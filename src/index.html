@@ -1281,6 +1281,8 @@
                     </span>
                     <button class="btn btn-sm btn-blue" onclick="renderTeacherMultiPeriodComparison()">生成教师多期对比</button>
                     <button class="btn btn-sm btn-green" onclick="exportTeacherMultiPeriodComparison()">导出教师多期对比</button>
+                    <button class="btn btn-sm" style="background:#8b5cf6; color:white;" onclick="saveTeacherMultiPeriodCompareToCloud()" title="保存当前对比结果到云端">☁️ 保存云端对比</button>
+                    <button class="btn btn-sm" style="background:#06b6d4; color:white;" onclick="viewCloudTeacherCompares()" title="查看已保存的教师对比记录">📋 查看云端对比</button>
                 </div>
                 <div id="teacherCompareHint" style="margin-top:6px; font-size:12px; color:#64748b;">请选择学校+学科+教师并选择2期或3期考试后生成。</div>
                 <div id="teacherCompareResult" style="margin-top:10px;"></div>

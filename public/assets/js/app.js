@@ -11256,7 +11256,200 @@ const DataManager = {
 
         hintEl.innerHTML = `✅ 已完成 ${periodCount} 期教师对比：${examIds.join(' → ')}`;
         hintEl.style.color = '#16a34a';
-        TEACHER_MULTI_PERIOD_COMPARE_CACHE = { school, subject, teacher, examIds, periodCount, examStats, delta };
+        window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = { school, subject, teacher, examIds, periodCount, examStats, delta, metricRows };
+    }
+
+    // 🆕 保存教师同学科多期对比到云端
+    async function saveTeacherMultiPeriodCompareToCloud() {
+        if (!window.TEACHER_MULTI_PERIOD_COMPARE_CACHE) {
+            return alert('请先生成教师多期对比结果');
+        }
+
+        if (!sbClient) {
+            return alert('☁️ 云端服务未连接，无法保存');
+        }
+
+        const user = Auth.currentUser;
+        // 允许教师保存
+        if (!user || user.role === 'guest') {
+            return alert('⛔ 权限不足：只有登录用户可以保存对比结果到云端');
+        }
+
+        const { school, subject, teacher, examIds, periodCount, delta, metricRows } = window.TEACHER_MULTI_PERIOD_COMPARE_CACHE;
+        
+        // 生成唯一Key: TEACHER_COMPARE_<Cohort>_<TeacherName>_<Subject>_<Timestamp>_<Rand>
+        const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || 'unknown';
+        const timestamp = new Date().toISOString().split('T')[0];
+        // 格式化 Teacher Name 防止非法字符
+        const safeTeacher = teacher.replace(/[^\w\u4e00-\u9fa5]/g, '');
+        const key = `TEACHER_COMPARE_${cohortId}级_${safeTeacher}_${subject}_${timestamp}_${Date.now().toString().slice(-4)}`;
+        
+        const title = `${school} ${teacher} ${subject}多期对比`;
+        
+        try {
+            if (window.UI) UI.loading(true, '☁️ 正在保存到云端...');
+            
+            // 准备保存的数据
+            const payload = {
+                school,
+                subject,
+                teacher,
+                examIds,
+                periodCount,
+                delta,
+                metricRows, // 保存 HTML 片段简单快速
+                title,
+                createdBy: user.username || user.name || user.email,
+                createdAt: new Date().toISOString()
+            };
+            
+            const json = JSON.stringify(payload);
+            const compressed = "LZ|" + LZString.compressToUTF16(json);
+            
+            const { error } = await sbClient.from('system_data').upsert({
+                key,
+                content: compressed,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'key' });
+            
+            if (error) throw error;
+            
+            if (window.UI) UI.loading(false);
+            if (window.UI) UI.toast(`✅ 已保存到云端 (${title})`, 'success');
+            console.log('✅ 对比结果已保存:', key);
+            
+        } catch (e) {
+            if (window.UI) UI.loading(false);
+            console.error('保存失败:', e);
+            alert('保存失败: ' + e.message);
+        }
+    }
+
+    // 🆕 查看云端教师对比列表
+    async function viewCloudTeacherCompares() {
+        if (!sbClient) return alert('☁️ 云端服务未连接');
+
+        try {
+            if (window.UI) UI.loading(true, '☁️ 正在加载云端列表...');
+            
+            // 查询 Teacher Compare 记录
+            const { data, error } = await sbClient
+                .from('system_data')
+                .select('key, updated_at')
+                .like('key', 'TEACHER_COMPARE_%')
+                .order('updated_at', { ascending: false })
+                .limit(50);
+            
+            if (error) throw error;
+            
+            if (window.UI) UI.loading(false);
+            
+            if (!data || data.length === 0) {
+                return alert('☁️ 云端暂无已保存的教师对比记录');
+            }
+
+            const listHtml = data.map((item, idx) => {
+                const keyParts = item.key.replace('TEACHER_COMPARE_', '').split('_');
+                // key format: <Cohort>_<Teacher>_<Subject>_<Date>_<Rand>
+                // index: 0=Cohort, 1=Teacher, 2=Subject, 3=Date
+                const teacherName = keyParts[1] || '未知教师';
+                const subject = keyParts[2] || '未知学科';
+                const dateStr = keyParts[3] || '未知日期';
+                const displayDate = new Date(item.updated_at).toLocaleString();
+                
+                return `<div style="padding:10px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="loadCloudTeacherCompare('${item.key}')">
+                    <div>
+                        <div style="font-weight:600; color:#334155;">${idx + 1}. ${teacherName} (${subject})</div>
+                        <div style="font-size:12px; color:#64748b; margin-top:2px;">${keyParts[0]} | ${displayDate}</div>
+                    </div>
+                    <div style="font-size:12px; color:#64748b;">详情 &gt;</div>
+                </div>`;
+            }).join('');
+            
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: '☁️ 云端教师对比记录',
+                    html: `<div style="max-height:400px; overflow-y:auto; text-align:left;">${listHtml}</div>`,
+                    width: 600,
+                    showCloseButton: true,
+                    showConfirmButton: false
+                });
+            } else {
+                 // Fallback
+                 if (window.UI) UI.toast('请在支持Swal的环境下使用', 'warning');
+            }
+        } catch (e) {
+            if (window.UI) UI.loading(false);
+            console.error('加载列表失败:', e);
+            alert('加载失败');
+        }
+    }
+
+    // 🆕 加载云端教师对比详情
+    async function loadCloudTeacherCompare(key) {
+        if (typeof Swal !== 'undefined') Swal.close();
+        if (window.UI) UI.loading(true, '☁️ 正在下载详情...');
+        
+        try {
+            const { data, error } = await sbClient
+                .from('system_data')
+                .select('content')
+                .eq('key', key)
+                .single();
+            
+            if (error) throw error;
+            
+            let content = data.content;
+            if (typeof content === 'string' && content.startsWith("LZ|")) {
+                content = LZString.decompressFromUTF16(content.substring(3));
+            }
+            const payload = typeof content === 'string' ? JSON.parse(content) : content;
+            
+            // 渲染详情
+            renderCloudTeacherCompareDetail(payload);
+            
+            if (window.UI) {
+                UI.loading(false);
+                UI.toast('✅ 加载成功', 'success');
+            }
+        } catch (e) {
+            console.error(e);
+            if (window.UI) UI.loading(false);
+            alert('加载详情失败: ' + e.message);
+        }
+    }
+
+    // 🆕 渲染加载后的云端对比详情
+    function renderCloudTeacherCompareDetail(payload) {
+        const resultEl = document.getElementById('teacherCompareResult');
+        const hintEl = document.getElementById('teacherCompareHint');
+        if (!resultEl) return;
+        
+        const { school, subject, teacher, examIds, periodCount, delta, metricRows, title, createdAt, createdBy } = payload;
+        
+        // 填充结果区域
+        resultEl.innerHTML = `
+            <div class="sub-header" style="color:#7c3aed;">☁️ [云端存档] ${title}</div>
+            <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>期次</th><th>人数</th><th>均分</th><th>优秀率</th><th>及格率</th><th>贡献值</th><th>绩效分</th><th>校内排位</th><th>乡镇均分排位</th></tr></thead><tbody>${metricRows}</tbody></table></div>
+            <div style="margin-top:8px; font-size:12px; color:#475569;">
+                首末期变化（${examIds[0]} → ${examIds[examIds.length - 1]}）：
+                均分 <strong style="color:${delta.avg >= 0 ? 'var(--success)' : 'var(--danger)'};">${delta.avg >= 0 ? '+' : ''}${delta.avg.toFixed(2)}</strong>，
+                优秀率 ${delta.exc >= 0 ? '+' : ''}${(delta.exc * 100).toFixed(1)}%，
+                及格率 ${delta.pass >= 0 ? '+' : ''}${(delta.pass * 100).toFixed(1)}%，
+                贡献值 ${delta.contribution >= 0 ? '+' : ''}${delta.contribution.toFixed(2)}，
+                绩效分 ${delta.finalScore >= 0 ? '+' : ''}${delta.finalScore.toFixed(2)}，
+                校内排位 ${delta.rank >= 0 ? '+' : ''}${delta.rank}
+                ${delta.township === null ? '' : `，乡镇均分排位 ${delta.township >= 0 ? '+' : ''}${delta.township}`}
+            </div>
+            <div style="margin-top:10px; font-size:12px; color:#94a3b8; text-align:right;">
+                存档时间: ${new Date(createdAt).toLocaleString()} | 创建人: ${createdBy}
+            </div>
+        `;
+        
+        if (hintEl) {
+            hintEl.innerHTML = `✅ 已加载云端存档：${title}`;
+            hintEl.style.color = '#7c3aed';
+        }
     }
 
     function exportTeacherMultiPeriodComparison() {
