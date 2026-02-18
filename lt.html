@@ -17221,11 +17221,22 @@ const DataManager = {
             return;
         }
 
-        const schoolRows = selectedByExam.map((x, idx) => {
+        const schoolSeries = selectedByExam.map((x, idx) => {
             const s = calcSchoolMetricsFromRows(x.rows);
-            const rankAvg = getSummaryEntryBySchool(summaryByExam[idx]?.summary, school)?.rankAvg || '-';
-            return `<tr><td>${x.examId}</td><td>${s.count}</td><td>${s.avg.toFixed(2)}</td><td>${(s.excRate * 100).toFixed(1)}%</td><td>${(s.passRate * 100).toFixed(1)}%</td><td>${rankAvg}</td></tr>`;
-        }).join('');
+            const rankAvg = Number(getSummaryEntryBySchool(summaryByExam[idx]?.summary, school)?.rankAvg || 0) || null;
+            return {
+                examId: x.examId,
+                count: s.count,
+                avg: s.avg,
+                excRate: s.excRate,
+                passRate: s.passRate,
+                rankAvg
+            };
+        });
+
+        const schoolRows = schoolSeries.map(s =>
+            `<tr><td>${s.examId}</td><td>${s.count}</td><td>${s.avg.toFixed(2)}</td><td>${(s.excRate * 100).toFixed(1)}%</td><td>${(s.passRate * 100).toFixed(1)}%</td><td>${s.rankAvg ?? '-'}</td></tr>`
+        ).join('');
 
         const firstSummary = summaryByExam[0].summary;
         const lastSummary = summaryByExam[summaryByExam.length - 1].summary;
@@ -17235,6 +17246,8 @@ const DataManager = {
             if (!a || !b) return null;
             return {
                 school: sName,
+                rankFirst: a.rankAvg,
+                rankLast: b.rankAvg,
                 dAvg: b.avg - a.avg,
                 dExc: b.excRate - a.excRate,
                 dPass: b.passRate - a.passRate,
@@ -17243,25 +17256,107 @@ const DataManager = {
         }).filter(Boolean).sort((a, b) => Math.abs(b.dAvg) - Math.abs(a.dAvg));
 
         const allRows = allSchoolsChange.length
-            ? allSchoolsChange.map(r => `<tr><td>${r.school}</td><td style="font-weight:bold; color:${r.dAvg >= 0 ? 'var(--success)' : 'var(--danger)'};">${r.dAvg >= 0 ? '+' : ''}${r.dAvg.toFixed(2)}</td><td>${r.dExc >= 0 ? '+' : ''}${(r.dExc * 100).toFixed(1)}%</td><td>${r.dPass >= 0 ? '+' : ''}${(r.dPass * 100).toFixed(1)}%</td><td style="font-weight:bold; color:${r.dRank >= 0 ? 'var(--success)' : 'var(--danger)'};">${r.dRank >= 0 ? '+' : ''}${r.dRank}</td></tr>`).join('')
-            : '<tr><td colspan="5" style="text-align:center; color:#999;">无可比数据</td></tr>';
+            ? allSchoolsChange.map(r => `<tr><td>${r.school}</td><td>${r.rankFirst}</td><td>${r.rankLast}</td><td style="font-weight:bold; color:${r.dRank >= 0 ? 'var(--success)' : 'var(--danger)'};">${r.dRank >= 0 ? '+' : ''}${r.dRank}</td><td style="font-weight:bold; color:${r.dAvg >= 0 ? 'var(--success)' : 'var(--danger)'};">${r.dAvg >= 0 ? '+' : ''}${r.dAvg.toFixed(2)}</td><td>${r.dExc >= 0 ? '+' : ''}${(r.dExc * 100).toFixed(1)}%</td><td>${r.dPass >= 0 ? '+' : ''}${(r.dPass * 100).toFixed(1)}%</td></tr>`).join('')
+            : '<tr><td colspan="7" style="text-align:center; color:#999;">无可比数据</td></tr>';
+
+        const firstPoint = schoolSeries[0];
+        const lastPoint = schoolSeries[schoolSeries.length - 1];
+        const deltaAvg = lastPoint.avg - firstPoint.avg;
+        const deltaExc = lastPoint.excRate - firstPoint.excRate;
+        const deltaPass = lastPoint.passRate - firstPoint.passRate;
+        const deltaRank = (firstPoint.rankAvg && lastPoint.rankAvg) ? (firstPoint.rankAvg - lastPoint.rankAvg) : null;
+
+        const periodDetailRows = schoolSeries.map((s, idx) => {
+            const prev = idx > 0 ? schoolSeries[idx - 1] : null;
+            return {
+                examId: s.examId,
+                count: s.count,
+                avg: s.avg,
+                excRate: s.excRate,
+                passRate: s.passRate,
+                rankAvg: s.rankAvg,
+                dAvg: prev ? (s.avg - prev.avg) : null,
+                dExc: prev ? (s.excRate - prev.excRate) : null,
+                dPass: prev ? (s.passRate - prev.passRate) : null,
+                dRank: (prev && prev.rankAvg && s.rankAvg) ? (prev.rankAvg - s.rankAvg) : null
+            };
+        });
+
+        const detailRowsHtml = periodDetailRows.map((r, idx) => `<tr>
+            <td>${r.examId}</td>
+            <td>${r.count}</td>
+            <td>${r.avg.toFixed(2)}</td>
+            <td>${(r.excRate * 100).toFixed(1)}%</td>
+            <td>${(r.passRate * 100).toFixed(1)}%</td>
+            <td>${r.rankAvg ?? '-'}</td>
+            <td>${idx === 0 ? '-' : `${r.dAvg >= 0 ? '+' : ''}${r.dAvg.toFixed(2)}`}</td>
+            <td>${idx === 0 ? '-' : `${r.dExc >= 0 ? '+' : ''}${(r.dExc * 100).toFixed(1)}%`}</td>
+            <td>${idx === 0 ? '-' : `${r.dPass >= 0 ? '+' : ''}${(r.dPass * 100).toFixed(1)}%`}</td>
+            <td>${idx === 0 ? '-' : (r.dRank === null ? '-' : `${r.dRank >= 0 ? '+' : ''}${r.dRank}`)}</td>
+        </tr>`).join('');
+
+        const kpiCardsHtml = `
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px; margin-bottom:10px;">
+                <div style="padding:10px; border:1px solid #e2e8f0; border-radius:8px; background:#fff;"><div style="font-size:12px; color:#64748b;">总分均分变化</div><div style="font-size:20px; font-weight:700; color:${deltaAvg >= 0 ? 'var(--success)' : 'var(--danger)'};">${deltaAvg >= 0 ? '+' : ''}${deltaAvg.toFixed(2)}</div></div>
+                <div style="padding:10px; border:1px solid #e2e8f0; border-radius:8px; background:#fff;"><div style="font-size:12px; color:#64748b;">优秀率变化</div><div style="font-size:20px; font-weight:700; color:${deltaExc >= 0 ? 'var(--success)' : 'var(--danger)'};">${deltaExc >= 0 ? '+' : ''}${(deltaExc * 100).toFixed(1)}%</div></div>
+                <div style="padding:10px; border:1px solid #e2e8f0; border-radius:8px; background:#fff;"><div style="font-size:12px; color:#64748b;">及格率变化</div><div style="font-size:20px; font-weight:700; color:${deltaPass >= 0 ? 'var(--success)' : 'var(--danger)'};">${deltaPass >= 0 ? '+' : ''}${(deltaPass * 100).toFixed(1)}%</div></div>
+                <div style="padding:10px; border:1px solid #e2e8f0; border-radius:8px; background:#fff;"><div style="font-size:12px; color:#64748b;">均分排位变化</div><div style="font-size:20px; font-weight:700; color:${(deltaRank ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)'};">${deltaRank === null ? '-' : ((deltaRank >= 0 ? '+' : '') + deltaRank)}</div></div>
+            </div>
+        `;
 
         const changeLabel = `${examIds[0]} → ${examIds[examIds.length - 1]}`;
         resultEl.innerHTML = `
-            <div class="sub-header">🏫 指定学校多期对比（${school}）</div>
-            <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>期次</th><th>人数</th><th>总分均分</th><th>优秀率</th><th>及格率</th><th>校际均分排位</th></tr></thead><tbody>${schoolRows}</tbody></table></div>
+            <div class="sub-header">📈 校际联考对比总览（${school}）</div>
+            ${kpiCardsHtml}
+            <div style="padding:10px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; margin-bottom:10px;">
+                <div style="font-size:13px; color:#334155; font-weight:600; margin-bottom:8px;">趋势图（总分均分 / 优秀率 / 及格率）</div>
+                <canvas id="macroCompareTrendChart" height="120"></canvas>
+            </div>
+            <div class="sub-header">🧾 每一期具体结果明细</div>
+            <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>期次</th><th>人数</th><th>总分均分</th><th>优秀率</th><th>及格率</th><th>均分排位</th><th>较上期均分</th><th>较上期优秀率</th><th>较上期及格率</th><th>较上期排位</th></tr></thead><tbody>${detailRowsHtml}</tbody></table></div>
             <div class="sub-header" style="margin-top:10px;">🌍 全镇学校首末期变化（${changeLabel}）</div>
-            <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>学校</th><th>均分变化</th><th>优秀率变化</th><th>及格率变化</th><th>排位变化</th></tr></thead><tbody>${allRows}</tbody></table></div>
+            <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>学校</th><th>首期排位</th><th>末期排位</th><th>排位变化</th><th>均分变化</th><th>优秀率变化</th><th>及格率变化</th></tr></thead><tbody>${allRows}</tbody></table></div>
         `;
+
+        try {
+            if (window.__macroCompareTrendChart && typeof window.__macroCompareTrendChart.destroy === 'function') {
+                window.__macroCompareTrendChart.destroy();
+            }
+            const chartCanvas = document.getElementById('macroCompareTrendChart');
+            if (chartCanvas && typeof Chart !== 'undefined') {
+                window.__macroCompareTrendChart = new Chart(chartCanvas, {
+                    type: 'line',
+                    data: {
+                        labels: schoolSeries.map(s => s.examId),
+                        datasets: [
+                            { label: '总分均分', data: schoolSeries.map(s => Number(s.avg.toFixed(2))), borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.15)', yAxisID: 'y', tension: 0.25 },
+                            { label: '优秀率(%)', data: schoolSeries.map(s => Number((s.excRate * 100).toFixed(1))), borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,0.15)', yAxisID: 'y1', tension: 0.25 },
+                            { label: '及格率(%)', data: schoolSeries.map(s => Number((s.passRate * 100).toFixed(1))), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.15)', yAxisID: 'y1', tension: 0.25 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: false, position: 'left', title: { display: true, text: '总分均分' } },
+                            y1: { beginAtZero: true, max: 100, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '比例(%)' } }
+                        },
+                        plugins: { legend: { position: 'bottom' } }
+                    }
+                });
+            }
+        } catch (chartErr) {
+            console.warn('趋势图渲染失败:', chartErr);
+        }
 
         hintEl.innerHTML = `✅ 已完成 ${periodCount} 期校际对比：${examIds.join(' → ')}`;
         hintEl.style.color = '#16a34a';
-        MACRO_MULTI_PERIOD_COMPARE_CACHE = { school, examIds, periodCount, summaryByExam, allSchoolsChange };
+        MACRO_MULTI_PERIOD_COMPARE_CACHE = { school, examIds, periodCount, summaryByExam, allSchoolsChange, schoolSeries, periodDetailRows };
     }
 
     function exportMacroMultiPeriodComparison() {
         if (!MACRO_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成校际多期对比结果');
-        const { school, examIds, summaryByExam, allSchoolsChange } = MACRO_MULTI_PERIOD_COMPARE_CACHE;
+        const { school, examIds, summaryByExam, allSchoolsChange, periodDetailRows = [] } = MACRO_MULTI_PERIOD_COMPARE_CACHE;
         const wb = XLSX.utils.book_new();
 
         const schoolData = [['学校', '期次', '人数', '总分均分', '优秀率', '及格率', '校际均分排位']];
@@ -17274,9 +17369,26 @@ const DataManager = {
 
         const first = examIds[0];
         const last = examIds[examIds.length - 1];
-        const allData = [["学校", `${first}→${last}均分变化`, `${first}→${last}优秀率变化`, `${first}→${last}及格率变化`, `${first}→${last}排位变化`]];
-        allSchoolsChange.forEach(r => allData.push([r.school, r.dAvg, r.dExc, r.dPass, r.dRank]));
+        const allData = [["学校", '首期排位', '末期排位', `${first}→${last}排位变化`, `${first}→${last}均分变化`, `${first}→${last}优秀率变化`, `${first}→${last}及格率变化`]];
+        allSchoolsChange.forEach(r => allData.push([r.school, r.rankFirst, r.rankLast, r.dRank, r.dAvg, r.dExc, r.dPass]));
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(allData), '全镇首末期变化');
+
+        if (periodDetailRows.length > 0) {
+            const detailHeader = ['期次', '人数', '总分均分', '优秀率', '及格率', '均分排位', '较上期均分', '较上期优秀率', '较上期及格率', '较上期排位'];
+            const detailData = periodDetailRows.map(r => [
+                r.examId,
+                r.count,
+                r.avg,
+                r.excRate,
+                r.passRate,
+                r.rankAvg,
+                r.dAvg,
+                r.dExc,
+                r.dPass,
+                r.dRank
+            ]);
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([detailHeader, ...detailData]), '本校期次明细');
+        }
 
         XLSX.writeFile(wb, `校际多期对比_${school}_${examIds.join('_')}.xlsx`);
     }
@@ -17296,6 +17408,8 @@ const DataManager = {
             periodCount: cache.periodCount,
             summaryByExam: cache.summaryByExam,
             allSchoolsChange: cache.allSchoolsChange,
+            schoolSeries: cache.schoolSeries || [],
+            periodDetailRows: cache.periodDetailRows || [],
             html: document.getElementById('macroCompareResult')?.innerHTML || '',
             title: `${cache.school} 校际多期对比`,
             createdAt: new Date().toISOString(),
@@ -17356,7 +17470,9 @@ const DataManager = {
                 examIds: payload.examIds,
                 periodCount: payload.periodCount,
                 summaryByExam: payload.summaryByExam,
-                allSchoolsChange: payload.allSchoolsChange
+                allSchoolsChange: payload.allSchoolsChange,
+                schoolSeries: payload.schoolSeries || [],
+                periodDetailRows: payload.periodDetailRows || []
             };
         } catch (e) {
             console.error(e);
