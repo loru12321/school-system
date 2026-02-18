@@ -10198,6 +10198,7 @@ const DataManager = {
 
     // 🆕 云端保存学生多期对比结果
     async function saveStudentCompareToCloud() {
+        window.saveStudentCompareToCloud = saveStudentCompareToCloud;
         if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) {
             return alert('请先生成学生多期对比结果');
         }
@@ -10269,6 +10270,7 @@ const DataManager = {
 
     // 🆕 查看云端对比列表
     async function viewCloudStudentCompares(selfOnly = false) {
+        window.viewCloudStudentCompares = viewCloudStudentCompares;
         if (!sbClient) {
             return alert('☁️ 云端服务未连接');
         }
@@ -10512,6 +10514,7 @@ const DataManager = {
 
     // 🆕 加载云端对比结果（重构：目标解析 / 权限过滤 / UI渲染分层）
     async function loadCloudStudentCompare(key, selfOnly = false) {
+        window.loadCloudStudentCompare = loadCloudStudentCompare;
         if (!sbClient) {
             return alert('☁️ 云端服务未连接');
         }
@@ -22346,6 +22349,7 @@ async function exportPPTReportLegacy() {
     }
 
     function getExamMetaFromUI() {
+        window.getExamMetaFromUI = getExamMetaFromUI;
         const year = document.getElementById('exam-year')?.value || '';
         const term = document.getElementById('exam-term')?.value || '';
         const type = document.getElementById('exam-type')?.value || '';
@@ -23010,6 +23014,7 @@ async function exportPPTReportLegacy() {
 
     // === 自动快照/回滚 ===
     function getCurrentSnapshotPayload() {
+        window.getCurrentSnapshotPayload = getCurrentSnapshotPayload;
         return {
             COHORT_DB: COHORT_DB || window.COHORT_DB || null,
             CURRENT_COHORT_ID: CURRENT_COHORT_ID || window.CURRENT_COHORT_ID || '',
@@ -23214,6 +23219,7 @@ async function exportPPTReportLegacy() {
     }
 
     function applySnapshotPayload(db) {
+        window.applySnapshotPayload = applySnapshotPayload;
         COHORT_DB = db.COHORT_DB || COHORT_DB || null;
         CURRENT_COHORT_ID = db.CURRENT_COHORT_ID || CURRENT_COHORT_ID || '';
         CURRENT_COHORT_META = db.CURRENT_COHORT_META || CURRENT_COHORT_META || null;
