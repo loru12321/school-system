@@ -11126,7 +11126,9 @@ const DataManager = {
                 contribution,
                 finalScore,
                 subjectRank: 0,
-                townshipRankAvg: null
+                townshipRankAvg: null,
+                townshipRankExc: null,
+                townshipRankPass: null
             };
         });
 
@@ -11151,7 +11153,7 @@ const DataManager = {
         subjectSet.forEach(subject => {
             const ranking = [];
             teacherStatsList.filter(x => x.subject === subject).forEach(x => {
-                ranking.push({ type: 'teacher', teacher: x.teacher, avg: x.avg });
+                ranking.push({ type: 'teacher', teacher: x.teacher, avg: x.avg, excellentRate: x.excellentRate, passRate: x.passRate });
             });
 
             const schoolScores = {};
@@ -11164,15 +11166,31 @@ const DataManager = {
             });
             Object.entries(schoolScores).forEach(([name, vals]) => {
                 if (!vals.length) return;
-                ranking.push({ type: 'school', school: name, avg: vals.reduce((a, b) => a + b, 0) / vals.length });
+                const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+                const excCount = vals.filter(v => v >= 85).length;
+                const passCount = vals.filter(v => v >= 60).length;
+                ranking.push({
+                    type: 'school',
+                    school: name,
+                    avg,
+                    excellentRate: vals.length ? (excCount / vals.length) : 0,
+                    passRate: vals.length ? (passCount / vals.length) : 0
+                });
             });
 
             ranking.sort((a, b) => b.avg - a.avg);
             ranking.forEach((row, i) => { row.rankAvg = i + 1; });
+            ranking.sort((a, b) => b.excellentRate - a.excellentRate);
+            ranking.forEach((row, i) => { row.rankExc = i + 1; });
+            ranking.sort((a, b) => b.passRate - a.passRate);
+            ranking.forEach((row, i) => { row.rankPass = i + 1; });
+            ranking.sort((a, b) => b.avg - a.avg);
 
             teacherStatsList.filter(x => x.subject === subject).forEach(x => {
                 const mine = ranking.find(r => r.type === 'teacher' && r.teacher === x.teacher);
                 x.townshipRankAvg = mine ? mine.rankAvg : null;
+                x.townshipRankExc = mine ? mine.rankExc : null;
+                x.townshipRankPass = mine ? mine.rankPass : null;
             });
         });
     }
@@ -11349,12 +11367,9 @@ const DataManager = {
                 // 计算变化 (Last - First)
                 if (firstStats && lastStats) {
                     rowData.delta = {
-                        avg: lastStats.avg - firstStats.avg,
-                        exc: lastStats.excellentRate - firstStats.excellentRate,
-                        pass: lastStats.passRate - firstStats.passRate,
-                        contribution: lastStats.contribution - firstStats.contribution,
-                        finalScore: lastStats.finalScore - firstStats.finalScore,
-                        township: (firstStats.townshipRankAvg && lastStats.townshipRankAvg) ? (firstStats.townshipRankAvg - lastStats.townshipRankAvg) : null
+                        townshipAvg: (firstStats.townshipRankAvg && lastStats.townshipRankAvg) ? (firstStats.townshipRankAvg - lastStats.townshipRankAvg) : null,
+                        townshipExc: (firstStats.townshipRankExc && lastStats.townshipRankExc) ? (firstStats.townshipRankExc - lastStats.townshipRankExc) : null,
+                        townshipPass: (firstStats.townshipRankPass && lastStats.townshipRankPass) ? (firstStats.townshipRankPass - lastStats.townshipRankPass) : null
                     };
                 } else {
                     rowData.delta = null;
@@ -11382,9 +11397,9 @@ const DataManager = {
         examIds.forEach(eid => {
             // 简写期次名
             const shortName = eid.split('-').pop() || eid;
-            ths += `<th style="background:#f1f5f9; border-left:2px solid white;">${shortName}<br><span style="font-size:10px;font-weight:normal">均分|绩效|乡镇排</span></th>`;
+            ths += `<th style="background:#f1f5f9; border-left:2px solid white;">${shortName}<br><span style="font-size:10px;font-weight:normal">均镇排|优镇排|及格镇排</span></th>`;
         });
-        ths += `<th style="background:#fff7ed; border-left:2px solid white;">变化<br><span style="font-size:10px;font-weight:normal">均分|绩效|乡镇排</span></th>`;
+        ths += `<th style="background:#fff7ed; border-left:2px solid white;">变化<br><span style="font-size:10px;font-weight:normal">均镇排|优镇排|及格镇排</span></th>`;
 
         const trs = results.map(r => {
             let tds = `<td style="font-weight:bold;">${r.teacher}</td><td>${r.subject}</td>`;
@@ -11393,9 +11408,9 @@ const DataManager = {
                 if (p.current) {
                     const c = p.current;
                     tds += `<td style="border-left:1px solid #e2e8f0; text-align:center;">
-                        <div>${c.avg.toFixed(1)}</div>
-                        <div style="font-size:11px; color:#64748b;">${c.finalScore.toFixed(1)}</div>
-                        <div style="font-size:11px; color:#64748b;">#${(typeof c.townshipRankAvg === 'number' ? c.townshipRankAvg : '-')}</div>
+                        <div style="font-size:11px; color:#334155;">均 #${(typeof c.townshipRankAvg === 'number' ? c.townshipRankAvg : '-')}</div>
+                        <div style="font-size:11px; color:#334155;">优 #${(typeof c.townshipRankExc === 'number' ? c.townshipRankExc : '-')}</div>
+                        <div style="font-size:11px; color:#334155;">及 #${(typeof c.townshipRankPass === 'number' ? c.townshipRankPass : '-')}</div>
                     </td>`;
                 } else {
                     tds += `<td style="border-left:1px solid #e2e8f0; text-align:center; color:#cbd5e1;">-</td>`;
@@ -11404,17 +11419,17 @@ const DataManager = {
 
             if (r.delta) {
                 const d = r.delta;
-                const avgStyle = d.avg >= 0 ? 'color:green' : 'color:red';
-                const scoreStyle = d.finalScore >= 0 ? 'color:green' : 'color:red';
-                const townshipDelta = typeof d.township === 'number' ? d.township : null;
-                const rankStyle = townshipDelta > 0 ? 'color:green' : (townshipDelta < 0 ? 'color:red' : 'color:gray');
-                const rankIcon = townshipDelta > 0 ? '↑' : (townshipDelta < 0 ? '↓' : '-');
-                const avgIcon = d.avg >= 0 ? '+' : '';
+                const fmtDelta = (deltaVal) => {
+                    if (typeof deltaVal !== 'number') return '<span style="color:#94a3b8;">-</span>';
+                    const color = deltaVal > 0 ? 'green' : (deltaVal < 0 ? 'red' : 'gray');
+                    const icon = deltaVal > 0 ? '↑' : (deltaVal < 0 ? '↓' : '-');
+                    return `<span style="color:${color};">${icon} ${Math.abs(deltaVal)}</span>`;
+                };
                 
                 tds += `<td style="border-left:1px solid #e2e8f0; text-align:center; background:#fffbf0;">
-                    <div style="${avgStyle}; font-weight:bold;">${avgIcon}${d.avg.toFixed(1)}</div>
-                    <div style="${scoreStyle}; font-size:11px;">${d.finalScore >= 0 ? '+' : ''}${d.finalScore.toFixed(1)}</div>
-                    <div style="${rankStyle}; font-size:11px;">${townshipDelta === null ? '-' : `${rankIcon} ${Math.abs(townshipDelta)}`}</div>
+                    <div style="font-size:11px;">均 ${fmtDelta(d.townshipAvg)}</div>
+                    <div style="font-size:11px;">优 ${fmtDelta(d.townshipExc)}</div>
+                    <div style="font-size:11px;">及 ${fmtDelta(d.townshipPass)}</div>
                 </td>`;
             } else {
                 tds += `<td style="border-left:1px solid #e2e8f0; text-align:center; background:#fffbf0; color:#cbd5e1;">-</td>`;
@@ -11462,25 +11477,33 @@ const DataManager = {
         if (!window.ALL_TEACHERS_DIFF_CACHE) return alert('请先生成表格');
         const { results, examIds } = window.ALL_TEACHERS_DIFF_CACHE;
         
-        // 构建 Excel 数据 [Teacher, Subject, Exam1_Avg, Exam1_Score, Exam1_TownshipRank, ..., Delta_Avg, Delta_Score, Delta_TownshipRank]
+        // 构建 Excel 数据 [Teacher, Subject, 每期三类镇排, 变化三类镇排]
         const header = ['教师', '学科'];
         examIds.forEach(eid => {
-            header.push(`${eid}\n均分`, `${eid}\n绩效`, `${eid}\n乡镇排名`, `${eid}\n贡献`, `${eid}\n优率`, `${eid}\n及格`);
+            header.push(`${eid}\n均分镇排`, `${eid}\n优秀率镇排`, `${eid}\n及格率镇排`);
         });
-        header.push('变化_均分', '变化_绩效', '变化_乡镇排名(正数进/负数退)');
+        header.push('变化_均分镇排(正数进/负数退)', '变化_优秀率镇排(正数进/负数退)', '变化_及格率镇排(正数进/负数退)');
 
         const data = results.map(r => {
             const row = [r.teacher, r.subject];
             r.details.forEach(p => {
                 const c = p.current;
                 if (c) {
-                    row.push(c.avg.toFixed(2), c.finalScore.toFixed(2), (typeof c.townshipRankAvg === 'number' ? c.townshipRankAvg : '-'), c.contribution.toFixed(2), (c.excellentRate*100).toFixed(1)+'%', (c.passRate*100).toFixed(1)+'%');
+                    row.push(
+                        (typeof c.townshipRankAvg === 'number' ? c.townshipRankAvg : '-'),
+                        (typeof c.townshipRankExc === 'number' ? c.townshipRankExc : '-'),
+                        (typeof c.townshipRankPass === 'number' ? c.townshipRankPass : '-')
+                    );
                 } else {
-                    row.push('-', '-', '-', '-', '-', '-');
+                    row.push('-', '-', '-');
                 }
             });
             if (r.delta) {
-                row.push(r.delta.avg.toFixed(2), r.delta.finalScore.toFixed(2), (typeof r.delta.township === 'number' ? r.delta.township : '-'));
+                row.push(
+                    (typeof r.delta.townshipAvg === 'number' ? r.delta.townshipAvg : '-'),
+                    (typeof r.delta.townshipExc === 'number' ? r.delta.townshipExc : '-'),
+                    (typeof r.delta.townshipPass === 'number' ? r.delta.townshipPass : '-')
+                );
             } else {
                 row.push('-', '-', '-');
             }
