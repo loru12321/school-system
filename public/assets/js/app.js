@@ -24232,7 +24232,7 @@ async function exportPPTReportLegacy() {
         if (window.UI) UI.toast('✅ 恢复完成', 'success');
     }
 
-    window.updateStatusPanel = function() {
+    function updateStatusPanel() {
         if (!document.getElementById('starter-status-panel')) return;
         const panel = document.getElementById('starter-status-panel');
         const termId = localStorage.getItem('CURRENT_TERM_ID') || (typeof getTermId === 'function' ? getTermId(getExamMetaFromUI()) : '');
@@ -24280,6 +24280,7 @@ async function exportPPTReportLegacy() {
         scanDataIssues();
         updateRoleHint();
     }
+    window.updateStatusPanel = updateStatusPanel;
 
     function openStarterGuide() {
         if (typeof Swal === 'undefined') {
