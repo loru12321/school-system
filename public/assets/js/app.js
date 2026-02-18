@@ -11596,9 +11596,10 @@ const DataManager = {
             if (resultEl && resultEl.querySelector('#cloud-teacher-compare-list')) {
                 // viewCloudTeacherCompares(); // 暂不自动刷新，避免切走视线
             }
+// FIX: 2026-02-18 Trigger Cache Refresh
         } catch (e) {
-            console.error(e);
-            alert('保存失败: ' + e.message);
+            console.error("Teacher Comparison Cloud Save Error:", e);
+            alert('保存失败: ' + (e.message || String(e)));
         } finally {
             if (window.UI) UI.loading(false);
         }
