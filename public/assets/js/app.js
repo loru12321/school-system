@@ -11750,9 +11750,6 @@ const DataManager = {
                 </div>
             `;
         }
-                存档时间: ${new Date(createdAt).toLocaleString()} | 创建人: ${createdBy}
-            </div>
-        `;
         
         if (hintEl) {
             hintEl.innerHTML = `✅ 已加载云端存档：${title}`;
