@@ -22111,6 +22111,7 @@ async function exportPPTReportLegacy() {
     }
 
     function getTermId(meta) {
+        window.getTermId = getTermId;
         if (!meta) return '';
         const grade = meta.grade || computeCohortGrade(CURRENT_COHORT_META, meta) || '';
         const term = meta.term || '';
@@ -23900,6 +23901,7 @@ async function exportPPTReportLegacy() {
     }
 
     function getCurrentUser() {
+        window.getCurrentUser = getCurrentUser;
         return (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser : null;
     }
 
