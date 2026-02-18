@@ -1,5 +1,5 @@
 {
-  "name": "school-system-worker",
+  "name": "school-system",
   "compatibility_date": "2024-02-18",
   "assets": {
     "directory": "./dist",
