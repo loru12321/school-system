@@ -2774,6 +2774,9 @@ const AccountManager = {
 
 // 📊 [新增] 数据综合管理器 (学生/教师/档案/参数/目标)
 const DataManager = {
+    init: function() {
+        window.DataManager = this;
+    },
     currentTab: 'student', // student | teacher | archive | params | targets
     pagination: { page: 1, size: 50, total: 0 },
     cloudSelection: new Set(),
