@@ -437,20 +437,22 @@
                 console.log('3. 用户将拥有所有角色的权限并集（累加，不覆盖）');
                 console.log('%c角色优先级（从高到低）：', 'color: #f59e0b; font-weight: bold;');
                 console.log('admin > director > grade_director > class_teacher > teacher > parent > guest');
-                console.log('%c测试工具（控制台输入）：', 'color: #8b5cf6; font-weight: bold;');
+                console.log('%cテスト工具（控制台输入）：', 'color: #8b5cf6; font-weight: bold;');
                 console.log('• RoleManager.showCurrentPermissions() - 查看当前用户权限');
                 console.log('• RoleManager.addRoleToCurrentUser("director") - 临时添加角色（测试用）');
                 console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color: #e5e7eb;');
                 
-                updateStatusPanel();
-                updateRoleHint();
-                renderActionLogs();
-                scanDataIssues();
-                if (!localStorage.getItem('HAS_SEEN_STARTER')) {
-                    __guardBypass = true;
+                // 确保依赖函数已定义
+                if (typeof updateStatusPanel === 'function') updateStatusPanel();
+                if (typeof updateRoleHint === 'function') updateRoleHint();
+                if (typeof renderActionLogs === 'function') renderActionLogs();
+                if (typeof scanDataIssues === 'function') scanDataIssues();
+                if (!localStorage.getItem('HAS_SEEN_STARTER') && typeof switchTab === 'function' && typeof openStarterGuide === 'function') {
+                    if (typeof __guardBypass !== 'undefined') __guardBypass = true;
                     switchTab('starter-hub');
                     openStarterGuide();
                 }
-                scheduleTeacherSyncPrompt();
+                if (typeof scheduleTeacherSyncPrompt === 'function') scheduleTeacherSyncPrompt();
             }, 1000);
+
         });
