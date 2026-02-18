@@ -11379,7 +11379,6 @@ const DataManager = {
                         pass: lastStats.passRate - firstStats.passRate,
                         contribution: lastStats.contribution - firstStats.contribution,
                         finalScore: lastStats.finalScore - firstStats.finalScore,
-                        rank: firstStats.subjectRank - lastStats.subjectRank, // 排名下降是负数还是正数？通常排名数值减小是进步。First=10, Last=5 => 10-5=5 (进步5名)
                         township: (firstStats.townshipRankAvg && lastStats.townshipRankAvg) ? (firstStats.townshipRankAvg - lastStats.townshipRankAvg) : null
                     };
                 } else {
@@ -11405,9 +11404,9 @@ const DataManager = {
         examIds.forEach(eid => {
             // 简写期次名
             const shortName = eid.split('-').pop() || eid;
-            ths += `<th style="background:#f1f5f9; border-left:2px solid white;">${shortName}<br><span style="font-size:10px;font-weight:normal">均分|绩效|校名</span></th>`;
+            ths += `<th style="background:#f1f5f9; border-left:2px solid white;">${shortName}<br><span style="font-size:10px;font-weight:normal">均分|绩效|乡镇排</span></th>`;
         });
-        ths += `<th style="background:#fff7ed; border-left:2px solid white;">变化<br><span style="font-size:10px;font-weight:normal">均分|绩效|排名</span></th>`;
+        ths += `<th style="background:#fff7ed; border-left:2px solid white;">变化<br><span style="font-size:10px;font-weight:normal">均分|绩效|乡镇排</span></th>`;
 
         const trs = results.map(r => {
             let tds = `<td style="font-weight:bold;">${r.teacher}</td><td>${r.subject}</td>`;
@@ -11418,7 +11417,7 @@ const DataManager = {
                     tds += `<td style="border-left:1px solid #e2e8f0; text-align:center;">
                         <div>${c.avg.toFixed(1)}</div>
                         <div style="font-size:11px; color:#64748b;">${c.finalScore.toFixed(1)}</div>
-                        <div style="font-size:11px; color:#64748b;">#${c.subjectRank}</div>
+                        <div style="font-size:11px; color:#64748b;">#${(typeof c.townshipRankAvg === 'number' ? c.townshipRankAvg : '-')}</div>
                     </td>`;
                 } else {
                     tds += `<td style="border-left:1px solid #e2e8f0; text-align:center; color:#cbd5e1;">-</td>`;
@@ -11429,14 +11428,15 @@ const DataManager = {
                 const d = r.delta;
                 const avgStyle = d.avg >= 0 ? 'color:green' : 'color:red';
                 const scoreStyle = d.finalScore >= 0 ? 'color:green' : 'color:red';
-                const rankStyle = d.rank > 0 ? 'color:green' : (d.rank < 0 ? 'color:red' : 'color:gray');
-                const rankIcon = d.rank > 0 ? '↑' : (d.rank < 0 ? '↓' : '-');
+                const townshipDelta = typeof d.township === 'number' ? d.township : null;
+                const rankStyle = townshipDelta > 0 ? 'color:green' : (townshipDelta < 0 ? 'color:red' : 'color:gray');
+                const rankIcon = townshipDelta > 0 ? '↑' : (townshipDelta < 0 ? '↓' : '-');
                 const avgIcon = d.avg >= 0 ? '+' : '';
                 
                 tds += `<td style="border-left:1px solid #e2e8f0; text-align:center; background:#fffbf0;">
                     <div style="${avgStyle}; font-weight:bold;">${avgIcon}${d.avg.toFixed(1)}</div>
                     <div style="${scoreStyle}; font-size:11px;">${d.finalScore >= 0 ? '+' : ''}${d.finalScore.toFixed(1)}</div>
-                    <div style="${rankStyle}; font-size:11px;">${rankIcon} ${Math.abs(d.rank)}</div>
+                    <div style="${rankStyle}; font-size:11px;">${townshipDelta === null ? '-' : `${rankIcon} ${Math.abs(townshipDelta)}`}</div>
                 </td>`;
             } else {
                 tds += `<td style="border-left:1px solid #e2e8f0; text-align:center; background:#fffbf0; color:#cbd5e1;">-</td>`;
@@ -11484,25 +11484,25 @@ const DataManager = {
         if (!window.ALL_TEACHERS_DIFF_CACHE) return alert('请先生成表格');
         const { results, examIds } = window.ALL_TEACHERS_DIFF_CACHE;
         
-        // 构建 Excel 数据 [Teacher, Subject, Exam1_Avg, Exam1_Score, Exam1_Rank, ..., Delta_Avg, Delta_Score, Delta_Rank]
+        // 构建 Excel 数据 [Teacher, Subject, Exam1_Avg, Exam1_Score, Exam1_TownshipRank, ..., Delta_Avg, Delta_Score, Delta_TownshipRank]
         const header = ['教师', '学科'];
         examIds.forEach(eid => {
-            header.push(`${eid}\n均分`, `${eid}\n绩效`, `${eid}\n排名`, `${eid}\n贡献`, `${eid}\n优率`, `${eid}\n及格`);
+            header.push(`${eid}\n均分`, `${eid}\n绩效`, `${eid}\n乡镇排名`, `${eid}\n贡献`, `${eid}\n优率`, `${eid}\n及格`);
         });
-        header.push('变化_均分', '变化_绩效', '变化_排名(正数进/负数退)');
+        header.push('变化_均分', '变化_绩效', '变化_乡镇排名(正数进/负数退)');
 
         const data = results.map(r => {
             const row = [r.teacher, r.subject];
             r.details.forEach(p => {
                 const c = p.current;
                 if (c) {
-                    row.push(c.avg.toFixed(2), c.finalScore.toFixed(2), c.subjectRank, c.contribution.toFixed(2), (c.excellentRate*100).toFixed(1)+'%', (c.passRate*100).toFixed(1)+'%');
+                    row.push(c.avg.toFixed(2), c.finalScore.toFixed(2), (typeof c.townshipRankAvg === 'number' ? c.townshipRankAvg : '-'), c.contribution.toFixed(2), (c.excellentRate*100).toFixed(1)+'%', (c.passRate*100).toFixed(1)+'%');
                 } else {
                     row.push('-', '-', '-', '-', '-', '-');
                 }
             });
             if (r.delta) {
-                row.push(r.delta.avg.toFixed(2), r.delta.finalScore.toFixed(2), r.delta.rank);
+                row.push(r.delta.avg.toFixed(2), r.delta.finalScore.toFixed(2), (typeof r.delta.township === 'number' ? r.delta.township : '-'));
             } else {
                 row.push('-', '-', '-');
             }
