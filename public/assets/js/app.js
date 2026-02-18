@@ -11603,23 +11603,6 @@ const DataManager = {
             if (window.UI) UI.loading(false);
         }
     }
-                key,
-                content: compressed,
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'key' });
-            
-            if (error) throw error;
-            
-            if (window.UI) UI.loading(false);
-            if (window.UI) UI.toast(`✅ 已保存到云端 (${title})`, 'success');
-            console.log('✅ 对比结果已保存:', key);
-            
-        } catch (e) {
-            if (window.UI) UI.loading(false);
-            console.error('保存失败:', e);
-            alert('保存失败: ' + e.message);
-        }
-    }
 
     // 🆕 查看云端教师对比列表
     async function viewCloudTeacherCompares() {
