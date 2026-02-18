@@ -11259,10 +11259,6 @@ const DataManager = {
         window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = { school, subject, teacher, examIds, periodCount, examStats, delta, metricRows };
     }
 
-
-        window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = { school, subject, teacher, examIds, periodCount, examStats, delta, metricRows };
-    }
-
     // 🆕 生成某学校所有教师的多期对比（大表模式）
     function renderAllTeachersMultiPeriodComparison() {
         const hintEl = document.getElementById('teacherCompareHint');
