@@ -3,6 +3,7 @@ import path from 'path';
 
 export default defineConfig({
   root: 'src',
+  publicDir: '../public', // Since root is 'src', publicDir must point to '../public'
   base: './', // Use relative paths for assets so it works on GitHub Pages/Cloudflare without domain root
   build: {
     outDir: '../dist',

@@ -40,24 +40,34 @@
 
 ---
 
-## ☁️ 步骤 2: 部署到 Cloudflare Pages
+## ☁️ 步骤 2: 部署到 Cloudflare (推荐方式)
 
-Cloudflare 是部署此类应用的最佳选择，速度快且免费支持自定义域名。
+### 选项 A: 使用 Cloudflare Pages (最简单)
 
 1.  登录 Cloudflare Dashboard。
-2.  进入 **Compute (Workers & Pages)** -> **Pages** -> **Connect to Git**。
-3.  选择你的 GitHub 账号和刚刚创建的 `school-system` 仓库。
-4.  **配置构建设置 (Critical)**:
-    *   **Project name**: `school-system`
-    *   **Framework preset**: 选择 `Vite` (如果没有，请手动填以下内容)
+2.  进入 **Compute (Workers & Pages)** -> **Create Application** -> **Pages** -> **Connect to Git**。
+3.  选择你的 GitHub 仓库。
+4.  **构建配置 (Build Settings)**:
+    *   **Framework preset**: 选择 `Vite`
     *   **Build command**: `npm run build`
     *   **Build output directory**: `dist`
-    *   **Root directory**: `/` (或留空)
 5.  点击 **Save and Deploy**。
 
-Cloudflare 会自动构建项目并发布。以后你只需 `git push` 到 GitHub，Cloudflare 会自动更新。
+---
+
+### 选项 B: 使用 Cloudflare Workers (当前配置兼容)
+
+如果你误选了 "Workers" 或者想用 Worker 功能：
+
+1.  项目已自动生成 `wrangler.json` 和 `src/worker-dummy.js`。
+2.  确保构建命令是 `npm run build`。
+3.  确保发布命令是 `npx wrangler deploy` (默认会读取 `wrangler.json`)。
+4.  Worker 会自动代理 `dist` 目录下的静态资源。
 
 ---
+
+## 🌐 步骤 3: 绑定域名 (schoolsystem.com.cn)
+
 
 ## 🌐 步骤 3: 绑定域名 (schoolsystem.com.cn)
 
