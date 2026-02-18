@@ -11292,6 +11292,26 @@ const DataManager = {
         const allTeachersSet = new Set();
         const teacherSubjectMap = {}; // "TeacherName": Set("Subject")
 
+        // Helper: 从 rows 中提取所有科目
+        const getAllSubjects = (rows) => {
+            const set = new Set();
+            rows.forEach(r => {
+                if(r.scores) Object.keys(r.scores).forEach(k => set.add(k));
+            });
+            // 简单的排序以保持一致性 (如果存在 SUBJECT_ORDER 全局变量)
+            if (typeof SUBJECT_ORDER !== 'undefined') {
+                return Array.from(set).sort((a,b) => {
+                    const idxA = SUBJECT_ORDER.indexOf(a);
+                    const idxB = SUBJECT_ORDER.indexOf(b);
+                    if(idxA !== -1 && idxB !== -1) return idxA - idxB;
+                    if(idxA !== -1) return -1;
+                    if(idxB !== -1) return 1;
+                    return a.localeCompare(b);
+                });
+            }
+            return Array.from(set).sort();
+        };
+
         // Helper: 从某次考试中提取该校所有教师数据
         const processExamForTeachers = (examId) => {
             const rows = getExamRowsForCompare(examId);
