@@ -11458,8 +11458,20 @@ const DataManager = {
             </div>
         `;
 
-        // 缓存结果用于导出
-        window.ALL_TEACHERS_DIFF_CACHE = { results, school, examIds };
+        // 缓存结果用于导出和云端保存
+        window.ALL_TEACHERS_DIFF_CACHE = { results, school, examIds, periodCount };
+        window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = {
+            school,
+            subject: '全学科',
+            teacher: '全校教师',
+            examIds,
+            periodCount,
+            delta: null, // 全校模式无单一变化量
+            metricRows: trs, // 复用 HTML
+            isBatchMode: true, // 标记为批量模式
+            batchResults: results, // 保存完整数据对象
+            thsHtml: ths // 保存表头
+        };
 
         hintEl.innerHTML = `✅ 已生成 ${school} 全校 ${results.length} 条对比记录；点击表格上方可导出。`;
         hintEl.style.color = '#16a34a';
@@ -11511,9 +11523,10 @@ const DataManager = {
     }
 
     // 🆕 保存教师同学科多期对比到云端
+    // 🆕 保存教师同学科对比到云端（支持单人/全校）
     async function saveTeacherMultiPeriodCompareToCloud() {
         if (!window.TEACHER_MULTI_PERIOD_COMPARE_CACHE) {
-            return alert('请先生成教师多期对比结果');
+            return alert('请先生成教师多期对比或全校对比结果');
         }
 
         if (!sbClient) {
@@ -11521,35 +11534,47 @@ const DataManager = {
         }
 
         const user = Auth.currentUser;
-        // 允许教师保存
         if (!user || user.role === 'guest') {
             return alert('⛔ 权限不足：只有登录用户可以保存对比结果到云端');
         }
 
-        const { school, subject, teacher, examIds, periodCount, delta, metricRows } = window.TEACHER_MULTI_PERIOD_COMPARE_CACHE;
+        const cache = window.TEACHER_MULTI_PERIOD_COMPARE_CACHE;
+        const isBatch = !!cache.isBatchMode;
         
-        // 生成唯一Key: TEACHER_COMPARE_<Cohort>_<TeacherName>_<Subject>_<Timestamp>_<Rand>
+        // 生成各类元数据
         const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || 'unknown';
         const timestamp = new Date().toISOString().split('T')[0];
-        // 格式化 Teacher Name 防止非法字符
-        const safeTeacher = teacher.replace(/[^\w\u4e00-\u9fa5]/g, '');
-        const key = `TEACHER_COMPARE_${cohortId}级_${safeTeacher}_${subject}_${timestamp}_${Date.now().toString().slice(-4)}`;
+        const rand = Date.now().toString().slice(-4);
         
-        const title = `${school} ${teacher} ${subject}多期对比`;
+        // 区分单人/批量 key 命名
+        let key, title;
+        if (isBatch) {
+            const safeSchool = cache.school.replace(/[^\w\u4e00-\u9fa5]/g, '');
+            key = `TEACHER_COMPARE_BATCH_${cohortId}级_${safeSchool}_${timestamp}_${rand}`;
+            title = `${cache.school} 全校教师多期对比`;
+        } else {
+            const safeTeacher = cache.teacher.replace(/[^\w\u4e00-\u9fa5]/g, '');
+            const subject = cache.subject || '未知学科';
+            key = `TEACHER_COMPARE_${cohortId}级_${safeTeacher}_${subject}_${timestamp}_${rand}`;
+            title = `${cache.school} ${cache.teacher} ${subject}多期对比`;
+        }
         
         try {
             if (window.UI) UI.loading(true, '☁️ 正在保存到云端...');
             
             // 准备保存的数据
             const payload = {
-                school,
-                subject,
-                teacher,
-                examIds,
-                periodCount,
-                delta,
-                metricRows, // 保存 HTML 片段简单快速
-                title,
+                school: cache.school,
+                subject: cache.subject,
+                teacher: cache.teacher,
+                examIds: cache.examIds,
+                periodCount: cache.periodCount,
+                delta: cache.delta,
+                metricRows: cache.metricRows,
+                isBatchMode: isBatch,
+                batchResults: cache.batchResults || null, // 批量模式保存原始数据
+                thsHtml: cache.thsHtml || null, // 批量模式保存表头
+                title: title,
                 createdBy: user.username || user.name || user.email,
                 createdAt: new Date().toISOString()
             };
@@ -11558,6 +11583,26 @@ const DataManager = {
             const compressed = "LZ|" + LZString.compressToUTF16(json);
             
             const { error } = await sbClient.from('system_data').upsert({
+                key,
+                content: compressed,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'key' });
+
+            if (error) throw error;
+            
+            if (window.UI) UI.toast(`✅ 已保存云端对比: ${title}`, 'success');
+            // 刷新云端列表（如果在查看界面）
+            const resultEl = document.getElementById('teacherCompareResult');
+            if (resultEl && resultEl.querySelector('#cloud-teacher-compare-list')) {
+                // viewCloudTeacherCompares(); // 暂不自动刷新，避免切走视线
+            }
+        } catch (e) {
+            console.error(e);
+            alert('保存失败: ' + e.message);
+        } finally {
+            if (window.UI) UI.loading(false);
+        }
+    }
                 key,
                 content: compressed,
                 updated_at: new Date().toISOString()
@@ -11676,23 +11721,51 @@ const DataManager = {
         const hintEl = document.getElementById('teacherCompareHint');
         if (!resultEl) return;
         
-        const { school, subject, teacher, examIds, periodCount, delta, metricRows, title, createdAt, createdBy } = payload;
+        const { school, subject, teacher, examIds, periodCount, delta, metricRows, title, createdAt, createdBy, isBatchMode, thsHtml, batchResults } = payload;
         
-        // 填充结果区域
-        resultEl.innerHTML = `
-            <div class="sub-header" style="color:#7c3aed;">☁️ [云端存档] ${title}</div>
-            <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>期次</th><th>人数</th><th>均分</th><th>优秀率</th><th>及格率</th><th>贡献值</th><th>绩效分</th><th>校内排位</th><th>乡镇均分排位</th></tr></thead><tbody>${metricRows}</tbody></table></div>
-            <div style="margin-top:8px; font-size:12px; color:#475569;">
-                首末期变化（${examIds[0]} → ${examIds[examIds.length - 1]}）：
-                均分 <strong style="color:${delta.avg >= 0 ? 'var(--success)' : 'var(--danger)'};">${delta.avg >= 0 ? '+' : ''}${delta.avg.toFixed(2)}</strong>，
-                优秀率 ${delta.exc >= 0 ? '+' : ''}${(delta.exc * 100).toFixed(1)}%，
-                及格率 ${delta.pass >= 0 ? '+' : ''}${(delta.pass * 100).toFixed(1)}%，
-                贡献值 ${delta.contribution >= 0 ? '+' : ''}${delta.contribution.toFixed(2)}，
-                绩效分 ${delta.finalScore >= 0 ? '+' : ''}${delta.finalScore.toFixed(2)}，
-                校内排位 ${delta.rank >= 0 ? '+' : ''}${delta.rank}
-                ${delta.township === null ? '' : `，乡镇均分排位 ${delta.township >= 0 ? '+' : ''}${delta.township}`}
-            </div>
-            <div style="margin-top:10px; font-size:12px; color:#94a3b8; text-align:right;">
+        // 渲染全校对比
+        if (isBatchMode) {
+            // 将 details 包装回原始结构以便导出
+            if (batchResults) {
+                window.ALL_TEACHERS_DIFF_CACHE = { results: batchResults, school, examIds, periodCount };
+            }
+            
+            resultEl.innerHTML = `
+                <div class="sub-header" style="color:#7c3aed;">☁️ [云端存档] ${title}</div>
+                <div class="table-wrap" style="max-height:600px; overflow-y:auto;">
+                    <table class="common-table" style="font-size:13px;">
+                        <thead style="position:sticky; top:0; z-index:10;"><tr>${thsHtml}</tr></thead>
+                        <tbody>${metricRows}</tbody>
+                    </table>
+                </div>
+                <div style="margin-top:10px; display:flex; gap:10px;">
+                    <button class="btn btn-sm" onclick="exportAllTeachersMultiPeriodDiff('${school}', '${examIds.join('_')}')">📤 导出Excel</button>
+                    ${payload.delta === undefined ? '<span style="font-size:12px;color:#64748b;">(表格可左右滑动查看)</span>' : ''}
+                </div>
+                <div style="margin-top:10px; font-size:12px; color:#94a3b8; text-align:right;">
+                    存档时间: ${new Date(createdAt).toLocaleString()} | 创建人: ${createdBy || '未知'}
+                </div>
+            `;
+        } else {
+            // 渲染单人对比
+            resultEl.innerHTML = `
+                <div class="sub-header" style="color:#7c3aed;">☁️ [云端存档] ${title}</div>
+                <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>期次</th><th>人数</th><th>均分</th><th>优秀率</th><th>及格率</th><th>贡献值</th><th>绩效分</th><th>校内排位</th><th>乡镇均分排位</th></tr></thead><tbody>${metricRows}</tbody></table></div>
+                <div style="margin-top:8px; font-size:12px; color:#475569;">
+                    首末期变化（${examIds[0]} → ${examIds[examIds.length - 1]}）：
+                    均分 <strong style="color:${delta.avg >= 0 ? 'var(--success)' : 'var(--danger)'};">${delta.avg >= 0 ? '+' : ''}${delta.avg.toFixed(2)}</strong>，
+                    优秀率 ${delta.exc >= 0 ? '+' : ''}${(delta.exc * 100).toFixed(1)}%，
+                    及格率 ${delta.pass >= 0 ? '+' : ''}${(delta.pass * 100).toFixed(1)}%，
+                    贡献值 ${delta.contribution >= 0 ? '+' : ''}${delta.contribution.toFixed(2)}，
+                    绩效分 ${delta.finalScore >= 0 ? '+' : ''}${delta.finalScore.toFixed(2)}，
+                    校内排位 ${delta.rank >= 0 ? '+' : ''}${delta.rank}
+                    ${delta.township === null ? '' : `，乡镇均分排位 ${delta.township >= 0 ? '+' : ''}${delta.township}`}
+                </div>
+                <div style="margin-top:10px; font-size:12px; color:#94a3b8; text-align:right;">
+                    存档时间: ${new Date(createdAt).toLocaleString()} | 创建人: ${createdBy || '未知'}
+                </div>
+            `;
+        }
                 存档时间: ${new Date(createdAt).toLocaleString()} | 创建人: ${createdBy}
             </div>
         `;
