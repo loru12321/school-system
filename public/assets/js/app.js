@@ -24645,3 +24645,5 @@ async function exportPPTReportLegacy() {
             });
         }, 1000); // 延迟 1 秒执行
     });
+window.DataManager = DataManager;
+
