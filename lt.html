@@ -14612,6 +14612,14 @@ const DataManager = {
     }
 
     function getTownSubmoduleSeries(submoduleId, selectedByExam, summaryByExam, school) {
+        const buildRankMap = (summary, metricKey) => {
+            const entries = Object.entries(summary || {}).filter(([, v]) => Number.isFinite(Number(v?.[metricKey])));
+            entries.sort((a, b) => Number(b[1][metricKey]) - Number(a[1][metricKey]));
+            const map = {};
+            entries.forEach(([name], idx) => { map[name] = idx + 1; });
+            return map;
+        };
+
         const calcBottom3 = (rows) => {
             const totals = (rows || []).map(r => Number(r.total)).filter(v => Number.isFinite(v)).sort((a, b) => b - a);
             if (!totals.length) return { bottom3Avg: 0, lowRate: 0, lowCount: 0 };
@@ -14651,6 +14659,11 @@ const DataManager = {
         const series = selectedByExam.map((x, idx) => {
             const m = calcSchoolMetricsFromRows(x.rows);
             const rankAvg = getSummaryEntryBySchool(summaryByExam[idx]?.summary, school)?.rankAvg || '-';
+            const summary = summaryByExam[idx]?.summary || {};
+            const excRankMap = buildRankMap(summary, 'excRate');
+            const passRankMap = buildRankMap(summary, 'passRate');
+            const schoolSummaryEntry = getSummaryEntryBySchool(summary, school);
+            const schoolKey = schoolSummaryEntry ? Object.keys(summary).find(k => summary[k] === schoolSummaryEntry) : school;
             const bottom = calcBottom3(x.rows);
             const high = calcHigh(x.rows);
             const ind = calcIndicator(x.rows);
@@ -14661,6 +14674,8 @@ const DataManager = {
                 excRate: m.excRate,
                 passRate: m.passRate,
                 rankAvg,
+                rankExc: (schoolKey && excRankMap[schoolKey]) ? excRankMap[schoolKey] : '-',
+                rankPass: (schoolKey && passRankMap[schoolKey]) ? passRankMap[schoolKey] : '-',
                 riskLevel: m.passRate < 0.6 ? '红色预警' : (m.passRate < 0.75 || m.excRate < 0.15 ? '黄色关注' : '绿色稳定'),
                 highCount: high.highCount,
                 highRate: high.highRate,
@@ -14678,34 +14693,39 @@ const DataManager = {
             return {
                 headers: ['期次', '人数', '总分均分', '优秀率', '及格率', '校际均分排位'],
                 rows: series.map(s => [s.examId, s.count, s.avg.toFixed(2), `${(s.excRate * 100).toFixed(1)}%`, `${(s.passRate * 100).toFixed(1)}%`, s.rankAvg]),
-                note: '口径：综合评价总榜 / 两率一分'
+                note: '口径：综合评价总榜 / 两率一分',
+                series
             };
         }
         if (submoduleId === 'macro-watch') {
             return {
                 headers: ['期次', '预警等级', '总分均分', '优秀率', '及格率', '校际均分排位'],
                 rows: series.map(s => [s.examId, s.riskLevel, s.avg.toFixed(2), `${(s.excRate * 100).toFixed(1)}%`, `${(s.passRate * 100).toFixed(1)}%`, s.rankAvg]),
-                note: '口径：预警与亮点看板'
+                note: '口径：预警与亮点看板',
+                series
             };
         }
         if (submoduleId === 'high-score') {
             return {
                 headers: ['期次', '高分段阈值', '高分段人数', '高分段占比'],
                 rows: series.map(s => [s.examId, s.highThreshold, s.highCount, `${(s.highRate * 100).toFixed(1)}%`]),
-                note: '口径：高分段/尖子生'
+                note: '口径：高分段/尖子生',
+                series
             };
         }
         if (submoduleId === 'indicator') {
             return {
                 headers: ['期次', '指标区间', '指标生人数', '指标生占比'],
                 rows: series.map(s => [s.examId, s.indicatorLabel, s.indicatorCount, `${(s.indicatorRate * 100).toFixed(1)}%`]),
-                note: '口径：指标生达标核算'
+                note: '口径：指标生达标核算',
+                series
             };
         }
         return {
             headers: ['期次', '后1/3均分', '低分人数', '低分率'],
             rows: series.map(s => [s.examId, s.bottom3Avg.toFixed(2), s.lowCount, `${(s.lowRate * 100).toFixed(1)}%`]),
-            note: '口径：低分率/后1/3核算'
+            note: '口径：低分率/后1/3核算',
+            series
         };
     }
 
@@ -14790,13 +14810,64 @@ const DataManager = {
         const th = data.headers.map(h => `<th>${h}</th>`).join('');
         const tr = data.rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('');
         const title = TOWN_SUBMODULE_META[submoduleId] || submoduleId;
-        const html = `<div class="sub-header">📊 ${title} 多期对比（${school}）</div><div class="table-wrap"><table class="mobile-card-table"><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table></div><div style="margin-top:6px; font-size:12px; color:#64748b;">${data.note || ''}</div>`;
+
+        const detailHeaders = ['期次', '人数', '总分均分', '优秀率', '及格率', '均分排位', '优秀率排位', '及格率排位', '高分人数', '指标生人数', '后1/3均分', '低分率'];
+        const detailRows = (data.series || []).map(s => [
+            s.examId,
+            s.count,
+            s.avg.toFixed(2),
+            `${(s.excRate * 100).toFixed(1)}%`,
+            `${(s.passRate * 100).toFixed(1)}%`,
+            s.rankAvg,
+            s.rankExc,
+            s.rankPass,
+            s.highCount,
+            s.indicatorCount,
+            s.bottom3Avg.toFixed(2),
+            `${(s.lowRate * 100).toFixed(1)}%`
+        ]);
+        const detailTh = detailHeaders.map(h => `<th>${h}</th>`).join('');
+        const detailTr = detailRows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('');
+
+        const first = data.series?.[0];
+        const last = data.series?.[data.series.length - 1];
+        const summaryDelta = (first && last) ? `
+            <div style="margin-top:8px; font-size:12px; color:#334155;">
+                首末期变化（${first.examId} → ${last.examId}）：
+                均分 ${((last.avg - first.avg) >= 0 ? '+' : '') + (last.avg - first.avg).toFixed(2)}，
+                优秀率 ${((last.excRate - first.excRate) >= 0 ? '+' : '') + ((last.excRate - first.excRate) * 100).toFixed(1)}%，
+                及格率 ${((last.passRate - first.passRate) >= 0 ? '+' : '') + ((last.passRate - first.passRate) * 100).toFixed(1)}%，
+                均分排位 ${Number.isFinite(Number(first.rankAvg)) && Number.isFinite(Number(last.rankAvg)) ? ((Number(first.rankAvg) - Number(last.rankAvg)) >= 0 ? '+' : '') + (Number(first.rankAvg) - Number(last.rankAvg)) : '-'}
+            </div>
+        ` : '';
+
+        const html = `
+            <div class="sub-header">📊 ${title} 多期对比（${school}）</div>
+            <div class="table-wrap"><table class="mobile-card-table"><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table></div>
+            ${summaryDelta}
+            <div class="sub-header" style="margin-top:10px;">🧾 每一期具体结果明细</div>
+            <div class="table-wrap"><table class="mobile-card-table"><thead><tr>${detailTh}</tr></thead><tbody>${detailTr}</tbody></table></div>
+            <div style="margin-top:6px; font-size:12px; color:#64748b;">${data.note || ''}</div>
+        `;
 
         resultEl.innerHTML = html;
         hintEl.innerHTML = `✅ 已完成 ${periodCount} 期对比：${examIds.join(' → ')}`;
         hintEl.style.color = '#16a34a';
 
-        TOWN_SUBMODULE_COMPARE_CACHE[submoduleId] = { submoduleId, title, school, examIds, periodCount, headers: data.headers, rows: data.rows, note: data.note, html };
+        TOWN_SUBMODULE_COMPARE_CACHE[submoduleId] = {
+            submoduleId,
+            title,
+            school,
+            examIds,
+            periodCount,
+            headers: data.headers,
+            rows: data.rows,
+            detailHeaders,
+            detailRows,
+            note: data.note,
+            html,
+            series: data.series || []
+        };
     }
 
     function exportTownSubmoduleCompare(submoduleId) {
@@ -14804,6 +14875,9 @@ const DataManager = {
         if (!cache) return alert('请先生成多期对比结果');
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([cache.headers, ...cache.rows]), '多期对比');
+        if (cache.detailHeaders && cache.detailRows) {
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([cache.detailHeaders, ...cache.detailRows]), '期次明细');
+        }
         XLSX.writeFile(wb, `${cache.title}_多期对比_${cache.school}_${cache.examIds.join('_')}.xlsx`);
     }
 
