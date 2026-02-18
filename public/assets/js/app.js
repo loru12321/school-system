@@ -24236,9 +24236,9 @@ async function exportPPTReportLegacy() {
         if (window.UI) UI.toast('✅ 恢复完成', 'success');
     }
 
-    function updateStatusPanel() {
+    window.updateStatusPanel = function() {
+        if (!document.getElementById('starter-status-panel')) return;
         const panel = document.getElementById('starter-status-panel');
-        if (!panel) return;
         const termId = localStorage.getItem('CURRENT_TERM_ID') || (typeof getTermId === 'function' ? getTermId(getExamMetaFromUI()) : '');
         const examId = CURRENT_EXAM_ID || localStorage.getItem('CURRENT_EXAM_ID') || '未选择';
         const cohortId = CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '未选择';
