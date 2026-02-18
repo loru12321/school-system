@@ -11259,6 +11259,235 @@ const DataManager = {
         window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = { school, subject, teacher, examIds, periodCount, examStats, delta, metricRows };
     }
 
+
+        window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = { school, subject, teacher, examIds, periodCount, examStats, delta, metricRows };
+    }
+
+    // 🆕 生成某学校所有教师的多期对比（大表模式）
+    function renderAllTeachersMultiPeriodComparison() {
+        const hintEl = document.getElementById('teacherCompareHint');
+        const resultEl = document.getElementById('teacherCompareResult');
+        const countEl = document.getElementById('teacherComparePeriodCount');
+        const schoolEl = document.getElementById('teacherCompareSchool');
+        const e1El = document.getElementById('teacherCompareExam1');
+        const e2El = document.getElementById('teacherCompareExam2');
+        const e3El = document.getElementById('teacherCompareExam3');
+
+        if (!hintEl || !resultEl || !countEl || !schoolEl || !e1El || !e2El || !e3El) return;
+
+        const periodCount = parseInt(countEl.value || '2');
+        const school = schoolEl.value;
+        const examIds = periodCount === 3 ? [e1El.value, e2El.value, e3El.value] : [e1El.value, e2El.value];
+
+        if (!school) return alert('请先选择学校');
+        if (examIds.some(x => !x)) return alert('请先选择所有对比的考试期次');
+        if (new Set(examIds).size !== examIds.length) return alert('期次不能重复');
+
+        if (window.UI) UI.loading(true, `正在生成 ${school} 全校教师对比...`);
+
+        // 1. 获取该校所有参与这几次考试的 (学科, 教师) 组合
+        // 遍历所有期次，收集所有出现的教师
+        const allTeachersSet = new Set();
+        const teacherSubjectMap = {}; // "TeacherName": Set("Subject")
+
+        // Helper: 从某次考试中提取该校所有教师数据
+        const processExamForTeachers = (examId) => {
+            const rows = getExamRowsForCompare(examId);
+            // 过滤该校
+            const schoolRows = rows.filter(r => r.school === school);
+            // 提取所有有成绩的学科
+            const subjects = getAllSubjects(rows); // 全局学科，或者只取该校的？最好全取以免漏
+            
+            subjects.forEach(sub => {
+                // 计算该次考试、该校、该学科的所有教师
+                const stats = buildTeacherStatsForExam(rows, school, sub);
+                stats.forEach(s => {
+                    if (s.teacher && s.teacher !== '未分配') {
+                        allTeachersSet.add(s.teacher);
+                        if (!teacherSubjectMap[s.teacher]) teacherSubjectMap[s.teacher] = new Set();
+                        teacherSubjectMap[s.teacher].add(sub);
+                    }
+                });
+            });
+        };
+
+        examIds.forEach(eid => processExamForTeachers(eid));
+
+        if (allTeachersSet.size === 0) {
+            if (window.UI) UI.loading(false);
+            return alert('未找到该校的相关教师数据');
+        }
+
+        // 2. 对每个 (教师, 学科) 生成对比数据
+        const results = [];
+
+        for (const teacher of allTeachersSet) {
+            const subjects = teacherSubjectMap[teacher];
+            for (const subject of subjects) {
+                // 计算该教师在该学科的多期表现
+                const examStats = examIds.map(examId => {
+                    const rows = getExamRowsForCompare(examId);
+                    const list = buildTeacherStatsForExam(rows, school, subject);
+                    attachTeacherTownshipAvgRank(rows, school, list);
+                    const current = list.find(x => x.teacher === teacher && x.subject === subject);
+                    return { examId, current };
+                });
+
+                // 只有当至少有一期有数据时才展示？或者要求每一期都有？
+                // 通常多期对比要求连续性，或者至少显示变化。如果某一期没数据，那变化就是 null
+                // 这里策略：只要有一期有数据就列出，但变化值可能为空
+                
+                const validPoints = examStats.filter(x => x.current).length;
+                if (validPoints === 0) continue;
+
+                const firstStats = examStats[0].current;
+                const lastStats = examStats[examStats.length - 1].current;
+                
+                let rowData = {
+                    teacher,
+                    subject,
+                    details: examStats // 包含每一期的数据
+                };
+
+                // 计算变化 (Last - First)
+                if (firstStats && lastStats) {
+                    rowData.delta = {
+                        avg: lastStats.avg - firstStats.avg,
+                        exc: lastStats.excellentRate - firstStats.excellentRate,
+                        pass: lastStats.passRate - firstStats.passRate,
+                        contribution: lastStats.contribution - firstStats.contribution,
+                        finalScore: lastStats.finalScore - firstStats.finalScore,
+                        rank: firstStats.subjectRank - lastStats.subjectRank, // 排名下降是负数还是正数？通常排名数值减小是进步。First=10, Last=5 => 10-5=5 (进步5名)
+                        township: (firstStats.townshipRankAvg && lastStats.townshipRankAvg) ? (firstStats.townshipRankAvg - lastStats.townshipRankAvg) : null
+                    };
+                } else {
+                    rowData.delta = null;
+                }
+                
+                results.push(rowData);
+            }
+        }
+
+        // 3. 排序：按学科 -> 教师名
+        results.sort((a, b) => {
+            if (a.subject !== b.subject) return a.subject.localeCompare(b.subject, 'zh');
+            return a.teacher.localeCompare(b.teacher, 'zh');
+        });
+
+        // 4. 渲染大表格
+        // 表头：教师 | 学科 | 第1期(均分/优率/绩效) | ... | 第N期(...) | 变化(均分/绩效)
+        // 为了不过分拥挤，列可以精简：只显示 均分/绩效/校名次 ? 
+        // 用户通常关注：均分、贡献值、绩效分、校内排名。
+
+        let ths = `<th>教师</th><th>学科</th>`;
+        examIds.forEach(eid => {
+            // 简写期次名
+            const shortName = eid.split('-').pop() || eid;
+            ths += `<th style="background:#f1f5f9; border-left:2px solid white;">${shortName}<br><span style="font-size:10px;font-weight:normal">均分|绩效|校名</span></th>`;
+        });
+        ths += `<th style="background:#fff7ed; border-left:2px solid white;">变化<br><span style="font-size:10px;font-weight:normal">均分|绩效|排名</span></th>`;
+
+        const trs = results.map(r => {
+            let tds = `<td style="font-weight:bold;">${r.teacher}</td><td>${r.subject}</td>`;
+            
+            r.details.forEach(p => {
+                if (p.current) {
+                    const c = p.current;
+                    tds += `<td style="border-left:1px solid #e2e8f0; text-align:center;">
+                        <div>${c.avg.toFixed(1)}</div>
+                        <div style="font-size:11px; color:#64748b;">${c.finalScore.toFixed(1)}</div>
+                        <div style="font-size:11px; color:#64748b;">#${c.subjectRank}</div>
+                    </td>`;
+                } else {
+                    tds += `<td style="border-left:1px solid #e2e8f0; text-align:center; color:#cbd5e1;">-</td>`;
+                }
+            });
+
+            if (r.delta) {
+                const d = r.delta;
+                const avgStyle = d.avg >= 0 ? 'color:green' : 'color:red';
+                const scoreStyle = d.finalScore >= 0 ? 'color:green' : 'color:red';
+                const rankStyle = d.rank > 0 ? 'color:green' : (d.rank < 0 ? 'color:red' : 'color:gray');
+                const rankIcon = d.rank > 0 ? '↑' : (d.rank < 0 ? '↓' : '-');
+                const avgIcon = d.avg >= 0 ? '+' : '';
+                
+                tds += `<td style="border-left:1px solid #e2e8f0; text-align:center; background:#fffbf0;">
+                    <div style="${avgStyle}; font-weight:bold;">${avgIcon}${d.avg.toFixed(1)}</div>
+                    <div style="${scoreStyle}; font-size:11px;">${d.finalScore >= 0 ? '+' : ''}${d.finalScore.toFixed(1)}</div>
+                    <div style="${rankStyle}; font-size:11px;">${rankIcon} ${Math.abs(d.rank)}</div>
+                </td>`;
+            } else {
+                tds += `<td style="border-left:1px solid #e2e8f0; text-align:center; background:#fffbf0; color:#cbd5e1;">-</td>`;
+            }
+
+            return `<tr>${tds}</tr>`;
+        }).join('');
+
+        resultEl.innerHTML = `
+            <div class="sub-header" style="color:#ea580c;">📊 全校教师多期对比总表（${school}）</div>
+            <div class="table-wrap" style="max-height:600px; overflow-y:auto;">
+                <table class="common-table" style="font-size:13px;">
+                    <thead style="position:sticky; top:0; z-index:10;"><tr>${ths}</tr></thead>
+                    <tbody>${trs}</tbody>
+                </table>
+            </div>
+            <div style="margin-top:10px; display:flex; gap:10px;">
+                <button class="btn btn-sm" onclick="exportAllTeachersMultiPeriodDiff('${school}', '${examIds.join('_')}')">📤 导出Excel</button>
+            </div>
+        `;
+
+        // 缓存结果用于导出
+        window.ALL_TEACHERS_DIFF_CACHE = { results, school, examIds };
+
+        hintEl.innerHTML = `✅ 已生成 ${school} 全校 ${results.length} 条对比记录；点击表格上方可导出。`;
+        hintEl.style.color = '#16a34a';
+
+        if (window.UI) UI.loading(false);
+    }
+
+    // 🆕 导出全校教师对比
+    function exportAllTeachersMultiPeriodDiff(school, examIdsStr) {
+        if (!window.ALL_TEACHERS_DIFF_CACHE) return alert('请先生成表格');
+        const { results, examIds } = window.ALL_TEACHERS_DIFF_CACHE;
+        
+        // 构建 Excel 数据 [Teacher, Subject, Exam1_Avg, Exam1_Score, Exam1_Rank, ..., Delta_Avg, Delta_Score, Delta_Rank]
+        const header = ['教师', '学科'];
+        examIds.forEach(eid => {
+            header.push(`${eid}\n均分`, `${eid}\n绩效`, `${eid}\n排名`, `${eid}\n贡献`, `${eid}\n优率`, `${eid}\n及格`);
+        });
+        header.push('变化_均分', '变化_绩效', '变化_排名(正数进/负数退)');
+
+        const data = results.map(r => {
+            const row = [r.teacher, r.subject];
+            r.details.forEach(p => {
+                const c = p.current;
+                if (c) {
+                    row.push(c.avg.toFixed(2), c.finalScore.toFixed(2), c.subjectRank, c.contribution.toFixed(2), (c.excellentRate*100).toFixed(1)+'%', (c.passRate*100).toFixed(1)+'%');
+                } else {
+                    row.push('-', '-', '-', '-', '-', '-');
+                }
+            });
+            if (r.delta) {
+                row.push(r.delta.avg.toFixed(2), r.delta.finalScore.toFixed(2), r.delta.rank);
+            } else {
+                row.push('-', '-', '-');
+            }
+            return row;
+        });
+
+        data.unshift(header);
+        
+        try {
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "教师多期对比");
+            XLSX.writeFile(wb, `${school}_教师多期对比总表_${new Date().toISOString().slice(0,10)}.xlsx`);
+        } catch (e) {
+            console.error(e);
+            alert('导出失败 (请确保xlsx库已加载)');
+        }
+    }
+
     // 🆕 保存教师同学科多期对比到云端
     async function saveTeacherMultiPeriodCompareToCloud() {
         if (!window.TEACHER_MULTI_PERIOD_COMPARE_CACHE) {
