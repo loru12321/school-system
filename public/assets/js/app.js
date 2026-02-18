@@ -11245,33 +11245,28 @@ const DataManager = {
 
         const metricRows = examStats.map(x => {
             const d = x.current;
-            return `<tr><td>${x.examId}</td><td>${d.studentCount}</td><td>${d.avg.toFixed(2)}</td><td>${(d.excellentRate * 100).toFixed(1)}%</td><td>${(d.passRate * 100).toFixed(1)}%</td><td>${d.contribution >= 0 ? '+' : ''}${d.contribution.toFixed(2)}</td><td>${d.finalScore.toFixed(2)}</td><td>${d.subjectRank}</td><td>${d.townshipRankAvg || '-'}</td></tr>`;
+            return `<tr><td>${x.examId}</td><td>${d.townshipRankAvg || '-'}</td><td>${d.townshipRankExc || '-'}</td><td>${d.townshipRankPass || '-'}</td></tr>`;
         }).join('');
 
         const first = examStats[0].current;
         const last = examStats[examStats.length - 1].current;
         const delta = {
-            avg: last.avg - first.avg,
-            exc: last.excellentRate - first.excellentRate,
-            pass: last.passRate - first.passRate,
-            contribution: last.contribution - first.contribution,
-            finalScore: last.finalScore - first.finalScore,
-            rank: first.subjectRank - last.subjectRank,
-            township: (first.townshipRankAvg && last.townshipRankAvg) ? (first.townshipRankAvg - last.townshipRankAvg) : null
+            townshipAvg: (first.townshipRankAvg && last.townshipRankAvg) ? (first.townshipRankAvg - last.townshipRankAvg) : null,
+            townshipExc: (first.townshipRankExc && last.townshipRankExc) ? (first.townshipRankExc - last.townshipRankExc) : null,
+            townshipPass: (first.townshipRankPass && last.townshipRankPass) ? (first.townshipRankPass - last.townshipRankPass) : null
         };
+        const dAvg = (typeof delta.townshipAvg === 'number') ? delta.townshipAvg : null;
+        const dExc = (typeof delta.townshipExc === 'number') ? delta.townshipExc : null;
+        const dPass = (typeof delta.townshipPass === 'number') ? delta.townshipPass : null;
 
         resultEl.innerHTML = `
             <div class="sub-header">👨‍🏫 教师同学科多期表现（${teacher} / ${subject}）</div>
-            <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>期次</th><th>人数</th><th>均分</th><th>优秀率</th><th>及格率</th><th>贡献值</th><th>绩效分</th><th>校内排位</th><th>乡镇均分排位</th></tr></thead><tbody>${metricRows}</tbody></table></div>
+            <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>期次</th><th>均分镇排</th><th>优秀率镇排</th><th>及格率镇排</th></tr></thead><tbody>${metricRows}</tbody></table></div>
             <div style="margin-top:8px; font-size:12px; color:#475569;">
                 首末期变化（${examIds[0]} → ${examIds[examIds.length - 1]}）：
-                均分 <strong style="color:${delta.avg >= 0 ? 'var(--success)' : 'var(--danger)'};">${delta.avg >= 0 ? '+' : ''}${delta.avg.toFixed(2)}</strong>，
-                优秀率 ${delta.exc >= 0 ? '+' : ''}${(delta.exc * 100).toFixed(1)}%，
-                及格率 ${delta.pass >= 0 ? '+' : ''}${(delta.pass * 100).toFixed(1)}%，
-                贡献值 ${delta.contribution >= 0 ? '+' : ''}${delta.contribution.toFixed(2)}，
-                绩效分 ${delta.finalScore >= 0 ? '+' : ''}${delta.finalScore.toFixed(2)}，
-                校内排位 ${delta.rank >= 0 ? '+' : ''}${delta.rank}
-                ${delta.township === null ? '' : `，乡镇均分排位 ${delta.township >= 0 ? '+' : ''}${delta.township}`}
+                均分镇排 ${dAvg === null ? '-' : (dAvg >= 0 ? '+' : '') + dAvg}，
+                优秀率镇排 ${dExc === null ? '-' : (dExc >= 0 ? '+' : '') + dExc}，
+                及格率镇排 ${dPass === null ? '-' : (dPass >= 0 ? '+' : '') + dPass}
             </div>
         `;
 
@@ -11732,19 +11727,18 @@ const DataManager = {
                 </div>
             `;
         } else {
+            const deltaAvg = (typeof delta?.townshipAvg === 'number') ? delta.townshipAvg : ((typeof delta?.township === 'number') ? delta.township : null);
+            const deltaExc = (typeof delta?.townshipExc === 'number') ? delta.townshipExc : null;
+            const deltaPass = (typeof delta?.townshipPass === 'number') ? delta.townshipPass : null;
             // 渲染单人对比
             resultEl.innerHTML = `
                 <div class="sub-header" style="color:#7c3aed;">☁️ [云端存档] ${title}</div>
-                <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>期次</th><th>人数</th><th>均分</th><th>优秀率</th><th>及格率</th><th>贡献值</th><th>绩效分</th><th>校内排位</th><th>乡镇均分排位</th></tr></thead><tbody>${metricRows}</tbody></table></div>
+                <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>期次</th><th>均分镇排</th><th>优秀率镇排</th><th>及格率镇排</th></tr></thead><tbody>${metricRows}</tbody></table></div>
                 <div style="margin-top:8px; font-size:12px; color:#475569;">
                     首末期变化（${examIds[0]} → ${examIds[examIds.length - 1]}）：
-                    均分 <strong style="color:${delta.avg >= 0 ? 'var(--success)' : 'var(--danger)'};">${delta.avg >= 0 ? '+' : ''}${delta.avg.toFixed(2)}</strong>，
-                    优秀率 ${delta.exc >= 0 ? '+' : ''}${(delta.exc * 100).toFixed(1)}%，
-                    及格率 ${delta.pass >= 0 ? '+' : ''}${(delta.pass * 100).toFixed(1)}%，
-                    贡献值 ${delta.contribution >= 0 ? '+' : ''}${delta.contribution.toFixed(2)}，
-                    绩效分 ${delta.finalScore >= 0 ? '+' : ''}${delta.finalScore.toFixed(2)}，
-                    校内排位 ${delta.rank >= 0 ? '+' : ''}${delta.rank}
-                    ${delta.township === null ? '' : `，乡镇均分排位 ${delta.township >= 0 ? '+' : ''}${delta.township}`}
+                    均分镇排 ${deltaAvg === null ? '-' : (deltaAvg >= 0 ? '+' : '') + deltaAvg}，
+                    优秀率镇排 ${deltaExc === null ? '-' : (deltaExc >= 0 ? '+' : '') + deltaExc}，
+                    及格率镇排 ${deltaPass === null ? '-' : (deltaPass >= 0 ? '+' : '') + deltaPass}
                 </div>
                 <div style="margin-top:10px; font-size:12px; color:#94a3b8; text-align:right;">
                     存档时间: ${new Date(createdAt).toLocaleString()} | 创建人: ${createdBy || '未知'}
@@ -11763,10 +11757,10 @@ const DataManager = {
         const { school, subject, teacher, examIds, examStats, delta } = TEACHER_MULTI_PERIOD_COMPARE_CACHE;
         const wb = XLSX.utils.book_new();
 
-        const detail = [['学校', '教师', '学科', '期次', '人数', '均分', '优秀率', '及格率', '贡献值', '绩效分', '校内排位', '乡镇均分排位']];
+        const detail = [['学校', '教师', '学科', '期次', '均分镇排', '优秀率镇排', '及格率镇排']];
         examStats.forEach(x => {
             const d = x.current;
-            detail.push([school, teacher, subject, x.examId, d.studentCount, d.avg, d.excellentRate, d.passRate, d.contribution, d.finalScore, d.subjectRank, d.townshipRankAvg || '']);
+            detail.push([school, teacher, subject, x.examId, d.townshipRankAvg || '', d.townshipRankExc || '', d.townshipRankPass || '']);
         });
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(detail), '教师多期明细');
 
@@ -11774,10 +11768,12 @@ const DataManager = {
         const last = examIds[examIds.length - 1];
         const deltaRows = [[
             '学校', '教师', '学科', '对比区间',
-            '均分变化', '优秀率变化', '及格率变化', '贡献值变化', '绩效分变化', '校内排位变化', '乡镇均分排位变化'
+            '均分镇排变化(正数进/负数退)', '优秀率镇排变化(正数进/负数退)', '及格率镇排变化(正数进/负数退)'
         ], [
             school, teacher, subject, `${first}→${last}`,
-            delta.avg, delta.exc, delta.pass, delta.contribution, delta.finalScore, delta.rank, delta.township === null ? '' : delta.township
+            delta.townshipAvg === null ? '' : delta.townshipAvg,
+            delta.townshipExc === null ? '' : delta.townshipExc,
+            delta.townshipPass === null ? '' : delta.townshipPass
         ]];
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(deltaRows), '首末期变化');
 
