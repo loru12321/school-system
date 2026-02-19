@@ -736,131 +736,176 @@
 
         @media screen and (max-width: 768px) {
 
-            /* 1. 隐藏 PC 端主界面 */
-            #app,
-            #watermark-layer {
+            /* 1. 全局容器适配：强制铺满屏幕，禁止页面级横向滚动 */
+            body,
+            html {
+                overflow-x: hidden !important;
+                width: 100% !important;
+            }
+
+            /* 2. 显式开启电脑版容器，但限制宽度 */
+            body>.container,
+            body>header,
+            body>.nav-wrapper {
+                display: block !important;
+                width: 100% !important;
+                max-width: 100vw !important;
+                padding: 10px !important;
+                /* 减小边距 */
+                margin: 0 !important;
+                box-sizing: border-box;
+            }
+
+            /* 3. 隐藏原本的极简手机版 (因为我们要用全功能版) */
+            #mobile-app,
+            .mob-bottom-nav {
                 display: none !important;
             }
 
-            /* 2. 显示移动端界面 */
-            #mobile-manager-app {
-                display: flex;
-                flex-direction: column;
-                min-height: 100vh;
-                background: var(--bg-body);
-                padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));
-                font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            /* 4. 标题栏深度适配 (修复文字竖排挤压问题) */
+            /* ✅ [新增]：强制 Header 内部改为垂直布局，不再左右挤压 */
+            header>div {
+                flex-direction: column !important;
+                align-items: center !important;
+                gap: 10px !important;
             }
 
-            /* 3. 顶部导航栏 */
-            .mob-header-bar {
-                height: var(--mobile-header-height);
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                padding: 0 20px;
-                background: var(--glass-bg);
-                backdrop-filter: blur(20px);
-                -webkit-backdrop-filter: blur(20px);
-                border-bottom: var(--glass-border);
-                position: sticky;
-                top: 0;
-                z-index: 100;
+            /* ✅ [新增]：标题容器宽度设为100%并居中 */
+            header>div>div:nth-of-type(1) {
+                width: 100% !important;
+                text-align: center !important;
+                flex: none !important;
+                /* 禁止缩放 */
             }
 
-            .mob-header-title {
-                font-size: 18px;
-                font-weight: 800;
-                color: var(--primary);
+            /* ✅ [新增]：右上角工具栏改为居中并允许换行 */
+            header>div>div:last-child {
+                width: 100% !important;
+                justify-content: center !important;
+                flex-wrap: wrap !important;
+                gap: 8px !important;
             }
 
-            /* 4. 内容区域 */
-            .mob-view {
-                display: none;
-                padding: 20px;
-                animation: fadeIn 0.3s ease;
+            /* ✅ [修改]：调整标题字号和 Logo */
+            h1 {
+                font-size: 20px !important;
+                line-height: 1.4 !important;
+                white-space: normal !important;
+                /* 强制允许文字横向显示 */
+                margin: 0 !important;
             }
 
-            .mob-view.active {
-                display: block;
+            /* 隐藏副标题以节省手机空间 */
+            #app-subtitle {
+                display: none !important;
             }
 
-            /* 5. 卡片样式 */
-            .mob-card {
-                background: white;
-                border-radius: 16px;
-                padding: 15px;
+            header {
+                padding: 15px 10px !important;
+                border-radius: 0 !important;
+                height: auto !important;
+            }
+
+            #custom-logo-img {
+                height: 50px !important;
+                margin-bottom: 5px;
+            }
+
+            /* 调整顶部按钮大小，使其更紧凑 */
+            header .btn,
+            header div[onclick] {
+                font-size: 12px !important;
+                padding: 6px 12px !important;
+                height: 32px !important;
+                margin: 0 !important;
+                width: auto !important;
+                /* 按钮不要撑满，保持自然宽度 */
+            }
+
+
+            /* 5. 核心布局调整：左右分栏改为上下堆叠 */
+            .layout-grid {
+                display: block !important;
+                /* 取消 Grid，改为流式布局 */
+            }
+
+            .side-nav {
+                width: 100% !important;
+                position: static !important;
+                /* 取消固定定位 */
                 margin-bottom: 15px;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-                border: 1px solid rgba(0, 0, 0, 0.05);
+                background: #f8fafc;
+                max-height: 180px;
+                /* 限制高度，内部滚动 */
+                overflow-y: auto;
+                border: 1px solid #e2e8f0;
             }
 
-            /* 6. 底部导航栏 */
-            .mob-bottom-bar {
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                width: 100%;
-                height: var(--mobile-nav-height);
-                background: var(--glass-bg);
-                backdrop-filter: blur(20px);
-                -webkit-backdrop-filter: blur(20px);
-                border-top: var(--glass-border);
-                display: flex;
-                justify-content: space-around;
-                align-items: center;
-                padding-bottom: env(safe-area-inset-bottom);
-                z-index: 1000;
-                box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.05);
+            /* 6. 控制面板优化 (关键！解决界面太大的问题) */
+            .control-panel {
+                display: flex !important;
+                flex-direction: column !important;
+                /* 强制垂直排列 */
+                gap: 8px !important;
+                align-items: stretch !important;
+                /* 拉伸占满宽度 */
             }
 
-            .mob-nav-btn {
-                background: none;
-                border: none;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                color: #94a3b8;
-                font-size: 10px;
-                gap: 4px;
-                width: 60px;
+            /* 让所有输入框、下拉框、按钮在手机上占满一行，方便点击 */
+            .control-panel select,
+            .control-panel input[type="text"],
+            .control-panel input[type="number"],
+            .control-panel button,
+            .btn {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                box-sizing: border-box !important;
+                height: 40px !important;
+                /* 增大触控区域 */
+                font-size: 14px !important;
             }
 
-            .mob-nav-btn i {
-                font-size: 22px;
-                transition: 0.2s;
-            }
-
-            .mob-nav-btn.active {
-                color: var(--primary);
-            }
-
-            .mob-nav-btn.active i {
-                transform: translateY(-2px);
-            }
-
-            /* 7. 列表项 */
-            .mob-list-item {
+            /* 特殊处理：在一行内的复选框让它保持行内 */
+            .control-panel label {
                 display: flex;
                 align-items: center;
-                gap: 12px;
-                padding: 12px;
-                background: white;
-                border-radius: 12px;
-                margin-bottom: 10px;
-                border: 1px solid #f1f5f9;
+                margin-bottom: 5px;
             }
 
-            .mob-avatar {
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 18px;
-                font-weight: bold;
+            /* 7. 表格深度优化：字体缩小 + 强制横向滚动 */
+            .table-wrap {
+                width: 100% !important;
+                overflow-x: auto !important;
+                /* 关键：只在表格区域滚动 */
+                -webkit-overflow-scrolling: touch;
+                /* 平滑滚动 */
+                display: block !important;
+                margin-top: 10px !important;
+                border: none !important;
+                /* 移除边框节省空间 */
+            }
+
+            table {
+                min-width: 600px;
+                /* 保证表格不被过度压缩 */
+                font-size: 12px !important;
+                /* 缩小字号 */
+            }
+
+            th,
+            td {
+                padding: 8px 4px !important;
+            }
+
+            /* 减小单元格内边距 */
+
+            /* 8. 导航栏适配：横向滑动 */
+            .nav-categories,
+            .nav-sub-items {
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch;
             }
         }
     </style>
@@ -5412,25 +5457,14 @@
                     this.switchTab('home');
 
                     // 监听登录状态变化
-                    // 由于 Auth 是全局对象，我们这里做一个简单的轮询或者劫持来检测登录
-                    // 更好的方式是 Auth 成功后调用 MobMgr.onLogin()
-                    // 这里暂时用定时器检测 #app 是否可见，如果可见则隐藏之并显示 mobile-app
+                    // 由于 Auth 是全局对象，我们这里不再强制隐藏 PC 版，因为用户可能需要完整功能
+                    // 仅初始化必要数据
                     setInterval(() => {
                         if (window.innerWidth <= 768) {
-                            const app = document.getElementById('app');
                             const loginOverlay = document.getElementById('login-overlay');
-                            const mobileApp = document.getElementById('mobile-manager-app');
-
-                            // 如果登录浮层隐藏了，且 PC app 显示了，或者已经存了 token
-                            // 这里简单判断：如果登录层没了，就认为登录了
+                            // 如果登录浮层隐藏了，说明已登录
                             if (loginOverlay.style.display === 'none') {
-                                if (app.style.display !== 'none') {
-                                    app.style.display = 'none'; // 强制隐藏 PC 版
-                                }
-                                if (mobileApp.style.display !== 'flex') {
-                                    mobileApp.style.display = 'flex'; // 显示手机版
-                                    this.renderHome(); // 渲染首页数据
-                                }
+                                // 可以在这里做一些移动端辅助提示，但不再强制切换视图
                             }
                         }
                     }, 1000);
