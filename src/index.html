@@ -3,82 +3,6 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- 📱 真正的移动端 Viewport 设置 -->
-
-    <style>
-        /* 移动端基础重置 */
-        @media screen and (max-width: 768px) {
-
-            /* 1. 彻底隐藏 PC 端导航与侧边栏 */
-            header,
-            .nav-wrapper,
-            .side-nav,
-            #app-subtitle,
-            #custom-logo-img {
-                display: none !important;
-            }
-
-            /* 2. 容器全宽 */
-            .container {
-                padding: 0 !important;
-                width: 100% !important;
-                max-width: 100% !important;
-            }
-
-            /* 3. 布局改为单列，移除间距 */
-            .layout-grid {
-                display: block !important;
-                gap: 0 !important;
-            }
-
-            /* 4. 内容区域全宽 */
-            .content-area {
-                padding: 0 10px !important;
-                /* 稍微留边距 */
-            }
-
-            /* 5. 调整控制面板 (红色框选区域) 为横向滚动条模式 */
-            .control-panel {
-                display: flex !important;
-                flex-direction: row !important;
-                /* 恢复水平排列 */
-                overflow-x: auto !important;
-                /* 开启横向滚动 */
-                -webkit-overflow-scrolling: touch;
-                white-space: nowrap !important;
-                /* 禁止换行 */
-                padding: 10px !important;
-                gap: 10px !important;
-                background: #fff !important;
-                border-bottom: 1px solid #eee !important;
-                margin: 0 -10px 15px -10px !important;
-                /* 抵消父容器 padding */
-                align-items: center !important;
-            }
-
-            /* 控制面板内的元素样式调整 */
-            .control-panel>* {
-                flex-shrink: 0 !important;
-                /* 防止被挤压 */
-            }
-
-            .control-panel select,
-            .control-panel input,
-            .control-panel button {
-                height: 36px !important;
-                padding: 0 12px !important;
-                font-size: 14px !important;
-                max-width: 120px !important;
-                /* 限制最大宽度，避免太宽 */
-            }
-
-            /* 隐藏不需要的提示标签 */
-            #role-hint {
-                display: none !important;
-            }
-        }
-    </style>
     <script>
         // ✅ 兜底初始化 Supabase，防止 sbClient 未定义
         var sbClient = window.sbClient || null;
@@ -984,87 +908,10 @@
                 -webkit-overflow-scrolling: touch;
             }
         }
-
-        /* 📱 移动端顶部栏样式 */
-        #mobile-top-bar {
-            display: none;
-        }
-
-        @media screen and (max-width: 768px) {
-            #mobile-top-bar {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                height: 60px;
-                padding: 0 15px;
-                background: rgba(255, 255, 255, 0.95);
-                /* 增加不透明度 */
-                backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                z-index: 9999;
-                box-shadow: 0 1px 15px rgba(0, 0, 0, 0.08);
-                /* 增强阴影 */
-                border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            }
-
-            body {
-                padding-top: 70px !important;
-                /* 给顶部栏留位置 */
-            }
-
-            .mob-app-title {
-                font-size: 18px;
-                font-weight: 800;
-                color: #1e293b;
-                letter-spacing: -0.5px;
-            }
-
-            .mob-menu-btn {
-                font-size: 24px;
-                color: #334155;
-                background: none;
-                border: none;
-                padding: 5px;
-            }
-
-            .mob-user-avatar {
-                width: 36px;
-                height: 36px;
-                border-radius: 50%;
-                background: linear-gradient(135deg, #4f46e5, #818cf8);
-                color: white;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-weight: bold;
-                font-size: 14px;
-                box-shadow: 0 2px 5px rgba(79, 70, 229, 0.3);
-            }
-        }
     </style>
 </head>
 
 <body>
-
-    <!-- 📱 移动端顶部栏结构 -->
-    <div id="mobile-top-bar">
-        <!-- 左侧菜单按钮 (控制侧边栏或 simply reload) -->
-        <button class="mob-menu-btn" onclick="location.reload()">
-            <i class="ti ti-menu-2"></i>
-        </button>
-
-        <!-- 中间标题 -->
-        <div class="mob-app-title">教务管理系统</div>
-
-        <!-- 右侧头像 -->
-        <div class="mob-user-avatar" onclick="Auth.logout()">
-            <i class="ti ti-user"></i>
-        </div>
-    </div>
 
     <!-- 全局加载遮罩 -->
     <div id="global-loader" class="hidden">
@@ -5617,22 +5464,10 @@
                             const loginOverlay = document.getElementById('login-overlay');
                             // 如果登录浮层隐藏了，说明已登录
                             if (loginOverlay.style.display === 'none') {
-                                this.renderMobileHeader();
+                                // 可以在这里做一些移动端辅助提示，但不再强制切换视图
                             }
                         }
                     }, 1000);
-
-                    this.renderMobileHeader();
-                },
-
-                renderMobileHeader: function () {
-                    if (window.Auth && Auth.currentUser) {
-                        const avatar = document.querySelector('#mobile-top-bar .mob-user-avatar');
-                        if (avatar) {
-                            avatar.innerText = (Auth.currentUser.name || 'U')[0];
-                            // 可以添加点击头像显示侧边栏或更多菜单的逻辑
-                        }
-                    }
                 },
 
                 switchTab: function (tabName) {
