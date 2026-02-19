@@ -3,110 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>封面墙 - 毛玻璃/Ins风格</title>
+    <title>封面墙</title>
     <style>
-        body {
-            min-height: 100vh;
+        html, body {
             margin: 0;
-            background: linear-gradient(120deg, #f8fafc 0%, #e0e7ef 100%);
-            font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
+            padding: 0;
+            background: #fff;
+            font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
         }
-        h1 {
-            margin: 2.5rem 0 1.5rem 0;
-            font-size: 2.2rem;
-            letter-spacing: 0.1em;
-            color: #222;
-            font-weight: 700;
-            text-shadow: 0 2px 16px #fff8, 0 1px 0 #fff;
+        .masonry {
+            column-count: 5;
+            column-gap: 12px;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px 0 32px 0;
         }
-        .cover-wall {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 2.2rem 1.5rem;
-            width: min(1200px, 96vw);
-            margin: 0 auto 3rem auto;
-            padding: 1.5rem 0;
-        }
-        .cover-card {
+        @media (max-width: 1200px) { .masonry { column-count: 4; } }
+        @media (max-width: 900px)  { .masonry { column-count: 3; } }
+        @media (max-width: 600px)  { .masonry { column-count: 2; } }
+        @media (max-width: 400px)  { .masonry { column-count: 1; } }
+        .masonry-item {
+            break-inside: avoid;
+            margin-bottom: 12px;
             position: relative;
-            border-radius: 1.2rem;
-            overflow: hidden;
-            box-shadow: 0 4px 32px 0 #b6c2d933, 0 1.5px 8px #fff8;
-            background: rgba(255,255,255,0.25);
-            backdrop-filter: blur(16px) saturate(1.2);
-            transition: transform 0.18s cubic-bezier(.4,1.6,.6,1), box-shadow 0.18s;
             cursor: pointer;
-            border: 1.5px solid #e3e8f0cc;
+            overflow: hidden;
+            border-radius: 0;
+            box-shadow: none;
+            background: none;
+            transition: transform 0.18s cubic-bezier(.4,1.6,.6,1), filter 0.18s;
         }
-        .cover-card:hover {
-            transform: scale(1.045) translateY(-4px) rotateZ(-0.5deg);
-            box-shadow: 0 8px 40px 0 #b6c2d966, 0 2px 12px #fff8;
-            z-index: 2;
-        }
-        .cover-img {
+        .masonry-item img {
             width: 100%;
+            display: block;
+            border-radius: 0;
+            box-shadow: none;
+            background: #f3f3f3;
+            transition: filter 0.18s, transform 0.18s;
+            filter: brightness(0.98) contrast(1.08);
+            min-height: 120px;
             aspect-ratio: 2/3;
             object-fit: cover;
-            display: block;
-            filter: brightness(0.98) contrast(1.08) saturate(1.08);
-            transition: filter 0.18s;
+            will-change: filter, transform;
+            opacity: 0;
+            animation: fadein 0.7s cubic-bezier(.4,1.6,.6,1) forwards;
         }
-        .cover-card:hover .cover-img {
-            filter: brightness(1.04) contrast(1.12) saturate(1.18) blur(1px);
+        .masonry-item:hover img {
+            filter: brightness(1.08) contrast(1.15) saturate(1.1);
+            transform: scale(1.035);
+            z-index: 2;
         }
-        .cover-title {
+        @keyframes fadein {
+            to { opacity: 1; }
+        }
+        /* 弹窗预览 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 99;
+            left: 0; top: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.82);
+            align-items: center;
+            justify-content: center;
+            animation: modalIn 0.2s;
+        }
+        .modal.active { display: flex; }
+        .modal-img {
+            max-width: 92vw;
+            max-height: 92vh;
+            border-radius: 0.5rem;
+            box-shadow: 0 8px 40px #0008;
+            background: #fff;
+            animation: imgIn 0.2s;
+        }
+        @keyframes modalIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes imgIn { from { transform: scale(0.95); opacity: 0.5; } to { transform: scale(1); opacity: 1; } }
+        .modal-close {
             position: absolute;
-            left: 0; right: 0; bottom: 0;
-            padding: 0.7em 1em 0.9em 1em;
+            top: 2.5vh; right: 3vw;
+            font-size: 2.2rem;
             color: #fff;
-            font-size: 1.08rem;
-            font-weight: 600;
-            letter-spacing: 0.04em;
-            text-shadow: 0 2px 12px #000a, 0 1px 0 #fff8;
-            background: linear-gradient(0deg, #222b 80%, #2220 100%);
-            backdrop-filter: blur(2px);
-            border-bottom-left-radius: 1.2rem;
-            border-bottom-right-radius: 1.2rem;
-            pointer-events: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            z-index: 100;
+            opacity: 0.7;
+            transition: opacity 0.15s;
         }
-        @media (max-width: 600px) {
-            h1 { font-size: 1.3rem; }
-            .cover-wall { gap: 1.2rem 0.7rem; }
-            .cover-card { border-radius: 0.7rem; }
-            .cover-title { font-size: 0.98rem; border-radius: 0 0 0.7rem 0.7rem; }
-        }
+        .modal-close:hover { opacity: 1; }
     </style>
 </head>
 <body>
-    <h1>封面墙 / 毛玻璃 · Ins 风格</h1>
-    <div class="cover-wall" id="coverWall"></div>
+    <div class="masonry" id="masonry"></div>
+    <div class="modal" id="modal">
+        <button class="modal-close" id="modalClose" title="关闭">×</button>
+        <img class="modal-img" id="modalImg" src="" alt="cover preview">
+    </div>
     <script>
-        // 可替换为本地图片路径或网络图片
+        // 优化：图片懒加载、响应式、弹窗预览
         const covers = [
-            { src: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80', title: '山林晨雾' },
-            { src: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80', title: '湖畔倒影' },
-            { src: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80', title: '城市夜色' },
-            { src: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=400&q=80', title: '极光之夜' },
-            { src: 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?auto=format&fit=crop&w=400&q=80', title: '沙漠星空' },
-            { src: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80', title: '湖畔清晨' },
-            { src: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80', title: '林间小路' },
-            { src: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80', title: '城市清晨' },
-            { src: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=400&q=80', title: '极光晨曦' },
-            { src: 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?auto=format&fit=crop&w=400&q=80', title: '沙漠晨光' },
-            { src: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80', title: '湖畔黄昏' },
-            { src: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80', title: '林间黄昏' }
+            { src: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80', h: 320 },
+            { src: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80', h: 260 },
+            { src: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80', h: 400 },
+            { src: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=400&q=80', h: 280 },
+            { src: 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?auto=format&fit=crop&w=400&q=80', h: 350 },
+            { src: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80', h: 220 },
+            { src: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80', h: 370 },
+            { src: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80', h: 310 },
+            { src: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=400&q=80', h: 260 },
+            { src: 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?auto=format&fit=crop&w=400&q=80', h: 340 },
+            { src: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80', h: 210 },
+            { src: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80', h: 390 }
         ];
-        const wall = document.getElementById('coverWall');
-        covers.forEach(c => {
-            const card = document.createElement('div');
-            card.className = 'cover-card';
-            card.innerHTML = `<img class="cover-img" src="${c.src}" alt="${c.title}"><div class="cover-title">${c.title}</div>`;
-            wall.appendChild(card);
+        const masonry = document.getElementById('masonry');
+        covers.forEach((c, i) => {
+            const item = document.createElement('div');
+            item.className = 'masonry-item';
+            const img = document.createElement('img');
+            img.src = c.src;
+            img.alt = 'cover';
+            img.loading = 'lazy';
+            img.style.height = (c.h + Math.floor(Math.random()*40-20)) + 'px';
+            item.appendChild(img);
+            item.addEventListener('click', () => showModal(c.src));
+            masonry.appendChild(item);
         });
+        // 弹窗预览
+        const modal = document.getElementById('modal');
+        const modalImg = document.getElementById('modalImg');
+        const modalClose = document.getElementById('modalClose');
+        function showModal(src) {
+            modalImg.src = src;
+            modal.classList.add('active');
+        }
+        modalClose.onclick = () => modal.classList.remove('active');
+        modal.onclick = e => { if (e.target === modal) modal.classList.remove('active'); };
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') modal.classList.remove('active'); });
     </script>
 </body>
 </html>
