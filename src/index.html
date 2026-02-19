@@ -127,131 +127,319 @@
         }
         thead th {
             background: transparent !important;
-            border-bottom: 1px solid #e5e7eb !important;
-            color: #64748b !important;
-            font-size: 12px !important;
-            text-transform: none !important;
-            padding: 12px 8px !important;
-        }
-        /* 悬浮行效果 */
-        tbody tr {
-            transition: background 0.1s !important;
-            border-radius: 6px !important;
-        }
-        tbody tr:hover td {
-            background-color: rgba(0, 0, 0, 0.03) !important; /* 极淡的灰 */
-        }
-        td {
-            border-right: none !important; /* 去除竖线 */
-            border-bottom: 1px solid #f1f5f9 !important;
-            padding: 12px 8px !important;
-        }
-        /* 修复首列冻结的背景 */
-        table th:first-child, table td:first-child {
-            background: rgba(255,255,255,0.95) !important; 
-            backdrop-filter: blur(10px);
-        }
-
-        /* 7. 导航栏：胶囊样式 */
-        .nav-wrapper {
-            background: rgba(255, 255, 255, 0.8) !important;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05) !important;
-            border: 1px solid rgba(255,255,255,0.5) !important;
-            padding: 5px !important;
-        }
-        .nav-categories {
-            background: transparent !important;
-            gap: 5px !important;
-            padding: 5px !important;
-        }
-        .nav-cat-item {
-            color: #666 !important;
-            border-radius: 4px !important;
-            border-bottom: none !important;
-            padding: 8px 16px !important;
-            background: transparent !important;
-        }
-        .nav-cat-item:hover {
-            background-color: rgba(0,0,0,0.05) !important;
-        }
-        .nav-cat-item.active {
-            background-color: #ffffff !important;
-            color: #0067c0 !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
-            font-weight: 700 !important;
-        }
-        /* 二级导航胶囊 */
-        .nav-link {
-            border-radius: 20px !important;
-            background: transparent !important;
-            border: none !important;
-        }
-        .nav-link:hover {
-            background: rgba(0,0,0,0.05) !important;
-        }
-        .nav-link.active {
-            background: #0067c0 !important;
-            color: white !important;
-            box-shadow: 0 2px 8px rgba(0, 103, 192, 0.3) !important;
-        }
-
-        /* 8. 弹窗 Modal：居中悬浮卡片 */
-        .modal {
-            background: rgba(0, 0, 0, 0.4) !important;
-            backdrop-filter: blur(5px) !important; /* 背景虚化 */
-        }
-        .modal-content {
-            border: 1px solid rgba(255,255,255,0.8) !important;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.2) !important;
-            animation: modalPop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
-        }
-        @keyframes modalPop {
-            0% { transform: scale(0.95); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        /* 9. 滚动条美化 (Overlay Scrollbars) */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-            border: 2px solid transparent;
-            background-clip: content-box;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background-color: rgba(0, 0, 0, 0.4);
-        }
-
-        /* 10. 修复左侧导航 (Side Nav) */
-        .side-nav {
-            background: rgba(255,255,255,0.6) !important;
-            border: none !important;
-        }
-        .side-nav-link.active {
-            background: rgba(0, 103, 192, 0.1) !important;
-            color: #0067c0 !important;
-            border-left: 3px solid #0067c0 !important;
-        }
-
-        /* 11. 消息提示 Toast */
-        .toast-msg {
-            background: rgba(255, 255, 255, 0.9) !important;
-            backdrop-filter: blur(10px) !important;
-            border: 1px solid rgba(255,255,255,0.5) !important;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.1) !important;
-        }
-
-    /* ================== 【终极版】全域沉浸式深色模式 (Immersive Dark Mode) ================== */
-    /* 核心逻辑：强制将所有白色半透明容器改为深灰半透明，文字反白 */
-
-    /* 1. 整体背景：深邃黑 */
-    body.dark-mode {
-        background-color: #0f0f0f !important;
-        background-image: none !important; /* 去掉花哨背景，保持纯净深色 */
+            <!DOCTYPE html>
+            <html lang="zh-CN">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width,initial-scale=1.0">
+                <title>封面墙</title>
+                <style>
+                    html, body {
+                        margin: 0;
+                        padding: 0;
+                        background: #fff;
+                        font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+                    }
+                    .nav-header {
+                        width: 100vw;
+                        background: #fff;
+                        box-shadow: 0 2px 12px #e9e4e1cc;
+                        position: sticky;
+                        top: 0; left: 0;
+                        z-index: 100;
+                        min-height: 62px;
+                    }
+                    .nav-inner {
+                        max-width: 1400px;
+                        margin: 0 auto;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        height: 62px;
+                        padding: 0 32px;
+                    }
+                    .nav-left .logo {
+                        font-size: 1.7rem;
+                        font-weight: 700;
+                        color: #b48c5a;
+                        letter-spacing: 0.08em;
+                        display: flex;
+                        align-items: center;
+                    }
+                    .logo-icon {
+                        font-size: 1.5rem;
+                        margin-right: 0.3em;
+                    }
+                    .nav-menu {
+                        display: flex;
+                        align-items: center;
+                        gap: 1.2rem;
+                        flex: 1 1 auto;
+                        margin: 0 2vw;
+                    }
+                    .nav-link {
+                        color: #6d5c4d;
+                        text-decoration: none;
+                        font-size: 1.08rem;
+                        padding: 0.2em 0.7em;
+                        border-radius: 0.3em;
+                        transition: background 0.15s, color 0.15s;
+                        position: relative;
+                    }
+                    .nav-link:hover, .nav-link:focus {
+                        background: #f7f2ed;
+                        color: #b48c5a;
+                    }
+                    .nav-dropdown {
+                        position: relative;
+                        display: inline-block;
+                    }
+                    .nav-dropdown-toggle::after {
+                        content: '';
+                        display: inline-block;
+                        margin-left: 0.2em;
+                    }
+                    .nav-dropdown-menu {
+                        display: none;
+                        position: absolute;
+                        left: 0;
+                        top: 2.1em;
+                        min-width: 8em;
+                        background: #fff;
+                        border-radius: 0.5em;
+                        box-shadow: 0 4px 24px #e9e4e1cc;
+                        border: 1px solid #f2e7d7;
+                        padding: 0.5em 0;
+                        z-index: 10;
+                    }
+                    .nav-dropdown:hover .nav-dropdown-menu {
+                        display: block;
+                    }
+                    .nav-dropdown-item {
+                        display: block;
+                        color: #6d5c4d;
+                        text-decoration: none;
+                        padding: 0.5em 1.5em;
+                        font-size: 1.05rem;
+                        transition: background 0.15s, color 0.15s;
+                    }
+                    .nav-dropdown-item:hover {
+                        background: #f7f2ed;
+                        color: #b48c5a;
+                    }
+                    .nav-right {
+                        display: flex;
+                        align-items: center;
+                        gap: 0.7em;
+                    }
+                    .nav-btn {
+                        background: none;
+                        border: none;
+                        color: #6d5c4d;
+                        font-size: 1.08rem;
+                        padding: 0.2em 0.8em;
+                        border-radius: 0.3em;
+                        cursor: pointer;
+                        transition: background 0.15s, color 0.15s;
+                    }
+                    .nav-btn:hover, .nav-btn:focus {
+                        background: #f7f2ed;
+                        color: #b48c5a;
+                    }
+                    .vip-badge {
+                        background: #f7e3b2;
+                        color: #b48c5a;
+                        font-weight: bold;
+                        font-size: 1.02rem;
+                        border-radius: 0.3em;
+                        padding: 0.2em 0.7em;
+                        margin: 0 0.2em;
+                        letter-spacing: 0.05em;
+                    }
+                    .nav-support {
+                        background: #f7e3b2;
+                        color: #b48c5a;
+                        font-weight: bold;
+                        margin-left: 0.5em;
+                    }
+                    @media (max-width: 900px) {
+                        .nav-inner { padding: 0 10px; }
+                        .nav-menu { gap: 0.5rem; margin: 0 0.5vw; }
+                        .nav-left .logo { font-size: 1.1rem; }
+                        .nav-btn, .vip-badge { font-size: 0.95rem; padding: 0.2em 0.5em; }
+                    }
+                    @media (max-width: 600px) {
+                        .nav-inner { flex-wrap: wrap; height: auto; padding: 0 2vw; }
+                        .nav-menu { flex-wrap: wrap; gap: 0.2rem; }
+                        .nav-left .logo { font-size: 1rem; }
+                        .nav-btn, .vip-badge { font-size: 0.85rem; padding: 0.15em 0.4em; }
+                    }
+                    .masonry {
+                        column-count: 5;
+                        column-gap: 12px;
+                        max-width: 1400px;
+                        margin: 0 auto;
+                        padding: 24px 0 32px 0;
+                    }
+                    @media (max-width: 1200px) { .masonry { column-count: 4; } }
+                    @media (max-width: 900px)  { .masonry { column-count: 3; } }
+                    @media (max-width: 600px)  { .masonry { column-count: 2; } }
+                    @media (max-width: 400px)  { .masonry { column-count: 1; } }
+                    .masonry-item {
+                        break-inside: avoid;
+                        margin-bottom: 12px;
+                        position: relative;
+                        cursor: pointer;
+                        overflow: hidden;
+                        border-radius: 0;
+                        box-shadow: none;
+                        background: none;
+                        transition: transform 0.18s cubic-bezier(.4,1.6,.6,1), filter 0.18s;
+                    }
+                    .masonry-item img {
+                        width: 100%;
+                        display: block;
+                        border-radius: 0;
+                        box-shadow: none;
+                        background: #f3f3f3;
+                        transition: filter 0.18s, transform 0.18s;
+                        filter: brightness(0.98) contrast(1.08);
+                        min-height: 120px;
+                        aspect-ratio: 2/3;
+                        object-fit: cover;
+                        will-change: filter, transform;
+                        opacity: 0;
+                        animation: fadein 0.7s cubic-bezier(.4,1.6,.6,1) forwards;
+                    }
+                    .masonry-item:hover img {
+                        filter: brightness(1.08) contrast(1.15) saturate(1.1);
+                        transform: scale(1.035);
+                        z-index: 2;
+                    }
+                    @keyframes fadein {
+                        to { opacity: 1; }
+                    }
+                    /* 弹窗预览 */
+                    .modal {
+                        display: none;
+                        position: fixed;
+                        z-index: 99;
+                        left: 0; top: 0; width: 100vw; height: 100vh;
+                        background: rgba(0,0,0,0.82);
+                        align-items: center;
+                        justify-content: center;
+                        animation: modalIn 0.2s;
+                    }
+                    .modal.active { display: flex; }
+                    .modal-img {
+                        max-width: 92vw;
+                        max-height: 92vh;
+                        border-radius: 0.5rem;
+                        box-shadow: 0 8px 40px #0008;
+                        background: #fff;
+                        animation: imgIn 0.2s;
+                    }
+                    @keyframes modalIn { from { opacity: 0; } to { opacity: 1; } }
+                    @keyframes imgIn { from { transform: scale(0.95); opacity: 0.5; } to { transform: scale(1); opacity: 1; } }
+                    .modal-close {
+                        position: absolute;
+                        top: 2.5vh; right: 3vw;
+                        font-size: 2.2rem;
+                        color: #fff;
+                        background: none;
+                        border: none;
+                        cursor: pointer;
+                        z-index: 100;
+                        opacity: 0.7;
+                        transition: opacity 0.15s;
+                    }
+                    .modal-close:hover { opacity: 1; }
+                </style>
+            </head>
+            <body>
+                <header class="nav-header">
+                    <div class="nav-inner">
+                        <div class="nav-left">
+                            <span class="logo"><span class="logo-icon">🎬</span>醍电影</span>
+                        </div>
+                        <nav class="nav-menu">
+                            <a href="#" class="nav-link">策展专题</a>
+                            <a href="#" class="nav-link">会员限定</a>
+                            <a href="#" class="nav-link">电影</a>
+                            <a href="#" class="nav-link">影集</a>
+                            <div class="nav-dropdown">
+                                <span class="nav-link nav-dropdown-toggle">人物 ▾</span>
+                                <div class="nav-dropdown-menu">
+                                    <a href="#" class="nav-dropdown-item">电影片单</a>
+                                    <a href="#" class="nav-dropdown-item">私信对写</a>
+                                    <a href="#" class="nav-dropdown-item">艺术评论</a>
+                                    <a href="#" class="nav-dropdown-item">书籍评论</a>
+                                    <a href="#" class="nav-dropdown-item">影展特报</a>
+                                    <a href="#" class="nav-dropdown-item">产业动态</a>
+                                </div>
+                            </div>
+                            <a href="#" class="nav-link">特稿</a>
+                            <a href="#" class="nav-link">编辑室</a>
+                            <a href="#" class="nav-link">作者群</a>
+                            <a href="#" class="nav-link">醍选品</a>
+                            <a href="#" class="nav-link">醍活动</a>
+                        </nav>
+                        <div class="nav-right">
+                            <button class="nav-btn" title="搜索">🔍</button>
+                            <button class="nav-btn" title="登录">登录</button>
+                            <span class="vip-badge">VIP</span>
+                            <button class="nav-btn nav-support">支持方案</button>
+                        </div>
+                    </div>
+                </header>
+                <div class="masonry" id="masonry"></div>
+                <div class="modal" id="modal">
+                    <button class="modal-close" id="modalClose" title="关闭">×</button>
+                    <img class="modal-img" id="modalImg" src="" alt="cover preview">
+                </div>
+                <script>
+                    // 优化：图片懒加载、响应式、弹窗预览
+                    const covers = [
+                        { src: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80', h: 320 },
+                        { src: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80', h: 260 },
+                        { src: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80', h: 400 },
+                        { src: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=400&q=80', h: 280 },
+                        { src: 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?auto=format&fit=crop&w=400&q=80', h: 350 },
+                        { src: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80', h: 220 },
+                        { src: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80', h: 370 },
+                        { src: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80', h: 310 },
+                        { src: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=400&q=80', h: 260 },
+                        { src: 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?auto=format&fit=crop&w=400&q=80', h: 340 },
+                        { src: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80', h: 210 },
+                        { src: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80', h: 390 }
+                    ];
+                    const masonry = document.getElementById('masonry');
+                    covers.forEach((c, i) => {
+                        const item = document.createElement('div');
+                        item.className = 'masonry-item';
+                        const img = document.createElement('img');
+                        img.src = c.src;
+                        img.alt = 'cover';
+                        img.loading = 'lazy';
+                        img.style.height = (c.h + Math.floor(Math.random()*40-20)) + 'px';
+                        item.appendChild(img);
+                        item.addEventListener('click', () => showModal(c.src));
+                        masonry.appendChild(item);
+                    });
+                    // 弹窗预览
+                    const modal = document.getElementById('modal');
+                    const modalImg = document.getElementById('modalImg');
+                    const modalClose = document.getElementById('modalClose');
+                    function showModal(src) {
+                        modalImg.src = src;
+                        modal.classList.add('active');
+                    }
+                    modalClose.onclick = () => modal.classList.remove('active');
+                    modal.onclick = e => { if (e.target === modal) modal.classList.remove('active'); };
+                    document.addEventListener('keydown', e => { if (e.key === 'Escape') modal.classList.remove('active'); });
+                </script>
+            </body>
+            </html>
         color: #e0e0e0 !important;
     }
 
