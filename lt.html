@@ -2,116 +2,114 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>封面墙 - 毛玻璃/Ins风格</title>
+    <style>
+        body {
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(120deg, #f8fafc 0%, #e0e7ef 100%);
+            font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        h1 {
+            margin: 2.5rem 0 1.5rem 0;
+            font-size: 2.2rem;
+            letter-spacing: 0.1em;
+            color: #222;
+            font-weight: 700;
+            text-shadow: 0 2px 16px #fff8, 0 1px 0 #fff;
+        }
+        .cover-wall {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 2.2rem 1.5rem;
+            width: min(1200px, 96vw);
+            margin: 0 auto 3rem auto;
+            padding: 1.5rem 0;
+        }
+        .cover-card {
+            position: relative;
+            border-radius: 1.2rem;
+            overflow: hidden;
+            box-shadow: 0 4px 32px 0 #b6c2d933, 0 1.5px 8px #fff8;
+            background: rgba(255,255,255,0.25);
+            backdrop-filter: blur(16px) saturate(1.2);
+            transition: transform 0.18s cubic-bezier(.4,1.6,.6,1), box-shadow 0.18s;
+            cursor: pointer;
+            border: 1.5px solid #e3e8f0cc;
+        }
+        .cover-card:hover {
+            transform: scale(1.045) translateY(-4px) rotateZ(-0.5deg);
+            box-shadow: 0 8px 40px 0 #b6c2d966, 0 2px 12px #fff8;
+            z-index: 2;
+        }
+        .cover-img {
+            width: 100%;
+            aspect-ratio: 2/3;
+            object-fit: cover;
+            display: block;
+            filter: brightness(0.98) contrast(1.08) saturate(1.08);
+            transition: filter 0.18s;
+        }
+        .cover-card:hover .cover-img {
+            filter: brightness(1.04) contrast(1.12) saturate(1.18) blur(1px);
+        }
+        .cover-title {
+            position: absolute;
+            left: 0; right: 0; bottom: 0;
+            padding: 0.7em 1em 0.9em 1em;
+            color: #fff;
+            font-size: 1.08rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-shadow: 0 2px 12px #000a, 0 1px 0 #fff8;
+            background: linear-gradient(0deg, #222b 80%, #2220 100%);
+            backdrop-filter: blur(2px);
+            border-bottom-left-radius: 1.2rem;
+            border-bottom-right-radius: 1.2rem;
+            pointer-events: none;
+        }
+        @media (max-width: 600px) {
+            h1 { font-size: 1.3rem; }
+            .cover-wall { gap: 1.2rem 0.7rem; }
+            .cover-card { border-radius: 0.7rem; }
+            .cover-title { font-size: 0.98rem; border-radius: 0 0 0.7rem 0.7rem; }
+        }
+    </style>
+</head>
+<body>
+    <h1>封面墙 / 毛玻璃 · Ins 风格</h1>
+    <div class="cover-wall" id="coverWall"></div>
     <script>
-        // ✅ 兜底初始化 Supabase，防止 sbClient 未定义
-        var sbClient = window.sbClient || null;
-        window.SUPABASE_URL = localStorage.getItem('SUPABASE_URL') || "https://okwcciujnfvobbwaydiv.supabase.co";
-        window.SUPABASE_KEY = localStorage.getItem('SUPABASE_KEY') || "sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4";
-        window.initSupabase = function() {
-            if (window.supabase && !sbClient) {
-                sbClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
-                window.sbClient = sbClient;
-                console.log("✅ Supabase 连接初始化成功");
-            }
-        };
+        // 可替换为本地图片路径或网络图片
+        const covers = [
+            { src: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80', title: '山林晨雾' },
+            { src: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80', title: '湖畔倒影' },
+            { src: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80', title: '城市夜色' },
+            { src: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=400&q=80', title: '极光之夜' },
+            { src: 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?auto=format&fit=crop&w=400&q=80', title: '沙漠星空' },
+            { src: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80', title: '湖畔清晨' },
+            { src: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80', title: '林间小路' },
+            { src: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80', title: '城市清晨' },
+            { src: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=400&q=80', title: '极光晨曦' },
+            { src: 'https://images.unsplash.com/photo-1465101178521-c1a9136a3b99?auto=format&fit=crop&w=400&q=80', title: '沙漠晨光' },
+            { src: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80', title: '湖畔黄昏' },
+            { src: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80', title: '林间黄昏' }
+        ];
+        const wall = document.getElementById('coverWall');
+        covers.forEach(c => {
+            const card = document.createElement('div');
+            card.className = 'cover-card';
+            card.innerHTML = `<img class="cover-img" src="${c.src}" alt="${c.title}"><div class="cover-title">${c.title}</div>`;
+            wall.appendChild(card);
+        });
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous" onload="window.initSupabase()"></script>
-    <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js" crossorigin="anonymous" onerror="this.onerror=null;this.src='https://unpkg.com/lz-string@1.5.0/libs/lz-string.min.js'"></script>
-    <!-- 🟢 [修复] 添加 XLSX 库支持 Excel 导入导出功能 -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous" onerror="this.onerror=null;this.src='https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'"></script>
-    <!-- 🟢 [修复] 添加 Alpine.js（教师卡片依赖） -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" crossorigin="anonymous" onerror="this.onerror=null;this.src='https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js'"></script>
-    <!-- 🟢 [修复] 添加 Chart.js（报告图表依赖） -->
-    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous" onerror="this.onerror=null;this.src='https://unpkg.com/chart.js@4.4.1/dist/chart.umd.min.js'"></script>
-    <!-- 🟢 [修复] 添加 SweetAlert2（Swal 依赖） -->
-    <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js" crossorigin="anonymous" onerror="this.onerror=null;this.src='https://unpkg.com/sweetalert2@11/dist/sweetalert2.all.min.js'"></script>
-    <!-- 🟢 [新增] 添加 jsPDF（PDF导出） -->
-    <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" crossorigin="anonymous" onerror="this.onerror=null;this.src='https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'"></script>
-    <script>
-        // ✅ 统一云端同步逻辑 (重构版)
-        const CloudManager = {
-            check: () => {
-                if (!sbClient) {
-                    if (window.UI) UI.toast("云端未连接 (Supabase Disconnected)", "error");
-                    return false;
-                }
-                return true;
-            },
-
-            getKey: () => {
-                const meta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
-                if (!meta.cohortId || !meta.year || !meta.term || !meta.type) return null;
-                const parts = [
-                    meta.cohortId + '级',
-                    meta.grade ? meta.grade + '年级' : '未知年级',
-                    meta.year,
-                    meta.term,
-                    meta.type,
-                    meta.name || '标准考试'
-                ];
-                return parts.join('_').replace(/[\s\/\\\?]/g, '');
-            },
-
-            save: async function() {
-                if (!this.check()) return;
-                const role = sessionStorage.getItem('CURRENT_ROLE');
-                if (role !== 'admin' && role !== 'director' && role !== 'grade_director') {
-                    if (window.UI) UI.toast("⛔ 权限不足", "warning");
-                    return;
-                }
-                const key = this.getKey();
-                if (!key) return alert("请先完善考试信息");
-                if (window.UI) UI.loading(true, `☁️ 正在同步...`);
-                try {
-                    if (!window.SYS_VARS) window.SYS_VARS = { indicator: { ind1: '', ind2: '' }, targets: {} };
-                    const i1 = document.getElementById('dm_ind1_input');
-                    const i2 = document.getElementById('dm_ind2_input');
-                    if (i1) window.SYS_VARS.indicator.ind1 = i1.value;
-                    if (i2) window.SYS_VARS.indicator.ind2 = i2.value;
-                    window.SYS_VARS.targets = window.TARGETS || {};
-
-                    const payload = typeof getCurrentSnapshotPayload === 'function' ? getCurrentSnapshotPayload() : {};
-                    const json = JSON.stringify(payload);
-                    const compressed = "LZ|" + LZString.compressToUTF16(json);
-
-                    const { error } = await sbClient.from('system_data').upsert({
-                        key,
-                        content: compressed,
-                        updated_at: new Date().toISOString()
-                    }, { onConflict: 'key' });
-                    if (error) throw error;
-
-                    localStorage.setItem('CURRENT_PROJECT_KEY', key);
-                    if (window.idbKeyval) await idbKeyval.set(`cache_${key}`, payload);
-                    if (window.UI) UI.toast("✅ 云端同步成功", "success");
-                    localStorage.setItem('CLOUD_SYNC_AT', new Date().toISOString());
-                    logAction('云端同步', `全量数据已同步：${key}`);
-                    updateStatusPanel();
-                } catch (e) {
-                    console.error("CloudManager Save Error:", e);
-                    alert("同步失败: " + e.message);
-                } finally {
-                    if (window.UI) UI.loading(false);
-                }
-            },
-
-            load: async function() {
-                if (!this.check()) return;
-                const key = this.getKey() || localStorage.getItem('CURRENT_PROJECT_KEY');
-                if (!key) return;
-                if (window.UI) UI.toast("⏳ 正在检查云端数据...", "info");
-                try {
-                    const { data, error } = await sbClient
-                        .from('system_data')
-                        .select('content')
-                        .eq('key', key)
-                        .maybeSingle();
-                    if (error) throw error;
-                    if (!data) return;
-
-                    let content = data.content;
-                    if (typeof content === 'string' && content.startsWith("LZ|")) {
-                        content = LZString.decompressFromUTF16(content.substring(3));
+</body>
+</html>
                     }
                     const payload = typeof content === 'string' ? JSON.parse(content) : content;
                     if (typeof applySnapshotPayload === 'function') applySnapshotPayload(payload);
@@ -519,7 +517,7 @@
             /* 动画时长 */
             --transition-fast: 0.15s;
             --transition-normal: 0.3s;
-        }
+    }
         
         /* 增加点阵背景，提升科技感 */
         body { 
@@ -3105,8 +3103,7 @@ body.parent-fullscreen-mode thead th {
             background: rgba(59, 130, 246, 0.25);
             color: #ffffff !important;
             box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
-        }
-    }
+
     </style>
 </head>
 <body>
@@ -3644,6 +3641,12 @@ body.parent-fullscreen-mode thead th {
                         <label style="font-size:12px; color:#475569; margin-left:2px;">第3期：</label>
                         <select id="macroCompareExam3" style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:180px;"></select>
                     </span>
+                        <span style="margin-left:10px; font-size:12px; color:#475569;">异常阈值：</span>
+                        <input id="macroAnomAvg" type="number" step="0.1" min="0" max="20" style="width:48px; font-size:12px;" title="均分波动阈值" placeholder="均分" />
+                        <input id="macroAnomExc" type="number" step="0.01" min="0" max="1" style="width:48px; font-size:12px;" title="优秀率波动阈值(比例)" placeholder="优秀率" />
+                        <input id="macroAnomPass" type="number" step="0.01" min="0" max="1" style="width:48px; font-size:12px;" title="及格率波动阈值(比例)" placeholder="及格率" />
+                        <input id="macroAnomRank" type="number" step="1" min="1" max="20" style="width:48px; font-size:12px;" title="排位波动阈值" placeholder="排位" />
+                        <button class="btn btn-xs" style="margin-left:2px;" onclick="saveMacroAnomalyConfig()">保存阈值</button>
                     <button class="btn btn-sm btn-blue" onclick="renderMacroMultiPeriodComparison()">生成校际多期对比</button>
                     <button class="btn btn-sm btn-green" onclick="exportMacroMultiPeriodComparison()">导出校际多期对比</button>
                     <button class="btn btn-sm" style="background:#8b5cf6; color:white;" onclick="saveMacroMultiPeriodCompareToCloud()">☁️ 保存云端对比</button>
@@ -17130,6 +17133,37 @@ const DataManager = {
         const wrap = document.getElementById('macroCompareExam3Wrap');
         if (!countEl || !wrap) return;
         wrap.style.display = countEl.value === '3' ? 'inline-flex' : 'none';
+
+        // 🆕 校际对比异常阈值配置（本地存储）
+        function getMacroAnomalyConfig() {
+            const raw = localStorage.getItem('MACRO_ANOMALY_CONFIG');
+            if (raw) {
+                try { return JSON.parse(raw); } catch { }
+            }
+            return { dAvg: 5, dExc: 0.05, dPass: 0.05, dRank: 3 };
+        }
+        function setMacroAnomalyConfig(cfg) {
+            localStorage.setItem('MACRO_ANOMALY_CONFIG', JSON.stringify(cfg));
+        }
+        function initMacroAnomalyConfigUI() {
+            const cfg = getMacroAnomalyConfig();
+            const avg = document.getElementById('macroAnomAvg');
+            const exc = document.getElementById('macroAnomExc');
+            const pass = document.getElementById('macroAnomPass');
+            const rank = document.getElementById('macroAnomRank');
+            if (avg) avg.value = cfg.dAvg;
+            if (exc) exc.value = cfg.dExc;
+            if (pass) pass.value = cfg.dPass;
+            if (rank) rank.value = cfg.dRank;
+        }
+        function saveMacroAnomalyConfig() {
+            const avg = Number(document.getElementById('macroAnomAvg')?.value) || 5;
+            const exc = Number(document.getElementById('macroAnomExc')?.value) || 0.05;
+            const pass = Number(document.getElementById('macroAnomPass')?.value) || 0.05;
+            const rank = Number(document.getElementById('macroAnomRank')?.value) || 3;
+            setMacroAnomalyConfig({ dAvg: avg, dExc: exc, dPass: pass, dRank: rank });
+            if (window.UI) UI.toast('异常阈值已保存', 'success');
+        }
     }
 
     function updateMacroMultiExamSelects() {
@@ -17282,18 +17316,67 @@ const DataManager = {
             };
         });
 
-        const detailRowsHtml = periodDetailRows.map((r, idx) => `<tr>
+        // 读取本地异常阈值配置
+        const anomalyThreshold = (typeof getMacroAnomalyConfig === 'function' ? getMacroAnomalyConfig() : { dAvg: 5, dExc: 0.05, dPass: 0.05, dRank: 3 });
+        const periodAnomalies = periodDetailRows.map((r, idx) => {
+            if (idx === 0) return { has: false, tags: [] };
+            const tags = [];
+            if (Math.abs(r.dAvg || 0) > anomalyThreshold.dAvg) tags.push(`均分波动>${anomalyThreshold.dAvg}`);
+            if (Math.abs(r.dExc || 0) > anomalyThreshold.dExc) tags.push(`优秀率波动>${(anomalyThreshold.dExc * 100).toFixed(0)}%`);
+            if (Math.abs(r.dPass || 0) > anomalyThreshold.dPass) tags.push(`及格率波动>${(anomalyThreshold.dPass * 100).toFixed(0)}%`);
+            if (r.dRank !== null && Math.abs(r.dRank || 0) > anomalyThreshold.dRank) tags.push(`排位波动>${anomalyThreshold.dRank}`);
+            return { has: tags.length > 0, tags };
+        });
+        const anomalyCount = periodAnomalies.filter(x => x.has).length;
+
+        const avgSeries = schoolSeries.map(s => s.avg);
+        const isAvgUp = avgSeries.every((v, i) => i === 0 || v >= avgSeries[i - 1]);
+        const isAvgDown = avgSeries.every((v, i) => i === 0 || v <= avgSeries[i - 1]);
+        const trendDesc = isAvgUp ? '均分持续上升' : (isAvgDown ? '均分持续下降' : '均分存在波动');
+
+        const riskLevel =
+            (deltaAvg <= -5 || deltaPass <= -0.05 || anomalyCount >= 2)
+                ? '高风险'
+                : ((deltaAvg <= -2 || deltaPass <= -0.02 || anomalyCount >= 1) ? '中风险' : '低风险');
+        const riskColor = riskLevel === '高风险' ? 'var(--danger)' : (riskLevel === '中风险' ? '#f59e0b' : 'var(--success)');
+
+        const bestItem = allSchoolsChange.length
+            ? allSchoolsChange.reduce((best, cur) => (cur.dAvg > best.dAvg ? cur : best), allSchoolsChange[0])
+            : null;
+        const worstItem = allSchoolsChange.length
+            ? allSchoolsChange.reduce((worst, cur) => (cur.dAvg < worst.dAvg ? cur : worst), allSchoolsChange[0])
+            : null;
+
+        const conclusionRows = [
+            `风险等级：<span style="color:${riskColor}; font-weight:700;">${riskLevel}</span>（异常期次 ${anomalyCount}/${Math.max(periodDetailRows.length - 1, 1)}）`,
+            `本校首末期变化：均分 ${deltaAvg >= 0 ? '+' : ''}${deltaAvg.toFixed(2)}，优秀率 ${deltaExc >= 0 ? '+' : ''}${(deltaExc * 100).toFixed(1)}%，及格率 ${deltaPass >= 0 ? '+' : ''}${(deltaPass * 100).toFixed(1)}%，排位 ${deltaRank === null ? '-' : ((deltaRank >= 0 ? '+' : '') + deltaRank)}`,
+            `走势判断：${trendDesc}`,
+            bestItem ? `全镇均分提升最大：${bestItem.school}（${bestItem.dAvg >= 0 ? '+' : ''}${bestItem.dAvg.toFixed(2)}）` : '全镇均分提升最大：无数据',
+            worstItem ? `全镇均分下降最大：${worstItem.school}（${worstItem.dAvg >= 0 ? '+' : ''}${worstItem.dAvg.toFixed(2)}）` : '全镇均分下降最大：无数据',
+            riskLevel === '高风险'
+                ? '建议动作：优先排查异常期次命题结构、学困生分层与薄弱学科教学进度。'
+                : (riskLevel === '中风险'
+                    ? '建议动作：针对波动学科做阶段复盘，并跟踪下一期指标回稳情况。'
+                    : '建议动作：保持当前教学策略，关注优秀率和及格率同步提升。')
+        ];
+
+        const detailRowsHtml = periodDetailRows.map((r, idx) => {
+            const anomaly = periodAnomalies[idx] || { has: false, tags: [] };
+            const warnStyle = anomaly.has ? 'font-weight:700; color:var(--danger);' : '';
+            return `<tr>
             <td>${r.examId}</td>
             <td>${r.count}</td>
             <td>${r.avg.toFixed(2)}</td>
             <td>${(r.excRate * 100).toFixed(1)}%</td>
             <td>${(r.passRate * 100).toFixed(1)}%</td>
             <td>${r.rankAvg ?? '-'}</td>
-            <td>${idx === 0 ? '-' : `${r.dAvg >= 0 ? '+' : ''}${r.dAvg.toFixed(2)}`}</td>
-            <td>${idx === 0 ? '-' : `${r.dExc >= 0 ? '+' : ''}${(r.dExc * 100).toFixed(1)}%`}</td>
-            <td>${idx === 0 ? '-' : `${r.dPass >= 0 ? '+' : ''}${(r.dPass * 100).toFixed(1)}%`}</td>
-            <td>${idx === 0 ? '-' : (r.dRank === null ? '-' : `${r.dRank >= 0 ? '+' : ''}${r.dRank}`)}</td>
-        </tr>`).join('');
+            <td style="${idx === 0 ? '' : warnStyle}">${idx === 0 ? '-' : `${r.dAvg >= 0 ? '+' : ''}${r.dAvg.toFixed(2)}`}</td>
+            <td style="${idx === 0 ? '' : warnStyle}">${idx === 0 ? '-' : `${r.dExc >= 0 ? '+' : ''}${(r.dExc * 100).toFixed(1)}%`}</td>
+            <td style="${idx === 0 ? '' : warnStyle}">${idx === 0 ? '-' : `${r.dPass >= 0 ? '+' : ''}${(r.dPass * 100).toFixed(1)}%`}</td>
+            <td style="${idx === 0 ? '' : warnStyle}">${idx === 0 ? '-' : (r.dRank === null ? '-' : `${r.dRank >= 0 ? '+' : ''}${r.dRank}`)}</td>
+            <td>${idx === 0 ? '-' : (anomaly.has ? `⚠️ ${anomaly.tags.join('；')}` : '正常')}</td>
+        </tr>`;
+        }).join('');
 
         const kpiCardsHtml = `
             <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px; margin-bottom:10px;">
@@ -17309,11 +17392,15 @@ const DataManager = {
             <div class="sub-header">📈 校际联考对比总览（${school}）</div>
             ${kpiCardsHtml}
             <div style="padding:10px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; margin-bottom:10px;">
+                <div style="font-size:13px; color:#334155; font-weight:600; margin-bottom:6px;">🧠 自动结论与建议</div>
+                <div style="font-size:13px; color:#334155; line-height:1.75;">${conclusionRows.map(row => `• ${row}`).join('<br>')}</div>
+            </div>
+            <div style="padding:10px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; margin-bottom:10px;">
                 <div style="font-size:13px; color:#334155; font-weight:600; margin-bottom:8px;">趋势图（总分均分 / 优秀率 / 及格率）</div>
                 <canvas id="macroCompareTrendChart" height="120"></canvas>
             </div>
             <div class="sub-header">🧾 每一期具体结果明细</div>
-            <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>期次</th><th>人数</th><th>总分均分</th><th>优秀率</th><th>及格率</th><th>均分排位</th><th>较上期均分</th><th>较上期优秀率</th><th>较上期及格率</th><th>较上期排位</th></tr></thead><tbody>${detailRowsHtml}</tbody></table></div>
+            <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>期次</th><th>人数</th><th>总分均分</th><th>优秀率</th><th>及格率</th><th>均分排位</th><th>较上期均分</th><th>较上期优秀率</th><th>较上期及格率</th><th>较上期排位</th><th>异常标记</th></tr></thead><tbody>${detailRowsHtml}</tbody></table></div>
             <div class="sub-header" style="margin-top:10px;">🌍 全镇学校首末期变化（${changeLabel}）</div>
             <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>学校</th><th>首期排位</th><th>末期排位</th><th>排位变化</th><th>均分变化</th><th>优秀率变化</th><th>及格率变化</th></tr></thead><tbody>${allRows}</tbody></table></div>
         `;
@@ -17351,12 +17438,23 @@ const DataManager = {
 
         hintEl.innerHTML = `✅ 已完成 ${periodCount} 期校际对比：${examIds.join(' → ')}`;
         hintEl.style.color = '#16a34a';
-        MACRO_MULTI_PERIOD_COMPARE_CACHE = { school, examIds, periodCount, summaryByExam, allSchoolsChange, schoolSeries, periodDetailRows };
+        MACRO_MULTI_PERIOD_COMPARE_CACHE = {
+            school,
+            examIds,
+            periodCount,
+            summaryByExam,
+            allSchoolsChange,
+            schoolSeries,
+            periodDetailRows,
+            periodAnomalies,
+            conclusionRows,
+            riskLevel
+        };
     }
 
     function exportMacroMultiPeriodComparison() {
         if (!MACRO_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成校际多期对比结果');
-        const { school, examIds, summaryByExam, allSchoolsChange, periodDetailRows = [] } = MACRO_MULTI_PERIOD_COMPARE_CACHE;
+        const { school, examIds, summaryByExam, allSchoolsChange, periodDetailRows = [], periodAnomalies = [], conclusionRows = [], riskLevel = '' } = MACRO_MULTI_PERIOD_COMPARE_CACHE;
         const wb = XLSX.utils.book_new();
 
         const schoolData = [['学校', '期次', '人数', '总分均分', '优秀率', '及格率', '校际均分排位']];
@@ -17374,8 +17472,10 @@ const DataManager = {
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(allData), '全镇首末期变化');
 
         if (periodDetailRows.length > 0) {
-            const detailHeader = ['期次', '人数', '总分均分', '优秀率', '及格率', '均分排位', '较上期均分', '较上期优秀率', '较上期及格率', '较上期排位'];
-            const detailData = periodDetailRows.map(r => [
+            const detailHeader = ['期次', '人数', '总分均分', '优秀率', '及格率', '均分排位', '较上期均分', '较上期优秀率', '较上期及格率', '较上期排位', '异常标记'];
+            const detailData = periodDetailRows.map((r, idx) => {
+                const anomaly = periodAnomalies[idx] || { has: false, tags: [] };
+                return [
                 r.examId,
                 r.count,
                 r.avg,
@@ -17385,9 +17485,17 @@ const DataManager = {
                 r.dAvg,
                 r.dExc,
                 r.dPass,
-                r.dRank
-            ]);
+                r.dRank,
+                idx === 0 ? '-' : (anomaly.has ? anomaly.tags.join('；') : '正常')
+            ];
+            });
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([detailHeader, ...detailData]), '本校期次明细');
+        }
+
+        if (conclusionRows.length > 0) {
+            const conclusionData = [['字段', '内容'], ['风险等级', riskLevel || '-']];
+            conclusionRows.forEach((row, idx) => conclusionData.push([`结论${idx + 1}`, String(row).replace(/<[^>]*>/g, '')]));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(conclusionData), '自动结论');
         }
 
         XLSX.writeFile(wb, `校际多期对比_${school}_${examIds.join('_')}.xlsx`);
@@ -17410,6 +17518,9 @@ const DataManager = {
             allSchoolsChange: cache.allSchoolsChange,
             schoolSeries: cache.schoolSeries || [],
             periodDetailRows: cache.periodDetailRows || [],
+            periodAnomalies: cache.periodAnomalies || [],
+            conclusionRows: cache.conclusionRows || [],
+            riskLevel: cache.riskLevel || '',
             html: document.getElementById('macroCompareResult')?.innerHTML || '',
             title: `${cache.school} 校际多期对比`,
             createdAt: new Date().toISOString(),
@@ -17472,7 +17583,10 @@ const DataManager = {
                 summaryByExam: payload.summaryByExam,
                 allSchoolsChange: payload.allSchoolsChange,
                 schoolSeries: payload.schoolSeries || [],
-                periodDetailRows: payload.periodDetailRows || []
+                periodDetailRows: payload.periodDetailRows || [],
+                periodAnomalies: payload.periodAnomalies || [],
+                conclusionRows: payload.conclusionRows || [],
+                riskLevel: payload.riskLevel || ''
             };
         } catch (e) {
             console.error(e);
