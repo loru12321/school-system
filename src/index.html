@@ -3,6 +3,202 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <style>
+        /* ================== 移动端仪表盘风格 (Dashboard Style) ================== */
+        @media screen and (max-width: 768px) {
+            /* 1. 彻底隐藏 PC 端所有非核心元素 */
+            /* 1. 彻底隐藏 PC 端所有非核心元素 (增加权重以覆盖 main.css) */
+            body>header,
+            body>.nav-wrapper,
+            body>.container,
+            .side-nav,
+            .content-area,
+            #app-subtitle,
+            #custom-logo-img,
+            .loading-mask,
+            #mobile-top-bar,
+            .control-panel
+
+            /* 确保旧控制面板也隐藏 */
+                {
+                display: none !important;
+            }
+
+            /* 2. 全局容器使得手机端占满 */
+            body,
+            html {
+                background-color: #f5f7fa;
+                /* 浅灰底色 */
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                height: 100%;
+                overflow-x: hidden;
+            }
+
+            .container {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 0 !important;
+                background: transparent !important;
+                box-shadow: none !important;
+            }
+
+            /* 3. 仪表盘容器 */
+            #mob-dashboard-view {
+                display: block !important;
+                padding-bottom: 80px;
+                /* 底部导航留空 */
+            }
+
+            /* 4. 沉浸式头部 */
+            .mob-dash-header {
+                background: linear-gradient(135deg, #4f46e5, #3b82f6);
+                padding: 20px 20px 50px 20px;
+                /* 底部留白给卡片可以上浮 */
+                color: white;
+                border-radius: 0 0 20px 20px;
+                box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+            }
+
+            .mob-dash-top {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 15px;
+            }
+
+            .mob-school-name {
+                font-size: 18px;
+                font-weight: bold;
+            }
+
+            .mob-user-info {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 14px;
+                background: rgba(255, 255, 255, 0.2);
+                padding: 5px 10px;
+                border-radius: 20px;
+                backdrop-filter: blur(5px);
+            }
+
+            /* 5. 金刚区 (Grid Navigation) - 核心控制面板 */
+            .mob-grid-nav-card {
+                background: white;
+                margin: -35px 15px 15px 15px;
+                /* 向上浮动覆盖头部 */
+                border-radius: 12px;
+                padding: 20px 10px;
+                box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 15px 10px;
+                position: relative;
+                z-index: 10;
+            }
+
+            .mob-grid-item {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+                font-size: 12px;
+                color: #64748b;
+            }
+
+            .mob-grid-icon-box {
+                width: 45px;
+                height: 45px;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 24px;
+                color: white;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            }
+
+            /* 6. 数据概览卡片 */
+            .mob-data-card {
+                background: white;
+                margin: 0 15px 15px 15px;
+                border-radius: 12px;
+                padding: 15px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+            }
+
+            .mob-card-title {
+                font-size: 15px;
+                font-weight: bold;
+                color: #1e293b;
+                margin-bottom: 12px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .mob-stat-row {
+                display: flex;
+                justify-content: space-between;
+                text-align: center;
+            }
+
+            .mob-stat-item {
+                flex: 1;
+            }
+
+            .mob-stat-val {
+                font-size: 20px;
+                font-weight: bold;
+                color: #333;
+            }
+
+            .mob-stat-label {
+                font-size: 11px;
+                color: #94a3b8;
+                margin-top: 4px;
+            }
+
+            /* 7. 底部导航栏 */
+            .mob-bottom-tabs {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: 60px;
+                background: white;
+                border-top: 1px solid #eee;
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                font-size: 10px;
+                color: #94a3b8;
+                padding-bottom: env(safe-area-inset-bottom);
+                z-index: 100;
+            }
+
+            .mob-tab-item {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+                padding: 5px;
+                flex: 1;
+            }
+
+            .mob-tab-item.active {
+                color: #4f46e5;
+            }
+
+            .mob-tab-item i {
+                font-size: 22px;
+            }
+        }
+    </style>
     <script>
         // ✅ 兜底初始化 Supabase，防止 sbClient 未定义
         var sbClient = window.sbClient || null;
@@ -1051,89 +1247,105 @@
     </div>
 
     <!-- 手机端管理主界面 (默认隐藏，通过 JS 激活) -->
-    <div id="mobile-manager-app">
-        <!-- 1. 顶部标题栏 -->
-        <div class="mob-header-bar">
-            <div class="mob-header-title" id="mob-page-title">📱 教务工作台</div>
-            <div onclick="Auth.logout()" style="color:#ef4444; font-size:12px; font-weight:bold; cursor: pointer;">退出
+    <!-- 📱 移动端仪表盘视图 -->
+    <div id="mob-dashboard-view" style="display: none;">
+        <!-- 头部 -->
+        <div class="mob-dash-header">
+            <div class="mob-dash-top">
+                <div class="mob-school-name"><i class="ti ti-building-arch"></i> 智慧教务</div>
+                <div class="mob-user-info" onclick="Auth.logout()">
+                    <i class="ti ti-user-circle"></i> <span id="mob-dash-user">老师</span>
+                </div>
+            </div>
+            <div style="font-size: 24px; font-weight: bold;">工作台</div>
+            <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">今天是 <span
+                    id="mob-date-display">--月--日</span>，祝您工作愉快</div>
+        </div>
+
+        <!-- 金刚区导航 (Grid Nav) -->
+        <div class="mob-grid-nav-card">
+            <div class="mob-grid-item"
+                onclick="document.getElementById('upload').scrollIntoView({behavior:'smooth'}); MobMgr.showToast('请在下方上传数据')">
+                <div class="mob-grid-icon-box" style="background: linear-gradient(135deg, #10b981, #34d399);">
+                    <i class="ti ti-file-import"></i>
+                </div>
+                <span>导入数据</span>
+            </div>
+            <div class="mob-grid-item" onclick="showModuleHelp('starter-hub')">
+                <div class="mob-grid-icon-box" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);">
+                    <i class="ti ti-compass"></i>
+                </div>
+                <span>新手向导</span>
+            </div>
+            <div class="mob-grid-item"
+                onclick="DataManager.renderCloudBackups(); document.getElementById('dm-cloud-modal').classList.remove('hidden')">
+                <div class="mob-grid-icon-box" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">
+                    <i class="ti ti-cloud"></i>
+                </div>
+                <span>云端回滚</span>
+            </div>
+            <div class="mob-grid-item" onclick="openSkinModal()">
+                <div class="mob-grid-icon-box" style="background: linear-gradient(135deg, #6366f1, #818cf8);">
+                    <i class="ti ti-palette"></i>
+                </div>
+                <span>外观设置</span>
+            </div>
+            <div class="mob-grid-item" onclick="toggleDarkMode()">
+                <div class="mob-grid-icon-box" style="background: linear-gradient(135deg, #475569, #64748b);">
+                    <i class="ti ti-moon"></i>
+                </div>
+                <span>深色模式</span>
+            </div>
+            <div class="mob-grid-item" onclick="if(confirm('确定退出登录吗？')) Auth.logout()">
+                <div class="mob-grid-icon-box" style="background: linear-gradient(135deg, #ef4444, #f87171);">
+                    <i class="ti ti-logout"></i>
+                </div>
+                <span>退出登录</span>
             </div>
         </div>
 
-        <!-- 2. 内容区域 (通过 JS 切换显示) -->
-
-        <!-- A. 首页/概览 -->
-        <div id="mob-view-home" class="mob-view active">
-            <div
-                style="background: linear-gradient(135deg, #4f46e5, #818cf8); border-radius: 12px; padding: 20px; color: white; margin-bottom: 20px; text-align: center;">
-                <div style="font-size: 12px; opacity: 0.8;">当前登录</div>
-                <div style="font-size: 24px; font-weight: bold; margin: 5px 0;" id="mob-user-name">老师</div>
-                <div style="font-size: 12px; background: rgba(255,255,255,0.2); display: inline-block; padding: 2px 10px; border-radius: 20px;"
-                    id="mob-user-role">科任教师</div>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
-                <div class="mob-list-item"
-                    style="flex-direction: column; align-items: center; text-align: center; padding: 15px;"
-                    onclick="MobMgr.switchTab('students')">
-                    <div class="mob-avatar" style="background: #dbeafe; color: #2563eb;"><i class="ti ti-users"></i>
-                    </div>
-                    <div style="font-weight: bold; margin-top: 5px;">学生管理</div>
+        <!-- 数据概览卡片 -->
+        <div class="mob-data-card">
+            <div class="mob-card-title"><i class="ti ti-chart-bar" style="color:#4f46e5"></i> 数据概览</div>
+            <div class="mob-stat-row">
+                <div class="mob-stat-item">
+                    <div class="mob-stat-val" id="mob-stat-total">--</div>
+                    <div class="mob-stat-label">总人数</div>
                 </div>
-                <div class="mob-list-item"
-                    style="flex-direction: column; align-items: center; text-align: center; padding: 15px;"
-                    onclick="MobMgr.switchTab('analysis')">
-                    <div class="mob-avatar" style="background: #fef3c7; color: #d97706;"><i class="ti ti-chart-bar"></i>
-                    </div>
-                    <div style="font-weight: bold; margin-top: 5px;">成绩分析</div>
+                <div class="mob-stat-item">
+                    <div class="mob-stat-val" id="mob-stat-avg" style="color:#10b981">--</div>
+                    <div class="mob-stat-label">总平均分</div>
+                </div>
+                <div class="mob-stat-item">
+                    <div class="mob-stat-val" id="mob-stat-pass" style="color:#f59e0b">--%</div>
+                    <div class="mob-stat-label">及格率</div>
                 </div>
             </div>
-
-            <div style="background: white; border-radius: 12px; padding: 15px;">
-                <h4 style="margin-bottom: 10px; color: #334155;">📢 系统公告</h4>
-                <div style="font-size: 12px; color: #64748b; line-height: 1.6;">
-                    欢迎使用移动端管理系统。目前支持查看学生名单、快速查询成绩以及基础的数据分析功能。更多高级功能请登录 PC 端操作。
-                </div>
+            <div style="margin-top:15px; font-size:12px; color:#94a3b8; text-align:center;">
+                * 更多详细分析请向下滚动查看完整 PC 视图
             </div>
         </div>
 
-        <!-- B. 学生列表 -->
-        <div id="mob-view-students" class="mob-view">
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <input type="text" id="mob-search-input" placeholder="🔍 搜姓名/考号..."
-                    style="flex: 1; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;"
-                    oninput="MobMgr.renderStudentList()">
+        <!-- 底部导航 -->
+        <div class="mob-bottom-tabs">
+            <div class="mob-tab-item active" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+                <i class="ti ti-smart-home"></i>
+                <span>工作台</span>
             </div>
-            <div id="mob-student-list" class="mob-list-container" style="padding: 0;">
-                <!-- 动态生成列表 -->
-                <div style="text-align: center; color: #999; padding: 20px;">加载中...</div>
+            <div class="mob-tab-item"
+                onclick="document.getElementById('dm-student-list').scrollIntoView({behavior:'smooth'})">
+                <i class="ti ti-address-book"></i>
+                <span>通讯录</span>
             </div>
-        </div>
-
-        <!-- C. 简报分析 -->
-        <div id="mob-view-analysis" class="mob-view">
-            <div class="mob-list-item" style="display: block; padding: 15px;">
-                <h3 style="margin-bottom: 15px; border-left: 4px solid #4f46e5; padding-left: 8px; font-size: 16px;">📊
-                    快速概览</h3>
-                <div id="mob-analysis-content">
-                    <p style="color: #999; text-align: center;">请先在 PC 端上传并处理数据...</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- 3. 底部导航栏 -->
-        <div class="mob-bottom-bar">
-            <button class="mob-nav-btn active" onclick="MobMgr.switchTab('home')">
-                <i class="ti ti-home"></i>
-                <span>首页</span>
-            </button>
-            <button class="mob-nav-btn" onclick="MobMgr.switchTab('students')">
-                <i class="ti ti-users"></i>
-                <span>学生</span>
-            </button>
-            <button class="mob-nav-btn" onclick="MobMgr.switchTab('analysis')">
+            <div class="mob-tab-item"
+                onclick="document.getElementById('analysis-output').scrollIntoView({behavior:'smooth'})">
                 <i class="ti ti-chart-pie"></i>
-                <span>分析</span>
-            </button>
+                <span>分析报表</span>
+            </div>
+            <div class="mob-tab-item" onclick="Auth.logout()">
+                <i class="ti ti-user"></i>
+                <span>我的</span>
+            </div>
         </div>
     </div>
 
@@ -5451,126 +5663,79 @@
                     // 仅在移动端运行
                     if (window.innerWidth > 768) return;
 
-                    console.log('📱 Mobile Manager Initialized');
+                    console.log('📱 Mobile Dashboard Initialized');
 
-                    // 绑定 Tab 点击事件 (已在 HTML onclick 中绑定，此处做额外初始化)
-                    this.switchTab('home');
+                    // 1. 设置顶部日期
+                    const date = new Date();
+                    const dateStr = `${date.getMonth() + 1}月${date.getDate()}日`;
+                    const dateEl = document.getElementById('mob-date-display');
+                    if (dateEl) dateEl.innerText = dateStr;
 
-                    // 监听登录状态变化
-                    // 由于 Auth 是全局对象，我们这里不再强制隐藏 PC 版，因为用户可能需要完整功能
-                    // 仅初始化必要数据
-                    setInterval(() => {
-                        if (window.innerWidth <= 768) {
-                            const loginOverlay = document.getElementById('login-overlay');
-                            // 如果登录浮层隐藏了，说明已登录
-                            if (loginOverlay.style.display === 'none') {
-                                // 可以在这里做一些移动端辅助提示，但不再强制切换视图
+                    // 2. 启动数据监控与渲染
+                    this.checkLoginAndRender();
+                    // 轮询检查数据更新 (比如刚导入数据后)
+                    setInterval(() => this.checkLoginAndRender(), 2000);
+                },
+
+                checkLoginAndRender: function () {
+                    if (window.innerWidth > 768) return;
+
+                    const loginOverlay = document.getElementById('login-overlay');
+                    // 如果登录层隐藏，视作已登录
+                    const isLogged = loginOverlay && loginOverlay.style.display === 'none';
+
+                    if (isLogged) {
+                        // A. 渲染用户信息
+                        if (window.Auth && Auth.currentUser) {
+                            const nameEl = document.getElementById('mob-dash-user');
+                            if (nameEl && nameEl.innerText === '老师') { // 避免重复刷新闪烁
+                                nameEl.innerText = Auth.currentUser.name || '老师';
                             }
                         }
-                    }, 1000);
-                },
 
-                switchTab: function (tabName) {
-                    // 1. 切换底部导航激活状态
-                    document.querySelectorAll('.mob-nav-btn').forEach(btn => {
-                        btn.classList.remove('active');
-                    });
-                    // 简单通过 onclick 触发的 button 查找不太容易，这里依赖 HTML 结构
-                    // 实际在 HTML onclick 中传了 this 更好，或者遍历查找
-                    const targetBtn = Array.from(document.querySelectorAll('.mob-nav-btn')).find(b => b.innerText.includes(
-                        tabName === 'home' ? '首页' :
-                            tabName === 'students' ? '学生' : '分析'
-                    ));
-                    if (targetBtn) targetBtn.classList.add('active');
-
-                    // 2. 切换视图内容
-                    document.querySelectorAll('.mob-view').forEach(view => {
-                        view.classList.remove('active');
-                    });
-                    document.getElementById('mob-view-' + tabName).classList.add('active');
-
-                    // 3. 触发数据渲染
-                    if (tabName === 'home') this.renderHome();
-                    if (tabName === 'students') this.renderStudentList();
-                    if (tabName === 'analysis') this.renderAnalysis();
-                },
-
-                renderHome: function () {
-                    // 更新用户信息
-                    if (window.Auth && Auth.currentUser) {
-                        document.getElementById('mob-user-name').innerText = Auth.currentUser.name || '老师';
-                        document.getElementById('mob-user-role').innerText = Auth.currentUser.role === 'admin' ? '管理员' : '科任教师';
+                        // B. 渲染统计卡片
+                        this.renderStats();
                     }
                 },
 
-                renderStudentList: function () {
-                    const container = document.getElementById('mob-student-list');
-                    const search = document.getElementById('mob-search-input').value.toLowerCase();
+                renderStats: function () {
+                    if (window.Data && window.Data.cleanData && window.Data.cleanData.length > 0) {
+                        const students = window.Data.cleanData;
+                        const total = students.length;
 
-                    // 从全局 Data 或者是 DOM 表格中获取数据
-                    // 假设 window.Data.students 存在 (需要确认数据源)
-                    // 这里为了稳妥，尝试从 PC 表格中抓取数据，或者使用 window.DataIfAvailable
+                        // 计算平均分 (总分字段)
+                        let totalScore = 0;
+                        let count = 0;
+                        students.forEach(s => {
+                            const score = parseFloat(s['总分']);
+                            if (!isNaN(score)) {
+                                totalScore += score;
+                                count++;
+                            }
+                        });
+                        const avg = count > 0 ? (totalScore / count).toFixed(1) : '--';
 
-                    let students = [];
-                    // 尝试从全局数据获取
-                    if (window.Data && window.Data.cleanData) {
-                        students = window.Data.cleanData;
-                    } else {
-                        container.innerHTML = '<div style="text-align:center;color:#999;padding:20px;">暂无数据，请先在电脑端导入</div>';
-                        return;
+                        // 计算班级数
+                        const classCount = new Set(students.map(s => s['班级'])).size;
+
+                        // 更新 DOM
+                        const elTotal = document.getElementById('mob-stat-total');
+                        const elAvg = document.getElementById('mob-stat-avg');
+                        const elPass = document.getElementById('mob-stat-pass'); // 复用及格率位置显示班级数
+
+                        if (elTotal) elTotal.innerText = total;
+                        if (elAvg) elAvg.innerText = avg;
+                        // 这里把及格率改成显示班级数，因为及格线不确定
+                        if (elPass) {
+                            elPass.innerHTML = `${classCount} <span style="font-size:10px;color:#94a3b8">个班</span>`;
+                            elPass.style.color = '#3b82f6';
+                        }
                     }
-
-                    if (search) {
-                        students = students.filter(s => (s['姓名'] && s['姓名'].includes(search)) || (s['考号'] && String(s['考号']).includes(search)));
-                    }
-
-                    // 只显示前 50 条防止卡顿
-                    const displayList = students.slice(0, 50);
-
-                    let html = '';
-                    displayList.forEach(s => {
-                        html += `
-                    <div class="mob-list-item" onclick="alert('${s['姓名']} 的详细成绩请在分析页查看')">
-                        <div class="mob-avatar" style="background:#e0f2fe; color:#0369a1;">${s['姓名'][0]}</div>
-                        <div style="flex:1;">
-                            <div style="font-weight:bold; font-size:16px;">${s['姓名']}</div>
-                            <div style="font-size:12px; color:#64748b;">${s['班级'] || '未知班级'} | 考号: ${s['考号'] || '--'}</div>
-                        </div>
-                        <div style="font-weight:bold; color:#f59e0b;">${s['总分'] || ''}</div>
-                    </div>
-                    `;
-                    });
-
-                    if (displayList.length === 0) {
-                        html = '<div style="text-align:center;color:#999;padding:20px;">未找到匹配学生</div>';
-                    }
-
-                    container.innerHTML = html;
                 },
 
-                renderAnalysis: function () {
-                    const container = document.getElementById('mob-analysis-content');
-                    // 简单统计
-                    if (window.Data && window.Data.cleanData) {
-                        const count = window.Data.cleanData.length;
-                        const classes = new Set(window.Data.cleanData.map(s => s['班级'])).size;
-                        container.innerHTML = `
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                            <div style="background:#f8fafc; padding:15px; border-radius:8px; text-align:center;">
-                                <div style="font-size:24px; color:#4f46e5; font-weight:bold;">${count}</div>
-                                <div style="font-size:12px; color:#64748b;">学生总数</div>
-                            </div>
-                            <div style="background:#f8fafc; padding:15px; border-radius:8px; text-align:center;">
-                                <div style="font-size:24px; color:#059669; font-weight:bold;">${classes}</div>
-                                <div style="font-size:12px; color:#64748b;">班级数量</div>
-                            </div>
-                        </div>
-                        <p style="margin-top:15px; font-size:12px; color:#94a3b8; text-align:center;">
-                            更多高级分析图表请使用电脑端查看。<br>
-                            移动端仅提供核心数据概览。
-                        </p>
-                    `;
-                    }
+                showToast: function (msg) {
+                    if (window.showToast) window.showToast(msg);
+                    else alert(msg);
                 }
             };
 
