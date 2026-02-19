@@ -7389,21 +7389,21 @@ const DataManager = {
         const tbBottom = document.querySelector('#tb-bottom3 tbody'); let htmlBottom = ''; 
         let bottomList = Object.values(SCHOOLS).sort((a,b)=> (a.rankBottom || 9999) - (b.rankBottom || 9999));
         bottomList.forEach(s => { 
-            const isMySchool = s.name === MY_SCHOOL; 
+            const isMySchool = s.name === MY_SCHOOL;
             htmlBottom += `
-            <tr class="${isMySchool?'bg-highlight':''}">
+            <tr class="${isMySchool ? 'bg-highlight' : ''}">
                 <td>${s.name}</td>
-                <td>${s.bottom3.totalN}</td>
-                <td>${s.bottom3.bottomN}</td>
+                <td>${s.bottom3 ? s.bottom3.totalN : ''}</td>
+                <td>${s.bottom3 ? s.bottom3.bottomN : ''}</td>
                 <td>
                     <span class="clickable-num" onclick="handleExcludedClick('${s.name}')" title="点击查看被剔除的低分学生">
-                        ${s.bottom3.excN}
+                        ${s.bottom3 ? s.bottom3.excN : ''}
                     </span>
                 </td>
-                <td>${s.bottom3.avg.toFixed(2)}</td>
-                <td class="text-red">${s.scoreBottom.toFixed(2)}</td>
+                <td>${s.bottom3 ? s.bottom3.avg.toFixed(2) : ''}</td>
+                <td class="text-red">${s.scoreBottom ? s.scoreBottom.toFixed(2) : ''}</td>
                 ${getRankHTML(s.rankBottom)}
-            </tr>`; 
+            </tr>`;
         });
         tbBottom.innerHTML = htmlBottom;
         renderTrafficLightDashboard();
@@ -22255,6 +22255,9 @@ async function exportPPTReportLegacy() {
         const img = document.getElementById('custom-logo-img');
         if (base64) {
             img.src = base64;
+            img.onerror = function() {
+                this.style.display = 'none';
+            };
             img.style.display = 'block';
         } else {
             img.style.display = 'none';
