@@ -4,6 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>封面墙</title>
+    <script>
+        // ✅ 兜底初始化 Supabase，防止 sbClient 未定义
+        var sbClient = window.sbClient || null;
+        window.SUPABASE_URL = localStorage.getItem('SUPABASE_URL') || "https://okwcciujnfvobbwaydiv.supabase.co";
+        window.SUPABASE_KEY = localStorage.getItem('SUPABASE_KEY') || "sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4";
+        window.initSupabase = function() {
+            if (window.supabase && !sbClient) {
+                sbClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
+                window.sbClient = sbClient;
+                console.log("✅ Supabase 连接初始化成功");
+            }
+        };
+        // 页面加载后自动初始化 Supabase
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof window.initSupabase === 'function') window.initSupabase();
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous" onload="window.initSupabase()"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js" crossorigin="anonymous" onerror="this.onerror=null;this.src='https://unpkg.com/lz-string@1.5.0/libs/lz-string.min.js'"></script>
     <style>
         html, body {
             margin: 0;
@@ -94,11 +113,182 @@
     </style>
 </head>
 <body>
+    <header class="nav-header">
+        <div class="nav-inner">
+            <div class="nav-left">
+                <span class="logo"><span class="logo-icon">🎬</span>醍电影</span>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-link">策展专题</a>
+                <a href="#" class="nav-link">会员限定</a>
+                <a href="#" class="nav-link">电影</a>
+                <a href="#" class="nav-link">影集</a>
+                <div class="nav-dropdown">
+                    <span class="nav-link nav-dropdown-toggle">人物 ▾</span>
+                    <div class="nav-dropdown-menu">
+                        <a href="#" class="nav-dropdown-item">电影片单</a>
+                        <a href="#" class="nav-dropdown-item">私信对写</a>
+                        <a href="#" class="nav-dropdown-item">艺术评论</a>
+                        <a href="#" class="nav-dropdown-item">书籍评论</a>
+                        <a href="#" class="nav-dropdown-item">影展特报</a>
+                        <a href="#" class="nav-dropdown-item">产业动态</a>
+                    </div>
+                </div>
+                <a href="#" class="nav-link">特稿</a>
+                <a href="#" class="nav-link">编辑室</a>
+                <a href="#" class="nav-link">作者群</a>
+                <a href="#" class="nav-link">醍选品</a>
+                <a href="#" class="nav-link">醍活动</a>
+            </nav>
+            <div class="nav-right">
+                <button class="nav-btn" title="搜索">🔍</button>
+                <button class="nav-btn" title="登录">登录</button>
+                <span class="vip-badge">VIP</span>
+                <button class="nav-btn nav-support">支持方案</button>
+            </div>
+        </div>
+    </header>
     <div class="masonry" id="masonry"></div>
     <div class="modal" id="modal">
         <button class="modal-close" id="modalClose" title="关闭">×</button>
         <img class="modal-img" id="modalImg" src="" alt="cover preview">
     </div>
+    <style>
+        .nav-header {
+            width: 100vw;
+            background: #fff;
+            box-shadow: 0 2px 12px #e9e4e1cc;
+            position: sticky;
+            top: 0; left: 0;
+            z-index: 100;
+            min-height: 62px;
+        }
+        .nav-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 62px;
+            padding: 0 32px;
+        }
+        .nav-left .logo {
+            font-size: 1.7rem;
+            font-weight: 700;
+            color: #b48c5a;
+            letter-spacing: 0.08em;
+            display: flex;
+            align-items: center;
+        }
+        .logo-icon {
+            font-size: 1.5rem;
+            margin-right: 0.3em;
+        }
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            flex: 1 1 auto;
+            margin: 0 2vw;
+        }
+        .nav-link {
+            color: #6d5c4d;
+            text-decoration: none;
+            font-size: 1.08rem;
+            padding: 0.2em 0.7em;
+            border-radius: 0.3em;
+            transition: background 0.15s, color 0.15s;
+            position: relative;
+        }
+        .nav-link:hover, .nav-link:focus {
+            background: #f7f2ed;
+            color: #b48c5a;
+        }
+        .nav-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .nav-dropdown-toggle::after {
+            content: '';
+            display: inline-block;
+            margin-left: 0.2em;
+        }
+        .nav-dropdown-menu {
+            display: none;
+            position: absolute;
+            left: 0;
+            top: 2.1em;
+            min-width: 8em;
+            background: #fff;
+            border-radius: 0.5em;
+            box-shadow: 0 4px 24px #e9e4e1cc;
+            border: 1px solid #f2e7d7;
+            padding: 0.5em 0;
+            z-index: 10;
+        }
+        .nav-dropdown:hover .nav-dropdown-menu {
+            display: block;
+        }
+        .nav-dropdown-item {
+            display: block;
+            color: #6d5c4d;
+            text-decoration: none;
+            padding: 0.5em 1.5em;
+            font-size: 1.05rem;
+            transition: background 0.15s, color 0.15s;
+        }
+        .nav-dropdown-item:hover {
+            background: #f7f2ed;
+            color: #b48c5a;
+        }
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 0.7em;
+        }
+        .nav-btn {
+            background: none;
+            border: none;
+            color: #6d5c4d;
+            font-size: 1.08rem;
+            padding: 0.2em 0.8em;
+            border-radius: 0.3em;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+        .nav-btn:hover, .nav-btn:focus {
+            background: #f7f2ed;
+            color: #b48c5a;
+        }
+        .vip-badge {
+            background: #f7e3b2;
+            color: #b48c5a;
+            font-weight: bold;
+            font-size: 1.02rem;
+            border-radius: 0.3em;
+            padding: 0.2em 0.7em;
+            margin: 0 0.2em;
+            letter-spacing: 0.05em;
+        }
+        .nav-support {
+            background: #f7e3b2;
+            color: #b48c5a;
+            font-weight: bold;
+            margin-left: 0.5em;
+        }
+        @media (max-width: 900px) {
+            .nav-inner { padding: 0 10px; }
+            .nav-menu { gap: 0.5rem; margin: 0 0.5vw; }
+            .nav-left .logo { font-size: 1.1rem; }
+            .nav-btn, .vip-badge { font-size: 0.95rem; padding: 0.2em 0.5em; }
+        }
+        @media (max-width: 600px) {
+            .nav-inner { flex-wrap: wrap; height: auto; padding: 0 2vw; }
+            .nav-menu { flex-wrap: wrap; gap: 0.2rem; }
+            .nav-left .logo { font-size: 1rem; }
+            .nav-btn, .vip-badge { font-size: 0.85rem; padding: 0.15em 0.4em; }
+        }
+    </style>
     <script>
         // 优化：图片懒加载、响应式、弹窗预览
         const covers = [
