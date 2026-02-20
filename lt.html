@@ -5887,6 +5887,95 @@
                 bottom: 150px !important;
             }
         }
+
+        /* ------------------------------------------------------------
+           全局深色模式深度覆盖 (处理残留的白色卡片与表格高亮) 
+           ------------------------------------------------------------ */
+        body.dark-mode .starter-card,
+        body.dark-mode .info-card,
+        body.dark-mode .doc-card,
+        body.dark-mode .setting-item {
+            background-color: var(--bg-card) !important;
+            border-color: var(--border) !important;
+            color: var(--text-color) !important;
+        }
+
+        body.dark-mode .starter-card h4,
+        body.dark-mode .doc-card h3 {
+            color: #f8fafc !important;
+        }
+
+        /* 重置所有表格的基础背景 */
+        body.dark-mode table,
+        body.dark-mode .pure-table,
+        body.dark-mode table.mobile-card-table tr,
+        body.dark-mode .ticket-table th,
+        body.dark-mode .heatmap-table th,
+        body.dark-mode .comparison-table th {
+            background-color: transparent !important;
+            color: var(--text-color) !important;
+            border-color: var(--border) !important;
+        }
+
+        /* 表格行和单元格深色处理 */
+        body.dark-mode tbody tr,
+        body.dark-mode table td,
+        body.dark-mode table th,
+        body.dark-mode table tbody td,
+        body.dark-mode .glass-table td {
+            background-color: transparent !important;
+            color: var(--text-color) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        /* 处理悬浮效果 */
+        body.dark-mode tbody tr:hover td {
+            background-color: var(--hover-bg) !important;
+        }
+
+        /* 处理可能通过 inline-style 强行覆盖白色的元素 */
+        body.dark-mode [style*="background: white"],
+        body.dark-mode [style*="background: #fff"],
+        body.dark-mode [style*="background:#fff"],
+        body.dark-mode [style*="background-color: white"],
+        body.dark-mode [style*="background-color: #fff"] {
+            background: var(--bg-card) !important;
+            background-color: var(--bg-card) !important;
+        }
+
+        /* --- 针对本校/重点行 高亮的智能转化 (黄色背景) --- */
+        body.dark-mode tbody tr[style*="background"],
+        body.dark-mode tbody tr.highlight td,
+        body.dark-mode td[style*="background-color: #fef3c7"],
+        body.dark-mode td[style*="background: #fef3c7"] {
+            background-color: rgba(234, 180, 8, 0.15) !important;
+        }
+
+        /* --- 针对具体模块(新教师主页等)内嵌的元素 --- */
+        body.dark-mode .module-help-btn,
+        body.dark-mode .status-item,
+        body.dark-mode .task-item,
+        body.dark-mode .item-card {
+            background-color: var(--bg-card) !important;
+            color: var(--text-color) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        /* 处理硬编码为淡蓝/淡色背景的容器 (例如多期对比) */
+        body.dark-mode [style*="background:#f8fafc"],
+        body.dark-mode [style*="background: #f8fafc"],
+        body.dark-mode [style*="background-color:#f8fafc"],
+        body.dark-mode [style*="background-color: #f8fafc"] {
+            background: var(--bg-card) !important;
+            background-color: var(--bg-card) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        /* 全局深色模式修正硬编码的黑色字体 */
+        body.dark-mode [style*="color:#334155"],
+        body.dark-mode [style*="color: #334155"] {
+            color: var(--text-color) !important;
+        }
     </style>
 
     <!-- ================== Windows 11 Fluent Design UI 重构包 ================== -->
