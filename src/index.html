@@ -1180,26 +1180,24 @@
                     alt="校徽">
 
                 <!-- 标题文字区域 -->
-                <div style="flex: 1;">
-                    <h1 id="app-title" style="margin:0; font-size:24px; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        乡镇学校成绩分析与教务管理系统 <span id="mode-badge" class="badge"></span></h1>
-                    <p id="app-subtitle" style="margin:5px 0 0 0; opacity: 0.9; font-size: 13px;">集成：乡镇学校横向对比 · 教师教学深度分析
-                        · 偏科挖掘 · 考务编排</p>
+                <div style="flex: 1; display: flex; align-items: center; gap: 15px;">
+                    <h1 id="app-title" style="margin:0; font-size:24px; text-shadow: 0 2px 4px rgba(0,0,0,0.1); font-weight: 800; letter-spacing: -0.5px;">
+                        SmartEdu Analytics <span id="mode-badge" class="badge"></span>
+                    </h1>
+                    <span id="role-hint"
+                        style="font-size:12px; color:#fff; background:rgba(255,255,255,0.15); backdrop-filter: blur(4px); padding:4px 10px; border-radius:999px; border:1px solid rgba(255,255,255,0.25);">Role: Guest</span>
                 </div>
 
                 <!-- 右上角工具栏 -->
-                <div style="display:flex; gap:10px; align-items:center;">
-                    <span id="role-hint"
-                        style="font-size:12px; color:#fff; background:rgba(0,0,0,0.15); padding:4px 8px; border-radius:999px; border:1px solid rgba(255,255,255,0.25);">角色:
-                        未登录</span>
+                <div style="display:flex; gap:8px; align-items:center;">
                     <select id="cohort-selector" onchange="CohortManager.switchTo(this.value)"
-                        style="background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.5); padding:5px; border-radius:4px; font-size:14px; font-weight:bold; cursor:pointer; outline:none;">
-                        <option value="" style="color:#333">📂 请选择届别</option>
+                        style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3); padding:6px 12px; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; outline:none; transition: all 0.2s;">
+                        <option value="" style="color:#333">📁 Select Cohort</option>
                     </select>
                     <button class="btn"
-                        style="background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4); color:white;"
-                        onclick="scrollToAnchor('upload', this)" title="前往届别管理">
-                        <i class="ti ti-users-group"></i> 届别
+                        style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:white; padding: 6px 12px; font-size: 13px;"
+                        onclick="scrollToAnchor('upload', this)" title="Manage Cohorts">
+                        <i class="ti ti-users-group"></i> Cohorts
                     </button>
                     <div id="admin-msg-btn" class="notification-btn" style="display:none;"
                         onclick="IssueManager.openAdminPanel()">
@@ -1213,41 +1211,41 @@
                     <!-- 注意：此按钮默认通过 CSS #admin-panel-btn {display:none} 隐藏，只有 body[data-role="admin"] 时才显示 -->
                     <button class="btn" id="admin-panel-btn"
                         onclick="document.getElementById('admin-modal').style.display='flex'"
-                        style="background:#b91c1c; color:white; border:1px solid rgba(255,255,255,0.4); display:none;">
-                        <i class="ti ti-settings"></i> 账号管理
+                        style="background:rgba(220, 38, 38, 0.8); color:white; border:1px solid rgba(255,255,255,0.2); display:none; padding: 6px 12px; font-size: 13px;">
+                        <i class="ti ti-settings"></i> Accounts
                     </button>
-                    <button class="btn" id="btn-cloud-rollback" onclick="openCloudRollback()" title="管理员专用：打开云端快照回滚"
-                        style="background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4); color:white; display:none;">
-                        <i class="ti ti-rotate"></i> 云端回滚
+                    <button class="btn" id="btn-cloud-rollback" onclick="openCloudRollback()" title="Admin: Cloud Rollback"
+                        style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:white; display:none; padding: 6px 12px; font-size: 13px;">
+                        <i class="ti ti-rotate"></i> Rollback
                     </button>
                     <button class="btn"
-                        style="background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4); backdrop-filter:blur(5px); color:white;"
-                        onclick="HelpSystem.startTour()" title="新手引导">
-                        <i class="ti ti-help-circle"></i> 教程
+                        style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); backdrop-filter:blur(5px); color:white; padding: 6px 12px; font-size: 13px;"
+                        onclick="HelpSystem.startTour()" title="Tutorial">
+                        <i class="ti ti-help-circle"></i> Guide
                     </button>
                     <!-- [新增] 外观设置按钮 -->
                     <button class="btn"
-                        style="background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4); backdrop-filter:blur(5px); color:white;"
-                        onclick="openSkinModal()" title="自定义外观">
-                        <i class="ti ti-palette"></i> 外观设置
+                        style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); backdrop-filter:blur(5px); color:white; padding: 6px 12px; font-size: 13px;"
+                        onclick="openSkinModal()" title="Theme/Appearance">
+                        <i class="ti ti-palette"></i> Theme
                     </button>
 
                     <!-- 深色模式切换按钮 -->
                     <button class="btn"
-                        style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.2); padding: 6px 10px;"
-                        onclick="toggleDarkMode()" title="切换深色模式">
+                        style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); padding: 6px 10px;"
+                        onclick="toggleDarkMode()" title="Toggle Dark Mode">
                         <i class="ti ti-moon"></i>
                     </button>
                     <!-- 全局搜索提示按钮 -->
-                    <div style="color:rgba(255,255,255,0.9); font-size:12px; border:1px solid rgba(255,255,255,0.3); padding:6px 12px; border-radius:6px; cursor:pointer; background: rgba(0,0,0,0.1);"
-                        onclick="openSpotlight()">
-                        <i class="ti ti-search"></i> 搜索
+                    <div style="color:rgba(255,255,255,0.9); font-size:12px; border:1px solid rgba(255,255,255,0.3); padding:6px 12px; border-radius:6px; cursor:pointer; background: rgba(0,0,0,0.15); font-weight: 500; transition: all 0.2s;"
+                        onclick="openSpotlight()" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(0,0,0,0.15)'">
+                        <i class="ti ti-search"></i> Search
                     </div>
 
                     <button class="btn" id="btn-guest-mode" onclick="toggleGuestMode()"
-                        style="background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4); color:white; font-size:12px; padding:5px 10px; margin-left:5px;"
-                        title="不保存任何数据，关闭即消失">
-                        <i class="ti ti-flame"></i> 阅后即焚
+                        style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:white; font-size:12px; padding:6px 10px; margin-left:5px;"
+                        title="Incognito Mode (Data deleted on close)">
+                        <i class="ti ti-flame"></i> Incognito
                     </button>
                 </div>
             </div>

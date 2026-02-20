@@ -5702,7 +5702,7 @@ const DataManager = {
 
     function renderNavigation() {
         const catContainer = document.getElementById('navCategories');
-        const subContainer = document.getElementById('navSubItems');
+        // const subContainer = document.getElementById('navSubItems'); // We don't use this anymore
         catContainer.innerHTML = '';
 
         // 如果 Auth 未初始化或未登录，默认为 guest
@@ -5722,6 +5722,7 @@ const DataManager = {
             document.documentElement.style.setProperty('--primary', NAV_STRUCTURE['town'].color);
         }
 
+        // Bilibili Style: Build Parent tabs and hover dropdowns
         Object.keys(NAV_STRUCTURE).forEach(key => {
             const cat = NAV_STRUCTURE[key];
 
@@ -5733,61 +5734,84 @@ const DataManager = {
             // 3.1 班主任/科任教师隐藏校际联考模块
             if (isTeacherRole && key === 'town') return;
 
-            // --- 原有渲染逻辑保持不变 ---
+            // 创建主菜单项
             const div = document.createElement('div');
             div.className = `nav-cat-item ${key === currentCategory ? 'active' : ''}`;
             div.innerHTML = `${cat.title}`;
-            
-            div.onclick = () => {
+
+            // 点击主菜单项仍然支持切换 Category，但更重要的是构建下拉结构
+            div.onclick = (e) => {
+                // 如果点的是内部的 a 标签，不要触发主类的点击
+                if(e.target.tagName.toLowerCase() === 'a' || e.target.closest('a')) return;
                 currentCategory = key;
                 document.documentElement.style.setProperty('--primary', cat.color);
                 renderNavigation();
                 
-                if (cat.items.length > 0) {
-                    // 自动跳转到该类目下的第一个功能
-                    switchTab(cat.items[0].id);
+                // 尝试跳转到第一个可用的模块
+                const availableItems = Array.from(div.querySelectorAll('.nav-link'));
+                if (availableItems.length > 0) {
+                    availableItems[0].click();
                 }
             };
-            catContainer.appendChild(div);
-        });
 
-        subContainer.innerHTML = '';
-        if (!NAV_STRUCTURE[currentCategory]) currentCategory = 'town';
-        const subItems = NAV_STRUCTURE[currentCategory].items;
-        subItems.forEach(item => {
-            
-            // 1. 教师/班主任权限控制
-            if ((role === 'teacher' || role === 'class_teacher') && !canAccessModule(item.id)) return;
+            // 构建下拉菜单 (nav-dropdown-menu)
+            if (cat.items && cat.items.length > 0) {
+                const subMenu = document.createElement('div');
+                subMenu.className = 'nav-dropdown-menu';
+                
+                cat.items.forEach(item => {
+                    // 1. 教师/班主任权限控制
+                    if ((role === 'teacher' || role === 'class_teacher') && !canAccessModule(item.id)) return;
 
-            // 2. 教师权限控制补充
-            if (role === 'teacher') {
-                const blockedModules = ['single-school-eval', 'exam-arranger', 'freshman-simulator'];
-                if(blockedModules.includes(item.id)) return; 
+                    // 2. 教师权限控制补充
+                    if (role === 'teacher') {
+                        const blockedModules = ['single-school-eval', 'exam-arranger', 'freshman-simulator'];
+                        if(blockedModules.includes(item.id)) return; 
+                    }
+
+                    // 3. 家长权限控制
+                    if (role === 'parent') return; 
+
+                    // 4. 配置显示/隐藏特定模块
+                    if (item.id === 'report-generator' && !CONFIG.showQuery) return;
+
+                    const a = document.createElement('a');
+                    a.className = 'nav-link';
+                    
+                    const targetElement = document.getElementById(item.id);
+                    if(targetElement && targetElement.classList.contains('active')) a.classList.add('active');
+                    
+                    a.innerHTML = `<i class="ti ${item.icon}"></i> ${item.text}`;
+                    a.onclick = (e) => {
+                        e.stopPropagation(); // 阻止主菜单的 onclick 触发
+                        document.documentElement.style.setProperty('--primary', cat.color);
+                        currentCategory = key;
+                        switchTab(item.id);
+                        // 重新渲染以更新 active 状态
+                        renderNavigation();
+                    };
+                    subMenu.appendChild(a);
+                });
+
+                // 只有当下拉菜单不为空时才添加它
+                if (subMenu.children.length > 0) {
+                    // 如果当前 active 的 sub-item 在这个分类里，主分类高亮
+                    if (subMenu.querySelector('.active')) {
+                        div.classList.add('active');
+                    }
+                    div.appendChild(subMenu);
+                }
             }
 
-            // 3. 家长权限控制 (虽然 CSS 已经隐藏了 header，这里做双重保险)
-            if (role === 'parent') return; 
-
-            // 3. 教务主任权限 (通常拥有所有业务权限，除了账号管理，账号管理已在 Header 按钮处控制)
-            
-            if (item.id === 'report-generator' && !CONFIG.showQuery) return;
-            const a = document.createElement('a');
-            a.className = `nav-link`;
-            const targetElement = document.getElementById(item.id);
-            if(targetElement && targetElement.classList.contains('active')) a.classList.add('active');
-            a.innerHTML = `<i class="ti ${item.icon}"></i> ${item.text}`;
-            a.onclick = () => switchTab(item.id);
-            subContainer.appendChild(a);
+            catContainer.appendChild(div);
         });
         
-        // 如果当前没有任何激活的section，自动激活当前分类的第一个模块
+        // 如果当前没有任何激活的section，自动激活可用的第一个模块
         const hasActiveSection = document.querySelector('.section.active');
-        if (!hasActiveSection && subItems.length > 0) {
-            const firstModuleId = subItems[0].id;
-            const firstSection = document.getElementById(firstModuleId);
-            if (firstSection) {
-                firstSection.classList.add('active');
-                console.log(`✅ 自动激活默认模块: ${firstModuleId}`);
+        if (!hasActiveSection) {
+            const firstAvailableLink = catContainer.querySelector('.nav-link');
+            if (firstAvailableLink) {
+                firstAvailableLink.click();
             }
         }
     }
