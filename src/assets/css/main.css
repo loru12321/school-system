@@ -5657,3 +5657,38 @@ body.dark-mode [style*="color:#9a3412"],
 body.dark-mode [style*="color: #9a3412"] {
     color: var(--text-color) !important;
 }
+
+/* 5. Deep Overrides for Dynamic JS Containers and Highlights */
+body.dark-mode .bg-highlight,
+body.dark-mode tr.bg-highlight,
+body.dark-mode td.bg-highlight {
+    background: rgba(249, 115, 22, 0.2) !important;
+    /* Translucent glowing orange for target school */
+    color: #fdba74 !important;
+}
+
+body.dark-mode .class-students-container,
+body.dark-mode .student-compare-card,
+body.dark-mode .class-group-header,
+body.dark-mode div[id*="multi-period-compare-section"],
+body.dark-mode [style*="background:#ffffff"],
+body.dark-mode [style*="background: #ffffff"],
+body.dark-mode [style*="background-color:#ffffff"],
+body.dark-mode [style*="background-color: #ffffff"],
+body.dark-mode [style*="background:#fff"],
+body.dark-mode [style*="background: #fff"],
+body.dark-mode [style*="background-color:#fff"],
+body.dark-mode [style*="background-color: #fff"] {
+    background: rgba(30, 41, 59, 0.45) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    color: var(--text-color) !important;
+}
+
+body.dark-mode span[style*="background:#f1f5f9"],
+body.dark-mode [style*="background:#f0fdf4"],
+body.dark-mode [style*="background:#fffbeb"] {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: var(--text-color) !important;
+}
