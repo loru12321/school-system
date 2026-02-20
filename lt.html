@@ -36253,6 +36253,134 @@
             }
         </script>
 
+
+        <!-- ============================================================
+         FINAL AUTHORITY: Dark Mode Override (MUST be last style block)
+         This block wins the CSS cascade against ALL 6 prior style blocks.
+         ============================================================ -->
+        <style>
+            /* UNIVERSAL: Every element with class-driven or default background */
+            body.dark-mode table,
+            body.dark-mode thead,
+            body.dark-mode tbody,
+            body.dark-mode tr,
+            body.dark-mode th,
+            body.dark-mode td,
+            body.dark-mode tr:nth-child(even),
+            body.dark-mode tr:nth-child(odd),
+            body.dark-mode .comparison-table th,
+            body.dark-mode .comparison-table td,
+            body.dark-mode .comparison-table thead th,
+            body.dark-mode .glass-table th,
+            body.dark-mode .glass-table td,
+            body.dark-mode .pure-table th,
+            body.dark-mode .pure-table td {
+                background: transparent !important;
+                background-color: transparent !important;
+                color: #cbd5e1 !important;
+                border-color: rgba(255, 255, 255, 0.08) !important;
+            }
+
+            /* Table headers get a subtle frosted dark treatment */
+            body.dark-mode table thead th,
+            body.dark-mode .comparison-table thead th,
+            body.dark-mode .glass-table thead th {
+                background: rgba(30, 41, 59, 0.7) !important;
+                color: #94a3b8 !important;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+            }
+
+            /* Hover effect for rows */
+            body.dark-mode tbody tr:hover,
+            body.dark-mode tbody tr:hover td {
+                background: rgba(255, 255, 255, 0.05) !important;
+            }
+
+            /* Alternating row stripe (subtle) */
+            body.dark-mode tbody tr:nth-child(even) td {
+                background: rgba(255, 255, 255, 0.02) !important;
+            }
+
+            /* Target school highlight rows */
+            body.dark-mode .bg-highlight,
+            body.dark-mode .bg-highlight td,
+            body.dark-mode tr.bg-highlight,
+            body.dark-mode tr.bg-highlight td {
+                background: rgba(249, 115, 22, 0.15) !important;
+                color: #fdba74 !important;
+            }
+
+            /* UNIVERSAL: Strip ALL inline style backgrounds */
+            body.dark-mode [style*="background"] {
+                background: transparent !important;
+                background-color: transparent !important;
+            }
+
+            /* Structural containers with inline backgrounds get glassmorphism */
+            body.dark-mode div[style*="background"],
+            body.dark-mode section[style*="background"],
+            body.dark-mode details[style*="background"],
+            body.dark-mode summary[style*="background"],
+            body.dark-mode li[style*="background"] {
+                background: rgba(30, 41, 59, 0.45) !important;
+                backdrop-filter: blur(12px) !important;
+                -webkit-backdrop-filter: blur(12px) !important;
+                border-color: rgba(255, 255, 255, 0.08) !important;
+            }
+
+            /* WHITELIST: Elements that NEED their inline backgrounds */
+            body.dark-mode button[style*="background"],
+            body.dark-mode .btn[style*="background"],
+            body.dark-mode [class*="btn-"][style*="background"],
+            body.dark-mode .heatmap-cell[style*="background"],
+            body.dark-mode .contribution-bar[style*="background"],
+            body.dark-mode .data-bar-bg[style*="background"],
+            body.dark-mode .progress-fill[style*="background"],
+            body.dark-mode .bar-fill[style*="background"],
+            body.dark-mode .score-bar[style*="background"],
+            body.dark-mode span.badge[style*="background"],
+            body.dark-mode .t-badge[style*="background"] {
+                background: revert !important;
+                background-color: revert !important;
+            }
+
+            /* Unscoped white/light class backgrounds */
+            body.dark-mode .table-wrap,
+            body.dark-mode .card-box,
+            body.dark-mode .info-card,
+            body.dark-mode .doc-card,
+            body.dark-mode .starter-card,
+            body.dark-mode .glass-panel,
+            body.dark-mode .modal-content,
+            body.dark-mode .spotlight-box,
+            body.dark-mode .nav-dropdown-menu,
+            body.dark-mode .log-item,
+            body.dark-mode .task-item,
+            body.dark-mode .issue-item,
+            body.dark-mode .class-students-container,
+            body.dark-mode .student-compare-card,
+            body.dark-mode .class-group-header {
+                background: rgba(30, 41, 59, 0.45) !important;
+                border-color: rgba(255, 255, 255, 0.08) !important;
+            }
+
+            /* Dark text overrides */
+            body.dark-mode [style*="color:#334155"],
+            body.dark-mode [style*="color: #334155"],
+            body.dark-mode [style*="color:#475569"],
+            body.dark-mode [style*="color: #475569"],
+            body.dark-mode [style*="color:#333"],
+            body.dark-mode [style*="color: #333"],
+            body.dark-mode [style*="color:#666"],
+            body.dark-mode [style*="color: #666"],
+            body.dark-mode [style*="color:#1e293b"],
+            body.dark-mode [style*="color: #1e293b"],
+            body.dark-mode [style*="color:#202020"],
+            body.dark-mode [style*="color: #202020"] {
+                color: #cbd5e1 !important;
+            }
+        </style>
+
 </body>
 
 </html>
