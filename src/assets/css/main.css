@@ -5624,9 +5624,17 @@ body.dark-mode span[style*="background: #16a34a"] {
     color: #e2e8f0 !important;
 }
 
-/* 4. Aggressive Table & Inline Style Overrides */
+/* ============================================================
+   4. NUCLEAR DARK MODE OVERRIDE
+   Strategy: Strip ALL inline backgrounds, then whitelist exceptions.
+   This catches every hardcoded hex (#f8fafc, #ffffff, #fff7ed, etc.)
+   regardless of browser normalization (hex → rgb()).
+   ============================================================ */
+
+/* 4a. Force ALL table elements to transparent (no exceptions) */
 body.dark-mode table,
 body.dark-mode tbody,
+body.dark-mode thead,
 body.dark-mode tr,
 body.dark-mode th,
 body.dark-mode td {
@@ -5634,61 +5642,82 @@ body.dark-mode td {
     background: transparent !important;
 }
 
-/* Overriding inline strings precisely for custom columns/charts */
-body.dark-mode [style*="background:#f8fafc"],
-body.dark-mode [style*="background: #f8fafc"],
-body.dark-mode [style*="background-color:#f8fafc"],
-body.dark-mode [style*="background-color: #f8fafc"],
-body.dark-mode [style*="background:#fff7ed"],
-body.dark-mode [style*="background: #fff7ed"],
-body.dark-mode [style*="background-color:#fff7ed"],
-body.dark-mode [style*="background-color: #fff7ed"] {
-    background: rgba(30, 41, 59, 0.45) !important;
-    backdrop-filter: blur(16px) !important;
-    border-color: rgba(255, 255, 255, 0.08) !important;
-    color: var(--text-color) !important;
+/* 4b. UNIVERSAL INLINE BACKGROUND STRIPPER
+   Any element with an inline style containing "background" → transparent.
+   This is the nuclear option that catches EVERYTHING JavaScript injects. */
+body.dark-mode [style*="background"] {
+    background: transparent !important;
+    background-color: transparent !important;
 }
 
+/* 4c. GLASSMORPHISM for structural containers (divs, sections, details)
+   These get the frosted glass treatment instead of just transparent */
+body.dark-mode div[style*="background"],
+body.dark-mode section[style*="background"],
+body.dark-mode details[style*="background"],
+body.dark-mode summary[style*="background"],
+body.dark-mode li[style*="background"] {
+    background: rgba(30, 41, 59, 0.45) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* 4d. WHITELIST: Elements that NEED their inline backgrounds preserved
+   (data visualization, colored buttons, colored badges, progress bars) */
+body.dark-mode .heatmap-cell[style*="background"],
+body.dark-mode .contribution-bar[style*="background"],
+body.dark-mode .data-bar-bg[style*="background"],
+body.dark-mode .progress-fill[style*="background"],
+body.dark-mode .bar-fill[style*="background"],
+body.dark-mode .score-bar[style*="background"] {
+    background: revert !important;
+    background-color: revert !important;
+}
+
+/* Buttons keep their semantic colors */
+body.dark-mode button[style*="background"],
+body.dark-mode .btn[style*="background"],
+body.dark-mode [class*="btn-"][style*="background"] {
+    background: revert !important;
+    background-color: revert !important;
+}
+
+/* Inline badge spans keep their semantic colors (red/green/blue chips) */
+body.dark-mode span.badge[style*="background"],
+body.dark-mode .t-badge[style*="background"] {
+    background: revert !important;
+    background-color: revert !important;
+}
+
+/* 4e. TARGET SCHOOL HIGHLIGHT (bg-highlight class) */
+body.dark-mode .bg-highlight,
+body.dark-mode tr.bg-highlight,
+body.dark-mode tr.bg-highlight td {
+    background: rgba(249, 115, 22, 0.15) !important;
+}
+
+/* 4f. Dark text colors that need overriding in dark mode */
 body.dark-mode [style*="color:#334155"],
 body.dark-mode [style*="color: #334155"],
+body.dark-mode [style*="color:#475569"],
+body.dark-mode [style*="color: #475569"],
 body.dark-mode [style*="color:#7c2d12"],
 body.dark-mode [style*="color: #7c2d12"],
 body.dark-mode [style*="color:#9a3412"],
-body.dark-mode [style*="color: #9a3412"] {
-    color: var(--text-color) !important;
+body.dark-mode [style*="color: #9a3412"],
+body.dark-mode [style*="color:#333"],
+body.dark-mode [style*="color: #333"],
+body.dark-mode [style*="color:#666"],
+body.dark-mode [style*="color: #666"],
+body.dark-mode [style*="color:#1e293b"],
+body.dark-mode [style*="color: #1e293b"] {
+    color: #cbd5e1 !important;
 }
 
-/* 5. Deep Overrides for Dynamic JS Containers and Highlights */
-body.dark-mode .bg-highlight,
-body.dark-mode tr.bg-highlight,
-body.dark-mode td.bg-highlight {
-    background: rgba(249, 115, 22, 0.2) !important;
-    /* Translucent glowing orange for target school */
-    color: #fdba74 !important;
-}
-
-body.dark-mode .class-students-container,
-body.dark-mode .student-compare-card,
-body.dark-mode .class-group-header,
-body.dark-mode div[id*="multi-period-compare-section"],
-body.dark-mode [style*="background:#ffffff"],
-body.dark-mode [style*="background: #ffffff"],
-body.dark-mode [style*="background-color:#ffffff"],
-body.dark-mode [style*="background-color: #ffffff"],
-body.dark-mode [style*="background:#fff"],
-body.dark-mode [style*="background: #fff"],
-body.dark-mode [style*="background-color:#fff"],
-body.dark-mode [style*="background-color: #fff"] {
-    background: rgba(30, 41, 59, 0.45) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
-    border-color: rgba(255, 255, 255, 0.08) !important;
-    color: var(--text-color) !important;
-}
-
-body.dark-mode span[style*="background:#f1f5f9"],
-body.dark-mode [style*="background:#f0fdf4"],
-body.dark-mode [style*="background:#fffbeb"] {
-    background: rgba(255, 255, 255, 0.1) !important;
-    color: var(--text-color) !important;
+/* 4g. Login overlay special case — needs its own background */
+body.dark-mode #login-overlay[style*="background"] {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%) !important;
+    background-image: radial-gradient(rgba(99, 102, 241, 0.15) 1px, transparent 1px) !important;
+    background-size: 20px 20px !important;
 }

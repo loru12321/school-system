@@ -5933,22 +5933,50 @@
             background-color: var(--hover-bg) !important;
         }
 
-        /* 处理可能通过 inline-style 强行覆盖白色的元素 */
-        body.dark-mode [style*="background: white"],
-        body.dark-mode [style*="background: #fff"],
-        body.dark-mode [style*="background:#fff"],
-        body.dark-mode [style*="background-color: white"],
-        body.dark-mode [style*="background-color: #fff"] {
-            background: var(--bg-card) !important;
-            background-color: var(--bg-card) !important;
+        /* ============================================================
+           NUCLEAR DARK MODE OVERRIDE (mirrors main.css section 4)
+           Strategy: Strip ALL inline backgrounds, then whitelist exceptions.
+           ============================================================ */
+
+        /* Universal inline background stripper */
+        body.dark-mode [style*="background"] {
+            background: transparent !important;
+            background-color: transparent !important;
         }
 
-        /* --- 针对本校/重点行 高亮的智能转化 (黄色背景) --- */
-        body.dark-mode tbody tr[style*="background"],
-        body.dark-mode tbody tr.highlight td,
-        body.dark-mode td[style*="background-color: #fef3c7"],
-        body.dark-mode td[style*="background: #fef3c7"] {
-            background-color: rgba(234, 180, 8, 0.15) !important;
+        /* Glassmorphism for structural containers */
+        body.dark-mode div[style*="background"],
+        body.dark-mode section[style*="background"],
+        body.dark-mode details[style*="background"],
+        body.dark-mode summary[style*="background"],
+        body.dark-mode li[style*="background"] {
+            background: rgba(30, 41, 59, 0.45) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        /* Whitelist: data-viz, buttons, badges keep their colors */
+        body.dark-mode .heatmap-cell[style*="background"],
+        body.dark-mode .contribution-bar[style*="background"],
+        body.dark-mode .data-bar-bg[style*="background"],
+        body.dark-mode .progress-fill[style*="background"],
+        body.dark-mode .bar-fill[style*="background"],
+        body.dark-mode .score-bar[style*="background"],
+        body.dark-mode button[style*="background"],
+        body.dark-mode .btn[style*="background"],
+        body.dark-mode [class*="btn-"][style*="background"],
+        body.dark-mode span.badge[style*="background"],
+        body.dark-mode .t-badge[style*="background"] {
+            background: revert !important;
+            background-color: revert !important;
+        }
+
+        /* Target school highlight */
+        body.dark-mode .bg-highlight,
+        body.dark-mode tr.bg-highlight,
+        body.dark-mode tr.bg-highlight td {
+            background: rgba(249, 115, 22, 0.15) !important;
         }
 
         /* --- WEATHER APP UI OVERHAUL (DARK MODE) --- */
@@ -6018,51 +6046,27 @@
             color: #6ee7b7 !important;
         }
 
-        body.dark-mode span[style*="background:#b91c1c"],
-        body.dark-mode span[style*="background: #b91c1c"],
-        body.dark-mode span[style*="background:#b45309"],
-        body.dark-mode span[style*="background: #b45309"],
-        body.dark-mode span[style*="background:#15803d"],
-        body.dark-mode span[style*="background: #15803d"],
-        body.dark-mode span[style*="background:#16a34a"],
-        body.dark-mode span[style*="background: #16a34a"] {
-            background: rgba(255, 255, 255, 0.15) !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
-            color: #e2e8f0 !important;
-        }
-
-        /* 4. Aggressive Table & Inline Style Overrides */
-        body.dark-mode table,
-        body.dark-mode tbody,
-        body.dark-mode tr,
-        body.dark-mode th,
-        body.dark-mode td {
-            background-color: transparent !important;
-            background: transparent !important;
-        }
-
-        /* Overriding inline strings precisely for custom columns/charts */
-        body.dark-mode [style*="background:#f8fafc"],
-        body.dark-mode [style*="background: #f8fafc"],
-        body.dark-mode [style*="background-color:#f8fafc"],
-        body.dark-mode [style*="background-color: #f8fafc"],
-        body.dark-mode [style*="background:#fff7ed"],
-        body.dark-mode [style*="background: #fff7ed"],
-        body.dark-mode [style*="background-color:#fff7ed"],
-        body.dark-mode [style*="background-color: #fff7ed"] {
-            background: rgba(30, 41, 59, 0.45) !important;
-            backdrop-filter: blur(16px) !important;
-            border-color: rgba(255, 255, 255, 0.08) !important;
-            color: var(--text-color) !important;
-        }
-
+        /* Dark text color overrides */
         body.dark-mode [style*="color:#334155"],
         body.dark-mode [style*="color: #334155"],
+        body.dark-mode [style*="color:#475569"],
+        body.dark-mode [style*="color: #475569"],
         body.dark-mode [style*="color:#7c2d12"],
         body.dark-mode [style*="color: #7c2d12"],
         body.dark-mode [style*="color:#9a3412"],
-        body.dark-mode [style*="color: #9a3412"] {
-            color: var(--text-color) !important;
+        body.dark-mode [style*="color: #9a3412"],
+        body.dark-mode [style*="color:#333"],
+        body.dark-mode [style*="color: #333"],
+        body.dark-mode [style*="color:#666"],
+        body.dark-mode [style*="color: #666"],
+        body.dark-mode [style*="color:#1e293b"],
+        body.dark-mode [style*="color: #1e293b"] {
+            color: #cbd5e1 !important;
+        }
+
+        /* Login overlay special case */
+        body.dark-mode #login-overlay[style*="background"] {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%) !important;
         }
     </style>
 
