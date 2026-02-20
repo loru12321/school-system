@@ -5951,29 +5951,117 @@
             background-color: rgba(234, 180, 8, 0.15) !important;
         }
 
-        /* --- 针对具体模块(新教师主页等)内嵌的元素 --- */
+        /* --- WEATHER APP UI OVERHAUL (DARK MODE) --- */
+        /* 1. Deep Atmospheric Gradient Background */
+        body.dark-mode {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%) !important;
+            color: #f8fafc !important;
+            min-height: 100vh;
+        }
+
+        /* 2. Unified Glassmorphism for Structural Containers */
+        body.dark-mode .card-box,
+        body.dark-mode .starter-card,
+        body.dark-mode .info-card,
+        body.dark-mode .doc-card,
+        body.dark-mode .glass-panel,
+        body.dark-mode .traffic-col,
+        body.dark-mode .teacher-card,
         body.dark-mode .module-help-btn,
         body.dark-mode .status-item,
         body.dark-mode .task-item,
-        body.dark-mode .item-card {
-            background-color: var(--bg-card) !important;
+        body.dark-mode .item-card,
+        body.dark-mode .stat-item,
+        body.dark-mode .badge,
+        body.dark-mode .status-badge,
+        body.dark-mode .badge-ok,
+        body.dark-mode .badge-warn {
+            background: rgba(30, 41, 59, 0.45) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2) !important;
             color: var(--text-color) !important;
-            border-color: rgba(255, 255, 255, 0.1) !important;
         }
 
-        /* 处理硬编码为淡蓝/淡色背景的容器 (例如多期对比) */
+        /* 3. Glowing Translucent Indicators (Town Exam Traffic Lights & Inline Badges) */
+        body.dark-mode .traffic-col.red {
+            background: rgba(239, 68, 68, 0.1) !important;
+            border-color: rgba(239, 68, 68, 0.3) !important;
+        }
+
+        body.dark-mode .traffic-head.red,
+        body.dark-mode .traffic-col.red .badge {
+            background: transparent !important;
+            color: #fca5a5 !important;
+        }
+
+        body.dark-mode .traffic-col.yellow {
+            background: rgba(245, 158, 11, 0.1) !important;
+            border-color: rgba(245, 158, 11, 0.3) !important;
+        }
+
+        body.dark-mode .traffic-head.yellow,
+        body.dark-mode .traffic-col.yellow .badge {
+            background: transparent !important;
+            color: #fcd34d !important;
+        }
+
+        body.dark-mode .traffic-col.green {
+            background: rgba(16, 185, 129, 0.1) !important;
+            border-color: rgba(16, 185, 129, 0.3) !important;
+        }
+
+        body.dark-mode .traffic-head.green,
+        body.dark-mode .traffic-col.green .badge {
+            background: transparent !important;
+            color: #6ee7b7 !important;
+        }
+
+        body.dark-mode span[style*="background:#b91c1c"],
+        body.dark-mode span[style*="background: #b91c1c"],
+        body.dark-mode span[style*="background:#b45309"],
+        body.dark-mode span[style*="background: #b45309"],
+        body.dark-mode span[style*="background:#15803d"],
+        body.dark-mode span[style*="background: #15803d"],
+        body.dark-mode span[style*="background:#16a34a"],
+        body.dark-mode span[style*="background: #16a34a"] {
+            background: rgba(255, 255, 255, 0.15) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            color: #e2e8f0 !important;
+        }
+
+        /* 4. Aggressive Table & Inline Style Overrides */
+        body.dark-mode table,
+        body.dark-mode tbody,
+        body.dark-mode tr,
+        body.dark-mode th,
+        body.dark-mode td {
+            background-color: transparent !important;
+            background: transparent !important;
+        }
+
+        /* Overriding inline strings precisely for custom columns/charts */
         body.dark-mode [style*="background:#f8fafc"],
         body.dark-mode [style*="background: #f8fafc"],
         body.dark-mode [style*="background-color:#f8fafc"],
-        body.dark-mode [style*="background-color: #f8fafc"] {
-            background: var(--bg-card) !important;
-            background-color: var(--bg-card) !important;
-            border-color: rgba(255, 255, 255, 0.1) !important;
+        body.dark-mode [style*="background-color: #f8fafc"],
+        body.dark-mode [style*="background:#fff7ed"],
+        body.dark-mode [style*="background: #fff7ed"],
+        body.dark-mode [style*="background-color:#fff7ed"],
+        body.dark-mode [style*="background-color: #fff7ed"] {
+            background: rgba(30, 41, 59, 0.45) !important;
+            backdrop-filter: blur(16px) !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+            color: var(--text-color) !important;
         }
 
-        /* 全局深色模式修正硬编码的黑色字体 */
         body.dark-mode [style*="color:#334155"],
-        body.dark-mode [style*="color: #334155"] {
+        body.dark-mode [style*="color: #334155"],
+        body.dark-mode [style*="color:#7c2d12"],
+        body.dark-mode [style*="color: #7c2d12"],
+        body.dark-mode [style*="color:#9a3412"],
+        body.dark-mode [style*="color: #9a3412"] {
             color: var(--text-color) !important;
         }
     </style>
