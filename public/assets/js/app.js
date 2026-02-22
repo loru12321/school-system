@@ -8959,15 +8959,26 @@ async function viewCloudTownSubmoduleCompares(submoduleId) {
         if (window.UI) UI.loading(false);
         if (!data || data.length === 0) return alert('☁️ 云端暂无记录');
 
-        const html = data.map((item, idx) => `
-                <div style="padding:10px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="loadCloudTownSubmoduleCompare('${submoduleId}', '${item.key}')">
-                    <div>
-                        <div style="font-weight:600; color:#334155;">${idx + 1}. ${item.key.replace(`TOWN_SUB_COMPARE_${submoduleId}_`, '')}</div>
-                        <div style="font-size:12px; color:#64748b; margin-top:2px;">${new Date(item.updated_at).toLocaleString()}</div>
+        const html = data.map((item, idx) => {
+            const keyParts = item.key.replace(`TOWN_SUB_COMPARE_${submoduleId}_`, '').split('_');
+            const cohort = keyParts[0] || '未知届别';
+            const school = keyParts[1] || '未知学校';
+            return `
+                <div style="padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="loadCloudTownSubmoduleCompare('${submoduleId}', '${item.key}')">
+                    <div style="flex:1;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                            <span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${cohort}</span>
+                            <span style="font-weight:600; color:#334155;">${school}</span>
+                        </div>
+                        <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${item.key}</div>
                     </div>
-                    <div style="font-size:12px; color:#64748b;">详情 &gt;</div>
+                    <div style="text-align:right;">
+                        <div style="font-size:12px; color:#64748b;">${new Date(item.updated_at).toLocaleString('zh-CN')}</div>
+                        <div style="font-size:11px; color:#3b82f6; margin-top:2px;">点击加载 &gt;</div>
+                    </div>
                 </div>
-            `).join('');
+            `;
+        }).join('');
 
         if (typeof Swal !== 'undefined') {
             Swal.fire({
@@ -10743,14 +10754,21 @@ async function viewCloudStudentCompares(selfOnly = false) {
         // 显示列表供用户选择（加载时按角色/本人过滤）
         const listHtml = listData.map((item, idx) => {
             const keyParts = item.key.split('_');
+            const cohort = keyParts[1] || '未知届别';
             const school = keyParts[2] || '未知学校';
             const date = new Date(item.updated_at).toLocaleString('zh-CN');
-            return `<div style="padding:10px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="${loadFn}('${item.key}')">
-                    <div>
-                        <div style="font-weight:600; color:#334155;">${idx + 1}. ${school}</div>
-                        <div style="font-size:12px; color:#64748b; margin-top:2px;">${item.key}</div>
+            return `<div style="padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="${loadFn}('${item.key}')">
+                    <div style="flex:1;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                            <span style="background:#f0fdf4; color:#16a34a; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${cohort}</span>
+                            <span style="font-weight:600; color:#334155;">${school}</span>
+                        </div>
+                        <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${item.key}</div>
                     </div>
-                    <div style="font-size:12px; color:#64748b;">${date}</div>
+                    <div style="text-align:right;">
+                        <div style="font-size:12px; color:#64748b;">${date}</div>
+                        <div style="font-size:11px; color:#3b82f6; margin-top:2px;">点击解析 &gt;</div>
+                    </div>
                 </div>`;
         }).join('');
 
@@ -10805,8 +10823,8 @@ function normalizeCloudCompareTarget(target, user) {
 
 function pickSelfStudentFromCloudRows(rows, normalizedTarget) {
     const sourceRows = Array.isArray(rows) ? rows : [];
-    const targetName = normalizedTarget?.name || '';
-    const targetClass = String(normalizedTarget?.class || '');
+    const targetName = normalizeCompareName(normalizedTarget?.name || '');
+    const targetClass = String(normalizedTarget?.class || '').trim();
     const targetSchool = String(normalizedTarget?.school || '').trim();
 
     const withSchool = sourceRows.filter(s => {
@@ -10816,24 +10834,30 @@ function pickSelfStudentFromCloudRows(rows, normalizedTarget) {
         return school === targetSchool;
     });
 
+    // 1. 尝试 姓名 + 班级 精确匹配
     const exactMatches = withSchool.filter(s => {
         const sameName = normalizeCompareName(s?.name || '') === targetName;
-        const sameClass = !targetClass || isClassEquivalent(s?.class || '', targetClass);
+        const sameClass = targetClass && isClassEquivalent(s?.class || '', targetClass);
         return sameName && sameClass;
     });
     if (exactMatches.length > 0) {
         return { student: exactMatches[0], strategy: 'name+class', candidates: exactMatches };
     }
 
+    // 2. 跨届可能存在班级变动：尝试 姓名 唯一匹配
     const nameOnlyMatches = withSchool.filter(s => normalizeCompareName(s?.name || '') === targetName);
-    if (nameOnlyMatches.length > 0) {
-        return { student: nameOnlyMatches[0], strategy: 'name-only', candidates: nameOnlyMatches };
+    if (nameOnlyMatches.length === 1) {
+        return { student: nameOnlyMatches[0], strategy: 'name-only-unique', candidates: nameOnlyMatches };
+    } else if (nameOnlyMatches.length > 1) {
+        // 如果同名，尝试寻找曾经匹配过的班级（此处逻辑可扩展，暂取第一个）
+        return { student: nameOnlyMatches[0], strategy: 'name-only-collision', candidates: nameOnlyMatches };
     }
 
-    const classOnlyMatches = withSchool.filter(s => targetClass && isClassEquivalent(s?.class || '', targetClass));
-    if (classOnlyMatches.length === 1) {
-        return { student: classOnlyMatches[0], strategy: 'class-unique', candidates: classOnlyMatches };
-    }
+    // 3. 兜底：仅班级唯一匹配 (通常不建议，但在某些极端小样场景下可能有用)
+    // const classOnlyMatches = withSchool.filter(s => targetClass && isClassEquivalent(s?.class || '', targetClass));
+    // if (classOnlyMatches.length === 1) {
+    //     return { student: classOnlyMatches[0], strategy: 'class-unique', candidates: classOnlyMatches };
+    // }
 
     return { student: null, strategy: 'none', candidates: [] };
 }
@@ -11511,15 +11535,26 @@ async function viewCloudMacroCompares() {
 
         if (!data || data.length === 0) return alert('☁️ 云端暂无校际多期对比记录');
 
-        const html = data.map((item, idx) => `
-                <div style="padding:10px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="loadCloudMacroCompare('${item.key}')">
-                    <div>
-                        <div style="font-weight:600; color:#334155;">${idx + 1}. ${item.key.replace('MACRO_COMPARE_', '')}</div>
-                        <div style="font-size:12px; color:#64748b; margin-top:2px;">${new Date(item.updated_at).toLocaleString()}</div>
+        const html = data.map((item, idx) => {
+            const keyParts = item.key.split('_');
+            const cohort = keyParts[1] || '未知届别';
+            const school = keyParts[2] || '未知学校';
+            return `
+                <div style="padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="loadCloudMacroCompare('${item.key}')">
+                    <div style="flex:1;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                            <span style="background:#eff6ff; color:#2563eb; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${cohort}</span>
+                            <span style="font-weight:600; color:#334155;">${school}</span>
+                        </div>
+                        <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${item.key}</div>
                     </div>
-                    <div style="font-size:12px; color:#64748b;">详情 &gt;</div>
+                    <div style="text-align:right;">
+                        <div style="font-size:12px; color:#64748b;">${new Date(item.updated_at).toLocaleString('zh-CN')}</div>
+                        <div style="font-size:11px; color:#3b82f6; margin-top:2px;">详情 &gt;</div>
+                    </div>
                 </div>
-            `).join('');
+            `;
+        }).join('');
 
         if (typeof Swal !== 'undefined') {
             Swal.fire({
@@ -12286,20 +12321,26 @@ async function viewCloudTeacherCompares() {
         }
 
         const listHtml = data.map((item, idx) => {
-            const keyParts = item.key.replace('TEACHER_COMPARE_', '').split('_');
-            // key format: <Cohort>_<Teacher>_<Subject>_<Date>_<Rand>
-            // index: 0=Cohort, 1=Teacher, 2=Subject, 3=Date
-            const teacherName = keyParts[1] || '未知教师';
-            const subject = keyParts[2] || '未知学科';
-            const dateStr = keyParts[3] || '未知日期';
-            const displayDate = new Date(item.updated_at).toLocaleString();
+            const keyParts = item.key.replace('TEACHER_COMPARE_BATCH_', '').replace('TEACHER_COMPARE_', '').split('_');
+            const cohort = keyParts[0] || '未知届别';
+            const name = keyParts[1] || '全校/未知';
+            const subject = keyParts[2] || '全科/未知';
+            const displayDate = new Date(item.updated_at).toLocaleString('zh-CN');
+            const isBatch = item.key.includes('_BATCH_');
 
-            return `<div style="padding:10px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="loadCloudTeacherCompare('${item.key}')">
-                    <div>
-                        <div style="font-weight:600; color:#334155;">${idx + 1}. ${teacherName} (${subject})</div>
-                        <div style="font-size:12px; color:#64748b; margin-top:2px;">${keyParts[0]} | ${displayDate}</div>
+            return `<div style="padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="loadCloudTeacherCompare('${item.key}')">
+                    <div style="flex:1;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                            <span style="background:#faf5ff; color:#7c3aed; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${cohort}</span>
+                            <span style="background:#fff7ed; color:#ea580c; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${isBatch ? '全校' : '个人'}</span>
+                            <span style="font-weight:600; color:#334155;">${name} (${subject})</span>
+                        </div>
+                        <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${item.key}</div>
                     </div>
-                    <div style="font-size:12px; color:#64748b;">详情 &gt;</div>
+                    <div style="text-align:right;">
+                        <div style="font-size:12px; color:#64748b;">${displayDate}</div>
+                        <div style="font-size:11px; color:#3b82f6; margin-top:2px;">详情 &gt;</div>
+                    </div>
                 </div>`;
         }).join('');
 
