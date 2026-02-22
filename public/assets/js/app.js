@@ -8954,7 +8954,19 @@ async function viewCloudTownSubmoduleCompares(submoduleId) {
     if (!sbClient) return alert('☁️ 云端服务未连接');
     try {
         if (window.UI) UI.loading(true, '☁️ 正在加载云端列表...');
-        const { data, error } = await sbClient.from('system_data').select('key, updated_at').like('key', `TOWN_SUB_COMPARE_${submoduleId}_%`).order('updated_at', { ascending: false }).limit(50);
+
+        const user = getCurrentUser();
+        const isAdmin = RoleManager.hasAnyRole(user, ['admin', 'director']);
+        const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '';
+
+        let query = sbClient.from('system_data').select('key, updated_at');
+        if (!isAdmin && cohortId) {
+            query = query.like('key', `TOWN_SUB_COMPARE_${submoduleId}_${cohortId}级_%`);
+        } else {
+            query = query.like('key', `TOWN_SUB_COMPARE_${submoduleId}_%`);
+        }
+
+        const { data, error } = await query.order('updated_at', { ascending: false }).limit(50);
         if (error) throw error;
         if (window.UI) UI.loading(false);
         if (!data || data.length === 0) return alert('☁️ 云端暂无记录');
@@ -10725,12 +10737,19 @@ async function viewCloudStudentCompares(selfOnly = false) {
     try {
         if (window.UI) UI.loading(true, '☁️ 正在加载云端对比列表...');
 
-        const { data, error } = await sbClient
-            .from('system_data')
-            .select('key, updated_at')
-            .like('key', 'STUDENT_COMPARE_%')
-            .order('updated_at', { ascending: false })
-            .limit(50);
+        const user = getCurrentUser();
+        const isAdminOrDirector = RoleManager.hasAnyRole(user, ['admin', 'director']);
+        const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '';
+
+        let query = sbClient.from('system_data').select('key, updated_at');
+        if (!isAdminOrDirector && cohortId) {
+            // 普通教师/学生/家长只能看到本届数据
+            query = query.like('key', `STUDENT_COMPARE_${cohortId}级_%`);
+        } else {
+            query = query.like('key', 'STUDENT_COMPARE_%');
+        }
+
+        const { data, error } = await query.order('updated_at', { ascending: false }).limit(50);
 
         if (error) throw error;
 
@@ -11524,12 +11543,19 @@ async function viewCloudMacroCompares() {
     if (!sbClient) return alert('☁️ 云端服务未连接');
     try {
         if (window.UI) UI.loading(true, '☁️ 正在加载校际对比云端列表...');
-        const { data, error } = await sbClient
-            .from('system_data')
-            .select('key, updated_at')
-            .like('key', 'MACRO_COMPARE_%')
-            .order('updated_at', { ascending: false })
-            .limit(50);
+
+        const user = getCurrentUser();
+        const isAdmin = RoleManager.hasAnyRole(user, ['admin', 'director']);
+        const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '';
+
+        let query = sbClient.from('system_data').select('key, updated_at');
+        if (!isAdmin && cohortId) {
+            query = query.like('key', `MACRO_COMPARE_${cohortId}级_%`);
+        } else {
+            query = query.like('key', 'MACRO_COMPARE_%');
+        }
+
+        const { data, error } = await query.order('updated_at', { ascending: false }).limit(50);
         if (error) throw error;
         if (window.UI) UI.loading(false);
 
@@ -12304,14 +12330,19 @@ async function viewCloudTeacherCompares() {
     try {
         if (window.UI) UI.loading(true, '☁️ 正在加载云端列表...');
 
-        // 查询 Teacher Compare 记录
-        const { data, error } = await sbClient
-            .from('system_data')
-            .select('key, updated_at')
-            .like('key', 'TEACHER_COMPARE_%')
-            .order('updated_at', { ascending: false })
-            .limit(50);
+        const user = getCurrentUser();
+        const isAdmin = RoleManager.hasAnyRole(user, ['admin', 'director']);
+        const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '';
 
+        let query = sbClient.from('system_data').select('key, updated_at');
+        if (!isAdmin && cohortId) {
+            // 普通教师/班主任只能看到本届数据（包含个人和批量）
+            query = query.or(`key.like.TEACHER_COMPARE_${cohortId}级_%,key.like.TEACHER_COMPARE_BATCH_${cohortId}级_%`);
+        } else {
+            query = query.like('key', 'TEACHER_COMPARE_%');
+        }
+
+        const { data, error } = await query.order('updated_at', { ascending: false }).limit(50);
         if (error) throw error;
 
         if (window.UI) UI.loading(false);
