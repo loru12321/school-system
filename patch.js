@@ -31,10 +31,14 @@ async function getHistoryComparisonData(studentName, className, schoolName) {
             // 在该记录中查找匹配的学生
             const sourceRows = payload.studentsCompareData || [];
             const matched = sourceRows.find(s => {
-                const sameName = normalizeCompareName(s.name || '') === normalizedTargetName;
-                const sameClass = !normalizedTargetClass || isClassEquivalent(s.class || '', normalizedTargetClass);
+                const sName = typeof normalizeCompareName === 'function' ? normalizeCompareName(s.name || '') : String(s.name || '').trim();
+                const sameName = sName === normalizedTargetName;
+                let sameClass = !normalizedTargetClass || (typeof isClassEquivalent === 'function' ? isClassEquivalent(s.class || '', normalizedTargetClass) : s.class === normalizedTargetClass);
+                if (!sameClass && normalizedTargetClass && s.class) {
+                    sameClass = String(s.class).replace(/[^0-9]/g, '') === normalizedTargetClass.replace(/[^0-9]/g, '');
+                }
                 const sameSchool = !schoolName || String(s.school || '').trim() === String(schoolName).trim();
-                return sameName && sameClass && sameSchool;
+                return sameName && (sameClass || !s.class);
             });
 
             if (matched && matched.periods) {
