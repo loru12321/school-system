@@ -690,11 +690,6 @@ const Auth = {
             reportHtml += `
                     <div style="text-align:center; margin-top:30px; padding-bottom:80px; border-top:1px dashed #e5e7eb; padding-top:20px;">
                         <p style="font-size:14px; color:#64748b; margin-bottom:15px;">数据有疑问？</p>
-                        <button class="btn" style="background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; font-size:15px; padding:10px 20px; margin-bottom:12px;" onmousedown="this.blur()" onclick="this.blur(); viewCloudStudentComparesForCurrentStudent('${safeName}', '${safeClass}', '${safeSchool}')">
-                            <i class="ti ti-cloud-search"></i> 查看云端对比（仅本人）
-                        </button>
-                        <br>
-                        
                         <!-- 核心修复：使用转义后的变量 -->
                         <button class="btn" style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; font-size:16px; padding:10px 20px; margin-bottom:20px;" 
                                 onclick="IssueManager.openSubmitModal('${safeName}', '${safeClass}', '${safeSchool}')">
@@ -10742,7 +10737,23 @@ async function viewCloudStudentCompares(selfOnly = false) {
         const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '';
 
         let query = sbClient.from('system_data').select('key, updated_at');
-        if (!isAdminOrDirector && cohortId) {
+        
+        // 本人模式：增强个人数据查询
+        if (selfOnly) {
+            // 学生/家长查看个人数据时，查询更精确的范围
+            const user = getCurrentUser();
+            const target = resolveCloudCompareTarget(user);
+            
+            if (target.name && target.class && target.school) {
+                // 优先查询包含个人信息的记录
+                query = query.like('key', `STUDENT_COMPARE_${cohortId}级_${target.school}_%`);
+            } else if (cohortId) {
+                // 退而求其次，查询本届数据
+                query = query.like('key', `STUDENT_COMPARE_${cohortId}级_%`);
+            } else {
+                query = query.like('key', 'STUDENT_COMPARE_%');
+            }
+        } else if (!isAdminOrDirector && cohortId) {
             // 普通教师/学生/家长只能看到本届数据
             query = query.like('key', `STUDENT_COMPARE_${cohortId}级_%`);
         } else {
@@ -10756,7 +10767,39 @@ async function viewCloudStudentCompares(selfOnly = false) {
         if (window.UI) UI.loading(false);
 
         if (!data || data.length === 0) {
-            return alert('☁️ 云端暂无已保存的对比结果');
+            if (window.UI) UI.loading(false);
+            
+            // 本人模式下的友好提示
+            if (selfOnly) {
+                const user = getCurrentUser();
+                const target = resolveCloudCompareTarget(user);
+                const readableName = target.name || '您本人';
+                
+                if (typeof Swal !== 'undefined') {
+                    return Swal.fire({
+                        title: '☁️ 暂无个人对比数据',
+                        html: `
+                            <div style="text-align: left; line-height: 1.6;">
+                                <p>云端未找到 <strong>${readableName}</strong> 的对比数据。</p>
+                                <p style="margin-top: 10px;">可能原因：</p>
+                                <ul style="margin: 8px 0; padding-left: 20px;">
+                                    <li>您还没有生成过多期成绩对比</li>
+                                    <li>对比数据尚未保存到云端</li>
+                                    <li>您的数据在其他学校或届别中</li>
+                                </ul>
+                                <p style="margin-top: 10px; color: #3b82f6;">建议：请联系班主任或教务老师生成对比数据。</p>
+                            </div>
+                        `,
+                        icon: 'info',
+                        confirmButtonText: '我知道了',
+                        width: 500
+                    });
+                } else {
+                    return alert(`☁️ 云端暂无${readableName}的对比数据\n\n建议联系班主任或教务老师生成对比数据。`);
+                }
+            } else {
+                return alert('☁️ 云端暂无已保存的对比结果');
+            }
         }
 
         const listData = data;
@@ -11050,6 +11093,21 @@ async function loadCloudStudentCompare(key, selfOnly = false) {
                     strategy: 'single-row-fallback',
                     candidates: [sourceRows[0]]
                 };
+            }
+
+            // 增强匹配：如果还是找不到，尝试模糊匹配
+            if (!picked.student && normalizedTarget.name) {
+                const nameLower = normalizedTarget.name.toLowerCase();
+                const fuzzyMatch = sourceRows.find(row => 
+                    row.name && row.name.toLowerCase().includes(nameLower)
+                );
+                if (fuzzyMatch) {
+                    picked = {
+                        student: fuzzyMatch,
+                        strategy: 'fuzzy-name-match',
+                        candidates: [fuzzyMatch]
+                    };
+                }
             }
 
             if (!picked.student) {
