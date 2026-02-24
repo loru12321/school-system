@@ -14997,7 +14997,12 @@ function getCloudPreviousSubjectScores(subject, student) {
     return Array.isArray(scores) ? scores : null;
 }
 
-async function viewCloudStudentComparesForCurrentStudent(name, className, schoolName) {
+window.viewCloudStudentComparesForCurrentStudent = async function (name, className, schoolName) {
+    console.log('[DEBUG] viewCloudStudentComparesForCurrentStudent called', { name, className, schoolName });
+    if (!sbClient) {
+        console.error('[DEBUG] sbClient is not initialized');
+        return alert('☁️ 云端服务未连接，请检查网络或配置');
+    }
     if (name || className || schoolName) {
         setCloudCompareTarget(name, className, schoolName);
     } else {
@@ -16267,6 +16272,7 @@ async function saveStudentCompareToCloud() {
 
 // 🆕 查看云端对比列表
 async function viewCloudStudentCompares(selfOnly = false) {
+    console.log('[DEBUG] viewCloudStudentCompares called', { selfOnly });
     window.viewCloudStudentCompares = viewCloudStudentCompares;
     if (!sbClient) {
         return alert('☁️ 云端服务未连接');
