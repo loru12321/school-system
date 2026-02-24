@@ -57,6 +57,170 @@
     <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" crossorigin="anonymous"
         onerror="this.onerror=null;this.src='https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'"></script>
     <script>
+        /**
+         * 学生历次成绩对比优化补丁
+         * 增加 getHistoryComparisonData 函数，用于获取指定学生的历次成绩对比数据
+         */
+        async function getHistoryComparisonData(studentName, className, schoolName) {
+            if (!window.sbClient) return { success: false, message: '云端服务未连接' };
+            try {
+                const { data, error } = await window.sbClient
+                    .from('system_data')
+                    .select('key, content, updated_at')
+                    .like('key', 'STUDENT_COMPARE_%')
+                    .order('updated_at', { ascending: false });
+                if (error) throw error;
+                if (!data || data.length === 0) return { success: false, message: '暂无云端对比记录' };
+                const history = [];
+                const normalizedTargetName = typeof normalizeCompareName === 'function' ? normalizeCompareName(studentName) : studentName;
+                const normalizedTargetClass = String(className || '').trim();
+                for (const item of data) {
+                    let raw = item.content;
+                    if (typeof raw === 'string' && raw.startsWith('LZ|')) {
+                        raw = LZString.decompressFromUTF16(raw.substring(3));
+                    }
+                    const payload = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                    const sourceRows = payload.studentsCompareData || [];
+                    const matched = sourceRows.find(s => {
+                        const sameName = (typeof normalizeCompareName === 'function' ? normalizeCompareName(s.name || '') : s.name) === normalizedTargetName;
+                        const sameClass = !normalizedTargetClass || (typeof isClassEquivalent === 'function' ? isClassEquivalent(s.class || '', normalizedTargetClass) : s.class === normalizedTargetClass);
+                        const sameSchool = !schoolName || String(s.school || '').trim() === String(schoolName).trim();
+                        return sameName && sameClass && sameSchool;
+                    });
+                    if (matched && matched.periods) {
+                        matched.periods.forEach(p => {
+                            if (!history.find(h => h.examId === p.examId)) {
+                                history.push({
+                                    examId: p.examId,
+                                    total: p.total,
+                                    rankClass: p.rankClass,
+                                    rankSchool: p.rankSchool,
+                                    rankTown: p.rankTown,
+                                    subjects: p.subjects,
+                                    updatedAt: item.updated_at
+                                });
+                            }
+                        });
+                    }
+                }
+                history.sort((a, b) => new Date(a.updatedAt) - new Date(b.updatedAt));
+                return { success: true, data: history };
+            } catch (e) {
+                console.error('获取历次成绩失败:', e);
+                return { success: false, message: e.message };
+            }
+        }
+
+        function renderHistoryCharts(historyData) {
+            const containerId = 'history-charts-container';
+            let container = document.getElementById(containerId);
+            if (!container) {
+                container = document.createElement('div');
+                container.id = containerId;
+                container.className = 'fluent-card';
+                container.style.marginTop = '20px';
+                const captureArea = document.getElementById('report-card-capture-area');
+                if (captureArea) captureArea.appendChild(container);
+            }
+            if (!historyData || historyData.length < 2) {
+                container.innerHTML = '<div style="padding:20px; text-align:center; color:#64748b;">历次成绩数据不足（至少需要2次考试记录）以生成趋势图</div>';
+                return;
+            }
+            container.innerHTML = \`
+                <div class="fluent-header">
+                    <i class="ti ti-trending-up" style="color:#2563eb;"></i>
+                    <span class="fluent-title">历次考试成绩趋势对比</span>
+                </div>
+                <div style="height:300px; position:relative;">
+                    <canvas id="historyTrendChart"></canvas>
+                </div>
+                <div style="margin-top:20px; overflow-x:auto;">
+                    <table class="fluent-table" style="font-size:12px;">
+                        <thead>
+                            <tr>
+                                <th>考试期次</th>
+                                <th>总分</th>
+                                <th>级排</th>
+                                <th>镇排</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            \${historyData.map(h => \`
+                                <tr>
+                                    <td>\${h.examId}</td>
+                                    <td style="font-weight:bold;">\${Number(h.total).toFixed(1)}</td>
+                                    <td>\${h.rankSchool || '-'}</td>
+                                    <td>\${h.rankTown || '-'}</td>
+                                </tr>
+                            \`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            \`;
+            const ctx = document.getElementById('historyTrendChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: historyData.map(h => h.examId),
+                    datasets: [{
+                        label: '总分趋势',
+                        data: historyData.map(h => h.total),
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#2563eb',
+                        pointRadius: 5,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const h = historyData[context.dataIndex];
+                                    return [\`总分: \${context.parsed.y}\`, \`级排: \${h.rankSchool}\`, \`镇排: \${h.rankTown}\`];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: false, grid: { color: '#f1f5f9' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        const originalDoQuery = window.doQuery;
+        window.doQuery = async function() {
+            const name = document.getElementById('inp-name').value;
+            const sch = document.getElementById('sel-school').value;
+            const cls = document.getElementById('sel-class').value;
+            if (typeof SCHOOLS === 'undefined' || !SCHOOLS[sch]) return alert("数据未就绪");
+            let stu = SCHOOLS[sch].students.find(s => s.name === name && (cls === '--请先选择学校--' || s.class === cls));
+            if (!stu) return alert("未找到该学生");
+            
+            clearCloudStudentCompareContext();
+            setCloudCompareTarget(stu);
+            CURRENT_REPORT_STUDENT = stu;
+            document.getElementById('single-report-result').classList.remove('hidden');
+            const container = document.getElementById('report-card-capture-area');
+            container.innerHTML = renderSingleReportCardHTML(stu, 'A4');
+            setTimeout(() => { renderRadarChart(stu); renderVarianceChart(stu); }, 100);
+            analyzeStrengthsAndWeaknesses(stu);
+
+            const historyResult = await getHistoryComparisonData(stu.name, stu.class, stu.school);
+            if (historyResult.success) {
+                renderHistoryCharts(historyResult.data);
+            }
+        };
+    </script>
+    <script>
 // ✅ 统一云端同步逻辑 (重构版)
         const CloudManager = {
             check: () => {
@@ -520,7 +684,8 @@
     <!-- ================== 图标字体 (Tabler Icons) ================== -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 
-    <!-- ================== 样式定义 (CSS) ================== -->
+    <!-- ================== 样式定义 (CSS) ================== -->
+
 
     <!-- ================== Windows 11 Fluent Design UI 重构包 ================== -->
     <style>
@@ -1225,6 +1390,170 @@
         onerror="this.onerror=null;this.src='https://unpkg.com/sweetalert2@11/dist/sweetalert2.all.min.js'"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" crossorigin="anonymous"
         onerror="this.onerror=null;this.src='https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'"></script>
+    <script>
+        /**
+         * 学生历次成绩对比优化补丁
+         * 增加 getHistoryComparisonData 函数，用于获取指定学生的历次成绩对比数据
+         */
+        async function getHistoryComparisonData(studentName, className, schoolName) {
+            if (!window.sbClient) return { success: false, message: '云端服务未连接' };
+            try {
+                const { data, error } = await window.sbClient
+                    .from('system_data')
+                    .select('key, content, updated_at')
+                    .like('key', 'STUDENT_COMPARE_%')
+                    .order('updated_at', { ascending: false });
+                if (error) throw error;
+                if (!data || data.length === 0) return { success: false, message: '暂无云端对比记录' };
+                const history = [];
+                const normalizedTargetName = typeof normalizeCompareName === 'function' ? normalizeCompareName(studentName) : studentName;
+                const normalizedTargetClass = String(className || '').trim();
+                for (const item of data) {
+                    let raw = item.content;
+                    if (typeof raw === 'string' && raw.startsWith('LZ|')) {
+                        raw = LZString.decompressFromUTF16(raw.substring(3));
+                    }
+                    const payload = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                    const sourceRows = payload.studentsCompareData || [];
+                    const matched = sourceRows.find(s => {
+                        const sameName = (typeof normalizeCompareName === 'function' ? normalizeCompareName(s.name || '') : s.name) === normalizedTargetName;
+                        const sameClass = !normalizedTargetClass || (typeof isClassEquivalent === 'function' ? isClassEquivalent(s.class || '', normalizedTargetClass) : s.class === normalizedTargetClass);
+                        const sameSchool = !schoolName || String(s.school || '').trim() === String(schoolName).trim();
+                        return sameName && sameClass && sameSchool;
+                    });
+                    if (matched && matched.periods) {
+                        matched.periods.forEach(p => {
+                            if (!history.find(h => h.examId === p.examId)) {
+                                history.push({
+                                    examId: p.examId,
+                                    total: p.total,
+                                    rankClass: p.rankClass,
+                                    rankSchool: p.rankSchool,
+                                    rankTown: p.rankTown,
+                                    subjects: p.subjects,
+                                    updatedAt: item.updated_at
+                                });
+                            }
+                        });
+                    }
+                }
+                history.sort((a, b) => new Date(a.updatedAt) - new Date(b.updatedAt));
+                return { success: true, data: history };
+            } catch (e) {
+                console.error('获取历次成绩失败:', e);
+                return { success: false, message: e.message };
+            }
+        }
+
+        function renderHistoryCharts(historyData) {
+            const containerId = 'history-charts-container';
+            let container = document.getElementById(containerId);
+            if (!container) {
+                container = document.createElement('div');
+                container.id = containerId;
+                container.className = 'fluent-card';
+                container.style.marginTop = '20px';
+                const captureArea = document.getElementById('report-card-capture-area');
+                if (captureArea) captureArea.appendChild(container);
+            }
+            if (!historyData || historyData.length < 2) {
+                container.innerHTML = '<div style="padding:20px; text-align:center; color:#64748b;">历次成绩数据不足（至少需要2次考试记录）以生成趋势图</div>';
+                return;
+            }
+            container.innerHTML = \`
+                <div class="fluent-header">
+                    <i class="ti ti-trending-up" style="color:#2563eb;"></i>
+                    <span class="fluent-title">历次考试成绩趋势对比</span>
+                </div>
+                <div style="height:300px; position:relative;">
+                    <canvas id="historyTrendChart"></canvas>
+                </div>
+                <div style="margin-top:20px; overflow-x:auto;">
+                    <table class="fluent-table" style="font-size:12px;">
+                        <thead>
+                            <tr>
+                                <th>考试期次</th>
+                                <th>总分</th>
+                                <th>级排</th>
+                                <th>镇排</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            \${historyData.map(h => \`
+                                <tr>
+                                    <td>\${h.examId}</td>
+                                    <td style="font-weight:bold;">\${Number(h.total).toFixed(1)}</td>
+                                    <td>\${h.rankSchool || '-'}</td>
+                                    <td>\${h.rankTown || '-'}</td>
+                                </tr>
+                            \`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            \`;
+            const ctx = document.getElementById('historyTrendChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: historyData.map(h => h.examId),
+                    datasets: [{
+                        label: '总分趋势',
+                        data: historyData.map(h => h.total),
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#2563eb',
+                        pointRadius: 5,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const h = historyData[context.dataIndex];
+                                    return [\`总分: \${context.parsed.y}\`, \`级排: \${h.rankSchool}\`, \`镇排: \${h.rankTown}\`];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: false, grid: { color: '#f1f5f9' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        const originalDoQuery = window.doQuery;
+        window.doQuery = async function() {
+            const name = document.getElementById('inp-name').value;
+            const sch = document.getElementById('sel-school').value;
+            const cls = document.getElementById('sel-class').value;
+            if (typeof SCHOOLS === 'undefined' || !SCHOOLS[sch]) return alert("数据未就绪");
+            let stu = SCHOOLS[sch].students.find(s => s.name === name && (cls === '--请先选择学校--' || s.class === cls));
+            if (!stu) return alert("未找到该学生");
+            
+            clearCloudStudentCompareContext();
+            setCloudCompareTarget(stu);
+            CURRENT_REPORT_STUDENT = stu;
+            document.getElementById('single-report-result').classList.remove('hidden');
+            const container = document.getElementById('report-card-capture-area');
+            container.innerHTML = renderSingleReportCardHTML(stu, 'A4');
+            setTimeout(() => { renderRadarChart(stu); renderVarianceChart(stu); }, 100);
+            analyzeStrengthsAndWeaknesses(stu);
+
+            const historyResult = await getHistoryComparisonData(stu.name, stu.class, stu.school);
+            if (historyResult.success) {
+                renderHistoryCharts(historyResult.data);
+            }
+        };
+    </script>
     <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" crossorigin="anonymous"
         onerror="this.onerror=null;this.src='https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js'"></script>
 
@@ -3485,7 +3814,7 @@
                 </div>
                 <div class="control-panel">
                     <input type="text" id="inp-name" placeholder="查询单个学生姓名" style="width:120px;">
-                    <button class="btn" onclick="doQuery()">查询单人报告</button>
+                    <button class="btn" onclick="window.doQuery()">查询单人报告</button>
                     <button class="btn btn-purple" id="btn-report-cloud-compare"
                         onclick="viewCloudStudentComparesForCurrentStudent()">
                         <i class="ti ti-cloud-search"></i> 查看云端对比（本人）
