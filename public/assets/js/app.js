@@ -490,6 +490,14 @@ const Auth = {
 
         const role = this.currentUser.role; // 主角色（兼容旧代码）
 
+        // 🟢 [Bug #1 修复] 设置全局年级过滤器，供其他模块使用
+        if (role === 'grade_director' && this.currentUser.class) {
+            window.USER_GRADE_FILTER = String(this.currentUser.class).trim();
+            console.log(`[权限] 级部主任年级过滤已启用: ${window.USER_GRADE_FILTER}`);
+        } else {
+            window.USER_GRADE_FILTER = null;
+        }
+
         const msgBtn = document.getElementById('admin-msg-btn');
         if (msgBtn) {
             // 🟢 修改：使用多角色检查
@@ -4951,6 +4959,14 @@ async function switchCohort(cohortId) {
     const examCohortLabel = document.getElementById('exam-cohort-label');
     if (examCohortLabel) examCohortLabel.innerText = label;
 
+    // 🟢 [Bug #4 修复] 切换前先清空全局数据，防止残留上一届别的数据
+    RAW_DATA = [];
+    SCHOOLS = {};
+    SUBJECTS = [];
+    THRESHOLDS = {};
+    setTeacherMap({});
+    setTeacherSchoolMap({});
+
     // 2. 从云端拉取新届别的数据
     const data = await DB.get(cohortKey);
 
@@ -4980,7 +4996,7 @@ async function switchCohort(cohortId) {
         if (data.AUTH_DB) {
             Auth.db = data.AUTH_DB;
             localStorage.setItem('SYS_USERS', JSON.stringify(Auth.db));
-            console.log("✅ 账号已切换为 [" + projectKey + "] 的版本");
+            console.log("✅ 账号已切换为 [" + cohortKey + "] 的版本");
         }
 
         // ★★★ 关键：恢复指标参数输入框 (安全检查版) ★★★
@@ -5144,6 +5160,17 @@ window.addEventListener('load', async () => {
 
     // 🟠 分支二：这是管理员原版 -> 从云端/本地加载
     else {
+        // 🟢 [Bug #4 修复] 启动时校验 cohort key 一致性
+        const savedCohortId = localStorage.getItem('CURRENT_COHORT_ID');
+        const savedProjectKey = localStorage.getItem('CURRENT_PROJECT_KEY');
+        if (savedCohortId && savedProjectKey) {
+            const expectedKey = getCohortKey(savedCohortId);
+            if (savedProjectKey !== expectedKey && savedProjectKey !== 'autosave_backup') {
+                console.warn(`[届别校验] CURRENT_PROJECT_KEY (${savedProjectKey}) 与 CURRENT_COHORT_ID (${savedCohortId}) 不匹配，自动修正为 ${expectedKey}`);
+                localStorage.setItem('CURRENT_PROJECT_KEY', expectedKey);
+            }
+        }
+
         // 🔥 关键：读取当前选中的项目 Key
         const currentKey = localStorage.getItem('CURRENT_PROJECT_KEY') || 'autosave_backup';
         const backup = await DB.get(currentKey);
@@ -13374,8 +13401,22 @@ function renderStudentDetails(reset = true) {
         } else if (user) {
             // 其他角色的权限控制
             if (!RoleManager.hasAnyRole(user, ['admin', 'director'])) {
-                // 非管理员、非教务主任的其他角色：按学校过滤
-                if (user.school) {
+                // 🟢 [Bug #1 修复] 级部主任：按年级过滤，只能看到自己级部的数据
+                if (RoleManager.hasAnyRole(user, ['grade_director']) && user.class) {
+                    const gradePrefix = String(user.class).trim();
+                    const beforeCount = data.length;
+                    data = data.filter(s => {
+                        const cls = String(s.class || '').trim();
+                        // 班级号以年级号开头（例如年级"7" → 班级"701","702"等）
+                        return cls.startsWith(gradePrefix);
+                    });
+                    console.log(`[考试明细] 🔒 级部主任过滤: 年级=${gradePrefix}, 过滤前${beforeCount}人, 过滤后${data.length}人`);
+                    if (data.length === 0) {
+                        UI.toast(`⚠️ 未找到${gradePrefix}年级的考试数据`, 'warning');
+                    }
+                }
+                // 非管理员、非教务主任、非级部主任的其他角色：按学校过滤
+                else if (user.school) {
                     data = data.filter(s => s.school === user.school);
                     console.log(`[考试明细] 按学校过滤: ${user.school}`);
                 }
@@ -14893,61 +14934,135 @@ function findPreviousRecord(student) {
         return CLOUD_STUDENT_COMPARE_CONTEXT.previousRecord;
     }
 
-    // 1. 基础检查
-    if (!window.PREV_DATA || window.PREV_DATA.length === 0) {
-        const user = getCurrentUser();
-        const isParentOrStudent = user && RoleManager.hasAnyRole(user, ['parent', 'student']) &&
-            !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director', 'teacher', 'class_teacher']);
-        if (!CLOUD_STUDENT_COMPARE_CONTEXT?.previousRecord && !isParentOrStudent) {
-            console.warn("历史数据(PREV_DATA)为空，无法进行对比。请先上传历史成绩。");
-        }
-        return null;
-    }
-
-    // 2. 标准化工具函数 (清洗数据)
-    const cleanStr = (str) => String(str || "").trim().replace(/\s+/g, ""); // 去空格
-    const normalizeClass = (cls) => {
+    // 🟢 [Bug #2/#5 修复] 标准化工具函数
+    const cleanStr = (str) => String(str || "").trim().replace(/\s+/g, "");
+    const normClass = (cls) => {
         let s = String(cls || "").trim();
-        // 移除 "班", "级", "(", ")", ".", "-", "grade", "class"
         return s.replace(/[班级\(\)\.\-gradeclass]/gi, "");
     };
-
-    const targetName = cleanStr(student.name);
-    const targetClass = normalizeClass(student.class);
-    const targetSchool = student.school;
-
-    // 3. 在历史库中查找
-    const match = window.PREV_DATA.find(p => {
-        // A. 校内模式：必须匹配学校 (如果历史数据有学校字段)
+    const matchStudent = (p, targetName, targetClass, targetSchool) => {
         if (p.school && targetSchool && p.school !== targetSchool) return false;
-
-        // B. 姓名匹配 (严格匹配清洗后的姓名)
         if (cleanStr(p.name) !== targetName) return false;
-
-        // C. 班级智能匹配 (核心修复点)
-        // 将 "7.1", "701", "7年级1班" 都清洗为 "71" 或 "701" 进行比对
-        const histClass = normalizeClass(p.class);
-
-        // 规则1: 完全相等
+        const histClass = normClass(p.class);
         if (histClass === targetClass) return true;
-
-        // 规则2: 处理 "0" 的差异 (例如 71 vs 701)
-        // 如果两个班级号都包含数字，且去掉0后相等，视为匹配 (存在风险，但在同一年级内通常安全)
         const numC1 = histClass.replace(/0/g, '');
         const numC2 = targetClass.replace(/0/g, '');
         if (numC1 === numC2 && numC1.length > 0) return true;
-
         return false;
-    });
+    };
 
-    if (!match) {
-        // 调试日志：如果你发现某人没匹配上，按F12看控制台会显示原因
-        // console.log(`未找到历史记录: ${student.name} (班级:${targetClass})`);
-    } else {
-        // console.log(`匹配成功: ${student.name} -> 上次分: ${match.total}`);
+    const targetName = cleanStr(student.name);
+    const targetClass = normClass(student.class);
+    const targetSchool = student.school;
+
+    // 1. 尝试从 PREV_DATA 查找
+    if (window.PREV_DATA && window.PREV_DATA.length > 0) {
+        const match = window.PREV_DATA.find(p => matchStudent(p, targetName, targetClass, targetSchool));
+        if (match) return match;
     }
 
-    return match;
+    // 🟢 [Bug #2 修复] 2. PREV_DATA为空时，从 COHORT_DB.exams 历史快照中查找上一次考试
+    if (typeof CohortDB !== 'undefined') {
+        try {
+            const db = CohortDB.ensure();
+            if (db && db.exams && Object.keys(db.exams).length > 0) {
+                const examEntries = Object.entries(db.exams)
+                    .filter(([id]) => id !== CURRENT_EXAM_ID) // 排除当前考试
+                    .sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0)); // 按时间降序
+
+                for (const [examId, exam] of examEntries) {
+                    const examData = exam.data || [];
+                    if (examData.length === 0) continue;
+
+                    const found = examData.find(p => matchStudent(p, targetName, targetClass, targetSchool));
+                    if (found) {
+                        console.log(`[对比] 从历史考试 "${examId}" 中找到 ${student.name} 的历史记录`);
+                        // 构建兼容的对比记录格式
+                        return {
+                            ...found,
+                            townRank: found.ranks?.total?.township || '-',
+                            classRank: found.ranks?.total?.class || '-',
+                            schoolRank: found.ranks?.total?.school || '-',
+                            _sourceExam: examId
+                        };
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('[对比] COHORT_DB 历史查找异常:', e);
+        }
+    }
+
+    const user = getCurrentUser();
+    const isParentOrStudent = user && RoleManager.hasAnyRole(user, ['parent', 'student']) &&
+        !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director', 'teacher', 'class_teacher']);
+    if (!CLOUD_STUDENT_COMPARE_CONTEXT?.previousRecord && !isParentOrStudent) {
+        console.warn("历史数据(PREV_DATA)为空且COHORT_DB中无历史快照，无法进行对比。");
+    }
+
+    return null;
+}
+
+// 🟢 [Bug #5 新增] 获取学生在所有历史考试中的记录（用于多期雷达图对比）
+function getStudentExamHistory(student) {
+    const results = [];
+    if (!student) return results;
+
+    const cleanStr = (str) => String(str || "").trim().replace(/\s+/g, "");
+    const normClass = (cls) => String(cls || "").trim().replace(/[班级\(\)\.\-gradeclass]/gi, "");
+    const targetName = cleanStr(student.name);
+    const targetClass = normClass(student.class);
+    const targetSchool = student.school;
+
+    if (typeof CohortDB === 'undefined') return results;
+
+    try {
+        const db = CohortDB.ensure();
+        if (!db || !db.exams) return results;
+
+        const examEntries = Object.entries(db.exams)
+            .sort((a, b) => (a[1].createdAt || 0) - (b[1].createdAt || 0)); // 按时间升序
+
+        for (const [examId, exam] of examEntries) {
+            const examData = exam.data || [];
+            if (examData.length === 0) continue;
+
+            const found = examData.find(p => {
+                if (p.school && targetSchool && p.school !== targetSchool) return false;
+                if (cleanStr(p.name) !== targetName) return false;
+                const histClass = normClass(p.class);
+                if (histClass === targetClass) return true;
+                const numC1 = histClass.replace(/0/g, '');
+                const numC2 = targetClass.replace(/0/g, '');
+                return numC1 === numC2 && numC1.length > 0;
+            });
+
+            if (found) {
+                // 计算该次考试中该学生各科的百分位
+                const percentiles = {};
+                (exam.subjects || SUBJECTS).forEach(sub => {
+                    if (found.scores && found.scores[sub] !== undefined) {
+                        const allScores = examData.map(s => s.scores?.[sub]).filter(v => typeof v === 'number').sort((a, b) => b - a);
+                        const rank = allScores.indexOf(found.scores[sub]) + 1;
+                        const total = allScores.length;
+                        percentiles[sub] = total > 0 ? ((1 - (rank / total)) * 100).toFixed(1) : 0;
+                    }
+                });
+
+                results.push({
+                    examId,
+                    examLabel: examId.replace(/_/g, ' '),
+                    student: found,
+                    percentiles,
+                    allStudents: examData
+                });
+            }
+        }
+    } catch (e) {
+        console.warn('[多期对比] 获取学生考试历史异常:', e);
+    }
+
+    return results;
 }
 
 // 🟢 [新增]：生成进退步胶囊标签 (Windows 风格)
@@ -15144,8 +15259,47 @@ function renderSingleReportCardHTML(stu, mode) {
                 <thead><tr><th style="text-align:left; padding-left:20px;">科目</th><th>成绩 (对比)</th><th>班排</th><th>校排</th><th style="${townColStyle}">全镇排名</th></tr></thead>
                 <tbody>${tableRows}</tbody>
             </table>
-        </div>
-        <div style="display:flex; gap:15px; margin-bottom:15px; flex-wrap:wrap;">
+        </div>`;
+
+    // 🟢 [Bug #5 修复] 补充渲染多期考试趋势表格 (如果是多期数据可用)
+    const examHistory = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(stu) : [];
+    if (examHistory.length > 1) { // 只有一次考试(本次)或无数据则不显示趋势表
+        let historyRows = '';
+        const trendLabels = examHistory.map(h => h.examLabel.substring(0, 15));
+        
+        // 生成表头 (考试名称)
+        let thHtml = `<th style="text-align:left; padding-left:20px;">考试名称</th><th>总分</th><th>校排</th>`;
+        if (!isSingleSchool) thHtml += `<th>镇排</th>`;
+        
+        // 反向遍历 (最新考试在上面)
+        for (let i = examHistory.length - 1; i >= 0; i--) {
+            const h = examHistory[i];
+            const isCurrent = h.examId === CURRENT_EXAM_ID;
+            const bgStyle = isCurrent ? 'background:rgba(239,246,255,0.7); font-weight:bold;' : '';
+            const tScore = h.student.total ? h.student.total.toFixed(1) : '-';
+            const sRank = safeGet(h.student, 'ranks.total.school', '-');
+            const tRank = safeGet(h.student, 'ranks.total.township', '-');
+            
+            historyRows += `<tr style="${bgStyle}">
+                <td style="text-align:left; padding-left:20px; color:#475569;">${isCurrent ? '⭐ ' : ''}${h.examLabel}</td>
+                <td style="color:#2563eb;">${tScore}</td>
+                <td style="color:#64748b;">${sRank}</td>
+                ${!isSingleSchool ? `<td style="color:#64748b;">${tRank}</td>` : ''}
+            </tr>`;
+        }
+
+        html += `
+        <div class="fluent-card" style="padding:0; overflow:hidden; margin-top:20px;">
+            <div class="fluent-header" style="padding: 15px 20px 5px; border-bottom: none;"><i class="ti ti-chart-line" style="color:#f97316;"></i><span class="fluent-title">历次考试趋势记录</span></div>
+            <table class="fluent-table">
+                <thead><tr>${thHtml}</tr></thead>
+                <tbody>${historyRows}</tbody>
+            </table>
+        </div>`;
+    }
+
+    html += `
+        <div style="display:flex; gap:15px; margin-bottom:15px; flex-wrap:wrap; margin-top:20px;">
             <div class="fluent-card" style="flex:1; min-width:300px; margin-bottom:0; display:flex; flex-direction:column;">
                 <div class="fluent-header"><i class="ti ti-radar" style="color:#2563eb;"></i><span class="fluent-title">综合素质评价 (百分位)</span></div>
                 <div style="flex:1; position:relative; min-height:220px;"><canvas id="radarChart"></canvas></div>
@@ -16613,32 +16767,101 @@ function renderRadarChart(student) {
 
     const labels = [];
     const currentData = [];
-    const prevData = [];
 
-    const prevStu = findPreviousRecord(student);
-
+    // 本次考试百分位计算
     SUBJECTS.forEach(sub => {
         if (student.scores[sub] !== undefined) {
             labels.push(sub);
-
-            // 本次百分位
             const allScores = RAW_DATA.map(s => s.scores[sub]).filter(v => v !== undefined).sort((a, b) => b - a);
             const rank = allScores.indexOf(student.scores[sub]) + 1;
             const total = allScores.length;
             const percentile = ((1 - (rank / total)) * 100).toFixed(1);
             currentData.push(percentile);
+        }
+    });
 
-            // 上次百分位
+    // 当前考试标签
+    const currentExamLabel = CURRENT_EXAM_ID ? CURRENT_EXAM_ID.replace(/_/g, ' ').substring(0, 20) : '本次';
+
+    const datasets = [{
+        label: currentExamLabel,
+        data: currentData,
+        fill: true,
+        backgroundColor: 'rgba(37, 99, 235, 0.2)',
+        borderColor: '#2563eb',
+        pointBackgroundColor: '#2563eb',
+        pointBorderColor: '#fff',
+        pointRadius: 4,
+        borderWidth: 2,
+        order: 10
+    }];
+
+    // 🟢 [Bug #5 修复] 多期历史对比：从 COHORT_DB.exams 获取历史数据
+    const historyColors = [
+        { border: '#f97316', bg: '#fff', point: '#f97316', style: 'rectRot' },  // 橙色
+        { border: '#10b981', bg: '#fff', point: '#10b981', style: 'triangle' },  // 绿色
+        { border: '#8b5cf6', bg: '#fff', point: '#8b5cf6', style: 'star' }       // 紫色
+    ];
+
+    // 优先使用 findPreviousRecord 的结果（兼容旧逻辑）
+    const prevStu = findPreviousRecord(student);
+    let historicalDatasets = [];
+
+    // 尝试从 COHORT_DB 获取多期数据
+    if (typeof getStudentExamHistory === 'function') {
+        const examHistory = getStudentExamHistory(student);
+        // 过滤掉当前考试，取最近3次
+        const pastExams = examHistory
+            .filter(h => h.examId !== CURRENT_EXAM_ID)
+            .slice(-3); // 取最近3次
+
+        pastExams.forEach((histExam, idx) => {
+            const color = historyColors[idx % historyColors.length];
+            const histData = labels.map(sub => {
+                return histExam.percentiles[sub] !== undefined ? histExam.percentiles[sub] : null;
+            });
+
+            if (histData.some(d => d !== null)) {
+                historicalDatasets.push({
+                    label: histExam.examLabel.substring(0, 20),
+                    data: histData,
+                    fill: false,
+                    borderDash: [6, 4],
+                    borderColor: color.border,
+                    pointBackgroundColor: color.bg,
+                    pointBorderColor: color.point,
+                    pointRadius: 4,
+                    pointStyle: color.style,
+                    borderWidth: 1.5,
+                    order: idx
+                });
+            }
+        });
+    }
+
+    // 如果没有从 COHORT_DB 获取到数据，回退到旧的 prevStu 逻辑
+    if (historicalDatasets.length === 0 && prevStu && prevStu.scores) {
+        const prevData = [];
+        labels.forEach(sub => {
             let prevPercentile = null;
-            if (prevStu && prevStu.scores && prevStu.scores[sub] !== undefined) {
+            if (prevStu.scores[sub] !== undefined) {
                 let prevAllScores = getCloudPreviousSubjectScores(sub, student);
                 if (!prevAllScores || prevAllScores.length === 0) {
                     prevAllScores = (window.PREV_DATA || [])
                         .map(s => s.scores ? s.scores[sub] : undefined)
                         .filter(v => typeof v === 'number');
                 }
-                prevAllScores = [...prevAllScores].sort((a, b) => b - a);
-
+                // 🟢 [Bug #2 修复] 兜底：从 prevStu._sourceExam 对应的考试快照获取全量数据
+                if ((!prevAllScores || prevAllScores.length === 0) && prevStu._sourceExam && typeof CohortDB !== 'undefined') {
+                    try {
+                        const db = CohortDB.ensure();
+                        const examSnap = db.exams?.[prevStu._sourceExam];
+                        if (examSnap && examSnap.data) {
+                            prevAllScores = examSnap.data.map(s => s.scores?.[sub]).filter(v => typeof v === 'number');
+                        }
+                    } catch (e) { }
+                }
+                prevAllScores = [...(prevAllScores || [])].sort((a, b) => b - a);
                 if (prevAllScores.length > 0) {
                     const prevRank = prevAllScores.indexOf(prevStu.scores[sub]) + 1;
                     const prevTotal = prevAllScores.length;
@@ -16646,37 +16869,27 @@ function renderRadarChart(student) {
                 }
             }
             prevData.push(prevPercentile);
-        }
-    });
-
-    const datasets = [{
-        label: '本次',
-        data: currentData,
-        fill: true,
-        backgroundColor: 'rgba(37, 99, 235, 0.2)', // 蓝色填充
-        borderColor: '#2563eb', // 蓝色实线
-        pointBackgroundColor: '#2563eb',
-        pointBorderColor: '#fff',
-        pointRadius: 4,
-        order: 1
-    }];
-
-    // 如果有有效历史数据，添加橙色虚线
-    if (prevData.some(d => d !== null)) {
-        datasets.push({
-            label: '上次',
-            data: prevData,
-            fill: false, // 不填充，避免颜色混杂
-            borderDash: [6, 4], // 明显的虚线
-            // 👇 改为醒目的橙色
-            borderColor: '#f97316',
-            pointBackgroundColor: '#fff',
-            pointBorderColor: '#f97316',
-            pointRadius: 4,
-            pointStyle: 'rectRot', // 点形状改为菱形，区分更明显
-            order: 0 // 置于底层
         });
+
+        if (prevData.some(d => d !== null)) {
+            const prevLabel = prevStu._sourceExam ? prevStu._sourceExam.replace(/_/g, ' ').substring(0, 20) : '上次';
+            historicalDatasets.push({
+                label: prevLabel,
+                data: prevData,
+                fill: false,
+                borderDash: [6, 4],
+                borderColor: '#f97316',
+                pointBackgroundColor: '#fff',
+                pointBorderColor: '#f97316',
+                pointRadius: 4,
+                pointStyle: 'rectRot',
+                borderWidth: 1.5,
+                order: 0
+            });
+        }
     }
+
+    datasets.push(...historicalDatasets);
 
     radarChartInstance = new Chart(ctx, {
         type: 'radar',
@@ -16694,7 +16907,18 @@ function renderRadarChart(student) {
                 }
             },
             plugins: {
-                legend: { display: true, position: 'bottom', labels: { usePointStyle: true, padding: 15 } }
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: { usePointStyle: true, padding: 15, font: { size: 11 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: 百分位 ${context.raw}%`;
+                        }
+                    }
+                }
             }
         }
     });
