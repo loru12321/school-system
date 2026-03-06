@@ -411,6 +411,75 @@
                 } finally {
                     if (window.UI) UI.loading(false);
                 }
+            },
+
+            // 🆕 跨考试检索学生历次成绩 (自动对比核心)
+            fetchStudentExamHistory: async function(student) {
+                if (!this.check()) return { success: false, message: '云端未连接' };
+                if (!student || !student.name) return { success: false, message: '学生信息无效' };
+
+                const cohortId = student.cohort || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
+                if (!cohortId) return { success: false, message: '无法确定学生届别' };
+
+                try {
+                    console.log(`[CloudHistory] 开始检索 ${student.name} (${cohortId}级) 的历次成绩...`);
+                    
+                    // 搜索该届所有考试记录 (排除 TEACHERS_ 和 STUDENT_COMPARE_ 这种二次快照)
+                    const { data, error } = await sbClient
+                        .from('system_data')
+                        .select('key, content, updated_at')
+                        .like('key', `${cohortId}级_%`)
+                        .not('key', 'like', 'TEACHERS_%')
+                        .not('key', 'like', 'STUDENT_COMPARE_%')
+                        .order('updated_at', { ascending: false });
+
+                    if (error) throw error;
+                    if (!data || data.length === 0) return { success: false, message: '未找到相关考试记录' };
+
+                    const history = [];
+                    const normalizedTargetName = student.name.trim();
+
+                    for (const item of data) {
+                        try {
+                            let content = item.content;
+                            if (typeof content === 'string' && content.startsWith("LZ|")) {
+                                content = LZString.decompressToUTF16(content.substring(3));
+                            }
+                            const payload = typeof content === 'string' ? JSON.parse(content) : content;
+                            
+                            // 检查 payload 是否包含学生数据
+                            const students = payload.students || [];
+                            const match = students.find(s => 
+                                s.name === normalizedTargetName && 
+                                (!student.class || String(s.class).replace(/[^0-9]/g, '') === String(student.class).replace(/[^0-9]/g, ''))
+                            );
+
+                            if (match) {
+                                history.push({
+                                    examId: item.key.split('_').pop() || item.key, // 尝试从Key中提取考试名
+                                    examFullKey: item.key,
+                                    total: match.total,
+                                    rankClass: match.ranks?.total?.class,
+                                    rankSchool: match.ranks?.total?.school,
+                                    rankTown: match.ranks?.total?.township,
+                                    scores: match.scores,
+                                    updatedAt: item.updated_at
+                                });
+                            }
+                        } catch (e) {
+                            console.warn(`[CloudHistory] 解析记录 ${item.key} 失败:`, e);
+                        }
+                    }
+
+                    // 按时间排序
+                    history.sort((a, b) => new Date(a.updatedAt) - new Date(b.updatedAt));
+
+                    console.log(`[CloudHistory] 找到 ${student.name} 的 ${history.length} 条历史成绩`);
+                    return { success: true, data: history };
+                } catch (e) {
+                    console.error('[CloudHistory] 检索失败:', e);
+                    return { success: false, message: e.message };
+                }
             }
         };
 

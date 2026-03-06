@@ -58,61 +58,14 @@
         onerror="this.onerror=null;this.src='https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'"></script>
     <script>
         /**
-         * 学生历次成绩对比优化补丁
-         * 增加 getHistoryComparisonData 函数，用于获取指定学生的历次成绩对比数据
+         * 🆕 适配新版 CloudManager.fetchStudentExamHistory
          */
-        async function getHistoryComparisonData(studentName, className, schoolName) {
-            if (!window.sbClient) return { success: false, message: '云端服务未连接' };
-            try {
-                const { data, error } = await window.sbClient
-                    .from('system_data')
-                    .select('key, content, updated_at')
-                    .like('key', 'STUDENT_COMPARE_%')
-                    .order('updated_at', { ascending: false });
-                if (error) throw error;
-                if (!data || data.length === 0) return { success: false, message: '暂无云端对比记录' };
-                const history = [];
-                const normalizedTargetName = typeof normalizeCompareName === 'function' ? normalizeCompareName(studentName) : studentName;
-                const normalizedTargetClass = String(className || '').trim();
-                for (const item of data) {
-                    let raw = item.content;
-                    if (typeof raw === 'string' && raw.startsWith('LZ|')) {
-                        raw = LZString.decompressFromUTF16(raw.substring(3));
-                    }
-                    const payload = typeof raw === 'string' ? JSON.parse(raw) : raw;
-                    const sourceRows = payload.studentsCompareData || [];
-                    const matched = sourceRows.find(s => {
-                        const sName = typeof normalizeCompareName === 'function' ? normalizeCompareName(s.name || '') : String(s.name || '').trim();
-                        const sameName = sName === normalizedTargetName;
-                        let sameClass = !normalizedTargetClass || (typeof isClassEquivalent === 'function' ? isClassEquivalent(s.class || '', normalizedTargetClass) : s.class === normalizedTargetClass);
-                        if (!sameClass && normalizedTargetClass && s.class) {
-                            sameClass = String(s.class).replace(/[^0-9]/g, '') === normalizedTargetClass.replace(/[^0-9]/g, '');
-                        }
-                        const sameSchool = !schoolName || String(s.school || '').trim() === String(schoolName).trim();
-                        return sameName && (sameClass || !s.class);
-                    });
-                    if (matched && matched.periods) {
-                        matched.periods.forEach(p => {
-                            if (!history.find(h => h.examId === p.examId)) {
-                                history.push({
-                                    examId: p.examId,
-                                    total: p.total,
-                                    rankClass: p.rankClass,
-                                    rankSchool: p.rankSchool,
-                                    rankTown: p.rankTown,
-                                    subjects: p.subjects,
-                                    updatedAt: item.updated_at
-                                });
-                            }
-                        });
-                    }
-                }
-                history.sort((a, b) => new Date(a.updatedAt) - new Date(b.updatedAt));
-                return { success: true, data: history };
-            } catch (e) {
-                console.error('获取历次成绩失败:', e);
-                return { success: false, message: e.message };
+        async function getHistoryComparisonData(student) {
+            if (window.CloudManager && typeof window.CloudManager.fetchStudentExamHistory === 'function') {
+                const res = await window.CloudManager.fetchStudentExamHistory(student);
+                if (res.success) return res.data;
             }
+            return [];
         }
 
         function renderHistoryCharts(historyData) {
@@ -126,46 +79,28 @@
                 const captureArea = document.getElementById('report-card-capture-area');
                 if (captureArea) captureArea.appendChild(container);
             }
+            
+            // 如果只有一次成绩，不显示趋势图
             if (!historyData || historyData.length < 2) {
-                container.innerHTML = '<div style="padding:20px; text-align:center; color:#64748b;">历次成绩数据不足（至少需要2次考试记录）以生成趋势图</div>';
+                container.style.display = 'none';
                 return;
             }
-            container.innerHTML = \`
+            
+            container.style.display = 'block';
+            container.innerHTML = `
                 <div class="fluent-header">
                     <i class="ti ti-trending-up" style="color:#2563eb;"></i>
                     <span class="fluent-title">历次考试成绩趋势对比</span>
                 </div>
                 <div style="height:300px; position:relative;">
                     <canvas id="historyTrendChart"></canvas>
-                </div>
-                <div style="margin-top:20px; overflow-x:auto;">
-                    <table class="fluent-table" style="font-size:12px;">
-                        <thead>
-                            <tr>
-                                <th>考试期次</th>
-                                <th>总分</th>
-                                <th>级排</th>
-                                <th>镇排</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            \${historyData.map(h => \`
-                                <tr>
-                                    <td>\${h.examId}</td>
-                                    <td style="font-weight:bold;">\${Number(h.total).toFixed(1)}</td>
-                                    <td>\${h.rankSchool || '-'}</td>
-                                    <td>\${h.rankTown || '-'}</td>
-                                </tr>
-                            \`).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            \`;
+                </div>`;
+            
             const ctx = document.getElementById('historyTrendChart').getContext('2d');
             new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: historyData.map(h => h.examId),
+                    labels: historyData.map(h => h.examId || h.examLabel),
                     datasets: [{
                         label: '总分趋势',
                         data: historyData.map(h => h.total),
@@ -187,7 +122,7 @@
                             callbacks: {
                                 label: function(context) {
                                     const h = historyData[context.dataIndex];
-                                    return [\`总分: \${context.parsed.y}\`, \`级排: \${h.rankSchool}\`, \`镇排: \${h.rankTown}\`];
+                                    return [`总分: ${context.parsed.y}`, `级排: ${h.rankSchool || h.student?.ranks?.total?.school || '-'}`, `镇排: ${h.rankTown || h.student?.ranks?.total?.township || '-'}`];
                                 }
                             }
                         }
@@ -200,7 +135,6 @@
             });
         }
 
-        const originalDoQuery = window.doQuery;
         window.doQuery = async function() {
             const name = document.getElementById('inp-name').value;
             const sch = document.getElementById('sel-school').value;
@@ -209,19 +143,55 @@
             let stu = SCHOOLS[sch].students.find(s => s.name === name && (cls === '--请先选择学校--' || s.class === cls));
             if (!stu) return alert("未找到该学生");
             
-            clearCloudStudentCompareContext();
-            setCloudCompareTarget(stu);
-            CURRENT_REPORT_STUDENT = stu;
+            // 🆕 自动对比流程：先同步云端历史
+            if (window.CloudManager && window.CloudManager.check()) {
+                if (window.UI) UI.toast("🔍 正在同步云端历史数据...", "info");
+                try {
+                    const historyRes = await window.CloudManager.fetchStudentExamHistory(stu);
+                    if (historyRes.success && historyRes.data.length > 0) {
+                        window.PREV_DATA = historyRes.data.map(h => ({
+                            examId: h.examId,
+                            examLabel: h.examId,
+                            student: {
+                                name: stu.name,
+                                class: stu.class,
+                                total: h.total,
+                                scores: h.scores,
+                                ranks: {
+                                    total: {
+                                        class: h.rankClass,
+                                        school: h.rankSchool,
+                                        township: h.rankTown
+                                    }
+                                }
+                            }
+                        }));
+                        if (window.UI) UI.toast(`✅ 已自动匹配 ${historyRes.data.length} 次历史成绩`, "success");
+                    }
+                } catch (e) {
+                    console.warn("[doQuery] 云端历史获取失败:", e);
+                }
+            }
+
+            if (typeof clearCloudStudentCompareContext === 'function') clearCloudStudentCompareContext();
+            if (typeof setCloudCompareTarget === 'function') setCloudCompareTarget(stu);
+            window.CURRENT_REPORT_STUDENT = stu;
             document.getElementById('single-report-result').classList.remove('hidden');
             const container = document.getElementById('report-card-capture-area');
-            container.innerHTML = renderSingleReportCardHTML(stu, 'A4');
-            setTimeout(() => { renderRadarChart(stu); renderVarianceChart(stu); }, 100);
-            analyzeStrengthsAndWeaknesses(stu);
-
-            const historyResult = await getHistoryComparisonData(stu.name, stu.class, stu.school);
-            if (historyResult.success) {
-                renderHistoryCharts(historyResult.data);
+            if (typeof renderSingleReportCardHTML === 'function') {
+                container.innerHTML = renderSingleReportCardHTML(stu, 'A4');
             }
+            
+            setTimeout(() => { 
+                if (typeof renderRadarChart === 'function') renderRadarChart(stu); 
+                if (typeof renderVarianceChart === 'function') renderVarianceChart(stu); 
+                
+                // 在 lt.html 中额外渲染趋势图
+                const history = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(stu) : (window.PREV_DATA || []);
+                renderHistoryCharts(history);
+            }, 100);
+            
+            if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(stu);
         };
     </script>
     <script>
@@ -3495,114 +3465,19 @@
                     </button>
                 </div>
 
-                <!-- 🆕 学生多期成绩对比 -->
-                <div id="student-multi-period-compare-section"
-                    style="margin:16px 0 14px 0; padding:12px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc; display:none;">
-                    <div
-                        style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
-                        <div style="font-weight:600; color:#334155;">📊 学生多期成绩对比（2期/3期）</div>
-                        <div style="display:flex; gap:8px; align-items:center; font-size:12px;">
-                            <label>期数：</label>
-                            <select id="studentComparePeriodCount"
-                                style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px;"
-                                onchange="onStudentComparePeriodCountChange()">
-                                <option value="2">2期</option>
-                                <option value="3">3期</option>
-                            </select>
-                        </div>
-                    </div>
-                    <!-- 🔐 [权限控制]：只有管理员、年级主任、教务主任能看到的选择界面 -->
-                    <div id="student-compare-admin-controls"
-                        style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                        <label style="font-size:12px; color:#475569;">学校：</label>
-                        <select id="studentCompareSchool"
-                            style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:130px;"></select>
-                        <label style="font-size:12px; color:#475569;">第1期：</label>
-                        <select id="studentCompareExam1"
-                            style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:180px;"></select>
-                        <label style="font-size:12px; color:#475569;">第2期：</label>
-                        <select id="studentCompareExam2"
-                            style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:180px;"></select>
-                        <span id="studentCompareExam3Wrap" style="display:none;">
-                            <label style="font-size:12px; color:#475569; margin-left:2px;">第3期：</label>
-                            <select id="studentCompareExam3"
-                                style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:180px;"></select>
-                        </span>
-                        <button class="btn btn-sm btn-blue"
-                            onclick="renderStudentMultiPeriodComparison()">生成全校学生对比</button>
-                        <button class="btn btn-sm" style="background:#8b5cf6; color:white;"
-                            onclick="saveStudentCompareToCloud()" title="保存对比结果到云端，供老师/家长查看">☁️ 保存到云端</button>
-                    </div>
-                    <!-- 🔐 [教师可见]：查看云端对比和导出功能 -->
-                    <div id="student-compare-teacher-controls"
-                        style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px;">
-                        <button class="btn btn-sm" style="background:#06b6d4; color:white;"
-                            onclick="viewCloudStudentCompares()" title="查看已保存的云端对比结果">📋 查看云端对比</button>
-                        <button class="btn btn-sm btn-green"
-                            onclick="exportStudentMultiPeriodComparison()">导出Excel</button>
-                        <span style="font-size:12px; color:#64748b; margin-left:8px;">提示：教师只能查看自己任教班级的对比数据</span>
-                    </div>
-                    <div
-                        style="display:flex; gap:8px; align-items:center; margin-top:8px; padding-top:8px; border-top:1px solid #e2e8f0; flex-wrap:wrap;">
-                        <label style="font-size:12px; color:#475569;">🔍 筛选：</label>
-                        <input type="text" id="studentCompareNameInput" placeholder="输入姓名（可用逗号分隔多个）"
-                            style="padding:4px 8px; border:1px solid #cbd5e1; border-radius:4px; min-width:180px;"
-                            onkeypress="if(event.key==='Enter') filterStudentCompareByName()">
-                        <button class="btn btn-sm" onclick="filterStudentCompareByName()">查询姓名</button>
-                        <button class="btn btn-sm" style="background:#10b981; color:white;"
-                            onclick="filterByProgress('improve')">只看进步</button>
-                        <button class="btn btn-sm" style="background:#ef4444; color:white;"
-                            onclick="filterByProgress('decline')">只看退步</button>
-                        <button class="btn btn-sm btn-gray" onclick="clearStudentCompareFilter()">显示全部</button>
-                        <span style="margin-left:auto; display:flex; gap:6px; align-items:center;">
-                            <label style="font-size:12px; color:#475569;">显示：</label>
-                            <select id="studentCompareGroupBy"
-                                style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px;"
-                                onchange="toggleGroupDisplay()">
-                                <optgroup label="📋 列表视图">
-                                    <option value="none">全部学生（列表）</option>
-                                </optgroup>
-                                <optgroup label="📁 班级分组" id="classGroupOptions">
-                                    <option value="class">所有班级（分组显示）</option>
-                                </optgroup>
-                            </select>
-                            <label style="font-size:12px; color:#475569; margin-left:8px;">排序：</label>
-                            <select id="studentCompareSortBy"
-                                style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px;"
-                                onchange="sortStudentCompare()">
-                                <option value="class">按班级+姓名</option>
-                                <option value="totalDesc">按最近总分降序</option>
-                                <option value="totalAsc">按最近总分升序</option>
-                                <option value="improveDesc">按进步幅度降序</option>
-                                <option value="improveAsc">按退步幅度降序</option>
-                                <option value="rankImprove">按排名提升降序</option>
-                            </select>
-                        </span>
-                    </div>
-                    <div id="studentCompareHint" style="margin-top:6px; font-size:12px; color:#64748b;">
-                        <span id="student-compare-hint-admin">请选择学校和2期或3期考试后生成对比。生成后可保存到云端，供老师、班主任、家长等查看。</span>
-                        <span id="student-compare-hint-teacher"
-                            style="display:none;">请点击"查看云端对比"按钮查看已保存的学生对比数据。您只能查看自己任教班级的学生数据。</span>
-                    </div>
-                    <div id="studentCompareSummary" style="margin-top:10px;"></div>
-                    <div id="studentComparePagination"
-                        style="margin-top:10px; display:none; padding:8px; background:#f8fafc; border-radius:6px; display:flex; justify-content:space-between; align-items:center; font-size:12px;">
-                        <div>
-                            <label style="color:#475569;">每页显示：</label>
-                            <select id="studentComparePageSize"
-                                style="padding:3px 6px; border:1px solid #cbd5e1; border-radius:4px;"
-                                onchange="changePageSize()">
-                                <option value="10">10人</option>
-                                <option value="20" selected>20人</option>
-                                <option value="30">30人</option>
-                                <option value="50">50人</option>
-                                <option value="999999">全部</option>
-                            </select>
-                            <span id="studentComparePaginationInfo" style="margin-left:15px; color:#64748b;"></span>
-                        </div>
-                        <div id="studentComparePaginationButtons" style="display:flex; gap:5px;"></div>
-                    </div>
-                    <div id="studentCompareResult" style="margin-top:10px;"></div>
+                <div class="table-wrap">
+                    <table id="studentDetailTable" class="mobile-card-table">
+                        <thead>
+                            <tr>
+                                <th>学校</th>
+                                <th>班级</th>
+                                <th>姓名</th>
+                                <th>考号</th>
+                                <th>考场</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
 
                 <div class="table-wrap">
@@ -3812,19 +3687,87 @@
                 <div class="sec-head">
                     <h2><i class="ti ti-certificate"></i> 个性化成绩单生成器</h2>
                 </div>
-                <div class="control-panel" style="background:#fff; border-color:var(--primary-light);">
-                    <label>选择学校：</label><select id="sel-school" style="min-width:150px;">
+                <div class="control-panel" style="background:#f8fafc; border-color:var(--primary-light); display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding: 12px 16px;">
+                    <label style="font-size:13px; font-weight:600;">学校：</label>
+                    <select id="studentCompareSchool" style="min-width:150px; background:#fff; border-radius:6px;"></select>
+                    
+                    <label style="font-size:13px; font-weight:600;">第1期：</label>
+                    <select id="studentCompareExam1" style="min-width:180px; background:#fff; border-radius:6px;"></select>
+                    
+                    <label style="font-size:13px; font-weight:600;">第2期：</label>
+                    <select id="studentCompareExam2" style="min-width:180px; background:#fff; border-radius:6px;"></select>
+                    
+                    <span id="studentCompareExam3Wrap" style="display:none; align-items:center; gap:10px;">
+                        <label style="font-size:13px; font-weight:600;">第3期：</label>
+                        <select id="studentCompareExam3" style="min-width:180px; background:#fff; border-radius:6px;"></select>
+                    </span>
+
+                    <button class="btn btn-green" onclick="renderStudentMultiPeriodComparison()" style="background:#10b981; border-radius:20px; padding: 6px 20px;">生成全校学生对比</button>
+                    <button id="btn-save-compare-cloud" class="btn" style="background:#8b5cf6; color:white; border-radius:20px; padding: 6px 20px;" onclick="saveStudentCompareToCloud()">☁️ 保存到云端</button>
+                </div>
+
+                <div class="control-panel" style="background:#fff; border:none; padding-top:0; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <button class="btn" style="background:#06b6d4; color:white; border-radius:20px; padding: 6px 20px;" onclick="viewCloudStudentCompares()">📋 查看云端对比</button>
+                    <button class="btn" style="background:#10b981; color:white; border-radius:20px; padding: 6px 20px;" onclick="exportStudentMultiPeriodComparison()">导出Excel</button>
+                    <span style="font-size:12px; color:#64748b; margin-left:8px;">提示：教师只能查看自己任教班级的对比数据</span>
+                    
+                    <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+                        <label style="font-size:12px;">期数：</label>
+                        <select id="studentComparePeriodCount" style="padding:4px 8px; border-radius:6px;" onchange="onStudentComparePeriodCountChange()">
+                            <option value="2">2期</option>
+                            <option value="3">3期</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 结果展示区域 -->
+                <div id="student-multi-period-compare-section" style="margin-top:10px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:15px; display:none;">
+                    <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
+                        <label style="font-size:12px; color:#475569;">🔍 筛选：</label>
+                        <input type="text" id="studentCompareNameInput" placeholder="输入姓名（可用逗号分隔多个）"
+                            style="padding:4px 12px; border-radius:20px; min-width:180px;"
+                            onkeypress="if(event.key==='Enter') filterStudentCompareByName()">
+                        <button class="btn btn-sm btn-gray" onclick="filterStudentCompareByName()">查询姓名</button>
+                        <button class="btn btn-sm" style="background:#10b981; color:white;"
+                            onclick="filterByProgress('improve')">只看进步</button>
+                        <button class="btn btn-sm" style="background:#ef4444; color:white;"
+                            onclick="filterByProgress('decline')">只看退步</button>
+                        <button class="btn btn-sm btn-gray" onclick="clearStudentCompareFilter()">显示全部</button>
+                    </div>
+                    
+                    <div id="studentCompareHint" style="font-size:12px; color:#64748b; margin:10px 0;">
+                        <span id="student-compare-hint-admin">请选择学校和2期或3期考试后生成对比。生成后可保存到云端，供老师、班主任、家长等查看。</span>
+                        <span id="student-compare-hint-teacher" style="display:none;">请点击"查看云端对比"按钮查看已保存的学生对比数据。您只能查看自己任教班级的学生数据。</span>
+                    </div>
+                    
+                    <div id="studentCompareSummary" style="margin-top:10px;"></div>
+                    <div id="studentComparePagination" style="margin-top:10px; display:none; padding:8px; background:#f8fafc; border-radius:6px; display:flex; justify-content:space-between; align-items:center; font-size:12px;">
+                        <div>
+                            <label style="color:#475569;">每页显示：</label>
+                            <select id="studentComparePageSize" onchange="changePageSize()">
+                                <option value="10">10人</option>
+                                <option value="20" selected>20人</option>
+                                <option value="30">30人</option>
+                                <option value="50">50人</option>
+                                <option value="999999">全部</option>
+                            </select>
+                            <span id="studentComparePaginationInfo" style="margin-left:15px; color:#64748b;"></span>
+                        </div>
+                        <div id="studentComparePaginationButtons" style="display:flex; gap:5px;"></div>
+                    </div>
+                    <div id="studentCompareResult" style="margin-top:10px;"></div>
+                </div>
+
+                <div class="control-panel" style="background:#fff; border-color:var(--primary-light); margin-top:20px; border-top:1px solid #eee; padding-top:20px;">
+                    <label>查询单人：</label>
+                    <select id="sel-school" style="min-width:150px;">
                         <option>--请先上传数据--</option>
                     </select>
-                    <label>班级：</label><select id="sel-class" style="min-width:120px;">
+                    <select id="sel-class" style="min-width:120px;">
                         <option>--请先选择学校--</option>
                     </select>
-                </div>
-                <div class="control-panel">
-                    <input type="text" id="inp-name" placeholder="查询单个学生姓名" style="width:120px;">
-                    <button class="btn" onclick="doQuery()">查询单人报告</button>
-                    <button class="btn btn-gray" onclick="testHistoryFeature()" style="margin-left:10px;">测试历史功能</button>
-                    <!-- [新增] 批量PDF入口 -->
+                    <input type="text" id="inp-name" placeholder="查询单个学生姓名" style="width:120px; margin-left:10px;">
+                    <button class="btn" style="background:var(--primary); color:white;" onclick="doQuery()">查询单人报告</button>
                     <button class="btn btn-primary" style="margin-left:auto;" onclick="batchGeneratePDF()">
                         <i class="ti ti-files"></i> 批量生成全班 PDF
                     </button>
@@ -12021,7 +11964,41 @@ function switchTab(id) {
     if (id === 'exam-arranger') {
         EXAM_initProctorUI();
     }
-    if (id === 'report-generator') { updateMarginalSchoolSelect(); updateClassSelect(); }
+    if (id === 'report-generator') {
+        updateMarginalSchoolSelect();
+        updateClassSelect();
+        
+        // 🔥 初始化学生多期对比
+        if (typeof updateStudentCompareExamSelects === 'function') {
+            updateStudentCompareExamSelects();
+        }
+
+        // 🔐 权限控制
+        const user = getCurrentUser();
+        const role = user?.role || 'guest';
+        
+        // 找到该模块下的所有控制面板
+        const panels = document.querySelectorAll('#report-generator .control-panel');
+        // 第1个面板：对比设置
+        // 第2个面板：云端/导出
+        // 第3个面板：单人查询
+        
+        if (role === 'admin' || role === 'director' || role === 'grade_director' || role === 'class_teacher' || role === 'teacher') {
+            // 显示对比面板
+            if (panels[0]) panels[0].style.display = 'flex';
+            if (panels[1]) panels[1].style.display = 'flex';
+            
+            // 教师/班主任隐藏保存按钮
+            const saveCloudBtn = document.getElementById('btn-save-compare-cloud');
+            if (saveCloudBtn) {
+                saveCloudBtn.style.display = (role === 'teacher' || role === 'class_teacher') ? 'none' : 'inline-block';
+            }
+        } else {
+            // 家长/访客隐藏对比面板
+            if (panels[0]) panels[0].style.display = 'none';
+            if (panels[1]) panels[1].style.display = 'none';
+        }
+    }
     if (id === 'segment-analysis') updateSegmentSelects();
     if (id === 'class-comparison') updateClassCompSchoolSelect();
     if (id === 'potential-analysis') updatePotentialSchoolSelect();

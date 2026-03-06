@@ -14758,13 +14758,45 @@ function exportTeacherTownshipRankExcel() {
 }
 
 // ================= 报告查询逻辑（打印增强） =================
-function doQuery() {
+async function doQuery() {
     const name = document.getElementById('inp-name').value;
     const sch = document.getElementById('sel-school').value;
     const cls = document.getElementById('sel-class').value;
 
     let stu = SCHOOLS[sch]?.students.find(s => s.name === name && (cls === '--请先选择学校--' || s.class === cls));
     if (!stu) return alert("未找到该学生");
+
+    // 🆕 自动对比流程：先同步云端历史
+    if (window.CloudManager && window.CloudManager.check()) {
+        if (window.UI) UI.toast("🔍 正在同步云端历史数据...", "info");
+        try {
+            const historyRes = await window.CloudManager.fetchStudentExamHistory(stu);
+            if (historyRes.success && historyRes.data.length > 0) {
+                // 模拟 patch.js 逻辑，将历史记录存入全局上下文
+                window.PREV_DATA = historyRes.data.map(h => ({
+                    examId: h.examId,
+                    examLabel: h.examId,
+                    student: {
+                        name: stu.name,
+                        class: stu.class,
+                        total: h.total,
+                        scores: h.scores,
+                        ranks: {
+                            total: {
+                                class: h.rankClass,
+                                school: h.rankSchool,
+                                township: h.rankTown
+                            }
+                        }
+                    }
+                }));
+                if (window.UI) UI.toast(`✅ 已自动匹配 ${historyRes.data.length} 次历史成绩`, "success");
+            }
+        } catch (e) {
+            console.warn("[doQuery] 云端历史获取失败:", e);
+        }
+    }
+
     clearCloudStudentCompareContext();
     setCloudCompareTarget(stu);
     CURRENT_REPORT_STUDENT = stu;
@@ -14772,11 +14804,15 @@ function doQuery() {
     document.getElementById('single-report-result').classList.remove('hidden');
     const container = document.getElementById('report-card-capture-area');
 
-    // 强制使用 'A4' 模式进行渲染，这样打印出来的效果最好
+    // 强制使用 'A4' 模式进行渲染
     container.innerHTML = renderSingleReportCardHTML(stu, 'A4');
 
-    setTimeout(() => { renderRadarChart(stu); renderVarianceChart(stu); }, 100);
-    analyzeStrengthsAndWeaknesses(stu);
+    setTimeout(() => { 
+        if (typeof renderRadarChart === 'function') renderRadarChart(stu); 
+        if (typeof renderVarianceChart === 'function') renderVarianceChart(stu); 
+    }, 100);
+    
+    if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(stu);
 }
 
 function updateMutualAidSelects() {
@@ -15020,8 +15056,25 @@ function getStudentExamHistory(student) {
             }
         }
     } catch (e) {
-        console.warn('[多期对比] 获取学生考试历史异常:', e);
+        console.warn('[多期对比] 获取学生本地考试历史异常:', e);
     }
+
+    // 🆕 整合云端异步拉取的数据 (PREV_DATA)
+    if (window.PREV_DATA && Array.isArray(window.PREV_DATA)) {
+        window.PREV_DATA.forEach(h => {
+            // 避免与本地数据重复 (以 examId 为准)
+            if (!results.some(r => r.examId === h.examId)) {
+                results.push(h);
+            }
+        });
+    }
+
+    // 重新按时间排序 (如果有多个来源)
+    results.sort((a, b) => {
+        const timeA = a.student?.updatedAt || a.updatedAt || 0;
+        const timeB = b.student?.updatedAt || b.updatedAt || 0;
+        return new Date(timeA) - new Date(timeB);
+    });
 
     return results;
 }
@@ -15199,7 +15252,7 @@ function renderSingleReportCardHTML(stu, mode) {
             </div>
         </div>` : '';
 
-    return `
+    const baseHtml = `
         ${fluentStyle}
         <div class="report-header" style="border-bottom:none; margin-bottom:10px; text-align:center;">
             <h3 style="font-family:'Microsoft YaHei', sans-serif; font-weight:800; color:#1e293b; letter-spacing:1px; margin:0;">${stu.school} 学生学业发展报告</h3>
@@ -15224,15 +15277,12 @@ function renderSingleReportCardHTML(stu, mode) {
 
     // 🟢 [Bug #5 修复] 补充渲染多期考试趋势表格 (如果是多期数据可用)
     const examHistory = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(stu) : [];
-    if (examHistory.length > 1) { // 只有一次考试(本次)或无数据则不显示趋势表
+    let historyHtml = '';
+    if (examHistory.length > 1) { 
         let historyRows = '';
-        const trendLabels = examHistory.map(h => h.examLabel.substring(0, 15));
-        
-        // 生成表头 (考试名称)
         let thHtml = `<th style="text-align:left; padding-left:20px;">考试名称</th><th>总分</th><th>校排</th>`;
         if (!isSingleSchool) thHtml += `<th>镇排</th>`;
         
-        // 反向遍历 (最新考试在上面)
         for (let i = examHistory.length - 1; i >= 0; i--) {
             const h = examHistory[i];
             const isCurrent = h.examId === CURRENT_EXAM_ID;
@@ -15249,7 +15299,7 @@ function renderSingleReportCardHTML(stu, mode) {
             </tr>`;
         }
 
-        html += `
+        historyHtml = `
         <div class="fluent-card" style="padding:0; overflow:hidden; margin-top:20px;">
             <div class="fluent-header" style="padding: 15px 20px 5px; border-bottom: none;"><i class="ti ti-chart-line" style="color:#f97316;"></i><span class="fluent-title">历次考试趋势记录</span></div>
             <table class="fluent-table">
@@ -15259,7 +15309,9 @@ function renderSingleReportCardHTML(stu, mode) {
         </div>`;
     }
 
-    html += `
+    const finalHtml = `
+        ${baseHtml}
+        ${historyHtml}
         <div style="display:flex; gap:15px; margin-bottom:15px; flex-wrap:wrap; margin-top:20px;">
             <div class="fluent-card" style="flex:1; min-width:300px; margin-bottom:0; display:flex; flex-direction:column;">
                 <div class="fluent-header"><i class="ti ti-radar" style="color:#2563eb;"></i><span class="fluent-title">综合素质评价 (百分位)</span></div>
@@ -15272,6 +15324,8 @@ function renderSingleReportCardHTML(stu, mode) {
         </div>
         ${chartNarrativeHtml}
         <div style="text-align:center; font-size:11px; color:#cbd5e1; margin-top:20px;">系统自动生成 · 仅供家校沟通参考</div>`;
+
+    return finalHtml;
 }
 
 // 2. 🟢 新增：生成 Instagram 风格卡片的函数 (Mobile Only)
