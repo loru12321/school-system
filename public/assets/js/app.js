@@ -3510,103 +3510,7 @@ const DataManager = {
 
     // --- 教师管理核心逻辑 ---
 
-    // 🟢 [修复]：动态渲染学期下拉框 (智能届别模式)
-    renderTeacherTermSelect: function () {
-        const sel = document.getElementById('dm-teacher-term-select');
-        if (!sel) return;
 
-        let years = [];
-        let startYear = null;
-
-        // 1. 优先从内存元数据读取
-        if (window.CURRENT_COHORT_META && window.CURRENT_COHORT_META.year) {
-            startYear = parseInt(window.CURRENT_COHORT_META.year, 10);
-        }
-
-        // 2. 再从本地存储读取
-        if (!startYear) {
-            try {
-                const metaStr = localStorage.getItem('CURRENT_COHORT_META');
-                if (metaStr) {
-                    const meta = JSON.parse(metaStr);
-                    if (meta && meta.year) startYear = parseInt(meta.year, 10);
-                }
-            } catch (e) { }
-        }
-
-        // 3. 再从届别ID推断
-        if (!startYear) {
-            const id = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
-            const match = id ? String(id).match(/(\d{4})/) : null;
-            if (match) startYear = parseInt(match[1], 10);
-        }
-
-        // 4. 最后从界面标签文本兜底
-        if (!startYear) {
-            const label = document.getElementById('cohort-current-label')?.innerText || '';
-            const match = label.match(/(\d{4})/);
-            if (match) startYear = parseInt(match[1], 10);
-        }
-
-        // 2. 生成学年列表
-        if (startYear) {
-            // 届别模式：生成 6年级(入学) 到 9年级(毕业) 的4个学年
-            // Year 0 (6级): startYear
-            // Year 3 (9级): startYear + 3
-            for (let i = 0; i < 4; i++) {
-                years.push(startYear + i);
-            }
-        } else {
-            // 兜底模式：当前年份 前后推导
-            const currentYear = new Date().getFullYear();
-            years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
-        }
-
-        let options = '';
-        years.forEach(year => {
-            const yearStr = `${year}-${year + 1}`; // e.g., 2022-2023
-
-            // 计算年级标签
-            let gradeLabel = '';
-            if (startYear) {
-                const gradeNum = 6 + (year - startYear);
-                gradeLabel = ` [${gradeNum}年级]`;
-            }
-
-            ['上学期', '下学期'].forEach(term => {
-                const termId = `${yearStr}_${term}`;
-                options += `<option value="${termId}">${yearStr} ${term}${gradeLabel}</option>`;
-            });
-        });
-
-        sel.innerHTML = options;
-
-        // 3. 智能选中逻辑
-        const uiMeta = getExamMetaFromUI();
-        const savedTerm = localStorage.getItem('CURRENT_TERM_ID');
-
-        // 数据清洗：检查当前 value 是否在 options 里
-        const setAndValidate = (val) => {
-            sel.value = val;
-            return sel.value === val; // 验证是否选中成功
-        };
-
-        let isSet = false;
-        if (uiMeta.year && uiMeta.term) {
-            // 优先选中顶部工具栏的设置
-            isSet = setAndValidate(`${uiMeta.year}_${uiMeta.term}`);
-        }
-
-        if (!isSet && savedTerm) {
-            // 其次选中上次保存的
-            isSet = setAndValidate(savedTerm);
-        }
-
-        // 如果都没选中（比如切换了届别，年份变了），默认选中最后一项（最高年级）
-        if (!sel.value && sel.options.length > 0) {
-            sel.value = sel.options[sel.options.length - 1].value;
-        }
-    },
 
     // 🟢 [修复]：修正 updateTeacherSchoolSelect 缺失问题
     updateTeacherSchoolSelect: function () {
@@ -3682,51 +3586,37 @@ const DataManager = {
         if (!sel) return;
 
         const getEntryYear = () => {
-            let y = null;
-
+            // 1. 绝对优先：内存中的届别元数据
             if (window.CURRENT_COHORT_META && window.CURRENT_COHORT_META.year) {
-                y = parseInt(window.CURRENT_COHORT_META.year, 10);
+                return parseInt(window.CURRENT_COHORT_META.year, 10);
             }
 
-            if (!y) {
-                try {
-                    const metaStr = localStorage.getItem('CURRENT_COHORT_META');
-                    if (metaStr) {
-                        const meta = JSON.parse(metaStr);
-                        if (meta && meta.year) y = parseInt(meta.year, 10);
-                    }
-                } catch (e) { }
-            }
+            // 2. 本地存储的元数据
+            try {
+                const metaStr = localStorage.getItem('CURRENT_COHORT_META');
+                if (metaStr) {
+                    const meta = JSON.parse(metaStr);
+                    if (meta && meta.year) return parseInt(meta.year, 10);
+                }
+            } catch (e) { }
 
-            if (!y) {
-                const id = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
-                const match = id ? String(id).match(/(\d{4})/) : null;
-                if (match) y = parseInt(match[1], 10);
-            }
+            // 3. 届别 ID (通常就是年份字符串，如 "2024")
+            const id = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
+            if (id && /^\d{4}$/.test(String(id))) return parseInt(id, 10);
 
-            if (!y) {
-                const label = document.getElementById('cohort-current-label')?.innerText || '';
-                const match = label.match(/(\d{4})/);
-                if (match) y = parseInt(match[1], 10);
-            }
+            // 4. 界面标签 (如 "2024级 (六年级入学)")
+            const label = document.getElementById('cohort-current-label')?.innerText || '';
+            const match = label.match(/(\d{4})级/); // 精确匹配 "xxxx级"
+            if (match) return parseInt(match[1], 10);
 
-            if (!y) {
-                try {
-                    const list = JSON.parse(localStorage.getItem(COHORT_STORAGE_KEY) || '[]');
-                    const currentId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
-                    const found = list.find(c => String(c.id) === String(currentId));
-                    if (found && found.year) y = parseInt(found.year, 10);
-                    if (!y && list.length) y = parseInt(list[0].year, 10);
-                } catch (e) { }
-            }
-
-            return y;
+            return null;
         };
 
         let years = [];
         const startYear = getEntryYear();
 
         if (startYear) {
+            // 正常学制：初中四年 (6, 7, 8, 9)
             for (let i = 0; i < 4; i++) years.push(startYear + i);
         } else {
             const currentYear = new Date().getFullYear();
@@ -3743,7 +3633,6 @@ const DataManager = {
                 gradeLabel = ` [${gradeNum}年级]`;
             }
             ['上学期', '下学期'].forEach(term => {
-                // 🟢 改进：value中包含年级信息，格式：year_term_grade
                 const termId = gradeNum ? `${yearStr}_${term}_${gradeNum}年级` : `${yearStr}_${term}`;
                 options += `<option value="${termId}">${yearStr} ${term}${gradeLabel}</option>`;
             });
@@ -3751,14 +3640,13 @@ const DataManager = {
 
         sel.innerHTML = options || '<option value="">暂无学期</option>';
 
+        // 智能选中逻辑
         const uiMeta = getExamMetaFromUI();
         const saved = localStorage.getItem('CURRENT_TERM_ID');
         let prefer = null;
 
-        // 🟢 改进：匹配时考虑新格式
         if (uiMeta.year && uiMeta.term) {
             const baseTermId = `${uiMeta.year}_${uiMeta.term}`;
-            // 尝试精确匹配或前缀匹配
             for (let opt of sel.options) {
                 if (opt.value === baseTermId || opt.value.startsWith(baseTermId + '_')) {
                     prefer = opt.value;
@@ -3768,7 +3656,6 @@ const DataManager = {
         }
 
         if (!prefer && saved) {
-            // 尝试匹配saved值
             for (let opt of sel.options) {
                 if (opt.value === saved || opt.value.startsWith(saved + '_')) {
                     prefer = opt.value;
@@ -3778,7 +3665,7 @@ const DataManager = {
         }
 
         if (prefer) sel.value = prefer;
-        if (!sel.value && sel.options.length) sel.value = sel.options[0].value;
+        else if (sel.options.length > 0) sel.value = sel.options[0].value;
     },
 
     switchTeacherTerm: function (termId) {
