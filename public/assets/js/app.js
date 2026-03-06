@@ -11338,7 +11338,17 @@ function listAvailableSchoolsForCompare() {
         });
     }
 
-    return [...names].sort((a, b) => a.localeCompare(b, 'zh-CN'));
+    // 🟢 [修复]：增加黑名单，过滤掉教育局、管理员等非教学单位，防止污染下拉框
+    const blockList = ['教育局', '教体局', '市局', '区局', '市直属', '区直属', 'admin', '测试', '默认'];
+    const filteredNames = [...names].filter(name => {
+        if (/^Sheet\d+$/i.test(name)) return false; // 过滤残留的旧假表名
+        for (let blocked of blockList) {
+            if (name.includes(blocked) || name.toLowerCase() === blocked) return false;
+        }
+        return true;
+    });
+
+    return filteredNames.sort((a, b) => a.localeCompare(b, 'zh-CN'));
 }
 
 function getClassSchoolMapForAllData() {
