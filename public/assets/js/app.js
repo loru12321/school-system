@@ -3847,6 +3847,18 @@ const DataManager = {
                     }
                     localMap = cleanedMap;
                 }
+
+                // 🟢 [修复]：同时清洗 "Sheet1" 这类因为当初 Excel 导入错误而遗留下来的假学校名
+                if (localSchoolMap && typeof localSchoolMap === 'object') {
+                    let scrubbedSchools = 0;
+                    Object.keys(localSchoolMap).forEach(k => {
+                        if (/^Sheet\d+$/i.test(localSchoolMap[k])) {
+                            delete localSchoolMap[k];
+                            scrubbedSchools++;
+                        }
+                    });
+                    if (scrubbedSchools > 0) console.warn(`🧹 [自动清洗] 已清除 ${scrubbedSchools} 条包含 "SheetX" 的错误学校名称`);
+                }
             }
 
             // 有本地数据(或清洗后的干净数据)，直接使用
@@ -3986,7 +3998,11 @@ const DataManager = {
                         const className = normalizeClass(getVal(classAlias));
                         const subject = normalizeSubject(getVal(subjectAlias));
                         const teacher = getVal(teacherAlias);
-                        const schoolName = String(getVal(schoolAlias) || sheetName || '').trim();
+                        let extractedSchool = getVal(schoolAlias);
+                        if (!extractedSchool && !/^Sheet\d+$/i.test(sheetName)) {
+                            extractedSchool = sheetName;
+                        }
+                        const schoolName = String(extractedSchool || '').trim();
 
                         if (className && subject && teacher) {
                             const key = `${className}_${subject}`;
