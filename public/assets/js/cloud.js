@@ -323,13 +323,13 @@
                         pushCandidates(rows);
                     }
 
-                    // 最后兜底：最新任课表
-                    if (candidateRows.length === 0) {
-                        triedKeys.push('like:TEACHERS_% (latest)');
+                    // 最后兜底：最新任课表 (仅限当前队列)
+                    if (candidateRows.length === 0 && cohortId) {
+                        triedKeys.push(`like:TEACHERS_${cohortId}级_% (latest)`);
                         const { data: rows, error } = await sbClient
                             .from('system_data')
                             .select('key,content,updated_at')
-                            .like('key', 'TEACHERS_%')
+                            .like('key', `TEACHERS_${cohortId}级_%`)
                             .order('updated_at', { ascending: false })
                             .limit(30);
                         if (error) throw error;

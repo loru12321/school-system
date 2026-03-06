@@ -22,10 +22,21 @@ async function getHistoryComparisonData(studentName, className, schoolName) {
     console.log('🔍 开始从云端存档获取历史数据...');
     try {
         if (typeof sbClient !== 'undefined' && sbClient) {
+            // 🟢 修复：强制队列隔离，非管理员只能读取当前队列的历史数据
+            const currentCohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
+            const user = getCurrentUser && getCurrentUser();
+            const isAdmin = user && (user.role === 'admin' || user.role === 'director' || user.role === 'grade_director');
+            
+            let queryPattern = 'cohort::%';
+            if (!isAdmin && currentCohortId) {
+                // 非管理员只能查询当前队列的数据
+                queryPattern = `cohort::${currentCohortId}::%`;
+            }
+            
             var result = await sbClient
                 .from('system_data')
                 .select('key, content, updated_at')
-                .like('key', 'cohort::%')
+                .like('key', queryPattern)
                 .order('updated_at', { ascending: false });
 
             console.log('📡 云端存档查询结果:', { count: result.data?.length, error: result.error });
