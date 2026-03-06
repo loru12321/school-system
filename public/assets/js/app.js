@@ -23411,6 +23411,11 @@ const CohortManager = {
         refreshExamYearOptions(meta.year);
         this.renderSelector();
         switchCohort(cohortId);
+        
+        // 🟢 [修复]：切换届别后，立即强制刷新教师学期下拉框，解决同步弹窗年级标签陈旧的问题
+        if (window.DataManager && typeof DataManager.renderTeacherTermSelect === 'function') {
+            DataManager.renderTeacherTermSelect();
+        }
 
         // 🟢 [新增]：切换届别后，自动加载对应学期的教师任课数据
         setTimeout(() => {
@@ -25547,6 +25552,11 @@ function openTeacherSync() {
 }
 
 function getTeacherTermOptions() {
+    // 🟢 [修复]：获取选项前强制重新渲染，防止因切换届别导致年级标签还是旧的
+    if (window.DataManager && typeof DataManager.renderTeacherTermSelect === 'function') {
+        DataManager.renderTeacherTermSelect();
+    }
+
     const tmpSelect = document.getElementById('dm-teacher-term-select');
     if (tmpSelect && tmpSelect.options && tmpSelect.options.length > 0) {
         return Array.from(tmpSelect.options)
@@ -25554,9 +25564,6 @@ function getTeacherTermOptions() {
             .map(o => ({ value: o.value, label: o.textContent }));
     }
 
-    if (window.DataManager && typeof DataManager.renderTeacherTermSelect === 'function') {
-        DataManager.renderTeacherTermSelect();
-    }
 
     const options = [];
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
