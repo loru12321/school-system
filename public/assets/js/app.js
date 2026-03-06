@@ -3822,11 +3822,38 @@ const DataManager = {
         const hasLocal = localMap && Object.keys(localMap).length > 0;
 
         if (hasLocal) {
-            // 有本地数据，直接使用
+            // 🟢 [修复]：清洗已被上一版 Bug 污染的本地缓存 (如8年级学期里混入了9年级的历史数据)
+            if (gradeInfo) {
+                const gradeMatch = gradeInfo.match(/(\d+)/);
+                if (gradeMatch) {
+                    const gradePrefix = String(gradeMatch[1]); // 例如 "8"
+                    const cleanedMap = {};
+                    let cleanedCount = 0;
+                    let droppedCount = 0;
+
+                    Object.entries(localMap).forEach(([k, v]) => {
+                        const clsName = String(k.split('_')[0]).replace(/班/g, '');
+                        // 如果班级是以该年级开头（例如 "801", "8.1"），则保留；否则（如 "9.1"）丢弃
+                        if (clsName.startsWith(gradePrefix)) {
+                            cleanedMap[k] = v;
+                            cleanedCount++;
+                        } else {
+                            droppedCount++; // 发现跨届污染数据，准备丢弃
+                        }
+                    });
+
+                    if (droppedCount > 0) {
+                        console.warn(`🧹 [自动清洗] 已从被污染的本地历史 '${baseTerm}' 中清除了 ${droppedCount} 条非 ${gradePrefix} 年级的脏数据`);
+                    }
+                    localMap = cleanedMap;
+                }
+            }
+
+            // 有本地数据(或清洗后的干净数据)，直接使用
             setTeacherMap(JSON.parse(JSON.stringify(localMap)));
             setTeacherSchoolMap(JSON.parse(JSON.stringify(localSchoolMap)));
             this.renderTeachers();
-            console.log(`✅ 已从本地历史加载学期 ${baseTerm} 的任课表`);
+            console.log(`✅ 已从本地历史加载学期 ${baseTerm} 的任课表，共展示 ${Object.keys(localMap).length} 条`);
             if (typeof this.refreshTeacherAnalysis === 'function') this.refreshTeacherAnalysis();
         } else {
             // 🟢 [修复]：本地无数据，自动尝试从云端拉取
@@ -3943,10 +3970,23 @@ const DataManager = {
                     totalRows += json.length;
 
                     json.forEach((row, idx) => {
-                        const className = normalizeClass(row['班级'] || row['class'] || row['Class'] || row['班级名称']);
-                        const subject = normalizeSubject(row['学科'] || row['subject'] || row['科目'] || row['Subject']);
-                        const teacher = row['教师'] || row['teacher'] || row['教师姓名'] || row['姓名'] || row['Teacher'];
-                        const schoolName = String(row['学校'] || row['school'] || row['School'] || sheetName || '').trim();
+                        // 🟢 [修复]：大幅增加 Excel 表头别名的容错率，匹配更多中国学校常用教务表格头
+                        const classAlias = ['班级', 'class', 'Class', '班级名称', '行政班', '所属班级', '年级班级', '教学班'];
+                        const subjectAlias = ['学科', 'subject', '科目', 'Subject', '任教科目', '考试科目'];
+                        const teacherAlias = ['教师', 'teacher', '教师姓名', '姓名', 'Teacher', '任课教师', '任课老师', '授课教师', '老师'];
+                        const schoolAlias = ['学校', 'school', 'School', '校区', '所属学校'];
+
+                        const getVal = (aliases) => {
+                            for (let a of aliases) {
+                                if (row[a] !== undefined && row[a] !== null) return String(row[a]).trim();
+                            }
+                            return '';
+                        };
+
+                        const className = normalizeClass(getVal(classAlias));
+                        const subject = normalizeSubject(getVal(subjectAlias));
+                        const teacher = getVal(teacherAlias);
+                        const schoolName = String(getVal(schoolAlias) || sheetName || '').trim();
 
                         if (className && subject && teacher) {
                             const key = `${className}_${subject}`;
