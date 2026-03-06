@@ -3933,6 +3933,9 @@ const DataManager = {
                 // 导入数据
                 let count = 0;
                 const errors = [];
+                // 🟢 [修复]：开始导入前准备全新的 Map，完全替换旧数据，避免遗留错误届别或已删除教师的数据
+                const newTeacherMap = {};
+                const newTeacherSchoolMap = {};
 
                 wb.SheetNames.forEach(sheetName => {
                     const json = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
@@ -3947,8 +3950,8 @@ const DataManager = {
 
                         if (className && subject && teacher) {
                             const key = `${className}_${subject}`;
-                            TEACHER_MAP[key] = String(teacher).trim();
-                            if (schoolName) teacherSchoolMap[key] = schoolName;
+                            newTeacherMap[key] = String(teacher).trim();
+                            if (schoolName) newTeacherSchoolMap[key] = schoolName;
                             count++;
                         } else {
                             if (errors.length < 5) {
@@ -3958,7 +3961,12 @@ const DataManager = {
                     });
                 });
 
-                setTeacherSchoolMap(teacherSchoolMap);
+                // 应用新数据
+                if (count > 0) {
+                    setTeacherMap(newTeacherMap);
+                    setTeacherSchoolMap(newTeacherSchoolMap);
+                }
+
                 if (window.DataManager && typeof DataManager.updateTeacherSchoolSelect === 'function') {
                     DataManager.updateTeacherSchoolSelect();
                 }

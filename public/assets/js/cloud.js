@@ -309,8 +309,9 @@
                         pushCandidates(rows);
                     }
 
-                    // 兜底：按学期匹配
-                    if ((candidateRows.length === 0 || broadSearchForTeacher) && baseTerm) {
+                    // 🟢 [修复] 兜底1：按学期匹配 (仅当启用宽泛搜索 && 按特定届数未找到时)
+                    // 如果不加 broadSearchForTeacher 限制，会导致找不到本届数据时，直接拉取上一届的同名学期数据（例如 8年级拉到了9年级的表）
+                    if (broadSearchForTeacher && candidateRows.length === 0 && baseTerm) {
                         const likePattern = `TEACHERS_%_${baseTerm}`;
                         triedKeys.push(`like:${likePattern}`);
                         const { data: rows, error } = await sbClient
@@ -323,8 +324,8 @@
                         pushCandidates(rows);
                     }
 
-                    // 最后兜底：最新任课表
-                    if (candidateRows.length === 0) {
+                    // 🟢 [修复] 最后兜底：最新任课表 (同理，仅当宽泛搜索时才允许)
+                    if (broadSearchForTeacher && candidateRows.length === 0) {
                         triedKeys.push('like:TEACHERS_% (latest)');
                         const { data: rows, error } = await sbClient
                             .from('system_data')
