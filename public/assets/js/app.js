@@ -20123,6 +20123,7 @@ function addBindPair(type) {
     const selA = document.getElementById(idA);
     const selB = document.getElementById(idB);
 
+
     if (!selA || !selB) return;
     if (!selA.value || !selB.value) return alert("请先选择两个学生");
     if (selA.value === selB.value) return alert("不能选择同一个学生");
@@ -21993,7 +21994,6 @@ function buildStudentPrompt(stu) {
     SUBJECTS.forEach(sub => {
         const score = stu.scores[sub];
         if (score === undefined) return;
-
         // 简单计算全镇均分
         const allScores = RAW_DATA.map(s => s.scores[sub]).filter(v => typeof v === 'number');
         const avg = allScores.length ? (allScores.reduce((a, b) => a + b, 0) / allScores.length) : 0;
@@ -22003,6 +22003,7 @@ function buildStudentPrompt(stu) {
         if (diff >= 15) strengths.push(sub);
         else if (diff <= -10) weaknesses.push(sub);
     });
+
 
     const strengthStr = strengths.length > 0 ? strengths.join("、") : "各科较均衡";
     const weakStr = weaknesses.length > 0 ? weaknesses.join("、") : "无明显短板";
@@ -23398,6 +23399,8 @@ const CohortManager = {
         if (!meta) return alert('未找到该届别');
         CURRENT_COHORT_ID = cohortId;
         CURRENT_COHORT_META = meta;
+        window.CURRENT_COHORT_ID = cohortId;
+        window.CURRENT_COHORT_META = meta;
         localStorage.setItem('CURRENT_COHORT_ID', cohortId);
         localStorage.setItem('CURRENT_COHORT_META', JSON.stringify(meta));
         rememberUserCohort(cohortId);
@@ -23433,9 +23436,13 @@ const CohortManager = {
         if (saved) {
             const metaStr = localStorage.getItem('CURRENT_COHORT_META');
             if (metaStr) {
-                try { CURRENT_COHORT_META = JSON.parse(metaStr); } catch (e) { }
+                try { 
+                    CURRENT_COHORT_META = JSON.parse(metaStr); 
+                    window.CURRENT_COHORT_META = CURRENT_COHORT_META;
+                } catch (e) { }
             }
             CURRENT_COHORT_ID = saved;
+            window.CURRENT_COHORT_ID = saved;
         }
         if (CURRENT_COHORT_META) CURRENT_COHORT_META.startGrade = 6;
         this.renderSelector();
