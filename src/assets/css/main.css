@@ -5981,15 +5981,20 @@ body.dark-mode #login-overlay[style*="background"] {
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    white-space: nowrap;
+    white-space: normal;
+    word-break: break-word;
     transition: all 0.2s;
     user-select: none;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     /* 配合父容器实现分页滚动 */
     flex-shrink: 0;
     scroll-snap-align: start;
+    max-width: 120px;
+    line-height: 1.2;
+    text-align: center;
 }
 
 .chip-item:hover {
