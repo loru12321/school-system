@@ -537,16 +537,20 @@
                         if (loadedCount > 0) {
                             // 同步到 window
                             window.COHORT_DB = db;
-                            // 刷新考试列表下拉框
-                            if (typeof CohortDB.renderExamList === 'function') CohortDB.renderExamList();
-                            if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
-                            if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
-                            if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-                            if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
+                        }
+
+                        // ✅ [修复] 无论是否有新加载的考试，只要拉取成功就尝试刷新下拉框
+                        if (typeof CohortDB.renderExamList === 'function') CohortDB.renderExamList();
+                        if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
+                        if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
+                        if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+                        if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
+                        
+                        if (loadedCount > 0) {
                             console.log(`[CloudExams] 成功从云端加载 ${loadedCount} 个历史考试快照`);
                             if (window.UI) UI.toast(`✅ 已从云端加载 ${loadedCount} 期历史考试，对比期数已更新`, 'success');
                         } else {
-                            console.log(`[CloudExams] 所有考试快照已是最新，无需更新`);
+                            console.log(`[CloudExams] 云端历史同步完成 (已是最新)`);
                         }
 
                         return { success: true, count: loadedCount };
