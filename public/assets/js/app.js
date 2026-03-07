@@ -6315,6 +6315,12 @@ function switchTab(id) {
         subTitleEl.style.animation = 'fadeIn 0.5s';
     }
 
+    // [新增] 切换标签页时隐藏可能属于之前任务的对比及结果区域
+    const reportResult = document.getElementById('single-report-result');
+    if (reportResult) reportResult.classList.add('hidden');
+    const compareSection = document.getElementById('student-multi-period-compare-section');
+    if (compareSection) compareSection.style.display = 'none';
+
     // [新增] 5. 自动同步当前页面的“说明条”颜色 (视觉统一)
     // 找到当前激活的 section
     const activeSection = document.getElementById(id);
@@ -6462,87 +6468,91 @@ function switchTab(id) {
         updateTeacherMultiExamSelects();
         updateTeacherCompareTeacherSelect();
     }
-    if (id === 'exam-arranger') {
-        EXAM_initProctorUI();
-    }
-    if (id === 'report-generator') { updateMarginalSchoolSelect(); updateClassSelect(); }
-    if (id === 'segment-analysis') updateSegmentSelects();
-    if (id === 'class-comparison') updateClassCompSchoolSelect();
-    if (id === 'potential-analysis') updatePotentialSchoolSelect();
-    if (id === 'class-diagnosis') updateDiagnosisSelects();
-    if (id === 'correlation-analysis') updateCorrelationSchoolSelect();
-    if (id === 'seat-adjustment') updateSeatAdjSelects();
-    if (id === 'subject-balance') updateSubjectBalanceSelects();
-    if (id === 'progress-analysis') {
+    try {
+        if (id === 'exam-arranger') {
+            EXAM_initProctorUI();
+        }
+        if (id === 'report-generator') { updateClassSelect(); }
+        if (id === 'segment-analysis') updateSegmentSelects();
+        if (id === 'class-comparison') updateClassCompSchoolSelect();
+        if (id === 'potential-analysis') updatePotentialSchoolSelect();
+        if (id === 'class-diagnosis') updateDiagnosisSelects();
+        if (id === 'correlation-analysis') updateCorrelationSchoolSelect();
+        if (id === 'seat-adjustment') updateSeatAdjSelects();
+        if (id === 'subject-balance') updateSubjectBalanceSelects();
+        if (id === 'progress-analysis') {
 
-        // 1. 智能推断本校 (逻辑保持不变)
-        if (!MY_SCHOOL && typeof TEACHER_MAP !== 'undefined' && Object.keys(TEACHER_MAP).length > 0 && typeof SCHOOLS !== 'undefined') {
-            const schoolCounts = {};
-            const schoolNames = Object.keys(SCHOOLS);
-            Object.keys(TEACHER_MAP).forEach(key => {
-                const cls = key.split('_')[0];
-                for (const sName of schoolNames) {
-                    if (SCHOOLS[sName].students.some(s => s.class == cls)) {
-                        schoolCounts[sName] = (schoolCounts[sName] || 0) + 1;
-                        break;
+            // 1. 智能推断本校 (逻辑保持不变)
+            if (!MY_SCHOOL && typeof TEACHER_MAP !== 'undefined' && Object.keys(TEACHER_MAP).length > 0 && typeof SCHOOLS !== 'undefined') {
+                const schoolCounts = {};
+                const schoolNames = Object.keys(SCHOOLS);
+                Object.keys(TEACHER_MAP).forEach(key => {
+                    const cls = key.split('_')[0];
+                    for (const sName of schoolNames) {
+                        if (SCHOOLS[sName].students.some(s => s.class == cls)) {
+                            schoolCounts[sName] = (schoolCounts[sName] || 0) + 1;
+                            break;
+                        }
                     }
+                });
+                let max = 0; let winner = "";
+                for (const [s, c] of Object.entries(schoolCounts)) { if (c > max) { max = c; winner = s; } }
+                if (winner) { MY_SCHOOL = winner; }
+            }
+
+            // 2. 初始化下拉框
+            updateProgressSchoolSelect();
+            updateProgressBaselineSelect();
+            updateProgressMultiExamSelects();
+            if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+            const progSel = document.getElementById('progressSchoolSelect');
+            if (MY_SCHOOL && progSel) progSel.value = MY_SCHOOL;
+
+            // 3. 🔥 核心修复：检查内存数据并激活 🔥
+            const statusEl = document.getElementById('va-data-status');
+
+            const baselineSel = document.getElementById('progressBaselineSelect');
+            const baselineId = baselineSel?.value || '';
+            const baselineData = baselineId ? getBaselineDataFromExam(baselineId) : (window.PREV_DATA || []);
+
+            // 只要 baseline 有长度，就说明云端或本地已加载
+            if (baselineData && baselineData.length > 0) {
+                // 成功状态
+                if (statusEl) {
+                    statusEl.innerHTML = `✅ 数据就绪 (已加载 ${baselineData.length} 条历史记录)`;
+                    statusEl.style.color = "#16a34a";
+                    statusEl.style.fontWeight = "bold";
                 }
-            });
-            let max = 0; let winner = "";
-            for (const [s, c] of Object.entries(schoolCounts)) { if (c > max) { max = c; winner = s; } }
-            if (winner) { MY_SCHOOL = winner; }
-        }
 
-        // 2. 初始化下拉框
-        updateProgressSchoolSelect();
-        updateProgressBaselineSelect();
-        updateProgressMultiExamSelects();
-        if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-        const progSel = document.getElementById('progressSchoolSelect');
-        if (MY_SCHOOL && progSel) progSel.value = MY_SCHOOL;
+                // 如果还没有生成缓存(PROGRESS_CACHE)，立即执行静默匹配
+                window.PREV_DATA = baselineData;
+                if (!window.PROGRESS_CACHE || window.PROGRESS_CACHE.length === 0) {
+                    if (typeof performSilentMatching === 'function') performSilentMatching();
+                }
 
-        // 3. 🔥 核心修复：检查内存数据并激活 🔥
-        const statusEl = document.getElementById('va-data-status');
+                // 渲染报表
+                if (typeof renderValueAddedReport === 'function') renderValueAddedReport(true);
 
-        const baselineSel = document.getElementById('progressBaselineSelect');
-        const baselineId = baselineSel?.value || '';
-        const baselineData = baselineId ? getBaselineDataFromExam(baselineId) : (window.PREV_DATA || []);
-
-        // 只要 baseline 有长度，就说明云端或本地已加载
-        if (baselineData && baselineData.length > 0) {
-            // 成功状态
-            if (statusEl) {
-                statusEl.innerHTML = `✅ 数据就绪 (已加载 ${baselineData.length} 条历史记录)`;
-                statusEl.style.color = "#16a34a";
-                statusEl.style.fontWeight = "bold";
-            }
-
-            // 如果还没有生成缓存(PROGRESS_CACHE)，立即执行静默匹配
-            window.PREV_DATA = baselineData;
-            if (!window.PROGRESS_CACHE || window.PROGRESS_CACHE.length === 0) {
-                if (typeof performSilentMatching === 'function') performSilentMatching();
-            }
-
-            // 渲染报表
-            if (typeof renderValueAddedReport === 'function') renderValueAddedReport(true);
-
-            // 如果选中了学校，渲染个人追踪
-            if (progSel && progSel.value && typeof renderProgressAnalysis === 'function') {
-                renderProgressAnalysis();
-            }
-        } else {
-            // 失败状态
-            if (statusEl) {
-                statusEl.innerHTML = `❌ 缺上次考试数据 (请到“数据 -> 历史数据对比”上传)`;
-                statusEl.style.color = "#dc2626";
+                // 如果选中了学校，渲染个人追踪
+                if (progSel && progSel.value && typeof renderProgressAnalysis === 'function') {
+                    renderProgressAnalysis();
+                }
+            } else {
+                // 失败状态
+                if (statusEl) {
+                    statusEl.innerHTML = `❌ 缺上次考试数据 (请到“数据 -> 历史数据对比”上传)`;
+                    statusEl.style.color = "#dc2626";
+                }
             }
         }
+        if (id === 'mutual-aid') updateMutualAidSelects();
+        if (id === 'poster-generator') updatePosterSelects();
+        if (id === 'marginal-push') updateMpSchoolSelect();
+        // 如果是单校绩效模块，触发一次下拉框更新
+        if (id === 'single-school-eval') updateSSESchoolSelect();
+    } catch (err) {
+        console.error("switchTab 初始化 Hook 发生错误:", err);
     }
-    if (id === 'mutual-aid') updateMutualAidSelects();
-    if (id === 'poster-generator') updatePosterSelects();
-    if (id === 'marginal-push') updateMpSchoolSelect();
-    // 如果是单校绩效模块，触发一次下拉框更新
-    if (id === 'single-school-eval') updateSSESchoolSelect();
 }
 
 const DrillSystem = {
@@ -9887,6 +9897,12 @@ function renderStudentComparePage(page) {
     } else if (paginationEl) {
         paginationEl.style.display = 'none';
     }
+
+    // 滚动到对比结果区域
+    setTimeout(() => {
+        const section = document.getElementById('student-multi-period-compare-section');
+        if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
 }
 
 function generateStudentCard(student, periodCount, totalLabel, subjects) {
@@ -13608,6 +13624,18 @@ function renderStudentDetails(reset = true) {
 
     if (totalItems === 0) tbody.innerHTML = `<tr><td colspan="100" style="text-align:center; padding:30px; color:#999;">无数据</td></tr>`;
     else tbody.innerHTML = rowsHTML + paginationHTML;
+
+    // 隐藏可能存在的对比区域
+    const compareSection = document.getElementById('student-multi-period-compare-section');
+    if (compareSection) compareSection.style.display = 'none';
+
+    // 滚动到学生明细区域
+    setTimeout(() => {
+        const tableWrap = document.querySelector('#student-details .table-wrap');
+        if (tableWrap) {
+            tableWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, 100);
 }
 
 // 辅助：获取单元格值
