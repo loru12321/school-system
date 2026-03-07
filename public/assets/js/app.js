@@ -16913,7 +16913,7 @@ function renderRadarChart(student) {
         pastExams.forEach((histExam, idx) => {
             const color = historyColors[idx % historyColors.length];
             const histData = labels.map(sub => {
-                return histExam.percentiles[sub] !== undefined ? histExam.percentiles[sub] : null;
+                return (histExam.percentiles && histExam.percentiles[sub] !== undefined) ? histExam.percentiles[sub] : null;
             });
 
             if (histData.some(d => d !== null)) {
