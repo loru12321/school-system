@@ -14862,15 +14862,20 @@ async function doQuery() {
     if (resultEl && container) {
         resultEl.classList.remove('hidden');
         // 强制使用 'A4' 模式进行渲染
-        container.innerHTML = renderSingleReportCardHTML(stu, 'A4');
+        try {
+            container.innerHTML = renderSingleReportCardHTML(stu, 'A4');
+        } catch (e) {
+            console.error('Render Report Error:', e);
+            container.innerHTML = `<div style="color:red; padding:20px; text-align:left;"><h3 style="color:red">Rendering Error</h3><pre>${e.stack || e.message || e}</pre></div>`;
+        }
     }
 
     setTimeout(() => { 
-        if (typeof renderRadarChart === 'function') renderRadarChart(stu); 
-        if (typeof renderVarianceChart === 'function') renderVarianceChart(stu); 
+        try { if (typeof renderRadarChart === 'function') renderRadarChart(stu); } catch(e) { console.error(e); }
+        try { if (typeof renderVarianceChart === 'function') renderVarianceChart(stu); } catch(e) { console.error(e); }
     }, 100);
     
-    if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(stu);
+    try { if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(stu); } catch(e) { console.error(e); }
 
     // 隐藏对比区域
     const compareSection = document.getElementById('student-multi-period-compare-section');
