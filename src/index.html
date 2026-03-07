@@ -4999,8 +4999,14 @@
         console.log('🔄 初始化历史成绩模块...');
         
         if (!window.doQuery) {
-            console.log('⚠️ window.doQuery 尚未定义，等待重试...');
-            setTimeout(initPatch, 500);
+            console.log('⚠️ window.doQuery 尚未定义，尝试从全局查找...');
+            // 如果 app.js 还没加载完，或者 doQuery 还没定义，这里先跳过，等待 app.js 加载
+            if (document.readyState !== 'complete') {
+                setTimeout(initPatch, 500);
+                return;
+            }
+            // 如果页面已加载完还是没有 doQuery，说明可能真的没定义
+            console.log('❌ 页面已加载完成但未找到 window.doQuery');
             return;
         }
         
