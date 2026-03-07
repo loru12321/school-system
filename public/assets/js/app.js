@@ -14846,6 +14846,34 @@ async function doQuery() {
     }, 100);
     
     if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(stu);
+
+    // 隐藏对比区域
+    const compareSection = document.getElementById('student-multi-period-compare-section');
+    if (compareSection) {
+        compareSection.style.display = 'none';
+    }
+
+    // 自动滚动到成绩单区域
+    setTimeout(() => {
+        const reportElement = document.getElementById('single-report-result');
+        if (reportElement) {
+            reportElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, 200);
+
+    // 隐藏对比区域
+    const compareSection = document.getElementById('student-multi-period-compare-section');
+    if (compareSection) {
+        compareSection.style.display = 'none';
+    }
+
+    // 自动滚动到成绩单区域
+    setTimeout(() => {
+        const reportElement = document.getElementById('single-report-result');
+        if (reportElement) {
+            reportElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, 200);
 }
 
 function updateMutualAidSelects() {
