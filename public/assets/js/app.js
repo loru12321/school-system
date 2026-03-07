@@ -9551,6 +9551,11 @@ function updateReportCompareExamSelects() {
     const exam3Sel = document.getElementById('reportCompareExam3');
     if (!exam1Sel || !exam2Sel || !exam3Sel) return;
 
+    // 1. 缓存当前值 (为了刷新后保持选择)
+    const v1 = exam1Sel.value;
+    const v2 = exam2Sel.value;
+    const v3 = exam3Sel.value;
+
     // 获取所有可用考试 (包括本地CohortDB和云端PREV_DATA)
     const examList = typeof listAvailableExamsForCompare === 'function' 
         ? listAvailableExamsForCompare() 
@@ -9575,6 +9580,24 @@ function updateReportCompareExamSelects() {
     exam1Sel.innerHTML = optionsHtml;
     exam2Sel.innerHTML = optionsHtml;
     exam3Sel.innerHTML = optionsHtml;
+
+    // 2. 尝试恢复值 (如果还选得上的话)
+    const IDs = examList.map(e => e.id);
+    if (v1 && IDs.includes(v1)) exam1Sel.value = v1;
+    if (v2 && IDs.includes(v2)) exam2Sel.value = v2;
+    if (v3 && IDs.includes(v3)) exam3Sel.value = v3;
+
+    // 3. 自动预测 (初次加载或重置后，自动填上最近的三期)
+    // 只有当至少一期没选，或者全部都不选时才触发自动匹配逻辑
+    if ((!exam1Sel.value || !exam2Sel.value || !exam3Sel.value) && examList.length > 0) {
+        const idx3 = examList.length - 1;
+        const idx2 = Math.max(0, idx3 - 1);
+        const idx1 = Math.max(0, idx3 - 2);
+
+        if (!exam3Sel.value) exam3Sel.value = examList[idx3].id;
+        if (!exam2Sel.value) exam2Sel.value = examList[idx2].id;
+        if (!exam1Sel.value) exam1Sel.value = examList[idx1].id;
+    }
 }
 
 function renderStudentMultiPeriodComparison() {
@@ -14943,10 +14966,13 @@ async function doQuery() {
         }
     }
 
+    // 🆕 统一提取历史数据并传给组件
+    const history = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(stu) : [];
+
     setTimeout(() => { 
-        try { if (typeof renderRadarChart === 'function') renderRadarChart(stu); } catch(e) { console.error(e); }
+        try { if (typeof renderRadarChart === 'function') renderRadarChart(stu, history); } catch(e) { console.error(e); }
         try { if (typeof renderVarianceChart === 'function') renderVarianceChart(stu); } catch(e) { console.error(e); }
-    }, 100);
+    }, 150);
     
     try { if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(stu); } catch(e) { console.error(e); }
 
@@ -15239,9 +15265,11 @@ function getStudentExamHistory(student) {
 
     // 重新按时间排序 (如果有多个来源)
     results.sort((a, b) => {
-        const timeA = a.student?.updatedAt || a.updatedAt || 0;
-        const timeB = b.student?.updatedAt || b.updatedAt || 0;
-        return new Date(timeA) - new Date(timeB);
+        const timeA = new Date(a.student?.updatedAt || a.updatedAt || 0).getTime();
+        const timeB = new Date(b.student?.updatedAt || b.updatedAt || 0).getTime();
+        if (timeA !== timeB) return timeA - timeB;
+        // 如果时间一致，按下标/ID 降序
+        return String(a.examId).localeCompare(String(b.examId));
     });
 
     return results;
@@ -16942,7 +16970,7 @@ function renderHistoryChart(student) {
     });
 }
 
-function renderRadarChart(student) {
+function renderRadarChart(student, passedHistory = null) {
     const ctx = document.getElementById('radarChart'); if (!ctx) return;
     if (!window.Chart) {
         const holder = ctx.parentElement;
@@ -16993,12 +17021,12 @@ function renderRadarChart(student) {
     const prevStu = findPreviousRecord(student);
     let historicalDatasets = [];
 
-    // 尝试从 COHORT_DB 获取多期数据
-    if (typeof getStudentExamHistory === 'function') {
-        const examHistory = getStudentExamHistory(student);
+    // 尝试从 COHORT_DB 或 传入参数获取多期数据
+    if (typeof getStudentExamHistory === 'function' || passedHistory) {
+        const examHistory = passedHistory || getStudentExamHistory(student);
         // 过滤掉当前考试，取最近3次
         const pastExams = examHistory
-            .filter(h => h.examId !== CURRENT_EXAM_ID)
+            .filter(h => h.examId !== window.CURRENT_EXAM_ID)
             .slice(-3); // 取最近3次
 
         pastExams.forEach((histExam, idx) => {
