@@ -11417,7 +11417,6 @@ function renderSubNavigation() {
     const validItems = cat.items.filter(item => {
         if ((role === 'teacher' || role === 'class_teacher') && typeof canAccessModule === 'function' && !canAccessModule(item.id)) return false;
         if (role === 'teacher' && ['single-school-eval', 'exam-arranger', 'freshman-simulator'].includes(item.id)) return false;
-        if (role === 'parent') return false;
         if (item.id === 'report-generator' && typeof CONFIG !== 'undefined' && !CONFIG.showQuery) return false;
         return true;
     });
