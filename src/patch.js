@@ -93,10 +93,15 @@ async function getHistoryComparisonData(studentName, className, schoolName) {
 
     try {
         if (sbClient) {
+            let queryPrefix = 'STUDENT_COMPARE_%';
+            if (window.CURRENT_COHORT_ID) {
+                queryPrefix = `STUDENT_COMPARE_${window.CURRENT_COHORT_ID}_%`;
+            }
+
             const { data, error } = await sbClient
                 .from('system_data')
                 .select('key, content, updated_at')
-                .like('key', 'STUDENT_COMPARE_%')
+                .like('key', queryPrefix)
                 .order('updated_at', { ascending: false });
 
             if (!error && data && data.length > 0) {

@@ -4712,14 +4712,19 @@
         console.log('🔍 开始从云端存档获取历史数据...');
         try {
             if (sbClient) {
-                // 获取所有 cohort 存档
+                // 获取特定 cohort 的存档 (如果已选择届别)
+                let queryPrefix = 'cohort::%';
+                if (window.CURRENT_COHORT_ID) {
+                    queryPrefix = `cohort::${window.CURRENT_COHORT_ID}::%`;
+                }
+
                 const { data, error } = await sbClient
                     .from('system_data')
                     .select('key, content, updated_at')
-                    .like('key', 'cohort::%')
+                    .like('key', queryPrefix)
                     .order('updated_at', { ascending: false });
 
-                console.log('📡 云端存档查询结果:', { count: data?.length, error });
+                console.log(`📡 云端存档查询结果 (${queryPrefix}):`, { count: data?.length, error });
                 
                 if (data && data.length > 0) {
                     const normalizedTargetName = normalizeCompareName(studentName);

@@ -21,12 +21,18 @@ async function getHistoryComparisonData(studentName, className, schoolName) {
     
     console.log('🔍 开始从云端存档获取历史数据...');
     try {
-        if (sbClient) {
-            const { data, error } = await sbClient
+        if (typeof sbClient !== 'undefined' && sbClient) {
+            let queryPrefix = 'cohort::%';
+            if (window.CURRENT_COHORT_ID) {
+                queryPrefix = `cohort::${window.CURRENT_COHORT_ID}::%`;
+            }
+            var result = await sbClient
                 .from('system_data')
                 .select('key, content, updated_at')
-                .like('key', 'cohort::%')
+                .like('key', queryPrefix)
                 .order('updated_at', { ascending: false });
+
+            const { data, error } = result; // Extract data and error from the result object
 
             console.log('📡 云端存档查询结果:', { count: data?.length, error });
 

@@ -1372,10 +1372,14 @@
         async function getHistoryComparisonData(studentName, className, schoolName) {
             if (!window.sbClient) return { success: false, message: '云端服务未连接' };
             try {
+                let queryPrefix = 'STUDENT_COMPARE_%';
+                if (window.CURRENT_COHORT_ID) {
+                    queryPrefix = `STUDENT_COMPARE_${window.CURRENT_COHORT_ID}_%`;
+                }
                 const { data, error } = await window.sbClient
                     .from('system_data')
                     .select('key, content, updated_at')
-                    .like('key', 'STUDENT_COMPARE_%')
+                    .like('key', queryPrefix)
                     .order('updated_at', { ascending: false });
                 if (error) throw error;
                 if (!data || data.length === 0) return { success: false, message: '暂无云端对比记录' };
