@@ -309,33 +309,12 @@
                         pushCandidates(rows);
                     }
 
-                    // 🟢 [修复] 兜底1：按学期匹配 (仅当启用宽泛搜索 && 按特定届数未找到时)
-                    // 如果不加 broadSearchForTeacher 限制，会导致找不到本届数据时，直接拉取上一届的同名学期数据（例如 8年级拉到了9年级的表）
-                    if (broadSearchForTeacher && candidateRows.length === 0 && baseTerm) {
-                        const likePattern = `TEACHERS_%_${baseTerm}`;
-                        triedKeys.push(`like:${likePattern}`);
-                        const { data: rows, error } = await sbClient
-                            .from('system_data')
-                            .select('key,content,updated_at')
-                            .like('key', likePattern)
-                            .order('updated_at', { ascending: false })
-                            .limit(30);
-                        if (error) throw error;
-                        pushCandidates(rows);
-                    }
-
-                    // 🟢 [修复] 最后兜底：最新任课表 (同理，仅当宽泛搜索时才允许)
-                    if (broadSearchForTeacher && candidateRows.length === 0) {
-                        triedKeys.push('like:TEACHERS_% (latest)');
-                        const { data: rows, error } = await sbClient
-                            .from('system_data')
-                            .select('key,content,updated_at')
-                            .like('key', 'TEACHERS_%')
-                            .order('updated_at', { ascending: false })
-                            .limit(30);
-                        if (error) throw error;
-                        pushCandidates(rows);
-                    }
+                    // 🟢 [修复] 取消：跨学期兜底和最新任课表兜底。
+                    // 必须严格匹配本届和本学期，不自动加载往期任课信息。
+                    /*
+                    if (broadSearchForTeacher && candidateRows.length === 0 && baseTerm) { ... }
+                    if (broadSearchForTeacher && candidateRows.length === 0) { ... }
+                    */
 
                     let selectedRow = candidateRows.length ? candidateRows[0] : null;
                     if (broadSearchForTeacher && teacherNameNorm && candidateRows.length > 0) {

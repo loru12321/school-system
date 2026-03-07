@@ -492,37 +492,6 @@
                         pushCandidates(rows);
                     }
 
-                    // 次优先：按所选届数匹配（不限制学期）
-                    if ((candidateRows.length === 0 || broadSearchForTeacher) && cohortId) {
-                        const likePattern = `TEACHERS_${cohortId}级_%`;
-                        triedKeys.push(`like:${likePattern}`);
-                        const { data: rows, error } = await sbClient
-                            .from('system_data')
-                            .select('key,content,updated_at')
-                            .like('key', likePattern)
-                            .order('updated_at', { ascending: false })
-                            .limit(30);
-                        if (error) throw error;
-                        pushCandidates(rows);
-                    }
-
-                    // 兜底：按学期匹配
-                    if ((candidateRows.length === 0 || broadSearchForTeacher) && baseTerm) {
-                        const likePattern = `TEACHERS_%_${baseTerm}`;
-                        triedKeys.push(`like:${likePattern}`);
-                        const { data: rows, error } = await sbClient
-                            .from('system_data')
-                            .select('key,content,updated_at')
-                            .like('key', likePattern)
-                            .order('updated_at', { ascending: false })
-                            .limit(30);
-                        if (error) throw error;
-                        pushCandidates(rows);
-                    }
-
-                    // 最后兜底：最新任课表
-                    if (candidateRows.length === 0) {
-                        triedKeys.push('like:TEACHERS_% (latest)');
                         const { data: rows, error } = await sbClient
                             .from('system_data')
                             .select('key,content,updated_at')
