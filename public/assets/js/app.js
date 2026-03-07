@@ -14798,7 +14798,6 @@ async function doQuery() {
             const historyRes = await window.CloudManager.fetchStudentExamHistory(stu);
             if (historyRes.success && historyRes.data.length > 0) {
                 // ✅ 修复：按照 findPreviousRecord 期望的格式存入 PREV_DATA
-                // PREV_DATA 是历史考试中学生对象的数组，每个元素包含 name/class/school/total/scores/ranks
                 window.PREV_DATA = historyRes.data.map(h => ({
                     name: stu.name,
                     class: stu.class,
@@ -14820,7 +14819,6 @@ async function doQuery() {
                 // 如果有多期历史，取最近一期（排除当前考试）作为对比基准
                 const prevRecords = window.PREV_DATA.filter(h => h._sourceExam !== CURRENT_EXAM_ID);
                 if (prevRecords.length > 0) {
-                    // 将最近一期放到数组第一个，供 findPreviousRecord 优先匹配
                     window.PREV_DATA = prevRecords;
                 }
                 if (window.UI) UI.toast(`✅ 已自动匹配 ${historyRes.data.length} 次历史成绩`, "success");
@@ -14846,20 +14844,6 @@ async function doQuery() {
     }, 100);
     
     if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(stu);
-
-    // 隐藏对比区域
-    const compareSection = document.getElementById('student-multi-period-compare-section');
-    if (compareSection) {
-        compareSection.style.display = 'none';
-    }
-
-    // 自动滚动到成绩单区域
-    setTimeout(() => {
-        const reportElement = document.getElementById('single-report-result');
-        if (reportElement) {
-            reportElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    }, 200);
 
     // 隐藏对比区域
     const compareSection = document.getElementById('student-multi-period-compare-section');

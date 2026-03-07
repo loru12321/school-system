@@ -4998,22 +4998,8 @@
     function initPatch() {
         console.log('🔄 初始化历史成绩模块...');
         
-        if (!window.doQuery) {
-            console.log('⚠️ window.doQuery 尚未定义，尝试从全局查找...');
-            // 如果 app.js 还没加载完，或者 doQuery 还没定义，这里先跳过，等待 app.js 加载
-            if (document.readyState !== 'complete') {
-                setTimeout(initPatch, 500);
-                return;
-            }
-            // 如果页面已加载完还是没有 doQuery，说明可能真的没定义
-            console.log('❌ 页面已加载完成但未找到 window.doQuery');
-            return;
-        }
-        
-        console.log('✅ 找到 window.doQuery，覆盖...');
-        const originalDoQuery = window.doQuery;
-        
-        window.doQuery = async function() {
+        // 移除循环等待，改为直接覆盖或在加载后覆盖
+        const patchDoQuery = async function() {
             console.log('🎯 调用增强版 doQuery');
             
             const name = document.getElementById('inp-name').value;
@@ -5066,14 +5052,33 @@
             setTimeout(function() { renderRadarChart(stu); renderVarianceChart(stu); }, 100);
             analyzeStrengthsAndWeaknesses(stu);
 
+            // 隐藏对比区域
+            const compareSection = document.getElementById('student-multi-period-compare-section');
+            if (compareSection) {
+                compareSection.style.display = 'none';
+            }
+
+            // 自动滚动到成绩单区域
+            setTimeout(() => {
+                const reportElement = document.getElementById('single-report-result');
+                if (reportElement) {
+                    reportElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 200);
+
             console.log('📊 获取历史成绩数据...');
             const historyResult = await getHistoryComparisonData(stu.name, stu.class, stu.school);
             console.log('📈 历史成绩结果:', historyResult);
             renderHistoryCharts(historyResult.data, stu);
         };
-        
-        // 定义测试函数 (已移除)
-        
+
+        if (window.doQuery) {
+            console.log('✅ 找到 window.doQuery，直接覆盖');
+            window.doQuery = patchDoQuery;
+        } else {
+            console.log('⚠️ window.doQuery 尚未定义，先定义它');
+            window.doQuery = patchDoQuery;
+        }
         console.log('✅ 历史成绩模块初始化完成！');
     }
 
