@@ -15140,9 +15140,11 @@ function findPreviousRecord(student) {
         return s.replace(/[班级\(\)\.\-gradeclass]/gi, "");
     };
     const matchStudent = (p, targetName, targetClass, targetSchool) => {
-        if (p.school && targetSchool && p.school !== targetSchool) return false;
-        if (cleanStr(p.name) !== targetName) return false;
-        const histClass = normClass(p.class);
+        // PREV_DATA 中的记录结构是 { examId, examFullKey, student: { name, class, school ... } }
+        const sObj = p.student || p; 
+        if (sObj.school && targetSchool && sObj.school !== targetSchool) return false;
+        if (cleanStr(sObj.name) !== targetName) return false;
+        const histClass = normClass(sObj.class);
         if (histClass === targetClass) return true;
         const numC1 = histClass.replace(/0/g, '');
         const numC2 = targetClass.replace(/0/g, '');
@@ -15154,9 +15156,13 @@ function findPreviousRecord(student) {
     const targetClass = normClass(student.class);
     const targetSchool = student.school;
 
-    // 1. 尝试从 PREV_DATA 查找
+    // 1. 尝试从 PREV_DATA 查找 (排除当前考试)
     if (window.PREV_DATA && window.PREV_DATA.length > 0) {
-        const match = window.PREV_DATA.find(p => matchStudent(p, targetName, targetClass, targetSchool));
+        const otherExams = window.PREV_DATA.filter(p => {
+             const hid = p.examFullKey || p.examId;
+             return hid !== window.CURRENT_EXAM_ID && p.examId !== window.CURRENT_EXAM_ID;
+        });
+        const match = otherExams.find(p => matchStudent(p, targetName, targetClass, targetSchool));
         if (match) return match;
     }
 
@@ -15262,6 +15268,7 @@ function getStudentExamHistory(student) {
 
                 results.push({
                     examId,
+                    examFullKey: exam.examFullKey || examId, // 记录全名
                     examLabel: examId.replace(/_/g, ' '),
                     student: found,
                     percentiles,
@@ -15282,8 +15289,15 @@ function getStudentExamHistory(student) {
                 return;
             }
 
-            // 避免与本地数据重复 (以 examFullKey 或 examId 为准)
-            if (!results.some(r => r.examId === matchKey || r.examId === h.examId)) {
+            // 避免与本地数据重复 (以 examFullKey 或 examId 为准进行多维度检查)
+            const exists = results.some(r => 
+                r.examFullKey === h.examFullKey || 
+                r.examId === h.examFullKey || 
+                r.examFullKey === h.examId ||
+                r.examId === h.examId
+            );
+            
+            if (!exists) {
                 results.push(h);
             }
         });
@@ -17052,7 +17066,10 @@ function renderRadarChart(student, passedHistory = null) {
         const examHistory = passedHistory || getStudentExamHistory(student);
         // 过滤掉当前考试，取最近3次
         const pastExams = examHistory
-            .filter(h => h.examId !== window.CURRENT_EXAM_ID)
+            .filter(h => {
+                const hid = h.examFullKey || h.examId;
+                return hid !== window.CURRENT_EXAM_ID && h.examId !== window.CURRENT_EXAM_ID;
+            })
             .slice(-3); // 取最近3次
 
         pastExams.forEach((histExam, idx) => {
