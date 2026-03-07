@@ -10353,7 +10353,7 @@ async function switchCohort(cohortId) {
         // ✅ [新增] 自动从云端拉取该届所有历史考试到对比期数下拉框
         if (window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
             window.CloudManager.fetchCohortExamsToLocal(cohortId).then(res => {
-                if (res.success && res.count > 0) {
+                if (res.success) {
                     if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
                     if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
                     if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
@@ -10585,7 +10585,7 @@ window.addEventListener('load', async () => {
                     const cid = CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
                     if (cid && window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
                         window.CloudManager.fetchCohortExamsToLocal(cid).then(res => {
-                            if (res.success && res.count > 0) {
+                            if (res.success) {
                                 if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
                                 if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
                                 if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
