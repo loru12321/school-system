@@ -5952,7 +5952,7 @@ body.dark-mode #login-overlay[style*="background"] {
 /* YouTube-style Sub Nav Chips */
 .sub-nav-chips {
     display: flex;
-    overflow-x: auto;
+    flex-wrap: wrap;
     gap: 12px;
     padding: 12px 32px;
     background: var(--bg-body);
@@ -5962,10 +5962,9 @@ body.dark-mode #login-overlay[style*="background"] {
     z-index: 40;
     border-bottom: 1px solid var(--border);
     scroll-behavior: smooth;
-    align-items: center;
+    align-items: flex-start;
     /* 移动端平滑滚动特性 */
     -webkit-overflow-scrolling: touch;
-    scroll-snap-type: x mandatory;
 }
 
 .sub-nav-chips::-webkit-scrollbar {
@@ -5981,20 +5980,15 @@ body.dark-mode #login-overlay[style*="background"] {
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    white-space: normal;
-    word-break: break-word;
+    white-space: nowrap;
     transition: all 0.2s;
     user-select: none;
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 6px;
     /* 配合父容器实现分页滚动 */
     flex-shrink: 0;
     scroll-snap-align: start;
-    max-width: 120px;
-    line-height: 1.2;
-    text-align: center;
 }
 
 .chip-item:hover {
