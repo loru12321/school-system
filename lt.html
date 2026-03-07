@@ -3469,20 +3469,75 @@
                     </button>
                 </div>
 
-                <div class="table-wrap">
-                    <table id="studentDetailTable" class="mobile-card-table">
-                        <thead>
-                            <tr>
-                                <th>学校</th>
-                                <th>班级</th>
-                                <th>姓名</th>
-                                <th>考号</th>
-                                <th>考场</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+<div class="control-panel" style="background:#f8fafc; border-color:var(--primary-light); display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding: 12px 16px;">
+                    <label style="font-size:13px; font-weight:600;">学校：</label>
+                    <select id="studentCompareSchool" style="min-width:150px; background:#fff; border-radius:6px;"></select>
+                    
+                    <label style="font-size:13px; font-weight:600;">第1期：</label>
+                    <select id="studentCompareExam1" style="min-width:180px; background:#fff; border-radius:6px;"></select>
+                    
+                    <label style="font-size:13px; font-weight:600;">第2期：</label>
+                    <select id="studentCompareExam2" style="min-width:180px; background:#fff; border-radius:6px;"></select>
+                    
+                    <span id="studentCompareExam3Wrap" style="display:none; align-items:center; gap:10px;">
+                        <label style="font-size:13px; font-weight:600;">第3期：</label>
+                        <select id="studentCompareExam3" style="min-width:180px; background:#fff; border-radius:6px;"></select>
+                    </span>
+
+                    <button class="btn btn-green" onclick="renderStudentMultiPeriodComparison()" style="background:#10b981; border-radius:20px; padding: 6px 20px;">生成全校学生对比</button>
+                    <button id="btn-save-compare-cloud" class="btn" style="background:#8b5cf6; color:white; border-radius:20px; padding: 6px 20px;" onclick="saveStudentCompareToCloud()">☁️ 保存到云端</button>
                 </div>
+
+                <div class="control-panel" style="background:#fff; border:none; padding-top:0; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <button class="btn" style="background:#06b6d4; color:white; border-radius:20px; padding: 6px 20px;" onclick="viewCloudStudentCompares()">📋 查看云端对比</button>
+                    <button class="btn" style="background:#10b981; color:white; border-radius:20px; padding: 6px 20px;" onclick="exportStudentMultiPeriodComparison()">导出Excel</button>
+                    <span style="font-size:12px; color:#64748b; margin-left:8px;">提示：教师只能查看自己任教班级的对比数据</span>
+                    
+                    <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+                        <label style="font-size:12px;">期数：</label>
+                        <select id="studentComparePeriodCount" style="padding:4px 8px; border-radius:6px;" onchange="onStudentComparePeriodCountChange()">
+                            <option value="2">2期</option>
+                            <option value="3">3期</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 结果展示区域 -->
+                <div id="student-multi-period-compare-section" style="margin-top:10px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:15px; display:none;">
+                    <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
+                        <label style="font-size:12px; color:#475569;">🔍 筛选：</label>
+                        <input type="text" id="studentCompareNameInput" placeholder="输入姓名（可用逗号分隔多个）"
+                            style="padding:4px 12px; border-radius:20px; min-width:180px;"
+                            onkeypress="if(event.key==='Enter') filterStudentCompareByName()">
+                        <button class="btn btn-sm btn-gray" onclick="filterStudentCompareByName()">查询姓名</button>
+                        <button class="btn btn-sm" style="background:#10b981; color:white;"
+                            onclick="filterByProgress('improve')">只看进步</button>
+                        <button class="btn btn-sm" style="background:#ef4444; color:white;"
+                            onclick="filterByProgress('decline')">只看退步</button>
+                        <button class="btn btn-sm btn-gray" onclick="clearStudentCompareFilter()">显示全部</button>
+                    </div>
+                    
+                    <div id="studentCompareHint" style="font-size:12px; color:#64748b; margin:10px 0;">
+                        <span id="student-compare-hint-admin">请选择学校和2期或3期考试后生成对比。生成后可保存到云端，供老师、班主任、家长等查看。</span>
+                        <span id="student-compare-hint-teacher" style="display:none;">请点击"查看云端对比"按钮查看已保存的学生对比数据。您只能查看自己任教班级的学生数据。</span>
+                    </div>
+                    
+                    <div id="studentCompareSummary" style="margin-top:10px;"></div>
+                    <div id="studentComparePagination" style="margin-top:10px; display:none; padding:8px; background:#f8fafc; border-radius:6px; display:flex; justify-content:space-between; align-items:center; font-size:12px;">
+                        <div>
+                            <label style="color:#475569;">每页显示：</label>
+                            <select id="studentComparePageSize" onchange="changePageSize()">
+                                <option value="10">10人</option>
+                                <option value="20" selected>20人</option>
+                                <option value="30">30人</option>
+                                <option value="50">50人</option>
+                                <option value="999999">全部</option>
+                            </select>
+                            <span id="studentComparePaginationInfo" style="margin-left:15px; color:#64748b;"></span>
+                        </div>
+                        <div id="studentComparePaginationButtons" style="display:flex; gap:5px;"></div>
+                    </div>
+                    <div id="studentCompareResult" style="margin-top:10px;"></div>
 
                 <div class="table-wrap">
                     <table id="studentDetailTable" class="mobile-card-table">
@@ -3498,6 +3553,8 @@
                         <tbody></tbody>
                     </table>
                 </div>
+
+
                 <div id="mobile-share-render-area" class="mobile-share-container"></div>
             </div>
 
@@ -3691,75 +3748,7 @@
                 <div class="sec-head">
                     <h2><i class="ti ti-certificate"></i> 个性化成绩单生成器</h2>
                 </div>
-                <div class="control-panel" style="background:#f8fafc; border-color:var(--primary-light); display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding: 12px 16px;">
-                    <label style="font-size:13px; font-weight:600;">学校：</label>
-                    <select id="studentCompareSchool" style="min-width:150px; background:#fff; border-radius:6px;"></select>
-                    
-                    <label style="font-size:13px; font-weight:600;">第1期：</label>
-                    <select id="studentCompareExam1" style="min-width:180px; background:#fff; border-radius:6px;"></select>
-                    
-                    <label style="font-size:13px; font-weight:600;">第2期：</label>
-                    <select id="studentCompareExam2" style="min-width:180px; background:#fff; border-radius:6px;"></select>
-                    
-                    <span id="studentCompareExam3Wrap" style="display:none; align-items:center; gap:10px;">
-                        <label style="font-size:13px; font-weight:600;">第3期：</label>
-                        <select id="studentCompareExam3" style="min-width:180px; background:#fff; border-radius:6px;"></select>
-                    </span>
-
-                    <button class="btn btn-green" onclick="renderStudentMultiPeriodComparison()" style="background:#10b981; border-radius:20px; padding: 6px 20px;">生成全校学生对比</button>
-                    <button id="btn-save-compare-cloud" class="btn" style="background:#8b5cf6; color:white; border-radius:20px; padding: 6px 20px;" onclick="saveStudentCompareToCloud()">☁️ 保存到云端</button>
-                </div>
-
-                <div class="control-panel" style="background:#fff; border:none; padding-top:0; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                    <button class="btn" style="background:#06b6d4; color:white; border-radius:20px; padding: 6px 20px;" onclick="viewCloudStudentCompares()">📋 查看云端对比</button>
-                    <button class="btn" style="background:#10b981; color:white; border-radius:20px; padding: 6px 20px;" onclick="exportStudentMultiPeriodComparison()">导出Excel</button>
-                    <span style="font-size:12px; color:#64748b; margin-left:8px;">提示：教师只能查看自己任教班级的对比数据</span>
-                    
-                    <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
-                        <label style="font-size:12px;">期数：</label>
-                        <select id="studentComparePeriodCount" style="padding:4px 8px; border-radius:6px;" onchange="onStudentComparePeriodCountChange()">
-                            <option value="2">2期</option>
-                            <option value="3">3期</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- 结果展示区域 -->
-                <div id="student-multi-period-compare-section" style="margin-top:10px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:15px; display:none;">
-                    <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
-                        <label style="font-size:12px; color:#475569;">🔍 筛选：</label>
-                        <input type="text" id="studentCompareNameInput" placeholder="输入姓名（可用逗号分隔多个）"
-                            style="padding:4px 12px; border-radius:20px; min-width:180px;"
-                            onkeypress="if(event.key==='Enter') filterStudentCompareByName()">
-                        <button class="btn btn-sm btn-gray" onclick="filterStudentCompareByName()">查询姓名</button>
-                        <button class="btn btn-sm" style="background:#10b981; color:white;"
-                            onclick="filterByProgress('improve')">只看进步</button>
-                        <button class="btn btn-sm" style="background:#ef4444; color:white;"
-                            onclick="filterByProgress('decline')">只看退步</button>
-                        <button class="btn btn-sm btn-gray" onclick="clearStudentCompareFilter()">显示全部</button>
-                    </div>
-                    
-                    <div id="studentCompareHint" style="font-size:12px; color:#64748b; margin:10px 0;">
-                        <span id="student-compare-hint-admin">请选择学校和2期或3期考试后生成对比。生成后可保存到云端，供老师、班主任、家长等查看。</span>
-                        <span id="student-compare-hint-teacher" style="display:none;">请点击"查看云端对比"按钮查看已保存的学生对比数据。您只能查看自己任教班级的学生数据。</span>
-                    </div>
-                    
-                    <div id="studentCompareSummary" style="margin-top:10px;"></div>
-                    <div id="studentComparePagination" style="margin-top:10px; display:none; padding:8px; background:#f8fafc; border-radius:6px; display:flex; justify-content:space-between; align-items:center; font-size:12px;">
-                        <div>
-                            <label style="color:#475569;">每页显示：</label>
-                            <select id="studentComparePageSize" onchange="changePageSize()">
-                                <option value="10">10人</option>
-                                <option value="20" selected>20人</option>
-                                <option value="30">30人</option>
-                                <option value="50">50人</option>
-                                <option value="999999">全部</option>
-                            </select>
-                            <span id="studentComparePaginationInfo" style="margin-left:15px; color:#64748b;"></span>
-                        </div>
-                        <div id="studentComparePaginationButtons" style="display:flex; gap:5px;"></div>
-                    </div>
-                    <div id="studentCompareResult" style="margin-top:10px;"></div>
+                
                 </div>
 
                 <div class="control-panel" style="background:#fff; border-color:var(--primary-light); margin-top:20px; border-top:1px solid #eee; padding-top:20px;">
