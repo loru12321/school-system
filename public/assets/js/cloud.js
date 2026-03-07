@@ -396,32 +396,57 @@
                         .like('key', `${cohortId}级_%`)
                         .not('key', 'like', 'TEACHERS_%')
                         .not('key', 'like', 'STUDENT_COMPARE_%')
-                        .order('updated_at', { ascending: false });
+                        .order('updated_at', { ascending: true });
 
                     if (error) throw error;
                     if (!data || data.length === 0) return { success: false, message: '未找到相关考试记录' };
 
                     const history = [];
                     const normalizedTargetName = student.name.trim();
+                    const targetClassNum = String(student.class || '').replace(/[^0-9]/g, '');
 
                     for (const item of data) {
                         try {
                             let content = item.content;
+                            // ✅ 修复：使用正确的解压方法 decompressFromUTF16
                             if (typeof content === 'string' && content.startsWith("LZ|")) {
-                                content = LZString.decompressToUTF16(content.substring(3));
+                                content = LZString.decompressFromUTF16(content.substring(3));
                             }
                             const payload = typeof content === 'string' ? JSON.parse(content) : content;
                             
-                            // 检查 payload 是否包含学生数据
-                            const students = payload.students || [];
-                            const match = students.find(s => 
-                                s.name === normalizedTargetName && 
-                                (!student.class || String(s.class).replace(/[^0-9]/g, '') === String(student.class).replace(/[^0-9]/g, ''))
-                            );
+                            // ✅ 修复：从 SCHOOLS 结构中查找学生（实际存储格式）
+                            let match = null;
+                            const schools = payload.SCHOOLS || {};
+                            for (const [schName, schData] of Object.entries(schools)) {
+                                // 如果指定了学校，则只在该学校中查找
+                                if (student.school && schName !== student.school) continue;
+                                const stuList = schData.students || [];
+                                match = stuList.find(s => {
+                                    if (s.name !== normalizedTargetName) return false;
+                                    if (!student.class) return true;
+                                    const sClassNum = String(s.class || '').replace(/[^0-9]/g, '');
+                                    return sClassNum === targetClassNum;
+                                });
+                                if (match) break;
+                            }
+
+                            // 兼容旧格式：直接存在 payload.students
+                            if (!match) {
+                                const stuList = payload.students || payload.RAW_DATA || [];
+                                match = stuList.find(s => {
+                                    if (s.name !== normalizedTargetName) return false;
+                                    if (!student.class) return true;
+                                    const sClassNum = String(s.class || '').replace(/[^0-9]/g, '');
+                                    return sClassNum === targetClassNum;
+                                });
+                            }
 
                             if (match) {
+                                // 从 key 中提取考试名（格式：{cohortId}级_{年级}_{年份}_{学期}_{类型}_{名称}）
+                                const keyParts = item.key.split('_');
+                                const examLabel = keyParts.length >= 5 ? keyParts.slice(4).join('_') : item.key;
                                 history.push({
-                                    examId: item.key.split('_').pop() || item.key, // 尝试从Key中提取考试名
+                                    examId: examLabel || item.key,
                                     examFullKey: item.key,
                                     total: match.total,
                                     rankClass: match.ranks?.total?.class,
@@ -436,13 +461,101 @@
                         }
                     }
 
-                    // 按时间排序
-                    history.sort((a, b) => new Date(a.updatedAt) - new Date(b.updatedAt));
-
                     console.log(`[CloudHistory] 找到 ${student.name} 的 ${history.length} 条历史成绩`);
                     return { success: true, data: history };
                 } catch (e) {
                     console.error('[CloudHistory] 检索失败:', e);
+                    return { success: false, message: e.message };
+                }
+            },
+
+            // 🆕 从云端拉取该届所有历史考试快照，填充到本地 COHORT_DB.exams（对比期数核心）
+            fetchCohortExamsToLocal: async function(cohortId) {
+                if (!this.check()) return { success: false, message: '云端未连接' };
+                const cid = cohortId || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
+                if (!cid) return { success: false, message: '无法确定届别' };
+
+                try {
+                    console.log(`[CloudExams] 开始从云端拉取 ${cid}级 的所有历史考试...`);
+                    if (window.UI) UI.toast(`⏳ 正在从云端加载 ${cid}级 历史考试列表...`, 'info');
+
+                    const { data, error } = await sbClient
+                        .from('system_data')
+                        .select('key, content, updated_at')
+                        .like('key', `${cid}级_%`)
+                        .not('key', 'like', 'TEACHERS_%')
+                        .not('key', 'like', 'STUDENT_COMPARE_%')
+                        .order('updated_at', { ascending: true });
+
+                    if (error) throw error;
+                    if (!data || data.length === 0) {
+                        console.log(`[CloudExams] 云端未找到 ${cid}级 的考试记录`);
+                        return { success: true, count: 0 };
+                    }
+
+                    // 确保 COHORT_DB 存在
+                    if (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') {
+                        const db = CohortDB.ensure();
+                        let loadedCount = 0;
+
+                        for (const item of data) {
+                            try {
+                                // 如果本地已有该考试快照，跳过（避免覆盖本地修改）
+                                if (db.exams && db.exams[item.key]) continue;
+
+                                let content = item.content;
+                                if (typeof content === 'string' && content.startsWith('LZ|')) {
+                                    content = LZString.decompressFromUTF16(content.substring(3));
+                                }
+                                const payload = typeof content === 'string' ? JSON.parse(content) : content;
+
+                                // 从 key 中提取考试名
+                                const keyParts = item.key.split('_');
+                                const examLabel = keyParts.length >= 5 ? keyParts.slice(4).join('_') : item.key;
+
+                                // 构建考试快照对象（与 CohortDB.syncCurrentExam 格式一致）
+                                const examSnapshot = {
+                                    examId: item.key,
+                                    examLabel: examLabel,
+                                    meta: payload.ARCHIVE_META || payload.CONFIG || {},
+                                    data: payload.RAW_DATA || [],
+                                    schools: payload.SCHOOLS || {},
+                                    teacherMap: payload.TEACHER_MAP || {},
+                                    subjects: payload.SUBJECTS || [],
+                                    thresholds: payload.THRESHOLDS || {},
+                                    config: payload.CONFIG || {},
+                                    createdAt: new Date(item.updated_at).getTime() || Date.now()
+                                };
+
+                                db.exams[item.key] = examSnapshot;
+                                loadedCount++;
+                            } catch (e) {
+                                console.warn(`[CloudExams] 解析考试 ${item.key} 失败:`, e);
+                            }
+                        }
+
+                        if (loadedCount > 0) {
+                            // 同步到 window
+                            window.COHORT_DB = db;
+                            // 刷新考试列表下拉框
+                            if (typeof CohortDB.renderExamList === 'function') CohortDB.renderExamList();
+                            if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
+                            if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
+                            if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+                            if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
+                            console.log(`[CloudExams] 成功从云端加载 ${loadedCount} 个历史考试快照`);
+                            if (window.UI) UI.toast(`✅ 已从云端加载 ${loadedCount} 期历史考试，对比期数已更新`, 'success');
+                        } else {
+                            console.log(`[CloudExams] 所有考试快照已是最新，无需更新`);
+                        }
+
+                        return { success: true, count: loadedCount };
+                    } else {
+                        console.warn('[CloudExams] CohortDB 未初始化，无法填充考试快照');
+                        return { success: false, message: 'CohortDB 未初始化' };
+                    }
+                } catch (e) {
+                    console.error('[CloudExams] 拉取历史考试失败:', e);
                     return { success: false, message: e.message };
                 }
             }

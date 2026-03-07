@@ -149,23 +149,28 @@
                 try {
                     const historyRes = await window.CloudManager.fetchStudentExamHistory(stu);
                     if (historyRes.success && historyRes.data.length > 0) {
+                        // ✅ 修复：按照 findPreviousRecord 期望的格式存入 PREV_DATA
                         window.PREV_DATA = historyRes.data.map(h => ({
-                            examId: h.examId,
-                            examLabel: h.examId,
-                            student: {
-                                name: stu.name,
-                                class: stu.class,
-                                total: h.total,
-                                scores: h.scores,
-                                ranks: {
-                                    total: {
-                                        class: h.rankClass,
-                                        school: h.rankSchool,
-                                        township: h.rankTown
-                                    }
+                            name: stu.name,
+                            class: stu.class,
+                            school: stu.school || '',
+                            total: Number(h.total) || 0,
+                            classRank: h.rankClass || '-',
+                            schoolRank: h.rankSchool || '-',
+                            townRank: h.rankTown || '-',
+                            scores: h.scores || {},
+                            ranks: {
+                                total: {
+                                    class: h.rankClass || '-',
+                                    school: h.rankSchool || '-',
+                                    township: h.rankTown || '-'
                                 }
-                            }
+                            },
+                            _sourceExam: h.examId
                         }));
+                        // 取排除当前考试的历史记录作为对比基准
+                        const prevRecords = window.PREV_DATA.filter(h => h._sourceExam !== (window.CURRENT_EXAM_ID || ''));
+                        if (prevRecords.length > 0) window.PREV_DATA = prevRecords;
                         if (window.UI) UI.toast(`✅ 已自动匹配 ${historyRes.data.length} 次历史成绩`, "success");
                     }
                 } catch (e) {
@@ -566,6 +571,157 @@
                     if (window.UI) UI.toast(`${reason}`, 'error');
                 } finally {
                     if (window.UI) UI.loading(false);
+                }
+            },
+
+            // 🆕 跨考试检索学生历次成绩 (自动对比核心)
+            fetchStudentExamHistory: async function(student) {
+                if (!this.check()) return { success: false, message: '云端未连接' };
+                if (!student || !student.name) return { success: false, message: '学生信息无效' };
+
+                const cohortId = student.cohort || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
+                if (!cohortId) return { success: false, message: '无法确定学生届别' };
+
+                try {
+                    console.log(`[CloudHistory] 开始检索 ${student.name} (${cohortId}级) 的历次成绩...`);
+                    const { data, error } = await sbClient
+                        .from('system_data')
+                        .select('key, content, updated_at')
+                        .like('key', `${cohortId}级_%`)
+                        .not('key', 'like', 'TEACHERS_%')
+                        .not('key', 'like', 'STUDENT_COMPARE_%')
+                        .order('updated_at', { ascending: true });
+
+                    if (error) throw error;
+                    if (!data || data.length === 0) return { success: false, message: '未找到相关考试记录' };
+
+                    const history = [];
+                    const normalizedTargetName = student.name.trim();
+                    const targetClassNum = String(student.class || '').replace(/[^0-9]/g, '');
+
+                    for (const item of data) {
+                        try {
+                            let content = item.content;
+                            if (typeof content === 'string' && content.startsWith('LZ|')) {
+                                content = LZString.decompressFromUTF16(content.substring(3));
+                            }
+                            const payload = typeof content === 'string' ? JSON.parse(content) : content;
+
+                            let match = null;
+                            const schools = payload.SCHOOLS || {};
+                            for (const [schName, schData] of Object.entries(schools)) {
+                                if (student.school && schName !== student.school) continue;
+                                const stuList = schData.students || [];
+                                match = stuList.find(s => {
+                                    if (s.name !== normalizedTargetName) return false;
+                                    if (!student.class) return true;
+                                    return String(s.class || '').replace(/[^0-9]/g, '') === targetClassNum;
+                                });
+                                if (match) break;
+                            }
+                            if (!match) {
+                                const stuList = payload.students || payload.RAW_DATA || [];
+                                match = stuList.find(s => {
+                                    if (s.name !== normalizedTargetName) return false;
+                                    if (!student.class) return true;
+                                    return String(s.class || '').replace(/[^0-9]/g, '') === targetClassNum;
+                                });
+                            }
+
+                            if (match) {
+                                const keyParts = item.key.split('_');
+                                const examLabel = keyParts.length >= 5 ? keyParts.slice(4).join('_') : item.key;
+                                history.push({
+                                    examId: examLabel || item.key,
+                                    examFullKey: item.key,
+                                    total: match.total,
+                                    rankClass: match.ranks?.total?.class,
+                                    rankSchool: match.ranks?.total?.school,
+                                    rankTown: match.ranks?.total?.township,
+                                    scores: match.scores,
+                                    updatedAt: item.updated_at
+                                });
+                            }
+                        } catch (e) {
+                            console.warn(`[CloudHistory] 解析记录 ${item.key} 失败:`, e);
+                        }
+                    }
+
+                    console.log(`[CloudHistory] 找到 ${student.name} 的 ${history.length} 条历史成绩`);
+                    return { success: true, data: history };
+                } catch (e) {
+                    console.error('[CloudHistory] 检索失败:', e);
+                    return { success: false, message: e.message };
+                }
+            },
+
+            // 🆕 从云端拉取该届所有历史考试快照，填充到本地 COHORT_DB.exams
+            fetchCohortExamsToLocal: async function(cohortId) {
+                if (!this.check()) return { success: false, message: '云端未连接' };
+                const cid = cohortId || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
+                if (!cid) return { success: false, message: '无法确定届别' };
+
+                try {
+                    console.log(`[CloudExams] 开始从云端拉取 ${cid}级 的所有历史考试...`);
+                    if (window.UI) UI.toast(`⏳ 正在从云端加载 ${cid}级 历史考试列表...`, 'info');
+
+                    const { data, error } = await sbClient
+                        .from('system_data')
+                        .select('key, content, updated_at')
+                        .like('key', `${cid}级_%`)
+                        .not('key', 'like', 'TEACHERS_%')
+                        .not('key', 'like', 'STUDENT_COMPARE_%')
+                        .order('updated_at', { ascending: true });
+
+                    if (error) throw error;
+                    if (!data || data.length === 0) return { success: true, count: 0 };
+
+                    if (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') {
+                        const db = CohortDB.ensure();
+                        let loadedCount = 0;
+
+                        for (const item of data) {
+                            try {
+                                if (db.exams && db.exams[item.key]) continue;
+                                let content = item.content;
+                                if (typeof content === 'string' && content.startsWith('LZ|')) {
+                                    content = LZString.decompressFromUTF16(content.substring(3));
+                                }
+                                const payload = typeof content === 'string' ? JSON.parse(content) : content;
+                                const keyParts = item.key.split('_');
+                                const examLabel = keyParts.length >= 5 ? keyParts.slice(4).join('_') : item.key;
+                                db.exams[item.key] = {
+                                    examId: item.key,
+                                    examLabel: examLabel,
+                                    meta: payload.ARCHIVE_META || payload.CONFIG || {},
+                                    data: payload.RAW_DATA || [],
+                                    schools: payload.SCHOOLS || {},
+                                    teacherMap: payload.TEACHER_MAP || {},
+                                    subjects: payload.SUBJECTS || [],
+                                    thresholds: payload.THRESHOLDS || {},
+                                    config: payload.CONFIG || {},
+                                    createdAt: new Date(item.updated_at).getTime() || Date.now()
+                                };
+                                loadedCount++;
+                            } catch (e) {
+                                console.warn(`[CloudExams] 解析考试 ${item.key} 失败:`, e);
+                            }
+                        }
+
+                        if (loadedCount > 0) {
+                            window.COHORT_DB = db;
+                            if (typeof CohortDB.renderExamList === 'function') CohortDB.renderExamList();
+                            if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
+                            if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
+                            if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+                            if (window.UI) UI.toast(`✅ 已从云端加载 ${loadedCount} 期历史考试，对比期数已更新`, 'success');
+                        }
+                        return { success: true, count: loadedCount };
+                    }
+                    return { success: false, message: 'CohortDB 未初始化' };
+                } catch (e) {
+                    console.error('[CloudExams] 拉取历史考试失败:', e);
+                    return { success: false, message: e.message };
                 }
             }
         };
@@ -10474,6 +10630,17 @@ async function switchCohort(cohortId) {
 
         CohortDB.renderExamList();
 
+        // ✅ [新增] 自动从云端拉取该届所有历史考试到对比期数下拉框
+        if (window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
+            window.CloudManager.fetchCohortExamsToLocal(cohortId).then(res => {
+                if (res.success && res.count > 0) {
+                    if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
+                    if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
+                    if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+                }
+            }).catch(e => console.warn('[switchCohort] 云端历史考试拉取失败:', e));
+        }
+
         UI.toast(`✅ 已切换到 [${cohortKey}]，数据加载完毕`, "success");
         logAction('届别切换', `已切换到 ${cohortKey}`);
         updateStatusPanel();
@@ -10680,6 +10847,20 @@ window.addEventListener('load', async () => {
                 if (MY_SCHOOL) generateTeacherInputs();
 
                 UI.toast(`✅ 已加载项目：[${currentKey}]`, 'success');
+
+                // ✅ [新增] 页面初始化后自动从云端拉取历史考试到对比期数下拉框
+                setTimeout(() => {
+                    const cid = CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
+                    if (cid && window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
+                        window.CloudManager.fetchCohortExamsToLocal(cid).then(res => {
+                            if (res.success && res.count > 0) {
+                                if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
+                                if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
+                                if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+                            }
+                        }).catch(e => console.warn('[Init] 云端历史考试拉取失败:', e));
+                    }
+                }, 1500);
             }, "正在加载数据...");
         };
 

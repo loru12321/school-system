@@ -4714,17 +4714,20 @@
         console.log('🔍 开始从云端存档获取历史数据...');
         try {
             if (sbClient) {
-                // 获取特定 cohort 的存档 (如果已选择届别)
-                let queryPrefix = 'cohort::%';
-                if (window.CURRENT_COHORT_ID) {
-                    queryPrefix = `cohort::${window.CURRENT_COHORT_ID}::%`;
+                // ✅ 修复：实际存储 key 格式为 `{cohortId}级_{...}`，而非 `cohort::` 前缀
+                const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
+                let queryPrefix = '%';
+                if (cohortId) {
+                    queryPrefix = `${cohortId}级_%`;
                 }
 
                 const { data, error } = await sbClient
                     .from('system_data')
                     .select('key, content, updated_at')
                     .like('key', queryPrefix)
-                    .order('updated_at', { ascending: false });
+                    .not('key', 'like', 'TEACHERS_%')
+                    .not('key', 'like', 'STUDENT_COMPARE_%')
+                    .order('updated_at', { ascending: true });
 
                 console.log(`📡 云端存档查询结果 (${queryPrefix}):`, { count: data?.length, error });
                 
@@ -4759,10 +4762,21 @@
                                 }
                             }
                         }
+                        // 如果 SCHOOLS 中未找到，尝试直接从 RAW_DATA 中查找
+                        if (!matchedStudent) {
+                            const stuList = payload.RAW_DATA || payload.students || [];
+                            matchedStudent = stuList.find(s => {
+                                const sName = normalizeCompareName(s.name || '');
+                                const sameName = sName === normalizedTargetName;
+                                const sameClass = !normalizedTargetClass || isClassEquivalent(s.class || '', normalizedTargetClass);
+                                return sameName && sameClass;
+                            });
+                        }
                         
                         if (matchedStudent) {
-                            // 从存档 key 中提取考试名称
-                            const examName = item.key.replace('cohort::', '考试');
+                            // ✅ 修复：从实际 key 格式提取考试名称
+                            const keyParts = item.key.split('_');
+                            const examName = keyParts.length >= 5 ? keyParts.slice(4).join('_') : item.key;
                             
                             console.log('✅ 找到匹配学生:', matchedStudent.name, '考试:', examName);
                             
@@ -5002,6 +5016,39 @@
             
             let stu = SCHOOLS[sch]?.students.find(function(s) { return s.name === name && (cls === '--请先选择学校--' || s.class === cls); });
             if (!stu) return alert("未找到该学生");
+
+            // ✅ [修复] 先通过 CloudManager 获取历史成绩，存入 PREV_DATA
+            if (window.CloudManager && window.CloudManager.check()) {
+                if (window.UI) UI.toast("🔍 正在同步云端历史数据...", "info");
+                try {
+                    const historyRes = await window.CloudManager.fetchStudentExamHistory(stu);
+                    if (historyRes.success && historyRes.data.length > 0) {
+                        window.PREV_DATA = historyRes.data.map(h => ({
+                            name: stu.name,
+                            class: stu.class,
+                            school: stu.school || '',
+                            total: Number(h.total) || 0,
+                            classRank: h.rankClass || '-',
+                            schoolRank: h.rankSchool || '-',
+                            townRank: h.rankTown || '-',
+                            scores: h.scores || {},
+                            ranks: {
+                                total: {
+                                    class: h.rankClass || '-',
+                                    school: h.rankSchool || '-',
+                                    township: h.rankTown || '-'
+                                }
+                            },
+                            _sourceExam: h.examId
+                        }));
+                        const prevRecords = window.PREV_DATA.filter(h => h._sourceExam !== (window.CURRENT_EXAM_ID || ''));
+                        if (prevRecords.length > 0) window.PREV_DATA = prevRecords;
+                        if (window.UI) UI.toast(`✅ 已自动匹配 ${historyRes.data.length} 次历史成绩`, "success");
+                    }
+                } catch (e) {
+                    console.warn("[doQuery] 云端历史获取失败:", e);
+                }
+            }
             
             clearCloudStudentCompareContext();
             setCloudCompareTarget(stu);
