@@ -14797,30 +14797,27 @@ async function doQuery() {
         try {
             const historyRes = await window.CloudManager.fetchStudentExamHistory(stu);
             if (historyRes.success && historyRes.data.length > 0) {
-                // ✅ 修复：按照 findPreviousRecord 期望的格式存入 PREV_DATA
+                // ✅ 修复：按照 getStudentExamHistory 期望的格式存入 PREV_DATA
                 window.PREV_DATA = historyRes.data.map(h => ({
-                    name: stu.name,
-                    class: stu.class,
-                    school: stu.school || '',
-                    total: Number(h.total) || 0,
-                    classRank: h.rankClass || '-',
-                    schoolRank: h.rankSchool || '-',
-                    townRank: h.rankTown || '-',
-                    scores: h.scores || {},
-                    ranks: {
-                        total: {
-                            class: h.rankClass || '-',
-                            school: h.rankSchool || '-',
-                            township: h.rankTown || '-'
-                        }
+                    examId: h.examId,
+                    examLabel: h.examId.replace(/_/g, ' '),
+                    student: {
+                        name: stu.name,
+                        class: stu.class,
+                        school: stu.school || '',
+                        total: Number(h.total) || 0,
+                        scores: h.scores || {},
+                        ranks: {
+                            total: {
+                                class: h.rankClass || '-',
+                                school: h.rankSchool || '-',
+                                township: h.rankTown || '-'
+                            }
+                        },
+                        updatedAt: h.updatedAt || new Date().toISOString()
                     },
-                    _sourceExam: h.examId
+                    percentiles: h.percentiles || {}
                 }));
-                // 如果有多期历史，取最近一期（排除当前考试）作为对比基准
-                const prevRecords = window.PREV_DATA.filter(h => h._sourceExam !== CURRENT_EXAM_ID);
-                if (prevRecords.length > 0) {
-                    window.PREV_DATA = prevRecords;
-                }
                 if (window.UI) UI.toast(`✅ 已自动匹配 ${historyRes.data.length} 次历史成绩`, "success");
             }
         } catch (e) {
@@ -14832,11 +14829,14 @@ async function doQuery() {
     setCloudCompareTarget(stu);
     CURRENT_REPORT_STUDENT = stu;
 
-    document.getElementById('single-report-result').classList.remove('hidden');
+    const resultEl = document.getElementById('single-report-result');
     const container = document.getElementById('report-card-capture-area');
-
-    // 强制使用 'A4' 模式进行渲染
-    container.innerHTML = renderSingleReportCardHTML(stu, 'A4');
+    
+    if (resultEl && container) {
+        resultEl.classList.remove('hidden');
+        // 强制使用 'A4' 模式进行渲染
+        container.innerHTML = renderSingleReportCardHTML(stu, 'A4');
+    }
 
     setTimeout(() => { 
         if (typeof renderRadarChart === 'function') renderRadarChart(stu); 
