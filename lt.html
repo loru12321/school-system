@@ -30507,7 +30507,7 @@ function canAccessModule(id) {
     }
 
     if (RoleManager.hasAnyRole(user, ['teacher', 'class_teacher'])) {
-        const allow = ['starter-hub', 'student-details', 'teacher-analysis', 'class-diagnosis', 'progress-analysis'];
+        const allow = ['starter-hub', 'student-details', 'teacher-analysis', 'class-diagnosis', 'progress-analysis', 'subject-balance', 'potential-analysis', 'report-generator'];
         return allow.includes(id);
     }
 
