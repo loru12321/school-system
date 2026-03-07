@@ -492,15 +492,6 @@
                         pushCandidates(rows);
                     }
 
-                        const { data: rows, error } = await sbClient
-                            .from('system_data')
-                            .select('key,content,updated_at')
-                            .like('key', 'TEACHERS_%')
-                            .order('updated_at', { ascending: false })
-                            .limit(30);
-                        if (error) throw error;
-                        pushCandidates(rows);
-                    }
 
                     let selectedRow = candidateRows.length ? candidateRows[0] : null;
                     if (broadSearchForTeacher && teacherNameNorm && candidateRows.length > 0) {

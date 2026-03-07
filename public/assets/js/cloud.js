@@ -295,20 +295,6 @@
                         pushCandidates(rows);
                     }
 
-                    // 次优先：按所选届数匹配（不限制学期）
-                    if ((candidateRows.length === 0 || broadSearchForTeacher) && cohortId) {
-                        const likePattern = `TEACHERS_${cohortId}级_%`;
-                        triedKeys.push(`like:${likePattern}`);
-                        const { data: rows, error } = await sbClient
-                            .from('system_data')
-                            .select('key,content,updated_at')
-                            .like('key', likePattern)
-                            .order('updated_at', { ascending: false })
-                            .limit(30);
-                        if (error) throw error;
-                        pushCandidates(rows);
-                    }
-
                     // 🟢 [修复] 取消：跨学期兜底和最新任课表兜底。
                     // 必须严格匹配本届和本学期，不自动加载往期任课信息。
                     /*
