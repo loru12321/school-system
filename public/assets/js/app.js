@@ -15139,8 +15139,9 @@ function getStudentExamHistory(student) {
     // 🆕 整合云端异步拉取的数据 (PREV_DATA)
     if (window.PREV_DATA && Array.isArray(window.PREV_DATA)) {
         window.PREV_DATA.forEach(h => {
-            // 避免与本地数据重复 (以 examId 为准)
-            if (!results.some(r => r.examId === h.examId)) {
+            // 避免与本地数据重复 (以 examFullKey 或 examId 为准)
+            const matchKey = h.examFullKey || h.examId;
+            if (!results.some(r => r.examId === matchKey || r.examId === h.examId)) {
                 results.push(h);
             }
         });
