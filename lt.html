@@ -20694,9 +20694,12 @@ function renderSingleReportCardHTML(stu, mode) {
             const h = examHistory[i];
             const isCurrent = h.examId === CURRENT_EXAM_ID;
             const bgStyle = isCurrent ? 'background:rgba(239,246,255,0.7); font-weight:bold;' : '';
-            const tScore = h.student.total ? h.student.total.toFixed(1) : '-';
-            const sRank = safeGet(h.student, 'ranks.total.school', '-');
-            const tRank = safeGet(h.student, 'ranks.total.township', '-');
+            
+            // 安全读取学生对象和成绩（兼容旧结构和不同来源）
+            const stuObj = h.student || h;
+            const tScore = (stuObj.total !== undefined && stuObj.total !== null) ? Number(stuObj.total).toFixed(1) : '-';
+            const sRank = safeGet(stuObj, 'ranks.total.school', h.rankSchool || '-');
+            const tRank = safeGet(stuObj, 'ranks.total.township', h.rankTown || '-');
             
             historyRows += `<tr style="${bgStyle}">
                 <td style="text-align:left; padding-left:20px; color:#475569;">${isCurrent ? '⭐ ' : ''}${h.examLabel}</td>
