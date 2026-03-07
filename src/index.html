@@ -2965,18 +2965,30 @@
 
                 <!-- 🆕 自定义历史对比考试 (覆盖自动获取) -->
                 <div class="control-panel" style="background:#f8fafc; border-color:var(--primary-light); display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding: 12px 16px; margin-top:10px;">
-                    <label style="font-size:13px; font-weight:600; color:#475569;">指定历史对比期数 (可选)：</label>
-                    
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <label style="font-size:13px; font-weight:600; color:#475569;">对比期数：</label>
+                        <select id="reportComparePeriodCount" style="padding:4px 8px; border-radius:6px;" onchange="onReportComparePeriodCountChange()">
+                            <option value="2">2期对比</option>
+                            <option value="3" selected>3期对比</option>
+                        </select>
+                    </div>
+
                     <label style="font-size:13px; font-weight:600; margin-left:10px;">第1期：</label>
                     <select id="reportCompareExam1" onchange="window.doQuery()" style="min-width:180px; background:#fff; border-radius:6px;"></select>
                     
                     <label style="font-size:13px; font-weight:600; margin-left:10px;">第2期：</label>
                     <select id="reportCompareExam2" onchange="window.doQuery()" style="min-width:180px; background:#fff; border-radius:6px;"></select>
                     
-                    <label style="font-size:13px; font-weight:600; margin-left:10px;">第3期：</label>
-                    <select id="reportCompareExam3" onchange="window.doQuery()" style="min-width:180px; background:#fff; border-radius:6px;"></select>
+                    <span id="reportCompareExam3Wrap" style="display:flex; align-items:center; gap:10px;">
+                        <label style="font-size:13px; font-weight:600; margin-left:10px;">第3期：</label>
+                        <select id="reportCompareExam3" onchange="window.doQuery()" style="min-width:180px; background:#fff; border-radius:6px;"></select>
+                    </span>
                     
-                    <span style="font-size:12px; color:#64748b; margin-left:auto;">（留空则自动搜索最近3次）</span>
+                    <button class="btn btn-blue" onclick="window.doQuery()" style="background:#3b82f6; border-radius:20px; padding: 5px 15px; font-size:12px; font-weight:700;">
+                        <i class="ti ti-arrows-left-right"></i> 执行对比
+                    </button>
+                    
+                    <span style="font-size:12px; color:#64748b; margin-left:auto;">（留空则自动搜索最近历史）</span>
                 </div>
                 <div id="single-report-result" class="hidden">
                     <div

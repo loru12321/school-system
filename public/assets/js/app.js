@@ -9551,6 +9551,9 @@ function updateReportCompareExamSelects() {
     const exam3Sel = document.getElementById('reportCompareExam3');
     if (!exam1Sel || !exam2Sel || !exam3Sel) return;
 
+    // 🆕 同步期数显示状态
+    onReportComparePeriodCountChange();
+
     // 1. 缓存当前值 (为了刷新后保持选择)
     const v1 = exam1Sel.value;
     const v2 = exam2Sel.value;
@@ -9594,9 +9597,32 @@ function updateReportCompareExamSelects() {
         const idx2 = Math.max(0, idx3 - 1);
         const idx1 = Math.max(0, idx3 - 2);
 
-        if (!exam3Sel.value) exam3Sel.value = examList[idx3].id;
-        if (!exam2Sel.value) exam2Sel.value = examList[idx2].id;
-        if (!exam1Sel.value) exam1Sel.value = examList[idx1].id;
+        if (!exam3Sel.value && examList[idx3]) exam3Sel.value = examList[idx3].id;
+        if (!exam2Sel.value && examList[idx2]) exam2Sel.value = examList[idx2].id;
+        if (!exam1Sel.value && examList[idx1]) exam1Sel.value = examList[idx1].id;
+
+        // 如果是2期，确保第3期不参与逻辑（虽然被隐藏了，但为了严谨性）
+        const count = parseInt(document.getElementById('reportComparePeriodCount')?.value || '3');
+        if (count === 2) {
+            // 2期时，通常是 第1期=Prev, 第2期=Current
+            exam2Sel.value = examList[idx3].id;
+            exam1Sel.value = examList[idx2].id;
+            exam3Sel.value = ""; 
+        }
+    }
+}
+
+function onReportComparePeriodCountChange() {
+    const countEl = document.getElementById('reportComparePeriodCount');
+    const wrap3 = document.getElementById('reportCompareExam3Wrap');
+    const sel3 = document.getElementById('reportCompareExam3');
+    if (!countEl || !wrap3 || !sel3) return;
+
+    if (countEl.value === '2') {
+        wrap3.style.display = 'none';
+        sel3.value = ""; // 清空，不参与计算
+    } else {
+        wrap3.style.display = 'flex';
     }
 }
 
