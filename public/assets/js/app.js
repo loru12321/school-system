@@ -4994,6 +4994,7 @@ async function switchCohort(cohortId) {
                     if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
                     if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
                     if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+                    if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
                 }
             }).catch(e => console.warn('[switchCohort] 云端历史考试拉取失败:', e));
         }
@@ -5225,6 +5226,7 @@ window.addEventListener('load', async () => {
                                 if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
                                 if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
                                 if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+                                if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
                             }
                         }).catch(e => console.warn('[Init] 云端历史考试拉取失败:', e));
                     }
@@ -6344,6 +6346,7 @@ function switchTab(id) {
     if (id === 'student-details') {
         updateStudentSchoolSelect();
         if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+        if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
 
         // 🔐 学生多期对比权限控制
         const user = getCurrentUser();
@@ -6505,6 +6508,7 @@ function switchTab(id) {
             updateProgressBaselineSelect();
             updateProgressMultiExamSelects();
             if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+            if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
             const progSel = document.getElementById('progressSchoolSelect');
             if (MY_SCHOOL && progSel) progSel.value = MY_SCHOOL;
 
@@ -6882,6 +6886,7 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
         if (typeof updateTeacherCompareTeacherSelect === 'function') updateTeacherCompareTeacherSelect();
         if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
         if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+        if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
 
         // 🟢 [新增] 处理完数据后，立即同步到云端 (仅管理员有效)
         // 注意：因为是异步，我们在后台默默保存，不阻塞界面显示
@@ -7770,7 +7775,7 @@ function updateStudentSchoolSelect() {
     Object.keys(SCHOOLS).forEach(school => { select.innerHTML += `<option value="${school}">${school}</option>`; });
 
     const user = getCurrentUser();
-    const role = user?.role || 'guest';
+    const role = user?.role;
     if (role === 'class_teacher') {
         const school = user.school || MY_SCHOOL || '';
         if (school) {
@@ -15090,6 +15095,13 @@ function getStudentExamHistory(student) {
 
     if (typeof CohortDB === 'undefined') return results;
 
+    // 🟢 [新增] 检查是否启用了“个性化历史期数”的手动覆盖
+    const manualExams = [];
+    ['reportCompareExam1', 'reportCompareExam2', 'reportCompareExam3'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.value) manualExams.push(el.value);
+    });
+
     try {
         const db = CohortDB.ensure();
         if (!db || !db.exams) return results;
@@ -15100,6 +15112,11 @@ function getStudentExamHistory(student) {
         for (const [examId, exam] of examEntries) {
             const examData = exam.data || [];
             if (examData.length === 0) continue;
+
+            // 如果启用了手动覆盖，必须在指定的 examId 列表中
+            if (manualExams.length > 0 && !manualExams.includes(examId) && examId !== window.CURRENT_EXAM_ID) {
+                continue;
+            }
 
             const found = examData.find(p => {
                 if (p.school && targetSchool && p.school !== targetSchool) return false;
@@ -15139,8 +15156,13 @@ function getStudentExamHistory(student) {
     // 🆕 整合云端异步拉取的数据 (PREV_DATA)
     if (window.PREV_DATA && Array.isArray(window.PREV_DATA)) {
         window.PREV_DATA.forEach(h => {
-            // 避免与本地数据重复 (以 examFullKey 或 examId 为准)
+            // 如果启用了手动覆盖，过滤掉不在覆盖列表里的云端数据 (当前考试除外)
             const matchKey = h.examFullKey || h.examId;
+            if (manualExams.length > 0 && !manualExams.includes(matchKey) && matchKey !== window.CURRENT_EXAM_ID) {
+                return;
+            }
+
+            // 避免与本地数据重复 (以 examFullKey 或 examId 为准)
             if (!results.some(r => r.examId === matchKey || r.examId === h.examId)) {
                 results.push(h);
             }
@@ -23880,6 +23902,7 @@ const CohortDB = {
             if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
             if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
             if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+            if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
             return;
         }
         const db = this.ensure();
@@ -23891,6 +23914,7 @@ const CohortDB = {
             if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
             if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
             if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+            if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
             return;
         }
         exams.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -23901,6 +23925,7 @@ const CohortDB = {
         if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
         if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
         if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+        if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
     },
 
     loadExamFromSelect: function () {
