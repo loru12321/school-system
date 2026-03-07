@@ -14891,6 +14891,38 @@ function updateStudentCompareExamSelects() {
     onStudentComparePeriodCountChange();
 }
 
+function updateReportCompareExamSelects() {
+    const exam1Sel = document.getElementById('reportCompareExam1');
+    const exam2Sel = document.getElementById('reportCompareExam2');
+    const exam3Sel = document.getElementById('reportCompareExam3');
+    if (!exam1Sel || !exam2Sel || !exam3Sel) return;
+
+    // 获取所有可用考试 (包括本地CohortDB和云端PREV_DATA)
+    const examList = typeof listAvailableExamsForCompare === 'function' 
+        ? listAvailableExamsForCompare() 
+        : [];
+
+    const defaultOption = '<option value="">--未选择(自动)--</option>';
+    if (examList.length === 0) {
+        const msg = '<option value="">--无可用历史数据--</option>';
+        exam1Sel.innerHTML = msg;
+        exam2Sel.innerHTML = msg;
+        exam3Sel.innerHTML = msg;
+        return;
+    }
+
+    const optionsHtml = defaultOption + examList.map(e => {
+        let label = e.label;
+        if (e.source === 'cloud') label = '☁️ ' + label;
+        if (e.source === 'local') label = '💻 ' + label;
+        return `<option value="${e.id}">${label}</option>`;
+    }).join('');
+    
+    exam1Sel.innerHTML = optionsHtml;
+    exam2Sel.innerHTML = optionsHtml;
+    exam3Sel.innerHTML = optionsHtml;
+}
+
 function renderStudentMultiPeriodComparison() {
     const schoolEl = document.getElementById('studentCompareSchool');
     const hintEl = document.getElementById('studentCompareHint');
@@ -16571,15 +16603,48 @@ function updateStudentCompareSummary() {
 
 function listAvailableExamsForCompare() {
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
-    const examList = [];
+    const examMap = new Map(); // 使用 Map 去重
+
+    // 1. 本地 CohortDB 数据
     if (db?.exams) {
         Object.values(db.exams).forEach(ex => {
-            if (ex?.examId) examList.push({ id: ex.examId, createdAt: ex.createdAt || 0, label: ex.examId });
+            if (ex?.examId) {
+                examMap.set(ex.examId, {
+                    id: ex.examId,
+                    createdAt: ex.createdAt || 0,
+                    label: ex.examLabel || ex.examId,
+                    source: 'local'
+                });
+            }
         });
     }
-    if (CURRENT_EXAM_ID && !examList.some(e => e.id === CURRENT_EXAM_ID)) {
-        examList.push({ id: CURRENT_EXAM_ID, createdAt: Date.now(), label: `${CURRENT_EXAM_ID} (当前)` });
+
+    // 2. 整合当前正在分析的数据
+    if (CURRENT_EXAM_ID && !examMap.has(CURRENT_EXAM_ID)) {
+        examMap.set(CURRENT_EXAM_ID, {
+            id: CURRENT_EXAM_ID,
+            createdAt: Date.now(),
+            label: `${CURRENT_EXAM_ID.split('_').pop()} (当前)`,
+            source: 'current'
+        });
     }
+
+    // 3. 整合云端异步拉取的当前学生历史 (如果有)
+    if (window.PREV_DATA && Array.isArray(window.PREV_DATA)) {
+        window.PREV_DATA.forEach(h => {
+            const hid = h.examFullKey || h.examId;
+            if (hid && !examMap.has(hid)) {
+                examMap.set(hid, {
+                    id: hid,
+                    createdAt: h.updatedAt ? new Date(h.updatedAt).getTime() : 0,
+                    label: h.examLabel || hid,
+                    source: 'cloud'
+                });
+            }
+        });
+    }
+
+    const examList = Array.from(examMap.values());
     examList.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
     return examList;
 }
@@ -20178,6 +20243,7 @@ async function doQuery() {
                 // ✅ 修复：按照 getStudentExamHistory 期望的格式存入 PREV_DATA
                 window.PREV_DATA = historyRes.data.map(h => ({
                     examId: h.examId,
+                    examFullKey: h.examFullKey,
                     examLabel: h.examId.replace(/_/g, ' '),
                     student: {
                         name: stu.name,
@@ -20197,6 +20263,8 @@ async function doQuery() {
                     percentiles: h.percentiles || {}
                 }));
                 if (window.UI) UI.toast(`✅ 已自动匹配 ${historyRes.data.length} 次历史成绩`, "success");
+                // 🆕 取到云端历史后，立即刷新下拉框，让用户能选
+                if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
             }
         } catch (e) {
             console.warn("[doQuery] 云端历史获取失败:", e);
