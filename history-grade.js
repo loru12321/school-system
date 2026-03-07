@@ -297,40 +297,4 @@ if (document.readyState === 'loading') {
     initHistoryPatch();
 }
 
-window.testHistoryFeature = function() {
-    console.log('🧪 测试历史成绩功能...');
-    
-    var mockStudent = {
-        name: '测试学生', 
-        class: '701', 
-        school: '银山实验学校', 
-        total: 550.5,
-        ranks: { total: { class: 1, school: 1, township: 1 } },
-        scores: { '语文': 133, '数学': 139, '英语': 130, '物理': 78.5, '化学': 70 }
-    };
-    
-    var mockHistory = [
-        { 
-            examId: '期中考试', 
-            total: 530.5, 
-            rankClass: 3, 
-            rankSchool: 5, 
-            rankTown: 10, 
-            subjects: { '语文': 125, '数学': 130, '英语': 120, '物理': 75.5, '化学': 80 },
-            updatedAt: new Date(Date.now() - 86400000 * 30).toISOString() 
-        },
-        { 
-            examId: '期末考试', 
-            total: 550.5, 
-            rankClass: 1, 
-            rankSchool: 1, 
-            rankTown: 1,
-            subjects: { '语文': 133, '数学': 139, '英语': 130, '物理': 78.5, '化学': 70 },
-            updatedAt: new Date().toISOString(), 
-            isCurrent: true 
-        }
-    ];
-    
-    renderHistoryCharts(mockHistory, mockStudent);
-    alert('测试成功！请查看页面下方的历史成绩模块');
-};
+// 测试功能已移除
