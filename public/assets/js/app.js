@@ -11319,7 +11319,7 @@ function isRealExamIdForCompare(examId, cohortId) {
     const key = String(examId || '').trim();
     if (!key) return false;
     if (/^(TEACHERS_|STUDENT_COMPARE_|MACRO_COMPARE_|TEACHER_COMPARE_|TOWN_SUB_COMPARE_)/.test(key)) return false;
-    if (/(?:^|_)(?:\u671f\u4e2d\u6807\u51c6|\u671f\u672b\u6807\u51c6|\u6807\u51c6\u8003\u8bd5)(?:_|$)/.test(key)) return false;
+    if (/(?:^|_)(?:\u671f\u4e2d\u6807\u51c6|\u671f\u672b\u6807\u51c6)(?:_|$)/.test(key)) return false;
 
     const normalizedCohort = normalizeCompareCohortId(cohortId);
     if (!normalizedCohort) return true;

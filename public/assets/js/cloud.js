@@ -475,89 +475,130 @@
                 const cid = cohortId || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
                 if (!cid) return { success: false, message: '无法确定届别' };
 
-                try {
-                    console.log(`[CloudExams] 开始从云端拉取 ${cid}级 的所有历史考试...`);
-                    if (window.UI) UI.toast(`⏳ 正在从云端加载 ${cid}级 历史考试列表...`, 'info');
+                const normalizeCohortId = (raw) => String(raw || '').replace(/\D/g, '');
+                const extractCohortIdFromKey = (key) => {
+                    const m = String(key || '').match(/^(\d{4})\D*_/);
+                    return m ? m[1] : '';
+                };
+                const isAllowedExamKey = (key) => {
+                    const examKey = String(key || '').trim();
+                    if (!examKey) return false;
+                    if (/^(TEACHERS_|STUDENT_COMPARE_|MACRO_COMPARE_|TEACHER_COMPARE_|TOWN_SUB_COMPARE_)/.test(examKey)) return false;
+                    if (/(?:^|_)(?:\u671f\u4e2d\u6807\u51c6|\u671f\u672b\u6807\u51c6)(?:_|$)/.test(examKey)) return false;
+                    const normalizedCid = normalizeCohortId(cid);
+                    if (!normalizedCid) return true;
+                    return extractCohortIdFromKey(examKey) === normalizedCid;
+                };
+                const refreshSelectors = () => {
+                    if (typeof CohortDB.renderExamList === 'function') CohortDB.renderExamList();
+                    if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
+                    if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
+                    if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+                    if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
+                };
 
-                    const { data, error } = await sbClient
+                try {
+                    if (typeof CohortDB === 'undefined' || typeof CohortDB.ensure !== 'function') {
+                        return { success: false, message: 'CohortDB 未初始化' };
+                    }
+
+                    const db = CohortDB.ensure();
+                    const normalizedCid = normalizeCohortId(cid) || cid;
+                    const cacheKey = `CLOUD_EXAMS_SYNC_TS_${normalizedCid}`;
+                    const lastSyncTs = Number(localStorage.getItem(cacheKey) || 0);
+                    const localExamCount = Object.keys(db.exams || {}).filter(isAllowedExamKey).length;
+                    const isRecentSync = Date.now() - lastSyncTs < 3 * 60 * 1000;
+
+                    if (localExamCount >= 2 && isRecentSync) {
+                        refreshSelectors();
+                        return { success: true, count: 0, skipped: true, reason: 'cache-hit' };
+                    }
+
+                    if (window.UI) UI.toast(`正在从云端加载 ${cid} 级历史考试列表...`, 'info');
+
+                    const { data: keyRows, error: keyError } = await sbClient
                         .from('system_data')
-                        .select('key, content, updated_at')
+                        .select('key, updated_at')
                         .like('key', `${cid}级_%`)
                         .not('key', 'like', 'TEACHERS_%')
                         .not('key', 'like', 'STUDENT_COMPARE_%')
                         .order('updated_at', { ascending: true });
 
-                    if (error) throw error;
-                    if (!data || data.length === 0) {
-                        console.log(`[CloudExams] 云端未找到 ${cid}级 的考试记录`);
+                    if (keyError) throw keyError;
+
+                    const remoteExamRows = (keyRows || []).filter(row => isAllowedExamKey(row.key));
+                    if (remoteExamRows.length === 0) {
+                        localStorage.setItem(cacheKey, String(Date.now()));
+                        refreshSelectors();
                         return { success: true, count: 0 };
                     }
 
-                    // 确保 COHORT_DB 存在
-                    if (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') {
-                        const db = CohortDB.ensure();
-                        let loadedCount = 0;
+                    const missingKeys = remoteExamRows
+                        .map(row => row.key)
+                        .filter(key => !(db.exams && db.exams[key]));
 
-                        for (const item of data) {
-                            try {
-                                // 如果本地已有该考试快照，跳过（避免覆盖本地修改）
-                                if (db.exams && db.exams[item.key]) continue;
-
-                                let content = item.content;
-                                if (typeof content === 'string' && content.startsWith('LZ|')) {
-                                    content = LZString.decompressFromUTF16(content.substring(3));
-                                }
-                                const payload = typeof content === 'string' ? JSON.parse(content) : content;
-
-                                // 从 key 中提取考试名
-                                const keyParts = item.key.split('_');
-                                const examLabel = keyParts.length >= 5 ? keyParts.slice(4).join('_') : item.key;
-
-                                // 构建考试快照对象（与 CohortDB.syncCurrentExam 格式一致）
-                                const examSnapshot = {
-                                    examId: item.key,
-                                    examLabel: examLabel,
-                                    meta: payload.ARCHIVE_META || payload.CONFIG || {},
-                                    data: payload.RAW_DATA || [],
-                                    schools: payload.SCHOOLS || {},
-                                    teacherMap: payload.TEACHER_MAP || {},
-                                    subjects: payload.SUBJECTS || [],
-                                    thresholds: payload.THRESHOLDS || {},
-                                    config: payload.CONFIG || {},
-                                    createdAt: new Date(item.updated_at).getTime() || Date.now()
-                                };
-
-                                db.exams[item.key] = examSnapshot;
-                                loadedCount++;
-                            } catch (e) {
-                                console.warn(`[CloudExams] 解析考试 ${item.key} 失败:`, e);
-                            }
-                        }
-
-                        if (loadedCount > 0) {
-                            // 同步到 window
-                            window.COHORT_DB = db;
-                        }
-
-                        // ✅ [修复] 无论是否有新加载的考试，只要拉取成功就尝试刷新下拉框
-                        if (typeof CohortDB.renderExamList === 'function') CohortDB.renderExamList();
-                        if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
-                        if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
-                        if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-                        if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
-                        
-                        if (loadedCount > 0) {
-                            console.log(`[CloudExams] 成功从云端加载 ${loadedCount} 个历史考试快照`);
-                            if (window.UI) UI.toast(`✅ 已从云端加载 ${loadedCount} 期历史考试，对比期数已更新`, 'success');
-                        } else {
-                            console.log(`[CloudExams] 云端历史同步完成 (已是最新)`);
-                        }
-
-                        return { success: true, count: loadedCount };
-                    } else {
-                        console.warn('[CloudExams] CohortDB 未初始化，无法填充考试快照');
-                        return { success: false, message: 'CohortDB 未初始化' };
+                    if (missingKeys.length === 0) {
+                        localStorage.setItem(cacheKey, String(Date.now()));
+                        refreshSelectors();
+                        return { success: true, count: 0, skipped: true, reason: 'up-to-date' };
                     }
+
+                    const missingRows = [];
+                    const chunkSize = 30;
+                    for (let i = 0; i < missingKeys.length; i += chunkSize) {
+                        const chunk = missingKeys.slice(i, i + chunkSize);
+                        const { data: contentRows, error: contentError } = await sbClient
+                            .from('system_data')
+                            .select('key, content, updated_at')
+                            .in('key', chunk);
+
+                        if (contentError) throw contentError;
+                        if (Array.isArray(contentRows)) {
+                            missingRows.push(...contentRows.filter(row => isAllowedExamKey(row.key)));
+                        }
+                    }
+
+                    missingRows.sort((a, b) => new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime());
+
+                    let loadedCount = 0;
+                    for (const item of missingRows) {
+                        try {
+                            let content = item.content;
+                            if (typeof content === 'string' && content.startsWith('LZ|')) {
+                                content = LZString.decompressFromUTF16(content.substring(3));
+                            }
+                            const payload = typeof content === 'string' ? JSON.parse(content) : content;
+                            if (!payload || !Array.isArray(payload.RAW_DATA) || payload.RAW_DATA.length === 0) continue;
+
+                            const keyParts = item.key.split('_');
+                            const examLabel = keyParts.length >= 5 ? keyParts.slice(4).join('_') : item.key;
+                            db.exams[item.key] = {
+                                examId: item.key,
+                                examLabel,
+                                meta: payload.ARCHIVE_META || payload.CONFIG || {},
+                                data: payload.RAW_DATA || [],
+                                schools: payload.SCHOOLS || {},
+                                teacherMap: payload.TEACHER_MAP || {},
+                                subjects: payload.SUBJECTS || [],
+                                thresholds: payload.THRESHOLDS || {},
+                                config: payload.CONFIG || {},
+                                createdAt: new Date(item.updated_at).getTime() || Date.now()
+                            };
+                            loadedCount++;
+                        } catch (err) {
+                            console.warn(`[CloudExams] 解析考试 ${item.key} 失败:`, err);
+                        }
+                    }
+
+                    window.COHORT_DB = db;
+                    localStorage.setItem(cacheKey, String(Date.now()));
+                    refreshSelectors();
+
+                    if (loadedCount > 0 && window.UI) {
+                        UI.toast(`已从云端加载 ${loadedCount} 期历史考试，对比期数已更新`, 'success');
+                    }
+
+                    return { success: true, count: loadedCount };
                 } catch (e) {
                     console.error('[CloudExams] 拉取历史考试失败:', e);
                     return { success: false, message: e.message };
