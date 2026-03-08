@@ -436,7 +436,7 @@ const Auth = {
             }
             window.setLoginFeedback('');
 
-            if (window.UI) UI.toast('登录成功，欢迎 ' + matchedUser.name, 'success');
+            if (window.UI) UI.toast('\u767b\u5f55\u6210\u529f\uff0c\u6b22\u8fce ' + matchedUser.name, 'success');
 
             if (matchedUser.role === 'parent') {
                 this.renderParentView();
@@ -9256,6 +9256,10 @@ let CLOUD_STUDENT_COMPARE_CONTEXT = null;
 let CLOUD_COMPARE_TARGET = null;
 let CLOUD_COMPARE_PREV_DATA_BACKUP = null;
 const CLOUD_COMPARE_PAYLOAD_CACHE = new Map();
+let STUDENT_COMPARE_CLOUD_VIEW_RESTORE_ATTEMPTED = false;
+let STUDENT_COMPARE_CLOUD_VIEW_LOADING = false;
+let STUDENT_COMPARE_CLOUD_VIEW_RESTORING = false;
+const STUDENT_COMPARE_CLOUD_VIEW_STATE_PREFIX = 'STUDENT_COMPARE_CLOUD_VIEW_STATE_V1';
 
 function parseCloudComparePayloadCached(key, content) {
     const cacheKey = String(key || '').trim();
@@ -9278,6 +9282,165 @@ function parseCloudComparePayloadCached(key, content) {
         CLOUD_COMPARE_PAYLOAD_CACHE.set(cacheKey, payload);
     }
     return payload;
+}
+
+
+function normalizeStudentCompareViewUserId(user) {
+    const rawId = String(user?.username || user?.email || user?.id || user?.name || 'anonymous').trim();
+    return (rawId.replace(/[^\w@.\-\u4e00-\u9fa5]/g, '_').slice(0, 80) || 'anonymous');
+}
+
+function getStudentCompareCloudViewStateKey() {
+    const cohortId = normalizeCompareCohortId(CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID')) || 'global';
+    const userId = normalizeStudentCompareViewUserId(getCurrentUser());
+    return `${STUDENT_COMPARE_CLOUD_VIEW_STATE_PREFIX}_${cohortId}_${userId}`;
+}
+
+function readStudentCompareCloudViewState() {
+    try {
+        const key = getStudentCompareCloudViewStateKey();
+        const raw = localStorage.getItem(key);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return null;
+        const currentCohort = normalizeCompareCohortId(CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+        const savedCohort = normalizeCompareCohortId(parsed.cohortId || '');
+        if (currentCohort && savedCohort && currentCohort !== savedCohort) return null;
+        return parsed;
+    } catch (e) {
+        console.warn('[student-compare] read cloud view state failed:', e);
+        return null;
+    }
+}
+
+function persistStudentCompareCloudViewState(overrides = {}) {
+    if (STUDENT_COMPARE_CLOUD_VIEW_RESTORING) return;
+    if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
+
+    const cache = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
+    const nameInput = document.getElementById('studentCompareNameInput');
+    const sortEl = document.getElementById('studentCompareSortBy');
+    const groupEl = document.getElementById('studentCompareGroupBy');
+
+    const source = String(overrides.source || cache.viewSource || (cache.lastCloudKey ? 'cloud' : 'local')).trim() || 'local';
+    const rawCloudKey = overrides.cloudKey !== undefined ? overrides.cloudKey : cache.lastCloudKey;
+    const cloudKey = source === 'cloud' ? String(rawCloudKey || '').trim() : '';
+    const selfOnly = overrides.selfOnly !== undefined ? !!overrides.selfOnly : !!cache.lastCloudSelfOnly;
+    const page = Math.max(1, parseInt(overrides.page !== undefined ? overrides.page : (cache.currentPage || 1), 10) || 1);
+
+    const payload = {
+        version: 1,
+        cohortId: normalizeCompareCohortId(CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID')),
+        source,
+        cloudKey,
+        selfOnly,
+        page,
+        pageSize: Number(cache.pageSize) || 20,
+        nameFilter: String(nameInput?.value || '').trim(),
+        sortBy: String(sortEl?.value || 'class').trim(),
+        groupBy: String(groupEl?.value || 'none').trim(),
+        updatedAt: new Date().toISOString()
+    };
+
+    try {
+        const key = getStudentCompareCloudViewStateKey();
+        localStorage.setItem(key, JSON.stringify(payload));
+    } catch (e) {
+        console.warn('[student-compare] persist cloud view state failed:', e);
+    }
+}
+
+function applyStudentCompareCloudViewState(viewState) {
+    if (!viewState || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
+
+    const nameInput = document.getElementById('studentCompareNameInput');
+    const sortEl = document.getElementById('studentCompareSortBy');
+    const groupEl = document.getElementById('studentCompareGroupBy');
+
+    const savedNameFilter = String(viewState.nameFilter || '').trim();
+    const savedSortBy = String(viewState.sortBy || '').trim();
+    const savedGroupBy = String(viewState.groupBy || '').trim();
+    const savedPage = Math.max(1, parseInt(viewState.page || 1, 10) || 1);
+
+    if (nameInput) nameInput.value = savedNameFilter;
+    if (savedNameFilter && typeof filterStudentCompareByName === 'function') {
+        filterStudentCompareByName();
+    }
+
+    if (sortEl && savedSortBy) {
+        const hasSortOption = Array.from(sortEl.options || []).some(o => o.value === savedSortBy);
+        if (hasSortOption) sortEl.value = savedSortBy;
+    }
+    if (sortEl && typeof sortStudentCompare === 'function') {
+        sortStudentCompare();
+    }
+
+    if (groupEl && savedGroupBy) {
+        const hasGroupOption = Array.from(groupEl.options || []).some(o => o.value === savedGroupBy);
+        if (hasGroupOption) groupEl.value = savedGroupBy;
+    }
+    if (typeof toggleGroupDisplay === 'function') {
+        toggleGroupDisplay();
+    }
+
+    const groupValue = String(groupEl?.value || 'none');
+    if (!groupValue || groupValue === 'none') {
+        renderStudentComparePage(savedPage);
+    } else {
+        STUDENT_MULTI_PERIOD_COMPARE_CACHE.currentPage = savedPage;
+    }
+}
+
+async function restoreLastStudentCompareCloudView() {
+    if (STUDENT_COMPARE_CLOUD_VIEW_LOADING || STUDENT_COMPARE_CLOUD_VIEW_RESTORING) return false;
+
+    const saved = readStudentCompareCloudViewState();
+    if (!saved) return false;
+    if (String(saved.source || '') !== 'cloud') return false;
+    const cloudKey = String(saved.cloudKey || '').trim();
+    if (!cloudKey) return false;
+    if (!sbClient) return false;
+
+    let loaded = false;
+    STUDENT_COMPARE_CLOUD_VIEW_RESTORING = true;
+    try {
+        loaded = await loadCloudStudentCompare(cloudKey, !!saved.selfOnly, {
+            restoreViewState: saved,
+            silentSuccessToast: true,
+            fromAutoRestore: true
+        });
+    } catch (e) {
+        console.warn('[student-compare] auto restore failed:', e);
+    } finally {
+        STUDENT_COMPARE_CLOUD_VIEW_RESTORING = false;
+    }
+
+    if (loaded) {
+        persistStudentCompareCloudViewState({
+            source: 'cloud',
+            cloudKey,
+            selfOnly: !!saved.selfOnly
+        });
+        if (window.UI) UI.toast('Cloud compare view restored', 'success');
+    }
+    return loaded;
+}
+
+function scheduleRestoreLastStudentCompareCloudView() {
+    if (STUDENT_COMPARE_CLOUD_VIEW_RESTORE_ATTEMPTED) return;
+    if (STUDENT_COMPARE_CLOUD_VIEW_LOADING || STUDENT_COMPARE_CLOUD_VIEW_RESTORING) return;
+
+    if (STUDENT_MULTI_PERIOD_COMPARE_CACHE) {
+        STUDENT_COMPARE_CLOUD_VIEW_RESTORE_ATTEMPTED = true;
+        return;
+    }
+
+    STUDENT_COMPARE_CLOUD_VIEW_RESTORE_ATTEMPTED = true;
+    setTimeout(() => {
+        restoreLastStudentCompareCloudView().catch(e => {
+            console.warn('[student-compare] auto restore task failed:', e);
+        });
+    }, 80);
 }
 
 function normalizeCompareName(name) {
@@ -9605,6 +9768,7 @@ function updateStudentCompareExamSelects() {
     }
 
     onStudentComparePeriodCountChange();
+    scheduleRestoreLastStudentCompareCloudView();
 }
 
 function updateReportCompareExamSelects() {
@@ -9949,7 +10113,10 @@ function renderStudentMultiPeriodComparison() {
         STUDENT_MULTI_PERIOD_COMPARE_CACHE = {
             school, examIds, periodCount, studentsCompareData, subjects: allSubjects,
             currentPage: 1,
-            pageSize: 20
+            pageSize: 20,
+            viewSource: 'local',
+            lastCloudKey: '',
+            lastCloudSelfOnly: false
         };
 
         // 🟢 [新增]：更新班级下拉选项
@@ -10047,6 +10214,8 @@ function renderStudentComparePage(page) {
     }
 
     // 滚动到对比结果区域
+    persistStudentCompareCloudViewState();
+
     setTimeout(() => {
         const section = document.getElementById('student-multi-period-compare-section');
         if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -10246,6 +10415,8 @@ function filterStudentCompareByName() {
         hintEl.innerHTML = `✅ 找到 ${matchedStudents.length} 名学生匹配 "${nameList}"`;
         hintEl.style.color = '#16a34a';
     }
+
+    persistStudentCompareCloudViewState();
 }
 
 function clearStudentCompareFilter() {
@@ -10271,6 +10442,8 @@ function clearStudentCompareFilter() {
     const { school, periodCount, studentsCompareData } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
     hintEl.innerHTML = `✅ 已显示 ${school} 的全部 ${studentsCompareData.length} 名学生的 ${periodCount} 期对比`;
     hintEl.style.color = '#16a34a';
+
+    persistStudentCompareCloudViewState();
 }
 
 function toggleStudentDetail(btn) {
@@ -10318,6 +10491,8 @@ function filterByProgress(type) {
     const typeLabel = type === 'improve' ? '进步' : (type === 'decline' ? '退步' : '持平');
     hintEl.innerHTML = `✅ 筛选结果：${filteredStudents.length} 名${typeLabel}学生`;
     hintEl.style.color = '#16a34a';
+
+    persistStudentCompareCloudViewState();
 }
 
 function sortStudentCompare() {
@@ -10362,9 +10537,11 @@ function sortStudentCompare() {
 
     // 🟢 [改进]：根据当前显示模式重新渲染
     toggleGroupDisplay();
+
+    persistStudentCompareCloudViewState();
 }
 
-// 🟢 [新增]：填充班级下拉选项
+// Student compare: refresh class group options
 function updateClassGroupOptions() {
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
@@ -10540,6 +10717,8 @@ function toggleGroupDisplay() {
         // 列表模式：使用分页渲染
         renderStudentComparePage(STUDENT_MULTI_PERIOD_COMPARE_CACHE.currentPage || 1);
     }
+
+    persistStudentCompareCloudViewState();
 }
 
 function toggleClassGroup(headerEl) {
@@ -11201,18 +11380,21 @@ function rerenderStudentSideReportAfterCloudCompare(user, selfStudent) {
 }
 
 // 🆕 加载云端对比结果（重构：目标解析 / 权限过滤 / UI渲染分层）
-async function loadCloudStudentCompare(key, selfOnly = false) {
+async function loadCloudStudentCompare(key, selfOnly = false, options = {}) {
     window.loadCloudStudentCompare = loadCloudStudentCompare;
+    const opts = options || {};
     if (!sbClient) {
-        return alert('☁️ 云端服务未连接');
+        alert('Cloud service is not connected');
+        return false;
     }
 
+    STUDENT_COMPARE_CLOUD_VIEW_LOADING = true;
     try {
         sanitizeCloudCompareFocusAndModal();
         await new Promise(r => setTimeout(r, 80));
         sanitizeCloudCompareFocusAndModal();
 
-        if (window.UI) UI.loading(true, '☁️ 正在加载对比数据...');
+        if (window.UI) UI.loading(true, 'Loading cloud compare data...');
 
         const { data, error } = await sbClient
             .from('system_data')
@@ -11221,7 +11403,7 @@ async function loadCloudStudentCompare(key, selfOnly = false) {
             .maybeSingle();
 
         if (error) throw error;
-        if (!data) throw new Error('未找到对比数据');
+        if (!data) throw new Error('Cloud compare data not found');
 
         const payload = parseCloudComparePayloadCached(key, data.content);
         payload.key = key;
@@ -11260,10 +11442,9 @@ async function loadCloudStudentCompare(key, selfOnly = false) {
                 };
             }
 
-            // 增强匹配：如果还是找不到，尝试模糊匹配
             if (!picked.student && normalizedTarget.name) {
                 const nameLower = normalizedTarget.name.toLowerCase();
-                const fuzzyMatch = sourceRows.find(row => 
+                const fuzzyMatch = sourceRows.find(row =>
                     row.name && row.name.toLowerCase().includes(nameLower)
                 );
                 if (fuzzyMatch) {
@@ -11278,16 +11459,17 @@ async function loadCloudStudentCompare(key, selfOnly = false) {
             if (!picked.student) {
                 clearCloudStudentCompareContext();
                 if (window.UI) UI.loading(false);
-                const readableName = normalizedTarget.name || '未识别姓名';
-                const readableClass = normalizedTarget.class || '未识别班级';
-                return UI.toast(`⚠️ 云端记录未匹配到本人数据（${readableName} / ${readableClass}）`, 'warning');
+                const readableName = normalizedTarget.name || 'Unknown';
+                const readableClass = normalizedTarget.class || 'Unknown';
+                if (window.UI) UI.toast('No matching student in cloud record (' + readableName + ' / ' + readableClass + ')', 'warning');
+                return false;
             }
 
             pickedSelfStudent = picked.student;
             STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData = [picked.student];
             applyCloudStudentCompareContext(payload, picked.student, sourceRows);
             syncCloudContextToPrevData();
-            if (window.UI) UI.toast(`🔒 已定位本人数据（${picked.strategy}）`, 'info');
+            if (!opts.silentSuccessToast && window.UI) UI.toast('Self record matched (' + picked.strategy + ')', 'info');
         }
 
         if (!shouldSelfOnly && user && RoleManager.hasAnyRole(user, ['teacher', 'class_teacher']) &&
@@ -11308,13 +11490,13 @@ async function loadCloudStudentCompare(key, selfOnly = false) {
                 });
                 const filteredCount = STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData.length;
                 if (filteredCount === 0) {
-                    if (window.UI) UI.toast('⚠️ 未找到您有权限查看的班级数据', 'warning');
+                    if (window.UI) UI.toast('No class data in permission scope', 'warning');
                 } else if (filteredCount < originalCount && window.UI) {
-                    UI.toast(`🔒 已过滤为任教班级 (${filteredCount}/${originalCount}人)`, 'info');
+                    UI.toast('Teacher-scope filtered (' + filteredCount + '/' + originalCount + ' students)', 'info');
                 }
             } else {
                 STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData = [];
-                if (window.UI) UI.toast('\u6682\u672a\u914d\u7f6e\u4efb\u6559\u73ed\u7ea7\u6743\u9650\uff0c\u6682\u65e0\u53ef\u67e5\u770b\u6570\u636e', 'warning');
+                if (window.UI) UI.toast('No teaching class permissions configured', 'warning');
             }
         }
 
@@ -11333,25 +11515,41 @@ async function loadCloudStudentCompare(key, selfOnly = false) {
             renderCloudCompareResultHint(payload, STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData.length);
         }
 
+        STUDENT_MULTI_PERIOD_COMPARE_CACHE.viewSource = 'cloud';
+        STUDENT_MULTI_PERIOD_COMPARE_CACHE.lastCloudKey = key;
+        STUDENT_MULTI_PERIOD_COMPARE_CACHE.lastCloudSelfOnly = shouldSelfOnly;
+
         updateClassGroupOptions();
         renderStudentComparePage(1);
+        if (opts.restoreViewState) {
+            applyStudentCompareCloudViewState(opts.restoreViewState);
+        }
         updateStudentCompareSummary();
+        persistStudentCompareCloudViewState({
+            source: 'cloud',
+            cloudKey: key,
+            selfOnly: shouldSelfOnly
+        });
 
         if (shouldSelfOnly && pickedSelfStudent) {
             rerenderStudentSideReportAfterCloudCompare(user, pickedSelfStudent);
         }
 
         if (window.UI) UI.loading(false);
-        if (window.UI) UI.toast('✅ 已加载云端对比数据', 'success');
+        if (!opts.silentSuccessToast && window.UI) UI.toast('Cloud compare data loaded', 'success');
 
+        return true;
     } catch (e) {
         if (window.UI) UI.loading(false);
-        console.error('加载失败:', e);
-        alert('加载失败: ' + e.message);
+        console.error('Load failed:', e);
+        alert('Load failed: ' + e.message);
+        return false;
+    } finally {
+        STUDENT_COMPARE_CLOUD_VIEW_LOADING = false;
     }
 }
 
-// 🆕 更新统计面板
+// Student compare: refresh summary panel
 function updateStudentCompareSummary() {
     const summaryEl = document.getElementById('studentCompareSummary');
     if (!summaryEl || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
