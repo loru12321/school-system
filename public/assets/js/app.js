@@ -10155,266 +10155,36 @@ function toggleClassGroup(headerEl) {
 }
 
 function exportStudentMultiPeriodComparison() {
-    if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return alert('闂備浇宕垫慨鏉懨洪妶澶婂簥闁哄被鍎遍崒銊︾箾閹存瑥鐏柛瀣ㄥ姂閺岋綁寮崒銈囧姼闂佽绻愬ú顓㈠箖濡も偓閳藉宕樺顔藉枠闂備浇妗ㄩ悞锕傚箰鐠囧樊鍤楅柛鏇ㄥ亽濞尖晜銇勯幘璺烘瀻闁绘帗鎮傞弻锝嗘償濠靛牏銈峰銈庡亜椤︾敻骞嗘笟鈧、娆撳礈瑜忛敍婊堟⒑鐟欏嫬鍔ゆい鏇ㄥ幗缁?);
+    if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) {
+        return alert('请先生成学生多期对比结果。');
+    }
 
-    const { school, examIds, periodCount, studentsCompareData, subjects } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
-    const wb = XLSX.utils.book_new();
-
-    // 闂傚倷绀侀幉锛勬暜閸ヮ剙纾归柡宥庡幖閽冪喖鏌涢妷顔煎闁?-8濠德板€楁慨鐑藉磻濞戙埄鏁嬫い鎾跺櫏濞堜粙鏌涢妷锝呭濞存嚎鍊栨穱濠囶敍濠婂懎绗＄紒?濠德板€楁慨鐑藉磻濞戙埄鏁嬫い鎾跺櫏濞堜粙鏌涢妷顔句粶闁绘梻鍘ч悘宕団偓瑙勬礀濞层劑銆?
-    const is9thGrade = CONFIG.name === '9濠德板€楁慨鐑藉磻濞戙埄鏁嬫い鎾跺櫏濞?;
-    const totalLabel = is9thGrade ? '婵犵數鍋涢悺銊у垝瀹ュ拋娼栧┑鐘崇啲缂嶆牠鏌″搴″箹缂? : '闂傚倷鑳堕…鍫㈡崲閸儱绀夐幖鎼厜缂嶆牠鏌″搴″箹缂?;
-
-    // 濠电姷顣藉Σ鍛村磻閳ь剟鏌涚€ｎ偅宕岄柡宀嬬磿娴狅妇鎷犻幓鎺戭潛缂傚倸鍊哥粔鎾敄婢跺﹦鏆︽繝濠傚枤閸氬鏌涢埄鍐剧労闁挎洖鍊归悡鏇熸叏濮椻偓缁犳牕顬婇鐣岀瘈闁逞屽墯閹峰懐鎲撮崟顏呭攭闂備焦鎮堕崕顖炲礉瀹ュ棙鍙忛柕蹇嬪€栭悡銉︾箾閹寸儐鐒藉褎娲滈幉鎼佸箮婵犲倹鍣抽柛瀣崌閹粙妫冨☉妯圭帛闂備焦鎮堕崐銈夊矗閸愩劎鏆﹂柨婵嗩樈閺佸秵绻濋崹顐㈠缂傚秴瀚伴弻锝嗘償閵忕姴鏋欐繝纰樷偓铏枠鐎殿噮鍋婇獮妯肩磼濡粯鐝?
+    const controller = window.StudentCompareControllerService || {};
+    const analytics = window.CompareAnalyticsService || {};
     const resultEl = document.getElementById('studentCompareResult');
-    let visibleStudents = studentsCompareData;
-    if (resultEl) {
-        const visibleCards = resultEl.querySelectorAll('.student-compare-card');
-        const visibleNames = new Set();
-        visibleCards.forEach(card => {
-            if (card.style.display !== 'none') {
-                const studentName = card.getAttribute('data-student-name');
-                if (studentName) visibleNames.add(studentName);
-            }
-        });
-        if (visibleNames.size > 0 && visibleNames.size < studentsCompareData.length) {
-            visibleStudents = studentsCompareData.filter(s => visibleNames.has(s.cleanName));
-        }
+    const visibleStudents = typeof controller.resolveVisibleStudentCompareRows === 'function'
+        ? controller.resolveVisibleStudentCompareRows(STUDENT_MULTI_PERIOD_COMPARE_CACHE, resultEl)
+        : (Array.isArray(STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData) ? STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData : []);
+    const exportData = typeof analytics.buildStudentMultiPeriodExportData === 'function'
+        ? analytics.buildStudentMultiPeriodExportData({
+            cache: STUDENT_MULTI_PERIOD_COMPARE_CACHE,
+            visibleStudents: visibleStudents,
+            totalLabel: getStudentCompareTotalLabel()
+        })
+        : null;
+
+    if (!exportData || !Array.isArray(exportData.sheets) || !exportData.sheets.length) {
+        return alert('暂无可导出的学生对比数据。');
     }
 
-    // 闂佽姘﹂～澶愬箖閸洖纾块柟娈垮枤缁€濠囨煛閸愩劌鈧綊宕?: 闂傚倷娴囬鏍礈濠靛鏁嬬憸鏂跨暦鐟欏嫭鍎熼柍杈ㄥ纯閸パ呭€為梺闈涱焾閸ㄨ绂嶆ィ鍐╁仯闁搞儜鍕ㄦ灆闂佹悶鍊楁慨鐢稿箞?
-    const totalHeader = ['闂備浇顕х€涒晠宕樼紒妯圭箚闁搞儺鍓欓弸渚€鏌熼幆褏鎽犻柛娆忕箻閺岀喖骞戦幇顓犲涧闂?, '闂傚倷鑳剁划顖滄崲瀹ュ鍌ㄩ柣鎰靛墻濞?];
-    examIds.forEach(examId => {
-        totalHeader.push(`${examId}-${totalLabel}`, `${examId}-缂傚倸鍊烽懗鍓佲偓姘箻瀹曠喖顢曢妶鍥ㄥ櫚`, `${examId}-闂傚倸鍊搁崐鐢稿磻閹剧粯鐓曢柕澶涚到婵¤偐绱掑Δ浣搁檷);
+    const wb = XLSX.utils.book_new();
+    exportData.sheets.forEach(function(sheet) {
+        if (!sheet || !Array.isArray(sheet.data)) return;
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheet.data), sheet.name || 'Sheet');
     });
-    const totalData = [totalHeader];
-
-    visibleStudents.forEach(student => {
-        const row = [student.name, student.class];
-        student.periods.forEach(p => {
-            row.push(
-                p.total !== null ? p.total.toFixed(1) : '-',
-                p.rankSchool !== null ? p.rankSchool : '-',
-                p.rankTown !== null ? p.rankTown : '-'
-            );
-        });
-        totalData.push(row);
-    });
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(totalData), '闂傚倷娴囬鏍礈濠靛鏁嬬憸鏂跨暦鐟欏嫭鍎熼柍杈ㄥ纯閸パ呭€為梺闈涱焾閸ㄨ绂?);
-
-    // 闂佽姘﹂～澶愬箖閸洖纾块柟娈垮枤缁€濠囨煛閸愩劌鈧綊宕?-N: 濠电姵顔栭崳顖滃緤閻ｅ本宕查悗锝庡枟閻撳倹绻濇繝鍌涘櫧闁活厽鎹囬弻鐔衡偓鐢殿焾鏍＄紓浣瑰姈椤ㄥ懘鍩ユ径鎰妞ゆ牗鐭竟鏇炩攽閻愭潙鐏﹂柟灏栨櫆缁傚秴顭ㄩ崟顐殼闂佸綊鍋婇崢鑺ュ垔鐎涙绡€濠电姴鍊归ˉ鎾绘煃?
-    subjects.forEach(subject => {
-        const subHeader = ['闂備浇顕х€涒晠宕樼紒妯圭箚闁搞儺鍓欓弸渚€鏌熼幆褏鎽犻柛娆忕箻閺岀喖骞戦幇顓犲涧闂?, '闂傚倷鑳剁划顖滄崲瀹ュ鍌ㄩ柣鎰靛墻濞?];
-        examIds.forEach(examId => {
-            subHeader.push(`${examId}-闂傚倷鑳堕幊鎾绘偤閵娾晛绀夋俊銈呮噹娴肩姵鎱? `${examId}-缂傚倸鍊烽懗鍓佲偓姘箻瀹曠喖顢曢妶鍥ㄥ櫚`, `${examId}-闂傚倸鍊搁崐鐢稿磻閹剧粯鐓曢柕澶涚到婵¤偐绱掑Δ浣搁檷);
-        });
-        const subData = [subHeader];
-
-        visibleStudents.forEach(student => {
-            const row = [student.name, student.class];
-            student.periods.forEach(p => {
-                const subjectData = p.subjects[subject];
-                if (subjectData) {
-                    row.push(subjectData.score, subjectData.rankSchool, subjectData.rankTown);
-                } else {
-                    row.push('-', '-', '-');
-                }
-            });
-            subData.push(row);
-        });
-
-        // 闂佽姘﹂～澶愬箖閸洖纾块柟娈垮枤缁€濠囨煛閸愩劌鈧綊宕戝鈧弻鏇熺箾閸喖濮曢梺绋匡工绾绢厾妲愰幒鎾崇窞閻忕偟鐡旈弳顓炩攽閻愬瓨灏柣鏍帶椤?1婵犵數鍋為崹鍫曞箹閳哄倻顩叉繝濠傜墛閸嬨倗鎲歌箛鏇炲灊妞ゆ挶鍨洪弲婊堟煠濞村娅囨い锔诲櫍濮婅櫣鎲撮崟顒€鍓规繛瀛樼矋缁繘濡甸幇鏉跨倞闁冲搫鍟伴悡瀣⒑閻熼偊鍤熷┑顔炬暩缁絽螖閸涱喚鍘卞┑顔斤供閸撴稖鍊撮柣?
-        const sheetName = subject.length > 28 ? subject.substring(0, 28) + '...' : subject;
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(subData), sheetName);
-    });
-
-    // 闂佽姘﹂～澶愬箖閸洖纾块柟娈垮枤缁€濠囨煛閸愩劌鈧綊宕戝鈧弻?1: 闂備浇宕垫慨鏉懨归崟顑跨箚闁搞儮鏅涢崹婵嬬叓閸ャ劍纾甸柛瀣尰閹峰懘宕橀悙顒傜Х闂備椒绱€靛矂宕抽敐澶婃瀬鐎广儱顦柋鍥煟閺冨倸鍔嬬悮鐐测攽閻愭潙鐏﹂柟灏栨櫆缁傚秴顭ㄩ崼顐ｆ櫌闂佺粯鏌ㄩ崥瀣磻閵娾晜鐓熼柡鍐ㄥ€搁崝瀣煟閿濆鎲鹃柟顔筋殜閹兘鎮ч崼鐔稿闂備礁鎼Λ瀵哥礊娴ｅ壊鍤曟い鎰堕檮閸嬪鏌涢锝囩畼闁靛牞绠撳娲箰鎼达絺妲堥梺鍏兼た閸ㄦ娊鍩€椤掆偓閻忔岸鏁冮姀鐘垫殾闁靛鏅╅弫鍐煏韫囨洖啸缂佸鍣ｅ娲川婵犲嫬顫ч梺缁橆殘閸嬬喓鍒掗弮鈧缓鐣岀矙鐠侯煈妲烽梻浣告啞閻楊厾妲愰弴鐘电焼?
-    if (periodCount > 1) {
-        const detailHeader = ['闂備浇顕х€涒晠宕樼紒妯圭箚闁搞儺鍓欓弸渚€鏌熼幆褏鎽犻柛娆忕箻閺岀喖骞戦幇顓犲涧闂?, '闂傚倷鑳剁划顖滄崲瀹ュ鍌ㄩ柣鎰靛墻濞?, '闂傚倷娴囧銊╂嚄閼稿灚娅犳俊銈傚亾闁伙絽鐏氶幏鍛存惞閻熺増娈梺鑽ゅТ濞测晝浜稿▎鎾崇劦?];
-        examIds.forEach((examId, idx) => {
-            detailHeader.push(`${examId}`);
-            if (idx > 0) {
-                detailHeader.push('闂傚倷绀侀幉锟犳偡閿曞倹鏅梺?);
-            }
-        });
-        const detailData = [detailHeader];
-
-        visibleStudents.forEach(student => {
-            // 闂傚倷娴囬鏍礈濠靛鏁嬬憸鏂跨暦鐟欏嫭鍎熼柨婵嗘娴?
-            const totalRow = [student.name, student.class, `${totalLabel}`];
-            student.periods.forEach((p, idx) => {
-                totalRow.push(p.total !== null ? p.total.toFixed(1) : '-');
-                if (idx > 0) {
-                    const prevPeriod = student.periods[idx - 1];
-                    const diff = (p.total !== null && prevPeriod.total !== null) ? (p.total - prevPeriod.total) : null;
-                    totalRow.push(diff !== null ? (diff >= 0 ? '+' : '') + diff.toFixed(1) : '-');
-                }
-            });
-            detailData.push(totalRow);
-
-            // 缂傚倸鍊烽懗鍓佲偓姘箻瀹曟儼顦插┑顔哄€濆娲捶椤撶偛濡洪柣銏╁灡鐢繝鐛崘顔煎嵆闁绘ê鍟挎禒?
-            const schoolRankRow = [student.name, student.class, '缂傚倸鍊烽懗鍓佲偓姘箻瀹曟儼顦插┑顔哄€濆娲捶椤撶偛濡洪柣銏╁灡鐢繝鐛?];
-            student.periods.forEach((p, idx) => {
-                schoolRankRow.push(p.rankSchool !== null ? p.rankSchool : '-');
-                if (idx > 0) {
-                    const prevPeriod = student.periods[idx - 1];
-                    const diff = (p.rankSchool !== null && prevPeriod.rankSchool !== null) ? (prevPeriod.rankSchool - p.rankSchool) : null;
-                    schoolRankRow.push(diff !== null ? (diff >= 0 ? '+' : '') + diff : '-');
-                }
-            });
-            detailData.push(schoolRankRow);
-
-            // 闂傚倸鍊搁崐鐢稿磻閹剧粯鐓曢柕澶涚到婵¤偐绱掑Δ浣瑰磳闁哄本绋戦～婵嬵敆閸屽倶鍎查妵?
-            const townRankRow = [student.name, student.class, '闂傚倸鍊搁崐鐢稿磻閹剧粯鐓曢柕澶涚到婵¤偐绱掑Δ浣瑰磳闁?];
-            student.periods.forEach((p, idx) => {
-                townRankRow.push(p.rankTown !== null ? p.rankTown : '-');
-                if (idx > 0) {
-                    const prevPeriod = student.periods[idx - 1];
-                    const diff = (p.rankTown !== null && prevPeriod.rankTown !== null) ? (prevPeriod.rankTown - p.rankTown) : null;
-                    townRankRow.push(diff !== null ? (diff >= 0 ? '+' : '') + diff : '-');
-                }
-            });
-            detailData.push(townRankRow);
-
-            // 缂傚倸鍊风粈渚€鎯岄崒婊呯＝婵缈伴埀顑跨窔楠炲鏁冮埀顒傜矆閸℃稒鐓曢柍鈺佸暟閳洘銇?
-            detailData.push([]);
-        });
-
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(detailData), '闂備浇宕垫慨鏉懨归崟顑跨箚闁搞儮鏅涢崹婵嬬叓閸ャ劍纾甸柛瀣尰閹峰懘宕橀悙顒傜Х闂?);
-    }
-
-    // 闂佽姘﹂～澶愬箖閸洖纾块柟娈垮枤缁€濠囨煛閸愩劌鈧綊宕戝鈧弻?2: 闂備礁鎼ˇ顐﹀疾濠婂牊鍎庢い鏍仜閻掑灚銇勯幋锝嗩棄濞存粍鍎抽埞鎴︻敊閻ｅ瞼绱伴梺绋块叄娴滆泛鐣风憴鍕劅闁靛鍎遍崵鎴︽⒑鐟欏嫭绶插褍娴风划鍫ュ礋椤愨偓瑜版帗鍋愰柛娆忣槸濞咃絽顪冮妶蹇曠暠婵炲皷鈧剚鍤曢柣銏犳啞閸嬪棝鏌涚仦鍓х煂妞?
-    if (periodCount > 1) {
-        // 闂備礁鎼ˇ顐﹀疾濠婂懐鐭欓柟鐑橆殢閺佸棝鏌ｉ幇顒佲枙婵炲皷鍓濈换娑㈡晲閸ャ劌宀竝20
-        const improveList = [...visibleStudents]
-            .filter(s => s.scoreDiff > 0)
-            .sort((a, b) => b.scoreDiff - a.scoreDiff)
-            .slice(0, 20);
-
-        // 闂傚倸鍊风欢锟犲磻閳ь剟鏌涚€ｎ偅灏伴柟渚垮妼閳规垿宕熼銏狀潥婵＄偑鍊ゆ禍娆戠不閹插兎20
-        const declineList = [...visibleStudents]
-            .filter(s => s.scoreDiff < 0)
-            .sort((a, b) => a.scoreDiff - b.scoreDiff)
-            .slice(0, 20);
-
-        const progressAnalysisData = [];
-
-        // 闂備礁鎼ˇ顐﹀疾濠婂懐鐭欓柟鐑橆殢閺佸棝鏌ｉ幇顒佲枙婵?
-        progressAnalysisData.push(['濠碘槅鍋撶徊浠嬪疮椤栫偛绠?闂備礁鎼ˇ顐﹀疾濠婂懐鐭欓柟鐑橆殢閺佸棝鏌ｉ幇顒佲枙婵?Top20']);
-        progressAnalysisData.push(['闂傚倷绀佸﹢閬嶅磿閵堝洦鏆滈柟鐑橆殔缁?, '闂備浇顕х€涒晠宕樼紒妯圭箚闁搞儺鍓欓弸渚€鏌熼幆褏鎽犻柛娆忕箻閺岀喖骞戦幇顓犲涧闂?, '闂傚倷鑳剁划顖滄崲瀹ュ鍌ㄩ柣鎰靛墻濞?, '婵犵妲呴崑鎾跺緤妤ｅ啯鍋嬫俊銈傚亾闁挎洏鍨介弫鎾绘偐閼碱剦鍚呴梻浣哥秺閸嬪﹪宕伴弽顓炵?, '闂傚倷绀侀幖顐︽偋濠婂牆纾婚柛娑卞弿閼板潡鏌ㄩ悢鍝勑㈢紒鐙呯秮閺岀喖鏌囬敃鈧弸娑㈡煙?, '闂傚倷绀侀幉锛勬暜閹烘嚦娑樷枎閹捐櫕杈堥梺缁樻⒒閸樠呯不閻㈠憡鐓欓梺顓ㄧ畱婢ь喚鐥?, '缂傚倸鍊烽懗鍓佲偓姘箻瀹曠喖顢曢妶鍥ㄥ櫚闂傚倷绀佸﹢杈╁垝椤栫偛绀夐柡鍥╁仧閺?, '闂傚倸鍊搁崐鐢稿磻閹剧粯鐓曢柕澶涚到婵¤偐绱掑Δ浣瑰磳闁哄瞼鍠撶槐鎺懳熼崫鍕垫綋闁?]);
-        improveList.forEach((s, idx) => {
-            const firstPeriod = s.periods[0];
-            const lastPeriod = s.periods[s.periods.length - 1];
-            progressAnalysisData.push([
-                idx + 1,
-                s.name,
-                s.class,
-                firstPeriod.total !== null ? firstPeriod.total.toFixed(1) : '-',
-                lastPeriod.total !== null ? lastPeriod.total.toFixed(1) : '-',
-                s.scoreDiff.toFixed(1),
-                s.rankSchoolDiff,
-                s.rankTownDiff
-            ]);
-        });
-
-        progressAnalysisData.push([]); // 缂傚倸鍊风粈渚€鎯岄崒婊呯＝婵缈伴埀?
-
-        // 闂傚倸鍊风欢锟犲磻閳ь剟鏌涚€ｎ偅灏伴柟渚垮妼閳规垿宕熼銏狀潥婵?
-        progressAnalysisData.push(['濠碘槅鍋撶徊浠嬪疮椤栫偛绠?闂傚倸鍊风欢锟犲磻閳ь剟鏌涚€ｎ偅灏伴柟渚垮妼閳规垿宕熼銏狀潥婵?Top20']);
-        progressAnalysisData.push(['闂傚倷绀佸﹢閬嶅磿閵堝洦鏆滈柟鐑橆殔缁?, '闂備浇顕х€涒晠宕樼紒妯圭箚闁搞儺鍓欓弸渚€鏌熼幆褏鎽犻柛娆忕箻閺岀喖骞戦幇顓犲涧闂?, '闂傚倷鑳剁划顖滄崲瀹ュ鍌ㄩ柣鎰靛墻濞?, '婵犵妲呴崑鎾跺緤妤ｅ啯鍋嬫俊銈傚亾闁挎洏鍨介弫鎾绘偐閼碱剦鍚呴梻浣哥秺閸嬪﹪宕伴弽顓炵?, '闂傚倷绀侀幖顐︽偋濠婂牆纾婚柛娑卞弿閼板潡鏌ㄩ悢鍝勑㈢紒鐙呯秮閺岀喖鏌囬敃鈧弸娑㈡煙?, '闂傚倷绀侀幉锛勬暜閹烘嚦娑樷枎閹捐櫕杈堥梺缁樻煥閹芥粓鍩㈤弮鍫熷€甸柨婵嗛閺嬬喐銇?, '缂傚倸鍊烽懗鍓佲偓姘箻瀹曠喖顢曢妶鍥ㄥ櫚婵犵數鍋為崹鍫曞箰閹间緡鏁勫璺侯煬閻?, '闂傚倸鍊搁崐鐢稿磻閹剧粯鐓曢柕澶涚到婵¤偐绱掑Δ浣瑰碍闁宠棄顦甸獮姗€骞囨担绋垮婵?]);
-        declineList.forEach((s, idx) => {
-            const firstPeriod = s.periods[0];
-            const lastPeriod = s.periods[s.periods.length - 1];
-            progressAnalysisData.push([
-                idx + 1,
-                s.name,
-                s.class,
-                firstPeriod.total !== null ? firstPeriod.total.toFixed(1) : '-',
-                lastPeriod.total !== null ? lastPeriod.total.toFixed(1) : '-',
-                s.scoreDiff.toFixed(1),
-                s.rankSchoolDiff,
-                s.rankTownDiff
-            ]);
-        });
-
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(progressAnalysisData), '闂備礁鎼ˇ顐﹀疾濠婂牊鍎庢い鏍仜閻掑灚銇勯幋锝嗩棄濞存粍鍎抽埞鎴︻敊閻ｅ瞼绱伴梺绋块叄娴滆泛鐣风憴鍕劅闁靛鍎遍崵?);
-    }
-
-    // 闂佽姘﹂～澶愬箖閸洖纾块柟娈垮枤缁€濠囨煛閸愩劌鈧綊宕戝鈧弻?3: 闂傚倷鑳堕…鍫㈡崲閸儱绀夌€广儱顦伴崑瀣箹鏉堝墽鎮肩痪鎯с偢閺岋綁寮埀顒€顪冮崸妤€瑙﹂柍?
-    if (periodCount > 1) {
-        const statData = [];
-
-        // 闂傚倷娴囧銊╂嚄閸撲焦宕叉繝闈涚墢缁€濠囨倵閿濆骸澧扮痪鎯с偢閺岋綁寮埀顒€顪冮崸妤€瑙﹂柍?
-        statData.push(['濠碘槅鍋撶徊浠嬪疮椤栫偛绠?闂傚倷鑳堕…鍫㈡崲閸儱绀夌€广儱顦伴崑瀣箹鏉堝墽鎮肩痪鎯с偢閺岋綁寮埀顒€顪冮崸妤€瑙﹂柍褜鍓欓埞鎴︻敊閽樺鐟ㄩ梺绋匡梗缁瑩鏁?]);
-        statData.push([]);
-        statData.push(['缂傚倸鍊搁崐鐑芥嚄閸洖绐楅柡鍥ュ焺閺佸洭鏌涘☉姗嗙劸濞存粍绮撻弻娑㈡晜鐠囨彃绠虹紓?, '闂傚倷娴囧銊╂倿閿曗偓椤灝顫滈埀顒勫春閳?]);
-
-        const totalCount = visibleStudents.length;
-        const improveCount = visibleStudents.filter(s => s.progressType === 'improve').length;
-        const declineCount = visibleStudents.filter(s => s.progressType === 'decline').length;
-        const stableCount = visibleStudents.filter(s => s.progressType === 'stable').length;
-        const avgScoreDiff = visibleStudents.reduce((sum, s) => sum + s.scoreDiff, 0) / totalCount;
-        const maxImprove = Math.max(...visibleStudents.map(s => s.scoreDiff));
-        const maxDecline = Math.min(...visibleStudents.map(s => s.scoreDiff));
-
-        statData.push(['闂備浇顕х€涒晠宕樼紒妯圭箚闁搞儺鍓欓弸渚€鏌熼幑鎰靛殭缂佺姵鍨圭槐鎾存媴閼测剝鍨甸埢?, totalCount]);
-        statData.push(['闂備礁鎼ˇ顐﹀疾濠婂懐鐭欓柟鐑橆殢閺佸棝鏌ｉ幇顒夊殶妞も晜鐓￠弻锝夊箣閻愬棙鍨甸埢?, `${improveCount}婵?(${(improveCount / totalCount * 100).toFixed(1)}%)`]);
-        statData.push(['闂傚倸鍊风欢锟犲磻閳ь剟鏌涚€ｎ偅灏伴柟渚垮妼閳规垿宕熼銏狀潚婵犳鍠氶幊鎾凰囬棃娑卞殨?, `${declineCount}婵?(${(declineCount / totalCount * 100).toFixed(1)}%)`]);
-        statData.push(['闂傚倷绀佺紞濠囧疾閼碱剛鐭嗗〒姘ｅ亾闁哄矉绠撻崺锟犲磼濠婂孩閿ら梻浣虹帛閸ㄦ儼鎽┑?, `${stableCount}婵?(${(stableCount / totalCount * 100).toFixed(1)}%)`]);
-        statData.push(['濠德板€楁慨鐑藉磻濞戙垹鐤柛顭戝櫘閻掍粙骞栧ǎ顒€濡肩紒鈧崱娑欑厱闁斥晛鍠氬▓鏃傜磽瀹ュ嫮绐旈柡?, avgScoreDiff.toFixed(2)]);
-        statData.push(['闂傚倷绀侀幖顐︽偋閸愵喖纾婚柟鐐墯閻斿棝鏌涢銏☆棞婵☆偅绋撶划鑽ょ磼濡寮垮┑鐘绘涧鐎氼剟宕濆杈╃＜闁绘ê纾幊鍕煙?, maxImprove.toFixed(1)]);
-        statData.push(['闂傚倷绀侀幖顐︽偋閸愵喖纾婚柟鐐墯閻斿棝鏌涢銏☆棞婵炶尙濞€瀹曟垿骞樼拠鑼姦濡炪倖宸婚崑鎾淬亜椤愮姴鐏插┑锛勫厴婵＄柉顦撮柡鍡╁灦閺?, maxDecline.toFixed(1)]);
-
-        statData.push([]);
-        statData.push([]);
-
-        // 闂傚倷绀侀幉锟犳嚌閸撗€鍋撳鐓庢灕闁靛洦鍔欓、娆撳礈瑜忛敍婊堟⒑缂佹ɑ鈷愭俊鐐叉健瀹曘儵鍩€?
-        statData.push(['濠碘槅鍋撶徊浠嬪疮椤栫偛绠?闂傚倷绀侀幉锟犳嚌閸撗€鍋撳鐓庢灕闁靛洦鍔欓、娆撳礈瑜庨敍蹇涙偡濠婂啰绠抽柛鎺撳浮閹煎湱鎲撮崟顐偓?]);
-        statData.push([]);
-        statData.push(['闂傚倷鑳剁划顖滄崲瀹ュ鍌ㄩ柣鎰靛墻濞?, '婵犵數鍋涢悺銊у垝鎼淬劌纾块柕鍫濐槸濮?, '闂備礁鎼ˇ顐﹀疾濠婂懐鐭欓柟鐑橆殢閺佸棝鏌ｉ幇顒夊殶妞も晜鐓￠弻锝夊箣閻愬棙鍨甸埢?, '闂傚倸鍊风欢锟犲磻閳ь剟鏌涚€ｎ偅灏伴柟渚垮妼閳规垿宕熼銏狀潚婵犳鍠氶幊鎾凰囬棃娑卞殨?, '濠德板€楁慨鐑藉磻濞戙垹鐤柛顭戝櫘閻掍粙骞栧ǎ顒€濡奸柣顓燁殕娣囧﹪顢涘顓熷創濡?, '濠德板€楁慨鐑藉磻濞戙垹鐤柛顭戝櫘閻掍粙骞栨潏鍓ф偧婵☆偒鍨抽幉鍛婃償閿濆棙娈伴梺瑙勫礃椤曆囨儗濡や椒绻嗘い鏍ㄧ閹牊銇?]);
-
-        const classStat = {};
-        visibleStudents.forEach(s => {
-            const className = s.class || '闂傚倷绀侀幖顐︽偋濠婂嫮顩叉繝濠傜墕閸ㄥ倿骞栧ǎ顒€濡介柛?;
-            if (!classStat[className]) {
-                classStat[className] = {
-                    count: 0,
-                    improveCount: 0,
-                    declineCount: 0,
-                    totalScoreDiff: 0,
-                    totalRankDiff: 0
-                };
-            }
-            classStat[className].count++;
-            if (s.progressType === 'improve') classStat[className].improveCount++;
-            if (s.progressType === 'decline') classStat[className].declineCount++;
-            classStat[className].totalScoreDiff += s.scoreDiff;
-            classStat[className].totalRankDiff += s.rankSchoolDiff;
-        });
-
-        Object.keys(classStat).sort((a, b) => a.localeCompare(b, 'zh-CN')).forEach(className => {
-            const stat = classStat[className];
-            statData.push([
-                className,
-                stat.count,
-                stat.improveCount,
-                stat.declineCount,
-                (stat.totalScoreDiff / stat.count).toFixed(2),
-                (stat.totalRankDiff / stat.count).toFixed(2)
-            ]);
-        });
-
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(statData), '闂傚倷鑳堕…鍫㈡崲閸儱绀夌€广儱顦伴崑瀣箹鏉堝墽鎮肩痪鎯с偢閺岋綁寮埀顒€顪冮崸妤€瑙﹂柍?);
-    }
-
-    const fileName = visibleStudents.length === 1
-        ? `闂備浇顕х€涒晠宕樼紒妯圭箚闁搞儺鍓欓弸渚€鏌熼悙顒佺稇缂佸墎鍋為幈銊ヮ潨閸℃绠洪梺绯曟櫅閸婂潡骞冨Δ浣瑰闁告劗鍋撶紞鍫ユ⒑娴兼瑥顩柡?{visibleStudents[0].name}_${examIds.join('_')}.xlsx`
-        : `${school}_闂備浇顕х€涒晠宕樼紒妯圭箚闁搞儺鍓欓弸渚€鏌熼悙顒佺稇缂佸墎鍋為幈銊ヮ潨閸℃绠洪梺绯曟櫅閸婂潡骞冨Δ浣瑰闁告劗鍋撶紞鍫ユ⒑娴兼瑥顩柡?{visibleStudents.length}婵犵數鍋涢悺銊у垝鎼搭煈鏁?{examIds.join('_')}.xlsx`;
-
-    XLSX.writeFile(wb, fileName);
+    XLSX.writeFile(wb, exportData.fileName || 'student-compare.xlsx');
 }
 
-// 濠碘槅鍋撶徊浠嬪疮椤愶箑鐤?婵犵數鍋涢悺銊у垝瀹ュ鍨傜憸鐗堝俯閺佸倹銇勯幒宥堝厡闁崇懓绉电换婵嬫濞戞瑯妫ら梺鍦櫕婵炩偓闁诡喗顨呴埥澶愬礃瀹割喗鍠橀梻浣芥〃閻掞箓骞愮拠宸殫闁告洦鍋掑鈺傘亜閹捐泛鏋庨柣鎺撴倐閺岋絾鎯斿┑鍫偡濡炪値鍋勯ˇ鐢稿箚娓氣偓椤㈡瑩宕滆閿涙粓姊虹憴鍕姢妞ゆ洦鍘界粋?
 async function saveStudentCompareToCloud() {
     window.saveStudentCompareToCloud = saveStudentCompareToCloud;
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) {

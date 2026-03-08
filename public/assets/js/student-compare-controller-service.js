@@ -351,6 +351,28 @@
         return { mode: 'list' };
     }
 
+    function resolveVisibleStudentCompareRows(cache, resultEl) {
+        const dataCache = cache || {};
+        const students = Array.isArray(dataCache.studentsCompareData) ? dataCache.studentsCompareData : [];
+        const container = resultEl || document.getElementById('studentCompareResult');
+        if (!container) return students;
+        const cards = container.querySelectorAll('.student-compare-card');
+        if (!cards.length) return students;
+        const visibleNames = new Set();
+        cards.forEach(function(card) {
+            if (card && card.style.display !== 'none') {
+                const studentName = card.getAttribute('data-student-name');
+                if (studentName) visibleNames.add(studentName);
+            }
+        });
+        if (!visibleNames.size || visibleNames.size >= students.length) {
+            return students;
+        }
+        return students.filter(function(student) {
+            return visibleNames.has(student && student.cleanName);
+        });
+    }
+
     window.StudentCompareControllerService = {
         getStudentCompareElements: getStudentCompareElements,
         readStudentCompareState: readStudentCompareState,
@@ -370,7 +392,8 @@
         sortStudentCompareRows: sortStudentCompareRows,
         getStudentCompareGroupElements: getStudentCompareGroupElements,
         listStudentCompareVisibleClasses: listStudentCompareVisibleClasses,
-        resolveStudentCompareGroupView: resolveStudentCompareGroupView
+        resolveStudentCompareGroupView: resolveStudentCompareGroupView,
+        resolveVisibleStudentCompareRows: resolveVisibleStudentCompareRows
     };
 })();
 

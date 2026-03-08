@@ -1118,6 +1118,251 @@
     }
 
 
+    function sanitizeSheetName(name, fallback) {
+        const base = String(name || fallback || '\u5de5\u4f5c\u8868')
+            .replace(/[\\/:*?[]]/g, '_')
+            .trim();
+        return (base || fallback || '\u5de5\u4f5c\u8868').slice(0, 31);
+    }
+
+    function formatStudentCompareNumber(value, digits) {
+        if (typeof value !== 'number' || !Number.isFinite(value)) return '-';
+        if (typeof digits === 'number') return value.toFixed(digits);
+        return String(value);
+    }
+
+    function formatStudentCompareSigned(value, digits) {
+        if (typeof value !== 'number' || !Number.isFinite(value)) return '-';
+        const num = typeof digits === 'number' ? value.toFixed(digits) : String(value);
+        return (value >= 0 ? '+' : '') + num;
+    }
+
+    function buildStudentCompareTotalSheet(cache, visibleStudents, totalLabel) {
+        const examIds = Array.isArray(cache && cache.examIds) ? cache.examIds : [];
+        const header = ['\u5b66\u751f', '\u73ed\u7ea7'];
+        examIds.forEach(function(examId) {
+            header.push(examId + '-' + totalLabel, examId + '-\u6821\u6392\u540d', examId + '-\u9547\u6392\u540d');
+        });
+        const rows = [header];
+        (visibleStudents || []).forEach(function(student) {
+            const row = [student && student.name || '', student && student.class || ''];
+            (student && student.periods || []).forEach(function(period) {
+                row.push(
+                    period && typeof period.total === 'number' ? period.total.toFixed(1) : '-',
+                    period && period.rankSchool != null ? period.rankSchool : '-',
+                    period && period.rankTown != null ? period.rankTown : '-'
+                );
+            });
+            rows.push(row);
+        });
+        return {
+            name: sanitizeSheetName('\u603b\u5206\u5bf9\u6bd4', 'Sheet1'),
+            data: rows
+        };
+    }
+
+    function buildStudentCompareSubjectSheets(cache, visibleStudents) {
+        const examIds = Array.isArray(cache && cache.examIds) ? cache.examIds : [];
+        const subjects = Array.isArray(cache && cache.subjects) ? cache.subjects : [];
+        return subjects.map(function(subject) {
+            const header = ['\u5b66\u751f', '\u73ed\u7ea7'];
+            examIds.forEach(function(examId) {
+                header.push(examId + '-\u5206\u6570', examId + '-\u6821\u6392\u540d', examId + '-\u9547\u6392\u540d');
+            });
+            const rows = [header];
+            (visibleStudents || []).forEach(function(student) {
+                const row = [student && student.name || '', student && student.class || ''];
+                (student && student.periods || []).forEach(function(period) {
+                    const subjectData = period && period.subjects ? period.subjects[subject] : null;
+                    row.push(
+                        subjectData && subjectData.score != null ? subjectData.score : '-',
+                        subjectData && subjectData.rankSchool != null ? subjectData.rankSchool : '-',
+                        subjectData && subjectData.rankTown != null ? subjectData.rankTown : '-'
+                    );
+                });
+                rows.push(row);
+            });
+            return {
+                name: sanitizeSheetName(subject, '\u5b66\u79d1'),
+                data: rows
+            };
+        });
+    }
+
+    function buildStudentCompareDetailSheet(cache, visibleStudents, totalLabel) {
+        const periodCount = Number(cache && cache.periodCount) === 3 ? 3 : 2;
+        if (periodCount <= 1) return null;
+        const examIds = Array.isArray(cache && cache.examIds) ? cache.examIds : [];
+        const header = ['\u5b66\u751f', '\u73ed\u7ea7', '\u6307\u6807'];
+        examIds.forEach(function(examId, idx) {
+            header.push(examId);
+            if (idx > 0) header.push('\u53d8\u5316');
+        });
+        const rows = [header];
+        (visibleStudents || []).forEach(function(student) {
+            const periods = Array.isArray(student && student.periods) ? student.periods : [];
+            const totalRow = [student && student.name || '', student && student.class || '', totalLabel];
+            const schoolRankRow = [student && student.name || '', student && student.class || '', '\u6821\u6392\u540d'];
+            const townRankRow = [student && student.name || '', student && student.class || '', '\u9547\u6392\u540d'];
+            periods.forEach(function(period, idx) {
+                totalRow.push(period && typeof period.total === 'number' ? period.total.toFixed(1) : '-');
+                schoolRankRow.push(period && period.rankSchool != null ? period.rankSchool : '-');
+                townRankRow.push(period && period.rankTown != null ? period.rankTown : '-');
+                if (idx > 0) {
+                    const prev = periods[idx - 1] || {};
+                    const totalDiff = typeof period.total === 'number' && typeof prev.total === 'number' ? period.total - prev.total : null;
+                    const schoolDiff = period.rankSchool != null && prev.rankSchool != null ? prev.rankSchool - period.rankSchool : null;
+                    const townDiff = period.rankTown != null && prev.rankTown != null ? prev.rankTown - period.rankTown : null;
+                    totalRow.push(formatStudentCompareSigned(totalDiff, 1));
+                    schoolRankRow.push(formatStudentCompareSigned(schoolDiff));
+                    townRankRow.push(formatStudentCompareSigned(townDiff));
+                }
+            });
+            rows.push(totalRow, schoolRankRow, townRankRow, []);
+        });
+        return {
+            name: sanitizeSheetName('\u8be6\u7ec6\u53d8\u5316', '\u8be6\u7ec6'),
+            data: rows
+        };
+    }
+
+    function buildStudentCompareProgressSheet(visibleStudents) {
+        const list = Array.isArray(visibleStudents) ? visibleStudents : [];
+        if (!list.length) {
+            return {
+                name: sanitizeSheetName('\u8fdb\u9000\6b65\u5206\u6790', '\u8fdb\u9000\6b65'),
+                data: [['\u6682\u65e0\u53ef\u5bfc\u51fa\u7684\u5b66\u751f\u6570\u636e']]
+            };
+        }
+        const improveList = list.filter(function(item) { return Number(item && item.scoreDiff || 0) > 0; }).sort(function(a, b) { return Number(b.scoreDiff || 0) - Number(a.scoreDiff || 0); }).slice(0, 20);
+        const declineList = list.filter(function(item) { return Number(item && item.scoreDiff || 0) < 0; }).sort(function(a, b) { return Number(a.scoreDiff || 0) - Number(b.scoreDiff || 0); }).slice(0, 20);
+        const header = ['\u6392\u540d', '\u5b66\u751f', '\u73ed\u7ea7', '\u9996\u671f\u603b\u5206', '\u672b\u671f\u603b\u5206', '\u603b\u5206\u53d8\u5316', '\u6821\u6392\u53d8\u5316', '\u9547\u6392\u53d8\u5316'];
+        const rows = [['Top20 \u8fdb\u6b65\u5b66\u751f'], header];
+        improveList.forEach(function(student, index) {
+            const periods = Array.isArray(student && student.periods) ? student.periods : [];
+            const first = periods[0] || {};
+            const last = periods[periods.length - 1] || {};
+            rows.push([
+                index + 1,
+                student && student.name || '',
+                student && student.class || '',
+                typeof first.total === 'number' ? first.total.toFixed(1) : '-',
+                typeof last.total === 'number' ? last.total.toFixed(1) : '-',
+                formatStudentCompareNumber(Number(student && student.scoreDiff || 0), 1),
+                student && student.rankSchoolDiff != null ? student.rankSchoolDiff : '-',
+                student && student.rankTownDiff != null ? student.rankTownDiff : '-'
+            ]);
+        });
+        rows.push([], ['Top20 \u9000\u6b65\u5b66\u751f'], header);
+        declineList.forEach(function(student, index) {
+            const periods = Array.isArray(student && student.periods) ? student.periods : [];
+            const first = periods[0] || {};
+            const last = periods[periods.length - 1] || {};
+            rows.push([
+                index + 1,
+                student && student.name || '',
+                student && student.class || '',
+                typeof first.total === 'number' ? first.total.toFixed(1) : '-',
+                typeof last.total === 'number' ? last.total.toFixed(1) : '-',
+                formatStudentCompareNumber(Number(student && student.scoreDiff || 0), 1),
+                student && student.rankSchoolDiff != null ? student.rankSchoolDiff : '-',
+                student && student.rankTownDiff != null ? student.rankTownDiff : '-'
+            ]);
+        });
+        return {
+            name: sanitizeSheetName('\u8fdb\u9000\u6b65\u5206\u6790', '\u8fdb\u9000\u6b65'),
+            data: rows
+        };
+    }
+
+    function buildStudentCompareStatSheet(visibleStudents) {
+        const list = Array.isArray(visibleStudents) ? visibleStudents : [];
+        const rows = [['\u5b66\u751f\u591a\u671f\u5bf9\u6bd4\u7edf\u8ba1'], [], ['\u6307\u6807', '\u6570\u503c']];
+        const totalCount = list.length;
+        if (!totalCount) {
+            rows.push(['\u53ef\u5bfc\u51fa\u5b66\u751f\u6570', 0]);
+            return {
+                name: sanitizeSheetName('\u5bf9\u6bd4\u7edf\u8ba1', '\u7edf\u8ba1'),
+                data: rows
+            };
+        }
+        const improveCount = list.filter(function(item) { return item && item.progressType === 'improve'; }).length;
+        const declineCount = list.filter(function(item) { return item && item.progressType === 'decline'; }).length;
+        const stableCount = list.filter(function(item) { return item && item.progressType === 'stable'; }).length;
+        const avgScoreDiff = list.reduce(function(sum, item) { return sum + Number(item && item.scoreDiff || 0); }, 0) / totalCount;
+        const scoreDiffs = list.map(function(item) { return Number(item && item.scoreDiff || 0); });
+        rows.push(['\u53ef\u5bfc\u51fa\u5b66\u751f\u6570', totalCount]);
+        rows.push(['\u8fdb\u6b65\u5b66\u751f', improveCount + ' (' + (improveCount / totalCount * 100).toFixed(1) + '%)']);
+        rows.push(['\u9000\u6b65\u5b66\u751f', declineCount + ' (' + (declineCount / totalCount * 100).toFixed(1) + '%)']);
+        rows.push(['\u7a33\u5b9a\u5b66\u751f', stableCount + ' (' + (stableCount / totalCount * 100).toFixed(1) + '%)']);
+        rows.push(['\u5e73\u5747\u603b\u5206\u53d8\u5316', avgScoreDiff.toFixed(2)]);
+        rows.push(['\u6700\u5927\u8fdb\u6b65\u5206\u6570', Math.max.apply(null, scoreDiffs).toFixed(1)]);
+        rows.push(['\u6700\u5927\u9000\u6b65\u5206\u6570', Math.min.apply(null, scoreDiffs).toFixed(1)]);
+        rows.push([], [], ['\u73ed\u7ea7', '\u5b66\u751f\u6570', '\u8fdb\u6b65\u4eba\u6570', '\u9000\u6b65\u4eba\u6570', '\u5e73\u5747\u603b\u5206\u53d8\u5316', '\u5e73\u5747\u6821\u6392\u53d8\u5316']);
+        const classStats = {};
+        list.forEach(function(student) {
+            const className = String(student && student.class || '').trim() || '\u672a\u5206\u73ed';
+            if (!classStats[className]) {
+                classStats[className] = { count: 0, improveCount: 0, declineCount: 0, totalScoreDiff: 0, totalRankDiff: 0 };
+            }
+            classStats[className].count += 1;
+            if (student && student.progressType === 'improve') classStats[className].improveCount += 1;
+            if (student && student.progressType === 'decline') classStats[className].declineCount += 1;
+            classStats[className].totalScoreDiff += Number(student && student.scoreDiff || 0);
+            classStats[className].totalRankDiff += Number(student && student.rankSchoolDiff || 0);
+        });
+        Object.keys(classStats).sort(function(a, b) { return a.localeCompare(b, 'zh-CN'); }).forEach(function(className) {
+            const stat = classStats[className];
+            rows.push([
+                className,
+                stat.count,
+                stat.improveCount,
+                stat.declineCount,
+                (stat.totalScoreDiff / stat.count).toFixed(2),
+                (stat.totalRankDiff / stat.count).toFixed(2)
+            ]);
+        });
+        return {
+            name: sanitizeSheetName('\u5bf9\u6bd4\u7edf\u8ba1', '\u7edf\u8ba1'),
+            data: rows
+        };
+    }
+
+    function buildStudentCompareExportFileName(options) {
+        const opts = options || {};
+        const school = String(opts.school || '').trim() || '\u5b66\u751f\u5bf9\u6bd4';
+        const examIds = Array.isArray(opts.examIds) ? opts.examIds : [];
+        const visibleStudents = Array.isArray(opts.visibleStudents) ? opts.visibleStudents : [];
+        if (visibleStudents.length === 1) {
+            return visibleStudents[0].name + '_' + examIds.join('_') + '.xlsx';
+        }
+        return school + '_\u5b66\u751f\u591a\u671f\u5bf9\u6bd4_' + visibleStudents.length + '\u4eba_' + examIds.join('_') + '.xlsx';
+    }
+
+    function buildStudentMultiPeriodExportData(options) {
+        const opts = options || {};
+        const cache = opts.cache || {};
+        const visibleStudents = Array.isArray(opts.visibleStudents) ? opts.visibleStudents : [];
+        const totalLabel = String(opts.totalLabel || '\u603b\u5206');
+        const sheets = [];
+        sheets.push(buildStudentCompareTotalSheet(cache, visibleStudents, totalLabel));
+        buildStudentCompareSubjectSheets(cache, visibleStudents).forEach(function(sheet) { sheets.push(sheet); });
+        const detailSheet = buildStudentCompareDetailSheet(cache, visibleStudents, totalLabel);
+        if (detailSheet) sheets.push(detailSheet);
+        if (Number(cache && cache.periodCount) > 1) {
+            sheets.push(buildStudentCompareProgressSheet(visibleStudents));
+            sheets.push(buildStudentCompareStatSheet(visibleStudents));
+        }
+        return {
+            sheets: sheets,
+            fileName: buildStudentCompareExportFileName({
+                school: cache.school,
+                examIds: cache.examIds,
+                visibleStudents: visibleStudents
+            })
+        };
+    }
+
     function buildStudentCompareCloudPayload(options) {
         const opts = options || {};
         const cache = opts.cache || {};
