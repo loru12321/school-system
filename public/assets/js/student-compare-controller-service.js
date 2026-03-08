@@ -145,6 +145,73 @@
         });
     }
 
+    function restoreStudentCompareSelectionState(options) {
+        const opts = options || {};
+        const payload = opts.payload || {};
+        const elements = opts.elements || getStudentCompareElements();
+        const examIds = Array.isArray(payload.examIds) ? payload.examIds : [];
+        const periodCount = Number(payload.periodCount) === 3 ? 3 : 2;
+
+        if (elements.schoolEl) {
+            elements.schoolEl.value = String(payload.school || '').trim();
+        }
+        if (elements.countEl) {
+            elements.countEl.value = String(periodCount);
+        }
+
+        syncStudentComparePeriodWrap({ elements: elements });
+
+        if (typeof opts.refreshExamOptions === 'function') {
+            opts.refreshExamOptions();
+        }
+
+        if (elements.exam1El) elements.exam1El.value = examIds[0] || '';
+        if (elements.exam2El) elements.exam2El.value = examIds[1] || '';
+        if (elements.exam3El) elements.exam3El.value = examIds[2] || '';
+
+        syncStudentComparePeriodWrap({ elements: elements });
+    }
+
+    function restoreStudentCompareCloudState(options) {
+        const opts = options || {};
+        const payload = opts.payload || {};
+        const elements = opts.elements || getStudentCompareElements();
+        const cache = hydrateStudentCompareCache(payload, {
+            studentsCompareData: opts.studentsCompareData,
+            pageSize: opts.pageSize
+        });
+
+        restoreStudentCompareSelectionState({
+            payload: payload,
+            elements: elements,
+            refreshExamOptions: opts.refreshExamOptions
+        });
+
+        const analyticsService = window.CompareAnalyticsService;
+        const detailView = analyticsService && typeof analyticsService.buildStudentCompareDetailView === 'function'
+            ? analyticsService.buildStudentCompareDetailView({
+                payload: payload,
+                studentsCompareData: cache.studentsCompareData,
+                pageSize: cache.pageSize,
+                displayCount: cache.studentsCompareData.length
+            })
+            : {
+                restoredStudentCompareCache: cache,
+                hintHtml: '????????????',
+                hintColor: '#16a34a'
+            };
+
+        applyStudentCloudDetail({
+            elements: elements,
+            detailView: detailView
+        });
+
+        return {
+            cache: detailView.restoredStudentCompareCache || cache,
+            detailView: detailView
+        };
+    }
+
     function applyStudentCloudDetail(options) {
         const opts = options || {};
         const elements = opts.elements || getStudentCompareElements();
@@ -382,6 +449,8 @@
         buildStudentCompareCache: buildStudentCompareCache,
         applyStudentCompareResult: applyStudentCompareResult,
         hydrateStudentCompareCache: hydrateStudentCompareCache,
+        restoreStudentCompareSelectionState: restoreStudentCompareSelectionState,
+        restoreStudentCompareCloudState: restoreStudentCompareCloudState,
         applyStudentCloudDetail: applyStudentCloudDetail,
         getStudentCompareFilterElements: getStudentCompareFilterElements,
         ensureStudentCompareOriginalData: ensureStudentCompareOriginalData,

@@ -11175,15 +11175,18 @@ async function loadCloudStudentCompare(key, selfOnly = false) {
         const payload = typeof raw === 'string' ? JSON.parse(raw) : raw;
         payload.key = key;
 
-        STUDENT_MULTI_PERIOD_COMPARE_CACHE = {
-            school: payload.school,
-            examIds: payload.examIds,
-            periodCount: payload.periodCount,
-            subjects: payload.subjects,
-            studentsCompareData: Array.isArray(payload.studentsCompareData) ? payload.studentsCompareData : [],
-            currentPage: 1,
-            pageSize: 20
-        };
+        const studentCompareController = window.StudentCompareControllerService;
+        STUDENT_MULTI_PERIOD_COMPARE_CACHE = studentCompareController && typeof studentCompareController.hydrateStudentCompareCache === 'function'
+            ? studentCompareController.hydrateStudentCompareCache(payload, { pageSize: 20 })
+            : {
+                school: payload.school,
+                examIds: payload.examIds,
+                periodCount: payload.periodCount,
+                subjects: payload.subjects,
+                studentsCompareData: Array.isArray(payload.studentsCompareData) ? payload.studentsCompareData : [],
+                currentPage: 1,
+                pageSize: 20
+            };
 
         const user = getCurrentUser();
         const isParentOrStudent = user && RoleManager.hasAnyRole(user, ['parent', 'student']) &&
@@ -11260,11 +11263,25 @@ async function loadCloudStudentCompare(key, selfOnly = false) {
                 }
             } else {
                 STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData = [];
-                if (window.UI) UI.toast('⚠️ 未配置任教班级，无法展示云端对比', 'warning');
+                if (window.UI) UI.toast('?? ????????????????', 'warning');
             }
         }
 
-        renderCloudCompareResultHint(payload, STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData.length);
+        const restoreResult = studentCompareController && typeof studentCompareController.restoreStudentCompareCloudState === 'function'
+            ? studentCompareController.restoreStudentCompareCloudState({
+                payload: payload,
+                studentsCompareData: STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData,
+                pageSize: STUDENT_MULTI_PERIOD_COMPARE_CACHE.pageSize || 20,
+                refreshExamOptions: typeof updateStudentCompareExamSelects === 'function' ? updateStudentCompareExamSelects : null
+            })
+            : null;
+
+        if (restoreResult && restoreResult.cache) {
+            STUDENT_MULTI_PERIOD_COMPARE_CACHE = restoreResult.cache;
+        } else {
+            renderCloudCompareResultHint(payload, STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData.length);
+        }
+
         updateClassGroupOptions();
         renderStudentComparePage(1);
         updateStudentCompareSummary();
