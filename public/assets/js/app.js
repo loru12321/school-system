@@ -8498,66 +8498,29 @@ function updateProgressMultiExamSelects() {
 }
 
 function getExamRowsForCompare(examId) {
-    if (!examId) return [];
-    if (!isExamSelectableForCompare(examId)) return [];
-    let rawRows = [];
-
-    if (examId === CURRENT_EXAM_ID) {
-        rawRows = (RAW_DATA || []).map(s => ({
-            name: s.name,
-            school: s.school,
-            class: normalizeClass(s.class),
-            total: Number.isFinite(Number(s.total)) ? Number(s.total) : NaN,
-            scores: s.scores || {}
-        }));
-    } else {
-        const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
-        const exam = db?.exams?.[examId];
-        const list = exam?.data || [];
-        const examSubjects = Array.isArray(exam?.subjects) && exam.subjects.length
-            ? exam.subjects
-            : (Array.isArray(SUBJECTS) ? SUBJECTS : []);
-        rawRows = list.map(s => {
-            const scores = s.scores || {};
-            let total = s.total;
-            if (!Number.isFinite(Number(total))) {
-                const baseSubs = examSubjects.length ? examSubjects : Object.keys(scores || {});
-                const vals = baseSubs.map(sub => parseFloat(scores[sub])).filter(v => !isNaN(v));
-                total = vals.length ? vals.reduce((a, b) => a + b, 0) : NaN;
-            } else {
-                total = Number(total);
-            }
-            return {
-                name: s.name,
-                school: s.school,
-                class: normalizeClass(s.class),
-                total,
-                scores
-            };
+    if (window.CompareDataService && typeof window.CompareDataService.getExamRowsForCompare === 'function') {
+        return window.CompareDataService.getExamRowsForCompare(examId, {
+            db: (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null,
+            cohortId: CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'),
+            currentExamId: CURRENT_EXAM_ID,
+            rawData: RAW_DATA || [],
+            subjects: SUBJECTS || []
         });
     }
-
-    const rows = rawRows.filter(r => r.name && r.school && typeof r.total === 'number' && !isNaN(r.total));
-    const bySchool = {};
-    rows.forEach(r => {
-        if (!bySchool[r.school]) bySchool[r.school] = [];
-        bySchool[r.school].push(r);
-    });
-    Object.values(bySchool).forEach(arr => {
-        arr.sort((a, b) => b.total - a.total);
-        arr.forEach((r, i) => {
-            if (i > 0 && Math.abs(r.total - arr[i - 1].total) < 0.001) r.rankSchool = arr[i - 1].rankSchool;
-            else r.rankSchool = i + 1;
-        });
-    });
-    return rows;
+    return [];
 }
 
 function normalizeSchoolName(name) {
-    return String(name || '').replace(/\s+/g, '').replace(/[()（）\-—_·•]/g, '').trim();
+    if (window.CompareDataService && typeof window.CompareDataService.normalizeSchoolName === 'function') {
+        return window.CompareDataService.normalizeSchoolName(name);
+    }
+    return String(name || '').replace(/\s+/g, '').replace(/[()（）\-—·]/g, '').trim();
 }
 
 function filterRowsBySchool(rows, school) {
+    if (window.CompareDataService && typeof window.CompareDataService.filterRowsBySchool === 'function') {
+        return window.CompareDataService.filterRowsBySchool(rows, school);
+    }
     const key = normalizeSchoolName(school);
     return (rows || []).filter(r => normalizeSchoolName(r.school) === key);
 }
@@ -11368,87 +11331,40 @@ function renderSharedCompareExamTriplet(exam1Sel, exam2Sel, exam3Sel) {
 }
 
 function listAvailableSchoolsForCompare() {
-    const names = new Set();
-    Object.keys(SCHOOLS || {}).forEach(s => {
-        const name = String(s || '').trim();
-        if (name) names.add(name);
-    });
-
-    (RAW_DATA || []).forEach(row => {
-        const school = String(row?.school || '').trim();
-        if (school) names.add(school);
-    });
-
-    Object.values(window.TEACHER_SCHOOL_MAP || {}).forEach(s => {
-        const school = String(s || '').trim();
-        if (school) names.add(school);
-    });
-
-    const persistedSchool = String(localStorage.getItem('MY_SCHOOL') || '').trim();
-    const runtimeSchool = String(MY_SCHOOL || '').trim();
-    if (persistedSchool) names.add(persistedSchool);
-    if (runtimeSchool) names.add(runtimeSchool);
-
-    const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
-    if (db?.exams) {
-        Object.values(db.exams).forEach(ex => {
-            (ex?.data || []).forEach(row => {
-                const school = String(row?.school || '').trim();
-                if (school) names.add(school);
-            });
+    if (window.CompareDataService && typeof window.CompareDataService.listAvailableSchools === 'function') {
+        return window.CompareDataService.listAvailableSchools({
+            db: (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null,
+            schools: SCHOOLS || {},
+            rawData: RAW_DATA || [],
+            teacherSchoolMap: window.TEACHER_SCHOOL_MAP || {},
+            runtimeSchool: MY_SCHOOL || ''
         });
     }
-
-    // 🟢 [修复]：增加黑名单，过滤掉教育局、管理员等非教学单位，防止污染下拉框
-    const blockList = ['教育局', '教体局', '市局', '区局', '市直属', '区直属', 'admin', '测试', '默认'];
-    const filteredNames = [...names].filter(name => {
-        if (/^Sheet\d+$/i.test(name)) return false; // 过滤残留的旧假表名
-        for (let blocked of blockList) {
-            if (name.includes(blocked) || name.toLowerCase() === blocked) return false;
-        }
-        return true;
-    });
-
-    return filteredNames.sort((a, b) => a.localeCompare(b, 'zh-CN'));
+    return Object.keys(SCHOOLS || {}).sort((a, b) => a.localeCompare(b, 'zh-CN'));
 }
 
 function getClassSchoolMapForAllData() {
-    const map = {};
-
-    Object.entries(window.TEACHER_SCHOOL_MAP || {}).forEach(([key, school]) => {
-        const cls = normalizeClass(String(key || '').split('_')[0]);
-        const sch = String(school || '').trim();
-        if (cls && sch) map[cls] = sch;
-    });
-
-    Object.entries(SCHOOLS || {}).forEach(([school, payload]) => {
-        (payload?.students || []).forEach(stu => {
-            const cls = normalizeClass(stu?.class);
-            if (cls && school && !map[cls]) map[cls] = school;
-        });
-    });
-
-    (RAW_DATA || []).forEach(row => {
-        const school = String(row?.school || '').trim();
-        const cls = normalizeClass(row?.class);
-        if (cls && school && !map[cls]) map[cls] = school;
-    });
-
-    const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
-    if (db?.exams) {
-        Object.values(db.exams).forEach(ex => {
-            (ex?.data || []).forEach(row => {
-                const school = String(row?.school || '').trim();
-                const cls = normalizeClass(row?.class);
-                if (cls && school && !map[cls]) map[cls] = school;
-            });
+    if (window.CompareDataService && typeof window.CompareDataService.getClassSchoolMap === 'function') {
+        return window.CompareDataService.getClassSchoolMap({
+            db: (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null,
+            schools: SCHOOLS || {},
+            rawData: RAW_DATA || [],
+            teacherSchoolMap: window.TEACHER_SCHOOL_MAP || {}
         });
     }
-
-    return map;
+    return {};
 }
 
 function inferDefaultSchoolFromContext() {
+    if (window.CompareDataService && typeof window.CompareDataService.inferDefaultSchool === 'function') {
+        return window.CompareDataService.inferDefaultSchool({
+            db: (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null,
+            schools: SCHOOLS || {},
+            rawData: RAW_DATA || [],
+            teacherSchoolMap: window.TEACHER_SCHOOL_MAP || {},
+            runtimeSchool: MY_SCHOOL || ''
+        });
+    }
     const saved = String(MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '').trim();
     if (saved) return saved;
     const list = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : [];
