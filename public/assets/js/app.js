@@ -266,6 +266,27 @@ window.setLoginFeedback = function (message, type = 'warning') {
     box.style.color = palette.color;
     box.textContent = message;
 };
+
+window.restoreMainWorkspaceView = function () {
+    const app = document.getElementById('app');
+    const header = document.querySelector('header');
+    const nav = document.querySelector('.nav-wrapper');
+    const subNav = document.getElementById('sub-nav-container');
+    const modeMask = document.getElementById('mode-mask');
+    const mobApp = document.getElementById('mobile-manager-app');
+    const parentContainer = document.getElementById('parent-view-container');
+
+    if (modeMask) modeMask.style.display = 'none';
+    if (app) {
+        app.classList.remove('hidden');
+        app.style.display = '';
+    }
+    if (header) header.style.display = '';
+    if (nav) nav.style.display = '';
+    if (subNav) subNav.style.display = '';
+    if (mobApp) mobApp.style.display = 'none';
+    if (parentContainer) parentContainer.style.display = 'none';
+};
 // 🔐 权限与账号管理系统核心
 const Auth = {
     currentUser: null,
@@ -305,7 +326,7 @@ const Auth = {
             }
             // 🟢 补充：如果是其他角色，恢复主视图 (防止刷新后空白)
             else if (this.currentUser.role !== 'parent') {
-                document.getElementById('app').classList.remove('hidden');
+                window.restoreMainWorkspaceView();
                 if (typeof renderNavigation === 'function') renderNavigation();
             }
         }
@@ -417,15 +438,10 @@ const Auth = {
 
             if (window.UI) UI.toast('登录成功，欢迎 ' + matchedUser.name, 'success');
 
-            if (typeof loadCloudData === 'function') {
-                UI.loading(true, '正在同步最新成绩数据...');
-                await loadCloudData();
-            }
-
             if (matchedUser.role === 'parent') {
                 this.renderParentView();
             } else {
-                document.getElementById('app').classList.remove('hidden');
+                window.restoreMainWorkspaceView();
                 if (typeof renderNavigation === 'function') renderNavigation();
                 if (typeof updateSchoolSelect === 'function') updateSchoolSelect();
                 if (typeof renderTables === 'function') renderTables();
@@ -445,9 +461,9 @@ const Auth = {
                 }
 
                 if (matchedUser.role === 'teacher') {
-                    UI.toast('欢迎您，' + matchedUser.name + '老师', 'success');
+                    UI.toast('\u6b22\u8fce\u60a8\uff0c' + matchedUser.name + '\u8001\u5e08', 'success');
                 } else if (matchedUser.role === 'class_teacher') {
-                    UI.toast('欢迎您，' + matchedUser.class + '班班主任', 'success');
+                    UI.toast('\u6b22\u8fce\u60a8\uff0c' + matchedUser.class + '\u73ed\u73ed\u4e3b\u4efb', 'success');
                     setTimeout(() => {
                         const clsSel = document.getElementById('studentClassSelect');
                         if (clsSel) {
@@ -456,13 +472,28 @@ const Auth = {
                         }
                     }, 500);
                 } else if (matchedUser.role === 'grade_director') {
-                    UI.toast('欢迎您，' + matchedUser.class + '年级主任', 'success');
+                    UI.toast('\u6b22\u8fce\u60a8\uff0c' + matchedUser.class + '\u5e74\u7ea7\u4e3b\u4efb', 'success');
                     const msgBtn = document.getElementById('admin-msg-btn');
                     if (msgBtn) msgBtn.style.display = 'block';
 
                     if (typeof IssueManager !== 'undefined') {
                         IssueManager.checkIssues();
                         setInterval(() => IssueManager.checkIssues(), 30000);
+                    }
+                }
+            }
+
+            if (typeof loadCloudData === 'function') {
+                UI.loading(true, '\u6b63\u5728\u540c\u6b65\u6700\u65b0\u6210\u7ee9\u6570\u636e...');
+                try {
+                    await loadCloudData();
+                } catch (syncErr) {
+                    console.warn('\u767b\u5f55\u540e\u4e91\u7aef\u540c\u6b65\u5931\u8d25\uff0c\u5df2\u56de\u9000\u672c\u5730\u89c6\u56fe:', syncErr);
+                    if (matchedUser.role !== 'parent') {
+                        window.restoreMainWorkspaceView();
+                    }
+                    if (window.UI) {
+                        UI.toast('\u5df2\u767b\u5f55\u6210\u529f\uff0c\u4f46\u4e91\u7aef\u6570\u636e\u540c\u6b65\u5931\u8d25\uff1a' + (syncErr.message || '\u8bf7\u7a0d\u540e\u91cd\u8bd5'), 'warning');
                     }
                 }
             }
@@ -25942,6 +25973,10 @@ function promptTeacherSyncIfNeeded() {
     if (sessionStorage.getItem('TEACHER_SYNC_PROMPT_SHOWN') === '1') return;
     if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return;
 
+    const currentUser = getCurrentUser();
+    const currentRole = currentUser?.role || 'guest';
+    if (currentRole === 'teacher' || currentRole === 'class_teacher') return false;
+
     const opts = getTeacherTermOptions();
     if (!opts.length) return false;
 
@@ -25986,7 +26021,7 @@ function promptTeacherSyncIfNeeded() {
 
 function scheduleTeacherSyncPrompt() {
     if (localStorage.getItem('SUPPRESS_TEACHER_SYNC_PROMPT') === '1') return;
-    sessionStorage.removeItem('TEACHER_SYNC_PROMPT_SHOWN');
+    if (sessionStorage.getItem('TEACHER_SYNC_PROMPT_SHOWN') === '1') return;
     let tries = 0;
     const timer = setInterval(() => {
         tries += 1;
