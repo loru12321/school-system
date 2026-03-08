@@ -184,6 +184,207 @@
         };
     }
 
+
+    function escapeStudentCompareHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function buildStudentCompareCardView(options) {
+        const opts = options || {};
+        const student = opts.student || {};
+        const periodCount = Number(opts.periodCount) === 3 ? 3 : 2;
+        const totalLabel = String(opts.totalLabel || '\u603b\u5206');
+        const subjects = Array.isArray(opts.subjects) ? opts.subjects : [];
+        let cardBg = '#f8fafc';
+        let badge = '';
+        let trendIcon = '\u2192';
+
+        if (Number(student.scoreDiff) >= 10) {
+            cardBg = '#f0fdf4';
+            badge = '<span style="background:#16a34a; color:white; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:8px;">\u663e\u8457\u8fdb\u6b65</span>';
+            trendIcon = '\u2191';
+        } else if (Number(student.scoreDiff) > 1) {
+            trendIcon = '\u2197';
+        } else if (Number(student.scoreDiff) <= -10) {
+            cardBg = '#fef2f2';
+            badge = '<span style="background:#dc2626; color:white; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:8px;">\u9700\u8981\u5173\u6ce8</span>';
+            trendIcon = '\u2193';
+        } else if (Number(student.scoreDiff) < -1) {
+            trendIcon = '\u2198';
+        }
+
+        if (Number(student.rankSchoolDiff) >= 5 && !badge) {
+            badge = '<span style="background:#10b981; color:white; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:8px;">\u6821\u6392\u63d0\u5347</span>';
+        }
+
+        const studentName = escapeStudentCompareHtml(student.name || '');
+        const studentClass = escapeStudentCompareHtml(student.class || '');
+        const cleanName = escapeStudentCompareHtml(student.cleanName || student.name || '');
+        const progressType = escapeStudentCompareHtml(student.progressType || 'stable');
+        const periods = Array.isArray(student.periods) ? student.periods : [];
+
+        let html = ''
+            + '<div class="student-compare-card" data-student-name="' + cleanName + '" data-progress-type="' + progressType + '" style="margin-bottom:15px; border:1px solid #e2e8f0; border-radius:8px; padding:15px; background:' + cardBg + ';">'
+            + '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">'
+            + '<div class="sub-header" style="font-size:14px; margin:0;">'
+            + '\u5b66\u751f\uff1a' + studentName + (studentClass ? ' (' + studentClass + ')' : '') + badge
+            + (periodCount > 1 ? '<span style="font-size:20px; margin-left:8px;">' + trendIcon + '</span>' : '')
+            + '</div>'
+            + '<button class="btn btn-sm btn-gray" onclick="toggleStudentDetail(this)" style="font-size:11px; padding:3px 10px;">\u5c55\u5f00\u660e\u7ec6</button>'
+            + '</div>';
+
+        html += ''
+            + '<div style="font-weight:bold; margin-top:10px; margin-bottom:5px; font-size:13px;">\u6210\u7ee9\u6982\u89c8</div>'
+            + '<div class="table-wrap">'
+            + '<table class="mobile-card-table" style="font-size:12px;">'
+            + '<thead><tr>'
+            + '<th>\u671f\u6b21</th><th>' + escapeStudentCompareHtml(totalLabel) + '</th><th>\u6821\u6392\u540d</th><th>\u9547\u6392\u540d</th>'
+            + (periodCount > 1 ? '<th>\u603b\u5206\u53d8\u5316</th><th>\u6821\u6392\u53d8\u5316</th><th>\u9547\u6392\u53d8\u5316</th>' : '')
+            + '</tr></thead><tbody>';
+
+        periods.forEach(function(period, idx) {
+            const prevPeriod = idx > 0 ? periods[idx - 1] : null;
+            const totalVal = typeof period.total === 'number' ? period.total : null;
+            const prevTotal = prevPeriod && typeof prevPeriod.total === 'number' ? prevPeriod.total : null;
+            const scoreDiff = prevPeriod && totalVal !== null && prevTotal !== null ? (totalVal - prevTotal) : null;
+            const schoolRank = typeof period.rankSchool === 'number' ? period.rankSchool : null;
+            const prevSchoolRank = prevPeriod && typeof prevPeriod.rankSchool === 'number' ? prevPeriod.rankSchool : null;
+            const schoolRankDiff = prevPeriod && schoolRank !== null && prevSchoolRank !== null ? (prevSchoolRank - schoolRank) : null;
+            const townRank = typeof period.rankTown === 'number' ? period.rankTown : null;
+            const prevTownRank = prevPeriod && typeof prevPeriod.rankTown === 'number' ? prevPeriod.rankTown : null;
+            const townRankDiff = prevPeriod && townRank !== null && prevTownRank !== null ? (prevTownRank - townRank) : null;
+            html += '<tr>'
+                + '<td><strong>' + escapeStudentCompareHtml(period.examId || '') + '</strong></td>'
+                + '<td>' + (totalVal !== null ? totalVal.toFixed(1) : '-') + '</td>'
+                + '<td>' + (schoolRank !== null ? schoolRank : '-') + '</td>'
+                + '<td>' + (townRank !== null ? townRank : '-') + '</td>';
+            if (periodCount > 1) {
+                html += '<td style="color:' + ((scoreDiff || 0) >= 0 ? 'var(--success)' : 'var(--danger)') + ';">' + (scoreDiff === null ? '-' : ((scoreDiff >= 0 ? '+' : '') + scoreDiff.toFixed(1))) + '</td>'
+                    + '<td style="font-weight:bold; color:' + ((schoolRankDiff || 0) >= 0 ? 'var(--success)' : 'var(--danger)') + ';">' + (schoolRankDiff === null ? '-' : ((schoolRankDiff >= 0 ? '+' : '') + schoolRankDiff)) + '</td>'
+                    + '<td style="font-weight:bold; color:' + ((townRankDiff || 0) >= 0 ? 'var(--success)' : 'var(--danger)') + ';">' + (townRankDiff === null ? '-' : ((townRankDiff >= 0 ? '+' : '') + townRankDiff)) + '</td>';
+            }
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+
+        if (subjects.length > 0) {
+            html += ''
+                + '<div class="student-detail-section" style="display:none; margin-top:15px;">'
+                + '<div style="font-weight:bold; margin-bottom:5px; font-size:13px;">\u5b66\u79d1\u660e\u7ec6</div>'
+                + '<div class="table-wrap">'
+                + '<table class="mobile-card-table" style="font-size:11px;">'
+                + '<thead><tr><th>\u5b66\u79d1</th>';
+            periods.forEach(function(period) {
+                html += '<th colspan="3" style="background:#f1f5f9;">' + escapeStudentCompareHtml(period.examId || '') + '</th>';
+            });
+            html += '</tr><tr><th></th>';
+            periods.forEach(function() {
+                html += '<th>\u5206\u6570</th><th>\u6821\u6392</th><th>\u9547\u6392</th>';
+            });
+            html += '</tr></thead><tbody>';
+            subjects.forEach(function(subject) {
+                html += '<tr><td><strong>' + escapeStudentCompareHtml(subject) + '</strong></td>';
+                periods.forEach(function(period) {
+                    const subData = period && period.subjects ? period.subjects[subject] : null;
+                    if (subData) {
+                        html += '<td>' + escapeStudentCompareHtml(subData.score) + '</td><td>' + escapeStudentCompareHtml(subData.rankSchool) + '</td><td>' + escapeStudentCompareHtml(subData.rankTown) + '</td>';
+                    } else {
+                        html += '<td>-</td><td>-</td><td>-</td>';
+                    }
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table></div></div>';
+        }
+
+        html += '</div>';
+        return html;
+    }
+
+    function buildStudentComparePaginationButtons(page, totalPages, renderPageFnName) {
+        const fnName = /^[\w$.]+$/.test(String(renderPageFnName || '')) ? String(renderPageFnName) : 'renderStudentComparePage';
+        let html = '';
+        html += '<button class="btn btn-sm" onclick="' + fnName + '(' + (page - 1) + ')" ' + (page <= 1 ? 'disabled' : '') + ' style="padding:3px 10px;">\u4e0a\u4e00\u9875</button>';
+        const maxButtons = 5;
+        let startPage = Math.max(1, page - Math.floor(maxButtons / 2));
+        let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+        if (endPage - startPage < maxButtons - 1) {
+            startPage = Math.max(1, endPage - maxButtons + 1);
+        }
+        if (startPage > 1) {
+            html += '<button class="btn btn-sm" onclick="' + fnName + '(1)" style="padding:3px 10px;">1</button>';
+            if (startPage > 2) html += '<span style="padding:3px 8px;">...</span>';
+        }
+        for (let i = startPage; i <= endPage; i++) {
+            const isActive = i === page;
+            html += '<button class="btn btn-sm ' + (isActive ? 'btn-blue' : '') + '" onclick="' + fnName + '(' + i + ')" style="padding:3px 10px; ' + (isActive ? 'font-weight:bold;' : '') + '">' + i + '</button>';
+        }
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) html += '<span style="padding:3px 8px;">...</span>';
+            html += '<button class="btn btn-sm" onclick="' + fnName + '(' + totalPages + ')" style="padding:3px 10px;">' + totalPages + '</button>';
+        }
+        html += '<button class="btn btn-sm" onclick="' + fnName + '(' + (page + 1) + ')" ' + (page >= totalPages ? 'disabled' : '') + ' style="padding:3px 10px;">\u4e0b\u4e00\u9875</button>';
+        return html;
+    }
+
+    function buildStudentComparePageView(options) {
+        const opts = options || {};
+        const cache = opts.cache || {};
+        const pageSize = Math.max(1, Number(cache.pageSize) || 20);
+        const students = Array.isArray(cache.studentsCompareData) ? cache.studentsCompareData : [];
+        const totalCount = students.length;
+        const totalPages = Math.max(1, Math.ceil(totalCount / pageSize) || 1);
+        const currentPage = Math.min(Math.max(1, Number(opts.page) || 1), totalPages);
+        const startIdx = (currentPage - 1) * pageSize;
+        const endIdx = Math.min(startIdx + pageSize, totalCount);
+        const pageStudents = students.slice(startIdx, endIdx);
+        return {
+            currentPage: currentPage,
+            resultHtml: pageStudents.map(function(student) {
+                return buildStudentCompareCardView({
+                    student: student,
+                    periodCount: cache.periodCount,
+                    totalLabel: opts.totalLabel,
+                    subjects: cache.subjects
+                });
+            }).join(''),
+            showPagination: totalCount > 10,
+            paginationInfoHtml: '\u663e\u793a ' + (totalCount === 0 ? 0 : (startIdx + 1)) + '-' + endIdx + ' / \u5171 ' + totalCount + ' \u540d\u5b66\u751f',
+            paginationButtonsHtml: buildStudentComparePaginationButtons(currentPage, totalPages, opts.renderPageFnName),
+            totalCount: totalCount
+        };
+    }
+
+    function buildStudentCompareSummaryView(options) {
+        const opts = options || {};
+        const cache = opts.cache || {};
+        const students = Array.isArray(cache.studentsCompareData) ? cache.studentsCompareData : [];
+        if (!students.length || Number(cache.periodCount) <= 1) {
+            return { html: '' };
+        }
+        const improveCount = students.filter(function(item) { return item.progressType === 'improve'; }).length;
+        const declineCount = students.filter(function(item) { return item.progressType === 'decline'; }).length;
+        const stableCount = students.filter(function(item) { return item.progressType === 'stable'; }).length;
+        const avgScoreDiff = students.reduce(function(sum, item) { return sum + Number(item.scoreDiff || 0); }, 0) / students.length;
+        return {
+            html: ''
+                + '<div style="padding:12px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:6px; margin-bottom:10px;">'
+                + '<div style="font-weight:600; margin-bottom:8px; color:#0369a1;">\u5b66\u751f\u591a\u671f\u5bf9\u6bd4\u6c47\u603b</div>'
+                + '<div style="display:flex; gap:15px; flex-wrap:wrap; font-size:13px;">'
+                + '<span>\u5e73\u5747\u603b\u5206\u53d8\u5316 <strong style="color:' + (avgScoreDiff >= 0 ? '#16a34a' : '#dc2626') + ';">' + (avgScoreDiff >= 0 ? '+' : '') + avgScoreDiff.toFixed(2) + '</strong></span>'
+                + '<span>\u8fdb\u6b65 <strong style="color:#16a34a;">' + improveCount + ' (' + (improveCount / students.length * 100).toFixed(1) + '%)</strong></span>'
+                + '<span>\u9000\u6b65 <strong style="color:#dc2626;">' + declineCount + ' (' + (declineCount / students.length * 100).toFixed(1) + '%)</strong></span>'
+                + '<span>\u7a33\u5b9a <strong>' + stableCount + ' (' + (stableCount / students.length * 100).toFixed(1) + '%)</strong></span>'
+                + '</div>'
+                + '</div>'
+        };
+    }
     window.CompareUiService = {
         renderOptions,
         renderSchoolSelect,
@@ -194,6 +395,9 @@
         toggleConditionalWrap,
         setCompareFeedback,
         buildTeacherSingleCompareView,
-        buildTeacherBatchCompareView
+        buildTeacherBatchCompareView,
+        buildStudentCompareCardView,
+        buildStudentComparePageView,
+        buildStudentCompareSummaryView
     };
 })();

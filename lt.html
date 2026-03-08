@@ -5289,6 +5289,207 @@
         };
     }
 
+
+    function escapeStudentCompareHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function buildStudentCompareCardView(options) {
+        const opts = options || {};
+        const student = opts.student || {};
+        const periodCount = Number(opts.periodCount) === 3 ? 3 : 2;
+        const totalLabel = String(opts.totalLabel || '\u603b\u5206');
+        const subjects = Array.isArray(opts.subjects) ? opts.subjects : [];
+        let cardBg = '#f8fafc';
+        let badge = '';
+        let trendIcon = '\u2192';
+
+        if (Number(student.scoreDiff) >= 10) {
+            cardBg = '#f0fdf4';
+            badge = '<span style="background:#16a34a; color:white; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:8px;">\u663e\u8457\u8fdb\u6b65</span>';
+            trendIcon = '\u2191';
+        } else if (Number(student.scoreDiff) > 1) {
+            trendIcon = '\u2197';
+        } else if (Number(student.scoreDiff) <= -10) {
+            cardBg = '#fef2f2';
+            badge = '<span style="background:#dc2626; color:white; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:8px;">\u9700\u8981\u5173\u6ce8</span>';
+            trendIcon = '\u2193';
+        } else if (Number(student.scoreDiff) < -1) {
+            trendIcon = '\u2198';
+        }
+
+        if (Number(student.rankSchoolDiff) >= 5 && !badge) {
+            badge = '<span style="background:#10b981; color:white; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:8px;">\u6821\u6392\u63d0\u5347</span>';
+        }
+
+        const studentName = escapeStudentCompareHtml(student.name || '');
+        const studentClass = escapeStudentCompareHtml(student.class || '');
+        const cleanName = escapeStudentCompareHtml(student.cleanName || student.name || '');
+        const progressType = escapeStudentCompareHtml(student.progressType || 'stable');
+        const periods = Array.isArray(student.periods) ? student.periods : [];
+
+        let html = ''
+            + '<div class="student-compare-card" data-student-name="' + cleanName + '" data-progress-type="' + progressType + '" style="margin-bottom:15px; border:1px solid #e2e8f0; border-radius:8px; padding:15px; background:' + cardBg + ';">'
+            + '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">'
+            + '<div class="sub-header" style="font-size:14px; margin:0;">'
+            + '\u5b66\u751f\uff1a' + studentName + (studentClass ? ' (' + studentClass + ')' : '') + badge
+            + (periodCount > 1 ? '<span style="font-size:20px; margin-left:8px;">' + trendIcon + '</span>' : '')
+            + '</div>'
+            + '<button class="btn btn-sm btn-gray" onclick="toggleStudentDetail(this)" style="font-size:11px; padding:3px 10px;">\u5c55\u5f00\u660e\u7ec6</button>'
+            + '</div>';
+
+        html += ''
+            + '<div style="font-weight:bold; margin-top:10px; margin-bottom:5px; font-size:13px;">\u6210\u7ee9\u6982\u89c8</div>'
+            + '<div class="table-wrap">'
+            + '<table class="mobile-card-table" style="font-size:12px;">'
+            + '<thead><tr>'
+            + '<th>\u671f\u6b21</th><th>' + escapeStudentCompareHtml(totalLabel) + '</th><th>\u6821\u6392\u540d</th><th>\u9547\u6392\u540d</th>'
+            + (periodCount > 1 ? '<th>\u603b\u5206\u53d8\u5316</th><th>\u6821\u6392\u53d8\u5316</th><th>\u9547\u6392\u53d8\u5316</th>' : '')
+            + '</tr></thead><tbody>';
+
+        periods.forEach(function(period, idx) {
+            const prevPeriod = idx > 0 ? periods[idx - 1] : null;
+            const totalVal = typeof period.total === 'number' ? period.total : null;
+            const prevTotal = prevPeriod && typeof prevPeriod.total === 'number' ? prevPeriod.total : null;
+            const scoreDiff = prevPeriod && totalVal !== null && prevTotal !== null ? (totalVal - prevTotal) : null;
+            const schoolRank = typeof period.rankSchool === 'number' ? period.rankSchool : null;
+            const prevSchoolRank = prevPeriod && typeof prevPeriod.rankSchool === 'number' ? prevPeriod.rankSchool : null;
+            const schoolRankDiff = prevPeriod && schoolRank !== null && prevSchoolRank !== null ? (prevSchoolRank - schoolRank) : null;
+            const townRank = typeof period.rankTown === 'number' ? period.rankTown : null;
+            const prevTownRank = prevPeriod && typeof prevPeriod.rankTown === 'number' ? prevPeriod.rankTown : null;
+            const townRankDiff = prevPeriod && townRank !== null && prevTownRank !== null ? (prevTownRank - townRank) : null;
+            html += '<tr>'
+                + '<td><strong>' + escapeStudentCompareHtml(period.examId || '') + '</strong></td>'
+                + '<td>' + (totalVal !== null ? totalVal.toFixed(1) : '-') + '</td>'
+                + '<td>' + (schoolRank !== null ? schoolRank : '-') + '</td>'
+                + '<td>' + (townRank !== null ? townRank : '-') + '</td>';
+            if (periodCount > 1) {
+                html += '<td style="color:' + ((scoreDiff || 0) >= 0 ? 'var(--success)' : 'var(--danger)') + ';">' + (scoreDiff === null ? '-' : ((scoreDiff >= 0 ? '+' : '') + scoreDiff.toFixed(1))) + '</td>'
+                    + '<td style="font-weight:bold; color:' + ((schoolRankDiff || 0) >= 0 ? 'var(--success)' : 'var(--danger)') + ';">' + (schoolRankDiff === null ? '-' : ((schoolRankDiff >= 0 ? '+' : '') + schoolRankDiff)) + '</td>'
+                    + '<td style="font-weight:bold; color:' + ((townRankDiff || 0) >= 0 ? 'var(--success)' : 'var(--danger)') + ';">' + (townRankDiff === null ? '-' : ((townRankDiff >= 0 ? '+' : '') + townRankDiff)) + '</td>';
+            }
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+
+        if (subjects.length > 0) {
+            html += ''
+                + '<div class="student-detail-section" style="display:none; margin-top:15px;">'
+                + '<div style="font-weight:bold; margin-bottom:5px; font-size:13px;">\u5b66\u79d1\u660e\u7ec6</div>'
+                + '<div class="table-wrap">'
+                + '<table class="mobile-card-table" style="font-size:11px;">'
+                + '<thead><tr><th>\u5b66\u79d1</th>';
+            periods.forEach(function(period) {
+                html += '<th colspan="3" style="background:#f1f5f9;">' + escapeStudentCompareHtml(period.examId || '') + '</th>';
+            });
+            html += '</tr><tr><th></th>';
+            periods.forEach(function() {
+                html += '<th>\u5206\u6570</th><th>\u6821\u6392</th><th>\u9547\u6392</th>';
+            });
+            html += '</tr></thead><tbody>';
+            subjects.forEach(function(subject) {
+                html += '<tr><td><strong>' + escapeStudentCompareHtml(subject) + '</strong></td>';
+                periods.forEach(function(period) {
+                    const subData = period && period.subjects ? period.subjects[subject] : null;
+                    if (subData) {
+                        html += '<td>' + escapeStudentCompareHtml(subData.score) + '</td><td>' + escapeStudentCompareHtml(subData.rankSchool) + '</td><td>' + escapeStudentCompareHtml(subData.rankTown) + '</td>';
+                    } else {
+                        html += '<td>-</td><td>-</td><td>-</td>';
+                    }
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table></div></div>';
+        }
+
+        html += '</div>';
+        return html;
+    }
+
+    function buildStudentComparePaginationButtons(page, totalPages, renderPageFnName) {
+        const fnName = /^[\w$.]+$/.test(String(renderPageFnName || '')) ? String(renderPageFnName) : 'renderStudentComparePage';
+        let html = '';
+        html += '<button class="btn btn-sm" onclick="' + fnName + '(' + (page - 1) + ')" ' + (page <= 1 ? 'disabled' : '') + ' style="padding:3px 10px;">\u4e0a\u4e00\u9875</button>';
+        const maxButtons = 5;
+        let startPage = Math.max(1, page - Math.floor(maxButtons / 2));
+        let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+        if (endPage - startPage < maxButtons - 1) {
+            startPage = Math.max(1, endPage - maxButtons + 1);
+        }
+        if (startPage > 1) {
+            html += '<button class="btn btn-sm" onclick="' + fnName + '(1)" style="padding:3px 10px;">1</button>';
+            if (startPage > 2) html += '<span style="padding:3px 8px;">...</span>';
+        }
+        for (let i = startPage; i <= endPage; i++) {
+            const isActive = i === page;
+            html += '<button class="btn btn-sm ' + (isActive ? 'btn-blue' : '') + '" onclick="' + fnName + '(' + i + ')" style="padding:3px 10px; ' + (isActive ? 'font-weight:bold;' : '') + '">' + i + '</button>';
+        }
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) html += '<span style="padding:3px 8px;">...</span>';
+            html += '<button class="btn btn-sm" onclick="' + fnName + '(' + totalPages + ')" style="padding:3px 10px;">' + totalPages + '</button>';
+        }
+        html += '<button class="btn btn-sm" onclick="' + fnName + '(' + (page + 1) + ')" ' + (page >= totalPages ? 'disabled' : '') + ' style="padding:3px 10px;">\u4e0b\u4e00\u9875</button>';
+        return html;
+    }
+
+    function buildStudentComparePageView(options) {
+        const opts = options || {};
+        const cache = opts.cache || {};
+        const pageSize = Math.max(1, Number(cache.pageSize) || 20);
+        const students = Array.isArray(cache.studentsCompareData) ? cache.studentsCompareData : [];
+        const totalCount = students.length;
+        const totalPages = Math.max(1, Math.ceil(totalCount / pageSize) || 1);
+        const currentPage = Math.min(Math.max(1, Number(opts.page) || 1), totalPages);
+        const startIdx = (currentPage - 1) * pageSize;
+        const endIdx = Math.min(startIdx + pageSize, totalCount);
+        const pageStudents = students.slice(startIdx, endIdx);
+        return {
+            currentPage: currentPage,
+            resultHtml: pageStudents.map(function(student) {
+                return buildStudentCompareCardView({
+                    student: student,
+                    periodCount: cache.periodCount,
+                    totalLabel: opts.totalLabel,
+                    subjects: cache.subjects
+                });
+            }).join(''),
+            showPagination: totalCount > 10,
+            paginationInfoHtml: '\u663e\u793a ' + (totalCount === 0 ? 0 : (startIdx + 1)) + '-' + endIdx + ' / \u5171 ' + totalCount + ' \u540d\u5b66\u751f',
+            paginationButtonsHtml: buildStudentComparePaginationButtons(currentPage, totalPages, opts.renderPageFnName),
+            totalCount: totalCount
+        };
+    }
+
+    function buildStudentCompareSummaryView(options) {
+        const opts = options || {};
+        const cache = opts.cache || {};
+        const students = Array.isArray(cache.studentsCompareData) ? cache.studentsCompareData : [];
+        if (!students.length || Number(cache.periodCount) <= 1) {
+            return { html: '' };
+        }
+        const improveCount = students.filter(function(item) { return item.progressType === 'improve'; }).length;
+        const declineCount = students.filter(function(item) { return item.progressType === 'decline'; }).length;
+        const stableCount = students.filter(function(item) { return item.progressType === 'stable'; }).length;
+        const avgScoreDiff = students.reduce(function(sum, item) { return sum + Number(item.scoreDiff || 0); }, 0) / students.length;
+        return {
+            html: ''
+                + '<div style="padding:12px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:6px; margin-bottom:10px;">'
+                + '<div style="font-weight:600; margin-bottom:8px; color:#0369a1;">\u5b66\u751f\u591a\u671f\u5bf9\u6bd4\u6c47\u603b</div>'
+                + '<div style="display:flex; gap:15px; flex-wrap:wrap; font-size:13px;">'
+                + '<span>\u5e73\u5747\u603b\u5206\u53d8\u5316 <strong style="color:' + (avgScoreDiff >= 0 ? '#16a34a' : '#dc2626') + ';">' + (avgScoreDiff >= 0 ? '+' : '') + avgScoreDiff.toFixed(2) + '</strong></span>'
+                + '<span>\u8fdb\u6b65 <strong style="color:#16a34a;">' + improveCount + ' (' + (improveCount / students.length * 100).toFixed(1) + '%)</strong></span>'
+                + '<span>\u9000\u6b65 <strong style="color:#dc2626;">' + declineCount + ' (' + (declineCount / students.length * 100).toFixed(1) + '%)</strong></span>'
+                + '<span>\u7a33\u5b9a <strong>' + stableCount + ' (' + (stableCount / students.length * 100).toFixed(1) + '%)</strong></span>'
+                + '</div>'
+                + '</div>'
+        };
+    }
     window.CompareUiService = {
         renderOptions,
         renderSchoolSelect,
@@ -5299,7 +5500,10 @@
         toggleConditionalWrap,
         setCompareFeedback,
         buildTeacherSingleCompareView,
-        buildTeacherBatchCompareView
+        buildTeacherBatchCompareView,
+        buildStudentCompareCardView,
+        buildStudentComparePageView,
+        buildStudentCompareSummaryView
     };
 })();
 </script>
@@ -17627,6 +17831,10 @@ function renderStudentMultiPeriodComparison() {
 }
 
 
+function getStudentCompareTotalLabel() {
+    return String(CONFIG && CONFIG.name || '') === '\u0039\u5e74\u7ea7' ? '\u6807\u51c6\u603b\u5206' : '\u603b\u5206';
+}
+
 function renderStudentComparePage(page) {
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
@@ -17634,219 +17842,61 @@ function renderStudentComparePage(page) {
     const paginationEl = document.getElementById('studentComparePagination');
     const paginationInfoEl = document.getElementById('studentComparePaginationInfo');
     const paginationBtnsEl = document.getElementById('studentComparePaginationButtons');
-
     if (!resultEl) return;
 
-    const { school, examIds, periodCount, studentsCompareData, subjects, pageSize } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
-    STUDENT_MULTI_PERIOD_COMPARE_CACHE.currentPage = page;
-
-    // 闂傚倷绀侀幉锛勬暜閸ヮ剙纾归柡宥庡幖閽冪喖鏌涢妷顔煎闁?-8濠德板€楁慨鐑藉磻濞戙埄鏁嬫い鎾跺櫏濞堜粙鏌涢妷锝呭濞存嚎鍊栨穱濠囶敍濠婂懎绗＄紒?濠德板€楁慨鐑藉磻濞戙埄鏁嬫い鎾跺櫏濞堜粙鏌涢妷顔句粶闁绘梻鍘ч悘宕団偓瑙勬礀濞层劑銆?
-    const is9thGrade = CONFIG.name === '9濠德板€楁慨鐑藉磻濞戙埄鏁嬫い鎾跺櫏濞?;
-    const totalLabel = is9thGrade ? '婵犵數鍋涢悺銊у垝瀹ュ拋娼栧┑鐘崇啲缂嶆牠鏌″搴″箹缂? : '闂傚倷鑳堕…鍫㈡崲閸儱绀夐幖鎼厜缂嶆牠鏌″搴″箹缂?;
-
-    // 闂傚倷鑳堕崕鐢稿疾濞戙垺鍋ら柕濞у嫭娈伴柣搴㈢⊕钃卞┑顖涙尦閹綊骞侀幒鎴濐瀴闂佸搫妫楃槐顧簎dentsCompareData闂傚倷鐒︾€笛呯矙閹达附鍋嬮柛鈩冪☉缁€鍕煥濞戞ê顏痪鎯с偢閻擃偊宕堕妸锕€纰嶉梺浼欑畱閻栧ジ寮诲☉姗嗘僵闁绘挸绨肩花浠嬫⒑閻戔晜顫婇柛瀣躬瀵宕ㄩ鑲╃獮婵犵數濮撮崯顐︻敂椤栫偞鈷戦柛锔诲幖閸斿鎮介娑樼闁兼椽浜堕、姗€濮€閻樼洅鏇㈡煙閼圭増褰х紒鏌ョ畺閹箖鏌嗗鍡欏幐婵炶揪绲介幖顐︺€傞懖鈹惧亾鐟欏嫭灏紒鑸靛哺瀵?
-    const visibleStudents = studentsCompareData;
-
-    // 闂傚倷绀侀幉锛勬暜閹烘嚦娑樷攽鐎ｎ€儱顭跨捄鐑樻拱濠殿垰銈搁弻銊モ槈濡警浼€闂?
-    const totalCount = visibleStudents.length;
-    const totalPages = Math.ceil(totalCount / pageSize);
-    const startIdx = (page - 1) * pageSize;
-    const endIdx = Math.min(startIdx + pageSize, totalCount);
-    const pageStudents = visibleStudents.slice(startIdx, endIdx);
-
-    // 闂傚倷鐒﹂惇褰掑垂婵犳艾绐楅柟鐗堟緲閸ㄥ倹鎱ㄥΟ璇差暢闁稿鎸搁埥澶愬礃瀹割喗鍠橀梻浣芥〃閻掞箓骞戦崶褏鏆﹂柨鐔哄У閺咁剟鏌涢弴銊ヤ航闁哄棛鎮乀ML
-    let html = '';
-    pageStudents.forEach((student, idx) => {
-        html += generateStudentCard(student, periodCount, totalLabel, subjects);
-    });
-
-    resultEl.innerHTML = html;
-
-    // 闂傚倷绀侀幖顐⒚洪妶澶嬪仱闁靛ň鏅涢拑鐔封攽閻樺弶鎼愮紒鈧崱娑欑厱闁斥晛鍟伴埣銈夋煃瑜滈崜娆撍囬悽鍝ュ祦闁圭儤娲﹀Σ鍝勨攽?
-    if (paginationEl && totalCount > 10) {
-        paginationEl.style.display = 'flex';
-
+    const compareUi = window.CompareUiService;
+    const totalLabel = getStudentCompareTotalLabel();
+    if (compareUi && typeof compareUi.buildStudentComparePageView === 'function') {
+        const pageView = compareUi.buildStudentComparePageView({
+            cache: STUDENT_MULTI_PERIOD_COMPARE_CACHE,
+            page: page,
+            totalLabel: totalLabel,
+            renderPageFnName: 'renderStudentComparePage'
+        });
+        STUDENT_MULTI_PERIOD_COMPARE_CACHE.currentPage = pageView.currentPage;
+        resultEl.innerHTML = pageView.resultHtml || '';
+        if (paginationEl) {
+            paginationEl.style.display = pageView.showPagination ? 'flex' : 'none';
+        }
         if (paginationInfoEl) {
-            paginationInfoEl.textContent = `闂傚倷绀侀幖顐も偓姘煎墯閺呰埖绂掔€ｎ€?${startIdx + 1}-${endIdx} / 闂?${totalCount} 婵犵數鍋涢悺銊у垝鎼搭煈鏁?
+            paginationInfoEl.textContent = pageView.paginationInfoHtml || '';
         }
-
         if (paginationBtnsEl) {
-            let btnsHtml = '';
-
-            // 婵犵數鍋為崹鍫曞箰閹间焦鏅濋柨婵嗘川閸楁岸鎮楀☉娅辨粍绂?
-            btnsHtml += `<button class="btn btn-sm" onclick="renderStudentComparePage(${page - 1})" ${page <= 1 ? 'disabled' : ''} style="padding:3px 10px;">闂傚倷绀侀崯鍧楁儍閻戣棄纾?婵犵數鍋為崹鍫曞箰閹间焦鏅濋柨婵嗘川閸楁岸鎮楀☉娅辨粍绂?/button>`;
-
-            // 婵犵绱曢崑鎴﹀磹濡ゅ懎鏋侀柟闂寸劍閸嬪绻濇繝鍌滃缂佺姵婢橀…鍧楁嚋闂堟稑顫嶉柣?
-            const maxButtons = 5;
-            let startPage = Math.max(1, page - Math.floor(maxButtons / 2));
-            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
-
-            if (endPage - startPage < maxButtons - 1) {
-                startPage = Math.max(1, endPage - maxButtons + 1);
-            }
-
-            if (startPage > 1) {
-                btnsHtml += `<button class="btn btn-sm" onclick="renderStudentComparePage(1)" style="padding:3px 10px;">1</button>`;
-                if (startPage > 2) btnsHtml += `<span style="padding:3px 8px;">...</span>`;
-            }
-
-            for (let i = startPage; i <= endPage; i++) {
-                const isActive = i === page;
-                btnsHtml += `<button class="btn btn-sm ${isActive ? 'btn-blue' : ''}" onclick="renderStudentComparePage(${i})" style="padding:3px 10px; ${isActive ? 'font-weight:bold;' : ''}">${i}</button>`;
-            }
-
-            if (endPage < totalPages) {
-                if (endPage < totalPages - 1) btnsHtml += `<span style="padding:3px 8px;">...</span>`;
-                btnsHtml += `<button class="btn btn-sm" onclick="renderStudentComparePage(${totalPages})" style="padding:3px 10px;">${totalPages}</button>`;
-            }
-
-            // 婵犵數鍋為崹鍫曞箰閹间緡鏁勯柛鏇ㄥ幘閸楁岸鎮楀☉娅辨粍绂?
-            btnsHtml += `<button class="btn btn-sm" onclick="renderStudentComparePage(${page + 1})" ${page >= totalPages ? 'disabled' : ''} style="padding:3px 10px;">婵犵數鍋為崹鍫曞箰閹间緡鏁勯柛鏇ㄥ幘閸楁岸鎮楀☉娅辨粍绂?闂?/button>`;
-
-            paginationBtnsEl.innerHTML = btnsHtml;
+            paginationBtnsEl.innerHTML = pageView.paginationButtonsHtml || '';
         }
-    } else if (paginationEl) {
-        paginationEl.style.display = 'none';
+        setTimeout(() => {
+            const section = document.getElementById('student-multi-period-compare-section');
+            if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+        return;
     }
 
-    // 濠电姷鏁告慨鎾晝閵夆晜鍤岄柣鎰靛墯閸欏繘鏌嶉崫鍕櫣缂佲偓閸℃稒鐓涘璺侯儛閸庛儵鏌涢妶鍥ｉ柟渚垮姂閺佹劙宕卞Ο閿嬪缂傚倷绶￠崰鎾诲礉閹存繍鍤曠紒瀣儥閻撱儵鏌涢幇鈺佸婵炲牜鍓熷?
-    setTimeout(() => {
-        const section = document.getElementById('student-multi-period-compare-section');
-        if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
+    const { studentsCompareData, pageSize } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
+    const totalCount = studentsCompareData.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize) || 1);
+    const currentPage = Math.min(Math.max(1, page), totalPages);
+    const startIdx = (currentPage - 1) * pageSize;
+    const endIdx = Math.min(startIdx + pageSize, totalCount);
+    STUDENT_MULTI_PERIOD_COMPARE_CACHE.currentPage = currentPage;
+    resultEl.innerHTML = studentsCompareData.slice(startIdx, endIdx).map(student => generateStudentCard(
+        student,
+        STUDENT_MULTI_PERIOD_COMPARE_CACHE.periodCount,
+        totalLabel,
+        STUDENT_MULTI_PERIOD_COMPARE_CACHE.subjects
+    )).join('');
 }
 
 function generateStudentCard(student, periodCount, totalLabel, subjects) {
-    // 闂備浇宕甸崰鎰版偡閵夈儙娑橆煥閸剛绋忛柟鍏肩暘閸╁嫬鈻撳Δ浣风箚妞ゆ牗绮嶉崵鈧梺浼欒礋閸旀垿寮婚妶澶婄闁告瑥顦伴幏鍗炩攽?
-    let cardBg = '#f8fafc';
-    let badge = '';
-    let trendIcon = '';
-
-    if (student.scoreDiff >= 10) {
-        cardBg = '#f0fdf4';
-        badge = '<span style="background:#16a34a; color:white; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:8px;">闂備胶绮懝楣冨箟閿熺姴绀夐柡鍥ュ灩妗呴梺鎼炲労閸撴稑鐣垫笟鈧弻娑樷槈濞嗗浚妫嗙紓浣哄Х缁垶骞?/span>';
-        trendIcon = '闂傚倷鐒﹂崜姘跺磻閸涙潙鍨傞柣鏃傚帶閻?;
-    } else if (student.scoreDiff > 1 && student.scoreDiff < 10) {
-        trendIcon = '闂?;
-    } else if (student.scoreDiff <= -10) {
-        cardBg = '#fef2f2';
-        badge = '<span style="background:#dc2626; color:white; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:8px;">闂傚倷绀侀悿鍥р枖閺囩喎鍨旈悗闈涙憸缁犳梻鈧箍鍎遍ˇ浼此夐崱娑欑厓鐟滄粓宕滈悢椋庢殾婵°倕鎳忛幆鐐淬亜閹板墎绋绘繛?/span>';
-        trendIcon = '闂傚倷鐒﹂崜姘跺磻閸涙潙绠伴柟缁㈠枛閻?;
-    } else if (student.scoreDiff < -1 && student.scoreDiff > -10) {
-        trendIcon = '闂?;
-    } else {
-        trendIcon = '闂?;
-    }
-
-    if (student.rankSchoolDiff >= 5 && !badge) {
-        badge = '<span style="background:#10b981; color:white; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:8px;">闂傚倷鐒﹂崜姘跺磻閸涙潙鍨傞柛鎾茬劍閺嗘粓鏌熼幑鎰靛殭閻熸瑱濡囬埀顒€绠嶉崕鍗炍涘Δ鍐ㄧ筏鐟滅増甯楅悡?/span>';
-    }
-
-    let html = `
-            <div class="student-compare-card" data-student-name="${student.cleanName}" data-progress-type="${student.progressType}" style="margin-bottom:15px; border:1px solid #e2e8f0; border-radius:8px; padding:15px; background:${cardBg};">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <div class="sub-header" style="font-size:14px; margin:0;">
-                        濠碘槅鍋撶徊浠嬪疮椤栫偛闂?${student.name} ${student.class ? `(${student.class})` : ''}${badge}
-                        ${periodCount > 1 ? `<span style="font-size:20px; margin-left:8px;">${trendIcon}</span>` : ''}
-                    </div>
-                    <button class="btn btn-sm btn-gray" onclick="toggleStudentDetail(this)" style="font-size:11px; padding:3px 10px;">闂備浇顕х换鎺楀磻閻愯娲冀椤愶綆娼熼梺鐟邦嚟婵數鈧碍宀搁弻銊╁籍閸ヮ煈妫勯梺?闂?/button>
-                </div>
-        `;
-
-    // 闂傚倷娴囬鏍礈濠靛鏁嬬憸鏂跨暦鐟欏嫭鍎熼柨婵嗗€告禍鎯归敐鍛灓婵炲吋鍔欓弻锝夋晜鐠囧弶鐏撻梺?
-    html += `
-            <div style="font-weight:bold; margin-top:10px; margin-bottom:5px; font-size:13px;">濠碘槅鍋撶徊浠嬪疮椤栫偛绠?闂傚倷娴囬鏍礈濠靛鏁嬬憸鏂跨暦鐟欏嫭鍎熼柕濞垮劤椤撴椽姊鸿ぐ鎺戜喊闁哥姵鐗犻獮妤冣偓锝庡枟閸婇潧霉閿濆懎鏋ゆ繛鍏煎姍閺?/div>
-            <div class="table-wrap">
-                <table class="mobile-card-table" style="font-size:12px;">
-                    <thead>
-                        <tr>
-                            <th>闂傚倷绀侀幖顐︽偋韫囨稑绐楅柟浼村亰閺?/th>
-                            <th>${totalLabel}</th>
-                            <th>缂傚倸鍊烽懗鍓佲偓姘箻瀹曟儼顦插┑顔哄€濆娲捶椤撶偛濡洪柣銏╁灡鐢繝鐛?/th>
-                            <th>闂傚倸鍊搁崐鐢稿磻閹剧粯鐓曢柕澶涚到婵¤偐绱掑Δ浣瑰磳闁?/th>
-                            ${periodCount > 1 ? '<th>闂傚倷娴囬鏍礈濠靛鏁嬬憸鏂跨暦鐟欏嫭鍎熼柕濞垮劤閻撴垵鈹戦埥鍡楃仩闁圭⒈鍋婇、?/th><th>缂傚倸鍊烽懗鍓佲偓姘箻瀹曠喖顢曢妶鍥ㄥ櫚闂傚倷绀侀幉锟犳偡閿曞倹鏅梺?/th><th>闂傚倸鍊搁崐鐢稿磻閹剧粯鐓曢柕澶涚到婵¤偐绱掑Δ浣瑰磳闁哄本绋戦埢搴ㄥ箚婵傚绨介柍?/th>' : ''}
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-
-    student.periods.forEach((p, idx) => {
-        const prevPeriod = idx > 0 ? student.periods[idx - 1] : null;
-        const scoreDiff = (prevPeriod && p.total !== null && prevPeriod.total !== null) ? (p.total - prevPeriod.total) : 0;
-        const schoolRankDiff = (prevPeriod && p.rankSchool !== null && prevPeriod.rankSchool !== null) ? (prevPeriod.rankSchool - p.rankSchool) : 0;
-        const townRankDiff = (prevPeriod && p.rankTown !== null && prevPeriod.rankTown !== null) ? (prevPeriod.rankTown - p.rankTown) : 0;
-
-        html += `<tr>
-                <td><strong>${p.examId}</strong></td>
-                <td>${p.total !== null ? p.total.toFixed(1) : '-'}</td>
-                <td>${p.rankSchool !== null ? p.rankSchool : '-'}</td>
-                <td>${p.rankTown !== null ? p.rankTown : '-'}</td>`;
-
-        if (periodCount > 1) {
-            html += `
-                    <td style="color:${scoreDiff >= 0 ? 'var(--success)' : 'var(--danger)'};">
-                        ${idx === 0 || p.total === null || prevPeriod.total === null ? '-' : (scoreDiff >= 0 ? '+' : '') + scoreDiff.toFixed(1)}
-                    </td>
-                    <td style="font-weight:bold; color:${schoolRankDiff >= 0 ? 'var(--success)' : 'var(--danger)'};">
-                        ${idx === 0 || p.rankSchool === null || prevPeriod.rankSchool === null ? '-' : (schoolRankDiff >= 0 ? '+' : '') + schoolRankDiff}
-                    </td>
-                    <td style="font-weight:bold; color:${townRankDiff >= 0 ? 'var(--success)' : 'var(--danger)'};">
-                        ${idx === 0 || p.rankTown === null || prevPeriod.rankTown === null ? '-' : (townRankDiff >= 0 ? '+' : '') + townRankDiff}
-                    </td>
-                `;
-        }
-
-        html += `</tr>`;
-    });
-
-    html += `</tbody></table></div>`;
-
-    // 闂傚倷绀侀幉锟犳嚌閸撗€鍋撳鐓庢珝闁挎繄鍋ゅ浠嬵敇閻愭鍚呴梻浣哥秺閸嬪﹪宕伴弽顓炵閻庯綆鍠楅崐闈浢归敐鍛灓婵炲吋鍔欓弻锝夋晜鐠囧弶鐏撻梺璇″枙閸楁娊鍨鹃敃鍌氱闁哄啫鍋嗗Σ鍗炩攽椤旇棄绗氱紒瀣浮閳ワ箓宕奸妷顔芥櫍婵犵數濮甸懝鍓х不椤旀垝绻嗘い鏍ㄧ閹牏绱撳鍛劯闁?
-    if (subjects.length > 0) {
-        html += `
-                <div class="student-detail-section" style="display:none; margin-top:15px;">
-                    <div style="font-weight:bold; margin-bottom:5px; font-size:13px;">濠碘槅鍋撶徊浠嬪疮椤栫偛绠?闂傚倷绀侀幉锟犳嚌閸撗€鍋撳鐓庢珝闁挎繄鍋ゅ浠嬵敇閻愭鍚呴梻浣哥秺閸嬪﹪宕伴弽顓炵閻庯綆鍠楅崐闈浢归敐鍛灓婵炲吋鍔欓弻?/div>
-                    <div class="table-wrap">
-                        <table class="mobile-card-table" style="font-size:11px;">
-                            <thead>
-                                <tr>
-                                    <th>缂傚倸鍊风粈渚€藝娴兼潙鍨傞柣鐔稿櫞?/th>
-            `;
-
-        student.periods.forEach(p => {
-            html += `<th colspan="3" style="background:#f1f5f9;">${p.examId}</th>`;
+    const compareUi = window.CompareUiService;
+    if (compareUi && typeof compareUi.buildStudentCompareCardView === 'function') {
+        return compareUi.buildStudentCompareCardView({
+            student: student,
+            periodCount: periodCount,
+            totalLabel: totalLabel,
+            subjects: subjects
         });
-
-        html += `</tr><tr><th></th>`;
-        student.periods.forEach(() => {
-            html += `<th>闂傚倷鑳堕幊鎾绘偤閵娾晛绀夋俊銈呮噹娴?/th><th>缂傚倸鍊烽懗鍓佲偓姘箻瀹曠喖顢曢妶鍥ㄥ櫚</th><th>闂傚倸鍊搁崐鐢稿磻閹剧粯鐓曢柕澶涚到婵¤偐绱?/th>`;
-        });
-        html += `</tr></thead><tbody>`;
-
-        subjects.forEach(subject => {
-            html += `<tr><td><strong>${subject}</strong></td>`;
-
-            student.periods.forEach(p => {
-                const subData = p.subjects[subject];
-                if (subData) {
-                    html += `
-                            <td>${subData.score}</td>
-                            <td>${subData.rankSchool}</td>
-                            <td>${subData.rankTown}</td>
-                        `;
-                } else {
-                    html += `<td>-</td><td>-</td><td>-</td>`;
-                }
-            });
-
-            html += `</tr>`;
-        });
-
-        html += `</tbody></table></div></div>`;
     }
-
-    html += `</div>`;
-    return html;
+    return '';
 }
 
 function changePageSize() {
@@ -19065,27 +19115,14 @@ function updateStudentCompareSummary() {
     const summaryEl = document.getElementById('studentCompareSummary');
     if (!summaryEl || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
-    const { studentsCompareData, periodCount } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
-    if (!studentsCompareData || studentsCompareData.length === 0) return;
-
-    const improveCount = studentsCompareData.filter(s => s.progressType === 'improve').length;
-    const declineCount = studentsCompareData.filter(s => s.progressType === 'decline').length;
-    const stableCount = studentsCompareData.filter(s => s.progressType === 'stable').length;
-    const avgScoreDiff = studentsCompareData.reduce((sum, s) => sum + s.scoreDiff, 0) / studentsCompareData.length;
-
-    if (periodCount > 1) {
-        summaryEl.innerHTML = `
-                <div style="padding:12px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:6px; margin-bottom:10px;">
-                    <div style="font-weight:600; margin-bottom:8px; color:#0369a1;">濠碘槅鍋撶徊浠嬪疮椤栫偛绠?闂傚倷鑳堕…鍫㈡崲閸儱绀夌€广儱顦伴崑瀣箹鏉堝墽鎮肩痪鎯с偢閺岋綁寮埀顒€顪冮崸妤€瑙﹂柍褜鍓欓埞鎴︻敊閽樺鐟ㄩ梺绋匡梗缁瑩鏁?/div>
-                    <div style="display:flex; gap:15px; flex-wrap:wrap; font-size:13px;">
-                        <span>濠碘槅鍋撶徊浠嬪疮椤栫偛绠?濠德板€楁慨鐑藉磻濞戙垹鐤柛顭戝櫘閻掍粙骞栧ǎ顒€濡肩紒鈧崱娑欑厱闁斥晛鍠氬▓鏃傜磽瀹ュ嫮绐旈柡? <strong style="color:${avgScoreDiff >= 0 ? '#16a34a' : '#dc2626'};">${avgScoreDiff >= 0 ? '+' : ''}${avgScoreDiff.toFixed(2)}闂?/strong></span>
-                        <span>濠碘槅鍋撶徊浠嬪疮椤愩倗涓?闂備礁鎼ˇ顐﹀疾濠婂懐鐭欓柟鐑橆殢閺佸棝鏌ｉ幇顒夊殶妞も晜鐓￠弻锝夊箣閻愬棙鍨甸埢? <strong style="color:#16a34a;">${improveCount}婵?(${(improveCount / studentsCompareData.length * 100).toFixed(1)}%)</strong></span>
-                        <span>濠碘槅鍋撶徊浠嬪疮椤栫偛绠?闂傚倸鍊风欢锟犲磻閳ь剟鏌涚€ｎ偅灏伴柟渚垮妼閳规垿宕熼銏狀潚婵犳鍠氶幊鎾凰囬棃娑卞殨? <strong style="color:#dc2626;">${declineCount}婵?(${(declineCount / studentsCompareData.length * 100).toFixed(1)}%)</strong></span>
-                        <span>闂傚倷鐒﹀娆撳疮閻樺弬锝夊礋椤撶姷鐣?闂傚倷绀佺紞濠囧疾閼碱剛鐭嗗〒姘ｅ亾闁哄矉绠撻崺锟犲磼濠婂孩閿ら梻浣虹帛閸ㄦ儼鎽┑? <strong>${stableCount}婵?(${(stableCount / studentsCompareData.length * 100).toFixed(1)}%)</strong></span>
-                    </div>
-                </div>
-            `;
+    const compareUi = window.CompareUiService;
+    if (compareUi && typeof compareUi.buildStudentCompareSummaryView === 'function') {
+        const summaryView = compareUi.buildStudentCompareSummaryView({ cache: STUDENT_MULTI_PERIOD_COMPARE_CACHE });
+        summaryEl.innerHTML = summaryView && summaryView.html ? summaryView.html : '';
+        return;
     }
+
+    summaryEl.innerHTML = '';
 }
 
 function normalizeCompareCohortId(raw) {
