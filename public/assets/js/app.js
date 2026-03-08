@@ -8493,46 +8493,7 @@ function updateProgressMultiExamSelects() {
     schoolList.forEach(s => schoolSel.innerHTML += `<option value="${s}">${s}</option>`);
     if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) schoolSel.value = MY_SCHOOL;
 
-    const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
-    const examList = [];
-    if (db?.exams) {
-        Object.values(db.exams).forEach(ex => {
-            if (ex?.examId) examList.push({ id: ex.examId, createdAt: ex.createdAt || 0, label: ex.examId });
-        });
-    }
-    if (CURRENT_EXAM_ID && !examList.some(e => e.id === CURRENT_EXAM_ID)) {
-        examList.push({ id: CURRENT_EXAM_ID, createdAt: Date.now(), label: `${CURRENT_EXAM_ID} (当前)` });
-    }
-    examList.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-
-    if (examList.length < 2) {
-        const msg = '<option value="">--考试数量不足(至少2期)--</option>';
-        exam1Sel.innerHTML = msg;
-        exam2Sel.innerHTML = msg;
-        exam3Sel.innerHTML = msg;
-        return;
-    }
-
-    const optionsHtml = examList.map(e => `<option value="${e.id}">${e.label}</option>`).join('');
-    exam1Sel.innerHTML = optionsHtml;
-    exam2Sel.innerHTML = optionsHtml;
-    exam3Sel.innerHTML = optionsHtml;
-
-    const currentIndex = (CURRENT_EXAM_ID && examList.some(e => e.id === CURRENT_EXAM_ID))
-        ? examList.findIndex(e => e.id === CURRENT_EXAM_ID)
-        : examList.length - 1;
-    const prevIndex = Math.max(0, currentIndex - 1);
-    const prev2Index = Math.max(0, currentIndex - 2);
-
-    exam1Sel.value = examList[prevIndex].id;
-    exam2Sel.value = examList[currentIndex].id;
-    exam3Sel.value = examList[currentIndex].id;
-    if (examList.length >= 3) {
-        exam1Sel.value = examList[prev2Index].id;
-        exam2Sel.value = examList[prevIndex].id;
-        exam3Sel.value = examList[currentIndex].id;
-    }
-
+    renderSharedCompareExamTriplet(exam1Sel, exam2Sel, exam3Sel);
     onProgressComparePeriodCountChange();
 }
 
@@ -9505,7 +9466,6 @@ function updateStudentCompareExamSelects() {
     const exam3Sel = document.getElementById('studentCompareExam3');
     if (!schoolSel || !exam1Sel || !exam2Sel || !exam3Sel) return;
 
-    // 初始化学校选择器
     const schoolList = listAvailableSchoolsForCompare();
     schoolSel.innerHTML = '<option value="">--请选择学校--</option>';
     schoolList.forEach(s => schoolSel.innerHTML += `<option value="${s}">${s}</option>`);
@@ -9513,36 +9473,7 @@ function updateStudentCompareExamSelects() {
         schoolSel.value = MY_SCHOOL;
     }
 
-    // 初始化考试期次选择器
-    const examList = listAvailableExamsForCompare();
-    if (examList.length < 2) {
-        const msg = '<option value="">--考试数量不足(至少2期)--</option>';
-        exam1Sel.innerHTML = msg;
-        exam2Sel.innerHTML = msg;
-        exam3Sel.innerHTML = msg;
-        return;
-    }
-
-    const optionsHtml = examList.map(e => `<option value="${e.id}">${e.label}</option>`).join('');
-    exam1Sel.innerHTML = optionsHtml;
-    exam2Sel.innerHTML = optionsHtml;
-    exam3Sel.innerHTML = optionsHtml;
-
-    const currentIndex = (CURRENT_EXAM_ID && examList.some(e => e.id === CURRENT_EXAM_ID))
-        ? examList.findIndex(e => e.id === CURRENT_EXAM_ID)
-        : examList.length - 1;
-    const prevIndex = Math.max(0, currentIndex - 1);
-    const prev2Index = Math.max(0, currentIndex - 2);
-
-    exam1Sel.value = examList[prevIndex].id;
-    exam2Sel.value = examList[currentIndex].id;
-    exam3Sel.value = examList[currentIndex].id;
-    if (examList.length >= 3) {
-        exam1Sel.value = examList[prev2Index].id;
-        exam2Sel.value = examList[prevIndex].id;
-        exam3Sel.value = examList[currentIndex].id;
-    }
-
+    renderSharedCompareExamTriplet(exam1Sel, exam2Sel, exam3Sel);
     onStudentComparePeriodCountChange();
 }
 
@@ -11306,16 +11237,26 @@ function updateStudentCompareSummary() {
 }
 
 function normalizeCompareCohortId(raw) {
+    if (window.ExamCatalog && typeof window.ExamCatalog.normalizeCohortId === 'function') {
+        return window.ExamCatalog.normalizeCohortId(raw);
+    }
     return String(raw || '').replace(/\D/g, '');
 }
 
 function extractCohortIdFromExamKey(examKey) {
+    if (window.ExamCatalog && typeof window.ExamCatalog.extractCohortIdFromExamKey === 'function') {
+        return window.ExamCatalog.extractCohortIdFromExamKey(examKey);
+    }
     const key = String(examKey || '').trim();
     const m = key.match(/^(\d{4})\D*_/);
     return m ? m[1] : '';
 }
 
 function isRealExamIdForCompare(examId, cohortId) {
+    if (window.ExamCatalog && typeof window.ExamCatalog.isSelectableExamKey === 'function') {
+        return window.ExamCatalog.isSelectableExamKey(examId, cohortId);
+    }
+
     const key = String(examId || '').trim();
     if (!key) return false;
     if (/^(TEACHERS_|STUDENT_COMPARE_|MACRO_COMPARE_|TEACHER_COMPARE_|TOWN_SUB_COMPARE_)/.test(key)) return false;
@@ -11333,10 +11274,17 @@ function isExamSelectableForCompare(examId) {
 
 function listAvailableExamsForCompare() {
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
-    const examMap = new Map(); // 使用 Map 去重
     const cohortId = normalizeCompareCohortId(CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+    if (window.ExamCatalog && typeof window.ExamCatalog.collectAvailableExams === 'function') {
+        return window.ExamCatalog.collectAvailableExams({
+            db,
+            cohortId,
+            currentExamId: CURRENT_EXAM_ID,
+            prevData: window.PREV_DATA || []
+        });
+    }
 
-    // 1. 本地 CohortDB 数据
+    const examMap = new Map();
     if (db?.exams) {
         Object.values(db.exams).forEach(ex => {
             if (ex?.examId && isRealExamIdForCompare(ex.examId, cohortId)) {
@@ -11350,7 +11298,6 @@ function listAvailableExamsForCompare() {
         });
     }
 
-    // 2. 整合当前正在分析的数据
     if (CURRENT_EXAM_ID && isRealExamIdForCompare(CURRENT_EXAM_ID, cohortId) && !examMap.has(CURRENT_EXAM_ID)) {
         examMap.set(CURRENT_EXAM_ID, {
             id: CURRENT_EXAM_ID,
@@ -11360,7 +11307,6 @@ function listAvailableExamsForCompare() {
         });
     }
 
-    // 3. 整合云端异步拉取的当前学生历史 (如果有)
     if (window.PREV_DATA && Array.isArray(window.PREV_DATA)) {
         window.PREV_DATA.forEach(h => {
             const hid = h.examFullKey || h.examId;
@@ -11378,6 +11324,47 @@ function listAvailableExamsForCompare() {
     const examList = Array.from(examMap.values());
     examList.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
     return examList;
+}
+
+function renderSharedCompareExamTriplet(exam1Sel, exam2Sel, exam3Sel) {
+    const examList = listAvailableExamsForCompare();
+    if (window.ExamCatalog && typeof window.ExamCatalog.renderExamSelectTriplet === 'function') {
+        return window.ExamCatalog.renderExamSelectTriplet(
+            [exam1Sel, exam2Sel, exam3Sel],
+            examList,
+            { currentExamId: CURRENT_EXAM_ID }
+        );
+    }
+
+    if (examList.length < 2) {
+        const msg = '<option value="">--考试数量不足(至少2期)--</option>';
+        exam1Sel.innerHTML = msg;
+        exam2Sel.innerHTML = msg;
+        exam3Sel.innerHTML = msg;
+        return { ok: false };
+    }
+
+    const optionsHtml = examList.map(e => `<option value="${e.id}">${e.label}</option>`).join('');
+    exam1Sel.innerHTML = optionsHtml;
+    exam2Sel.innerHTML = optionsHtml;
+    exam3Sel.innerHTML = optionsHtml;
+
+    const currentIndex = (CURRENT_EXAM_ID && examList.some(e => e.id === CURRENT_EXAM_ID))
+        ? examList.findIndex(e => e.id === CURRENT_EXAM_ID)
+        : examList.length - 1;
+    const prevIndex = Math.max(0, currentIndex - 1);
+    const prev2Index = Math.max(0, currentIndex - 2);
+
+    exam1Sel.value = examList[prevIndex].id;
+    exam2Sel.value = examList[currentIndex].id;
+    exam3Sel.value = examList[currentIndex].id;
+    if (examList.length >= 3) {
+        exam1Sel.value = examList[prev2Index].id;
+        exam2Sel.value = examList[prevIndex].id;
+        exam3Sel.value = examList[currentIndex].id;
+    }
+
+    return { ok: true };
 }
 
 function listAvailableSchoolsForCompare() {
@@ -11487,35 +11474,7 @@ function updateMacroMultiExamSelects() {
     schoolList.forEach(s => schoolSel.innerHTML += `<option value="${s}">${s}</option>`);
     if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) schoolSel.value = MY_SCHOOL;
 
-    const examList = listAvailableExamsForCompare();
-    if (examList.length < 2) {
-        const msg = '<option value="">--考试数量不足(至少2期)--</option>';
-        exam1Sel.innerHTML = msg;
-        exam2Sel.innerHTML = msg;
-        exam3Sel.innerHTML = msg;
-        return;
-    }
-
-    const optionsHtml = examList.map(e => `<option value="${e.id}">${e.label}</option>`).join('');
-    exam1Sel.innerHTML = optionsHtml;
-    exam2Sel.innerHTML = optionsHtml;
-    exam3Sel.innerHTML = optionsHtml;
-
-    const currentIndex = (CURRENT_EXAM_ID && examList.some(e => e.id === CURRENT_EXAM_ID))
-        ? examList.findIndex(e => e.id === CURRENT_EXAM_ID)
-        : examList.length - 1;
-    const prevIndex = Math.max(0, currentIndex - 1);
-    const prev2Index = Math.max(0, currentIndex - 2);
-
-    exam1Sel.value = examList[prevIndex].id;
-    exam2Sel.value = examList[currentIndex].id;
-    exam3Sel.value = examList[currentIndex].id;
-    if (examList.length >= 3) {
-        exam1Sel.value = examList[prev2Index].id;
-        exam2Sel.value = examList[prevIndex].id;
-        exam3Sel.value = examList[currentIndex].id;
-    }
-
+    renderSharedCompareExamTriplet(exam1Sel, exam2Sel, exam3Sel);
     onMacroComparePeriodCountChange();
 }
 
@@ -11895,35 +11854,7 @@ function updateTeacherMultiExamSelects() {
         subjectSel.innerHTML += `<option value="${sub}">${sub}</option>`;
     });
 
-    const examList = listAvailableExamsForCompare();
-    if (examList.length < 2) {
-        const msg = '<option value="">--考试数量不足(至少2期)--</option>';
-        exam1Sel.innerHTML = msg;
-        exam2Sel.innerHTML = msg;
-        exam3Sel.innerHTML = msg;
-        return;
-    }
-
-    const optionsHtml = examList.map(e => `<option value="${e.id}">${e.label}</option>`).join('');
-    exam1Sel.innerHTML = optionsHtml;
-    exam2Sel.innerHTML = optionsHtml;
-    exam3Sel.innerHTML = optionsHtml;
-
-    const currentIndex = (CURRENT_EXAM_ID && examList.some(e => e.id === CURRENT_EXAM_ID))
-        ? examList.findIndex(e => e.id === CURRENT_EXAM_ID)
-        : examList.length - 1;
-    const prevIndex = Math.max(0, currentIndex - 1);
-    const prev2Index = Math.max(0, currentIndex - 2);
-
-    exam1Sel.value = examList[prevIndex].id;
-    exam2Sel.value = examList[currentIndex].id;
-    exam3Sel.value = examList[currentIndex].id;
-    if (examList.length >= 3) {
-        exam1Sel.value = examList[prev2Index].id;
-        exam2Sel.value = examList[prevIndex].id;
-        exam3Sel.value = examList[currentIndex].id;
-    }
-
+    renderSharedCompareExamTriplet(exam1Sel, exam2Sel, exam3Sel);
     onTeacherComparePeriodCountChange();
 }
 
@@ -11937,55 +11868,20 @@ function updateTeacherCompareExamSelects() {
 
     if (!schoolEl || !subjectEl || !exam1El || !exam2El || !exam3El) return;
 
-    // 初始化学校选择器
     const schoolList = listAvailableSchoolsForCompare();
     schoolEl.innerHTML = '<option value="">--请选择学校--</option>';
     schoolList.forEach(s => schoolEl.innerHTML += `<option value="${s}">${s}</option>`);
-
-    // 🔥 自动选择当前学校
     if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) {
         schoolEl.value = MY_SCHOOL;
     }
 
-    // 初始化学科选择器
     subjectEl.innerHTML = '<option value="">--请选择学科--</option>';
     (SUBJECTS || []).forEach(sub => {
         subjectEl.innerHTML += `<option value="${sub}">${sub}</option>`;
     });
 
-    // 初始化考试期次选择器
-    const examList = listAvailableExamsForCompare();
-    if (examList.length < 2) {
-        const msg = '<option value="">--考试数量不足(至少2期)--</option>';
-        exam1El.innerHTML = msg;
-        exam2El.innerHTML = msg;
-        exam3El.innerHTML = msg;
-        return;
-    }
+    renderSharedCompareExamTriplet(exam1El, exam2El, exam3El);
 
-    const optionsHtml = examList.map(e => `<option value="${e.id}">${e.label}</option>`).join('');
-    exam1El.innerHTML = optionsHtml;
-    exam2El.innerHTML = optionsHtml;
-    exam3El.innerHTML = optionsHtml;
-
-    // 🔥 自动选择最近3期考试
-    const currentIndex = (CURRENT_EXAM_ID && examList.some(e => e.id === CURRENT_EXAM_ID))
-        ? examList.findIndex(e => e.id === CURRENT_EXAM_ID)
-        : examList.length - 1;
-    const prevIndex = Math.max(0, currentIndex - 1);
-    const prev2Index = Math.max(0, currentIndex - 2);
-
-    if (examList.length >= 3) {
-        exam1El.value = examList[prev2Index].id;
-        exam2El.value = examList[prevIndex].id;
-        exam3El.value = examList[currentIndex].id;
-    } else {
-        exam1El.value = examList[prevIndex].id;
-        exam2El.value = examList[currentIndex].id;
-        exam3El.value = examList[currentIndex].id;
-    }
-
-    // 触发教师下拉框更新
     if (typeof updateTeacherCompareTeacherSelect === 'function') {
         updateTeacherCompareTeacherSelect();
     }

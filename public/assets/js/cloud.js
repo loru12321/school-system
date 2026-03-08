@@ -404,9 +404,13 @@
                     const history = [];
                     const normalizedTargetName = student.name.trim();
                     const targetClassNum = String(student.class || '').replace(/[^0-9]/g, '');
+                    const isAllowedExamKey = (window.ExamCatalog && typeof window.ExamCatalog.isSelectableExamKey === 'function')
+                        ? (key) => window.ExamCatalog.isSelectableExamKey(key, cohortId)
+                        : (key) => !/^(TEACHERS_|STUDENT_COMPARE_|MACRO_COMPARE_|TEACHER_COMPARE_|TOWN_SUB_COMPARE_)/.test(String(key || '').trim());
 
                     for (const item of data) {
                         try {
+                            if (!isAllowedExamKey(item.key)) continue;
                             let content = item.content;
                             // ✅ 修复：使用正确的解压方法 decompressFromUTF16
                             if (typeof content === 'string' && content.startsWith("LZ|")) {
@@ -475,22 +479,28 @@
                 const cid = cohortId || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
                 if (!cid) return { success: false, message: '无法确定届别' };
 
-                const normalizeCohortId = (raw) => String(raw || '').replace(/\D/g, '');
-                const extractCohortIdFromKey = (key) => {
-                    const m = String(key || '').match(/^(\d{4})\D*_/);
-                    return m ? m[1] : '';
-                };
-                const isAllowedExamKey = (key) => {
-                    const examKey = String(key || '').trim();
-                    if (!examKey) return false;
-                    if (/^(TEACHERS_|STUDENT_COMPARE_|MACRO_COMPARE_|TEACHER_COMPARE_|TOWN_SUB_COMPARE_)/.test(examKey)) return false;
-                    if (/(?:^|_)(?:\u671f\u4e2d\u6807\u51c6|\u671f\u672b\u6807\u51c6)(?:_|$)/.test(examKey)) return false;
-                    const normalizedCid = normalizeCohortId(cid);
-                    if (!normalizedCid) return true;
-                    return extractCohortIdFromKey(examKey) === normalizedCid;
-                };
+                const examCatalog = window.ExamCatalog || {};
+                const normalizeCohortId = typeof examCatalog.normalizeCohortId === 'function'
+                    ? examCatalog.normalizeCohortId
+                    : (raw) => String(raw || '').replace(/\D/g, '');
+                const isAllowedExamKey = typeof examCatalog.isSelectableExamKey === 'function'
+                    ? (key) => examCatalog.isSelectableExamKey(key, cid)
+                    : (key) => {
+                        const examKey = String(key || '').trim();
+                        if (!examKey) return false;
+                        if (/^(TEACHERS_|STUDENT_COMPARE_|MACRO_COMPARE_|TEACHER_COMPARE_|TOWN_SUB_COMPARE_)/.test(examKey)) return false;
+                        if (/(?:^|_)(?:\u671f\u4e2d\u6807\u51c6|\u671f\u672b\u6807\u51c6)(?:_|$)/.test(examKey)) return false;
+                        const normalizedCid = normalizeCohortId(cid);
+                        if (!normalizedCid) return true;
+                        const match = examKey.match(/^(\d{4})\D*_/);
+                        return match ? match[1] === normalizedCid : false;
+                    };
                 const refreshSelectors = () => {
                     if (typeof CohortDB.renderExamList === 'function') CohortDB.renderExamList();
+                    if (examCatalog && typeof examCatalog.refreshCompareSelectors === 'function') {
+                        examCatalog.refreshCompareSelectors();
+                        return;
+                    }
                     if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
                     if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
                     if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
@@ -506,7 +516,9 @@
                     const normalizedCid = normalizeCohortId(cid) || cid;
                     const cacheKey = `CLOUD_EXAMS_SYNC_TS_${normalizedCid}`;
                     const lastSyncTs = Number(localStorage.getItem(cacheKey) || 0);
-                    const localExamCount = Object.keys(db.exams || {}).filter(isAllowedExamKey).length;
+                    const localExamCount = (examCatalog && typeof examCatalog.collectAvailableExams === 'function')
+                        ? examCatalog.collectAvailableExams({ db, cohortId: cid, currentExamId: '' }).length
+                        : Object.keys(db.exams || {}).filter(isAllowedExamKey).length;
                     const isRecentSync = Date.now() - lastSyncTs < 3 * 60 * 1000;
 
                     if (localExamCount >= 2 && isRecentSync) {
