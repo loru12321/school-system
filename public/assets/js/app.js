@@ -21,7 +21,12 @@ window.onerror = function (msg, url, lineNo, columnNo, error) {
             cancelButtonColor: '#d33'
         }).then((result) => {
             if (result.isDismissed) { // 用户点击了“清空缓存”
-                idbKeyval.del('autosave_backup').then(() => location.reload());
+                if (window.idbKeyval) {
+                    idbKeyval.del('autosave_backup').then(() => location.reload());
+                } else {
+                    localStorage.removeItem('autosave_backup'); // 回退到 localStorage
+                    location.reload();
+                }
             } else {
                 location.reload();
             }
@@ -289,6 +294,7 @@ window.restoreMainWorkspaceView = function () {
 };
 
 window.showLoginOverlayView = function () {
+    console.log('[UI] Showing login overlay...');
     const app = document.getElementById('app');
     const overlay = document.getElementById('login-overlay');
     const mobApp = document.getElementById('mobile-manager-app');
@@ -297,9 +303,22 @@ window.showLoginOverlayView = function () {
 
     if (app) {
         app.classList.add('hidden');
-        app.style.display = '';
+        app.style.display = 'none'; // 🛑 加强：直接隐藏 app
     }
-    if (overlay) overlay.style.display = 'flex';
+    if (overlay) {
+        // 🔥 激进修补：确保登录层全屏显示且在最顶层
+        Object.assign(overlay.style, {
+            display: 'flex',
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            width: '100vw',
+            height: '100vh',
+            zIndex: '999999',
+            visibility: 'visible',
+            opacity: '1'
+        });
+    }
     if (mobApp) mobApp.style.display = 'none';
     if (parentContainer) parentContainer.style.display = 'none';
     if (loader) loader.classList.add('hidden');
@@ -321,6 +340,7 @@ const Auth = {
 
     // 初始化：检查会话状态
     init: async function () {
+        console.log('[Auth] Initializing...');
         const session = sessionStorage.getItem('CURRENT_USER');
         if (!session) {
             this.currentUser = null;
@@ -369,6 +389,7 @@ const Auth = {
 
         window.restoreMainWorkspaceView();
         if (typeof renderNavigation === 'function') renderNavigation();
+        if (typeof applyUserCohortPreference === 'function') applyUserCohortPreference();
         if (typeof ensureWorkspaceSectionForCurrentUser === 'function') {
             ensureWorkspaceSectionForCurrentUser();
         }
@@ -397,51 +418,68 @@ const Auth = {
         if (!sbClient && typeof window.initSupabase === 'function') {
             window.initSupabase();
         }
-        if (!sbClient) {
-            window.setLoginFeedback('云端连接尚未准备好，请稍后重试或刷新页面。', 'error');
-            return;
-        }
 
         UI.loading(true, '正在验证身份...');
         window.setLoginBusyState(true, '登录中...');
 
         try {
-            const { data, error } = await sbClient
-                .from('system_users')
-                .select('*')
-                .eq('username', user)
-                .eq('password', pass)
-                .maybeSingle();
+            let finalUser = null;
 
-            if (error) {
-                console.error('Database Login Error:', error);
-                throw new Error('系统连接错误：' + error.message);
+            if (sbClient) {
+                try {
+                    const { data, error } = await sbClient
+                        .from('system_users')
+                        .select('*')
+                        .eq('username', user)
+                        .eq('password', pass)
+                        .maybeSingle();
+
+                    if (!error) {
+                        finalUser = data;
+                    } else {
+                        console.warn('Supabase authentication failed, trying local fallback:', error);
+                    }
+                } catch (e) {
+                    console.warn('Supabase exception, trying local fallback:', e);
+                }
             }
 
-            let finalUser = data;
+            // 🟢 [修复] 增加管理员与教师的本地降级登录逻辑
+            if (!finalUser) {
+                // 1. 管理员降级 (Auth.db.admin)
+                if (user === 'admin' && this.db.admin && pass === this.db.admin.pass) {
+                    finalUser = {
+                        username: 'admin',
+                        role: 'admin',
+                        roles: ['admin']
+                    };
+                }
+                // 2. 教师/班主任降级 (基于任课表)
+                else {
+                    const tMap = window.TEACHER_MAP || {};
+                    const ctMap = window.CLASS_TEACHER_MAP || {};
+                    const isTeacher = Object.values(tMap).some(names => String(names).includes(user));
+                    const isClassTeacher = Object.values(ctMap).some(name => String(name).includes(user));
+
+                    if (isTeacher || isClassTeacher) {
+                        const defaultPasses = ['yssy2016', '123456'];
+                        if (defaultPasses.includes(pass)) {
+                            finalUser = {
+                                username: user,
+                                role: isClassTeacher ? 'class_teacher' : 'teacher',
+                                roles: [isClassTeacher ? 'class_teacher' : 'teacher']
+                            };
+                        } else {
+                            window.setLoginFeedback('教师账号请使用之前在系统中设置的密码。如尚未同步到云端，请使用默认密码登录。', 'error');
+                            return;
+                        }
+                    }
+                }
+            }
 
             if (!finalUser) {
-                // 🟢 智能降级：如果云端查不到，但在本地任课表中存在，则允许使用默认密码登录
-                const tMap = window.TEACHER_MAP || {};
-                const ctMap = window.CLASS_TEACHER_MAP || {};
-                const isTeacher = Object.values(tMap).some(names => String(names).includes(user));
-                const isClassTeacher = Object.values(ctMap).some(name => String(name).includes(user));
-                
-                if (isTeacher || isClassTeacher) {
-                    if (pass === 'yssy2016' || pass === '123456') {
-                        finalUser = {
-                            username: user,
-                            role: isClassTeacher ? 'class_teacher' : 'teacher',
-                            roles: [isClassTeacher ? 'class_teacher' : 'teacher']
-                        };
-                    } else {
-                        window.setLoginFeedback('未同步的账号请使用默认密码登录。', 'error');
-                        return;
-                    }
-                } else {
-                    window.setLoginFeedback('账号或密码错误，或该账号尚未同步到云端。', 'error');
-                    return;
-                }
+                window.setLoginFeedback('账号或密码错误，或该账号尚未同步。', 'error');
+                return;
             }
 
             if (finalUser.role === 'parent') {
@@ -477,9 +515,9 @@ const Auth = {
             }
 
             this.applyRoleView();
-            updateAdminOnlyButtons();
-            updateWatermark();
-            updateRoleHint();
+            if (typeof updateAdminOnlyButtons === 'function') updateAdminOnlyButtons();
+            if (typeof updateWatermark === 'function') updateWatermark();
+            if (typeof updateRoleHint === 'function') updateRoleHint();
 
             const rolesInfo = matchedUser.roles && matchedUser.roles.length > 1
                 ? matchedUser.role + ' (' + matchedUser.roles.join(', ') + ')'
@@ -499,7 +537,7 @@ const Auth = {
             }
             window.setLoginFeedback('');
 
-            if (window.UI) UI.toast('\u767b\u5f55\u6210\u529f\uff0c\u6b22\u8fce ' + matchedUser.name, 'success');
+            if (window.UI) UI.toast('登录成功，欢迎 ' + matchedUser.name, 'success');
 
             const finalizeNonParentLogin = () => {
                 window.restoreMainWorkspaceView();
@@ -509,7 +547,7 @@ const Auth = {
 
                 if (typeof CohortManager !== 'undefined') {
                     CohortManager.init();
-                    applyUserCohortPreference();
+                    if (typeof applyUserCohortPreference === 'function') applyUserCohortPreference();
                 }
 
                 if (matchedUser.school) {
@@ -526,9 +564,9 @@ const Auth = {
                 }
 
                 if (matchedUser.role === 'teacher') {
-                    UI.toast('\u6b22\u8fce\u60a8\uff0c' + matchedUser.name + '\u8001\u5e08', 'success');
+                    UI.toast('欢迎您，' + matchedUser.name + '老师', 'success');
                 } else if (matchedUser.role === 'class_teacher') {
-                    UI.toast('\u6b22\u8fce\u60a8\uff0c' + matchedUser.class + '\u73ed\u73ed\u4e3b\u4efb', 'success');
+                    UI.toast('欢迎您，' + matchedUser.class + '班班主任', 'success');
                     setTimeout(() => {
                         const clsSel = document.getElementById('studentClassSelect');
                         if (clsSel) {
@@ -536,15 +574,6 @@ const Auth = {
                             clsSel.dispatchEvent(new Event('change'));
                         }
                     }, 500);
-                } else if (matchedUser.role === 'grade_director') {
-                    UI.toast('\u6b22\u8fce\u60a8\uff0c' + matchedUser.class + '\u5e74\u7ea7\u4e3b\u4efb', 'success');
-                    const msgBtn = document.getElementById('admin-msg-btn');
-                    if (msgBtn) msgBtn.style.display = 'block';
-
-                    if (typeof IssueManager !== 'undefined') {
-                        IssueManager.checkIssues();
-                        setInterval(() => IssueManager.checkIssues(), 30000);
-                    }
                 }
             };
 
@@ -573,7 +602,9 @@ const Auth = {
             const isDefaultPass = (matchedUser.role === 'teacher' && pass === 'yssy2016') || pass === '123456';
             if (isDefaultPass) {
                 UI.toast('检测到默认密码，请立即修改密码。', 'warning');
-                setTimeout(() => openUserPasswordModal(true), 300);
+                if (typeof openUserPasswordModal === 'function') {
+                    setTimeout(() => openUserPasswordModal(true), 300);
+                }
             }
         } catch (err) {
             console.error(err);
@@ -5171,7 +5202,8 @@ window.addEventListener('load', async () => {
 
     // 1. 初始化鉴权 (最先执行)
     if (typeof Auth !== 'undefined') {
-        Auth.init();
+        await Auth.init();
+        if (!Auth.currentUser) return; // 🛑 [验证拦截] 如果未登录，停止后续自动初始化逻辑，等待 Auth.login 完成
     }
 
     // 2. 教程检查
@@ -6455,7 +6487,7 @@ function guardBeforeSwitch(id) {
 
 // [优化] switchTab: 增加动态副标题更新，提升上下文感知
 function switchTab(id) {
-    console.log(`🔄 切换模块: ${id}`);
+    console.log(`🔄 切换模块: ${id}, __guardBypass: ${typeof __guardBypass !== 'undefined' ? __guardBypass : 'undefined'}, currentUser: ${Auth.currentUser ? Auth.currentUser.name : 'null'}`);
     if (!canAccessModule(id)) {
         alert('⛔ 权限不足：该模块对当前角色不可见');
         return;
@@ -16472,6 +16504,12 @@ const MobMgr = {
 
     // 1. 初始化手机管理界面
     init: function () {
+        console.log('[MobMgr] Initializing...');
+        // 🛑 [修复] 如果未登录，不允许初始化手机管理界面
+        if (typeof Auth !== 'undefined' && !Auth.currentUser) {
+            console.warn('[MobMgr] Not logged in, skipping initialization');
+            return false;
+        }
         // 🔴 安全检查：如果手机端管理容器不存在，则不执行初始化
         const mobApp = document.getElementById('mobile-manager-app');
         if (!mobApp) {
@@ -24034,15 +24072,53 @@ function rememberUserCohort(cohortId) {
     localStorage.setItem(key, cohortId);
 }
 
-function applyUserCohortPreference() {
+function getPreferredCohortId() {
     const key = getUserCohortPrefKey();
-    if (!key) return;
-    const saved = localStorage.getItem(key);
-    if (saved) {
-        CohortManager.switchTo(saved);
+    const roleSaved = key ? localStorage.getItem(key) : '';
+    return roleSaved || localStorage.getItem('CURRENT_COHORT_ID') || '';
+}
+
+function renderCohortMaskChoices() {
+    const select = document.getElementById('entry-cohort-select');
+    const status = document.getElementById('entry-cohort-status');
+    const yearInput = document.getElementById('entry-cohort-year');
+    if (!select) return;
+
+    const list = Array.isArray(CohortManager?.list)
+        ? CohortManager.list.slice().sort((a, b) => Number(b?.year || b?.id || 0) - Number(a?.year || a?.id || 0))
+        : [];
+    const preferredId = getPreferredCohortId();
+    const preferredMeta = list.find(item => item && item.id === preferredId) || null;
+
+    if (list.length) {
+        select.disabled = false;
+        select.innerHTML = '<option value="">请选择已有届别</option>' + list.map(item => {
+            const label = formatCohortLabel(item);
+            return `<option value="${item.id}">${label}</option>`;
+        }).join('');
+        if (preferredMeta) select.value = preferredMeta.id;
     } else {
-        showCohortPicker();
+        select.disabled = true;
+        select.innerHTML = '<option value="">暂无已创建届别</option>';
     }
+
+    if (status) {
+        if (preferredMeta) {
+            status.innerHTML = `上次查看：<strong>${formatCohortLabel(preferredMeta)}</strong>`;
+        } else if (list.length) {
+            status.textContent = '请选择要进入的届别，或输入新的入学年份创建。';
+        } else {
+            status.textContent = '还没有届别档案，请先输入入学年份创建。';
+        }
+    }
+
+    if (yearInput && !yearInput.value && preferredMeta?.year) {
+        yearInput.placeholder = `输入新的入学年份，例如 ${preferredMeta.year}`;
+    }
+}
+
+function applyUserCohortPreference() {
+    showCohortPicker();
 }
 
 function setModeMaskVisible(visible) {
@@ -24064,8 +24140,14 @@ function syncModeHeader(infoText) {
 }
 
 function showCohortPicker() {
+    renderCohortMaskChoices();
     setModeMaskVisible(true);
     setMainAppHidden(true);
+
+    const select = document.getElementById('entry-cohort-select');
+    const yearInput = document.getElementById('entry-cohort-year');
+    if (select && !select.disabled) select.focus();
+    else if (yearInput) yearInput.focus();
 }
 
 function resetCohortSelection() {
@@ -24226,10 +24308,17 @@ const CohortManager = {
 };
 
 function enterCohortFromMask() {
+    const selected = document.getElementById('entry-cohort-select')?.value || '';
     const year = parseYearFromInput('entry-cohort-year');
     const startGrade = 6;
-    if (!year || year < 2000) return alert('请输入有效的入学年份');
-    CohortManager.addCohort({ year, startGrade });
+
+    if (selected) {
+        CohortManager.switchTo(selected);
+    } else {
+        if (!year || year < 2000) return alert('请输入有效的入学年份');
+        CohortManager.addCohort({ year, startGrade });
+    }
+
     setModeMaskVisible(false);
     setMainAppHidden(false);
     setTimeout(() => {
@@ -26344,7 +26433,6 @@ function getTeacherTermOptions() {
             .map(o => ({ value: o.value, label: o.textContent }));
     }
 
-
     const options = [];
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
     const history = db?.teachingHistory || {};
@@ -26360,66 +26448,59 @@ function getTeacherTermOptions() {
     return options;
 }
 
-function promptTeacherSyncIfNeeded() {
-    if (localStorage.getItem('SUPPRESS_TEACHER_SYNC_PROMPT') === '1') return;
-    if (sessionStorage.getItem('TEACHER_SYNC_PROMPT_SHOWN') === '1') return;
-    if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return;
+function getTeacherSyncSessionKey(cohortId) {
+    return `TEACHER_SYNC_AUTO_${cohortId || 'unknown'}`;
+}
+
+async function autoLoadNearestTeacherMapForCurrentCohort(options = {}) {
+    const cohortId = String(CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
+    if (!cohortId) return false;
 
     const currentUser = getCurrentUser();
     const currentRole = currentUser?.role || 'guest';
-    if (currentRole === 'teacher' || currentRole === 'class_teacher') return false;
+    if (currentRole === 'parent' || currentRole === 'guest') return false;
 
-    const opts = getTeacherTermOptions();
-    if (!opts.length) return false;
-
-    const current = localStorage.getItem('CURRENT_TERM_ID');
-    const defaultValue = current || opts[0].value;
-
-    const doSync = (termId) => {
-        if (!termId) return;
-        localStorage.setItem('CURRENT_TERM_ID', termId);
-        const termSel = document.getElementById('dm-teacher-term-select');
-        if (termSel) termSel.value = termId;
-        if (window.CloudManager && CloudManager.loadTeachers) CloudManager.loadTeachers();
-    };
-
-    if (typeof Swal === 'undefined') {
-        const list = opts.map(o => o.value).join('\n');
-        const picked = prompt(`检测到任课表可同步，请输入学期ID：\n${list}`, defaultValue);
-        if (picked) doSync(picked);
-        sessionStorage.setItem('TEACHER_SYNC_PROMPT_SHOWN', '1');
+    if (!options.force && window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) {
         return true;
     }
 
-    Swal.fire({
-        title: '☁️ 检测到任课表可同步',
-        html: `请选择学期后同步任课表到本地：<br><small style="color:#94a3b8;">本次仅同步任课表，不影响成绩数据</small>`,
-        input: 'select',
-        inputOptions: opts.reduce((acc, o) => (acc[o.value] = o.label, acc), {}),
-        inputValue: defaultValue,
-        showCancelButton: true,
-        confirmButtonText: '同步到本地',
-        cancelButtonText: '暂不同步',
-        showDenyButton: true,
-        denyButtonText: '不再提示',
-        confirmButtonColor: '#0ea5e9'
-    }).then((res) => {
-        if (res.isConfirmed) doSync(res.value);
-        if (res.isDenied) localStorage.setItem('SUPPRESS_TEACHER_SYNC_PROMPT', '1');
-    });
-    sessionStorage.setItem('TEACHER_SYNC_PROMPT_SHOWN', '1');
-    return true;
+    const sessionKey = getTeacherSyncSessionKey(cohortId);
+    if (!options.force && sessionStorage.getItem(sessionKey) === '1') {
+        return false;
+    }
+    sessionStorage.setItem(sessionKey, '1');
+
+    if (window.DataManager && typeof DataManager.renderTeacherTermSelect === 'function') {
+        DataManager.renderTeacherTermSelect();
+    }
+
+    try {
+        if (window.CloudManager && typeof CloudManager.loadTeachers === 'function') {
+            const result = await CloudManager.loadTeachers({ preferNearestToNow: true, silentIfMissing: true });
+            return !!(result && result.success);
+        }
+    } catch (error) {
+        console.warn('自动加载教师任课表失败:', error);
+    }
+    return false;
+}
+
+function promptTeacherSyncIfNeeded() {
+    return autoLoadNearestTeacherMapForCurrentCohort();
 }
 
 function scheduleTeacherSyncPrompt() {
-    if (localStorage.getItem('SUPPRESS_TEACHER_SYNC_PROMPT') === '1') return;
-    if (sessionStorage.getItem('TEACHER_SYNC_PROMPT_SHOWN') === '1') return;
+    const cohortId = String(CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
+    if (!cohortId) return;
+
     let tries = 0;
     const timer = setInterval(() => {
         tries += 1;
-        const shown = promptTeacherSyncIfNeeded();
-        if (shown || tries >= 10) {
-            clearInterval(timer);
+        const ready = !!(window.CloudManager && typeof CloudManager.loadTeachers === 'function');
+        if (!ready && tries < 10) return;
+        clearInterval(timer);
+        if (ready) {
+            void autoLoadNearestTeacherMapForCurrentCohort();
         }
     }, 800);
 }
@@ -26553,4 +26634,5 @@ window.addEventListener('load', () => {
     }, 1000); // 延迟 1 秒执行
 });
 window.DataManager = DataManager;
+
 

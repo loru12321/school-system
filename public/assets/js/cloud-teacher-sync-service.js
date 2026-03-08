@@ -1,4 +1,4 @@
-(function() {
+﻿(function() {
     function normalizeTeacherName(name) {
         return String(name || '').replace(/\s+/g, '').toLowerCase();
     }
@@ -138,7 +138,7 @@
     async function loadTeachers(options) {
         const opts = options || {};
         const sbClient = opts.sbClient || window.sbClient;
-        if (!sbClient) return;
+        if (!sbClient) return { success: false, reason: 'no_client' };
 
         try {
             if (window.UI) UI.loading(true, '☁️ 正在从云端拉取学期任课表...');
@@ -219,10 +219,10 @@
                 const cohortHint = cohortId ? `${cohortId}级` : '未识别届数';
                 const keyHint = triedKeys.length ? triedKeys.join(' | ') : '(无)';
                 console.warn(`⚠️ 云端未找到可用任课档案: ${loadedKey || '(无可用key)'}`);
-                if (window.UI) {
+                if (!opts.silentIfMissing && window.UI) {
                     UI.toast(`⚠️ 未找到任课表：届数=${cohortHint}，学期=${termHint}；已尝试=${keyHint}`, 'warning');
                 }
-                return;
+                return { success: false, reason: 'not_found' };
             }
 
             const payload = parseTeacherPayload(payloadContent);
@@ -256,6 +256,7 @@
             if (window.UI) UI.toast(`✅ 已从云端加载本学期任课表（${Object.keys(map).length}条）`, 'success');
             if (typeof window.logAction === 'function') window.logAction('任课同步', `任课表已加载：${loadedKey || 'fallback-key'}`);
             console.log(`✅ 云端任课表加载成功: ${loadedKey || 'fallback-key'}, 共 ${Object.keys(map).length} 条记录`);
+            return { success: true, key: loadedKey || 'fallback-key', count: Object.keys(map).length };
         } catch (error) {
             console.error('云端加载失败:', error);
             const msg = String(error?.message || error?.details || error?.hint || error || '未知错误');
@@ -271,6 +272,7 @@
             }
 
             if (window.UI) UI.toast(reason, 'error');
+            return { success: false, error };
         } finally {
             if (window.UI) UI.loading(false);
         }
@@ -283,3 +285,5 @@
         loadTeachers
     };
 })();
+
+
