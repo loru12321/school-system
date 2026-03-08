@@ -5016,11 +5016,10 @@ async function switchCohort(cohortId) {
         renderTables();
 
         // 如果有配置名，刷新导航
-        const badge = document.getElementById('mode-badge');
-        if (badge && CONFIG.name) badge.innerText = CONFIG.name;
+        syncModeHeader();
         renderNavigation();
-        document.getElementById('mode-mask').style.display = 'none';
-        document.getElementById('app').classList.remove('hidden');
+        setModeMaskVisible(false);
+        setMainAppHidden(false);
 
         CohortDB.renderExamList();
 
@@ -5069,8 +5068,8 @@ async function switchCohort(cohortId) {
         renderTables();
         const grade = computeCohortGrade(CURRENT_COHORT_META, getExamMetaFromUI());
         applyModeByGrade(grade);
-        document.getElementById('mode-mask').style.display = 'none';
-        document.getElementById('app').classList.remove('hidden');
+        setModeMaskVisible(false);
+        setMainAppHidden(false);
 
         CohortDB.renderExamList();
 
@@ -5117,7 +5116,7 @@ window.addEventListener('load', async () => {
         if (loader) loader.classList.add('hidden');
         sessionStorage.removeItem('CURRENT_USER');
         document.getElementById('login-overlay').style.display = 'flex';
-        document.getElementById('app').classList.add('hidden');
+        setMainAppHidden(true);
         const db = window.EMBEDDED_DB;
 
         // 恢复内存
@@ -5152,8 +5151,11 @@ window.addEventListener('load', async () => {
         updateSchoolSelect();
         updateMySchoolSelect();
         renderTables();
-        document.getElementById('mode-mask').style.display = 'none';
-        if (CONFIG.name) renderNavigation();
+        setModeMaskVisible(false);
+        if (CONFIG.name) {
+            syncModeHeader();
+            renderNavigation();
+        }
 
         UI.toast("✅ 数据已自动加载 (分发版模式)", "success");
     }
@@ -5231,12 +5233,11 @@ window.addEventListener('load', async () => {
                 syncRuntimeStateToWindow();
 
                 // 刷新界面
-                document.getElementById('mode-mask').style.display = 'none';
-                document.getElementById('app').classList.remove('hidden');
+                setModeMaskVisible(false);
+                setMainAppHidden(false);
 
                 if (CONFIG.name) {
-                    document.getElementById('mode-badge').innerText = CONFIG.name;
-                    document.getElementById('mode-info').innerText = `${CONFIG.name}模式`;
+                    syncModeHeader();
                     renderNavigation();
                 }
 
@@ -5288,7 +5289,7 @@ window.addEventListener('load', async () => {
         }
         else {
             // 无数据，显示初始模式选择
-            document.getElementById('mode-mask').style.display = 'flex';
+            setModeMaskVisible(true);
         }
     }
 
@@ -6268,14 +6269,14 @@ saveProjectSnapshot = function () {
 
 // ================= 初始化 =================
 function initSystem(type) {
-    document.getElementById('mode-mask').style.display = 'none';
-    document.getElementById('app').classList.remove('hidden');
+    setModeMaskVisible(false);
+    setMainAppHidden(false);
     if (type === '6-8') CONFIG = { name: '6-8年级', label: '全科总', excRate: 0.05, totalSubs: 'auto', analysisSubs: 'auto', showQuery: true };
     else CONFIG = { name: '9年级', label: '五科总', excRate: 0.06, totalSubs: ['语文', '数学', '英语', '物理', '化学'], analysisSubs: ['语文', '数学', '英语', '物理', '化学', '政治'], showQuery: true };
-    document.getElementById('mode-badge').innerText = CONFIG.name;
-    document.getElementById('mode-info').innerText = `${CONFIG.name}模式 (总分: ${CONFIG.label}, 后1/3剔除: ${CONFIG.excRate * 100}%)`;
+    syncModeHeader(`${CONFIG.name}模式 (总分: ${CONFIG.label}, 后1/3剔除: ${CONFIG.excRate * 100}%)`);
     document.querySelectorAll('.label-total').forEach(e => e.innerText = CONFIG.label);
-    document.getElementById('label-exc').innerText = (CONFIG.excRate * 100) + '%';
+    const excEl = document.getElementById('label-exc');
+    if (excEl) excEl.innerText = (CONFIG.excRate * 100) + '%';
     renderNavigation();
 }
 
@@ -23912,11 +23913,27 @@ function applyUserCohortPreference() {
     }
 }
 
-function showCohortPicker() {
+function setModeMaskVisible(visible) {
     const mask = document.getElementById('mode-mask');
+    if (mask) mask.style.display = visible ? 'flex' : 'none';
+}
+
+function setMainAppHidden(hidden) {
     const app = document.getElementById('app');
-    if (mask) mask.style.display = 'flex';
-    if (app) app.classList.add('hidden');
+    if (app) app.classList.toggle('hidden', !!hidden);
+}
+
+function syncModeHeader(infoText) {
+    if (!CONFIG || !CONFIG.name) return;
+    const badge = document.getElementById('mode-badge');
+    if (badge) badge.innerText = CONFIG.name;
+    const info = document.getElementById('mode-info');
+    if (info) info.innerText = infoText || `${CONFIG.name}模式`;
+}
+
+function showCohortPicker() {
+    setModeMaskVisible(true);
+    setMainAppHidden(true);
 }
 
 function resetCohortSelection() {
@@ -23955,10 +23972,7 @@ function applyModeByGrade(grade) {
     } else {
         CONFIG = { name: '6-8年级', label: '全科总', excRate: 0.05, totalSubs: 'auto', analysisSubs: 'auto', showQuery: true, mode: CONFIG.mode || 'multi' };
     }
-    const badge = document.getElementById('mode-badge');
-    if (badge) badge.innerText = CONFIG.name;
-    const info = document.getElementById('mode-info');
-    if (info) info.innerText = `${CONFIG.name}模式 (总分: ${CONFIG.label}, 后1/3剔除: ${CONFIG.excRate * 100}%)`;
+    syncModeHeader(`${CONFIG.name}模式 (总分: ${CONFIG.label}, 后1/3剔除: ${CONFIG.excRate * 100}%)`);
     document.querySelectorAll('.label-total').forEach(e => e.innerText = CONFIG.label);
     const excEl = document.getElementById('label-exc');
     if (excEl) excEl.innerText = (CONFIG.excRate * 100) + '%';
@@ -24084,8 +24098,8 @@ function enterCohortFromMask() {
     const startGrade = 6;
     if (!year || year < 2000) return alert('请输入有效的入学年份');
     CohortManager.addCohort({ year, startGrade });
-    document.getElementById('mode-mask').style.display = 'none';
-    document.getElementById('app').classList.remove('hidden');
+    setModeMaskVisible(false);
+    setMainAppHidden(false);
     setTimeout(() => {
         scheduleTeacherSyncPrompt();
     }, 1200);
