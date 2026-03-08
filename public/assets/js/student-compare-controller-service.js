@@ -260,6 +260,97 @@
         return list;
     }
 
+    function getStudentCompareGroupElements() {
+        return {
+            groupEl: document.getElementById('studentCompareGroupBy'),
+            paginationEl: document.getElementById('studentComparePagination'),
+            resultEl: document.getElementById('studentCompareResult'),
+            optgroupEl: document.getElementById('classGroupOptions')
+        };
+    }
+
+    function getStudentCompareClassName(student) {
+        const className = String(student && student.class || '').trim();
+        return className || '\u672a\u5206\u73ed';
+    }
+
+    function buildStudentCompareGroupStats(students) {
+        const list = Array.isArray(students) ? students : [];
+        if (!list.length) {
+            return { improveCount: 0, declineCount: 0, avgScoreDiff: 0 };
+        }
+        return {
+            improveCount: list.filter(function(item) { return item && item.progressType === 'improve'; }).length,
+            declineCount: list.filter(function(item) { return item && item.progressType === 'decline'; }).length,
+            avgScoreDiff: list.reduce(function(sum, item) { return sum + Number(item && item.scoreDiff || 0); }, 0) / list.length
+        };
+    }
+
+    function listStudentCompareVisibleClasses(cache) {
+        const dataCache = cache || {};
+        let classes = Array.from(new Set((Array.isArray(dataCache.studentsCompareData) ? dataCache.studentsCompareData : []).map(getStudentCompareClassName)));
+        const roleManager = window.RoleManager;
+        const hasAnyRole = roleManager && typeof roleManager.hasAnyRole === 'function'
+            ? function(user, roles) { return roleManager.hasAnyRole(user, roles); }
+            : function() { return false; };
+        const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+        if (user && hasAnyRole(user, ['teacher', 'class_teacher']) && !hasAnyRole(user, ['admin', 'director', 'grade_director'])
+            && typeof getTeacherScopeForUser === 'function' && typeof normalizeClass === 'function') {
+            const scope = getTeacherScopeForUser(user) || {};
+            if (scope.classes && scope.classes.size > 0) {
+                classes = classes.filter(function(className) {
+                    return scope.classes.has(normalizeClass(className));
+                });
+            }
+        }
+        return classes.sort(function(a, b) { return String(a || '').localeCompare(String(b || ''), 'zh-CN'); });
+    }
+
+    function buildStudentCompareGroupedClasses(cache) {
+        const dataCache = cache || {};
+        const groupedByClass = {};
+        (Array.isArray(dataCache.studentsCompareData) ? dataCache.studentsCompareData : []).forEach(function(student) {
+            const className = getStudentCompareClassName(student);
+            if (!groupedByClass[className]) groupedByClass[className] = [];
+            groupedByClass[className].push(student);
+        });
+        return Object.keys(groupedByClass)
+            .sort(function(a, b) { return String(a || '').localeCompare(String(b || ''), 'zh-CN'); })
+            .map(function(className) {
+                const students = groupedByClass[className];
+                return {
+                    className: className,
+                    count: students.length,
+                    students: students,
+                    stats: buildStudentCompareGroupStats(students)
+                };
+            });
+    }
+
+    function resolveStudentCompareGroupView(cache, groupBy) {
+        const dataCache = cache || {};
+        const currentGroup = String(groupBy || '');
+        if (currentGroup.indexOf('class:') === 0) {
+            const className = currentGroup.slice(6);
+            const students = (Array.isArray(dataCache.studentsCompareData) ? dataCache.studentsCompareData : []).filter(function(student) {
+                return getStudentCompareClassName(student) === className;
+            });
+            return {
+                mode: 'singleClass',
+                className: className,
+                students: students,
+                stats: buildStudentCompareGroupStats(students)
+            };
+        }
+        if (currentGroup === 'class') {
+            return {
+                mode: 'classGroups',
+                groups: buildStudentCompareGroupedClasses(dataCache)
+            };
+        }
+        return { mode: 'list' };
+    }
+
     window.StudentCompareControllerService = {
         getStudentCompareElements: getStudentCompareElements,
         readStudentCompareState: readStudentCompareState,
@@ -276,7 +367,10 @@
         filterStudentCompareByNames: filterStudentCompareByNames,
         restoreStudentCompareOriginalData: restoreStudentCompareOriginalData,
         filterStudentCompareByProgressType: filterStudentCompareByProgressType,
-        sortStudentCompareRows: sortStudentCompareRows
+        sortStudentCompareRows: sortStudentCompareRows,
+        getStudentCompareGroupElements: getStudentCompareGroupElements,
+        listStudentCompareVisibleClasses: listStudentCompareVisibleClasses,
+        resolveStudentCompareGroupView: resolveStudentCompareGroupView
     };
 })();
 

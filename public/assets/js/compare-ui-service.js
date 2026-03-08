@@ -418,6 +418,99 @@
         };
     }
 
+    function buildStudentCompareGroupOptions(options) {
+        const opts = options || {};
+        const classes = Array.isArray(opts.classes) ? opts.classes : [];
+        let html = '<option value="class">\u6309\u73ed\u7ea7\u5206\u7ec4\u67e5\u770b</option>';
+        classes.forEach(function(className) {
+            const safeClassName = escapeStudentCompareHtml(className || '');
+            html += '<option value="class:' + safeClassName + '">' + safeClassName + '</option>';
+        });
+        return html;
+    }
+
+    function buildStudentCompareEmptyState(message) {
+        return '<div style="padding:20px; text-align:center; color:#64748b;">' + escapeStudentCompareHtml(message || '\u6682\u65e0\u6570\u636e') + '</div>';
+    }
+
+    function getStudentCompareGroupToggleText(expanded) {
+        return expanded ? '\u6536\u8d77\u73ed\u7ea7' : '\u5c55\u5f00\u73ed\u7ea7';
+    }
+
+    function buildStudentCompareClassStatsHtml(stats, options) {
+        const data = stats || {};
+        const opts = options || {};
+        const avgScoreDiff = Number(data.avgScoreDiff || 0);
+        const avgColor = avgScoreDiff >= 0 ? '#16a34a' : '#dc2626';
+        const countLabel = escapeStudentCompareHtml(opts.countLabel || '\u4eba');
+        return ''
+            + '<span>\u5e73\u5747\u603b\u5206\u53d8\u5316 <strong style="color:' + avgColor + ';">' + (avgScoreDiff >= 0 ? '+' : '') + avgScoreDiff.toFixed(1) + '</strong></span>'
+            + '<span style="color:#16a34a;">\u8fdb\u6b65 ' + Number(data.improveCount || 0) + countLabel + '</span>'
+            + '<span style="color:#dc2626;">\u9000\u6b65 ' + Number(data.declineCount || 0) + countLabel + '</span>';
+    }
+
+    function buildStudentCompareSingleClassView(options) {
+        const opts = options || {};
+        const students = Array.isArray(opts.students) ? opts.students : [];
+        if (!students.length) {
+            return {
+                resultHtml: buildStudentCompareEmptyState('\u5f53\u524d\u73ed\u7ea7\u6682\u65e0\u5bf9\u6bd4\u6570\u636e\u3002')
+            };
+        }
+        const statsHtml = buildStudentCompareClassStatsHtml(opts.stats, { countLabel: '\u540d' });
+        let html = ''
+            + '<div class="class-group-section" style="margin-bottom:25px; border:2px solid #0ea5e9; border-radius:10px; overflow:hidden;">'
+            + '<div class="class-group-header" style="background:#0ea5e9; padding:12px 15px; font-weight:600; color:white; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">'
+            + '<div><span style="font-size:17px;">\u73ed\u7ea7\uff1a' + escapeStudentCompareHtml(opts.className || '') + '</span>'
+            + '<span style="font-size:14px; margin-left:10px; opacity:0.9;">' + students.length + '\u540d\u5b66\u751f</span></div>'
+            + '<div style="font-size:12px; display:flex; gap:12px; opacity:0.95; flex-wrap:wrap;">' + statsHtml + '</div>'
+            + '</div>'
+            + '<div class="class-students-container" style="padding:15px; background:#ffffff;">';
+        students.forEach(function(student) {
+            html += buildStudentCompareCardView({
+                student: student,
+                periodCount: opts.periodCount,
+                totalLabel: opts.totalLabel,
+                subjects: opts.subjects
+            });
+        });
+        html += '</div></div>';
+        return { resultHtml: html };
+    }
+
+    function buildStudentCompareGroupedView(options) {
+        const opts = options || {};
+        const groups = Array.isArray(opts.groups) ? opts.groups : [];
+        if (!groups.length) {
+            return {
+                resultHtml: buildStudentCompareEmptyState('\u5f53\u524d\u6682\u65e0\u53ef\u5206\u7ec4\u7684\u5b66\u751f\u5bf9\u6bd4\u6570\u636e\u3002')
+            };
+        }
+        let html = '';
+        groups.forEach(function(group) {
+            const statsHtml = buildStudentCompareClassStatsHtml(group.stats, { countLabel: '\u540d' });
+            html += ''
+                + '<div class="class-group-section" style="margin-bottom:25px; border:2px solid #cbd5e1; border-radius:10px; overflow:hidden;">'
+                + '<div class="class-group-header" style="background:#e0f2fe; padding:10px 15px; font-weight:600; color:#0c4a6e; display:flex; justify-content:space-between; align-items:center; cursor:pointer; gap:12px; flex-wrap:wrap;" onclick="toggleClassGroup(this)">'
+                + '<div><span style="font-size:16px;">\u73ed\u7ea7\uff1a' + escapeStudentCompareHtml(group.className || '') + '</span>'
+                + '<span style="font-size:13px; margin-left:10px; color:#64748b;">' + Number(group.count || 0) + '\u540d\u5b66\u751f</span></div>'
+                + '<div style="font-size:12px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;">' + statsHtml
+                + '<span class="group-toggle" style="font-weight:bold; color:#0f172a;">' + getStudentCompareGroupToggleText(true) + '</span>'
+                + '</div></div>'
+                + '<div class="class-students-container" style="padding:10px; background:#ffffff;">';
+            (group.students || []).forEach(function(student) {
+                html += buildStudentCompareCardView({
+                    student: student,
+                    periodCount: opts.periodCount,
+                    totalLabel: opts.totalLabel,
+                    subjects: opts.subjects
+                });
+            });
+            html += '</div></div>';
+        });
+        return { resultHtml: html };
+    }
+
     window.CompareUiService = {
         renderOptions,
         renderSchoolSelect,
@@ -435,7 +528,12 @@
         buildStudentCompareSearchFeedback,
         buildStudentCompareSearchEmptyFeedback,
         buildStudentCompareResetFeedback,
-        buildStudentCompareProgressFeedback
+        buildStudentCompareProgressFeedback,
+        buildStudentCompareGroupOptions,
+        buildStudentCompareEmptyState,
+        getStudentCompareGroupToggleText,
+        buildStudentCompareSingleClassView,
+        buildStudentCompareGroupedView
     };
 })();
 

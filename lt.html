@@ -5523,6 +5523,99 @@
         };
     }
 
+    function buildStudentCompareGroupOptions(options) {
+        const opts = options || {};
+        const classes = Array.isArray(opts.classes) ? opts.classes : [];
+        let html = '<option value="class">\u6309\u73ed\u7ea7\u5206\u7ec4\u67e5\u770b</option>';
+        classes.forEach(function(className) {
+            const safeClassName = escapeStudentCompareHtml(className || '');
+            html += '<option value="class:' + safeClassName + '">' + safeClassName + '</option>';
+        });
+        return html;
+    }
+
+    function buildStudentCompareEmptyState(message) {
+        return '<div style="padding:20px; text-align:center; color:#64748b;">' + escapeStudentCompareHtml(message || '\u6682\u65e0\u6570\u636e') + '</div>';
+    }
+
+    function getStudentCompareGroupToggleText(expanded) {
+        return expanded ? '\u6536\u8d77\u73ed\u7ea7' : '\u5c55\u5f00\u73ed\u7ea7';
+    }
+
+    function buildStudentCompareClassStatsHtml(stats, options) {
+        const data = stats || {};
+        const opts = options || {};
+        const avgScoreDiff = Number(data.avgScoreDiff || 0);
+        const avgColor = avgScoreDiff >= 0 ? '#16a34a' : '#dc2626';
+        const countLabel = escapeStudentCompareHtml(opts.countLabel || '\u4eba');
+        return ''
+            + '<span>\u5e73\u5747\u603b\u5206\u53d8\u5316 <strong style="color:' + avgColor + ';">' + (avgScoreDiff >= 0 ? '+' : '') + avgScoreDiff.toFixed(1) + '</strong></span>'
+            + '<span style="color:#16a34a;">\u8fdb\u6b65 ' + Number(data.improveCount || 0) + countLabel + '</span>'
+            + '<span style="color:#dc2626;">\u9000\u6b65 ' + Number(data.declineCount || 0) + countLabel + '</span>';
+    }
+
+    function buildStudentCompareSingleClassView(options) {
+        const opts = options || {};
+        const students = Array.isArray(opts.students) ? opts.students : [];
+        if (!students.length) {
+            return {
+                resultHtml: buildStudentCompareEmptyState('\u5f53\u524d\u73ed\u7ea7\u6682\u65e0\u5bf9\u6bd4\u6570\u636e\u3002')
+            };
+        }
+        const statsHtml = buildStudentCompareClassStatsHtml(opts.stats, { countLabel: '\u540d' });
+        let html = ''
+            + '<div class="class-group-section" style="margin-bottom:25px; border:2px solid #0ea5e9; border-radius:10px; overflow:hidden;">'
+            + '<div class="class-group-header" style="background:#0ea5e9; padding:12px 15px; font-weight:600; color:white; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">'
+            + '<div><span style="font-size:17px;">\u73ed\u7ea7\uff1a' + escapeStudentCompareHtml(opts.className || '') + '</span>'
+            + '<span style="font-size:14px; margin-left:10px; opacity:0.9;">' + students.length + '\u540d\u5b66\u751f</span></div>'
+            + '<div style="font-size:12px; display:flex; gap:12px; opacity:0.95; flex-wrap:wrap;">' + statsHtml + '</div>'
+            + '</div>'
+            + '<div class="class-students-container" style="padding:15px; background:#ffffff;">';
+        students.forEach(function(student) {
+            html += buildStudentCompareCardView({
+                student: student,
+                periodCount: opts.periodCount,
+                totalLabel: opts.totalLabel,
+                subjects: opts.subjects
+            });
+        });
+        html += '</div></div>';
+        return { resultHtml: html };
+    }
+
+    function buildStudentCompareGroupedView(options) {
+        const opts = options || {};
+        const groups = Array.isArray(opts.groups) ? opts.groups : [];
+        if (!groups.length) {
+            return {
+                resultHtml: buildStudentCompareEmptyState('\u5f53\u524d\u6682\u65e0\u53ef\u5206\u7ec4\u7684\u5b66\u751f\u5bf9\u6bd4\u6570\u636e\u3002')
+            };
+        }
+        let html = '';
+        groups.forEach(function(group) {
+            const statsHtml = buildStudentCompareClassStatsHtml(group.stats, { countLabel: '\u540d' });
+            html += ''
+                + '<div class="class-group-section" style="margin-bottom:25px; border:2px solid #cbd5e1; border-radius:10px; overflow:hidden;">'
+                + '<div class="class-group-header" style="background:#e0f2fe; padding:10px 15px; font-weight:600; color:#0c4a6e; display:flex; justify-content:space-between; align-items:center; cursor:pointer; gap:12px; flex-wrap:wrap;" onclick="toggleClassGroup(this)">'
+                + '<div><span style="font-size:16px;">\u73ed\u7ea7\uff1a' + escapeStudentCompareHtml(group.className || '') + '</span>'
+                + '<span style="font-size:13px; margin-left:10px; color:#64748b;">' + Number(group.count || 0) + '\u540d\u5b66\u751f</span></div>'
+                + '<div style="font-size:12px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;">' + statsHtml
+                + '<span class="group-toggle" style="font-weight:bold; color:#0f172a;">' + getStudentCompareGroupToggleText(true) + '</span>'
+                + '</div></div>'
+                + '<div class="class-students-container" style="padding:10px; background:#ffffff;">';
+            (group.students || []).forEach(function(student) {
+                html += buildStudentCompareCardView({
+                    student: student,
+                    periodCount: opts.periodCount,
+                    totalLabel: opts.totalLabel,
+                    subjects: opts.subjects
+                });
+            });
+            html += '</div></div>';
+        });
+        return { resultHtml: html };
+    }
+
     window.CompareUiService = {
         renderOptions,
         renderSchoolSelect,
@@ -5540,7 +5633,12 @@
         buildStudentCompareSearchFeedback,
         buildStudentCompareSearchEmptyFeedback,
         buildStudentCompareResetFeedback,
-        buildStudentCompareProgressFeedback
+        buildStudentCompareProgressFeedback,
+        buildStudentCompareGroupOptions,
+        buildStudentCompareEmptyState,
+        getStudentCompareGroupToggleText,
+        buildStudentCompareSingleClassView,
+        buildStudentCompareGroupedView
     };
 })();
 
@@ -6007,6 +6105,97 @@
         return list;
     }
 
+    function getStudentCompareGroupElements() {
+        return {
+            groupEl: document.getElementById('studentCompareGroupBy'),
+            paginationEl: document.getElementById('studentComparePagination'),
+            resultEl: document.getElementById('studentCompareResult'),
+            optgroupEl: document.getElementById('classGroupOptions')
+        };
+    }
+
+    function getStudentCompareClassName(student) {
+        const className = String(student && student.class || '').trim();
+        return className || '\u672a\u5206\u73ed';
+    }
+
+    function buildStudentCompareGroupStats(students) {
+        const list = Array.isArray(students) ? students : [];
+        if (!list.length) {
+            return { improveCount: 0, declineCount: 0, avgScoreDiff: 0 };
+        }
+        return {
+            improveCount: list.filter(function(item) { return item && item.progressType === 'improve'; }).length,
+            declineCount: list.filter(function(item) { return item && item.progressType === 'decline'; }).length,
+            avgScoreDiff: list.reduce(function(sum, item) { return sum + Number(item && item.scoreDiff || 0); }, 0) / list.length
+        };
+    }
+
+    function listStudentCompareVisibleClasses(cache) {
+        const dataCache = cache || {};
+        let classes = Array.from(new Set((Array.isArray(dataCache.studentsCompareData) ? dataCache.studentsCompareData : []).map(getStudentCompareClassName)));
+        const roleManager = window.RoleManager;
+        const hasAnyRole = roleManager && typeof roleManager.hasAnyRole === 'function'
+            ? function(user, roles) { return roleManager.hasAnyRole(user, roles); }
+            : function() { return false; };
+        const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+        if (user && hasAnyRole(user, ['teacher', 'class_teacher']) && !hasAnyRole(user, ['admin', 'director', 'grade_director'])
+            && typeof getTeacherScopeForUser === 'function' && typeof normalizeClass === 'function') {
+            const scope = getTeacherScopeForUser(user) || {};
+            if (scope.classes && scope.classes.size > 0) {
+                classes = classes.filter(function(className) {
+                    return scope.classes.has(normalizeClass(className));
+                });
+            }
+        }
+        return classes.sort(function(a, b) { return String(a || '').localeCompare(String(b || ''), 'zh-CN'); });
+    }
+
+    function buildStudentCompareGroupedClasses(cache) {
+        const dataCache = cache || {};
+        const groupedByClass = {};
+        (Array.isArray(dataCache.studentsCompareData) ? dataCache.studentsCompareData : []).forEach(function(student) {
+            const className = getStudentCompareClassName(student);
+            if (!groupedByClass[className]) groupedByClass[className] = [];
+            groupedByClass[className].push(student);
+        });
+        return Object.keys(groupedByClass)
+            .sort(function(a, b) { return String(a || '').localeCompare(String(b || ''), 'zh-CN'); })
+            .map(function(className) {
+                const students = groupedByClass[className];
+                return {
+                    className: className,
+                    count: students.length,
+                    students: students,
+                    stats: buildStudentCompareGroupStats(students)
+                };
+            });
+    }
+
+    function resolveStudentCompareGroupView(cache, groupBy) {
+        const dataCache = cache || {};
+        const currentGroup = String(groupBy || '');
+        if (currentGroup.indexOf('class:') === 0) {
+            const className = currentGroup.slice(6);
+            const students = (Array.isArray(dataCache.studentsCompareData) ? dataCache.studentsCompareData : []).filter(function(student) {
+                return getStudentCompareClassName(student) === className;
+            });
+            return {
+                mode: 'singleClass',
+                className: className,
+                students: students,
+                stats: buildStudentCompareGroupStats(students)
+            };
+        }
+        if (currentGroup === 'class') {
+            return {
+                mode: 'classGroups',
+                groups: buildStudentCompareGroupedClasses(dataCache)
+            };
+        }
+        return { mode: 'list' };
+    }
+
     window.StudentCompareControllerService = {
         getStudentCompareElements: getStudentCompareElements,
         readStudentCompareState: readStudentCompareState,
@@ -6023,7 +6212,10 @@
         filterStudentCompareByNames: filterStudentCompareByNames,
         restoreStudentCompareOriginalData: restoreStudentCompareOriginalData,
         filterStudentCompareByProgressType: filterStudentCompareByProgressType,
-        sortStudentCompareRows: sortStudentCompareRows
+        sortStudentCompareRows: sortStudentCompareRows,
+        getStudentCompareGroupElements: getStudentCompareGroupElements,
+        listStudentCompareVisibleClasses: listStudentCompareVisibleClasses,
+        resolveStudentCompareGroupView: resolveStudentCompareGroupView
     };
 })();
 
@@ -18215,192 +18407,105 @@ function sortStudentCompare() {
 function updateClassGroupOptions() {
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
-    const optgroup = document.getElementById('classGroupOptions');
-    if (!optgroup) return;
+    const controller = window.StudentCompareControllerService || {};
+    const compareUi = window.CompareUiService || {};
+    const elements = typeof controller.getStudentCompareGroupElements === 'function'
+        ? controller.getStudentCompareGroupElements()
+        : {
+            groupEl: document.getElementById('studentCompareGroupBy'),
+            optgroupEl: document.getElementById('classGroupOptions')
+        };
 
-    const { studentsCompareData } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
+    if (!elements.optgroupEl) return;
 
-    // 闂傚倷绀侀崥瀣磿閹惰棄搴婇柤鑹扮堪娴滃綊鏌涢妷顔煎缂佺姰鍎甸弻宥堫檨闁告挾鍠庨锝夊垂椤愩垻绐為柣蹇曞仧閺咁偊寮搁崒婊呯＝?
-    const classSet = new Set();
-    studentsCompareData.forEach(student => {
-        const className = student.class || '闂傚倷绀侀幖顐︽偋濠婂嫮顩叉繝濠傜墕閸ㄥ倿骞栧ǎ顒€濡介柛?;
-        classSet.add(className);
-    });
+    const visibleClasses = typeof controller.listStudentCompareVisibleClasses === 'function'
+        ? controller.listStudentCompareVisibleClasses(STUDENT_MULTI_PERIOD_COMPARE_CACHE)
+        : [];
+    const optionHtml = typeof compareUi.buildStudentCompareGroupOptions === 'function'
+        ? compareUi.buildStudentCompareGroupOptions({ classes: visibleClasses })
+        : '<option value="class">\u6309\u73ed\u7ea7\u5206\u7ec4\u67e5\u770b</option>';
 
-    console.log('[闂傚倷鑳剁划顖滄崲瀹ュ鍌ㄩ柣鎰靛墻濞堜粙鏌涢妷锝呭闁崇粯妫冮幃妤呮晲鎼粹€茬盎濡炪倕瀛╅悷锔界┍婵犲伣鏃堝焵椤掑嫬绠?闂傚倷娴囧銊╂嚄閼稿灚娅犳俊銈傚亾闁伙絽鐏氶幏鍛村捶椤撴稒鐏冩俊鐐€栭幐鐐叏閻㈠憡鍋╅梺顒€绉甸悡娆戠棯閻楀煫顏呯妤ｅ啯鈷戦柛婵嗗婢ф洘銇勯敃浣虹翱闁靛洦鍔欓、娆撳礈瑜庨敍?', Array.from(classSet));
+    const currentValue = elements.groupEl ? String(elements.groupEl.value || '') : '';
+    elements.optgroupEl.innerHTML = optionHtml;
 
-    // 濠碘槅鍋撶徊浠嬪疮椤栫偛鏋?闂傚倷绀侀幖顐λ囬鐐茬柈闁哄鍩堥悗鑸电箾瀹割喕绨荤紒鐘茬－閹茬顓兼径濠冩К濠德板€曢幊蹇涘疾椤掍焦鍙忔慨妤€妫楁晶缁樼箾鐏炲倸鈧繈寮婚敍鍕ㄥ亾閿濆骸浜為柣顓烆儐娣囧﹪宕ｆ径瀣偓鎰偓娈垮櫘閸嬪嫰鍩㈡惔銈囩杸闁哄洨濮甸崯锝夋⒒娴ｇ懓顕滅紒瀣灴閹崇喖顢涘┑鍕睏閻熸粍鏌ㄩ锝嗗閺夋垹顦悷婊冾儐缁傛帒鈽夊Ο蹇撶秺閹晠鎮介棃娑氼偧闂備礁鎼Λ宀勫磻閹剧粯鈷戠紓浣诡焽缁犮儵鏌涘Ο鐓庝壕妞?
-    const user = getCurrentUser();
-    let allowedClasses = classSet;
-
-    if (user && RoleManager.hasAnyRole(user, ['teacher', 'class_teacher']) &&
-        !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director'])) {
-        // 缂傚倸鍊烽懗鍫曟惞鎼淬劌鍨傞梺顒€绉村Ч鏌ユ煃瑜滈崜鐔煎箖娴犲鏁嶆慨妯哄船椤も偓闂備焦鎮堕崝濠囧礉閹达箑绠栭柣銏犲閺佸洦绻濋棃娑欘棤婵¤绲剧换娑氣偓鐢殿焾鏍″┑鈥冲级鐢繝鏁愰悙鍙傛棃宕ㄩ鍏肩杽闂佽崵濮村▔褔宕ㄩ婊冪倞闂傚倷绀侀幉锟犳偡椤栨稓顩叉繝闈涙焾閻旂绶炵€光偓閳ь剟鎯岄崱娑樼骇闁绘劙娼ч。鑲┾偓瑙勬礃閻擄繝寮婚埄鍐╁闁革富鍘介崳顕€鎮峰鍫濅喊闁哥姵宀搁幆鈧?
-        console.log('[闂傚倷鑳剁划顖滄崲瀹ュ鍌ㄩ柣鎰靛墻濞堜粙鏌涢妷锝呭闁崇粯妫冮幃妤呮晲鎼粹€茬盎濡炪倕瀛╅悷锔界┍婵犲伣鏃堝焵椤掑嫬绠?濠碘槅鍋撶徊浠嬪疮椤栫偛鐤?濠电姷顣藉Σ鍛村磻閳ь剟鏌涚€ｎ偅灏扮紒缁樼洴瀵爼骞嬮鐐插闂備胶纭堕弲娑㈡儗閸屾凹鍤曟い鎰ㄦ噰閺嬪酣鐓崶銊︾闁瑰眰鍎甸弻锝夋偄閸濄儲鍣柣銏╁灣閸犳劗绮╅悢鍝ョ瘈闁搞儯鍔嶅▍鏍倵閸忓浜鹃梺鍛婂姦娴滅偤鎮鹃崫鍕ㄦ斀闁绘ê妯婇悞楣冩煕婵犲喚娈欓柕鍥ㄥ姍椤㈡瑩宕滆閿涘繘鎮峰鍕棃闁糕斁鍋撳銈嗗坊閸嬫挻銇勯敂鐐毈濠?);
-        const scope = getTeacherScopeForUser(user);
-        if (scope.classes.size > 0) {
-            allowedClasses = new Set(
-                Array.from(classSet).filter(cls => {
-                    const normalized = normalizeClass(cls);
-                    const allowed = scope.classes.has(normalized);
-                    console.log(`[闂傚倷鑳剁划顖滄崲瀹ュ鍌ㄩ柣鎰靛墻濞堜粙鏌涢妷锝呭闁崇粯妫冮幃妤呮晲鎼粹€茬盎濡炪倕瀛╅悷锔界┍婵犲伣鏃堝焵椤掑嫬绠?闂傚倷鑳剁划顖滄崲瀹ュ鍌ㄩ柣鎰靛墻濞?${cls} (闂備浇宕甸崰鎰版偡閵壯€鍋撳鐓庣仯闁逞屽墮閻忔岸鎮ч悩鑼殾? ${normalized}) -> ${allowed ? '闂傚倷鑳剁换婵堢矆娓氣偓楠炲﹥鎯旈妸銉ュ亶闂佺懓顕慨鍨垔? : '闂傚倷鐒﹀娆撳磹閹间焦鍎斿┑鍌涙偠閳ь剙鎳橀弫鍐焵椤掑嫸缍?}`);
-                    return allowed;
-                })
-            );
-            console.log(`[闂傚倷鑳剁划顖滄崲瀹ュ鍌ㄩ柣鎰靛墻濞堜粙鏌涢妷锝呭闁崇粯妫冮幃妤呮晲鎼粹€茬盎濡炪倕瀛╅悷锔界┍婵犲伣鏃堝焵椤掑嫬绠?濠碘槅鍋撶徊浠嬪疮椤栫偛鏋?闂傚倷绀侀幖顐λ囬鐐茬柈闁哄鍩堥悗鍫曟煣韫囨挻璐″纭呮珪缁绘盯骞嬮弮鈧崳浼存煕鐎ｎ偅灏扮€垫澘瀚埥澶婎潩鏉堚晛鐐?{user.name} 闂傚倷绀侀幉锟犳偡椤栨稓顩查柨婵嗩槸缁€鍌涙叏濡炶浜鹃梺璇″灠濞层劑鍩€椤掑﹦绉靛ù婊勭矒閹?${allowedClasses.size} 婵犵數鍋為崹鍫曞箹閳哄倻顩查柣鎰堪娴滆銇勯弬鍨挃婵?`, Array.from(allowedClasses));
+    if (elements.groupEl && currentValue) {
+        const visibleValues = new Set(['class'].concat(visibleClasses.map(function(className) {
+            return 'class:' + className;
+        })));
+        if (currentValue === 'class' || currentValue.indexOf('class:') === 0) {
+            elements.groupEl.value = visibleValues.has(currentValue) ? currentValue : 'class';
         } else {
-            console.warn('[闂傚倷鑳剁划顖滄崲瀹ュ鍌ㄩ柣鎰靛墻濞堜粙鏌涢妷锝呭闁崇粯妫冮幃妤呮晲鎼粹€茬盎濡炪倕瀛╅悷锔界┍婵犲伣鏃堝焵椤掑嫬绠?闂傚倷绀侀悿鍥р枖閺囩喎鍨旈悗闈涙憸缁?闂傚倷绀侀幖顐︽偋濠婂嫮顩叉繝闈涙川閻濊埖鎱ㄥ璇蹭壕閻庤娲樼喊宥夋晬閹邦厽濯撮柣鐔告緲缁ㄣ儵姊洪懡銈呅㈡繛灞傚€涢妵鎰版倷鐎电硶鏀虫繝鐢靛Т濞层倗绮婚幒鎾变簻闁哄秲鍎遍埀顒侇殘缁牊寰勯幇顓犲幐闂佸憡娲﹂崑鍕煕閺冨牊鐓忛柛銉ｅ妽閻ㄦ垹绱掗钘夊摵鐎规洦鍋婂畷鐔碱敃閵堝嫮娉婇梻?);
+            elements.groupEl.value = currentValue;
         }
-    } else {
-        console.log('[闂傚倷鑳剁划顖滄崲瀹ュ鍌ㄩ柣鎰靛墻濞堜粙鏌涢妷锝呭闁崇粯妫冮幃妤呮晲鎼粹€茬盎濡炪倕瀛╅悷锔界┍婵犲伣鏃堝焵椤掑嫬绠?闂傚倷鐒﹂弸濂稿疾濠靛棌鏋嶉柕蹇嬪灮缁?缂傚倸鍊烽懗鑸靛垔鐎靛憡顫曢柡鍥ュ灩缁犳牕鈹戦悩鍙夋悙鐎瑰憡绻冩穱濠囶敍濠垫劕娈梺璇茬箲椤ㄥ﹤顫忔繝姘唶闁靛繒濮冲▽顏堟⒑閸濆嫭顥戦柛瀣崌閺岋綁濮€閳轰胶浠╅梺缁橆殕閸旀瑩鏁愰悙鍙傛棃宕ㄩ鍏肩杽闂佽崵濮村▔褔宕ㄩ锝喰ラ梻鍌欑閹碱偆鈧凹鍓氶弲鑸电鐎ｎ€附鎱ㄥΟ鎸庣【缂佺姰鍎甸弻宥堫檨闁告挾鍠庨锝夊垂椤愩垻绐為柣蹇曞仧閺咁偊寮搁崒婊呯＝?);
     }
-
-    // 闂傚倷绀佸﹢閬嶅磿閵堝洦鏆滈柟鐑樻婵櫕銇勯幘鍗炵仾闁稿鍠愰妵鍕箻鐠鸿　鏋呴梺缁樼⊕閹瑰洭寮诲☉姗嗘僵妞ゆ帒鍊愰妶鍥ㄥ仏?
-    const sortedClasses = Array.from(allowedClasses).sort((a, b) => a.localeCompare(b, 'zh-CN'));
-
-    // 濠电姷鏁搁崑鐐哄箰閹间礁绠犻柟鐗堟緲閻撴﹢鏌″搴″箻鐎规挷绶氶弻娑㈩敃閿濆棛顦ュ┑鐐叉噷閸ㄥ鍩€椤掑倸浠柛濠冪墪椤啯绂掔€ｎ亞鍔﹀銈嗗坊閸嬫挻銇勯敂鐐毈濠碘剝娼欓鍏煎緞鐎ｎ偅鐝梻浣稿閸嬪懐鍒掓惔锝囦笉濞寸姴顑嗛悡鐔兼煥濠靛棙顥犻柟鍐叉噺閵囧嫰骞嬪┑鍥ь槱缂備礁顑呴ˇ鐢稿春閳ь剚銇勯幒宥堝厡闁?闂傚倷绀佸﹢閬嶃€傛禒瀣；闁瑰墽绮悡娑㈡煕椤愶絿绠ユ俊鑼舵閹叉悂鏌囬敃鈧弸銈夋煟?闂傚倸鍊风欢锟犲磻閸曨垁鍥偨缁嬭銉р偓骞垮劚椤︿即寮?
-    let html = '<option value="class">闂傚倷绀佸﹢閬嶃€傛禒瀣；闁瑰墽绮悡娑㈡煕椤愶絿绠ユ俊鑼舵閹叉悂鏌囬敃鈧弸銈夋煟閵夘喕娴锋い褍鍊荤槐鎺撴綇閵娧勫櫚閻庤娲樺畝绋跨暦閸楃偐鏋庨柟瀵稿Х閸樻垿姊绘担鍛婃儓閻庢凹鍓氶弲鑸电鐎ｎ€附鎱ㄥΟ鍨厫闁?/option>';
-    sortedClasses.forEach(className => {
-        html += `<option value="class:${className}">${className}</option>`;
-    });
-
-    optgroup.innerHTML = html;
-    console.log('[闂傚倷鑳剁划顖滄崲瀹ュ鍌ㄩ柣鎰靛墻濞堜粙鏌涢妷锝呭闁崇粯妫冮幃妤呮晲鎼粹€茬盎濡炪倕瀛╅悷锔界┍婵犲伣鏃堝焵椤掑嫬绠?婵犵數鍋為崹鍫曞箰閹间緡鏁勯柛鈩兠崹鏃堟煕濠靛棗顏存繛瀛樼墵閺屾盯鍩勯崘鐐暥闂佹悶鍊栫敮锟犲蓟閿熺姴鐐婄憸蹇涘箺閻樼粯鐓涢悘鐐存灮闊剟鏌℃担鍝バゅù鐙呯畵閹稿﹥寰勬繝鍕枏 ' + sortedClasses.length + ' 婵犵數鍋為崹鍫曞箹閳哄倻顩叉い蹇撶墕閻掑灚銇勯幒鍡椾壕濡炪倧濡囬弫缁樹繆?);
 }
 
 function toggleGroupDisplay() {
-    const groupEl = document.getElementById('studentCompareGroupBy');
-    const paginationEl = document.getElementById('studentComparePagination');
+    const controller = window.StudentCompareControllerService || {};
+    const compareUi = window.CompareUiService || {};
+    const elements = typeof controller.getStudentCompareGroupElements === 'function'
+        ? controller.getStudentCompareGroupElements()
+        : {
+            groupEl: document.getElementById('studentCompareGroupBy'),
+            paginationEl: document.getElementById('studentComparePagination'),
+            resultEl: document.getElementById('studentCompareResult')
+        };
 
-    if (!groupEl || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
+    if (!elements.groupEl || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
-    const groupBy = groupEl.value;
-    const { studentsCompareData, subjects, periodCount } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
+    const groupBy = elements.groupEl.value;
+    const groupView = typeof controller.resolveStudentCompareGroupView === 'function'
+        ? controller.resolveStudentCompareGroupView(STUDENT_MULTI_PERIOD_COMPARE_CACHE, groupBy)
+        : { mode: 'list' };
 
-    // 濠碘槅鍋撶徊浠嬪疮娴兼潙鍌?[闂傚倷娴囬妴鈧柛瀣尵閻ヮ亪顢橀悙鏉戞缂備胶濮烽挅鍕⒒娴ｇ懓顕滅紒瀣笧閸犲﹤顓兼径濠冪€銈嗘磵閸嬫挻顨ラ悙鏉戝闁瑰嘲鎳愮划娆戞崉椤垶效婵犵數鍋為崹鍫曞箹閳哄倻顩查柣鎰堪娴滆銇勯弬鍨挃婵☆偒鍨抽幉鍛婃償閳儳鍠愬鍕暆閳ь剟鎯?
-    if (groupBy.startsWith('class:')) {
-        // 闂傚倷绀侀幖顐も偓姘煎墯閺呰埖绂掔€ｎ€附鎱ㄥΟ鍨厫闁稿顑夐弻锝夋偄缁嬫妫嗛梺鍝勬閸楁娊寮婚敐鍛斀闁归偊鍓欑粻缁樹繆?
-        const targetClass = groupBy.substring(6); // 闂傚倷绀侀幉锟犫€﹂崶鈺佸灊妞ゆ牗绮嶉弳婊堟煃?class:"闂傚倷绀侀幉锟犲箰閸濄儳鐭撻柛鎾茬劍椤?
-        if (paginationEl) paginationEl.style.display = 'none';
-
-        const resultEl = document.getElementById('studentCompareResult');
-        if (!resultEl) return;
-
-        // 缂傚倸鍊烽悞锔剧矙閹烘鍎庢い鏍仜閻掑灚銇勯幒鍡椾壕濡炪倧闄勬繛濠囥€佸顒夋僵闁兼悂娼ф禒褍顪冮妶鍡樺暗濠电偐鍋撻梺缁樼⊕閹瑰洭寮婚敐澶娢╅柕澶堝労娴犵厧顪冮妶鍡楃闁哥姵鐗犻獮?
-        const classStudents = studentsCompareData.filter(s => (s.class || '闂傚倷绀侀幖顐︽偋濠婂嫮顩叉繝濠傜墕閸ㄥ倿骞栧ǎ顒€濡介柛?) === targetClass);
-
-        if (classStudents.length === 0) {
-            resultEl.innerHTML = '<div style="padding:20px; text-align:center; color:#64748b;">闂備浇宕垫慨鏉懨洪姀銈呯？閻庡湱濮版禍瑙勩亜閺傚灝鈷旀俊顐灣閹插憡鎯旈埦鈧弸鏃堢叓閸ャ劎鈽夌紒顐㈢Ч閺岋絽螣閹稿海褰у┑鐐茬墕閻栧ジ寮?/div>';
-            return;
-        }
-
-        const is9thGrade = CONFIG.name === '9濠德板€楁慨鐑藉磻濞戙埄鏁嬫い鎾跺櫏濞?;
-        const totalLabel = is9thGrade ? '婵犵數鍋涢悺銊у垝瀹ュ拋娼栧┑鐘崇啲缂嶆牠鏌″搴″箹缂? : '闂傚倷鑳堕…鍫㈡崲閸儱绀夐幖鎼厜缂嶆牠鏌″搴″箹缂?;
-
-        // 闂備浇宕垫慨宕囨閵堝洦顫曢柡鍥ュ灪閸嬧晛鈹戦悩宕囶暡闁稿鍠愰妵鍕箻鐠鸿　鏋呴梺缁樼⊕閹稿墽妲愰幘瀛樺闁告繂瀚悘鍡楊渻?
-        const improveCount = classStudents.filter(s => s.progressType === 'improve').length;
-        const declineCount = classStudents.filter(s => s.progressType === 'decline').length;
-        const avgScoreDiff = classStudents.reduce((sum, s) => sum + s.scoreDiff, 0) / classStudents.length;
-
-        let html = `
-                <div class="class-group-section" style="margin-bottom:25px; border:2px solid #0ea5e9; border-radius:10px; overflow:hidden;">
-                    <div class="class-group-header" style="background:#0ea5e9; padding:12px 15px; font-weight:600; color:white; display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <span style="font-size:17px;">濠碘槅鍋撶徊浠嬪疮椤栫偛绠?${targetClass}</span>
-                            <span style="font-size:14px; margin-left:10px; opacity:0.9;">${classStudents.length}婵?/span>
-                        </div>
-                        <div style="font-size:12px; display:flex; gap:12px; opacity:0.95;">
-                            <span>濠德板€楁慨鐑藉磻濞戙垹鐤柛顭戝櫘閻掍粙骞栧ǎ顒€濡奸柣顓燁殕娣囧﹪顢涘顓熷創濡? <strong>${avgScoreDiff >= 0 ? '+' : ''}${avgScoreDiff.toFixed(1)}闂?/strong></span>
-                            <span>闂?{improveCount}婵?/span>
-                            <span>闂?{declineCount}婵?/span>
-                        </div>
-                    </div>
-                    <div class="class-students-container" style="padding:15px; background:#ffffff;">
-            `;
-
-        classStudents.forEach(student => {
-            html += generateStudentCard(student, periodCount, totalLabel, subjects);
-        });
-
-        html += `</div></div>`;
-        resultEl.innerHTML = html;
-
-    } else if (groupBy === 'class') {
-        // 闂傚倷鑳剁划顖滄崲瀹ュ鍌ㄩ柣鎰靛墻濞堜粙鏌涢妷顔煎缂佲偓閸℃稒鐓曢柍鈺佸暟閹冲懘鏌ｉ鐑嗗剱濞ｅ洤锕、娑橆渻鐠囪弓澹曢悗瑙勬礀濞层劑銆侀崨瀛樷拺闁圭娴烽埊鏇犫偓鍏夊亾缂佸绨遍弸鏃堟煥濠靛棭妲归悗鐢靛█閻擃偊宕堕妸锕€纰嶉梺璇叉唉椤曆団€旈崘顔嘉ч柛銉ㄥ煐濞堟壆绱撴担浠嬪摵缂佽鐗嗛锝嗗閺夋垹顦悷婊冾儐缁傛帒鈽夐姀锛勫幍缂佸墽澧楅敋濞存粓绠栧娲传閸曨厼顣哄銈忓瘜閸ㄥ爼銆佸Δ鍛亜闁稿繒鍘ф禒?
-        if (paginationEl) paginationEl.style.display = 'none';
-
-        const resultEl = document.getElementById('studentCompareResult');
-        if (!resultEl) return;
-
-        // 闂傚倷绀佸﹢閬嶁€﹂崼銉嬪洦娼忛鐘辨睏濡炪倖鏌ㄦ晶钘壩涢婊勫枑鐎广儱顦崹鍌炲箹鏉堝墽鎮肩痪?
-        const groupedByClass = {};
-        studentsCompareData.forEach(student => {
-            const className = student.class || '闂傚倷绀侀幖顐︽偋濠婂嫮顩叉繝濠傜墕閸ㄥ倿骞栧ǎ顒€濡介柛?;
-            if (!groupedByClass[className]) groupedByClass[className] = [];
-            groupedByClass[className].push(student);
-        });
-
-        // 闂備浇顕ч柊锝咁焽瑜嶉敃銏℃綇椤愮姳姹楀銈嗘煥婢ц棄螞椤栨粍鍠愮€广儱顦粻鏍煛閸モ晛啸闁活厽鎹囬弻锝呂旈埀顒勬偋閸℃瑧绠旈柟鎹愵嚙缁?
-        const sortedClasses = Object.keys(groupedByClass).sort((a, b) => a.localeCompare(b, 'zh-CN'));
-
-        // 闂傚倷绀侀幉锛勬暜閸ヮ剙纾归柡宥庡幖閽冪喖鏌涢妷顔煎闁?-8濠德板€楁慨鐑藉磻濞戙埄鏁嬫い鎾跺櫏濞堜粙鏌涢妷锝呭濞存嚎鍊栨穱濠囶敍濠婂懎绗＄紒?濠德板€楁慨鐑藉磻濞戙埄鏁嬫い鎾跺櫏濞堜粙鏌涢妷顔句粶闁绘梻鍘ч悘宕団偓瑙勬礀濞层劑銆?
-        const is9thGrade = CONFIG.name === '9濠德板€楁慨鐑藉磻濞戙埄鏁嬫い鎾跺櫏濞?;
-        const totalLabel = is9thGrade ? '婵犵數鍋涢悺銊у垝瀹ュ拋娼栧┑鐘崇啲缂嶆牠鏌″搴″箹缂? : '闂傚倷鑳堕…鍫㈡崲閸儱绀夐幖鎼厜缂嶆牠鏌″搴″箹缂?;
-
-        // 闂傚倷鐒﹂惇褰掑垂婵犳艾绐楅柟鐗堟緲閸ㄥ倹鎱ㄥΟ鎸庣【缂佲偓閸℃稒鐓曢柍鈺佸暟閹冲懘鏌ｉ鐐╂敩TML
-        let html = '';
-        sortedClasses.forEach(className => {
-            const students = groupedByClass[className];
-
-            // 闂備浇宕垫慨宕囨閵堝洦顫曢柡鍥ュ灪閸嬧晛鈹戦悩瀹犲閻庢艾顦伴妵鍕箳閹存績鍋撻幖浣瑰仾闁糕剝鐟х壕钘壝归敐鍛儓闁哄鐟﹂妵?
-            const improveCount = students.filter(s => s.progressType === 'improve').length;
-            const declineCount = students.filter(s => s.progressType === 'decline').length;
-            const avgScoreDiff = students.reduce((sum, s) => sum + s.scoreDiff, 0) / students.length;
-
-            html += `
-                    <div class="class-group-section" style="margin-bottom:25px; border:2px solid #cbd5e1; border-radius:10px; overflow:hidden;">
-                        <div class="class-group-header" style="background:#e0f2fe; padding:10px 15px; font-weight:600; color:#0c4a6e; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleClassGroup(this)">
-                            <div>
-                                <span style="font-size:16px;">濠碘槅鍋撶徊浠嬪疮椤栫偛绠?${className}</span>
-                                <span style="font-size:13px; margin-left:10px; color:#64748b;">${students.length}婵?/span>
-                            </div>
-                            <div style="font-size:12px; display:flex; gap:12px;">
-                                <span>濠德板€楁慨鐑藉磻濞戙垹鐤柛顭戝櫘閻掍粙骞栧ǎ顒€濡奸柣顓燁殕娣囧﹪顢涘顓熷創濡? <strong style="color:${avgScoreDiff >= 0 ? '#16a34a' : '#dc2626'};">${avgScoreDiff >= 0 ? '+' : ''}${avgScoreDiff.toFixed(1)}闂?/strong></span>
-                                <span style="color:#16a34a;">闂?{improveCount}婵?/span>
-                                <span style="color:#dc2626;">闂?{declineCount}婵?/span>
-                                <span class="group-toggle" style="font-weight:bold;">闂傚倷娴囬妴鈧柛瀣崌閺岀喖顢涘鍐炬毉閻?闂?/span>
-                            </div>
-                        </div>
-                        <div class="class-students-container" style="padding:10px; background:#ffffff;">
-                `;
-
-            // 濠电姷鏁搁崕鎴犵礊閳ь剚銇勯弴鍡楀閸欏繘鏌ｉ幇顓犳殭闁圭儤娲滈悿鈧柟鍏肩暘閸斿苯鈻撳┑瀣厽閹兼番鍨归崰鏇炩攽閳ヨ櫕鍠樼€殿噮鍋婇獮妯兼嫚閼碱剦鏀ㄩ梻浣瑰缁嬫垹鈧凹鍓熼妴?
-            students.forEach(student => {
-                html += generateStudentCard(student, periodCount, totalLabel, subjects);
-            });
-
-            html += `</div></div>`;
-        });
-
-        resultEl.innerHTML = html;
-    } else {
-        // 闂傚倷绀侀幉锛勬暜濡ゅ懌鈧啯寰勯幇顑┿儵鏌涢幇鈺佸闁绘梻鍘ч悘宕団偓瑙勬礀濞层劑銆侀崨瀛樷拺闁圭娴烽埊鏇㈡煟椤撗冩灍缂佺粯鐩畷鍫曨敆娴ｉ晲缂撻梻渚€娼ч…鍫ュ磿闁秵鍊甸悹鍥ф▕濞撳鏌曢崼婵囧櫧濞寸姵鐩幃鐑藉即閻愭惌妫﹂悗?
-        renderStudentComparePage(STUDENT_MULTI_PERIOD_COMPARE_CACHE.currentPage || 1);
+    if (groupView.mode === 'singleClass') {
+        if (elements.paginationEl) elements.paginationEl.style.display = 'none';
+        if (!elements.resultEl) return;
+        const totalLabel = getStudentCompareTotalLabel();
+        const singleView = typeof compareUi.buildStudentCompareSingleClassView === 'function'
+            ? compareUi.buildStudentCompareSingleClassView({
+                className: groupView.className,
+                students: groupView.students,
+                stats: groupView.stats,
+                periodCount: STUDENT_MULTI_PERIOD_COMPARE_CACHE.periodCount,
+                totalLabel: totalLabel,
+                subjects: STUDENT_MULTI_PERIOD_COMPARE_CACHE.subjects
+            })
+            : { resultHtml: '' };
+        elements.resultEl.innerHTML = singleView.resultHtml || '';
+        return;
     }
+
+    if (groupView.mode === 'classGroups') {
+        if (elements.paginationEl) elements.paginationEl.style.display = 'none';
+        if (!elements.resultEl) return;
+        const totalLabel = getStudentCompareTotalLabel();
+        const groupedView = typeof compareUi.buildStudentCompareGroupedView === 'function'
+            ? compareUi.buildStudentCompareGroupedView({
+                groups: groupView.groups,
+                periodCount: STUDENT_MULTI_PERIOD_COMPARE_CACHE.periodCount,
+                totalLabel: totalLabel,
+                subjects: STUDENT_MULTI_PERIOD_COMPARE_CACHE.subjects
+            })
+            : { resultHtml: '' };
+        elements.resultEl.innerHTML = groupedView.resultHtml || '';
+        return;
+    }
+
+    renderStudentComparePage(STUDENT_MULTI_PERIOD_COMPARE_CACHE.currentPage || 1);
 }
 
 function toggleClassGroup(headerEl) {
-    const container = headerEl.nextElementSibling;
-    const toggle = headerEl.querySelector('.group-toggle');
+    const container = headerEl && headerEl.nextElementSibling;
+    const toggle = headerEl && headerEl.querySelector('.group-toggle');
     if (!container || !toggle) return;
 
-    if (container.style.display === 'none') {
-        container.style.display = 'block';
-        toggle.textContent = '闂傚倷娴囬妴鈧柛瀣崌閺岀喖顢涘鍐炬毉閻?闂?;
-    } else {
-        container.style.display = 'none';
-        toggle.textContent = '闂備浇顕х换鎺楀磻閻愯娲冀椤愶綆娼?闂?;
-    }
+    const compareUi = window.CompareUiService || {};
+    const isExpanded = container.style.display !== 'none';
+    container.style.display = isExpanded ? 'none' : 'block';
+    toggle.textContent = typeof compareUi.getStudentCompareGroupToggleText === 'function'
+        ? compareUi.getStudentCompareGroupToggleText(!isExpanded)
+        : (!isExpanded ? '\u6536\u8d77\u73ed\u7ea7' : '\u5c55\u5f00\u73ed\u7ea7');
 }
 
 function exportStudentMultiPeriodComparison() {
