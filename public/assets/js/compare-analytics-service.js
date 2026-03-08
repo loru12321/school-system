@@ -580,6 +580,133 @@
             deltaSheet: deltaSheet
         };
     }
+
+    function buildAllTeachersMultiPeriodComparison(options) {
+        const opts = options || {};
+        const school = String(opts.school || '').trim();
+        const examIds = Array.isArray(opts.examIds) ? opts.examIds : [];
+        const periodCount = Number(opts.periodCount) === 3 ? 3 : 2;
+        const subjects = Array.isArray(opts.subjects) ? opts.subjects.filter(Boolean) : [];
+        const getExamRows = typeof opts.getExamRows === 'function' ? opts.getExamRows : function() { return []; };
+        const buildTeacherStats = typeof opts.buildTeacherStats === 'function' ? opts.buildTeacherStats : function() { return []; };
+        const attachTeacherRanks = typeof opts.attachTeacherRanks === 'function' ? opts.attachTeacherRanks : function() {};
+        const sortSubjects = typeof opts.sortSubjects === 'function' ? opts.sortSubjects : null;
+
+        const teacherSubjectMap = {};
+        examIds.forEach(function(examId) {
+            const rows = getExamRows(examId) || [];
+            subjects.forEach(function(subject) {
+                const stats = buildTeacherStats(rows, school, subject) || [];
+                stats.forEach(function(item) {
+                    const teacher = String(item && item.teacher || '').trim();
+                    if (!teacher) return;
+                    if (!teacherSubjectMap[teacher]) teacherSubjectMap[teacher] = new Set();
+                    teacherSubjectMap[teacher].add(subject);
+                });
+            });
+        });
+
+        const results = [];
+        Object.keys(teacherSubjectMap).forEach(function(teacher) {
+            teacherSubjectMap[teacher].forEach(function(subject) {
+                const details = examIds.map(function(examId) {
+                    const rows = getExamRows(examId) || [];
+                    const list = buildTeacherStats(rows, school, subject) || [];
+                    attachTeacherRanks(rows, school, list);
+                    const current = list.find(function(item) {
+                        return item.teacher === teacher && item.subject === subject;
+                    }) || null;
+                    return { examId: examId, current: current };
+                });
+
+                const validPoints = details.filter(function(item) { return !!item.current; }).length;
+                if (!validPoints) return;
+
+                const first = details[0] && details[0].current;
+                const last = details[details.length - 1] && details[details.length - 1].current;
+                const delta = (first && last)
+                    ? {
+                        townshipAvg: (first.townshipRankAvg && last.townshipRankAvg) ? (first.townshipRankAvg - last.townshipRankAvg) : null,
+                        townshipExc: (first.townshipRankExc && last.townshipRankExc) ? (first.townshipRankExc - last.townshipRankExc) : null,
+                        townshipPass: (first.townshipRankPass && last.townshipRankPass) ? (first.townshipRankPass - last.townshipRankPass) : null
+                    }
+                    : null;
+
+                results.push({
+                    teacher: teacher,
+                    subject: subject,
+                    details: details,
+                    delta: delta
+                });
+            });
+        });
+
+        results.sort(function(a, b) {
+            if (a.subject !== b.subject) {
+                if (sortSubjects) return sortSubjects(a.subject, b.subject);
+                return a.subject.localeCompare(b.subject, 'zh');
+            }
+            return a.teacher.localeCompare(b.teacher, 'zh');
+        });
+
+        return {
+            school: school,
+            examIds: examIds,
+            periodCount: periodCount,
+            results: results,
+            teacherCount: Object.keys(teacherSubjectMap).length
+        };
+    }
+
+    function buildAllTeachersMultiPeriodExportData(options) {
+        const opts = options || {};
+        const cache = opts.cache || {};
+        const examIds = Array.isArray(cache.examIds) ? cache.examIds : [];
+        const results = Array.isArray(cache.results) ? cache.results : [];
+        const school = String(cache.school || '').trim();
+
+        const header = ['教师', '学科'];
+        examIds.forEach(function(examId) {
+            header.push(
+                examId + '\n乡镇均分排位',
+                examId + '\n优秀率排位',
+                examId + '\n及格率排位'
+            );
+        });
+        header.push('乡镇均分排位变化', '优秀率排位变化', '及格率排位变化');
+
+        const rows = results.map(function(item) {
+            const row = [item.teacher, item.subject];
+            (item.details || []).forEach(function(detail) {
+                const current = detail.current;
+                if (current) {
+                    row.push(
+                        (typeof current.townshipRankAvg === 'number' ? current.townshipRankAvg : '-'),
+                        (typeof current.townshipRankExc === 'number' ? current.townshipRankExc : '-'),
+                        (typeof current.townshipRankPass === 'number' ? current.townshipRankPass : '-')
+                    );
+                } else {
+                    row.push('-', '-', '-');
+                }
+            });
+            if (item.delta) {
+                row.push(
+                    (typeof item.delta.townshipAvg === 'number' ? item.delta.townshipAvg : '-'),
+                    (typeof item.delta.townshipExc === 'number' ? item.delta.townshipExc : '-'),
+                    (typeof item.delta.townshipPass === 'number' ? item.delta.townshipPass : '-')
+                );
+            } else {
+                row.push('-', '-', '-');
+            }
+            return row;
+        });
+
+        return {
+            sheetName: '教师批量多期对比',
+            sheetData: [header].concat(rows),
+            fileName: school
+        };
+    }
     window.CompareAnalyticsService = {
         calcSchoolMetricsFromRows: calcSchoolMetricsFromRows,
         getSummaryEntryBySchool: getSummaryEntryBySchool,
