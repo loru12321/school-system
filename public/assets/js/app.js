@@ -1,4 +1,4 @@
-﻿window.onerror = function (msg, url, lineNo, columnNo, error) {
+window.onerror = function (msg, url, lineNo, columnNo, error) {
     // 忽略第三方插件的非关键错误
     if (msg.includes('Script error')) return false;
 
@@ -9255,6 +9255,30 @@ let STUDENT_MULTI_PERIOD_COMPARE_CACHE = null;
 let CLOUD_STUDENT_COMPARE_CONTEXT = null;
 let CLOUD_COMPARE_TARGET = null;
 let CLOUD_COMPARE_PREV_DATA_BACKUP = null;
+const CLOUD_COMPARE_PAYLOAD_CACHE = new Map();
+
+function parseCloudComparePayloadCached(key, content) {
+    const cacheKey = String(key || '').trim();
+    if (cacheKey && CLOUD_COMPARE_PAYLOAD_CACHE.has(cacheKey)) {
+        return CLOUD_COMPARE_PAYLOAD_CACHE.get(cacheKey);
+    }
+
+    let payload = null;
+    if (window.CloudExamSyncService && typeof window.CloudExamSyncService.parseCloudPayload === 'function') {
+        payload = window.CloudExamSyncService.parseCloudPayload(content, cacheKey);
+    } else {
+        let raw = content;
+        if (typeof raw === 'string' && raw.startsWith('LZ|')) {
+            raw = LZString.decompressFromUTF16(raw.substring(3));
+        }
+        payload = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    }
+
+    if (cacheKey) {
+        CLOUD_COMPARE_PAYLOAD_CACHE.set(cacheKey, payload);
+    }
+    return payload;
+}
 
 function normalizeCompareName(name) {
     return String(name || '').trim().replace(/\s+/g, '').toLowerCase();
@@ -11199,11 +11223,7 @@ async function loadCloudStudentCompare(key, selfOnly = false) {
         if (error) throw error;
         if (!data) throw new Error('未找到对比数据');
 
-        let raw = data.content;
-        if (typeof raw === 'string' && raw.startsWith('LZ|')) {
-            raw = LZString.decompressFromUTF16(raw.substring(3));
-        }
-        const payload = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        const payload = parseCloudComparePayloadCached(key, data.content);
         payload.key = key;
 
         const studentCompareController = window.StudentCompareControllerService;
@@ -11294,7 +11314,7 @@ async function loadCloudStudentCompare(key, selfOnly = false) {
                 }
             } else {
                 STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData = [];
-                if (window.UI) UI.toast('?? ????????????????', 'warning');
+                if (window.UI) UI.toast('\u6682\u672a\u914d\u7f6e\u4efb\u6559\u73ed\u7ea7\u6743\u9650\uff0c\u6682\u65e0\u53ef\u67e5\u770b\u6570\u636e', 'warning');
             }
         }
 
