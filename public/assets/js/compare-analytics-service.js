@@ -314,6 +314,233 @@
             .replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '');
     }
 
+    function resolveStudentCompareSubjects(options) {
+        const opts = options || {};
+        const examIds = Array.isArray(opts.examIds) ? opts.examIds : [];
+        const currentExamId = String(opts.currentExamId || '').trim();
+        const currentSubjects = Array.isArray(opts.currentSubjects) ? opts.currentSubjects : [];
+        const exams = opts.exams || {};
+        const subjects = [];
+
+        examIds.forEach(function(examId) {
+            if (!examId) return;
+            if (examId === currentExamId) {
+                currentSubjects.forEach(function(subject) {
+                    if (subject) subjects.push(subject);
+                });
+                return;
+            }
+            const exam = exams && exams[examId];
+            if (!exam || !Array.isArray(exam.subjects)) return;
+            exam.subjects.forEach(function(subject) {
+                if (subject) subjects.push(subject);
+            });
+        });
+
+        return Array.from(new Set(subjects));
+    }
+
+    function buildStudentCompareRankMap(rows, scoreGetter) {
+        const getter = typeof scoreGetter === 'function'
+            ? scoreGetter
+            : function(row) { return Number(row && row.total) || 0; };
+        const sortedRows = (Array.isArray(rows) ? rows : []).slice().sort(function(a, b) {
+            return getter(b) - getter(a);
+        });
+        const rankMap = {};
+        sortedRows.forEach(function(row, index) {
+            const key = normalizeStudentCompareName(row && row.name);
+            if (key && rankMap[key] == null) rankMap[key] = index + 1;
+        });
+        return rankMap;
+    }
+
+    function calcStudentCompareProgressType(scoreDiff, rankSchoolDiff, rankTownDiff) {
+        if (
+            rankTownDiff > 0
+            || (rankTownDiff === 0 && rankSchoolDiff > 0)
+            || (rankTownDiff === 0 && rankSchoolDiff === 0 && scoreDiff > 1)
+        ) {
+            return 'improve';
+        }
+        if (
+            rankTownDiff < 0
+            || (rankTownDiff === 0 && rankSchoolDiff < 0)
+            || (rankTownDiff === 0 && rankSchoolDiff === 0 && scoreDiff < -1)
+        ) {
+            return 'decline';
+        }
+        return 'stable';
+    }
+
+    function buildStudentMultiPeriodComparison(options) {
+        const opts = options || {};
+        const examDataList = Array.isArray(opts.examDataList) ? opts.examDataList : [];
+        const allSubjects = Array.isArray(opts.allSubjects) ? opts.allSubjects.filter(Boolean) : [];
+        const isClassEquivalent = typeof opts.isClassEquivalent === 'function'
+            ? opts.isClassEquivalent
+            : function(a, b) { return String(a || '').trim() === String(b || '').trim(); };
+
+        const preparedExams = examDataList.map(function(item) {
+            const allRows = Array.isArray(item && item.allRows) ? item.allRows : [];
+            const schoolRows = Array.isArray(item && item.schoolRows) ? item.schoolRows : [];
+            const schoolNameMap = {};
+            schoolRows.forEach(function(row) {
+                const key = normalizeStudentCompareName(row && row.name);
+                if (key && !schoolNameMap[key]) schoolNameMap[key] = row;
+            });
+
+            const totalTownRanks = buildStudentCompareRankMap(allRows);
+            const totalSchoolRanks = buildStudentCompareRankMap(schoolRows);
+            const townSubjectRanks = new Map();
+            const schoolSubjectRanks = new Map();
+            const classCache = new Map();
+
+            function getSubjectRankMap(cache, rows, subject) {
+                const cacheKey = String(subject || '');
+                if (!cache.has(cacheKey)) {
+                    cache.set(cacheKey, buildStudentCompareRankMap(rows, function(row) {
+                        const value = parseFloat(row && row.scores && row.scores[subject]);
+                        return Number.isFinite(value) ? value : 0;
+                    }));
+                }
+                return cache.get(cacheKey);
+            }
+
+            function getClassBundle(studentClass) {
+                const classKey = String(studentClass || '');
+                if (!classCache.has(classKey)) {
+                    const classRows = schoolRows.filter(function(row) {
+                        return isClassEquivalent((row && row.class) || '', classKey);
+                    });
+                    classCache.set(classKey, {
+                        rows: classRows,
+                        totalRanks: buildStudentCompareRankMap(classRows),
+                        subjectRanks: new Map()
+                    });
+                }
+                const bundle = classCache.get(classKey);
+                bundle.getSubjectRanks = function(subject) {
+                    return getSubjectRankMap(bundle.subjectRanks, bundle.rows, subject);
+                };
+                return bundle;
+            }
+
+            return {
+                examId: item && item.examId,
+                schoolNameMap: schoolNameMap,
+                totalTownRanks: totalTownRanks,
+                totalSchoolRanks: totalSchoolRanks,
+                getTownSubjectRanks: function(subject) {
+                    return getSubjectRankMap(townSubjectRanks, allRows, subject);
+                },
+                getSchoolSubjectRanks: function(subject) {
+                    return getSubjectRankMap(schoolSubjectRanks, schoolRows, subject);
+                },
+                getClassBundle: getClassBundle
+            };
+        });
+
+        const allStudentNames = new Set();
+        preparedExams.forEach(function(item) {
+            Object.keys(item.schoolNameMap).forEach(function(name) {
+                if (name) allStudentNames.add(name);
+            });
+        });
+
+        const studentsCompareData = [];
+        allStudentNames.forEach(function(cleanedName) {
+            const studentPeriods = [];
+            let displayName = cleanedName;
+            let studentClass = '';
+
+            preparedExams.forEach(function(item) {
+                const studentRow = item.schoolNameMap[cleanedName];
+                if (!studentRow) {
+                    studentPeriods.push({
+                        examId: item.examId,
+                        total: null,
+                        rankClass: null,
+                        rankTown: null,
+                        rankSchool: null,
+                        subjects: {}
+                    });
+                    return;
+                }
+
+                displayName = studentRow.name || displayName;
+                studentClass = studentRow.class || studentClass;
+
+                const classBundle = item.getClassBundle(studentClass);
+                const subjectRanks = {};
+                allSubjects.forEach(function(subject) {
+                    const subScore = parseFloat(studentRow && studentRow.scores && studentRow.scores[subject]);
+                    if (!Number.isFinite(subScore)) return;
+                    const classSubjectRanks = classBundle.getSubjectRanks(subject);
+                    const townSubjectRanksForSubject = item.getTownSubjectRanks(subject);
+                    const schoolSubjectRanksForSubject = item.getSchoolSubjectRanks(subject);
+                    subjectRanks[subject] = {
+                        score: subScore,
+                        rankClass: classSubjectRanks[cleanedName] || null,
+                        rankTown: townSubjectRanksForSubject[cleanedName] || null,
+                        rankSchool: schoolSubjectRanksForSubject[cleanedName] || null
+                    };
+                });
+
+                studentPeriods.push({
+                    examId: item.examId,
+                    total: Number(studentRow && studentRow.total) || 0,
+                    rankClass: classBundle.totalRanks[cleanedName] || null,
+                    rankTown: item.totalTownRanks[cleanedName] || null,
+                    rankSchool: item.totalSchoolRanks[cleanedName] || null,
+                    subjects: subjectRanks
+                });
+            });
+
+            const first = studentPeriods[0] || {};
+            const last = studentPeriods[studentPeriods.length - 1] || {};
+            const scoreDiff = first.total != null && last.total != null ? Number(last.total) - Number(first.total) : 0;
+            const rankSchoolDiff = first.rankSchool != null && last.rankSchool != null ? Number(first.rankSchool) - Number(last.rankSchool) : 0;
+            const rankTownDiff = first.rankTown != null && last.rankTown != null ? Number(first.rankTown) - Number(last.rankTown) : 0;
+
+            studentsCompareData.push({
+                name: displayName,
+                cleanName: cleanedName,
+                class: studentClass,
+                periods: studentPeriods,
+                scoreDiff: scoreDiff,
+                rankSchoolDiff: rankSchoolDiff,
+                rankTownDiff: rankTownDiff,
+                latestTotal: last.total || 0,
+                progressType: calcStudentCompareProgressType(scoreDiff, rankSchoolDiff, rankTownDiff)
+            });
+        });
+
+        studentsCompareData.sort(function(a, b) {
+            const classCompare = String(a && a.class || '').localeCompare(String(b && b.class || ''), 'zh-CN');
+            if (classCompare !== 0) return classCompare;
+            return String(a && a.name || '').localeCompare(String(b && b.name || ''), 'zh-CN');
+        });
+
+        return studentsCompareData;
+    }
+
+    function filterStudentCompareRowsByClasses(options) {
+        const opts = options || {};
+        const rows = Array.isArray(opts.rows) ? opts.rows : [];
+        const normalizeClass = typeof opts.normalizeClass === 'function'
+            ? opts.normalizeClass
+            : function(value) { return String(value || '').trim(); };
+        const allowedClasses = opts.allowedClasses instanceof Set
+            ? opts.allowedClasses
+            : new Set(Array.isArray(opts.allowedClasses) ? opts.allowedClasses : []);
+
+        if (!allowedClasses.size) return rows.slice();
+        return rows.filter(function(row) {
+            return allowedClasses.has(normalizeClass(row && row.class));
+        });
+    }
+
     function buildBasicStudentCompareRows(selectedByExam, periodCount) {
         const schoolMaps = (selectedByExam || []).map(function(item) {
             const map = {};
@@ -994,10 +1221,10 @@
             return {
                 key: String(record && record.key || ''),
                 displayDate: formatZhDateTime(record && record.updated_at),
-                cohortLabel: parsed.cohortId || '未知届别',
-                typeLabel: parsed.isBatch ? '批量' : '单教师',
-                nameLabel: parsed.name || (parsed.isBatch ? '教师批量对比' : '未命名教师'),
-                subjectLabel: parsed.isBatch ? '批量分析' : (parsed.subject || '未知学科')
+                cohortLabel: parsed.cohortId || '\u672a\u77e5\u5c4a\u522b',
+                typeLabel: parsed.isBatch ? '\u6279\u91cf' : '\u5355\u6559\u5e08',
+                nameLabel: parsed.name || (parsed.isBatch ? '\u6559\u5e08\u6279\u91cf\u5bf9\u6bd4' : '\u672a\u547d\u540d\u6559\u5e08'),
+                subjectLabel: parsed.isBatch ? '\u6279\u91cf\u5206\u6790' : (parsed.subject || '\u672a\u77e5\u5b66\u79d1')
             };
         });
     }
@@ -1016,7 +1243,7 @@
                 + '</div>'
                 + '<div style="text-align:right;">'
                 + '<div style="font-size:12px; color:#64748b;">' + escapeHtml(item.displayDate || '-') + '</div>'
-                + '<div style="font-size:11px; color:#3b82f6; margin-top:2px;">点击查看 &gt;</div>'
+                + '<div style="font-size:11px; color:#3b82f6; margin-top:2px;">\u70b9\u51fb\u67e5\u770b &gt;</div>'
                 + '</div>'
                 + '</div>';
         }).join('');
@@ -1033,13 +1260,13 @@
         const delta = payload.delta || {};
         const metricRows = String(payload.metricRows || '');
         const title = String(payload.title || '').trim() || (payload.isBatchMode
-            ? (school + ' 教师多期对比（批量）')
-            : [school, teacher, subject].filter(Boolean).join(' ') + '教师多期对比');
+            ? (school + ' \u6559\u5e08\u591a\u671f\u5bf9\u6bd4\uff08\u6279\u91cf\uff09')
+            : [school, teacher, subject].filter(Boolean).join(' ') + '\u6559\u5e08\u591a\u671f\u5bf9\u6bd4');
         const createdAtLabel = formatZhDateTime(payload.createdAt) || '-';
-        const createdByLabel = escapeHtml(payload.createdBy || '未知');
+        const createdByLabel = escapeHtml(payload.createdBy || '\u672a\u77e5');
         const titleHtml = escapeHtml(title);
-        const firstExam = escapeHtml(examIds[0] || '首期');
-        const lastExam = escapeHtml(examIds[examIds.length - 1] || '末期');
+        const firstExam = escapeHtml(examIds[0] || '\u9996\u671f');
+        const lastExam = escapeHtml(examIds[examIds.length - 1] || '\u672b\u671f');
 
         const restoredTeacherCompareCache = {
             school: school,
@@ -1057,7 +1284,7 @@
 
         if (payload.isBatchMode) {
             const resultHtml = ''
-                + '<div class="sub-header" style="color:#7c3aed;">云端教师多期对比：' + titleHtml + '</div>'
+                + '<div class="sub-header" style="color:#7c3aed;">\u4e91\u7aef\u6559\u5e08\u591a\u671f\u5bf9\u6bd4\uff1a' + titleHtml + '</div>'
                 + '<div class="table-wrap" style="max-height:600px; overflow-y:auto;">'
                 + '<table class="common-table" style="font-size:13px;">'
                 + '<thead style="position:sticky; top:0; z-index:10;"><tr>' + String(payload.thsHtml || '') + '</tr></thead>'
@@ -1065,16 +1292,16 @@
                 + '</table>'
                 + '</div>'
                 + '<div style="margin-top:10px; display:flex; gap:10px;">'
-                + '<button class="btn btn-sm" data-school="' + escapeHtml(school) + '" data-exams="' + escapeHtml(examIds.join('_')) + '" onclick="exportAllTeachersMultiPeriodDiff(this.getAttribute(&quot;data-school&quot;), this.getAttribute(&quot;data-exams&quot;))">导出批量对比 Excel</button>'
+                + '<button class="btn btn-sm" data-school="' + escapeHtml(school) + '" data-exams="' + escapeHtml(examIds.join('_')) + '" onclick="exportAllTeachersMultiPeriodDiff(this.getAttribute(&quot;data-school&quot;), this.getAttribute(&quot;data-exams&quot;))">\u5bfc\u51fa\u6279\u91cf\u5bf9\u6bd4 Excel</button>'
                 + '</div>'
                 + '<div style="margin-top:10px; font-size:12px; color:#94a3b8; text-align:right;">'
-                + '保存时间：' + escapeHtml(createdAtLabel) + ' | '
-                + '保存人：' + createdByLabel
+                + '\u4fdd\u5b58\u65f6\u95f4\uff1a' + escapeHtml(createdAtLabel) + ' | '
+                + '\u4fdd\u5b58\u4eba\uff1a' + createdByLabel
                 + '</div>';
 
             return {
                 resultHtml: resultHtml,
-                hintHtml: '已从云端载入教师批量多期对比：' + titleHtml,
+                hintHtml: '\u5df2\u4ece\u4e91\u7aef\u8f7d\u5165\u6559\u5e08\u6279\u91cf\u591a\u671f\u5bf9\u6bd4\uff1a' + titleHtml,
                 hintColor: '#7c3aed',
                 restoredTeacherCompareCache: restoredTeacherCompareCache,
                 restoredAllTeachersCache: payload.batchResults ? {
@@ -1096,27 +1323,26 @@
 
         return {
             resultHtml: ''
-                + '<div class="sub-header" style="color:#7c3aed;">云端教师多期对比：' + titleHtml + '</div>'
+                + '<div class="sub-header" style="color:#7c3aed;">\u4e91\u7aef\u6559\u5e08\u591a\u671f\u5bf9\u6bd4\uff1a' + titleHtml + '</div>'
                 + '<div class="table-wrap"><table class="mobile-card-table"><thead><tr>'
-                + '<th>期次</th><th>乡镇均分排名</th><th>优秀率排名</th><th>及格率排名</th>'
+                + '<th>\u671f\u6b21</th><th>\u4e61\u9547\u5747\u5206\u6392\u540d</th><th>\u4f18\u79c0\u7387\u6392\u540d</th><th>\u53ca\u683c\u7387\u6392\u540d</th>'
                 + '</tr></thead><tbody>' + metricRows + '</tbody></table></div>'
                 + '<div style="margin-top:8px; font-size:12px; color:#475569;">'
-                + '对比区间：' + firstExam + ' -> ' + lastExam + '；'
-                + '乡镇均分排名变化：' + escapeHtml(formatSigned(deltaAvg)) + '；'
-                + '优秀率排名变化：' + escapeHtml(formatSigned(deltaExc)) + '；'
-                + '及格率排名变化：' + escapeHtml(formatSigned(deltaPass))
+                + '\u5bf9\u6bd4\u533a\u95f4\uff1a' + firstExam + ' -> ' + lastExam + '\uff1b'
+                + '\u4e61\u9547\u5747\u5206\u6392\u540d\u53d8\u5316\uff1a' + escapeHtml(formatSigned(deltaAvg)) + '\uff1b'
+                + '\u4f18\u79c0\u7387\u6392\u540d\u53d8\u5316\uff1a' + escapeHtml(formatSigned(deltaExc)) + '\uff1b'
+                + '\u53ca\u683c\u7387\u6392\u540d\u53d8\u5316\uff1a' + escapeHtml(formatSigned(deltaPass))
                 + '</div>'
                 + '<div style="margin-top:10px; font-size:12px; color:#94a3b8; text-align:right;">'
-                + '保存时间：' + escapeHtml(createdAtLabel) + ' | '
-                + '保存人：' + createdByLabel
+                + '\u4fdd\u5b58\u65f6\u95f4\uff1a' + escapeHtml(createdAtLabel) + ' | '
+                + '\u4fdd\u5b58\u4eba\uff1a' + createdByLabel
                 + '</div>',
-            hintHtml: '已从云端载入教师多期对比：' + titleHtml,
+            hintHtml: '\u5df2\u4ece\u4e91\u7aef\u8f7d\u5165\u6559\u5e08\u591a\u671f\u5bf9\u6bd4\uff1a' + titleHtml,
             hintColor: '#7c3aed',
             restoredTeacherCompareCache: restoredTeacherCompareCache,
             restoredAllTeachersCache: null
         };
     }
-
 
     function sanitizeSheetName(name, fallback) {
         const base = String(name || fallback || '\u5de5\u4f5c\u8868')
@@ -1495,6 +1721,9 @@
         buildMacroMultiPeriodExportData: buildMacroMultiPeriodExportData,
         buildBasicMultiPeriodComparison: buildBasicMultiPeriodComparison,
         buildBasicMultiPeriodExportData: buildBasicMultiPeriodExportData,
+        resolveStudentCompareSubjects: resolveStudentCompareSubjects,
+        buildStudentMultiPeriodComparison: buildStudentMultiPeriodComparison,
+        filterStudentCompareRowsByClasses: filterStudentCompareRowsByClasses,
         buildTeacherStatsForExam: buildTeacherStatsForExam,
         attachTeacherTownshipAvgRank: attachTeacherTownshipAvgRank,
         buildTeacherMultiPeriodComparison: buildTeacherMultiPeriodComparison,

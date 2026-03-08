@@ -6561,6 +6561,233 @@
             .replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '');
     }
 
+    function resolveStudentCompareSubjects(options) {
+        const opts = options || {};
+        const examIds = Array.isArray(opts.examIds) ? opts.examIds : [];
+        const currentExamId = String(opts.currentExamId || '').trim();
+        const currentSubjects = Array.isArray(opts.currentSubjects) ? opts.currentSubjects : [];
+        const exams = opts.exams || {};
+        const subjects = [];
+
+        examIds.forEach(function(examId) {
+            if (!examId) return;
+            if (examId === currentExamId) {
+                currentSubjects.forEach(function(subject) {
+                    if (subject) subjects.push(subject);
+                });
+                return;
+            }
+            const exam = exams && exams[examId];
+            if (!exam || !Array.isArray(exam.subjects)) return;
+            exam.subjects.forEach(function(subject) {
+                if (subject) subjects.push(subject);
+            });
+        });
+
+        return Array.from(new Set(subjects));
+    }
+
+    function buildStudentCompareRankMap(rows, scoreGetter) {
+        const getter = typeof scoreGetter === 'function'
+            ? scoreGetter
+            : function(row) { return Number(row && row.total) || 0; };
+        const sortedRows = (Array.isArray(rows) ? rows : []).slice().sort(function(a, b) {
+            return getter(b) - getter(a);
+        });
+        const rankMap = {};
+        sortedRows.forEach(function(row, index) {
+            const key = normalizeStudentCompareName(row && row.name);
+            if (key && rankMap[key] == null) rankMap[key] = index + 1;
+        });
+        return rankMap;
+    }
+
+    function calcStudentCompareProgressType(scoreDiff, rankSchoolDiff, rankTownDiff) {
+        if (
+            rankTownDiff > 0
+            || (rankTownDiff === 0 && rankSchoolDiff > 0)
+            || (rankTownDiff === 0 && rankSchoolDiff === 0 && scoreDiff > 1)
+        ) {
+            return 'improve';
+        }
+        if (
+            rankTownDiff < 0
+            || (rankTownDiff === 0 && rankSchoolDiff < 0)
+            || (rankTownDiff === 0 && rankSchoolDiff === 0 && scoreDiff < -1)
+        ) {
+            return 'decline';
+        }
+        return 'stable';
+    }
+
+    function buildStudentMultiPeriodComparison(options) {
+        const opts = options || {};
+        const examDataList = Array.isArray(opts.examDataList) ? opts.examDataList : [];
+        const allSubjects = Array.isArray(opts.allSubjects) ? opts.allSubjects.filter(Boolean) : [];
+        const isClassEquivalent = typeof opts.isClassEquivalent === 'function'
+            ? opts.isClassEquivalent
+            : function(a, b) { return String(a || '').trim() === String(b || '').trim(); };
+
+        const preparedExams = examDataList.map(function(item) {
+            const allRows = Array.isArray(item && item.allRows) ? item.allRows : [];
+            const schoolRows = Array.isArray(item && item.schoolRows) ? item.schoolRows : [];
+            const schoolNameMap = {};
+            schoolRows.forEach(function(row) {
+                const key = normalizeStudentCompareName(row && row.name);
+                if (key && !schoolNameMap[key]) schoolNameMap[key] = row;
+            });
+
+            const totalTownRanks = buildStudentCompareRankMap(allRows);
+            const totalSchoolRanks = buildStudentCompareRankMap(schoolRows);
+            const townSubjectRanks = new Map();
+            const schoolSubjectRanks = new Map();
+            const classCache = new Map();
+
+            function getSubjectRankMap(cache, rows, subject) {
+                const cacheKey = String(subject || '');
+                if (!cache.has(cacheKey)) {
+                    cache.set(cacheKey, buildStudentCompareRankMap(rows, function(row) {
+                        const value = parseFloat(row && row.scores && row.scores[subject]);
+                        return Number.isFinite(value) ? value : 0;
+                    }));
+                }
+                return cache.get(cacheKey);
+            }
+
+            function getClassBundle(studentClass) {
+                const classKey = String(studentClass || '');
+                if (!classCache.has(classKey)) {
+                    const classRows = schoolRows.filter(function(row) {
+                        return isClassEquivalent((row && row.class) || '', classKey);
+                    });
+                    classCache.set(classKey, {
+                        rows: classRows,
+                        totalRanks: buildStudentCompareRankMap(classRows),
+                        subjectRanks: new Map()
+                    });
+                }
+                const bundle = classCache.get(classKey);
+                bundle.getSubjectRanks = function(subject) {
+                    return getSubjectRankMap(bundle.subjectRanks, bundle.rows, subject);
+                };
+                return bundle;
+            }
+
+            return {
+                examId: item && item.examId,
+                schoolNameMap: schoolNameMap,
+                totalTownRanks: totalTownRanks,
+                totalSchoolRanks: totalSchoolRanks,
+                getTownSubjectRanks: function(subject) {
+                    return getSubjectRankMap(townSubjectRanks, allRows, subject);
+                },
+                getSchoolSubjectRanks: function(subject) {
+                    return getSubjectRankMap(schoolSubjectRanks, schoolRows, subject);
+                },
+                getClassBundle: getClassBundle
+            };
+        });
+
+        const allStudentNames = new Set();
+        preparedExams.forEach(function(item) {
+            Object.keys(item.schoolNameMap).forEach(function(name) {
+                if (name) allStudentNames.add(name);
+            });
+        });
+
+        const studentsCompareData = [];
+        allStudentNames.forEach(function(cleanedName) {
+            const studentPeriods = [];
+            let displayName = cleanedName;
+            let studentClass = '';
+
+            preparedExams.forEach(function(item) {
+                const studentRow = item.schoolNameMap[cleanedName];
+                if (!studentRow) {
+                    studentPeriods.push({
+                        examId: item.examId,
+                        total: null,
+                        rankClass: null,
+                        rankTown: null,
+                        rankSchool: null,
+                        subjects: {}
+                    });
+                    return;
+                }
+
+                displayName = studentRow.name || displayName;
+                studentClass = studentRow.class || studentClass;
+
+                const classBundle = item.getClassBundle(studentClass);
+                const subjectRanks = {};
+                allSubjects.forEach(function(subject) {
+                    const subScore = parseFloat(studentRow && studentRow.scores && studentRow.scores[subject]);
+                    if (!Number.isFinite(subScore)) return;
+                    const classSubjectRanks = classBundle.getSubjectRanks(subject);
+                    const townSubjectRanksForSubject = item.getTownSubjectRanks(subject);
+                    const schoolSubjectRanksForSubject = item.getSchoolSubjectRanks(subject);
+                    subjectRanks[subject] = {
+                        score: subScore,
+                        rankClass: classSubjectRanks[cleanedName] || null,
+                        rankTown: townSubjectRanksForSubject[cleanedName] || null,
+                        rankSchool: schoolSubjectRanksForSubject[cleanedName] || null
+                    };
+                });
+
+                studentPeriods.push({
+                    examId: item.examId,
+                    total: Number(studentRow && studentRow.total) || 0,
+                    rankClass: classBundle.totalRanks[cleanedName] || null,
+                    rankTown: item.totalTownRanks[cleanedName] || null,
+                    rankSchool: item.totalSchoolRanks[cleanedName] || null,
+                    subjects: subjectRanks
+                });
+            });
+
+            const first = studentPeriods[0] || {};
+            const last = studentPeriods[studentPeriods.length - 1] || {};
+            const scoreDiff = first.total != null && last.total != null ? Number(last.total) - Number(first.total) : 0;
+            const rankSchoolDiff = first.rankSchool != null && last.rankSchool != null ? Number(first.rankSchool) - Number(last.rankSchool) : 0;
+            const rankTownDiff = first.rankTown != null && last.rankTown != null ? Number(first.rankTown) - Number(last.rankTown) : 0;
+
+            studentsCompareData.push({
+                name: displayName,
+                cleanName: cleanedName,
+                class: studentClass,
+                periods: studentPeriods,
+                scoreDiff: scoreDiff,
+                rankSchoolDiff: rankSchoolDiff,
+                rankTownDiff: rankTownDiff,
+                latestTotal: last.total || 0,
+                progressType: calcStudentCompareProgressType(scoreDiff, rankSchoolDiff, rankTownDiff)
+            });
+        });
+
+        studentsCompareData.sort(function(a, b) {
+            const classCompare = String(a && a.class || '').localeCompare(String(b && b.class || ''), 'zh-CN');
+            if (classCompare !== 0) return classCompare;
+            return String(a && a.name || '').localeCompare(String(b && b.name || ''), 'zh-CN');
+        });
+
+        return studentsCompareData;
+    }
+
+    function filterStudentCompareRowsByClasses(options) {
+        const opts = options || {};
+        const rows = Array.isArray(opts.rows) ? opts.rows : [];
+        const normalizeClass = typeof opts.normalizeClass === 'function'
+            ? opts.normalizeClass
+            : function(value) { return String(value || '').trim(); };
+        const allowedClasses = opts.allowedClasses instanceof Set
+            ? opts.allowedClasses
+            : new Set(Array.isArray(opts.allowedClasses) ? opts.allowedClasses : []);
+
+        if (!allowedClasses.size) return rows.slice();
+        return rows.filter(function(row) {
+            return allowedClasses.has(normalizeClass(row && row.class));
+        });
+    }
+
     function buildBasicStudentCompareRows(selectedByExam, periodCount) {
         const schoolMaps = (selectedByExam || []).map(function(item) {
             const map = {};
@@ -7241,10 +7468,10 @@
             return {
                 key: String(record && record.key || ''),
                 displayDate: formatZhDateTime(record && record.updated_at),
-                cohortLabel: parsed.cohortId || '未知届别',
-                typeLabel: parsed.isBatch ? '批量' : '单教师',
-                nameLabel: parsed.name || (parsed.isBatch ? '教师批量对比' : '未命名教师'),
-                subjectLabel: parsed.isBatch ? '批量分析' : (parsed.subject || '未知学科')
+                cohortLabel: parsed.cohortId || '\u672a\u77e5\u5c4a\u522b',
+                typeLabel: parsed.isBatch ? '\u6279\u91cf' : '\u5355\u6559\u5e08',
+                nameLabel: parsed.name || (parsed.isBatch ? '\u6559\u5e08\u6279\u91cf\u5bf9\u6bd4' : '\u672a\u547d\u540d\u6559\u5e08'),
+                subjectLabel: parsed.isBatch ? '\u6279\u91cf\u5206\u6790' : (parsed.subject || '\u672a\u77e5\u5b66\u79d1')
             };
         });
     }
@@ -7263,7 +7490,7 @@
                 + '</div>'
                 + '<div style="text-align:right;">'
                 + '<div style="font-size:12px; color:#64748b;">' + escapeHtml(item.displayDate || '-') + '</div>'
-                + '<div style="font-size:11px; color:#3b82f6; margin-top:2px;">点击查看 &gt;</div>'
+                + '<div style="font-size:11px; color:#3b82f6; margin-top:2px;">\u70b9\u51fb\u67e5\u770b &gt;</div>'
                 + '</div>'
                 + '</div>';
         }).join('');
@@ -7280,13 +7507,13 @@
         const delta = payload.delta || {};
         const metricRows = String(payload.metricRows || '');
         const title = String(payload.title || '').trim() || (payload.isBatchMode
-            ? (school + ' 教师多期对比（批量）')
-            : [school, teacher, subject].filter(Boolean).join(' ') + '教师多期对比');
+            ? (school + ' \u6559\u5e08\u591a\u671f\u5bf9\u6bd4\uff08\u6279\u91cf\uff09')
+            : [school, teacher, subject].filter(Boolean).join(' ') + '\u6559\u5e08\u591a\u671f\u5bf9\u6bd4');
         const createdAtLabel = formatZhDateTime(payload.createdAt) || '-';
-        const createdByLabel = escapeHtml(payload.createdBy || '未知');
+        const createdByLabel = escapeHtml(payload.createdBy || '\u672a\u77e5');
         const titleHtml = escapeHtml(title);
-        const firstExam = escapeHtml(examIds[0] || '首期');
-        const lastExam = escapeHtml(examIds[examIds.length - 1] || '末期');
+        const firstExam = escapeHtml(examIds[0] || '\u9996\u671f');
+        const lastExam = escapeHtml(examIds[examIds.length - 1] || '\u672b\u671f');
 
         const restoredTeacherCompareCache = {
             school: school,
@@ -7304,7 +7531,7 @@
 
         if (payload.isBatchMode) {
             const resultHtml = ''
-                + '<div class="sub-header" style="color:#7c3aed;">云端教师多期对比：' + titleHtml + '</div>'
+                + '<div class="sub-header" style="color:#7c3aed;">\u4e91\u7aef\u6559\u5e08\u591a\u671f\u5bf9\u6bd4\uff1a' + titleHtml + '</div>'
                 + '<div class="table-wrap" style="max-height:600px; overflow-y:auto;">'
                 + '<table class="common-table" style="font-size:13px;">'
                 + '<thead style="position:sticky; top:0; z-index:10;"><tr>' + String(payload.thsHtml || '') + '</tr></thead>'
@@ -7312,16 +7539,16 @@
                 + '</table>'
                 + '</div>'
                 + '<div style="margin-top:10px; display:flex; gap:10px;">'
-                + '<button class="btn btn-sm" data-school="' + escapeHtml(school) + '" data-exams="' + escapeHtml(examIds.join('_')) + '" onclick="exportAllTeachersMultiPeriodDiff(this.getAttribute(&quot;data-school&quot;), this.getAttribute(&quot;data-exams&quot;))">导出批量对比 Excel</button>'
+                + '<button class="btn btn-sm" data-school="' + escapeHtml(school) + '" data-exams="' + escapeHtml(examIds.join('_')) + '" onclick="exportAllTeachersMultiPeriodDiff(this.getAttribute(&quot;data-school&quot;), this.getAttribute(&quot;data-exams&quot;))">\u5bfc\u51fa\u6279\u91cf\u5bf9\u6bd4 Excel</button>'
                 + '</div>'
                 + '<div style="margin-top:10px; font-size:12px; color:#94a3b8; text-align:right;">'
-                + '保存时间：' + escapeHtml(createdAtLabel) + ' | '
-                + '保存人：' + createdByLabel
+                + '\u4fdd\u5b58\u65f6\u95f4\uff1a' + escapeHtml(createdAtLabel) + ' | '
+                + '\u4fdd\u5b58\u4eba\uff1a' + createdByLabel
                 + '</div>';
 
             return {
                 resultHtml: resultHtml,
-                hintHtml: '已从云端载入教师批量多期对比：' + titleHtml,
+                hintHtml: '\u5df2\u4ece\u4e91\u7aef\u8f7d\u5165\u6559\u5e08\u6279\u91cf\u591a\u671f\u5bf9\u6bd4\uff1a' + titleHtml,
                 hintColor: '#7c3aed',
                 restoredTeacherCompareCache: restoredTeacherCompareCache,
                 restoredAllTeachersCache: payload.batchResults ? {
@@ -7343,27 +7570,26 @@
 
         return {
             resultHtml: ''
-                + '<div class="sub-header" style="color:#7c3aed;">云端教师多期对比：' + titleHtml + '</div>'
+                + '<div class="sub-header" style="color:#7c3aed;">\u4e91\u7aef\u6559\u5e08\u591a\u671f\u5bf9\u6bd4\uff1a' + titleHtml + '</div>'
                 + '<div class="table-wrap"><table class="mobile-card-table"><thead><tr>'
-                + '<th>期次</th><th>乡镇均分排名</th><th>优秀率排名</th><th>及格率排名</th>'
+                + '<th>\u671f\u6b21</th><th>\u4e61\u9547\u5747\u5206\u6392\u540d</th><th>\u4f18\u79c0\u7387\u6392\u540d</th><th>\u53ca\u683c\u7387\u6392\u540d</th>'
                 + '</tr></thead><tbody>' + metricRows + '</tbody></table></div>'
                 + '<div style="margin-top:8px; font-size:12px; color:#475569;">'
-                + '对比区间：' + firstExam + ' -> ' + lastExam + '；'
-                + '乡镇均分排名变化：' + escapeHtml(formatSigned(deltaAvg)) + '；'
-                + '优秀率排名变化：' + escapeHtml(formatSigned(deltaExc)) + '；'
-                + '及格率排名变化：' + escapeHtml(formatSigned(deltaPass))
+                + '\u5bf9\u6bd4\u533a\u95f4\uff1a' + firstExam + ' -> ' + lastExam + '\uff1b'
+                + '\u4e61\u9547\u5747\u5206\u6392\u540d\u53d8\u5316\uff1a' + escapeHtml(formatSigned(deltaAvg)) + '\uff1b'
+                + '\u4f18\u79c0\u7387\u6392\u540d\u53d8\u5316\uff1a' + escapeHtml(formatSigned(deltaExc)) + '\uff1b'
+                + '\u53ca\u683c\u7387\u6392\u540d\u53d8\u5316\uff1a' + escapeHtml(formatSigned(deltaPass))
                 + '</div>'
                 + '<div style="margin-top:10px; font-size:12px; color:#94a3b8; text-align:right;">'
-                + '保存时间：' + escapeHtml(createdAtLabel) + ' | '
-                + '保存人：' + createdByLabel
+                + '\u4fdd\u5b58\u65f6\u95f4\uff1a' + escapeHtml(createdAtLabel) + ' | '
+                + '\u4fdd\u5b58\u4eba\uff1a' + createdByLabel
                 + '</div>',
-            hintHtml: '已从云端载入教师多期对比：' + titleHtml,
+            hintHtml: '\u5df2\u4ece\u4e91\u7aef\u8f7d\u5165\u6559\u5e08\u591a\u671f\u5bf9\u6bd4\uff1a' + titleHtml,
             hintColor: '#7c3aed',
             restoredTeacherCompareCache: restoredTeacherCompareCache,
             restoredAllTeachersCache: null
         };
     }
-
 
     function sanitizeSheetName(name, fallback) {
         const base = String(name || fallback || '\u5de5\u4f5c\u8868')
@@ -7742,6 +7968,9 @@
         buildMacroMultiPeriodExportData: buildMacroMultiPeriodExportData,
         buildBasicMultiPeriodComparison: buildBasicMultiPeriodComparison,
         buildBasicMultiPeriodExportData: buildBasicMultiPeriodExportData,
+        resolveStudentCompareSubjects: resolveStudentCompareSubjects,
+        buildStudentMultiPeriodComparison: buildStudentMultiPeriodComparison,
+        filterStudentCompareRowsByClasses: filterStudentCompareRowsByClasses,
         buildTeacherStatsForExam: buildTeacherStatsForExam,
         attachTeacherTownshipAvgRank: attachTeacherTownshipAvgRank,
         buildTeacherMultiPeriodComparison: buildTeacherMultiPeriodComparison,
@@ -18139,6 +18368,7 @@ function onReportComparePeriodCountChange() {
 
 function renderStudentMultiPeriodComparison() {
     const controller = window.StudentCompareControllerService;
+    const compareAnalytics = window.CompareAnalyticsService || {};
     const state = controller && typeof controller.readStudentCompareState === 'function'
         ? controller.readStudentCompareState()
         : {
@@ -18173,33 +18403,31 @@ function renderStudentMultiPeriodComparison() {
     const school = state.school;
     const examIds = state.examIds;
 
-    if (controller && typeof controller.setStudentCompareFeedback === 'function') {
-        controller.setStudentCompareFeedback({
-            elements,
-            message: '\u6b63\u5728\u6839\u636e\u6240\u9009\u671f\u6b21\u751f\u6210\u5b66\u751f\u591a\u671f\u5bf9\u6bd4\uff0c\u8bf7\u7a0d\u5019...',
-            color: '#3b82f6',
-            clearResult: true,
-            clearSummary: true
-        });
-    } else {
-        hintEl.innerHTML = '\u6b63\u5728\u6839\u636e\u6240\u9009\u671f\u6b21\u751f\u6210\u5b66\u751f\u591a\u671f\u5bf9\u6bd4\uff0c\u8bf7\u7a0d\u5019...';
-        hintEl.style.color = '#3b82f6';
-        resultEl.innerHTML = '';
-        if (summaryEl) summaryEl.innerHTML = '';
+    function applyFeedback(message, color, options) {
+        const opts = options || {};
+        if (controller && typeof controller.setStudentCompareFeedback === 'function') {
+            controller.setStudentCompareFeedback({
+                elements,
+                message: message,
+                color: color,
+                clearResult: opts.clearResult !== false,
+                clearSummary: opts.clearSummary !== false
+            });
+            return;
+        }
+        hintEl.innerHTML = message;
+        hintEl.style.color = color;
+        if (opts.clearResult !== false) resultEl.innerHTML = '';
+        if (summaryEl && opts.clearSummary !== false) summaryEl.innerHTML = '';
     }
+
+    applyFeedback('\u6b63\u5728\u6839\u636e\u6240\u9009\u671f\u6b21\u751f\u6210\u5b66\u751f\u591a\u671f\u5bf9\u6bd4\uff0c\u8bf7\u7a0d\u5019...', '#3b82f6');
 
     const feedback = controller && typeof controller.validateStudentCompareState === 'function'
         ? controller.validateStudentCompareState(state)
-        : { ok: !!school && !(examIds || []).some(x => !x) && new Set(examIds).size === examIds.length, message: '\u8bf7\u68c0\u67e5\u5b66\u6821\u548c\u8003\u8bd5\u671f\u6b21\u9009\u62e9\u3002' };
+        : { ok: !!school && !(examIds || []).some(function(x) { return !x; }) && new Set(examIds).size === examIds.length, message: '\u8bf7\u68c0\u67e5\u5b66\u6821\u548c\u8003\u8bd5\u671f\u6b21\u9009\u62e9\u3002' };
     if (!feedback.ok) {
-        if (controller && typeof controller.setStudentCompareFeedback === 'function') {
-            controller.setStudentCompareFeedback({ elements, message: feedback.message, color: '#dc2626', clearResult: true, clearSummary: true });
-        } else {
-            hintEl.innerHTML = feedback.message;
-            hintEl.style.color = '#dc2626';
-            resultEl.innerHTML = '';
-            if (summaryEl) summaryEl.innerHTML = '';
-        }
+        applyFeedback(feedback.message, '#dc2626');
         return;
     }
 
@@ -18207,215 +18435,55 @@ function renderStudentMultiPeriodComparison() {
     for (const examId of examIds) {
         const allRows = getExamRowsForCompare(examId);
         const schoolRows = filterRowsBySchool(allRows, school);
-
         if (schoolRows.length === 0) {
-            hintEl.innerHTML = `闂?闂?"${examId}" 婵犵數鍋為崹鍫曞箹閳哄懎鍌ㄩ柤鎭掑劤閻濊埖淇婇婵嗗惞闁崇粯姊婚埀顒€绠嶉崕閬嶅箠鎼淬劍鍋?"${school}" 闂傚倷鐒﹂惇褰掑礉瀹€鈧埀顒佸嚬閸欏啫顕ｉ幎鑺ュ亜闁绘挸娴烽澶婎渻閵堝棙顥嗛柕鍡忓亾闂佺顑嗛幐鑽ょ矚?
-            hintEl.style.color = '#dc2626';
-            resultEl.innerHTML = '';
+            applyFeedback('\u6240\u9009\u8003\u8bd5 ' + examId + ' \u4e2d\u6ca1\u6709\u627e\u5230\u5b66\u6821\u300c' + school + '\u300d\u7684\u6210\u7ee9\u6570\u636e\u3002', '#dc2626');
             return;
         }
-
         examDataList.push({ examId, allRows, schoolRows });
     }
 
-    // 闂傚倷绀侀幉锛勬暜閸ヮ剙纾归柡宥庡幖閽冪喖鏌涢妷顔煎闁?-8濠德板€楁慨鐑藉磻濞戙埄鏁嬫い鎾跺櫏濞堜粙鏌涢妷锝呭濞存嚎鍊栨穱濠囶敍濠婂懎绗＄紒?濠德板€楁慨鐑藉磻濞戙埄鏁嬫い鎾跺櫏濞堜粙鏌涢妷顔句粶闁绘梻鍘ч悘宕団偓瑙勬礀濞层劑銆?
-    const is9thGrade = CONFIG.name === '9濠德板€楁慨鐑藉磻濞戙埄鏁嬫い鎾跺櫏濞?;
-    const totalLabel = is9thGrade ? '婵犵數鍋涢悺銊у垝瀹ュ拋娼栧┑鐘崇啲缂嶆牠鏌″搴″箹缂? : '闂傚倷鑳堕…鍫㈡崲閸儱绀夐幖鎼厜缂嶆牠鏌″搴″箹缂?;
-
-    // 闂傚倷绀侀崥瀣磿閹惰棄搴婇柤鑹扮堪娴滃綊鏌涢妷銏℃珖闁活厽鎹囬弻鐔衡偓鐢殿焾鏍＄紓浣瑰姈椤ㄥ﹪寮诲☉銏犵闁瑰灝鍟悾浠嬫⒑?
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
-    let allSubjects = [];
-    examIds.forEach(examId => {
-        if (examId === CURRENT_EXAM_ID) {
-            if (SUBJECTS && SUBJECTS.length > 0) {
-                allSubjects = [...allSubjects, ...SUBJECTS];
-            }
-        } else if (db?.exams?.[examId]?.subjects) {
-            allSubjects = [...allSubjects, ...db.exams[examId].subjects];
-        }
-    });
-    allSubjects = [...new Set(allSubjects)].filter(s => s);
+    const allSubjects = typeof compareAnalytics.resolveStudentCompareSubjects === 'function'
+        ? compareAnalytics.resolveStudentCompareSubjects({
+            examIds: examIds,
+            currentExamId: CURRENT_EXAM_ID,
+            currentSubjects: SUBJECTS,
+            exams: db && db.exams
+        })
+        : [];
 
-    // 闂傚倷娴囬妴鈧柛瀣崌閺屾盯顢曢敐鍡欘槰闂佽壈灏欐繛鈧柡宀€鍠撻崰濠偽熸潪鏉款棜闂傚倷绀侀幖顐︽偋閸℃蛋鍥敍閻戝棙鏅㈤梺缁樻煥閸氬宕戦妸鈺傜厽闁哄倹顑欏▓鐘崇箾绾绉柡灞剧☉椤繈顢楅崒妤佺€哥紓鍌欐祰妞存悂鎮疯楠炴垿宕熼姣尖晠鏌ㄩ弮鍥棄闁绘帗鎮傚娲川婵犲懎顥濋梺缁橆殔濡繈骞婇悢鍏煎亜闁稿繐鍚嬪▍?
-    const cleanName = n => String(n || '').replace(/\s+/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '');
-    const allStudentNames = new Set();
-    examDataList.forEach(({ schoolRows }) => {
-        schoolRows.forEach(row => {
-            const name = cleanName(row.name);
-            if (name) allStudentNames.add(name);
-        });
-    });
+    let studentsCompareData = typeof compareAnalytics.buildStudentMultiPeriodComparison === 'function'
+        ? compareAnalytics.buildStudentMultiPeriodComparison({
+            examDataList: examDataList,
+            allSubjects: allSubjects,
+            isClassEquivalent: isClassEquivalent
+        })
+        : [];
 
-    // 闂傚倷绀侀幖顐︻敄閸涱垪鍋撳鐓庡缂佽鲸鎹囬獮姗€骞嶉幐搴＄缂佺姵绋掗幆鏃堝Ω閵夛妇鏉洪梻浣筋嚙鐎涒晠宕樼紒妯圭箚闁搞儺鍓欓弸渚€鏌熼崜褏甯涢柛搴＄Ч閺屾盯寮撮妸銉よ埅濠碘槅鍨伴澶愬蓟閿熺姴閱囬柕蹇曞У閻庨箖姊洪崫鍕棤闁哥姵鐗犻悰?
-    let studentsCompareData = [];
-    allStudentNames.forEach(cleanedName => {
-        const studentPeriods = [];
-        let displayName = cleanedName;
-        let studentClass = '';
-
-        examDataList.forEach(({ examId, allRows, schoolRows }) => {
-            const studentRow = schoolRows.find(r => cleanName(r.name) === cleanedName);
-
-            if (studentRow) {
-                displayName = studentRow.name; // 婵犵數鍋犻幓顏嗙礊閳ь剚绻涙径瀣鐎殿噮鍋婃俊鑸靛緞婵犲倸浜堕梻浣虹帛閺屻劑銆冩惔鈽嗙劷婵°倐鍋撻柍瑙勫灴椤㈡瑩鎳為妷銉ь暡闂?
-                studentClass = studentRow.class || '';
-
-                // 闂備浇宕垫慨宕囨閵堝洦顫曢柡鍥ュ灪閸嬧晛鈹戦悩瀹犲缂佺姵鍨块幃褰掑炊閵娿儳绁烽梺璇查椤兘寮婚悢鍏煎€绘俊顖濇閻熴劑姊?
-                const sortedByTotal = [...allRows].sort((a, b) => (b.total || 0) - (a.total || 0));
-                const sortedBySchool = [...schoolRows].sort((a, b) => (b.total || 0) - (a.total || 0));
-                const classRows = schoolRows.filter(r => isClassEquivalent(r.class || '', studentClass || ''));
-                const sortedByClass = [...classRows].sort((a, b) => (b.total || 0) - (a.total || 0));
-
-                const rankTown = sortedByTotal.findIndex(r => cleanName(r.name) === cleanedName) + 1;
-                const rankSchool = sortedBySchool.findIndex(r => cleanName(r.name) === cleanedName) + 1;
-                const rankClass = sortedByClass.findIndex(r => cleanName(r.name) === cleanedName) + 1;
-
-                // 闂傚倷绀侀幉锟犳嚌閸撗€鍋撳鐓庢珝闁挎繄鍋ゅ浠嬵敇閻愭鍞洪梻浣告贡閸庛倝宕归崼鏇炵９?
-                const subjectRanks = {};
-                allSubjects.forEach(subject => {
-                    const subScore = parseFloat(studentRow.scores?.[subject]);
-                    if (!isNaN(subScore)) {
-                        const sortedBySub = [...allRows].sort((a, b) => {
-                            const aScore = parseFloat(a.scores?.[subject]) || 0;
-                            const bScore = parseFloat(b.scores?.[subject]) || 0;
-                            return bScore - aScore;
-                        });
-                        const sortedBySubSchool = [...schoolRows].sort((a, b) => {
-                            const aScore = parseFloat(a.scores?.[subject]) || 0;
-                            const bScore = parseFloat(b.scores?.[subject]) || 0;
-                            return bScore - aScore;
-                        });
-                        const sortedBySubClass = [...classRows].sort((a, b) => {
-                            const aScore = parseFloat(a.scores?.[subject]) || 0;
-                            const bScore = parseFloat(b.scores?.[subject]) || 0;
-                            return bScore - aScore;
-                        });
-
-                        subjectRanks[subject] = {
-                            score: subScore,
-                            rankClass: sortedBySubClass.findIndex(r => cleanName(r.name) === cleanedName) + 1,
-                            rankTown: sortedBySub.findIndex(r => cleanName(r.name) === cleanedName) + 1,
-                            rankSchool: sortedBySubSchool.findIndex(r => cleanName(r.name) === cleanedName) + 1
-                        };
-                    }
-                });
-
-                studentPeriods.push({
-                    examId,
-                    total: studentRow.total || 0,
-                    rankClass,
-                    rankTown,
-                    rankSchool,
-                    subjects: subjectRanks
-                });
-            } else {
-                // 闂備浇宕垫慨鏉懨洪姀銈呯？闂侇剙绋侀弫鍡涙煟閺傚灝鎮戦柛瀣ㄥ姂閺岋綁寮崼鐔告殸闂傚鍓﹂崜姘跺箞閵娿儮鏀介柛鏇ㄥ亐閸嬫捇寮借閼板潡鏌嶉妷锔界伇闁哄閰ｉ弻宥夊Ψ閵娿儴鏁块梺鍛婏供閸撴瑩鍩ユ径鎰鐎规洖娉﹂姀銈嗙厽閹烘娊宕濋幋婵堟殾?
-                studentPeriods.push({
-                    examId,
-                    total: null,
-                    rankClass: null,
-                    rankTown: null,
-                    rankSchool: null,
-                    subjects: {}
-                });
-            }
-        });
-
-        // 闂備浇宕垫慨宕囨閵堝洦顫曢柡鍥ュ灪閸嬧晝绱撴担鑲℃垶绂嶉妶鍡欑闁瑰鍋熼幊鎰版煕閺傚灝顏い銊ｅ劦閹瑩宕ｆ径濠冾仩闂佽娴烽幊鎾跺椤撶姴鍨濋柛顭戝亜缁剁偛鈹戦悩鎻掆偓鍝ョ箔濮樿埖鈷戦弶鐐村閸忓苯顭胯椤ㄥ懘鎮?
-        let scoreDiff = 0;
-        let rankSchoolDiff = 0;
-        let rankTownDiff = 0;
-        if (studentPeriods.length >= 2) {
-            const first = studentPeriods[0];
-            const last = studentPeriods[studentPeriods.length - 1];
-            if (first.total !== null && last.total !== null) {
-                scoreDiff = last.total - first.total;
-            }
-            if (first.rankSchool !== null && last.rankSchool !== null) {
-                rankSchoolDiff = first.rankSchool - last.rankSchool;
-            }
-            if (first.rankTown !== null && last.rankTown !== null) {
-                rankTownDiff = first.rankTown - last.rankTown;
-            }
-        }
-
-        // 闂傚倷绀侀幉锛勬暜閸ヮ剙纾归柡宥庡幖閽冪喖鏌涢妷锝呭濞存嚎鍊栫换娑㈠箣閻愬灚鍣介梺鍛婃煥鐎氼喚妲愰幒妤婃晝闁靛鍠栧▓顓㈡⒑鐠囧弶鎹ｉ柛蹇旓耿瀵偄顓奸崪浣瑰兊濡炪倖鍔戦崐鏇㈠几閻樼粯鈷戠紒瀣硶缁犱即鏌ｅΔ鈧换鎰版晝閵忋倕宸濋悗娑櫱氶幏褰掓⒑閹肩偛鍔橀柛鏂跨灱缁參骞樼紒妯煎幈濠殿喗锕╅崜娑㈠煝瀹€鈧槐鎺撴綇閵娧呯杽閻庤娲橀敋妞ゆ挸銈稿畷鍫曞Ω瑜忛弳顖炴⒒娴ｅ憡鎯堢紒澶樺櫍瀹曟粌鈹戦崼鐔告闂佽宕橀褏鎲撮敂閿亾楠炲灝鍔氱紒缁樺笧缁牊寰勯幇顓犲幐闂佸壊鍋呴懝鐐妤ｅ啯鈷戦柛娑橈龚婢规ɑ绻涢弶鎴濇Щ闁挎洏鍨藉畷銊╁级閹寸姷鏆犻梺鑽ゅТ濞诧箒銇愰崘顔藉€?
-        let progressType = 'stable';
-        if (rankTownDiff > 0 || (rankTownDiff === 0 && rankSchoolDiff > 0) || (rankTownDiff === 0 && rankSchoolDiff === 0 && scoreDiff > 1)) {
-            progressType = 'improve';
-        } else if (rankTownDiff < 0 || (rankTownDiff === 0 && rankSchoolDiff < 0) || (rankTownDiff === 0 && rankSchoolDiff === 0 && scoreDiff < -1)) {
-            progressType = 'decline';
-        }
-
-        studentsCompareData.push({
-            name: displayName,
-            cleanName: cleanedName,
-            class: studentClass,
-            periods: studentPeriods,
-            // 闂傚倷鑳堕…鍫㈡崲閹版澘鐤い鏍仜濮规煡鏌ｉ弮鍌氬付缂?
-            scoreDiff,
-            rankSchoolDiff,
-            rankTownDiff,
-            latestTotal: studentPeriods[studentPeriods.length - 1]?.total || 0,
-            progressType
-        });
-    });
-
-    // 濠碘槅鍋撶徊浠嬪疮椤栫偛鏋?闂傚倷绀侀幖顐λ囬鐐茬柈闁哄鍩堥悗鑸电箾瀹割喕绨荤紒鐘茬－閹茬顓兼径濠冩К濠德板€曢幊蹇涘疾椤掍焦鍙忔慨妤€妫楅獮妯侯熆閻熸壆鐒搁柡宀€鍠撻幏鐘诲灳閾忣偆浠屾俊鐐€ら崑鍛淬€冩繝鍥х疇婵犻潧顑嗛崵鎴炪亜閹烘垵鈧綊骞婇埀顒勬⒒閸屾瑧璐伴柛瀣钘濋弶鍫亖娴滆銇勯弬鍨挃婵?
     const user = getCurrentUser();
-    console.log('[闂備浇顕х€涒晠宕樼紒妯圭箚闁搞儺鍓欓弸渚€鏌熼幆褏浜柛瀣尰閹峰懘宕橀悙顒傜Х闂備椒绱俊鍥极?闂佽崵鍠愮划搴㈡櫠濡ゅ懎绠伴柛娑橈攻濞呯娀鏌ｅΟ鑲╁笡闁稿鍔戦弻鏇熺節韫囨洜鏆犻梺?', user);
-
-    // 濠碘槅鍋撶徊浠嬪疮椤愶箑鐤?婵犵數鍋犻幓顏嗙礊閳ь剚绻涙径瀣鐎殿噮鍋婃俊鍫曞幢濡ゅ啰鐛繝娈垮枟钃遍柛鎾磋壘椤洭鏁撻悩宕囧幘闂佽崵鍠愬妯肩棯瑜庨妵鍕Ψ閵夛箑娈楅悗?
-    if (user && RoleManager.hasAnyRole(user, ['teacher', 'class_teacher']) &&
-        !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director'])) {
-        // 缂傚倸鍊烽懗鍫曟惞鎼淬劌鍨傞梺顒€绉村Ч鏌ユ煃瑜滈崜鐔煎箖娴犲鏁嶆慨妯哄船椤も偓闂備焦鎮堕崝濠囧礉閹达箑绠栭柣銏犲閺佸洦绻濋棃娑欘棤婵¤绲剧换娑氣偓鐢殿焾鏍″┑鈥冲级鐢繝鏁愰悙鍙傛棃宕ㄩ鍏肩杽闂佽崵濮村▔褔宕ㄩ锝喰熸繝鐢靛仦閸ㄥ爼骞愰崫銉х煋闁圭虎鍠栫粻姘舵煕椤愮姴鐏☉鎾崇Ч閺屻劌鈽夊Ο渚痪闂佺锕﹂崑銈夊蓟濞戞ǚ妲堟繛鍛版珪閸ㄧ敻鈥﹂崶顒€閱囬柕澶涜吂閹稿啴姊虹憴鍕凡濠⒀冩捣缁牓宕卞☉娆戝弳濠电偞鍨堕悷銊︾珶濡吋鍠愰柟璺猴工濞诧箓宕甸崟顖涚厽闁挎繂鎳忓﹢鎵磼閻樺磭鎳囬柡灞诲€栫缓鑺ュ緞婢跺瞼娉跨紓鍌欐祰椤斿﹪鎮為敂鍓х焿闁圭儤姊荤壕鍏间繆椤栨粎甯涢柣锝庡墴濮婂搫效閸パ冾瀳闁诲孩鍑归崰娑㈠Φ閹伴偊鏁婇柛鎾楀嫸绱?
-        console.log('[闂備浇顕х€涒晠宕樼紒妯圭箚闁搞儺鍓欓弸渚€鏌熼幆褏浜柛瀣尰閹峰懘宕橀悙顒傜Х闂備椒绱俊鍥极?濠碘槅鍋撶徊浠嬪疮椤栫偛鐤?濠电姷顣藉Σ鍛村磻閳ь剟鏌涚€ｎ偅灏扮紒缁樼洴瀵爼骞嬮鐐插闂備胶纭堕弲娑㈡儗閸屾凹鍤曟い鎰ㄦ噰閺嬪酣鐓崶銊︾闁瑰眰鍎甸弻锝夋偄閸濄儲鍣柣銏╁灣閸犳劗绮╅悢鍝ョ瘈闁搞儯鍔嶅▍鏍煟韫囨洖浠╁┑顔哄€濆畷鏇炩枎閹惧鍘藉銈庡亽閸撴瑦淇婇懞銉х闁绘挸娴锋晶锔芥叏婵犱胶鐭欐鐐叉喘椤㈡稑顭ㄩ崨顖涙瘒濠?);
+    if (user && RoleManager.hasAnyRole(user, ['teacher', 'class_teacher'])
+        && !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director'])) {
         const scope = getTeacherScopeForUser(user);
-        const allowedClasses = scope.classes;
-
-        if (allowedClasses.size > 0) {
-            const originalCount = studentsCompareData.length;
-            console.log(`[闂備浇顕х€涒晠宕樼紒妯圭箚闁搞儺鍓欓弸渚€鏌熼幆褏浜柛瀣尰閹峰懘宕橀悙顒傜Х闂備椒绱俊鍥极?闂備礁鎼ˇ顐﹀疾濞戞◤娲晝閸屾氨顔呴梺闈涚墕椤︻垳绮堥崼鈶╁亾楠炲灝鍔氶柟宄邦儔瀹曟繈宕ㄧ€涙鍘介梺闈涚箞閸ㄥ綊寮搁幋锔界厸? ${originalCount}`);
-            console.log('[闂備浇顕х€涒晠宕樼紒妯圭箚闁搞儺鍓欓弸渚€鏌熼幆褏浜柛瀣尰閹峰懘宕橀悙顒傜Х闂備椒绱俊鍥极?闂傚倷娴囧銊╂嚄閼稿灚娅犳俊銈傚亾闁伙絽鐏氶幏鍛村捶椤撴稒鐏冩俊鐐€栭幐鐐叏閻㈠憡鍋╅梺顒€绉甸悡鐔哥節閸偄濮囨鐐疵灃?', [...new Set(studentsCompareData.map(s => s.class))]);
-
-            studentsCompareData = studentsCompareData.filter(s => {
-                const cls = normalizeClass(s.class);
-                const hasPermission = allowedClasses.has(cls);
-                if (!hasPermission) {
-                    console.log(`[闂備浇顕х€涒晠宕樼紒妯圭箚闁搞儺鍓欓弸渚€鏌熼幆褏浜柛瀣尰閹峰懘宕橀悙顒傜Х闂備椒绱俊鍥极?闂?闂備礁鎼ˇ顐﹀疾濞戞◤娲晝閸屾氨顔呴梺闈涚墕椤︻垳绮婚崘宸唵閻犳椽缂氱€氫即鏌ｉ妶鍛棤缂?${s.class} (闂備浇宕甸崰鎰版偡閵壯€鍋撳鐓庣仯闁逞屽墮閻忔岸鎮ч悩鑼殾? ${cls})`);
-                }
-                return hasPermission;
-            });
-
-            const roles = RoleManager.getUserRoles(user).join(', ');
-            console.log(`濠碘槅鍋撶徊浠嬪疮椤栫偛鏋?闂傚倷绀侀幖顐λ囬鐐茬柈闁哄鍩堥悗鍫曟煣韫囨挻璐″纭呮珪缁绘盯骞嬮弮鈧崳浼存煕鐎ｎ偅灏扮€垫澘瀚埥澶婎潩鏉堚晛鐐?{roles} ${user.name} 闂傚倷绀侀幉锟犳偡椤栨稓顩查柨婵嗩槸缁€鍌涙叏濡炶浜鹃悗娈垮枛椤攱淇婇悿顖ｆЪ缂?${allowedClasses.size} 婵犵數鍋為崹鍫曞箹閳哄倻顩查柣鎰堪娴滆銇勯弬鍨挃婵☆偒鍨抽幉绋库攽閸噥娼熷┑鐘绘涧閻楀繑銇欓搹顐ょ闁瑰瓨姊归崳浼存煕鐎ｎ偅灏扮€垫澘瀚换婵嬪磼閵堝棛鈧?{originalCount}婵犵數鍋涢悺銊у垝鎼达絼鐒婇柕濞у嫷娼熷┑鐘绘涧閻楀繑銇欓搹顐ょ闁瑰瓨姊归崳浼存煕鐎ｎ偅灏扮€垫澘瀚换婵嬪礃閵娿垹浜?{studentsCompareData.length}婵犵數鍋涢悺銊у垝鎼搭煈鏁?;
-
-            if (studentsCompareData.length === 0) {
-                hintEl.innerHTML = `闂傚倷绀侀悿鍥р枖閺囩喎鍨旈悗闈涙憸缁?闂傚倷娴囬鏍窗閹捐绀夌€广儱顦伴崕澶愭煕濞戞瑦缍戦悗姘槸椤法鎹勬笟顖氬壉缂傚倸绉崑鎾绘⒒閸屾艾鈧摜鈧凹鍙冨畷婵嬪冀椤撶喎浜楅梺璺ㄥ枔婵敻宕曢幋锔藉€甸柨婵嗛瀵箖鏌涢妶鍜佹█闁哄备鈧剚鍚嬪ù锝嗗絻娴滈箖鏌熸０浣侯槮濠碘剝濞婂鍝勑ч崶褏浼勯梺鍝ュУ閸旀瑥顕ｉ幎鑺ュ亜闁绘挸娴烽澶婎渻閵堝棙绀€婵☆偅绋撶划鍫熷緞閹邦厾鍘甸柣搴㈢⊕椤洦鏅堕鍕厱閻庯綆浜炴牎缂備礁鍊圭敮鐐垫閹烘嚦鐔虹磼濡吋娈梻鍌欑劍閻綊宕濆畝鈧埀顒佸嚬閸犳盯濡甸幇閭︽晩闁告挆鍕剁础闁荤喐绮岄惉鑲╁垝椤撶喎绶為柟閭﹀墯瀹撳秹姊洪棃娑辩叚閻庨潧鐭傚畷婵嬪礃椤旇棄鈧灚绻涢幋鐐测枙婵＄虎鍣ｉ弻锝呂旈埀顒勬煀閿濆棔绻嗛悗娑欘焽閳?
-                hintEl.style.color = '#f59e0b';
-                resultEl.innerHTML = '';
-                console.error('[闂備浇顕х€涒晠宕樼紒妯圭箚闁搞儺鍓欓弸渚€鏌熼幆褏浜柛瀣尰閹峰懘宕橀悙顒傜Х闂備椒绱俊鍥极?闂傚倷绀侀悿鍥р枖閺囩喎鍨旈悗闈涙憸缁?闂備礁鎼ˇ顐﹀疾濞戞◤娲晝閸屾氨顔呴梺闈涚墕椤︻垳鎲撮敃鍌氱婵烇綆鍓欓悘顏堟煥閻旀潙鍔﹂柡灞稿墲閹峰懘宕崟鍨瘔闁?);
-                return;
-            }
-        } else {
-            hintEl.innerHTML = `闂傚倷绀侀悿鍥р枖閺囩喎鍨旈悗闈涙憸缁?闂傚倷绀侀幖顐︽偋濠婂嫮顩叉繝闈涙川閻濊埖鎱ㄥ璇蹭壕閻庤娲樺畝鎼佸箖瑜斿畷鐓庘攽閸涱喖鏋ら梻鍌欑劍閻綊宕濆畝鈧埀顒佸嚬娴滎亪鐛幋锕€顫呴柕蹇娾偓宕囧酱闂備礁鎲￠悷锝夊磿閹殿喗宕查柛鈩冪⊕閻撴瑦銇勯幘妤€鍟版导鍫㈢磽娴ｄ粙鍝虹紒璇插楠炲繘鎮╅懠顒佹疂闂佸搫顦悘婵嗩嚕濡ゅ懏鈷戦梻鍫氭櫈缁€瀣煕閺傚尅韬柛鈹惧亾濡炪倖甯婄粈浣规叏閸儲鐓涢柛鈩冪懃閺嬫稒顨ラ悙鏉戠伌妞ゃ垺鐟х槐鎺楀閻樺啿鈧酣姊?- 闂傚倷娴囧銊╂倿閿曞倹鍋￠柕澹懐鐣堕梺閫炲苯澧棁澶愭煟濡寧鐝い顐ｎ殕閵囧嫰寮撮悢灏佹灆婵犵鍓濋幐鎶界嵁鐎ｎ亶鐓ラ柛鈩冾殔缁犳垿姊婚崒娆戝妽婵犮垺顭囩划鏃堝醇閺囩喎浠鹃梺绯曞墲缁嬫垼绻氬┑?
-            hintEl.style.color = '#dc2626';
-            resultEl.innerHTML = '';
-            console.error('[闂備浇顕х€涒晠宕樼紒妯圭箚闁搞儺鍓欓弸渚€鏌熼幆褏浜柛瀣尰閹峰懘宕橀悙顒傜Х闂備椒绱俊鍥极?闂傚倷绀侀悿鍥р枖閺囩喎鍨旈悗闈涙憸缁?闂傚倷绀侀幖顐︽偋濠婂嫮顩叉繝闈涙川閻濊埖鎱ㄥ璇蹭壕閻庤娲樼喊宥夋晬閹邦厽濯撮柣鐔告緲缁ㄣ儵姊洪懡銈呅㈡繛灞傚€涢妵鎰版倷鐎电硶鏀虫繝鐢靛Т濞层倗绮?);
+        const allowedClasses = scope && scope.classes instanceof Set ? scope.classes : new Set();
+        if (!allowedClasses.size) {
+            applyFeedback('\u5f53\u524d\u8d26\u53f7\u672a\u914d\u7f6e\u53ef\u67e5\u770b\u7684\u73ed\u7ea7\u8303\u56f4\uff0c\u6682\u65f6\u65e0\u6cd5\u751f\u6210\u5b66\u751f\u5bf9\u6bd4\u3002', '#dc2626');
             return;
         }
-    } else {
-        console.log('[闂備浇顕х€涒晠宕樼紒妯圭箚闁搞儺鍓欓弸渚€鏌熼幆褏浜柛瀣尰閹峰懘宕橀悙顒傜Х闂備椒绱俊鍥极?闂傚倷鐒﹂弸濂稿疾濠靛棌鏋嶉柕蹇嬪灮缁?缂傚倸鍊烽懗鑸靛垔鐎靛憡顫曢柡鍥ュ灩缁犳牕鈹戦悩鍙夋悙鐎瑰憡绻冩穱濠囶敍濠垫劕娈梺璇茬箲椤ㄥ﹤顫忔繝姘唶闁靛繒濮冲▽顏堟⒑閸濆嫭顥戦柛瀣崌閺岋綁濮€閳轰胶浠╅梺缁橆殕閸旀瑩鏁愰悙鍙傛棃宕ㄩ鍏肩杽闂佽崵濮村▔褔宕ㄩ锝喰ユ繝鐢靛仦閸ㄥ爼骞愰崫銉х煋濡炲瀛╁畷鏌ユ煕閹扮數鍘涢柣鎾卞劦閺屾洟宕煎┑鍥舵！濠电偛鐗嗛悥濂稿蓟?);
+        studentsCompareData = typeof compareAnalytics.filterStudentCompareRowsByClasses === 'function'
+            ? compareAnalytics.filterStudentCompareRowsByClasses({
+                rows: studentsCompareData,
+                allowedClasses: allowedClasses,
+                normalizeClass: normalizeClass
+            })
+            : studentsCompareData.filter(function(student) {
+                return allowedClasses.has(normalizeClass(student && student.class));
+            });
+        if (studentsCompareData.length === 0) {
+            applyFeedback('\u5f53\u524d\u8d26\u53f7\u6ca1\u6709\u6743\u9650\u67e5\u770b\u6240\u9009\u5b66\u6821\u4e0b\u7684\u5b66\u751f\u73ed\u7ea7\u6210\u7ee9\u3002', '#f59e0b');
+            return;
+        }
     }
 
-    // 闂傚倷绀佸﹢閬嶁€﹂崼銉嬪洦娼忛鐘辨睏濡炪倖鏌ㄦ晶钘壩涢婊勫枑鐎广儱顦粻顖炴煟濡も偓閻楀﹪宕ｈ箛娑欑厵闁硅鍔栭悵顏堟煕婵犲啫鈻曢柡宀€鍠栭幃婊兾熼搹鍦噯缂傚倷绶￠悡鍫ュ矗閸愵喖鏋佺€广儱顦柋鍥煏婢诡垰鍟伴濂告⒑閼姐倕小闂傚嫬绉瑰畷鎰槾婵?
-    studentsCompareData.sort((a, b) => {
-        const classCompare = (a.class || '').localeCompare(b.class || '', 'zh-CN');
-        if (classCompare !== 0) return classCompare;
-        return (a.name || '').localeCompare(b.name || '', 'zh-CN');
-    });
-
-    // 闂佽娴烽崑锝夊磹閺嶎厼纾块柤娴嬫櫆瀹曞弶绻濇繝鍌氭殧闁逞屽墯鐢€崇暦閿濆棗绶為悘鐐舵閼搭垶姊婚崒娆戣窗闁告挻鐟╅幃妯衡攽鐎ｎ亜鍋嶉梺闈涚墕椤︿即鍩涢幘缁樺仯闁搞儜鍕ㄦ灆闂佽桨鐒﹂悺妗?
     setTimeout(() => {
         const successMessage = '\u5df2\u751f\u6210 ' + school + ' \u5171 ' + studentsCompareData.length + ' \u540d\u5b66\u751f\u7684 ' + periodCount + ' \u671f\u5bf9\u6bd4\u7ed3\u679c\u3002';
         STUDENT_MULTI_PERIOD_COMPARE_CACHE = controller && typeof controller.applyStudentCompareResult === 'function'
@@ -18438,7 +18506,6 @@ function renderStudentMultiPeriodComparison() {
         renderStudentComparePage(1);
     }, 100);
 }
-
 
 function getStudentCompareTotalLabel() {
     return String(CONFIG && CONFIG.name || '') === '\u0039\u5e74\u7ea7' ? '\u6807\u51c6\u603b\u5206' : '\u603b\u5206';
