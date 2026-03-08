@@ -1,4 +1,4 @@
-﻿(function() {
+(function() {
     function getNormalizeSchoolName() {
         if (window.CompareDataService && typeof window.CompareDataService.normalizeSchoolName === 'function') {
             return window.CompareDataService.normalizeSchoolName;
@@ -487,6 +487,99 @@
         };
     }
 
+
+    function buildTeacherMultiPeriodComparison(options) {
+        const opts = options || {};
+        const school = String(opts.school || '').trim();
+        const subject = String(opts.subject || '').trim();
+        const teacher = String(opts.teacher || '').trim();
+        const examIds = Array.isArray(opts.examIds) ? opts.examIds : [];
+        const getExamRows = typeof opts.getExamRows === 'function' ? opts.getExamRows : function() { return []; };
+        const buildTeacherStats = typeof opts.buildTeacherStats === 'function' ? opts.buildTeacherStats : function() { return []; };
+        const attachTeacherRanks = typeof opts.attachTeacherRanks === 'function' ? opts.attachTeacherRanks : function() {};
+
+        const examStats = examIds.map(function(examId) {
+            const rows = getExamRows(examId) || [];
+            const list = buildTeacherStats(rows, school, subject) || [];
+            attachTeacherRanks(rows, school, list);
+            const current = list.find(function(item) {
+                return item.teacher === teacher && item.subject === subject;
+            }) || null;
+            return { examId: examId, list: list, current: current };
+        });
+
+        const hasMissingCurrent = examStats.some(function(item) {
+            return !item.current;
+        });
+        const metricRowsHtml = hasMissingCurrent ? '' : examStats.map(function(item) {
+            const current = item.current;
+            return '<tr><td>' + item.examId + '</td><td>' + (current.townshipRankAvg || '-') + '</td><td>' + (current.townshipRankExc || '-') + '</td><td>' + (current.townshipRankPass || '-') + '</td></tr>';
+        }).join('');
+
+        const first = examStats.length ? examStats[0].current : null;
+        const last = examStats.length ? examStats[examStats.length - 1].current : null;
+        const delta = {
+            townshipAvg: (first && last && first.townshipRankAvg && last.townshipRankAvg) ? (first.townshipRankAvg - last.townshipRankAvg) : null,
+            townshipExc: (first && last && first.townshipRankExc && last.townshipRankExc) ? (first.townshipRankExc - last.townshipRankExc) : null,
+            townshipPass: (first && last && first.townshipRankPass && last.townshipRankPass) ? (first.townshipRankPass - last.townshipRankPass) : null
+        };
+
+        return {
+            school: school,
+            subject: subject,
+            teacher: teacher,
+            examIds: examIds,
+            examStats: examStats,
+            delta: delta,
+            metricRowsHtml: metricRowsHtml,
+            hasMissingCurrent: hasMissingCurrent
+        };
+    }
+
+    function buildTeacherMultiPeriodExportData(options) {
+        const opts = options || {};
+        const cache = opts.cache || {};
+        const school = String(cache.school || '').trim();
+        const subject = String(cache.subject || '').trim();
+        const teacher = String(cache.teacher || '').trim();
+        const examIds = Array.isArray(cache.examIds) ? cache.examIds : [];
+        const examStats = Array.isArray(cache.examStats) ? cache.examStats : [];
+        const delta = cache.delta || {};
+
+        const detailSheet = [['\u5b66\u6821', '\u6559\u5e08', '\u5b66\u79d1', '\u671f\u6b21', '\u4e61\u9547\u5747\u5206\u6392\u4f4d', '\u4f18\u79c0\u7387\u6392\u4f4d', '\u53ca\u683c\u7387\u6392\u4f4d']];
+        examStats.forEach(function(item) {
+            const current = item.current || {};
+            detailSheet.push([
+                school,
+                teacher,
+                subject,
+                item.examId,
+                current.townshipRankAvg || '',
+                current.townshipRankExc || '',
+                current.townshipRankPass || ''
+            ]);
+        });
+
+        const first = examIds[0] || '\u9996\u671f';
+        const last = examIds[examIds.length - 1] || '\u672b\u671f';
+        const deltaSheet = [[
+            '\u5b66\u6821', '\u6559\u5e08', '\u5b66\u79d1', '\u53d8\u5316\u533a\u95f4',
+            '\u4e61\u9547\u5747\u5206\u6392\u4f4d\u53d8\u5316', '\u4f18\u79c0\u7387\u6392\u4f4d\u53d8\u5316', '\u53ca\u683c\u7387\u6392\u4f4d\u53d8\u5316'
+        ], [
+            school,
+            teacher,
+            subject,
+            first + '\u2192' + last,
+            delta.townshipAvg === null ? '' : delta.townshipAvg,
+            delta.townshipExc === null ? '' : delta.townshipExc,
+            delta.townshipPass === null ? '' : delta.townshipPass
+        ]];
+
+        return {
+            detailSheet: detailSheet,
+            deltaSheet: deltaSheet
+        };
+    }
     window.CompareAnalyticsService = {
         calcSchoolMetricsFromRows: calcSchoolMetricsFromRows,
         getSummaryEntryBySchool: getSummaryEntryBySchool,
