@@ -11662,6 +11662,12 @@ async function loadCloudMacroCompare(key) {
 }
 
 function onTeacherComparePeriodCountChange() {
+    const controller = window.TeacherCompareControllerService;
+    if (controller && typeof controller.syncTeacherComparePeriodWrap === 'function') {
+        controller.syncTeacherComparePeriodWrap();
+        return;
+    }
+
     const countEl = document.getElementById('teacherComparePeriodCount');
     const wrap = document.getElementById('teacherCompareExam3Wrap');
     const compareUi = window.CompareUiService;
@@ -11923,58 +11929,45 @@ function attachTeacherTownshipAvgRank(rows, school, teacherStatsList) {
 }
 
 function renderTeacherMultiPeriodComparison() {
-    const hintEl = document.getElementById('teacherCompareHint');
-    const resultEl = document.getElementById('teacherCompareResult');
-    const countEl = document.getElementById('teacherComparePeriodCount');
-    const schoolEl = document.getElementById('teacherCompareSchool');
-    const subjectEl = document.getElementById('teacherCompareSubject');
-    const teacherEl = document.getElementById('teacherCompareTeacher');
-    const e1El = document.getElementById('teacherCompareExam1');
-    const e2El = document.getElementById('teacherCompareExam2');
-    const e3El = document.getElementById('teacherCompareExam3');
-    if (!hintEl || !resultEl || !countEl || !schoolEl || !subjectEl || !teacherEl || !e1El || !e2El || !e3El) return;
-
-    const periodCount = parseInt(countEl.value || '2', 10);
-    const school = schoolEl.value;
-    const subject = subjectEl.value;
-    const teacher = teacherEl.value;
-    const examIds = periodCount === 3 ? [e1El.value, e2El.value, e3El.value] : [e1El.value, e2El.value];
-    const compareUi = window.CompareUiService;
-    const setFeedback = function(message, color, clearResult) {
-        if (compareUi && typeof compareUi.setCompareFeedback === 'function') {
-            compareUi.setCompareFeedback({ hintEl, resultEl, message, color, clearResult });
-        } else {
-            hintEl.innerHTML = message || '';
-            hintEl.style.color = color || '#64748b';
-            if (clearResult) resultEl.innerHTML = '';
-        }
+    const controller = window.TeacherCompareControllerService;
+    const state = controller && typeof controller.readTeacherCompareState === 'function'
+        ? controller.readTeacherCompareState({ requireTeacher: true })
+        : null;
+    const elements = state && state.elements ? state.elements : {
+        hintEl: document.getElementById('teacherCompareHint'),
+        resultEl: document.getElementById('teacherCompareResult')
     };
+    if (!state || !state.ok) return;
 
-    if (!school || !subject || !teacher) {
-        setFeedback('请先选择学校、学科和教师，再生成教师多期对比。', '#dc2626', true);
-        return;
-    }
-    if (examIds.some(function(x) { return !x; })) {
-        setFeedback('请为教师多期对比选齐所有期次。', '#dc2626', true);
-        return;
-    }
-    if (new Set(examIds).size !== examIds.length) {
-        setFeedback('教师多期对比不能重复选择同一场考试。', '#dc2626', true);
+    const feedback = controller && typeof controller.validateTeacherCompareState === 'function'
+        ? controller.validateTeacherCompareState(state, { requireTeacher: true })
+        : { ok: true };
+    if (!feedback.ok) {
+        if (controller && typeof controller.setTeacherCompareFeedback === 'function') {
+            controller.setTeacherCompareFeedback({ elements, message: feedback.message, color: '#dc2626', clearResult: true });
+        }
         return;
     }
 
-    const examStats = examIds.map(function(examId) {
+    const examStats = state.examIds.map(function(examId) {
         const rows = getExamRowsForCompare(examId);
-        const list = buildTeacherStatsForExam(rows, school, subject);
-        attachTeacherTownshipAvgRank(rows, school, list);
+        const list = buildTeacherStatsForExam(rows, state.school, state.subject);
+        attachTeacherTownshipAvgRank(rows, state.school, list);
         const current = list.find(function(item) {
-            return item.teacher === teacher && item.subject === subject;
+            return item.teacher === state.teacher && item.subject === state.subject;
         });
         return { examId: examId, list: list, current: current };
     });
 
     if (examStats.some(function(item) { return !item.current; })) {
-        setFeedback('所选期次中有考试缺少该教师或学科成绩，请更换期次后再试。', '#dc2626', true);
+        if (controller && typeof controller.setTeacherCompareFeedback === 'function') {
+            controller.setTeacherCompareFeedback({
+                elements,
+                message: '所选期次中有考试缺少该教师或学科成绩，请更换期次后再试。',
+                color: '#dc2626',
+                clearResult: true
+            });
+        }
         return;
     }
 
@@ -11991,67 +11984,59 @@ function renderTeacherMultiPeriodComparison() {
         townshipPass: (first.townshipRankPass && last.townshipRankPass) ? (first.townshipRankPass - last.townshipRankPass) : null
     };
 
-    let viewState = null;
-    if (compareUi && typeof compareUi.buildTeacherSingleCompareView === 'function') {
-        viewState = compareUi.buildTeacherSingleCompareView({ teacher, subject, examIds, periodCount, metricRows, delta });
-    }
+    const compareUi = window.CompareUiService;
+    const viewState = compareUi && typeof compareUi.buildTeacherSingleCompareView === 'function'
+        ? compareUi.buildTeacherSingleCompareView({
+            teacher: state.teacher,
+            subject: state.subject,
+            examIds: state.examIds,
+            periodCount: state.periodCount,
+            metricRows: metricRows,
+            delta: delta
+        })
+        : null;
 
-    resultEl.innerHTML = viewState && viewState.resultHtml ? viewState.resultHtml : '';
-    setFeedback(viewState && viewState.hintHtml ? viewState.hintHtml : '', viewState && viewState.hintColor ? viewState.hintColor : '#16a34a', false);
-    window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = { school, subject, teacher, examIds, periodCount, examStats, delta, metricRows };
+    if (controller && typeof controller.applyTeacherSingleResult === 'function') {
+        controller.applyTeacherSingleResult({ state, examStats, delta, metricRows, viewState });
+    }
 }
 
 function renderAllTeachersMultiPeriodComparison() {
-    const hintEl = document.getElementById('teacherCompareHint');
-    const resultEl = document.getElementById('teacherCompareResult');
-    const countEl = document.getElementById('teacherComparePeriodCount');
-    const schoolEl = document.getElementById('teacherCompareSchool');
-    const e1El = document.getElementById('teacherCompareExam1');
-    const e2El = document.getElementById('teacherCompareExam2');
-    const e3El = document.getElementById('teacherCompareExam3');
-
-    if (!hintEl || !resultEl || !countEl || !schoolEl || !e1El || !e2El || !e3El) return;
-
-    const periodCount = parseInt(countEl.value || '2', 10);
-    const school = schoolEl.value;
-    const examIds = periodCount === 3 ? [e1El.value, e2El.value, e3El.value] : [e1El.value, e2El.value];
-    const compareUi = window.CompareUiService;
-    const setFeedback = function(message, color, clearResult) {
-        if (compareUi && typeof compareUi.setCompareFeedback === 'function') {
-            compareUi.setCompareFeedback({ hintEl, resultEl, message, color, clearResult });
-        } else {
-            hintEl.innerHTML = message || '';
-            hintEl.style.color = color || '#64748b';
-            if (clearResult) resultEl.innerHTML = '';
-        }
+    const controller = window.TeacherCompareControllerService;
+    const state = controller && typeof controller.readTeacherCompareState === 'function'
+        ? controller.readTeacherCompareState({ requireTeacher: false })
+        : null;
+    const elements = state && state.elements ? state.elements : {
+        hintEl: document.getElementById('teacherCompareHint'),
+        resultEl: document.getElementById('teacherCompareResult')
     };
+    if (!state || !state.ok) return;
 
-    if (!school) {
-        setFeedback('请先选择学校后再生成全教师多期对比。', '#dc2626', true);
-        return;
-    }
-    if (examIds.some(function(x) { return !x; })) {
-        setFeedback('请为全教师多期对比选齐所有期次。', '#dc2626', true);
-        return;
-    }
-    if (new Set(examIds).size !== examIds.length) {
-        setFeedback('全教师多期对比不能重复选择同一场考试。', '#dc2626', true);
+    const feedback = controller && typeof controller.validateTeacherCompareState === 'function'
+        ? controller.validateTeacherCompareState(state, { requireTeacher: false })
+        : { ok: true };
+    if (!feedback.ok) {
+        if (controller && typeof controller.setTeacherCompareFeedback === 'function') {
+            controller.setTeacherCompareFeedback({ elements, message: feedback.message, color: '#dc2626', clearResult: true });
+        }
         return;
     }
 
-    if (window.UI) UI.loading(true, '正在生成 ' + school + ' 全教师多期对比...');
+    if (window.UI) UI.loading(true, '正在生成 ' + state.school + ' 全教师多期对比...');
 
     const compareAnalytics = window.CompareAnalyticsService;
     if (!compareAnalytics || typeof compareAnalytics.buildAllTeachersMultiPeriodComparison !== 'function') {
         if (window.UI) UI.loading(false);
-        setFeedback('全教师多期对比分析模块未加载。', '#dc2626', true);
+        if (controller && typeof controller.setTeacherCompareFeedback === 'function') {
+            controller.setTeacherCompareFeedback({ elements, message: '全教师多期对比分析模块未加载。', color: '#dc2626', clearResult: true });
+        }
         return;
     }
 
     const compareState = compareAnalytics.buildAllTeachersMultiPeriodComparison({
-        school,
-        examIds,
-        periodCount,
+        school: state.school,
+        examIds: state.examIds,
+        periodCount: state.periodCount,
         subjects: SUBJECTS,
         getExamRows: getExamRowsForCompare,
         buildTeacherStats: buildTeacherStatsForExam,
@@ -12062,31 +12047,20 @@ function renderAllTeachersMultiPeriodComparison() {
     const results = compareState.results || [];
     if (!results.length) {
         if (window.UI) UI.loading(false);
-        setFeedback('当前条件下没有可生成的全教师多期对比结果。', '#dc2626', true);
+        if (controller && typeof controller.setTeacherCompareFeedback === 'function') {
+            controller.setTeacherCompareFeedback({ elements, message: '当前条件下没有可生成的全教师多期对比结果。', color: '#dc2626', clearResult: true });
+        }
         return;
     }
 
-    let viewState = null;
-    if (compareUi && typeof compareUi.buildTeacherBatchCompareView === 'function') {
-        viewState = compareUi.buildTeacherBatchCompareView({ school, examIds, results });
+    const compareUi = window.CompareUiService;
+    const viewState = compareUi && typeof compareUi.buildTeacherBatchCompareView === 'function'
+        ? compareUi.buildTeacherBatchCompareView({ school: state.school, examIds: state.examIds, results })
+        : null;
+
+    if (controller && typeof controller.applyTeacherBatchResult === 'function') {
+        controller.applyTeacherBatchResult({ state, results, viewState });
     }
-
-    resultEl.innerHTML = viewState && viewState.resultHtml ? viewState.resultHtml : '';
-    setFeedback(viewState && viewState.hintHtml ? viewState.hintHtml : '', viewState && viewState.hintColor ? viewState.hintColor : '#16a34a', false);
-
-    window.ALL_TEACHERS_DIFF_CACHE = { results, school, examIds, periodCount };
-    window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = {
-        school,
-        subject: '全学科',
-        teacher: '全教师',
-        examIds,
-        periodCount,
-        delta: null,
-        metricRows: viewState && viewState.trsHtml ? viewState.trsHtml : '',
-        isBatchMode: true,
-        batchResults: results,
-        thsHtml: viewState && viewState.thsHtml ? viewState.thsHtml : ''
-    };
 
     if (window.UI) UI.loading(false);
 }
@@ -12247,34 +12221,32 @@ async function loadCloudTeacherCompare(key) {
 }
 
 function renderCloudTeacherCompareDetail(payload) {
-    const resultEl = document.getElementById('teacherCompareResult');
-    const hintEl = document.getElementById('teacherCompareHint');
-    if (!resultEl) return;
-
+    const controller = window.TeacherCompareControllerService;
     const compareAnalytics = window.CompareAnalyticsService;
+    const elements = controller && typeof controller.getTeacherCompareElements === 'function'
+        ? controller.getTeacherCompareElements()
+        : {
+            resultEl: document.getElementById('teacherCompareResult'),
+            hintEl: document.getElementById('teacherCompareHint')
+        };
+    if (!elements.resultEl) return;
+
     if (!compareAnalytics || typeof compareAnalytics.buildTeacherCompareDetailView !== 'function') {
-        resultEl.innerHTML = '<div style="color:#ef4444;">教师云端对比渲染模块未加载。</div>';
-        if (hintEl) {
-            hintEl.textContent = '请刷新页面后重试。';
-            hintEl.style.color = '#ef4444';
+        elements.resultEl.innerHTML = '<div style="color:#ef4444;">教师云端对比渲染模块未加载。</div>';
+        if (elements.hintEl) {
+            elements.hintEl.textContent = '请刷新页面后重试。';
+            elements.hintEl.style.color = '#ef4444';
         }
         return;
     }
 
     const detailView = compareAnalytics.buildTeacherCompareDetailView({ payload: payload || {} });
-    resultEl.innerHTML = detailView.resultHtml || '';
-
-    if (detailView.restoredAllTeachersCache) {
-        window.ALL_TEACHERS_DIFF_CACHE = detailView.restoredAllTeachersCache;
-    }
-    if (detailView.restoredTeacherCompareCache) {
-        window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = detailView.restoredTeacherCompareCache;
+    if (controller && typeof controller.applyTeacherCloudDetail === 'function') {
+        controller.applyTeacherCloudDetail({ elements, detailView });
+        return;
     }
 
-    if (hintEl) {
-        hintEl.innerHTML = detailView.hintHtml || '';
-        hintEl.style.color = detailView.hintColor || '#7c3aed';
-    }
+    elements.resultEl.innerHTML = detailView.resultHtml || '';
 }
 
 function exportTeacherMultiPeriodComparison() {
