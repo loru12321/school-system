@@ -9609,12 +9609,9 @@ const Auth = {
 
             if (window.UI) UI.toast('\u767b\u5f55\u6210\u529f\uff0c\u6b22\u8fce ' + matchedUser.name, 'success');
 
-            if (matchedUser.role === 'parent') {
-                this.renderParentView();
-            } else {
+            const finalizeNonParentLogin = () => {
                 window.restoreMainWorkspaceView();
                 if (typeof renderNavigation === 'function') renderNavigation();
-                if (typeof ensureWorkspaceSectionForCurrentUser === 'function') ensureWorkspaceSectionForCurrentUser();
                 if (typeof updateSchoolSelect === 'function') updateSchoolSelect();
                 if (typeof renderTables === 'function') renderTables();
 
@@ -9632,7 +9629,9 @@ const Auth = {
                     }
                 }
 
-                if (typeof ensureWorkspaceSectionForCurrentUser === 'function') ensureWorkspaceSectionForCurrentUser();
+                if (typeof ensureWorkspaceSectionForCurrentUser === 'function') {
+                    ensureWorkspaceSectionForCurrentUser();
+                }
 
                 if (matchedUser.role === 'teacher') {
                     UI.toast('\u6b22\u8fce\u60a8\uff0c' + matchedUser.name + '\u8001\u5e08', 'success');
@@ -9655,7 +9654,7 @@ const Auth = {
                         setInterval(() => IssueManager.checkIssues(), 30000);
                     }
                 }
-            }
+            };
 
             if (typeof loadCloudData === 'function') {
                 UI.loading(true, '正在同步最新成绩数据...');
@@ -9663,19 +9662,20 @@ const Auth = {
                     await loadCloudData();
                 } catch (syncErr) {
                     console.warn('登录后云端同步失败，已回退本地视图:', syncErr);
-                    if (matchedUser.role !== 'parent') {
-                        window.restoreMainWorkspaceView();
-                    }
                     if (window.UI) {
                         UI.toast('已登录成功，但云端数据同步失败：' + (syncErr.message || '请稍后重试'), 'warning');
                     }
                 } finally {
-                    if (matchedUser.role !== 'parent') {
-                        window.restoreMainWorkspaceView();
-                        if (typeof renderNavigation === 'function') renderNavigation();
-                        if (typeof ensureWorkspaceSectionForCurrentUser === 'function') ensureWorkspaceSectionForCurrentUser();
+                    if (matchedUser.role === 'parent') {
+                        this.renderParentView();
+                    } else {
+                        finalizeNonParentLogin();
                     }
                 }
+            } else if (matchedUser.role === 'parent') {
+                this.renderParentView();
+            } else {
+                finalizeNonParentLogin();
             }
 
             const isDefaultPass = (matchedUser.role === 'teacher' && pass === 'yssy2016') || pass === '123456';
