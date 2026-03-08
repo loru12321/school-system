@@ -13901,6 +13901,7 @@ function updateProgressMultiExamSelects() {
 
 function getExamRowsForCompare(examId) {
     if (!examId) return [];
+    if (!isExamSelectableForCompare(examId)) return [];
     let rawRows = [];
 
     if (examId === CURRENT_EXAM_ID) {
@@ -16667,14 +16668,41 @@ function updateStudentCompareSummary() {
     }
 }
 
+function normalizeCompareCohortId(raw) {
+    return String(raw || '').replace(/\D/g, '');
+}
+
+function extractCohortIdFromExamKey(examKey) {
+    const key = String(examKey || '').trim();
+    const m = key.match(/^(\d{4})\D*_/);
+    return m ? m[1] : '';
+}
+
+function isRealExamIdForCompare(examId, cohortId) {
+    const key = String(examId || '').trim();
+    if (!key) return false;
+    if (/^(TEACHERS_|STUDENT_COMPARE_|MACRO_COMPARE_|TEACHER_COMPARE_|TOWN_SUB_COMPARE_)/.test(key)) return false;
+    if (/(?:^|_)(?:\u671f\u4e2d\u6807\u51c6|\u671f\u672b\u6807\u51c6|\u6807\u51c6\u8003\u8bd5)(?:_|$)/.test(key)) return false;
+
+    const normalizedCohort = normalizeCompareCohortId(cohortId);
+    if (!normalizedCohort) return true;
+    return extractCohortIdFromExamKey(key) === normalizedCohort;
+}
+
+function isExamSelectableForCompare(examId) {
+    const cohortId = normalizeCompareCohortId(CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+    return isRealExamIdForCompare(examId, cohortId);
+}
+
 function listAvailableExamsForCompare() {
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
     const examMap = new Map(); // 使用 Map 去重
+    const cohortId = normalizeCompareCohortId(CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
 
     // 1. 本地 CohortDB 数据
     if (db?.exams) {
         Object.values(db.exams).forEach(ex => {
-            if (ex?.examId) {
+            if (ex?.examId && isRealExamIdForCompare(ex.examId, cohortId)) {
                 examMap.set(ex.examId, {
                     id: ex.examId,
                     createdAt: ex.createdAt || 0,
@@ -16686,7 +16714,7 @@ function listAvailableExamsForCompare() {
     }
 
     // 2. 整合当前正在分析的数据
-    if (CURRENT_EXAM_ID && !examMap.has(CURRENT_EXAM_ID)) {
+    if (CURRENT_EXAM_ID && isRealExamIdForCompare(CURRENT_EXAM_ID, cohortId) && !examMap.has(CURRENT_EXAM_ID)) {
         examMap.set(CURRENT_EXAM_ID, {
             id: CURRENT_EXAM_ID,
             createdAt: Date.now(),
@@ -16699,7 +16727,7 @@ function listAvailableExamsForCompare() {
     if (window.PREV_DATA && Array.isArray(window.PREV_DATA)) {
         window.PREV_DATA.forEach(h => {
             const hid = h.examFullKey || h.examId;
-            if (hid && !examMap.has(hid)) {
+            if (hid && isRealExamIdForCompare(hid, cohortId) && !examMap.has(hid)) {
                 examMap.set(hid, {
                     id: hid,
                     createdAt: h.updatedAt ? new Date(h.updatedAt).getTime() : 0,
