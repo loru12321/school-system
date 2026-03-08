@@ -145,6 +145,19 @@
         });
     }
 
+    function applyStudentCloudDetail(options) {
+        const opts = options || {};
+        const elements = opts.elements || getStudentCompareElements();
+        const detailView = opts.detailView || {};
+        setStudentCompareFeedback({
+            elements: elements,
+            message: detailView.hintHtml || '',
+            color: detailView.hintColor || '#16a34a',
+            clearResult: false,
+            clearSummary: false
+        });
+    }
+
     window.StudentCompareControllerService = {
         getStudentCompareElements: getStudentCompareElements,
         readStudentCompareState: readStudentCompareState,
@@ -153,6 +166,7 @@
         validateStudentCompareState: validateStudentCompareState,
         buildStudentCompareCache: buildStudentCompareCache,
         applyStudentCompareResult: applyStudentCompareResult,
-        hydrateStudentCompareCache: hydrateStudentCompareCache
+        hydrateStudentCompareCache: hydrateStudentCompareCache,
+        applyStudentCloudDetail: applyStudentCloudDetail
     };
 })();

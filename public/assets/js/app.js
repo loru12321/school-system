@@ -10998,11 +10998,55 @@ function moveFocusOutOfParentView() {
     }
 }
 
+function renderCloudStudentCompareDetail(payload, options) {
+    const controller = window.StudentCompareControllerService;
+    const compareAnalytics = window.CompareAnalyticsService;
+    const opts = options || {};
+    const elements = controller && typeof controller.getStudentCompareElements === 'function'
+        ? controller.getStudentCompareElements()
+        : {
+            hintEl: document.getElementById('studentCompareHint')
+        };
+    if (!compareAnalytics || typeof compareAnalytics.buildStudentCompareDetailView !== 'function') {
+        if (elements.hintEl) {
+            elements.hintEl.textContent = '\u8bf7\u5237\u65b0\u9875\u9762\u540e\u91cd\u8bd5\u5b66\u751f\u4e91\u7aef\u5bf9\u6bd4\u8be6\u60c5\u3002';
+            elements.hintEl.style.color = '#ef4444';
+        }
+        return;
+    }
+
+    const detailView = compareAnalytics.buildStudentCompareDetailView({
+        payload: payload || {},
+        studentsCompareData: opts.studentsCompareData,
+        pageSize: opts.pageSize,
+        displayCount: opts.displayCount
+    });
+
+    if (detailView.restoredStudentCompareCache) {
+        STUDENT_MULTI_PERIOD_COMPARE_CACHE = detailView.restoredStudentCompareCache;
+    }
+
+    if (controller && typeof controller.applyStudentCloudDetail === 'function') {
+        controller.applyStudentCloudDetail({ elements, detailView });
+        return;
+    }
+
+    if (elements.hintEl) {
+        elements.hintEl.innerHTML = detailView.hintHtml || '';
+        elements.hintEl.style.color = detailView.hintColor || '#16a34a';
+    }
+}
+
 function renderCloudCompareResultHint(payload, displayCount) {
-    const hintEl = document.getElementById('studentCompareHint');
-    if (!hintEl) return;
-    hintEl.innerHTML = `闂傚倷娴囧▍鏇㈠垂濠靛牊顐介柕鍫濇川缁?闂佽娴烽幊鎾诲箟闄囬妵鎰板礃閳哄倸寮块梺缁樺姇閻°劍鎱ㄥ鍫熺厵閻庢稒锚缁椦囨⒒閸涱噮鐒界紒杈ㄥ浮瀵噣骞嬪┑鍫滃摋婵＄偑鍊栧ú锕傚窗閺嶎剦鏆伴梻浣告惈閸燁垶骞愰崜褏鐜?{payload.title} (闂?{displayCount}婵犵數鍋涢悺銊у垝鎼达絼鐒婇柕濞у嫷娼熷┑鐘绘涧濞层劑鍩炲鍡欑瘈闂傚牊绋掗ˉ鐘绘煙閻ｅ苯孝闂?{new Date(payload.createdAt).toLocaleString('zh-CN')})`;
-    hintEl.style.color = '#16a34a';
+    renderCloudStudentCompareDetail(payload, {
+        studentsCompareData: STUDENT_MULTI_PERIOD_COMPARE_CACHE && Array.isArray(STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData)
+            ? STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData
+            : [],
+        pageSize: STUDENT_MULTI_PERIOD_COMPARE_CACHE && typeof STUDENT_MULTI_PERIOD_COMPARE_CACHE.pageSize === 'number'
+            ? STUDENT_MULTI_PERIOD_COMPARE_CACHE.pageSize
+            : 20,
+        displayCount: displayCount
+    });
 }
 
 function rerenderStudentSideReportAfterCloudCompare(user, selfStudent) {
@@ -11184,7 +11228,11 @@ async function loadCloudStudentCompare(key, selfOnly = false) {
             }
         }
 
-        renderCloudCompareResultHint(payload, STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData.length);
+        renderCloudStudentCompareDetail(payload, {
+            studentsCompareData: STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData,
+            pageSize: STUDENT_MULTI_PERIOD_COMPARE_CACHE.pageSize || 20,
+            displayCount: STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData.length
+        });
         updateClassGroupOptions();
         renderStudentComparePage(1);
         updateStudentCompareSummary();

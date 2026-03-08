@@ -1209,6 +1209,36 @@
                 + '</div>';
         }).join('');
     }
+
+    function buildStudentCompareDetailView(options) {
+        const opts = options || {};
+        const payload = opts.payload || {};
+        const school = String(payload.school || '').trim();
+        const examIds = Array.isArray(payload.examIds) ? payload.examIds : [];
+        const periodCount = Number(payload.periodCount) === 3 ? 3 : 2;
+        const subjects = Array.isArray(payload.subjects) ? payload.subjects : [];
+        const studentsCompareData = Array.isArray(opts.studentsCompareData)
+            ? opts.studentsCompareData
+            : (Array.isArray(payload.studentsCompareData) ? payload.studentsCompareData : []);
+        const pageSize = typeof opts.pageSize === 'number' ? opts.pageSize : 20;
+        const title = String(payload.title || '').trim() || (school + ' ' + periodCount + '\u671f\u5b66\u751f\u591a\u671f\u5bf9\u6bd4(' + examIds.join(' vs ') + ')');
+        const displayCount = typeof opts.displayCount === 'number' ? opts.displayCount : studentsCompareData.length;
+        const createdAtLabel = formatZhDateTime(payload.createdAt) || '-';
+        return {
+            restoredStudentCompareCache: {
+                school: school,
+                examIds: examIds,
+                periodCount: periodCount,
+                subjects: subjects,
+                studentsCompareData: studentsCompareData,
+                currentPage: 1,
+                pageSize: pageSize
+            },
+            hintHtml: '\u5df2\u4ece\u4e91\u7aef\u8f7d\u5165\u5b66\u751f\u591a\u671f\u5bf9\u6bd4\uff1a' + escapeHtml(title)
+                + ' (' + displayCount + '\u540d\u5b66\u751f / ' + escapeHtml(createdAtLabel) + ')',
+            hintColor: '#16a34a'
+        };
+    }
     window.CompareAnalyticsService = {
         calcSchoolMetricsFromRows: calcSchoolMetricsFromRows,
         getSummaryEntryBySchool: getSummaryEntryBySchool,
@@ -1228,6 +1258,7 @@
         buildAllTeachersMultiPeriodExportData: buildAllTeachersMultiPeriodExportData,
         buildStudentCompareCloudPayload: buildStudentCompareCloudPayload,
         buildStudentCompareListItems: buildStudentCompareListItems,
-        buildStudentCompareListHtml: buildStudentCompareListHtml
+        buildStudentCompareListHtml: buildStudentCompareListHtml,
+        buildStudentCompareDetailView: buildStudentCompareDetailView
     };
 })();
