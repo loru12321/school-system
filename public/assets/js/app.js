@@ -12144,102 +12144,70 @@ function exportAllTeachersMultiPeriodDiff(school, examIdsStr) {
 // 濠碘槅鍋撶徊浠嬪疮椤愶箑鐤?婵犵數鍎戠徊钘壝洪敂鐐床闁稿瞼鍋為崑銈夋煏婵炵偓娅呴柡瀣╃劍缁绘盯宕卞Δ鍐唺闂佽崵鍠庨柊锝夊蓟濞戞﹩娼╂い鎺戝暙椤忣厼顪冮妶鍡楃闁哥姵鎸鹃崚鎺楀籍閸繄顓哄┑鐘茬仛閸旀洖鈻撶粙搴撴斀妞ゆ洖妫涚粙濠氭煛鐏炶濮傜€规洝娅ｆ禒锕傚礈瑜滃ú鎼佹⒑閻熼偊鍤熷┑顖ｅ幗鐎靛ジ宕掗悙瀵稿弳濠电偞鍨堕…鍥ㄦ櫠濞戙垺鐓涘〒姘搐濞呭秵顨ラ悙鏉戝闁瑰嘲鎳愮划娆戞崉椤垶效婵?闂傚倷鑳堕…鍫㈡崲閸儱绀夌€广儱顦伴崑瀣箹濞ｎ剙濡介柡?
 async function saveTeacherMultiPeriodCompareToCloud() {
     if (!window.TEACHER_MULTI_PERIOD_COMPARE_CACHE) {
-        return alert('闂備浇宕垫慨鏉懨洪妶澶婂簥闁哄被鍎遍崒銊︾箾閹存瑥鐏柛瀣ㄥ姂閺岋綁寮崒銈囧姼闂佽绻愬ú顓㈠蓟閳╁啯濯撮柛锔诲幗閸Ｑ呯磽娴ｅ箍浠滈柛瀣尰缁绘繈濮€閿濆懐鍘紒鐐緲缁夋挳鏁冮姀銈嗘櫖闁告洏鍔屾禍鎯归敐鍛灓婵炲吋鍔欓弻锝夋晜鐠囧弶鐝濆Δ鐘靛仜椤戝顕ｉ崐鐕佹Щ閻庢鍠栧锟犲蓟閳ユ剚鍚嬪ù锝嗗絻娴滈箖鏌熸０浣侯槮婵炲牏顭堥埞鎴︻敋閸℃瑧蓱濠殿喖锕ㄥ畷鐢稿礆閹烘惟闁宠桨绀侀崵?);
+        return alert('请先生成教师多期对比结果后再保存到云端。');
     }
 
     if (!sbClient) {
-        return alert('闂傚倷娴囧▍鏇㈠垂濠靛牊顐介柕鍫濇川缁?婵犵數鍋涢悺銊у垝瀹ュ鍨傜憸鐗堝俯閺佸倹銇勯幒鎴濐仼閻庢艾顦遍埀顒€绠嶉崕閬嶅箠鎼搭煉缍栭柕鍫濐槹閻撴盯鏌涢顐簵婵炴挳顥撶槐鎺旂磼濡吋鍒涘Δ鐘靛仦鐢剝淇婇悜绛嬫晬婵犲﹤鎷嬪Σ鐑芥⒒娴ｅ憡鎯堥柛鐔哄閹便劑鎮介崹顐㈠幑闂佺厧鎽滈弫鎼佸煘瀹ュ棛绡€闂傚牊绋掗ˉ鐘绘煙?);
+        return alert('云端服务尚未连接，请先完成云端配置。');
     }
 
     const user = Auth.currentUser;
     if (!user || user.role === 'guest') {
-        return alert('闂傚倷鑳剁悰銉╁磻?闂傚倷绀侀幖顐λ囬鐐茬柈闁哄鍩堥悗鍫曟煟閹寸儐鐒介柍缁樻⒒閳ь剙绠嶉崕閬嶆偋閸℃稑绐楅柡鍥ュ灪閻撱儲绻涢幋鐐垫噯濠㈣顭囬幉鎼佸箮婵犲倹鎼愰悗姘槸椤法鎹勯悜妯绘嫳濡炪倕绻堥崹濠氬箟閹间焦鍋嬮柛顐ゅ枔椤︻參姊烘潪浼存闁稿﹥绻堥悰顔锯偓锝庝簽閺嗗鏌℃径搴″姷妞ゆ柨顦扮换娑氣偓鐢殿焾琚ㄩ梺绋垮婢瑰棝骞戦姀鐙€娼╅柟鍏哥娴滅偓绻涢幋鐑嗕痪妞ゅ繐鐗滈弫瀣亜閺傝￥浠氶柟鐑橆殔缁秹鏌涚仦鍓х煁閻忓繑绻堝娲传閸曢潧鍓辩紓渚囧枛閻倸鐣烽搹閫涙勃闁告挆灞鹃敜闂備胶鎳撻顓熷垔椤撶喎顕?);
+        return alert('请先登录正式账号后再保存教师多期对比。');
     }
 
     const cache = window.TEACHER_MULTI_PERIOD_COMPARE_CACHE;
-    const isBatch = !!cache.isBatchMode;
-
-    // 闂傚倷鐒﹂惇褰掑垂婵犳艾绐楅柟鐗堟緲閸ㄥ倹鎱ㄥΟ鎸庣【閻熸瑱绠撻弻娑㈠即閵娿儱缁╁銈庡亾缁犳捇寮诲☉婊呯杸闁规崘娅曞▓鏌ユ⒑閸濆嫭顥犻柛鐘崇墵閻?
     const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || 'unknown';
     const timestamp = new Date().toISOString().split('T')[0];
     const rand = Date.now().toString().slice(-4);
+    const compareAnalytics = window.CompareAnalyticsService;
 
-    // 闂傚倷绀侀幉锟犳偋閺囥垹绠规い鎰剁畱閸ㄥ倿骞栧ǎ顒€濡肩痪顓涘亾闂備礁鎼ú锔惧枈瀹ュ鍎?闂傚倷绀佺紞濠傤焽瑜忕槐鐐寸節閸パ囨７?key 闂傚倷绀侀幉锛勭矙閺嶎灛娑㈠礋椤栨氨鐣?
-    let key, title;
-    if (isBatch) {
-        const safeSchool = cache.school.replace(/[^\w\u4e00-\u9fa5]/g, '');
-        key = `TEACHER_COMPARE_BATCH_${cohortId}缂傚倸鍊烽懗鍫曟惞鎼粹槄鑰?{safeSchool}_${timestamp}_${rand}`;
-        title = `${cache.school} 闂傚倷鑳堕…鍫㈡崲閸儱绀夌€广儱顦伴崑瀣箹濞ｎ剙濡奸柡瀣╃劍缁绘盯宕卞Δ鍐唺闂佽崵鍠庢鎼佲€﹂崸妤佸殝闁汇垺顔栭弳鈥斥攽閻橆偄浜鹃梺鎸庣☉鐎氀囧磻閹惧瓨濯撮柛鎰亾缂嶅牓姊烘导娆忣洭闁?
-    } else {
-        const safeTeacher = cache.teacher.replace(/[^\w\u4e00-\u9fa5]/g, '');
-        const subject = cache.subject || '闂傚倷绀侀幖顐︽偋濠婂嫮顩查柣鎰劋閸嬪倿鏌ㄥ☉妯侯仱闁稿鎸搁埥澶愬礃瀹割喗鍠樻俊?;
-        key = `TEACHER_COMPARE_${cohortId}缂傚倸鍊烽懗鍫曟惞鎼粹槄鑰?{safeTeacher}_${subject}_${timestamp}_${rand}`;
-        title = `${cache.school} ${cache.teacher} ${subject}婵犵數濮伴崹濂稿春閺嶎偄鏋堢€广儱鎷戦懓鍧楁煥濞戞ê顏ら柛瀣尰閹峰懘宕橀悙顒傜Х闂備椒绱俊鍥极?
+    let cloudState = null;
+    if (compareAnalytics && typeof compareAnalytics.buildTeacherCompareCloudPayload === 'function') {
+        cloudState = compareAnalytics.buildTeacherCompareCloudPayload({ cache, user, cohortId, timestamp, rand });
+    }
+
+    if (!cloudState || !cloudState.key || !cloudState.payload) {
+        return alert('教师对比云端保存模块未就绪，请刷新页面后重试。');
     }
 
     try {
-        if (window.UI) UI.loading(true, '闂傚倷娴囧▍鏇㈠垂濠靛牊顐介柕鍫濇川缁?濠电姵顔栭崰妤冩崲閹邦喖绶ら柦妯侯檧閼版寧銇勮箛鎾村櫧闁崇懓绉电换婵嬫濞戞瑯妫ら梺鍦櫕婵炩偓闁哄本鐩獮鎺懳旀繝鍐╊吋缂傚倷绶￠悡鍫ュ垂瀹曞洤鍨?..');
+        if (window.UI) UI.loading(true, '正在保存教师多期对比到云端...');
 
-        // 闂傚倷绀侀幉锟犲垂闂堟党娑樜旈崥钘夋喘椤㈡鎷呯悰鈩冩暤婵犵數濞€濞佳兾涘☉銏犵闁绘绮悡鐔兼煏婵炲灝鍔氭い蹇ｄ邯閺岋繝宕卞▎蹇旂亪濡?
-        const payload = {
-            school: cache.school,
-            subject: cache.subject,
-            teacher: cache.teacher,
-            examIds: cache.examIds,
-            periodCount: cache.periodCount,
-            delta: cache.delta,
-            metricRows: cache.metricRows,
-            isBatchMode: isBatch,
-            batchResults: cache.batchResults || null, // 闂傚倷绀佺紞濠傤焽瑜忕槐鐐寸節閸パ囨７闂佸憡绻傜€氣偓闁绘梻鍘ч悘宕団偓瑙勬礀濞层劑銆侀崨顔剧闁挎繂鎳忔径鍕磼鐠囨彃鈧潡骞冨ú顏勎╅柍杞扮閸嬪秹姊虹紒妯荤叆妞ゃ劌楠搁…鍥旈崨顔惧幐婵炶揪绲介幖顐︺€傞懖鈹惧亾?
-            thsHtml: cache.thsHtml || null, // 闂傚倷绀佺紞濠傤焽瑜忕槐鐐寸節閸パ囨７闂佸憡绻傜€氣偓闁绘梻鍘ч悘宕団偓瑙勬礀濞层劑銆侀崨顔剧闁挎繂鎳忔径鍕磼鐠囨彃鈧潡骞冨ú顏勎╃憸搴ㄥ磻濮椻偓閺屾洘绻涢崹顔煎婵?
-            title: title,
-            createdBy: user.username || user.name || user.email,
-            createdAt: new Date().toISOString()
-        };
-
-        const json = JSON.stringify(payload);
-        const compressed = "LZ|" + LZString.compressToUTF16(json);
-
+        const json = JSON.stringify(cloudState.payload);
+        const compressed = 'LZ|' + LZString.compressToUTF16(json);
         const { error } = await sbClient.from('system_data').upsert({
-            key,
+            key: cloudState.key,
             content: compressed,
             updated_at: new Date().toISOString()
         }, { onConflict: 'key' });
 
         if (error) throw error;
 
-        if (window.UI) UI.toast(`闂?闂佽姘﹂～澶愭偤閺囩儐鍤曢柟鎹愬煐瀹曞弶鎱ㄥΟ璇差暢闁稿鎸搁埥澶娾枍椤撯€充汗闁兼椽浜堕、娑橆煥閸涱厼瑙︽俊鐐€栭悧妤呭礄瑜版帒鍚归柣妯挎珪閸? ${title}`, 'success');
-        // 闂傚倷绀侀幉锛勬暜閿熺姴缁╅梺顒€绉撮拑鐔封攽閻樻彃鏆熸い鈺傜叀閺岀喓鈧數顭堥灞矫归悡搴♀偓鍧楀蓟濞戙垹绠抽柟鍨暞閻ｄ粙姊洪棃娑欘棞闁哥喐鎸冲顐㈩吋婢跺﹪鍞跺┑鐘茬仛閸旀牠骞栭幇鐗堚拺闁告繂瀚烽崕鎰磼椤旇壈瀚伴柨鏇樺灲椤㈡棃宕煎┑濠冩啺闂備線娼ч敍蹇涘礋椤撶姵姣岄梻鍌欐缁鳖喚寰婃禒瀣剹闁稿本鍑归悞钘壝归悡搴ｆ憼闁?
-        const resultEl = document.getElementById('teacherCompareResult');
-        if (resultEl && resultEl.querySelector('#cloud-teacher-compare-list')) {
-            // viewCloudTeacherCompares(); // 闂傚倷绀侀幖顐⑽涘Δ鍛９濡炲娴风粻鏂款熆閼搁潧濮堥柛銈咃攻閵囧嫯绠涢幘鎰佷患閻炴氨鍠栧娲川婵犲倹璇為梺琛″亾闂侇剙绉撮拑鐔封攽閻樺弶澶勯柡鍜佸墰閳ь剙鍘滈崑鎾绘煕閺囥劋绨界紒杈ㄥ哺濮婅櫣绮欑捄銊ь唶缂備礁顦伴幐鍐茬暦绾懐鐤€闁哄洨鍠庨惃顐︽⒑閻熸澘妲婚柣顓炵墕椤洭骞掗弮鍌滐紲?
-        }
-        // FIX: 2026-02-18 Trigger Cache Refresh
+        if (window.UI) UI.toast('教师多期对比已保存到云端：' + cloudState.title, 'success');
     } catch (e) {
-        console.error("Teacher Comparison Cloud Save Error:", e);
-        alert('婵犵數鍎戠徊钘壝洪敂鐐床闁稿瞼鍋為崑銈夋煏婵犲繒鐣辩紒鍓佸仱瀵爼宕奸顫嚱閻? ' + (e.message || String(e)));
+        console.error('Teacher Comparison Cloud Save Error:', e);
+        alert('保存教师多期对比到云端失败：' + (e.message || String(e)));
     } finally {
         if (window.UI) UI.loading(false);
     }
 }
 
-// 濠碘槅鍋撶徊浠嬪疮椤愶箑鐤?闂傚倷绀侀幖顐ゆ偖椤愶箑纾块柛鎰嚋閼板潡鏌涘☉鍗炴灓妞も晜鐓￠弻鐔衡偓鐢殿焾椤庡苯霉閻撳骸鈧潡寮婚埄鍐╁闁革富鍘介崳褏绱撴担骞夸粶闁稿鎹囬弻锝嗘償濠靛牏銈峰銈庡亜椤︾敻骞嗘笟鈧、姘跺焵椤掆偓閻ｅ嘲顫濋鈺傛瀹曠喖鍩為幆褌澹?
 async function viewCloudTeacherCompares() {
-    if (!sbClient) return alert('闂傚倷娴囧▍鏇㈠垂濠靛牊顐介柕鍫濇川缁?婵犵數鍋涢悺銊у垝瀹ュ鍨傜憸鐗堝俯閺佸倹銇勯幒鎴濐仼閻庢艾顦遍埀顒€绠嶉崕閬嶅箠鎼搭煉缍栭柕鍫濐槹閻撴盯鏌涢顐簵婵炴挳顥撶槐鎺旂磼濡吋鍒涘Δ?);
+    if (!sbClient) return alert('云端服务尚未连接，请先完成云端配置。');
 
     try {
-        if (window.UI) UI.loading(true, '闂傚倷娴囧▍鏇㈠垂濠靛牊顐介柕鍫濇川缁?濠电姵顔栭崰妤冩崲閹邦喖绶ら柦妯侯檧閼版寧銇勮箛鎾跺缂佲偓婢舵劖鐓熸俊顖滃帶閸斿绱掓担瑙勭凡闂囧绻濇繝鍌氼仼闁诲繆鏅滈妵鍕疀閿濆懎鈷嬮悗瑙勬礃閼规崘鐏冮梺鍛婃磵閺備線宕?..');
+        if (window.UI) UI.loading(true, '正在读取云端教师对比列表...');
 
         const user = getCurrentUser();
         const isAdmin = RoleManager.hasAnyRole(user, ['admin', 'director']);
         const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '';
-
         let query = sbClient.from('system_data').select('key, updated_at');
+
         if (!isAdmin && cohortId) {
-            // 闂傚倷绀侀幖顐﹀箯鐎ｎ喖闂柨婵嗩槸閻掑灚銇勯幒宥堝厡妞わ絾鐓￠弻锟犲幢韫囨挷澹曢梻?闂傚倷鑳剁划顖滄崲瀹ュ鍌ㄩ柧蹇撳帨閸嬫捇妫冨☉娆愭嫳缂備礁鍊圭敮鐐哄箯閻樿绠甸柟鐑樻崌閺侇亪姊绘担鍝勫付缁剧虎鍙冨鏌ヮ敃椤喛鈧潡鏌涘☉娆愮稇缂佲偓閸℃稒鐓熸俊銈傚亾闁绘锕獮蹇涙焼瀹ュ棗鈧爼鏌ｉ幇顖ｅ殝闁衡偓婵犳碍鐓涢柛鈩冪懃閺嬫稒顨ラ悙鏉戠伌妞ゃ垺宀稿畷鍗炩枎閹搭厽袩闂傚倷绀侀幉锟犳偋閺囥垹绠犻幖娣妼缁犳岸鏌涢銈呮灁闁崇粯姊归妵鍕疀閹捐櫕娈查梺娲讳簷缁瑩寮诲☉姗嗙叆闁告劏鏅滈幏杈ㄧ節閵忥綆娼愰悽顖ょ節瀵鐣濋崘顏嗘澑闂侀潧锛忛崪浣剐?
-            query = query.or(`key.like.TEACHER_COMPARE_${cohortId}缂傚倸鍊烽懗鍫曟惞鎼粹槄鑰?,key.like.TEACHER_COMPARE_BATCH_${cohortId}缂傚倸鍊烽懗鍫曟惞鎼粹槄鑰?`);
+            query = query.or('key.like.TEACHER_COMPARE_' + cohortId + '_%,key.like.TEACHER_COMPARE_BATCH_' + cohortId + '_%');
         } else {
-            query = query.like('key', 'TEACHER_COMPARE_%');
+            query = query.or('key.like.TEACHER_COMPARE_%,key.like.TEACHER_COMPARE_BATCH_%');
         }
 
         const { data, error } = await query.order('updated_at', { ascending: false }).limit(50);
@@ -12248,56 +12216,35 @@ async function viewCloudTeacherCompares() {
         if (window.UI) UI.loading(false);
 
         if (!data || data.length === 0) {
-            return alert('闂傚倷娴囧▍鏇㈠垂濠靛牊顐介柕鍫濇川缁?婵犵數鍋涢悺銊у垝瀹ュ鍨傜憸鐗堝俯閺佸倹銇勯幒鎴濐仼婵鐓￠弻娑氫沪閸撗€濮囬梺璺ㄥ枂閸庢娊鍩€椤掑喚娼愰柣鈩冩礀椤曪綁骞橀懜闈涘簥濠殿喗蓱婢у酣宕戦幘鏂ユ婵炲棙顭囬崝宄扳攽閻愯尙澧涢柛銊ョ仢椤曪綁顢曢埗鈺傜€婚棅顐㈡处濞叉粓骞夐妷鈺傜厽閹煎瓨绻勭粊閿嬨亜椤愩埄妯€闁诡垯绶氶、娆撴倷椤掆偓椤庢盯姊洪崫鍕垫Ъ婵炲娲滅划?);
+            return alert('当前没有找到云端教师多期对比记录。');
         }
 
-        const listHtml = data.map((item, idx) => {
-            const keyParts = item.key.replace('TEACHER_COMPARE_BATCH_', '').replace('TEACHER_COMPARE_', '').split('_');
-            const cohort = keyParts[0] || '闂傚倷绀侀幖顐︽偋濠婂嫮顩查柣鎰劋閸嬪倿鏌ㄥ☉妯侯仹婵炲矈浜滈埞鎴︽偐閹绘巻鍋撻幖浣瑰€?;
-            const name = keyParts[1] || '闂傚倷鑳堕…鍫㈡崲閸儱绀夌€广儱顦伴崑?闂傚倷绀侀幖顐︽偋濠婂嫮顩查柣鎰劋閸?;
-            const subject = keyParts[2] || '闂傚倷鑳堕…鍫㈡崲閸儱绀夐幖鎼厜缂?闂傚倷绀侀幖顐︽偋濠婂嫮顩查柣鎰劋閸?;
-            const displayDate = new Date(item.updated_at).toLocaleString('zh-CN');
-            const isBatch = item.key.includes('_BATCH_');
-
-            return `<div style="padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="loadCloudTeacherCompare('${item.key}')">
-                    <div style="flex:1;">
-                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                            <span style="background:#faf5ff; color:#7c3aed; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${cohort}</span>
-                            <span style="background:#fff7ed; color:#ea580c; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${isBatch ? '闂傚倷鑳堕…鍫㈡崲閸儱绀夌€广儱顦伴崑? : '婵犵數鍋為崹鍫曞箹閳哄倻顩叉繛鍡楄?}</span>
-                            <span style="font-weight:600; color:#334155;">${name} (${subject})</span>
-                        </div>
-                        <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${item.key}</div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-size:12px; color:#64748b;">${displayDate}</div>
-                        <div style="font-size:11px; color:#3b82f6; margin-top:2px;">闂備浇宕垫慨鏉懨归崟顖涒挃闁告洦鍨扮壕?&gt;</div>
-                    </div>
-                </div>`;
-        }).join('');
+        const compareAnalytics = window.CompareAnalyticsService;
+        const listHtml = compareAnalytics && typeof compareAnalytics.buildTeacherCompareListHtml === 'function'
+            ? compareAnalytics.buildTeacherCompareListHtml({ records: data })
+            : '';
 
         if (typeof Swal !== 'undefined') {
             Swal.fire({
-                title: '闂傚倷娴囧▍鏇㈠垂濠靛牊顐介柕鍫濇川缁?婵犵數鍋涢悺銊у垝瀹ュ鍨傜憸鐗堝俯閺佸倹銇勯幒鎴濐仼闁哄鐒︾换娑㈠幢濡ゅ啰顔婇梺鑽ゅ枎闁帮綁骞冨Δ浣瑰闁告劗鍋撶紞鍫ユ⒑娴兼瑥鐦滈柛鐘冲哺楠炲繒鈧綆鍠栫痪褔鎮归幁鎺戝閸?,
-                html: `<div style="max-height:400px; overflow-y:auto; text-align:left;">${listHtml}</div>`,
+                title: '云端教师多期对比记录',
+                html: '<div style="max-height:400px; overflow-y:auto; text-align:left;">' + listHtml + '</div>',
                 width: 600,
                 showCloseButton: true,
                 showConfirmButton: false
             });
-        } else {
-            // Fallback
-            if (window.UI) UI.toast('闂備浇宕垫慨鏉懨洪妶澶婂簥闁圭粯甯懓鎸庛亜韫囨挾澧曠紓浣叉櫆閵囧嫰寮介妸褉妲堥梺浼欏閺€鐪瀉l闂傚倷鐒﹂惇褰掑礉瀹€鈧埀顒佸嚬閸ｏ綁鎮伴鈧畷鍗炍熺紒妯煎娇闂備礁鎲￠崜顒勫川椤栨稑鏆ｆ繝鐢靛仩閹活亞绱為埀顒佺箾婢跺绀嬬€?, 'warning');
+        } else if (window.UI) {
+            UI.toast('当前环境不支持弹窗查看，请在可视化环境中打开。', 'warning');
         }
     } catch (e) {
         if (window.UI) UI.loading(false);
-        console.error('闂傚倷绀侀幉鈥愁潖缂佹ɑ鍙忛柟顖ｇ亹瑜版帒鐐婃い鎺嗗亾缂佲偓閸℃ü绻嗛柕鍫濇噹椤忋儵鏌嶈閸撴瑩宕姘煎殫闁告洦鍓氱紞鍥ㄣ亜閹扳晛鍓?', e);
-        alert('闂傚倷绀侀幉鈥愁潖缂佹ɑ鍙忛柟顖ｇ亹瑜版帒鐐婇柕濞垮劤缁愮偤鏌℃径濠勫⒈闁稿顦抽·?);
+        console.error('View Cloud Teacher Compares Error:', e);
+        alert('读取云端教师多期对比列表失败：' + (e.message || String(e)));
     }
 }
 
-// 濠碘槅鍋撶徊浠嬪疮椤愶箑鐤?闂傚倷绀侀幉鈥愁潖缂佹ɑ鍙忛柟顖ｇ亹瑜版帒鐐婇柕濞у本閿ら梻浣烘嚀椤曨厽鍒婇鐔奉嚤闁稿瞼鍋為悡娑樏归敐鍛础闁瑰啿鍟扮槐鎺戭渻鐠囪弓澹曢梻浣筋嚙缁ㄨ偐寰婃繝姘剧稏濠㈣埖鍔栭崕濠冦亜閺冨倸浜鹃悗姘哺閺屻劑寮崶顭戞闂?
 async function loadCloudTeacherCompare(key) {
     if (typeof Swal !== 'undefined') Swal.close();
-    if (window.UI) UI.loading(true, '闂傚倷娴囧▍鏇㈠垂濠靛牊顐介柕鍫濇川缁?濠电姵顔栭崰妤冩崲閹邦喖绶ら柦妯侯檧閼版寧銇勮箛鎾村櫧闁崇粯妫冮幃妤呮晲鎼粹€崇缂備椒妞掗崡鎶藉箖瑜版帒鐐婇柣鎴ｅГ椤庡秹姊?..');
+    if (window.UI) UI.loading(true, '正在读取云端教师多期对比详情...');
 
     try {
         const { data, error } = await sbClient
@@ -12309,79 +12256,52 @@ async function loadCloudTeacherCompare(key) {
         if (error) throw error;
 
         let content = data.content;
-        if (typeof content === 'string' && content.startsWith("LZ|")) {
+        if (typeof content === 'string' && content.startsWith('LZ|')) {
             content = LZString.decompressFromUTF16(content.substring(3));
         }
         const payload = typeof content === 'string' ? JSON.parse(content) : content;
 
-        // 濠电姷鏁搁崑鐐哄箰缁嬫鍤曢柛顐ｆ礃閸嬪倿鎮楅敐搴″閻庢碍宀搁弻銊╁籍閸ヮ煈妫勯梺?
         renderCloudTeacherCompareDetail(payload);
 
         if (window.UI) {
             UI.loading(false);
-            UI.toast('闂?闂傚倷绀侀幉鈥愁潖缂佹ɑ鍙忛柟顖ｇ亹瑜版帒鐐婃い鎺嗗亾缂佺媴缍侀弻鐔兼焽閿曗偓婢ь喗銇?, 'success');
+            UI.toast('云端教师多期对比已载入页面。', 'success');
         }
     } catch (e) {
         console.error(e);
         if (window.UI) UI.loading(false);
-        alert('闂傚倷绀侀幉鈥愁潖缂佹ɑ鍙忛柟顖ｇ亹瑜版帒鐐婇柍鍝勫€搁悵浼存⒑閹稿孩顥嗘俊顐㈠瀹曟粓寮跺▎鍓у數闂佽鍨辨竟鍡欒姳閸ф鍋? ' + e.message);
+        alert('读取云端教师多期对比详情失败：' + (e.message || String(e)));
     }
 }
 
-// 濠碘槅鍋撶徊浠嬪疮椤愶箑鐤?濠电姷鏁搁崑鐐哄箰缁嬫鍤曢柛顐ｆ礃閸嬪倿鎮楅敐搴℃灈缂佲偓婢舵劖鐓熸俊顖滃帶閸斿绱掓担宄板祮闁哄本绋戦～婵嬵敆娴ｇ懓闂繝鐢靛仜閻楀﹪宕归崜浣虹焿鐎广儱顦粻锝夋煟濞嗗苯浜炬繛瀵稿帶閸婂潡骞冨Δ浣瑰闁告劗鍋撶紞鍫ユ⒑娴兼瑥鐦滈柛鐘冲哺楠炲繘鎮╃紒妯绘珕闂佽姤锚椤︻垱绔?
 function renderCloudTeacherCompareDetail(payload) {
     const resultEl = document.getElementById('teacherCompareResult');
     const hintEl = document.getElementById('teacherCompareHint');
     if (!resultEl) return;
 
-    const { school, subject, teacher, examIds, periodCount, delta, metricRows, title, createdAt, createdBy, isBatchMode, thsHtml, batchResults } = payload;
-
-    // 濠电姷鏁搁崑鐐哄箰缁嬫鍤曢柛顐ｆ礃閸嬪倿鎮楅敐搴℃灈缂佲偓閸岀偞鐓忓┑鐘茬箰椤╊剙顭胯缁绘繈骞冨Δ浣瑰闁告劗鍋撶紞鍫ユ⒑?
-    if (isBatchMode) {
-        // 闂?details 闂傚倷绀侀幉锟犳偋閺囥垹绠犻柟鎯у殺婢跺绡€闁搞儜鍛偓鐐烘⒑缂佹ê濮堢憸鏉垮暣瀵剝顦查柍瑙勫灴椤㈡瑧鍠婇崡鐐插缂傚倷绶￠崰鎾诲礉閹存繍鍤曢柟闂寸缁€瀣亜韫囨挸鏆熼梻澶婄У缁绘盯骞樼壕瀣棟闂佽绻戠换鍫ャ€佸鑸电劶鐎广儱鎳愰ˇ?
-        if (batchResults) {
-            window.ALL_TEACHERS_DIFF_CACHE = { results: batchResults, school, examIds, periodCount };
+    const compareAnalytics = window.CompareAnalyticsService;
+    if (!compareAnalytics || typeof compareAnalytics.buildTeacherCompareDetailView !== 'function') {
+        resultEl.innerHTML = '<div style="color:#ef4444;">教师云端对比渲染模块未加载。</div>';
+        if (hintEl) {
+            hintEl.textContent = '请刷新页面后重试。';
+            hintEl.style.color = '#ef4444';
         }
+        return;
+    }
 
-        resultEl.innerHTML = `
-                <div class="sub-header" style="color:#7c3aed;">闂傚倷娴囧▍鏇㈠垂濠靛牊顐介柕鍫濇川缁?[婵犵數鍋涢悺銊у垝瀹ュ鍨傜憸鐗堝俯閺佸倹銇勯幒鎴濃偓鐢稿磻閹炬枼妲堟繛鍛版珪閸ㄦ寧淇婄€涙鈹?${title}</div>
-                <div class="table-wrap" style="max-height:600px; overflow-y:auto;">
-                    <table class="common-table" style="font-size:13px;">
-                        <thead style="position:sticky; top:0; z-index:10;"><tr>${thsHtml}</tr></thead>
-                        <tbody>${metricRows}</tbody>
-                    </table>
-                </div>
-                <div style="margin-top:10px; display:flex; gap:10px;">
-                    <button class="btn btn-sm" onclick="exportAllTeachersMultiPeriodDiff('${school}', '${examIds.join('_')}')">濠碘槅鍋撶徊浠嬪疮椤栫偛绠?闂備浇顕уù鐑藉极閹间礁鍌ㄧ憸鏂跨暦閻㈠憡鍋ｉ柛鎾崇┋el</button>
-                    ${payload.delta === undefined ? '<span style="font-size:12px;color:#64748b;">(闂備浇宕甸崑鐐电矙韫囨稑绀夌€广儱顦伴崑瀣煙闂傚顦﹂柣顓燁殕閵囧嫰寮介妸褏鍙濈紓浣哄閸ㄥ爼寮诲☉妯锋瀻闁圭儤鎸捐ぐ褏绱撴笟鍥ф珯缂佺姵鎸搁悾宄扳攽鐎ｎ€晠鏌ㄩ弮鈧崕鍐差嚕閵娾晜鈷?</span>' : ''}
-                </div>
-                <div style="margin-top:10px; font-size:12px; color:#94a3b8; text-align:right;">
-                    闂備浇顕х€涒晝绮欓幒鏇熸噷闂備線娼уΛ妤呭磹閸噮鍤曟い鏇楀亾鐎规洖銈稿鎾偆閸屾粌鎯? ${new Date(createdAt).toLocaleString()} | 闂傚倷绀侀幉锛勬暜濡ゅ啰鐭欓柟瀵稿Х绾句粙鏌熼幆褜鍤熸い? ${createdBy || '闂傚倷绀侀幖顐︽偋濠婂嫮顩查柣鎰劋閸?}
-                </div>
-            `;
-    } else {
-        const deltaAvg = (typeof delta?.townshipAvg === 'number') ? delta.townshipAvg : ((typeof delta?.township === 'number') ? delta.township : null);
-        const deltaExc = (typeof delta?.townshipExc === 'number') ? delta.townshipExc : null;
-        const deltaPass = (typeof delta?.townshipPass === 'number') ? delta.townshipPass : null;
-        // 濠电姷鏁搁崑鐐哄箰缁嬫鍤曢柛顐ｆ礃閸嬪倿鎮楅敐搴℃灈缁绢厸鍋撻梻浣告惈濞诧妇鍠婂澶嬪剳濞寸姴顑嗛崐闈浢归敐鍛灓婵炲吋鍔欓弻?
-        resultEl.innerHTML = `
-                <div class="sub-header" style="color:#7c3aed;">闂傚倷娴囧▍鏇㈠垂濠靛牊顐介柕鍫濇川缁?[婵犵數鍋涢悺銊у垝瀹ュ鍨傜憸鐗堝俯閺佸倹銇勯幒鎴濃偓鐢稿磻閹炬枼妲堟繛鍛版珪閸ㄦ寧淇婄€涙鈹?${title}</div>
-                <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>闂傚倷绀侀幖顐︽偋韫囨稑绐楅柟浼村亰閺?/th><th>闂傚倷鑳堕～瀣礃閳哄倹鍊烽梻浣规偠閸斿矂鏌婇敐鍜佹綎鐟滅増甯掗悙濠囨煏婵炲灝鍔ら柣?/th><th>婵犵數鍋炲娆撳触鐎ｎ喒鈧箓宕堕濠勭◤闂佸憡绋戦悺銊╁磻濠靛鐓曢柕澶樺枛婢ь垱绻涢崨顓犘ч柡?/th><th>闂傚倷绀侀幉锟犳偡閵夆晜鏅濋柕澶嗘櫆閸嬪鏌熼梻瀵稿妽闁稿绻堥弻娑㈠Ψ椤旂厧顫┑鐐叉噹缁夊綊寮?/th></tr></thead><tbody>${metricRows}</tbody></table></div>
-                <div style="margin-top:8px; font-size:12px; color:#475569;">
-                    婵犵妲呴崑鎾跺緤妤ｅ啯鍋嬫俊銈傚亾闁挎洏鍨介、娑㈡倷閹绘帞褰夐梻浣虹帛閺屻劑宕查懠顒傜濞撴埃鍋撻柡灞剧洴瀵粙濡歌椤ュ绱?{examIds[0]} 闂?${examIds[examIds.length - 1]}闂傚倷鐒︾€笛呯矙閹次层劑鍩€椤掑倻纾?
-                    闂傚倷鑳堕～瀣礃閳哄倹鍊烽梻浣规偠閸斿矂鏌婇敐鍜佹綎鐟滅増甯掗悙濠囨煏婵炲灝鍔ら柣?${deltaAvg === null ? '-' : (deltaAvg >= 0 ? '+' : '') + deltaAvg}闂?
-                    婵犵數鍋炲娆撳触鐎ｎ喒鈧箓宕堕濠勭◤闂佸憡绋戦悺銊╁磻濠靛鐓曢柕澶樺枛婢ь垱绻涢崨顓犘ч柡?${deltaExc === null ? '-' : (deltaExc >= 0 ? '+' : '') + deltaExc}闂?
-                    闂傚倷绀侀幉锟犳偡閵夆晜鏅濋柕澶嗘櫆閸嬪鏌熼梻瀵稿妽闁稿绻堥弻娑㈠Ψ椤旂厧顫┑鐐叉噹缁夊綊寮?${deltaPass === null ? '-' : (deltaPass >= 0 ? '+' : '') + deltaPass}
-                </div>
-                <div style="margin-top:10px; font-size:12px; color:#94a3b8; text-align:right;">
-                    闂備浇顕х€涒晝绮欓幒鏇熸噷闂備線娼уΛ妤呭磹閸噮鍤曟い鏇楀亾鐎规洖銈稿鎾偆閸屾粌鎯? ${new Date(createdAt).toLocaleString()} | 闂傚倷绀侀幉锛勬暜濡ゅ啰鐭欓柟瀵稿Х绾句粙鏌熼幆褜鍤熸い? ${createdBy || '闂傚倷绀侀幖顐︽偋濠婂嫮顩查柣鎰劋閸?}
-                </div>
-            `;
+    const detailView = compareAnalytics.buildTeacherCompareDetailView({ payload: payload || {} });
+    resultEl.innerHTML = detailView.resultHtml || '';
+
+    if (detailView.restoredAllTeachersCache) {
+        window.ALL_TEACHERS_DIFF_CACHE = detailView.restoredAllTeachersCache;
+    }
+    if (detailView.restoredTeacherCompareCache) {
+        window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = detailView.restoredTeacherCompareCache;
     }
 
     if (hintEl) {
-        hintEl.innerHTML = `闂?闂佽娴烽幊鎾诲箟闄囬妵鎰板礃閳哄倸寮块梺缁樺姇閻°劍鎱ㄥ鍫熺厵閻庢稒锚缁椦囨⒒閸涱噮鐒界紒杈ㄥ浮瀵噣骞嬪┑鍫滃摋闂備礁顓介弶鍨瀳濡炪倐鏅涢妶鎼佸极閹邦垳鐤€闁哄洨濮峰畷?{title}`;
-        hintEl.style.color = '#7c3aed';
+        hintEl.innerHTML = detailView.hintHtml || '';
+        hintEl.style.color = detailView.hintColor || '#7c3aed';
     }
 }
 

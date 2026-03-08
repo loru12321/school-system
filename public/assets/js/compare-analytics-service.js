@@ -885,6 +885,238 @@
             fileName: school
         };
     }
+    function escapeHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function sanitizeCloudSegment(value) {
+        return String(value || '').replace(/[^\w\u4e00-\u9fa5]/g, '');
+    }
+
+    function formatZhDateTime(value) {
+        if (!value) return '';
+        const date = new Date(value);
+        return isNaN(date.getTime()) ? '' : date.toLocaleString('zh-CN');
+    }
+
+    function buildTeacherCompareCloudPayload(options) {
+        const opts = options || {};
+        const cache = opts.cache || {};
+        const user = opts.user || {};
+        const cohortId = String(opts.cohortId || 'unknown').trim() || 'unknown';
+        const timestamp = String(opts.timestamp || '').trim() || new Date().toISOString().slice(0, 10);
+        const rand = String(opts.rand || '').trim() || Date.now().toString().slice(-4);
+        const isBatch = !!cache.isBatchMode;
+        const safeSchool = sanitizeCloudSegment(cache.school);
+        const safeTeacher = sanitizeCloudSegment(cache.teacher);
+        const safeSubject = sanitizeCloudSegment(cache.subject) || 'subject';
+
+        let key = '';
+        let title = '';
+        if (isBatch) {
+            key = 'TEACHER_COMPARE_BATCH_' + cohortId + '_' + (safeSchool || 'school') + '_' + timestamp + '_' + rand;
+            title = String(cache.school || '') + ' 教师多期对比（批量）';
+        } else {
+            key = 'TEACHER_COMPARE_' + cohortId + '_' + (safeTeacher || 'teacher') + '_' + safeSubject + '_' + timestamp + '_' + rand;
+            title = [cache.school, cache.teacher, cache.subject].filter(Boolean).join(' ') + '教师多期对比';
+        }
+
+        return {
+            key: key,
+            title: title,
+            payload: {
+                school: cache.school,
+                subject: cache.subject,
+                teacher: cache.teacher,
+                examIds: cache.examIds,
+                periodCount: cache.periodCount,
+                examStats: cache.examStats || null,
+                delta: cache.delta,
+                metricRows: cache.metricRows,
+                isBatchMode: isBatch,
+                batchResults: cache.batchResults || null,
+                thsHtml: cache.thsHtml || null,
+                title: title,
+                createdBy: user.username || user.name || user.email,
+                createdAt: new Date().toISOString()
+            }
+        };
+    }
+
+    function parseTeacherCompareCloudKey(key) {
+        const rawKey = String(key || '').trim();
+        const batchPrefix = 'TEACHER_COMPARE_BATCH_';
+        const singlePrefix = 'TEACHER_COMPARE_';
+        let isBatch = false;
+        let body = '';
+        if (rawKey.indexOf(batchPrefix) === 0) {
+            isBatch = true;
+            body = rawKey.substring(batchPrefix.length);
+        } else if (rawKey.indexOf(singlePrefix) === 0) {
+            body = rawKey.substring(singlePrefix.length);
+        } else {
+            body = rawKey;
+        }
+
+        const parts = body.split('_').filter(function(part) { return part !== ''; });
+        const cohortId = parts[0] || '';
+        const dateTag = parts.length >= 2 ? parts[parts.length - 2] : '';
+        const bodyParts = parts.slice(1, Math.max(1, parts.length - 2));
+        let name = '';
+        let subject = '';
+        if (isBatch) {
+            name = bodyParts.join('_');
+        } else {
+            name = bodyParts[0] || '';
+            subject = bodyParts.slice(1).join('_');
+        }
+
+        return {
+            key: rawKey,
+            isBatch: isBatch,
+            cohortId: cohortId,
+            name: name,
+            subject: subject,
+            dateTag: dateTag
+        };
+    }
+
+    function buildTeacherCompareListItems(options) {
+        const opts = options || {};
+        const records = Array.isArray(opts.records) ? opts.records : [];
+        return records.map(function(record) {
+            const parsed = parseTeacherCompareCloudKey(record && record.key);
+            return {
+                key: String(record && record.key || ''),
+                displayDate: formatZhDateTime(record && record.updated_at),
+                cohortLabel: parsed.cohortId || '未知届别',
+                typeLabel: parsed.isBatch ? '批量' : '单教师',
+                nameLabel: parsed.name || (parsed.isBatch ? '教师批量对比' : '未命名教师'),
+                subjectLabel: parsed.isBatch ? '批量分析' : (parsed.subject || '未知学科')
+            };
+        });
+    }
+
+    function buildTeacherCompareListHtml(options) {
+        const items = buildTeacherCompareListItems(options);
+        return items.map(function(item) {
+            return '<div style="padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" data-key="' + escapeHtml(item.key) + '" onclick="loadCloudTeacherCompare(this.getAttribute(&quot;data-key&quot;))">'
+                + '<div style="flex:1;">'
+                + '<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">'
+                + '<span style="background:#faf5ff; color:#7c3aed; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">' + escapeHtml(item.cohortLabel) + '</span>'
+                + '<span style="background:#fff7ed; color:#ea580c; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">' + escapeHtml(item.typeLabel) + '</span>'
+                + '<span style="font-weight:600; color:#334155;">' + escapeHtml(item.nameLabel) + ' (' + escapeHtml(item.subjectLabel) + ')</span>'
+                + '</div>'
+                + '<div style="font-size:11px; color:#94a3b8; font-family:monospace;">' + escapeHtml(item.key) + '</div>'
+                + '</div>'
+                + '<div style="text-align:right;">'
+                + '<div style="font-size:12px; color:#64748b;">' + escapeHtml(item.displayDate || '-') + '</div>'
+                + '<div style="font-size:11px; color:#3b82f6; margin-top:2px;">点击查看 &gt;</div>'
+                + '</div>'
+                + '</div>';
+        }).join('');
+    }
+
+    function buildTeacherCompareDetailView(options) {
+        const opts = options || {};
+        const payload = opts.payload || {};
+        const school = String(payload.school || '').trim();
+        const subject = String(payload.subject || '').trim();
+        const teacher = String(payload.teacher || '').trim();
+        const examIds = Array.isArray(payload.examIds) ? payload.examIds : [];
+        const periodCount = Number(payload.periodCount) === 3 ? 3 : 2;
+        const delta = payload.delta || {};
+        const metricRows = String(payload.metricRows || '');
+        const title = String(payload.title || '').trim() || (payload.isBatchMode
+            ? (school + ' 教师多期对比（批量）')
+            : [school, teacher, subject].filter(Boolean).join(' ') + '教师多期对比');
+        const createdAtLabel = formatZhDateTime(payload.createdAt) || '-';
+        const createdByLabel = escapeHtml(payload.createdBy || '未知');
+        const titleHtml = escapeHtml(title);
+        const firstExam = escapeHtml(examIds[0] || '首期');
+        const lastExam = escapeHtml(examIds[examIds.length - 1] || '末期');
+
+        const restoredTeacherCompareCache = {
+            school: school,
+            subject: subject,
+            teacher: teacher,
+            examIds: examIds,
+            periodCount: periodCount,
+            examStats: Array.isArray(payload.examStats) ? payload.examStats : [],
+            delta: delta,
+            metricRows: metricRows,
+            isBatchMode: !!payload.isBatchMode,
+            batchResults: payload.batchResults || null,
+            thsHtml: payload.thsHtml || null
+        };
+
+        if (payload.isBatchMode) {
+            const resultHtml = ''
+                + '<div class="sub-header" style="color:#7c3aed;">云端教师多期对比：' + titleHtml + '</div>'
+                + '<div class="table-wrap" style="max-height:600px; overflow-y:auto;">'
+                + '<table class="common-table" style="font-size:13px;">'
+                + '<thead style="position:sticky; top:0; z-index:10;"><tr>' + String(payload.thsHtml || '') + '</tr></thead>'
+                + '<tbody>' + metricRows + '</tbody>'
+                + '</table>'
+                + '</div>'
+                + '<div style="margin-top:10px; display:flex; gap:10px;">'
+                + '<button class="btn btn-sm" data-school="' + escapeHtml(school) + '" data-exams="' + escapeHtml(examIds.join('_')) + '" onclick="exportAllTeachersMultiPeriodDiff(this.getAttribute(&quot;data-school&quot;), this.getAttribute(&quot;data-exams&quot;))">导出批量对比 Excel</button>'
+                + '</div>'
+                + '<div style="margin-top:10px; font-size:12px; color:#94a3b8; text-align:right;">'
+                + '保存时间：' + escapeHtml(createdAtLabel) + ' | '
+                + '保存人：' + createdByLabel
+                + '</div>';
+
+            return {
+                resultHtml: resultHtml,
+                hintHtml: '已从云端载入教师批量多期对比：' + titleHtml,
+                hintColor: '#7c3aed',
+                restoredTeacherCompareCache: restoredTeacherCompareCache,
+                restoredAllTeachersCache: payload.batchResults ? {
+                    results: payload.batchResults,
+                    school: school,
+                    examIds: examIds,
+                    periodCount: periodCount
+                } : null
+            };
+        }
+
+        const deltaAvg = (typeof delta.townshipAvg === 'number') ? delta.townshipAvg : ((typeof delta.township === 'number') ? delta.township : null);
+        const deltaExc = (typeof delta.townshipExc === 'number') ? delta.townshipExc : null;
+        const deltaPass = (typeof delta.townshipPass === 'number') ? delta.townshipPass : null;
+        const formatSigned = function(value) {
+            if (typeof value !== 'number') return '-';
+            return (value >= 0 ? '+' : '') + value;
+        };
+
+        return {
+            resultHtml: ''
+                + '<div class="sub-header" style="color:#7c3aed;">云端教师多期对比：' + titleHtml + '</div>'
+                + '<div class="table-wrap"><table class="mobile-card-table"><thead><tr>'
+                + '<th>期次</th><th>乡镇均分排名</th><th>优秀率排名</th><th>及格率排名</th>'
+                + '</tr></thead><tbody>' + metricRows + '</tbody></table></div>'
+                + '<div style="margin-top:8px; font-size:12px; color:#475569;">'
+                + '对比区间：' + firstExam + ' -> ' + lastExam + '；'
+                + '乡镇均分排名变化：' + escapeHtml(formatSigned(deltaAvg)) + '；'
+                + '优秀率排名变化：' + escapeHtml(formatSigned(deltaExc)) + '；'
+                + '及格率排名变化：' + escapeHtml(formatSigned(deltaPass))
+                + '</div>'
+                + '<div style="margin-top:10px; font-size:12px; color:#94a3b8; text-align:right;">'
+                + '保存时间：' + escapeHtml(createdAtLabel) + ' | '
+                + '保存人：' + createdByLabel
+                + '</div>',
+            hintHtml: '已从云端载入教师多期对比：' + titleHtml,
+            hintColor: '#7c3aed',
+            restoredTeacherCompareCache: restoredTeacherCompareCache,
+            restoredAllTeachersCache: null
+        };
+    }
+
     window.CompareAnalyticsService = {
         calcSchoolMetricsFromRows: calcSchoolMetricsFromRows,
         getSummaryEntryBySchool: getSummaryEntryBySchool,
