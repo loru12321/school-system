@@ -7,15 +7,17 @@
 
 
     <script>
-        // 鉁?鍏滃簳鍒濆鍖?Supabase锛岄槻姝?sbClient 鏈畾涔?        var sbClient = window.sbClient || null;
+        // Initialize the shared Supabase client once the CDN script is ready.
+        var sbClient = window.sbClient || null;
         window.SUPABASE_URL = localStorage.getItem('SUPABASE_URL') || "https://okwcciujnfvobbwaydiv.supabase.co";
         window.SUPABASE_KEY = localStorage.getItem('SUPABASE_KEY') || "sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4";
         window.initSupabase = function () {
             if (window.supabase && !sbClient) {
                 sbClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
                 window.sbClient = sbClient;
-                console.log("鉁?Supabase 杩炴帴鍒濆鍖栨垚鍔?);
+                console.log('Supabase client initialized');
             }
+            return sbClient;
         };
     </script>
     <script>
@@ -920,62 +922,85 @@
     </div>
 
     <div id="login-overlay"
-        style="position:fixed; top:0; left:0; width:100%; height:100%; background:#f3f4f6; z-index:50000; display:flex; align-items:center; justify-content:center; background-image: radial-gradient(#e5e7eb 1px, transparent 1px); background-size: 20px 20px;">
-        <div
-            style="background:white; padding:40px; border-radius:16px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); width:100%; max-width:420px; border:1px solid #e5e7eb;">
-            <div style="text-align:center; margin-bottom:30px;">
-                <h1 style="color:var(--primary); font-size:24px; font-weight:800; margin-bottom:5px;">鏅烘収鏁欏姟绠＄悊绯荤粺</h1>
-                <p style="color:#64748b; font-size:14px;">缁熶竴韬唤璁よ瘉鍏ュ彛</p>
-            </div>
-
-            <!-- 鐧诲綍琛ㄥ崟 -->
-            <div id="login-form">
-
-                <!-- 1. 鐢ㄦ埛鍚嶈緭鍏ユ -->
-                <div class="form-group">
-                    <label style="display:block; font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">
-                        璐﹀彿 / 濮撳悕
-                    </label>
-                    <input type="text" id="login-user" placeholder="绠＄悊鍛樿处鍙?/ 鏁欏笀濮撳悕 / 瀛︾敓濮撳悕"
-                        style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; outline:none;"
-                        onkeydown="if(event.key==='Enter') Auth.login()">
+        style="position:fixed; inset:0; background:radial-gradient(circle at top, rgba(15,23,42,0.08), transparent 35%), linear-gradient(135deg, #f8fafc 0%, #eef2ff 45%, #ecfeff 100%); z-index:50000; display:flex; align-items:center; justify-content:center; padding:24px;">
+        <div style="width:100%; max-width:960px; display:grid; grid-template-columns:minmax(0, 1.1fr) minmax(360px, 420px); background:rgba(255,255,255,0.94); border:1px solid rgba(148,163,184,0.22); border-radius:28px; overflow:hidden; box-shadow:0 28px 80px rgba(15,23,42,0.16); backdrop-filter:blur(18px);">
+            <section style="padding:44px 40px; background:linear-gradient(160deg, #0f172a 0%, #1d4ed8 55%, #0891b2 100%); color:#e2e8f0; position:relative; display:flex; flex-direction:column; justify-content:space-between; gap:28px;">
+                <div>
+                    <div style="display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:999px; background:rgba(255,255,255,0.12); font-size:12px; letter-spacing:0.08em; text-transform:uppercase;">SmartEdu Analytics</div>
+                    <h1 style="margin:20px 0 12px; font-size:34px; line-height:1.15; font-weight:800; color:#ffffff;">教务数据综合分析平台</h1>
+                    <p style="margin:0; font-size:15px; line-height:1.8; color:rgba(226,232,240,0.92);">统一进入成绩分析、教师画像、云端同步与多期对比等核心模块，保持登录体验清晰、安全、可靠。</p>
                 </div>
-
-                <!-- 2. 鐝骇杈撳叆妗?(鏀逛负濮嬬粓鏄剧ず锛屼絾鍦?JS 閲屽垽鏂€昏緫) -->
-                <div class="form-group" style="margin-top:15px;">
-                    <label style="display:block; font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">
-                        鐝骇 <span style="color:#f59e0b; font-weight:normal; font-size:11px;">(鏁欒亴宸ョ暀绌猴紝瀹堕暱蹇呭～濡?701)</span>
-                    </label>
-                    <input type="text" id="login-class" placeholder="璇疯緭鍏ョ彮绾?(浠呭闀?瀛︾敓蹇呭～)"
-                        style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; outline:none;"
-                        onkeydown="if(event.key==='Enter') Auth.login()">
+                <div style="display:grid; gap:12px;">
+                    <div style="display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:18px; background:rgba(255,255,255,0.1);">
+                        <i class="ti ti-shield-lock" style="font-size:20px; margin-top:1px;"></i>
+                        <div>
+                            <div style="font-weight:700; color:#fff; margin-bottom:4px;">安全登录校验</div>
+                            <div style="font-size:13px; color:rgba(226,232,240,0.84);">自动校验账号、密码、角色与必要班级信息，减少误登与空白页问题。</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:18px; background:rgba(255,255,255,0.1);">
+                        <i class="ti ti-users-group" style="font-size:20px; margin-top:1px;"></i>
+                        <div>
+                            <div style="font-weight:700; color:#fff; margin-bottom:4px;">按角色进入工作台</div>
+                            <div style="font-size:13px; color:rgba(226,232,240,0.84);">教师、班主任、家长与管理员登录后进入各自授权范围内的工作区。</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border-radius:18px; background:rgba(255,255,255,0.1);">
+                        <i class="ti ti-refresh-alert" style="font-size:20px; margin-top:1px;"></i>
+                        <div>
+                            <div style="font-weight:700; color:#fff; margin-bottom:4px;">云端数据自动同步</div>
+                            <div style="font-size:13px; color:rgba(226,232,240,0.84);">登录成功后自动拉取最新数据，减少手动操作和等待焦虑。</div>
+                        </div>
+                    </div>
                 </div>
-
-                <!-- 3. 瀵嗙爜杈撳叆妗?-->
-                <div class="form-group" style="margin-top:15px;">
-                    <label
-                        style="display:block; font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">瀵嗙爜</label>
-                    <input type="password" id="login-pass" placeholder="杈撳叆瀵嗙爜"
-                        style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; outline:none;"
-                        onkeydown="if(event.key==='Enter') window.Auth?.login()">
+            </section>
+            <section id="login-form" style="padding:38px 34px 32px; display:flex; flex-direction:column; justify-content:center; background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98));">
+                <div style="margin-bottom:22px;">
+                    <div style="font-size:13px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#475569;">系统登录</div>
+                    <h2 style="margin:10px 0 8px; font-size:28px; line-height:1.2; color:#0f172a;">欢迎回到工作台</h2>
+                    <p style="margin:0; color:#64748b; font-size:14px; line-height:1.7;">请使用已同步到云端的正式账号登录。首次登录后，建议尽快修改默认密码。</p>
                 </div>
-
-                <button onclick="window.Auth?.login()"
-                    style="width:100%; background:var(--primary); color:white; border:none; padding:12px; border-radius:6px; font-size:16px; font-weight:bold; margin-top:25px; cursor:pointer; transition:0.2s; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                    绔嬪嵆鐧诲綍
+                <div style="display:grid; gap:16px;">
+                    <div class="form-group" style="margin:0;">
+                        <label for="login-user" style="display:block; font-size:13px; font-weight:700; color:#334155; margin-bottom:8px;">账号 / 教师 / 家长</label>
+                        <input type="text" id="login-user" autocomplete="username" placeholder="例如：admin 或教师姓名"
+                            style="width:100%; padding:13px 14px; border:1px solid #cbd5e1; border-radius:12px; outline:none; background:#fff; transition:border-color .2s, box-shadow .2s;"
+                            onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label for="login-class" style="display:flex; justify-content:space-between; gap:8px; align-items:center; font-size:13px; font-weight:700; color:#334155; margin-bottom:8px;">
+                            <span>班级（家长/学生必填）</span>
+                            <span style="font-weight:500; font-size:12px; color:#f59e0b;">例如：701</span>
+                        </label>
+                        <input type="text" id="login-class" autocomplete="organization" placeholder="请输入所在班级"
+                            style="width:100%; padding:13px 14px; border:1px solid #cbd5e1; border-radius:12px; outline:none; background:#fff; transition:border-color .2s, box-shadow .2s;"
+                            onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label for="login-pass" style="display:block; font-size:13px; font-weight:700; color:#334155; margin-bottom:8px;">密码</label>
+                        <div style="position:relative;">
+                            <input type="password" id="login-pass" autocomplete="current-password" placeholder="请输入登录密码"
+                                style="width:100%; padding:13px 48px 13px 14px; border:1px solid #cbd5e1; border-radius:12px; outline:none; background:#fff; transition:border-color .2s, box-shadow .2s;"
+                                onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                            <button type="button" onclick="window.toggleLoginPasswordVisibility && window.toggleLoginPasswordVisibility()"
+                                style="position:absolute; right:10px; top:50%; transform:translateY(-50%); border:none; background:transparent; color:#64748b; cursor:pointer; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center;">
+                                <i id="login-pass-toggle-icon" class="ti ti-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div id="login-feedback" style="display:none; margin-top:14px; padding:12px 14px; border-radius:12px; background:#fff7ed; border:1px solid #fdba74; color:#9a3412; font-size:13px; line-height:1.6;"></div>
+                <button id="login-submit-btn" onclick="window.Auth?.login()"
+                    style="width:100%; background:linear-gradient(135deg, #2563eb, #1d4ed8); color:white; border:none; padding:14px 16px; border-radius:14px; font-size:16px; font-weight:700; margin-top:22px; cursor:pointer; transition:transform .2s, box-shadow .2s, opacity .2s; box-shadow:0 16px 28px rgba(37,99,235,0.24);">
+                    立即登录
                 </button>
-
-                <!-- 宸叉坊鍔?display:none 闅愯棌榛樿鎻愮ず -->
-                <div
-                    style="display:none; text-align:center; margin-top:15px; font-size:12px; color:#94a3b8; line-height: 1.6;">
-                    绠＄悊鍛橀粯璁? admin / admin123<br>
-                    鍏朵粬瑙掕壊榛樿瀵嗙爜: 123456
+                <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-top:16px; color:#64748b; font-size:12px; line-height:1.7;">
+                    <div>管理员默认账号：<code>admin / admin123</code></div>
+                    <div>教师默认密码：<code>yssy2016</code>；其他角色默认：<code>123456</code></div>
                 </div>
-            </div>
+            </section>
         </div>
     </div>
-
-    <!-- 绾靛悜鎴愰暱妗ｆ (Cohort Growth) -->
     <div id="cohort-growth" class="section card-box">
         <div class="module-desc-bar" style="border-color: var(--color-diag)">
             <h3><i class="ti ti-timeline"></i> 绾靛悜鎴愰暱妗ｆ <span class="badge" style="background:#0ea5e9;">馃搱
@@ -1183,28 +1208,27 @@
                 </div>
                 <!-- 閫氱煡 -->
                 <div class="sidebar-footer-item" id="admin-msg-btn-sidebar" onclick="IssueManager.openAdminPanel()"
-                    title="娑堟伅涓庣敵璇?>
+                    title="????">
                     <i class="ti ti-bell"></i>
-                    <span>娑堟伅涓績</span>
+                    <span>????</span>
                     <div id="msg-badge-sidebar" class="notification-badge hidden">0</div>
                 </div>
-                <!-- 澶栬璁剧疆 -->
-                <div class="sidebar-footer-item" onclick="openSkinModal()" title="涓婚閰嶇疆">
+                <!-- ????? -->
+                <div class="sidebar-footer-item" onclick="openSkinModal()" title="?????">
                     <i class="ti ti-palette"></i>
-                    <span>澶栬涓庝富棰?/span>
+                    <span>?????</span>
                 </div>
-                <!-- 娣辫壊妯″紡 -->
-                <div class="sidebar-footer-item" onclick="toggleDarkMode()" title="鍒囨崲娣辫壊妯″紡">
+                <!-- ???? -->
+                <div class="sidebar-footer-item" onclick="toggleDarkMode()" title="??????">
                     <i class="ti ti-moon" id="sidebar-moon-icon"></i>
-                    <span>娣辫壊妯″紡</span>
+                    <span>????</span>
                 </div>
-                <!-- 鏇村鏀惰捣鑿滃崟 (璁剧疆銆佸浠界瓑) -->
-                <div class="sidebar-footer-item sidebar-more" onclick="toggleSidebarMoreMenu()" title="鏇村绯荤粺璁剧疆">
+                <!-- ???? / ?? -->
+                <div class="sidebar-footer-item sidebar-more" onclick="toggleSidebarMoreMenu()" title="????">
                     <i class="ti ti-settings"></i>
-                    <span>绯荤粺璁剧疆</span>
+                    <span>????</span>
                 </div>
 
-                <!-- 鏋佺畝鏇村鑿滃崟妗?(娴姩) -->
                 <div id="sidebar-more-menu" class="hidden">
                     <div class="more-menu-item" onclick="HelpSystem.startTour()">
                         <i class="ti ti-help-circle"></i> <span>鏂版墜鎸囧紩</span>
@@ -1446,26 +1470,26 @@
                         </select>
                         <select id="exam-term" style="padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px;"
                             onchange="refreshExamGradePreview(); onExamTermChange();">
-                            <option value="涓婂鏈?>涓婂鏈?/option>
-                            <option value="涓嬪鏈?>涓嬪鏈?/option>
+                            <option value="上学期">上学期</option>
+                            <option value="下学期">下学期</option>
                         </select>
                         <select id="exam-type" style="padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px;">
-                            <option value="鏈堣€?>鏈堣€?/option>
-                            <option value="鏈熶腑">鏈熶腑</option>
-                            <option value="鏈熸湯">鏈熸湯</option>
-                            <option value="妯℃嫙">妯℃嫙</option>
+                            <option value="月考">月考</option>
+                            <option value="期中">期中</option>
+                            <option value="期末">期末</option>
+                            <option value="模拟">模拟</option>
                         </select>
                         <input id="exam-date" type="date"
                             style="padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px;">
-                        <input id="exam-name" type="text" placeholder="鑰冭瘯鍚嶇О(鍙€?"
+                        <input id="exam-name" type="text" placeholder="考试名称，例如：期中考试"
                             style="padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; width:200px;">
                         <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#475569;">
-                            <input type="checkbox" id="exam-reset-point"> 鏈鑰冭瘯缁忓巻閲嶆柊鍒嗙彮
+                            <input type="checkbox" id="exam-reset-point"> 重置为标准考试起点
                         </label>
-                        <span style="font-size:12px; color:#475569;">鏈骞寸骇锛?/span>
+                        <span style="font-size:12px; color:#475569;">考试年级：</span>
                         <strong id="exam-grade-label" style="font-size:12px; color:#1e3a8a;">-</strong>
-                        <button class="btn btn-primary" onclick="setCurrentExamMeta()">璁句负褰撳墠鑰冭瘯</button>
-                        <button class="btn btn-orange" onclick="archiveCurrentExam()">涓€閿皝瀛樻湰娆¤€冭瘯</button>
+                        <button class="btn btn-primary" onclick="setCurrentExamMeta()">设为当前考试</button>
+                        <button class="btn btn-orange" onclick="archiveCurrentExam()">                        <button class="btn btn-orange" onclick="archiveCurrentExam()">涓€閿皝瀛樻湰娆¤€冭瘯</button>
                         <button class="btn btn-gray" onclick="unlockArchive()">瑙ｉ櫎灏佸瓨</button>
                     </div>
                     <div style="margin-top:8px; font-size:12px; color:#475569;">
@@ -1511,10 +1535,10 @@
                     </div>
                 </div>
                 <div class="upload-box" id="uploadBox" onclick="document.getElementById('fileInput').click()"
-                    tabindex="0" role="button" aria-label="涓婁紶鎴愮哗鏂囦欢锛屾寜鍥炶溅閿彲鎵撳紑鏂囦欢閫夋嫨鍣?>
+                    tabindex="0" role="button" aria-label="???????????????????">
                     <div class="upload-icon"><i class="ti ti-cloud-upload"></i></div>
-                    <p style="font-size:18px; margin-bottom:10px; font-weight:600;">鐐瑰嚮涓婁紶鎴愮哗 Excel 鏂囦欢</p>
-                    <p style="color:#94a3b8;">鏀寔澶氭枃浠朵笂浼?(.xlsx, .xls)</p>
+                    <p style="font-size:18px; margin-bottom:10px; font-weight:600;">?????? Excel ??</p>
+                    <p style="color:#94a3b8;">????????.xlsx, .xls?</p>
                     <input type="file" id="fileInput" multiple accept=".xlsx,.xls" hidden>
                 </div>
 
@@ -1932,19 +1956,19 @@
                                 style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:180px;"></select>
                         </span>
                         <button class="btn btn-sm btn-blue"
-                            onclick="renderTeacherMultiPeriodComparison()">鐢熸垚鏁欏笀澶氭湡瀵规瘮</button>
+                            onclick="renderTeacherMultiPeriodComparison()">????????</button>
                         <button class="btn btn-sm" style="background:#ea580c; color:white;"
-                            onclick="renderAllTeachersMultiPeriodComparison()" title="鐢熸垚璇ュ鏍℃墍鏈夋暀甯堢殑瀵规瘮琛?>馃搳 鐢熸垚鍏ㄦ牎瀵规瘮</button>
+                            onclick="renderAllTeachersMultiPeriodComparison()" title="???????????????">??????</button>
                         <button class="btn btn-sm btn-green"
-                            onclick="exportTeacherMultiPeriodComparison()">瀵煎嚭鏁欏笀澶氭湡瀵规瘮</button>
+                            onclick="exportTeacherMultiPeriodComparison()">????????</button>
                         <button class="btn btn-sm" style="background:#8b5cf6; color:white;"
-                            onclick="saveTeacherMultiPeriodCompareToCloud()" title="淇濆瓨褰撳墠瀵规瘮缁撴灉鍒颁簯绔?>鈽侊笍 淇濆瓨浜戠瀵规瘮</button>
+                            onclick="saveTeacherMultiPeriodCompareToCloud()" title="????????????????">??????</button>
                         <button class="btn btn-sm" style="background:#06b6d4; color:white;"
-                            onclick="viewCloudTeacherCompares()" title="鏌ョ湅宸蹭繚瀛樼殑鏁欏笀瀵规瘮璁板綍">馃搵 鏌ョ湅浜戠瀵规瘮</button>
+                            onclick="viewCloudTeacherCompares()" title="????????????????">??????</button>
                     </div>
                     <div id="teacherCompareHint" style="margin-top:6px; font-size:12px; color:#64748b;">
-                        璇烽€夋嫨瀛︽牎+瀛︾+鏁欏笀骞堕€夋嫨2鏈熸垨3鏈熻€冭瘯鍚庣敓鎴愩€?/div>
-                    <div id="teacherCompareResult" style="margin-top:10px;"></div>
+                        ??????????????? 2 ?? 3 ???????
+                    </div>
                 </div>
                 <details class="explain-panel">
                     <summary>鎸囨爣鍙ｅ緞璇存槑锛堢偣鍑诲睍寮€锛?/summary>
@@ -1975,55 +1999,44 @@
                     <div class="content-area">
                         <div id="anchor-cards" class="anchor-target"> <!-- 浣跨敤 x-data 澹版槑杩欐槸涓€涓?Alpine 缁勪欢锛寈-show 鎺у埗鏄剧ず -->
                             <div class="teacher-cards-container" id="teacherCardsContainer" x-data>
-
-                                <!-- 绌虹姸鎬佹彁绀?-->
                                 <div x-show="$store.teacherData.list.length === 0"
                                     style="grid-column: 1/-1; text-align:center; color:#999; padding:20px;">
-                                    鏆傛棤鏁欏笀鏁版嵁锛岃鍏堝湪涓婃柟閰嶇疆骞跺鍏ャ€?                                    <div style="margin-top:10px;">
-                                        <button class="btn btn-orange" onclick="openTeacherSync()">鍘诲悓姝ヤ换璇捐〃</button>
+                                    暂无教师分析数据，请先同步或生成教师画像结果。
+                                    <div style="margin-top:10px;">
+                                        <button class="btn btn-orange" onclick="openTeacherSync()">同步教师数据</button>
                                     </div>
                                 </div>
-
-                                <!-- 寰幆娓叉煋鍗＄墖 -->
                                 <template x-for="item in $store.teacherData.list" :key="item.id">
                                     <div class="teacher-card">
                                         <div class="teacher-header">
                                             <div>
-                                                <div class="teacher-name" x-text="item.name + ' - ' + item.subject">
-                                                </div>
-                                                <div class="teacher-classes" x-text="item.classes + '鐝?"></div>
+                                                <div class="teacher-name" x-text="item.name + ' - ' + item.subject"></div>
+                                                <div class="teacher-classes" x-text="item.classes + ' ???'"></div>
                                             </div>
-                                            <div :class="`performance-badge ${item.badgeClass}`"
-                                                x-text="item.badgeText">
-                                            </div>
+                                            <div :class="`performance-badge ${item.badgeClass}`" x-text="item.badgeText"></div>
                                         </div>
                                         <div class="teacher-stats">
                                             <div class="stat-item">
                                                 <div class="stat-value" x-text="item.avg"></div>
-                                                <div class="stat-label">骞冲潎鍒?/div>
+                                                <div class="stat-label">平均分</div>
                                             </div>
                                             <div class="stat-item">
                                                 <div class="stat-value" x-text="item.excRate"></div>
-                                                <div class="stat-label">浼樼鐜?/div>
+                                                <div class="stat-label">优秀率</div>
                                             </div>
                                             <div class="stat-item">
                                                 <div class="stat-value" x-text="item.passRate"></div>
-                                                <div class="stat-label">鍙婃牸鐜?/div>
+                                                <div class="stat-label">及格率</div>
                                             </div>
                                         </div>
-                                        <div
-                                            style="display:flex; justify-content:space-between; font-size:12px; color:#666; margin-bottom:15px; padding:0 10px;">
-                                            <span>瀛︾敓: <span x-text="item.count"></span>浜?/span>
-                                            <span>闀囨帓: <strong style="color:var(--primary)"
-                                                    x-text="item.rank"></strong></span>
+                                        <div style="display:flex; justify-content:space-between; font-size:12px; color:#666; margin-bottom:15px; padding:0 10px;">
+                                            <span>学生数：<span x-text="item.count"></span>人</span>
+                                            <span>镇排：<strong style="color:var(--primary)" x-text="item.rank"></strong></span>
                                         </div>
-                                        <!-- 鐐瑰嚮浜嬩欢鐩存帴缁戝畾 JS 鍑芥暟 -->
-                                        <button class="view-details-btn"
-                                            @click="showTeacherDetails(item.name, item.subject)">鏌ョ湅璇︽儏</button>
+                                        <button class="view-details-btn" @click="showTeacherDetails(item.name, item.subject)">查看详情</button>
                                     </div>
                                 </template>
                             </div>
-                        </div>
                         <div id="anchor-detail" class="anchor-target" style="padding-top:30px;">
                             <div class="sub-header"
                                 style="display:flex; justify-content:space-between; align-items:center;">
@@ -2560,8 +2573,8 @@
                     <label style="margin-left:15px;">瀛︾锛?/label><select id="diagSubjectSelect" style="min-width:100px;">
                         <option value="total">鎬诲垎</option>
                     </select>
-                    <label style="margin-left:15px;">闂磋窛锛?/label><input type="number" id="diagStep" value="10"
-                        style="width:80px;" placeholder="鍒?>
+                    <label style="margin-left:15px;">???</label><input type="number" id="diagStep" value="10"
+                        style="width:80px;" placeholder="???10">
                     <button class="btn" style="margin-left:15px;" onclick="renderClassDiagnosis()">璇婃柇鍒嗘瀽</button>
                 </div>
                 <div id="diagnosis-results">
@@ -2678,11 +2691,11 @@
                 <!-- 缁撴灉灞曠ず鍖哄煙 -->
                 <div id="student-multi-period-compare-section" style="margin-top:10px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:15px; display:none;">
                     <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
-                        <label style="font-size:12px; color:#475569;">馃攳 绛涢€夛細</label>
-                        <input type="text" id="studentCompareNameInput" placeholder="杈撳叆濮撳悕锛堝彲鐢ㄩ€楀彿鍒嗛殧澶氫釜锛?
+                        <label style="font-size:12px; color:#475569;">?????</label>
+                        <input type="text" id="studentCompareNameInput" placeholder="???????????????"
                             style="padding:4px 12px; border-radius:20px; min-width:180px;"
                             onkeypress="if(event.key==='Enter') filterStudentCompareByName()">
-                        <button class="btn btn-sm btn-gray" onclick="filterStudentCompareByName()">鏌ヨ濮撳悕</button>
+                        <button class="btn btn-sm btn-gray" onclick="filterStudentCompareByName()">????</button>
                         <button class="btn btn-sm" style="background:#10b981; color:white;"
                             onclick="filterByProgress('improve')">鍙湅杩涙</button>
                         <button class="btn btn-sm" style="background:#ef4444; color:white;"
@@ -3744,14 +3757,14 @@
 
                         <h4
                             style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px; margin-top:20px;">
-                            馃摑 3. 鏂囨瀹氬埗</h4>
-                        <div style="margin-bottom:5px;"><input type="text" id="posterTitleInput" value="鍏夎崳姒?
-                                placeholder="澶ф爣棰? style="width:100%;"></div>
-                        <div style="margin-bottom:10px;"><input type="text" id="posterSubInput" value="鏈鏈熸湯鑰冭瘯浼樼鍚嶅崟"
-                                placeholder="鍓爣棰? style="width:100%;"></div>
+                            ????</h4>
+                        <div style="margin-bottom:5px;"><input type="text" id="posterTitleInput" value="???"
+                                placeholder="???" style="width:100%;"></div>
+                        <div style="margin-bottom:10px;"><input type="text" id="posterSubInput" value="??????????"
+                                placeholder="???" style="width:100%;"></div>
 
-                        <button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="renderPoster()">馃攧
-                            鐢熸垚/鍒锋柊棰勮</button>
+                        <button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="renderPoster()">??/????</button>
+
                     </div>
 
                     <!-- 鍙充晶锛氶瑙堢敾甯?-->
@@ -3777,7 +3790,7 @@
 
 
     <!-- 璇煶鎺у埗鍏ュ彛 -->
-    <div id="voice-fab" class="voice-fab" onclick="VoiceControl.toggle()" title="鐐瑰嚮寮€鍚闊虫帶鍒?>
+    <div id="voice-fab" class="voice-fab" onclick="VoiceControl.toggle()" title="????????">
         <i class="ti ti-microphone"></i>
     </div>
 
@@ -4178,24 +4191,25 @@
                 <h4 style="margin-bottom:10px; color:#333;">1. 閫夋嫨涓昏壊璋?/h4>
                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
                     <!-- 棰勮棰滆壊 -->
+                    <!-- ???? -->
                     <div onclick="setThemeColor('#4f46e5')"
                         style="width:30px; height:30px; background:#4f46e5; border-radius:50%; cursor:pointer; border:2px solid #ddd;"
-                        title="榛樿绱?></div>
+                        title="???"></div>
                     <div onclick="setThemeColor('#2563eb')"
                         style="width:30px; height:30px; background:#2563eb; border-radius:50%; cursor:pointer; border:2px solid #ddd;"
-                        title="绉戞妧钃?></div>
+                        title="???"></div>
                     <div onclick="setThemeColor('#059669')"
                         style="width:30px; height:30px; background:#059669; border-radius:50%; cursor:pointer; border:2px solid #ddd;"
-                        title="鎶ょ溂缁?></div>
+                        title="???"></div>
                     <div onclick="setThemeColor('#dc2626')"
                         style="width:30px; height:30px; background:#dc2626; border-radius:50%; cursor:pointer; border:2px solid #ddd;"
-                        title="涓浗绾?></div>
+                        title="???"></div>
                     <div onclick="setThemeColor('#b45309')"
                         style="width:30px; height:30px; background:#b45309; border-radius:50%; cursor:pointer; border:2px solid #ddd;"
-                        title="灏婅吹閲?></div>
+                        title="???"></div>
                     <div onclick="setThemeColor('#0f172a')"
                         style="width:30px; height:30px; background:#0f172a; border-radius:50%; cursor:pointer; border:2px solid #ddd;"
-                        title="娣遍們榛?></div>
+                        title="???"></div>
                 </div>
                 <div style="display:flex; align-items:center; gap:10px;">
                     <input type="color" id="custom-color-input" onchange="setThemeColor(this.value)"
@@ -4390,7 +4404,7 @@
                                     const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
                                     if (json.length === 0) return alert("琛ㄦ牸涓虹┖");
-                                    if (!confirm(`瑙ｆ瀽鍒?${json.length} 鏉¤处鍙锋暟鎹紝纭畾瑕佸鍏ヤ簯绔悧锛焋)) return;
+                                    if (!confirm(`??????????? ${json.length} ???????????????`)) return;
 
                                     UI.loading(true, "姝ｅ湪鎵归噺鍒涘缓浜戠璐﹀彿...");
 
@@ -4488,11 +4502,11 @@
 
                 <!-- 鍔熻兘鍖?3 -->
                 <div style="background:#fff; padding:15px; border:1px solid #eee; border-radius:8px;">
-                    <h4 style="margin-bottom:10px; color:#333;">3. 淇敼绠＄悊鍛樺瘑鐮?/h4>
+                    <h4 style="margin-bottom:10px; color:#333;">3. ???????</h4>
                     <div style="display:flex; gap:10px;">
-                        <input type="text" id="new-admin-pass" placeholder="杈撳叆鏂板瘑鐮?
+                        <input type="text" id="new-admin-pass" placeholder="?????"
                             style="padding:8px; flex:1; border:1px solid #cbd5e1; border-radius:4px;">
-                        <button class="btn btn-gray" onclick="changeAdminPass()">纭淇敼</button>
+                        <button class="btn btn-gray" onclick="changeAdminPass()">????</button>
                     </div>
                 </div>
                 <div
@@ -4560,56 +4574,42 @@
     <script>
         // 1. 鎵撳紑淇敼瀵嗙爜寮圭獥 (鏀寔寮哄埗妯″紡)
         function openUserPasswordModal(isForced = false) {
-            // 鑾峰彇褰撳墠鐢ㄦ埛
-            const user = JSON.parse(sessionStorage.getItem('CURRENT_USER'));
-            if (!user) return alert("鏈娴嬪埌鐧诲綍鐢ㄦ埛锛岃鍒锋柊椤甸潰銆?);
+            const user = JSON.parse(sessionStorage.getItem('CURRENT_USER') || 'null');
+            if (!user) return alert('请输入原密码和新密码。');
 
-            // 娓呯┖杈撳叆妗?            document.getElementById('upm-old').value = '';
+            document.getElementById('upm-old').value = '';
             document.getElementById('upm-new').value = '';
             document.getElementById('upm-confirm').value = '';
 
             const modal = document.getElementById('user-password-modal');
-            const closeBtn = modal.querySelector('button[onclick*="none"]'); // 鏌ユ壘鍏抽棴鎸夐挳
+            const closeBtn = modal.querySelector('button[onclick*="none"]');
+            if (closeBtn) closeBtn.style.display = isForced ? 'none' : 'block';
 
-            if (isForced) {
-                // 馃敶 寮哄埗妯″紡锛氶殣钘忓叧闂寜閽紝绂佹鐐瑰嚮鑳屾櫙鍏抽棴
-                if (closeBtn) closeBtn.style.display = 'none';
-                // 绠€鍗曠殑闃叉鐐瑰嚮鑳屾櫙鍏抽棴閫昏緫 (瑕嗙洊 onclick)
-                modal.onclick = (e) => e.stopPropagation();
-            } else {
-                // 鏅€氭ā寮忥細鏄剧ず鍏抽棴鎸夐挳
-                if (closeBtn) closeBtn.style.display = 'block';
-                modal.onclick = (e) => {
-                    if (e.target === modal) modal.style.display = 'none';
-                };
-            }
-
-            // 鏄剧ず寮圭獥
+            modal.onclick = isForced ? ((e) => e.stopPropagation()) : null;
             modal.style.display = 'flex';
         }
 
-        // 2. 鎻愪氦瀵嗙爜淇敼 (鍚屾浜戠)
         async function submitUserPasswordChange() {
-            // 妫€鏌ユ暟鎹簱杩炴帴
-            if (!sbClient) return alert("鉂?浜戠鏈繛鎺ワ紝鏃犳硶淇敼瀵嗙爜銆?);
+            if (!sbClient && typeof window.initSupabase === 'function') {
+                window.initSupabase();
+            }
+            if (!sbClient) return alert('云端服务尚未连接，请稍后重试。');
 
-            const user = JSON.parse(sessionStorage.getItem('CURRENT_USER'));
-            if (!user) return alert("鏈娴嬪埌鐧诲綍鐢ㄦ埛锛岃鍒锋柊閲嶈瘯銆?);
+            const user = JSON.parse(sessionStorage.getItem('CURRENT_USER') || 'null');
+            if (!user) return alert('当前登录会话已失效，请重新登录。');
 
-            // 鑾峰彇杈撳叆鍊?            const oldPass = document.getElementById('upm-old').value.trim();
+            const oldPass = document.getElementById('upm-old').value.trim();
             const newPass = document.getElementById('upm-new').value.trim();
             const confirmPass = document.getElementById('upm-confirm').value.trim();
 
-            // 鍩虹鏍￠獙
-            if (!oldPass || !newPass) return alert("瀵嗙爜涓嶈兘涓虹┖");
-            if (newPass !== confirmPass) return alert("涓ゆ杈撳叆鐨勬柊瀵嗙爜涓嶄竴鑷?);
-            if (newPass.length < 6) return alert("鏂板瘑鐮侀暱搴﹁嚦灏戦渶瑕?6 浣嶏紝寤鸿浣跨敤瀛楁瘝+鏁板瓧缁勫悎");
-            if (oldPass === newPass) return alert("鏂板瘑鐮佷笉鑳戒笌鏃у瘑鐮佺浉鍚?);
+            if (!oldPass || !newPass) return alert('请输入原密码和新密码。');
+            if (newPass !== confirmPass) return alert('两次输入的新密码不一致。');
+            if (newPass.length < 6) return alert('新密码长度不能少于 6 位。');
+            if (oldPass === newPass) return alert('新密码不能与原密码相同。');
 
-            UI.loading(true, "姝ｅ湪楠岃瘉骞舵洿鏂板瘑鐮?..");
+            UI.loading(true, '正在提交新密码...');
 
             try {
-                // A. 楠岃瘉鏃у瘑鐮佹槸鍚︽纭?(蹇呴』鍘绘暟鎹簱鏌ワ紝闃叉鏈湴绡℃敼)
                 const { data: verifyData, error: verifyError } = await sbClient
                     .from('system_users')
                     .select('*')
@@ -4618,15 +4618,13 @@
                     .maybeSingle();
 
                 if (verifyError) {
-                    throw new Error("楠岃瘉鏃у瘑鐮佹椂鍑洪敊: " + verifyError.message);
+                    throw new Error('校验原密码失败：' + verifyError.message);
                 }
-
                 if (!verifyData) {
                     UI.loading(false);
-                    return alert("鉂?鏃у瘑鐮侀敊璇紒璇锋鏌ュ悗閲嶈瘯銆?);
+                    return alert('原密码不正确，请重新输入。');
                 }
 
-                // B. 鎵ц鏇存柊鎿嶄綔
                 const { error: updateError } = await sbClient
                     .from('system_users')
                     .update({ password: newPass })
@@ -4635,19 +4633,16 @@
                 UI.loading(false);
 
                 if (updateError) {
-                    throw new Error("鏇存柊瀵嗙爜澶辫触: " + updateError.message);
+                    throw new Error('更新密码失败：' + updateError.message);
                 }
 
-                // C. 鎴愬姛鍚庡鐞?                alert("鉁?瀵嗙爜淇敼鎴愬姛锛乗n\n涓轰簡瀹夊叏璧疯锛岃浣跨敤鏂板瘑鐮侀噸鏂扮櫥褰曘€?);
+                alert('密码修改成功，请使用新密码重新登录。');
                 document.getElementById('user-password-modal').style.display = 'none';
-
-                // 寮哄埗鐧诲嚭
                 Auth.logout();
-
             } catch (e) {
                 UI.loading(false);
                 console.error(e);
-                alert("鉂?淇敼澶辫触锛? + e.message);
+                alert('密码修改失败：' + e.message);
             }
         }
     </script>
@@ -5111,17 +5106,17 @@
             <div style="display:flex; flex-direction:column; gap:15px;">
                 <div>
                     <label style="font-size:12px; font-weight:bold; color:#666;">褰撳墠鏃у瘑鐮?/label>
-                    <input type="password" id="upm-old" placeholder="杈撳叆褰撳墠瀵嗙爜"
+                    <input type="password" id="upm-old" placeholder="??????"
                         style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px;">
                 </div>
                 <div>
-                    <label style="font-size:12px; font-weight:bold; color:#666;">鏂板瘑鐮?(寤鸿瀛楁瘝+鏁板瓧)</label>
-                    <input type="password" id="upm-new" placeholder="杈撳叆鏂板瘑鐮?
+                    <label style="font-size:12px; font-weight:bold; color:#666;">???????? + ???</label>
+                    <input type="password" id="upm-new" placeholder="?????"
                         style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px;">
                 </div>
                 <div>
-                    <label style="font-size:12px; font-weight:bold; color:#666;">纭鏂板瘑鐮?/label>
-                    <input type="password" id="upm-confirm" placeholder="鍐嶆杈撳叆鏂板瘑鐮?
+                    <label style="font-size:12px; font-weight:bold; color:#666;">?????</label>
+                    <input type="password" id="upm-confirm" placeholder="???????"
                         style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px;">
                 </div>
 
@@ -5165,7 +5160,7 @@
 
                 <div>
                     <label style="font-size:12px; font-weight:bold; color:#374151;">鍏蜂綋璇存槑 (蹇呭～)</label>
-                    <textarea id="issue-desc" rows="4" placeholder="渚嬪锛氭暟瀛﹁瘯鍗峰凡浜わ紝浣嗙郴缁熸樉绀?鍒嗐€傚ぇ鑷撮浼板垎鏁颁负90鍒嗗乏鍙炽€?
+                    <textarea id="issue-desc" rows="4" placeholder="??????????????? 0 ?????? 90 ????"
                         style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:6px; margin-top:5px; font-size:14px;"></textarea>
                 </div>
 
@@ -5469,13 +5464,13 @@
                         <!-- 鍙充晶锛氭搷浣滄寜閽粍 -->
                         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                             <button class="btn btn-sm btn-purple" onclick="CloudManager.loadTeachers()"
-                                title="浠庝簯绔悓姝ユ湰瀛︽湡鐨勬暀甯堜换璇炬暟鎹?
+                                title="???????????????"
                                 style="padding:6px 12px; font-size:12px; display:flex; align-items:center; gap:4px;">
                                 <i class="ti ti-cloud-download"></i> 浜戠鍚屾
                             </button>
 
                             <button class="btn btn-sm btn-orange" onclick="CloudManager.saveTeachers()"
-                                title="淇濆瓨褰撳墠鏁欏笀浠昏鏁版嵁鍒颁簯绔?
+                                title="??????????????"
                                 style="padding:6px 12px; font-size:12px; display:flex; align-items:center; gap:4px;">
                                 <i class="ti ti-cloud-upload"></i> 涓婁紶浜戠
                             </button>
@@ -5489,7 +5484,7 @@
                                 onchange="DataManager.handleTeacherUpload(this)">
 
                             <button class="btn btn-sm btn-primary" onclick="DataManager.addTeacher()"
-                                title="鎵嬪姩娣诲姞涓€鏉℃暀甯堜换璇捐褰?
+                                title="????????????"
                                 style="padding:6px 12px; font-size:12px; display:flex; align-items:center; gap:4px;">
                                 <i class="ti ti-plus"></i> 鎵嬪姩鏂板
                             </button>
@@ -5719,7 +5714,7 @@
                                 <tr>
                                     <th style="width:44px; text-align:center;"><input type="checkbox"
                                             id="dm-cloud-select-all"
-                                            onchange="DataManager.toggleCloudSelectAll(this.checked)" title="鍏ㄩ€?鍙栨秷鍏ㄩ€?>
+                                            onchange="DataManager.toggleCloudSelectAll(this.checked)" title="?? / ????">
                                     </th>
                                     <th>瀛樻。 Key (椤圭洰鍚?</th>
                                     <th>涓婁紶鏃堕棿</th>
@@ -5901,7 +5896,7 @@
 
                     // 1. 璁剧疆椤堕儴鏃ユ湡
                     const date = new Date();
-                    const dateStr = `${date.getMonth() + 1}鏈?{date.getDate()}鏃;
+                    const dateStr = `${date.getMonth() + 1}?${date.getDate()}?`;
                     const dateEl = document.getElementById('mob-date-display');
                     if (dateEl) dateEl.innerText = dateStr;
 
@@ -5958,7 +5953,7 @@
                         if (elAvg) elAvg.innerText = avg;
                         // 杩欓噷鎶婂強鏍肩巼鏀规垚鏄剧ず鐝骇鏁帮紝鍥犱负鍙婃牸绾夸笉纭畾
                         if (elPass) {
-                            elPass.innerHTML = `${classCount} <span style="font-size:10px;color:#94a3b8">涓彮</span>`;
+                            elPass.innerHTML = `${classCount} <span style="font-size:10px;color:#94a3b8">???</span>`;
                             elPass.style.color = '#3b82f6';
                         }
                     }
