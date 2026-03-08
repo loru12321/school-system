@@ -9,87 +9,33 @@
             },
 
             getKey: () => {
-                const meta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
-                if (!meta.cohortId || !meta.year || !meta.term || !meta.type) return null;
-                const parts = [
-                    meta.cohortId + '级',
-                    meta.grade ? meta.grade + '年级' : '未知年级',
-                    meta.year,
-                    meta.term,
-                    meta.type,
-                    meta.name || '标准考试'
-                ];
-                return parts.join('_').replace(/[\s\/\\\?]/g, '');
+                if (window.CloudSnapshotService && typeof window.CloudSnapshotService.getSnapshotKey === 'function') {
+                    return window.CloudSnapshotService.getSnapshotKey({
+                        getExamMeta: () => (typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {})
+                    });
+                }
+                return null;
             },
 
             save: async function() {
                 if (!this.check()) return;
-                const role = sessionStorage.getItem('CURRENT_ROLE');
-                if (role !== 'admin' && role !== 'director' && role !== 'grade_director') {
-                    if (window.UI) UI.toast("⛔ 权限不足", "warning");
-                    return;
-                }
-                const key = this.getKey();
-                if (!key) return alert("请先完善考试信息");
-                if (window.UI) UI.loading(true, `☁️ 正在同步...`);
-                try {
-                    if (!window.SYS_VARS) window.SYS_VARS = { indicator: { ind1: '', ind2: '' }, targets: {} };
-                    const i1 = document.getElementById('dm_ind1_input');
-                    const i2 = document.getElementById('dm_ind2_input');
-                    if (i1) window.SYS_VARS.indicator.ind1 = i1.value;
-                    if (i2) window.SYS_VARS.indicator.ind2 = i2.value;
-                    window.SYS_VARS.targets = window.TARGETS || {};
-
-                    const payload = typeof getCurrentSnapshotPayload === 'function' ? getCurrentSnapshotPayload() : {};
-                    const json = JSON.stringify(payload);
-                    const compressed = "LZ|" + LZString.compressToUTF16(json);
-
-                    const { error } = await sbClient.from('system_data').upsert({
-                        key,
-                        content: compressed,
-                        updated_at: new Date().toISOString()
-                    }, { onConflict: 'key' });
-                    if (error) throw error;
-
-                    localStorage.setItem('CURRENT_PROJECT_KEY', key);
-                    if (window.idbKeyval) await idbKeyval.set(`cache_${key}`, payload);
-                    if (window.UI) UI.toast("✅ 云端同步成功", "success");
-                    localStorage.setItem('CLOUD_SYNC_AT', new Date().toISOString());
-                    logAction('云端同步', `全量数据已同步：${key}`);
-                    updateStatusPanel();
-                } catch (e) {
-                    console.error("CloudManager Save Error:", e);
-                    alert("同步失败: " + e.message);
-                } finally {
-                    if (window.UI) UI.loading(false);
+                if (window.CloudSnapshotService && typeof window.CloudSnapshotService.saveSnapshot === 'function') {
+                    return window.CloudSnapshotService.saveSnapshot({
+                        sbClient,
+                        key: this.getKey(),
+                        getExamMeta: () => (typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {})
+                    });
                 }
             },
 
             load: async function() {
                 if (!this.check()) return;
-                const key = this.getKey() || localStorage.getItem('CURRENT_PROJECT_KEY');
-                if (!key) return;
-                if (window.UI) UI.toast("⏳ 正在检查云端数据...", "info");
-                try {
-                    const { data, error } = await sbClient
-                        .from('system_data')
-                        .select('content')
-                        .eq('key', key)
-                        .maybeSingle();
-                    if (error) throw error;
-                    if (!data) return;
-
-                    let content = data.content;
-                    if (typeof content === 'string' && content.startsWith("LZ|")) {
-                        content = LZString.decompressFromUTF16(content.substring(3));
-                    }
-                    const payload = typeof content === 'string' ? JSON.parse(content) : content;
-                    if (typeof applySnapshotPayload === 'function') applySnapshotPayload(payload);
-                    if (window.UI) UI.toast("✅ 数据已同步到本地", "success");
-                    logAction('云端加载', `已加载全量数据：${key}`);
-                } catch (e) {
-                    console.error("CloudManager Load Error:", e);
-                    if (window.UI) UI.toast("加载失败", "error");
+                if (window.CloudSnapshotService && typeof window.CloudSnapshotService.loadSnapshot === 'function') {
+                    return window.CloudSnapshotService.loadSnapshot({
+                        sbClient,
+                        key: this.getKey() || localStorage.getItem('CURRENT_PROJECT_KEY'),
+                        getExamMeta: () => (typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {})
+                    });
                 }
             },
 
