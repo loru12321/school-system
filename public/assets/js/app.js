@@ -9390,6 +9390,11 @@ function loadCloudStudentCompareForCurrentStudent(key) {
 }
 
 function onStudentComparePeriodCountChange() {
+    const controller = window.StudentCompareControllerService;
+    if (controller && typeof controller.syncStudentComparePeriodWrap === 'function') {
+        controller.syncStudentComparePeriodWrap();
+        return;
+    }
     const countEl = document.getElementById('studentComparePeriodCount');
     const wrap = document.getElementById('studentCompareExam3Wrap');
     if (!countEl || !wrap) return;
@@ -9397,10 +9402,14 @@ function onStudentComparePeriodCountChange() {
 }
 
 function updateStudentCompareExamSelects() {
-    const schoolSel = document.getElementById('studentCompareSchool');
-    const exam1Sel = document.getElementById('studentCompareExam1');
-    const exam2Sel = document.getElementById('studentCompareExam2');
-    const exam3Sel = document.getElementById('studentCompareExam3');
+    const controller = window.StudentCompareControllerService;
+    const elements = controller && typeof controller.getStudentCompareElements === 'function'
+        ? controller.getStudentCompareElements()
+        : {};
+    const schoolSel = elements.schoolEl || document.getElementById('studentCompareSchool');
+    const exam1Sel = elements.exam1El || document.getElementById('studentCompareExam1');
+    const exam2Sel = elements.exam2El || document.getElementById('studentCompareExam2');
+    const exam3Sel = elements.exam3El || document.getElementById('studentCompareExam3');
     if (!schoolSel || !exam1Sel || !exam2Sel || !exam3Sel) return;
 
     const schoolList = listAvailableSchoolsForCompare();
@@ -9414,8 +9423,8 @@ function updateStudentCompareExamSelects() {
             currentExamId: CURRENT_EXAM_ID
         });
     } else {
-        schoolSel.innerHTML = '<option value="">--闂備浇宕垫慨鏉懨洪妸鈺佺婵せ鍋撻柛鈹惧亾濡炪倖宸婚崑鎾淬亜閿旇棄顥嬮柍褜鍓氶崫搴ㄥ礉鎼淬劌鐒垫い鎺嶇閸犳洟姊婚崟顐㈩伃闁?-</option>';
-        schoolList.forEach(s => schoolSel.innerHTML += `<option value="${s}">${s}</option>`);
+        schoolSel.innerHTML = '<option value="">--闂傚倷娴囧畷鍨叏閺夋嚚娲Ω閳轰胶顦у┑顔姐仜閸嬫捇鏌涢埞鎯т壕婵＄偑鍊栧濠氬磻閹炬番浜滈柨鏃囨椤ュ鏌嶈閸撴岸宕惔銊ョ閹兼番鍔岄悞鍨亜閹哄秶顦﹂柛鐘虫礋濮婂宕熼銏╀純闂?-</option>';
+        schoolList.forEach(s => schoolSel.innerHTML += '<option value="' + s + '">' + s + '</option>');
         if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) {
             schoolSel.value = MY_SCHOOL;
         }
@@ -9507,49 +9516,71 @@ function onReportComparePeriodCountChange() {
 }
 
 function renderStudentMultiPeriodComparison() {
-    const schoolEl = document.getElementById('studentCompareSchool');
-    const hintEl = document.getElementById('studentCompareHint');
-    const summaryEl = document.getElementById('studentCompareSummary');
-    const resultEl = document.getElementById('studentCompareResult');
-    const countEl = document.getElementById('studentComparePeriodCount');
-    const e1El = document.getElementById('studentCompareExam1');
-    const e2El = document.getElementById('studentCompareExam2');
-    const e3El = document.getElementById('studentCompareExam3');
+    const controller = window.StudentCompareControllerService;
+    const state = controller && typeof controller.readStudentCompareState === 'function'
+        ? controller.readStudentCompareState()
+        : {
+            ok: true,
+            elements: {
+                schoolEl: document.getElementById('studentCompareSchool'),
+                hintEl: document.getElementById('studentCompareHint'),
+                summaryEl: document.getElementById('studentCompareSummary'),
+                resultEl: document.getElementById('studentCompareResult'),
+                countEl: document.getElementById('studentComparePeriodCount'),
+                exam1El: document.getElementById('studentCompareExam1'),
+                exam2El: document.getElementById('studentCompareExam2'),
+                exam3El: document.getElementById('studentCompareExam3')
+            },
+            periodCount: parseInt(document.getElementById('studentComparePeriodCount')?.value || '2', 10) === 3 ? 3 : 2,
+            school: String(document.getElementById('studentCompareSchool')?.value || '').trim(),
+            examIds: (() => {
+                const count = parseInt(document.getElementById('studentComparePeriodCount')?.value || '2', 10) === 3 ? 3 : 2;
+                const e1 = document.getElementById('studentCompareExam1')?.value || '';
+                const e2 = document.getElementById('studentCompareExam2')?.value || '';
+                const e3 = document.getElementById('studentCompareExam3')?.value || '';
+                return count === 3 ? [e1, e2, e3] : [e1, e2];
+            })()
+        };
+    const elements = state.elements || {};
+    const hintEl = elements.hintEl;
+    const summaryEl = elements.summaryEl;
+    const resultEl = elements.resultEl;
+    if (!state.ok || !hintEl || !resultEl) return;
 
-    if (!schoolEl || !hintEl || !resultEl || !countEl || !e1El || !e2El || !e3El) return;
+    const periodCount = state.periodCount;
+    const school = state.school;
+    const examIds = state.examIds;
 
-    const periodCount = parseInt(countEl.value || '2');
-    const school = schoolEl.value;
-    const examIds = periodCount === 3 ? [e1El.value, e2El.value, e3El.value] : [e1El.value, e2El.value];
-
-    // 闂傚倷绀侀幖顐も偓姘煎墯閺呰埖绂掔€ｎ€附鎱ㄥΟ鎸庣【缂佲偓婢舵劖鐓熸俊顖滃帶閸斿绱掓担宄板祮闁哄矉绲借灒闁割煈鍠氶崢顐︽⒑?
-    hintEl.innerHTML = '闂?濠电姵顔栭崰妤冩崲閹邦喖绶ら柦妯侯檧閼版寧銇勮箛鎾跺闁稿鍔戦弻锝夊籍閸屻倗鍔搁梺璇茬箰濞差參骞冨Δ浣瑰闁告劗鍋撶紞鍫ユ⒑娴兼瑥鐦滈柛锝忕到椤曪綁顢曢敂钘変罕闂佸壊鍋呯换鍕Χ閿曞倹鈷戦柟绋挎捣閳藉鏌ｉ婵堢獢妞ゃ垺宀搁、妤呭磼濠婂懐鍘柣搴＄畭閸庨亶骞婃径鎰；?..';
-    hintEl.style.color = '#3b82f6';
-    resultEl.innerHTML = '';
-    if (summaryEl) summaryEl.innerHTML = '';
-
-    if (!school) {
-        hintEl.innerHTML = '闂?闂備浇宕垫慨鏉懨洪妶澶婂簥闁哄被鍎遍崒銊︾箾閹存瑥鐏柣鎺曨嚙椤法鎹勬笟顖氬壈濡炪倕绻堥崕鐢稿箖濡も偓閳藉骞庨懞銉偓宥夋⒑缂佹﹩娈旈梺甯稻娣?;
-        hintEl.style.color = '#dc2626';
+    if (controller && typeof controller.setStudentCompareFeedback === 'function') {
+        controller.setStudentCompareFeedback({
+            elements,
+            message: '\u6b63\u5728\u6839\u636e\u6240\u9009\u671f\u6b21\u751f\u6210\u5b66\u751f\u591a\u671f\u5bf9\u6bd4\uff0c\u8bf7\u7a0d\u5019...',
+            color: '#3b82f6',
+            clearResult: true,
+            clearSummary: true
+        });
+    } else {
+        hintEl.innerHTML = '\u6b63\u5728\u6839\u636e\u6240\u9009\u671f\u6b21\u751f\u6210\u5b66\u751f\u591a\u671f\u5bf9\u6bd4\uff0c\u8bf7\u7a0d\u5019...';
+        hintEl.style.color = '#3b82f6';
         resultEl.innerHTML = '';
+        if (summaryEl) summaryEl.innerHTML = '';
+    }
+
+    const feedback = controller && typeof controller.validateStudentCompareState === 'function'
+        ? controller.validateStudentCompareState(state)
+        : { ok: !!school && !(examIds || []).some(x => !x) && new Set(examIds).size === examIds.length, message: '\u8bf7\u68c0\u67e5\u5b66\u6821\u548c\u8003\u8bd5\u671f\u6b21\u9009\u62e9\u3002' };
+    if (!feedback.ok) {
+        if (controller && typeof controller.setStudentCompareFeedback === 'function') {
+            controller.setStudentCompareFeedback({ elements, message: feedback.message, color: '#dc2626', clearResult: true, clearSummary: true });
+        } else {
+            hintEl.innerHTML = feedback.message;
+            hintEl.style.color = '#dc2626';
+            resultEl.innerHTML = '';
+            if (summaryEl) summaryEl.innerHTML = '';
+        }
         return;
     }
 
-    if (examIds.some(x => !x)) {
-        hintEl.innerHTML = '闂?闂備浇宕垫慨鏉懨洪妶澶婂簥闁哄被鍎查崑鈺傘亜閹烘垵顏╅柡瀣╃窔閺岀喓绱掗姀鐘崇亐闂佺顑嗛幐璇差嚗閸曨厸鍋撻敐搴濇喚濞寸姵鎸冲娲捶椤撗勬瘜闂佺顑嗛幑鍥蓟閿熺姴閱囨繝鍨姈姝囬梻渚€鈧偛鑻晶顕€鏌涢悢绋库枙闁诡垯绶氶、娑㈡倷閹绘帞褰夐梻浣虹帛閺屻劍绔熸繝鍥х；鐟滄棃寮?;
-        hintEl.style.color = '#dc2626';
-        resultEl.innerHTML = '';
-        return;
-    }
-
-    if (new Set(examIds).size !== examIds.length) {
-        hintEl.innerHTML = '闂?闂傚倷绀侀幖顐︽偋韫囨稑绐楅柟浼村亰閺佸啴鏌涜箛姘汗闁崇粯姊婚埀顒€绠嶉崕閬嶆偋閸℃稑鍌ㄩ柟缁㈠枟閳锋垿鏌熺紒妯虹鐎涙繂顪冮妶蹇涙闁绘搫绻濆顐㈩吋閸涱垱娈曢梺鍛婂姈閸庡啿鈻撻弻銉︹拻濞撴艾娲ゆ禍婊勩亜閿旇棄顥嬮柍褜鍓氶崫搴ㄥ礉瀹ュ洨鐭欏璺侯煬閸氬鏌涘☉鍗炴灈闁逞屽墴娴滃爼寮婚妶澶婄骇闁割煈鍠楀▓娲⒑娴兼瑥鐦滈柛銊ㄥ煐娣?;
-        hintEl.style.color = '#dc2626';
-        resultEl.innerHTML = '';
-        return;
-    }
-
-    // 闂傚倷绀侀崥瀣磿閹惰棄搴婇柤鑹扮堪娴滃綊鏌涢妷顔煎閻熸瑱绠撻弻娑㈠即閵娿儱顫梺绯曟櫅閸婂潡寮婚埄鍐╁闁告繂瀚烽弳顓㈡倵?
     const examDataList = [];
     for (const examId of examIds) {
         const allRows = getExamRowsForCompare(examId);
@@ -9764,23 +9795,28 @@ function renderStudentMultiPeriodComparison() {
 
     // 闂佽娴烽崑锝夊磹閺嶎厼纾块柤娴嬫櫆瀹曞弶绻濇繝鍌氭殧闁逞屽墯鐢€崇暦閿濆棗绶為悘鐐舵閼搭垶姊婚崒娆戣窗闁告挻鐟╅幃妯衡攽鐎ｎ亜鍋嶉梺闈涚墕椤︿即鍩涢幘缁樺仯闁搞儜鍕ㄦ灆闂佽桨鐒﹂悺妗?
     setTimeout(() => {
-        STUDENT_MULTI_PERIOD_COMPARE_CACHE = {
-            school, examIds, periodCount, studentsCompareData, subjects: allSubjects,
-            currentPage: 1,
-            pageSize: 20
-        };
+        const successMessage = '\u5df2\u751f\u6210 ' + school + ' \u5171 ' + studentsCompareData.length + ' \u540d\u5b66\u751f\u7684 ' + periodCount + ' \u671f\u5bf9\u6bd4\u7ed3\u679c\u3002';
+        STUDENT_MULTI_PERIOD_COMPARE_CACHE = controller && typeof controller.applyStudentCompareResult === 'function'
+            ? controller.applyStudentCompareResult({
+                state,
+                studentsCompareData,
+                subjects: allSubjects,
+                pageSize: 20,
+                message: successMessage,
+                color: '#16a34a'
+            })
+            : {
+                school, examIds, periodCount, studentsCompareData, subjects: allSubjects,
+                currentPage: 1,
+                pageSize: 20
+            };
 
-        // 濠碘槅鍋撶徊浠嬪疮娴兼潙鍌?[闂傚倷绀侀幖顐﹀磹閻熼偊鐔嗘慨妞诲亾鐠侯垶鏌涘鍡欑疄闁哄被鍔岄埥澶娾枎閹搭厽娈规繝鐢靛仦瑜板啫顭囬垾鎰佸殨妞ゆ帒瀚粻銉︺亜閺冨洤浜归柡瀣€荤槐鎾存媴閸濆嫮褰欓梺绋挎湰缁酣骞夐鈧娲偡閺夋寧些濡炪倧濡囬弫濠氬春閳ь剚銇勯幒鍡椾壕濡炪倧濡囬弫缁樹繆?
         updateClassGroupOptions();
-
-        // 闂傚倷鐒﹂惇褰掑垂婵犳艾绐楅柟鐗堟緲閸ㄥ倹鎱ㄥΟ澶稿惈缁炬儳銈搁弻锝夊籍閳ь剙顪冮崸妤€瑙﹂柍褜鍓欓埞鎴︻敊閽樺鐟ㄩ梺绋匡梗缁瑩鏁?
         updateStudentCompareSummary();
-
         renderStudentComparePage(1);
-        hintEl.innerHTML = `闂?闂佽姘﹂～澶愭偤閺囩姳鐒婃繛鍡樻尭閺嬩線鏌熼幑鎰靛殭缂?${school} 闂?${studentsCompareData.length} 闂傚倷绀侀幉锟犳嚌閸撗呯煋闁圭虎鍣弫鍡涙煟閺傚灝鎮戦柛?${periodCount} 闂傚倷绀侀幖顐︽偋韫囨稑绐楅幖鎼厛閺佸銇勯弬瑁や粴闁圭儤顨呯粻?
-        hintEl.style.color = '#16a34a';
     }, 100);
 }
+
 
 function renderStudentComparePage(page) {
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
@@ -11048,15 +11084,18 @@ async function loadCloudStudentCompare(key, selfOnly = false) {
         const payload = typeof raw === 'string' ? JSON.parse(raw) : raw;
         payload.key = key;
 
-        STUDENT_MULTI_PERIOD_COMPARE_CACHE = {
-            school: payload.school,
-            examIds: payload.examIds,
-            periodCount: payload.periodCount,
-            subjects: payload.subjects,
-            studentsCompareData: Array.isArray(payload.studentsCompareData) ? payload.studentsCompareData : [],
-            currentPage: 1,
-            pageSize: 20
-        };
+        const controller = window.StudentCompareControllerService;
+        STUDENT_MULTI_PERIOD_COMPARE_CACHE = controller && typeof controller.hydrateStudentCompareCache === 'function'
+            ? controller.hydrateStudentCompareCache(payload, { pageSize: 20 })
+            : {
+                school: payload.school,
+                examIds: payload.examIds,
+                periodCount: payload.periodCount,
+                subjects: payload.subjects,
+                studentsCompareData: Array.isArray(payload.studentsCompareData) ? payload.studentsCompareData : [],
+                currentPage: 1,
+                pageSize: 20
+            };
 
         const user = getCurrentUser();
         const isParentOrStudent = user && RoleManager.hasAnyRole(user, ['parent', 'student']) &&
