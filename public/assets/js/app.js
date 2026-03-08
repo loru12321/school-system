@@ -5432,22 +5432,33 @@ let IS_LOCAL_LOADING = false;
 // 2. 切换 AI 来源 (UI 交互)
 function toggleAISource() {
     if (AI_DISABLED) return aiDisabledAlert();
-    const source = document.querySelector('input[name="ai_source"]:checked').value;
+
+    const selectedSourceEl = document.querySelector('input[name="ai_source"]:checked');
+    if (!selectedSourceEl) {
+        console.warn('[AI] Missing selected source input: ai_source');
+        return;
+    }
+
+    const source = selectedSourceEl.value;
+    const cloudConfigEl = document.getElementById('ai-config-cloud');
+    const localConfigEl = document.getElementById('ai-config-local');
+    const localStatusEl = document.getElementById('local-ai-status');
+
     LLM_CONFIG.source = source;
     if (source === 'cloud') {
-        document.getElementById('ai-config-cloud').classList.remove('hidden');
-        document.getElementById('ai-config-local').classList.add('hidden');
+        if (cloudConfigEl) cloudConfigEl.classList.remove('hidden');
+        if (localConfigEl) localConfigEl.classList.add('hidden');
     } else {
-        document.getElementById('ai-config-cloud').classList.add('hidden');
-        document.getElementById('ai-config-local').classList.remove('hidden');
-        // 检查浏览器是否支持 WebGPU
-        if (!navigator.gpu) {
-            document.getElementById('local-ai-status').innerHTML = '<span style="color:red">❌ 您的浏览器不支持 WebGPU，无法使用本地 AI。请尝试升级 Chrome/Edge 浏览器。</span>';
+        if (cloudConfigEl) cloudConfigEl.classList.add('hidden');
+        if (localConfigEl) localConfigEl.classList.remove('hidden');
+        // Check whether browser supports WebGPU
+        if (!navigator.gpu && localStatusEl) {
+            localStatusEl.innerHTML = '<span style="color:red">Browser does not support WebGPU. Please use the cloud AI mode.</span>';
         }
     }
 }
 
-// 3. 初始化本地模型 (WebLLM 核心)
+// 3. Initialize local model (WebLLM core)
 async function initLocalModel() {
     if (IS_LOCAL_LOADING) return;
     if (!window.webllm) return alert("WebLLM 库尚未加载完成，请检查网络或刷新页面");
@@ -5464,12 +5475,29 @@ async function initLocalModel() {
         }
     }
 
-    const modelId = document.getElementById('local_model_select').value;
-    IS_LOCAL_LOADING = true;
-
+    const modelSelectEl = document.getElementById('local_model_select');
     const statusEl = document.getElementById('local-ai-status');
     const progressEl = document.getElementById('local-ai-progress');
     const btn = document.querySelector('button[onclick="initLocalModel()"]');
+    const modelId = modelSelectEl?.value;
+
+    if (!modelSelectEl || !statusEl || !progressEl || !btn) {
+        console.warn('[AI] Local AI controls are missing in current view', {
+            hasModelSelect: !!modelSelectEl,
+            hasStatus: !!statusEl,
+            hasProgress: !!progressEl,
+            hasButton: !!btn
+        });
+        if (window.UI) UI.toast('Local AI panel is not available on current page', 'warning');
+        return;
+    }
+
+    if (!modelId) {
+        if (window.UI) UI.toast('Please select a local model first', 'warning');
+        return;
+    }
+
+    IS_LOCAL_LOADING = true;
 
     btn.disabled = true;
     btn.innerHTML = '⏳ 加载中...';
