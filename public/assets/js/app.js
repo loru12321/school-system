@@ -287,6 +287,25 @@ window.restoreMainWorkspaceView = function () {
     if (mobApp) mobApp.style.display = 'none';
     if (parentContainer) parentContainer.style.display = 'none';
 };
+
+window.showLoginOverlayView = function () {
+    const app = document.getElementById('app');
+    const overlay = document.getElementById('login-overlay');
+    const mobApp = document.getElementById('mobile-manager-app');
+    const parentContainer = document.getElementById('parent-view-container');
+    const loader = document.getElementById('global-loader');
+
+    if (app) {
+        app.classList.add('hidden');
+        app.style.display = '';
+    }
+    if (overlay) overlay.style.display = 'flex';
+    if (mobApp) mobApp.style.display = 'none';
+    if (parentContainer) parentContainer.style.display = 'none';
+    if (loader) loader.classList.add('hidden');
+    window.setLoginBusyState(false, '立即登录');
+    window.setLoginFeedback('');
+};
 // 🔐 权限与账号管理系统核心
 const Auth = {
     currentUser: null,
@@ -303,32 +322,55 @@ const Auth = {
     // 初始化：检查会话状态
     init: async function () {
         const session = sessionStorage.getItem('CURRENT_USER');
-        if (session) {
-            this.currentUser = JSON.parse(session);
-            this.applyRoleView();
-            document.getElementById('login-overlay').style.display = 'none';
+        if (!session) {
+            this.currentUser = null;
+            window.showLoginOverlayView();
+            return;
+        }
 
-            // 如果是家长，恢复视图
-            if (this.currentUser.role === 'parent') {
-                if ((!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function' && !this._parentDataRecovering) {
-                    this._parentDataRecovering = true;
-                    try {
-                        UI.loading(true, "正在恢复学生数据...");
-                        await loadCloudData();
-                    } catch (e) {
-                        console.warn('家长会话恢复：云端数据拉取失败', e);
-                    } finally {
-                        this._parentDataRecovering = false;
-                        UI.loading(false);
-                    }
+        try {
+            this.currentUser = JSON.parse(session);
+        } catch (e) {
+            console.warn('登录会话解析失败，已回退到登录页:', e);
+            sessionStorage.removeItem('CURRENT_USER');
+            sessionStorage.removeItem('CURRENT_ROLE');
+            sessionStorage.removeItem('CURRENT_ROLES');
+            this.currentUser = null;
+            window.showLoginOverlayView();
+            return;
+        }
+
+        if (!this.currentUser || !this.currentUser.role) {
+            this.currentUser = null;
+            window.showLoginOverlayView();
+            return;
+        }
+
+        this.applyRoleView();
+        const loginOverlay = document.getElementById('login-overlay');
+        if (loginOverlay) loginOverlay.style.display = 'none';
+
+        if (this.currentUser.role === 'parent') {
+            if ((!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function' && !this._parentDataRecovering) {
+                this._parentDataRecovering = true;
+                try {
+                    UI.loading(true, "正在恢复学生数据...");
+                    await loadCloudData();
+                } catch (e) {
+                    console.warn('家长会话恢复：云端数据拉取失败', e);
+                } finally {
+                    this._parentDataRecovering = false;
+                    UI.loading(false);
                 }
-                this.renderParentView();
             }
-            // 🟢 补充：如果是其他角色，恢复主视图 (防止刷新后空白)
-            else if (this.currentUser.role !== 'parent') {
-                window.restoreMainWorkspaceView();
-                if (typeof renderNavigation === 'function') renderNavigation();
-            }
+            this.renderParentView();
+            return;
+        }
+
+        window.restoreMainWorkspaceView();
+        if (typeof renderNavigation === 'function') renderNavigation();
+        if (typeof ensureWorkspaceSectionForCurrentUser === 'function') {
+            ensureWorkspaceSectionForCurrentUser();
         }
     },
 
@@ -443,6 +485,7 @@ const Auth = {
             } else {
                 window.restoreMainWorkspaceView();
                 if (typeof renderNavigation === 'function') renderNavigation();
+                if (typeof ensureWorkspaceSectionForCurrentUser === 'function') ensureWorkspaceSectionForCurrentUser();
                 if (typeof updateSchoolSelect === 'function') updateSchoolSelect();
                 if (typeof renderTables === 'function') renderTables();
 
@@ -459,6 +502,8 @@ const Auth = {
                         sel.dispatchEvent(new Event('change'));
                     }
                 }
+
+                if (typeof ensureWorkspaceSectionForCurrentUser === 'function') ensureWorkspaceSectionForCurrentUser();
 
                 if (matchedUser.role === 'teacher') {
                     UI.toast('\u6b22\u8fce\u60a8\uff0c' + matchedUser.name + '\u8001\u5e08', 'success');
@@ -484,16 +529,22 @@ const Auth = {
             }
 
             if (typeof loadCloudData === 'function') {
-                UI.loading(true, '\u6b63\u5728\u540c\u6b65\u6700\u65b0\u6210\u7ee9\u6570\u636e...');
+                UI.loading(true, '正在同步最新成绩数据...');
                 try {
                     await loadCloudData();
                 } catch (syncErr) {
-                    console.warn('\u767b\u5f55\u540e\u4e91\u7aef\u540c\u6b65\u5931\u8d25\uff0c\u5df2\u56de\u9000\u672c\u5730\u89c6\u56fe:', syncErr);
+                    console.warn('登录后云端同步失败，已回退本地视图:', syncErr);
                     if (matchedUser.role !== 'parent') {
                         window.restoreMainWorkspaceView();
                     }
                     if (window.UI) {
-                        UI.toast('\u5df2\u767b\u5f55\u6210\u529f\uff0c\u4f46\u4e91\u7aef\u6570\u636e\u540c\u6b65\u5931\u8d25\uff1a' + (syncErr.message || '\u8bf7\u7a0d\u540e\u91cd\u8bd5'), 'warning');
+                        UI.toast('已登录成功，但云端数据同步失败：' + (syncErr.message || '请稍后重试'), 'warning');
+                    }
+                } finally {
+                    if (matchedUser.role !== 'parent') {
+                        window.restoreMainWorkspaceView();
+                        if (typeof renderNavigation === 'function') renderNavigation();
+                        if (typeof ensureWorkspaceSectionForCurrentUser === 'function') ensureWorkspaceSectionForCurrentUser();
                     }
                 }
             }
@@ -5768,6 +5819,64 @@ const NAV_STRUCTURE = {
 
 let currentCategory = 'data';
 
+function getAccessibleCategoryKeysForRole(role) {
+    const keys = Object.keys(NAV_STRUCTURE);
+    if (role === 'teacher' || role === 'class_teacher') {
+        return keys.filter(key => key === 'class' || key === 'student');
+    }
+    if (role === 'parent') {
+        return keys.filter(key => key === 'student');
+    }
+    return keys;
+}
+
+function syncCategoryForRole(role) {
+    const accessibleKeys = getAccessibleCategoryKeysForRole(role);
+    if (!accessibleKeys.length) return [];
+    if (!accessibleKeys.includes(currentCategory)) {
+        currentCategory = accessibleKeys[0];
+    }
+    const color = NAV_STRUCTURE[currentCategory] && NAV_STRUCTURE[currentCategory].color;
+    if (color) {
+        document.documentElement.style.setProperty('--primary', color);
+    }
+    return accessibleKeys;
+}
+
+function getFirstAccessibleModuleForRole(role) {
+    const accessibleKeys = getAccessibleCategoryKeysForRole(role);
+    for (const key of accessibleKeys) {
+        const category = NAV_STRUCTURE[key];
+        if (!category || !Array.isArray(category.items)) continue;
+        for (const item of category.items) {
+            if (typeof canAccessModule === 'function' && !canAccessModule(item.id)) continue;
+            if (role === 'teacher' && ['single-school-eval', 'exam-arranger', 'freshman-simulator'].includes(item.id)) continue;
+            if (item.id === 'report-generator' && typeof CONFIG !== 'undefined' && !CONFIG.showQuery) continue;
+            return item.id;
+        }
+    }
+    return '';
+}
+
+function ensureWorkspaceSectionForCurrentUser(preferredId = '') {
+    const role = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser.role : 'guest';
+    const activeSection = document.querySelector('.section.active');
+
+    if (preferredId && document.getElementById(preferredId) && canAccessModule(preferredId)) {
+        if (!activeSection || activeSection.id !== preferredId) switchTab(preferredId);
+        return;
+    }
+
+    if (activeSection && canAccessModule(activeSection.id)) {
+        return;
+    }
+
+    const fallbackId = getFirstAccessibleModuleForRole(role);
+    if (fallbackId && document.getElementById(fallbackId)) {
+        switchTab(fallbackId);
+    }
+}
+
 function renderNavigation() {
     const sidebarNav = document.getElementById('sidebar-nav');
     if (!sidebarNav) return;
@@ -5778,11 +5887,7 @@ function renderNavigation() {
     const restrictedRoles = ['teacher', 'class_teacher'];
     const isRestricted = restrictedRoles.includes(role);
     const isTeacherRole = (role === 'teacher' || role === 'class_teacher');
-
-    if (isRestricted && (currentCategory === 'data' || currentCategory === 'tools')) {
-        currentCategory = 'town';
-        document.documentElement.style.setProperty('--primary', NAV_STRUCTURE['town'].color);
-    }
+    syncCategoryForRole(role);
 
     Object.keys(NAV_STRUCTURE).forEach(key => {
         const cat = NAV_STRUCTURE[key];
@@ -5840,8 +5945,14 @@ function renderSubNavigation() {
         if (item.id === 'report-generator' && typeof CONFIG !== 'undefined' && !CONFIG.showQuery) return false;
         return true;
     });
-
-    if (validItems.length === 0) return;
+    if (validItems.length === 0) {
+        const fallbackCategory = getAccessibleCategoryKeysForRole(role).find(key => key !== currentCategory && NAV_STRUCTURE[key] && Array.isArray(NAV_STRUCTURE[key].items) && NAV_STRUCTURE[key].items.some(item => canAccessModule(item.id)));
+        if (fallbackCategory) {
+            currentCategory = fallbackCategory;
+            renderSubNavigation();
+        }
+        return;
+    }
 
     validItems.forEach(item => {
         const chip = document.createElement('div');
