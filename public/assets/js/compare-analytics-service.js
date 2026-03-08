@@ -1117,6 +1117,98 @@
         };
     }
 
+
+    function buildStudentCompareCloudPayload(options) {
+        const opts = options || {};
+        const cache = opts.cache || {};
+        const user = opts.user || {};
+        const cohortId = String(opts.cohortId || 'unknown').trim() || 'unknown';
+        const timestamp = String(opts.timestamp || '').trim() || new Date().toISOString().slice(0, 10);
+        const school = String(cache.school || '').trim();
+        const safeSchool = sanitizeCloudSegment(school) || 'school';
+        const examIds = Array.isArray(cache.examIds) ? cache.examIds.filter(Boolean) : [];
+        const periodCount = Number(cache.periodCount) === 3 ? 3 : 2;
+        const title = String(opts.title || '').trim() || (school + ' ' + periodCount + '\u671f\u5b66\u751f\u591a\u671f\u5bf9\u6bd4(' + examIds.join(' vs ') + ')');
+        return {
+            key: 'STUDENT_COMPARE_' + cohortId + '_' + safeSchool + '_' + examIds.join('_') + '_' + timestamp,
+            title: title,
+            payload: {
+                school: school,
+                examIds: examIds,
+                periodCount: periodCount,
+                subjects: Array.isArray(cache.subjects) ? cache.subjects : [],
+                title: title,
+                studentCount: Array.isArray(cache.studentsCompareData) ? cache.studentsCompareData.length : 0,
+                studentsCompareData: (Array.isArray(cache.studentsCompareData) ? cache.studentsCompareData : []).map(function(student) {
+                    return {
+                        id: student && student.id,
+                        school: student && student.school,
+                        name: student && student.name,
+                        class: student && student.class,
+                        periods: student && student.periods,
+                        scoreDiff: student && student.scoreDiff,
+                        rankSchoolDiff: student && student.rankSchoolDiff,
+                        rankTownDiff: student && student.rankTownDiff,
+                        latestTotal: student && student.latestTotal,
+                        progressType: student && student.progressType
+                    };
+                }),
+                createdBy: user.username || user.name || user.email,
+                createdAt: new Date().toISOString()
+            }
+        };
+    }
+
+    function parseStudentCompareCloudKey(key) {
+        const rawKey = String(key || '').trim();
+        const prefix = 'STUDENT_COMPARE_';
+        const body = rawKey.indexOf(prefix) === 0 ? rawKey.substring(prefix.length) : rawKey;
+        const parts = body.split('_').filter(function(part) { return part !== ''; });
+        let cohortId = parts[0] || '';
+        const cohortMatch = cohortId.match(/^(\d{4}(?:\u7ea7)?)/);
+        if (cohortMatch) cohortId = cohortMatch[1];
+        return {
+            key: rawKey,
+            cohortId: cohortId,
+            school: parts[1] || '',
+            dateTag: parts.length ? parts[parts.length - 1] : ''
+        };
+    }
+
+    function buildStudentCompareListItems(options) {
+        const opts = options || {};
+        const records = Array.isArray(opts.records) ? opts.records : [];
+        return records.map(function(record) {
+            const parsed = parseStudentCompareCloudKey(record && record.key);
+            return {
+                key: String(record && record.key || ''),
+                displayDate: formatZhDateTime(record && record.updated_at),
+                cohortLabel: parsed.cohortId || '\u672a\u77e5\u5c4a\u522b',
+                schoolLabel: parsed.school || '\u5b66\u751f\u591a\u671f\u5bf9\u6bd4'
+            };
+        });
+    }
+
+    function buildStudentCompareListHtml(options) {
+        const opts = options || {};
+        const items = buildStudentCompareListItems(opts);
+        const loadFunctionName = /^[\w$.]+$/.test(String(opts.loadFunctionName || '')) ? String(opts.loadFunctionName) : 'loadCloudStudentCompare';
+        return items.map(function(item) {
+            return '<div style="padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" data-key="' + escapeHtml(item.key) + '" onclick="' + loadFunctionName + '(this.getAttribute(&quot;data-key&quot;))">'
+                + '<div style="flex:1;">'
+                + '<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">'
+                + '<span style="background:#f0fdf4; color:#16a34a; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">' + escapeHtml(item.cohortLabel) + '</span>'
+                + '<span style="font-weight:600; color:#334155;">' + escapeHtml(item.schoolLabel) + '</span>'
+                + '</div>'
+                + '<div style="font-size:11px; color:#94a3b8; font-family:monospace;">' + escapeHtml(item.key) + '</div>'
+                + '</div>'
+                + '<div style="text-align:right;">'
+                + '<div style="font-size:12px; color:#64748b;">' + escapeHtml(item.displayDate || '-') + '</div>'
+                + '<div style="font-size:11px; color:#3b82f6; margin-top:2px;">\u70b9\u51fb\u67e5\u770b &gt;</div>'
+                + '</div>'
+                + '</div>';
+        }).join('');
+    }
     window.CompareAnalyticsService = {
         calcSchoolMetricsFromRows: calcSchoolMetricsFromRows,
         getSummaryEntryBySchool: getSummaryEntryBySchool,
@@ -1133,6 +1225,9 @@
         buildTeacherMultiPeriodComparison: buildTeacherMultiPeriodComparison,
         buildTeacherMultiPeriodExportData: buildTeacherMultiPeriodExportData,
         buildAllTeachersMultiPeriodComparison: buildAllTeachersMultiPeriodComparison,
-        buildAllTeachersMultiPeriodExportData: buildAllTeachersMultiPeriodExportData
+        buildAllTeachersMultiPeriodExportData: buildAllTeachersMultiPeriodExportData,
+        buildStudentCompareCloudPayload: buildStudentCompareCloudPayload,
+        buildStudentCompareListItems: buildStudentCompareListItems,
+        buildStudentCompareListHtml: buildStudentCompareListHtml
     };
 })();

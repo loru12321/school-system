@@ -6782,6 +6782,98 @@
         };
     }
 
+
+    function buildStudentCompareCloudPayload(options) {
+        const opts = options || {};
+        const cache = opts.cache || {};
+        const user = opts.user || {};
+        const cohortId = String(opts.cohortId || 'unknown').trim() || 'unknown';
+        const timestamp = String(opts.timestamp || '').trim() || new Date().toISOString().slice(0, 10);
+        const school = String(cache.school || '').trim();
+        const safeSchool = sanitizeCloudSegment(school) || 'school';
+        const examIds = Array.isArray(cache.examIds) ? cache.examIds.filter(Boolean) : [];
+        const periodCount = Number(cache.periodCount) === 3 ? 3 : 2;
+        const title = String(opts.title || '').trim() || (school + ' ' + periodCount + '\u671f\u5b66\u751f\u591a\u671f\u5bf9\u6bd4(' + examIds.join(' vs ') + ')');
+        return {
+            key: 'STUDENT_COMPARE_' + cohortId + '_' + safeSchool + '_' + examIds.join('_') + '_' + timestamp,
+            title: title,
+            payload: {
+                school: school,
+                examIds: examIds,
+                periodCount: periodCount,
+                subjects: Array.isArray(cache.subjects) ? cache.subjects : [],
+                title: title,
+                studentCount: Array.isArray(cache.studentsCompareData) ? cache.studentsCompareData.length : 0,
+                studentsCompareData: (Array.isArray(cache.studentsCompareData) ? cache.studentsCompareData : []).map(function(student) {
+                    return {
+                        id: student && student.id,
+                        school: student && student.school,
+                        name: student && student.name,
+                        class: student && student.class,
+                        periods: student && student.periods,
+                        scoreDiff: student && student.scoreDiff,
+                        rankSchoolDiff: student && student.rankSchoolDiff,
+                        rankTownDiff: student && student.rankTownDiff,
+                        latestTotal: student && student.latestTotal,
+                        progressType: student && student.progressType
+                    };
+                }),
+                createdBy: user.username || user.name || user.email,
+                createdAt: new Date().toISOString()
+            }
+        };
+    }
+
+    function parseStudentCompareCloudKey(key) {
+        const rawKey = String(key || '').trim();
+        const prefix = 'STUDENT_COMPARE_';
+        const body = rawKey.indexOf(prefix) === 0 ? rawKey.substring(prefix.length) : rawKey;
+        const parts = body.split('_').filter(function(part) { return part !== ''; });
+        let cohortId = parts[0] || '';
+        const cohortMatch = cohortId.match(/^(\d{4}(?:\u7ea7)?)/);
+        if (cohortMatch) cohortId = cohortMatch[1];
+        return {
+            key: rawKey,
+            cohortId: cohortId,
+            school: parts[1] || '',
+            dateTag: parts.length ? parts[parts.length - 1] : ''
+        };
+    }
+
+    function buildStudentCompareListItems(options) {
+        const opts = options || {};
+        const records = Array.isArray(opts.records) ? opts.records : [];
+        return records.map(function(record) {
+            const parsed = parseStudentCompareCloudKey(record && record.key);
+            return {
+                key: String(record && record.key || ''),
+                displayDate: formatZhDateTime(record && record.updated_at),
+                cohortLabel: parsed.cohortId || '\u672a\u77e5\u5c4a\u522b',
+                schoolLabel: parsed.school || '\u5b66\u751f\u591a\u671f\u5bf9\u6bd4'
+            };
+        });
+    }
+
+    function buildStudentCompareListHtml(options) {
+        const opts = options || {};
+        const items = buildStudentCompareListItems(opts);
+        const loadFunctionName = /^[\w$.]+$/.test(String(opts.loadFunctionName || '')) ? String(opts.loadFunctionName) : 'loadCloudStudentCompare';
+        return items.map(function(item) {
+            return '<div style="padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" data-key="' + escapeHtml(item.key) + '" onclick="' + loadFunctionName + '(this.getAttribute(&quot;data-key&quot;))">'
+                + '<div style="flex:1;">'
+                + '<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">'
+                + '<span style="background:#f0fdf4; color:#16a34a; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">' + escapeHtml(item.cohortLabel) + '</span>'
+                + '<span style="font-weight:600; color:#334155;">' + escapeHtml(item.schoolLabel) + '</span>'
+                + '</div>'
+                + '<div style="font-size:11px; color:#94a3b8; font-family:monospace;">' + escapeHtml(item.key) + '</div>'
+                + '</div>'
+                + '<div style="text-align:right;">'
+                + '<div style="font-size:12px; color:#64748b;">' + escapeHtml(item.displayDate || '-') + '</div>'
+                + '<div style="font-size:11px; color:#3b82f6; margin-top:2px;">\u70b9\u51fb\u67e5\u770b &gt;</div>'
+                + '</div>'
+                + '</div>';
+        }).join('');
+    }
     window.CompareAnalyticsService = {
         calcSchoolMetricsFromRows: calcSchoolMetricsFromRows,
         getSummaryEntryBySchool: getSummaryEntryBySchool,
@@ -6798,7 +6890,10 @@
         buildTeacherMultiPeriodComparison: buildTeacherMultiPeriodComparison,
         buildTeacherMultiPeriodExportData: buildTeacherMultiPeriodExportData,
         buildAllTeachersMultiPeriodComparison: buildAllTeachersMultiPeriodComparison,
-        buildAllTeachersMultiPeriodExportData: buildAllTeachersMultiPeriodExportData
+        buildAllTeachersMultiPeriodExportData: buildAllTeachersMultiPeriodExportData,
+        buildStudentCompareCloudPayload: buildStudentCompareCloudPayload,
+        buildStudentCompareListItems: buildStudentCompareListItems,
+        buildStudentCompareListHtml: buildStudentCompareListHtml
     };
 })();
 
@@ -18357,38 +18452,50 @@ async function saveStudentCompareToCloud() {
 
     const { school, examIds, periodCount, studentsCompareData, subjects } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
 
-    // 闂傚倷鐒﹂惇褰掑垂婵犳艾绐楅柟鐗堟緲閸ㄥ倹鎱ㄥΟ鎸庣【闁兼瓕顫夐妵鍕冀閵娧勫櫘濡炪倕绻掑ú鏉剏
     const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || 'unknown';
     const timestamp = new Date().toISOString().split('T')[0];
-    const key = `STUDENT_COMPARE_${cohortId}缂傚倸鍊烽懗鍫曟惞鎼粹槄鑰?{school}_${examIds.join('_')}_${timestamp}`;
+    const compareAnalytics = window.CompareAnalyticsService;
+    const cloudState = compareAnalytics && typeof compareAnalytics.buildStudentCompareCloudPayload === 'function'
+        ? compareAnalytics.buildStudentCompareCloudPayload({
+            cache: STUDENT_MULTI_PERIOD_COMPARE_CACHE,
+            user: user,
+            cohortId: cohortId,
+            timestamp: timestamp
+        })
+        : null;
 
-    const title = `${school} ${periodCount}闂傚倷绀侀幖顐︽偋韫囨稑绐楅幖鎼厛閺佸銇勯弬瑁や粴?(${examIds.join(' vs ')})`;
+    const key = cloudState && cloudState.key
+        ? cloudState.key
+        : 'STUDENT_COMPARE_' + cohortId + '_' + school + '_' + examIds.join('_') + '_' + timestamp;
+    const title = cloudState && cloudState.title
+        ? cloudState.title
+        : school + ' ' + periodCount + '\u671f\u5b66\u751f\u591a\u671f\u5bf9\u6bd4(' + examIds.join(' vs ') + ')';
 
     try {
-        if (window.UI) UI.loading(true, '闂傚倷娴囧▍鏇㈠垂濠靛牊顐介柕鍫濇川缁?濠电姵顔栭崰妤冩崲閹邦喖绶ら柦妯侯檧閼版寧銇勮箛鎾村櫧闁崇懓绉电换婵嬫濞戞瑯妫ら梺鍦櫕婵炩偓闁哄本鐩獮鎺懳旀繝鍐╊吋缂傚倷绶￠悡鍫ュ垂瀹曞洤鍨?..');
+        if (window.UI) UI.loading(true, '\u6b63\u5728\u5c06\u5b66\u751f\u591a\u671f\u5bf9\u6bd4\u7ed3\u679c\u4fdd\u5b58\u5230\u4e91\u7aef...');
 
-        // 闂傚倷绀侀幉锟犲垂闂堟党娑樜旈崥钘夋喘椤㈡鎷呯悰鈩冩暤婵犵數濞€濞佳兾涘☉銏犵闁绘绮悡鐔兼煏婵炲灝鍔氭い蹇ｄ邯閺岋繝宕卞▎蹇旂亪濡ょ姷鍋為崹鍧椼€佸璺哄耿婵炲棙鍩堝Σ鍗炩攽閻愭潙鐏﹂柟绋挎憸缁棃骞橀鑲╃暰闂佸壊鍋侀崕閬嶅磼閵娾晜鐓熼柡鍌涱儥濞堢姵绻涢崗纰辨當妞ゎ厼娼″畷濂稿幢濡も偓椤忣亝绻涢崼婵堝煟闁哄瞼鍠撻幏鐘诲灳閾忣偆褰茬紓鍌欐祰妞村摜鎹㈤崼婵堟殾闁挎繂顦介弫鍌炴煕閹板吀绨芥い鏃€妫冨鐑樺濞嗘垹蓱闂佽崵鍠嗛崕鎶藉箲閵忋倕鐒垫い鎺戝閸嬶繝鏌￠崶銊ь暡妞わ箑鍢茶彁闁搞儜宥堝惈濡ょ姷鍋樼欢姘躲€佸☉銏犖ч柛銉㈡櫓濡?
-        const payload = {
-            school,
-            examIds,
-            periodCount,
-            subjects,
-            title,
-            studentCount: studentsCompareData.length,
-            studentsCompareData: studentsCompareData.map(s => ({
-                name: s.name,
-                class: s.class,
-                periods: s.periods,
-                scoreDiff: s.scoreDiff,
-                rankSchoolDiff: s.rankSchoolDiff,
-                rankTownDiff: s.rankTownDiff,
-                latestTotal: s.latestTotal,
-                progressType: s.progressType
-            })),
-            createdBy: user.username || user.email,
-            createdAt: new Date().toISOString()
-        };
-
+        const payload = cloudState && cloudState.payload
+            ? cloudState.payload
+            : {
+                school,
+                examIds,
+                periodCount,
+                subjects,
+                title,
+                studentCount: studentsCompareData.length,
+                studentsCompareData: studentsCompareData.map(s => ({
+                    name: s.name,
+                    class: s.class,
+                    periods: s.periods,
+                    scoreDiff: s.scoreDiff,
+                    rankSchoolDiff: s.rankSchoolDiff,
+                    rankTownDiff: s.rankTownDiff,
+                    latestTotal: s.latestTotal,
+                    progressType: s.progressType
+                })),
+                createdBy: user.username || user.email,
+                createdAt: new Date().toISOString()
+            };
         const json = JSON.stringify(payload);
         const compressed = "LZ|" + LZString.compressToUTF16(json);
 
@@ -18435,16 +18542,16 @@ async function viewCloudStudentCompares(selfOnly = false) {
             
             if (target.name && target.class && target.school) {
                 // 婵犵數鍋炲娆撳触鐎ｎ喗鏅梻浣告啞钃遍柣鈺婂灠椤曪絾绻濆顑┿劍銇勯鐔风仴婵炲牊鍨垮娲川婵犲嫬鈪归梺鐟板暱闁帮綁鐛崱娑橀唶闁绘棁銆€閺嬫牕顪冮妶鍛闁哥噥鍨堕幆鍥寠婢光€抽叄瀹曞爼鏁愰崨顓涙嫟濠电偛顕崢褔骞婂鈧獮鍡涘礃椤旇偐顦板銈嗘礀閹冲酣寮ぐ鎺撳仭?
-                query = query.like('key', `STUDENT_COMPARE_${cohortId}缂傚倸鍊烽懗鍫曟惞鎼粹槄鑰?{target.school}_%`);
+                query = query.like('key', `STUDENT_COMPARE_${cohortId}%`);
             } else if (cohortId) {
                 // 闂傚倸鍊风欢锟犲磻閳ь剟鏌涚€ｎ偅宕岄柡灞诲€濆鍫曞箰鎼淬垺瀚抽梻浣规た娴滄瑩宕￠崘鑼殾婵°倕鎳忛崵瀣箾閸繄浠㈠ù鐘茬秺濮婃椽骞愭惔锝傛闂佸搫鐗滈崜鐔煎箖閿熺姵鏅柛鏇ㄥ墮閻濅即姊洪棃娑氱畾闁告挻绻堥獮蹇涙焼瀹ュ棗鈧爼鏌ｉ幇顖ｅ殝闁衡偓婵犳碍鐓涢柛鈩冪懃閺嬫稒顨?
-                query = query.like('key', `STUDENT_COMPARE_${cohortId}缂傚倸鍊烽懗鍫曟惞鎼粹槄鑰?`);
+                query = query.like('key', `STUDENT_COMPARE_${cohortId}%`);
             } else {
                 query = query.like('key', 'STUDENT_COMPARE_%');
             }
         } else if (!isAdminOrDirector && cohortId) {
             // 闂傚倷绀侀幖顐﹀箯鐎ｎ喖闂柨婵嗩槸閻掑灚銇勯幒宥堝厡妞わ絾鐓￠弻锟犲幢韫囨挷澹曢梻?闂備浇顕х€涒晠宕樼紒妯圭箚闁搞儺鍓欓弸?闂備浇顕уù鐑藉箠閹剧粯鍋夊┑鍌滎焾濮规煡姊洪鈧粔鎾儗濡や降浜滈煫鍥ㄦ尰閹兼劙鏌涘Ο缁樺唉闁哄矉缍侀、鏃堝礋闂堟稑澹堥梻浣虹《閺呮盯鎯岄崒姘煎殨闁汇垹澹婇弫鍡涙煃瑜滈崜鐔煎箚閸ャ劊鍋呴柛鎰╁妽閻庮剟姊虹紒姗嗘當闁绘妫涚划?
-            query = query.like('key', `STUDENT_COMPARE_${cohortId}缂傚倸鍊烽懗鍫曟惞鎼粹槄鑰?`);
+            query = query.like('key', `STUDENT_COMPARE_${cohortId}%`);
         } else {
             query = query.like('key', 'STUDENT_COMPARE_%');
         }
@@ -18501,28 +18608,24 @@ async function viewCloudStudentCompares(selfOnly = false) {
         }
 
         const loadFn = selfOnly ? 'loadCloudStudentCompareForCurrentStudent' : 'loadCloudStudentCompare';
-
-        // 闂傚倷绀侀幖顐も偓姘煎墯閺呰埖绂掔€ｎ€附鎱ㄥΟ鎸庣【缂佲偓閸℃ü绻嗛柕鍫濇噹椤忋儵鏌嶈閸撴瑩宕婊呯當闁绘柨鐨濆Σ鍫熸叏濮楀棗骞楁繛鍫涘灲濮婃椽鎮烽柇锕€娈堕梺绋跨箲閿曘垽宕洪埀顒併亜閹哄棗浜惧銈忛檮婢瑰棝鍩€椤掍礁鎼搁柛鏃€鍨垮顐㈩吋婢跺﹪鍞跺┑鐘绘涧濡厼顭囬柆宥嗙厸濠㈣泛鑻禒鈺佲攽椤斿搫鈧洟鈥旈崘顔肩＜闁绘劘灏欓鍥ㄧ節閵忥絾纭鹃悗鍨笒椤洭鏁撻悩宕囧幘?闂傚倷绀侀幖顐︽偋濠婂牆绀傛繛鎴烆焺瑜庡鍕偓锝庡亗濮橈箓姊洪幖鐐插姌闁告柨绉甸幈銊╁閵堝棛鍙?
-        const listHtml = listData.map((item, idx) => {
-            const keyParts = item.key.split('_');
-            const cohort = keyParts[1] || '闂傚倷绀侀幖顐︽偋濠婂嫮顩查柣鎰劋閸嬪倿鏌ㄥ☉妯侯仹婵炲矈浜滈埞鎴︽偐閹绘巻鍋撻幖浣瑰€?;
-            const school = keyParts[2] || '闂傚倷绀侀幖顐︽偋濠婂嫮顩查柣鎰劋閸嬪倿鏌ㄥ☉妯侯仱闁稿鎸搁埥澶愬箮閼恒儺鈧秹姊?;
-            const date = new Date(item.updated_at).toLocaleString('zh-CN');
-            return `<div style="padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="${loadFn}('${item.key}')">
-                    <div style="flex:1;">
-                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                            <span style="background:#f0fdf4; color:#16a34a; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${cohort}</span>
-                            <span style="font-weight:600; color:#334155;">${school}</span>
-                        </div>
-                        <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${item.key}</div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-size:12px; color:#64748b;">${date}</div>
-                        <div style="font-size:11px; color:#3b82f6; margin-top:2px;">闂傚倷鑳剁划顖炲礉濡ゅ懎绠犻柟鎹愵嚙閸氳銇勯弮鍌氫壕闁哥姴妫濋弻銊モ攽閸℃﹩妫ら梺?&gt;</div>
-                    </div>
-                </div>`;
-        }).join('');
-
+        const compareAnalytics = window.CompareAnalyticsService;
+        const listHtml = compareAnalytics && typeof compareAnalytics.buildStudentCompareListHtml === 'function'
+            ? compareAnalytics.buildStudentCompareListHtml({ records: listData, loadFunctionName: loadFn })
+            : listData.map((item) => {
+                const date = new Date(item.updated_at).toLocaleString('zh-CN');
+                return '<div style="padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" data-key="' + item.key + '" onclick="' + loadFn + '(this.getAttribute(&quot;data-key&quot;))">'
+                    + '<div style="flex:1;">'
+                    + '<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">'
+                    + '<span style="font-weight:600; color:#334155;">' + item.key + '</span>'
+                    + '</div>'
+                    + '<div style="font-size:11px; color:#94a3b8; font-family:monospace;">' + item.key + '</div>'
+                    + '</div>'
+                    + '<div style="text-align:right;">'
+                    + '<div style="font-size:12px; color:#64748b;">' + date + '</div>'
+                    + '<div style="font-size:11px; color:#3b82f6; margin-top:2px;">\u70b9\u51fb\u67e5\u770b &gt;</div>'
+                    + '</div>'
+                    + '</div>';
+            }).join('');
         if (typeof Swal !== 'undefined') {
             moveFocusOutOfParentView();
             Swal.fire({
