@@ -418,34 +418,55 @@ const Auth = {
                 throw new Error('系统连接错误：' + error.message);
             }
 
-            if (!data) {
-                window.setLoginFeedback('账号或密码错误，或该账号尚未同步到云端。', 'error');
-                return;
+            let finalUser = data;
+
+            if (!finalUser) {
+                // 🟢 智能降级：如果云端查不到，但在本地任课表中存在，则允许使用默认密码登录
+                const tMap = window.TEACHER_MAP || {};
+                const ctMap = window.CLASS_TEACHER_MAP || {};
+                const isTeacher = Object.values(tMap).some(names => String(names).includes(user));
+                const isClassTeacher = Object.values(ctMap).some(name => String(name).includes(user));
+                
+                if (isTeacher || isClassTeacher) {
+                    if (pass === 'yssy2016' || pass === '123456') {
+                        finalUser = {
+                            username: user,
+                            role: isClassTeacher ? 'class_teacher' : 'teacher',
+                            roles: [isClassTeacher ? 'class_teacher' : 'teacher']
+                        };
+                    } else {
+                        window.setLoginFeedback('未同步的账号请使用默认密码登录。', 'error');
+                        return;
+                    }
+                } else {
+                    window.setLoginFeedback('账号或密码错误，或该账号尚未同步到云端。', 'error');
+                    return;
+                }
             }
 
-            if (data.role === 'parent') {
+            if (finalUser.role === 'parent') {
                 if (!inputClass) {
                     window.setLoginFeedback('家长或学生账号必须输入班级后才能登录。', 'warning');
                     loginClassEl?.focus();
                     return;
                 }
 
-                const dbClass = String(data.class_name || '').replace(/\s+/g, '');
+                const dbClass = String(finalUser.class_name || '').replace(/\s+/g, '');
                 const userClass = String(inputClass || '').replace(/\s+/g, '');
 
                 if (dbClass !== userClass) {
-                    window.setLoginFeedback('班级不匹配，请核对后重试。系统记录班级：' + (data.class_name || '未录入'), 'error');
+                    window.setLoginFeedback('班级不匹配，请核对后重试。系统记录班级：' + (finalUser.class_name || '未录入'), 'error');
                     loginClassEl?.focus();
                     return;
                 }
             }
 
             const matchedUser = {
-                name: data.username,
-                role: data.role,
-                roles: data.roles || [data.role],
-                school: data.school,
-                class: data.class_name
+                name: finalUser.username,
+                role: finalUser.role,
+                roles: finalUser.roles || [finalUser.role],
+                school: finalUser.school,
+                class: finalUser.class_name
             };
 
             this.currentUser = matchedUser;
