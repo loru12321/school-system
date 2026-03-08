@@ -202,12 +202,61 @@
         return buildComparableRows(rawRows);
     }
 
+
+    function listTeacherOptions(options) {
+        const opts = options || {};
+        const school = String(opts.school || '').trim();
+        const subject = String(opts.subject || '').trim();
+        if (!school || !subject) return [];
+
+        const normalizeClass = typeof opts.normalizeClass === 'function' ? opts.normalizeClass : getNormalizeClass();
+        const normalizeSubject = typeof opts.normalizeSubject === 'function'
+            ? opts.normalizeSubject
+            : function(value) { return String(value || '').trim(); };
+        const teacherMap = opts.teacherMap || window.TEACHER_MAP || {};
+        const subjects = Array.isArray(opts.subjects) ? opts.subjects : (window.SUBJECTS || []);
+        const schools = opts.schools || window.SCHOOLS || {};
+        const classSchoolMap = opts.classSchoolMap || getClassSchoolMap(opts);
+        const schoolClasses = new Set(((schools[school] && schools[school].students) || []).map(student => normalizeClass(student && student.class)));
+
+        Object.entries(classSchoolMap || {}).forEach(function(entry) {
+            const cls = entry[0];
+            const sch = entry[1];
+            if (String(sch || '').trim() === school) {
+                schoolClasses.add(normalizeClass(cls));
+            }
+        });
+
+        const names = new Set();
+        Object.entries(teacherMap).forEach(function(entry) {
+            const key = entry[0];
+            const teacherName = entry[1];
+            const parts = String(key || '').split('_');
+            const rawClass = parts[0];
+            const rawSubject = parts[1];
+            const cls = normalizeClass(rawClass);
+            const matchedSubject = subjects.find(function(item) {
+                return normalizeSubject(item) === normalizeSubject(rawSubject);
+            });
+            if (!cls || !matchedSubject) return;
+            if (matchedSubject !== subject) return;
+            if (!schoolClasses.has(cls)) return;
+            const name = String(teacherName || '').trim();
+            if (name) names.add(name);
+        });
+
+        return Array.from(names).sort(function(a, b) {
+            return a.localeCompare(b, 'zh-CN');
+        });
+    }
+
     window.CompareDataService = {
         normalizeSchoolName,
         filterRowsBySchool,
         listAvailableSchools,
         getClassSchoolMap,
         inferDefaultSchool,
-        getExamRowsForCompare
+        getExamRowsForCompare,
+        listTeacherOptions
     };
 })();

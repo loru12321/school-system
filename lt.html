@@ -5043,13 +5043,62 @@
         return buildComparableRows(rawRows);
     }
 
+
+    function listTeacherOptions(options) {
+        const opts = options || {};
+        const school = String(opts.school || '').trim();
+        const subject = String(opts.subject || '').trim();
+        if (!school || !subject) return [];
+
+        const normalizeClass = typeof opts.normalizeClass === 'function' ? opts.normalizeClass : getNormalizeClass();
+        const normalizeSubject = typeof opts.normalizeSubject === 'function'
+            ? opts.normalizeSubject
+            : function(value) { return String(value || '').trim(); };
+        const teacherMap = opts.teacherMap || window.TEACHER_MAP || {};
+        const subjects = Array.isArray(opts.subjects) ? opts.subjects : (window.SUBJECTS || []);
+        const schools = opts.schools || window.SCHOOLS || {};
+        const classSchoolMap = opts.classSchoolMap || getClassSchoolMap(opts);
+        const schoolClasses = new Set(((schools[school] && schools[school].students) || []).map(student => normalizeClass(student && student.class)));
+
+        Object.entries(classSchoolMap || {}).forEach(function(entry) {
+            const cls = entry[0];
+            const sch = entry[1];
+            if (String(sch || '').trim() === school) {
+                schoolClasses.add(normalizeClass(cls));
+            }
+        });
+
+        const names = new Set();
+        Object.entries(teacherMap).forEach(function(entry) {
+            const key = entry[0];
+            const teacherName = entry[1];
+            const parts = String(key || '').split('_');
+            const rawClass = parts[0];
+            const rawSubject = parts[1];
+            const cls = normalizeClass(rawClass);
+            const matchedSubject = subjects.find(function(item) {
+                return normalizeSubject(item) === normalizeSubject(rawSubject);
+            });
+            if (!cls || !matchedSubject) return;
+            if (matchedSubject !== subject) return;
+            if (!schoolClasses.has(cls)) return;
+            const name = String(teacherName || '').trim();
+            if (name) names.add(name);
+        });
+
+        return Array.from(names).sort(function(a, b) {
+            return a.localeCompare(b, 'zh-CN');
+        });
+    }
+
     window.CompareDataService = {
         normalizeSchoolName,
         filterRowsBySchool,
         listAvailableSchools,
         getClassSchoolMap,
         inferDefaultSchool,
-        getExamRowsForCompare
+        getExamRowsForCompare,
+        listTeacherOptions
     };
 })();
 </script>
@@ -5115,12 +5164,142 @@
         }
     }
 
+
+    function renderTeacherSelect(selectEl, teacherNames, placeholder) {
+        renderOptions(selectEl, teacherNames || [], placeholder || '--\u8bf7\u9009\u62e9\u6559\u5e08--');
+    }
+
+    function toggleConditionalWrap(controlEl, wrapEl, options) {
+        if (!controlEl || !wrapEl) return;
+        const opts = options || {};
+        const displayValue = opts.displayValue || '3';
+        const displayStyle = opts.displayStyle || 'inline-flex';
+        wrapEl.style.display = String(controlEl.value || '') === String(displayValue) ? displayStyle : 'none';
+    }
+
+    function setCompareFeedback(config) {
+        const cfg = config || {};
+        const hintEl = cfg.hintEl;
+        const resultEl = cfg.resultEl;
+        if (hintEl) {
+            hintEl.innerHTML = cfg.message || '';
+            hintEl.style.color = cfg.color || '#64748b';
+        }
+        if (resultEl && cfg.clearResult) {
+            resultEl.innerHTML = '';
+        }
+    }
+
+    function buildTeacherSingleCompareView(options) {
+        const opts = options || {};
+        const teacher = String(opts.teacher || '').trim();
+        const subject = String(opts.subject || '').trim();
+        const examIds = Array.isArray(opts.examIds) ? opts.examIds : [];
+        const metricRows = String(opts.metricRows || '');
+        const delta = opts.delta || {};
+        const deltaAvg = typeof delta.townshipAvg === 'number' ? delta.townshipAvg : null;
+        const deltaExc = typeof delta.townshipExc === 'number' ? delta.townshipExc : null;
+        const deltaPass = typeof delta.townshipPass === 'number' ? delta.townshipPass : null;
+        const fmt = function(value) {
+            if (typeof value !== 'number') return '-';
+            return (value >= 0 ? '+' : '') + value;
+        };
+
+        return {
+            resultHtml: ''
+                + '<div class="sub-header">\u6559\u5e08\u591a\u671f\u5bf9\u6bd4\uff1a' + teacher + ' / ' + subject + '</div>'
+                + '<div class="table-wrap"><table class="mobile-card-table"><thead><tr>'
+                + '<th>\u671f\u6b21</th><th>\u4e61\u9547\u5747\u5206\u6392\u540d</th><th>\u4f18\u79c0\u7387\u6392\u540d</th><th>\u53ca\u683c\u7387\u6392\u540d</th>'
+                + '</tr></thead><tbody>' + metricRows + '</tbody></table></div>'
+                + '<div style="margin-top:8px; font-size:12px; color:#475569;">'
+                + '\u5bf9\u6bd4\u533a\u95f4\uff1a' + (examIds[0] || '\u9996\u671f') + ' -> ' + (examIds[examIds.length - 1] || '\u672b\u671f') + '\uff1b'
+                + '\u4e61\u9547\u5747\u5206\u6392\u540d\u53d8\u5316\uff1a' + fmt(deltaAvg) + '\uff1b'
+                + '\u4f18\u79c0\u7387\u6392\u540d\u53d8\u5316\uff1a' + fmt(deltaExc) + '\uff1b'
+                + '\u53ca\u683c\u7387\u6392\u540d\u53d8\u5316\uff1a' + fmt(deltaPass)
+                + '</div>',
+            hintHtml: '\u5df2\u751f\u6210 ' + (opts.periodCount || examIds.length || 2) + ' \u671f\u6559\u5e08\u591a\u671f\u5bf9\u6bd4\uff1a' + examIds.join(' / '),
+            hintColor: '#16a34a'
+        };
+    }
+
+    function buildTeacherBatchCompareView(options) {
+        const opts = options || {};
+        const school = String(opts.school || '').trim();
+        const examIds = Array.isArray(opts.examIds) ? opts.examIds : [];
+        const results = Array.isArray(opts.results) ? opts.results : [];
+        let ths = '<th>\u6559\u5e08</th><th>\u5b66\u79d1</th>';
+        examIds.forEach(function(eid) {
+            const shortName = String(eid || '').split('-').pop() || eid;
+            ths += '<th style="background:#f1f5f9; border-left:2px solid white;">' + shortName
+                + '<br><span style="font-size:10px;font-weight:normal">\u5747\u5206\u6392\u540d / \u4f18\u79c0\u7387\u6392\u540d / \u53ca\u683c\u7387\u6392\u540d</span></th>';
+        });
+        ths += '<th style="background:#fff7ed; border-left:2px solid white;">\u53d8\u5316<br><span style="font-size:10px;font-weight:normal">\u6392\u540d\u53d8\u5316\u503c</span></th>';
+
+        const fmtDelta = function(deltaVal) {
+            if (typeof deltaVal !== 'number') return '<span style="color:#94a3b8;">-</span>';
+            const color = deltaVal > 0 ? 'green' : (deltaVal < 0 ? 'red' : 'gray');
+            const icon = deltaVal > 0 ? '\u2191' : (deltaVal < 0 ? '\u2193' : '-');
+            return '<span style="color:' + color + ';">' + icon + ' ' + Math.abs(deltaVal) + '</span>';
+        };
+
+        const trs = results.map(function(item) {
+            let tds = '<td style="font-weight:bold;">' + item.teacher + '</td><td>' + item.subject + '</td>';
+            (item.details || []).forEach(function(detail) {
+                const current = detail.current;
+                if (current) {
+                    tds += '<td style="border-left:1px solid #e2e8f0; text-align:center;">'
+                        + '<div style="font-size:11px; color:#334155;">\u5747 ' + (typeof current.townshipRankAvg === 'number' ? current.townshipRankAvg : '-') + '</div>'
+                        + '<div style="font-size:11px; color:#334155;">\u4f18 ' + (typeof current.townshipRankExc === 'number' ? current.townshipRankExc : '-') + '</div>'
+                        + '<div style="font-size:11px; color:#334155;">\u53ca ' + (typeof current.townshipRankPass === 'number' ? current.townshipRankPass : '-') + '</div>'
+                        + '</td>';
+                } else {
+                    tds += '<td style="border-left:1px solid #e2e8f0; text-align:center; color:#cbd5e1;">-</td>';
+                }
+            });
+
+            if (item.delta) {
+                tds += '<td style="border-left:1px solid #e2e8f0; text-align:center; background:#fffbf0;">'
+                    + '<div style="font-size:11px;">\u5747 ' + fmtDelta(item.delta.townshipAvg) + '</div>'
+                    + '<div style="font-size:11px;">\u4f18 ' + fmtDelta(item.delta.townshipExc) + '</div>'
+                    + '<div style="font-size:11px;">\u53ca ' + fmtDelta(item.delta.townshipPass) + '</div>'
+                    + '</td>';
+            } else {
+                tds += '<td style="border-left:1px solid #e2e8f0; text-align:center; background:#fffbf0; color:#cbd5e1;">-</td>';
+            }
+
+            return '<tr>' + tds + '</tr>';
+        }).join('');
+
+        return {
+            thsHtml: ths,
+            trsHtml: trs,
+            resultHtml: ''
+                + '<div class="sub-header" style="color:#ea580c;">\u5168\u6559\u5e08\u591a\u671f\u5bf9\u6bd4\uff1a' + school + '</div>'
+                + '<div class="table-wrap" style="max-height:600px; overflow-y:auto;">'
+                + '<table class="common-table" style="font-size:13px;">'
+                + '<thead style="position:sticky; top:0; z-index:10;"><tr>' + ths + '</tr></thead>'
+                + '<tbody>' + trs + '</tbody>'
+                + '</table>'
+                + '</div>'
+                + '<div style="margin-top:10px; display:flex; gap:10px;">'
+                + '<button class="btn btn-sm" onclick="exportAllTeachersMultiPeriodDiff(' + JSON.stringify(school) + ', ' + JSON.stringify(examIds.join('_')) + ')">\u5bfc\u51fa\u5168\u6559\u5e08\u5bf9\u6bd4 Excel</button>'
+                + '</div>',
+            hintHtml: '\u5df2\u751f\u6210 ' + school + ' \u5168\u6559\u5e08\u591a\u671f\u5bf9\u6bd4\uff0c\u5171 ' + results.length + ' \u6761\u8bb0\u5f55\uff1a' + examIds.join(' / '),
+            hintColor: '#16a34a'
+        };
+    }
+
     window.CompareUiService = {
         renderOptions,
         renderSchoolSelect,
         renderSubjectSelect,
         renderExamTriplet,
-        initializeCompareFilters
+        initializeCompareFilters,
+        renderTeacherSelect,
+        toggleConditionalWrap,
+        setCompareFeedback,
+        buildTeacherSingleCompareView,
+        buildTeacherBatchCompareView
     };
 })();
 </script>
@@ -18795,6 +18974,11 @@ async function loadCloudMacroCompare(key) {
 function onTeacherComparePeriodCountChange() {
     const countEl = document.getElementById('teacherComparePeriodCount');
     const wrap = document.getElementById('teacherCompareExam3Wrap');
+    const compareUi = window.CompareUiService;
+    if (compareUi && typeof compareUi.toggleConditionalWrap === 'function') {
+        compareUi.toggleConditionalWrap(countEl, wrap, { displayValue: '3', displayStyle: 'inline-flex' });
+        return;
+    }
     if (!countEl || !wrap) return;
     wrap.style.display = countEl.value === '3' ? 'inline-flex' : 'none';
 }
@@ -18853,18 +19037,17 @@ function updateTeacherCompareExamSelects() {
             schoolList,
             preferredSchool: MY_SCHOOL,
             subjects: SUBJECTS || [],
+            subjectSortFn: typeof sortSubjects === 'function' ? sortSubjects : null,
             examList: listAvailableExamsForCompare(),
             currentExamId: CURRENT_EXAM_ID
         });
     } else {
-        schoolEl.innerHTML = '<option value="">--闂備浇宕垫慨鏉懨洪妸鈺佺婵せ鍋撻柛鈹惧亾濡炪倖宸婚崑鎾淬亜閿旇棄顥嬮柍褜鍓氶崫搴ㄥ礉鎼淬劌鐒垫い鎺嶇閸犳洟姊婚崟顐㈩伃闁?-</option>';
-        schoolList.forEach(s => schoolEl.innerHTML += `<option value="${s}">${s}</option>`);
-        if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) {
-            schoolEl.value = MY_SCHOOL;
-        }
-        subjectEl.innerHTML = '<option value="">--闂備浇宕垫慨鏉懨洪妸鈺佺婵せ鍋撻柛鈹惧亾濡炪倖宸婚崑鎾淬亜閿旇棄顥嬮柍褜鍓氶崫搴ㄥ礉鎼淬劌鐒垫い鎺嶇閸犳洖鈹戦垾铏枠闁?-</option>';
-        (SUBJECTS || []).forEach(sub => {
-            subjectEl.innerHTML += `<option value="${sub}">${sub}</option>`;
+        schoolEl.innerHTML = '<option value="">--请选择学校--</option>';
+        schoolList.forEach(function(s) { schoolEl.innerHTML += '<option value="' + s + '">' + s + '</option>'; });
+        if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) schoolEl.value = MY_SCHOOL;
+        subjectEl.innerHTML = '<option value="">--请选择学科--</option>';
+        (SUBJECTS || []).forEach(function(sub) {
+            subjectEl.innerHTML += '<option value="' + sub + '">' + sub + '</option>';
         });
         renderSharedCompareExamTriplet(exam1El, exam2El, exam3El);
     }
@@ -18872,6 +19055,7 @@ function updateTeacherCompareExamSelects() {
     if (typeof updateTeacherCompareTeacherSelect === 'function') {
         updateTeacherCompareTeacherSelect();
     }
+    onTeacherComparePeriodCountChange();
 }
 
 function updateTeacherCompareTeacherSelect() {
@@ -18882,29 +19066,29 @@ function updateTeacherCompareTeacherSelect() {
 
     const school = schoolEl.value;
     const subject = subjectEl.value;
-    teacherEl.innerHTML = '<option value="">--闂備浇宕垫慨鏉懨洪妸鈺佺婵せ鍋撻柛鈹惧亾濡炪倖宸婚崑鎾淬亜閿旇棄顥嬮柍褜鍓氶崫搴ㄥ礉閹存繍鍤曟い鎰ㄦ噰閺嬪酣鐓崶銊︾闁?-</option>';
-    if (!school || !subject) return;
+    const compareData = window.CompareDataService;
+    const compareUi = window.CompareUiService;
+    const teacherNames = compareData && typeof compareData.listTeacherOptions === 'function'
+        ? compareData.listTeacherOptions({
+            school,
+            subject,
+            schools: SCHOOLS,
+            teacherMap: TEACHER_MAP,
+            subjects: SUBJECTS,
+            classSchoolMap: (typeof getClassSchoolMapForAllData === 'function') ? getClassSchoolMapForAllData() : {},
+            normalizeClass,
+            normalizeSubject
+        })
+        : [];
 
-    const schoolClasses = new Set((SCHOOLS[school]?.students || []).map(s => normalizeClass(s.class)));
-    const classSchoolMap = (typeof getClassSchoolMapForAllData === 'function') ? getClassSchoolMapForAllData() : {};
-    Object.entries(classSchoolMap).forEach(([cls, sch]) => {
-        if (sch === school) schoolClasses.add(normalizeClass(cls));
-    });
-    const names = new Set();
-    Object.entries(TEACHER_MAP || {}).forEach(([key, teacherName]) => {
-        const [rawClass, rawSubject] = String(key).split('_');
-        const cls = normalizeClass(rawClass);
-        const sub = SUBJECTS.find(s => normalizeSubject(s) === normalizeSubject(rawSubject));
-        if (!cls || !sub) return;
-        if (sub !== subject) return;
-        if (!schoolClasses.has(cls)) return;
-        const name = String(teacherName || '').trim();
-        if (name) names.add(name);
-    });
-
-    [...names].sort((a, b) => a.localeCompare(b, 'zh-CN')).forEach(name => {
-        teacherEl.innerHTML += `<option value="${name}">${name}</option>`;
-    });
+    if (compareUi && typeof compareUi.renderTeacherSelect === 'function') {
+        compareUi.renderTeacherSelect(teacherEl, teacherNames, '--请选择教师--');
+    } else {
+        teacherEl.innerHTML = '<option value="">--请选择教师--</option>';
+        teacherNames.forEach(function(name) {
+            teacherEl.innerHTML += '<option value="' + name + '">' + name + '</option>';
+        });
+    }
 }
 
 function buildTeacherStatsForExam(rows, school, subjectFilter) {
@@ -19060,45 +19244,53 @@ function renderTeacherMultiPeriodComparison() {
     const e3El = document.getElementById('teacherCompareExam3');
     if (!hintEl || !resultEl || !countEl || !schoolEl || !subjectEl || !teacherEl || !e1El || !e2El || !e3El) return;
 
-    const periodCount = parseInt(countEl.value || '2');
+    const periodCount = parseInt(countEl.value || '2', 10);
     const school = schoolEl.value;
     const subject = subjectEl.value;
     const teacher = teacherEl.value;
     const examIds = periodCount === 3 ? [e1El.value, e2El.value, e3El.value] : [e1El.value, e2El.value];
+    const compareUi = window.CompareUiService;
+    const setFeedback = function(message, color, clearResult) {
+        if (compareUi && typeof compareUi.setCompareFeedback === 'function') {
+            compareUi.setCompareFeedback({ hintEl, resultEl, message, color, clearResult });
+        } else {
+            hintEl.innerHTML = message || '';
+            hintEl.style.color = color || '#64748b';
+            if (clearResult) resultEl.innerHTML = '';
+        }
+    };
 
     if (!school || !subject || !teacher) {
-        hintEl.innerHTML = '闂?闂備浇宕垫慨鏉懨洪妶澶婂簥闁哄被鍎遍崒銊︾箾閹存瑥鐏柣鎺曨嚙椤法鎹勬笟顖氬壈濡炪倕绻堥崕鐢稿箖濡も偓閳藉骞庨懞銉偓宥夋⒑缂佹﹩娈旈梺甯稻娣囧﹦鈧稒蓱婵挳鏌涢幘鏉戠祷濠碘€崇－缁辨挻鎷呴崜鍙壭ч梺鍓茬厛閸ㄥ爼宕洪埀顒併亜閹达絾纭堕柛鏂跨Ч閺岋繝宕辫箛鎾插闂備焦鐪归崺鍕垂娴煎瓨鍋嬮柛鏇ㄥ灠閻?;
-        resultEl.innerHTML = '';
+        setFeedback('请先选择学校、学科和教师，再生成教师多期对比。', '#dc2626', true);
         return;
     }
-    if (examIds.some(x => !x)) {
-        hintEl.innerHTML = '闂?闂備浇宕垫慨鏉懨洪妶澶婂簥闁哄被鍎查崑鈺傘亜閹烘垵顏╅柡瀣╃窔閺岀喓绱掗姀鐘崇亐闂佺顑嗛幐璇差嚗閸曨厸鍋撻敐搴濇喚濞寸姵鎸冲娲捶椤撗勬瘜闂佺顑嗛幑鍥蓟閿熺姴閱囨繝鍨姈姝囬梻渚€鈧偛鑻晶顕€鏌涢悢绋库枙闁诡垯绶氶、娑㈡倷閹绘帞褰夐梻浣虹帛閺屻劍绔熸繝鍥х；鐟滄棃寮?;
-        resultEl.innerHTML = '';
+    if (examIds.some(function(x) { return !x; })) {
+        setFeedback('请为教师多期对比选齐所有期次。', '#dc2626', true);
         return;
     }
     if (new Set(examIds).size !== examIds.length) {
-        hintEl.innerHTML = '闂?闂傚倷绀侀幖顐︽偋韫囨稑绐楅柟浼村亰閺佸啴鏌涜箛姘汗闁崇粯姊婚埀顒€绠嶉崕閬嶆偋閸℃稑鍌ㄩ柟缁㈠枟閳锋垿鏌熺紒妯虹鐎涙繂顪冮妶蹇涙闁绘搫绻濆顐㈩吋閸涱垱娈曢梺鍛婂姈閸庡啿鈻撻弻銉︹拻濞撴艾娲ゆ禍婊勩亜閿旇棄顥嬮柍褜鍓氶崫搴ㄥ礉瀹ュ洨鐭欏璺侯煬閸氬鏌涘☉鍗炴灈闁逞屽墴娴滃爼寮婚妶澶婄骇闁割煈鍠楀▓娲⒑娴兼瑥鐦滈柛銊ㄥ煐娣?;
-        resultEl.innerHTML = '';
+        setFeedback('教师多期对比不能重复选择同一场考试。', '#dc2626', true);
         return;
     }
 
-    const examStats = examIds.map(examId => {
+    const examStats = examIds.map(function(examId) {
         const rows = getExamRowsForCompare(examId);
         const list = buildTeacherStatsForExam(rows, school, subject);
         attachTeacherTownshipAvgRank(rows, school, list);
-        const current = list.find(x => x.teacher === teacher && x.subject === subject);
-        return { examId, list, current };
+        const current = list.find(function(item) {
+            return item.teacher === teacher && item.subject === subject;
+        });
+        return { examId: examId, list: list, current: current };
     });
 
-    if (examStats.some(x => !x.current)) {
-        hintEl.innerHTML = '闂?闂備浇宕垫慨鏉懨洪姀銈呯？闁哄被鍎卞Ч鏌ユ煃瑜滈崜鐔煎箖娴犲鏁嶆慨妯哄船椤ｅ搫鈹戦悩顐壕濡炪倕绻愰悧鍡涙嫅閻斿吋鐓欓梺顓ㄧ細缁ㄤ粙鏌￠崟顐⑩偓鍧楀蓟閿熺姴閱囬柕蹇曞У閻庢儳顪冮妶鍡楀闁靛牏顭堥锝夘敋閳ь剟骞冮埡鍛優妞ゆ劑鍊楅弳銏ゆ⒒娴ｈ姤銆冪紒鈧笟鈧幃褎绻濋崶褎杈堥梺缁樻⒒閸樠呯不閸欏浜滈柡鍥╁仦椤ョ姷绱掗埀顒勫礋椤栨稓鍘卞┑鐐叉閿氶柣蹇嬪劦閺屾稖绠涢弮鎾光偓璺ㄢ偓娈垮枤閺佸銆侀弮鍫濈闁宠桨绀佺花銉╂⒒娴ｈ姤銆冮柣鎺炵畵閹兘濡搁埡濠冩櫔濠殿喗蓱婢у酣宕戦幘鏂ユ闁告劕妯婂ú顓烆渻閵堝骸浜濋柣妤冨█閻涱喚鈧綆鍠栭崘鈧銈嗗姂閸ㄨ崵绮婚幒妤佺厽闊洦鎸剧粻鏌ユ煕閵娿儳鍩ｇ€规洜鎳撻～婵囨綇閳哄喛绱查梻浣稿暱閹碱偊顢栭崶鈺冪焼闁糕剝绋掗悡?;
-        resultEl.innerHTML = '';
+    if (examStats.some(function(item) { return !item.current; })) {
+        setFeedback('所选期次中有考试缺少该教师或学科成绩，请更换期次后再试。', '#dc2626', true);
         return;
     }
 
-    const metricRows = examStats.map(x => {
-        const d = x.current;
-        return `<tr><td>${x.examId}</td><td>${d.townshipRankAvg || '-'}</td><td>${d.townshipRankExc || '-'}</td><td>${d.townshipRankPass || '-'}</td></tr>`;
+    const metricRows = examStats.map(function(item) {
+        const current = item.current;
+        return '<tr><td>' + item.examId + '</td><td>' + (current.townshipRankAvg || '-') + '</td><td>' + (current.townshipRankExc || '-') + '</td><td>' + (current.townshipRankPass || '-') + '</td></tr>';
     }).join('');
 
     const first = examStats[0].current;
@@ -19108,27 +19300,17 @@ function renderTeacherMultiPeriodComparison() {
         townshipExc: (first.townshipRankExc && last.townshipRankExc) ? (first.townshipRankExc - last.townshipRankExc) : null,
         townshipPass: (first.townshipRankPass && last.townshipRankPass) ? (first.townshipRankPass - last.townshipRankPass) : null
     };
-    const dAvg = (typeof delta.townshipAvg === 'number') ? delta.townshipAvg : null;
-    const dExc = (typeof delta.townshipExc === 'number') ? delta.townshipExc : null;
-    const dPass = (typeof delta.townshipPass === 'number') ? delta.townshipPass : null;
 
-    resultEl.innerHTML = `
-            <div class="sub-header">濠碘槅鍋撶徊浠嬪疮椤栫偛闂い鏍仦閻撳啴鏌曟径鍫濆姢闁宠绉归弻?闂傚倷娴囧銊╂倿閿曞倹鍋￠柕澹懐鐣堕梺閫炲苯澧撮柡灞剧☉椤繈顢楅崘顭戜純婵＄偑鍊栫敮鐐哄窗閹捐泛鍨濋柡鍐ㄧ墕缁狅絾绻濋崹顐㈠闁宠銈稿娲传閸曨厼鈪遍梺鍝ュУ濞茬喐淇婇幘顔肩妞ゆ棁妫勬禒銏ゆ煟閵忊晛鐏遍柛鐘虫皑缁?{teacher} / ${subject}闂?/div>
-            <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>闂傚倷绀侀幖顐︽偋韫囨稑绐楅柟浼村亰閺?/th><th>闂傚倷鑳堕～瀣礃閳哄倹鍊烽梻浣规偠閸斿矂鏌婇敐鍜佹綎鐟滅増甯掗悙濠囨煏婵炲灝鍔ら柣?/th><th>婵犵數鍋炲娆撳触鐎ｎ喒鈧箓宕堕濠勭◤闂佸憡绋戦悺銊╁磻濠靛鐓曢柕澶樺枛婢ь垱绻涢崨顓犘ч柡?/th><th>闂傚倷绀侀幉锟犳偡閵夆晜鏅濋柕澶嗘櫆閸嬪鏌熼梻瀵稿妽闁稿绻堥弻娑㈠Ψ椤旂厧顫┑鐐叉噹缁夊綊寮?/th></tr></thead><tbody>${metricRows}</tbody></table></div>
-            <div style="margin-top:8px; font-size:12px; color:#475569;">
-                婵犵妲呴崑鎾跺緤妤ｅ啯鍋嬫俊銈傚亾闁挎洏鍨介、娑㈡倷閹绘帞褰夐梻浣虹帛閺屻劑宕查懠顒傜濞撴埃鍋撻柡灞剧洴瀵粙濡歌椤ュ绱?{examIds[0]} 闂?${examIds[examIds.length - 1]}闂傚倷鐒︾€笛呯矙閹次层劑鍩€椤掑倻纾?
-                闂傚倷鑳堕～瀣礃閳哄倹鍊烽梻浣规偠閸斿矂鏌婇敐鍜佹綎鐟滅増甯掗悙濠囨煏婵炲灝鍔ら柣?${dAvg === null ? '-' : (dAvg >= 0 ? '+' : '') + dAvg}闂?
-                婵犵數鍋炲娆撳触鐎ｎ喒鈧箓宕堕濠勭◤闂佸憡绋戦悺銊╁磻濠靛鐓曢柕澶樺枛婢ь垱绻涢崨顓犘ч柡?${dExc === null ? '-' : (dExc >= 0 ? '+' : '') + dExc}闂?
-                闂傚倷绀侀幉锟犳偡閵夆晜鏅濋柕澶嗘櫆閸嬪鏌熼梻瀵稿妽闁稿绻堥弻娑㈠Ψ椤旂厧顫┑鐐叉噹缁夊綊寮?${dPass === null ? '-' : (dPass >= 0 ? '+' : '') + dPass}
-            </div>
-        `;
+    let viewState = null;
+    if (compareUi && typeof compareUi.buildTeacherSingleCompareView === 'function') {
+        viewState = compareUi.buildTeacherSingleCompareView({ teacher, subject, examIds, periodCount, metricRows, delta });
+    }
 
-    hintEl.innerHTML = `闂?闂佽娴烽幊鎾诲箟闄囬妵鎰板礃椤旇棄浠煎銈嗗笒鐎氼剛绮?${periodCount} 闂傚倷绀侀幖顐︽偋韫囨稑绐楅柟鐗堟緲濮规煡鏌嶈閸撶喖骞冩禒瀣垫晬婵ê宕。鍝勵渻閵堝棙澶勯柛鐘崇墳椤ｉ箖姊洪崫鍕殲闁圭澧界划?{examIds.join(' 闂?')}`;
-    hintEl.style.color = '#16a34a';
+    resultEl.innerHTML = viewState && viewState.resultHtml ? viewState.resultHtml : '';
+    setFeedback(viewState && viewState.hintHtml ? viewState.hintHtml : '', viewState && viewState.hintColor ? viewState.hintColor : '#16a34a', false);
     window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = { school, subject, teacher, examIds, periodCount, examStats, delta, metricRows };
 }
 
-// 濠碘槅鍋撶徊浠嬪疮椤愶箑鐤?闂傚倷鐒﹂惇褰掑垂婵犳艾绐楅柟鐗堟緲閸ㄥ倹鎱ㄥΟ鎸庣【闁藉啰鍠栭弻鐔兼焽閿曗偓婢у鏌涢弬鎸庡殗闁哄备鈧剚鍚嬪ù锝囶焾閳峰绻濋埛鈧崘顎呪偓娈垮枛閻忔艾顕ラ崟顓涘亾閿濆骸浜濋柣锝庡墴閺岋綁濮€閳轰胶浠╅梺缁橆殔缁绘劙鍩㈤幘璇茬闁绘劘灏欑粣鐐测攽椤旀枻渚涢柛妯圭矙瀹曟椽宕掗悙鏉戔偓闈浢归敐鍛灓婵炲吋鍔欓弻锝夋晜鐠囧弶鐝濋梺杞扮缁夌懓鐣烽悡搴樻斀闁告洦浜濋幑锝夋⒑閼姐倕浠︾紒瀣箻瀹曟繂顓奸崼婵囨闂佽瀛╅鏍窗閺嶎煈娈介煫鍥ㄦ礃椤?
 function renderAllTeachersMultiPeriodComparison() {
     const hintEl = document.getElementById('teacherCompareHint');
     const resultEl = document.getElementById('teacherCompareResult');
@@ -19140,20 +19322,40 @@ function renderAllTeachersMultiPeriodComparison() {
 
     if (!hintEl || !resultEl || !countEl || !schoolEl || !e1El || !e2El || !e3El) return;
 
-    const periodCount = parseInt(countEl.value || '2');
+    const periodCount = parseInt(countEl.value || '2', 10);
     const school = schoolEl.value;
     const examIds = periodCount === 3 ? [e1El.value, e2El.value, e3El.value] : [e1El.value, e2El.value];
+    const compareUi = window.CompareUiService;
+    const setFeedback = function(message, color, clearResult) {
+        if (compareUi && typeof compareUi.setCompareFeedback === 'function') {
+            compareUi.setCompareFeedback({ hintEl, resultEl, message, color, clearResult });
+        } else {
+            hintEl.innerHTML = message || '';
+            hintEl.style.color = color || '#64748b';
+            if (clearResult) resultEl.innerHTML = '';
+        }
+    };
 
-    if (!school) return alert('璇峰厛閫夋嫨瀛︽牎銆?);
-    if (examIds.some(x => !x)) return alert('璇峰畬鏁撮€夋嫨鎵€鏈夎€冭瘯鏈熸銆?);
-    if (new Set(examIds).size !== examIds.length) return alert('鏈熸涓嶈兘閲嶅锛岃閫夋嫨涓嶅悓鑰冭瘯銆?);
+    if (!school) {
+        setFeedback('请先选择学校后再生成全教师多期对比。', '#dc2626', true);
+        return;
+    }
+    if (examIds.some(function(x) { return !x; })) {
+        setFeedback('请为全教师多期对比选齐所有期次。', '#dc2626', true);
+        return;
+    }
+    if (new Set(examIds).size !== examIds.length) {
+        setFeedback('全教师多期对比不能重复选择同一场考试。', '#dc2626', true);
+        return;
+    }
 
-    if (window.UI) UI.loading(true, `姝ｅ湪鐢熸垚 ${school} 鍏ㄦ暀甯堝鏈熷姣?..`);
+    if (window.UI) UI.loading(true, '正在生成 ' + school + ' 全教师多期对比...');
 
     const compareAnalytics = window.CompareAnalyticsService;
     if (!compareAnalytics || typeof compareAnalytics.buildAllTeachersMultiPeriodComparison !== 'function') {
         if (window.UI) UI.loading(false);
-        return alert('鍏ㄦ暀甯堝鏈熷姣旀湇鍔℃湭鍔犺浇锛岃鍒锋柊椤甸潰閲嶈瘯銆?);
+        setFeedback('全教师多期对比分析模块未加载。', '#dc2626', true);
+        return;
     }
 
     const compareState = compareAnalytics.buildAllTeachersMultiPeriodComparison({
@@ -19170,86 +19372,35 @@ function renderAllTeachersMultiPeriodComparison() {
     const results = compareState.results || [];
     if (!results.length) {
         if (window.UI) UI.loading(false);
-        return alert('娌℃湁鍙敤浜庢壒閲忔暀甯堝鏈熷姣旂殑鏁版嵁銆?);
+        setFeedback('当前条件下没有可生成的全教师多期对比结果。', '#dc2626', true);
+        return;
     }
 
-    let ths = `<th>鏁欏笀</th><th>瀛︾</th>`;
-    examIds.forEach(eid => {
-        const shortName = eid.split('-').pop() || eid;
-        ths += `<th style="background:#f1f5f9; border-left:2px solid white;">${shortName}<br><span style="font-size:10px;font-weight:normal">涔￠晣鍧囧垎鎺掍綅 / 浼樼鐜囨帓浣?/ 鍙婃牸鐜囨帓浣?/span></th>`;
-    });
-    ths += `<th style="background:#fff7ed; border-left:2px solid white;">鍙樺寲姹囨€?br><span style="font-size:10px;font-weight:normal">棣栨湯鏈熸帓浣嶅彉鍖?/span></th>`;
+    let viewState = null;
+    if (compareUi && typeof compareUi.buildTeacherBatchCompareView === 'function') {
+        viewState = compareUi.buildTeacherBatchCompareView({ school, examIds, results });
+    }
 
-    const trs = results.map(item => {
-        let tds = `<td style="font-weight:bold;">${item.teacher}</td><td>${item.subject}</td>`;
-
-        (item.details || []).forEach(detail => {
-            const current = detail.current;
-            if (current) {
-                tds += `<td style="border-left:1px solid #e2e8f0; text-align:center;">
-                        <div style="font-size:11px; color:#334155;">鍧?${(typeof current.townshipRankAvg === 'number' ? current.townshipRankAvg : '-')}</div>
-                        <div style="font-size:11px; color:#334155;">浼?${(typeof current.townshipRankExc === 'number' ? current.townshipRankExc : '-')}</div>
-                        <div style="font-size:11px; color:#334155;">鍙?${(typeof current.townshipRankPass === 'number' ? current.townshipRankPass : '-')}</div>
-                    </td>`;
-            } else {
-                tds += `<td style="border-left:1px solid #e2e8f0; text-align:center; color:#cbd5e1;">-</td>`;
-            }
-        });
-
-        const fmtDelta = (deltaVal) => {
-            if (typeof deltaVal !== 'number') return '<span style="color:#94a3b8;">-</span>';
-            const color = deltaVal > 0 ? 'green' : (deltaVal < 0 ? 'red' : 'gray');
-            const icon = deltaVal > 0 ? '鈫? : (deltaVal < 0 ? '鈫? : '-');
-            return `<span style="color:${color};">${icon} ${Math.abs(deltaVal)}</span>`;
-        };
-
-        if (item.delta) {
-            tds += `<td style="border-left:1px solid #e2e8f0; text-align:center; background:#fffbf0;">
-                    <div style="font-size:11px;">鍧?{fmtDelta(item.delta.townshipAvg)}</div>
-                    <div style="font-size:11px;">浼?{fmtDelta(item.delta.townshipExc)}</div>
-                    <div style="font-size:11px;">鍙?{fmtDelta(item.delta.townshipPass)}</div>
-                </td>`;
-        } else {
-            tds += `<td style="border-left:1px solid #e2e8f0; text-align:center; background:#fffbf0; color:#cbd5e1;">-</td>`;
-        }
-
-        return `<tr>${tds}</tr>`;
-    }).join('');
-
-    resultEl.innerHTML = `
-            <div class="sub-header" style="color:#ea580c;">馃摍 鍏ㄦ暀甯堝鏈熷姣旓紙${school}锛?/div>
-            <div class="table-wrap" style="max-height:600px; overflow-y:auto;">
-                <table class="common-table" style="font-size:13px;">
-                    <thead style="position:sticky; top:0; z-index:10;"><tr>${ths}</tr></thead>
-                    <tbody>${trs}</tbody>
-                </table>
-            </div>
-            <div style="margin-top:10px; display:flex; gap:10px;">
-                <button class="btn btn-sm" onclick="exportAllTeachersMultiPeriodDiff('${school}', '${examIds.join('_')}')">瀵煎嚭鍏ㄦ暀甯?Excel</button>
-            </div>
-        `;
+    resultEl.innerHTML = viewState && viewState.resultHtml ? viewState.resultHtml : '';
+    setFeedback(viewState && viewState.hintHtml ? viewState.hintHtml : '', viewState && viewState.hintColor ? viewState.hintColor : '#16a34a', false);
 
     window.ALL_TEACHERS_DIFF_CACHE = { results, school, examIds, periodCount };
     window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = {
         school,
-        subject: '鍏ㄥ绉?,
-        teacher: '鍏ㄦ暀甯堝鏈熷姣?,
+        subject: '全学科',
+        teacher: '全教师',
         examIds,
         periodCount,
         delta: null,
-        metricRows: trs,
+        metricRows: viewState && viewState.trsHtml ? viewState.trsHtml : '',
         isBatchMode: true,
         batchResults: results,
-        thsHtml: ths
+        thsHtml: viewState && viewState.thsHtml ? viewState.thsHtml : ''
     };
-
-    hintEl.innerHTML = `鉁?宸插畬鎴?${school} 鍏ㄦ暀甯?${results.length} 鏉″鏈熷姣旇褰曪細${examIds.join(' 鈫?')}`;
-    hintEl.style.color = '#16a34a';
 
     if (window.UI) UI.loading(false);
 }
 
-// 濠碘槅鍋撶徊浠嬪疮椤愶箑鐤?闂備浇顕уù鐑藉极閹间礁鍌ㄧ憸鏂跨暦閻㈠壊鏁囬柕蹇曞Х椤ρ囨⒑闂堟侗鐓┑鈥虫处閺呭爼鏁撻悩宕囧幐婵炶揪绲藉﹢閬嶅箠閸愵亞纾兼俊鐐额嚙娴滈箖姊虹拠鑼嚬缂佹彃顭烽敐鐐村緞閹邦厼鍓?
 function exportAllTeachersMultiPeriodDiff(school, examIdsStr) {
     if (!window.ALL_TEACHERS_DIFF_CACHE) return alert('璇峰厛鐢熸垚鍏ㄦ暀甯堝鏈熷姣旂粨鏋溿€?);
     const compareAnalytics = window.CompareAnalyticsService;
