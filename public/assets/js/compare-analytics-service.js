@@ -488,6 +488,180 @@
     }
 
 
+
+    function buildTeacherStatsForExam(options) {
+        const opts = options || {};
+        const rows = Array.isArray(opts.rows) ? opts.rows : [];
+        const school = String(opts.school || '').trim();
+        const subjectFilter = String(opts.subjectFilter || '').trim();
+        const teacherMap = opts.teacherMap || {};
+        const subjects = Array.isArray(opts.subjects) ? opts.subjects : [];
+        const normalizeClass = typeof opts.normalizeClass === 'function' ? opts.normalizeClass : function(value) { return String(value || '').trim(); };
+        const normalizeSubject = typeof opts.normalizeSubject === 'function' ? opts.normalizeSubject : function(value) { return String(value || '').trim(); };
+        const configName = String(opts.configName || '');
+
+        const rowsSchool = rows.filter(function(row) {
+            return String(row && row.school || '').trim() === school;
+        });
+        const classSet = new Set(rowsSchool.map(function(row) {
+            return normalizeClass(row && row.class);
+        }));
+        const excRatio = configName.includes('9') ? 0.15 : 0.2;
+
+        const gradeStats = {};
+        subjects.forEach(function(subject) {
+            const vals = rowsSchool
+                .map(function(row) { return parseFloat(row && row.scores && row.scores[subject]); })
+                .filter(function(value) { return !isNaN(value); })
+                .sort(function(a, b) { return b - a; });
+            if (!vals.length) return;
+            const avg = vals.reduce(function(sum, value) { return sum + value; }, 0) / vals.length;
+            const exc = vals[Math.floor(vals.length * excRatio)] || 0;
+            const pass = vals[Math.floor(vals.length * 0.5)] || 0;
+            gradeStats[subject] = { avg: avg, exc: exc, pass: pass, low: pass * 0.6 };
+        });
+
+        const bucket = {};
+        Object.entries(teacherMap).forEach(function(entry) {
+            const key = entry[0];
+            const teacherName = entry[1];
+            const parts = String(key).split('_');
+            const cls = normalizeClass(parts[0]);
+            const subject = subjects.find(function(item) {
+                return normalizeSubject(item) === normalizeSubject(parts[1]);
+            });
+            if (!cls || !subject || !classSet.has(cls)) return;
+            if (subjectFilter && subject !== subjectFilter) return;
+            const teacher = String(teacherName || '').trim();
+            if (!teacher) return;
+
+            const students = rowsSchool.filter(function(row) {
+                return normalizeClass(row && row.class) === cls && !isNaN(parseFloat(row && row.scores && row.scores[subject]));
+            });
+            if (!students.length) return;
+
+            const keyName = teacher + '__' + subject;
+            if (!bucket[keyName]) bucket[keyName] = { teacher: teacher, subject: subject, classes: new Set(), students: [] };
+            bucket[keyName].classes.add(cls);
+            bucket[keyName].students.push.apply(bucket[keyName].students, students);
+        });
+
+        const list = Object.values(bucket).map(function(item) {
+            const gs = gradeStats[item.subject] || { avg: 0, exc: 0, pass: 0, low: 36 };
+            const vals = item.students
+                .map(function(student) { return parseFloat(student && student.scores && student.scores[item.subject]); })
+                .filter(function(value) { return !isNaN(value); });
+            const count = vals.length;
+            const avg = count ? vals.reduce(function(sum, value) { return sum + value; }, 0) / count : 0;
+            const excellentRate = count ? vals.filter(function(value) { return value >= gs.exc; }).length / count : 0;
+            const passRate = count ? vals.filter(function(value) { return value >= gs.pass; }).length / count : 0;
+            const lowRate = count ? vals.filter(function(value) { return value < gs.low; }).length / count : 0;
+            const contribution = avg - gs.avg;
+            const finalScore = 30 + contribution + excellentRate * 30 + passRate * 30 - lowRate * 20;
+
+            return {
+                teacher: item.teacher,
+                subject: item.subject,
+                classes: Array.from(item.classes).sort().join(','),
+                studentCount: count,
+                avg: avg,
+                excellentRate: excellentRate,
+                passRate: passRate,
+                lowRate: lowRate,
+                contribution: contribution,
+                finalScore: finalScore,
+                subjectRank: 0,
+                townshipRankAvg: null,
+                townshipRankExc: null,
+                townshipRankPass: null
+            };
+        });
+
+        const bySubject = {};
+        list.forEach(function(item) {
+            if (!bySubject[item.subject]) bySubject[item.subject] = [];
+            bySubject[item.subject].push(item);
+        });
+        Object.values(bySubject).forEach(function(items) {
+            items.sort(function(a, b) { return b.finalScore - a.finalScore; });
+            items.forEach(function(item, index) {
+                if (index > 0 && Math.abs(item.finalScore - items[index - 1].finalScore) < 0.0001) {
+                    item.subjectRank = items[index - 1].subjectRank;
+                } else {
+                    item.subjectRank = index + 1;
+                }
+            });
+        });
+
+        return list;
+    }
+
+    function attachTeacherTownshipAvgRank(options) {
+        const opts = options || {};
+        const rows = Array.isArray(opts.rows) ? opts.rows : [];
+        const school = String(opts.school || '').trim();
+        const teacherStatsList = Array.isArray(opts.teacherStatsList) ? opts.teacherStatsList : [];
+
+        const subjectSet = Array.from(new Set(teacherStatsList.map(function(item) {
+            return item.subject;
+        }).filter(Boolean)));
+
+        subjectSet.forEach(function(subject) {
+            const ranking = [];
+            teacherStatsList.filter(function(item) {
+                return item.subject === subject;
+            }).forEach(function(item) {
+                ranking.push({ type: 'teacher', teacher: item.teacher, avg: item.avg, excellentRate: item.excellentRate, passRate: item.passRate });
+            });
+
+            const schoolScores = {};
+            rows.forEach(function(row) {
+                if (String(row && row.school || '').trim() === school) return;
+                const score = parseFloat(row && row.scores && row.scores[subject]);
+                if (isNaN(score)) return;
+                const schoolName = String(row && row.school || '').trim();
+                if (!schoolName) return;
+                if (!schoolScores[schoolName]) schoolScores[schoolName] = [];
+                schoolScores[schoolName].push(score);
+            });
+
+            Object.entries(schoolScores).forEach(function(entry) {
+                const schoolName = entry[0];
+                const vals = entry[1];
+                if (!vals.length) return;
+                const avg = vals.reduce(function(sum, value) { return sum + value; }, 0) / vals.length;
+                const excCount = vals.filter(function(value) { return value >= 85; }).length;
+                const passCount = vals.filter(function(value) { return value >= 60; }).length;
+                ranking.push({
+                    type: 'school',
+                    school: schoolName,
+                    avg: avg,
+                    excellentRate: vals.length ? excCount / vals.length : 0,
+                    passRate: vals.length ? passCount / vals.length : 0
+                });
+            });
+
+            ranking.sort(function(a, b) { return b.avg - a.avg; });
+            ranking.forEach(function(item, index) { item.rankAvg = index + 1; });
+            ranking.sort(function(a, b) { return b.excellentRate - a.excellentRate; });
+            ranking.forEach(function(item, index) { item.rankExc = index + 1; });
+            ranking.sort(function(a, b) { return b.passRate - a.passRate; });
+            ranking.forEach(function(item, index) { item.rankPass = index + 1; });
+
+            teacherStatsList.filter(function(item) {
+                return item.subject === subject;
+            }).forEach(function(item) {
+                const mine = ranking.find(function(rankItem) {
+                    return rankItem.type === 'teacher' && rankItem.teacher === item.teacher;
+                });
+                item.townshipRankAvg = mine ? mine.rankAvg : null;
+                item.townshipRankExc = mine ? mine.rankExc : null;
+                item.townshipRankPass = mine ? mine.rankPass : null;
+            });
+        });
+
+        return teacherStatsList;
+    }
     function buildTeacherMultiPeriodComparison(options) {
         const opts = options || {};
         const school = String(opts.school || '').trim();
@@ -665,15 +839,19 @@
         const results = Array.isArray(cache.results) ? cache.results : [];
         const school = String(cache.school || '').trim();
 
-        const header = ['教师', '学科'];
+        const header = ['\u6559\u5e08', '\u5b66\u79d1'];
         examIds.forEach(function(examId) {
             header.push(
-                examId + '\n乡镇均分排位',
-                examId + '\n优秀率排位',
-                examId + '\n及格率排位'
+                examId + '\n\u4e61\u9547\u5747\u5206\u6392\u4f4d',
+                examId + '\n\u4f18\u79c0\u7387\u6392\u4f4d',
+                examId + '\n\u53ca\u683c\u7387\u6392\u4f4d'
             );
         });
-        header.push('乡镇均分排位变化', '优秀率排位变化', '及格率排位变化');
+        header.push(
+            '\u4e61\u9547\u5747\u5206\u6392\u4f4d\u53d8\u5316',
+            '\u4f18\u79c0\u7387\u6392\u4f4d\u53d8\u5316',
+            '\u53ca\u683c\u7387\u6392\u4f4d\u53d8\u5316'
+        );
 
         const rows = results.map(function(item) {
             const row = [item.teacher, item.subject];
@@ -691,7 +869,7 @@
             });
             if (item.delta) {
                 row.push(
-                    (typeof item.delta.townshipAvg === 'number' ? item.delta.townshipAvg : '-'),
+                    (typeof item.delta.townshipRankAvg === 'number' ? item.delta.townshipRankAvg : (typeof item.delta.townshipAvg === 'number' ? item.delta.townshipAvg : '-')),
                     (typeof item.delta.townshipExc === 'number' ? item.delta.townshipExc : '-'),
                     (typeof item.delta.townshipPass === 'number' ? item.delta.townshipPass : '-')
                 );
@@ -702,7 +880,7 @@
         });
 
         return {
-            sheetName: '教师批量多期对比',
+            sheetName: '\u6559\u5e08\u6279\u91cf\u591a\u671f\u5bf9\u6bd4',
             sheetData: [header].concat(rows),
             fileName: school
         };
@@ -717,6 +895,12 @@
         buildMacroMultiPeriodComparison: buildMacroMultiPeriodComparison,
         buildMacroMultiPeriodExportData: buildMacroMultiPeriodExportData,
         buildBasicMultiPeriodComparison: buildBasicMultiPeriodComparison,
-        buildBasicMultiPeriodExportData: buildBasicMultiPeriodExportData
+        buildBasicMultiPeriodExportData: buildBasicMultiPeriodExportData,
+        buildTeacherStatsForExam: buildTeacherStatsForExam,
+        attachTeacherTownshipAvgRank: attachTeacherTownshipAvgRank,
+        buildTeacherMultiPeriodComparison: buildTeacherMultiPeriodComparison,
+        buildTeacherMultiPeriodExportData: buildTeacherMultiPeriodExportData,
+        buildAllTeachersMultiPeriodComparison: buildAllTeachersMultiPeriodComparison,
+        buildAllTeachersMultiPeriodExportData: buildAllTeachersMultiPeriodExportData
     };
 })();
