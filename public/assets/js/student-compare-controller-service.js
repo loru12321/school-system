@@ -1,4 +1,4 @@
-﻿(function() {
+(function() {
     function getStudentCompareElements() {
         return {
             hintEl: document.getElementById('studentCompareHint'),
@@ -158,6 +158,108 @@
         });
     }
 
+
+    function getStudentCompareFilterElements() {
+        return {
+            hintEl: document.getElementById('studentCompareHint'),
+            nameInputEl: document.getElementById('studentCompareNameInput'),
+            sortEl: document.getElementById('studentCompareSortBy'),
+            groupEl: document.getElementById('studentCompareGroupBy')
+        };
+    }
+
+    function ensureStudentCompareOriginalData(cache) {
+        const dataCache = cache || {};
+        if (!Array.isArray(dataCache.originalStudentsCompareData)) {
+            dataCache.originalStudentsCompareData = Array.isArray(dataCache.studentsCompareData)
+                ? dataCache.studentsCompareData.slice()
+                : [];
+        }
+        return dataCache.originalStudentsCompareData;
+    }
+
+    function normalizeStudentSearchNames(text) {
+        const rawText = String(text || '').trim();
+        const cleanName = function(name) {
+            return String(name || '').replace(/\s+/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '');
+        };
+        return rawText
+            .split(/[\s,\uFF0C\u3001;\uFF1B]+/)
+            .map(cleanName)
+            .filter(Boolean);
+    }
+
+    function filterStudentCompareByNames(cache, searchText) {
+        const source = ensureStudentCompareOriginalData(cache || {});
+        const names = normalizeStudentSearchNames(searchText);
+        const matchedStudents = source.filter(function(student) {
+            const studentName = String(student && student.name || '').replace(/\s+/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '');
+            return names.some(function(name) { return studentName.indexOf(name) !== -1; });
+        });
+        return {
+            searchNames: names,
+            matchedStudents: matchedStudents,
+            displayNames: names.length > 3 ? names.slice(0, 3).join(', ') + '...' : names.join(', ')
+        };
+    }
+
+    function restoreStudentCompareOriginalData(cache) {
+        const dataCache = cache || {};
+        const originalData = ensureStudentCompareOriginalData(dataCache);
+        dataCache.studentsCompareData = originalData.slice();
+        dataCache.isFiltered = false;
+        return dataCache.studentsCompareData;
+    }
+
+    function filterStudentCompareByProgressType(cache, type) {
+        const dataCache = cache || {};
+        const originalData = ensureStudentCompareOriginalData(dataCache);
+        const filteredStudents = originalData.filter(function(student) {
+            return String(student && student.progressType || '') === String(type || '');
+        });
+        dataCache.studentsCompareData = filteredStudents;
+        dataCache.isFiltered = true;
+        const typeLabelMap = {
+            improve: '\u8fdb\u6b65',
+            decline: '\u9000\u6b65',
+            stable: '\u7a33\u5b9a'
+        };
+        return {
+            filteredStudents: filteredStudents,
+            typeLabel: typeLabelMap[type] || '\u7b5b\u9009'
+        };
+    }
+
+    function sortStudentCompareRows(rows, sortBy) {
+        const list = Array.isArray(rows) ? rows.slice() : [];
+        switch (String(sortBy || 'class')) {
+            case 'totalDesc':
+                list.sort(function(a, b) { return Number(b.latestTotal || 0) - Number(a.latestTotal || 0); });
+                break;
+            case 'totalAsc':
+                list.sort(function(a, b) { return Number(a.latestTotal || 0) - Number(b.latestTotal || 0); });
+                break;
+            case 'improveDesc':
+                list.sort(function(a, b) { return Number(b.scoreDiff || 0) - Number(a.scoreDiff || 0); });
+                break;
+            case 'improveAsc':
+                list.sort(function(a, b) { return Number(a.scoreDiff || 0) - Number(b.scoreDiff || 0); });
+                break;
+            case 'rankImprove':
+                list.sort(function(a, b) { return Number(b.rankSchoolDiff || 0) - Number(a.rankSchoolDiff || 0); });
+                break;
+            case 'class':
+            default:
+                list.sort(function(a, b) {
+                    const classCompare = String(a && a.class || '').localeCompare(String(b && b.class || ''), 'zh-CN');
+                    if (classCompare !== 0) return classCompare;
+                    return String(a && a.name || '').localeCompare(String(b && b.name || ''), 'zh-CN');
+                });
+                break;
+        }
+        return list;
+    }
+
     window.StudentCompareControllerService = {
         getStudentCompareElements: getStudentCompareElements,
         readStudentCompareState: readStudentCompareState,
@@ -167,6 +269,14 @@
         buildStudentCompareCache: buildStudentCompareCache,
         applyStudentCompareResult: applyStudentCompareResult,
         hydrateStudentCompareCache: hydrateStudentCompareCache,
-        applyStudentCloudDetail: applyStudentCloudDetail
+        applyStudentCloudDetail: applyStudentCloudDetail,
+        getStudentCompareFilterElements: getStudentCompareFilterElements,
+        ensureStudentCompareOriginalData: ensureStudentCompareOriginalData,
+        normalizeStudentSearchNames: normalizeStudentSearchNames,
+        filterStudentCompareByNames: filterStudentCompareByNames,
+        restoreStudentCompareOriginalData: restoreStudentCompareOriginalData,
+        filterStudentCompareByProgressType: filterStudentCompareByProgressType,
+        sortStudentCompareRows: sortStudentCompareRows
     };
 })();
+

@@ -385,6 +385,39 @@
                 + '</div>'
         };
     }
+
+    function buildStudentCompareSearchFeedback(options) {
+        const opts = options || {};
+        return {
+            message: '\u5df2\u7b5b\u9009\u51fa ' + Number(opts.count || 0) + ' \u540d\u5b66\u751f\uff1a"' + escapeStudentCompareHtml(opts.keywordLabel || '') + '"',
+            color: '#16a34a'
+        };
+    }
+
+    function buildStudentCompareSearchEmptyFeedback(options) {
+        const opts = options || {};
+        return {
+            message: '\u672a\u627e\u5230\u5339\u914d\u7684\u5b66\u751f\uff1a"' + escapeStudentCompareHtml(opts.keyword || '') + '"',
+            color: '#dc2626'
+        };
+    }
+
+    function buildStudentCompareResetFeedback(options) {
+        const opts = options || {};
+        return {
+            message: '\u5df2\u6062\u590d ' + escapeStudentCompareHtml(opts.school || '') + ' \u5171 ' + Number(opts.count || 0) + ' \u540d\u5b66\u751f\u7684 ' + Number(opts.periodCount || 2) + ' \u671f\u5bf9\u6bd4\u89c6\u56fe\u3002',
+            color: '#16a34a'
+        };
+    }
+
+    function buildStudentCompareProgressFeedback(options) {
+        const opts = options || {};
+        return {
+            message: '\u5df2\u7b5b\u9009\u51fa ' + Number(opts.count || 0) + ' \u540d' + escapeStudentCompareHtml(opts.typeLabel || '\u5b66\u751f') + '\u5b66\u751f\u3002',
+            color: '#16a34a'
+        };
+    }
+
     window.CompareUiService = {
         renderOptions,
         renderSchoolSelect,
@@ -398,6 +431,11 @@
         buildTeacherBatchCompareView,
         buildStudentCompareCardView,
         buildStudentComparePageView,
-        buildStudentCompareSummaryView
+        buildStudentCompareSummaryView,
+        buildStudentCompareSearchFeedback,
+        buildStudentCompareSearchEmptyFeedback,
+        buildStudentCompareResetFeedback,
+        buildStudentCompareProgressFeedback
     };
 })();
+
