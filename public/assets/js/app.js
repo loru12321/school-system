@@ -8489,11 +8489,22 @@ function updateProgressMultiExamSelects() {
     if (!schoolSel || !exam1Sel || !exam2Sel || !exam3Sel) return;
 
     const schoolList = listAvailableSchoolsForCompare();
-    schoolSel.innerHTML = '<option value="">--请选择学校--</option>';
-    schoolList.forEach(s => schoolSel.innerHTML += `<option value="${s}">${s}</option>`);
-    if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) schoolSel.value = MY_SCHOOL;
+    if (window.CompareUiService && typeof window.CompareUiService.initializeCompareFilters === 'function') {
+        window.CompareUiService.initializeCompareFilters({
+            schoolSelect: schoolSel,
+            examSelects: [exam1Sel, exam2Sel, exam3Sel],
+            schoolList,
+            preferredSchool: MY_SCHOOL,
+            examList: listAvailableExamsForCompare(),
+            currentExamId: CURRENT_EXAM_ID
+        });
+    } else {
+        schoolSel.innerHTML = '<option value="">--请选择学校--</option>';
+        schoolList.forEach(s => schoolSel.innerHTML += `<option value="${s}">${s}</option>`);
+        if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) schoolSel.value = MY_SCHOOL;
+        renderSharedCompareExamTriplet(exam1Sel, exam2Sel, exam3Sel);
+    }
 
-    renderSharedCompareExamTriplet(exam1Sel, exam2Sel, exam3Sel);
     onProgressComparePeriodCountChange();
 }
 
@@ -9430,13 +9441,24 @@ function updateStudentCompareExamSelects() {
     if (!schoolSel || !exam1Sel || !exam2Sel || !exam3Sel) return;
 
     const schoolList = listAvailableSchoolsForCompare();
-    schoolSel.innerHTML = '<option value="">--请选择学校--</option>';
-    schoolList.forEach(s => schoolSel.innerHTML += `<option value="${s}">${s}</option>`);
-    if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) {
-        schoolSel.value = MY_SCHOOL;
+    if (window.CompareUiService && typeof window.CompareUiService.initializeCompareFilters === 'function') {
+        window.CompareUiService.initializeCompareFilters({
+            schoolSelect: schoolSel,
+            examSelects: [exam1Sel, exam2Sel, exam3Sel],
+            schoolList,
+            preferredSchool: MY_SCHOOL,
+            examList: listAvailableExamsForCompare(),
+            currentExamId: CURRENT_EXAM_ID
+        });
+    } else {
+        schoolSel.innerHTML = '<option value="">--请选择学校--</option>';
+        schoolList.forEach(s => schoolSel.innerHTML += `<option value="${s}">${s}</option>`);
+        if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) {
+            schoolSel.value = MY_SCHOOL;
+        }
+        renderSharedCompareExamTriplet(exam1Sel, exam2Sel, exam3Sel);
     }
 
-    renderSharedCompareExamTriplet(exam1Sel, exam2Sel, exam3Sel);
     onStudentComparePeriodCountChange();
 }
 
@@ -11386,11 +11408,22 @@ function updateMacroMultiExamSelects() {
     if (!schoolSel || !exam1Sel || !exam2Sel || !exam3Sel) return;
 
     const schoolList = listAvailableSchoolsForCompare();
-    schoolSel.innerHTML = '<option value="">--请选择学校--</option>';
-    schoolList.forEach(s => schoolSel.innerHTML += `<option value="${s}">${s}</option>`);
-    if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) schoolSel.value = MY_SCHOOL;
+    if (window.CompareUiService && typeof window.CompareUiService.initializeCompareFilters === 'function') {
+        window.CompareUiService.initializeCompareFilters({
+            schoolSelect: schoolSel,
+            examSelects: [exam1Sel, exam2Sel, exam3Sel],
+            schoolList,
+            preferredSchool: MY_SCHOOL,
+            examList: listAvailableExamsForCompare(),
+            currentExamId: CURRENT_EXAM_ID
+        });
+    } else {
+        schoolSel.innerHTML = '<option value="">--请选择学校--</option>';
+        schoolList.forEach(s => schoolSel.innerHTML += `<option value="${s}">${s}</option>`);
+        if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) schoolSel.value = MY_SCHOOL;
+        renderSharedCompareExamTriplet(exam1Sel, exam2Sel, exam3Sel);
+    }
 
-    renderSharedCompareExamTriplet(exam1Sel, exam2Sel, exam3Sel);
     onMacroComparePeriodCountChange();
 }
 
@@ -11761,16 +11794,29 @@ function updateTeacherMultiExamSelects() {
     if (!schoolSel || !subjectSel || !exam1Sel || !exam2Sel || !exam3Sel) return;
 
     const schoolList = listAvailableSchoolsForCompare();
-    schoolSel.innerHTML = '<option value="">--请选择学校--</option>';
-    schoolList.forEach(s => schoolSel.innerHTML += `<option value="${s}">${s}</option>`);
-    if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) schoolSel.value = MY_SCHOOL;
+    if (window.CompareUiService && typeof window.CompareUiService.initializeCompareFilters === 'function') {
+        window.CompareUiService.initializeCompareFilters({
+            schoolSelect: schoolSel,
+            subjectSelect: subjectSel,
+            examSelects: [exam1Sel, exam2Sel, exam3Sel],
+            schoolList,
+            preferredSchool: MY_SCHOOL,
+            subjects: SUBJECTS || [],
+            subjectSortFn: sortSubjects,
+            examList: listAvailableExamsForCompare(),
+            currentExamId: CURRENT_EXAM_ID
+        });
+    } else {
+        schoolSel.innerHTML = '<option value="">--请选择学校--</option>';
+        schoolList.forEach(s => schoolSel.innerHTML += `<option value="${s}">${s}</option>`);
+        if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) schoolSel.value = MY_SCHOOL;
+        subjectSel.innerHTML = '<option value="">--请选择学科--</option>';
+        [...SUBJECTS].sort(sortSubjects).forEach(sub => {
+            subjectSel.innerHTML += `<option value="${sub}">${sub}</option>`;
+        });
+        renderSharedCompareExamTriplet(exam1Sel, exam2Sel, exam3Sel);
+    }
 
-    subjectSel.innerHTML = '<option value="">--请选择学科--</option>';
-    [...SUBJECTS].sort(sortSubjects).forEach(sub => {
-        subjectSel.innerHTML += `<option value="${sub}">${sub}</option>`;
-    });
-
-    renderSharedCompareExamTriplet(exam1Sel, exam2Sel, exam3Sel);
     onTeacherComparePeriodCountChange();
 }
 
@@ -11785,18 +11831,29 @@ function updateTeacherCompareExamSelects() {
     if (!schoolEl || !subjectEl || !exam1El || !exam2El || !exam3El) return;
 
     const schoolList = listAvailableSchoolsForCompare();
-    schoolEl.innerHTML = '<option value="">--请选择学校--</option>';
-    schoolList.forEach(s => schoolEl.innerHTML += `<option value="${s}">${s}</option>`);
-    if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) {
-        schoolEl.value = MY_SCHOOL;
+    if (window.CompareUiService && typeof window.CompareUiService.initializeCompareFilters === 'function') {
+        window.CompareUiService.initializeCompareFilters({
+            schoolSelect: schoolEl,
+            subjectSelect: subjectEl,
+            examSelects: [exam1El, exam2El, exam3El],
+            schoolList,
+            preferredSchool: MY_SCHOOL,
+            subjects: SUBJECTS || [],
+            examList: listAvailableExamsForCompare(),
+            currentExamId: CURRENT_EXAM_ID
+        });
+    } else {
+        schoolEl.innerHTML = '<option value="">--请选择学校--</option>';
+        schoolList.forEach(s => schoolEl.innerHTML += `<option value="${s}">${s}</option>`);
+        if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) {
+            schoolEl.value = MY_SCHOOL;
+        }
+        subjectEl.innerHTML = '<option value="">--请选择学科--</option>';
+        (SUBJECTS || []).forEach(sub => {
+            subjectEl.innerHTML += `<option value="${sub}">${sub}</option>`;
+        });
+        renderSharedCompareExamTriplet(exam1El, exam2El, exam3El);
     }
-
-    subjectEl.innerHTML = '<option value="">--请选择学科--</option>';
-    (SUBJECTS || []).forEach(sub => {
-        subjectEl.innerHTML += `<option value="${sub}">${sub}</option>`;
-    });
-
-    renderSharedCompareExamTriplet(exam1El, exam2El, exam3El);
 
     if (typeof updateTeacherCompareTeacherSelect === 'function') {
         updateTeacherCompareTeacherSelect();
