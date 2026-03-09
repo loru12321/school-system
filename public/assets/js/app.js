@@ -9332,6 +9332,9 @@ function syncCloudContextToPrevData() {
     }
 
     const historyRow = {
+        examId: String(ctx?.prevExamId || ''),
+        examFullKey: String(ctx?.prevExamId || ''),
+        examLabel: String(ctx?.prevExamId || '').replace(/_/g, ' '),
         school: String(prev.school || ctx?.owner?.school || ''),
         class: String(prev.class || ctx?.owner?.class || ''),
         name: String(prev.name || ctx?.owner?.name || ''),
@@ -9340,7 +9343,15 @@ function syncCloudContextToPrevData() {
         schoolRank: prev.schoolRank ?? '-',
         townRank: prev.townRank ?? '-',
         ranks: JSON.parse(JSON.stringify(prev.ranks || {})),
-        scores: JSON.parse(JSON.stringify(prev.scores || {}))
+        scores: JSON.parse(JSON.stringify(prev.scores || {})),
+        student: {
+            school: String(prev.school || ctx?.owner?.school || ''),
+            class: String(prev.class || ctx?.owner?.class || ''),
+            name: String(prev.name || ctx?.owner?.name || ''),
+            total: Number(prev.total) || 0,
+            ranks: JSON.parse(JSON.stringify(prev.ranks || {})),
+            scores: JSON.parse(JSON.stringify(prev.scores || {}))
+        }
     };
 
     if (!historyRow.ranks.total) {
@@ -9370,10 +9381,22 @@ function applyCloudStudentCompareContext(payload, compareStudent, allCompareStud
     }
 
     const periods = compareStudent.periods;
+    const normalizeExamKey = (key) => String(key || '').trim().replace(/\s+/g, '_').toLowerCase();
+    const isExamKeyMatch = (a, b) => {
+        const ka = normalizeExamKey(a);
+        const kb = normalizeExamKey(b);
+        if (!ka || !kb) return false;
+        return ka === kb || ka.endsWith(`_${kb}`) || kb.endsWith(`_${ka}`);
+    };
     const currentExamId = String(CURRENT_EXAM_ID || '').trim();
     let latestIndex = periods.length - 1;
     if (currentExamId) {
-        const idx = periods.findIndex(p => String(p?.examId || '').trim() === currentExamId);
+        const idx = periods.findIndex(p => isExamKeyMatch(p?.examId, currentExamId));
+        if (idx >= 0) latestIndex = idx;
+    }
+    if (latestIndex < 0 && Array.isArray(payload?.examIds) && payload.examIds.length > 0) {
+        const expectLatest = payload.examIds[payload.examIds.length - 1];
+        const idx = periods.findIndex(p => isExamKeyMatch(p?.examId, expectLatest));
         if (idx >= 0) latestIndex = idx;
     }
 
@@ -9403,7 +9426,7 @@ function applyCloudStudentCompareContext(payload, compareStudent, allCompareStud
 
     const previousSubjectScores = {};
     (allCompareStudents || []).forEach(stu => {
-        const period = stu?.periods?.[prevIndex];
+        const period = (stu?.periods || []).find(p => isExamKeyMatch(p?.examId, prevPeriod.examId));
         if (!period) return;
         Object.entries(period.subjects || {}).forEach(([subject, info]) => {
             const score = Number(info?.score);
@@ -9433,7 +9456,8 @@ function applyCloudStudentCompareContext(payload, compareStudent, allCompareStud
             schoolRank: prevPeriod.rankSchool ?? '-',
             townRank: prevPeriod.rankTown ?? '-',
             scores: prevScores,
-            ranks: prevRanks
+            ranks: prevRanks,
+            _sourceExam: prevPeriod.examId || ''
         }
     };
     return CLOUD_STUDENT_COMPARE_CONTEXT;
@@ -9489,6 +9513,42 @@ function getCloudPreviousSubjectScores(subject, student) {
     if (!isCloudContextMatchStudent(student) && !isCloudContextLikelyCurrentTarget(student)) return null;
     const scores = CLOUD_STUDENT_COMPARE_CONTEXT?.previousSubjectScores?.[subject];
     return Array.isArray(scores) ? scores : null;
+}
+
+function getPreviousExamSubjectScores(subject, student, prevStu) {
+    let scores = getCloudPreviousSubjectScores(subject, student);
+    if (Array.isArray(scores) && scores.length >= 5) return scores;
+
+    const examKey = String(
+        CLOUD_STUDENT_COMPARE_CONTEXT?.prevExamId ||
+        prevStu?._sourceExam ||
+        prevStu?.examFullKey ||
+        prevStu?.examId ||
+        ''
+    ).trim();
+
+    if (examKey && typeof CohortDB !== 'undefined') {
+        try {
+            const db = CohortDB.ensure();
+            const exams = db?.exams || {};
+            let snap = exams[examKey];
+            if (!snap) {
+                snap = Object.values(exams).find(ex => {
+                    const id = String(ex?.examId || '').trim();
+                    return id === examKey || id.endsWith(`_${examKey}`) || examKey.endsWith(`_${id}`);
+                });
+            }
+            if (snap && Array.isArray(snap.data)) {
+                const arr = snap.data.map(s => s?.scores?.[subject]).filter(v => typeof v === 'number');
+                if (arr.length > 0) return arr;
+            }
+        } catch (e) { }
+    }
+
+    scores = (window.PREV_DATA || [])
+        .map(s => (s.student?.scores || s.scores || {})[subject])
+        .filter(v => typeof v === 'number');
+    return scores.length ? scores : null;
 }
 
 async function viewCloudStudentComparesForCurrentStudent(name, className, schoolName) {
@@ -17178,12 +17238,7 @@ function renderRadarChart(student, passedHistory = null) {
         labels.forEach(sub => {
             let prevPercentile = null;
             if (prevStu.scores[sub] !== undefined) {
-                let prevAllScores = getCloudPreviousSubjectScores(sub, student);
-                if (!prevAllScores || prevAllScores.length === 0) {
-                    prevAllScores = (window.PREV_DATA || [])
-                        .map(s => (s.student?.scores || s.scores || {})[sub])
-                        .filter(v => typeof v === 'number');
-                }
+                let prevAllScores = getPreviousExamSubjectScores(sub, student, prevStu) || [];
                 // 🟢 [Bug #2 修复] 兜底：从 prevStu._sourceExam 对应的考试快照获取全量数据
                 if ((!prevAllScores || prevAllScores.length === 0) && prevStu._sourceExam && typeof CohortDB !== 'undefined') {
                     try {
@@ -17303,12 +17358,7 @@ function renderVarianceChart(student) {
             // 上次 Z-Score
             let prevZ = null;
             if (prevStu && prevStu.scores && prevStu.scores[sub] !== undefined) {
-                let prevAllScores = getCloudPreviousSubjectScores(sub, student);
-                if (!prevAllScores || prevAllScores.length === 0) {
-                    prevAllScores = (window.PREV_DATA || [])
-                        .map(s => (s.student?.scores || s.scores || {})[sub])
-                        .filter(v => typeof v === 'number');
-                }
+                let prevAllScores = getPreviousExamSubjectScores(sub, student, prevStu) || [];
                 const prevStats = calcStats(prevAllScores);
                 if (prevStats.sd > 0) {
                     prevZ = (prevStu.scores[sub] - prevStats.mean) / prevStats.sd;
