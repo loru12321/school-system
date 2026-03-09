@@ -15309,6 +15309,7 @@ function getStudentExamHistory(student) {
                     examId,
                     examFullKey: exam.examFullKey || examId, // 记录全名
                     examLabel: examId.replace(/_/g, ' '),
+                    createdAt: exam.createdAt || 0,
                     student: found,
                     percentiles,
                     allStudents: examData
@@ -17103,13 +17104,19 @@ function renderRadarChart(student, passedHistory = null) {
     // 尝试从 COHORT_DB 或 传入参数获取多期数据
     if (typeof getStudentExamHistory === 'function' || passedHistory) {
         const examHistory = passedHistory || getStudentExamHistory(student);
-        // 过滤掉当前考试，取最近3次
         const pastExams = examHistory
+            .map((h, idx) => ({ ...h, __idx: idx }))
             .filter(h => {
                 const hid = h.examFullKey || h.examId;
                 return hid !== window.CURRENT_EXAM_ID && h.examId !== window.CURRENT_EXAM_ID;
             })
-            .slice(-3); // 取最近3次
+            .sort((a, b) => {
+                const ta = Number(a.createdAt || (a.student && a.student.updatedAt && new Date(a.student.updatedAt).getTime()) || 0);
+                const tb = Number(b.createdAt || (b.student && b.student.updatedAt && new Date(b.student.updatedAt).getTime()) || 0);
+                if (ta !== tb) return tb - ta;
+                return b.__idx - a.__idx;
+            })
+            .slice(0, 3); // 最近3次（第一条即最近一次）
 
         pastExams.forEach((histExam, idx) => {
             const color = historyColors[idx % historyColors.length];
