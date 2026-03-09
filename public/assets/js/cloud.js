@@ -20,6 +20,12 @@
         if (window.UI && typeof UI.loading === 'function') UI.loading(show, text);
     }
 
+    function setCloudStatus(state, detail = '') {
+        if (typeof window.setCloudSyncStatus === 'function') {
+            window.setCloudSyncStatus(state, detail);
+        }
+    }
+
     function normalizeCohortId(raw) {
         return String(raw || '').replace(/\D/g, '');
     }
@@ -68,17 +74,25 @@
             const retryMs = Number(options.retryMs || 250);
             const silent = Boolean(options.silent);
 
-            if (this.check(true)) return true;
+            if (this.check(true)) {
+                setCloudStatus('connected');
+                return true;
+            }
+            setCloudStatus('connecting');
             if (typeof window.initSupabase === 'function') window.initSupabase();
 
             const start = Date.now();
             while (Date.now() - start < timeoutMs) {
-                if (this.check(true)) return true;
+                if (this.check(true)) {
+                    setCloudStatus('connected');
+                    return true;
+                }
                 await sleep(retryMs);
                 if (typeof window.initSupabase === 'function') window.initSupabase();
             }
-
-            return this.check(silent);
+            const ok = this.check(silent);
+            if (!ok) setCloudStatus('error', '连接失败');
+            return ok;
         },
 
         getKey: () => {
@@ -106,6 +120,7 @@
 
         save: async function () {
             if (!(await this.ensureClientReady())) return false;
+            setCloudStatus('syncing', '保存中');
 
             const role = getCurrentUserRole();
             if (!['admin', 'director', 'grade_director'].includes(role)) {
@@ -144,10 +159,12 @@
                 if (typeof logAction === 'function') logAction('云端同步', `全量数据已同步：${key}`);
                 if (typeof updateStatusPanel === 'function') updateStatusPanel();
                 safeToast('云端同步成功', 'success');
+                setCloudStatus('success', '已保存');
                 return true;
             } catch (e) {
                 console.error('Cloud save error:', e);
                 alert(`同步失败: ${e.message || e}`);
+                setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '保存失败');
                 return false;
             } finally {
                 safeLoading(false);
@@ -156,6 +173,7 @@
 
         load: async function () {
             if (!(await this.ensureClientReady())) return false;
+            setCloudStatus('syncing', '拉取中');
 
             let key = this.getKey() || localStorage.getItem('CURRENT_PROJECT_KEY');
             if (!key) {
@@ -187,16 +205,19 @@
                 if (typeof applySnapshotPayload === 'function') applySnapshotPayload(payload);
                 if (typeof logAction === 'function') logAction('云端加载', `已加载全量数据：${key}`);
                 safeToast('数据已同步到本地', 'success');
+                setCloudStatus('success', '已拉取');
                 return true;
             } catch (e) {
                 console.error('Cloud load error:', e);
                 safeToast('加载失败', 'error');
+                setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '拉取失败');
                 return false;
             }
         },
 
         saveTeachers: async function () {
             if (!(await this.ensureClientReady())) return false;
+            setCloudStatus('syncing', '同步任课');
             const key = this.getTeacherKey();
             if (!key) {
                 safeToast('无法确定学期或年级信息', 'error');
@@ -227,10 +248,12 @@
                 }
                 if (typeof updateStatusPanel === 'function') updateStatusPanel();
                 safeToast('任课表同步成功', 'success');
+                setCloudStatus('success', '任课已同步');
                 return true;
             } catch (e) {
                 console.error('Teacher save error:', e);
                 alert(`任课同步失败: ${e.message || e}`);
+                setCloudStatus('error', '任课同步失败');
                 return false;
             } finally {
                 safeLoading(false);
@@ -239,6 +262,7 @@
 
         loadTeachers: async function () {
             if (!(await this.ensureClientReady())) return false;
+            setCloudStatus('syncing', '拉取任课');
             safeLoading(true, '正在从云端拉取任课表...');
             try {
                 let key = this.getTeacherKey();
@@ -291,10 +315,12 @@
 
                 safeToast(`已加载任课表（${Object.keys(map).length} 条）`, 'success');
                 if (typeof logAction === 'function') logAction('任课同步', `任课表已加载：${key || 'latest'}`);
+                setCloudStatus('success', '任课已拉取');
                 return true;
             } catch (e) {
                 console.error('Teacher load error:', e);
                 safeToast('任课表加载失败', 'error');
+                setCloudStatus('error', '任课拉取失败');
                 return false;
             } finally {
                 safeLoading(false);
@@ -303,6 +329,7 @@
 
         fetchStudentExamHistory: async function (student) {
             if (!(await this.ensureClientReady())) return { success: false, message: '云端未连接' };
+            setCloudStatus('syncing', '拉取历史');
             if (!student || !student.name) return { success: false, message: '学生信息无效' };
 
             const cohortId = normalizeCohortId(student.cohort || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
@@ -370,15 +397,18 @@
                     }
                 }
 
+                setCloudStatus('success', `历史${history.length}条`);
                 return { success: true, data: history };
             } catch (e) {
                 console.error('[CloudHistory] failed:', e);
+                setCloudStatus('error', '历史拉取失败');
                 return { success: false, message: e.message || String(e) };
             }
         },
 
         fetchCohortExamsToLocal: async function (cohortId) {
             if (!(await this.ensureClientReady())) return { success: false, message: '云端未连接' };
+            setCloudStatus('syncing', '拉取考试');
             const cid = normalizeCohortId(cohortId || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
             if (!cid) return { success: false, message: '无法确定届别' };
             if (typeof CohortDB === 'undefined' || typeof CohortDB.ensure !== 'function') {
@@ -448,9 +478,11 @@
                 refreshSelectors();
 
                 if (loadedCount > 0) safeToast(`已从云端加载 ${loadedCount} 期历史考试`, 'success');
+                setCloudStatus('success', loadedCount > 0 ? `新增${loadedCount}期` : '已最新');
                 return { success: true, count: loadedCount };
             } catch (e) {
                 console.error('[CloudExams] failed:', e);
+                setCloudStatus('error', '考试拉取失败');
                 return { success: false, message: e.message || String(e) };
             }
         }

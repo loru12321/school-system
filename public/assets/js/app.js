@@ -232,6 +232,89 @@ async function withTimeout(promise, timeoutMs = 8000, timeoutMessage = 'Request 
     }
 }
 
+const CloudSyncIndicator = {
+    el: null,
+    timer: null,
+    state: 'idle',
+    ensure: function () {
+        if (this.el && document.body.contains(this.el)) return this.el;
+        const node = document.createElement('div');
+        node.id = 'cloud-sync-indicator';
+        node.style.cssText = [
+            'position:fixed',
+            'top:12px',
+            'right:12px',
+            'z-index:10000',
+            'display:flex',
+            'align-items:center',
+            'gap:8px',
+            'padding:6px 10px',
+            'border-radius:9999px',
+            'font-size:12px',
+            'font-weight:600',
+            'border:1px solid #cbd5e1',
+            'background:rgba(255,255,255,0.9)',
+            'color:#334155',
+            'backdrop-filter:blur(6px)',
+            'box-shadow:0 4px 12px rgba(15,23,42,0.08)'
+        ].join(';');
+        node.innerHTML = '<span style="font-size:10px;">●</span><span>云端: 未连接</span>';
+        document.body.appendChild(node);
+        this.el = node;
+        return node;
+    },
+    set: function (state, detail = '') {
+        const el = this.ensure();
+        this.state = state;
+        if (this.timer) clearTimeout(this.timer);
+        const map = {
+            idle: { dot: '#94a3b8', text: '未连接', bg: 'rgba(255,255,255,0.9)', bd: '#cbd5e1', fg: '#334155' },
+            connecting: { dot: '#f59e0b', text: '连接中', bg: '#fffbeb', bd: '#fde68a', fg: '#92400e' },
+            connected: { dot: '#10b981', text: '已连接', bg: '#ecfdf5', bd: '#86efac', fg: '#065f46' },
+            syncing: { dot: '#0ea5e9', text: '同步中', bg: '#eff6ff', bd: '#bfdbfe', fg: '#1e3a8a' },
+            success: { dot: '#22c55e', text: '同步成功', bg: '#ecfdf5', bd: '#86efac', fg: '#166534' },
+            error: { dot: '#ef4444', text: '同步失败', bg: '#fef2f2', bd: '#fecaca', fg: '#991b1b' }
+        };
+        const cfg = map[state] || map.idle;
+        const text = detail ? `${cfg.text} (${detail})` : cfg.text;
+        el.style.background = cfg.bg;
+        el.style.borderColor = cfg.bd;
+        el.style.color = cfg.fg;
+        el.innerHTML = `<span style="font-size:10px;color:${cfg.dot};">●</span><span>云端: ${text}</span>`;
+
+        if (state === 'success') {
+            this.timer = setTimeout(() => this.set('connected'), 2200);
+        }
+    },
+    probe: async function () {
+        if (!navigator.onLine) {
+            this.set('error', '离线');
+            return;
+        }
+        if (!window.sbClient) {
+            this.set('connecting', '等待初始化');
+            return;
+        }
+        try {
+            await withTimeout(window.sbClient.from('system_data').select('key').limit(1), 4000, 'probe-timeout');
+            this.set('connected');
+        } catch (e) {
+            this.set('error', '连接异常');
+        }
+    },
+    start: function () {
+        this.ensure();
+        this.probe();
+        window.addEventListener('online', () => this.probe());
+        window.addEventListener('offline', () => this.set('error', '离线'));
+        setInterval(() => this.probe(), 30000);
+    }
+};
+
+window.setCloudSyncStatus = (state, detail = '') => {
+    CloudSyncIndicator.set(state, detail);
+};
+
 // 🔐 权限与账号管理系统核心
 const Auth = {
     currentUser: null,
@@ -5086,6 +5169,7 @@ window.switchProject = switchCohort;
 
 // 4. 启动时自动检查恢复 (程序入口)
 window.addEventListener('load', async () => {
+    try { CloudSyncIndicator.start(); } catch (e) { console.warn('CloudSyncIndicator start failed:', e); }
 
     // ✋ 🔴 [已移除]：删除了 MobApp.init() 的拦截逻辑，确保手机端也继续执行后续的完整初始化流程 🔴
 
