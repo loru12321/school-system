@@ -456,13 +456,24 @@
                                 // 从 key 中提取考试名（格式：{cohortId}级_{年级}_{年份}_{学期}_{类型}_{名称}）
                                 const keyParts = item.key.split('_');
                                 const examLabel = keyParts.length >= 5 ? keyParts.slice(4).join('_') : item.key;
+                                const subjectRanks = {};
+                                Object.entries(match.ranks || {}).forEach(([subject, rankInfo]) => {
+                                    if (subject === 'total' || !rankInfo || typeof rankInfo !== 'object') return;
+                                    subjectRanks[subject] = {
+                                        class: rankInfo.class ?? '-',
+                                        school: rankInfo.school ?? '-',
+                                        township: rankInfo.township ?? '-'
+                                    };
+                                });
                                 history.push({
                                     examId: examLabel || item.key,
                                     examFullKey: item.key,
+                                    examLabel: examLabel || item.key,
                                     total: match.total,
                                     rankClass: match.ranks?.total?.class,
                                     rankSchool: match.ranks?.total?.school,
                                     rankTown: match.ranks?.total?.township,
+                                    subjectRanks,
                                     scores: match.scores,
                                     updatedAt: item.updated_at
                                 });

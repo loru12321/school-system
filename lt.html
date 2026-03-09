@@ -10709,9 +10709,12 @@ window.addEventListener('load', async () => {
         // 刷新
         updateSchoolSelect();
         updateMySchoolSelect();
-        renderTables();
         document.getElementById('mode-mask').style.display = 'none';
         if (CONFIG.name) renderNavigation();
+        setTimeout(() => {
+            renderTables();
+            if (MY_SCHOOL) generateTeacherInputs();
+        }, 60);
 
         UI.toast("✅ 数据已自动加载 (分发版模式)", "success");
     }
@@ -10807,8 +10810,10 @@ window.addEventListener('load', async () => {
                 if (typeof CohortDB !== 'undefined') CohortDB.renderExamList();
                 updateExamHistoryStatusBar();
 
-                renderTables();
-                if (MY_SCHOOL) generateTeacherInputs();
+                setTimeout(() => {
+                    try { renderTables(); } catch (e) { console.warn('[Init] renderTables delayed failed:', e); }
+                    try { if (MY_SCHOOL) generateTeacherInputs(); } catch (e) { console.warn('[Init] generateTeacherInputs delayed failed:', e); }
+                }, 80);
 
                 UI.toast(`✅ 已加载项目：[${currentKey}]`, 'success');
 
@@ -10825,7 +10830,7 @@ window.addEventListener('load', async () => {
                             }
                         }).catch(e => console.warn('[Init] 云端历史考试拉取失败:', e));
                     }
-                }, 1500);
+                }, 700);
             }, "正在加载数据...");
         };
 
@@ -15239,70 +15244,75 @@ function updateStudentCompareExamSelects() {
 }
 
 function updateReportCompareExamSelects() {
+    const countEl = document.getElementById('reportComparePeriodCount');
     const exam1Sel = document.getElementById('reportCompareExam1');
     const exam2Sel = document.getElementById('reportCompareExam2');
     const exam3Sel = document.getElementById('reportCompareExam3');
-    if (!exam1Sel || !exam2Sel || !exam3Sel) return;
+    if (!countEl || !exam1Sel || !exam2Sel || !exam3Sel) return;
 
-    // 🆕 同步期数显示状态
-    onReportComparePeriodCountChange();
-
-    // 1. 缓存当前值 (为了刷新后保持选择)
     const v1 = exam1Sel.value;
     const v2 = exam2Sel.value;
     const v3 = exam3Sel.value;
-
-    // 获取所有可用考试 (包括本地CohortDB和云端PREV_DATA)
-    const examList = typeof listAvailableExamsForCompare === 'function' 
-        ? listAvailableExamsForCompare() 
+    const examList = typeof listAvailableExamsForCompare === 'function'
+        ? listAvailableExamsForCompare()
         : [];
 
-    const defaultOption = '<option value="">--未选择(自动)--</option>';
+    const defaultOption = '<option value="">--???(??)--</option>';
     if (examList.length === 0) {
-        const msg = '<option value="">--无可用历史数据--</option>';
+        const msg = '<option value="">--???????--</option>';
         exam1Sel.innerHTML = msg;
         exam2Sel.innerHTML = msg;
         exam3Sel.innerHTML = msg;
         return;
     }
 
+    const autoCount = examList.length >= 3 ? 3 : 2;
+    countEl.value = String(autoCount);
+    const count3Option = countEl.querySelector('option[value="3"]');
+    if (count3Option) count3Option.disabled = examList.length < 3;
+    onReportComparePeriodCountChange();
+
     const optionsHtml = defaultOption + examList.map(e => {
         let label = e.label;
-        if (e.source === 'cloud') label = '☁️ ' + label;
-        if (e.source === 'local') label = '💻 ' + label;
-        return `<option value="${e.id}">${label}</option>`;
+        if (e.source === 'cloud') label = '?? ' + label;
+        if (e.source === 'local') label = '?? ' + label;
+        return '<option value="' + e.id + '">' + label + '</option>';
     }).join('');
-    
     exam1Sel.innerHTML = optionsHtml;
     exam2Sel.innerHTML = optionsHtml;
     exam3Sel.innerHTML = optionsHtml;
 
-    // 2. 尝试恢复值 (如果还选得上的话)
-    const IDs = examList.map(e => e.id);
-    if (v1 && IDs.includes(v1)) exam1Sel.value = v1;
-    if (v2 && IDs.includes(v2)) exam2Sel.value = v2;
-    if (v3 && IDs.includes(v3)) exam3Sel.value = v3;
+    const resolveExamId = (value) => {
+        if (!value) return '';
+        const hit = examList.find(e => isExamKeyEquivalentForCompare(e.id, value));
+        return hit ? hit.id : '';
+    };
 
-    // 3. 自动预测 (初次加载或重置后，自动填上最近的三期)
-    // 只有当至少一期没选，或者全部都不选时才触发自动匹配逻辑
-    if ((!exam1Sel.value || !exam2Sel.value || !exam3Sel.value) && examList.length > 0) {
-        const idx3 = examList.length - 1;
-        const idx2 = Math.max(0, idx3 - 1);
-        const idx1 = Math.max(0, idx3 - 2);
-
-        if (!exam3Sel.value && examList[idx3]) exam3Sel.value = examList[idx3].id;
-        if (!exam2Sel.value && examList[idx2]) exam2Sel.value = examList[idx2].id;
-        if (!exam1Sel.value && examList[idx1]) exam1Sel.value = examList[idx1].id;
-
-        // 如果是2期，确保第3期不参与逻辑（虽然被隐藏了，但为了严谨性）
-        const count = parseInt(document.getElementById('reportComparePeriodCount')?.value || '3');
-        if (count === 2) {
-            // 2期时，通常是 第1期=Prev, 第2期=Current
-            exam2Sel.value = examList[idx3].id;
-            exam1Sel.value = examList[idx2].id;
-            exam3Sel.value = ""; 
-        }
+    const manualValues = autoCount === 3
+        ? [resolveExamId(v1), resolveExamId(v2), resolveExamId(v3)]
+        : [resolveExamId(v1), resolveExamId(v2)];
+    const hasValidManualSelection = manualValues.every(Boolean) && (new Set(manualValues).size === manualValues.length);
+    if (hasValidManualSelection) {
+        exam1Sel.value = manualValues[0] || '';
+        exam2Sel.value = manualValues[1] || '';
+        exam3Sel.value = autoCount === 3 ? (manualValues[2] || '') : '';
+        return;
     }
+
+    const effectiveCurrentExamId = getEffectiveCurrentExamId();
+    let currentIndex = effectiveCurrentExamId
+        ? examList.findIndex(e => isExamKeyEquivalentForCompare(e.id, effectiveCurrentExamId))
+        : -1;
+    if (currentIndex < 0) currentIndex = examList.length - 1;
+
+    let selectedExams = examList.slice(Math.max(0, currentIndex - autoCount + 1), currentIndex + 1);
+    if (selectedExams.length < autoCount) {
+        selectedExams = examList.slice(Math.max(0, examList.length - autoCount));
+    }
+
+    exam1Sel.value = selectedExams[0]?.id || '';
+    exam2Sel.value = selectedExams[1]?.id || '';
+    exam3Sel.value = autoCount === 3 ? (selectedExams[2]?.id || '') : '';
 }
 
 function onReportComparePeriodCountChange() {
@@ -17040,45 +17050,58 @@ function isExamSelectableForCompare(examId) {
 
 function listAvailableExamsForCompare() {
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
-    const examMap = new Map(); // 使用 Map 去重
+    const examMap = new Map();
     const cohortId = normalizeCompareCohortId(CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
 
-    // 1. 本地 CohortDB 数据
+    const upsertExam = (entry) => {
+        if (!entry?.id || !isRealExamIdForCompare(entry.id, cohortId)) return;
+        const existingKey = Array.from(examMap.keys()).find(key => isExamKeyEquivalentForCompare(key, entry.id));
+        if (!existingKey) {
+            examMap.set(entry.id, entry);
+            return;
+        }
+        const existing = examMap.get(existingKey) || {};
+        examMap.set(existingKey, {
+            ...existing,
+            ...entry,
+            id: existing.id || entry.id,
+            createdAt: Math.max(existing.createdAt || 0, entry.createdAt || 0),
+            label: entry.label || existing.label || entry.id,
+            source: entry.source || existing.source || 'local'
+        });
+    };
+
     if (db?.exams) {
         Object.values(db.exams).forEach(ex => {
-            if (ex?.examId && isRealExamIdForCompare(ex.examId, cohortId)) {
-                examMap.set(ex.examId, {
-                    id: ex.examId,
-                    createdAt: ex.createdAt || 0,
-                    label: ex.examLabel || ex.examId,
-                    source: 'local'
-                });
-            }
+            if (!ex?.examId) return;
+            upsertExam({
+                id: ex.examId,
+                createdAt: ex.createdAt || 0,
+                label: ex.examLabel || ex.examId,
+                source: 'local'
+            });
         });
     }
 
-    // 2. 整合当前正在分析的数据
-    if (CURRENT_EXAM_ID && isRealExamIdForCompare(CURRENT_EXAM_ID, cohortId) && !examMap.has(CURRENT_EXAM_ID)) {
-        examMap.set(CURRENT_EXAM_ID, {
+    if (CURRENT_EXAM_ID) {
+        upsertExam({
             id: CURRENT_EXAM_ID,
             createdAt: Date.now(),
-            label: `${CURRENT_EXAM_ID.split('_').pop()} (当前)`,
+            label: CURRENT_EXAM_ID.split('_').pop() + ' (??)',
             source: 'current'
         });
     }
 
-    // 3. 整合云端异步拉取的当前学生历史 (如果有)
     if (window.PREV_DATA && Array.isArray(window.PREV_DATA)) {
         window.PREV_DATA.forEach(h => {
             const hid = h.examFullKey || h.examId;
-            if (hid && isRealExamIdForCompare(hid, cohortId) && !examMap.has(hid)) {
-                examMap.set(hid, {
-                    id: hid,
-                    createdAt: h.updatedAt ? new Date(h.updatedAt).getTime() : 0,
-                    label: h.examLabel || hid,
-                    source: 'cloud'
-                });
-            }
+            if (!hid) return;
+            upsertExam({
+                id: hid,
+                createdAt: h.updatedAt ? new Date(h.updatedAt).getTime() : 0,
+                label: h.examLabel || hid,
+                source: 'cloud'
+            });
         });
     }
 
@@ -20692,19 +20715,26 @@ async function doQuery() {
                     examId: h.examId,
                     examFullKey: h.examFullKey,
                     examLabel: String(h.examLabel || h.examId || h.examFullKey || '').replace(/_/g, ' '),
+                    updatedAt: h.updatedAt || new Date().toISOString(),
                     student: {
                         name: stu.name,
                         class: stu.class,
                         school: stu.school || '',
                         total: Number(h.total) || 0,
                         scores: h.scores || {},
-                        ranks: {
+                        ranks: Object.assign({
                             total: {
                                 class: h.rankClass || '-',
                                 school: h.rankSchool || '-',
                                 township: h.rankTown || '-'
                             }
-                        },
+                        }, Object.fromEntries(
+                            Object.entries(h.subjectRanks || {}).map(([sub, ranks]) => [sub, {
+                                class: ranks?.class ?? '-',
+                                school: ranks?.school ?? '-',
+                                township: ranks?.township ?? '-'
+                            }])
+                        )),
                         updatedAt: h.updatedAt || new Date().toISOString()
                     },
                     percentiles: h.percentiles || {}
@@ -20899,6 +20929,13 @@ function findPreviousRecord(student) {
     const targetName = cleanStr(student.name);
     const targetClass = normClass(student.class);
     const targetSchool = student.school;
+    const getRecordTime = (row) => {
+        const raw = row?.updatedAt || row?.createdAt || row?.student?.updatedAt || 0;
+        const asNum = Number(raw);
+        if (Number.isFinite(asNum) && asNum > 0) return asNum;
+        const asDate = new Date(raw).getTime();
+        return Number.isFinite(asDate) ? asDate : 0;
+    };
 
     const currentExamId = getEffectiveCurrentExamId();
 
@@ -20907,7 +20944,7 @@ function findPreviousRecord(student) {
         const otherExams = window.PREV_DATA.filter(p => {
              const hid = p.examFullKey || p.examId;
              return !currentExamId || (!isExamKeyEquivalentForCompare(hid, currentExamId) && !isExamKeyEquivalentForCompare(p.examId, currentExamId));
-        });
+        }).sort((a, b) => getRecordTime(b) - getRecordTime(a));
         const match = otherExams.find(p => matchStudent(p, targetName, targetClass, targetSchool));
         if (match) return match;
     }
@@ -21005,7 +21042,7 @@ function getStudentExamHistory(student) {
             if (examData.length === 0) continue;
 
             // 如果启用了手动覆盖，必须在指定的 examId 列表中
-            if (manualExams.length > 0 && !manualExams.includes(examId) && !isExamKeyEquivalentForCompare(examId, currentExamId)) {
+            if (manualExams.length > 0 && !manualExams.some(id => isExamKeyEquivalentForCompare(examId, id)) && !isExamKeyEquivalentForCompare(examId, currentExamId)) {
                 continue;
             }
 
@@ -21051,7 +21088,7 @@ function getStudentExamHistory(student) {
             if (!isTargetStudent(h)) return;
             // 如果启用了手动覆盖，过滤掉不在覆盖列表里的云端数据 (当前考试除外)
             const matchKey = getHistoryKey(h);
-            if (manualExams.length > 0 && !manualExams.includes(matchKey) && !isExamKeyEquivalentForCompare(matchKey, currentExamId)) {
+            if (manualExams.length > 0 && !manualExams.some(id => isExamKeyEquivalentForCompare(matchKey, id)) && !isExamKeyEquivalentForCompare(matchKey, currentExamId)) {
                 return;
             }
             if (!matchKey) return;
@@ -21062,7 +21099,7 @@ function getStudentExamHistory(student) {
                 examId: h.examId || h.examFullKey,
                 examLabel: String(h.examLabel || h.examId || h.examFullKey || '').replace(/_/g, ' ')
             };
-            const existsIdx = results.findIndex(r => getHistoryKey(r) === matchKey);
+            const existsIdx = results.findIndex(r => isExamKeyEquivalentForCompare(getHistoryKey(r), matchKey));
             if (existsIdx === -1) {
                 results.push(normalized);
             } else if (getHistoryTime(normalized) > getHistoryTime(results[existsIdx])) {
