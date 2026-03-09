@@ -17434,9 +17434,11 @@ function analyzeStrengthsAndWeaknesses(student) {
 }
 
 function getIndicatorContext() {
-    let meta = null;
-    try { meta = JSON.parse(localStorage.getItem('ARCHIVE_META') || 'null'); } catch (e) { }
-    if (!meta) meta = getExamMetaFromUI();
+    const liveMeta = (typeof getExamMetaFromUI === 'function') ? (getExamMetaFromUI() || {}) : {};
+    let archiveMeta = null;
+    try { archiveMeta = JSON.parse(localStorage.getItem('ARCHIVE_META') || 'null'); } catch (e) { }
+    const hasLive = !!(liveMeta && (liveMeta.grade || liveMeta.type || liveMeta.year || liveMeta.term));
+    const meta = hasLive ? liveMeta : (archiveMeta || liveMeta);
     const grade = String(meta?.grade || computeCohortGrade(CURRENT_COHORT_META, meta) || '');
     const type = meta?.type || '';
     return { grade, type, meta };
@@ -17456,7 +17458,7 @@ function updateIndicatorUIState() {
     const promptAllowed = isIndicatorPromptAllowed();
     const calcAllowed = isIndicatorCalcAllowed();
     const btn = document.getElementById('btn-indicator-calc');
-    if (btn) btn.disabled = !promptAllowed;
+    if (btn) btn.disabled = !calcAllowed;
     const paramsArea = document.getElementById('dm-params-area');
     if (paramsArea) paramsArea.style.display = promptAllowed ? 'block' : 'none';
     const i1 = document.getElementById('dm_ind1_input');
@@ -17468,7 +17470,10 @@ function updateIndicatorUIState() {
 }
 
 function calcIndicators() {
-    if (!isIndicatorPromptAllowed()) return;
+    if (!isIndicatorPromptAllowed()) {
+        if (window.UI) UI.toast('仅 9 年级可使用指标生功能', 'warning');
+        return;
+    }
     // 1. 优先读取全局变量 SYS_VARS (这是最可靠的数据源)
     // 如果全局变量是空的，尝试读取管理面板里的输入框 (dm_ind...)
     let val1 = window.SYS_VARS?.indicator?.ind1;
@@ -17489,7 +17494,10 @@ function calcIndicators() {
         return;
     }
 
-    if (!isIndicatorCalcAllowed()) return;
+    if (!isIndicatorCalcAllowed()) {
+        if (window.UI) UI.toast('仅 9 年级期中/期末考试可开始计算', 'warning');
+        return;
+    }
 
     // 3. 检查：如果目标人数未导入，自动打开管理面板并跳转到【目标人数管理】页
     // window.TARGETS 是在 loadCloudData 或 DataManager 中加载的
