@@ -348,7 +348,13 @@
                     setTeacherSchoolMap(schoolMap);
                     
                     // 🟢 [修复]：加载后自动同步到本地历史记录
-                    if (window.DataManager && DataManager.syncTeacherHistory) DataManager.syncTeacherHistory();
+                    if (window.DataManager && DataManager.syncTeacherHistory) {
+                        DataManager.syncTeacherHistory({
+                            termId: baseTerm || termId || '',
+                            timestamp: selectedRow?.updated_at || Date.now(),
+                            source: 'cloud'
+                        });
+                    }
                     if (window.DataManager && DataManager.renderTeachers) DataManager.renderTeachers();
                     if (window.DataManager && typeof DataManager.refreshTeacherAnalysis === 'function') {
                         DataManager.refreshTeacherAnalysis();

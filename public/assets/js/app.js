@@ -3774,14 +3774,25 @@ const DataManager = {
         }
     },
 
-    syncTeacherHistory: function () {
-        const termId = localStorage.getItem('CURRENT_TERM_ID') || getTermId(getExamMetaFromUI());
+    syncTeacherHistory: function (opts = {}) {
+        const termId = opts.termId || localStorage.getItem('CURRENT_TERM_ID') || getTermId(getExamMetaFromUI());
         if (!termId) return;
         const db = CohortDB.ensure();
         db.teachingHistory = db.teachingHistory || {};
+        const savedAt = (() => {
+            const raw = opts.timestamp;
+            if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+            if (typeof raw === 'string') {
+                const parsed = Date.parse(raw);
+                if (!Number.isNaN(parsed)) return parsed;
+            }
+            return Date.now();
+        })();
         db.teachingHistory[termId] = {
             map: JSON.parse(JSON.stringify(TEACHER_MAP || {})),
-            schoolMap: JSON.parse(JSON.stringify(TEACHER_SCHOOL_MAP || {}))
+            schoolMap: JSON.parse(JSON.stringify(TEACHER_SCHOOL_MAP || {})),
+            savedAt,
+            source: opts.source || 'local'
         };
         if (typeof this.refreshTeacherAnalysis === 'function') this.refreshTeacherAnalysis();
     },
@@ -25914,7 +25925,78 @@ function getTeacherTermOptions() {
     return options;
 }
 
+function parseTeacherTermApproxMs(termId) {
+    if (!termId) return 0;
+    const m = String(termId).match(/(\d{4})-(\d{4})_(.+?)(?:_|$)/);
+    if (!m) return 0;
+    const startYear = Number(m[1]);
+    const term = m[3];
+    if (!Number.isFinite(startYear)) return 0;
+    const month = /下/.test(term) ? 2 : 9;
+    return new Date(startYear, month - 1, 1).getTime();
+}
+
+function pickAutoTeacherTerm() {
+    const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+    const history = db?.teachingHistory || {};
+    const now = Date.now();
+    const entries = Object.entries(history)
+        .map(([termId, entry]) => {
+            const mapObj = entry?.map && typeof entry.map === 'object' ? entry.map : (entry || {});
+            const size = (mapObj && typeof mapObj === 'object') ? Object.keys(mapObj).length : 0;
+            const rawTs = entry?.savedAt || entry?.updated_at || entry?.updatedAt || entry?.importedAt || entry?.createdAt;
+            const parsedTs = typeof rawTs === 'number' ? rawTs : Date.parse(String(rawTs || ''));
+            const ts = Number.isFinite(parsedTs) ? parsedTs : 0;
+            const approxTs = parseTeacherTermApproxMs(termId);
+            return { termId, size, ts, approxTs };
+        })
+        .filter(x => x.termId && x.size > 0);
+
+    if (!entries.length) {
+        return localStorage.getItem('CURRENT_TERM_ID') || '';
+    }
+
+    entries.sort((a, b) => {
+        if (a.ts && b.ts) {
+            return Math.abs(a.ts - now) - Math.abs(b.ts - now);
+        }
+        if (a.ts || b.ts) return b.ts - a.ts;
+        return Math.abs(a.approxTs - now) - Math.abs(b.approxTs - now);
+    });
+    return entries[0].termId;
+}
+
+function applyTeacherTermWithoutPrompt(termId) {
+    if (!termId) return false;
+    localStorage.setItem('CURRENT_TERM_ID', termId);
+    const termSel = document.getElementById('dm-teacher-term-select');
+    if (termSel) {
+        const hit = Array.from(termSel.options || []).find(o => o.value === termId || String(o.value).startsWith(termId + '_'));
+        termSel.value = hit ? hit.value : termId;
+    }
+
+    const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+    const history = db?.teachingHistory || {};
+    const entry = history[termId];
+    const localMap = entry?.map && typeof entry.map === 'object' ? entry.map : (entry || {});
+    const localSchoolMap = entry?.schoolMap && typeof entry.schoolMap === 'object' ? entry.schoolMap : {};
+    if (localMap && Object.keys(localMap).length > 0) {
+        setTeacherMap(JSON.parse(JSON.stringify(localMap)));
+        setTeacherSchoolMap(JSON.parse(JSON.stringify(localSchoolMap)));
+        if (window.DataManager && typeof DataManager.renderTeachers === 'function') DataManager.renderTeachers();
+        if (window.DataManager && typeof DataManager.refreshTeacherAnalysis === 'function') DataManager.refreshTeacherAnalysis();
+        return true;
+    }
+
+    if (window.CloudManager && typeof CloudManager.loadTeachers === 'function') {
+        CloudManager.loadTeachers();
+        return true;
+    }
+    return false;
+}
+
 function promptTeacherSyncIfNeeded() {
+    return applyTeacherTermWithoutPrompt(pickAutoTeacherTerm());
     if (localStorage.getItem('SUPPRESS_TEACHER_SYNC_PROMPT') === '1') return;
     if (sessionStorage.getItem('TEACHER_SYNC_PROMPT_SHOWN') === '1') return;
     if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return;
@@ -25962,16 +26044,15 @@ function promptTeacherSyncIfNeeded() {
 }
 
 function scheduleTeacherSyncPrompt() {
-    if (localStorage.getItem('SUPPRESS_TEACHER_SYNC_PROMPT') === '1') return;
-    sessionStorage.removeItem('TEACHER_SYNC_PROMPT_SHOWN');
+    if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return;
     let tries = 0;
     const timer = setInterval(() => {
         tries += 1;
-        const shown = promptTeacherSyncIfNeeded();
-        if (shown || tries >= 10) {
+        const done = promptTeacherSyncIfNeeded();
+        if (done || tries >= 10) {
             clearInterval(timer);
         }
-    }, 800);
+    }, 400);
 }
 function runDataDoctor() {
     if (!RAW_DATA.length) return alert("请先上传数据，医生才能进行诊断！");
