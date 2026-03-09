@@ -34042,6 +34042,9 @@ if (typeof window !== 'undefined') {
         }
     }
 
+    let historyTrendChartInstance = null;
+    let historyTrendChartTimer = null;
+
     function renderHistoryCharts(historyData, currentStudent) {
         const containerId = 'history-charts-container';
         let container = document.getElementById(containerId);
@@ -34111,10 +34114,25 @@ if (typeof window !== 'undefined') {
         container.innerHTML = html;
 
         if (historyData.length >= 2) {
-            setTimeout(function() {
+            if (historyTrendChartTimer) {
+                clearTimeout(historyTrendChartTimer);
+                historyTrendChartTimer = null;
+            }
+            historyTrendChartTimer = setTimeout(function() {
                 const ctx = document.getElementById('historyTrendChart');
                 if (ctx && window.Chart) {
-                    new Chart(ctx, {
+                    try {
+                        if (historyTrendChartInstance) {
+                            historyTrendChartInstance.destroy();
+                            historyTrendChartInstance = null;
+                        }
+                        const existed = Chart.getChart ? Chart.getChart(ctx) : null;
+                        if (existed) existed.destroy();
+                    } catch (e) {
+                        console.warn('[historyTrendChart] 清理旧图表实例失败:', e);
+                    }
+
+                    historyTrendChartInstance = new Chart(ctx, {
                         type: 'line',
                         data: {
                             labels: historyData.map(function(h) { return h.examId; }),
@@ -34141,6 +34159,7 @@ if (typeof window !== 'undefined') {
                         }
                     });
                 }
+                historyTrendChartTimer = null;
             }, 100);
         }
         
