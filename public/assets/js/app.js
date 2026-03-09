@@ -344,10 +344,6 @@ const Auth = {
             if (matchedUser.roles) {
                 sessionStorage.setItem('CURRENT_ROLES', JSON.stringify(matchedUser.roles));
             }
-            setTimeout(() => {
-                loadCloudData();
-            }, 200);
-
             // 界面切换
             this.applyRoleView();
             updateAdminOnlyButtons();
@@ -458,11 +454,7 @@ const Auth = {
                     const msgBtn = document.getElementById('admin-msg-btn');
                     if (msgBtn) msgBtn.style.display = 'block'; // 显示铃铛
 
-                    if (typeof IssueManager !== 'undefined') {
-                        IssueManager.checkIssues(); // 立即查一次
-                        // 每30秒轮询一次新消息
-                        setInterval(() => IssueManager.checkIssues(), 30000);
-                    }
+                    // 轮询交由 applyRoleView 统一管理，避免重复定时器导致卡顿
                 }
                 /* 👆👆👆 🟢 结束 🟢 👆👆👆 */
             }
