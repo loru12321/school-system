@@ -4322,7 +4322,7 @@ const DataManager = {
         }
     },
 
-    saveParamsLocally: function () {
+    saveParamsLocally: async function (skipCloudSync = false) {
         if (!isIndicatorAllowed()) return;
         // 1. 防御性初始化
         if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {} };
@@ -4342,17 +4342,15 @@ const DataManager = {
         this.persistGrade9IndicatorTemplate();
 
         // 5. 🔥 核心新增：立即触发云端同步 🔥
-        if (typeof saveCloudData === 'function') {
+        if (!skipCloudSync && typeof saveCloudData === 'function') {
             // 使用 toast 提示正在保存，体验更好
             UI.toast('💾 正在同步参数至云端...', 'info');
-            saveCloudData().then(() => {
+            const ok = await saveCloudData();
+            if (ok) {
                 UI.toast('✅ 参数已保存并同步云端', 'success');
-
-                // 可选：参数变动后，通常需要重算指标生数据
-                // if(confirm("参数已更新，是否立即重新计算指标生数据？")) {
-                //     calcIndicators();
-                // }
-            });
+            } else {
+                UI.toast('⚠️ 参数已暂存，本次未成功同步到云端', 'warning');
+            }
         } else {
             UI.toast('✅ 参数已暂存到内存 (未连接云端)', 'success');
         }
@@ -4435,8 +4433,10 @@ const DataManager = {
                 DataManager.persistGrade9TargetsTemplate();
 
                 if (typeof saveCloudData === 'function') {
-                    saveCloudData();
-                    if (window.UI) UI.toast("✅ 目标数据已自动同步云端", "success");
+                    const ok = await saveCloudData();
+                    if (window.UI) {
+                        UI.toast(ok ? "✅ 目标数据已自动同步云端" : "⚠️ 目标数据已暂存，本次未成功同步云端", ok ? "success" : "warning");
+                    }
                 }
 
                 const msg = `✅ 导入完成：成功 ${successCount} 条，重复 ${dupCount} 条，错误 ${errorCount} 条。`;
@@ -4459,20 +4459,28 @@ const DataManager = {
             showCancelButton: true,
             confirmButtonText: '确定',
             preConfirm: () => ({ t1: parseInt(document.getElementById('swal-t1').value) || 0, t2: parseInt(document.getElementById('swal-t2').value) || 0 })
-        }).then((result) => {
+        }).then(async (result) => {
             if (result.isConfirmed) {
                 window.TARGETS[schoolName] = result.value;
                 this.renderTargets();
                 this.persistGrade9TargetsTemplate();
+                if (typeof saveCloudData === 'function') {
+                    const ok = await saveCloudData();
+                    if (window.UI) UI.toast(ok ? "✅ 目标修改已同步云端" : "⚠️ 目标修改已暂存，本次未成功同步云端", ok ? "success" : "warning");
+                }
             }
         });
     },
 
-    deleteTarget: function (schoolName) {
+    deleteTarget: async function (schoolName) {
         if (!confirm("确定删除？")) return;
         delete window.TARGETS[schoolName];
         this.renderTargets();
         this.persistGrade9TargetsTemplate();
+        if (typeof saveCloudData === 'function') {
+            const ok = await saveCloudData();
+            if (window.UI) UI.toast(ok ? "✅ 目标删除已同步云端" : "⚠️ 目标删除已暂存，本次未成功同步云端", ok ? "success" : "warning");
+        }
     },
 
     // 7. 保存并同步 (核心修复)
@@ -4484,7 +4492,7 @@ const DataManager = {
 
         try {
             // 1. 确保参数已同步到全局
-            this.saveParamsLocally();
+            await this.saveParamsLocally(true);
             this.syncTeacherHistory();
             if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {} };
             window.SYS_VARS.targets = window.TARGETS || {};

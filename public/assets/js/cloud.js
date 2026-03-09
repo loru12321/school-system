@@ -27,10 +27,13 @@
                 const role = sessionStorage.getItem('CURRENT_ROLE');
                 if (role !== 'admin' && role !== 'director' && role !== 'grade_director') {
                     if (window.UI) UI.toast("⛔ 权限不足", "warning");
-                    return;
+                    return false;
                 }
                 const key = this.getKey();
-                if (!key) return alert("请先完善考试信息");
+                if (!key) {
+                    alert("请先完善考试信息");
+                    return false;
+                }
                 if (window.UI) UI.loading(true, `☁️ 正在同步...`);
                 try {
                     if (!window.SYS_VARS) window.SYS_VARS = { indicator: { ind1: '', ind2: '' }, targets: {} };
@@ -57,9 +60,11 @@
                     localStorage.setItem('CLOUD_SYNC_AT', new Date().toISOString());
                     logAction('云端同步', `全量数据已同步：${key}`);
                     updateStatusPanel();
+                    return true;
                 } catch (e) {
                     console.error("CloudManager Save Error:", e);
                     alert("同步失败: " + e.message);
+                    return false;
                 } finally {
                     if (window.UI) UI.loading(false);
                 }
