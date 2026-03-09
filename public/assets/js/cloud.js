@@ -428,12 +428,6 @@
 
             try {
                 const cacheKey = `CLOUD_EXAMS_SYNC_TS_${cid}`;
-                const lastSyncTs = Number(localStorage.getItem(cacheKey) || 0);
-                const recent = Date.now() - lastSyncTs < 3 * 60 * 1000;
-                if (recent) {
-                    refreshSelectors();
-                    return { success: true, count: 0, skipped: true, reason: 'cache-hit' };
-                }
 
                 const { data: rows, error } = await window.sbClient
                     .from(CLOUD_TABLE)
@@ -446,7 +440,10 @@
                 for (const row of (rows || [])) {
                     if (isIgnoredExamKey(row.key)) continue;
                     if (extractCohortIdFromKey(row.key) !== cid) continue;
-                    if (db.exams[row.key]) continue;
+                    const remoteTs = new Date(row.updated_at).getTime() || 0;
+                    const localTs = Number(db.exams?.[row.key]?.createdAt || 0);
+                    const needsUpdate = !db.exams[row.key] || remoteTs > localTs + 1000;
+                    if (!needsUpdate) continue;
 
                     try {
                         const payload = parsePayload(row.content);
@@ -465,7 +462,8 @@
                             subjects: payload.SUBJECTS || [],
                             thresholds: payload.THRESHOLDS || {},
                             config: payload.CONFIG || {},
-                            createdAt: new Date(row.updated_at).getTime() || Date.now()
+                            createdAt: remoteTs || Date.now(),
+                            updatedAt: row.updated_at || ''
                         };
                         loadedCount++;
                     } catch (rowErr) {

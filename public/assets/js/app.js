@@ -9193,7 +9193,8 @@ function renderMultiPeriodComparison() {
 
     const periodCount = parseInt(countEl.value || '2');
     const school = schoolEl.value;
-    const examIds = periodCount === 3 ? [e1El.value, e2El.value, e3El.value] : [e1El.value, e2El.value];
+    const selectedExamIds = periodCount === 3 ? [e1El.value, e2El.value, e3El.value] : [e1El.value, e2El.value];
+    const examIds = sortExamIdsChronologically(selectedExamIds);
 
     if (!school) {
         hintEl.innerHTML = '❌ 请先选择学校。';
@@ -9835,9 +9836,10 @@ function updateReportCompareExamSelects() {
         : [resolveExamId(v1), resolveExamId(v2)];
     const hasValidManualSelection = manualValues.every(Boolean) && (new Set(manualValues).size === manualValues.length);
     if (hasValidManualSelection) {
-        exam1Sel.value = manualValues[0] || '';
-        exam2Sel.value = manualValues[1] || '';
-        exam3Sel.value = autoCount === 3 ? (manualValues[2] || '') : '';
+        const ordered = sortExamIdsChronologically(manualValues);
+        exam1Sel.value = ordered[0] || '';
+        exam2Sel.value = ordered[1] || '';
+        exam3Sel.value = autoCount === 3 ? (ordered[2] || '') : '';
         return;
     }
     const effectiveCurrentExamId = getEffectiveCurrentExamId();
@@ -9908,6 +9910,12 @@ function renderStudentMultiPeriodComparison() {
         hintEl.style.color = '#dc2626';
         resultEl.innerHTML = '';
         return;
+    }
+
+    if (periodCount >= 2) {
+        e1El.value = examIds[0] || '';
+        e2El.value = examIds[1] || '';
+        if (periodCount === 3) e3El.value = examIds[2] || '';
     }
 
     // 获取各期数据
@@ -11564,6 +11572,57 @@ function normalizeCompareCohortId(raw) {
     return String(raw || '').replace(/\D/g, '');
 }
 
+function parseExamSemanticTimestamp(examId) {
+    const key = String(examId || '').trim();
+    if (!key) return 0;
+    const parts = key.split('_');
+    if (parts.length < 5) return 0;
+    const yearPart = String(parts[2] || '');
+    const termPart = String(parts[3] || '');
+    const typePart = String(parts[4] || '');
+    const yearMatch = yearPart.match(/(\d{4})/);
+    if (!yearMatch) return 0;
+    const startYear = parseInt(yearMatch[1], 10);
+    if (!Number.isFinite(startYear)) return 0;
+
+    let y = startYear;
+    let m = 9;
+    if (termPart.includes('上')) {
+        if (typePart.includes('期中')) { y = startYear; m = 11; }
+        else if (typePart.includes('期末')) { y = startYear + 1; m = 1; }
+        else { y = startYear; m = 10; }
+    } else if (termPart.includes('下')) {
+        if (typePart.includes('期中')) { y = startYear + 1; m = 4; }
+        else if (typePart.includes('期末')) { y = startYear + 1; m = 6; }
+        else { y = startYear + 1; m = 3; }
+    } else {
+        if (typePart.includes('期中')) { y = startYear; m = 11; }
+        else if (typePart.includes('期末')) { y = startYear + 1; m = 1; }
+    }
+    return new Date(y, m - 1, 1).getTime();
+}
+
+function getExamSortTimestamp(examId, fallbackTs = 0) {
+    const semantic = parseExamSemanticTimestamp(examId);
+    if (semantic > 0) return semantic;
+    const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+    const snap = db?.exams?.[examId];
+    const metaDate = snap?.meta?.date ? new Date(snap.meta.date).getTime() : 0;
+    const snapTs = Number(snap?.createdAt || 0);
+    const fbTs = Number(fallbackTs || 0);
+    return metaDate || snapTs || fbTs || 0;
+}
+
+function sortExamIdsChronologically(examIds) {
+    const ids = Array.isArray(examIds) ? examIds.filter(Boolean) : [];
+    return ids.slice().sort((a, b) => {
+        const ta = getExamSortTimestamp(a);
+        const tb = getExamSortTimestamp(b);
+        if (ta !== tb) return ta - tb;
+        return String(a).localeCompare(String(b), 'zh-CN');
+    });
+}
+
 function extractCohortIdFromExamKey(examKey) {
     const key = String(examKey || '').trim();
     const m = key.match(/^(\d{4})\D*_/);
@@ -11592,19 +11651,24 @@ function listAvailableExamsForCompare() {
     const cohortId = normalizeCompareCohortId(CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
     const upsertExam = (entry) => {
         if (!entry?.id || !isRealExamIdForCompare(entry.id, cohortId)) return;
+        const normalizedEntry = {
+            ...entry,
+            sortTs: getExamSortTimestamp(entry.id, entry.createdAt || 0)
+        };
         const existingKey = Array.from(examMap.keys()).find(key => isExamKeyEquivalentForCompare(key, entry.id));
         if (!existingKey) {
-            examMap.set(entry.id, entry);
+            examMap.set(entry.id, normalizedEntry);
             return;
         }
         const existing = examMap.get(existingKey) || {};
         examMap.set(existingKey, {
             ...existing,
-            ...entry,
-            id: existing.id || entry.id,
-            createdAt: Math.max(existing.createdAt || 0, entry.createdAt || 0),
-            label: entry.label || existing.label || entry.id,
-            source: entry.source || existing.source || 'local'
+            ...normalizedEntry,
+            id: existing.id || normalizedEntry.id,
+            createdAt: Math.max(existing.createdAt || 0, normalizedEntry.createdAt || 0),
+            sortTs: normalizedEntry.sortTs || existing.sortTs || 0,
+            label: normalizedEntry.label || existing.label || normalizedEntry.id,
+            source: normalizedEntry.source || existing.source || 'local'
         });
     };
     if (db?.exams) {
@@ -11639,7 +11703,12 @@ function listAvailableExamsForCompare() {
         });
     }
     const examList = Array.from(examMap.values());
-    examList.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    examList.sort((a, b) => {
+        const ta = Number(a.sortTs || a.createdAt || 0);
+        const tb = Number(b.sortTs || b.createdAt || 0);
+        if (ta !== tb) return ta - tb;
+        return String(a.id || '').localeCompare(String(b.id || ''), 'zh-CN');
+    });
     return examList;
 }
 
@@ -11651,7 +11720,7 @@ function getSelectedReportCompareExamIds() {
     const periodCount = Number(countEl?.value || 2);
     const ids = [exam1Sel?.value || '', exam2Sel?.value || ''];
     if (periodCount === 3) ids.push(exam3Sel?.value || '');
-    return ids.filter(Boolean);
+    return sortExamIdsChronologically(ids.filter(Boolean));
 }
 function listAvailableSchoolsForCompare() {
     const names = new Set();
