@@ -14994,7 +14994,7 @@ async function doQuery() {
                 window.PREV_DATA = historyRes.data.map(h => ({
                     examId: h.examId,
                     examFullKey: h.examFullKey,
-                    examLabel: h.examId.replace(/_/g, ' '),
+                    examLabel: String(h.examLabel || h.examId || h.examFullKey || '').replace(/_/g, ' '),
                     student: {
                         name: stu.name,
                         class: stu.class,
@@ -15262,9 +15262,27 @@ function getStudentExamHistory(student) {
 
     const cleanStr = (str) => String(str || "").trim().replace(/\s+/g, "");
     const normClass = (cls) => String(cls || "").trim().replace(/[班级\(\)\.\-gradeclass]/gi, "");
+    const getHistoryKey = (row) => String(row?.examFullKey || row?.examId || '').trim();
+    const getHistoryTime = (row) => {
+        const raw = row?.createdAt || row?.student?.updatedAt || row?.updatedAt || 0;
+        const asNum = Number(raw);
+        if (Number.isFinite(asNum) && asNum > 0) return asNum;
+        const asDate = new Date(raw).getTime();
+        return Number.isFinite(asDate) ? asDate : 0;
+    };
     const targetName = cleanStr(student.name);
     const targetClass = normClass(student.class);
     const targetSchool = student.school;
+    const isTargetStudent = (row) => {
+        const sObj = row?.student || row || {};
+        if (sObj.school && targetSchool && sObj.school !== targetSchool) return false;
+        if (cleanStr(sObj.name) !== targetName) return false;
+        const histClass = normClass(sObj.class);
+        if (histClass === targetClass) return true;
+        const numC1 = histClass.replace(/0/g, '');
+        const numC2 = targetClass.replace(/0/g, '');
+        return numC1 === numC2 && numC1.length > 0;
+    };
 
     if (typeof CohortDB === 'undefined') return results;
 
@@ -15331,33 +15349,36 @@ function getStudentExamHistory(student) {
     // 🆕 整合云端异步拉取的数据 (PREV_DATA)
     if (window.PREV_DATA && Array.isArray(window.PREV_DATA)) {
         window.PREV_DATA.forEach(h => {
+            if (!isTargetStudent(h)) return;
             // 如果启用了手动覆盖，过滤掉不在覆盖列表里的云端数据 (当前考试除外)
-            const matchKey = h.examFullKey || h.examId;
+            const matchKey = getHistoryKey(h);
             if (manualExams.length > 0 && !manualExams.includes(matchKey) && matchKey !== window.CURRENT_EXAM_ID) {
                 return;
             }
+            if (!matchKey) return;
 
-            // 避免与本地数据重复 (以 examFullKey 或 examId 为准进行多维度检查)
-            const exists = results.some(r => 
-                r.examFullKey === h.examFullKey || 
-                r.examId === h.examFullKey || 
-                r.examFullKey === h.examId ||
-                r.examId === h.examId
-            );
-            
-            if (!exists) {
-                results.push(h);
+            // 统一结构后再做去重，避免 examId/examFullKey 混用导致误判
+            const normalized = {
+                ...h,
+                examFullKey: h.examFullKey || h.examId,
+                examId: h.examId || h.examFullKey,
+                examLabel: String(h.examLabel || h.examId || h.examFullKey || '').replace(/_/g, ' ')
+            };
+            const existsIdx = results.findIndex(r => getHistoryKey(r) === matchKey);
+            if (existsIdx === -1) {
+                results.push(normalized);
+            } else if (getHistoryTime(normalized) > getHistoryTime(results[existsIdx])) {
+                results[existsIdx] = normalized;
             }
         });
     }
 
     // 重新按时间排序 (如果有多个来源)
     results.sort((a, b) => {
-        const timeA = new Date(a.student?.updatedAt || a.updatedAt || 0).getTime();
-        const timeB = new Date(b.student?.updatedAt || b.updatedAt || 0).getTime();
+        const timeA = getHistoryTime(a);
+        const timeB = getHistoryTime(b);
         if (timeA !== timeB) return timeA - timeB;
-        // 如果时间一致，按下标/ID 降序
-        return String(a.examId).localeCompare(String(b.examId));
+        return getHistoryKey(a).localeCompare(getHistoryKey(b));
     });
 
     return results;
@@ -15569,7 +15590,8 @@ function renderSingleReportCardHTML(stu, mode) {
         
         for (let i = examHistory.length - 1; i >= 0; i--) {
             const h = examHistory[i];
-            const isCurrent = h.examId === CURRENT_EXAM_ID;
+            const matchKey = h.examFullKey || h.examId;
+            const isCurrent = matchKey === CURRENT_EXAM_ID || h.examId === CURRENT_EXAM_ID;
             const bgStyle = isCurrent ? 'background:rgba(239,246,255,0.7); font-weight:bold;' : '';
             
             // 安全读取学生对象和成绩（兼容旧结构和不同来源）
@@ -15579,7 +15601,7 @@ function renderSingleReportCardHTML(stu, mode) {
             const tRank = safeGet(stuObj, 'ranks.total.township', h.rankTown || '-');
             
             historyRows += `<tr style="${bgStyle}">
-                <td style="text-align:left; padding-left:20px; color:#475569;">${isCurrent ? '⭐ ' : ''}${h.examLabel}</td>
+                <td style="text-align:left; padding-left:20px; color:#475569;">${isCurrent ? '⭐ ' : ''}${h.examLabel || h.examId || h.examFullKey || '-'}</td>
                 <td style="color:#2563eb;">${tScore}</td>
                 <td style="color:#64748b;">${sRank}</td>
                 ${!isSingleSchool ? `<td style="color:#64748b;">${tRank}</td>` : ''}
@@ -17159,7 +17181,7 @@ function renderRadarChart(student, passedHistory = null) {
                 let prevAllScores = getCloudPreviousSubjectScores(sub, student);
                 if (!prevAllScores || prevAllScores.length === 0) {
                     prevAllScores = (window.PREV_DATA || [])
-                        .map(s => s.scores ? s.scores[sub] : undefined)
+                        .map(s => (s.student?.scores || s.scores || {})[sub])
                         .filter(v => typeof v === 'number');
                 }
                 // 🟢 [Bug #2 修复] 兜底：从 prevStu._sourceExam 对应的考试快照获取全量数据
@@ -17284,7 +17306,7 @@ function renderVarianceChart(student) {
                 let prevAllScores = getCloudPreviousSubjectScores(sub, student);
                 if (!prevAllScores || prevAllScores.length === 0) {
                     prevAllScores = (window.PREV_DATA || [])
-                        .map(s => s.scores ? s.scores[sub] : undefined)
+                        .map(s => (s.student?.scores || s.scores || {})[sub])
                         .filter(v => typeof v === 'number');
                 }
                 const prevStats = calcStats(prevAllScores);
