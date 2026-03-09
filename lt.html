@@ -5648,6 +5648,18 @@ const UI = {
     }
 };
 
+async function withTimeout(promise, timeoutMs = 8000, timeoutMessage = 'Request timeout') {
+    let timer = null;
+    const timeoutPromise = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+    });
+    try {
+        return await Promise.race([promise, timeoutPromise]);
+    } finally {
+        if (timer) clearTimeout(timer);
+    }
+}
+
 // 🔐 权限与账号管理系统核心
 const Auth = {
     currentUser: null,
@@ -5689,6 +5701,10 @@ const Auth = {
             else if (this.currentUser.role !== 'parent') {
                 document.getElementById('app').classList.remove('hidden');
                 if (typeof renderNavigation === 'function') renderNavigation();
+                if ((!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function') {
+                    withTimeout(loadCloudData(), 8000, 'cloud-load-timeout')
+                        .catch(e => console.warn('[Auth.init] background cloud load failed:', e));
+                }
             }
         }
     },
@@ -5812,10 +5828,18 @@ const Auth = {
 
             if (window.UI) UI.toast(`登录成功！欢迎 ${matchedUser.name}`, 'success');
 
-            // 5. 【关键】拉取云端数据
+            // 5. 云端同步改为“限时 + 后台”，避免登录阻塞接近1分钟
             UI.loading(true, "正在同步最新成绩数据...");
-            await loadCloudData();
-            UI.loading(false);
+            try {
+                await withTimeout(loadCloudData(), 8000, 'cloud-load-timeout');
+            } catch (e) {
+                console.warn('[Auth.login] initial cloud load timeout/fail:', e);
+                if (typeof loadCloudData === 'function') {
+                    loadCloudData().catch(err => console.warn('[Auth.login] background cloud load failed:', err));
+                }
+            } finally {
+                UI.loading(false);
+            }
 
             // 6. 分流跳转与权限初始化
             if (matchedUser.role === 'parent') {
@@ -10697,9 +10721,19 @@ window.addEventListener('load', async () => {
         }
     }
 
-    // 启动后延迟自检：若历史考试为空，提示一键恢复最近快照
+    // 启动后延迟执行：自动拉取云端历史考试并刷新对比下拉框
     setTimeout(() => {
-        try { promptHistoryRecoveryIfEmpty(); } catch (e) { console.warn('历史恢复提示异常:', e); }
+        try {
+            const cid = CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
+            if (cid && window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
+                window.CloudManager.fetchCohortExamsToLocal(cid).then(() => {
+                    if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
+                    if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
+                    if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+                    if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
+                }).catch(e => console.warn('[Startup] fetch cohort exams failed:', e));
+            }
+        } catch (e) { console.warn('[Startup] auto cloud exam sync error:', e); }
         try { updateExamHistoryStatusBar(); } catch (e) { console.warn('状态条刷新异常:', e); }
     }, 1200);
 });
@@ -16952,6 +16986,17 @@ function listAvailableExamsForCompare() {
     examList.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
     return examList;
 }
+
+function getSelectedReportCompareExamIds() {
+    const countEl = document.getElementById('reportComparePeriodCount');
+    const exam1Sel = document.getElementById('reportCompareExam1');
+    const exam2Sel = document.getElementById('reportCompareExam2');
+    const exam3Sel = document.getElementById('reportCompareExam3');
+    const periodCount = Number(countEl?.value || 2);
+    const ids = [exam1Sel?.value || '', exam2Sel?.value || ''];
+    if (periodCount === 3) ids.push(exam3Sel?.value || '');
+    return ids.filter(Boolean);
+}
 function listAvailableSchoolsForCompare() {
     const names = new Set();
     Object.keys(SCHOOLS || {}).forEach(s => {
@@ -20537,21 +20582,35 @@ async function doQuery() {
     let stu = SCHOOLS[sch]?.students.find(s => s.name === name && (cls === '--请先选择学校--' || s.class === cls));
     if (!stu) return alert("未找到该学生");
 
-    const effectiveCurrentExamId = getEffectiveCurrentExamId();
+    const selectedReportExamIds = getSelectedReportCompareExamIds();
+    const effectiveCurrentExamId = selectedReportExamIds[selectedReportExamIds.length - 1] || getEffectiveCurrentExamId();
     if (effectiveCurrentExamId) {
         CURRENT_EXAM_ID = effectiveCurrentExamId;
         window.CURRENT_EXAM_ID = effectiveCurrentExamId;
+        localStorage.setItem('CURRENT_EXAM_ID', effectiveCurrentExamId);
     }
 
     // 🆕 自动对比流程：先同步云端历史
-    if (window.CloudManager && window.CloudManager.check()) {
+    const cloudReady = !!(window.CloudManager && (
+        (typeof window.CloudManager.ensureClientReady === 'function' && await window.CloudManager.ensureClientReady({ silent: true })) ||
+        (typeof window.CloudManager.check === 'function' && window.CloudManager.check(true))
+    ));
+    if (cloudReady) {
         if (window.UI) UI.toast("🔍 正在同步云端历史数据...", "info");
         try {
             const historyRes = await window.CloudManager.fetchStudentExamHistory(stu);
             if (historyRes.success && historyRes.data.length > 0) {
                 // ✅ 修复：按照 getStudentExamHistory 期望的格式存入 PREV_DATA
+                const selectedForCompare = selectedReportExamIds.length
+                    ? selectedReportExamIds
+                    : [];
                 window.PREV_DATA = historyRes.data.filter(h => {
                     const hid = String(h.examFullKey || h.examId || '').trim();
+                    if (!hid) return false;
+                    if (selectedForCompare.length > 0) {
+                        const inSelected = selectedForCompare.some(id => isExamKeyEquivalentForCompare(hid, id));
+                        if (!inSelected) return false;
+                    }
                     return !effectiveCurrentExamId || !isExamKeyEquivalentForCompare(hid, effectiveCurrentExamId);
                 }).map(h => ({
                     examId: h.examId,
@@ -30264,6 +30323,8 @@ function restoreLatestAutoSnapshotDirect() {
 }
 
 function promptHistoryRecoveryIfEmpty() {
+    // Disabled by product requirement: no "历史考试为空" popup.
+    return;
     const cohortId = CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '';
     if (!cohortId) return;
 
