@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node inline-scripts.mjs",
+    "push": "powershell -ExecutionPolicy Bypass -File ./deploy.ps1",
+    "sync": "npm run build && npm run push",
     "preview": "vite preview"
   },
   "keywords": [],

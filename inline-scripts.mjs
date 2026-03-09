@@ -13,6 +13,17 @@ if (!fs.existsSync(htmlPath)) {
     process.exit(1);
 }
 
+// Keep original script semantics intact; only normalize newlines.
+function normalizeScript(content) {
+    return String(content || '').replace(/\r\n/g, '\n');
+}
+
+// Fix synchronization issues (previously in fix_sync.ps1)
+function applySyncFixes(content) {
+    // Replace "res.success && res.count > 0" with "res.success"
+    return content.replace(/if\s*\(\s*res\.success\s*&&\s*res\.count\s*>\s*0\s*\)/g, 'if (res.success)');
+}
+
 let html = fs.readFileSync(htmlPath, 'utf-8');
 
 // Use regex to locate tags like <script src="./assets/js/cloud.js"></script>
@@ -28,7 +39,12 @@ html = html.replace(scriptRegex, (match, src) => {
 
         if (fs.existsSync(publicPath)) {
             console.log(`Inlining script: ${publicPath}`);
-            const content = fs.readFileSync(publicPath, 'utf-8');
+            let content = fs.readFileSync(publicPath, 'utf-8');
+            
+            // Apply sync fixes only; avoid regex minification that can break JS runtime semantics.
+            content = applySyncFixes(content);
+            content = normalizeScript(content);
+            
             return `<script>\n${content}\n</script>`;
         } else {
             console.warn(`Local script not found: ${publicPath}`);
@@ -83,4 +99,4 @@ if (html.includes('</head>')) {
 }
 
 fs.writeFileSync(outPath, html, 'utf-8');
-console.log('Successfully generated lt.html with inlined local scripts.');
+console.log('Successfully generated lt.html with inlined and minified local scripts.');
