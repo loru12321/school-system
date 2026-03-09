@@ -56,7 +56,6 @@
     <!-- 🟢 [新增] 添加 jsPDF（PDF导出） -->
     <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" crossorigin="anonymous"
         onerror="this.onerror=null;this.src='https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'"></script>
-    <script src="./public/assets/js/teacher-sync-auto.js"></script>
     <script>
 // ✅ 统一云端同步逻辑 (重构版)
         const CloudManager = {
@@ -31634,15 +31633,6 @@ function scheduleTeacherSyncPrompt() {
         }
     }, 400);
 }
-
-if (window.TeacherSyncAuto) {
-    parseTeacherTermApproxMs = function (termId) { return window.TeacherSyncAuto.parseTeacherTermApproxMs(termId); };
-    pickAutoTeacherTerm = function () { return window.TeacherSyncAuto.pickAutoTeacherTerm(); };
-    applyTeacherTermWithoutPrompt = function (termId) { return window.TeacherSyncAuto.applyTeacherTermWithoutPrompt(termId); };
-    promptTeacherSyncIfNeeded = function () { return window.TeacherSyncAuto.promptTeacherSyncIfNeeded(); };
-    scheduleTeacherSyncPrompt = function () { return window.TeacherSyncAuto.scheduleTeacherSyncPrompt(); };
-}
-
 function runDataDoctor() {
     if (!RAW_DATA.length) return alert("请先上传数据，医生才能进行诊断！");
 

@@ -20,7 +20,6 @@ const STATIC_ASSETS = [
     '/public/assets/css/style.css',
     '/public/assets/js/app.js',
     '/public/assets/js/cloud.js',
-    '/public/assets/js/teacher-sync-auto.js',
     '/public/assets/js/data-pagination.js',
     '/public/assets/libs/chart.js',
     '/public/assets/libs/xlsx.full.min.js',
