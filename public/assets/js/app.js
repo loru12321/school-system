@@ -9388,7 +9388,7 @@ function applyCloudStudentCompareContext(payload, compareStudent, allCompareStud
         if (!ka || !kb) return false;
         return ka === kb || ka.endsWith(`_${kb}`) || kb.endsWith(`_${ka}`);
     };
-    const currentExamId = String(CURRENT_EXAM_ID || '').trim();
+    const currentExamId = String(getEffectiveCurrentExamId() || '').trim();
     let latestIndex = periods.length - 1;
     if (currentExamId) {
         const idx = periods.findIndex(p => isExamKeyMatch(p?.examId, currentExamId));
@@ -9513,6 +9513,32 @@ function getCloudPreviousSubjectScores(subject, student) {
     if (!isCloudContextMatchStudent(student) && !isCloudContextLikelyCurrentTarget(student)) return null;
     const scores = CLOUD_STUDENT_COMPARE_CONTEXT?.previousSubjectScores?.[subject];
     return Array.isArray(scores) ? scores : null;
+}
+
+function getEffectiveCurrentExamId() {
+    const candidates = [
+        CURRENT_EXAM_ID,
+        window.CURRENT_EXAM_ID,
+        localStorage.getItem('CURRENT_EXAM_ID'),
+        (typeof COHORT_DB !== 'undefined' && COHORT_DB) ? COHORT_DB.currentExamId : '',
+        (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? (CohortDB.ensure()?.currentExamId || '') : ''
+    ];
+    for (const c of candidates) {
+        const key = String(c || '').trim();
+        if (key) return key;
+    }
+    try {
+        if (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') {
+            const db = CohortDB.ensure();
+            const exams = Object.values(db?.exams || {});
+            if (exams.length > 0) {
+                exams.sort((a, b) => Number(b?.createdAt || 0) - Number(a?.createdAt || 0));
+                const fallback = String(exams[0]?.examId || '').trim();
+                if (fallback) return fallback;
+            }
+        }
+    } catch (e) { }
+    return '';
 }
 
 function getPreviousExamSubjectScores(subject, student, prevStu) {
@@ -15044,6 +15070,12 @@ async function doQuery() {
     let stu = SCHOOLS[sch]?.students.find(s => s.name === name && (cls === '--请先选择学校--' || s.class === cls));
     if (!stu) return alert("未找到该学生");
 
+    const effectiveCurrentExamId = getEffectiveCurrentExamId();
+    if (effectiveCurrentExamId) {
+        CURRENT_EXAM_ID = effectiveCurrentExamId;
+        window.CURRENT_EXAM_ID = effectiveCurrentExamId;
+    }
+
     // 🆕 自动对比流程：先同步云端历史
     if (window.CloudManager && window.CloudManager.check()) {
         if (window.UI) UI.toast("🔍 正在同步云端历史数据...", "info");
@@ -15051,7 +15083,10 @@ async function doQuery() {
             const historyRes = await window.CloudManager.fetchStudentExamHistory(stu);
             if (historyRes.success && historyRes.data.length > 0) {
                 // ✅ 修复：按照 getStudentExamHistory 期望的格式存入 PREV_DATA
-                window.PREV_DATA = historyRes.data.map(h => ({
+                window.PREV_DATA = historyRes.data.filter(h => {
+                    const hid = String(h.examFullKey || h.examId || '').trim();
+                    return !effectiveCurrentExamId || (hid !== effectiveCurrentExamId && String(h.examId || '').trim() !== effectiveCurrentExamId);
+                }).map(h => ({
                     examId: h.examId,
                     examFullKey: h.examFullKey,
                     examLabel: String(h.examLabel || h.examId || h.examFullKey || '').replace(/_/g, ' '),
@@ -15263,11 +15298,13 @@ function findPreviousRecord(student) {
     const targetClass = normClass(student.class);
     const targetSchool = student.school;
 
+    const currentExamId = getEffectiveCurrentExamId();
+
     // 1. 尝试从 PREV_DATA 查找 (排除当前考试)
     if (window.PREV_DATA && window.PREV_DATA.length > 0) {
         const otherExams = window.PREV_DATA.filter(p => {
              const hid = p.examFullKey || p.examId;
-             return hid !== window.CURRENT_EXAM_ID && p.examId !== window.CURRENT_EXAM_ID;
+             return !currentExamId || (hid !== currentExamId && p.examId !== currentExamId);
         });
         const match = otherExams.find(p => matchStudent(p, targetName, targetClass, targetSchool));
         if (match) return match;
@@ -15279,7 +15316,7 @@ function findPreviousRecord(student) {
             const db = CohortDB.ensure();
             if (db && db.exams && Object.keys(db.exams).length > 0) {
                 const examEntries = Object.entries(db.exams)
-                    .filter(([id]) => id !== CURRENT_EXAM_ID) // 排除当前考试
+                    .filter(([id]) => !currentExamId || id !== currentExamId) // 排除当前考试
                     .sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0)); // 按时间降序
 
                 for (const [examId, exam] of examEntries) {
@@ -15333,6 +15370,7 @@ function getStudentExamHistory(student) {
     const targetName = cleanStr(student.name);
     const targetClass = normClass(student.class);
     const targetSchool = student.school;
+    const currentExamId = getEffectiveCurrentExamId();
     const isTargetStudent = (row) => {
         const sObj = row?.student || row || {};
         if (sObj.school && targetSchool && sObj.school !== targetSchool) return false;
@@ -15365,7 +15403,7 @@ function getStudentExamHistory(student) {
             if (examData.length === 0) continue;
 
             // 如果启用了手动覆盖，必须在指定的 examId 列表中
-            if (manualExams.length > 0 && !manualExams.includes(examId) && examId !== window.CURRENT_EXAM_ID) {
+            if (manualExams.length > 0 && !manualExams.includes(examId) && examId !== currentExamId) {
                 continue;
             }
 
@@ -15412,7 +15450,7 @@ function getStudentExamHistory(student) {
             if (!isTargetStudent(h)) return;
             // 如果启用了手动覆盖，过滤掉不在覆盖列表里的云端数据 (当前考试除外)
             const matchKey = getHistoryKey(h);
-            if (manualExams.length > 0 && !manualExams.includes(matchKey) && matchKey !== window.CURRENT_EXAM_ID) {
+            if (manualExams.length > 0 && !manualExams.includes(matchKey) && matchKey !== currentExamId) {
                 return;
             }
             if (!matchKey) return;
@@ -15651,7 +15689,8 @@ function renderSingleReportCardHTML(stu, mode) {
         for (let i = examHistory.length - 1; i >= 0; i--) {
             const h = examHistory[i];
             const matchKey = h.examFullKey || h.examId;
-            const isCurrent = matchKey === CURRENT_EXAM_ID || h.examId === CURRENT_EXAM_ID;
+            const currentExamId = getEffectiveCurrentExamId();
+            const isCurrent = !!currentExamId && (matchKey === currentExamId || h.examId === currentExamId);
             const bgStyle = isCurrent ? 'background:rgba(239,246,255,0.7); font-weight:bold;' : '';
             
             // 安全读取学生对象和成绩（兼容旧结构和不同来源）
@@ -17165,7 +17204,7 @@ function renderRadarChart(student, passedHistory = null) {
     });
 
     // 当前考试标签
-    const currentExamLabel = CURRENT_EXAM_ID ? CURRENT_EXAM_ID.replace(/_/g, ' ').substring(0, 20) : '本次';
+    const currentExamLabel = (getEffectiveCurrentExamId() || '').replace(/_/g, ' ').substring(0, 20) || '本次';
 
     const datasets = [{
         label: currentExamLabel,
@@ -17194,11 +17233,12 @@ function renderRadarChart(student, passedHistory = null) {
     // 尝试从 COHORT_DB 或 传入参数获取多期数据
     if (typeof getStudentExamHistory === 'function' || passedHistory) {
         const examHistory = passedHistory || getStudentExamHistory(student);
+        const currentExamId = getEffectiveCurrentExamId();
         const pastExams = examHistory
             .map((h, idx) => ({ ...h, __idx: idx }))
             .filter(h => {
                 const hid = h.examFullKey || h.examId;
-                return hid !== window.CURRENT_EXAM_ID && h.examId !== window.CURRENT_EXAM_ID;
+                return !currentExamId || (hid !== currentExamId && h.examId !== currentExamId);
             })
             .sort((a, b) => {
                 const ta = Number(a.createdAt || (a.student && a.student.updatedAt && new Date(a.student.updatedAt).getTime()) || 0);
