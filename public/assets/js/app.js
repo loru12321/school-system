@@ -9663,7 +9663,12 @@ function getEffectiveCurrentExamId() {
                 ts: Number(ex?.createdAt || ex?.updatedAt || 0)
             })).filter(x => x.id);
             if (exams.length > 0) {
-                exams.sort((a, b) => b.ts - a.ts);
+                exams.sort((a, b) => {
+                    const ta = getExamSortTimestamp(a.id, a.ts);
+                    const tb = getExamSortTimestamp(b.id, b.ts);
+                    if (ta !== tb) return tb - ta;
+                    return String(b.id || '').localeCompare(String(a.id || ''), 'zh-CN');
+                });
                 if (exams[0].id) return exams[0].id;
             }
         }

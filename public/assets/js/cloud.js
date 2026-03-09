@@ -407,82 +407,129 @@
         },
 
         fetchCohortExamsToLocal: async function (cohortId) {
-            if (!(await this.ensureClientReady())) return { success: false, message: '云端未连接' };
-            setCloudStatus('syncing', '拉取考试');
             const cid = normalizeCohortId(cohortId || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
             if (!cid) return { success: false, message: '无法确定届别' };
-            if (typeof CohortDB === 'undefined' || typeof CohortDB.ensure !== 'function') {
-                return { success: false, message: 'CohortDB 未初始化' };
-            }
+            if (!this._cohortExamSyncTasks) this._cohortExamSyncTasks = {};
+            if (this._cohortExamSyncTasks[cid]) return this._cohortExamSyncTasks[cid];
 
-            const db = CohortDB.ensure();
-            db.exams = db.exams || {};
-
-            const refreshSelectors = () => {
-                if (typeof CohortDB.renderExamList === 'function') CohortDB.renderExamList();
-                if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
-                if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
-                if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-                if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
-            };
-
-            try {
-                const cacheKey = `CLOUD_EXAMS_SYNC_TS_${cid}`;
-
-                const { data: rows, error } = await window.sbClient
-                    .from(CLOUD_TABLE)
-                    .select('key, content, updated_at')
-                    .like('key', `${cid}%`)
-                    .order('updated_at', { ascending: true });
-                if (error) throw error;
-
-                let loadedCount = 0;
-                for (const row of (rows || [])) {
-                    if (isIgnoredExamKey(row.key)) continue;
-                    if (extractCohortIdFromKey(row.key) !== cid) continue;
-                    const remoteTs = new Date(row.updated_at).getTime() || 0;
-                    const localTs = Number(db.exams?.[row.key]?.createdAt || 0);
-                    const needsUpdate = !db.exams[row.key] || remoteTs > localTs + 1000;
-                    if (!needsUpdate) continue;
-
-                    try {
-                        const payload = parsePayload(row.content);
-                        if (!payload || !Array.isArray(payload.RAW_DATA) || payload.RAW_DATA.length === 0) continue;
-
-                        const keyParts = String(row.key || '').split('_');
-                        const examLabel = keyParts.length >= 5 ? keyParts.slice(4).join('_') : row.key;
-
-                        db.exams[row.key] = {
-                            examId: row.key,
-                            examLabel,
-                            meta: payload.ARCHIVE_META || payload.CONFIG || {},
-                            data: payload.RAW_DATA || [],
-                            schools: payload.SCHOOLS || {},
-                            teacherMap: payload.TEACHER_MAP || {},
-                            subjects: payload.SUBJECTS || [],
-                            thresholds: payload.THRESHOLDS || {},
-                            config: payload.CONFIG || {},
-                            createdAt: remoteTs || Date.now(),
-                            updatedAt: row.updated_at || ''
-                        };
-                        loadedCount++;
-                    } catch (rowErr) {
-                        console.warn('[CloudExams] parse row failed:', rowErr);
-                    }
+            this._cohortExamSyncTasks[cid] = (async () => {
+                if (!(await this.ensureClientReady())) return { success: false, message: '云端未连接' };
+                setCloudStatus('syncing', '拉取考试');
+                if (typeof CohortDB === 'undefined' || typeof CohortDB.ensure !== 'function') {
+                    return { success: false, message: 'CohortDB 未初始化' };
                 }
 
-                window.COHORT_DB = db;
-                localStorage.setItem(cacheKey, String(Date.now()));
-                refreshSelectors();
+                const db = CohortDB.ensure();
+                db.exams = db.exams || {};
 
-                if (loadedCount > 0) safeToast(`已从云端加载 ${loadedCount} 期历史考试`, 'success');
-                setCloudStatus('success', loadedCount > 0 ? `新增${loadedCount}期` : '已最新');
-                return { success: true, count: loadedCount };
-            } catch (e) {
-                console.error('[CloudExams] failed:', e);
-                setCloudStatus('error', '考试拉取失败');
-                return { success: false, message: e.message || String(e) };
-            }
+                const refreshSelectors = () => {
+                    if (typeof CohortDB.renderExamList === 'function') CohortDB.renderExamList();
+                    if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
+                    if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
+                    if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+                    if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
+                };
+
+                const getLocalExamTs = (exam) => {
+                    if (!exam) return 0;
+                    const tsUpdated = exam.updatedAt ? new Date(exam.updatedAt).getTime() : 0;
+                    const tsCreated = Number(exam.createdAt || 0);
+                    return Math.max(tsUpdated || 0, tsCreated || 0);
+                };
+
+                try {
+                    const cacheKey = `CLOUD_EXAMS_SYNC_TS_${cid}`;
+                    const chunkSize = 10;
+
+                    // Step 1: fetch metadata first, avoid downloading full content for unchanged exams.
+                    const { data: metaRows, error: metaErr } = await window.sbClient
+                        .from(CLOUD_TABLE)
+                        .select('key, updated_at')
+                        .like('key', `${cid}%`)
+                        .order('updated_at', { ascending: true });
+                    if (metaErr) throw metaErr;
+
+                    const candidates = (metaRows || []).filter(row => {
+                        if (isIgnoredExamKey(row.key)) return false;
+                        if (extractCohortIdFromKey(row.key) !== cid) return false;
+                        return true;
+                    });
+
+                    const keysToFetch = [];
+                    for (const row of candidates) {
+                        const remoteTs = new Date(row.updated_at).getTime() || 0;
+                        const localTs = getLocalExamTs(db.exams[row.key]);
+                        if (!db.exams[row.key] || remoteTs > localTs + 1000) {
+                            keysToFetch.push(row.key);
+                        }
+                    }
+
+                    if (keysToFetch.length === 0) {
+                        localStorage.setItem(cacheKey, String(Date.now()));
+                        refreshSelectors();
+                        setCloudStatus('success', '已最新');
+                        return { success: true, count: 0, updated: 0 };
+                    }
+
+                    const rowMap = new Map();
+                    for (let i = 0; i < keysToFetch.length; i += chunkSize) {
+                        const chunk = keysToFetch.slice(i, i + chunkSize);
+                        const { data: chunkRows, error: chunkErr } = await window.sbClient
+                            .from(CLOUD_TABLE)
+                            .select('key, content, updated_at')
+                            .in('key', chunk);
+                        if (chunkErr) throw chunkErr;
+                        (chunkRows || []).forEach(r => rowMap.set(r.key, r));
+                    }
+
+                    let loadedCount = 0;
+                    for (const key of keysToFetch) {
+                        const row = rowMap.get(key);
+                        if (!row) continue;
+                        try {
+                            const payload = parsePayload(row.content);
+                            if (!payload || !Array.isArray(payload.RAW_DATA) || payload.RAW_DATA.length === 0) continue;
+
+                            const keyParts = String(row.key || '').split('_');
+                            const examLabel = keyParts.length >= 5 ? keyParts.slice(4).join('_') : row.key;
+                            const remoteTs = new Date(row.updated_at).getTime() || Date.now();
+
+                            db.exams[row.key] = {
+                                examId: row.key,
+                                examLabel,
+                                meta: payload.ARCHIVE_META || payload.CONFIG || {},
+                                data: payload.RAW_DATA || [],
+                                schools: payload.SCHOOLS || {},
+                                teacherMap: payload.TEACHER_MAP || {},
+                                subjects: payload.SUBJECTS || [],
+                                thresholds: payload.THRESHOLDS || {},
+                                config: payload.CONFIG || {},
+                                createdAt: remoteTs,
+                                updatedAt: row.updated_at || ''
+                            };
+                            loadedCount++;
+                        } catch (rowErr) {
+                            console.warn('[CloudExams] parse row failed:', rowErr);
+                        }
+                    }
+
+                    window.COHORT_DB = db;
+                    localStorage.setItem(cacheKey, String(Date.now()));
+                    refreshSelectors();
+
+                    if (loadedCount > 0) safeToast(`已从云端加载 ${loadedCount} 期历史考试`, 'success');
+                    setCloudStatus('success', loadedCount > 0 ? `更新${loadedCount}期` : '已最新');
+                    return { success: true, count: loadedCount, updated: loadedCount };
+                } catch (e) {
+                    console.error('[CloudExams] failed:', e);
+                    setCloudStatus('error', '考试拉取失败');
+                    return { success: false, message: e.message || String(e) };
+                }
+            })().finally(() => {
+                delete this._cohortExamSyncTasks[cid];
+            });
+
+            return this._cohortExamSyncTasks[cid];
         }
     };
 
