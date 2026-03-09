@@ -9376,13 +9376,7 @@ function applyCloudStudentCompareContext(payload, compareStudent, allCompareStud
     }
 
     const periods = compareStudent.periods;
-    const normalizeExamKey = (key) => String(key || '').trim().replace(/\s+/g, '_').toLowerCase();
-    const isExamKeyMatch = (a, b) => {
-        const ka = normalizeExamKey(a);
-        const kb = normalizeExamKey(b);
-        if (!ka || !kb) return false;
-        return ka === kb || ka.endsWith(`_${kb}`) || kb.endsWith(`_${ka}`);
-    };
+    const isExamKeyMatch = (a, b) => isExamKeyEquivalentForCompare(a, b);
     const currentExamId = String(getEffectiveCurrentExamId() || '').trim();
     let latestIndex = periods.length - 1;
     if (currentExamId) {
@@ -9515,7 +9509,29 @@ function isExamKeyEquivalentForCompare(a, b) {
     const ka = normalize(a);
     const kb = normalize(b);
     if (!ka || !kb) return false;
-    return ka === kb || ka.endsWith(`_${kb}`) || kb.endsWith(`_${ka}`);
+    if (ka === kb) return true;
+
+    const isLikelyFullKey = (key) => /^(\d{4})\D*_/.test(key);
+    const extractShortVariants = (fullKey) => {
+        const parts = String(fullKey || '').split('_').filter(Boolean);
+        const variants = new Set();
+        if (parts.length >= 5) variants.add(parts.slice(4).join('_')); // type + name
+        if (parts.length >= 4) variants.add(parts.slice(3).join('_')); // term + type + name
+        return variants;
+    };
+
+    const aFull = isLikelyFullKey(ka);
+    const bFull = isLikelyFullKey(kb);
+
+    // Two full keys must match exactly; prevent false "self vs self" matching.
+    if (aFull && bFull) return false;
+
+    // Backward compatibility: allow full-key vs short-label matching in controlled variants only.
+    if (aFull && !bFull) return extractShortVariants(ka).has(kb);
+    if (!aFull && bFull) return extractShortVariants(kb).has(ka);
+
+    // Two short labels: strict match only.
+    return false;
 }
 
 function getEffectiveCurrentExamId() {

@@ -353,7 +353,8 @@
                         const examLabel = keyParts.length >= 5 ? keyParts.slice(4).join('_') : row.key;
 
                         history.push({
-                            examId: examLabel || row.key,
+                            // Use full key as canonical ID to avoid "same exam" false positives.
+                            examId: row.key,
                             examFullKey: row.key,
                             examLabel: examLabel || row.key,
                             total: match.total,
