@@ -15872,9 +15872,24 @@ function filterStudentCompareByName() {
 
         // 🟢 [改进]：根据当前显示模式重新渲染
         toggleGroupDisplay();
+        updateStudentCompareSummary();
 
         const nameList = searchNames.length > 3 ? `${searchNames.slice(0, 3).join(', ')}...` : searchNames.join(', ');
-        hintEl.innerHTML = `✅ 找到 ${matchedStudents.length} 名学生匹配 "${nameList}"`;
+        if (matchedStudents.length === 1) {
+            hintEl.innerHTML = `✅ 已定位到 ${matchedStudents[0].name}，仅展示该生成绩对比`;
+            // 单人匹配：自动展开详情并聚焦（等价“只弹出该生对比”）
+            setTimeout(() => {
+                const card = document.querySelector('#studentCompareResult .student-compare-card');
+                if (!card) return;
+                const detail = card.querySelector('.student-detail-section');
+                const btn = card.querySelector('button[onclick^=\"toggleStudentDetail\"]');
+                if (detail) detail.style.display = 'block';
+                if (btn) btn.innerHTML = '收起详情 ▲';
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 80);
+        } else {
+            hintEl.innerHTML = `✅ 找到 ${matchedStudents.length} 名学生匹配 "${nameList}"`;
+        }
         hintEl.style.color = '#16a34a';
     }
 }
