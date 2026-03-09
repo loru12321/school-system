@@ -4933,6 +4933,10 @@
     function renderHistoryCharts(historyData, currentStudent) {
         const containerId = 'history-charts-container';
         let container = document.getElementById(containerId);
+        if (window.historyTrendChartInstance && typeof window.historyTrendChartInstance.destroy === 'function') {
+            window.historyTrendChartInstance.destroy();
+            window.historyTrendChartInstance = null;
+        }
         
         if (!container) {
             container = document.createElement('div');
@@ -5002,7 +5006,15 @@
             setTimeout(function() {
                 const ctx = document.getElementById('historyTrendChart');
                 if (ctx && window.Chart) {
-                    new Chart(ctx, {
+                    if (window.historyTrendChartInstance && typeof window.historyTrendChartInstance.destroy === 'function') {
+                        window.historyTrendChartInstance.destroy();
+                        window.historyTrendChartInstance = null;
+                    }
+                    if (typeof Chart.getChart === 'function') {
+                        const chartInRegistry = Chart.getChart(ctx);
+                        if (chartInRegistry) chartInRegistry.destroy();
+                    }
+                    window.historyTrendChartInstance = new Chart(ctx, {
                         type: 'line',
                         data: {
                             labels: historyData.map(function(h) { return h.examId; }),
