@@ -1,0 +1,139 @@
+{
+  "summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "passRate": "100.0%",
+    "generatedAt": "2026-02-18T08:31:43.251Z"
+  },
+  "cases": [
+    {
+      "scenario": "精确匹配（姓名+班级）",
+      "target": {
+        "name": "张三",
+        "class": "701",
+        "school": "实验中学"
+      },
+      "expected": {
+        "found": true,
+        "pickedName": "张三",
+        "pickedClass": "701",
+        "strategy": "name+class"
+      },
+      "actual": {
+        "found": true,
+        "pickedName": "张三",
+        "pickedClass": "701",
+        "strategy": "name+class",
+        "candidates": 1
+      },
+      "pass": true
+    },
+    {
+      "scenario": "班级格式兼容（7.03 vs 703）",
+      "target": {
+        "name": "王五",
+        "class": "703",
+        "school": "实验中学"
+      },
+      "expected": {
+        "found": true,
+        "pickedName": "王五",
+        "pickedClass": "7.03",
+        "strategy": "name+class"
+      },
+      "actual": {
+        "found": true,
+        "pickedName": "王五",
+        "pickedClass": "7.03",
+        "strategy": "name+class",
+        "candidates": 1
+      },
+      "pass": true
+    },
+    {
+      "scenario": "同名多班按班级定向",
+      "target": {
+        "name": "张三",
+        "class": "702",
+        "school": "实验中学"
+      },
+      "expected": {
+        "found": true,
+        "pickedName": "张三",
+        "pickedClass": "702",
+        "strategy": "name+class"
+      },
+      "actual": {
+        "found": true,
+        "pickedName": "张三",
+        "pickedClass": "702",
+        "strategy": "name+class",
+        "candidates": 1
+      },
+      "pass": true
+    },
+    {
+      "scenario": "仅姓名回退匹配",
+      "target": {
+        "name": "李四",
+        "class": "",
+        "school": "实验中学"
+      },
+      "expected": {
+        "found": true,
+        "pickedName": "李四",
+        "pickedClass": "702",
+        "strategy": "name+class"
+      },
+      "actual": {
+        "found": true,
+        "pickedName": "李四",
+        "pickedClass": "702",
+        "strategy": "name+class",
+        "candidates": 1
+      },
+      "pass": true
+    },
+    {
+      "scenario": "跨校目标不应误命中",
+      "target": {
+        "name": "张三",
+        "class": "701",
+        "school": "城关中学"
+      },
+      "expected": {
+        "found": false,
+        "strategy": "none"
+      },
+      "actual": {
+        "found": false,
+        "pickedName": null,
+        "pickedClass": null,
+        "strategy": "none",
+        "candidates": 0
+      },
+      "pass": true
+    },
+    {
+      "scenario": "无匹配数据",
+      "target": {
+        "name": "不存在",
+        "class": "999",
+        "school": "实验中学"
+      },
+      "expected": {
+        "found": false,
+        "strategy": "none"
+      },
+      "actual": {
+        "found": false,
+        "pickedName": null,
+        "pickedClass": null,
+        "strategy": "none",
+        "candidates": 0
+      },
+      "pass": true
+    }
+  ]
+}
