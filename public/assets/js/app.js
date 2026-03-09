@@ -26061,6 +26061,15 @@ function scheduleTeacherSyncPrompt() {
         }
     }, 400);
 }
+
+if (window.TeacherSyncAuto) {
+    parseTeacherTermApproxMs = function (termId) { return window.TeacherSyncAuto.parseTeacherTermApproxMs(termId); };
+    pickAutoTeacherTerm = function () { return window.TeacherSyncAuto.pickAutoTeacherTerm(); };
+    applyTeacherTermWithoutPrompt = function (termId) { return window.TeacherSyncAuto.applyTeacherTermWithoutPrompt(termId); };
+    promptTeacherSyncIfNeeded = function () { return window.TeacherSyncAuto.promptTeacherSyncIfNeeded(); };
+    scheduleTeacherSyncPrompt = function () { return window.TeacherSyncAuto.scheduleTeacherSyncPrompt(); };
+}
+
 function runDataDoctor() {
     if (!RAW_DATA.length) return alert("请先上传数据，医生才能进行诊断！");
 
@@ -26191,4 +26200,3 @@ window.addEventListener('load', () => {
     }, 1000); // 延迟 1 秒执行
 });
 window.DataManager = DataManager;
-
