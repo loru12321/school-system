@@ -15583,9 +15583,12 @@ function renderStudentMultiPeriodComparison() {
                 studentClass = studentRow.class || '';
 
                 const classRows = schoolRows.filter(r => isClassEquivalent(r.class || '', studentClass || ''));
-                const rankTownMap = buildCompetitionRankMap(allRows, r => cleanName(r.name), r => Number(r.total) || 0);
-                const rankSchoolMap = buildCompetitionRankMap(schoolRows, r => cleanName(r.name), r => Number(r.total) || 0);
-                const rankClassMap = buildCompetitionRankMap(classRows, r => cleanName(r.name), r => Number(r.total) || 0);
+                const comparisonTotalSubjects = getComparisonTotalSubjects();
+                const totalOf = (row) => getComparisonTotalValue(row, comparisonTotalSubjects) || 0;
+                const normalizedTotal = getComparisonTotalValue(studentRow, comparisonTotalSubjects);
+                const rankTownMap = buildCompetitionRankMap(allRows, r => cleanName(r.name), totalOf);
+                const rankSchoolMap = buildCompetitionRankMap(schoolRows, r => cleanName(r.name), totalOf);
+                const rankClassMap = buildCompetitionRankMap(classRows, r => cleanName(r.name), totalOf);
 
                 const rankTown = rankTownMap.get(cleanedName) ?? null;
                 const rankSchool = rankSchoolMap.get(cleanedName) ?? null;
@@ -15615,7 +15618,7 @@ function renderStudentMultiPeriodComparison() {
 
                 studentPeriods.push({
                     examId,
-                    total: studentRow.total || 0,
+                    total: normalizedTotal ?? studentRow.total ?? 0,
                     rankClass,
                     rankTown,
                     rankSchool,
@@ -19627,6 +19630,8 @@ function renderStudentDetails(reset = true) {
             }
         }
 
+        data = getComparisonStudentList(data, RAW_DATA);
+
         // --- C. Excel 列筛选 (核心逻辑) ---
         // 遍历所有已激活的筛选器
         Object.keys(STD_STATE.activeFilters).forEach(colKey => {
@@ -19660,7 +19665,7 @@ function renderStudentDetails(reset = true) {
             });
         } else {
             // 默认按总分降序
-            data.sort((a, b) => b.total - a.total);
+            data.sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0));
         }
 
         STD_STATE.cacheData = data;
@@ -19829,7 +19834,7 @@ function renderStudentDetails(reset = true) {
 
 // 辅助：获取单元格值
 function getCellValue(student, colKey) {
-    if (colKey === 'total') return student.total;
+    if (colKey === 'total') return getComparisonStudentView(student, RAW_DATA)?.total;
     if (colKey === 'totalTScore') return student.totalTScore;
     if (['school', 'class', 'name', 'id', 'examRoom'].includes(colKey)) return student[colKey];
     return student.scores[colKey] !== undefined ? student.scores[colKey] : '-';
@@ -20052,7 +20057,8 @@ function exportStudentDetails() {
         studentsToShow = studentsToShow.filter(s => s.class === selectedClass);
     }
 
-    studentsToShow.sort((a, b) => b.total - a.total);
+    studentsToShow = getComparisonStudentList(studentsToShow, RAW_DATA);
+    studentsToShow.sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0));
 
     // 3. 填充数据行 (需与表头逻辑严格对应)
     studentsToShow.forEach(student => {
@@ -20223,13 +20229,13 @@ function generateMobileLongImage() {
     const cls = document.getElementById('studentClassSelect').value;
     if (!sch || !cls || cls === '全部' || sch.includes('请选择')) return alert("请先选择具体的【学校】和【班级】！");
 
-    const students = RAW_DATA.filter(s => s.school === sch && s.class === cls);
+    const students = getComparisonStudentList(RAW_DATA.filter(s => s.school === sch && s.class === cls), RAW_DATA);
     if (students.length === 0) return alert("该班级无数据");
 
     // 1. 数据准备
-    students.sort((a, b) => b.total - a.total);
-    const avg = students.reduce((a, b) => a + b.total, 0) / students.length;
-    const max = students[0].total;
+    students.sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0));
+    const avg = students.reduce((sum, student) => sum + (Number(student.total) || 0), 0) / students.length;
+    const max = Number(students[0].total) || 0;
 
     // 2. 渲染容器
     const container = document.getElementById('mobile-share-render-area');
@@ -21243,6 +21249,11 @@ function getComparisonStudentView(record, allStudents = RAW_DATA) {
         console.warn('[report] failed to normalize comparison student view:', error);
         return record;
     }
+}
+
+function getComparisonStudentList(records, allStudents = RAW_DATA) {
+    if (!Array.isArray(records)) return [];
+    return records.map(record => getComparisonStudentView(record, allStudents));
 }
 
 function getComparisonTotalValue(record, subjects) {
