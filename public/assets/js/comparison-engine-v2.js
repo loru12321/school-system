@@ -37,7 +37,7 @@ const ComparisonEngineV2 = {
      * @param {String} examPeriod - 考试期数（如 "期中"）
      * @returns {Object} 对比结果
      */
-    compareCohorts(cohort1, cohort2, examPeriod) {
+    async compareCohorts(cohort1, cohort2, examPeriod) {
         const cacheKey = `cohort_${cohort1}_${cohort2}_${examPeriod}`;
 
         // 检查缓存
@@ -46,6 +46,14 @@ const ComparisonEngineV2 = {
         }
 
         try {
+            // 自动拉取云端数据
+            if (window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
+                const cid1 = String(cohort1 || '').replace(/\D/g, '');
+                const cid2 = String(cohort2 || '').replace(/\D/g, '');
+                await window.CloudManager.fetchCohortExamsToLocal(cid1);
+                if (cid1 !== cid2) await window.CloudManager.fetchCohortExamsToLocal(cid2);
+            }
+
             const data1 = this._getCohortExamData(cohort1, examPeriod);
             const data2 = this._getCohortExamData(cohort2, examPeriod);
 
@@ -337,9 +345,16 @@ const ComparisonEngineV2 = {
      * @private
      */
     _getCohortExamData(cohort, examPeriod) {
+        const cid = String(cohort || '').replace(/\D/g, '');
         // 从 COHORT_DB 或云端获取数据
-        const exams = window.COHORT_DB?.exams || [];
-        const exam = exams.find(e => e.name.includes(examPeriod));
+        const examsObj = window.COHORT_DB?.exams || {};
+        const exams = Object.values(examsObj);
+
+        // 过滤出属于该届别的考试，并匹配期数
+        const exam = exams.find(e => {
+            const examCid = String(e.examId || '').match(/^(\d{4})/)?.[1];
+            return examCid === cid && (e.examLabel?.includes(examPeriod) || e.examId?.includes(examPeriod));
+        });
 
         if (!exam || !exam.data) {
             return { avgScore: 0, passRate: 0, excellentRate: 0, subjects: {} };
