@@ -10152,7 +10152,8 @@ function renderStudentMultiPeriodComparison() {
             pageSize: 20,
             originalStudentsCompareData: [...studentsCompareData],
             activeNameFilters: [],
-            activeProgressFilter: ''
+            activeProgressFilter: '',
+            activeClassFilter: ''
         };
 
         // 🟢 [新增]：更新班级下拉选项
@@ -10437,9 +10438,14 @@ function applyStudentCompareFilters(options = {}) {
         : [];
     const nameFilters = Array.isArray(cache.activeNameFilters) ? cache.activeNameFilters : [];
     const progressFilter = cache.activeProgressFilter || '';
+    const classFilter = cache.activeClassFilter || '';
     const cleanName = n => String(n || '').replace(/\s+/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '');
 
     let filteredStudents = [...originalData];
+
+    if (classFilter) {
+        filteredStudents = filteredStudents.filter(student => (student.class || '未分班') === classFilter);
+    }
 
     if (progressFilter) {
         filteredStudents = filteredStudents.filter(student => student.progressType === progressFilter);
@@ -10453,7 +10459,7 @@ function applyStudentCompareFilters(options = {}) {
     }
 
     cache.studentsCompareData = filteredStudents;
-    cache.isFiltered = nameFilters.length > 0 || !!progressFilter;
+    cache.isFiltered = nameFilters.length > 0 || !!progressFilter || !!classFilter;
     cache.currentPage = 1;
 
     updateClassGroupOptions();
@@ -10462,9 +10468,10 @@ function applyStudentCompareFilters(options = {}) {
 
     if (hintEl) {
         if (filteredStudents.length === 0) {
+            const classText = classFilter ? 'class=' + classFilter : '';
             const nameText = nameFilters.length > 0 ? 'name=' + nameFilters.join(', ') : '';
             const progressText = progressFilter ? 'progress=' + progressFilter : '';
-            const summaryText = [nameText, progressText].filter(Boolean).join(' | ') || 'current filters';
+            const summaryText = [classText, nameText, progressText].filter(Boolean).join(' | ') || 'current filters';
             hintEl.innerHTML = 'No students matched: ' + summaryText;
             hintEl.style.color = '#dc2626';
         } else if (!cache.isFiltered) {
@@ -10473,6 +10480,7 @@ function applyStudentCompareFilters(options = {}) {
         } else {
             const progressLabelMap = { improve: 'improve', decline: 'decline', stable: 'stable' };
             const parts = [];
+            if (classFilter) parts.push('class=' + classFilter);
             if (nameFilters.length > 0) parts.push('name=' + nameFilters.join(', '));
             if (progressFilter) parts.push('progress=' + (progressLabelMap[progressFilter] || progressFilter));
             hintEl.innerHTML = 'Filtered ' + filteredStudents.length + ' students: ' + parts.join(' | ');
@@ -10501,21 +10509,21 @@ function filterStudentCompareByName() {
 
     if (!nameInput) return;
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) {
-        alert('????????????');
+        alert('请先生成学生成绩对比数据');
         return;
     }
 
     const searchText = nameInput.value.trim();
     if (!searchText) {
-        alert('??????????????????????????');
+        alert('请输入学生姓名后再筛选');
         return;
     }
 
     const cleanName = n => String(n || '').replace(/\s+/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '');
-    const searchNames = searchText.split(/[,?\s]+/).map(n => cleanName(n)).filter(Boolean);
+    const searchNames = searchText.split(/[,，、\s]+/).map(n => cleanName(n)).filter(Boolean);
 
     if (searchNames.length === 0) {
-        alert('??????????');
+        alert('请输入有效的学生姓名');
         return;
     }
 
@@ -10523,14 +10531,26 @@ function filterStudentCompareByName() {
     applyStudentCompareFilters({ focusSingleMatch: true });
 }
 
+function filterStudentCompareByClass() {
+    const classFilterEl = document.getElementById('studentCompareClassFilter');
+
+    if (!classFilterEl || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
+
+    STUDENT_MULTI_PERIOD_COMPARE_CACHE.activeClassFilter = classFilterEl.value || '';
+    applyStudentCompareFilters({ focusSingleMatch: true });
+}
+
 function clearStudentCompareFilter() {
     const nameInput = document.getElementById('studentCompareNameInput');
+    const classFilterEl = document.getElementById('studentCompareClassFilter');
 
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
     if (nameInput) nameInput.value = '';
+    if (classFilterEl) classFilterEl.value = '';
 
     STUDENT_MULTI_PERIOD_COMPARE_CACHE.activeNameFilters = [];
     STUDENT_MULTI_PERIOD_COMPARE_CACHE.activeProgressFilter = '';
+    STUDENT_MULTI_PERIOD_COMPARE_CACHE.activeClassFilter = '';
     applyStudentCompareFilters();
 }
 
@@ -10610,56 +10630,67 @@ function updateClassGroupOptions() {
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
     const optgroup = document.getElementById('classGroupOptions');
+    const classFilterEl = document.getElementById('studentCompareClassFilter');
     if (!optgroup) return;
 
-    const { studentsCompareData } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
+    const { studentsCompareData, originalStudentsCompareData, activeClassFilter } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
 
-    // 获取所有班级
-    const classSet = new Set();
-    studentsCompareData.forEach(student => {
-        const className = student.class || '未分班';
-        classSet.add(className);
-    });
+    const buildAllowedClassList = (sourceData = []) => {
+        const classSet = new Set();
+        sourceData.forEach(student => {
+            const className = student.class || '未分班';
+            classSet.add(className);
+        });
 
-    console.log('[班级下拉框] 数据中的所有班级:', Array.from(classSet));
+        console.log('[班级下拉框] 数据中的所有班级:', Array.from(classSet));
 
-    // 🔐 权限控制：如果是教师，只显示任教班级
-    const user = getCurrentUser();
-    let allowedClasses = classSet;
+        const user = getCurrentUser();
+        let allowedClasses = classSet;
 
-    if (user && RoleManager.hasAnyRole(user, ['teacher', 'class_teacher']) &&
-        !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director'])) {
-        // 纯教师或班主任角色：只显示任教班级
-        console.log('[班级下拉框] 🔒 检测到教师角色，过滤班级选项');
-        const scope = getTeacherScopeForUser(user);
-        if (scope.classes.size > 0) {
-            allowedClasses = new Set(
-                Array.from(classSet).filter(cls => {
-                    const normalized = normalizeClass(cls);
-                    const allowed = scope.classes.has(normalized);
-                    console.log(`[班级下拉框] 班级 ${cls} (规范化: ${normalized}) -> ${allowed ? '✅允许' : '❌禁止'}`);
-                    return allowed;
-                })
-            );
-            console.log(`[班级下拉框] 🔐 权限筛选：${user.name} 只能看到 ${allowedClasses.size} 个班级:`, Array.from(allowedClasses));
+        if (user && RoleManager.hasAnyRole(user, ['teacher', 'class_teacher']) &&
+            !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director'])) {
+            console.log('[班级下拉框] 🔒 检测到教师角色，过滤班级选项');
+            const scope = getTeacherScopeForUser(user);
+            if (scope.classes.size > 0) {
+                allowedClasses = new Set(
+                    Array.from(classSet).filter(cls => {
+                        const normalized = normalizeClass(cls);
+                        const allowed = scope.classes.has(normalized);
+                        console.log(`[班级下拉框] 班级 ${cls} (规范化: ${normalized}) -> ${allowed ? '✅允许' : '❌禁止'}`);
+                        return allowed;
+                    })
+                );
+                console.log(`[班级下拉框] 🔐 权限筛选：${user.name} 只能看到 ${allowedClasses.size} 个班级:`, Array.from(allowedClasses));
+            } else {
+                console.warn('[班级下拉框] ⚠️ 未找到任课信息，显示空列表');
+            }
         } else {
-            console.warn('[班级下拉框] ⚠️ 未找到任课信息，显示空列表');
+            console.log('[班级下拉框] ℹ️ 管理员或非教师角色，显示所有班级');
         }
-    } else {
-        console.log('[班级下拉框] ℹ️ 管理员或非教师角色，显示所有班级');
-    }
 
-    // 排序班级名称
-    const sortedClasses = Array.from(allowedClasses).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+        return Array.from(allowedClasses).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+    };
 
-    // 清空并重建选项（保留第一个"所有班级"选项）
+    const groupClasses = buildAllowedClassList(studentsCompareData);
     let html = '<option value="class">所有班级（分组显示）</option>';
-    sortedClasses.forEach(className => {
+    groupClasses.forEach(className => {
         html += `<option value="class:${className}">${className}</option>`;
     });
-
     optgroup.innerHTML = html;
-    console.log('[班级下拉框] 下拉框已更新，共 ' + sortedClasses.length + ' 个选项');
+
+    if (classFilterEl) {
+        const filterClasses = buildAllowedClassList(
+            Array.isArray(originalStudentsCompareData) ? originalStudentsCompareData : studentsCompareData
+        );
+        let filterHtml = '<option value="">全部班级</option>';
+        filterClasses.forEach(className => {
+            filterHtml += `<option value="${className}">${className}</option>`;
+        });
+        classFilterEl.innerHTML = filterHtml;
+        classFilterEl.value = activeClassFilter || '';
+    }
+
+    console.log('[班级下拉框] 下拉框已更新，共 ' + groupClasses.length + ' 个分组选项');
 }
 
 function toggleGroupDisplay() {

@@ -2893,6 +2893,10 @@
                 <div id="student-multi-period-compare-section" style="margin-top:10px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:15px; display:none;">
                     <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
                         <label style="font-size:12px; color:#475569;">🔍 筛选：</label>
+                        <select id="studentCompareClassFilter" style="padding:4px 12px; border-radius:20px; min-width:140px;"
+                            onchange="filterStudentCompareByClass()">
+                            <option value="">全部班级</option>
+                        </select>
                         <input type="text" id="studentCompareNameInput" placeholder="输入姓名（可用逗号分隔多个）"
                             style="padding:4px 12px; border-radius:20px; min-width:180px;"
                             onkeypress="if(event.key==='Enter') filterStudentCompareByName()">
