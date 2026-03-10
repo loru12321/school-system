@@ -15976,6 +15976,32 @@ function generateStudentCard(student, periodCount, totalLabel, subjects) {
     return html;
 }
 
+function showStudentComparePopup(student) {
+    if (!student || typeof Swal === 'undefined' || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return false;
+
+    const { periodCount, subjects } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
+    const totalLabel = CONFIG.name === '9年级' ? '五科总' : '全科总';
+    const popupHtml = generateStudentCard(student, periodCount, totalLabel, subjects);
+
+    Swal.fire({
+        title: `${student.name}${student.class ? ` (${student.class})` : ''}`,
+        html: `<div id="student-compare-popup" style="max-height:70vh; overflow:auto; text-align:left;">${popupHtml}</div>`,
+        width: 980,
+        showConfirmButton: false,
+        showCloseButton: true,
+        didOpen: () => {
+            const container = document.getElementById('student-compare-popup');
+            if (!container) return;
+            const detail = container.querySelector('.student-detail-section');
+            const btn = container.querySelector('button[onclick^="toggleStudentDetail"]');
+            if (detail) detail.style.display = 'block';
+            if (btn) btn.remove();
+        }
+    });
+
+    return true;
+}
+
 function changePageSize() {
     const pageSizeEl = document.getElementById('studentComparePageSize');
     if (!pageSizeEl || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
@@ -16043,12 +16069,13 @@ function applyStudentCompareFilters(options = {}) {
 
     if (focusSingleMatch && filteredStudents.length === 1) {
         setTimeout(() => {
+            if (showStudentComparePopup(filteredStudents[0])) return;
             const card = document.querySelector('#studentCompareResult .student-compare-card');
             if (!card) return;
             const detail = card.querySelector('.student-detail-section');
             const btn = card.querySelector('button[onclick^="toggleStudentDetail"]');
             if (detail) detail.style.display = 'block';
-            if (btn) btn.innerHTML = '???? ?';
+            if (btn) btn.innerHTML = 'Expand';
             card.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 80);
     }
