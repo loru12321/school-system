@@ -11927,7 +11927,7 @@ function initSystem(type) {
     document.getElementById('mode-mask').style.display = 'none';
     document.getElementById('app').classList.remove('hidden');
     if (type === '6-8') CONFIG = { name: '6-8年级', label: '全科总', excRate: 0.05, totalSubs: 'auto', analysisSubs: 'auto', showQuery: true };
-    else CONFIG = { name: '9年级', label: '五科总', excRate: 0.06, totalSubs: ['语文', '数学', '英语', '物理', '化学'], analysisSubs: ['语文', '数学', '英语', '物理', '化学', '政治'], showQuery: true };
+    else CONFIG = { name: '9年级', label: '五科总', excRate: 0.06, totalSubs: ['语文', '数学', '英语', '物理', '化学'], analysisSubs: ['语文', '数学', '英语', '物理', '化学'], showQuery: true };
     document.getElementById('mode-badge').innerText = CONFIG.name;
     document.getElementById('mode-info').innerText = `${CONFIG.name}模式 (总分: ${CONFIG.label}, 后1/3剔除: ${CONFIG.excRate * 100}%)`;
     document.querySelectorAll('.label-total').forEach(e => e.innerText = CONFIG.label);
@@ -21235,6 +21235,16 @@ function getComparisonTotalSubjects() {
     return Array.isArray(subsForTotal) ? subsForTotal.filter(Boolean) : [];
 }
 
+function getComparisonStudentView(record, allStudents = RAW_DATA) {
+    if (!record || typeof record !== 'object') return record;
+    try {
+        return createComparisonStudentView(record, allStudents);
+    } catch (error) {
+        console.warn('[report] failed to normalize comparison student view:', error);
+        return record;
+    }
+}
+
 function getComparisonTotalValue(record, subjects) {
     if (!record || !record.scores || typeof record.scores !== 'object') {
         return (typeof record?.total === 'number' && Number.isFinite(record.total)) ? record.total : null;
@@ -21660,11 +21670,12 @@ function renderSingleReportCardHTML(stu, mode) {
     // --- 否则：渲染原有的 PC 端 Fluent Design 风格 (A4打印版) ---
     const totalStudentsCount = RAW_DATA.length;
     const genDate = new Date().toLocaleDateString();
+    const reportStu = getComparisonStudentView(stu, RAW_DATA);
 
     // 获取对比数据（云端上下文优先，避免回退导致“看不到对比”）
-    const cloudHint = (isCloudContextMatchStudent(stu) || isCloudContextLikelyCurrentTarget(stu)) ? CLOUD_STUDENT_COMPARE_CONTEXT : null;
-    const prevStu = cloudHint?.previousRecord || findPreviousRecord(stu);
-    const reportExamHistory = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(stu) : [];
+    const cloudHint = (isCloudContextMatchStudent(reportStu) || isCloudContextLikelyCurrentTarget(reportStu)) ? CLOUD_STUDENT_COMPARE_CONTEXT : null;
+    const prevStu = cloudHint?.previousRecord || findPreviousRecord(reportStu);
+    const reportExamHistory = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(reportStu) : [];
     const currentExamId = getEffectiveCurrentExamId();
     const prevHistoryEntry = reportExamHistory.filter(h => {
         const matchKey = h.examFullKey || h.examId;
@@ -21685,14 +21696,14 @@ function renderSingleReportCardHTML(stu, mode) {
     });
 
     // 数据容错（云端简版对象可能缺少scores）
-    const stuScores = (stu && typeof stu === 'object' && stu.scores && typeof stu.scores === 'object') ? stu.scores : {};
+    const stuScores = (reportStu && typeof reportStu === 'object' && reportStu.scores && typeof reportStu.scores === 'object') ? reportStu.scores : {};
 
     // 排名数据准备
-    const curTownRank = safeGet(stu, 'ranks.total.township', '-');
+    const curTownRank = safeGet(reportStu, 'ranks.total.township', '-');
     const prevTownRank = compareTotalRanks.township ?? prevStu?.townRank ?? '-';
-    const curClassRank = safeGet(stu, 'ranks.total.class', '-');
+    const curClassRank = safeGet(reportStu, 'ranks.total.class', '-');
     const prevClassRank = compareTotalRanks.class ?? prevStu?.classRank ?? '-';
-    const curSchoolRank = safeGet(stu, 'ranks.total.school', '-');
+    const curSchoolRank = safeGet(reportStu, 'ranks.total.school', '-');
     const prevSchoolRank = compareTotalRanks.school ?? prevStu?.schoolRank ?? '-';
 
     // 单校判断
@@ -21719,7 +21730,7 @@ function renderSingleReportCardHTML(stu, mode) {
 
         // B. 总分行 — 用统一的联动科目集展示总分，避免把政治混入9年级总分口径
         const comparisonTotalSubjects = getComparisonTotalSubjects();
-        const currentTotal = getComparisonTotalValue(stu, comparisonTotalSubjects);
+        const currentTotal = getComparisonTotalValue(reportStu, comparisonTotalSubjects);
         const totalLabel = (CONFIG.name === '9年级' && comparisonTotalSubjects.length) ? '五科总分' : CONFIG.label;
         const prevTotal = compareStu ? recalcPrevTotal(compareStu) : '-';
         const trendTotal = getTrendBadge(currentTotal, prevTotal, 'score');
@@ -21747,11 +21758,11 @@ function renderSingleReportCardHTML(stu, mode) {
                 prevRanks = normalizeRankInfo(prevStu.ranks[sub]);
             }
 
-            const curCR = safeGet(stu, `ranks.${sub}.class`, '-');
+            const curCR = safeGet(reportStu, `ranks.${sub}.class`, '-');
             const tC = getTrendBadge(curCR, prevRanks.class || '-', 'rank');
-            const curSR = safeGet(stu, `ranks.${sub}.school`, '-');
+            const curSR = safeGet(reportStu, `ranks.${sub}.school`, '-');
             const tS = getTrendBadge(curSR, prevRanks.school || '-', 'rank');
-            const curTR = safeGet(stu, `ranks.${sub}.township`, '-');
+            const curTR = safeGet(reportStu, `ranks.${sub}.township`, '-');
             const tT = getTrendBadge(curTR, prevRanks.township || '-', 'rank');
 
             tableRows += `<tr style="transition:0.2s;" onmouseover="this.style.background='rgba(241,245,249,0.5)'" onmouseout="this.style.background='transparent'">
@@ -21778,7 +21789,7 @@ function renderSingleReportCardHTML(stu, mode) {
             </style>
         `;
 
-    const chartNarrativeHtml = buildChartNarrative(stu);
+    const chartNarrativeHtml = buildChartNarrative(reportStu);
     const cloudCompareHintHtml = cloudHint ? `
         <div class="fluent-card" style="padding:10px 14px; margin-bottom:12px; background:#eef2ff; border:1px solid #c7d2fe; color:#3730a3;">
             <div style="display:flex; align-items:center; gap:8px; font-size:12px; flex-wrap:wrap;">
@@ -21884,12 +21895,13 @@ function renderSingleReportCardHTML(stu, mode) {
 function renderInstagramCard(stu) {
     const genDate = new Date().toLocaleDateString();
     const totalStudents = RAW_DATA.length;
+    const reportStu = getComparisonStudentView(stu, RAW_DATA);
     const comparisonTotalSubjects = getComparisonTotalSubjects();
-    const currentTotal = getComparisonTotalValue(stu, comparisonTotalSubjects);
-    const rank = safeGet(stu, 'ranks.total.township', '-');
+    const currentTotal = getComparisonTotalValue(reportStu, comparisonTotalSubjects);
+    const rank = safeGet(reportStu, 'ranks.total.township', '-');
     const pct = (typeof rank === 'number') ? ((1 - rank / totalStudents) * 100).toFixed(0) : '-';
     const avatarLetter = stu.name.charAt(0); // 头像取首字
-    const cloudHint = (isCloudContextMatchStudent(stu) || isCloudContextLikelyCurrentTarget(stu)) ? CLOUD_STUDENT_COMPARE_CONTEXT : null;
+    const cloudHint = (isCloudContextMatchStudent(reportStu) || isCloudContextLikelyCurrentTarget(reportStu)) ? CLOUD_STUDENT_COMPARE_CONTEXT : null;
 
     // 判断是否为单校模式
     const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
@@ -21903,11 +21915,11 @@ function renderInstagramCard(stu) {
     // 3. 构建单科评论行
     let commentsHtml = '';
     comparisonTotalSubjects.forEach(sub => {
-        if (stu.scores[sub] !== undefined) {
-            const score = stu.scores[sub];
+        if (reportStu.scores[sub] !== undefined) {
+            const score = reportStu.scores[sub];
 
             // 修改点 1：获取校内排名 (即年级排名/级排) 而不是班级排名 (.class)
-            const subRank = safeGet(stu, `ranks.${sub}.school`, '-');
+            const subRank = safeGet(reportStu, `ranks.${sub}.school`, '-');
 
             commentsHtml += `
                     <div class="insta-comment-row">
@@ -22113,7 +22125,7 @@ function renderInstagramCard(stu) {
                     <div style="font-size:16px; opacity:0.9; text-transform:uppercase; letter-spacing:2px;">Total Score</div>
                     <div style="font-size:64px; font-weight:800; text-shadow:0 4px 10px rgba(0,0,0,0.2);">${Number.isFinite(currentTotal) ? currentTotal.toFixed(1) : '-'}</div>
                     <div style="margin-top:10px; font-size:18px; font-weight:bold; background:rgba(255,255,255,0.2); padding:5px 15px; border-radius:20px;">
-                        全校排名: ${safeGet(stu, 'ranks.total.school', '-')}
+                        全校排名: ${safeGet(reportStu, 'ranks.total.school', '-')}
                     </div>
                     <div style="margin-top:20px; font-size:12px; opacity:0.8;">击败了${scopeText} ${pct}% 的考生</div>
                 </div>
@@ -23356,6 +23368,7 @@ function renderHistoryChart(student) {
 }
 
 function renderRadarChart(student, passedHistory = null) {
+    const reportStudent = getComparisonStudentView(student, RAW_DATA);
     const ctx = document.getElementById('radarChart'); if (!ctx) return;
     if (!window.Chart) {
         const holder = ctx.parentElement;
@@ -23370,10 +23383,10 @@ function renderRadarChart(student, passedHistory = null) {
 
     // 本次考试百分位计算
     linkedSubjects.forEach(sub => {
-        if (student.scores[sub] !== undefined) {
+        if (reportStudent.scores[sub] !== undefined) {
             labels.push(sub);
             const allScores = RAW_DATA.map(s => s.scores[sub]).filter(v => v !== undefined).sort((a, b) => b - a);
-            const rank = allScores.indexOf(student.scores[sub]) + 1;
+            const rank = allScores.indexOf(reportStudent.scores[sub]) + 1;
             const total = allScores.length;
             const percentile = ((1 - (rank / total)) * 100).toFixed(1);
             currentData.push(percentile);
@@ -23404,12 +23417,12 @@ function renderRadarChart(student, passedHistory = null) {
     ];
 
     // 优先使用 findPreviousRecord 的结果（兼容旧逻辑）
-    const prevStu = findPreviousRecord(student);
+    const prevStu = findPreviousRecord(reportStudent);
     let historicalDatasets = [];
 
     // 尝试从 COHORT_DB 或 传入参数获取多期数据
     if (typeof getStudentExamHistory === 'function' || passedHistory) {
-        const examHistory = passedHistory || getStudentExamHistory(student);
+        const examHistory = passedHistory || getStudentExamHistory(reportStudent);
         const currentExamId = getEffectiveCurrentExamId();
         const pastExams = examHistory
             .map((h, idx) => ({ ...h, __idx: idx }))
@@ -23455,7 +23468,7 @@ function renderRadarChart(student, passedHistory = null) {
         labels.forEach(sub => {
             let prevPercentile = null;
             if (prevStu.scores[sub] !== undefined) {
-                let prevAllScores = getPreviousExamSubjectScores(sub, student, prevStu) || [];
+                let prevAllScores = getPreviousExamSubjectScores(sub, reportStudent, prevStu) || [];
                 // 🟢 [Bug #2 修复] 兜底：从 prevStu._sourceExam 对应的考试快照获取全量数据
                 if ((!prevAllScores || prevAllScores.length === 0) && prevStu._sourceExam && typeof CohortDB !== 'undefined') {
                     try {
@@ -23532,6 +23545,7 @@ function renderRadarChart(student, passedHistory = null) {
 let varianceChartInstance = null;
 
 function renderVarianceChart(student) {
+    const reportStudent = getComparisonStudentView(student, RAW_DATA);
     const ctx = document.getElementById('varianceChart');
     if (!ctx) return;
     if (!window.Chart) {
@@ -23546,7 +23560,7 @@ function renderVarianceChart(student) {
     const zScoresPrev = [];
     const bgColors = [];
 
-    const prevStu = findPreviousRecord(student);
+    const prevStu = findPreviousRecord(reportStudent);
 
     const calcStats = (arr) => {
         const n = arr.length;
@@ -23558,12 +23572,12 @@ function renderVarianceChart(student) {
 
     const linkedSubjects = getComparisonTotalSubjects();
     linkedSubjects.forEach(sub => {
-        if (student.scores[sub] !== undefined) {
+        if (reportStudent.scores[sub] !== undefined) {
             // 本次 Z-Score
             const allScores = RAW_DATA.map(s => s.scores[sub]).filter(v => typeof v === 'number');
             const stats = calcStats(allScores);
             let z = 0;
-            if (stats.sd > 0) z = (student.scores[sub] - stats.mean) / stats.sd;
+            if (stats.sd > 0) z = (reportStudent.scores[sub] - stats.mean) / stats.sd;
 
             labels.push(sub);
             zScoresCurr.push(z);
@@ -23576,7 +23590,7 @@ function renderVarianceChart(student) {
             // 上次 Z-Score
             let prevZ = null;
             if (prevStu && prevStu.scores && prevStu.scores[sub] !== undefined) {
-                let prevAllScores = getPreviousExamSubjectScores(sub, student, prevStu) || [];
+                let prevAllScores = getPreviousExamSubjectScores(sub, reportStudent, prevStu) || [];
                 const prevStats = calcStats(prevAllScores);
                 if (prevStats.sd > 0) {
                     prevZ = (prevStu.scores[sub] - prevStats.mean) / prevStats.sd;
@@ -23646,7 +23660,8 @@ function renderVarianceChart(student) {
 function buildChartNarrative(student) {
     const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
     const scopeText = isSingleSchool ? '全校' : '全镇';
-    const rank = safeGet(student, 'ranks.total.township', safeGet(student, 'ranks.total.school', '-'));
+    const reportStudent = getComparisonStudentView(student, RAW_DATA);
+    const rank = safeGet(reportStudent, 'ranks.total.township', safeGet(reportStudent, 'ranks.total.school', '-'));
     const totalCount = RAW_DATA.length || 1;
     const percentile = (typeof rank === 'number') ? ((1 - rank / totalCount) * 100) : null;
 
@@ -23665,15 +23680,15 @@ function buildChartNarrative(student) {
 
     const linkedSubjects = getComparisonTotalSubjects();
     linkedSubjects.forEach(sub => {
-        if (student.scores[sub] === undefined) return;
+        if (reportStudent.scores[sub] === undefined) return;
         const allScores = RAW_DATA.map(s => s.scores[sub]).filter(v => typeof v === 'number').sort((a, b) => b - a);
         if (!allScores.length) return;
-        const r = allScores.indexOf(student.scores[sub]) + 1;
+        const r = allScores.indexOf(reportStudent.scores[sub]) + 1;
         const p = ((1 - r / allScores.length) * 100);
         subjectPercentiles.push(p);
 
         const stats = calcStats(allScores);
-        const z = stats.sd > 0 ? (student.scores[sub] - stats.mean) / stats.sd : 0;
+        const z = stats.sd > 0 ? (reportStudent.scores[sub] - stats.mean) / stats.sd : 0;
         zScores.push(z);
         if (z >= 0.8) strong.push(sub);
         if (z <= -0.8) weak.push(sub);
@@ -30032,7 +30047,7 @@ function getActiveGrade() {
 function applyModeByGrade(grade) {
     const isGrade9 = String(grade) === '9';
     if (isGrade9) {
-        CONFIG = { name: '9年级', label: '五科总', excRate: 0.06, totalSubs: ['语文', '数学', '英语', '物理', '化学'], analysisSubs: ['语文', '数学', '英语', '物理', '化学', '政治'], showQuery: true, mode: CONFIG.mode || 'multi' };
+        CONFIG = { name: '9年级', label: '五科总', excRate: 0.06, totalSubs: ['语文', '数学', '英语', '物理', '化学'], analysisSubs: ['语文', '数学', '英语', '物理', '化学'], showQuery: true, mode: CONFIG.mode || 'multi' };
     } else {
         CONFIG = { name: '6-8年级', label: '全科总', excRate: 0.05, totalSubs: 'auto', analysisSubs: 'auto', showQuery: true, mode: CONFIG.mode || 'multi' };
     }
