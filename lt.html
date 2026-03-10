@@ -21591,6 +21591,24 @@ function renderSingleReportCardHTML(stu, mode) {
     // 获取对比数据（云端上下文优先，避免回退导致“看不到对比”）
     const cloudHint = (isCloudContextMatchStudent(stu) || isCloudContextLikelyCurrentTarget(stu)) ? CLOUD_STUDENT_COMPARE_CONTEXT : null;
     const prevStu = cloudHint?.previousRecord || findPreviousRecord(stu);
+    const reportExamHistory = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(stu) : [];
+    const currentExamId = getEffectiveCurrentExamId();
+    const prevHistoryEntry = reportExamHistory.filter(h => {
+        const matchKey = h.examFullKey || h.examId;
+        return !currentExamId || (!isExamKeyEquivalentForCompare(matchKey, currentExamId) && !isExamKeyEquivalentForCompare(h.examId, currentExamId));
+    }).slice(-1)[0] || null;
+    const prevHistoryStu = prevHistoryEntry ? (prevHistoryEntry.student || prevHistoryEntry) : null;
+    const compareStu = (prevHistoryStu && prevHistoryStu.scores) ? prevHistoryStu : prevStu;
+    const readScoreValue = (scoreLike) => {
+        if (typeof scoreLike === 'number' && Number.isFinite(scoreLike)) return scoreLike;
+        if (scoreLike && typeof scoreLike === 'object' && typeof scoreLike.score === 'number' && Number.isFinite(scoreLike.score)) return scoreLike.score;
+        return '-';
+    };
+    const normalizeRankInfo = (rankLike) => ({
+        class: rankLike?.class ?? rankLike?.rankClass ?? '-',
+        school: rankLike?.school ?? rankLike?.rankSchool ?? '-',
+        township: rankLike?.township ?? rankLike?.rankTown ?? '-'
+    });
 
     // 数据容错（云端简版对象可能缺少scores）
     const stuScores = (stu && typeof stu === 'object' && stu.scores && typeof stu.scores === 'object') ? stu.scores : {};
@@ -21626,7 +21644,7 @@ function renderSingleReportCardHTML(stu, mode) {
     }
 
     // B. 总分行 — 用当前科目集重算上期总分，防止跨期科目集不同导致对比错误
-    const prevTotal = prevStu ? recalcPrevTotal(prevStu) : '-';
+    const prevTotal = compareStu ? recalcPrevTotal(compareStu) : '-';
     const trendTotal = getTrendBadge(stu.total, prevTotal, 'score');
     const trendClass = getTrendBadge(curClassRank, prevClassRank, 'rank');
     const trendSchool = getTrendBadge(curSchoolRank, prevSchoolRank, 'rank');
@@ -21644,11 +21662,13 @@ function renderSingleReportCardHTML(stu, mode) {
     const uniqueSubjects = [...new Set(SUBJECTS)];
     uniqueSubjects.forEach(sub => {
         if (stuScores[sub] !== undefined) {
-            const prevSubScore = (prevStu && prevStu.scores) ? prevStu.scores[sub] : '-';
+            const prevSubScore = compareStu && compareStu.scores ? readScoreValue(compareStu.scores[sub]) : '-';
             const subTrend = getTrendBadge(stuScores[sub], prevSubScore, 'score');
 
-            let prevRanks = {};
-            if (prevStu && prevStu.ranks && prevStu.ranks[sub]) prevRanks = prevStu.ranks[sub];
+            let prevRanks = normalizeRankInfo(compareStu && compareStu.ranks ? compareStu.ranks[sub] : null);
+            if (prevRanks.class === '-' && prevRanks.school === '-' && prevRanks.township === '-' && prevStu && prevStu.ranks && prevStu.ranks[sub]) {
+                prevRanks = normalizeRankInfo(prevStu.ranks[sub]);
+            }
 
             const curCR = safeGet(stu, `ranks.${sub}.class`, '-');
             const tC = getTrendBadge(curCR, prevRanks.class || '-', 'rank');
@@ -21724,7 +21744,7 @@ function renderSingleReportCardHTML(stu, mode) {
         </div>`;
 
     // 🟢 [Bug #5 修复] 补充渲染多期考试趋势表格 (如果是多期数据可用)
-    const examHistory = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(stu) : [];
+    const examHistory = reportExamHistory;
     let historyHtml = '';
     if (examHistory.length > 1) {
         let historyRows = '';
