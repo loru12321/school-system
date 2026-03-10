@@ -15736,7 +15736,10 @@ function renderStudentMultiPeriodComparison() {
         STUDENT_MULTI_PERIOD_COMPARE_CACHE = {
             school, examIds, periodCount, studentsCompareData, subjects: allSubjects,
             currentPage: 1,
-            pageSize: 20
+            pageSize: 20,
+            originalStudentsCompareData: [...studentsCompareData],
+            activeNameFilters: [],
+            activeProgressFilter: ''
         };
 
         // 🟢 [新增]：更新班级下拉选项
@@ -15981,98 +15984,114 @@ function changePageSize() {
     renderStudentComparePage(1);
 }
 
+function applyStudentCompareFilters(options = {}) {
+    if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return [];
+
+    const {
+        focusSingleMatch = false
+    } = options;
+
+    const cache = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
+    const hintEl = document.getElementById('studentCompareHint');
+    const originalData = Array.isArray(cache.originalStudentsCompareData)
+        ? cache.originalStudentsCompareData
+        : [];
+    const nameFilters = Array.isArray(cache.activeNameFilters) ? cache.activeNameFilters : [];
+    const progressFilter = cache.activeProgressFilter || '';
+    const cleanName = n => String(n || '').replace(/\s+/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '');
+
+    let filteredStudents = [...originalData];
+
+    if (progressFilter) {
+        filteredStudents = filteredStudents.filter(student => student.progressType === progressFilter);
+    }
+
+    if (nameFilters.length > 0) {
+        filteredStudents = filteredStudents.filter(student => {
+            const normalized = cleanName(student.name);
+            return nameFilters.some(keyword => normalized.includes(keyword));
+        });
+    }
+
+    cache.studentsCompareData = filteredStudents;
+    cache.isFiltered = nameFilters.length > 0 || !!progressFilter;
+    cache.currentPage = 1;
+
+    updateClassGroupOptions();
+    updateStudentCompareSummary();
+    toggleGroupDisplay();
+
+    if (hintEl) {
+        if (filteredStudents.length === 0) {
+            const nameText = nameFilters.length > 0 ? 'name=' + nameFilters.join(', ') : '';
+            const progressText = progressFilter ? 'progress=' + progressFilter : '';
+            const summaryText = [nameText, progressText].filter(Boolean).join(' | ') || 'current filters';
+            hintEl.innerHTML = 'No students matched: ' + summaryText;
+            hintEl.style.color = '#dc2626';
+        } else if (!cache.isFiltered) {
+            hintEl.innerHTML = 'Showing all ' + cache.school + ' students across ' + cache.periodCount + ' exams: ' + filteredStudents.length;
+            hintEl.style.color = '#16a34a';
+        } else {
+            const progressLabelMap = { improve: 'improve', decline: 'decline', stable: 'stable' };
+            const parts = [];
+            if (nameFilters.length > 0) parts.push('name=' + nameFilters.join(', '));
+            if (progressFilter) parts.push('progress=' + (progressLabelMap[progressFilter] || progressFilter));
+            hintEl.innerHTML = 'Filtered ' + filteredStudents.length + ' students: ' + parts.join(' | ');
+            hintEl.style.color = '#16a34a';
+        }
+    }
+
+    if (focusSingleMatch && filteredStudents.length === 1) {
+        setTimeout(() => {
+            const card = document.querySelector('#studentCompareResult .student-compare-card');
+            if (!card) return;
+            const detail = card.querySelector('.student-detail-section');
+            const btn = card.querySelector('button[onclick^="toggleStudentDetail"]');
+            if (detail) detail.style.display = 'block';
+            if (btn) btn.innerHTML = '???? ?';
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 80);
+    }
+
+    return filteredStudents;
+}
+
 function filterStudentCompareByName() {
     const nameInput = document.getElementById('studentCompareNameInput');
-    const hintEl = document.getElementById('studentCompareHint');
 
-    if (!nameInput || !hintEl) return;
+    if (!nameInput) return;
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) {
-        alert('请先生成学生多期对比结果');
+        alert('????????????');
         return;
     }
 
     const searchText = nameInput.value.trim();
     if (!searchText) {
-        alert('请输入要查询的学生姓名（可用逗号或空格分隔多个姓名）');
+        alert('??????????????????????????');
         return;
     }
 
     const cleanName = n => String(n || '').replace(/\s+/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '');
-
-    // 支持多个姓名搜索，用逗号或空格分隔
-    const searchNames = searchText.split(/[,，\s]+/).map(n => cleanName(n)).filter(n => n);
+    const searchNames = searchText.split(/[,?\s]+/).map(n => cleanName(n)).filter(Boolean);
 
     if (searchNames.length === 0) {
-        alert('请输入有效的学生姓名');
+        alert('??????????');
         return;
     }
 
-    // 保存原始数据（如果还没保存）
-    if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE.originalStudentsCompareData) {
-        STUDENT_MULTI_PERIOD_COMPARE_CACHE.originalStudentsCompareData = STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData;
-    }
-
-    // 从原始数据筛选匹配的学生
-    const originalData = STUDENT_MULTI_PERIOD_COMPARE_CACHE.originalStudentsCompareData;
-    const matchedStudents = originalData.filter(student => {
-        return searchNames.some(searchName => cleanName(student.name).includes(searchName));
-    });
-
-    if (matchedStudents.length === 0) {
-        hintEl.innerHTML = `❌ 找不到姓名包含 "${searchText}" 的学生`;
-        hintEl.style.color = '#dc2626';
-    } else {
-        // 持久化筛选结果
-        STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData = matchedStudents;
-        STUDENT_MULTI_PERIOD_COMPARE_CACHE.isFiltered = true;
-
-        // 🟢 [改进]：根据当前显示模式重新渲染
-        toggleGroupDisplay();
-        updateStudentCompareSummary();
-
-        const nameList = searchNames.length > 3 ? `${searchNames.slice(0, 3).join(', ')}...` : searchNames.join(', ');
-        if (matchedStudents.length === 1) {
-            hintEl.innerHTML = `✅ 已定位到 ${matchedStudents[0].name}，仅展示该生成绩对比`;
-            // 单人匹配：自动展开详情并聚焦（等价“只弹出该生对比”）
-            setTimeout(() => {
-                const card = document.querySelector('#studentCompareResult .student-compare-card');
-                if (!card) return;
-                const detail = card.querySelector('.student-detail-section');
-                const btn = card.querySelector('button[onclick^="toggleStudentDetail"]');
-                if (detail) detail.style.display = 'block';
-                if (btn) btn.innerHTML = '收起详情 ▲';
-                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 80);
-        } else {
-            hintEl.innerHTML = `✅ 找到 ${matchedStudents.length} 名学生匹配 "${nameList}"`;
-        }
-        hintEl.style.color = '#16a34a';
-    }
+    STUDENT_MULTI_PERIOD_COMPARE_CACHE.activeNameFilters = searchNames;
+    applyStudentCompareFilters({ focusSingleMatch: true });
 }
 
 function clearStudentCompareFilter() {
     const nameInput = document.getElementById('studentCompareNameInput');
-    const hintEl = document.getElementById('studentCompareHint');
 
-    if (!nameInput || !hintEl) return;
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
+    if (nameInput) nameInput.value = '';
 
-    // 清空输入框
-    nameInput.value = '';
-
-    // 恢复原始数据
-    if (STUDENT_MULTI_PERIOD_COMPARE_CACHE.originalStudentsCompareData) {
-        STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData = STUDENT_MULTI_PERIOD_COMPARE_CACHE.originalStudentsCompareData;
-        STUDENT_MULTI_PERIOD_COMPARE_CACHE.isFiltered = false;
-    }
-
-    // 🟢 [改进]：重新更新班级选项并根据当前显示模式重新渲染
-    updateClassGroupOptions();
-    toggleGroupDisplay();
-
-    const { school, periodCount, studentsCompareData } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
-    hintEl.innerHTML = `✅ 已显示 ${school} 的全部 ${studentsCompareData.length} 名学生的 ${periodCount} 期对比`;
-    hintEl.style.color = '#16a34a';
+    STUDENT_MULTI_PERIOD_COMPARE_CACHE.activeNameFilters = [];
+    STUDENT_MULTI_PERIOD_COMPARE_CACHE.activeProgressFilter = '';
+    applyStudentCompareFilters();
 }
 
 function toggleStudentDetail(btn) {
@@ -16084,42 +16103,22 @@ function toggleStudentDetail(btn) {
 
     if (detailSection.style.display === 'none' || !detailSection.style.display) {
         detailSection.style.display = 'block';
-        btn.innerHTML = '收起详情 ▲';
+        btn.innerHTML = '???? ?';
     } else {
         detailSection.style.display = 'none';
-        btn.innerHTML = '展开详情 ▼';
+        btn.innerHTML = '???? ?';
     }
 }
 
 function filterByProgress(type) {
-    const hintEl = document.getElementById('studentCompareHint');
     const nameInput = document.getElementById('studentCompareNameInput');
 
-    if (!hintEl) return;
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
-
-    // 清空姓名筛选
     if (nameInput) nameInput.value = '';
 
-    // 保存原始数据（如果还没保存）
-    if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE.originalStudentsCompareData) {
-        STUDENT_MULTI_PERIOD_COMPARE_CACHE.originalStudentsCompareData = STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData;
-    }
-
-    // 从原始数据筛选
-    const originalData = STUDENT_MULTI_PERIOD_COMPARE_CACHE.originalStudentsCompareData;
-    const filteredStudents = originalData.filter(s => s.progressType === type);
-
-    // 持久化筛选结果
-    STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData = filteredStudents;
-    STUDENT_MULTI_PERIOD_COMPARE_CACHE.isFiltered = true;
-
-    // 🟢 [改进]：根据当前显示模式重新渲染
-    toggleGroupDisplay();
-
-    const typeLabel = type === 'improve' ? '进步' : (type === 'decline' ? '退步' : '持平');
-    hintEl.innerHTML = `✅ 筛选结果：${filteredStudents.length} 名${typeLabel}学生`;
-    hintEl.style.color = '#16a34a';
+    STUDENT_MULTI_PERIOD_COMPARE_CACHE.activeNameFilters = [];
+    STUDENT_MULTI_PERIOD_COMPARE_CACHE.activeProgressFilter = type;
+    applyStudentCompareFilters();
 }
 
 function sortStudentCompare() {
