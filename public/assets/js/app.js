@@ -15655,53 +15655,54 @@ function findPreviousRecord(student) {
         const otherExams = window.PREV_DATA.filter(p => {
             const hid = p.examFullKey || p.examId;
             const sameExam = currentExamId && (isExamKeyEquivalentForCompare(hid, currentExamId) || isExamKeyEquivalentForCompare(p.examId, currentExamId));
-
-            // 🚨 [Bug Fix] Also compare data fingerprint to detect identical snapshots with different names
             const sameFingerprint = currentFingerprint && p?.fingerprint && String(p.fingerprint) === currentFingerprint;
-
-            // 🚨 [Bug Fix] Compare actual total score to prevent comparing against identical data object
             const sameScores = student.total !== undefined && p.total !== undefined && Math.abs(student.total - p.total) < 0.001;
-
             return !sameExam && !sameFingerprint && !sameScores;
         }).sort((a, b) => getRecordTime(b) - getRecordTime(a));
-        if (db && db.exams && Object.keys(db.exams).length > 0) {
-            const examEntries = Object.entries(db.exams)
-                .filter(([id]) => !currentExamId || !isExamKeyEquivalentForCompare(id, currentExamId)) // 排除当前考试
-                .sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0)); // 按时间降序
+        const match = otherExams.find(p => matchStudent(p, targetName, targetClass, targetSchool));
+        if (match) return match;
+    }
 
-            for (const [examId, exam] of examEntries) {
-                const examData = exam.data || [];
-                if (examData.length === 0) continue;
-                const examFingerprint = String(exam.fingerprint || computeExamDataFingerprint(examData)).trim();
-                if (currentFingerprint && examFingerprint && examFingerprint === currentFingerprint) continue;
+    // 🟢 [Bug #2 修复] 2. PREV_DATA为空时，从 COHORT_DB.exams 历史快照中查找上一次考试
+    if (typeof CohortDB !== 'undefined') {
+        try {
+            const db = CohortDB.ensure();
+            if (db && db.exams && Object.keys(db.exams).length > 0) {
+                const examEntries = Object.entries(db.exams)
+                    .filter(([id]) => !currentExamId || !isExamKeyEquivalentForCompare(id, currentExamId)) // 排除当前考试
+                    .sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0)); // 按时间降序
 
-                const found = examData.find(p => matchStudent(p, targetName, targetClass, targetSchool));
-                if (found) {
-                    console.log(`[对比] 从历史考试 "${examId}" 中找到 ${student.name} 的历史记录`);
-                    // 构建兼容的对比记录格式
-                    return {
-                        ...found,
-                        townRank: found.ranks?.total?.township || '-',
-                        classRank: found.ranks?.total?.class || '-',
-                        schoolRank: found.ranks?.total?.school || '-',
-                        _sourceExam: examId
-                    };
+                for (const [examId, exam] of examEntries) {
+                    const examData = exam.data || [];
+                    if (examData.length === 0) continue;
+                    const examFingerprint = String(exam.fingerprint || computeExamDataFingerprint(examData)).trim();
+                    if (currentFingerprint && examFingerprint && examFingerprint === currentFingerprint) continue;
+
+                    const found = examData.find(p => matchStudent(p, targetName, targetClass, targetSchool));
+                    if (found) {
+                        console.log(`[对比] 从历史考试 "${examId}" 中找到 ${student.name} 的历史记录`);
+                        return {
+                            ...found,
+                            townRank: found.ranks?.total?.township || '-',
+                            classRank: found.ranks?.total?.class || '-',
+                            schoolRank: found.ranks?.total?.school || '-',
+                            _sourceExam: examId
+                        };
+                    }
                 }
             }
+        } catch (e) {
+            console.warn('[对比] COHORT_DB 历史查找异常:', e);
         }
-    } catch (e) {
-        console.warn('[对比] COHORT_DB 历史查找异常:', e);
     }
-}
+    const user = getCurrentUser();
+    const isParentOrStudent = user && RoleManager.hasAnyRole(user, ['parent', 'student']) &&
+        !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director', 'teacher', 'class_teacher']);
+    if (!CLOUD_STUDENT_COMPARE_CONTEXT?.previousRecord && !isParentOrStudent) {
+        console.warn("历史数据(PREV_DATA)为空且COHORT_DB中无历史快照，无法进行对比。");
+    }
 
-const user = getCurrentUser();
-const isParentOrStudent = user && RoleManager.hasAnyRole(user, ['parent', 'student']) &&
-    !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director', 'teacher', 'class_teacher']);
-if (!CLOUD_STUDENT_COMPARE_CONTEXT?.previousRecord && !isParentOrStudent) {
-    console.warn("历史数据(PREV_DATA)为空且COHORT_DB中无历史快照，无法进行对比。");
-}
-
-return null;
+    return null;
 }
 
 // 🟢 [Bug #5 新增] 获取学生在所有历史考试中的记录（用于多期雷达图对比）
