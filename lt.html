@@ -21230,9 +21230,81 @@ function generateAIComment(student) {
  * @param {Object} prevRecord - 上期学生记录（需含 scores 对象）
  * @returns {number|string} - 归一化后的总分，或 '-' 表示科目不匹配
  */
+function getComparisonTotalSubjects() {
+    const subsForTotal = (CONFIG.totalSubs === 'auto') ? SUBJECTS : CONFIG.totalSubs;
+    return Array.isArray(subsForTotal) ? subsForTotal.filter(Boolean) : [];
+}
+
+function getComparisonTotalValue(record, subjects) {
+    if (!record || !record.scores || typeof record.scores !== 'object') {
+        return (typeof record?.total === 'number' && Number.isFinite(record.total)) ? record.total : null;
+    }
+
+    const totalSubjects = Array.isArray(subjects) && subjects.length ? subjects : getComparisonTotalSubjects();
+    if (!totalSubjects.length) {
+        return (typeof record.total === 'number' && Number.isFinite(record.total)) ? record.total : null;
+    }
+
+    let sum = 0;
+    let matchCount = 0;
+    totalSubjects.forEach(sub => {
+        const score = Number(record.scores?.[sub]);
+        if (Number.isFinite(score)) {
+            sum += score;
+            matchCount++;
+        }
+    });
+
+    if (matchCount === totalSubjects.length) {
+        return parseFloat(sum.toFixed(1));
+    }
+
+    return (typeof record.total === 'number' && Number.isFinite(record.total)) ? record.total : null;
+}
+
+function createComparisonStudentView(record, allStudents) {
+    if (!record || typeof record !== 'object') return record;
+
+    const totalSubjects = getComparisonTotalSubjects();
+    const normalizedTotal = getComparisonTotalValue(record, totalSubjects);
+    const view = {
+        ...record,
+        scores: { ...(record.scores || {}) },
+        ranks: {
+            ...(record.ranks || {}),
+            total: { ...((record.ranks && record.ranks.total) || {}) }
+        }
+    };
+
+    if (typeof normalizedTotal === 'number' && Number.isFinite(normalizedTotal)) {
+        view.total = normalizedTotal;
+    }
+
+    const rows = Array.isArray(allStudents) ? allStudents.filter(Boolean) : [];
+    if (!rows.length) return view;
+
+    const keyOf = (row) => `${String(row?.school || '').trim()}::${String(row?.class || '').trim()}::${String(row?.name || '').trim()}`;
+    const targetKey = keyOf(record);
+    const withTotals = rows.map(row => ({ row, total: getComparisonTotalValue(row, totalSubjects) })).filter(item => Number.isFinite(item.total));
+    if (!withTotals.length) return view;
+
+    const townRankMap = buildCompetitionRankMap(withTotals, item => keyOf(item.row), item => item.total);
+    const schoolRankMap = buildCompetitionRankMap(withTotals.filter(item => String(item.row?.school || '').trim() === String(record.school || '').trim()), item => keyOf(item.row), item => item.total);
+    const classRankMap = buildCompetitionRankMap(withTotals.filter(item => String(item.row?.school || '').trim() === String(record.school || '').trim() && isClassEquivalent(item.row?.class || '', record.class || '')), item => keyOf(item.row), item => item.total);
+
+    view.ranks.total = {
+        ...view.ranks.total,
+        township: townRankMap.get(targetKey) ?? view.ranks.total.township ?? '-',
+        school: schoolRankMap.get(targetKey) ?? view.ranks.total.school ?? '-',
+        class: classRankMap.get(targetKey) ?? view.ranks.total.class ?? '-'
+    };
+
+    return view;
+}
+
 function recalcPrevTotal(prevRecord) {
     if (!prevRecord || !prevRecord.scores || typeof prevRecord.scores !== 'object') return '-';
-    const subsForTotal = (CONFIG.totalSubs === 'auto') ? SUBJECTS : CONFIG.totalSubs;
+    const subsForTotal = getComparisonTotalSubjects();
     if (!subsForTotal || subsForTotal.length === 0) {
         return (typeof prevRecord.total === 'number') ? prevRecord.total : '-';
     }
@@ -21418,12 +21490,13 @@ function getStudentExamHistory(student) {
             });
 
             if (found) {
+                const normalizedStudent = createComparisonStudentView(found, examData);
                 // 计算该次考试中该学生各科的百分位
                 const percentiles = {};
                 (exam.subjects || SUBJECTS).forEach(sub => {
-                    if (found.scores && found.scores[sub] !== undefined) {
+                    if (normalizedStudent.scores && normalizedStudent.scores[sub] !== undefined) {
                         const allScores = examData.map(s => s.scores?.[sub]).filter(v => typeof v === 'number').sort((a, b) => b - a);
-                        const rank = allScores.indexOf(found.scores[sub]) + 1;
+                        const rank = allScores.indexOf(normalizedStudent.scores[sub]) + 1;
                         const total = allScores.length;
                         percentiles[sub] = total > 0 ? ((1 - (rank / total)) * 100).toFixed(1) : 0;
                     }
@@ -21435,7 +21508,7 @@ function getStudentExamHistory(student) {
                     examLabel: examId.replace(/_/g, ' '),
                     createdAt: exam.createdAt || 0,
                     fingerprint: exam.fingerprint || computeExamDataFingerprint(examData),
-                    student: found,
+                    student: normalizedStudent,
                     percentiles,
                     allStudents: examData
                 });
@@ -21599,6 +21672,7 @@ function renderSingleReportCardHTML(stu, mode) {
     }).slice(-1)[0] || null;
     const prevHistoryStu = prevHistoryEntry ? (prevHistoryEntry.student || prevHistoryEntry) : null;
     const compareStu = (prevHistoryStu && prevHistoryStu.scores) ? prevHistoryStu : prevStu;
+    const compareTotalRanks = compareStu?.ranks?.total || {};
     const readScoreValue = (scoreLike) => {
         if (typeof scoreLike === 'number' && Number.isFinite(scoreLike)) return scoreLike;
         if (scoreLike && typeof scoreLike === 'object' && typeof scoreLike.score === 'number' && Number.isFinite(scoreLike.score)) return scoreLike.score;
@@ -21615,11 +21689,11 @@ function renderSingleReportCardHTML(stu, mode) {
 
     // 排名数据准备
     const curTownRank = safeGet(stu, 'ranks.total.township', '-');
-    const prevTownRank = prevStu ? (prevStu.townRank || '-') : '-';
+    const prevTownRank = compareTotalRanks.township ?? prevStu?.townRank ?? '-';
     const curClassRank = safeGet(stu, 'ranks.total.class', '-');
-    const prevClassRank = prevStu ? (prevStu.classRank || '-') : '-';
+    const prevClassRank = compareTotalRanks.class ?? prevStu?.classRank ?? '-';
     const curSchoolRank = safeGet(stu, 'ranks.total.school', '-');
-    const prevSchoolRank = prevStu ? (prevStu.schoolRank || '-') : '-';
+    const prevSchoolRank = compareTotalRanks.school ?? prevStu?.schoolRank ?? '-';
 
     // 单校判断
     const isSingleSchool = Object.keys(SCHOOLS).length <= 1;

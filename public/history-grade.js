@@ -16,6 +16,75 @@ function isClassEquivalent(cls1, cls2) {
     return c1 === c2 || c1.replace(/0/g, '') === c2.replace(/0/g, '');
 }
 
+function getHistoryTotalSubjects() {
+    const subsForTotal = (window.CONFIG && window.CONFIG.totalSubs === 'auto') ? window.SUBJECTS : window.CONFIG?.totalSubs;
+    return Array.isArray(subsForTotal) ? subsForTotal.filter(Boolean) : [];
+}
+
+function getHistoryTotalValue(student, subjects) {
+    if (!student || !student.scores || typeof student.scores !== 'object') return Number.isFinite(Number(student?.total)) ? Number(student.total) : null;
+    const totalSubjects = Array.isArray(subjects) && subjects.length ? subjects : getHistoryTotalSubjects();
+    if (!totalSubjects.length) return Number.isFinite(Number(student.total)) ? Number(student.total) : null;
+
+    let sum = 0;
+    let count = 0;
+    totalSubjects.forEach(sub => {
+        const score = Number(student.scores?.[sub]);
+        if (Number.isFinite(score)) {
+            sum += score;
+            count++;
+        }
+    });
+    if (count === totalSubjects.length) return parseFloat(sum.toFixed(1));
+    return Number.isFinite(Number(student.total)) ? Number(student.total) : null;
+}
+
+function buildHistorySnapshotView(student, allStudents) {
+    if (!student || typeof student !== 'object') return student;
+    const totalSubjects = getHistoryTotalSubjects();
+    const view = {
+        ...student,
+        scores: { ...(student.scores || {}) },
+        ranks: {
+            ...(student.ranks || {}),
+            total: { ...((student.ranks && student.ranks.total) || {}) }
+        }
+    };
+
+    const normalizedTotal = getHistoryTotalValue(student, totalSubjects);
+    if (Number.isFinite(normalizedTotal)) view.total = normalizedTotal;
+
+    const rows = Array.isArray(allStudents) ? allStudents.filter(Boolean) : [];
+    if (!rows.length || typeof assignCompetitionRanks !== 'function') return view;
+
+    const keyOf = (row) => `${String(row?.school || '').trim()}::${String(row?.class || '').trim()}::${String(row?.name || '').trim()}`;
+    const targetKey = keyOf(student);
+    const withTotals = rows.map(row => ({ row, total: getHistoryTotalValue(row, totalSubjects) })).filter(item => Number.isFinite(item.total));
+    if (!withTotals.length) return view;
+
+    const createRankMap = (items) => {
+        const rankMap = new Map();
+        assignCompetitionRanks(items, item => item.total, (item, rank) => {
+            const key = keyOf(item.row);
+            if (key && !rankMap.has(key)) rankMap.set(key, rank);
+        });
+        return rankMap;
+    };
+
+    const townRankMap = createRankMap(withTotals);
+    const schoolRankMap = createRankMap(withTotals.filter(item => String(item.row?.school || '').trim() === String(student.school || '').trim()));
+    const classRankMap = createRankMap(withTotals.filter(item => String(item.row?.school || '').trim() === String(student.school || '').trim() && isClassEquivalent(item.row?.class || '', student.class || '')));
+
+    view.ranks.total = {
+        ...view.ranks.total,
+        class: classRankMap.get(targetKey) ?? view.ranks.total.class ?? '-',
+        school: schoolRankMap.get(targetKey) ?? view.ranks.total.school ?? '-',
+        township: townRankMap.get(targetKey) ?? view.ranks.total.township ?? '-'
+    };
+
+    return view;
+}
+
 async function getHistoryComparisonData(studentName, className, schoolName) {
     const history = [];
     
@@ -46,6 +115,9 @@ async function getHistoryComparisonData(studentName, className, schoolName) {
                         raw = LZString.decompressFromUTF16(raw.substring(3));
                     }
                     const payload = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                    const allStudents = Array.isArray(payload.RAW_DATA) && payload.RAW_DATA.length
+                        ? payload.RAW_DATA
+                        : Object.values(payload.SCHOOLS || {}).flatMap(sch => sch.students || []);
                     
                     const schools = payload.SCHOOLS || {};
                     let matchedStudent = null;
@@ -64,15 +136,16 @@ async function getHistoryComparisonData(studentName, className, schoolName) {
                     }
                     
                     if (matchedStudent) {
+                        const normalizedStudent = buildHistorySnapshotView(matchedStudent, allStudents);
                         const examName = item.key.replace('cohort::', '考试');
                         console.log('✅ 找到匹配学生:', matchedStudent.name, '考试:', examName);
                         history.push({
                             examId: examName,
-                            total: matchedStudent.total,
-                            rankClass: matchedStudent.ranks?.total?.class,
-                            rankSchool: matchedStudent.ranks?.total?.school,
-                            rankTown: matchedStudent.ranks?.total?.township,
-                            subjects: matchedStudent.scores,
+                            total: normalizedStudent.total,
+                            rankClass: normalizedStudent.ranks?.total?.class,
+                            rankSchool: normalizedStudent.ranks?.total?.school,
+                            rankTown: normalizedStudent.ranks?.total?.township,
+                            subjects: normalizedStudent.scores,
                             updatedAt: item.updated_at
                         });
                     }
@@ -85,19 +158,21 @@ async function getHistoryComparisonData(studentName, className, schoolName) {
 
     console.log('📊 当前考试数据查询: schoolName=', schoolName, 'studentName=', studentName, 'className=', className);
     if (SCHOOLS && studentName) {
+        const currentStudents = Object.values(SCHOOLS).flatMap(sch => sch.students || []);
         for (const [schKey, schData] of Object.entries(SCHOOLS)) {
             const currentStu = schData.students?.find(s => 
                 s.name === studentName && (!className || isClassEquivalent(s.class, className))
             );
             if (currentStu) {
+                const normalizedCurrent = buildHistorySnapshotView(currentStu, currentStudents);
                 console.log('✅ 找到当前学生:', currentStu.name, '学校:', schKey);
                 history.push({
                     examId: '本次考试',
-                    total: currentStu.total,
-                    rankClass: currentStu.ranks?.total?.class,
-                    rankSchool: currentStu.ranks?.total?.school,
-                    rankTown: currentStu.ranks?.total?.township,
-                    subjects: currentStu.scores,
+                    total: normalizedCurrent.total,
+                    rankClass: normalizedCurrent.ranks?.total?.class,
+                    rankSchool: normalizedCurrent.ranks?.total?.school,
+                    rankTown: normalizedCurrent.ranks?.total?.township,
+                    subjects: normalizedCurrent.scores,
                     updatedAt: new Date().toISOString(),
                     isCurrent: true
                 });
