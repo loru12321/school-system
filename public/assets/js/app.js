@@ -16130,16 +16130,19 @@ function renderSingleReportCardHTML(stu, mode) {
         }
     }
 
-    // B. 总分行 — 用当前科目集重算上期总分，防止跨期科目集不同导致对比错误
-    const prevTotal = compareStu ? recalcPrevTotal(compareStu) : '-';
-    const trendTotal = getTrendBadge(stu.total, prevTotal, 'score');
+        // B. 总分行 — 用统一的联动科目集展示总分，避免把政治混入9年级总分口径
+        const comparisonTotalSubjects = getComparisonTotalSubjects();
+        const currentTotal = getComparisonTotalValue(stu, comparisonTotalSubjects);
+        const totalLabel = (CONFIG.name === '9年级' && comparisonTotalSubjects.length) ? '五科总分' : CONFIG.label;
+        const prevTotal = compareStu ? recalcPrevTotal(compareStu) : '-';
+        const trendTotal = getTrendBadge(currentTotal, prevTotal, 'score');
     const trendClass = getTrendBadge(curClassRank, prevClassRank, 'rank');
     const trendSchool = getTrendBadge(curSchoolRank, prevSchoolRank, 'rank');
     const trendTown = getTrendBadge(curTownRank, prevTownRank, 'rank');
 
     tableRows += `<tr style="background:rgba(239,246,255,0.7); backdrop-filter:blur(4px); border-bottom:2px solid #fff;">
-            <td style="font-weight:bold; color:#1e3a8a;">🏆 ${CONFIG.label}</td>
-            <td style="font-weight:800; font-size:16px; color:#1e40af;">${stu.total.toFixed(2)} ${trendTotal}</td>
+            <td style="font-weight:bold; color:#1e3a8a;">🏆 ${totalLabel}</td>
+            <td style="font-weight:800; font-size:16px; color:#1e40af;">${Number.isFinite(currentTotal) ? currentTotal.toFixed(2) : '-'} ${trendTotal}</td>
             <td style="font-weight:bold; color:#334155;">${curClassRank} ${trendClass}</td>
             <td style="font-weight:bold; color:#334155;">${curSchoolRank} ${trendSchool}</td>
             <td style="${townColStyle} font-weight:bold; color:#334155;">${curTownRank} ${trendTown}</td>
@@ -16235,7 +16238,7 @@ function renderSingleReportCardHTML(stu, mode) {
     let historyHtml = '';
     if (examHistory.length > 1) {
         let historyRows = '';
-        let thHtml = `<th style="text-align:left; padding-left:20px;">考试名称</th><th>总分</th><th>校排</th>`;
+        let thHtml = `<th style="text-align:left; padding-left:20px;">考试名称</th><th>${totalLabel}</th><th>校排</th>`;
         if (!isSingleSchool) thHtml += `<th>镇排</th>`;
 
         for (let i = examHistory.length - 1; i >= 0; i--) {
@@ -16247,13 +16250,8 @@ function renderSingleReportCardHTML(stu, mode) {
 
             // 安全读取学生对象和成绩（兼容旧结构和不同来源）
             const stuObj = h.student || h;
-            // 用当前科目集重算历史总分，保证跨期对比一致性
-            const normTotal = recalcPrevTotal(stuObj);
-            const rawTotal = (stuObj.total !== undefined && stuObj.total !== null) ? Number(stuObj.total) : null;
-            // 当前考试用原始总分，历史考试用归一化总分
-            const displayTotal = isCurrent
-                ? (rawTotal !== null ? rawTotal.toFixed(1) : '-')
-                : (typeof normTotal === 'number' ? normTotal.toFixed(1) : (rawTotal !== null ? rawTotal.toFixed(1) + '*' : '-'));
+            const normalizedDisplayTotal = getComparisonTotalValue(stuObj, comparisonTotalSubjects);
+            const displayTotal = Number.isFinite(normalizedDisplayTotal) ? normalizedDisplayTotal.toFixed(1) : '-';
             const tScore = displayTotal;
             const sRank = safeGet(stuObj, 'ranks.total.school', h.rankSchool || '-');
             const tRank = safeGet(stuObj, 'ranks.total.township', h.rankTown || '-');
@@ -16281,11 +16279,11 @@ function renderSingleReportCardHTML(stu, mode) {
         ${historyHtml}
         <div style="display:flex; gap:15px; margin-bottom:15px; flex-wrap:wrap; margin-top:20px;">
             <div class="fluent-card" style="flex:1; min-width:300px; margin-bottom:0; display:flex; flex-direction:column;">
-                <div class="fluent-header"><i class="ti ti-radar" style="color:#2563eb;"></i><span class="fluent-title">综合素质评价 (百分位)</span></div>
+                <div class="fluent-header"><i class="ti ti-radar" style="color:#2563eb;"></i><span class="fluent-title">${CONFIG.name === '9年级' ? '五科综合素质评价' : '综合素质评价'} (百分位)</span></div>
                 <div style="flex:1; position:relative; min-height:220px;"><canvas id="radarChart"></canvas></div>
             </div>            
             <div class="fluent-card" style="flex:1; min-width:300px; margin-bottom:0; display:flex; flex-direction:column;">
-                <div class="fluent-header"><i class="ti ti-scale" style="color:#059669;"></i><span class="fluent-title">学科均衡度诊断 (Z-Score)</span></div>
+                <div class="fluent-header"><i class="ti ti-scale" style="color:#059669;"></i><span class="fluent-title">${CONFIG.name === '9年级' ? '五科学科均衡度诊断' : '学科均衡度诊断'} (Z-Score)</span></div>
                 <div style="flex:1; position:relative; min-height:220px;"><canvas id="varianceChart"></canvas></div>
             </div> 
         </div>
@@ -16299,6 +16297,8 @@ function renderSingleReportCardHTML(stu, mode) {
 function renderInstagramCard(stu) {
     const genDate = new Date().toLocaleDateString();
     const totalStudents = RAW_DATA.length;
+    const comparisonTotalSubjects = getComparisonTotalSubjects();
+    const currentTotal = getComparisonTotalValue(stu, comparisonTotalSubjects);
     const rank = safeGet(stu, 'ranks.total.township', '-');
     const pct = (typeof rank === 'number') ? ((1 - rank / totalStudents) * 100).toFixed(0) : '-';
     const avatarLetter = stu.name.charAt(0); // 头像取首字
@@ -16315,7 +16315,7 @@ function renderInstagramCard(stu) {
 
     // 3. 构建单科评论行
     let commentsHtml = '';
-    SUBJECTS.forEach(sub => {
+    comparisonTotalSubjects.forEach(sub => {
         if (stu.scores[sub] !== undefined) {
             const score = stu.scores[sub];
 
@@ -16345,7 +16345,7 @@ function renderInstagramCard(stu) {
                 <!-- 雷达图容器 -->
                 <div style="background: #f8fafc; border-radius: 8px; padding: 15px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
                     <div style="font-size: 13px; font-weight: bold; color: #475569; margin-bottom: 10px; border-left: 4px solid #2563eb; padding-left: 8px;">
-                        📊 学科能力雷达图
+                        📊 ${CONFIG.name === '9年级' ? '五科能力雷达图' : '学科能力雷达图'}
                     </div>
                     <div style="height: 250px; position: relative;">
                         <canvas id="igRadarChart"></canvas>
@@ -16355,7 +16355,7 @@ function renderInstagramCard(stu) {
                 <!-- 均衡度容器 -->
                 <div style="background: #f8fafc; border-radius: 8px; padding: 15px; border: 1px solid #e2e8f0;">
                     <div style="font-size: 13px; font-weight: bold; color: #475569; margin-bottom: 10px; border-left: 4px solid #059669; padding-left: 8px;">
-                        ⚖️ 学科均衡度诊断
+                        ⚖️ ${CONFIG.name === '9年级' ? '五科学科均衡度诊断' : '学科均衡度诊断'}
                     </div>
                     <div style="height: 200px; position: relative;">
                         <canvas id="igVarianceChart"></canvas>
@@ -16371,8 +16371,9 @@ function renderInstagramCard(stu) {
     // 目的：为后续的“一句话诊断”、“优势清单”、“家长建议”提供数据支撑
     const getSubjectLevels = () => {
         let strong = [], weak = [], mid = [], zScores = [];
+        const linkedSubjects = getComparisonTotalSubjects();
 
-        SUBJECTS.forEach(sub => {
+        linkedSubjects.forEach(sub => {
             if (stu.scores[sub] !== undefined) {
                 // A. 获取该科全镇数据 (用于计算标准分)
                 const allScores = RAW_DATA.map(s => s.scores[sub]).filter(v => typeof v === 'number');
@@ -16523,7 +16524,7 @@ function renderInstagramCard(stu) {
             <div class="insta-visual-area">
                 <div style="width:100%; height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; background:linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045); border-radius:8px; color:white; padding:40px 0;">
                     <div style="font-size:16px; opacity:0.9; text-transform:uppercase; letter-spacing:2px;">Total Score</div>
-                    <div style="font-size:64px; font-weight:800; text-shadow:0 4px 10px rgba(0,0,0,0.2);">${stu.total}</div>
+                    <div style="font-size:64px; font-weight:800; text-shadow:0 4px 10px rgba(0,0,0,0.2);">${Number.isFinite(currentTotal) ? currentTotal.toFixed(1) : '-'}</div>
                     <div style="margin-top:10px; font-size:18px; font-weight:bold; background:rgba(255,255,255,0.2); padding:5px 15px; border-radius:20px;">
                         全校排名: ${safeGet(stu, 'ranks.total.school', '-')}
                     </div>
@@ -16613,6 +16614,7 @@ function renderInstagramCard(stu) {
 function renderIGCharts(stu) {
     // 使用 setTimeout 确保 DOM 元素已经插入页面
     setTimeout(() => {
+        const linkedSubjects = getComparisonTotalSubjects();
         // === 绘制雷达图 ===
         const radarCtx = document.getElementById('igRadarChart');
         if (radarCtx) {
@@ -16622,7 +16624,7 @@ function renderIGCharts(stu) {
             const labels = [];
             const data = [];
 
-            SUBJECTS.forEach(sub => {
+            linkedSubjects.forEach(sub => {
                 if (stu.scores[sub] !== undefined) {
                     labels.push(sub);
 
@@ -16686,7 +16688,7 @@ function renderIGCharts(stu) {
                 return { mean, sd: Math.sqrt(variance) };
             };
 
-            SUBJECTS.forEach(sub => {
+            linkedSubjects.forEach(sub => {
                 if (stu.scores[sub] !== undefined) {
                     const allArr = RAW_DATA.map(s => s.scores[sub]).filter(v => typeof v === 'number');
                     const stats = calcStats(allArr);
@@ -17777,9 +17779,10 @@ function renderRadarChart(student, passedHistory = null) {
 
     const labels = [];
     const currentData = [];
+    const linkedSubjects = getComparisonTotalSubjects();
 
     // 本次考试百分位计算
-    SUBJECTS.forEach(sub => {
+    linkedSubjects.forEach(sub => {
         if (student.scores[sub] !== undefined) {
             labels.push(sub);
             const allScores = RAW_DATA.map(s => s.scores[sub]).filter(v => v !== undefined).sort((a, b) => b - a);
@@ -17966,7 +17969,8 @@ function renderVarianceChart(student) {
         return { mean, sd: Math.sqrt(variance) };
     };
 
-    SUBJECTS.forEach(sub => {
+    const linkedSubjects = getComparisonTotalSubjects();
+    linkedSubjects.forEach(sub => {
         if (student.scores[sub] !== undefined) {
             // 本次 Z-Score
             const allScores = RAW_DATA.map(s => s.scores[sub]).filter(v => typeof v === 'number');
@@ -18072,7 +18076,8 @@ function buildChartNarrative(student) {
         return { mean, sd: Math.sqrt(variance) };
     };
 
-    SUBJECTS.forEach(sub => {
+    const linkedSubjects = getComparisonTotalSubjects();
+    linkedSubjects.forEach(sub => {
         if (student.scores[sub] === undefined) return;
         const allScores = RAW_DATA.map(s => s.scores[sub]).filter(v => typeof v === 'number').sort((a, b) => b - a);
         if (!allScores.length) return;
@@ -18109,9 +18114,9 @@ function buildChartNarrative(student) {
         <div class="fluent-card" style="margin-top:10px;">
             <div class="fluent-header"><i class="ti ti-info-circle" style="color:#6366f1;"></i><span class="fluent-title">图表解读与建议</span></div>
             <div style="font-size:13px; color:#475569; line-height:1.8;">
-                <div><strong>综合素质评价（百分位）</strong>：表示学生在${scopeText}的相对位置，数值越高越优秀。</div>
+                <div><strong>${CONFIG.name === '9年级' ? '五科综合素质评价' : '综合素质评价'}（百分位）</strong>：表示学生在${scopeText}的相对位置，数值越高越优秀。</div>
                 <div>当前综合排名：${rank} / ${totalCount}，综合百分位约 <strong>${pctText}</strong>；单科平均百分位约 <strong>${avgPctText}</strong>。</div>
-                <div style="margin-top:6px;"><strong>学科均衡度（Z-Score）</strong>：正数代表优势、负数代表薄弱，绝对值越大差异越明显。</div>
+                <div style="margin-top:6px;"><strong>${CONFIG.name === '9年级' ? '五科学科均衡度' : '学科均衡度'}（Z-Score）</strong>：正数代表优势、负数代表薄弱，绝对值越大差异越明显。</div>
                 <div>均衡度判断：<strong>${balanceText}</strong>；${strengthText}；${weakText}。</div>
                 <div style="margin-top:6px;"><strong>学习建议</strong>：${advice.join(' ')}</div>
             </div>
