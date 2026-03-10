@@ -19025,23 +19025,27 @@ function performProgressCalculation() {
         prevSchoolSubset = PREV_DATA.filter(p => currentNames.has(cleanName(p.name)));
     }
 
-    // 2. 对上次的本校子集进行重新排序 (按分数降序)
-    prevSchoolSubset.sort((a, b) => b.total - a.total);
+    // 2. 对上次的本校子集进行重新排序 (按当前科目集重算的总分降序)
+    prevSchoolSubset.forEach(p => {
+        const norm = recalcPrevTotal(p);
+        p._normTotal = (typeof norm === 'number') ? norm : p.total;
+    });
+    prevSchoolSubset.sort((a, b) => b._normTotal - a._normTotal);
 
     // 3. 建立映射表: 姓名 -> 上次校内排名
     const prevLocalRankMap = {};
     prevSchoolSubset.forEach((p, index) => {
         // 处理同分同名次逻辑
         let rank = index + 1;
-        if (index > 0 && Math.abs(p.total - prevSchoolSubset[index - 1].total) < 0.01) {
+        if (index > 0 && Math.abs(p._normTotal - prevSchoolSubset[index - 1]._normTotal) < 0.01) {
             // 继承上一名
             rank = prevLocalRankMap[cleanName(prevSchoolSubset[index - 1].name) + "_rank"];
         }
 
         prevLocalRankMap[cleanName(p.name)] = {
-            localRank: rank,      // 💡 影子排名：上次在校内的名次
+            localRank: rank,      // 影子排名：上次在校内的名次
             townRank: p.rank,     // 原始排名：上次在全镇的名次
-            total: p.total
+            total: p._normTotal   // 归一化总分（用当前科目集重算）
         };
         // 辅助键防止覆盖
         prevLocalRankMap[cleanName(p.name) + "_rank"] = rank;
@@ -21198,6 +21202,31 @@ function generateAIComment(student) {
     return parts.join("");
 }
 
+/**
+ * 用当前考试的科目集重新计算上期总分
+ * 解决跨期次科目集不同（如期中6科含政治 vs 期末5科不含）导致对比差值完全错误的问题
+ * @param {Object} prevRecord - 上期学生记录（需含 scores 对象）
+ * @returns {number|string} - 归一化后的总分，或 '-' 表示科目不匹配
+ */
+function recalcPrevTotal(prevRecord) {
+    if (!prevRecord || !prevRecord.scores || typeof prevRecord.scores !== 'object') return '-';
+    const subsForTotal = (CONFIG.totalSubs === 'auto') ? SUBJECTS : CONFIG.totalSubs;
+    if (!subsForTotal || subsForTotal.length === 0) {
+        return (typeof prevRecord.total === 'number') ? prevRecord.total : '-';
+    }
+    let sum = 0, matchCount = 0;
+    subsForTotal.forEach(sub => {
+        const score = prevRecord.scores[sub];
+        if (typeof score === 'number' && Number.isFinite(score)) {
+            sum += score;
+            matchCount++;
+        }
+    });
+    // 所有科目都必须匹配才对比，否则返回 '-'（科目集差异太大无法有效对比）
+    if (matchCount === 0 || matchCount < subsForTotal.length) return '-';
+    return sum;
+}
+
 function findPreviousRecord(student) {
     const cloudPrev = getCloudPreviousRecord(student);
     if (cloudPrev) {
@@ -21575,8 +21604,8 @@ function renderSingleReportCardHTML(stu, mode) {
         }
     }
 
-    // B. 总分行
-    const prevTotal = prevStu ? prevStu.total : '-';
+    // B. 总分行 — 用当前科目集重算上期总分，防止跨期科目集不同导致对比错误
+    const prevTotal = prevStu ? recalcPrevTotal(prevStu) : '-';
     const trendTotal = getTrendBadge(stu.total, prevTotal, 'score');
     const trendClass = getTrendBadge(curClassRank, prevClassRank, 'rank');
     const trendSchool = getTrendBadge(curSchoolRank, prevSchoolRank, 'rank');
@@ -21690,7 +21719,14 @@ function renderSingleReportCardHTML(stu, mode) {
 
             // 安全读取学生对象和成绩（兼容旧结构和不同来源）
             const stuObj = h.student || h;
-            const tScore = (stuObj.total !== undefined && stuObj.total !== null) ? Number(stuObj.total).toFixed(1) : '-';
+            // 用当前科目集重算历史总分，保证跨期对比一致性
+            const normTotal = recalcPrevTotal(stuObj);
+            const rawTotal = (stuObj.total !== undefined && stuObj.total !== null) ? Number(stuObj.total) : null;
+            // 当前考试用原始总分，历史考试用归一化总分
+            const displayTotal = isCurrent
+                ? (rawTotal !== null ? rawTotal.toFixed(1) : '-')
+                : (typeof normTotal === 'number' ? normTotal.toFixed(1) : (rawTotal !== null ? rawTotal.toFixed(1) + '*' : '-'));
+            const tScore = displayTotal;
             const sRank = safeGet(stuObj, 'ranks.total.school', h.rankSchool || '-');
             const tRank = safeGet(stuObj, 'ranks.total.township', h.rankTown || '-');
 
@@ -28474,7 +28510,10 @@ function buildStudentPrompt(stu) {
         const prevTownRank = (typeof prevStu.townRank === 'number' && prevStu.townRank > 0)
             ? prevStu.townRank
             : (parseInt(prevStu.townRank) > 0 ? parseInt(prevStu.townRank) : null);
-        const scoreDiff = stu.total - prevStu.total; // 正数=涨分
+        // 用当前科目集重算上期总分，防止跨科目集对比错误
+        const prevNormTotal = recalcPrevTotal(prevStu);
+        const canCompareScore = (typeof prevNormTotal === 'number');
+        const scoreDiff = canCompareScore ? stu.total - prevNormTotal : null;
 
         let rankTrendStr = "";
         if (prevTownRank !== null && rank !== null) {
@@ -28488,9 +28527,13 @@ function buildStudentPrompt(stu) {
             - 稳定性评价：${evalStr}。`;
         }
 
+        const scoreChangeStr = (scoreDiff !== null)
+            ? `相比上次考试，总分变化：${scoreDiff > 0 ? '+' : ''}${scoreDiff.toFixed(1)}分。`
+            : `（上次考试科目集不同，总分无法直接对比）`;
+
         trendInfo = `
             【历史对比情况】：
-            - 相比上次考试，总分变化：${scoreDiff > 0 ? '+' : ''}${scoreDiff.toFixed(1)}分。${rankTrendStr}
+            - ${scoreChangeStr}${rankTrendStr}
             `;
     }
 
