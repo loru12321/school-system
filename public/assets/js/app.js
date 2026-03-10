@@ -23863,7 +23863,7 @@ window.addEventListener('load', () => {
     updateAdminOnlyButtons();
     initModuleDescToggles();
     updateWatermark();
-    if (Auth?.currentUser && !localStorage.getItem('CURRENT_COHORT_ID')) {
+    if (Auth?.currentUser && !ensureCurrentCohortIdentity()) {
         showCohortPicker();
     }
 });
@@ -23945,6 +23945,41 @@ const COHORT_STORAGE_KEY = 'COHORT_LIST';
 
 function getCohortKey(cohortId) {
     return `cohort::${cohortId}`;
+}
+
+function inferCohortIdFromValue(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    let match = raw.match(/^cohort::(\d{4})$/i);
+    if (match) return match[1];
+    match = raw.match(/^(\d{4})\D*_/);
+    if (match) return match[1];
+    return '';
+}
+
+function ensureCurrentCohortIdentity() {
+    const existing = String(CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
+    if (existing) return existing;
+
+    const inferred = inferCohortIdFromValue(localStorage.getItem('CURRENT_PROJECT_KEY'))
+        || inferCohortIdFromValue(localStorage.getItem('CURRENT_EXAM_ID'))
+        || inferCohortIdFromValue(CURRENT_EXAM_ID)
+        || inferCohortIdFromValue(window.CURRENT_EXAM_ID);
+    if (!inferred) return '';
+
+    CURRENT_COHORT_ID = inferred;
+    window.CURRENT_COHORT_ID = inferred;
+    localStorage.setItem('CURRENT_COHORT_ID', inferred);
+
+    const meta = CURRENT_COHORT_META || window.CURRENT_COHORT_META || { id: inferred, year: inferred, startGrade: 6 };
+    meta.id = meta.id || inferred;
+    meta.year = meta.year || inferred;
+    meta.startGrade = meta.startGrade || 6;
+    CURRENT_COHORT_META = meta;
+    window.CURRENT_COHORT_META = meta;
+    localStorage.setItem('CURRENT_COHORT_META', JSON.stringify(meta));
+
+    return inferred;
 }
 
 function formatCohortLabel(meta) {
@@ -24172,7 +24207,7 @@ const CohortManager = {
 
     init: function () {
         this.load();
-        const saved = localStorage.getItem('CURRENT_COHORT_ID');
+        const saved = localStorage.getItem('CURRENT_COHORT_ID') || ensureCurrentCohortIdentity();
         if (saved) {
             const metaStr = localStorage.getItem('CURRENT_COHORT_META');
             if (metaStr) {
@@ -24183,6 +24218,12 @@ const CohortManager = {
             }
             CURRENT_COHORT_ID = saved;
             window.CURRENT_COHORT_ID = saved;
+            if (!CURRENT_COHORT_META) {
+                const fallbackMeta = this.list.find(c => c.id === saved) || { id: saved, year: saved, startGrade: 6 };
+                CURRENT_COHORT_META = fallbackMeta;
+                window.CURRENT_COHORT_META = fallbackMeta;
+                localStorage.setItem('CURRENT_COHORT_META', JSON.stringify(fallbackMeta));
+            }
         }
         if (CURRENT_COHORT_META) CURRENT_COHORT_META.startGrade = 6;
         this.renderSelector();
