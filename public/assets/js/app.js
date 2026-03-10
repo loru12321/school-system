@@ -9639,15 +9639,22 @@ function isExamKeyEquivalentForCompare(a, b) {
     const aFull = isLikelyFullKey(ka);
     const bFull = isLikelyFullKey(kb);
 
-    // Two full keys must match exactly; prevent false "self vs self" matching.
-    if (aFull && bFull) return false;
+    // [New Logic] If both are full keys, check if they share the same suffix (e.g. 2022级_9年级_... vs 2022_9年级_...)
+    // This handles variations in year/grade prefixes across different uploaders/platforms.
+    if (aFull && bFull) {
+        if (ka === kb) return true;
+        const sa = extractShortVariants(ka);
+        const sb = extractShortVariants(kb);
+        for (let v of sa) { if (sb.has(v)) return true; }
+        return false;
+    }
 
     // Backward compatibility: allow full-key vs short-label matching in controlled variants only.
     if (aFull && !bFull) return extractShortVariants(ka).has(kb);
     if (!aFull && bFull) return extractShortVariants(kb).has(ka);
 
     // Two short labels: strict match only.
-    return false;
+    return ka === kb;
 }
 
 function getEffectiveCurrentExamId() {
@@ -11107,13 +11114,13 @@ async function viewCloudStudentCompares(selfOnly = false) {
         const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '';
 
         let query = sbClient.from('system_data').select('key, updated_at');
-        
+
         // 本人模式：增强个人数据查询
         if (selfOnly) {
             // 学生/家长查看个人数据时，查询更精确的范围
             const user = getCurrentUser();
             const target = resolveCloudCompareTarget(user);
-            
+
             if (target.name && target.class && target.school) {
                 // 优先查询包含个人信息的记录
                 query = query.like('key', `STUDENT_COMPARE_${cohortId}级_${target.school}_%`);
@@ -11138,13 +11145,13 @@ async function viewCloudStudentCompares(selfOnly = false) {
 
         if (!data || data.length === 0) {
             if (window.UI) UI.loading(false);
-            
+
             // 本人模式下的友好提示
             if (selfOnly) {
                 const user = getCurrentUser();
                 const target = resolveCloudCompareTarget(user);
                 const readableName = target.name || '您本人';
-                
+
                 if (typeof Swal !== 'undefined') {
                     return Swal.fire({
                         title: '☁️ 暂无个人对比数据',
@@ -11468,7 +11475,7 @@ async function loadCloudStudentCompare(key, selfOnly = false) {
             // 增强匹配：如果还是找不到，尝试模糊匹配
             if (!picked.student && normalizedTarget.name) {
                 const nameLower = normalizedTarget.name.toLowerCase();
-                const fuzzyMatch = sourceRows.find(row => 
+                const fuzzyMatch = sourceRows.find(row =>
                     row.name && row.name.toLowerCase().includes(nameLower)
                 );
                 if (fuzzyMatch) {
@@ -15456,7 +15463,7 @@ async function doQuery() {
 
     const resultEl = document.getElementById('single-report-result');
     const container = document.getElementById('report-card-capture-area');
-    
+
     if (resultEl && container) {
         resultEl.classList.remove('hidden');
         // 强制使用 'A4' 模式进行渲染
@@ -15471,12 +15478,12 @@ async function doQuery() {
     // 🆕 统一提取历史数据并传给组件
     const history = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(stu) : [];
 
-    setTimeout(() => { 
-        try { if (typeof renderRadarChart === 'function') renderRadarChart(stu, history); } catch(e) { console.error(e); }
-        try { if (typeof renderVarianceChart === 'function') renderVarianceChart(stu); } catch(e) { console.error(e); }
+    setTimeout(() => {
+        try { if (typeof renderRadarChart === 'function') renderRadarChart(stu, history); } catch (e) { console.error(e); }
+        try { if (typeof renderVarianceChart === 'function') renderVarianceChart(stu); } catch (e) { console.error(e); }
     }, 150);
-    
-    try { if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(stu); } catch(e) { console.error(e); }
+
+    try { if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(stu); } catch (e) { console.error(e); }
 
     // 隐藏对比区域
     const compareSection = document.getElementById('student-multi-period-compare-section');
@@ -15617,7 +15624,7 @@ function findPreviousRecord(student) {
     };
     const matchStudent = (p, targetName, targetClass, targetSchool) => {
         // PREV_DATA 中的记录结构是 { examId, examFullKey, student: { name, class, school ... } }
-        const sObj = p.student || p; 
+        const sObj = p.student || p;
         if (sObj.school && targetSchool && sObj.school !== targetSchool) return false;
         if (cleanStr(sObj.name) !== targetName) return false;
         const histClass = normClass(sObj.class);
@@ -15642,60 +15649,59 @@ function findPreviousRecord(student) {
     const currentExamId = getEffectiveCurrentExamId();
     const currentFingerprint = computeExamDataFingerprint(RAW_DATA || []);
 
+
     // 1. 尝试从 PREV_DATA 查找 (排除当前考试)
     if (window.PREV_DATA && window.PREV_DATA.length > 0) {
         const otherExams = window.PREV_DATA.filter(p => {
             const hid = p.examFullKey || p.examId;
             const sameExam = currentExamId && (isExamKeyEquivalentForCompare(hid, currentExamId) || isExamKeyEquivalentForCompare(p.examId, currentExamId));
+
+            // 🚨 [Bug Fix] Also compare data fingerprint to detect identical snapshots with different names
             const sameFingerprint = currentFingerprint && p?.fingerprint && String(p.fingerprint) === currentFingerprint;
-            return !sameExam && !sameFingerprint;
+
+            // 🚨 [Bug Fix] Compare actual total score to prevent comparing against identical data object
+            const sameScores = student.total !== undefined && p.total !== undefined && Math.abs(student.total - p.total) < 0.001;
+
+            return !sameExam && !sameFingerprint && !sameScores;
         }).sort((a, b) => getRecordTime(b) - getRecordTime(a));
-        const match = otherExams.find(p => matchStudent(p, targetName, targetClass, targetSchool));
-        if (match) return match;
-    }
+        if (db && db.exams && Object.keys(db.exams).length > 0) {
+            const examEntries = Object.entries(db.exams)
+                .filter(([id]) => !currentExamId || !isExamKeyEquivalentForCompare(id, currentExamId)) // 排除当前考试
+                .sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0)); // 按时间降序
 
-    // 🟢 [Bug #2 修复] 2. PREV_DATA为空时，从 COHORT_DB.exams 历史快照中查找上一次考试
-    if (typeof CohortDB !== 'undefined') {
-        try {
-            const db = CohortDB.ensure();
-            if (db && db.exams && Object.keys(db.exams).length > 0) {
-                const examEntries = Object.entries(db.exams)
-                    .filter(([id]) => !currentExamId || !isExamKeyEquivalentForCompare(id, currentExamId)) // 排除当前考试
-                    .sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0)); // 按时间降序
+            for (const [examId, exam] of examEntries) {
+                const examData = exam.data || [];
+                if (examData.length === 0) continue;
+                const examFingerprint = String(exam.fingerprint || computeExamDataFingerprint(examData)).trim();
+                if (currentFingerprint && examFingerprint && examFingerprint === currentFingerprint) continue;
 
-                for (const [examId, exam] of examEntries) {
-                    const examData = exam.data || [];
-                    if (examData.length === 0) continue;
-                    const examFingerprint = String(exam.fingerprint || computeExamDataFingerprint(examData)).trim();
-                    if (currentFingerprint && examFingerprint && examFingerprint === currentFingerprint) continue;
-
-                    const found = examData.find(p => matchStudent(p, targetName, targetClass, targetSchool));
-                    if (found) {
-                        console.log(`[对比] 从历史考试 "${examId}" 中找到 ${student.name} 的历史记录`);
-                        // 构建兼容的对比记录格式
-                        return {
-                            ...found,
-                            townRank: found.ranks?.total?.township || '-',
-                            classRank: found.ranks?.total?.class || '-',
-                            schoolRank: found.ranks?.total?.school || '-',
-                            _sourceExam: examId
-                        };
-                    }
+                const found = examData.find(p => matchStudent(p, targetName, targetClass, targetSchool));
+                if (found) {
+                    console.log(`[对比] 从历史考试 "${examId}" 中找到 ${student.name} 的历史记录`);
+                    // 构建兼容的对比记录格式
+                    return {
+                        ...found,
+                        townRank: found.ranks?.total?.township || '-',
+                        classRank: found.ranks?.total?.class || '-',
+                        schoolRank: found.ranks?.total?.school || '-',
+                        _sourceExam: examId
+                    };
                 }
             }
-        } catch (e) {
-            console.warn('[对比] COHORT_DB 历史查找异常:', e);
         }
+    } catch (e) {
+        console.warn('[对比] COHORT_DB 历史查找异常:', e);
     }
+}
 
-    const user = getCurrentUser();
-    const isParentOrStudent = user && RoleManager.hasAnyRole(user, ['parent', 'student']) &&
-        !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director', 'teacher', 'class_teacher']);
-    if (!CLOUD_STUDENT_COMPARE_CONTEXT?.previousRecord && !isParentOrStudent) {
-        console.warn("历史数据(PREV_DATA)为空且COHORT_DB中无历史快照，无法进行对比。");
-    }
+const user = getCurrentUser();
+const isParentOrStudent = user && RoleManager.hasAnyRole(user, ['parent', 'student']) &&
+    !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director', 'teacher', 'class_teacher']);
+if (!CLOUD_STUDENT_COMPARE_CONTEXT?.previousRecord && !isParentOrStudent) {
+    console.warn("历史数据(PREV_DATA)为空且COHORT_DB中无历史快照，无法进行对比。");
+}
 
-    return null;
+return null;
 }
 
 // 🟢 [Bug #5 新增] 获取学生在所有历史考试中的记录（用于多期雷达图对比）
@@ -16077,24 +16083,24 @@ function renderSingleReportCardHTML(stu, mode) {
     // 🟢 [Bug #5 修复] 补充渲染多期考试趋势表格 (如果是多期数据可用)
     const examHistory = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(stu) : [];
     let historyHtml = '';
-    if (examHistory.length > 1) { 
+    if (examHistory.length > 1) {
         let historyRows = '';
         let thHtml = `<th style="text-align:left; padding-left:20px;">考试名称</th><th>总分</th><th>校排</th>`;
         if (!isSingleSchool) thHtml += `<th>镇排</th>`;
-        
+
         for (let i = examHistory.length - 1; i >= 0; i--) {
             const h = examHistory[i];
             const matchKey = h.examFullKey || h.examId;
             const currentExamId = getEffectiveCurrentExamId();
             const isCurrent = !!currentExamId && (isExamKeyEquivalentForCompare(matchKey, currentExamId) || isExamKeyEquivalentForCompare(h.examId, currentExamId));
             const bgStyle = isCurrent ? 'background:rgba(239,246,255,0.7); font-weight:bold;' : '';
-            
+
             // 安全读取学生对象和成绩（兼容旧结构和不同来源）
             const stuObj = h.student || h;
             const tScore = (stuObj.total !== undefined && stuObj.total !== null) ? Number(stuObj.total).toFixed(1) : '-';
             const sRank = safeGet(stuObj, 'ranks.total.school', h.rankSchool || '-');
             const tRank = safeGet(stuObj, 'ranks.total.township', h.rankTown || '-');
-            
+
             historyRows += `<tr style="${bgStyle}">
                 <td style="text-align:left; padding-left:20px; color:#475569;">${isCurrent ? '⭐ ' : ''}${h.examLabel || h.examId || h.examFullKey || '-'}</td>
                 <td style="color:#2563eb;">${tScore}</td>
@@ -17738,7 +17744,7 @@ function renderRadarChart(student, passedHistory = null) {
                 },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             return `${context.dataset.label}: 百分位 ${context.raw}%`;
                         }
                     }
@@ -24315,7 +24321,7 @@ const CohortManager = {
         refreshExamYearOptions(meta.year);
         this.renderSelector();
         switchCohort(cohortId);
-        
+
         // 🟢 [修复]：切换届别后，立即强制刷新教师学期下拉框，解决同步弹窗年级标签陈旧的问题
         if (window.DataManager && typeof DataManager.renderTeacherTermSelect === 'function') {
             DataManager.renderTeacherTermSelect();
@@ -24337,8 +24343,8 @@ const CohortManager = {
         if (saved) {
             const metaStr = localStorage.getItem('CURRENT_COHORT_META');
             if (metaStr) {
-                try { 
-                    CURRENT_COHORT_META = JSON.parse(metaStr); 
+                try {
+                    CURRENT_COHORT_META = JSON.parse(metaStr);
                     window.CURRENT_COHORT_META = CURRENT_COHORT_META;
                 } catch (e) { }
             }
