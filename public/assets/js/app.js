@@ -10631,7 +10631,7 @@ function updateClassGroupOptions() {
 
     const optgroup = document.getElementById('classGroupOptions');
     const classFilterEl = document.getElementById('studentCompareClassFilter');
-    if (!optgroup) return;
+    if (!optgroup && !classFilterEl) return;
 
     const { studentsCompareData, originalStudentsCompareData, activeClassFilter } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
 
@@ -10672,11 +10672,13 @@ function updateClassGroupOptions() {
     };
 
     const groupClasses = buildAllowedClassList(studentsCompareData);
-    let html = '<option value="class">所有班级（分组显示）</option>';
-    groupClasses.forEach(className => {
-        html += `<option value="class:${className}">${className}</option>`;
-    });
-    optgroup.innerHTML = html;
+    if (optgroup) {
+        let html = '<option value="class">所有班级（分组显示）</option>';
+        groupClasses.forEach(className => {
+            html += `<option value="class:${className}">${className}</option>`;
+        });
+        optgroup.innerHTML = html;
+    }
 
     if (classFilterEl) {
         const filterClasses = buildAllowedClassList(
@@ -10688,6 +10690,7 @@ function updateClassGroupOptions() {
         });
         classFilterEl.innerHTML = filterHtml;
         classFilterEl.value = activeClassFilter || '';
+        classFilterEl.disabled = filterClasses.length === 0;
     }
 
     console.log('[班级下拉框] 下拉框已更新，共 ' + groupClasses.length + ' 个分组选项');
@@ -10697,7 +10700,11 @@ function toggleGroupDisplay() {
     const groupEl = document.getElementById('studentCompareGroupBy');
     const paginationEl = document.getElementById('studentComparePagination');
 
-    if (!groupEl || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
+    if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
+    if (!groupEl) {
+        renderStudentComparePage(STUDENT_MULTI_PERIOD_COMPARE_CACHE.currentPage || 1);
+        return;
+    }
 
     const groupBy = groupEl.value;
     const { studentsCompareData, subjects, periodCount } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
