@@ -9506,8 +9506,13 @@ function applyCloudStudentCompareContext(payload, compareStudent, allCompareStud
     }
 
     let prevIndex = latestIndex - 1;
-    if (prevIndex < 0 && periods.length > 1) {
-        prevIndex = 1;
+    if (prevIndex < 0) {
+        // If latest is the first one, try the next one (for 2-period comparisons where latest is manually set)
+        prevIndex = (latestIndex + 1 < periods.length) ? latestIndex + 1 : -1;
+    }
+    // If still invalid or out of bounds, fallback to any other period
+    if (prevIndex < 0 || prevIndex >= periods.length || prevIndex === latestIndex) {
+        prevIndex = periods.findIndex((_, i) => i !== latestIndex);
     }
 
     const prevPeriod = periods[prevIndex] || null;
@@ -16018,9 +16023,9 @@ function renderSingleReportCardHTML(stu, mode) {
             tableRows += `<tr style="transition:0.2s;" onmouseover="this.style.background='rgba(241,245,249,0.5)'" onmouseout="this.style.background='transparent'">
                     <td style="font-weight:600; color:#475569;">${sub}</td>
                     <td style="font-weight:bold; color:#334155;">${stuScores[sub]} ${subTrend}</td>
-                    <td style="color:#64748b;">${curCR} ${tC}</td>
-                    <td style="color:#64748b;">${curSR} ${tS}</td>
-                    <td style="color:#64748b; ${townColStyle}">${curTR} ${tT}</td>
+                    <td style="color:#64748b;">${curCR} <span style="font-size:0.9em;">${tC}</span></td>
+                    <td style="color:#64748b;">${curSR} <span style="font-size:0.9em;">${tS}</span></td>
+                    <td style="color:#64748b; ${townColStyle}">${curTR} <span style="font-size:0.9em;">${tT}</span></td>
                 </tr>`;
         }
     });
