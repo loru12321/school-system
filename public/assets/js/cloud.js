@@ -56,6 +56,35 @@
         return 'LZ|' + LZString.compressToUTF16(json);
     }
 
+    function computeExamDataFingerprint(rows) {
+        const list = Array.isArray(rows) ? rows : [];
+        const normalized = list.map(row => ({
+            school: String(row?.school || '').trim(),
+            class: String(row?.class || '').trim(),
+            name: String(row?.name || '').trim(),
+            total: Number(row?.total || 0),
+            scores: Object.fromEntries(
+                Object.entries(row?.scores || {})
+                    .map(([subject, score]) => [String(subject), Number(score)])
+                    .sort((a, b) => String(a[0]).localeCompare(String(b[0]), 'zh-CN'))
+            )
+        })).sort((a, b) => {
+            const schoolDiff = a.school.localeCompare(b.school, 'zh-CN');
+            if (schoolDiff !== 0) return schoolDiff;
+            const classDiff = a.class.localeCompare(b.class, 'zh-CN', { numeric: true });
+            if (classDiff !== 0) return classDiff;
+            return a.name.localeCompare(b.name, 'zh-CN');
+        });
+
+        const json = JSON.stringify(normalized);
+        let hash = 2166136261;
+        for (let i = 0; i < json.length; i++) {
+            hash ^= json.charCodeAt(i);
+            hash = Math.imul(hash, 16777619);
+        }
+        return `fp_${(hash >>> 0).toString(16)}`;
+    }
+
     function seedCurrentExamToCohortDb(payload, fallbackKey, updatedAt) {
         if (typeof CohortDB === 'undefined' || typeof CohortDB.ensure !== 'function') return;
         const examId = String(payload?.CURRENT_EXAM_ID || fallbackKey || '').trim();
@@ -84,6 +113,7 @@
                 subjects: payload?.SUBJECTS || [],
                 thresholds: payload?.THRESHOLDS || {},
                 config: payload?.CONFIG || {},
+                fingerprint: payload?.FINGERPRINT || computeExamDataFingerprint(rows),
                 createdAt: remoteTs,
                 updatedAt: updatedAt || ''
             };
@@ -436,6 +466,7 @@
                             examId: row.key,
                             examFullKey: row.key,
                             examLabel: examLabel || row.key,
+                            fingerprint: payload?.FINGERPRINT || computeExamDataFingerprint(payload?.RAW_DATA || []),
                             total: match.total,
                             rankClass: match.ranks?.total?.class,
                             rankSchool: match.ranks?.total?.school,
@@ -552,6 +583,7 @@
                                 subjects: payload.SUBJECTS || [],
                                 thresholds: payload.THRESHOLDS || {},
                                 config: payload.CONFIG || {},
+                                fingerprint: payload.FINGERPRINT || computeExamDataFingerprint(payload.RAW_DATA || []),
                                 createdAt: remoteTs,
                                 updatedAt: row.updated_at || ''
                             };

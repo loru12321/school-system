@@ -8,6 +8,7 @@
     "build": "vite build && node inline-scripts.mjs",
     "push": "powershell -ExecutionPolicy Bypass -File ./deploy.ps1",
     "sync": "npm run build && npm run push",
+    "smoke:report-compare": "node scripts/smoke-report-compare.js",
     "preview": "vite preview"
   },
   "keywords": [],
