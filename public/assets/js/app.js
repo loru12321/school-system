@@ -25112,6 +25112,7 @@ function applySnapshotPayload(db) {
         localStorage.setItem('CURRENT_COHORT_ID', window.CURRENT_COHORT_ID);
     }
     if (window.CURRENT_EXAM_ID) {
+        localStorage.setItem('CURRENT_EXAM_ID', window.CURRENT_EXAM_ID);
         const metaStr = localStorage.getItem('ARCHIVE_META');
         try {
             const meta = metaStr ? JSON.parse(metaStr) : null;

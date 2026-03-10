@@ -56,6 +56,52 @@
         return 'LZ|' + LZString.compressToUTF16(json);
     }
 
+    function seedCurrentExamToCohortDb(payload, fallbackKey, updatedAt) {
+        if (typeof CohortDB === 'undefined' || typeof CohortDB.ensure !== 'function') return;
+        const examId = String(payload?.CURRENT_EXAM_ID || fallbackKey || '').trim();
+        if (!examId) return;
+
+        const rows = Array.isArray(payload?.RAW_DATA) ? payload.RAW_DATA : [];
+        if (!rows.length) return;
+
+        const db = CohortDB.ensure();
+        db.exams = db.exams || {};
+
+        const keyParts = examId.split('_');
+        const examLabel = keyParts.length >= 5 ? keyParts.slice(4).join('_') : examId;
+        const remoteTs = updatedAt ? (new Date(updatedAt).getTime() || Date.now()) : Date.now();
+        const existing = db.exams[examId];
+        const existingCount = Array.isArray(existing?.data) ? existing.data.length : 0;
+
+        if (!existing || existingCount === 0) {
+            db.exams[examId] = {
+                examId,
+                examLabel,
+                meta: payload?.ARCHIVE_META || payload?.CONFIG || {},
+                data: rows,
+                schools: payload?.SCHOOLS || {},
+                teacherMap: payload?.TEACHER_MAP || {},
+                subjects: payload?.SUBJECTS || [],
+                thresholds: payload?.THRESHOLDS || {},
+                config: payload?.CONFIG || {},
+                createdAt: remoteTs,
+                updatedAt: updatedAt || ''
+            };
+        }
+
+        db.currentExamId = examId;
+        window.COHORT_DB = db;
+    }
+
+    async function refreshCompareSelectors() {
+        if (typeof CohortDB !== 'undefined' && typeof CohortDB.renderExamList === 'function') CohortDB.renderExamList();
+        if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
+        if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
+        if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+        if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
+        if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
+    }
+
     function getCurrentUserRole() {
         return sessionStorage.getItem('CURRENT_ROLE') || 'guest';
     }
@@ -202,7 +248,13 @@
                 if (!data) return false;
 
                 const payload = parsePayload(data.content);
+                seedCurrentExamToCohortDb(payload, key, data.updated_at);
                 if (typeof applySnapshotPayload === 'function') applySnapshotPayload(payload);
+                const cohortId = normalizeCohortId(payload?.CURRENT_COHORT_ID || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+                if (cohortId && typeof this.fetchCohortExamsToLocal === 'function') {
+                    await this.fetchCohortExamsToLocal(cohortId);
+                }
+                await refreshCompareSelectors();
                 if (typeof logAction === 'function') logAction('云端加载', `已加载全量数据：${key}`);
                 safeToast('数据已同步到本地', 'success');
                 setCloudStatus('success', '已拉取');
@@ -423,11 +475,7 @@
                 db.exams = db.exams || {};
 
                 const refreshSelectors = () => {
-                    if (typeof CohortDB.renderExamList === 'function') CohortDB.renderExamList();
-                    if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
-                    if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
-                    if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-                    if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
+                    refreshCompareSelectors();
                 };
 
                 const getLocalExamTs = (exam) => {
