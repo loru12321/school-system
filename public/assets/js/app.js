@@ -15641,7 +15641,6 @@ function findPreviousRecord(student) {
 
     const currentExamId = getEffectiveCurrentExamId();
     const currentFingerprint = computeExamDataFingerprint(RAW_DATA || []);
-    const currentFingerprint = computeExamDataFingerprint(RAW_DATA || []);
 
     // 1. 尝试从 PREV_DATA 查找 (排除当前考试)
     if (window.PREV_DATA && window.PREV_DATA.length > 0) {
@@ -15718,6 +15717,7 @@ function getStudentExamHistory(student) {
     const targetClass = normClass(student.class);
     const targetSchool = student.school;
     const currentExamId = getEffectiveCurrentExamId();
+    const currentFingerprint = computeExamDataFingerprint(RAW_DATA || []);
     const isTargetStudent = (row) => {
         const sObj = row?.student || row || {};
         if (sObj.school && targetSchool && sObj.school !== targetSchool) return false;
