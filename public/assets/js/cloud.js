@@ -253,16 +253,22 @@
 
             let key = this.getKey() || localStorage.getItem('CURRENT_PROJECT_KEY');
             if (!key) {
-                const { data: rows, error } = await window.sbClient
-                    .from(CLOUD_TABLE)
-                    .select('key,updated_at')
-                    .not('key', 'like', 'TEACHERS_%')
-                    .not('key', 'like', 'STUDENT_COMPARE_%')
-                    .order('updated_at', { ascending: false })
-                    .limit(1);
-                if (error) throw error;
-                key = rows?.[0]?.key || null;
-                if (key) localStorage.setItem('CURRENT_PROJECT_KEY', key);
+                try {
+                    const { data: rows, error } = await window.sbClient
+                        .from(CLOUD_TABLE)
+                        .select('key,updated_at')
+                        .not('key', 'like', 'TEACHERS_%')
+                        .not('key', 'like', 'STUDENT_COMPARE_%')
+                        .order('updated_at', { ascending: false })
+                        .limit(1);
+                    if (error) throw error;
+                    key = rows?.[0]?.key || null;
+                    if (key) localStorage.setItem('CURRENT_PROJECT_KEY', key);
+                } catch (e) {
+                    console.error('Cloud load key lookup error:', e);
+                    setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '加载失败');
+                    return false;
+                }
             }
 
             if (!key) return false;
@@ -621,7 +627,7 @@
     };
 
     window.getUniqueExamKey = () => CloudManager.getKey();
-    window.saveCloudSnapshot = () => { };
+    window.saveCloudSnapshot = () => CloudManager.save();
 
     window.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {

@@ -16890,11 +16890,39 @@ async function batchGeneratePDF() {
         if (!res.isConfirmed) return;
     } else if (!confirm(`即将生成 ${students.length} 份 A4 报告。\n\n系统将调用浏览器打印功能，请在打印预览页选择：\n1. 目标打印机：另存为 PDF\n2. 更多设置 -> 勾选“背景图形”\n\n确定继续吗？`)) return;
     const container = document.getElementById('batch-print-container'); container.innerHTML = ''; let batchHtml = '';
-    students.forEach(stu => {
-        let reportHtml = renderSingleReportCardHTML(stu, 'A4');
-        reportHtml = reportHtml.replace(/<div class="chart-wrapper"[\s\S]*?<\/div>/, '<div style="height:50px; text-align:center; color:#999; line-height:50px; border:1px dashed #eee; margin:10px 0;">(批量打印模式暂不显示雷达图)</div>');
-        batchHtml += `<div style="page-break-after: always; padding: 20px; height: 100vh;">${reportHtml}</div>`;
-    });
+
+    // 清除主报告区，避免 #radarChart 重复 ID 导致 Chart.js 找错画布
+    const reportCaptureArea = document.getElementById('report-card-capture-area');
+    if (reportCaptureArea) reportCaptureArea.innerHTML = '';
+    if (radarChartInstance) { try { radarChartInstance.destroy(); } catch (e) { } radarChartInstance = null; }
+
+    // 创建隐藏的渲染区域，用于逐一渲染并捕获雷达图
+    const tempRender = document.createElement('div');
+    tempRender.style.cssText = 'position:fixed; left:-9999px; top:0; width:794px; visibility:hidden;';
+    document.body.appendChild(tempRender);
+
+    for (const stu of students) {
+        tempRender.innerHTML = renderSingleReportCardHTML(stu, 'A4');
+        const history = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(stu) : [];
+        // 初始化雷达图
+        try { if (typeof renderRadarChart === 'function') renderRadarChart(stu, history, tempRender); } catch (e) { console.warn('batch radar chart error:', e); }
+        // 等待 Chart.js 绘制完成
+        await new Promise(r => setTimeout(r, 200));
+        // 将 canvas 转换为 img，确保打印时可见
+        const canvas = tempRender.querySelector('canvas');
+        if (canvas) {
+            try {
+                const imgSrc = canvas.toDataURL('image/png');
+                const img = document.createElement('img');
+                img.src = imgSrc;
+                img.style.cssText = 'width:100%; height:100%; object-fit:contain;';
+                canvas.parentNode.replaceChild(img, canvas);
+            } catch (e) { console.warn('canvas capture error:', e); }
+        }
+        batchHtml += `<div style="page-break-after: always; padding: 20px; height: 100vh;">${tempRender.innerHTML}</div>`;
+    }
+
+    document.body.removeChild(tempRender);
     container.innerHTML = batchHtml; container.style.display = 'block';
     const style = document.createElement('style'); style.id = 'batch-print-style';
     style.innerHTML = `@media print { body > *:not(#batch-print-container) { display: none !important; } #batch-print-container { display: block !important; } .report-card-container { box-shadow: none !important; border: 2px solid #333 !important; } -webkit-print-color-adjust: exact; print-color-adjust: exact; }`;
@@ -17444,7 +17472,7 @@ function renderHistoryChart(student) {
     if (historyChartInstance) historyChartInstance.destroy();
 
     // 1. 尝试从历史档案中获取数据
-    const uid = student.school + "_" + student.name;
+    const uid = student.school + "_" + normalizeClass(student.class || '') + "_" + student.name;
     // 深度拷贝一份，以免修改原数据
     let history = HISTORY_ARCHIVE[uid] ? JSON.parse(JSON.stringify(HISTORY_ARCHIVE[uid])) : [];
 
@@ -22458,7 +22486,13 @@ function updateSeatAdjSelects() {
         updateConstraintWidgetsContext('adj');
     };
 }
-function renderSeatGrid() { } // Placeholder
+function renderSeatGrid() {
+    // 仅在座位工作区已生成后才重新渲染（响应行列数输入变化）
+    const workspace = document.getElementById('seat-adj-workspace');
+    if (workspace && !workspace.classList.contains('hidden')) {
+        generateSeatSuggestions();
+    }
+}
 
 function generateSeatSuggestions() {
     const sch = document.getElementById('seatAdjSchoolSelect').value;
@@ -22837,10 +22871,11 @@ function updateBatchProgress(current, total) {
 function buildStudentPrompt(stu) {
     // 1. 获取基础上下文
     const totalStudents = RAW_DATA.length;
-    const rank = safeGet(stu, 'ranks.total.township', 0);
+    const rawRank = safeGet(stu, 'ranks.total.township', null);
+    const rank = (typeof rawRank === 'number' && rawRank > 0) ? rawRank : null;
 
-    // 防止除以0
-    const pct = totalStudents > 0 ? (rank / totalStudents * 100).toFixed(1) : 0;
+    // 防止除以0，排名未知时显示"未知"
+    const rankDisplay = rank !== null ? `${rank}/${totalStudents} (前${(rank / totalStudents * 100).toFixed(1)}%)` : `未知/${totalStudents}`;
 
     // 2. 进退步数据 (RAG: 检索历史)
     // 使用之前定义的新辅助函数 findPreviousRecord
@@ -22848,20 +22883,27 @@ function buildStudentPrompt(stu) {
     let trendInfo = "（本次无历史对比数据）";
 
     if (prevStu) {
-        const rankDiff = prevStu.townRank - rank; // 正数=进步 (名次变小)
+        // prevStu.townRank 可能是数字或字符串'-'，需要做类型守卫
+        const prevTownRank = (typeof prevStu.townRank === 'number' && prevStu.townRank > 0)
+            ? prevStu.townRank
+            : (parseInt(prevStu.townRank) > 0 ? parseInt(prevStu.townRank) : null);
         const scoreDiff = stu.total - prevStu.total; // 正数=涨分
 
-        // 构造一段自然语言描述，喂给 AI
-        let evalStr = "";
-        if (Math.abs(rankDiff) < 10) evalStr = "发挥十分稳定";
-        else if (rankDiff >= 10) evalStr = "进步非常显著！";
-        else evalStr = "名次出现滑坡，需查找原因";
+        let rankTrendStr = "";
+        if (prevTownRank !== null && rank !== null) {
+            const rankDiff = prevTownRank - rank; // 正数=进步 (名次变小)
+            let evalStr = "";
+            if (Math.abs(rankDiff) < 10) evalStr = "发挥十分稳定";
+            else if (rankDiff >= 10) evalStr = "进步非常显著！";
+            else evalStr = "名次出现滑坡，需查找原因";
+            rankTrendStr = `
+            - 排名变化：${rankDiff > 0 ? '进步了' : '退步了'} ${Math.abs(rankDiff)} 名。
+            - 稳定性评价：${evalStr}。`;
+        }
 
         trendInfo = `
             【历史对比情况】：
-            - 相比上次考试，总分变化：${scoreDiff > 0 ? '+' : ''}${scoreDiff.toFixed(1)}分。
-            - 排名变化：${rankDiff > 0 ? '进步了' : '退步了'} ${Math.abs(rankDiff)} 名。
-            - 稳定性评价：${evalStr}。
+            - 相比上次考试，总分变化：${scoreDiff > 0 ? '+' : ''}${scoreDiff.toFixed(1)}分。${rankTrendStr}
             `;
     }
 
@@ -22893,7 +22935,7 @@ function buildStudentPrompt(stu) {
 
         # Data Context
         姓名：${stu.name}
-        当前排名：${rank}/${totalStudents} (前${pct}%)
+        当前排名：${rankDisplay}
         优势学科：${strengthStr}
         待提升学科：${weakStr}
         ${trendInfo}
