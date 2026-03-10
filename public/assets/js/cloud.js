@@ -505,22 +505,11 @@
                 const db = CohortDB.ensure();
                 db.exams = db.exams || {};
 
-                const refreshSelectors = () => {
-                    refreshCompareSelectors();
-                };
-
-                const getLocalExamTs = (exam) => {
-                    if (!exam) return 0;
-                    const tsUpdated = exam.updatedAt ? new Date(exam.updatedAt).getTime() : 0;
-                    const tsCreated = Number(exam.createdAt || 0);
-                    return Math.max(tsUpdated || 0, tsCreated || 0);
-                };
-
                 try {
                     const cacheKey = `CLOUD_EXAMS_SYNC_TS_${cid}`;
                     const chunkSize = 10;
 
-                    // Step 1: fetch metadata first, avoid downloading full content for unchanged exams.
+                    // Step 1: fetch metadata first
                     const { data: metaRows, error: metaErr } = await window.sbClient
                         .from(CLOUD_TABLE)
                         .select('key, updated_at')
@@ -537,7 +526,7 @@
                     const keysToFetch = [];
                     for (const row of candidates) {
                         const remoteTs = new Date(row.updated_at).getTime() || 0;
-                        const localTs = getLocalExamTs(db.exams[row.key]);
+                        const localTs = db.exams[row.key] ? Math.max(new Date(db.exams[row.key].updatedAt || 0).getTime(), Number(db.exams[row.key].createdAt || 0)) : 0;
                         if (!db.exams[row.key] || remoteTs > localTs + 1000) {
                             keysToFetch.push(row.key);
                         }
@@ -545,9 +534,9 @@
 
                     if (keysToFetch.length === 0) {
                         localStorage.setItem(cacheKey, String(Date.now()));
-                        refreshSelectors();
+                        await refreshCompareSelectors();
                         setCloudStatus('success', '已最新');
-                        return { success: true, count: 0, updated: 0 };
+                        return { success: true, count: candidates.length, updated: 0 };
                     }
 
                     const rowMap = new Map();
@@ -595,11 +584,11 @@
 
                     window.COHORT_DB = db;
                     localStorage.setItem(cacheKey, String(Date.now()));
-                    refreshSelectors();
+                    await refreshCompareSelectors();
 
                     if (loadedCount > 0) safeToast(`已从云端加载 ${loadedCount} 期历史考试`, 'success');
                     setCloudStatus('success', loadedCount > 0 ? `更新${loadedCount}期` : '已最新');
-                    return { success: true, count: loadedCount, updated: loadedCount };
+                    return { success: true, count: candidates.length, updated: loadedCount };
                 } catch (e) {
                     console.error('[CloudExams] failed:', e);
                     setCloudStatus('error', '考试拉取失败');
@@ -610,6 +599,12 @@
             });
 
             return this._cohortExamSyncTasks[cid];
+        },
+
+        fetchAllCohortExams: async function () {
+            const cid = normalizeCohortId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+            if (!cid) return;
+            return this.fetchCohortExamsToLocal(cid);
         }
     };
 
@@ -626,7 +621,7 @@
     };
 
     window.getUniqueExamKey = () => CloudManager.getKey();
-    window.saveCloudSnapshot = () => {};
+    window.saveCloudSnapshot = () => { };
 
     window.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
@@ -640,6 +635,7 @@
                 openStarterGuide();
             }
             if (typeof scheduleTeacherSyncPrompt === 'function') scheduleTeacherSyncPrompt();
+            if (typeof CloudManager.fetchAllCohortExams === 'function') CloudManager.fetchAllCohortExams();
         }, 800);
     });
 })();
