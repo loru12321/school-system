@@ -3578,6 +3578,15 @@
                             onchange="filterStudentCompareByClass()">
                             <option value="">全部班级</option>
                         </select>
+                        <select id="studentCompareSortBy" style="padding:4px 12px; border-radius:20px; min-width:160px;"
+                            onchange="sortStudentCompare()">
+                            <option value="class">Class / Name</option>
+                            <option value="totalDesc">Latest Total Desc</option>
+                            <option value="totalAsc">Latest Total Asc</option>
+                            <option value="improveDesc">Progress Desc</option>
+                            <option value="improveAsc">Progress Asc</option>
+                            <option value="rankImprove">Rank Improve</option>
+                        </select>
                         <input type="text" id="studentCompareNameInput" placeholder="输入姓名（可用逗号分隔多个）"
                             style="padding:4px 12px; border-radius:20px; min-width:180px;"
                             onkeypress="if(event.key==='Enter') filterStudentCompareByName()">
@@ -16049,6 +16058,10 @@ function applyStudentCompareFilters(options = {}) {
         });
     }
 
+    const sortEl = document.getElementById('studentCompareSortBy');
+    const sortBy = sortEl?.value || 'class';
+    filteredStudents = getSortedStudentCompareData(filteredStudents, sortBy);
+
     cache.studentsCompareData = filteredStudents;
     cache.isFiltered = nameFilters.length > 0 || !!progressFilter || !!classFilter;
     cache.currentPage = 1;
@@ -16172,16 +16185,8 @@ function filterByProgress(type) {
     applyStudentCompareFilters();
 }
 
-function sortStudentCompare() {
-    const sortEl = document.getElementById('studentCompareSortBy');
-
-    if (!sortEl || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
-
-    const sortBy = sortEl.value;
-    const { studentsCompareData, currentPage } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
-
-    // 创建排序后的数组
-    let sortedData = [...studentsCompareData];
+function getSortedStudentCompareData(data, sortBy) {
+    const sortedData = Array.isArray(data) ? [...data] : [];
 
     switch (sortBy) {
         case 'totalDesc':
@@ -16209,14 +16214,22 @@ function sortStudentCompare() {
             break;
     }
 
-    // 更新缓存数据并重新渲染
-    STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData = sortedData;
+    return sortedData;
+}
 
-    // 🟢 [改进]：根据当前显示模式重新渲染
+function sortStudentCompare() {
+    const sortEl = document.getElementById('studentCompareSortBy');
+
+    if (!sortEl || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
+
+    const sortBy = sortEl.value;
+    const { studentsCompareData } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
+    const sortedData = getSortedStudentCompareData(studentsCompareData, sortBy);
+
+    STUDENT_MULTI_PERIOD_COMPARE_CACHE.studentsCompareData = sortedData;
     toggleGroupDisplay();
 }
 
-// 🟢 [新增]：填充班级下拉选项
 function updateClassGroupOptions() {
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
@@ -17213,29 +17226,65 @@ function updateStudentCompareSummary() {
     const summaryEl = document.getElementById('studentCompareSummary');
     if (!summaryEl || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
-    const { studentsCompareData, periodCount } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
-    if (!studentsCompareData || studentsCompareData.length === 0) return;
+    const { studentsCompareData, periodCount, activeClassFilter } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
+    if (!studentsCompareData || studentsCompareData.length === 0) {
+        summaryEl.innerHTML = '';
+        return;
+    }
 
+    const totalCount = studentsCompareData.length;
+    const classCount = new Set(studentsCompareData.map(s => s.class || '未分班')).size;
     const improveCount = studentsCompareData.filter(s => s.progressType === 'improve').length;
     const declineCount = studentsCompareData.filter(s => s.progressType === 'decline').length;
     const stableCount = studentsCompareData.filter(s => s.progressType === 'stable').length;
-    const avgScoreDiff = studentsCompareData.reduce((sum, s) => sum + s.scoreDiff, 0) / studentsCompareData.length;
+    const missingCount = studentsCompareData.filter(s => Array.isArray(s.periods) && s.periods.some(p => p.total === null || p.total === undefined)).length;
+    const avgScoreDiff = studentsCompareData.reduce((sum, s) => sum + Number(s.scoreDiff || 0), 0) / totalCount;
+    const avgLatestTotal = studentsCompareData.reduce((sum, s) => sum + Number(s.latestTotal || 0), 0) / totalCount;
+    const bestImprover = studentsCompareData.slice().sort((a, b) => Number(b.scoreDiff || 0) - Number(a.scoreDiff || 0))[0] || null;
+    const topLatest = studentsCompareData.slice().sort((a, b) => Number(b.latestTotal || 0) - Number(a.latestTotal || 0))[0] || null;
+
+    let html = '';
 
     if (periodCount > 1) {
-        summaryEl.innerHTML = `
-                <div style="padding:12px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:6px; margin-bottom:10px;">
-                    <div style="font-weight:600; margin-bottom:8px; color:#0369a1;">📊 全校统计概览</div>
-                    <div style="display:flex; gap:15px; flex-wrap:wrap; font-size:13px;">
-                        <span>📈 平均分变化: <strong style="color:${avgScoreDiff >= 0 ? '#16a34a' : '#dc2626'};">${avgScoreDiff >= 0 ? '+' : ''}${avgScoreDiff.toFixed(2)}分</strong></span>
-                        <span>🎯 进步人数: <strong style="color:#16a34a;">${improveCount}人 (${(improveCount / studentsCompareData.length * 100).toFixed(1)}%)</strong></span>
-                        <span>📉 退步人数: <strong style="color:#dc2626;">${declineCount}人 (${(declineCount / studentsCompareData.length * 100).toFixed(1)}%)</strong></span>
-                        <span>➡️ 持平人数: <strong>${stableCount}人 (${(stableCount / studentsCompareData.length * 100).toFixed(1)}%)</strong></span>
+        html += `
+                <div style="padding:12px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; margin-bottom:10px;">
+                    <div style="font-weight:600; margin-bottom:10px; color:#0369a1; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                        <span>当前筛选统计</span>
+                        <span style="font-size:12px; color:#64748b; font-weight:500;">${totalCount}人 / ${classCount}个班级</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; font-size:13px;">
+                        <div style="background:#ffffff; border-radius:8px; padding:10px; border:1px solid #dbeafe;">平均变化<br><strong style="color:${avgScoreDiff >= 0 ? '#16a34a' : '#dc2626'};">${avgScoreDiff >= 0 ? '+' : ''}${avgScoreDiff.toFixed(2)}分</strong></div>
+                        <div style="background:#ffffff; border-radius:8px; padding:10px; border:1px solid #dbeafe;">最新均分<br><strong>${avgLatestTotal.toFixed(1)}</strong></div>
+                        <div style="background:#ffffff; border-radius:8px; padding:10px; border:1px solid #dcfce7;">进步人数<br><strong style="color:#16a34a;">${improveCount}人</strong></div>
+                        <div style="background:#ffffff; border-radius:8px; padding:10px; border:1px solid #fee2e2;">退步人数<br><strong style="color:#dc2626;">${declineCount}人</strong></div>
+                        <div style="background:#ffffff; border-radius:8px; padding:10px; border:1px solid #e5e7eb;">持平人数<br><strong>${stableCount}人</strong></div>
+                        <div style="background:#ffffff; border-radius:8px; padding:10px; border:1px solid #fef3c7;">缺考/缺科<br><strong style="color:#d97706;">${missingCount}人</strong></div>
                     </div>
                 </div>
             `;
     }
-}
 
+    if (activeClassFilter) {
+        html += `
+                <div style="padding:12px; background:#fffbeb; border:1px solid #fde68a; border-radius:10px; margin-bottom:10px;">
+                    <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:8px;">
+                        <div style="font-weight:700; color:#92400e;">${activeClassFilter} 班级摘要</div>
+                        <div style="font-size:12px; color:#a16207;">排序与筛选实时联动</div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; font-size:13px;">
+                        <div style="background:#fff; border-radius:8px; padding:10px; border:1px solid #fde68a;">班级人数<br><strong>${totalCount}人</strong></div>
+                        <div style="background:#fff; border-radius:8px; padding:10px; border:1px solid #fde68a;">班级均分变化<br><strong style="color:${avgScoreDiff >= 0 ? '#16a34a' : '#dc2626'};">${avgScoreDiff >= 0 ? '+' : ''}${avgScoreDiff.toFixed(2)}分</strong></div>
+                        <div style="background:#fff; border-radius:8px; padding:10px; border:1px solid #fde68a;">班级最新均分<br><strong>${avgLatestTotal.toFixed(1)}</strong></div>
+                        <div style="background:#fff; border-radius:8px; padding:10px; border:1px solid #fde68a;">最佳进步<br><strong>${bestImprover ? `${bestImprover.name} (${bestImprover.scoreDiff >= 0 ? '+' : ''}${Number(bestImprover.scoreDiff || 0).toFixed(1)})` : '-'}</strong></div>
+                        <div style="background:#fff; border-radius:8px; padding:10px; border:1px solid #fde68a;">当前最高总分<br><strong>${topLatest ? `${topLatest.name} (${Number(topLatest.latestTotal || 0).toFixed(1)})` : '-'}</strong></div>
+                        <div style="background:#fff; border-radius:8px; padding:10px; border:1px solid #fde68a;">班级稳定率<br><strong>${((stableCount / totalCount) * 100).toFixed(1)}%</strong></div>
+                    </div>
+                </div>
+            `;
+    }
+
+    summaryEl.innerHTML = html;
+}
 function normalizeCompareCohortId(raw) {
     return String(raw || '').replace(/\D/g, '');
 }

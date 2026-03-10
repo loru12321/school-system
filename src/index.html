@@ -2897,6 +2897,15 @@
                             onchange="filterStudentCompareByClass()">
                             <option value="">全部班级</option>
                         </select>
+                        <select id="studentCompareSortBy" style="padding:4px 12px; border-radius:20px; min-width:160px;"
+                            onchange="sortStudentCompare()">
+                            <option value="class">Class / Name</option>
+                            <option value="totalDesc">Latest Total Desc</option>
+                            <option value="totalAsc">Latest Total Asc</option>
+                            <option value="improveDesc">Progress Desc</option>
+                            <option value="improveAsc">Progress Asc</option>
+                            <option value="rankImprove">Rank Improve</option>
+                        </select>
                         <input type="text" id="studentCompareNameInput" placeholder="输入姓名（可用逗号分隔多个）"
                             style="padding:4px 12px; border-radius:20px; min-width:180px;"
                             onkeypress="if(event.key==='Enter') filterStudentCompareByName()">
