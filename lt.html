@@ -8949,10 +8949,7 @@ const DataManager = {
                 // ==========================================
 
                 // 辅助函数：通用排名计算
-                const calcRank = (list, scoreGetter, rankSetter) => {
-                    list.sort((a, b) => scoreGetter(b) - scoreGetter(a));
-                    list.forEach((s, i) => rankSetter(s, i + 1));
-                };
+                const calcRank = (list, scoreGetter, rankSetter) => assignCompetitionRanks(list, scoreGetter, rankSetter);
 
                 // 1. 全镇范围 (总分 + 单科)
                 calcRank(parsedHistory, s => s.total, (s, r) => { if (!s.ranks.total) s.ranks.total = {}; s.townRank = r; s.ranks.total.township = r; });
@@ -8968,7 +8965,11 @@ const DataManager = {
                 parsedHistory.forEach(s => { if (!schools[s.school]) schools[s.school] = []; schools[s.school].push(s); });
 
                 Object.values(schools).forEach(group => {
-                    calcRank(group, s => s.total, (s, r) => { s.schoolRank = r; s.ranks.total.school = r; });
+                    calcRank(group, s => s.total, (s, r) => {
+                        if (!s.ranks.total) s.ranks.total = {};
+                        s.schoolRank = r;
+                        s.ranks.total.school = r;
+                    });
                     SUBJECTS.forEach(sub => {
                         const validList = group.filter(s => s.scores[sub] !== undefined);
                         calcRank(validList, s => s.scores[sub], (s, r) => { if (!s.ranks[sub]) s.ranks[sub] = {}; s.ranks[sub].school = r; });
@@ -8980,7 +8981,11 @@ const DataManager = {
                 parsedHistory.forEach(s => { const k = s.school + "_" + s.class; if (!classes[k]) classes[k] = []; classes[k].push(s); });
 
                 Object.values(classes).forEach(group => {
-                    calcRank(group, s => s.total, (s, r) => { s.classRank = r; s.ranks.total.class = r; });
+                    calcRank(group, s => s.total, (s, r) => {
+                        if (!s.ranks.total) s.ranks.total = {};
+                        s.classRank = r;
+                        s.ranks.total.class = r;
+                    });
                     SUBJECTS.forEach(sub => {
                         const validList = group.filter(s => s.scores[sub] !== undefined);
                         calcRank(validList, s => s.scores[sub], (s, r) => { if (!s.ranks[sub]) s.ranks[sub] = {}; s.ranks[sub].class = r; });
@@ -15577,42 +15582,33 @@ function renderStudentMultiPeriodComparison() {
                 displayName = studentRow.name; // 使用原始姓名
                 studentClass = studentRow.class || '';
 
-                // 计算总分排名
-                const sortedByTotal = [...allRows].sort((a, b) => (b.total || 0) - (a.total || 0));
-                const sortedBySchool = [...schoolRows].sort((a, b) => (b.total || 0) - (a.total || 0));
                 const classRows = schoolRows.filter(r => isClassEquivalent(r.class || '', studentClass || ''));
-                const sortedByClass = [...classRows].sort((a, b) => (b.total || 0) - (a.total || 0));
+                const rankTownMap = buildCompetitionRankMap(allRows, r => cleanName(r.name), r => Number(r.total) || 0);
+                const rankSchoolMap = buildCompetitionRankMap(schoolRows, r => cleanName(r.name), r => Number(r.total) || 0);
+                const rankClassMap = buildCompetitionRankMap(classRows, r => cleanName(r.name), r => Number(r.total) || 0);
 
-                const rankTown = sortedByTotal.findIndex(r => cleanName(r.name) === cleanedName) + 1;
-                const rankSchool = sortedBySchool.findIndex(r => cleanName(r.name) === cleanedName) + 1;
-                const rankClass = sortedByClass.findIndex(r => cleanName(r.name) === cleanedName) + 1;
+                const rankTown = rankTownMap.get(cleanedName) ?? null;
+                const rankSchool = rankSchoolMap.get(cleanedName) ?? null;
+                const rankClass = rankClassMap.get(cleanedName) ?? null;
 
                 // 各科排名
                 const subjectRanks = {};
                 allSubjects.forEach(subject => {
                     const subScore = parseFloat(studentRow.scores?.[subject]);
                     if (!isNaN(subScore)) {
-                        const sortedBySub = [...allRows].sort((a, b) => {
-                            const aScore = parseFloat(a.scores?.[subject]) || 0;
-                            const bScore = parseFloat(b.scores?.[subject]) || 0;
-                            return bScore - aScore;
-                        });
-                        const sortedBySubSchool = [...schoolRows].sort((a, b) => {
-                            const aScore = parseFloat(a.scores?.[subject]) || 0;
-                            const bScore = parseFloat(b.scores?.[subject]) || 0;
-                            return bScore - aScore;
-                        });
-                        const sortedBySubClass = [...classRows].sort((a, b) => {
-                            const aScore = parseFloat(a.scores?.[subject]) || 0;
-                            const bScore = parseFloat(b.scores?.[subject]) || 0;
-                            return bScore - aScore;
-                        });
+                        const getSubjectScore = row => parseFloat(row.scores?.[subject]) || 0;
+                        const sortedBySub = allRows.filter(r => !isNaN(parseFloat(r.scores?.[subject])));
+                        const sortedBySubSchool = schoolRows.filter(r => !isNaN(parseFloat(r.scores?.[subject])));
+                        const sortedBySubClass = classRows.filter(r => !isNaN(parseFloat(r.scores?.[subject])));
+                        const subjectTownMap = buildCompetitionRankMap(sortedBySub, r => cleanName(r.name), getSubjectScore);
+                        const subjectSchoolMap = buildCompetitionRankMap(sortedBySubSchool, r => cleanName(r.name), getSubjectScore);
+                        const subjectClassMap = buildCompetitionRankMap(sortedBySubClass, r => cleanName(r.name), getSubjectScore);
 
                         subjectRanks[subject] = {
                             score: subScore,
-                            rankClass: sortedBySubClass.findIndex(r => cleanName(r.name) === cleanedName) + 1,
-                            rankTown: sortedBySub.findIndex(r => cleanName(r.name) === cleanedName) + 1,
-                            rankSchool: sortedBySubSchool.findIndex(r => cleanName(r.name) === cleanedName) + 1
+                            rankClass: subjectClassMap.get(cleanedName) ?? null,
+                            rankTown: subjectTownMap.get(cleanedName) ?? null,
+                            rankSchool: subjectSchoolMap.get(cleanedName) ?? null
                         };
                     }
                 });
@@ -17222,6 +17218,32 @@ function sortExamIdsChronologically(examIds) {
         if (ta !== tb) return ta - tb;
         return String(a).localeCompare(String(b), 'zh-CN');
     });
+}
+
+function assignCompetitionRanks(list, scoreGetter, rankSetter) {
+    const rows = Array.isArray(list) ? list.slice() : [];
+    rows.sort((a, b) => Number(scoreGetter(b) ?? Number.NEGATIVE_INFINITY) - Number(scoreGetter(a) ?? Number.NEGATIVE_INFINITY));
+
+    let prevScore = null;
+    let prevRank = 0;
+    rows.forEach((item, index) => {
+        const score = Number(scoreGetter(item) ?? Number.NEGATIVE_INFINITY);
+        const rank = index > 0 && prevScore !== null && Math.abs(score - prevScore) < 0.0001 ? prevRank : index + 1;
+        prevScore = score;
+        prevRank = rank;
+        rankSetter(item, rank, index, rows);
+    });
+
+    return rows;
+}
+
+function buildCompetitionRankMap(list, keyGetter, scoreGetter) {
+    const rankMap = new Map();
+    assignCompetitionRanks(list, scoreGetter, (item, rank) => {
+        const key = keyGetter(item);
+        if (key && !rankMap.has(key)) rankMap.set(key, rank);
+    });
+    return rankMap;
 }
 
 function computeExamDataFingerprint(rows) {
@@ -21277,8 +21299,7 @@ function findPreviousRecord(student) {
             const hid = p.examFullKey || p.examId;
             const sameExam = currentExamId && (isExamKeyEquivalentForCompare(hid, currentExamId) || isExamKeyEquivalentForCompare(p.examId, currentExamId));
             const sameFingerprint = currentFingerprint && p?.fingerprint && String(p.fingerprint) === currentFingerprint;
-            const sameScores = student.total !== undefined && p.total !== undefined && Math.abs(student.total - p.total) < 0.001;
-            return !sameExam && !sameFingerprint && !sameScores;
+            return !sameExam && !sameFingerprint;
         }).sort((a, b) => getRecordTime(b) - getRecordTime(a));
         const match = otherExams.find(p => matchStudent(p, targetName, targetClass, targetSchool));
         if (match) return match;
