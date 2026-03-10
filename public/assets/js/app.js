@@ -15517,7 +15517,7 @@ async function doQuery() {
 
     setTimeout(() => {
         try { if (typeof renderRadarChart === 'function') renderRadarChart(stu, history); } catch (e) { console.error(e); }
-        try { if (typeof renderVarianceChart === 'function') renderVarianceChart(stu); } catch (e) { console.error(e); }
+        try { if (typeof renderVarianceChart === 'function') renderVarianceChart(stu, history); } catch (e) { console.error(e); }
     }, 150);
 
     try { if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(stu); } catch (e) { console.error(e); }
@@ -15667,6 +15667,37 @@ function getComparisonStudentView(record, allStudents = RAW_DATA) {
 function getComparisonStudentList(records, allStudents = RAW_DATA) {
     if (!Array.isArray(records)) return [];
     return records.map(record => getComparisonStudentView(record, allStudents));
+}
+
+function formatComparisonExamLabel(rawLabel, fallback = '本次') {
+    const raw = String(rawLabel || '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!raw) return fallback;
+    const tokens = raw.split(' ').filter(Boolean);
+    if (tokens.length >= 4) return tokens.slice(-4).join(' ');
+    return raw.length > 28 ? raw.slice(-28) : raw;
+}
+
+function getLatestHistoryExamEntry(student, passedHistory = null) {
+    const history = Array.isArray(passedHistory)
+        ? passedHistory
+        : (typeof getStudentExamHistory === 'function' ? getStudentExamHistory(student) : []);
+    const currentExamId = getEffectiveCurrentExamId();
+
+    return history
+        .filter(entry => {
+            const entryKey = entry?.examFullKey || entry?.examId;
+            return !currentExamId || (
+                !isExamKeyEquivalentForCompare(entryKey, currentExamId) &&
+                !isExamKeyEquivalentForCompare(entry?.examId, currentExamId)
+            );
+        })
+        .sort((a, b) => {
+            const timeA = Number(a?.createdAt || a?.student?.updatedAt || 0);
+            const timeB = Number(b?.createdAt || b?.student?.updatedAt || 0);
+            if (timeA !== timeB) return timeA - timeB;
+            return String(a?.examFullKey || a?.examId || '').localeCompare(String(b?.examFullKey || b?.examId || ''));
+        })
+        .slice(-1)[0] || null;
 }
 
 function getComparisonTotalValue(record, subjects) {
@@ -17796,7 +17827,7 @@ function renderRadarChart(student, passedHistory = null) {
     const ctx = document.getElementById('radarChart'); if (!ctx) return;
     if (!window.Chart) {
         const holder = ctx.parentElement;
-        if (holder) holder.innerHTML = '<div style="text-align:center; color:#94a3b8; font-size:12px; padding:20px;">图表组件未加载，请刷新页面</div>';
+        if (holder) holder.innerHTML = '<div style="text-align:center; color:#94a3b8; font-size:12px; padding:20px;">?????????????</div>';
         return;
     }
     if (radarChartInstance) { radarChartInstance.destroy(); }
@@ -17805,23 +17836,18 @@ function renderRadarChart(student, passedHistory = null) {
     const currentData = [];
     const linkedSubjects = getComparisonTotalSubjects();
 
-    // 本次考试百分位计算
     linkedSubjects.forEach(sub => {
         if (reportStudent.scores[sub] !== undefined) {
             labels.push(sub);
-            const allScores = RAW_DATA.map(s => s.scores[sub]).filter(v => v !== undefined).sort((a, b) => b - a);
+            const allScores = RAW_DATA.map(s => s.scores[sub]).filter(v => typeof v === 'number').sort((a, b) => b - a);
             const rank = allScores.indexOf(reportStudent.scores[sub]) + 1;
             const total = allScores.length;
-            const percentile = ((1 - (rank / total)) * 100).toFixed(1);
-            currentData.push(percentile);
+            currentData.push(total > 0 ? ((1 - (rank / total)) * 100).toFixed(1) : null);
         }
     });
 
-    // 当前考试标签
-    const currentExamLabel = (getEffectiveCurrentExamId() || '').replace(/_/g, ' ').substring(0, 20) || '本次';
-
     const datasets = [{
-        label: currentExamLabel,
+        label: formatComparisonExamLabel(getEffectiveCurrentExamId(), 'Current'),
         data: currentData,
         fill: true,
         backgroundColor: 'rgba(37, 99, 235, 0.2)',
@@ -17833,91 +17859,26 @@ function renderRadarChart(student, passedHistory = null) {
         order: 10
     }];
 
-    // 🟢 [Bug #5 修复] 多期历史对比：从 COHORT_DB.exams 获取历史数据
-    const historyColors = [
-        { border: '#f97316', bg: '#fff', point: '#f97316', style: 'rectRot' },  // 橙色
-        { border: '#10b981', bg: '#fff', point: '#10b981', style: 'triangle' },  // 绿色
-        { border: '#8b5cf6', bg: '#fff', point: '#8b5cf6', style: 'star' }       // 紫色
-    ];
+    const latestHistoryEntry = getLatestHistoryExamEntry(reportStudent, passedHistory);
+    const latestHistoryStudent = latestHistoryEntry ? (latestHistoryEntry.student || latestHistoryEntry) : null;
+    const latestHistoryRows = Array.isArray(latestHistoryEntry?.allStudents) ? latestHistoryEntry.allStudents : [];
 
-    // 优先使用 findPreviousRecord 的结果（兼容旧逻辑）
-    const prevStu = findPreviousRecord(reportStudent);
-    let historicalDatasets = [];
-
-    // 尝试从 COHORT_DB 或 传入参数获取多期数据
-    if (typeof getStudentExamHistory === 'function' || passedHistory) {
-        const examHistory = passedHistory || getStudentExamHistory(reportStudent);
-        const currentExamId = getEffectiveCurrentExamId();
-        const pastExams = examHistory
-            .map((h, idx) => ({ ...h, __idx: idx }))
-            .filter(h => {
-                const hid = h.examFullKey || h.examId;
-                return !currentExamId || (!isExamKeyEquivalentForCompare(hid, currentExamId) && !isExamKeyEquivalentForCompare(h.examId, currentExamId));
-            })
-            .sort((a, b) => {
-                const ta = Number(a.createdAt || (a.student && a.student.updatedAt && new Date(a.student.updatedAt).getTime()) || 0);
-                const tb = Number(b.createdAt || (b.student && b.student.updatedAt && new Date(b.student.updatedAt).getTime()) || 0);
-                if (ta !== tb) return tb - ta;
-                return b.__idx - a.__idx;
-            })
-            .slice(0, 3); // 最近3次（第一条即最近一次）
-
-        pastExams.forEach((histExam, idx) => {
-            const color = historyColors[idx % historyColors.length];
-            const histData = labels.map(sub => {
-                return (histExam.percentiles && histExam.percentiles[sub] !== undefined) ? histExam.percentiles[sub] : null;
-            });
-
-            if (histData.some(d => d !== null)) {
-                historicalDatasets.push({
-                    label: histExam.examLabel.substring(0, 20),
-                    data: histData,
-                    fill: false,
-                    borderDash: [6, 4],
-                    borderColor: color.border,
-                    pointBackgroundColor: color.bg,
-                    pointBorderColor: color.point,
-                    pointRadius: 4,
-                    pointStyle: color.style,
-                    borderWidth: 1.5,
-                    order: idx
-                });
-            }
-        });
-    }
-
-    // 如果没有从 COHORT_DB 获取到数据，回退到旧的 prevStu 逻辑
-    if (historicalDatasets.length === 0 && prevStu && prevStu.scores) {
-        const prevData = [];
-        labels.forEach(sub => {
-            let prevPercentile = null;
-            if (prevStu.scores[sub] !== undefined) {
-                let prevAllScores = getPreviousExamSubjectScores(sub, reportStudent, prevStu) || [];
-                // 🟢 [Bug #2 修复] 兜底：从 prevStu._sourceExam 对应的考试快照获取全量数据
-                if ((!prevAllScores || prevAllScores.length === 0) && prevStu._sourceExam && typeof CohortDB !== 'undefined') {
-                    try {
-                        const db = CohortDB.ensure();
-                        const examSnap = db.exams?.[prevStu._sourceExam];
-                        if (examSnap && examSnap.data) {
-                            prevAllScores = examSnap.data.map(s => s.scores?.[sub]).filter(v => typeof v === 'number');
-                        }
-                    } catch (e) { }
-                }
-                prevAllScores = [...(prevAllScores || [])].sort((a, b) => b - a);
-                if (prevAllScores.length > 0) {
-                    const prevRank = prevAllScores.indexOf(prevStu.scores[sub]) + 1;
-                    const prevTotal = prevAllScores.length;
-                    prevPercentile = ((1 - (prevRank / prevTotal)) * 100).toFixed(1);
-                }
-            }
-            prevData.push(prevPercentile);
+    if (latestHistoryStudent?.scores) {
+        const previousData = labels.map(sub => {
+            if (latestHistoryStudent.scores[sub] === undefined) return null;
+            const prevScores = latestHistoryRows
+                .map(row => row?.scores?.[sub])
+                .filter(v => typeof v === 'number')
+                .sort((a, b) => b - a);
+            if (!prevScores.length) return null;
+            const prevRank = prevScores.indexOf(latestHistoryStudent.scores[sub]) + 1;
+            return prevRank > 0 ? ((1 - (prevRank / prevScores.length)) * 100).toFixed(1) : null;
         });
 
-        if (prevData.some(d => d !== null)) {
-            const prevLabel = prevStu._sourceExam ? prevStu._sourceExam.replace(/_/g, ' ').substring(0, 20) : '上次';
-            historicalDatasets.push({
-                label: prevLabel,
-                data: prevData,
+        if (previousData.some(value => value !== null)) {
+            datasets.push({
+                label: formatComparisonExamLabel(latestHistoryEntry.examLabel || latestHistoryEntry.examId, 'Previous'),
+                data: previousData,
                 fill: false,
                 borderDash: [6, 4],
                 borderColor: '#f97316',
@@ -17926,22 +17887,21 @@ function renderRadarChart(student, passedHistory = null) {
                 pointRadius: 4,
                 pointStyle: 'rectRot',
                 borderWidth: 1.5,
-                order: 0
+                order: 1
             });
         }
     }
 
-    datasets.push(...historicalDatasets);
-
     radarChartInstance = new Chart(ctx, {
         type: 'radar',
-        data: { labels: labels, datasets: datasets },
+        data: { labels, datasets },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             scales: {
                 r: {
-                    min: 0, max: 100,
+                    min: 0,
+                    max: 100,
                     ticks: { display: false },
                     pointLabels: { font: { size: 12, family: 'Microsoft YaHei', weight: 'bold' }, color: '#475569' },
                     grid: { color: 'rgba(0,0,0,0.05)' },
@@ -17957,7 +17917,7 @@ function renderRadarChart(student, passedHistory = null) {
                 tooltip: {
                     callbacks: {
                         label: function (context) {
-                            return `${context.dataset.label}: 百分位 ${context.raw}%`;
+                            return `${context.dataset.label}: Percentile ${context.raw}%`;
                         }
                     }
                 }
@@ -17968,13 +17928,13 @@ function renderRadarChart(student, passedHistory = null) {
 
 let varianceChartInstance = null;
 
-function renderVarianceChart(student) {
+function renderVarianceChart(student, passedHistory = null) {
     const reportStudent = getComparisonStudentView(student, RAW_DATA);
     const ctx = document.getElementById('varianceChart');
     if (!ctx) return;
     if (!window.Chart) {
         const holder = ctx.parentElement;
-        if (holder) holder.innerHTML = '<div style="text-align:center; color:#94a3b8; font-size:12px; padding:20px;">图表组件未加载，请刷新页面</div>';
+        if (holder) holder.innerHTML = '<div style="text-align:center; color:#94a3b8; font-size:12px; padding:20px;">?????????????</div>';
         return;
     }
     if (varianceChartInstance) varianceChartInstance.destroy();
@@ -17983,8 +17943,9 @@ function renderVarianceChart(student) {
     const zScoresCurr = [];
     const zScoresPrev = [];
     const bgColors = [];
-
-    const prevStu = findPreviousRecord(reportStudent);
+    const latestHistoryEntry = getLatestHistoryExamEntry(reportStudent, passedHistory);
+    const prevStu = latestHistoryEntry ? (latestHistoryEntry.student || latestHistoryEntry) : null;
+    const prevRows = Array.isArray(latestHistoryEntry?.allStudents) ? latestHistoryEntry.allStudents : [];
 
     const calcStats = (arr) => {
         const n = arr.length;
@@ -17997,7 +17958,6 @@ function renderVarianceChart(student) {
     const linkedSubjects = getComparisonTotalSubjects();
     linkedSubjects.forEach(sub => {
         if (reportStudent.scores[sub] !== undefined) {
-            // 本次 Z-Score
             const allScores = RAW_DATA.map(s => s.scores[sub]).filter(v => typeof v === 'number');
             const stats = calcStats(allScores);
             let z = 0;
@@ -18006,15 +17966,15 @@ function renderVarianceChart(student) {
             labels.push(sub);
             zScoresCurr.push(z);
 
-            // 颜色判定
-            if (z >= 0.8) bgColors.push('#16a34a');      // 强 (绿)
-            else if (z <= -0.8) bgColors.push('#dc2626'); // 弱 (红)
-            else bgColors.push('#3b82f6');                // 中 (蓝)
+            if (z >= 0.8) bgColors.push('#16a34a');
+            else if (z <= -0.8) bgColors.push('#dc2626');
+            else bgColors.push('#3b82f6');
 
-            // 上次 Z-Score
             let prevZ = null;
             if (prevStu && prevStu.scores && prevStu.scores[sub] !== undefined) {
-                let prevAllScores = getPreviousExamSubjectScores(sub, reportStudent, prevStu) || [];
+                const prevAllScores = prevRows
+                    .map(row => row?.scores?.[sub])
+                    .filter(v => typeof v === 'number');
                 const prevStats = calcStats(prevAllScores);
                 if (prevStats.sd > 0) {
                     prevZ = (prevStu.scores[sub] - prevStats.mean) / prevStats.sd;
@@ -18025,7 +17985,7 @@ function renderVarianceChart(student) {
     });
 
     const datasets = [{
-        label: '本次',
+        label: 'Current',
         data: zScoresCurr,
         backgroundColor: bgColors,
         borderRadius: 3,
@@ -18034,29 +17994,27 @@ function renderVarianceChart(student) {
         order: 1
     }];
 
-    // 如果有历史数据，添加橙色半透明柱
     if (zScoresPrev.some(d => d !== null)) {
         datasets.push({
-            label: '上次',
+            label: formatComparisonExamLabel(latestHistoryEntry?.examLabel || latestHistoryEntry?.examId, 'Previous'),
             data: zScoresPrev,
-            // 👇 改为醒目的橙色 (半透明填充 + 实线边框)
-            backgroundColor: 'rgba(249, 115, 22, 0.4)', // Orange
+            backgroundColor: 'rgba(249, 115, 22, 0.4)',
             borderColor: '#f97316',
             borderWidth: 1,
             borderRadius: 3,
             barPercentage: 0.5,
             categoryPercentage: 0.8,
-            order: 2 // 稍微错开或重叠均可，bar图表默认是并列
+            order: 2
         });
     }
 
     varianceChartInstance = new Chart(ctx, {
         type: 'bar',
-        data: { labels: labels, datasets: datasets },
+        data: { labels, datasets },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            indexAxis: 'y', // 横向柱状图
+            indexAxis: 'y',
             plugins: {
                 legend: { display: true, position: 'bottom' },
                 tooltip: {
