@@ -1982,7 +1982,7 @@ const HelpSystem = {
                         <p><strong>默认权重配置：</strong></p>
                         <ul>
                             <li><strong>6-8年级：</strong> 均分60 + 优率70 + 及格70 = 满分200</li>
-                            <li><strong>9年级：</strong> 均分40 + 优率80 + 及格40 = 满分160</li>
+                            <li><strong>9年级：</strong> 均分50 + 优率80 + 及格50 = 满分180</li>
                         </ul>
                         <p style="font-size:12px; color:#666; margin-top:5px;">* 指标计算基准：以全镇最高值为满分进行归一化折算。</p>
                     </div>
@@ -2253,11 +2253,11 @@ const WORKER_SOURCE = `
                         // 定义默认权重 (6-8年级)
                         let wAvg = 60, wExc = 70, wPass = 70;
                         
-                        // 🟢 如果是 9年级模式，修改权重 (均分40 + 优秀80 + 及格40)
+                        // 🟢 如果是 9年级模式，修改权重 (均分50 + 优秀80 + 及格50)
                         if (isGrade9) {
-                            wAvg = 40; 
+                            wAvg = 50; 
                             wExc = 80; 
-                            wPass = 40; 
+                            wPass = 50; 
                         }
 
                         // 分别计算三项赋分
@@ -2275,8 +2275,8 @@ const WORKER_SOURCE = `
 
                         // === 🔥 3. 如果是9年级，计算高分赋分 ===
                         if (isGrade9 && s.highScoreStats) {
-                            // 赋分公式：(本校比例 / 最高比例) * 70
-                            const highScore = maxHighRatio > 0 ? (s.highScoreStats.ratio / maxHighRatio * 70) : 0;
+                            // 赋分公式：(本校比例 / 最高比例) * 50
+                            const highScore = maxHighRatio > 0 ? (s.highScoreStats.ratio / maxHighRatio * 50) : 0;
                             s.highScoreStats.score = highScore;
                             
                             // ⚠️ 注意：目前高分赋分仅做展示，暂未叠加到 score2Rate (总排名分) 中。
@@ -6926,7 +6926,7 @@ function exportHighScoreExcel() {
     if (!CONFIG.name.includes('9')) return alert("非9年级模式无此数据");
 
     const wb = XLSX.utils.book_new();
-    const headers = ["学校名称", "实考人数", "高分人数(≥490)", "高分率", "高分赋分(70)", "排名"];
+    const headers = ["学校名称", "实考人数", "高分人数(≥490)", "高分率", "高分赋分(50)", "排名"];
     const wsData = [headers];
 
     const list = Object.values(SCHOOLS).map(s => {
@@ -7431,9 +7431,13 @@ function calculateRankings() {
     [...SUBJECTS, 'total'].forEach(sub => { doRank(sub, 'avg'); doRank(sub, 'excRate'); doRank(sub, 'passRate'); });
     const max = { avg: 0, exc: 0, pass: 0 };
     Object.values(SCHOOLS).forEach(s => { if (s.metrics.total) { max.avg = Math.max(max.avg, s.metrics.total.avg); max.exc = Math.max(max.exc, s.metrics.total.excRate); max.pass = Math.max(max.pass, s.metrics.total.passRate); } });
+    const isGrade9 = CONFIG.name && CONFIG.name.includes('9');
+    const wAvg = isGrade9 ? 50 : 60;
+    const wExc = isGrade9 ? 80 : 70;
+    const wPass = isGrade9 ? 50 : 70;
     Object.values(SCHOOLS).forEach(s => {
         if (s.metrics.total) {
-            const m = s.metrics.total; const ratedAvg = max.avg > 0 ? (m.avg / max.avg * 60) : 0; const ratedExc = max.exc > 0 ? (m.excRate / max.exc * 70) : 0; const ratedPass = max.pass > 0 ? (m.passRate / max.pass * 70) : 0;
+            const m = s.metrics.total; const ratedAvg = max.avg > 0 ? (m.avg / max.avg * wAvg) : 0; const ratedExc = max.exc > 0 ? (m.excRate / max.exc * wExc) : 0; const ratedPass = max.pass > 0 ? (m.passRate / max.pass * wPass) : 0;
             m.ratedAvg = ratedAvg; m.ratedExc = ratedExc; m.ratedPass = ratedPass; s.score2Rate = ratedAvg + ratedExc + ratedPass;
         } else { s.score2Rate = 0; }
     });
@@ -15051,7 +15055,7 @@ function exportMacroTables() {
     // 1. 构建动态表头
     let headerRow = ["学校名称", "实考人数", "平均分", "优秀率", "及格率"];
     if (isGrade9) {
-        headerRow.push("高分人数(≥490)", "高分率", "高分赋分");
+        headerRow.push("高分人数(≥490)", "高分率", "高分赋分(50)");
     }
     headerRow.push("赋分-均分", "赋分-优率", "赋分-及格", "两率一分总分", "排名");
 
@@ -15324,7 +15328,7 @@ function exportSummaryTable() {
 
     // 3. 构建表头
     const headers = ["学校名称", "两率一分得分", "后1/3得分", "指标生得分"];
-    if (isGrade9) headers.push("高分段赋分(70)");
+    if (isGrade9) headers.push("高分段赋分(50)");
     headers.push("综合总分", "总排名");
 
     const wsData = [headers];
@@ -18690,7 +18694,7 @@ function calcSummary(isSilent = false) {
     // 3. 动态生成表头
     const thead = document.querySelector('#tb-summary thead');
     let theadHtml = `<tr><th>学校名称</th><th>两率一分得分</th><th>后1/3得分</th><th>指标生得分</th>`;
-    if (isGrade9) theadHtml += `<th style="color:#b45309; background:#fff7ed;">高分段赋分(70)</th>`;
+    if (isGrade9) theadHtml += `<th style="color:#b45309; background:#fff7ed;">高分段赋分(50)</th>`;
     theadHtml += `<th>综合总分</th><th>总排名</th></tr>`;
     thead.innerHTML = theadHtml;
 
@@ -26066,18 +26070,18 @@ const SYSTEM_MANUAL = {
         use: `用于教育组/教研室查看全镇各校排名。点击“生成横向对比表”可查看详细数据。`,
         calc: `<strong>核心公式：两率一分总分 = (均分赋分 + 优率赋分 + 及格赋分)</strong>
                    <div class="formula-box">
-                   均分赋分 = (本校均分 ÷ 全镇最高均分) × 权重(60/40)<br>
+                   均分赋分 = (本校均分 ÷ 全镇最高均分) × 权重(60/50)<br>
                    优率赋分 = (本校优率 ÷ 全镇最高优率) × 权重(70/80)<br>
-                   及格赋分 = (本校及格 ÷ 全镇最高及格) × 权重(70/40)
+                   及格赋分 = (本校及格 ÷ 全镇最高及格) × 权重(70/50)
                    </div>
-                   * 6-8年级权重：60/70/70；9年级权重：40/80/40。`
+                   * 6-8年级权重：60/70/70；9年级权重：50/80/50。`
     },
     'high-score': {
         title: '🌟 9年级高分段核算·算法说明',
         fit: `用于<strong>尖子生培养</strong>与拔尖人才监测。`,
         when: `中考备考阶段或重点关注拔尖学生结构时使用。`,
         use: `仅针对 9 年级中考备考。统计总分 ≥ 490分 (可配置) 的尖子生情况。`,
-        calc: `<div class="formula-box">得分 = (本校高分率 ÷ 全镇最高高分率) × 70</div>
+        calc: `<div class="formula-box">得分 = (本校高分率 ÷ 全镇最高高分率) × 50</div>
                    旨在鼓励学校培养拔尖人才。`
     },
     'value-added': {
