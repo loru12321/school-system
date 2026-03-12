@@ -21,7 +21,8 @@ window.onerror = function (msg, url, lineNo, columnNo, error) {
             cancelButtonColor: '#d33'
         }).then((result) => {
             if (result.isDismissed) { // 用户点击了“清空缓存”
-                idbKeyval.del('autosave_backup').then(() => location.reload());
+                if (window.idbKeyval && typeof idbKeyval.del === 'function') idbKeyval.del('autosave_backup').finally(() => location.reload());
+                else location.reload();
             } else {
                 location.reload();
             }
@@ -31,74 +32,94 @@ window.onerror = function (msg, url, lineNo, columnNo, error) {
     return false;
 };
 // Alpine.js 数据仓库初始化
+function escapeTeacherCardHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[ch]));
+}
+
+function buildTeacherCardList(statsObj, rankingObj, currentUserName = '', currentRole = 'guest') {
+    const arr = [];
+    if (statsObj && Object.keys(statsObj).length > 0) {
+        Object.keys(statsObj).sort().forEach(teacher => {
+            Object.keys(statsObj[teacher]).sort((a, b) => a.localeCompare(b)).forEach(subject => {
+                const data = statsObj[teacher][subject];
+                let badgeClass = 'performance-poor';
+                let badgeText = '需改进';
+                const avg = parseFloat(data.avg);
+                const exc = data.excellentRate * 100;
+                const pass = data.passRate * 100;
+                if (avg >= 85 && exc >= 30 && pass >= 90) {
+                    badgeClass = 'performance-excellent';
+                    badgeText = '优秀';
+                } else if (avg >= 80 && exc >= 25 && pass >= 85) {
+                    badgeClass = 'performance-good';
+                    badgeText = '良好';
+                } else if (avg >= 75 && exc >= 20 && pass >= 80) {
+                    badgeClass = 'performance-average';
+                    badgeText = '中等';
+                }
+                const rank = (rankingObj && rankingObj[teacher] && rankingObj[teacher][subject])
+                    ? rankingObj[teacher][subject].rank
+                    : '-';
+                arr.push({
+                    id: `${teacher}-${subject}`,
+                    name: teacher,
+                    subject,
+                    classes: data.classes,
+                    avg: data.avg,
+                    excRate: (data.excellentRate * 100).toFixed(1) + '%',
+                    passRate: (data.passRate * 100).toFixed(1) + '%',
+                    count: data.studentCount,
+                    rank,
+                    badgeClass,
+                    badgeText
+                });
+            });
+        });
+    }
+
+    const role = String(currentRole || 'guest');
+    const normalizedCurrent = String(currentUserName || '').replace(/\s+/g, '').toLowerCase();
+    arr.sort((a, b) => {
+        if ((role === 'teacher' || role === 'class_teacher') && normalizedCurrent) {
+            const aNorm = String(a.name || '').replace(/\s+/g, '').toLowerCase();
+            const bNorm = String(b.name || '').replace(/\s+/g, '').toLowerCase();
+            const aMe = (aNorm === normalizedCurrent || aNorm.startsWith(normalizedCurrent + '(') || aNorm.startsWith(normalizedCurrent + '（')) ? 1 : 0;
+            const bMe = (bNorm === normalizedCurrent || bNorm.startsWith(normalizedCurrent + '(') || bNorm.startsWith(normalizedCurrent + '（')) ? 1 : 0;
+            if (aMe !== bMe) return bMe - aMe;
+        }
+
+        const avgDiff = (parseFloat(b.avg) || 0) - (parseFloat(a.avg) || 0);
+        if (avgDiff !== 0) return avgDiff;
+
+        const passA = parseFloat(String(a.passRate || '').replace('%', '')) || 0;
+        const passB = parseFloat(String(b.passRate || '').replace('%', '')) || 0;
+        const passDiff = passB - passA;
+        if (passDiff !== 0) return passDiff;
+
+        const excA = parseFloat(String(a.excRate || '').replace('%', '')) || 0;
+        const excB = parseFloat(String(b.excRate || '').replace('%', '')) || 0;
+        const excDiff = excB - excA;
+        if (excDiff !== 0) return excDiff;
+
+        return String(a.name || '').localeCompare(String(b.name || ''), 'zh-Hans-CN');
+    });
+
+    return arr;
+}
+
 document.addEventListener('alpine:init', () => {
     Alpine.store('teacherData', {
         list: [], // 存放扁平化的教师数据
 
         // 更新数据的逻辑 (供旧代码调用)
         update(statsObj, rankingObj, currentUserName = '', currentRole = 'guest') {
-            const arr = [];
-            // 将复杂的嵌套对象转换为数组，方便前端循环
-            if (statsObj && Object.keys(statsObj).length > 0) {
-                Object.keys(statsObj).sort().forEach(teacher => {
-                    Object.keys(statsObj[teacher]).sort((a, b) => a.localeCompare(b)).forEach(subject => {
-                        const data = statsObj[teacher][subject];
-                        // 计算评级样式
-                        let badgeClass = 'performance-poor', badgeText = '需改进';
-                        const avg = parseFloat(data.avg), exc = data.excellentRate * 100, pass = data.passRate * 100;
-                        if (avg >= 85 && exc >= 30 && pass >= 90) { badgeClass = 'performance-excellent'; badgeText = '优秀'; }
-                        else if (avg >= 80 && exc >= 25 && pass >= 85) { badgeClass = 'performance-good'; badgeText = '良好'; }
-                        else if (avg >= 75 && exc >= 20 && pass >= 80) { badgeClass = 'performance-average'; badgeText = '中等'; }
-
-                        // 获取排名
-                        const rank = (rankingObj && rankingObj[teacher] && rankingObj[teacher][subject])
-                            ? rankingObj[teacher][subject].rank : '-';
-
-                        arr.push({
-                            id: `${teacher}-${subject}`, // 唯一键
-                            name: teacher,
-                            subject: subject,
-                            classes: data.classes,
-                            avg: data.avg,
-                            excRate: (data.excellentRate * 100).toFixed(1) + '%',
-                            passRate: (data.passRate * 100).toFixed(1) + '%',
-                            count: data.studentCount,
-                            rank: rank,
-                            badgeClass: badgeClass,
-                            badgeText: badgeText
-                        });
-                    });
-                });
-            }
-
-            const role = String(currentRole || 'guest');
-            const normalizedCurrent = String(currentUserName || '').replace(/\s+/g, '').toLowerCase();
-            arr.sort((a, b) => {
-                if ((role === 'teacher' || role === 'class_teacher') && normalizedCurrent) {
-                    const aNorm = String(a.name || '').replace(/\s+/g, '').toLowerCase();
-                    const bNorm = String(b.name || '').replace(/\s+/g, '').toLowerCase();
-                    const aMe = (aNorm === normalizedCurrent || aNorm.startsWith(normalizedCurrent + '(') || aNorm.startsWith(normalizedCurrent + '（')) ? 1 : 0;
-                    const bMe = (bNorm === normalizedCurrent || bNorm.startsWith(normalizedCurrent + '(') || bNorm.startsWith(normalizedCurrent + '（')) ? 1 : 0;
-                    if (aMe !== bMe) return bMe - aMe;
-                }
-
-                const avgDiff = (parseFloat(b.avg) || 0) - (parseFloat(a.avg) || 0);
-                if (avgDiff !== 0) return avgDiff;
-
-                const passA = parseFloat(String(a.passRate || '').replace('%', '')) || 0;
-                const passB = parseFloat(String(b.passRate || '').replace('%', '')) || 0;
-                const passDiff = passB - passA;
-                if (passDiff !== 0) return passDiff;
-
-                const excA = parseFloat(String(a.excRate || '').replace('%', '')) || 0;
-                const excB = parseFloat(String(b.excRate || '').replace('%', '')) || 0;
-                const excDiff = excB - excA;
-                if (excDiff !== 0) return excDiff;
-
-                return String(a.name || '').localeCompare(String(b.name || ''), 'zh-Hans-CN');
-            });
-
-            this.list = arr;
+            this.list = buildTeacherCardList(statsObj, rankingObj, currentUserName, currentRole);
         }
     });
 });
@@ -2900,7 +2921,7 @@ const DataManager = {
             if (!raw) return false;
             const saved = JSON.parse(raw);
             if (!saved || (!saved.ind1 && !saved.ind2)) return false;
-            if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {} };
+            if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {}, schoolAliases: [] };
             window.SYS_VARS.indicator = { ind1: saved.ind1 || '', ind2: saved.ind2 || '' };
             const main1 = document.getElementById('ind1');
             const main2 = document.getElementById('ind2');
@@ -2928,7 +2949,7 @@ const DataManager = {
             const saved = JSON.parse(raw);
             if (!saved || !Object.keys(saved).length) return false;
             window.TARGETS = saved;
-            if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {} };
+            if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {}, schoolAliases: [] };
             window.SYS_VARS.targets = saved;
             return true;
         } catch (e) {
@@ -2956,13 +2977,162 @@ const DataManager = {
         }
 
         document.getElementById('data-manager-modal').style.display = 'flex';
+        this.decorateLayout();
         this.switchTab('student');
     },
 
     // 2. 切换标签页 (修复版：支持所有管理模块)
+    decorateLayout: function () {
+        const modal = document.getElementById('data-manager-modal');
+        const content = modal?.querySelector('.modal-content');
+        if (!content) return;
+
+        content.style.width = 'min(1480px, 96vw)';
+        content.style.maxWidth = '1480px';
+        content.style.height = 'min(92vh, 960px)';
+        content.style.padding = '22px 24px 18px';
+        content.style.borderRadius = '22px';
+
+        const tabContainer = document.getElementById('tab-data-stu')?.parentElement;
+        const statusOverview = document.getElementById('dm-status-overview');
+        const searchBar = document.getElementById('dm-search-bar');
+        const saveBtn = content.querySelector('button[onclick="DataManager.saveAndSync()"]');
+        const closeBtn = Array.from(content.querySelectorAll('button'))
+            .find(btn => String(btn.getAttribute('onclick') || '').includes('data-manager-modal'));
+        const legacyHeader = saveBtn?.parentElement?.parentElement;
+
+        if (legacyHeader) {
+            legacyHeader.style.display = 'flex';
+            legacyHeader.style.justifyContent = 'space-between';
+            legacyHeader.style.alignItems = 'flex-start';
+            legacyHeader.style.gap = '18px';
+            legacyHeader.style.flexWrap = 'wrap';
+            legacyHeader.style.borderBottom = '1px solid #e2e8f0';
+            legacyHeader.style.paddingBottom = '14px';
+            legacyHeader.style.marginBottom = '14px';
+
+            legacyHeader.querySelectorAll('h3').forEach(el => {
+                el.style.display = 'none';
+            });
+
+            const buttonGroup = saveBtn?.parentElement;
+            if (buttonGroup) {
+                buttonGroup.style.display = 'flex';
+                buttonGroup.style.gap = '10px';
+                buttonGroup.style.alignItems = 'center';
+            }
+
+            if (saveBtn) {
+                saveBtn.style.padding = '10px 16px';
+                saveBtn.style.borderRadius = '12px';
+            }
+            if (closeBtn) {
+                closeBtn.style.border = 'none';
+                closeBtn.style.background = '#f8fafc';
+                closeBtn.style.color = '#475569';
+                closeBtn.style.width = '40px';
+                closeBtn.style.height = '40px';
+                closeBtn.style.borderRadius = '12px';
+                closeBtn.style.fontSize = '24px';
+                closeBtn.style.cursor = 'pointer';
+            }
+
+            let intro = document.getElementById('dm-layout-intro');
+            if (!intro) {
+                intro = document.createElement('div');
+                intro.id = 'dm-layout-intro';
+            }
+            intro.innerHTML = `
+                <div style="display:flex; gap:14px; align-items:flex-start;">
+                    <div style="width:46px; height:46px; border-radius:14px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%); color:#1d4ed8; box-shadow:0 10px 24px rgba(59,130,246,0.14);">
+                        <i class="ti ti-cloud-cog" style="font-size:22px;"></i>
+                    </div>
+                    <div>
+                        <div style="color:#0f172a; font-size:24px; font-weight:800; line-height:1.2;">云端教务数据综合控制台</div>
+                        <div style="margin-top:6px; font-size:12px; color:#64748b; line-height:1.7;">
+                            建议顺序：导入成绩 -> 任课/目标人数 -> 设置指标参数 -> 保存并同步云端
+                        </div>
+                    </div>
+                </div>
+            `;
+            if (buttonGroup) legacyHeader.insertBefore(intro, buttonGroup);
+        }
+
+        if (statusOverview && tabContainer && statusOverview.previousElementSibling === tabContainer) {
+            content.insertBefore(statusOverview, tabContainer);
+        }
+        if (statusOverview) {
+            statusOverview.style.marginBottom = '14px';
+            statusOverview.style.borderRadius = '16px';
+        }
+
+        let workflow = document.getElementById('dm-workflow-strip');
+        if (!workflow) {
+            workflow = document.createElement('div');
+            workflow.id = 'dm-workflow-strip';
+        }
+        workflow.innerHTML = `
+            <span style="display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; background:#ecfdf5; color:#166534; font-size:12px; font-weight:700;"><i class="ti ti-file-import"></i> 1. 导入基础数据</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; background:#eff6ff; color:#1d4ed8; font-size:12px; font-weight:700;"><i class="ti ti-target-arrow"></i> 2. 配置目标与参数</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; background:#fff7ed; color:#9a3412; font-size:12px; font-weight:700;"><i class="ti ti-cloud-up"></i> 3. 统一保存同步</span>
+            <span style="display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; background:#f8fafc; color:#475569; font-size:12px; font-weight:700;"><i class="ti ti-chart-bar"></i> 4. 返回分析页面使用</span>
+        `;
+        workflow.style.display = 'flex';
+        workflow.style.gap = '8px';
+        workflow.style.flexWrap = 'wrap';
+        workflow.style.marginBottom = '14px';
+        workflow.style.padding = '10px 12px';
+        workflow.style.border = '1px solid #e2e8f0';
+        workflow.style.borderRadius = '14px';
+        workflow.style.background = '#fafcff';
+
+        if (tabContainer) {
+            content.insertBefore(workflow, statusOverview || tabContainer);
+            tabContainer.style.display = 'flex';
+            tabContainer.style.gap = '10px';
+            tabContainer.style.marginBottom = '14px';
+            tabContainer.style.padding = '6px';
+            tabContainer.style.border = '1px solid #e2e8f0';
+            tabContainer.style.borderRadius = '14px';
+            tabContainer.style.background = '#f8fafc';
+            tabContainer.style.flexWrap = 'wrap';
+            tabContainer.style.overflowX = 'auto';
+
+            ['tab-data-stu', 'tab-data-tea', 'tab-data-targets', 'tab-data-params', 'tab-data-history', 'tab-data-cloud', 'tab-data-sql']
+                .forEach(id => {
+                    const tab = document.getElementById(id);
+                    if (tab && tab.parentElement === tabContainer) {
+                        tab.style.minWidth = '132px';
+                        tab.style.flex = '1 1 132px';
+                        tab.style.textAlign = 'center';
+                        tab.style.justifyContent = 'center';
+                        tabContainer.appendChild(tab);
+                    }
+                });
+        }
+
+        if (searchBar) {
+            searchBar.style.background = '#f8fafc';
+            searchBar.style.padding = '12px';
+            searchBar.style.borderRadius = '12px';
+            searchBar.style.border = '1px solid #e2e8f0';
+            searchBar.style.marginBottom = '12px';
+            searchBar.style.gap = '10px';
+            searchBar.style.flexWrap = 'wrap';
+            searchBar.style.alignItems = 'center';
+            const searchInput = document.getElementById('dm-search-input');
+            if (searchInput) {
+                searchInput.style.minWidth = '260px';
+                searchInput.style.padding = '10px 12px';
+                searchInput.style.borderRadius = '10px';
+            }
+        }
+    },
+
     switchTab: function (tab) {
         this.currentTab = tab;
         this.pagination.page = 1;
+        this.decorateLayout();
         const searchInput = document.getElementById('dm-search-input');
         if (searchInput) searchInput.value = '';
 
@@ -3032,7 +3202,10 @@ const DataManager = {
                 try {
                     const storedMeta = localStorage.getItem('CURRENT_COHORT_META');
                     if (storedMeta) window.CURRENT_COHORT_META = JSON.parse(storedMeta);
-                    else window.CURRENT_COHORT_META = { id: window.CURRENT_COHORT_ID, year: String(window.CURRENT_COHORT_ID).replace(/\D/g, '') };
+                    else window.CURRENT_COHORT_META = {
+                        id: window.CURRENT_COHORT_ID,
+                        year: inferCohortIdFromValue(window.CURRENT_COHORT_ID) || String(window.CURRENT_COHORT_ID).replace(/\D/g, '').slice(0, 4)
+                    };
                 } catch (e) { }
             }
 
@@ -3041,7 +3214,7 @@ const DataManager = {
 
             // 🟢 [修复]：选中学期并自动同步云端数据
             setTimeout(() => {
-                const termId = localStorage.getItem('CURRENT_TERM_ID') || getTermId(getExamMetaFromUI());
+                const termId = getPreferredTeacherTermId() || buildTeacherTermId(getExamMetaFromUI());
                 if (termId) {
                     const sel = document.getElementById('dm-teacher-term-select');
                     if (sel) sel.value = termId;
@@ -3057,6 +3230,7 @@ const DataManager = {
         }
 
         this.renderCurrentTab();
+        this.renderDataManagerStatus();
     },
 
     // --- 模块 A: 云端数据管理 (重构版) ---
@@ -3418,6 +3592,7 @@ const DataManager = {
                 if (typeof saveCloudData === 'function') saveCloudData();
 
                 alert(`历史数据导入成功！\n共 ${parsedHistory.length} 人。\n✅ 已自动计算历史总分及单科的三级排名(班/校/镇)。`);
+                DataManager.renderDataManagerStatus();
                 input.value = '';
 
             } catch (err) {
@@ -3745,31 +3920,22 @@ const DataManager = {
         sel.innerHTML = options || '<option value="">暂无学期</option>';
 
         // 智能选中逻辑
-        const uiMeta = getExamMetaFromUI();
-        const saved = localStorage.getItem('CURRENT_TERM_ID');
         let prefer = null;
-
-        if (uiMeta.year && uiMeta.term) {
-            const baseTermId = `${uiMeta.year}_${uiMeta.term}`;
+        const preferredCandidates = getTeacherTermCandidates();
+        for (const candidate of preferredCandidates) {
             for (let opt of sel.options) {
-                if (opt.value === baseTermId || opt.value.startsWith(baseTermId + '_')) {
+                if (opt.value === candidate || opt.value.startsWith(candidate + '_')) {
                     prefer = opt.value;
                     break;
                 }
             }
+            if (prefer) break;
         }
 
-        if (!prefer && saved) {
-            for (let opt of sel.options) {
-                if (opt.value === saved || opt.value.startsWith(saved + '_')) {
-                    prefer = opt.value;
-                    break;
-                }
-            }
-        }
-
-        if (prefer) sel.value = prefer;
-        else if (sel.options.length > 0) sel.value = sel.options[0].value;
+        if (prefer) {
+            sel.value = prefer;
+            syncTeacherTermStorage(prefer);
+        } else if (sel.options.length > 0) sel.value = sel.options[0].value;
     },
 
     switchTeacherTerm: function (termId) {
@@ -3902,7 +4068,7 @@ const DataManager = {
     },
 
     ensureTeacherMap: function (triggerCloud) {
-        const termId = localStorage.getItem('CURRENT_TERM_ID') || getTermId(getExamMetaFromUI());
+        const termId = getPreferredTeacherTermId() || buildTeacherTermId(getExamMetaFromUI());
         if (!termId) return false;
         if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return true;
 
@@ -3925,8 +4091,11 @@ const DataManager = {
 
     refreshTeacherAnalysis: function () {
         const section = document.getElementById('teacher-analysis');
+        syncTeacherAnalysisSchoolContext();
         if (section && section.classList.contains('active')) {
-            if (typeof analyzeTeachers === 'function') analyzeTeachers();
+            if (typeof renderTeacherAnalysisState === 'function') renderTeacherAnalysisState();
+            else if (typeof analyzeTeachers === 'function') analyzeTeachers();
+            if (typeof updateStatusPanel === 'function') updateStatusPanel();
         }
     },
 
@@ -3949,7 +4118,7 @@ const DataManager = {
             alert('⚠️ 请先选择学期！\n\n点击【学期】下拉框选择一个学期后再导入Excel。');
             return;
         }
-        localStorage.setItem('CURRENT_TERM_ID', termId);
+        syncTeacherTermStorage(termId);
 
         console.log(`开始导入教师Excel: ${file.name}, 学期: ${termId}`);
 
@@ -4378,14 +4547,295 @@ const DataManager = {
     },
 
     // 👇👇👇 🟢 [同步修复]：参数管理渲染逻辑优化 🟢 👇👇👇
+    getDataManagerSyncStorageKey: function () {
+        return 'DM_SYNC_STATUS_V1';
+    },
+
+    getDataManagerSyncScope: function () {
+        return String(
+            localStorage.getItem('CURRENT_PROJECT_KEY') ||
+            window.CURRENT_PROJECT_KEY ||
+            window.CURRENT_COHORT_ID ||
+            window.CONFIG?.name ||
+            'default'
+        );
+    },
+
+    readDataManagerSyncState: function () {
+        const storageKey = this.getDataManagerSyncStorageKey();
+        const scope = this.getDataManagerSyncScope();
+        let all = {};
+        try {
+            all = JSON.parse(localStorage.getItem(storageKey) || '{}') || {};
+        } catch (e) { }
+        const scoped = all && typeof all[scope] === 'object' ? all[scope] : null;
+        if (scoped) return scoped;
+        if (window.SYS_VARS?.dataManagerSyncState && typeof window.SYS_VARS.dataManagerSyncState === 'object') {
+            return window.SYS_VARS.dataManagerSyncState;
+        }
+        return {};
+    },
+
+    writeDataManagerSyncState: function (patch) {
+        const storageKey = this.getDataManagerSyncStorageKey();
+        const scope = this.getDataManagerSyncScope();
+        let all = {};
+        try {
+            all = JSON.parse(localStorage.getItem(storageKey) || '{}') || {};
+        } catch (e) { }
+        const current = all && typeof all[scope] === 'object' ? all[scope] : {};
+        const next = Object.assign({}, current, patch || {});
+        all[scope] = next;
+        try {
+            localStorage.setItem(storageKey, JSON.stringify(all));
+        } catch (e) { }
+        if (!window.SYS_VARS) window.SYS_VARS = { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
+        window.SYS_VARS.dataManagerSyncState = next;
+        return next;
+    },
+
+    getCurrentIndicatorValues: function () {
+        const indicator = window.SYS_VARS?.indicator || {};
+        const input1 = document.getElementById('dm_ind1_input') || document.getElementById('ind1');
+        const input2 = document.getElementById('dm_ind2_input') || document.getElementById('ind2');
+        const ind1 = String((input1 && input1.value) || indicator.ind1 || '').trim();
+        const ind2 = String((input2 && input2.value) || indicator.ind2 || '').trim();
+        return { ind1, ind2 };
+    },
+
+    getParamsSyncSignature: function () {
+        const current = this.getCurrentIndicatorValues();
+        return current.ind1 || current.ind2 ? `${current.ind1}::${current.ind2}` : '';
+    },
+
+    getTargetsSyncSignature: function () {
+        const targets = typeof ensureNormalizedTargets === 'function'
+            ? (ensureNormalizedTargets() || {})
+            : (window.TARGETS || {});
+        return Object.keys(targets)
+            .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'))
+            .map(name => {
+                const item = targets[name] || {};
+                const normalized = typeof normalizeSchoolName === 'function'
+                    ? (normalizeSchoolName(name) || name)
+                    : name;
+                return `${normalized}:${parseInt(item.t1, 10) || 0}:${parseInt(item.t2, 10) || 0}`;
+            })
+            .join('|');
+    },
+
+    buildTeacherSignature: function (teacherMap, schoolMap) {
+        const map = teacherMap && typeof teacherMap === 'object' ? teacherMap : {};
+        const schools = schoolMap && typeof schoolMap === 'object' ? schoolMap : {};
+        return Object.keys(map)
+            .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }))
+            .map(key => `${key}:${String(map[key] || '').trim()}:${String(schools[key] || '').trim()}`)
+            .join('|');
+    },
+
+    getTeacherStatusSnapshot: function () {
+        const preferredTermId = getPreferredTeacherTermId() || '';
+        const resolved = typeof resolveTeacherHistoryEntry === 'function'
+            ? resolveTeacherHistoryEntry(preferredTermId)
+            : null;
+        const localMap = resolved?.map && typeof resolved.map === 'object'
+            ? resolved.map
+            : (window.TEACHER_MAP || {});
+        const localSchoolMap = resolved?.schoolMap && typeof resolved.schoolMap === 'object'
+            ? resolved.schoolMap
+            : (window.TEACHER_SCHOOL_MAP || {});
+        const liveMap = window.TEACHER_MAP && typeof window.TEACHER_MAP === 'object' ? window.TEACHER_MAP : {};
+        const liveSchoolMap = window.TEACHER_SCHOOL_MAP && typeof window.TEACHER_SCHOOL_MAP === 'object' ? window.TEACHER_SCHOOL_MAP : {};
+        const termId = resolved?.key || preferredTermId;
+        const loadedTermId = String(localStorage.getItem('CURRENT_TEACHER_TERM_ID') || '').trim();
+        const localSignature = this.buildTeacherSignature(localMap, localSchoolMap);
+        const liveSignature = this.buildTeacherSignature(liveMap, liveSchoolMap);
+        const localCount = Object.keys(localMap || {}).length;
+        const liveCount = Object.keys(liveMap || {}).length;
+        const loadedMatches = !!liveCount
+            && (!termId || !loadedTermId || getTeacherTermBase(loadedTermId) === getTeacherTermBase(termId))
+            && (!localSignature || liveSignature === localSignature);
+
+        return {
+            termId,
+            loadedTermId,
+            count: localCount,
+            loadedCount: liveCount,
+            signature: localSignature || liveSignature,
+            loadedSignature: liveSignature,
+            loadedMatches
+        };
+    },
+
+    rememberDataManagerSyncSnapshot: function (sourceLabel = '统一保存同步') {
+        return this.writeDataManagerSyncState({
+            paramsSignature: this.getParamsSyncSignature(),
+            targetsSignature: this.getTargetsSyncSignature(),
+            lastCloudSyncAt: Date.now(),
+            lastSyncSource: sourceLabel
+        });
+    },
+
+    getDataManagerStatusModel: function () {
+        const indicator = this.getCurrentIndicatorValues();
+        const paramsNeeded = isIndicatorPromptAllowed();
+        const paramsFilledCount = [indicator.ind1, indicator.ind2].filter(Boolean).length;
+        const paramsSignature = this.getParamsSyncSignature();
+        const targets = typeof ensureNormalizedTargets === 'function'
+            ? (ensureNormalizedTargets() || {})
+            : (window.TARGETS || {});
+        const targetNames = Object.keys(targets).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'));
+        const targetsSignature = this.getTargetsSyncSignature();
+        const syncState = this.readDataManagerSyncState();
+        const hasBaseline = !!(syncState.paramsSignature || syncState.targetsSignature || syncState.lastCloudSyncAt);
+
+        let paramsState = 'missing';
+        if (!paramsNeeded) paramsState = 'not_needed';
+        else if (paramsFilledCount === 0) paramsState = 'missing';
+        else if (paramsFilledCount < 2) paramsState = 'partial';
+        else if (!hasBaseline) paramsState = 'unknown';
+        else paramsState = paramsSignature === syncState.paramsSignature ? 'synced' : 'pending';
+
+        let targetsState = 'missing';
+        if (targetNames.length === 0) targetsState = 'missing';
+        else if (!hasBaseline) targetsState = 'unknown';
+        else targetsState = targetsSignature === syncState.targetsSignature ? 'synced' : 'pending';
+
+        return {
+            paramsNeeded,
+            indicator,
+            paramsFilledCount,
+            paramsState,
+            targetNames,
+            targetCount: targetNames.length,
+            targetsState,
+            syncState,
+            hasBaseline,
+            lastSyncText: syncState.lastCloudSyncAt
+                ? new Date(syncState.lastCloudSyncAt).toLocaleString('zh-CN')
+                : '尚未记录',
+            lastSyncSource: syncState.lastSyncSource || ''
+        };
+    },
+
+    renderDataManagerStatus: function () {
+        const summaryEl = document.getElementById('dm-status-overview-summary');
+        const tipEl = document.getElementById('dm-status-overview-tip');
+        const paramsEl = document.getElementById('dm-params-status');
+        const targetsEl = document.getElementById('dm-targets-status');
+        if (!summaryEl && !tipEl && !paramsEl && !targetsEl) return;
+
+        const model = this.getDataManagerStatusModel();
+        const toneMap = {
+            success: { bg: '#dcfce7', color: '#166534', border: '#86efac' },
+            warning: { bg: '#fff7ed', color: '#9a3412', border: '#fdba74' },
+            error: { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca' },
+            info: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+            neutral: { bg: '#f8fafc', color: '#475569', border: '#cbd5e1' }
+        };
+        const pill = (text, tone = 'neutral') => {
+            const theme = toneMap[tone] || toneMap.neutral;
+            return `<span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid ${theme.border}; background:${theme.bg}; color:${theme.color}; font-size:12px; font-weight:700;">${text}</span>`;
+        };
+
+        const paramsMetaMap = {
+            not_needed: { tone: 'neutral', title: '当前考试无需指标参数', detail: '当前场景不会使用优生线/普高线参与指标生计算。' },
+            missing: { tone: 'error', title: '未填写', detail: '请先填写优生线和普高线名次。' },
+            partial: { tone: 'warning', title: `已填写 ${model.paramsFilledCount}/2`, detail: '还有参数未填完，暂时不建议开始计算。' },
+            unknown: { tone: 'info', title: '已填写，建议同步确认', detail: '已经检测到参数，但还没有同步基线记录，建议点一次右上角保存。' },
+            pending: { tone: 'warning', title: '已暂存，待同步', detail: '参数已经变化，请在完成修改后点右上角统一同步。' },
+            synced: { tone: 'success', title: '已同步', detail: '当前参数和最近一次云端同步记录一致。' }
+        };
+        const targetsMetaMap = {
+            missing: { tone: 'error', title: '未导入', detail: '只保存参数不会自动生成目标人数，请在本页导入目标人数 Excel。' },
+            unknown: { tone: 'info', title: '已导入，建议同步确认', detail: `已检测到 ${model.targetCount} 所学校的目标人数，建议点一次右上角保存建立同步记录。` },
+            pending: { tone: 'warning', title: '已导入，待同步', detail: `已导入 ${model.targetCount} 所学校的目标人数，但还有修改未同步。` },
+            synced: { tone: 'success', title: '已导入并同步', detail: `已导入 ${model.targetCount} 所学校的目标人数，并已和最近一次云端同步保持一致。` }
+        };
+
+        const paramsMeta = paramsMetaMap[model.paramsState] || paramsMetaMap.missing;
+        const targetsMeta = targetsMetaMap[model.targetsState] || targetsMetaMap.missing;
+
+        let tipTone = 'success';
+        let tipText = '当前参数和目标人数状态已经清晰，可以直接回到分析页面使用。';
+        if (model.targetsState === 'missing' && model.paramsState !== 'missing' && model.paramsState !== 'partial') {
+            tipTone = 'warning';
+            tipText = '你已经设置了年级指标参数，但【目标人数】仍未导入。只保存参数不会自动生成目标人数，请切换到“目标人数管理”导入 Excel。';
+        } else if (model.paramsNeeded && (model.paramsState === 'missing' || model.paramsState === 'partial')) {
+            tipTone = 'warning';
+            tipText = '请先补齐优生线和普高线名次，再进行统一保存和指标相关计算。';
+        } else if (model.paramsState === 'unknown' || model.paramsState === 'pending' || model.targetsState === 'unknown' || model.targetsState === 'pending') {
+            tipTone = 'info';
+            tipText = '当前存在尚未确认同步的内容。建议完成修改后点右上角【保存修改并同步云端】。';
+        }
+
+        if (summaryEl) {
+            summaryEl.innerHTML = `
+                <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:stretch;">
+                    <div style="flex:1; min-width:240px; background:#ffffff; border:1px solid #dbeafe; border-radius:10px; padding:12px;">
+                        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+                            <strong style="color:#0f172a;">年级指标参数</strong>
+                            ${pill(paramsMeta.title, paramsMeta.tone)}
+                        </div>
+                        <div style="margin-top:8px; font-size:12px; color:#475569;">优生线：${model.indicator.ind1 || '未填写'}　|　普高线：${model.indicator.ind2 || '未填写'}</div>
+                        <div style="margin-top:6px; font-size:12px; color:#64748b;">${paramsMeta.detail}</div>
+                    </div>
+                    <div style="flex:1; min-width:240px; background:#ffffff; border:1px solid #dcfce7; border-radius:10px; padding:12px;">
+                        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+                            <strong style="color:#0f172a;">目标人数</strong>
+                            ${pill(targetsMeta.title, targetsMeta.tone)}
+                        </div>
+                        <div style="margin-top:8px; font-size:12px; color:#475569;">已识别学校：${model.targetCount} 所</div>
+                        <div style="margin-top:6px; font-size:12px; color:#64748b;">${targetsMeta.detail}</div>
+                    </div>
+                    <div style="flex:1; min-width:220px; background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:12px;">
+                        <strong style="color:#0f172a;">最近云端同步</strong>
+                        <div style="margin-top:8px; font-size:13px; color:#0f172a; font-weight:700;">${model.lastSyncText}</div>
+                        <div style="margin-top:6px; font-size:12px; color:#64748b;">${model.lastSyncSource || '尚未建立同步记录，建议完成修改后保存一次。'}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (tipEl) {
+            const tipTheme = toneMap[tipTone] || toneMap.info;
+            tipEl.innerHTML = `
+                <div style="padding:10px 12px; border-radius:10px; border:1px solid ${tipTheme.border}; background:${tipTheme.bg}; color:${tipTheme.color}; font-size:12px; line-height:1.8;">
+                    <strong>当前提醒：</strong>${tipText}
+                </div>
+            `;
+        }
+
+        if (paramsEl) {
+            paramsEl.innerHTML = `
+                <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <div><strong>参数状态：</strong>${paramsMeta.title}</div>
+                    ${pill(paramsMeta.title, paramsMeta.tone)}
+                </div>
+                <div style="margin-top:6px; line-height:1.8;">${paramsMeta.detail}</div>
+            `;
+        }
+
+        if (targetsEl) {
+            targetsEl.innerHTML = `
+                <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <div><strong>目标人数状态：</strong>${targetsMeta.title}</div>
+                    ${pill(targetsMeta.title, targetsMeta.tone)}
+                </div>
+                <div style="margin-top:6px; line-height:1.8;">${targetsMeta.detail}</div>
+            `;
+        }
+    },
+
     renderParams: function () {
         if (!isIndicatorPromptAllowed()) {
             const area = document.getElementById('dm-params-area');
             if (area) area.style.display = 'none';
+            this.renderDataManagerStatus();
             return;
         }
         // 1. 确保全局变量结构存在
-        if (!window.SYS_VARS) window.SYS_VARS = { indicator: { ind1: '', ind2: '' }, targets: {} };
+        if (!window.SYS_VARS) window.SYS_VARS = { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
         if (!window.SYS_VARS.indicator) window.SYS_VARS.indicator = { ind1: '', ind2: '' };
 
         // 2. 优先从全局变量读取
@@ -4415,6 +4865,9 @@ const DataManager = {
             el1.oninput = function () {
                 if (!window.SYS_VARS.indicator) window.SYS_VARS.indicator = {};
                 window.SYS_VARS.indicator.ind1 = this.value;
+                if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') {
+                    DataManager.renderDataManagerStatus();
+                }
             };
         }
         if (el2) {
@@ -4422,14 +4875,18 @@ const DataManager = {
             el2.oninput = function () {
                 if (!window.SYS_VARS.indicator) window.SYS_VARS.indicator = {};
                 window.SYS_VARS.indicator.ind2 = this.value;
+                if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') {
+                    DataManager.renderDataManagerStatus();
+                }
             };
         }
+        this.renderDataManagerStatus();
     },
 
     saveParamsLocally: async function (skipCloudSync = false) {
         if (!isIndicatorAllowed()) return;
         // 1. 防御性初始化
-        if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {} };
+        if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {}, schoolAliases: [] };
 
         // 2. 获取管理面板弹窗内的值
         const v1 = document.getElementById('dm_ind1_input').value;
@@ -4450,6 +4907,7 @@ const DataManager = {
             // 使用 toast 提示正在保存，体验更好
             UI.toast('💾 正在同步参数至云端...', 'info');
             const ok = await saveCloudData();
+            if (ok) this.rememberDataManagerSyncSnapshot('params-auto-save');
             if (ok) {
                 UI.toast('✅ 参数已保存并同步云端', 'success');
             } else {
@@ -4467,11 +4925,14 @@ const DataManager = {
 
         // 确保全局变量存在
         if (typeof window.TARGETS === 'undefined') window.TARGETS = {};
+        ensureNormalizedTargets();
         if (Object.keys(window.TARGETS).length === 0) {
             this.restoreGrade9TargetsTemplate();
+            ensureNormalizedTargets();
         }
 
         const list = Object.keys(window.TARGETS).sort();
+        this.renderSchoolAliasMappings();
 
         if (list.length === 0) {
             tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:30px; color:#999;">暂无数据，请先点击上方按钮导入 Excel</td></tr>';
@@ -4484,6 +4945,137 @@ const DataManager = {
             html += `<tr><td style="font-weight:bold;">${sch}</td><td>${t.t1}</td><td>${t.t2}</td><td><button class="btn btn-sm btn-primary" onclick="DataManager.editTarget('${sch}')" style="padding:2px 6px;">修改</button> <button class="btn btn-sm btn-danger" onclick="DataManager.deleteTarget('${sch}')" style="padding:2px 6px;">删除</button></td></tr>`;
         });
         tbody.innerHTML = html;
+        this.renderDataManagerStatus();
+    },
+
+    renderSchoolAliasMappings: function () {
+        const defaultTbody = document.getElementById('dm-default-school-aliases-tbody');
+        const customTbody = document.getElementById('dm-custom-school-aliases-tbody');
+        const summaryEl = document.getElementById('dm-school-aliases-summary');
+        if (!defaultTbody && !customTbody && !summaryEl) return;
+
+        const defaultRows = SCHOOL_ALIAS_GROUPS
+            .slice()
+            .sort((a, b) => String(a.canonical || '').localeCompare(String(b.canonical || ''), 'zh-CN'));
+        const customRows = ensureSchoolAliasStore()
+            .slice()
+            .map((item, index) => ({ index, canonical: String(item?.canonical || '').trim(), alias: String(item?.alias || '').trim() }))
+            .filter(item => item.canonical && item.alias)
+            .sort((a, b) => {
+                const byCanonical = a.canonical.localeCompare(b.canonical, 'zh-CN');
+                return byCanonical !== 0 ? byCanonical : a.alias.localeCompare(b.alias, 'zh-CN');
+            });
+
+        if (summaryEl) {
+            summaryEl.innerHTML = `默认规则 <strong>${defaultRows.length}</strong> 组，自定义补充 <strong>${customRows.length}</strong> 条。系统会优先保留“实验学校”等关键区分，避免把相近学校误并。`;
+        }
+
+        if (defaultTbody) {
+            defaultTbody.innerHTML = defaultRows.map(row => `
+                <tr>
+                    <td style="font-weight:700;">${row.canonical}</td>
+                    <td>${(row.aliases || []).join('、') || '-'}</td>
+                    <td><span class="badge" style="background:#e2e8f0; color:#475569;">系统默认</span></td>
+                </tr>
+            `).join('') || '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">暂无默认规则</td></tr>';
+        }
+
+        if (customTbody) {
+            customTbody.innerHTML = customRows.map(row => `
+                <tr>
+                    <td style="font-weight:700;">${row.canonical}</td>
+                    <td>${row.alias}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="DataManager.openSchoolAliasEditor(${row.index})" style="padding:2px 8px;">修改</button>
+                        <button class="btn btn-sm btn-danger" onclick="DataManager.deleteSchoolAliasMapping(${row.index})" style="padding:2px 8px;">删除</button>
+                    </td>
+                </tr>
+            `).join('') || '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">暂无自定义对应，可点击上方“新增对应”补充。</td></tr>';
+        }
+        this.renderDataManagerStatus();
+    },
+
+    persistSchoolAliasSettings: async function () {
+        ensureSchoolAliasStore();
+        persistSchoolAliasSettingsLocal();
+        if (typeof saveCloudData === 'function') {
+            const ok = await saveCloudData();
+            if (ok) this.rememberDataManagerSyncSnapshot('school-alias-save');
+        }
+        this.renderDataManagerStatus();
+    },
+
+    openSchoolAliasEditor: function (index = -1) {
+        const list = ensureSchoolAliasStore();
+        const current = index >= 0 ? (list[index] || {}) : {};
+        Swal.fire({
+            title: index >= 0 ? '修改学校名称对应' : '新增学校名称对应',
+            html: `
+                <div style="text-align:left; line-height:2.2;">
+                    <label>规范学校名</label>
+                    <input id="swal-school-canonical" class="swal2-input" placeholder="如：银山实验学校" value="${String(current.canonical || '').replace(/"/g, '&quot;')}">
+                    <label>别名/导入名称</label>
+                    <input id="swal-school-alias" class="swal2-input" placeholder="如：银山镇实验学校" value="${String(current.alias || '').replace(/"/g, '&quot;')}">
+                    <div style="font-size:12px; color:#64748b; margin-top:6px;">提示：这里用于补充你自己的学校名称对应。系统默认规则仍会保留，不会把“中学”和“实验学校”混在一起。</div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: '保存',
+            cancelButtonText: '取消',
+            focusConfirm: false,
+            preConfirm: () => {
+                const canonical = String(document.getElementById('swal-school-canonical')?.value || '').trim();
+                const alias = String(document.getElementById('swal-school-alias')?.value || '').trim();
+                if (!canonical || !alias) {
+                    Swal.showValidationMessage('规范学校名和别名都不能为空');
+                    return false;
+                }
+                if (sanitizeSchoolText(canonical) === sanitizeSchoolText(alias)) {
+                    Swal.showValidationMessage('别名与规范学校名完全相同，无需重复添加');
+                    return false;
+                }
+                const duplicate = list.findIndex((item, idx) =>
+                    idx !== index &&
+                    sanitizeSchoolText(item?.alias || '') === sanitizeSchoolText(alias)
+                );
+                if (duplicate >= 0) {
+                    Swal.showValidationMessage(`别名“${alias}”已存在于自定义对应表中`);
+                    return false;
+                }
+                return { canonical, alias };
+            }
+        }).then(async (result) => {
+            if (!result.isConfirmed || !result.value) return;
+            const next = ensureSchoolAliasStore().slice();
+            if (index >= 0) next[index] = result.value;
+            else next.push(result.value);
+            window.SYS_VARS = window.SYS_VARS || { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
+            window.SYS_VARS.schoolAliases = next;
+            this.renderSchoolAliasMappings();
+            try {
+                await this.persistSchoolAliasSettings();
+                if (window.UI) UI.toast('学校名称对应已保存', 'success');
+            } catch (e) {
+                if (window.UI) UI.toast('学校名称对应已暂存到本地，云端同步失败', 'warning');
+            }
+        });
+    },
+
+    deleteSchoolAliasMapping: async function (index) {
+        const list = ensureSchoolAliasStore().slice();
+        const current = list[index];
+        if (!current) return;
+        if (!confirm(`确定删除对应：${current.alias} → ${current.canonical} 吗？`)) return;
+        list.splice(index, 1);
+        window.SYS_VARS = window.SYS_VARS || { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
+        window.SYS_VARS.schoolAliases = list;
+        this.renderSchoolAliasMappings();
+        try {
+            await this.persistSchoolAliasSettings();
+            if (window.UI) UI.toast('学校名称对应已删除', 'success');
+        } catch (e) {
+            if (window.UI) UI.toast('已删除本地对应，但云端同步失败', 'warning');
+        }
     },
 
     handleTargetUpload: function (input) {
@@ -4506,19 +5098,22 @@ const DataManager = {
 
                 json.forEach((row, idx) => {
                     const rowNo = idx + 2;
-                    const name = row['学校名称'] || row['学校'];
+                    const rawName = row['学校名称'] || row['学校'];
                     const t1Key = Object.keys(row).find(k => k.includes('指标一') || k.includes('目标一'));
                     const t2Key = Object.keys(row).find(k => k.includes('指标二') || k.includes('目标二'));
 
-                    if (!name) {
+                    if (!rawName) {
                         errorCount++;
                         errors.push(`第 ${rowNo} 行：学校名称为空`);
                         return;
                     }
-                    if (seen.has(name)) {
+                    const existingKey = resolveSchoolNameFromCollection(window.TARGETS || {}, rawName);
+                    const name = getCanonicalSchoolName(rawName, [...Object.keys(window.TARGETS || {}), ...Object.keys(SCHOOLS || {}), rawName]);
+                    const seenKey = normalizeSchoolName(name) || name;
+                    if (seen.has(seenKey)) {
                         dupCount++;
                     }
-                    seen.add(name);
+                    seen.add(seenKey);
 
                     const t1 = parseInt(row[t1Key] || row['指标一目标人数'] || 0);
                     const t2 = parseInt(row[t2Key] || row['指标二目标人数'] || 0);
@@ -4529,6 +5124,7 @@ const DataManager = {
                         return;
                     }
 
+                    if (existingKey && existingKey !== name) delete window.TARGETS[existingKey];
                     window.TARGETS[name] = { t1, t2 };
                     successCount++;
                 });
@@ -4538,6 +5134,7 @@ const DataManager = {
 
                 if (typeof saveCloudData === 'function') {
                     const ok = await saveCloudData();
+                    if (ok) DataManager.rememberDataManagerSyncSnapshot('targets-upload');
                     if (window.UI) {
                         UI.toast(ok ? "✅ 目标数据已自动同步云端" : "⚠️ 目标数据已暂存，本次未成功同步云端", ok ? "success" : "warning");
                     }
@@ -4570,6 +5167,7 @@ const DataManager = {
                 this.persistGrade9TargetsTemplate();
                 if (typeof saveCloudData === 'function') {
                     const ok = await saveCloudData();
+                    if (ok) this.rememberDataManagerSyncSnapshot('targets-edit');
                     if (window.UI) UI.toast(ok ? "✅ 目标修改已同步云端" : "⚠️ 目标修改已暂存，本次未成功同步云端", ok ? "success" : "warning");
                 }
             }
@@ -4583,8 +5181,10 @@ const DataManager = {
         this.persistGrade9TargetsTemplate();
         if (typeof saveCloudData === 'function') {
             const ok = await saveCloudData();
+            if (ok) this.rememberDataManagerSyncSnapshot('targets-delete');
             if (window.UI) UI.toast(ok ? "✅ 目标删除已同步云端" : "⚠️ 目标删除已暂存，本次未成功同步云端", ok ? "success" : "warning");
         }
+        this.renderDataManagerStatus();
     },
 
     // 7. 保存并同步 (核心修复)
@@ -4598,8 +5198,9 @@ const DataManager = {
             // 1. 确保参数已同步到全局
             await this.saveParamsLocally(true);
             this.syncTeacherHistory();
-            if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {} };
-            window.SYS_VARS.targets = window.TARGETS || {};
+            if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {}, schoolAliases: [] };
+            window.SYS_VARS.targets = ensureNormalizedTargets();
+            window.SYS_VARS.schoolAliases = ensureSchoolAliasStore();
 
             // 2. 重新计算数据 (会读取 ind1, ind2)
             if (window.RAW_DATA && window.RAW_DATA.length) {
@@ -4613,6 +5214,7 @@ const DataManager = {
 
             // 3. 上传到云端
             await saveCloudData();
+            this.rememberDataManagerSyncSnapshot('save-and-sync');
 
             UI.loading(false);
             Swal.fire('成功', '数据已更新并同步至云端！', 'success');
@@ -5081,15 +5683,20 @@ async function switchCohort(cohortId) {
             if (i2) i2.value = data.INDICATOR_PARAMS.ind2 || '';
 
             // 同时更新内存
-            if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {} };
+            if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {}, schoolAliases: [] };
             window.SYS_VARS.indicator = data.INDICATOR_PARAMS;
         }
 
         // 恢复其他变量
         if (data.TARGETS) {
             TARGETS = data.TARGETS;
-            if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {} };
+            if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {}, schoolAliases: [] };
             window.SYS_VARS.targets = data.TARGETS;
+        }
+        if (Array.isArray(data.SCHOOL_ALIAS_SETTINGS)) {
+            window.SYS_VARS = window.SYS_VARS || { indicator: {}, targets: {}, schoolAliases: [] };
+            window.SYS_VARS.schoolAliases = data.SCHOOL_ALIAS_SETTINGS;
+            persistSchoolAliasSettingsLocal();
         }
         if (data.PREV_DATA) PREV_DATA = data.PREV_DATA;
         if (data.HISTORY_ARCHIVE) HISTORY_ARCHIVE = data.HISTORY_ARCHIVE;
@@ -5294,7 +5901,7 @@ window.addEventListener('load', async () => {
                 if (backup.INDICATOR_PARAMS) {
                     // 1. 核心修复：必须更新全局内存变量！
                     // 这样当你打开管理面板时，switchTab 才能读取到正确的值
-                    if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {} };
+                    if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {}, schoolAliases: [] };
                     window.SYS_VARS.indicator = backup.INDICATOR_PARAMS;
 
                     // 2. 尝试回填到 DOM (使用正确的新 ID: dm_ind..._input)
@@ -5311,6 +5918,11 @@ window.addEventListener('load', async () => {
                     console.log("✅ [自动恢复] 指标参数已加载到内存:", window.SYS_VARS.indicator);
                 }
                 if (backup.TARGETS) TARGETS = backup.TARGETS;
+                if (Array.isArray(backup.SCHOOL_ALIAS_SETTINGS)) {
+                    window.SYS_VARS = window.SYS_VARS || { indicator: {}, targets: {}, schoolAliases: [] };
+                    window.SYS_VARS.schoolAliases = backup.SCHOOL_ALIAS_SETTINGS;
+                    persistSchoolAliasSettingsLocal();
+                }
 
                 // 恢复其他
                 if (backup.PREV_DATA) PREV_DATA = backup.PREV_DATA;
@@ -6238,7 +6850,7 @@ function togglePrivacyMode() {
 
     // 刷新特定的视图（如果当前正停留在这些Tab）
     // 比如教师卡片
-    if (!document.getElementById('teacherCardsContainer').innerHTML.includes('暂无')) {
+    if (document.getElementById('teacherCardsContainer')) {
         renderTeacherCards();
         renderTeacherComparisonTable();
         renderTeacherTownshipRanking();
@@ -8126,7 +8738,12 @@ function analyzeTeachers() {
     const rows = resolveRowsForTeacherAnalysis();
     const schools = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
     let inferredSchool = (typeof inferDefaultSchoolFromContext === 'function') ? inferDefaultSchoolFromContext() : '';
-    let activeSchool = String(MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || inferredSchool || '').trim();
+    let activeSchool = syncTeacherAnalysisSchoolContext(
+        document.getElementById('mySchoolSelect')?.value
+        || MY_SCHOOL
+        || localStorage.getItem('MY_SCHOOL')
+        || inferredSchool
+    );
 
     // --- 🟢 Fix Teacher School Detection ---
     const user = getCurrentUser();
@@ -8172,20 +8789,14 @@ function analyzeTeachers() {
     // ----------------------------------------
 
 
-    if (!activeSchool && schools.length === 1) activeSchool = schools[0];
+    if (!activeSchool && schools.length === 1) activeSchool = syncTeacherAnalysisSchoolContext(schools[0]);
     if (!activeSchool) {
         const firstFromRows = rows.find(r => String(r?.school || '').trim());
-        if (firstFromRows) activeSchool = String(firstFromRows.school).trim();
+        if (firstFromRows) activeSchool = syncTeacherAnalysisSchoolContext(String(firstFromRows.school).trim());
     }
 
     if (!activeSchool) { alert('请先选择本校'); return; }
-    if (MY_SCHOOL !== activeSchool) {
-        MY_SCHOOL = activeSchool;
-        window.MY_SCHOOL = activeSchool;
-        localStorage.setItem('MY_SCHOOL', activeSchool);
-        const sel = document.getElementById('mySchoolSelect');
-        if (sel) sel.value = activeSchool;
-    }
+    syncTeacherAnalysisSchoolContext(activeSchool);
 
     if (window.DataManager && typeof DataManager.ensureTeacherMap === 'function') {
         const ok = DataManager.ensureTeacherMap(true);
@@ -8351,16 +8962,67 @@ function calculateTeacherTownshipRanking() {
 }
 
 function renderTeacherCards() {
-    // Alpine 可能未加载，需保护
-    if (!window.Alpine || !Alpine.store) {
-        console.warn('Alpine 未加载，跳过教师卡片渲染');
-        return;
-    }
+    const container = document.getElementById('teacherCardsContainer');
     const user = getCurrentUser();
     const role = user?.role || 'guest';
     const stats = getVisibleTeacherStats();
     const rankings = TEACHER_TOWNSHIP_RANKINGS;
-    Alpine.store('teacherData').update(stats, rankings, user?.name || '', role);
+    const list = buildTeacherCardList(stats, rankings, user?.name || '', role);
+
+    try {
+        if (window.Alpine && Alpine.store) {
+            const store = Alpine.store('teacherData');
+            if (store && typeof store.update === 'function') store.update(stats, rankings, user?.name || '', role);
+            else if (store) store.list = list;
+        }
+    } catch (err) {
+        console.warn('teacherData store update skipped:', err);
+    }
+
+    if (!container) return;
+
+    if (!list.length) {
+        container.innerHTML = `
+            <div style="grid-column: 1/-1; text-align:center; color:#999; padding:20px;">
+                暂无教师数据，请先在上方配置并导入。
+                <div style="margin-top:10px;">
+                    <button class="btn btn-orange" onclick="openTeacherSync()">去同步任课表</button>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = list.map(item => `
+        <div class="teacher-card">
+            <div class="teacher-header">
+                <div>
+                    <div class="teacher-name">${escapeTeacherCardHtml(item.name)} - ${escapeTeacherCardHtml(item.subject)}</div>
+                    <div class="teacher-classes">${escapeTeacherCardHtml(item.classes)}班</div>
+                </div>
+                <div class="performance-badge ${escapeTeacherCardHtml(item.badgeClass)}">${escapeTeacherCardHtml(item.badgeText)}</div>
+            </div>
+            <div class="teacher-stats">
+                <div class="stat-item">
+                    <div class="stat-value">${escapeTeacherCardHtml(item.avg)}</div>
+                    <div class="stat-label">平均分</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${escapeTeacherCardHtml(item.excRate)}</div>
+                    <div class="stat-label">优秀率</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${escapeTeacherCardHtml(item.passRate)}</div>
+                    <div class="stat-label">及格率</div>
+                </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; color:#666; margin-bottom:15px; padding:0 10px;">
+                <span>学生: ${escapeTeacherCardHtml(item.count)}人</span>
+                <span>镇排: <strong style="color:var(--primary)">${escapeTeacherCardHtml(item.rank)}</strong></span>
+            </div>
+            <button class="view-details-btn" onclick='showTeacherDetails(${JSON.stringify(item.name)}, ${JSON.stringify(item.subject)})'>查看详情</button>
+        </div>
+    `).join('');
 }
 
 function calculatePerformanceLevel(teacherData) {
@@ -8619,6 +9281,49 @@ function onProgressComparePeriodCountChange() {
     wrap.style.display = countEl.value === '3' ? 'inline-flex' : 'none';
 }
 
+function setCompareExamSelectPlaceholders(selects, message) {
+    const optionHtml = `<option value="">${message}</option>`;
+    (selects || []).forEach(sel => {
+        if (!sel) return;
+        sel.innerHTML = optionHtml;
+    });
+}
+
+function refreshCompareExamSelectors() {
+    if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
+    if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+    if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
+    if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
+    if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
+    if (typeof updateTeacherCompareExamSelects === 'function') updateTeacherCompareExamSelects();
+}
+
+function trySyncCompareExamOptions() {
+    const rawCohortId = CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
+    const cohortId = typeof normalizeCompareCohortId === 'function'
+        ? normalizeCompareCohortId(rawCohortId)
+        : rawCohortId;
+    if (!cohortId || !window.CloudManager || typeof window.CloudManager.fetchCohortExamsToLocal !== 'function') return false;
+    if (!window.__COMPARE_EXAM_SYNC_STATE) window.__COMPARE_EXAM_SYNC_STATE = {};
+    const state = window.__COMPARE_EXAM_SYNC_STATE[cohortId] || { pending: false, lastAttempt: 0 };
+    window.__COMPARE_EXAM_SYNC_STATE[cohortId] = state;
+    if (state.pending) return true;
+    if (Date.now() - Number(state.lastAttempt || 0) < 5000) return false;
+    state.pending = true;
+    state.lastAttempt = Date.now();
+    Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId))
+        .catch(err => {
+            console.warn('[compare-sync] fetchCohortExamsToLocal failed:', err);
+        })
+        .finally(() => {
+            state.pending = false;
+            setTimeout(() => {
+                refreshCompareExamSelectors();
+            }, 0);
+        });
+    return true;
+}
+
 function updateProgressMultiExamSelects() {
     const schoolSel = document.getElementById('progressCompareSchool');
     const exam1Sel = document.getElementById('progressCompareExam1');
@@ -8644,6 +9349,11 @@ function updateProgressMultiExamSelects() {
     examList.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
 
     if (examList.length < 2) {
+        const syncing = trySyncCompareExamOptions();
+        if (syncing) {
+            setCompareExamSelectPlaceholders([exam1Sel, exam2Sel, exam3Sel], '正在同步云端考试期数...');
+            return;
+        }
         const msg = '<option value="">--考试数量不足(至少2期)--</option>';
         exam1Sel.innerHTML = msg;
         exam2Sel.innerHTML = msg;
@@ -8730,8 +9440,235 @@ function getExamRowsForCompare(examId) {
     return rows;
 }
 
+const SCHOOL_ALIAS_GROUPS = [
+    { canonical: '银山中学', aliases: ['银山镇中学'] },
+    { canonical: '老湖中学', aliases: ['老湖'] },
+    { canonical: '梯门中学', aliases: ['梯门'] },
+    { canonical: '商老庄中学', aliases: ['商老庄实验学校'] },
+    { canonical: '彭集中学', aliases: ['彭集街道中学'] },
+    { canonical: '接山中学', aliases: ['接山镇中学'] },
+    { canonical: '州城中学', aliases: ['州城街道', '州城街道中学'] },
+    { canonical: '新湖中学', aliases: ['新湖镇中学'] },
+    { canonical: '大羊中学', aliases: ['大羊'] },
+    { canonical: '沙河站中学', aliases: ['沙河站镇中学'] },
+    { canonical: '银山实验学校', aliases: ['银山镇实验学校', '银山实验中学', '银山镇实验中学'] },
+    { canonical: '旧县中学', aliases: ['旧县乡中心学校', '旧县中心学校'] },
+    { canonical: '斑鸠店中学', aliases: ['斑鸠店镇中学'] },
+    { canonical: '戴庙中学', aliases: ['戴庙'] }
+];
+
+function sanitizeSchoolText(name) {
+    return String(name || '')
+        .replace(/\s+/g, '')
+        .replace(/[()（）\-—_·、,，.。]/g, '')
+        .trim();
+}
+
+function computeSchoolBaseKey(name) {
+    let text = sanitizeSchoolText(name);
+    if (!text) return '';
+    text = text
+        .replace(/镇实验学校$/u, '实验')
+        .replace(/街道实验学校$/u, '实验')
+        .replace(/乡实验学校$/u, '实验')
+        .replace(/实验学校$/u, '实验')
+        .replace(/实验中学$/u, '实验')
+        .replace(/镇中学$/u, '')
+        .replace(/街道中学$/u, '')
+        .replace(/乡中心学校$/u, '')
+        .replace(/中心学校$/u, '')
+        .replace(/中学$/u, '')
+        .replace(/学校$/u, '')
+        .replace(/街道$/u, '')
+        .replace(/乡$/u, '')
+        .replace(/镇$/u, '');
+    return text || sanitizeSchoolText(name);
+}
+
+const SCHOOL_ALIAS_CANONICAL_MAP = (() => {
+    const map = Object.create(null);
+    SCHOOL_ALIAS_GROUPS.forEach(group => {
+        [group.canonical, ...(group.aliases || [])].forEach(name => {
+            const key = sanitizeSchoolText(name);
+            if (key) map[key] = group.canonical;
+        });
+    });
+    return map;
+})();
+
+const SCHOOL_BASEKEY_CANONICAL_MAP = (() => {
+    const map = Object.create(null);
+    SCHOOL_ALIAS_GROUPS.forEach(group => {
+        const keys = new Set(
+            [group.canonical, ...(group.aliases || [])]
+                .map(name => computeSchoolBaseKey(name))
+                .filter(Boolean)
+        );
+        if (keys.size === 1) {
+            map[[...keys][0]] = group.canonical;
+        }
+    });
+    return map;
+})();
+
+const SCHOOL_ALIAS_STORAGE_KEY = 'CUSTOM_SCHOOL_ALIAS_SETTINGS';
+
+function ensureSchoolAliasStore() {
+    window.SYS_VARS = window.SYS_VARS || { indicator: { ind1: '', ind2: '' }, targets: {} };
+    if (!Array.isArray(window.SYS_VARS.schoolAliases)) {
+        try {
+            const raw = localStorage.getItem(SCHOOL_ALIAS_STORAGE_KEY);
+            const saved = raw ? JSON.parse(raw) : [];
+            window.SYS_VARS.schoolAliases = Array.isArray(saved) ? saved : [];
+        } catch (e) {
+            window.SYS_VARS.schoolAliases = [];
+        }
+    }
+    return window.SYS_VARS.schoolAliases;
+}
+
+function persistSchoolAliasSettingsLocal() {
+    const list = ensureSchoolAliasStore();
+    localStorage.setItem(SCHOOL_ALIAS_STORAGE_KEY, JSON.stringify(list));
+}
+
+function getCustomSchoolAliasGroups() {
+    const groups = new Map();
+    ensureSchoolAliasStore().forEach(item => {
+        const canonical = String(item?.canonical || '').trim();
+        const alias = String(item?.alias || '').trim();
+        if (!canonical || !alias) return;
+        if (!groups.has(canonical)) groups.set(canonical, new Set());
+        if (alias !== canonical) groups.get(canonical).add(alias);
+    });
+    return Array.from(groups.entries()).map(([canonical, aliases]) => ({
+        canonical,
+        aliases: Array.from(aliases)
+    }));
+}
+
+function getMergedSchoolAliasCanonicalMap() {
+    const map = Object.assign(Object.create(null), SCHOOL_ALIAS_CANONICAL_MAP);
+    getCustomSchoolAliasGroups().forEach(group => {
+        [group.canonical, ...(group.aliases || [])].forEach(name => {
+            const key = sanitizeSchoolText(name);
+            if (key) map[key] = group.canonical;
+        });
+    });
+    return map;
+}
+
+function getMergedSchoolBasekeyCanonicalMap() {
+    const map = Object.assign(Object.create(null), SCHOOL_BASEKEY_CANONICAL_MAP);
+    getCustomSchoolAliasGroups().forEach(group => {
+        const keys = new Set(
+            [group.canonical, ...(group.aliases || [])]
+                .map(name => computeSchoolBaseKey(name))
+                .filter(Boolean)
+        );
+        if (keys.size === 1) {
+            map[[...keys][0]] = group.canonical;
+        }
+    });
+    return map;
+}
+
+function pickPreferredSchoolDisplayName(existing, candidate) {
+    const a = String(existing || '').trim();
+    const b = String(candidate || '').trim();
+    if (!a) return b;
+    if (!b) return a;
+    const canonicalMap = getMergedSchoolAliasCanonicalMap();
+    const score = (raw) => {
+        const text = sanitizeSchoolText(raw);
+        if (!text) return Number.NEGATIVE_INFINITY;
+        let value = 0;
+        const canonical = canonicalMap[text];
+        if (canonical && text === sanitizeSchoolText(canonical)) value += 100;
+        if (/实验学校|实验中学/u.test(text)) value += 25;
+        else if (/中学|学校/u.test(text)) value += 15;
+        if (/未知|Sheet/i.test(text)) value -= 100;
+        value += Math.min(text.length, 20);
+        return value;
+    };
+    return score(b) > score(a) ? b : a;
+}
+
 function normalizeSchoolName(name) {
-    return String(name || '').replace(/\s+/g, '').replace(/[()（）\-—_·•]/g, '').trim();
+    const text = sanitizeSchoolText(name);
+    if (!text) return '';
+    const directCanonical = getMergedSchoolAliasCanonicalMap()[text];
+    if (directCanonical) return `canon:${directCanonical}`;
+    const baseKey = computeSchoolBaseKey(text);
+    if (!baseKey) return text;
+    const mappedCanonical = getMergedSchoolBasekeyCanonicalMap()[baseKey];
+    return mappedCanonical ? `canon:${mappedCanonical}` : baseKey;
+}
+
+function areSchoolNamesEquivalent(a, b) {
+    const keyA = normalizeSchoolName(a);
+    const keyB = normalizeSchoolName(b);
+    return !!keyA && !!keyB && keyA === keyB;
+}
+
+function resolveSchoolNameFromCollection(collection, schoolName) {
+    const candidates = Array.isArray(collection) ? collection : Object.keys(collection || {});
+    const raw = String(schoolName || '').trim();
+    if (!raw) return '';
+    const exact = candidates.find(name => String(name || '').trim() === raw);
+    if (exact) return exact;
+    const targetKey = normalizeSchoolName(raw);
+    if (!targetKey) return '';
+    const matches = candidates
+        .map(name => String(name || '').trim())
+        .filter(Boolean)
+        .filter(name => normalizeSchoolName(name) === targetKey);
+    if (!matches.length) return '';
+    return matches.reduce((best, item) => pickPreferredSchoolDisplayName(best, item), '');
+}
+
+function getCanonicalSchoolName(name, candidateNames = []) {
+    const raw = String(name || '').trim();
+    if (!raw) return '';
+    const directCanonical = getMergedSchoolAliasCanonicalMap()[sanitizeSchoolText(raw)];
+    if (directCanonical) return directCanonical;
+    const resolved = resolveSchoolNameFromCollection(candidateNames, raw);
+    if (resolved) return resolved;
+    const key = normalizeSchoolName(raw);
+    return typeof key === 'string' && key.startsWith('canon:') ? key.slice(6) : raw;
+}
+
+function normalizeTargetsMap(targets) {
+    const source = (targets && typeof targets === 'object') ? targets : {};
+    const normalized = {};
+    const candidates = [...Object.keys(source), ...Object.keys(SCHOOLS || {})];
+    Object.entries(source).forEach(([schoolName, value]) => {
+        const canonicalSchool = getCanonicalSchoolName(schoolName, [...candidates, schoolName]);
+        if (!canonicalSchool) return;
+        normalized[canonicalSchool] = {
+            t1: parseInt(value?.t1, 10) || 0,
+            t2: parseInt(value?.t2, 10) || 0
+        };
+    });
+    return normalized;
+}
+
+function ensureNormalizedTargets() {
+    const normalized = normalizeTargetsMap(window.TARGETS || {});
+    if (JSON.stringify(window.TARGETS || {}) !== JSON.stringify(normalized)) {
+        window.TARGETS = normalized;
+    }
+    return window.TARGETS;
+}
+
+function getTargetConfigBySchool(schoolName) {
+    ensureNormalizedTargets();
+    const key = resolveSchoolNameFromCollection(window.TARGETS || {}, schoolName)
+        || getCanonicalSchoolName(schoolName, Object.keys(window.TARGETS || {}));
+    return {
+        key,
+        value: key ? (window.TARGETS[key] || null) : null
+    };
 }
 
 function filterRowsBySchool(rows, school) {
@@ -9785,6 +10722,11 @@ function updateStudentCompareExamSelects() {
     // 初始化考试期次选择器
     const examList = listAvailableExamsForCompare();
     if (examList.length < 2) {
+        const syncing = trySyncCompareExamOptions();
+        if (syncing) {
+            setCompareExamSelectPlaceholders([exam1Sel, exam2Sel, exam3Sel], '正在同步云端考试期数...');
+            return;
+        }
         const msg = '<option value="">--考试数量不足(至少2期)--</option>';
         exam1Sel.innerHTML = msg;
         exam2Sel.innerHTML = msg;
@@ -9829,6 +10771,11 @@ function updateReportCompareExamSelects() {
         : [];
     const defaultOption = '<option value="">--未选择(自动)--</option>';
     if (examList.length < 2) {
+        const syncing = trySyncCompareExamOptions();
+        if (syncing) {
+            setCompareExamSelectPlaceholders([exam1Sel, exam2Sel, exam3Sel], '正在同步云端考试期数...');
+            return;
+        }
         const msg = '<option value="">--无可用历史数据--</option>';
         exam1Sel.innerHTML = msg;
         exam2Sel.innerHTML = msg;
@@ -11346,7 +12293,7 @@ function pickSelfStudentFromCloudRows(rows, normalizedTarget) {
         if (!targetSchool) return true;
         const school = String(s?.school || '').trim();
         if (!school) return true;
-        return school === targetSchool;
+        return areSchoolNamesEquivalent(school, targetSchool);
     });
 
     // 1. 尝试 姓名 + 班级 精确匹配
@@ -11690,7 +12637,12 @@ function updateStudentCompareSummary() {
     summaryEl.innerHTML = html;
 }
 function normalizeCompareCohortId(raw) {
-    return String(raw || '').replace(/\D/g, '');
+    const text = String(raw || '').trim();
+    if (!text) return '';
+    const inferred = typeof inferCohortIdFromValue === 'function' ? inferCohortIdFromValue(text) : '';
+    if (inferred) return inferred;
+    const digits = text.replace(/\D/g, '');
+    return digits.length > 4 ? digits.slice(0, 4) : digits;
 }
 
 function parseExamSemanticTimestamp(examId) {
@@ -11823,8 +12775,11 @@ function warnIfDuplicateCompareSnapshots() {
 
 function extractCohortIdFromExamKey(examKey) {
     const key = String(examKey || '').trim();
-    const m = key.match(/^(\d{4})\D*_/);
-    return m ? m[1] : '';
+    if (!key) return '';
+    const inferred = typeof inferCohortIdFromValue === 'function' ? inferCohortIdFromValue(key) : '';
+    if (inferred) return inferred;
+    const digits = key.replace(/\D/g, '');
+    return digits.length > 4 ? digits.slice(0, 4) : digits;
 }
 
 function isRealExamIdForCompare(examId, cohortId) {
@@ -11943,40 +12898,39 @@ function getSelectedReportCompareExamIds() {
     return sortExamIdsChronologically(ids.filter(Boolean));
 }
 function listAvailableSchoolsForCompare() {
-    const names = new Set();
-    Object.keys(SCHOOLS || {}).forEach(s => {
-        const name = String(s || '').trim();
-        if (name) names.add(name);
-    });
+    const names = new Map();
+    const collectName = (rawName) => {
+        const school = String(rawName || '').trim();
+        if (!school) return;
+        const key = normalizeSchoolName(school) || school;
+        const existing = names.get(key);
+        names.set(key, existing ? pickPreferredSchoolDisplayName(existing, school) : school);
+    };
+    Object.keys(SCHOOLS || {}).forEach(collectName);
 
     (RAW_DATA || []).forEach(row => {
-        const school = String(row?.school || '').trim();
-        if (school) names.add(school);
+        collectName(row?.school);
     });
 
-    Object.values(window.TEACHER_SCHOOL_MAP || {}).forEach(s => {
-        const school = String(s || '').trim();
-        if (school) names.add(school);
-    });
+    Object.values(window.TEACHER_SCHOOL_MAP || {}).forEach(collectName);
 
     const persistedSchool = String(localStorage.getItem('MY_SCHOOL') || '').trim();
     const runtimeSchool = String(MY_SCHOOL || '').trim();
-    if (persistedSchool) names.add(persistedSchool);
-    if (runtimeSchool) names.add(runtimeSchool);
+    if (persistedSchool) collectName(persistedSchool);
+    if (runtimeSchool) collectName(runtimeSchool);
 
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
     if (db?.exams) {
         Object.values(db.exams).forEach(ex => {
             (ex?.data || []).forEach(row => {
-                const school = String(row?.school || '').trim();
-                if (school) names.add(school);
+                collectName(row?.school);
             });
         });
     }
 
     // 🟢 [修复]：增加黑名单，过滤掉教育局、管理员等非教学单位，防止污染下拉框
     const blockList = ['教育局', '教体局', '市局', '区局', '市直属', '区直属', 'admin', '测试', '默认'];
-    const filteredNames = [...names].filter(name => {
+    const filteredNames = [...names.values()].filter(name => {
         if (/^Sheet\d+$/i.test(name)) return false; // 过滤残留的旧假表名
         for (let blocked of blockList) {
             if (name.includes(blocked) || name.toLowerCase() === blocked) return false;
@@ -12051,6 +13005,11 @@ function updateMacroMultiExamSelects() {
 
     const examList = listAvailableExamsForCompare();
     if (examList.length < 2) {
+        const syncing = trySyncCompareExamOptions();
+        if (syncing) {
+            setCompareExamSelectPlaceholders([exam1Sel, exam2Sel, exam3Sel], '正在同步云端考试期数...');
+            return;
+        }
         const msg = '<option value="">--考试数量不足(至少2期)--</option>';
         exam1Sel.innerHTML = msg;
         exam2Sel.innerHTML = msg;
@@ -12459,6 +13418,11 @@ function updateTeacherMultiExamSelects() {
 
     const examList = listAvailableExamsForCompare();
     if (examList.length < 2) {
+        const syncing = trySyncCompareExamOptions();
+        if (syncing) {
+            setCompareExamSelectPlaceholders([exam1Sel, exam2Sel, exam3Sel], '正在同步云端考试期数...');
+            return;
+        }
         const msg = '<option value="">--考试数量不足(至少2期)--</option>';
         exam1Sel.innerHTML = msg;
         exam2Sel.innerHTML = msg;
@@ -12518,6 +13482,11 @@ function updateTeacherCompareExamSelects() {
     // 初始化考试期次选择器
     const examList = listAvailableExamsForCompare();
     if (examList.length < 2) {
+        const syncing = trySyncCompareExamOptions();
+        if (syncing) {
+            setCompareExamSelectPlaceholders([exam1El, exam2El, exam3El], '正在同步云端考试期数...');
+            return;
+        }
         const msg = '<option value="">--考试数量不足(至少2期)--</option>';
         exam1El.innerHTML = msg;
         exam2El.innerHTML = msg;
@@ -13454,12 +14423,12 @@ function renderProgressAnalysis() {
     // 预扫描
     currentStudents.forEach(curr => {
         // 1. 尝试严格匹配 (姓名+班级+学校)
-        const strictMatch = PREV_DATA.find(p => p.name === curr.name && p.school === curr.school && p.class === curr.class);
+        const strictMatch = PREV_DATA.find(p => p.name === curr.name && areSchoolNamesEquivalent(p.school, curr.school) && p.class === curr.class);
 
         // 2. 如果严格匹配失败，但在上次数据里能找到“同名同校”的人 (说明可能转班了，或者只是同名)
         if (!strictMatch) {
             // 找出所有同名同校的候选人
-            const candidates = PREV_DATA.filter(p => p.name === curr.name && p.school === curr.school);
+            const candidates = PREV_DATA.filter(p => p.name === curr.name && areSchoolNamesEquivalent(p.school, curr.school));
 
             if (candidates.length > 0) {
                 // 检查是否已经手动映射过
@@ -13562,7 +14531,7 @@ function performProgressCalculation() {
     // ==========================================
 
     // 1. 从上次全镇数据中，筛选出属于该校的学生
-    let prevSchoolSubset = PREV_DATA.filter(p => p.school === schoolName);
+    let prevSchoolSubset = PREV_DATA.filter(p => areSchoolNamesEquivalent(p.school, schoolName));
 
     // 备用方案：如果上次数据没填学校，或者学校名写的不一样，尝试用本次名单反查
     if (prevSchoolSubset.length < currentStudents.length * 0.5) {
@@ -15265,7 +16234,7 @@ function performSilentMatching() {
     // 简单的姓名匹配逻辑
     RAW_DATA.forEach(curr => {
         // 尝试匹配：优先全名+学校，其次全名
-        let prev = PREV_DATA.find(p => p.name === curr.name && p.school === curr.school);
+        let prev = PREV_DATA.find(p => p.name === curr.name && areSchoolNamesEquivalent(p.school, curr.school));
         if (!prev) prev = PREV_DATA.find(p => p.name === curr.name); // 宽松匹配
 
         if (prev) {
@@ -15913,7 +16882,7 @@ function findPreviousRecord(student) {
     const matchStudent = (p, targetName, targetClass, targetSchool) => {
         // PREV_DATA 中的记录结构是 { examId, examFullKey, student: { name, class, school ... } }
         const sObj = p.student || p;
-        if (sObj.school && targetSchool && sObj.school !== targetSchool) return false;
+        if (sObj.school && targetSchool && !areSchoolNamesEquivalent(sObj.school, targetSchool)) return false;
         if (cleanStr(sObj.name) !== targetName) return false;
         const histClass = normClass(sObj.class);
         if (histClass === targetClass) return true;
@@ -16014,7 +16983,7 @@ function getStudentExamHistory(student) {
     const currentFingerprint = computeExamDataFingerprint(RAW_DATA || []);
     const isTargetStudent = (row) => {
         const sObj = row?.student || row || {};
-        if (sObj.school && targetSchool && sObj.school !== targetSchool) return false;
+        if (sObj.school && targetSchool && !areSchoolNamesEquivalent(sObj.school, targetSchool)) return false;
         if (cleanStr(sObj.name) !== targetName) return false;
         const histClass = normClass(sObj.class);
         if (histClass === targetClass) return true;
@@ -16053,7 +17022,7 @@ function getStudentExamHistory(student) {
             }
 
             const found = examData.find(p => {
-                if (p.school && targetSchool && p.school !== targetSchool) return false;
+                if (p.school && targetSchool && !areSchoolNamesEquivalent(p.school, targetSchool)) return false;
                 if (cleanStr(p.name) !== targetName) return false;
                 const histClass = normClass(p.class);
                 if (histClass === targetClass) return true;
@@ -18245,6 +19214,10 @@ function isIndicatorPromptAllowed() {
     return ctx.grade === '9';
 }
 
+function isIndicatorAllowed() {
+    return isIndicatorPromptAllowed();
+}
+
 function isIndicatorCalcAllowed() {
     const ctx = getIndicatorContext();
     return ctx.grade === '9' && (ctx.type === '期中' || ctx.type === '期末');
@@ -18321,7 +19294,8 @@ function calcIndicators() {
         const reach1 = scores.filter(v => v >= line1).length; // 实际达标1
         const reach2 = scores.filter(v => v >= line2).length; // 实际达标2
 
-        const t = window.TARGETS[s.name] || { t1: 10000, t2: 10000 }; // 防止除以0
+        const targetInfo = getTargetConfigBySchool(s.name);
+        const t = targetInfo.value || { t1: 10000, t2: 10000 }; // 防止除以0
 
         // --- 指标一计算 ---
         // 基础分 (满分30)
@@ -18435,7 +19409,7 @@ function analyzeTargetGap(schoolName, type, lineScore) {
 
     // 1. 获取该校的目标人数设定
     // 注意：TARGETS 是全局变量，存储了导入的目标配置
-    const targetConfig = TARGETS[schoolName] || { t1: 0, t2: 0 };
+    const targetConfig = getTargetConfigBySchool(schoolName).value || { t1: 0, t2: 0 };
     const targetCount = type === 'ind1' ? parseInt(targetConfig.t1) : parseInt(targetConfig.t2);
 
     if (!targetCount) return alert(`未找到 ${schoolName} 的目标设定，请先导入目标人数Excel。`);
@@ -24387,7 +25361,13 @@ function inferCohortIdFromValue(value) {
     if (!raw) return '';
     let match = raw.match(/^cohort::(\d{4})$/i);
     if (match) return match[1];
+    match = raw.match(/^cohort::(\d{4})/i);
+    if (match) return match[1];
     match = raw.match(/^(\d{4})\D*_/);
+    if (match) return match[1];
+    match = raw.match(/(\d{4})级/);
+    if (match) return match[1];
+    match = raw.match(/(\d{4})/);
     if (match) return match[1];
     return '';
 }
@@ -24446,6 +25426,105 @@ function getTermId(meta) {
     const grade = meta.grade || computeCohortGrade(CURRENT_COHORT_META, meta) || '';
     const term = meta.term || '';
     return grade ? `${grade}年级_${term}` : term;
+}
+
+function buildTeacherTermId(meta) {
+    if (!meta) return '';
+    const year = String(meta.year || '').trim();
+    const term = String(meta.term || '').trim();
+    const grade = String(meta.grade || computeCohortGrade(CURRENT_COHORT_META, meta) || '').trim();
+    if (!year || !term) return '';
+    return grade ? `${year}_${term}_${grade}年级` : `${year}_${term}`;
+}
+
+function getTeacherTermBase(termId) {
+    const text = String(termId || '').trim();
+    if (!text) return '';
+    const parts = text.split('_').filter(Boolean);
+    if (parts.length >= 2 && /^\d{4}-\d{4}$/.test(parts[0])) {
+        return parts.slice(0, 2).join('_');
+    }
+    return text;
+}
+
+function getPreferredTeacherTermId() {
+    const uiMeta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
+    const uiTeacherTermId = buildTeacherTermId(uiMeta);
+    const termSel = document.getElementById('dm-teacher-term-select');
+    return String(
+        termSel?.value
+        || localStorage.getItem('CURRENT_TEACHER_TERM_ID')
+        || uiTeacherTermId
+        || localStorage.getItem('CURRENT_TERM_ID')
+        || ''
+    ).trim();
+}
+
+function syncTeacherTermStorage(termId) {
+    const exactTermId = String(termId || '').trim();
+    if (!exactTermId) return { exactTermId: '', baseTermId: '' };
+    const baseTermId = getTeacherTermBase(exactTermId);
+    localStorage.setItem('CURRENT_TEACHER_TERM_ID', exactTermId);
+    if (baseTermId) localStorage.setItem('CURRENT_TERM_ID', baseTermId);
+    return { exactTermId, baseTermId };
+}
+
+function getTeacherTermCandidates(termId) {
+    const preferred = String(termId || '').trim();
+    const uiMeta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
+    const uiTeacherTermId = buildTeacherTermId(uiMeta);
+    const savedTeacherTermId = String(localStorage.getItem('CURRENT_TEACHER_TERM_ID') || '').trim();
+    const savedBaseTerm = String(localStorage.getItem('CURRENT_TERM_ID') || '').trim();
+    const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+    const history = db?.teachingHistory || {};
+    const candidates = [];
+    const pushUnique = (value) => {
+        const text = String(value || '').trim();
+        if (!text || candidates.includes(text)) return;
+        candidates.push(text);
+    };
+
+    [
+        preferred,
+        savedTeacherTermId,
+        uiTeacherTermId,
+        getTeacherTermBase(preferred),
+        getTeacherTermBase(savedTeacherTermId),
+        getTeacherTermBase(uiTeacherTermId),
+        savedBaseTerm
+    ].forEach(pushUnique);
+
+    const bases = [...new Set(candidates.map(getTeacherTermBase).filter(Boolean))];
+    Object.keys(history).forEach(key => {
+        const text = String(key || '').trim();
+        if (!text) return;
+        if (candidates.includes(text)) return;
+        const keyBase = getTeacherTermBase(text);
+        if (bases.includes(keyBase)) pushUnique(text);
+    });
+
+    return candidates;
+}
+
+function resolveTeacherHistoryEntry(termId) {
+    const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+    const history = db?.teachingHistory || {};
+    const candidates = getTeacherTermCandidates(termId);
+
+    for (const key of candidates) {
+        const entry = history[key];
+        const localMap = entry?.map && typeof entry.map === 'object' ? entry.map : (entry || {});
+        const localSchoolMap = entry?.schoolMap && typeof entry.schoolMap === 'object' ? entry.schoolMap : {};
+        if (localMap && Object.keys(localMap).length > 0) {
+            return {
+                key,
+                baseTerm: getTeacherTermBase(key),
+                map: localMap,
+                schoolMap: localSchoolMap
+            };
+        }
+    }
+    return null;
 }
 
 function getExamLabelForKey(meta) {
@@ -24510,6 +25589,7 @@ function resetCohortSelection() {
     localStorage.removeItem('CURRENT_COHORT_META');
     localStorage.removeItem('CURRENT_EXAM_ID');
     localStorage.removeItem('CURRENT_TERM_ID');
+    localStorage.removeItem('CURRENT_TEACHER_TERM_ID');
     CURRENT_COHORT_ID = '';
     CURRENT_COHORT_META = null;
     CURRENT_EXAM_ID = '';
@@ -24725,13 +25805,13 @@ function onExamTermChange() {
     }
 
     // 构建学期ID：年份_学期_年级
-    const termId = `${meta.year}_${meta.term}${meta.grade ? '_' + meta.grade + '年级' : ''}`;
-    const baseTerm = `${meta.year}_${meta.term}`;
+    const termId = buildTeacherTermId(meta);
+    const baseTerm = getTeacherTermBase(termId);
 
     console.log(`📅 学期已选择：${termId}，准备加载教师任课数据...`);
 
     // 更新学期ID到localStorage，供DataManager使用
-    localStorage.setItem('CURRENT_TERM_ID', baseTerm);
+    syncTeacherTermStorage(termId);
 
     // 同步到教师管理界面的学期选择器
     const teacherTermSel = document.getElementById('dm-teacher-term-select');
@@ -24748,21 +25828,18 @@ function onExamTermChange() {
 
     // 尝试从本地历史加载
     const db = CohortDB.ensure();
-    const history = db.teachingHistory || {};
-    const entry = history[termId] || history[baseTerm];
-    const localMap = entry?.map && typeof entry.map === 'object' ? entry.map : (entry || {});
-    const localSchoolMap = entry?.schoolMap && typeof entry.schoolMap === 'object' ? entry.schoolMap : {};
-    const hasLocal = localMap && Object.keys(localMap).length > 0;
+    const resolved = resolveTeacherHistoryEntry(termId);
 
-    if (hasLocal) {
+    if (resolved) {
         // 有本地数据
-        setTeacherMap(JSON.parse(JSON.stringify(localMap)));
-        setTeacherSchoolMap(JSON.parse(JSON.stringify(localSchoolMap)));
+        syncTeacherTermStorage(resolved.key);
+        setTeacherMap(JSON.parse(JSON.stringify(resolved.map || {})));
+        setTeacherSchoolMap(JSON.parse(JSON.stringify(resolved.schoolMap || {})));
         if (window.DataManager && typeof DataManager.renderTeachers === 'function') {
             DataManager.renderTeachers();
         }
-        console.log(`✅ 已从本地历史加载 ${baseTerm} 的任课表（${Object.keys(localMap).length}条）`);
-        if (window.UI) UI.toast(`✅ 已加载该学期任课表（${Object.keys(localMap).length}条）`, 'success');
+        console.log(`✅ 已从本地历史加载 ${resolved.key} 的任课表（${Object.keys(resolved.map || {}).length}条）`);
+        if (window.UI) UI.toast(`✅ 已加载该学期任课表（${Object.keys(resolved.map || {}).length}条）`, 'success');
     } else {
         // 本地无数据，尝试从云端加载
         console.log(`⚠️ 本地无 ${baseTerm} 的任课数据，尝试从云端加载...`);
@@ -25386,6 +26463,7 @@ function getCurrentSnapshotPayload() {
         MY_SCHOOL: window.MY_SCHOOL || "",
         TARGETS: window.SYS_VARS?.targets || window.TARGETS || {},
         INDICATOR_PARAMS: window.SYS_VARS?.indicator || { ind1: '', ind2: '' },
+        SCHOOL_ALIAS_SETTINGS: ensureSchoolAliasStore(),
         PREV_DATA: window.PREV_DATA || [],
         TEACHER_STATS: window.TEACHER_STATS || {},
         HISTORY_ARCHIVE: window.HISTORY_ARCHIVE || {},
@@ -25607,8 +26685,10 @@ function applySnapshotPayload(db) {
     window.CONFIG = db.CONFIG || {};
     window.MY_SCHOOL = db.MY_SCHOOL || "";
     window.TARGETS = db.TARGETS || {};
-    window.SYS_VARS = window.SYS_VARS || { indicator: { ind1: '', ind2: '' }, targets: {} };
+    window.SYS_VARS = window.SYS_VARS || { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
     window.SYS_VARS.targets = window.TARGETS;
+    window.SYS_VARS.schoolAliases = Array.isArray(db.SCHOOL_ALIAS_SETTINGS) ? db.SCHOOL_ALIAS_SETTINGS : ensureSchoolAliasStore();
+    persistSchoolAliasSettingsLocal();
     if (db.INDICATOR_PARAMS) {
         window.SYS_VARS.indicator.ind1 = db.INDICATOR_PARAMS.ind1 || '';
         window.SYS_VARS.indicator.ind2 = db.INDICATOR_PARAMS.ind2 || '';
@@ -25635,6 +26715,7 @@ function applySnapshotPayload(db) {
     try { if (typeof renderTables === 'function') renderTables(); } catch (e) { }
     try { if (typeof updateSchoolSelect === 'function') updateSchoolSelect(); } catch (e) { }
     try { if (typeof renderAll === 'function') renderAll(); } catch (e) { }
+    try { if (typeof DataManager !== 'undefined' && typeof DataManager.renderSchoolAliasMappings === 'function') DataManager.renderSchoolAliasMappings(); } catch (e) { }
     try { updateExamHistoryStatusBar(); } catch (e) { }
     if (typeof DataManager !== 'undefined' && DataManager.renderHistoryPreview) DataManager.renderHistoryPreview();
 }
@@ -26759,25 +27840,51 @@ async function loadDemoData() {
     updateStatusPanel();
 }
 
-function openTeacherSync() {
+async function openTeacherSync() {
     const user = getCurrentUser();
     const role = user?.role || 'guest';
+    const preferredTerm = getPreferredTeacherTermId() || pickAutoTeacherTerm();
 
-    // 教师端无底层数据面板权限，直接执行云端任课表拉取
-    if (role === 'teacher' || role === 'class_teacher') {
-        if (window.CloudManager && typeof CloudManager.loadTeachers === 'function') {
-            CloudManager.loadTeachers();
-        } else if (window.UI) {
-            UI.toast('任课同步功能未就绪，请刷新后重试', 'warning');
+    try {
+        if (preferredTerm && applyTeacherTermWithoutPrompt(preferredTerm)) {
+            if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') DataManager.renderDataManagerStatus();
+            if (window.UI) UI.toast(`已恢复 ${preferredTerm} 的任课表`, 'success');
+            return;
         }
-        return;
-    }
 
-    if (window.DataManager && typeof DataManager.open === 'function') {
-        DataManager.open();
-        DataManager.switchTab('teacher');
-    } else {
-        switchTab('upload');
+        if (window.CloudManager && typeof CloudManager.loadTeachers === 'function') {
+            if (window.UI) UI.toast(preferredTerm ? `正在同步 ${preferredTerm} 的任课表...` : '正在同步任课表...', 'info');
+            await CloudManager.loadTeachers();
+            if (preferredTerm && applyTeacherTermWithoutPrompt(preferredTerm)) {
+                if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') DataManager.renderDataManagerStatus();
+                if (window.UI) UI.toast(`已从云端恢复 ${preferredTerm} 的任课表`, 'success');
+                return;
+            }
+            if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) {
+                if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') DataManager.renderDataManagerStatus();
+                if (window.UI) UI.toast('任课表已同步到当前页面', 'success');
+                return;
+            }
+        }
+
+        if (role === 'teacher' || role === 'class_teacher') {
+            if (window.UI) UI.toast('当前学期暂无可用任课表，请联系管理员在“教师任课”中导入或同步', 'warning');
+            return;
+        }
+
+        if (window.DataManager && typeof DataManager.open === 'function') {
+            DataManager.open();
+            DataManager.switchTab('teacher');
+        } else {
+            switchTab('upload');
+        }
+    } catch (err) {
+        console.error('openTeacherSync failed:', err);
+        if (window.UI) {
+            UI.toast(`任课表同步失败：${err?.message || err}`, 'error');
+            return;
+        }
+        alert(`任课表同步失败：${err?.message || err}`);
     }
 }
 
@@ -26853,21 +27960,18 @@ function pickAutoTeacherTerm() {
 
 function applyTeacherTermWithoutPrompt(termId) {
     if (!termId) return false;
-    localStorage.setItem('CURRENT_TERM_ID', termId);
+    syncTeacherTermStorage(termId);
     const termSel = document.getElementById('dm-teacher-term-select');
     if (termSel) {
         const hit = Array.from(termSel.options || []).find(o => o.value === termId || String(o.value).startsWith(termId + '_'));
         termSel.value = hit ? hit.value : termId;
     }
 
-    const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
-    const history = db?.teachingHistory || {};
-    const entry = history[termId];
-    const localMap = entry?.map && typeof entry.map === 'object' ? entry.map : (entry || {});
-    const localSchoolMap = entry?.schoolMap && typeof entry.schoolMap === 'object' ? entry.schoolMap : {};
-    if (localMap && Object.keys(localMap).length > 0) {
-        setTeacherMap(JSON.parse(JSON.stringify(localMap)));
-        setTeacherSchoolMap(JSON.parse(JSON.stringify(localSchoolMap)));
+    const resolved = resolveTeacherHistoryEntry(termId);
+    if (resolved) {
+        syncTeacherTermStorage(resolved.key);
+        setTeacherMap(JSON.parse(JSON.stringify(resolved.map || {})));
+        setTeacherSchoolMap(JSON.parse(JSON.stringify(resolved.schoolMap || {})));
         if (window.DataManager && typeof DataManager.renderTeachers === 'function') DataManager.renderTeachers();
         if (window.DataManager && typeof DataManager.refreshTeacherAnalysis === 'function') DataManager.refreshTeacherAnalysis();
         return true;
@@ -26878,6 +27982,30 @@ function applyTeacherTermWithoutPrompt(termId) {
         return true;
     }
     return false;
+}
+
+function syncTeacherAnalysisSchoolContext(preferredSchool = '') {
+    const schoolSel = document.getElementById('mySchoolSelect');
+    const inferredSchool = (typeof inferDefaultSchoolFromContext === 'function') ? inferDefaultSchoolFromContext() : '';
+    const candidates = [
+        preferredSchool,
+        schoolSel?.value,
+        MY_SCHOOL,
+        localStorage.getItem('MY_SCHOOL'),
+        inferredSchool
+    ].map(v => String(v || '').trim()).filter(Boolean);
+    const schoolNames = Object.keys(SCHOOLS || {});
+    const resolvedSchool = candidates.find(name => schoolNames.includes(name))
+        || (schoolNames.length === 1 ? schoolNames[0] : candidates[0] || '');
+
+    if (resolvedSchool) {
+        MY_SCHOOL = resolvedSchool;
+        window.MY_SCHOOL = resolvedSchool;
+        localStorage.setItem('MY_SCHOOL', resolvedSchool);
+        if (schoolSel && schoolSel.value !== resolvedSchool) schoolSel.value = resolvedSchool;
+    }
+
+    return resolvedSchool;
 }
 
 function promptTeacherSyncIfNeeded() {
@@ -26938,6 +28066,404 @@ function scheduleTeacherSyncPrompt() {
             clearInterval(timer);
         }
     }, 400);
+}
+
+function renderTeacherAnalysisState() {
+    if (window.DataManager && typeof DataManager.ensureTeacherMap === 'function') {
+        DataManager.ensureTeacherMap(true);
+    }
+    if (typeof updateTeacherCompareExamSelects === 'function') {
+        updateTeacherCompareExamSelects();
+    }
+
+    const cta = document.getElementById('teacher-sync-cta');
+    const hasTeacherMap = !!(window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0);
+    let activeSchool = syncTeacherAnalysisSchoolContext();
+    if (cta) cta.style.display = hasTeacherMap ? 'none' : 'inline-flex';
+
+    const exportBtn = document.querySelector('#teacher-analysis .sec-head button');
+    if (exportBtn) exportBtn.style.display = 'inline-flex';
+    const detailSection = document.getElementById('anchor-detail');
+    const pairSection = document.getElementById('anchor-pair');
+    const townshipContainer = document.getElementById('teacher-township-ranking-container');
+    if (detailSection) detailSection.style.display = 'block';
+    if (pairSection) pairSection.style.display = 'block';
+    if (townshipContainer) townshipContainer.style.display = 'block';
+
+    if (!activeSchool && typeof SCHOOLS !== 'undefined' && Object.keys(SCHOOLS).length > 0 && hasTeacherMap) {
+        const schoolNames = Object.keys(SCHOOLS);
+        if (schoolNames.length === 1) {
+            activeSchool = syncTeacherAnalysisSchoolContext(schoolNames[0]);
+        } else {
+            const schoolCounts = {};
+            Object.keys(TEACHER_MAP).forEach(key => {
+                const cls = key.split('_')[0];
+                for (const sName of schoolNames) {
+                    const hasClass = SCHOOLS[sName].students.some(s => s.class == cls);
+                    if (hasClass) {
+                        schoolCounts[sName] = (schoolCounts[sName] || 0) + 1;
+                        break;
+                    }
+                }
+            });
+
+            let max = 0;
+            let winner = '';
+            for (const [s, c] of Object.entries(schoolCounts)) {
+                if (c > max) {
+                    max = c;
+                    winner = s;
+                }
+            }
+            if (winner) activeSchool = syncTeacherAnalysisSchoolContext(winner);
+        }
+    }
+
+    if (activeSchool && hasTeacherMap) {
+        analyzeTeachers();
+        renderTeacherComparisonTable();
+        renderTeacherCards();
+        renderTeacherTownshipRanking();
+        if (typeof updateStatusPanel === 'function') updateStatusPanel();
+    } else {
+        const compTable = document.getElementById('teacherComparisonTable');
+        if (compTable) {
+            const teacherTerm = localStorage.getItem('CURRENT_TEACHER_TERM_ID') || getPreferredTeacherTermId() || '当前学期';
+            const message = hasTeacherMap
+                ? `
+                    <p style="font-size:16px; font-weight:bold; color:#333;">无法自动识别“本校”</p>
+                    <div style="background:#f9fafb; padding:10px 20px; border-radius:6px; display:inline-block; text-align:left; margin-top:10px; font-size:13px; color:#666; line-height:1.8;">
+                        <strong>可能原因：</strong><br>
+                        1. 您仅导入了教师配置，但尚未上传【学生成绩】数据。<br>
+                        <span style="color:#d97706">系统需要结合学生名单才能确认班级归属。</span><br>
+                        2. 任课表中的班级名与成绩表中的班级名不一致。
+                    </div>
+                `
+                : `
+                    <p style="font-size:16px; font-weight:bold; color:#333;">当前学期任课表尚未加载</p>
+                    <div style="background:#f9fafb; padding:10px 20px; border-radius:6px; display:inline-block; text-align:left; margin-top:10px; font-size:13px; color:#666; line-height:1.8;">
+                        <strong>当前学期：</strong>${teacherTerm}<br>
+                        已同步到云端的任课表，需要先恢复到当前页面才能参与教师分析。<br>
+                        系统会优先自动恢复本地历史，再自动拉取云端；如果仍为空，再点击下方“同步任课表”。
+                    </div>
+                `;
+            compTable.innerHTML = `
+                <div style="text-align:center; padding:40px; color:#999;">
+                    <div style="font-size:48px; margin-bottom:10px;">📚</div>
+                    ${message}
+                </div>`;
+        }
+        if (townshipContainer) townshipContainer.innerHTML = '';
+    }
+
+    if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
+    if (typeof updateTeacherCompareTeacherSelect === 'function') updateTeacherCompareTeacherSelect();
+}
+
+if (typeof DataManager !== 'undefined') {
+    DataManager.switchTeacherTerm = function (termId) {
+        if (!termId) return;
+        const exactTermId = String(termId || '').trim();
+        const { baseTermId } = syncTeacherTermStorage(exactTermId);
+        const parts = exactTermId.split('_');
+        const gradeInfo = parts[2] || '';
+
+        if (gradeInfo) {
+            const gradeMatch = gradeInfo.match(/(\d+)/);
+            const yearMatch = parts[0]?.match(/(\d{4})/);
+            if (gradeMatch && yearMatch) {
+                const grade = parseInt(gradeMatch[1], 10);
+                const currentYear = parseInt(yearMatch[1], 10);
+                const cohortId = currentYear - (grade - 6);
+                window.CURRENT_COHORT_ID = cohortId;
+                localStorage.setItem('CURRENT_COHORT_ID', String(cohortId));
+            }
+        }
+
+        const resolved = resolveTeacherHistoryEntry(exactTermId);
+        if (resolved) {
+            syncTeacherTermStorage(resolved.key);
+            setTeacherMap(JSON.parse(JSON.stringify(resolved.map || {})));
+            setTeacherSchoolMap(JSON.parse(JSON.stringify(resolved.schoolMap || {})));
+            if (typeof DataManager.renderTeachers === 'function') DataManager.renderTeachers();
+            if (typeof DataManager.refreshTeacherAnalysis === 'function') DataManager.refreshTeacherAnalysis();
+            return;
+        }
+
+        setTeacherMap({});
+        setTeacherSchoolMap({});
+        if (typeof DataManager.renderTeachers === 'function') DataManager.renderTeachers();
+        console.log(`⚠️ 本地无学期 ${baseTermId || exactTermId} 的任课数据，尝试从云端同步...`);
+        if (window.CloudManager && CloudManager.loadTeachers) {
+            if (window.UI) UI.toast('📧 正在从云端加载该学期任课表...', 'info');
+            CloudManager.loadTeachers().then(ok => {
+                if (!ok && window.UI) UI.toast('☁️ 云端暂无该学期任课数据', 'warning');
+            }).catch(err => {
+                console.warn('云端加载失败:', err);
+                if (window.UI) UI.toast('☁️ 云端暂无该学期任课数据', 'warning');
+            });
+        }
+    };
+
+    DataManager.syncTeacherHistory = function (opts = {}) {
+        const termId = opts.termId || getPreferredTeacherTermId() || buildTeacherTermId(getExamMetaFromUI());
+        if (!termId) return;
+        syncTeacherTermStorage(termId);
+        const db = CohortDB.ensure();
+        db.teachingHistory = db.teachingHistory || {};
+        const savedAt = (() => {
+            const raw = opts.timestamp;
+            if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+            if (typeof raw === 'string') {
+                const parsed = Date.parse(raw);
+                if (!Number.isNaN(parsed)) return parsed;
+            }
+            return Date.now();
+        })();
+        db.teachingHistory[termId] = {
+            map: JSON.parse(JSON.stringify(TEACHER_MAP || {})),
+            schoolMap: JSON.parse(JSON.stringify(TEACHER_SCHOOL_MAP || {})),
+            savedAt,
+            source: opts.source || 'local'
+        };
+        if (typeof DataManager.refreshTeacherAnalysis === 'function') DataManager.refreshTeacherAnalysis();
+    };
+
+    DataManager.ensureTeacherMap = function (triggerCloud) {
+        const termId = getPreferredTeacherTermId();
+        if (!termId) return false;
+        if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return true;
+
+        const resolved = resolveTeacherHistoryEntry(termId);
+        if (resolved) {
+            syncTeacherTermStorage(resolved.key);
+            setTeacherMap(JSON.parse(JSON.stringify(resolved.map || {})));
+            setTeacherSchoolMap(JSON.parse(JSON.stringify(resolved.schoolMap || {})));
+            return true;
+        }
+
+        if (triggerCloud && window.CloudManager && CloudManager.loadTeachers) {
+            CloudManager.loadTeachers();
+        }
+        return false;
+    };
+
+    DataManager.refreshTeacherAnalysis = function () {
+        const section = document.getElementById('teacher-analysis');
+        syncTeacherAnalysisSchoolContext();
+        if (section && section.classList.contains('active')) {
+            renderTeacherAnalysisState();
+            if (typeof updateStatusPanel === 'function') updateStatusPanel();
+        }
+    };
+
+    DataManager.rememberDataManagerSyncSnapshot = function (sourceLabel = 'save-and-sync') {
+        const teacherSnapshot = this.getTeacherStatusSnapshot();
+        return this.writeDataManagerSyncState({
+            paramsSignature: this.getParamsSyncSignature(),
+            targetsSignature: this.getTargetsSyncSignature(),
+            teacherSignature: teacherSnapshot.signature || '',
+            teacherTermId: teacherSnapshot.termId || '',
+            teacherCount: teacherSnapshot.count || 0,
+            lastCloudSyncAt: Date.now(),
+            lastSyncSource: sourceLabel
+        });
+    };
+
+    DataManager.getDataManagerStatusModel = function () {
+        const indicator = this.getCurrentIndicatorValues();
+        const paramsNeeded = isIndicatorPromptAllowed();
+        const paramsFilledCount = [indicator.ind1, indicator.ind2].filter(Boolean).length;
+        const paramsSignature = this.getParamsSyncSignature();
+        const targets = typeof ensureNormalizedTargets === 'function'
+            ? (ensureNormalizedTargets() || {})
+            : (window.TARGETS || {});
+        const targetNames = Object.keys(targets).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'));
+        const targetsSignature = this.getTargetsSyncSignature();
+        const teacherSnapshot = this.getTeacherStatusSnapshot();
+        const syncState = this.readDataManagerSyncState();
+        const hasBaseline = !!(syncState.paramsSignature || syncState.targetsSignature || syncState.lastCloudSyncAt);
+
+        let paramsState = 'missing';
+        if (!paramsNeeded) paramsState = 'not_needed';
+        else if (paramsFilledCount === 0) paramsState = 'missing';
+        else if (paramsFilledCount < 2) paramsState = 'partial';
+        else if (!hasBaseline) paramsState = 'unknown';
+        else paramsState = paramsSignature === syncState.paramsSignature ? 'synced' : 'pending';
+
+        let targetsState = 'missing';
+        if (targetNames.length === 0) targetsState = 'missing';
+        else if (!hasBaseline) targetsState = 'unknown';
+        else targetsState = targetsSignature === syncState.targetsSignature ? 'synced' : 'pending';
+
+        const teacherBaselineTerm = String(syncState.teacherTermId || '').trim();
+        const teacherBaselineSignature = String(syncState.teacherSignature || '').trim();
+        const teacherHasBaseline = !!teacherBaselineSignature;
+        const teacherMatchesBaseline = !!teacherSnapshot.signature
+            && teacherSnapshot.signature === teacherBaselineSignature
+            && (!teacherBaselineTerm || !teacherSnapshot.termId || teacherBaselineTerm === teacherSnapshot.termId);
+
+        let teachersState = 'missing';
+        if (teacherSnapshot.count === 0) teachersState = 'missing';
+        else if (!teacherHasBaseline) teachersState = 'unknown';
+        else if (!teacherMatchesBaseline) teachersState = 'pending';
+        else teachersState = teacherSnapshot.loadedMatches ? 'synced' : 'synced_unloaded';
+
+        return {
+            paramsNeeded,
+            indicator,
+            paramsFilledCount,
+            paramsState,
+            targetNames,
+            targetCount: targetNames.length,
+            targetsState,
+            teacherSnapshot,
+            teachersState,
+            syncState,
+            hasBaseline,
+            lastSyncText: syncState.lastCloudSyncAt
+                ? new Date(syncState.lastCloudSyncAt).toLocaleString('zh-CN')
+                : '尚未记录',
+            lastSyncSource: syncState.lastSyncSource || ''
+        };
+    };
+
+    DataManager.renderDataManagerStatus = function () {
+        const summaryEl = document.getElementById('dm-status-overview-summary');
+        const tipEl = document.getElementById('dm-status-overview-tip');
+        const paramsEl = document.getElementById('dm-params-status');
+        const targetsEl = document.getElementById('dm-targets-status');
+        if (!summaryEl && !tipEl && !paramsEl && !targetsEl) return;
+
+        const model = this.getDataManagerStatusModel();
+        const toneMap = {
+            success: { bg: '#dcfce7', color: '#166534', border: '#86efac' },
+            warning: { bg: '#fff7ed', color: '#9a3412', border: '#fdba74' },
+            error: { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca' },
+            info: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+            neutral: { bg: '#f8fafc', color: '#475569', border: '#cbd5e1' }
+        };
+        const pill = (text, tone = 'neutral') => {
+            const theme = toneMap[tone] || toneMap.neutral;
+            return `<span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid ${theme.border}; background:${theme.bg}; color:${theme.color}; font-size:12px; font-weight:700;">${text}</span>`;
+        };
+
+        const paramsMetaMap = {
+            not_needed: { tone: 'neutral', title: '当前考试无需参数', detail: '当前场景不会使用优生线/普高线参与指标计算。' },
+            missing: { tone: 'error', title: '未填写', detail: '请先填写优生线和普高线名次。' },
+            partial: { tone: 'warning', title: `已填写 ${model.paramsFilledCount}/2`, detail: '还有参数未填完，暂时不建议开始计算。' },
+            unknown: { tone: 'info', title: '已填写，建议同步确认', detail: '已检测到参数，但还没有同步基线记录，建议点一次右上角保存。' },
+            pending: { tone: 'warning', title: '已暂存，待同步', detail: '参数已经变化，请在完成修改后点右上角统一同步。' },
+            synced: { tone: 'success', title: '已同步', detail: '当前参数和最近一次云端同步记录一致。' }
+        };
+        const targetsMetaMap = {
+            missing: { tone: 'error', title: '未导入', detail: '只保存参数不会自动生成目标人数，请在本页导入目标人数 Excel。' },
+            unknown: { tone: 'info', title: '已导入，建议同步确认', detail: `已检测到 ${model.targetCount} 所学校的目标人数，建议点一次右上角保存建立同步记录。` },
+            pending: { tone: 'warning', title: '已导入，待同步', detail: `已导入 ${model.targetCount} 所学校的目标人数，但还有修改未同步。` },
+            synced: { tone: 'success', title: '已导入并同步', detail: `已导入 ${model.targetCount} 所学校的目标人数，并已和最近一次云端同步保持一致。` }
+        };
+        const teacherTermText = model.teacherSnapshot.termId || getPreferredTeacherTermId() || '未选择学期';
+        const teachersMetaMap = {
+            missing: { tone: 'error', title: '未导入', detail: `当前学期 ${teacherTermText} 还没有任课表。请在“教师任课”导入 Excel 或从云端拉取。` },
+            unknown: { tone: 'info', title: '已导入，建议同步确认', detail: `当前学期 ${teacherTermText} 已识别 ${model.teacherSnapshot.count} 条任课记录，建议同步一次建立基线。` },
+            pending: { tone: 'warning', title: '已导入，待同步', detail: `当前学期 ${teacherTermText} 的任课表有修改，尚未和最近一次云端同步保持一致。` },
+            synced_unloaded: { tone: 'warning', title: '已同步，未加载', detail: `当前学期 ${teacherTermText} 的任课表已同步，但还没恢复到当前分析页面。点击“去同步任课表”即可恢复。` },
+            synced: { tone: 'success', title: '已同步并加载', detail: `当前学期 ${teacherTermText} 的任课表已同步，当前页面正在使用这份任课表。` }
+        };
+
+        const paramsMeta = paramsMetaMap[model.paramsState] || paramsMetaMap.missing;
+        const targetsMeta = targetsMetaMap[model.targetsState] || targetsMetaMap.missing;
+        const teachersMeta = teachersMetaMap[model.teachersState] || teachersMetaMap.missing;
+
+        let tipTone = 'success';
+        let tipText = '当前参数、目标人数和任课表状态已经清晰，可以直接回到分析页面使用。';
+        if (model.teachersState === 'missing') {
+            tipTone = 'warning';
+            tipText = '教师分析页依赖“当前学期任课表”。先在“教师任课”导入或拉取本学期任课表，再回到教师画像。';
+        } else if (model.teachersState === 'synced_unloaded') {
+            tipTone = 'info';
+            tipText = '任课表其实已经同步成功，只是还没恢复到当前页面。点击“去同步任课表”或重新进入“教师任课”即可自动恢复。';
+        } else if (model.targetsState === 'missing' && model.paramsState !== 'missing' && model.paramsState !== 'partial') {
+            tipTone = 'warning';
+            tipText = '你已经设置了年级指标参数，但【目标人数】仍未导入。只保存参数不会自动生成目标人数，请切换到“目标人数管理”导入 Excel。';
+        } else if (model.paramsNeeded && (model.paramsState === 'missing' || model.paramsState === 'partial')) {
+            tipTone = 'warning';
+            tipText = '请先补齐优生线和普高线名次，再进行统一保存和指标相关计算。';
+        } else if (
+            model.paramsState === 'unknown' || model.paramsState === 'pending'
+            || model.targetsState === 'unknown' || model.targetsState === 'pending'
+            || model.teachersState === 'unknown' || model.teachersState === 'pending'
+        ) {
+            tipTone = 'info';
+            tipText = '当前存在尚未确认同步的内容。建议完成修改后点右上角【保存修改并同步云端】。';
+        }
+
+        if (summaryEl) {
+            summaryEl.innerHTML = `
+                <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:stretch;">
+                    <div style="flex:1; min-width:220px; background:#ffffff; border:1px solid #dbeafe; border-radius:10px; padding:12px;">
+                        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+                            <strong style="color:#0f172a;">年级指标参数</strong>
+                            ${pill(paramsMeta.title, paramsMeta.tone)}
+                        </div>
+                        <div style="margin-top:8px; font-size:12px; color:#475569;">优生线：${model.indicator.ind1 || '未填写'} | 普高线：${model.indicator.ind2 || '未填写'}</div>
+                        <div style="margin-top:6px; font-size:12px; color:#64748b;">${paramsMeta.detail}</div>
+                    </div>
+                    <div style="flex:1; min-width:220px; background:#ffffff; border:1px solid #dcfce7; border-radius:10px; padding:12px;">
+                        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+                            <strong style="color:#0f172a;">目标人数</strong>
+                            ${pill(targetsMeta.title, targetsMeta.tone)}
+                        </div>
+                        <div style="margin-top:8px; font-size:12px; color:#475569;">已识别学校：${model.targetCount} 所</div>
+                        <div style="margin-top:6px; font-size:12px; color:#64748b;">${targetsMeta.detail}</div>
+                    </div>
+                    <div style="flex:1; min-width:220px; background:#ffffff; border:1px solid #fde68a; border-radius:10px; padding:12px;">
+                        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+                            <strong style="color:#0f172a;">当前学期任课表</strong>
+                            ${pill(teachersMeta.title, teachersMeta.tone)}
+                        </div>
+                        <div style="margin-top:8px; font-size:12px; color:#475569;">学期：${teacherTermText}</div>
+                        <div style="margin-top:4px; font-size:12px; color:#475569;">记录：${model.teacherSnapshot.count || 0} 条，本页已加载：${model.teacherSnapshot.loadedCount || 0} 条</div>
+                        <div style="margin-top:6px; font-size:12px; color:#64748b;">${teachersMeta.detail}</div>
+                    </div>
+                    <div style="flex:1; min-width:220px; background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:12px;">
+                        <strong style="color:#0f172a;">最近云端同步</strong>
+                        <div style="margin-top:8px; font-size:13px; color:#0f172a; font-weight:700;">${model.lastSyncText}</div>
+                        <div style="margin-top:6px; font-size:12px; color:#64748b;">${model.lastSyncSource || '尚未建立同步记录，建议完成修改后保存一次。'}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (tipEl) {
+            const tipTheme = toneMap[tipTone] || toneMap.info;
+            tipEl.innerHTML = `
+                <div style="padding:10px 12px; border-radius:10px; border:1px solid ${tipTheme.border}; background:${tipTheme.bg}; color:${tipTheme.color}; font-size:12px; line-height:1.8;">
+                    <strong>当前提醒：</strong>${tipText}
+                </div>
+            `;
+        }
+
+        if (paramsEl) {
+            paramsEl.innerHTML = `
+                <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <div><strong>参数状态：</strong>${paramsMeta.title}</div>
+                    ${pill(paramsMeta.title, paramsMeta.tone)}
+                </div>
+                <div style="margin-top:6px; line-height:1.8;">${paramsMeta.detail}</div>
+            `;
+        }
+
+        if (targetsEl) {
+            targetsEl.innerHTML = `
+                <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <div><strong>目标人数状态：</strong>${targetsMeta.title}</div>
+                    ${pill(targetsMeta.title, targetsMeta.tone)}
+                </div>
+                <div style="margin-top:6px; line-height:1.8;">${targetsMeta.detail}</div>
+            `;
+        }
+    };
 }
 function runDataDoctor() {
     if (!RAW_DATA.length) return alert("请先上传数据，医生才能进行诊断！");

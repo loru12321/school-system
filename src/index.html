@@ -4477,7 +4477,7 @@
     <div id="admin-modal" class="modal" style="display: none; z-index: 60000;">
         <div class="modal-content" style="max-width: 600px;"> <!-- 稍微调宽一点 -->
             <div
-                style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;">
+                style="display:flex; justify-content:space-between; align-items:flex-start; gap:18px; border-bottom:1px solid #e2e8f0; padding-bottom:14px; margin-bottom:14px; flex-wrap:wrap;">
                 <div style="display:flex; align-items:center; gap:10px;">
                     <h3 style="color:#b91c1c; margin:0;"><i class="ti ti-shield-lock"></i> 账号管理</h3>
                     <!-- 新增：查看日志按钮 -->
@@ -5639,7 +5639,8 @@
 
     <!-- 5. 数据综合管理后台 (成绩/教师/档案) -->
     <div id="data-manager-modal" class="modal" style="display: none; z-index: 79000;">
-        <div class="modal-content" style="max-width: 900px; height: 90vh; display: flex; flex-direction: column;">
+        <div class="modal-content"
+            style="width:min(1480px,96vw); max-width:1480px; height:min(92vh,960px); display:flex; flex-direction:column; padding:22px 24px 18px; border-radius:22px;">
 
             <div
                 style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;">
@@ -5688,6 +5689,12 @@
             </div>
 
             <!-- 搜索工具栏 (仅在学生/教师 Tab 显示) -->
+            <div id="dm-status-overview"
+                style="margin-bottom:12px; padding:14px 16px; border:1px solid #dbeafe; border-radius:12px; background:linear-gradient(135deg,#eff6ff 0%,#f8fafc 100%);">
+                <div id="dm-status-overview-summary"></div>
+                <div id="dm-status-overview-tip" style="margin-top:10px;"></div>
+            </div>
+
             <div id="dm-search-bar"
                 style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:10px; display:flex; gap:10px;">
                 <input type="text" id="dm-search-input" placeholder="输入姓名/班级/考号筛选..."
@@ -5836,6 +5843,9 @@
                             style="display:none; background:#fff7ed; border:1px dashed #fdba74; color:#9a3412; padding:8px 10px; border-radius:6px; font-size:12px; margin-bottom:12px;">
                             提示：当前非 9 年级期中/期末，参数仅用于预设，不参与计算。
                         </div>
+                        <div id="dm-params-status"
+                            style="background:#ffffff; border:1px solid #dbeafe; color:#1e3a8a; padding:10px 12px; border-radius:10px; font-size:12px; margin-bottom:14px;">
+                        </div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
                             <div>
                                 <label style="font-weight:bold; display:block; margin-bottom:5px;">指标一 (优生线)
@@ -5854,7 +5864,7 @@
                         </div>
                         <div style="margin-top:20px; text-align:right;">
                             <button class="btn btn-primary" onclick="DataManager.saveParamsLocally()">
-                                <i class="ti ti-device-floppy"></i> 暂存参数 (需点击右上角保存同步)
+                                <i class="ti ti-device-floppy"></i> 暂存参数（会尝试立即保存，建议最后统一同步）
                             </button>
                         </div>
                     </div>
@@ -5883,7 +5893,11 @@
                     </div>
 
                     <div class="info-bar" style="margin-bottom:10px;">
-                        💡 提示：导入后请点击右上角【保存修改并同步云端】按钮，以防止刷新后丢失。
+                        💡 提示：导入后系统会尝试自动保存；如果你后面继续修改成绩、参数或目标人数，建议最后再点一次右上角【保存修改并同步云端】。
+                    </div>
+
+                    <div id="dm-targets-status"
+                        style="background:#ffffff; border:1px solid #dcfce7; color:#166534; padding:10px 12px; border-radius:10px; font-size:12px; margin-bottom:12px;">
                     </div>
 
                     <div class="table-wrap"
@@ -5901,6 +5915,52 @@
                                 <!-- JS 动态渲染 -->
                             </tbody>
                         </table>
+                    </div>
+
+                    <div style="margin-top:18px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
+                        <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
+                            <div>
+                                <h4 style="margin:0; color:#0f172a;"><i class="ti ti-git-merge"></i> 学校名称对应表</h4>
+                                <div id="dm-school-aliases-summary" style="font-size:12px; color:#64748b; margin-top:4px;"></div>
+                            </div>
+                            <button class="btn btn-sm btn-primary" onclick="DataManager.openSchoolAliasEditor()">
+                                <i class="ti ti-plus"></i> 新增对应
+                            </button>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:14px;">
+                            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden;">
+                                <div style="padding:10px 12px; background:#eff6ff; color:#1d4ed8; font-weight:700;">系统默认对应</div>
+                                <div class="table-wrap" style="box-shadow:none; border:none; max-height:260px; overflow-y:auto;">
+                                    <table class="comparison-table" style="font-size:12px;">
+                                        <thead>
+                                            <tr>
+                                                <th>规范学校名</th>
+                                                <th>可识别别名</th>
+                                                <th>来源</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="dm-default-school-aliases-tbody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden;">
+                                <div style="padding:10px 12px; background:#f0fdf4; color:#15803d; font-weight:700;">自定义补充对应</div>
+                                <div class="table-wrap" style="box-shadow:none; border:none; max-height:260px; overflow-y:auto;">
+                                    <table class="comparison-table" style="font-size:12px;">
+                                        <thead>
+                                            <tr>
+                                                <th>规范学校名</th>
+                                                <th>别名/导入名称</th>
+                                                <th>操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="dm-custom-school-aliases-tbody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
