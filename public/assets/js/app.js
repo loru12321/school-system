@@ -241,7 +241,7 @@ const UI = {
     }
 };
 
-const CLOUD_STARTUP_LOAD_TIMEOUT_MS = 15000;
+const CLOUD_STARTUP_LOAD_TIMEOUT_MS = 25000;
 
 async function withTimeout(promise, timeoutMs = 8000, timeoutMessage = 'Request timeout') {
     let timer = null;
