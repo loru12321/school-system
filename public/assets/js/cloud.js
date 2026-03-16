@@ -934,7 +934,14 @@
             if (typeof renderActionLogs === 'function') renderActionLogs();
             if (typeof scanDataIssues === 'function') scanDataIssues();
             const hasSessionUser = !!(sessionStorage.getItem('CURRENT_USER') || (window.Auth && Auth.currentUser));
-            if (hasSessionUser && !localStorage.getItem('HAS_SEEN_STARTER') && typeof switchTab === 'function' && typeof openStarterGuide === 'function') {
+            const hasSavedWorkspace = !!(
+                localStorage.getItem('CURRENT_EXAM_ID')
+                || localStorage.getItem('CURRENT_PROJECT_KEY')
+                || window.CURRENT_EXAM_ID
+                || window.CURRENT_PROJECT_KEY
+            );
+            const hasRuntimeScores = Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0;
+            if (hasSessionUser && !localStorage.getItem('HAS_SEEN_STARTER') && !hasSavedWorkspace && !hasRuntimeScores && typeof switchTab === 'function' && typeof openStarterGuide === 'function') {
                 if (typeof __guardBypass !== 'undefined') __guardBypass = true;
                 switchTab('starter-hub');
                 openStarterGuide();

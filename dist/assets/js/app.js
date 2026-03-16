@@ -241,6 +241,8 @@ const UI = {
     }
 };
 
+const CLOUD_STARTUP_LOAD_TIMEOUT_MS = 15000;
+
 async function withTimeout(promise, timeoutMs = 8000, timeoutMessage = 'Request timeout') {
     let timer = null;
     const timeoutPromise = new Promise((_, reject) => {
@@ -503,7 +505,7 @@ const Auth = {
                 document.getElementById('app').classList.remove('hidden');
                 if (typeof renderNavigation === 'function') renderNavigation();
                 if ((!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function') {
-                    withTimeout(loadCloudData(), 8000, 'cloud-load-timeout')
+                    withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout')
                         .catch(e => console.warn('[Auth.init] background cloud load failed:', e));
                 }
             }
@@ -637,7 +639,7 @@ const Auth = {
             // 5. 云端同步改为“限时 + 后台”，避免登录阻塞接近1分钟
             UI.loading(true, "正在同步最新成绩数据...");
             try {
-                await withTimeout(loadCloudData(), 8000, 'cloud-load-timeout');
+                await withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout');
             } catch (e) {
                 console.warn('[Auth.login] initial cloud load timeout/fail:', e);
                 if (typeof loadCloudData === 'function') {
@@ -2231,6 +2233,32 @@ const HelpSystem = {
 };
 
 // 1. Worker 脚本源码 (后台线程逻辑)
+HelpSystem.checkFirstRun = function () {
+    const hasSeen = !!localStorage.getItem('hasSeenV3Tour');
+    const hasSessionUser = !!(sessionStorage.getItem('CURRENT_USER') || (window.Auth && Auth.currentUser));
+    const loginOverlay = document.getElementById('login-overlay');
+    const loginOverlayVisible = !!(loginOverlay && getComputedStyle(loginOverlay).display !== 'none');
+    const hasSavedWorkspace = !!(
+        localStorage.getItem('CURRENT_EXAM_ID')
+        || localStorage.getItem('CURRENT_PROJECT_KEY')
+        || window.CURRENT_EXAM_ID
+        || window.CURRENT_PROJECT_KEY
+    );
+    const hasRuntimeScores = Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0;
+
+    if (hasSeen) return;
+    if (loginOverlayVisible) return;
+    if (hasSessionUser || hasSavedWorkspace || hasRuntimeScores) {
+        localStorage.setItem('hasSeenV3Tour', 'true');
+        return;
+    }
+
+    setTimeout(() => {
+        HelpSystem.startTour();
+        localStorage.setItem('hasSeenV3Tour', 'true');
+    }, 1000);
+};
+
 const WORKER_SOURCE = `
     self.onmessage = function(e) {
         const { cmd, data } = e.data;
@@ -10376,6 +10404,7 @@ function switchTab(id) {
         }
     }
     if (id === 'analysis') updateMacroMultiExamSelects();
+    if (id === 'indicator') refreshIndicatorResults(true);
     if (id === 'high-score') renderHighScoreTable();
     if (id === 'teaching-overview') {
         renderTeachingOverview();
@@ -11535,6 +11564,7 @@ function renderTables() {
     });
     tbBottom.innerHTML = htmlBottom;
     renderTrafficLightDashboard();
+    refreshIndicatorResults(true);
 }
 
 function renderTrafficLightDashboard() {
@@ -24141,6 +24171,23 @@ function isIndicatorAllowed() {
     return isIndicatorPromptAllowed();
 }
 
+function hasIndicatorScoreData() {
+    if (!Array.isArray(RAW_DATA) || RAW_DATA.length === 0) return false;
+    return RAW_DATA.some(row => Number.isFinite(Number(row?.total)));
+}
+
+function hasIndicatorCalcInputs() {
+    const indicator = window.SYS_VARS?.indicator || {};
+    const raw1 = indicator.ind1 || document.getElementById('dm_ind1_input')?.value || document.getElementById('ind1')?.value || '';
+    const raw2 = indicator.ind2 || document.getElementById('dm_ind2_input')?.value || document.getElementById('ind2')?.value || '';
+    const rank1 = parseInt(String(raw1).trim(), 10);
+    const rank2 = parseInt(String(raw2).trim(), 10);
+    const targetCount = window.TARGETS && typeof window.TARGETS === 'object'
+        ? Object.keys(window.TARGETS).length
+        : 0;
+    return rank1 > 0 && rank2 > 0 && targetCount > 0;
+}
+
 function isIndicatorCalcAllowed() {
     const ctx = getIndicatorContext();
     return ctx.grade === '9' && (ctx.type === '期中' || ctx.type === '期末');
@@ -24159,6 +24206,46 @@ function updateIndicatorUIState() {
     if (i2) i2.disabled = !promptAllowed;
     const tip = document.getElementById('dm-params-tip');
     if (tip) tip.style.display = calcAllowed ? 'none' : (promptAllowed ? 'block' : 'none');
+}
+
+function isIndicatorCalcAllowed() {
+    const ctx = getIndicatorContext();
+    return ctx.grade === '9' && hasIndicatorScoreData();
+}
+
+function updateIndicatorUIState() {
+    const promptAllowed = isIndicatorPromptAllowed();
+    const calcAllowed = isIndicatorCalcAllowed();
+    const btn = document.getElementById('btn-indicator-calc');
+    if (btn) {
+        btn.disabled = !calcAllowed;
+        if (!promptAllowed) btn.title = '仅 9 年级可使用指标生功能';
+        else if (!calcAllowed) btn.title = '请先加载当前考试成绩';
+        else if (!hasIndicatorCalcInputs()) btn.title = '参数未补齐，点击后可按提示继续设置';
+        else btn.title = '重新计算当前考试的指标生得分';
+    }
+    const paramsArea = document.getElementById('dm-params-area');
+    if (paramsArea) paramsArea.style.display = promptAllowed ? 'block' : 'none';
+    const i1 = document.getElementById('dm_ind1_input');
+    const i2 = document.getElementById('dm_ind2_input');
+    if (i1) i1.disabled = !promptAllowed;
+    if (i2) i2.disabled = !promptAllowed;
+    const tip = document.getElementById('dm-params-tip');
+    if (tip) {
+        let tipText = '';
+        if (!promptAllowed) tipText = '提示：当前仅 9 年级显示并使用指标生参数。';
+        else if (!calcAllowed) tipText = '提示：请先加载当前考试成绩，再开始计算。';
+        else if (!hasIndicatorCalcInputs()) tipText = '提示：请先补齐划线名次和目标人数，再点击“开始计算”。';
+        tip.textContent = tipText;
+        tip.style.display = tipText ? 'block' : 'none';
+    }
+}
+
+function refreshIndicatorResults(isSilent = true) {
+    updateIndicatorUIState();
+    if (!isIndicatorCalcAllowed() || !hasIndicatorCalcInputs()) return [];
+    const result = calcIndicators(isSilent);
+    return Array.isArray(result) ? result : [];
 }
 
 function ensureIndicatorTargetMatchPanel() {
@@ -24262,6 +24349,10 @@ function calcIndicators(isSilent = false) {
         return [];
     }
 
+    if (!isIndicatorCalcAllowed()) {
+        if (window.UI) UI.toast('请先加载当前 9 年级考试成绩后再开始计算', 'warning');
+        return [];
+    }
     if (!isIndicatorCalcAllowed()) {
         if (window.UI) UI.toast('仅 9 年级期中/期末考试可开始计算', 'warning');
         return;
