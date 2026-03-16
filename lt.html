@@ -28306,22 +28306,93 @@ async function doQuery() {
     }, 200);
 }
 
+function setSingleSelectOptions(selectEl, values, placeholderText, preferredValue) {
+    if (!selectEl) return '';
+    const list = Array.isArray(values)
+        ? values.map(v => String(v || '').trim()).filter(Boolean)
+        : [];
+    let html = '';
+    if (placeholderText !== null && placeholderText !== undefined) {
+        html += `<option value="">${placeholderText}</option>`;
+    }
+    html += list.map(value => `<option value="${value}">${value}</option>`).join('');
+    selectEl.innerHTML = html;
+
+    const preferred = preferredValue == null ? '' : String(preferredValue).trim();
+    if (preferred && list.includes(preferred)) {
+        selectEl.value = preferred;
+    } else if (placeholderText === null && list.length) {
+        selectEl.value = list[0];
+    } else {
+        selectEl.value = '';
+    }
+    return selectEl.value;
+}
+
+function setMultiSelectOptions(selectEl, values, preferredValues) {
+    if (!selectEl) return;
+    const list = Array.isArray(values)
+        ? values.map(v => String(v || '').trim()).filter(Boolean)
+        : [];
+    const preferredSet = new Set((preferredValues || []).map(v => String(v || '').trim()).filter(Boolean));
+    selectEl.innerHTML = list.map(value => `<option value="${value}">${value}</option>`).join('');
+    Array.from(selectEl.options).forEach(option => {
+        option.selected = preferredSet.has(option.value);
+    });
+}
+
+function getSchoolClassOptions(schoolName) {
+    if (!schoolName || !SCHOOLS[schoolName] || !Array.isArray(SCHOOLS[schoolName].students)) return [];
+    return [...new Set(SCHOOLS[schoolName].students.map(s => s.class).filter(Boolean))]
+        .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
+}
+
 function updateMutualAidSelects() {
-    const source = document.getElementById('aid_source').value;
+    const sourceEl = document.getElementById('aid_source');
     const schSel = document.getElementById('aidSchoolSelect');
     const clsSel = document.getElementById('aidClassSelect');
     const subSel = document.getElementById('aidSubjectSelect');
-    schSel.innerHTML = ''; clsSel.innerHTML = '<option value="">--班级--</option>'; subSel.innerHTML = '';
+    if (!sourceEl || !schSel || !clsSel || !subSel) return;
+    const source = sourceEl.value;
+    const prevSchool = schSel.value;
+    const prevClass = clsSel.value;
+    const prevSubject = subSel.value;
     if (source === 'freshman') {
-        schSel.disabled = true; schSel.innerHTML = '<option value="SIM">🚀 新生模拟数据</option>';
-        subSel.innerHTML = '<option value="total">入学总分</option>'; subSel.disabled = true;
-        if (Object.keys(FB_SIMULATED_DATA).length > 0) { Object.keys(FB_SIMULATED_DATA).sort().forEach(c => clsSel.innerHTML += `<option value="${c}">${c}</option>`); } else { clsSel.innerHTML = '<option value="">(暂无数据)</option>'; }
-    } else {
-        schSel.disabled = false; schSel.innerHTML = '<option value="">--请选择学校--</option>';
-        Object.keys(SCHOOLS).forEach(s => schSel.innerHTML += `<option value="${s}">${s}</option>`);
-        schSel.onchange = () => { clsSel.innerHTML = '<option value="">--班级--</option>'; if (schSel.value && SCHOOLS[schSel.value]) { const classes = [...new Set(SCHOOLS[schSel.value].students.map(s => s.class))].sort(); classes.forEach(c => clsSel.innerHTML += `<option value="${c}">${c}</option>`); } };
-        subSel.disabled = false; subSel.innerHTML = '<option value="total">总分(综合)</option>'; SUBJECTS.forEach(s => subSel.innerHTML += `<option value="${s}">${s}</option>`);
+        schSel.disabled = true;
+        schSel.onchange = null;
+        schSel.innerHTML = '<option value="SIM">🎌 新生模拟数据</option>';
+        schSel.value = 'SIM';
+
+        const classes = Object.keys(FB_SIMULATED_DATA || {}).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
+        clsSel.disabled = classes.length === 0;
+        setSingleSelectOptions(clsSel, classes, classes.length ? '--班级--' : '(暂无数据)', prevClass);
+
+        subSel.disabled = true;
+        subSel.innerHTML = '<option value="total">入学总分</option>';
+        subSel.value = 'total';
+        return;
     }
+
+    schSel.disabled = false;
+    clsSel.disabled = false;
+    setSingleSelectOptions(
+        schSel,
+        Object.keys(SCHOOLS || {}).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true })),
+        '--请选择学校--',
+        prevSchool
+    );
+
+    const syncAidClasses = (preferredClass) => {
+        setSingleSelectOptions(clsSel, getSchoolClassOptions(schSel.value), '--班级--', preferredClass);
+    };
+
+    schSel.onchange = () => syncAidClasses(clsSel.value);
+    syncAidClasses(prevClass);
+
+    subSel.disabled = false;
+    subSel.innerHTML = '<option value="total">总分(综合)</option>';
+    SUBJECTS.forEach(s => subSel.innerHTML += `<option value="${s}">${s}</option>`);
+    subSel.value = (prevSubject === 'total' || SUBJECTS.includes(prevSubject)) ? prevSubject : 'total';
 }
 
 function renderMutualAidGroups() {
@@ -28329,7 +28400,11 @@ function renderMutualAidGroups() {
     const sch = document.getElementById('aidSchoolSelect').value;
     const cls = document.getElementById('aidClassSelect').value;
     const sub = document.getElementById('aidSubjectSelect').value;
-    const groupSize = parseInt(document.getElementById('aidGroupSize').value) || 4;
+    const groupSizeInput = document.getElementById('aidGroupSize');
+    const groupSize = Math.max(2, parseInt(groupSizeInput && groupSizeInput.value, 10) || 4);
+    if (groupSizeInput && String(groupSizeInput.value) !== String(groupSize)) {
+        groupSizeInput.value = groupSize;
+    }
     let students = [];
     if (source === 'freshman') {
         if (!cls || !FB_SIMULATED_DATA[cls]) return alert("无分班数据");
@@ -32848,7 +32923,7 @@ function FB_runDivision() {
         FB_renderSchemeSelector();
 
         // 默认应用均分极差最小（最均衡）的方案
-        const bestScheme = FB_SCHEMES_CACHE.sort((a, b) => a.range - b.range)[0];
+        const bestScheme = [...FB_SCHEMES_CACHE].sort((a, b) => a.range - b.range)[0];
         FB_applyScheme(bestScheme.id);
 
         // 显示区域
@@ -32948,10 +33023,11 @@ function FB_renderSchemeSelector() {
     const container = document.getElementById('fb-scheme-cards');
     if (!container) return;
     container.innerHTML = '';
+    const bestRange = FB_SCHEMES_CACHE.length ? Math.min(...FB_SCHEMES_CACHE.map(s => s.range)) : Infinity;
 
     FB_SCHEMES_CACHE.forEach(scheme => {
         // 简单的评分逻辑
-        const isBest = (scheme.range <= FB_SCHEMES_CACHE[0].range); // 假设已排序
+        const isBest = scheme.range <= bestRange;
         const borderStyle = isBest ? 'border:2px solid #16a34a; background:#fff;' : 'border:1px solid #ddd; background:#fff;';
 
         // 找出该方案中男女比例极差
@@ -32959,7 +33035,7 @@ function FB_renderSchemeSelector() {
         const maleRange = Math.max(...males) - Math.min(...males);
 
         container.innerHTML += `
-                <div onclick="FB_applyScheme(${scheme.id})" style="cursor:pointer; padding:10px; border-radius:6px; ${borderStyle} transition:0.2s;" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='#fff'">
+                <div data-scheme-id="${scheme.id}" onclick="FB_applyScheme(${scheme.id})" style="cursor:pointer; padding:10px; border-radius:6px; ${borderStyle} transition:0.2s;" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='#fff'">
                     <div style="font-weight:bold; color:#333; display:flex; justify-content:space-between;">
                         <span>${scheme.name}</span>
                         ${isBest ? '<span style="color:red; font-size:10px;">★ 推荐</span>' : ''}
@@ -32990,8 +33066,8 @@ function FB_applyScheme(id) {
     const cardsWrap = document.getElementById('fb-scheme-cards');
     if (cardsWrap) {
         const cards = cardsWrap.children;
-        Array.from(cards).forEach((card, idx) => {
-            if (scheme.id === FB_SCHEMES_CACHE[idx].id) { // 注意：这里简单按索引对应，实际上按ID匹配更稳
+        Array.from(cards).forEach((card) => {
+            if (String(card.dataset.schemeId) === String(scheme.id)) {
                 card.style.borderColor = '#16a34a';
                 card.style.boxShadow = '0 0 0 3px rgba(22, 163, 74, 0.2)';
             } else {
@@ -34057,6 +34133,7 @@ function FB_toggleLock(idx) {
 // 辅助函数：切换视角旋转
 function FB_toggleViewRotation() {
     const canvas = document.querySelector('.seat-canvas');
+    if (!canvas) return;
     canvas.classList.toggle('view-rotated');
 }
 
@@ -34090,7 +34167,13 @@ function addBindPair(type) {
 function FB_initScenarioSelect() {
     const cls = FB_CLASSES[FB_CUR_CLASS_IDX];
     const sel = document.getElementById('seat_scenario_select');
+    if (!sel) return;
     sel.innerHTML = '<option value="">-- 选择方案 --</option>';
+    if (!cls) {
+        sel.disabled = true;
+        return;
+    }
+    sel.disabled = false;
 
     if (!cls.scenarios) cls.scenarios = {}; // 初始化存储结构
 
@@ -34101,6 +34184,7 @@ function FB_initScenarioSelect() {
 
 function FB_saveScenario() {
     const cls = FB_CLASSES[FB_CUR_CLASS_IDX];
+    if (!cls) return alert("请先打开一个班级座位图");
     if (!cls.seatLayout || cls.seatLayout.length === 0) return alert("当前座位表为空，无法保存");
 
     const name = prompt("请输入方案名称 (如：期中考试、日常、互助组)", `方案 ${Object.keys(cls.scenarios || {}).length + 1}`);
@@ -34116,13 +34200,16 @@ function FB_saveScenario() {
 }
 
 function FB_loadScenario() {
-    const name = document.getElementById('seat_scenario_select').value;
+    const sel = document.getElementById('seat_scenario_select');
+    if (!sel) return;
+    const name = sel.value;
     if (!name) return;
 
     const cls = FB_CLASSES[FB_CUR_CLASS_IDX];
+    if (!cls) return alert("请先打开一个班级座位图");
     if (cls.scenarios && cls.scenarios[name]) {
         if (!confirm(`确定要加载 [${name}] 方案吗？\n当前未保存的修改将丢失。`)) {
-            document.getElementById('seat_scenario_select').value = "";
+            sel.value = "";
             return;
         }
         // 恢复布局
@@ -34132,11 +34219,14 @@ function FB_loadScenario() {
 }
 
 function FB_deleteScenario() {
-    const name = document.getElementById('seat_scenario_select').value;
+    const sel = document.getElementById('seat_scenario_select');
+    if (!sel) return;
+    const name = sel.value;
     if (!name) return alert("请先选择一个要删除的方案");
 
     if (confirm(`确定要永久删除方案 [${name}] 吗？`)) {
         const cls = FB_CLASSES[FB_CUR_CLASS_IDX];
+        if (!cls) return alert("请先打开一个班级座位图");
         delete cls.scenarios[name];
         FB_initScenarioSelect();
     }
@@ -34242,8 +34332,16 @@ function EXAM_generate() {
 }
 
 function EXAM_switchView(view, btn) {
-    document.querySelectorAll('#exam-results-area .nav-link').forEach(l => l.classList.remove('active')); btn.classList.add('active');
-    document.getElementById('exam-view-overview').classList.add('hidden'); document.getElementById('exam-view-students').classList.add('hidden'); document.getElementById('exam-view-proctor').classList.add('hidden'); document.getElementById('exam-view-' + view).classList.remove('hidden');
+    const links = Array.from(document.querySelectorAll('#exam-results-area .nav-link'));
+    links.forEach(l => l.classList.remove('active'));
+    const activeBtn = btn || links.find(link => {
+        const handler = link.getAttribute('onclick') || '';
+        return handler.includes(`'${view}'`) || handler.includes(`"${view}"`);
+    });
+    if (activeBtn) activeBtn.classList.add('active');
+    document.getElementById('exam-view-overview').classList.add('hidden'); document.getElementById('exam-view-students').classList.add('hidden'); document.getElementById('exam-view-proctor').classList.add('hidden');
+    const targetView = document.getElementById('exam-view-' + view);
+    if (targetView) targetView.classList.remove('hidden');
 }
 
 function EXAM_renderOverview() {
@@ -34326,38 +34424,64 @@ function EXAM_generateDeskLabels() {
 
 // 初始化教师勾选列表和下拉框
 function EXAM_initProctorUI() {
-    const teachers = [...new Set(Object.values(TEACHER_MAP))].sort();
+    const teachers = [...new Set(Object.values(TEACHER_MAP || {}).map(name => String(name || '').trim()).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'zh-CN'));
     const poolContainer = document.getElementById('proctor-teacher-pool');
     const patrolSel = document.getElementById('proctor-role-patrol');
     const affairsSel = document.getElementById('proctor-role-affairs');
+    if (!poolContainer || !patrolSel || !affairsSel) return;
 
-    if (!teachers.length) return;
+    const prevExcluded = Array.from(document.querySelectorAll('.exclude-check:checked')).map(option => option.value);
+    const prevPatrols = Array.from(patrolSel.selectedOptions).map(option => option.value);
+    const prevAffairs = Array.from(affairsSel.selectedOptions).map(option => option.value);
+
+    if (!teachers.length) {
+        poolContainer.innerHTML = '<div style="padding:8px 0; color:#94a3b8;">暂无任课教师数据，请先导入任课表。</div>';
+        patrolSel.disabled = true;
+        affairsSel.disabled = true;
+        patrolSel.innerHTML = '';
+        affairsSel.innerHTML = '';
+        return;
+    }
 
     // 渲染黑名单勾选
     poolContainer.innerHTML = teachers.map(name => `
             <label class="teacher-item">
-                <input type="checkbox" class="exclude-check" value="${name}"> ${name}
+                <input type="checkbox" class="exclude-check" value="${name}" ${prevExcluded.includes(name) ? 'checked' : ''}> ${name}
             </label>
         `).join('');
 
     // 渲染多选下拉框
-    const options = teachers.map(name => `<option value="${name}">${name}</option>`).join('');
-    patrolSel.innerHTML = options;
-    affairsSel.innerHTML = options;
+    patrolSel.disabled = false;
+    affairsSel.disabled = false;
+    setMultiSelectOptions(patrolSel, teachers, prevPatrols);
+    setMultiSelectOptions(affairsSel, teachers, prevAffairs);
 }
 
 // 执行编排逻辑
 function EXAM_assignProctors() {
     if (!EXAM_ROOMS.length) return alert("请先生成考场安排");
 
-    const allTeachers = [...new Set(Object.values(TEACHER_MAP))];
+    const allTeachers = [...new Set(Object.values(TEACHER_MAP || {}).map(name => String(name || '').trim()).filter(Boolean))];
+    if (!allTeachers.length) return alert("请先导入任课表，当前没有可用于监考分配的教师。");
+    const patrolSelect = document.getElementById('proctor-role-patrol');
+    const affairsSelect = document.getElementById('proctor-role-affairs');
+    if (!patrolSelect || !affairsSelect) return alert("监考配置面板未就绪，请刷新页面后重试。");
 
     // 获取排除人员
     const excluded = Array.from(document.querySelectorAll('.exclude-check:checked')).map(el => el.value);
 
     // 获取特殊岗位人员
-    const patrols = Array.from(document.getElementById('proctor-role-patrol').selectedOptions).map(o => o.value);
-    const affairs = Array.from(document.getElementById('proctor-role-affairs').selectedOptions).map(o => o.value);
+    const patrols = [...new Set(Array.from(patrolSelect.selectedOptions).map(o => o.value))];
+    const affairsRaw = [...new Set(Array.from(affairsSelect.selectedOptions).map(o => o.value))];
+    const duplicateRoles = affairsRaw.filter(name => patrols.includes(name));
+    const affairs = affairsRaw.filter(name => !patrols.includes(name));
+    if (duplicateRoles.length) {
+        Array.from(affairsSelect.options).forEach(option => {
+            option.selected = affairs.includes(option.value);
+        });
+        if (window.UI) UI.toast(`已自动去重特殊岗位：${duplicateRoles.join('、')}`, 'warning');
+    }
 
     // 可用监考池 = 总人员 - 排除 - 特殊岗位
     let availablePool = allTeachers.filter(t =>
@@ -34661,6 +34785,9 @@ const SCHEDULER = {
                     for (let i = 1; i <= pm; i++) allSlots.push({ id: `d${dayNum}_pm_${i}`, day: dayNum, period: i, type: 'pm' });
                     for (let i = 1; i <= eve; i++) allSlots.push({ id: `d${dayNum}_eve_${i}`, day: dayNum, period: i, type: 'eve' });
                 });
+                let queue = JSON.parse(JSON.stringify(this.data))
+                    .map(item => ({ ...item, remainingHours: item.hours }))
+                    .sort((a, b) => b.hours - a.hours);
 
                 // --- 阶段 A & B (保持不变，略) ---
                 // A. 全局封锁 (活动)
@@ -34695,7 +34822,7 @@ const SCHEDULER = {
                     const targetSlotSuffix = rule.slot.replace(/pm|am|eve/, (m) => m + '_'); // e.g. "eve_3" -> "eve_3"
 
                     // 1. 找出所有教该学科且教多个班的老师
-                    const eligibleTeachers = this.data.filter(t => t.subject === targetSubject && t.classes.length > 1);
+                    const eligibleTeachers = queue.filter(t => t.subject === targetSubject && t.classes.length > 1 && t.remainingHours > 0);
 
                     eligibleTeachers.forEach(t => {
                         // 2. 寻找合适的时间 (周1-5)
@@ -34733,7 +34860,7 @@ const SCHEDULER = {
                                 });
 
                                 // 4. 扣减该老师的待排课时
-                                t.hours = Math.max(0, t.hours - 1);
+                                t.remainingHours = Math.max(0, t.remainingHours - 1);
 
                                 break; // 该老师安排完毕，跳出天数循环
                             }
@@ -34750,18 +34877,16 @@ const SCHEDULER = {
                 // ...
                 const teacherBusyMap = {};
                 this.rules.busy.forEach(b => {
-                    const slots = this.parseBusySlots(b.day, b.slotsStr, am, pm);
+                    const slots = this.parseBusySlots(b.day, b.slotsStr, am, pm, eve);
                     slots.forEach(sid => teacherBusyMap[`${b.name}_${sid}`] = true);
                 });
 
-                const queue = JSON.parse(JSON.stringify(this.data)).sort((a, b) => b.hours - a.hours);
-
                 queue.forEach(t => {
-                    let remaining = t.hours;
+                    let remaining = t.remainingHours;
                     t.classes.forEach(cls => {
                         if (!this.schedule[cls]) return;
                         let placedCount = 0;
-                        const shuffledSlots = allSlots.sort(() => Math.random() - 0.5);
+                        const shuffledSlots = [...allSlots].sort(() => Math.random() - 0.5);
 
                         let iter = 0;
                         for (let sObj of shuffledSlots) {
@@ -34786,10 +34911,11 @@ const SCHEDULER = {
                             placedCount++;
                         }
                     });
+                    t.remainingHours = remaining;
                 });
 
                 // 回退机制：检测是否存在未安排的课时
-                const hasUnfilled = queue.some(t => t.hours > 0);
+                const hasUnfilled = queue.some(t => t.remainingHours > 0);
                 if (hasUnfilled) {
                     UI.toast("⚠️ 部分课时未能安排，已停止优化。请降低约束或重试。", "warning");
                 }
@@ -34872,7 +34998,7 @@ const SCHEDULER = {
                     if (run > maxRun) maxRun = run;
 
                     if (cell && cell.teacher && cell.teacher !== '-') {
-                        const tName = String(cell.teacher).replace('(合)', '').trim();
+                        const tName = String(cell.teacher).replace(/\([^)]*\)/g, '').trim();
                         if (tName) {
                             if (!teacherMap[tName]) teacherMap[tName] = {};
                             if (!teacherMap[tName][day]) teacherMap[tName][day] = new Set();
@@ -35017,20 +35143,23 @@ const SCHEDULER = {
             for (let i = 1; i <= am; i++) slots.push(`${prefix}_am_${i}`);
         } else if (rangeType === 'pm_all') {
             for (let i = 1; i <= pm; i++) slots.push(`${prefix}_pm_${i}`);
+        } else if (rangeType === 'eve_all') {
+            for (let i = 1; i <= eve; i++) slots.push(`${prefix}_eve_${i}`);
         }
         return slots;
     },
 
-    parseBusySlots: function (day, str, amLimit, pmLimit) {
+    parseBusySlots: function (day, str, amLimit, pmLimit, eveLimit) {
         const res = [];
-        const parts = str.split(/[,，]/);
+        const parts = str.split(/[,，、\s]+/);
         parts.forEach(p => {
             p = p.trim();
             if (!p) return;
             if (/^\d+$/.test(p)) {
-                let n = parseInt(p);
+                let n = parseInt(p, 10);
                 if (n <= amLimit) res.push(`d${day}_am_${n}`);
                 else if (n <= amLimit + pmLimit) res.push(`d${day}_pm_${n - amLimit}`);
+                else if (n <= amLimit + pmLimit + eveLimit) res.push(`d${day}_eve_${n - amLimit - pmLimit}`);
             } else {
                 res.push(`d${day}_${p}`);
             }
@@ -35039,9 +35168,12 @@ const SCHEDULER = {
     },
 
     isTeacherBusyInOtherClass: function (teacherName, slotId) {
+        const normalizedTeacher = String(teacherName || '').replace(/\([^)]*\)/g, '').trim();
+        if (!normalizedTeacher) return false;
         for (let cls of this.classes) {
             const cell = this.schedule[cls][slotId];
-            if (cell && cell.teacher === teacherName) return true;
+            const cellTeacher = String(cell?.teacher || '').replace(/\([^)]*\)/g, '').trim();
+            if (cellTeacher === normalizedTeacher) return true;
         }
         return false;
     },
@@ -35064,6 +35196,7 @@ const SCHEDULER = {
                 target = this.classes[0];
             }
         }
+        if (sel && target) sel.value = target;
 
         const table = document.getElementById('sch_table');
         const am = parseInt(document.getElementById('sch_am_count').value);
@@ -35086,7 +35219,7 @@ const SCHEDULER = {
                 const foundCls = [];
                 this.classes.forEach(c => {
                     const s = this.schedule[c][slotId];
-                    if (s && s.teacher.includes(target)) foundCls.push(c);
+                    if (s && typeof s.teacher === 'string' && s.teacher.includes(target)) foundCls.push(c);
                 });
                 if (foundCls.length) return `<div style="font-weight:bold; color:#059669;">${foundCls.join(',')}班</div><div style="font-size:10px;">上课</div>`;
             }
@@ -35150,21 +35283,62 @@ const SCHEDULER = {
         table.innerHTML = html;
     },
 
+    getExportCellText: function (className, slotId) {
+        const cell = this.schedule[className]?.[slotId];
+        return cell ? `${cell.subject}\n(${cell.teacher})` : '';
+    },
+
+    appendExportSectionRows: function (data, className, labelPrefix, slotType, count, options = {}) {
+        const isFridayLimited = !!options.fridayDisabled;
+        const fridayText = options.fridayText || '';
+        const startIndex = parseInt(options.startIndex, 10) || 1;
+        for (let i = 1; i <= count; i++) {
+            const slotNumber = startIndex + i - 1;
+            const row = [`${className}班`, `${labelPrefix}${slotNumber}`];
+            for (let day = 1; day <= 5; day++) {
+                if (day === 5 && isFridayLimited) {
+                    row.push(fridayText);
+                } else {
+                    row.push(this.getExportCellText(className, `d${day}_${slotType}_${slotNumber}`));
+                }
+            }
+            data.push(row);
+        }
+    },
+
     exportResult: function () {
         if (Object.keys(this.schedule).length === 0) return alert("暂无课表数据");
         const wb = XLSX.utils.book_new();
         const data = [['班级', '时段', '周一', '周二', '周三', '周四', '周五']];
         const am = parseInt(document.getElementById('sch_am_count').value);
+        const pm = parseInt(document.getElementById('sch_pm_count').value);
+        const eve = parseInt(document.getElementById('sch_eve_count').value);
+        const hasMorningRead = document.getElementById('sch_rule_morning_read').checked;
+        const hasNoonWrite = document.getElementById('sch_rule_noon_write').checked;
+        const fridayPmLimit = document.getElementById('sch_rule_fri_pm').checked;
+        const fridayPmMax = parseInt(document.getElementById('sch_fri_pm_val').value, 10) || 0;
+        const noFridayEve = document.getElementById('sch_rule_fri_eve').checked;
 
         this.classes.forEach(c => {
-            for (let i = 1; i <= am; i++) {
-                const row = [`${c}班`, `上午${i}`];
-                for (let d = 1; d <= 5; d++) {
-                    const cell = this.schedule[c][`d${d}_am_${i}`];
-                    row.push(cell ? `${cell.subject}\n(${cell.teacher})` : '');
-                }
-                data.push(row);
+            if (hasMorningRead) data.push([`${c}班`, '早读', '语文/英语', '语文/英语', '语文/英语', '语文/英语', '语文/英语']);
+
+            this.appendExportSectionRows(data, c, '上午', 'am', am);
+
+            if (hasNoonWrite) data.push([`${c}班`, '午练', '练字', '练字', '练字', '练字', '练字']);
+
+            for (let i = 1; i <= pm; i++) {
+                this.appendExportSectionRows(data, c, '下午', 'pm', 1, {
+                    startIndex: i,
+                    fridayDisabled: fridayPmLimit && i > fridayPmMax,
+                    fridayText: '(放假)'
+                });
             }
+
+            this.appendExportSectionRows(data, c, '晚', 'eve', eve, {
+                fridayDisabled: noFridayEve,
+                fridayText: '-'
+            });
+
             data.push(['---', '---', '---', '---', '---', '---', '---']);
         });
 
@@ -35178,32 +35352,41 @@ const SCHEDULER = {
 // 初始化下拉框 (当切换到此 Tab 时调用)
 function updatePosterSelects() {
     const schSel = document.getElementById('posterSchoolSelect');
+    const clsSel = document.getElementById('posterClassSelect');
     const subSel = document.getElementById('posterSubjectSelect');
+    if (!schSel || !clsSel || !subSel) return;
+    const prevSchool = schSel.value;
+    const prevClass = clsSel.value;
+    const prevSubject = subSel.value;
 
-    schSel.innerHTML = '<option value="">--请选择学校--</option>';
-    Object.keys(SCHOOLS).forEach(s => schSel.innerHTML += `<option value="${s}">${s}</option>`);
+    setSingleSelectOptions(
+        schSel,
+        Object.keys(SCHOOLS || {}).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true })),
+        '--请选择学校--',
+        prevSchool
+    );
 
     // 填充科目 (保留总分选项)
     subSel.innerHTML = '<option value="total">🏆 总分光荣榜</option>';
     SUBJECTS.forEach(s => subSel.innerHTML += `<option value="${s}">📘 ${s}单科状元</option>`);
+    subSel.value = (prevSubject === 'total' || SUBJECTS.includes(prevSubject)) ? prevSubject : 'total';
 
     // 默认触发一次班级更新
-    updatePosterClassSelect();
+    schSel.onchange = () => updatePosterClassSelect();
+    updatePosterClassSelect(prevClass);
 }
 
-function updatePosterClassSelect() {
+function updatePosterClassSelect(preferredClass) {
     const sch = document.getElementById('posterSchoolSelect').value;
     const clsSel = document.getElementById('posterClassSelect');
-    clsSel.innerHTML = '<option value="">全校排名</option>';
-
-    if (sch && SCHOOLS[sch]) {
-        const classes = [...new Set(SCHOOLS[sch].students.map(s => s.class))].sort();
-        classes.forEach(c => clsSel.innerHTML += `<option value="${c}">${c}</option>`);
-    }
+    if (!clsSel) return;
+    const keepClass = preferredClass !== undefined ? preferredClass : clsSel.value;
+    setSingleSelectOptions(clsSel, getSchoolClassOptions(sch), '全校排名', keepClass);
 }
 
 function setPosterTheme(themeName, btn) {
     const canvas = document.getElementById('poster-canvas');
+    if (!canvas || !btn || !btn.parentNode) return;
     // 移除旧主题
     canvas.classList.remove('theme-red', 'theme-blue', 'theme-tech');
     // 添加新主题
@@ -35222,8 +35405,11 @@ function renderPoster() {
     const limit = parseInt(document.getElementById('posterCount').value) || 10;
     const customTitle = document.getElementById('posterTitleInput').value;
     const customSub = document.getElementById('posterSubInput').value;
+    const canvas = document.getElementById('poster-canvas');
+    const container = document.getElementById('poster-list-container');
 
-    if (!sch) return alert("请先选择学校");
+    if (!canvas || !container) return;
+    if (!sch || !SCHOOLS[sch]) return alert("请先选择学校");
 
     // 1. 筛选数据
     let students = SCHOOLS[sch].students;
@@ -35240,12 +35426,12 @@ function renderPoster() {
     list = list.slice(0, limit);
 
     // 3. 更新标题
-    const canvas = document.getElementById('poster-canvas');
-    canvas.querySelector('.p-title').innerText = customTitle;
-    canvas.querySelector('.p-sub').innerText = customSub || `${sch} ${cls || '全年级'} ${sub === 'total' ? '总分' : sub}前${limit}名`;
+    const titleEl = canvas.querySelector('.p-title');
+    const subTitleEl = canvas.querySelector('.p-sub');
+    if (titleEl) titleEl.innerText = customTitle;
+    if (subTitleEl) subTitleEl.innerText = customSub || `${sch} ${cls || '全年级'} ${sub === 'total' ? '总分' : sub}前${limit}名`;
 
     // 4. 渲染列表
-    const container = document.getElementById('poster-list-container');
     let html = '';
 
     if (list.length === 0) {
@@ -35273,6 +35459,7 @@ function renderPoster() {
 function downloadPoster() {
     const canvasDiv = document.getElementById('poster-canvas');
     if (!canvasDiv) return;
+    if (typeof html2canvas !== 'function') return alert("截图组件尚未加载完成，请刷新页面后重试。");
 
     // 防止截图时文字被截断或错位，先临时锁定宽高
     const originalTransform = canvasDiv.style.transform;
@@ -35288,7 +35475,7 @@ function downloadPoster() {
             logging: false
         }).then(canvas => {
             // 恢复样式
-            if (originalTransform) canvasDiv.style.transform = originalTransform;
+            canvasDiv.style.transform = originalTransform;
 
             // 下载
             const link = document.createElement('a');
@@ -35298,6 +35485,7 @@ function downloadPoster() {
             link.click();
             document.body.removeChild(link);
         }).catch(err => {
+            canvasDiv.style.transform = originalTransform;
             alert("生成失败: " + err.message);
         });
     }, 200);
@@ -35510,20 +35698,24 @@ window.addEventListener('load', MP_initSnapshotSelect);
 function updateSeatAdjSelects() {
     const schSel = document.getElementById('seatAdjSchoolSelect');
     const clsSel = document.getElementById('seatAdjClassSelect');
+    if (!schSel || !clsSel) return;
+    const prevSchool = schSel.value;
+    const prevClass = clsSel.value;
 
     // 初始化学校下拉框
-    schSel.innerHTML = '<option value="">--请选择学校--</option>';
-    clsSel.innerHTML = '<option value="">--请选择班级--</option>';
-
-    Object.keys(SCHOOLS).forEach(s => schSel.innerHTML += `<option value="${s}">${s}</option>`);
+    setSingleSelectOptions(
+        schSel,
+        Object.keys(SCHOOLS || {}).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true })),
+        '--请选择学校--',
+        prevSchool
+    );
+    const syncSeatAdjClasses = (preferredClass) => {
+        setSingleSelectOptions(clsSel, getSchoolClassOptions(schSel.value), '--请选择班级--', preferredClass);
+    };
 
     // 学校变更 -> 更新班级
     schSel.onchange = () => {
-        clsSel.innerHTML = '<option value="">--班级--</option>';
-        if (schSel.value && SCHOOLS[schSel.value]) {
-            const classes = [...new Set(SCHOOLS[schSel.value].students.map(s => s.class))].sort();
-            classes.forEach(c => clsSel.innerHTML += `<option value="${c}">${c}</option>`);
-        }
+        syncSeatAdjClasses('');
         // 清空学生列表
         CURRENT_CONTEXT_STUDENTS = [];
         updateConstraintWidgetsContext('adj'); // 立即更新一次，清空下拉框
@@ -35533,6 +35725,8 @@ function updateSeatAdjSelects() {
     clsSel.onchange = () => {
         updateConstraintWidgetsContext('adj');
     };
+    syncSeatAdjClasses(prevClass);
+    updateConstraintWidgetsContext('adj');
 }
 function renderSeatGrid() {
     // 仅在座位工作区已生成后才重新渲染（响应行列数输入变化）
