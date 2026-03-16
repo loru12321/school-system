@@ -384,6 +384,7 @@
         if (typeof CohortDB !== 'undefined' && typeof CohortDB.renderExamList === 'function') CohortDB.renderExamList();
         if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
         if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
+        if (typeof updateTeacherCompareExamSelects === 'function') updateTeacherCompareExamSelects();
         if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
         if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
         if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
