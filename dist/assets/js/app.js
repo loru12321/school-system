@@ -6281,6 +6281,7 @@ function syncRuntimeStateToWindow() {
     window.CURRENT_COHORT_ID = CURRENT_COHORT_ID;
     window.CURRENT_COHORT_META = CURRENT_COHORT_META;
     window.CURRENT_EXAM_ID = CURRENT_EXAM_ID;
+    window.CURRENT_PROJECT_KEY = CURRENT_COHORT_ID ? getCohortKey(CURRENT_COHORT_ID) : (localStorage.getItem('CURRENT_PROJECT_KEY') || '');
     window.RAW_DATA = RAW_DATA;
     window.SCHOOLS = SCHOOLS;
     window.SUBJECTS = SUBJECTS;
@@ -11273,12 +11274,24 @@ async function processData() {
         // ✋ 🔴 [修复开始]：不要写死 'autosave_backup'，而是获取当前选中的项目 KEY
         // 如果获取不到，才兜底使用 'autosave_backup'
         const currentKey = localStorage.getItem('CURRENT_PROJECT_KEY') || 'autosave_backup';
+        const snapshotPayload = typeof getCurrentSnapshotPayload === 'function'
+            ? getCurrentSnapshotPayload()
+            : {
+                timestamp: Date.now(),
+                RAW_DATA, SCHOOLS, SUBJECTS, THRESHOLDS, TEACHER_MAP, CONFIG, MY_SCHOOL
+            };
+        const isCohortKey = /^cohort::/i.test(currentKey);
+        const indicatorRequired = typeof isIndicatorCalcAllowed === 'function' ? isIndicatorCalcAllowed() : false;
+        const targetCount = snapshotPayload?.TARGETS && typeof snapshotPayload.TARGETS === 'object'
+            ? Object.keys(snapshotPayload.TARGETS).length
+            : 0;
 
-        DB.save(currentKey, {
-            timestamp: Date.now(),
-            RAW_DATA, SCHOOLS, SUBJECTS, THRESHOLDS, TEACHER_MAP, CONFIG, MY_SCHOOL
-        });
-        console.log(`✅ 数据已自动保存至: ${currentKey}`);
+        if (isCohortKey && indicatorRequired && Array.isArray(snapshotPayload?.RAW_DATA) && snapshotPayload.RAW_DATA.length > 0 && targetCount === 0) {
+            console.warn(`[AutoSave] skip partial cohort snapshot without targets: ${currentKey}`);
+        } else {
+            DB.save(currentKey, snapshotPayload);
+            console.log(`✅ 数据已自动保存至: ${currentKey}`);
+        }
         // 👆 🟢 [修复结束]
     }
     updateStatusPanel();

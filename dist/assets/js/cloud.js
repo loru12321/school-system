@@ -80,6 +80,163 @@
         return 'LZ|' + LZString.compressToUTF16(json);
     }
 
+    function clonePayloadFragment(value) {
+        if (value == null) return value;
+        return JSON.parse(JSON.stringify(value));
+    }
+
+    function getPayloadTargetCount(payload) {
+        if (!payload || typeof payload !== 'object' || !payload.TARGETS || typeof payload.TARGETS !== 'object') return 0;
+        return Object.keys(payload.TARGETS).length;
+    }
+
+    function hasPayloadIndicatorParams(payload) {
+        const params = payload?.INDICATOR_PARAMS;
+        if (!params || typeof params !== 'object') return false;
+        return !!String(params.ind1 || '').trim() || !!String(params.ind2 || '').trim();
+    }
+
+    function hasPayloadAliasSettings(payload) {
+        return Array.isArray(payload?.SCHOOL_ALIAS_SETTINGS) && payload.SCHOOL_ALIAS_SETTINGS.length > 0;
+    }
+
+    function needsIndicatorPayloadSupplement(payload) {
+        return getPayloadTargetCount(payload) === 0 || !hasPayloadIndicatorParams(payload) || !hasPayloadAliasSettings(payload);
+    }
+
+    function mergeIndicatorPayloadFields(payload, supplement) {
+        const base = (payload && typeof payload === 'object') ? { ...payload } : {};
+        if (!supplement || typeof supplement !== 'object') return base;
+
+        if (getPayloadTargetCount(base) === 0 && getPayloadTargetCount(supplement) > 0) {
+            base.TARGETS = clonePayloadFragment(supplement.TARGETS);
+        }
+        if (!hasPayloadIndicatorParams(base) && hasPayloadIndicatorParams(supplement)) {
+            base.INDICATOR_PARAMS = clonePayloadFragment(supplement.INDICATOR_PARAMS);
+        }
+        if (!hasPayloadAliasSettings(base) && hasPayloadAliasSettings(supplement)) {
+            base.SCHOOL_ALIAS_SETTINGS = clonePayloadFragment(supplement.SCHOOL_ALIAS_SETTINGS);
+        }
+        return base;
+    }
+
+    async function loadSnapshotPayloadByKey(key) {
+        const snapshotKey = String(key || '').trim();
+        if (!snapshotKey) return null;
+
+        try {
+            if (window.idbKeyval) {
+                const cached = await idbKeyval.get(`cache_${snapshotKey}`);
+                if (cached && typeof cached === 'object') return cached;
+            }
+        } catch (e) {
+            console.warn('[CloudLoad] read snapshot cache failed:', e);
+        }
+
+        const { data, error } = await window.sbClient
+            .from(CLOUD_TABLE)
+            .select('content')
+            .eq('key', snapshotKey)
+            .maybeSingle();
+        if (error) throw error;
+        if (!data?.content) return null;
+
+        const payload = parsePayload(data.content);
+        try {
+            if (window.idbKeyval && payload && typeof payload === 'object') {
+                await idbKeyval.set(`cache_${snapshotKey}`, payload);
+            }
+        } catch (e) {
+            console.warn('[CloudLoad] write snapshot cache failed:', e);
+        }
+        return payload;
+    }
+
+    function scoreIndicatorSupplement(basePayload, preferredKey, candidateKey, candidatePayload) {
+        if (!candidatePayload || typeof candidatePayload !== 'object') return Number.NEGATIVE_INFINITY;
+        let score = 0;
+
+        const targetCount = getPayloadTargetCount(candidatePayload);
+        if (targetCount > 0) score += 500 + targetCount;
+        if (hasPayloadIndicatorParams(candidatePayload)) score += 180;
+        if (hasPayloadAliasSettings(candidatePayload)) score += 60;
+
+        const preferredExamLabel = deriveExamLabel(preferredKey);
+        const candidateExamLabel = deriveExamLabel(candidateKey);
+        if (preferredExamLabel && candidateExamLabel && preferredExamLabel === candidateExamLabel) score += 120;
+
+        const baseFingerprint = String(basePayload?.FINGERPRINT || '').trim();
+        const candidateFingerprint = String(candidatePayload?.FINGERPRINT || '').trim();
+        if (baseFingerprint && candidateFingerprint && baseFingerprint === candidateFingerprint) score += 220;
+
+        const baseRows = Array.isArray(basePayload?.RAW_DATA) ? basePayload.RAW_DATA.length : 0;
+        const candidateRows = Array.isArray(candidatePayload?.RAW_DATA) ? candidatePayload.RAW_DATA.length : 0;
+        if (baseRows > 0 && candidateRows === baseRows) score += 90;
+
+        const cohortId = normalizeCohortId(basePayload?.CURRENT_COHORT_ID || preferredKey || localStorage.getItem('CURRENT_COHORT_ID'));
+        if (cohortId && candidateKey === `cohort::${cohortId}`) score += 40;
+
+        return score;
+    }
+
+    async function supplementIndicatorPayload(preferredKey, payload) {
+        if (!needsIndicatorPayloadSupplement(payload)) return payload;
+
+        const cohortId = normalizeCohortId(
+            payload?.CURRENT_COHORT_ID
+            || extractCohortIdFromKey(preferredKey)
+            || window.CURRENT_COHORT_ID
+            || localStorage.getItem('CURRENT_COHORT_ID')
+        );
+        if (!cohortId) return payload;
+
+        const candidateKeys = new Set();
+        candidateKeys.add(`cohort::${cohortId}`);
+
+        const { data, error } = await window.sbClient
+            .from(CLOUD_TABLE)
+            .select('key,updated_at')
+            .like('key', `${cohortId}%`)
+            .order('updated_at', { ascending: false })
+            .limit(50);
+        if (error) throw error;
+
+        (data || []).forEach((row) => {
+            const key = String(row?.key || '').trim();
+            if (!key || key === preferredKey || isIgnoredExamKey(key)) return;
+            candidateKeys.add(key);
+        });
+
+        let bestPayload = null;
+        let bestScore = Number.NEGATIVE_INFINITY;
+        for (const candidateKey of candidateKeys) {
+            if (!candidateKey || candidateKey === preferredKey) continue;
+            try {
+                const candidatePayload = await loadSnapshotPayloadByKey(candidateKey);
+                const score = scoreIndicatorSupplement(payload, preferredKey, candidateKey, candidatePayload);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestPayload = candidatePayload;
+                }
+            } catch (e) {
+                console.warn('[CloudLoad] supplement candidate skipped:', candidateKey, e?.message || e);
+            }
+        }
+
+        if (!bestPayload || bestScore === Number.NEGATIVE_INFINITY) return payload;
+        const merged = mergeIndicatorPayloadFields(payload, bestPayload);
+
+        try {
+            if (window.idbKeyval && merged && typeof merged === 'object') {
+                await idbKeyval.set(`cache_${preferredKey}`, merged);
+            }
+        } catch (e) {
+            console.warn('[CloudLoad] cache merged payload failed:', e);
+        }
+
+        return merged;
+    }
+
     function computeExamDataFingerprint(rows) {
         const list = Array.isArray(rows) ? rows : [];
         const normalized = list.map(row => ({
@@ -381,7 +538,8 @@
                 if (error) throw error;
                 if (!data) return false;
 
-                const payload = parsePayload(data.content);
+                let payload = parsePayload(data.content);
+                payload = await supplementIndicatorPayload(key, payload);
                 seedCurrentExamToCohortDb(payload, key, data.updated_at);
                 if (typeof applySnapshotPayload === 'function') applySnapshotPayload(payload);
                 const cohortId = normalizeCohortId(payload?.CURRENT_COHORT_ID || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
