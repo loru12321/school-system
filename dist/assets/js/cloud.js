@@ -27,12 +27,22 @@
     }
 
     function normalizeCohortId(raw) {
-        return String(raw || '').replace(/\D/g, '');
+        const text = String(raw || '').trim();
+        if (!text) return '';
+        let match = text.match(/^cohort::(\d{4})/i);
+        if (match) return match[1];
+        match = text.match(/^(\d{4})(?!\d)/);
+        if (match) return match[1];
+        match = text.match(/(\d{4})级/);
+        if (match) return match[1];
+        match = text.match(/(\d{4})/);
+        if (match) return match[1];
+        const digits = text.replace(/\D/g, '');
+        return digits.length > 4 ? digits.slice(0, 4) : digits;
     }
 
     function extractCohortIdFromKey(key) {
-        const match = String(key || '').match(/^(\d{4})\D*_/);
-        return match ? match[1] : '';
+        return normalizeCohortId(key);
     }
 
     function isIgnoredExamKey(key) {
@@ -123,6 +133,82 @@
         window.COHORT_DB = db;
     }
 
+    function deriveExamLabel(examId, fallbackLabel) {
+        if (fallbackLabel) return fallbackLabel;
+        const keyParts = String(examId || '').split('_');
+        return keyParts.length >= 5 ? keyParts.slice(4).join('_') : String(examId || '');
+    }
+
+    function upsertCloudExamSnapshot(db, examId, payload, updatedAt, fallbackLabel) {
+        if (!db || !examId || !payload || isIgnoredExamKey(examId)) return 0;
+        const rows = Array.isArray(payload?.RAW_DATA) && payload.RAW_DATA.length
+            ? payload.RAW_DATA
+            : Array.isArray(payload?.data) && payload.data.length
+                ? payload.data
+                : [];
+        if (!rows.length) return 0;
+
+        const remoteTs = updatedAt ? (new Date(updatedAt).getTime() || Date.now()) : Date.now();
+        const existing = db.exams?.[examId];
+        const existingCount = Array.isArray(existing?.data) ? existing.data.length : 0;
+        const existingTs = existing
+            ? Math.max(new Date(existing.updatedAt || 0).getTime() || 0, Number(existing.createdAt || 0))
+            : 0;
+        if (existing && existingCount > 0 && remoteTs <= existingTs + 1000) return 0;
+
+        db.exams[examId] = {
+            examId,
+            examLabel: payload?.examLabel || deriveExamLabel(examId, fallbackLabel),
+            meta: payload?.ARCHIVE_META || payload?.meta || payload?.CONFIG || payload?.config || {},
+            data: rows,
+            schools: payload?.SCHOOLS || payload?.schools || {},
+            teacherMap: payload?.TEACHER_MAP || payload?.teacherMap || {},
+            subjects: payload?.SUBJECTS || payload?.subjects || [],
+            thresholds: payload?.THRESHOLDS || payload?.thresholds || {},
+            config: payload?.CONFIG || payload?.config || {},
+            fingerprint: payload?.FINGERPRINT || payload?.fingerprint || computeExamDataFingerprint(rows),
+            createdAt: existingCount > 0 ? (existing.createdAt || remoteTs) : remoteTs,
+            updatedAt: updatedAt || existing?.updatedAt || ''
+        };
+        return 1;
+    }
+
+    function hydrateBundledCohortExams(db, payload, updatedAt) {
+        const bundledExams = payload?.COHORT_DB?.exams;
+        if (!bundledExams || typeof bundledExams !== 'object') return 0;
+        let mergedCount = 0;
+        Object.entries(bundledExams).forEach(([examId, examPayload]) => {
+            mergedCount += upsertCloudExamSnapshot(db, examId, examPayload, updatedAt, examPayload?.examLabel || examId);
+        });
+        return mergedCount;
+    }
+
+    async function resolveCloudSnapshotKey(preferredKey) {
+        const rawKey = String(preferredKey || '').trim();
+        const keyLooksLikeExam = rawKey
+            && !/^cohort::/i.test(rawKey)
+            && !isIgnoredExamKey(rawKey)
+            && !!extractCohortIdFromKey(rawKey);
+        if (keyLooksLikeExam) return rawKey;
+
+        const cid = normalizeCohortId(
+            extractCohortIdFromKey(rawKey)
+            || window.CURRENT_COHORT_ID
+            || localStorage.getItem('CURRENT_COHORT_ID')
+        );
+        let query = window.sbClient.from(CLOUD_TABLE).select('key,updated_at');
+        if (cid) query = query.like('key', `${cid}%`);
+        const { data, error } = await query.order('updated_at', { ascending: false }).limit(50);
+        if (error) throw error;
+
+        const rows = (data || []).filter(row => {
+            if (isIgnoredExamKey(row.key)) return false;
+            if (!cid) return true;
+            return extractCohortIdFromKey(row.key) === cid;
+        });
+        return rows[0]?.key || '';
+    }
+
     async function refreshCompareSelectors() {
         if (typeof CohortDB !== 'undefined' && typeof CohortDB.renderExamList === 'function') CohortDB.renderExamList();
         if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
@@ -188,7 +274,14 @@
         getTeacherKey: () => {
             const termSel = document.getElementById('dm-teacher-term-select');
             const meta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
-            const termId = termSel?.value || localStorage.getItem('CURRENT_TERM_ID') || (typeof getTermId === 'function' ? getTermId(meta) : '');
+            const exactUiTeacherTerm = meta.year && meta.term
+                ? `${meta.year}_${meta.term}${meta.grade ? '_' + meta.grade + '年级' : ''}`
+                : '';
+            const termId = termSel?.value
+                || localStorage.getItem('CURRENT_TEACHER_TERM_ID')
+                || exactUiTeacherTerm
+                || localStorage.getItem('CURRENT_TERM_ID')
+                || (typeof getTermId === 'function' ? getTermId(meta) : '');
             const cohortId = window.CURRENT_COHORT_ID || window.CURRENT_COHORT_META?.id || meta.cohortId || localStorage.getItem('CURRENT_COHORT_ID');
             if (!termId || !cohortId) return null;
             return `${KEY_PREFIX_TEACHERS}${cohortId}级_${termId}`;
@@ -212,12 +305,13 @@
 
             safeLoading(true, '正在同步云端数据...');
             try {
-                if (!window.SYS_VARS) window.SYS_VARS = { indicator: { ind1: '', ind2: '' }, targets: {} };
+                if (!window.SYS_VARS) window.SYS_VARS = { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
                 const ind1 = document.getElementById('dm_ind1_input');
                 const ind2 = document.getElementById('dm_ind2_input');
                 if (ind1) window.SYS_VARS.indicator.ind1 = ind1.value;
                 if (ind2) window.SYS_VARS.indicator.ind2 = ind2.value;
-                window.SYS_VARS.targets = window.TARGETS || {};
+                window.SYS_VARS.targets = (typeof ensureNormalizedTargets === 'function') ? ensureNormalizedTargets() : (window.TARGETS || {});
+                window.SYS_VARS.schoolAliases = (typeof ensureSchoolAliasStore === 'function') ? ensureSchoolAliasStore() : (window.SYS_VARS.schoolAliases || []);
 
                 const payload = typeof getCurrentSnapshotPayload === 'function' ? getCurrentSnapshotPayload() : {};
                 const content = packPayload(payload);
@@ -252,23 +346,13 @@
             setCloudStatus('syncing', '拉取中');
 
             let key = this.getKey() || localStorage.getItem('CURRENT_PROJECT_KEY');
-            if (!key) {
-                try {
-                    const { data: rows, error } = await window.sbClient
-                        .from(CLOUD_TABLE)
-                        .select('key,updated_at')
-                        .not('key', 'like', 'TEACHERS_%')
-                        .not('key', 'like', 'STUDENT_COMPARE_%')
-                        .order('updated_at', { ascending: false })
-                        .limit(1);
-                    if (error) throw error;
-                    key = rows?.[0]?.key || null;
-                    if (key) localStorage.setItem('CURRENT_PROJECT_KEY', key);
-                } catch (e) {
-                    console.error('Cloud load key lookup error:', e);
-                    setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '加载失败');
-                    return false;
-                }
+            try {
+                key = await resolveCloudSnapshotKey(key);
+                if (key) localStorage.setItem('CURRENT_PROJECT_KEY', key);
+            } catch (e) {
+                console.error('Cloud load key lookup error:', e);
+                setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '加载失败');
+                return false;
             }
 
             if (!key) return false;
@@ -331,8 +415,14 @@
 
                 localStorage.setItem('TEACHER_SYNC_AT', new Date().toISOString());
                 if (typeof logAction === 'function') logAction('任课同步', `任课表已保存：${key}`);
+                if (window.DataManager && typeof DataManager.rememberDataManagerSyncSnapshot === 'function') {
+                    DataManager.rememberDataManagerSyncSnapshot('teacher-cloud-save');
+                }
                 if (window.DataManager && typeof DataManager.refreshTeacherAnalysis === 'function') {
                     DataManager.refreshTeacherAnalysis();
+                }
+                if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') {
+                    DataManager.renderDataManagerStatus();
                 }
                 if (typeof updateStatusPanel === 'function') updateStatusPanel();
                 safeToast('任课表同步成功', 'success');
@@ -364,6 +454,17 @@
 
                 if (!row) {
                     const cohortId = normalizeCohortId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+                    const termSel = document.getElementById('dm-teacher-term-select');
+                    const meta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
+                    const exactUiTeacherTerm = meta.year && meta.term
+                        ? `${meta.year}_${meta.term}${meta.grade ? '_' + meta.grade + '年级' : ''}`
+                        : '';
+                    const desiredTerms = [
+                        termSel?.value,
+                        localStorage.getItem('CURRENT_TEACHER_TERM_ID'),
+                        exactUiTeacherTerm,
+                        localStorage.getItem('CURRENT_TERM_ID')
+                    ].map(v => String(v || '').trim()).filter(Boolean);
                     let query = window.sbClient
                         .from(CLOUD_TABLE)
                         .select('key,content,updated_at')
@@ -382,7 +483,10 @@
 
                     const { data: rows, error } = await query;
                     if (error) throw error;
-                    row = rows?.[0] || null;
+                    row = (rows || []).find(item => desiredTerms.some(term => {
+                        const keyText = String(item?.key || '');
+                        return keyText.endsWith(`_${term}`) || keyText.includes(`_${term}_`);
+                    })) || rows?.[0] || null;
                     key = row?.key || key;
                 }
 
@@ -394,11 +498,30 @@
                 const parsed = parsePayload(row.content) || {};
                 const map = parsed.map && typeof parsed.map === 'object' ? parsed.map : {};
                 const schoolMap = parsed.schoolMap && typeof parsed.schoolMap === 'object' ? parsed.schoolMap : {};
+                const keyTermId = String(key || row?.key || '').replace(/^TEACHERS_[^_]+_/, '').trim();
+                if (keyTermId) {
+                    localStorage.setItem('CURRENT_TEACHER_TERM_ID', keyTermId);
+                    const baseTermId = typeof getTeacherTermBase === 'function'
+                        ? getTeacherTermBase(keyTermId)
+                        : keyTermId.split('_').slice(0, 2).join('_');
+                    if (baseTermId) localStorage.setItem('CURRENT_TERM_ID', baseTermId);
+                }
 
                 if (typeof setTeacherMap === 'function') setTeacherMap(map);
                 if (typeof setTeacherSchoolMap === 'function') setTeacherSchoolMap(schoolMap);
+                if (window.DataManager && typeof DataManager.syncTeacherHistory === 'function') {
+                    DataManager.syncTeacherHistory({
+                        termId: keyTermId || localStorage.getItem('CURRENT_TEACHER_TERM_ID') || localStorage.getItem('CURRENT_TERM_ID') || '',
+                        source: 'cloud',
+                        timestamp: row?.updated_at || ''
+                    });
+                }
+                if (window.DataManager && typeof DataManager.rememberDataManagerSyncSnapshot === 'function') {
+                    DataManager.rememberDataManagerSyncSnapshot('teacher-cloud-load');
+                }
                 if (window.DataManager && typeof DataManager.renderTeachers === 'function') DataManager.renderTeachers();
                 if (window.DataManager && typeof DataManager.refreshTeacherAnalysis === 'function') DataManager.refreshTeacherAnalysis();
+                if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') DataManager.renderDataManagerStatus();
                 if (typeof updateStatusPanel === 'function') updateStatusPanel();
 
                 safeToast(`已加载任课表（${Object.keys(map).length} 条）`, 'success');
@@ -538,6 +661,13 @@
                         }
                     }
 
+                    const localCompareCount = typeof listAvailableExamsForCompare === 'function'
+                        ? listAvailableExamsForCompare().length
+                        : Object.keys(db.exams || {}).length;
+                    if (keysToFetch.length === 0 && localCompareCount < 2 && candidates.length > 0) {
+                        keysToFetch.push(candidates[candidates.length - 1].key);
+                    }
+
                     if (keysToFetch.length === 0) {
                         localStorage.setItem(cacheKey, String(Date.now()));
                         await refreshCompareSelectors();
@@ -562,27 +692,9 @@
                         if (!row) continue;
                         try {
                             const payload = parsePayload(row.content);
-                            if (!payload || !Array.isArray(payload.RAW_DATA) || payload.RAW_DATA.length === 0) continue;
-
-                            const keyParts = String(row.key || '').split('_');
-                            const examLabel = keyParts.length >= 5 ? keyParts.slice(4).join('_') : row.key;
-                            const remoteTs = new Date(row.updated_at).getTime() || Date.now();
-
-                            db.exams[row.key] = {
-                                examId: row.key,
-                                examLabel,
-                                meta: payload.ARCHIVE_META || payload.CONFIG || {},
-                                data: payload.RAW_DATA || [],
-                                schools: payload.SCHOOLS || {},
-                                teacherMap: payload.TEACHER_MAP || {},
-                                subjects: payload.SUBJECTS || [],
-                                thresholds: payload.THRESHOLDS || {},
-                                config: payload.CONFIG || {},
-                                fingerprint: payload.FINGERPRINT || computeExamDataFingerprint(payload.RAW_DATA || []),
-                                createdAt: remoteTs,
-                                updatedAt: row.updated_at || ''
-                            };
-                            loadedCount++;
+                            if (!payload) continue;
+                            loadedCount += upsertCloudExamSnapshot(db, row.key, payload, row.updated_at, deriveExamLabel(row.key));
+                            loadedCount += hydrateBundledCohortExams(db, payload, row.updated_at);
                         } catch (rowErr) {
                             console.warn('[CloudExams] parse row failed:', rowErr);
                         }
@@ -635,7 +747,8 @@
             if (typeof updateRoleHint === 'function') updateRoleHint();
             if (typeof renderActionLogs === 'function') renderActionLogs();
             if (typeof scanDataIssues === 'function') scanDataIssues();
-            if (!localStorage.getItem('HAS_SEEN_STARTER') && typeof switchTab === 'function' && typeof openStarterGuide === 'function') {
+            const hasSessionUser = !!(sessionStorage.getItem('CURRENT_USER') || (window.Auth && Auth.currentUser));
+            if (hasSessionUser && !localStorage.getItem('HAS_SEEN_STARTER') && typeof switchTab === 'function' && typeof openStarterGuide === 'function') {
                 if (typeof __guardBypass !== 'undefined') __guardBypass = true;
                 switchTab('starter-hub');
                 openStarterGuide();

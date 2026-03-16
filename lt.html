@@ -57,7 +57,1052 @@
     <!-- 🟢 [新增] 添加 jsPDF（PDF导出） -->
     <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" crossorigin="anonymous"
         onerror="this.onerror=null;this.src='https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'"></script>
+    <script>
+﻿(function () {
+    const CLOUD_TABLE = 'system_data';
+    const KEY_PREFIX_TEACHERS = 'TEACHERS_';
+    const KEY_PREFIX_COMPARE = [
+        'STUDENT_COMPARE_',
+        'MACRO_COMPARE_',
+        'TEACHER_COMPARE_',
+        'TOWN_SUB_COMPARE_'
+    ];
+
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function safeToast(msg, type) {
+        if (window.UI && typeof UI.toast === 'function') UI.toast(msg, type);
+    }
+
+    function safeLoading(show, text) {
+        if (window.UI && typeof UI.loading === 'function') UI.loading(show, text);
+    }
+
+    function setCloudStatus(state, detail = '') {
+        if (typeof window.setCloudSyncStatus === 'function') {
+            window.setCloudSyncStatus(state, detail);
+        }
+    }
+
+    function normalizeCohortId(raw) {
+        const text = String(raw || '').trim();
+        if (!text) return '';
+        let match = text.match(/^cohort::(\d{4})/i);
+        if (match) return match[1];
+        match = text.match(/^(\d{4})(?!\d)/);
+        if (match) return match[1];
+        match = text.match(/(\d{4})级/);
+        if (match) return match[1];
+        match = text.match(/(\d{4})/);
+        if (match) return match[1];
+        const digits = text.replace(/\D/g, '');
+        return digits.length > 4 ? digits.slice(0, 4) : digits;
+    }
+
+    function extractCohortIdFromKey(key) {
+        return normalizeCohortId(key);
+    }
+
+    function isIgnoredExamKey(key) {
+        const k = String(key || '');
+        if (!k) return true;
+        if (k.startsWith(KEY_PREFIX_TEACHERS)) return true;
+        if (KEY_PREFIX_COMPARE.some(prefix => k.startsWith(prefix))) return true;
+        return false;
+    }
+
+    function parsePayload(content) {
+        let raw = content;
+        if (typeof raw === 'string' && raw.startsWith('LZ|')) {
+            raw = LZString.decompressFromUTF16(raw.slice(3));
+        }
+        return typeof raw === 'string' ? JSON.parse(raw) : raw;
+    }
+
+    function packPayload(payload) {
+        const json = JSON.stringify(payload || {});
+        return 'LZ|' + LZString.compressToUTF16(json);
+    }
+
+    function computeExamDataFingerprint(rows) {
+        const list = Array.isArray(rows) ? rows : [];
+        const normalized = list.map(row => ({
+            school: String(row?.school || '').trim(),
+            class: String(row?.class || '').trim(),
+            name: String(row?.name || '').trim(),
+            total: Number(row?.total || 0),
+            scores: Object.fromEntries(
+                Object.entries(row?.scores || {})
+                    .map(([subject, score]) => [String(subject), Number(score)])
+                    .sort((a, b) => String(a[0]).localeCompare(String(b[0]), 'zh-CN'))
+            )
+        })).sort((a, b) => {
+            const schoolDiff = a.school.localeCompare(b.school, 'zh-CN');
+            if (schoolDiff !== 0) return schoolDiff;
+            const classDiff = a.class.localeCompare(b.class, 'zh-CN', { numeric: true });
+            if (classDiff !== 0) return classDiff;
+            return a.name.localeCompare(b.name, 'zh-CN');
+        });
+
+        const json = JSON.stringify(normalized);
+        let hash = 2166136261;
+        for (let i = 0; i < json.length; i++) {
+            hash ^= json.charCodeAt(i);
+            hash = Math.imul(hash, 16777619);
+        }
+        return `fp_${(hash >>> 0).toString(16)}`;
+    }
+
+    function seedCurrentExamToCohortDb(payload, fallbackKey, updatedAt) {
+        if (typeof CohortDB === 'undefined' || typeof CohortDB.ensure !== 'function') return;
+        const examId = String(payload?.CURRENT_EXAM_ID || fallbackKey || '').trim();
+        if (!examId) return;
+
+        const rows = Array.isArray(payload?.RAW_DATA) ? payload.RAW_DATA : [];
+        if (!rows.length) return;
+
+        const db = CohortDB.ensure();
+        db.exams = db.exams || {};
+
+        const keyParts = examId.split('_');
+        const examLabel = keyParts.length >= 5 ? keyParts.slice(4).join('_') : examId;
+        const remoteTs = updatedAt ? (new Date(updatedAt).getTime() || Date.now()) : Date.now();
+        const existing = db.exams[examId];
+        const existingCount = Array.isArray(existing?.data) ? existing.data.length : 0;
+
+        if (!existing || existingCount === 0) {
+            db.exams[examId] = {
+                examId,
+                examLabel,
+                meta: payload?.ARCHIVE_META || payload?.CONFIG || {},
+                data: rows,
+                schools: payload?.SCHOOLS || {},
+                teacherMap: payload?.TEACHER_MAP || {},
+                subjects: payload?.SUBJECTS || [],
+                thresholds: payload?.THRESHOLDS || {},
+                config: payload?.CONFIG || {},
+                fingerprint: payload?.FINGERPRINT || computeExamDataFingerprint(rows),
+                createdAt: remoteTs,
+                updatedAt: updatedAt || ''
+            };
+        }
+
+        db.currentExamId = examId;
+        window.COHORT_DB = db;
+    }
+
+    function deriveExamLabel(examId, fallbackLabel) {
+        if (fallbackLabel) return fallbackLabel;
+        const keyParts = String(examId || '').split('_');
+        return keyParts.length >= 5 ? keyParts.slice(4).join('_') : String(examId || '');
+    }
+
+    function upsertCloudExamSnapshot(db, examId, payload, updatedAt, fallbackLabel) {
+        if (!db || !examId || !payload || isIgnoredExamKey(examId)) return 0;
+        const rows = Array.isArray(payload?.RAW_DATA) && payload.RAW_DATA.length
+            ? payload.RAW_DATA
+            : Array.isArray(payload?.data) && payload.data.length
+                ? payload.data
+                : [];
+        if (!rows.length) return 0;
+
+        const remoteTs = updatedAt ? (new Date(updatedAt).getTime() || Date.now()) : Date.now();
+        const existing = db.exams?.[examId];
+        const existingCount = Array.isArray(existing?.data) ? existing.data.length : 0;
+        const existingTs = existing
+            ? Math.max(new Date(existing.updatedAt || 0).getTime() || 0, Number(existing.createdAt || 0))
+            : 0;
+        if (existing && existingCount > 0 && remoteTs <= existingTs + 1000) return 0;
+
+        db.exams[examId] = {
+            examId,
+            examLabel: payload?.examLabel || deriveExamLabel(examId, fallbackLabel),
+            meta: payload?.ARCHIVE_META || payload?.meta || payload?.CONFIG || payload?.config || {},
+            data: rows,
+            schools: payload?.SCHOOLS || payload?.schools || {},
+            teacherMap: payload?.TEACHER_MAP || payload?.teacherMap || {},
+            subjects: payload?.SUBJECTS || payload?.subjects || [],
+            thresholds: payload?.THRESHOLDS || payload?.thresholds || {},
+            config: payload?.CONFIG || payload?.config || {},
+            fingerprint: payload?.FINGERPRINT || payload?.fingerprint || computeExamDataFingerprint(rows),
+            createdAt: existingCount > 0 ? (existing.createdAt || remoteTs) : remoteTs,
+            updatedAt: updatedAt || existing?.updatedAt || ''
+        };
+        return 1;
+    }
+
+    function hydrateBundledCohortExams(db, payload, updatedAt) {
+        const bundledExams = payload?.COHORT_DB?.exams;
+        if (!bundledExams || typeof bundledExams !== 'object') return 0;
+        let mergedCount = 0;
+        Object.entries(bundledExams).forEach(([examId, examPayload]) => {
+            mergedCount += upsertCloudExamSnapshot(db, examId, examPayload, updatedAt, examPayload?.examLabel || examId);
+        });
+        return mergedCount;
+    }
+
+    async function resolveCloudSnapshotKey(preferredKey) {
+        const rawKey = String(preferredKey || '').trim();
+        const keyLooksLikeExam = rawKey
+            && !/^cohort::/i.test(rawKey)
+            && !isIgnoredExamKey(rawKey)
+            && !!extractCohortIdFromKey(rawKey);
+        if (keyLooksLikeExam) return rawKey;
+
+        const cid = normalizeCohortId(
+            extractCohortIdFromKey(rawKey)
+            || window.CURRENT_COHORT_ID
+            || localStorage.getItem('CURRENT_COHORT_ID')
+        );
+        let query = window.sbClient.from(CLOUD_TABLE).select('key,updated_at');
+        if (cid) query = query.like('key', `${cid}%`);
+        const { data, error } = await query.order('updated_at', { ascending: false }).limit(50);
+        if (error) throw error;
+
+        const rows = (data || []).filter(row => {
+            if (isIgnoredExamKey(row.key)) return false;
+            if (!cid) return true;
+            return extractCohortIdFromKey(row.key) === cid;
+        });
+        return rows[0]?.key || '';
+    }
+
+    async function refreshCompareSelectors() {
+        if (typeof CohortDB !== 'undefined' && typeof CohortDB.renderExamList === 'function') CohortDB.renderExamList();
+        if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
+        if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
+        if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+        if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
+        if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
+    }
+
+    function getCurrentUserRole() {
+        return sessionStorage.getItem('CURRENT_ROLE') || 'guest';
+    }
+
+    const CloudManager = {
+        check: (silent = false) => {
+            if (!window.sbClient) {
+                if (!silent) safeToast('云端未连接 (Supabase Disconnected)', 'error');
+                return false;
+            }
+            return true;
+        },
+
+        ensureClientReady: async function (options = {}) {
+            const timeoutMs = Number(options.timeoutMs || 8000);
+            const retryMs = Number(options.retryMs || 250);
+            const silent = Boolean(options.silent);
+
+            if (this.check(true)) {
+                setCloudStatus('connected');
+                return true;
+            }
+            setCloudStatus('connecting');
+            if (typeof window.initSupabase === 'function') window.initSupabase();
+
+            const start = Date.now();
+            while (Date.now() - start < timeoutMs) {
+                if (this.check(true)) {
+                    setCloudStatus('connected');
+                    return true;
+                }
+                await sleep(retryMs);
+                if (typeof window.initSupabase === 'function') window.initSupabase();
+            }
+            const ok = this.check(silent);
+            if (!ok) setCloudStatus('error', '连接失败');
+            return ok;
+        },
+
+        getKey: () => {
+            const meta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
+            if (!meta.cohortId || !meta.year || !meta.term || !meta.type) return null;
+            const parts = [
+                `${meta.cohortId}级`,
+                meta.grade ? `${meta.grade}年级` : '未知年级',
+                meta.year,
+                meta.term,
+                meta.type,
+                meta.name || '标准考试'
+            ];
+            return parts.join('_').replace(/[\s\/\\?]/g, '');
+        },
+
+        getTeacherKey: () => {
+            const termSel = document.getElementById('dm-teacher-term-select');
+            const meta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
+            const exactUiTeacherTerm = meta.year && meta.term
+                ? `${meta.year}_${meta.term}${meta.grade ? '_' + meta.grade + '年级' : ''}`
+                : '';
+            const termId = termSel?.value
+                || localStorage.getItem('CURRENT_TEACHER_TERM_ID')
+                || exactUiTeacherTerm
+                || localStorage.getItem('CURRENT_TERM_ID')
+                || (typeof getTermId === 'function' ? getTermId(meta) : '');
+            const cohortId = window.CURRENT_COHORT_ID || window.CURRENT_COHORT_META?.id || meta.cohortId || localStorage.getItem('CURRENT_COHORT_ID');
+            if (!termId || !cohortId) return null;
+            return `${KEY_PREFIX_TEACHERS}${cohortId}级_${termId}`;
+        },
+
+        save: async function () {
+            if (!(await this.ensureClientReady())) return false;
+            setCloudStatus('syncing', '保存中');
+
+            const role = getCurrentUserRole();
+            if (!['admin', 'director', 'grade_director'].includes(role)) {
+                safeToast('权限不足', 'warning');
+                return false;
+            }
+
+            const key = this.getKey();
+            if (!key) {
+                alert('请先完善考试信息');
+                return false;
+            }
+
+            safeLoading(true, '正在同步云端数据...');
+            try {
+                if (!window.SYS_VARS) window.SYS_VARS = { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
+                const ind1 = document.getElementById('dm_ind1_input');
+                const ind2 = document.getElementById('dm_ind2_input');
+                if (ind1) window.SYS_VARS.indicator.ind1 = ind1.value;
+                if (ind2) window.SYS_VARS.indicator.ind2 = ind2.value;
+                window.SYS_VARS.targets = (typeof ensureNormalizedTargets === 'function') ? ensureNormalizedTargets() : (window.TARGETS || {});
+                window.SYS_VARS.schoolAliases = (typeof ensureSchoolAliasStore === 'function') ? ensureSchoolAliasStore() : (window.SYS_VARS.schoolAliases || []);
+
+                const payload = typeof getCurrentSnapshotPayload === 'function' ? getCurrentSnapshotPayload() : {};
+                const content = packPayload(payload);
+
+                const { error } = await window.sbClient.from(CLOUD_TABLE).upsert({
+                    key,
+                    content,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'key' });
+                if (error) throw error;
+
+                localStorage.setItem('CURRENT_PROJECT_KEY', key);
+                localStorage.setItem('CLOUD_SYNC_AT', new Date().toISOString());
+                if (window.idbKeyval) await idbKeyval.set(`cache_${key}`, payload);
+                if (typeof logAction === 'function') logAction('云端同步', `全量数据已同步：${key}`);
+                if (typeof updateStatusPanel === 'function') updateStatusPanel();
+                safeToast('云端同步成功', 'success');
+                setCloudStatus('success', '已保存');
+                return true;
+            } catch (e) {
+                console.error('Cloud save error:', e);
+                alert(`同步失败: ${e.message || e}`);
+                setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '保存失败');
+                return false;
+            } finally {
+                safeLoading(false);
+            }
+        },
+
+        load: async function () {
+            if (!(await this.ensureClientReady())) return false;
+            setCloudStatus('syncing', '拉取中');
+
+            let key = this.getKey() || localStorage.getItem('CURRENT_PROJECT_KEY');
+            try {
+                key = await resolveCloudSnapshotKey(key);
+                if (key) localStorage.setItem('CURRENT_PROJECT_KEY', key);
+            } catch (e) {
+                console.error('Cloud load key lookup error:', e);
+                setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '加载失败');
+                return false;
+            }
+
+            if (!key) return false;
+
+            safeToast('正在检查云端数据...', 'info');
+            try {
+                const { data, error } = await window.sbClient
+                    .from(CLOUD_TABLE)
+                    .select('content')
+                    .eq('key', key)
+                    .maybeSingle();
+                if (error) throw error;
+                if (!data) return false;
+
+                const payload = parsePayload(data.content);
+                seedCurrentExamToCohortDb(payload, key, data.updated_at);
+                if (typeof applySnapshotPayload === 'function') applySnapshotPayload(payload);
+                const cohortId = normalizeCohortId(payload?.CURRENT_COHORT_ID || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+                if (cohortId && typeof this.fetchCohortExamsToLocal === 'function') {
+                    await this.fetchCohortExamsToLocal(cohortId);
+                }
+                await refreshCompareSelectors();
+                if (typeof logAction === 'function') logAction('云端加载', `已加载全量数据：${key}`);
+                safeToast('数据已同步到本地', 'success');
+                setCloudStatus('success', '已拉取');
+                return true;
+            } catch (e) {
+                console.error('Cloud load error:', e);
+                safeToast('加载失败', 'error');
+                setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '拉取失败');
+                return false;
+            }
+        },
+
+        saveTeachers: async function () {
+            if (!(await this.ensureClientReady())) return false;
+            setCloudStatus('syncing', '同步任课');
+            const key = this.getTeacherKey();
+            if (!key) {
+                safeToast('无法确定学期或年级信息', 'error');
+                return false;
+            }
+            if (!window.TEACHER_MAP || Object.keys(window.TEACHER_MAP).length === 0) {
+                safeToast('当前无任课数据', 'warning');
+                return false;
+            }
+
+            safeLoading(true, '正在同步任课数据...');
+            try {
+                const content = packPayload({
+                    map: window.TEACHER_MAP || {},
+                    schoolMap: window.TEACHER_SCHOOL_MAP || {}
+                });
+                const { error } = await window.sbClient.from(CLOUD_TABLE).upsert({
+                    key,
+                    content,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'key' });
+                if (error) throw error;
+
+                localStorage.setItem('TEACHER_SYNC_AT', new Date().toISOString());
+                if (typeof logAction === 'function') logAction('任课同步', `任课表已保存：${key}`);
+                if (window.DataManager && typeof DataManager.rememberDataManagerSyncSnapshot === 'function') {
+                    DataManager.rememberDataManagerSyncSnapshot('teacher-cloud-save');
+                }
+                if (window.DataManager && typeof DataManager.refreshTeacherAnalysis === 'function') {
+                    DataManager.refreshTeacherAnalysis();
+                }
+                if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') {
+                    DataManager.renderDataManagerStatus();
+                }
+                if (typeof updateStatusPanel === 'function') updateStatusPanel();
+                safeToast('任课表同步成功', 'success');
+                setCloudStatus('success', '任课已同步');
+                return true;
+            } catch (e) {
+                console.error('Teacher save error:', e);
+                alert(`任课同步失败: ${e.message || e}`);
+                setCloudStatus('error', '任课同步失败');
+                return false;
+            } finally {
+                safeLoading(false);
+            }
+        },
+
+        loadTeachers: async function () {
+            if (!(await this.ensureClientReady())) return false;
+            setCloudStatus('syncing', '拉取任课');
+            safeLoading(true, '正在从云端拉取任课表...');
+            try {
+                let key = this.getTeacherKey();
+                let row = null;
+
+                if (key) {
+                    const { data, error } = await window.sbClient.from(CLOUD_TABLE).select('key,content,updated_at').eq('key', key).maybeSingle();
+                    if (error) throw error;
+                    row = data || null;
+                }
+
+                if (!row) {
+                    const cohortId = normalizeCohortId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+                    const termSel = document.getElementById('dm-teacher-term-select');
+                    const meta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
+                    const exactUiTeacherTerm = meta.year && meta.term
+                        ? `${meta.year}_${meta.term}${meta.grade ? '_' + meta.grade + '年级' : ''}`
+                        : '';
+                    const desiredTerms = [
+                        termSel?.value,
+                        localStorage.getItem('CURRENT_TEACHER_TERM_ID'),
+                        exactUiTeacherTerm,
+                        localStorage.getItem('CURRENT_TERM_ID')
+                    ].map(v => String(v || '').trim()).filter(Boolean);
+                    let query = window.sbClient
+                        .from(CLOUD_TABLE)
+                        .select('key,content,updated_at')
+                        .like('key', `${KEY_PREFIX_TEACHERS}%`)
+                        .order('updated_at', { ascending: false })
+                        .limit(20);
+
+                    if (cohortId) {
+                        query = window.sbClient
+                            .from(CLOUD_TABLE)
+                            .select('key,content,updated_at')
+                            .like('key', `${KEY_PREFIX_TEACHERS}${cohortId}%`)
+                            .order('updated_at', { ascending: false })
+                            .limit(20);
+                    }
+
+                    const { data: rows, error } = await query;
+                    if (error) throw error;
+                    row = (rows || []).find(item => desiredTerms.some(term => {
+                        const keyText = String(item?.key || '');
+                        return keyText.endsWith(`_${term}`) || keyText.includes(`_${term}_`);
+                    })) || rows?.[0] || null;
+                    key = row?.key || key;
+                }
+
+                if (!row || !row.content) {
+                    safeToast('未找到可用任课表', 'warning');
+                    return false;
+                }
+
+                const parsed = parsePayload(row.content) || {};
+                const map = parsed.map && typeof parsed.map === 'object' ? parsed.map : {};
+                const schoolMap = parsed.schoolMap && typeof parsed.schoolMap === 'object' ? parsed.schoolMap : {};
+                const keyTermId = String(key || row?.key || '').replace(/^TEACHERS_[^_]+_/, '').trim();
+                if (keyTermId) {
+                    localStorage.setItem('CURRENT_TEACHER_TERM_ID', keyTermId);
+                    const baseTermId = typeof getTeacherTermBase === 'function'
+                        ? getTeacherTermBase(keyTermId)
+                        : keyTermId.split('_').slice(0, 2).join('_');
+                    if (baseTermId) localStorage.setItem('CURRENT_TERM_ID', baseTermId);
+                }
+
+                if (typeof setTeacherMap === 'function') setTeacherMap(map);
+                if (typeof setTeacherSchoolMap === 'function') setTeacherSchoolMap(schoolMap);
+                if (window.DataManager && typeof DataManager.syncTeacherHistory === 'function') {
+                    DataManager.syncTeacherHistory({
+                        termId: keyTermId || localStorage.getItem('CURRENT_TEACHER_TERM_ID') || localStorage.getItem('CURRENT_TERM_ID') || '',
+                        source: 'cloud',
+                        timestamp: row?.updated_at || ''
+                    });
+                }
+                if (window.DataManager && typeof DataManager.rememberDataManagerSyncSnapshot === 'function') {
+                    DataManager.rememberDataManagerSyncSnapshot('teacher-cloud-load');
+                }
+                if (window.DataManager && typeof DataManager.renderTeachers === 'function') DataManager.renderTeachers();
+                if (window.DataManager && typeof DataManager.refreshTeacherAnalysis === 'function') DataManager.refreshTeacherAnalysis();
+                if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') DataManager.renderDataManagerStatus();
+                if (typeof updateStatusPanel === 'function') updateStatusPanel();
+
+                safeToast(`已加载任课表（${Object.keys(map).length} 条）`, 'success');
+                if (typeof logAction === 'function') logAction('任课同步', `任课表已加载：${key || 'latest'}`);
+                setCloudStatus('success', '任课已拉取');
+                return true;
+            } catch (e) {
+                console.error('Teacher load error:', e);
+                safeToast('任课表加载失败', 'error');
+                setCloudStatus('error', '任课拉取失败');
+                return false;
+            } finally {
+                safeLoading(false);
+            }
+        },
+
+        fetchStudentExamHistory: async function (student) {
+            if (!(await this.ensureClientReady())) return { success: false, message: '云端未连接' };
+            setCloudStatus('syncing', '拉取历史');
+            if (!student || !student.name) return { success: false, message: '学生信息无效' };
+
+            const cohortId = normalizeCohortId(student.cohort || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+            if (!cohortId) return { success: false, message: '无法确定学生届别' };
+
+            try {
+                const { data, error } = await window.sbClient
+                    .from(CLOUD_TABLE)
+                    .select('key, content, updated_at')
+                    .like('key', `${cohortId}%`)
+                    .order('updated_at', { ascending: true });
+                if (error) throw error;
+
+                const rows = (data || []).filter(row => !isIgnoredExamKey(row.key));
+                const targetName = String(student.name || '').trim();
+                const targetClassNum = String(student.class || '').replace(/[^0-9]/g, '');
+                const history = [];
+
+                for (const row of rows) {
+                    try {
+                        const payload = parsePayload(row.content) || {};
+                        let match = null;
+
+                        const schools = payload.SCHOOLS || {};
+                        for (const [schoolName, schoolData] of Object.entries(schools)) {
+                            if (student.school && schoolName !== student.school) continue;
+                            const list = Array.isArray(schoolData?.students) ? schoolData.students : [];
+                            match = list.find(s => {
+                                if (String(s?.name || '').trim() !== targetName) return false;
+                                if (!targetClassNum) return true;
+                                return String(s?.class || '').replace(/[^0-9]/g, '') === targetClassNum;
+                            });
+                            if (match) break;
+                        }
+
+                        if (!match) {
+                            const list = payload.students || payload.RAW_DATA || [];
+                            match = list.find(s => {
+                                if (String(s?.name || '').trim() !== targetName) return false;
+                                if (!targetClassNum) return true;
+                                return String(s?.class || '').replace(/[^0-9]/g, '') === targetClassNum;
+                            });
+                        }
+
+                        if (!match) continue;
+
+                        const keyParts = String(row.key || '').split('_');
+                        const examLabel = keyParts.length >= 5 ? keyParts.slice(4).join('_') : row.key;
+
+                        history.push({
+                            // Use full key as canonical ID to avoid "same exam" false positives.
+                            examId: row.key,
+                            examFullKey: row.key,
+                            examLabel: examLabel || row.key,
+                            fingerprint: payload?.FINGERPRINT || computeExamDataFingerprint(payload?.RAW_DATA || []),
+                            total: match.total,
+                            rankClass: match.ranks?.total?.class,
+                            rankSchool: match.ranks?.total?.school,
+                            rankTown: match.ranks?.total?.township,
+                            subjectRanks: match.ranks || {},
+                            scores: match.scores,
+                            updatedAt: row.updated_at
+                        });
+                    } catch (rowErr) {
+                        console.warn('[CloudHistory] parse row failed:', rowErr);
+                    }
+                }
+
+                setCloudStatus('success', `历史${history.length}条`);
+                return { success: true, data: history };
+            } catch (e) {
+                console.error('[CloudHistory] failed:', e);
+                setCloudStatus('error', '历史拉取失败');
+                return { success: false, message: e.message || String(e) };
+            }
+        },
+
+        fetchCohortExamsToLocal: async function (cohortId) {
+            const cid = normalizeCohortId(cohortId || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+            if (!cid) return { success: false, message: '无法确定届别' };
+            if (!this._cohortExamSyncTasks) this._cohortExamSyncTasks = {};
+            if (this._cohortExamSyncTasks[cid]) return this._cohortExamSyncTasks[cid];
+
+            this._cohortExamSyncTasks[cid] = (async () => {
+                if (!(await this.ensureClientReady())) return { success: false, message: '云端未连接' };
+                setCloudStatus('syncing', '拉取考试');
+                if (typeof CohortDB === 'undefined' || typeof CohortDB.ensure !== 'function') {
+                    return { success: false, message: 'CohortDB 未初始化' };
+                }
+
+                const db = CohortDB.ensure();
+                db.exams = db.exams || {};
+
+                try {
+                    const cacheKey = `CLOUD_EXAMS_SYNC_TS_${cid}`;
+                    const chunkSize = 10;
+
+                    // Step 1: fetch metadata first
+                    const { data: metaRows, error: metaErr } = await window.sbClient
+                        .from(CLOUD_TABLE)
+                        .select('key, updated_at')
+                        .like('key', `${cid}%`)
+                        .order('updated_at', { ascending: true });
+                    if (metaErr) throw metaErr;
+
+                    const candidates = (metaRows || []).filter(row => {
+                        if (isIgnoredExamKey(row.key)) return false;
+                        if (extractCohortIdFromKey(row.key) !== cid) return false;
+                        return true;
+                    });
+
+                    const keysToFetch = [];
+                    for (const row of candidates) {
+                        const remoteTs = new Date(row.updated_at).getTime() || 0;
+                        const localTs = db.exams[row.key] ? Math.max(new Date(db.exams[row.key].updatedAt || 0).getTime(), Number(db.exams[row.key].createdAt || 0)) : 0;
+                        if (!db.exams[row.key] || remoteTs > localTs + 1000) {
+                            keysToFetch.push(row.key);
+                        }
+                    }
+
+                    const localCompareCount = typeof listAvailableExamsForCompare === 'function'
+                        ? listAvailableExamsForCompare().length
+                        : Object.keys(db.exams || {}).length;
+                    if (keysToFetch.length === 0 && localCompareCount < 2 && candidates.length > 0) {
+                        keysToFetch.push(candidates[candidates.length - 1].key);
+                    }
+
+                    if (keysToFetch.length === 0) {
+                        localStorage.setItem(cacheKey, String(Date.now()));
+                        await refreshCompareSelectors();
+                        setCloudStatus('success', '已最新');
+                        return { success: true, count: candidates.length, updated: 0 };
+                    }
+
+                    const rowMap = new Map();
+                    for (let i = 0; i < keysToFetch.length; i += chunkSize) {
+                        const chunk = keysToFetch.slice(i, i + chunkSize);
+                        const { data: chunkRows, error: chunkErr } = await window.sbClient
+                            .from(CLOUD_TABLE)
+                            .select('key, content, updated_at')
+                            .in('key', chunk);
+                        if (chunkErr) throw chunkErr;
+                        (chunkRows || []).forEach(r => rowMap.set(r.key, r));
+                    }
+
+                    let loadedCount = 0;
+                    for (const key of keysToFetch) {
+                        const row = rowMap.get(key);
+                        if (!row) continue;
+                        try {
+                            const payload = parsePayload(row.content);
+                            if (!payload) continue;
+                            loadedCount += upsertCloudExamSnapshot(db, row.key, payload, row.updated_at, deriveExamLabel(row.key));
+                            loadedCount += hydrateBundledCohortExams(db, payload, row.updated_at);
+                        } catch (rowErr) {
+                            console.warn('[CloudExams] parse row failed:', rowErr);
+                        }
+                    }
+
+                    window.COHORT_DB = db;
+                    localStorage.setItem(cacheKey, String(Date.now()));
+                    await refreshCompareSelectors();
+
+                    if (loadedCount > 0) safeToast(`已从云端加载 ${loadedCount} 期历史考试`, 'success');
+                    setCloudStatus('success', loadedCount > 0 ? `更新${loadedCount}期` : '已最新');
+                    return { success: true, count: candidates.length, updated: loadedCount };
+                } catch (e) {
+                    console.error('[CloudExams] failed:', e);
+                    setCloudStatus('error', '考试拉取失败');
+                    return { success: false, message: e.message || String(e) };
+                }
+            })().finally(() => {
+                delete this._cohortExamSyncTasks[cid];
+            });
+
+            return this._cohortExamSyncTasks[cid];
+        },
+
+        fetchAllCohortExams: async function () {
+            const cid = normalizeCohortId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+            if (!cid) return;
+            return this.fetchCohortExamsToLocal(cid);
+        }
+    };
+
+    window.CloudManager = CloudManager;
+    window.saveCloudData = () => CloudManager.save();
+
+    let cloudLoadPromise = null;
+    window.loadCloudData = () => {
+        if (cloudLoadPromise) return cloudLoadPromise;
+        cloudLoadPromise = Promise.resolve(CloudManager.load()).finally(() => {
+            cloudLoadPromise = null;
+        });
+        return cloudLoadPromise;
+    };
+
+    window.getUniqueExamKey = () => CloudManager.getKey();
+    window.saveCloudSnapshot = () => CloudManager.save();
+
+    window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            if (typeof updateStatusPanel === 'function') updateStatusPanel();
+            if (typeof updateRoleHint === 'function') updateRoleHint();
+            if (typeof renderActionLogs === 'function') renderActionLogs();
+            if (typeof scanDataIssues === 'function') scanDataIssues();
+            const hasSessionUser = !!(sessionStorage.getItem('CURRENT_USER') || (window.Auth && Auth.currentUser));
+            if (hasSessionUser && !localStorage.getItem('HAS_SEEN_STARTER') && typeof switchTab === 'function' && typeof openStarterGuide === 'function') {
+                if (typeof __guardBypass !== 'undefined') __guardBypass = true;
+                switchTab('starter-hub');
+                openStarterGuide();
+            }
+            if (typeof scheduleTeacherSyncPrompt === 'function') scheduleTeacherSyncPrompt();
+            if (typeof CloudManager.fetchAllCohortExams === 'function') CloudManager.fetchAllCohortExams();
+        }, 800);
+    });
+})();
+
+</script>
+
+    <!-- ================== 图标字体 (Tabler Icons) ================== -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+
+    <!-- ================== 样式定义 (CSS) ================== -->
+
+    <!-- ================== Windows 11 Fluent Design UI 重构包 ================== -->
     <style>
+        /* 1. 全局字体与背景 (Flat Minimalism) */
+        body {
+            /* Variables from main.css handle the actual colors */
+            -webkit-font-smoothing: antialiased;
+            /* 移除了斑驳的径向渐变背景 */
+        }
+
+        /* 2. 卡片与容器：纯净扁平化 (移除亚克力磨砂) */
+        .card-box,
+        .section,
+        .nav-wrapper,
+        .spotlight-box,
+        .side-nav,
+        .control-panel {
+            background: var(--bg-card) !important;
+            backdrop-filter: none !important;
+            /* 彻底移除毛玻璃性能消耗 */
+            border: 1px solid var(--border) !important;
+            box-shadow: var(--shadow) !important;
+            border-radius: var(--radius) !important;
+        }
+
+        /* 弹窗稍微保留一点浮力 */
+        .modal-content {
+            background: var(--bg-card) !important;
+            border: 1px solid var(--border) !important;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08) !important;
+            border-radius: 20px !important;
+        }
+
+        /* 3. 顶部 Header：极致干净 (X / YouTube 风格) */
+        header {
+            background: var(--bg-card) !important;
+            border: none !important;
+            border-bottom: 1px solid var(--border) !important;
+            /* 仅底边框 */
+            box-shadow: none !important;
+            color: #0f1419 !important;
+            margin-bottom: 20px !important;
+            border-radius: 0 !important;
+            /* 顶栏不圆角 */
+        }
+
+        /* 强制标题文字颜色变深，适应浅色背景 (仅限浅色模式) */
+        body:not(.dark-mode) header h1,
+        body:not(.dark-mode) header p,
+        body:not(.dark-mode) header .btn,
+        body:not(.dark-mode) header select,
+        body:not(.dark-mode) header div,
+        body:not(.dark-mode) header span,
+        body:not(.dark-mode) header i,
+        body:not(.dark-mode) header a {
+            color: #0f1419 !important;
+            text-shadow: none !important;
+        }
+
+        /* 顶栏图标/按钮变为圆角磁贴 (X 风格悬浮) */
+        header .btn,
+        header select,
+        header div[onclick] {
+            background: transparent !important;
+            border: none !important;
+            color: #0f1419 !important;
+            border-radius: 9999px !important;
+            /* 全圆角胶囊/圆形 */
+            padding: 8px 16px !important;
+            font-weight: 600 !important;
+            transition: background 0.2s ease !important;
+        }
+
+        /* 图标按钮如果是方形，强制变正圆 */
+        header .btn:not(:has(#cohort-selector)),
+        header div[onclick] {
+            padding: 10px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        header .btn:hover,
+        header select:hover,
+        header div[onclick]:hover {
+            background: var(--primary-light) !important;
+            /* 浅灰悬浮底色 */
+            box-shadow: none !important;
+        }
+
+        /* 4. 按钮：扁平胶囊化 */
+        .btn {
+            border-radius: 9999px !important;
+            /* 胶囊按键 */
+            border: 1px solid transparent !important;
+            font-weight: 700 !important;
+            transition: background 0.2s ease !important;
+            box-shadow: none !important;
+        }
+
+        .btn:active {
+            transform: scale(0.96) !important;
+            /* 点击缩放 */
+            opacity: 0.8;
+        }
+
+        /* 5. 输入框：X 风格胶囊 */
+        input[type="text"],
+        input[type="number"],
+        input[type="password"],
+        select,
+        textarea {
+            background-color: var(--bg-body) !important;
+            /* 跟随背景 */
+            border: 1px solid var(--border) !important;
+            border-bottom: 1px solid var(--border) !important;
+            border-radius: 9999px !important;
+            /* 胶囊输入框 */
+            transition: all 0.2s !important;
+            color: #0f1419 !important;
+            padding: 10px 16px !important;
+            box-shadow: none !important;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            background-color: var(--bg-card) !important;
+            border-color: var(--primary) !important;
+            box-shadow: none !important;
+        }
+
+        /* 6. 表格：极简风，去竖线 */
+        table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
+
+        thead th {
+            background: transparent !important;
+            border-bottom: 1px solid var(--border) !important;
+            color: var(--secondary) !important;
+            font-size: 13px !important;
+            text-transform: none !important;
+            padding: 12px 16px !important;
+            font-weight: 600 !important;
+        }
+
+        /* 悬浮行效果 */
+        tbody tr {
+            transition: background 0.1s !important;
+            border-radius: 0 !important;
+            /* X风表格行不圆角 */
+        }
+
+        tbody tr:hover td {
+            background-color: rgba(0, 0, 0, 0.02) !important;
+            /* 极淡的灰 */
+        }
+
+        td {
+            border-right: none !important;
+            /* 去除竖线 */
+            border-bottom: 1px solid var(--border) !important;
+            padding: 14px 16px !important;
+            color: #0f1419 !important;
+        }
+
+        /* 修复首列冻结的背景 */
+        table th:first-child,
+        table td:first-child {
+            background: var(--bg-card) !important;
+            backdrop-filter: none;
+        }
+
+        /* 7. 导航栏：极简底栏 */
+        .nav-wrapper {
+            background: var(--bg-card) !important;
+            box-shadow: none !important;
+            border: none !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding: 0 16px !important;
+            border-radius: 0 !important;
+        }
+
+        .nav-categories {
+            background: transparent !important;
+            gap: 16px !important;
+            /* 增加导航间距 */
+            padding: 0 !important;
+            border: none !important;
+        }
+
+        .nav-cat-item {
+            color: var(--secondary) !important;
+            border-radius: 0 !important;
+            border-bottom: 4px solid transparent !important;
+            /* X 风格底边指示线 */
+            padding: 16px 8px !important;
+            background: transparent !important;
+            font-weight: 500 !important;
+        }
+
+        .nav-cat-item:hover {
+            background-color: var(--primary-light) !important;
+            color: #0f1419 !important;
+        }
+
+        .nav-cat-item.active {
+            background-color: transparent !important;
+            color: #0f1419 !important;
+            box-shadow: none !important;
+            border-bottom: 4px solid var(--primary) !important;
+            /* 激活底边线 */
+            font-weight: 700 !important;
+        }
+
+        /* 二级导航胶囊 */
+        .nav-link {
+            border-radius: 9999px !important;
+            background: transparent !important;
+            border: none !important;
+            padding: 8px 16px !important;
+            color: var(--secondary) !important;
+        }
+
+        .nav-link:hover {
+            background: var(--primary-light) !important;
+            color: #0f1419 !important;
+        }
+
+        .nav-link.active {
+            background: #0f1419 !important;
+            color: white !important;
+            box-shadow: none !important;
+        }
+
+        /* 8. 弹窗 Modal：居中悬浮卡片 */
+        .modal {
+            background: rgba(0, 0, 0, 0.4) !important;
+            backdrop-filter: blur(2px) !important;
+            /* 极弱模糊 */
+        }
+
+        /* 9. 滚动条美化 (Overlay Scrollbars) */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 9999px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+
+        /* 10. 修复左侧导航 (Side Nav) */
+        .side-nav {
+            background: var(--bg-card) !important;
+            border: none !important;
+            border-right: 1px solid var(--border) !important;
+            border-radius: 0 !important;
+        }
+
+        .side-nav-link.active {
+            background: var(--primary-light) !important;
+            color: #0f1419 !important;
+            border-left: 3px solid var(--primary) !important;
+            /* removed closing bracket here because it attaches to next section */
+        }
+
+        /* Teaching Overview */
         #teaching-overview .module-desc-bar {
             margin-bottom: 14px;
         }
@@ -831,1051 +1876,6 @@
             #teaching-overview .layout-grid {
                 grid-template-columns: 1fr;
             }
-        }
-    </style>
-
-    <script>
-﻿(function () {
-    const CLOUD_TABLE = 'system_data';
-    const KEY_PREFIX_TEACHERS = 'TEACHERS_';
-    const KEY_PREFIX_COMPARE = [
-        'STUDENT_COMPARE_',
-        'MACRO_COMPARE_',
-        'TEACHER_COMPARE_',
-        'TOWN_SUB_COMPARE_'
-    ];
-
-    function sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    function safeToast(msg, type) {
-        if (window.UI && typeof UI.toast === 'function') UI.toast(msg, type);
-    }
-
-    function safeLoading(show, text) {
-        if (window.UI && typeof UI.loading === 'function') UI.loading(show, text);
-    }
-
-    function setCloudStatus(state, detail = '') {
-        if (typeof window.setCloudSyncStatus === 'function') {
-            window.setCloudSyncStatus(state, detail);
-        }
-    }
-
-    function normalizeCohortId(raw) {
-        const text = String(raw || '').trim();
-        if (!text) return '';
-        let match = text.match(/^cohort::(\d{4})/i);
-        if (match) return match[1];
-        match = text.match(/^(\d{4})(?!\d)/);
-        if (match) return match[1];
-        match = text.match(/(\d{4})级/);
-        if (match) return match[1];
-        match = text.match(/(\d{4})/);
-        if (match) return match[1];
-        const digits = text.replace(/\D/g, '');
-        return digits.length > 4 ? digits.slice(0, 4) : digits;
-    }
-
-    function extractCohortIdFromKey(key) {
-        return normalizeCohortId(key);
-    }
-
-    function isIgnoredExamKey(key) {
-        const k = String(key || '');
-        if (!k) return true;
-        if (k.startsWith(KEY_PREFIX_TEACHERS)) return true;
-        if (KEY_PREFIX_COMPARE.some(prefix => k.startsWith(prefix))) return true;
-        return false;
-    }
-
-    function parsePayload(content) {
-        let raw = content;
-        if (typeof raw === 'string' && raw.startsWith('LZ|')) {
-            raw = LZString.decompressFromUTF16(raw.slice(3));
-        }
-        return typeof raw === 'string' ? JSON.parse(raw) : raw;
-    }
-
-    function packPayload(payload) {
-        const json = JSON.stringify(payload || {});
-        return 'LZ|' + LZString.compressToUTF16(json);
-    }
-
-    function computeExamDataFingerprint(rows) {
-        const list = Array.isArray(rows) ? rows : [];
-        const normalized = list.map(row => ({
-            school: String(row?.school || '').trim(),
-            class: String(row?.class || '').trim(),
-            name: String(row?.name || '').trim(),
-            total: Number(row?.total || 0),
-            scores: Object.fromEntries(
-                Object.entries(row?.scores || {})
-                    .map(([subject, score]) => [String(subject), Number(score)])
-                    .sort((a, b) => String(a[0]).localeCompare(String(b[0]), 'zh-CN'))
-            )
-        })).sort((a, b) => {
-            const schoolDiff = a.school.localeCompare(b.school, 'zh-CN');
-            if (schoolDiff !== 0) return schoolDiff;
-            const classDiff = a.class.localeCompare(b.class, 'zh-CN', { numeric: true });
-            if (classDiff !== 0) return classDiff;
-            return a.name.localeCompare(b.name, 'zh-CN');
-        });
-
-        const json = JSON.stringify(normalized);
-        let hash = 2166136261;
-        for (let i = 0; i < json.length; i++) {
-            hash ^= json.charCodeAt(i);
-            hash = Math.imul(hash, 16777619);
-        }
-        return `fp_${(hash >>> 0).toString(16)}`;
-    }
-
-    function seedCurrentExamToCohortDb(payload, fallbackKey, updatedAt) {
-        if (typeof CohortDB === 'undefined' || typeof CohortDB.ensure !== 'function') return;
-        const examId = String(payload?.CURRENT_EXAM_ID || fallbackKey || '').trim();
-        if (!examId) return;
-
-        const rows = Array.isArray(payload?.RAW_DATA) ? payload.RAW_DATA : [];
-        if (!rows.length) return;
-
-        const db = CohortDB.ensure();
-        db.exams = db.exams || {};
-
-        const keyParts = examId.split('_');
-        const examLabel = keyParts.length >= 5 ? keyParts.slice(4).join('_') : examId;
-        const remoteTs = updatedAt ? (new Date(updatedAt).getTime() || Date.now()) : Date.now();
-        const existing = db.exams[examId];
-        const existingCount = Array.isArray(existing?.data) ? existing.data.length : 0;
-
-        if (!existing || existingCount === 0) {
-            db.exams[examId] = {
-                examId,
-                examLabel,
-                meta: payload?.ARCHIVE_META || payload?.CONFIG || {},
-                data: rows,
-                schools: payload?.SCHOOLS || {},
-                teacherMap: payload?.TEACHER_MAP || {},
-                subjects: payload?.SUBJECTS || [],
-                thresholds: payload?.THRESHOLDS || {},
-                config: payload?.CONFIG || {},
-                fingerprint: payload?.FINGERPRINT || computeExamDataFingerprint(rows),
-                createdAt: remoteTs,
-                updatedAt: updatedAt || ''
-            };
-        }
-
-        db.currentExamId = examId;
-        window.COHORT_DB = db;
-    }
-
-    function deriveExamLabel(examId, fallbackLabel) {
-        if (fallbackLabel) return fallbackLabel;
-        const keyParts = String(examId || '').split('_');
-        return keyParts.length >= 5 ? keyParts.slice(4).join('_') : String(examId || '');
-    }
-
-    function upsertCloudExamSnapshot(db, examId, payload, updatedAt, fallbackLabel) {
-        if (!db || !examId || !payload || isIgnoredExamKey(examId)) return 0;
-        const rows = Array.isArray(payload?.RAW_DATA) && payload.RAW_DATA.length
-            ? payload.RAW_DATA
-            : Array.isArray(payload?.data) && payload.data.length
-                ? payload.data
-                : [];
-        if (!rows.length) return 0;
-
-        const remoteTs = updatedAt ? (new Date(updatedAt).getTime() || Date.now()) : Date.now();
-        const existing = db.exams?.[examId];
-        const existingCount = Array.isArray(existing?.data) ? existing.data.length : 0;
-        const existingTs = existing
-            ? Math.max(new Date(existing.updatedAt || 0).getTime() || 0, Number(existing.createdAt || 0))
-            : 0;
-        if (existing && existingCount > 0 && remoteTs <= existingTs + 1000) return 0;
-
-        db.exams[examId] = {
-            examId,
-            examLabel: payload?.examLabel || deriveExamLabel(examId, fallbackLabel),
-            meta: payload?.ARCHIVE_META || payload?.meta || payload?.CONFIG || payload?.config || {},
-            data: rows,
-            schools: payload?.SCHOOLS || payload?.schools || {},
-            teacherMap: payload?.TEACHER_MAP || payload?.teacherMap || {},
-            subjects: payload?.SUBJECTS || payload?.subjects || [],
-            thresholds: payload?.THRESHOLDS || payload?.thresholds || {},
-            config: payload?.CONFIG || payload?.config || {},
-            fingerprint: payload?.FINGERPRINT || payload?.fingerprint || computeExamDataFingerprint(rows),
-            createdAt: existingCount > 0 ? (existing.createdAt || remoteTs) : remoteTs,
-            updatedAt: updatedAt || existing?.updatedAt || ''
-        };
-        return 1;
-    }
-
-    function hydrateBundledCohortExams(db, payload, updatedAt) {
-        const bundledExams = payload?.COHORT_DB?.exams;
-        if (!bundledExams || typeof bundledExams !== 'object') return 0;
-        let mergedCount = 0;
-        Object.entries(bundledExams).forEach(([examId, examPayload]) => {
-            mergedCount += upsertCloudExamSnapshot(db, examId, examPayload, updatedAt, examPayload?.examLabel || examId);
-        });
-        return mergedCount;
-    }
-
-    async function resolveCloudSnapshotKey(preferredKey) {
-        const rawKey = String(preferredKey || '').trim();
-        const keyLooksLikeExam = rawKey
-            && !/^cohort::/i.test(rawKey)
-            && !isIgnoredExamKey(rawKey)
-            && !!extractCohortIdFromKey(rawKey);
-        if (keyLooksLikeExam) return rawKey;
-
-        const cid = normalizeCohortId(
-            extractCohortIdFromKey(rawKey)
-            || window.CURRENT_COHORT_ID
-            || localStorage.getItem('CURRENT_COHORT_ID')
-        );
-        let query = window.sbClient.from(CLOUD_TABLE).select('key,updated_at');
-        if (cid) query = query.like('key', `${cid}%`);
-        const { data, error } = await query.order('updated_at', { ascending: false }).limit(50);
-        if (error) throw error;
-
-        const rows = (data || []).filter(row => {
-            if (isIgnoredExamKey(row.key)) return false;
-            if (!cid) return true;
-            return extractCohortIdFromKey(row.key) === cid;
-        });
-        return rows[0]?.key || '';
-    }
-
-    async function refreshCompareSelectors() {
-        if (typeof CohortDB !== 'undefined' && typeof CohortDB.renderExamList === 'function') CohortDB.renderExamList();
-        if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
-        if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
-        if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-        if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
-        if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
-    }
-
-    function getCurrentUserRole() {
-        return sessionStorage.getItem('CURRENT_ROLE') || 'guest';
-    }
-
-    const CloudManager = {
-        check: (silent = false) => {
-            if (!window.sbClient) {
-                if (!silent) safeToast('云端未连接 (Supabase Disconnected)', 'error');
-                return false;
-            }
-            return true;
-        },
-
-        ensureClientReady: async function (options = {}) {
-            const timeoutMs = Number(options.timeoutMs || 8000);
-            const retryMs = Number(options.retryMs || 250);
-            const silent = Boolean(options.silent);
-
-            if (this.check(true)) {
-                setCloudStatus('connected');
-                return true;
-            }
-            setCloudStatus('connecting');
-            if (typeof window.initSupabase === 'function') window.initSupabase();
-
-            const start = Date.now();
-            while (Date.now() - start < timeoutMs) {
-                if (this.check(true)) {
-                    setCloudStatus('connected');
-                    return true;
-                }
-                await sleep(retryMs);
-                if (typeof window.initSupabase === 'function') window.initSupabase();
-            }
-            const ok = this.check(silent);
-            if (!ok) setCloudStatus('error', '连接失败');
-            return ok;
-        },
-
-        getKey: () => {
-            const meta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
-            if (!meta.cohortId || !meta.year || !meta.term || !meta.type) return null;
-            const parts = [
-                `${meta.cohortId}级`,
-                meta.grade ? `${meta.grade}年级` : '未知年级',
-                meta.year,
-                meta.term,
-                meta.type,
-                meta.name || '标准考试'
-            ];
-            return parts.join('_').replace(/[\s\/\\?]/g, '');
-        },
-
-        getTeacherKey: () => {
-            const termSel = document.getElementById('dm-teacher-term-select');
-            const meta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
-            const exactUiTeacherTerm = meta.year && meta.term
-                ? `${meta.year}_${meta.term}${meta.grade ? '_' + meta.grade + '年级' : ''}`
-                : '';
-            const termId = termSel?.value
-                || localStorage.getItem('CURRENT_TEACHER_TERM_ID')
-                || exactUiTeacherTerm
-                || localStorage.getItem('CURRENT_TERM_ID')
-                || (typeof getTermId === 'function' ? getTermId(meta) : '');
-            const cohortId = window.CURRENT_COHORT_ID || window.CURRENT_COHORT_META?.id || meta.cohortId || localStorage.getItem('CURRENT_COHORT_ID');
-            if (!termId || !cohortId) return null;
-            return `${KEY_PREFIX_TEACHERS}${cohortId}级_${termId}`;
-        },
-
-        save: async function () {
-            if (!(await this.ensureClientReady())) return false;
-            setCloudStatus('syncing', '保存中');
-
-            const role = getCurrentUserRole();
-            if (!['admin', 'director', 'grade_director'].includes(role)) {
-                safeToast('权限不足', 'warning');
-                return false;
-            }
-
-            const key = this.getKey();
-            if (!key) {
-                alert('请先完善考试信息');
-                return false;
-            }
-
-            safeLoading(true, '正在同步云端数据...');
-            try {
-                if (!window.SYS_VARS) window.SYS_VARS = { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
-                const ind1 = document.getElementById('dm_ind1_input');
-                const ind2 = document.getElementById('dm_ind2_input');
-                if (ind1) window.SYS_VARS.indicator.ind1 = ind1.value;
-                if (ind2) window.SYS_VARS.indicator.ind2 = ind2.value;
-                window.SYS_VARS.targets = (typeof ensureNormalizedTargets === 'function') ? ensureNormalizedTargets() : (window.TARGETS || {});
-                window.SYS_VARS.schoolAliases = (typeof ensureSchoolAliasStore === 'function') ? ensureSchoolAliasStore() : (window.SYS_VARS.schoolAliases || []);
-
-                const payload = typeof getCurrentSnapshotPayload === 'function' ? getCurrentSnapshotPayload() : {};
-                const content = packPayload(payload);
-
-                const { error } = await window.sbClient.from(CLOUD_TABLE).upsert({
-                    key,
-                    content,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'key' });
-                if (error) throw error;
-
-                localStorage.setItem('CURRENT_PROJECT_KEY', key);
-                localStorage.setItem('CLOUD_SYNC_AT', new Date().toISOString());
-                if (window.idbKeyval) await idbKeyval.set(`cache_${key}`, payload);
-                if (typeof logAction === 'function') logAction('云端同步', `全量数据已同步：${key}`);
-                if (typeof updateStatusPanel === 'function') updateStatusPanel();
-                safeToast('云端同步成功', 'success');
-                setCloudStatus('success', '已保存');
-                return true;
-            } catch (e) {
-                console.error('Cloud save error:', e);
-                alert(`同步失败: ${e.message || e}`);
-                setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '保存失败');
-                return false;
-            } finally {
-                safeLoading(false);
-            }
-        },
-
-        load: async function () {
-            if (!(await this.ensureClientReady())) return false;
-            setCloudStatus('syncing', '拉取中');
-
-            let key = this.getKey() || localStorage.getItem('CURRENT_PROJECT_KEY');
-            try {
-                key = await resolveCloudSnapshotKey(key);
-                if (key) localStorage.setItem('CURRENT_PROJECT_KEY', key);
-            } catch (e) {
-                console.error('Cloud load key lookup error:', e);
-                setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '加载失败');
-                return false;
-            }
-
-            if (!key) return false;
-
-            safeToast('正在检查云端数据...', 'info');
-            try {
-                const { data, error } = await window.sbClient
-                    .from(CLOUD_TABLE)
-                    .select('content')
-                    .eq('key', key)
-                    .maybeSingle();
-                if (error) throw error;
-                if (!data) return false;
-
-                const payload = parsePayload(data.content);
-                seedCurrentExamToCohortDb(payload, key, data.updated_at);
-                if (typeof applySnapshotPayload === 'function') applySnapshotPayload(payload);
-                const cohortId = normalizeCohortId(payload?.CURRENT_COHORT_ID || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
-                if (cohortId && typeof this.fetchCohortExamsToLocal === 'function') {
-                    await this.fetchCohortExamsToLocal(cohortId);
-                }
-                await refreshCompareSelectors();
-                if (typeof logAction === 'function') logAction('云端加载', `已加载全量数据：${key}`);
-                safeToast('数据已同步到本地', 'success');
-                setCloudStatus('success', '已拉取');
-                return true;
-            } catch (e) {
-                console.error('Cloud load error:', e);
-                safeToast('加载失败', 'error');
-                setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '拉取失败');
-                return false;
-            }
-        },
-
-        saveTeachers: async function () {
-            if (!(await this.ensureClientReady())) return false;
-            setCloudStatus('syncing', '同步任课');
-            const key = this.getTeacherKey();
-            if (!key) {
-                safeToast('无法确定学期或年级信息', 'error');
-                return false;
-            }
-            if (!window.TEACHER_MAP || Object.keys(window.TEACHER_MAP).length === 0) {
-                safeToast('当前无任课数据', 'warning');
-                return false;
-            }
-
-            safeLoading(true, '正在同步任课数据...');
-            try {
-                const content = packPayload({
-                    map: window.TEACHER_MAP || {},
-                    schoolMap: window.TEACHER_SCHOOL_MAP || {}
-                });
-                const { error } = await window.sbClient.from(CLOUD_TABLE).upsert({
-                    key,
-                    content,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'key' });
-                if (error) throw error;
-
-                localStorage.setItem('TEACHER_SYNC_AT', new Date().toISOString());
-                if (typeof logAction === 'function') logAction('任课同步', `任课表已保存：${key}`);
-                if (window.DataManager && typeof DataManager.rememberDataManagerSyncSnapshot === 'function') {
-                    DataManager.rememberDataManagerSyncSnapshot('teacher-cloud-save');
-                }
-                if (window.DataManager && typeof DataManager.refreshTeacherAnalysis === 'function') {
-                    DataManager.refreshTeacherAnalysis();
-                }
-                if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') {
-                    DataManager.renderDataManagerStatus();
-                }
-                if (typeof updateStatusPanel === 'function') updateStatusPanel();
-                safeToast('任课表同步成功', 'success');
-                setCloudStatus('success', '任课已同步');
-                return true;
-            } catch (e) {
-                console.error('Teacher save error:', e);
-                alert(`任课同步失败: ${e.message || e}`);
-                setCloudStatus('error', '任课同步失败');
-                return false;
-            } finally {
-                safeLoading(false);
-            }
-        },
-
-        loadTeachers: async function () {
-            if (!(await this.ensureClientReady())) return false;
-            setCloudStatus('syncing', '拉取任课');
-            safeLoading(true, '正在从云端拉取任课表...');
-            try {
-                let key = this.getTeacherKey();
-                let row = null;
-
-                if (key) {
-                    const { data, error } = await window.sbClient.from(CLOUD_TABLE).select('key,content,updated_at').eq('key', key).maybeSingle();
-                    if (error) throw error;
-                    row = data || null;
-                }
-
-                if (!row) {
-                    const cohortId = normalizeCohortId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
-                    const termSel = document.getElementById('dm-teacher-term-select');
-                    const meta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
-                    const exactUiTeacherTerm = meta.year && meta.term
-                        ? `${meta.year}_${meta.term}${meta.grade ? '_' + meta.grade + '年级' : ''}`
-                        : '';
-                    const desiredTerms = [
-                        termSel?.value,
-                        localStorage.getItem('CURRENT_TEACHER_TERM_ID'),
-                        exactUiTeacherTerm,
-                        localStorage.getItem('CURRENT_TERM_ID')
-                    ].map(v => String(v || '').trim()).filter(Boolean);
-                    let query = window.sbClient
-                        .from(CLOUD_TABLE)
-                        .select('key,content,updated_at')
-                        .like('key', `${KEY_PREFIX_TEACHERS}%`)
-                        .order('updated_at', { ascending: false })
-                        .limit(20);
-
-                    if (cohortId) {
-                        query = window.sbClient
-                            .from(CLOUD_TABLE)
-                            .select('key,content,updated_at')
-                            .like('key', `${KEY_PREFIX_TEACHERS}${cohortId}%`)
-                            .order('updated_at', { ascending: false })
-                            .limit(20);
-                    }
-
-                    const { data: rows, error } = await query;
-                    if (error) throw error;
-                    row = (rows || []).find(item => desiredTerms.some(term => {
-                        const keyText = String(item?.key || '');
-                        return keyText.endsWith(`_${term}`) || keyText.includes(`_${term}_`);
-                    })) || rows?.[0] || null;
-                    key = row?.key || key;
-                }
-
-                if (!row || !row.content) {
-                    safeToast('未找到可用任课表', 'warning');
-                    return false;
-                }
-
-                const parsed = parsePayload(row.content) || {};
-                const map = parsed.map && typeof parsed.map === 'object' ? parsed.map : {};
-                const schoolMap = parsed.schoolMap && typeof parsed.schoolMap === 'object' ? parsed.schoolMap : {};
-                const keyTermId = String(key || row?.key || '').replace(/^TEACHERS_[^_]+_/, '').trim();
-                if (keyTermId) {
-                    localStorage.setItem('CURRENT_TEACHER_TERM_ID', keyTermId);
-                    const baseTermId = typeof getTeacherTermBase === 'function'
-                        ? getTeacherTermBase(keyTermId)
-                        : keyTermId.split('_').slice(0, 2).join('_');
-                    if (baseTermId) localStorage.setItem('CURRENT_TERM_ID', baseTermId);
-                }
-
-                if (typeof setTeacherMap === 'function') setTeacherMap(map);
-                if (typeof setTeacherSchoolMap === 'function') setTeacherSchoolMap(schoolMap);
-                if (window.DataManager && typeof DataManager.syncTeacherHistory === 'function') {
-                    DataManager.syncTeacherHistory({
-                        termId: keyTermId || localStorage.getItem('CURRENT_TEACHER_TERM_ID') || localStorage.getItem('CURRENT_TERM_ID') || '',
-                        source: 'cloud',
-                        timestamp: row?.updated_at || ''
-                    });
-                }
-                if (window.DataManager && typeof DataManager.rememberDataManagerSyncSnapshot === 'function') {
-                    DataManager.rememberDataManagerSyncSnapshot('teacher-cloud-load');
-                }
-                if (window.DataManager && typeof DataManager.renderTeachers === 'function') DataManager.renderTeachers();
-                if (window.DataManager && typeof DataManager.refreshTeacherAnalysis === 'function') DataManager.refreshTeacherAnalysis();
-                if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') DataManager.renderDataManagerStatus();
-                if (typeof updateStatusPanel === 'function') updateStatusPanel();
-
-                safeToast(`已加载任课表（${Object.keys(map).length} 条）`, 'success');
-                if (typeof logAction === 'function') logAction('任课同步', `任课表已加载：${key || 'latest'}`);
-                setCloudStatus('success', '任课已拉取');
-                return true;
-            } catch (e) {
-                console.error('Teacher load error:', e);
-                safeToast('任课表加载失败', 'error');
-                setCloudStatus('error', '任课拉取失败');
-                return false;
-            } finally {
-                safeLoading(false);
-            }
-        },
-
-        fetchStudentExamHistory: async function (student) {
-            if (!(await this.ensureClientReady())) return { success: false, message: '云端未连接' };
-            setCloudStatus('syncing', '拉取历史');
-            if (!student || !student.name) return { success: false, message: '学生信息无效' };
-
-            const cohortId = normalizeCohortId(student.cohort || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
-            if (!cohortId) return { success: false, message: '无法确定学生届别' };
-
-            try {
-                const { data, error } = await window.sbClient
-                    .from(CLOUD_TABLE)
-                    .select('key, content, updated_at')
-                    .like('key', `${cohortId}%`)
-                    .order('updated_at', { ascending: true });
-                if (error) throw error;
-
-                const rows = (data || []).filter(row => !isIgnoredExamKey(row.key));
-                const targetName = String(student.name || '').trim();
-                const targetClassNum = String(student.class || '').replace(/[^0-9]/g, '');
-                const history = [];
-
-                for (const row of rows) {
-                    try {
-                        const payload = parsePayload(row.content) || {};
-                        let match = null;
-
-                        const schools = payload.SCHOOLS || {};
-                        for (const [schoolName, schoolData] of Object.entries(schools)) {
-                            if (student.school && schoolName !== student.school) continue;
-                            const list = Array.isArray(schoolData?.students) ? schoolData.students : [];
-                            match = list.find(s => {
-                                if (String(s?.name || '').trim() !== targetName) return false;
-                                if (!targetClassNum) return true;
-                                return String(s?.class || '').replace(/[^0-9]/g, '') === targetClassNum;
-                            });
-                            if (match) break;
-                        }
-
-                        if (!match) {
-                            const list = payload.students || payload.RAW_DATA || [];
-                            match = list.find(s => {
-                                if (String(s?.name || '').trim() !== targetName) return false;
-                                if (!targetClassNum) return true;
-                                return String(s?.class || '').replace(/[^0-9]/g, '') === targetClassNum;
-                            });
-                        }
-
-                        if (!match) continue;
-
-                        const keyParts = String(row.key || '').split('_');
-                        const examLabel = keyParts.length >= 5 ? keyParts.slice(4).join('_') : row.key;
-
-                        history.push({
-                            // Use full key as canonical ID to avoid "same exam" false positives.
-                            examId: row.key,
-                            examFullKey: row.key,
-                            examLabel: examLabel || row.key,
-                            fingerprint: payload?.FINGERPRINT || computeExamDataFingerprint(payload?.RAW_DATA || []),
-                            total: match.total,
-                            rankClass: match.ranks?.total?.class,
-                            rankSchool: match.ranks?.total?.school,
-                            rankTown: match.ranks?.total?.township,
-                            subjectRanks: match.ranks || {},
-                            scores: match.scores,
-                            updatedAt: row.updated_at
-                        });
-                    } catch (rowErr) {
-                        console.warn('[CloudHistory] parse row failed:', rowErr);
-                    }
-                }
-
-                setCloudStatus('success', `历史${history.length}条`);
-                return { success: true, data: history };
-            } catch (e) {
-                console.error('[CloudHistory] failed:', e);
-                setCloudStatus('error', '历史拉取失败');
-                return { success: false, message: e.message || String(e) };
-            }
-        },
-
-        fetchCohortExamsToLocal: async function (cohortId) {
-            const cid = normalizeCohortId(cohortId || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
-            if (!cid) return { success: false, message: '无法确定届别' };
-            if (!this._cohortExamSyncTasks) this._cohortExamSyncTasks = {};
-            if (this._cohortExamSyncTasks[cid]) return this._cohortExamSyncTasks[cid];
-
-            this._cohortExamSyncTasks[cid] = (async () => {
-                if (!(await this.ensureClientReady())) return { success: false, message: '云端未连接' };
-                setCloudStatus('syncing', '拉取考试');
-                if (typeof CohortDB === 'undefined' || typeof CohortDB.ensure !== 'function') {
-                    return { success: false, message: 'CohortDB 未初始化' };
-                }
-
-                const db = CohortDB.ensure();
-                db.exams = db.exams || {};
-
-                try {
-                    const cacheKey = `CLOUD_EXAMS_SYNC_TS_${cid}`;
-                    const chunkSize = 10;
-
-                    // Step 1: fetch metadata first
-                    const { data: metaRows, error: metaErr } = await window.sbClient
-                        .from(CLOUD_TABLE)
-                        .select('key, updated_at')
-                        .like('key', `${cid}%`)
-                        .order('updated_at', { ascending: true });
-                    if (metaErr) throw metaErr;
-
-                    const candidates = (metaRows || []).filter(row => {
-                        if (isIgnoredExamKey(row.key)) return false;
-                        if (extractCohortIdFromKey(row.key) !== cid) return false;
-                        return true;
-                    });
-
-                    const keysToFetch = [];
-                    for (const row of candidates) {
-                        const remoteTs = new Date(row.updated_at).getTime() || 0;
-                        const localTs = db.exams[row.key] ? Math.max(new Date(db.exams[row.key].updatedAt || 0).getTime(), Number(db.exams[row.key].createdAt || 0)) : 0;
-                        if (!db.exams[row.key] || remoteTs > localTs + 1000) {
-                            keysToFetch.push(row.key);
-                        }
-                    }
-
-                    const localCompareCount = typeof listAvailableExamsForCompare === 'function'
-                        ? listAvailableExamsForCompare().length
-                        : Object.keys(db.exams || {}).length;
-                    if (keysToFetch.length === 0 && localCompareCount < 2 && candidates.length > 0) {
-                        keysToFetch.push(candidates[candidates.length - 1].key);
-                    }
-
-                    if (keysToFetch.length === 0) {
-                        localStorage.setItem(cacheKey, String(Date.now()));
-                        await refreshCompareSelectors();
-                        setCloudStatus('success', '已最新');
-                        return { success: true, count: candidates.length, updated: 0 };
-                    }
-
-                    const rowMap = new Map();
-                    for (let i = 0; i < keysToFetch.length; i += chunkSize) {
-                        const chunk = keysToFetch.slice(i, i + chunkSize);
-                        const { data: chunkRows, error: chunkErr } = await window.sbClient
-                            .from(CLOUD_TABLE)
-                            .select('key, content, updated_at')
-                            .in('key', chunk);
-                        if (chunkErr) throw chunkErr;
-                        (chunkRows || []).forEach(r => rowMap.set(r.key, r));
-                    }
-
-                    let loadedCount = 0;
-                    for (const key of keysToFetch) {
-                        const row = rowMap.get(key);
-                        if (!row) continue;
-                        try {
-                            const payload = parsePayload(row.content);
-                            if (!payload) continue;
-                            loadedCount += upsertCloudExamSnapshot(db, row.key, payload, row.updated_at, deriveExamLabel(row.key));
-                            loadedCount += hydrateBundledCohortExams(db, payload, row.updated_at);
-                        } catch (rowErr) {
-                            console.warn('[CloudExams] parse row failed:', rowErr);
-                        }
-                    }
-
-                    window.COHORT_DB = db;
-                    localStorage.setItem(cacheKey, String(Date.now()));
-                    await refreshCompareSelectors();
-
-                    if (loadedCount > 0) safeToast(`已从云端加载 ${loadedCount} 期历史考试`, 'success');
-                    setCloudStatus('success', loadedCount > 0 ? `更新${loadedCount}期` : '已最新');
-                    return { success: true, count: candidates.length, updated: loadedCount };
-                } catch (e) {
-                    console.error('[CloudExams] failed:', e);
-                    setCloudStatus('error', '考试拉取失败');
-                    return { success: false, message: e.message || String(e) };
-                }
-            })().finally(() => {
-                delete this._cohortExamSyncTasks[cid];
-            });
-
-            return this._cohortExamSyncTasks[cid];
-        },
-
-        fetchAllCohortExams: async function () {
-            const cid = normalizeCohortId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
-            if (!cid) return;
-            return this.fetchCohortExamsToLocal(cid);
-        }
-    };
-
-    window.CloudManager = CloudManager;
-    window.saveCloudData = () => CloudManager.save();
-
-    let cloudLoadPromise = null;
-    window.loadCloudData = () => {
-        if (cloudLoadPromise) return cloudLoadPromise;
-        cloudLoadPromise = Promise.resolve(CloudManager.load()).finally(() => {
-            cloudLoadPromise = null;
-        });
-        return cloudLoadPromise;
-    };
-
-    window.getUniqueExamKey = () => CloudManager.getKey();
-    window.saveCloudSnapshot = () => CloudManager.save();
-
-    window.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => {
-            if (typeof updateStatusPanel === 'function') updateStatusPanel();
-            if (typeof updateRoleHint === 'function') updateRoleHint();
-            if (typeof renderActionLogs === 'function') renderActionLogs();
-            if (typeof scanDataIssues === 'function') scanDataIssues();
-            if (!localStorage.getItem('HAS_SEEN_STARTER') && typeof switchTab === 'function' && typeof openStarterGuide === 'function') {
-                if (typeof __guardBypass !== 'undefined') __guardBypass = true;
-                switchTab('starter-hub');
-                openStarterGuide();
-            }
-            if (typeof scheduleTeacherSyncPrompt === 'function') scheduleTeacherSyncPrompt();
-            if (typeof CloudManager.fetchAllCohortExams === 'function') CloudManager.fetchAllCohortExams();
-        }, 800);
-    });
-})();
-
-</script>
-
-    <!-- ================== 图标字体 (Tabler Icons) ================== -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
-
-    <!-- ================== 样式定义 (CSS) ================== -->
-
-    <!-- ================== Windows 11 Fluent Design UI 重构包 ================== -->
-    <style>
-        /* 1. 全局字体与背景 (Flat Minimalism) */
-        body {
-            /* Variables from main.css handle the actual colors */
-            -webkit-font-smoothing: antialiased;
-            /* 移除了斑驳的径向渐变背景 */
-        }
-
-        /* 2. 卡片与容器：纯净扁平化 (移除亚克力磨砂) */
-        .card-box,
-        .section,
-        .nav-wrapper,
-        .spotlight-box,
-        .side-nav,
-        .control-panel {
-            background: var(--bg-card) !important;
-            backdrop-filter: none !important;
-            /* 彻底移除毛玻璃性能消耗 */
-            border: 1px solid var(--border) !important;
-            box-shadow: var(--shadow) !important;
-            border-radius: var(--radius) !important;
-        }
-
-        /* 弹窗稍微保留一点浮力 */
-        .modal-content {
-            background: var(--bg-card) !important;
-            border: 1px solid var(--border) !important;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08) !important;
-            border-radius: 20px !important;
-        }
-
-        /* 3. 顶部 Header：极致干净 (X / YouTube 风格) */
-        header {
-            background: var(--bg-card) !important;
-            border: none !important;
-            border-bottom: 1px solid var(--border) !important;
-            /* 仅底边框 */
-            box-shadow: none !important;
-            color: #0f1419 !important;
-            margin-bottom: 20px !important;
-            border-radius: 0 !important;
-            /* 顶栏不圆角 */
-        }
-
-        /* 强制标题文字颜色变深，适应浅色背景 (仅限浅色模式) */
-        body:not(.dark-mode) header h1,
-        body:not(.dark-mode) header p,
-        body:not(.dark-mode) header .btn,
-        body:not(.dark-mode) header select,
-        body:not(.dark-mode) header div,
-        body:not(.dark-mode) header span,
-        body:not(.dark-mode) header i,
-        body:not(.dark-mode) header a {
-            color: #0f1419 !important;
-            text-shadow: none !important;
-        }
-
-        /* 顶栏图标/按钮变为圆角磁贴 (X 风格悬浮) */
-        header .btn,
-        header select,
-        header div[onclick] {
-            background: transparent !important;
-            border: none !important;
-            color: #0f1419 !important;
-            border-radius: 9999px !important;
-            /* 全圆角胶囊/圆形 */
-            padding: 8px 16px !important;
-            font-weight: 600 !important;
-            transition: background 0.2s ease !important;
-        }
-
-        /* 图标按钮如果是方形，强制变正圆 */
-        header .btn:not(:has(#cohort-selector)),
-        header div[onclick] {
-            padding: 10px !important;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        header .btn:hover,
-        header select:hover,
-        header div[onclick]:hover {
-            background: var(--primary-light) !important;
-            /* 浅灰悬浮底色 */
-            box-shadow: none !important;
-        }
-
-        /* 4. 按钮：扁平胶囊化 */
-        .btn {
-            border-radius: 9999px !important;
-            /* 胶囊按键 */
-            border: 1px solid transparent !important;
-            font-weight: 700 !important;
-            transition: background 0.2s ease !important;
-            box-shadow: none !important;
-        }
-
-        .btn:active {
-            transform: scale(0.96) !important;
-            /* 点击缩放 */
-            opacity: 0.8;
-        }
-
-        /* 5. 输入框：X 风格胶囊 */
-        input[type="text"],
-        input[type="number"],
-        input[type="password"],
-        select,
-        textarea {
-            background-color: var(--bg-body) !important;
-            /* 跟随背景 */
-            border: 1px solid var(--border) !important;
-            border-bottom: 1px solid var(--border) !important;
-            border-radius: 9999px !important;
-            /* 胶囊输入框 */
-            transition: all 0.2s !important;
-            color: #0f1419 !important;
-            padding: 10px 16px !important;
-            box-shadow: none !important;
-        }
-
-        input:focus,
-        select:focus,
-        textarea:focus {
-            background-color: var(--bg-card) !important;
-            border-color: var(--primary) !important;
-            box-shadow: none !important;
-        }
-
-        /* 6. 表格：极简风，去竖线 */
-        table {
-            border-collapse: separate !important;
-            border-spacing: 0 !important;
-        }
-
-        thead th {
-            background: transparent !important;
-            border-bottom: 1px solid var(--border) !important;
-            color: var(--secondary) !important;
-            font-size: 13px !important;
-            text-transform: none !important;
-            padding: 12px 16px !important;
-            font-weight: 600 !important;
-        }
-
-        /* 悬浮行效果 */
-        tbody tr {
-            transition: background 0.1s !important;
-            border-radius: 0 !important;
-            /* X风表格行不圆角 */
-        }
-
-        tbody tr:hover td {
-            background-color: rgba(0, 0, 0, 0.02) !important;
-            /* 极淡的灰 */
-        }
-
-        td {
-            border-right: none !important;
-            /* 去除竖线 */
-            border-bottom: 1px solid var(--border) !important;
-            padding: 14px 16px !important;
-            color: #0f1419 !important;
-        }
-
-        /* 修复首列冻结的背景 */
-        table th:first-child,
-        table td:first-child {
-            background: var(--bg-card) !important;
-            backdrop-filter: none;
-        }
-
-        /* 7. 导航栏：极简底栏 */
-        .nav-wrapper {
-            background: var(--bg-card) !important;
-            box-shadow: none !important;
-            border: none !important;
-            border-bottom: 1px solid var(--border) !important;
-            padding: 0 16px !important;
-            border-radius: 0 !important;
-        }
-
-        .nav-categories {
-            background: transparent !important;
-            gap: 16px !important;
-            /* 增加导航间距 */
-            padding: 0 !important;
-            border: none !important;
-        }
-
-        .nav-cat-item {
-            color: var(--secondary) !important;
-            border-radius: 0 !important;
-            border-bottom: 4px solid transparent !important;
-            /* X 风格底边指示线 */
-            padding: 16px 8px !important;
-            background: transparent !important;
-            font-weight: 500 !important;
-        }
-
-        .nav-cat-item:hover {
-            background-color: var(--primary-light) !important;
-            color: #0f1419 !important;
-        }
-
-        .nav-cat-item.active {
-            background-color: transparent !important;
-            color: #0f1419 !important;
-            box-shadow: none !important;
-            border-bottom: 4px solid var(--primary) !important;
-            /* 激活底边线 */
-            font-weight: 700 !important;
-        }
-
-        /* 二级导航胶囊 */
-        .nav-link {
-            border-radius: 9999px !important;
-            background: transparent !important;
-            border: none !important;
-            padding: 8px 16px !important;
-            color: var(--secondary) !important;
-        }
-
-        .nav-link:hover {
-            background: var(--primary-light) !important;
-            color: #0f1419 !important;
-        }
-
-        .nav-link.active {
-            background: #0f1419 !important;
-            color: white !important;
-            box-shadow: none !important;
-        }
-
-        /* 8. 弹窗 Modal：居中悬浮卡片 */
-        .modal {
-            background: rgba(0, 0, 0, 0.4) !important;
-            backdrop-filter: blur(2px) !important;
-            /* 极弱模糊 */
-        }
-
-        /* 9. 滚动条美化 (Overlay Scrollbars) */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-            background: transparent;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.15);
-            border-radius: 9999px;
-            border: 2px solid transparent;
-            background-clip: content-box;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background-color: rgba(0, 0, 0, 0.3);
-        }
-
-        /* 10. 修复左侧导航 (Side Nav) */
-        .side-nav {
-            background: var(--bg-card) !important;
-            border: none !important;
-            border-right: 1px solid var(--border) !important;
-            border-radius: 0 !important;
-        }
-
-        .side-nav-link.active {
-            background: var(--primary-light) !important;
-            color: #0f1419 !important;
-            border-left: 3px solid var(--primary) !important;
-            /* removed closing bracket here because it attaches to next section */
         }
 
         /* 11. 消息提示 Toast */
@@ -3649,7 +3649,7 @@
                 </div>
             </div>
 
-            <!-- 6. 本校教师分析 -->
+            <!-- 6. 教学管理总览 -->
             <div id="teaching-overview" class="section card-box">
                 <div class="module-desc-bar" style="border-color:#dc2626;">
                     <div
@@ -3763,6 +3763,7 @@
                 </div>
             </div>
 
+            <!-- 6.1 教学异常预警中心 -->
             <div id="teaching-warning-center" class="section card-box">
                 <div class="sec-head">
                     <h2><i class="ti ti-alert-triangle"></i> 教学异常预警中心</h2>
@@ -3814,6 +3815,7 @@
                 </div>
             </div>
 
+            <!-- 6.2 教学整改任务列表 -->
             <div id="teaching-rectify-center" class="section card-box">
                 <div class="sec-head">
                     <h2><i class="ti ti-list-check"></i> 教学整改任务列表</h2>
@@ -3939,6 +3941,7 @@
                 </div>
             </div>
 
+            <!-- 6. 本校教师分析 -->
             <div id="teacher-analysis" class="section card-box">
                 <div class="sec-head">
                     <h2>
@@ -6444,7 +6447,7 @@
     <div id="admin-modal" class="modal" style="display: none; z-index: 60000;">
         <div class="modal-content" style="max-width: 600px;"> <!-- 稍微调宽一点 -->
             <div
-                style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;">
+                style="display:flex; justify-content:space-between; align-items:flex-start; gap:18px; border-bottom:1px solid #e2e8f0; padding-bottom:14px; margin-bottom:14px; flex-wrap:wrap;">
                 <div style="display:flex; align-items:center; gap:10px;">
                     <h3 style="color:#b91c1c; margin:0;"><i class="ti ti-shield-lock"></i> 账号管理</h3>
                     <!-- 新增：查看日志按钮 -->
@@ -7005,67 +7008,6 @@ document.addEventListener('alpine:init', () => {
 
         // 更新数据的逻辑 (供旧代码调用)
         update(statsObj, rankingObj, currentUserName = '', currentRole = 'guest') {
-            const arr = [];
-            // 将复杂的嵌套对象转换为数组，方便前端循环
-            if (statsObj && Object.keys(statsObj).length > 0) {
-                Object.keys(statsObj).sort().forEach(teacher => {
-                    Object.keys(statsObj[teacher]).sort((a, b) => a.localeCompare(b)).forEach(subject => {
-                        const data = statsObj[teacher][subject];
-                        // 计算评级样式
-                        let badgeClass = 'performance-poor', badgeText = '需改进';
-                        const avg = parseFloat(data.avg), exc = data.excellentRate * 100, pass = data.passRate * 100;
-                        if (avg >= 85 && exc >= 30 && pass >= 90) { badgeClass = 'performance-excellent'; badgeText = '优秀'; }
-                        else if (avg >= 80 && exc >= 25 && pass >= 85) { badgeClass = 'performance-good'; badgeText = '良好'; }
-                        else if (avg >= 75 && exc >= 20 && pass >= 80) { badgeClass = 'performance-average'; badgeText = '中等'; }
-
-                        // 获取排名
-                        const rank = (rankingObj && rankingObj[teacher] && rankingObj[teacher][subject])
-                            ? rankingObj[teacher][subject].rank : '-';
-
-                        arr.push({
-                            id: `${teacher}-${subject}`, // 唯一键
-                            name: teacher,
-                            subject: subject,
-                            classes: data.classes,
-                            avg: data.avg,
-                            excRate: (data.excellentRate * 100).toFixed(1) + '%',
-                            passRate: (data.passRate * 100).toFixed(1) + '%',
-                            count: data.studentCount,
-                            rank: rank,
-                            badgeClass: badgeClass,
-                            badgeText: badgeText
-                        });
-                    });
-                });
-            }
-
-            const role = String(currentRole || 'guest');
-            const normalizedCurrent = String(currentUserName || '').replace(/\s+/g, '').toLowerCase();
-            arr.sort((a, b) => {
-                if ((role === 'teacher' || role === 'class_teacher') && normalizedCurrent) {
-                    const aNorm = String(a.name || '').replace(/\s+/g, '').toLowerCase();
-                    const bNorm = String(b.name || '').replace(/\s+/g, '').toLowerCase();
-                    const aMe = (aNorm === normalizedCurrent || aNorm.startsWith(normalizedCurrent + '(') || aNorm.startsWith(normalizedCurrent + '（')) ? 1 : 0;
-                    const bMe = (bNorm === normalizedCurrent || bNorm.startsWith(normalizedCurrent + '(') || bNorm.startsWith(normalizedCurrent + '（')) ? 1 : 0;
-                    if (aMe !== bMe) return bMe - aMe;
-                }
-
-                const avgDiff = (parseFloat(b.avg) || 0) - (parseFloat(a.avg) || 0);
-                if (avgDiff !== 0) return avgDiff;
-
-                const passA = parseFloat(String(a.passRate || '').replace('%', '')) || 0;
-                const passB = parseFloat(String(b.passRate || '').replace('%', '')) || 0;
-                const passDiff = passB - passA;
-                if (passDiff !== 0) return passDiff;
-
-                const excA = parseFloat(String(a.excRate || '').replace('%', '')) || 0;
-                const excB = parseFloat(String(b.excRate || '').replace('%', '')) || 0;
-                const excDiff = excB - excA;
-                if (excDiff !== 0) return excDiff;
-
-                return String(a.name || '').localeCompare(String(b.name || ''), 'zh-Hans-CN');
-            });
-
             this.list = buildTeacherCardList(statsObj, rankingObj, currentUserName, currentRole);
         }
     });
@@ -7315,7 +7257,9 @@ const EdgeGateway = {
     request: async function (action, payload = {}, options = {}) {
         const url = this.getGatewayUrl();
         const apikey = this.getPublishableKey();
-        if (!url || !apikey) throw new Error('EDGE_GATEWAY_NOT_CONFIGURED');
+        if (!url || !apikey) {
+            throw new Error('EDGE_GATEWAY_NOT_CONFIGURED');
+        }
         const headers = {
             'Content-Type': 'application/json',
             'apikey': apikey
@@ -7331,9 +7275,12 @@ const EdgeGateway = {
             body: JSON.stringify({ action, payload })
         });
         let data = null;
-        try { data = await response.json(); } catch (e) { }
+        try {
+            data = await response.json();
+        } catch (e) { }
         if (!response.ok || !data?.ok) {
-            throw new Error(data?.error || `EDGE_GATEWAY_HTTP_${response.status}`);
+            const message = data?.error || `EDGE_GATEWAY_HTTP_${response.status}`;
+            throw new Error(message);
         }
         return data;
     },
@@ -9852,7 +9799,6 @@ const AccountManager = {
                 `;
         });
         tbody.innerHTML = html;
-        this.renderDataManagerStatus();
     },
 
 
@@ -10663,6 +10609,7 @@ const DataManager = {
                 if (typeof saveCloudData === 'function') saveCloudData();
 
                 alert(`历史数据导入成功！\n共 ${parsedHistory.length} 人。\n✅ 已自动计算历史总分及单科的三级排名(班/校/镇)。`);
+                DataManager.renderDataManagerStatus();
                 input.value = '';
 
             } catch (err) {
@@ -11987,7 +11934,6 @@ const DataManager = {
         } else {
             UI.toast('✅ 参数已暂存到内存 (未连接云端)', 'success');
         }
-        this.renderDataManagerStatus();
     },
 
     // --- 目标人数管理 (增强版) ---
@@ -12017,6 +11963,7 @@ const DataManager = {
             html += `<tr><td style="font-weight:bold;">${sch}</td><td>${t.t1}</td><td>${t.t2}</td><td><button class="btn btn-sm btn-primary" onclick="DataManager.editTarget('${sch}')" style="padding:2px 6px;">修改</button> <button class="btn btn-sm btn-danger" onclick="DataManager.deleteTarget('${sch}')" style="padding:2px 6px;">删除</button></td></tr>`;
         });
         tbody.innerHTML = html;
+        this.renderDataManagerStatus();
     },
 
     renderSchoolAliasMappings: function () {
@@ -12243,7 +12190,6 @@ const DataManager = {
                 } else {
                     alert(msg);
                 }
-                DataManager.renderDataManagerStatus();
                 input.value = '';
             } catch (err) { alert("失败：" + err.message); }
         };
@@ -12268,7 +12214,6 @@ const DataManager = {
                     if (ok) this.rememberDataManagerSyncSnapshot('targets-edit');
                     if (window.UI) UI.toast(ok ? "✅ 目标修改已同步云端" : "⚠️ 目标修改已暂存，本次未成功同步云端", ok ? "success" : "warning");
                 }
-                this.renderDataManagerStatus();
             }
         });
     },
@@ -17483,12 +17428,9 @@ function switchTab(id) {
             });
             /*
 
-            const baselineSel = document.getElementById('progressBaselineSelect');
-            const baselineId = baselineSel?.value || '';
-            const baselineData = baselineId ? getBaselineDataFromExam(baselineId) : (window.PREV_DATA || []);
+
 
             // 只要 baseline 有长度，就说明云端或本地已加载
-            if (baselineData && baselineData.length > 0) {
                 // 成功状态
                 if (statusEl) {
                     statusEl.innerHTML = `✅ 数据就绪 (已加载 ${baselineData.length} 条历史记录)`;
@@ -19796,7 +19738,6 @@ async function ensureProgressBaselineData(options = {}) {
 
     if (!baselineData.length) {
         setProgressBaselineStatus('❌ 未找到可用上次考试数据，请先同步当前届别考试或导入历史成绩', 'error');
-        window.__PROGRESS_BASELINE_LOADING = false;
         return [];
     }
 
@@ -25027,54 +24968,185 @@ function loadPreviousData(input) {
 // --- 进退步分析 (含同名/转班智能拦截) ---
 
 // 1. 入口函数：先检查歧义
-function renderProgressAnalysis() {
-    if (!RAW_DATA.length) return uiAlert("请先上传【本次考试】数据", 'warning');
-    if (!PREV_DATA.length) return uiAlert("请先同步或导入【上次考试】数据", 'warning');
+function getProgressCleanName(name) {
+    return String(name || '')
+        .trim()
+        .replace(/\s+/g, '')
+        .replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '')
+        .toLowerCase();
+}
 
-    const schoolName = document.getElementById('progressSchoolSelect').value;
-    if (!schoolName) return uiAlert("请选择要分析的学校", 'warning');
+function getProgressSelectedSchoolName() {
+    const select = document.getElementById('progressSchoolSelect');
+    const schoolName = String(select?.value || MY_SCHOOL || Object.keys(SCHOOLS || {})[0] || '').trim();
+    if (select && schoolName && !select.value) select.value = schoolName;
+    return schoolName;
+}
+
+function getProgressCurrentStudentsForSchool(schoolName) {
+    const school = SCHOOLS?.[schoolName];
+    if (!school || !Array.isArray(school.students)) return [];
 
     const user = getCurrentUser();
     const role = user?.role || 'guest';
-    const scope = (role === 'teacher') ? getTeacherScopeForUser(user) : null;
-    let currentStudents = SCHOOLS[schoolName].students;
+    const scope = role === 'teacher' ? getTeacherScopeForUser(user) : null;
+    let students = school.students.slice();
+
     if (role === 'class_teacher' && user?.class) {
-        currentStudents = currentStudents.filter(s => s.class === user.class);
+        students = students.filter(student => isClassEquivalent(student.class, user.class));
     }
-    if (role === 'teacher' && scope && scope.classes.size > 0) {
-        currentStudents = currentStudents.filter(s => scope.classes.has(s.class));
+    if (role === 'teacher' && scope?.classes instanceof Set && scope.classes.size > 0) {
+        students = students.filter(student => scope.classes.has(student.class));
     }
-    const ambiguousCases = []; // 存储需要用户确认的情况
+    return students;
+}
 
-    // 预扫描
-    currentStudents.forEach(curr => {
-        // 1. 尝试严格匹配 (姓名+班级+学校)
-        const strictMatch = PREV_DATA.find(p => p.name === curr.name && areSchoolNamesEquivalent(p.school, curr.school) && p.class === curr.class);
+function getProgressBaselineRowsForSchool(schoolName) {
+    const baselineExamId = document.getElementById('progressBaselineSelect')?.value || '';
+    const normalizedRows = normalizeProgressBaselineRows(PREV_DATA || window.PREV_DATA || [], baselineExamId);
+    const currentStudents = getProgressCurrentStudentsForSchool(schoolName);
+    const currentNames = new Set(currentStudents.map(student => getProgressCleanName(student.name)).filter(Boolean));
 
-        // 2. 如果严格匹配失败，但在上次数据里能找到“同名同校”的人 (说明可能转班了，或者只是同名)
-        if (!strictMatch) {
-            // 找出所有同名同校的候选人
-            const candidates = PREV_DATA.filter(p => p.name === curr.name && areSchoolNamesEquivalent(p.school, curr.school));
+    let rows = normalizedRows.filter(row => areSchoolNamesEquivalent(row.school, schoolName));
+    if (rows.length < Math.max(5, Math.floor(currentStudents.length * 0.4))) {
+        rows = normalizedRows.filter(row => currentNames.has(getProgressCleanName(row.name)));
+    }
 
-            if (candidates.length > 0) {
-                // 检查是否已经手动映射过
-                const mapKey = `${curr.school}_${curr.class}_${curr.name}`;
-                if (!MANUAL_ID_MAPPINGS[mapKey]) {
-                    ambiguousCases.push({
-                        curr: curr,
-                        candidates: candidates
-                    });
-                }
-            }
+    rows = rows
+        .map(row => {
+            const recalculated = Number(recalcPrevTotal(row));
+            const total = Number.isFinite(recalculated) ? recalculated : Number(row.total);
+            return Number.isFinite(total) ? { ...row, _progressTotal: total } : null;
+        })
+        .filter(Boolean)
+        .sort((a, b) => b._progressTotal - a._progressTotal);
+
+    let lastRank = 0;
+    let lastTotal = null;
+    rows.forEach((row, index) => {
+        if (lastTotal === null || Math.abs(row._progressTotal - lastTotal) > 0.001) {
+            lastRank = index + 1;
+            lastTotal = row._progressTotal;
         }
+        row._progressSchoolRank = lastRank;
     });
 
-    // 决策：如果有歧义，弹窗；否则直接计算
-    if (ambiguousCases.length > 0) {
-        showMappingModal(ambiguousCases);
-    } else {
-        performProgressCalculation(); // 直接计算
+    return rows;
+}
+
+function buildProgressPreviousMatchIndex(rows) {
+    const strictMap = new Map();
+    const looseMap = new Map();
+
+    (rows || []).forEach(row => {
+        const nameKey = getProgressCleanName(row.name);
+        const classKey = normalizeClass(row.class || '');
+        const strictKey = `${nameKey}__${classKey}`;
+        if (!strictMap.has(strictKey)) strictMap.set(strictKey, []);
+        strictMap.get(strictKey).push(row);
+        if (!looseMap.has(nameKey)) looseMap.set(nameKey, []);
+        looseMap.get(nameKey).push(row);
+    });
+
+    return { strictMap, looseMap };
+}
+
+function resolveProgressBaselineMatch(student, indexes) {
+    const nameKey = getProgressCleanName(student.name);
+    const classKey = normalizeClass(student.class || '');
+    const manualKey = `${student.school}_${student.class}_${student.name}`;
+    const manualValue = MANUAL_ID_MAPPINGS?.[manualKey];
+    const looseCandidates = (indexes.looseMap.get(nameKey) || []).filter(row => !student.school || !row.school || areSchoolNamesEquivalent(row.school, student.school));
+
+    if (manualValue === '__IGNORE__') {
+        return { row: null, matchType: 'ignored', matchLabel: '已手动忽略' };
     }
+    if (manualValue) {
+        const manualRow = looseCandidates.find(row => isClassEquivalent(row.class, manualValue) || String(row.class || '').trim() === String(manualValue || '').trim());
+        if (manualRow) {
+            return { row: manualRow, matchType: 'manual', matchLabel: '手动映射' };
+        }
+    }
+
+    const strictCandidates = (indexes.strictMap.get(`${nameKey}__${classKey}`) || []).filter(row => !student.school || !row.school || areSchoolNamesEquivalent(row.school, student.school));
+    if (strictCandidates.length === 1) {
+        return { row: strictCandidates[0], matchType: 'strict', matchLabel: '同名同班' };
+    }
+    if (looseCandidates.length === 1) {
+        return { row: looseCandidates[0], matchType: 'same_name_unique', matchLabel: '同名唯一' };
+    }
+    if (strictCandidates.length > 1 || looseCandidates.length > 1) {
+        return { row: null, matchType: 'ambiguous', matchLabel: '同名待确认' };
+    }
+    return { row: null, matchType: 'missing', matchLabel: '未匹配' };
+}
+
+function getProgressStatusMeta(change) {
+    if (change >= 20) return { label: '显著进步', className: 'trend-up', color: 'var(--success)' };
+    if (change >= 5) return { label: '稳步提升', className: 'trend-up', color: 'var(--success)' };
+    if (change <= -20) return { label: '明显退步', className: 'trend-down', color: 'var(--danger)' };
+    if (change <= -5) return { label: '需要关注', className: 'trend-down', color: 'var(--danger)' };
+    return { label: '基本稳定', className: 'trend-stable', color: '#64748b' };
+}
+
+function destroyProgressChart(canvasId, instanceRef) {
+    const canvas = document.getElementById(canvasId);
+    try {
+        if (typeof Chart !== 'undefined' && typeof Chart.getChart === 'function' && canvas) {
+            const existing = Chart.getChart(canvas);
+            if (existing) existing.destroy();
+        }
+    } catch (error) {
+        console.warn(`[progress] destroy chart ${canvasId} failed:`, error);
+    }
+    try {
+        if (instanceRef && typeof instanceRef.destroy === 'function') instanceRef.destroy();
+    } catch (error) {
+        console.warn(`[progress] destroy chart instance ${canvasId} failed:`, error);
+    }
+    if (canvas && typeof canvas.getContext === 'function') {
+        const ctx = canvas.getContext('2d');
+        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    return null;
+}
+
+function clearProgressVisuals() {
+    trendChartInstance = destroyProgressChart('trendChart', trendChartInstance);
+    sankeyChartInstance = destroyProgressChart('sankeyChart', sankeyChartInstance);
+}
+
+function updateProgressModuleCopy() {
+    const infoBar = document.querySelector('#progress-analysis .info-bar');
+    if (infoBar) {
+        const tip = infoBar.querySelector('span:last-child');
+        if (tip) tip.textContent = '比较口径：上次校排 - 本次校排 = 排名变化（正数=进步）';
+    }
+    const chartTitles = document.querySelectorAll('#anchor-va-trend h4');
+    if (chartTitles[0]) chartTitles[0].textContent = '排名变化散点图（越靠上越接近进步）';
+    if (chartTitles[1]) chartTitles[1].textContent = '排名变化分布（显著进步 / 稳定 / 退步）';
+}
+
+function renderProgressAnalysis() {
+    updateProgressModuleCopy();
+    if (!RAW_DATA.length) return uiAlert("请先上传【本次考试】数据", 'warning');
+
+    if ((!PREV_DATA || !PREV_DATA.length) && typeof ensureProgressBaselineData === 'function') {
+        setProgressBaselineStatus('⏳ 正在自动加载上次考试数据...', 'loading');
+        Promise.resolve(ensureProgressBaselineData({
+            allowCloudSync: true,
+            rerenderReport: true,
+            rerenderAnalysis: true
+        })).catch(error => {
+            console.warn('[progress] auto load baseline failed:', error);
+            setProgressBaselineStatus('❌ 自动加载上次考试数据失败，请稍后重试', 'error');
+        });
+        return;
+    }
+
+    const schoolName = getProgressSelectedSchoolName();
+    if (!schoolName || !SCHOOLS[schoolName]) return uiAlert("请选择要分析的学校", 'warning');
+    performProgressCalculation({ schoolName });
 }
 
 // 2. 显示映射弹窗
@@ -37190,15 +37262,98 @@ function rememberUserCohort(cohortId) {
     localStorage.setItem(key, cohortId);
 }
 
+function ensureCohortRegistered(cohortId) {
+    const id = String(cohortId || '').trim();
+    if (!id || typeof CohortManager === 'undefined') return null;
+    CohortManager.list = Array.isArray(CohortManager.list) ? CohortManager.list : [];
+
+    let meta = CohortManager.list.find(item => String(item?.id || '').trim() === id);
+    if (!meta) {
+        const currentMeta = CURRENT_COHORT_META && String(CURRENT_COHORT_META.id || CURRENT_COHORT_ID || '').trim() === id
+            ? CURRENT_COHORT_META
+            : null;
+        const year = parseInt(id, 10);
+        meta = currentMeta || {
+            id,
+            year: Number.isFinite(year) ? year : id,
+            startGrade: 6,
+            createdAt: Date.now()
+        };
+        CohortManager.list.unshift(meta);
+        if (typeof CohortManager.save === 'function') CohortManager.save();
+    }
+
+    CURRENT_COHORT_ID = id;
+    window.CURRENT_COHORT_ID = id;
+    localStorage.setItem('CURRENT_COHORT_ID', id);
+
+    if (!CURRENT_COHORT_META || String(CURRENT_COHORT_META.id || '').trim() !== id) {
+        CURRENT_COHORT_META = meta;
+        window.CURRENT_COHORT_META = meta;
+        localStorage.setItem('CURRENT_COHORT_META', JSON.stringify(meta));
+    }
+
+    if (typeof CohortManager.renderSelector === 'function') CohortManager.renderSelector();
+    return meta;
+}
+
+function restoreActiveCohortUI(cohortId) {
+    const meta = ensureCohortRegistered(cohortId);
+    if (!meta) return false;
+
+    const currentLabel = document.getElementById('cohort-current-label');
+    if (currentLabel) currentLabel.innerText = formatCohortLabel(meta);
+
+    const examCohortLabel = document.getElementById('exam-cohort-label');
+    if (examCohortLabel) examCohortLabel.innerText = formatCohortLabel(meta);
+
+    const selector = document.getElementById('cohort-selector');
+    if (selector) selector.value = meta.id;
+
+    const mask = document.getElementById('mode-mask');
+    if (mask) mask.style.display = 'none';
+
+    const app = document.getElementById('app');
+    if (app) app.classList.remove('hidden');
+
+    return true;
+}
+
 function applyUserCohortPreference() {
     const key = getUserCohortPrefKey();
     if (!key) return;
-    const saved = localStorage.getItem(key);
+    const saved = String(localStorage.getItem(key) || '').trim();
+    const current = String(CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
+    const knownIds = (typeof CohortManager !== 'undefined' && Array.isArray(CohortManager.list))
+        ? CohortManager.list.map(item => String(item?.id || '').trim()).filter(Boolean)
+        : [];
+
     if (saved) {
-        CohortManager.switchTo(saved);
-    } else {
-        showCohortPicker();
+        if (knownIds.includes(saved) && saved !== current) {
+            CohortManager.switchTo(saved);
+            rememberUserCohort(saved);
+            return;
+        }
+        if (saved === current && restoreActiveCohortUI(saved)) {
+            rememberUserCohort(saved);
+            return;
+        }
+        localStorage.removeItem(key);
     }
+
+    if (current && restoreActiveCohortUI(current)) {
+        rememberUserCohort(current);
+        return;
+    }
+
+    const fallback = knownIds[0];
+    if (fallback) {
+        CohortManager.switchTo(fallback);
+        rememberUserCohort(fallback);
+        return;
+    }
+
+    showCohortPicker();
 }
 
 function showCohortPicker() {
@@ -38344,7 +38499,14 @@ function applySnapshotPayload(db) {
     try { if (typeof renderTables === 'function') renderTables(); } catch (e) { }
     try { if (typeof updateSchoolSelect === 'function') updateSchoolSelect(); } catch (e) { }
     try { if (typeof renderAll === 'function') renderAll(); } catch (e) { }
-    try { if (typeof DataManager !== 'undefined' && typeof DataManager.renderSchoolAliasMappings === 'function') DataManager.renderSchoolAliasMappings(); } catch (e) { }
+    try {
+        if (typeof DataManager !== 'undefined' && typeof DataManager.renderSchoolAliasMappings === 'function') {
+            DataManager.renderSchoolAliasMappings();
+        }
+        if (typeof DataManager !== 'undefined' && typeof DataManager.syncSchoolAliasSettingsFromGateway === 'function') {
+            DataManager.syncSchoolAliasSettingsFromGateway().catch(err => console.warn('[EdgeGateway] post-load alias refresh skipped:', err?.message || err));
+        }
+    } catch (e) { }
     try { updateExamHistoryStatusBar(); } catch (e) { }
     if (typeof DataManager !== 'undefined' && DataManager.renderHistoryPreview) DataManager.renderHistoryPreview();
 }
@@ -42891,7 +43053,8 @@ if (typeof window !== 'undefined') {
 
     <!-- 5. 数据综合管理后台 (成绩/教师/档案) -->
     <div id="data-manager-modal" class="modal" style="display: none; z-index: 79000;">
-        <div class="modal-content" style="max-width: 900px; height: 90vh; display: flex; flex-direction: column;">
+        <div class="modal-content"
+            style="width:min(1480px,96vw); max-width:1480px; height:min(92vh,960px); display:flex; flex-direction:column; padding:22px 24px 18px; border-radius:22px;">
 
             <div
                 style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;">

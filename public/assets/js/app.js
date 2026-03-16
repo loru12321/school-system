@@ -10569,6 +10569,7 @@ function switchTab(id) {
                     statusEl.style.color = "#dc2626";
                 }
             }
+            */
         }
         if (id === 'mutual-aid') updateMutualAidSelects();
         if (id === 'poster-generator') updatePosterSelects();
@@ -12257,7 +12258,6 @@ function renderTeacherCards() {
             const store = Alpine.store('teacherData');
             if (store && typeof store.update === 'function') store.update(stats, rankings, user?.name || '', role);
             else if (store) store.list = list;
-            */
         }
     } catch (err) {
         console.warn('teacherData store update skipped:', err);
@@ -30373,15 +30373,98 @@ function rememberUserCohort(cohortId) {
     localStorage.setItem(key, cohortId);
 }
 
+function ensureCohortRegistered(cohortId) {
+    const id = String(cohortId || '').trim();
+    if (!id || typeof CohortManager === 'undefined') return null;
+    CohortManager.list = Array.isArray(CohortManager.list) ? CohortManager.list : [];
+
+    let meta = CohortManager.list.find(item => String(item?.id || '').trim() === id);
+    if (!meta) {
+        const currentMeta = CURRENT_COHORT_META && String(CURRENT_COHORT_META.id || CURRENT_COHORT_ID || '').trim() === id
+            ? CURRENT_COHORT_META
+            : null;
+        const year = parseInt(id, 10);
+        meta = currentMeta || {
+            id,
+            year: Number.isFinite(year) ? year : id,
+            startGrade: 6,
+            createdAt: Date.now()
+        };
+        CohortManager.list.unshift(meta);
+        if (typeof CohortManager.save === 'function') CohortManager.save();
+    }
+
+    CURRENT_COHORT_ID = id;
+    window.CURRENT_COHORT_ID = id;
+    localStorage.setItem('CURRENT_COHORT_ID', id);
+
+    if (!CURRENT_COHORT_META || String(CURRENT_COHORT_META.id || '').trim() !== id) {
+        CURRENT_COHORT_META = meta;
+        window.CURRENT_COHORT_META = meta;
+        localStorage.setItem('CURRENT_COHORT_META', JSON.stringify(meta));
+    }
+
+    if (typeof CohortManager.renderSelector === 'function') CohortManager.renderSelector();
+    return meta;
+}
+
+function restoreActiveCohortUI(cohortId) {
+    const meta = ensureCohortRegistered(cohortId);
+    if (!meta) return false;
+
+    const currentLabel = document.getElementById('cohort-current-label');
+    if (currentLabel) currentLabel.innerText = formatCohortLabel(meta);
+
+    const examCohortLabel = document.getElementById('exam-cohort-label');
+    if (examCohortLabel) examCohortLabel.innerText = formatCohortLabel(meta);
+
+    const selector = document.getElementById('cohort-selector');
+    if (selector) selector.value = meta.id;
+
+    const mask = document.getElementById('mode-mask');
+    if (mask) mask.style.display = 'none';
+
+    const app = document.getElementById('app');
+    if (app) app.classList.remove('hidden');
+
+    return true;
+}
+
 function applyUserCohortPreference() {
     const key = getUserCohortPrefKey();
     if (!key) return;
-    const saved = localStorage.getItem(key);
+    const saved = String(localStorage.getItem(key) || '').trim();
+    const current = String(CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
+    const knownIds = (typeof CohortManager !== 'undefined' && Array.isArray(CohortManager.list))
+        ? CohortManager.list.map(item => String(item?.id || '').trim()).filter(Boolean)
+        : [];
+
     if (saved) {
-        CohortManager.switchTo(saved);
-    } else {
-        showCohortPicker();
+        if (knownIds.includes(saved) && saved !== current) {
+            CohortManager.switchTo(saved);
+            rememberUserCohort(saved);
+            return;
+        }
+        if (saved === current && restoreActiveCohortUI(saved)) {
+            rememberUserCohort(saved);
+            return;
+        }
+        localStorage.removeItem(key);
     }
+
+    if (current && restoreActiveCohortUI(current)) {
+        rememberUserCohort(current);
+        return;
+    }
+
+    const fallback = knownIds[0];
+    if (fallback) {
+        CohortManager.switchTo(fallback);
+        rememberUserCohort(fallback);
+        return;
+    }
+
+    showCohortPicker();
 }
 
 function showCohortPicker() {

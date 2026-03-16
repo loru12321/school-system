@@ -747,7 +747,8 @@
             if (typeof updateRoleHint === 'function') updateRoleHint();
             if (typeof renderActionLogs === 'function') renderActionLogs();
             if (typeof scanDataIssues === 'function') scanDataIssues();
-            if (!localStorage.getItem('HAS_SEEN_STARTER') && typeof switchTab === 'function' && typeof openStarterGuide === 'function') {
+            const hasSessionUser = !!(sessionStorage.getItem('CURRENT_USER') || (window.Auth && Auth.currentUser));
+            if (hasSessionUser && !localStorage.getItem('HAS_SEEN_STARTER') && typeof switchTab === 'function' && typeof openStarterGuide === 'function') {
                 if (typeof __guardBypass !== 'undefined') __guardBypass = true;
                 switchTab('starter-hub');
                 openStarterGuide();

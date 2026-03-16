@@ -11,6 +11,7 @@
         var sbClient = window.sbClient || null;
         window.SUPABASE_URL = localStorage.getItem('SUPABASE_URL') || "https://okwcciujnfvobbwaydiv.supabase.co";
         window.SUPABASE_KEY = localStorage.getItem('SUPABASE_KEY') || "sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4";
+        window.EDGE_GATEWAY_URL = localStorage.getItem('EDGE_GATEWAY_URL') || "https://okwcciujnfvobbwaydiv.supabase.co/functions/v1/edu-gateway-v2";
         window.initSupabase = function () {
             if (window.supabase && !sbClient) {
                 sbClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
@@ -337,6 +338,782 @@
             color: #0f1419 !important;
             border-left: 3px solid var(--primary) !important;
             /* removed closing bracket here because it attaches to next section */
+        }
+
+        /* Teaching Overview */
+        #teaching-overview .module-desc-bar {
+            margin-bottom: 14px;
+        }
+
+        .tm-overview-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tm-overview-card-grid,
+        .tm-readiness-grid,
+        .tm-summary-grid,
+        .tm-quick-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .tm-context-grid {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .tm-overview-slot {
+            min-height: 122px;
+        }
+
+        .tm-stat-card-inner,
+        .tm-mini-card {
+            height: 100%;
+            padding: 16px 18px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+        }
+
+        .tm-stat-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 14px;
+            color: #334155;
+        }
+
+        .tm-stat-main {
+            font-size: 18px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.45;
+            word-break: break-word;
+        }
+
+        .tm-stat-sub {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #64748b;
+            line-height: 1.7;
+        }
+
+        .status-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 28px;
+            padding: 0 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+            border: 1px solid transparent;
+        }
+
+        .status-chip.ok {
+            color: #166534;
+            background: #dcfce7;
+            border-color: #86efac;
+        }
+
+        .status-chip.warn {
+            color: #9a3412;
+            background: #ffedd5;
+            border-color: #fdba74;
+        }
+
+        .status-chip.info {
+            color: #1d4ed8;
+            background: #eff6ff;
+            border-color: #bfdbfe;
+        }
+
+        .status-chip.neutral {
+            color: #475569;
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        .tm-mini-card strong {
+            display: block;
+            margin-bottom: 6px;
+            color: #0f172a;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .tm-mini-card span {
+            color: #475569;
+            line-height: 1.7;
+            word-break: break-word;
+        }
+
+        .tm-quick-grid button {
+            width: 100%;
+        }
+
+        .tm-quick-entry-btn {
+            min-height: 92px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            gap: 8px;
+            text-align: left;
+            padding: 14px 16px !important;
+            border-radius: 14px !important;
+            border: 1px solid #dbe2ea !important;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+            color: #0f172a !important;
+        }
+
+        .tm-quick-entry-btn .tm-quick-head {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .tm-quick-entry-btn .tm-quick-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #0f172a;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tm-quick-entry-btn .tm-quick-desc {
+            font-size: 12px;
+            line-height: 1.7;
+            color: #64748b;
+            text-align: left;
+        }
+
+        .tm-next-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 16px 18px;
+            border: 1px solid #dbe2ea;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%);
+        }
+
+        .tm-next-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 6px;
+        }
+
+        .tm-next-desc {
+            font-size: 13px;
+            line-height: 1.75;
+            color: #64748b;
+        }
+
+        .tm-next-meta {
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tm-next-btn {
+            white-space: nowrap;
+        }
+
+        .tm-section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .tm-cloud-columns {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .tm-cloud-group {
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            padding: 14px 16px;
+        }
+
+        .tm-cloud-group h5 {
+            margin: 0 0 12px;
+            font-size: 14px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .tm-cloud-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .tm-cloud-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.92);
+            padding: 12px 14px;
+        }
+
+        .tm-cloud-item.warning {
+            border-color: #fed7aa;
+            background: linear-gradient(180deg, #ffffff 0%, #fff7ed 100%);
+        }
+
+        .tm-cloud-item.task {
+            border-color: #dbeafe;
+            background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+        }
+
+        .tm-cloud-item-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .tm-cloud-item-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.6;
+        }
+
+        .tm-cloud-item-desc {
+            font-size: 12px;
+            color: #475569;
+            line-height: 1.75;
+        }
+
+        .tm-cloud-item-meta {
+            margin-top: 8px;
+            font-size: 11px;
+            color: #64748b;
+            line-height: 1.7;
+        }
+
+        .tm-cloud-item-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tm-cloud-empty {
+            padding: 14px 16px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 14px;
+            color: #64748b;
+            font-size: 12px;
+            line-height: 1.75;
+            background: #f8fafc;
+        }
+
+        .tm-center-toolbar {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+
+        .tm-center-toolbar>div {
+            min-width: 160px;
+        }
+
+        .tm-center-toolbar label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+        }
+
+        .tm-center-scope {
+            margin: 0 0 14px;
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #f8fafc;
+            color: #475569;
+            font-size: 12px;
+            line-height: 1.75;
+        }
+
+        .tm-center-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .tm-center-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .tm-center-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            padding: 16px 18px;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+        }
+
+        .tm-center-card.warning {
+            border-color: #fed7aa;
+            background: linear-gradient(180deg, #ffffff 0%, #fff7ed 100%);
+        }
+
+        .tm-center-card.task {
+            border-color: #dbeafe;
+            background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+        }
+
+        .tm-center-card-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .tm-center-card-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.6;
+        }
+
+        .tm-center-card-scope {
+            margin-bottom: 10px;
+            font-size: 12px;
+            color: #64748b;
+            line-height: 1.75;
+        }
+
+        .tm-center-card-desc {
+            font-size: 13px;
+            color: #475569;
+            line-height: 1.8;
+        }
+
+        .tm-center-card-meta {
+            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        .tm-center-card-actions {
+            margin-top: 12px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tm-inline-chip {
+            display: inline-flex;
+            align-items: center;
+            min-height: 24px;
+            padding: 0 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.86);
+            border: 1px solid #dbe2ea;
+        }
+
+        .tm-version-diff-panel {
+            margin-bottom: 14px;
+        }
+
+        .tm-version-diff-card {
+            padding: 16px 18px;
+            border-radius: 16px;
+            border: 1px solid #fed7aa;
+            background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
+            box-shadow: 0 8px 24px rgba(249, 115, 22, 0.08);
+        }
+
+        .tm-version-diff-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .tm-version-diff-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: #9a3412;
+        }
+
+        .tm-version-diff-subtitle {
+            margin-top: 4px;
+            font-size: 12px;
+            color: #7c2d12;
+        }
+
+        .tm-version-diff-summary {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .tm-version-diff-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .tm-version-diff-item {
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid #e5e7eb;
+            background: rgba(255, 255, 255, 0.92);
+        }
+
+        .tm-version-diff-item.changed {
+            border-color: #fdba74;
+            background: #fff7ed;
+        }
+
+        .tm-version-diff-label {
+            margin-bottom: 10px;
+            font-size: 13px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .tm-version-diff-values {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .tm-version-diff-caption {
+            margin-bottom: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+        }
+
+        .tm-version-diff-value {
+            font-size: 13px;
+            color: #334155;
+            line-height: 1.7;
+            word-break: break-word;
+        }
+
+        .tm-module-statebar {
+            margin: 12px 0 14px;
+            padding: 14px 16px;
+            border: 1px solid #dbe2ea;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.03);
+        }
+
+        .tm-module-state-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .tm-module-state-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .tm-module-state-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .tm-module-state-item {
+            padding: 12px 14px;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.92);
+        }
+
+        .tm-module-state-item.is-interactive {
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            appearance: none;
+            transition: transform 0.16s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .tm-module-state-item.is-interactive:hover {
+            border-color: #fdba74;
+            box-shadow: 0 10px 22px rgba(249, 115, 22, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .tm-module-state-item.is-interactive:focus-visible {
+            outline: 2px solid #fb923c;
+            outline-offset: 2px;
+            border-color: #fb923c;
+        }
+
+        .tm-module-state-item.tone-ok {
+            border-color: #bbf7d0;
+            background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
+        }
+
+        .tm-module-state-item.tone-warn {
+            border-color: #fed7aa;
+            background: linear-gradient(180deg, #ffffff 0%, #fff7ed 100%);
+        }
+
+        .tm-module-state-item.tone-info,
+        .tm-module-state-item.tone-neutral {
+            border-color: #dbeafe;
+            background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+        }
+
+        .tm-module-state-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+            margin-bottom: 6px;
+        }
+
+        .tm-module-state-value {
+            font-size: 14px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.65;
+            word-break: break-word;
+        }
+
+        .tm-module-state-meta {
+            margin-top: 8px;
+        }
+
+        .tm-module-state-action {
+            margin-top: 8px;
+            font-size: 11px;
+            font-weight: 800;
+            color: #ea580c;
+            letter-spacing: 0.02em;
+        }
+
+        .tm-field-flash {
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.18) !important;
+            border-color: #fb923c !important;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        #tmAlertList .plain-list,
+        #smInsightList .plain-list {
+            margin: 0;
+            padding-left: 18px;
+            color: #334155;
+            line-height: 1.85;
+        }
+
+        body.dark-mode .tm-stat-card-inner,
+        body.dark-mode .tm-mini-card {
+            background: rgba(30, 41, 59, 0.78) !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+            color: #e2e8f0 !important;
+        }
+
+        body.dark-mode .tm-stat-main,
+        body.dark-mode .tm-mini-card strong {
+            color: #f8fafc !important;
+        }
+
+        body.dark-mode .tm-stat-sub,
+        body.dark-mode .tm-mini-card span,
+        body.dark-mode #tmAlertList .plain-list,
+        body.dark-mode #smInsightList .plain-list,
+        body.dark-mode .tm-quick-entry-btn .tm-quick-desc,
+        body.dark-mode .tm-next-desc {
+            color: #cbd5e1 !important;
+        }
+
+        body.dark-mode .tm-cloud-group,
+        body.dark-mode .tm-cloud-item,
+        body.dark-mode .tm-quick-entry-btn,
+        body.dark-mode .tm-next-card,
+        body.dark-mode .tm-module-statebar,
+        body.dark-mode .tm-module-state-item,
+        body.dark-mode .tm-version-diff-card,
+        body.dark-mode .tm-version-diff-item {
+            background: rgba(30, 41, 59, 0.78) !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        body.dark-mode .tm-version-diff-title,
+        body.dark-mode .tm-version-diff-label,
+        body.dark-mode .tm-version-diff-value {
+            color: #f8fafc !important;
+        }
+
+        body.dark-mode .tm-version-diff-subtitle,
+        body.dark-mode .tm-version-diff-caption {
+            color: #cbd5e1 !important;
+        }
+
+        body.dark-mode .tm-cloud-item-title,
+        body.dark-mode .tm-cloud-group h5 {
+            color: #f8fafc !important;
+        }
+
+        body.dark-mode .tm-cloud-item-desc,
+        body.dark-mode .tm-cloud-item-meta,
+        body.dark-mode .tm-cloud-empty {
+            color: #cbd5e1 !important;
+        }
+
+        body.dark-mode .tm-center-card,
+        body.dark-mode .tm-center-scope {
+            background: rgba(30, 41, 59, 0.78) !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        body.dark-mode .tm-center-card-title {
+            color: #f8fafc !important;
+        }
+
+        body.dark-mode .tm-center-card-scope,
+        body.dark-mode .tm-center-card-desc,
+        body.dark-mode .tm-center-card-meta,
+        body.dark-mode .tm-center-scope {
+            color: #cbd5e1 !important;
+        }
+
+        body.dark-mode .tm-inline-chip {
+            background: rgba(15, 23, 42, 0.7);
+            border-color: rgba(148, 163, 184, 0.35);
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .tm-cloud-empty {
+            background: rgba(15, 23, 42, 0.72) !important;
+            border-color: rgba(148, 163, 184, 0.28) !important;
+        }
+
+        body.dark-mode .tm-module-state-item.is-interactive:hover {
+            border-color: rgba(251, 146, 60, 0.55) !important;
+            box-shadow: 0 10px 22px rgba(251, 146, 60, 0.16);
+        }
+
+        body.dark-mode .tm-module-state-item.is-interactive:focus-visible {
+            outline-color: rgba(251, 146, 60, 0.92);
+            border-color: rgba(251, 146, 60, 0.65) !important;
+        }
+
+        body.dark-mode .tm-module-state-item.tone-ok {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.88) 0%, rgba(20, 83, 45, 0.52) 100%) !important;
+        }
+
+        body.dark-mode .tm-module-state-item.tone-warn {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.88) 0%, rgba(124, 45, 18, 0.5) 100%) !important;
+        }
+
+        body.dark-mode .tm-module-state-item.tone-info,
+        body.dark-mode .tm-module-state-item.tone-neutral {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.88) 0%, rgba(30, 64, 175, 0.42) 100%) !important;
+        }
+
+        body.dark-mode .tm-module-state-action {
+            color: #fdba74 !important;
+        }
+
+        body.dark-mode .tm-field-flash {
+            box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.28) !important;
+            border-color: rgba(251, 146, 60, 0.78) !important;
+        }
+
+        body.dark-mode .tm-quick-entry-btn .tm-quick-title,
+        body.dark-mode .tm-next-title,
+        body.dark-mode .tm-module-state-title,
+        body.dark-mode .tm-module-state-value {
+            color: #f8fafc !important;
+        }
+
+        @media (max-width: 1200px) {
+
+            .tm-overview-card-grid,
+            .tm-readiness-grid,
+            .tm-summary-grid,
+            .tm-context-grid,
+            .tm-module-state-grid,
+            .tm-cloud-columns,
+            .tm-center-summary-grid,
+            .tm-version-diff-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .tm-quick-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+
+            .tm-overview-actions,
+            .tm-overview-card-grid,
+            .tm-readiness-grid,
+            .tm-summary-grid,
+            .tm-context-grid,
+            .tm-quick-grid,
+            .tm-module-state-grid,
+            .tm-cloud-columns,
+            .tm-center-summary-grid,
+            .tm-version-diff-grid,
+            .tm-version-diff-values {
+                grid-template-columns: 1fr;
+            }
+
+            .tm-center-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .tm-center-toolbar>div,
+            .tm-center-toolbar select {
+                width: 100%;
+            }
+
+            #teaching-overview .layout-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         /* 11. 消息提示 Toast */
@@ -1927,7 +2704,7 @@
             <div id="high-score" class="section card-box">
                 <div class="module-desc-bar" style="border-color: #b45309">
                     <h3><i class="ti ti-trophy"></i> 9年级高分段核算</h3>
-                    <p>考核标准：总分≥490分。赋分公式：(本校高分率 / 全镇最高高分率) × 70。</p>
+                    <p>考核标准：总分≥490分。赋分公式：(本校高分率 / 全镇最高高分率) × 50。</p>
                 </div>
                 <div class="sec-head">
                     <h2>
@@ -1953,7 +2730,7 @@
                                 <th>实考人数</th>
                                 <th style="background:#fff7ed; color:#b45309;">高分人数 (≥490)</th>
                                 <th style="background:#fff7ed; color:#b45309;">高分率</th>
-                                <th style="background:#fff7ed; color:#b45309;">高分赋分 (满分70)</th>
+                                <th style="background:#fff7ed; color:#b45309;">高分赋分 (满分50)</th>
                                 <th>排名</th>
                             </tr>
                         </thead>
@@ -2077,6 +2854,298 @@
                 </div>
             </div>
 
+            <!-- 6. 教学管理总览 -->
+            <div id="teaching-overview" class="section card-box">
+                <div class="module-desc-bar" style="border-color:#dc2626;">
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+                        <div>
+                            <h3><i class="ti ti-layout-dashboard"></i> 教学管理总览</h3>
+                            <p>先检查成绩、任课表、多期数据和同步状态，再进入教师画像、班级对比、分化诊断和绩效考核。</p>
+                        </div>
+                        <div class="tm-overview-actions">
+                            <button id="tmQuickSyncTeacherBtn" class="btn btn-orange" type="button"><i
+                                    class="ti ti-refresh"></i> 同步任课表</button>
+                            <button id="tmQuickOpenConsoleBtn" class="btn" type="button"><i
+                                    class="ti ti-cloud-cog"></i> 打开教务控制台</button>
+                            <button id="tmQuickExportBtn" class="btn btn-green" type="button"><i
+                                    class="ti ti-file-export"></i> 导出教师分析</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tm-status-strip" class="tm-overview-card-grid">
+                    <div id="tmStatExam" class="tm-overview-slot"></div>
+                    <div id="tmStatTeacher" class="tm-overview-slot"></div>
+                    <div id="tmStatCompare" class="tm-overview-slot"></div>
+                    <div id="tmStatSync" class="tm-overview-slot"></div>
+                </div>
+
+                <div id="tm-context-panel" class="card-box" style="margin-bottom:14px;">
+                    <div style="font-weight:800; color:#0f172a; margin-bottom:10px;">当前分析依据</div>
+                    <div class="tm-context-grid">
+                        <div id="tmCtxSchool"></div>
+                        <div id="tmCtxSubject"></div>
+                        <div id="tmCtxTeacher"></div>
+                        <div id="tmCtxExam1"></div>
+                        <div id="tmCtxExam2"></div>
+                        <div id="tmCtxPeriod"></div>
+                    </div>
+                </div>
+
+                <div class="layout-grid">
+                    <div class="side-nav">
+                        <div class="side-nav-title">总览导航</div>
+                        <div class="side-nav-link active" onclick="scrollToAnchor('tmReadiness', this)">📋 数据就绪</div>
+                        <div class="side-nav-link" onclick="scrollToAnchor('tmAlerts', this)">🚨 教学预警</div>
+                        <div class="side-nav-link" onclick="scrollToAnchor('tmCloudOps', this)">☁️ 云端预警与整改</div>
+                        <div class="side-nav-link" onclick="scrollToAnchor('tmRecommend', this)">🧭 推荐下一步</div>
+                        <div class="side-nav-link" onclick="scrollToAnchor('tmQuickEntry', this)">⚡ 快捷入口</div>
+                        <div class="side-nav-link" onclick="scrollToAnchor('tmSummary', this)">📊 本次摘要</div>
+                    </div>
+
+                    <div class="content-area">
+                        <div id="tmReadiness" class="anchor-target card-box" style="margin-bottom:14px;">
+                            <h4 style="margin:0 0 12px; color:#0f172a;">数据就绪检查</h4>
+                            <div class="tm-readiness-grid">
+                                <div id="tmReadyScore"></div>
+                                <div id="tmReadyTeacherMap"></div>
+                                <div id="tmReadySchool"></div>
+                                <div id="tmReadyCompareExam"></div>
+                            </div>
+                        </div>
+
+                        <div id="tmAlerts" class="anchor-target card-box" style="margin-bottom:14px;">
+                            <h4 style="margin:0 0 12px; color:#0f172a;">教学预警</h4>
+                            <div id="tmAlertList">暂无预警</div>
+                        </div>
+
+                        <div id="tmCloudOps" class="anchor-target card-box" style="margin-bottom:14px;">
+                            <div class="tm-section-head">
+                                <h4 style="margin:0; color:#0f172a;">云端预警与整改</h4>
+                                <button type="button" id="tmRefreshCloudOpsBtn" class="btn btn-orange">刷新云端状态</button>
+                            </div>
+                            <div class="tm-readiness-grid">
+                                <div id="tmWarningCount"></div>
+                                <div id="tmWarningHigh"></div>
+                                <div id="tmTaskCount"></div>
+                                <div id="tmTaskDoing"></div>
+                            </div>
+                            <div id="tmCloudOpsList" class="tm-cloud-columns" style="margin-top:12px;">
+                                <div class="tm-cloud-empty">正在检查云端预警与整改任务...</div>
+                            </div>
+                        </div>
+
+                        <div id="tmRecommend" class="anchor-target card-box" style="margin-bottom:14px;">
+                            <h4 style="margin:0 0 12px; color:#0f172a;">推荐下一步</h4>
+                            <div id="tmNextAction">正在分析当前数据状态...</div>
+                        </div>
+
+                        <div id="tmQuickEntry" class="anchor-target card-box" style="margin-bottom:14px;">
+                            <h4 style="margin:0 0 12px; color:#0f172a;">快捷入口</h4>
+                            <div class="tm-quick-grid">
+                                <button type="button" class="btn" data-target="teacher-analysis"><i class="ti ti-school"></i>
+                                    进入教师画像</button>
+                                <button type="button" class="btn" data-target="class-comparison"><i
+                                        class="ti ti-layout-columns"></i> 进入班级对比</button>
+                                <button type="button" class="btn" data-target="class-diagnosis"><i
+                                        class="ti ti-activity"></i> 进入分化诊断</button>
+                                <button type="button" class="btn" data-target="single-school-eval"><i
+                                        class="ti ti-scale"></i> 进入绩效考核</button>
+                            </div>
+                        </div>
+
+                        <div id="tmSummary" class="anchor-target card-box">
+                            <h4 style="margin:0 0 12px; color:#0f172a;">本次摘要</h4>
+                            <div class="tm-summary-grid">
+                                <div id="tmSummaryTeacherCount"></div>
+                                <div id="tmSummaryClassCount"></div>
+                                <div id="tmSummarySubjectCount"></div>
+                                <div id="tmSummaryExamCount"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6.1 教学异常预警中心 -->
+            <div id="teaching-warning-center" class="section card-box">
+                <div class="sec-head">
+                    <h2><i class="ti ti-alert-triangle"></i> 教学异常预警中心</h2>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button type="button" id="tmWarningCenterRefreshBtn" class="btn btn-orange"><i class="ti ti-refresh"></i> 刷新预警</button>
+                        <button type="button" class="btn btn-purple" onclick="switchTab('teaching-rectify-center')"><i class="ti ti-list-check"></i> 查看整改任务</button>
+                    </div>
+                </div>
+                <div class="info-bar">集中查看当前届别与当前学校范围内的云端结构化预警，支持按等级筛选、忽略预警与一键转为整改任务。</div>
+                <div class="control-panel tm-center-toolbar">
+                    <div>
+                        <label>风险等级</label>
+                        <select id="tmWarningLevelFilter">
+                            <option value="all">全部等级</option>
+                            <option value="critical">严重预警</option>
+                            <option value="high">高风险</option>
+                            <option value="medium">中风险</option>
+                            <option value="low">低风险</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>处理状态</label>
+                        <select id="tmWarningStatusFilter">
+                            <option value="open">待处理</option>
+                            <option value="ignored">已忽略</option>
+                            <option value="all">全部状态</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>预警类型</label>
+                        <select id="tmWarningTypeFilter">
+                            <option value="all">全部类型</option>
+                            <option value="data">数据异常</option>
+                            <option value="teacher">教师异常</option>
+                            <option value="class">班级异常</option>
+                            <option value="student">学生异常</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="tmWarningScopeMeta" class="tm-center-scope">正在识别当前预警范围...</div>
+                <div class="tm-center-summary-grid" style="margin-bottom:14px;">
+                    <div id="tmWarningSummaryOpen"></div>
+                    <div id="tmWarningSummaryCritical"></div>
+                    <div id="tmWarningSummaryTeacher"></div>
+                    <div id="tmWarningSummaryClass"></div>
+                </div>
+                <div id="tmWarningCenterList" class="tm-center-list">
+                    <div class="tm-cloud-empty">正在准备预警数据...</div>
+                </div>
+            </div>
+
+            <!-- 6.2 教学整改任务列表 -->
+            <div id="teaching-rectify-center" class="section card-box">
+                <div class="sec-head">
+                    <h2><i class="ti ti-list-check"></i> 教学整改任务列表</h2>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button type="button" id="tmRectifyCenterRefreshBtn" class="btn btn-orange"><i class="ti ti-refresh"></i> 刷新任务</button>
+                        <button type="button" id="tmRectifyCreateBtn" class="btn btn-green"><i class="ti ti-plus"></i> 新建整改任务</button>
+                    </div>
+                </div>
+                <div class="info-bar">对接云端整改台账，支持查看待办、推进中、已完成任务，并按当前学校范围持续跟踪。</div>
+                <div class="control-panel tm-center-toolbar">
+                    <div>
+                        <label>任务状态</label>
+                        <select id="tmRectifyStatusFilter">
+                            <option value="open">未完成</option>
+                            <option value="todo">待开始</option>
+                            <option value="doing">进行中</option>
+                            <option value="done">已完成</option>
+                            <option value="closed">已关闭</option>
+                            <option value="all">全部状态</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>优先级</label>
+                        <select id="tmRectifyPriorityFilter">
+                            <option value="all">全部优先级</option>
+                            <option value="high">高优先级</option>
+                            <option value="medium">中优先级</option>
+                            <option value="low">低优先级</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>负责人</label>
+                        <select id="tmRectifyOwnerFilter">
+                            <option value="all">全部负责人</option>
+                            <option value="assigned">已指派</option>
+                            <option value="unassigned">未指派</option>
+                            <option value="mine">与我相关</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="tmRectifyScopeMeta" class="tm-center-scope">正在识别当前整改范围...</div>
+                <div class="tm-center-summary-grid" style="margin-bottom:14px;">
+                    <div id="tmRectifySummaryOpen"></div>
+                    <div id="tmRectifySummaryDoing"></div>
+                    <div id="tmRectifySummaryDone"></div>
+                    <div id="tmRectifySummaryOverdue"></div>
+                </div>
+                <div id="tmRectifyCenterList" class="tm-center-list">
+                    <div class="tm-cloud-empty">正在准备整改任务数据...</div>
+                </div>
+            </div>
+
+            <div id="teaching-issue-board" class="section card-box">
+                <div class="sec-head">
+                    <h2><i class="ti ti-clipboard-list"></i> 教学问题清单</h2>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button type="button" id="tmIssueBoardRefreshBtn" class="btn btn-orange"><i class="ti ti-refresh"></i> 刷新清单</button>
+                        <button type="button" class="btn btn-purple" onclick="switchTab('teacher-analysis')"><i class="ti ti-school"></i> 查看教师画像</button>
+                    </div>
+                </div>
+                <div class="info-bar">把教师风险、待处理预警、整改任务合并到一页查看，适合作为教导处或教研组的日常跟进面板。</div>
+                <div class="tm-center-summary-grid" style="margin-bottom:14px;">
+                    <div id="tmIssueSummaryTeacherRisk"></div>
+                    <div id="tmIssueSummaryWarnings"></div>
+                    <div id="tmIssueSummaryTasks"></div>
+                    <div id="tmIssueSummaryFocus"></div>
+                </div>
+                <div id="tmIssueBoardList" class="tm-center-list">
+                    <div class="tm-cloud-empty">正在生成问题清单...</div>
+                </div>
+            </div>
+
+            <div id="teaching-version-center" class="section card-box">
+                <div class="sec-head">
+                    <h2><i class="ti ti-stack-2"></i> 版本归档中心</h2>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button type="button" id="tmVersionRefreshBtn" class="btn btn-orange"><i class="ti ti-refresh"></i> 刷新版本</button>
+                        <button type="button" id="tmVersionCreateBtn" class="btn btn-green"><i class="ti ti-plus"></i> 生成当前版本</button>
+                        <button type="button" id="tmVersionMarkLatestStableBtn" class="btn btn-orange"><i class="ti ti-award"></i> 设最新为稳定版</button>
+                        <button type="button" id="tmVersionCompareStableBtn" class="btn btn-blue" style="display:none;"><i class="ti ti-arrows-diff"></i> 查看稳定版差异</button>
+                        <button type="button" class="btn btn-purple" onclick="DataManager.open(); DataManager.switchTab('cloud');"><i class="ti ti-cloud"></i> 打开云端存档</button>
+                    </div>
+                </div>
+                <div class="info-bar">把当前届别、成绩库、任课表、参数与目标人数状态生成结构化版本，方便后续追踪与比对。</div>
+                <div id="tmVersionScopeMeta" class="tm-center-scope">正在识别当前版本范围...</div>
+                <div id="tmVersionStableMeta" class="tm-center-scope" style="margin-top:-6px; margin-bottom:12px;">正在检查稳定版基线...</div>
+                <div class="control-panel tm-center-toolbar" style="margin-bottom:14px;">
+                    <div style="min-width:220px; flex:1;">
+                        <label>版本搜索</label>
+                        <input id="tmVersionSearchInput" type="text" placeholder="搜索版本名、创建人、快照键..." style="padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; width:100%; min-height:38px;">
+                    </div>
+                    <div>
+                        <label>版本类型</label>
+                        <select id="tmVersionStableFilter">
+                            <option value="all">全部版本</option>
+                            <option value="stable">仅稳定版</option>
+                            <option value="normal">仅普通版</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>时间排序</label>
+                        <select id="tmVersionSortOrder">
+                            <option value="desc">最新在前</option>
+                            <option value="asc">最早在前</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; align-items:flex-end;">
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button type="button" id="tmVersionDiffOnlyBtn" class="btn btn-secondary" style="min-height:38px;">只看有差异</button>
+                            <button type="button" id="tmVersionNormalDiffBtn" class="btn btn-secondary" style="min-height:38px;">普通版差异</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="tm-center-summary-grid" style="margin-bottom:14px;">
+                    <div id="tmVersionSummaryCurrent"></div>
+                    <div id="tmVersionSummaryScores"></div>
+                    <div id="tmVersionSummaryTeachers"></div>
+                    <div id="tmVersionSummaryTargets"></div>
+                </div>
+                <div id="tmVersionDiffPanel" class="tm-version-diff-panel" style="display:none;"></div>
+                <div id="tmVersionCenterList" class="tm-center-list">
+                    <div class="tm-cloud-empty">正在读取版本归档...</div>
+                </div>
+            </div>
+
             <!-- 6. 本校教师分析 -->
             <div id="teacher-analysis" class="section card-box">
                 <div class="sec-head">
@@ -2146,6 +3215,7 @@
                         请选择学校+学科+教师并选择2期或3期考试后生成。</div>
                     <div id="teacherCompareResult" style="margin-top:10px;"></div>
                 </div>
+                <div id="tmModuleState-teacher-analysis"></div>
                 <details class="explain-panel">
                     <summary>指标口径说明（点击展开）</summary>
                     <div class="explain-content">
@@ -2355,6 +3425,7 @@
                         <button class="btn btn-purple" onclick="SSE_export()">📥 导出考核表</button>
                     </div>
                 </div>
+                <div id="tmModuleState-single-school-eval"></div>
 
                 <!-- 结果展示区 -->
                 <div id="sse_result_container" class="hidden">
@@ -2747,6 +3818,7 @@
                         </div>
                     </div>
                 </div>
+                <div id="tmModuleState-class-comparison"></div>
                 <div class="layout-grid">
                     <div class="side-nav">
                         <div class="side-nav-title">快速定位</div>
@@ -2778,6 +3850,7 @@
                         style="width:80px;" placeholder="分">
                     <button class="btn" style="margin-left:15px;" onclick="renderClassDiagnosis()">诊断分析</button>
                 </div>
+                <div id="tmModuleState-class-diagnosis"></div>
                 <div id="diagnosis-results">
                     <div style="text-align:center; padding:40px; color:#94a3b8;"><i class="ti ti-chart-bar"
                             style="font-size:48px; display:block; margin-bottom:10px;"></i>
@@ -2812,6 +3885,92 @@
                         <thead></thead>
                         <tbody></tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- 10. 学情总览 -->
+            <div id="student-overview" class="section card-box">
+                <div class="module-desc-bar" style="border-color:#059669;">
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+                        <div>
+                            <h3><i class="ti ti-layout-dashboard"></i> 学情总览</h3>
+                            <p>先看成绩库、学校范围、进退步与临界生准备情况，再进入学生明细、进退步、偏科和家校沟通页面。</p>
+                        </div>
+                        <div class="tm-overview-actions">
+                            <button id="smQuickStudentBtn" class="btn btn-green" type="button"><i class="ti ti-users"></i> 学生明细</button>
+                            <button id="smQuickProgressBtn" class="btn btn-orange" type="button"><i class="ti ti-trending-up"></i> 进退步分析</button>
+                            <button id="smQuickReportBtn" class="btn" type="button"><i class="ti ti-certificate"></i> 成绩单/家长查分</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tm-overview-card-grid">
+                    <div id="smStatScores" class="tm-overview-slot"></div>
+                    <div id="smStatScope" class="tm-overview-slot"></div>
+                    <div id="smStatProgress" class="tm-overview-slot"></div>
+                    <div id="smStatSupport" class="tm-overview-slot"></div>
+                </div>
+
+                <div class="card-box" style="margin-bottom:14px;">
+                    <div style="font-weight:800; color:#0f172a; margin-bottom:10px;">当前学情依据</div>
+                    <div class="tm-context-grid">
+                        <div id="smCtxSchool"></div>
+                        <div id="smCtxClass"></div>
+                        <div id="smCtxExam1"></div>
+                        <div id="smCtxExam2"></div>
+                        <div id="smCtxPeriod"></div>
+                        <div id="smCtxFocus"></div>
+                    </div>
+                </div>
+
+                <div class="layout-grid">
+                    <div class="side-nav">
+                        <div class="side-nav-title">总览导航</div>
+                        <div class="side-nav-link active" onclick="scrollToAnchor('smReadiness', this)">📋 数据就绪</div>
+                        <div class="side-nav-link" onclick="scrollToAnchor('smInsights', this)">🧭 学情提示</div>
+                        <div class="side-nav-link" onclick="scrollToAnchor('smQuickEntry', this)">⚡ 快捷入口</div>
+                        <div class="side-nav-link" onclick="scrollToAnchor('smSummary', this)">📊 本次摘要</div>
+                    </div>
+
+                    <div class="content-area">
+                        <div id="smReadiness" class="anchor-target card-box" style="margin-bottom:14px;">
+                            <h4 style="margin:0 0 12px; color:#0f172a;">数据就绪检查</h4>
+                            <div class="tm-readiness-grid">
+                                <div id="smReadyScore"></div>
+                                <div id="smReadySchool"></div>
+                                <div id="smReadyProgress"></div>
+                                <div id="smReadySupport"></div>
+                            </div>
+                        </div>
+
+                        <div id="smInsights" class="anchor-target card-box" style="margin-bottom:14px;">
+                            <h4 style="margin:0 0 12px; color:#0f172a;">学情提示</h4>
+                            <div id="smInsightList">正在汇总当前学情提示...</div>
+                        </div>
+
+                        <div id="smQuickEntry" class="anchor-target card-box" style="margin-bottom:14px;">
+                            <h4 style="margin:0 0 12px; color:#0f172a;">快捷入口</h4>
+                            <div class="tm-quick-grid">
+                                <button type="button" class="btn" data-target="student-details"><i class="ti ti-users"></i> 进入学生明细</button>
+                                <button type="button" class="btn" data-target="progress-analysis"><i class="ti ti-trending-up"></i> 进入进退步分析</button>
+                                <button type="button" class="btn" data-target="marginal-push"><i class="ti ti-target-arrow"></i> 进入临界生干预</button>
+                                <button type="button" class="btn" data-target="subject-balance"><i class="ti ti-scale"></i> 进入优劣势透视</button>
+                                <button type="button" class="btn" data-target="potential-analysis"><i class="ti ti-bulb"></i> 进入偏科潜力挖掘</button>
+                                <button type="button" class="btn" data-target="report-generator"><i class="ti ti-certificate"></i> 进入成绩单/查分</button>
+                            </div>
+                        </div>
+
+                        <div id="smSummary" class="anchor-target card-box">
+                            <h4 style="margin:0 0 12px; color:#0f172a;">本次摘要</h4>
+                            <div class="tm-summary-grid">
+                                <div id="smSummarySchools"></div>
+                                <div id="smSummaryStudents"></div>
+                                <div id="smSummaryProgress"></div>
+                                <div id="smSummaryPotential"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -3095,8 +4254,15 @@
 
                             <div
                                 style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:5px; flex-wrap:wrap;">
-                                <div style="display:flex; gap:8px; align-items:center; font-size:12px;">
+                                <div style="display:flex; gap:8px; align-items:center; font-size:12px; flex-wrap:wrap;">
                                     <label>筛选：</label>
+                                    <span style="color:#475569; font-weight:700;">查看范围</span>
+                                    <button type="button" id="progressQuickAllBtn" class="btn btn-sm progress-quick-btn"
+                                        onclick="setProgressQuickFilter('all')">全部学生</button>
+                                    <button type="button" id="progressQuickMyClassBtn" class="btn btn-sm progress-quick-btn"
+                                        onclick="setProgressQuickFilter('my_class')">只看本班</button>
+                                    <button type="button" id="progressQuickFocusBtn" class="btn btn-sm progress-quick-btn"
+                                        onclick="setProgressQuickFilter('focus')">重点变化</button>
                                     <select id="progressFilterType"
                                         style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px;"
                                         onchange="applyProgressFilter()">
@@ -3108,6 +4274,15 @@
                                     <input id="progressFilterThreshold" type="number" value="20"
                                         style="width:70px; padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px;"
                                         oninput="applyProgressFilter()">
+                                    <label>排序</label>
+                                    <select id="progressSortOrder"
+                                        style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px;"
+                                        onchange="applyProgressFilter()">
+                                        <option value="improve_desc">进步优先</option>
+                                        <option value="regress_desc">退步优先</option>
+                                        <option value="current_rank_asc">本次校排靠前</option>
+                                        <option value="class_name_asc">班级姓名</option>
+                                    </select>
                                     <span style="color:#64748b;">仅显示 |变化| ≥ 阈值</span>
                                     <button class="btn btn-sm btn-gray" onclick="resetProgressFilter()">重置筛选</button>
                                 </div>
@@ -4477,7 +5652,7 @@
     <div id="admin-modal" class="modal" style="display: none; z-index: 60000;">
         <div class="modal-content" style="max-width: 600px;"> <!-- 稍微调宽一点 -->
             <div
-                style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;">
+                style="display:flex; justify-content:space-between; align-items:flex-start; gap:18px; border-bottom:1px solid #e2e8f0; padding-bottom:14px; margin-bottom:14px; flex-wrap:wrap;">
                 <div style="display:flex; align-items:center; gap:10px;">
                     <h3 style="color:#b91c1c; margin:0;"><i class="ti ti-shield-lock"></i> 账号管理</h3>
                     <!-- 新增：查看日志按钮 -->
@@ -5639,7 +6814,8 @@
 
     <!-- 5. 数据综合管理后台 (成绩/教师/档案) -->
     <div id="data-manager-modal" class="modal" style="display: none; z-index: 79000;">
-        <div class="modal-content" style="max-width: 900px; height: 90vh; display: flex; flex-direction: column;">
+        <div class="modal-content"
+            style="width:min(1480px,96vw); max-width:1480px; height:min(92vh,960px); display:flex; flex-direction:column; padding:22px 24px 18px; border-radius:22px;">
 
             <div
                 style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;">
@@ -5682,12 +6858,15 @@
                 <div class="login-tab" id="tab-data-cloud" onclick="DataManager.switchTab('cloud')">
                     <i class="ti ti-cloud"></i> 云端存档管理
                 </div>
-                <div class="login-tab" id="tab-data-history" onclick="DataManager.switchTab('history')">
-                    <i class="ti ti-history"></i> 历史数据对比
-                </div>
             </div>
 
             <!-- 搜索工具栏 (仅在学生/教师 Tab 显示) -->
+            <div id="dm-status-overview"
+                style="margin-bottom:12px; padding:14px 16px; border:1px solid #dbeafe; border-radius:12px; background:linear-gradient(135deg,#eff6ff 0%,#f8fafc 100%);">
+                <div id="dm-status-overview-summary"></div>
+                <div id="dm-status-overview-tip" style="margin-top:10px;"></div>
+            </div>
+
             <div id="dm-search-bar"
                 style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:10px; display:flex; gap:10px;">
                 <input type="text" id="dm-search-input" placeholder="输入姓名/班级/考号筛选..."
@@ -5836,6 +7015,9 @@
                             style="display:none; background:#fff7ed; border:1px dashed #fdba74; color:#9a3412; padding:8px 10px; border-radius:6px; font-size:12px; margin-bottom:12px;">
                             提示：当前非 9 年级期中/期末，参数仅用于预设，不参与计算。
                         </div>
+                        <div id="dm-params-status"
+                            style="background:#ffffff; border:1px solid #dbeafe; color:#1e3a8a; padding:10px 12px; border-radius:10px; font-size:12px; margin-bottom:14px;">
+                        </div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
                             <div>
                                 <label style="font-weight:bold; display:block; margin-bottom:5px;">指标一 (优生线)
@@ -5854,7 +7036,7 @@
                         </div>
                         <div style="margin-top:20px; text-align:right;">
                             <button class="btn btn-primary" onclick="DataManager.saveParamsLocally()">
-                                <i class="ti ti-device-floppy"></i> 暂存参数 (需点击右上角保存同步)
+                                <i class="ti ti-device-floppy"></i> 暂存参数（会尝试立即保存，建议最后统一同步）
                             </button>
                         </div>
                     </div>
@@ -5883,7 +7065,11 @@
                     </div>
 
                     <div class="info-bar" style="margin-bottom:10px;">
-                        💡 提示：导入后请点击右上角【保存修改并同步云端】按钮，以防止刷新后丢失。
+                        💡 提示：导入后系统会尝试自动保存；如果你后面继续修改成绩、参数或目标人数，建议最后再点一次右上角【保存修改并同步云端】。
+                    </div>
+
+                    <div id="dm-targets-status"
+                        style="background:#ffffff; border:1px solid #dcfce7; color:#166534; padding:10px 12px; border-radius:10px; font-size:12px; margin-bottom:12px;">
                     </div>
 
                     <div class="table-wrap"
@@ -5901,6 +7087,52 @@
                                 <!-- JS 动态渲染 -->
                             </tbody>
                         </table>
+                    </div>
+
+                    <div style="margin-top:18px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
+                        <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
+                            <div>
+                                <h4 style="margin:0; color:#0f172a;"><i class="ti ti-git-merge"></i> 学校名称对应表</h4>
+                                <div id="dm-school-aliases-summary" style="font-size:12px; color:#64748b; margin-top:4px;"></div>
+                            </div>
+                            <button class="btn btn-sm btn-primary" onclick="DataManager.openSchoolAliasEditor()">
+                                <i class="ti ti-plus"></i> 新增对应
+                            </button>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:14px;">
+                            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden;">
+                                <div style="padding:10px 12px; background:#eff6ff; color:#1d4ed8; font-weight:700;">系统默认对应</div>
+                                <div class="table-wrap" style="box-shadow:none; border:none; max-height:260px; overflow-y:auto;">
+                                    <table class="comparison-table" style="font-size:12px;">
+                                        <thead>
+                                            <tr>
+                                                <th>规范学校名</th>
+                                                <th>可识别别名</th>
+                                                <th>来源</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="dm-default-school-aliases-tbody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden;">
+                                <div style="padding:10px 12px; background:#f0fdf4; color:#15803d; font-weight:700;">自定义补充对应</div>
+                                <div class="table-wrap" style="box-shadow:none; border:none; max-height:260px; overflow-y:auto;">
+                                    <table class="comparison-table" style="font-size:12px;">
+                                        <thead>
+                                            <tr>
+                                                <th>规范学校名</th>
+                                                <th>别名/导入名称</th>
+                                                <th>操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="dm-custom-school-aliases-tbody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -6012,55 +7244,6 @@
                                 </tr>
                             </thead>
                             <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div id="dm-history-area" style="display:none; padding:15px; flex-direction:column; height:100%;">
-                    <div
-                        style="background:#f0fdf4; border:1px solid #86efac; padding:15px; border-radius:8px; margin-bottom:15px;">
-                        <h4 style="margin:0 0 10px 0; color:#166534;"><i class="ti ti-file-import"></i> 上传历史考试数据
-                            (用于进退步分析)</h4>
-                        <div style="font-size:12px; color:#15803d; line-height:1.6; margin-bottom:10px;">
-                            <strong>📂 智能解析规则：</strong><br>
-                            1. <strong>多校识别：</strong> 系统将读取 Excel 的 <span
-                                style="background:white; padding:0 4px; border:1px dashed #ccc;">Sheet名称</span>
-                            作为学校名称。<br>
-                            2. <strong>匹配键值：</strong> 对比分析将严格基于 <span
-                                style="background:white; padding:0 4px; border:1px dashed #ccc;">[班级] + [姓名]</span>
-                            进行锚定。<br>
-                            3. <strong>匿名处理：</strong> 若表格中缺少姓名列，系统将自动标记为“无名氏_序号”，仅作校内人数统计，不参与个人进退步。<br>
-                            4. <strong>单校模式：</strong> 若仅检测到一个学校，系统将自动隐藏“全镇排名”列，转为校内深度对比。
-                        </div>
-                        <div style="display:flex; gap:10px;">
-                            <button class="btn btn-green" onclick="document.getElementById('dm-history-file').click()">
-                                <i class="ti ti-upload"></i> 点击上传历史 Excel
-                            </button>
-                            <input type="file" id="dm-history-file" accept=".xlsx,.xls" hidden
-                                onchange="DataManager.handleHistoryUpload(this)">
-                            <span id="dm-history-status"
-                                style="align-self:center; font-size:12px; color:#666;">暂未上传</span>
-                        </div>
-                    </div>
-
-                    <div class="sub-header">📊 历史对比数据预览</div>
-                    <div class="table-wrap" style="flex:1; overflow-y:auto;">
-                        <table id="dm-history-preview-table" style="font-size:12px;">
-                            <thead>
-                                <tr>
-                                    <th>学校 (Sheet名)</th>
-                                    <th>班级</th>
-                                    <th>姓名</th>
-                                    <th>上次总分</th>
-                                    <th>上次校排</th>
-                                    <th>上次镇排</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td colspan="6" style="text-align:center; padding:20px; color:#999;">请上传文件预览数据</td>
-                                </tr>
-                            </tbody>
                         </table>
                     </div>
                 </div>
