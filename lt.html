@@ -20126,6 +20126,84 @@ function pickPreferredSchoolDisplayName(existing, candidate) {
     return score(b) > score(a) ? b : a;
 }
 
+function normalizeSchoolFuzzyText(name) {
+    let text = sanitizeSchoolText(name);
+    if (!text) return '';
+    let prev = '';
+    while (text && text !== prev) {
+        prev = text;
+        text = text
+            .replace(/(学校|中学)教育集团$/u, '$1')
+            .replace(/(学校|中学)集团$/u, '$1')
+            .replace(/(学校|中学)(初中部|高中部|小学部|本部|校本部|分校|校区|总校)$/u, '$1')
+            .replace(/九年一贯制学校$/u, '学校')
+            .replace(/九年一贯制$/u, '')
+            .replace(/完全中学$/u, '中学')
+            .replace(/附属学校$/u, '学校')
+            .replace(/附属中学$/u, '中学')
+            .replace(/教育联盟$/u, '')
+            .replace(/直属校区$/u, '')
+            .replace(/校区$/u, '')
+            .replace(/分校$/u, '')
+            .replace(/教学点$/u, '')
+            .replace(/本部$/u, '')
+            .replace(/校本部$/u, '')
+            .replace(/总校$/u, '');
+    }
+    return text;
+}
+
+function getSchoolFuzzyMatchScore(sourceName, candidateName) {
+    const rawSource = String(sourceName || '').trim();
+    const rawCandidate = String(candidateName || '').trim();
+    if (!rawSource || !rawCandidate) return 0;
+
+    const sourceText = normalizeSchoolFuzzyText(rawSource);
+    const candidateText = normalizeSchoolFuzzyText(rawCandidate);
+    if (!sourceText || !candidateText) return 0;
+
+    const sourceIsExperiment = /实验/u.test(sourceText);
+    const candidateIsExperiment = /实验/u.test(candidateText);
+    if (sourceIsExperiment !== candidateIsExperiment) return 0;
+
+    const shorter = sourceText.length <= candidateText.length ? sourceText : candidateText;
+    const longer = shorter === sourceText ? candidateText : sourceText;
+    if (shorter.length < 4 || !longer.includes(shorter)) return 0;
+
+    let score = 400 + shorter.length;
+    const sourceRawText = sanitizeSchoolText(rawSource);
+    const candidateRawText = sanitizeSchoolText(rawCandidate);
+    if (sourceRawText === sourceText || candidateRawText === candidateText) score += 20;
+    if (longer.startsWith(shorter)) score += 10;
+    if (longer.endsWith(shorter)) score += 5;
+    return score;
+}
+
+function findBestFuzzySchoolNameMatch(collection, schoolName) {
+    const raw = String(schoolName || '').trim();
+    if (!raw) return '';
+    const candidates = Array.isArray(collection) ? collection : Object.keys(collection || {});
+    const names = Array.from(new Set(
+        candidates
+            .map(name => String(name || '').trim())
+            .filter(Boolean)
+    ));
+    let bestMatch = '';
+    let bestScore = 0;
+    names.forEach((name) => {
+        const score = getSchoolFuzzyMatchScore(raw, name);
+        if (score > bestScore) {
+            bestScore = score;
+            bestMatch = name;
+            return;
+        }
+        if (score > 0 && score === bestScore) {
+            bestMatch = pickPreferredSchoolDisplayName(bestMatch, name);
+        }
+    });
+    return bestScore > 0 ? bestMatch : '';
+}
+
 function normalizeSchoolName(name) {
     const text = sanitizeSchoolText(name);
     if (!text) return '';
@@ -20143,6 +20221,11 @@ function areSchoolNamesEquivalent(a, b) {
     return !!keyA && !!keyB && keyA === keyB;
 }
 
+function areSchoolNamesMatched(a, b, allowFuzzy = false) {
+    if (areSchoolNamesEquivalent(a, b)) return true;
+    return !!allowFuzzy && getSchoolFuzzyMatchScore(a, b) > 0;
+}
+
 function resolveSchoolNameFromCollection(collection, schoolName) {
     const candidates = Array.isArray(collection) ? collection : Object.keys(collection || {});
     const raw = String(schoolName || '').trim();
@@ -20155,8 +20238,10 @@ function resolveSchoolNameFromCollection(collection, schoolName) {
         .map(name => String(name || '').trim())
         .filter(Boolean)
         .filter(name => normalizeSchoolName(name) === targetKey);
-    if (!matches.length) return '';
-    return matches.reduce((best, item) => pickPreferredSchoolDisplayName(best, item), '');
+    if (matches.length) {
+        return matches.reduce((best, item) => pickPreferredSchoolDisplayName(best, item), '');
+    }
+    return findBestFuzzySchoolNameMatch(candidates, raw);
 }
 
 function getCanonicalSchoolName(name, candidateNames = []) {
@@ -20194,6 +20279,7 @@ function normalizeTargetsMap(targets) {
 
         if (String(rawKey || '').trim() === canonicalSchool) score += 100;
         if (normalizeSchoolName(rawKey) === normalizeSchoolName(canonicalSchool)) score += 50;
+        else if (getSchoolFuzzyMatchScore(rawKey, canonicalSchool) > 0) score += 35;
         if (t1 > 0 || t2 > 0) score += 80;
         else score -= 120;
 
@@ -20249,7 +20335,7 @@ function getEquivalentSchoolStudents(schoolName) {
     const rows = filterRowsBySchool(RAW_DATA || [], schoolName);
     if (rows.length) return rows.slice();
     return Object.values(SCHOOLS || {})
-        .filter(item => areSchoolNamesEquivalent(item?.name, schoolName))
+        .filter(item => areSchoolNamesMatched(item?.name, schoolName, true))
         .flatMap(item => Array.isArray(item?.students) ? item.students : []);
 }
 
@@ -20258,11 +20344,12 @@ function buildIndicatorSchoolBuckets() {
     const buckets = new Map();
     Object.values(SCHOOLS || {}).forEach((school) => {
         const rawName = String(school?.name || '').trim();
-        const canonicalName = getCanonicalSchoolName(rawName, [
-            ...Object.keys(window.TARGETS || {}),
-            ...Object.keys(SCHOOLS || {}),
-            rawName
-        ]) || rawName;
+        const canonicalName = resolveSchoolNameFromCollection(window.TARGETS || {}, rawName)
+            || getCanonicalSchoolName(rawName, [
+                ...Object.keys(window.TARGETS || {}),
+                rawName
+            ])
+            || rawName;
         if (!canonicalName) return;
         if (!buckets.has(canonicalName)) {
             buckets.set(canonicalName, {
@@ -20282,7 +20369,7 @@ function buildIndicatorSchoolBuckets() {
 
 function syncIndicatorScoreToSchools(schoolName, score) {
     Object.values(SCHOOLS || {}).forEach((school) => {
-        if (areSchoolNamesEquivalent(school?.name, schoolName)) {
+        if (areSchoolNamesMatched(school?.name, schoolName, true)) {
             school.scoreInd = score;
         }
     });
@@ -20290,7 +20377,9 @@ function syncIndicatorScoreToSchools(schoolName, score) {
 
 function filterRowsBySchool(rows, school) {
     const key = normalizeSchoolName(school);
-    return (rows || []).filter(r => normalizeSchoolName(r.school) === key);
+    const strictMatches = (rows || []).filter(r => normalizeSchoolName(r.school) === key);
+    if (strictMatches.length) return strictMatches;
+    return (rows || []).filter(r => areSchoolNamesMatched(r?.school, school, true));
 }
 
 function calcSchoolMetricsFromRows(rows) {
@@ -20318,7 +20407,9 @@ function getSummaryEntryBySchool(summary, school) {
     if (summary[school]) return summary[school];
     const key = normalizeSchoolName(school);
     const matchedKey = Object.keys(summary).find(k => normalizeSchoolName(k) === key);
-    return matchedKey ? summary[matchedKey] : null;
+    if (matchedKey) return summary[matchedKey];
+    const fuzzyKey = resolveSchoolNameFromCollection(Object.keys(summary), school);
+    return fuzzyKey ? summary[fuzzyKey] : null;
 }
 
 function buildSchoolSummaryForExam(rows) {
