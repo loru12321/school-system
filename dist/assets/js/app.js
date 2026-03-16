@@ -308,6 +308,11 @@ const CloudSyncIndicator = {
         }
     },
     probe: async function () {
+        const hasSessionUser = !!(sessionStorage.getItem('CURRENT_USER') || (window.Auth && Auth.currentUser));
+        if (!hasSessionUser) {
+            this.set('idle');
+            return;
+        }
         if (!navigator.onLine) {
             this.set('error', '离线');
             return;
@@ -5670,6 +5675,20 @@ function isSafeSQL(sql) {
 
 // 🟢 [优化版] 数据持久化工具：支持 Supabase 云端同步 + IndexedDB 本地缓存
 const DB = {
+    getLocal: async (key) => {
+        try {
+            if (window.idbKeyval) {
+                const localData = await idbKeyval.get(`cache_${key}`);
+                if (localData) {
+                    console.log(`馃殌 浠庢湰鍦扮紦瀛樺姞杞芥垚鍔? ${key}`);
+                    return localData;
+                }
+            }
+        } catch (e) {
+            console.warn("璇诲彇鏈湴缂撳瓨澶辫触:", e);
+        }
+        return null;
+    },
     // 保存数据：同时保存到云端和本地缓存
     save: async (key, value) => {
         // 1. 优先保存到本地 IndexedDB (极速)
@@ -5702,7 +5721,8 @@ const DB = {
     },
 
     // 读取数据：优先本地缓存，后台静默更新
-    get: async (key) => {
+    get: async (key, options = {}) => {
+        const localOnly = Boolean(options.localOnly);
         let localData = null;
         // 1. 尝试从本地 IndexedDB 读取 (秒开)
         try {
@@ -5711,13 +5731,14 @@ const DB = {
                 if (localData) {
                     console.log(`🚀 从本地缓存加载成功: ${key}`);
                     // 触发异步云端校验（可选，此处为了性能先返回本地）
-                    DB.syncFromCloud(key);
+                    if (!localOnly) DB.syncFromCloud(key);
                     return localData;
                 }
             }
         } catch (e) { console.warn("读取本地缓存失败:", e); }
 
         // 2. 本地无数据，从云端读取
+        if (localOnly) return null;
         return await DB.syncFromCloud(key);
     },
 
@@ -6029,7 +6050,8 @@ window.addEventListener('load', async () => {
 
         // 🔥 关键：读取当前选中的项目 Key
         const currentKey = localStorage.getItem('CURRENT_PROJECT_KEY') || 'autosave_backup';
-        const backup = await DB.get(currentKey);
+        const hasSessionUser = !!(sessionStorage.getItem('CURRENT_USER') || (window.Auth && Auth.currentUser));
+        const backup = await DB.get(currentKey, { localOnly: !hasSessionUser });
         const isForceRestore = localStorage.getItem('SYS_FORCE_RESTORE');
 
         // 定义统一的恢复函数

@@ -7,6 +7,7 @@
         'TEACHER_COMPARE_',
         'TOWN_SUB_COMPARE_'
     ];
+    const AUTO_COHORT_SYNC_COOLDOWN_MS = 10 * 60 * 1000;
 
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -43,6 +44,19 @@
 
     function extractCohortIdFromKey(key) {
         return normalizeCohortId(key);
+    }
+
+    function getCohortSyncCacheKey(cohortId) {
+        return `CLOUD_EXAMS_SYNC_TS_${normalizeCohortId(cohortId)}`;
+    }
+
+    function countCachedCohortExams(db, cohortId) {
+        const cid = normalizeCohortId(cohortId);
+        if (!cid || !db || !db.exams || typeof db.exams !== 'object') return 0;
+        return Object.keys(db.exams).reduce((count, examId) => {
+            if (isIgnoredExamKey(examId)) return count;
+            return extractCohortIdFromKey(examId) === cid ? count + 1 : count;
+        }, 0);
     }
 
     function isIgnoredExamKey(key) {
@@ -361,7 +375,7 @@
             try {
                 const { data, error } = await window.sbClient
                     .from(CLOUD_TABLE)
-                    .select('content')
+                    .select('content,updated_at')
                     .eq('key', key)
                     .maybeSingle();
                 if (error) throw error;
@@ -618,9 +632,13 @@
             }
         },
 
-        fetchCohortExamsToLocal: async function (cohortId) {
+        fetchCohortExamsToLocal: async function (cohortId, options = {}) {
             const cid = normalizeCohortId(cohortId || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
             if (!cid) return { success: false, message: '无法确定届别' };
+            const hasSessionUser = !!(sessionStorage.getItem('CURRENT_USER') || (window.Auth && Auth.currentUser));
+            if (!hasSessionUser && !options.force) {
+                return { success: false, skipped: true, message: '未登录，跳过自动拉取' };
+            }
             if (!this._cohortExamSyncTasks) this._cohortExamSyncTasks = {};
             if (this._cohortExamSyncTasks[cid]) return this._cohortExamSyncTasks[cid];
 
@@ -633,9 +651,18 @@
 
                 const db = CohortDB.ensure();
                 db.exams = db.exams || {};
+                const cacheKey = getCohortSyncCacheKey(cid);
+                const forceSync = Boolean(options.force);
+                const lastSyncAt = Number(localStorage.getItem(cacheKey) || 0);
+                const localExamCount = countCachedCohortExams(db, cid);
+
+                if (!forceSync && localExamCount > 0 && lastSyncAt && (Date.now() - lastSyncAt) < AUTO_COHORT_SYNC_COOLDOWN_MS) {
+                    await refreshCompareSelectors();
+                    setCloudStatus('success', '使用缓存');
+                    return { success: true, count: localExamCount, updated: 0, cached: true };
+                }
 
                 try {
-                    const cacheKey = `CLOUD_EXAMS_SYNC_TS_${cid}`;
                     const chunkSize = 10;
 
                     // Step 1: fetch metadata first
@@ -661,10 +688,7 @@
                         }
                     }
 
-                    const localCompareCount = typeof listAvailableExamsForCompare === 'function'
-                        ? listAvailableExamsForCompare().length
-                        : Object.keys(db.exams || {}).length;
-                    if (keysToFetch.length === 0 && localCompareCount < 2 && candidates.length > 0) {
+                    if (keysToFetch.length === 0 && localExamCount < 2 && candidates.length > 0) {
                         keysToFetch.push(candidates[candidates.length - 1].key);
                     }
 
@@ -719,10 +743,14 @@
             return this._cohortExamSyncTasks[cid];
         },
 
-        fetchAllCohortExams: async function () {
+        fetchAllCohortExams: async function (options = {}) {
+            const hasSessionUser = !!(sessionStorage.getItem('CURRENT_USER') || (window.Auth && Auth.currentUser));
+            if (!hasSessionUser && !options.force) {
+                return { success: false, skipped: true, message: '未登录，跳过自动拉取' };
+            }
             const cid = normalizeCohortId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
             if (!cid) return;
-            return this.fetchCohortExamsToLocal(cid);
+            return this.fetchCohortExamsToLocal(cid, options);
         }
     };
 
@@ -754,7 +782,7 @@
                 openStarterGuide();
             }
             if (typeof scheduleTeacherSyncPrompt === 'function') scheduleTeacherSyncPrompt();
-            if (typeof CloudManager.fetchAllCohortExams === 'function') CloudManager.fetchAllCohortExams();
+            if (hasSessionUser && typeof CloudManager.fetchAllCohortExams === 'function') CloudManager.fetchAllCohortExams();
         }, 800);
     });
 })();
