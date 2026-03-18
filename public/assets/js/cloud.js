@@ -944,7 +944,7 @@
                         }
                     }
 
-                    if (keysToFetch.length === 0 && localExamCount < 2 && candidates.length > 0) {
+                    if (keysToFetch.length === 0 && localExamCount < minCount && candidates.length > 0) {
                         keysToFetch.push(candidates[candidates.length - 1].key);
                     }
 

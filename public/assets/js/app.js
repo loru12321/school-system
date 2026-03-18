@@ -13118,17 +13118,7 @@ function updateProgressMultiExamSelects() {
     schoolList.forEach(s => schoolSel.innerHTML += `<option value="${s}">${s}</option>`);
     if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) schoolSel.value = MY_SCHOOL;
 
-    const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
-    const examList = [];
-    if (db?.exams) {
-        Object.values(db.exams).forEach(ex => {
-            if (ex?.examId) examList.push({ id: ex.examId, createdAt: ex.createdAt || 0, label: ex.examId });
-        });
-    }
-    if (CURRENT_EXAM_ID && !examList.some(e => e.id === CURRENT_EXAM_ID)) {
-        examList.push({ id: CURRENT_EXAM_ID, createdAt: Date.now(), label: `${CURRENT_EXAM_ID} (当前)` });
-    }
-    examList.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    const examList = listAvailableExamsForCompare();
 
     if (examList.length < 2) {
         const syncing = trySyncCompareExamOptions();
@@ -22271,18 +22261,21 @@ function getStudentExamHistory(student) {
         });
     }
 
-    // 重新按时间排序 (如果有多个来源)
+    // 重新按考试身份去重：允许“不同考试但成绩恰好相同”并存
     const dedupedResults = [];
-    const fingerprintMap = new Map();
+    const getHistoryIdentity = (entry) => getCompareExamIdentity({
+        id: entry?.examFullKey || entry?.examId || '',
+        label: entry?.examLabel || ''
+    });
     results.forEach(item => {
-        const fp = String(item?.fingerprint || '').trim();
-        if (!fp) {
-            dedupedResults.push(item);
-            return;
-        }
-        const existingIdx = fingerprintMap.get(fp);
-        if (existingIdx === undefined) {
-            fingerprintMap.set(fp, dedupedResults.length);
+        const matchKey = getHistoryKey(item);
+        const identity = getHistoryIdentity(item);
+        const existingIdx = dedupedResults.findIndex(existing => {
+            const existingKey = getHistoryKey(existing);
+            if (matchKey && existingKey && isExamKeyEquivalentForCompare(existingKey, matchKey)) return true;
+            return !!identity && identity === getHistoryIdentity(existing);
+        });
+        if (existingIdx === -1) {
             dedupedResults.push(item);
             return;
         }
@@ -23194,8 +23187,12 @@ const MobMgr = {
         displayList.forEach(s => {
             // 根据总分给个颜色区分
             const badgeColor = s.total >= 500 ? '#16a34a' : (s.total >= 360 ? '#2563eb' : '#d97706');
+            const schoolArg = encodeURIComponent(String(s.school || ''));
+            const classArg = encodeURIComponent(String(s.class || ''));
+            const nameArg = encodeURIComponent(String(s.name || ''));
+            const idArg = encodeURIComponent(String(s.id || ''));
             html += `
-                    <div class="mob-list-item" onclick="MobMgr.showStudentDetail('${s.name}')">
+                    <div class="mob-list-item" onclick="MobMgr.showStudentDetail('${schoolArg}', '${classArg}', '${nameArg}', '${idArg}')">
                         <div class="mob-avatar">${s.name[0]}</div>
                         <div class="mob-info">
                             <div class="mob-name">${s.name}</div>
@@ -23209,9 +23206,23 @@ const MobMgr = {
     },
 
     // 4. 显示学生详情 (复用 IG 风格卡片 + 全屏模态)
-    showStudentDetail: function (name) {
-        // 简单查找 (实际应考虑同名问题，这里优先取第一个)
-        const stu = RAW_DATA.find(s => s.name === name);
+    showStudentDetail: function (schoolEncoded, classEncoded, nameEncoded, idEncoded) {
+        const school = decodeURIComponent(String(schoolEncoded || ''));
+        const className = decodeURIComponent(String(classEncoded || ''));
+        const name = decodeURIComponent(String(nameEncoded || ''));
+        const studentId = decodeURIComponent(String(idEncoded || ''));
+        const stu = RAW_DATA.find(s => {
+            if (String(s?.name || '') !== name) return false;
+            if (studentId && String(s?.id || '') !== studentId) return false;
+            if (school && String(s?.school || '') !== school) return false;
+            if (className && !isClassEquivalent(String(s?.class || ''), className)) return false;
+            return true;
+        }) || RAW_DATA.find(s => {
+            if (studentId && String(s?.id || '') === studentId) return true;
+            if (String(s?.name || '') !== name) return false;
+            if (school && String(s?.school || '') !== school) return false;
+            return className ? isClassEquivalent(String(s?.class || ''), className) : true;
+        });
         if (!stu) return;
 
         const html = renderInstagramCard(stu);
