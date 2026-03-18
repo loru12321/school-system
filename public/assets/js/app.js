@@ -13148,20 +13148,10 @@ function updateProgressMultiExamSelects() {
     exam2Sel.innerHTML = optionsHtml;
     exam3Sel.innerHTML = optionsHtml;
 
-    const currentIndex = (CURRENT_EXAM_ID && examList.some(e => e.id === CURRENT_EXAM_ID))
-        ? examList.findIndex(e => e.id === CURRENT_EXAM_ID)
-        : examList.length - 1;
-    const prevIndex = Math.max(0, currentIndex - 1);
-    const prev2Index = Math.max(0, currentIndex - 2);
-
-    exam1Sel.value = examList[prevIndex].id;
-    exam2Sel.value = examList[currentIndex].id;
-    exam3Sel.value = examList[currentIndex].id;
-    if (examList.length >= 3) {
-        exam1Sel.value = examList[prev2Index].id;
-        exam2Sel.value = examList[prevIndex].id;
-        exam3Sel.value = examList[currentIndex].id;
-    }
+    const defaultIds = getDefaultCompareExamIds(examList, examList.length >= 3 ? 3 : 2, CURRENT_EXAM_ID);
+    exam1Sel.value = defaultIds[0] || '';
+    exam2Sel.value = defaultIds[1] || defaultIds[0] || '';
+    exam3Sel.value = defaultIds[2] || defaultIds[defaultIds.length - 1] || '';
 
     onProgressComparePeriodCountChange();
 }
@@ -13945,16 +13935,11 @@ async function openTownSubmoduleCompareDialog(submoduleId) {
     const schoolOptions = schoolList.map(s => `<option value="${s}">${s}</option>`).join('');
     const examOptions = examList.map(e => `<option value="${e.id}">${e.label}</option>`).join('');
 
-    const currentIndex = (CURRENT_EXAM_ID && examList.some(e => e.id === CURRENT_EXAM_ID))
-        ? examList.findIndex(e => e.id === CURRENT_EXAM_ID)
-        : examList.length - 1;
-    const prevIndex = Math.max(0, currentIndex - 1);
-    const prev2Index = Math.max(0, currentIndex - 2);
-
+    const defaultIds = getDefaultCompareExamIds(examList, examList.length >= 3 ? 3 : 2, CURRENT_EXAM_ID);
     const schoolDefault = (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) ? MY_SCHOOL : schoolList[0];
-    const exam1Default = examList.length >= 3 ? examList[prev2Index].id : examList[prevIndex].id;
-    const exam2Default = examList[prevIndex].id;
-    const exam3Default = examList[currentIndex].id;
+    const exam1Default = defaultIds[0] || '';
+    const exam2Default = defaultIds[1] || defaultIds[0] || '';
+    const exam3Default = defaultIds[2] || defaultIds[defaultIds.length - 1] || '';
 
     if (typeof Swal === 'undefined') {
         return alert('当前环境不支持弹窗，请升级页面依赖后重试');
@@ -14802,20 +14787,10 @@ function updateStudentCompareExamSelects() {
     exam2Sel.innerHTML = optionsHtml;
     exam3Sel.innerHTML = optionsHtml;
 
-    const currentIndex = (CURRENT_EXAM_ID && examList.some(e => e.id === CURRENT_EXAM_ID))
-        ? examList.findIndex(e => e.id === CURRENT_EXAM_ID)
-        : examList.length - 1;
-    const prevIndex = Math.max(0, currentIndex - 1);
-    const prev2Index = Math.max(0, currentIndex - 2);
-
-    exam1Sel.value = examList[prevIndex].id;
-    exam2Sel.value = examList[currentIndex].id;
-    exam3Sel.value = examList[currentIndex].id;
-    if (examList.length >= 3) {
-        exam1Sel.value = examList[prev2Index].id;
-        exam2Sel.value = examList[prevIndex].id;
-        exam3Sel.value = examList[currentIndex].id;
-    }
+    const defaultIds = getDefaultCompareExamIds(examList, examList.length >= 3 ? 3 : 2, CURRENT_EXAM_ID);
+    exam1Sel.value = defaultIds[0] || '';
+    exam2Sel.value = defaultIds[1] || defaultIds[0] || '';
+    exam3Sel.value = defaultIds[2] || defaultIds[defaultIds.length - 1] || '';
 
     onStudentComparePeriodCountChange();
 }
@@ -16854,6 +16829,30 @@ function sortExamIdsChronologically(examIds) {
     });
 }
 
+function getDefaultCompareExamIds(examList, desiredCount = 2, preferredCurrentExamId = '') {
+    const list = Array.isArray(examList) ? examList.filter(item => item?.id) : [];
+    if (!list.length) return [];
+
+    const count = Math.max(1, Math.min(Number(desiredCount) || 2, list.length));
+    const effectiveCurrentExamId = String(
+        preferredCurrentExamId
+        || (typeof getEffectiveCurrentExamId === 'function' ? getEffectiveCurrentExamId() : '')
+        || CURRENT_EXAM_ID
+        || ''
+    ).trim();
+
+    let currentIndex = effectiveCurrentExamId
+        ? list.findIndex(item => isExamKeyEquivalentForCompare(item.id, effectiveCurrentExamId))
+        : -1;
+    if (currentIndex < 0) currentIndex = list.length - 1;
+
+    let selected = list.slice(Math.max(0, currentIndex - count + 1), currentIndex + 1);
+    if (selected.length < count) {
+        selected = list.slice(Math.max(0, list.length - count));
+    }
+    return selected.map(item => item.id);
+}
+
 function assignCompetitionRanks(list, scoreGetter, rankSetter) {
     const rows = Array.isArray(list) ? list.slice() : [];
     rows.sort((a, b) => Number(scoreGetter(b) ?? Number.NEGATIVE_INFINITY) - Number(scoreGetter(a) ?? Number.NEGATIVE_INFINITY));
@@ -17175,20 +17174,10 @@ function updateMacroMultiExamSelects() {
     exam2Sel.innerHTML = optionsHtml;
     exam3Sel.innerHTML = optionsHtml;
 
-    const currentIndex = (CURRENT_EXAM_ID && examList.some(e => e.id === CURRENT_EXAM_ID))
-        ? examList.findIndex(e => e.id === CURRENT_EXAM_ID)
-        : examList.length - 1;
-    const prevIndex = Math.max(0, currentIndex - 1);
-    const prev2Index = Math.max(0, currentIndex - 2);
-
-    exam1Sel.value = examList[prevIndex].id;
-    exam2Sel.value = examList[currentIndex].id;
-    exam3Sel.value = examList[currentIndex].id;
-    if (examList.length >= 3) {
-        exam1Sel.value = examList[prev2Index].id;
-        exam2Sel.value = examList[prevIndex].id;
-        exam3Sel.value = examList[currentIndex].id;
-    }
+    const defaultIds = getDefaultCompareExamIds(examList, examList.length >= 3 ? 3 : 2, CURRENT_EXAM_ID);
+    exam1Sel.value = defaultIds[0] || '';
+    exam2Sel.value = defaultIds[1] || defaultIds[0] || '';
+    exam3Sel.value = defaultIds[2] || defaultIds[defaultIds.length - 1] || '';
 
     onMacroComparePeriodCountChange();
 }
@@ -17588,20 +17577,10 @@ function updateTeacherMultiExamSelects() {
     exam2Sel.innerHTML = optionsHtml;
     exam3Sel.innerHTML = optionsHtml;
 
-    const currentIndex = (CURRENT_EXAM_ID && examList.some(e => e.id === CURRENT_EXAM_ID))
-        ? examList.findIndex(e => e.id === CURRENT_EXAM_ID)
-        : examList.length - 1;
-    const prevIndex = Math.max(0, currentIndex - 1);
-    const prev2Index = Math.max(0, currentIndex - 2);
-
-    exam1Sel.value = examList[prevIndex].id;
-    exam2Sel.value = examList[currentIndex].id;
-    exam3Sel.value = examList[currentIndex].id;
-    if (examList.length >= 3) {
-        exam1Sel.value = examList[prev2Index].id;
-        exam2Sel.value = examList[prevIndex].id;
-        exam3Sel.value = examList[currentIndex].id;
-    }
+    const defaultIds = getDefaultCompareExamIds(examList, examList.length >= 3 ? 3 : 2, CURRENT_EXAM_ID);
+    exam1Sel.value = defaultIds[0] || '';
+    exam2Sel.value = defaultIds[1] || defaultIds[0] || '';
+    exam3Sel.value = defaultIds[2] || defaultIds[defaultIds.length - 1] || '';
 
     onTeacherComparePeriodCountChange();
 }
@@ -17652,22 +17631,11 @@ function updateTeacherCompareExamSelects() {
     exam2El.innerHTML = optionsHtml;
     exam3El.innerHTML = optionsHtml;
 
-    // 🔥 自动选择最近3期考试
-    const currentIndex = (CURRENT_EXAM_ID && examList.some(e => e.id === CURRENT_EXAM_ID))
-        ? examList.findIndex(e => e.id === CURRENT_EXAM_ID)
-        : examList.length - 1;
-    const prevIndex = Math.max(0, currentIndex - 1);
-    const prev2Index = Math.max(0, currentIndex - 2);
-
-    if (examList.length >= 3) {
-        exam1El.value = examList[prev2Index].id;
-        exam2El.value = examList[prevIndex].id;
-        exam3El.value = examList[currentIndex].id;
-    } else {
-        exam1El.value = examList[prevIndex].id;
-        exam2El.value = examList[currentIndex].id;
-        exam3El.value = examList[currentIndex].id;
-    }
+    // 🔥 自动选择不同期次，避免只有2期时出现“期中 / 期中”
+    const defaultIds = getDefaultCompareExamIds(examList, examList.length >= 3 ? 3 : 2, CURRENT_EXAM_ID);
+    exam1El.value = defaultIds[0] || '';
+    exam2El.value = defaultIds[1] || defaultIds[0] || '';
+    exam3El.value = defaultIds[2] || defaultIds[defaultIds.length - 1] || '';
 
     // 触发教师下拉框更新
     if (typeof updateTeacherCompareTeacherSelect === 'function') {
