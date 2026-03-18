@@ -6815,7 +6815,7 @@
     <!-- 5. 数据综合管理后台 (成绩/教师/档案) -->
     <div id="data-manager-modal" class="modal" style="display: none; z-index: 79000;">
         <div class="modal-content"
-            style="width:min(1480px,96vw); max-width:1480px; height:min(92vh,960px); display:flex; flex-direction:column; padding:22px 24px 18px; border-radius:22px;">
+            style="width:min(1480px,96vw); max-width:1480px; height:min(92vh,960px); display:flex; flex-direction:column; min-height:0; overflow:hidden; padding:22px 24px 18px; border-radius:22px;">
 
             <div
                 style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;">
@@ -6881,7 +6881,7 @@
             </div>
 
             <!-- 列表容器 -->
-            <div class="table-wrap" style="flex:1; overflow-y:auto; box-shadow:none; border:1px solid #e2e8f0;">
+            <div class="table-wrap" style="flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column; box-shadow:none; border:1px solid #e2e8f0;">
                 <!-- 学生表 -->
                 <table id="dm-student-table" style="font-size:12px;">
                     <thead>
@@ -7203,7 +7203,7 @@
                     </div>
                 </div>
 
-                <div id="dm-cloud-area" style="display:none; padding:15px; flex-direction:column; height:100%;">
+                <div id="dm-cloud-area" style="display:none; padding:15px; flex-direction:column; height:100%; min-height:0; overflow:hidden;">
                     <div class="info-bar">
                         <i class="ti ti-cloud"></i> <strong>我的云端数据管理：</strong>
                         此处列出您上传到云端的所有备份（包括自动保存和手动备份）。您可以删除旧的存档以释放空间。
@@ -7229,7 +7229,7 @@
                             <i class="ti ti-trash"></i> 批量删除
                         </button>
                     </div>
-                    <div class="table-wrap" style="flex:1; overflow-y:auto;">
+                    <div class="table-wrap" style="flex:1; min-height:0; overflow:auto;">
                         <table class="comparison-table" id="dm-cloud-table">
                             <thead>
                                 <tr>

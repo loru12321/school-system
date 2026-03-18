@@ -54,9 +54,13 @@
         const cid = normalizeCohortId(cohortId);
         if (!cid || !db || !db.exams || typeof db.exams !== 'object') return 0;
         return Object.keys(db.exams).reduce((count, examId) => {
-            if (isIgnoredExamKey(examId)) return count;
+            if (isIgnoredExamKey(examId) || isVirtualCohortSnapshotKey(examId)) return count;
             return extractCohortIdFromKey(examId) === cid ? count + 1 : count;
         }, 0);
+    }
+
+    function isVirtualCohortSnapshotKey(key) {
+        return /^cohort::/i.test(String(key || '').trim());
     }
 
     function isIgnoredExamKey(key) {
@@ -269,7 +273,7 @@
     function seedCurrentExamToCohortDb(payload, fallbackKey, updatedAt) {
         if (typeof CohortDB === 'undefined' || typeof CohortDB.ensure !== 'function') return;
         const examId = String(payload?.CURRENT_EXAM_ID || fallbackKey || '').trim();
-        if (!examId) return;
+        if (!examId || isVirtualCohortSnapshotKey(examId)) return;
 
         const rows = Array.isArray(payload?.RAW_DATA) ? payload.RAW_DATA : [];
         if (!rows.length) return;
@@ -311,7 +315,7 @@
     }
 
     function upsertCloudExamSnapshot(db, examId, payload, updatedAt, fallbackLabel) {
-        if (!db || !examId || !payload || isIgnoredExamKey(examId)) return 0;
+        if (!db || !examId || !payload || isIgnoredExamKey(examId) || isVirtualCohortSnapshotKey(examId)) return 0;
         const rows = Array.isArray(payload?.RAW_DATA) && payload.RAW_DATA.length
             ? payload.RAW_DATA
             : Array.isArray(payload?.data) && payload.data.length
@@ -812,10 +816,11 @@
                 db.exams = db.exams || {};
                 const cacheKey = getCohortSyncCacheKey(cid);
                 const forceSync = Boolean(options.force);
+                const minCount = Math.max(1, Number(options.minCount || 2));
                 const lastSyncAt = Number(localStorage.getItem(cacheKey) || 0);
                 const localExamCount = countCachedCohortExams(db, cid);
 
-                if (!forceSync && localExamCount > 0 && lastSyncAt && (Date.now() - lastSyncAt) < AUTO_COHORT_SYNC_COOLDOWN_MS) {
+                if (!forceSync && localExamCount >= minCount && lastSyncAt && (Date.now() - lastSyncAt) < AUTO_COHORT_SYNC_COOLDOWN_MS) {
                     await refreshCompareSelectors();
                     setCloudStatus('success', '使用缓存');
                     return { success: true, count: localExamCount, updated: 0, cached: true };

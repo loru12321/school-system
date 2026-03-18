@@ -3395,10 +3395,43 @@ const DataManager = {
     },
 
     // --- 模块 A: 云端数据管理 (重构版) ---
+    getCloudRecordKind: function (key) {
+        const text = String(key || '').trim();
+        if (!text) return 'other';
+        if (/^cohort::/i.test(text)) return 'cohort';
+        if (/^TEACHERS_/i.test(text)) return 'teacher';
+        if (/^(STUDENT_COMPARE_|MACRO_COMPARE_|TEACHER_COMPARE_|TOWN_SUB_COMPARE_)/.test(text)) return 'compare';
+        if (normalizeCompareCohortId(text)) return 'snapshot';
+        return 'other';
+    },
+
+    isCloudWorkspaceSnapshotKey: function (key) {
+        const kind = this.getCloudRecordKind(key);
+        return kind === 'cohort' || kind === 'snapshot';
+    },
+
+    isCloudRecordInCurrentWorkspace: function (key) {
+        const text = String(key || '').trim();
+        if (!text) return false;
+        const currentKey = String(localStorage.getItem('CURRENT_PROJECT_KEY') || window.CURRENT_PROJECT_KEY || '').trim();
+        if (currentKey && text === currentKey) return true;
+        const currentCohortId = normalizeCompareCohortId(
+            CURRENT_COHORT_ID
+            || window.CURRENT_COHORT_ID
+            || localStorage.getItem('CURRENT_COHORT_ID')
+            || currentKey
+        );
+        if (!currentCohortId) return true;
+        if (/^cohort::/i.test(text)) return text === `cohort::${currentCohortId}`;
+        return normalizeCompareCohortId(text) === currentCohortId;
+    },
+
     renderCloudBackups: async function () {
         if (!sbClient) return;
         const tbody = document.querySelector('#dm-cloud-table tbody');
         const summaryEl = document.getElementById('dm-cloud-summary');
+        const filterCurrent = document.getElementById('cloud-filter-current')?.checked !== false;
+        const filterSnapshotsOnly = document.getElementById('cloud-filter-snapshots')?.checked !== false;
 
         // 初始化加载状态
         if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">⏳ 正在读取云端数据库...</td></tr>';
@@ -3416,7 +3449,14 @@ const DataManager = {
 
             if (error) throw error;
 
-            if (!data || data.length === 0) {
+            const allRows = Array.isArray(data) ? data : [];
+            const visibleRows = allRows.filter(item => {
+                if (filterSnapshotsOnly && !this.isCloudWorkspaceSnapshotKey(item.key)) return false;
+                if (filterCurrent && !this.isCloudRecordInCurrentWorkspace(item.key)) return false;
+                return true;
+            });
+
+            if (!allRows.length) {
                 this.cloudSelection.clear();
                 if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#64748b;">☁️ 云端数据库为空</td></tr>';
                 if (summaryEl) summaryEl.innerHTML = '📌 暂无存档记录';
@@ -3424,13 +3464,27 @@ const DataManager = {
                 return;
             }
 
-            const keySet = new Set(data.map(item => item.key));
+            if (!visibleRows.length) {
+                this.cloudSelection.clear();
+                if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#64748b;">当前筛选条件下暂无可显示的工作区快照</td></tr>';
+                if (summaryEl) {
+                    const filterText = [
+                        filterCurrent ? '当前届别/工作区' : '',
+                        filterSnapshotsOnly ? '工作区快照' : ''
+                    ].filter(Boolean).join(' + ') || '全部记录';
+                    summaryEl.innerHTML = `📌 当前云端共 ${allRows.length} 条记录，已按「${filterText}」过滤。`;
+                }
+                this.updateCloudSelectionUI();
+                return;
+            }
+
+            const keySet = new Set(visibleRows.map(item => item.key));
             this.cloudSelection.forEach(key => {
                 if (!keySet.has(key)) this.cloudSelection.delete(key);
             });
 
             // 2. 统计信息
-            const totalSize = data.reduce((acc, item) => acc + (item.content ? item.content.length : 0), 0);
+            const totalSize = visibleRows.reduce((acc, item) => acc + (item.content ? item.content.length : 0), 0);
             const totalSizeMB = (totalSize / 1024 / 1024).toFixed(2);
             if (summaryEl) {
                 summaryEl.innerHTML = `
@@ -3442,10 +3496,22 @@ const DataManager = {
             }
 
             // 3. 渲染列表
+            if (summaryEl) {
+                const suffix = visibleRows.length !== allRows.length
+                    ? `<span style="font-size:11px; color:#94a3b8;">当前显示 ${visibleRows.length} / ${allRows.length} 条</span>`
+                    : '<span style="font-size:11px; color:#94a3b8;">当前显示全部匹配记录</span>';
+                summaryEl.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>📌 当前云端清单 <b>${visibleRows.length}</b> 条 | 占用约 <b>${totalSizeMB} MB</b></span>
+                        ${suffix}
+                    </div>
+                `;
+            }
+
             const currentKey = localStorage.getItem('CURRENT_PROJECT_KEY');
             let rows = '';
 
-            data.forEach(item => {
+            visibleRows.forEach(item => {
                 const isCurrent = (item.key === currentKey);
                 const sizeKB = (item.content ? item.content.length / 1024 : 0).toFixed(1);
                 const time = new Date(item.updated_at || item.created_at).toLocaleString();
@@ -3571,6 +3637,9 @@ const DataManager = {
 
     // 加载指定的云端存档
     loadCloudBackup: async function (key) {
+        if (!this.isCloudWorkspaceSnapshotKey(key)) {
+            return alert('该记录不是工作区快照。教师任课和各类对比请在对应模块中查看。');
+        }
         if (!confirm(`⚠️ 确定要切换到存档 [${key}] 吗？\n当前未保存的工作将会丢失。`)) return;
 
         // 临时修改 Current Key，然后调用 CloudManager.load
@@ -12667,7 +12736,7 @@ function trySyncCompareExamOptions() {
     if (Date.now() - Number(state.lastAttempt || 0) < 5000) return false;
     state.pending = true;
     state.lastAttempt = Date.now();
-    Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId))
+    Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId, { minCount: 2 }))
         .catch(err => {
             console.warn('[compare-sync] fetchCohortExamsToLocal failed:', err);
         })
@@ -12851,7 +12920,7 @@ function syncProgressBaselineExamOptions() {
 
     state.pending = true;
     state.lastAttempt = Date.now();
-    state.promise = Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId))
+    state.promise = Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId, { minCount: 2 }))
         .then(() => {
             if (typeof updateProgressBaselineSelect === 'function') updateProgressBaselineSelect();
             if (typeof refreshCompareExamSelectors === 'function') refreshCompareExamSelectors();
@@ -13008,7 +13077,7 @@ function getExamRowsForCompare(examId) {
     if (!isExamSelectableForCompare(examId)) return [];
     let rawRows = [];
 
-    if (examId === CURRENT_EXAM_ID) {
+    if (CURRENT_EXAM_ID && isExamKeyEquivalentForCompare(examId, CURRENT_EXAM_ID)) {
         rawRows = (RAW_DATA || []).map(s => ({
             name: s.name,
             school: s.school,
@@ -13018,7 +13087,13 @@ function getExamRowsForCompare(examId) {
         }));
     } else {
         const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
-        const exam = db?.exams?.[examId];
+        const identity = getCompareExamIdentity({ id: examId });
+        const exam = db?.exams?.[examId] || Object.values(db?.exams || {}).find(item => {
+            const storedId = String(item?.examId || '').trim();
+            if (!storedId || !isExamSelectableForCompare(storedId)) return false;
+            if (isExamKeyEquivalentForCompare(storedId, examId)) return true;
+            return getCompareExamIdentity({ id: storedId, label: item?.examLabel || '' }) === identity;
+        });
         const list = exam?.data || [];
         const examSubjects = Array.isArray(exam?.subjects) && exam.subjects.length
             ? exam.subjects
@@ -16539,6 +16614,93 @@ function normalizeCompareCohortId(raw) {
     return digits.length > 4 ? digits.slice(0, 4) : digits;
 }
 
+const COMPARE_EXAM_TYPE_KEYWORDS = [
+    '开学考', '摸底', '月考', '期中', '期末', '联考', '调研', '模考', '模拟',
+    '一模', '二模', '三模', '周测', '单元', '阶段测试'
+];
+
+function normalizeCompareExamToken(value) {
+    return String(value || '')
+        .trim()
+        .replace(/[—–－-]/g, '_')
+        .replace(/[()（）【】\[\]{}]/g, '_')
+        .replace(/\s+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .toLowerCase();
+}
+
+function isGenericCompareExamSuffixToken(token, meta = {}) {
+    const raw = String(token || '').trim();
+    const normalized = normalizeCompareExamToken(raw);
+    if (!normalized) return true;
+    if (/^\d{1,2}$/.test(raw)) return true;
+    if (/^\d{4}$/.test(raw)) return true;
+    if (/^\d{4}(?:[-_/]\d{1,2}(?:[-_/]\d{1,2})?)?$/.test(raw)) return true;
+    if (/^\d+年级$/.test(raw)) return true;
+    if (/^(?:标准考试|考试|测试)$/i.test(raw)) return true;
+    const metaTokens = [
+        meta.cohort,
+        meta.grade,
+        meta.year,
+        meta.term,
+        meta.type
+    ].map(normalizeCompareExamToken).filter(Boolean);
+    return metaTokens.includes(normalized);
+}
+
+function getCompareExamIdentity(entryOrId, fallbackLabel = '') {
+    const entry = (entryOrId && typeof entryOrId === 'object')
+        ? entryOrId
+        : { id: entryOrId, label: fallbackLabel };
+    const idText = String(entry?.id || '').trim();
+    const labelText = String(entry?.label || fallbackLabel || '').trim();
+    const sourceText = `${idText} ${labelText}`.trim();
+    if (!sourceText) return '';
+
+    const cohort = normalizeCompareCohortId(sourceText);
+    const gradeMatch = sourceText.match(/\d+年级/);
+    const yearMatch = sourceText.match(/\d{4}-\d{4}/);
+    const termMatch = sourceText.match(/上学期|下学期|第一学期|第二学期/);
+    const type = COMPARE_EXAM_TYPE_KEYWORDS.find(keyword => sourceText.includes(keyword)) || '';
+
+    const normalized = String(idText || labelText || sourceText)
+        .replace(/[—–－-]/g, '_')
+        .replace(/[()（）【】\[\]{}]/g, '_')
+        .replace(/\s+/g, '_');
+    const parts = normalized.split('_').filter(Boolean);
+    const meta = {
+        cohort: cohort ? `${cohort}级` : '',
+        grade: gradeMatch?.[0] || '',
+        year: yearMatch?.[0] || '',
+        term: termMatch?.[0] || '',
+        type
+    };
+
+    let afterType = !type;
+    const suffixParts = [];
+    parts.forEach(part => {
+        const rawPart = String(part || '').trim();
+        if (!rawPart) return;
+        if (!afterType) {
+            if (rawPart.includes(type)) afterType = true;
+            return;
+        }
+        if (isGenericCompareExamSuffixToken(rawPart, meta)) return;
+        suffixParts.push(rawPart);
+    });
+
+    const identity = [
+        cohort,
+        gradeMatch?.[0] || '',
+        yearMatch?.[0] || '',
+        termMatch?.[0] || '',
+        type,
+        suffixParts[0] || ''
+    ].filter(Boolean).join('|');
+
+    return identity || normalizeCompareExamToken(sourceText);
+}
+
 function parseExamSemanticTimestamp(examId) {
     const key = String(examId || '').trim();
     if (!key) return 0;
@@ -16649,9 +16811,12 @@ function pickPreferredExamEntry(existing, candidate) {
     const score = (entry) => {
         const id = String(entry?.id || '');
         let weight = 0;
+        if (/^cohort::/i.test(id)) weight -= 1000;
         if (!/^cohort::/i.test(id)) weight += 100;
         if (entry?.source === 'local') weight += 10;
+        if (entry?.source === 'current') weight += 8;
         if (entry?.source === 'cloud') weight += 5;
+        if (/\d{4}-\d{2}-\d{2}/.test(id)) weight += 3;
         weight += Number(entry?.sortTs || entry?.createdAt || 0) / 1e13;
         return weight;
     };
@@ -16679,6 +16844,7 @@ function extractCohortIdFromExamKey(examKey) {
 function isRealExamIdForCompare(examId, cohortId) {
     const key = String(examId || '').trim();
     if (!key) return false;
+    if (/^cohort::/i.test(key)) return false;
     if (/^(TEACHERS_|STUDENT_COMPARE_|MACRO_COMPARE_|TEACHER_COMPARE_|TOWN_SUB_COMPARE_)/.test(key)) return false;
     if (/(?:^|_)(?:\u671f\u4e2d\u6807\u51c6|\u671f\u672b\u6807\u51c6)(?:_|$)/.test(key)) return false;
 
@@ -16698,24 +16864,31 @@ function listAvailableExamsForCompare() {
     const cohortId = normalizeCompareCohortId(CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
     const upsertExam = (entry) => {
         if (!entry?.id || !isRealExamIdForCompare(entry.id, cohortId)) return;
+        const identity = getCompareExamIdentity(entry);
         const normalizedEntry = {
             ...entry,
             sortTs: getExamSortTimestamp(entry.id, entry.createdAt || 0)
         };
-        const existingKey = Array.from(examMap.keys()).find(key => isExamKeyEquivalentForCompare(key, entry.id));
+        const existingKey = Array.from(examMap.keys()).find(key => {
+            if (isExamKeyEquivalentForCompare(key, entry.id)) return true;
+            const existing = examMap.get(key);
+            return getCompareExamIdentity(existing) === identity;
+        });
         if (!existingKey) {
             examMap.set(entry.id, normalizedEntry);
             return;
         }
         const existing = examMap.get(existingKey) || {};
+        const preferred = pickPreferredExamEntry(existing, normalizedEntry);
         examMap.set(existingKey, {
             ...existing,
             ...normalizedEntry,
-            id: existing.id || normalizedEntry.id,
+            id: preferred.id || existing.id || normalizedEntry.id,
             createdAt: Math.max(existing.createdAt || 0, normalizedEntry.createdAt || 0),
-            sortTs: normalizedEntry.sortTs || existing.sortTs || 0,
-            label: normalizedEntry.label || existing.label || normalizedEntry.id,
-            source: normalizedEntry.source || existing.source || 'local'
+            sortTs: Math.max(existing.sortTs || 0, normalizedEntry.sortTs || 0),
+            label: preferred.label || existing.label || normalizedEntry.label || preferred.id,
+            source: preferred.source || existing.source || normalizedEntry.source || 'local',
+            fingerprint: preferred.fingerprint || existing.fingerprint || normalizedEntry.fingerprint || ''
         });
     };
     if (db?.exams) {
@@ -16752,25 +16925,8 @@ function listAvailableExamsForCompare() {
             });
         });
     }
-    const examList = Array.from(examMap.values());
-    const duplicateGroups = new Map();
-    const dedupedByFingerprint = new Map();
-    const withoutFingerprint = [];
-    examList.forEach(entry => {
-        const fp = String(entry?.fingerprint || '').trim();
-        if (!fp) {
-            withoutFingerprint.push(entry);
-            return;
-        }
-        const group = duplicateGroups.get(fp) || [];
-        group.push(entry);
-        duplicateGroups.set(fp, group);
-        const existing = dedupedByFingerprint.get(fp);
-        dedupedByFingerprint.set(fp, existing ? pickPreferredExamEntry(existing, entry) : entry);
-    });
-    window.DUPLICATE_COMPARE_EXAMS = Array.from(duplicateGroups.values()).filter(group => group.length > 1);
-    const uniqueByFingerprint = Array.from(dedupedByFingerprint.values());
-    const finalExamList = [...uniqueByFingerprint, ...withoutFingerprint];
+    const finalExamList = Array.from(examMap.values());
+    window.DUPLICATE_COMPARE_EXAMS = [];
     warnIfDuplicateCompareSnapshots();
     finalExamList.sort((a, b) => {
         const ta = Number(a.sortTs || a.createdAt || 0);
