@@ -12842,20 +12842,20 @@ const DataManager = {
         let sql = "";
         switch (type) {
             case 'base':
-                sql = "SELECT school, class, name, total FROM students ORDER BY total DESC LIMIT 10";
+                sql = "SELECT school, [class] AS class_name, name, total FROM students ORDER BY total DESC LIMIT 10";
                 break;
             case 'count':
-                sql = "SELECT school, COUNT(*) as cnt, AVG(total) as avg_score FROM students GROUP BY school ORDER BY avg_score DESC";
+                sql = "SELECT school, COUNT(1) AS cnt, AVG(total) AS avg_score FROM students GROUP BY school ORDER BY avg_score DESC";
                 break;
             case 'avg':
-                sql = "SELECT class, AVG(语文) as chinese_avg FROM students GROUP BY class ORDER BY chinese_avg DESC";
+                sql = "SELECT [class] AS class_name, AVG([语文]) AS chinese_avg FROM students GROUP BY [class] ORDER BY chinese_avg DESC";
                 break;
             case 'failed':
-                sql = "SELECT class, name, 数学 FROM students WHERE 数学 < 90 ORDER BY 数学 ASC"; // 假设满分150
+                sql = "SELECT [class] AS class_name, name, [数学] AS math_score FROM students WHERE [数学] < 90 ORDER BY [数学] ASC"; // 假设满分150
                 break;
             case 'teacher':
                 // 联合查询示例
-                sql = "SELECT s.class, s.name, s.英语, t.teacher FROM students s JOIN teachers t ON s.class = t.class AND t.subject = '英语' WHERE t.teacher LIKE '张%' LIMIT 20";
+                sql = "SELECT s.[class] AS class_name, s.name, s.[英语] AS english_score, t.teacher FROM students AS s JOIN teachers AS t ON s.[class] = t.class AND t.subject = '英语' WHERE t.teacher LIKE '张%' LIMIT 20";
                 break;
         }
         document.getElementById('dm-sql-input').value = sql;
@@ -12904,6 +12904,7 @@ const DataManager = {
         }
 
         try {
+            const normalizedSql = sql.replace(/COUNT\s*\(\s*\*\s*\)/gi, 'COUNT(1)');
             // 1. 准备数据
             const db = this.prepareSQLData();
 
@@ -12915,7 +12916,7 @@ const DataManager = {
             alasql("SELECT * INTO teachers FROM ?", [db.teachers]);
 
             // 执行用户输入的 SQL
-            const res = alasql(sql);
+            const res = alasql(normalizedSql);
 
             this.sqlResultCache = res; // 存起来供导出
 
@@ -12952,7 +12953,7 @@ const DataManager = {
             tbody.innerHTML = bodyHtml;
 
             // 记录最近查询
-            this.addRecentSQL(sql);
+            this.addRecentSQL(normalizedSql);
             this.renderSQLHistory();
 
             // 清理内存表
@@ -20304,6 +20305,7 @@ function updateProgressMultiExamSelects() {
     schoolSel.innerHTML = '<option value="">--请选择学校--</option>';
     schoolList.forEach(s => schoolSel.innerHTML += `<option value="${s}">${s}</option>`);
     if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) schoolSel.value = MY_SCHOOL;
+    else if (!schoolSel.value && schoolList.length > 0) schoolSel.value = schoolList[0];
 
     const examList = listAvailableExamsForCompare();
 
@@ -24781,6 +24783,8 @@ function updateTeacherCompareExamSelects() {
     // 🔥 自动选择当前学校
     if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) {
         schoolEl.value = MY_SCHOOL;
+    } else if (!schoolEl.value && schoolList.length > 0) {
+        schoolEl.value = schoolList[0];
     }
 
     // 初始化学科选择器
