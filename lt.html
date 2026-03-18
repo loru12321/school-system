@@ -24144,2861 +24144,7 @@ function loadPreviousData(input) {
 }
 // --- 进退步分析 (含同名/转班智能拦截) ---
 
-// 1. 入口函数：先检查歧义
-function getProgressCleanName(name) {
-    return String(name || '')
-        .trim()
-        .replace(/\s+/g, '')
-        .replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '')
-        .toLowerCase();
-}
-
-function getProgressSelectedSchoolName() {
-    const select = document.getElementById('progressSchoolSelect');
-    const schoolName = String(select?.value || MY_SCHOOL || Object.keys(SCHOOLS || {})[0] || '').trim();
-    if (select && schoolName && !select.value) select.value = schoolName;
-    return schoolName;
-}
-
-function getProgressCurrentStudentsForSchool(schoolName) {
-    const school = SCHOOLS?.[schoolName];
-    if (!school || !Array.isArray(school.students)) return [];
-
-    const user = getCurrentUser();
-    const role = user?.role || 'guest';
-    const scope = role === 'teacher' ? getTeacherScopeForUser(user) : null;
-    let students = school.students.slice();
-
-    if (role === 'class_teacher' && user?.class) {
-        students = students.filter(student => isClassEquivalent(student.class, user.class));
-    }
-    if (role === 'teacher' && scope?.classes instanceof Set && scope.classes.size > 0) {
-        students = students.filter(student => scope.classes.has(student.class));
-    }
-    return students;
-}
-
-function getProgressBaselineRowsForSchool(schoolName) {
-    const baselineExamId = document.getElementById('progressBaselineSelect')?.value || '';
-    const normalizedRows = normalizeProgressBaselineRows(PREV_DATA || window.PREV_DATA || [], baselineExamId);
-    const currentStudents = getProgressCurrentStudentsForSchool(schoolName);
-    const currentNames = new Set(currentStudents.map(student => getProgressCleanName(student.name)).filter(Boolean));
-
-    let rows = normalizedRows.filter(row => areSchoolNamesEquivalent(row.school, schoolName));
-    if (rows.length < Math.max(5, Math.floor(currentStudents.length * 0.4))) {
-        rows = normalizedRows.filter(row => currentNames.has(getProgressCleanName(row.name)));
-    }
-
-    rows = rows
-        .map(row => {
-            const recalculated = Number(recalcPrevTotal(row));
-            const total = Number.isFinite(recalculated) ? recalculated : Number(row.total);
-            return Number.isFinite(total) ? { ...row, _progressTotal: total } : null;
-        })
-        .filter(Boolean)
-        .sort((a, b) => b._progressTotal - a._progressTotal);
-
-    let lastRank = 0;
-    let lastTotal = null;
-    rows.forEach((row, index) => {
-        if (lastTotal === null || Math.abs(row._progressTotal - lastTotal) > 0.001) {
-            lastRank = index + 1;
-            lastTotal = row._progressTotal;
-        }
-        row._progressSchoolRank = lastRank;
-    });
-
-    return rows;
-}
-
-function buildProgressPreviousMatchIndex(rows) {
-    const strictMap = new Map();
-    const looseMap = new Map();
-
-    (rows || []).forEach(row => {
-        const nameKey = getProgressCleanName(row.name);
-        const classKey = normalizeClass(row.class || '');
-        const strictKey = `${nameKey}__${classKey}`;
-        if (!strictMap.has(strictKey)) strictMap.set(strictKey, []);
-        strictMap.get(strictKey).push(row);
-        if (!looseMap.has(nameKey)) looseMap.set(nameKey, []);
-        looseMap.get(nameKey).push(row);
-    });
-
-    return { strictMap, looseMap };
-}
-
-function resolveProgressBaselineMatch(student, indexes) {
-    const nameKey = getProgressCleanName(student.name);
-    const classKey = normalizeClass(student.class || '');
-    const manualKey = `${student.school}_${student.class}_${student.name}`;
-    const manualValue = MANUAL_ID_MAPPINGS?.[manualKey];
-    const looseCandidates = (indexes.looseMap.get(nameKey) || []).filter(row => !student.school || !row.school || areSchoolNamesEquivalent(row.school, student.school));
-
-    if (manualValue === '__IGNORE__') {
-        return { row: null, matchType: 'ignored', matchLabel: '已手动忽略' };
-    }
-    if (manualValue) {
-        const manualRow = looseCandidates.find(row => isClassEquivalent(row.class, manualValue) || String(row.class || '').trim() === String(manualValue || '').trim());
-        if (manualRow) {
-            return { row: manualRow, matchType: 'manual', matchLabel: '手动映射' };
-        }
-    }
-
-    const strictCandidates = (indexes.strictMap.get(`${nameKey}__${classKey}`) || []).filter(row => !student.school || !row.school || areSchoolNamesEquivalent(row.school, student.school));
-    if (strictCandidates.length === 1) {
-        return { row: strictCandidates[0], matchType: 'strict', matchLabel: '同名同班' };
-    }
-    if (looseCandidates.length === 1) {
-        return { row: looseCandidates[0], matchType: 'same_name_unique', matchLabel: '同名唯一' };
-    }
-    if (strictCandidates.length > 1 || looseCandidates.length > 1) {
-        return { row: null, matchType: 'ambiguous', matchLabel: '同名待确认' };
-    }
-    return { row: null, matchType: 'missing', matchLabel: '未匹配' };
-}
-
-function getProgressStatusMeta(change) {
-    if (change >= 20) return { label: '显著进步', className: 'trend-up', color: 'var(--success)' };
-    if (change >= 5) return { label: '稳步提升', className: 'trend-up', color: 'var(--success)' };
-    if (change <= -20) return { label: '明显退步', className: 'trend-down', color: 'var(--danger)' };
-    if (change <= -5) return { label: '需要关注', className: 'trend-down', color: 'var(--danger)' };
-    return { label: '基本稳定', className: 'trend-stable', color: '#64748b' };
-}
-
-function destroyProgressChart(canvasId, instanceRef) {
-    const canvas = document.getElementById(canvasId);
-    try {
-        if (typeof Chart !== 'undefined' && typeof Chart.getChart === 'function' && canvas) {
-            const existing = Chart.getChart(canvas);
-            if (existing) existing.destroy();
-        }
-    } catch (error) {
-        console.warn(`[progress] destroy chart ${canvasId} failed:`, error);
-    }
-    try {
-        if (instanceRef && typeof instanceRef.destroy === 'function') instanceRef.destroy();
-    } catch (error) {
-        console.warn(`[progress] destroy chart instance ${canvasId} failed:`, error);
-    }
-    if (canvas && typeof canvas.getContext === 'function') {
-        const ctx = canvas.getContext('2d');
-        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-    return null;
-}
-
-function clearProgressVisuals() {
-    trendChartInstance = destroyProgressChart('trendChart', trendChartInstance);
-    sankeyChartInstance = destroyProgressChart('sankeyChart', sankeyChartInstance);
-}
-
-function updateProgressModuleCopy() {
-    const infoBar = document.querySelector('#progress-analysis .info-bar');
-    if (infoBar) {
-        const tip = infoBar.querySelector('span:last-child');
-        if (tip) tip.textContent = '比较口径：上次校排 - 本次校排 = 排名变化（正数=进步）';
-    }
-    const chartTitles = document.querySelectorAll('#anchor-va-trend h4');
-    if (chartTitles[0]) chartTitles[0].textContent = '排名变化散点图（越靠上越接近进步）';
-    if (chartTitles[1]) chartTitles[1].textContent = '排名变化分布（显著进步 / 稳定 / 退步）';
-}
-
-function renderProgressAnalysis() {
-    updateProgressModuleCopy();
-    if (!RAW_DATA.length) return uiAlert("请先上传【本次考试】数据", 'warning');
-
-    if ((!PREV_DATA || !PREV_DATA.length) && typeof ensureProgressBaselineData === 'function') {
-        setProgressBaselineStatus('⏳ 正在自动加载上次考试数据...', 'loading');
-        Promise.resolve(ensureProgressBaselineData({
-            allowCloudSync: true,
-            rerenderReport: true,
-            rerenderAnalysis: true
-        })).catch(error => {
-            console.warn('[progress] auto load baseline failed:', error);
-            setProgressBaselineStatus('❌ 自动加载上次考试数据失败，请稍后重试', 'error');
-        });
-        return;
-    }
-
-    const schoolName = getProgressSelectedSchoolName();
-    if (!schoolName || !SCHOOLS[schoolName]) return uiAlert("请选择要分析的学校", 'warning');
-    performProgressCalculation({ schoolName });
-}
-
-// 2. 显示映射弹窗
-function showMappingModal(cases) {
-    const modal = document.getElementById('mappingModal');
-    const tbody = document.querySelector('#mappingModal tbody');
-    tbody.innerHTML = '';
-
-    cases.forEach((item, idx) => {
-        const curr = item.curr;
-        let optionsHtml = `<option value="">-- 请选择对应的上次记录 --</option>`;
-        // 默认选项：如果只有一个候选人，为了方便，默认选中它？还是强制让用户选？
-        // 建议：强制选，或者提供一个"不匹配(视为新生)"选项
-        item.candidates.forEach(cand => {
-            optionsHtml += `<option value="${cand.class}">上次在：${cand.class} (排名:${cand.rank})</option>`;
-        });
-        optionsHtml += `<option value="__IGNORE__">❌ 不是同一个人 (视为新生)</option>`;
-
-        const row = `
-                <tr data-school="${curr.school}" data-class="${curr.class}" data-name="${curr.name}">
-                    <td style="padding:10px;">
-                        <div style="font-weight:bold;">${curr.name}</div>
-                        <div style="font-size:12px; color:#666;">本次：${curr.class}</div>
-                    </td>
-                    <td style="padding:10px;">
-                        <select class="mapping-select" style="width:100%; padding:5px; border:1px solid #d97706; border-radius:4px;">
-                            ${optionsHtml}
-                        </select>
-                    </td>
-                </tr>
-            `;
-        tbody.innerHTML += row;
-    });
-
-    modal.style.display = 'flex';
-}
-
-// 3. 用户点击确认后
-function confirmMappingsAndRun() {
-    const rows = document.querySelectorAll('#mappingModal tbody tr');
-    let allSelected = true;
-
-    rows.forEach(row => {
-        const select = row.querySelector('select');
-        const val = select.value;
-        if (!val) {
-            allSelected = false;
-            select.style.border = "2px solid red";
-        } else {
-            // 保存映射关系
-            const s = row.dataset.school;
-            const c = row.dataset.class;
-            const n = row.dataset.name;
-            const key = `${s}_${c}_${n}`; // 唯一键
-            MANUAL_ID_MAPPINGS[key] = val; // value 是上次的班级名，或者 __IGNORE__
-        }
-    });
-
-    if (!allSelected) return alert("请为所有疑似学生选择对应关系（如果是新生，请选“不是同一个人”）");
-
-    document.getElementById('mappingModal').style.display = 'none';
-    performProgressCalculation(); // 继续计算
-}
-
-// 4. 真正的计算逻辑 (拆分出来的)
-// 🟢 [修改]：完全重写此函数，支持“校内排名”重算对比，解决单校月考 vs 全镇联考的对比难题
-function performProgressCalculation() {
-    const schoolName = document.getElementById('progressSchoolSelect').value;
-
-    if (!schoolName || !SCHOOLS[schoolName]) return alert("请选择学校");
-
-    const currentStudents = SCHOOLS[schoolName].students;
-    PROGRESS_CACHE = [];
-    const cleanName = (n) => String(n).replace(/\s+/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '');
-
-    // ==========================================
-    // 🚀 核心改进：构建“上次考试”的【校内排名】索引
-    // 解决痛点：本次是单校(分母小)，上次是全镇(分母大)，直接比排名不科学。
-    // 方案：把上次全镇数据里的本校学生拎出来，重新排个座次，用“上次校排”vs“本次校排”。
-    // ==========================================
-
-    // 1. 从上次全镇数据中，筛选出属于该校的学生
-    let prevSchoolSubset = PREV_DATA.filter(p => areSchoolNamesEquivalent(p.school, schoolName));
-
-    // 备用方案：如果上次数据没填学校，或者学校名写的不一样，尝试用本次名单反查
-    if (prevSchoolSubset.length < currentStudents.length * 0.5) {
-        console.log("智能修正：上次数据中学校名称可能不匹配，启用【名单反查模式】...");
-        const currentNames = new Set(currentStudents.map(s => cleanName(s.name)));
-        prevSchoolSubset = PREV_DATA.filter(p => currentNames.has(cleanName(p.name)));
-    }
-
-    // 2. 对上次的本校子集进行重新排序 (按当前科目集重算的总分降序)
-    prevSchoolSubset.forEach(p => {
-        const norm = recalcPrevTotal(p);
-        p._normTotal = (typeof norm === 'number') ? norm : p.total;
-    });
-    prevSchoolSubset.sort((a, b) => b._normTotal - a._normTotal);
-
-    // 3. 建立映射表: 姓名 -> 上次校内排名
-    const prevLocalRankMap = {};
-    prevSchoolSubset.forEach((p, index) => {
-        // 处理同分同名次逻辑
-        let rank = index + 1;
-        if (index > 0 && Math.abs(p._normTotal - prevSchoolSubset[index - 1]._normTotal) < 0.01) {
-            // 继承上一名
-            rank = prevLocalRankMap[cleanName(prevSchoolSubset[index - 1].name) + "_rank"];
-        }
-
-        prevLocalRankMap[cleanName(p.name)] = {
-            localRank: rank,      // 影子排名：上次在校内的名次
-            townRank: p.rank,     // 原始排名：上次在全镇的名次
-            total: p._normTotal   // 归一化总分（用当前科目集重算）
-        };
-        // 辅助键防止覆盖
-        prevLocalRankMap[cleanName(p.name) + "_rank"] = rank;
-    });
-
-    console.log(`[进退步分析] 已重构上次校内排名，基数: ${prevSchoolSubset.length} 人`);
-
-    // ==========================================
-    // 开始对比
-    // ==========================================
-
-    currentStudents.forEach(curr => {
-        const currNameClean = cleanName(curr.name);
-
-        // 尝试获取用户手动映射 (处理同名/转班)
-        const mapKey = `${curr.school}_${curr.class}_${curr.name}`;
-        const mappedPrevClass = MANUAL_ID_MAPPINGS[mapKey];
-
-        // 获取该生在上次考试中的信息
-        let prevInfo = prevLocalRankMap[currNameClean];
-
-        // 简单过滤：如果指定了映射但不是忽略，或者没指定但找到了
-        if (mappedPrevClass === '__IGNORE__') prevInfo = null;
-
-        if (prevInfo) {
-            // 💡 核心对比：本次校排 vs 上次校排
-            // curr.ranks.total.school 是系统在 processData 里算好的本次校内排名
-            const currLocalRank = safeGet(curr, 'ranks.total.school', 0);
-            const prevLocalRank = prevInfo.localRank;
-
-            // 只有当两者都有效时才计算
-            if (currLocalRank > 0 && prevLocalRank > 0) {
-                const change = prevLocalRank - currLocalRank; // 正数为进步 (名次变小)
-
-                let status = "";
-                if (change > 0) status = `<span class="trend-up"><i class="ti ti-arrow-up trend-icon"></i>校排进 ${change} 名</span>`;
-                else if (change < 0) status = `<span class="trend-down"><i class="ti ti-arrow-down trend-icon"></i>校排退 ${Math.abs(change)} 名</span>`;
-                else status = `<span style="color:#666;">🔵 排名持平</span>`;
-
-                // 增加提示：如果是单校模式，特别标注这是校内对比
-                const note = `<div style="font-size:10px; color:#999;">(上次校排: ${prevLocalRank})</div>`;
-
-                PROGRESS_CACHE.push({
-                    class: curr.class,
-                    name: curr.name,
-                    currTotal: curr.total,
-                    currRank: currLocalRank, // 显示校内排名
-                    prevTotal: prevInfo.total,
-                    prevRank: prevLocalRank, // 显示重算后的上次校内排名
-                    change: change,
-                    statusHTML: status + note
-                });
-            }
-        }
-    });
-
-    // 保存全量缓存并应用筛选
-    window.PROGRESS_CACHE_FULL = PROGRESS_CACHE.slice();
-    applyProgressFilter();
-}
-
-// 进退步筛选与表格渲染
-function applyProgressFilter() {
-    const typeEl = document.getElementById('progressFilterType');
-    const thresholdEl = document.getElementById('progressFilterThreshold');
-    const type = typeEl ? typeEl.value : 'all';
-    const threshold = thresholdEl ? parseInt(thresholdEl.value || '0') : 0;
-
-    let list = (window.PROGRESS_CACHE_FULL || []).slice();
-    list = list.filter(r => Math.abs(r.change) >= threshold);
-    if (type === 'up') list = list.filter(r => r.change > 0);
-    if (type === 'down') list = list.filter(r => r.change < 0);
-
-    // 更新全局用于图表
-    PROGRESS_CACHE = list;
-    renderProgressTable(list);
-
-    if (list.length > 0) {
-        renderTrendChart();
-        renderSankeyDiagram();
-    }
-}
-
-function resetProgressFilter() {
-    const typeEl = document.getElementById('progressFilterType');
-    const thresholdEl = document.getElementById('progressFilterThreshold');
-    const sortEl = document.getElementById('progressSortOrder');
-    if (typeEl) typeEl.value = 'all';
-    if (thresholdEl) thresholdEl.value = 20;
-    if (sortEl) sortEl.value = 'improve_desc';
-    applyProgressFilter();
-}
-
-function renderProgressTable(list) {
-    const tbody = document.querySelector('#progressTable tbody');
-    const thead = document.querySelector('#progressTable thead tr');
-    if (!tbody || !thead) return;
-
-    thead.innerHTML = `<th>班级</th><th>姓名</th><th>本次总分</th><th>本次校排</th><th>上次总分</th><th>上次校排(重算)</th><th>进退步</th><th>状态评价</th>`;
-
-    if (!list || list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#999;">暂无符合筛选条件的学生</td></tr>';
-        return;
-    }
-
-    list.sort((a, b) => b.change - a.change);
-    let html = '';
-    list.forEach(row => {
-        const rewardBtn = row.change > 30
-            ? `<button class="btn btn-orange" style="padding:2px 8px; font-size:11px;" onclick="showCertificate('${row.name}', '进步之星')">🏅 颁奖</button>`
-            : (row.currRank <= 10 ? `<button class="btn btn-purple" style="padding:2px 8px; font-size:11px;" onclick="showCertificate('${row.name}', '学习标兵')">🏆 颁奖</button>` : '');
-
-        html += `<tr>
-                <td data-label="班级">${row.class}</td>
-                <td data-label="姓名"><strong>${row.name}</strong></td>
-                <td data-label="本次总分">${row.currTotal}</td>
-                <td data-label="本次校排" style="font-weight:bold;">${row.currRank}</td>
-                <td data-label="上次总分" style="color:#999">${row.prevTotal}</td>
-                <td data-label="上次校排" style="color:#999">${row.prevRank}</td>
-                <td data-label="进退步" style="font-weight:bold; ${row.change > 0 ? 'color:var(--success)' : 'color:var(--danger)'}">${row.change > 0 ? '+' : ''}${row.change}</td>
-                <td data-label="状态评价">${row.statusHTML} ${rewardBtn}</td>
-            </tr>`;
-    });
-    tbody.innerHTML = html;
-}
-
-// 辅助：重绘图表 (把原来的图表逻辑封装在这里)
-function renderTrendChart() {
-    const ctx = document.getElementById('trendChart');
-    if (trendChartInstance) trendChartInstance.destroy();
-
-    const improved = [], regressed = [], stable = [];
-    PROGRESS_CACHE.forEach(p => {
-        const point = { x: p.prevRank, y: p.currRank, name: p.name, cls: p.class, change: p.change };
-        if (p.change > 0) improved.push(point);
-        else if (p.change < 0) regressed.push(point);
-        else stable.push(point);
-    });
-    const maxRank = Math.max(...PROGRESS_CACHE.map(p => Math.max(p.prevRank, p.currRank))) + 10;
-
-    trendChartInstance = new Chart(ctx, {
-        type: 'scatter',
-        data: {
-            datasets: [
-                { label: '进步', data: improved, backgroundColor: 'rgba(22, 163, 74, 0.6)', borderColor: 'rgba(22, 163, 74, 1)' },
-                { label: '退步', data: regressed, backgroundColor: 'rgba(220, 38, 38, 0.6)', borderColor: 'rgba(220, 38, 38, 1)' },
-                { label: '持平', data: stable, backgroundColor: 'rgba(71, 85, 105, 0.4)' },
-                { label: '基准线', data: [{ x: 0, y: 0 }, { x: maxRank, y: maxRank }], showLine: true, borderColor: '#94a3b8', borderDash: [5, 5], pointRadius: 0, fill: false }
-            ]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { tooltip: { callbacks: { label: (ctx) => { const p = ctx.raw; return p.name ? `${p.cls} ${p.name}: ${p.x} -> ${p.y} (${p.change > 0 ? '+' : ''}${p.change})` : ''; } } } },
-            scales: { x: { title: { display: true, text: '上次排名' }, min: 0, max: maxRank }, y: { title: { display: true, text: '本次排名' }, min: 0, max: maxRank, reverse: true } }
-        }
-    });
-}
-
-let sankeyChartInstance = null;
-
-function renderSankeyDiagram() {
-    const ctx = document.getElementById('sankeyChart');
-    if (!ctx) return;
-    if (sankeyChartInstance) sankeyChartInstance.destroy();
-
-    if (PROGRESS_CACHE.length === 0) return;
-
-    // 1. 准备基数
-    const totalStudents = RAW_DATA.length; // 本次全镇总人数
-    const prevTotalStudents = PREV_DATA.length; // 上次全镇总人数
-
-    // 2. 聚合流动数据
-    const flows = {};
-
-    PROGRESS_CACHE.forEach(p => {
-        // 计算上次层级 (按全镇百分比)
-        const prevPct = p.prevRank / prevTotalStudents;
-        let fromTier = '上次 ';
-        if (prevPct <= 0.25) fromTier += 'A (优)';
-        else if (prevPct <= 0.50) fromTier += 'B (良)';
-        else if (prevPct <= 0.75) fromTier += 'C (中)';
-        else fromTier += 'D (潜)';
-
-        // 计算本次层级
-        const currPct = p.currRank / totalStudents;
-        let toTier = '本次 ';
-        if (currPct <= 0.25) toTier += 'A (优)';
-        else if (currPct <= 0.50) toTier += 'B (良)';
-        else if (currPct <= 0.75) toTier += 'C (中)';
-        else toTier += 'D (潜)';
-
-        const key = `${fromTier}||${toTier}`;
-        if (!flows[key]) flows[key] = 0;
-        flows[key]++;
-    });
-
-    // 3. 转换为 Chart.js Sankey 数据格式
-    const dataPoints = Object.keys(flows).map(key => {
-        const [from, to] = key.split('||');
-        return { from, to, flow: flows[key] };
-    });
-
-    // 4. 颜色映射逻辑
-    const getColor = (from, to) => {
-        const f = from.charAt(3); // 取字符 A, B, C, D
-        const t = to.charAt(3);
-        const map = { 'A': 0, 'B': 1, 'C': 2, 'D': 3 };
-        const fi = map[f];
-        const ti = map[t];
-
-        if (fi === ti) return '#94a3b8'; // 灰色：保持
-        if (ti < fi) return '#16a34a';  // 绿色：进步 (A是0，变小了就是进步)
-        return '#dc2626';             // 红色：退步
-    };
-
-    sankeyChartInstance = new Chart(ctx, {
-        type: 'sankey',
-        data: {
-            datasets: [{
-                label: '生源流动',
-                data: dataPoints,
-                colorFrom: (c) => getColor(c.dataset.data[c.dataIndex].from, c.dataset.data[c.dataIndex].to),
-                colorTo: (c) => getColor(c.dataset.data[c.dataIndex].from, c.dataset.data[c.dataIndex].to),
-                colorMode: 'gradient', // 渐变色
-                labels: { font: { size: 12, weight: 'bold' }, color: 'black' },
-                nodeWidth: 20
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            const item = context.raw;
-                            return `${item.from} -> ${item.to}: ${item.flow}人`;
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-function toggleAIChat() {
-    if (AI_DISABLED) return aiDisabledAlert();
-    const box = document.getElementById('ai-chat-box');
-    box.classList.toggle('hidden');
-    if (!box.classList.contains('hidden')) document.getElementById('ai-chat-input').focus();
-}
-
-function addChatBubble(html, type) {
-    const container = document.getElementById('ai-chat-messages');
-    const div = document.createElement('div');
-    div.className = `ai-msg-bubble ${type}`;
-    div.innerHTML = html;
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
-}
-
-// 1. 准备数据上下文 (合并 成绩 + 进退步 + 排名)
-function prepareDataForAI() {
-    if (!RAW_DATA.length) return [];
-    // 建立进退步索引
-    const progressMap = {};
-    if (PROGRESS_CACHE && PROGRESS_CACHE.length) {
-        PROGRESS_CACHE.forEach(p => {
-            progressMap[p.name + '_' + p.class] = p.change; // 正数=进步
-        });
-    }
-
-    return RAW_DATA.map(s => {
-        return {
-            name: s.name,
-            school: s.school,
-            class: s.class,
-            total: s.total,
-            scores: s.scores, // {语文:90, 数学:80...}
-            townRank: safeGet(s, 'ranks.total.township', 9999),
-            classRank: safeGet(s, 'ranks.total.class', 999),
-            progress: progressMap[s.name + '_' + s.class] || 0 // 进退步
-        };
-    });
-}
-
-async function sendAIChat() {
-    if (AI_DISABLED) return aiDisabledAlert();
-    const input = document.getElementById('ai-chat-input');
-    const query = input.value.trim();
-    if (!query) return;
-
-    if (!LLM_CONFIG.apiKey) {
-        addChatBubble("⚠️ 请先在【数据中心】配置 AI API Key 才能使用智能查询。", "system");
-        return;
-    }
-
-    addChatBubble(query, "user");
-    input.value = '';
-    addChatBubble("🤖 正在分析数据...", "system");
-
-    // 2. 构建 Prompt：告诉 AI 数据结构，让它写代码
-    const dataContext = prepareDataForAI();
-    if (dataContext.length === 0) {
-        addChatBubble("❌ 当前暂无数据，请先上传成绩。", "system");
-        return;
-    }
-
-    const subjectsStr = SUBJECTS.join(',');
-    const prompt = `
-        你是一个数据查询生成器。
-        【数据结构】
-        变量名: data
-        类型: Array<Student>
-        Student结构: {
-            name: String,
-            school: String,
-            class: String, // 例如 "701", "802"
-            total: Number, // 总分
-            scores: { "${subjectsStr}": Number }, // 各科成绩
-            townRank: Number, // 全镇排名 (越小越好)
-            progress: Number // 进退步 (正数=进步, 负数=退步, 0=无数据)
-        }
-        
-        【任务】
-        根据用户问题："${query}"
-        编写一段 JavaScript 代码，从 \`data\` 数组中筛选并排序，返回结果数组。
-        
-        【要求】
-        1. 仅返回代码，不要Markdown标记，不要解释。
-        2. 代码必须以 \`return data.filter(...).sort(...).slice(0, N)\` 的形式结束。
-        3. 如果用户问“不及格”，默认指分数 < 60%满分（假设满分100则<60，满分120则<72）。你可自行设定阈值或简单按 < 60 处理。
-        4. 结果最多返回 20 条。
-        5. 只能使用 JS 标准数组方法 (filter, sort, slice, map)。
-        `;
-
-    try {
-        // 3. 调用 LLM
-        let jsCode = "";
-        await new Promise((resolve) => {
-            callLLM(prompt, null, (fullText) => { jsCode = fullText; resolve(); });
-        });
-
-        // 清洗代码 (去掉 ```javascript 等)
-        jsCode = jsCode.replace(/```javascript/g, '').replace(/```/g, '').trim();
-        console.log("AI Generated Code:", jsCode);
-
-        // 4. 沙箱执行代码
-        const result = executeAICode(jsCode, dataContext);
-
-        // 5. 渲染结果
-        renderAIChatResult(result, query);
-
-    } catch (err) {
-        console.error(err);
-        addChatBubble(`❌ 查询失败: ${err.message}`, "system");
-    }
-}
-
-function executeAICode(code, data) {
-    if (AI_DISABLED) return aiDisabledAlert();
-    try {
-        // 使用 new Function 创建一个安全的执行环境
-        // 传入 data 变量
-        const func = new Function('data', code);
-        const res = func(data);
-        if (!Array.isArray(res)) throw new Error("AI 生成的代码未返回数组");
-        return res;
-    } catch (e) {
-        throw new Error("代码执行错误: " + e.message);
-    }
-}
-
-function renderAIChatResult(list, query) {
-    if (AI_DISABLED) return aiDisabledAlert();
-    const lastMsg = document.querySelector('#ai-chat-messages .ai-msg-bubble.system:last-child');
-
-    if (!list || list.length === 0) {
-        lastMsg.innerHTML = `🔍 查询 "${query}"<br>结果：未找到符合条件的学生。`;
-        return;
-    }
-
-    let tableHtml = `<div style="margin-bottom:5px; font-weight:bold;">✅ 找到 ${list.length} 条结果:</div>
-        <div class="table-wrap" style="max-height:200px; overflow-y:auto; box-shadow:none; margin:0;">
-        <table class="ai-chat-table">
-            <thead><tr><th>班级</th><th>姓名</th><th>总分</th><th>详情</th></tr></thead>
-            <tbody>`;
-
-    list.forEach(s => {
-        // 智能展示详情：如果查询提到了某科，就显示某科成绩；提到了进步，显示进步
-        let detail = `排:${s.townRank}`;
-        if (query.includes("进步") || query.includes("退步")) {
-            const p = s.progress > 0 ? `+${s.progress}` : s.progress;
-            detail = `<span style="color:${s.progress > 0 ? 'green' : 'red'}">变${p}</span>`;
-        } else {
-            // 简单的尝试找一下偏科或者单科
-            SUBJECTS.forEach(sub => {
-                if (query.includes(sub)) detail = `${sub}:${s.scores[sub]}`;
-            });
-        }
-
-        tableHtml += `<tr>
-                <td>${s.class}</td>
-                <td>${s.name}</td>
-                <td>${s.total}</td>
-                <td>${detail}</td>
-            </tr>`;
-    });
-    tableHtml += `</tbody></table></div>`;
-
-    lastMsg.innerHTML = tableHtml;
-}
-
-function exportProgressAnalysis() {
-    if (!PROGRESS_CACHE.length) return alert("暂无分析结果，请先进行分析");
-    const user = getCurrentUser();
-    const role = user?.role || 'guest';
-    const scope = (role === 'teacher') ? getTeacherScopeForUser(user) : null;
-    const wb = XLSX.utils.book_new(); const data = [['班级', '姓名', '本次总分', '本次镇排', '上次总分', '上次镇排', '名次变化(正进负退)']];
-    PROGRESS_CACHE
-        .filter(r => {
-            if (role === 'class_teacher' && user?.class) return r.class === user.class;
-            if (role === 'teacher' && scope && scope.classes.size > 0) return scope.classes.has(r.class);
-            return true;
-        })
-        .forEach(r => { data.push([r.class, r.name, r.currTotal, r.currRank, r.prevTotal, r.prevRank, r.change]); });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), "进退步分析"); XLSX.writeFile(wb, "学生进退步追踪分析表.xlsx");
-}
-
-// 全局状态管理
-let STD_STATE = {
-    page: 1,
-    size: 100,
-    sortCol: null,     // 当前排序列
-    sortDir: 'desc',   // desc 或 asc
-    activeFilters: {}, // 存储筛选状态: { 'school': new Set(['实验中学', '二中']), '语文': ... }
-    cacheData: []      // 最终展示的数据
-};
-
-// 1. 主渲染函数
-function getClassTeacherStudentViewMode() {
-    const sel = document.getElementById('classTeacherViewMode');
-    const val = sel?.value;
-    return (val === 'teaching') ? 'teaching' : 'class_all';
-}
-
-function renderStudentDetails(reset = true) {
-    // 隐藏可能存在的筛选菜单
-    closeAllMenus();
-
-    if (reset) {
-        STD_STATE.page = 1;
-        let data = [...RAW_DATA]; // 从原始数据副本开始
-
-        const user = getCurrentUser();
-        const role = user?.role || 'guest';
-        const classTeacherMode = role === 'class_teacher' ? getClassTeacherStudentViewMode() : 'teaching';
-        console.log('[考试明细] 当前用户:', user);
-
-        // --- A. 权限过滤 ---
-        // 🆕 使用多角色系统进行权限控制
-        if (user && RoleManager.hasAnyRole(user, ['teacher', 'class_teacher']) &&
-            !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director'])) {
-            // 纯教师或班主任角色：只能看自己任教的班级
-            console.log('[考试明细] 🔒 检测到教师角色，启用权限过滤');
-            const scope = getTeacherScopeForUser(user);
-
-            // 班主任“本班全科”模式：按本班过滤，不受任教学科限制
-            if (role === 'class_teacher' && classTeacherMode === 'class_all') {
-                const myClass = normalizeClass(user?.class || '');
-                if (!myClass) {
-                    data = [];
-                    UI.toast('⚠️ 班主任账号未配置班级，无法显示本班数据。', 'warning');
-                } else {
-                    const before = data.length;
-                    data = data.filter(s => normalizeClass(s.class) === myClass);
-                    console.log(`[考试明细] 班主任本班全科模式：过滤前${before}人，过滤后${data.length}人，班级=${myClass}`);
-                }
-            } else if (scope.classes.size > 0) {
-                const originalCount = data.length;
-
-                if (data.length > 0) {
-                    console.log(`[考试明细] 数据样本班级: ${data[0].class} (规范化: ${normalizeClass(data[0].class)})`);
-                }
-                console.log(`[考试明细] 权限班级:`, Array.from(scope.classes));
-
-                data = data.filter(s => {
-                    const rawClass = String(s.class || '').trim();
-                    const normalizedClass = normalizeClass(s.class);
-
-                    // 宽容匹配策略
-                    let hasPermission = scope.classes.has(normalizedClass);
-                    if (!hasPermission) hasPermission = scope.classes.has(rawClass);
-                    if (!hasPermission) {
-                        // 尝试模糊匹配，如 "701" 和 "7.01"
-                        for (const allowedCls of scope.classes) {
-                            // 移除所有点和空格再比较
-                            if (String(allowedCls).replace(/[\s\.]/g, '') === String(rawClass).replace(/[\s\.]/g, '')) {
-                                hasPermission = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!hasPermission && Math.random() < 0.001) { // 抽样打印被过滤的
-                        console.log(`[考试明细] ❌ 过滤: ${s.class} -> ${normalizedClass}`);
-                    }
-                    return hasPermission;
-                });
-                console.log(`[考试明细] 🔐 权限筛选：过滤前${originalCount}人，过滤后${data.length}人`);
-
-                if (data.length === 0) {
-                    console.warn('[考试明细] ⚠️ 过滤后无数据');
-                    const userClasses = Array.from(scope.classes).join(', ');
-                    UI.toast(`⚠️ 暂无考试数据。您的任教班级：${userClasses}`, 'warning');
-                }
-            } else {
-                console.warn('[考试明细] ⚠️ 未找到任课信息，显示空数据');
-                data = []; // 没有任课信息则不显示任何数据
-                UI.toast('⚠️ 未找到您的任课信息，无法显示数据。请在“数据管理-教师任课”中检查配置。', 'warning');
-            }
-        } else if (user) {
-            // 其他角色的权限控制
-            if (!RoleManager.hasAnyRole(user, ['admin', 'director'])) {
-                // 🟢 [Bug #1 修复] 级部主任：按年级过滤，只能看到自己级部的数据
-                if (RoleManager.hasAnyRole(user, ['grade_director']) && user.class) {
-                    const gradePrefix = String(user.class).trim();
-                    const beforeCount = data.length;
-                    data = data.filter(s => {
-                        const cls = String(s.class || '').trim();
-                        // 班级号以年级号开头（例如年级"7" → 班级"701","702"等）
-                        return cls.startsWith(gradePrefix);
-                    });
-                    console.log(`[考试明细] 🔒 级部主任过滤: 年级=${gradePrefix}, 过滤前${beforeCount}人, 过滤后${data.length}人`);
-                    if (data.length === 0) {
-                        UI.toast(`⚠️ 未找到${gradePrefix}年级的考试数据`, 'warning');
-                    }
-                }
-                // 非管理员、非教务主任、非级部主任的其他角色：按学校过滤
-                else if (user.school) {
-                    data = data.filter(s => s.school === user.school);
-                    console.log(`[考试明细] 按学校过滤: ${user.school}`);
-                }
-            }
-            console.log('[考试明细] 其他角色或管理员，显示所有/学校范围数据');
-        }
-
-        // --- B. 顶部下拉框过滤 (依然保留，作为一级筛选) ---
-        const selectedSchool = document.getElementById('studentSchoolSelect')?.value;
-        const selectedClass = document.getElementById('studentClassSelect')?.value;
-
-        // 下拉框筛选逻辑（在权限筛选的基础上二次筛选）
-        if (selectedSchool && !selectedSchool.includes('请选择')) {
-            data = data.filter(s => s.school === selectedSchool);
-            if (selectedClass && selectedClass !== '全部') {
-                // 如果是教师，需要确保选中的班级在权限范围内（虽然下拉框可能已经限制了）
-                data = data.filter(s => s.class === selectedClass);
-            }
-        }
-
-        data = getComparisonStudentList(data, RAW_DATA);
-
-        // --- C. Excel 列筛选 (核心逻辑) ---
-        // 遍历所有已激活的筛选器
-        Object.keys(STD_STATE.activeFilters).forEach(colKey => {
-            const allowedValues = STD_STATE.activeFilters[colKey]; // Set 对象
-            if (!allowedValues || allowedValues.size === 0) return;
-
-            data = data.filter(s => {
-                let val = getCellValue(s, colKey);
-                // 将值统一转为字符串进行比对
-                return allowedValues.has(String(val));
-            });
-        });
-
-        // --- D. 排序 ---
-        if (STD_STATE.sortCol) {
-            const key = STD_STATE.sortCol;
-            const dir = STD_STATE.sortDir === 'asc' ? 1 : -1;
-
-            data.sort((a, b) => {
-                let valA = getCellValue(a, key);
-                let valB = getCellValue(b, key);
-
-                // 处理空值
-                if (valA === '-' || valA === undefined) valA = -9999;
-                if (valB === '-' || valB === undefined) valB = -9999;
-
-                if (typeof valA === 'number' && typeof valB === 'number') {
-                    return (valA - valB) * dir;
-                }
-                return String(valA).localeCompare(String(valB), 'zh-CN', { numeric: true }) * dir;
-            });
-        } else {
-            // 默认按总分降序
-            data.sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0));
-        }
-
-        STD_STATE.cacheData = data;
-    }
-
-    // --- E. 分页与渲染 ---
-    const totalItems = STD_STATE.cacheData.length;
-    const totalPages = Math.ceil(totalItems / STD_STATE.size) || 1;
-    if (STD_STATE.page > totalPages) STD_STATE.page = totalPages;
-    if (STD_STATE.page < 1) STD_STATE.page = 1;
-
-    const startIdx = (STD_STATE.page - 1) * STD_STATE.size;
-    const endIdx = startIdx + STD_STATE.size;
-    const displayList = STD_STATE.cacheData.slice(startIdx, endIdx);
-
-    const thead = document.querySelector('#studentDetailTable thead tr');
-    const tbody = document.querySelector('#studentDetailTable tbody');
-
-    const user = getCurrentUser();
-    const role = user?.role || 'guest';
-    const isTeacher = role === 'teacher';
-    const isClassTeacher = role === 'class_teacher';
-    const classTeacherMode = isClassTeacher ? getClassTeacherStudentViewMode() : 'teaching';
-    const needTeacherScope = isTeacher || (isClassTeacher && classTeacherMode === 'teaching');
-    const teacherScope = needTeacherScope ? getTeacherScopeForUser(user) : null;
-    const visibleSubjects = (isTeacher || (isClassTeacher && classTeacherMode === 'teaching'))
-        ? SUBJECTS.filter(s => teacherScope.subjects.has(normalizeSubject(s)))
-        : SUBJECTS;
-
-    // 生成表头 (带漏斗图标)
-    let headerHTML = '';
-
-    // 辅助：生成表头单元格
-    const buildTh = (label, colKey, width = 'auto') => {
-        // 判断该列是否有激活的筛选
-        const isFiltered = STD_STATE.activeFilters[colKey] && STD_STATE.activeFilters[colKey].size > 0;
-        // 判断该列是否正在排序
-        const isSorted = STD_STATE.sortCol === colKey;
-        const sortIcon = isSorted ? (STD_STATE.sortDir === 'asc' ? '↑' : '↓') : '';
-
-        const activeClass = (isFiltered || isSorted) ? 'active' : '';
-
-        return `
-                <th style="min-width:${width}">
-                    <div class="excel-header" onclick="toggleExcelMenu('${colKey}', event)">
-                        <div class="header-text">${label} <span style="color:#2563eb">${sortIcon}</span></div>
-                        <div class="filter-icon-btn ${activeClass}">
-                            <i class="ti ti-filter"></i>
-                        </div>
-                        <!-- 下拉菜单容器，点击时动态填充 -->
-                        <div id="menu-${colKey}" class="excel-filter-menu" onclick="event.stopPropagation()"></div>
-                    </div>
-                </th>
-            `;
-    };
-
-    headerHTML += buildTh('学校', 'school', '120px');
-    headerHTML += buildTh('班级', 'class', '80px');
-    headerHTML += buildTh('姓名', 'name', '100px');
-    if (!isTeacher && !isClassTeacher) {
-        headerHTML += buildTh('考号', 'id', '100px');
-        headerHTML += buildTh('考场', 'examRoom', '80px');
-        headerHTML += buildTh('T分', 'totalTScore', '60px');
-    }
-
-    // 动态判断当前数据是否只有一所学校
-    const isSingleSchool = isSingleSchoolMode();
-    const townHeaderStyle = isSingleSchool ? 'display:none;' : ''; // 如果单校，隐藏列
-
-    visibleSubjects.forEach(sub => {
-        headerHTML += buildTh(sub, sub, '80px');
-        if (!isTeacher && !isClassTeacher) {
-            headerHTML += `<th>T</th><th>校</th><th>班</th><th style="${townHeaderStyle}">镇</th>`;
-        } else {
-            // 科任教师/班主任：展示分数 + 班排 + 级部排 + 镇排
-            headerHTML += `<th>班</th><th>级</th><th style="${townHeaderStyle}">镇</th>`;
-        }
-    });
-
-    const totalLabel = CONFIG.name === '9年级' ? '五科总分' : '总分';
-    if (!isTeacher && !isClassTeacher) {
-        headerHTML += buildTh(totalLabel, 'total', '80px');
-        headerHTML += `<th>校</th><th>班</th><th style="${townHeaderStyle}">镇</th>`;
-    } else {
-        // 科任教师/班主任：显示总分及排名（便于诊断学生整体位置）
-        headerHTML += buildTh(totalLabel, 'total', '80px');
-        headerHTML += `<th>班</th><th>级</th><th style="${townHeaderStyle}">镇</th>`;
-    }
-
-    thead.innerHTML = headerHTML;
-
-    // 生成数据行
-    let rowsHTML = displayList.map(student => {
-        const nameLink = `<a href="javascript:void(0)" onclick="jumpToStudent('${student.name}', '${student.school}', '${student.class}')" style="color:var(--primary); font-weight:800;">${student.name}</a>`;
-
-        let row = `<tr>
-                <td data-label="学校">${student.school}</td>
-                <td data-label="班级">${student.class}</td>
-                <td data-label="姓名">${nameLink}</td>
-                ${!isTeacher && !isClassTeacher ? `<td data-label="考号">${student.id}</td><td data-label="考场">${student.examRoom || '-'}</td><td data-label="T分" style="color:#b45309; font-weight:bold;">${student.totalTScore || '-'}</td>` : ''}`;
-
-        visibleSubjects.forEach(sub => {
-            const score = student.scores[sub] !== undefined ? student.scores[sub] : '-';
-            const t = student.tScores ? (student.tScores[sub] || '-') : '-';
-
-            // 修改功能链接
-            const clickAttr = `onclick="updateStudentScore('${student.name}', '${student.class}', '${sub}', ${score})"`;
-
-            if (!isTeacher && !isClassTeacher) {
-                row += `<td data-label="${sub}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${score}</td>
-                            <td data-label="${sub}T分" class="text-gray">${t}</td>
-                            <td data-label="${sub}校排" class="text-gray">${safeGet(student, `ranks.${sub}.school`, '-')}</td>
-                            <td data-label="${sub}班排" class="text-gray">${safeGet(student, `ranks.${sub}.class`, '-')}</td>
-                            <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${safeGet(student, `ranks.${sub}.township`, '-')}</td>`;
-            } else {
-                row += `<td data-label="${sub}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${score}</td>
-                            <td data-label="${sub}班排" class="text-gray">${safeGet(student, `ranks.${sub}.class`, '-')}</td>
-                            <td data-label="${sub}级排" class="text-gray">${safeGet(student, `ranks.${sub}.school`, '-')}</td>
-                            <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${safeGet(student, `ranks.${sub}.township`, '-')}</td>`;
-            }
-        });
-
-        if (!isTeacher && !isClassTeacher) {
-            row += `<td data-label="总分" style="color:#2563eb; font-weight:bold;">${student.total}</td>
-                        <td data-label="总分校排">${safeGet(student, 'ranks.total.school', '-')}</td>
-                        <td data-label="总分班排">${safeGet(student, 'ranks.total.class', '-')}</td>
-                        <td data-label="总分镇排">${safeGet(student, 'ranks.total.township', '-')}</td>
-                    </tr>`;
-        } else {
-            row += `<td data-label="总分" style="color:#2563eb; font-weight:bold;">${student.total}</td>
-                    <td data-label="总分班排">${safeGet(student, 'ranks.total.class', '-')}</td>
-                    <td data-label="总分级排">${safeGet(student, 'ranks.total.school', '-')}</td>
-                    <td data-label="总分镇排" style="${townHeaderStyle}">${safeGet(student, 'ranks.total.township', '-')}</td>
-                </tr>`;
-        }
-        return row;
-    }).join('');
-
-    // 分页条
-    const paginationHTML = `
-            <tr style="background:#f8fafc; font-weight:bold; position:sticky; bottom:0; z-index:150; border-top:2px solid #cbd5e1;">
-                <td colspan="100" style="text-align:center; padding:8px;">
-                    <div style="display:flex; align-items:center; justify-content:center; gap:15px;">
-                        <span style="font-size:12px; color:#666;">共 ${totalItems} 条 · ${STD_STATE.page}/${totalPages} 页</span>
-                        <button class="btn btn-sm" onclick="changeStdPage(-1)" ${STD_STATE.page === 1 ? 'disabled' : ''}>◀</button>
-                        <button class="btn btn-sm" onclick="changeStdPage(1)" ${STD_STATE.page === totalPages ? 'disabled' : ''}>▶</button>
-                    </div>
-                </td>
-            </tr>`;
-
-    if (totalItems === 0) tbody.innerHTML = `<tr><td colspan="100" style="text-align:center; padding:30px; color:#999;">无数据</td></tr>`;
-    else tbody.innerHTML = rowsHTML + paginationHTML;
-
-    // 隐藏可能存在的对比区域
-    const compareSection = document.getElementById('student-multi-period-compare-section');
-    if (compareSection) compareSection.style.display = 'none';
-
-    // 滚动到学生明细区域
-    setTimeout(() => {
-        const tableWrap = document.querySelector('#student-details .table-wrap');
-        if (tableWrap) {
-            tableWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    }, 100);
-}
-
-// 辅助：获取单元格值
-function getCellValue(student, colKey) {
-    if (colKey === 'total') return getComparisonStudentView(student, RAW_DATA)?.total;
-    if (colKey === 'totalTScore') return student.totalTScore;
-    if (['school', 'class', 'name', 'id', 'examRoom'].includes(colKey)) return student[colKey];
-    return student.scores[colKey] !== undefined ? student.scores[colKey] : '-';
-}
-
-// 2. 切换显示 Excel 菜单
-function toggleExcelMenu(colKey, event) {
-    // 阻止冒泡
-    event.stopPropagation();
-
-    const menuId = `menu-${colKey}`;
-    const menu = document.getElementById(menuId);
-
-    // 如果该菜单已打开，则关闭
-    if (menu.classList.contains('show')) {
-        menu.classList.remove('show');
-        return;
-    }
-
-    // 关闭其他所有菜单
-    closeAllMenus();
-
-    // 填充菜单内容
-    buildFilterMenuContent(colKey, menu);
-
-    // 显示
-    menu.classList.add('show');
-}
-
-// 3. 构建菜单内容 (核心：提取唯一值)
-function buildFilterMenuContent(colKey, container) {
-    // 简单策略：从当前显示的 cacheData 中提取唯一值
-    const uniqueValues = new Set();
-    STD_STATE.cacheData.forEach(s => {
-        let val = getCellValue(s, colKey);
-        uniqueValues.add(String(val));
-    });
-
-    // 转为数组并排序
-    const sortedValues = Array.from(uniqueValues).sort((a, b) => {
-        const numA = parseFloat(a);
-        const numB = parseFloat(b);
-        if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-        return a.localeCompare(b, 'zh-CN', { numeric: true });
-    });
-
-    // 检查哪些被选中了
-    const currentSet = STD_STATE.activeFilters[colKey];
-    const isAllChecked = !currentSet;
-
-    let listHtml = '';
-    sortedValues.forEach(v => {
-        const checked = isAllChecked || currentSet.has(v) ? 'checked' : '';
-        listHtml += `
-                <label class="menu-item">
-                    <input type="checkbox" value="${v}" ${checked} class="filter-cb-${colKey}"> ${v}
-                </label>`;
-    });
-
-    container.innerHTML = `
-            <div class="menu-actions">
-                <button class="btn btn-sm btn-gray" style="width:100%" onclick="applySort('${colKey}', 'asc')">⬆️ 升序排列</button>
-                <button class="btn btn-sm btn-gray" style="width:100%" onclick="applySort('${colKey}', 'desc')">⬇️ 降序排列</button>
-                <input type="text" class="menu-search" placeholder="搜索..." oninput="filterCheckboxList(this)">
-            </div>
-            <div class="menu-list">
-                <label class="menu-item" style="font-weight:bold; border-bottom:1px solid #eee;">
-                    <input type="checkbox" id="cb-all-${colKey}" ${isAllChecked ? 'checked' : ''} onchange="toggleAllCheckboxes('${colKey}', this)"> (全选)
-                </label>
-                ${listHtml}
-            </div>
-            <div class="menu-footer">
-                <button class="btn btn-sm btn-primary" onclick="confirmFilter('${colKey}')">确定</button>
-                <button class="btn btn-sm btn-gray" onclick="clearFilter('${colKey}')">重置</button>
-            </div>
-        `;
-}
-
-// 4. 菜单内部交互函数
-window.applySort = function (colKey, dir) {
-    STD_STATE.sortCol = colKey;
-    STD_STATE.sortDir = dir;
-    renderStudentDetails(true); // 重绘
-};
-
-window.filterCheckboxList = function (input) {
-    const text = input.value.toLowerCase();
-    const list = input.closest('.menu-actions').nextElementSibling;
-    const items = list.querySelectorAll('.menu-item');
-    // 跳过第一个(全选)
-    for (let i = 1; i < items.length; i++) {
-        const itemText = items[i].innerText.toLowerCase();
-        items[i].style.display = itemText.includes(text) ? 'flex' : 'none';
-    }
-};
-
-window.toggleAllCheckboxes = function (colKey, source) {
-    const cbs = document.querySelectorAll(`.filter-cb-${colKey}`);
-    cbs.forEach(cb => {
-        if (cb.parentElement.style.display !== 'none') {
-            cb.checked = source.checked;
-        }
-    });
-};
-
-window.confirmFilter = function (colKey) {
-    const cbs = document.querySelectorAll(`.filter-cb-${colKey}:checked`);
-    const allCbs = document.querySelectorAll(`.filter-cb-${colKey}`);
-
-    if (cbs.length === allCbs.length) {
-        delete STD_STATE.activeFilters[colKey];
-    } else {
-        const selectedValues = new Set();
-        cbs.forEach(cb => selectedValues.add(cb.value));
-        STD_STATE.activeFilters[colKey] = selectedValues;
-    }
-
-    renderStudentDetails(true);
-};
-
-window.clearFilter = function (colKey) {
-    delete STD_STATE.activeFilters[colKey];
-    renderStudentDetails(true);
-};
-
-function closeAllMenus() {
-    document.querySelectorAll('.excel-filter-menu').forEach(el => el.classList.remove('show'));
-}
-
-// 点击空白关闭菜单
-document.addEventListener('click', closeAllMenus);
-
-// 辅助：翻页
-window.changeStdPage = function (delta) {
-    STD_STATE.page += delta;
-    renderStudentDetails(false);
-    document.querySelector('#student-details .table-wrap').scrollTop = 0;
-};
-
-
-function exportStudentDetails() {
-    if (!RAW_DATA.length) { alert('请先上传数据'); return; }
-
-    const user = getCurrentUser();
-    const role = user?.role || 'guest';
-    const isTeacher = role === 'teacher';
-    const isClassTeacher = role === 'class_teacher';
-    const classTeacherMode = isClassTeacher ? getClassTeacherStudentViewMode() : 'teaching';
-    const needTeacherScope = isTeacher || (isClassTeacher && classTeacherMode === 'teaching');
-    const teacherScope = needTeacherScope ? getTeacherScopeForUser(user) : null;
-    const visibleSubjects = (isTeacher || (isClassTeacher && classTeacherMode === 'teaching'))
-        ? SUBJECTS.filter(s => teacherScope.subjects.has(normalizeSubject(s)))
-        : SUBJECTS;
-
-    const selectedSchool = document.getElementById('studentSchoolSelect').value;
-    const selectedClass = document.getElementById('studentClassSelect').value;
-
-    // 1. 判断是否为单校模式 (只有1所学校)
-    const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
-
-    const wb = XLSX.utils.book_new();
-
-    // 2. 动态构建表头
-    const headers = isClassTeacher
-        ? ['学校', '班级', '姓名']
-        : (isTeacher
-            ? ['学校', '班级', '姓名']
-            : ['学校', '班级', '姓名', '考号', '考场', '标准分总和(T分)']);
-
-    visibleSubjects.forEach(subject => {
-        if (isTeacher || isClassTeacher) {
-            headers.push(`${subject} 分数`, `${subject} 班排`, `${subject} 级排`);
-            if (!isSingleSchool) headers.push(`${subject} 镇排`);
-        } else {
-            headers.push(`${subject} 分数`, `${subject} T分`, `${subject} 校排`, `${subject} 班排`);
-            if (!isSingleSchool) headers.push(`${subject} 镇排`);
-        }
-    });
-
-    if (!isClassTeacher && !isTeacher) {
-        if (CONFIG.name === '9年级') {
-            headers.push('五科总分', '五科校排', '五科班排');
-            if (!isSingleSchool) headers.push('五科镇排');
-        } else {
-            headers.push('总分', '总分校排', '总分班排');
-            if (!isSingleSchool) headers.push('总分镇排');
-        }
-    } else {
-        headers.push(CONFIG.name === '9年级' ? '五科总分' : '总分', '总分班排', '总分级排');
-        if (!isSingleSchool) headers.push('总分镇排');
-    }
-
-    const data = [headers];
-
-    let studentsToShow = [...RAW_DATA];
-    if ((isTeacher || (isClassTeacher && classTeacherMode === 'teaching')) && teacherScope && teacherScope.classes.size > 0) {
-        studentsToShow = studentsToShow.filter(s => {
-            const rawClass = String(s.class || '').trim();
-            const normalizedClass = normalizeClass(s.class);
-            if (teacherScope.classes.has(normalizedClass) || teacherScope.classes.has(rawClass)) return true;
-            for (const allowedCls of teacherScope.classes) {
-                if (String(allowedCls).replace(/[\s\.]/g, '') === String(rawClass).replace(/[\s\.]/g, '')) {
-                    return true;
-                }
-            }
-            return false;
-        });
-    } else if (isClassTeacher && user?.class) {
-        const myClass = normalizeClass(user.class);
-        studentsToShow = studentsToShow.filter(s => normalizeClass(s.class) === myClass);
-    } else if (selectedSchool && !selectedSchool.includes('请选择')) {
-        studentsToShow = studentsToShow.filter(s => s.school === selectedSchool);
-        if (selectedClass && selectedClass !== '全部') studentsToShow = studentsToShow.filter(s => s.class === selectedClass);
-    }
-
-    if (selectedSchool && !selectedSchool.includes('请选择')) {
-        studentsToShow = studentsToShow.filter(s => s.school === selectedSchool);
-    }
-    if (selectedClass && selectedClass !== '全部') {
-        studentsToShow = studentsToShow.filter(s => s.class === selectedClass);
-    }
-
-    studentsToShow = getComparisonStudentList(studentsToShow, RAW_DATA);
-    studentsToShow.sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0));
-
-    // 3. 填充数据行 (需与表头逻辑严格对应)
-    studentsToShow.forEach(student => {
-        const row = (isTeacher || isClassTeacher)
-            ? [student.school, student.class, student.name]
-            : [student.school, student.class, student.name, student.id, student.examRoom, student.totalTScore || 0];
-
-        visibleSubjects.forEach(subject => {
-            const tVal = student.tScores && student.tScores[subject] ? student.tScores[subject] : '-';
-            if (isTeacher || isClassTeacher) {
-                row.push(
-                    student.scores[subject] || '-',
-                    safeGet(student, `ranks.${subject}.class`, '-'),
-                    safeGet(student, `ranks.${subject}.school`, '-')
-                );
-                if (!isSingleSchool) {
-                    row.push(safeGet(student, `ranks.${subject}.township`, '-'));
-                }
-            } else {
-                row.push(
-                    student.scores[subject] || '-',
-                    tVal,
-                    safeGet(student, `ranks.${subject}.school`, '-'),
-                    safeGet(student, `ranks.${subject}.class`, '-')
-                );
-                if (!isSingleSchool) {
-                    row.push(safeGet(student, `ranks.${subject}.township`, '-'));
-                }
-            }
-        });
-
-        if (!isClassTeacher && !isTeacher) {
-            row.push(
-                student.total,
-                safeGet(student, 'ranks.total.school', '-'),
-                safeGet(student, 'ranks.total.class', '-')
-            );
-            if (!isSingleSchool) {
-                row.push(safeGet(student, 'ranks.total.township', '-'));
-            }
-        } else {
-            row.push(
-                student.total,
-                safeGet(student, 'ranks.total.class', '-'),
-                safeGet(student, 'ranks.total.school', '-')
-            );
-            if (!isSingleSchool) {
-                row.push(safeGet(student, 'ranks.total.township', '-'));
-            }
-        }
-
-        data.push(row);
-    });
-
-    const ws = XLSX.utils.aoa_to_sheet(data);
-
-    // 调用装饰函数美化 Excel
-    decorateExcelSheet(ws, headers);
-
-    XLSX.utils.book_append_sheet(wb, ws, '学生考试明细');
-    if (isTeacher || isClassTeacher) {
-        const exportTag = buildTeacherExportTag(user, new Set(visibleSubjects || []));
-        XLSX.writeFile(wb, `学生考试明细_${exportTag}.xlsx`);
-    } else {
-        XLSX.writeFile(wb, '学生考试明细.xlsx');
-    }
-}
-
-// 🟢 [新增] 核心功能：管理员/级部主任修改成绩并同步云端
-async function updateStudentScore(name, cls, subject, oldScore) {
-    /* 👇👇👇 🟢 修改：权限校验逻辑 (支持级部主任) 🟢 👇👇👇 */
-    // 1. 权限与身份校验
-    const user = typeof Auth !== 'undefined' ? Auth.currentUser : null;
-    if (!user) return alert("请先登录系统");
-
-    const role = user.role;
-
-    // 允许: 管理员(admin) 和 级部主任(grade_director)
-    if (role !== 'admin' && role !== 'grade_director') {
-        return alert("⛔ 权限不足：只有【管理员】或【级部主任】可以修改原始成绩。\n\n(科任教师或班主任如需修改，请联系上级或重新上传Excel)");
-    }
-
-    // 级部主任特有检查：只能修改本年级的班级
-    if (role === 'grade_director') {
-        // 数据库中 class_name 存的是级部名称(如 "7" 或 "七")
-        const myGrade = String(user.class || "").trim();
-        const targetClass = String(cls).trim();
-
-        // 简单逻辑：班级名必须以级部名开头 (例如 "7" 匹配 "701", "705")
-        // 如果级部是中文 "七"，而班级是 "701"，可能需要更复杂的映射，这里假设输入一致
-        if (!myGrade || !targetClass.startsWith(myGrade)) {
-            return alert(`⛔ 越权操作拦截！\n\n您是【${myGrade}年级】主任，无权修改【${targetClass}班】的成绩。`);
-        }
-    }
-    /* 👆👆👆 🟢 结束 🟢 👆👆👆 */
-
-    // 2. 弹出输入框
-    const newScoreStr = prompt(`📝 正在修改成绩\n\n学生：${cls}班 ${name}\n科目：${subject}\n\n当前分数：${oldScore}\n请输入新分数：`, oldScore);
-
-    // 用户点击取消
-    if (newScoreStr === null) return;
-
-    const newScore = parseFloat(newScoreStr);
-    if (isNaN(newScore)) return alert("❌ 输入错误：请输入有效的数字！");
-    if (newScore === oldScore) return; // 分数没变，不做处理
-
-    // 3. 在内存数据中查找并更新
-    // 使用 姓名 + 班级 + 学校 组合键进行精确查找
-    const student = RAW_DATA.find(s => s.name === name && s.class === cls && s.school === (window.MY_SCHOOL || s.school));
-
-    if (!student) {
-        return alert("❌ 错误：未在内存中找到该学生数据，请尝试刷新页面。");
-    }
-
-    // 更新单科成绩
-    student.scores[subject] = newScore;
-
-    // 4. 重新计算该学生的总分
-    // 逻辑：判断当前模式（9年级五科模式 vs 全科模式）
-    let newTotal = 0;
-    let subjectsToCount = [];
-
-    if (CONFIG && CONFIG.name && CONFIG.name.includes('9')) {
-        // 9年级模式：只累加语数英物化
-        subjectsToCount = ['语文', '数学', '英语', '物理', '化学'];
-    } else {
-        // 其他模式：CONFIG.totalSubs 如果是 'auto' 则累加所有科目
-        subjectsToCount = (CONFIG.totalSubs === 'auto') ? SUBJECTS : CONFIG.totalSubs;
-    }
-
-    // 执行累加
-    subjectsToCount.forEach(sub => {
-        const val = student.scores[sub];
-        if (typeof val === 'number') {
-            newTotal += val;
-        }
-    });
-
-    student.total = parseFloat(newTotal.toFixed(2)); // 保持2位小数
-
-    // 5. 全局重算 (触发 Worker 重新排名、计算两率一分)
-    UI.loading(true, "正在重新排名并同步云端...");
-
-    try {
-        await processData(); // 等待 Worker 计算完成
-
-        // 6. 保存到 Supabase 云端 (关键步骤)
-        await saveCloudData();
-
-        // 7. 刷新界面
-        renderStudentDetails(false); // 刷新列表，false表示不重置页码
-        renderTables(); // 刷新宏观分析表
-
-        UI.loading(false);
-        UI.toast(`✅ 修改成功！\n${name} 的 ${subject} 已更新为 ${newScore}\n总分更新为 ${student.total}`, "success");
-
-        // 🛡️ [日志埋点] 记录成绩修改操作
-        Logger.log('修改成绩', `${cls}班 ${name} - ${subject}: ${oldScore} -> ${newScore} (总分:${student.total}) [操作人:${user.name}]`);
-
-    } catch (err) {
-        UI.loading(false);
-        console.error(err);
-        alert("❌ 保存失败：" + err.message);
-    }
-}
-function generateMobileLongImage() {
-    const sch = document.getElementById('studentSchoolSelect').value;
-    const cls = document.getElementById('studentClassSelect').value;
-    if (!sch || !cls || cls === '全部' || sch.includes('请选择')) return alert("请先选择具体的【学校】和【班级】！");
-
-    const students = getComparisonStudentList(RAW_DATA.filter(s => s.school === sch && s.class === cls), RAW_DATA);
-    if (students.length === 0) return alert("该班级无数据");
-
-    // 1. 数据准备
-    students.sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0));
-    const avg = students.reduce((sum, student) => sum + (Number(student.total) || 0), 0) / students.length;
-    const max = Number(students[0].total) || 0;
-
-    // 2. 渲染容器
-    const container = document.getElementById('mobile-share-render-area');
-    const dateStr = new Date().toLocaleDateString();
-
-    // 只展示前 15 名，避免图片过长，或者全部展示（视需求而定，这里展示前15+底部提示）
-    const displayLimit = 15;
-    let topListHtml = '';
-
-    students.slice(0, displayLimit).forEach((s, i) => {
-        let rankClass = 'background:#f1f5f9; color:#64748b;'; // 默认普通排名
-        let rankIcon = i + 1;
-
-        // 前三名特殊样式
-        if (i === 0) { rankClass = 'background:#fee2e2; color:#dc2626; border:1px solid #fecaca;'; rankIcon = '🥇'; }
-        else if (i === 1) { rankClass = 'background:#ffedd5; color:#c2410c; border:1px solid #fed7aa;'; rankIcon = '🥈'; }
-        else if (i === 2) { rankClass = 'background:#fef9c3; color:#b45309; border:1px solid #fde047;'; rankIcon = '🥉'; }
-
-        topListHtml += `
-                <div class="m-list-row" style="display:flex; justify-content:space-between; padding:12px 10px; border-bottom:1px dashed #eee; align-items:center;">
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <span style="width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; ${rankClass}">${rankIcon}</span>
-                        <span style="font-weight:bold; font-size:15px; color:#333;">${s.name}</span>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-weight:800; color:#2563eb; font-size:16px;">${s.total}</div>
-                        <div style="font-size:10px; color:#94a3b8;">镇排: ${safeGet(s, 'ranks.total.township', '-')}</div>
-                    </div>
-                </div>`;
-    });
-
-    // 如果人数超过展示限制，加个提示
-    if (students.length > displayLimit) {
-        topListHtml += `<div style="text-align:center; padding:10px; color:#94a3b8; font-size:12px;">... 后续 ${students.length - displayLimit} 名学生略 ...</div>`;
-    }
-
-    // 3. 构建 HTML (内联样式确保 html2canvas 渲染准确)
-    container.innerHTML = `
-            <div style="background:white; padding-bottom:20px;">
-                <!-- 头部海报区 -->
-                <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 30px 20px; text-align: center; border-radius: 0 0 30px 30px; margin-bottom: 20px; position:relative; overflow:hidden;">
-                    <!-- 装饰背景圆 -->
-                    <div style="position:absolute; top:-20px; left:-20px; width:100px; height:100px; background:rgba(255,255,255,0.1); border-radius:50%;"></div>
-                    <div style="position:absolute; bottom:-10px; right:-10px; width:80px; height:80px; background:rgba(255,255,255,0.1); border-radius:50%;"></div>
-                    
-                    <div style="font-size: 12px; opacity: 0.9; letter-spacing: 2px; margin-bottom: 5px; text-transform:uppercase;">Academic Report</div>
-                    <div style="font-size: 24px; font-weight: 800; margin-bottom: 5px; text-shadow:0 2px 4px rgba(0,0,0,0.2);">${sch} · ${cls}</div>
-                    <div style="font-size: 14px; opacity: 0.9; background:rgba(255,255,255,0.2); display:inline-block; padding:4px 12px; border-radius:20px;">
-                        ${CONFIG.name} 成绩快报
-                    </div>
-                </div>
-                
-                <!-- 核心指标卡 -->
-                <div style="margin: 0 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center; margin-bottom: 20px;">
-                    <div style="background:#f8fafc; padding:15px 5px; border-radius:12px; border:1px solid #e2e8f0;">
-                        <div style="font-size:20px; font-weight:800; color:#334155;">${students.length}</div>
-                        <div style="font-size:10px; color:#64748b; margin-top:2px;">参考人数</div>
-                    </div>
-                    <div style="background:#f0f9ff; padding:15px 5px; border-radius:12px; border:1px solid #bae6fd;">
-                        <div style="font-size:20px; font-weight:800; color:#0284c7;">${avg.toFixed(1)}</div>
-                        <div style="font-size:10px; color:#0369a1; margin-top:2px;">班级均分</div>
-                    </div>
-                    <div style="background:#fffbeb; padding:15px 5px; border-radius:12px; border:1px solid #fde68a;">
-                        <div style="font-size:20px; font-weight:800; color:#d97706;">${max}</div>
-                        <div style="font-size:10px; color:#b45309; margin-top:2px;">最高分</div>
-                    </div>
-                </div>
-
-                <!-- 榜单列表 -->
-                <div style="margin: 0 15px; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; overflow: hidden;">
-                    <div style="background:#f8fafc; padding:12px 15px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-weight:bold; color:#333; display:flex; align-items:center; gap:5px;">
-                            <span style="color:#eab308;">🏆</span> 光荣榜 (Top ${displayLimit})
-                        </span>
-                        <span style="font-size:10px; color:#94a3b8;">按总分排序</span>
-                    </div>
-                    <div style="padding: 0 10px;">
-                        ${topListHtml}
-                    </div>
-                </div>
-
-                <!-- 底部落款 -->
-                <div style="text-align: center; margin-top: 30px; color: #cbd5e1; font-size: 10px; line-height: 1.5;">
-                    <div style="margin-bottom:5px;">📅 生成日期: ${dateStr}</div>
-                    <div>本数据由 [智能教务分析系统] 自动生成</div>
-                    <div>仅供班级内部学情分析使用</div>
-                </div>
-            </div>
-        `;
-
-    // 4. 调用 html2canvas
-    const btn = event.target;
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="ti ti-loader"></i> 生成中...';
-    btn.disabled = true;
-
-    setTimeout(() => {
-        html2canvas(container, {
-            scale: 2, // 2倍高清
-            useCORS: true,
-            backgroundColor: '#f3f4f6' // 背景色
-        }).then(canvas => {
-            const imgData = canvas.toDataURL("image/png");
-            const resultBox = document.getElementById('mobile-img-result');
-            // 限制高度，允许滚动查看
-            resultBox.innerHTML = `<img src="${imgData}" style="width:100%; display:block; border-radius:8px;">`;
-
-            document.getElementById('mobileShareModal').style.display = 'flex';
-
-            // 恢复按钮
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }).catch(err => {
-            alert("生成失败: " + err.message);
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        });
-    }, 300); // 稍微延时等待 DOM 渲染
-}
-
-// 辅助：获取进步之星 HTML
-function getProgressStarsHtml(school, className) {
-    if (!PROGRESS_CACHE || PROGRESS_CACHE.length === 0) return "暂无进退步数据 (需在'进退步追踪'模块分析)";
-
-    // 筛选本班进步最大的前5名
-    const stars = PROGRESS_CACHE.filter(p => p.class === className && p.change > 0)
-        .sort((a, b) => b.change - a.change)
-        .slice(0, 5);
-
-    if (stars.length === 0) return "本次无明显进步记录";
-
-    return stars.map(s =>
-        `<span style="display:inline-block; margin:3px; padding:2px 6px; background:#dcfce7; color:#166534; border-radius:10px;">
-                ${s.name} ↑${s.change}
-             </span>`
-    ).join("");
-}
-
-function downloadMobileImage() {
-    const img = document.querySelector('#mobile-img-result img');
-    if (img) {
-        const link = document.createElement('a');
-        link.download = `班级成绩长图_${new Date().getTime()}.png`;
-        link.href = img.src;
-        link.click();
-    }
-}
-
-function analyzeMarginalStudents() {
-    const selectedSchool = document.getElementById('marginalSchoolSelect').value; if (!selectedSchool) { alert('请选择本校'); return; }
-    const mySchoolStudents = RAW_DATA.filter(student => student.school === selectedSchool); if (mySchoolStudents.length === 0) { alert('该学校没有学生数据'); return; }
-    MARGINAL_STUDENTS = {}; const classes = {}; mySchoolStudents.forEach(student => { if (!classes[student.class]) classes[student.class] = []; classes[student.class].push(student); });
-    Object.keys(classes).forEach(className => {
-        const classStudents = classes[className];
-        SUBJECTS.forEach(subject => {
-            const excThreshold = THRESHOLDS[subject]?.exc || 0; const passThreshold = THRESHOLDS[subject]?.pass || 0;
-            const excellentMarginal = classStudents.filter(student => { const score = student.scores[subject]; return score !== undefined && score < excThreshold && score >= excThreshold * 0.9; });
-            const passMarginal = classStudents.filter(student => { const score = student.scores[subject]; return score !== undefined && score < passThreshold && score >= passThreshold * 0.8; });
-            if (!MARGINAL_STUDENTS[className]) MARGINAL_STUDENTS[className] = {}; MARGINAL_STUDENTS[className][subject] = { excellentMarginal, passMarginal };
-        });
-    });
-    renderMarginalStudents(selectedSchool);
-}
-
-function renderMarginalStudents(schoolName) {
-    const container = document.getElementById('marginal-student-results'); container.innerHTML = '';
-    Object.keys(MARGINAL_STUDENTS).sort().forEach(className => {
-        let html = `<div class="sub-header">${className}班 - 边缘生分析</div><div class="table-wrap"><table><thead><tr><th>学科</th><th>优秀边缘生</th><th>及格边缘生</th></tr></thead><tbody>`;
-        SUBJECTS.forEach(subject => {
-            const subjectData = MARGINAL_STUDENTS[className][subject]; if (!subjectData) return;
-            const formatList = (list, thresh) => list.length ? list.map(s => `<strong>${s.name}</strong> <span style="font-size:12px;color:#666">(${s.scores[subject]},差${(thresh - s.scores[subject]).toFixed(1)})</span>`).join('， ') : '无';
-            html += `<tr><td>${subject}</td><td style="background:#f0fdf4;">${formatList(subjectData.excellentMarginal, THRESHOLDS[subject].exc)}</td><td style="background:#fffbeb;">${formatList(subjectData.passMarginal, THRESHOLDS[subject].pass)}</td></tr>`;
-        });
-        html += '</tbody></table></div>'; container.innerHTML += html;
-    });
-}
-
-function exportMarginalStudents() {
-    if (Object.keys(MARGINAL_STUDENTS).length === 0) { alert('请先进行边缘生分析'); return; }
-    const wb = XLSX.utils.book_new(); const headers = ['班级', '学科', '类型', '学生姓名', '分数', '与标准线差距']; const data = [headers];
-    Object.keys(MARGINAL_STUDENTS).sort().forEach(className => {
-        Object.keys(MARGINAL_STUDENTS[className]).forEach(subject => {
-            const subjectData = MARGINAL_STUDENTS[className][subject];
-            subjectData.excellentMarginal.forEach(student => data.push([className, subject, '优秀边缘生', student.name, student.scores[subject].toFixed(1), (THRESHOLDS[subject].exc - student.scores[subject]).toFixed(1)]));
-            subjectData.passMarginal.forEach(student => data.push([className, subject, '及格边缘生', student.name, student.scores[subject].toFixed(1), (THRESHOLDS[subject].pass - student.scores[subject]).toFixed(1)]));
-        });
-    });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), '边缘生分析'); XLSX.writeFile(wb, '边缘生分析.xlsx');
-}
-
-function renderHorizontalTable() {
-    const mySchoolName = document.getElementById('mySchool').value;
-    let html = '<table class="comparison-table"><thead><tr><th>统计项目/科目</th>'; let mySchoolIndex = -1;
-    const schoolNames = Object.keys(SCHOOLS);
-    schoolNames.forEach((school, index) => { if (school === mySchoolName) mySchoolIndex = index; const highlightClass = (school === mySchoolName) ? 'bg-highlight' : ''; html += `<th class="${highlightClass}">${school}</th>`; });
-    html += '</tr></thead><tbody>';
-    SUBJECTS.forEach(subject => {
-        html += `<tr><td>${subject}平均分</td>`; schoolNames.forEach(school => { const highlightClass = (school === mySchoolName) ? 'bg-highlight' : ''; html += `<td class="${highlightClass}">${SCHOOLS[school].metrics[subject] ? formatRankDisplay(SCHOOLS[school].metrics[subject].avg, SCHOOLS[school].rankings[subject]?.avg || 0) : '-'}</td>`; });
-        html += `</tr><tr><td>${subject}优秀率</td>`; schoolNames.forEach(school => { const highlightClass = (school === mySchoolName) ? 'bg-highlight' : ''; html += `<td class="${highlightClass}">${SCHOOLS[school].metrics[subject] ? formatRankDisplay(SCHOOLS[school].metrics[subject].excRate, SCHOOLS[school].rankings[subject]?.excRate || 0, 'school', true) : '-'}</td>`; });
-        html += `</tr><tr><td>${subject}及格率</td>`; schoolNames.forEach(school => { const highlightClass = (school === mySchoolName) ? 'bg-highlight' : ''; html += `<td class="${highlightClass}">${SCHOOLS[school].metrics[subject] ? formatRankDisplay(SCHOOLS[school].metrics[subject].passRate, SCHOOLS[school].rankings[subject]?.passRate || 0, 'school', true) : '-'}</td>`; });
-        html += '</tr>';
-    });
-    html += `<tr><td>${CONFIG.label}平均分</td>`; schoolNames.forEach(school => { const highlightClass = (school === mySchoolName) ? 'bg-highlight' : ''; html += `<td class="${highlightClass}">${SCHOOLS[school].metrics.total ? formatRankDisplay(SCHOOLS[school].metrics.total.avg, SCHOOLS[school].rankings.total?.avg || 0) : '-'}</td>`; });
-    html += `<tr><td>${CONFIG.label}优秀率</td>`; schoolNames.forEach(school => { const highlightClass = (school === mySchoolName) ? 'bg-highlight' : ''; html += `<td class="${highlightClass}">${SCHOOLS[school].metrics.total ? formatRankDisplay(SCHOOLS[school].metrics.total.excRate, SCHOOLS[school].rankings.total?.excRate || 0, 'school', true) : '-'}</td>`; });
-    html += `<tr><td>${CONFIG.label}及格率</td>`; schoolNames.forEach(school => { const highlightClass = (school === mySchoolName) ? 'bg-highlight' : ''; html += `<td class="${highlightClass}">${SCHOOLS[school].metrics.total ? formatRankDisplay(SCHOOLS[school].metrics.total.passRate, SCHOOLS[school].rankings.total?.passRate || 0, 'school', true) : '-'}</td>`; });
-    html += '</tr></tbody></table>';
-    document.getElementById('horizontal-table').innerHTML = html; document.getElementById('horizontal-box').classList.remove('hidden');
-}
-
-// ================= 增强版：横向对比Excel导出 =================
-function exportHorizontalExcel() {
-    const mySchoolName = document.getElementById('mySchool').value.trim();
-    const schoolNames = Object.keys(SCHOOLS);
-    if (schoolNames.length === 0) return alert("暂无数据可导出");
-
-    const wb = XLSX.utils.book_new();
-    const wsData = [];
-    const merges = [];
-    let rowIndex = 0;
-
-    const borderStyle = { top: { style: "thin", color: { rgb: "E2E8F0" } }, bottom: { style: "thin", color: { rgb: "E2E8F0" } }, left: { style: "thin", color: { rgb: "E2E8F0" } }, right: { style: "thin", color: { rgb: "E2E8F0" } } };
-    const styleHeader = { font: { bold: true, color: { rgb: "333333" }, sz: 11 }, fill: { fgColor: { rgb: "F3F4F6" } }, alignment: { horizontal: "center", vertical: "center" }, border: borderStyle };
-    const styleSubjectBar = { font: { bold: true, color: { rgb: "1E40AF" }, sz: 12 }, fill: { fgColor: { rgb: "DBEAFE" } }, alignment: { horizontal: "left", vertical: "center" }, border: { top: { style: "medium", color: { rgb: "3B82F6" } }, bottom: { style: "thin" } } };
-    const styleNormal = { alignment: { horizontal: "center", vertical: "center" }, border: borderStyle };
-    const styleHighlight = { fill: { fgColor: { rgb: "FEF9C3" } }, font: { bold: true, color: { rgb: "B45309" } }, alignment: { horizontal: "center", vertical: "center" }, border: { ...borderStyle, left: { style: "medium", color: { rgb: "FACC15" } }, right: { style: "medium", color: { rgb: "FACC15" } } } };
-    const styleRankRow = { font: { color: { rgb: "94A3B8" }, sz: 9 }, alignment: { horizontal: "center", vertical: "center" }, border: borderStyle };
-    const styleHighlightRank = Object.assign({}, styleHighlight, { font: { color: { rgb: "B45309" }, sz: 9 } });
-
-    const headerRow = [{ v: "统计项目 / 学校", t: 's', s: styleHeader }];
-    let mySchoolIndex = -1;
-
-    schoolNames.forEach((name, index) => {
-        const isMySchool = (name === mySchoolName);
-        if (isMySchool) mySchoolIndex = index;
-        headerRow.push({ v: name, t: 's', s: isMySchool ? styleHighlight : styleHeader });
-    });
-    wsData.push(headerRow);
-    rowIndex++;
-
-    const createCell = (val, type, format, isRankRow, colIndex) => {
-        const isMyCol = (colIndex === mySchoolIndex);
-        let style = isRankRow ? styleRankRow : styleNormal;
-        if (isMyCol) style = isRankRow ? styleHighlightRank : styleHighlight;
-        if (val === '-' || val === undefined || val === null) { return { v: '-', t: 's', s: style }; }
-        return { v: val, t: type, z: format, s: style };
-    };
-
-    const allItems = [...SUBJECTS, 'total'];
-    const totalCols = schoolNames.length + 1;
-
-    allItems.forEach(sub => {
-        const label = sub === 'total' ? CONFIG.label : sub;
-        const sepRowData = [];
-        for (let c = 0; c < totalCols; c++) { sepRowData.push({ v: c === 0 ? `📘 ${label} 数据分析` : "", t: 's', s: styleSubjectBar }); }
-        wsData.push(sepRowData);
-        merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: totalCols - 1 } });
-        rowIndex++;
-
-        const labelStyle = (color) => ({ font: { color: { rgb: color }, bold: true }, fill: { fgColor: { rgb: "F9FAFB" } }, border: borderStyle });
-        const rowAvg = [{ v: "平均分", t: 's', s: labelStyle("2563EB") }]; const rowAvgR = [{ v: "   ↳ 排名", t: 's', s: styleRankRow }];
-        const rowExc = [{ v: "优秀率", t: 's', s: labelStyle("16A34A") }]; const rowExcR = [{ v: "   ↳ 排名", t: 's', s: styleRankRow }];
-        const rowPass = [{ v: "及格率", t: 's', s: labelStyle("D97706") }]; const rowPassR = [{ v: "   ↳ 排名", t: 's', s: styleRankRow }];
-
-        schoolNames.forEach((school, idx) => {
-            const metrics = SCHOOLS[school].metrics[sub]; const rankings = SCHOOLS[school].rankings[sub] || {};
-            if (metrics) {
-                rowAvg.push(createCell(parseFloat(metrics.avg.toFixed(2)), 'n', '0.00', false, idx));
-                rowAvgR.push(createCell(rankings.avg, 'n', '0', true, idx));
-                rowExc.push(createCell(metrics.excRate, 'n', '0.00%', false, idx));
-                rowExcR.push(createCell(rankings.excRate, 'n', '0', true, idx));
-                rowPass.push(createCell(metrics.passRate, 'n', '0.00%', false, idx));
-                rowPassR.push(createCell(rankings.passRate, 'n', '0', true, idx));
-            } else {
-                [rowAvg, rowAvgR, rowExc, rowExcR, rowPass, rowPassR].forEach(r => r.push(createCell('-', 's', null, false, idx)));
-            }
-        });
-        wsData.push(rowAvg, rowAvgR, rowExc, rowExcR, rowPass, rowPassR);
-        rowIndex += 6;
-    });
-
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!merges'] = merges;
-    const cols = [{ wch: 20 }]; schoolNames.forEach(() => cols.push({ wch: 11 })); ws['!cols'] = cols;
-    ws['!freeze'] = { xSplit: 1, ySplit: 1 };
-
-    XLSX.utils.book_append_sheet(wb, ws, "横向对比分析");
-    XLSX.writeFile(wb, `乡镇学校横向对比表_${mySchoolName || '全镇'}.xlsx`);
-}
-
-function exportMacroTables() {
-    if (!Object.keys(SCHOOLS).length) return alert("请先上传数据");
-
-    const isGrade9 = CONFIG.name && CONFIG.name.includes('9');
-    const wb = XLSX.utils.book_new();
-
-    // 1. 构建动态表头
-    let headerRow = ["学校名称", "实考人数", "平均分", "优秀率", "及格率"];
-    if (isGrade9) {
-        headerRow.push("高分人数(≥490)", "高分率", "高分赋分(50)");
-    }
-    headerRow.push("赋分-均分", "赋分-优率", "赋分-及格", "两率一分总分", "排名");
-
-    const summaryData = [headerRow];
-    const list = Object.values(SCHOOLS).sort((a, b) => a.rank2Rate - b.rank2Rate);
-
-    // 2. 构建数据行
-    list.forEach(s => {
-        const m = s.metrics.total || {};
-        let row = [
-            s.name,
-            m.count || 0,
-            getExcelNum(m.avg),
-            getExcelPercent(m.excRate),
-            getExcelPercent(m.passRate)
-        ];
-
-        // 插入高分数据
-        if (isGrade9) {
-            const hs = s.highScoreStats || { count: 0, ratio: 0, score: 0 };
-            row.push(hs.count, getExcelPercent(hs.ratio), getExcelNum(hs.score));
-        }
-
-        // 插入原有赋分数据
-        row.push(
-            getExcelNum(m.ratedAvg),
-            getExcelNum(m.ratedExc),
-            getExcelNum(m.ratedPass),
-            getExcelNum(s.score2Rate),
-            s.rank2Rate
-        );
-
-        summaryData.push(row);
-    });
-
-    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-    // 调用装饰函数，传入 Worksheet 和 表头数组
-    decorateExcelSheet(wsSummary, headerRow);
-    XLSX.utils.book_append_sheet(wb, wsSummary, "综合总表");
-
-    // 遍历所有学科导出详情
-    SUBJECTS.forEach(sub => {
-        // 1. 先显式定义表头数组 (之前报错是因为这行可能被漏掉或写在了数组里)
-        const subHeaders = ["学校名称", "实考人数", "平均分", "优秀率", "及格率", "均分排名", "优率排名", "及格排名"];
-
-        // 2. 使用定义的表头初始化数据数组
-        const subData = [subHeaders];
-
-        const subList = Object.values(SCHOOLS).filter(s => s.metrics[sub]).sort((a, b) => (a.rankings[sub].avg - b.rankings[sub].avg));
-
-        subList.forEach(s => {
-            const m = s.metrics[sub];
-            const r = s.rankings[sub];
-            subData.push([
-                s.name,
-                m.count,
-                getExcelNum(m.avg),
-                getExcelPercent(m.excRate),
-                getExcelPercent(m.passRate),
-                r.avg,
-                r.excRate,
-                r.passRate
-            ]);
-        });
-
-        const wsSub = XLSX.utils.aoa_to_sheet(subData);
-
-        // 3. 应用样式 (现在 subHeaders 已经有定义了，不会报错)
-        decorateExcelSheet(wsSub, subHeaders);
-
-        XLSX.utils.book_append_sheet(wb, wsSub, sub);
-    });
-
-    XLSX.writeFile(wb, `乡镇宏观分析_${CONFIG.name}.xlsx`);
-}
-
-// --- 增值性评价逻辑 ---
-
-let VA_VIEW_MODE = 'school'; // school | class
-
-function switchValueAddedView(mode, btn) {
-    VA_VIEW_MODE = mode;
-
-    // 1. 切换按钮自身的激活状态 (视觉反馈)
-    // 找到同一组的所有按钮 (它们都在同一个父容器里)
-    const siblings = btn.parentNode.querySelectorAll('.btn');
-    siblings.forEach(b => {
-        b.classList.remove('active');
-        // 恢复默认样式 (白底灰字)
-        b.style.backgroundColor = 'white';
-        b.style.color = '#64748b';
-    });
-
-    // 设置当前按钮为激活样式 (蓝底白字)
-    btn.classList.add('active');
-    btn.style.backgroundColor = '#e0f2fe';
-    btn.style.color = '#0369a1';
-    // 重新渲染表格
-    renderValueAddedReport(true);
-}
-
-function renderValueAddedReport(isSwitching = false) {
-    if (window.__PROGRESS_BASELINE_LOADING) {
-        const statusEl = document.getElementById('va-data-status');
-        if (statusEl) statusEl.innerHTML = '⏳ 正在自动加载上次考试数据...';
-        return;
-    }
-    if ((!PREV_DATA || PREV_DATA.length === 0) && RAW_DATA.length > 0 && typeof ensureProgressBaselineData === 'function') {
-        setProgressBaselineStatus('⏳ 正在自动加载上次考试数据...', 'loading');
-        Promise.resolve(ensureProgressBaselineData({
-            allowCloudSync: true,
-            rerenderReport: true,
-            rerenderAnalysis: false
-        })).catch(err => {
-            console.warn('[progress] 自动补拉历史基准失败:', err);
-            setProgressBaselineStatus('❌ 自动加载上次考试数据失败，请稍后重试', 'error');
-        });
-        return;
-    }
-    // 1. 检查数据源
-    if (!PROGRESS_CACHE || PROGRESS_CACHE.length === 0) {
-        // 尝试自动检查是否已有数据
-        if (PREV_DATA.length > 0 && RAW_DATA.length > 0) {
-            // 如果有数据但没生成缓存，提示用户去那个模块点一下，或者这里自动调用（为了安全起见，提示用户）
-            document.getElementById('va-data-status').innerHTML = '⚠️ 已有数据，正在后台计算...';
-            // 自动执行一次匹配逻辑 (借用 renderProgressAnalysis 的逻辑，但不画图)
-            // 这里为了简化，我们直接基于 PREV_DATA 和 RAW_DATA 现场算一遍核心数据
-            performSilentMatching();
-        } else {
-            if (!isSwitching) alert("❌ 无法生成：请先同步当前届别考试或导入“上次考试”数据！");
-            document.getElementById('va-data-status').innerHTML = '❌ 缺上次考试数据';
-            return;
-        }
-    }
-    document.getElementById('va-data-status').innerHTML = '✅ 数据就绪';
-
-    // 2. 聚合数据
-    const stats = {};
-
-    PROGRESS_CACHE.forEach(p => {
-        // 确定分组键：是按学校还是按班级
-        let key = "";
-        let name = "";
-        if (VA_VIEW_MODE === 'school') {
-            // 根据当前学生找学校名
-            // PROGRESS_CACHE 里可能没有存 school 字段，需要回溯 RAW_DATA 找，或者我们在 performSilentMatching 里补全
-            const stuObj = RAW_DATA.find(r => r.name === p.name && r.class === p.class);
-            if (stuObj) key = stuObj.school;
-            else key = "未知学校";
-            name = key;
-        } else {
-            key = p.class; // 班级
-            // 尝试附加学校名以防班级重名
-            const stuObj = RAW_DATA.find(r => r.name === p.name && r.class === p.class);
-            if (stuObj) name = `${stuObj.school} ${p.class}`;
-            else name = p.class;
-        }
-
-        if (!stats[name]) {
-            stats[name] = { name: name, count: 0, sumPrev: 0, sumCurr: 0 };
-        }
-        stats[name].count++;
-        stats[name].sumPrev += p.prevRank;
-        stats[name].sumCurr += p.currRank;
-    });
-
-    // 3. 计算增值指标
-    const reportData = Object.values(stats).map(item => {
-        const avgPrev = item.sumPrev / item.count;
-        const avgCurr = item.sumCurr / item.count;
-        const valueAdded = avgPrev - avgCurr; // 正数表示排名向前移动（变小）
-        return {
-            name: item.name,
-            count: item.count,
-            entryAvg: avgPrev,
-            exitAvg: avgCurr,
-            valueAdded: valueAdded
-        };
-    });
-
-    // 4. 排序 (按增值从高到低)
-    reportData.sort((a, b) => b.valueAdded - a.valueAdded);
-    reportData.forEach((d, i) => d.rank = i + 1);
-
-    // 5. 渲染表格
-    const tbody = document.querySelector('#tb-value-added tbody');
-    let html = '';
-    reportData.forEach(d => {
-        const vaFixed = d.valueAdded.toFixed(1);
-        let colorClass = d.valueAdded > 0 ? 'text-green' : (d.valueAdded < 0 ? 'text-red' : '');
-        let sign = d.valueAdded > 0 ? '+' : '';
-
-        // 评价标签
-        let evalTag = '';
-        if (d.valueAdded >= 50) evalTag = '<span class="badge" style="background:#16a34a">🚀 卓越增值</span>';
-        else if (d.valueAdded >= 10) evalTag = '<span class="badge" style="background:#2563eb">📈 有效提升</span>';
-        else if (d.valueAdded <= -50) evalTag = '<span class="badge" style="background:#dc2626">📉 严重滑坡</span>';
-        else evalTag = '<span class="badge" style="background:#94a3b8">➖ 保持稳定</span>';
-
-        html += `
-                <tr>
-                    <td style="font-weight:bold;">${d.name}</td>
-                    <td>${d.count}</td>
-                    <td style="color:#666;">${d.entryAvg.toFixed(1)}</td>
-                    <td style="color:#333;">${d.exitAvg.toFixed(1)}</td>
-                    <td style="font-size:16px; font-weight:bold;" class="${colorClass}">${sign}${vaFixed}</td>
-                    <td>${evalTag}</td>
-                    <td class="rank-cell ${d.rank <= 3 ? 'r-' + d.rank : ''}">${d.rank}</td>
-                </tr>
-            `;
-    });
-
-    if (reportData.length === 0) html = '<tr><td colspan="7" style="text-align:center;">暂无匹配数据</td></tr>';
-    tbody.innerHTML = html;
-
-    // 缓存供导出用
-    window.LAST_VA_DATA = reportData;
-}
-
-// 后台静默匹配 (如果用户没点进退步分析，这里补做一次匹配)
-function performSilentMatching() {
-    if (!PREV_DATA.length || !RAW_DATA.length) return;
-    PROGRESS_CACHE = [];
-    // 简单的姓名匹配逻辑
-    RAW_DATA.forEach(curr => {
-        // 尝试匹配：优先全名+学校，其次全名
-        let prev = PREV_DATA.find(p => p.name === curr.name && areSchoolNamesEquivalent(p.school, curr.school));
-        if (!prev) prev = PREV_DATA.find(p => p.name === curr.name); // 宽松匹配
-
-        if (prev) {
-            const currRank = safeGet(curr, 'ranks.total.township', 0);
-            // 只有当两者都有有效排名时才算
-            if (currRank > 0 && prev.rank > 0) {
-                PROGRESS_CACHE.push({
-                    school: curr.school, // 补全学校信息
-                    class: curr.class,
-                    name: curr.name,
-                    currRank: currRank,
-                    prevRank: prev.rank,
-                    change: prev.rank - currRank
-                });
-            }
-        }
-    });
-}
-
-function exportValueAddedExcel() {
-    if (!window.LAST_VA_DATA || window.LAST_VA_DATA.length === 0) return alert("请先生成报表");
-
-    const wb = XLSX.utils.book_new();
-    const data = [['单位名称', '匹配人数', '入口均位(上次排名)', '出口均位(本次排名)', '平均增值(名次)', '增值排名']];
-
-    window.LAST_VA_DATA.forEach(d => {
-        data.push([d.name, d.count, d.entryAvg.toFixed(2), d.exitAvg.toFixed(2), d.valueAdded.toFixed(2), d.rank]);
-    });
-
-    // 列宽设置
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    ws['!cols'] = [{ wch: 20 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }];
-
-    XLSX.utils.book_append_sheet(wb, ws, "增值性评价表");
-    XLSX.writeFile(wb, `增值性评价报表_${VA_VIEW_MODE === 'school' ? '学校' : '班级'}.xlsx`);
-}
-
-// Progress analysis override: use a simplified "previous school rank vs current school rank" model.
-function getProgressCleanName(name) {
-    return String(name || '')
-        .replace(/\s+/g, '')
-        .replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '')
-        .toLowerCase();
-}
-
-function getProgressSelectedSchoolName() {
-    const select = document.getElementById('progressSchoolSelect');
-    const schoolName = String(select?.value || MY_SCHOOL || Object.keys(SCHOOLS || {})[0] || '').trim();
-    if (select && schoolName && !select.value) select.value = schoolName;
-    return schoolName;
-}
-
-function getProgressCurrentStudentsForSchool(schoolName) {
-    const school = SCHOOLS?.[schoolName];
-    if (!school || !Array.isArray(school.students)) return [];
-
-    const user = getCurrentUser();
-    const role = user?.role || 'guest';
-    const scope = role === 'teacher' ? getTeacherScopeForUser(user) : null;
-    let students = school.students.slice();
-
-    if (role === 'class_teacher' && user?.class) {
-        students = students.filter(student => isClassEquivalent(student.class, user.class));
-    }
-    if (role === 'teacher' && scope?.classes instanceof Set && scope.classes.size > 0) {
-        students = students.filter(student => scope.classes.has(student.class));
-    }
-    return students;
-}
-
-function getProgressBaselineRowsForSchool(schoolName) {
-    const baselineExamId = document.getElementById('progressBaselineSelect')?.value || '';
-    const normalizedRows = normalizeProgressBaselineRows(PREV_DATA || window.PREV_DATA || [], baselineExamId);
-    const currentStudents = getProgressCurrentStudentsForSchool(schoolName);
-    const currentNames = new Set(currentStudents.map(student => getProgressCleanName(student.name)).filter(Boolean));
-
-    let rows = normalizedRows.filter(row => areSchoolNamesEquivalent(row.school, schoolName));
-    if (rows.length < Math.max(5, Math.floor(currentStudents.length * 0.4))) {
-        rows = normalizedRows.filter(row => currentNames.has(getProgressCleanName(row.name)));
-    }
-
-    rows = rows
-        .map(row => {
-            const recalculated = Number(recalcPrevTotal(row));
-            const total = Number.isFinite(recalculated) ? recalculated : Number(row.total);
-            return Number.isFinite(total) ? { ...row, _progressTotal: total } : null;
-        })
-        .filter(Boolean)
-        .sort((a, b) => b._progressTotal - a._progressTotal);
-
-    let lastRank = 0;
-    let lastTotal = null;
-    rows.forEach((row, index) => {
-        if (lastTotal === null || Math.abs(row._progressTotal - lastTotal) > 0.001) {
-            lastRank = index + 1;
-            lastTotal = row._progressTotal;
-        }
-        row._progressSchoolRank = lastRank;
-    });
-
-    return rows;
-}
-
-function buildProgressPreviousMatchIndex(rows) {
-    const strictMap = new Map();
-    const looseMap = new Map();
-
-    (rows || []).forEach(row => {
-        const nameKey = getProgressCleanName(row.name);
-        const classKey = normalizeClass(row.class || '');
-        const strictKey = `${nameKey}__${classKey}`;
-        if (!strictMap.has(strictKey)) strictMap.set(strictKey, []);
-        strictMap.get(strictKey).push(row);
-        if (!looseMap.has(nameKey)) looseMap.set(nameKey, []);
-        looseMap.get(nameKey).push(row);
-    });
-
-    return { strictMap, looseMap };
-}
-
-function resolveProgressBaselineMatch(student, indexes) {
-    const nameKey = getProgressCleanName(student.name);
-    const classKey = normalizeClass(student.class || '');
-    const manualKey = `${student.school}_${student.class}_${student.name}`;
-    const manualValue = MANUAL_ID_MAPPINGS?.[manualKey];
-    const looseCandidates = (indexes.looseMap.get(nameKey) || []).filter(row => (
-        !student.school || !row.school || areSchoolNamesEquivalent(row.school, student.school)
-    ));
-
-    if (manualValue === '__IGNORE__') {
-        return { row: null, matchType: 'ignored', matchLabel: '手动忽略' };
-    }
-    if (manualValue) {
-        const manualRow = looseCandidates.find(row => (
-            isClassEquivalent(row.class, manualValue) ||
-            String(row.class || '').trim() === String(manualValue || '').trim()
-        ));
-        if (manualRow) {
-            return { row: manualRow, matchType: 'manual', matchLabel: '手动映射' };
-        }
-    }
-
-    const strictCandidates = (indexes.strictMap.get(`${nameKey}__${classKey}`) || []).filter(row => (
-        !student.school || !row.school || areSchoolNamesEquivalent(row.school, student.school)
-    ));
-    if (strictCandidates.length === 1) {
-        return { row: strictCandidates[0], matchType: 'strict', matchLabel: '同名同班' };
-    }
-    if (looseCandidates.length === 1) {
-        return { row: looseCandidates[0], matchType: 'same_name_unique', matchLabel: '同名唯一' };
-    }
-    if (strictCandidates.length > 1 || looseCandidates.length > 1) {
-        return { row: null, matchType: 'ambiguous', matchLabel: '同名待确认' };
-    }
-    return { row: null, matchType: 'missing', matchLabel: '未匹配' };
-}
-
-function getProgressStatusMeta(change) {
-    if (change >= 20) return { label: '显著进步', className: 'trend-up', color: 'var(--success)' };
-    if (change >= 5) return { label: '稳步提升', className: 'trend-up', color: 'var(--success)' };
-    if (change <= -20) return { label: '明显退步', className: 'trend-down', color: 'var(--danger)' };
-    if (change <= -5) return { label: '需要关注', className: 'trend-down', color: 'var(--danger)' };
-    return { label: '基本稳定', className: 'trend-stable', color: '#64748b' };
-}
-
-function destroyProgressChart(canvasId, instanceRef) {
-    const canvas = document.getElementById(canvasId);
-    try {
-        if (typeof Chart !== 'undefined' && typeof Chart.getChart === 'function' && canvas) {
-            const existing = Chart.getChart(canvas);
-            if (existing) existing.destroy();
-        }
-    } catch (error) {
-        console.warn(`[progress] destroy chart ${canvasId} failed:`, error);
-    }
-    try {
-        if (instanceRef && typeof instanceRef.destroy === 'function') instanceRef.destroy();
-    } catch (error) {
-        console.warn(`[progress] destroy chart instance ${canvasId} failed:`, error);
-    }
-    if (canvas && typeof canvas.getContext === 'function') {
-        const ctx = canvas.getContext('2d');
-        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-    return null;
-}
-
-function clearProgressVisuals() {
-    trendChartInstance = destroyProgressChart('trendChart', trendChartInstance);
-    sankeyChartInstance = destroyProgressChart('sankeyChart', sankeyChartInstance);
-}
-
-function updateProgressModuleCopy() {
-    const infoBar = document.querySelector('#progress-analysis .info-bar');
-    if (infoBar) {
-        const tip = infoBar.querySelector('span:last-child');
-        if (tip) tip.textContent = '核心口径：同校学生按“上次校排 - 本次校排”计算，正数=进步，可按进步或退步排序查看';
-    }
-    const chartTitles = document.querySelectorAll('#anchor-va-trend h4');
-    if (chartTitles[0]) chartTitles[0].textContent = '排名变化散点图（上次校排 vs 本次校排）';
-    if (chartTitles[1]) chartTitles[1].textContent = '排名变化分布图（显著进步 / 稳定 / 退步）';
-    const desc = document.querySelector('#progress-analysis .module-desc-bar p:last-of-type');
-    if (desc) desc.textContent = '推荐顺序：先自动识别上次考试，再看集体增值，最后按进步或退步排序查看个人明细。';
-}
-
-function renderProgressAnalysis() {
-    updateProgressModuleCopy();
-    if (!RAW_DATA.length) return uiAlert("请先上传【本次考试】数据", 'warning');
-
-    if ((!PREV_DATA || !PREV_DATA.length) && typeof ensureProgressBaselineData === 'function') {
-        setProgressBaselineStatus('⏳ 正在自动加载上次考试数据...', 'loading');
-        Promise.resolve(ensureProgressBaselineData({
-            allowCloudSync: true,
-            rerenderReport: true,
-            rerenderAnalysis: true
-        })).catch(error => {
-            console.warn('[progress] auto load baseline failed:', error);
-            setProgressBaselineStatus('❌ 自动加载上次考试数据失败，请稍后重试', 'error');
-        });
-        return;
-    }
-
-    const schoolName = getProgressSelectedSchoolName();
-    if (!schoolName || !SCHOOLS[schoolName]) return uiAlert("请选择要分析的学校", 'warning');
-    performProgressCalculation({ schoolName });
-}
-
-function performProgressCalculation(options = {}) {
-    const schoolName = String(options.schoolName || getProgressSelectedSchoolName() || '').trim();
-    const silent = !!options.silent;
-    const shouldRenderReport = options.rerenderReport !== false;
-    const statusEl = document.getElementById('va-data-status');
-
-    if (!schoolName || !SCHOOLS[schoolName]) {
-        if (!silent) uiAlert("请选择要分析的学校", 'warning');
-        return { schoolName, matched: 0, ambiguous: 0, ignored: 0, total: 0 };
-    }
-
-    const currentStudents = getProgressCurrentStudentsForSchool(schoolName);
-    const baselineRows = getProgressBaselineRowsForSchool(schoolName);
-
-    window.__PROGRESS_CALCULATING = true;
-    PROGRESS_CACHE = [];
-    window.PROGRESS_CACHE_FULL = [];
-    window.LAST_VA_DATA = [];
-
-    if (!currentStudents.length) {
-        clearProgressVisuals();
-        renderProgressTable([]);
-        if (statusEl) statusEl.innerHTML = '⚠️ 当前学校暂无可分析学生';
-        window.__PROGRESS_CALCULATING = false;
-        return { schoolName, matched: 0, ambiguous: 0, ignored: 0, total: 0 };
-    }
-
-    if (!baselineRows.length) {
-        clearProgressVisuals();
-        renderProgressTable([]);
-        if (statusEl) statusEl.innerHTML = '⚠️ 未找到可用的上次考试数据';
-        window.__PROGRESS_CALCULATING = false;
-        return { schoolName, matched: 0, ambiguous: 0, ignored: 0, total: currentStudents.length };
-    }
-
-    const indexes = buildProgressPreviousMatchIndex(baselineRows);
-    const results = [];
-    let ambiguousCount = 0;
-    let ignoredCount = 0;
-
-    currentStudents.forEach(student => {
-        const currRank = Number(safeGet(student, 'ranks.total.school', 0));
-        if (!Number.isFinite(currRank) || currRank <= 0) return;
-
-        const match = resolveProgressBaselineMatch(student, indexes);
-        if (match.matchType === 'ambiguous') ambiguousCount++;
-        if (match.matchType === 'ignored') ignoredCount++;
-        if (!match.row) return;
-
-        const prevRank = Number(
-            match.row._progressSchoolRank ||
-            match.row.rankSchool ||
-            match.row.rank ||
-            0
-        );
-        if (!Number.isFinite(prevRank) || prevRank <= 0) return;
-
-        const change = prevRank - currRank;
-        const statusMeta = getProgressStatusMeta(change);
-        results.push({
-            school: student.school,
-            class: student.class,
-            name: student.name,
-            currTotal: Number.isFinite(Number(student.total)) ? Number(student.total) : '-',
-            currRank,
-            prevTotal: Number.isFinite(Number(match.row._progressTotal)) ? Number(match.row._progressTotal) : '-',
-            prevRank,
-            change,
-            matchType: match.matchType,
-            matchTypeLabel: match.matchLabel,
-            statusText: statusMeta.label,
-            statusClass: statusMeta.className,
-            statusColor: statusMeta.color
-        });
-    });
-
-    window.PROGRESS_CACHE_FULL = results.slice();
-    PROGRESS_CACHE = results.slice();
-    applyProgressFilter();
-    if (shouldRenderReport) renderValueAddedReport(true);
-
-    if (statusEl) {
-        statusEl.innerHTML = results.length
-            ? `✅ 已完成校内排名对比：匹配 ${results.length} 人，待确认 ${ambiguousCount} 人，忽略 ${ignoredCount} 人`
-            : '⚠️ 已加载上次考试数据，但当前学校没有可匹配学生';
-    }
-
-    window.__PROGRESS_CALCULATING = false;
-    return {
-        schoolName,
-        matched: results.length,
-        ambiguous: ambiguousCount,
-        ignored: ignoredCount,
-        total: currentStudents.length
-    };
-}
-
-function applyProgressFilter() {
-    const typeEl = document.getElementById('progressFilterType');
-    const thresholdEl = document.getElementById('progressFilterThreshold');
-    const sortEl = document.getElementById('progressSortOrder');
-    const type = typeEl ? typeEl.value : 'all';
-    const threshold = thresholdEl ? parseInt(thresholdEl.value || '0', 10) : 0;
-    const sortMode = sortEl ? sortEl.value : 'improve_desc';
-
-    let list = (window.PROGRESS_CACHE_FULL || []).slice();
-    list = list.filter(item => Math.abs(item.change) >= threshold);
-    if (type === 'up') list = list.filter(item => item.change > 0);
-    if (type === 'down') list = list.filter(item => item.change < 0);
-    list.sort((a, b) => {
-        switch (sortMode) {
-            case 'regress_desc':
-                if (a.change !== b.change) return a.change - b.change;
-                return a.currRank - b.currRank;
-            case 'current_rank_asc':
-                if (a.currRank !== b.currRank) return a.currRank - b.currRank;
-                return b.change - a.change;
-            case 'class_name_asc': {
-                const classDiff = String(a.class || '').localeCompare(String(b.class || ''), 'zh-CN', { numeric: true });
-                if (classDiff !== 0) return classDiff;
-                return String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN', { numeric: true });
-            }
-            case 'improve_desc':
-            default:
-                if (a.change !== b.change) return b.change - a.change;
-                return a.currRank - b.currRank;
-        }
-    });
-
-    PROGRESS_CACHE = list;
-    renderProgressTable(list);
-
-    if (list.length > 0) {
-        renderTrendChart();
-        renderSankeyDiagram();
-    } else {
-        clearProgressVisuals();
-    }
-}
-
-function renderProgressTable(list) {
-    const tbody = document.querySelector('#progressTable tbody');
-    const thead = document.querySelector('#progressTable thead tr');
-    if (!tbody || !thead) return;
-
-    thead.innerHTML = '<th>班级</th><th>姓名</th><th>上次校排</th><th>本次校排</th><th>排名变化</th><th>上次总分</th><th>本次总分</th><th>匹配方式</th><th>状态</th>';
-
-    if (!list || list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px; color:#999;">暂无符合条件的学生</td></tr>';
-        return;
-    }
-
-    tbody.innerHTML = list.map(row => {
-        const changeText = `${row.change > 0 ? '+' : ''}${row.change}`;
-        const changeColor = row.change > 0 ? 'var(--success)' : (row.change < 0 ? 'var(--danger)' : '#64748b');
-        const statusHtml = `<span class="${row.statusClass || 'trend-stable'}" style="color:${row.statusColor || '#64748b'};">${row.statusText || '基本稳定'}</span>`;
-        return `<tr>
-            <td data-label="班级">${row.class || '-'}</td>
-            <td data-label="姓名"><strong>${row.name}</strong></td>
-            <td data-label="上次校排">${row.prevRank}</td>
-            <td data-label="本次校排">${row.currRank}</td>
-            <td data-label="排名变化" style="font-weight:bold; color:${changeColor};">${changeText}</td>
-            <td data-label="上次总分" style="color:#666;">${row.prevTotal}</td>
-            <td data-label="本次总分">${row.currTotal}</td>
-            <td data-label="匹配方式">${row.matchTypeLabel || '-'}</td>
-            <td data-label="状态">${statusHtml}</td>
-        </tr>`;
-    }).join('');
-}
-
-function renderTrendChart() {
-    const ctx = document.getElementById('trendChart');
-    if (!ctx || !PROGRESS_CACHE.length) {
-        trendChartInstance = destroyProgressChart('trendChart', trendChartInstance);
-        return;
-    }
-    trendChartInstance = destroyProgressChart('trendChart', trendChartInstance);
-
-    const improved = [];
-    const regressed = [];
-    const stable = [];
-
-    PROGRESS_CACHE.forEach(item => {
-        const point = { x: item.prevRank, y: item.currRank, name: item.name, cls: item.class, change: item.change };
-        if (item.change > 0) improved.push(point);
-        else if (item.change < 0) regressed.push(point);
-        else stable.push(point);
-    });
-
-    const maxRank = Math.max(...PROGRESS_CACHE.map(item => Math.max(item.prevRank, item.currRank))) + 10;
-    trendChartInstance = new Chart(ctx, {
-        type: 'scatter',
-        data: {
-            datasets: [
-                { label: '进步', data: improved, backgroundColor: 'rgba(22, 163, 74, 0.6)', borderColor: 'rgba(22, 163, 74, 1)' },
-                { label: '退步', data: regressed, backgroundColor: 'rgba(220, 38, 38, 0.6)', borderColor: 'rgba(220, 38, 38, 1)' },
-                { label: '稳定', data: stable, backgroundColor: 'rgba(71, 85, 105, 0.45)', borderColor: 'rgba(71, 85, 105, 0.8)' },
-                { label: '基准线', data: [{ x: 0, y: 0 }, { x: maxRank, y: maxRank }], showLine: true, borderColor: '#94a3b8', borderDash: [5, 5], pointRadius: 0, fill: false }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: chartCtx => {
-                            const point = chartCtx.raw;
-                            return point?.name
-                                ? `${point.cls} ${point.name}: 上次校排 ${point.x} -> 本次校排 ${point.y} (${point.change > 0 ? '+' : ''}${point.change})`
-                                : '';
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: { title: { display: true, text: '上次校排' }, min: 0, max: maxRank },
-                y: { title: { display: true, text: '本次校排' }, min: 0, max: maxRank, reverse: true }
-            }
-        }
-    });
-}
-
-function renderSankeyDiagram() {
-    const ctx = document.getElementById('sankeyChart');
-    if (!ctx || !PROGRESS_CACHE.length) {
-        sankeyChartInstance = destroyProgressChart('sankeyChart', sankeyChartInstance);
-        return;
-    }
-
-    sankeyChartInstance = destroyProgressChart('sankeyChart', sankeyChartInstance);
-
-    const buckets = [
-        { label: '显著进步', color: '#16a34a', count: 0, test: change => change >= 20 },
-        { label: '小幅进步', color: '#4ade80', count: 0, test: change => change >= 5 && change < 20 },
-        { label: '基本稳定', color: '#94a3b8', count: 0, test: change => change > -5 && change < 5 },
-        { label: '小幅退步', color: '#f97316', count: 0, test: change => change <= -5 && change > -20 },
-        { label: '明显退步', color: '#dc2626', count: 0, test: change => change <= -20 }
-    ];
-
-    PROGRESS_CACHE.forEach(item => {
-        const bucket = buckets.find(entry => entry.test(item.change));
-        if (bucket) bucket.count += 1;
-    });
-
-    sankeyChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: buckets.map(item => item.label),
-            datasets: [{
-                label: '人数',
-                data: buckets.map(item => item.count),
-                backgroundColor: buckets.map(item => item.color),
-                borderRadius: 8,
-                maxBarThickness: 48
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: chartCtx => `${chartCtx.label}: ${chartCtx.raw} 人`
-                    }
-                }
-            },
-            scales: {
-                x: { title: { display: true, text: '排名变化区间' } },
-                y: { beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: '人数' } }
-            }
-        }
-    });
-}
-
-function renderValueAddedReport(isSwitching = false) {
-    const statusEl = document.getElementById('va-data-status');
-    if (window.__PROGRESS_BASELINE_LOADING) {
-        if (statusEl) statusEl.innerHTML = '⏳ 正在自动加载上次考试数据...';
-        return;
-    }
-
-    if ((!PREV_DATA || PREV_DATA.length === 0) && RAW_DATA.length > 0 && typeof ensureProgressBaselineData === 'function') {
-        setProgressBaselineStatus('⏳ 正在自动加载上次考试数据...', 'loading');
-        Promise.resolve(ensureProgressBaselineData({
-            allowCloudSync: true,
-            rerenderReport: true,
-            rerenderAnalysis: false
-        })).catch(err => {
-            console.warn('[progress] 自动补拉历史基准失败:', err);
-            setProgressBaselineStatus('❌ 自动加载上次考试数据失败，请稍后重试', 'error');
-        });
-        return;
-    }
-
-    let sourceList = Array.isArray(window.PROGRESS_CACHE_FULL) && window.PROGRESS_CACHE_FULL.length
-        ? window.PROGRESS_CACHE_FULL.slice()
-        : (PROGRESS_CACHE || []).slice();
-
-    if (!sourceList.length && PREV_DATA.length > 0 && RAW_DATA.length > 0 && !window.__PROGRESS_CALCULATING) {
-        performSilentMatching();
-        sourceList = Array.isArray(window.PROGRESS_CACHE_FULL) && window.PROGRESS_CACHE_FULL.length
-            ? window.PROGRESS_CACHE_FULL.slice()
-            : (PROGRESS_CACHE || []).slice();
-    }
-
-    const tbody = document.querySelector('#tb-value-added tbody');
-    if (!sourceList.length) {
-        if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">暂无可用匹配数据</td></tr>';
-        if (statusEl) statusEl.innerHTML = '⚠️ 暂无可用的增值评价数据';
-        window.LAST_VA_DATA = [];
-        return;
-    }
-
-    const groups = new Map();
-    sourceList.forEach(item => {
-        const key = VA_VIEW_MODE === 'class' ? item.class : (item.school || getProgressSelectedSchoolName());
-        const label = VA_VIEW_MODE === 'class' ? item.class : (item.school || getProgressSelectedSchoolName());
-        if (!groups.has(key)) {
-            groups.set(key, {
-                name: label,
-                count: 0,
-                sumPrev: 0,
-                sumCurr: 0,
-                improved: 0,
-                stable: 0,
-                regressed: 0
-            });
-        }
-        const group = groups.get(key);
-        group.count += 1;
-        group.sumPrev += item.prevRank;
-        group.sumCurr += item.currRank;
-        if (item.change >= 5) group.improved += 1;
-        else if (item.change <= -5) group.regressed += 1;
-        else group.stable += 1;
-    });
-
-    const reportData = Array.from(groups.values()).map(group => {
-        const entryAvg = group.sumPrev / group.count;
-        const exitAvg = group.sumCurr / group.count;
-        const valueAdded = entryAvg - exitAvg;
-        let evaluation = '<span class="badge" style="background:#94a3b8">基本稳定</span>';
-        if (valueAdded >= 20) evaluation = '<span class="badge" style="background:#16a34a">显著增值</span>';
-        else if (valueAdded >= 5) evaluation = '<span class="badge" style="background:#2563eb">稳步提升</span>';
-        else if (valueAdded <= -20) evaluation = '<span class="badge" style="background:#dc2626">明显回落</span>';
-        else if (valueAdded < -5) evaluation = '<span class="badge" style="background:#f97316">需要关注</span>';
-        return {
-            name: group.name,
-            count: group.count,
-            entryAvg,
-            exitAvg,
-            valueAdded,
-            improved: group.improved,
-            stable: group.stable,
-            regressed: group.regressed,
-            evaluation
-        };
-    }).sort((a, b) => b.valueAdded - a.valueAdded);
-
-    reportData.forEach((item, index) => {
-        item.rank = index + 1;
-    });
-
-    if (tbody) {
-        tbody.innerHTML = reportData.length
-            ? reportData.map(item => `
-                <tr>
-                    <td style="font-weight:bold;">${item.name}</td>
-                    <td>${item.count}</td>
-                    <td style="color:#666;">${item.entryAvg.toFixed(1)}</td>
-                    <td>${item.exitAvg.toFixed(1)}</td>
-                    <td style="font-size:16px; font-weight:bold; color:${item.valueAdded >= 0 ? 'var(--success)' : 'var(--danger)'};">${item.valueAdded > 0 ? '+' : ''}${item.valueAdded.toFixed(1)}</td>
-                    <td>${item.evaluation}</td>
-                    <td class="rank-cell ${item.rank <= 3 ? `r-${item.rank}` : ''}">${item.rank}</td>
-                </tr>
-            `).join('')
-            : '<tr><td colspan="7" style="text-align:center;">暂无可用匹配数据</td></tr>';
-    }
-
-    if (statusEl) statusEl.innerHTML = `✅ 数据就绪（已匹配 ${sourceList.length} 人）`;
-    window.LAST_VA_DATA = reportData;
-}
-
-function performSilentMatching() {
-    if (!PREV_DATA.length || !RAW_DATA.length) return [];
-    const schoolName = getProgressSelectedSchoolName();
-    if (!schoolName || !SCHOOLS[schoolName]) return [];
-    performProgressCalculation({ schoolName, silent: true, rerenderReport: false });
-    return window.PROGRESS_CACHE_FULL || [];
-}
-
-function exportProgressAnalysis() {
-    if (!PROGRESS_CACHE.length) return alert("暂无分析结果，请先进行分析");
-    const user = getCurrentUser();
-    const role = user?.role || 'guest';
-    const scope = role === 'teacher' ? getTeacherScopeForUser(user) : null;
-    const wb = XLSX.utils.book_new();
-    const data = [['班级', '姓名', '上次校排', '本次校排', '排名变化', '上次总分', '本次总分', '匹配方式', '状态']];
-
-    PROGRESS_CACHE
-        .filter(row => {
-            if (role === 'class_teacher' && user?.class) return isClassEquivalent(row.class, user.class);
-            if (role === 'teacher' && scope?.classes instanceof Set && scope.classes.size > 0) return scope.classes.has(row.class);
-            return true;
-        })
-        .forEach(row => {
-            data.push([
-                row.class,
-                row.name,
-                row.prevRank,
-                row.currRank,
-                row.change,
-                row.prevTotal,
-                row.currTotal,
-                row.matchTypeLabel || '',
-                row.statusText || ''
-            ]);
-        });
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), "进退步分析");
-    XLSX.writeFile(wb, "学生进退步追踪分析表.xlsx");
-}
-
-function ensureProgressFilterSummaryElement() {
-    let summaryEl = document.getElementById('progressFilterSummary');
-    if (summaryEl) return summaryEl;
-    const filterBar = document.querySelector('#progress-analysis div[style*="justify-content:space-between"] > div[style*="font-size:12px"]');
-    if (!filterBar) return null;
-    const resetBtn = filterBar.querySelector('button[onclick="resetProgressFilter()"]');
-    if (!resetBtn) return null;
-    summaryEl = document.createElement('span');
-    summaryEl.id = 'progressFilterSummary';
-    summaryEl.style.color = '#64748b';
-    summaryEl.style.whiteSpace = 'nowrap';
-    summaryEl.textContent = '当前：全部学生 · 全部变化 · 进步优先';
-    resetBtn.before(summaryEl);
-    return summaryEl;
-}
-
-function updateProgressModuleCopy() {
-    const infoBar = document.querySelector('#progress-analysis .info-bar');
-    if (infoBar) {
-        const tip = infoBar.querySelector('span:last-child');
-        if (tip) tip.textContent = '核心口径：同校学生按“上次校排 - 本次校排”计算，正数=进步；可切换全部学生、本班、重点变化，并按进步或退步排序查看。';
-    }
-    const chartTitles = document.querySelectorAll('#anchor-va-trend h4');
-    if (chartTitles[0]) chartTitles[0].textContent = '排名变化散点图（上次校排 vs 本次校排）';
-    if (chartTitles[1]) chartTitles[1].textContent = '排名变化分布图（显著进步 / 稳定 / 退步）';
-    const desc = document.querySelector('#progress-analysis .module-desc-bar p:last-of-type');
-    if (desc) desc.textContent = '推荐顺序：先自动识别上次考试，再看集体增值，最后用“全部 / 本班 / 重点变化 + 方向 + 排序”查看个人明细。';
-
-    const filterBar = document.querySelector('#progress-analysis div[style*="justify-content:space-between"] > div[style*="font-size:12px"]');
-    if (!filterBar) return;
-    filterBar.style.flexWrap = 'wrap';
-    const labels = filterBar.querySelectorAll('label');
-    if (labels[0]) labels[0].textContent = '变化方向';
-    if (labels[1]) labels[1].textContent = '重点阈值(名次)';
-    if (labels[2]) labels[2].textContent = '排序';
-    const resetBtn = filterBar.querySelector('button[onclick="resetProgressFilter()"]');
-    if (resetBtn) resetBtn.textContent = '重置筛选';
-    ensureProgressFilterSummaryElement();
-}
-
-function getProgressQuickFilterMode() {
-    const mode = String(window.__PROGRESS_QUICK_MODE || 'all');
-    return ['all', 'my_class', 'focus'].includes(mode) ? mode : 'all';
-}
-
-function getProgressQuickFilterThreshold() {
-    const thresholdEl = document.getElementById('progressFilterThreshold');
-    const threshold = thresholdEl ? parseInt(thresholdEl.value || '20', 10) : 20;
-    return Number.isFinite(threshold) && threshold >= 0 ? threshold : 20;
-}
-
-function getProgressQuickFilterClass() {
-    try {
-        const user = typeof getCurrentUser === 'function' ? getCurrentUser() : (window.Auth?.currentUser || null);
-        return String(user?.class || '').trim();
-    } catch (_) {
-        return '';
-    }
-}
-
-function syncProgressQuickFilterButtons() {
-    const mode = getProgressQuickFilterMode();
-    const myClass = getProgressQuickFilterClass();
-    const buttons = [
-        { id: 'progressQuickAllBtn', key: 'all', activeBg: '#10b981' },
-        { id: 'progressQuickMyClassBtn', key: 'my_class', activeBg: '#3b82f6' },
-        { id: 'progressQuickFocusBtn', key: 'focus', activeBg: '#f59e0b' }
-    ];
-    buttons.forEach(item => {
-        const btn = document.getElementById(item.id);
-        if (!btn) return;
-        const active = mode === item.key;
-        btn.style.background = active ? item.activeBg : '#e2e8f0';
-        btn.style.color = active ? '#ffffff' : '#475569';
-        btn.style.border = active ? '1px solid transparent' : '1px solid #cbd5e1';
-        btn.style.fontWeight = '700';
-        btn.style.cursor = 'pointer';
-        btn.style.opacity = '1';
-        btn.disabled = false;
-        if (item.key === 'my_class' && !myClass) {
-            btn.style.background = '#f1f5f9';
-            btn.style.color = '#94a3b8';
-            btn.style.border = '1px dashed #cbd5e1';
-            btn.style.cursor = 'not-allowed';
-            btn.style.opacity = '0.8';
-            btn.disabled = true;
-        }
-    });
-    const thresholdEl = document.getElementById('progressFilterThreshold');
-    if (thresholdEl) {
-        const enabled = mode === 'focus';
-        thresholdEl.disabled = !enabled;
-        thresholdEl.style.opacity = enabled ? '1' : '0.6';
-        thresholdEl.style.background = enabled ? '#ffffff' : '#f8fafc';
-    }
-}
-
-function updateProgressFilterSummary(meta = {}) {
-    const summaryEl = ensureProgressFilterSummaryElement();
-    if (!summaryEl) return;
-    const mode = meta.mode || getProgressQuickFilterMode();
-    const type = meta.type || (document.getElementById('progressFilterType')?.value || 'all');
-    const sortMode = meta.sortMode || (document.getElementById('progressSortOrder')?.value || 'improve_desc');
-    const threshold = Number.isFinite(meta.threshold) ? meta.threshold : getProgressQuickFilterThreshold();
-    const myClass = getProgressQuickFilterClass();
-    const modeLabel = mode === 'my_class'
-        ? (myClass ? `只看本班(${myClass})` : '只看本班')
-        : (mode === 'focus' ? `重点变化(≥${threshold}名)` : '全部学生');
-    const typeLabel = type === 'up' ? '仅进步' : (type === 'down' ? '仅退步' : '全部变化');
-    const sortLabelMap = {
-        improve_desc: '进步优先',
-        regress_desc: '退步优先',
-        current_rank_asc: '本次校排靠前',
-        class_name_asc: '班级姓名'
-    };
-    summaryEl.textContent = `当前：${modeLabel} · ${typeLabel} · ${sortLabelMap[sortMode] || '进步优先'}`;
-}
-
-function setProgressQuickFilter(mode) {
-    const myClass = getProgressQuickFilterClass();
-    if (mode === 'my_class' && !myClass) {
-        window.__PROGRESS_QUICK_MODE = 'all';
-        syncProgressQuickFilterButtons();
-        updateProgressFilterSummary();
-        if (window.UI?.toast) window.UI.toast('当前账号没有班级范围，已切回全部学生。', 'warning');
-        applyProgressFilter();
-        return;
-    }
-    window.__PROGRESS_QUICK_MODE = ['all', 'my_class', 'focus'].includes(mode) ? mode : 'all';
-    syncProgressQuickFilterButtons();
-    applyProgressFilter();
-}
-
-function renderProgressAnalysis() {
-    updateProgressModuleCopy();
-    syncProgressQuickFilterButtons();
-    updateProgressFilterSummary();
-    if (!RAW_DATA.length) return uiAlert("请先上传【本次考试】数据", 'warning');
-
-    if ((!PREV_DATA || !PREV_DATA.length) && typeof ensureProgressBaselineData === 'function') {
-        setProgressBaselineStatus('⏳ 正在自动加载上次考试数据...', 'loading');
-        Promise.resolve(ensureProgressBaselineData({
-            allowCloudSync: true,
-            rerenderReport: true,
-            rerenderAnalysis: true
-        })).catch(error => {
-            console.warn('[progress] auto load baseline failed:', error);
-            setProgressBaselineStatus('❌ 自动加载上次考试数据失败，请稍后重试', 'error');
-        });
-        return;
-    }
-
-    const schoolName = getProgressSelectedSchoolName();
-    if (!schoolName || !SCHOOLS[schoolName]) return uiAlert("请选择要分析的学校", 'warning');
-    performProgressCalculation({ schoolName });
-}
-
-function applyProgressFilter() {
-    const typeEl = document.getElementById('progressFilterType');
-    const thresholdEl = document.getElementById('progressFilterThreshold');
-    const sortEl = document.getElementById('progressSortOrder');
-    const type = typeEl ? typeEl.value : 'all';
-    const threshold = thresholdEl ? parseInt(thresholdEl.value || '20', 10) : 20;
-    const sortMode = sortEl ? sortEl.value : 'improve_desc';
-    const quickMode = getProgressQuickFilterMode();
-
-    let list = (window.PROGRESS_CACHE_FULL || []).slice();
-    if (quickMode === 'my_class') {
-        const myClass = getProgressQuickFilterClass();
-        if (myClass) list = list.filter(item => isClassEquivalent(item.class, myClass));
-    } else if (quickMode === 'focus') {
-        list = list.filter(item => Math.abs(item.change) >= threshold);
-    }
-    if (type === 'up') list = list.filter(item => item.change > 0);
-    if (type === 'down') list = list.filter(item => item.change < 0);
-    list.sort((a, b) => {
-        switch (sortMode) {
-            case 'regress_desc':
-                if (a.change !== b.change) return a.change - b.change;
-                return a.currRank - b.currRank;
-            case 'current_rank_asc':
-                if (a.currRank !== b.currRank) return a.currRank - b.currRank;
-                return b.change - a.change;
-            case 'class_name_asc': {
-                const classDiff = String(a.class || '').localeCompare(String(b.class || ''), 'zh-CN', { numeric: true });
-                if (classDiff !== 0) return classDiff;
-                return String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN', { numeric: true });
-            }
-            case 'improve_desc':
-            default:
-                if (a.change !== b.change) return b.change - a.change;
-                return a.currRank - b.currRank;
-        }
-    });
-
-    PROGRESS_CACHE = list;
-    syncProgressQuickFilterButtons();
-    updateProgressFilterSummary({ mode: quickMode, type, threshold, sortMode });
-    renderProgressTable(list);
-
-    if (list.length > 0) {
-        renderTrendChart();
-        renderSankeyDiagram();
-    } else {
-        clearProgressVisuals();
-    }
-}
-
-function resetProgressFilter() {
-    const typeEl = document.getElementById('progressFilterType');
-    const thresholdEl = document.getElementById('progressFilterThreshold');
-    const sortEl = document.getElementById('progressSortOrder');
-    if (typeEl) typeEl.value = 'all';
-    if (thresholdEl) thresholdEl.value = 20;
-    if (sortEl) sortEl.value = 'improve_desc';
-    window.__PROGRESS_QUICK_MODE = 'all';
-    applyProgressFilter();
-}
+// 进退步/增值评价运行时已拆分到 public/assets/js/progress-analysis-runtime.js
 
 function exportSummaryTable() {
     if (!Object.keys(SCHOOLS).length) return alert("无数据");
@@ -39592,7 +36738,6 @@ window.addEventListener('load', () => {
 });
 window.DataManager = DataManager;
 
-
 </script>
     <script>
 (() => {
@@ -40077,6 +37222,921 @@ window.DataManager = DataManager;
     });
 
     window.__COMPARE_SELECTORS_RUNTIME_PATCHED__ = true;
+})();
+
+</script>
+    <script>
+﻿(() => {
+    if (typeof window === 'undefined' || window.__PROGRESS_ANALYSIS_RUNTIME_PATCHED__) return;
+
+    let trendChartInstance = window.trendChartInstance || null;
+    let sankeyChartInstance = window.sankeyChartInstance || null;
+    window.PROGRESS_CACHE = Array.isArray(window.PROGRESS_CACHE) ? window.PROGRESS_CACHE : PROGRESS_CACHE;
+
+function showMappingModal(cases) {
+    const modal = document.getElementById('mappingModal');
+    const tbody = document.querySelector('#mappingModal tbody');
+    tbody.innerHTML = '';
+
+    cases.forEach((item, idx) => {
+        const curr = item.curr;
+        let optionsHtml = `<option value="">-- 请选择对应的上次记录 --</option>`;
+        // 默认选项：如果只有一个候选人，为了方便，默认选中它？还是强制让用户选？
+        // 建议：强制选，或者提供一个"不匹配(视为新生)"选项
+        item.candidates.forEach(cand => {
+            optionsHtml += `<option value="${cand.class}">上次在：${cand.class} (排名:${cand.rank})</option>`;
+        });
+        optionsHtml += `<option value="__IGNORE__">❌ 不是同一个人 (视为新生)</option>`;
+
+        const row = `
+                <tr data-school="${curr.school}" data-class="${curr.class}" data-name="${curr.name}">
+                    <td style="padding:10px;">
+                        <div style="font-weight:bold;">${curr.name}</div>
+                        <div style="font-size:12px; color:#666;">本次：${curr.class}</div>
+                    </td>
+                    <td style="padding:10px;">
+                        <select class="mapping-select" style="width:100%; padding:5px; border:1px solid #d97706; border-radius:4px;">
+                            ${optionsHtml}
+                        </select>
+                    </td>
+                </tr>
+            `;
+        tbody.innerHTML += row;
+    });
+
+    modal.style.display = 'flex';
+}
+
+// 3. 用户点击确认后
+function confirmMappingsAndRun() {
+    const rows = document.querySelectorAll('#mappingModal tbody tr');
+    let allSelected = true;
+
+    rows.forEach(row => {
+        const select = row.querySelector('select');
+        const val = select.value;
+        if (!val) {
+            allSelected = false;
+            select.style.border = "2px solid red";
+        } else {
+            // 保存映射关系
+            const s = row.dataset.school;
+            const c = row.dataset.class;
+            const n = row.dataset.name;
+            const key = `${s}_${c}_${n}`; // 唯一键
+            MANUAL_ID_MAPPINGS[key] = val; // value 是上次的班级名，或者 __IGNORE__
+        }
+    });
+
+    if (!allSelected) return alert("请为所有疑似学生选择对应关系（如果是新生，请选“不是同一个人”）");
+
+    document.getElementById('mappingModal').style.display = 'none';
+    performProgressCalculation(); // 继续计算
+}
+
+let VA_VIEW_MODE = window.VA_VIEW_MODE || 'school'; // school | class
+
+function switchValueAddedView(mode, btn) {
+    VA_VIEW_MODE = mode;
+    window.VA_VIEW_MODE = VA_VIEW_MODE;
+
+    // 1. 切换按钮自身的激活状态 (视觉反馈)
+    // 找到同一组的所有按钮 (它们都在同一个父容器里)
+    const siblings = btn.parentNode.querySelectorAll('.btn');
+    siblings.forEach(b => {
+        b.classList.remove('active');
+        // 恢复默认样式 (白底灰字)
+        b.style.backgroundColor = 'white';
+        b.style.color = '#64748b';
+    });
+
+    // 设置当前按钮为激活样式 (蓝底白字)
+    btn.classList.add('active');
+    btn.style.backgroundColor = '#e0f2fe';
+    btn.style.color = '#0369a1';
+    // 重新渲染表格
+    renderValueAddedReport(true);
+}
+
+function exportValueAddedExcel() {
+    if (!window.LAST_VA_DATA || window.LAST_VA_DATA.length === 0) return alert("请先生成报表");
+
+    const wb = XLSX.utils.book_new();
+    const data = [['单位名称', '匹配人数', '入口均位(上次排名)', '出口均位(本次排名)', '平均增值(名次)', '增值排名']];
+
+    window.LAST_VA_DATA.forEach(d => {
+        data.push([d.name, d.count, d.entryAvg.toFixed(2), d.exitAvg.toFixed(2), d.valueAdded.toFixed(2), d.rank]);
+    });
+
+    // 列宽设置
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{ wch: 20 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 10 }];
+
+    XLSX.utils.book_append_sheet(wb, ws, "增值性评价表");
+    XLSX.writeFile(wb, `增值性评价报表_${VA_VIEW_MODE === 'school' ? '学校' : '班级'}.xlsx`);
+}
+
+// Progress analysis override: use a simplified "previous school rank vs current school rank" model.
+function getProgressCleanName(name) {
+    return String(name || '')
+        .replace(/\s+/g, '')
+        .replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '')
+        .toLowerCase();
+}
+
+function getProgressSelectedSchoolName() {
+    const select = document.getElementById('progressSchoolSelect');
+    const schoolName = String(select?.value || MY_SCHOOL || Object.keys(SCHOOLS || {})[0] || '').trim();
+    if (select && schoolName && !select.value) select.value = schoolName;
+    return schoolName;
+}
+
+function getProgressCurrentStudentsForSchool(schoolName) {
+    const school = SCHOOLS?.[schoolName];
+    if (!school || !Array.isArray(school.students)) return [];
+
+    const user = getCurrentUser();
+    const role = user?.role || 'guest';
+    const scope = role === 'teacher' ? getTeacherScopeForUser(user) : null;
+    let students = school.students.slice();
+
+    if (role === 'class_teacher' && user?.class) {
+        students = students.filter(student => isClassEquivalent(student.class, user.class));
+    }
+    if (role === 'teacher' && scope?.classes instanceof Set && scope.classes.size > 0) {
+        students = students.filter(student => scope.classes.has(student.class));
+    }
+    return students;
+}
+
+function getProgressBaselineRowsForSchool(schoolName) {
+    const baselineExamId = document.getElementById('progressBaselineSelect')?.value || '';
+    const normalizedRows = normalizeProgressBaselineRows(PREV_DATA || window.PREV_DATA || [], baselineExamId);
+    const currentStudents = getProgressCurrentStudentsForSchool(schoolName);
+    const currentNames = new Set(currentStudents.map(student => getProgressCleanName(student.name)).filter(Boolean));
+
+    let rows = normalizedRows.filter(row => areSchoolNamesEquivalent(row.school, schoolName));
+    if (rows.length < Math.max(5, Math.floor(currentStudents.length * 0.4))) {
+        rows = normalizedRows.filter(row => currentNames.has(getProgressCleanName(row.name)));
+    }
+
+    rows = rows
+        .map(row => {
+            const recalculated = Number(recalcPrevTotal(row));
+            const total = Number.isFinite(recalculated) ? recalculated : Number(row.total);
+            return Number.isFinite(total) ? { ...row, _progressTotal: total } : null;
+        })
+        .filter(Boolean)
+        .sort((a, b) => b._progressTotal - a._progressTotal);
+
+    let lastRank = 0;
+    let lastTotal = null;
+    rows.forEach((row, index) => {
+        if (lastTotal === null || Math.abs(row._progressTotal - lastTotal) > 0.001) {
+            lastRank = index + 1;
+            lastTotal = row._progressTotal;
+        }
+        row._progressSchoolRank = lastRank;
+    });
+
+    return rows;
+}
+
+function buildProgressPreviousMatchIndex(rows) {
+    const strictMap = new Map();
+    const looseMap = new Map();
+
+    (rows || []).forEach(row => {
+        const nameKey = getProgressCleanName(row.name);
+        const classKey = normalizeClass(row.class || '');
+        const strictKey = `${nameKey}__${classKey}`;
+        if (!strictMap.has(strictKey)) strictMap.set(strictKey, []);
+        strictMap.get(strictKey).push(row);
+        if (!looseMap.has(nameKey)) looseMap.set(nameKey, []);
+        looseMap.get(nameKey).push(row);
+    });
+
+    return { strictMap, looseMap };
+}
+
+function resolveProgressBaselineMatch(student, indexes) {
+    const nameKey = getProgressCleanName(student.name);
+    const classKey = normalizeClass(student.class || '');
+    const manualKey = `${student.school}_${student.class}_${student.name}`;
+    const manualValue = MANUAL_ID_MAPPINGS?.[manualKey];
+    const looseCandidates = (indexes.looseMap.get(nameKey) || []).filter(row => (
+        !student.school || !row.school || areSchoolNamesEquivalent(row.school, student.school)
+    ));
+
+    if (manualValue === '__IGNORE__') {
+        return { row: null, matchType: 'ignored', matchLabel: '手动忽略' };
+    }
+    if (manualValue) {
+        const manualRow = looseCandidates.find(row => (
+            isClassEquivalent(row.class, manualValue) ||
+            String(row.class || '').trim() === String(manualValue || '').trim()
+        ));
+        if (manualRow) {
+            return { row: manualRow, matchType: 'manual', matchLabel: '手动映射' };
+        }
+    }
+
+    const strictCandidates = (indexes.strictMap.get(`${nameKey}__${classKey}`) || []).filter(row => (
+        !student.school || !row.school || areSchoolNamesEquivalent(row.school, student.school)
+    ));
+    if (strictCandidates.length === 1) {
+        return { row: strictCandidates[0], matchType: 'strict', matchLabel: '同名同班' };
+    }
+    if (looseCandidates.length === 1) {
+        return { row: looseCandidates[0], matchType: 'same_name_unique', matchLabel: '同名唯一' };
+    }
+    if (strictCandidates.length > 1 || looseCandidates.length > 1) {
+        return { row: null, matchType: 'ambiguous', matchLabel: '同名待确认' };
+    }
+    return { row: null, matchType: 'missing', matchLabel: '未匹配' };
+}
+
+function getProgressStatusMeta(change) {
+    if (change >= 20) return { label: '显著进步', className: 'trend-up', color: 'var(--success)' };
+    if (change >= 5) return { label: '稳步提升', className: 'trend-up', color: 'var(--success)' };
+    if (change <= -20) return { label: '明显退步', className: 'trend-down', color: 'var(--danger)' };
+    if (change <= -5) return { label: '需要关注', className: 'trend-down', color: 'var(--danger)' };
+    return { label: '基本稳定', className: 'trend-stable', color: '#64748b' };
+}
+
+function destroyProgressChart(canvasId, instanceRef) {
+    const canvas = document.getElementById(canvasId);
+    try {
+        if (typeof Chart !== 'undefined' && typeof Chart.getChart === 'function' && canvas) {
+            const existing = Chart.getChart(canvas);
+            if (existing) existing.destroy();
+        }
+    } catch (error) {
+        console.warn(`[progress] destroy chart ${canvasId} failed:`, error);
+    }
+    try {
+        if (instanceRef && typeof instanceRef.destroy === 'function') instanceRef.destroy();
+    } catch (error) {
+        console.warn(`[progress] destroy chart instance ${canvasId} failed:`, error);
+    }
+    if (canvas && typeof canvas.getContext === 'function') {
+        const ctx = canvas.getContext('2d');
+        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    return null;
+}
+
+function clearProgressVisuals() {
+    trendChartInstance = window.trendChartInstance = destroyProgressChart('trendChart', trendChartInstance);
+    sankeyChartInstance = window.sankeyChartInstance = destroyProgressChart('sankeyChart', sankeyChartInstance);
+}
+
+
+function performProgressCalculation(options = {}) {
+    const schoolName = String(options.schoolName || getProgressSelectedSchoolName() || '').trim();
+    const silent = !!options.silent;
+    const shouldRenderReport = options.rerenderReport !== false;
+    const statusEl = document.getElementById('va-data-status');
+
+    if (!schoolName || !SCHOOLS[schoolName]) {
+        if (!silent) uiAlert("请选择要分析的学校", 'warning');
+        return { schoolName, matched: 0, ambiguous: 0, ignored: 0, total: 0 };
+    }
+
+    const currentStudents = getProgressCurrentStudentsForSchool(schoolName);
+    const baselineRows = getProgressBaselineRowsForSchool(schoolName);
+
+    window.__PROGRESS_CALCULATING = true;
+    PROGRESS_CACHE = [];
+    window.PROGRESS_CACHE = PROGRESS_CACHE;
+    window.PROGRESS_CACHE_FULL = [];
+    window.LAST_VA_DATA = [];
+
+    if (!currentStudents.length) {
+        clearProgressVisuals();
+        renderProgressTable([]);
+        if (statusEl) statusEl.innerHTML = '⚠️ 当前学校暂无可分析学生';
+        window.__PROGRESS_CALCULATING = false;
+        return { schoolName, matched: 0, ambiguous: 0, ignored: 0, total: 0 };
+    }
+
+    if (!baselineRows.length) {
+        clearProgressVisuals();
+        renderProgressTable([]);
+        if (statusEl) statusEl.innerHTML = '⚠️ 未找到可用的上次考试数据';
+        window.__PROGRESS_CALCULATING = false;
+        return { schoolName, matched: 0, ambiguous: 0, ignored: 0, total: currentStudents.length };
+    }
+
+    const indexes = buildProgressPreviousMatchIndex(baselineRows);
+    const results = [];
+    let ambiguousCount = 0;
+    let ignoredCount = 0;
+
+    currentStudents.forEach(student => {
+        const currRank = Number(safeGet(student, 'ranks.total.school', 0));
+        if (!Number.isFinite(currRank) || currRank <= 0) return;
+
+        const match = resolveProgressBaselineMatch(student, indexes);
+        if (match.matchType === 'ambiguous') ambiguousCount++;
+        if (match.matchType === 'ignored') ignoredCount++;
+        if (!match.row) return;
+
+        const prevRank = Number(
+            match.row._progressSchoolRank ||
+            match.row.rankSchool ||
+            match.row.rank ||
+            0
+        );
+        if (!Number.isFinite(prevRank) || prevRank <= 0) return;
+
+        const change = prevRank - currRank;
+        const statusMeta = getProgressStatusMeta(change);
+        results.push({
+            school: student.school,
+            class: student.class,
+            name: student.name,
+            currTotal: Number.isFinite(Number(student.total)) ? Number(student.total) : '-',
+            currRank,
+            prevTotal: Number.isFinite(Number(match.row._progressTotal)) ? Number(match.row._progressTotal) : '-',
+            prevRank,
+            change,
+            matchType: match.matchType,
+            matchTypeLabel: match.matchLabel,
+            statusText: statusMeta.label,
+            statusClass: statusMeta.className,
+            statusColor: statusMeta.color
+        });
+    });
+
+    window.PROGRESS_CACHE_FULL = results.slice();
+    PROGRESS_CACHE = results.slice();
+    window.PROGRESS_CACHE = PROGRESS_CACHE;
+    applyProgressFilter();
+    if (shouldRenderReport) renderValueAddedReport(true);
+
+    if (statusEl) {
+        statusEl.innerHTML = results.length
+            ? `✅ 已完成校内排名对比：匹配 ${results.length} 人，待确认 ${ambiguousCount} 人，忽略 ${ignoredCount} 人`
+            : '⚠️ 已加载上次考试数据，但当前学校没有可匹配学生';
+    }
+
+    window.__PROGRESS_CALCULATING = false;
+    return {
+        schoolName,
+        matched: results.length,
+        ambiguous: ambiguousCount,
+        ignored: ignoredCount,
+        total: currentStudents.length
+    };
+}
+
+
+function renderProgressTable(list) {
+    const tbody = document.querySelector('#progressTable tbody');
+    const thead = document.querySelector('#progressTable thead tr');
+    if (!tbody || !thead) return;
+
+    thead.innerHTML = '<th>班级</th><th>姓名</th><th>上次校排</th><th>本次校排</th><th>排名变化</th><th>上次总分</th><th>本次总分</th><th>匹配方式</th><th>状态</th>';
+
+    if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px; color:#999;">暂无符合条件的学生</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = list.map(row => {
+        const changeText = `${row.change > 0 ? '+' : ''}${row.change}`;
+        const changeColor = row.change > 0 ? 'var(--success)' : (row.change < 0 ? 'var(--danger)' : '#64748b');
+        const statusHtml = `<span class="${row.statusClass || 'trend-stable'}" style="color:${row.statusColor || '#64748b'};">${row.statusText || '基本稳定'}</span>`;
+        return `<tr>
+            <td data-label="班级">${row.class || '-'}</td>
+            <td data-label="姓名"><strong>${row.name}</strong></td>
+            <td data-label="上次校排">${row.prevRank}</td>
+            <td data-label="本次校排">${row.currRank}</td>
+            <td data-label="排名变化" style="font-weight:bold; color:${changeColor};">${changeText}</td>
+            <td data-label="上次总分" style="color:#666;">${row.prevTotal}</td>
+            <td data-label="本次总分">${row.currTotal}</td>
+            <td data-label="匹配方式">${row.matchTypeLabel || '-'}</td>
+            <td data-label="状态">${statusHtml}</td>
+        </tr>`;
+    }).join('');
+}
+
+function renderTrendChart() {
+    const ctx = document.getElementById('trendChart');
+    if (!ctx || !PROGRESS_CACHE.length) {
+        trendChartInstance = window.trendChartInstance = destroyProgressChart('trendChart', trendChartInstance);
+        return;
+    }
+    trendChartInstance = window.trendChartInstance = destroyProgressChart('trendChart', trendChartInstance);
+
+    const improved = [];
+    const regressed = [];
+    const stable = [];
+
+    PROGRESS_CACHE.forEach(item => {
+        const point = { x: item.prevRank, y: item.currRank, name: item.name, cls: item.class, change: item.change };
+        if (item.change > 0) improved.push(point);
+        else if (item.change < 0) regressed.push(point);
+        else stable.push(point);
+    });
+
+    const maxRank = Math.max(...PROGRESS_CACHE.map(item => Math.max(item.prevRank, item.currRank))) + 10;
+    trendChartInstance = window.trendChartInstance = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+            datasets: [
+                { label: '进步', data: improved, backgroundColor: 'rgba(22, 163, 74, 0.6)', borderColor: 'rgba(22, 163, 74, 1)' },
+                { label: '退步', data: regressed, backgroundColor: 'rgba(220, 38, 38, 0.6)', borderColor: 'rgba(220, 38, 38, 1)' },
+                { label: '稳定', data: stable, backgroundColor: 'rgba(71, 85, 105, 0.45)', borderColor: 'rgba(71, 85, 105, 0.8)' },
+                { label: '基准线', data: [{ x: 0, y: 0 }, { x: maxRank, y: maxRank }], showLine: true, borderColor: '#94a3b8', borderDash: [5, 5], pointRadius: 0, fill: false }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: chartCtx => {
+                            const point = chartCtx.raw;
+                            return point?.name
+                                ? `${point.cls} ${point.name}: 上次校排 ${point.x} -> 本次校排 ${point.y} (${point.change > 0 ? '+' : ''}${point.change})`
+                                : '';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: '上次校排' }, min: 0, max: maxRank },
+                y: { title: { display: true, text: '本次校排' }, min: 0, max: maxRank, reverse: true }
+            }
+        }
+    });
+}
+
+function renderSankeyDiagram() {
+    const ctx = document.getElementById('sankeyChart');
+    if (!ctx || !PROGRESS_CACHE.length) {
+        sankeyChartInstance = window.sankeyChartInstance = destroyProgressChart('sankeyChart', sankeyChartInstance);
+        return;
+    }
+
+    sankeyChartInstance = window.sankeyChartInstance = destroyProgressChart('sankeyChart', sankeyChartInstance);
+
+    const buckets = [
+        { label: '显著进步', color: '#16a34a', count: 0, test: change => change >= 20 },
+        { label: '小幅进步', color: '#4ade80', count: 0, test: change => change >= 5 && change < 20 },
+        { label: '基本稳定', color: '#94a3b8', count: 0, test: change => change > -5 && change < 5 },
+        { label: '小幅退步', color: '#f97316', count: 0, test: change => change <= -5 && change > -20 },
+        { label: '明显退步', color: '#dc2626', count: 0, test: change => change <= -20 }
+    ];
+
+    PROGRESS_CACHE.forEach(item => {
+        const bucket = buckets.find(entry => entry.test(item.change));
+        if (bucket) bucket.count += 1;
+    });
+
+    sankeyChartInstance = window.sankeyChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: buckets.map(item => item.label),
+            datasets: [{
+                label: '人数',
+                data: buckets.map(item => item.count),
+                backgroundColor: buckets.map(item => item.color),
+                borderRadius: 8,
+                maxBarThickness: 48
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: chartCtx => `${chartCtx.label}: ${chartCtx.raw} 人`
+                    }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: '排名变化区间' } },
+                y: { beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: '人数' } }
+            }
+        }
+    });
+}
+
+function renderValueAddedReport(isSwitching = false) {
+    const statusEl = document.getElementById('va-data-status');
+    if (window.__PROGRESS_BASELINE_LOADING) {
+        if (statusEl) statusEl.innerHTML = '⏳ 正在自动加载上次考试数据...';
+        return;
+    }
+
+    if ((!PREV_DATA || PREV_DATA.length === 0) && RAW_DATA.length > 0 && typeof ensureProgressBaselineData === 'function') {
+        setProgressBaselineStatus('⏳ 正在自动加载上次考试数据...', 'loading');
+        Promise.resolve(ensureProgressBaselineData({
+            allowCloudSync: true,
+            rerenderReport: true,
+            rerenderAnalysis: false
+        })).catch(err => {
+            console.warn('[progress] 自动补拉历史基准失败:', err);
+            setProgressBaselineStatus('❌ 自动加载上次考试数据失败，请稍后重试', 'error');
+        });
+        return;
+    }
+
+    let sourceList = Array.isArray(window.PROGRESS_CACHE_FULL) && window.PROGRESS_CACHE_FULL.length
+        ? window.PROGRESS_CACHE_FULL.slice()
+        : (PROGRESS_CACHE || []).slice();
+
+    if (!sourceList.length && PREV_DATA.length > 0 && RAW_DATA.length > 0 && !window.__PROGRESS_CALCULATING) {
+        performSilentMatching();
+        sourceList = Array.isArray(window.PROGRESS_CACHE_FULL) && window.PROGRESS_CACHE_FULL.length
+            ? window.PROGRESS_CACHE_FULL.slice()
+            : (PROGRESS_CACHE || []).slice();
+    }
+
+    const tbody = document.querySelector('#tb-value-added tbody');
+    if (!sourceList.length) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">暂无可用匹配数据</td></tr>';
+        if (statusEl) statusEl.innerHTML = '⚠️ 暂无可用的增值评价数据';
+        window.LAST_VA_DATA = [];
+        return;
+    }
+
+    const groups = new Map();
+    sourceList.forEach(item => {
+        const key = VA_VIEW_MODE === 'class' ? item.class : (item.school || getProgressSelectedSchoolName());
+        const label = VA_VIEW_MODE === 'class' ? item.class : (item.school || getProgressSelectedSchoolName());
+        if (!groups.has(key)) {
+            groups.set(key, {
+                name: label,
+                count: 0,
+                sumPrev: 0,
+                sumCurr: 0,
+                improved: 0,
+                stable: 0,
+                regressed: 0
+            });
+        }
+        const group = groups.get(key);
+        group.count += 1;
+        group.sumPrev += item.prevRank;
+        group.sumCurr += item.currRank;
+        if (item.change >= 5) group.improved += 1;
+        else if (item.change <= -5) group.regressed += 1;
+        else group.stable += 1;
+    });
+
+    const reportData = Array.from(groups.values()).map(group => {
+        const entryAvg = group.sumPrev / group.count;
+        const exitAvg = group.sumCurr / group.count;
+        const valueAdded = entryAvg - exitAvg;
+        let evaluation = '<span class="badge" style="background:#94a3b8">基本稳定</span>';
+        if (valueAdded >= 20) evaluation = '<span class="badge" style="background:#16a34a">显著增值</span>';
+        else if (valueAdded >= 5) evaluation = '<span class="badge" style="background:#2563eb">稳步提升</span>';
+        else if (valueAdded <= -20) evaluation = '<span class="badge" style="background:#dc2626">明显回落</span>';
+        else if (valueAdded < -5) evaluation = '<span class="badge" style="background:#f97316">需要关注</span>';
+        return {
+            name: group.name,
+            count: group.count,
+            entryAvg,
+            exitAvg,
+            valueAdded,
+            improved: group.improved,
+            stable: group.stable,
+            regressed: group.regressed,
+            evaluation
+        };
+    }).sort((a, b) => b.valueAdded - a.valueAdded);
+
+    reportData.forEach((item, index) => {
+        item.rank = index + 1;
+    });
+
+    if (tbody) {
+        tbody.innerHTML = reportData.length
+            ? reportData.map(item => `
+                <tr>
+                    <td style="font-weight:bold;">${item.name}</td>
+                    <td>${item.count}</td>
+                    <td style="color:#666;">${item.entryAvg.toFixed(1)}</td>
+                    <td>${item.exitAvg.toFixed(1)}</td>
+                    <td style="font-size:16px; font-weight:bold; color:${item.valueAdded >= 0 ? 'var(--success)' : 'var(--danger)'};">${item.valueAdded > 0 ? '+' : ''}${item.valueAdded.toFixed(1)}</td>
+                    <td>${item.evaluation}</td>
+                    <td class="rank-cell ${item.rank <= 3 ? `r-${item.rank}` : ''}">${item.rank}</td>
+                </tr>
+            `).join('')
+            : '<tr><td colspan="7" style="text-align:center;">暂无可用匹配数据</td></tr>';
+    }
+
+    if (statusEl) statusEl.innerHTML = `✅ 数据就绪（已匹配 ${sourceList.length} 人）`;
+    window.LAST_VA_DATA = reportData;
+}
+
+function performSilentMatching() {
+    if (!PREV_DATA.length || !RAW_DATA.length) return [];
+    const schoolName = getProgressSelectedSchoolName();
+    if (!schoolName || !SCHOOLS[schoolName]) return [];
+    performProgressCalculation({ schoolName, silent: true, rerenderReport: false });
+    return window.PROGRESS_CACHE_FULL || [];
+}
+
+function exportProgressAnalysis() {
+    if (!PROGRESS_CACHE.length) return alert("暂无分析结果，请先进行分析");
+    const user = getCurrentUser();
+    const role = user?.role || 'guest';
+    const scope = role === 'teacher' ? getTeacherScopeForUser(user) : null;
+    const wb = XLSX.utils.book_new();
+    const data = [['班级', '姓名', '上次校排', '本次校排', '排名变化', '上次总分', '本次总分', '匹配方式', '状态']];
+
+    PROGRESS_CACHE
+        .filter(row => {
+            if (role === 'class_teacher' && user?.class) return isClassEquivalent(row.class, user.class);
+            if (role === 'teacher' && scope?.classes instanceof Set && scope.classes.size > 0) return scope.classes.has(row.class);
+            return true;
+        })
+        .forEach(row => {
+            data.push([
+                row.class,
+                row.name,
+                row.prevRank,
+                row.currRank,
+                row.change,
+                row.prevTotal,
+                row.currTotal,
+                row.matchTypeLabel || '',
+                row.statusText || ''
+            ]);
+        });
+
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), "进退步分析");
+    XLSX.writeFile(wb, "学生进退步追踪分析表.xlsx");
+}
+
+function ensureProgressFilterSummaryElement() {
+    let summaryEl = document.getElementById('progressFilterSummary');
+    if (summaryEl) return summaryEl;
+    const filterBar = document.querySelector('#progress-analysis div[style*="justify-content:space-between"] > div[style*="font-size:12px"]');
+    if (!filterBar) return null;
+    const resetBtn = filterBar.querySelector('button[onclick="resetProgressFilter()"]');
+    if (!resetBtn) return null;
+    summaryEl = document.createElement('span');
+    summaryEl.id = 'progressFilterSummary';
+    summaryEl.style.color = '#64748b';
+    summaryEl.style.whiteSpace = 'nowrap';
+    summaryEl.textContent = '当前：全部学生 · 全部变化 · 进步优先';
+    resetBtn.before(summaryEl);
+    return summaryEl;
+}
+
+
+function updateProgressModuleCopy() {
+    const infoBar = document.querySelector('#progress-analysis .info-bar');
+    if (infoBar) {
+        const tip = infoBar.querySelector('span:last-child');
+        if (tip) tip.textContent = '核心口径：同校学生按“上次校排 - 本次校排”计算，正数=进步；可切换全部学生、本班、重点变化，并按进步或退步排序查看。';
+    }
+    const chartTitles = document.querySelectorAll('#anchor-va-trend h4');
+    if (chartTitles[0]) chartTitles[0].textContent = '排名变化散点图（上次校排 vs 本次校排）';
+    if (chartTitles[1]) chartTitles[1].textContent = '排名变化分布图（显著进步 / 稳定 / 退步）';
+    const desc = document.querySelector('#progress-analysis .module-desc-bar p:last-of-type');
+    if (desc) desc.textContent = '推荐顺序：先自动识别上次考试，再看集体增值，最后用“全部 / 本班 / 重点变化 + 方向 + 排序”查看个人明细。';
+
+    const filterBar = document.querySelector('#progress-analysis div[style*="justify-content:space-between"] > div[style*="font-size:12px"]');
+    if (!filterBar) return;
+    filterBar.style.flexWrap = 'wrap';
+    const labels = filterBar.querySelectorAll('label');
+    if (labels[0]) labels[0].textContent = '变化方向';
+    if (labels[1]) labels[1].textContent = '重点阈值(名次)';
+    if (labels[2]) labels[2].textContent = '排序';
+    const resetBtn = filterBar.querySelector('button[onclick="resetProgressFilter()"]');
+    if (resetBtn) resetBtn.textContent = '重置筛选';
+    ensureProgressFilterSummaryElement();
+}
+
+function getProgressQuickFilterMode() {
+    const mode = String(window.__PROGRESS_QUICK_MODE || 'all');
+    return ['all', 'my_class', 'focus'].includes(mode) ? mode : 'all';
+}
+
+function getProgressQuickFilterThreshold() {
+    const thresholdEl = document.getElementById('progressFilterThreshold');
+    const threshold = thresholdEl ? parseInt(thresholdEl.value || '20', 10) : 20;
+    return Number.isFinite(threshold) && threshold >= 0 ? threshold : 20;
+}
+
+function getProgressQuickFilterClass() {
+    try {
+        const user = typeof getCurrentUser === 'function' ? getCurrentUser() : (window.Auth?.currentUser || null);
+        return String(user?.class || '').trim();
+    } catch (_) {
+        return '';
+    }
+}
+
+function syncProgressQuickFilterButtons() {
+    const mode = getProgressQuickFilterMode();
+    const myClass = getProgressQuickFilterClass();
+    const buttons = [
+        { id: 'progressQuickAllBtn', key: 'all', activeBg: '#10b981' },
+        { id: 'progressQuickMyClassBtn', key: 'my_class', activeBg: '#3b82f6' },
+        { id: 'progressQuickFocusBtn', key: 'focus', activeBg: '#f59e0b' }
+    ];
+    buttons.forEach(item => {
+        const btn = document.getElementById(item.id);
+        if (!btn) return;
+        const active = mode === item.key;
+        btn.style.background = active ? item.activeBg : '#e2e8f0';
+        btn.style.color = active ? '#ffffff' : '#475569';
+        btn.style.border = active ? '1px solid transparent' : '1px solid #cbd5e1';
+        btn.style.fontWeight = '700';
+        btn.style.cursor = 'pointer';
+        btn.style.opacity = '1';
+        btn.disabled = false;
+        if (item.key === 'my_class' && !myClass) {
+            btn.style.background = '#f1f5f9';
+            btn.style.color = '#94a3b8';
+            btn.style.border = '1px dashed #cbd5e1';
+            btn.style.cursor = 'not-allowed';
+            btn.style.opacity = '0.8';
+            btn.disabled = true;
+        }
+    });
+    const thresholdEl = document.getElementById('progressFilterThreshold');
+    if (thresholdEl) {
+        const enabled = mode === 'focus';
+        thresholdEl.disabled = !enabled;
+        thresholdEl.style.opacity = enabled ? '1' : '0.6';
+        thresholdEl.style.background = enabled ? '#ffffff' : '#f8fafc';
+    }
+}
+
+function updateProgressFilterSummary(meta = {}) {
+    const summaryEl = ensureProgressFilterSummaryElement();
+    if (!summaryEl) return;
+    const mode = meta.mode || getProgressQuickFilterMode();
+    const type = meta.type || (document.getElementById('progressFilterType')?.value || 'all');
+    const sortMode = meta.sortMode || (document.getElementById('progressSortOrder')?.value || 'improve_desc');
+    const threshold = Number.isFinite(meta.threshold) ? meta.threshold : getProgressQuickFilterThreshold();
+    const myClass = getProgressQuickFilterClass();
+    const modeLabel = mode === 'my_class'
+        ? (myClass ? `只看本班(${myClass})` : '只看本班')
+        : (mode === 'focus' ? `重点变化(≥${threshold}名)` : '全部学生');
+    const typeLabel = type === 'up' ? '仅进步' : (type === 'down' ? '仅退步' : '全部变化');
+    const sortLabelMap = {
+        improve_desc: '进步优先',
+        regress_desc: '退步优先',
+        current_rank_asc: '本次校排靠前',
+        class_name_asc: '班级姓名'
+    };
+    summaryEl.textContent = `当前：${modeLabel} · ${typeLabel} · ${sortLabelMap[sortMode] || '进步优先'}`;
+}
+
+function setProgressQuickFilter(mode) {
+    const myClass = getProgressQuickFilterClass();
+    if (mode === 'my_class' && !myClass) {
+        window.__PROGRESS_QUICK_MODE = 'all';
+        syncProgressQuickFilterButtons();
+        updateProgressFilterSummary();
+        if (window.UI?.toast) window.UI.toast('当前账号没有班级范围，已切回全部学生。', 'warning');
+        applyProgressFilter();
+        return;
+    }
+    window.__PROGRESS_QUICK_MODE = ['all', 'my_class', 'focus'].includes(mode) ? mode : 'all';
+    syncProgressQuickFilterButtons();
+    applyProgressFilter();
+}
+
+function renderProgressAnalysis() {
+    updateProgressModuleCopy();
+    syncProgressQuickFilterButtons();
+    updateProgressFilterSummary();
+    if (!RAW_DATA.length) return uiAlert("请先上传【本次考试】数据", 'warning');
+
+    if ((!PREV_DATA || !PREV_DATA.length) && typeof ensureProgressBaselineData === 'function') {
+        setProgressBaselineStatus('⏳ 正在自动加载上次考试数据...', 'loading');
+        Promise.resolve(ensureProgressBaselineData({
+            allowCloudSync: true,
+            rerenderReport: true,
+            rerenderAnalysis: true
+        })).catch(error => {
+            console.warn('[progress] auto load baseline failed:', error);
+            setProgressBaselineStatus('❌ 自动加载上次考试数据失败，请稍后重试', 'error');
+        });
+        return;
+    }
+
+    const schoolName = getProgressSelectedSchoolName();
+    if (!schoolName || !SCHOOLS[schoolName]) return uiAlert("请选择要分析的学校", 'warning');
+    performProgressCalculation({ schoolName });
+}
+
+function applyProgressFilter() {
+    const typeEl = document.getElementById('progressFilterType');
+    const thresholdEl = document.getElementById('progressFilterThreshold');
+    const sortEl = document.getElementById('progressSortOrder');
+    const type = typeEl ? typeEl.value : 'all';
+    const threshold = thresholdEl ? parseInt(thresholdEl.value || '20', 10) : 20;
+    const sortMode = sortEl ? sortEl.value : 'improve_desc';
+    const quickMode = getProgressQuickFilterMode();
+
+    let list = (window.PROGRESS_CACHE_FULL || []).slice();
+    if (quickMode === 'my_class') {
+        const myClass = getProgressQuickFilterClass();
+        if (myClass) list = list.filter(item => isClassEquivalent(item.class, myClass));
+    } else if (quickMode === 'focus') {
+        list = list.filter(item => Math.abs(item.change) >= threshold);
+    }
+    if (type === 'up') list = list.filter(item => item.change > 0);
+    if (type === 'down') list = list.filter(item => item.change < 0);
+    list.sort((a, b) => {
+        switch (sortMode) {
+            case 'regress_desc':
+                if (a.change !== b.change) return a.change - b.change;
+                return a.currRank - b.currRank;
+            case 'current_rank_asc':
+                if (a.currRank !== b.currRank) return a.currRank - b.currRank;
+                return b.change - a.change;
+            case 'class_name_asc': {
+                const classDiff = String(a.class || '').localeCompare(String(b.class || ''), 'zh-CN', { numeric: true });
+                if (classDiff !== 0) return classDiff;
+                return String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN', { numeric: true });
+            }
+            case 'improve_desc':
+            default:
+                if (a.change !== b.change) return b.change - a.change;
+                return a.currRank - b.currRank;
+        }
+    });
+
+    PROGRESS_CACHE = list;
+    window.PROGRESS_CACHE = PROGRESS_CACHE;
+    syncProgressQuickFilterButtons();
+    updateProgressFilterSummary({ mode: quickMode, type, threshold, sortMode });
+    renderProgressTable(list);
+
+    if (list.length > 0) {
+        renderTrendChart();
+        renderSankeyDiagram();
+    } else {
+        clearProgressVisuals();
+    }
+}
+
+function resetProgressFilter() {
+    const typeEl = document.getElementById('progressFilterType');
+    const thresholdEl = document.getElementById('progressFilterThreshold');
+    const sortEl = document.getElementById('progressSortOrder');
+    if (typeEl) typeEl.value = 'all';
+    if (thresholdEl) thresholdEl.value = 20;
+    if (sortEl) sortEl.value = 'improve_desc';
+    window.__PROGRESS_QUICK_MODE = 'all';
+    applyProgressFilter();
+}
+
+    Object.assign(window, {
+        showMappingModal,
+        confirmMappingsAndRun,
+        switchValueAddedView,
+        exportValueAddedExcel,
+        getProgressCleanName,
+        getProgressSelectedSchoolName,
+        getProgressCurrentStudentsForSchool,
+        getProgressBaselineRowsForSchool,
+        buildProgressPreviousMatchIndex,
+        resolveProgressBaselineMatch,
+        getProgressStatusMeta,
+        destroyProgressChart,
+        clearProgressVisuals,
+        performProgressCalculation,
+        renderProgressTable,
+        renderTrendChart,
+        renderSankeyDiagram,
+        renderValueAddedReport,
+        performSilentMatching,
+        exportProgressAnalysis,
+        ensureProgressFilterSummaryElement,
+        updateProgressModuleCopy,
+        getProgressQuickFilterMode,
+        getProgressQuickFilterThreshold,
+        getProgressQuickFilterClass,
+        syncProgressQuickFilterButtons,
+        updateProgressFilterSummary,
+        setProgressQuickFilter,
+        renderProgressAnalysis,
+        applyProgressFilter,
+        resetProgressFilter
+    });
+
+    window.VA_VIEW_MODE = VA_VIEW_MODE;
+    window.PROGRESS_CACHE = PROGRESS_CACHE;
+    window.trendChartInstance = trendChartInstance;
+    window.sankeyChartInstance = sankeyChartInstance;
+    window.__PROGRESS_ANALYSIS_RUNTIME_PATCHED__ = true;
 })();
 
 </script>
