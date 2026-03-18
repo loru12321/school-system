@@ -478,6 +478,42 @@
         return sessionStorage.getItem('CURRENT_ROLE') || 'guest';
     }
 
+    window.CloudWorkspaceRuntimeDeps = {
+        CLOUD_TABLE,
+        AUTO_COHORT_SYNC_COOLDOWN_MS,
+        safeToast,
+        safeLoading,
+        setCloudStatus,
+        normalizeCohortId,
+        extractCohortIdFromKey,
+        isLegacyWorkspaceShadowExamKey,
+        getWorkspaceExamSortTime,
+        getWorkspaceSnapshotKey,
+        getCohortSyncCacheKey,
+        countCachedCohortExams,
+        isVirtualCohortSnapshotKey,
+        isIgnoredExamKey,
+        parsePayload,
+        packPayload,
+        clonePayloadFragment,
+        getPayloadTargetCount,
+        hasPayloadIndicatorParams,
+        hasPayloadAliasSettings,
+        needsIndicatorPayloadSupplement,
+        mergeIndicatorPayloadFields,
+        loadSnapshotPayloadByKey,
+        scoreIndicatorSupplement,
+        supplementIndicatorPayload,
+        computeExamDataFingerprint,
+        seedCurrentExamToCohortDb,
+        deriveExamLabel,
+        upsertCloudExamSnapshot,
+        hydrateBundledCohortExams,
+        resolveCloudSnapshotKey,
+        refreshCompareSelectors,
+        getCurrentUserRole
+    };
+
     const CloudManager = {
         check: (silent = false) => {
             if (!window.sbClient) {
@@ -543,118 +579,7 @@
             return `${KEY_PREFIX_TEACHERS}${cohortId}级_${termId}`;
         },
 
-        save: async function (options = {}) {
-            if (!(await this.ensureClientReady())) return false;
-            setCloudStatus('syncing', '保存中');
-
-            const role = getCurrentUserRole();
-            if (!['admin', 'director', 'grade_director'].includes(role)) {
-                safeToast('权限不足', 'warning');
-                return false;
-            }
-
-            const mode = options?.mode === 'exam' ? 'exam' : 'workspace';
-            const key = mode === 'exam'
-                ? this.getKey()
-                : (getWorkspaceSnapshotKey() || this.getKey());
-            if (!key) {
-                alert(mode === 'exam' ? '请先完善考试信息' : '请先选择届别');
-                return false;
-            }
-
-            safeLoading(true, '正在同步云端数据...');
-            try {
-                if (!window.SYS_VARS) window.SYS_VARS = { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
-                const ind1 = document.getElementById('dm_ind1_input');
-                const ind2 = document.getElementById('dm_ind2_input');
-                if (ind1) window.SYS_VARS.indicator.ind1 = ind1.value;
-                if (ind2) window.SYS_VARS.indicator.ind2 = ind2.value;
-                window.SYS_VARS.targets = (typeof ensureNormalizedTargets === 'function') ? ensureNormalizedTargets() : (window.TARGETS || {});
-                window.SYS_VARS.schoolAliases = (typeof ensureSchoolAliasStore === 'function') ? ensureSchoolAliasStore() : (window.SYS_VARS.schoolAliases || []);
-
-                const payload = typeof getCurrentSnapshotPayload === 'function' ? getCurrentSnapshotPayload() : {};
-                if (mode === 'workspace') normalizeWorkspacePayload(payload);
-                const content = packPayload(payload);
-
-                const { error } = await window.sbClient.from(CLOUD_TABLE).upsert({
-                    key,
-                    content,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'key' });
-                if (error) throw error;
-
-                if (mode === 'workspace') {
-                    localStorage.setItem('CURRENT_PROJECT_KEY', key);
-                    window.CURRENT_PROJECT_KEY = key;
-                    if (payload?.CURRENT_EXAM_ID) {
-                        localStorage.setItem('CURRENT_EXAM_ID', payload.CURRENT_EXAM_ID);
-                        window.CURRENT_EXAM_ID = payload.CURRENT_EXAM_ID;
-                    }
-                }
-                localStorage.setItem('CLOUD_SYNC_AT', new Date().toISOString());
-                if (window.idbKeyval) await idbKeyval.set(`cache_${key}`, payload);
-                if (typeof logAction === 'function') logAction('云端同步', `全量数据已同步：${key}`);
-                if (typeof updateStatusPanel === 'function') updateStatusPanel();
-                safeToast('云端同步成功', 'success');
-                setCloudStatus('success', '已保存');
-                return true;
-            } catch (e) {
-                console.error('Cloud save error:', e);
-                alert(`同步失败: ${e.message || e}`);
-                setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '保存失败');
-                return false;
-            } finally {
-                safeLoading(false);
-            }
-        },
-
-        load: async function () {
-            if (!(await this.ensureClientReady())) return false;
-            setCloudStatus('syncing', '拉取中');
-
-            let key = getWorkspaceSnapshotKey() || localStorage.getItem('CURRENT_PROJECT_KEY') || this.getKey();
-            try {
-                key = await resolveCloudSnapshotKey(key);
-                if (key) localStorage.setItem('CURRENT_PROJECT_KEY', key);
-            } catch (e) {
-                console.error('Cloud load key lookup error:', e);
-                setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '加载失败');
-                return false;
-            }
-
-            if (!key) return false;
-
-            safeToast('正在检查云端数据...', 'info');
-            try {
-                const { data, error } = await window.sbClient
-                    .from(CLOUD_TABLE)
-                    .select('content,updated_at')
-                    .eq('key', key)
-                    .maybeSingle();
-                if (error) throw error;
-                if (!data) return false;
-
-                let payload = parsePayload(data.content);
-                payload = normalizeWorkspacePayload(payload);
-                payload = await supplementIndicatorPayload(key, payload);
-                seedCurrentExamToCohortDb(payload, key, data.updated_at);
-                if (typeof applySnapshotPayload === 'function') applySnapshotPayload(payload);
-                const cohortId = normalizeCohortId(payload?.CURRENT_COHORT_ID || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
-                if (cohortId && typeof this.fetchCohortExamsToLocal === 'function') {
-                    await this.fetchCohortExamsToLocal(cohortId);
-                }
-                await refreshCompareSelectors();
-                if (typeof logAction === 'function') logAction('云端加载', `已加载全量数据：${key}`);
-                safeToast('数据已同步到本地', 'success');
-                setCloudStatus('success', '已拉取');
-                return true;
-            } catch (e) {
-                console.error('Cloud load error:', e);
-                safeToast('加载失败', 'error');
-                setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '拉取失败');
-                return false;
-            }
-        },
+        // 工作区/考试快照运行时已拆分到 public/assets/js/cloud-workspace-runtime.js
 
         saveTeachers: async function () {
             if (!(await this.ensureClientReady())) return false;
@@ -887,127 +812,7 @@
             }
         },
 
-        fetchCohortExamsToLocal: async function (cohortId, options = {}) {
-            const cid = normalizeCohortId(cohortId || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
-            if (!cid) return { success: false, message: '无法确定届别' };
-            const hasSessionUser = !!(sessionStorage.getItem('CURRENT_USER') || (window.Auth && Auth.currentUser));
-            if (!hasSessionUser && !options.force) {
-                return { success: false, skipped: true, message: '未登录，跳过自动拉取' };
-            }
-            if (!this._cohortExamSyncTasks) this._cohortExamSyncTasks = {};
-            if (this._cohortExamSyncTasks[cid]) return this._cohortExamSyncTasks[cid];
-
-            this._cohortExamSyncTasks[cid] = (async () => {
-                if (!(await this.ensureClientReady())) return { success: false, message: '云端未连接' };
-                setCloudStatus('syncing', '拉取考试');
-                if (typeof CohortDB === 'undefined' || typeof CohortDB.ensure !== 'function') {
-                    return { success: false, message: 'CohortDB 未初始化' };
-                }
-
-                const db = CohortDB.ensure();
-                db.exams = db.exams || {};
-                const cacheKey = getCohortSyncCacheKey(cid);
-                const forceSync = Boolean(options.force);
-                const minCount = Math.max(1, Number(options.minCount || 2));
-                const lastSyncAt = Number(localStorage.getItem(cacheKey) || 0);
-                const localExamCount = countCachedCohortExams(db, cid);
-
-                if (!forceSync && localExamCount >= minCount && lastSyncAt && (Date.now() - lastSyncAt) < AUTO_COHORT_SYNC_COOLDOWN_MS) {
-                    await refreshCompareSelectors();
-                    setCloudStatus('success', '使用缓存');
-                    return { success: true, count: localExamCount, updated: 0, cached: true };
-                }
-
-                try {
-                    const chunkSize = 10;
-
-                    // Step 1: fetch metadata first
-                    const { data: metaRows, error: metaErr } = await window.sbClient
-                        .from(CLOUD_TABLE)
-                        .select('key, updated_at')
-                        .like('key', `${cid}%`)
-                        .order('updated_at', { ascending: true });
-                    if (metaErr) throw metaErr;
-
-                    const candidates = (metaRows || []).filter(row => {
-                        if (isIgnoredExamKey(row.key)) return false;
-                        if (extractCohortIdFromKey(row.key) !== cid) return false;
-                        return true;
-                    });
-
-                    const keysToFetch = [];
-                    for (const row of candidates) {
-                        const remoteTs = new Date(row.updated_at).getTime() || 0;
-                        const localTs = db.exams[row.key] ? Math.max(new Date(db.exams[row.key].updatedAt || 0).getTime(), Number(db.exams[row.key].createdAt || 0)) : 0;
-                        if (!db.exams[row.key] || remoteTs > localTs + 1000) {
-                            keysToFetch.push(row.key);
-                        }
-                    }
-
-                    if (keysToFetch.length === 0 && localExamCount < minCount && candidates.length > 0) {
-                        keysToFetch.push(candidates[candidates.length - 1].key);
-                    }
-
-                    if (keysToFetch.length === 0) {
-                        localStorage.setItem(cacheKey, String(Date.now()));
-                        await refreshCompareSelectors();
-                        setCloudStatus('success', '已最新');
-                        return { success: true, count: candidates.length, updated: 0 };
-                    }
-
-                    const rowMap = new Map();
-                    for (let i = 0; i < keysToFetch.length; i += chunkSize) {
-                        const chunk = keysToFetch.slice(i, i + chunkSize);
-                        const { data: chunkRows, error: chunkErr } = await window.sbClient
-                            .from(CLOUD_TABLE)
-                            .select('key, content, updated_at')
-                            .in('key', chunk);
-                        if (chunkErr) throw chunkErr;
-                        (chunkRows || []).forEach(r => rowMap.set(r.key, r));
-                    }
-
-                    let loadedCount = 0;
-                    for (const key of keysToFetch) {
-                        const row = rowMap.get(key);
-                        if (!row) continue;
-                        try {
-                            const payload = parsePayload(row.content);
-                            if (!payload) continue;
-                            loadedCount += upsertCloudExamSnapshot(db, row.key, payload, row.updated_at, deriveExamLabel(row.key));
-                            loadedCount += hydrateBundledCohortExams(db, payload, row.updated_at);
-                        } catch (rowErr) {
-                            console.warn('[CloudExams] parse row failed:', rowErr);
-                        }
-                    }
-
-                    window.COHORT_DB = db;
-                    localStorage.setItem(cacheKey, String(Date.now()));
-                    await refreshCompareSelectors();
-
-                    if (loadedCount > 0) safeToast(`已从云端加载 ${loadedCount} 期历史考试`, 'success');
-                    setCloudStatus('success', loadedCount > 0 ? `更新${loadedCount}期` : '已最新');
-                    return { success: true, count: candidates.length, updated: loadedCount };
-                } catch (e) {
-                    console.error('[CloudExams] failed:', e);
-                    setCloudStatus('error', '考试拉取失败');
-                    return { success: false, message: e.message || String(e) };
-                }
-            })().finally(() => {
-                delete this._cohortExamSyncTasks[cid];
-            });
-
-            return this._cohortExamSyncTasks[cid];
-        },
-
-        fetchAllCohortExams: async function (options = {}) {
-            const hasSessionUser = !!(sessionStorage.getItem('CURRENT_USER') || (window.Auth && Auth.currentUser));
-            if (!hasSessionUser && !options.force) {
-                return { success: false, skipped: true, message: '未登录，跳过自动拉取' };
-            }
-            const cid = normalizeCohortId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
-            if (!cid) return;
-            return this.fetchCohortExamsToLocal(cid, options);
-        }
+        // 届别考试补拉运行时已拆分到 public/assets/js/cloud-workspace-runtime.js
     };
 
     window.CloudManager = CloudManager;

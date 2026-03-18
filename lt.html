@@ -541,6 +541,42 @@
         return sessionStorage.getItem('CURRENT_ROLE') || 'guest';
     }
 
+    window.CloudWorkspaceRuntimeDeps = {
+        CLOUD_TABLE,
+        AUTO_COHORT_SYNC_COOLDOWN_MS,
+        safeToast,
+        safeLoading,
+        setCloudStatus,
+        normalizeCohortId,
+        extractCohortIdFromKey,
+        isLegacyWorkspaceShadowExamKey,
+        getWorkspaceExamSortTime,
+        getWorkspaceSnapshotKey,
+        getCohortSyncCacheKey,
+        countCachedCohortExams,
+        isVirtualCohortSnapshotKey,
+        isIgnoredExamKey,
+        parsePayload,
+        packPayload,
+        clonePayloadFragment,
+        getPayloadTargetCount,
+        hasPayloadIndicatorParams,
+        hasPayloadAliasSettings,
+        needsIndicatorPayloadSupplement,
+        mergeIndicatorPayloadFields,
+        loadSnapshotPayloadByKey,
+        scoreIndicatorSupplement,
+        supplementIndicatorPayload,
+        computeExamDataFingerprint,
+        seedCurrentExamToCohortDb,
+        deriveExamLabel,
+        upsertCloudExamSnapshot,
+        hydrateBundledCohortExams,
+        resolveCloudSnapshotKey,
+        refreshCompareSelectors,
+        getCurrentUserRole
+    };
+
     const CloudManager = {
         check: (silent = false) => {
             if (!window.sbClient) {
@@ -606,118 +642,7 @@
             return `${KEY_PREFIX_TEACHERS}${cohortId}级_${termId}`;
         },
 
-        save: async function (options = {}) {
-            if (!(await this.ensureClientReady())) return false;
-            setCloudStatus('syncing', '保存中');
-
-            const role = getCurrentUserRole();
-            if (!['admin', 'director', 'grade_director'].includes(role)) {
-                safeToast('权限不足', 'warning');
-                return false;
-            }
-
-            const mode = options?.mode === 'exam' ? 'exam' : 'workspace';
-            const key = mode === 'exam'
-                ? this.getKey()
-                : (getWorkspaceSnapshotKey() || this.getKey());
-            if (!key) {
-                alert(mode === 'exam' ? '请先完善考试信息' : '请先选择届别');
-                return false;
-            }
-
-            safeLoading(true, '正在同步云端数据...');
-            try {
-                if (!window.SYS_VARS) window.SYS_VARS = { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
-                const ind1 = document.getElementById('dm_ind1_input');
-                const ind2 = document.getElementById('dm_ind2_input');
-                if (ind1) window.SYS_VARS.indicator.ind1 = ind1.value;
-                if (ind2) window.SYS_VARS.indicator.ind2 = ind2.value;
-                window.SYS_VARS.targets = (typeof ensureNormalizedTargets === 'function') ? ensureNormalizedTargets() : (window.TARGETS || {});
-                window.SYS_VARS.schoolAliases = (typeof ensureSchoolAliasStore === 'function') ? ensureSchoolAliasStore() : (window.SYS_VARS.schoolAliases || []);
-
-                const payload = typeof getCurrentSnapshotPayload === 'function' ? getCurrentSnapshotPayload() : {};
-                if (mode === 'workspace') normalizeWorkspacePayload(payload);
-                const content = packPayload(payload);
-
-                const { error } = await window.sbClient.from(CLOUD_TABLE).upsert({
-                    key,
-                    content,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'key' });
-                if (error) throw error;
-
-                if (mode === 'workspace') {
-                    localStorage.setItem('CURRENT_PROJECT_KEY', key);
-                    window.CURRENT_PROJECT_KEY = key;
-                    if (payload?.CURRENT_EXAM_ID) {
-                        localStorage.setItem('CURRENT_EXAM_ID', payload.CURRENT_EXAM_ID);
-                        window.CURRENT_EXAM_ID = payload.CURRENT_EXAM_ID;
-                    }
-                }
-                localStorage.setItem('CLOUD_SYNC_AT', new Date().toISOString());
-                if (window.idbKeyval) await idbKeyval.set(`cache_${key}`, payload);
-                if (typeof logAction === 'function') logAction('云端同步', `全量数据已同步：${key}`);
-                if (typeof updateStatusPanel === 'function') updateStatusPanel();
-                safeToast('云端同步成功', 'success');
-                setCloudStatus('success', '已保存');
-                return true;
-            } catch (e) {
-                console.error('Cloud save error:', e);
-                alert(`同步失败: ${e.message || e}`);
-                setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '保存失败');
-                return false;
-            } finally {
-                safeLoading(false);
-            }
-        },
-
-        load: async function () {
-            if (!(await this.ensureClientReady())) return false;
-            setCloudStatus('syncing', '拉取中');
-
-            let key = getWorkspaceSnapshotKey() || localStorage.getItem('CURRENT_PROJECT_KEY') || this.getKey();
-            try {
-                key = await resolveCloudSnapshotKey(key);
-                if (key) localStorage.setItem('CURRENT_PROJECT_KEY', key);
-            } catch (e) {
-                console.error('Cloud load key lookup error:', e);
-                setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '加载失败');
-                return false;
-            }
-
-            if (!key) return false;
-
-            safeToast('正在检查云端数据...', 'info');
-            try {
-                const { data, error } = await window.sbClient
-                    .from(CLOUD_TABLE)
-                    .select('content,updated_at')
-                    .eq('key', key)
-                    .maybeSingle();
-                if (error) throw error;
-                if (!data) return false;
-
-                let payload = parsePayload(data.content);
-                payload = normalizeWorkspacePayload(payload);
-                payload = await supplementIndicatorPayload(key, payload);
-                seedCurrentExamToCohortDb(payload, key, data.updated_at);
-                if (typeof applySnapshotPayload === 'function') applySnapshotPayload(payload);
-                const cohortId = normalizeCohortId(payload?.CURRENT_COHORT_ID || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
-                if (cohortId && typeof this.fetchCohortExamsToLocal === 'function') {
-                    await this.fetchCohortExamsToLocal(cohortId);
-                }
-                await refreshCompareSelectors();
-                if (typeof logAction === 'function') logAction('云端加载', `已加载全量数据：${key}`);
-                safeToast('数据已同步到本地', 'success');
-                setCloudStatus('success', '已拉取');
-                return true;
-            } catch (e) {
-                console.error('Cloud load error:', e);
-                safeToast('加载失败', 'error');
-                setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '拉取失败');
-                return false;
-            }
-        },
+        // 工作区/考试快照运行时已拆分到 public/assets/js/cloud-workspace-runtime.js
 
         saveTeachers: async function () {
             if (!(await this.ensureClientReady())) return false;
@@ -950,6 +875,202 @@
             }
         },
 
+        // 届别考试补拉运行时已拆分到 public/assets/js/cloud-workspace-runtime.js
+    };
+
+    window.CloudManager = CloudManager;
+    window.saveCloudData = (options = {}) => CloudManager.save(options);
+
+    let cloudLoadPromise = null;
+    window.loadCloudData = () => {
+        if (cloudLoadPromise) return cloudLoadPromise;
+        cloudLoadPromise = Promise.resolve(CloudManager.load()).finally(() => {
+            cloudLoadPromise = null;
+        });
+        return cloudLoadPromise;
+    };
+
+    window.getUniqueExamKey = () => CloudManager.getKey();
+    window.saveCloudSnapshot = (options = {}) => CloudManager.save(options);
+
+    window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            if (typeof updateStatusPanel === 'function') updateStatusPanel();
+            if (typeof updateRoleHint === 'function') updateRoleHint();
+            if (typeof renderActionLogs === 'function') renderActionLogs();
+            if (typeof scanDataIssues === 'function') scanDataIssues();
+            const hasSessionUser = !!(sessionStorage.getItem('CURRENT_USER') || (window.Auth && Auth.currentUser));
+            const hasSavedWorkspace = !!(
+                localStorage.getItem('CURRENT_EXAM_ID')
+                || localStorage.getItem('CURRENT_PROJECT_KEY')
+                || window.CURRENT_EXAM_ID
+                || window.CURRENT_PROJECT_KEY
+            );
+            const hasRuntimeScores = Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0;
+            if (hasSessionUser && !localStorage.getItem('HAS_SEEN_STARTER') && !hasSavedWorkspace && !hasRuntimeScores && typeof switchTab === 'function' && typeof openStarterGuide === 'function') {
+                if (typeof __guardBypass !== 'undefined') __guardBypass = true;
+                switchTab('starter-hub');
+                openStarterGuide();
+            }
+            if (typeof scheduleTeacherSyncPrompt === 'function') scheduleTeacherSyncPrompt();
+            if (hasSessionUser && typeof CloudManager.fetchAllCohortExams === 'function') CloudManager.fetchAllCohortExams();
+        }, 800);
+    });
+})();
+
+</script>
+    <script>
+(() => {
+    if (typeof window === 'undefined') return;
+    const CloudManager = window.CloudManager;
+    const deps = window.CloudWorkspaceRuntimeDeps;
+    if (!CloudManager || !deps || window.__CLOUD_WORKSPACE_RUNTIME_PATCHED__) return;
+
+    const {
+        CLOUD_TABLE,
+        AUTO_COHORT_SYNC_COOLDOWN_MS,
+        safeToast,
+        safeLoading,
+        setCloudStatus,
+        normalizeCohortId,
+        extractCohortIdFromKey,
+        getWorkspaceSnapshotKey,
+        getCohortSyncCacheKey,
+        countCachedCohortExams,
+        parsePayload,
+        packPayload,
+        supplementIndicatorPayload,
+        seedCurrentExamToCohortDb,
+        deriveExamLabel,
+        upsertCloudExamSnapshot,
+        hydrateBundledCohortExams,
+        resolveCloudSnapshotKey,
+        refreshCompareSelectors,
+        getCurrentUserRole,
+        isIgnoredExamKey
+    } = deps;
+
+    function normalizeWorkspacePayload(payload) {
+        if (typeof window.normalizeWorkspacePayload === 'function') {
+            return window.normalizeWorkspacePayload(payload);
+        }
+        return payload;
+    }
+
+    Object.assign(CloudManager, {
+        save: async function (options = {}) {
+            if (!(await this.ensureClientReady())) return false;
+            setCloudStatus('syncing', '保存中');
+
+            const role = getCurrentUserRole();
+            if (!['admin', 'director', 'grade_director'].includes(role)) {
+                safeToast('权限不足', 'warning');
+                return false;
+            }
+
+            const mode = options?.mode === 'exam' ? 'exam' : 'workspace';
+            const key = mode === 'exam'
+                ? this.getKey()
+                : (getWorkspaceSnapshotKey() || this.getKey());
+            if (!key) {
+                alert(mode === 'exam' ? '请先完善考试信息' : '请先选择届别');
+                return false;
+            }
+
+            safeLoading(true, '正在同步云端数据...');
+            try {
+                if (!window.SYS_VARS) window.SYS_VARS = { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
+                const ind1 = document.getElementById('dm_ind1_input');
+                const ind2 = document.getElementById('dm_ind2_input');
+                if (ind1) window.SYS_VARS.indicator.ind1 = ind1.value;
+                if (ind2) window.SYS_VARS.indicator.ind2 = ind2.value;
+                window.SYS_VARS.targets = (typeof ensureNormalizedTargets === 'function') ? ensureNormalizedTargets() : (window.TARGETS || {});
+                window.SYS_VARS.schoolAliases = (typeof ensureSchoolAliasStore === 'function') ? ensureSchoolAliasStore() : (window.SYS_VARS.schoolAliases || []);
+
+                const payload = typeof getCurrentSnapshotPayload === 'function' ? getCurrentSnapshotPayload() : {};
+                if (mode === 'workspace') normalizeWorkspacePayload(payload);
+                const content = packPayload(payload);
+
+                const { error } = await window.sbClient.from(CLOUD_TABLE).upsert({
+                    key,
+                    content,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'key' });
+                if (error) throw error;
+
+                if (mode === 'workspace') {
+                    localStorage.setItem('CURRENT_PROJECT_KEY', key);
+                    window.CURRENT_PROJECT_KEY = key;
+                    if (payload?.CURRENT_EXAM_ID) {
+                        localStorage.setItem('CURRENT_EXAM_ID', payload.CURRENT_EXAM_ID);
+                        window.CURRENT_EXAM_ID = payload.CURRENT_EXAM_ID;
+                    }
+                }
+                localStorage.setItem('CLOUD_SYNC_AT', new Date().toISOString());
+                if (window.idbKeyval) await idbKeyval.set(`cache_${key}`, payload);
+                if (typeof logAction === 'function') logAction('云端同步', `全量数据已同步：${key}`);
+                if (typeof updateStatusPanel === 'function') updateStatusPanel();
+                safeToast('云端同步成功', 'success');
+                setCloudStatus('success', '已保存');
+                return true;
+            } catch (e) {
+                console.error('Cloud save error:', e);
+                alert(`同步失败: ${e.message || e}`);
+                setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '保存失败');
+                return false;
+            } finally {
+                safeLoading(false);
+            }
+        },
+
+        load: async function () {
+            if (!(await this.ensureClientReady())) return false;
+            setCloudStatus('syncing', '拉取中');
+
+            let key = getWorkspaceSnapshotKey() || localStorage.getItem('CURRENT_PROJECT_KEY') || this.getKey();
+            try {
+                key = await resolveCloudSnapshotKey(key);
+                if (key) localStorage.setItem('CURRENT_PROJECT_KEY', key);
+            } catch (e) {
+                console.error('Cloud load key lookup error:', e);
+                setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '加载失败');
+                return false;
+            }
+
+            if (!key) return false;
+
+            safeToast('正在检查云端数据...', 'info');
+            try {
+                const { data, error } = await window.sbClient
+                    .from(CLOUD_TABLE)
+                    .select('content,updated_at')
+                    .eq('key', key)
+                    .maybeSingle();
+                if (error) throw error;
+                if (!data) return false;
+
+                let payload = parsePayload(data.content);
+                payload = normalizeWorkspacePayload(payload);
+                payload = await supplementIndicatorPayload(key, payload);
+                seedCurrentExamToCohortDb(payload, key, data.updated_at);
+                if (typeof applySnapshotPayload === 'function') applySnapshotPayload(payload);
+                const cohortId = normalizeCohortId(payload?.CURRENT_COHORT_ID || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+                if (cohortId && typeof this.fetchCohortExamsToLocal === 'function') {
+                    await this.fetchCohortExamsToLocal(cohortId);
+                }
+                await refreshCompareSelectors();
+                if (typeof logAction === 'function') logAction('云端加载', `已加载全量数据：${key}`);
+                safeToast('数据已同步到本地', 'success');
+                setCloudStatus('success', '已拉取');
+                return true;
+            } catch (e) {
+                console.error('Cloud load error:', e);
+                safeToast('加载失败', 'error');
+                setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '拉取失败');
+                return false;
+            }
+        },
+
         fetchCohortExamsToLocal: async function (cohortId, options = {}) {
             const cid = normalizeCohortId(cohortId || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
             if (!cid) return { success: false, message: '无法确定届别' };
@@ -983,8 +1104,6 @@
 
                 try {
                     const chunkSize = 10;
-
-                    // Step 1: fetch metadata first
                     const { data: metaRows, error: metaErr } = await window.sbClient
                         .from(CLOUD_TABLE)
                         .select('key, updated_at')
@@ -1071,46 +1190,9 @@
             if (!cid) return;
             return this.fetchCohortExamsToLocal(cid, options);
         }
-    };
-
-    window.CloudManager = CloudManager;
-    window.saveCloudData = (options = {}) => CloudManager.save(options);
-
-    let cloudLoadPromise = null;
-    window.loadCloudData = () => {
-        if (cloudLoadPromise) return cloudLoadPromise;
-        cloudLoadPromise = Promise.resolve(CloudManager.load()).finally(() => {
-            cloudLoadPromise = null;
-        });
-        return cloudLoadPromise;
-    };
-
-    window.getUniqueExamKey = () => CloudManager.getKey();
-    window.saveCloudSnapshot = (options = {}) => CloudManager.save(options);
-
-    window.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => {
-            if (typeof updateStatusPanel === 'function') updateStatusPanel();
-            if (typeof updateRoleHint === 'function') updateRoleHint();
-            if (typeof renderActionLogs === 'function') renderActionLogs();
-            if (typeof scanDataIssues === 'function') scanDataIssues();
-            const hasSessionUser = !!(sessionStorage.getItem('CURRENT_USER') || (window.Auth && Auth.currentUser));
-            const hasSavedWorkspace = !!(
-                localStorage.getItem('CURRENT_EXAM_ID')
-                || localStorage.getItem('CURRENT_PROJECT_KEY')
-                || window.CURRENT_EXAM_ID
-                || window.CURRENT_PROJECT_KEY
-            );
-            const hasRuntimeScores = Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0;
-            if (hasSessionUser && !localStorage.getItem('HAS_SEEN_STARTER') && !hasSavedWorkspace && !hasRuntimeScores && typeof switchTab === 'function' && typeof openStarterGuide === 'function') {
-                if (typeof __guardBypass !== 'undefined') __guardBypass = true;
-                switchTab('starter-hub');
-                openStarterGuide();
-            }
-            if (typeof scheduleTeacherSyncPrompt === 'function') scheduleTeacherSyncPrompt();
-            if (hasSessionUser && typeof CloudManager.fetchAllCohortExams === 'function') CloudManager.fetchAllCohortExams();
-        }, 800);
     });
+
+    window.__CLOUD_WORKSPACE_RUNTIME_PATCHED__ = true;
 })();
 
 </script>
