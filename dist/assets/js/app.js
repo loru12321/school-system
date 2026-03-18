@@ -6493,12 +6493,24 @@ let CURRENT_COHORT_ID = '';
 let CURRENT_COHORT_META = null;
 let CURRENT_EXAM_ID = '';
 window.switchMobileTab = function (tabName) {
+    if (window.MobMgr && typeof MobMgr.switchTab === 'function' && document.getElementById('mobile-manager-app')) {
+        const mobApp = document.getElementById('mobile-manager-app');
+        if (mobApp && getComputedStyle(mobApp).display === 'none') {
+            mobApp.style.display = 'block';
+            const appEl = document.getElementById('app');
+            if (appEl) {
+                appEl.classList.add('hidden');
+                appEl.style.display = 'none';
+            }
+        }
+        MobMgr.switchTab(tabName);
+        return;
+    }
     const app = document.getElementById('mobile-app');
-    // 兼容 Alpine V3 的写法
     if (app && window.Alpine) {
         Alpine.$data(app).activeTab = tabName;
     } else {
-        console.error("Alpine 未加载或元素不存在");
+        console.warn("⚠️ 未找到可用的移动端容器，已跳过 switchMobileTab");
     }
 };
 let TEACHER_TOWNSHIP_RANKINGS = {}; MARGINAL_STUDENTS = {};
@@ -23101,7 +23113,10 @@ const MobMgr = {
 
         // 隐藏 PC 端的大容器及导航
         const appEl = document.getElementById('app');
-        if (appEl) appEl.classList.add('hidden');
+        if (appEl) {
+            appEl.classList.add('hidden');
+            appEl.style.display = 'none';
+        }
         const header = document.querySelector('header');
         if (header) header.style.display = 'none';
         const nav = document.querySelector('.nav-wrapper');
@@ -23331,12 +23346,15 @@ const MobMgr = {
         container.innerHTML = html;
     }
 };
+window.MobMgr = MobMgr;
 
 // 4. Hook: 拦截 Auth.applyRoleView，实现手机端自动跳转
 // 必须确保在 Auth 对象定义之后执行此代码 (通常放在脚本末尾即可)
 const originalApplyRoleView = Auth.applyRoleView;
 Auth.applyRoleView = function () {
     const role = this.currentUser.role;
+    const mobApp = document.getElementById('mobile-manager-app');
+    const useMobileManager = role !== 'parent' && window.innerWidth <= 768 && !!mobApp && window.MobMgr && typeof MobMgr.init === 'function';
 
     // A. 家长角色：始终进入专属的 Parent View (会自动调用 renderInstagramCard)
     if (role === 'parent') {
@@ -23344,8 +23362,19 @@ Auth.applyRoleView = function () {
         return;
     }
 
-    // B. 所有其他角色（包括手机端）：统一使用 PC 网页端视图
+    // B. 先应用桌面端权限逻辑，再按屏幕宽度决定是否切到移动端管理器
     originalApplyRoleView.call(this);
+    if (useMobileManager) {
+        MobMgr.init();
+        return;
+    }
+
+    if (mobApp) mobApp.style.display = 'none';
+    const appEl = document.getElementById('app');
+    if (appEl) {
+        appEl.classList.remove('hidden');
+        appEl.style.display = '';
+    }
 };
 
 
