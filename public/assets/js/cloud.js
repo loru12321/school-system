@@ -46,6 +46,26 @@
         return normalizeCohortId(key);
     }
 
+    function isLegacyWorkspaceShadowExamKey(key) {
+        const text = String(key || '').trim();
+        if (!text) return false;
+        if (/^cohort::/i.test(text)) return false;
+        if (isIgnoredExamKey(text)) return false;
+        return /^\d{4}级_[^_]+年级_\d{4}-\d{4}_[^_]+_[^_]+(?:_[^_]+)?$/i.test(text);
+    }
+
+    function getWorkspaceSnapshotKey() {
+        const explicitProjectKey = String(localStorage.getItem('CURRENT_PROJECT_KEY') || window.CURRENT_PROJECT_KEY || '').trim();
+        if (/^cohort::/i.test(explicitProjectKey)) return explicitProjectKey;
+        const cohortId = normalizeCohortId(
+            window.CURRENT_COHORT_ID
+            || localStorage.getItem('CURRENT_COHORT_ID')
+            || explicitProjectKey
+        );
+        if (cohortId) return `cohort::${cohortId}`;
+        return explicitProjectKey;
+    }
+
     function getCohortSyncCacheKey(cohortId) {
         return `CLOUD_EXAMS_SYNC_TS_${normalizeCohortId(cohortId)}`;
     }
@@ -77,6 +97,46 @@
             raw = LZString.decompressFromUTF16(raw.slice(3));
         }
         return typeof raw === 'string' ? JSON.parse(raw) : raw;
+    }
+
+    function normalizeWorkspacePayload(payload) {
+        const next = (payload && typeof payload === 'object') ? payload : {};
+        const db = next.COHORT_DB && typeof next.COHORT_DB === 'object' ? next.COHORT_DB : null;
+        const examMap = db?.exams && typeof db.exams === 'object' ? db.exams : null;
+        if (!examMap) return next;
+
+        const realExamEntries = Object.entries(examMap)
+            .map(([examId, examPayload]) => ({
+                examId: String(examId || '').trim(),
+                examPayload: examPayload || {}
+            }))
+            .filter(item => item.examId && !isIgnoredExamKey(item.examId) && !isVirtualCohortSnapshotKey(item.examId) && !isLegacyWorkspaceShadowExamKey(item.examId));
+
+        if (realExamEntries.length === 0) return next;
+
+        Object.keys(examMap).forEach(examId => {
+            if (isLegacyWorkspaceShadowExamKey(examId)) {
+                delete examMap[examId];
+            }
+        });
+
+        const sortedRealExamIds = realExamEntries
+            .slice()
+            .sort((a, b) => {
+                const ta = new Date(b.examPayload?.updatedAt || 0).getTime() || Number(b.examPayload?.createdAt || 0) || 0;
+                const tb = new Date(a.examPayload?.updatedAt || 0).getTime() || Number(a.examPayload?.createdAt || 0) || 0;
+                return ta - tb;
+            })
+            .map(item => item.examId);
+
+        const preferredCurrentExamId = sortedRealExamIds[0] || '';
+        if (preferredCurrentExamId && isLegacyWorkspaceShadowExamKey(next.CURRENT_EXAM_ID)) {
+            next.CURRENT_EXAM_ID = preferredCurrentExamId;
+        }
+        if (preferredCurrentExamId && db && isLegacyWorkspaceShadowExamKey(db.currentExamId)) {
+            db.currentExamId = preferredCurrentExamId;
+        }
+        return next;
     }
 
     function packPayload(payload) {
@@ -360,6 +420,7 @@
 
     async function resolveCloudSnapshotKey(preferredKey) {
         const rawKey = String(preferredKey || '').trim();
+        if (/^cohort::/i.test(rawKey)) return rawKey;
         const keyLooksLikeExam = rawKey
             && !/^cohort::/i.test(rawKey)
             && !isIgnoredExamKey(rawKey)
@@ -463,7 +524,7 @@
             return `${KEY_PREFIX_TEACHERS}${cohortId}级_${termId}`;
         },
 
-        save: async function () {
+        save: async function (options = {}) {
             if (!(await this.ensureClientReady())) return false;
             setCloudStatus('syncing', '保存中');
 
@@ -473,9 +534,12 @@
                 return false;
             }
 
-            const key = this.getKey();
+            const mode = options?.mode === 'exam' ? 'exam' : 'workspace';
+            const key = mode === 'exam'
+                ? this.getKey()
+                : (getWorkspaceSnapshotKey() || this.getKey());
             if (!key) {
-                alert('请先完善考试信息');
+                alert(mode === 'exam' ? '请先完善考试信息' : '请先选择届别');
                 return false;
             }
 
@@ -490,6 +554,7 @@
                 window.SYS_VARS.schoolAliases = (typeof ensureSchoolAliasStore === 'function') ? ensureSchoolAliasStore() : (window.SYS_VARS.schoolAliases || []);
 
                 const payload = typeof getCurrentSnapshotPayload === 'function' ? getCurrentSnapshotPayload() : {};
+                if (mode === 'workspace') normalizeWorkspacePayload(payload);
                 const content = packPayload(payload);
 
                 const { error } = await window.sbClient.from(CLOUD_TABLE).upsert({
@@ -499,7 +564,10 @@
                 }, { onConflict: 'key' });
                 if (error) throw error;
 
-                localStorage.setItem('CURRENT_PROJECT_KEY', key);
+                if (mode === 'workspace') {
+                    localStorage.setItem('CURRENT_PROJECT_KEY', key);
+                    window.CURRENT_PROJECT_KEY = key;
+                }
                 localStorage.setItem('CLOUD_SYNC_AT', new Date().toISOString());
                 if (window.idbKeyval) await idbKeyval.set(`cache_${key}`, payload);
                 if (typeof logAction === 'function') logAction('云端同步', `全量数据已同步：${key}`);
@@ -521,7 +589,7 @@
             if (!(await this.ensureClientReady())) return false;
             setCloudStatus('syncing', '拉取中');
 
-            let key = this.getKey() || localStorage.getItem('CURRENT_PROJECT_KEY');
+            let key = getWorkspaceSnapshotKey() || localStorage.getItem('CURRENT_PROJECT_KEY') || this.getKey();
             try {
                 key = await resolveCloudSnapshotKey(key);
                 if (key) localStorage.setItem('CURRENT_PROJECT_KEY', key);
@@ -544,6 +612,7 @@
                 if (!data) return false;
 
                 let payload = parsePayload(data.content);
+                payload = normalizeWorkspacePayload(payload);
                 payload = await supplementIndicatorPayload(key, payload);
                 seedCurrentExamToCohortDb(payload, key, data.updated_at);
                 if (typeof applySnapshotPayload === 'function') applySnapshotPayload(payload);
@@ -919,7 +988,7 @@
     };
 
     window.CloudManager = CloudManager;
-    window.saveCloudData = () => CloudManager.save();
+    window.saveCloudData = (options = {}) => CloudManager.save(options);
 
     let cloudLoadPromise = null;
     window.loadCloudData = () => {
@@ -931,7 +1000,7 @@
     };
 
     window.getUniqueExamKey = () => CloudManager.getKey();
-    window.saveCloudSnapshot = () => CloudManager.save();
+    window.saveCloudSnapshot = (options = {}) => CloudManager.save(options);
 
     window.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {

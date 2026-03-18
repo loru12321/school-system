@@ -3492,6 +3492,7 @@ const DataManager = {
         const text = String(key || '').trim();
         if (!text) return 'other';
         if (/^cohort::/i.test(text)) return 'cohort';
+        if (isLegacyWorkspaceShadowExamId(text)) return 'shadow';
         if (/^TEACHERS_/i.test(text)) return 'teacher';
         if (/^(STUDENT_COMPARE_|MACRO_COMPARE_|TEACHER_COMPARE_|TOWN_SUB_COMPARE_)/.test(text)) return 'compare';
         if (normalizeCompareCohortId(text)) return 'snapshot';
@@ -16707,6 +16708,14 @@ function normalizeCompareCohortId(raw) {
     return digits.length > 4 ? digits.slice(0, 4) : digits;
 }
 
+function isLegacyWorkspaceShadowExamId(key) {
+    const text = String(key || '').trim();
+    if (!text) return false;
+    if (/^cohort::/i.test(text)) return false;
+    if (/^(TEACHERS_|STUDENT_COMPARE_|MACRO_COMPARE_|TEACHER_COMPARE_|TOWN_SUB_COMPARE_)/.test(text)) return false;
+    return /^\d{4}级_[^_]+年级_\d{4}-\d{4}_[^_]+_[^_]+(?:_[^_]+)?$/i.test(text);
+}
+
 const COMPARE_EXAM_TYPE_KEYWORDS = [
     '开学考', '摸底', '月考', '期中', '期末', '联考', '调研', '模考', '模拟',
     '一模', '二模', '三模', '周测', '单元', '阶段测试'
@@ -16938,6 +16947,7 @@ function isRealExamIdForCompare(examId, cohortId) {
     const key = String(examId || '').trim();
     if (!key) return false;
     if (/^cohort::/i.test(key)) return false;
+    if (isLegacyWorkspaceShadowExamId(key)) return false;
     if (/^(TEACHERS_|STUDENT_COMPARE_|MACRO_COMPARE_|TEACHER_COMPARE_|TOWN_SUB_COMPARE_)/.test(key)) return false;
     if (/(?:^|_)(?:\u671f\u4e2d\u6807\u51c6|\u671f\u672b\u6807\u51c6)(?:_|$)/.test(key)) return false;
 
@@ -31567,8 +31577,9 @@ async function archiveCurrentExam() {
     localStorage.setItem('ARCHIVE_META', JSON.stringify(meta));
     if (COHORT_DB) COHORT_DB.currentExamId = key;
 
-    // 保存并生成快照
-    await saveCloudData();
+    // 保存真实考试快照，并同步整届工作区
+    await saveCloudData({ mode: 'exam' });
+    await saveCloudData({ mode: 'workspace' });
     createAutoSnapshot(getCurrentSnapshotPayload());
 
     localStorage.setItem('ARCHIVE_LOCKED', 'true');
