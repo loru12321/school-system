@@ -5715,6 +5715,10 @@ const DataManager = {
         tbody.innerHTML = "";
 
         if (!sql) return;
+        if (typeof alasql === 'undefined') {
+            msgEl.innerText = "❌ SQL 引擎未加载，请刷新页面后重试";
+            return;
+        }
 
         try {
             // 1. 准备数据
@@ -17573,6 +17577,7 @@ function updateTeacherMultiExamSelects() {
     exam3Sel.value = defaultIds[2] || defaultIds[defaultIds.length - 1] || '';
 
     onTeacherComparePeriodCountChange();
+    pickTeacherCompareDefaultSubjectAndTeacher();
 }
 
 // 🆕 初始化教师多期对比选择器
@@ -17631,6 +17636,39 @@ function updateTeacherCompareExamSelects() {
     if (typeof updateTeacherCompareTeacherSelect === 'function') {
         updateTeacherCompareTeacherSelect();
     }
+    pickTeacherCompareDefaultSubjectAndTeacher();
+}
+
+function pickTeacherCompareDefaultSubjectAndTeacher() {
+    const schoolEl = document.getElementById('teacherCompareSchool');
+    const subjectEl = document.getElementById('teacherCompareSubject');
+    const teacherEl = document.getElementById('teacherCompareTeacher');
+    if (!schoolEl || !subjectEl || !teacherEl) return;
+    const school = schoolEl.value;
+    if (!school) return;
+
+    const subjects = Array.from(subjectEl.options).map(option => option.value).filter(Boolean);
+    if (!subjects.length) return;
+
+    const currentSubject = String(subjectEl.value || '').trim();
+    if (currentSubject) {
+        updateTeacherCompareTeacherSelect();
+        const hasTeacher = Array.from(teacherEl.options).some(option => option.value);
+        if (hasTeacher) {
+            if (!teacherEl.value) teacherEl.value = Array.from(teacherEl.options).find(option => option.value)?.value || '';
+            return;
+        }
+    }
+
+    for (const subject of subjects) {
+        subjectEl.value = subject;
+        updateTeacherCompareTeacherSelect();
+        const firstTeacher = Array.from(teacherEl.options).find(option => option.value)?.value || '';
+        if (firstTeacher) {
+            teacherEl.value = firstTeacher;
+            return;
+        }
+    }
 }
 
 function updateTeacherCompareTeacherSelect() {
@@ -17664,6 +17702,9 @@ function updateTeacherCompareTeacherSelect() {
     [...names].sort((a, b) => a.localeCompare(b, 'zh-CN')).forEach(name => {
         teacherEl.innerHTML += `<option value="${name}">${name}</option>`;
     });
+    if (!teacherEl.value) {
+        teacherEl.value = Array.from(teacherEl.options).find(option => option.value)?.value || '';
+    }
 }
 
 function buildTeacherStatsForExam(rows, school, subjectFilter) {
