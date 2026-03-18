@@ -3056,6 +3056,7 @@ const DataManager = {
         window.DataManager = this;
     },
     currentTab: 'student', // student | teacher | archive | params | targets
+    cloudPanelView: 'list',
     pagination: { page: 1, size: 50, total: 0 },
     cloudSelection: new Set(),
     studentSelection: new Set(),
@@ -3143,6 +3144,95 @@ const DataManager = {
                 console.warn('[EdgeGateway] school alias refresh skipped:', err?.message || err);
             });
         }
+    },
+
+    ensureCloudPanelSwitch: function () {
+        const modal = document.getElementById('data-manager-modal');
+        const content = modal?.querySelector('.modal-content');
+        const tabContainer = document.getElementById('tab-data-stu')?.parentElement;
+        if (!content || !tabContainer) return null;
+
+        let switcher = document.getElementById('dm-cloud-panel-switch');
+        if (!switcher) {
+            switcher = document.createElement('div');
+            switcher.id = 'dm-cloud-panel-switch';
+            switcher.style.display = 'none';
+            switcher.style.marginBottom = '14px';
+            switcher.style.padding = '6px';
+            switcher.style.border = '1px solid #e2e8f0';
+            switcher.style.borderRadius = '16px';
+            switcher.style.background = '#f8fafc';
+            switcher.style.gap = '8px';
+            switcher.style.alignItems = 'center';
+            switcher.style.justifyContent = 'space-between';
+            switcher.style.flexWrap = 'wrap';
+            switcher.innerHTML = `
+                <div style="font-size:12px; color:#64748b; padding:0 6px;">左右点击切换显示区域</div>
+                <div style="display:flex; gap:8px; flex:1; min-width:260px;">
+                    <button type="button" id="dm-cloud-view-overview" onclick="DataManager.setCloudPanelView('overview')"
+                        style="flex:1; border:none; border-radius:12px; padding:10px 14px; cursor:pointer; font-weight:700; background:#ffffff; color:#334155;">
+                        ① 左侧显示概览
+                    </button>
+                    <button type="button" id="dm-cloud-view-list" onclick="DataManager.setCloudPanelView('list')"
+                        style="flex:1; border:none; border-radius:12px; padding:10px 14px; cursor:pointer; font-weight:700; background:#ffffff; color:#334155;">
+                        ② 右侧显示存档
+                    </button>
+                </div>
+            `;
+        }
+
+        if (switcher.parentElement !== content) {
+            content.insertBefore(switcher, tabContainer.nextSibling);
+        }
+        return switcher;
+    },
+
+    setCloudPanelView: function (view) {
+        this.cloudPanelView = view === 'overview' ? 'overview' : 'list';
+        this.updateCloudPanelView();
+    },
+
+    updateCloudPanelView: function () {
+        const switcher = this.ensureCloudPanelSwitch();
+        const workflow = document.getElementById('dm-workflow-strip');
+        const statusOverview = document.getElementById('dm-status-overview');
+        const cloudArea = document.getElementById('dm-cloud-area');
+        const overviewBtn = document.getElementById('dm-cloud-view-overview');
+        const listBtn = document.getElementById('dm-cloud-view-list');
+        const isCloudTab = this.currentTab === 'cloud';
+
+        if (switcher) {
+            switcher.style.display = isCloudTab ? 'flex' : 'none';
+        }
+
+        if (!isCloudTab) {
+            if (workflow) workflow.style.display = 'flex';
+            if (statusOverview) statusOverview.style.display = 'block';
+            if (cloudArea) cloudArea.style.display = 'none';
+            return;
+        }
+
+        const showOverview = this.cloudPanelView === 'overview';
+        if (workflow) workflow.style.display = showOverview ? 'flex' : 'none';
+        if (statusOverview) statusOverview.style.display = showOverview ? 'block' : 'none';
+        if (cloudArea) cloudArea.style.display = showOverview ? 'none' : 'flex';
+
+        const activeStyle = {
+            background: 'linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%)',
+            color: '#ffffff',
+            boxShadow: '0 10px 24px rgba(37,99,235,0.18)'
+        };
+        const idleStyle = {
+            background: '#ffffff',
+            color: '#334155',
+            boxShadow: 'none'
+        };
+        [overviewBtn, listBtn].forEach(btn => {
+            if (!btn) return;
+            btn.style.transition = 'all 0.2s ease';
+        });
+        if (overviewBtn) Object.assign(overviewBtn.style, showOverview ? activeStyle : idleStyle);
+        if (listBtn) Object.assign(listBtn.style, showOverview ? idleStyle : activeStyle);
     },
 
     // 2. 切换标签页 (修复版：支持所有管理模块)
@@ -3291,6 +3381,8 @@ const DataManager = {
                 searchInput.style.borderRadius = '10px';
             }
         }
+
+        this.ensureCloudPanelSwitch();
     },
 
     switchTab: function (tab) {
@@ -3392,6 +3484,7 @@ const DataManager = {
 
         this.renderCurrentTab();
         this.renderDataManagerStatus();
+        this.updateCloudPanelView();
     },
 
     // --- 模块 A: 云端数据管理 (重构版) ---
