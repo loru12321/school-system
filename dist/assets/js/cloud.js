@@ -54,6 +54,13 @@
         return /^\d{4}级_[^_]+年级_\d{4}-\d{4}_[^_]+_[^_]+(?:_[^_]+)?$/i.test(text);
     }
 
+    function getWorkspaceExamSortTime(examId, examPayload) {
+        const metaDate = examPayload?.meta?.date ? new Date(examPayload.meta.date).getTime() : 0;
+        const updatedTs = examPayload?.updatedAt ? new Date(examPayload.updatedAt).getTime() : 0;
+        const createdTs = Number(examPayload?.createdAt || 0);
+        return metaDate || updatedTs || createdTs || 0;
+    }
+
     function getWorkspaceSnapshotKey() {
         const explicitProjectKey = String(localStorage.getItem('CURRENT_PROJECT_KEY') || window.CURRENT_PROJECT_KEY || '').trim();
         if (/^cohort::/i.test(explicitProjectKey)) return explicitProjectKey;
@@ -115,26 +122,38 @@
         if (realExamEntries.length === 0) return next;
 
         Object.keys(examMap).forEach(examId => {
-            if (isLegacyWorkspaceShadowExamKey(examId)) {
+            if (isLegacyWorkspaceShadowExamKey(examId) || isVirtualCohortSnapshotKey(examId)) {
                 delete examMap[examId];
             }
         });
 
-        const sortedRealExamIds = realExamEntries
+        const sortedRealExamEntries = realExamEntries
             .slice()
             .sort((a, b) => {
-                const ta = new Date(b.examPayload?.updatedAt || 0).getTime() || Number(b.examPayload?.createdAt || 0) || 0;
-                const tb = new Date(a.examPayload?.updatedAt || 0).getTime() || Number(a.examPayload?.createdAt || 0) || 0;
-                return ta - tb;
+                const ta = getWorkspaceExamSortTime(a.examId, a.examPayload);
+                const tb = getWorkspaceExamSortTime(b.examId, b.examPayload);
+                if (ta !== tb) return tb - ta;
+                return String(b.examId || '').localeCompare(String(a.examId || ''), 'zh-CN');
             })
-            .map(item => item.examId);
+        ;
 
-        const preferredCurrentExamId = sortedRealExamIds[0] || '';
-        if (preferredCurrentExamId && isLegacyWorkspaceShadowExamKey(next.CURRENT_EXAM_ID)) {
+        const preferredCurrentExam = sortedRealExamEntries[0] || null;
+        const preferredCurrentExamId = preferredCurrentExam?.examId || '';
+        const preferredCurrentExamPayload = preferredCurrentExam?.examPayload || null;
+        if (preferredCurrentExamId) {
             next.CURRENT_EXAM_ID = preferredCurrentExamId;
-        }
-        if (preferredCurrentExamId && db && isLegacyWorkspaceShadowExamKey(db.currentExamId)) {
             db.currentExamId = preferredCurrentExamId;
+        }
+
+        if (preferredCurrentExamPayload && typeof preferredCurrentExamPayload === 'object') {
+            next.ARCHIVE_META = clonePayloadFragment(preferredCurrentExamPayload.meta || next.ARCHIVE_META || null);
+            next.RAW_DATA = clonePayloadFragment(preferredCurrentExamPayload.data || next.RAW_DATA || []);
+            next.SCHOOLS = clonePayloadFragment(preferredCurrentExamPayload.schools || next.SCHOOLS || {});
+            next.SUBJECTS = clonePayloadFragment(preferredCurrentExamPayload.subjects || next.SUBJECTS || []);
+            next.THRESHOLDS = clonePayloadFragment(preferredCurrentExamPayload.thresholds || next.THRESHOLDS || {});
+            next.TEACHER_MAP = clonePayloadFragment(preferredCurrentExamPayload.teacherMap || next.TEACHER_MAP || {});
+            next.CONFIG = clonePayloadFragment(preferredCurrentExamPayload.config || next.CONFIG || {});
+            next.FINGERPRINT = String(preferredCurrentExamPayload.fingerprint || next.FINGERPRINT || '').trim();
         }
         return next;
     }
@@ -567,6 +586,10 @@
                 if (mode === 'workspace') {
                     localStorage.setItem('CURRENT_PROJECT_KEY', key);
                     window.CURRENT_PROJECT_KEY = key;
+                    if (payload?.CURRENT_EXAM_ID) {
+                        localStorage.setItem('CURRENT_EXAM_ID', payload.CURRENT_EXAM_ID);
+                        window.CURRENT_EXAM_ID = payload.CURRENT_EXAM_ID;
+                    }
                 }
                 localStorage.setItem('CLOUD_SYNC_AT', new Date().toISOString());
                 if (window.idbKeyval) await idbKeyval.set(`cache_${key}`, payload);
