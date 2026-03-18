@@ -5659,10 +5659,10 @@ const DataManager = {
         let sql = "";
         switch (type) {
             case 'base':
-                sql = "SELECT school, [class] AS class_name, name, total FROM students ORDER BY total DESC LIMIT 10";
+                sql = "SELECT school, [class] AS class_name, name, [total] AS total_score FROM students ORDER BY [total] DESC LIMIT 10";
                 break;
             case 'count':
-                sql = "SELECT school, COUNT(1) AS cnt, AVG(total) AS avg_score FROM students GROUP BY school ORDER BY avg_score DESC";
+                sql = "SELECT school, COUNT(1) AS cnt, AVG([total]) AS avg_score FROM students GROUP BY school ORDER BY avg_score DESC";
                 break;
             case 'avg':
                 sql = "SELECT [class] AS class_name, AVG([语文]) AS chinese_avg FROM students GROUP BY [class] ORDER BY chinese_avg DESC";
@@ -17648,29 +17648,31 @@ function pickTeacherCompareDefaultSubjectAndTeacher() {
     const subjectEl = document.getElementById('teacherCompareSubject');
     const teacherEl = document.getElementById('teacherCompareTeacher');
     if (!schoolEl || !subjectEl || !teacherEl) return;
-    const school = schoolEl.value;
-    if (!school) return;
-
+    const schools = Array.from(schoolEl.options).map(option => option.value).filter(Boolean);
     const subjects = Array.from(subjectEl.options).map(option => option.value).filter(Boolean);
-    if (!subjects.length) return;
+    if (!schools.length || !subjects.length) return;
 
-    const currentSubject = String(subjectEl.value || '').trim();
-    if (currentSubject) {
-        updateTeacherCompareTeacherSelect();
-        const hasTeacher = Array.from(teacherEl.options).some(option => option.value);
-        if (hasTeacher) {
-            if (!teacherEl.value) teacherEl.value = Array.from(teacherEl.options).find(option => option.value)?.value || '';
-            return;
-        }
-    }
-
-    for (const subject of subjects) {
+    const tryPick = (school, subject) => {
+        schoolEl.value = school;
         subjectEl.value = subject;
         updateTeacherCompareTeacherSelect();
         const firstTeacher = Array.from(teacherEl.options).find(option => option.value)?.value || '';
-        if (firstTeacher) {
-            teacherEl.value = firstTeacher;
-            return;
+        if (!firstTeacher) return false;
+        teacherEl.value = firstTeacher;
+        return true;
+    };
+
+    const preferredSchoolOrder = [];
+    if (schoolEl.value) preferredSchoolOrder.push(schoolEl.value);
+    schools.forEach(school => {
+        if (!preferredSchoolOrder.includes(school)) preferredSchoolOrder.push(school);
+    });
+
+    if (schoolEl.value && subjectEl.value && tryPick(schoolEl.value, subjectEl.value)) return;
+
+    for (const school of preferredSchoolOrder) {
+        for (const subject of subjects) {
+            if (tryPick(school, subject)) return;
         }
     }
 }
