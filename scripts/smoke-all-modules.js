@@ -94,6 +94,18 @@ async function runModuleDeepCheck(page, id) {
             };
         });
     }
+    if (id === 'analysis') {
+        return page.evaluate(async () => {
+            const checks = {
+                renderMacroMultiPeriodComparison: typeof window.renderMacroMultiPeriodComparison === 'function',
+                exportMacroMultiPeriodComparison: typeof window.exportMacroMultiPeriodComparison === 'function'
+            };
+            return {
+                ok: Object.values(checks).every(Boolean),
+                checks
+            };
+        });
+    }
     if (id === 'student-details') {
         return page.evaluate(async () => {
             if (typeof window.renderStudentDetails !== 'function') {
