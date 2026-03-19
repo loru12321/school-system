@@ -81,6 +81,25 @@ async function smokeSwitchModule(page, id) {
 }
 
 async function runModuleDeepCheck(page, id) {
+    if (id === 'summary') {
+        return page.evaluate(async () => {
+            const checks = {
+                ensureTownSubmoduleCompareUIs: typeof window.ensureTownSubmoduleCompareUIs === 'function',
+                openTownSubmoduleCompareDialog: typeof window.openTownSubmoduleCompareDialog === 'function',
+                renderTownSubmoduleMultiPeriodComparison: typeof window.renderTownSubmoduleMultiPeriodComparison === 'function',
+                exportTownSubmoduleCompare: typeof window.exportTownSubmoduleCompare === 'function',
+                saveTownSubmoduleCompareToCloud: typeof window.saveTownSubmoduleCompareToCloud === 'function',
+                viewCloudTownSubmoduleCompares: typeof window.viewCloudTownSubmoduleCompares === 'function',
+                loadCloudTownSubmoduleCompare: typeof window.loadCloudTownSubmoduleCompare === 'function'
+            };
+            const panel = document.querySelector('.town-submodule-compare-panel[data-submodule="summary"]');
+            return {
+                ok: Object.values(checks).every(Boolean) && !!panel,
+                checks,
+                panelReady: !!panel
+            };
+        });
+    }
     if (id === 'teacher-analysis') {
         return page.evaluate(async () => {
             const checks = {
