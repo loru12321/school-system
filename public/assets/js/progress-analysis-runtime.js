@@ -3,7 +3,10 @@
 
     let trendChartInstance = window.trendChartInstance || null;
     let sankeyChartInstance = window.sankeyChartInstance || null;
-    window.PROGRESS_CACHE = Array.isArray(window.PROGRESS_CACHE) ? window.PROGRESS_CACHE : PROGRESS_CACHE;
+    const initialProgressCache = Array.isArray(window.PROGRESS_CACHE)
+        ? window.PROGRESS_CACHE
+        : (typeof PROGRESS_CACHE !== 'undefined' && Array.isArray(PROGRESS_CACHE) ? PROGRESS_CACHE : []);
+    window.PROGRESS_CACHE = initialProgressCache;
 
 function showMappingModal(cases) {
     const modal = document.getElementById('mappingModal');

@@ -33,7 +33,7 @@ html = html.replace(scriptRegex, (match, src) => {
     // Check if it's a local file
     if (src.startsWith('./') || src.startsWith('/')) {
         // Strip leading ./ or /
-        const relativeSrc = src.replace(/^(\.\/|\/)/, '');
+        const relativeSrc = src.replace(/^(\.\/|\/)/, '').split('?')[0].split('#')[0];
         // Search in public folder directly 
         const publicPath = path.join(__dirname, 'public', relativeSrc);
 

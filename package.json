@@ -5,9 +5,10 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node inline-scripts.mjs",
+    "build": "vite build && node sync-public-assets.mjs && node inline-scripts.mjs",
     "push": "powershell -ExecutionPolicy Bypass -File ./deploy.ps1",
     "sync": "npm run build && npm run push",
+    "smoke:modules": "node scripts/smoke-all-modules.js",
     "smoke:report-compare": "node scripts/smoke-report-compare.js",
     "preview": "vite preview"
   },
