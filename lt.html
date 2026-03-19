@@ -19053,6 +19053,635 @@ function updateStudentSchoolSelect() {
     }
 }
 
+
+// 全局状态管理
+let STD_STATE = {
+    page: 1,
+    size: 100,
+    sortCol: null,     // 当前排序列
+    sortDir: 'desc',   // desc 或 asc
+    activeFilters: {}, // 存储筛选状态: { 'school': new Set(['实验中学', '二中']), '语文': ... }
+    cacheData: []      // 最终展示的数据
+};
+
+// 1. 主渲染函数
+function getClassTeacherStudentViewMode() {
+    const sel = document.getElementById('classTeacherViewMode');
+    const val = sel?.value;
+    return (val === 'teaching') ? 'teaching' : 'class_all';
+}
+
+function renderStudentDetails(reset = true) {
+    // 隐藏可能存在的筛选菜单
+    closeAllMenus();
+
+    if (reset) {
+        STD_STATE.page = 1;
+        let data = [...RAW_DATA]; // 从原始数据副本开始
+
+        const user = getCurrentUser();
+        const role = user?.role || 'guest';
+        const classTeacherMode = role === 'class_teacher' ? getClassTeacherStudentViewMode() : 'teaching';
+        console.log('[考试明细] 当前用户:', user);
+
+        // --- A. 权限过滤 ---
+        // 🆕 使用多角色系统进行权限控制
+        if (user && RoleManager.hasAnyRole(user, ['teacher', 'class_teacher']) &&
+            !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director'])) {
+            // 纯教师或班主任角色：只能看自己任教的班级
+            console.log('[考试明细] 🔒 检测到教师角色，启用权限过滤');
+            const scope = getTeacherScopeForUser(user);
+
+            // 班主任“本班全科”模式：按本班过滤，不受任教学科限制
+            if (role === 'class_teacher' && classTeacherMode === 'class_all') {
+                const myClass = normalizeClass(user?.class || '');
+                if (!myClass) {
+                    data = [];
+                    UI.toast('⚠️ 班主任账号未配置班级，无法显示本班数据。', 'warning');
+                } else {
+                    const before = data.length;
+                    data = data.filter(s => normalizeClass(s.class) === myClass);
+                    console.log(`[考试明细] 班主任本班全科模式：过滤前${before}人，过滤后${data.length}人，班级=${myClass}`);
+                }
+            } else if (scope.classes.size > 0) {
+                const originalCount = data.length;
+
+                if (data.length > 0) {
+                    console.log(`[考试明细] 数据样本班级: ${data[0].class} (规范化: ${normalizeClass(data[0].class)})`);
+                }
+                console.log(`[考试明细] 权限班级:`, Array.from(scope.classes));
+
+                data = data.filter(s => {
+                    const rawClass = String(s.class || '').trim();
+                    const normalizedClass = normalizeClass(s.class);
+
+                    // 宽容匹配策略
+                    let hasPermission = scope.classes.has(normalizedClass);
+                    if (!hasPermission) hasPermission = scope.classes.has(rawClass);
+                    if (!hasPermission) {
+                        // 尝试模糊匹配，如 "701" 和 "7.01"
+                        for (const allowedCls of scope.classes) {
+                            // 移除所有点和空格再比较
+                            if (String(allowedCls).replace(/[\s\.]/g, '') === String(rawClass).replace(/[\s\.]/g, '')) {
+                                hasPermission = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!hasPermission && Math.random() < 0.001) { // 抽样打印被过滤的
+                        console.log(`[考试明细] ❌ 过滤: ${s.class} -> ${normalizedClass}`);
+                    }
+                    return hasPermission;
+                });
+                console.log(`[考试明细] 🔐 权限筛选：过滤前${originalCount}人，过滤后${data.length}人`);
+
+                if (data.length === 0) {
+                    console.warn('[考试明细] ⚠️ 过滤后无数据');
+                    const userClasses = Array.from(scope.classes).join(', ');
+                    UI.toast(`⚠️ 暂无考试数据。您的任教班级：${userClasses}`, 'warning');
+                }
+            } else {
+                console.warn('[考试明细] ⚠️ 未找到任课信息，显示空数据');
+                data = []; // 没有任课信息则不显示任何数据
+                UI.toast('⚠️ 未找到您的任课信息，无法显示数据。请在“数据管理-教师任课”中检查配置。', 'warning');
+            }
+        } else if (user) {
+            // 其他角色的权限控制
+            if (!RoleManager.hasAnyRole(user, ['admin', 'director'])) {
+                // 🟢 [Bug #1 修复] 级部主任：按年级过滤，只能看到自己级部的数据
+                if (RoleManager.hasAnyRole(user, ['grade_director']) && user.class) {
+                    const gradePrefix = String(user.class).trim();
+                    const beforeCount = data.length;
+                    data = data.filter(s => {
+                        const cls = String(s.class || '').trim();
+                        // 班级号以年级号开头（例如年级"7" → 班级"701","702"等）
+                        return cls.startsWith(gradePrefix);
+                    });
+                    console.log(`[考试明细] 🔒 级部主任过滤: 年级=${gradePrefix}, 过滤前${beforeCount}人, 过滤后${data.length}人`);
+                    if (data.length === 0) {
+                        UI.toast(`⚠️ 未找到${gradePrefix}年级的考试数据`, 'warning');
+                    }
+                }
+                // 非管理员、非教务主任、非级部主任的其他角色：按学校过滤
+                else if (user.school) {
+                    data = data.filter(s => s.school === user.school);
+                    console.log(`[考试明细] 按学校过滤: ${user.school}`);
+                }
+            }
+            console.log('[考试明细] 其他角色或管理员，显示所有/学校范围数据');
+        }
+
+        // --- B. 顶部下拉框过滤 (依然保留，作为一级筛选) ---
+        const selectedSchool = document.getElementById('studentSchoolSelect')?.value;
+        const selectedClass = document.getElementById('studentClassSelect')?.value;
+
+        // 下拉框筛选逻辑（在权限筛选的基础上二次筛选）
+        if (selectedSchool && !selectedSchool.includes('请选择')) {
+            data = data.filter(s => s.school === selectedSchool);
+            if (selectedClass && selectedClass !== '全部') {
+                // 如果是教师，需要确保选中的班级在权限范围内（虽然下拉框可能已经限制了）
+                data = data.filter(s => s.class === selectedClass);
+            }
+        }
+
+        data = getComparisonStudentList(data, RAW_DATA);
+
+        // --- C. Excel 列筛选 (核心逻辑) ---
+        // 遍历所有已激活的筛选器
+        Object.keys(STD_STATE.activeFilters).forEach(colKey => {
+            const allowedValues = STD_STATE.activeFilters[colKey]; // Set 对象
+            if (!allowedValues || allowedValues.size === 0) return;
+
+            data = data.filter(s => {
+                let val = getCellValue(s, colKey);
+                // 将值统一转为字符串进行比对
+                return allowedValues.has(String(val));
+            });
+        });
+
+        // --- D. 排序 ---
+        if (STD_STATE.sortCol) {
+            const key = STD_STATE.sortCol;
+            const dir = STD_STATE.sortDir === 'asc' ? 1 : -1;
+
+            data.sort((a, b) => {
+                let valA = getCellValue(a, key);
+                let valB = getCellValue(b, key);
+
+                // 处理空值
+                if (valA === '-' || valA === undefined) valA = -9999;
+                if (valB === '-' || valB === undefined) valB = -9999;
+
+                if (typeof valA === 'number' && typeof valB === 'number') {
+                    return (valA - valB) * dir;
+                }
+                return String(valA).localeCompare(String(valB), 'zh-CN', { numeric: true }) * dir;
+            });
+        } else {
+            // 默认按总分降序
+            data.sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0));
+        }
+
+        STD_STATE.cacheData = data;
+    }
+
+    // --- E. 分页与渲染 ---
+    const totalItems = STD_STATE.cacheData.length;
+    const totalPages = Math.ceil(totalItems / STD_STATE.size) || 1;
+    if (STD_STATE.page > totalPages) STD_STATE.page = totalPages;
+    if (STD_STATE.page < 1) STD_STATE.page = 1;
+
+    const startIdx = (STD_STATE.page - 1) * STD_STATE.size;
+    const endIdx = startIdx + STD_STATE.size;
+    const displayList = STD_STATE.cacheData.slice(startIdx, endIdx);
+
+    const thead = document.querySelector('#studentDetailTable thead tr');
+    const tbody = document.querySelector('#studentDetailTable tbody');
+
+    const user = getCurrentUser();
+    const role = user?.role || 'guest';
+    const isTeacher = role === 'teacher';
+    const isClassTeacher = role === 'class_teacher';
+    const classTeacherMode = isClassTeacher ? getClassTeacherStudentViewMode() : 'teaching';
+    const needTeacherScope = isTeacher || (isClassTeacher && classTeacherMode === 'teaching');
+    const teacherScope = needTeacherScope ? getTeacherScopeForUser(user) : null;
+    const visibleSubjects = (isTeacher || (isClassTeacher && classTeacherMode === 'teaching'))
+        ? SUBJECTS.filter(s => teacherScope.subjects.has(normalizeSubject(s)))
+        : SUBJECTS;
+
+    // 生成表头 (带漏斗图标)
+    let headerHTML = '';
+
+    // 辅助：生成表头单元格
+    const buildTh = (label, colKey, width = 'auto') => {
+        // 判断该列是否有激活的筛选
+        const isFiltered = STD_STATE.activeFilters[colKey] && STD_STATE.activeFilters[colKey].size > 0;
+        // 判断该列是否正在排序
+        const isSorted = STD_STATE.sortCol === colKey;
+        const sortIcon = isSorted ? (STD_STATE.sortDir === 'asc' ? '↑' : '↓') : '';
+
+        const activeClass = (isFiltered || isSorted) ? 'active' : '';
+
+        return `
+                <th style="min-width:${width}">
+                    <div class="excel-header" onclick="toggleExcelMenu('${colKey}', event)">
+                        <div class="header-text">${label} <span style="color:#2563eb">${sortIcon}</span></div>
+                        <div class="filter-icon-btn ${activeClass}">
+                            <i class="ti ti-filter"></i>
+                        </div>
+                        <!-- 下拉菜单容器，点击时动态填充 -->
+                        <div id="menu-${colKey}" class="excel-filter-menu" onclick="event.stopPropagation()"></div>
+                    </div>
+                </th>
+            `;
+    };
+
+    headerHTML += buildTh('学校', 'school', '120px');
+    headerHTML += buildTh('班级', 'class', '80px');
+    headerHTML += buildTh('姓名', 'name', '100px');
+    if (!isTeacher && !isClassTeacher) {
+        headerHTML += buildTh('考号', 'id', '100px');
+        headerHTML += buildTh('考场', 'examRoom', '80px');
+        headerHTML += buildTh('T分', 'totalTScore', '60px');
+    }
+
+    // 动态判断当前数据是否只有一所学校
+    const isSingleSchool = isSingleSchoolMode();
+    const townHeaderStyle = isSingleSchool ? 'display:none;' : ''; // 如果单校，隐藏列
+
+    visibleSubjects.forEach(sub => {
+        headerHTML += buildTh(sub, sub, '80px');
+        if (!isTeacher && !isClassTeacher) {
+            headerHTML += `<th>T</th><th>校</th><th>班</th><th style="${townHeaderStyle}">镇</th>`;
+        } else {
+            // 科任教师/班主任：展示分数 + 班排 + 级部排 + 镇排
+            headerHTML += `<th>班</th><th>级</th><th style="${townHeaderStyle}">镇</th>`;
+        }
+    });
+
+    const totalLabel = CONFIG.name === '9年级' ? '五科总分' : '总分';
+    if (!isTeacher && !isClassTeacher) {
+        headerHTML += buildTh(totalLabel, 'total', '80px');
+        headerHTML += `<th>校</th><th>班</th><th style="${townHeaderStyle}">镇</th>`;
+    } else {
+        // 科任教师/班主任：显示总分及排名（便于诊断学生整体位置）
+        headerHTML += buildTh(totalLabel, 'total', '80px');
+        headerHTML += `<th>班</th><th>级</th><th style="${townHeaderStyle}">镇</th>`;
+    }
+
+    thead.innerHTML = headerHTML;
+
+    // 生成数据行
+    let rowsHTML = displayList.map(student => {
+        const nameLink = `<a href="javascript:void(0)" onclick="jumpToStudent('${student.name}', '${student.school}', '${student.class}')" style="color:var(--primary); font-weight:800;">${student.name}</a>`;
+
+        let row = `<tr>
+                <td data-label="学校">${student.school}</td>
+                <td data-label="班级">${student.class}</td>
+                <td data-label="姓名">${nameLink}</td>
+                ${!isTeacher && !isClassTeacher ? `<td data-label="考号">${student.id}</td><td data-label="考场">${student.examRoom || '-'}</td><td data-label="T分" style="color:#b45309; font-weight:bold;">${student.totalTScore || '-'}</td>` : ''}`;
+
+        visibleSubjects.forEach(sub => {
+            const score = student.scores[sub] !== undefined ? student.scores[sub] : '-';
+            const t = student.tScores ? (student.tScores[sub] || '-') : '-';
+
+            // 修改功能链接
+            const clickAttr = `onclick="updateStudentScore('${student.name}', '${student.class}', '${sub}', ${score})"`;
+
+            if (!isTeacher && !isClassTeacher) {
+                row += `<td data-label="${sub}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${score}</td>
+                            <td data-label="${sub}T分" class="text-gray">${t}</td>
+                            <td data-label="${sub}校排" class="text-gray">${safeGet(student, `ranks.${sub}.school`, '-')}</td>
+                            <td data-label="${sub}班排" class="text-gray">${safeGet(student, `ranks.${sub}.class`, '-')}</td>
+                            <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${safeGet(student, `ranks.${sub}.township`, '-')}</td>`;
+            } else {
+                row += `<td data-label="${sub}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${score}</td>
+                            <td data-label="${sub}班排" class="text-gray">${safeGet(student, `ranks.${sub}.class`, '-')}</td>
+                            <td data-label="${sub}级排" class="text-gray">${safeGet(student, `ranks.${sub}.school`, '-')}</td>
+                            <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${safeGet(student, `ranks.${sub}.township`, '-')}</td>`;
+            }
+        });
+
+        if (!isTeacher && !isClassTeacher) {
+            row += `<td data-label="总分" style="color:#2563eb; font-weight:bold;">${student.total}</td>
+                        <td data-label="总分校排">${safeGet(student, 'ranks.total.school', '-')}</td>
+                        <td data-label="总分班排">${safeGet(student, 'ranks.total.class', '-')}</td>
+                        <td data-label="总分镇排">${safeGet(student, 'ranks.total.township', '-')}</td>
+                    </tr>`;
+        } else {
+            row += `<td data-label="总分" style="color:#2563eb; font-weight:bold;">${student.total}</td>
+                    <td data-label="总分班排">${safeGet(student, 'ranks.total.class', '-')}</td>
+                    <td data-label="总分级排">${safeGet(student, 'ranks.total.school', '-')}</td>
+                    <td data-label="总分镇排" style="${townHeaderStyle}">${safeGet(student, 'ranks.total.township', '-')}</td>
+                </tr>`;
+        }
+        return row;
+    }).join('');
+
+    // 分页条
+    const paginationHTML = `
+            <tr style="background:#f8fafc; font-weight:bold; position:sticky; bottom:0; z-index:150; border-top:2px solid #cbd5e1;">
+                <td colspan="100" style="text-align:center; padding:8px;">
+                    <div style="display:flex; align-items:center; justify-content:center; gap:15px;">
+                        <span style="font-size:12px; color:#666;">共 ${totalItems} 条 · ${STD_STATE.page}/${totalPages} 页</span>
+                        <button class="btn btn-sm" onclick="changeStdPage(-1)" ${STD_STATE.page === 1 ? 'disabled' : ''}>◀</button>
+                        <button class="btn btn-sm" onclick="changeStdPage(1)" ${STD_STATE.page === totalPages ? 'disabled' : ''}>▶</button>
+                    </div>
+                </td>
+            </tr>`;
+
+    if (totalItems === 0) tbody.innerHTML = `<tr><td colspan="100" style="text-align:center; padding:30px; color:#999;">无数据</td></tr>`;
+    else tbody.innerHTML = rowsHTML + paginationHTML;
+
+    // 隐藏可能存在的对比区域
+    const compareSection = document.getElementById('student-multi-period-compare-section');
+    if (compareSection) compareSection.style.display = 'none';
+
+    // 滚动到学生明细区域
+    setTimeout(() => {
+        const tableWrap = document.querySelector('#student-details .table-wrap');
+        if (tableWrap) {
+            tableWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, 100);
+}
+
+// 辅助：获取单元格值
+function getCellValue(student, colKey) {
+    if (colKey === 'total') return getComparisonStudentView(student, RAW_DATA)?.total;
+    if (colKey === 'totalTScore') return student.totalTScore;
+    if (['school', 'class', 'name', 'id', 'examRoom'].includes(colKey)) return student[colKey];
+    return student.scores[colKey] !== undefined ? student.scores[colKey] : '-';
+}
+
+// 2. 切换显示 Excel 菜单
+function toggleExcelMenu(colKey, event) {
+    // 阻止冒泡
+    event.stopPropagation();
+
+    const menuId = `menu-${colKey}`;
+    const menu = document.getElementById(menuId);
+
+    // 如果该菜单已打开，则关闭
+    if (menu.classList.contains('show')) {
+        menu.classList.remove('show');
+        return;
+    }
+
+    // 关闭其他所有菜单
+    closeAllMenus();
+
+    // 填充菜单内容
+    buildFilterMenuContent(colKey, menu);
+
+    // 显示
+    menu.classList.add('show');
+}
+
+// 3. 构建菜单内容 (核心：提取唯一值)
+function buildFilterMenuContent(colKey, container) {
+    // 简单策略：从当前显示的 cacheData 中提取唯一值
+    const uniqueValues = new Set();
+    STD_STATE.cacheData.forEach(s => {
+        let val = getCellValue(s, colKey);
+        uniqueValues.add(String(val));
+    });
+
+    // 转为数组并排序
+    const sortedValues = Array.from(uniqueValues).sort((a, b) => {
+        const numA = parseFloat(a);
+        const numB = parseFloat(b);
+        if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+        return a.localeCompare(b, 'zh-CN', { numeric: true });
+    });
+
+    // 检查哪些被选中了
+    const currentSet = STD_STATE.activeFilters[colKey];
+    const isAllChecked = !currentSet;
+
+    let listHtml = '';
+    sortedValues.forEach(v => {
+        const checked = isAllChecked || currentSet.has(v) ? 'checked' : '';
+        listHtml += `
+                <label class="menu-item">
+                    <input type="checkbox" value="${v}" ${checked} class="filter-cb-${colKey}"> ${v}
+                </label>`;
+    });
+
+    container.innerHTML = `
+            <div class="menu-actions">
+                <button class="btn btn-sm btn-gray" style="width:100%" onclick="applySort('${colKey}', 'asc')">⬆️ 升序排列</button>
+                <button class="btn btn-sm btn-gray" style="width:100%" onclick="applySort('${colKey}', 'desc')">⬇️ 降序排列</button>
+                <input type="text" class="menu-search" placeholder="搜索..." oninput="filterCheckboxList(this)">
+            </div>
+            <div class="menu-list">
+                <label class="menu-item" style="font-weight:bold; border-bottom:1px solid #eee;">
+                    <input type="checkbox" id="cb-all-${colKey}" ${isAllChecked ? 'checked' : ''} onchange="toggleAllCheckboxes('${colKey}', this)"> (全选)
+                </label>
+                ${listHtml}
+            </div>
+            <div class="menu-footer">
+                <button class="btn btn-sm btn-primary" onclick="confirmFilter('${colKey}')">确定</button>
+                <button class="btn btn-sm btn-gray" onclick="clearFilter('${colKey}')">重置</button>
+            </div>
+        `;
+}
+
+// 4. 菜单内部交互函数
+window.applySort = function (colKey, dir) {
+    STD_STATE.sortCol = colKey;
+    STD_STATE.sortDir = dir;
+    renderStudentDetails(true); // 重绘
+};
+
+window.filterCheckboxList = function (input) {
+    const text = input.value.toLowerCase();
+    const list = input.closest('.menu-actions').nextElementSibling;
+    const items = list.querySelectorAll('.menu-item');
+    // 跳过第一个(全选)
+    for (let i = 1; i < items.length; i++) {
+        const itemText = items[i].innerText.toLowerCase();
+        items[i].style.display = itemText.includes(text) ? 'flex' : 'none';
+    }
+};
+
+window.toggleAllCheckboxes = function (colKey, source) {
+    const cbs = document.querySelectorAll(`.filter-cb-${colKey}`);
+    cbs.forEach(cb => {
+        if (cb.parentElement.style.display !== 'none') {
+            cb.checked = source.checked;
+        }
+    });
+};
+
+window.confirmFilter = function (colKey) {
+    const cbs = document.querySelectorAll(`.filter-cb-${colKey}:checked`);
+    const allCbs = document.querySelectorAll(`.filter-cb-${colKey}`);
+
+    if (cbs.length === allCbs.length) {
+        delete STD_STATE.activeFilters[colKey];
+    } else {
+        const selectedValues = new Set();
+        cbs.forEach(cb => selectedValues.add(cb.value));
+        STD_STATE.activeFilters[colKey] = selectedValues;
+    }
+
+    renderStudentDetails(true);
+};
+
+window.clearFilter = function (colKey) {
+    delete STD_STATE.activeFilters[colKey];
+    renderStudentDetails(true);
+};
+
+function closeAllMenus() {
+    document.querySelectorAll('.excel-filter-menu').forEach(el => el.classList.remove('show'));
+}
+
+// 点击空白关闭菜单
+document.addEventListener('click', closeAllMenus);
+
+// 辅助：翻页
+window.changeStdPage = function (delta) {
+    STD_STATE.page += delta;
+    renderStudentDetails(false);
+    document.querySelector('#student-details .table-wrap').scrollTop = 0;
+};
+
+
+function exportStudentDetails() {
+    if (!RAW_DATA.length) { alert('请先上传数据'); return; }
+
+    const user = getCurrentUser();
+    const role = user?.role || 'guest';
+    const isTeacher = role === 'teacher';
+    const isClassTeacher = role === 'class_teacher';
+    const classTeacherMode = isClassTeacher ? getClassTeacherStudentViewMode() : 'teaching';
+    const needTeacherScope = isTeacher || (isClassTeacher && classTeacherMode === 'teaching');
+    const teacherScope = needTeacherScope ? getTeacherScopeForUser(user) : null;
+    const visibleSubjects = (isTeacher || (isClassTeacher && classTeacherMode === 'teaching'))
+        ? SUBJECTS.filter(s => teacherScope.subjects.has(normalizeSubject(s)))
+        : SUBJECTS;
+
+    const selectedSchool = document.getElementById('studentSchoolSelect').value;
+    const selectedClass = document.getElementById('studentClassSelect').value;
+
+    // 1. 判断是否为单校模式 (只有1所学校)
+    const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
+
+    const wb = XLSX.utils.book_new();
+
+    // 2. 动态构建表头
+    const headers = isClassTeacher
+        ? ['学校', '班级', '姓名']
+        : (isTeacher
+            ? ['学校', '班级', '姓名']
+            : ['学校', '班级', '姓名', '考号', '考场', '标准分总和(T分)']);
+
+    visibleSubjects.forEach(subject => {
+        if (isTeacher || isClassTeacher) {
+            headers.push(`${subject} 分数`, `${subject} 班排`, `${subject} 级排`);
+            if (!isSingleSchool) headers.push(`${subject} 镇排`);
+        } else {
+            headers.push(`${subject} 分数`, `${subject} T分`, `${subject} 校排`, `${subject} 班排`);
+            if (!isSingleSchool) headers.push(`${subject} 镇排`);
+        }
+    });
+
+    if (!isClassTeacher && !isTeacher) {
+        if (CONFIG.name === '9年级') {
+            headers.push('五科总分', '五科校排', '五科班排');
+            if (!isSingleSchool) headers.push('五科镇排');
+        } else {
+            headers.push('总分', '总分校排', '总分班排');
+            if (!isSingleSchool) headers.push('总分镇排');
+        }
+    } else {
+        headers.push(CONFIG.name === '9年级' ? '五科总分' : '总分', '总分班排', '总分级排');
+        if (!isSingleSchool) headers.push('总分镇排');
+    }
+
+    const data = [headers];
+
+    let studentsToShow = [...RAW_DATA];
+    if ((isTeacher || (isClassTeacher && classTeacherMode === 'teaching')) && teacherScope && teacherScope.classes.size > 0) {
+        studentsToShow = studentsToShow.filter(s => {
+            const rawClass = String(s.class || '').trim();
+            const normalizedClass = normalizeClass(s.class);
+            if (teacherScope.classes.has(normalizedClass) || teacherScope.classes.has(rawClass)) return true;
+            for (const allowedCls of teacherScope.classes) {
+                if (String(allowedCls).replace(/[\s\.]/g, '') === String(rawClass).replace(/[\s\.]/g, '')) {
+                    return true;
+                }
+            }
+            return false;
+        });
+    } else if (isClassTeacher && user?.class) {
+        const myClass = normalizeClass(user.class);
+        studentsToShow = studentsToShow.filter(s => normalizeClass(s.class) === myClass);
+    } else if (selectedSchool && !selectedSchool.includes('请选择')) {
+        studentsToShow = studentsToShow.filter(s => s.school === selectedSchool);
+        if (selectedClass && selectedClass !== '全部') studentsToShow = studentsToShow.filter(s => s.class === selectedClass);
+    }
+
+    if (selectedSchool && !selectedSchool.includes('请选择')) {
+        studentsToShow = studentsToShow.filter(s => s.school === selectedSchool);
+    }
+    if (selectedClass && selectedClass !== '全部') {
+        studentsToShow = studentsToShow.filter(s => s.class === selectedClass);
+    }
+
+    studentsToShow = getComparisonStudentList(studentsToShow, RAW_DATA);
+    studentsToShow.sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0));
+
+    // 3. 填充数据行 (需与表头逻辑严格对应)
+    studentsToShow.forEach(student => {
+        const row = (isTeacher || isClassTeacher)
+            ? [student.school, student.class, student.name]
+            : [student.school, student.class, student.name, student.id, student.examRoom, student.totalTScore || 0];
+
+        visibleSubjects.forEach(subject => {
+            const tVal = student.tScores && student.tScores[subject] ? student.tScores[subject] : '-';
+            if (isTeacher || isClassTeacher) {
+                row.push(
+                    student.scores[subject] || '-',
+                    safeGet(student, `ranks.${subject}.class`, '-'),
+                    safeGet(student, `ranks.${subject}.school`, '-')
+                );
+                if (!isSingleSchool) {
+                    row.push(safeGet(student, `ranks.${subject}.township`, '-'));
+                }
+            } else {
+                row.push(
+                    student.scores[subject] || '-',
+                    tVal,
+                    safeGet(student, `ranks.${subject}.school`, '-'),
+                    safeGet(student, `ranks.${subject}.class`, '-')
+                );
+                if (!isSingleSchool) {
+                    row.push(safeGet(student, `ranks.${subject}.township`, '-'));
+                }
+            }
+        });
+
+        if (!isClassTeacher && !isTeacher) {
+            row.push(
+                student.total,
+                safeGet(student, 'ranks.total.school', '-'),
+                safeGet(student, 'ranks.total.class', '-')
+            );
+            if (!isSingleSchool) {
+                row.push(safeGet(student, 'ranks.total.township', '-'));
+            }
+        } else {
+            row.push(
+                student.total,
+                safeGet(student, 'ranks.total.class', '-'),
+                safeGet(student, 'ranks.total.school', '-')
+            );
+            if (!isSingleSchool) {
+                row.push(safeGet(student, 'ranks.total.township', '-'));
+            }
+        }
+
+        data.push(row);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+
+    // 调用装饰函数美化 Excel
+    decorateExcelSheet(ws, headers);
+
+    XLSX.utils.book_append_sheet(wb, ws, '学生考试明细');
+    if (isTeacher || isClassTeacher) {
+        const exportTag = buildTeacherExportTag(user, new Set(visibleSubjects || []));
+        XLSX.writeFile(wb, `学生考试明细_${exportTag}.xlsx`);
+    } else {
+        XLSX.writeFile(wb, '学生考试明细.xlsx');
+    }
+}
+
 function updateMarginalSchoolSelect() {
     const select = document.getElementById('marginalSchoolSelect');
     select.innerHTML = '<option value="">--请选择本校--</option>';

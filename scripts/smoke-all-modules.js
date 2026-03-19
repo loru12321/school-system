@@ -80,6 +80,22 @@ async function smokeSwitchModule(page, id) {
     return result;
 }
 
+async function runModuleDeepCheck(page, id) {
+    if (id === 'student-details') {
+        return page.evaluate(async () => {
+            if (typeof window.renderStudentDetails !== 'function') {
+                return { ok: false, id: 'student-details', error: 'renderStudentDetails is not available' };
+            }
+            window.renderStudentDetails(true);
+            await new Promise(resolve => setTimeout(resolve, 1200));
+            const table = document.getElementById('studentDetailTable');
+            const rows = table?.querySelectorAll('tbody tr')?.length || 0;
+            return { ok: !!table && rows >= 0, rows };
+        });
+    }
+    return { ok: true };
+}
+
 async function smokeDataManagerTab(page, id) {
     const result = await page.evaluate(async (tabId) => {
         try {
@@ -143,7 +159,9 @@ async function smokeDataManagerTab(page, id) {
 
     for (const id of SWITCH_MODULE_IDS) {
         currentScope = `switch:${id}`;
-        summary.switchModules.push(await smokeSwitchModule(page, id));
+        const switchResult = await smokeSwitchModule(page, id);
+        const deepCheck = switchResult.ok ? await runModuleDeepCheck(page, id) : { ok: false, skipped: true };
+        summary.switchModules.push({ ...switchResult, deepCheck });
     }
 
     currentScope = 'data-manager';
