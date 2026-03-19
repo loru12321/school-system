@@ -97,6 +97,9 @@ async function runModuleDeepCheck(page, id) {
     if (id === 'analysis') {
         return page.evaluate(async () => {
             const checks = {
+                getExamRowsForCompare: typeof window.getExamRowsForCompare === 'function',
+                listAvailableExamsForCompare: typeof window.listAvailableExamsForCompare === 'function',
+                sortExamIdsChronologically: typeof window.sortExamIdsChronologically === 'function',
                 renderMacroMultiPeriodComparison: typeof window.renderMacroMultiPeriodComparison === 'function',
                 exportMacroMultiPeriodComparison: typeof window.exportMacroMultiPeriodComparison === 'function'
             };
