@@ -81,6 +81,19 @@ async function smokeSwitchModule(page, id) {
 }
 
 async function runModuleDeepCheck(page, id) {
+    if (id === 'teacher-analysis') {
+        return page.evaluate(async () => {
+            const checks = {
+                renderTeacherMultiPeriodComparison: typeof window.renderTeacherMultiPeriodComparison === 'function',
+                renderAllTeachersMultiPeriodComparison: typeof window.renderAllTeachersMultiPeriodComparison === 'function',
+                exportTeacherMultiPeriodComparison: typeof window.exportTeacherMultiPeriodComparison === 'function'
+            };
+            return {
+                ok: Object.values(checks).every(Boolean),
+                checks
+            };
+        });
+    }
     if (id === 'student-details') {
         return page.evaluate(async () => {
             if (typeof window.renderStudentDetails !== 'function') {
