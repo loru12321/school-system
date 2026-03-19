@@ -111,11 +111,14 @@ async function runModuleDeepCheck(page, id) {
             if (typeof window.renderStudentDetails !== 'function') {
                 return { ok: false, id: 'student-details', error: 'renderStudentDetails is not available' };
             }
+            if (typeof window.renderStudentMultiPeriodComparison !== 'function') {
+                return { ok: false, id: 'student-details', error: 'renderStudentMultiPeriodComparison is not available' };
+            }
             window.renderStudentDetails(true);
             await new Promise(resolve => setTimeout(resolve, 1200));
             const table = document.getElementById('studentDetailTable');
             const rows = table?.querySelectorAll('tbody tr')?.length || 0;
-            return { ok: !!table && rows >= 0, rows };
+            return { ok: !!table && rows >= 0, rows, compareEntryReady: true };
         });
     }
     return { ok: true };
