@@ -58,25 +58,53 @@ async function login(page, user, pass) {
 }
 
 async function smokeSwitchModule(page, id) {
-    const result = await page.evaluate(async (moduleId) => {
-        try {
+    const collectState = async () => page.evaluate((moduleId) => {
+        const section = document.getElementById(moduleId);
+        if (!section) return { ok: false, id: moduleId, error: 'target section not found' };
+        const style = getComputedStyle(section);
+        const visible = style.display !== 'none';
+        const active = section.classList.contains('active');
+        const title = section.querySelector('h1,h2,h3,.sub-header,.sec-head')?.textContent?.trim() || '';
+        return { ok: visible && active, id: moduleId, visible, active, title };
+    }, id);
+
+    try {
+        await page.evaluate((moduleId) => {
             if (typeof window.switchTab !== 'function') {
-                return { ok: false, id: moduleId, error: 'switchTab is not available' };
+                throw new Error('switchTab is not available');
             }
             window.switchTab(moduleId);
-            await new Promise(resolve => setTimeout(resolve, 1800));
+        }, id);
+
+        await page.waitForFunction((moduleId) => {
             const section = document.getElementById(moduleId);
-            if (!section) return { ok: false, id: moduleId, error: 'target section not found' };
+            if (!section) return false;
             const style = getComputedStyle(section);
-            const visible = style.display !== 'none';
-            const active = section.classList.contains('active');
-            const title = section.querySelector('h1,h2,h3,.sub-header,.sec-head')?.textContent?.trim() || '';
-            return { ok: visible && active, id: moduleId, visible, active, title };
-        } catch (error) {
-            return { ok: false, id: moduleId, error: error?.message || String(error) };
+            return style.display !== 'none' && section.classList.contains('active');
+        }, id, { timeout: 5000 });
+    } catch (error) {
+        const fallback = await collectState();
+        if (fallback.ok) {
+            await page.waitForTimeout(500);
+            return fallback;
         }
-    }, id);
-    await page.waitForTimeout(700);
+        return {
+            ...fallback,
+            ok: false,
+            id,
+            error: error?.message || String(error)
+        };
+    }
+
+    let result = await collectState();
+    if (!result.ok) {
+        await page.evaluate((moduleId) => {
+            if (typeof window.switchTab === 'function') window.switchTab(moduleId);
+        }, id);
+        await page.waitForTimeout(1200);
+        result = await collectState();
+    }
+    await page.waitForTimeout(500);
     return result;
 }
 
@@ -152,16 +180,49 @@ async function runModuleDeepCheck(page, id) {
     }
     if (id === 'report-generator') {
         return page.evaluate(async () => {
+            const schoolSelect = document.getElementById('sel-school');
+            const classSelect = document.getElementById('sel-class');
+            const nameInput = document.getElementById('inp-name');
             const checks = {
                 doQuery: typeof window.doQuery === 'function',
                 getComparisonStudentView: typeof window.getComparisonStudentView === 'function',
                 getComparisonStudentList: typeof window.getComparisonStudentList === 'function',
                 formatComparisonExamLabel: typeof window.formatComparisonExamLabel === 'function',
-                getStudentExamHistory: typeof window.getStudentExamHistory === 'function'
+                getStudentExamHistory: typeof window.getStudentExamHistory === 'function',
+                renderSingleReportCardHTML: typeof window.renderSingleReportCardHTML === 'function',
+                renderRadarChart: typeof window.renderRadarChart === 'function',
+                renderVarianceChart: typeof window.renderVarianceChart === 'function'
             };
+            if (!Object.values(checks).every(Boolean)) {
+                return { ok: false, checks };
+            }
+
+            const schools = Object.keys(window.SCHOOLS || {});
+            const school = schools[0] || '';
+            const student = school ? (window.SCHOOLS?.[school]?.students?.[0] || null) : null;
+            if (!school || !student || !schoolSelect || !classSelect || !nameInput) {
+                return { ok: false, checks, error: 'report form or sample student unavailable' };
+            }
+
+            schoolSelect.value = school;
+            if (typeof window.updateClassSelect === 'function') window.updateClassSelect();
+            await new Promise(resolve => setTimeout(resolve, 150));
+            classSelect.value = student.class || '';
+            nameInput.value = student.name || '';
+
+            await window.doQuery();
+            await new Promise(resolve => setTimeout(resolve, 1200));
+
+            const reportWrap = document.getElementById('single-report-result');
+            const capture = document.getElementById('report-card-capture-area');
+            const reportVisible = !!reportWrap && !reportWrap.classList.contains('hidden');
+            const contentReady = !!capture && String(capture.innerHTML || '').trim().length > 0;
+
             return {
-                ok: Object.values(checks).every(Boolean),
-                checks
+                ok: Object.values(checks).every(Boolean) && reportVisible && contentReady,
+                checks,
+                reportVisible,
+                contentReady
             };
         });
     }
