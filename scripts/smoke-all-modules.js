@@ -138,6 +138,25 @@ async function runModuleDeepCheck(page, id) {
             };
         });
     }
+    if (id === 'upload') {
+        return page.evaluate(async () => {
+            const schools = typeof window.listAvailableSchoolsForCompare === 'function'
+                ? window.listAvailableSchoolsForCompare()
+                : [];
+            const checks = {
+                normalizeSchoolName: typeof window.normalizeSchoolName === 'function',
+                getCanonicalSchoolName: typeof window.getCanonicalSchoolName === 'function',
+                ensureNormalizedTargets: typeof window.ensureNormalizedTargets === 'function',
+                buildIndicatorSchoolBuckets: typeof window.buildIndicatorSchoolBuckets === 'function',
+                listAvailableSchoolsForCompare: typeof window.listAvailableSchoolsForCompare === 'function'
+            };
+            return {
+                ok: Object.values(checks).every(Boolean) && Array.isArray(schools),
+                checks,
+                schoolCount: Array.isArray(schools) ? schools.length : -1
+            };
+        });
+    }
     if (id === 'teacher-analysis') {
         return page.evaluate(async () => {
             const checks = {
