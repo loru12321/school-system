@@ -5445,6 +5445,11 @@ const DataManager = {
     },
 
     syncSchoolAliasSettingsFromGateway: async function () {
+        const user = typeof getCurrentUser === 'function' ? getCurrentUser() : (window.Auth?.currentUser || null);
+        const role = String(user?.role || '').trim();
+        if (role !== 'admin' && role !== 'director') {
+            return false;
+        }
         if (!(window.EdgeGateway && typeof EdgeGateway.listAliasRules === 'function' && EdgeGateway.canUseAuthorizedRequests())) {
             return false;
         }
