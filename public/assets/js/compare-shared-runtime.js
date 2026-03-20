@@ -1,6 +1,74 @@
 (() => {
     if (typeof window === 'undefined' || window.__COMPARE_SHARED_RUNTIME_PATCHED__) return;
 
+function isExamKeyEquivalentForCompare(a, b) {
+    const normalize = (key) => String(key || '').trim().replace(/\s+/g, '_').toLowerCase();
+    const ka = normalize(a);
+    const kb = normalize(b);
+    if (!ka || !kb) return false;
+    if (ka === kb) return true;
+
+    const isLikelyFullKey = (key) => /^(\d{4})\D*_/.test(key);
+    const extractShortVariants = (fullKey) => {
+        const parts = String(fullKey || '').split('_').filter(Boolean);
+        const variants = new Set();
+        if (parts.length >= 5) variants.add(parts.slice(4).join('_'));
+        if (parts.length >= 4) variants.add(parts.slice(3).join('_'));
+        return variants;
+    };
+
+    const aFull = isLikelyFullKey(ka);
+    const bFull = isLikelyFullKey(kb);
+
+    if (aFull && bFull) {
+        if (ka === kb) return true;
+        const sa = extractShortVariants(ka);
+        const sb = extractShortVariants(kb);
+        for (const value of sa) {
+            if (sb.has(value)) return true;
+        }
+        return false;
+    }
+
+    if (aFull && !bFull) return extractShortVariants(ka).has(kb);
+    if (!aFull && bFull) return extractShortVariants(kb).has(ka);
+    return ka === kb;
+}
+
+function getEffectiveCurrentExamId() {
+    try {
+        if (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') {
+            const db = CohortDB.ensure();
+            const exams = Object.values(db?.exams || {}).map(ex => ({
+                id: String(ex?.examId || '').trim(),
+                ts: Number(ex?.createdAt || ex?.updatedAt || 0)
+            })).filter(item => item.id);
+            if (exams.length > 0) {
+                exams.sort((a, b) => {
+                    const ta = getExamSortTimestamp(a.id, a.ts);
+                    const tb = getExamSortTimestamp(b.id, b.ts);
+                    if (ta !== tb) return tb - ta;
+                    return String(b.id || '').localeCompare(String(a.id || ''), 'zh-CN');
+                });
+                if (exams[0].id) return exams[0].id;
+            }
+        }
+    } catch (e) {}
+
+    const candidates = [
+        CURRENT_EXAM_ID,
+        window.CURRENT_EXAM_ID,
+        localStorage.getItem('CURRENT_EXAM_ID'),
+        (typeof COHORT_DB !== 'undefined' && COHORT_DB) ? COHORT_DB.currentExamId : '',
+        (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? (CohortDB.ensure()?.currentExamId || '') : ''
+    ];
+    for (const candidate of candidates) {
+        const key = String(candidate || '').trim();
+        if (key) return key;
+    }
+    return '';
+}
+
 function normalizeCompareCohortId(raw) {
     const text = String(raw || '').trim();
     if (!text) return '';
@@ -477,6 +545,8 @@ function buildSchoolSummaryForExam(rows) {
 }
 
     Object.assign(window, {
+        isExamKeyEquivalentForCompare,
+        getEffectiveCurrentExamId,
         normalizeCompareCohortId,
         isLegacyWorkspaceShadowExamId,
         normalizeCompareExamToken,

@@ -140,7 +140,29 @@ async function runModuleDeepCheck(page, id) {
             await new Promise(resolve => setTimeout(resolve, 1200));
             const table = document.getElementById('studentDetailTable');
             const rows = table?.querySelectorAll('tbody tr')?.length || 0;
-            return { ok: !!table && rows >= 0, rows, compareEntryReady: true };
+            return {
+                ok: !!table && rows >= 0,
+                rows,
+                compareEntryReady: true,
+                comparisonHelpersReady: typeof window.getComparisonStudentView === 'function'
+                    && typeof window.getComparisonStudentList === 'function'
+                    && typeof window.recalcPrevTotal === 'function'
+            };
+        });
+    }
+    if (id === 'report-generator') {
+        return page.evaluate(async () => {
+            const checks = {
+                doQuery: typeof window.doQuery === 'function',
+                getComparisonStudentView: typeof window.getComparisonStudentView === 'function',
+                getComparisonStudentList: typeof window.getComparisonStudentList === 'function',
+                formatComparisonExamLabel: typeof window.formatComparisonExamLabel === 'function',
+                getStudentExamHistory: typeof window.getStudentExamHistory === 'function'
+            };
+            return {
+                ok: Object.values(checks).every(Boolean),
+                checks
+            };
         });
     }
     return { ok: true };
