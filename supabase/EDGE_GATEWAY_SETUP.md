@@ -5,7 +5,9 @@ So the recommended path is:
 
 - keep the current front-end login
 - protect new management tables with RLS
-- access those new tables only through one Edge Function: `edu-gateway`
+- access those new tables only through one Edge Function endpoint
+
+The front end currently prefers `edu-gateway-v2` and will automatically fall back to `edu-gateway` if the v2 endpoint is not deployed yet.
 
 ## Files added
 
@@ -32,9 +34,11 @@ Result:
 In Supabase Dashboard:
 
 1. Open `Edge Functions`
-2. Create a new function named `edu-gateway`
+2. Create a new function named `edu-gateway-v2` (recommended, matches the default front-end config)
 3. Replace the default code with `supabase/functions/edu-gateway/index.ts`
 4. Deploy
+
+If you already have a function named `edu-gateway`, the current front end will still fall back to it automatically. Keeping both names deployed is also safe during migration.
 
 ## Step 3: Add secrets
 
@@ -128,6 +132,7 @@ Search for:
 
 - `window.SUPABASE_URL`
 - `window.SUPABASE_KEY`
+- `window.EDGE_GATEWAY_URL`
 
 ## Notes
 

@@ -500,6 +500,90 @@ function syncIndicatorScoreToSchools(schoolName, score) {
     });
 }
 
+function listAvailableSchoolsForCompare() {
+    const names = new Map();
+    const collectName = (rawName) => {
+        const school = String(rawName || '').trim();
+        if (!school) return;
+        const key = normalizeSchoolName(school) || school;
+        const existing = names.get(key);
+        names.set(key, existing ? pickPreferredSchoolDisplayName(existing, school) : school);
+    };
+
+    Object.keys(SCHOOLS || {}).forEach(collectName);
+
+    (RAW_DATA || []).forEach((row) => {
+        collectName(row?.school);
+    });
+
+    Object.values(window.TEACHER_SCHOOL_MAP || {}).forEach(collectName);
+
+    const persistedSchool = String(localStorage.getItem('MY_SCHOOL') || '').trim();
+    const runtimeSchool = String(MY_SCHOOL || '').trim();
+    if (persistedSchool) collectName(persistedSchool);
+    if (runtimeSchool) collectName(runtimeSchool);
+
+    const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+    if (db?.exams) {
+        Object.values(db.exams).forEach((exam) => {
+            (exam?.data || []).forEach((row) => {
+                collectName(row?.school);
+            });
+        });
+    }
+
+    const blockList = ['教育局', '教体局', '市局', '区局', '市直局', '区直局', 'admin', '测试', '默认'];
+    return [...names.values()]
+        .filter((name) => {
+            if (!name || /^Sheet\d+$/i.test(name)) return false;
+            return !blockList.some((blocked) => name.includes(blocked) || name.toLowerCase() === blocked);
+        })
+        .sort((a, b) => a.localeCompare(b, 'zh-CN'));
+}
+
+function getClassSchoolMapForAllData() {
+    const map = {};
+
+    Object.entries(window.TEACHER_SCHOOL_MAP || {}).forEach(([key, school]) => {
+        const cls = normalizeClass(String(key || '').split('_')[0]);
+        const normalizedSchool = String(school || '').trim();
+        if (cls && normalizedSchool) map[cls] = normalizedSchool;
+    });
+
+    Object.entries(SCHOOLS || {}).forEach(([school, payload]) => {
+        (payload?.students || []).forEach((stu) => {
+            const cls = normalizeClass(stu?.class);
+            if (cls && school && !map[cls]) map[cls] = school;
+        });
+    });
+
+    (RAW_DATA || []).forEach((row) => {
+        const school = String(row?.school || '').trim();
+        const cls = normalizeClass(row?.class);
+        if (cls && school && !map[cls]) map[cls] = school;
+    });
+
+    const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+    if (db?.exams) {
+        Object.values(db.exams).forEach((exam) => {
+            (exam?.data || []).forEach((row) => {
+                const school = String(row?.school || '').trim();
+                const cls = normalizeClass(row?.class);
+                if (cls && school && !map[cls]) map[cls] = school;
+            });
+        });
+    }
+
+    return map;
+}
+
+function inferDefaultSchoolFromContext() {
+    const saved = String(MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '').trim();
+    if (saved) return saved;
+    const list = listAvailableSchoolsForCompare();
+    return list.length === 1 ? list[0] : '';
+}
+
 // Compare school summary runtime moved to public/assets/js/compare-shared-runtime.js
 
 // Town submodule compare runtime moved to public/assets/js/town-submodule-compare-runtime.js

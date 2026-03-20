@@ -13,9 +13,16 @@ const PWARegister = {
             return false;
         }
 
+        if (!window.isSecureContext && !/^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname)) {
+            console.warn('⚠️ 当前上下文不是安全环境，Service Worker 无法注册');
+            return false;
+        }
+
         try {
-            const registration = await navigator.serviceWorker.register('/public/sw.js', {
-                scope: '/'
+            const swUrl = new URL('./sw.js', window.location.href);
+            const scopeUrl = new URL('./', window.location.href);
+            const registration = await navigator.serviceWorker.register(swUrl.pathname, {
+                scope: scopeUrl.pathname
             });
 
             console.log('✅ Service Worker 已注册:', registration);
@@ -61,7 +68,7 @@ const PWARegister = {
         return {
             available: true,
             controller: navigator.serviceWorker.controller ? '已激活' : '未激活',
-            ready: navigator.serviceWorker.ready ? '就绪' : '未就绪'
+            ready: '检查中'
         };
     },
 

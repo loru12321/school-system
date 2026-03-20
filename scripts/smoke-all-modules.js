@@ -160,6 +160,10 @@ async function runModuleDeepCheck(page, id) {
     if (id === 'teacher-analysis') {
         return page.evaluate(async () => {
             const checks = {
+                analyzeTeachers: typeof window.analyzeTeachers === 'function',
+                renderTeacherCards: typeof window.renderTeacherCards === 'function',
+                renderTeacherComparisonTable: typeof window.renderTeacherComparisonTable === 'function',
+                renderTeacherTownshipRanking: typeof window.renderTeacherTownshipRanking === 'function',
                 renderTeacherMultiPeriodComparison: typeof window.renderTeacherMultiPeriodComparison === 'function',
                 renderAllTeachersMultiPeriodComparison: typeof window.renderAllTeachersMultiPeriodComparison === 'function',
                 exportTeacherMultiPeriodComparison: typeof window.exportTeacherMultiPeriodComparison === 'function'

@@ -1,6 +1,279 @@
 (() => {
     if (typeof window === 'undefined' || window.__STUDENT_COMPARE_CLOUD_RUNTIME_PATCHED__) return;
 
+    let CLOUD_COMPARE_TARGET = window.CLOUD_COMPARE_TARGET || null;
+    let CLOUD_STUDENT_COMPARE_CONTEXT = window.CLOUD_STUDENT_COMPARE_CONTEXT || null;
+    let CLOUD_COMPARE_PREV_DATA_BACKUP = window.CLOUD_COMPARE_PREV_DATA_BACKUP ?? null;
+
+    function syncCloudCompareGlobals() {
+        window.CLOUD_COMPARE_TARGET = CLOUD_COMPARE_TARGET;
+        window.CLOUD_STUDENT_COMPARE_CONTEXT = CLOUD_STUDENT_COMPARE_CONTEXT;
+        window.CLOUD_COMPARE_PREV_DATA_BACKUP = CLOUD_COMPARE_PREV_DATA_BACKUP;
+    }
+
+    function normalizeCompareName(name) {
+        return String(name || '').trim().replace(/\s+/g, '').toLowerCase();
+    }
+
+    function setCloudCompareTarget(targetOrName, className, schoolName) {
+        if (!targetOrName) {
+            CLOUD_COMPARE_TARGET = null;
+            syncCloudCompareGlobals();
+            return null;
+        }
+        if (typeof targetOrName === 'object') {
+            CLOUD_COMPARE_TARGET = {
+                name: String(targetOrName.name || '').trim(),
+                class: String(targetOrName.class || '').trim(),
+                school: String(targetOrName.school || '').trim()
+            };
+            syncCloudCompareGlobals();
+            return CLOUD_COMPARE_TARGET;
+        }
+        CLOUD_COMPARE_TARGET = {
+            name: String(targetOrName || '').trim(),
+            class: String(className || '').trim(),
+            school: String(schoolName || '').trim()
+        };
+        syncCloudCompareGlobals();
+        return CLOUD_COMPARE_TARGET;
+    }
+
+    function isClassEquivalent(a, b) {
+        const c1 = normalizeClass(a || '');
+        const c2 = normalizeClass(b || '');
+        if (!c1 || !c2) return false;
+        if (c1 === c2) return true;
+        const n1 = c1.replace(/0/g, '');
+        const n2 = c2.replace(/0/g, '');
+        return n1.length > 0 && n1 === n2;
+    }
+
+    function getCurrentBoundStudentFromUser(user) {
+        if (!user || !Array.isArray(RAW_DATA) || RAW_DATA.length === 0) return null;
+        const targetName = normalizeCompareName(user.name || '');
+        const targetClass = String(user.class || '').trim();
+        const targetSchool = String(user.school || '').trim();
+        return RAW_DATA.find((student) => {
+            if (normalizeCompareName(student?.name || '') !== targetName) return false;
+            if (targetClass && !isClassEquivalent(student?.class || '', targetClass)) return false;
+            if (targetSchool && String(student?.school || '').trim() && String(student?.school || '').trim() !== targetSchool) return false;
+            return true;
+        }) || null;
+    }
+
+    function resolveCloudCompareTarget(user) {
+        if (CLOUD_COMPARE_TARGET && CLOUD_COMPARE_TARGET.name) return CLOUD_COMPARE_TARGET;
+        if (CURRENT_REPORT_STUDENT) {
+            return {
+                name: String(CURRENT_REPORT_STUDENT.name || '').trim(),
+                class: String(CURRENT_REPORT_STUDENT.class || '').trim(),
+                school: String(CURRENT_REPORT_STUDENT.school || '').trim()
+            };
+        }
+        const bound = getCurrentBoundStudentFromUser(user);
+        if (bound) {
+            return {
+                name: String(bound.name || '').trim(),
+                class: String(bound.class || '').trim(),
+                school: String(bound.school || '').trim()
+            };
+        }
+        return {
+            name: String(user?.name || '').trim(),
+            class: String(user?.class || '').trim(),
+            school: String(user?.school || '').trim()
+        };
+    }
+
+    function restorePrevDataFromCloudCompare() {
+        if (CLOUD_COMPARE_PREV_DATA_BACKUP !== null) {
+            PREV_DATA = JSON.parse(JSON.stringify(CLOUD_COMPARE_PREV_DATA_BACKUP));
+            CLOUD_COMPARE_PREV_DATA_BACKUP = null;
+            syncCloudCompareGlobals();
+            if (typeof performSilentMatching === 'function') {
+                try { performSilentMatching(); } catch (e) { console.warn('restore prev compare context failed:', e); }
+            }
+        }
+    }
+
+    function syncCloudContextToPrevData() {
+        const ctx = CLOUD_STUDENT_COMPARE_CONTEXT;
+        const prev = ctx?.previousRecord;
+        if (!prev) return false;
+
+        if (CLOUD_COMPARE_PREV_DATA_BACKUP === null) {
+            CLOUD_COMPARE_PREV_DATA_BACKUP = JSON.parse(JSON.stringify(PREV_DATA || []));
+        }
+
+        const historyRow = {
+            examId: String(ctx?.prevExamId || ''),
+            examFullKey: String(ctx?.prevExamId || ''),
+            examLabel: String(ctx?.prevExamId || '').replace(/_/g, ' '),
+            school: String(prev.school || ctx?.owner?.school || ''),
+            class: String(prev.class || ctx?.owner?.class || ''),
+            name: String(prev.name || ctx?.owner?.name || ''),
+            total: Number(prev.total) || 0,
+            classRank: prev.classRank ?? '-',
+            schoolRank: prev.schoolRank ?? '-',
+            townRank: prev.townRank ?? '-',
+            ranks: JSON.parse(JSON.stringify(prev.ranks || {})),
+            scores: JSON.parse(JSON.stringify(prev.scores || {})),
+            student: {
+                school: String(prev.school || ctx?.owner?.school || ''),
+                class: String(prev.class || ctx?.owner?.class || ''),
+                name: String(prev.name || ctx?.owner?.name || ''),
+                total: Number(prev.total) || 0,
+                ranks: JSON.parse(JSON.stringify(prev.ranks || {})),
+                scores: JSON.parse(JSON.stringify(prev.scores || {}))
+            }
+        };
+
+        if (!historyRow.ranks.total) {
+            historyRow.ranks.total = {
+                class: historyRow.classRank,
+                school: historyRow.schoolRank,
+                township: historyRow.townRank
+            };
+        }
+
+        PREV_DATA = [historyRow];
+        syncCloudCompareGlobals();
+        if (typeof performSilentMatching === 'function') {
+            try { performSilentMatching(); } catch (e) { console.warn('sync cloud compare context failed:', e); }
+        }
+        return true;
+    }
+
+    function clearCloudStudentCompareContext() {
+        CLOUD_STUDENT_COMPARE_CONTEXT = null;
+        syncCloudCompareGlobals();
+        restorePrevDataFromCloudCompare();
+    }
+
+    function applyCloudStudentCompareContext(payload, compareStudent, allCompareStudents) {
+        if (!compareStudent || !Array.isArray(compareStudent.periods) || compareStudent.periods.length < 2) {
+            clearCloudStudentCompareContext();
+            return null;
+        }
+
+        const periods = compareStudent.periods;
+        const currentExamId = String(getEffectiveCurrentExamId() || '').trim();
+        let latestIndex = periods.length - 1;
+        if (currentExamId) {
+            const idx = periods.findIndex((period) => isExamKeyEquivalentForCompare(period?.examId, currentExamId));
+            if (idx >= 0) latestIndex = idx;
+        }
+        if (latestIndex < 0 && Array.isArray(payload?.examIds) && payload.examIds.length > 0) {
+            const expectedLatest = payload.examIds[payload.examIds.length - 1];
+            const idx = periods.findIndex((period) => isExamKeyEquivalentForCompare(period?.examId, expectedLatest));
+            if (idx >= 0) latestIndex = idx;
+        }
+
+        let prevIndex = latestIndex - 1;
+        if (prevIndex < 0) prevIndex = (latestIndex + 1 < periods.length) ? latestIndex + 1 : -1;
+        if (prevIndex < 0 || prevIndex >= periods.length || prevIndex === latestIndex) {
+            prevIndex = periods.findIndex((_, index) => index !== latestIndex);
+        }
+
+        const prevPeriod = periods[prevIndex] || null;
+        const latestPeriod = periods[latestIndex] || null;
+        if (!prevPeriod || !latestPeriod) {
+            clearCloudStudentCompareContext();
+            return null;
+        }
+
+        const prevScores = {};
+        const prevRanks = {
+            total: {
+                class: prevPeriod.rankClass ?? '-',
+                school: prevPeriod.rankSchool ?? '-',
+                township: prevPeriod.rankTown ?? '-'
+            }
+        };
+        Object.entries(prevPeriod.subjects || {}).forEach(([subject, info]) => {
+            const score = Number(info?.score);
+            if (Number.isFinite(score)) prevScores[subject] = score;
+            prevRanks[subject] = {
+                class: info?.rankClass ?? '-',
+                school: info?.rankSchool ?? '-',
+                township: info?.rankTown ?? '-'
+            };
+        });
+
+        const previousSubjectScores = {};
+        (allCompareStudents || []).forEach((student) => {
+            const period = (student?.periods || []).find((item) => isExamKeyEquivalentForCompare(item?.examId, prevPeriod.examId));
+            if (!period) return;
+            Object.entries(period.subjects || {}).forEach(([subject, info]) => {
+                const score = Number(info?.score);
+                if (!Number.isFinite(score)) return;
+                if (!previousSubjectScores[subject]) previousSubjectScores[subject] = [];
+                previousSubjectScores[subject].push(score);
+            });
+        });
+
+        CLOUD_STUDENT_COMPARE_CONTEXT = {
+            key: payload?.key || '',
+            title: payload?.title || '',
+            owner: {
+                name: String(compareStudent.name || '').trim(),
+                class: normalizeClass(compareStudent.class || ''),
+                school: String(payload?.school || '').trim()
+            },
+            prevExamId: prevPeriod.examId || '',
+            latestExamId: latestPeriod.examId || '',
+            previousSubjectScores,
+            previousRecord: {
+                name: compareStudent.name,
+                class: compareStudent.class,
+                school: payload?.school || '',
+                total: Number(prevPeriod.total) || 0,
+                classRank: prevPeriod.rankClass ?? '-',
+                schoolRank: prevPeriod.rankSchool ?? '-',
+                townRank: prevPeriod.rankTown ?? '-',
+                scores: prevScores,
+                ranks: prevRanks,
+                _sourceExam: prevPeriod.examId || ''
+            }
+        };
+        syncCloudCompareGlobals();
+        return CLOUD_STUDENT_COMPARE_CONTEXT;
+    }
+
+    function isCloudContextMatchStudent(student) {
+        if (!CLOUD_STUDENT_COMPARE_CONTEXT || !student) return false;
+
+        const owner = CLOUD_STUDENT_COMPARE_CONTEXT.owner || {};
+        const targetName = normalizeCompareName(student.name || '');
+        const targetClass = String(student.class || '');
+        const ownerName = normalizeCompareName(owner.name || '');
+        const ownerClass = String(owner.class || '');
+
+        return targetName === ownerName && isClassEquivalent(targetClass, ownerClass);
+    }
+
+    function isCloudContextLikelyCurrentTarget(student) {
+        if (!CLOUD_STUDENT_COMPARE_CONTEXT || !student) return false;
+        const owner = CLOUD_STUDENT_COMPARE_CONTEXT.owner || {};
+        const target = resolveCloudCompareTarget(getCurrentUser());
+        const studentName = normalizeCompareName(student?.name || '');
+        const ownerName = normalizeCompareName(owner?.name || '');
+        const targetName = normalizeCompareName(target?.name || '');
+        const ownerClass = String(owner?.class || '');
+        const targetClass = String(target?.class || '');
+        const studentClass = String(student?.class || '');
+
+        const nameMatchByOwner = !!ownerName && studentName === ownerName;
+        const nameMatchByTarget = !!targetName && studentName === targetName;
+        const classMatchByOwner = !!ownerClass && isClassEquivalent(studentClass, ownerClass);
+        const classMatchByTarget = !!targetClass && isClassEquivalent(studentClass, targetClass);
+
+        if (nameMatchByOwner && (classMatchByOwner || !ownerClass)) return true;
+        if (nameMatchByTarget && (classMatchByTarget || !targetClass)) return true;
+        return nameMatchByOwner || nameMatchByTarget;
+    }
+
     async function saveStudentCompareToCloud() {
         if (!window.STUDENT_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成学生多期对比结果');
         if (!window.sbClient) return alert('☁️ 云端服务未连接，无法保存');
@@ -335,6 +608,7 @@
             const user = getCurrentUser();
             if (selfOnly && picked?.student) {
                 applyCloudStudentCompareContext(payload, picked.student, allRows);
+                syncCloudContextToPrevData();
                 rerenderStudentSideReportAfterCloudCompare(user, picked.student);
             } else {
                 clearCloudStudentCompareContext();
@@ -352,6 +626,17 @@
     }
 
     window.saveStudentCompareToCloud = saveStudentCompareToCloud;
+    window.normalizeCompareName = normalizeCompareName;
+    window.setCloudCompareTarget = setCloudCompareTarget;
+    window.resolveCloudCompareTarget = resolveCloudCompareTarget;
+    window.isClassEquivalent = isClassEquivalent;
+    window.getCurrentBoundStudentFromUser = getCurrentBoundStudentFromUser;
+    window.restorePrevDataFromCloudCompare = restorePrevDataFromCloudCompare;
+    window.syncCloudContextToPrevData = syncCloudContextToPrevData;
+    window.clearCloudStudentCompareContext = clearCloudStudentCompareContext;
+    window.applyCloudStudentCompareContext = applyCloudStudentCompareContext;
+    window.isCloudContextMatchStudent = isCloudContextMatchStudent;
+    window.isCloudContextLikelyCurrentTarget = isCloudContextLikelyCurrentTarget;
     window.viewCloudStudentCompares = viewCloudStudentCompares;
     window.normalizeCloudCompareTarget = normalizeCloudCompareTarget;
     window.pickSelfStudentFromCloudRows = pickSelfStudentFromCloudRows;
@@ -372,5 +657,6 @@
         return loadCloudStudentCompare(key, true);
     };
 
+    syncCloudCompareGlobals();
     window.__STUDENT_COMPARE_CLOUD_RUNTIME_PATCHED__ = true;
 })();

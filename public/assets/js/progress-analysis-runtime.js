@@ -8,6 +8,377 @@
         : (typeof PROGRESS_CACHE !== 'undefined' && Array.isArray(PROGRESS_CACHE) ? PROGRESS_CACHE : []);
     window.PROGRESS_CACHE = initialProgressCache;
 
+function updateProgressSchoolSelect() {
+    const sel = document.getElementById('progressSchoolSelect');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">--请选择本校--</option>';
+    Object.keys(SCHOOLS || {}).forEach((school) => {
+        sel.innerHTML += `<option value="${school}">${school}</option>`;
+    });
+
+    const user = getCurrentUser();
+    const role = user?.role || 'guest';
+    if (role === 'teacher' || role === 'class_teacher') {
+        const school = user.school || MY_SCHOOL || '';
+        if (school) {
+            sel.value = school;
+            sel.disabled = true;
+        }
+    } else {
+        sel.disabled = false;
+    }
+
+    requestAnimationFrame(() => {
+        const active = document.getElementById('progress-analysis');
+        if (active && active.classList.contains('active') && typeof enforceSectionIsolation === 'function') {
+            enforceSectionIsolation('progress-analysis');
+        }
+    });
+}
+
+function getProgressBaselineExamList() {
+    const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+    return Object.values(db?.exams || {})
+        .map((exam) => ({
+            id: String(exam?.examId || '').trim(),
+            examId: String(exam?.examId || '').trim(),
+            examFullKey: String(exam?.examFullKey || exam?.examId || '').trim(),
+            createdAt: Number(exam?.createdAt || exam?.updatedAt || 0),
+            data: Array.isArray(exam?.data) ? exam.data : []
+        }))
+        .filter((exam) => exam.id && exam.data.length > 0)
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+}
+
+function pickDefaultProgressBaselineExamId(examList) {
+    const list = Array.isArray(examList) ? examList : [];
+    const historicalList = list.filter((exam) => !CURRENT_EXAM_ID || !isExamKeyEquivalentForCompare(exam.id, CURRENT_EXAM_ID));
+    if (!historicalList.length) return '';
+    if (CURRENT_EXAM_ID) {
+        const currentIndex = list.findIndex((exam) => isExamKeyEquivalentForCompare(exam.id, CURRENT_EXAM_ID));
+        if (currentIndex > 0) return list[currentIndex - 1].id;
+    }
+    return historicalList[historicalList.length - 1].id;
+}
+
+function normalizeProgressBaselineRows(rows, examId = '') {
+    const normalized = (rows || []).map((row) => {
+        const student = row?.student || {};
+        const total = Number(
+            row?.total ??
+            row?.totalScore ??
+            row?.score ??
+            student?.total ??
+            student?.totalScore ??
+            NaN
+        );
+        const rankValue = Number(
+            row?.rank ??
+            row?.townRank ??
+            row?.prevRank ??
+            row?.ranks?.total?.township ??
+            student?.ranks?.total?.township ??
+            NaN
+        );
+        return {
+            name: row?.name || student?.name || '',
+            school: row?.school || student?.school || '',
+            class: normalizeClass(row?.class || student?.class || ''),
+            total,
+            rank: Number.isFinite(rankValue) && rankValue > 0 ? rankValue : null,
+            examId: examId || row?.examId || row?.examFullKey || row?._sourceExam || ''
+        };
+    }).filter((item) => item.name && Number.isFinite(item.total));
+
+    if (!normalized.length) return [];
+    const needsRank = normalized.some((item) => !Number.isFinite(item.rank) || item.rank <= 0);
+    if (needsRank) {
+        const ranked = normalized.slice().sort((a, b) => (b.total || 0) - (a.total || 0));
+        let lastRank = 0;
+        let lastTotal = null;
+        ranked.forEach((item, index) => {
+            if (index > 0 && lastTotal !== null && Math.abs((item.total || 0) - lastTotal) < 0.001) {
+                item.rank = lastRank;
+            } else {
+                item.rank = index + 1;
+                lastRank = item.rank;
+            }
+            lastTotal = item.total || 0;
+        });
+    }
+    return normalized;
+}
+
+function updateProgressBaselineSelect() {
+    const sel = document.getElementById('progressBaselineSelect');
+    if (!sel) return;
+    const currentValue = sel.value || '';
+    const examList = getProgressBaselineExamList();
+    const baselineList = examList.filter((exam) => !CURRENT_EXAM_ID || !isExamKeyEquivalentForCompare(exam.id, CURRENT_EXAM_ID));
+
+    sel.innerHTML = '<option value="">--请选择历史考试--</option>';
+    baselineList.forEach((exam) => {
+        sel.innerHTML += `<option value="${exam.id}">${exam.id}</option>`;
+    });
+
+    const preferredId = baselineList.some((exam) => exam.id === currentValue)
+        ? currentValue
+        : pickDefaultProgressBaselineExamId(examList);
+    if (preferredId) sel.value = preferredId;
+
+    sel.onchange = () => {
+        window.PROGRESS_CACHE = [];
+        window.__PROGRESS_BASELINE_ACTIVE_ID = '';
+        Promise.resolve(ensureProgressBaselineData({
+            allowCloudSync: false,
+            rerenderReport: true,
+            rerenderAnalysis: true
+        })).catch((err) => {
+            console.warn('[progress] baseline switch failed:', err);
+            setProgressBaselineStatus('❌ 切换历史基准失败，请稍后重试', 'error');
+        });
+    };
+}
+
+function getBaselineDataFromExam(examId) {
+    if (!examId) return [];
+    const exam = getProgressBaselineExamList().find((item) => (
+        isExamKeyEquivalentForCompare(item.id, examId) ||
+        isExamKeyEquivalentForCompare(item.examFullKey, examId)
+    ));
+    if (!exam || !Array.isArray(exam.data) || exam.data.length === 0) return [];
+    return normalizeProgressBaselineRows(exam.data, exam.examFullKey || exam.id || examId);
+}
+
+function onProgressComparePeriodCountChange() {
+    const countEl = document.getElementById('progressComparePeriodCount');
+    const wrap = document.getElementById('progressCompareExam3Wrap');
+    if (!countEl || !wrap) return;
+    wrap.style.display = countEl.value === '3' ? 'inline-flex' : 'none';
+}
+
+function setCompareExamSelectPlaceholders(selects, message) {
+    const optionHtml = `<option value="">${message}</option>`;
+    (selects || []).forEach((sel) => {
+        if (!sel) return;
+        sel.innerHTML = optionHtml;
+    });
+}
+
+function refreshCompareExamSelectors() {
+    if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
+    if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+    if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
+    if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
+    if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
+    if (typeof updateTeacherCompareExamSelects === 'function') updateTeacherCompareExamSelects();
+}
+
+function trySyncCompareExamOptions() {
+    const cohortId = CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
+    if (!cohortId || !window.CloudManager || typeof window.CloudManager.fetchCohortExamsToLocal !== 'function') return false;
+    if (!window.__COMPARE_EXAM_SYNC_STATE) window.__COMPARE_EXAM_SYNC_STATE = {};
+    const state = window.__COMPARE_EXAM_SYNC_STATE[cohortId] || { pending: false, lastAttempt: 0 };
+    window.__COMPARE_EXAM_SYNC_STATE[cohortId] = state;
+    if (state.pending) return true;
+    if (Date.now() - Number(state.lastAttempt || 0) < 5000) return false;
+    state.pending = true;
+    state.lastAttempt = Date.now();
+    Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId))
+        .catch((err) => {
+            console.warn('[compare-sync] fetchCohortExamsToLocal failed:', err);
+        })
+        .finally(() => {
+            state.pending = false;
+            setTimeout(() => {
+                refreshCompareExamSelectors();
+                if (typeof updateProgressBaselineSelect === 'function') updateProgressBaselineSelect();
+            }, 0);
+        });
+    return true;
+}
+
+function setProgressBaselineStatus(message, tone = 'info') {
+    const statusEl = document.getElementById('va-data-status');
+    if (!statusEl) return;
+    const palette = {
+        success: { color: '#16a34a', weight: 'bold' },
+        error: { color: '#dc2626', weight: 'bold' },
+        loading: { color: '#2563eb', weight: 'bold' },
+        info: { color: '#475569', weight: 'normal' }
+    };
+    const style = palette[tone] || palette.info;
+    statusEl.innerHTML = message;
+    statusEl.style.color = style.color;
+    statusEl.style.fontWeight = style.weight;
+}
+
+function syncProgressBaselineExamOptions() {
+    const cohortId = CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
+    if (!cohortId || !window.CloudManager || typeof window.CloudManager.fetchCohortExamsToLocal !== 'function') {
+        return Promise.resolve(false);
+    }
+    if (!window.__PROGRESS_BASELINE_SYNC_STATE) window.__PROGRESS_BASELINE_SYNC_STATE = {};
+    const state = window.__PROGRESS_BASELINE_SYNC_STATE[cohortId] || { pending: false, lastAttempt: 0, promise: null };
+    window.__PROGRESS_BASELINE_SYNC_STATE[cohortId] = state;
+    if (state.pending && state.promise) return state.promise;
+    if (Date.now() - Number(state.lastAttempt || 0) < 5000) return Promise.resolve(false);
+
+    state.pending = true;
+    state.lastAttempt = Date.now();
+    state.promise = Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId))
+        .then(() => {
+            if (typeof updateProgressBaselineSelect === 'function') updateProgressBaselineSelect();
+            if (typeof refreshCompareExamSelectors === 'function') refreshCompareExamSelectors();
+            return true;
+        })
+        .catch((err) => {
+            console.warn('[progress-sync] fetchCohortExamsToLocal failed:', err);
+            return false;
+        })
+        .finally(() => {
+            state.pending = false;
+            state.promise = null;
+        });
+    return state.promise;
+}
+
+async function ensureProgressBaselineData(options = {}) {
+    const {
+        allowCloudSync = false,
+        rerenderReport = true,
+        rerenderAnalysis = true
+    } = options;
+    if (window.__PROGRESS_BASELINE_LOADING) {
+        return Array.isArray(PREV_DATA) ? PREV_DATA : [];
+    }
+    window.__PROGRESS_BASELINE_LOADING = true;
+
+    const baselineSel = document.getElementById('progressBaselineSelect');
+    const progressSchoolSel = document.getElementById('progressSchoolSelect');
+    let baselineId = baselineSel?.value || '';
+    if (!baselineId) {
+        const examList = getProgressBaselineExamList();
+        baselineId = pickDefaultProgressBaselineExamId(examList);
+        if (baselineSel && baselineId) baselineSel.value = baselineId;
+    }
+
+    let baselineData = baselineId
+        ? getBaselineDataFromExam(baselineId)
+        : normalizeProgressBaselineRows(PREV_DATA || window.PREV_DATA || []);
+
+    if (!baselineData.length) {
+        const fallbackId = pickDefaultProgressBaselineExamId(getProgressBaselineExamList());
+        if (fallbackId) {
+            baselineId = fallbackId;
+            if (baselineSel) baselineSel.value = fallbackId;
+            baselineData = getBaselineDataFromExam(fallbackId);
+        }
+    }
+
+    if (!baselineData.length && allowCloudSync) {
+        setProgressBaselineStatus('⏳ 正在自动加载上次考试数据...', 'loading');
+        const synced = await syncProgressBaselineExamOptions();
+        if (synced) {
+            const fallbackId = baselineSel?.value || pickDefaultProgressBaselineExamId(getProgressBaselineExamList());
+            if (fallbackId) {
+                baselineId = fallbackId;
+                if (baselineSel) baselineSel.value = fallbackId;
+                baselineData = getBaselineDataFromExam(fallbackId);
+            }
+        }
+    }
+
+    if (!baselineData.length) {
+        setProgressBaselineStatus('❌ 未找到可用上次考试数据，请先同步当前届别考试或导入历史成绩', 'error');
+        window.__PROGRESS_BASELINE_LOADING = false;
+        return [];
+    }
+
+    const baselineChanged = String(window.__PROGRESS_BASELINE_ACTIVE_ID || '') !== String(baselineId || '');
+    if (baselineChanged) window.PROGRESS_CACHE = [];
+    window.__PROGRESS_BASELINE_ACTIVE_ID = baselineId || '';
+    PREV_DATA = baselineData;
+    window.PREV_DATA = baselineData;
+    setProgressBaselineStatus(`✅ 已自动加载上次考试数据（${baselineData.length} 条）${baselineId ? `：${baselineId}` : ''}`, 'success');
+
+    try {
+        if ((!window.PROGRESS_CACHE || window.PROGRESS_CACHE.length === 0) && typeof performSilentMatching === 'function') {
+            performSilentMatching();
+        }
+        if (rerenderReport && typeof renderValueAddedReport === 'function') renderValueAddedReport(true);
+        if (rerenderAnalysis && progressSchoolSel?.value && typeof renderProgressAnalysis === 'function') renderProgressAnalysis();
+    } catch (renderErr) {
+        console.warn('[progress] baseline loaded but rerender failed:', renderErr);
+        setProgressBaselineStatus(`⚠️ 已加载上次考试数据（${baselineData.length} 条），但页面刷新失败，请稍后重试`, 'error');
+    } finally {
+        window.__PROGRESS_BASELINE_LOADING = false;
+    }
+    return baselineData;
+}
+
+function updateProgressMultiExamSelects() {
+    const schoolSel = document.getElementById('progressCompareSchool');
+    const exam1Sel = document.getElementById('progressCompareExam1');
+    const exam2Sel = document.getElementById('progressCompareExam2');
+    const exam3Sel = document.getElementById('progressCompareExam3');
+    if (!schoolSel || !exam1Sel || !exam2Sel || !exam3Sel) return;
+
+    const schoolList = (typeof listAvailableSchoolsForCompare === 'function')
+        ? listAvailableSchoolsForCompare()
+        : Object.keys(SCHOOLS || {});
+    schoolSel.innerHTML = '<option value="">--请选择学校--</option>';
+    schoolList.forEach((school) => {
+        schoolSel.innerHTML += `<option value="${school}">${school}</option>`;
+    });
+    if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) schoolSel.value = MY_SCHOOL;
+
+    const examList = getProgressBaselineExamList().map((exam) => ({
+        id: exam.id,
+        createdAt: exam.createdAt || 0,
+        label: exam.id
+    }));
+    if (CURRENT_EXAM_ID && !examList.some((exam) => exam.id === CURRENT_EXAM_ID)) {
+        examList.push({ id: CURRENT_EXAM_ID, createdAt: Date.now(), label: `${CURRENT_EXAM_ID} (当前)` });
+    }
+    examList.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+
+    if (examList.length < 2) {
+        const syncing = trySyncCompareExamOptions();
+        if (syncing) {
+            setCompareExamSelectPlaceholders([exam1Sel, exam2Sel, exam3Sel], '正在同步云端考试期数...');
+            return;
+        }
+        const msg = '<option value="">--考试数量不足(至少2次)--</option>';
+        exam1Sel.innerHTML = msg;
+        exam2Sel.innerHTML = msg;
+        exam3Sel.innerHTML = msg;
+        return;
+    }
+
+    const optionsHtml = examList.map((exam) => `<option value="${exam.id}">${exam.label}</option>`).join('');
+    exam1Sel.innerHTML = optionsHtml;
+    exam2Sel.innerHTML = optionsHtml;
+    exam3Sel.innerHTML = optionsHtml;
+
+    const currentIndex = (CURRENT_EXAM_ID && examList.some((exam) => exam.id === CURRENT_EXAM_ID))
+        ? examList.findIndex((exam) => exam.id === CURRENT_EXAM_ID)
+        : examList.length - 1;
+    const prevIndex = Math.max(0, currentIndex - 1);
+    const prev2Index = Math.max(0, currentIndex - 2);
+
+    exam1Sel.value = examList[prevIndex].id;
+    exam2Sel.value = examList[currentIndex].id;
+    exam3Sel.value = examList[currentIndex].id;
+    if (examList.length >= 3) {
+        exam1Sel.value = examList[prev2Index].id;
+        exam2Sel.value = examList[prevIndex].id;
+        exam3Sel.value = examList[currentIndex].id;
+    }
+
+    onProgressComparePeriodCountChange();
+}
+
 function showMappingModal(cases) {
     const modal = document.getElementById('mappingModal');
     const tbody = document.querySelector('#mappingModal tbody');
@@ -878,6 +1249,20 @@ function resetProgressFilter() {
         confirmMappingsAndRun,
         switchValueAddedView,
         exportValueAddedExcel,
+        updateProgressSchoolSelect,
+        getProgressBaselineExamList,
+        pickDefaultProgressBaselineExamId,
+        normalizeProgressBaselineRows,
+        updateProgressBaselineSelect,
+        getBaselineDataFromExam,
+        onProgressComparePeriodCountChange,
+        setCompareExamSelectPlaceholders,
+        refreshCompareExamSelectors,
+        trySyncCompareExamOptions,
+        setProgressBaselineStatus,
+        syncProgressBaselineExamOptions,
+        ensureProgressBaselineData,
+        updateProgressMultiExamSelects,
         getProgressCleanName,
         getProgressSelectedSchoolName,
         getProgressCurrentStudentsForSchool,
