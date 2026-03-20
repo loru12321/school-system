@@ -29527,6 +29527,18 @@ const PermissionPolicy = {
             ? RoleManager.getPrimaryRole(user)
             : (user.role || 'guest');
     },
+    getQueryRoles(user = getCurrentUser()) {
+        if (!user) return ['guest'];
+        if (typeof RoleManager !== 'undefined' && typeof RoleManager.getUserRoles === 'function') {
+            const roles = RoleManager.getUserRoles(user).filter(Boolean);
+            return roles.length ? roles : ['guest'];
+        }
+        if (Array.isArray(user.roles) && user.roles.length) return user.roles.filter(Boolean);
+        return [user.role || 'guest'];
+    },
+    hasQueryRole(user, roleName) {
+        return this.getQueryRoles(user).includes(roleName);
+    },
     isAdmin(user = getCurrentUser()) {
         return this.getPrimaryRole(user) === 'admin';
     },
@@ -29556,7 +29568,7 @@ const PermissionPolicy = {
         return normalizeClass(user?.class || '');
     },
     getTeachingScope(user = getCurrentUser()) {
-        if (!(this.isTeacher(user) || this.isClassTeacher(user))) {
+        if (!(this.hasQueryRole(user, 'teacher') || this.hasQueryRole(user, 'class_teacher'))) {
             return { classes: new Set(), subjects: new Set() };
         }
         return getTeacherScopeForUser(user);
@@ -29571,46 +29583,62 @@ const PermissionPolicy = {
     },
     canQuerySchool(user, schoolName) {
         if (!user) return true;
-        if (this.isAdmin(user)) return true;
-        return this.sameSchoolName(this.getBoundSchool(user), schoolName);
+        if (this.hasQueryRole(user, 'admin')) return true;
+        if (this.hasQueryRole(user, 'director')
+            || this.hasQueryRole(user, 'grade_director')
+            || this.hasQueryRole(user, 'class_teacher')
+            || this.hasQueryRole(user, 'teacher')
+            || this.hasQueryRole(user, 'parent')
+            || this.hasQueryRole(user, 'student')) {
+            return this.sameSchoolName(this.getBoundSchool(user), schoolName);
+        }
+        return false;
     },
     canQueryClass(user, schoolName, className, options = {}) {
         if (!user) return true;
         if (!this.canQuerySchool(user, schoolName)) return false;
-        if (this.isAdmin(user) || this.isDirector(user)) return true;
         const normalizedClass = normalizeClass(className || '');
         if (!normalizedClass) return false;
-        if (this.isGradeDirector(user)) {
+        if (this.hasQueryRole(user, 'admin')) return true;
+        if (this.hasQueryRole(user, 'director')) return true;
+
+        const roleChecks = [];
+
+        if (this.hasQueryRole(user, 'grade_director')) {
             const boundGrade = this.getBoundGrade(user);
-            return !!boundGrade && this.extractGrade(normalizedClass) === boundGrade;
+            roleChecks.push(!!boundGrade && this.extractGrade(normalizedClass) === boundGrade);
         }
-        if (this.isClassTeacher(user)) {
+
+        if (this.hasQueryRole(user, 'class_teacher')) {
             const mode = options.mode || 'either';
             const homeroomClass = this.getHomeroomClass(user);
             const teachingScope = this.getTeachingScope(user);
             const homeroomMatch = !!homeroomClass && normalizedClass === homeroomClass;
             const teachingMatch = teachingScope.classes.has(normalizedClass);
-            if (mode === 'homeroom') return homeroomMatch;
-            if (mode === 'teaching') return homeroomMatch || teachingMatch;
-            return homeroomMatch || teachingMatch;
+            if (mode === 'homeroom') roleChecks.push(homeroomMatch);
+            else if (mode === 'teaching') roleChecks.push(homeroomMatch || teachingMatch);
+            else roleChecks.push(homeroomMatch || teachingMatch);
         }
-        if (this.isTeacher(user)) {
-            return this.getTeachingScope(user).classes.has(normalizedClass);
+
+        if (this.hasQueryRole(user, 'teacher')) {
+            roleChecks.push(this.getTeachingScope(user).classes.has(normalizedClass));
         }
-        if (this.isParentLike(user)) {
-            return normalizeClass(user?.class || '') === normalizedClass;
+
+        if (this.hasQueryRole(user, 'parent') || this.hasQueryRole(user, 'student')) {
+            roleChecks.push(normalizeClass(user?.class || '') === normalizedClass);
         }
-        return false;
+
+        return roleChecks.some(Boolean);
     },
     canQueryStudent(user, row, options = {}) {
         if (!user) return true;
         if (!row) return false;
-        if (this.isParentLike(user)) {
-            return this.sameSchoolName(user?.school, row?.school)
-                && normalizeClass(user?.class || '') === normalizeClass(row?.class || '')
-                && this.normalizeName(user?.name) === this.normalizeName(row?.name);
-        }
-        return this.canQueryClass(user, row?.school, row?.class, options);
+        const canByClassScope = this.canQueryClass(user, row?.school, row?.class, options);
+        const canBySelf = (this.hasQueryRole(user, 'parent') || this.hasQueryRole(user, 'student'))
+            && this.sameSchoolName(user?.school, row?.school)
+            && normalizeClass(user?.class || '') === normalizeClass(row?.class || '')
+            && this.normalizeName(user?.name) === this.normalizeName(row?.name);
+        return canByClassScope || canBySelf;
     },
     filterStudentRows(user, rows, options = {}) {
         if (!user) return Array.isArray(rows) ? rows.slice() : [];
@@ -29629,21 +29657,27 @@ const PermissionPolicy = {
     canQueryTeacherMetric(user, teacherName, statItem, schoolName) {
         if (!user) return true;
         if (!this.canQuerySchool(user, schoolName)) return false;
-        if (this.isAdmin(user) || this.isDirector(user)) return true;
-        if (this.isTeacher(user)) {
-            return this.normalizeName(teacherName) === this.normalizeName(user?.name);
-        }
+        if (this.hasQueryRole(user, 'admin')) return true;
+        if (this.hasQueryRole(user, 'director')) return true;
         const classes = this.parseClasses(statItem?.classes);
-        if (this.isGradeDirector(user)) {
-            const boundGrade = this.getBoundGrade(user);
-            return !!boundGrade && classes.some(cls => this.extractGrade(cls) === boundGrade);
+        const roleChecks = [];
+
+        if (this.hasQueryRole(user, 'teacher')) {
+            roleChecks.push(this.normalizeName(teacherName) === this.normalizeName(user?.name));
         }
-        if (this.isClassTeacher(user)) {
+
+        if (this.hasQueryRole(user, 'grade_director')) {
+            const boundGrade = this.getBoundGrade(user);
+            roleChecks.push(!!boundGrade && classes.some(cls => this.extractGrade(cls) === boundGrade));
+        }
+
+        if (this.hasQueryRole(user, 'class_teacher')) {
             const homeroomClass = this.getHomeroomClass(user);
             const ownTeacherMetric = this.normalizeName(teacherName) === this.normalizeName(user?.name);
-            return ownTeacherMetric || (!!homeroomClass && classes.some(cls => normalizeClass(cls) === homeroomClass));
+            roleChecks.push(ownTeacherMetric || (!!homeroomClass && classes.some(cls => normalizeClass(cls) === homeroomClass)));
         }
-        return false;
+
+        return roleChecks.some(Boolean);
     },
     filterTeacherStats(user, stats, schoolName) {
         if (!user) return stats;
