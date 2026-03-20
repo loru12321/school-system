@@ -517,10 +517,82 @@ const Auth = {
     },
 
     // 初始化：检查会话状态
+    loginPortalStorageKey: 'LOGIN_PORTAL_V1',
+
+    getLoginPortal: function () {
+        return localStorage.getItem(this.loginPortalStorageKey) === 'parent' ? 'parent' : 'school';
+    },
+
+    setLoginPortal: function (portal) {
+        const nextPortal = portal === 'parent' ? 'parent' : 'school';
+        localStorage.setItem(this.loginPortalStorageKey, nextPortal);
+        this.syncLoginPortalUI(nextPortal);
+        return nextPortal;
+    },
+
+    syncLoginPortalUI: function (portal = this.getLoginPortal()) {
+        const nextPortal = portal === 'parent' ? 'parent' : 'school';
+        const overlay = document.getElementById('login-overlay');
+        if (overlay) overlay.dataset.loginPortal = nextPortal;
+
+        document.querySelectorAll('.login-portal-card[data-portal]').forEach(card => {
+            card.classList.toggle('active', card.dataset.portal === nextPortal);
+        });
+
+        const badgeEl = document.getElementById('login-portal-badge');
+        const copyEl = document.getElementById('login-portal-copy') || document.querySelector('#login-overlay > div > div p');
+        const userInput = document.getElementById('login-user');
+        const classInput = document.getElementById('login-class');
+        const classGroup = classInput ? classInput.closest('.form-group') : null;
+        const userHelper = document.getElementById('login-user-helper');
+        const portalHelper = document.getElementById('login-portal-helper');
+        const submitButton = document.getElementById('login-submit-button');
+        const userLabel = document.querySelector('#login-form .form-group label');
+        const classLabel = classGroup ? classGroup.querySelector('label') : null;
+        const classNote = classLabel ? classLabel.querySelector('span') : null;
+
+        const config = nextPortal === 'parent'
+            ? {
+                badge: '家长端入口',
+                copy: '输入学生姓名、班级和密码，进入成长报告与成绩查询视图',
+                userLabel: '学生姓名',
+                userPlaceholder: '请输入学生姓名',
+                userHelper: '家长端建议使用学生姓名登录，并完整填写班级信息',
+                classNote: '(家长端必填，如 701)',
+                classPlaceholder: '请输入学生班级，如 701',
+                helper: '家长端将进入成长报告、成绩单与家校沟通视图。',
+                submit: '进入家长端'
+            }
+            : {
+                badge: '学校端入口',
+                copy: '教务、年级、班主任与教师统一进入教学分析与管理工作台',
+                userLabel: '账号 / 姓名',
+                userPlaceholder: '管理员账号 / 教师姓名',
+                userHelper: '学校端支持管理员、教务、年级、班主任与教师账号登录。',
+                classNote: '(学校端无需填写)',
+                classPlaceholder: '学校端无需填写',
+                helper: '学校端用于成绩分析、教学管理与数据维护。',
+                submit: '进入学校端'
+            };
+
+        if (badgeEl) badgeEl.textContent = config.badge;
+        if (copyEl) copyEl.textContent = config.copy;
+        if (userLabel) userLabel.textContent = config.userLabel;
+        if (userInput) userInput.placeholder = config.userPlaceholder;
+        if (userHelper) userHelper.textContent = config.userHelper;
+        if (classNote) classNote.textContent = config.classNote;
+        if (classInput) classInput.placeholder = config.classPlaceholder;
+        if (classGroup) classGroup.style.display = nextPortal === 'parent' ? 'block' : 'none';
+        if (portalHelper) portalHelper.textContent = config.helper;
+        if (submitButton) submitButton.textContent = config.submit;
+    },
+
     init: async function () {
+        this.syncLoginPortalUI();
         const session = sessionStorage.getItem('CURRENT_USER');
         if (session) {
             this.currentUser = JSON.parse(session);
+            this.setLoginPortal(this.currentUser.role === 'parent' ? 'parent' : 'school');
             if (window.EdgeGateway && typeof EdgeGateway.verify === 'function' && EdgeGateway.getToken()) {
                 EdgeGateway.verify().catch(err => {
                     console.warn('[EdgeGateway] session verify failed:', err?.message || err);
@@ -565,7 +637,10 @@ const Auth = {
         const user = document.getElementById('login-user').value.trim();
         const pass = document.getElementById('login-pass').value.trim();
         // 获取输入的班级 (去除空格)
-        const inputClass = document.getElementById('login-class').value.trim();
+        const loginPortal = this.getLoginPortal();
+        const classInputEl = document.getElementById('login-class');
+        const inputClass = classInputEl ? classInputEl.value.trim() : '';
+        if (loginPortal === 'parent' && user && pass && !inputClass) return UI.toast('家长端请输入学生班级', 'error');
 
         if (!user || !pass) return UI.toast('请输入账号和密码', 'error');
 
@@ -630,6 +705,7 @@ const Auth = {
             };
 
             this.currentUser = matchedUser;
+            this.setLoginPortal(matchedUser.role === 'parent' ? 'parent' : 'school');
             sessionStorage.setItem('CURRENT_USER', JSON.stringify(matchedUser));
             sessionStorage.setItem('CURRENT_ROLE', matchedUser.role); // 主角色
 
@@ -638,7 +714,8 @@ const Auth = {
                 sessionStorage.setItem('CURRENT_ROLES', JSON.stringify(matchedUser.roles));
             }
             if (window.EdgeGateway && typeof EdgeGateway.login === 'function') {
-                EdgeGateway.login(user, pass, inputClass).catch(err => {
+                const gatewayClassName = (matchedUser.role === 'parent' || matchedUser.role === 'class_teacher') ? inputClass : '';
+                EdgeGateway.login(user, pass, gatewayClassName).catch(err => {
                     console.warn('[EdgeGateway] login skipped:', err?.message || err);
                 });
             }
@@ -1598,6 +1675,7 @@ const Auth = {
 
 // 🟢 [修复] 确保 Auth 挂载到 window 以便 HTML onclick 访问
 window.Auth = Auth;
+Auth.syncLoginPortalUI();
 
 // 🆕 多角色权限系统
 window.RoleManager = {
