@@ -57,6 +57,16 @@ async function login(page, user, pass) {
     }, { timeout: 30000 });
 }
 
+async function waitForAppReady(page) {
+    await page.waitForFunction(() => {
+        const termId = localStorage.getItem('CURRENT_TERM_ID') || '';
+        const cohortId = localStorage.getItem('CURRENT_COHORT_ID') || '';
+        const school = String(window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '').trim();
+        const scoresReady = Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0;
+        return !!termId && !!cohortId && !!school && scoresReady;
+    }, { timeout: 30000 });
+}
+
 async function smokeSwitchModule(page, id) {
     const collectState = async () => page.evaluate((moduleId) => {
         const section = document.getElementById(moduleId);
@@ -278,12 +288,17 @@ async function smokeDataManagerTab(page, id) {
     });
 
     await login(page, user, pass);
+    await waitForAppReady(page);
 
     const summary = {
         login: await page.evaluate(() => ({
             overlayHidden: getComputedStyle(document.getElementById('login-overlay')).display === 'none',
             appVisible: getComputedStyle(document.getElementById('app')).display !== 'none',
-            roleText: document.body.innerText.includes('Role:')
+            roleText: document.body.innerText.includes('Role:'),
+            termId: localStorage.getItem('CURRENT_TERM_ID') || '',
+            cohortId: localStorage.getItem('CURRENT_COHORT_ID') || '',
+            mySchool: window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '',
+            scoreCount: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0
         })),
         switchModules: [],
         dataManagerTabs: [],
