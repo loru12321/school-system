@@ -50,7 +50,8 @@ function renderSingleReportCardHTML(stu, mode) {
     // 2. 判断是否为手机端 (或显式请求 IG 模式)
     const isMobile = window.innerWidth <= 768;
 
-    if (isMobile || mode === 'IG') {
+    const forceFullLayout = mode === 'A4' || mode === 'PC' || mode === 'FULL';
+    if ((!forceFullLayout && isMobile) || mode === 'IG') {
         // A. 获取 HTML 字符串
         const html = renderInstagramCard(stu);
 

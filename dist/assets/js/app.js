@@ -1057,7 +1057,7 @@ const Auth = {
             }
 
             // 渲染报表 HTML
-            let reportHtml = renderSingleReportCardHTML(stu, 'H5');
+            let reportHtml = renderSingleReportCardHTML(stu, 'A4');
 
             // 去除不必要的按钮和输入框
             reportHtml = reportHtml.replace(/<button.*AI 深度生成.*<\/button>/, '');

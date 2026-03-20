@@ -6098,3 +6098,194 @@ body.dark-mode #login-overlay[style*="background"] {
         padding: 15px 10px;
     }
 }
+
+@media screen and (max-width: 960px) {
+    body[data-mobile-query="true"] {
+        font-size: 14px;
+        overflow-x: hidden;
+        background: #f7fafc;
+    }
+
+    body[data-mobile-query="true"] #mobile-manager-app {
+        display: none !important;
+    }
+
+    body[data-mobile-query="true"] #app {
+        padding-bottom: 32px;
+    }
+
+    body[data-mobile-query="true"] header,
+    body[data-mobile-query="true"] .nav-wrapper,
+    body[data-mobile-query="true"] .card-box,
+    body[data-mobile-query="true"] .section {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    body[data-mobile-query="true"] .sec-head,
+    body[data-mobile-query="true"] .sub-header,
+    body[data-mobile-query="true"] .excel-header,
+    body[data-mobile-query="true"] .tm-overview-actions,
+    body[data-mobile-query="true"] .tm-summary-grid,
+    body[data-mobile-query="true"] .tm-context-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+    }
+
+    body[data-mobile-query="true"] .sec-head > div,
+    body[data-mobile-query="true"] .excel-header > div,
+    body[data-mobile-query="true"] .tm-overview-actions > div {
+        width: 100% !important;
+    }
+
+    body[data-mobile-query="true"] .btn,
+    body[data-mobile-query="true"] button,
+    body[data-mobile-query="true"] select,
+    body[data-mobile-query="true"] input[type="text"],
+    body[data-mobile-query="true"] input[type="number"],
+    body[data-mobile-query="true"] input[type="password"] {
+        min-height: 44px;
+    }
+
+    body[data-mobile-query="true"] .table-wrap {
+        overflow: visible !important;
+        border: none !important;
+        background: transparent !important;
+        margin-top: 12px !important;
+    }
+
+    body[data-mobile-query="true"] table.mobile-card-table {
+        min-width: 0 !important;
+        width: 100% !important;
+        border-spacing: 0 !important;
+    }
+
+    body[data-mobile-query="true"] table.mobile-card-table thead {
+        display: none !important;
+    }
+
+    body[data-mobile-query="true"] table.mobile-card-table tbody,
+    body[data-mobile-query="true"] table.mobile-card-table tr,
+    body[data-mobile-query="true"] table.mobile-card-table td {
+        display: block !important;
+        width: 100% !important;
+    }
+
+    body[data-mobile-query="true"] table.mobile-card-table tr {
+        background: #fff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 14px !important;
+        padding: 10px 12px !important;
+        margin-bottom: 12px !important;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05) !important;
+    }
+
+    body[data-mobile-query="true"] table.mobile-card-table td {
+        position: relative !important;
+        border: none !important;
+        border-bottom: 1px dashed #e2e8f0 !important;
+        padding: 10px 0 10px 42% !important;
+        text-align: right !important;
+        min-height: 36px !important;
+    }
+
+    body[data-mobile-query="true"] table.mobile-card-table td:last-child {
+        border-bottom: none !important;
+    }
+
+    body[data-mobile-query="true"] table.mobile-card-table td::before {
+        content: attr(data-label) !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 10px !important;
+        width: 38% !important;
+        text-align: left !important;
+        color: #64748b !important;
+        font-size: 12px !important;
+        font-weight: 700 !important;
+        white-space: normal !important;
+    }
+
+    body[data-mobile-query="true"] table.mobile-card-table td[colspan] {
+        padding-left: 0 !important;
+        text-align: center !important;
+    }
+
+    body[data-mobile-query="true"] table.mobile-card-table td[colspan]::before {
+        content: none !important;
+    }
+
+    body[data-mobile-query="true"] #parent-view-container table.fluent-table {
+        min-width: 0 !important;
+        width: 100% !important;
+        border-spacing: 0 !important;
+    }
+
+    body[data-mobile-query="true"] #parent-view-container table.fluent-table thead {
+        display: none !important;
+    }
+
+    body[data-mobile-query="true"] #parent-view-container table.fluent-table tbody,
+    body[data-mobile-query="true"] #parent-view-container table.fluent-table tr,
+    body[data-mobile-query="true"] #parent-view-container table.fluent-table td {
+        display: block !important;
+        width: 100% !important;
+    }
+
+    body[data-mobile-query="true"] #parent-view-container table.fluent-table tr {
+        background: #fff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 14px !important;
+        padding: 10px 12px !important;
+        margin-bottom: 12px !important;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05) !important;
+    }
+
+    body[data-mobile-query="true"] #parent-view-container table.fluent-table td {
+        position: relative !important;
+        border: none !important;
+        border-bottom: 1px dashed #e2e8f0 !important;
+        padding: 10px 0 10px 42% !important;
+        text-align: right !important;
+        min-height: 36px !important;
+    }
+
+    body[data-mobile-query="true"] #parent-view-container table.fluent-table td:last-child {
+        border-bottom: none !important;
+    }
+
+    body[data-mobile-query="true"] #parent-view-container table.fluent-table td::before {
+        content: attr(data-label) !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 10px !important;
+        width: 38% !important;
+        text-align: left !important;
+        color: #64748b !important;
+        font-size: 12px !important;
+        font-weight: 700 !important;
+        white-space: normal !important;
+    }
+
+    body[data-mobile-query="true"] #parent-view-container {
+        position: static !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 100vh !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        padding: 16px 12px 40px !important;
+        background: #f7fafc !important;
+    }
+
+    body[data-mobile-query="true"] #parent-view-container .report-card-container,
+    body[data-mobile-query="true"] #parent-view-container .insta-card,
+    body[data-mobile-query="true"] #parent-view-container .fluent-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+}
