@@ -1,25 +1,244 @@
 (() => {
-    if (typeof window === 'undefined') return;
-    if (window.MobMgr && window.__MOBILE_MANAGER_PATCHED__) return;
+    if (typeof window === 'undefined' || window.__MOBILE_MANAGER_PATCHED__) return;
 
-    function hideDesktopApp() {
-        const appEl = document.getElementById('app');
-        if (appEl) {
-            appEl.classList.add('hidden');
-            appEl.style.display = 'none';
-        }
-        const header = document.querySelector('header');
-        if (header) header.style.display = 'none';
-        const nav = document.querySelector('.nav-wrapper');
-        if (nav) nav.style.display = 'none';
-        const subNav = document.getElementById('sub-nav-container');
-        if (subNav) subNav.style.display = 'none';
-        document.querySelectorAll('.section, .card-box').forEach(el => {
-            el.style.display = 'none';
-        });
+    const MOBILE_BREAKPOINT = 960;
+    const REFRESH_DELAYS = [80, 260, 900];
+    const SHORTCUT_ORDER = [
+        'starter-hub',
+        'summary',
+        'teacher-analysis',
+        'student-details',
+        'progress-analysis',
+        'report-generator',
+        'teaching-warning-center',
+        'teaching-rectify-center',
+        'analysis',
+        'class-comparison'
+    ];
+    const ROLE_LABELS = {
+        admin: '管理员',
+        director: '校级管理',
+        grade_director: '级部主任',
+        class_teacher: '班主任',
+        teacher: '教师',
+        parent: '家长',
+        student: '学生',
+        guest: '访客'
+    };
+    const HOME_BY_ROLE = {
+        admin: 'starter-hub',
+        director: 'starter-hub',
+        grade_director: 'starter-hub',
+        class_teacher: 'student-details',
+        teacher: 'teacher-analysis'
+    };
+
+    let currentSheetMode = '';
+
+    function getEffectiveViewportWidth() {
+        const candidates = [
+            Number(window.innerWidth || 0),
+            Number(document.documentElement?.clientWidth || 0),
+            Number(window.outerWidth || 0),
+            Number(window.screen?.width || 0),
+            Number(window.screen?.availWidth || 0)
+        ].filter(value => Number.isFinite(value) && value > 0);
+        return candidates.length ? Math.min(...candidates) : 0;
     }
 
-    function showDesktopApp() {
+    function isMobileViewport() {
+        return getEffectiveViewportWidth() <= MOBILE_BREAKPOINT;
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, ch => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[ch]));
+    }
+
+    function stripEmoji(text) {
+        return String(text || '').replace(/[\u{1F300}-\u{1FAFF}]/gu, '').replace(/\s+/g, ' ').trim();
+    }
+
+    function getCurrentUser() {
+        if (window.Auth && window.Auth.currentUser) return window.Auth.currentUser;
+        try {
+            const raw = sessionStorage.getItem('CURRENT_USER');
+            return raw ? JSON.parse(raw) : null;
+        } catch {
+            return null;
+        }
+    }
+
+    function getCurrentRole() {
+        return String(getCurrentUser()?.role || document.body.dataset.role || 'guest').trim() || 'guest';
+    }
+
+    function getCurrentRoles() {
+        const user = getCurrentUser();
+        const rawRoles = Array.isArray(user?.roles) && user.roles.length ? user.roles : [user?.role].filter(Boolean);
+        return rawRoles.map(role => String(role || '').trim()).filter(Boolean);
+    }
+
+    function getCurrentSchool() {
+        return String(
+            getCurrentUser()?.school ||
+            window.MY_SCHOOL ||
+            localStorage.getItem('MY_SCHOOL') ||
+            ''
+        ).trim();
+    }
+
+    function humanizeRole(role) {
+        return ROLE_LABELS[String(role || '').trim()] || String(role || '访客');
+    }
+
+    function getNavStructure() {
+        if (window.NAV_STRUCTURE) return window.NAV_STRUCTURE;
+        try {
+            return NAV_STRUCTURE;
+        } catch {
+            return null;
+        }
+    }
+
+    function getCurrentCategoryKey() {
+        if (typeof window.getCurrentNavCategory === 'function') {
+            return String(window.getCurrentNavCategory() || '').trim();
+        }
+        try {
+            return String(currentCategory || '').trim();
+        } catch {
+            return '';
+        }
+    }
+
+    function switchCategoryKey(key) {
+        if (!key) return;
+        if (typeof window.switchNavCategory === 'function') {
+            window.switchNavCategory(key);
+            return;
+        }
+        try {
+            if (typeof switchCategory === 'function') switchCategory(key);
+        } catch {
+            // ignore
+        }
+    }
+
+    function canUseModule(id) {
+        const role = getCurrentRole();
+        if ((role === 'teacher' || role === 'class_teacher') && typeof window.canAccessModule === 'function' && !window.canAccessModule(id)) {
+            return false;
+        }
+        if (role === 'teacher' && ['single-school-eval', 'exam-arranger', 'freshman-simulator'].includes(id)) {
+            return false;
+        }
+        if (id === 'report-generator' && typeof window.CONFIG !== 'undefined' && window.CONFIG && !window.CONFIG.showQuery) {
+            return false;
+        }
+        return true;
+    }
+
+    function getAllowedCategories() {
+        const nav = getNavStructure();
+        if (!nav) return [];
+
+        const role = getCurrentRole();
+        const isRestricted = ['teacher', 'class_teacher'].includes(role);
+        const isTeacherRole = isRestricted;
+
+        return Object.keys(nav).filter((key) => {
+            if (isRestricted && (key === 'data' || key === 'tools')) return false;
+            if (isTeacherRole && key === 'town') return false;
+            return true;
+        }).map((key) => {
+            const category = nav[key];
+            return {
+                ...category,
+                key,
+                items: Array.isArray(category?.items) ? category.items.filter(item => canUseModule(item.id)) : []
+            };
+        }).filter(category => category.items.length > 0);
+    }
+
+    function findAllowedItem(itemId) {
+        const categories = getAllowedCategories();
+        for (const category of categories) {
+            const match = category.items.find(item => item.id === itemId);
+            if (match) {
+                return {
+                    ...match,
+                    categoryKey: category.key,
+                    categoryTitle: category.title,
+                    categoryColor: category.color
+                };
+            }
+        }
+        return null;
+    }
+
+    function getActiveSectionId() {
+        return document.querySelector('.section.active')?.id || '';
+    }
+
+    function getPrimaryModuleId() {
+        const role = getCurrentRole();
+        const preferred = HOME_BY_ROLE[role] || 'starter-hub';
+        const preferredItem = findAllowedItem(preferred);
+        if (preferredItem) return preferredItem.id;
+        return getAllowedCategories()[0]?.items?.[0]?.id || 'starter-hub';
+    }
+
+    function getActiveItem() {
+        return findAllowedItem(getActiveSectionId()) || findAllowedItem(getPrimaryModuleId()) || null;
+    }
+
+    function getShortcutItems() {
+        const allowMap = new Map();
+        const shortlist = [];
+        const seen = new Set();
+
+        getAllowedCategories().forEach(category => {
+            category.items.forEach(item => {
+                allowMap.set(item.id, {
+                    ...item,
+                    categoryKey: category.key,
+                    categoryTitle: category.title,
+                    categoryColor: category.color
+                });
+            });
+        });
+
+        [getPrimaryModuleId(), ...SHORTCUT_ORDER].forEach((itemId) => {
+            if (!itemId || seen.has(itemId) || !allowMap.has(itemId)) return;
+            seen.add(itemId);
+            shortlist.push(allowMap.get(itemId));
+        });
+
+        return shortlist.slice(0, 6);
+    }
+
+    function syncViewport() {
+        const viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) {
+            viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes');
+        }
+    }
+
+    function hideLegacyMobileShell() {
+        const mobApp = document.getElementById('mobile-manager-app');
+        if (mobApp) {
+            mobApp.style.display = 'none';
+        }
+    }
+
+    function showDesktopAppForMobile(role = '') {
+        if (role === 'parent') return;
         const appEl = document.getElementById('app');
         if (appEl) {
             appEl.classList.remove('hidden');
@@ -33,270 +252,578 @@
         if (subNav) subNav.style.display = '';
     }
 
-    function getEffectiveViewportWidth() {
-        const candidates = [
-            Number(window.innerWidth || 0),
-            Number(document.documentElement?.clientWidth || 0),
-            Number(window.outerWidth || 0),
-            Number(window.screen?.width || 0),
-            Number(window.screen?.availWidth || 0)
-        ].filter(value => Number.isFinite(value) && value > 0);
-        return candidates.length ? Math.min(...candidates) : 0;
+    function markResponsiveTables(scope = document) {
+        if (!isMobileViewport()) return;
+        const tables = scope.querySelectorAll('.table-wrap table, table.comparison-table, table.fluent-table, #tb-query, #studentDetailTable');
+        tables.forEach((table) => {
+            const headerRows = table.querySelectorAll('thead tr');
+            const headerCells = headerRows.length ? Array.from(headerRows[headerRows.length - 1].children) : [];
+            if (!headerCells.length) return;
+
+            table.classList.add('mobile-card-table');
+            Array.from(table.querySelectorAll('tbody tr')).forEach((row) => {
+                let title = '';
+                Array.from(row.children).forEach((cell, index) => {
+                    if (!(cell instanceof HTMLElement)) return;
+                    if (cell.hasAttribute('colspan')) return;
+                    const headerText = headerCells[index]?.textContent?.replace(/\s+/g, ' ').trim() || `字段${index + 1}`;
+                    const cellText = cell.textContent?.replace(/\s+/g, ' ').trim() || '';
+                    if (!title && cellText && index <= 1) {
+                        title = cellText;
+                    }
+                    cell.setAttribute('data-label', headerText);
+                });
+                if (title) {
+                    row.setAttribute('data-mobile-card-title', title);
+                }
+            });
+            table.dataset.mobileEnhanced = '1';
+        });
+    }
+
+    function markResponsiveLayouts(scope = document) {
+        if (!isMobileViewport()) return;
+
+        scope.querySelectorAll('.section [style*="grid-template-columns"]').forEach((el) => {
+            if (el.closest('#parent-view-container')) return;
+            el.classList.add('mobile-stack-grid');
+        });
+
+        scope.querySelectorAll('.section [style*="display:flex"]').forEach((el) => {
+            if (el.closest('#parent-view-container') || el.closest('#mobile-query-shell')) return;
+            if (el.children.length < 2) return;
+            el.classList.add('mobile-wrap-row');
+        });
+    }
+
+    function isLoggedIn() {
+        const overlay = document.getElementById('login-overlay');
+        const overlayVisible = !!(overlay && getComputedStyle(overlay).display !== 'none');
+        return !!getCurrentUser() && !overlayVisible;
+    }
+
+    function ensureMobileShell() {
+        let root = document.getElementById('mobile-query-shell');
+        if (root) return root;
+
+        root = document.createElement('div');
+        root.id = 'mobile-query-shell';
+        root.setAttribute('aria-hidden', 'true');
+        root.innerHTML = `
+            <div class="mq-topbar">
+                <button type="button" class="mq-icon-btn" data-mobile-action="home" aria-label="返回工作台">
+                    <i class="ti ti-layout-grid"></i>
+                </button>
+                <div class="mq-topbar-copy">
+                    <div class="mq-role-line" data-field="role">访客</div>
+                    <div class="mq-title-line" data-field="title">手机查询工作台</div>
+                    <div class="mq-subtitle-line" data-field="subtitle">完整数据已适配到手机界面</div>
+                </div>
+                <button type="button" class="mq-icon-btn" data-mobile-sheet="modules" aria-label="打开模块面板">
+                    <i class="ti ti-category-2"></i>
+                </button>
+            </div>
+            <div class="mq-backdrop"></div>
+            <div class="mq-sheet">
+                <div class="mq-sheet-panel"></div>
+            </div>
+            <div class="mq-tabs">
+                <button type="button" class="mq-tab" data-mobile-action="home">
+                    <i class="ti ti-home-2"></i>
+                    <span>工作台</span>
+                </button>
+                <button type="button" class="mq-tab" data-mobile-sheet="modules">
+                    <i class="ti ti-layout-list"></i>
+                    <span>模块</span>
+                </button>
+                <button type="button" class="mq-tab" data-mobile-sheet="quick">
+                    <i class="ti ti-bolt"></i>
+                    <span>快捷</span>
+                </button>
+                <button type="button" class="mq-tab" data-mobile-sheet="account">
+                    <i class="ti ti-user-circle"></i>
+                    <span>我的</span>
+                </button>
+            </div>
+        `;
+
+        root.addEventListener('click', handleShellClick);
+        root.querySelector('.mq-backdrop')?.addEventListener('click', () => setSheetMode(''));
+        document.body.appendChild(root);
+        return root;
+    }
+
+    function getSheetPanel() {
+        return ensureMobileShell().querySelector('.mq-sheet-panel');
+    }
+
+    function setSheetMode(mode = '') {
+        const root = ensureMobileShell();
+        const panel = getSheetPanel();
+        currentSheetMode = mode;
+        root.dataset.sheetOpen = mode ? '1' : '0';
+        root.dataset.sheetMode = mode || '';
+        root.setAttribute('aria-hidden', mode ? 'false' : 'true');
+
+        if (!mode) {
+            panel.innerHTML = '';
+            return;
+        }
+
+        if (mode === 'modules') renderModuleSheet(panel);
+        if (mode === 'quick') renderQuickSheet(panel);
+        if (mode === 'account') renderAccountSheet(panel);
+    }
+
+    function renderModuleSheet(panel) {
+        const categories = getAllowedCategories();
+        if (!categories.length) {
+            panel.innerHTML = `
+                <div class="mq-sheet-head">
+                    <div>
+                        <strong>模块面板</strong>
+                        <span>当前角色还没有可用模块</span>
+                    </div>
+                    <button type="button" class="mq-close-btn" data-mobile-action="close-sheet"><i class="ti ti-x"></i></button>
+                </div>
+            `;
+            return;
+        }
+
+        const activeItem = getActiveItem();
+        const currentCategory = panel.dataset.categoryKey && categories.some(cat => cat.key === panel.dataset.categoryKey)
+            ? panel.dataset.categoryKey
+            : (activeItem?.categoryKey || getCurrentCategoryKey() || categories[0].key);
+        const selectedCategory = categories.find(cat => cat.key === currentCategory) || categories[0];
+        panel.dataset.categoryKey = selectedCategory.key;
+
+        const pillsHtml = categories.map(cat => `
+            <button type="button" class="mq-pill ${cat.key === selectedCategory.key ? 'is-active' : ''}" data-mobile-target="category" data-key="${escapeHtml(cat.key)}" style="--mq-accent:${escapeHtml(cat.color || '#0f172a')};">
+                <i class="ti ${escapeHtml(cat.icon || 'ti-layout-grid')}"></i>
+                <span>${escapeHtml(stripEmoji(cat.title || '模块'))}</span>
+            </button>
+        `).join('');
+
+        const itemsHtml = selectedCategory.items.map(item => {
+            const activeClass = activeItem?.id === item.id ? 'is-active' : '';
+            return `
+                <button type="button" class="mq-module-card ${activeClass}" data-mobile-target="module" data-id="${escapeHtml(item.id)}" data-category="${escapeHtml(selectedCategory.key)}">
+                    <div class="mq-module-card-head">
+                        <span class="mq-module-icon"><i class="ti ${escapeHtml(item.icon || 'ti-layout-grid')}"></i></span>
+                        <span class="mq-module-state">${activeClass ? '当前模块' : '点击进入'}</span>
+                    </div>
+                    <strong>${escapeHtml(stripEmoji(item.text || item.id))}</strong>
+                    <span>${escapeHtml(stripEmoji(selectedCategory.title || '模块分组'))}</span>
+                </button>
+            `;
+        }).join('');
+
+        panel.innerHTML = `
+            <div class="mq-sheet-head">
+                <div>
+                    <strong>模块导航</strong>
+                    <span>保留电脑端完整能力，用手机友好的方式进入</span>
+                </div>
+                <button type="button" class="mq-close-btn" data-mobile-action="close-sheet"><i class="ti ti-x"></i></button>
+            </div>
+            <div class="mq-pill-row">${pillsHtml}</div>
+            <div class="mq-module-grid">${itemsHtml}</div>
+        `;
+    }
+
+    function renderQuickSheet(panel) {
+        const shortcuts = getShortcutItems();
+        const activeItem = getActiveItem();
+        const school = getCurrentSchool() || '未绑定学校';
+        const dataCount = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+
+        panel.innerHTML = `
+            <div class="mq-sheet-head">
+                <div>
+                    <strong>手机快捷查询</strong>
+                    <span>常用入口、数据范围与当前会话一屏可见</span>
+                </div>
+                <button type="button" class="mq-close-btn" data-mobile-action="close-sheet"><i class="ti ti-x"></i></button>
+            </div>
+            <div class="mq-info-card">
+                <div class="mq-info-row">
+                    <span>当前模块</span>
+                    <strong>${escapeHtml(stripEmoji(activeItem?.text || '未进入模块'))}</strong>
+                </div>
+                <div class="mq-info-row">
+                    <span>当前学校</span>
+                    <strong>${escapeHtml(school)}</strong>
+                </div>
+                <div class="mq-info-row">
+                    <span>已载入记录</span>
+                    <strong>${escapeHtml(String(dataCount))}</strong>
+                </div>
+            </div>
+            <div class="mq-shortcut-grid">
+                ${shortcuts.map(item => `
+                    <button type="button" class="mq-shortcut-card ${activeItem?.id === item.id ? 'is-active' : ''}" data-mobile-target="module" data-id="${escapeHtml(item.id)}" data-category="${escapeHtml(item.categoryKey || '')}">
+                        <i class="ti ${escapeHtml(item.icon || 'ti-bolt')}"></i>
+                        <strong>${escapeHtml(stripEmoji(item.text || item.id))}</strong>
+                        <span>${escapeHtml(stripEmoji(item.categoryTitle || '快捷入口'))}</span>
+                    </button>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    function renderAccountSheet(panel) {
+        const user = getCurrentUser();
+        const roles = getCurrentRoles();
+        const school = getCurrentSchool() || '未绑定学校';
+        const roleChips = roles.length
+            ? roles.map(role => `<span class="mq-role-chip">${escapeHtml(humanizeRole(role))}</span>`).join('')
+            : `<span class="mq-role-chip">访客</span>`;
+
+        const extraActions = [];
+        if (typeof window.showModuleHelp === 'function') {
+            extraActions.push(`
+                <button type="button" class="mq-account-action" data-mobile-action="permissions">
+                    <i class="ti ti-shield-lock"></i>
+                    <span>权限说明</span>
+                </button>
+            `);
+        }
+        if (typeof window.openSpotlight === 'function') {
+            extraActions.push(`
+                <button type="button" class="mq-account-action" data-mobile-action="search">
+                    <i class="ti ti-search"></i>
+                    <span>全局搜索</span>
+                </button>
+            `);
+        }
+
+        panel.innerHTML = `
+            <div class="mq-sheet-head">
+                <div>
+                    <strong>当前会话</strong>
+                    <span>账号、角色与常用系统操作集中在这里</span>
+                </div>
+                <button type="button" class="mq-close-btn" data-mobile-action="close-sheet"><i class="ti ti-x"></i></button>
+            </div>
+            <div class="mq-account-card">
+                <div class="mq-account-name">${escapeHtml(user?.name || '未登录')}</div>
+                <div class="mq-account-school">${escapeHtml(school)}</div>
+                <div class="mq-role-chip-row">${roleChips}</div>
+            </div>
+            <div class="mq-account-actions">
+                <button type="button" class="mq-account-action" data-mobile-action="password">
+                    <i class="ti ti-key"></i>
+                    <span>修改密码</span>
+                </button>
+                <button type="button" class="mq-account-action" data-mobile-action="theme">
+                    <i class="ti ti-moon"></i>
+                    <span>深色模式</span>
+                </button>
+                ${extraActions.join('')}
+                <button type="button" class="mq-account-action is-danger" data-mobile-action="logout">
+                    <i class="ti ti-logout"></i>
+                    <span>退出登录</span>
+                </button>
+            </div>
+        `;
+    }
+
+    function handleParentJump(target) {
+        const container = document.getElementById('parent-view-container');
+        if (!container) return;
+
+        if (target === 'top') {
+            container.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+
+        const scoreTarget = container.querySelector('#tb-query, table.fluent-table, table');
+        const chartTarget = container.querySelector('canvas, .fluent-chart, .chart-box');
+
+        if (target === 'scores' && scoreTarget) {
+            scoreTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        if (target === 'charts' && chartTarget) {
+            chartTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    function handleShellClick(event) {
+        const trigger = event.target.closest('[data-mobile-action], [data-mobile-sheet], [data-mobile-target], [data-parent-jump]');
+        if (!trigger) return;
+
+        const sheetMode = trigger.getAttribute('data-mobile-sheet');
+        if (sheetMode) {
+            setSheetMode(currentSheetMode === sheetMode ? '' : sheetMode);
+            return;
+        }
+
+        const targetType = trigger.getAttribute('data-mobile-target');
+        if (targetType === 'category') {
+            const panel = getSheetPanel();
+            panel.dataset.categoryKey = trigger.getAttribute('data-key') || '';
+            renderModuleSheet(panel);
+            return;
+        }
+        if (targetType === 'module') {
+            const categoryKey = trigger.getAttribute('data-category') || '';
+            const moduleId = trigger.getAttribute('data-id') || '';
+            setSheetMode('');
+            if (categoryKey) switchCategoryKey(categoryKey);
+            if (typeof window.switchTab === 'function' && moduleId) {
+                window.switchTab(moduleId);
+            }
+            scheduleRefresh();
+            return;
+        }
+
+        const action = trigger.getAttribute('data-mobile-action');
+        if (action === 'close-sheet') {
+            setSheetMode('');
+            return;
+        }
+        if (action === 'home') {
+            setSheetMode('');
+            if (typeof window.switchTab === 'function') {
+                window.switchTab(getPrimaryModuleId());
+            }
+            scheduleRefresh();
+            return;
+        }
+        if (action === 'search' && typeof window.openSpotlight === 'function') {
+            setSheetMode('');
+            window.openSpotlight();
+            return;
+        }
+        if (action === 'password' && typeof window.openUserPasswordModal === 'function') {
+            setSheetMode('');
+            window.openUserPasswordModal();
+            return;
+        }
+        if (action === 'theme' && typeof window.toggleDarkMode === 'function') {
+            window.toggleDarkMode();
+            scheduleRefresh();
+            return;
+        }
+        if (action === 'permissions' && typeof window.showModuleHelp === 'function') {
+            setSheetMode('');
+            window.showModuleHelp('permissions');
+            return;
+        }
+        if (action === 'logout' && window.Auth && typeof window.Auth.logout === 'function') {
+            setSheetMode('');
+            window.Auth.logout();
+            return;
+        }
+        if (action === 'refresh-parent' && window.Auth && typeof window.Auth.renderParentView === 'function') {
+            window.Auth.renderParentView();
+            return;
+        }
+        if (action === 'logout-parent' && window.Auth && typeof window.Auth.logout === 'function') {
+            window.Auth.logout();
+            return;
+        }
+
+        const parentJump = trigger.getAttribute('data-parent-jump');
+        if (parentJump) {
+            handleParentJump(parentJump);
+        }
+    }
+
+    function syncShellState() {
+        const root = ensureMobileShell();
+        const role = getCurrentRole();
+        const activeItem = getActiveItem();
+        const school = getCurrentSchool();
+        const subtitle = school
+            ? `${school} · 完整数据已适配到手机查询界面`
+            : '完整数据已适配到手机查询界面';
+
+        root.querySelector('[data-field="role"]').textContent = humanizeRole(role);
+        root.querySelector('[data-field="title"]').textContent = stripEmoji(activeItem?.text || '手机查询工作台');
+        root.querySelector('[data-field="subtitle"]').textContent = subtitle;
+        document.body.dataset.mobileSection = activeItem?.id || '';
+
+        root.querySelectorAll('.mq-tab').forEach((tab) => {
+            tab.classList.remove('is-active');
+            const tabSheetMode = tab.getAttribute('data-mobile-sheet');
+            const action = tab.getAttribute('data-mobile-action');
+            if (tabSheetMode && currentSheetMode === tabSheetMode) {
+                tab.classList.add('is-active');
+            }
+            if (action === 'home' && !currentSheetMode) {
+                tab.classList.add('is-active');
+            }
+        });
+    }
+
+    function syncShellVisibility() {
+        const root = ensureMobileShell();
+        const shouldShow = isMobileViewport() && isLoggedIn() && getCurrentRole() !== 'parent';
+        root.style.display = shouldShow ? 'block' : 'none';
+        if (!shouldShow) {
+            setSheetMode('');
+            return;
+        }
+        syncShellState();
+    }
+
+    function enhanceParentView() {
+        const container = document.getElementById('parent-view-container');
+        if (!container || !isMobileViewport() || getCurrentRole() !== 'parent') return;
+
+        const user = getCurrentUser();
+        let header = container.querySelector('.mobile-parent-header');
+        if (!header) {
+            header = document.createElement('div');
+            header.className = 'mobile-parent-header';
+            container.prepend(header);
+        }
+
+        header.innerHTML = `
+            <div class="mobile-parent-header-top">
+                <div>
+                    <div class="mobile-parent-role">家长端报告</div>
+                    <div class="mobile-parent-name">${escapeHtml(user?.name || '学生')}</div>
+                    <div class="mobile-parent-meta">${escapeHtml(user?.class || '未绑定班级')}${user?.school ? ` · ${escapeHtml(user.school)}` : ''}</div>
+                </div>
+                <button type="button" class="mobile-parent-logout" data-mobile-action="logout-parent">退出</button>
+            </div>
+            <div class="mobile-parent-chip-row">
+                <span class="mobile-parent-chip">手机端展示完整报告</span>
+                <span class="mobile-parent-chip">与电脑端保持同一份数据</span>
+            </div>
+            <div class="mobile-parent-action-row">
+                <button type="button" class="mobile-parent-action" data-parent-jump="top">总览</button>
+                <button type="button" class="mobile-parent-action" data-parent-jump="scores">成绩表</button>
+                <button type="button" class="mobile-parent-action" data-parent-jump="charts">图表</button>
+                <button type="button" class="mobile-parent-action" data-mobile-action="refresh-parent">刷新</button>
+            </div>
+        `;
+
+        markResponsiveTables(container);
+    }
+
+    function scheduleRefresh() {
+        REFRESH_DELAYS.forEach((delay) => {
+            setTimeout(refreshMobileEnhancements, delay);
+        });
+    }
+
+    function refreshMobileEnhancements() {
+        syncViewport();
+        hideLegacyMobileShell();
+        document.body.dataset.mobileQuery = isMobileViewport() ? 'true' : 'false';
+
+        if (!isMobileViewport()) {
+            syncShellVisibility();
+            return;
+        }
+
+        if (getCurrentRole() !== 'parent') {
+            showDesktopAppForMobile(getCurrentRole());
+        }
+
+        markResponsiveTables(document);
+        markResponsiveLayouts(document);
+        enhanceParentView();
+        syncShellVisibility();
     }
 
     const MobMgr = {
-        currentTab: 'home',
-
-        init: function () {
-            const mobApp = document.getElementById('mobile-manager-app');
-            if (!mobApp) {
-                console.warn('⚠️ #mobile-manager-app 元素不存在，跳过手机端管理初始化');
-                return false;
-            }
-
-            hideDesktopApp();
-            mobApp.style.display = 'block';
-
-            const user = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser : null;
-            if (user) {
-                const roleMap = { admin: '管理员', teacher: '教师', class_teacher: '班主任', grade_director: '级部主任', director: '教务主任' };
-                const roleName = roleMap[user.role] || user.role;
-                const setTxt = (id, txt) => {
-                    const el = document.getElementById(id);
-                    if (el) el.innerText = txt;
-                };
-                setTxt('mob-user-name', user.name);
-                setTxt('mob-user-role', roleName);
-                setTxt('mob-me-name', user.name);
-                setTxt('mob-me-role', roleName);
-            }
-
-            const now = new Date();
-            const dateEl = document.getElementById('mob-date-text');
-            if (dateEl) dateEl.innerText = `${now.getMonth() + 1}月${now.getDate()}日，祝您工作愉快`;
-
-            const savedCohort = localStorage.getItem('CURRENT_COHORT_ID');
-            if (savedCohort && typeof window.CURRENT_COHORT_ID === 'undefined') {
-                window.CURRENT_COHORT_ID = savedCohort;
-            }
-
-            if (savedCohort) {
-                setTimeout(() => {
-                    const cohortModal = document.getElementById('cohort-entry-modal');
-                    if (cohortModal) cohortModal.style.display = 'none';
-                    if (typeof Swal !== 'undefined' && Swal.isVisible && Swal.isVisible()) {
-                        Swal.close();
-                    }
-                }, 500);
-            }
-
-            setTimeout(() => this.refreshDataOverview(), 2000);
-            this.switchTab('home');
+        init() {
+            refreshMobileEnhancements();
             return true;
         },
-
-        refreshDataOverview: function () {
-            try {
-                const list = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
-                const total = list.length;
-                const setTxt = (id, txt) => {
-                    const el = document.getElementById(id);
-                    if (el) el.innerText = txt;
-                };
-                if (total > 0) {
-                    const allTotal = list.map(s => s.total || 0).reduce((a, b) => a + b, 0);
-                    const avg = (allTotal / total).toFixed(1);
-                    const passLine = 360;
-                    const passCount = list.filter(s => (s.total || 0) >= passLine).length;
-                    const passRate = ((passCount / total) * 100).toFixed(1) + '%';
-                    setTxt('mob-stat-total', total);
-                    setTxt('mob-stat-avg', avg);
-                    setTxt('mob-stat-pass', passRate);
-                }
-            } catch (e) {
-                console.warn('MobMgr.refreshDataOverview error:', e);
+        switchTab(tabName) {
+            const map = {
+                home: getPrimaryModuleId(),
+                students: 'student-details',
+                analysis: 'summary',
+                me: getPrimaryModuleId()
+            };
+            if (typeof window.switchTab === 'function' && map[tabName]) {
+                window.switchTab(map[tabName]);
+                setTimeout(refreshMobileEnhancements, 80);
             }
         },
-
-        switchTab: function (tabId) {
-            this.currentTab = tabId;
-            document.querySelectorAll('.mob-view').forEach(el => el.classList.remove('active'));
-            const targetView = document.getElementById(`mob-view-${tabId}`);
-            if (targetView) targetView.classList.add('active');
-
-            document.querySelectorAll('.mob-nav-btn').forEach(btn => btn.classList.remove('active'));
-            const activeBtn = Array.from(document.querySelectorAll('.mob-nav-btn')).find(btn => {
-                const oc = btn.getAttribute('onclick') || '';
-                return oc.includes(`'${tabId}'`);
-            });
-            if (activeBtn) activeBtn.classList.add('active');
-
-            if (tabId === 'students') this.renderStudentList();
-            if (tabId === 'analysis') this.renderAnalysis();
+        renderStudentList() {
+            refreshMobileEnhancements();
         },
-
-        renderStudentList: function () {
-            const container = document.getElementById('mob-student-list');
-            if (!container) return;
-            const keyword = String(document.getElementById('mob-search-input')?.value || '').toLowerCase();
-            const user = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser : null;
-
-            let list = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
-            if (user) {
-                if (user.school) list = list.filter(s => s.school === user.school);
-                if (user.role === 'class_teacher' && user.class) {
-                    list = list.filter(s => s.class === user.class);
-                }
-            }
-
-            if (keyword) {
-                list = list.filter(s => String(s.name || '').toLowerCase().includes(keyword) || String(s.id || '').includes(keyword));
-            }
-
-            const displayList = list.slice(0, 50);
-            if (displayList.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:30px; color:#999;">无匹配学生<br><small>请尝试搜索姓名</small></div>';
-                return;
-            }
-
-            container.innerHTML = displayList.map(student => {
-                const badgeColor = student.total >= 500 ? '#16a34a' : (student.total >= 360 ? '#2563eb' : '#d97706');
-                const schoolArg = encodeURIComponent(String(student.school || ''));
-                const classArg = encodeURIComponent(String(student.class || ''));
-                const nameArg = encodeURIComponent(String(student.name || ''));
-                const idArg = encodeURIComponent(String(student.id || ''));
-                return `
-                    <div class="mob-list-item" onclick="MobMgr.showStudentDetail('${schoolArg}', '${classArg}', '${nameArg}', '${idArg}')">
-                        <div class="mob-avatar">${student.name[0]}</div>
-                        <div class="mob-info">
-                            <div class="mob-name">${student.name}</div>
-                            <div class="mob-detail">${student.class} | 考号:${student.id}</div>
-                        </div>
-                        <div class="mob-score-badge" style="color:${badgeColor}">${student.total}</div>
-                    </div>
-                `;
-            }).join('');
+        showStudentDetail() {
+            refreshMobileEnhancements();
         },
-
-        showStudentDetail: function (schoolEncoded, classEncoded, nameEncoded, idEncoded) {
-            const school = decodeURIComponent(String(schoolEncoded || ''));
-            const className = decodeURIComponent(String(classEncoded || ''));
-            const name = decodeURIComponent(String(nameEncoded || ''));
-            const studentId = decodeURIComponent(String(idEncoded || ''));
-            const rows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
-            const stu = rows.find(s => {
-                if (String(s?.name || '') !== name) return false;
-                if (studentId && String(s?.id || '') !== studentId) return false;
-                if (school && String(s?.school || '') !== school) return false;
-                if (className && typeof isClassEquivalent === 'function' && !isClassEquivalent(String(s?.class || ''), className)) return false;
-                return true;
-            }) || rows.find(s => {
-                if (studentId && String(s?.id || '') === studentId) return true;
-                if (String(s?.name || '') !== name) return false;
-                if (school && String(s?.school || '') !== school) return false;
-                return className && typeof isClassEquivalent === 'function' ? isClassEquivalent(String(s?.class || ''), className) : true;
-            });
-            if (!stu || typeof renderInstagramCard !== 'function') return;
-
-            const html = renderInstagramCard(stu);
-            const modal = document.createElement('div');
-            modal.style.position = 'fixed';
-            modal.style.top = '0';
-            modal.style.left = '0';
-            modal.style.width = '100%';
-            modal.style.height = '100%';
-            modal.style.background = '#fafafa';
-            modal.style.zIndex = '20000';
-            modal.style.overflowY = 'auto';
-            modal.style.animation = 'fadeIn 0.2s ease-out';
-            modal.innerHTML = `
-                <div style="position:fixed; top:0; width:100%; padding:10px; background:white; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; z-index:20001;">
-                    <div style="font-weight:bold; color:#333;">学生详情</div>
-                    <button onclick="this.closest('div').parentElement.remove()" style="padding:6px 15px; background:#f3f4f6; border:none; border-radius:4px; font-weight:bold; color:#333;">关闭</button>
-                </div>
-                <div style="padding-top:60px; padding-bottom:40px;">${html}</div>
-            `;
-            document.body.appendChild(modal);
+        renderAnalysis() {
+            refreshMobileEnhancements();
         },
-
-        renderAnalysis: function () {
-            const container = document.getElementById('mob-analysis-content');
-            if (!container) return;
-
-            let list = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
-            const user = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser : null;
-            if (user && user.school) {
-                list = list.filter(s => s.school === user.school);
-            }
-
-            if (!list.length) {
-                container.innerHTML = '<div style="padding:20px;text-align:center;">暂无数据</div>';
-                return;
-            }
-
-            const total = list.length;
-            const allTotal = list.map(s => s.total).reduce((a, b) => a + b, 0);
-            const avg = (allTotal / total).toFixed(1);
-            container.innerHTML = `
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; text-align:center;">
-                    <div style="background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #e2e8f0;">
-                        <div style="font-size:24px; font-weight:bold; color:#333;">${total}</div>
-                        <div style="font-size:12px; color:#64748b;">本校人数</div>
-                    </div>
-                    <div style="background:#f0f9ff; padding:15px; border-radius:8px; border:1px solid #bae6fd;">
-                        <div style="font-size:24px; font-weight:bold; color:#2563eb;">${avg}</div>
-                        <div style="font-size:12px; color:#0369a1;">年级均分</div>
-                    </div>
-                </div>
-                <div style="margin-top:20px; text-align:center; font-size:12px; color:#999;">
-                    <i class="ti ti-device-desktop"></i><br>更多复杂分析（如进退步、班级对比）<br>请登录电脑端查看
-                </div>
-            `;
-        }
+        openModules() {
+            setSheetMode('modules');
+        },
+        openQuickActions() {
+            setSheetMode('quick');
+        },
+        openAccountSheet() {
+            setSheetMode('account');
+        },
+        refresh: refreshMobileEnhancements
     };
 
     window.MobMgr = MobMgr;
-
+    window.MobileQueryUI = {
+        refresh: refreshMobileEnhancements,
+        openModules: () => setSheetMode('modules'),
+        openQuick: () => setSheetMode('quick'),
+        openAccount: () => setSheetMode('account')
+    };
     window.switchMobileTab = function (tabName) {
-        if (window.MobMgr && typeof MobMgr.switchTab === 'function' && document.getElementById('mobile-manager-app')) {
-            const mobApp = document.getElementById('mobile-manager-app');
-            if (mobApp && getComputedStyle(mobApp).display === 'none') {
-                mobApp.style.display = 'block';
-                hideDesktopApp();
-            }
-            MobMgr.switchTab(tabName);
-            return;
-        }
-        const app = document.getElementById('mobile-app');
-        if (app && window.Alpine) {
-            Alpine.$data(app).activeTab = tabName;
-        } else {
-            console.warn("⚠️ 未找到可用的移动端容器，已跳过 switchMobileTab");
-        }
+        MobMgr.switchTab(tabName);
     };
 
     if (typeof Auth !== 'undefined' && typeof Auth.applyRoleView === 'function') {
         const originalApplyRoleView = Auth.applyRoleView;
         Auth.applyRoleView = function () {
-            const role = this.currentUser.role;
-            const mobApp = document.getElementById('mobile-manager-app');
-            const useMobileManager = role !== 'parent' && getEffectiveViewportWidth() <= 768 && !!mobApp && typeof MobMgr.init === 'function';
-
-            if (role === 'parent') {
-                this.renderParentView();
-                return;
-            }
-
             originalApplyRoleView.call(this);
-            if (useMobileManager) {
-                MobMgr.init();
-                return;
-            }
-
-            if (mobApp) mobApp.style.display = 'none';
-            showDesktopApp();
+            scheduleRefresh();
         };
     }
 
+    if (typeof Auth !== 'undefined' && typeof Auth.renderParentView === 'function') {
+        const originalRenderParentView = Auth.renderParentView;
+        Auth.renderParentView = function () {
+            originalRenderParentView.call(this);
+            scheduleRefresh();
+        };
+    }
+
+    if (typeof window.renderNavigation === 'function') {
+        const originalRenderNavigation = window.renderNavigation;
+        window.renderNavigation = function () {
+            const result = originalRenderNavigation.apply(this, arguments);
+            scheduleRefresh();
+            return result;
+        };
+    }
+
+    if (typeof window.switchTab === 'function') {
+        const originalSwitchTab = window.switchTab;
+        window.switchTab = function () {
+            const result = originalSwitchTab.apply(this, arguments);
+            scheduleRefresh();
+            return result;
+        };
+    }
+
+    if (typeof window.switchCategory === 'function') {
+        const originalSwitchCategory = window.switchCategory;
+        window.switchCategory = function () {
+            const result = originalSwitchCategory.apply(this, arguments);
+            scheduleRefresh();
+            return result;
+        };
+    }
+
+    window.addEventListener('resize', scheduleRefresh);
+
+    scheduleRefresh();
     window.__MOBILE_MANAGER_PATCHED__ = true;
 })();

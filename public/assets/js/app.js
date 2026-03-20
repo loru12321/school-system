@@ -6666,6 +6666,8 @@ const NAV_STRUCTURE = {
     }
 };
 
+window.NAV_STRUCTURE = NAV_STRUCTURE;
+
 let currentCategory = 'data';
 
 function renderNavigation() {
@@ -6793,6 +6795,14 @@ function switchCategory(key) {
         }
     }, 50);
 }
+
+window.getCurrentNavCategory = function () {
+    return currentCategory;
+};
+
+window.switchNavCategory = function (key) {
+    switchCategory(key);
+};
 
 // ================= 侧边栏与通用工具 =================
 window.toggleSidebarMoreMenu = function () {

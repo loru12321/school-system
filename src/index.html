@@ -1622,6 +1622,41 @@
             margin: 18px 0 18px;
         }
 
+        .login-shell {
+            position: relative;
+        }
+
+        .login-brand-block {
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-mobile-highlights {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 0 0 6px;
+        }
+
+        .login-mobile-highlights span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 34px;
+            padding: 0 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(251, 113, 133, 0.16);
+            background: rgba(255, 255, 255, 0.72);
+            color: #7c4a58;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .login-mobile-highlights i {
+            color: #ec4899;
+            font-size: 14px;
+        }
+
         .login-portal-card {
             border: 1px solid rgba(251, 113, 133, 0.18);
             background: rgba(255, 255, 255, 0.72);
@@ -1821,28 +1856,49 @@
 
         @media screen and (max-width: 768px) {
             #login-overlay {
-                padding: 16px !important;
-                align-items: flex-start !important;
+                padding: 0 !important;
+                align-items: stretch !important;
             }
 
             #login-overlay>div {
-                margin-top: max(20px, env(safe-area-inset-top));
+                margin-top: 0 !important;
                 width: 100% !important;
                 max-width: 100% !important;
-                padding: 24px 18px 20px !important;
-                border-radius: 18px !important;
+                min-height: 100vh !important;
+                padding: max(28px, calc(env(safe-area-inset-top) + 12px)) 18px calc(env(safe-area-inset-bottom) + 22px) !important;
+                border-radius: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.72)) !important;
+            }
+
+            .login-brand-block {
+                text-align: left !important;
+                margin-bottom: 22px !important;
             }
 
             #login-overlay h1 {
-                font-size: 28px !important;
+                font-size: 30px !important;
+                text-align: left !important;
+            }
+
+            #login-overlay p {
+                text-align: left !important;
             }
 
             .login-portal-grid {
                 grid-template-columns: 1fr;
+                gap: 10px;
             }
 
             .login-portal-card {
                 padding: 13px;
+            }
+
+            .login-mobile-highlights span {
+                flex: 1 1 calc(50% - 8px);
+                min-width: 0;
+                justify-content: center;
             }
 
             #login-form input {
@@ -2043,9 +2099,9 @@
 
     <div id="login-overlay" data-login-portal="school"
         style="position:fixed; top:0; left:0; width:100%; height:100%; background:#f3f4f6; z-index:50000; display:flex; align-items:center; justify-content:center; background-image: radial-gradient(#e5e7eb 1px, transparent 1px); background-size: 20px 20px;">
-        <div
+        <div class="login-shell"
             style="background:white; padding:40px; border-radius:16px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); width:100%; max-width:420px; border:1px solid #e5e7eb;">
-            <div style="text-align:center; margin-bottom:30px;">
+            <div class="login-brand-block" style="text-align:center; margin-bottom:30px;">
                 <div id="login-portal-badge" class="login-portal-badge">学校端入口</div>
                 <h1 style="color:var(--primary); font-size:24px; font-weight:800; margin-bottom:5px;">智慧教务管理系统</h1>
                 <p style="color:#64748b; font-size:14px;">统一身份认证入口</p>
@@ -2067,6 +2123,12 @@
                     <span class="login-portal-desc">输入学生姓名、班级和密码，进入成长报告与家校沟通视图。</span>
                     <span class="login-portal-meta">成长报告 / 成绩查询</span>
                 </button>
+            </div>
+
+            <div class="login-mobile-highlights">
+                <span><i class="ti ti-device-mobile"></i> 手机友好查询</span>
+                <span><i class="ti ti-shield-check"></i> 角色自动识别</span>
+                <span><i class="ti ti-report-search"></i> 信息与电脑端一致</span>
             </div>
 
             <div id="login-form">
