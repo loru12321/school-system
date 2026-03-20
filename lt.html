@@ -3651,6 +3651,8 @@
                                 教师任课</button>
                             <button class="btn btn-green" onclick="switchTab('teacher-analysis')"><i
                                     class="ti ti-school"></i> 教师画像</button>
+                            <button class="btn btn-gray" onclick="showModuleHelp('permissions')"><i
+                                    class="ti ti-shield-lock"></i> 权限说明</button>
                         </div>
                     </div>
                     <div class="starter-card">
@@ -29692,6 +29694,30 @@ const PermissionPolicy = {
             if (Object.keys(scopedSubjects).length > 0) filtered[teacherName] = scopedSubjects;
         });
         return filtered;
+    },
+    'permissions': {
+        title: '权限说明·方案 C',
+        fit: `用于<strong>查看当前角色的模块访问与数据查询边界</strong>，便于系统培训、审核和账号配置。`,
+        when: `新增/调整角色，或需要解释多角色可查范围时使用。`,
+        use: `<ul>
+                <li><strong>模块访问：</strong>按最高优先级角色决定。</li>
+                <li><strong>数据查询：</strong>按所有角色查询范围的并集决定。</li>
+                <li><strong>优先级：</strong>admin > director > grade_director > class_teacher > teacher > parent > student > guest。</li>
+              </ul>`,
+        calc: `<div class="formula-box">
+                <strong>方案 C 核心：</strong><br>
+                模块访问 = 最高优先级角色<br>
+                数据查询 = 所有角色范围并集
+              </div>
+              <div style="text-align:left; line-height:1.7;">
+                <p><strong>典型示例：</strong></p>
+                <ul>
+                  <li>级部主任 + 班主任 + 教师：模块按 grade_director；数据按“本年级 ∪ 本班 ∪ 任教班级”。</li>
+                  <li>班主任 + 教师：模块按 class_teacher；数据按“本班 ∪ 任教班级”。</li>
+                  <li>director：本校全量；admin：全局。</li>
+                  <li>parent/student：仅本人学生报告。</li>
+                </ul>
+              </div>`
     }
 };
 

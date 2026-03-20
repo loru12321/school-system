@@ -111,12 +111,19 @@ function normalizeRoles(row) {
   const roles = Array.isArray(rolesRaw) ? rolesRaw.map((item) => String(item || "").trim()).filter(Boolean) : [role];
   return Array.from(/* @__PURE__ */ new Set([role, ...roles]));
 }
+function getPrimaryRoleFromRoles(roles) {
+  const hierarchy = ["admin", "director", "grade_director", "class_teacher", "teacher", "parent", "student", "guest"];
+  for (const role of hierarchy) {
+    if (roles.includes(role)) return role;
+  }
+  return roles[0] || "guest";
+}
 function buildSessionPayload(row) {
   const roles = normalizeRoles(row);
-  const role = roles[0] || "guest";
+  const role = getPrimaryRoleFromRoles(roles);
   const school = String(row.school || "").trim();
   const className = String(row.class_name || "").trim();
-  const gradeName = role === "grade_director" ? className : extractGradeName(className);
+  const gradeName = roles.includes("grade_director") ? className : extractGradeName(className);
   const teacherName = String(row.teacher_name || row.display_name || row.name || row.username || "").trim();
   return {
     username: String(row.username || "").trim(),
@@ -132,26 +139,29 @@ function buildSessionPayload(row) {
 function hasAnyRole(session, roles) {
   return roles.some((role) => session.roles.includes(role));
 }
+function hasRole(session, role) {
+  return session.roles.includes(role);
+}
 function isAdmin(session) {
-  return hasAnyRole(session, ["admin"]);
+  return hasRole(session, "admin");
 }
 function isAdminLike(session) {
   return hasAnyRole(session, ["admin", "director"]);
 }
 function sameDirectorSchool(session, schoolName) {
-  return session.role === "director" && String(schoolName || "").trim() === session.school;
+  return hasRole(session, "director") && String(schoolName || "").trim() === session.school;
 }
 function sameGrade(session, schoolName, gradeName, className) {
-  return isAdmin(session) || session.role === "grade_director" && String(schoolName || "").trim() === session.school && (String(gradeName || "").trim() === session.grade_name || extractGradeName(String(className || "").trim()) === session.grade_name);
+  return isAdmin(session) || hasRole(session, "grade_director") && String(schoolName || "").trim() === session.school && (String(gradeName || "").trim() === session.grade_name || extractGradeName(String(className || "").trim()) === session.grade_name);
 }
 function sameClass(session, schoolName, className) {
-  return isAdmin(session) || session.role === "class_teacher" && String(schoolName || "").trim() === session.school && String(className || "").trim() === session.class_name;
+  return isAdmin(session) || hasRole(session, "class_teacher") && String(schoolName || "").trim() === session.school && String(className || "").trim() === session.class_name;
 }
 function sameTeacher(session, schoolName, teacherName) {
-  return isAdmin(session) || session.role === "teacher" && String(schoolName || "").trim() === session.school && String(teacherName || "").trim() === session.teacher_name;
+  return isAdmin(session) || hasRole(session, "teacher") && String(schoolName || "").trim() === session.school && String(teacherName || "").trim() === session.teacher_name;
 }
 function taskParticipant(session, ownerName, assistUsers, schoolName = "") {
-  if (isAdmin(session) || sameDirectorSchool(session, schoolName) || session.role === "grade_director") return true;
+  if (isAdmin(session) || sameDirectorSchool(session, schoolName)) return true;
   if (String(ownerName || "").trim() === session.teacher_name) return true;
   const users = Array.isArray(assistUsers) ? assistUsers : [];
   return users.map((item) => String(item || "").trim()).includes(session.teacher_name);
