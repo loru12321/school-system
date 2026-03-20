@@ -132,29 +132,37 @@ function buildSessionPayload(row) {
 function hasAnyRole(session, roles) {
   return roles.some((role) => session.roles.includes(role));
 }
+function isAdmin(session) {
+  return hasAnyRole(session, ["admin"]);
+}
 function isAdminLike(session) {
   return hasAnyRole(session, ["admin", "director"]);
 }
+function sameDirectorSchool(session, schoolName) {
+  return session.role === "director" && String(schoolName || "").trim() === session.school;
+}
 function sameGrade(session, schoolName, gradeName, className) {
-  return isAdminLike(session) || session.role === "grade_director" && String(schoolName || "").trim() === session.school && (String(gradeName || "").trim() === session.grade_name || extractGradeName(String(className || "").trim()) === session.grade_name);
+  return isAdmin(session) || session.role === "grade_director" && String(schoolName || "").trim() === session.school && (String(gradeName || "").trim() === session.grade_name || extractGradeName(String(className || "").trim()) === session.grade_name);
 }
 function sameClass(session, schoolName, className) {
-  return isAdminLike(session) || session.role === "class_teacher" && String(schoolName || "").trim() === session.school && String(className || "").trim() === session.class_name;
+  return isAdmin(session) || session.role === "class_teacher" && String(schoolName || "").trim() === session.school && String(className || "").trim() === session.class_name;
 }
 function sameTeacher(session, schoolName, teacherName) {
-  return isAdminLike(session) || session.role === "teacher" && String(schoolName || "").trim() === session.school && String(teacherName || "").trim() === session.teacher_name;
+  return isAdmin(session) || session.role === "teacher" && String(schoolName || "").trim() === session.school && String(teacherName || "").trim() === session.teacher_name;
 }
-function taskParticipant(session, ownerName, assistUsers) {
-  if (isAdminLike(session) || session.role === "grade_director") return true;
+function taskParticipant(session, ownerName, assistUsers, schoolName = "") {
+  if (isAdmin(session) || sameDirectorSchool(session, schoolName) || session.role === "grade_director") return true;
   if (String(ownerName || "").trim() === session.teacher_name) return true;
   const users = Array.isArray(assistUsers) ? assistUsers : [];
   return users.map((item) => String(item || "").trim()).includes(session.teacher_name);
 }
 function warningVisible(session, row) {
-  return isAdminLike(session) || sameGrade(session, String(row.school_name || ""), String(row.grade_name || ""), String(row.class_name || "")) || sameClass(session, String(row.school_name || ""), String(row.class_name || "")) || sameTeacher(session, String(row.school_name || ""), String(row.teacher_name || ""));
+  const schoolName = String(row.school_name || "");
+  return isAdmin(session) || sameDirectorSchool(session, schoolName) || sameGrade(session, schoolName, String(row.grade_name || ""), String(row.class_name || "")) || sameClass(session, schoolName, String(row.class_name || "")) || sameTeacher(session, schoolName, String(row.teacher_name || ""));
 }
 function rectifyVisible(session, row) {
-  return isAdminLike(session) || sameGrade(session, String(row.school_name || ""), String(row.grade_name || ""), String(row.class_name || "")) || sameClass(session, String(row.school_name || ""), String(row.class_name || "")) || sameTeacher(session, String(row.school_name || ""), String(row.teacher_name || "")) || taskParticipant(session, String(row.owner_name || ""), row.assist_users);
+  const schoolName = String(row.school_name || "");
+  return isAdmin(session) || sameDirectorSchool(session, schoolName) || sameGrade(session, schoolName, String(row.grade_name || ""), String(row.class_name || "")) || sameClass(session, schoolName, String(row.class_name || "")) || sameTeacher(session, schoolName, String(row.teacher_name || "")) || taskParticipant(session, String(row.owner_name || ""), row.assist_users, schoolName);
 }
 function requireEnv() {
   if (!supabaseUrl || !serviceRoleKey || !sessionSecret) {

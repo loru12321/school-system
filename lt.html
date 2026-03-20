@@ -9156,7 +9156,7 @@ window.RoleManager = {
     // 获取用户的最高权限角色
     getPrimaryRole: function (user) {
         const roles = this.getUserRoles(user);
-        const hierarchy = ['admin', 'director', 'grade_director', 'class_teacher', 'teacher', 'parent', 'guest'];
+          const hierarchy = ['admin', 'director', 'grade_director', 'class_teacher', 'teacher', 'parent', 'student', 'guest'];
         for (const role of hierarchy) {
             if (roles.includes(role)) return role;
         }
@@ -19115,7 +19115,17 @@ function jumpToDetail(school, subject) {
 function updateSchoolSelect() {
     const sel = document.getElementById('sel-school');
     sel.innerHTML = '<option>--请选择学校--</option>';
-    Object.keys(SCHOOLS).forEach(n => sel.innerHTML += `<option>${n}</option>`);
+    const user = getCurrentUser();
+    PermissionPolicy.getAccessibleSchoolNames(user, Object.keys(SCHOOLS || {})).forEach(n => sel.innerHTML += `<option>${n}</option>`);
+    if (!PermissionPolicy.isAdmin(user)) {
+        const boundSchool = PermissionPolicy.getBoundSchool(user);
+        if (boundSchool && Array.from(sel.options).some(option => option.value === boundSchool)) {
+            sel.value = boundSchool;
+            sel.disabled = true;
+        }
+    } else {
+        sel.disabled = false;
+    }
     sel.addEventListener('change', updateClassSelect);
 }
 
@@ -19185,7 +19195,12 @@ function updateMySchoolSelect() {
 function updateClassSelect() {
     const schoolSelect = document.getElementById('sel-school'); const classSelect = document.getElementById('sel-class');
     classSelect.innerHTML = '<option>--请先选择学校--</option>';
-    if (schoolSelect.value && SCHOOLS[schoolSelect.value]) { const classes = [...new Set(SCHOOLS[schoolSelect.value].students.map(s => s.class))].sort(); classes.forEach(cls => classSelect.innerHTML += `<option>${cls}</option>`); }
+    if (schoolSelect.value && SCHOOLS[schoolSelect.value]) {
+        const user = getCurrentUser();
+        const classMode = PermissionPolicy.isClassTeacher(user) ? 'homeroom' : 'teaching';
+        const classes = PermissionPolicy.getAccessibleClassNames(user, [...new Set(SCHOOLS[schoolSelect.value].students.map(s => s.class))].sort(), schoolSelect.value, { mode: classMode });
+        classes.forEach(cls => classSelect.innerHTML += `<option>${cls}</option>`);
+    }
 }
 
 function autoDetectMySchool() {
@@ -19301,10 +19316,10 @@ function updateStudentSchoolSelect() {
     classSelect.innerHTML = '<option value="">全部班级</option>';
     if (modeWrap) modeWrap.style.display = 'none';
 
-    Object.keys(SCHOOLS).forEach(school => { select.innerHTML += `<option value="${school}">${school}</option>`; });
-
     const user = getCurrentUser();
     const role = user?.role;
+    const accessibleSchools = PermissionPolicy.getAccessibleSchoolNames(user, Object.keys(SCHOOLS || {}));
+    accessibleSchools.forEach(school => { select.innerHTML += `<option value="${school}">${school}</option>`; });
     if (role === 'class_teacher') {
         const school = user.school || MY_SCHOOL || '';
         if (school) {
@@ -19328,13 +19343,23 @@ function updateStudentSchoolSelect() {
         classSelect.innerHTML = '<option value="">全部班级</option>';
         const classes = Array.from(scope.classes).sort();
         classes.forEach(c => classSelect.innerHTML += `<option value="${c}">${c}</option>`);
+    } else if (role === 'director' || role === 'grade_director') {
+        const school = PermissionPolicy.getBoundSchool(user);
+        if (school) {
+            select.value = school;
+            select.disabled = true;
+        }
+        classSelect.innerHTML = '<option value="">鍏ㄩ儴鐝骇</option>';
+        const classes = PermissionPolicy.getAccessibleClassNames(user, [...new Set((SCHOOLS[school]?.students || []).map(s => s.class))].sort(), school, { mode: 'homeroom' });
+        classes.forEach(c => classSelect.innerHTML += `<option value="${c}">${c}</option>`);
     }
 
     select.addEventListener('change', function () {
         const selectedSchool = this.value;
         classSelect.innerHTML = '<option value="">全部班级</option>';
         if (selectedSchool && SCHOOLS[selectedSchool]) {
-            const classes = [...new Set(SCHOOLS[selectedSchool].students.map(s => s.class))].sort();
+            const classQueryMode = role === 'class_teacher' ? getClassTeacherStudentViewMode() : 'teaching';
+            const classes = PermissionPolicy.getAccessibleClassNames(user, [...new Set(SCHOOLS[selectedSchool].students.map(s => s.class))].sort(), selectedSchool, { mode: classQueryMode });
             classes.forEach(c => classSelect.innerHTML += `<option value="${c}">${c}</option>`);
         }
         // ✋ 性能优化关键：切换学校时，重置分页并立即渲染
@@ -19382,11 +19407,13 @@ function renderStudentDetails(reset = true) {
         const user = getCurrentUser();
         const role = user?.role || 'guest';
         const classTeacherMode = role === 'class_teacher' ? getClassTeacherStudentViewMode() : 'teaching';
+        const queryMode = role === 'class_teacher' ? (classTeacherMode === 'class_all' ? 'homeroom' : 'teaching') : 'teaching';
+        data = PermissionPolicy.filterStudentRows(user, data, { mode: queryMode });
         console.log('[考试明细] 当前用户:', user);
 
         // --- A. 权限过滤 ---
         // 🆕 使用多角色系统进行权限控制
-        if (user && RoleManager.hasAnyRole(user, ['teacher', 'class_teacher']) &&
+        if (false && user && RoleManager.hasAnyRole(user, ['teacher', 'class_teacher']) &&
             !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director'])) {
             // 纯教师或班主任角色：只能看自己任教的班级
             console.log('[考试明细] 🔒 检测到教师角色，启用权限过滤');
@@ -19446,7 +19473,7 @@ function renderStudentDetails(reset = true) {
                 data = []; // 没有任课信息则不显示任何数据
                 UI.toast('⚠️ 未找到您的任课信息，无法显示数据。请在“数据管理-教师任课”中检查配置。', 'warning');
             }
-        } else if (user) {
+        } else if (false && user) {
             // 其他角色的权限控制
             if (!RoleManager.hasAnyRole(user, ['admin', 'director'])) {
                 // 🟢 [Bug #1 修复] 级部主任：按年级过滤，只能看到自己级部的数据
@@ -20136,9 +20163,12 @@ async function doQuery() {
     const name = document.getElementById('inp-name').value;
     const sch = document.getElementById('sel-school').value;
     const cls = document.getElementById('sel-class').value;
+    const user = getCurrentUser();
 
     let stu = SCHOOLS[sch]?.students.find(s => s.name === name && (cls === '--请先选择学校--' || s.class === cls));
     if (!stu) return alert("未找到该学生");
+    const reportQueryMode = PermissionPolicy.isClassTeacher(user) ? 'homeroom' : 'teaching';
+    if (!PermissionPolicy.canQueryStudent(user, stu, { mode: reportQueryMode })) return alert("当前角色没有权限查询该学生");
 
     const selectedReportExamIds = getSelectedReportCompareExamIds();
     const effectiveCurrentExamId = selectedReportExamIds[selectedReportExamIds.length - 1] || getEffectiveCurrentExamId();
@@ -29458,8 +29488,185 @@ function getTeacherScopeForUser(user) {
     return scope;
 }
 
+const QUERY_MODULE_ACCESS = {
+    admin: ['*'],
+    director: ['starter-hub', 'upload', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'freshman-simulator', 'exam-arranger', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis'],
+    grade_director: ['starter-hub', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis'],
+    class_teacher: ['starter-hub', 'student-overview', 'student-details', 'teacher-analysis', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator'],
+    teacher: ['starter-hub', 'student-overview', 'student-details', 'teacher-analysis', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator'],
+    parent: ['report-generator'],
+    student: ['report-generator'],
+    guest: ['starter-hub']
+};
+
+const PermissionPolicy = {
+    normalizeName(value) {
+        return String(value || '').trim().replace(/\s+/g, '').toLowerCase();
+    },
+    normalizeSchool(value) {
+        return String(value || '').trim();
+    },
+    sameSchoolName(a, b) {
+        const left = this.normalizeSchool(a);
+        const right = this.normalizeSchool(b);
+        if (!left || !right) return false;
+        if (typeof areSchoolNamesEquivalent === 'function') return areSchoolNamesEquivalent(left, right);
+        return left === right;
+    },
+    extractGrade(value) {
+        const normalized = normalizeClass(value || '');
+        const match = String(normalized || '').match(/^(\d{1,2})/);
+        return match ? match[1] : '';
+    },
+    parseClasses(value) {
+        return String(value || '').split(/[,\uff0c\u3001/|]/).map(item => normalizeClass(item)).filter(Boolean);
+    },
+    getPrimaryRole(user = getCurrentUser()) {
+        if (!user) return 'guest';
+        return typeof RoleManager !== 'undefined' && typeof RoleManager.getPrimaryRole === 'function'
+            ? RoleManager.getPrimaryRole(user)
+            : (user.role || 'guest');
+    },
+    isAdmin(user = getCurrentUser()) {
+        return this.getPrimaryRole(user) === 'admin';
+    },
+    isDirector(user = getCurrentUser()) {
+        return this.getPrimaryRole(user) === 'director';
+    },
+    isGradeDirector(user = getCurrentUser()) {
+        return this.getPrimaryRole(user) === 'grade_director';
+    },
+    isClassTeacher(user = getCurrentUser()) {
+        return this.getPrimaryRole(user) === 'class_teacher';
+    },
+    isTeacher(user = getCurrentUser()) {
+        return this.getPrimaryRole(user) === 'teacher';
+    },
+    isParentLike(user = getCurrentUser()) {
+        const role = this.getPrimaryRole(user);
+        return role === 'parent' || role === 'student';
+    },
+    getBoundSchool(user = getCurrentUser()) {
+        return this.normalizeSchool(user?.school || MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '');
+    },
+    getBoundGrade(user = getCurrentUser()) {
+        return this.extractGrade(user?.grade_name || user?.class || '');
+    },
+    getHomeroomClass(user = getCurrentUser()) {
+        return normalizeClass(user?.class || '');
+    },
+    getTeachingScope(user = getCurrentUser()) {
+        if (!(this.isTeacher(user) || this.isClassTeacher(user))) {
+            return { classes: new Set(), subjects: new Set() };
+        }
+        return getTeacherScopeForUser(user);
+    },
+    getAllowedModules(user = getCurrentUser()) {
+        const role = this.getPrimaryRole(user);
+        return QUERY_MODULE_ACCESS[role] || QUERY_MODULE_ACCESS.guest;
+    },
+    canAccessModule(user, moduleId) {
+        const allow = this.getAllowedModules(user);
+        return allow.includes('*') || allow.includes(moduleId);
+    },
+    canQuerySchool(user, schoolName) {
+        if (!user) return true;
+        if (this.isAdmin(user)) return true;
+        return this.sameSchoolName(this.getBoundSchool(user), schoolName);
+    },
+    canQueryClass(user, schoolName, className, options = {}) {
+        if (!user) return true;
+        if (!this.canQuerySchool(user, schoolName)) return false;
+        if (this.isAdmin(user) || this.isDirector(user)) return true;
+        const normalizedClass = normalizeClass(className || '');
+        if (!normalizedClass) return false;
+        if (this.isGradeDirector(user)) {
+            const boundGrade = this.getBoundGrade(user);
+            return !!boundGrade && this.extractGrade(normalizedClass) === boundGrade;
+        }
+        if (this.isClassTeacher(user)) {
+            const mode = options.mode || 'either';
+            const homeroomClass = this.getHomeroomClass(user);
+            const teachingScope = this.getTeachingScope(user);
+            const homeroomMatch = !!homeroomClass && normalizedClass === homeroomClass;
+            const teachingMatch = teachingScope.classes.has(normalizedClass);
+            if (mode === 'homeroom') return homeroomMatch;
+            if (mode === 'teaching') return homeroomMatch || teachingMatch;
+            return homeroomMatch || teachingMatch;
+        }
+        if (this.isTeacher(user)) {
+            return this.getTeachingScope(user).classes.has(normalizedClass);
+        }
+        if (this.isParentLike(user)) {
+            return normalizeClass(user?.class || '') === normalizedClass;
+        }
+        return false;
+    },
+    canQueryStudent(user, row, options = {}) {
+        if (!user) return true;
+        if (!row) return false;
+        if (this.isParentLike(user)) {
+            return this.sameSchoolName(user?.school, row?.school)
+                && normalizeClass(user?.class || '') === normalizeClass(row?.class || '')
+                && this.normalizeName(user?.name) === this.normalizeName(row?.name);
+        }
+        return this.canQueryClass(user, row?.school, row?.class, options);
+    },
+    filterStudentRows(user, rows, options = {}) {
+        if (!user) return Array.isArray(rows) ? rows.slice() : [];
+        return (Array.isArray(rows) ? rows : []).filter(row => this.canQueryStudent(user, row, options));
+    },
+    getAccessibleSchoolNames(user, schoolNames) {
+        const names = Array.from(new Set((Array.isArray(schoolNames) ? schoolNames : []).map(name => String(name || '').trim()).filter(Boolean)));
+        if (!user || this.isAdmin(user)) return names;
+        return names.filter(name => this.canQuerySchool(user, name));
+    },
+    getAccessibleClassNames(user, classNames, schoolName, options = {}) {
+        const names = Array.from(new Set((Array.isArray(classNames) ? classNames : []).map(name => String(name || '').trim()).filter(Boolean)));
+        if (!user) return names;
+        return names.filter(name => this.canQueryClass(user, schoolName, name, options));
+    },
+    canQueryTeacherMetric(user, teacherName, statItem, schoolName) {
+        if (!user) return true;
+        if (!this.canQuerySchool(user, schoolName)) return false;
+        if (this.isAdmin(user) || this.isDirector(user)) return true;
+        if (this.isTeacher(user)) {
+            return this.normalizeName(teacherName) === this.normalizeName(user?.name);
+        }
+        const classes = this.parseClasses(statItem?.classes);
+        if (this.isGradeDirector(user)) {
+            const boundGrade = this.getBoundGrade(user);
+            return !!boundGrade && classes.some(cls => this.extractGrade(cls) === boundGrade);
+        }
+        if (this.isClassTeacher(user)) {
+            const homeroomClass = this.getHomeroomClass(user);
+            const ownTeacherMetric = this.normalizeName(teacherName) === this.normalizeName(user?.name);
+            return ownTeacherMetric || (!!homeroomClass && classes.some(cls => normalizeClass(cls) === homeroomClass));
+        }
+        return false;
+    },
+    filterTeacherStats(user, stats, schoolName) {
+        if (!user) return stats;
+        const filtered = {};
+        Object.entries(stats || {}).forEach(([teacherName, subjectMap]) => {
+            const scopedSubjects = {};
+            Object.entries(subjectMap || {}).forEach(([subject, statItem]) => {
+                if (this.canQueryTeacherMetric(user, teacherName, statItem, schoolName)) {
+                    scopedSubjects[subject] = statItem;
+                }
+            });
+            if (Object.keys(scopedSubjects).length > 0) filtered[teacherName] = scopedSubjects;
+        });
+        return filtered;
+    }
+};
+
+window.PermissionPolicy = PermissionPolicy;
+
 function canAccessModule(id) {
     const user = getCurrentUser();
+    if (!user) return true;
+    return PermissionPolicy.canAccessModule(user, id);
     if (!user) return true; // 未登录时允许访问（兼容）
 
     // 🆕 使用多角色检查
@@ -29567,8 +29774,9 @@ function getVisibleSubjectsForTeacherUser(user) {
 function getVisibleTeacherStats() {
     const user = getCurrentUser();
     const role = user?.role || 'guest';
+    const scopedStats = PermissionPolicy.filterTeacherStats(user, TEACHER_STATS || {}, MY_SCHOOL);
     if (role === 'teacher' || role === 'class_teacher') {
-        const allStats = TEACHER_STATS || {};
+        const allStats = scopedStats;
         const filtered = {};
         if (Object.keys(allStats).length === 0) return filtered;
 
@@ -29602,7 +29810,7 @@ function getVisibleTeacherStats() {
 
         return filtered;
     }
-    return TEACHER_STATS;
+    return scopedStats;
 }
 
 function logAction(type, message) {
@@ -34345,6 +34553,10 @@ function analyzeTeachers() {
     const rows = resolveRowsForTeacherAnalysis();
     const schools = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
     let inferredSchool = (typeof inferDefaultSchoolFromContext === 'function') ? inferDefaultSchoolFromContext() : '';
+    const scopedUser = getCurrentUser();
+    const accessibleSchools = (window.PermissionPolicy && typeof PermissionPolicy.getAccessibleSchoolNames === 'function')
+        ? PermissionPolicy.getAccessibleSchoolNames(scopedUser, schools)
+        : schools.slice();
     let activeSchool = syncTeacherAnalysisSchoolContext(
         document.getElementById('mySchoolSelect')?.value
         || MY_SCHOOL
@@ -34396,9 +34608,10 @@ function analyzeTeachers() {
     // ----------------------------------------
 
 
-    if (!activeSchool && schools.length === 1) activeSchool = syncTeacherAnalysisSchoolContext(schools[0]);
+    if (activeSchool && accessibleSchools.length && !accessibleSchools.includes(activeSchool)) activeSchool = '';
+    if (!activeSchool && accessibleSchools.length === 1) activeSchool = syncTeacherAnalysisSchoolContext(accessibleSchools[0]);
     if (!activeSchool) {
-        const firstFromRows = rows.find(r => String(r?.school || '').trim());
+        const firstFromRows = rows.find(r => accessibleSchools.includes(String(r?.school || '').trim()));
         if (firstFromRows) activeSchool = syncTeacherAnalysisSchoolContext(String(firstFromRows.school).trim());
     }
 
@@ -34430,6 +34643,10 @@ function analyzeTeachers() {
             const mappedSchool = classSchoolMap[cls];
             return mappedSchool === activeSchool;
         });
+    }
+    const queryMode = window.PermissionPolicy && PermissionPolicy.isClassTeacher(user) ? 'homeroom' : 'teaching';
+    if (window.PermissionPolicy && typeof PermissionPolicy.filterStudentRows === 'function') {
+        mySchoolStudents = PermissionPolicy.filterStudentRows(user, mySchoolStudents, { mode: queryMode });
     }
     if (!mySchoolStudents.length) return;
 
@@ -36486,14 +36703,14 @@ function updateProgressSchoolSelect() {
     const sel = document.getElementById('progressSchoolSelect');
     if (!sel) return;
     sel.innerHTML = '<option value="">--请选择本校--</option>';
-    Object.keys(SCHOOLS || {}).forEach((school) => {
+    const user = getCurrentUser();
+    PermissionPolicy.getAccessibleSchoolNames(user, Object.keys(SCHOOLS || {})).forEach((school) => {
         sel.innerHTML += `<option value="${school}">${school}</option>`;
     });
 
-    const user = getCurrentUser();
     const role = user?.role || 'guest';
-    if (role === 'teacher' || role === 'class_teacher') {
-        const school = user.school || MY_SCHOOL || '';
+    if (role === 'teacher' || role === 'class_teacher' || role === 'director' || role === 'grade_director') {
+        const school = PermissionPolicy.getBoundSchool(user);
         if (school) {
             sel.value = school;
             sel.disabled = true;
@@ -36976,17 +37193,8 @@ function getProgressCurrentStudentsForSchool(schoolName) {
     if (!school || !Array.isArray(school.students)) return [];
 
     const user = getCurrentUser();
-    const role = user?.role || 'guest';
-    const scope = role === 'teacher' ? getTeacherScopeForUser(user) : null;
-    let students = school.students.slice();
-
-    if (role === 'class_teacher' && user?.class) {
-        students = students.filter(student => isClassEquivalent(student.class, user.class));
-    }
-    if (role === 'teacher' && scope?.classes instanceof Set && scope.classes.size > 0) {
-        students = students.filter(student => scope.classes.has(student.class));
-    }
-    return students;
+    const mode = PermissionPolicy.isClassTeacher(user) ? 'homeroom' : 'teaching';
+    return PermissionPolicy.filterStudentRows(user, school.students.slice(), { mode });
 }
 
 function getProgressBaselineRowsForSchool(schoolName) {

@@ -12,14 +12,14 @@ function updateProgressSchoolSelect() {
     const sel = document.getElementById('progressSchoolSelect');
     if (!sel) return;
     sel.innerHTML = '<option value="">--请选择本校--</option>';
-    Object.keys(SCHOOLS || {}).forEach((school) => {
+    const user = getCurrentUser();
+    PermissionPolicy.getAccessibleSchoolNames(user, Object.keys(SCHOOLS || {})).forEach((school) => {
         sel.innerHTML += `<option value="${school}">${school}</option>`;
     });
 
-    const user = getCurrentUser();
     const role = user?.role || 'guest';
-    if (role === 'teacher' || role === 'class_teacher') {
-        const school = user.school || MY_SCHOOL || '';
+    if (role === 'teacher' || role === 'class_teacher' || role === 'director' || role === 'grade_director') {
+        const school = PermissionPolicy.getBoundSchool(user);
         if (school) {
             sel.value = school;
             sel.disabled = true;
@@ -502,17 +502,8 @@ function getProgressCurrentStudentsForSchool(schoolName) {
     if (!school || !Array.isArray(school.students)) return [];
 
     const user = getCurrentUser();
-    const role = user?.role || 'guest';
-    const scope = role === 'teacher' ? getTeacherScopeForUser(user) : null;
-    let students = school.students.slice();
-
-    if (role === 'class_teacher' && user?.class) {
-        students = students.filter(student => isClassEquivalent(student.class, user.class));
-    }
-    if (role === 'teacher' && scope?.classes instanceof Set && scope.classes.size > 0) {
-        students = students.filter(student => scope.classes.has(student.class));
-    }
-    return students;
+    const mode = PermissionPolicy.isClassTeacher(user) ? 'homeroom' : 'teaching';
+    return PermissionPolicy.filterStudentRows(user, school.students.slice(), { mode });
 }
 
 function getProgressBaselineRowsForSchool(schoolName) {

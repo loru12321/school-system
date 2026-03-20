@@ -18,6 +18,10 @@ function analyzeTeachers() {
     const rows = resolveRowsForTeacherAnalysis();
     const schools = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
     let inferredSchool = (typeof inferDefaultSchoolFromContext === 'function') ? inferDefaultSchoolFromContext() : '';
+    const scopedUser = getCurrentUser();
+    const accessibleSchools = (window.PermissionPolicy && typeof PermissionPolicy.getAccessibleSchoolNames === 'function')
+        ? PermissionPolicy.getAccessibleSchoolNames(scopedUser, schools)
+        : schools.slice();
     let activeSchool = syncTeacherAnalysisSchoolContext(
         document.getElementById('mySchoolSelect')?.value
         || MY_SCHOOL
@@ -69,9 +73,10 @@ function analyzeTeachers() {
     // ----------------------------------------
 
 
-    if (!activeSchool && schools.length === 1) activeSchool = syncTeacherAnalysisSchoolContext(schools[0]);
+    if (activeSchool && accessibleSchools.length && !accessibleSchools.includes(activeSchool)) activeSchool = '';
+    if (!activeSchool && accessibleSchools.length === 1) activeSchool = syncTeacherAnalysisSchoolContext(accessibleSchools[0]);
     if (!activeSchool) {
-        const firstFromRows = rows.find(r => String(r?.school || '').trim());
+        const firstFromRows = rows.find(r => accessibleSchools.includes(String(r?.school || '').trim()));
         if (firstFromRows) activeSchool = syncTeacherAnalysisSchoolContext(String(firstFromRows.school).trim());
     }
 
@@ -103,6 +108,10 @@ function analyzeTeachers() {
             const mappedSchool = classSchoolMap[cls];
             return mappedSchool === activeSchool;
         });
+    }
+    const queryMode = window.PermissionPolicy && PermissionPolicy.isClassTeacher(user) ? 'homeroom' : 'teaching';
+    if (window.PermissionPolicy && typeof PermissionPolicy.filterStudentRows === 'function') {
+        mySchoolStudents = PermissionPolicy.filterStudentRows(user, mySchoolStudents, { mode: queryMode });
     }
     if (!mySchoolStudents.length) return;
 
