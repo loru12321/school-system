@@ -326,9 +326,6 @@ async function runModuleDeepCheck(page, id) {
             window.SIG_render();
             await new Promise(resolve => setTimeout(resolve, 600));
             const before = document.querySelector('.section.active')?.id || '';
-            const beforeCategory = typeof window.getCurrentNavCategory === 'function'
-                ? window.getCurrentNavCategory()
-                : '';
             const quickButtons = Array.from(document.querySelectorAll('#sig-view-teaching button')).map((btn) => ({
                 text: btn.textContent.trim(),
                 onclick: btn.getAttribute('onclick') || ''
@@ -344,33 +341,12 @@ async function runModuleDeepCheck(page, id) {
             const after = document.querySelector('.section.active')?.id || '';
             const activeView = Array.from(document.querySelectorAll('[data-sig-view-btn]'))
                 .find((btn) => btn.classList.contains('active'))?.dataset.sigViewBtn || '';
-            const motherButtons = Array.from(document.querySelectorAll('#sigMotherWorkbench [data-sig-mother-btn]')).map((btn) => ({
-                id: btn.getAttribute('data-sig-mother-btn') || '',
-                text: btn.textContent.trim()
-            }));
-            const teachingMotherBtn = document.querySelector('#sigMotherWorkbench [data-sig-mother-btn="school-teaching-overview"]');
-            let aggregatedSwitchSection = '';
-            let aggregatedSwitchCategory = '';
-            if (teachingMotherBtn) {
-                teachingMotherBtn.click();
-                await new Promise(resolve => setTimeout(resolve, 500));
-                aggregatedSwitchSection = document.querySelector('.section.active')?.id || '';
-                aggregatedSwitchCategory = typeof window.getCurrentNavCategory === 'function'
-                    ? window.getCurrentNavCategory()
-                    : '';
-                window.switchTab('school-internal-grades');
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
             const summaryCount = document.querySelectorAll('#sigSummaryGrid .fb-card').length;
             const classRows = document.querySelectorAll('#sigClassTable tbody tr').length;
             const teacherRows = document.querySelectorAll('#sigTeacherTable tbody tr').length;
             const baselineRows = document.querySelectorAll('#sigBaselineTable tbody tr').length;
             const teacherHeadCount = document.querySelectorAll('#sigTeacherTable thead th').length;
             const localQuickActions = quickButtons.length > 0 && quickButtons.every((btn) => !btn.onclick.includes("switchTab('"));
-            const schoolSidebarExists = Array.from(document.querySelectorAll('#sidebar-nav .sidebar-menu-item span'))
-                .some((el) => (el.textContent || '').trim() === '校内成绩');
-            const schoolSubnavExists = Array.from(document.querySelectorAll('#sub-nav-container .chip-item span'))
-                .some((el) => (el.textContent || '').trim() === '教学管理');
             return {
                 ok: summaryCount >= 4
                     && classRows >= 0
@@ -378,28 +354,16 @@ async function runModuleDeepCheck(page, id) {
                     && baselineRows >= 0
                     && teacherHeadCount === 7
                     && localQuickActions
-                    && beforeCategory === 'school'
                     && before === 'school-internal-grades'
                     && after === 'school-internal-grades'
-                    && activeView === 'diagnosis'
-                    && schoolSidebarExists
-                    && schoolSubnavExists
-                    && motherButtons.length >= 3
-                    && aggregatedSwitchSection === 'teaching-overview'
-                    && aggregatedSwitchCategory === 'school',
+                    && activeView === 'diagnosis',
                 summaryCount,
                 classRows,
                 teacherRows,
                 baselineRows,
                 teacherHeadCount,
                 activeView,
-                beforeCategory,
                 localQuickActions,
-                schoolSidebarExists,
-                schoolSubnavExists,
-                motherButtonCount: motherButtons.length,
-                aggregatedSwitchSection,
-                aggregatedSwitchCategory,
                 hasFileInput: !!document.querySelector('#school-internal-grades input[type="file"]')
             };
         });

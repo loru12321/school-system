@@ -6622,92 +6622,6 @@ const SUBJECT_ORDER = ['语文', '数学', '英语', '物理', '化学', '政治
 
 // [修改] 导航配置与逻辑 (方案二：功能场景导向版)
 // 说明：按“管数据 -> 比学校 -> 评班级 -> 抓学生 -> 用工具”的逻辑排列
-const SCHOOL_PARENT_PROXY_MAP = {
-    'school-data-management': {
-        category: 'school',
-        target: 'upload',
-        accessId: 'upload',
-        text: '数据管理',
-        activeTargets: ['starter-hub', 'upload']
-    },
-    'school-teaching-management': {
-        category: 'school',
-        target: 'teaching-overview',
-        accessId: 'teaching-overview',
-        text: '教学管理',
-        activeTargets: [
-            'teaching-overview', 'teaching-issue-board', 'teaching-warning-center',
-            'teaching-rectify-center', 'teaching-version-center', 'teacher-analysis',
-            'single-school-eval', 'class-comparison', 'class-diagnosis'
-        ]
-    },
-    'school-student-diagnosis': {
-        category: 'school',
-        target: 'student-overview',
-        accessId: 'student-overview',
-        text: '学情诊断',
-        activeTargets: [
-            'student-overview', 'student-details', 'subject-balance', 'marginal-push',
-            'progress-analysis', 'cohort-growth', 'potential-analysis',
-            'segment-analysis', 'correlation-analysis', 'report-generator'
-        ]
-    },
-    'school-data-starter': { category: 'school', target: 'starter-hub', accessId: 'starter-hub', text: '新手入口与诊断' },
-    'school-data-upload': { category: 'school', target: 'upload', accessId: 'upload', text: '数据上传与设置' },
-    'school-teaching-overview': { category: 'school', target: 'teaching-overview', accessId: 'teaching-overview', text: '教学总览' },
-    'school-teaching-issue-board': { category: 'school', target: 'teaching-issue-board', accessId: 'teaching-issue-board', text: '教学问题清单' },
-    'school-teaching-warning-center': { category: 'school', target: 'teaching-warning-center', accessId: 'teaching-warning-center', text: '异常预警中心' },
-    'school-teaching-rectify-center': { category: 'school', target: 'teaching-rectify-center', accessId: 'teaching-rectify-center', text: '整改任务列表' },
-    'school-teaching-version-center': { category: 'school', target: 'teaching-version-center', accessId: 'teaching-version-center', text: '版本归档中心' },
-    'school-teaching-teacher-analysis': { category: 'school', target: 'teacher-analysis', accessId: 'teacher-analysis', text: '教师教学质量画像' },
-    'school-teaching-single-school-eval': { category: 'school', target: 'single-school-eval', accessId: 'single-school-eval', text: '绩效公平考核模型' },
-    'school-teaching-class-comparison': { category: 'school', target: 'class-comparison', accessId: 'class-comparison', text: '班级横向对比' },
-    'school-teaching-class-diagnosis': { category: 'school', target: 'class-diagnosis', accessId: 'class-diagnosis', text: '班级分化诊断(SD)' },
-    'school-student-overview': { category: 'school', target: 'student-overview', accessId: 'student-overview', text: '学情总览' },
-    'school-student-details': { category: 'school', target: 'student-details', accessId: 'student-details', text: '学生档案查询' },
-    'school-student-subject-balance': { category: 'school', target: 'subject-balance', accessId: 'subject-balance', text: '优劣势学科透视' },
-    'school-student-marginal-push': { category: 'school', target: 'marginal-push', accessId: 'marginal-push', text: '临界生精准干预' },
-    'school-student-progress-analysis': { category: 'school', target: 'progress-analysis', accessId: 'progress-analysis', text: '进退步/增值评价' },
-    'school-student-cohort-growth': { category: 'school', target: 'cohort-growth', accessId: 'cohort-growth', text: '纵向成长档案' },
-    'school-student-potential-analysis': { category: 'school', target: 'potential-analysis', accessId: 'potential-analysis', text: '偏科潜力挖掘' },
-    'school-student-segment-analysis': { category: 'school', target: 'segment-analysis', accessId: 'segment-analysis', text: '分数段统计' },
-    'school-student-correlation-analysis': { category: 'school', target: 'correlation-analysis', accessId: 'correlation-analysis', text: '学科关联度分析' },
-    'school-student-report-generator': { category: 'school', target: 'report-generator', accessId: 'report-generator', text: '成绩单/家长查分' }
-};
-
-function getSchoolParentProxy(id) {
-    return SCHOOL_PARENT_PROXY_MAP[id] || null;
-}
-
-function resolveNavTargetId(id) {
-    const proxy = getSchoolParentProxy(id);
-    return proxy?.target || id;
-}
-
-function resolveNavAccessId(id) {
-    const proxy = getSchoolParentProxy(id);
-    return proxy?.accessId || proxy?.target || id;
-}
-
-function resolveNavCategoryKey(id, fallback = '') {
-    const proxy = getSchoolParentProxy(id);
-    return proxy?.category || fallback;
-}
-
-function resolveNavItemLabel(id, fallback = '') {
-    const proxy = getSchoolParentProxy(id);
-    return proxy?.text || fallback;
-}
-
-function isNavItemActive(itemId, activeSectionId) {
-    const proxy = getSchoolParentProxy(itemId);
-    if (!proxy) return itemId === activeSectionId;
-    const activeTargets = Array.isArray(proxy.activeTargets) && proxy.activeTargets.length
-        ? proxy.activeTargets
-        : [proxy.target];
-    return activeTargets.includes(activeSectionId);
-}
-
 const NAV_STRUCTURE = {
     'data': {
         title: '数据管理',
@@ -6716,17 +6630,6 @@ const NAV_STRUCTURE = {
         items: [
             { id: 'starter-hub', icon: 'ti-rocket', text: '新手入口与诊断' },
             { id: 'upload', icon: 'ti-database-import', text: '数据上传与设置' }
-        ]
-    },
-    'school': {
-        title: '校内成绩',
-        color: '#7c3aed',
-        icon: 'ti-building-bank',
-        items: [
-            { id: 'school-internal-grades', icon: 'ti-building-bank', text: '校内总览' },
-            { id: 'school-data-management', icon: 'ti-database', text: '数据管理' },
-            { id: 'school-teaching-management', icon: 'ti-school', text: '教学管理' },
-            { id: 'school-student-diagnosis', icon: 'ti-user-scan', text: '学情诊断' }
         ]
     },
     'town': {
@@ -6777,9 +6680,10 @@ const NAV_STRUCTURE = {
     },
     'tools': {
         title: '考务工具',
-        color: '#4f46e5', // 靛蓝 Indigo
+        color: '#7c3aed', // 紫色 Violet
         icon: 'ti-briefcase',
         items: [
+            { id: 'school-internal-grades', icon: 'ti-building-bank', text: '校内成绩' },
             { id: 'exam-arranger', icon: 'ti-id-badge-2', text: '智能考场编排' },
             { id: 'freshman-simulator', icon: 'ti-arrows-split', text: '新生均衡分班' },
             { id: 'grade-scheduler', icon: 'ti-calendar-time', text: '级部智能排课' },
@@ -7134,51 +7038,9 @@ function SIG_renderAnalysisHint() {
     }
     const schoolCount = SIG_getAccessibleSchools().length;
     hint.textContent = schoolCount <= 1
-        ? '当前只有本校数据，校际联考横向排名不适用。建议优先使用左侧“校内成绩”母模块。'
-        : '如当前处理的是本校月考、校考或周测，建议改用左侧“校内成绩”母模块，避免误用联考口径。';
+        ? '当前只有本校数据，校际联考横向排名不适用。建议优先使用“考务工具 -> 校内成绩”子模块。'
+        : '如当前处理的是本校月考/校考，建议改用“考务工具 -> 校内成绩”子模块，避免误用联考口径。';
 }
-
-const SIG_MOTHER_WORKBENCH_GROUPS = [
-    {
-        title: '数据管理复制功能',
-        desc: '先把本校成绩、任课与基础设置准备完整，再开始后续分析。',
-        buttons: [
-            { id: 'school-data-starter', label: '新手入口' },
-            { id: 'school-data-upload', label: '数据上传与设置' }
-        ]
-    },
-    {
-        title: '教学管理复制功能',
-        desc: '围绕教师公平、班级执行和整改闭环完成本校教学分析。',
-        buttons: [
-            { id: 'school-teaching-overview', label: '教学总览' },
-            { id: 'school-teaching-issue-board', label: '问题清单' },
-            { id: 'school-teaching-warning-center', label: '预警中心' },
-            { id: 'school-teaching-rectify-center', label: '整改任务' },
-            { id: 'school-teaching-version-center', label: '版本归档' },
-            { id: 'school-teaching-teacher-analysis', label: '教师画像' },
-            { id: 'school-teaching-single-school-eval', label: '公平考核' },
-            { id: 'school-teaching-class-comparison', label: '班级对比' },
-            { id: 'school-teaching-class-diagnosis', label: '班级诊断' }
-        ]
-    },
-    {
-        title: '学情诊断复制功能',
-        desc: '把学生总览、个体画像、进退步和成绩报告都收口到本校分析里。',
-        buttons: [
-            { id: 'school-student-overview', label: '学情总览' },
-            { id: 'school-student-details', label: '学生档案' },
-            { id: 'school-student-subject-balance', label: '学科透视' },
-            { id: 'school-student-marginal-push', label: '临界生' },
-            { id: 'school-student-progress-analysis', label: '进退步' },
-            { id: 'school-student-cohort-growth', label: '成长档案' },
-            { id: 'school-student-potential-analysis', label: '潜力挖掘' },
-            { id: 'school-student-segment-analysis', label: '分数段' },
-            { id: 'school-student-correlation-analysis', label: '关联分析' },
-            { id: 'school-student-report-generator', label: '成绩单' }
-        ]
-    }
-];
 
 let SIG_LOCAL_STATE = {
     imported: false,
@@ -7209,52 +7071,6 @@ function SIG_scrollIntoView(targetId) {
     const el = document.getElementById(targetId);
     if (!el || typeof el.scrollIntoView !== 'function') return;
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function SIG_openMotherModule(moduleId) {
-    switchTab(moduleId);
-}
-
-function SIG_renderMotherWorkbench() {
-    const wrap = document.getElementById('sigMotherWorkbench');
-    if (!wrap) return;
-    const cards = SIG_MOTHER_WORKBENCH_GROUPS.map((group) => {
-        const buttons = (group.buttons || [])
-            .filter((button) => (
-                typeof canAccessModule !== 'function' || canAccessModule(resolveNavAccessId(button.id))
-            ))
-            .map((button) => `
-                <button
-                    type="button"
-                    class="btn btn-sm"
-                    data-sig-mother-btn="${button.id}"
-                    onclick="SIG_openMotherModule('${button.id}')"
-                >${button.label}</button>
-            `)
-            .join('');
-        if (!buttons) return '';
-        return `
-            <div class="card-box" style="padding:16px;">
-                <div class="sub-header" style="margin-top:0;">${group.title}</div>
-                <div style="font-size:13px; color:#64748b; line-height:1.8; margin-bottom:12px;">${group.desc}</div>
-                <div style="display:flex; flex-wrap:wrap; gap:8px;">${buttons}</div>
-            </div>
-        `;
-    }).filter(Boolean).join('');
-
-    if (!cards) {
-        wrap.innerHTML = '';
-        return;
-    }
-
-    wrap.innerHTML = `
-        <div class="info-bar" style="margin-bottom:12px;">
-            当前已将“数据管理 / 教学管理 / 学情诊断”的复制入口并入“校内成绩”母模块，下面的跳转会保持左侧母模块定位在“校内成绩”。
-        </div>
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
-            ${cards}
-        </div>
-    `;
 }
 
 function SIG_ensureTeacherTableLayout() {
@@ -7321,7 +7137,6 @@ function SIG_ensureLocalQuickActions() {
 }
 
 function SIG_ensureLayout() {
-    SIG_renderMotherWorkbench();
     SIG_ensureLocalQuickActions();
     SIG_ensureTeacherTableLayout();
     SIG_ensureBaselinePanel();
@@ -8213,8 +8028,8 @@ function renderNavigation() {
     const isTeacherRole = (role === 'teacher' || role === 'class_teacher');
 
     if (isRestricted && (currentCategory === 'data' || currentCategory === 'tools')) {
-        currentCategory = 'school';
-        document.documentElement.style.setProperty('--primary', NAV_STRUCTURE['school'].color);
+        currentCategory = 'town';
+        document.documentElement.style.setProperty('--primary', NAV_STRUCTURE['town'].color);
     }
 
     Object.keys(NAV_STRUCTURE).forEach(key => {
@@ -8268,10 +8083,9 @@ function renderSubNavigation() {
     if (!cat || !cat.items) return;
 
     const validItems = cat.items.filter(item => {
-        const accessId = resolveNavAccessId(item.id);
-        if ((role === 'teacher' || role === 'class_teacher') && typeof canAccessModule === 'function' && !canAccessModule(accessId)) return false;
-        if (role === 'teacher' && ['single-school-eval', 'exam-arranger', 'freshman-simulator'].includes(accessId)) return false;
-        if (accessId === 'report-generator' && typeof CONFIG !== 'undefined' && !CONFIG.showQuery) return false;
+        if ((role === 'teacher' || role === 'class_teacher') && typeof canAccessModule === 'function' && !canAccessModule(item.id)) return false;
+        if (role === 'teacher' && ['single-school-eval', 'exam-arranger', 'freshman-simulator'].includes(item.id)) return false;
+        if (item.id === 'report-generator' && typeof CONFIG !== 'undefined' && !CONFIG.showQuery) return false;
         return true;
     });
 
@@ -8281,8 +8095,8 @@ function renderSubNavigation() {
         const chip = document.createElement('div');
         chip.className = 'chip-item';
 
-        const activeSectionId = document.querySelector('.section.active')?.id || '';
-        const isActive = isNavItemActive(item.id, activeSectionId);
+        const targetElement = document.getElementById(item.id);
+        const isActive = targetElement && targetElement.classList.contains('active');
 
         if (isActive) {
             chip.classList.add('active');
@@ -8726,15 +8540,14 @@ function initSystem(type) {
 
 let __guardBypass = false;
 function guardBeforeSwitch(id) {
-    const moduleId = resolveNavAccessId(id);
-    if (moduleId === 'starter-hub' || moduleId === 'upload') return true;
+    if (id === 'starter-hub' || id === 'upload') return true;
     const needGuard = [
         'summary', 'analysis', 'macro-watch', 'high-score', 'indicator', 'bottom3',
         'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'teacher-analysis', 'single-school-eval', 'class-comparison', 'class-diagnosis',
         'student-overview', 'student-details', 'subject-balance', 'marginal-push', 'progress-analysis', 'cohort-growth',
         'potential-analysis', 'segment-analysis', 'correlation-analysis', 'report-generator', 'school-internal-grades'
     ];
-    if (!needGuard.includes(moduleId)) return true;
+    if (!needGuard.includes(id)) return true;
 
     const termId = localStorage.getItem('CURRENT_TERM_ID') || (typeof getTermId === 'function' ? getTermId(getExamMetaFromUI()) : '');
     const hasSchool = !!MY_SCHOOL;
@@ -11847,36 +11660,33 @@ function resetMainViewport() {
 }
 
 function switchTab(id) {
-    const requestedId = id;
-    const targetId = resolveNavTargetId(requestedId);
-    const accessId = resolveNavAccessId(requestedId);
-    console.log(`🔄 切换模块: ${requestedId} -> ${targetId}`);
-    if (!canAccessModule(accessId)) {
+    console.log(`🔄 切换模块: ${id}`);
+    if (!canAccessModule(id)) {
         alert('⛔ 权限不足：该模块对当前角色不可见');
         return;
     }
-    if (!__guardBypass && !guardBeforeSwitch(requestedId)) return;
+    if (!__guardBypass && !guardBeforeSwitch(id)) return;
     if (__guardBypass) __guardBypass = false;
 
     // 1. 切换内容区域显示
     forceHideAllSectionsExcept();
-    const targetSection = document.getElementById(targetId);
+    const targetSection = document.getElementById(id);
     if (!targetSection) {
-        console.error(`❌ 找不到模块: ${targetId}`);
-        alert(`模块 "${targetId}" 不存在，请联系管理员`);
+        console.error(`❌ 找不到模块: ${id}`);
+        alert(`模块 "${id}" 不存在，请联系管理员`);
         return;
     }
-    console.log(`✅ 激活模块: ${targetId}`, targetSection);
+    console.log(`✅ 激活模块: ${id}`, targetSection);
     targetSection.classList.add('active');
     targetSection.style.display = 'block';
     resetMainViewport();
 
     // 2. 定位所属大类
-    let foundCategory = resolveNavCategoryKey(requestedId, '');
-    let currentItemName = resolveNavItemLabel(requestedId, '');
+    let foundCategory = null;
+    let currentItemName = '';
 
     Object.keys(NAV_STRUCTURE).forEach(catKey => {
-        const item = NAV_STRUCTURE[catKey].items.find(i => i.id === requestedId);
+        const item = NAV_STRUCTURE[catKey].items.find(i => i.id === id);
         if (item) {
             foundCategory = catKey;
             currentItemName = item.text;
@@ -11916,7 +11726,7 @@ function switchTab(id) {
 
     // [新增] 5. 自动同步当前页面的“说明条”颜色 (视觉统一)
     // 找到当前激活的 section
-    const activeSection = document.getElementById(targetId);
+    const activeSection = document.getElementById(id);
     if (activeSection) {
         // 找到内部的 module-desc-bar
         const descBar = activeSection.querySelector('.module-desc-bar');
@@ -11928,13 +11738,13 @@ function switchTab(id) {
             if (descTitle) descTitle.style.color = '#333'; // 保持深色或设为 NAV_STRUCTURE[currentCategory].color
         }
     }
-    ensureModuleHelpButton(targetId);
+    ensureModuleHelpButton(id);
     if (currentCategory === 'town') {
         ensureTownSubmoduleCompareUIs();
     }
 
     // 6. 模块特定初始化逻辑 (保持原有逻辑不变)
-    if (targetId === 'student-details') {
+    if (id === 'student-details') {
         updateStudentSchoolSelect();
         if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
         if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
@@ -11963,20 +11773,20 @@ function switchTab(id) {
             }
         }
     }
-    if (targetId === 'analysis') {
+    if (id === 'analysis') {
         updateMacroMultiExamSelects();
         SIG_renderAnalysisHint();
     }
-    if (targetId === 'school-internal-grades') {
+    if (id === 'school-internal-grades') {
         SIG_render();
     }
-    if (targetId === 'indicator') refreshIndicatorResults(true);
-    if (targetId === 'high-score') renderHighScoreTable();
-    if (targetId === 'teaching-overview') {
+    if (id === 'indicator') refreshIndicatorResults(true);
+    if (id === 'high-score') renderHighScoreTable();
+    if (id === 'teaching-overview') {
         renderTeachingOverview();
         tmRefreshVersionCenter(false);
     }
-    if (targetId === 'student-overview') {
+    if (id === 'student-overview') {
         if (typeof updateStudentSchoolSelect === 'function') updateStudentSchoolSelect();
         if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
         if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
@@ -11988,27 +11798,27 @@ function switchTab(id) {
         if (typeof updateClassSelect === 'function') updateClassSelect();
         renderStudentOverview();
     }
-    if (targetId === 'teaching-issue-board') {
+    if (id === 'teaching-issue-board') {
         bindTeachingOverviewActions();
         tmRenderIssueBoard();
         tmRefreshCloudOps(false);
     }
-    if (targetId === 'teaching-warning-center') {
+    if (id === 'teaching-warning-center') {
         bindTeachingOverviewActions();
         tmRenderWarningCenter();
         tmRefreshCloudOps(false);
     }
-    if (targetId === 'teaching-rectify-center') {
+    if (id === 'teaching-rectify-center') {
         bindTeachingOverviewActions();
         tmRenderRectifyCenter();
         tmRefreshCloudOps(false);
     }
-    if (targetId === 'teaching-version-center') {
+    if (id === 'teaching-version-center') {
         bindTeachingOverviewActions();
         tmRenderVersionCenter();
         tmRefreshVersionCenter(false);
     }
-    if (targetId === 'teacher-analysis') {
+    if (id === 'teacher-analysis') {
         if (window.DataManager && typeof DataManager.ensureTeacherMap === 'function') {
             DataManager.ensureTeacherMap(true);
         }
@@ -12106,21 +11916,21 @@ function switchTab(id) {
         updateTeacherCompareTeacherSelect();
     }
     try {
-        if (targetId === 'exam-arranger') {
+        if (id === 'exam-arranger') {
             EXAM_initProctorUI();
         }
-        if (targetId === 'school-internal-grades') {
+        if (id === 'school-internal-grades') {
             SIG_render();
         }
-        if (targetId === 'report-generator') { updateClassSelect(); }
-        if (targetId === 'segment-analysis') updateSegmentSelects();
-        if (targetId === 'class-comparison') updateClassCompSchoolSelect();
-        if (targetId === 'potential-analysis') updatePotentialSchoolSelect();
-        if (targetId === 'class-diagnosis') updateDiagnosisSelects();
-        if (targetId === 'correlation-analysis' && typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
-        if (targetId === 'seat-adjustment') updateSeatAdjSelects();
-        if (targetId === 'subject-balance') updateSubjectBalanceSelects();
-        if (targetId === 'progress-analysis') {
+        if (id === 'report-generator') { updateClassSelect(); }
+        if (id === 'segment-analysis') updateSegmentSelects();
+        if (id === 'class-comparison') updateClassCompSchoolSelect();
+        if (id === 'potential-analysis') updatePotentialSchoolSelect();
+        if (id === 'class-diagnosis') updateDiagnosisSelects();
+        if (id === 'correlation-analysis' && typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
+        if (id === 'seat-adjustment') updateSeatAdjSelects();
+        if (id === 'subject-balance') updateSubjectBalanceSelects();
+        if (id === 'progress-analysis') {
 
             // 1. 智能推断本校 (逻辑保持不变)
             if (!MY_SCHOOL && typeof TEACHER_MAP !== 'undefined' && Object.keys(TEACHER_MAP).length > 0 && typeof SCHOOLS !== 'undefined') {
@@ -12192,15 +12002,15 @@ function switchTab(id) {
             }
             */
         }
-        if (targetId === 'mutual-aid') updateMutualAidSelects();
-        if (targetId === 'poster-generator') updatePosterSelects();
-        if (targetId === 'marginal-push') updateMpSchoolSelect();
+        if (id === 'mutual-aid') updateMutualAidSelects();
+        if (id === 'poster-generator') updatePosterSelects();
+        if (id === 'marginal-push') updateMpSchoolSelect();
         // 如果是单校绩效模块，触发一次下拉框更新
-        if (targetId === 'single-school-eval') updateSSESchoolSelect();
+        if (id === 'single-school-eval') updateSSESchoolSelect();
     } catch (err) {
         console.error("switchTab 初始化 Hook 发生错误:", err);
     }
-    if (['teacher-analysis', 'class-comparison', 'class-diagnosis', 'single-school-eval'].includes(targetId)) {
+    if (['teacher-analysis', 'class-comparison', 'class-diagnosis', 'single-school-eval'].includes(id)) {
         setTimeout(() => {
             if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars();
         }, 0);
@@ -23361,9 +23171,6 @@ function doSpotlightSearch() {
     const modules = [
         { name: "新生分班", id: "freshman-simulator" },
         { name: "考场编排", id: "exam-arranger" },
-        { name: "校内成绩·数据管理", id: "school-data-management" },
-        { name: "校内成绩·教学管理", id: "school-teaching-management" },
-        { name: "校内成绩·学情诊断", id: "school-student-diagnosis" },
         { name: "校内成绩", id: "school-internal-grades" },
         { name: "座位微调", id: "seat-adjustment" },
         { name: "教学总览", id: "teaching-overview" },
