@@ -1911,6 +1911,68 @@ select:focus {
     position: relative;
 }
 
+.report-query-copy {
+    margin-top: 18px;
+    padding: 18px 20px;
+    border-radius: 20px;
+    border: 1px solid #dbeafe;
+    background: linear-gradient(135deg, #eff6ff 0%, #ffffff 55%, #eef2ff 100%);
+    box-shadow: 0 12px 30px rgba(37, 99, 235, 0.08);
+}
+
+.report-query-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.1);
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+}
+
+.report-query-copy h3 {
+    margin: 10px 0 6px;
+    font-size: 22px;
+    line-height: 1.3;
+    color: #0f172a;
+}
+
+.report-query-copy p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.8;
+    color: #475569;
+}
+
+.report-query-panel {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+    align-items: end;
+}
+
+.report-query-panel label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+}
+
+.report-query-panel select,
+.report-query-panel input {
+    width: 100%;
+    min-width: 0 !important;
+}
+
+.report-query-panel button {
+    width: 100%;
+    margin-left: 0 !important;
+}
+
 /* =========================================================
    🟢 家长端成绩单【全屏沉浸模式】增强样式
    作用：彻底解决“成绩单显示不完整 / 被挤没”的问题
@@ -6086,6 +6148,10 @@ body.dark-mode #login-overlay[style*="background"] {
     .app-main>.section {
         padding: 20px 20px;
     }
+
+    .report-query-panel {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media screen and (max-width: 768px) {
@@ -6108,6 +6174,19 @@ body.dark-mode #login-overlay[style*="background"] {
 
     .app-main>.section {
         padding: 15px 10px;
+    }
+
+    .report-query-copy {
+        padding: 16px;
+        border-radius: 18px;
+    }
+
+    .report-query-copy h3 {
+        font-size: 18px;
+    }
+
+    .report-query-panel {
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 

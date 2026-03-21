@@ -185,11 +185,47 @@ function renderSingleReportCardHTML(stu, mode) {
                 .fluent-table th { text-align: center; padding: 10px 5px; color: #64748b; font-size: 12px; font-weight: 600; border-bottom: 1px solid #e2e8f0; background: rgba(248, 250, 252, 0.5); }
                 .fluent-table td { text-align: center; padding: 12px 5px; border-bottom: 1px solid rgba(0,0,0,0.03); font-size: 14px; }
                 .fluent-table tr:last-child td { border-bottom: none; }
+                .report-insight-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; margin:16px 0 12px; }
+                .report-insight-card { border-radius:18px; padding:16px 18px; border:1px solid #e2e8f0; background:linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); box-shadow:0 10px 26px rgba(15, 23, 42, 0.04); }
+                .report-insight-card.tone-score { border-color:#bfdbfe; background:linear-gradient(180deg, #ffffff 0%, #eff6ff 100%); }
+                .report-insight-card.tone-rank { border-color:#fde68a; background:linear-gradient(180deg, #ffffff 0%, #fffbeb 100%); }
+                .report-insight-card.tone-balance { border-color:#bbf7d0; background:linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%); }
+                .report-insight-card.tone-trend { border-color:#fbcfe8; background:linear-gradient(180deg, #ffffff 0%, #fdf2f8 100%); }
+                .report-insight-label { display:block; font-size:12px; font-weight:700; color:#64748b; margin-bottom:8px; }
+                .report-insight-value { display:block; font-size:20px; line-height:1.35; color:#0f172a; font-weight:800; }
+                .report-insight-sub { display:block; margin-top:6px; font-size:12px; color:#64748b; line-height:1.6; }
+                .report-chip-row { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 18px; }
+                .report-chip { display:inline-flex; align-items:center; min-height:32px; padding:0 12px; border-radius:999px; font-size:12px; font-weight:700; }
+                .report-chip-focus { background:#fff7ed; color:#c2410c; border:1px solid #fdba74; }
+                .report-chip-guard { background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
+                .report-pill { display:inline-flex; align-items:center; min-height:26px; padding:0 10px; border-radius:999px; font-size:11px; font-weight:700; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; margin-top:8px; }
+                .report-pill.up { color:#166534; background:#dcfce7; border-color:#86efac; }
+                .report-pill.down { color:#b91c1c; background:#fee2e2; border-color:#fca5a5; }
+                .report-pill.ok, .report-pill.steady { color:#0369a1; background:#e0f2fe; border-color:#7dd3fc; }
+                .report-pill.info { color:#7c2d12; background:#fff7ed; border-color:#fdba74; }
+                .report-pill.warn { color:#b91c1c; background:#fff1f2; border-color:#fda4af; }
+                .report-action-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; margin:0 0 18px; }
+                .report-action-card { border-radius:18px; padding:16px 18px; border:1px solid #e2e8f0; background:#fff; min-height:140px; }
+                .report-action-card.tone-warn { background:linear-gradient(180deg, #ffffff 0%, #fff7ed 100%); border-color:#fdba74; }
+                .report-action-card.tone-info { background:linear-gradient(180deg, #ffffff 0%, #eff6ff 100%); border-color:#bfdbfe; }
+                .report-action-card.tone-ok { background:linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%); border-color:#bbf7d0; }
+                .report-action-card.tone-goal { background:linear-gradient(180deg, #ffffff 0%, #f5f3ff 100%); border-color:#ddd6fe; }
+                .report-action-title { font-size:14px; font-weight:800; color:#0f172a; margin-bottom:8px; }
+                .report-action-text { font-size:13px; color:#475569; line-height:1.8; }
+                .report-reality-note { margin-top:12px; border-radius:18px; border:1px dashed #cbd5e1; padding:14px 16px; background:#f8fafc; }
+                .report-reality-title { font-size:12px; font-weight:800; color:#475569; margin-bottom:8px; }
+                .report-reality-list { margin:0; padding-left:18px; font-size:12px; color:#64748b; line-height:1.75; }
+                .report-reality-list li { margin-bottom:4px; }
+                @media (max-width: 768px) { .report-insight-grid, .report-action-grid { grid-template-columns:minmax(0, 1fr); } .report-insight-card, .report-action-card { padding:14px 16px; } }
                 @media print { .fluent-card { box-shadow: none; border: 1px solid #ccc; backdrop-filter: none; } }
             </style>
         `;
 
     const chartNarrativeHtml = buildChartNarrative(reportStu);
+    const insightModel = buildStudentInsightModel(reportStu, reportExamHistory);
+    const insightOverviewHtml = renderStudentInsightOverview(insightModel);
+    const actionPlanHtml = renderStudentActionPlan(insightModel);
+    const realityNoteHtml = renderStudentRealityNote(insightModel);
     const cloudCompareHintHtml = cloudHint ? `
         <div class="fluent-card" style="padding:10px 14px; margin-bottom:12px; background:#eef2ff; border:1px solid #c7d2fe; color:#3730a3;">
             <div style="display:flex; align-items:center; gap:8px; font-size:12px; flex-wrap:wrap;">
@@ -223,6 +259,12 @@ function renderSingleReportCardHTML(stu, mode) {
                 </div>
                 <div style="font-size:13px; color:#64748b; font-family:monospace;">考号: ${stu.id}</div>
             </div>
+        </div>
+        <div class="fluent-card" style="padding:18px 20px;">
+            <div class="fluent-header"><i class="ti ti-badge-4k" style="color:#2563eb;"></i><span class="fluent-title">成绩快照与真实定位</span></div>
+            ${insightOverviewHtml}
+            ${actionPlanHtml}
+            ${realityNoteHtml}
         </div>
         <div class="fluent-card" style="padding:0; overflow:hidden;">
             <table class="fluent-table" id="tb-query">
@@ -557,6 +599,7 @@ function renderInstagramCard(stu) {
                     
                     <!-- 1. 核心总分大卡片 (Visual Area - 旧模块) -->
                     ${visualAreaHtml}
+                    ${igInsightHtml}
                     
                     <!-- Actions (点赞栏 - 旧模块) -->
                     <div class="insta-actions">
@@ -1742,6 +1785,261 @@ function renderVarianceChart(student, passedHistory = null) {
     });
 }
 
+function buildStudentInsightModel(student, passedHistory = null) {
+    const reportStudent = getComparisonStudentView(student, RAW_DATA);
+    const totalSubjects = getComparisonTotalSubjects();
+    const totalScore = getComparisonTotalValue(reportStudent, totalSubjects);
+    const totalCount = RAW_DATA.length || 1;
+    const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
+    const scopeText = isSingleSchool ? '全校' : '全镇';
+    const effectiveRank = safeGet(reportStudent, 'ranks.total.township', safeGet(reportStudent, 'ranks.total.school', '-'));
+    const percentile = (typeof effectiveRank === 'number' && totalCount > 0)
+        ? ((1 - effectiveRank / totalCount) * 100)
+        : null;
+
+    const history = Array.isArray(passedHistory) ? passedHistory : (typeof getStudentExamHistory === 'function' ? getStudentExamHistory(reportStudent) : []);
+    const latestHistoryEntry = getLatestHistoryExamEntry(reportStudent, history);
+    const previousStudent = latestHistoryEntry ? (latestHistoryEntry.student || latestHistoryEntry) : null;
+    const previousTotal = previousStudent ? recalcPrevTotal(previousStudent) : null;
+    const totalDelta = (Number.isFinite(totalScore) && Number.isFinite(previousTotal)) ? (totalScore - previousTotal) : null;
+
+    const calcStats = (arr) => {
+        const count = arr.length;
+        if (!count) return { mean: 0, sd: 1 };
+        const mean = arr.reduce((sum, value) => sum + value, 0) / count;
+        const variance = arr.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / count;
+        return { mean, sd: Math.sqrt(variance) || 1 };
+    };
+
+    const subjectInsights = [];
+    totalSubjects.forEach(subject => {
+        const score = reportStudent?.scores?.[subject];
+        if (typeof score !== 'number') return;
+        const allScores = RAW_DATA
+            .map(row => row?.scores?.[subject])
+            .filter(value => typeof value === 'number')
+            .sort((a, b) => b - a);
+        if (!allScores.length) return;
+
+        const rank = allScores.indexOf(score) + 1;
+        const percentileValue = rank > 0 ? ((1 - rank / allScores.length) * 100) : null;
+        const stats = calcStats(allScores);
+        const zScore = stats.sd > 0 ? (score - stats.mean) / stats.sd : 0;
+        subjectInsights.push({
+            subject,
+            score,
+            percentile: percentileValue,
+            zScore,
+            schoolRank: safeGet(reportStudent, `ranks.${subject}.school`, '-'),
+            townshipRank: safeGet(reportStudent, `ranks.${subject}.township`, '-')
+        });
+    });
+
+    const strongSubjects = subjectInsights
+        .filter(item => item.zScore >= 0.8)
+        .sort((a, b) => b.zScore - a.zScore);
+    const weakSubjects = subjectInsights
+        .filter(item => item.zScore <= -0.8)
+        .sort((a, b) => a.zScore - b.zScore);
+    const sortedByRisk = [...subjectInsights].sort((a, b) => a.zScore - b.zScore);
+    const sortedByStrength = [...subjectInsights].sort((a, b) => b.zScore - a.zScore);
+    const zValues = subjectInsights.map(item => item.zScore);
+    const zRange = zValues.length ? (Math.max(...zValues) - Math.min(...zValues)) : 0;
+
+    let balanceLabel = '结构均衡';
+    let balanceTone = 'ok';
+    if (zRange >= 2.6) {
+        balanceLabel = '偏科明显';
+        balanceTone = 'warn';
+    } else if (zRange >= 1.4) {
+        balanceLabel = '有波动';
+        balanceTone = 'info';
+    }
+
+    let trendLabel = '首次生成';
+    let trendTone = 'neutral';
+    if (typeof totalDelta === 'number') {
+        if (totalDelta >= 5) {
+            trendLabel = `较上次提升 ${totalDelta.toFixed(1)} 分`;
+            trendTone = 'up';
+        } else if (totalDelta >= 0.5) {
+            trendLabel = `较上次小幅提升 ${totalDelta.toFixed(1)} 分`;
+            trendTone = 'up';
+        } else if (totalDelta <= -5) {
+            trendLabel = `较上次回落 ${Math.abs(totalDelta).toFixed(1)} 分`;
+            trendTone = 'down';
+        } else if (totalDelta <= -0.5) {
+            trendLabel = `较上次略有回落 ${Math.abs(totalDelta).toFixed(1)} 分`;
+            trendTone = 'down';
+        } else {
+            trendLabel = '与上次基本持平';
+            trendTone = 'steady';
+        }
+    }
+
+    const targetScore = Number.isFinite(totalScore)
+        ? totalScore + Math.max(4, Math.min(12, (weakSubjects.length || 1) * 3))
+        : null;
+    const targetRank = (typeof effectiveRank === 'number')
+        ? Math.max(1, effectiveRank - Math.max(1, Math.round(effectiveRank * 0.08)))
+        : null;
+
+    const focusSubjects = weakSubjects.slice(0, 2);
+    const guardSubjects = strongSubjects.slice(0, 2);
+
+    const actionPlans = [];
+    if (focusSubjects.length) {
+        actionPlans.push({
+            tone: 'warn',
+            title: `优先补弱：${focusSubjects.map(item => item.subject).join('、')}`,
+            detail: '先做基础概念回顾，再做近两次错题复盘；每天固定 15 到 20 分钟，先稳住容易失分点。'
+        });
+    } else {
+        actionPlans.push({
+            tone: 'ok',
+            title: '当前没有明显短板',
+            detail: '说明整体结构比较稳，可以把更多精力放在提速、审题和规范表达上，争取把稳定优势转成总分。'
+        });
+    }
+
+    if (guardSubjects.length) {
+        actionPlans.push({
+            tone: 'info',
+            title: `继续守住优势：${guardSubjects.map(item => item.subject).join('、')}`,
+            detail: '优势科不要盲目加量，重点保持错题复盘和阶段总结，让强项持续稳定输出。'
+        });
+    } else {
+        actionPlans.push({
+            tone: 'info',
+            title: '建立自己的稳定科目',
+            detail: '从最有把握的一门学科开始，先把基础题和中档题做稳，逐步形成可复制的得分来源。'
+        });
+    }
+
+    actionPlans.push({
+        tone: 'goal',
+        title: '下一次目标建议',
+        detail: `${targetScore !== null ? `建议先把总分稳定到 ${targetScore.toFixed(1)} 分左右；` : ''}${targetRank !== null ? `争取 ${scopeText}排名提升到前 ${targetRank} 名。` : '先把当前优势延续到下一次考试。'}`
+    });
+
+    const realityNotes = [
+        `本次解读基于当前成绩库中的 ${totalCount} 名同届样本和 ${Math.max(history.length, 1)} 次考试记录。`,
+        '分数、排名、百分位均按已导入的真实成绩计算，不做“估高”处理。',
+        '如果学校还没有导入最新一次考试或历史考试，趋势结论会更保守。'
+    ];
+
+    return {
+        reportStudent,
+        totalScore,
+        totalCount,
+        scopeText,
+        effectiveRank,
+        percentile,
+        previousTotal,
+        totalDelta,
+        balanceLabel,
+        balanceTone,
+        trendLabel,
+        trendTone,
+        focusSubjects,
+        guardSubjects,
+        actionPlans,
+        realityNotes,
+        targetScore,
+        targetRank,
+        subjectInsights,
+        strongSubjects,
+        weakSubjects
+    };
+}
+
+function renderStudentInsightOverview(model) {
+    const pctText = model.percentile !== null ? `${model.percentile.toFixed(0)}%` : '-';
+    const totalText = Number.isFinite(model.totalScore) ? model.totalScore.toFixed(1) : '-';
+    const rankText = typeof model.effectiveRank === 'number' ? `${model.effectiveRank}` : '-';
+    const prevText = Number.isFinite(model.previousTotal) ? model.previousTotal.toFixed(1) : '-';
+    const trendClass = model.trendTone === 'up' ? 'report-pill up' : model.trendTone === 'down' ? 'report-pill down' : 'report-pill';
+    const balanceClass = model.balanceTone === 'warn' ? 'report-pill warn' : model.balanceTone === 'info' ? 'report-pill info' : 'report-pill ok';
+    const focusText = model.focusSubjects.length
+        ? model.focusSubjects.map(item => item.subject).join('、')
+        : '暂无明显短板';
+    const guardText = model.guardSubjects.length
+        ? model.guardSubjects.map(item => item.subject).join('、')
+        : '建议先培养一门稳定优势科';
+
+    const igInsightHtml = `
+            <div style="margin: 15px 14px 0 14px; display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px;">
+                <div style="background:#ffffff; border:1px solid #dbeafe; border-radius:12px; padding:12px 14px;">
+                    <div style="font-size:11px; color:#64748b; font-weight:700;">真实定位</div>
+                    <div style="font-size:18px; font-weight:800; color:#0f172a; margin-top:6px;">${typeof insightModel.effectiveRank === 'number' ? `第 ${insightModel.effectiveRank} 名` : '-'}</div>
+                    <div style="font-size:11px; color:#2563eb; margin-top:4px;">${insightModel.scopeText}百分位 ${insightModel.percentile !== null ? insightModel.percentile.toFixed(0) + '%' : '-'}</div>
+                </div>
+                <div style="background:#ffffff; border:1px solid #fde68a; border-radius:12px; padding:12px 14px;">
+                    <div style="font-size:11px; color:#64748b; font-weight:700;">当前走势</div>
+                    <div style="font-size:16px; font-weight:800; color:#0f172a; margin-top:6px; line-height:1.45;">${insightModel.trendLabel}</div>
+                    <div style="font-size:11px; color:#b45309; margin-top:4px;">结构状态：${insightModel.balanceLabel}</div>
+                </div>
+            </div>
+            <div style="margin: 10px 14px 0 14px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:12px; padding:12px 14px;">
+                <div style="font-size:11px; color:#64748b; font-weight:700; margin-bottom:6px;">下一步怎么调</div>
+                <div style="font-size:12px; color:#334155; line-height:1.7;">${insightModel.actionPlans.map(plan => plan.title).join(' · ')}</div>
+            </div>
+        `;
+
+    return `
+        <div class="report-insight-grid">
+            <div class="report-insight-card tone-score">
+                <span class="report-insight-label">本次总分</span>
+                <strong class="report-insight-value">${totalText}</strong>
+                <span class="report-insight-sub">上次对比：${prevText}</span>
+            </div>
+            <div class="report-insight-card tone-rank">
+                <span class="report-insight-label">${model.scopeText}定位</span>
+                <strong class="report-insight-value">第 ${rankText} 名</strong>
+                <span class="report-insight-sub">综合百分位：${pctText}</span>
+            </div>
+            <div class="report-insight-card tone-balance">
+                <span class="report-insight-label">结构状态</span>
+                <strong class="report-insight-value">${model.balanceLabel}</strong>
+                <span class="${balanceClass}">${model.balanceLabel}</span>
+            </div>
+            <div class="report-insight-card tone-trend">
+                <span class="report-insight-label">阶段走势</span>
+                <strong class="report-insight-value">${model.trendLabel}</strong>
+                <span class="${trendClass}">${model.trendLabel}</span>
+            </div>
+        </div>
+        <div class="report-chip-row">
+            <span class="report-chip report-chip-focus">当前优先调整：${focusText}</span>
+            <span class="report-chip report-chip-guard">继续守住优势：${guardText}</span>
+        </div>
+    `;
+}
+
+function renderStudentActionPlan(model) {
+    return `
+        <div class="report-action-grid">
+            ${model.actionPlans.map(plan => `
+                <div class="report-action-card tone-${plan.tone}">
+                    <div class="report-action-title">${plan.title}</div>
+                    <div class="report-action-text">${plan.detail}</div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function renderStudentRealityNote(model) {
+    return `
+        <div class="report-reality-note">
+            <div class="report-reality-title">真实成绩说明</div>
+            <ul class="report-reality-list">
+                ${model.realityNotes.map(note => `<li>${note}</li>`).join('')}
+            </ul>
+        </div>
+    `;
+}
+
 function buildChartNarrative(student) {
     const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
     const scopeText = isSingleSchool ? '全校' : '全镇';
@@ -1823,6 +2121,52 @@ function analyzeStrengthsAndWeaknesses(student) {
     strengthsContainer.innerHTML = strengths.length ? strengths.map(s => `<span>${s.subject} <small>(${s.score})</small></span>`).join('、') : '无明显优势学科'; weaknessesContainer.innerHTML = weaknesses.length ? weaknesses.map(w => `<span>${w.subject} <small>(${w.score})</small></span>`).join('、') : '无明显劣势学科';
     let suggestions = weaknesses.length ? `<p>建议重点关注：${weaknesses.map(w => w.subject).join('、')}，制定针对性复习计划。</p>` : '<p>各科发展均衡，请继续保持当前的良好状态。</p>'; suggestionsContainer.innerHTML = suggestions;
 }
+
+function renderStudentInsightOverview(model) {
+    const pctText = model.percentile !== null ? `${model.percentile.toFixed(0)}%` : '-';
+    const totalText = Number.isFinite(model.totalScore) ? model.totalScore.toFixed(1) : '-';
+    const rankText = typeof model.effectiveRank === 'number' ? `${model.effectiveRank}` : '-';
+    const prevText = Number.isFinite(model.previousTotal) ? model.previousTotal.toFixed(1) : '-';
+    const trendClass = model.trendTone === 'up' ? 'report-pill up' : model.trendTone === 'down' ? 'report-pill down' : 'report-pill';
+    const balanceClass = model.balanceTone === 'warn' ? 'report-pill warn' : model.balanceTone === 'info' ? 'report-pill info' : 'report-pill ok';
+    const focusText = model.focusSubjects.length
+        ? model.focusSubjects.map(item => item.subject).join('、')
+        : '暂无明显短板';
+    const guardText = model.guardSubjects.length
+        ? model.guardSubjects.map(item => item.subject).join('、')
+        : '建议先培养一门稳定优势科';
+
+    return `
+        <div class="report-insight-grid">
+            <div class="report-insight-card tone-score">
+                <span class="report-insight-label">本次总分</span>
+                <strong class="report-insight-value">${totalText}</strong>
+                <span class="report-insight-sub">上次对比：${prevText}</span>
+            </div>
+            <div class="report-insight-card tone-rank">
+                <span class="report-insight-label">${model.scopeText}定位</span>
+                <strong class="report-insight-value">第 ${rankText} 名</strong>
+                <span class="report-insight-sub">综合百分位：${pctText}</span>
+            </div>
+            <div class="report-insight-card tone-balance">
+                <span class="report-insight-label">结构状态</span>
+                <strong class="report-insight-value">${model.balanceLabel}</strong>
+                <span class="${balanceClass}">${model.balanceLabel}</span>
+            </div>
+            <div class="report-insight-card tone-trend">
+                <span class="report-insight-label">阶段走势</span>
+                <strong class="report-insight-value">${model.trendLabel}</strong>
+                <span class="${trendClass}">${model.trendLabel}</span>
+            </div>
+        </div>
+        <div class="report-chip-row">
+            <span class="report-chip report-chip-focus">当前优先调整：${focusText}</span>
+            <span class="report-chip report-chip-guard">继续守住优势：${guardText}</span>
+        </div>
+    `;
+}
+
+var igInsightHtml = '';
 
     Object.assign(window, {
         getTrendBadge,
