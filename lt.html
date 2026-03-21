@@ -14444,9 +14444,13 @@ let SIG_CACHE = {
     localOnly: true,
     classRows: [],
     teacherRows: [],
+    baselineSummary: [],
     studentCount: 0,
     baselineExamCount: 0,
+    rollingBaselineCount: 0,
     teacherReady: false,
+    teacherStatusText: '未加载',
+    teacherAssignmentCount: 0,
     thresholdMeta: {}
 };
 
@@ -14559,7 +14563,7 @@ function SIG_renderSummary(cache) {
         <div class="fb-card"><div class="fb-lbl">当前学校</div><div class="fb-val">${tmEscapeHtml(cache.schoolName || '未识别')}</div></div>
         <div class="fb-card"><div class="fb-lbl">本次实考</div><div class="fb-val">${cache.studentCount || 0}</div></div>
         <div class="fb-card"><div class="fb-lbl">历史期次</div><div class="fb-val">${cache.baselineExamCount || 0}</div></div>
-        <div class="fb-card"><div class="fb-lbl">任课表</div><div class="fb-val">${cache.teacherReady ? '已加载' : '未加载'}</div></div>
+        <div class="fb-card"><div class="fb-lbl">任课表</div><div class="fb-val">${tmEscapeHtml(cache.teacherStatusText || (cache.teacherReady ? '已加载' : '未加载'))}</div></div>
         <div class="fb-card"><div class="fb-lbl">校内高水平线</div><div class="fb-val">${SIG_toNumber(cache.thresholdMeta.highLine, 0).toFixed(1)}</div></div>
         <div class="fb-card"><div class="fb-lbl">校内稳态线</div><div class="fb-val">${SIG_toNumber(cache.thresholdMeta.stableLine, 0).toFixed(1)}</div></div>
         <div class="fb-card"><div class="fb-lbl">学校数量</div><div class="fb-val">${schoolCount}</div></div>
@@ -14588,6 +14592,7 @@ function SIG_renderAdvice(cache) {
 function SIG_renderTables(cache) {
     const classBody = document.querySelector('#sigClassTable tbody');
     const teacherBody = document.querySelector('#sigTeacherTable tbody');
+    const baselineBody = document.querySelector('#sigBaselineTable tbody');
     if (classBody) {
         classBody.innerHTML = cache.classRows.length
             ? cache.classRows.map((row) => `
@@ -14709,6 +14714,84 @@ function SIG_syncSchoolSelect(value) {
         const el = document.getElementById(id);
         if (el && value) el.value = value;
     });
+}
+
+function SIG_scrollIntoView(targetId) {
+    const el = document.getElementById(targetId);
+    if (!el || typeof el.scrollIntoView !== 'function') return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function SIG_ensureTeacherTableLayout() {
+    const row = document.querySelector('#sigTeacherTable thead tr');
+    if (!row || row.querySelector('[data-sig-col="classes"]')) return;
+    const th = document.createElement('th');
+    th.dataset.sigCol = 'classes';
+    th.textContent = '班级';
+    row.insertBefore(th, row.children[2] || null);
+}
+
+function SIG_ensureBaselinePanel() {
+    const diagnosisView = document.getElementById('sig-view-diagnosis');
+    if (!diagnosisView || document.getElementById('sigBaselineTable')) return;
+    const classCard = Array.from(diagnosisView.querySelectorAll('.card-box'))
+        .find((card) => card.querySelector('#sigClassTable'));
+    if (!classCard) return;
+    const panel = document.createElement('div');
+    panel.className = 'card-box';
+    panel.style.padding = '16px';
+    panel.style.marginBottom = '16px';
+    panel.innerHTML = `
+        <div class="sub-header" style="margin-top:0;">历次基线快照</div>
+        <div class="table-wrap">
+            <table class="comparison-table" id="sigBaselineTable">
+                <thead>
+                    <tr>
+                        <th>考试快照</th>
+                        <th>生成时间</th>
+                        <th>可比样本</th>
+                        <th>记录数</th>
+                        <th>学科数</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    `;
+    diagnosisView.insertBefore(panel, classCard);
+}
+
+function SIG_ensureLocalQuickActions() {
+    const panel = Array.from(document.querySelectorAll('#sig-view-teaching .card-box'))
+        .find((card) => card.querySelector('button[onclick*="switchTab(\'teacher-analysis\')"]'));
+    if (!panel) return;
+    panel.innerHTML = `
+        <div class="sub-header" style="margin-top:0;">模块内快捷操作</div>
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <button type="button" class="btn btn-sm" onclick="SIG_openLocalPanel('import')">导入本校成绩</button>
+            <button type="button" class="btn btn-sm" onclick="SIG_openLocalPanel('teaching', 'sigTeacherTable')">教师公平</button>
+            <button type="button" class="btn btn-sm" onclick="SIG_openLocalPanel('diagnosis', 'sigClassTable')">班级执行</button>
+            <button type="button" class="btn btn-sm" onclick="SIG_openLocalPanel('diagnosis', 'sigBaselineTable')">历次基线</button>
+            <button type="button" class="btn btn-sm" onclick="SIG_openLocalPanel('diagnosis', 'sigDiagnosisHint')">诊断提醒</button>
+            <button type="button" class="btn btn-sm" onclick="SIG_export()">导出分析</button>
+        </div>
+    `;
+}
+
+function SIG_ensureLayout() {
+    SIG_ensureLocalQuickActions();
+    SIG_ensureTeacherTableLayout();
+    SIG_ensureBaselinePanel();
+}
+
+function SIG_openLocalPanel(view, anchorId = '') {
+    SIG_ensureLayout();
+    const trigger = document.querySelector(`[data-sig-view-btn="${view}"]`);
+    SIG_switchView(view, trigger || null);
+    SIG_render();
+    if (anchorId) {
+        setTimeout(() => SIG_scrollIntoView(anchorId), 80);
+    }
 }
 
 function SIG_normalizeSubjectHeader(header) {
@@ -15093,13 +15176,14 @@ function SIG_getBaselineExamEntries(schoolName) {
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 }
 
-function SIG_getTeacherAssignments(source, schoolName) {
+function SIG_getTeacherAssignments(source, schoolName, students) {
     if (window.DataManager && typeof DataManager.ensureTeacherMap === 'function') {
         DataManager.ensureTeacherMap(false);
     }
     const teacherMap = window.TEACHER_MAP || {};
     const teacherSchoolMap = window.TEACHER_SCHOOL_MAP || {};
     const classSchoolMap = SIG_buildClassSchoolMap(source);
+    const localClassSet = new Set((students || []).map((student) => normalizeClass(student?.class || '')).filter(Boolean));
     return Object.entries(teacherMap).map(([key, teacherName]) => {
         const parts = String(key || '').split('_');
         const className = normalizeClass(parts.shift() || '');
@@ -15116,7 +15200,7 @@ function SIG_getTeacherAssignments(source, schoolName) {
         if (!item.teacherName || !item.className || !item.subjectName) return false;
         if (!schoolName) return true;
         if (item.schoolName) return SIG_sameSchool(item.schoolName, schoolName);
-        return false;
+        return localClassSet.has(item.className);
     });
 }
 
@@ -15223,6 +15307,46 @@ function SIG_buildConversionMetrics(currentRows, subjectName, baselineRows) {
     };
 }
 
+function SIG_buildRollingConversionMetrics(currentRows, subjectName, baselineExams) {
+    const entries = (baselineExams || []).slice(0, 3);
+    if (!entries.length) return SIG_buildConversionMetrics(currentRows, subjectName, []);
+
+    const weighted = entries.map((entry, index) => {
+        const metrics = SIG_buildConversionMetrics(currentRows, subjectName, entry?.rows || []);
+        const recencyWeight = Math.max(0.55, 1 - (index * 0.2));
+        const sampleWeight = Math.max(0.35, Math.min(1, SIG_toNumber(metrics.matchedCount, 0) / 15));
+        return {
+            label: String(entry?.examFullKey || entry?.examId || `baseline_${index + 1}`),
+            metrics,
+            weight: SIG_toNumber(metrics.matchedCount, 0) > 0 ? (recencyWeight * sampleWeight) : 0
+        };
+    }).filter((item) => item.weight > 0);
+
+    if (!weighted.length) {
+        const latest = SIG_buildConversionMetrics(currentRows, subjectName, entries[0]?.rows || []);
+        return {
+            ...latest,
+            baselineCount: entries.filter((entry) => Array.isArray(entry?.rows) && entry.rows.length > 0).length,
+            labels: entries.map((entry, index) => String(entry?.examFullKey || entry?.examId || `baseline_${index + 1}`))
+        };
+    }
+
+    const totalWeight = weighted.reduce((sum, item) => sum + item.weight, 0) || 1;
+    const blend = (getter, fallback = 0) => {
+        const value = weighted.reduce((sum, item) => sum + (getter(item.metrics) * item.weight), 0) / totalWeight;
+        return Number.isFinite(value) ? value : fallback;
+    };
+    return {
+        score: Math.max(0, Math.min(100, blend((metrics) => SIG_toNumber(metrics.score, 50), 50))),
+        adjustment: Math.max(-12, Math.min(12, blend((metrics) => SIG_toNumber(metrics.adjustment, 0), 0))),
+        matchedCount: Math.round(blend((metrics) => SIG_toNumber(metrics.matchedCount, 0), 0)),
+        previousCount: Math.round(blend((metrics) => SIG_toNumber(metrics.previousCount, 0), 0)),
+        stabilityRate: Math.max(0, Math.min(1, blend((metrics) => SIG_toNumber(metrics.stabilityRate, 0), 0))),
+        baselineCount: weighted.length,
+        labels: weighted.map((item) => item.label)
+    };
+}
+
 function SIG_normalizePeerMetric(value, values, reverse = false) {
     const list = (values || []).map((item) => SIG_toNumber(item, NaN)).filter((item) => Number.isFinite(item));
     if (!list.length) return 0.5;
@@ -15243,12 +15367,46 @@ function SIG_filterTeacherRows(rows, schoolName) {
     ));
 }
 
+function SIG_formatBaselineTime(timestamp) {
+    const time = SIG_toNumber(timestamp, NaN);
+    if (!Number.isFinite(time) || time <= 0) return '本地快照';
+    try {
+        return new Date(time).toLocaleString('zh-CN', {
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch (error) {
+        return '本地快照';
+    }
+}
+
+function SIG_buildBaselineSummary(baselineExams, students) {
+    const currentKeys = new Set((students || []).map((student) => SIG_buildStudentKey(student)));
+    return (baselineExams || []).slice(0, 5).map((entry, index) => {
+        const rows = Array.isArray(entry?.rows) ? entry.rows : [];
+        const matchedCount = rows.reduce((sum, row) => sum + (currentKeys.has(SIG_buildStudentKey(row)) ? 1 : 0), 0);
+        const subjectCount = new Set(rows.flatMap((row) => (
+            Object.keys(row?.scores || {}).map((subject) => normalizeSubject(subject)).filter(Boolean)
+        ))).size;
+        return {
+            examLabel: String(entry?.examFullKey || entry?.examId || `历史基线${index + 1}`),
+            createdAtText: SIG_formatBaselineTime(entry?.createdAt),
+            sampleCount: rows.length,
+            matchedCount,
+            matchedRate: rows.length ? (matchedCount / rows.length) : 0,
+            subjectCount
+        };
+    });
+}
+
 function SIG_buildTeacherRows(schoolName, students, baselineExams, source) {
     const subjectSet = new Set(
         (students || []).flatMap((student) => Object.keys(student?.scores || {}).map((subject) => normalizeSubject(subject))).filter(Boolean)
     );
     const assignmentGroups = {};
-    SIG_getTeacherAssignments(source, schoolName).forEach((item) => {
+    SIG_getTeacherAssignments(source, schoolName, students).forEach((item) => {
         if (!subjectSet.has(item.subjectName)) return;
         const groupKey = `${item.teacherName}__${item.subjectName}`;
         if (!assignmentGroups[groupKey]) {
@@ -15261,7 +15419,6 @@ function SIG_buildTeacherRows(schoolName, students, baselineExams, source) {
         assignmentGroups[groupKey].classes.add(item.className);
     });
 
-    const primaryBaseline = baselineExams[0]?.rows || [];
     const baseRows = Object.values(assignmentGroups).map((group) => {
         const classes = [...group.classes].sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
         const classSet = new Set(classes);
@@ -15273,11 +15430,14 @@ function SIG_buildTeacherRows(schoolName, students, baselineExams, source) {
 
         const thresholds = SIG_getSubjectThresholds(group.subjectName, students || []);
         const metrics = SIG_buildMetricSummary(currentRows, group.subjectName, thresholds);
-        const baselineRows = primaryBaseline.filter((row) => (
-            classSet.has(normalizeClass(row?.class || ''))
-            && Number.isFinite(SIG_toNumber(row?.scores?.[group.subjectName], NaN))
-        ));
-        const conversion = SIG_buildConversionMetrics(currentRows, group.subjectName, baselineRows);
+        const baselineSeries = (baselineExams || []).slice(0, 3).map((entry) => ({
+            ...entry,
+            rows: (entry?.rows || []).filter((row) => (
+                classSet.has(normalizeClass(row?.class || ''))
+                && Number.isFinite(SIG_toNumber(row?.scores?.[group.subjectName], NaN))
+            ))
+        })).filter((entry) => entry.rows.length > 0);
+        const conversion = SIG_buildRollingConversionMetrics(currentRows, group.subjectName, baselineSeries);
         const protectedByTeacherChange = SIG_buildTeacherProtection(classes, group.subjectName, group.teacherName);
         return {
             teacherName: group.teacherName,
@@ -15318,7 +15478,7 @@ function SIG_buildTeacherRows(schoolName, students, baselineExams, source) {
             subjectName: row.subjectName,
             fairScore,
             conversionScore: SIG_toNumber(row.conversion.score, 50),
-            sampleText: `${row.conversion.matchedCount || 0} / ${(SIG_toNumber(row.conversion.stabilityRate, 0) * 100).toFixed(0)}%`,
+            sampleText: `${row.conversion.matchedCount || 0} / ${(SIG_toNumber(row.conversion.stabilityRate, 0) * 100).toFixed(0)}% · ${row.conversion.baselineCount || 0}次`,
             protectionText: row.teacherChangeProtected ? '已保护' : '正常',
             classesText: row.classesText
         };
@@ -15360,8 +15520,9 @@ function SIG_renderAdvice(cache) {
     if (schoolCount <= 1) items.push('当前数据只有本校口径，校际联考横向排名不适用。');
     else items.push('即使当前工作区有多校数据，本页也只按本校-only口径分析。');
     if (cache.baselineExamCount <= 0) items.push('当前没有可用历史考试，本页只输出当次诊断分。');
-    else items.push(`当前已检测到 ${cache.baselineExamCount} 次历史考试，可使用滚动基线做校内公平绩效。`);
-    if (!cache.teacherReady) items.push('任课表尚未加载，教师公平快览会受限。');
+    else items.push(`当前已检测到 ${cache.baselineExamCount} 次历史考试，教师公平分会优先滚动参考最近 ${cache.rollingBaselineCount || 0} 次快照。`);
+    if (cache.teacherAssignmentCount <= 0) items.push('当前未找到本校本地任课表映射，教师公平快览暂时无法展开。');
+    else if (!cache.teacherRows.length) items.push('已识别到任课表映射，但当前权限下暂无可见的教师公平结果。');
     items.push('本页不调用云端保存，不会把校内月考数据同步到云端。');
     el.innerHTML = `<ul class="plain-list">${items.map((item) => `<li>${tmEscapeHtml(item)}</li>`).join('')}</ul>`;
     notice.textContent = cache.baselineExamCount > 0
@@ -15373,6 +15534,7 @@ function SIG_renderAdvice(cache) {
                 <li>当前来源：${tmEscapeHtml(cache.source === 'upload' ? '专属文件' : '工作区')}。</li>
                 <li>当前学校：${tmEscapeHtml(cache.schoolName || '未识别')}，实考 ${cache.studentCount || 0} 人。</li>
                 <li>当前更适合使用 ${tmEscapeHtml(cache.baselineExamCount > 0 ? '校内公平模式' : '当次诊断模式')}。</li>
+                <li>任课表状态：${tmEscapeHtml(cache.teacherStatusText || '未加载')}。</li>
             </ul>
         `;
     }
@@ -15385,6 +15547,7 @@ function SIG_renderAdvice(cache) {
 function SIG_renderTables(cache) {
     const classBody = document.querySelector('#sigClassTable tbody');
     const teacherBody = document.querySelector('#sigTeacherTable tbody');
+    const baselineBody = document.querySelector('#sigBaselineTable tbody');
     if (classBody) {
         classBody.innerHTML = cache.classRows.length
             ? cache.classRows.map((row) => `
@@ -15405,17 +15568,32 @@ function SIG_renderTables(cache) {
                 <tr>
                     <td>${tmEscapeHtml(row.teacherName)}</td>
                     <td>${tmEscapeHtml(row.subjectName)}</td>
+                    <td>${tmEscapeHtml(row.classesText || '-')}</td>
                     <td>${row.fairScore.toFixed(1)}</td>
                     <td>${row.conversionScore.toFixed(1)}</td>
                     <td>${tmEscapeHtml(row.sampleText)}</td>
                     <td>${tmEscapeHtml(row.protectionText)}</td>
                 </tr>
             `).join('')
-            : '<tr><td colspan="6" style="text-align:center; color:#999;">暂无教师公平快览数据</td></tr>';
+            : '<tr><td colspan="7" style="text-align:center; color:#999;">暂无教师公平快览数据</td></tr>';
+    }
+    if (baselineBody) {
+        baselineBody.innerHTML = cache.baselineSummary.length
+            ? cache.baselineSummary.map((row) => `
+                <tr>
+                    <td>${tmEscapeHtml(row.examLabel)}</td>
+                    <td>${tmEscapeHtml(row.createdAtText)}</td>
+                    <td>${row.matchedCount} / ${(SIG_toNumber(row.matchedRate, 0) * 100).toFixed(0)}%</td>
+                    <td>${row.sampleCount}</td>
+                    <td>${row.subjectCount}</td>
+                </tr>
+            `).join('')
+            : '<tr><td colspan="5" style="text-align:center; color:#999;">暂无可用历史基线数据</td></tr>';
     }
 }
 
 function SIG_render() {
+    SIG_ensureLayout();
     const schoolName = SIG_updateSchoolSelect();
     SIG_syncSchoolSelect(schoolName);
     const source = SIG_getSourceState();
@@ -15424,15 +15602,23 @@ function SIG_render() {
     const baselineExams = SIG_getBaselineExamEntries(schoolName);
     const teacherResult = SIG_buildTeacherRows(schoolName, students, baselineExams, source);
     const teacherReady = teacherResult.assignmentCount > 0;
+    const baselineSummary = SIG_buildBaselineSummary(baselineExams, students);
+    const teacherStatusText = teacherResult.assignmentCount <= 0
+        ? '未加载'
+        : (teacherResult.rows.length ? '已加载' : '受权限过滤');
     SIG_CACHE = {
         schoolName,
         source: source.source,
         localOnly: true,
         classRows: classInfo.rows,
         teacherRows: teacherResult.rows,
+        baselineSummary,
         studentCount: students.length,
         baselineExamCount: baselineExams.length,
+        rollingBaselineCount: Math.min(3, baselineExams.length),
         teacherReady,
+        teacherStatusText,
+        teacherAssignmentCount: teacherResult.assignmentCount,
         thresholdMeta: classInfo.thresholds
     };
     SIG_renderSummary(SIG_CACHE);
@@ -15452,18 +15638,21 @@ function SIG_export() {
             SIG_CACHE.source === 'upload' ? '专属文件' : '工作区',
             SIG_CACHE.studentCount,
             SIG_CACHE.baselineExamCount,
-            SIG_CACHE.teacherReady ? '已加载' : '未加载',
+            SIG_CACHE.teacherStatusText || (SIG_CACHE.teacherReady ? '已加载' : '未加载'),
             SIG_toNumber(SIG_CACHE.thresholdMeta.highLine, 0),
             SIG_toNumber(SIG_CACHE.thresholdMeta.stableLine, 0)
         ]
     ];
     const classData = [['班级', '实考', '均分', '校内高水平率', '校内稳态率', '诊断分']]
         .concat(SIG_CACHE.classRows.map((row) => [row.className, row.count, row.avg.toFixed(2), (row.highRate * 100).toFixed(2), (row.stableRate * 100).toFixed(2), row.score.toFixed(2)]));
-    const teacherData = [['教师', '学科', '公平绩效', '转化分', '共同样本/稳定', '换老师保护']]
-        .concat(SIG_CACHE.teacherRows.map((row) => [row.teacherName, row.subjectName, row.fairScore.toFixed(2), row.conversionScore.toFixed(2), row.sampleText, row.protectionText]));
+    const teacherData = [['教师', '学科', '班级', '公平绩效', '转化分', '共同样本/稳定', '换老师保护']]
+        .concat(SIG_CACHE.teacherRows.map((row) => [row.teacherName, row.subjectName, row.classesText || '', row.fairScore.toFixed(2), row.conversionScore.toFixed(2), row.sampleText, row.protectionText]));
+    const baselineData = [['考试快照', '生成时间', '可比样本', '记录数', '学科数']]
+        .concat((SIG_CACHE.baselineSummary || []).map((row) => [row.examLabel, row.createdAtText, `${row.matchedCount} / ${(SIG_toNumber(row.matchedRate, 0) * 100).toFixed(0)}%`, row.sampleCount, row.subjectCount]));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryData), '校内摘要');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(classData), '班级执行表');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(teacherData), '教师公平快览');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(baselineData), '历次基线');
     XLSX.writeFile(wb, `${SIG_CACHE.schoolName || '本校'}_校内成绩分析.xlsx`);
 }
 
@@ -29070,9 +29259,36 @@ function applyUserCohortPreference() {
     showCohortPicker();
 }
 
+function resolveMaskCohortYear() {
+    const inputYear = parseYearFromInput('entry-cohort-year');
+    if (inputYear && inputYear >= 2000) return String(inputYear);
+
+    const current = String(CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
+    if (/^\d{4}$/.test(current)) return current;
+
+    const knownIds = (typeof CohortManager !== 'undefined' && Array.isArray(CohortManager.list))
+        ? CohortManager.list.map(item => String(item?.id || '').trim()).filter(id => /^\d{4}$/.test(id))
+        : [];
+    if (knownIds.length) return knownIds[0];
+
+    const inferred = inferCohortIdFromValue(localStorage.getItem('CURRENT_PROJECT_KEY'))
+        || inferCohortIdFromValue(localStorage.getItem('CURRENT_EXAM_ID'));
+    return /^\d{4}$/.test(String(inferred || '').trim()) ? String(inferred).trim() : '';
+}
+
+function prefillMaskCohortYear() {
+    const input = document.getElementById('entry-cohort-year');
+    if (!input) return '';
+    if (String(input.value || '').trim()) return String(input.value || '').trim();
+    const resolved = resolveMaskCohortYear();
+    if (resolved) input.value = resolved;
+    return String(input.value || '').trim();
+}
+
 function showCohortPicker() {
     const mask = document.getElementById('mode-mask');
     const app = document.getElementById('app');
+    prefillMaskCohortYear();
     if (mask) mask.style.display = 'flex';
     if (app) app.classList.add('hidden');
 }
@@ -29245,7 +29461,7 @@ const CohortManager = {
 };
 
 function enterCohortFromMask() {
-    const year = parseYearFromInput('entry-cohort-year');
+    const year = parseInt(resolveMaskCohortYear(), 10);
     const startGrade = 6;
     if (!year || year < 2000) return alert('请输入有效的入学年份');
     CohortManager.addCohort({ year, startGrade });

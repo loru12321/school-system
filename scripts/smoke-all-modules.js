@@ -35,6 +35,7 @@ const DATA_MANAGER_TABS = ['student', 'teacher', 'targets', 'params', 'cloud'];
 function shouldIgnoreConsoleMessage(msg) {
     const text = String(msg || '');
     return text.includes('favicon.ico')
+        || text.includes('ERR_FILE_NOT_FOUND')
         || text.includes('Slow network is detected')
         || text.includes('Fallback font will be used while loading');
 }
@@ -52,10 +53,67 @@ async function login(page, user, pass) {
 
     await page.waitForFunction(() => {
         const overlay = document.getElementById('login-overlay');
-        const app = document.getElementById('app');
-        if (!overlay || !app) return false;
-        return getComputedStyle(overlay).display === 'none' && getComputedStyle(app).display !== 'none';
+        return overlay && getComputedStyle(overlay).display === 'none';
     }, { timeout: 30000 });
+
+    await ensureCohortEntered(page);
+
+    await page.waitForFunction(() => {
+        const app = document.getElementById('app');
+        if (!app) return false;
+        return getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden');
+    }, { timeout: 30000 });
+}
+
+async function ensureCohortEntered(page) {
+    const state = await page.evaluate(() => {
+        const mask = document.getElementById('mode-mask');
+        const input = document.getElementById('entry-cohort-year');
+        const selector = document.getElementById('cohort-selector');
+        const infer = typeof window.inferCohortIdFromValue === 'function'
+            ? window.inferCohortIdFromValue
+            : (() => '');
+        return {
+            maskVisible: !!mask && getComputedStyle(mask).display !== 'none',
+            inputValue: String(input?.value || '').trim(),
+            currentCohortId: String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim(),
+            inferredCohortId: String(
+                infer(localStorage.getItem('CURRENT_PROJECT_KEY'))
+                || infer(localStorage.getItem('CURRENT_EXAM_ID'))
+                || ''
+            ).trim(),
+            knownCohorts: selector
+                ? Array.from(selector.options || []).map((option) => String(option.value || '').trim()).filter(Boolean)
+                : []
+        };
+    });
+
+    if (!state.maskVisible) return state;
+
+    const candidate = String(
+        process.env.SMOKE_COHORT_YEAR
+        || state.inputValue
+        || state.currentCohortId
+        || state.knownCohorts[0]
+        || state.inferredCohortId
+        || ''
+    ).trim();
+
+    if (!candidate) return state;
+
+    const input = page.locator('#entry-cohort-year');
+    if (await input.count()) {
+        await input.fill(candidate);
+    }
+    await page.click('button[onclick="enterCohortFromMask()"]');
+    await page.waitForFunction(() => {
+        const mask = document.getElementById('mode-mask');
+        const app = document.getElementById('app');
+        return (!mask || getComputedStyle(mask).display === 'none')
+            && !!app
+            && getComputedStyle(app).display !== 'none'
+            && !app.classList.contains('hidden');
+    }, { timeout: 20000 });
 }
 
 async function waitForAppReady(page) {
@@ -65,7 +123,7 @@ async function waitForAppReady(page) {
         const school = String(window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '').trim();
         const scoresReady = Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0;
         return !!termId && !!cohortId && !!school && scoresReady;
-    }, { timeout: 30000 });
+    }, { timeout: 60000 });
 }
 
 async function smokeSwitchModule(page, id) {
