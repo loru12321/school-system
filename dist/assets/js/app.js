@@ -498,6 +498,37 @@ const EdgeGateway = {
     },
     deleteVersion: async function (id) {
         return await this.request('version.delete', { id: String(id || '').trim() });
+    },
+    searchAccounts: async function (keyword, payload = {}) {
+        return await this.request('account.search', Object.assign({
+            keyword: String(keyword || '').trim()
+        }, payload || {}));
+    },
+    updateAccount: async function (payload = {}) {
+        return await this.request('account.update', payload || {});
+    },
+    resetAccountPassword: async function (username, newPassword) {
+        return await this.request('account.reset_password', {
+            username: String(username || '').trim(),
+            new_password: String(newPassword || '').trim()
+        });
+    },
+    changeOwnPassword: async function (oldPassword, newPassword) {
+        return await this.request('account.change_password', {
+            old_password: String(oldPassword || '').trim(),
+            new_password: String(newPassword || '').trim()
+        });
+    },
+    exportAccounts: async function () {
+        return await this.request('account.export', {});
+    },
+    upsertAccounts: async function (rows) {
+        return await this.request('account.upsert_many', {
+            rows: Array.isArray(rows) ? rows : []
+        });
+    },
+    deleteManagedAccounts: async function () {
+        return await this.request('account.delete_non_admin', {});
     }
 };
 
@@ -654,44 +685,76 @@ const Auth = {
 
         if (!user || !pass) return UI.toast('请输入账号和密码', 'error');
 
-        // 🔴 关键修复：如果 sbClient 未初始化，先尝试初始化
-        if (!sbClient && typeof window.initSupabase === 'function') {
-            window.initSupabase();
-        }
-        if (!sbClient) {
-            alert("❌ 系统连接失败！\n\n云端数据库 (Supabase) 尚未加载完毕。\n\n可能原因：\n1. 网络连接不稳定\n2. CDN 资源加载超时\n\n请刷新页面后重试。");
-            return;
-        }
-
         UI.loading(true, "正在验证身份...");
 
         try {
-            // 1. 查询数据库 (使用新变量 sbClient)
-            // 🔴 改动点：使用 .maybeSingle() 代替 .single()
-            const { data, error } = await sbClient
-                .from('system_users')
-                .select('*')
-                .eq('username', user)
-                .eq('password', pass) // 简单明文匹配
-                .maybeSingle();
+            let data = null;
+            let gatewayError = null;
+            const shouldFallbackToDirect = (message) => {
+                const text = String(message || '').trim();
+                if (!text) return true;
+                return text.includes('EDGE_GATEWAY_NOT_CONFIGURED')
+                    || text.includes('EDGE_GATEWAY_REQUEST_FAILED')
+                    || text.includes('EDGE_GATEWAY_HTTP_404')
+                    || text.includes('Failed to fetch')
+                    || text.includes('NetworkError')
+                    || text.includes('function not found');
+            };
+
+            if (window.EdgeGateway && typeof EdgeGateway.login === 'function' && EdgeGateway.hasGatewayConfig()) {
+                try {
+                    const gatewayRes = await EdgeGateway.login(user, pass, inputClass);
+                    data = gatewayRes?.user || null;
+                } catch (error) {
+                    gatewayError = error instanceof Error ? error : new Error(String(error));
+                }
+            }
+
+            if (!data && shouldFallbackToDirect(gatewayError?.message)) {
+                if (!sbClient && typeof window.initSupabase === 'function') {
+                    window.initSupabase();
+                }
+                if (!sbClient) {
+                    UI.loading(false);
+                    alert("❌ 系统连接失败！\n\n网关暂不可用，且云端数据库尚未加载完毕。\n\n请稍后刷新页面重试。");
+                    return;
+                }
+                const directRes = await sbClient
+                    .from('system_users')
+                    .select('*')
+                    .eq('username', user)
+                    .eq('password', pass)
+                    .maybeSingle();
+                if (directRes.error) {
+                    UI.loading(false);
+                    console.error("Database Login Error:", directRes.error);
+                    return alert("系统连接错误：" + directRes.error.message);
+                }
+                data = directRes.data || null;
+            }
 
             UI.loading(false);
 
-            // 2. 检查是否有系统级错误
-            if (error) {
-                console.error("Database Login Error:", error);
-                return alert("系统连接错误：" + error.message);
-            }
-
-            // 3. 检查是否找到了用户
             if (!data) {
+                if (gatewayError && !shouldFallbackToDirect(gatewayError?.message)) {
+                    const message = String(gatewayError.message || '').trim();
+                    if (message.includes('class_name mismatch')) {
+                        return alert(`❌ 班级不匹配！\n\n您输入的班级：${inputClass || '未填写'}\n请核对后重试。`);
+                    }
+                    if (message.includes('Invalid username or password')) {
+                        return alert("❌ 登录失败！\n\n可能原因：\n1. 账号或密码错误\n2. 管理员尚未将账号同步到云端");
+                    }
+                    return alert("❌ 登录失败：" + message);
+                }
                 return alert("❌ 登录失败！\n\n可能原因：\n1. 账号或密码错误\n2. 管理员尚未将账号【同步到云端】");
             }
 
             /* 👇👇👇 🟢 新增代码：家长角色强制校验班级 🟢 👇👇👇 */
-            if (data.role === 'parent') {
+            if (data.role === 'parent' || data.role === 'class_teacher') {
                 if (!inputClass) {
-                    return alert("❌ 登录失败：家长/学生必须输入【班级】才能登录。");
+                    if (data.role === 'parent') {
+                        return alert("❌ 登录失败：家长/学生必须输入【班级】才能登录。");
+                    }
                 }
 
                 // 对比输入的班级和数据库存的班级 (去除空格后比较，防止 '701 ' 和 '701' 不匹配)
@@ -699,7 +762,7 @@ const Auth = {
                 const dbClass = (data.class_name || "").toString().replace(/\s+/g, "");
                 const userClass = inputClass.toString().replace(/\s+/g, "");
 
-                if (dbClass !== userClass) {
+                if (userClass && dbClass !== userClass) {
                     return alert(`❌ 班级不匹配！\n\n您输入的班级：${inputClass}\n系统记录的班级：${data.class_name || '未录入'}\n\n请核对后重试。`);
                 }
             }
@@ -707,7 +770,7 @@ const Auth = {
 
             // 4. 登录成功，构建用户对象
             const matchedUser = {
-                name: data.username,
+                name: data.username || data.name,
                 role: data.role, // 主角色（兼容）
                 roles: data.roles || [data.role], // 🆕 支持多角色数组
                 school: data.school,
@@ -723,7 +786,7 @@ const Auth = {
             if (matchedUser.roles) {
                 sessionStorage.setItem('CURRENT_ROLES', JSON.stringify(matchedUser.roles));
             }
-            if (window.EdgeGateway && typeof EdgeGateway.login === 'function') {
+            if ((!window.EdgeGateway || !EdgeGateway.getToken()) && window.EdgeGateway && typeof EdgeGateway.login === 'function') {
                 const gatewayClassName = (matchedUser.role === 'parent' || matchedUser.role === 'class_teacher') ? inputClass : '';
                 EdgeGateway.login(user, pass, gatewayClassName).catch(err => {
                     console.warn('[EdgeGateway] login skipped:', err?.message || err);
@@ -1388,7 +1451,11 @@ const Auth = {
             return alert("❌ 请填写【级部/年级】(例如: 7)");
         }
 
-        UI.loading(true, "正在写入数据库...");
+        if (!window.EdgeGateway || typeof EdgeGateway.upsertAccounts !== 'function') {
+            return alert("❌ 账号网关未就绪，请稍后重试。");
+        }
+
+        UI.loading(true, "正在写入账号库...");
 
         const newUserData = {
             username: username,
@@ -1398,16 +1465,18 @@ const Auth = {
             class_name: className // 这是一个复用字段：对家长/班主任是班级，对级部主任是年级
         };
 
-        // 执行插入 (使用 upsert 以便支持“更新”操作，即覆盖旧账号)
-        const { error } = await sbClient
-            .from('system_users')
-            .upsert(newUserData, { onConflict: 'username' });
+        let error = null;
+        try {
+            await EdgeGateway.upsertAccounts([newUserData]);
+        } catch (e) {
+            error = e;
+        }
 
         UI.loading(false);
 
         if (error) {
             console.error(error);
-            alert("❌ 操作失败：" + error.message);
+            alert("❌ 操作失败：" + (error.message || error));
         } else {
             UI.toast(`✅ 账号 [${username}] 已添加/更新成功！`, "success");
             // 清空姓名输入框，方便继续添加
@@ -1422,7 +1491,9 @@ const Auth = {
     // 🛠️ 管理员工具：批量同步本地生成的账号到云端 (V4 智能容错版)
     // 特性：自动去重 + 失败自动降级为单条上传 + 精确报错
     syncBatchToCloud: async function () {
-        if (!sbClient) return alert("❌ 云端数据库连接失败。");
+        if (!window.EdgeGateway || typeof EdgeGateway.upsertAccounts !== 'function') {
+            return alert("❌ 账号网关未就绪，请稍后重试。");
+        }
 
         const parents = this.db.parents || [];
         const teachers = this.db.teachers || [];
@@ -1509,14 +1580,14 @@ const Auth = {
         const uploadOneByOne = async (items) => {
             let ok = 0;
             for (let item of items) {
-                const { error } = await sbClient.from('system_users').upsert(item, { onConflict: 'username' });
-                if (error) {
-                    console.warn(`❌ 单条写入失败 [${item.username}]:`, error.message);
-                    failCount++;
-                    errorDetails.push(`${item.username}: ${error.message}`);
-                } else {
+                try {
+                    await EdgeGateway.upsertAccounts([item]);
                     ok++;
                     successCount++;
+                } catch (error) {
+                    console.warn(`❌ 单条写入失败 [${item.username}]:`, error?.message || error);
+                    failCount++;
+                    errorDetails.push(`${item.username}: ${error?.message || error}`);
                 }
             }
             return ok;
@@ -1527,16 +1598,14 @@ const Auth = {
                 const chunk = batchData.slice(i, i + BATCH_SIZE);
 
                 // 1. 尝试批量写入
-                const { error } = await sbClient.from('system_users').upsert(chunk, { onConflict: 'username' });
-
                 const pct = Math.round(((i + chunk.length) / batchData.length) * 100);
-
-                if (error) {
+                try {
+                    await EdgeGateway.upsertAccounts(chunk);
+                    successCount += chunk.length;
+                } catch (error) {
                     console.warn(`⚠️ 批次 ${Math.ceil(i / BATCH_SIZE) + 1} 报错 (HTTP 500/409)，自动降级为单条上传模式...`);
                     // 2. 批量失败，自动降级为单条循环
                     await uploadOneByOne(chunk);
-                } else {
-                    successCount += chunk.length;
                 }
 
                 UI.loading(true, `☁️ 同步中... ${pct}% (成功:${successCount} / 失败:${failCount})`);
@@ -1564,7 +1633,9 @@ const Auth = {
 
     // 🛠️ 管理员工具：批量删除云端账号 (保留管理员)
     deleteCloudAccounts: async function () {
-        if (!sbClient) return alert("❌ 云端数据库连接失败。");
+        if (!window.EdgeGateway || typeof EdgeGateway.deleteManagedAccounts !== 'function') {
+            return alert("❌ 账号网关未就绪，请稍后重试。");
+        }
 
         // 1. 第一重确认
         if (!confirm("⚠️【高风险操作】⚠️\n\n您确定要清空云端数据库中的所有【家长】和【教师】账号吗？\n\n注意：\n1. 此操作不可撤销！\n2. 管理员账号会被保留，不会被删除。\n3. 删除后用户将无法登录，直到您再次同步。")) {
@@ -1582,17 +1653,9 @@ const Auth = {
         try {
             // 执行删除操作
             // 逻辑：删除所有 role 不等于 'admin' 和 'director' 的用户
-            const { error, count } = await sbClient
-                .from('system_users')
-                .delete({ count: 'exact' }) // 请求返回删除的数量
-                .neq('role', 'admin')       // 保护管理员
-                .neq('role', 'director');   // 保护教务主任
+            const { count } = await EdgeGateway.deleteManagedAccounts();
 
             UI.loading(false);
-
-            if (error) {
-                throw error;
-            }
 
             alert(`✅ 清理完成！\n共删除了 ${count !== null ? count : '若干'} 个云端账号。\n\n现在您可以重新生成并同步新名单了。`);
 
@@ -1607,28 +1670,23 @@ const Auth = {
     },
 
     exportAllCloudAccounts: async function () {
-        if (!sbClient) return alert("❌ 云端数据库未连接，无法导出。");
+        if (!window.EdgeGateway || typeof EdgeGateway.exportAccounts !== 'function') {
+            return alert("❌ 账号网关未就绪，无法导出。");
+        }
 
         if (!confirm("⚠️ 准备从云端下载所有账号数据。\n\n这将包含数据库中存储的：\n1. 管理员\n2. 教师/班主任/主任\n3. 家长/学生\n\n确定要导出吗？")) return;
 
         UI.loading(true, "正在从云端拉取所有账号...");
 
         try {
-            // 1. 从 Supabase 获取所有用户 (限制10000条，一般够用，不够需分页)
-            const { data, error } = await sbClient
-                .from('system_users')
-                .select('*')
-                .order('school', { ascending: true }) // 按学校排序
-                .order('role', { ascending: true });  // 再按角色排序
-
-            if (error) throw error;
+            const { records: data } = await EdgeGateway.exportAccounts();
 
             if (!data || data.length === 0) {
                 throw new Error("云端数据库为空，没有账号可导出。");
             }
 
             // 2. 准备 Excel 数据
-            const headers = ['角色', '学校', '班级/范围', '账号/姓名', '密码 (如可见)'];
+            const headers = ['角色', '学校', '班级/范围', '账号/姓名', '密码状态'];
             const excelData = [headers];
 
             // 角色名称映射字典
@@ -1648,7 +1706,7 @@ const Auth = {
                     u.school || '-',       // 学校
                     u.class_name || '-',   // 班级
                     u.username,            // 账号
-                    u.password             // 密码
+                    u.password_display || '未设置'
                 ]);
             });
 
@@ -2973,67 +3031,19 @@ const AccountManager = {
 
         const user = Auth.currentUser;
         if (!user) return;
+        if (!window.EdgeGateway || typeof EdgeGateway.searchAccounts !== 'function') {
+            return alert("❌ 账号网关未就绪，请稍后重试。");
+        }
 
         UI.loading(true, "正在搜索账号...");
-
-        // --- A. 构建基础查询 ---
-        let query = sbClient
-            .from('system_users')
-            .select('*')
-            .ilike('username', `%${keyword}%`) // 模糊匹配用户名
-            .limit(50); // 限制返回条数，防止数据量过大
-
-        // --- B. 数据库级初步过滤 (Role-Based Filter) ---
-
-        // 1. 管理员 (admin): 无限制，查所有
-        if (user.role === 'admin') {
-            // No filter
+        try {
+            const { records } = await EdgeGateway.searchAccounts(keyword, { limit: 50 });
+            this.renderTable(records || []);
+        } catch (error) {
+            alert("查询失败: " + (error?.message || error));
+        } finally {
+            UI.loading(false);
         }
-
-        // 2. 教务主任 (director): 限制本校
-        else if (user.role === 'director') {
-            query = query.eq('school', user.school);
-        }
-
-        // 3. 级部主任 (grade_director): 限制本校 (后续在内存中细分)
-        else if (user.role === 'grade_director') {
-            query = query.eq('school', user.school);
-        }
-
-        // 4. 班主任 (class_teacher): 限制本校 + 本班 + 仅家长
-        else if (user.role === 'class_teacher') {
-            query = query
-                .eq('school', user.school)
-                .eq('class_name', user.class) // user.class 如 "701"
-                .eq('role', 'parent'); // 只能管家长
-        }
-
-        // 执行查询
-        const { data, error } = await query;
-
-        UI.loading(false);
-
-        if (error) {
-            return alert("查询失败: " + error.message);
-        }
-
-        // --- C. 内存级二次过滤 (处理复杂逻辑) ---
-        let filteredData = data;
-
-        // 级部主任特殊逻辑：可以管【教师】 OR 【本年级家长】
-        if (user.role === 'grade_director') {
-            const gradePrefix = String(user.class); // 如 "7"
-            filteredData = data.filter(u => {
-                // 允许管理本校所有教师
-                if (u.role === 'teacher') return true;
-                // 允许管理本年级家长 (班级以 "7" 开头)
-                if (u.role === 'parent' && String(u.class_name).startsWith(gradePrefix)) return true;
-                // 其他情况 (如别的年级家长、管理员账号) 过滤掉
-                return false;
-            });
-        }
-
-        this.renderTable(filteredData);
     },
 
     // 3. 渲染结果表格 (已添加“修改信息”按钮)
@@ -3077,7 +3087,7 @@ const AccountManager = {
                         <td style="font-weight:bold;">${u.username}</td>
                         <td><span class="badge" style="background:#e0f2fe; color:#0369a1;">${roleName}</span></td>
                         <td>${u.class_name || '-'}</td>
-                        <td style="font-family:monospace; color:#666;">${u.password}</td>
+                        <td style="font-family:monospace; color:#666;">${u.password_display || '未设置'}</td>
                         <td>
                             <!-- 🟢 新增：修改信息按钮 -->
                             <button class="btn btn-sm btn-purple" ${disableAttr} style="padding:2px 6px; font-size:12px; margin-right:5px; ${cursorStyle}" 
@@ -3144,28 +3154,28 @@ const AccountManager = {
             return Swal.fire('错误', '修改为家长或班主任时，【班级】不能为空！', 'error');
         }
 
+        if (!window.EdgeGateway || typeof EdgeGateway.updateAccount !== 'function') {
+            return alert("❌ 账号网关未就绪，请稍后重试。");
+        }
+
         UI.loading(true, "正在更新云端数据...");
 
-        // 提交到 Supabase
-        const { error } = await sbClient
-            .from('system_users')
-            .update({
+        try {
+            await EdgeGateway.updateAccount({
+                username,
                 role: formValues.role,
                 class_name: formValues.class_name
-            })
-            .eq('username', username);
-
-        UI.loading(false);
-
-        if (error) {
-            alert("❌ 更新失败: " + error.message);
-        } else {
+            });
+            UI.loading(false);
             UI.toast(`✅ 账号 [${username}] 信息已更新`, "success");
             // 刷新列表
             this.search();
 
             // 记录日志
             if (window.Logger) Logger.log('修改账号信息', `修改了 ${username} 的角色为 ${formValues.role}, 范围为 ${formValues.class_name}`);
+        } catch (error) {
+            UI.loading(false);
+            alert("❌ 更新失败: " + (error?.message || error));
         }
     },
 
@@ -3174,29 +3184,27 @@ const AccountManager = {
         const newPass = prompt(`🔐 正在修改账号 [${username}] 的密码\n\n请输入新密码 (留空则取消):`);
         if (newPass === null) return;
         if (!newPass.trim()) return alert("密码不能为空");
-        const ok = confirm(`⚠️ 确认将账号 [${username}] 的密码修改为：\n${newPass}\n\n此操作将立即生效。是否继续？`);
+        const ok = confirm(`⚠️ 确认重置账号 [${username}] 的密码？\n\n新密码将立即生效。是否继续？`);
         if (!ok) return;
+        if (!window.EdgeGateway || typeof EdgeGateway.resetAccountPassword !== 'function') {
+            return alert("❌ 账号网关未就绪，请稍后重试。");
+        }
 
         UI.loading(true, "正在更新密码...");
 
-        // 调用 Supabase 更新
-        const { error } = await sbClient
-            .from('system_users')
-            .update({ password: newPass.trim() })
-            .eq('username', username);
-
-        UI.loading(false);
-
-        if (error) {
-            alert("❌ 修改失败: " + error.message);
-        } else {
-            UI.toast(`✅ 账号 [${username}] 密码已修改为 ${newPass}`, "success");
+        try {
+            await EdgeGateway.resetAccountPassword(username, newPass.trim());
+            UI.loading(false);
+            UI.toast(`✅ 账号 [${username}] 密码已更新`, "success");
 
             // 刷新列表显示新密码
             this.search();
 
             // 记录到操作日志 (如果有 Logger 模块)
             if (window.Logger) Logger.log('修改密码', `修改了用户 ${username} 的密码`);
+        } catch (error) {
+            UI.loading(false);
+            alert("❌ 修改失败: " + (error?.message || error));
         }
     }
 };

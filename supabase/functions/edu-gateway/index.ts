@@ -174,6 +174,108 @@ function rectifyVisible(session, row) {
   const schoolName = String(row.school_name || "");
   return isAdmin(session) || sameDirectorSchool(session, schoolName) || sameGrade(session, schoolName, String(row.grade_name || ""), String(row.class_name || "")) || sameClass(session, schoolName, String(row.class_name || "")) || sameTeacher(session, schoolName, String(row.teacher_name || "")) || taskParticipant(session, String(row.owner_name || ""), row.assist_users, schoolName);
 }
+function normalizeAccountText(value) {
+  return String(value || "").trim();
+}
+function sanitizeAccountRecord(row) {
+  const passwordPresent = !!normalizeAccountText(row?.password);
+  return {
+    username: normalizeAccountText(row?.username),
+    role: normalizeAccountText(row?.role) || "guest",
+    roles: normalizeRoles(row || {}),
+    school: normalizeAccountText(row?.school),
+    class_name: normalizeAccountText(row?.class_name),
+    teacher_name: normalizeAccountText(row?.teacher_name || row?.display_name || row?.name || row?.username),
+    has_password: passwordPresent,
+    password_display: passwordPresent ? "已设置(不显示明文)" : "未设置"
+  };
+}
+function canSearchAccounts(session) {
+  return hasAnyRole(session, [
+    "admin",
+    "director",
+    "grade_director",
+    "class_teacher"
+  ]);
+}
+function canBulkManageAccounts(session) {
+  return hasAnyRole(session, [
+    "admin",
+    "director"
+  ]);
+}
+function accountVisible(session, row) {
+  const role = normalizeAccountText(row?.role) || "guest";
+  const school = normalizeAccountText(row?.school);
+  const className = normalizeAccountText(row?.class_name);
+  if (isAdmin(session)) return true;
+  if (sameDirectorSchool(session, school)) return true;
+  if (hasRole(session, "grade_director") && school === normalizeAccountText(session.school)) {
+    const gradePrefix = normalizeAccountText(session.class_name || session.grade_name);
+    if (!gradePrefix) return false;
+    if (role === "teacher") return true;
+    return role === "parent" && className.startsWith(gradePrefix);
+  }
+  if (hasRole(session, "class_teacher") && school === normalizeAccountText(session.school)) {
+    return role === "parent" && className === normalizeAccountText(session.class_name);
+  }
+  return false;
+}
+function accountEditable(session, row) {
+  if (!accountVisible(session, row)) return false;
+  const role = normalizeAccountText(row?.role);
+  const username = normalizeAccountText(row?.username);
+  if (isAdmin(session)) {
+    return role !== "admin" || username === normalizeAccountText(session.username);
+  }
+  if (hasRole(session, "director")) {
+    return role !== "admin" && role !== "director";
+  }
+  if (hasRole(session, "grade_director")) {
+    return role === "parent" || role === "teacher";
+  }
+  if (hasRole(session, "class_teacher")) {
+    return role === "parent";
+  }
+  return false;
+}
+function normalizeAccountUpsertRow(input, session) {
+  const role = normalizeAccountText(input?.role) || "teacher";
+  const username = normalizeAccountText(input?.username);
+  const password = normalizeAccountText(input?.password);
+  let school = normalizeAccountText(input?.school);
+  let className = normalizeAccountText(input?.class_name);
+  if (role === "teacher" && !className) className = "教师";
+  if (role !== "admin" && !school && !isAdmin(session)) {
+    school = normalizeAccountText(session.school);
+  }
+  if (role === "admin") school = "系统";
+  const roles = Array.isArray(input?.roles) && input.roles.length
+    ? Array.from(new Set(input.roles.map((item) => normalizeAccountText(item)).filter(Boolean)))
+    : [
+      role
+    ];
+  return {
+    username,
+    password,
+    role,
+    roles,
+    school,
+    class_name: className,
+    teacher_name: normalizeAccountText(input?.teacher_name || input?.display_name || input?.name || input?.username) || username
+  };
+}
+function validateAccountUpsertRow(session, row) {
+  if (!row.username || !row.password || !row.role) return "username、password、role 不能为空";
+  if (row.role !== "admin" && !row.school) return "school 不能为空";
+  if ((row.role === "parent" || row.role === "class_teacher") && !row.class_name) return "班级不能为空";
+  if (row.role === "grade_director" && !row.class_name) return "级部/年级不能为空";
+  if (hasRole(session, "director")) {
+    if (row.role === "admin" || row.role === "director") return "教务主任不能创建或覆盖管理员/主任账号";
+    if (normalizeAccountText(row.school) !== normalizeAccountText(session.school)) return "教务主任只能管理本校账号";
+  }
+  return "";
+}
 function requireEnv() {
   if (!supabaseUrl || !serviceRoleKey || !sessionSecret) {
     throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY or APP_SESSION_SECRET");
@@ -425,6 +527,115 @@ async function handleVersionDelete(session, payload) {
     }
   });
 }
+async function handleAccountSearch(session, payload) {
+  if (!canSearchAccounts(session)) return forbidden("No permission to search accounts");
+  const keyword = normalizeAccountText(payload.keyword);
+  const limit = Math.max(1, Math.min(Number(payload.limit ?? 50) || 50, 100));
+  if (!keyword) return badRequest("keyword is required");
+  let query = admin.from("system_users").select("*").ilike("username", `%${keyword}%`).limit(limit);
+  if (!isAdmin(session)) {
+    query = query.eq("school", normalizeAccountText(session.school));
+  }
+  const { data, error } = await query;
+  if (error) return serverError("system_users search failed", { detail: error.message });
+  const records = (data ?? []).filter((row) => accountVisible(session, row)).map((row) => sanitizeAccountRecord(row));
+  return json(200, { ok: true, records });
+}
+async function handleAccountUpdate(session, payload) {
+  if (!canSearchAccounts(session)) return forbidden("No permission to update accounts");
+  const username = normalizeAccountText(payload.username);
+  if (!username) return badRequest("username is required");
+  const { data: existing, error: findError } = await admin.from("system_users").select("*").eq("username", username).maybeSingle();
+  if (findError) return serverError("system_users lookup failed", { detail: findError.message });
+  if (!existing) return badRequest("account not found");
+  if (!accountEditable(session, existing)) return forbidden("Out of scope");
+
+  const nextRole = normalizeAccountText(payload.role) || normalizeAccountText(existing.role) || "teacher";
+  const nextClassName = normalizeAccountText(payload.class_name ?? existing.class_name);
+  if ((nextRole === "parent" || nextRole === "class_teacher") && !nextClassName) return badRequest("class_name is required");
+  if (nextRole === "grade_director" && !nextClassName) return badRequest("class_name is required");
+  if (!isAdmin(session) && (nextRole === "admin" || nextRole === "director")) {
+    return forbidden("Only admin can elevate account to admin/director");
+  }
+  if (normalizeAccountText(existing.role) === "admin" && normalizeAccountText(existing.username) === normalizeAccountText(session.username) && nextRole !== "admin") {
+    return forbidden("Cannot downgrade current admin account from browser");
+  }
+
+  const patch = {
+    role: nextRole,
+    roles: [nextRole],
+    class_name: nextRole === "teacher" && !nextClassName ? "教师" : nextClassName
+  };
+  const { data, error } = await admin.from("system_users").update(patch).eq("username", username).select("*").maybeSingle();
+  if (error) return serverError("system_users update failed", { detail: error.message });
+  return json(200, { ok: true, record: sanitizeAccountRecord(data) });
+}
+async function handleAccountResetPassword(session, payload) {
+  if (!canSearchAccounts(session)) return forbidden("No permission to reset accounts");
+  const username = normalizeAccountText(payload.username);
+  const newPassword = normalizeAccountText(payload.new_password);
+  if (!username || !newPassword) return badRequest("username and new_password are required");
+  if (newPassword.length < 6) return badRequest("new_password must be at least 6 characters");
+
+  const { data: existing, error: findError } = await admin.from("system_users").select("*").eq("username", username).maybeSingle();
+  if (findError) return serverError("system_users lookup failed", { detail: findError.message });
+  if (!existing) return badRequest("account not found");
+  if (!accountEditable(session, existing)) return forbidden("Out of scope");
+
+  const { data, error } = await admin.from("system_users").update({ password: newPassword }).eq("username", username).select("*").maybeSingle();
+  if (error) return serverError("system_users password reset failed", { detail: error.message });
+  return json(200, { ok: true, record: sanitizeAccountRecord(data) });
+}
+async function handleAccountChangePassword(session, payload) {
+  const oldPassword = normalizeAccountText(payload.old_password);
+  const newPassword = normalizeAccountText(payload.new_password);
+  if (!oldPassword || !newPassword) return badRequest("old_password and new_password are required");
+  if (newPassword.length < 6) return badRequest("new_password must be at least 6 characters");
+  if (oldPassword === newPassword) return badRequest("new_password must differ from old_password");
+
+  const { data: existing, error: findError } = await admin.from("system_users").select("*").eq("username", normalizeAccountText(session.username)).maybeSingle();
+  if (findError) return serverError("system_users lookup failed", { detail: findError.message });
+  if (!existing) return badRequest("current account not found");
+  if (normalizeAccountText(existing.password) !== oldPassword) return forbidden("old password mismatch");
+
+  const { data, error } = await admin.from("system_users").update({ password: newPassword }).eq("username", normalizeAccountText(session.username)).select("*").maybeSingle();
+  if (error) return serverError("system_users password update failed", { detail: error.message });
+  return json(200, { ok: true, record: sanitizeAccountRecord(data) });
+}
+async function handleAccountExport(session) {
+  if (!canBulkManageAccounts(session)) return forbidden("No permission to export accounts");
+  let query = admin.from("system_users").select("*").order("school", { ascending: true }).order("role", { ascending: true }).limit(10000);
+  if (!isAdmin(session)) {
+    query = query.eq("school", normalizeAccountText(session.school));
+  }
+  const { data, error } = await query;
+  if (error) return serverError("system_users export failed", { detail: error.message });
+  const records = (data ?? []).map((row) => sanitizeAccountRecord(row));
+  return json(200, { ok: true, records });
+}
+async function handleAccountUpsertMany(session, payload) {
+  if (!canBulkManageAccounts(session)) return forbidden("No permission to manage accounts");
+  const rows = Array.isArray(payload.rows) ? payload.rows : [payload];
+  const sanitizedRows = rows.map((row) => normalizeAccountUpsertRow(row, session));
+  for (let i = 0; i < sanitizedRows.length; i += 1) {
+    const reason = validateAccountUpsertRow(session, sanitizedRows[i]);
+    if (reason) return badRequest(`第 ${i + 1} 条账号数据无效: ${reason}`);
+  }
+  if (!sanitizedRows.length) return json(200, { ok: true, count: 0 });
+  const { error } = await admin.from("system_users").upsert(sanitizedRows, { onConflict: "username" });
+  if (error) return serverError("system_users upsert failed", { detail: error.message });
+  return json(200, { ok: true, count: sanitizedRows.length });
+}
+async function handleAccountDeleteNonAdmin(session) {
+  if (!canBulkManageAccounts(session)) return forbidden("No permission to delete accounts");
+  let query = admin.from("system_users").delete({ count: "exact" }).neq("role", "admin").neq("role", "director");
+  if (!isAdmin(session)) {
+    query = query.eq("school", normalizeAccountText(session.school));
+  }
+  const { error, count } = await query;
+  if (error) return serverError("system_users delete failed", { detail: error.message });
+  return json(200, { ok: true, count: Number(count || 0) });
+}
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
@@ -465,6 +676,20 @@ Deno.serve(async (req) => {
         return await handleVersionUpdate(session, payload);
       case "version.delete":
         return await handleVersionDelete(session, payload);
+      case "account.search":
+        return await handleAccountSearch(session, payload);
+      case "account.update":
+        return await handleAccountUpdate(session, payload);
+      case "account.reset_password":
+        return await handleAccountResetPassword(session, payload);
+      case "account.change_password":
+        return await handleAccountChangePassword(session, payload);
+      case "account.export":
+        return await handleAccountExport(session);
+      case "account.upsert_many":
+        return await handleAccountUpsertMany(session, payload);
+      case "account.delete_non_admin":
+        return await handleAccountDeleteNonAdmin(session);
       default:
         return badRequest(`Unsupported action: ${action}`);
     }
