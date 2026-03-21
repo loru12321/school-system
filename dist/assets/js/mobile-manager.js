@@ -865,6 +865,11 @@
         const container = document.getElementById('parent-view-container');
         if (!container || !isMobileViewport() || getCurrentRole() !== 'parent') return;
 
+        if (container.dataset.mobileParentBound !== '1') {
+            container.addEventListener('click', handleShellClick);
+            container.dataset.mobileParentBound = '1';
+        }
+
         const user = getCurrentUser();
         let header = container.querySelector('.mobile-parent-header');
         if (!header) {
