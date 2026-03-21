@@ -29,6 +29,7 @@ node_modules
 supabase/.temp/
 .tmp-*/
 tmp_*.png
+tmp-*.png
 node_modules
 node_modules
 node_modules

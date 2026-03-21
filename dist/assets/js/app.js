@@ -8263,10 +8263,12 @@ function tmBuildTeacherInsight(subjectFilter = '', teacherFilter = '') {
             const baselineAdjustment = Number(data?.baselineAdjustment || 0);
             const sampleStabilityRate = Number(data?.sampleStabilityRate || 0);
             const sampleShiftCount = Number(data?.sampleShiftCount || 0);
+            const teacherChangeProtected = !!data?.teacherChangeProtected;
+            const conversionScore = Number(data?.conversionScore || 50);
 
             if (lowRate >= 0.12) lowRiskTeachers.add(teacherName);
             if (passRate > 0 && passRate < 0.6) passRiskTeachers.add(teacherName);
-            if ((fairScore > 0 && fairScore < 60) || baselineAdjustment <= -6 || (sampleStabilityRate > 0 && sampleStabilityRate < 0.75 && sampleShiftCount >= 3)) scoreRiskTeachers.add(teacherName);
+            if ((fairScore > 0 && fairScore < 60) || baselineAdjustment <= -6 || teacherChangeProtected || conversionScore < 45 || (sampleStabilityRate > 0 && sampleStabilityRate < 0.75 && sampleShiftCount >= 3)) scoreRiskTeachers.add(teacherName);
 
             if (!subjectBuckets[subjectName]) {
                 subjectBuckets[subjectName] = {
@@ -8279,7 +8281,7 @@ function tmBuildTeacherInsight(subjectFilter = '', teacherFilter = '') {
             subjectBuckets[subjectName].count += 1;
             subjectBuckets[subjectName].totalLowRate += lowRate;
             subjectBuckets[subjectName].totalScore += fairScore;
-            if (lowRate >= 0.12 || fairScore < 60 || baselineAdjustment <= -6 || (passRate > 0 && passRate < 0.6) || (sampleStabilityRate > 0 && sampleStabilityRate < 0.75 && sampleShiftCount >= 3)) {
+            if (lowRate >= 0.12 || fairScore < 60 || baselineAdjustment <= -6 || teacherChangeProtected || conversionScore < 45 || (passRate > 0 && passRate < 0.6) || (sampleStabilityRate > 0 && sampleStabilityRate < 0.75 && sampleShiftCount >= 3)) {
                 subjectBuckets[subjectName].riskCount += 1;
             }
         });
@@ -9706,11 +9708,15 @@ function tmBuildTeacherRiskRows(subjectFilter = '', teacherFilter = '') {
             const baselineAdjustment = Number(data?.baselineAdjustment || 0);
             const sampleStabilityRate = Number(data?.sampleStabilityRate || 0);
             const sampleShiftCount = Number(data?.sampleShiftCount || 0);
+            const teacherChangeProtected = !!data?.teacherChangeProtected;
+            const conversionScore = Number(data?.conversionScore || 50);
             let riskScore = 0;
             if (lowRate >= 0.12) riskScore += 3;
             if (passRate > 0 && passRate < 0.6) riskScore += 2;
             if (fairScore > 0 && fairScore < 60) riskScore += 2;
             if (baselineAdjustment <= -6) riskScore += 2;
+            if (teacherChangeProtected) riskScore += 1;
+            if (conversionScore < 45) riskScore += 1;
             if (sampleStabilityRate > 0 && sampleStabilityRate < 0.75 && sampleShiftCount >= 3) riskScore += 1;
             if (!riskScore) return;
 
@@ -9724,6 +9730,8 @@ function tmBuildTeacherRiskRows(subjectFilter = '', teacherFilter = '') {
                 baselineAdjustment,
                 sampleStabilityRate,
                 sampleShiftCount,
+                teacherChangeProtected,
+                conversionScore,
                 riskScore
             });
         });
@@ -9744,7 +9752,7 @@ function tmBuildIssueTeacherCard(row) {
                 ${tmBuildStatusChip('教师风险', 'warn')}
             </div>
             <div class="tm-center-card-scope">${tmEscapeHtml(row.classes || '当前任课班级未识别')}</div>
-            <div class="tm-center-card-desc">低分率 ${(row.lowRate * 100).toFixed(1)}%，及格率 ${(row.passRate * 100).toFixed(1)}%，公平绩效 ${row.fairScore.toFixed(1)}，基线校正 ${row.baselineAdjustment >= 0 ? '+' : ''}${row.baselineAdjustment.toFixed(1)}，样本稳定 ${(row.sampleStabilityRate * 100).toFixed(0)}%${row.sampleShiftCount ? `（变动 ${row.sampleShiftCount} 人）` : ''}。</div>
+            <div class="tm-center-card-desc">低分率 ${(row.lowRate * 100).toFixed(1)}%，及格率 ${(row.passRate * 100).toFixed(1)}%，公平绩效 ${row.fairScore.toFixed(1)}，基线校正 ${row.baselineAdjustment >= 0 ? '+' : ''}${row.baselineAdjustment.toFixed(1)}，转化分 ${row.conversionScore.toFixed(1)}，样本稳定 ${(row.sampleStabilityRate * 100).toFixed(0)}%${row.sampleShiftCount ? `（变动 ${row.sampleShiftCount} 人）` : ''}${row.teacherChangeProtected ? '，已启用换老师保护' : ''}。</div>
             <div class="tm-center-card-actions">
                 <button type="button" class="btn btn-orange" data-tm-issue-teacher="${tmEscapeHtml(row.teacherName)}" data-tm-issue-subject="${tmEscapeHtml(row.subjectName)}">定位教师画像</button>
             </div>

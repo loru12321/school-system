@@ -8,7 +8,47 @@ $ErrorActionPreference = "Stop"
 
 Set-Location $PSScriptRoot
 
-git add .
+$trackedUpdatePaths = @(
+    "src",
+    "public",
+    "supabase",
+    "scripts",
+    "deploy.ps1",
+    "package.json",
+    "package-lock.json",
+    "vite.config.js",
+    "sync-public-assets.mjs",
+    "inline-scripts.mjs",
+    "lt.html",
+    "index.html",
+    "dist"
+)
+
+$explicitStagePaths = @(
+    "src",
+    "public",
+    "supabase",
+    "scripts",
+    "deploy.ps1",
+    "package.json",
+    "package-lock.json",
+    "vite.config.js",
+    "sync-public-assets.mjs",
+    "inline-scripts.mjs",
+    "lt.html",
+    "index.html"
+)
+
+git add -u -- $trackedUpdatePaths
+git add -- $explicitStagePaths
+
+if (Test-Path "dist") {
+    git add -f -- dist/index.html
+    if (Test-Path "dist/assets") {
+        git add -f -- dist/assets
+    }
+}
+
 $status = git status --porcelain
 
 if (-not $status) {
