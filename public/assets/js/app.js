@@ -12604,10 +12604,7 @@ function updateMarginalSchoolSelect() {
 function generateTeacherInputs() {
     if (!MY_SCHOOL) { alert('请先选择本校'); return; }
     const container = document.getElementById('teacherInputsContainer');
-    if (!container) {
-        console.warn('teacherInputsContainer 不存在，跳过生成教师输入区');
-        return;
-    }
+    if (!container) return;
     container.innerHTML = '';
     const mySchoolData = SCHOOLS[MY_SCHOOL]; if (!mySchoolData) return;
     const classes = [...new Set(mySchoolData.students.map(s => s.class))].sort((a, b) => { const [gradeA, classA] = a.split('.').map(Number); const [gradeB, classB] = b.split('.').map(Number); if (gradeA !== gradeB) return gradeA - gradeB; return classA - classB; });
