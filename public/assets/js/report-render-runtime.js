@@ -212,11 +212,25 @@ function renderSingleReportCardHTML(stu, mode) {
                 .report-action-card.tone-goal { background:linear-gradient(180deg, #ffffff 0%, #f5f3ff 100%); border-color:#ddd6fe; }
                 .report-action-title { font-size:14px; font-weight:800; color:#0f172a; margin-bottom:8px; }
                 .report-action-text { font-size:13px; color:#475569; line-height:1.8; }
+                .report-subject-board { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; margin:0 0 18px; }
+                .report-subject-item { border-radius:16px; padding:14px 16px; border:1px solid #e2e8f0; background:#fff; }
+                .report-subject-item.tone-strong { background:linear-gradient(180deg, #ffffff 0%, #effdf5 100%); border-color:#bbf7d0; }
+                .report-subject-item.tone-weak { background:linear-gradient(180deg, #ffffff 0%, #fff7ed 100%); border-color:#fdba74; }
+                .report-subject-item.tone-steady { background:linear-gradient(180deg, #ffffff 0%, #eff6ff 100%); border-color:#bfdbfe; }
+                .report-subject-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+                .report-subject-head strong { font-size:14px; color:#0f172a; }
+                .report-subject-head span { font-size:11px; font-weight:700; color:#64748b; }
+                .report-subject-meta { display:flex; gap:10px; flex-wrap:wrap; font-size:11px; color:#64748b; margin-bottom:10px; }
+                .report-progress-track { height:8px; border-radius:999px; background:#e2e8f0; overflow:hidden; }
+                .report-progress-bar { height:100%; border-radius:999px; }
+                .report-progress-bar.tone-strong { background:linear-gradient(90deg, #22c55e 0%, #16a34a 100%); }
+                .report-progress-bar.tone-weak { background:linear-gradient(90deg, #fb923c 0%, #ea580c 100%); }
+                .report-progress-bar.tone-steady { background:linear-gradient(90deg, #60a5fa 0%, #2563eb 100%); }
                 .report-reality-note { margin-top:12px; border-radius:18px; border:1px dashed #cbd5e1; padding:14px 16px; background:#f8fafc; }
                 .report-reality-title { font-size:12px; font-weight:800; color:#475569; margin-bottom:8px; }
                 .report-reality-list { margin:0; padding-left:18px; font-size:12px; color:#64748b; line-height:1.75; }
                 .report-reality-list li { margin-bottom:4px; }
-                @media (max-width: 768px) { .report-insight-grid, .report-action-grid { grid-template-columns:minmax(0, 1fr); } .report-insight-card, .report-action-card { padding:14px 16px; } }
+                @media (max-width: 768px) { .report-insight-grid, .report-action-grid, .report-subject-board { grid-template-columns:minmax(0, 1fr); } .report-insight-card, .report-action-card, .report-subject-item { padding:14px 16px; } }
                 @media print { .fluent-card { box-shadow: none; border: 1px solid #ccc; backdrop-filter: none; } }
             </style>
         `;
@@ -225,6 +239,7 @@ function renderSingleReportCardHTML(stu, mode) {
     const insightModel = buildStudentInsightModel(reportStu, reportExamHistory);
     const insightOverviewHtml = renderStudentInsightOverview(insightModel);
     const actionPlanHtml = renderStudentActionPlan(insightModel);
+    const subjectBoardHtml = renderStudentSubjectBoard(insightModel);
     const realityNoteHtml = renderStudentRealityNote(insightModel);
     const cloudCompareHintHtml = cloudHint ? `
         <div class="fluent-card" style="padding:10px 14px; margin-bottom:12px; background:#eef2ff; border:1px solid #c7d2fe; color:#3730a3;">
@@ -264,6 +279,7 @@ function renderSingleReportCardHTML(stu, mode) {
             <div class="fluent-header"><i class="ti ti-badge-4k" style="color:#2563eb;"></i><span class="fluent-title">成绩快照与真实定位</span></div>
             ${insightOverviewHtml}
             ${actionPlanHtml}
+            ${subjectBoardHtml}
             ${realityNoteHtml}
         </div>
         <div class="fluent-card" style="padding:0; overflow:hidden;">
@@ -2025,6 +2041,38 @@ function renderStudentActionPlan(model) {
                     <div class="report-action-text">${plan.detail}</div>
                 </div>
             `).join('')}
+        </div>
+    `;
+}
+
+function renderStudentSubjectBoard(model) {
+    const items = Array.isArray(model.subjectInsights) ? model.subjectInsights : [];
+    if (!items.length) return '';
+
+    return `
+        <div class="report-subject-board">
+            ${items.map(item => {
+                const percentile = item.percentile !== null ? Math.max(0, Math.min(100, item.percentile)) : 0;
+                const tone = item.zScore >= 0.8 ? 'strong' : item.zScore <= -0.8 ? 'weak' : 'steady';
+                const label = tone === 'strong' ? '优势科' : tone === 'weak' ? '优先补弱' : '保持稳定';
+                const zText = Number.isFinite(item.zScore) ? item.zScore.toFixed(2) : '-';
+                return `
+                    <div class="report-subject-item tone-${tone}">
+                        <div class="report-subject-head">
+                            <strong>${item.subject}</strong>
+                            <span>${label}</span>
+                        </div>
+                        <div class="report-subject-meta">
+                            <span>成绩 ${item.score}</span>
+                            <span>百分位 ${item.percentile !== null ? item.percentile.toFixed(0) + '%' : '-'}</span>
+                            <span>Z ${zText}</span>
+                        </div>
+                        <div class="report-progress-track">
+                            <div class="report-progress-bar tone-${tone}" style="width:${percentile}%;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
         </div>
     `;
 }
