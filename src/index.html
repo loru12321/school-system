@@ -61,8 +61,9 @@
     <!-- 🟢 [新增] 添加 jsPDF（PDF导出） -->
     <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" crossorigin="anonymous"
         onerror="this.onerror=null;this.src='https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'"></script>
-    <script src="./assets/js/cloud.js?v=20260321-localgrades-v4"></script>
-    <script src="./assets/js/cloud-workspace-runtime.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/auth-state-runtime.js?v=20260321-security-v5"></script>
+    <script src="./assets/js/cloud.js?v=20260321-security-v5"></script>
+    <script src="./assets/js/cloud-workspace-runtime.js?v=20260321-security-v5"></script>
 
     <!-- ================== 图标字体 (Tabler Icons) ================== -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
@@ -6283,8 +6284,11 @@
 
             // 1. 更新本地状态 (确保当前会话立即生效)
             if (typeof Auth !== 'undefined') {
-                Auth.db.admin.pass = '已设置(不显示明文)';
-                if (typeof persistLocalAuthDb === 'function') {
+                const maskedPassword = window.AuthState?.MASKED_PASSWORD_DISPLAY || '已设置(不显示明文)';
+                Auth.db.admin.pass = maskedPassword;
+                if (window.AuthState && typeof window.AuthState.persistLocalAuthDb === 'function') {
+                    Auth.db = window.AuthState.persistLocalAuthDb(Auth.db);
+                } else if (typeof persistLocalAuthDb === 'function') {
                     Auth.db = persistLocalAuthDb(Auth.db);
                 } else {
                     localStorage.setItem('SYS_USERS', JSON.stringify(Auth.db));
@@ -6321,7 +6325,7 @@
         // 1. 打开修改密码弹窗 (支持强制模式)
         function openUserPasswordModal(isForced = false) {
             // 获取当前用户
-            const user = JSON.parse(sessionStorage.getItem('CURRENT_USER'));
+            const user = window.AuthState?.getCurrentUser ? window.AuthState.getCurrentUser() : JSON.parse(sessionStorage.getItem('CURRENT_USER'));
             if (!user) return alert("未检测到登录用户，请刷新页面。");
 
             // 清空输入框
@@ -6356,7 +6360,7 @@
                 return alert("❌ 账号网关未连接，无法修改密码。");
             }
 
-            const user = JSON.parse(sessionStorage.getItem('CURRENT_USER'));
+            const user = window.AuthState?.getCurrentUser ? window.AuthState.getCurrentUser() : JSON.parse(sessionStorage.getItem('CURRENT_USER'));
             if (!user) return alert("未检测到登录用户，请刷新重试。");
 
             // 获取输入值
@@ -6392,7 +6396,7 @@
     </script>
 
     <!-- 核心逻辑脚本 -->
-    <script src="./assets/js/app.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/app.js?v=20260321-security-v5"></script>
     <script src="./assets/js/school-normalization-runtime.js?v=20260321-localgrades-v4"></script>
     <script src="./assets/js/compare-shared-runtime.js?v=20260321-localgrades-v4"></script>
     <script src="./assets/js/report-compare-runtime.js?v=20260321-localgrades-v4"></script>
@@ -6409,7 +6413,7 @@
     <script src="./assets/js/teacher-compare-cloud-runtime.js?v=20260321-localgrades-v4"></script>
     <script src="./assets/js/macro-compare-cloud-runtime.js?v=20260321-localgrades-v4"></script>
     <script src="./assets/js/data-manager-sql.js?v=20260321-localgrades-v4"></script>
-    <script src="./assets/js/mobile-manager.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/mobile-manager.js?v=20260321-security-v5"></script>
     
     <!-- ============ Phase 5: 全息教育大脑与元宇宙交互 ============ -->
     <!-- 全息学情 3D 建模引擎 (需要 Three.js) -->

@@ -152,7 +152,9 @@
         fetchCohortExamsToLocal: async function (cohortId, options = {}) {
             const cid = normalizeCohortId(cohortId || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
             if (!cid) return { success: false, message: '无法确定届别' };
-            const hasSessionUser = !!(sessionStorage.getItem('CURRENT_USER') || (window.Auth && Auth.currentUser));
+            const hasSessionUser = !!(window.AuthState && typeof window.AuthState.hasActiveSession === 'function'
+                ? window.AuthState.hasActiveSession(window.Auth && Auth.currentUser)
+                : (window.Auth && Auth.currentUser));
             if (!hasSessionUser && !options.force) {
                 return { success: false, skipped: true, message: '未登录，跳过自动拉取' };
             }
@@ -260,7 +262,9 @@
         },
 
         fetchAllCohortExams: async function (options = {}) {
-            const hasSessionUser = !!(sessionStorage.getItem('CURRENT_USER') || (window.Auth && Auth.currentUser));
+            const hasSessionUser = !!(window.AuthState && typeof window.AuthState.hasActiveSession === 'function'
+                ? window.AuthState.hasActiveSession(window.Auth && Auth.currentUser)
+                : (window.Auth && Auth.currentUser));
             if (!hasSessionUser && !options.force) {
                 return { success: false, skipped: true, message: '未登录，跳过自动拉取' };
             }

@@ -310,7 +310,7 @@ const CloudSyncIndicator = {
         }
     },
     probe: async function () {
-        const hasSessionUser = !!(sessionStorage.getItem('CURRENT_USER') || (window.Auth && Auth.currentUser));
+        const hasSessionUser = AuthState.hasActiveSession(window.Auth && Auth.currentUser);
         if (!hasSessionUser) {
             this.set('idle');
             return;
@@ -534,33 +534,95 @@ const EdgeGateway = {
 
 window.EdgeGateway = EdgeGateway;
 
-const MASKED_PASSWORD_DISPLAY = '已设置(不显示明文)';
-
-function sanitizeLocalAuthDb(rawDb) {
-    const source = rawDb && typeof rawDb === 'object' ? rawDb : {};
-    const nextDb = {
-        ...source,
-        admin: {
-            ...(source.admin && typeof source.admin === 'object' ? source.admin : {}),
-            pass: MASKED_PASSWORD_DISPLAY
-        },
-        teachers: Array.isArray(source.teachers) ? source.teachers : [],
-        parents: Array.isArray(source.parents) ? source.parents : []
-    };
-    if (source.director && typeof source.director === 'object') {
-        nextDb.director = {
-            ...source.director,
-            pass: MASKED_PASSWORD_DISPLAY
-        };
+const AuthState = window.AuthState || {
+    MASKED_PASSWORD_DISPLAY: '已设置(不显示明文)',
+    sanitizeLocalAuthDb: function (rawDb) { return rawDb && typeof rawDb === 'object' ? rawDb : {}; },
+    persistLocalAuthDb: function (rawDb) {
+        const safeDb = rawDb && typeof rawDb === 'object' ? rawDb : {};
+        localStorage.setItem('SYS_USERS', JSON.stringify(safeDb));
+        return safeDb;
+    },
+    readLocalAuthDb: function () {
+        return this.sanitizeLocalAuthDb(JSON.parse(localStorage.getItem('SYS_USERS')) || {
+            admin: { pass: this.MASKED_PASSWORD_DISPLAY },
+            teachers: [],
+            parents: []
+        });
+    },
+    getCurrentUser: function () {
+        try {
+            const raw = sessionStorage.getItem('CURRENT_USER');
+            return raw ? JSON.parse(raw) : null;
+        } catch {
+            return null;
+        }
+    },
+    setCurrentUser: function (user) {
+        if (!user) return this.clearCurrentUser();
+        sessionStorage.setItem('CURRENT_USER', JSON.stringify(user));
+        sessionStorage.setItem('CURRENT_ROLE', String(user.role || 'guest').trim() || 'guest');
+        sessionStorage.setItem('CURRENT_ROLES', JSON.stringify(Array.isArray(user.roles) ? user.roles : [user.role].filter(Boolean)));
+        return user;
+    },
+    clearCurrentUser: function () {
+        sessionStorage.removeItem('CURRENT_USER');
+        sessionStorage.removeItem('CURRENT_ROLE');
+        sessionStorage.removeItem('CURRENT_ROLES');
+    },
+    hasActiveSession: function (user) {
+        return !!(user || this.getCurrentUser());
+    },
+    getUserRoles: function (user) {
+        if (!user) return ['guest'];
+        if (Array.isArray(user.roles) && user.roles.length) return user.roles;
+        return user.role ? [user.role] : ['guest'];
+    },
+    getPrimaryRole: function (user) {
+        return this.getUserRoles(user)[0] || 'guest';
+    },
+    hasRole: function (user, roleName) {
+        return this.getUserRoles(user).includes(roleName);
+    },
+    hasAnyRole: function (user, roleNames) {
+        const expectedRoles = Array.isArray(roleNames) ? roleNames : [roleNames];
+        const roleSet = new Set(this.getUserRoles(user));
+        return expectedRoles.some(role => roleSet.has(role));
+    },
+    hasAllRoles: function (user, roleNames) {
+        const expectedRoles = Array.isArray(roleNames) ? roleNames : [roleNames];
+        const roleSet = new Set(this.getUserRoles(user));
+        return expectedRoles.every(role => roleSet.has(role));
+    },
+    applyRolesToBody: function (user) {
+        if (!user) return;
+        document.body.dataset.role = this.getPrimaryRole(user);
+    },
+    getDefaultManagedPassword: function (role) {
+        return role === 'teacher' ? 'yssy2016' : '123456';
+    },
+    isDefaultManagedPassword: function (role, password) {
+        return String(password || '').trim() === this.getDefaultManagedPassword(role);
+    },
+    getManagedAccountPassword: function (record, role) {
+        return String(record?.pass || '').trim() || this.getDefaultManagedPassword(role);
+    },
+    matchesManagedPassword: function (record, role, password) {
+        return this.getManagedAccountPassword(record, role) === String(password || '').trim();
+    },
+    findManagedAccount: function (authDb, username, className) {
+        const safeDb = authDb && typeof authDb === 'object' ? authDb : { teachers: [], parents: [] };
+        const normalizedName = String(username || '').trim();
+        const normalizedClass = String(className || '').trim();
+        const parent = (safeDb.parents || []).find(item => String(item?.name || '').trim() === normalizedName && String(item?.class || '').trim() === normalizedClass);
+        if (parent) return { role: 'parent', record: parent };
+        const teacher = (safeDb.teachers || []).find(item => String(item?.name || '').trim() === normalizedName);
+        if (teacher) return { role: 'teacher', record: teacher };
+        return null;
     }
-    return nextDb;
-}
-
-function persistLocalAuthDb(rawDb) {
-    const safeDb = sanitizeLocalAuthDb(rawDb);
-    localStorage.setItem('SYS_USERS', JSON.stringify(safeDb));
-    return safeDb;
-}
+};
+const MASKED_PASSWORD_DISPLAY = AuthState.MASKED_PASSWORD_DISPLAY;
+const sanitizeLocalAuthDb = AuthState.sanitizeLocalAuthDb.bind(AuthState);
+const persistLocalAuthDb = AuthState.persistLocalAuthDb.bind(AuthState);
 
 // 🔐 权限与账号管理系统核心
 const Auth = {
@@ -569,11 +631,13 @@ const Auth = {
     _parentRenderRetrying: false,
 
     // 模拟数据库 (实际存储在 localStorage 'SYS_USERS')
-    db: sanitizeLocalAuthDb(JSON.parse(localStorage.getItem('SYS_USERS')) || {
-        admin: { pass: '已设置(不显示明文)' },
-        teachers: [],
-        parents: []
-    }),
+    db: (typeof AuthState.readLocalAuthDb === 'function'
+        ? AuthState.readLocalAuthDb()
+        : sanitizeLocalAuthDb(JSON.parse(localStorage.getItem('SYS_USERS')) || {
+            admin: { pass: MASKED_PASSWORD_DISPLAY },
+            teachers: [],
+            parents: []
+        })),
 
     // 初始化：检查会话状态
     loginPortalStorageKey: 'LOGIN_PORTAL_V1',
@@ -655,12 +719,53 @@ const Auth = {
         if (submitButton) submitButton.textContent = config.submit;
     },
 
+    resolveLocalManagedSchool: function (name, className = '') {
+        const normalizedName = String(name || '').trim();
+        const normalizedClass = String(className || '').trim();
+        if (normalizedName && normalizedClass && Array.isArray(RAW_DATA)) {
+            const parentRow = RAW_DATA.find(row => String(row?.name || '').trim() === normalizedName && String(row?.class || '').trim() === normalizedClass);
+            if (parentRow && parentRow.school) return String(parentRow.school).trim();
+        }
+        if (normalizedName && typeof TEACHER_SCHOOL_MAP === 'object' && TEACHER_SCHOOL_MAP) {
+            const teacherSchool = TEACHER_SCHOOL_MAP[normalizedName];
+            if (teacherSchool) return String(teacherSchool).trim();
+        }
+        if (normalizedName && typeof TEACHER_MAP === 'object' && TEACHER_MAP && Array.isArray(RAW_DATA)) {
+            for (const [key, teacherName] of Object.entries(TEACHER_MAP)) {
+                if (String(teacherName || '').trim() !== normalizedName) continue;
+                const cls = String(key || '').split('_')[0];
+                const classRow = RAW_DATA.find(row => String(row?.class || '').trim() === cls);
+                if (classRow && classRow.school) return String(classRow.school).trim();
+            }
+        }
+        return String(MY_SCHOOL || '').trim();
+    },
+
+    tryLocalManagedLogin: function (username, password, inputClass = '') {
+        const canUseLocalManagedLogin = !!window.EMBEDDED_DB || window.location.protocol === 'file:' || !navigator.onLine || !EdgeGateway.hasGatewayConfig();
+        if (!canUseLocalManagedLogin) return null;
+        const match = AuthState.findManagedAccount(this.db, username, inputClass);
+        if (!match || !AuthState.matchesManagedPassword(match.record, match.role, password)) return null;
+
+        const normalizedClass = String(match.record?.class || inputClass || '').trim();
+        const localSchool = this.resolveLocalManagedSchool(match.record?.name, normalizedClass);
+        const role = match.role;
+        return {
+            username: String(match.record?.name || username).trim(),
+            role,
+            roles: [role],
+            school: localSchool,
+            class_name: role === 'parent' ? normalizedClass : '教师',
+            local_only: true
+        };
+    },
+
     init: async function () {
         this.syncLoginPortalUI();
-        const session = sessionStorage.getItem('CURRENT_USER');
-        this.syncLoginOverlayState(!session);
-        if (session) {
-            this.currentUser = JSON.parse(session);
+        const sessionUser = AuthState.getCurrentUser();
+        this.syncLoginOverlayState(!sessionUser);
+        if (sessionUser) {
+            this.currentUser = sessionUser;
             this.setLoginPortal(this.currentUser.role === 'parent' ? 'parent' : 'school');
             if (window.EdgeGateway && typeof EdgeGateway.verify === 'function' && EdgeGateway.getToken()) {
                 EdgeGateway.verify().catch(err => {
@@ -673,7 +778,7 @@ const Auth = {
 
             // 如果是家长，恢复视图
             if (this.currentUser.role === 'parent') {
-                if ((!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function' && !this._parentDataRecovering) {
+                if (!this.currentUser.local_only && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function' && !this._parentDataRecovering) {
                     this._parentDataRecovering = true;
                     try {
                         UI.loading(true, "正在恢复学生数据...");
@@ -691,7 +796,7 @@ const Auth = {
             else if (this.currentUser.role !== 'parent') {
                 document.getElementById('app').classList.remove('hidden');
                 if (typeof renderNavigation === 'function') renderNavigation();
-                if ((!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function') {
+                if (!this.currentUser.local_only && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function') {
                     withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout')
                         .catch(e => console.warn('[Auth.init] background cloud load failed:', e));
                 }
@@ -718,17 +823,20 @@ const Auth = {
         try {
             let data = null;
             let gatewayError = null;
-            if (!window.EdgeGateway || typeof EdgeGateway.login !== 'function' || !EdgeGateway.hasGatewayConfig()) {
-                UI.loading(false);
-                alert("鉂?璐﹀彿缃戝叧鏈厤缃紝鏃犳硶楠岃瘉韬唤銆傝鍏堥厤缃?Supabase Edge Gateway銆?");
-                return;
+            const canUseGatewayLogin = !!(window.EdgeGateway && typeof EdgeGateway.login === 'function' && EdgeGateway.hasGatewayConfig());
+            const canUseLocalManagedLogin = !!window.EMBEDDED_DB || window.location.protocol === 'file:' || !navigator.onLine || !canUseGatewayLogin;
+
+            if (canUseGatewayLogin) {
+                try {
+                    const gatewayRes = await EdgeGateway.login(user, pass, inputClass);
+                    data = gatewayRes?.user || null;
+                } catch (error) {
+                    gatewayError = error instanceof Error ? error : new Error(String(error));
+                }
             }
 
-            try {
-                const gatewayRes = await EdgeGateway.login(user, pass, inputClass);
-                data = gatewayRes?.user || null;
-            } catch (error) {
-                gatewayError = error instanceof Error ? error : new Error(String(error));
+            if (!data && canUseLocalManagedLogin) {
+                data = this.tryLocalManagedLogin(user, pass, inputClass);
             }
 
             /* legacy browser-direct login fallback removed
@@ -755,6 +863,9 @@ const Auth = {
                         return alert("❌ 登录失败！\n\n可能原因：\n1. 账号或密码错误\n2. 管理员尚未将账号同步到云端");
                     }
                     return alert("❌ 登录失败：" + message);
+                }
+                if (!canUseGatewayLogin) {
+                    return alert("❌ 登录失败！\n\n当前页面未配置云端账号网关，且在本地分发账号中未找到匹配用户。");
                 }
                 return alert("❌ 登录失败！\n\n可能原因：\n1. 账号或密码错误\n2. 管理员尚未将账号【同步到云端】");
             }
@@ -784,19 +895,15 @@ const Auth = {
                 role: data.role, // 主角色（兼容）
                 roles: data.roles || [data.role], // 🆕 支持多角色数组
                 school: data.school,
-                class: data.class_name // 数据库字段名
+                class: data.class_name, // 数据库字段名
+                local_only: !!data.local_only
             };
 
+            const isLocalOnlySession = !!data.local_only;
             this.currentUser = matchedUser;
             this.setLoginPortal(matchedUser.role === 'parent' ? 'parent' : 'school');
-            sessionStorage.setItem('CURRENT_USER', JSON.stringify(matchedUser));
-            sessionStorage.setItem('CURRENT_ROLE', matchedUser.role); // 主角色
-
-            // 🆕 存储所有角色
-            if (matchedUser.roles) {
-                sessionStorage.setItem('CURRENT_ROLES', JSON.stringify(matchedUser.roles));
-            }
-            if ((!window.EdgeGateway || !EdgeGateway.getToken()) && window.EdgeGateway && typeof EdgeGateway.login === 'function') {
+            AuthState.setCurrentUser(matchedUser);
+            if (!isLocalOnlySession && (!window.EdgeGateway || !EdgeGateway.getToken()) && window.EdgeGateway && typeof EdgeGateway.login === 'function') {
                 const gatewayClassName = (matchedUser.role === 'parent' || matchedUser.role === 'class_teacher') ? inputClass : '';
                 EdgeGateway.login(user, pass, gatewayClassName).catch(err => {
                     console.warn('[EdgeGateway] login skipped:', err?.message || err);
@@ -816,7 +923,7 @@ const Auth = {
 
             // === 🛡️ 安全检查：强制修改默认密码 ===
             // 默认密码定义：教师是 yssy2016，其他人是 123456
-            const isDefaultPass = (matchedUser.role === 'teacher' && pass === 'yssy2016') || pass === '123456';
+            const isDefaultPass = AuthState.isDefaultManagedPassword(matchedUser.role, pass);
 
             if (isDefaultPass) {
                 this.syncLoginOverlayState(false); // 先关掉登录框
@@ -843,16 +950,18 @@ const Auth = {
             if (window.UI) UI.toast(`登录成功！欢迎 ${matchedUser.name}`, 'success');
 
             // 5. 云端同步改为“限时 + 后台”，避免登录阻塞接近1分钟
-            UI.loading(true, "正在同步最新成绩数据...");
-            try {
-                await withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout');
-            } catch (e) {
-                console.warn('[Auth.login] initial cloud load timeout/fail:', e);
-                if (typeof loadCloudData === 'function') {
-                    loadCloudData().catch(err => console.warn('[Auth.login] background cloud load failed:', err));
+            if (!isLocalOnlySession) {
+                UI.loading(true, "正在同步最新成绩数据...");
+                try {
+                    await withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout');
+                } catch (e) {
+                    console.warn('[Auth.login] initial cloud load timeout/fail:', e);
+                    if (typeof loadCloudData === 'function') {
+                        loadCloudData().catch(err => console.warn('[Auth.login] background cloud load failed:', err));
+                    }
+                } finally {
+                    UI.loading(false);
                 }
-            } finally {
-                UI.loading(false);
             }
 
             // 6. 分流跳转与权限初始化
@@ -935,7 +1044,10 @@ const Auth = {
     // 登出
     logout: function () {
         logAction('登出', '退出登录');
-        sessionStorage.removeItem('CURRENT_USER');
+        AuthState.clearCurrentUser();
+        if (window.EdgeGateway && typeof EdgeGateway.clearSession === 'function') {
+            EdgeGateway.clearSession();
+        }
         location.reload(); // 刷新页面最彻底，清除所有临时状态
     },
 
@@ -1241,7 +1353,7 @@ const Auth = {
             const newAccount = {
                 name: s.name,
                 class: s.class,
-                pass: '123456' // 默认密码
+                password_mode: 'default'
             };
 
             if (existIdx >= 0) {
@@ -1280,13 +1392,14 @@ const Auth = {
             const existIdx = this.db.teachers.findIndex(t => t.name === tName);
             const newAccount = {
                 name: tName,
-                pass: 'yssy2016', // 🟢 修改点：将 '123456' 改为 'yssy2016'
+                password_mode: 'default',
                 grade: 'all'
             };
 
             if (existIdx >= 0) {
                 // 教师账号通常跨年级，如果已存在，一般不重置密码，或者也重置
-                this.db.teachers[existIdx].pass = 'yssy2016'; // 🟢 修改点：将 '123456' 改为 'yssy2016'
+                this.db.teachers[existIdx].password_mode = 'default';
+                delete this.db.teachers[existIdx].pass;
             } else {
                 this.db.teachers.push(newAccount);
                 countTeacherNew++;
@@ -1366,7 +1479,7 @@ const Auth = {
             }
 
             if (shouldExport) {
-                data.push(['教师', t.name, '-', t.pass, isFiltering ? '关联选中学校' : '']);
+                data.push(['教师', t.name, '-', AuthState.getManagedAccountPassword(t, 'teacher'), isFiltering ? '关联选中学校' : '']);
                 teacherCount++;
             }
         });
@@ -1391,7 +1504,7 @@ const Auth = {
             }
 
             if (shouldExport) {
-                data.push(['家长', p.name, p.class, p.pass, schoolName || '未知/已删除']);
+                data.push(['家长', p.name, p.class, AuthState.getManagedAccountPassword(p, 'parent'), schoolName || '未知/已删除']);
                 parentCount++;
             }
         });
@@ -1540,7 +1653,7 @@ const Auth = {
 
             uniqueMap.set(user, {
                 username: user,
-                password: cleanStr(p.pass) || "123456",
+                password: cleanStr(AuthState.getManagedAccountPassword(p, 'parent')) || AuthState.getDefaultManagedPassword('parent'),
                 role: 'parent',
                 school: getSchool(p.name, p.class),
                 class_name: cleanStr(p.class) // 班级
@@ -1570,7 +1683,7 @@ const Auth = {
 
             uniqueMap.set(user, { // 写入 Map，自动覆盖同名 Key
                 username: user,
-                password: cleanStr(t.pass) || "123456",
+                password: cleanStr(AuthState.getManagedAccountPassword(t, 'teacher')) || AuthState.getDefaultManagedPassword('teacher'),
                 role: 'teacher',
                 school: teaSchMap[t.name] || globalDefaultSchool,
                 class_name: '教师'
@@ -1758,76 +1871,27 @@ Auth.syncLoginPortalUI();
 
 // 🆕 多角色权限系统
 window.RoleManager = {
-    // 获取用户的所有角色（支持多角色）
     getUserRoles: function (user) {
-        if (!user) return [];
-
-        // 如果用户有 roles 数组（多角色），直接返回
-        if (Array.isArray(user.roles) && user.roles.length > 0) {
-            return user.roles;
-        }
-
-        // 兼容旧的单角色系统
-        if (user.role) {
-            return [user.role];
-        }
-
-        return ['guest'];
+        return AuthState.getUserRoles(user);
     },
-
-    // 检查用户是否拥有某个角色
     hasRole: function (user, roleName) {
-        const roles = this.getUserRoles(user);
-        return roles.includes(roleName);
+        return AuthState.hasRole(user, roleName);
     },
-
-    // 检查用户是否拥有任意一个角色（OR逻辑）
     hasAnyRole: function (user, roleNames) {
-        if (!Array.isArray(roleNames)) roleNames = [roleNames];
-        const userRoles = this.getUserRoles(user);
-        return roleNames.some(r => userRoles.includes(r));
+        return AuthState.hasAnyRole(user, roleNames);
     },
-
-    // 检查用户是否拥有所有角色（AND逻辑）
     hasAllRoles: function (user, roleNames) {
-        if (!Array.isArray(roleNames)) roleNames = [roleNames];
-        const userRoles = this.getUserRoles(user);
-        return roleNames.every(r => userRoles.includes(r));
+        return AuthState.hasAllRoles(user, roleNames);
     },
-
-    // 获取用户的最高权限角色
     getPrimaryRole: function (user) {
-        const roles = this.getUserRoles(user);
-          const hierarchy = ['admin', 'director', 'grade_director', 'class_teacher', 'teacher', 'parent', 'student', 'guest'];
-        for (const role of hierarchy) {
-            if (roles.includes(role)) return role;
-        }
-        return 'guest';
+        return AuthState.getPrimaryRole(user);
     },
-
-    // 应用用户的所有角色到界面（用于CSS控制）
     applyRolesToBody: function (user) {
-        if (!user) {
-            document.body.dataset.role = 'guest';
-            document.body.className = document.body.className.replace(/\brole-\w+\b/g, '').trim();
-            return;
+        const primaryRole = AuthState.applyRolesToBody(user);
+        if (user) {
+            const roles = AuthState.getUserRoles(user);
+            console.log(`🎭 用户角色：${roles.join(', ')} (主角色：${primaryRole})`);
         }
-
-        const roles = this.getUserRoles(user);
-        const primaryRole = this.getPrimaryRole(user);
-
-        // 设置主要角色（兼容旧代码）
-        document.body.dataset.role = primaryRole;
-
-        // 移除所有旧的角色类
-        document.body.className = document.body.className.replace(/\brole-\w+\b/g, '').trim();
-
-        // 为每个角色添加类名
-        roles.forEach(role => {
-            document.body.classList.add(`role-${role}`);
-        });
-
-        console.log(`🎭 用户角色：${roles.join(', ')} (主角色：${primaryRole})`);
     },
 
     // 🆕 测试工具：为当前用户添加角色（仅用于开发测试）
@@ -1846,9 +1910,7 @@ window.RoleManager = {
         const newRoles = [...currentRoles, roleName];
         Auth.currentUser.roles = newRoles;
 
-        // 更新sessionStorage
-        sessionStorage.setItem('CURRENT_USER', JSON.stringify(Auth.currentUser));
-        sessionStorage.setItem('CURRENT_ROLES', JSON.stringify(newRoles));
+        AuthState.setCurrentUser(Auth.currentUser);
 
         // 重新应用角色
         this.applyRolesToBody(Auth.currentUser);
@@ -2438,7 +2500,7 @@ const HelpSystem = {
 // 1. Worker 脚本源码 (后台线程逻辑)
 HelpSystem.checkFirstRun = function () {
     const hasSeen = !!localStorage.getItem('hasSeenV3Tour');
-    const hasSessionUser = !!(sessionStorage.getItem('CURRENT_USER') || (window.Auth && Auth.currentUser));
+    const hasSessionUser = AuthState.hasActiveSession(window.Auth && Auth.currentUser);
     const loginOverlay = document.getElementById('login-overlay');
     const loginOverlayVisible = !!(loginOverlay && getComputedStyle(loginOverlay).display !== 'none');
     const hasSavedWorkspace = !!(
@@ -2810,9 +2872,8 @@ const Logger = {
         if (!sbClient) return;
         let operator = "未知/系统";
         try {
-            const userStr = sessionStorage.getItem('CURRENT_USER');
-            if (userStr) {
-                const user = JSON.parse(userStr);
+            const user = AuthState.getCurrentUser();
+            if (user) {
                 operator = `${user.name} (${user.role})`;
             }
         } catch (e) { }
@@ -6062,7 +6123,7 @@ window.addEventListener('load', async () => {
         console.log("检测到内置数据包，正在装载...");
         const loader = document.getElementById('global-loader');
         if (loader) loader.classList.add('hidden');
-        sessionStorage.removeItem('CURRENT_USER');
+        AuthState.clearCurrentUser();
         if (typeof Auth !== 'undefined' && typeof Auth.syncLoginOverlayState === 'function') Auth.syncLoginOverlayState(true);
         document.getElementById('app').classList.add('hidden');
         const db = window.EMBEDDED_DB;
@@ -6124,7 +6185,7 @@ window.addEventListener('load', async () => {
 
         // 🔥 关键：读取当前选中的项目 Key
         const currentKey = localStorage.getItem('CURRENT_PROJECT_KEY') || 'autosave_backup';
-        const hasSessionUser = !!(sessionStorage.getItem('CURRENT_USER') || (window.Auth && Auth.currentUser));
+        const hasSessionUser = AuthState.hasActiveSession(window.Auth && Auth.currentUser);
         const backup = await DB.get(currentKey, { localOnly: !hasSessionUser });
         const isForceRestore = localStorage.getItem('SYS_FORCE_RESTORE');
 

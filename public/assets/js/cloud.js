@@ -475,6 +475,9 @@
     }
 
     function getCurrentUserRole() {
+        if (window.AuthState && typeof window.AuthState.getCurrentRole === 'function') {
+            return window.AuthState.getCurrentRole();
+        }
         return sessionStorage.getItem('CURRENT_ROLE') || 'guest';
     }
 
@@ -841,7 +844,9 @@
             if (typeof updateRoleHint === 'function') updateRoleHint();
             if (typeof renderActionLogs === 'function') renderActionLogs();
             if (typeof scanDataIssues === 'function') scanDataIssues();
-            const hasSessionUser = !!(sessionStorage.getItem('CURRENT_USER') || (window.Auth && Auth.currentUser));
+            const hasSessionUser = !!(window.AuthState && typeof window.AuthState.hasActiveSession === 'function'
+                ? window.AuthState.hasActiveSession(window.Auth && Auth.currentUser)
+                : (window.Auth && Auth.currentUser));
             const hasSavedWorkspace = !!(
                 localStorage.getItem('CURRENT_EXAM_ID')
                 || localStorage.getItem('CURRENT_PROJECT_KEY')

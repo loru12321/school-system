@@ -68,20 +68,24 @@
     }
 
     function getCurrentUser() {
-        if (window.Auth && window.Auth.currentUser) return window.Auth.currentUser;
-        try {
-            const raw = sessionStorage.getItem('CURRENT_USER');
-            return raw ? JSON.parse(raw) : null;
-        } catch {
-            return null;
+        if (window.AuthState && typeof window.AuthState.getCurrentUser === 'function') {
+            return window.AuthState.getCurrentUser();
         }
+        if (window.Auth && window.Auth.currentUser) return window.Auth.currentUser;
+        return null;
     }
 
     function getCurrentRole() {
+        if (window.AuthState && typeof window.AuthState.getCurrentRole === 'function') {
+            return window.AuthState.getCurrentRole();
+        }
         return String(getCurrentUser()?.role || document.body.dataset.role || 'guest').trim() || 'guest';
     }
 
     function getCurrentRoles() {
+        if (window.AuthState && typeof window.AuthState.getCurrentRoles === 'function') {
+            return window.AuthState.getCurrentRoles();
+        }
         const user = getCurrentUser();
         const rawRoles = Array.isArray(user?.roles) && user.roles.length ? user.roles : [user?.role].filter(Boolean);
         return rawRoles.map(role => String(role || '').trim()).filter(Boolean);
