@@ -364,6 +364,18 @@ a {
     display: none !important;
 }
 
+body.login-overlay-active {
+    overflow: hidden !important;
+    height: 100vh !important;
+    overscroll-behavior: none !important;
+}
+
+body.login-overlay-active #app,
+body.login-overlay-active #mobile-query-shell,
+body.login-overlay-active #parent-view-container {
+    display: none !important;
+}
+
 header {
     /* 移除硬编码的红色结尾，改用 --primary-dark 变量实现同色系渐变 */
     background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark, #3730a3) 100%);

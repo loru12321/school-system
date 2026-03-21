@@ -300,6 +300,14 @@
         }
     }
 
+    function hideAppForLoggedOut() {
+        const appEl = document.getElementById('app');
+        if (appEl) {
+            appEl.classList.add('hidden');
+            appEl.style.display = 'none';
+        }
+    }
+
     function markResponsiveTables(scope = document) {
         if (!isMobileViewport()) return;
         const tables = scope.querySelectorAll('.table-wrap table, table.comparison-table, table.fluent-table, #tb-query, #studentDetailTable');
@@ -901,6 +909,12 @@
         document.body.dataset.mobileQuery = isMobileViewport() ? 'true' : 'false';
 
         if (!isMobileViewport()) {
+            syncShellVisibility();
+            return;
+        }
+
+        if (!isLoggedIn()) {
+            hideAppForLoggedOut();
             syncShellVisibility();
             return;
         }

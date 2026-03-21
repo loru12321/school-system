@@ -530,6 +530,15 @@ const Auth = {
         return nextPortal;
     },
 
+    syncLoginOverlayState: function (visible) {
+        const overlay = document.getElementById('login-overlay');
+        const app = document.getElementById('app');
+        document.body.classList.toggle('login-overlay-active', !!visible);
+        document.body.dataset.authState = visible ? 'logged_out' : 'logged_in';
+        if (overlay) overlay.style.display = visible ? 'flex' : 'none';
+        if (app && visible) app.classList.add('hidden');
+    },
+
     syncLoginPortalUI: function (portal = this.getLoginPortal()) {
         const nextPortal = portal === 'parent' ? 'parent' : 'school';
         const overlay = document.getElementById('login-overlay');
@@ -590,6 +599,7 @@ const Auth = {
     init: async function () {
         this.syncLoginPortalUI();
         const session = sessionStorage.getItem('CURRENT_USER');
+        this.syncLoginOverlayState(!session);
         if (session) {
             this.currentUser = JSON.parse(session);
             this.setLoginPortal(this.currentUser.role === 'parent' ? 'parent' : 'school');
@@ -600,7 +610,7 @@ const Auth = {
                 });
             }
             this.applyRoleView();
-            document.getElementById('login-overlay').style.display = 'none';
+            this.syncLoginOverlayState(false);
 
             // 如果是家长，恢复视图
             if (this.currentUser.role === 'parent') {
@@ -736,7 +746,7 @@ const Auth = {
             const isDefaultPass = (matchedUser.role === 'teacher' && pass === 'yssy2016') || pass === '123456';
 
             if (isDefaultPass) {
-                document.getElementById('login-overlay').style.display = 'none'; // 先关掉登录框
+                this.syncLoginOverlayState(false); // 先关掉登录框
 
                 // 弹出提示
                 alert("⚠️ 安全警告：\n检测到您正在使用默认密码！\n为了保障账号安全，首次登录必须修改密码。");
@@ -755,7 +765,7 @@ const Auth = {
             [loginUserEl, loginPassEl, loginClassEl].forEach(el => {
                 if (el && typeof el.blur === 'function') el.blur();
             });
-            document.getElementById('login-overlay').style.display = 'none';
+            this.syncLoginOverlayState(false);
 
             if (window.UI) UI.toast(`登录成功！欢迎 ${matchedUser.name}`, 'success');
 
@@ -984,7 +994,7 @@ const Auth = {
         if (app) app.style.display = 'none'; // 关键：隐藏主应用
         if (header) header.style.display = 'none';
         if (nav) nav.style.display = 'none';
-        if (overlay) overlay.style.display = 'none';
+        if (overlay) this.syncLoginOverlayState(false);
         if (loader) loader.classList.add('hidden');
 
         // 2. 创建或重置家长容器
@@ -6020,7 +6030,7 @@ window.addEventListener('load', async () => {
         const loader = document.getElementById('global-loader');
         if (loader) loader.classList.add('hidden');
         sessionStorage.removeItem('CURRENT_USER');
-        document.getElementById('login-overlay').style.display = 'flex';
+        if (typeof Auth !== 'undefined' && typeof Auth.syncLoginOverlayState === 'function') Auth.syncLoginOverlayState(true);
         document.getElementById('app').classList.add('hidden');
         const db = window.EMBEDDED_DB;
 

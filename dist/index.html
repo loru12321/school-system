@@ -1864,7 +1864,8 @@
                 width: 100% !important;
                 max-width: 100% !important;
                 min-height: 100vh !important;
-                padding: max(28px, calc(env(safe-area-inset-top) + 12px)) 18px calc(env(safe-area-inset-bottom) + 22px) !important;
+                max-height: 100vh !important;
+                padding: max(18px, calc(env(safe-area-inset-top) + 6px)) 16px calc(env(safe-area-inset-bottom) + 16px) !important;
                 border-radius: 0 !important;
                 border: none !important;
                 box-shadow: none !important;
@@ -1873,31 +1874,51 @@
 
             .login-brand-block {
                 text-align: left !important;
-                margin-bottom: 22px !important;
+                margin-bottom: 16px !important;
             }
 
             #login-overlay h1 {
-                font-size: 30px !important;
+                font-size: 26px !important;
                 text-align: left !important;
             }
 
             #login-overlay p {
                 text-align: left !important;
+                font-size: 12px !important;
             }
 
             .login-portal-grid {
-                grid-template-columns: 1fr;
-                gap: 10px;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+                margin: 12px 0 10px;
             }
 
             .login-portal-card {
-                padding: 13px;
+                padding: 12px;
+                gap: 8px;
+                min-height: 0;
             }
 
-            .login-mobile-highlights span {
-                flex: 1 1 calc(50% - 8px);
-                min-width: 0;
-                justify-content: center;
+            .login-portal-desc {
+                min-height: 0;
+                font-size: 11px;
+                line-height: 1.45;
+            }
+
+            .login-portal-meta {
+                font-size: 10px;
+            }
+
+            .login-mobile-highlights {
+                display: none;
+            }
+
+            #login-form {
+                margin-top: 14px !important;
+            }
+
+            #login-form .form-group {
+                margin-top: 10px !important;
             }
 
             body[data-mobile-query="true"]:not([data-role="parent"]) #cohort-growth.active {
@@ -1912,6 +1933,7 @@
             #login-form button {
                 font-size: 17px !important;
                 padding: 14px !important;
+                margin-top: 14px !important;
             }
         }
     </style>
