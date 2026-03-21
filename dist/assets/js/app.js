@@ -2394,6 +2394,22 @@ HelpSystem.checkFirstRun = function () {
     }, 1000);
 };
 
+if (HelpSystem?.content?.teacher) {
+    HelpSystem.content.teacher.html = `
+        <div style="text-align:left;">
+            <p>系统现在按“联考赋分 + 基线校正 + 置信修正”评价教师学科绩效：</p>
+            <ol>
+                <li><strong>联考赋分：</strong> 按系统现有“两率一分”口径，对同校同学科教师做赋分。</li>
+                <li><strong>基线校正：</strong> 用最近一次历史考试匹配学生，按同基础分层比较“实际值 - 预计值”。</li>
+                <li><strong>重点学生：</strong> 自动给出培优边缘生、及格临界生、辅差关注生名单。</li>
+            </ol>
+            <div class="info-bar" style="margin-top:10px; font-size:12px;">
+                提示：请先完成任课表同步，并尽量加载最近一次历史考试，基线校正才会更稳定。
+            </div>
+        </div>
+    `;
+}
+
 const WORKER_SOURCE = `
     self.onmessage = function(e) {
         const { cmd, data } = e.data;
@@ -6694,6 +6710,10 @@ function enhanceStudentReportMetrics(root) {
             </ul>
         `;
         board.parentNode.insertBefore(explain, board);
+        const tipline = document.createElement('div');
+        tipline.className = 'report-metric-tipline';
+        tipline.textContent = '涓€鍙ヨ瘽璁板繂锛氱櫨鍒嗕綅鐪嬩綅缃紝Z 鍊肩湅鍜屽钩鍧囨按骞冲樊澶氳繙銆?';
+        explain.appendChild(tipline);
     }
 
     board.querySelectorAll('.report-subject-meta span').forEach((span) => {
@@ -6708,7 +6728,60 @@ function enhanceStudentReportMetrics(root) {
             span.textContent = `领先指数 Z ${value}`;
         }
     });
+
+    board.querySelectorAll('.report-subject-item').forEach((item) => {
+        if (item.querySelector('.report-subject-note')) return;
+        const note = document.createElement('div');
+        note.className = 'report-subject-note';
+        note.textContent = '鐧惧垎浣嶇湅浣嶇疆锛孼 鍊肩湅鍜屽钩鍧囨按骞冲樊璺?';
+        item.appendChild(note);
+    });
 }
+
+enhanceStudentReportMetrics = function (root) {
+    const scope = root || document;
+    const board = scope.querySelector('.report-subject-board');
+    if (!board) return;
+
+    if (!scope.querySelector('.report-metric-explain')) {
+        const explain = document.createElement('div');
+        explain.className = 'report-reality-note report-metric-explain';
+        explain.style.marginBottom = '16px';
+        explain.innerHTML = `
+            <div class="report-reality-title">怎么看百分位和 Z 值</div>
+            <ul class="report-reality-list">
+                <li><strong>百分位</strong>：可以理解成“这门学科大约超过了多少同届学生”，数值越高越靠前。</li>
+                <li><strong>Z 值</strong>：可以理解成“和平均水平差多远”，0 附近接近平均，正数越大优势越明显，负数越小越要优先补弱。</li>
+            </ul>
+        `;
+        board.parentNode.insertBefore(explain, board);
+        const tipline = document.createElement('div');
+        tipline.className = 'report-metric-tipline';
+        tipline.textContent = '一句话记忆：百分位看位置，Z 值看和平均水平差多远。';
+        explain.appendChild(tipline);
+    }
+
+    board.querySelectorAll('.report-subject-meta span').forEach((span) => {
+        const text = String(span.textContent || '').trim();
+        if (!text) return;
+        if (text.startsWith('百分位')) {
+            const value = text.replace(/^百分位\s*/, '').trim();
+            span.textContent = `超过同范围 ${value} 学生`;
+        }
+        if (/^Z\s*/i.test(text)) {
+            const value = text.replace(/^Z\s*/i, '').trim();
+            span.textContent = `领先指数 Z ${value}`;
+        }
+    });
+
+    board.querySelectorAll('.report-subject-item').forEach((item) => {
+        if (item.querySelector('.report-subject-note')) return;
+        const note = document.createElement('div');
+        note.className = 'report-subject-note';
+        note.textContent = '百分位看位置，Z 值看和平均水平差多远。';
+        item.appendChild(note);
+    });
+};
 
 window.NAV_STRUCTURE = NAV_STRUCTURE;
 
@@ -8186,11 +8259,12 @@ function tmBuildTeacherInsight(subjectFilter = '', teacherFilter = '') {
 
             const lowRate = Number(data?.lowRate || 0);
             const passRate = Number(data?.passRate || 0);
-            const finalScore = Number(data?.finalScore || 0);
+            const fairScore = Number(data?.fairScore ?? data?.finalScore ?? 0);
+            const baselineAdjustment = Number(data?.baselineAdjustment || 0);
 
-            if (lowRate >= 0.1) lowRiskTeachers.add(teacherName);
+            if (lowRate >= 0.12) lowRiskTeachers.add(teacherName);
             if (passRate > 0 && passRate < 0.6) passRiskTeachers.add(teacherName);
-            if (finalScore > 0 && finalScore < 50) scoreRiskTeachers.add(teacherName);
+            if ((fairScore > 0 && fairScore < 60) || baselineAdjustment <= -6) scoreRiskTeachers.add(teacherName);
 
             if (!subjectBuckets[subjectName]) {
                 subjectBuckets[subjectName] = {
@@ -8202,8 +8276,8 @@ function tmBuildTeacherInsight(subjectFilter = '', teacherFilter = '') {
             }
             subjectBuckets[subjectName].count += 1;
             subjectBuckets[subjectName].totalLowRate += lowRate;
-            subjectBuckets[subjectName].totalScore += finalScore;
-            if (lowRate >= 0.1 || finalScore < 50 || (passRate > 0 && passRate < 0.6)) {
+            subjectBuckets[subjectName].totalScore += fairScore;
+            if (lowRate >= 0.12 || fairScore < 60 || baselineAdjustment <= -6 || (passRate > 0 && passRate < 0.6)) {
                 subjectBuckets[subjectName].riskCount += 1;
             }
         });
@@ -9091,7 +9165,7 @@ function renderTeachingOverview() {
     if (exams.length < 2) alerts.push('可用于教学对比的考试不足 2 期，多期对比会受限。');
     if (teacherInsight.teacherCount > 0) {
         if (teacherInsight.riskTeacherCount > 0) {
-            alerts.push(`当前筛选范围内有 ${teacherInsight.riskTeacherCount} 位教师存在风险信号，其中低分率偏高 ${teacherInsight.lowRiskTeacherCount} 位、绩效分偏低 ${teacherInsight.scoreRiskTeacherCount} 位。`);
+            alerts.push(`当前筛选范围内有 ${teacherInsight.riskTeacherCount} 位教师存在风险信号，其中低分率偏高 ${teacherInsight.lowRiskTeacherCount} 位、公平绩效偏低或基线校正为负 ${teacherInsight.scoreRiskTeacherCount} 位。`);
         } else {
             alerts.push(`当前筛选范围内 ${teacherInsight.teacherCount} 位教师已完成画像分析，暂未发现明显风险信号。`);
         }
@@ -9626,11 +9700,13 @@ function tmBuildTeacherRiskRows(subjectFilter = '', teacherFilter = '') {
             if (useSubjectFilter && useSubjectFilter !== '全部学科' && subjectName !== useSubjectFilter) return;
             const lowRate = Number(data?.lowRate || 0);
             const passRate = Number(data?.passRate || 0);
-            const finalScore = Number(data?.finalScore || 0);
+            const fairScore = Number(data?.fairScore ?? data?.finalScore ?? 0);
+            const baselineAdjustment = Number(data?.baselineAdjustment || 0);
             let riskScore = 0;
-            if (lowRate >= 0.1) riskScore += 3;
+            if (lowRate >= 0.12) riskScore += 3;
             if (passRate > 0 && passRate < 0.6) riskScore += 2;
-            if (finalScore > 0 && finalScore < 50) riskScore += 2;
+            if (fairScore > 0 && fairScore < 60) riskScore += 2;
+            if (baselineAdjustment <= -6) riskScore += 2;
             if (!riskScore) return;
 
             rows.push({
@@ -9639,7 +9715,8 @@ function tmBuildTeacherRiskRows(subjectFilter = '', teacherFilter = '') {
                 classes: Array.isArray(data?.classes) ? data.classes.join(',') : String(data?.classes || ''),
                 lowRate,
                 passRate,
-                finalScore,
+                fairScore,
+                baselineAdjustment,
                 riskScore
             });
         });
@@ -9648,7 +9725,7 @@ function tmBuildTeacherRiskRows(subjectFilter = '', teacherFilter = '') {
     return rows.sort((a, b) => {
         if (b.riskScore !== a.riskScore) return b.riskScore - a.riskScore;
         if (b.lowRate !== a.lowRate) return b.lowRate - a.lowRate;
-        return a.finalScore - b.finalScore;
+        return a.fairScore - b.fairScore;
     });
 }
 
@@ -9660,7 +9737,7 @@ function tmBuildIssueTeacherCard(row) {
                 ${tmBuildStatusChip('教师风险', 'warn')}
             </div>
             <div class="tm-center-card-scope">${tmEscapeHtml(row.classes || '当前任课班级未识别')}</div>
-            <div class="tm-center-card-desc">低分率 ${(row.lowRate * 100).toFixed(1)}%，及格率 ${(row.passRate * 100).toFixed(1)}%，绩效分 ${row.finalScore.toFixed(1)}。</div>
+            <div class="tm-center-card-desc">低分率 ${(row.lowRate * 100).toFixed(1)}%，及格率 ${(row.passRate * 100).toFixed(1)}%，公平绩效 ${row.fairScore.toFixed(1)}，基线校正 ${row.baselineAdjustment >= 0 ? '+' : ''}${row.baselineAdjustment.toFixed(1)}。</div>
             <div class="tm-center-card-actions">
                 <button type="button" class="btn btn-orange" data-tm-issue-teacher="${tmEscapeHtml(row.teacherName)}" data-tm-issue-subject="${tmEscapeHtml(row.subjectName)}">定位教师画像</button>
             </div>
@@ -21986,6 +22063,18 @@ const SYSTEM_MANUAL = {
         calc: `本页不计算成绩，只提供流程引导、诊断与快捷入口。`
     }
 };
+
+if (SYSTEM_MANUAL.teacher) {
+    SYSTEM_MANUAL.teacher.calc = `<strong>当前模型：联考赋分 + 基线校正 + 置信修正</strong><br>
+                   <div class="formula-box">公平绩效分 = 联考赋分(折算100) × 置信系数 + 基线校正 + 工作量修正</div>
+                   联考赋分按系统现有“两率一分”标准计算；基线校正按最近一次历史考试的匹配学生、分层基础与实际结果的超预期差折算。`;
+}
+
+if (SYSTEM_MANUAL.sse) {
+    SYSTEM_MANUAL.sse.calc = `<strong>说明：</strong><br>
+                   班级公平考核仍用于班级层面的工作量与整体结果比较；教师画像中的“公平绩效分”则是教师学科层面的联考赋分与基线校正模型。<br>
+                   建议：班级考核看班级管理与整体结果，教师画像看任课教师的真实教学加工效果。`;
+}
 
 function showModuleHelp(key) {
     const info = SYSTEM_MANUAL[key];

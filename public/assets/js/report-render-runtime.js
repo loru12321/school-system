@@ -228,8 +228,10 @@ function renderSingleReportCardHTML(stu, mode) {
                 .report-progress-bar.tone-steady { background:linear-gradient(90deg, #60a5fa 0%, #2563eb 100%); }
                 .report-reality-note { margin-top:12px; border-radius:18px; border:1px dashed #cbd5e1; padding:14px 16px; background:#f8fafc; }
                 .report-reality-title { font-size:12px; font-weight:800; color:#475569; margin-bottom:8px; }
+                .report-metric-tipline { margin-top:8px; padding:8px 10px; border-radius:12px; background:#ffffff; color:#475569; font-size:12px; font-weight:700; border:1px solid #dbeafe; }
                 .report-reality-list { margin:0; padding-left:18px; font-size:12px; color:#64748b; line-height:1.75; }
                 .report-reality-list li { margin-bottom:4px; }
+                .report-subject-note { margin-top:10px; font-size:11px; color:#64748b; line-height:1.65; }
                 @media (max-width: 768px) { .report-insight-grid, .report-action-grid, .report-subject-board { grid-template-columns:minmax(0, 1fr); } .report-insight-card, .report-action-card, .report-subject-item { padding:14px 16px; } }
                 @media print { .fluent-card { box-shadow: none; border: 1px solid #ccc; backdrop-filter: none; } }
             </style>

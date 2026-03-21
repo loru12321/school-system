@@ -1,6 +1,206 @@
 (() => {
     if (typeof window === 'undefined' || window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__) return;
 
+const TEACHER_BASELINE_BANDS = [
+    { id: 'top', label: '前25%', max: 0.25 },
+    { id: 'upper', label: '25%-50%', max: 0.5 },
+    { id: 'middle', label: '50%-75%', max: 0.75 },
+    { id: 'tail', label: '后25%', max: 1.01 }
+];
+
+function teacherClamp(value, min, max) {
+    return Math.min(Math.max(Number(value) || 0, min), max);
+}
+
+function teacherToNumber(value, fallback = 0) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
+}
+
+function teacherFormatSigned(value, digits = 1) {
+    const num = teacherToNumber(value, 0);
+    return `${num >= 0 ? '+' : ''}${num.toFixed(digits)}`;
+}
+
+function teacherFormatPercent(value, digits = 1) {
+    return `${(teacherToNumber(value, 0) * 100).toFixed(digits)}%`;
+}
+
+function teacherEscapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[ch]));
+}
+
+function teacherGetWeightConfig() {
+    const isGrade9 = String(CONFIG?.name || '').includes('9');
+    return isGrade9
+        ? { avg: 50, exc: 80, pass: 50, total: 180, label: '均分50 + 优率80 + 及格50' }
+        : { avg: 60, exc: 70, pass: 70, total: 200, label: '均分60 + 优率70 + 及格70' };
+}
+
+function teacherBuildStudentKey(student) {
+    const school = String(student?.school || '').trim();
+    const cls = normalizeClass(student?.class || '');
+    const cleanName = typeof getProgressCleanName === 'function'
+        ? getProgressCleanName(student?.name)
+        : String(student?.name || '').replace(/\s+/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '').toLowerCase();
+    return `${school}__${cls}__${cleanName}`;
+}
+
+function teacherResolveThresholds(subject, students = []) {
+    const fallbackScores = students
+        .map((student) => teacherToNumber(student?.scores?.[subject], NaN))
+        .filter((score) => Number.isFinite(score))
+        .sort((a, b) => b - a);
+    const config = THRESHOLDS?.[subject] || {};
+    let exc = teacherToNumber(config.exc, NaN);
+    let pass = teacherToNumber(config.pass, NaN);
+    if (!Number.isFinite(exc) && fallbackScores.length) {
+        exc = fallbackScores[Math.max(0, Math.floor(fallbackScores.length * 0.25) - 1)] || 0;
+    }
+    if (!Number.isFinite(pass) && fallbackScores.length) {
+        pass = fallbackScores[Math.min(fallbackScores.length - 1, Math.floor(fallbackScores.length * 0.8))] || 60;
+    }
+    if (!Number.isFinite(exc)) exc = 0;
+    if (!Number.isFinite(pass)) pass = 60;
+    return {
+        exc,
+        pass,
+        low: pass * 0.6
+    };
+}
+
+function teacherBuildMetricSummary(scores, thresholds) {
+    const list = (scores || []).map((score) => teacherToNumber(score, NaN)).filter((score) => Number.isFinite(score));
+    if (!list.length) {
+        return {
+            count: 0,
+            avg: 0,
+            excellentRate: 0,
+            passRate: 0,
+            lowRate: 0
+        };
+    }
+    const total = list.reduce((sum, score) => sum + score, 0);
+    return {
+        count: list.length,
+        avg: total / list.length,
+        excellentRate: list.filter((score) => score >= thresholds.exc).length / list.length,
+        passRate: list.filter((score) => score >= thresholds.pass).length / list.length,
+        lowRate: list.filter((score) => score < thresholds.low).length / list.length
+    };
+}
+
+function teacherMedian(values) {
+    const list = (values || []).map((value) => teacherToNumber(value, NaN)).filter((value) => Number.isFinite(value)).sort((a, b) => a - b);
+    if (!list.length) return 0;
+    const mid = Math.floor(list.length / 2);
+    return list.length % 2 ? list[mid] : (list[mid - 1] + list[mid]) / 2;
+}
+
+function teacherGetZScore(value, values) {
+    const list = (values || []).map((item) => teacherToNumber(item, NaN)).filter((item) => Number.isFinite(item));
+    if (list.length <= 1) return 0;
+    const mean = list.reduce((sum, item) => sum + item, 0) / list.length;
+    const variance = list.reduce((sum, item) => sum + Math.pow(item - mean, 2), 0) / list.length;
+    const sd = Math.sqrt(variance);
+    if (!sd || !Number.isFinite(sd)) return 0;
+    return (teacherToNumber(value, 0) - mean) / sd;
+}
+
+function teacherBuildSchoolRankMap(students) {
+    const ranked = (students || [])
+        .map((student) => ({
+            key: teacherBuildStudentKey(student),
+            total: teacherToNumber(student?.total, NaN)
+        }))
+        .filter((row) => Number.isFinite(row.total))
+        .sort((a, b) => b.total - a.total);
+    const map = new Map();
+    let lastRank = 0;
+    let lastTotal = null;
+    ranked.forEach((row, index) => {
+        if (lastTotal === null || Math.abs(row.total - lastTotal) > 0.001) {
+            lastRank = index + 1;
+            lastTotal = row.total;
+        }
+        map.set(row.key, lastRank);
+    });
+    return { map, count: ranked.length };
+}
+
+function teacherResolveBaselineBand(rank, totalCount) {
+    if (!Number.isFinite(rank) || rank <= 0 || !totalCount) return 'tail';
+    const percentile = (rank - 1) / Math.max(totalCount - 1, 1);
+    return (TEACHER_BASELINE_BANDS.find((band) => percentile <= band.max) || TEACHER_BASELINE_BANDS[TEACHER_BASELINE_BANDS.length - 1]).id;
+}
+
+function teacherBuildFocusTargets(students, subject, thresholds) {
+    const excellentEdges = [];
+    const passEdges = [];
+    const lowRisk = [];
+
+    (students || []).forEach((student) => {
+        const score = teacherToNumber(student?.scores?.[subject], NaN);
+        if (!Number.isFinite(score)) return;
+        const name = String(student?.name || '').trim();
+        const cls = normalizeClass(student?.class || '');
+        if (score >= thresholds.exc - 5 && score < thresholds.exc) {
+            excellentEdges.push({ name, className: cls, score, gap: thresholds.exc - score });
+        }
+        if (score >= thresholds.pass - 5 && score < thresholds.pass) {
+            passEdges.push({ name, className: cls, score, gap: thresholds.pass - score });
+        }
+        if (score < thresholds.low || score <= thresholds.low + 5) {
+            lowRisk.push({ name, className: cls, score, gap: score - thresholds.low });
+        }
+    });
+
+    excellentEdges.sort((a, b) => b.score - a.score);
+    passEdges.sort((a, b) => b.score - a.score);
+    lowRisk.sort((a, b) => a.score - b.score);
+
+    return {
+        excellentEdges,
+        passEdges,
+        lowRisk,
+        summaryText: `培优${excellentEdges.length} / 临界${passEdges.length} / 辅差${lowRisk.length}`,
+        flatText: [
+            `培优 ${excellentEdges.length} 人`,
+            `临界 ${passEdges.length} 人`,
+            `辅差 ${lowRisk.length} 人`
+        ].join(' · ')
+    };
+}
+
+function refreshTeacherPerformanceCopy() {
+    const teacherSection = document.getElementById('teacher-analysis');
+    const explain = teacherSection?.querySelector('.explain-panel .explain-content');
+    if (explain) {
+        explain.innerHTML = `
+            <p>联考赋分：按系统现有“两率一分”标准，对同校同学科教师的均分、优秀率、及格率进行赋分。6-8 年级权重为 60/70/70，9 年级权重为 50/80/50。</p>
+            <p>基线校正：使用最近一次历史考试中可匹配的学生，按同基础分层计算预计均分、预计优秀率、预计及格率和预计低分率，再比较“实际值 - 预计值”，折算为校正分。</p>
+            <p>低分率：低于及格线 × 0.6 的学生占比，用于观察薄弱尾部是否得到有效控制。</p>
+            <p>公平绩效分：联考赋分折算到 100 分后，叠加基线校正、工作量修正，再乘置信系数得到的结果，更适合做教师横向比较。</p>
+            <p>重点学生：系统会自动识别培优边缘生、及格临界生、辅差关注生，方便教师直接用于培优和辅差。</p>
+        `;
+    }
+    const sseSection = document.getElementById('single-school-eval');
+    const sseExplain = sseSection?.querySelector('.explain-panel .explain-content');
+    if (sseExplain) {
+        sseExplain.innerHTML = `
+            <p>本模块仍用于班级层面的公平考核，重点看班级工作量、整体结果和生源变化。</p>
+            <p>教师教学质量画像中的“公平绩效分”则是教师学科层面的口径，会额外考虑联考赋分、历史基线校正和重点学生结构。</p>
+            <p>建议：班级管理与班主任评价看本模块，任课教师的教学加工效果看“教师教学质量画像”。</p>
+        `;
+    }
+}
+
 function analyzeTeachers() {
     const resolveRowsForTeacherAnalysis = () => {
         if (Array.isArray(RAW_DATA) && RAW_DATA.length > 0) return RAW_DATA;
@@ -213,6 +413,345 @@ function analyzeTeachers() {
     if (typeof renderTeachingOverview === 'function') renderTeachingOverview();
     if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars();
 }
+
+function analyzeTeachersV2() {
+    const resolveRowsForTeacherAnalysis = () => {
+        if (Array.isArray(RAW_DATA) && RAW_DATA.length > 0) return RAW_DATA;
+        const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+        if (!db?.exams) return [];
+        const currentId = CURRENT_EXAM_ID || db.currentExamId || '';
+        let exam = currentId ? db.exams[currentId] : null;
+        if (!exam) {
+            const list = Object.values(db.exams).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            exam = list[0] || null;
+        }
+        return Array.isArray(exam?.data) ? exam.data : [];
+    };
+
+    const rows = resolveRowsForTeacherAnalysis();
+    const schools = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
+    const inferredSchool = (typeof inferDefaultSchoolFromContext === 'function') ? inferDefaultSchoolFromContext() : '';
+    const scopedUser = getCurrentUser();
+    const accessibleSchools = (window.PermissionPolicy && typeof PermissionPolicy.getAccessibleSchoolNames === 'function')
+        ? PermissionPolicy.getAccessibleSchoolNames(scopedUser, schools)
+        : schools.slice();
+    let activeSchool = syncTeacherAnalysisSchoolContext(
+        document.getElementById('mySchoolSelect')?.value
+        || MY_SCHOOL
+        || localStorage.getItem('MY_SCHOOL')
+        || inferredSchool
+    );
+
+    const user = getCurrentUser();
+    if (user && user.role === 'teacher') {
+        const userNameNorm = String(user.name || '').replace(/\s+/g, '').toLowerCase();
+        const classSchoolMap = (typeof getClassSchoolMapForAllData === 'function') ? getClassSchoolMapForAllData() : {};
+        Object.entries(window.TEACHER_MAP || {}).some(([key, teacherName]) => {
+            const teacherNameNorm = String(teacherName || '').replace(/\s+/g, '').toLowerCase();
+            if (teacherNameNorm !== userNameNorm && !teacherNameNorm.startsWith(`${userNameNorm}(`) && !teacherNameNorm.startsWith(`${userNameNorm}（`)) {
+                return false;
+            }
+            if (window.TEACHER_SCHOOL_MAP && window.TEACHER_SCHOOL_MAP[key]) {
+                activeSchool = window.TEACHER_SCHOOL_MAP[key];
+                return true;
+            }
+            const [rawCls] = key.split('_');
+            const cls = normalizeClass(rawCls);
+            if (classSchoolMap[cls]) {
+                activeSchool = classSchoolMap[cls];
+                return true;
+            }
+            return false;
+        });
+        if (activeSchool) {
+            MY_SCHOOL = activeSchool;
+            window.MY_SCHOOL = activeSchool;
+            localStorage.setItem('MY_SCHOOL', activeSchool);
+        }
+    }
+
+    if (activeSchool && accessibleSchools.length && !accessibleSchools.includes(activeSchool)) activeSchool = '';
+    if (!activeSchool && accessibleSchools.length === 1) activeSchool = syncTeacherAnalysisSchoolContext(accessibleSchools[0]);
+    if (!activeSchool) {
+        const firstFromRows = rows.find((row) => accessibleSchools.includes(String(row?.school || '').trim()));
+        if (firstFromRows) activeSchool = syncTeacherAnalysisSchoolContext(String(firstFromRows.school).trim());
+    }
+    if (!activeSchool) {
+        alert('请先选择本校');
+        return;
+    }
+    syncTeacherAnalysisSchoolContext(activeSchool);
+
+    if (window.DataManager && typeof DataManager.ensureTeacherMap === 'function') {
+        const ok = DataManager.ensureTeacherMap(true);
+        if (!ok) {
+            if (window.UI) UI.toast('请先同步教师任课表后再分析', 'warning');
+            return;
+        }
+    }
+
+    TEACHER_STATS = {};
+    const classSchoolMap = (typeof getClassSchoolMapForAllData === 'function') ? getClassSchoolMapForAllData() : {};
+    const normalizedRows = rows.map((student) => ({
+        ...student,
+        school: String(student?.school || '').trim(),
+        class: normalizeClass(student?.class),
+        scores: student?.scores || {}
+    }));
+    const teacherClassSet = new Set(Object.keys(TEACHER_MAP || {}).map((key) => normalizeClass(String(key).split('_')[0])).filter(Boolean));
+    let mySchoolStudents = normalizedRows.filter((student) => student.school === activeSchool);
+    if (!mySchoolStudents.length) {
+        mySchoolStudents = normalizedRows.filter((student) => {
+            const cls = normalizeClass(student.class);
+            if (!cls || !teacherClassSet.has(cls)) return false;
+            return classSchoolMap[cls] === activeSchool;
+        });
+    }
+    const queryMode = window.PermissionPolicy && PermissionPolicy.isClassTeacher(user) ? 'homeroom' : 'teaching';
+    if (window.PermissionPolicy && typeof PermissionPolicy.filterStudentRows === 'function') {
+        mySchoolStudents = PermissionPolicy.filterStudentRows(user, mySchoolStudents, { mode: queryMode });
+    }
+    if (!mySchoolStudents.length) return;
+
+    const subjectList = (SUBJECTS && SUBJECTS.length)
+        ? SUBJECTS
+        : [...new Set(mySchoolStudents.flatMap((student) => Object.keys(student.scores || {})).map(normalizeSubject))];
+    const weightConfig = teacherGetWeightConfig();
+    const gradeStats = {};
+    subjectList.forEach((subject) => {
+        gradeStats[subject] = teacherResolveThresholds(subject, mySchoolStudents);
+        const subjectSummary = teacherBuildMetricSummary(
+            mySchoolStudents.map((student) => teacherToNumber(student?.scores?.[subject], NaN)),
+            gradeStats[subject]
+        );
+        gradeStats[subject].avg = subjectSummary.avg;
+    });
+
+    const schoolRankMap = teacherBuildSchoolRankMap(mySchoolStudents);
+    const baselineRows = (typeof getProgressBaselineRowsForSchool === 'function')
+        ? getProgressBaselineRowsForSchool(activeSchool)
+        : (typeof normalizeProgressBaselineRows === 'function'
+            ? normalizeProgressBaselineRows(PREV_DATA || window.PREV_DATA || [])
+            : []);
+    const baselineIndexes = (baselineRows.length && typeof buildProgressPreviousMatchIndex === 'function')
+        ? buildProgressPreviousMatchIndex(baselineRows)
+        : null;
+    const baselineInfoMap = new Map();
+    const expectationMap = {};
+
+    subjectList.forEach((subject) => {
+        expectationMap[subject] = {
+            overall: teacherBuildMetricSummary(
+                mySchoolStudents.map((student) => teacherToNumber(student?.scores?.[subject], NaN)),
+                gradeStats[subject]
+            ),
+            bands: {}
+        };
+        TEACHER_BASELINE_BANDS.forEach((band) => {
+            expectationMap[subject].bands[band.id] = null;
+        });
+    });
+
+    mySchoolStudents.forEach((student) => {
+        const key = teacherBuildStudentKey(student);
+        const currentRank = teacherToNumber(
+            safeGet(student, 'ranks.total.school', schoolRankMap.map.get(key)),
+            schoolRankMap.map.get(key) || 0
+        );
+        const match = baselineIndexes && typeof resolveProgressBaselineMatch === 'function'
+            ? resolveProgressBaselineMatch(student, baselineIndexes)
+            : { row: null, matchType: 'missing', matchLabel: '暂无历史' };
+        const prevRow = match?.row || null;
+        const baselineRank = prevRow
+            ? teacherToNumber(prevRow._progressSchoolRank || prevRow.rankSchool || prevRow.rank, NaN)
+            : NaN;
+        baselineInfoMap.set(key, {
+            row: prevRow,
+            bandId: teacherResolveBaselineBand(baselineRank, baselineRows.length || 0),
+            baselineRank,
+            currentRank,
+            matchType: match?.matchType || 'missing',
+            matchLabel: match?.matchLabel || '暂无历史'
+        });
+    });
+
+    subjectList.forEach((subject) => {
+        const buckets = {};
+        TEACHER_BASELINE_BANDS.forEach((band) => {
+            buckets[band.id] = [];
+        });
+        mySchoolStudents.forEach((student) => {
+            const score = teacherToNumber(student?.scores?.[subject], NaN);
+            if (!Number.isFinite(score)) return;
+            const info = baselineInfoMap.get(teacherBuildStudentKey(student));
+            if (!info?.row) return;
+            buckets[info.bandId || 'tail'].push(score);
+        });
+        TEACHER_BASELINE_BANDS.forEach((band) => {
+            const bucketSummary = teacherBuildMetricSummary(buckets[band.id], gradeStats[subject]);
+            expectationMap[subject].bands[band.id] = bucketSummary.count >= 3
+                ? bucketSummary
+                : expectationMap[subject].overall;
+        });
+    });
+
+    Object.entries(TEACHER_MAP || {}).forEach(([key, teacherName]) => {
+        const [rawClass, rawSubject] = key.split('_');
+        const className = normalizeClass(rawClass);
+        const normalizedSubject = normalizeSubject(rawSubject);
+        const matchedSubject = subjectList.find((subject) => normalizeSubject(subject) === normalizedSubject);
+        if (!matchedSubject) return;
+        if (!TEACHER_STATS[teacherName]) TEACHER_STATS[teacherName] = {};
+        if (!TEACHER_STATS[teacherName][matchedSubject]) {
+            TEACHER_STATS[teacherName][matchedSubject] = {
+                classes: [],
+                students: [],
+                subject: matchedSubject
+            };
+        }
+        const teacherStudents = mySchoolStudents.filter((student) => (
+            normalizeClass(student.class) === className && student.scores?.[matchedSubject] !== undefined
+        ));
+        TEACHER_STATS[teacherName][matchedSubject].classes.push(className);
+        TEACHER_STATS[teacherName][matchedSubject].students.push(...teacherStudents);
+    });
+
+    const subjectGroups = {};
+    Object.keys(TEACHER_STATS).forEach((teacherName) => {
+        Object.keys(TEACHER_STATS[teacherName]).forEach((subject) => {
+            const data = TEACHER_STATS[teacherName][subject];
+            const studentMap = new Map();
+            (data.students || []).forEach((student) => {
+                studentMap.set(teacherBuildStudentKey(student), student);
+            });
+            const students = Array.from(studentMap.values());
+            data.students = students;
+            data.classes = [...new Set((data.classes || []).filter(Boolean))].sort();
+            data.classesText = data.classes.join(',');
+
+            const thresholds = gradeStats[subject] || teacherResolveThresholds(subject, students);
+            const summary = teacherBuildMetricSummary(
+                students.map((student) => teacherToNumber(student?.scores?.[subject], NaN)),
+                thresholds
+            );
+            data.thresholds = thresholds;
+            data.studentCount = summary.count;
+            data.totalScore = students.reduce((sum, student) => sum + teacherToNumber(student?.scores?.[subject], 0), 0);
+            data.avgValue = summary.avg;
+            data.avg = summary.avg.toFixed(2);
+            data.excellentRate = summary.excellentRate;
+            data.passRate = summary.passRate;
+            data.lowRate = summary.lowRate;
+            data.excellentCount = Math.round(summary.excellentRate * summary.count);
+            data.passCount = Math.round(summary.passRate * summary.count);
+            data.lowCount = Math.round(summary.lowRate * summary.count);
+            data.contributionValue = summary.avg - teacherToNumber(gradeStats[subject]?.avg, 0);
+            data.contribution = data.contributionValue.toFixed(2);
+
+            const expectedAccumulator = { avg: 0, exc: 0, pass: 0, low: 0, count: 0 };
+            let matchedCount = 0;
+            students.forEach((student) => {
+                const info = baselineInfoMap.get(teacherBuildStudentKey(student));
+                const fallback = expectationMap[subject]?.overall || teacherBuildMetricSummary([], thresholds);
+                const expected = info?.row
+                    ? (expectationMap[subject]?.bands?.[info.bandId] || fallback)
+                    : fallback;
+                if (info?.row) matchedCount += 1;
+                expectedAccumulator.avg += teacherToNumber(expected?.avg, 0);
+                expectedAccumulator.exc += teacherToNumber(expected?.excellentRate, 0);
+                expectedAccumulator.pass += teacherToNumber(expected?.passRate, 0);
+                expectedAccumulator.low += teacherToNumber(expected?.lowRate, 0);
+                expectedAccumulator.count += 1;
+            });
+
+            const divisor = Math.max(expectedAccumulator.count, 1);
+            data.expectedAvg = expectedAccumulator.avg / divisor;
+            data.expectedExcellentRate = expectedAccumulator.exc / divisor;
+            data.expectedPassRate = expectedAccumulator.pass / divisor;
+            data.expectedLowRate = expectedAccumulator.low / divisor;
+            data.baselineMatchedCount = matchedCount;
+            data.baselineCoverage = data.studentCount ? matchedCount / data.studentCount : 0;
+            data.baselineCoverageText = `${Math.round(data.baselineCoverage * 100)}%`;
+            data.deltaAvg = data.avgValue - data.expectedAvg;
+            data.deltaExcellentRate = data.excellentRate - data.expectedExcellentRate;
+            data.deltaPassRate = data.passRate - data.expectedPassRate;
+            data.deltaLowBetter = data.expectedLowRate - data.lowRate;
+            data.focusTargets = teacherBuildFocusTargets(students, subject, thresholds);
+            data.focusSummary = data.focusTargets.summaryText;
+            data.baselineExamId = String(window.__PROGRESS_BASELINE_ACTIVE_ID || document.getElementById('progressBaselineSelect')?.value || '').trim();
+            data.ratedAvg = 0;
+            data.ratedExc = 0;
+            data.ratedPass = 0;
+            data.leagueScoreRaw = 0;
+            data.leagueScore = 0;
+            data.baselineAdjustment = 0;
+            data.workloadAdjustment = 0;
+            data.confidenceFactor = 1;
+            data.fairScore = 0;
+            data.finalScore = '0.0';
+            data.fairRank = 0;
+
+            if (!subjectGroups[subject]) subjectGroups[subject] = [];
+            subjectGroups[subject].push({ teacherName, data });
+        });
+    });
+
+    Object.entries(subjectGroups).forEach(([subject, entries]) => {
+        const maxAvg = Math.max(...entries.map((entry) => teacherToNumber(entry.data.avgValue, 0)), 0);
+        const maxExc = Math.max(...entries.map((entry) => teacherToNumber(entry.data.excellentRate, 0)), 0);
+        const maxPass = Math.max(...entries.map((entry) => teacherToNumber(entry.data.passRate, 0)), 0);
+        const medianCount = teacherMedian(entries.map((entry) => teacherToNumber(entry.data.studentCount, 0))) || 1;
+        const deltaAvgList = entries.map((entry) => entry.data.deltaAvg);
+        const deltaExcList = entries.map((entry) => entry.data.deltaExcellentRate);
+        const deltaPassList = entries.map((entry) => entry.data.deltaPassRate);
+        const deltaLowList = entries.map((entry) => entry.data.deltaLowBetter);
+
+        entries.forEach(({ data }) => {
+            data.ratedAvg = maxAvg > 0 ? (data.avgValue / maxAvg) * weightConfig.avg : 0;
+            data.ratedExc = maxExc > 0 ? (data.excellentRate / maxExc) * weightConfig.exc : 0;
+            data.ratedPass = maxPass > 0 ? (data.passRate / maxPass) * weightConfig.pass : 0;
+            data.leagueScoreRaw = data.ratedAvg + data.ratedExc + data.ratedPass;
+            data.leagueScore = weightConfig.total > 0 ? (data.leagueScoreRaw / weightConfig.total) * 100 : 0;
+
+            const baselineReliability = data.baselineMatchedCount > 0
+                ? teacherClamp((data.baselineCoverage * 0.7) + (Math.min(data.baselineMatchedCount, 20) / 20 * 0.3), 0, 1)
+                : 0;
+            const baselineAdjustment = (
+                teacherGetZScore(data.deltaAvg, deltaAvgList) * 6 +
+                teacherGetZScore(data.deltaExcellentRate, deltaExcList) * 5 +
+                teacherGetZScore(data.deltaPassRate, deltaPassList) * 5 +
+                teacherGetZScore(data.deltaLowBetter, deltaLowList) * 4
+            ) * baselineReliability;
+            data.baselineAdjustment = teacherClamp(baselineAdjustment, -20, 20);
+
+            const workloadDiff = Math.sqrt(Math.max(data.studentCount, 0)) - Math.sqrt(Math.max(medianCount, 1));
+            data.workloadAdjustment = teacherClamp(workloadDiff * 2.4, -3, 3);
+            const sampleFactor = teacherClamp(Math.sqrt(Math.max(data.studentCount, 1) / Math.max(medianCount, 1)), 0, 1);
+            data.confidenceFactor = teacherClamp(0.9 + 0.1 * ((sampleFactor + Math.max(baselineReliability, 0.35)) / 2), 0.88, 1);
+            data.fairScore = teacherClamp(
+                data.leagueScore * data.confidenceFactor + data.baselineAdjustment + data.workloadAdjustment,
+                0,
+                100
+            );
+            data.finalScore = data.fairScore.toFixed(1);
+            data.riskLevel = (data.fairScore < 60 || data.lowRate >= 0.12 || data.baselineAdjustment <= -6) ? 'risk' : 'normal';
+        });
+
+        entries.sort((a, b) => b.data.fairScore - a.data.fairScore).forEach((entry, index) => {
+            entry.data.fairRank = index + 1;
+        });
+    });
+
+    refreshTeacherPerformanceCopy();
+    calculateTeacherTownshipRanking();
+    renderTeacherCards();
+    renderTeacherComparisonTable();
+    generateTeacherPairing();
+    if (typeof renderTeachingOverview === 'function') renderTeachingOverview();
+    if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars();
+}
+
+analyzeTeachers = analyzeTeachersV2;
 
 function generateTeacherPairing() {
     const container = document.getElementById('teacher-pairing-suggestions'); container.innerHTML = '';
@@ -447,6 +986,390 @@ function showTeacherDetails(teacher, subject) {
     tableBody.innerHTML = `<tr><td>${subject}</td><td>${data.avg}</td><td class="${avgComparison >= 0 ? 'positive-percent' : 'negative-percent'}">${avgComparison >= 0 ? '+' : ''}${avgComparison}%</td><td>${(data.excellentRate * 100).toFixed(2)}%</td><td>-</td><td>${(data.passRate * 100).toFixed(2)}%</td><td>-</td></tr>`;
     document.getElementById('teacherModal').style.display = 'flex';
 }
+
+function teacherBuildCardList(stats, rankings, currentUserName = '', currentRole = 'guest') {
+    const list = [];
+    Object.keys(stats || {}).forEach((teacherName) => {
+        Object.keys(stats[teacherName] || {}).forEach((subject) => {
+            const data = stats[teacherName][subject];
+            const level = calculatePerformanceLevelV2(data);
+            const rank = rankings?.[teacherName]?.[subject]?.rank || '-';
+            list.push({
+                id: `${teacherName}-${subject}`,
+                name: teacherName,
+                subject,
+                classes: data.classesText || data.classes || '',
+                avg: data.avg,
+                fairScore: teacherToNumber(data.fairScore, 0).toFixed(1),
+                leagueScoreRaw: teacherToNumber(data.leagueScoreRaw, 0).toFixed(1),
+                leagueScore: teacherToNumber(data.leagueScore, 0).toFixed(1),
+                baselineAdjustment: teacherFormatSigned(data.baselineAdjustment, 1),
+                baselineCoverage: data.baselineCoverageText || '0%',
+                excRate: teacherFormatPercent(data.excellentRate, 1),
+                passRate: teacherFormatPercent(data.passRate, 1),
+                lowRate: teacherFormatPercent(data.lowRate, 1),
+                focusSummary: data.focusSummary || '培优0 / 临界0 / 辅差0',
+                count: data.studentCount,
+                rank,
+                badgeClass: level.class,
+                badgeText: level.text
+            });
+        });
+    });
+
+    const normalizedCurrent = String(currentUserName || '').replace(/\s+/g, '').toLowerCase();
+    list.sort((a, b) => {
+        if ((currentRole === 'teacher' || currentRole === 'class_teacher') && normalizedCurrent) {
+            const aName = String(a.name || '').replace(/\s+/g, '').toLowerCase();
+            const bName = String(b.name || '').replace(/\s+/g, '').toLowerCase();
+            const aMine = aName === normalizedCurrent || aName.startsWith(`${normalizedCurrent}(`) || aName.startsWith(`${normalizedCurrent}（`);
+            const bMine = bName === normalizedCurrent || bName.startsWith(`${normalizedCurrent}(`) || bName.startsWith(`${normalizedCurrent}（`);
+            if (aMine !== bMine) return aMine ? -1 : 1;
+        }
+        const fairDiff = teacherToNumber(b.fairScore, 0) - teacherToNumber(a.fairScore, 0);
+        if (fairDiff !== 0) return fairDiff;
+        const leagueDiff = teacherToNumber(b.leagueScore, 0) - teacherToNumber(a.leagueScore, 0);
+        if (leagueDiff !== 0) return leagueDiff;
+        return String(a.name || '').localeCompare(String(b.name || ''), 'zh-Hans-CN');
+    });
+    return list;
+}
+
+function renderTeacherCardsV2() {
+    const container = document.getElementById('teacherCardsContainer');
+    const user = getCurrentUser();
+    const role = user?.role || 'guest';
+    const stats = getVisibleTeacherStats();
+    const rankings = TEACHER_TOWNSHIP_RANKINGS;
+    const list = teacherBuildCardList(stats, rankings, user?.name || '', role);
+
+    try {
+        if (window.Alpine && Alpine.store) {
+            const store = Alpine.store('teacherData');
+            if (store) store.list = list;
+        }
+    } catch (err) {
+        console.warn('teacherData store update skipped:', err);
+    }
+
+    if (!container) return;
+    if (!list.length) {
+        container.innerHTML = `
+            <div style="grid-column: 1/-1; text-align:center; color:#999; padding:20px;">
+                暂无教师数据，请先完成任课表同步和成绩导入。
+                <div style="margin-top:10px;">
+                    <button class="btn btn-orange" onclick="openTeacherSync()">去同步任课表</button>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = list.map((item) => `
+        <div class="teacher-card">
+            <div class="teacher-header">
+                <div>
+                    <div class="teacher-name">${teacherEscapeHtml(item.name)} - ${teacherEscapeHtml(item.subject)}</div>
+                    <div class="teacher-classes">${teacherEscapeHtml(item.classes)}班</div>
+                </div>
+                <div class="performance-badge ${teacherEscapeHtml(item.badgeClass)}">${teacherEscapeHtml(item.badgeText)}</div>
+            </div>
+            <div class="teacher-stats">
+                <div class="stat-item">
+                    <div class="stat-value">${teacherEscapeHtml(item.avg)}</div>
+                    <div class="stat-label">均分</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${teacherEscapeHtml(item.leagueScoreRaw)}</div>
+                    <div class="stat-label">联考赋分</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${teacherEscapeHtml(item.fairScore)}</div>
+                    <div class="stat-label">公平绩效</div>
+                </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; color:#475569; margin-bottom:8px; padding:0 10px;">
+                <span>优/及/低: ${teacherEscapeHtml(item.excRate)} / ${teacherEscapeHtml(item.passRate)} / ${teacherEscapeHtml(item.lowRate)}</span>
+                <span>校排: <strong style="color:var(--primary)">${teacherEscapeHtml(item.rank)}</strong></span>
+            </div>
+            <div style="display:flex; justify-content:space-between; gap:8px; font-size:12px; color:#64748b; margin-bottom:14px; padding:0 10px;">
+                <span>基线校正 ${teacherEscapeHtml(item.baselineAdjustment)} · 覆盖 ${teacherEscapeHtml(item.baselineCoverage)}</span>
+                <span>${teacherEscapeHtml(item.focusSummary)}</span>
+            </div>
+            <button class="view-details-btn" onclick='showTeacherDetails(${JSON.stringify(item.name)}, ${JSON.stringify(item.subject)})'>查看详情</button>
+        </div>
+    `).join('');
+}
+
+function calculatePerformanceLevelV2(teacherData) {
+    const fairScore = teacherToNumber(teacherData?.fairScore, teacherData?.finalScore || 0);
+    const baselineAdjustment = teacherToNumber(teacherData?.baselineAdjustment, 0);
+    if (fairScore >= 85 && baselineAdjustment >= 0) return { class: 'performance-excellent', text: '优秀' };
+    if (fairScore >= 75) return { class: 'performance-good', text: '良好' };
+    if (fairScore >= 65) return { class: 'performance-average', text: '稳健' };
+    return { class: 'performance-poor', text: '待改进' };
+}
+
+function renderTeacherComparisonTableV2() {
+    const container = document.getElementById('teacherComparisonTable');
+    const stats = getVisibleTeacherStats();
+    if (!container) return;
+    if (!Object.keys(stats).length) {
+        container.innerHTML = '<p style="text-align:center; color:#666;">暂无教师统计数据</p>';
+        return;
+    }
+
+    const subjectTeachers = {};
+    Object.keys(stats).forEach((teacherName) => {
+        Object.keys(stats[teacherName] || {}).forEach((subject) => {
+            if (!subjectTeachers[subject]) subjectTeachers[subject] = [];
+            subjectTeachers[subject].push({ teacher: teacherName, data: stats[teacherName][subject] });
+        });
+    });
+
+    const weightConfig = teacherGetWeightConfig();
+    let tableHtml = `
+        <thead>
+            <tr>
+                <th rowspan="2">教师</th>
+                <th rowspan="2">班级</th>
+                <th rowspan="2">人数</th>
+                <th rowspan="2">均分</th>
+                <th rowspan="2" title="按系统现有两率一分标准折算，同校同学科比较">联考赋分(${weightConfig.total})</th>
+                <th rowspan="2" title="按最近一次历史考试的匹配学生做超预期修正，范围约 ±20">基线校正</th>
+                <th colspan="3" style="background:#dcfce7; color:#166534;">三率指标</th>
+                <th rowspan="2">重点学生</th>
+                <th rowspan="2" style="background:#fef3c7; color:#92400e;">公平绩效分</th>
+            </tr>
+            <tr>
+                <th>优秀率</th>
+                <th>及格率</th>
+                <th>低分率</th>
+            </tr>
+        </thead>
+        <tbody>
+    `;
+
+    Object.keys(subjectTeachers).sort(sortSubjects).forEach((subject) => {
+        tableHtml += `<tr style="background:#f1f5f9; font-weight:bold; color:#64748b;"><td colspan="11" style="text-align:left; padding-left:15px;">${teacherEscapeHtml(subject)}</td></tr>`;
+        subjectTeachers[subject]
+            .sort((a, b) => teacherToNumber(b.data.fairScore, 0) - teacherToNumber(a.data.fairScore, 0))
+            .forEach((item) => {
+                const d = item.data;
+                const baselineClass = teacherToNumber(d.baselineAdjustment, 0) >= 0 ? 'text-green' : 'text-red';
+                const lowStyle = teacherToNumber(d.lowRate, 0) >= 0.12 ? 'color:#dc2626; font-weight:700;' : 'color:#334155;';
+                const focusTitle = [
+                    `培优: ${(d.focusTargets?.excellentEdges || []).slice(0, 6).map((row) => `${row.name}(${row.score})`).join('、') || '暂无'}`,
+                    `临界: ${(d.focusTargets?.passEdges || []).slice(0, 6).map((row) => `${row.name}(${row.score})`).join('、') || '暂无'}`,
+                    `辅差: ${(d.focusTargets?.lowRisk || []).slice(0, 6).map((row) => `${row.name}(${row.score})`).join('、') || '暂无'}`
+                ].join(' | ');
+                const baselineTitle = `基线覆盖 ${d.baselineCoverageText || '0%'}；预计均分 ${teacherToNumber(d.expectedAvg, 0).toFixed(2)}；预计优率 ${teacherFormatPercent(d.expectedExcellentRate, 1)}；预计及格率 ${teacherFormatPercent(d.expectedPassRate, 1)}；预计低分率 ${teacherFormatPercent(d.expectedLowRate, 1)}${d.baselineExamId ? `；基线 ${d.baselineExamId}` : ''}`;
+                tableHtml += `
+                    <tr>
+                        <td><strong>${teacherEscapeHtml(item.teacher)}</strong></td>
+                        <td>${teacherEscapeHtml(d.classesText || d.classes || '-')}</td>
+                        <td>${teacherEscapeHtml(d.studentCount)}</td>
+                        <td style="font-weight:700;">${teacherEscapeHtml(d.avg)}</td>
+                        <td title="${teacherEscapeHtml(`均分赋分 ${teacherToNumber(d.ratedAvg, 0).toFixed(1)}，优率赋分 ${teacherToNumber(d.ratedExc, 0).toFixed(1)}，及格赋分 ${teacherToNumber(d.ratedPass, 0).toFixed(1)}`)}">
+                            <div style="font-weight:700; color:#0369a1;">${teacherToNumber(d.leagueScoreRaw, 0).toFixed(1)}</div>
+                            <div style="font-size:11px; color:#64748b;">折算 ${teacherToNumber(d.leagueScore, 0).toFixed(1)} / 100</div>
+                        </td>
+                        <td class="${baselineClass}" title="${teacherEscapeHtml(baselineTitle)}" style="font-weight:700;">
+                            <div>${teacherFormatSigned(d.baselineAdjustment, 1)}</div>
+                            <div style="font-size:11px; color:#64748b;">覆盖 ${teacherEscapeHtml(d.baselineCoverageText || '0%')}</div>
+                        </td>
+                        <td>${teacherFormatPercent(d.excellentRate, 1)}</td>
+                        <td>${teacherFormatPercent(d.passRate, 1)}</td>
+                        <td style="${lowStyle}">${teacherFormatPercent(d.lowRate, 1)}</td>
+                        <td title="${teacherEscapeHtml(focusTitle)}" style="font-size:12px;">${teacherEscapeHtml(d.focusSummary || '培优0 / 临界0 / 辅差0')}</td>
+                        <td style="background:#fffbeb; font-weight:800; color:#b45309; font-size:1.1em;">
+                            <div>${teacherToNumber(d.fairScore, 0).toFixed(1)}</div>
+                            <div style="font-size:11px; color:#92400e;">同科第 ${teacherEscapeHtml(d.fairRank || '-')} 名</div>
+                        </td>
+                    </tr>
+                `;
+            });
+    });
+
+    tableHtml += '</tbody>';
+    container.classList.add('comparison-table');
+    container.innerHTML = tableHtml;
+}
+
+function teacherFormatFocusList(list, emptyText = '暂无') {
+    const rows = (list || []).slice(0, 8);
+    if (!rows.length) return emptyText;
+    return rows.map((row) => `${row.name}${row.className ? `(${row.className})` : ''}${Number.isFinite(row.score) ? ` ${row.score}` : ''}`).join('、');
+}
+
+function showTeacherDetailsV2(teacher, subject) {
+    const stats = getVisibleTeacherStats();
+    const data = stats[teacher] ? stats[teacher][subject] : null;
+    if (!data) {
+        if (window.UI) UI.toast('当前筛选范围下暂无该教师该学科数据', 'warning');
+        return;
+    }
+    document.getElementById('modalTeacherName').textContent = `${teacher} - ${subject} 教学详情`;
+    document.getElementById('modalAvgScore').textContent = data.avg;
+    document.getElementById('modalExcellentRate').textContent = teacherFormatPercent(data.excellentRate, 1);
+    document.getElementById('modalPassRate').textContent = teacherFormatPercent(data.passRate, 1);
+
+    const expectedAvg = teacherToNumber(data.expectedAvg, 0);
+    const avgComparison = expectedAvg > 0 ? ((teacherToNumber(data.avgValue, 0) - expectedAvg) / expectedAvg) * 100 : 0;
+    document.getElementById('modalAvgComparison').textContent = `${avgComparison >= 0 ? '+' : ''}${avgComparison.toFixed(1)}%`;
+    const avgProgress = Math.min(Math.max(50 + avgComparison, 0), 100);
+    const progressEl = document.getElementById('modalAvgProgress');
+    progressEl.style.width = `${avgProgress}%`;
+    progressEl.className = avgComparison >= 0 ? 'progress-good' : 'progress-poor';
+    progressEl.style.backgroundColor = avgComparison >= 0 ? '#22c55e' : '#ef4444';
+
+    const table = document.getElementById('modalSubjectTable');
+    const thead = table.querySelector('thead');
+    const tbody = table.querySelector('tbody');
+    thead.innerHTML = `
+        <tr>
+            <th>学科</th>
+            <th>实际均分</th>
+            <th>预计均分</th>
+            <th>优秀率(实/预)</th>
+            <th>及格率(实/预)</th>
+            <th>低分率(实/预)</th>
+            <th>基线校正</th>
+        </tr>
+    `;
+    tbody.innerHTML = `
+        <tr>
+            <td>${teacherEscapeHtml(subject)}</td>
+            <td>${teacherToNumber(data.avgValue, 0).toFixed(2)}</td>
+            <td>${teacherToNumber(data.expectedAvg, 0).toFixed(2)}</td>
+            <td>${teacherFormatPercent(data.excellentRate, 1)} / ${teacherFormatPercent(data.expectedExcellentRate, 1)}</td>
+            <td>${teacherFormatPercent(data.passRate, 1)} / ${teacherFormatPercent(data.expectedPassRate, 1)}</td>
+            <td>${teacherFormatPercent(data.lowRate, 1)} / ${teacherFormatPercent(data.expectedLowRate, 1)}</td>
+            <td class="${teacherToNumber(data.baselineAdjustment, 0) >= 0 ? 'positive-percent' : 'negative-percent'}">${teacherFormatSigned(data.baselineAdjustment, 1)}</td>
+        </tr>
+    `;
+
+    let extra = document.getElementById('teacherModalExtra');
+    if (!extra) {
+        extra = document.createElement('div');
+        extra.id = 'teacherModalExtra';
+        extra.style.marginBottom = '16px';
+        table.parentNode.insertBefore(extra, table);
+    }
+    extra.innerHTML = `
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:14px;">
+            <div class="bg-gray-50" style="padding:12px; border-radius:12px;">
+                <div style="font-size:12px; color:#64748b;">联考赋分</div>
+                <div style="font-size:22px; font-weight:800; color:#0f172a;">${teacherToNumber(data.leagueScoreRaw, 0).toFixed(1)}</div>
+                <div style="font-size:12px; color:#64748b;">折算 ${teacherToNumber(data.leagueScore, 0).toFixed(1)} / 100</div>
+            </div>
+            <div class="bg-gray-50" style="padding:12px; border-radius:12px;">
+                <div style="font-size:12px; color:#64748b;">基线校正</div>
+                <div style="font-size:22px; font-weight:800; color:${teacherToNumber(data.baselineAdjustment, 0) >= 0 ? '#15803d' : '#dc2626'};">${teacherFormatSigned(data.baselineAdjustment, 1)}</div>
+                <div style="font-size:12px; color:#64748b;">覆盖 ${teacherEscapeHtml(data.baselineCoverageText || '0%')}</div>
+            </div>
+            <div class="bg-gray-50" style="padding:12px; border-radius:12px;">
+                <div style="font-size:12px; color:#64748b;">公平绩效分</div>
+                <div style="font-size:22px; font-weight:800; color:#b45309;">${teacherToNumber(data.fairScore, 0).toFixed(1)}</div>
+                <div style="font-size:12px; color:#64748b;">同科第 ${teacherEscapeHtml(data.fairRank || '-')} 名</div>
+            </div>
+            <div class="bg-gray-50" style="padding:12px; border-radius:12px;">
+                <div style="font-size:12px; color:#64748b;">置信 / 工作量</div>
+                <div style="font-size:22px; font-weight:800; color:#0f172a;">${teacherToNumber(data.confidenceFactor, 1).toFixed(2)}</div>
+                <div style="font-size:12px; color:#64748b;">工作量修正 ${teacherFormatSigned(data.workloadAdjustment, 1)}</div>
+            </div>
+        </div>
+        <div style="border:1px solid #e2e8f0; border-radius:12px; padding:14px; background:#f8fafc;">
+            <div style="font-size:13px; font-weight:700; color:#334155; margin-bottom:10px;">培优 / 辅差名单</div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px;">
+                <div>
+                    <div style="font-size:12px; color:#0f766e; font-weight:700; margin-bottom:4px;">培优边缘生</div>
+                    <div style="font-size:12px; color:#475569; line-height:1.7;">${teacherEscapeHtml(teacherFormatFocusList(data.focusTargets?.excellentEdges, '暂无培优边缘生'))}</div>
+                </div>
+                <div>
+                    <div style="font-size:12px; color:#1d4ed8; font-weight:700; margin-bottom:4px;">及格临界生</div>
+                    <div style="font-size:12px; color:#475569; line-height:1.7;">${teacherEscapeHtml(teacherFormatFocusList(data.focusTargets?.passEdges, '暂无及格临界生'))}</div>
+                </div>
+                <div>
+                    <div style="font-size:12px; color:#b45309; font-weight:700; margin-bottom:4px;">辅差关注生</div>
+                    <div style="font-size:12px; color:#475569; line-height:1.7;">${teacherEscapeHtml(teacherFormatFocusList(data.focusTargets?.lowRisk, '暂无辅差关注生'))}</div>
+                </div>
+            </div>
+            <div style="margin-top:10px; font-size:12px; color:#64748b;">${teacherEscapeHtml(data.baselineExamId ? `历史基线：${data.baselineExamId}` : '未加载历史基线，当前仅使用本次成绩的联考赋分与当前群体均值进行校正。')}</div>
+        </div>
+    `;
+
+    document.getElementById('teacherModal').style.display = 'flex';
+}
+
+function exportTeacherComparisonExcelV2() {
+    const user = getCurrentUser();
+    const role = user?.role || 'guest';
+    const exportStats = (role === 'teacher' || role === 'class_teacher') ? getVisibleTeacherStats() : TEACHER_STATS;
+    if (!Object.keys(exportStats).length) return alert('请先进行教师分析');
+
+    const subjectSet = new Set();
+    Object.values(exportStats).forEach((subjectMap) => Object.keys(subjectMap || {}).forEach((subject) => subjectSet.add(subject)));
+    const wb = XLSX.utils.book_new();
+    const weightConfig = teacherGetWeightConfig();
+    const rowsBySubject = {};
+
+    Object.keys(exportStats).forEach((teacherName) => {
+        Object.keys(exportStats[teacherName] || {}).forEach((subject) => {
+            if (!rowsBySubject[subject]) rowsBySubject[subject] = [];
+            rowsBySubject[subject].push({ teacherName, data: exportStats[teacherName][subject] });
+        });
+    });
+
+    Object.keys(rowsBySubject).sort(sortSubjects).forEach((subject) => {
+        const rows = rowsBySubject[subject].sort((a, b) => teacherToNumber(b.data.fairScore, 0) - teacherToNumber(a.data.fairScore, 0));
+        const wsData = [[
+            '教师姓名', '学科', '任教班级', '人数', '均分',
+            `联考赋分(${weightConfig.total})`, '联考赋分(折算100)', '基线校正', '基线覆盖',
+            '预计均分', '优秀率', '预计优秀率', '及格率', '预计及格率', '低分率', '预计低分率',
+            '工作量修正', '置信系数', '公平绩效分', '同科排名',
+            '培优边缘生', '及格临界生', '辅差关注生'
+        ]];
+        rows.forEach(({ teacherName, data }) => {
+            wsData.push([
+                teacherName,
+                subject,
+                data.classesText || data.classes || '',
+                data.studentCount,
+                getExcelNum(teacherToNumber(data.avgValue, 0)),
+                getExcelNum(teacherToNumber(data.leagueScoreRaw, 0)),
+                getExcelNum(teacherToNumber(data.leagueScore, 0)),
+                getExcelNum(teacherToNumber(data.baselineAdjustment, 0)),
+                data.baselineCoverageText || '0%',
+                getExcelNum(teacherToNumber(data.expectedAvg, 0)),
+                getExcelPercent(teacherToNumber(data.excellentRate, 0)),
+                getExcelPercent(teacherToNumber(data.expectedExcellentRate, 0)),
+                getExcelPercent(teacherToNumber(data.passRate, 0)),
+                getExcelPercent(teacherToNumber(data.expectedPassRate, 0)),
+                getExcelPercent(teacherToNumber(data.lowRate, 0)),
+                getExcelPercent(teacherToNumber(data.expectedLowRate, 0)),
+                getExcelNum(teacherToNumber(data.workloadAdjustment, 0)),
+                getExcelNum(teacherToNumber(data.confidenceFactor, 1)),
+                getExcelNum(teacherToNumber(data.fairScore, 0)),
+                data.fairRank || '',
+                teacherFormatFocusList(data.focusTargets?.excellentEdges, ''),
+                teacherFormatFocusList(data.focusTargets?.passEdges, ''),
+                teacherFormatFocusList(data.focusTargets?.lowRisk, '')
+            ]);
+        });
+        const sheetName = buildSafeSheetName(subject, '公平绩效');
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(wsData), sheetName);
+    });
+
+    const exportTag = buildTeacherExportTag(user, subjectSet);
+    XLSX.writeFile(wb, `教师公平绩效明细_${exportTag}.xlsx`);
+}
+
+renderTeacherCards = renderTeacherCardsV2;
+calculatePerformanceLevel = calculatePerformanceLevelV2;
+renderTeacherComparisonTable = renderTeacherComparisonTableV2;
+showTeacherDetails = showTeacherDetailsV2;
+exportTeacherComparisonExcel = exportTeacherComparisonExcelV2;
 
 document.getElementById('closeModal').addEventListener('click', () => document.getElementById('teacherModal').style.display = 'none');
 window.addEventListener('click', (e) => { if (e.target === document.getElementById('teacherModal')) document.getElementById('teacherModal').style.display = 'none'; });
@@ -1719,6 +2642,8 @@ function exportTeacherTownshipRankExcel() {
 }
 
 // ================= 报告查询逻辑（打印增强） =================
+
+    refreshTeacherPerformanceCopy();
 
     Object.assign(window, {
         analyzeTeachers,
