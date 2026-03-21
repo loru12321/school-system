@@ -10553,7 +10553,7 @@ function switchTab(id) {
         if (id === 'class-comparison') updateClassCompSchoolSelect();
         if (id === 'potential-analysis') updatePotentialSchoolSelect();
         if (id === 'class-diagnosis') updateDiagnosisSelects();
-        if (id === 'correlation-analysis') updateCorrelationSchoolSelect();
+        if (id === 'correlation-analysis' && typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
         if (id === 'seat-adjustment') updateSeatAdjSelects();
         if (id === 'subject-balance') updateSubjectBalanceSelects();
         if (id === 'progress-analysis') {
@@ -10983,7 +10983,10 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
         // 更新所有下拉框
         updateSchoolSelect(); updateMySchoolSelect(); updateStudentSchoolSelect(); updateMarginalSchoolSelect();
         updateClassSelect(); updateSegmentSelects(); updateClassCompSchoolSelect(); updatePotentialSchoolSelect();
-        updateDiagnosisSelects(); updateCorrelationSchoolSelect(); updateSeatAdjSelects(); updateProgressSchoolSelect();
+        updateDiagnosisSelects();
+        if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
+        updateSeatAdjSelects();
+        updateProgressSchoolSelect();
         updateMutualAidSelects(); updateMpSchoolSelect();
 
         document.getElementById('msg-box').innerText = `✅ 成功导入 ${Object.keys(SCHOOLS).length} 所学校，共 ${RAW_DATA.length} 名学生`;
@@ -20749,7 +20752,7 @@ const CohortDB = {
             updateClassCompSchoolSelect();
             updatePotentialSchoolSelect();
             updateDiagnosisSelects();
-            updateCorrelationSchoolSelect();
+            if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
             updateSeatAdjSelects();
             updateProgressSchoolSelect();
             updateMutualAidSelects();

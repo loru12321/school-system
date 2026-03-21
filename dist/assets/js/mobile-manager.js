@@ -32,6 +32,9 @@
         class_teacher: 'student-details',
         teacher: 'teacher-analysis'
     };
+    const MESSAGE_ROLES = ['admin', 'director', 'grade_director', 'class_teacher'];
+    const ACCOUNT_MANAGER_ROLES = ['admin', 'director', 'grade_director', 'class_teacher'];
+    const DATA_MANAGER_ROLES = ['admin', 'director'];
 
     let currentSheetMode = '';
 
@@ -82,6 +85,11 @@
         const user = getCurrentUser();
         const rawRoles = Array.isArray(user?.roles) && user.roles.length ? user.roles : [user?.role].filter(Boolean);
         return rawRoles.map(role => String(role || '').trim()).filter(Boolean);
+    }
+
+    function hasRole(allowedRoles) {
+        const roleSet = new Set(getCurrentRoles());
+        return allowedRoles.some(role => roleSet.has(role));
     }
 
     function getCurrentSchool() {
@@ -198,6 +206,16 @@
         return findAllowedItem(getActiveSectionId()) || findAllowedItem(getPrimaryModuleId()) || null;
     }
 
+    function getCurrentCategory() {
+        const categories = getAllowedCategories();
+        const activeItem = getActiveItem();
+        if (activeItem) {
+            const category = categories.find(item => item.key === activeItem.categoryKey);
+            if (category) return category;
+        }
+        return categories.find(item => item.key === getCurrentCategoryKey()) || categories[0] || null;
+    }
+
     function getShortcutItems() {
         const allowMap = new Map();
         const shortlist = [];
@@ -223,6 +241,42 @@
         return shortlist.slice(0, 6);
     }
 
+    function getSelectedText(selectId, fallback = '') {
+        const select = document.getElementById(selectId);
+        if (!select || !select.selectedOptions || !select.selectedOptions[0]) return fallback;
+        const text = String(select.selectedOptions[0].textContent || '').trim();
+        return text || fallback;
+    }
+
+    function getModeBadgeText() {
+        const badge = document.getElementById('mode-badge');
+        const text = String(badge?.textContent || '').trim();
+        if (text) return text;
+        return String(window.CONFIG?.name || '当前模式').trim();
+    }
+
+    function getCohortLabel() {
+        return getSelectedText('cohort-selector', '请选择届别');
+    }
+
+    function getCohortOptions() {
+        const select = document.getElementById('cohort-selector');
+        if (!select) return [];
+        return Array.from(select.options || [])
+            .filter(option => String(option.value || '').trim())
+            .map(option => ({
+                value: String(option.value || '').trim(),
+                label: String(option.textContent || option.value || '').trim()
+            }));
+    }
+
+    function setCohortValue(value) {
+        const select = document.getElementById('cohort-selector');
+        if (!select || !value) return;
+        select.value = value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
     function syncViewport() {
         const viewport = document.querySelector('meta[name="viewport"]');
         if (viewport) {
@@ -244,12 +298,6 @@
             appEl.classList.remove('hidden');
             appEl.style.display = '';
         }
-        const header = document.querySelector('header');
-        if (header) header.style.display = '';
-        const nav = document.querySelector('.nav-wrapper');
-        if (nav) nav.style.display = '';
-        const subNav = document.getElementById('sub-nav-container');
-        if (subNav) subNav.style.display = '';
     }
 
     function markResponsiveTables(scope = document) {
@@ -284,15 +332,15 @@
     function markResponsiveLayouts(scope = document) {
         if (!isMobileViewport()) return;
 
-        scope.querySelectorAll('.section [style*="grid-template-columns"]').forEach((el) => {
-            if (el.closest('#parent-view-container')) return;
-            el.classList.add('mobile-stack-grid');
+        scope.querySelectorAll('.section [style*="grid-template-columns"]').forEach((element) => {
+            if (element.closest('#parent-view-container')) return;
+            element.classList.add('mobile-stack-grid');
         });
 
-        scope.querySelectorAll('.section [style*="display:flex"]').forEach((el) => {
-            if (el.closest('#parent-view-container') || el.closest('#mobile-query-shell')) return;
-            if (el.children.length < 2) return;
-            el.classList.add('mobile-wrap-row');
+        scope.querySelectorAll('.section [style*="display:flex"]').forEach((element) => {
+            if (element.closest('#parent-view-container') || element.closest('#mobile-query-shell')) return;
+            if (element.children.length < 2) return;
+            element.classList.add('mobile-wrap-row');
         });
     }
 
@@ -300,6 +348,24 @@
         const overlay = document.getElementById('login-overlay');
         const overlayVisible = !!(overlay && getComputedStyle(overlay).display !== 'none');
         return !!getCurrentUser() && !overlayVisible;
+    }
+
+    function buildInlineSubnavHtml() {
+        const currentCategory = getCurrentCategory();
+        if (!currentCategory || !currentCategory.items.length) {
+            return '<div class="mq-inline-empty">当前分类暂无可用子模块</div>';
+        }
+
+        const activeItem = getActiveItem();
+        return currentCategory.items.map(item => {
+            const isActive = activeItem?.id === item.id;
+            return `
+                <button type="button" class="mq-inline-chip ${isActive ? 'is-active' : ''}" data-mobile-target="module" data-id="${escapeHtml(item.id)}" data-category="${escapeHtml(currentCategory.key)}">
+                    <i class="ti ${escapeHtml(item.icon || 'ti-layout-grid')}"></i>
+                    <span>${escapeHtml(stripEmoji(item.text || item.id))}</span>
+                </button>
+            `;
+        }).join('');
     }
 
     function ensureMobileShell() {
@@ -317,11 +383,25 @@
                 <div class="mq-topbar-copy">
                     <div class="mq-role-line" data-field="role">访客</div>
                     <div class="mq-title-line" data-field="title">手机查询工作台</div>
-                    <div class="mq-subtitle-line" data-field="subtitle">完整数据已适配到手机界面</div>
+                    <div class="mq-subtitle-line" data-field="subtitle">完整数据已适配到手机查询界面</div>
                 </div>
                 <button type="button" class="mq-icon-btn" data-mobile-sheet="modules" aria-label="打开模块面板">
                     <i class="ti ti-category-2"></i>
                 </button>
+            </div>
+            <div class="mq-toolbar">
+                <div class="mq-toolbar-row">
+                    <div class="mq-mode-badge" data-field="mode">当前模式</div>
+                    <button type="button" class="mq-toolbar-pill" data-mobile-sheet="cohorts">
+                        <i class="ti ti-folders"></i>
+                        <span data-field="cohort">请选择届别</span>
+                    </button>
+                    <button type="button" class="mq-toolbar-pill" data-mobile-action="search">
+                        <i class="ti ti-search"></i>
+                        <span>搜索</span>
+                    </button>
+                </div>
+                <div class="mq-inline-subnav"></div>
             </div>
             <div class="mq-backdrop"></div>
             <div class="mq-sheet">
@@ -373,6 +453,7 @@
         if (mode === 'modules') renderModuleSheet(panel);
         if (mode === 'quick') renderQuickSheet(panel);
         if (mode === 'account') renderAccountSheet(panel);
+        if (mode === 'cohorts') renderCohortSheet(panel);
     }
 
     function renderModuleSheet(panel) {
@@ -391,26 +472,26 @@
         }
 
         const activeItem = getActiveItem();
-        const currentCategory = panel.dataset.categoryKey && categories.some(cat => cat.key === panel.dataset.categoryKey)
+        const currentCategoryKey = panel.dataset.categoryKey && categories.some(cat => cat.key === panel.dataset.categoryKey)
             ? panel.dataset.categoryKey
             : (activeItem?.categoryKey || getCurrentCategoryKey() || categories[0].key);
-        const selectedCategory = categories.find(cat => cat.key === currentCategory) || categories[0];
+        const selectedCategory = categories.find(cat => cat.key === currentCategoryKey) || categories[0];
         panel.dataset.categoryKey = selectedCategory.key;
 
-        const pillsHtml = categories.map(cat => `
-            <button type="button" class="mq-pill ${cat.key === selectedCategory.key ? 'is-active' : ''}" data-mobile-target="category" data-key="${escapeHtml(cat.key)}" style="--mq-accent:${escapeHtml(cat.color || '#0f172a')};">
-                <i class="ti ${escapeHtml(cat.icon || 'ti-layout-grid')}"></i>
-                <span>${escapeHtml(stripEmoji(cat.title || '模块'))}</span>
+        const pillsHtml = categories.map(category => `
+            <button type="button" class="mq-pill ${category.key === selectedCategory.key ? 'is-active' : ''}" data-mobile-target="category" data-key="${escapeHtml(category.key)}">
+                <i class="ti ${escapeHtml(category.icon || 'ti-layout-grid')}"></i>
+                <span>${escapeHtml(stripEmoji(category.title || '模块'))}</span>
             </button>
         `).join('');
 
         const itemsHtml = selectedCategory.items.map(item => {
-            const activeClass = activeItem?.id === item.id ? 'is-active' : '';
+            const isActive = activeItem?.id === item.id;
             return `
-                <button type="button" class="mq-module-card ${activeClass}" data-mobile-target="module" data-id="${escapeHtml(item.id)}" data-category="${escapeHtml(selectedCategory.key)}">
+                <button type="button" class="mq-module-card ${isActive ? 'is-active' : ''}" data-mobile-target="module" data-id="${escapeHtml(item.id)}" data-category="${escapeHtml(selectedCategory.key)}">
                     <div class="mq-module-card-head">
                         <span class="mq-module-icon"><i class="ti ${escapeHtml(item.icon || 'ti-layout-grid')}"></i></span>
-                        <span class="mq-module-state">${activeClass ? '当前模块' : '点击进入'}</span>
+                        <span class="mq-module-state">${isActive ? '当前子模块' : '点击进入'}</span>
                     </div>
                     <strong>${escapeHtml(stripEmoji(item.text || item.id))}</strong>
                     <span>${escapeHtml(stripEmoji(selectedCategory.title || '模块分组'))}</span>
@@ -422,7 +503,7 @@
             <div class="mq-sheet-head">
                 <div>
                     <strong>模块导航</strong>
-                    <span>保留电脑端完整能力，用手机友好的方式进入</span>
+                    <span>先选模块分类，再进入对应子模块</span>
                 </div>
                 <button type="button" class="mq-close-btn" data-mobile-action="close-sheet"><i class="ti ti-x"></i></button>
             </div>
@@ -437,17 +518,59 @@
         const school = getCurrentSchool() || '未绑定学校';
         const dataCount = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
 
+        const utilityActions = [
+            `
+                <button type="button" class="mq-account-action" data-mobile-action="search">
+                    <i class="ti ti-search"></i>
+                    <span>全局搜索</span>
+                </button>
+            `,
+            `
+                <button type="button" class="mq-account-action" data-mobile-sheet="cohorts">
+                    <i class="ti ti-folders"></i>
+                    <span>切换届别</span>
+                </button>
+            `
+        ];
+
+        if (hasRole(MESSAGE_ROLES) && window.IssueManager && typeof window.IssueManager.openAdminPanel === 'function') {
+            utilityActions.push(`
+                <button type="button" class="mq-account-action" data-mobile-action="messages">
+                    <i class="ti ti-bell"></i>
+                    <span>消息中心</span>
+                </button>
+            `);
+        }
+
+        if (hasRole(DATA_MANAGER_ROLES) && window.DataManager && typeof window.DataManager.open === 'function') {
+            utilityActions.push(`
+                <button type="button" class="mq-account-action" data-mobile-action="data-manager">
+                    <i class="ti ti-database-edit"></i>
+                    <span>数据中心</span>
+                </button>
+            `);
+        }
+
+        if (hasRole(ACCOUNT_MANAGER_ROLES) && window.AccountManager && typeof window.AccountManager.open === 'function') {
+            utilityActions.push(`
+                <button type="button" class="mq-account-action" data-mobile-action="account-manager">
+                    <i class="ti ti-user-cog"></i>
+                    <span>账号权限</span>
+                </button>
+            `);
+        }
+
         panel.innerHTML = `
             <div class="mq-sheet-head">
                 <div>
-                    <strong>手机快捷查询</strong>
-                    <span>常用入口、数据范围与当前会话一屏可见</span>
+                    <strong>快捷操作</strong>
+                    <span>手机端常用操作和高频入口集中在这里</span>
                 </div>
                 <button type="button" class="mq-close-btn" data-mobile-action="close-sheet"><i class="ti ti-x"></i></button>
             </div>
             <div class="mq-info-card">
                 <div class="mq-info-row">
-                    <span>当前模块</span>
+                    <span>当前子模块</span>
                     <strong>${escapeHtml(stripEmoji(activeItem?.text || '未进入模块'))}</strong>
                 </div>
                 <div class="mq-info-row">
@@ -459,6 +582,8 @@
                     <strong>${escapeHtml(String(dataCount))}</strong>
                 </div>
             </div>
+            <div class="mq-utility-grid">${utilityActions.join('')}</div>
+            <div class="mq-section-title">高频入口</div>
             <div class="mq-shortcut-grid">
                 ${shortcuts.map(item => `
                     <button type="button" class="mq-shortcut-card ${activeItem?.id === item.id ? 'is-active' : ''}" data-mobile-target="module" data-id="${escapeHtml(item.id)}" data-category="${escapeHtml(item.categoryKey || '')}">
@@ -477,7 +602,7 @@
         const school = getCurrentSchool() || '未绑定学校';
         const roleChips = roles.length
             ? roles.map(role => `<span class="mq-role-chip">${escapeHtml(humanizeRole(role))}</span>`).join('')
-            : `<span class="mq-role-chip">访客</span>`;
+            : '<span class="mq-role-chip">访客</span>';
 
         const extraActions = [];
         if (typeof window.showModuleHelp === 'function') {
@@ -501,7 +626,7 @@
             <div class="mq-sheet-head">
                 <div>
                     <strong>当前会话</strong>
-                    <span>账号、角色与常用系统操作集中在这里</span>
+                    <span>账号、角色和系统操作都集中在这里</span>
                 </div>
                 <button type="button" class="mq-close-btn" data-mobile-action="close-sheet"><i class="ti ti-x"></i></button>
             </div>
@@ -524,6 +649,29 @@
                     <i class="ti ti-logout"></i>
                     <span>退出登录</span>
                 </button>
+            </div>
+        `;
+    }
+
+    function renderCohortSheet(panel) {
+        const options = getCohortOptions();
+        const currentValue = document.getElementById('cohort-selector')?.value || '';
+
+        panel.innerHTML = `
+            <div class="mq-sheet-head">
+                <div>
+                    <strong>切换届别</strong>
+                    <span>手机端也可以直接切换当前届别</span>
+                </div>
+                <button type="button" class="mq-close-btn" data-mobile-action="close-sheet"><i class="ti ti-x"></i></button>
+            </div>
+            <div class="mq-cohort-list">
+                ${options.map(option => `
+                    <button type="button" class="mq-cohort-option ${option.value === currentValue ? 'is-active' : ''}" data-mobile-target="cohort" data-value="${escapeHtml(option.value)}">
+                        <strong>${escapeHtml(option.label)}</strong>
+                        <span>${option.value === currentValue ? '当前届别' : '点击切换'}</span>
+                    </button>
+                `).join('')}
             </div>
         `;
     }
@@ -565,14 +713,28 @@
             renderModuleSheet(panel);
             return;
         }
+
         if (targetType === 'module') {
             const categoryKey = trigger.getAttribute('data-category') || '';
             const moduleId = trigger.getAttribute('data-id') || '';
             setSheetMode('');
-            if (categoryKey) switchCategoryKey(categoryKey);
+            const shouldDelay = categoryKey && categoryKey !== getCurrentCategoryKey();
+            if (shouldDelay) switchCategoryKey(categoryKey);
             if (typeof window.switchTab === 'function' && moduleId) {
-                window.switchTab(moduleId);
+                if (shouldDelay) {
+                    setTimeout(() => window.switchTab(moduleId), 90);
+                } else {
+                    window.switchTab(moduleId);
+                }
             }
+            scheduleRefresh();
+            return;
+        }
+
+        if (targetType === 'cohort') {
+            const value = trigger.getAttribute('data-value') || '';
+            setSheetMode('');
+            setCohortValue(value);
             scheduleRefresh();
             return;
         }
@@ -610,6 +772,21 @@
             window.showModuleHelp('permissions');
             return;
         }
+        if (action === 'messages' && window.IssueManager && typeof window.IssueManager.openAdminPanel === 'function') {
+            setSheetMode('');
+            window.IssueManager.openAdminPanel();
+            return;
+        }
+        if (action === 'data-manager' && window.DataManager && typeof window.DataManager.open === 'function') {
+            setSheetMode('');
+            window.DataManager.open();
+            return;
+        }
+        if (action === 'account-manager' && window.AccountManager && typeof window.AccountManager.open === 'function') {
+            setSheetMode('');
+            window.AccountManager.open();
+            return;
+        }
         if (action === 'logout' && window.Auth && typeof window.Auth.logout === 'function') {
             setSheetMode('');
             window.Auth.logout();
@@ -636,12 +813,15 @@
         const activeItem = getActiveItem();
         const school = getCurrentSchool();
         const subtitle = school
-            ? `${school} · 完整数据已适配到手机查询界面`
-            : '完整数据已适配到手机查询界面';
+            ? `${school} · 手机端已切到完整查询模式`
+            : '手机端已切到完整查询模式';
 
         root.querySelector('[data-field="role"]').textContent = humanizeRole(role);
         root.querySelector('[data-field="title"]').textContent = stripEmoji(activeItem?.text || '手机查询工作台');
         root.querySelector('[data-field="subtitle"]').textContent = subtitle;
+        root.querySelector('[data-field="mode"]').textContent = getModeBadgeText();
+        root.querySelector('[data-field="cohort"]').textContent = getCohortLabel();
+        root.querySelector('.mq-inline-subnav').innerHTML = buildInlineSubnavHtml();
         document.body.dataset.mobileSection = activeItem?.id || '';
 
         root.querySelectorAll('.mq-tab').forEach((tab) => {
@@ -655,6 +835,11 @@
                 tab.classList.add('is-active');
             }
         });
+
+        if (currentSheetMode === 'modules') renderModuleSheet(getSheetPanel());
+        if (currentSheetMode === 'quick') renderQuickSheet(getSheetPanel());
+        if (currentSheetMode === 'account') renderAccountSheet(getSheetPanel());
+        if (currentSheetMode === 'cohorts') renderCohortSheet(getSheetPanel());
     }
 
     function syncShellVisibility() {
@@ -765,6 +950,9 @@
         openAccountSheet() {
             setSheetMode('account');
         },
+        openCohortSheet() {
+            setSheetMode('cohorts');
+        },
         refresh: refreshMobileEnhancements
     };
 
@@ -773,7 +961,8 @@
         refresh: refreshMobileEnhancements,
         openModules: () => setSheetMode('modules'),
         openQuick: () => setSheetMode('quick'),
-        openAccount: () => setSheetMode('account')
+        openAccount: () => setSheetMode('account'),
+        openCohorts: () => setSheetMode('cohorts')
     };
     window.switchMobileTab = function (tabName) {
         MobMgr.switchTab(tabName);
