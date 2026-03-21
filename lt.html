@@ -14895,7 +14895,12 @@ function SIG_updateSchoolSelect() {
 function SIG_getSchoolStudents(schoolName) {
     const source = SIG_getSourceState();
     const school = source.schools?.[schoolName];
-    return Array.isArray(school?.students) ? school.students.slice() : [];
+    const rows = Array.isArray(school?.students) ? school.students.slice() : [];
+    const user = getCurrentUser();
+    const mode = window.PermissionPolicy && PermissionPolicy.isClassTeacher(user) ? 'homeroom' : 'teaching';
+    return (window.PermissionPolicy && typeof PermissionPolicy.filterStudentRows === 'function')
+        ? PermissionPolicy.filterStudentRows(user, rows, { mode })
+        : rows;
 }
 
 function SIG_buildThresholds(students) {
@@ -14937,58 +14942,392 @@ function SIG_buildClassRows(students) {
     return { rows, thresholds };
 }
 
-function SIG_withScopedWorkspace(source, callback) {
-    if (source.source !== 'upload') return callback();
-    const backup = {
-        RAW_DATA,
-        SCHOOLS,
-        MY_SCHOOL,
-        WINDOW_RAW_DATA: window.RAW_DATA,
-        WINDOW_SCHOOLS: window.SCHOOLS,
-        WINDOW_MY_SCHOOL: window.MY_SCHOOL,
-        WINDOW_TEACHER_STATS: window.TEACHER_STATS
-    };
-    try {
-        RAW_DATA = JSON.parse(JSON.stringify(source.rawData || []));
-        SCHOOLS = JSON.parse(JSON.stringify(source.schools || {}));
-        window.RAW_DATA = RAW_DATA;
-        window.SCHOOLS = SCHOOLS;
-        return callback();
-    } finally {
-        RAW_DATA = backup.RAW_DATA;
-        SCHOOLS = backup.SCHOOLS;
-        MY_SCHOOL = backup.MY_SCHOOL;
-        window.RAW_DATA = backup.WINDOW_RAW_DATA;
-        window.SCHOOLS = backup.WINDOW_SCHOOLS;
-        window.MY_SCHOOL = backup.WINDOW_MY_SCHOOL;
-        window.TEACHER_STATS = backup.WINDOW_TEACHER_STATS;
-    }
+function SIG_sameSchool(left, right) {
+    const a = String(left || '').trim();
+    const b = String(right || '').trim();
+    if (!a || !b) return false;
+    return (typeof areSchoolNamesEquivalent === 'function') ? areSchoolNamesEquivalent(a, b) : a === b;
 }
 
-function SIG_buildTeacherRows(schoolName) {
-    const source = SIG_getSourceState();
-    return SIG_withScopedWorkspace(source, () => {
-        if (window.DataManager && typeof DataManager.ensureTeacherMap === 'function') {
-            DataManager.ensureTeacherMap(false);
-        }
-        if (typeof syncTeacherAnalysisSchoolContext === 'function') syncTeacherAnalysisSchoolContext(schoolName);
-        if (typeof analyzeTeachers === 'function') analyzeTeachers();
-        const stats = typeof getVisibleTeacherStats === 'function' ? getVisibleTeacherStats() : (window.TEACHER_STATS || {});
-        const rows = [];
-        Object.entries(stats || {}).forEach(([teacherName, subjectMap]) => {
-            Object.entries(subjectMap || {}).forEach(([subjectName, data]) => {
-                rows.push({
-                    teacherName,
-                    subjectName,
-                    fairScore: SIG_toNumber(data?.fairScore ?? data?.finalScore ?? 0),
-                    conversionScore: SIG_toNumber(data?.conversionScore || 50),
-                    sampleText: `${data?.commonSampleCount ?? '-'} / ${data?.sampleStabilityText || '0%'}`,
-                    protectionText: data?.teacherChangeProtected ? '已保护' : '正常'
-                });
-            });
+function SIG_sameExam(left, right) {
+    const a = String(left || '').trim();
+    const b = String(right || '').trim();
+    if (!a || !b) return false;
+    return (typeof isExamKeyEquivalentForCompare === 'function') ? isExamKeyEquivalentForCompare(a, b) : a === b;
+}
+
+function SIG_cleanName(value) {
+    if (typeof getProgressCleanName === 'function') return getProgressCleanName(value);
+    return String(value || '').replace(/\s+/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '').toLowerCase();
+}
+
+function SIG_buildStudentKey(student) {
+    const schoolName = String(student?.school || '').trim();
+    const className = normalizeClass(student?.class || '');
+    const cleanName = SIG_cleanName(student?.name);
+    return `${schoolName}__${className}__${cleanName}`;
+}
+
+function SIG_filterStudentRows(rows) {
+    const user = getCurrentUser();
+    const mode = window.PermissionPolicy && PermissionPolicy.isClassTeacher(user) ? 'homeroom' : 'teaching';
+    return (window.PermissionPolicy && typeof PermissionPolicy.filterStudentRows === 'function')
+        ? PermissionPolicy.filterStudentRows(user, Array.isArray(rows) ? rows : [], { mode })
+        : (Array.isArray(rows) ? rows.slice() : []);
+}
+
+function SIG_buildClassSchoolMap(source) {
+    const map = {};
+    Object.entries(source?.schools || {}).forEach(([schoolName, school]) => {
+        (school?.students || []).forEach((student) => {
+            const className = normalizeClass(student?.class || '');
+            if (className && !map[className]) map[className] = schoolName;
         });
-        return rows.sort((a, b) => b.fairScore - a.fairScore).slice(0, 12);
     });
+    const fallback = (typeof getClassSchoolMapForAllData === 'function') ? (getClassSchoolMapForAllData() || {}) : {};
+    Object.entries(fallback).forEach(([className, schoolName]) => {
+        const normalizedClass = normalizeClass(className);
+        if (normalizedClass && schoolName && !map[normalizedClass]) map[normalizedClass] = schoolName;
+    });
+    return map;
+}
+
+function SIG_getSubjectThresholds(subjectName, rows) {
+    const config = THRESHOLDS?.[subjectName] || {};
+    const scores = (rows || [])
+        .map((row) => SIG_toNumber(row?.scores?.[subjectName], NaN))
+        .filter((score) => Number.isFinite(score))
+        .sort((a, b) => b - a);
+    let excellent = SIG_toNumber(config.exc, NaN);
+    let pass = SIG_toNumber(config.pass, NaN);
+    if (!Number.isFinite(excellent) && scores.length) {
+        excellent = scores[Math.max(0, Math.floor(scores.length * 0.25) - 1)] || 0;
+    }
+    if (!Number.isFinite(pass) && scores.length) {
+        pass = scores[Math.min(scores.length - 1, Math.floor(scores.length * 0.8))] || 60;
+    }
+    if (!Number.isFinite(excellent)) excellent = 0;
+    if (!Number.isFinite(pass)) pass = 60;
+    return {
+        excellent,
+        pass,
+        low: Math.max(0, pass * 0.6)
+    };
+}
+
+function SIG_buildMetricSummary(rows, subjectName, thresholds) {
+    const scores = (rows || [])
+        .map((row) => SIG_toNumber(row?.scores?.[subjectName], NaN))
+        .filter((score) => Number.isFinite(score));
+    if (!scores.length) {
+        return {
+            count: 0,
+            avg: 0,
+            excellentRate: 0,
+            passRate: 0,
+            lowRate: 0
+        };
+    }
+    const total = scores.reduce((sum, score) => sum + score, 0);
+    return {
+        count: scores.length,
+        avg: total / scores.length,
+        excellentRate: scores.filter((score) => score >= thresholds.excellent).length / scores.length,
+        passRate: scores.filter((score) => score >= thresholds.pass).length / scores.length,
+        lowRate: scores.filter((score) => score < thresholds.low).length / scores.length
+    };
+}
+
+function SIG_normalizeBaselineRows(rows, examId = '') {
+    return (rows || []).map((row) => {
+        const student = row?.student || {};
+        const scores = {};
+        Object.entries(row?.scores || student?.scores || {}).forEach(([subject, value]) => {
+            const normalizedSubject = normalizeSubject(subject);
+            const score = SIG_toNumber(value, NaN);
+            if (normalizedSubject && Number.isFinite(score)) {
+                scores[normalizedSubject] = score;
+            }
+        });
+        let total = SIG_toNumber(
+            row?.total ?? row?.totalScore ?? row?.score ?? student?.total ?? student?.totalScore,
+            NaN
+        );
+        if (!Number.isFinite(total) && Object.keys(scores).length) {
+            total = Object.values(scores).reduce((sum, score) => sum + SIG_toNumber(score, 0), 0);
+        }
+        const normalized = {
+            name: String(row?.name || student?.name || '').trim(),
+            school: String(row?.school || student?.school || '').trim(),
+            class: normalizeClass(row?.class || student?.class || ''),
+            total: Number.isFinite(total) ? total : 0,
+            scores,
+            examId: examId || row?.examFullKey || row?.examId || ''
+        };
+        return normalized.name && normalized.school && normalized.class && (Object.keys(scores).length || Number.isFinite(total))
+            ? normalized
+            : null;
+    }).filter(Boolean);
+}
+
+function SIG_getBaselineExamEntries(schoolName) {
+    const db = window.COHORT_DB || ((typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null);
+    return Object.values(db?.exams || {})
+        .map((exam) => {
+            const examId = String(exam?.examId || '').trim();
+            const examFullKey = String(exam?.examFullKey || examId).trim();
+            const rows = SIG_filterStudentRows(
+                SIG_normalizeBaselineRows(exam?.data || [], examFullKey || examId).filter((row) => (
+                    !schoolName || SIG_sameSchool(row.school, schoolName)
+                ))
+            );
+            return {
+                examId,
+                examFullKey,
+                createdAt: Number(exam?.createdAt || exam?.updatedAt || 0),
+                rows
+            };
+        })
+        .filter((exam) => (exam.examId || exam.examFullKey) && exam.rows.length > 0)
+        .filter((exam) => !CURRENT_EXAM_ID || !SIG_sameExam(exam.examId || exam.examFullKey, CURRENT_EXAM_ID))
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+}
+
+function SIG_getTeacherAssignments(source, schoolName) {
+    if (window.DataManager && typeof DataManager.ensureTeacherMap === 'function') {
+        DataManager.ensureTeacherMap(false);
+    }
+    const teacherMap = window.TEACHER_MAP || {};
+    const teacherSchoolMap = window.TEACHER_SCHOOL_MAP || {};
+    const classSchoolMap = SIG_buildClassSchoolMap(source);
+    return Object.entries(teacherMap).map(([key, teacherName]) => {
+        const parts = String(key || '').split('_');
+        const className = normalizeClass(parts.shift() || '');
+        const subjectName = normalizeSubject(parts.join('_'));
+        const mappedSchool = String(teacherSchoolMap[key] || classSchoolMap[className] || '').trim();
+        return {
+            key,
+            teacherName: String(teacherName || '').trim(),
+            className,
+            subjectName,
+            schoolName: mappedSchool
+        };
+    }).filter((item) => {
+        if (!item.teacherName || !item.className || !item.subjectName) return false;
+        if (!schoolName) return true;
+        if (item.schoolName) return SIG_sameSchool(item.schoolName, schoolName);
+        return false;
+    });
+}
+
+function SIG_buildTeacherProtection(classes, subjectName, teacherName) {
+    const db = window.COHORT_DB || ((typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null);
+    const history = db?.teachingHistory || {};
+    const currentTermId = String(
+        (typeof getPreferredTeacherTermId === 'function' ? getPreferredTeacherTermId() : '')
+        || localStorage.getItem('CURRENT_TEACHER_TERM_ID')
+        || ''
+    ).trim();
+    const classList = [...new Set((classes || []).map((item) => normalizeClass(item)).filter(Boolean))];
+    const normalizedTeacher = typeof normalizeTeacherName === 'function'
+        ? normalizeTeacherName(teacherName)
+        : String(teacherName || '').replace(/\s+/g, '');
+    const historyEntries = Object.entries(history)
+        .filter(([termId]) => String(termId || '').trim() && String(termId || '').trim() !== currentTermId)
+        .sort((a, b) => String(b[0]).localeCompare(String(a[0]), 'zh-CN', { numeric: true }))
+        .slice(0, 3);
+    return historyEntries.some(([, entry]) => {
+        const map = entry?.map && typeof entry.map === 'object' ? entry.map : (entry || {});
+        return classList.some((className) => {
+            const historyTeacher = String(map?.[`${className}_${subjectName}`] || '').trim();
+            if (!historyTeacher) return false;
+            const normalizedHistoryTeacher = typeof normalizeTeacherName === 'function'
+                ? normalizeTeacherName(historyTeacher)
+                : historyTeacher.replace(/\s+/g, '');
+            return normalizedHistoryTeacher && normalizedHistoryTeacher !== normalizedTeacher;
+        });
+    });
+}
+
+function SIG_buildConversionMetrics(currentRows, subjectName, baselineRows) {
+    const neutral = {
+        score: 50,
+        adjustment: 0,
+        matchedCount: 0,
+        previousCount: baselineRows.length,
+        stabilityRate: 0
+    };
+    if (!baselineRows.length || !currentRows.length) return neutral;
+
+    const currentThresholds = SIG_getSubjectThresholds(subjectName, currentRows);
+    const baselineThresholds = SIG_getSubjectThresholds(subjectName, baselineRows);
+    const baselineMap = new Map(baselineRows.map((row) => [SIG_buildStudentKey(row), row]));
+    let matchedCount = 0;
+    let excellentPool = 0;
+    let excellentHold = 0;
+    let edgeExcellentPool = 0;
+    let edgeExcellentHit = 0;
+    let edgePassPool = 0;
+    let edgePassHit = 0;
+    let lowPool = 0;
+    let lowLift = 0;
+    let totalChange = 0;
+
+    currentRows.forEach((student) => {
+        const baselineRow = baselineMap.get(SIG_buildStudentKey(student));
+        if (!baselineRow) return;
+        const currentScore = SIG_toNumber(student?.scores?.[subjectName], NaN);
+        const baselineScore = SIG_toNumber(baselineRow?.scores?.[subjectName], NaN);
+        if (!Number.isFinite(currentScore) || !Number.isFinite(baselineScore)) return;
+        matchedCount += 1;
+        totalChange += currentScore - baselineScore;
+
+        if (baselineScore >= baselineThresholds.excellent) {
+            excellentPool += 1;
+            if (currentScore >= currentThresholds.excellent) excellentHold += 1;
+        }
+        if (baselineScore >= baselineThresholds.excellent - 5 && baselineScore < baselineThresholds.excellent) {
+            edgeExcellentPool += 1;
+            if (currentScore >= currentThresholds.excellent) edgeExcellentHit += 1;
+        }
+        if (baselineScore >= baselineThresholds.pass - 5 && baselineScore < baselineThresholds.pass) {
+            edgePassPool += 1;
+            if (currentScore >= currentThresholds.pass) edgePassHit += 1;
+        }
+        if (baselineScore < baselineThresholds.low) {
+            lowPool += 1;
+            if (currentScore >= currentThresholds.low) lowLift += 1;
+        }
+    });
+
+    if (!matchedCount) return neutral;
+
+    const rates = [
+        excellentPool ? excellentHold / excellentPool : null,
+        edgeExcellentPool ? edgeExcellentHit / edgeExcellentPool : null,
+        edgePassPool ? edgePassHit / edgePassPool : null,
+        lowPool ? lowLift / lowPool : null
+    ].filter((value) => value !== null);
+    const rateScore = rates.length
+        ? (rates.reduce((sum, value) => sum + value, 0) / rates.length) * 100
+        : 50;
+    const avgChange = totalChange / matchedCount;
+    const reliability = Math.max(0, Math.min(1, matchedCount / Math.max(currentRows.length, baselineRows.length, 1))) * Math.min(1, matchedCount / 12);
+    const score = Math.max(0, Math.min(100, 50 + ((rateScore - 50) * reliability) + (Math.max(-8, Math.min(8, avgChange / 3)) * reliability)));
+    return {
+        score,
+        adjustment: Math.max(-12, Math.min(12, (score - 50) * 0.35)),
+        matchedCount,
+        previousCount: baselineRows.length,
+        stabilityRate: Math.max(0, Math.min(1, matchedCount / Math.max(currentRows.length, baselineRows.length, 1)))
+    };
+}
+
+function SIG_normalizePeerMetric(value, values, reverse = false) {
+    const list = (values || []).map((item) => SIG_toNumber(item, NaN)).filter((item) => Number.isFinite(item));
+    if (!list.length) return 0.5;
+    const min = Math.min(...list);
+    const max = Math.max(...list);
+    if (!Number.isFinite(min) || !Number.isFinite(max) || Math.abs(max - min) < 0.0001) return 0.5;
+    const normalized = reverse ? ((max - value) / (max - min)) : ((value - min) / (max - min));
+    return Math.max(0, Math.min(1, normalized));
+}
+
+function SIG_filterTeacherRows(rows, schoolName) {
+    const user = getCurrentUser();
+    if (!(window.PermissionPolicy && typeof PermissionPolicy.canQueryTeacherMetric === 'function')) {
+        return Array.isArray(rows) ? rows.slice() : [];
+    }
+    return (Array.isArray(rows) ? rows : []).filter((row) => (
+        PermissionPolicy.canQueryTeacherMetric(user, row.teacherName, { classes: row.classesText }, schoolName)
+    ));
+}
+
+function SIG_buildTeacherRows(schoolName, students, baselineExams, source) {
+    const subjectSet = new Set(
+        (students || []).flatMap((student) => Object.keys(student?.scores || {}).map((subject) => normalizeSubject(subject))).filter(Boolean)
+    );
+    const assignmentGroups = {};
+    SIG_getTeacherAssignments(source, schoolName).forEach((item) => {
+        if (!subjectSet.has(item.subjectName)) return;
+        const groupKey = `${item.teacherName}__${item.subjectName}`;
+        if (!assignmentGroups[groupKey]) {
+            assignmentGroups[groupKey] = {
+                teacherName: item.teacherName,
+                subjectName: item.subjectName,
+                classes: new Set()
+            };
+        }
+        assignmentGroups[groupKey].classes.add(item.className);
+    });
+
+    const primaryBaseline = baselineExams[0]?.rows || [];
+    const baseRows = Object.values(assignmentGroups).map((group) => {
+        const classes = [...group.classes].sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
+        const classSet = new Set(classes);
+        const currentRows = (students || []).filter((student) => (
+            classSet.has(normalizeClass(student?.class || ''))
+            && Number.isFinite(SIG_toNumber(student?.scores?.[group.subjectName], NaN))
+        ));
+        if (!currentRows.length) return null;
+
+        const thresholds = SIG_getSubjectThresholds(group.subjectName, students || []);
+        const metrics = SIG_buildMetricSummary(currentRows, group.subjectName, thresholds);
+        const baselineRows = primaryBaseline.filter((row) => (
+            classSet.has(normalizeClass(row?.class || ''))
+            && Number.isFinite(SIG_toNumber(row?.scores?.[group.subjectName], NaN))
+        ));
+        const conversion = SIG_buildConversionMetrics(currentRows, group.subjectName, baselineRows);
+        const protectedByTeacherChange = SIG_buildTeacherProtection(classes, group.subjectName, group.teacherName);
+        return {
+            teacherName: group.teacherName,
+            subjectName: group.subjectName,
+            classes,
+            classesText: classes.join('、'),
+            metrics,
+            conversion,
+            teacherChangeProtected: protectedByTeacherChange
+        };
+    }).filter(Boolean);
+
+    const peerMap = {};
+    baseRows.forEach((row) => {
+        if (!peerMap[row.subjectName]) {
+            peerMap[row.subjectName] = { avg: [], excellentRate: [], passRate: [], lowRate: [] };
+        }
+        peerMap[row.subjectName].avg.push(row.metrics.avg);
+        peerMap[row.subjectName].excellentRate.push(row.metrics.excellentRate);
+        peerMap[row.subjectName].passRate.push(row.metrics.passRate);
+        peerMap[row.subjectName].lowRate.push(row.metrics.lowRate);
+    });
+
+    const rows = SIG_filterTeacherRows(baseRows.map((row) => {
+        const peer = peerMap[row.subjectName] || { avg: [], excellentRate: [], passRate: [], lowRate: [] };
+        const avgNorm = SIG_normalizePeerMetric(row.metrics.avg, peer.avg);
+        const excellentNorm = SIG_normalizePeerMetric(row.metrics.excellentRate, peer.excellentRate);
+        const passNorm = SIG_normalizePeerMetric(row.metrics.passRate, peer.passRate);
+        const lowNorm = SIG_normalizePeerMetric(row.metrics.lowRate, peer.lowRate, true);
+        const currentScore = (avgNorm * 40) + (excellentNorm * 20) + (passNorm * 20) + (lowNorm * 20);
+        const sampleWeight = Math.max(0.55, Math.min(1, row.metrics.count / 25));
+        const conversionAdjustment = row.teacherChangeProtected
+            ? Math.max(0, SIG_toNumber(row.conversion.adjustment, 0))
+            : SIG_toNumber(row.conversion.adjustment, 0);
+        const fairScore = Math.max(0, Math.min(100, (currentScore * sampleWeight) + (50 * (1 - sampleWeight)) + conversionAdjustment));
+        return {
+            teacherName: row.teacherName,
+            subjectName: row.subjectName,
+            fairScore,
+            conversionScore: SIG_toNumber(row.conversion.score, 50),
+            sampleText: `${row.conversion.matchedCount || 0} / ${(SIG_toNumber(row.conversion.stabilityRate, 0) * 100).toFixed(0)}%`,
+            protectionText: row.teacherChangeProtected ? '已保护' : '正常',
+            classesText: row.classesText
+        };
+    }), schoolName);
+
+    return {
+        rows: rows.sort((a, b) => b.fairScore - a.fairScore).slice(0, 12),
+        assignmentCount: Object.keys(assignmentGroups).length
+    };
 }
 
 function SIG_renderSummary(cache) {
@@ -15082,19 +15421,17 @@ function SIG_render() {
     const source = SIG_getSourceState();
     const students = SIG_getSchoolStudents(schoolName);
     const classInfo = SIG_buildClassRows(students);
-    const teacherRows = SIG_buildTeacherRows(schoolName);
-    const baselineExamCount = (typeof getProgressBaselineExamList === 'function' ? getProgressBaselineExamList() : [])
-        .filter((exam) => !CURRENT_EXAM_ID || !isExamKeyEquivalentForCompare(exam.id, CURRENT_EXAM_ID))
-        .length;
-    const teacherReady = !!(window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0);
+    const baselineExams = SIG_getBaselineExamEntries(schoolName);
+    const teacherResult = SIG_buildTeacherRows(schoolName, students, baselineExams, source);
+    const teacherReady = teacherResult.assignmentCount > 0;
     SIG_CACHE = {
         schoolName,
         source: source.source,
         localOnly: true,
         classRows: classInfo.rows,
-        teacherRows,
+        teacherRows: teacherResult.rows,
         studentCount: students.length,
-        baselineExamCount,
+        baselineExamCount: baselineExams.length,
         teacherReady,
         thresholdMeta: classInfo.thresholds
     };
