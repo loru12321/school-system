@@ -1097,6 +1097,7 @@ const Auth = {
                 `;
 
             container.innerHTML = reportHtml;
+            enhanceStudentReportMetrics(container);
 
             // 渲染图表 (Canvas)
             setTimeout(() => {
@@ -6675,6 +6676,39 @@ const NAV_STRUCTURE = {
         ]
     }
 };
+
+function enhanceStudentReportMetrics(root) {
+    const scope = root || document;
+    const board = scope.querySelector('.report-subject-board');
+    if (!board) return;
+
+    if (!scope.querySelector('.report-metric-explain')) {
+        const explain = document.createElement('div');
+        explain.className = 'report-reality-note report-metric-explain';
+        explain.style.marginBottom = '16px';
+        explain.innerHTML = `
+            <div class="report-reality-title">怎么看百分位和 Z 值</div>
+            <ul class="report-reality-list">
+                <li><strong>百分位</strong>：可以理解成“这门学科大约超过了多少同届学生”，数值越高越靠前。</li>
+                <li><strong>Z 值</strong>：可以理解成“和平均水平差多远”，0 附近接近平均，正数越大优势越明显，负数越小越要优先补弱。</li>
+            </ul>
+        `;
+        board.parentNode.insertBefore(explain, board);
+    }
+
+    board.querySelectorAll('.report-subject-meta span').forEach((span) => {
+        const text = String(span.textContent || '').trim();
+        if (!text) return;
+        if (text.startsWith('百分位')) {
+            const value = text.replace(/^百分位\s*/, '').trim();
+            span.textContent = `超过同范围 ${value} 学生`;
+        }
+        if (/^Z\s*/i.test(text)) {
+            const value = text.replace(/^Z\s*/i, '').trim();
+            span.textContent = `领先指数 Z ${value}`;
+        }
+    });
+}
 
 window.NAV_STRUCTURE = NAV_STRUCTURE;
 
@@ -12833,6 +12867,7 @@ async function doQuery() {
         // 强制使用 'A4' 模式进行渲染
         try {
             container.innerHTML = renderSingleReportCardHTML(stu, 'A4');
+            enhanceStudentReportMetrics(container);
         } catch (e) {
             console.error('Render Report Error:', e);
             container.innerHTML = `<div style="color:red; padding:20px; text-align:left;"><h3 style="color:red">Rendering Error</h3><pre>${e.stack || e.message || e}</pre></div>`;
