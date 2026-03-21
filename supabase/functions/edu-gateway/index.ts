@@ -1,4 +1,5 @@
 ﻿import { createClient } from "npm:@supabase/supabase-js@2";
+import bcrypt from "npm:bcryptjs@2.4.3";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -8,6 +9,7 @@ const textEncoder = new TextEncoder();
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const sessionSecret = Deno.env.get("APP_SESSION_SECRET") ?? "";
+const bcryptRounds = 12;
 const admin = createClient(supabaseUrl, serviceRoleKey, {
   auth: { persistSession: false, autoRefreshToken: false }
 });
@@ -177,8 +179,53 @@ function rectifyVisible(session, row) {
 function normalizeAccountText(value) {
   return String(value || "").trim();
 }
+function getStoredPassword(row) {
+  return normalizeAccountText(row?.password);
+}
+function getStoredPasswordHash(row) {
+  return normalizeAccountText(row?.password_hash);
+}
+function hasStoredPassword(row) {
+  return !!(getStoredPasswordHash(row) || getStoredPassword(row));
+}
+function hashAccountPassword(password) {
+  return bcrypt.hashSync(normalizeAccountText(password), bcryptRounds);
+}
+function verifyAccountPassword(row, password) {
+  const incomingPassword = normalizeAccountText(password);
+  const passwordHash = getStoredPasswordHash(row);
+  if (passwordHash) {
+    try {
+      return bcrypt.compareSync(incomingPassword, passwordHash);
+    } catch {
+      return false;
+    }
+  }
+  const legacyPassword = getStoredPassword(row);
+  if (!legacyPassword) return false;
+  return timingSafeEqual(legacyPassword, incomingPassword);
+}
+function buildPasswordSecretPatch(password) {
+  return {
+    password_hash: hashAccountPassword(password),
+    password: null
+  };
+}
+async function migrateLegacyPasswordRecord(username, password) {
+  const normalizedUsername = normalizeAccountText(username);
+  const normalizedPassword = normalizeAccountText(password);
+  if (!normalizedUsername || !normalizedPassword) return;
+  try {
+    await admin
+      .from("system_users")
+      .update(buildPasswordSecretPatch(normalizedPassword))
+      .eq("username", normalizedUsername);
+  } catch (error) {
+    console.warn("[edu-gateway] legacy password migration skipped", normalizedUsername, error);
+  }
+}
 function sanitizeAccountRecord(row) {
-  const passwordPresent = !!normalizeAccountText(row?.password);
+  const passwordPresent = hasStoredPassword(row);
   return {
     username: normalizeAccountText(row?.username),
     role: normalizeAccountText(row?.role) || "guest",
@@ -257,7 +304,7 @@ function normalizeAccountUpsertRow(input, session) {
     ];
   return {
     username,
-    password,
+    ...(password ? buildPasswordSecretPatch(password) : { password_hash: "", password: null }),
     role,
     roles,
     school,
@@ -266,7 +313,7 @@ function normalizeAccountUpsertRow(input, session) {
   };
 }
 function validateAccountUpsertRow(session, row) {
-  if (!row.username || !row.password || !row.role) return "username、password、role 不能为空";
+  if (!row.username || !row.password_hash || !row.role) return "username、password、role 不能为空";
   if (row.role !== "admin" && !row.school) return "school 不能为空";
   if ((row.role === "parent" || row.role === "class_teacher") && !row.class_name) return "班级不能为空";
   if (row.role === "grade_director" && !row.class_name) return "级部/年级不能为空";
@@ -286,12 +333,15 @@ async function handleLogin(payload) {
   const password = String(payload.password || "").trim();
   const inputClass = String(payload.class_name || "").trim();
   if (!username || !password) return badRequest("username and password are required");
-  const { data, error } = await admin.from("system_users").select("*").eq("username", username).eq("password", password).maybeSingle();
+  const { data, error } = await admin.from("system_users").select("*").eq("username", username).maybeSingle();
   if (error) return serverError("system_users query failed", { detail: error.message });
-  if (!data) return unauthorized("Invalid username or password");
+  if (!data || !verifyAccountPassword(data, password)) return unauthorized("Invalid username or password");
   const role = String(data.role || "guest");
   if ((role === "parent" || role === "class_teacher") && inputClass && String(data.class_name || "").trim() !== inputClass) {
     return forbidden("class_name mismatch");
+  }
+  if (!getStoredPasswordHash(data) && getStoredPassword(data)) {
+    await migrateLegacyPasswordRecord(username, password);
   }
   const session = buildSessionPayload(data);
   const token = await signAppSession(session);
@@ -582,7 +632,7 @@ async function handleAccountResetPassword(session, payload) {
   if (!existing) return badRequest("account not found");
   if (!accountEditable(session, existing)) return forbidden("Out of scope");
 
-  const { data, error } = await admin.from("system_users").update({ password: newPassword }).eq("username", username).select("*").maybeSingle();
+  const { data, error } = await admin.from("system_users").update(buildPasswordSecretPatch(newPassword)).eq("username", username).select("*").maybeSingle();
   if (error) return serverError("system_users password reset failed", { detail: error.message });
   return json(200, { ok: true, record: sanitizeAccountRecord(data) });
 }
@@ -596,9 +646,9 @@ async function handleAccountChangePassword(session, payload) {
   const { data: existing, error: findError } = await admin.from("system_users").select("*").eq("username", normalizeAccountText(session.username)).maybeSingle();
   if (findError) return serverError("system_users lookup failed", { detail: findError.message });
   if (!existing) return badRequest("current account not found");
-  if (normalizeAccountText(existing.password) !== oldPassword) return forbidden("old password mismatch");
+  if (!verifyAccountPassword(existing, oldPassword)) return forbidden("old password mismatch");
 
-  const { data, error } = await admin.from("system_users").update({ password: newPassword }).eq("username", normalizeAccountText(session.username)).select("*").maybeSingle();
+  const { data, error } = await admin.from("system_users").update(buildPasswordSecretPatch(newPassword)).eq("username", normalizeAccountText(session.username)).select("*").maybeSingle();
   if (error) return serverError("system_users password update failed", { detail: error.message });
   return json(200, { ok: true, record: sanitizeAccountRecord(data) });
 }

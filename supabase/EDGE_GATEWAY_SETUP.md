@@ -13,6 +13,7 @@ The front end currently prefers `edu-gateway-v2` and will automatically fall bac
 
 - `supabase/sql/001_management_tables.sql`
 - `supabase/sql/002_management_rls_minimal.sql`
+- `supabase/sql/003_system_users_password_hardening.sql`
 - `supabase/functions/edu-gateway/index.ts`
 
 ## Step 1: Create the management tables
@@ -22,12 +23,15 @@ In Supabase Dashboard:
 1. Open `SQL Editor`
 2. Run `supabase/sql/001_management_tables.sql`
 3. Run `supabase/sql/002_management_rls_minimal.sql`
+4. Run `supabase/sql/003_system_users_password_hardening.sql`
 
 Result:
 
 - the new tables are created
 - RLS is enabled
 - browser direct access is blocked for `anon` and `authenticated`
+- `system_users.password` is migrated to bcrypt hashes in `password_hash`
+- legacy plaintext passwords are cleared after migration
 
 ## Step 2: Create the Edge Function
 
@@ -39,6 +43,7 @@ In Supabase Dashboard:
 4. Deploy
 
 If you already have a function named `edu-gateway`, the current front end will still fall back to it automatically. Keeping both names deployed is also safe during migration.
+Deploy the updated function before running the hardening SQL in production.
 
 ## Step 3: Add secrets
 
@@ -60,9 +65,11 @@ Recommended test order:
 
 1. `login`
 2. `session.verify`
-3. `alias.list`
-4. `warning.list`
-5. `rectify.list`
+3. `account.search`
+4. `account.change_password`
+5. `alias.list`
+6. `warning.list`
+7. `rectify.list`
 
 ## Sample request body
 
@@ -138,4 +145,6 @@ Search for:
 
 - This setup is intentionally compatible with the current project.
 - It does not require moving login to Supabase Auth right now.
+- Passwords are now expected to be stored as bcrypt hashes in `system_users.password_hash`.
+- After the hardening SQL is applied, browser direct access to `system_users` should remain disabled and all account operations should go through `edu-gateway-v2`.
 - Later, you can upgrade to Supabase Auth + JWT claims and then move more permission logic into RLS itself.

@@ -5995,7 +5995,7 @@
 
             <div class="info-bar" style="margin-bottom:20px;">
                 此处功能将基于您在【数据中心】上传的 Excel 数据批量生成账号。<br>
-                所有生成账号的默认初始密码均为 <strong>123456</strong>。
+                教师生成账号的初始密码为 <strong>yssy2016</strong>，其余生成账号的初始密码为 <strong>123456</strong>。
             </div>
 
             <div style="display:grid; gap:15px;">
@@ -6284,7 +6284,11 @@
             // 1. 更新本地状态 (确保当前会话立即生效)
             if (typeof Auth !== 'undefined') {
                 Auth.db.admin.pass = '已设置(不显示明文)';
-                localStorage.setItem('SYS_USERS', JSON.stringify(Auth.db));
+                if (typeof persistLocalAuthDb === 'function') {
+                    Auth.db = persistLocalAuthDb(Auth.db);
+                } else {
+                    localStorage.setItem('SYS_USERS', JSON.stringify(Auth.db));
+                }
             }
 
             // 2. 通过账号网关同步到云端

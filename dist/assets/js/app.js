@@ -343,280 +343,6 @@ window.setCloudSyncStatus = (state, detail = '') => {
     CloudSyncIndicator.set(state, detail);
 };
 
-function normalizeClientAccountText(value) {
-    return String(value || '').trim();
-}
-
-function getAccountSessionUser() {
-    if (window.Auth && Auth.currentUser) return Auth.currentUser;
-    try {
-        return JSON.parse(sessionStorage.getItem('CURRENT_USER') || 'null');
-    } catch (error) {
-        return null;
-    }
-}
-
-function ensureAccountSbClient() {
-    if (!window.sbClient && typeof window.initSupabase === 'function') {
-        window.initSupabase();
-    }
-    if (!window.sbClient) {
-        throw new Error('云端数据库未连接');
-    }
-    return window.sbClient;
-}
-
-function maskAccountRecord(row) {
-    const passwordPresent = !!normalizeClientAccountText(row && row.password);
-    const role = normalizeClientAccountText(row && row.role) || 'guest';
-    const username = normalizeClientAccountText(row && row.username);
-    const roles = Array.isArray(row && row.roles) && row.roles.length
-        ? Array.from(new Set(row.roles.map(item => normalizeClientAccountText(item)).filter(Boolean)))
-        : (role ? [role] : []);
-    return {
-        username,
-        role,
-        roles,
-        school: normalizeClientAccountText(row && row.school),
-        class_name: normalizeClientAccountText(row && row.class_name),
-        teacher_name: normalizeClientAccountText((row && (row.teacher_name || row.display_name || row.name || row.username))),
-        has_password: passwordPresent,
-        password_display: passwordPresent ? '已设置(不显示明文)' : '未设置'
-    };
-}
-
-function shouldFallbackAccountGateway(error) {
-    const message = normalizeClientAccountText(error && error.message ? error.message : error);
-    if (!message) return true;
-    return message.includes('EDGE_GATEWAY_NOT_CONFIGURED')
-        || message.includes('EDGE_GATEWAY_REQUEST_FAILED')
-        || message.includes('EDGE_GATEWAY_HTTP_404')
-        || message.includes('EDGE_GATEWAY_SESSION_MISSING')
-        || message.includes('Unsupported action: account.')
-        || message.includes('function not found')
-        || message.includes('Failed to fetch')
-        || message.includes('NetworkError');
-}
-
-async function directSearchAccountsFallback(keyword, payload = {}) {
-    const user = getAccountSessionUser();
-    if (!user) throw new Error('未检测到登录用户');
-    const role = normalizeClientAccountText(user.role);
-    if (!['admin', 'director', 'grade_director', 'class_teacher'].includes(role)) {
-        throw new Error('No permission to search accounts');
-    }
-
-    const client = ensureAccountSbClient();
-    const searchKeyword = normalizeClientAccountText(keyword);
-    if (!searchKeyword) throw new Error('keyword is required');
-
-    let query = client
-        .from('system_users')
-        .select('*')
-        .ilike('username', `%${searchKeyword}%`)
-        .limit(Math.max(1, Math.min(Number(payload.limit || 50) || 50, 100)));
-
-    if (role === 'director' || role === 'grade_director' || role === 'class_teacher') {
-        query = query.eq('school', normalizeClientAccountText(user.school));
-    }
-    if (role === 'class_teacher') {
-        query = query
-            .eq('class_name', normalizeClientAccountText(user.class || user.class_name))
-            .eq('role', 'parent');
-    }
-
-    const { data, error } = await query;
-    if (error) throw error;
-
-    let records = Array.isArray(data) ? data : [];
-    if (role === 'grade_director') {
-        const gradePrefix = normalizeClientAccountText(user.class || user.class_name);
-        records = records.filter(item => {
-            const itemRole = normalizeClientAccountText(item && item.role);
-            if (itemRole === 'teacher') return true;
-            return itemRole === 'parent' && normalizeClientAccountText(item && item.class_name).startsWith(gradePrefix);
-        });
-    }
-
-    return {
-        ok: true,
-        records: records.map(maskAccountRecord)
-    };
-}
-
-async function directUpdateAccountFallback(payload = {}) {
-    const user = getAccountSessionUser();
-    if (!user) throw new Error('未检测到登录用户');
-    const role = normalizeClientAccountText(user.role);
-    if (!['admin', 'director', 'grade_director', 'class_teacher'].includes(role)) {
-        throw new Error('No permission to update accounts');
-    }
-
-    const username = normalizeClientAccountText(payload.username);
-    const nextRole = normalizeClientAccountText(payload.role) || 'teacher';
-    const nextClassName = normalizeClientAccountText(payload.class_name);
-    if (!username) throw new Error('username is required');
-    if ((nextRole === 'parent' || nextRole === 'class_teacher' || nextRole === 'grade_director') && !nextClassName) {
-        throw new Error('class_name is required');
-    }
-    if (role !== 'admin' && (nextRole === 'admin' || nextRole === 'director')) {
-        throw new Error('Only admin can elevate account to admin/director');
-    }
-
-    const client = ensureAccountSbClient();
-    const patch = {
-        role: nextRole,
-        roles: [nextRole],
-        class_name: nextRole === 'teacher' && !nextClassName ? '教师' : nextClassName
-    };
-    const { data, error } = await client
-        .from('system_users')
-        .update(patch)
-        .eq('username', username)
-        .select('*')
-        .maybeSingle();
-    if (error) throw error;
-    return { ok: true, record: maskAccountRecord(data) };
-}
-
-async function directResetAccountPasswordFallback(username, newPassword) {
-    const user = getAccountSessionUser();
-    if (!user) throw new Error('未检测到登录用户');
-    const role = normalizeClientAccountText(user.role);
-    if (!['admin', 'director', 'grade_director', 'class_teacher'].includes(role)) {
-        throw new Error('No permission to reset accounts');
-    }
-
-    const nextUsername = normalizeClientAccountText(username);
-    const nextPassword = normalizeClientAccountText(newPassword);
-    if (!nextUsername || !nextPassword) throw new Error('username and new_password are required');
-    if (nextPassword.length < 6) throw new Error('new_password must be at least 6 characters');
-
-    const client = ensureAccountSbClient();
-    const { data, error } = await client
-        .from('system_users')
-        .update({ password: nextPassword })
-        .eq('username', nextUsername)
-        .select('*')
-        .maybeSingle();
-    if (error) throw error;
-    return { ok: true, record: maskAccountRecord(data) };
-}
-
-async function directChangeOwnPasswordFallback(oldPassword, newPassword) {
-    const user = getAccountSessionUser();
-    if (!user) throw new Error('未检测到登录用户');
-    const username = normalizeClientAccountText(user.name || user.username);
-    const previousPassword = normalizeClientAccountText(oldPassword);
-    const nextPassword = normalizeClientAccountText(newPassword);
-    if (!username || !previousPassword || !nextPassword) {
-        throw new Error('old_password and new_password are required');
-    }
-    if (nextPassword.length < 6) throw new Error('new_password must be at least 6 characters');
-    if (previousPassword === nextPassword) throw new Error('new_password must differ from old_password');
-
-    const client = ensureAccountSbClient();
-    const { data: verifyData, error: verifyError } = await client
-        .from('system_users')
-        .select('*')
-        .eq('username', username)
-        .eq('password', previousPassword)
-        .maybeSingle();
-    if (verifyError) throw verifyError;
-    if (!verifyData) throw new Error('old password mismatch');
-
-    const { data, error } = await client
-        .from('system_users')
-        .update({ password: nextPassword })
-        .eq('username', username)
-        .select('*')
-        .maybeSingle();
-    if (error) throw error;
-    return { ok: true, record: maskAccountRecord(data) };
-}
-
-async function directExportAccountsFallback() {
-    const user = getAccountSessionUser();
-    if (!user) throw new Error('未检测到登录用户');
-    const role = normalizeClientAccountText(user.role);
-    if (!['admin', 'director'].includes(role)) {
-        throw new Error('No permission to export accounts');
-    }
-
-    const client = ensureAccountSbClient();
-    let query = client
-        .from('system_users')
-        .select('*')
-        .order('school', { ascending: true })
-        .order('role', { ascending: true });
-    if (role === 'director') {
-        query = query.eq('school', normalizeClientAccountText(user.school));
-    }
-    const { data, error } = await query;
-    if (error) throw error;
-    return {
-        ok: true,
-        records: (Array.isArray(data) ? data : []).map(maskAccountRecord)
-    };
-}
-
-async function directUpsertAccountsFallback(rows) {
-    const user = getAccountSessionUser();
-    if (!user) throw new Error('未检测到登录用户');
-    const role = normalizeClientAccountText(user.role);
-    if (!['admin', 'director'].includes(role)) {
-        throw new Error('No permission to manage accounts');
-    }
-
-    const payloadRows = Array.isArray(rows) ? rows : [];
-    const normalizedRows = payloadRows.map(row => {
-        const nextRole = normalizeClientAccountText(row && row.role) || 'teacher';
-        return {
-            username: normalizeClientAccountText(row && row.username),
-            password: normalizeClientAccountText(row && row.password),
-            role: nextRole,
-            roles: Array.isArray(row && row.roles) && row.roles.length
-                ? Array.from(new Set(row.roles.map(item => normalizeClientAccountText(item)).filter(Boolean)))
-                : [nextRole],
-            school: nextRole === 'admin'
-                ? '系统'
-                : (normalizeClientAccountText(row && row.school) || normalizeClientAccountText(user.school)),
-            class_name: normalizeClientAccountText(row && row.class_name),
-            teacher_name: normalizeClientAccountText((row && (row.teacher_name || row.display_name || row.name || row.username)))
-                || normalizeClientAccountText(row && row.username)
-        };
-    });
-
-    const client = ensureAccountSbClient();
-    const { error } = await client
-        .from('system_users')
-        .upsert(normalizedRows, { onConflict: 'username' });
-    if (error) throw error;
-    return { ok: true, count: normalizedRows.length };
-}
-
-async function directDeleteManagedAccountsFallback() {
-    const user = getAccountSessionUser();
-    if (!user) throw new Error('未检测到登录用户');
-    const role = normalizeClientAccountText(user.role);
-    if (!['admin', 'director'].includes(role)) {
-        throw new Error('No permission to delete accounts');
-    }
-
-    const client = ensureAccountSbClient();
-    let query = client
-        .from('system_users')
-        .delete({ count: 'exact' })
-        .neq('role', 'admin')
-        .neq('role', 'director');
-    if (role === 'director') {
-        query = query.eq('school', normalizeClientAccountText(user.school));
-    }
-    const { error, count } = await query;
-    if (error) throw error;
-    return { ok: true, count: Number(count || 0) };
-}
-
 const EdgeGateway = {
     tokenStorageKey: 'EDGE_GATEWAY_TOKEN_V1',
     userStorageKey: 'EDGE_GATEWAY_USER_V1',
@@ -774,95 +500,67 @@ const EdgeGateway = {
         return await this.request('version.delete', { id: String(id || '').trim() });
     },
     searchAccounts: async function (keyword, payload = {}) {
-        try {
-            return await this.request('account.search', Object.assign({
-                keyword: String(keyword || '').trim()
-            }, payload || {}));
-        } catch (error) {
-            if (shouldFallbackAccountGateway(error)) {
-                console.warn('[EdgeGateway] account.search fallback:', error?.message || error);
-                return await directSearchAccountsFallback(keyword, payload);
-            }
-            throw error;
-        }
+        return await this.request('account.search', Object.assign({
+            keyword: String(keyword || '').trim()
+        }, payload || {}));
     },
     updateAccount: async function (payload = {}) {
-        try {
-            return await this.request('account.update', payload || {});
-        } catch (error) {
-            if (shouldFallbackAccountGateway(error)) {
-                console.warn('[EdgeGateway] account.update fallback:', error?.message || error);
-                return await directUpdateAccountFallback(payload);
-            }
-            throw error;
-        }
+        return await this.request('account.update', payload || {});
     },
     resetAccountPassword: async function (username, newPassword) {
-        try {
-            return await this.request('account.reset_password', {
-                username: String(username || '').trim(),
-                new_password: String(newPassword || '').trim()
-            });
-        } catch (error) {
-            if (shouldFallbackAccountGateway(error)) {
-                console.warn('[EdgeGateway] account.reset_password fallback:', error?.message || error);
-                return await directResetAccountPasswordFallback(username, newPassword);
-            }
-            throw error;
-        }
+        return await this.request('account.reset_password', {
+            username: String(username || '').trim(),
+            new_password: String(newPassword || '').trim()
+        });
     },
     changeOwnPassword: async function (oldPassword, newPassword) {
-        try {
-            return await this.request('account.change_password', {
-                old_password: String(oldPassword || '').trim(),
-                new_password: String(newPassword || '').trim()
-            });
-        } catch (error) {
-            if (shouldFallbackAccountGateway(error)) {
-                console.warn('[EdgeGateway] account.change_password fallback:', error?.message || error);
-                return await directChangeOwnPasswordFallback(oldPassword, newPassword);
-            }
-            throw error;
-        }
+        return await this.request('account.change_password', {
+            old_password: String(oldPassword || '').trim(),
+            new_password: String(newPassword || '').trim()
+        });
     },
     exportAccounts: async function () {
-        try {
-            return await this.request('account.export', {});
-        } catch (error) {
-            if (shouldFallbackAccountGateway(error)) {
-                console.warn('[EdgeGateway] account.export fallback:', error?.message || error);
-                return await directExportAccountsFallback();
-            }
-            throw error;
-        }
+        return await this.request('account.export', {});
     },
     upsertAccounts: async function (rows) {
-        try {
-            return await this.request('account.upsert_many', {
-                rows: Array.isArray(rows) ? rows : []
-            });
-        } catch (error) {
-            if (shouldFallbackAccountGateway(error)) {
-                console.warn('[EdgeGateway] account.upsert_many fallback:', error?.message || error);
-                return await directUpsertAccountsFallback(rows);
-            }
-            throw error;
-        }
+        return await this.request('account.upsert_many', {
+            rows: Array.isArray(rows) ? rows : []
+        });
     },
     deleteManagedAccounts: async function () {
-        try {
-            return await this.request('account.delete_non_admin', {});
-        } catch (error) {
-            if (shouldFallbackAccountGateway(error)) {
-                console.warn('[EdgeGateway] account.delete_non_admin fallback:', error?.message || error);
-                return await directDeleteManagedAccountsFallback();
-            }
-            throw error;
-        }
+        return await this.request('account.delete_non_admin', {});
     }
 };
 
 window.EdgeGateway = EdgeGateway;
+
+const MASKED_PASSWORD_DISPLAY = '已设置(不显示明文)';
+
+function sanitizeLocalAuthDb(rawDb) {
+    const source = rawDb && typeof rawDb === 'object' ? rawDb : {};
+    const nextDb = {
+        ...source,
+        admin: {
+            ...(source.admin && typeof source.admin === 'object' ? source.admin : {}),
+            pass: MASKED_PASSWORD_DISPLAY
+        },
+        teachers: Array.isArray(source.teachers) ? source.teachers : [],
+        parents: Array.isArray(source.parents) ? source.parents : []
+    };
+    if (source.director && typeof source.director === 'object') {
+        nextDb.director = {
+            ...source.director,
+            pass: MASKED_PASSWORD_DISPLAY
+        };
+    }
+    return nextDb;
+}
+
+function persistLocalAuthDb(rawDb) {
+    const safeDb = sanitizeLocalAuthDb(rawDb);
+    localStorage.setItem('SYS_USERS', JSON.stringify(safeDb));
+    return safeDb;
+}
 
 // 🔐 权限与账号管理系统核心
 const Auth = {
@@ -871,11 +569,11 @@ const Auth = {
     _parentRenderRetrying: false,
 
     // 模拟数据库 (实际存储在 localStorage 'SYS_USERS')
-    db: JSON.parse(localStorage.getItem('SYS_USERS')) || {
-        admin: { pass: 'admin123' },
+    db: sanitizeLocalAuthDb(JSON.parse(localStorage.getItem('SYS_USERS')) || {
+        admin: { pass: '已设置(不显示明文)' },
         teachers: [],
         parents: []
-    },
+    }),
 
     // 初始化：检查会话状态
     loginPortalStorageKey: 'LOGIN_PORTAL_V1',
@@ -1020,41 +718,22 @@ const Auth = {
         try {
             let data = null;
             let gatewayError = null;
-            const shouldFallbackToDirect = (message) => {
-                const text = String(message || '').trim();
-                if (!text) return true;
-                return text.includes('EDGE_GATEWAY_NOT_CONFIGURED')
-                    || text.includes('EDGE_GATEWAY_REQUEST_FAILED')
-                    || text.includes('EDGE_GATEWAY_HTTP_404')
-                    || text.includes('Failed to fetch')
-                    || text.includes('NetworkError')
-                    || text.includes('function not found');
-            };
-
-            if (window.EdgeGateway && typeof EdgeGateway.login === 'function' && EdgeGateway.hasGatewayConfig()) {
-                try {
-                    const gatewayRes = await EdgeGateway.login(user, pass, inputClass);
-                    data = gatewayRes?.user || null;
-                } catch (error) {
-                    gatewayError = error instanceof Error ? error : new Error(String(error));
-                }
+            if (!window.EdgeGateway || typeof EdgeGateway.login !== 'function' || !EdgeGateway.hasGatewayConfig()) {
+                UI.loading(false);
+                alert("鉂?璐﹀彿缃戝叧鏈厤缃紝鏃犳硶楠岃瘉韬唤銆傝鍏堥厤缃?Supabase Edge Gateway銆?");
+                return;
             }
 
-            if (!data && shouldFallbackToDirect(gatewayError?.message)) {
-                if (!sbClient && typeof window.initSupabase === 'function') {
-                    window.initSupabase();
-                }
-                if (!sbClient) {
-                    UI.loading(false);
+            try {
+                const gatewayRes = await EdgeGateway.login(user, pass, inputClass);
+                data = gatewayRes?.user || null;
+            } catch (error) {
+                gatewayError = error instanceof Error ? error : new Error(String(error));
+            }
+
+            /* legacy browser-direct login fallback removed
                     alert("❌ 系统连接失败！\n\n网关暂不可用，且云端数据库尚未加载完毕。\n\n请稍后刷新页面重试。");
-                    return;
-                }
-                const directRes = await sbClient
-                    .from('system_users')
-                    .select('*')
-                    .eq('username', user)
-                    .eq('password', pass)
-                    .maybeSingle();
+                const directRes = { error: new Error('EDGE_GATEWAY_REQUIRED'), data: null };
                 if (directRes.error) {
                     UI.loading(false);
                     console.error("Database Login Error:", directRes.error);
@@ -1063,10 +742,11 @@ const Auth = {
                 data = directRes.data || null;
             }
 
+            */
             UI.loading(false);
 
             if (!data) {
-                if (gatewayError && !shouldFallbackToDirect(gatewayError?.message)) {
+                if (gatewayError) {
                     const message = String(gatewayError.message || '').trim();
                     if (message.includes('class_name mismatch')) {
                         return alert(`❌ 班级不匹配！\n\n您输入的班级：${inputClass || '未填写'}\n请核对后重试。`);
@@ -1542,7 +1222,7 @@ const Auth = {
             return alert("请至少勾选一所学校！\n(如果列表为空，请先上传数据)");
         }
 
-        if (!confirm(`⚠️ 确定要为选中的 [${selectedSchools.length}] 所学校生成账号吗？\n\n1. 仅生成/更新选中学校的学生和老师账号。\n2. 未选中学校的现有账号将【保留】。\n3. 默认初始密码均为 123456。`)) return;
+        if (!confirm(`⚠️ 确定要为选中的 [${selectedSchools.length}] 所学校生成账号吗？\n\n1. 仅生成/更新选中学校的学生和老师账号。\n2. 未选中学校的现有账号将【保留】。\n3. 教师初始密码为 yssy2016，其余账号初始密码为 123456。`)) return;
 
         let countParentNew = 0;
         let countParentUpd = 0;
@@ -1614,7 +1294,7 @@ const Auth = {
         });
 
         // 4. 保存结果到本地存储
-        localStorage.setItem('SYS_USERS', JSON.stringify(this.db));
+        this.db = persistLocalAuthDb(this.db);
 
         let msg = `✅ 操作完成！\n\n`;
         msg += `覆盖学校：${selectedSchools.join(', ')}\n`;
@@ -1649,8 +1329,8 @@ const Auth = {
         const data = [['角色', '用户名/姓名', '登录班级 (家长必填)', '密码', '所属学校/备注']];
 
         // --- A. 写入管理员/主任 (始终导出，不受筛选影响) ---
-        data.push(['管理员', 'admin', '-', this.db.admin.pass, '最高权限']);
-        const dirPass = this.db.director ? this.db.director.pass : 'admin123';
+        data.push(['管理员', 'admin', '-', MASKED_PASSWORD_DISPLAY, '最高权限（明文口令不导出）']);
+        const dirPass = MASKED_PASSWORD_DISPLAY;
         data.push(['教务主任', 'director', '-', dirPass, '查看除账号外所有信息']);
 
         // --- 准备筛选辅助数据 ---
@@ -2067,7 +1747,7 @@ const Auth = {
         if (!confirm("⚠️ 确定清空所有教师和家长账号吗？\n(管理员密码不会被清除)")) return;
         this.db.teachers = [];
         this.db.parents = [];
-        localStorage.setItem('SYS_USERS', JSON.stringify(this.db));
+        this.db = persistLocalAuthDb(this.db);
         alert("✅ 所有普通账号已清空");
     }
 };
@@ -6242,8 +5922,7 @@ async function switchCohort(cohortId) {
 
         // ★★★ 关键：恢复账号数据 ★★★
         if (data.AUTH_DB) {
-            Auth.db = data.AUTH_DB;
-            localStorage.setItem('SYS_USERS', JSON.stringify(Auth.db));
+            Auth.db = persistLocalAuthDb(data.AUTH_DB);
             console.log("✅ 账号已切换为 [" + cohortKey + "] 的版本");
         }
 
@@ -6323,8 +6002,7 @@ async function switchCohort(cohortId) {
             resetPoints: []
         };
 
-        Auth.db = { admin: { pass: 'admin123' }, teachers: [], parents: [] };
-        localStorage.setItem('SYS_USERS', JSON.stringify(Auth.db));
+        Auth.db = persistLocalAuthDb({ admin: { pass: MASKED_PASSWORD_DISPLAY }, teachers: [], parents: [] });
 
         // 清空指标输入框 (安全检查版)
         const i1 = document.getElementById('ind1');
@@ -6401,8 +6079,7 @@ window.addEventListener('load', async () => {
 
         // 恢复账号 (分发版核心)
         if (db.AUTH_DB) {
-            localStorage.setItem('SYS_USERS', JSON.stringify(db.AUTH_DB));
-            if (typeof Auth !== 'undefined') Auth.db = db.AUTH_DB;
+            if (typeof Auth !== 'undefined') Auth.db = persistLocalAuthDb(db.AUTH_DB);
         }
 
         // 恢复指标参数
@@ -6472,8 +6149,7 @@ window.addEventListener('load', async () => {
 
                 // ★★★ 恢复账号 ★★★
                 if (backup.AUTH_DB) {
-                    Auth.db = backup.AUTH_DB;
-                    localStorage.setItem('SYS_USERS', JSON.stringify(Auth.db));
+                    Auth.db = persistLocalAuthDb(backup.AUTH_DB);
                     console.log("✅ 账号信息已同步");
                 }
 
