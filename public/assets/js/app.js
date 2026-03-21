@@ -8261,10 +8261,12 @@ function tmBuildTeacherInsight(subjectFilter = '', teacherFilter = '') {
             const passRate = Number(data?.passRate || 0);
             const fairScore = Number(data?.fairScore ?? data?.finalScore ?? 0);
             const baselineAdjustment = Number(data?.baselineAdjustment || 0);
+            const sampleStabilityRate = Number(data?.sampleStabilityRate || 0);
+            const sampleShiftCount = Number(data?.sampleShiftCount || 0);
 
             if (lowRate >= 0.12) lowRiskTeachers.add(teacherName);
             if (passRate > 0 && passRate < 0.6) passRiskTeachers.add(teacherName);
-            if ((fairScore > 0 && fairScore < 60) || baselineAdjustment <= -6) scoreRiskTeachers.add(teacherName);
+            if ((fairScore > 0 && fairScore < 60) || baselineAdjustment <= -6 || (sampleStabilityRate > 0 && sampleStabilityRate < 0.75 && sampleShiftCount >= 3)) scoreRiskTeachers.add(teacherName);
 
             if (!subjectBuckets[subjectName]) {
                 subjectBuckets[subjectName] = {
@@ -8277,7 +8279,7 @@ function tmBuildTeacherInsight(subjectFilter = '', teacherFilter = '') {
             subjectBuckets[subjectName].count += 1;
             subjectBuckets[subjectName].totalLowRate += lowRate;
             subjectBuckets[subjectName].totalScore += fairScore;
-            if (lowRate >= 0.12 || fairScore < 60 || baselineAdjustment <= -6 || (passRate > 0 && passRate < 0.6)) {
+            if (lowRate >= 0.12 || fairScore < 60 || baselineAdjustment <= -6 || (passRate > 0 && passRate < 0.6) || (sampleStabilityRate > 0 && sampleStabilityRate < 0.75 && sampleShiftCount >= 3)) {
                 subjectBuckets[subjectName].riskCount += 1;
             }
         });
@@ -9702,11 +9704,14 @@ function tmBuildTeacherRiskRows(subjectFilter = '', teacherFilter = '') {
             const passRate = Number(data?.passRate || 0);
             const fairScore = Number(data?.fairScore ?? data?.finalScore ?? 0);
             const baselineAdjustment = Number(data?.baselineAdjustment || 0);
+            const sampleStabilityRate = Number(data?.sampleStabilityRate || 0);
+            const sampleShiftCount = Number(data?.sampleShiftCount || 0);
             let riskScore = 0;
             if (lowRate >= 0.12) riskScore += 3;
             if (passRate > 0 && passRate < 0.6) riskScore += 2;
             if (fairScore > 0 && fairScore < 60) riskScore += 2;
             if (baselineAdjustment <= -6) riskScore += 2;
+            if (sampleStabilityRate > 0 && sampleStabilityRate < 0.75 && sampleShiftCount >= 3) riskScore += 1;
             if (!riskScore) return;
 
             rows.push({
@@ -9717,6 +9722,8 @@ function tmBuildTeacherRiskRows(subjectFilter = '', teacherFilter = '') {
                 passRate,
                 fairScore,
                 baselineAdjustment,
+                sampleStabilityRate,
+                sampleShiftCount,
                 riskScore
             });
         });
@@ -9737,7 +9744,7 @@ function tmBuildIssueTeacherCard(row) {
                 ${tmBuildStatusChip('教师风险', 'warn')}
             </div>
             <div class="tm-center-card-scope">${tmEscapeHtml(row.classes || '当前任课班级未识别')}</div>
-            <div class="tm-center-card-desc">低分率 ${(row.lowRate * 100).toFixed(1)}%，及格率 ${(row.passRate * 100).toFixed(1)}%，公平绩效 ${row.fairScore.toFixed(1)}，基线校正 ${row.baselineAdjustment >= 0 ? '+' : ''}${row.baselineAdjustment.toFixed(1)}。</div>
+            <div class="tm-center-card-desc">低分率 ${(row.lowRate * 100).toFixed(1)}%，及格率 ${(row.passRate * 100).toFixed(1)}%，公平绩效 ${row.fairScore.toFixed(1)}，基线校正 ${row.baselineAdjustment >= 0 ? '+' : ''}${row.baselineAdjustment.toFixed(1)}，样本稳定 ${(row.sampleStabilityRate * 100).toFixed(0)}%${row.sampleShiftCount ? `（变动 ${row.sampleShiftCount} 人）` : ''}。</div>
             <div class="tm-center-card-actions">
                 <button type="button" class="btn btn-orange" data-tm-issue-teacher="${tmEscapeHtml(row.teacherName)}" data-tm-issue-subject="${tmEscapeHtml(row.subjectName)}">定位教师画像</button>
             </div>

@@ -36,6 +36,12 @@ function teacherEscapeHtml(value) {
     }[ch]));
 }
 
+function teacherGetCleanName(value) {
+    return typeof getProgressCleanName === 'function'
+        ? getProgressCleanName(value)
+        : String(value || '').replace(/\s+/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '').toLowerCase();
+}
+
 function teacherGetWeightConfig() {
     const isGrade9 = String(CONFIG?.name || '').includes('9');
     return isGrade9
@@ -46,10 +52,12 @@ function teacherGetWeightConfig() {
 function teacherBuildStudentKey(student) {
     const school = String(student?.school || '').trim();
     const cls = normalizeClass(student?.class || '');
-    const cleanName = typeof getProgressCleanName === 'function'
-        ? getProgressCleanName(student?.name)
-        : String(student?.name || '').replace(/\s+/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '').toLowerCase();
+    const cleanName = teacherGetCleanName(student?.name);
     return `${school}__${cls}__${cleanName}`;
+}
+
+function teacherBuildBaselineRowKey(row) {
+    return `${String(row?.school || '').trim()}__${normalizeClass(row?.class || '')}__${teacherGetCleanName(row?.name)}`;
 }
 
 function teacherResolveThresholds(subject, students = []) {
@@ -178,6 +186,48 @@ function teacherBuildFocusTargets(students, subject, thresholds) {
     };
 }
 
+function teacherBuildSampleSnapshot(currentStudents, baselineRows, baselineInfoMap, classes) {
+    const classSet = new Set((classes || []).map((item) => normalizeClass(item)).filter(Boolean));
+    const previousRosterMap = new Map();
+    (baselineRows || []).forEach((row) => {
+        const cls = normalizeClass(row?.class || '');
+        if (!classSet.has(cls)) return;
+        previousRosterMap.set(teacherBuildBaselineRowKey(row), row);
+    });
+
+    let commonCount = 0;
+    (currentStudents || []).forEach((student) => {
+        const info = baselineInfoMap.get(teacherBuildStudentKey(student));
+        if (!info?.row) return;
+        commonCount += 1;
+        previousRosterMap.set(teacherBuildBaselineRowKey(info.row), info.row);
+    });
+
+    const currentCount = Array.isArray(currentStudents) ? currentStudents.length : 0;
+    const previousCount = previousRosterMap.size;
+    const addedCount = previousCount > 0 ? Math.max(currentCount - commonCount, 0) : 0;
+    const exitedCount = previousCount > 0 ? Math.max(previousCount - commonCount, 0) : 0;
+    const shiftCount = addedCount + exitedCount;
+    const stabilityRate = previousCount > 0 ? (commonCount / Math.max(currentCount, previousCount, 1)) : 0;
+
+    return {
+        currentCount,
+        previousCount,
+        commonCount,
+        addedCount,
+        exitedCount,
+        shiftCount,
+        stabilityRate,
+        stabilityText: `${Math.round(stabilityRate * 100)}%`,
+        summary: previousCount
+            ? `共样 ${commonCount} / 新增 ${addedCount} / 缺考退出 ${exitedCount}`
+            : `共样 ${commonCount} / 暂无上次班级样本`,
+        detailText: previousCount
+            ? `上次样本 ${previousCount} 人；本次实考 ${currentCount} 人；共同样本 ${commonCount} 人；新增 ${addedCount} 人；缺考/退出 ${exitedCount} 人；样本稳定度 ${Math.round(stabilityRate * 100)}%。`
+            : `本次实考 ${currentCount} 人；暂无可对照的上次班级样本。`
+    };
+}
+
 function refreshTeacherPerformanceCopy() {
     const teacherSection = document.getElementById('teacher-analysis');
     const explain = teacherSection?.querySelector('.explain-panel .explain-content');
@@ -200,6 +250,29 @@ function refreshTeacherPerformanceCopy() {
         `;
     }
 }
+
+refreshTeacherPerformanceCopy = function () {
+    const teacherSection = document.getElementById('teacher-analysis');
+    const explain = teacherSection?.querySelector('.explain-panel .explain-content');
+    if (explain) {
+        explain.innerHTML = `
+            <p>联考赋分：按系统现有“两率一分”标准，对同校同学科教师的均分、优秀率、及格率进行赋分。6-8 年级权重为 60/70/70，9 年级权重为 50/80/50。</p>
+            <p>基线校正：只使用最近一次历史考试里的共同样本。共同样本不足、缺考/新增太多时，系统会自动降低校正分权重，避免“48 人变 46 人”这类样本变化被误算成教师增值。</p>
+            <p>低分率：低于及格线 × 0.6 的学生占比，用于观察薄弱尾部是否得到有效控制。</p>
+            <p>公平绩效分：联考赋分折算到 100 分后，叠加基线校正、工作量修正，再乘置信系数得到的结果，更适合做教师横向比较。</p>
+            <p>重点学生：系统会自动识别培优边缘生、及格临界生、辅差关注生，并列出共同样本、样本变动、新增、缺考/退出提示。</p>
+        `;
+    }
+    const sseSection = document.getElementById('single-school-eval');
+    const sseExplain = sseSection?.querySelector('.explain-panel .explain-content');
+    if (sseExplain) {
+        sseExplain.innerHTML = `
+            <p>本模块仍用于班级层面的公平考核，重点看班级工作量、整体结果和生源变化。</p>
+            <p>教师教学质量画像中的“公平绩效分”则是教师学科层面的口径，会额外考虑联考赋分、历史基线校正、共同样本和重点学生结构。</p>
+            <p>建议：班级管理与班主任评价看本模块，任课教师的教学加工效果看“教师教学质量画像”。</p>
+        `;
+    }
+};
 
 function analyzeTeachers() {
     const resolveRowsForTeacherAnalysis = () => {
@@ -678,6 +751,17 @@ function analyzeTeachersV2() {
             data.deltaLowBetter = data.expectedLowRate - data.lowRate;
             data.focusTargets = teacherBuildFocusTargets(students, subject, thresholds);
             data.focusSummary = data.focusTargets.summaryText;
+            const sampleSnapshot = teacherBuildSampleSnapshot(students, baselineRows, baselineInfoMap, data.classes);
+            data.commonSampleCount = sampleSnapshot.commonCount;
+            data.previousSampleCount = sampleSnapshot.previousCount;
+            data.addedSampleCount = sampleSnapshot.addedCount;
+            data.exitedSampleCount = sampleSnapshot.exitedCount;
+            data.sampleShiftCount = sampleSnapshot.shiftCount;
+            data.sampleStabilityRate = sampleSnapshot.stabilityRate;
+            data.sampleStabilityText = sampleSnapshot.stabilityText;
+            data.sampleSummary = sampleSnapshot.summary;
+            data.sampleDetailText = sampleSnapshot.detailText;
+            data.sampleWarning = sampleSnapshot.stabilityRate < 0.75 || sampleSnapshot.shiftCount >= 3;
             data.baselineExamId = String(window.__PROGRESS_BASELINE_ACTIVE_ID || document.getElementById('progressBaselineSelect')?.value || '').trim();
             data.ratedAvg = 0;
             data.ratedExc = 0;
@@ -713,9 +797,16 @@ function analyzeTeachersV2() {
             data.leagueScoreRaw = data.ratedAvg + data.ratedExc + data.ratedPass;
             data.leagueScore = weightConfig.total > 0 ? (data.leagueScoreRaw / weightConfig.total) * 100 : 0;
 
-            const baselineReliability = data.baselineMatchedCount > 0
-                ? teacherClamp((data.baselineCoverage * 0.7) + (Math.min(data.baselineMatchedCount, 20) / 20 * 0.3), 0, 1)
+            let baselineReliability = data.baselineMatchedCount > 0
+                ? teacherClamp(
+                    (data.baselineCoverage * 0.4)
+                    + (teacherToNumber(data.sampleStabilityRate, 0) * 0.4)
+                    + ((Math.min(data.baselineMatchedCount, 20) / 20) * 0.2),
+                    0,
+                    1
+                )
                 : 0;
+            if (data.commonSampleCount < 5) baselineReliability = 0;
             const baselineAdjustment = (
                 teacherGetZScore(data.deltaAvg, deltaAvgList) * 6 +
                 teacherGetZScore(data.deltaExcellentRate, deltaExcList) * 5 +
@@ -727,7 +818,8 @@ function analyzeTeachersV2() {
             const workloadDiff = Math.sqrt(Math.max(data.studentCount, 0)) - Math.sqrt(Math.max(medianCount, 1));
             data.workloadAdjustment = teacherClamp(workloadDiff * 2.4, -3, 3);
             const sampleFactor = teacherClamp(Math.sqrt(Math.max(data.studentCount, 1) / Math.max(medianCount, 1)), 0, 1);
-            data.confidenceFactor = teacherClamp(0.9 + 0.1 * ((sampleFactor + Math.max(baselineReliability, 0.35)) / 2), 0.88, 1);
+            const stabilityFactor = teacherToNumber(data.sampleStabilityRate, 0) > 0 ? teacherToNumber(data.sampleStabilityRate, 0) : 0.35;
+            data.confidenceFactor = teacherClamp(0.88 + 0.12 * ((sampleFactor + Math.max(baselineReliability, stabilityFactor)) / 2), 0.85, 1);
             data.fairScore = teacherClamp(
                 data.leagueScore * data.confidenceFactor + data.baselineAdjustment + data.workloadAdjustment,
                 0,
@@ -1005,6 +1097,8 @@ function teacherBuildCardList(stats, rankings, currentUserName = '', currentRole
                 leagueScore: teacherToNumber(data.leagueScore, 0).toFixed(1),
                 baselineAdjustment: teacherFormatSigned(data.baselineAdjustment, 1),
                 baselineCoverage: data.baselineCoverageText || '0%',
+                sampleSummary: data.sampleSummary || '共同样本待识别',
+                sampleStability: data.sampleStabilityText || '0%',
                 excRate: teacherFormatPercent(data.excellentRate, 1),
                 passRate: teacherFormatPercent(data.passRate, 1),
                 lowRate: teacherFormatPercent(data.lowRate, 1),
@@ -1092,8 +1186,12 @@ function renderTeacherCardsV2() {
                 <span>优/及/低: ${teacherEscapeHtml(item.excRate)} / ${teacherEscapeHtml(item.passRate)} / ${teacherEscapeHtml(item.lowRate)}</span>
                 <span>校排: <strong style="color:var(--primary)">${teacherEscapeHtml(item.rank)}</strong></span>
             </div>
-            <div style="display:flex; justify-content:space-between; gap:8px; font-size:12px; color:#64748b; margin-bottom:14px; padding:0 10px;">
+            <div style="display:flex; justify-content:space-between; gap:8px; font-size:12px; color:#64748b; margin-bottom:6px; padding:0 10px;">
                 <span>基线校正 ${teacherEscapeHtml(item.baselineAdjustment)} · 覆盖 ${teacherEscapeHtml(item.baselineCoverage)}</span>
+                <span>稳定 ${teacherEscapeHtml(item.sampleStability)}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; gap:8px; font-size:12px; color:#64748b; margin-bottom:14px; padding:0 10px;">
+                <span>${teacherEscapeHtml(item.sampleSummary)}</span>
                 <span>${teacherEscapeHtml(item.focusSummary)}</span>
             </div>
             <button class="view-details-btn" onclick='showTeacherDetails(${JSON.stringify(item.name)}, ${JSON.stringify(item.subject)})'>查看详情</button>
@@ -1133,7 +1231,9 @@ function renderTeacherComparisonTableV2() {
             <tr>
                 <th rowspan="2">教师</th>
                 <th rowspan="2">班级</th>
-                <th rowspan="2">人数</th>
+                <th rowspan="2">实考</th>
+                <th rowspan="2">共同样本</th>
+                <th rowspan="2">样本变动</th>
                 <th rowspan="2">均分</th>
                 <th rowspan="2" title="按系统现有两率一分标准折算，同校同学科比较">联考赋分(${weightConfig.total})</th>
                 <th rowspan="2" title="按最近一次历史考试的匹配学生做超预期修正，范围约 ±20">基线校正</th>
@@ -1151,24 +1251,36 @@ function renderTeacherComparisonTableV2() {
     `;
 
     Object.keys(subjectTeachers).sort(sortSubjects).forEach((subject) => {
-        tableHtml += `<tr style="background:#f1f5f9; font-weight:bold; color:#64748b;"><td colspan="11" style="text-align:left; padding-left:15px;">${teacherEscapeHtml(subject)}</td></tr>`;
+        tableHtml += `<tr style="background:#f1f5f9; font-weight:bold; color:#64748b;"><td colspan="13" style="text-align:left; padding-left:15px;">${teacherEscapeHtml(subject)}</td></tr>`;
         subjectTeachers[subject]
             .sort((a, b) => teacherToNumber(b.data.fairScore, 0) - teacherToNumber(a.data.fairScore, 0))
             .forEach((item) => {
                 const d = item.data;
                 const baselineClass = teacherToNumber(d.baselineAdjustment, 0) >= 0 ? 'text-green' : 'text-red';
                 const lowStyle = teacherToNumber(d.lowRate, 0) >= 0.12 ? 'color:#dc2626; font-weight:700;' : 'color:#334155;';
+                const sampleTone = d.sampleWarning ? 'color:#b45309; font-weight:700;' : 'color:#334155;';
                 const focusTitle = [
                     `培优: ${(d.focusTargets?.excellentEdges || []).slice(0, 6).map((row) => `${row.name}(${row.score})`).join('、') || '暂无'}`,
                     `临界: ${(d.focusTargets?.passEdges || []).slice(0, 6).map((row) => `${row.name}(${row.score})`).join('、') || '暂无'}`,
                     `辅差: ${(d.focusTargets?.lowRisk || []).slice(0, 6).map((row) => `${row.name}(${row.score})`).join('、') || '暂无'}`
                 ].join(' | ');
                 const baselineTitle = `基线覆盖 ${d.baselineCoverageText || '0%'}；预计均分 ${teacherToNumber(d.expectedAvg, 0).toFixed(2)}；预计优率 ${teacherFormatPercent(d.expectedExcellentRate, 1)}；预计及格率 ${teacherFormatPercent(d.expectedPassRate, 1)}；预计低分率 ${teacherFormatPercent(d.expectedLowRate, 1)}${d.baselineExamId ? `；基线 ${d.baselineExamId}` : ''}`;
+                const sampleChangeText = (d.previousSampleCount || 0) > 0
+                    ? `新增 ${d.addedSampleCount || 0} / 缺考退出 ${d.exitedSampleCount || 0}`
+                    : '暂无基线';
                 tableHtml += `
                     <tr>
                         <td><strong>${teacherEscapeHtml(item.teacher)}</strong></td>
                         <td>${teacherEscapeHtml(d.classesText || d.classes || '-')}</td>
                         <td>${teacherEscapeHtml(d.studentCount)}</td>
+                        <td title="${teacherEscapeHtml(d.sampleDetailText || '')}" style="${sampleTone}">
+                            <div>${teacherEscapeHtml((d.previousSampleCount || 0) > 0 ? (d.commonSampleCount || 0) : '—')}</div>
+                            <div style="font-size:11px; color:#64748b;">稳定 ${teacherEscapeHtml((d.previousSampleCount || 0) > 0 ? (d.sampleStabilityText || '0%') : '待历史样本')}</div>
+                        </td>
+                        <td title="${teacherEscapeHtml(d.sampleDetailText || '')}" style="${sampleTone}">
+                            <div>${teacherEscapeHtml(sampleChangeText)}</div>
+                            <div style="font-size:11px; color:#64748b;">上次 ${teacherEscapeHtml(d.previousSampleCount || 0)}</div>
+                        </td>
                         <td style="font-weight:700;">${teacherEscapeHtml(d.avg)}</td>
                         <td title="${teacherEscapeHtml(`均分赋分 ${teacherToNumber(d.ratedAvg, 0).toFixed(1)}，优率赋分 ${teacherToNumber(d.ratedExc, 0).toFixed(1)}，及格赋分 ${teacherToNumber(d.ratedPass, 0).toFixed(1)}`)}">
                             <div style="font-weight:700; color:#0369a1;">${teacherToNumber(d.leagueScoreRaw, 0).toFixed(1)}</div>
@@ -1278,6 +1390,16 @@ function showTeacherDetailsV2(teacher, subject) {
                 <div style="font-size:22px; font-weight:800; color:#0f172a;">${teacherToNumber(data.confidenceFactor, 1).toFixed(2)}</div>
                 <div style="font-size:12px; color:#64748b;">工作量修正 ${teacherFormatSigned(data.workloadAdjustment, 1)}</div>
             </div>
+            <div class="bg-gray-50" style="padding:12px; border-radius:12px;">
+                <div style="font-size:12px; color:#64748b;">共同样本</div>
+                <div style="font-size:22px; font-weight:800; color:${data.sampleWarning ? '#b45309' : '#0f172a'};">${teacherEscapeHtml((data.previousSampleCount || 0) > 0 ? (data.commonSampleCount || 0) : '—')}</div>
+                <div style="font-size:12px; color:#64748b;">稳定 ${teacherEscapeHtml((data.previousSampleCount || 0) > 0 ? (data.sampleStabilityText || '0%') : '待历史样本')}</div>
+            </div>
+            <div class="bg-gray-50" style="padding:12px; border-radius:12px;">
+                <div style="font-size:12px; color:#64748b;">样本变动</div>
+                <div style="font-size:22px; font-weight:800; color:${data.sampleWarning ? '#b45309' : '#0f172a'};">${teacherEscapeHtml((data.previousSampleCount || 0) > 0 ? (data.sampleShiftCount || 0) : '—')}</div>
+                <div style="font-size:12px; color:#64748b;">${teacherEscapeHtml((data.previousSampleCount || 0) > 0 ? `新增 ${data.addedSampleCount || 0} · 缺考退出 ${data.exitedSampleCount || 0}` : '暂无基线样本')}</div>
+            </div>
         </div>
         <div style="border:1px solid #e2e8f0; border-radius:12px; padding:14px; background:#f8fafc;">
             <div style="font-size:13px; font-weight:700; color:#334155; margin-bottom:10px;">培优 / 辅差名单</div>
@@ -1295,7 +1417,8 @@ function showTeacherDetailsV2(teacher, subject) {
                     <div style="font-size:12px; color:#475569; line-height:1.7;">${teacherEscapeHtml(teacherFormatFocusList(data.focusTargets?.lowRisk, '暂无辅差关注生'))}</div>
                 </div>
             </div>
-            <div style="margin-top:10px; font-size:12px; color:#64748b;">${teacherEscapeHtml(data.baselineExamId ? `历史基线：${data.baselineExamId}` : '未加载历史基线，当前仅使用本次成绩的联考赋分与当前群体均值进行校正。')}</div>
+            <div style="margin-top:10px; font-size:12px; color:#64748b;">${teacherEscapeHtml(data.sampleDetailText || '')}</div>
+            <div style="margin-top:6px; font-size:12px; color:#64748b;">${teacherEscapeHtml(data.baselineExamId ? `历史基线：${data.baselineExamId}` : '未加载历史基线，当前仅使用本次成绩的联考赋分与当前群体均值进行校正。')}</div>
         </div>
     `;
 
@@ -1326,6 +1449,7 @@ function exportTeacherComparisonExcelV2() {
         const wsData = [[
             '教师姓名', '学科', '任教班级', '人数', '均分',
             `联考赋分(${weightConfig.total})`, '联考赋分(折算100)', '基线校正', '基线覆盖',
+            '上次样本', '共同样本', '新增样本', '缺考/退出', '样本稳定度',
             '预计均分', '优秀率', '预计优秀率', '及格率', '预计及格率', '低分率', '预计低分率',
             '工作量修正', '置信系数', '公平绩效分', '同科排名',
             '培优边缘生', '及格临界生', '辅差关注生'
@@ -1341,6 +1465,11 @@ function exportTeacherComparisonExcelV2() {
                 getExcelNum(teacherToNumber(data.leagueScore, 0)),
                 getExcelNum(teacherToNumber(data.baselineAdjustment, 0)),
                 data.baselineCoverageText || '0%',
+                data.previousSampleCount || 0,
+                data.commonSampleCount || 0,
+                data.addedSampleCount || 0,
+                data.exitedSampleCount || 0,
+                data.sampleStabilityText || '0%',
                 getExcelNum(teacherToNumber(data.expectedAvg, 0)),
                 getExcelPercent(teacherToNumber(data.excellentRate, 0)),
                 getExcelPercent(teacherToNumber(data.expectedExcellentRate, 0)),
