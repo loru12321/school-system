@@ -6916,6 +6916,10 @@ function SIG_renderSummary(cache) {
         <div class="fb-card"><div class="fb-lbl">学校数量</div><div class="fb-val">${schoolCount}</div></div>
         <div class="fb-card"><div class="fb-lbl">分析模式</div><div class="fb-val">${cache.baselineExamCount > 0 ? '校内公平模式' : '当次诊断模式'}</div></div>
     `;
+    const teacherValue = grid.querySelectorAll('.fb-card .fb-val')[3];
+    if (teacherValue) {
+        teacherValue.textContent = cache.teacherStatusText || (cache.teacherReady ? '已加载' : '未加载');
+    }
 }
 
 function SIG_renderAdvice(cache) {
@@ -7071,7 +7075,14 @@ function SIG_scrollIntoView(targetId) {
 
 function SIG_ensureTeacherTableLayout() {
     const row = document.querySelector('#sigTeacherTable thead tr');
-    if (!row || row.querySelector('[data-sig-col="classes"]')) return;
+    if (!row) return;
+    const existing = Array.from(row.querySelectorAll('th')).find((cell) => (
+        String(cell.textContent || '').replace(/\s+/g, '').includes('班级')
+    ));
+    if (existing) {
+        existing.dataset.sigCol = 'classes';
+        return;
+    }
     const th = document.createElement('th');
     th.dataset.sigCol = 'classes';
     th.textContent = '班级';
@@ -7825,7 +7836,7 @@ function SIG_buildTeacherRows(schoolName, students, baselineExams, source) {
             subjectName: row.subjectName,
             fairScore,
             conversionScore: SIG_toNumber(row.conversion.score, 50),
-            sampleText: `${row.conversion.matchedCount || 0} / ${(SIG_toNumber(row.conversion.stabilityRate, 0) * 100).toFixed(0)}% · ${row.conversion.baselineCount || 0}次`,
+            sampleText: `${row.conversion.matchedCount || 0} / ${(SIG_toNumber(row.conversion.stabilityRate, 0) * 100).toFixed(0)}% | ${row.conversion.baselineCount || 0}次`,
             protectionText: row.teacherChangeProtected ? '已保护' : '正常',
             classesText: row.classesText
         };

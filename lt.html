@@ -6206,15 +6206,14 @@
                         <div id="sigAdviceList" style="font-size:13px; color:#475569; line-height:1.8;">正在分析适用口径...</div>
                     </div>
                     <div class="card-box" style="padding:16px;">
-                        <div class="sub-header" style="margin-top:0;">快捷入口</div>
+                        <div class="sub-header" style="margin-top:0;">模块内快捷操作</div>
                         <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                            <button type="button" class="btn btn-sm" onclick="switchTab('teacher-analysis')">教师画像</button>
-                            <button type="button" class="btn btn-sm" onclick="switchTab('single-school-eval')">班级考核</button>
-                            <button type="button" class="btn btn-sm" onclick="switchTab('progress-analysis')">历次对比</button>
-                            <button type="button" class="btn btn-sm" onclick="switchTab('segment-analysis')">分数段</button>
-                            <button type="button" class="btn btn-sm" onclick="switchTab('potential-analysis')">偏科潜力</button>
-                            <button type="button" class="btn btn-sm" onclick="switchTab('marginal-push')">临界生</button>
-                            <button type="button" class="btn btn-sm" onclick="switchTab('report-generator')">成绩单</button>
+                            <button type="button" class="btn btn-sm" onclick="SIG_openLocalPanel('import')">导入本校成绩</button>
+                            <button type="button" class="btn btn-sm" onclick="SIG_openLocalPanel('teaching', 'sigTeacherTable')">教师公平</button>
+                            <button type="button" class="btn btn-sm" onclick="SIG_openLocalPanel('diagnosis', 'sigClassTable')">班级执行</button>
+                            <button type="button" class="btn btn-sm" onclick="SIG_openLocalPanel('diagnosis', 'sigBaselineTable')">历次基线</button>
+                            <button type="button" class="btn btn-sm" onclick="SIG_openLocalPanel('diagnosis', 'sigDiagnosisHint')">诊断提醒</button>
+                            <button type="button" class="btn btn-sm" onclick="SIG_export()">导出分析</button>
                         </div>
                     </div>
                     <div class="card-box" style="padding:16px;">
@@ -6225,6 +6224,7 @@
                                     <tr>
                                         <th>教师</th>
                                         <th>学科</th>
+                                        <th>班级</th>
                                         <th>公平绩效</th>
                                         <th>转化分</th>
                                         <th>共同样本</th>
@@ -6246,6 +6246,23 @@
                     <div class="card-box" style="padding:16px; margin-bottom:16px;">
                         <div class="sub-header" style="margin-top:0;">校内诊断提醒</div>
                         <div id="sigDiagnosisHint" style="font-size:13px; color:#475569; line-height:1.8;">正在生成校内诊断提醒...</div>
+                    </div>
+                    <div class="card-box" style="padding:16px; margin-bottom:16px;">
+                        <div class="sub-header" style="margin-top:0;">历次基线快照</div>
+                        <div class="table-wrap">
+                            <table class="comparison-table" id="sigBaselineTable">
+                                <thead>
+                                    <tr>
+                                        <th>考试快照</th>
+                                        <th>生成时间</th>
+                                        <th>可比样本</th>
+                                        <th>记录数</th>
+                                        <th>学科数</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
                     </div>
                     <div class="card-box" style="padding:16px;">
                         <div class="sub-header" style="margin-top:0;">班级校内执行表</div>
@@ -14569,6 +14586,10 @@ function SIG_renderSummary(cache) {
         <div class="fb-card"><div class="fb-lbl">学校数量</div><div class="fb-val">${schoolCount}</div></div>
         <div class="fb-card"><div class="fb-lbl">分析模式</div><div class="fb-val">${cache.baselineExamCount > 0 ? '校内公平模式' : '当次诊断模式'}</div></div>
     `;
+    const teacherValue = grid.querySelectorAll('.fb-card .fb-val')[3];
+    if (teacherValue) {
+        teacherValue.textContent = cache.teacherStatusText || (cache.teacherReady ? '已加载' : '未加载');
+    }
 }
 
 function SIG_renderAdvice(cache) {
@@ -14724,7 +14745,14 @@ function SIG_scrollIntoView(targetId) {
 
 function SIG_ensureTeacherTableLayout() {
     const row = document.querySelector('#sigTeacherTable thead tr');
-    if (!row || row.querySelector('[data-sig-col="classes"]')) return;
+    if (!row) return;
+    const existing = Array.from(row.querySelectorAll('th')).find((cell) => (
+        String(cell.textContent || '').replace(/\s+/g, '').includes('班级')
+    ));
+    if (existing) {
+        existing.dataset.sigCol = 'classes';
+        return;
+    }
     const th = document.createElement('th');
     th.dataset.sigCol = 'classes';
     th.textContent = '班级';
@@ -15478,7 +15506,7 @@ function SIG_buildTeacherRows(schoolName, students, baselineExams, source) {
             subjectName: row.subjectName,
             fairScore,
             conversionScore: SIG_toNumber(row.conversion.score, 50),
-            sampleText: `${row.conversion.matchedCount || 0} / ${(SIG_toNumber(row.conversion.stabilityRate, 0) * 100).toFixed(0)}% · ${row.conversion.baselineCount || 0}次`,
+            sampleText: `${row.conversion.matchedCount || 0} / ${(SIG_toNumber(row.conversion.stabilityRate, 0) * 100).toFixed(0)}% | ${row.conversion.baselineCount || 0}次`,
             protectionText: row.teacherChangeProtected ? '已保护' : '正常',
             classesText: row.classesText
         };

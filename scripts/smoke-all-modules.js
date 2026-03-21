@@ -325,14 +325,45 @@ async function runModuleDeepCheck(page, id) {
             }
             window.SIG_render();
             await new Promise(resolve => setTimeout(resolve, 600));
+            const before = document.querySelector('.section.active')?.id || '';
+            const quickButtons = Array.from(document.querySelectorAll('#sig-view-teaching button')).map((btn) => ({
+                text: btn.textContent.trim(),
+                onclick: btn.getAttribute('onclick') || ''
+            }));
+            const baselineButton = Array.from(document.querySelectorAll('#sig-view-teaching button')).find((btn) => {
+                const action = btn.getAttribute('onclick') || '';
+                return action.includes('sigBaselineTable');
+            });
+            if (baselineButton) {
+                baselineButton.click();
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            const after = document.querySelector('.section.active')?.id || '';
+            const activeView = Array.from(document.querySelectorAll('[data-sig-view-btn]'))
+                .find((btn) => btn.classList.contains('active'))?.dataset.sigViewBtn || '';
             const summaryCount = document.querySelectorAll('#sigSummaryGrid .fb-card').length;
             const classRows = document.querySelectorAll('#sigClassTable tbody tr').length;
             const teacherRows = document.querySelectorAll('#sigTeacherTable tbody tr').length;
+            const baselineRows = document.querySelectorAll('#sigBaselineTable tbody tr').length;
+            const teacherHeadCount = document.querySelectorAll('#sigTeacherTable thead th').length;
+            const localQuickActions = quickButtons.length > 0 && quickButtons.every((btn) => !btn.onclick.includes("switchTab('"));
             return {
-                ok: summaryCount >= 4 && classRows >= 0 && teacherRows >= 0,
+                ok: summaryCount >= 4
+                    && classRows >= 0
+                    && teacherRows >= 0
+                    && baselineRows >= 0
+                    && teacherHeadCount === 7
+                    && localQuickActions
+                    && before === 'school-internal-grades'
+                    && after === 'school-internal-grades'
+                    && activeView === 'diagnosis',
                 summaryCount,
                 classRows,
                 teacherRows,
+                baselineRows,
+                teacherHeadCount,
+                activeView,
+                localQuickActions,
                 hasFileInput: !!document.querySelector('#school-internal-grades input[type="file"]')
             };
         });
