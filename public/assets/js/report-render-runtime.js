@@ -2050,6 +2050,13 @@ function renderStudentSubjectBoard(model) {
     if (!items.length) return '';
 
     return `
+        <div class="report-reality-note" style="margin-bottom:16px;">
+            <div class="report-reality-title">怎么看“百分位”和“Z值”</div>
+            <ul class="report-reality-list">
+                <li><strong>百分位</strong>：看你在同届样本里大概超过了多少人。比如 99%，可以理解成“大约超过了 99% 的同届学生”。</li>
+                <li><strong>Z值</strong>：看你和平均水平差多远。`0` 附近表示接近平均，正数越大说明优势越明显，负数越小说明越需要优先补弱。</li>
+            </ul>
+        </div>
         <div class="report-subject-board">
             ${items.map(item => {
                 const percentile = item.percentile !== null ? Math.max(0, Math.min(100, item.percentile)) : 0;
@@ -2064,8 +2071,8 @@ function renderStudentSubjectBoard(model) {
                         </div>
                         <div class="report-subject-meta">
                             <span>成绩 ${item.score}</span>
-                            <span>百分位 ${item.percentile !== null ? item.percentile.toFixed(0) + '%' : '-'}</span>
-                            <span>Z ${zText}</span>
+                            <span>超过同范围 ${item.percentile !== null ? item.percentile.toFixed(0) + '%' : '-'} 学生</span>
+                            <span>领先指数 Z ${zText}</span>
                         </div>
                         <div class="report-progress-track">
                             <div class="report-progress-bar tone-${tone}" style="width:${percentile}%;"></div>
