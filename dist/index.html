@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <link rel="icon" href="./favicon.ico?v=20260321-teacherfair-v3" sizes="any">
+    <link rel="icon" href="./favicon.ico?v=20260321-localgrades-v4" sizes="any">
 
 
     <script>
@@ -61,8 +61,8 @@
     <!-- 🟢 [新增] 添加 jsPDF（PDF导出） -->
     <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" crossorigin="anonymous"
         onerror="this.onerror=null;this.src='https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'"></script>
-    <script src="./assets/js/cloud.js?v=20260321-teacherfair-v3"></script>
-    <script src="./assets/js/cloud-workspace-runtime.js?v=20260321-teacherfair-v3"></script>
+    <script src="./assets/js/cloud.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/cloud-workspace-runtime.js?v=20260321-localgrades-v4"></script>
 
     <!-- ================== 图标字体 (Tabler Icons) ================== -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
@@ -4993,6 +4993,11 @@
                         <button class="btn btn-purple" onclick="SIG_export()">导出本地分析</button>
                     </div>
                 </div>
+                <div class="nav-sub-items" style="margin-bottom:12px;">
+                    <div class="nav-link active" data-sig-view-btn="import" onclick="SIG_switchView('import', this)">成绩导入</div>
+                    <div class="nav-link" data-sig-view-btn="teaching" onclick="SIG_switchView('teaching', this)">教学管理</div>
+                    <div class="nav-link" data-sig-view-btn="diagnosis" onclick="SIG_switchView('diagnosis', this)">学情诊断</div>
+                </div>
                 <div class="info-bar" id="sigModeNotice">正在准备校内成绩分析...</div>
                 <details class="explain-panel">
                     <summary>口径说明（点击展开）</summary>
@@ -5002,15 +5007,34 @@
                         <p>本页所有数据仅在本地运行，不触发云端同步。</p>
                     </div>
                 </details>
-                <div class="control-panel">
-                    <label>分析学校</label>
-                    <select id="sigSchoolSelect" onchange="SIG_render()" style="min-width:220px;"></select>
-                    <span class="badge" style="background:#f3e8ff; color:#6d28d9;">Local Only</span>
-                    <span class="badge" style="background:#ecfeff; color:#0f766e;">不上传云端</span>
+                <div id="sig-view-import" class="sig-subview">
+                    <div class="control-panel" style="align-items:stretch; gap:16px;">
+                        <div class="upload-box" style="flex:1; min-height:170px;" onclick="document.getElementById('sigFileInput').click()">
+                            <div class="upload-icon"><i class="ti ti-file-spreadsheet"></i></div>
+                            <div style="font-weight:700; font-size:16px;">导入校内成绩文件</div>
+                            <div style="font-size:12px; color:#64748b; margin-top:6px;">支持本校月考、校考、周测 Excel。只在本模块本地使用，不同步云端。</div>
+                            <input type="file" id="sigFileInput" accept=".xlsx,.xls" hidden onchange="SIG_handleFile(this)">
+                        </div>
+                        <div class="card-box" style="flex:1; padding:16px;">
+                            <div class="sub-header" style="margin-top:0;">本地工作区状态</div>
+                            <div id="sigImportStatus" style="font-size:13px; color:#475569; line-height:1.8;">尚未导入专属成绩文件。当前可临时使用本地工作区中已加载的校内成绩。</div>
+                            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;">
+                                <span class="badge" style="background:#f3e8ff; color:#6d28d9;">Local Only</span>
+                                <span class="badge" style="background:#ecfeff; color:#0f766e;">不上传云端</span>
+                                <span class="badge" id="sigSourceBadge" style="background:#fff7ed; color:#b45309;">当前来源：工作区</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div id="sigSummaryGrid" class="fb-dashboard" style="margin-bottom:16px;"></div>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:14px; margin-bottom:16px;">
-                    <div class="card-box" style="padding:16px;">
+                <div id="sig-view-teaching" class="sig-subview hidden">
+                    <div class="control-panel">
+                        <label>分析学校</label>
+                        <select id="sigSchoolSelect" onchange="SIG_render()" style="min-width:220px;"></select>
+                        <span class="badge" style="background:#f3e8ff; color:#6d28d9;">Local Only</span>
+                        <span class="badge" style="background:#ecfeff; color:#0f766e;">不上传云端</span>
+                    </div>
+                    <div id="sigSummaryGrid" class="fb-dashboard" style="margin-bottom:16px;"></div>
+                    <div class="card-box" style="padding:16px; margin-bottom:16px;">
                         <div class="sub-header" style="margin-top:0;">校内适用建议</div>
                         <div id="sigAdviceList" style="font-size:13px; color:#475569; line-height:1.8;">正在分析适用口径...</div>
                     </div>
@@ -5026,26 +5050,6 @@
                             <button type="button" class="btn btn-sm" onclick="switchTab('report-generator')">成绩单</button>
                         </div>
                     </div>
-                </div>
-                <div style="display:grid; grid-template-columns:1.1fr 1fr; gap:16px; align-items:start;">
-                    <div class="card-box" style="padding:16px;">
-                        <div class="sub-header" style="margin-top:0;">班级校内执行表</div>
-                        <div class="table-wrap">
-                            <table class="comparison-table" id="sigClassTable">
-                                <thead>
-                                    <tr>
-                                        <th>班级</th>
-                                        <th>实考</th>
-                                        <th>均分</th>
-                                        <th>校内高水平率</th>
-                                        <th>校内稳态率</th>
-                                        <th>诊断分</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </div>
                     <div class="card-box" style="padding:16px;">
                         <div class="sub-header" style="margin-top:0;">教师公平快览</div>
                         <div class="table-wrap">
@@ -5058,6 +5062,36 @@
                                         <th>转化分</th>
                                         <th>共同样本</th>
                                         <th>保护</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div id="sig-view-diagnosis" class="sig-subview hidden">
+                    <div class="control-panel">
+                        <label>分析学校</label>
+                        <select id="sigSchoolSelectAlt" onchange="SIG_syncSchoolSelect(this.value); SIG_render()" style="min-width:220px;"></select>
+                        <span class="badge" style="background:#f3e8ff; color:#6d28d9;">Local Only</span>
+                        <span class="badge" style="background:#ecfeff; color:#0f766e;">不上传云端</span>
+                    </div>
+                    <div class="card-box" style="padding:16px; margin-bottom:16px;">
+                        <div class="sub-header" style="margin-top:0;">校内诊断提醒</div>
+                        <div id="sigDiagnosisHint" style="font-size:13px; color:#475569; line-height:1.8;">正在生成校内诊断提醒...</div>
+                    </div>
+                    <div class="card-box" style="padding:16px;">
+                        <div class="sub-header" style="margin-top:0;">班级校内执行表</div>
+                        <div class="table-wrap">
+                            <table class="comparison-table" id="sigClassTable">
+                                <thead>
+                                    <tr>
+                                        <th>班级</th>
+                                        <th>实考</th>
+                                        <th>均分</th>
+                                        <th>校内高水平率</th>
+                                        <th>校内稳态率</th>
+                                        <th>诊断分</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -6449,24 +6483,24 @@
     </script>
 
     <!-- 核心逻辑脚本 -->
-    <script src="./assets/js/app.js?v=20260321-teacherfair-v3"></script>
-    <script src="./assets/js/school-normalization-runtime.js?v=20260321-teacherfair-v3"></script>
-    <script src="./assets/js/compare-shared-runtime.js?v=20260321-teacherfair-v3"></script>
-    <script src="./assets/js/report-compare-runtime.js?v=20260321-teacherfair-v3"></script>
-    <script src="./assets/js/report-render-runtime.js?v=20260321-teacherfair-v3"></script>
-    <script src="./assets/js/compare-selectors-runtime.js?v=20260321-teacherfair-v3"></script>
-    <script src="./assets/js/teacher-analysis-main-runtime.js?v=20260321-teacherfair-v3"></script>
-    <script src="./assets/js/town-submodule-compare-runtime.js?v=20260321-teacherfair-v3"></script>
-    <script src="./assets/js/progress-analysis-runtime.js?v=20260321-teacherfair-v3"></script>
-    <script src="./assets/js/student-compare-result-runtime.js?v=20260321-teacherfair-v3"></script>
-    <script src="./assets/js/student-compare-generate-runtime.js?v=20260321-teacherfair-v3"></script>
-    <script src="./assets/js/teacher-compare-result-runtime.js?v=20260321-teacherfair-v3"></script>
-    <script src="./assets/js/macro-compare-result-runtime.js?v=20260321-teacherfair-v3"></script>
-    <script src="./assets/js/student-compare-cloud-runtime.js?v=20260321-teacherfair-v3"></script>
-    <script src="./assets/js/teacher-compare-cloud-runtime.js?v=20260321-teacherfair-v3"></script>
-    <script src="./assets/js/macro-compare-cloud-runtime.js?v=20260321-teacherfair-v3"></script>
-    <script src="./assets/js/data-manager-sql.js?v=20260321-teacherfair-v3"></script>
-    <script src="./assets/js/mobile-manager.js?v=20260321-teacherfair-v3"></script>
+    <script src="./assets/js/app.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/school-normalization-runtime.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/compare-shared-runtime.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/report-compare-runtime.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/report-render-runtime.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/compare-selectors-runtime.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/teacher-analysis-main-runtime.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/town-submodule-compare-runtime.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/progress-analysis-runtime.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/student-compare-result-runtime.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/student-compare-generate-runtime.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/teacher-compare-result-runtime.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/macro-compare-result-runtime.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/student-compare-cloud-runtime.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/teacher-compare-cloud-runtime.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/macro-compare-cloud-runtime.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/data-manager-sql.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/mobile-manager.js?v=20260321-localgrades-v4"></script>
     
     <!-- ============ Phase 5: 全息教育大脑与元宇宙交互 ============ -->
     <!-- 全息学情 3D 建模引擎 (需要 Three.js) -->

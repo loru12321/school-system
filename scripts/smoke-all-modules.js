@@ -267,12 +267,15 @@ async function runModuleDeepCheck(page, id) {
             }
             window.SIG_render();
             await new Promise(resolve => setTimeout(resolve, 600));
+            const summaryCount = document.querySelectorAll('#sigSummaryGrid .fb-card').length;
+            const classRows = document.querySelectorAll('#sigClassTable tbody tr').length;
+            const teacherRows = document.querySelectorAll('#sigTeacherTable tbody tr').length;
             return {
-                ok: document.querySelectorAll('#sigSummaryGrid .fb-card').length >= 4
-                    && document.querySelectorAll('#sigTeacherTable tbody tr').length >= 0,
-                summaryCount: document.querySelectorAll('#sigSummaryGrid .fb-card').length,
-                classRows: document.querySelectorAll('#sigClassTable tbody tr').length,
-                teacherRows: document.querySelectorAll('#sigTeacherTable tbody tr').length
+                ok: summaryCount >= 4 && classRows >= 0 && teacherRows >= 0,
+                summaryCount,
+                classRows,
+                teacherRows,
+                hasFileInput: !!document.querySelector('#school-internal-grades input[type="file"]')
             };
         });
     }

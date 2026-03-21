@@ -7033,6 +7033,450 @@ function SIG_renderAnalysisHint() {
         : '如当前处理的是本校月考/校考，建议改用“考务工具 -> 校内成绩”子模块，避免误用联考口径。';
 }
 
+let SIG_LOCAL_STATE = {
+    imported: false,
+    source: 'workspace',
+    rawData: [],
+    schools: {}
+};
+
+function SIG_switchView(view, trigger) {
+    document.querySelectorAll('[data-sig-view-btn]').forEach((btn) => {
+        btn.classList.toggle('active', btn === trigger || btn.dataset.sigViewBtn === view);
+    });
+    ['import', 'teaching', 'diagnosis'].forEach((key) => {
+        const panel = document.getElementById(`sig-view-${key}`);
+        if (!panel) return;
+        panel.classList.toggle('hidden', key !== view);
+    });
+}
+
+function SIG_syncSchoolSelect(value) {
+    ['sigSchoolSelect', 'sigSchoolSelectAlt'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el && value) el.value = value;
+    });
+}
+
+function SIG_normalizeSubjectHeader(header) {
+    const text = normalizeSubject(String(header || '').replace(/\s+/g, '').trim());
+    const map = {
+        '语': '语文',
+        '数': '数学',
+        '英': '英语',
+        '物': '物理',
+        '化': '化学',
+        '政': '政治',
+        '道法': '政治',
+        '历': '历史',
+        '地': '地理',
+        '生': '生物'
+    };
+    return map[text] || text;
+}
+
+function SIG_parseRows(rows, defaultSchool = '本校') {
+    if (!Array.isArray(rows) || rows.length < 2) return { rawData: [], subjects: [] };
+    const headers = rows[0].map((item) => String(item || '').trim());
+    const aliasMap = {
+        name: ['姓名', '学生姓名', '学生', 'Name', '考生姓名'],
+        class: ['班级', '班', '班次', 'Class', '行政班'],
+        school: ['学校', 'school', 'School', '校区'],
+        total: ['总分', '五科总', '全科总', '总成绩', '合计']
+    };
+    const idxMap = { name: -1, class: -1, school: -1, total: -1, scores: {} };
+    const excludeKeywords = ['排名', '名次', '赋分', '标准分', 'T分', '等级', '分差', 'Z值', '百分位'];
+    headers.forEach((header, index) => {
+        const text = header.replace(/\s+/g, '');
+        Object.entries(aliasMap).forEach(([key, aliases]) => {
+            if (aliases.some((alias) => text.includes(alias))) idxMap[key] = index;
+        });
+        const normalizedSubject = SIG_normalizeSubjectHeader(text);
+        if (normalizedSubject && !excludeKeywords.some((keyword) => text.includes(keyword)) && SUBJECT_ORDER.includes(normalizedSubject)) {
+            if (!idxMap.scores[normalizedSubject]) idxMap.scores[normalizedSubject] = [];
+            idxMap.scores[normalizedSubject].push(index);
+        }
+    });
+
+    const subjects = Object.keys(idxMap.scores).filter(Boolean);
+    const rawData = [];
+    for (let rowIndex = 1; rowIndex < rows.length; rowIndex += 1) {
+        const row = rows[rowIndex];
+        if (!row || !row.length) continue;
+        const name = String(idxMap.name >= 0 ? (row[idxMap.name] || '') : '').replace(/\s+/g, '').trim();
+        if (!name) continue;
+        const className = normalizeClass(idxMap.class >= 0 ? row[idxMap.class] : '未分班');
+        const schoolName = String(idxMap.school >= 0 ? (row[idxMap.school] || defaultSchool) : defaultSchool).trim() || defaultSchool;
+        const student = {
+            name,
+            class: className || '未分班',
+            school: schoolName,
+            scores: {},
+            total: 0,
+            hasValidScore: false
+        };
+        subjects.forEach((subject) => {
+            const indices = idxMap.scores[subject] || [];
+            let sum = 0;
+            let valid = false;
+            indices.forEach((columnIndex) => {
+                const value = parseFloat(String(row[columnIndex] ?? '').replace(/\s+/g, ''));
+                if (Number.isFinite(value)) {
+                    sum += value;
+                    valid = true;
+                }
+            });
+            if (valid) {
+                student.scores[subject] = parseFloat(sum.toFixed(2));
+                student.total += sum;
+                student.hasValidScore = true;
+            }
+        });
+        if (!student.hasValidScore && idxMap.total >= 0) {
+            const totalValue = parseFloat(String(row[idxMap.total] ?? '').replace(/\s+/g, ''));
+            if (Number.isFinite(totalValue)) {
+                student.total = totalValue;
+                student.hasValidScore = true;
+            }
+        }
+        student.total = parseFloat(student.total.toFixed(2));
+        if (student.hasValidScore) rawData.push(student);
+    }
+    return { rawData, subjects };
+}
+
+function SIG_buildSchoolMap(rawData) {
+    const schools = {};
+    (rawData || []).forEach((student) => {
+        const schoolName = String(student.school || '本校').trim() || '本校';
+        if (!schools[schoolName]) schools[schoolName] = { name: schoolName, students: [] };
+        schools[schoolName].students.push(student);
+    });
+    return schools;
+}
+
+async function SIG_handleFile(input) {
+    const file = input?.files?.[0];
+    if (!file) return;
+    if (typeof XLSX === 'undefined') {
+        alert('请刷新页面后再导入 Excel');
+        return;
+    }
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: 'array' });
+    let parsed = [];
+    workbook.SheetNames.forEach((sheetName) => {
+        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
+        const result = SIG_parseRows(rows, sheetName);
+        parsed.push(...result.rawData);
+    });
+    SIG_LOCAL_STATE = {
+        imported: parsed.length > 0,
+        source: parsed.length > 0 ? 'upload' : 'workspace',
+        rawData: parsed,
+        schools: SIG_buildSchoolMap(parsed)
+    };
+    const status = document.getElementById('sigImportStatus');
+    const badge = document.getElementById('sigSourceBadge');
+    if (status) {
+        status.textContent = parsed.length
+            ? `已导入专属成绩文件：${file.name}，共 ${parsed.length} 条有效成绩。此数据仅在“校内成绩”模块本地使用。`
+            : '文件中未识别到有效成绩数据，请检查列名与内容。';
+    }
+    if (badge) badge.textContent = parsed.length ? '当前来源：专属文件' : '当前来源：工作区';
+    SIG_switchView('teaching', document.querySelector('[data-sig-view-btn="teaching"]'));
+    SIG_render();
+    input.value = '';
+}
+
+function SIG_getSourceState() {
+    if (SIG_LOCAL_STATE.imported && SIG_LOCAL_STATE.rawData.length) {
+        return {
+            source: 'upload',
+            rawData: SIG_LOCAL_STATE.rawData,
+            schools: SIG_LOCAL_STATE.schools,
+            schoolOptions: Object.keys(SIG_LOCAL_STATE.schools || {})
+        };
+    }
+    const schools = {};
+    Object.keys(SCHOOLS || {}).forEach((schoolName) => {
+        const school = SCHOOLS[schoolName];
+        if (!school || !Array.isArray(school.students)) return;
+        schools[schoolName] = {
+            name: schoolName,
+            students: school.students.filter((student) => student.hasValidScore || SIG_toNumber(student.total, 0) > 0)
+        };
+    });
+    return {
+        source: 'workspace',
+        rawData: Object.values(schools).flatMap((school) => school.students),
+        schools,
+        schoolOptions: Object.keys(schools)
+    };
+}
+
+function SIG_getAccessibleSchools() {
+    const user = getCurrentUser();
+    const source = SIG_getSourceState();
+    const schools = source.schoolOptions.length ? source.schoolOptions : Object.keys(source.schools || {});
+    return (window.PermissionPolicy && typeof PermissionPolicy.getAccessibleSchoolNames === 'function')
+        ? PermissionPolicy.getAccessibleSchoolNames(user, schools)
+        : schools;
+}
+
+function SIG_updateSchoolSelect() {
+    const schools = SIG_getAccessibleSchools();
+    ['sigSchoolSelect', 'sigSchoolSelectAlt'].forEach((id) => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const old = sel.value;
+        sel.innerHTML = schools.map((school) => `<option value="${school}">${school}</option>`).join('');
+        const fallback = old && schools.includes(old)
+            ? old
+            : (MY_SCHOOL && schools.includes(MY_SCHOOL) ? MY_SCHOOL : (schools[0] || ''));
+        if (fallback) sel.value = fallback;
+    });
+    return document.getElementById('sigSchoolSelect')?.value || schools[0] || '';
+}
+
+function SIG_getSchoolStudents(schoolName) {
+    const source = SIG_getSourceState();
+    const school = source.schools?.[schoolName];
+    return Array.isArray(school?.students) ? school.students.slice() : [];
+}
+
+function SIG_buildThresholds(students) {
+    const scores = (students || [])
+        .map((student) => SIG_toNumber(student.total, NaN))
+        .filter((score) => Number.isFinite(score))
+        .sort((a, b) => b - a);
+    if (!scores.length) return { highLine: 0, stableLine: 0 };
+    return {
+        highLine: scores[Math.max(0, Math.floor(scores.length * 0.25) - 1)] || 0,
+        stableLine: scores[Math.min(scores.length - 1, Math.floor(scores.length * 0.8))] || 0
+    };
+}
+
+function SIG_buildClassRows(students) {
+    const thresholds = SIG_buildThresholds(students);
+    const buckets = {};
+    (students || []).forEach((student) => {
+        const cls = normalizeClass(student.class || '');
+        if (!cls) return;
+        if (!buckets[cls]) buckets[cls] = [];
+        buckets[cls].push(SIG_toNumber(student.total, 0));
+    });
+    const rows = Object.entries(buckets).map(([className, scores]) => {
+        const count = scores.length;
+        const avg = count ? scores.reduce((sum, score) => sum + score, 0) / count : 0;
+        const highRate = count ? scores.filter((score) => score >= thresholds.highLine).length / count : 0;
+        const stableRate = count ? scores.filter((score) => score >= thresholds.stableLine).length / count : 0;
+        return { className, count, avg, highRate, stableRate, score: 0 };
+    });
+    const maxAvg = Math.max(...rows.map((row) => row.avg), 0) || 1;
+    const maxHigh = Math.max(...rows.map((row) => row.highRate), 0) || 1;
+    const maxStable = Math.max(...rows.map((row) => row.stableRate), 0) || 1;
+    rows.forEach((row) => {
+        row.score = ((row.avg / maxAvg) * 35) + ((row.highRate / maxHigh) * 35) + ((row.stableRate / maxStable) * 30);
+    });
+    rows.sort((a, b) => b.score - a.score);
+    rows.forEach((row, index) => { row.rank = index + 1; });
+    return { rows, thresholds };
+}
+
+function SIG_withScopedWorkspace(source, callback) {
+    if (source.source !== 'upload') return callback();
+    const backup = {
+        RAW_DATA,
+        SCHOOLS,
+        MY_SCHOOL,
+        WINDOW_RAW_DATA: window.RAW_DATA,
+        WINDOW_SCHOOLS: window.SCHOOLS,
+        WINDOW_MY_SCHOOL: window.MY_SCHOOL,
+        WINDOW_TEACHER_STATS: window.TEACHER_STATS
+    };
+    try {
+        RAW_DATA = JSON.parse(JSON.stringify(source.rawData || []));
+        SCHOOLS = JSON.parse(JSON.stringify(source.schools || {}));
+        window.RAW_DATA = RAW_DATA;
+        window.SCHOOLS = SCHOOLS;
+        return callback();
+    } finally {
+        RAW_DATA = backup.RAW_DATA;
+        SCHOOLS = backup.SCHOOLS;
+        MY_SCHOOL = backup.MY_SCHOOL;
+        window.RAW_DATA = backup.WINDOW_RAW_DATA;
+        window.SCHOOLS = backup.WINDOW_SCHOOLS;
+        window.MY_SCHOOL = backup.WINDOW_MY_SCHOOL;
+        window.TEACHER_STATS = backup.WINDOW_TEACHER_STATS;
+    }
+}
+
+function SIG_buildTeacherRows(schoolName) {
+    const source = SIG_getSourceState();
+    return SIG_withScopedWorkspace(source, () => {
+        if (window.DataManager && typeof DataManager.ensureTeacherMap === 'function') {
+            DataManager.ensureTeacherMap(false);
+        }
+        if (typeof syncTeacherAnalysisSchoolContext === 'function') syncTeacherAnalysisSchoolContext(schoolName);
+        if (typeof analyzeTeachers === 'function') analyzeTeachers();
+        const stats = typeof getVisibleTeacherStats === 'function' ? getVisibleTeacherStats() : (window.TEACHER_STATS || {});
+        const rows = [];
+        Object.entries(stats || {}).forEach(([teacherName, subjectMap]) => {
+            Object.entries(subjectMap || {}).forEach(([subjectName, data]) => {
+                rows.push({
+                    teacherName,
+                    subjectName,
+                    fairScore: SIG_toNumber(data?.fairScore ?? data?.finalScore ?? 0),
+                    conversionScore: SIG_toNumber(data?.conversionScore || 50),
+                    sampleText: `${data?.commonSampleCount ?? '-'} / ${data?.sampleStabilityText || '0%'}`,
+                    protectionText: data?.teacherChangeProtected ? '已保护' : '正常'
+                });
+            });
+        });
+        return rows.sort((a, b) => b.fairScore - a.fairScore).slice(0, 12);
+    });
+}
+
+function SIG_renderSummary(cache) {
+    const grid = document.getElementById('sigSummaryGrid');
+    if (!grid) return;
+    const schoolCount = SIG_getAccessibleSchools().length;
+    grid.innerHTML = `
+        <div class="fb-card"><div class="fb-lbl">当前学校</div><div class="fb-val">${tmEscapeHtml(cache.schoolName || '未识别')}</div></div>
+        <div class="fb-card"><div class="fb-lbl">本次实考</div><div class="fb-val">${cache.studentCount || 0}</div></div>
+        <div class="fb-card"><div class="fb-lbl">历史期次</div><div class="fb-val">${cache.baselineExamCount || 0}</div></div>
+        <div class="fb-card"><div class="fb-lbl">任课表</div><div class="fb-val">${cache.teacherReady ? '已加载' : '未加载'}</div></div>
+        <div class="fb-card"><div class="fb-lbl">校内高水平线</div><div class="fb-val">${SIG_toNumber(cache.thresholdMeta.highLine, 0).toFixed(1)}</div></div>
+        <div class="fb-card"><div class="fb-lbl">校内稳态线</div><div class="fb-val">${SIG_toNumber(cache.thresholdMeta.stableLine, 0).toFixed(1)}</div></div>
+        <div class="fb-card"><div class="fb-lbl">学校数量</div><div class="fb-val">${schoolCount}</div></div>
+        <div class="fb-card"><div class="fb-lbl">数据来源</div><div class="fb-val">${cache.source === 'upload' ? '专属文件' : '工作区'}</div></div>
+    `;
+}
+
+function SIG_renderAdvice(cache) {
+    const el = document.getElementById('sigAdviceList');
+    const notice = document.getElementById('sigModeNotice');
+    const diag = document.getElementById('sigDiagnosisHint');
+    const badge = document.getElementById('sigSourceBadge');
+    const status = document.getElementById('sigImportStatus');
+    if (!el || !notice) return;
+    const schoolCount = SIG_getAccessibleSchools().length;
+    const items = [];
+    if (cache.source === 'upload') items.push('当前使用本模块专属成绩文件，分析结果与母模块数据隔离。');
+    else items.push('当前暂用本地工作区中已加载的校内成绩，建议尽快导入本模块专属文件。');
+    if (schoolCount <= 1) items.push('当前数据只有本校口径，校际联考横向排名不适用。');
+    else items.push('即使当前工作区有多校数据，本页也只按本校-only口径分析。');
+    if (cache.baselineExamCount <= 0) items.push('当前没有可用历史考试，本页只输出当次诊断分。');
+    else items.push(`当前已检测到 ${cache.baselineExamCount} 次历史考试，可使用滚动基线做校内公平绩效。`);
+    if (!cache.teacherReady) items.push('任课表尚未加载，教师公平快览会受限。');
+    items.push('本页不调用云端保存，不会把校内月考数据同步到云端。');
+    el.innerHTML = `<ul class="plain-list">${items.map((item) => `<li>${tmEscapeHtml(item)}</li>`).join('')}</ul>`;
+    notice.textContent = cache.baselineExamCount > 0
+        ? '当前使用校内公平口径：联考模块可参考，但本页更适合月考/校考。'
+        : '当前使用当次校内诊断口径：只看本校执行状态，不输出正式联考绩效。';
+    if (diag) {
+        diag.innerHTML = `
+            <ul class="plain-list">
+                <li>当前来源：${tmEscapeHtml(cache.source === 'upload' ? '专属文件' : '工作区')}。</li>
+                <li>当前学校：${tmEscapeHtml(cache.schoolName || '未识别')}，实考 ${cache.studentCount || 0} 人。</li>
+                <li>当前更适合使用 ${tmEscapeHtml(cache.baselineExamCount > 0 ? '校内公平模式' : '当次诊断模式')}。</li>
+            </ul>
+        `;
+    }
+    if (badge) badge.textContent = `当前来源：${cache.source === 'upload' ? '专属文件' : '工作区'}`;
+    if (status && cache.source === 'workspace') {
+        status.textContent = '尚未导入专属成绩文件。当前临时使用本地工作区中已加载的校内成绩，不会同步云端。';
+    }
+}
+
+function SIG_renderTables(cache) {
+    const classBody = document.querySelector('#sigClassTable tbody');
+    const teacherBody = document.querySelector('#sigTeacherTable tbody');
+    if (classBody) {
+        classBody.innerHTML = cache.classRows.length
+            ? cache.classRows.map((row) => `
+                <tr>
+                    <td>${tmEscapeHtml(row.className)}</td>
+                    <td>${row.count}</td>
+                    <td>${row.avg.toFixed(2)}</td>
+                    <td>${(row.highRate * 100).toFixed(1)}%</td>
+                    <td>${(row.stableRate * 100).toFixed(1)}%</td>
+                    <td style="font-weight:700; color:#6d28d9;">${row.score.toFixed(1)}</td>
+                </tr>
+            `).join('')
+            : '<tr><td colspan="6" style="text-align:center; color:#999;">暂无可分析班级数据</td></tr>';
+    }
+    if (teacherBody) {
+        teacherBody.innerHTML = cache.teacherRows.length
+            ? cache.teacherRows.map((row) => `
+                <tr>
+                    <td>${tmEscapeHtml(row.teacherName)}</td>
+                    <td>${tmEscapeHtml(row.subjectName)}</td>
+                    <td>${row.fairScore.toFixed(1)}</td>
+                    <td>${row.conversionScore.toFixed(1)}</td>
+                    <td>${tmEscapeHtml(row.sampleText)}</td>
+                    <td>${tmEscapeHtml(row.protectionText)}</td>
+                </tr>
+            `).join('')
+            : '<tr><td colspan="6" style="text-align:center; color:#999;">暂无教师公平快览数据</td></tr>';
+    }
+}
+
+function SIG_render() {
+    const schoolName = SIG_updateSchoolSelect();
+    SIG_syncSchoolSelect(schoolName);
+    const source = SIG_getSourceState();
+    const students = SIG_getSchoolStudents(schoolName);
+    const classInfo = SIG_buildClassRows(students);
+    const teacherRows = SIG_buildTeacherRows(schoolName);
+    const baselineExamCount = (typeof getProgressBaselineExamList === 'function' ? getProgressBaselineExamList() : [])
+        .filter((exam) => !CURRENT_EXAM_ID || !isExamKeyEquivalentForCompare(exam.id, CURRENT_EXAM_ID))
+        .length;
+    const teacherReady = !!(window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0);
+    SIG_CACHE = {
+        schoolName,
+        source: source.source,
+        localOnly: true,
+        classRows: classInfo.rows,
+        teacherRows,
+        studentCount: students.length,
+        baselineExamCount,
+        teacherReady,
+        thresholdMeta: classInfo.thresholds
+    };
+    SIG_renderSummary(SIG_CACHE);
+    SIG_renderAdvice(SIG_CACHE);
+    SIG_renderTables(SIG_CACHE);
+}
+
+function SIG_export() {
+    if (!SIG_CACHE.schoolName) SIG_render();
+    if (!SIG_CACHE.schoolName) return alert('请先加载校内成绩分析');
+    const wb = XLSX.utils.book_new();
+    const summaryData = [
+        ['学校', '模式', '来源', '实考人数', '历史期次', '任课表状态', '校内高水平线', '校内稳态线'],
+        [
+            SIG_CACHE.schoolName,
+            SIG_CACHE.baselineExamCount > 0 ? '校内公平模式' : '当次诊断模式',
+            SIG_CACHE.source === 'upload' ? '专属文件' : '工作区',
+            SIG_CACHE.studentCount,
+            SIG_CACHE.baselineExamCount,
+            SIG_CACHE.teacherReady ? '已加载' : '未加载',
+            SIG_toNumber(SIG_CACHE.thresholdMeta.highLine, 0),
+            SIG_toNumber(SIG_CACHE.thresholdMeta.stableLine, 0)
+        ]
+    ];
+    const classData = [['班级', '实考', '均分', '校内高水平率', '校内稳态率', '诊断分']]
+        .concat(SIG_CACHE.classRows.map((row) => [row.className, row.count, row.avg.toFixed(2), (row.highRate * 100).toFixed(2), (row.stableRate * 100).toFixed(2), row.score.toFixed(2)]));
+    const teacherData = [['教师', '学科', '公平绩效', '转化分', '共同样本/稳定', '换老师保护']]
+        .concat(SIG_CACHE.teacherRows.map((row) => [row.teacherName, row.subjectName, row.fairScore.toFixed(2), row.conversionScore.toFixed(2), row.sampleText, row.protectionText]));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryData), '校内摘要');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(classData), '班级执行表');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(teacherData), '教师公平快览');
+    XLSX.writeFile(wb, `${SIG_CACHE.schoolName || '本校'}_校内成绩分析.xlsx`);
+}
+
 let currentCategory = 'data';
 
 function renderNavigation() {
