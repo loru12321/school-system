@@ -6689,7 +6689,6 @@ const NAV_STRUCTURE = {
             { id: 'grade-scheduler', icon: 'ti-calendar-time', text: '级部智能排课' },
             { id: 'seat-adjustment', icon: 'ti-armchair', text: '考后排座/互助组' },
             { id: 'mutual-aid', icon: 'ti-friends', text: '学科小老师分组' },
-            { id: 'poster-generator', icon: 'ti-photo-star', text: '喜报红榜生成' }
         ]
     }
 };
@@ -12003,7 +12002,6 @@ function switchTab(id) {
             */
         }
         if (id === 'mutual-aid') updateMutualAidSelects();
-        if (id === 'poster-generator') updatePosterSelects();
         if (id === 'marginal-push') updateMpSchoolSelect();
         // 如果是单校绩效模块，触发一次下拉框更新
         if (id === 'single-school-eval') updateSSESchoolSelect();
@@ -23332,7 +23330,7 @@ const SYSTEM_MANUAL = {
         title: '🛠️ 教务考务工具·算法说明',
         fit: `用于<strong>教务考务流程化</strong>与日常工作降本。`,
         when: `开学初、考试前后、宣传展示时使用。`,
-        use: `包含新生分班、考场编排、红榜生成。`,
+        use: `包含新生分班、考场编排、座位调整等教务工具。`,
         calc: `<strong>分班算法</strong>：S型蛇形排列 + 均分极差优化 (模拟退火)。<br>
                    <strong>考场编排</strong>：同班互斥逻辑 (自动检测并调换同班相邻考生)。`
     },

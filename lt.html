@@ -6687,86 +6687,6 @@
                 </div>
             </div>
 
-            <div id="poster-generator" class="section card-box">
-                <div class="sec-head">
-                    <h2><i class="ti ti-photo-star"></i> 喜报/红榜生成器</h2>
-                    <div class="control-panel" style="margin-bottom:0; padding:5px; border:none; background:none;">
-                        <button class="btn btn-purple" onclick="downloadPoster()">⬇️ 保存图片</button>
-                    </div>
-                </div>
-
-                <div class="poster-workspace">
-                    <!-- 左侧：控制器 -->
-                    <div class="poster-controls">
-                        <h4 style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;">🎨 1. 选择主题
-                        </h4>
-                        <div class="thumb-select">
-                            <div class="thumb-btn active" onclick="setPosterTheme('red', this)">🧧 大红喜报</div>
-                            <div class="thumb-btn" onclick="setPosterTheme('blue', this)">📘 清爽蓝调</div>
-                            <div class="thumb-btn" onclick="setPosterTheme('tech', this)">🤖 赛博科技</div>
-                        </div>
-
-                        <h4
-                            style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px; margin-top:20px;">
-                            📊 2. 数据来源</h4>
-                        <div style="margin-bottom:10px;">
-                            <label style="font-size:12px;">学校：</label>
-                            <select id="posterSchoolSelect" style="width:100%; margin-bottom:5px;"
-                                onchange="updatePosterClassSelect()">
-                                <option value="">--请选择--</option>
-                            </select>
-                        </div>
-                        <div style="margin-bottom:10px;">
-                            <label style="font-size:12px;">班级 (可选)：</label>
-                            <select id="posterClassSelect" style="width:100%; margin-bottom:5px;">
-                                <option value="">全校排名</option>
-                            </select>
-                        </div>
-                        <div style="margin-bottom:10px;">
-                            <label style="font-size:12px;">榜单类型：</label>
-                            <select id="posterSubjectSelect" style="width:100%; margin-bottom:5px;">
-                                <option value="total">🏆 总分光荣榜</option>
-                                <!-- JS动态填充科目 -->
-                            </select>
-                        </div>
-                        <div style="margin-bottom:10px;">
-                            <label style="font-size:12px;">上榜人数：</label>
-                            <input type="number" id="posterCount" value="10" min="1" max="50" style="width:100%;">
-                        </div>
-
-                        <h4
-                            style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px; margin-top:20px;">
-                            📝 3. 文案定制</h4>
-                        <div style="margin-bottom:5px;"><input type="text" id="posterTitleInput" value="光荣榜"
-                                placeholder="大标题" style="width:100%;"></div>
-                        <div style="margin-bottom:10px;"><input type="text" id="posterSubInput" value="本次期末考试优秀名单"
-                                placeholder="副标题" style="width:100%;"></div>
-
-                        <button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="renderPoster()">🔄
-                            生成/刷新预览</button>
-                    </div>
-
-                    <!-- 右侧：预览画布 -->
-                    <div class="poster-preview-area">
-                        <div id="poster-canvas" class="poster-canvas theme-red">
-                            <div class="p-header">
-                                <h1 class="p-title" contenteditable="true">光荣榜</h1>
-                                <div class="p-sub" contenteditable="true">2024-2025学年 第一学期期末考试</div>
-                            </div>
-                            <div class="p-list" id="poster-list-container">
-                                <!-- 列表项将在这里生成 -->
-                                <div style="text-align:center; padding-top:100px; opacity:0.7;">
-                                    请在左侧选择数据并点击生成
-                                </div>
-                            </div>
-                            <div class="p-footer" contenteditable="true">
-                                星光不问赶路人 · 时光不负有心人<br>
-                                xx中学教务处 宣
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
     </div>
 
 
@@ -14359,7 +14279,6 @@ const NAV_STRUCTURE = {
             { id: 'grade-scheduler', icon: 'ti-calendar-time', text: '级部智能排课' },
             { id: 'seat-adjustment', icon: 'ti-armchair', text: '考后排座/互助组' },
             { id: 'mutual-aid', icon: 'ti-friends', text: '学科小老师分组' },
-            { id: 'poster-generator', icon: 'ti-photo-star', text: '喜报红榜生成' }
         ]
     }
 };
@@ -19673,7 +19592,6 @@ function switchTab(id) {
             */
         }
         if (id === 'mutual-aid') updateMutualAidSelects();
-        if (id === 'poster-generator') updatePosterSelects();
         if (id === 'marginal-push') updateMpSchoolSelect();
         // 如果是单校绩效模块，触发一次下拉框更新
         if (id === 'single-school-eval') updateSSESchoolSelect();
@@ -31002,7 +30920,7 @@ const SYSTEM_MANUAL = {
         title: '🛠️ 教务考务工具·算法说明',
         fit: `用于<strong>教务考务流程化</strong>与日常工作降本。`,
         when: `开学初、考试前后、宣传展示时使用。`,
-        use: `包含新生分班、考场编排、红榜生成。`,
+        use: `包含新生分班、考场编排、座位调整等教务工具。`,
         calc: `<strong>分班算法</strong>：S型蛇形排列 + 均分极差优化 (模拟退火)。<br>
                    <strong>考场编排</strong>：同班互斥逻辑 (自动检测并调换同班相邻考生)。`
     },
