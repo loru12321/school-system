@@ -2,6 +2,7 @@
     if (typeof window === 'undefined') return;
     const CloudManager = window.CloudManager;
     const deps = window.CloudWorkspaceRuntimeDeps;
+    const WorkspaceState = window.WorkspaceState || null;
     if (!CloudManager || !deps || window.__CLOUD_WORKSPACE_RUNTIME_PATCHED__) return;
 
     const {
@@ -33,6 +34,42 @@
             return window.normalizeWorkspacePayload(payload);
         }
         return payload;
+    }
+
+    function getCurrentProjectKey() {
+        if (WorkspaceState && typeof WorkspaceState.getCurrentProjectKey === 'function') {
+            return String(WorkspaceState.getCurrentProjectKey() || '').trim();
+        }
+        return String(localStorage.getItem('CURRENT_PROJECT_KEY') || window.CURRENT_PROJECT_KEY || '').trim();
+    }
+
+    function getCurrentCohortId() {
+        if (WorkspaceState && typeof WorkspaceState.getCurrentCohortId === 'function') {
+            return normalizeCohortId(WorkspaceState.getCurrentCohortId());
+        }
+        return normalizeCohortId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+    }
+
+    function syncWorkspaceState(patch = {}) {
+        if (WorkspaceState && typeof WorkspaceState.syncWorkspaceState === 'function') {
+            return WorkspaceState.syncWorkspaceState(patch);
+        }
+        const next = patch && typeof patch === 'object' ? patch : {};
+        if (Object.prototype.hasOwnProperty.call(next, 'currentProjectKey')) {
+            const key = String(next.currentProjectKey || '').trim();
+            if (key) {
+                localStorage.setItem('CURRENT_PROJECT_KEY', key);
+                window.CURRENT_PROJECT_KEY = key;
+            }
+        }
+        if (Object.prototype.hasOwnProperty.call(next, 'currentExamId')) {
+            const examId = String(next.currentExamId || '').trim();
+            if (examId) {
+                localStorage.setItem('CURRENT_EXAM_ID', examId);
+                window.CURRENT_EXAM_ID = examId;
+            }
+        }
+        return next;
     }
 
     Object.assign(CloudManager, {
@@ -77,12 +114,10 @@
                 if (error) throw error;
 
                 if (mode === 'workspace') {
-                    localStorage.setItem('CURRENT_PROJECT_KEY', key);
-                    window.CURRENT_PROJECT_KEY = key;
-                    if (payload?.CURRENT_EXAM_ID) {
-                        localStorage.setItem('CURRENT_EXAM_ID', payload.CURRENT_EXAM_ID);
-                        window.CURRENT_EXAM_ID = payload.CURRENT_EXAM_ID;
-                    }
+                    syncWorkspaceState({
+                        currentProjectKey: key,
+                        currentExamId: payload?.CURRENT_EXAM_ID || ''
+                    });
                 }
                 localStorage.setItem('CLOUD_SYNC_AT', new Date().toISOString());
                 if (window.idbKeyval) await idbKeyval.set(`cache_${key}`, payload);
@@ -105,10 +140,10 @@
             if (!(await this.ensureClientReady())) return false;
             setCloudStatus('syncing', '拉取中');
 
-            let key = getWorkspaceSnapshotKey() || localStorage.getItem('CURRENT_PROJECT_KEY') || this.getKey();
+            let key = getWorkspaceSnapshotKey() || getCurrentProjectKey() || this.getKey();
             try {
                 key = await resolveCloudSnapshotKey(key);
-                if (key) localStorage.setItem('CURRENT_PROJECT_KEY', key);
+                if (key) syncWorkspaceState({ currentProjectKey: key });
             } catch (e) {
                 console.error('Cloud load key lookup error:', e);
                 setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '加载失败');
@@ -132,7 +167,7 @@
                 payload = await supplementIndicatorPayload(key, payload);
                 seedCurrentExamToCohortDb(payload, key, data.updated_at);
                 if (typeof applySnapshotPayload === 'function') applySnapshotPayload(payload);
-                const cohortId = normalizeCohortId(payload?.CURRENT_COHORT_ID || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+                const cohortId = normalizeCohortId(payload?.CURRENT_COHORT_ID || getCurrentCohortId());
                 if (cohortId && typeof this.fetchCohortExamsToLocal === 'function') {
                     await this.fetchCohortExamsToLocal(cohortId);
                 }
@@ -150,7 +185,7 @@
         },
 
         fetchCohortExamsToLocal: async function (cohortId, options = {}) {
-            const cid = normalizeCohortId(cohortId || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+            const cid = normalizeCohortId(cohortId || getCurrentCohortId());
             if (!cid) return { success: false, message: '无法确定届别' };
             const hasSessionUser = !!(window.AuthState && typeof window.AuthState.hasActiveSession === 'function'
                 ? window.AuthState.hasActiveSession(window.Auth && Auth.currentUser)
@@ -268,7 +303,7 @@
             if (!hasSessionUser && !options.force) {
                 return { success: false, skipped: true, message: '未登录，跳过自动拉取' };
             }
-            const cid = normalizeCohortId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+            const cid = normalizeCohortId(getCurrentCohortId());
             if (!cid) return;
             return this.fetchCohortExamsToLocal(cid, options);
         }

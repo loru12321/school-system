@@ -8,6 +8,7 @@
         'TOWN_SUB_COMPARE_'
     ];
     const AUTO_COHORT_SYNC_COOLDOWN_MS = 10 * 60 * 1000;
+    const WorkspaceState = window.WorkspaceState || null;
 
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -46,6 +47,27 @@
         return normalizeCohortId(key);
     }
 
+    function getCurrentProjectKey() {
+        if (WorkspaceState && typeof WorkspaceState.getCurrentProjectKey === 'function') {
+            return String(WorkspaceState.getCurrentProjectKey() || '').trim();
+        }
+        return String(localStorage.getItem('CURRENT_PROJECT_KEY') || window.CURRENT_PROJECT_KEY || '').trim();
+    }
+
+    function getCurrentCohortId() {
+        if (WorkspaceState && typeof WorkspaceState.getCurrentCohortId === 'function') {
+            return normalizeCohortId(WorkspaceState.getCurrentCohortId());
+        }
+        return normalizeCohortId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+    }
+
+    function hasSavedWorkspaceState() {
+        if (WorkspaceState && typeof WorkspaceState.hasSavedWorkspace === 'function') {
+            return WorkspaceState.hasSavedWorkspace();
+        }
+        return !!(getCurrentProjectKey() || getCurrentCohortId() || window.CURRENT_EXAM_ID || localStorage.getItem('CURRENT_EXAM_ID'));
+    }
+
     function isLegacyWorkspaceShadowExamKey(key) {
         const text = String(key || '').trim();
         if (!text) return false;
@@ -62,13 +84,9 @@
     }
 
     function getWorkspaceSnapshotKey() {
-        const explicitProjectKey = String(localStorage.getItem('CURRENT_PROJECT_KEY') || window.CURRENT_PROJECT_KEY || '').trim();
+        const explicitProjectKey = getCurrentProjectKey();
         if (/^cohort::/i.test(explicitProjectKey)) return explicitProjectKey;
-        const cohortId = normalizeCohortId(
-            window.CURRENT_COHORT_ID
-            || localStorage.getItem('CURRENT_COHORT_ID')
-            || explicitProjectKey
-        );
+        const cohortId = normalizeCohortId(getCurrentCohortId() || explicitProjectKey);
         if (cohortId) return `cohort::${cohortId}`;
         return explicitProjectKey;
     }
@@ -847,12 +865,7 @@
             const hasSessionUser = !!(window.AuthState && typeof window.AuthState.hasActiveSession === 'function'
                 ? window.AuthState.hasActiveSession(window.Auth && Auth.currentUser)
                 : (window.Auth && Auth.currentUser));
-            const hasSavedWorkspace = !!(
-                localStorage.getItem('CURRENT_EXAM_ID')
-                || localStorage.getItem('CURRENT_PROJECT_KEY')
-                || window.CURRENT_EXAM_ID
-                || window.CURRENT_PROJECT_KEY
-            );
+            const hasSavedWorkspace = hasSavedWorkspaceState();
             const hasRuntimeScores = Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0;
             if (hasSessionUser && !localStorage.getItem('HAS_SEEN_STARTER') && !hasSavedWorkspace && !hasRuntimeScores && typeof switchTab === 'function' && typeof openStarterGuide === 'function') {
                 if (typeof __guardBypass !== 'undefined') __guardBypass = true;
