@@ -18,6 +18,7 @@ const SWITCH_MODULE_IDS = [
     'marginal-push',
     'progress-analysis',
     'report-generator',
+    'school-internal-grades',
     'freshman-simulator',
     'exam-arranger',
     'teaching-overview',
@@ -256,6 +257,22 @@ async function runModuleDeepCheck(page, id) {
                 checks,
                 reportVisible,
                 contentReady
+            };
+        });
+    }
+    if (id === 'school-internal-grades') {
+        return page.evaluate(async () => {
+            if (typeof window.SIG_render !== 'function') {
+                return { ok: false, error: 'SIG_render is not available' };
+            }
+            window.SIG_render();
+            await new Promise(resolve => setTimeout(resolve, 600));
+            return {
+                ok: document.querySelectorAll('#sigSummaryGrid .fb-card').length >= 4
+                    && document.querySelectorAll('#sigTeacherTable tbody tr').length >= 0,
+                summaryCount: document.querySelectorAll('#sigSummaryGrid .fb-card').length,
+                classRows: document.querySelectorAll('#sigClassTable tbody tr').length,
+                teacherRows: document.querySelectorAll('#sigTeacherTable tbody tr').length
             };
         });
     }

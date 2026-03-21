@@ -4981,6 +4981,92 @@
                 </div>
             </div>
 
+            <div id="school-internal-grades" class="section card-box">
+                <div class="module-desc-bar" style="border-color: var(--color-tools)">
+                    <h3><i class="ti ti-building-bank"></i> 06 校内成绩分析台</h3>
+                    <p>说明：面向只有本校月考、校考、周测数据的场景。本页只使用本地当前成绩、任课表和本地历史快照，不参与云端同步，也不使用校际联考口径。</p>
+                </div>
+                <div class="sec-head">
+                    <h2><i class="ti ti-building-bank"></i> 校内成绩</h2>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-green" onclick="SIG_render()">刷新分析</button>
+                        <button class="btn btn-purple" onclick="SIG_export()">导出本地分析</button>
+                    </div>
+                </div>
+                <div class="info-bar" id="sigModeNotice">正在准备校内成绩分析...</div>
+                <details class="explain-panel">
+                    <summary>口径说明（点击展开）</summary>
+                    <div class="explain-content">
+                        <p>本页只做校内口径分析，不做校际联考横向排名。</p>
+                        <p>当只有本校一次考试时，系统输出“校内诊断分”；有多次历史考试时，再升级为“校内公平绩效分”。</p>
+                        <p>本页所有数据仅在本地运行，不触发云端同步。</p>
+                    </div>
+                </details>
+                <div class="control-panel">
+                    <label>分析学校</label>
+                    <select id="sigSchoolSelect" onchange="SIG_render()" style="min-width:220px;"></select>
+                    <span class="badge" style="background:#f3e8ff; color:#6d28d9;">Local Only</span>
+                    <span class="badge" style="background:#ecfeff; color:#0f766e;">不上传云端</span>
+                </div>
+                <div id="sigSummaryGrid" class="fb-dashboard" style="margin-bottom:16px;"></div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:14px; margin-bottom:16px;">
+                    <div class="card-box" style="padding:16px;">
+                        <div class="sub-header" style="margin-top:0;">校内适用建议</div>
+                        <div id="sigAdviceList" style="font-size:13px; color:#475569; line-height:1.8;">正在分析适用口径...</div>
+                    </div>
+                    <div class="card-box" style="padding:16px;">
+                        <div class="sub-header" style="margin-top:0;">快捷入口</div>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            <button type="button" class="btn btn-sm" onclick="switchTab('teacher-analysis')">教师画像</button>
+                            <button type="button" class="btn btn-sm" onclick="switchTab('single-school-eval')">班级考核</button>
+                            <button type="button" class="btn btn-sm" onclick="switchTab('progress-analysis')">历次对比</button>
+                            <button type="button" class="btn btn-sm" onclick="switchTab('segment-analysis')">分数段</button>
+                            <button type="button" class="btn btn-sm" onclick="switchTab('potential-analysis')">偏科潜力</button>
+                            <button type="button" class="btn btn-sm" onclick="switchTab('marginal-push')">临界生</button>
+                            <button type="button" class="btn btn-sm" onclick="switchTab('report-generator')">成绩单</button>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1.1fr 1fr; gap:16px; align-items:start;">
+                    <div class="card-box" style="padding:16px;">
+                        <div class="sub-header" style="margin-top:0;">班级校内执行表</div>
+                        <div class="table-wrap">
+                            <table class="comparison-table" id="sigClassTable">
+                                <thead>
+                                    <tr>
+                                        <th>班级</th>
+                                        <th>实考</th>
+                                        <th>均分</th>
+                                        <th>校内高水平率</th>
+                                        <th>校内稳态率</th>
+                                        <th>诊断分</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-box" style="padding:16px;">
+                        <div class="sub-header" style="margin-top:0;">教师公平快览</div>
+                        <div class="table-wrap">
+                            <table class="comparison-table" id="sigTeacherTable">
+                                <thead>
+                                    <tr>
+                                        <th>教师</th>
+                                        <th>学科</th>
+                                        <th>公平绩效</th>
+                                        <th>转化分</th>
+                                        <th>共同样本</th>
+                                        <th>保护</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- 14. 智能考场编排 -->
             <div id="exam-arranger" class="section card-box">
                 <div class="module-desc-bar" style="border-color: var(--color-tools)">
