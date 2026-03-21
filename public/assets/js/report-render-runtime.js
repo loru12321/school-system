@@ -1829,6 +1829,8 @@ function analyzeStrengthsAndWeaknesses(student) {
         renderSingleReportCardHTML,
         renderInstagramCard,
         renderIGCharts,
+        copyReport,
+        exportToWord,
         printSingleReport,
         downloadSingleReportPDF,
         batchGeneratePDF,
