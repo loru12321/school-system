@@ -2675,10 +2675,9 @@ HelpSystem.checkFirstRun = function () {
     const loginOverlay = document.getElementById('login-overlay');
     const loginOverlayVisible = !!(loginOverlay && getComputedStyle(loginOverlay).display !== 'none');
     const hasSavedWorkspace = !!(
-        localStorage.getItem('CURRENT_EXAM_ID')
-        || localStorage.getItem('CURRENT_PROJECT_KEY')
-        || window.CURRENT_EXAM_ID
-        || window.CURRENT_PROJECT_KEY
+        (WorkspaceStateRuntime && typeof WorkspaceStateRuntime.hasSavedWorkspace === 'function'
+            ? WorkspaceStateRuntime.hasSavedWorkspace()
+            : (readWorkspaceExamId() || readWorkspaceProjectKey()))
     );
     const hasRuntimeScores = Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0;
 
@@ -3470,7 +3469,7 @@ const DataManager = {
     },
 
     getGrade9TemplateKey: function (type) {
-        const cohortId = CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || 'GLOBAL';
+        const cohortId = CURRENT_COHORT_ID || readWorkspaceCohortId() || 'GLOBAL';
         return `GRADE9_${type}_${cohortId}`;
     },
 
@@ -3908,12 +3907,12 @@ const DataManager = {
     isCloudRecordInCurrentWorkspace: function (key) {
         const text = String(key || '').trim();
         if (!text) return false;
-        const currentKey = String(localStorage.getItem('CURRENT_PROJECT_KEY') || window.CURRENT_PROJECT_KEY || '').trim();
+        const currentKey = readWorkspaceProjectKey();
         if (currentKey && text === currentKey) return true;
         const currentCohortId = normalizeCompareCohortId(
             CURRENT_COHORT_ID
             || window.CURRENT_COHORT_ID
-            || localStorage.getItem('CURRENT_COHORT_ID')
+            || readWorkspaceCohortId()
             || currentKey
         );
         if (!currentCohortId) return true;
@@ -4003,7 +4002,7 @@ const DataManager = {
                 `;
             }
 
-            const currentKey = localStorage.getItem('CURRENT_PROJECT_KEY');
+            const currentKey = readWorkspaceProjectKey();
             let rows = '';
 
             visibleRows.forEach(item => {
@@ -4606,7 +4605,7 @@ const DataManager = {
             } catch (e) { }
 
             // 3. 届别 ID (通常就是年份字符串，如 "2024")
-            const id = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
+            const id = window.CURRENT_COHORT_ID || readWorkspaceCohortId();
             if (id && /^\d{4}$/.test(String(id))) return parseInt(id, 10);
 
             // 4. 界面标签 (如 "2024级 (六年级入学)")
@@ -5277,13 +5276,7 @@ const DataManager = {
     },
 
     getDataManagerSyncScope: function () {
-        return String(
-            localStorage.getItem('CURRENT_PROJECT_KEY') ||
-            window.CURRENT_PROJECT_KEY ||
-            window.CURRENT_COHORT_ID ||
-            window.CONFIG?.name ||
-            'default'
-        );
+        return String(readWorkspaceProjectKey() || readWorkspaceCohortId() || window.CONFIG?.name || 'default');
     },
 
     readDataManagerSyncState: function () {
@@ -6283,7 +6276,7 @@ window.addEventListener('load', async () => {
         CohortManager.init();
     }
     const selector = document.getElementById('cohort-selector');
-    if (selector) selector.value = localStorage.getItem('CURRENT_COHORT_ID') || '';
+    if (selector) selector.value = readWorkspaceCohortId() || '';
 
     // 1. 初始化鉴权 (最先执行)
     if (typeof Auth !== 'undefined') {
@@ -6352,7 +6345,7 @@ window.addEventListener('load', async () => {
     // 🟠 分支二：这是管理员原版 -> 从云端/本地加载
     else {
         // 🟢 [Bug #4 修复] 启动时校验 cohort key 一致性
-        const savedCohortId = localStorage.getItem('CURRENT_COHORT_ID');
+        const savedCohortId = readWorkspaceCohortId();
         const savedProjectKey = readWorkspaceProjectKey();
         if (savedCohortId && savedProjectKey) {
             const expectedKey = getCohortKey(savedCohortId);
@@ -6373,9 +6366,9 @@ window.addEventListener('load', async () => {
             Perf.runAsync(async () => {
                 // 恢复届别与考试主状态（历史考试下拉依赖）
                 COHORT_DB = backup.COHORT_DB || COHORT_DB || null;
-                CURRENT_COHORT_ID = backup.CURRENT_COHORT_ID || CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '';
+                CURRENT_COHORT_ID = backup.CURRENT_COHORT_ID || CURRENT_COHORT_ID || readWorkspaceCohortId() || '';
                 CURRENT_COHORT_META = backup.CURRENT_COHORT_META || CURRENT_COHORT_META || null;
-                CURRENT_EXAM_ID = backup.CURRENT_EXAM_ID || CURRENT_EXAM_ID || localStorage.getItem('CURRENT_EXAM_ID') || '';
+                CURRENT_EXAM_ID = backup.CURRENT_EXAM_ID || CURRENT_EXAM_ID || readWorkspaceExamId() || '';
 
                 // 恢复基础数据
                 RAW_DATA = backup.RAW_DATA || [];
@@ -6458,7 +6451,7 @@ window.addEventListener('load', async () => {
 
                 // ✅ [新增] 页面初始化后自动从云端拉取历史考试到对比期数下拉框
                 setTimeout(() => {
-                    const cid = CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
+                    const cid = CURRENT_COHORT_ID || readWorkspaceCohortId();
                     if (cid && window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
                         window.CloudManager.fetchCohortExamsToLocal(cid).then(res => {
                             if (res.success) {
@@ -6497,7 +6490,7 @@ window.addEventListener('load', async () => {
     // 启动后延迟执行：自动拉取云端历史考试并刷新对比下拉框
     setTimeout(() => {
         try {
-            const cid = CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
+            const cid = CURRENT_COHORT_ID || readWorkspaceCohortId();
             if (cid && window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
                 window.CloudManager.fetchCohortExamsToLocal(cid).then(() => {
                     if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
@@ -8944,8 +8937,8 @@ function tmGetCurrentGatewayScope() {
         String(window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '').trim() || ''
     );
     return {
-        project_key: String(localStorage.getItem('CURRENT_PROJECT_KEY') || window.CURRENT_PROJECT_KEY || '').trim() || 'cohort::2022',
-        cohort_id: String(localStorage.getItem('CURRENT_COHORT_ID') || window.CURRENT_COHORT_ID || '').trim() || '2022',
+        project_key: readWorkspaceProjectKey() || 'cohort::2022',
+        cohort_id: readWorkspaceCohortId() || '2022',
         school_name: school && !tmLooksLikePendingValue(school) ? school : ''
     };
 }
@@ -10555,7 +10548,7 @@ function renderTeachingOverview() {
     ].filter(Boolean).join(' ');
     const currentExam = currentExamText
         || exam1
-        || String(localStorage.getItem('CURRENT_EXAM_ID') || window.CURRENT_EXAM_ID || '').trim()
+        || String(readWorkspaceExamId() || window.CURRENT_EXAM_ID || '').trim()
         || '未选择';
     const teacherTerm = String(
         statusModel?.teacherSnapshot?.termId
@@ -11384,7 +11377,7 @@ function tmBuildCurrentVersionPayload(versionName) {
         version_name: versionName,
         project_key: scope.project_key,
         cohort_id: scope.cohort_id,
-        snapshot_key: String(localStorage.getItem('CURRENT_PROJECT_KEY') || window.CURRENT_PROJECT_KEY || '').trim() || null,
+        snapshot_key: readWorkspaceProjectKey() || null,
         exam_scope: exams.map((item) => item.label || item.id).join(' | ') || null,
         score_hash: tmBuildScoreSignature(exams),
         teacher_hash: teacherSignature,
@@ -12548,7 +12541,7 @@ function exportHighScoreExcel() {
 document.getElementById('fileInput').addEventListener('change', function (e) {
     if (isArchiveLocked()) return alert("⛔ 当前考试已封存，禁止上传新数据");
     if (!CURRENT_COHORT_ID) return alert("请先选择或新建届别");
-    const beforeExamId = CURRENT_EXAM_ID || localStorage.getItem('CURRENT_EXAM_ID') || '';
+    const beforeExamId = CURRENT_EXAM_ID || readWorkspaceExamId() || '';
     const currentExamId = setCurrentExamMeta(true);
     if (!currentExamId) return;
     if (beforeExamId && beforeExamId !== currentExamId && window.UI) {
@@ -12948,7 +12941,7 @@ async function processData() {
     if (typeof DB !== 'undefined') {
         // ✋ 🔴 [修复开始]：不要写死 'autosave_backup'，而是获取当前选中的项目 KEY
         // 如果获取不到，才兜底使用 'autosave_backup'
-        const currentKey = localStorage.getItem('CURRENT_PROJECT_KEY') || 'autosave_backup';
+        const currentKey = readWorkspaceProjectKey() || 'autosave_backup';
         const snapshotPayload = typeof getCurrentSnapshotPayload === 'function'
             ? getCurrentSnapshotPayload()
             : {
@@ -14244,7 +14237,7 @@ function generateTeacherInputs() {
             const key = this.dataset.key; const value = this.value.trim(); if (value) TEACHER_MAP[key] = value; else delete TEACHER_MAP[key];             // 防抖保存：输入停止 1 秒后保存，避免频繁写入
             clearTimeout(window.saveTimer);
             window.saveTimer = setTimeout(() => {
-                const currentKey = localStorage.getItem('CURRENT_PROJECT_KEY') || 'autosave_backup';
+                const currentKey = readWorkspaceProjectKey() || 'autosave_backup';
 
                 DB.save(currentKey, {
                     timestamp: Date.now(),
@@ -21858,7 +21851,7 @@ function applyUserCohortPreference() {
     const key = getUserCohortPrefKey();
     if (!key) return;
     const saved = String(localStorage.getItem(key) || '').trim();
-    const current = String(CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
+    const current = String(CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
     const knownIds = (typeof CohortManager !== 'undefined' && Array.isArray(CohortManager.list))
         ? CohortManager.list.map(item => String(item?.id || '').trim()).filter(Boolean)
         : [];
@@ -22908,8 +22901,8 @@ function updateExamHistoryStatusBar() {
 
 function showMultiCompareDataSourceDiag() {
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
-    const cohortId = CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '(未选择届别)';
-    const currentExamId = CURRENT_EXAM_ID || localStorage.getItem('CURRENT_EXAM_ID') || '(未设置当前考试)';
+    const cohortId = CURRENT_COHORT_ID || readWorkspaceCohortId() || '(未选择届别)';
+    const currentExamId = CURRENT_EXAM_ID || readWorkspaceExamId() || '(未设置当前考试)';
     const exams = Object.values(db?.exams || {}).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
     const lines = exams.map((ex, idx) => {
@@ -23002,7 +22995,7 @@ function restoreLatestAutoSnapshotDirect() {
 function promptHistoryRecoveryIfEmpty() {
     // Disabled by product requirement: no "历史考试为空" popup.
     return;
-    const cohortId = CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '';
+    const cohortId = CURRENT_COHORT_ID || readWorkspaceCohortId() || '';
     if (!cohortId) return;
 
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
@@ -24302,7 +24295,7 @@ function scanDataIssues() {
 }
 
 function manualBackup() {
-    const key = localStorage.getItem('CURRENT_PROJECT_KEY') || 'autosave_backup';
+    const key = readWorkspaceProjectKey() || 'autosave_backup';
     if (typeof getCurrentSnapshotPayload === 'function') {
         DB.save(key, getCurrentSnapshotPayload());
     } else {
@@ -24314,7 +24307,7 @@ function manualBackup() {
 }
 
 async function manualRestore() {
-    const key = localStorage.getItem('CURRENT_PROJECT_KEY') || 'autosave_backup';
+    const key = readWorkspaceProjectKey() || 'autosave_backup';
     const data = await DB.get(key);
     if (!data) return alert('未找到备份数据');
     if (typeof applySnapshotPayload === 'function') {
@@ -24338,8 +24331,8 @@ function updateStatusPanel() {
     if (!document.getElementById('starter-status-panel')) return;
     const panel = document.getElementById('starter-status-panel');
     const termId = localStorage.getItem('CURRENT_TERM_ID') || (typeof getTermId === 'function' ? getTermId(getExamMetaFromUI()) : '');
-    const examId = CURRENT_EXAM_ID || localStorage.getItem('CURRENT_EXAM_ID') || '未选择';
-    const cohortId = CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '未选择';
+    const examId = CURRENT_EXAM_ID || readWorkspaceExamId() || '未选择';
+    const cohortId = CURRENT_COHORT_ID || readWorkspaceCohortId() || '未选择';
     const savedSchool = localStorage.getItem('MY_SCHOOL');
     if (!MY_SCHOOL && savedSchool) {
         MY_SCHOOL = savedSchool;
