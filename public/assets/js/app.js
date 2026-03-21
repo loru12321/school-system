@@ -21488,10 +21488,9 @@ function getExamLabelForKey(meta) {
     const grade = meta.grade ? `${meta.grade}年级` : '';
     const year = meta.year || '';
     const term = meta.term || '';
-    const type = meta.type || '';
+    const examName = getPreferredExamName(meta);
     const date = meta.date || '';
-    const name = meta.name || '';
-    return [cohort, grade, year, term, type, date, name].filter(Boolean).join('_');
+    return [cohort, grade, year, term, examName, date].filter(Boolean).join('_');
 }
 
 function refreshExamYearOptions(entryYear) {
@@ -21834,11 +21833,46 @@ function parseYearFromInput(id) {
 }
 
 // === 考试档案化与封存逻辑 ===
-function buildExamKey(meta) {
+function getPreferredExamName(meta, fallback = '') {
+    const customName = String(meta?.name || '').trim();
+    if (customName) return customName;
+    const typeName = String(meta?.type || '').trim();
+    return typeName || fallback;
+}
+
+function buildLegacyExamKey(meta) {
     const cohortLabel = meta.cohortId ? `${meta.cohortId}级` : '未知届别';
     const gradeLabel = meta.grade ? `${meta.grade}年级` : '未知年级';
     const base = `${cohortLabel}-${gradeLabel}-${meta.year}-${meta.term}-${meta.type}` + (meta.date ? `-${meta.date}` : '');
     return meta.name ? `${base}-${meta.name}` : base;
+}
+
+function buildExamKey(meta) {
+    const cohortLabel = meta.cohortId ? `${meta.cohortId}级` : '未知届别';
+    const gradeLabel = meta.grade ? `${meta.grade}年级` : '未知年级';
+    const examName = getPreferredExamName(meta, '标准考试');
+    return `${cohortLabel}-${gradeLabel}-${meta.year}-${meta.term}-${examName}` + (meta.date ? `-${meta.date}` : '');
+}
+
+function migrateLegacyExamKey(meta, nextKey) {
+    const legacyKey = buildLegacyExamKey(meta);
+    if (!legacyKey || !nextKey || legacyKey === nextKey) return;
+
+    const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+    if (db?.exams?.[legacyKey] && !db.exams[nextKey]) {
+        db.exams[nextKey] = {
+            ...db.exams[legacyKey],
+            examId: nextKey
+        };
+        delete db.exams[legacyKey];
+    }
+    if (db?.currentExamId === legacyKey) db.currentExamId = nextKey;
+    if (Array.isArray(db?.resetPoints)) {
+        db.resetPoints = db.resetPoints.map((examId) => (examId === legacyKey ? nextKey : examId));
+    }
+    if (localStorage.getItem('ARCHIVE_LOCKED_KEY') === legacyKey) {
+        localStorage.setItem('ARCHIVE_LOCKED_KEY', nextKey);
+    }
 }
 
 function getExamMetaFromUI() {
@@ -21852,7 +21886,8 @@ function getExamMetaFromUI() {
     const cohortId = CURRENT_COHORT_ID || '';
     const cohortMeta = CURRENT_COHORT_META || null;
     const grade = computeCohortGrade(cohortMeta, { year, term, type, name, date });
-    return { year, term, type, name, date, cohortId, grade, resetPoint };
+    const examName = getPreferredExamName({ type, name });
+    return { year, term, type, name, examName, date, cohortId, grade, resetPoint };
 }
 
 function refreshExamGradePreview() {
@@ -21944,6 +21979,7 @@ function setCurrentExamMeta(silent = false) {
     if (!meta.year || !meta.term || !meta.type) return alert("请完整选择学年/学期/考试类型");
     if (!meta.date) return alert("请填写考试日期");
     const key = buildExamKey(meta);
+    migrateLegacyExamKey(meta, key);
     CURRENT_EXAM_ID = key;
     syncRuntimeStateToWindow();
     localStorage.setItem('CURRENT_EXAM_ID', key);
@@ -22018,6 +22054,7 @@ async function archiveCurrentExam() {
     const meta = getExamMetaFromUI();
     if (!meta.year || !meta.term || !meta.type) return alert("请先设置学年/学期/考试类型");
     const key = buildExamKey(meta);
+    migrateLegacyExamKey(meta, key);
     localStorage.setItem('CURRENT_EXAM_ID', key);
     localStorage.setItem('ARCHIVE_META', JSON.stringify(meta));
     if (COHORT_DB) COHORT_DB.currentExamId = key;

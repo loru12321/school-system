@@ -552,13 +552,18 @@
         getKey: () => {
             const meta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
             if (!meta.cohortId || !meta.year || !meta.term || !meta.type) return null;
+            const examName = String(
+                meta.examName
+                || meta.name
+                || meta.type
+                || '标准考试'
+            ).trim() || '标准考试';
             const parts = [
                 `${meta.cohortId}级`,
                 meta.grade ? `${meta.grade}年级` : '未知年级',
                 meta.year,
                 meta.term,
-                meta.type,
-                meta.name || '标准考试'
+                examName
             ];
             return parts.join('_').replace(/[\s\/\\?]/g, '');
         },
