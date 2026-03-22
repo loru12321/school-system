@@ -5039,7 +5039,17 @@ const DataManager = {
 
         // 如果切到云端管理，立即加载列表
         if (tab === 'cloud') this.renderCloudBackups();
-        if (tab === 'sql') this.renderSQLHistory();
+        if (tab === 'sql') {
+            if (typeof this.renderSQLHistory === 'function') {
+                this.renderSQLHistory();
+            } else if (typeof window.ensureDataManagerSqlRuntimeLoaded === 'function') {
+                window.ensureDataManagerSqlRuntimeLoaded()
+                    .then(() => {
+                        if (typeof this.renderSQLHistory === 'function') this.renderSQLHistory();
+                    })
+                    .catch(err => console.warn('[DataManager] sql runtime load failed:', err?.message || err));
+            }
+        }
 
         // 搜索栏和分页栏逻辑 (教师页现在有独立筛选，不再使用顶部通用搜索)
         const showSearch = (tab === 'student');
