@@ -2427,6 +2427,16 @@ let CLOUD_STUDENT_COMPARE_CONTEXT = null;
 let CLOUD_COMPARE_TARGET = null;
 let CLOUD_COMPARE_PREV_DATA_BACKUP = null;
 
+function applyLocalCompareSessionSnapshot(snapshot = {}) {
+    CLOUD_COMPARE_TARGET = snapshot.cloudCompareTarget || null;
+    CLOUD_STUDENT_COMPARE_CONTEXT = snapshot.cloudStudentCompareContext || null;
+    CLOUD_COMPARE_PREV_DATA_BACKUP = snapshot.cloudComparePrevDataBackup ?? null;
+    setCloudCompareTargetSessionState(CLOUD_COMPARE_TARGET);
+    setCloudStudentCompareContextSessionState(CLOUD_STUDENT_COMPARE_CONTEXT);
+    setCloudComparePrevDataBackupSessionState(CLOUD_COMPARE_PREV_DATA_BACKUP);
+    return snapshot;
+}
+
 function syncLocalCompareSessionState(patch = {}) {
     const snapshot = CompareSessionStateRuntime && typeof CompareSessionStateRuntime.syncCompareSessionState === 'function'
         ? CompareSessionStateRuntime.syncCompareSessionState(patch)
@@ -2435,13 +2445,7 @@ function syncLocalCompareSessionState(patch = {}) {
             cloudStudentCompareContext: Object.prototype.hasOwnProperty.call(patch, 'cloudStudentCompareContext') ? patch.cloudStudentCompareContext : (Object.prototype.hasOwnProperty.call(patch, 'CLOUD_STUDENT_COMPARE_CONTEXT') ? patch.CLOUD_STUDENT_COMPARE_CONTEXT : (readCloudStudentCompareContextSessionState() || CLOUD_STUDENT_COMPARE_CONTEXT || null)),
             cloudComparePrevDataBackup: Object.prototype.hasOwnProperty.call(patch, 'cloudComparePrevDataBackup') ? patch.cloudComparePrevDataBackup : (Object.prototype.hasOwnProperty.call(patch, 'CLOUD_COMPARE_PREV_DATA_BACKUP') ? patch.CLOUD_COMPARE_PREV_DATA_BACKUP : (readCloudComparePrevDataBackupSessionState() ?? CLOUD_COMPARE_PREV_DATA_BACKUP ?? null))
         };
-    CLOUD_COMPARE_TARGET = snapshot.cloudCompareTarget || null;
-    CLOUD_STUDENT_COMPARE_CONTEXT = snapshot.cloudStudentCompareContext || null;
-    CLOUD_COMPARE_PREV_DATA_BACKUP = snapshot.cloudComparePrevDataBackup ?? null;
-    setCloudCompareTargetSessionState(CLOUD_COMPARE_TARGET);
-    setCloudStudentCompareContextSessionState(CLOUD_STUDENT_COMPARE_CONTEXT);
-    setCloudComparePrevDataBackupSessionState(CLOUD_COMPARE_PREV_DATA_BACKUP);
-    return snapshot;
+    return applyLocalCompareSessionSnapshot(snapshot);
 }
 
 syncLocalCompareSessionState({
