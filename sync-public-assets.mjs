@@ -24,7 +24,7 @@ export function collectReferencedJsAssets(html) {
 
 export function collectLazyLoadedJsAssets(sourceCode) {
   const refs = new Set();
-  const lazyLoadRegex = /loadOptionalRuntime\([^,]+,\s*['"]\.\/assets\/js\/([^'"]+\.js)['"]\)/g;
+  const lazyLoadRegex = /['"]\.\/assets\/js\/([^'"]+\.js)['"]/g;
   for (const match of String(sourceCode || '').matchAll(lazyLoadRegex)) {
     refs.add(String(match[1] || '').trim());
   }

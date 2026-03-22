@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { collectLazyLoadedJsAssets } from './sync-public-assets.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,6 +34,19 @@ function normalizeScriptAttrs(beforeSrc = '', afterSrc = '') {
     return `${beforeSrc} ${afterSrc}`.replace(/\s+/g, ' ').trim();
 }
 
+function readLocalScriptContent(projectRoot, src) {
+    const builtPath = resolveBuiltScriptPath(projectRoot, src);
+    const publicPath = resolvePublicScriptPath(projectRoot, src);
+    const sourcePath = fs.existsSync(builtPath) ? builtPath : publicPath;
+    if (!fs.existsSync(sourcePath)) {
+        return '';
+    }
+
+    let content = fs.readFileSync(sourcePath, 'utf-8');
+    content = applySyncFixes(content);
+    return normalizeScript(content);
+}
+
 // Use regex to locate tags like <script defer src="./assets/js/cloud.js?v=1"></script>
 export function inlineLocalScripts(html, { projectRoot = __dirname } = {}) {
     const scriptRegex = /<script([^>]*)\bsrc="([^"]+)"([^>]*)><\/script>/gi;
@@ -51,15 +65,49 @@ export function inlineLocalScripts(html, { projectRoot = __dirname } = {}) {
         }
 
         console.log(`Inlining script: ${sourcePath}`);
-        let content = fs.readFileSync(sourcePath, 'utf-8');
-        content = applySyncFixes(content);
-        content = normalizeScript(content);
+        const content = readLocalScriptContent(projectRoot, src);
 
         const attrs = normalizeScriptAttrs(beforeSrc, afterSrc);
         return attrs
             ? `<script ${attrs}>\n${content}\n</script>`
             : `<script>\n${content}\n</script>`;
     });
+}
+
+export function buildInlineRuntimeRegistry({ projectRoot = __dirname } = {}) {
+    const bootRuntimePath = path.join(projectRoot, 'public', 'assets', 'js', 'boot-runtime.js');
+    if (!fs.existsSync(bootRuntimePath)) {
+        return {};
+    }
+
+    const bootRuntime = fs.readFileSync(bootRuntimePath, 'utf8');
+    const registry = {};
+
+    for (const assetName of collectLazyLoadedJsAssets(bootRuntime)) {
+        const logicalSrc = `./assets/js/${assetName}`;
+        const content = readLocalScriptContent(projectRoot, logicalSrc);
+        if (!content) continue;
+        registry[logicalSrc] = content;
+    }
+
+    return registry;
+}
+
+export function injectInlineRuntimeRegistry(html, { projectRoot = __dirname } = {}) {
+    const registry = buildInlineRuntimeRegistry({ projectRoot });
+    const keys = Object.keys(registry);
+    if (!keys.length || !html.includes('</head>')) {
+        return html;
+    }
+
+    const registryPayload = JSON.stringify(registry).replace(/</g, '\\u003c');
+    const registryScript = `
+    <script>
+        window.__INLINE_RUNTIME_SOURCES = Object.assign({}, window.__INLINE_RUNTIME_SOURCES || {}, ${registryPayload});
+    </script>
+`;
+
+    return html.replace('</head>', registryScript + '\n</head>');
 }
 
 // =====================================================================
@@ -110,7 +158,7 @@ function injectCdnScripts(html) {
 }
 
 export function buildLtHtml(html, { projectRoot = __dirname } = {}) {
-    return injectCdnScripts(inlineLocalScripts(html, { projectRoot }));
+    return injectCdnScripts(injectInlineRuntimeRegistry(inlineLocalScripts(html, { projectRoot }), { projectRoot }));
 }
 
 function main() {

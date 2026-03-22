@@ -30,9 +30,15 @@ async function main() {
     window.ensureBar = function () {
       return loadOptionalRuntime('bar', "./assets/js/bar-runtime.js");
     };
+    window.ensureBundle = function () {
+      return loadOptionalRuntimeBundle('bundle', [
+        { key: 'baz', src: './assets/js/baz-runtime.js' }
+      ]);
+    };
   `);
   assert.ok(lazyRefs.has('foo-runtime.js'), 'should collect lazy-loaded runtime assets');
   assert.ok(lazyRefs.has('bar-runtime.js'), 'should collect double-quoted lazy-loaded assets');
+  assert.ok(lazyRefs.has('baz-runtime.js'), 'should collect bundle runtime assets');
 
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'sync-public-assets-'));
   const sourceJsDir = path.join(tempRoot, 'public', 'assets', 'js');
@@ -46,11 +52,15 @@ async function main() {
 
   const verboseJs = `function longName(){const veryLongVariableName = 1 + 2; return veryLongVariableName;}\nwindow.answer = longName();\n`;
   const unusedJs = `window.shouldNotExist = true;\n`;
-  const bootRuntime = `window.ensureLazy = function(){return loadOptionalRuntime('lazy', './assets/js/lazy-runtime.js');};\n`;
+  const bootRuntime = `
+window.ensureLazy = function(){return loadOptionalRuntime('lazy', './assets/js/lazy-runtime.js');};
+window.ensureBundle = function(){return loadOptionalRuntimeBundle('bundle', [{ key: 'baz', src: './assets/js/baz-runtime.js' }]);};
+`;
   fs.writeFileSync(path.join(sourceJsDir, 'app.js'), verboseJs, 'utf8');
   fs.writeFileSync(path.join(sourceJsDir, 'unused.js'), unusedJs, 'utf8');
   fs.writeFileSync(path.join(sourceJsDir, 'boot-runtime.js'), bootRuntime, 'utf8');
   fs.writeFileSync(path.join(sourceJsDir, 'lazy-runtime.js'), 'window.lazyLoaded = true;\n', 'utf8');
+  fs.writeFileSync(path.join(sourceJsDir, 'baz-runtime.js'), 'window.bundleLoaded = true;\n', 'utf8');
   fs.writeFileSync(path.join(srcDir, 'index.html'), '<script src="./assets/js/app.js?v=1"></script>', 'utf8');
   fs.writeFileSync(path.join(publicDir, 'favicon.ico'), 'ico', 'utf8');
   fs.writeFileSync(path.join(targetJsDir, 'stale.js'), 'window.stale = true;', 'utf8');
@@ -64,10 +74,12 @@ async function main() {
 
   const syncedAppPath = path.join(targetJsDir, 'app.js');
   const syncedLazyPath = path.join(targetJsDir, 'lazy-runtime.js');
+  const syncedBundlePath = path.join(targetJsDir, 'baz-runtime.js');
   const skippedPath = path.join(targetJsDir, 'unused.js');
   const stalePath = path.join(targetJsDir, 'stale.js');
   assert.ok(fs.existsSync(syncedAppPath), 'should sync referenced assets');
   assert.ok(fs.existsSync(syncedLazyPath), 'should sync lazily loaded assets referenced by boot runtime');
+  assert.ok(fs.existsSync(syncedBundlePath), 'should sync bundled lazy-loaded assets referenced by boot runtime');
   assert.strictEqual(fs.existsSync(skippedPath), false, 'should skip unreferenced assets');
   assert.strictEqual(fs.existsSync(stalePath), false, 'should remove stale target assets that are no longer referenced');
   const minifiedJs = fs.readFileSync(syncedAppPath, 'utf8');

@@ -16,7 +16,7 @@ function getSize(filePath) {
 
 const budgets = {
     distIndexHtml: 505_000,
-    ltHtml: 1_725_000,
+    ltHtml: 1_750_000,
     distAppJs: 770_000,
     distReportRenderJs: 72_500,
     distTeacherAnalysisJs: 105_000

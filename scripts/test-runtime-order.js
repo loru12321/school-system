@@ -24,6 +24,13 @@ const accountAdminRuntimePath = path.resolve(__dirname, '../public/assets/js/acc
 const historyCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/history-compare-runtime.js');
 const perfMobileRuntimePath = path.resolve(__dirname, '../public/assets/js/perf-mobile-runtime.js');
 const reportRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/report-render-runtime.js');
+const studentCompareGenerateRuntimePath = path.resolve(__dirname, '../public/assets/js/student-compare-generate-runtime.js');
+const studentCompareResultRuntimePath = path.resolve(__dirname, '../public/assets/js/student-compare-result-runtime.js');
+const studentCompareCloudRuntimePath = path.resolve(__dirname, '../public/assets/js/student-compare-cloud-runtime.js');
+const teacherCompareResultRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-compare-result-runtime.js');
+const teacherCompareCloudRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-compare-cloud-runtime.js');
+const macroCompareResultRuntimePath = path.resolve(__dirname, '../public/assets/js/macro-compare-result-runtime.js');
+const macroCompareCloudRuntimePath = path.resolve(__dirname, '../public/assets/js/macro-compare-cloud-runtime.js');
 
 assert.ok(fs.existsSync(runtimePath), 'auth-state-runtime.js should exist');
 assert.ok(fs.existsSync(workspaceRuntimePath), 'workspace-state-runtime.js should exist');
@@ -46,6 +53,13 @@ assert.ok(fs.existsSync(accountAdminRuntimePath), 'account-admin-runtime.js shou
 assert.ok(fs.existsSync(historyCompareRuntimePath), 'history-compare-runtime.js should exist');
 assert.ok(fs.existsSync(perfMobileRuntimePath), 'perf-mobile-runtime.js should exist');
 assert.ok(fs.existsSync(reportRenderRuntimePath), 'report-render-runtime.js should exist');
+assert.ok(fs.existsSync(studentCompareGenerateRuntimePath), 'student-compare-generate-runtime.js should exist');
+assert.ok(fs.existsSync(studentCompareResultRuntimePath), 'student-compare-result-runtime.js should exist');
+assert.ok(fs.existsSync(studentCompareCloudRuntimePath), 'student-compare-cloud-runtime.js should exist');
+assert.ok(fs.existsSync(teacherCompareResultRuntimePath), 'teacher-compare-result-runtime.js should exist');
+assert.ok(fs.existsSync(teacherCompareCloudRuntimePath), 'teacher-compare-cloud-runtime.js should exist');
+assert.ok(fs.existsSync(macroCompareResultRuntimePath), 'macro-compare-result-runtime.js should exist');
+assert.ok(fs.existsSync(macroCompareCloudRuntimePath), 'macro-compare-cloud-runtime.js should exist');
 
 const indexHtml = fs.readFileSync(indexPath, 'utf8');
 const authStateRef = './assets/js/auth-state-runtime.js';
@@ -67,7 +81,6 @@ const townSubmoduleCompareRef = './assets/js/town-submodule-compare-runtime.js';
 const compareSelectorsRef = './assets/js/compare-selectors-runtime.js';
 const progressAnalysisRef = './assets/js/progress-analysis-runtime.js';
 const teacherAnalysisMainRef = './assets/js/teacher-analysis-main-runtime.js';
-const studentCompareCloudRef = './assets/js/student-compare-cloud-runtime.js';
 const cloudWorkspaceRef = './assets/js/cloud-workspace-runtime.js';
 const cloudRef = './assets/js/cloud.js';
 const appRef = './assets/js/app.js';
@@ -75,6 +88,13 @@ const accountAdminRef = './assets/js/account-admin-runtime.js';
 const historyCompareRef = './assets/js/history-compare-runtime.js';
 const perfMobileRef = './assets/js/perf-mobile-runtime.js';
 const reportRenderRef = './assets/js/report-render-runtime.js';
+const studentCompareGenerateRef = './assets/js/student-compare-generate-runtime.js';
+const studentCompareResultRef = './assets/js/student-compare-result-runtime.js';
+const studentCompareCloudRef = './assets/js/student-compare-cloud-runtime.js';
+const teacherCompareResultRef = './assets/js/teacher-compare-result-runtime.js';
+const teacherCompareCloudRef = './assets/js/teacher-compare-cloud-runtime.js';
+const macroCompareResultRef = './assets/js/macro-compare-result-runtime.js';
+const macroCompareCloudRef = './assets/js/macro-compare-cloud-runtime.js';
 const holographicRef = './assets/js/holographic-student-3d.js';
 const predictiveRef = './assets/js/predictive-simulation-lab.js';
 const metaverseRef = './assets/js/metaverse-collab-space.js';
@@ -109,7 +129,6 @@ const townSubmoduleCompareIndex = indexHtml.indexOf(townSubmoduleCompareRef);
 const compareSelectorsIndex = indexHtml.indexOf(compareSelectorsRef);
 const progressAnalysisIndex = indexHtml.indexOf(progressAnalysisRef);
 const teacherAnalysisMainIndex = indexHtml.indexOf(teacherAnalysisMainRef);
-const studentCompareCloudIndex = indexHtml.indexOf(studentCompareCloudRef);
 const cloudIndex = indexHtml.indexOf(cloudRef);
 const cloudWorkspaceIndex = indexHtml.indexOf(cloudWorkspaceRef);
 const appIndex = indexHtml.indexOf(appRef);
@@ -138,7 +157,6 @@ assert.ok(townSubmoduleCompareIndex >= 0, 'index.html should load town-submodule
 assert.ok(compareSelectorsIndex >= 0, 'index.html should load compare-selectors-runtime.js');
 assert.ok(progressAnalysisIndex >= 0, 'index.html should load progress-analysis-runtime.js');
 assert.ok(teacherAnalysisMainIndex >= 0, 'index.html should load teacher-analysis-main-runtime.js');
-assert.ok(studentCompareCloudIndex >= 0, 'index.html should load student-compare-cloud-runtime.js');
 assert.ok(cloudIndex >= 0, 'index.html should load cloud.js');
 assert.ok(cloudWorkspaceIndex >= 0, 'index.html should load cloud-workspace-runtime.js');
 assert.ok(appIndex >= 0, 'index.html should load app.js');
@@ -168,7 +186,6 @@ assert.ok(appIndex >= 0, 'index.html should load app.js');
     compareSelectorsRef,
     progressAnalysisRef,
     teacherAnalysisMainRef,
-    studentCompareCloudRef,
     townSubmoduleCompareStateRef,
     townSubmoduleCompareRef
 ].forEach((src) => {
@@ -182,6 +199,13 @@ assert.ok(appIndex >= 0, 'index.html should load app.js');
     historyCompareRef,
     perfMobileRef,
     reportRenderRef,
+    studentCompareGenerateRef,
+    studentCompareResultRef,
+    studentCompareCloudRef,
+    teacherCompareResultRef,
+    teacherCompareCloudRef,
+    macroCompareResultRef,
+    macroCompareCloudRef,
     holographicRef,
     predictiveRef,
     metaverseRef,
@@ -201,7 +225,6 @@ assert.ok(reportSessionStateIndex < compareSessionStateIndex, 'report-session-st
 assert.ok(compareSessionStateIndex < compareResultStateIndex, 'compare-session-state-runtime.js must load before compare-result-state-runtime.js');
 assert.ok(compareResultStateIndex < compareSummaryStateIndex, 'compare-result-state-runtime.js must load before compare-summary-state-runtime.js');
 assert.ok(compareCloudContextIndex < teacherAnalysisMainIndex, 'compare-cloud-context-runtime.js must load before teacher-analysis-main-runtime.js');
-assert.ok(compareCloudContextIndex < studentCompareCloudIndex, 'compare-cloud-context-runtime.js must load before student-compare-cloud-runtime.js');
 assert.ok(compareExamSyncIndex < compareSelectorsIndex, 'compare-exam-sync-runtime.js must load before compare-selectors-runtime.js');
 assert.ok(compareExamSyncIndex < progressAnalysisIndex, 'compare-exam-sync-runtime.js must load before progress-analysis-runtime.js');
 assert.ok(compareSummaryStateIndex < townSubmoduleCompareStateIndex, 'compare-summary-state-runtime.js must load before town-submodule-compare-state-runtime.js');

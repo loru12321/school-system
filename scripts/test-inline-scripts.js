@@ -5,7 +5,7 @@ const { pathToFileURL } = require('url');
 async function main() {
     const projectRoot = path.resolve(__dirname, '..');
     const moduleUrl = pathToFileURL(path.join(projectRoot, 'inline-scripts.mjs')).href;
-    const { inlineLocalScripts } = await import(moduleUrl);
+    const { inlineLocalScripts, buildLtHtml } = await import(moduleUrl);
 
     const sourceHtml = [
         '<html><head></head><body>',
@@ -20,6 +20,10 @@ async function main() {
     assert.ok(output.includes('system_data'), 'should inline the referenced local script content');
     assert.ok(output.includes('<script src="https://example.com/external.js"></script>'), 'should keep external scripts untouched');
     assert.ok(!output.includes('src="./assets/js/cloud.js?v=123"'), 'should remove the local script src after inlining');
+
+    const ltHtml = buildLtHtml('<html><head></head><body></body></html>', { projectRoot });
+    assert.ok(ltHtml.includes('window.__INLINE_RUNTIME_SOURCES'), 'lt.html should embed inline sources for lazy runtimes');
+    assert.ok(ltHtml.includes('./assets/js/report-render-runtime.js'), 'lt.html should include report render runtime in the inline source registry');
 
     console.log('inline-scripts tests passed');
 }
