@@ -6832,6 +6832,14 @@
                         <input type="file" id="dm-cloud-upload-input" accept=".json,application/json" multiple hidden
                             onchange="DataManager.handleCloudArchiveUpload(this)">
                     </div>
+                    <div id="dm-cloud-pagination"
+                        style="display:none; gap:8px; align-items:center; justify-content:flex-end; margin-bottom:8px; font-size:12px; color:#64748b;">
+                        <button class="btn btn-sm btn-gray" id="btn-dm-cloud-prev"
+                            onclick="DataManager.changeCloudBackupPage(-1)">上一页</button>
+                        <span id="dm-cloud-page-info">1 / 1</span>
+                        <button class="btn btn-sm btn-gray" id="btn-dm-cloud-next"
+                            onclick="DataManager.changeCloudBackupPage(1)">下一页</button>
+                    </div>
                     <div class="table-wrap" style="flex:1; min-height:0; overflow:auto;">
                         <table class="comparison-table" id="dm-cloud-table">
                             <thead>

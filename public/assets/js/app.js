@@ -4629,6 +4629,7 @@ const DataManager = {
     pagination: { page: 1, size: 50, total: 0 },
     cloudSelection: new Set(),
     cloudBackupRows: new Map(),
+    cloudPagination: { page: 1, size: 10, total: 0 },
     studentSelection: new Set(),
 
     isGrade9Context: function () {
@@ -5084,6 +5085,32 @@ const DataManager = {
         if (!currentCohortId) return true;
         if (/^cohort::/i.test(text)) return text === `cohort::${currentCohortId}`;
         return normalizeCompareCohortId(text) === currentCohortId;
+    },
+
+    changeCloudBackupPage: function (delta) {
+        const nextPage = Math.max(1, Number(this.cloudPagination.page || 1) + Number(delta || 0));
+        this.cloudPagination.page = nextPage;
+        this.renderCloudBackups();
+    },
+
+    updateCloudPaginationUI: function () {
+        const pageInfoEl = document.getElementById('dm-cloud-page-info');
+        const prevBtn = document.getElementById('btn-dm-cloud-prev');
+        const nextBtn = document.getElementById('btn-dm-cloud-next');
+        const wrapper = document.getElementById('dm-cloud-pagination');
+        const total = Math.max(0, Number(this.cloudPagination.total || 0));
+        const pageSize = Math.max(1, Number(this.cloudPagination.size || 10));
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const currentPage = Math.min(totalPages, Math.max(1, Number(this.cloudPagination.page || 1)));
+
+        this.cloudPagination.page = currentPage;
+
+        if (pageInfoEl) {
+            pageInfoEl.textContent = `${currentPage} / ${totalPages}`;
+        }
+        if (prevBtn) prevBtn.disabled = currentPage <= 1;
+        if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
+        if (wrapper) wrapper.style.display = total > pageSize ? 'flex' : 'none';
     },
 
     renderCloudBackups: async function () {
@@ -26712,3 +26739,172 @@ window.addEventListener('load', () => {
     }, 1000); // 延迟 1 秒执行
 });
 window.DataManager = DataManager;
+
+DataManager.renderCloudBackups = async function () {
+    if (!sbClient) return;
+    const tbody = document.querySelector('#dm-cloud-table tbody');
+    const summaryEl = document.getElementById('dm-cloud-summary');
+    const filterCurrent = document.getElementById('cloud-filter-current')?.checked !== false;
+    const filterSnapshotsOnly = document.getElementById('cloud-filter-snapshots')?.checked !== false;
+    const pageSize = Math.max(1, Number(this.cloudPagination?.size || 10));
+
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">⏳ 正在读取云端数据...</td></tr>';
+    if (summaryEl) {
+        summaryEl.style.display = 'block';
+        summaryEl.innerHTML = '⏳ 正在分析存档列表...';
+    }
+
+    try {
+        const { data, error } = await sbClient
+            .from('system_data')
+            .select('key, created_at, updated_at')
+            .order('updated_at', { ascending: false });
+
+        if (error) throw error;
+
+        const allRows = Array.isArray(data) ? data : [];
+        if (!(this.cloudBackupRows instanceof Map)) this.cloudBackupRows = new Map();
+        allRows.forEach((item) => {
+            const normalizedKey = String(item?.key || '').trim();
+            if (!normalizedKey) return;
+            const existing = this.cloudBackupRows.get(normalizedKey) || {};
+            this.cloudBackupRows.set(normalizedKey, Object.assign({}, existing, item));
+        });
+
+        const visibleRows = allRows.filter((item) => {
+            if (filterSnapshotsOnly && !this.isCloudWorkspaceSnapshotKey(item.key)) return false;
+            if (filterCurrent && !this.isCloudRecordInCurrentWorkspace(item.key)) return false;
+            return true;
+        });
+
+        this.cloudPagination.total = visibleRows.length;
+        this.updateCloudPaginationUI();
+
+        if (!allRows.length) {
+            this.cloudSelection.clear();
+            if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#64748b;">☁️ 云端数据库为空</td></tr>';
+            if (summaryEl) summaryEl.innerHTML = '📌 暂无存档记录';
+            this.updateCloudSelectionUI();
+            return;
+        }
+
+        if (!visibleRows.length) {
+            this.cloudSelection.clear();
+            if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#64748b;">当前筛选条件下暂无可显示的工作区快照</td></tr>';
+            if (summaryEl) {
+                const filterText = [
+                    filterCurrent ? '当前届别/工作区' : '',
+                    filterSnapshotsOnly ? '工作区快照' : ''
+                ].filter(Boolean).join(' + ') || '全部记录';
+                summaryEl.innerHTML = `📌 当前云端共 ${allRows.length} 条记录，已按「${filterText}」过滤。`;
+            }
+            this.updateCloudSelectionUI();
+            return;
+        }
+
+        const keySet = new Set(visibleRows.map(item => item.key));
+        this.cloudSelection.forEach((key) => {
+            if (!keySet.has(key)) this.cloudSelection.delete(key);
+        });
+
+        const totalPages = Math.max(1, Math.ceil(visibleRows.length / pageSize));
+        const currentPage = Math.min(totalPages, Math.max(1, Number(this.cloudPagination.page || 1)));
+        this.cloudPagination.page = currentPage;
+        this.updateCloudPaginationUI();
+
+        const startIndex = (currentPage - 1) * pageSize;
+        const pageRows = visibleRows.slice(startIndex, startIndex + pageSize);
+        const pageKeys = pageRows.map(item => String(item.key || '').trim()).filter(Boolean);
+        const contentMap = new Map();
+
+        if (pageKeys.length) {
+            const { data: contentRows, error: contentError } = await sbClient
+                .from('system_data')
+                .select('key, content')
+                .in('key', pageKeys);
+
+            if (contentError) throw contentError;
+            (contentRows || []).forEach((item) => {
+                contentMap.set(String(item?.key || '').trim(), item?.content || null);
+            });
+        }
+
+        const hydratedRows = pageRows.map((item) => {
+            const normalizedKey = String(item?.key || '').trim();
+            const merged = Object.assign({}, this.cloudBackupRows.get(normalizedKey) || {}, item);
+            if (contentMap.has(normalizedKey)) merged.content = contentMap.get(normalizedKey);
+            this.cloudBackupRows.set(normalizedKey, merged);
+            return merged;
+        });
+
+        const currentPageSize = hydratedRows.reduce((acc, item) => acc + String(item?.content || '').length, 0);
+        const currentPageSizeMB = (currentPageSize / 1024 / 1024).toFixed(2);
+        const currentRangeStart = startIndex + 1;
+        const currentRangeEnd = startIndex + hydratedRows.length;
+
+        if (summaryEl) {
+            summaryEl.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+                    <span>📌 当前云端清单 <b>${visibleRows.length}</b> 条 | 当前页约占用 <b>${currentPageSizeMB} MB</b></span>
+                    <span style="font-size:11px; color:#94a3b8;">当前显示 ${currentRangeStart}-${currentRangeEnd} / ${visibleRows.length} 条，第 ${currentPage} / ${totalPages} 页</span>
+                </div>
+            `;
+        }
+
+        const currentKey = readWorkspaceProjectKey();
+        let rows = '';
+
+        hydratedRows.forEach((item) => {
+            const isCurrent = item.key === currentKey;
+            const sizeKB = (String(item?.content || '').length / 1024).toFixed(1);
+            const time = new Date(item.updated_at || item.created_at).toLocaleString();
+            let displayName = item.key;
+            let tags = '';
+            const parts = String(item.key || '').split('_');
+            if (parts.length >= 5) {
+                displayName = `<b>${parts[0]} ${parts[1]}</b><br><span style="color:#64748b; font-size:11px;">${parts[2]} ${parts[3]} ${parts[5] || ''}</span>`;
+                tags = `<span class="badge" style="background:${parts[4] === '期末' ? '#ef4444' : '#3b82f6'}; color:white; padding:2px 6px; border-radius:4px; font-size:10px;">${parts[4]}</span>`;
+            }
+
+            rows += `
+                <tr style="${isCurrent ? 'background:#f0fdf4;' : ''}">
+                    <td style="text-align:center; width:44px;">
+                        <input type="checkbox" class="dm-cloud-select" data-key="${item.key}" ${this.cloudSelection.has(item.key) ? 'checked' : ''} onchange="DataManager.toggleCloudSelection(this)">
+                    </td>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            ${isCurrent ? '<i class="ti ti-current-location" style="color:#16a34a;" title="当前项目"></i>' : ''}
+                            <div>${displayName}</div>
+                            ${tags}
+                        </div>
+                    </td>
+                    <td style="font-size:12px; color:#64748b;">${time}</td>
+                    <td style="font-size:12px;">${sizeKB} KB</td>
+                    <td>
+                        <div style="display:flex; gap:6px;">
+                            <button class="btn btn-sm btn-primary" onclick="DataManager.loadCloudBackup('${item.key}')" title="读取此存档">
+                                <i class="ti ti-download"></i> 读取
+                            </button>
+                            <button class="btn btn-sm btn-green" onclick="DataManager.downloadCloudBackup('${item.key}')" title="下载此存档文档">
+                                <i class="ti ti-file-download"></i> 下载存档
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="DataManager.deleteCloudBackup('${item.key}')" title="永久删除">
+                                <i class="ti ti-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+
+        if (tbody) tbody.innerHTML = rows;
+        this.updateCloudSelectionUI();
+    } catch (err) {
+        console.error(err);
+        this.cloudBackupRows = new Map();
+        this.cloudPagination.total = 0;
+        this.updateCloudPaginationUI();
+        if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#ef4444;">❌ 加载失败: ${err.message}</td></tr>`;
+        this.updateCloudSelectionUI();
+    }
+};
