@@ -2,6 +2,7 @@
     if (typeof window === 'undefined' || window.__COMPARE_SELECTORS_RUNTIME_PATCHED__) return;
 
     const CompareSessionStateRuntime = window.CompareSessionState || null;
+    const CompareExamSyncRuntime = window.CompareExamSyncRuntime || null;
     const ensureCompareExamSyncStateEntry = typeof window.ensureCompareExamSyncStateEntry === 'function'
         ? window.ensureCompareExamSyncStateEntry
         : ((cohortId) => {
@@ -32,46 +33,57 @@
         wrap.style.display = countEl.value === '3' ? 'inline-flex' : 'none';
     }
 
-    function setCompareExamSelectPlaceholders(selects, message) {
-        const optionHtml = `<option value="">${message}</option>`;
-        (selects || []).forEach(sel => {
-            if (!sel) return;
-            sel.innerHTML = optionHtml;
-        });
-    }
-
-    function refreshCompareExamSelectors() {
-        if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
-        if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-        if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
-        if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
-        if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
-        if (typeof updateTeacherCompareExamSelects === 'function') updateTeacherCompareExamSelects();
-    }
-
-    function trySyncCompareExamOptions() {
-        const rawCohortId = CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
-        const cohortId = typeof normalizeCompareCohortId === 'function'
-            ? normalizeCompareCohortId(rawCohortId)
-            : rawCohortId;
-        if (!cohortId || !window.CloudManager || typeof window.CloudManager.fetchCohortExamsToLocal !== 'function') return false;
-        const state = ensureCompareExamSyncStateEntry(cohortId);
-        if (state.pending) return true;
-        if (Date.now() - Number(state.lastAttempt || 0) < 5000) return false;
-        state.pending = true;
-        state.lastAttempt = Date.now();
-        Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId, { minCount: 2 }))
-            .catch(err => {
-                console.warn('[compare-sync] fetchCohortExamsToLocal failed:', err);
-            })
-            .finally(() => {
-                state.pending = false;
-                setTimeout(() => {
-                    refreshCompareExamSelectors();
-                }, 0);
+    const setCompareExamSelectPlaceholders = CompareExamSyncRuntime && typeof CompareExamSyncRuntime.setSelectPlaceholders === 'function'
+        ? CompareExamSyncRuntime.setSelectPlaceholders
+        : function setCompareExamSelectPlaceholders(selects, message) {
+            const optionHtml = `<option value="">${message}</option>`;
+            (selects || []).forEach(sel => {
+                if (!sel) return;
+                sel.innerHTML = optionHtml;
             });
-        return true;
-    }
+        };
+
+    const refreshCompareExamSelectors = CompareExamSyncRuntime && typeof CompareExamSyncRuntime.refreshSelectors === 'function'
+        ? CompareExamSyncRuntime.refreshSelectors
+        : function refreshCompareExamSelectors() {
+            if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
+            if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+            if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
+            if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
+            if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
+            if (typeof updateTeacherCompareExamSelects === 'function') updateTeacherCompareExamSelects();
+        };
+
+    const trySyncCompareExamOptions = CompareExamSyncRuntime && typeof CompareExamSyncRuntime.trySyncOptions === 'function'
+        ? function trySyncCompareExamOptions() {
+            return CompareExamSyncRuntime.trySyncOptions({
+                cohortId: CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'),
+                minCount: 2
+            });
+        }
+        : function trySyncCompareExamOptions() {
+            const rawCohortId = CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
+            const cohortId = typeof normalizeCompareCohortId === 'function'
+                ? normalizeCompareCohortId(rawCohortId)
+                : rawCohortId;
+            if (!cohortId || !window.CloudManager || typeof window.CloudManager.fetchCohortExamsToLocal !== 'function') return false;
+            const state = ensureCompareExamSyncStateEntry(cohortId);
+            if (state.pending) return true;
+            if (Date.now() - Number(state.lastAttempt || 0) < 5000) return false;
+            state.pending = true;
+            state.lastAttempt = Date.now();
+            Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cohortId, { minCount: 2 }))
+                .catch(err => {
+                    console.warn('[compare-sync] fetchCohortExamsToLocal failed:', err);
+                })
+                .finally(() => {
+                    state.pending = false;
+                    setTimeout(() => {
+                        refreshCompareExamSelectors();
+                    }, 0);
+                });
+            return true;
+        };
 
     function getDefaultCompareExamIds(examList, desiredCount = 2, preferredCurrentExamId = '') {
         const list = Array.isArray(examList) ? examList.filter(item => item?.id) : [];
