@@ -6432,7 +6432,7 @@
             </div>
 
             <!-- 顶部 Tab 切换 -->
-            <div
+            <div id="dm-tab-rail"
                 style="display:flex; gap:10px; margin-bottom:15px; border-bottom:1px solid #e2e8f0; padding-bottom:10px; overflow-x:auto;">
                 <div class="login-tab active" id="tab-data-stu" onclick="DataManager.switchTab('student')">
                     <i class="ti ti-users"></i> 学生成绩
@@ -6454,6 +6454,14 @@
                 </div>
                 <div class="login-tab" id="tab-data-cloud" onclick="DataManager.switchTab('cloud')">
                     <i class="ti ti-cloud"></i> 云端存档管理
+                </div>
+                <div class="dm-tab-spacer" aria-hidden="true"></div>
+                <div id="dm-tab-sync-chip" class="dm-tab-sync-chip is-idle" title="最近云端同步状态">
+                    <span class="dm-tab-sync-dot"></span>
+                    <div class="dm-tab-sync-copy">
+                        <strong>最近同步</strong>
+                        <span>尚未记录</span>
+                    </div>
                 </div>
             </div>
 
@@ -7091,15 +7099,15 @@
             }
 
             #data-manager-modal .login-tab {
-                min-height: 58px;
-                padding: 0 18px !important;
-                border-radius: 18px !important;
-                border: 1px solid var(--dm-line) !important;
-                background: rgba(255, 255, 255, 0.78) !important;
-                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 10px 24px rgba(15, 23, 42, 0.05);
-                color: #475569 !important;
+                min-height: 44px;
+                padding: 0 16px !important;
+                border-radius: 999px !important;
+                border: 1px solid rgba(15, 23, 42, 0.08) !important;
+                background: rgba(255, 255, 255, 0.96) !important;
+                box-shadow: none;
+                color: #334155 !important;
                 font-weight: 700;
-                transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+                transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
                 white-space: nowrap;
             }
 
@@ -7109,14 +7117,90 @@
 
             #data-manager-modal .login-tab:hover {
                 transform: translateY(-1px);
-                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88), 0 14px 30px rgba(15, 23, 42, 0.09);
+                border-color: rgba(37, 99, 235, 0.24) !important;
+                box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
             }
 
             #data-manager-modal .login-tab.active {
-                border-color: rgba(37, 99, 235, 0.22) !important;
-                background: linear-gradient(135deg, #0f172a 0%, #2563eb 100%) !important;
+                border-color: rgba(15, 23, 42, 0.3) !important;
+                background: #0f172a !important;
                 color: #fff !important;
-                box-shadow: 0 18px 34px rgba(15, 23, 42, 0.18);
+                box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18);
+            }
+
+            #dm-tab-rail {
+                align-items: center !important;
+                gap: 12px !important;
+                padding: 10px 12px !important;
+                border: 1px solid var(--dm-line) !important;
+                border-radius: 24px !important;
+                background: rgba(255, 255, 255, 0.86) !important;
+                box-shadow: var(--dm-soft-shadow) !important;
+                scrollbar-width: none;
+            }
+
+            #dm-tab-rail::-webkit-scrollbar {
+                display: none;
+            }
+
+            #dm-tab-rail .dm-tab-spacer {
+                flex: 1 0 24px;
+                min-width: 24px;
+            }
+
+            #dm-tab-sync-chip {
+                flex: 0 0 auto;
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                min-height: 48px;
+                padding: 0 14px;
+                border-radius: 999px;
+                border: 1px solid rgba(148, 163, 184, 0.24);
+                background: linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(241, 245, 249, 0.94));
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+                color: #0f172a;
+                white-space: nowrap;
+            }
+
+            #dm-tab-sync-chip.is-recorded {
+                border-color: rgba(37, 99, 235, 0.2);
+                background: linear-gradient(180deg, rgba(239, 246, 255, 0.98), rgba(219, 234, 254, 0.9));
+            }
+
+            #dm-tab-sync-chip .dm-tab-sync-dot {
+                width: 10px;
+                height: 10px;
+                border-radius: 999px;
+                background: #ef4444;
+                box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.12);
+                flex: 0 0 auto;
+            }
+
+            #dm-tab-sync-chip.is-recorded .dm-tab-sync-dot {
+                background: #2563eb;
+                box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.12);
+            }
+
+            #dm-tab-sync-chip .dm-tab-sync-copy {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+                line-height: 1.1;
+            }
+
+            #dm-tab-sync-chip .dm-tab-sync-copy strong {
+                font-size: 12px;
+                font-weight: 800;
+                color: #0f172a;
+            }
+
+            #dm-tab-sync-chip .dm-tab-sync-copy span {
+                font-size: 12px;
+                color: #64748b;
+                max-width: 240px;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
 
             #dm-status-overview {
@@ -7515,6 +7599,18 @@
                     flex-wrap: wrap;
                 }
 
+                #dm-tab-rail {
+                    padding: 10px !important;
+                }
+
+                #dm-tab-rail .dm-tab-spacer {
+                    display: none;
+                }
+
+                #dm-tab-sync-chip {
+                    margin-left: 2px;
+                }
+
                 #dm-status-overview-summary>div {
                     grid-template-columns: 1fr !important;
                 }
@@ -7577,8 +7673,47 @@
             }
 
             body.dark-mode #data-manager-modal .login-tab.active {
-                background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
-                color: #fff !important;
+                background: #e5e7eb !important;
+                color: #020617 !important;
+                border-color: rgba(255, 255, 255, 0.28) !important;
+            }
+
+            body.dark-mode #dm-tab-rail {
+                background: rgba(15, 23, 42, 0.74) !important;
+                border-color: rgba(148, 163, 184, 0.16) !important;
+            }
+
+            body.dark-mode #dm-tab-sync-chip {
+                background: rgba(15, 23, 42, 0.82) !important;
+                border-color: rgba(148, 163, 184, 0.2) !important;
+                color: #e2e8f0 !important;
+            }
+
+            body.dark-mode #dm-tab-sync-chip.is-recorded {
+                background: linear-gradient(180deg, rgba(30, 41, 59, 0.9), rgba(30, 64, 175, 0.4)) !important;
+            }
+
+            body.dark-mode #dm-tab-sync-chip .dm-tab-sync-copy strong {
+                color: #f8fafc !important;
+            }
+
+            body.dark-mode #dm-tab-sync-chip .dm-tab-sync-copy span {
+                color: #94a3b8 !important;
+            }
+
+            body.dark-mode #dm-tab-sync-chip .dm-tab-sync-dot {
+                box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.18);
+            }
+
+            body.dark-mode #dm-tab-sync-chip.is-recorded .dm-tab-sync-dot {
+                box-shadow: 0 0 0 5px rgba(96, 165, 250, 0.18);
+            }
+
+            body.dark-mode #data-manager-modal .login-tab {
+                background: rgba(15, 23, 42, 0.82) !important;
+                border-color: rgba(148, 163, 184, 0.18) !important;
+                color: #e2e8f0 !important;
+                box-shadow: none;
             }
 
             body.dark-mode #dm-status-overview {
