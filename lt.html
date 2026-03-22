@@ -1166,6 +1166,144 @@
 
 </script>
     <script>
+(function (root, factory) {
+    const runtime = factory(root || {});
+
+    if (typeof module === 'object' && module.exports) {
+        const createRuntime = function (overrideRoot) {
+            return factory(overrideRoot || root || {});
+        };
+        createRuntime.runtime = runtime;
+        module.exports = createRuntime;
+    }
+
+    if (!root || root.DataState) return;
+    root.DataState = runtime;
+    runtime.syncDataState(runtime.snapshotDataState());
+})(typeof globalThis !== 'undefined' ? globalThis : this, function createDataStateRuntime(root) {
+    function normalizeArray(value) {
+        return Array.isArray(value) ? value : [];
+    }
+
+    function normalizeObject(value) {
+        return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    }
+
+    function getRawData() {
+        return normalizeArray(root.RAW_DATA);
+    }
+
+    function setRawData(rows) {
+        const nextRows = normalizeArray(rows);
+        root.RAW_DATA = nextRows;
+        return nextRows;
+    }
+
+    function getSchools() {
+        return normalizeObject(root.SCHOOLS);
+    }
+
+    function setSchools(schools) {
+        const nextSchools = normalizeObject(schools);
+        root.SCHOOLS = nextSchools;
+        return nextSchools;
+    }
+
+    function getSubjects() {
+        return normalizeArray(root.SUBJECTS);
+    }
+
+    function setSubjects(subjects) {
+        const nextSubjects = normalizeArray(subjects);
+        root.SUBJECTS = nextSubjects;
+        return nextSubjects;
+    }
+
+    function getThresholds() {
+        return normalizeObject(root.THRESHOLDS);
+    }
+
+    function setThresholds(thresholds) {
+        const nextThresholds = normalizeObject(thresholds);
+        root.THRESHOLDS = nextThresholds;
+        return nextThresholds;
+    }
+
+    function getConfig() {
+        return normalizeObject(root.CONFIG);
+    }
+
+    function setConfig(config) {
+        const nextConfig = normalizeObject(config);
+        root.CONFIG = nextConfig;
+        return nextConfig;
+    }
+
+    function snapshotDataState() {
+        return {
+            rawData: getRawData(),
+            schools: getSchools(),
+            subjects: getSubjects(),
+            thresholds: getThresholds(),
+            config: getConfig()
+        };
+    }
+
+    function syncDataState(nextState = {}) {
+        const source = nextState && typeof nextState === 'object' ? nextState : {};
+        const rawData = Object.prototype.hasOwnProperty.call(source, 'rawData')
+            ? source.rawData
+            : (Object.prototype.hasOwnProperty.call(source, 'RAW_DATA') ? source.RAW_DATA : getRawData());
+        const schools = Object.prototype.hasOwnProperty.call(source, 'schools')
+            ? source.schools
+            : (Object.prototype.hasOwnProperty.call(source, 'SCHOOLS') ? source.SCHOOLS : getSchools());
+        const subjects = Object.prototype.hasOwnProperty.call(source, 'subjects')
+            ? source.subjects
+            : (Object.prototype.hasOwnProperty.call(source, 'SUBJECTS') ? source.SUBJECTS : getSubjects());
+        const thresholds = Object.prototype.hasOwnProperty.call(source, 'thresholds')
+            ? source.thresholds
+            : (Object.prototype.hasOwnProperty.call(source, 'THRESHOLDS') ? source.THRESHOLDS : getThresholds());
+        const config = Object.prototype.hasOwnProperty.call(source, 'config')
+            ? source.config
+            : (Object.prototype.hasOwnProperty.call(source, 'CONFIG') ? source.CONFIG : getConfig());
+
+        setRawData(rawData);
+        setSchools(schools);
+        setSubjects(subjects);
+        setThresholds(thresholds);
+        setConfig(config);
+
+        return snapshotDataState();
+    }
+
+    function clearDataState(options = {}) {
+        setRawData([]);
+        setSchools({});
+        setSubjects([]);
+        setThresholds({});
+        if (!options.keepConfig) setConfig({});
+        return snapshotDataState();
+    }
+
+    return {
+        getRawData,
+        setRawData,
+        getSchools,
+        setSchools,
+        getSubjects,
+        setSubjects,
+        getThresholds,
+        setThresholds,
+        getConfig,
+        setConfig,
+        snapshotDataState,
+        syncDataState,
+        clearDataState
+    };
+});
+
+</script>
+    <script>
 ﻿(function () {
     const CLOUD_TABLE = 'system_data';
     const KEY_PREFIX_TEACHERS = 'TEACHERS_';
@@ -9921,6 +10059,161 @@ window.setTeacherSchoolMap = setTeacherSchoolMap;
 window.readTeacherStats = readTeacherStats;
 window.setTeacherStats = setTeacherStats;
 
+const DataStateRuntime = window.DataState || null;
+
+function readRawData() {
+    const nextRows = DataStateRuntime && typeof DataStateRuntime.getRawData === 'function'
+        ? (DataStateRuntime.getRawData() || [])
+        : (window.RAW_DATA && Array.isArray(window.RAW_DATA) ? window.RAW_DATA : (
+            typeof RAW_DATA !== 'undefined' && Array.isArray(RAW_DATA) ? RAW_DATA : []
+        ));
+    if (typeof RAW_DATA !== 'undefined') RAW_DATA = nextRows;
+    window.RAW_DATA = nextRows;
+    return nextRows;
+}
+
+function setRawData(rows) {
+    const nextRows = DataStateRuntime && typeof DataStateRuntime.setRawData === 'function'
+        ? (DataStateRuntime.setRawData(rows) || [])
+        : (Array.isArray(rows) ? rows : []);
+    if (typeof RAW_DATA !== 'undefined') RAW_DATA = nextRows;
+    window.RAW_DATA = nextRows;
+    return nextRows;
+}
+
+function readSchools() {
+    const nextSchools = DataStateRuntime && typeof DataStateRuntime.getSchools === 'function'
+        ? (DataStateRuntime.getSchools() || {})
+        : (window.SCHOOLS && typeof window.SCHOOLS === 'object' ? window.SCHOOLS : (
+            typeof SCHOOLS !== 'undefined' && SCHOOLS && typeof SCHOOLS === 'object' ? SCHOOLS : {}
+        ));
+    if (typeof SCHOOLS !== 'undefined') SCHOOLS = nextSchools;
+    window.SCHOOLS = nextSchools;
+    return nextSchools;
+}
+
+function setSchools(schools) {
+    const nextSchools = DataStateRuntime && typeof DataStateRuntime.setSchools === 'function'
+        ? (DataStateRuntime.setSchools(schools) || {})
+        : (schools && typeof schools === 'object' && !Array.isArray(schools) ? schools : {});
+    if (typeof SCHOOLS !== 'undefined') SCHOOLS = nextSchools;
+    window.SCHOOLS = nextSchools;
+    return nextSchools;
+}
+
+function readSubjects() {
+    const nextSubjects = DataStateRuntime && typeof DataStateRuntime.getSubjects === 'function'
+        ? (DataStateRuntime.getSubjects() || [])
+        : (window.SUBJECTS && Array.isArray(window.SUBJECTS) ? window.SUBJECTS : (
+            typeof SUBJECTS !== 'undefined' && Array.isArray(SUBJECTS) ? SUBJECTS : []
+        ));
+    if (typeof SUBJECTS !== 'undefined') SUBJECTS = nextSubjects;
+    window.SUBJECTS = nextSubjects;
+    return nextSubjects;
+}
+
+function setSubjects(subjects) {
+    const nextSubjects = DataStateRuntime && typeof DataStateRuntime.setSubjects === 'function'
+        ? (DataStateRuntime.setSubjects(subjects) || [])
+        : (Array.isArray(subjects) ? subjects : []);
+    if (typeof SUBJECTS !== 'undefined') SUBJECTS = nextSubjects;
+    window.SUBJECTS = nextSubjects;
+    return nextSubjects;
+}
+
+function readThresholds() {
+    const nextThresholds = DataStateRuntime && typeof DataStateRuntime.getThresholds === 'function'
+        ? (DataStateRuntime.getThresholds() || {})
+        : (window.THRESHOLDS && typeof window.THRESHOLDS === 'object' ? window.THRESHOLDS : (
+            typeof THRESHOLDS !== 'undefined' && THRESHOLDS && typeof THRESHOLDS === 'object' ? THRESHOLDS : {}
+        ));
+    if (typeof THRESHOLDS !== 'undefined') THRESHOLDS = nextThresholds;
+    window.THRESHOLDS = nextThresholds;
+    return nextThresholds;
+}
+
+function setThresholds(thresholds) {
+    const nextThresholds = DataStateRuntime && typeof DataStateRuntime.setThresholds === 'function'
+        ? (DataStateRuntime.setThresholds(thresholds) || {})
+        : (thresholds && typeof thresholds === 'object' && !Array.isArray(thresholds) ? thresholds : {});
+    if (typeof THRESHOLDS !== 'undefined') THRESHOLDS = nextThresholds;
+    window.THRESHOLDS = nextThresholds;
+    return nextThresholds;
+}
+
+function readConfigState() {
+    const nextConfig = DataStateRuntime && typeof DataStateRuntime.getConfig === 'function'
+        ? (DataStateRuntime.getConfig() || {})
+        : (window.CONFIG && typeof window.CONFIG === 'object' ? window.CONFIG : (
+            typeof CONFIG !== 'undefined' && CONFIG && typeof CONFIG === 'object' ? CONFIG : {}
+        ));
+    if (typeof CONFIG !== 'undefined') CONFIG = nextConfig;
+    window.CONFIG = nextConfig;
+    return nextConfig;
+}
+
+function setConfigState(config) {
+    const nextConfig = DataStateRuntime && typeof DataStateRuntime.setConfig === 'function'
+        ? (DataStateRuntime.setConfig(config) || {})
+        : (config && typeof config === 'object' && !Array.isArray(config) ? config : {});
+    if (typeof CONFIG !== 'undefined') CONFIG = nextConfig;
+    window.CONFIG = nextConfig;
+    return nextConfig;
+}
+
+function syncDataRuntimeState(patch = {}) {
+    if (DataStateRuntime && typeof DataStateRuntime.syncDataState === 'function') {
+        const snapshot = DataStateRuntime.syncDataState(patch);
+        if (typeof RAW_DATA !== 'undefined') RAW_DATA = snapshot.rawData || [];
+        if (typeof SCHOOLS !== 'undefined') SCHOOLS = snapshot.schools || {};
+        if (typeof SUBJECTS !== 'undefined') SUBJECTS = snapshot.subjects || [];
+        if (typeof THRESHOLDS !== 'undefined') THRESHOLDS = snapshot.thresholds || {};
+        if (typeof CONFIG !== 'undefined') CONFIG = snapshot.config || {};
+        window.RAW_DATA = RAW_DATA;
+        window.SCHOOLS = SCHOOLS;
+        window.SUBJECTS = SUBJECTS;
+        window.THRESHOLDS = THRESHOLDS;
+        window.CONFIG = CONFIG;
+        return snapshot;
+    }
+    return {
+        rawData: setRawData(patch.rawData ?? patch.RAW_DATA ?? readRawData()),
+        schools: setSchools(patch.schools ?? patch.SCHOOLS ?? readSchools()),
+        subjects: setSubjects(patch.subjects ?? patch.SUBJECTS ?? readSubjects()),
+        thresholds: setThresholds(patch.thresholds ?? patch.THRESHOLDS ?? readThresholds()),
+        config: setConfigState(patch.config ?? patch.CONFIG ?? readConfigState())
+    };
+}
+
+function clearDataRuntimeState(options = {}) {
+    if (DataStateRuntime && typeof DataStateRuntime.clearDataState === 'function') {
+        return syncDataRuntimeState(DataStateRuntime.clearDataState(options));
+    }
+    setRawData([]);
+    setSchools({});
+    setSubjects([]);
+    setThresholds({});
+    if (!options.keepConfig) setConfigState({});
+    return {
+        rawData: readRawData(),
+        schools: readSchools(),
+        subjects: readSubjects(),
+        thresholds: readThresholds(),
+        config: readConfigState()
+    };
+}
+
+window.readRawData = readRawData;
+window.setRawData = setRawData;
+window.readSchools = readSchools;
+window.setSchools = setSchools;
+window.readSubjects = readSubjects;
+window.setSubjects = setSubjects;
+window.readThresholds = readThresholds;
+window.setThresholds = setThresholds;
+window.readConfigState = readConfigState;
+window.setConfigState = setConfigState;
+
 const Auth = {
     currentUser: null,
     _parentDataRecovering: false,
@@ -15244,10 +15537,7 @@ async function switchCohort(cohortId) {
     if (examCohortLabel) examCohortLabel.innerText = label;
 
     // 🟢 [Bug #4 修复] 切换前先清空全局数据，防止残留上一届别的数据
-    RAW_DATA = [];
-    SCHOOLS = {};
-    SUBJECTS = [];
-    THRESHOLDS = {};
+    clearDataRuntimeState();
     setTeacherMap({});
     setTeacherSchoolMap({});
 
@@ -15266,13 +15556,15 @@ async function switchCohort(cohortId) {
         if (COHORT_DB && COHORT_DB.currentExamId && CohortDB.applyExamToWorkspace(COHORT_DB.currentExamId)) {
             // 已加载当前考试快照
         } else {
-            RAW_DATA = data.RAW_DATA || [];
-            SCHOOLS = data.SCHOOLS || {};
-            SUBJECTS = data.SUBJECTS || [];
-            THRESHOLDS = data.THRESHOLDS || {};
+            syncDataRuntimeState({
+                rawData: data.RAW_DATA || [],
+                schools: data.SCHOOLS || {},
+                subjects: data.SUBJECTS || [],
+                thresholds: data.THRESHOLDS || {},
+                config: data.CONFIG || {}
+            });
             setTeacherMap(data.TEACHER_MAP || {});
             setTeacherSchoolMap(data.TEACHER_SCHOOL_MAP || {});
-            CONFIG = data.CONFIG || {};
         }
         scheduleTeacherSyncPrompt();
 
@@ -15344,10 +15636,7 @@ async function switchCohort(cohortId) {
         updateStatusPanel();
     } else {
         // 4. 如果云端没这个届别的数据（新档案）
-        RAW_DATA = [];
-        SCHOOLS = {};
-        SUBJECTS = [];
-        THRESHOLDS = {};
+        clearDataRuntimeState();
         COHORT_DB = {
             cohortId,
             cohortMeta: CURRENT_COHORT_META || null,
@@ -15425,14 +15714,16 @@ window.addEventListener('load', async () => {
         const db = window.EMBEDDED_DB;
 
         // 恢复内存
-        RAW_DATA = db.RAW_DATA || [];
-        SCHOOLS = db.SCHOOLS || {};
-        SUBJECTS = db.SUBJECTS || [];
-        THRESHOLDS = db.THRESHOLDS || {};
+        syncDataRuntimeState({
+            rawData: db.RAW_DATA || [],
+            schools: db.SCHOOLS || {},
+            subjects: db.SUBJECTS || [],
+            thresholds: db.THRESHOLDS || {},
+            config: db.CONFIG || {}
+        });
         setTeacherMap(db.TEACHER_MAP || {});
         setTeacherSchoolMap(db.TEACHER_SCHOOL_MAP || {});
         writeCurrentSchool(db.MY_SCHOOL || '');
-        CONFIG = db.CONFIG || {};
 
         // 恢复账号 (分发版核心)
         if (db.AUTH_DB) {
@@ -15495,14 +15786,16 @@ window.addEventListener('load', async () => {
                 CURRENT_EXAM_ID = backup.CURRENT_EXAM_ID || CURRENT_EXAM_ID || readWorkspaceExamId() || '';
 
                 // 恢复基础数据
-                RAW_DATA = backup.RAW_DATA || [];
-                SCHOOLS = backup.SCHOOLS || {};
-                SUBJECTS = backup.SUBJECTS || [];
-                THRESHOLDS = backup.THRESHOLDS || {};
+                syncDataRuntimeState({
+                    rawData: backup.RAW_DATA || [],
+                    schools: backup.SCHOOLS || {},
+                    subjects: backup.SUBJECTS || [],
+                    thresholds: backup.THRESHOLDS || {},
+                    config: backup.CONFIG || readConfigState()
+                });
                 setTeacherMap(backup.TEACHER_MAP || {});
                 setTeacherSchoolMap(backup.TEACHER_SCHOOL_MAP || {});
                 writeCurrentSchool(backup.MY_SCHOOL || '');
-                if (backup.CONFIG) CONFIG = backup.CONFIG;
 
                 // ★★★ 恢复账号 ★★★
                 if (backup.AUTH_DB) {
@@ -15663,6 +15956,22 @@ let CONFIG = {
     mode: 'multi'
 };
 let RAW_DATA = [], SCHOOLS = {}, SUBJECTS = [], THRESHOLDS = {}, TARGETS = {};
+const initialDataSnapshot = syncDataRuntimeState({
+    config: (window.CONFIG && typeof window.CONFIG === 'object' && Object.keys(window.CONFIG).length > 0)
+        ? window.CONFIG
+        : CONFIG,
+    rawData: Array.isArray(window.RAW_DATA) ? window.RAW_DATA : RAW_DATA,
+    schools: window.SCHOOLS && typeof window.SCHOOLS === 'object' ? window.SCHOOLS : SCHOOLS,
+    subjects: Array.isArray(window.SUBJECTS) ? window.SUBJECTS : SUBJECTS,
+    thresholds: window.THRESHOLDS && typeof window.THRESHOLDS === 'object' ? window.THRESHOLDS : THRESHOLDS
+});
+CONFIG = initialDataSnapshot.config && Object.keys(initialDataSnapshot.config).length
+    ? { ...CONFIG, ...initialDataSnapshot.config }
+    : CONFIG;
+RAW_DATA = initialDataSnapshot.rawData || [];
+SCHOOLS = initialDataSnapshot.schools || {};
+SUBJECTS = initialDataSnapshot.subjects || [];
+THRESHOLDS = initialDataSnapshot.thresholds || {};
 // 🟢 [修复]：全局变量显式挂载到 window，确保 CloudManager 可访问
 var TEACHER_MAP = readTeacherMap(), TEACHER_SCHOOL_MAP = readTeacherSchoolMap(), MY_SCHOOL = "", TEACHER_STATS = readTeacherStats();
 window.TEACHER_MAP = TEACHER_MAP;
@@ -15696,6 +16005,18 @@ function uiAlert(message, type = 'info') {
 }
 
 function syncRuntimeStateToWindow() {
+    const dataSnapshot = syncDataRuntimeState({
+        rawData: RAW_DATA,
+        schools: SCHOOLS,
+        subjects: SUBJECTS,
+        thresholds: THRESHOLDS,
+        config: CONFIG
+    });
+    RAW_DATA = dataSnapshot.rawData || [];
+    SCHOOLS = dataSnapshot.schools || {};
+    SUBJECTS = dataSnapshot.subjects || [];
+    THRESHOLDS = dataSnapshot.thresholds || {};
+    CONFIG = dataSnapshot.config || {};
     const teacherSnapshot = syncTeacherRuntimeState({
         teacherMap: TEACHER_MAP,
         teacherSchoolMap: TEACHER_SCHOOL_MAP,
@@ -17775,7 +18096,7 @@ function togglePrivacyMode() {
     } else {
         // === 关闭隐私模式 (还原) ===
         if (DATA_BACKUP_PRIVACY) {
-            RAW_DATA = DATA_BACKUP_PRIVACY.RAW_DATA;
+            setRawData(DATA_BACKUP_PRIVACY.RAW_DATA);
             setTeacherMap(DATA_BACKUP_PRIVACY.TEACHER_MAP);
             PREV_DATA = DATA_BACKUP_PRIVACY.PREV_DATA;
             DATA_BACKUP_PRIVACY = null;
@@ -17790,8 +18111,8 @@ function togglePrivacyMode() {
 
     // 4. 全局重算与重绘
     // 因为 SCHOOLS, TEACHER_STATS 等都是基于 RAW_DATA 计算的，必须重置
-    SCHOOLS = {};
-        setTeacherStats({});
+    setSchools({});
+    setTeacherStats({});
     TEACHER_TOWNSHIP_RANKINGS = {};
 
     // 重新运行数据处理流程
@@ -17909,8 +18230,8 @@ saveProjectSnapshot = function () {
 function initSystem(type) {
     document.getElementById('mode-mask').style.display = 'none';
     document.getElementById('app').classList.remove('hidden');
-    if (type === '6-8') CONFIG = { name: '6-8年级', label: '全科总', excRate: 0.05, totalSubs: 'auto', analysisSubs: 'auto', showQuery: true };
-    else CONFIG = { name: '9年级', label: '五科总', excRate: 0.06, totalSubs: ['语文', '数学', '英语', '物理', '化学'], analysisSubs: ['语文', '数学', '英语', '物理', '化学'], showQuery: true };
+    if (type === '6-8') setConfigState({ name: '6-8年级', label: '全科总', excRate: 0.05, totalSubs: 'auto', analysisSubs: 'auto', showQuery: true });
+    else setConfigState({ name: '9年级', label: '五科总', excRate: 0.06, totalSubs: ['语文', '数学', '英语', '物理', '化学'], analysisSubs: ['语文', '数学', '英语', '物理', '化学'], showQuery: true });
     document.getElementById('mode-badge').innerText = CONFIG.name;
     document.getElementById('mode-info').innerText = `${CONFIG.name}模式 (总分: ${CONFIG.label}, 后1/3剔除: ${CONFIG.excRate * 100}%)`;
     document.querySelectorAll('.label-total').forEach(e => e.innerText = CONFIG.label);
@@ -21687,7 +22008,7 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
     // 使用 Perf.runAsync 包裹，实现加载动画 + 防卡死
     Perf.runAsync(async () => {
         // 重置数据
-        RAW_DATA = []; SCHOOLS = {}; SUBJECTS = []; setTeacherMap({}); setTeacherStats({});
+        clearDataRuntimeState({ keepConfig: true }); setTeacherMap({}); setTeacherStats({});
         TEACHER_TOWNSHIP_RANKINGS = {}; MARGINAL_STUDENTS = {}; POTENTIAL_STUDENTS_CACHE = []; TOWNSHIP_RANKING_DATA = {}; clearCurrentSchool();
         const teacherCards = document.getElementById('teacherCardsContainer');
         const teacherTable = document.getElementById('teacherComparisonTable');
@@ -21799,7 +22120,7 @@ function parseRows(rows, defaultSchool) {
     });
 
     if (CONFIG.analysisSubs && CONFIG.analysisSubs !== 'auto') {
-        SUBJECTS = SUBJECTS.filter(s => CONFIG.analysisSubs.includes(s));
+        setSubjects(SUBJECTS.filter(s => CONFIG.analysisSubs.includes(s)));
     }
     const subsForTotal = CONFIG.totalSubs === 'auto' ? SUBJECTS : CONFIG.totalSubs;
 
@@ -21986,7 +22307,7 @@ async function processData() {
     const result = await WorkerAPI.run({ RAW_DATA, SUBJECTS, CONFIG, THRESHOLDS, SCHOOLS });
 
     // 3. 接收结果 (RAW_DATA 是全新的，带有排名的数组)
-    RAW_DATA = result.RAW_DATA;
+    setRawData(result.RAW_DATA || []);
 
     // 4. 【关键修复】重建 SCHOOLS 与新 RAW_DATA 的关联
     // Worker 返回了全新的 RAW_DATA，必须把这些新对象重新塞回 SCHOOLS 的 students 数组里
@@ -22020,6 +22341,9 @@ async function processData() {
     calculateClassRanksOnly();
 
     if (typeof fuseInstance !== 'undefined') fuseInstance = null; // 强制重建索引
+
+    setSchools(SCHOOLS);
+    setThresholds(THRESHOLDS);
 
     if (isSingleSchool) {
         console.log("🏫 检测到单校数据，自动切换 UI 为年级模式...");
@@ -31050,9 +31374,9 @@ function getActiveGrade() {
 function applyModeByGrade(grade) {
     const isGrade9 = String(grade) === '9';
     if (isGrade9) {
-        CONFIG = { name: '9年级', label: '五科总', excRate: 0.06, totalSubs: ['语文', '数学', '英语', '物理', '化学'], analysisSubs: ['语文', '数学', '英语', '物理', '化学'], showQuery: true, mode: CONFIG.mode || 'multi' };
+        setConfigState({ name: '9年级', label: '五科总', excRate: 0.06, totalSubs: ['语文', '数学', '英语', '物理', '化学'], analysisSubs: ['语文', '数学', '英语', '物理', '化学'], showQuery: true, mode: CONFIG.mode || 'multi' });
     } else {
-        CONFIG = { name: '6-8年级', label: '全科总', excRate: 0.05, totalSubs: 'auto', analysisSubs: 'auto', showQuery: true, mode: CONFIG.mode || 'multi' };
+        setConfigState({ name: '6-8年级', label: '全科总', excRate: 0.05, totalSubs: 'auto', analysisSubs: 'auto', showQuery: true, mode: CONFIG.mode || 'multi' });
     }
     const badge = document.getElementById('mode-badge');
     if (badge) badge.innerText = CONFIG.name;
@@ -31601,22 +31925,25 @@ const CohortDB = {
         const db = this.ensure();
         const exam = db.exams?.[examId];
         if (!exam) return false;
-        RAW_DATA = exam.data || [];
-        SCHOOLS = (exam.schools && typeof exam.schools === 'object') ? exam.schools : {};
-        SUBJECTS = exam.subjects || [];
-        THRESHOLDS = exam.thresholds || {};
-        CONFIG = exam.config || CONFIG;
+        syncDataRuntimeState({
+            rawData: exam.data || [],
+            schools: (exam.schools && typeof exam.schools === 'object') ? exam.schools : {},
+            subjects: exam.subjects || [],
+            thresholds: exam.thresholds || {},
+            config: exam.config || readConfigState()
+        });
         setTeacherMap(exam.teacherMap || {});
 
         if (!SCHOOLS || Object.keys(SCHOOLS).length === 0) {
-            SCHOOLS = {};
+            const rebuiltSchools = {};
             (RAW_DATA || []).forEach(stu => {
                 const schoolName = String(stu?.school || '').trim() || '未命名学校';
-                if (!SCHOOLS[schoolName]) {
-                    SCHOOLS[schoolName] = { name: schoolName, students: [], metrics: {}, rankings: {} };
+                if (!rebuiltSchools[schoolName]) {
+                    rebuiltSchools[schoolName] = { name: schoolName, students: [], metrics: {}, rankings: {} };
                 }
-                SCHOOLS[schoolName].students.push(stu);
+                rebuiltSchools[schoolName].students.push(stu);
             });
+            setSchools(rebuiltSchools);
         }
 
         CURRENT_EXAM_ID = examId;
@@ -31937,13 +32264,13 @@ function getCurrentSnapshotPayload() {
         ARCHIVE_META: examSnapshot.archiveMeta || null,
         ARCHIVE_LOCKED: examSnapshot.archiveLocked ? 'true' : 'false',
         ARCHIVE_LOCKED_KEY: examSnapshot.archiveLockedKey || '',
-        RAW_DATA: window.RAW_DATA || [],
-        SCHOOLS: window.SCHOOLS || {},
-        SUBJECTS: window.SUBJECTS || [],
-        THRESHOLDS: window.THRESHOLDS || {},
+        RAW_DATA: readRawData(),
+        SCHOOLS: readSchools(),
+        SUBJECTS: readSubjects(),
+        THRESHOLDS: readThresholds(),
         TEACHER_MAP: window.TEACHER_MAP || {},
         TEACHER_SCHOOL_MAP: window.TEACHER_SCHOOL_MAP || {},
-        CONFIG: window.CONFIG || {},
+        CONFIG: readConfigState(),
         MY_SCHOOL: readCurrentSchool(),
         TARGETS: window.SYS_VARS?.targets || window.TARGETS || {},
         INDICATOR_PARAMS: window.SYS_VARS?.indicator || { ind1: '', ind2: '' },
@@ -31953,7 +32280,7 @@ function getCurrentSnapshotPayload() {
         HISTORY_ARCHIVE: window.HISTORY_ARCHIVE || {},
         FB_CLASSES: window.FB_CLASSES || [],
         MP_SNAPSHOTS: window.MP_SNAPSHOTS || {},
-        FINGERPRINT: computeExamDataFingerprint(window.RAW_DATA || []),
+        FINGERPRINT: computeExamDataFingerprint(readRawData()),
         timestamp: new Date().getTime()
     };
 }
@@ -32162,13 +32489,15 @@ function applySnapshotPayload(db) {
             if (termId) writeCurrentTermId(termId);
         } catch (e) { }
     }
-    window.RAW_DATA = db.RAW_DATA || [];
-    window.SCHOOLS = db.SCHOOLS || {};
-    window.SUBJECTS = db.SUBJECTS || [];
-    window.THRESHOLDS = db.THRESHOLDS || {};
+    syncDataRuntimeState({
+        rawData: db.RAW_DATA || [],
+        schools: db.SCHOOLS || {},
+        subjects: db.SUBJECTS || [],
+        thresholds: db.THRESHOLDS || {},
+        config: db.CONFIG || readConfigState()
+    });
     setTeacherMap(db.TEACHER_MAP || {});
     setTeacherSchoolMap(db.TEACHER_SCHOOL_MAP || {});
-    window.CONFIG = db.CONFIG || {};
     writeCurrentSchool(db.MY_SCHOOL || '');
     window.TARGETS = db.TARGETS || {};
     TARGETS = window.TARGETS;
@@ -33415,13 +33744,15 @@ async function manualRestore() {
     if (typeof applySnapshotPayload === 'function') {
         applySnapshotPayload(data);
     } else {
-        RAW_DATA = data.RAW_DATA || [];
-        SCHOOLS = data.SCHOOLS || {};
-        SUBJECTS = data.SUBJECTS || [];
-        THRESHOLDS = data.THRESHOLDS || {};
+        syncDataRuntimeState({
+            rawData: data.RAW_DATA || [],
+            schools: data.SCHOOLS || {},
+            subjects: data.SUBJECTS || [],
+            thresholds: data.THRESHOLDS || {},
+            config: data.CONFIG || readConfigState()
+        });
         setTeacherMap(data.TEACHER_MAP || {});
         setTeacherSchoolMap(data.TEACHER_SCHOOL_MAP || {});
-        CONFIG = data.CONFIG || CONFIG;
         writeCurrentSchool(data.MY_SCHOOL || readCurrentSchool());
     }
     updateStatusPanel();
@@ -33539,9 +33870,10 @@ async function loadDemoData() {
     // 构造简易演示数据
     const demoSchool = '示例学校';
     const classes = ['9.1', '9.2'];
-    SUBJECTS = ['语文', '数学', '英语'];
-    RAW_DATA = [];
-    SCHOOLS = {};
+    setSubjects(['语文', '数学', '英语']);
+    setRawData([]);
+    setSchools({});
+    setThresholds({});
 
     let counter = 1;
     classes.forEach(cls => {
