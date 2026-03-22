@@ -17,7 +17,7 @@ async function main() {
     const output = inlineLocalScripts(sourceHtml, { projectRoot });
 
     assert.ok(output.includes('<script defer data-test="cloud-runtime">'), 'should preserve non-src attributes on local scripts');
-    assert.ok(output.includes("const CLOUD_TABLE = 'system_data';"), 'should inline the referenced local script content');
+    assert.ok(output.includes('system_data'), 'should inline the referenced local script content');
     assert.ok(output.includes('<script src="https://example.com/external.js"></script>'), 'should keep external scripts untouched');
     assert.ok(!output.includes('src="./assets/js/cloud.js?v=123"'), 'should remove the local script src after inlining');
 

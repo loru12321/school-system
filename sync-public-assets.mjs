@@ -37,6 +37,14 @@ export function syncReferencedAssets({
   const sourceIndexHtml = fs.readFileSync(indexHtmlPath, 'utf8');
   const referencedAssets = collectReferencedJsAssets(sourceIndexHtml);
 
+  for (const entry of fs.readdirSync(targetJsDir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.js')) continue;
+    if (referencedAssets.has(entry.name)) continue;
+    const targetPath = path.join(targetJsDir, entry.name);
+    fs.rmSync(targetPath, { force: true });
+    console.log(`Removed stale asset: ${targetPath}`);
+  }
+
   for (const entry of fs.readdirSync(sourceJsDir, { withFileTypes: true })) {
     if (!entry.isFile() || !entry.name.endsWith('.js')) continue;
     if (!referencedAssets.has(entry.name)) continue;

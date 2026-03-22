@@ -39,6 +39,7 @@ async function main() {
   fs.writeFileSync(path.join(sourceJsDir, 'unused.js'), unusedJs, 'utf8');
   fs.writeFileSync(path.join(srcDir, 'index.html'), '<script src="./assets/js/app.js?v=1"></script>', 'utf8');
   fs.writeFileSync(path.join(publicDir, 'favicon.ico'), 'ico', 'utf8');
+  fs.writeFileSync(path.join(targetJsDir, 'stale.js'), 'window.stale = true;', 'utf8');
 
   syncReferencedAssets({
     sourceJsDir,
@@ -49,8 +50,10 @@ async function main() {
 
   const syncedAppPath = path.join(targetJsDir, 'app.js');
   const skippedPath = path.join(targetJsDir, 'unused.js');
+  const stalePath = path.join(targetJsDir, 'stale.js');
   assert.ok(fs.existsSync(syncedAppPath), 'should sync referenced assets');
   assert.strictEqual(fs.existsSync(skippedPath), false, 'should skip unreferenced assets');
+  assert.strictEqual(fs.existsSync(stalePath), false, 'should remove stale target assets that are no longer referenced');
   const minifiedJs = fs.readFileSync(syncedAppPath, 'utf8');
   assert.ok(minifiedJs.length < verboseJs.length, 'should minify synced assets');
   assert.ok(fs.existsSync(path.join(tempRoot, 'dist', 'favicon.ico')), 'should sync root public files');
