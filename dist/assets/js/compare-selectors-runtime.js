@@ -5,12 +5,19 @@
         ? window.ensureCompareExamSyncStateEntry
         : ((cohortId) => {
             const key = String(cohortId || '').trim();
-            if (!window.__COMPARE_EXAM_SYNC_STATE) window.__COMPARE_EXAM_SYNC_STATE = {};
+            const currentState = typeof window.readCompareExamSyncState === 'function'
+                ? window.readCompareExamSyncState()
+                : (window.__COMPARE_EXAM_SYNC_STATE && typeof window.__COMPARE_EXAM_SYNC_STATE === 'object' ? window.__COMPARE_EXAM_SYNC_STATE : {});
             if (!key) return { pending: false, lastAttempt: 0 };
-            if (!window.__COMPARE_EXAM_SYNC_STATE[key]) {
-                window.__COMPARE_EXAM_SYNC_STATE[key] = { pending: false, lastAttempt: 0 };
+            if (!currentState[key]) {
+                currentState[key] = { pending: false, lastAttempt: 0 };
+                if (typeof window.setCompareExamSyncState === 'function') {
+                    window.setCompareExamSyncState(currentState);
+                } else {
+                    window.__COMPARE_EXAM_SYNC_STATE = currentState;
+                }
             }
-            return window.__COMPARE_EXAM_SYNC_STATE[key];
+            return currentState[key];
         });
 
     function onProgressComparePeriodCountChange() {

@@ -7522,18 +7522,18 @@ const initialSupportSnapshot = syncSupportRuntimeState({
 });
 TARGETS = initialSupportSnapshot.targets || {};
 const initialProgressSnapshot = syncProgressRuntimeState({
-    progressCache: Array.isArray(window.PROGRESS_CACHE) ? window.PROGRESS_CACHE : [],
-    progressCacheFull: Array.isArray(window.PROGRESS_CACHE_FULL) ? window.PROGRESS_CACHE_FULL : [],
-    manualIdMappings: window.MANUAL_ID_MAPPINGS && typeof window.MANUAL_ID_MAPPINGS === 'object' ? window.MANUAL_ID_MAPPINGS : {},
-    lastVaData: Array.isArray(window.LAST_VA_DATA) ? window.LAST_VA_DATA : [],
-    vaViewMode: window.VA_VIEW_MODE || 'school',
-    quickMode: window.__PROGRESS_QUICK_MODE || 'all'
+    progressCache: readProgressCacheState(),
+    progressCacheFull: readProgressCacheFullState(),
+    manualIdMappings: readManualIdMappingsState(),
+    lastVaData: readLastVaDataState(),
+    vaViewMode: readProgressViewModeState(),
+    quickMode: readProgressQuickModeState()
 });
 const initialReportSessionSnapshot = syncReportSessionRuntimeState({
-    currentReportStudent: window.CURRENT_REPORT_STUDENT && typeof window.CURRENT_REPORT_STUDENT === 'object' ? window.CURRENT_REPORT_STUDENT : null,
-    batchAiCache: window.BATCH_AI_CACHE && typeof window.BATCH_AI_CACHE === 'object' && !Array.isArray(window.BATCH_AI_CACHE) ? window.BATCH_AI_CACHE : {},
-    isBatchAiRunning: !!window.IS_BATCH_AI_RUNNING,
-    currentContextStudents: Array.isArray(window.CURRENT_CONTEXT_STUDENTS) ? window.CURRENT_CONTEXT_STUDENTS : []
+    currentReportStudent: readCurrentReportStudentState(),
+    batchAiCache: readBatchAICacheState(),
+    isBatchAiRunning: readIsBatchAIRunningState(),
+    currentContextStudents: readCurrentContextStudentsState()
 });
 // 🟢 [修复]：全局变量显式挂载到 window，确保 CloudManager 可访问
 var TEACHER_MAP = readTeacherMap(), TEACHER_SCHOOL_MAP = readTeacherSchoolMap(), MY_SCHOOL = "", TEACHER_STATS = readTeacherStats();
@@ -13289,7 +13289,7 @@ function switchTab(id) {
 
                 // 如果还没有生成缓存(PROGRESS_CACHE)，立即执行静默匹配
                 setPrevDataState(baselineData);
-                if (!window.PROGRESS_CACHE || window.PROGRESS_CACHE.length === 0) {
+                if (readProgressCacheState().length === 0) {
                     if (typeof performSilentMatching === 'function') performSilentMatching();
                 }
 

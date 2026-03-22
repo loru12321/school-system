@@ -1547,17 +1547,39 @@
 </script>
     <script>
 (function (root, factory) {
+    function installProgressState(target, runtime) {
+        if (!target || !runtime) return;
+        target.readProgressCacheState = runtime.getProgressCache;
+        target.setProgressCacheState = runtime.setProgressCache;
+        target.readProgressCacheFullState = runtime.getProgressCacheFull;
+        target.setProgressCacheFullState = runtime.setProgressCacheFull;
+        target.readManualIdMappingsState = runtime.getManualIdMappings;
+        target.setManualIdMappingsState = runtime.setManualIdMappings;
+        target.readLastVaDataState = runtime.getLastVaData;
+        target.setLastVaDataState = runtime.setLastVaData;
+        target.readProgressViewModeState = runtime.getVaViewMode;
+        target.setProgressViewModeState = runtime.setVaViewMode;
+        target.readProgressQuickModeState = runtime.getQuickMode;
+        target.setProgressQuickModeState = runtime.setQuickMode;
+        target.syncProgressRuntimeState = runtime.syncProgressState;
+        target.clearProgressRuntimeState = runtime.clearProgressState;
+    }
+
     const runtime = factory(root || {});
 
     if (typeof module === 'object' && module.exports) {
         const createRuntime = function (overrideRoot) {
-            return factory(overrideRoot || root || {});
+            const nextRoot = overrideRoot || root || {};
+            const nextRuntime = factory(nextRoot);
+            installProgressState(nextRoot, nextRuntime);
+            return nextRuntime;
         };
         createRuntime.runtime = runtime;
         module.exports = createRuntime;
     }
 
     if (!root || root.ProgressState) return;
+    installProgressState(root, runtime);
     root.ProgressState = runtime;
     runtime.syncProgressState(runtime.snapshotProgressState());
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createProgressStateRuntime(root) {
@@ -17540,18 +17562,18 @@ const initialSupportSnapshot = syncSupportRuntimeState({
 });
 TARGETS = initialSupportSnapshot.targets || {};
 const initialProgressSnapshot = syncProgressRuntimeState({
-    progressCache: Array.isArray(window.PROGRESS_CACHE) ? window.PROGRESS_CACHE : [],
-    progressCacheFull: Array.isArray(window.PROGRESS_CACHE_FULL) ? window.PROGRESS_CACHE_FULL : [],
-    manualIdMappings: window.MANUAL_ID_MAPPINGS && typeof window.MANUAL_ID_MAPPINGS === 'object' ? window.MANUAL_ID_MAPPINGS : {},
-    lastVaData: Array.isArray(window.LAST_VA_DATA) ? window.LAST_VA_DATA : [],
-    vaViewMode: window.VA_VIEW_MODE || 'school',
-    quickMode: window.__PROGRESS_QUICK_MODE || 'all'
+    progressCache: readProgressCacheState(),
+    progressCacheFull: readProgressCacheFullState(),
+    manualIdMappings: readManualIdMappingsState(),
+    lastVaData: readLastVaDataState(),
+    vaViewMode: readProgressViewModeState(),
+    quickMode: readProgressQuickModeState()
 });
 const initialReportSessionSnapshot = syncReportSessionRuntimeState({
-    currentReportStudent: window.CURRENT_REPORT_STUDENT && typeof window.CURRENT_REPORT_STUDENT === 'object' ? window.CURRENT_REPORT_STUDENT : null,
-    batchAiCache: window.BATCH_AI_CACHE && typeof window.BATCH_AI_CACHE === 'object' && !Array.isArray(window.BATCH_AI_CACHE) ? window.BATCH_AI_CACHE : {},
-    isBatchAiRunning: !!window.IS_BATCH_AI_RUNNING,
-    currentContextStudents: Array.isArray(window.CURRENT_CONTEXT_STUDENTS) ? window.CURRENT_CONTEXT_STUDENTS : []
+    currentReportStudent: readCurrentReportStudentState(),
+    batchAiCache: readBatchAICacheState(),
+    isBatchAiRunning: readIsBatchAIRunningState(),
+    currentContextStudents: readCurrentContextStudentsState()
 });
 // 🟢 [修复]：全局变量显式挂载到 window，确保 CloudManager 可访问
 var TEACHER_MAP = readTeacherMap(), TEACHER_SCHOOL_MAP = readTeacherSchoolMap(), MY_SCHOOL = "", TEACHER_STATS = readTeacherStats();
@@ -23307,7 +23329,7 @@ function switchTab(id) {
 
                 // 如果还没有生成缓存(PROGRESS_CACHE)，立即执行静默匹配
                 setPrevDataState(baselineData);
-                if (!window.PROGRESS_CACHE || window.PROGRESS_CACHE.length === 0) {
+                if (readProgressCacheState().length === 0) {
                     if (typeof performSilentMatching === 'function') performSilentMatching();
                 }
 
@@ -39960,12 +39982,19 @@ var igInsightHtml = '';
         ? window.ensureCompareExamSyncStateEntry
         : ((cohortId) => {
             const key = String(cohortId || '').trim();
-            if (!window.__COMPARE_EXAM_SYNC_STATE) window.__COMPARE_EXAM_SYNC_STATE = {};
+            const currentState = typeof window.readCompareExamSyncState === 'function'
+                ? window.readCompareExamSyncState()
+                : (window.__COMPARE_EXAM_SYNC_STATE && typeof window.__COMPARE_EXAM_SYNC_STATE === 'object' ? window.__COMPARE_EXAM_SYNC_STATE : {});
             if (!key) return { pending: false, lastAttempt: 0 };
-            if (!window.__COMPARE_EXAM_SYNC_STATE[key]) {
-                window.__COMPARE_EXAM_SYNC_STATE[key] = { pending: false, lastAttempt: 0 };
+            if (!currentState[key]) {
+                currentState[key] = { pending: false, lastAttempt: 0 };
+                if (typeof window.setCompareExamSyncState === 'function') {
+                    window.setCompareExamSyncState(currentState);
+                } else {
+                    window.__COMPARE_EXAM_SYNC_STATE = currentState;
+                }
             }
-            return window.__COMPARE_EXAM_SYNC_STATE[key];
+            return currentState[key];
         });
 
     function onProgressComparePeriodCountChange() {
@@ -44205,12 +44234,19 @@ async function loadCloudTownSubmoduleCompare(submoduleId, key) {
         ? window.ensureCompareExamSyncStateEntry
         : ((cohortId) => {
             const key = String(cohortId || '').trim();
-            if (!window.__COMPARE_EXAM_SYNC_STATE) window.__COMPARE_EXAM_SYNC_STATE = {};
+            const currentState = typeof window.readCompareExamSyncState === 'function'
+                ? window.readCompareExamSyncState()
+                : (window.__COMPARE_EXAM_SYNC_STATE && typeof window.__COMPARE_EXAM_SYNC_STATE === 'object' ? window.__COMPARE_EXAM_SYNC_STATE : {});
             if (!key) return { pending: false, lastAttempt: 0 };
-            if (!window.__COMPARE_EXAM_SYNC_STATE[key]) {
-                window.__COMPARE_EXAM_SYNC_STATE[key] = { pending: false, lastAttempt: 0 };
+            if (!currentState[key]) {
+                currentState[key] = { pending: false, lastAttempt: 0 };
+                if (typeof window.setCompareExamSyncState === 'function') {
+                    window.setCompareExamSyncState(currentState);
+                } else {
+                    window.__COMPARE_EXAM_SYNC_STATE = currentState;
+                }
             }
-            return window.__COMPARE_EXAM_SYNC_STATE[key];
+            return currentState[key];
         });
 
     let PROGRESS_CACHE = [];

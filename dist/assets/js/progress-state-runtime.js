@@ -1,15 +1,37 @@
 (function (root, factory) {
+    function installProgressState(target, runtime) {
+        if (!target || !runtime) return;
+        target.readProgressCacheState = runtime.getProgressCache;
+        target.setProgressCacheState = runtime.setProgressCache;
+        target.readProgressCacheFullState = runtime.getProgressCacheFull;
+        target.setProgressCacheFullState = runtime.setProgressCacheFull;
+        target.readManualIdMappingsState = runtime.getManualIdMappings;
+        target.setManualIdMappingsState = runtime.setManualIdMappings;
+        target.readLastVaDataState = runtime.getLastVaData;
+        target.setLastVaDataState = runtime.setLastVaData;
+        target.readProgressViewModeState = runtime.getVaViewMode;
+        target.setProgressViewModeState = runtime.setVaViewMode;
+        target.readProgressQuickModeState = runtime.getQuickMode;
+        target.setProgressQuickModeState = runtime.setQuickMode;
+        target.syncProgressRuntimeState = runtime.syncProgressState;
+        target.clearProgressRuntimeState = runtime.clearProgressState;
+    }
+
     const runtime = factory(root || {});
 
     if (typeof module === 'object' && module.exports) {
         const createRuntime = function (overrideRoot) {
-            return factory(overrideRoot || root || {});
+            const nextRoot = overrideRoot || root || {};
+            const nextRuntime = factory(nextRoot);
+            installProgressState(nextRoot, nextRuntime);
+            return nextRuntime;
         };
         createRuntime.runtime = runtime;
         module.exports = createRuntime;
     }
 
     if (!root || root.ProgressState) return;
+    installProgressState(root, runtime);
     root.ProgressState = runtime;
     runtime.syncProgressState(runtime.snapshotProgressState());
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createProgressStateRuntime(root) {
