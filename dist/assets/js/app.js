@@ -1782,6 +1782,156 @@ window.readCurrentContextStudentsState = readCurrentContextStudentsState;
 window.setCurrentContextStudentsState = setCurrentContextStudentsState;
 window.syncReportSessionRuntimeState = syncReportSessionRuntimeState;
 
+const CompareSessionStateRuntime = window.CompareSessionState || null;
+
+function normalizeCompareSessionObject(value) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+}
+
+function normalizeCompareSessionArray(value) {
+    return Array.isArray(value) ? value : [];
+}
+
+function normalizeCompareSessionString(value) {
+    return String(value || '').trim();
+}
+
+function readCloudCompareTargetState() {
+    const nextTarget = CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getCloudCompareTarget === 'function'
+        ? (CompareSessionStateRuntime.getCloudCompareTarget() || null)
+        : normalizeCompareSessionObject(window.CLOUD_COMPARE_TARGET);
+    window.CLOUD_COMPARE_TARGET = nextTarget;
+    return nextTarget;
+}
+
+function setCloudCompareTargetState(target) {
+    const nextTarget = CompareSessionStateRuntime && typeof CompareSessionStateRuntime.setCloudCompareTarget === 'function'
+        ? (CompareSessionStateRuntime.setCloudCompareTarget(target) || null)
+        : normalizeCompareSessionObject(target);
+    window.CLOUD_COMPARE_TARGET = nextTarget;
+    return nextTarget;
+}
+
+function readCloudStudentCompareContextState() {
+    const nextContext = CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getCloudStudentCompareContext === 'function'
+        ? (CompareSessionStateRuntime.getCloudStudentCompareContext() || null)
+        : normalizeCompareSessionObject(window.CLOUD_STUDENT_COMPARE_CONTEXT);
+    window.CLOUD_STUDENT_COMPARE_CONTEXT = nextContext;
+    return nextContext;
+}
+
+function setCloudStudentCompareContextState(context) {
+    const nextContext = CompareSessionStateRuntime && typeof CompareSessionStateRuntime.setCloudStudentCompareContext === 'function'
+        ? (CompareSessionStateRuntime.setCloudStudentCompareContext(context) || null)
+        : normalizeCompareSessionObject(context);
+    window.CLOUD_STUDENT_COMPARE_CONTEXT = nextContext;
+    return nextContext;
+}
+
+function readCloudComparePrevDataBackupState() {
+    const nextRows = CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getCloudComparePrevDataBackup === 'function'
+        ? (CompareSessionStateRuntime.getCloudComparePrevDataBackup() ?? null)
+        : (window.CLOUD_COMPARE_PREV_DATA_BACKUP ?? null);
+    window.CLOUD_COMPARE_PREV_DATA_BACKUP = nextRows;
+    return nextRows;
+}
+
+function setCloudComparePrevDataBackupState(rows) {
+    const nextRows = CompareSessionStateRuntime && typeof CompareSessionStateRuntime.setCloudComparePrevDataBackup === 'function'
+        ? (CompareSessionStateRuntime.setCloudComparePrevDataBackup(rows) ?? null)
+        : (rows ?? null);
+    window.CLOUD_COMPARE_PREV_DATA_BACKUP = nextRows;
+    return nextRows;
+}
+
+function readDuplicateCompareExamsState() {
+    const nextGroups = CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getDuplicateCompareExams === 'function'
+        ? (CompareSessionStateRuntime.getDuplicateCompareExams() || [])
+        : normalizeCompareSessionArray(window.DUPLICATE_COMPARE_EXAMS);
+    window.DUPLICATE_COMPARE_EXAMS = nextGroups;
+    return nextGroups;
+}
+
+function setDuplicateCompareExamsState(groups) {
+    const nextGroups = CompareSessionStateRuntime && typeof CompareSessionStateRuntime.setDuplicateCompareExams === 'function'
+        ? (CompareSessionStateRuntime.setDuplicateCompareExams(groups) || [])
+        : normalizeCompareSessionArray(groups);
+    window.DUPLICATE_COMPARE_EXAMS = nextGroups;
+    return nextGroups;
+}
+
+function readDuplicateCompareWarnedKeyState() {
+    const nextKey = CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getDuplicateCompareWarnedKey === 'function'
+        ? String(CompareSessionStateRuntime.getDuplicateCompareWarnedKey() || '').trim()
+        : normalizeCompareSessionString(window.__DUPLICATE_COMPARE_WARNED_KEY);
+    window.__DUPLICATE_COMPARE_WARNED_KEY = nextKey;
+    return nextKey;
+}
+
+function setDuplicateCompareWarnedKeyState(key) {
+    const nextKey = CompareSessionStateRuntime && typeof CompareSessionStateRuntime.setDuplicateCompareWarnedKey === 'function'
+        ? String(CompareSessionStateRuntime.setDuplicateCompareWarnedKey(key) || '').trim()
+        : normalizeCompareSessionString(key);
+    window.__DUPLICATE_COMPARE_WARNED_KEY = nextKey;
+    return nextKey;
+}
+
+function readCompareExamSyncState() {
+    const nextState = CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getCompareExamSyncState === 'function'
+        ? (CompareSessionStateRuntime.getCompareExamSyncState() || {})
+        : (window.__COMPARE_EXAM_SYNC_STATE && typeof window.__COMPARE_EXAM_SYNC_STATE === 'object' && !Array.isArray(window.__COMPARE_EXAM_SYNC_STATE)
+            ? window.__COMPARE_EXAM_SYNC_STATE
+            : {});
+    window.__COMPARE_EXAM_SYNC_STATE = nextState;
+    return nextState;
+}
+
+function setCompareExamSyncState(state) {
+    const nextState = CompareSessionStateRuntime && typeof CompareSessionStateRuntime.setCompareExamSyncState === 'function'
+        ? (CompareSessionStateRuntime.setCompareExamSyncState(state) || {})
+        : (state && typeof state === 'object' && !Array.isArray(state) ? state : {});
+    window.__COMPARE_EXAM_SYNC_STATE = nextState;
+    return nextState;
+}
+
+function applyCompareSessionLateBoundState(snapshot = {}) {
+    window.CLOUD_COMPARE_TARGET = snapshot.cloudCompareTarget || null;
+    window.CLOUD_STUDENT_COMPARE_CONTEXT = snapshot.cloudStudentCompareContext || null;
+    window.CLOUD_COMPARE_PREV_DATA_BACKUP = snapshot.cloudComparePrevDataBackup ?? null;
+    window.DUPLICATE_COMPARE_EXAMS = snapshot.duplicateCompareExams || [];
+    window.__DUPLICATE_COMPARE_WARNED_KEY = snapshot.duplicateCompareWarnedKey || '';
+    window.__COMPARE_EXAM_SYNC_STATE = snapshot.compareExamSyncState || {};
+    return snapshot;
+}
+
+function syncCompareSessionRuntimeState(patch = {}) {
+    if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.syncCompareSessionState === 'function') {
+        return applyCompareSessionLateBoundState(CompareSessionStateRuntime.syncCompareSessionState(patch));
+    }
+    return applyCompareSessionLateBoundState({
+        cloudCompareTarget: setCloudCompareTargetState(patch.cloudCompareTarget ?? patch.CLOUD_COMPARE_TARGET ?? readCloudCompareTargetState()),
+        cloudStudentCompareContext: setCloudStudentCompareContextState(patch.cloudStudentCompareContext ?? patch.CLOUD_STUDENT_COMPARE_CONTEXT ?? readCloudStudentCompareContextState()),
+        cloudComparePrevDataBackup: setCloudComparePrevDataBackupState(patch.cloudComparePrevDataBackup ?? patch.CLOUD_COMPARE_PREV_DATA_BACKUP ?? readCloudComparePrevDataBackupState()),
+        duplicateCompareExams: setDuplicateCompareExamsState(patch.duplicateCompareExams ?? patch.DUPLICATE_COMPARE_EXAMS ?? readDuplicateCompareExamsState()),
+        duplicateCompareWarnedKey: setDuplicateCompareWarnedKeyState(patch.duplicateCompareWarnedKey ?? patch.__DUPLICATE_COMPARE_WARNED_KEY ?? readDuplicateCompareWarnedKeyState()),
+        compareExamSyncState: setCompareExamSyncState(patch.compareExamSyncState ?? patch.__COMPARE_EXAM_SYNC_STATE ?? readCompareExamSyncState())
+    });
+}
+
+window.readCloudCompareTargetState = readCloudCompareTargetState;
+window.setCloudCompareTargetState = setCloudCompareTargetState;
+window.readCloudStudentCompareContextState = readCloudStudentCompareContextState;
+window.setCloudStudentCompareContextState = setCloudStudentCompareContextState;
+window.readCloudComparePrevDataBackupState = readCloudComparePrevDataBackupState;
+window.setCloudComparePrevDataBackupState = setCloudComparePrevDataBackupState;
+window.readDuplicateCompareExamsState = readDuplicateCompareExamsState;
+window.setDuplicateCompareExamsState = setDuplicateCompareExamsState;
+window.readDuplicateCompareWarnedKeyState = readDuplicateCompareWarnedKeyState;
+window.setDuplicateCompareWarnedKeyState = setDuplicateCompareWarnedKeyState;
+window.readCompareExamSyncState = readCompareExamSyncState;
+window.setCompareExamSyncState = setCompareExamSyncState;
+window.syncCompareSessionRuntimeState = syncCompareSessionRuntimeState;
+
 const Auth = {
     currentUser: null,
     _parentDataRecovering: false,
@@ -7614,6 +7764,14 @@ function syncRuntimeStateToWindow() {
         batchAiCache: readLateBoundState(() => BATCH_AI_CACHE, readBatchAICacheState()),
         isBatchAiRunning: readLateBoundState(() => IS_BATCH_AI_RUNNING, readIsBatchAIRunningState()),
         currentContextStudents: readLateBoundState(() => CURRENT_CONTEXT_STUDENTS, readCurrentContextStudentsState())
+    });
+    syncCompareSessionRuntimeState({
+        cloudCompareTarget: readCloudCompareTargetState(),
+        cloudStudentCompareContext: readCloudStudentCompareContextState(),
+        cloudComparePrevDataBackup: readCloudComparePrevDataBackupState(),
+        duplicateCompareExams: readDuplicateCompareExamsState(),
+        duplicateCompareWarnedKey: readDuplicateCompareWarnedKeyState(),
+        compareExamSyncState: readCompareExamSyncState()
     });
     const teacherSnapshot = syncTeacherRuntimeState({
         teacherMap: TEACHER_MAP,
@@ -15795,6 +15953,17 @@ function getComparisonTotalValue(record, subjects) {
     return (typeof record.total === 'number' && Number.isFinite(record.total)) ? record.total : null;
 }
 
+function readCloudPreviousRecordForStudent(student) {
+    if (typeof window.getCloudPreviousRecord === 'function') {
+        return window.getCloudPreviousRecord(student) || null;
+    }
+    const cloudCompareContext = readCloudStudentCompareContextState();
+    if (cloudCompareContext?.previousRecord && isCloudContextLikelyCurrentTarget(student)) {
+        return cloudCompareContext.previousRecord;
+    }
+    return null;
+}
+
 function createComparisonStudentView(record, allStudents) {
     if (!record || typeof record !== 'object') return record;
 
@@ -15855,19 +16024,9 @@ function recalcPrevTotal(prevRecord) {
 }
 
 function findPreviousRecord(student) {
-    const cloudPrev = getCloudPreviousRecord(student);
+    const cloudPrev = readCloudPreviousRecordForStudent(student);
     if (cloudPrev) {
         return cloudPrev;
-    }
-
-    const readCloudStudentCompareContextSessionState = typeof window.readCloudStudentCompareContextState === 'function'
-        ? window.readCloudStudentCompareContextState
-        : (() => (window.CompareSessionState && typeof window.CompareSessionState.getCloudStudentCompareContext === 'function'
-            ? (window.CompareSessionState.getCloudStudentCompareContext() || null)
-            : null));
-    const cloudCompareContext = readCloudStudentCompareContextSessionState();
-    if (cloudCompareContext?.previousRecord && isCloudContextLikelyCurrentTarget(student)) {
-        return cloudCompareContext.previousRecord;
     }
 
     // 🟢 [Bug #2/#5 修复] 标准化工具函数
@@ -15951,7 +16110,7 @@ function findPreviousRecord(student) {
     const user = getCurrentUser();
     const isParentOrStudent = user && RoleManager.hasAnyRole(user, ['parent', 'student']) &&
         !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director', 'teacher', 'class_teacher']);
-    if (!cloudCompareContext?.previousRecord && !isParentOrStudent) {
+    if (!readCloudStudentCompareContextState()?.previousRecord && !isParentOrStudent) {
         console.warn("历史数据(PREV_DATA)为空且COHORT_DB中无历史快照，无法进行对比。");
     }
 
