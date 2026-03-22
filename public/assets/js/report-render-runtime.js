@@ -9,9 +9,7 @@ const readCloudStudentCompareContextSessionState = typeof window.readCloudStuden
         if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getCloudStudentCompareContext === 'function') {
             return CompareSessionStateRuntime.getCloudStudentCompareContext() || null;
         }
-        return window.CLOUD_STUDENT_COMPARE_CONTEXT && typeof window.CLOUD_STUDENT_COMPARE_CONTEXT === 'object'
-            ? window.CLOUD_STUDENT_COMPARE_CONTEXT
-            : null;
+        return null;
     });
 const readCurrentReportStudentSessionState = typeof window.readCurrentReportStudentState === 'function'
     ? window.readCurrentReportStudentState
@@ -29,7 +27,7 @@ const readDuplicateCompareExamsState = typeof window.readDuplicateCompareExamsSt
         if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getDuplicateCompareExams === 'function') {
             return CompareSessionStateRuntime.getDuplicateCompareExams() || [];
         }
-        return Array.isArray(window.DUPLICATE_COMPARE_EXAMS) ? window.DUPLICATE_COMPARE_EXAMS : [];
+        return [];
     });
 
 function getTrendBadge(current, previous, type = 'score') {

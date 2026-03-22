@@ -8,9 +8,7 @@ const readCloudStudentCompareContextSessionState = typeof window.readCloudStuden
         if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getCloudStudentCompareContext === 'function') {
             return CompareSessionStateRuntime.getCloudStudentCompareContext() || null;
         }
-        return window.CLOUD_STUDENT_COMPARE_CONTEXT && typeof window.CLOUD_STUDENT_COMPARE_CONTEXT === 'object'
-            ? window.CLOUD_STUDENT_COMPARE_CONTEXT
-            : null;
+        return null;
     });
 
 function getCloudPreviousRecord(student) {

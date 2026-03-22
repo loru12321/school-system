@@ -15864,9 +15864,7 @@ function findPreviousRecord(student) {
         ? window.readCloudStudentCompareContextState
         : (() => (window.CompareSessionState && typeof window.CompareSessionState.getCloudStudentCompareContext === 'function'
             ? (window.CompareSessionState.getCloudStudentCompareContext() || null)
-            : (window.CLOUD_STUDENT_COMPARE_CONTEXT && typeof window.CLOUD_STUDENT_COMPARE_CONTEXT === 'object'
-                ? window.CLOUD_STUDENT_COMPARE_CONTEXT
-                : null)));
+            : null));
     const cloudCompareContext = readCloudStudentCompareContextSessionState();
     if (cloudCompareContext?.previousRecord && isCloudContextLikelyCurrentTarget(student)) {
         return cloudCompareContext.previousRecord;
