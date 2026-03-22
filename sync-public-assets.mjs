@@ -22,6 +22,15 @@ export function collectReferencedJsAssets(html) {
   return refs;
 }
 
+export function collectLazyLoadedJsAssets(sourceCode) {
+  const refs = new Set();
+  const lazyLoadRegex = /loadOptionalRuntime\([^,]+,\s*['"]\.\/assets\/js\/([^'"]+\.js)['"]\)/g;
+  for (const match of String(sourceCode || '').matchAll(lazyLoadRegex)) {
+    refs.add(String(match[1] || '').trim());
+  }
+  return refs;
+}
+
 export function syncReferencedAssets({
   sourceJsDir = sourceDir,
   targetJsDir = targetDir,
@@ -36,6 +45,13 @@ export function syncReferencedAssets({
 
   const sourceIndexHtml = fs.readFileSync(indexHtmlPath, 'utf8');
   const referencedAssets = collectReferencedJsAssets(sourceIndexHtml);
+  const resolvedBootRuntimePath = path.join(sourceJsDir, 'boot-runtime.js');
+  if (fs.existsSync(resolvedBootRuntimePath)) {
+    const bootRuntime = fs.readFileSync(resolvedBootRuntimePath, 'utf8');
+    for (const asset of collectLazyLoadedJsAssets(bootRuntime)) {
+      referencedAssets.add(asset);
+    }
+  }
 
   for (const entry of fs.readdirSync(targetJsDir, { withFileTypes: true })) {
     if (!entry.isFile() || !entry.name.endsWith('.js')) continue;

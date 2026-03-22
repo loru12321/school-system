@@ -7,7 +7,7 @@ const { pathToFileURL } = require('url');
 async function main() {
   const projectRoot = path.resolve(__dirname, '..');
   const moduleUrl = pathToFileURL(path.join(projectRoot, 'sync-public-assets.mjs')).href;
-  const { collectReferencedJsAssets, syncReferencedAssets } = await import(moduleUrl);
+  const { collectReferencedJsAssets, collectLazyLoadedJsAssets, syncReferencedAssets } = await import(moduleUrl);
 
   const sampleHtml = [
     '<script defer src="./assets/js/app.js?v=1"></script>',
@@ -23,6 +23,17 @@ async function main() {
   assert.ok(refs.has('teacher-analysis-main-runtime.js'), 'should include other referenced local assets');
   assert.strictEqual(refs.has('xlsx.full.min.js'), false, 'should ignore external CDN scripts');
 
+  const lazyRefs = collectLazyLoadedJsAssets(`
+    window.ensureFoo = function () {
+      return loadOptionalRuntime('foo', './assets/js/foo-runtime.js');
+    };
+    window.ensureBar = function () {
+      return loadOptionalRuntime('bar', "./assets/js/bar-runtime.js");
+    };
+  `);
+  assert.ok(lazyRefs.has('foo-runtime.js'), 'should collect lazy-loaded runtime assets');
+  assert.ok(lazyRefs.has('bar-runtime.js'), 'should collect double-quoted lazy-loaded assets');
+
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'sync-public-assets-'));
   const sourceJsDir = path.join(tempRoot, 'public', 'assets', 'js');
   const targetJsDir = path.join(tempRoot, 'dist', 'assets', 'js');
@@ -35,8 +46,11 @@ async function main() {
 
   const verboseJs = `function longName(){const veryLongVariableName = 1 + 2; return veryLongVariableName;}\nwindow.answer = longName();\n`;
   const unusedJs = `window.shouldNotExist = true;\n`;
+  const bootRuntime = `window.ensureLazy = function(){return loadOptionalRuntime('lazy', './assets/js/lazy-runtime.js');};\n`;
   fs.writeFileSync(path.join(sourceJsDir, 'app.js'), verboseJs, 'utf8');
   fs.writeFileSync(path.join(sourceJsDir, 'unused.js'), unusedJs, 'utf8');
+  fs.writeFileSync(path.join(sourceJsDir, 'boot-runtime.js'), bootRuntime, 'utf8');
+  fs.writeFileSync(path.join(sourceJsDir, 'lazy-runtime.js'), 'window.lazyLoaded = true;\n', 'utf8');
   fs.writeFileSync(path.join(srcDir, 'index.html'), '<script src="./assets/js/app.js?v=1"></script>', 'utf8');
   fs.writeFileSync(path.join(publicDir, 'favicon.ico'), 'ico', 'utf8');
   fs.writeFileSync(path.join(targetJsDir, 'stale.js'), 'window.stale = true;', 'utf8');
@@ -49,9 +63,11 @@ async function main() {
   });
 
   const syncedAppPath = path.join(targetJsDir, 'app.js');
+  const syncedLazyPath = path.join(targetJsDir, 'lazy-runtime.js');
   const skippedPath = path.join(targetJsDir, 'unused.js');
   const stalePath = path.join(targetJsDir, 'stale.js');
   assert.ok(fs.existsSync(syncedAppPath), 'should sync referenced assets');
+  assert.ok(fs.existsSync(syncedLazyPath), 'should sync lazily loaded assets referenced by boot runtime');
   assert.strictEqual(fs.existsSync(skippedPath), false, 'should skip unreferenced assets');
   assert.strictEqual(fs.existsSync(stalePath), false, 'should remove stale target assets that are no longer referenced');
   const minifiedJs = fs.readFileSync(syncedAppPath, 'utf8');
