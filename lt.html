@@ -42307,7 +42307,7 @@ function updateProgressBaselineSelect() {
             sel.innerHTML += `<option value="${ex.examId}">${ex.examId}</option>`;
         }
     });
-    sel.onchange = () => { window.PROGRESS_CACHE = []; };
+    sel.onchange = () => { setProgressCacheState([]); };
 }
 
 function getBaselineDataFromExam(examId) {
@@ -42336,6 +42336,17 @@ const setMultiPeriodCompareCacheState = typeof window.setMultiPeriodCompareCache
         return nextCache;
     });
 // 多期对比选择器运行时已拆分到 public/assets/js/compare-selectors-runtime.js
+
+const readProgressCacheState = typeof window.readProgressCacheState === 'function'
+    ? window.readProgressCacheState
+    : (() => (Array.isArray(window.PROGRESS_CACHE) ? window.PROGRESS_CACHE : []));
+const setProgressCacheState = typeof window.setProgressCacheState === 'function'
+    ? window.setProgressCacheState
+    : ((rows) => {
+        const nextRows = Array.isArray(rows) ? rows : [];
+        window.PROGRESS_CACHE = nextRows;
+        return nextRows;
+    });
 
 function setProgressBaselineStatus(message, tone = 'info') {
     const statusEl = document.getElementById('va-data-status');
@@ -42473,7 +42484,7 @@ function updateProgressBaselineSelect() {
     if (preferredId) sel.value = preferredId;
 
     sel.onchange = () => {
-        window.PROGRESS_CACHE = [];
+        setProgressCacheState([]);
         window.__PROGRESS_BASELINE_ACTIVE_ID = '';
         Promise.resolve(ensureProgressBaselineData({
             allowCloudSync: false,
@@ -42576,14 +42587,14 @@ async function ensureProgressBaselineData(options = {}) {
     }
 
     const baselineChanged = String(window.__PROGRESS_BASELINE_ACTIVE_ID || '') !== String(baselineId || '');
-    if (baselineChanged) window.PROGRESS_CACHE = [];
+    if (baselineChanged) setProgressCacheState([]);
     window.__PROGRESS_BASELINE_ACTIVE_ID = baselineId || '';
     PREV_DATA = baselineData;
     window.PREV_DATA = baselineData;
     setProgressBaselineStatus(`✅ 已自动加载上次考试数据（${baselineData.length} 条）${baselineId ? `：${baselineId}` : ''}`, 'success');
 
     try {
-        if (!window.PROGRESS_CACHE || window.PROGRESS_CACHE.length === 0) {
+        if (readProgressCacheState().length === 0) {
             if (typeof performSilentMatching === 'function') performSilentMatching();
         }
         if (rerenderReport && typeof renderValueAddedReport === 'function') {
