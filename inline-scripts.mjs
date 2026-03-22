@@ -8,11 +8,6 @@ const __dirname = path.dirname(__filename);
 const htmlPath = path.join(__dirname, 'dist', 'index.html');
 const outPath = path.join(__dirname, 'lt.html');
 
-if (!fs.existsSync(htmlPath)) {
-    console.error('dist/index.html not found!');
-    process.exit(1);
-}
-
 // Keep original script semantics intact; only normalize newlines.
 function normalizeScript(content) {
     return String(content || '').replace(/\r\n/g, '\n');
@@ -24,43 +19,50 @@ function applySyncFixes(content) {
     return content.replace(/if\s*\(\s*res\.success\s*&&\s*res\.count\s*>\s*0\s*\)/g, 'if (res.success)');
 }
 
-let html = fs.readFileSync(htmlPath, 'utf-8');
+function resolvePublicScriptPath(projectRoot, src) {
+    const relativeSrc = src.replace(/^(\.\/|\/)/, '').split('?')[0].split('#')[0];
+    return path.join(projectRoot, 'public', relativeSrc);
+}
 
-// Use regex to locate tags like <script src="./assets/js/cloud.js"></script>
-const scriptRegex = /<script\s+src="([^"]+)"\s*><\/script>/gi;
+function normalizeScriptAttrs(beforeSrc = '', afterSrc = '') {
+    return `${beforeSrc} ${afterSrc}`.replace(/\s+/g, ' ').trim();
+}
 
-html = html.replace(scriptRegex, (match, src) => {
-    // Check if it's a local file
-    if (src.startsWith('./') || src.startsWith('/')) {
-        // Strip leading ./ or /
-        const relativeSrc = src.replace(/^(\.\/|\/)/, '').split('?')[0].split('#')[0];
-        // Search in public folder directly 
-        const publicPath = path.join(__dirname, 'public', relativeSrc);
+// Use regex to locate tags like <script defer src="./assets/js/cloud.js?v=1"></script>
+export function inlineLocalScripts(html, { projectRoot = __dirname } = {}) {
+    const scriptRegex = /<script([^>]*)\bsrc="([^"]+)"([^>]*)><\/script>/gi;
 
-        if (fs.existsSync(publicPath)) {
-            console.log(`Inlining script: ${publicPath}`);
-            let content = fs.readFileSync(publicPath, 'utf-8');
-            
-            // Apply sync fixes only; avoid regex minification that can break JS runtime semantics.
-            content = applySyncFixes(content);
-            content = normalizeScript(content);
-            
-            return `<script>\n${content}\n</script>`;
-        } else {
-            console.warn(`Local script not found: ${publicPath}`);
+    return String(html || '').replace(scriptRegex, (match, beforeSrc, src, afterSrc) => {
+        if (!(src.startsWith('./') || src.startsWith('/'))) {
+            return match;
         }
-    }
-    return match; // Return unchanged if not found or if it's external (e.g. CDN)
-});
+
+        const publicPath = resolvePublicScriptPath(projectRoot, src);
+        if (!fs.existsSync(publicPath)) {
+            console.warn(`Local script not found: ${publicPath}`);
+            return match;
+        }
+
+        console.log(`Inlining script: ${publicPath}`);
+        let content = fs.readFileSync(publicPath, 'utf-8');
+        content = applySyncFixes(content);
+        content = normalizeScript(content);
+
+        const attrs = normalizeScriptAttrs(beforeSrc, afterSrc);
+        return attrs
+            ? `<script ${attrs}>\n${content}\n</script>`
+            : `<script>\n${content}\n</script>`;
+    });
+}
 
 // =====================================================================
-// 🔴 FIX: viteSingleFile strips ALL external <script> tags from <head>.
-// We must re-inject them so the deployed build has Supabase, XLSX, etc.
+// viteSingleFile strips external <script> tags from <head>.
+// Re-inject them so the deployed build keeps Supabase, XLSX, and other CDNs.
 // =====================================================================
 const cdnScripts = `
-    <!-- 🔧 Re-injected by inline-scripts.mjs (viteSingleFile strips these) -->
+    <!-- Re-injected by inline-scripts.mjs (viteSingleFile strips these) -->
     <script>
-        // ✅ 兜底初始化 Supabase，防止 sbClient 未定义
+        // Fallback Supabase init so sbClient is always available.
         var sbClient = window.sbClient || null;
         window.SUPABASE_URL = localStorage.getItem('SUPABASE_URL') || "https://okwcciujnfvobbwaydiv.supabase.co";
         window.SUPABASE_KEY = localStorage.getItem('SUPABASE_KEY') || "sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4";
@@ -69,7 +71,7 @@ const cdnScripts = `
             if (window.supabase && !sbClient) {
                 sbClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
                 window.sbClient = sbClient;
-                console.log("✅ Supabase 连接初始化成功");
+                console.log("Supabase initialized");
             }
         };
     </script>
@@ -91,13 +93,31 @@ const cdnScripts = `
         onerror="this.onerror=null;this.src='https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js'"></script>
 `;
 
-// Inject right before </head>
-if (html.includes('</head>')) {
-    html = html.replace('</head>', cdnScripts + '\n</head>');
-    console.log('✅ Injected CDN scripts and Supabase init into lt.html');
-} else {
-    console.warn('⚠️ Could not find </head> tag to inject CDN scripts!');
+function injectCdnScripts(html) {
+    if (!html.includes('</head>')) {
+        console.warn('Could not find </head> tag to inject CDN scripts.');
+        return html;
+    }
+    console.log('Injected CDN scripts and Supabase init into lt.html');
+    return html.replace('</head>', cdnScripts + '\n</head>');
 }
 
-fs.writeFileSync(outPath, html, 'utf-8');
-console.log('Successfully generated lt.html with inlined and minified local scripts.');
+export function buildLtHtml(html, { projectRoot = __dirname } = {}) {
+    return injectCdnScripts(inlineLocalScripts(html, { projectRoot }));
+}
+
+function main() {
+    if (!fs.existsSync(htmlPath)) {
+        console.error('dist/index.html not found!');
+        process.exit(1);
+    }
+
+    const html = fs.readFileSync(htmlPath, 'utf-8');
+    const output = buildLtHtml(html, { projectRoot: __dirname });
+    fs.writeFileSync(outPath, output, 'utf-8');
+    console.log('Successfully generated lt.html with inlined local scripts.');
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+    main();
+}
