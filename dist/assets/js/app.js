@@ -36,20 +36,20 @@ var q,W,K,Y;window.onerror=function(e,t,n,o,s){return e.includes("Script error")
                     <div class="sk-card skeleton" style="flex:1;"><div class="sk-chart"></div></div>
                     <div class="sk-card skeleton" style="flex:1;"><div class="sk-chart"></div></div>
                 </div>
-            `,setTimeout(async()=>{var h;if(!RAW_DATA||RAW_DATA.length===0){a.innerHTML=`<div style="text-align:center; padding:50px; color:#666;">
+            `,setTimeout(async()=>{var y;if(!RAW_DATA||RAW_DATA.length===0){a.innerHTML=`<div style="text-align:center; padding:50px; color:#666;">
                         <i class="ti ti-database-off" style="font-size:48px; margin-bottom:10px; display:block;"></i>
                         数据加载中...<br><small>请稍候 (如长时间无反应请刷新)</small>
-                    </div>`,!this._parentRenderRetrying&&typeof loadCloudData=="function"&&(this._parentRenderRetrying=!0,loadCloudData().then(()=>{RAW_DATA&&RAW_DATA.length>0&&this.renderParentView()}).catch(p=>{console.warn("家长视图自动重试拉取失败:",p)}).finally(()=>{this._parentRenderRetrying=!1}));return}const i=readCurrentReportStudentState(),c=(i&&i.scores&&normalizeCompareName(i.name||"")===normalizeCompareName(((h=this.currentUser)==null?void 0:h.name)||"")?i:null)||getCurrentBoundStudentFromUser(this.currentUser)||RAW_DATA.find(p=>p.name===this.currentUser.name&&p.class===this.currentUser.class);if(!c){a.innerHTML=`<div style="text-align:center; padding:50px; color:red;">
+                    </div>`,!this._parentRenderRetrying&&typeof loadCloudData=="function"&&(this._parentRenderRetrying=!0,loadCloudData().then(()=>{RAW_DATA&&RAW_DATA.length>0&&this.renderParentView()}).catch(b=>{console.warn("家长视图自动重试拉取失败:",b)}).finally(()=>{this._parentRenderRetrying=!1}));return}const i=readCurrentReportStudentState(),l=typeof normalizeCompareName=="function"?b=>normalizeCompareName(b):b=>String(b||"").replace(/\s+/g,"").toLowerCase(),c=typeof normalizeClass=="function"?b=>normalizeClass(b):b=>String(b||"").replace(/\s+/g,""),d=i&&i.scores&&l(i.name||"")===l(((y=this.currentUser)==null?void 0:y.name)||"")?i:null,u=typeof getCurrentBoundStudentFromUser=="function"?getCurrentBoundStudentFromUser(this.currentUser):null;!u&&typeof getCurrentBoundStudentFromUser!="function"&&console.warn("[ParentView] getCurrentBoundStudentFromUser is unavailable, fallback to RAW_DATA lookup");const f=d||u||RAW_DATA.find(b=>{var E,w;return l((b==null?void 0:b.name)||"")===l(((E=this.currentUser)==null?void 0:E.name)||"")&&c((b==null?void 0:b.class)||"")===c(((w=this.currentUser)==null?void 0:w.class)||"")});if(!f){a.innerHTML=`<div style="text-align:center; padding:50px; color:red;">
                         ❌ 未找到学生【${this.currentUser.name}】（${this.currentUser.class}班）的数据。<br>
                         请联系班主任确认名单是否已上传。
-                    </div>`;return}if(typeof window.ensureReportRenderRuntimeLoaded=="function")try{await window.ensureReportRenderRuntimeLoaded()}catch(p){console.error("Failed to load report render runtime for parent view:",p),a.innerHTML=`<div style="text-align:center; padding:50px; color:red;">
+                    </div>`;return}if(typeof window.ensureReportRenderRuntimeLoaded=="function")try{await window.ensureReportRenderRuntimeLoaded()}catch(b){console.error("Failed to load report render runtime for parent view:",b),a.innerHTML=`<div style="text-align:center; padding:50px; color:red;">
                         Report runtime failed to load. Please refresh and try again.
-                    </div>`;return}let d=renderSingleReportCardHTML(c,"A4");d=d.replace(/<button.*AI 深度生成.*<\/button>/,"");const u=TEACHER_MAP[c.class+"_班主任"]||"班主任";d=d.replace(/<input.*id="inp-teacher-name".*?>/,`<span style="font-weight:bold">${u}</span>`);const f=c.name.replace(/'/g,"\\'").replace(/"/g,"&quot;"),m=c.class.replace(/'/g,"\\'").replace(/"/g,"&quot;"),g=c.school.replace(/'/g,"\\'").replace(/"/g,"&quot;");d+=`
+                    </div>`;return}let m=renderSingleReportCardHTML(f,"A4");m=m.replace(/<button.*AI 深度生成.*<\/button>/,"");const g=TEACHER_MAP[f.class+"_班主任"]||"班主任";m=m.replace(/<input.*id="inp-teacher-name".*?>/,`<span style="font-weight:bold">${g}</span>`);const h=f.name.replace(/'/g,"\\'").replace(/"/g,"&quot;"),p=f.class.replace(/'/g,"\\'").replace(/"/g,"&quot;"),S=f.school.replace(/'/g,"\\'").replace(/"/g,"&quot;");m+=`
                     <div style="text-align:center; margin-top:30px; padding-bottom:80px; border-top:1px dashed #e5e7eb; padding-top:20px;">
                         <p style="font-size:14px; color:#64748b; margin-bottom:15px;">数据有疑问？</p>
                         <!-- 核心修复：使用转义后的变量 -->
                         <button class="btn" style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; font-size:16px; padding:10px 20px; margin-bottom:20px;" 
-                                onclick="IssueManager.openSubmitModal('${f}', '${m}', '${g}')">
+                                onclick="IssueManager.openSubmitModal('${h}', '${p}', '${S}')">
                             <i class="ti ti-alert-circle"></i> 申请成绩核查
                         </button>
                         
@@ -58,7 +58,7 @@ var q,W,K,Y;window.onerror=function(e,t,n,o,s){return e.includes("Script error")
                             退出登录
                         </button>
                     </div>
-                `,a.innerHTML=d,enhanceStudentReportMetrics(a),setTimeout(()=>{try{typeof renderRadarChart=="function"&&renderRadarChart(c),typeof renderVarianceChart=="function"&&renderVarianceChart(c)}catch(p){console.error("图表渲染失败:",p)}},200)},500)},renderSchoolCheckboxes:function(){const e=document.getElementById("admin-gen-school-list");if(!e)return;if(typeof SCHOOLS=="undefined"||Object.keys(SCHOOLS).length===0){e.innerHTML='<div style="color:#999; text-align:center; padding:10px;">暂无数据，请先上传成绩</div>';return}let t="";Object.keys(SCHOOLS).forEach(n=>{t+=`
+                `,a.innerHTML=m,enhanceStudentReportMetrics(a),setTimeout(()=>{try{typeof renderRadarChart=="function"&&renderRadarChart(f),typeof renderVarianceChart=="function"&&renderVarianceChart(f)}catch(b){console.error("图表渲染失败:",b)}},200)},500)},renderSchoolCheckboxes:function(){const e=document.getElementById("admin-gen-school-list");if(!e)return;if(typeof SCHOOLS=="undefined"||Object.keys(SCHOOLS).length===0){e.innerHTML='<div style="color:#999; text-align:center; padding:10px;">暂无数据，请先上传成绩</div>';return}let t="";Object.keys(SCHOOLS).forEach(n=>{t+=`
                     <label style="display:flex; align-items:center; margin-bottom:3px; cursor:pointer;">
                         <input type="checkbox" class="gen-school-check" value="${n}" checked>
                         <span style="margin-left:5px;">${n}</span>

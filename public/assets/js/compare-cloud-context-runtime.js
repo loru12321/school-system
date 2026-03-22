@@ -1,13 +1,43 @@
 (function (root, factory) {
     function installCompareCloudContext(target, runtime) {
         if (!target || !runtime) return runtime;
+        const readContext = function () {
+            if (typeof target.readCloudStudentCompareContextState === 'function') {
+                return target.readCloudStudentCompareContextState() || null;
+            }
+            if (target.CompareSessionState && typeof target.CompareSessionState.getCloudStudentCompareContext === 'function') {
+                return target.CompareSessionState.getCloudStudentCompareContext() || null;
+            }
+            return target.CLOUD_STUDENT_COMPARE_CONTEXT || null;
+        };
+        const resolveTargetUser = function () {
+            const currentUser = typeof target.getCurrentUser === 'function'
+                ? target.getCurrentUser()
+                : (target.Auth && target.Auth.currentUser) || null;
+            return typeof target.resolveCloudCompareTarget === 'function'
+                ? target.resolveCloudCompareTarget(currentUser)
+                : currentUser;
+        };
+        const resolveOptions = function () {
+            return {
+                normalizeCompareName: target.normalizeCompareName || runtime.normalizeCompareName,
+                normalizeClass: target.normalizeClass
+            };
+        };
         target.CompareCloudContext = runtime;
         target.normalizeCompareCloudName = runtime.normalizeCompareName;
+        target.normalizeCompareName = target.normalizeCompareName || runtime.normalizeCompareName;
         target.isCloudCompareClassEquivalent = function (a, b, normalizeClassFn) {
             return runtime.isClassEquivalent(a, b, { normalizeClass: normalizeClassFn });
         };
         target.isCloudCompareContextMatchStudent = runtime.isContextMatchStudent;
         target.isCloudCompareContextLikelyCurrentTarget = runtime.isLikelyCurrentTarget;
+        target.isCloudContextMatchStudent = function (student) {
+            return runtime.isContextMatchStudent(readContext(), student, resolveOptions());
+        };
+        target.isCloudContextLikelyCurrentTarget = function (student) {
+            return runtime.isLikelyCurrentTarget(readContext(), student, resolveTargetUser(), resolveOptions());
+        };
         return runtime;
     }
 

@@ -2600,12 +2600,29 @@ const Auth = {
 
             // 容错查找：优先使用当前报告学生（云端对比命中后会写入）
             const currentReportStudent = readCurrentReportStudentState();
+            const normalizeParentName = typeof normalizeCompareName === 'function'
+                ? (value) => normalizeCompareName(value)
+                : (value) => String(value || '').replace(/\s+/g, '').toLowerCase();
+            const normalizeParentClass = typeof normalizeClass === 'function'
+                ? (value) => normalizeClass(value)
+                : (value) => String(value || '').replace(/\s+/g, '');
             const stuFromCurrent = currentReportStudent && currentReportStudent.scores && (
-                normalizeCompareName(currentReportStudent.name || '') === normalizeCompareName(this.currentUser?.name || '')
+                normalizeParentName(currentReportStudent.name || '') === normalizeParentName(this.currentUser?.name || '')
             ) ? currentReportStudent : null;
 
-            // 回退：姓名 + 班级(宽容匹配)
-            const stu = stuFromCurrent || getCurrentBoundStudentFromUser(this.currentUser) || RAW_DATA.find(s => s.name === this.currentUser.name && s.class === this.currentUser.class);
+            // 回退：优先使用云端对比运行时的绑定学生；若运行时未加载，则直接在当前成绩库中兜底查找
+            const boundStudent = typeof getCurrentBoundStudentFromUser === 'function'
+                ? getCurrentBoundStudentFromUser(this.currentUser)
+                : null;
+            if (!boundStudent && typeof getCurrentBoundStudentFromUser !== 'function') {
+                console.warn('[ParentView] getCurrentBoundStudentFromUser is unavailable, fallback to RAW_DATA lookup');
+            }
+            const stu = stuFromCurrent
+                || boundStudent
+                || RAW_DATA.find(s =>
+                    normalizeParentName(s?.name || '') === normalizeParentName(this.currentUser?.name || '') &&
+                    normalizeParentClass(s?.class || '') === normalizeParentClass(this.currentUser?.class || '')
+                );
 
             if (!stu) {
                 container.innerHTML = `<div style="text-align:center; padding:50px; color:red;">
