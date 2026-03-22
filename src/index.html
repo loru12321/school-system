@@ -1448,7 +1448,7 @@
                 /* Force touch */
             }
 
-            #login-overlay>div {
+            #login-overlay>div:not(.login-shell) {
                 width: 100% !important;
                 max-width: 100% !important;
                 border: none !important;
@@ -1533,7 +1533,7 @@
             background: linear-gradient(120deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.18));
         }
 
-        #login-overlay>div {
+        #login-overlay>div:not(.login-shell) {
             position: relative;
             width: min(430px, 100%) !important;
             max-width: 430px !important;
@@ -1550,7 +1550,7 @@
             overflow-y: auto;
         }
 
-        #login-overlay>div::after {
+        #login-overlay>div:not(.login-shell)::after {
             content: "";
             position: absolute;
             width: 180px;
@@ -1843,7 +1843,7 @@
                 align-items: stretch !important;
             }
 
-            #login-overlay>div {
+            #login-overlay>div:not(.login-shell) {
                 margin-top: 0 !important;
                 width: 100% !important;
                 max-width: 100% !important;
@@ -2020,15 +2020,16 @@
             animation: loginRefreshGlow 12s ease-in-out infinite reverse;
         }
 
+        #login-overlay>.login-shell,
         .login-shell {
             position: relative;
             z-index: 1;
-            width: min(1480px, 100%) !important;
-            max-width: 1480px !important;
+            width: 100% !important;
+            max-width: none !important;
             min-height: calc(100vh - (clamp(14px, 2vw, 26px) * 2)) !important;
             display: grid !important;
-            grid-template-columns: minmax(0, 1.24fr) minmax(360px, 430px) !important;
-            gap: 22px !important;
+            grid-template-columns: minmax(720px, 1.5fr) minmax(500px, 560px) !important;
+            gap: 28px !important;
             padding: 0 !important;
             background: transparent !important;
             border: none !important;
@@ -2038,6 +2039,7 @@
             -webkit-backdrop-filter: none !important;
         }
 
+        #login-overlay>.login-shell::after,
         .login-shell::after {
             content: none !important;
             display: none !important;
@@ -2052,7 +2054,7 @@
 
         .login-stage {
             overflow: hidden;
-            padding: 38px 40px 34px;
+            padding: 48px 52px 40px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -2362,7 +2364,7 @@
         }
 
         .login-auth-panel {
-            padding: 28px;
+            padding: 34px;
             overflow-y: auto;
             background: var(--login-panel-bg);
             border: 1px solid var(--login-panel-border);
@@ -2415,7 +2417,7 @@
 
         .login-auth-panel h1 {
             margin: 12px 0 10px !important;
-            font-size: clamp(30px, 2.5vw, 40px) !important;
+            font-size: clamp(34px, 2.8vw, 46px) !important;
             line-height: 1.04;
             font-weight: 900 !important;
             letter-spacing: -0.03em;
@@ -2580,7 +2582,7 @@
 
         .login-auth-card {
             margin-top: 18px;
-            padding: 20px;
+            padding: 24px;
             border-radius: 28px;
             background: rgba(255, 255, 255, 0.78);
             border: 1px solid rgba(15, 23, 42, 0.08);
@@ -2701,8 +2703,11 @@
         }
 
         @media screen and (max-width: 1180px) {
+            #login-overlay>.login-shell,
             .login-shell {
-                grid-template-columns: minmax(0, 1fr) minmax(340px, 400px) !important;
+                width: 100% !important;
+                max-width: none !important;
+                grid-template-columns: minmax(0, 1fr) minmax(420px, 480px) !important;
             }
 
             .login-stage {
@@ -2719,9 +2724,12 @@
                 padding: 10px !important;
             }
 
+            #login-overlay>.login-shell,
             .login-shell {
                 min-height: auto !important;
                 grid-template-columns: 1fr !important;
+                width: 100% !important;
+                max-width: 100% !important;
             }
 
             .login-stage {
