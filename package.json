@@ -34,6 +34,7 @@
     "sync": "npm run build && npm run push",
     "smoke:modules": "node scripts/smoke-all-modules.js",
     "smoke:modules:local": "node scripts/run-local-smoke.js",
+    "smoke:modules:lt": "node scripts/smoke-all-modules.js",
     "smoke:report-compare": "node scripts/smoke-report-compare.js",
     "preview": "vite preview"
   },
