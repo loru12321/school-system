@@ -4620,6 +4620,14 @@ const AccountManager = {
 };
 
 // 📊 [新增] 数据综合管理器 (学生/教师/档案/参数/目标)
+var syncChipEl = null;
+var inlineStatusGroupEl = null;
+
+function refreshDataManagerRailRefs() {
+    syncChipEl = document.getElementById('dm-tab-sync-chip');
+    inlineStatusGroupEl = document.getElementById('dm-tab-status-group');
+}
+
 const DataManager = {
     init: function () {
         window.DataManager = this;
@@ -4703,6 +4711,7 @@ const DataManager = {
             return alert("⛔ 权限不足：只有管理员或教务主任可操作底层数据。");
         }
 
+        refreshDataManagerRailRefs();
         document.getElementById('data-manager-modal').style.display = 'flex';
         this.decorateLayout();
         this.switchTab('student');
@@ -6778,7 +6787,8 @@ const DataManager = {
         const paramsEl = document.getElementById('dm-params-status');
         const targetsEl = document.getElementById('dm-targets-status');
         const syncChipEl = document.getElementById('dm-tab-sync-chip');
-        if (!summaryEl && !tipEl && !paramsEl && !targetsEl && !syncChipEl) return;
+        const inlineStatusGroupEl = document.getElementById('dm-tab-status-group');
+        if (!summaryEl && !tipEl && !paramsEl && !targetsEl && !syncChipEl && !inlineStatusGroupEl) return;
 
         const model = this.getDataManagerStatusModel();
         const toneMap = {
@@ -26478,7 +26488,9 @@ if (typeof DataManager !== 'undefined') {
         const tipEl = document.getElementById('dm-status-overview-tip');
         const paramsEl = document.getElementById('dm-params-status');
         const targetsEl = document.getElementById('dm-targets-status');
-        if (!summaryEl && !tipEl && !paramsEl && !targetsEl) return;
+        const syncChipEl = document.getElementById('dm-tab-sync-chip');
+        const inlineStatusGroupEl = document.getElementById('dm-tab-status-group');
+        if (!summaryEl && !tipEl && !paramsEl && !targetsEl && !syncChipEl && !inlineStatusGroupEl) return;
 
         const model = this.getDataManagerStatusModel();
         const toneMap = {
@@ -26630,6 +26642,38 @@ if (typeof DataManager !== 'undefined') {
                 </div>
             `;
             syncChipEl.title = hasSyncRecord ? `${lastSyncText} / ${lastSyncSource}` : '鏆傛棤浜戠鍚屾璁板綍';
+        }
+
+        if (inlineStatusGroupEl) {
+            const chipToneMap = {
+                success: 'is-success',
+                info: 'is-info',
+                warning: 'is-warning',
+                error: 'is-error',
+                neutral: ''
+            };
+            const buildInlineChip = (label, value, tone) => {
+                const toneClass = chipToneMap[tone] || '';
+                return `
+                    <div class="dm-inline-status ${toneClass}">
+                        <span class="dm-inline-dot"></span>
+                        <div class="dm-inline-copy">
+                            <strong>${label}</strong>
+                            <span>${value}</span>
+                        </div>
+                    </div>
+                `;
+            };
+            inlineStatusGroupEl.innerHTML = [
+                buildInlineChip('参数', paramsMeta.title, paramsMeta.tone),
+                buildInlineChip('目标', targetsMeta.title, targetsMeta.tone),
+                buildInlineChip('任课表', teachersMeta.title, teachersMeta.tone)
+            ].join('');
+            inlineStatusGroupEl.innerHTML = [
+                buildInlineChip('参数', paramsMeta.title, paramsMeta.tone),
+                buildInlineChip('目标', targetsMeta.title, targetsMeta.tone),
+                buildInlineChip('任课表', teachersMeta.title, teachersMeta.tone)
+            ].join('');
         }
 
         if (tipEl) {
