@@ -14,6 +14,39 @@
             window.STUDENT_MULTI_PERIOD_COMPARE_CACHE = nextCache;
             return nextCache;
         });
+    const readCloudCompareTargetSessionState = typeof window.readCloudCompareTargetState === 'function'
+        ? window.readCloudCompareTargetState
+        : (() => (window.CLOUD_COMPARE_TARGET && typeof window.CLOUD_COMPARE_TARGET === 'object'
+            ? window.CLOUD_COMPARE_TARGET
+            : null));
+    const setCloudCompareTargetSessionState = typeof window.setCloudCompareTargetState === 'function'
+        ? window.setCloudCompareTargetState
+        : ((target) => {
+            const nextTarget = target && typeof target === 'object' && !Array.isArray(target) ? target : null;
+            window.CLOUD_COMPARE_TARGET = nextTarget;
+            return nextTarget;
+        });
+    const readCloudStudentCompareContextSessionState = typeof window.readCloudStudentCompareContextState === 'function'
+        ? window.readCloudStudentCompareContextState
+        : (() => (window.CLOUD_STUDENT_COMPARE_CONTEXT && typeof window.CLOUD_STUDENT_COMPARE_CONTEXT === 'object'
+            ? window.CLOUD_STUDENT_COMPARE_CONTEXT
+            : null));
+    const setCloudStudentCompareContextSessionState = typeof window.setCloudStudentCompareContextState === 'function'
+        ? window.setCloudStudentCompareContextState
+        : ((context) => {
+            const nextContext = context && typeof context === 'object' && !Array.isArray(context) ? context : null;
+            window.CLOUD_STUDENT_COMPARE_CONTEXT = nextContext;
+            return nextContext;
+        });
+    const readCloudComparePrevDataBackupSessionState = typeof window.readCloudComparePrevDataBackupState === 'function'
+        ? window.readCloudComparePrevDataBackupState
+        : (() => (window.CLOUD_COMPARE_PREV_DATA_BACKUP ?? null));
+    const setCloudComparePrevDataBackupSessionState = typeof window.setCloudComparePrevDataBackupState === 'function'
+        ? window.setCloudComparePrevDataBackupState
+        : ((rows) => {
+            window.CLOUD_COMPARE_PREV_DATA_BACKUP = rows ?? null;
+            return window.CLOUD_COMPARE_PREV_DATA_BACKUP;
+        });
     const readCurrentReportStudentState = typeof window.readCurrentReportStudentState === 'function'
         ? window.readCurrentReportStudentState
         : (() => (CURRENT_REPORT_STUDENT && typeof CURRENT_REPORT_STUDENT === 'object'
@@ -35,9 +68,9 @@
         const snapshot = CompareSessionStateRuntime && typeof CompareSessionStateRuntime.syncCompareSessionState === 'function'
             ? CompareSessionStateRuntime.syncCompareSessionState(patch)
             : {
-                cloudCompareTarget: Object.prototype.hasOwnProperty.call(patch, 'cloudCompareTarget') ? patch.cloudCompareTarget : (Object.prototype.hasOwnProperty.call(patch, 'CLOUD_COMPARE_TARGET') ? patch.CLOUD_COMPARE_TARGET : (window.CLOUD_COMPARE_TARGET || CLOUD_COMPARE_TARGET || null)),
-                cloudStudentCompareContext: Object.prototype.hasOwnProperty.call(patch, 'cloudStudentCompareContext') ? patch.cloudStudentCompareContext : (Object.prototype.hasOwnProperty.call(patch, 'CLOUD_STUDENT_COMPARE_CONTEXT') ? patch.CLOUD_STUDENT_COMPARE_CONTEXT : (window.CLOUD_STUDENT_COMPARE_CONTEXT || CLOUD_STUDENT_COMPARE_CONTEXT || null)),
-                cloudComparePrevDataBackup: Object.prototype.hasOwnProperty.call(patch, 'cloudComparePrevDataBackup') ? patch.cloudComparePrevDataBackup : (Object.prototype.hasOwnProperty.call(patch, 'CLOUD_COMPARE_PREV_DATA_BACKUP') ? patch.CLOUD_COMPARE_PREV_DATA_BACKUP : (window.CLOUD_COMPARE_PREV_DATA_BACKUP ?? CLOUD_COMPARE_PREV_DATA_BACKUP ?? null))
+                cloudCompareTarget: Object.prototype.hasOwnProperty.call(patch, 'cloudCompareTarget') ? patch.cloudCompareTarget : (Object.prototype.hasOwnProperty.call(patch, 'CLOUD_COMPARE_TARGET') ? patch.CLOUD_COMPARE_TARGET : (readCloudCompareTargetSessionState() || CLOUD_COMPARE_TARGET || null)),
+                cloudStudentCompareContext: Object.prototype.hasOwnProperty.call(patch, 'cloudStudentCompareContext') ? patch.cloudStudentCompareContext : (Object.prototype.hasOwnProperty.call(patch, 'CLOUD_STUDENT_COMPARE_CONTEXT') ? patch.CLOUD_STUDENT_COMPARE_CONTEXT : (readCloudStudentCompareContextSessionState() || CLOUD_STUDENT_COMPARE_CONTEXT || null)),
+                cloudComparePrevDataBackup: Object.prototype.hasOwnProperty.call(patch, 'cloudComparePrevDataBackup') ? patch.cloudComparePrevDataBackup : (Object.prototype.hasOwnProperty.call(patch, 'CLOUD_COMPARE_PREV_DATA_BACKUP') ? patch.CLOUD_COMPARE_PREV_DATA_BACKUP : (readCloudComparePrevDataBackupSessionState() ?? CLOUD_COMPARE_PREV_DATA_BACKUP ?? null))
             };
         CLOUD_COMPARE_TARGET = snapshot.cloudCompareTarget || null;
         CLOUD_STUDENT_COMPARE_CONTEXT = snapshot.cloudStudentCompareContext || null;
@@ -51,15 +84,15 @@
             cloudStudentCompareContext: CLOUD_STUDENT_COMPARE_CONTEXT,
             cloudComparePrevDataBackup: CLOUD_COMPARE_PREV_DATA_BACKUP
         });
-        window.CLOUD_COMPARE_TARGET = snapshot.cloudCompareTarget || null;
-        window.CLOUD_STUDENT_COMPARE_CONTEXT = snapshot.cloudStudentCompareContext || null;
-        window.CLOUD_COMPARE_PREV_DATA_BACKUP = snapshot.cloudComparePrevDataBackup ?? null;
+        setCloudCompareTargetSessionState(snapshot.cloudCompareTarget || null);
+        setCloudStudentCompareContextSessionState(snapshot.cloudStudentCompareContext || null);
+        setCloudComparePrevDataBackupSessionState(snapshot.cloudComparePrevDataBackup ?? null);
     }
 
     syncLocalCompareSessionState({
-        cloudCompareTarget: window.CLOUD_COMPARE_TARGET || null,
-        cloudStudentCompareContext: window.CLOUD_STUDENT_COMPARE_CONTEXT || null,
-        cloudComparePrevDataBackup: window.CLOUD_COMPARE_PREV_DATA_BACKUP ?? null
+        cloudCompareTarget: readCloudCompareTargetSessionState() || null,
+        cloudStudentCompareContext: readCloudStudentCompareContextSessionState() || null,
+        cloudComparePrevDataBackup: readCloudComparePrevDataBackupSessionState() ?? null
     });
 
     function normalizeCompareName(name) {

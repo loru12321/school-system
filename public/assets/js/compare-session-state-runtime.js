@@ -1,31 +1,37 @@
 (function (root, factory) {
+    function installCompareSessionState(target, runtime) {
+        if (!target || !runtime) return runtime;
+        target.CompareSessionState = runtime;
+        target.readCloudCompareTargetState = runtime.getCloudCompareTarget;
+        target.setCloudCompareTargetState = runtime.setCloudCompareTarget;
+        target.readCloudStudentCompareContextState = runtime.getCloudStudentCompareContext;
+        target.setCloudStudentCompareContextState = runtime.setCloudStudentCompareContext;
+        target.readCloudComparePrevDataBackupState = runtime.getCloudComparePrevDataBackup;
+        target.setCloudComparePrevDataBackupState = runtime.setCloudComparePrevDataBackup;
+        target.readDuplicateCompareExamsState = runtime.getDuplicateCompareExams;
+        target.setDuplicateCompareExamsState = runtime.setDuplicateCompareExams;
+        target.readDuplicateCompareWarnedKeyState = runtime.getDuplicateCompareWarnedKey;
+        target.setDuplicateCompareWarnedKeyState = runtime.setDuplicateCompareWarnedKey;
+        target.readCompareExamSyncState = runtime.getCompareExamSyncState;
+        target.setCompareExamSyncState = runtime.setCompareExamSyncState;
+        target.ensureCompareExamSyncStateEntry = runtime.ensureCompareExamSyncStateEntry;
+        target.syncCompareSessionRuntimeState = runtime.syncCompareSessionState;
+        runtime.syncCompareSessionState(runtime.snapshotCompareSessionState());
+        return runtime;
+    }
+
     const runtime = factory(root || {});
 
     if (typeof module === 'object' && module.exports) {
         const createRuntime = function (overrideRoot) {
-            return factory(overrideRoot || root || {});
+            return installCompareSessionState(overrideRoot || root || {}, factory(overrideRoot || root || {}));
         };
         createRuntime.runtime = runtime;
         module.exports = createRuntime;
     }
 
     if (!root || root.CompareSessionState) return;
-    root.CompareSessionState = runtime;
-    root.readCloudCompareTargetState = runtime.getCloudCompareTarget;
-    root.setCloudCompareTargetState = runtime.setCloudCompareTarget;
-    root.readCloudStudentCompareContextState = runtime.getCloudStudentCompareContext;
-    root.setCloudStudentCompareContextState = runtime.setCloudStudentCompareContext;
-    root.readCloudComparePrevDataBackupState = runtime.getCloudComparePrevDataBackup;
-    root.setCloudComparePrevDataBackupState = runtime.setCloudComparePrevDataBackup;
-    root.readDuplicateCompareExamsState = runtime.getDuplicateCompareExams;
-    root.setDuplicateCompareExamsState = runtime.setDuplicateCompareExams;
-    root.readDuplicateCompareWarnedKeyState = runtime.getDuplicateCompareWarnedKey;
-    root.setDuplicateCompareWarnedKeyState = runtime.setDuplicateCompareWarnedKey;
-    root.readCompareExamSyncState = runtime.getCompareExamSyncState;
-    root.setCompareExamSyncState = runtime.setCompareExamSyncState;
-    root.ensureCompareExamSyncStateEntry = runtime.ensureCompareExamSyncStateEntry;
-    root.syncCompareSessionRuntimeState = runtime.syncCompareSessionState;
-    runtime.syncCompareSessionState(runtime.snapshotCompareSessionState());
+    installCompareSessionState(root, runtime);
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createCompareSessionStateRuntime(root) {
     function cloneJson(value, fallbackValue) {
         if (value == null) return fallbackValue;
