@@ -113,7 +113,10 @@ function buildTeacherCardList(statsObj, rankingObj, currentUserName = '', curren
     return arr;
 }
 
-document.addEventListener('alpine:init', () => {
+function ensureTeacherDataStore() {
+    if (!window.Alpine || typeof Alpine.store !== 'function') return false;
+    const existingStore = Alpine.store('teacherData');
+    if (existingStore) return true;
     Alpine.store('teacherData', {
         list: [], // 存放扁平化的教师数据
 
@@ -122,7 +125,24 @@ document.addEventListener('alpine:init', () => {
             this.list = buildTeacherCardList(statsObj, rankingObj, currentUserName, currentRole);
         }
     });
-});
+    return true;
+}
+
+function hydrateTeacherDataStore() {
+    if (!window.Alpine || typeof Alpine.store !== 'function') return false;
+    const store = Alpine.store('teacherData');
+    if (!store) return ensureTeacherDataStore();
+    if (!Array.isArray(store.list)) store.list = [];
+    if (typeof store.update !== 'function') {
+        store.update = function (statsObj, rankingObj, currentUserName = '', currentRole = 'guest') {
+            this.list = buildTeacherCardList(statsObj, rankingObj, currentUserName, currentRole);
+        };
+    }
+    return true;
+}
+
+document.addEventListener('alpine:init', hydrateTeacherDataStore);
+hydrateTeacherDataStore();
 // 深色模式切换逻辑
 function toggleDarkMode() {
     document.body.classList.toggle('dark-mode');

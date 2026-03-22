@@ -7,11 +7,9 @@
     <link rel="icon" href="./favicon.ico?v=20260321-localgrades-v4" sizes="any">
     <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
     <link rel="dns-prefetch" href="//unpkg.com">
-    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
     <link rel="dns-prefetch" href="//okwcciujnfvobbwaydiv.supabase.co">
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <link rel="preconnect" href="https://okwcciujnfvobbwaydiv.supabase.co" crossorigin>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 
@@ -46,6 +44,19 @@
                 window.scrollTo({ top: y, behavior: 'smooth' });
             }
         }
+    </script>
+    <script>
+        // Pre-register a minimal Alpine store so templates can read teacherData safely before the main runtime hydrates it.
+        window.ensureTeacherDataAlpineStore = function () {
+            if (!window.Alpine || typeof window.Alpine.store !== 'function') return;
+            const existing = window.Alpine.store('teacherData');
+            if (existing) {
+                if (!Array.isArray(existing.list)) existing.list = [];
+                return;
+            }
+            window.Alpine.store('teacherData', { list: [] });
+        };
+        document.addEventListener('alpine:init', window.ensureTeacherDataAlpineStore);
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"
         onload="window.initSupabase()"
@@ -3529,7 +3540,7 @@
                             <div class="teacher-cards-container" id="teacherCardsContainer" x-data>
 
                                 <!-- 空状态提示 -->
-                                <div x-show="$store.teacherData.list.length === 0"
+                                <div x-show="!$store.teacherData || $store.teacherData.list.length === 0"
                                     style="grid-column: 1/-1; text-align:center; color:#999; padding:20px;">
                                     暂无教师数据，请先在上方配置并导入。
                                     <div style="margin-top:10px;">
@@ -3538,7 +3549,7 @@
                                 </div>
 
                                 <!-- 循环渲染卡片 -->
-                                <template x-for="item in $store.teacherData.list" :key="item.id">
+                                <template x-for="item in ($store.teacherData ? $store.teacherData.list : [])" :key="item.id">
                                     <div class="teacher-card">
                                         <div class="teacher-header">
                                             <div>
@@ -6432,21 +6443,6 @@
     <script defer src="./assets/js/macro-compare-cloud-runtime.js?v=20260321-localgrades-v4"></script>
     <script defer src="./assets/js/data-manager-sql.js?v=20260321-localgrades-v4"></script>
     <script defer src="./assets/js/mobile-manager.js?v=20260321-security-v5"></script>
-    
-    <!-- ============ Phase 5: 全息教育大脑与元宇宙交互 ============ -->
-    <!-- 全息学情 3D 建模引擎 (需要 Three.js) -->
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script defer src="./assets/js/holographic-student-3d.js"></script>
-    
-    <!-- 学情预知与模拟实验室 -->
-    <script defer src="./assets/js/predictive-simulation-lab.js"></script>
-    
-    <!-- 元宇宙虚拟教研室 -->
-    <script defer src="./assets/js/metaverse-collab-space.js"></script>
-    
-    <!-- 智能情感与心理预警系统 -->
-    <script defer src="./assets/js/emotional-ai-monitor.js"></script>
-    
     <!-- 学生历史成绩对比功能 (内联) -->
     <script>
     // ====== 历史成绩对比功能代码 ======

@@ -61,7 +61,10 @@ const studentCompareCloudRef = './assets/js/student-compare-cloud-runtime.js';
 const cloudWorkspaceRef = './assets/js/cloud-workspace-runtime.js';
 const cloudRef = './assets/js/cloud.js';
 const appRef = './assets/js/app.js';
-const threeRef = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+const holographicRef = './assets/js/holographic-student-3d.js';
+const predictiveRef = './assets/js/predictive-simulation-lab.js';
+const metaverseRef = './assets/js/metaverse-collab-space.js';
+const emotionalRef = './assets/js/emotional-ai-monitor.js';
 
 function findScriptTag(html, src) {
     const normalizedSrc = src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -140,12 +143,20 @@ assert.ok(appIndex >= 0, 'index.html should load app.js');
     teacherAnalysisMainRef,
     studentCompareCloudRef,
     townSubmoduleCompareStateRef,
-    townSubmoduleCompareRef,
-    threeRef
+    townSubmoduleCompareRef
 ].forEach((src) => {
     const scriptTag = findScriptTag(indexHtml, src);
     assert.ok(scriptTag, `index.html should contain a script tag for ${src}`);
     assert.ok(/\sdefer(\s|>|=)/i.test(scriptTag), `${src} should load with defer`);
+});
+
+[
+    holographicRef,
+    predictiveRef,
+    metaverseRef,
+    emotionalRef
+].forEach((src) => {
+    assert.strictEqual(indexHtml.includes(src), false, `${src} should not be eagerly loaded on boot`);
 });
 assert.ok(authStateIndex < workspaceStateIndex, 'auth-state-runtime.js must load before workspace-state-runtime.js');
 assert.ok(workspaceStateIndex < examStateIndex, 'workspace-state-runtime.js must load before exam-state-runtime.js');
