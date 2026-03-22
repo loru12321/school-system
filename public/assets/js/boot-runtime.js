@@ -161,6 +161,10 @@ window.ensurePerfMobileRuntimeLoaded = function () {
     return loadOptionalRuntime('perf-mobile', './assets/js/perf-mobile-runtime.js');
 };
 
+window.ensureMobileManagerRuntimeLoaded = function () {
+    return loadOptionalRuntime('mobile-manager', './assets/js/mobile-manager.js');
+};
+
 window.ensureReportRenderRuntimeLoaded = function () {
     return loadOptionalRuntime('report-render', './assets/js/report-render-runtime.js');
 };
@@ -255,8 +259,16 @@ if (!window.AccountExcel) {
     installOptionalRuntimePlaceholder(name, `${name} runtime not loaded`);
 });
 
+if (window.innerWidth <= 960 || localStorage.getItem('DEV_MODE') === 'true') {
+    window.ensureMobileManagerRuntimeLoaded().catch((error) => {
+        console.warn(error);
+    });
+}
+
 if (window.innerWidth <= 768 || localStorage.getItem('DEV_MODE') === 'true') {
-    window.ensurePerfMobileRuntimeLoaded().catch((error) => {
+    window.ensureMobileManagerRuntimeLoaded().then(() => {
+        return window.ensurePerfMobileRuntimeLoaded();
+    }).catch((error) => {
         console.warn(error);
     });
 }
