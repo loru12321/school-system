@@ -1,400 +1,9 @@
-(() => {
-    if (typeof window === 'undefined' || window.__MOBILE_MANAGER_PATCHED__) return;
-
-    const MOBILE_BREAKPOINT = 960;
-    const REFRESH_DELAYS = [80, 260, 900];
-    const SHORTCUT_ORDER = [
-        'starter-hub',
-        'summary',
-        'teacher-analysis',
-        'student-details',
-        'progress-analysis',
-        'report-generator',
-        'teaching-warning-center',
-        'teaching-rectify-center',
-        'analysis',
-        'class-comparison'
-    ];
-    const ROLE_LABELS = {
-        admin: '管理员',
-        director: '校级管理',
-        grade_director: '级部主任',
-        class_teacher: '班主任',
-        teacher: '教师',
-        parent: '家长',
-        student: '学生',
-        guest: '访客'
-    };
-    const HOME_BY_ROLE = {
-        admin: 'starter-hub',
-        director: 'starter-hub',
-        grade_director: 'starter-hub',
-        class_teacher: 'student-details',
-        teacher: 'teacher-analysis'
-    };
-    const MESSAGE_ROLES = ['admin', 'director', 'grade_director', 'class_teacher'];
-    const ACCOUNT_MANAGER_ROLES = ['admin', 'director', 'grade_director', 'class_teacher'];
-    const DATA_MANAGER_ROLES = ['admin', 'director'];
-
-    let currentSheetMode = '';
-
-    function getEffectiveViewportWidth() {
-        const candidates = [
-            Number(window.innerWidth || 0),
-            Number(document.documentElement?.clientWidth || 0),
-            Number(window.outerWidth || 0),
-            Number(window.screen?.width || 0),
-            Number(window.screen?.availWidth || 0)
-        ].filter(value => Number.isFinite(value) && value > 0);
-        return candidates.length ? Math.min(...candidates) : 0;
-    }
-
-    function isMobileViewport() {
-        return getEffectiveViewportWidth() <= MOBILE_BREAKPOINT;
-    }
-
-    function escapeHtml(value) {
-        return String(value ?? '').replace(/[&<>"']/g, ch => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;'
-        }[ch]));
-    }
-
-    function stripEmoji(text) {
-        return String(text || '').replace(/[\u{1F300}-\u{1FAFF}]/gu, '').replace(/\s+/g, ' ').trim();
-    }
-
-    function getCurrentUser() {
-        if (window.AuthState && typeof window.AuthState.getCurrentUser === 'function') {
-            return window.AuthState.getCurrentUser();
-        }
-        if (window.Auth && window.Auth.currentUser) return window.Auth.currentUser;
-        return null;
-    }
-
-    function getCurrentRole() {
-        if (window.AuthState && typeof window.AuthState.getCurrentRole === 'function') {
-            return window.AuthState.getCurrentRole();
-        }
-        return String(getCurrentUser()?.role || document.body.dataset.role || 'guest').trim() || 'guest';
-    }
-
-    function getCurrentRoles() {
-        if (window.AuthState && typeof window.AuthState.getCurrentRoles === 'function') {
-            return window.AuthState.getCurrentRoles();
-        }
-        const user = getCurrentUser();
-        const rawRoles = Array.isArray(user?.roles) && user.roles.length ? user.roles : [user?.role].filter(Boolean);
-        return rawRoles.map(role => String(role || '').trim()).filter(Boolean);
-    }
-
-    function hasRole(allowedRoles) {
-        const roleSet = new Set(getCurrentRoles());
-        return allowedRoles.some(role => roleSet.has(role));
-    }
-
-    function getCurrentSchool() {
-        if (window.SchoolState && typeof window.SchoolState.getCurrentSchool === 'function') {
-            return String(
-                getCurrentUser()?.school ||
-                window.SchoolState.getCurrentSchool() ||
-                ''
-            ).trim();
-        }
-        return String(
-            getCurrentUser()?.school ||
-            window.MY_SCHOOL ||
-            localStorage.getItem('MY_SCHOOL') ||
-            ''
-        ).trim();
-    }
-
-    function humanizeRole(role) {
-        return ROLE_LABELS[String(role || '').trim()] || String(role || '访客');
-    }
-
-    function getNavStructure() {
-        if (window.NAV_STRUCTURE) return window.NAV_STRUCTURE;
-        try {
-            return NAV_STRUCTURE;
-        } catch {
-            return null;
-        }
-    }
-
-    function getCurrentCategoryKey() {
-        if (typeof window.getCurrentNavCategory === 'function') {
-            return String(window.getCurrentNavCategory() || '').trim();
-        }
-        try {
-            return String(currentCategory || '').trim();
-        } catch {
-            return '';
-        }
-    }
-
-    function switchCategoryKey(key) {
-        if (!key) return;
-        if (typeof window.switchNavCategory === 'function') {
-            window.switchNavCategory(key);
-            return;
-        }
-        try {
-            if (typeof switchCategory === 'function') switchCategory(key);
-        } catch {
-            // ignore
-        }
-    }
-
-    function canUseModule(id) {
-        const role = getCurrentRole();
-        if ((role === 'teacher' || role === 'class_teacher') && typeof window.canAccessModule === 'function' && !window.canAccessModule(id)) {
-            return false;
-        }
-        if (role === 'teacher' && ['single-school-eval', 'exam-arranger', 'freshman-simulator'].includes(id)) {
-            return false;
-        }
-        if (id === 'report-generator' && typeof window.CONFIG !== 'undefined' && window.CONFIG && !window.CONFIG.showQuery) {
-            return false;
-        }
-        return true;
-    }
-
-    function getAllowedCategories() {
-        const nav = getNavStructure();
-        if (!nav) return [];
-
-        const role = getCurrentRole();
-        const isRestricted = ['teacher', 'class_teacher'].includes(role);
-        const isTeacherRole = isRestricted;
-
-        return Object.keys(nav).filter((key) => {
-            if (isRestricted && (key === 'data' || key === 'tools')) return false;
-            if (isTeacherRole && key === 'town') return false;
-            return true;
-        }).map((key) => {
-            const category = nav[key];
-            return {
-                ...category,
-                key,
-                items: Array.isArray(category?.items) ? category.items.filter(item => canUseModule(item.id)) : []
-            };
-        }).filter(category => category.items.length > 0);
-    }
-
-    function findAllowedItem(itemId) {
-        const categories = getAllowedCategories();
-        for (const category of categories) {
-            const match = category.items.find(item => item.id === itemId);
-            if (match) {
-                return {
-                    ...match,
-                    categoryKey: category.key,
-                    categoryTitle: category.title,
-                    categoryColor: category.color
-                };
-            }
-        }
-        return null;
-    }
-
-    function getActiveSectionId() {
-        return document.querySelector('.section.active')?.id || '';
-    }
-
-    function getPrimaryModuleId() {
-        const role = getCurrentRole();
-        const preferred = HOME_BY_ROLE[role] || 'starter-hub';
-        const preferredItem = findAllowedItem(preferred);
-        if (preferredItem) return preferredItem.id;
-        return getAllowedCategories()[0]?.items?.[0]?.id || 'starter-hub';
-    }
-
-    function getActiveItem() {
-        return findAllowedItem(getActiveSectionId()) || findAllowedItem(getPrimaryModuleId()) || null;
-    }
-
-    function getCurrentCategory() {
-        const categories = getAllowedCategories();
-        const activeItem = getActiveItem();
-        if (activeItem) {
-            const category = categories.find(item => item.key === activeItem.categoryKey);
-            if (category) return category;
-        }
-        return categories.find(item => item.key === getCurrentCategoryKey()) || categories[0] || null;
-    }
-
-    function getShortcutItems() {
-        const allowMap = new Map();
-        const shortlist = [];
-        const seen = new Set();
-
-        getAllowedCategories().forEach(category => {
-            category.items.forEach(item => {
-                allowMap.set(item.id, {
-                    ...item,
-                    categoryKey: category.key,
-                    categoryTitle: category.title,
-                    categoryColor: category.color
-                });
-            });
-        });
-
-        [getPrimaryModuleId(), ...SHORTCUT_ORDER].forEach((itemId) => {
-            if (!itemId || seen.has(itemId) || !allowMap.has(itemId)) return;
-            seen.add(itemId);
-            shortlist.push(allowMap.get(itemId));
-        });
-
-        return shortlist.slice(0, 6);
-    }
-
-    function getSelectedText(selectId, fallback = '') {
-        const select = document.getElementById(selectId);
-        if (!select || !select.selectedOptions || !select.selectedOptions[0]) return fallback;
-        const text = String(select.selectedOptions[0].textContent || '').trim();
-        return text || fallback;
-    }
-
-    function getModeBadgeText() {
-        const badge = document.getElementById('mode-badge');
-        const text = String(badge?.textContent || '').trim();
-        if (text) return text;
-        return String(window.CONFIG?.name || '当前模式').trim();
-    }
-
-    function getCohortLabel() {
-        return getSelectedText('cohort-selector', '请选择届别');
-    }
-
-    function getCohortOptions() {
-        const select = document.getElementById('cohort-selector');
-        if (!select) return [];
-        return Array.from(select.options || [])
-            .filter(option => String(option.value || '').trim())
-            .map(option => ({
-                value: String(option.value || '').trim(),
-                label: String(option.textContent || option.value || '').trim()
-            }));
-    }
-
-    function setCohortValue(value) {
-        const select = document.getElementById('cohort-selector');
-        if (!select || !value) return;
-        select.value = value;
-        select.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-
-    function syncViewport() {
-        const viewport = document.querySelector('meta[name="viewport"]');
-        if (viewport) {
-            viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes');
-        }
-    }
-
-    function hideLegacyMobileShell() {
-        const mobApp = document.getElementById('mobile-manager-app');
-        if (mobApp) {
-            mobApp.style.display = 'none';
-        }
-    }
-
-    function showDesktopAppForMobile(role = '') {
-        if (role === 'parent') return;
-        const appEl = document.getElementById('app');
-        if (appEl) {
-            appEl.classList.remove('hidden');
-            appEl.style.display = '';
-        }
-    }
-
-    function hideAppForLoggedOut() {
-        const appEl = document.getElementById('app');
-        if (appEl) {
-            appEl.classList.add('hidden');
-            appEl.style.display = 'none';
-        }
-    }
-
-    function markResponsiveTables(scope = document) {
-        if (!isMobileViewport()) return;
-        const tables = scope.querySelectorAll('.table-wrap table, table.comparison-table, table.fluent-table, #tb-query, #studentDetailTable');
-        tables.forEach((table) => {
-            const headerRows = table.querySelectorAll('thead tr');
-            const headerCells = headerRows.length ? Array.from(headerRows[headerRows.length - 1].children) : [];
-            if (!headerCells.length) return;
-
-            table.classList.add('mobile-card-table');
-            Array.from(table.querySelectorAll('tbody tr')).forEach((row) => {
-                let title = '';
-                Array.from(row.children).forEach((cell, index) => {
-                    if (!(cell instanceof HTMLElement)) return;
-                    if (cell.hasAttribute('colspan')) return;
-                    const headerText = headerCells[index]?.textContent?.replace(/\s+/g, ' ').trim() || `字段${index + 1}`;
-                    const cellText = cell.textContent?.replace(/\s+/g, ' ').trim() || '';
-                    if (!title && cellText && index <= 1) {
-                        title = cellText;
-                    }
-                    cell.setAttribute('data-label', headerText);
-                });
-                if (title) {
-                    row.setAttribute('data-mobile-card-title', title);
-                }
-            });
-            table.dataset.mobileEnhanced = '1';
-        });
-    }
-
-    function markResponsiveLayouts(scope = document) {
-        if (!isMobileViewport()) return;
-
-        scope.querySelectorAll('.section [style*="grid-template-columns"]').forEach((element) => {
-            if (element.closest('#parent-view-container')) return;
-            element.classList.add('mobile-stack-grid');
-        });
-
-        scope.querySelectorAll('.section [style*="display:flex"]').forEach((element) => {
-            if (element.closest('#parent-view-container') || element.closest('#mobile-query-shell')) return;
-            if (element.children.length < 2) return;
-            element.classList.add('mobile-wrap-row');
-        });
-    }
-
-    function isLoggedIn() {
-        const overlay = document.getElementById('login-overlay');
-        const overlayVisible = !!(overlay && getComputedStyle(overlay).display !== 'none');
-        return !!getCurrentUser() && !overlayVisible;
-    }
-
-    function buildInlineSubnavHtml() {
-        const currentCategory = getCurrentCategory();
-        if (!currentCategory || !currentCategory.items.length) {
-            return '<div class="mq-inline-empty">当前分类暂无可用子模块</div>';
-        }
-
-        const activeItem = getActiveItem();
-        return currentCategory.items.map(item => {
-            const isActive = activeItem?.id === item.id;
-            return `
-                <button type="button" class="mq-inline-chip ${isActive ? 'is-active' : ''}" data-mobile-target="module" data-id="${escapeHtml(item.id)}" data-category="${escapeHtml(currentCategory.key)}">
-                    <i class="ti ${escapeHtml(item.icon || 'ti-layout-grid')}"></i>
-                    <span>${escapeHtml(stripEmoji(item.text || item.id))}</span>
+(()=>{if(typeof window=="undefined"||window.__MOBILE_MANAGER_PATCHED__)return;const U=960,j=[80,260,900],K=["starter-hub","summary","teacher-analysis","student-details","progress-analysis","report-generator","teaching-warning-center","teaching-rectify-center","analysis","class-comparison"],F={admin:"管理员",director:"校级管理",grade_director:"级部主任",class_teacher:"班主任",teacher:"教师",parent:"家长",student:"学生",guest:"访客"},G={admin:"starter-hub",director:"starter-hub",grade_director:"starter-hub",class_teacher:"student-details",teacher:"teacher-analysis"},W=["admin","director","grade_director","class_teacher"],Q=["admin","director","grade_director","class_teacher"],Y=["admin","director"];let p="";function z(){var e,n,i;const t=[Number(window.innerWidth||0),Number(((e=document.documentElement)==null?void 0:e.clientWidth)||0),Number(window.outerWidth||0),Number(((n=window.screen)==null?void 0:n.width)||0),Number(((i=window.screen)==null?void 0:i.availWidth)||0)].filter(o=>Number.isFinite(o)&&o>0);return t.length?Math.min(...t):0}function w(){return z()<=U}function r(t){return String(t!=null?t:"").replace(/[&<>"']/g,e=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[e])}function h(t){return String(t||"").replace(/[\u{1F300}-\u{1FAFF}]/gu,"").replace(/\s+/g," ").trim()}function b(){return window.AuthState&&typeof window.AuthState.getCurrentUser=="function"?window.AuthState.getCurrentUser():window.Auth&&window.Auth.currentUser?window.Auth.currentUser:null}function m(){var t;return window.AuthState&&typeof window.AuthState.getCurrentRole=="function"?window.AuthState.getCurrentRole():String(((t=b())==null?void 0:t.role)||document.body.dataset.role||"guest").trim()||"guest"}function $(){if(window.AuthState&&typeof window.AuthState.getCurrentRoles=="function")return window.AuthState.getCurrentRoles();const t=b();return(Array.isArray(t==null?void 0:t.roles)&&t.roles.length?t.roles:[t==null?void 0:t.role].filter(Boolean)).map(n=>String(n||"").trim()).filter(Boolean)}function q(t){const e=new Set($());return t.some(n=>e.has(n))}function C(){var t,e;return window.SchoolState&&typeof window.SchoolState.getCurrentSchool=="function"?String(((t=b())==null?void 0:t.school)||window.SchoolState.getCurrentSchool()||"").trim():String(((e=b())==null?void 0:e.school)||window.MY_SCHOOL||localStorage.getItem("MY_SCHOOL")||"").trim()}function L(t){return F[String(t||"").trim()]||String(t||"访客")}function J(){if(window.NAV_STRUCTURE)return window.NAV_STRUCTURE;try{return NAV_STRUCTURE}catch(t){return null}}function M(){if(typeof window.getCurrentNavCategory=="function")return String(window.getCurrentNavCategory()||"").trim();try{return String(currentCategory||"").trim()}catch(t){return""}}function X(t){if(t){if(typeof window.switchNavCategory=="function"){window.switchNavCategory(t);return}try{typeof switchCategory=="function"&&switchCategory(t)}catch(e){}}}function Z(t){const e=m();return!((e==="teacher"||e==="class_teacher")&&typeof window.canAccessModule=="function"&&!window.canAccessModule(t)||e==="teacher"&&["single-school-eval","exam-arranger","freshman-simulator"].includes(t)||t==="report-generator"&&typeof window.CONFIG!="undefined"&&window.CONFIG&&!window.CONFIG.showQuery)}function y(){const t=J();if(!t)return[];const e=m(),n=["teacher","class_teacher"].includes(e),i=n;return Object.keys(t).filter(o=>!(n&&(o==="data"||o==="tools")||i&&o==="town")).map(o=>{const a=t[o];return{...a,key:o,items:Array.isArray(a==null?void 0:a.items)?a.items.filter(s=>Z(s.id)):[]}}).filter(o=>o.items.length>0)}function E(t){const e=y();for(const n of e){const i=n.items.find(o=>o.id===t);if(i)return{...i,categoryKey:n.key,categoryTitle:n.title,categoryColor:n.color}}return null}function tt(){var t;return((t=document.querySelector(".section.active"))==null?void 0:t.id)||""}function v(){var i,o,a;const t=m(),e=G[t]||"starter-hub",n=E(e);return n?n.id:((a=(o=(i=y()[0])==null?void 0:i.items)==null?void 0:o[0])==null?void 0:a.id)||"starter-hub"}function A(){return E(tt())||E(v())||null}function et(){const t=y(),e=A();if(e){const n=t.find(i=>i.key===e.categoryKey);if(n)return n}return t.find(n=>n.key===M())||t[0]||null}function nt(){const t=new Map,e=[],n=new Set;return y().forEach(i=>{i.items.forEach(o=>{t.set(o.id,{...o,categoryKey:i.key,categoryTitle:i.title,categoryColor:i.color})})}),[v(),...K].forEach(i=>{!i||n.has(i)||!t.has(i)||(n.add(i),e.push(t.get(i)))}),e.slice(0,6)}function ot(t,e=""){const n=document.getElementById(t);return!n||!n.selectedOptions||!n.selectedOptions[0]?e:String(n.selectedOptions[0].textContent||"").trim()||e}function it(){var n;const t=document.getElementById("mode-badge"),e=String((t==null?void 0:t.textContent)||"").trim();return e||String(((n=window.CONFIG)==null?void 0:n.name)||"当前模式").trim()}function at(){return ot("cohort-selector","请选择届别")}function st(){const t=document.getElementById("cohort-selector");return t?Array.from(t.options||[]).filter(e=>String(e.value||"").trim()).map(e=>({value:String(e.value||"").trim(),label:String(e.textContent||e.value||"").trim()})):[]}function rt(t){const e=document.getElementById("cohort-selector");!e||!t||(e.value=t,e.dispatchEvent(new Event("change",{bubbles:!0})))}function ct(){const t=document.querySelector('meta[name="viewport"]');t&&t.setAttribute("content","width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes")}function lt(){const t=document.getElementById("mobile-manager-app");t&&(t.style.display="none")}function ut(t=""){if(t==="parent")return;const e=document.getElementById("app");e&&(e.classList.remove("hidden"),e.style.display="")}function dt(){const t=document.getElementById("app");t&&(t.classList.add("hidden"),t.style.display="none")}function _(t=document){if(!w())return;t.querySelectorAll(".table-wrap table, table.comparison-table, table.fluent-table, #tb-query, #studentDetailTable").forEach(n=>{const i=n.querySelectorAll("thead tr"),o=i.length?Array.from(i[i.length-1].children):[];o.length&&(n.classList.add("mobile-card-table"),Array.from(n.querySelectorAll("tbody tr")).forEach(a=>{let s="";Array.from(a.children).forEach((c,d)=>{var V,P,D;if(!(c instanceof HTMLElement)||c.hasAttribute("colspan"))return;const wt=((P=(V=o[d])==null?void 0:V.textContent)==null?void 0:P.replace(/\s+/g," ").trim())||`字段${d+1}`,B=((D=c.textContent)==null?void 0:D.replace(/\s+/g," ").trim())||"";!s&&B&&d<=1&&(s=B),c.setAttribute("data-label",wt)}),s&&a.setAttribute("data-mobile-card-title",s)}),n.dataset.mobileEnhanced="1")})}function pt(t=document){w()&&(t.querySelectorAll('.section [style*="grid-template-columns"]').forEach(e=>{e.closest("#parent-view-container")||e.classList.add("mobile-stack-grid")}),t.querySelectorAll('.section [style*="display:flex"]').forEach(e=>{e.closest("#parent-view-container")||e.closest("#mobile-query-shell")||e.children.length<2||e.classList.add("mobile-wrap-row")}))}function k(){const t=document.getElementById("login-overlay"),e=!!(t&&getComputedStyle(t).display!=="none");return!!b()&&!e}function ht(){const t=et();if(!t||!t.items.length)return'<div class="mq-inline-empty">当前分类暂无可用子模块</div>';const e=A();return t.items.map(n=>`
+                <button type="button" class="mq-inline-chip ${(e==null?void 0:e.id)===n.id?"is-active":""}" data-mobile-target="module" data-id="${r(n.id)}" data-category="${r(t.key)}">
+                    <i class="ti ${r(n.icon||"ti-layout-grid")}"></i>
+                    <span>${r(h(n.text||n.id))}</span>
                 </button>
-            `;
-        }).join('');
-    }
-
-    function ensureMobileShell() {
-        let root = document.getElementById('mobile-query-shell');
-        if (root) return root;
-
-        root = document.createElement('div');
-        root.id = 'mobile-query-shell';
-        root.setAttribute('aria-hidden', 'true');
-        root.innerHTML = `
+            `).join("")}function S(){var e;let t=document.getElementById("mobile-query-shell");return t||(t=document.createElement("div"),t.id="mobile-query-shell",t.setAttribute("aria-hidden","true"),t.innerHTML=`
             <div class="mq-topbar">
                 <button type="button" class="mq-icon-btn" data-mobile-action="home" aria-label="返回工作台">
                     <i class="ti ti-layout-grid"></i>
@@ -444,41 +53,7 @@
                     <span>我的</span>
                 </button>
             </div>
-        `;
-
-        root.addEventListener('click', handleShellClick);
-        root.querySelector('.mq-backdrop')?.addEventListener('click', () => setSheetMode(''));
-        document.body.appendChild(root);
-        return root;
-    }
-
-    function getSheetPanel() {
-        return ensureMobileShell().querySelector('.mq-sheet-panel');
-    }
-
-    function setSheetMode(mode = '') {
-        const root = ensureMobileShell();
-        const panel = getSheetPanel();
-        currentSheetMode = mode;
-        root.dataset.sheetOpen = mode ? '1' : '0';
-        root.dataset.sheetMode = mode || '';
-        root.setAttribute('aria-hidden', mode ? 'false' : 'true');
-
-        if (!mode) {
-            panel.innerHTML = '';
-            return;
-        }
-
-        if (mode === 'modules') renderModuleSheet(panel);
-        if (mode === 'quick') renderQuickSheet(panel);
-        if (mode === 'account') renderAccountSheet(panel);
-        if (mode === 'cohorts') renderCohortSheet(panel);
-    }
-
-    function renderModuleSheet(panel) {
-        const categories = getAllowedCategories();
-        if (!categories.length) {
-            panel.innerHTML = `
+        `,t.addEventListener("click",I),(e=t.querySelector(".mq-backdrop"))==null||e.addEventListener("click",()=>l("")),document.body.appendChild(t),t)}function g(){return S().querySelector(".mq-sheet-panel")}function l(t=""){const e=S(),n=g();if(p=t,e.dataset.sheetOpen=t?"1":"0",e.dataset.sheetMode=t||"",e.setAttribute("aria-hidden",t?"false":"true"),!t){n.innerHTML="";return}t==="modules"&&T(n),t==="quick"&&x(n),t==="account"&&N(n),t==="cohorts"&&O(n)}function T(t){const e=y();if(!e.length){t.innerHTML=`
                 <div class="mq-sheet-head">
                     <div>
                         <strong>模块面板</strong>
@@ -486,39 +61,21 @@
                     </div>
                     <button type="button" class="mq-close-btn" data-mobile-action="close-sheet"><i class="ti ti-x"></i></button>
                 </div>
-            `;
-            return;
-        }
-
-        const activeItem = getActiveItem();
-        const currentCategoryKey = panel.dataset.categoryKey && categories.some(cat => cat.key === panel.dataset.categoryKey)
-            ? panel.dataset.categoryKey
-            : (activeItem?.categoryKey || getCurrentCategoryKey() || categories[0].key);
-        const selectedCategory = categories.find(cat => cat.key === currentCategoryKey) || categories[0];
-        panel.dataset.categoryKey = selectedCategory.key;
-
-        const pillsHtml = categories.map(category => `
-            <button type="button" class="mq-pill ${category.key === selectedCategory.key ? 'is-active' : ''}" data-mobile-target="category" data-key="${escapeHtml(category.key)}">
-                <i class="ti ${escapeHtml(category.icon || 'ti-layout-grid')}"></i>
-                <span>${escapeHtml(stripEmoji(category.title || '模块'))}</span>
+            `;return}const n=A(),i=t.dataset.categoryKey&&e.some(c=>c.key===t.dataset.categoryKey)?t.dataset.categoryKey:(n==null?void 0:n.categoryKey)||M()||e[0].key,o=e.find(c=>c.key===i)||e[0];t.dataset.categoryKey=o.key;const a=e.map(c=>`
+            <button type="button" class="mq-pill ${c.key===o.key?"is-active":""}" data-mobile-target="category" data-key="${r(c.key)}">
+                <i class="ti ${r(c.icon||"ti-layout-grid")}"></i>
+                <span>${r(h(c.title||"模块"))}</span>
             </button>
-        `).join('');
-
-        const itemsHtml = selectedCategory.items.map(item => {
-            const isActive = activeItem?.id === item.id;
-            return `
-                <button type="button" class="mq-module-card ${isActive ? 'is-active' : ''}" data-mobile-target="module" data-id="${escapeHtml(item.id)}" data-category="${escapeHtml(selectedCategory.key)}">
+        `).join(""),s=o.items.map(c=>{const d=(n==null?void 0:n.id)===c.id;return`
+                <button type="button" class="mq-module-card ${d?"is-active":""}" data-mobile-target="module" data-id="${r(c.id)}" data-category="${r(o.key)}">
                     <div class="mq-module-card-head">
-                        <span class="mq-module-icon"><i class="ti ${escapeHtml(item.icon || 'ti-layout-grid')}"></i></span>
-                        <span class="mq-module-state">${isActive ? '当前子模块' : '点击进入'}</span>
+                        <span class="mq-module-icon"><i class="ti ${r(c.icon||"ti-layout-grid")}"></i></span>
+                        <span class="mq-module-state">${d?"当前子模块":"点击进入"}</span>
                     </div>
-                    <strong>${escapeHtml(stripEmoji(item.text || item.id))}</strong>
-                    <span>${escapeHtml(stripEmoji(selectedCategory.title || '模块分组'))}</span>
+                    <strong>${r(h(c.text||c.id))}</strong>
+                    <span>${r(h(o.title||"模块分组"))}</span>
                 </button>
-            `;
-        }).join('');
-
-        panel.innerHTML = `
+            `}).join("");t.innerHTML=`
             <div class="mq-sheet-head">
                 <div>
                     <strong>模块导航</strong>
@@ -526,60 +83,34 @@
                 </div>
                 <button type="button" class="mq-close-btn" data-mobile-action="close-sheet"><i class="ti ti-x"></i></button>
             </div>
-            <div class="mq-pill-row">${pillsHtml}</div>
-            <div class="mq-module-grid">${itemsHtml}</div>
-        `;
-    }
-
-    function renderQuickSheet(panel) {
-        const shortcuts = getShortcutItems();
-        const activeItem = getActiveItem();
-        const school = getCurrentSchool() || '未绑定学校';
-        const dataCount = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
-
-        const utilityActions = [
-            `
+            <div class="mq-pill-row">${a}</div>
+            <div class="mq-module-grid">${s}</div>
+        `}function x(t){const e=nt(),n=A(),i=C()||"未绑定学校",o=Array.isArray(window.RAW_DATA)?window.RAW_DATA.length:0,a=[`
                 <button type="button" class="mq-account-action" data-mobile-action="search">
                     <i class="ti ti-search"></i>
                     <span>全局搜索</span>
                 </button>
-            `,
-            `
+            `,`
                 <button type="button" class="mq-account-action" data-mobile-sheet="cohorts">
                     <i class="ti ti-folders"></i>
                     <span>切换届别</span>
                 </button>
-            `
-        ];
-
-        if (hasRole(MESSAGE_ROLES) && window.IssueManager && typeof window.IssueManager.openAdminPanel === 'function') {
-            utilityActions.push(`
+            `];q(W)&&window.IssueManager&&typeof window.IssueManager.openAdminPanel=="function"&&a.push(`
                 <button type="button" class="mq-account-action" data-mobile-action="messages">
                     <i class="ti ti-bell"></i>
                     <span>消息中心</span>
                 </button>
-            `);
-        }
-
-        if (hasRole(DATA_MANAGER_ROLES) && window.DataManager && typeof window.DataManager.open === 'function') {
-            utilityActions.push(`
+            `),q(Y)&&window.DataManager&&typeof window.DataManager.open=="function"&&a.push(`
                 <button type="button" class="mq-account-action" data-mobile-action="data-manager">
                     <i class="ti ti-database-edit"></i>
                     <span>数据中心</span>
                 </button>
-            `);
-        }
-
-        if (hasRole(ACCOUNT_MANAGER_ROLES) && window.AccountManager && typeof window.AccountManager.open === 'function') {
-            utilityActions.push(`
+            `),q(Q)&&window.AccountManager&&typeof window.AccountManager.open=="function"&&a.push(`
                 <button type="button" class="mq-account-action" data-mobile-action="account-manager">
                     <i class="ti ti-user-cog"></i>
                     <span>账号权限</span>
                 </button>
-            `);
-        }
-
-        panel.innerHTML = `
+            `),t.innerHTML=`
             <div class="mq-sheet-head">
                 <div>
                     <strong>快捷操作</strong>
@@ -590,58 +121,39 @@
             <div class="mq-info-card">
                 <div class="mq-info-row">
                     <span>当前子模块</span>
-                    <strong>${escapeHtml(stripEmoji(activeItem?.text || '未进入模块'))}</strong>
+                    <strong>${r(h((n==null?void 0:n.text)||"未进入模块"))}</strong>
                 </div>
                 <div class="mq-info-row">
                     <span>当前学校</span>
-                    <strong>${escapeHtml(school)}</strong>
+                    <strong>${r(i)}</strong>
                 </div>
                 <div class="mq-info-row">
                     <span>已载入记录</span>
-                    <strong>${escapeHtml(String(dataCount))}</strong>
+                    <strong>${r(String(o))}</strong>
                 </div>
             </div>
-            <div class="mq-utility-grid">${utilityActions.join('')}</div>
+            <div class="mq-utility-grid">${a.join("")}</div>
             <div class="mq-section-title">高频入口</div>
             <div class="mq-shortcut-grid">
-                ${shortcuts.map(item => `
-                    <button type="button" class="mq-shortcut-card ${activeItem?.id === item.id ? 'is-active' : ''}" data-mobile-target="module" data-id="${escapeHtml(item.id)}" data-category="${escapeHtml(item.categoryKey || '')}">
-                        <i class="ti ${escapeHtml(item.icon || 'ti-bolt')}"></i>
-                        <strong>${escapeHtml(stripEmoji(item.text || item.id))}</strong>
-                        <span>${escapeHtml(stripEmoji(item.categoryTitle || '快捷入口'))}</span>
+                ${e.map(s=>`
+                    <button type="button" class="mq-shortcut-card ${(n==null?void 0:n.id)===s.id?"is-active":""}" data-mobile-target="module" data-id="${r(s.id)}" data-category="${r(s.categoryKey||"")}">
+                        <i class="ti ${r(s.icon||"ti-bolt")}"></i>
+                        <strong>${r(h(s.text||s.id))}</strong>
+                        <span>${r(h(s.categoryTitle||"快捷入口"))}</span>
                     </button>
-                `).join('')}
+                `).join("")}
             </div>
-        `;
-    }
-
-    function renderAccountSheet(panel) {
-        const user = getCurrentUser();
-        const roles = getCurrentRoles();
-        const school = getCurrentSchool() || '未绑定学校';
-        const roleChips = roles.length
-            ? roles.map(role => `<span class="mq-role-chip">${escapeHtml(humanizeRole(role))}</span>`).join('')
-            : '<span class="mq-role-chip">访客</span>';
-
-        const extraActions = [];
-        if (typeof window.showModuleHelp === 'function') {
-            extraActions.push(`
+        `}function N(t){const e=b(),n=$(),i=C()||"未绑定学校",o=n.length?n.map(s=>`<span class="mq-role-chip">${r(L(s))}</span>`).join(""):'<span class="mq-role-chip">访客</span>',a=[];typeof window.showModuleHelp=="function"&&a.push(`
                 <button type="button" class="mq-account-action" data-mobile-action="permissions">
                     <i class="ti ti-shield-lock"></i>
                     <span>权限说明</span>
                 </button>
-            `);
-        }
-        if (typeof window.openSpotlight === 'function') {
-            extraActions.push(`
+            `),typeof window.openSpotlight=="function"&&a.push(`
                 <button type="button" class="mq-account-action" data-mobile-action="search">
                     <i class="ti ti-search"></i>
                     <span>全局搜索</span>
                 </button>
-            `);
-        }
-
-        panel.innerHTML = `
+            `),t.innerHTML=`
             <div class="mq-sheet-head">
                 <div>
                     <strong>当前会话</strong>
@@ -650,9 +162,9 @@
                 <button type="button" class="mq-close-btn" data-mobile-action="close-sheet"><i class="ti ti-x"></i></button>
             </div>
             <div class="mq-account-card">
-                <div class="mq-account-name">${escapeHtml(user?.name || '未登录')}</div>
-                <div class="mq-account-school">${escapeHtml(school)}</div>
-                <div class="mq-role-chip-row">${roleChips}</div>
+                <div class="mq-account-name">${r((e==null?void 0:e.name)||"未登录")}</div>
+                <div class="mq-account-school">${r(i)}</div>
+                <div class="mq-role-chip-row">${o}</div>
             </div>
             <div class="mq-account-actions">
                 <button type="button" class="mq-account-action" data-mobile-action="password">
@@ -663,20 +175,13 @@
                     <i class="ti ti-moon"></i>
                     <span>深色模式</span>
                 </button>
-                ${extraActions.join('')}
+                ${a.join("")}
                 <button type="button" class="mq-account-action is-danger" data-mobile-action="logout">
                     <i class="ti ti-logout"></i>
                     <span>退出登录</span>
                 </button>
             </div>
-        `;
-    }
-
-    function renderCohortSheet(panel) {
-        const options = getCohortOptions();
-        const currentValue = document.getElementById('cohort-selector')?.value || '';
-
-        panel.innerHTML = `
+        `}function O(t){var i;const e=st(),n=((i=document.getElementById("cohort-selector"))==null?void 0:i.value)||"";t.innerHTML=`
             <div class="mq-sheet-head">
                 <div>
                     <strong>切换届别</strong>
@@ -685,216 +190,19 @@
                 <button type="button" class="mq-close-btn" data-mobile-action="close-sheet"><i class="ti ti-x"></i></button>
             </div>
             <div class="mq-cohort-list">
-                ${options.map(option => `
-                    <button type="button" class="mq-cohort-option ${option.value === currentValue ? 'is-active' : ''}" data-mobile-target="cohort" data-value="${escapeHtml(option.value)}">
-                        <strong>${escapeHtml(option.label)}</strong>
-                        <span>${option.value === currentValue ? '当前届别' : '点击切换'}</span>
+                ${e.map(o=>`
+                    <button type="button" class="mq-cohort-option ${o.value===n?"is-active":""}" data-mobile-target="cohort" data-value="${r(o.value)}">
+                        <strong>${r(o.label)}</strong>
+                        <span>${o.value===n?"当前届别":"点击切换"}</span>
                     </button>
-                `).join('')}
+                `).join("")}
             </div>
-        `;
-    }
-
-    function handleParentJump(target) {
-        const container = document.getElementById('parent-view-container');
-        if (!container) return;
-
-        if (target === 'top') {
-            container.scrollTo({ top: 0, behavior: 'smooth' });
-            return;
-        }
-
-        const scoreTarget = container.querySelector('#tb-query, table.fluent-table, table');
-        const chartTarget = container.querySelector('canvas, .fluent-chart, .chart-box');
-
-        if (target === 'scores' && scoreTarget) {
-            scoreTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-        if (target === 'charts' && chartTarget) {
-            chartTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    }
-
-    function handleShellClick(event) {
-        const trigger = event.target.closest('[data-mobile-action], [data-mobile-sheet], [data-mobile-target], [data-parent-jump]');
-        if (!trigger) return;
-
-        const sheetMode = trigger.getAttribute('data-mobile-sheet');
-        if (sheetMode) {
-            setSheetMode(currentSheetMode === sheetMode ? '' : sheetMode);
-            return;
-        }
-
-        const targetType = trigger.getAttribute('data-mobile-target');
-        if (targetType === 'category') {
-            const panel = getSheetPanel();
-            panel.dataset.categoryKey = trigger.getAttribute('data-key') || '';
-            renderModuleSheet(panel);
-            return;
-        }
-
-        if (targetType === 'module') {
-            const categoryKey = trigger.getAttribute('data-category') || '';
-            const moduleId = trigger.getAttribute('data-id') || '';
-            setSheetMode('');
-            const shouldDelay = categoryKey && categoryKey !== getCurrentCategoryKey();
-            if (shouldDelay) switchCategoryKey(categoryKey);
-            if (typeof window.switchTab === 'function' && moduleId) {
-                if (shouldDelay) {
-                    setTimeout(() => window.switchTab(moduleId), 90);
-                } else {
-                    window.switchTab(moduleId);
-                }
-            }
-            scheduleRefresh();
-            return;
-        }
-
-        if (targetType === 'cohort') {
-            const value = trigger.getAttribute('data-value') || '';
-            setSheetMode('');
-            setCohortValue(value);
-            scheduleRefresh();
-            return;
-        }
-
-        const action = trigger.getAttribute('data-mobile-action');
-        if (action === 'close-sheet') {
-            setSheetMode('');
-            return;
-        }
-        if (action === 'home') {
-            setSheetMode('');
-            if (typeof window.switchTab === 'function') {
-                window.switchTab(getPrimaryModuleId());
-            }
-            scheduleRefresh();
-            return;
-        }
-        if (action === 'search' && typeof window.openSpotlight === 'function') {
-            setSheetMode('');
-            window.openSpotlight();
-            return;
-        }
-        if (action === 'password' && typeof window.openUserPasswordModal === 'function') {
-            setSheetMode('');
-            window.openUserPasswordModal();
-            return;
-        }
-        if (action === 'theme' && typeof window.toggleDarkMode === 'function') {
-            window.toggleDarkMode();
-            scheduleRefresh();
-            return;
-        }
-        if (action === 'permissions' && typeof window.showModuleHelp === 'function') {
-            setSheetMode('');
-            window.showModuleHelp('permissions');
-            return;
-        }
-        if (action === 'messages' && window.IssueManager && typeof window.IssueManager.openAdminPanel === 'function') {
-            setSheetMode('');
-            window.IssueManager.openAdminPanel();
-            return;
-        }
-        if (action === 'data-manager' && window.DataManager && typeof window.DataManager.open === 'function') {
-            setSheetMode('');
-            window.DataManager.open();
-            return;
-        }
-        if (action === 'account-manager' && window.AccountManager && typeof window.AccountManager.open === 'function') {
-            setSheetMode('');
-            window.AccountManager.open();
-            return;
-        }
-        if (action === 'logout' && window.Auth && typeof window.Auth.logout === 'function') {
-            setSheetMode('');
-            window.Auth.logout();
-            return;
-        }
-        if (action === 'refresh-parent' && window.Auth && typeof window.Auth.renderParentView === 'function') {
-            window.Auth.renderParentView();
-            return;
-        }
-        if (action === 'logout-parent' && window.Auth && typeof window.Auth.logout === 'function') {
-            window.Auth.logout();
-            return;
-        }
-
-        const parentJump = trigger.getAttribute('data-parent-jump');
-        if (parentJump) {
-            handleParentJump(parentJump);
-        }
-    }
-
-    function syncShellState() {
-        const root = ensureMobileShell();
-        const role = getCurrentRole();
-        const activeItem = getActiveItem();
-        const school = getCurrentSchool();
-        const subtitle = school
-            ? `${school} · 手机端已切到完整查询模式`
-            : '手机端已切到完整查询模式';
-
-        root.querySelector('[data-field="role"]').textContent = humanizeRole(role);
-        root.querySelector('[data-field="title"]').textContent = stripEmoji(activeItem?.text || '手机查询工作台');
-        root.querySelector('[data-field="subtitle"]').textContent = subtitle;
-        root.querySelector('[data-field="mode"]').textContent = getModeBadgeText();
-        root.querySelector('[data-field="cohort"]').textContent = getCohortLabel();
-        root.querySelector('.mq-inline-subnav').innerHTML = buildInlineSubnavHtml();
-        document.body.dataset.mobileSection = activeItem?.id || '';
-
-        root.querySelectorAll('.mq-tab').forEach((tab) => {
-            tab.classList.remove('is-active');
-            const tabSheetMode = tab.getAttribute('data-mobile-sheet');
-            const action = tab.getAttribute('data-mobile-action');
-            if (tabSheetMode && currentSheetMode === tabSheetMode) {
-                tab.classList.add('is-active');
-            }
-            if (action === 'home' && !currentSheetMode) {
-                tab.classList.add('is-active');
-            }
-        });
-
-        if (currentSheetMode === 'modules') renderModuleSheet(getSheetPanel());
-        if (currentSheetMode === 'quick') renderQuickSheet(getSheetPanel());
-        if (currentSheetMode === 'account') renderAccountSheet(getSheetPanel());
-        if (currentSheetMode === 'cohorts') renderCohortSheet(getSheetPanel());
-    }
-
-    function syncShellVisibility() {
-        const root = ensureMobileShell();
-        const shouldShow = isMobileViewport() && isLoggedIn() && getCurrentRole() !== 'parent';
-        root.style.display = shouldShow ? 'block' : 'none';
-        if (!shouldShow) {
-            setSheetMode('');
-            return;
-        }
-        syncShellState();
-    }
-
-    function enhanceParentView() {
-        const container = document.getElementById('parent-view-container');
-        if (!container || !isMobileViewport() || getCurrentRole() !== 'parent') return;
-
-        if (container.dataset.mobileParentBound !== '1') {
-            container.addEventListener('click', handleShellClick);
-            container.dataset.mobileParentBound = '1';
-        }
-
-        const user = getCurrentUser();
-        let header = container.querySelector('.mobile-parent-header');
-        if (!header) {
-            header = document.createElement('div');
-            header.className = 'mobile-parent-header';
-            container.prepend(header);
-        }
-
-        header.innerHTML = `
+        `}function mt(t){const e=document.getElementById("parent-view-container");if(!e)return;if(t==="top"){e.scrollTo({top:0,behavior:"smooth"});return}const n=e.querySelector("#tb-query, table.fluent-table, table"),i=e.querySelector("canvas, .fluent-chart, .chart-box");t==="scores"&&n&&n.scrollIntoView({behavior:"smooth",block:"start"}),t==="charts"&&i&&i.scrollIntoView({behavior:"smooth",block:"start"})}function I(t){const e=t.target.closest("[data-mobile-action], [data-mobile-sheet], [data-mobile-target], [data-parent-jump]");if(!e)return;const n=e.getAttribute("data-mobile-sheet");if(n){l(p===n?"":n);return}const i=e.getAttribute("data-mobile-target");if(i==="category"){const s=g();s.dataset.categoryKey=e.getAttribute("data-key")||"",T(s);return}if(i==="module"){const s=e.getAttribute("data-category")||"",c=e.getAttribute("data-id")||"";l("");const d=s&&s!==M();d&&X(s),typeof window.switchTab=="function"&&c&&(d?setTimeout(()=>window.switchTab(c),90):window.switchTab(c)),u();return}if(i==="cohort"){const s=e.getAttribute("data-value")||"";l(""),rt(s),u();return}const o=e.getAttribute("data-mobile-action");if(o==="close-sheet"){l("");return}if(o==="home"){l(""),typeof window.switchTab=="function"&&window.switchTab(v()),u();return}if(o==="search"&&typeof window.openSpotlight=="function"){l(""),window.openSpotlight();return}if(o==="password"&&typeof window.openUserPasswordModal=="function"){l(""),window.openUserPasswordModal();return}if(o==="theme"&&typeof window.toggleDarkMode=="function"){window.toggleDarkMode(),u();return}if(o==="permissions"&&typeof window.showModuleHelp=="function"){l(""),window.showModuleHelp("permissions");return}if(o==="messages"&&window.IssueManager&&typeof window.IssueManager.openAdminPanel=="function"){l(""),window.IssueManager.openAdminPanel();return}if(o==="data-manager"&&window.DataManager&&typeof window.DataManager.open=="function"){l(""),window.DataManager.open();return}if(o==="account-manager"&&window.AccountManager&&typeof window.AccountManager.open=="function"){l(""),window.AccountManager.open();return}if(o==="logout"&&window.Auth&&typeof window.Auth.logout=="function"){l(""),window.Auth.logout();return}if(o==="refresh-parent"&&window.Auth&&typeof window.Auth.renderParentView=="function"){window.Auth.renderParentView();return}if(o==="logout-parent"&&window.Auth&&typeof window.Auth.logout=="function"){window.Auth.logout();return}const a=e.getAttribute("data-parent-jump");a&&mt(a)}function ft(){const t=S(),e=m(),n=A(),i=C(),o=i?`${i} · 手机端已切到完整查询模式`:"手机端已切到完整查询模式";t.querySelector('[data-field="role"]').textContent=L(e),t.querySelector('[data-field="title"]').textContent=h((n==null?void 0:n.text)||"手机查询工作台"),t.querySelector('[data-field="subtitle"]').textContent=o,t.querySelector('[data-field="mode"]').textContent=it(),t.querySelector('[data-field="cohort"]').textContent=at(),t.querySelector(".mq-inline-subnav").innerHTML=ht(),document.body.dataset.mobileSection=(n==null?void 0:n.id)||"",t.querySelectorAll(".mq-tab").forEach(a=>{a.classList.remove("is-active");const s=a.getAttribute("data-mobile-sheet"),c=a.getAttribute("data-mobile-action");s&&p===s&&a.classList.add("is-active"),c==="home"&&!p&&a.classList.add("is-active")}),p==="modules"&&T(g()),p==="quick"&&x(g()),p==="account"&&N(g()),p==="cohorts"&&O(g())}function R(){const t=S(),e=w()&&k()&&m()!=="parent";if(t.style.display=e?"block":"none",!e){l("");return}ft()}function bt(){const t=document.getElementById("parent-view-container");if(!t||!w()||m()!=="parent")return;t.dataset.mobileParentBound!=="1"&&(t.addEventListener("click",I),t.dataset.mobileParentBound="1");const e=b();let n=t.querySelector(".mobile-parent-header");n||(n=document.createElement("div"),n.className="mobile-parent-header",t.prepend(n)),n.innerHTML=`
             <div class="mobile-parent-header-top">
                 <div>
                     <div class="mobile-parent-role">家长端报告</div>
-                    <div class="mobile-parent-name">${escapeHtml(user?.name || '学生')}</div>
-                    <div class="mobile-parent-meta">${escapeHtml(user?.class || '未绑定班级')}${user?.school ? ` · ${escapeHtml(user.school)}` : ''}</div>
+                    <div class="mobile-parent-name">${r((e==null?void 0:e.name)||"学生")}</div>
+                    <div class="mobile-parent-meta">${r((e==null?void 0:e.class)||"未绑定班级")}${e!=null&&e.school?` · ${r(e.school)}`:""}</div>
                 </div>
                 <button type="button" class="mobile-parent-logout" data-mobile-action="logout-parent">退出</button>
             </div>
@@ -908,141 +216,4 @@
                 <button type="button" class="mobile-parent-action" data-parent-jump="charts">图表</button>
                 <button type="button" class="mobile-parent-action" data-mobile-action="refresh-parent">刷新</button>
             </div>
-        `;
-
-        markResponsiveTables(container);
-    }
-
-    function scheduleRefresh() {
-        REFRESH_DELAYS.forEach((delay) => {
-            setTimeout(refreshMobileEnhancements, delay);
-        });
-    }
-
-    function refreshMobileEnhancements() {
-        syncViewport();
-        hideLegacyMobileShell();
-        document.body.dataset.mobileQuery = isMobileViewport() ? 'true' : 'false';
-
-        if (!isMobileViewport()) {
-            syncShellVisibility();
-            return;
-        }
-
-        if (!isLoggedIn()) {
-            hideAppForLoggedOut();
-            syncShellVisibility();
-            return;
-        }
-
-        if (getCurrentRole() !== 'parent') {
-            showDesktopAppForMobile(getCurrentRole());
-        }
-
-        markResponsiveTables(document);
-        markResponsiveLayouts(document);
-        enhanceParentView();
-        syncShellVisibility();
-    }
-
-    const MobMgr = {
-        init() {
-            refreshMobileEnhancements();
-            return true;
-        },
-        switchTab(tabName) {
-            const map = {
-                home: getPrimaryModuleId(),
-                students: 'student-details',
-                analysis: 'summary',
-                me: getPrimaryModuleId()
-            };
-            if (typeof window.switchTab === 'function' && map[tabName]) {
-                window.switchTab(map[tabName]);
-                setTimeout(refreshMobileEnhancements, 80);
-            }
-        },
-        renderStudentList() {
-            refreshMobileEnhancements();
-        },
-        showStudentDetail() {
-            refreshMobileEnhancements();
-        },
-        renderAnalysis() {
-            refreshMobileEnhancements();
-        },
-        openModules() {
-            setSheetMode('modules');
-        },
-        openQuickActions() {
-            setSheetMode('quick');
-        },
-        openAccountSheet() {
-            setSheetMode('account');
-        },
-        openCohortSheet() {
-            setSheetMode('cohorts');
-        },
-        refresh: refreshMobileEnhancements
-    };
-
-    window.MobMgr = MobMgr;
-    window.MobileQueryUI = {
-        refresh: refreshMobileEnhancements,
-        openModules: () => setSheetMode('modules'),
-        openQuick: () => setSheetMode('quick'),
-        openAccount: () => setSheetMode('account'),
-        openCohorts: () => setSheetMode('cohorts')
-    };
-    window.switchMobileTab = function (tabName) {
-        MobMgr.switchTab(tabName);
-    };
-
-    if (typeof Auth !== 'undefined' && typeof Auth.applyRoleView === 'function') {
-        const originalApplyRoleView = Auth.applyRoleView;
-        Auth.applyRoleView = function () {
-            originalApplyRoleView.call(this);
-            scheduleRefresh();
-        };
-    }
-
-    if (typeof Auth !== 'undefined' && typeof Auth.renderParentView === 'function') {
-        const originalRenderParentView = Auth.renderParentView;
-        Auth.renderParentView = function () {
-            originalRenderParentView.call(this);
-            scheduleRefresh();
-        };
-    }
-
-    if (typeof window.renderNavigation === 'function') {
-        const originalRenderNavigation = window.renderNavigation;
-        window.renderNavigation = function () {
-            const result = originalRenderNavigation.apply(this, arguments);
-            scheduleRefresh();
-            return result;
-        };
-    }
-
-    if (typeof window.switchTab === 'function') {
-        const originalSwitchTab = window.switchTab;
-        window.switchTab = function () {
-            const result = originalSwitchTab.apply(this, arguments);
-            scheduleRefresh();
-            return result;
-        };
-    }
-
-    if (typeof window.switchCategory === 'function') {
-        const originalSwitchCategory = window.switchCategory;
-        window.switchCategory = function () {
-            const result = originalSwitchCategory.apply(this, arguments);
-            scheduleRefresh();
-            return result;
-        };
-    }
-
-    window.addEventListener('resize', scheduleRefresh);
-
-    scheduleRefresh();
-    window.__MOBILE_MANAGER_PATCHED__ = true;
-})();
+        `,_(t)}function u(){j.forEach(t=>{setTimeout(f,t)})}function f(){if(ct(),lt(),document.body.dataset.mobileQuery=w()?"true":"false",!w()){R();return}if(!k()){dt(),R();return}m()!=="parent"&&ut(m()),_(document),pt(document),bt(),R()}const H={init(){return f(),!0},switchTab(t){const e={home:v(),students:"student-details",analysis:"summary",me:v()};typeof window.switchTab=="function"&&e[t]&&(window.switchTab(e[t]),setTimeout(f,80))},renderStudentList(){f()},showStudentDetail(){f()},renderAnalysis(){f()},openModules(){l("modules")},openQuickActions(){l("quick")},openAccountSheet(){l("account")},openCohortSheet(){l("cohorts")},refresh:f};if(window.MobMgr=H,window.MobileQueryUI={refresh:f,openModules:()=>l("modules"),openQuick:()=>l("quick"),openAccount:()=>l("account"),openCohorts:()=>l("cohorts")},window.switchMobileTab=function(t){H.switchTab(t)},typeof Auth!="undefined"&&typeof Auth.applyRoleView=="function"){const t=Auth.applyRoleView;Auth.applyRoleView=function(){t.call(this),u()}}if(typeof Auth!="undefined"&&typeof Auth.renderParentView=="function"){const t=Auth.renderParentView;Auth.renderParentView=function(){t.call(this),u()}}if(typeof window.renderNavigation=="function"){const t=window.renderNavigation;window.renderNavigation=function(){const e=t.apply(this,arguments);return u(),e}}if(typeof window.switchTab=="function"){const t=window.switchTab;window.switchTab=function(){const e=t.apply(this,arguments);return u(),e}}if(typeof window.switchCategory=="function"){const t=window.switchCategory;window.switchCategory=function(){const e=t.apply(this,arguments);return u(),e}}window.addEventListener("resize",u),u(),window.__MOBILE_MANAGER_PATCHED__=!0})();

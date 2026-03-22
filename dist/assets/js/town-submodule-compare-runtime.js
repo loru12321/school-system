@@ -1,437 +1,46 @@
-(() => {
-    if (typeof window === 'undefined' || window.__TOWN_SUBMODULE_COMPARE_RUNTIME_PATCHED__) return;
-
-    const readTownSubmoduleCompareEntryState = typeof window.readTownSubmoduleCompareEntryState === 'function'
-        ? window.readTownSubmoduleCompareEntryState
-        : ((submoduleId) => {
-            const cache = window.TOWN_SUBMODULE_COMPARE_CACHE && typeof window.TOWN_SUBMODULE_COMPARE_CACHE === 'object'
-                ? window.TOWN_SUBMODULE_COMPARE_CACHE
-                : {};
-            return submoduleId && Object.prototype.hasOwnProperty.call(cache, submoduleId)
-                ? cache[submoduleId]
-                : null;
-        });
-    const setTownSubmoduleCompareEntryState = typeof window.setTownSubmoduleCompareEntryState === 'function'
-        ? window.setTownSubmoduleCompareEntryState
-        : ((submoduleId, entry) => {
-            const cache = window.TOWN_SUBMODULE_COMPARE_CACHE && typeof window.TOWN_SUBMODULE_COMPARE_CACHE === 'object'
-                ? { ...window.TOWN_SUBMODULE_COMPARE_CACHE }
-                : {};
-            if (!submoduleId) return null;
-            if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
-                cache[submoduleId] = entry;
-            } else {
-                delete cache[submoduleId];
-            }
-            window.TOWN_SUBMODULE_COMPARE_CACHE = cache;
-            return Object.prototype.hasOwnProperty.call(cache, submoduleId) ? cache[submoduleId] : null;
-        });
-
-const TOWN_SUBMODULE_META = {
-    summary: '综合评价总榜',
-    analysis: '两率一分(横向)',
-    'macro-watch': '预警与亮点看板',
-    'high-score': '高分段/尖子生',
-    indicator: '指标生达标核算',
-    bottom3: '低分率/后1/3核算'
-};
-
-function ensureTownSubmoduleCompareUIs() {
-    Object.entries(TOWN_SUBMODULE_META).forEach(([submoduleId, title]) => {
-        const section = document.getElementById(submoduleId);
-        if (!section) return;
-        if (section.querySelector(`.town-submodule-compare-panel[data-submodule="${submoduleId}"]`)) return;
-
-        const panel = document.createElement('div');
-        panel.className = 'town-submodule-compare-panel';
-        panel.setAttribute('data-submodule', submoduleId);
-        panel.style.cssText = 'margin:10px 0 14px 0; padding:10px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc;';
-        panel.innerHTML = `
+(()=>{if(typeof window=="undefined"||window.__TOWN_SUBMODULE_COMPARE_RUNTIME_PATCHED__)return;const E=typeof window.readTownSubmoduleCompareEntryState=="function"?window.readTownSubmoduleCompareEntryState:(e=>{const o=window.TOWN_SUBMODULE_COMPARE_CACHE&&typeof window.TOWN_SUBMODULE_COMPARE_CACHE=="object"?window.TOWN_SUBMODULE_COMPARE_CACHE:{};return e&&Object.prototype.hasOwnProperty.call(o,e)?o[e]:null}),_=typeof window.setTownSubmoduleCompareEntryState=="function"?window.setTownSubmoduleCompareEntryState:((e,o)=>{const a=window.TOWN_SUBMODULE_COMPARE_CACHE&&typeof window.TOWN_SUBMODULE_COMPARE_CACHE=="object"?{...window.TOWN_SUBMODULE_COMPARE_CACHE}:{};return e?(o&&typeof o=="object"&&!Array.isArray(o)?a[e]=o:delete a[e],window.TOWN_SUBMODULE_COMPARE_CACHE=a,Object.prototype.hasOwnProperty.call(a,e)?a[e]:null):null}),C={summary:"综合评价总榜",analysis:"两率一分(横向)","macro-watch":"预警与亮点看板","high-score":"高分段/尖子生",indicator:"指标生达标核算",bottom3:"低分率/后1/3核算"};function O(){Object.entries(C).forEach(([e,o])=>{const a=document.getElementById(e);if(!a||a.querySelector(`.town-submodule-compare-panel[data-submodule="${e}"]`))return;const c=document.createElement("div");c.className="town-submodule-compare-panel",c.setAttribute("data-submodule",e),c.style.cssText="margin:10px 0 14px 0; padding:10px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc;",c.innerHTML=`
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-                    <div style="font-weight:600; color:#334155;">🧭 ${title} 多期对比（2期/3期）</div>
+                    <div style="font-weight:600; color:#334155;">🧭 ${o} 多期对比（2期/3期）</div>
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <button class="btn btn-sm btn-blue" onclick="openTownSubmoduleCompareDialog('${submoduleId}')">生成多期对比</button>
-                        <button class="btn btn-sm btn-green" onclick="exportTownSubmoduleCompare('${submoduleId}')">导出多期对比</button>
-                        <button class="btn btn-sm" style="background:#8b5cf6; color:white;" onclick="saveTownSubmoduleCompareToCloud('${submoduleId}')">☁️ 保存云端对比</button>
-                        <button class="btn btn-sm" style="background:#06b6d4; color:white;" onclick="viewCloudTownSubmoduleCompares('${submoduleId}')">📋 查看云端对比</button>
+                        <button class="btn btn-sm btn-blue" onclick="openTownSubmoduleCompareDialog('${e}')">生成多期对比</button>
+                        <button class="btn btn-sm btn-green" onclick="exportTownSubmoduleCompare('${e}')">导出多期对比</button>
+                        <button class="btn btn-sm" style="background:#8b5cf6; color:white;" onclick="saveTownSubmoduleCompareToCloud('${e}')">☁️ 保存云端对比</button>
+                        <button class="btn btn-sm" style="background:#06b6d4; color:white;" onclick="viewCloudTownSubmoduleCompares('${e}')">📋 查看云端对比</button>
                     </div>
                 </div>
-                <div id="town-submodule-compare-hint-${submoduleId}" style="margin-top:6px; font-size:12px; color:#64748b;">请选择学校与考试期次后生成。</div>
-                <div id="town-submodule-compare-result-${submoduleId}" style="margin-top:10px;"></div>
-            `;
-
-        const secHead = section.querySelector('.sec-head');
-        if (secHead && secHead.parentNode) secHead.parentNode.insertBefore(panel, secHead.nextSibling);
-        else section.insertBefore(panel, section.firstChild);
-    });
-}
-
-function getTownSubmoduleSeries(submoduleId, selectedByExam, summaryByExam, school) {
-    const calcBottom3Avg = (rows) => {
-        const totals = (rows || []).map(r => Number(r.total)).filter(v => Number.isFinite(v)).sort((a, b) => b - a);
-        if (!totals.length) return { avg: 0, lowRate: 0, lowCount: 0, totalN: 0 };
-        const totalN = totals.length;
-        const bottomN = Math.ceil(totalN / 3);
-        const excN = Math.ceil(bottomN * (CONFIG?.excRate || 0));
-        const bottomGroup = totals.slice(-bottomN);
-        const validGroup = bottomGroup.slice(0, Math.max(0, bottomGroup.length - excN));
-        const avg = validGroup.length ? validGroup.reduce((a, b) => a + b, 0) / validGroup.length : 0;
-
-        const subjectCount = (SUBJECTS && SUBJECTS.length) ? SUBJECTS.length : 1;
-        const lowThreshold = subjectCount * 72 * 0.6;
-        const lowCount = totals.filter(v => v < lowThreshold).length;
-        const lowRate = lowCount / totalN;
-        return { avg, lowRate, lowCount, totalN };
-    };
-
-    const calcHighScore = (rows) => {
-        const totals = (rows || []).map(r => Number(r.total)).filter(v => Number.isFinite(v));
-        const count = totals.length;
-        if (!count) return { highCount: 0, highRate: 0, threshold: 0 };
-        const subjectCount = (SUBJECTS && SUBJECTS.length) ? SUBJECTS.length : 1;
-        const threshold = subjectCount * 90;
-        const highCount = totals.filter(v => v >= threshold).length;
-        return { highCount, highRate: highCount / count, threshold };
-    };
-
-    const calcIndicator = (rows) => {
-        const totals = (rows || []).map(r => Number(r.total)).filter(v => Number.isFinite(v));
-        const count = totals.length;
-        if (!count) return { indicatorCount: 0, indicatorRate: 0, label: '未设置' };
-        const ind1 = Number(window.SYS_VARS?.indicator?.ind1);
-        const ind2 = Number(window.SYS_VARS?.indicator?.ind2);
-        if (Number.isFinite(ind1) && Number.isFinite(ind2)) {
-            const minV = Math.min(ind1, ind2);
-            const maxV = Math.max(ind1, ind2);
-            const indicatorCount = totals.filter(v => v >= minV && v <= maxV).length;
-            return { indicatorCount, indicatorRate: indicatorCount / count, label: `${minV}-${maxV}` };
-        }
-        const high = calcHighScore(rows);
-        return { indicatorCount: high.highCount, indicatorRate: high.highRate, label: '未设置(回退高分段)' };
-    };
-
-    const series = selectedByExam.map((x, idx) => {
-        const schoolSummary = getSummaryEntryBySchool(summaryByExam[idx]?.summary, school);
-        const metrics = calcSchoolMetricsFromRows(x.rows);
-        const bottom3 = calcBottom3Avg(x.rows);
-        const high = calcHighScore(x.rows);
-        const indicator = calcIndicator(x.rows);
-        const riskLevel = metrics.passRate < 0.6
-            ? '红色预警'
-            : (metrics.passRate < 0.75 || metrics.excRate < 0.15 ? '黄色关注' : '绿色稳定');
-        return {
-            examId: x.examId,
-            count: metrics.count,
-            avg: metrics.avg,
-            excRate: metrics.excRate,
-            passRate: metrics.passRate,
-            rankAvg: schoolSummary?.rankAvg || '-',
-            riskLevel,
-            highCount: high.highCount,
-            highRate: high.highRate,
-            highThreshold: high.threshold,
-            indicatorCount: indicator.indicatorCount,
-            indicatorRate: indicator.indicatorRate,
-            indicatorLabel: indicator.label,
-            bottom3Avg: bottom3.avg,
-            lowRate: bottom3.lowRate,
-            lowCount: bottom3.lowCount
-        };
-    });
-
-    if (submoduleId === 'summary' || submoduleId === 'analysis') {
-        return {
-            headers: ['期次', '人数', '总分均分', '优秀率', '及格率', '校际均分排位'],
-            rows: series.map(s => [s.examId, s.count, s.avg.toFixed(2), `${(s.excRate * 100).toFixed(1)}%`, `${(s.passRate * 100).toFixed(1)}%`, s.rankAvg]),
-            note: '口径：综合评价总榜 / 两率一分'
-        };
-    }
-    if (submoduleId === 'macro-watch') {
-        return {
-            headers: ['期次', '预警等级', '总分均分', '优秀率', '及格率', '校际均分排位'],
-            rows: series.map(s => [s.examId, s.riskLevel, s.avg.toFixed(2), `${(s.excRate * 100).toFixed(1)}%`, `${(s.passRate * 100).toFixed(1)}%`, s.rankAvg]),
-            note: '口径：预警看板核心阈值'
-        };
-    }
-    if (submoduleId === 'high-score') {
-        return {
-            headers: ['期次', '高分段阈值', '高分段人数', '高分段占比'],
-            rows: series.map(s => [s.examId, s.highThreshold, s.highCount, `${(s.highRate * 100).toFixed(1)}%`]),
-            note: '口径：高分段/尖子生'
-        };
-    }
-    if (submoduleId === 'indicator') {
-        return {
-            headers: ['期次', '指标区间', '指标生人数', '指标生占比'],
-            rows: series.map(s => [s.examId, s.indicatorLabel, s.indicatorCount, `${(s.indicatorRate * 100).toFixed(1)}%`]),
-            note: '口径：指标生达标核算'
-        };
-    }
-    return {
-        headers: ['期次', '后1/3均分', '低分人数', '低分率'],
-        rows: series.map(s => [s.examId, s.bottom3Avg.toFixed(2), s.lowCount, `${(s.lowRate * 100).toFixed(1)}%`]),
-        note: '口径：低分率/后1/3核算'
-    };
-}
-
-async function openTownSubmoduleCompareDialog(submoduleId) {
-    const schoolList = listAvailableSchoolsForCompare();
-    const examList = listAvailableExamsForCompare();
-    if (schoolList.length === 0) return alert('暂无可选学校');
-    if (examList.length < 2) return alert('考试数量不足，至少2期');
-
-    const title = TOWN_SUBMODULE_META[submoduleId] || submoduleId;
-    const schoolOptions = schoolList.map(s => `<option value="${s}">${s}</option>`).join('');
-    const examOptions = examList.map(e => `<option value="${e.id}">${e.label}</option>`).join('');
-
-    const defaultIds = getDefaultCompareExamIds(examList, examList.length >= 3 ? 3 : 2, CURRENT_EXAM_ID);
-    const schoolDefault = (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) ? MY_SCHOOL : schoolList[0];
-    const exam1Default = defaultIds[0] || '';
-    const exam2Default = defaultIds[1] || defaultIds[0] || '';
-    const exam3Default = defaultIds[2] || defaultIds[defaultIds.length - 1] || '';
-
-    if (typeof Swal === 'undefined') {
-        return alert('当前环境不支持弹窗，请升级页面依赖后重试');
-    }
-
-    const res = await Swal.fire({
-        title: `🧭 ${title} 多期对比`,
-        html: `
+                <div id="town-submodule-compare-hint-${e}" style="margin-top:6px; font-size:12px; color:#64748b;">请选择学校与考试期次后生成。</div>
+                <div id="town-submodule-compare-result-${e}" style="margin-top:10px;"></div>
+            `;const r=a.querySelector(".sec-head");r&&r.parentNode?r.parentNode.insertBefore(c,r.nextSibling):a.insertBefore(c,a.firstChild)})}function v(e,o,a,c){const r=t=>{const l=(t||[]).map(g=>Number(g.total)).filter(g=>Number.isFinite(g)).sort((g,y)=>y-g);if(!l.length)return{avg:0,lowRate:0,lowCount:0,totalN:0};const d=l.length,i=Math.ceil(d/3),u=Math.ceil(i*((CONFIG==null?void 0:CONFIG.excRate)||0)),w=l.slice(-i),n=w.slice(0,Math.max(0,w.length-u)),h=n.length?n.reduce((g,y)=>g+y,0)/n.length:0,S=(SUBJECTS&&SUBJECTS.length?SUBJECTS.length:1)*72*.6,f=l.filter(g=>g<S).length,x=f/d;return{avg:h,lowRate:x,lowCount:f,totalN:d}},m=t=>{const l=(t||[]).map(n=>Number(n.total)).filter(n=>Number.isFinite(n)),d=l.length;if(!d)return{highCount:0,highRate:0,threshold:0};const u=(SUBJECTS&&SUBJECTS.length?SUBJECTS.length:1)*90,w=l.filter(n=>n>=u).length;return{highCount:w,highRate:w/d,threshold:u}},s=t=>{var n,h,b,S;const l=(t||[]).map(f=>Number(f.total)).filter(f=>Number.isFinite(f)),d=l.length;if(!d)return{indicatorCount:0,indicatorRate:0,label:"未设置"};const i=Number((h=(n=window.SYS_VARS)==null?void 0:n.indicator)==null?void 0:h.ind1),u=Number((S=(b=window.SYS_VARS)==null?void 0:b.indicator)==null?void 0:S.ind2);if(Number.isFinite(i)&&Number.isFinite(u)){const f=Math.min(i,u),x=Math.max(i,u),g=l.filter(y=>y>=f&&y<=x).length;return{indicatorCount:g,indicatorRate:g/d,label:`${f}-${x}`}}const w=m(t);return{indicatorCount:w.highCount,indicatorRate:w.highRate,label:"未设置(回退高分段)"}},p=o.map((t,l)=>{var b;const d=getSummaryEntryBySchool((b=a[l])==null?void 0:b.summary,c),i=calcSchoolMetricsFromRows(t.rows),u=r(t.rows),w=m(t.rows),n=s(t.rows),h=i.passRate<.6?"红色预警":i.passRate<.75||i.excRate<.15?"黄色关注":"绿色稳定";return{examId:t.examId,count:i.count,avg:i.avg,excRate:i.excRate,passRate:i.passRate,rankAvg:(d==null?void 0:d.rankAvg)||"-",riskLevel:h,highCount:w.highCount,highRate:w.highRate,highThreshold:w.threshold,indicatorCount:n.indicatorCount,indicatorRate:n.indicatorRate,indicatorLabel:n.label,bottom3Avg:u.avg,lowRate:u.lowRate,lowCount:u.lowCount}});return e==="summary"||e==="analysis"?{headers:["期次","人数","总分均分","优秀率","及格率","校际均分排位"],rows:p.map(t=>[t.examId,t.count,t.avg.toFixed(2),`${(t.excRate*100).toFixed(1)}%`,`${(t.passRate*100).toFixed(1)}%`,t.rankAvg]),note:"口径：综合评价总榜 / 两率一分"}:e==="macro-watch"?{headers:["期次","预警等级","总分均分","优秀率","及格率","校际均分排位"],rows:p.map(t=>[t.examId,t.riskLevel,t.avg.toFixed(2),`${(t.excRate*100).toFixed(1)}%`,`${(t.passRate*100).toFixed(1)}%`,t.rankAvg]),note:"口径：预警看板核心阈值"}:e==="high-score"?{headers:["期次","高分段阈值","高分段人数","高分段占比"],rows:p.map(t=>[t.examId,t.highThreshold,t.highCount,`${(t.highRate*100).toFixed(1)}%`]),note:"口径：高分段/尖子生"}:e==="indicator"?{headers:["期次","指标区间","指标生人数","指标生占比"],rows:p.map(t=>[t.examId,t.indicatorLabel,t.indicatorCount,`${(t.indicatorRate*100).toFixed(1)}%`]),note:"口径：指标生达标核算"}:{headers:["期次","后1/3均分","低分人数","低分率"],rows:p.map(t=>[t.examId,t.bottom3Avg.toFixed(2),t.lowCount,`${(t.lowRate*100).toFixed(1)}%`]),note:"口径：低分率/后1/3核算"}}async function R(e){const o=listAvailableSchoolsForCompare(),a=listAvailableExamsForCompare();if(o.length===0)return alert("暂无可选学校");if(a.length<2)return alert("考试数量不足，至少2期");const c=C[e]||e,r=o.map(h=>`<option value="${h}">${h}</option>`).join(""),m=a.map(h=>`<option value="${h.id}">${h.label}</option>`).join(""),s=getDefaultCompareExamIds(a,a.length>=3?3:2,CURRENT_EXAM_ID),p=MY_SCHOOL&&o.includes(MY_SCHOOL)?MY_SCHOOL:o[0],t=s[0]||"",l=s[1]||s[0]||"",d=s[2]||s[s.length-1]||"";if(typeof Swal=="undefined")return alert("当前环境不支持弹窗，请升级页面依赖后重试");const i=await Swal.fire({title:`🧭 ${c} 多期对比`,html:`
                 <div style="text-align:left; display:flex; flex-direction:column; gap:8px;">
-                    <label>学校：<select id="townSubSchool" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">${schoolOptions}</select></label>
+                    <label>学校：<select id="townSubSchool" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">${r}</select></label>
                     <label>期数：
                         <select id="townSubPeriod" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;" onchange="document.getElementById('townSubExam3Wrap').style.display=this.value==='3'?'block':'none'">
                             <option value="2">2期</option>
                             <option value="3">3期</option>
                         </select>
                     </label>
-                    <label>第1期：<select id="townSubExam1" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">${examOptions}</select></label>
-                    <label>第2期：<select id="townSubExam2" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">${examOptions}</select></label>
+                    <label>第1期：<select id="townSubExam1" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">${m}</select></label>
+                    <label>第2期：<select id="townSubExam2" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">${m}</select></label>
                     <div id="townSubExam3Wrap" style="display:none;">
-                        <label>第3期：<select id="townSubExam3" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">${examOptions}</select></label>
+                        <label>第3期：<select id="townSubExam3" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">${m}</select></label>
                     </div>
                 </div>
-            `,
-        showCancelButton: true,
-        confirmButtonText: '生成对比',
-        cancelButtonText: '取消',
-        didOpen: () => {
-            document.getElementById('townSubSchool').value = schoolDefault;
-            document.getElementById('townSubExam1').value = exam1Default;
-            document.getElementById('townSubExam2').value = exam2Default;
-            document.getElementById('townSubExam3').value = exam3Default;
-        },
-        preConfirm: () => {
-            const school = document.getElementById('townSubSchool').value;
-            const periodCount = parseInt(document.getElementById('townSubPeriod').value || '2');
-            const e1 = document.getElementById('townSubExam1').value;
-            const e2 = document.getElementById('townSubExam2').value;
-            const e3 = document.getElementById('townSubExam3').value;
-            const examIds = periodCount === 3 ? [e1, e2, e3] : [e1, e2];
-            if (!school || examIds.some(x => !x)) {
-                Swal.showValidationMessage('请完整选择学校和考试期次');
-                return false;
-            }
-            if (new Set(examIds).size !== examIds.length) {
-                Swal.showValidationMessage('期次不能重复');
-                return false;
-            }
-            return { school, periodCount, examIds };
-        }
-    });
-
-    if (!res.isConfirmed) return;
-    const { school, periodCount, examIds } = res.value;
-    renderTownSubmoduleMultiPeriodComparison(submoduleId, school, examIds, periodCount);
-}
-
-function renderTownSubmoduleMultiPeriodComparison(submoduleId, school, examIds, periodCount) {
-    const hintEl = document.getElementById(`town-submodule-compare-hint-${submoduleId}`);
-    const resultEl = document.getElementById(`town-submodule-compare-result-${submoduleId}`);
-    if (!hintEl || !resultEl) return;
-
-    const rowsByExam = examIds.map(id => ({ examId: id, rows: getExamRowsForCompare(id) }));
-    if (rowsByExam.some(x => !x.rows.length)) {
-        hintEl.innerHTML = '❌ 某些期次没有可用数据，请检查考试数据。';
-        hintEl.style.color = '#dc2626';
-        resultEl.innerHTML = '';
-        return;
-    }
-
-    const summaryByExam = rowsByExam.map(x => ({ examId: x.examId, summary: buildSchoolSummaryForExam(x.rows) }));
-    const selectedByExam = rowsByExam.map(x => ({ examId: x.examId, rows: filterRowsBySchool(x.rows, school) }));
-    if (!selectedByExam.every(x => x.rows.length > 0)) {
-        hintEl.innerHTML = '❌ 所选学校在某些期次中无数据，无法对比。';
-        hintEl.style.color = '#dc2626';
-        resultEl.innerHTML = '';
-        return;
-    }
-
-    const data = getTownSubmoduleSeries(submoduleId, selectedByExam, summaryByExam, school);
-    const th = data.headers.map(h => `<th>${h}</th>`).join('');
-    const tr = data.rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('');
-    const title = TOWN_SUBMODULE_META[submoduleId] || submoduleId;
-
-    const html = `
-            <div class="sub-header">📊 ${title} 多期对比（${school}）</div>
-            <div class="table-wrap"><table class="mobile-card-table"><thead><tr>${th}</tr></thead><tbody>${tr || `<tr><td colspan="${data.headers.length}" style="text-align:center;color:#94a3b8;">暂无数据</td></tr>`}</tbody></table></div>
-            <div style="margin-top:6px; font-size:12px; color:#64748b;">${data.note || ''}</div>
-        `;
-
-    resultEl.innerHTML = html;
-    hintEl.innerHTML = `✅ 已完成 ${periodCount} 期对比：${examIds.join(' → ')}`;
-    hintEl.style.color = '#16a34a';
-
-    setTownSubmoduleCompareEntryState(submoduleId, {
-        submoduleId,
-        title,
-        school,
-        examIds,
-        periodCount,
-        headers: data.headers,
-        rows: data.rows,
-        note: data.note,
-        html
-    });
-}
-
-function exportTownSubmoduleCompare(submoduleId) {
-    const cache = readTownSubmoduleCompareEntryState(submoduleId);
-    if (!cache) return alert('请先生成多期对比结果');
-    const wb = XLSX.utils.book_new();
-    const aoa = [cache.headers, ...cache.rows];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), '多期对比');
-    XLSX.writeFile(wb, `${cache.title}_多期对比_${cache.school}_${cache.examIds.join('_')}.xlsx`);
-}
-
-async function saveTownSubmoduleCompareToCloud(submoduleId) {
-    const cache = readTownSubmoduleCompareEntryState(submoduleId);
-    if (!cache) return alert('请先生成多期对比结果');
-    if (!sbClient) return alert('☁️ 云端服务未连接，无法保存');
-
-    const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || 'unknown';
-    const stamp = new Date().toISOString().split('T')[0];
-    const rand = Date.now().toString().slice(-4);
-    const safeSchool = String(cache.school || '').replace(/[^\w\u4e00-\u9fa5]/g, '');
-    const key = `TOWN_SUB_COMPARE_${submoduleId}_${cohortId}级_${safeSchool}_${stamp}_${rand}`;
-
-    const payload = {
-        ...cache,
-        createdAt: new Date().toISOString(),
-        createdBy: Auth?.currentUser?.username || Auth?.currentUser?.name || Auth?.currentUser?.email || 'unknown'
-    };
-
-    try {
-        if (window.UI) UI.loading(true, '☁️ 正在保存云端对比...');
-        const compressed = 'LZ|' + LZString.compressToUTF16(JSON.stringify(payload));
-        const { error } = await sbClient.from('system_data').upsert({ key, content: compressed, updated_at: new Date().toISOString() }, { onConflict: 'key' });
-        if (error) throw error;
-        if (window.UI) UI.toast('✅ 云端保存成功', 'success');
-    } catch (e) {
-        console.error(e);
-        alert('保存失败: ' + e.message);
-    } finally {
-        if (window.UI) UI.loading(false);
-    }
-}
-
-async function viewCloudTownSubmoduleCompares(submoduleId) {
-    if (!sbClient) return alert('☁️ 云端服务未连接');
-    try {
-        if (window.UI) UI.loading(true, '☁️ 正在加载云端列表...');
-
-        const user = getCurrentUser();
-        const isAdmin = RoleManager.hasAnyRole(user, ['admin', 'director']);
-        const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '';
-
-        let query = sbClient.from('system_data').select('key, updated_at');
-        if (!isAdmin && cohortId) {
-            query = query.like('key', `TOWN_SUB_COMPARE_${submoduleId}_${cohortId}级_%`);
-        } else {
-            query = query.like('key', `TOWN_SUB_COMPARE_${submoduleId}_%`);
-        }
-
-        const { data, error } = await query.order('updated_at', { ascending: false }).limit(50);
-        if (error) throw error;
-        if (window.UI) UI.loading(false);
-        if (!data || data.length === 0) return alert('☁️ 云端暂无记录');
-
-        const html = data.map((item, idx) => {
-            const keyParts = item.key.replace(`TOWN_SUB_COMPARE_${submoduleId}_`, '').split('_');
-            const cohort = keyParts[0] || '未知届别';
-            const school = keyParts[1] || '未知学校';
-            return `
-                <div style="padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="loadCloudTownSubmoduleCompare('${submoduleId}', '${item.key}')">
+            `,showCancelButton:!0,confirmButtonText:"生成对比",cancelButtonText:"取消",didOpen:()=>{document.getElementById("townSubSchool").value=p,document.getElementById("townSubExam1").value=t,document.getElementById("townSubExam2").value=l,document.getElementById("townSubExam3").value=d},preConfirm:()=>{const h=document.getElementById("townSubSchool").value,b=parseInt(document.getElementById("townSubPeriod").value||"2"),S=document.getElementById("townSubExam1").value,f=document.getElementById("townSubExam2").value,x=document.getElementById("townSubExam3").value,g=b===3?[S,f,x]:[S,f];return!h||g.some(y=>!y)?(Swal.showValidationMessage("请完整选择学校和考试期次"),!1):new Set(g).size!==g.length?(Swal.showValidationMessage("期次不能重复"),!1):{school:h,periodCount:b,examIds:g}}});if(!i.isConfirmed)return;const{school:u,periodCount:w,examIds:n}=i.value;T(e,u,n,w)}function T(e,o,a,c){const r=document.getElementById(`town-submodule-compare-hint-${e}`),m=document.getElementById(`town-submodule-compare-result-${e}`);if(!r||!m)return;const s=a.map(n=>({examId:n,rows:getExamRowsForCompare(n)}));if(s.some(n=>!n.rows.length)){r.innerHTML="❌ 某些期次没有可用数据，请检查考试数据。",r.style.color="#dc2626",m.innerHTML="";return}const p=s.map(n=>({examId:n.examId,summary:buildSchoolSummaryForExam(n.rows)})),t=s.map(n=>({examId:n.examId,rows:filterRowsBySchool(n.rows,o)}));if(!t.every(n=>n.rows.length>0)){r.innerHTML="❌ 所选学校在某些期次中无数据，无法对比。",r.style.color="#dc2626",m.innerHTML="";return}const l=v(e,t,p,o),d=l.headers.map(n=>`<th>${n}</th>`).join(""),i=l.rows.map(n=>`<tr>${n.map(h=>`<td>${h}</td>`).join("")}</tr>`).join(""),u=C[e]||e,w=`
+            <div class="sub-header">📊 ${u} 多期对比（${o}）</div>
+            <div class="table-wrap"><table class="mobile-card-table"><thead><tr>${d}</tr></thead><tbody>${i||`<tr><td colspan="${l.headers.length}" style="text-align:center;color:#94a3b8;">暂无数据</td></tr>`}</tbody></table></div>
+            <div style="margin-top:6px; font-size:12px; color:#64748b;">${l.note||""}</div>
+        `;m.innerHTML=w,r.innerHTML=`✅ 已完成 ${c} 期对比：${a.join(" → ")}`,r.style.color="#16a34a",_(e,{submoduleId:e,title:u,school:o,examIds:a,periodCount:c,headers:l.headers,rows:l.rows,note:l.note,html:w})}function $(e){const o=E(e);if(!o)return alert("请先生成多期对比结果");const a=XLSX.utils.book_new(),c=[o.headers,...o.rows];XLSX.utils.book_append_sheet(a,XLSX.utils.aoa_to_sheet(c),"多期对比"),XLSX.writeFile(a,`${o.title}_多期对比_${o.school}_${o.examIds.join("_")}.xlsx`)}async function U(e){var t,l,d;const o=E(e);if(!o)return alert("请先生成多期对比结果");if(!sbClient)return alert("☁️ 云端服务未连接，无法保存");const a=window.CURRENT_COHORT_ID||localStorage.getItem("CURRENT_COHORT_ID")||"unknown",c=new Date().toISOString().split("T")[0],r=Date.now().toString().slice(-4),m=String(o.school||"").replace(/[^\w\u4e00-\u9fa5]/g,""),s=`TOWN_SUB_COMPARE_${e}_${a}级_${m}_${c}_${r}`,p={...o,createdAt:new Date().toISOString(),createdBy:((t=Auth==null?void 0:Auth.currentUser)==null?void 0:t.username)||((l=Auth==null?void 0:Auth.currentUser)==null?void 0:l.name)||((d=Auth==null?void 0:Auth.currentUser)==null?void 0:d.email)||"unknown"};try{window.UI&&UI.loading(!0,"☁️ 正在保存云端对比...");const i="LZ|"+LZString.compressToUTF16(JSON.stringify(p)),{error:u}=await sbClient.from("system_data").upsert({key:s,content:i,updated_at:new Date().toISOString()},{onConflict:"key"});if(u)throw u;window.UI&&UI.toast("✅ 云端保存成功","success")}catch(i){console.error(i),alert("保存失败: "+i.message)}finally{window.UI&&UI.loading(!1)}}async function B(e){if(!sbClient)return alert("☁️ 云端服务未连接");try{window.UI&&UI.loading(!0,"☁️ 正在加载云端列表...");const o=getCurrentUser(),a=RoleManager.hasAnyRole(o,["admin","director"]),c=window.CURRENT_COHORT_ID||localStorage.getItem("CURRENT_COHORT_ID")||"";let r=sbClient.from("system_data").select("key, updated_at");!a&&c?r=r.like("key",`TOWN_SUB_COMPARE_${e}_${c}级_%`):r=r.like("key",`TOWN_SUB_COMPARE_${e}_%`);const{data:m,error:s}=await r.order("updated_at",{ascending:!1}).limit(50);if(s)throw s;if(window.UI&&UI.loading(!1),!m||m.length===0)return alert("☁️ 云端暂无记录");const p=m.map((t,l)=>{const d=t.key.replace(`TOWN_SUB_COMPARE_${e}_`,"").split("_"),i=d[0]||"未知届别",u=d[1]||"未知学校";return`
+                <div style="padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="loadCloudTownSubmoduleCompare('${e}', '${t.key}')">
                     <div style="flex:1;">
                         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                            <span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${cohort}</span>
-                            <span style="font-weight:600; color:#334155;">${school}</span>
+                            <span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${i}</span>
+                            <span style="font-weight:600; color:#334155;">${u}</span>
                         </div>
-                        <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${item.key}</div>
+                        <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${t.key}</div>
                     </div>
                     <div style="text-align:right;">
-                        <div style="font-size:12px; color:#64748b;">${new Date(item.updated_at).toLocaleString('zh-CN')}</div>
+                        <div style="font-size:12px; color:#64748b;">${new Date(t.updated_at).toLocaleString("zh-CN")}</div>
                         <div style="font-size:11px; color:#3b82f6; margin-top:2px;">点击加载 &gt;</div>
                     </div>
                 </div>
-            `;
-        }).join('');
-
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({
-                title: `☁️ ${TOWN_SUBMODULE_META[submoduleId] || submoduleId} 云端对比记录`,
-                html: `<div style="max-height:400px; overflow-y:auto; text-align:left;">${html}</div>`,
-                width: 650,
-                showCloseButton: true,
-                showConfirmButton: false
-            });
-        }
-    } catch (e) {
-        if (window.UI) UI.loading(false);
-        console.error(e);
-        alert('加载失败: ' + e.message);
-    }
-}
-
-async function loadCloudTownSubmoduleCompare(submoduleId, key) {
-    if (!sbClient) return alert('☁️ 云端服务未连接');
-    const hintEl = document.getElementById(`town-submodule-compare-hint-${submoduleId}`);
-    const resultEl = document.getElementById(`town-submodule-compare-result-${submoduleId}`);
-    if (!hintEl || !resultEl) return;
-
-    try {
-        if (typeof Swal !== 'undefined') Swal.close();
-        if (window.UI) UI.loading(true, '☁️ 正在加载详情...');
-        const { data, error } = await sbClient.from('system_data').select('content').eq('key', key).single();
-        if (error) throw error;
-        let content = data.content;
-        if (typeof content === 'string' && content.startsWith('LZ|')) {
-            content = LZString.decompressFromUTF16(content.substring(3));
-        }
-        const payload = typeof content === 'string' ? JSON.parse(content) : content;
-        resultEl.innerHTML = payload.html || '<div style="color:#94a3b8;">云端记录缺少展示内容</div>';
-        hintEl.innerHTML = `✅ 已加载云端记录：${payload.title || key}`;
-        hintEl.style.color = '#7c3aed';
-        setTownSubmoduleCompareEntryState(submoduleId, payload);
-    } catch (e) {
-        console.error(e);
-        alert('加载失败: ' + e.message);
-    } finally {
-        if (window.UI) UI.loading(false);
-    }
-}
-
-    Object.assign(window, {
-        TOWN_SUBMODULE_META,
-        ensureTownSubmoduleCompareUIs,
-        getTownSubmoduleSeries,
-        openTownSubmoduleCompareDialog,
-        renderTownSubmoduleMultiPeriodComparison,
-        exportTownSubmoduleCompare,
-        saveTownSubmoduleCompareToCloud,
-        viewCloudTownSubmoduleCompares,
-        loadCloudTownSubmoduleCompare
-    });
-
-    window.__TOWN_SUBMODULE_COMPARE_RUNTIME_PATCHED__ = true;
-})();
+            `}).join("");typeof Swal!="undefined"&&Swal.fire({title:`☁️ ${C[e]||e} 云端对比记录`,html:`<div style="max-height:400px; overflow-y:auto; text-align:left;">${p}</div>`,width:650,showCloseButton:!0,showConfirmButton:!1})}catch(o){window.UI&&UI.loading(!1),console.error(o),alert("加载失败: "+o.message)}}async function M(e,o){if(!sbClient)return alert("☁️ 云端服务未连接");const a=document.getElementById(`town-submodule-compare-hint-${e}`),c=document.getElementById(`town-submodule-compare-result-${e}`);if(!(!a||!c))try{typeof Swal!="undefined"&&Swal.close(),window.UI&&UI.loading(!0,"☁️ 正在加载详情...");const{data:r,error:m}=await sbClient.from("system_data").select("content").eq("key",o).single();if(m)throw m;let s=r.content;typeof s=="string"&&s.startsWith("LZ|")&&(s=LZString.decompressFromUTF16(s.substring(3)));const p=typeof s=="string"?JSON.parse(s):s;c.innerHTML=p.html||'<div style="color:#94a3b8;">云端记录缺少展示内容</div>',a.innerHTML=`✅ 已加载云端记录：${p.title||o}`,a.style.color="#7c3aed",_(e,p)}catch(r){console.error(r),alert("加载失败: "+r.message)}finally{window.UI&&UI.loading(!1)}}Object.assign(window,{TOWN_SUBMODULE_META:C,ensureTownSubmoduleCompareUIs:O,getTownSubmoduleSeries:v,openTownSubmoduleCompareDialog:R,renderTownSubmoduleMultiPeriodComparison:T,exportTownSubmoduleCompare:$,saveTownSubmoduleCompareToCloud:U,viewCloudTownSubmoduleCompares:B,loadCloudTownSubmoduleCompare:M}),window.__TOWN_SUBMODULE_COMPARE_RUNTIME_PATCHED__=!0})();

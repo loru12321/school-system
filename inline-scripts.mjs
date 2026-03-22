@@ -24,6 +24,11 @@ function resolvePublicScriptPath(projectRoot, src) {
     return path.join(projectRoot, 'public', relativeSrc);
 }
 
+function resolveBuiltScriptPath(projectRoot, src) {
+    const relativeSrc = src.replace(/^(\.\/|\/)/, '').split('?')[0].split('#')[0];
+    return path.join(projectRoot, 'dist', relativeSrc);
+}
+
 function normalizeScriptAttrs(beforeSrc = '', afterSrc = '') {
     return `${beforeSrc} ${afterSrc}`.replace(/\s+/g, ' ').trim();
 }
@@ -37,14 +42,16 @@ export function inlineLocalScripts(html, { projectRoot = __dirname } = {}) {
             return match;
         }
 
+        const builtPath = resolveBuiltScriptPath(projectRoot, src);
         const publicPath = resolvePublicScriptPath(projectRoot, src);
-        if (!fs.existsSync(publicPath)) {
+        const sourcePath = fs.existsSync(builtPath) ? builtPath : publicPath;
+        if (!fs.existsSync(sourcePath)) {
             console.warn(`Local script not found: ${publicPath}`);
             return match;
         }
 
-        console.log(`Inlining script: ${publicPath}`);
-        let content = fs.readFileSync(publicPath, 'utf-8');
+        console.log(`Inlining script: ${sourcePath}`);
+        let content = fs.readFileSync(sourcePath, 'utf-8');
         content = applySyncFixes(content);
         content = normalizeScript(content);
 

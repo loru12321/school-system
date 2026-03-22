@@ -1,269 +1,41 @@
-(() => {
-    if (typeof window === 'undefined' || window.__TEACHER_COMPARE_CLOUD_RUNTIME_PATCHED__) return;
-
-    const readTeacherCompareCacheState = typeof window.readTeacherCompareCacheState === 'function'
-        ? window.readTeacherCompareCacheState
-        : (() => (window.TEACHER_MULTI_PERIOD_COMPARE_CACHE && typeof window.TEACHER_MULTI_PERIOD_COMPARE_CACHE === 'object'
-            ? window.TEACHER_MULTI_PERIOD_COMPARE_CACHE
-            : null));
-    const setTeacherCompareCacheState = typeof window.setTeacherCompareCacheState === 'function'
-        ? window.setTeacherCompareCacheState
-        : ((cache) => {
-            const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
-            window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = nextCache;
-            return nextCache;
-        });
-    const readAllTeachersDiffCacheState = typeof window.readAllTeachersDiffCacheState === 'function'
-        ? window.readAllTeachersDiffCacheState
-        : (() => (window.ALL_TEACHERS_DIFF_CACHE && typeof window.ALL_TEACHERS_DIFF_CACHE === 'object'
-            ? window.ALL_TEACHERS_DIFF_CACHE
-            : null));
-    const setAllTeachersDiffCacheState = typeof window.setAllTeachersDiffCacheState === 'function'
-        ? window.setAllTeachersDiffCacheState
-        : ((cache) => {
-            const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
-            window.ALL_TEACHERS_DIFF_CACHE = nextCache;
-            return nextCache;
-        });
-
-    async function saveTeacherMultiPeriodCompareToCloud() {
-        const TEACHER_MULTI_PERIOD_COMPARE_CACHE = readTeacherCompareCacheState();
-        window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = TEACHER_MULTI_PERIOD_COMPARE_CACHE;
-        if (!window.TEACHER_MULTI_PERIOD_COMPARE_CACHE) {
-            return alert('请先生成教师多期对比或全校对比结果');
-        }
-
-        if (!window.sbClient) {
-            return alert('☁️ 云端服务未连接，无法保存');
-        }
-
-        const user = Auth.currentUser;
-        if (!user || user.role === 'guest') {
-            return alert('⛔ 权限不足：只有登录用户可以保存对比结果到云端');
-        }
-
-        const cache = TEACHER_MULTI_PERIOD_COMPARE_CACHE;
-        const isBatch = !!cache.isBatchMode;
-        const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || 'unknown';
-        const timestamp = new Date().toISOString().split('T')[0];
-        const rand = Date.now().toString().slice(-4);
-
-        let key, title;
-        if (isBatch) {
-            const safeSchool = cache.school.replace(/[^\w\u4e00-\u9fa5]/g, '');
-            key = `TEACHER_COMPARE_BATCH_${cohortId}级_${safeSchool}_${timestamp}_${rand}`;
-            title = `${cache.school} 全校教师多期对比`;
-        } else {
-            const safeTeacher = cache.teacher.replace(/[^\w\u4e00-\u9fa5]/g, '');
-            const subject = cache.subject || '未知学科';
-            key = `TEACHER_COMPARE_${cohortId}级_${safeTeacher}_${subject}_${timestamp}_${rand}`;
-            title = `${cache.school} ${cache.teacher} ${subject}多期对比`;
-        }
-
-        try {
-            if (window.UI) UI.loading(true, '☁️ 正在保存到云端...');
-
-            const payload = {
-                school: cache.school,
-                subject: cache.subject,
-                teacher: cache.teacher,
-                examIds: cache.examIds,
-                periodCount: cache.periodCount,
-                delta: cache.delta,
-                metricRows: cache.metricRows,
-                isBatchMode: isBatch,
-                batchResults: cache.batchResults || null,
-                thsHtml: cache.thsHtml || null,
-                title,
-                createdBy: user.username || user.name || user.email,
-                createdAt: new Date().toISOString()
-            };
-
-            const compressed = 'LZ|' + LZString.compressToUTF16(JSON.stringify(payload));
-            const { error } = await sbClient.from('system_data').upsert({
-                key,
-                content: compressed,
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'key' });
-
-            if (error) throw error;
-            if (window.UI) UI.toast(`✅ 已保存云端对比: ${title}`, 'success');
-        } catch (e) {
-            console.error('Teacher Comparison Cloud Save Error:', e);
-            alert('保存失败: ' + (e.message || String(e)));
-        } finally {
-            if (window.UI) UI.loading(false);
-        }
-    }
-
-    async function viewCloudTeacherCompares() {
-        if (!sbClient) return alert('☁️ 云端服务未连接');
-
-        try {
-            if (window.UI) UI.loading(true, '☁️ 正在加载云端列表...');
-
-            const user = getCurrentUser();
-            const isAdmin = RoleManager.hasAnyRole(user, ['admin', 'director']);
-            const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '';
-
-            let query = sbClient.from('system_data').select('key, updated_at');
-            if (!isAdmin && cohortId) {
-                query = query.or(`key.like.TEACHER_COMPARE_${cohortId}级_%,key.like.TEACHER_COMPARE_BATCH_${cohortId}级_%`);
-            } else {
-                query = query.like('key', 'TEACHER_COMPARE_%');
-            }
-
-            const { data, error } = await query.order('updated_at', { ascending: false }).limit(50);
-            if (error) throw error;
-            if (window.UI) UI.loading(false);
-
-            if (!data || data.length === 0) {
-                return alert('☁️ 云端暂无已保存的教师对比记录');
-            }
-
-            const listHtml = data.map((item) => {
-                const keyParts = item.key.replace('TEACHER_COMPARE_BATCH_', '').replace('TEACHER_COMPARE_', '').split('_');
-                const cohort = keyParts[0] || '未知届别';
-                const name = keyParts[1] || '全校/未知';
-                const subject = keyParts[2] || '全科/未知';
-                const displayDate = new Date(item.updated_at).toLocaleString('zh-CN');
-                const isBatch = item.key.includes('_BATCH_');
-                return `<div style="padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="loadCloudTeacherCompare('${item.key}')">
+(()=>{if(typeof window=="undefined"||window.__TEACHER_COMPARE_CLOUD_RUNTIME_PATCHED__)return;const _=typeof window.readTeacherCompareCacheState=="function"?window.readTeacherCompareCacheState:(()=>window.TEACHER_MULTI_PERIOD_COMPARE_CACHE&&typeof window.TEACHER_MULTI_PERIOD_COMPARE_CACHE=="object"?window.TEACHER_MULTI_PERIOD_COMPARE_CACHE:null),E=typeof window.setTeacherCompareCacheState=="function"?window.setTeacherCompareCacheState:(t=>{const n=t&&typeof t=="object"&&!Array.isArray(t)?t:null;return window.TEACHER_MULTI_PERIOD_COMPARE_CACHE=n,n}),T=typeof window.readAllTeachersDiffCacheState=="function"?window.readAllTeachersDiffCacheState:(()=>window.ALL_TEACHERS_DIFF_CACHE&&typeof window.ALL_TEACHERS_DIFF_CACHE=="object"?window.ALL_TEACHERS_DIFF_CACHE:null),y=typeof window.setAllTeachersDiffCacheState=="function"?window.setAllTeachersDiffCacheState:(t=>{const n=t&&typeof t=="object"&&!Array.isArray(t)?t:null;return window.ALL_TEACHERS_DIFF_CACHE=n,n});async function A(){const t=_();if(window.TEACHER_MULTI_PERIOD_COMPARE_CACHE=t,!window.TEACHER_MULTI_PERIOD_COMPARE_CACHE)return alert("请先生成教师多期对比或全校对比结果");if(!window.sbClient)return alert("☁️ 云端服务未连接，无法保存");const n=Auth.currentUser;if(!n||n.role==="guest")return alert("⛔ 权限不足：只有登录用户可以保存对比结果到云端");const e=t,a=!!e.isBatchMode,s=window.CURRENT_COHORT_ID||localStorage.getItem("CURRENT_COHORT_ID")||"unknown",o=new Date().toISOString().split("T")[0],d=Date.now().toString().slice(-4);let r,l;if(a){const i=e.school.replace(/[^\w\u4e00-\u9fa5]/g,"");r=`TEACHER_COMPARE_BATCH_${s}级_${i}_${o}_${d}`,l=`${e.school} 全校教师多期对比`}else{const i=e.teacher.replace(/[^\w\u4e00-\u9fa5]/g,""),c=e.subject||"未知学科";r=`TEACHER_COMPARE_${s}级_${i}_${c}_${o}_${d}`,l=`${e.school} ${e.teacher} ${c}多期对比`}try{window.UI&&UI.loading(!0,"☁️ 正在保存到云端...");const i={school:e.school,subject:e.subject,teacher:e.teacher,examIds:e.examIds,periodCount:e.periodCount,delta:e.delta,metricRows:e.metricRows,isBatchMode:a,batchResults:e.batchResults||null,thsHtml:e.thsHtml||null,title:l,createdBy:n.username||n.name||n.email,createdAt:new Date().toISOString()},c="LZ|"+LZString.compressToUTF16(JSON.stringify(i)),{error:C}=await sbClient.from("system_data").upsert({key:r,content:c,updated_at:new Date().toISOString()},{onConflict:"key"});if(C)throw C;window.UI&&UI.toast(`✅ 已保存云端对比: ${l}`,"success")}catch(i){console.error("Teacher Comparison Cloud Save Error:",i),alert("保存失败: "+(i.message||String(i)))}finally{window.UI&&UI.loading(!1)}}async function m(){if(!sbClient)return alert("☁️ 云端服务未连接");try{window.UI&&UI.loading(!0,"☁️ 正在加载云端列表...");const t=getCurrentUser(),n=RoleManager.hasAnyRole(t,["admin","director"]),e=window.CURRENT_COHORT_ID||localStorage.getItem("CURRENT_COHORT_ID")||"";let a=sbClient.from("system_data").select("key, updated_at");!n&&e?a=a.or(`key.like.TEACHER_COMPARE_${e}级_%,key.like.TEACHER_COMPARE_BATCH_${e}级_%`):a=a.like("key","TEACHER_COMPARE_%");const{data:s,error:o}=await a.order("updated_at",{ascending:!1}).limit(50);if(o)throw o;if(window.UI&&UI.loading(!1),!s||s.length===0)return alert("☁️ 云端暂无已保存的教师对比记录");const d=s.map(r=>{const l=r.key.replace("TEACHER_COMPARE_BATCH_","").replace("TEACHER_COMPARE_","").split("_"),i=l[0]||"未知届别",c=l[1]||"全校/未知",C=l[2]||"全科/未知",f=new Date(r.updated_at).toLocaleString("zh-CN"),p=r.key.includes("_BATCH_");return`<div style="padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="loadCloudTeacherCompare('${r.key}')">
                         <div style="flex:1;">
                             <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                                <span style="background:#faf5ff; color:#7c3aed; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${cohort}</span>
-                                <span style="background:#fff7ed; color:#ea580c; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${isBatch ? '全校' : '个人'}</span>
-                                <span style="font-weight:600; color:#334155;">${name} (${subject})</span>
+                                <span style="background:#faf5ff; color:#7c3aed; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${i}</span>
+                                <span style="background:#fff7ed; color:#ea580c; padding:2px 6px; border-radius:4px; font-size:11px; font-weight:600;">${p?"全校":"个人"}</span>
+                                <span style="font-weight:600; color:#334155;">${c} (${C})</span>
                             </div>
-                            <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${item.key}</div>
+                            <div style="font-size:11px; color:#94a3b8; font-family:monospace;">${r.key}</div>
                         </div>
                         <div style="text-align:right;">
-                            <div style="font-size:12px; color:#64748b;">${displayDate}</div>
+                            <div style="font-size:12px; color:#64748b;">${f}</div>
                             <div style="font-size:11px; color:#3b82f6; margin-top:2px;">详情 &gt;</div>
                         </div>
-                    </div>`;
-            }).join('');
-
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    title: '☁️ 云端教师对比记录',
-                    html: `<div style="max-height:400px; overflow-y:auto; text-align:left;">${listHtml}</div>`,
-                    width: 600,
-                    showCloseButton: true,
-                    showConfirmButton: false
-                });
-            } else if (window.UI) {
-                UI.toast('请在支持Swal的环境下使用', 'warning');
-            }
-        } catch (e) {
-            if (window.UI) UI.loading(false);
-            console.error('加载列表失败:', e);
-            alert('加载失败');
-        }
-    }
-
-    async function loadCloudTeacherCompare(key) {
-        if (typeof Swal !== 'undefined') Swal.close();
-        if (window.UI) UI.loading(true, '☁️ 正在下载详情...');
-
-        try {
-            const { data, error } = await sbClient
-                .from('system_data')
-                .select('content')
-                .eq('key', key)
-                .single();
-
-            if (error) throw error;
-
-            let content = data.content;
-            if (typeof content === 'string' && content.startsWith('LZ|')) {
-                content = LZString.decompressFromUTF16(content.substring(3));
-            }
-            const payload = typeof content === 'string' ? JSON.parse(content) : content;
-            renderCloudTeacherCompareDetail(payload);
-
-            if (window.UI) {
-                UI.loading(false);
-                UI.toast('✅ 加载成功', 'success');
-            }
-        } catch (e) {
-            console.error(e);
-            if (window.UI) UI.loading(false);
-            alert('加载详情失败: ' + e.message);
-        }
-    }
-
-    function renderCloudTeacherCompareDetail(payload) {
-        const resultEl = document.getElementById('teacherCompareResult');
-        const hintEl = document.getElementById('teacherCompareHint');
-        if (!resultEl) return;
-
-        const { school, examIds, delta, metricRows, title, createdAt, createdBy, isBatchMode, thsHtml, batchResults } = payload;
-
-        if (isBatchMode) {
-            if (batchResults) {
-                setAllTeachersDiffCacheState({ results: batchResults, school, examIds, periodCount: payload.periodCount });
-            }
-            resultEl.innerHTML = `
-                    <div class="sub-header" style="color:#7c3aed;">☁️ [云端存档] ${title}</div>
+                    </div>`}).join("");typeof Swal!="undefined"?Swal.fire({title:"☁️ 云端教师对比记录",html:`<div style="max-height:400px; overflow-y:auto; text-align:left;">${d}</div>`,width:600,showCloseButton:!0,showConfirmButton:!1}):window.UI&&UI.toast("请在支持Swal的环境下使用","warning")}catch(t){window.UI&&UI.loading(!1),console.error("加载列表失败:",t),alert("加载失败")}}async function g(t){typeof Swal!="undefined"&&Swal.close(),window.UI&&UI.loading(!0,"☁️ 正在下载详情...");try{const{data:n,error:e}=await sbClient.from("system_data").select("content").eq("key",t).single();if(e)throw e;let a=n.content;typeof a=="string"&&a.startsWith("LZ|")&&(a=LZString.decompressFromUTF16(a.substring(3)));const s=typeof a=="string"?JSON.parse(a):a;h(s),window.UI&&(UI.loading(!1),UI.toast("✅ 加载成功","success"))}catch(n){console.error(n),window.UI&&UI.loading(!1),alert("加载详情失败: "+n.message)}}function h(t){const n=document.getElementById("teacherCompareResult"),e=document.getElementById("teacherCompareHint");if(!n)return;const{school:a,examIds:s,delta:o,metricRows:d,title:r,createdAt:l,createdBy:i,isBatchMode:c,thsHtml:C,batchResults:f}=t;if(c)f&&y({results:f,school:a,examIds:s,periodCount:t.periodCount}),n.innerHTML=`
+                    <div class="sub-header" style="color:#7c3aed;">☁️ [云端存档] ${r}</div>
                     <div class="table-wrap" style="max-height:600px; overflow-y:auto;">
                         <table class="common-table" style="font-size:13px;">
-                            <thead style="position:sticky; top:0; z-index:10;"><tr>${thsHtml}</tr></thead>
-                            <tbody>${metricRows}</tbody>
+                            <thead style="position:sticky; top:0; z-index:10;"><tr>${C}</tr></thead>
+                            <tbody>${d}</tbody>
                         </table>
                     </div>
                     <div style="margin-top:10px; display:flex; gap:10px;">
-                        <button class="btn btn-sm" onclick="exportAllTeachersMultiPeriodDiff('${school}', '${examIds.join('_')}')">📤 导出Excel</button>
-                        ${payload.delta === undefined ? '<span style="font-size:12px;color:#64748b;">(表格可左右滑动查看)</span>' : ''}
+                        <button class="btn btn-sm" onclick="exportAllTeachersMultiPeriodDiff('${a}', '${s.join("_")}')">📤 导出Excel</button>
+                        ${t.delta===void 0?'<span style="font-size:12px;color:#64748b;">(表格可左右滑动查看)</span>':""}
                     </div>
                     <div style="margin-top:10px; font-size:12px; color:#94a3b8; text-align:right;">
-                        存档时间: ${new Date(createdAt).toLocaleString()} | 创建人: ${createdBy || '未知'}
+                        存档时间: ${new Date(l).toLocaleString()} | 创建人: ${i||"未知"}
                     </div>
-                `;
-        } else {
-            const deltaAvg = (typeof delta?.townshipAvg === 'number') ? delta.townshipAvg : ((typeof delta?.township === 'number') ? delta.township : null);
-            const deltaExc = (typeof delta?.townshipExc === 'number') ? delta.townshipExc : null;
-            const deltaPass = (typeof delta?.townshipPass === 'number') ? delta.townshipPass : null;
-            resultEl.innerHTML = `
-                    <div class="sub-header" style="color:#7c3aed;">☁️ [云端存档] ${title}</div>
-                    <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>期次</th><th>均分镇排</th><th>优秀率镇排</th><th>及格率镇排</th></tr></thead><tbody>${metricRows}</tbody></table></div>
+                `;else{const p=typeof(o==null?void 0:o.townshipAvg)=="number"?o.townshipAvg:typeof(o==null?void 0:o.township)=="number"?o.township:null,w=typeof(o==null?void 0:o.townshipExc)=="number"?o.townshipExc:null,u=typeof(o==null?void 0:o.townshipPass)=="number"?o.townshipPass:null;n.innerHTML=`
+                    <div class="sub-header" style="color:#7c3aed;">☁️ [云端存档] ${r}</div>
+                    <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>期次</th><th>均分镇排</th><th>优秀率镇排</th><th>及格率镇排</th></tr></thead><tbody>${d}</tbody></table></div>
                     <div style="margin-top:8px; font-size:12px; color:#475569;">
-                        首末期变化（${examIds[0]} → ${examIds[examIds.length - 1]}）：
-                        均分镇排 ${deltaAvg === null ? '-' : (deltaAvg >= 0 ? '+' : '') + deltaAvg}，
-                        优秀率镇排 ${deltaExc === null ? '-' : (deltaExc >= 0 ? '+' : '') + deltaExc}，
-                        及格率镇排 ${deltaPass === null ? '-' : (deltaPass >= 0 ? '+' : '') + deltaPass}
+                        首末期变化（${s[0]} → ${s[s.length-1]}）：
+                        均分镇排 ${p===null?"-":(p>=0?"+":"")+p}，
+                        优秀率镇排 ${w===null?"-":(w>=0?"+":"")+w}，
+                        及格率镇排 ${u===null?"-":(u>=0?"+":"")+u}
                     </div>
                     <div style="margin-top:10px; font-size:12px; color:#94a3b8; text-align:right;">
-                        存档时间: ${new Date(createdAt).toLocaleString()} | 创建人: ${createdBy || '未知'}
+                        存档时间: ${new Date(l).toLocaleString()} | 创建人: ${i||"未知"}
                     </div>
-                `;
-        }
-
-        if (hintEl) {
-            hintEl.innerHTML = `✅ 已加载云端存档：${title}`;
-            hintEl.style.color = '#7c3aed';
-        }
-        setTeacherCompareCacheState({
-            school,
-            subject: payload.subject,
-            teacher: payload.teacher,
-            examIds,
-            periodCount: payload.periodCount,
-            examStats: payload.examStats || [],
-            delta,
-            metricRows,
-            isBatchMode: !!isBatchMode,
-            batchResults: batchResults || null,
-            thsHtml: thsHtml || null
-        });
-    }
-
-    Object.assign(window, {
-        saveTeacherMultiPeriodCompareToCloud,
-        viewCloudTeacherCompares,
-        loadCloudTeacherCompare,
-        renderCloudTeacherCompareDetail
-    });
-
-    window.__TEACHER_COMPARE_CLOUD_RUNTIME_PATCHED__ = true;
-})();
+                `}e&&(e.innerHTML=`✅ 已加载云端存档：${r}`,e.style.color="#7c3aed"),E({school:a,subject:t.subject,teacher:t.teacher,examIds:s,periodCount:t.periodCount,examStats:t.examStats||[],delta:o,metricRows:d,isBatchMode:!!c,batchResults:f||null,thsHtml:C||null})}Object.assign(window,{saveTeacherMultiPeriodCompareToCloud:A,viewCloudTeacherCompares:m,loadCloudTeacherCompare:g,renderCloudTeacherCompareDetail:h}),window.__TEACHER_COMPARE_CLOUD_RUNTIME_PATCHED__=!0})();

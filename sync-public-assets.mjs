@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { transformSync } from 'esbuild';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,8 +42,16 @@ export function syncReferencedAssets({
     if (!referencedAssets.has(entry.name)) continue;
     const sourcePath = path.join(sourceJsDir, entry.name);
     const targetPath = path.join(targetJsDir, entry.name);
-    fs.copyFileSync(sourcePath, targetPath);
-    console.log(`Synced asset: ${sourcePath} -> ${targetPath}`);
+    const sourceCode = fs.readFileSync(sourcePath, 'utf8');
+    const minified = transformSync(sourceCode, {
+      loader: 'js',
+      minify: true,
+      legalComments: 'none',
+      charset: 'utf8',
+      target: 'es2018'
+    });
+    fs.writeFileSync(targetPath, minified.code, 'utf8');
+    console.log(`Synced asset: ${sourcePath} -> ${targetPath} (${sourceCode.length}B -> ${minified.code.length}B)`);
   }
 
   for (const fileName of rootPublicFiles) {
