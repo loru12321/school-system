@@ -23,6 +23,7 @@ const bootRuntimePath = path.resolve(__dirname, '../public/assets/js/boot-runtim
 const accountAdminRuntimePath = path.resolve(__dirname, '../public/assets/js/account-admin-runtime.js');
 const historyCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/history-compare-runtime.js');
 const perfMobileRuntimePath = path.resolve(__dirname, '../public/assets/js/perf-mobile-runtime.js');
+const reportRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/report-render-runtime.js');
 
 assert.ok(fs.existsSync(runtimePath), 'auth-state-runtime.js should exist');
 assert.ok(fs.existsSync(workspaceRuntimePath), 'workspace-state-runtime.js should exist');
@@ -44,6 +45,7 @@ assert.ok(fs.existsSync(bootRuntimePath), 'boot-runtime.js should exist');
 assert.ok(fs.existsSync(accountAdminRuntimePath), 'account-admin-runtime.js should exist');
 assert.ok(fs.existsSync(historyCompareRuntimePath), 'history-compare-runtime.js should exist');
 assert.ok(fs.existsSync(perfMobileRuntimePath), 'perf-mobile-runtime.js should exist');
+assert.ok(fs.existsSync(reportRenderRuntimePath), 'report-render-runtime.js should exist');
 
 const indexHtml = fs.readFileSync(indexPath, 'utf8');
 const authStateRef = './assets/js/auth-state-runtime.js';
@@ -72,6 +74,7 @@ const appRef = './assets/js/app.js';
 const accountAdminRef = './assets/js/account-admin-runtime.js';
 const historyCompareRef = './assets/js/history-compare-runtime.js';
 const perfMobileRef = './assets/js/perf-mobile-runtime.js';
+const reportRenderRef = './assets/js/report-render-runtime.js';
 const holographicRef = './assets/js/holographic-student-3d.js';
 const predictiveRef = './assets/js/predictive-simulation-lab.js';
 const metaverseRef = './assets/js/metaverse-collab-space.js';
@@ -178,6 +181,7 @@ assert.ok(appIndex >= 0, 'index.html should load app.js');
     accountAdminRef,
     historyCompareRef,
     perfMobileRef,
+    reportRenderRef,
     holographicRef,
     predictiveRef,
     metaverseRef,

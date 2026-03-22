@@ -80,6 +80,31 @@ window.ensurePerfMobileRuntimeLoaded = function () {
     return loadOptionalRuntime('perf-mobile', './assets/js/perf-mobile-runtime.js');
 };
 
+window.ensureReportRenderRuntimeLoaded = function () {
+    return loadOptionalRuntime('report-render', './assets/js/report-render-runtime.js');
+};
+
+function installOptionalRuntimeMethod(name, loader) {
+    if (typeof window[name] === 'function') return;
+    window[name] = function (...args) {
+        const current = window[name];
+        return loader().then(() => {
+            const next = window[name];
+            if (typeof next === 'function' && next !== current) {
+                return next.apply(this, args);
+            }
+            throw new Error(`${name} runtime not loaded`);
+        });
+    };
+}
+
+function installOptionalRuntimePlaceholder(name, message) {
+    if (typeof window[name] === 'function') return;
+    window[name] = function () {
+        throw new Error(message || `${name} runtime not loaded`);
+    };
+}
+
 const accountAdminStub = {
     downloadTemplate(...args) {
         return window.ensureAccountAdminRuntimeLoaded().then(() => {
@@ -104,17 +129,15 @@ if (!window.AccountExcel) {
 }
 
 ['toggleAdminManualInput', 'changeAdminPass', 'openUserPasswordModal', 'submitUserPasswordChange'].forEach((name) => {
-    if (typeof window[name] === 'function') return;
-    window[name] = function (...args) {
-        const current = window[name];
-        return window.ensureAccountAdminRuntimeLoaded().then(() => {
-            const next = window[name];
-            if (typeof next === 'function' && next !== current) {
-                return next.apply(this, args);
-            }
-            throw new Error(`${name} runtime not loaded`);
-        });
-    };
+    installOptionalRuntimeMethod(name, window.ensureAccountAdminRuntimeLoaded);
+});
+
+['printSingleReport', 'downloadSingleReportPDF', 'batchGeneratePDF', 'copyReport', 'exportToWord'].forEach((name) => {
+    installOptionalRuntimeMethod(name, window.ensureReportRenderRuntimeLoaded);
+});
+
+['renderSingleReportCardHTML', 'renderRadarChart', 'renderVarianceChart', 'analyzeStrengthsAndWeaknesses'].forEach((name) => {
+    installOptionalRuntimePlaceholder(name, `${name} runtime not loaded`);
 });
 
 if (window.innerWidth <= 768 || localStorage.getItem('DEV_MODE') === 'true') {

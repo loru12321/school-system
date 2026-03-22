@@ -2537,7 +2537,7 @@ const Auth = {
             `;
 
         // 延时加载数据，给骨架屏一点展示时间
-        setTimeout(() => {
+        setTimeout(async () => {
             if (!RAW_DATA || RAW_DATA.length === 0) {
                 container.innerHTML = `<div style="text-align:center; padding:50px; color:#666;">
                         <i class="ti ti-database-off" style="font-size:48px; margin-bottom:10px; display:block;"></i>
@@ -2577,6 +2577,18 @@ const Auth = {
                         请联系班主任确认名单是否已上传。
                     </div>`;
                 return;
+            }
+
+            if (typeof window.ensureReportRenderRuntimeLoaded === 'function') {
+                try {
+                    await window.ensureReportRenderRuntimeLoaded();
+                } catch (error) {
+                    console.error('Failed to load report render runtime for parent view:', error);
+                    container.innerHTML = `<div style="text-align:center; padding:50px; color:red;">
+                        Report runtime failed to load. Please refresh and try again.
+                    </div>`;
+                    return;
+                }
             }
 
             // 渲染报表 HTML
@@ -13406,6 +13418,9 @@ function switchTab(id) {
     if (id === 'report-generator' && typeof window.ensureHistoryCompareRuntimeLoaded === 'function') {
         window.ensureHistoryCompareRuntimeLoaded().catch((error) => console.warn(error));
     }
+    if (id === 'report-generator' && typeof window.ensureReportRenderRuntimeLoaded === 'function') {
+        window.ensureReportRenderRuntimeLoaded().catch((error) => console.warn(error));
+    }
     try {
         if (id === 'exam-arranger') {
             EXAM_initProctorUI();
@@ -15669,6 +15684,14 @@ async function doQuery() {
     clearCloudStudentCompareContext();
     setCloudCompareTarget(stu);
     setCurrentReportStudentState(stu);
+
+    if (typeof window.ensureReportRenderRuntimeLoaded === 'function') {
+        try {
+            await window.ensureReportRenderRuntimeLoaded();
+        } catch (error) {
+            console.warn('Failed to load report render runtime before query:', error);
+        }
+    }
 
     const resultEl = document.getElementById('single-report-result');
     const container = document.getElementById('report-card-capture-area');
