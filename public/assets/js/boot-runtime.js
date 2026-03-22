@@ -165,6 +165,10 @@ window.ensureMobileManagerRuntimeLoaded = function () {
     return loadOptionalRuntime('mobile-manager', './assets/js/mobile-manager.js');
 };
 
+window.ensureDataManagerSqlRuntimeLoaded = function () {
+    return loadOptionalRuntime('data-manager-sql', './assets/js/data-manager-sql.js');
+};
+
 window.ensureReportRenderRuntimeLoaded = function () {
     return loadOptionalRuntime('report-render', './assets/js/report-render-runtime.js');
 };
@@ -298,11 +302,78 @@ function installHistoryDoQueryWrapper() {
     return true;
 }
 
+function installDataManagerSqlHooks() {
+    if (window.__dataManagerSqlHooksInstalled || !window.DataManager || typeof window.DataManager !== 'object') return false;
+
+    [
+        'renderSQLHistory',
+        'applySQLHistory',
+        'saveNamedSQL',
+        'clearSQLHistory',
+        'setQuickSQL',
+        'runSQL',
+        'exportSQLResult'
+    ].forEach((name) => {
+        if (typeof window.DataManager[name] === 'function') return;
+        window.DataManager[name] = function (...args) {
+            const current = window.DataManager[name];
+            return window.ensureDataManagerSqlRuntimeLoaded().then(() => {
+                const next = window.DataManager[name];
+                if (typeof next === 'function' && next !== current) {
+                    return next.apply(window.DataManager, args);
+                }
+                throw new Error(`${name} runtime not loaded`);
+            });
+        };
+    });
+
+    if (typeof window.talkToData !== 'function') {
+        window.talkToData = function (...args) {
+            const current = window.talkToData;
+            return window.ensureDataManagerSqlRuntimeLoaded().then(() => {
+                const next = window.talkToData;
+                if (typeof next === 'function' && next !== current) {
+                    return next.apply(window, args);
+                }
+                throw new Error('talkToData runtime not loaded');
+            });
+        };
+    }
+
+    if (!window.__dataManagerSqlSwitchWrapped && typeof window.DataManager.switchTab === 'function') {
+        const baseSwitchTab = window.DataManager.switchTab;
+        window.DataManager.switchTab = async function (tab, ...args) {
+            if (tab === 'sql') {
+                try {
+                    await window.ensureDataManagerSqlRuntimeLoaded();
+                } catch (error) {
+                    console.warn(error);
+                }
+            }
+            return baseSwitchTab.call(this, tab, ...args);
+        };
+        window.__dataManagerSqlSwitchWrapped = true;
+    }
+
+    window.__dataManagerSqlHooksInstalled = true;
+    return true;
+}
+
 if (!installHistoryDoQueryWrapper()) {
     let tries = 0;
     const timer = setInterval(() => {
         tries += 1;
         if (installHistoryDoQueryWrapper() || tries >= 30) {
+            clearInterval(timer);
+        }
+    }, 250);
+}
+
+if (!installDataManagerSqlHooks()) {
+    let tries = 0;
+    const timer = setInterval(() => {
+        tries += 1;
+        if (installDataManagerSqlHooks() || tries >= 30) {
             clearInterval(timer);
         }
     }, 250);

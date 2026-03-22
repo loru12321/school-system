@@ -24,6 +24,7 @@ const accountAdminRuntimePath = path.resolve(__dirname, '../public/assets/js/acc
 const historyCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/history-compare-runtime.js');
 const perfMobileRuntimePath = path.resolve(__dirname, '../public/assets/js/perf-mobile-runtime.js');
 const mobileManagerRuntimePath = path.resolve(__dirname, '../public/assets/js/mobile-manager.js');
+const dataManagerSqlRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-sql.js');
 const reportRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/report-render-runtime.js');
 const studentCompareGenerateRuntimePath = path.resolve(__dirname, '../public/assets/js/student-compare-generate-runtime.js');
 const studentCompareResultRuntimePath = path.resolve(__dirname, '../public/assets/js/student-compare-result-runtime.js');
@@ -54,6 +55,7 @@ assert.ok(fs.existsSync(accountAdminRuntimePath), 'account-admin-runtime.js shou
 assert.ok(fs.existsSync(historyCompareRuntimePath), 'history-compare-runtime.js should exist');
 assert.ok(fs.existsSync(perfMobileRuntimePath), 'perf-mobile-runtime.js should exist');
 assert.ok(fs.existsSync(mobileManagerRuntimePath), 'mobile-manager.js should exist');
+assert.ok(fs.existsSync(dataManagerSqlRuntimePath), 'data-manager-sql.js should exist');
 assert.ok(fs.existsSync(reportRenderRuntimePath), 'report-render-runtime.js should exist');
 assert.ok(fs.existsSync(studentCompareGenerateRuntimePath), 'student-compare-generate-runtime.js should exist');
 assert.ok(fs.existsSync(studentCompareResultRuntimePath), 'student-compare-result-runtime.js should exist');
@@ -90,6 +92,7 @@ const accountAdminRef = './assets/js/account-admin-runtime.js';
 const historyCompareRef = './assets/js/history-compare-runtime.js';
 const perfMobileRef = './assets/js/perf-mobile-runtime.js';
 const mobileManagerRef = './assets/js/mobile-manager.js';
+const dataManagerSqlRef = './assets/js/data-manager-sql.js';
 const reportRenderRef = './assets/js/report-render-runtime.js';
 const studentCompareGenerateRef = './assets/js/student-compare-generate-runtime.js';
 const studentCompareResultRef = './assets/js/student-compare-result-runtime.js';
@@ -202,6 +205,7 @@ assert.ok(appIndex >= 0, 'index.html should load app.js');
     historyCompareRef,
     perfMobileRef,
     mobileManagerRef,
+    dataManagerSqlRef,
     reportRenderRef,
     studentCompareGenerateRef,
     studentCompareResultRef,

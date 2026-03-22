@@ -29,7 +29,7 @@ const SWITCH_MODULE_IDS = [
     'student-details'
 ];
 
-const DATA_MANAGER_TABS = ['student', 'teacher', 'targets', 'params', 'cloud'];
+const DATA_MANAGER_TABS = ['student', 'teacher', 'targets', 'params', 'sql', 'cloud'];
 
 function shouldIgnoreConsoleMessage(msg) {
     const text = String(msg || '');
@@ -386,7 +386,7 @@ async function smokeDataManagerTab(page, id) {
             if (!window.DataManager || typeof window.DataManager.switchTab !== 'function') {
                 return { ok: false, id: tabId, error: 'DataManager.switchTab is not available' };
             }
-            window.DataManager.switchTab(tabId);
+            await Promise.resolve(window.DataManager.switchTab(tabId));
             await new Promise(resolve => setTimeout(resolve, 800));
             const activePanel = document.querySelector('.data-manager-tab.active,[data-dm-tab].active,.tab-pane.active');
             return {
