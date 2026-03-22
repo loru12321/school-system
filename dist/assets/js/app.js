@@ -1008,6 +1008,107 @@ function clearCurrentSchool() {
 }
 
 // 🔐 权限与账号管理系统核心
+const TeacherStateRuntime = window.TeacherState || null;
+
+function readTeacherMap() {
+    const nextMap = TeacherStateRuntime && typeof TeacherStateRuntime.getTeacherMap === 'function'
+        ? (TeacherStateRuntime.getTeacherMap() || {})
+        : (window.TEACHER_MAP && typeof window.TEACHER_MAP === 'object' ? window.TEACHER_MAP : (
+            typeof TEACHER_MAP !== 'undefined' && TEACHER_MAP && typeof TEACHER_MAP === 'object' ? TEACHER_MAP : {}
+        ));
+    if (typeof TEACHER_MAP !== 'undefined') TEACHER_MAP = nextMap;
+    window.TEACHER_MAP = nextMap;
+    return nextMap;
+}
+
+function setTeacherMap(map) {
+    const nextMap = TeacherStateRuntime && typeof TeacherStateRuntime.setTeacherMap === 'function'
+        ? (TeacherStateRuntime.setTeacherMap(map) || {})
+        : (map && typeof map === 'object' ? map : {});
+    if (typeof TEACHER_MAP !== 'undefined') TEACHER_MAP = nextMap;
+    window.TEACHER_MAP = nextMap;
+    return nextMap;
+}
+
+function readTeacherSchoolMap() {
+    const nextSchoolMap = TeacherStateRuntime && typeof TeacherStateRuntime.getTeacherSchoolMap === 'function'
+        ? (TeacherStateRuntime.getTeacherSchoolMap() || {})
+        : (window.TEACHER_SCHOOL_MAP && typeof window.TEACHER_SCHOOL_MAP === 'object' ? window.TEACHER_SCHOOL_MAP : (
+            typeof TEACHER_SCHOOL_MAP !== 'undefined' && TEACHER_SCHOOL_MAP && typeof TEACHER_SCHOOL_MAP === 'object' ? TEACHER_SCHOOL_MAP : {}
+        ));
+    if (typeof TEACHER_SCHOOL_MAP !== 'undefined') TEACHER_SCHOOL_MAP = nextSchoolMap;
+    window.TEACHER_SCHOOL_MAP = nextSchoolMap;
+    return nextSchoolMap;
+}
+
+function setTeacherSchoolMap(map) {
+    const nextSchoolMap = TeacherStateRuntime && typeof TeacherStateRuntime.setTeacherSchoolMap === 'function'
+        ? (TeacherStateRuntime.setTeacherSchoolMap(map) || {})
+        : (map && typeof map === 'object' ? map : {});
+    if (typeof TEACHER_SCHOOL_MAP !== 'undefined') TEACHER_SCHOOL_MAP = nextSchoolMap;
+    window.TEACHER_SCHOOL_MAP = nextSchoolMap;
+    return nextSchoolMap;
+}
+
+function readTeacherStats() {
+    const nextStats = TeacherStateRuntime && typeof TeacherStateRuntime.getTeacherStats === 'function'
+        ? (TeacherStateRuntime.getTeacherStats() || {})
+        : (window.TEACHER_STATS && typeof window.TEACHER_STATS === 'object' ? window.TEACHER_STATS : (
+            typeof TEACHER_STATS !== 'undefined' && TEACHER_STATS && typeof TEACHER_STATS === 'object' ? TEACHER_STATS : {}
+        ));
+    if (typeof TEACHER_STATS !== 'undefined') TEACHER_STATS = nextStats;
+    window.TEACHER_STATS = nextStats;
+    return nextStats;
+}
+
+function setTeacherStats(stats) {
+    const nextStats = TeacherStateRuntime && typeof TeacherStateRuntime.setTeacherStats === 'function'
+        ? (TeacherStateRuntime.setTeacherStats(stats) || {})
+        : (stats && typeof stats === 'object' ? stats : {});
+    if (typeof TEACHER_STATS !== 'undefined') TEACHER_STATS = nextStats;
+    window.TEACHER_STATS = nextStats;
+    return nextStats;
+}
+
+function syncTeacherRuntimeState(patch = {}) {
+    if (TeacherStateRuntime && typeof TeacherStateRuntime.syncTeacherState === 'function') {
+        const snapshot = TeacherStateRuntime.syncTeacherState(patch);
+        if (typeof TEACHER_MAP !== 'undefined') TEACHER_MAP = snapshot.teacherMap || {};
+        if (typeof TEACHER_SCHOOL_MAP !== 'undefined') TEACHER_SCHOOL_MAP = snapshot.teacherSchoolMap || {};
+        if (typeof TEACHER_STATS !== 'undefined') TEACHER_STATS = snapshot.teacherStats || {};
+        window.TEACHER_MAP = TEACHER_MAP;
+        window.TEACHER_SCHOOL_MAP = TEACHER_SCHOOL_MAP;
+        window.TEACHER_STATS = TEACHER_STATS;
+        return snapshot;
+    }
+    return {
+        teacherMap: setTeacherMap(patch.teacherMap ?? patch.TEACHER_MAP ?? readTeacherMap()),
+        teacherSchoolMap: setTeacherSchoolMap(patch.teacherSchoolMap ?? patch.TEACHER_SCHOOL_MAP ?? readTeacherSchoolMap()),
+        teacherStats: setTeacherStats(patch.teacherStats ?? patch.TEACHER_STATS ?? readTeacherStats())
+    };
+}
+
+function clearTeacherRuntimeState(options = {}) {
+    if (TeacherStateRuntime && typeof TeacherStateRuntime.clearTeacherState === 'function') {
+        return syncTeacherRuntimeState(TeacherStateRuntime.clearTeacherState(options));
+    }
+    setTeacherMap({});
+    setTeacherSchoolMap({});
+    if (!options.keepStats) setTeacherStats({});
+    return {
+        teacherMap: readTeacherMap(),
+        teacherSchoolMap: readTeacherSchoolMap(),
+        teacherStats: readTeacherStats()
+    };
+}
+
+window.readTeacherMap = readTeacherMap;
+window.setTeacherMap = setTeacherMap;
+window.readTeacherSchoolMap = readTeacherSchoolMap;
+window.setTeacherSchoolMap = setTeacherSchoolMap;
+window.readTeacherStats = readTeacherStats;
+window.setTeacherStats = setTeacherStats;
+
 const Auth = {
     currentUser: null,
     _parentDataRecovering: false,
@@ -6751,7 +6852,7 @@ let CONFIG = {
 };
 let RAW_DATA = [], SCHOOLS = {}, SUBJECTS = [], THRESHOLDS = {}, TARGETS = {};
 // 🟢 [修复]：全局变量显式挂载到 window，确保 CloudManager 可访问
-var TEACHER_MAP = {}, TEACHER_SCHOOL_MAP = {}, MY_SCHOOL = "", TEACHER_STATS = {};
+var TEACHER_MAP = readTeacherMap(), TEACHER_SCHOOL_MAP = readTeacherSchoolMap(), MY_SCHOOL = "", TEACHER_STATS = readTeacherStats();
 window.TEACHER_MAP = TEACHER_MAP;
 window.TEACHER_SCHOOL_MAP = TEACHER_SCHOOL_MAP;
 MY_SCHOOL = readCurrentSchool();
@@ -6782,19 +6883,15 @@ function uiAlert(message, type = 'info') {
     alert(message);
 }
 
-function setTeacherMap(map) {
-    TEACHER_MAP = map || {};
-    window.TEACHER_MAP = TEACHER_MAP;
-    return TEACHER_MAP;
-}
-
-function setTeacherSchoolMap(map) {
-    TEACHER_SCHOOL_MAP = map || {};
-    window.TEACHER_SCHOOL_MAP = TEACHER_SCHOOL_MAP;
-    return TEACHER_SCHOOL_MAP;
-}
-
 function syncRuntimeStateToWindow() {
+    const teacherSnapshot = syncTeacherRuntimeState({
+        teacherMap: TEACHER_MAP,
+        teacherSchoolMap: TEACHER_SCHOOL_MAP,
+        teacherStats: TEACHER_STATS
+    });
+    TEACHER_MAP = teacherSnapshot.teacherMap || {};
+    TEACHER_SCHOOL_MAP = teacherSnapshot.teacherSchoolMap || {};
+    TEACHER_STATS = teacherSnapshot.teacherStats || {};
     const workspaceSnapshot = syncWorkspaceRuntimeState({
         cohortDb: COHORT_DB,
         currentCohortId: CURRENT_COHORT_ID,
@@ -6815,6 +6912,7 @@ function syncRuntimeStateToWindow() {
     window.SCHOOLS = SCHOOLS;
     window.SUBJECTS = SUBJECTS;
     window.THRESHOLDS = THRESHOLDS;
+    window.TEACHER_MAP = TEACHER_MAP;
     window.TEACHER_SCHOOL_MAP = TEACHER_SCHOOL_MAP;
     window.CONFIG = CONFIG;
     window.MY_SCHOOL = MY_SCHOOL;
@@ -8881,7 +8979,7 @@ function togglePrivacyMode() {
     // 4. 全局重算与重绘
     // 因为 SCHOOLS, TEACHER_STATS 等都是基于 RAW_DATA 计算的，必须重置
     SCHOOLS = {};
-    TEACHER_STATS = {};
+        setTeacherStats({});
     TEACHER_TOWNSHIP_RANKINGS = {};
 
     // 重新运行数据处理流程
@@ -9931,7 +10029,7 @@ function tmGetAvailableExamList() {
 }
 
 function tmBuildTeacherInsight(subjectFilter = '', teacherFilter = '') {
-    const stats = window.TEACHER_STATS && typeof window.TEACHER_STATS === 'object' ? window.TEACHER_STATS : {};
+    const stats = readTeacherStats();
     const useSubjectFilter = String(subjectFilter || '').trim();
     const useTeacherFilter = String(teacherFilter || '').trim();
     const teacherSet = new Set();
@@ -11392,7 +11490,7 @@ async function tmMarkLatestVersionStable() {
 }
 
 function tmBuildTeacherRiskRows(subjectFilter = '', teacherFilter = '') {
-    const stats = window.TEACHER_STATS && typeof window.TEACHER_STATS === 'object' ? window.TEACHER_STATS : {};
+    const stats = readTeacherStats();
     const useSubjectFilter = String(subjectFilter || '').trim();
     const useTeacherFilter = String(teacherFilter || '').trim();
     const rows = [];
@@ -12777,7 +12875,7 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
     // 使用 Perf.runAsync 包裹，实现加载动画 + 防卡死
     Perf.runAsync(async () => {
         // 重置数据
-        RAW_DATA = []; SCHOOLS = {}; SUBJECTS = []; setTeacherMap({}); TEACHER_STATS = {};
+        RAW_DATA = []; SCHOOLS = {}; SUBJECTS = []; setTeacherMap({}); setTeacherStats({});
         TEACHER_TOWNSHIP_RANKINGS = {}; MARGINAL_STUDENTS = {}; POTENTIAL_STUDENTS_CACHE = []; TOWNSHIP_RANKING_DATA = {}; clearCurrentSchool();
         const teacherCards = document.getElementById('teacherCardsContainer');
         const teacherTable = document.getElementById('teacherComparisonTable');
@@ -23279,7 +23377,7 @@ function applySnapshotPayload(db) {
         if (main2) main2.value = window.SYS_VARS.indicator.ind2;
     }
     if (db.PREV_DATA) window.PREV_DATA = db.PREV_DATA;
-    if (db.TEACHER_STATS) window.TEACHER_STATS = db.TEACHER_STATS;
+    if (db.TEACHER_STATS) setTeacherStats(db.TEACHER_STATS);
     if (db.HISTORY_ARCHIVE) window.HISTORY_ARCHIVE = db.HISTORY_ARCHIVE;
     if (db.FB_CLASSES) window.FB_CLASSES = db.FB_CLASSES;
     if (db.MP_SNAPSHOTS) window.MP_SNAPSHOTS = db.MP_SNAPSHOTS;

@@ -10,6 +10,7 @@
     const AUTO_COHORT_SYNC_COOLDOWN_MS = 10 * 60 * 1000;
     const WorkspaceState = window.WorkspaceState || null;
     const ExamState = window.ExamState || null;
+    const TeacherState = window.TeacherState || null;
 
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -109,6 +110,44 @@
             window.CURRENT_TERM_ID = baseTermId;
         }
         return { exactTermId, baseTermId };
+    }
+
+    function getTeacherMap() {
+        if (typeof window.readTeacherMap === 'function') {
+            return window.readTeacherMap() || {};
+        }
+        if (TeacherState && typeof TeacherState.getTeacherMap === 'function') {
+            return TeacherState.getTeacherMap() || {};
+        }
+        return window.TEACHER_MAP && typeof window.TEACHER_MAP === 'object' ? window.TEACHER_MAP : {};
+    }
+
+    function getTeacherSchoolMap() {
+        if (typeof window.readTeacherSchoolMap === 'function') {
+            return window.readTeacherSchoolMap() || {};
+        }
+        if (TeacherState && typeof TeacherState.getTeacherSchoolMap === 'function') {
+            return TeacherState.getTeacherSchoolMap() || {};
+        }
+        return window.TEACHER_SCHOOL_MAP && typeof window.TEACHER_SCHOOL_MAP === 'object' ? window.TEACHER_SCHOOL_MAP : {};
+    }
+
+    function applyTeacherState(map, schoolMap) {
+        if (typeof window.setTeacherMap === 'function') {
+            window.setTeacherMap(map || {});
+        } else if (TeacherState && typeof TeacherState.setTeacherMap === 'function') {
+            TeacherState.setTeacherMap(map || {});
+        } else {
+            window.TEACHER_MAP = map || {};
+        }
+
+        if (typeof window.setTeacherSchoolMap === 'function') {
+            window.setTeacherSchoolMap(schoolMap || {});
+        } else if (TeacherState && typeof TeacherState.setTeacherSchoolMap === 'function') {
+            TeacherState.setTeacherSchoolMap(schoolMap || {});
+        } else {
+            window.TEACHER_SCHOOL_MAP = schoolMap || {};
+        }
     }
 
     function hasSavedWorkspaceState() {
@@ -663,7 +702,8 @@
                 safeToast('无法确定学期或年级信息', 'error');
                 return false;
             }
-            if (!window.TEACHER_MAP || Object.keys(window.TEACHER_MAP).length === 0) {
+            const teacherMap = getTeacherMap();
+            if (!teacherMap || Object.keys(teacherMap).length === 0) {
                 safeToast('当前无任课数据', 'warning');
                 return false;
             }
@@ -671,8 +711,8 @@
             safeLoading(true, '正在同步任课数据...');
             try {
                 const content = packPayload({
-                    map: window.TEACHER_MAP || {},
-                    schoolMap: window.TEACHER_SCHOOL_MAP || {}
+                    map: teacherMap,
+                    schoolMap: getTeacherSchoolMap()
                 });
                 const { error } = await window.sbClient.from(CLOUD_TABLE).upsert({
                     key,
@@ -769,8 +809,7 @@
                 const keyTermId = String(key || row?.key || '').replace(/^TEACHERS_[^_]+_/, '').trim();
                 if (keyTermId) syncTeacherTermState(keyTermId);
 
-                if (typeof setTeacherMap === 'function') setTeacherMap(map);
-                if (typeof setTeacherSchoolMap === 'function') setTeacherSchoolMap(schoolMap);
+                applyTeacherState(map, schoolMap);
                 if (window.DataManager && typeof DataManager.syncTeacherHistory === 'function') {
                     DataManager.syncTeacherHistory({
                         termId: keyTermId || getCurrentTeacherTermId() || getCurrentTermId() || '',
