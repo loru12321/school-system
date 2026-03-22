@@ -103,9 +103,67 @@ function runCompareSelectorsFallbackTest() {
     assert.ok(syncState['2022'].lastAttempt > 0);
 }
 
+function runProgressAnalysisFallbackTest() {
+    const progressPath = path.resolve(__dirname, '../public/assets/js/progress-analysis-runtime.js');
+    const progressCode = fs.readFileSync(progressPath, 'utf8');
+
+    const syncState = {};
+    let fetchCalled = false;
+    const pendingFetch = new Promise(() => {});
+
+    const context = {
+        console,
+        Promise,
+        setTimeout,
+        clearTimeout,
+        CURRENT_COHORT_ID: '2022',
+        localStorage: {
+            getItem: () => ''
+        },
+        document: {
+            getElementById: () => null
+        },
+        window: {
+            __PROGRESS_ANALYSIS_RUNTIME_PATCHED__: false,
+            trendChartInstance: null,
+            sankeyChartInstance: null,
+            CompareSessionState: {
+                getCompareExamSyncState: () => syncState,
+                setCompareExamSyncState: (nextState) => {
+                    const source = JSON.parse(JSON.stringify(nextState || {}));
+                    Object.keys(syncState).forEach((key) => delete syncState[key]);
+                    Object.assign(syncState, source);
+                    return syncState;
+                }
+            },
+            CloudManager: {
+                fetchCohortExamsToLocal: () => {
+                    fetchCalled = true;
+                    return pendingFetch;
+                }
+            }
+        }
+    };
+    context.globalThis = context.window;
+    context.window.localStorage = context.localStorage;
+    context.window.document = context.document;
+
+    vm.runInNewContext(progressCode, context, { filename: progressPath });
+
+    assert.strictEqual(typeof context.window.trySyncCompareExamOptions, 'function');
+    const started = context.window.trySyncCompareExamOptions();
+
+    assert.strictEqual(started, true);
+    assert.strictEqual(fetchCalled, true);
+    assert.ok(syncState['2022']);
+    assert.strictEqual(syncState['2022'].pending, true);
+    assert.ok(syncState['2022'].lastAttempt > 0);
+}
+
 function run() {
     runCompareSharedFallbackTest();
     runCompareSelectorsFallbackTest();
+    runProgressAnalysisFallbackTest();
     console.log('compare helper fallback tests passed');
 }
 
