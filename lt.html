@@ -686,6 +686,293 @@
 
 </script>
     <script>
+(function (root, factory) {
+    const runtime = factory(root || {});
+
+    if (typeof module === 'object' && module.exports) {
+        const createRuntime = function (overrideRoot) {
+            return factory(overrideRoot || root || {});
+        };
+        createRuntime.runtime = runtime;
+        module.exports = createRuntime;
+    }
+
+    if (!root || root.ExamState) return;
+    root.ExamState = runtime;
+    runtime.syncExamState(runtime.snapshotExamState());
+})(typeof globalThis !== 'undefined' ? globalThis : this, function createExamStateRuntime(root) {
+    const ARCHIVE_META_STORAGE = 'ARCHIVE_META';
+    const CURRENT_TERM_ID_STORAGE = 'CURRENT_TERM_ID';
+    const CURRENT_TEACHER_TERM_ID_STORAGE = 'CURRENT_TEACHER_TERM_ID';
+    const ARCHIVE_LOCKED_STORAGE = 'ARCHIVE_LOCKED';
+    const ARCHIVE_LOCKED_KEY_STORAGE = 'ARCHIVE_LOCKED_KEY';
+
+    function normalizeText(value) {
+        return String(value || '').trim();
+    }
+
+    function getStorage(name) {
+        try {
+            const storage = root && root[name];
+            if (!storage) return null;
+            if (typeof storage.getItem !== 'function') return null;
+            if (typeof storage.setItem !== 'function') return null;
+            if (typeof storage.removeItem !== 'function') return null;
+            return storage;
+        } catch {
+            return null;
+        }
+    }
+
+    function safeParseJson(rawValue, fallbackValue) {
+        if (!normalizeText(rawValue)) return fallbackValue;
+        try {
+            return JSON.parse(rawValue);
+        } catch {
+            return fallbackValue;
+        }
+    }
+
+    function readJson(storage, key, fallbackValue) {
+        if (!storage) return fallbackValue;
+        return safeParseJson(storage.getItem(key), fallbackValue);
+    }
+
+    function writeJson(storage, key, value) {
+        if (!storage) return;
+        storage.setItem(key, JSON.stringify(value));
+    }
+
+    function deleteRootKey(key, fallbackValue = '') {
+        if (!root || typeof key !== 'string') return;
+        try {
+            delete root[key];
+        } catch {
+            root[key] = fallbackValue;
+        }
+    }
+
+    function getTeacherTermBase(termId) {
+        const text = normalizeText(termId);
+        if (!text) return '';
+        const parts = text.split('_').filter(Boolean);
+        if (parts.length >= 2 && /^\d{4}-\d{4}$/.test(parts[0])) {
+            return parts.slice(0, 2).join('_');
+        }
+        return text;
+    }
+
+    function getArchiveMeta() {
+        if (root.ARCHIVE_META && typeof root.ARCHIVE_META === 'object') {
+            return root.ARCHIVE_META;
+        }
+        const storage = getStorage('localStorage');
+        return readJson(storage, ARCHIVE_META_STORAGE, null);
+    }
+
+    function setArchiveMeta(meta) {
+        const storage = getStorage('localStorage');
+        if (!meta || typeof meta !== 'object') {
+            if (storage) storage.removeItem(ARCHIVE_META_STORAGE);
+            deleteRootKey('ARCHIVE_META', null);
+            return null;
+        }
+        const nextMeta = { ...meta };
+        if (storage) writeJson(storage, ARCHIVE_META_STORAGE, nextMeta);
+        root.ARCHIVE_META = nextMeta;
+        return nextMeta;
+    }
+
+    function getCurrentTermId() {
+        const storage = getStorage('localStorage');
+        return normalizeText(root.CURRENT_TERM_ID || (storage && storage.getItem(CURRENT_TERM_ID_STORAGE)) || '');
+    }
+
+    function setCurrentTermId(termId) {
+        const storage = getStorage('localStorage');
+        const nextTermId = normalizeText(termId);
+        if (!nextTermId) {
+            if (storage) storage.removeItem(CURRENT_TERM_ID_STORAGE);
+            deleteRootKey('CURRENT_TERM_ID');
+            return '';
+        }
+        if (storage) storage.setItem(CURRENT_TERM_ID_STORAGE, nextTermId);
+        root.CURRENT_TERM_ID = nextTermId;
+        return nextTermId;
+    }
+
+    function getCurrentTeacherTermId() {
+        const storage = getStorage('localStorage');
+        return normalizeText(root.CURRENT_TEACHER_TERM_ID || (storage && storage.getItem(CURRENT_TEACHER_TERM_ID_STORAGE)) || '');
+    }
+
+    function setCurrentTeacherTermId(termId, options = {}) {
+        const storage = getStorage('localStorage');
+        const nextTeacherTermId = normalizeText(termId);
+        if (!nextTeacherTermId) {
+            if (storage) storage.removeItem(CURRENT_TEACHER_TERM_ID_STORAGE);
+            deleteRootKey('CURRENT_TEACHER_TERM_ID');
+            if (options.syncBaseTerm === true) setCurrentTermId('');
+            return '';
+        }
+        if (storage) storage.setItem(CURRENT_TEACHER_TERM_ID_STORAGE, nextTeacherTermId);
+        root.CURRENT_TEACHER_TERM_ID = nextTeacherTermId;
+        if (options.syncBaseTerm !== false) {
+            setCurrentTermId(getTeacherTermBase(nextTeacherTermId));
+        }
+        return nextTeacherTermId;
+    }
+
+    function syncTeacherTerm(termId) {
+        const exactTermId = normalizeText(termId);
+        if (!exactTermId) {
+            setCurrentTeacherTermId('', { syncBaseTerm: true });
+            return { exactTermId: '', baseTermId: '' };
+        }
+        const baseTermId = getTeacherTermBase(exactTermId);
+        setCurrentTeacherTermId(exactTermId, { syncBaseTerm: false });
+        if (baseTermId) setCurrentTermId(baseTermId);
+        return { exactTermId, baseTermId };
+    }
+
+    function getArchiveLocked() {
+        const storage = getStorage('localStorage');
+        const rawValue = normalizeText(root.ARCHIVE_LOCKED || (storage && storage.getItem(ARCHIVE_LOCKED_STORAGE)) || '');
+        return rawValue === 'true';
+    }
+
+    function getArchiveLockedKey() {
+        const storage = getStorage('localStorage');
+        return normalizeText(root.ARCHIVE_LOCKED_KEY || (storage && storage.getItem(ARCHIVE_LOCKED_KEY_STORAGE)) || '');
+    }
+
+    function setArchiveLock(locked, lockedKey = '') {
+        const storage = getStorage('localStorage');
+        const nextLocked = !!locked;
+        const nextLockedKey = normalizeText(lockedKey);
+
+        if (storage) storage.setItem(ARCHIVE_LOCKED_STORAGE, nextLocked ? 'true' : 'false');
+        root.ARCHIVE_LOCKED = nextLocked ? 'true' : 'false';
+
+        if (!nextLocked || !nextLockedKey) {
+            if (storage) storage.removeItem(ARCHIVE_LOCKED_KEY_STORAGE);
+            deleteRootKey('ARCHIVE_LOCKED_KEY');
+            return { locked: nextLocked, lockedKey: '' };
+        }
+
+        if (storage) storage.setItem(ARCHIVE_LOCKED_KEY_STORAGE, nextLockedKey);
+        root.ARCHIVE_LOCKED_KEY = nextLockedKey;
+        return { locked: nextLocked, lockedKey: nextLockedKey };
+    }
+
+    function getCurrentExamId() {
+        if (root.WorkspaceState && typeof root.WorkspaceState.getCurrentExamId === 'function') {
+            return normalizeText(root.WorkspaceState.getCurrentExamId());
+        }
+        return normalizeText(root.CURRENT_EXAM_ID || '');
+    }
+
+    function isArchiveLocked(currentExamId) {
+        const targetExamId = normalizeText(currentExamId || getCurrentExamId());
+        const lockedKey = getArchiveLockedKey();
+        return !!(getArchiveLocked() && lockedKey && targetExamId && lockedKey === targetExamId);
+    }
+
+    function snapshotExamState() {
+        return {
+            archiveMeta: getArchiveMeta(),
+            currentTermId: getCurrentTermId(),
+            currentTeacherTermId: getCurrentTeacherTermId(),
+            archiveLocked: getArchiveLocked(),
+            archiveLockedKey: getArchiveLockedKey()
+        };
+    }
+
+    function syncExamState(nextState = {}) {
+        const source = nextState && typeof nextState === 'object' ? nextState : {};
+        const nextArchiveMeta = Object.prototype.hasOwnProperty.call(source, 'archiveMeta') ? source.archiveMeta : (
+            Object.prototype.hasOwnProperty.call(source, 'ARCHIVE_META') ? source.ARCHIVE_META : getArchiveMeta()
+        );
+        const nextCurrentTermId = normalizeText(
+            Object.prototype.hasOwnProperty.call(source, 'currentTermId') ? source.currentTermId : (
+                Object.prototype.hasOwnProperty.call(source, 'CURRENT_TERM_ID') ? source.CURRENT_TERM_ID : getCurrentTermId()
+            )
+        );
+        const nextTeacherTermId = normalizeText(
+            Object.prototype.hasOwnProperty.call(source, 'currentTeacherTermId') ? source.currentTeacherTermId : (
+                Object.prototype.hasOwnProperty.call(source, 'CURRENT_TEACHER_TERM_ID') ? source.CURRENT_TEACHER_TERM_ID : getCurrentTeacherTermId()
+            )
+        );
+        const nextArchiveLocked = Object.prototype.hasOwnProperty.call(source, 'archiveLocked') ? !!source.archiveLocked : (
+            Object.prototype.hasOwnProperty.call(source, 'ARCHIVE_LOCKED') ? String(source.ARCHIVE_LOCKED) === 'true' : getArchiveLocked()
+        );
+        const nextArchiveLockedKey = normalizeText(
+            Object.prototype.hasOwnProperty.call(source, 'archiveLockedKey') ? source.archiveLockedKey : (
+                Object.prototype.hasOwnProperty.call(source, 'ARCHIVE_LOCKED_KEY') ? source.ARCHIVE_LOCKED_KEY : getArchiveLockedKey()
+            )
+        );
+
+        setArchiveMeta(nextArchiveMeta);
+        if (nextTeacherTermId) {
+            syncTeacherTerm(nextTeacherTermId);
+        } else {
+            setCurrentTeacherTermId('', { syncBaseTerm: false });
+            setCurrentTermId(nextCurrentTermId);
+        }
+        setArchiveLock(nextArchiveLocked, nextArchiveLockedKey);
+
+        return snapshotExamState();
+    }
+
+    function clearExamState(options = {}) {
+        const storage = getStorage('localStorage');
+        if (storage) {
+            storage.removeItem(ARCHIVE_META_STORAGE);
+            storage.removeItem(ARCHIVE_LOCKED_STORAGE);
+            storage.removeItem(ARCHIVE_LOCKED_KEY_STORAGE);
+            if (!options.keepTermIds) {
+                storage.removeItem(CURRENT_TERM_ID_STORAGE);
+                storage.removeItem(CURRENT_TEACHER_TERM_ID_STORAGE);
+            }
+        }
+
+        deleteRootKey('ARCHIVE_META', null);
+        deleteRootKey('ARCHIVE_LOCKED');
+        deleteRootKey('ARCHIVE_LOCKED_KEY');
+        if (!options.keepTermIds) {
+            deleteRootKey('CURRENT_TERM_ID');
+            deleteRootKey('CURRENT_TEACHER_TERM_ID');
+        }
+
+        return snapshotExamState();
+    }
+
+    return {
+        ARCHIVE_META_STORAGE,
+        CURRENT_TERM_ID_STORAGE,
+        CURRENT_TEACHER_TERM_ID_STORAGE,
+        ARCHIVE_LOCKED_STORAGE,
+        ARCHIVE_LOCKED_KEY_STORAGE,
+        getTeacherTermBase,
+        getArchiveMeta,
+        setArchiveMeta,
+        getCurrentTermId,
+        setCurrentTermId,
+        getCurrentTeacherTermId,
+        setCurrentTeacherTermId,
+        syncTeacherTerm,
+        getArchiveLocked,
+        getArchiveLockedKey,
+        setArchiveLock,
+        isArchiveLocked,
+        snapshotExamState,
+        syncExamState,
+        clearExamState
+    };
+});
+
+</script>
+    <script>
 ﻿(function () {
     const CLOUD_TABLE = 'system_data';
     const KEY_PREFIX_TEACHERS = 'TEACHERS_';
@@ -697,6 +984,7 @@
     ];
     const AUTO_COHORT_SYNC_COOLDOWN_MS = 10 * 60 * 1000;
     const WorkspaceState = window.WorkspaceState || null;
+    const ExamState = window.ExamState || null;
 
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -747,6 +1035,55 @@
             return normalizeCohortId(WorkspaceState.getCurrentCohortId());
         }
         return normalizeCohortId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+    }
+
+    function getCurrentTermId() {
+        if (ExamState && typeof ExamState.getCurrentTermId === 'function') {
+            return String(ExamState.getCurrentTermId() || '').trim();
+        }
+        return String(window.CURRENT_TERM_ID || localStorage.getItem('CURRENT_TERM_ID') || '').trim();
+    }
+
+    function getCurrentTeacherTermId() {
+        if (ExamState && typeof ExamState.getCurrentTeacherTermId === 'function') {
+            return String(ExamState.getCurrentTeacherTermId() || '').trim();
+        }
+        return String(window.CURRENT_TEACHER_TERM_ID || localStorage.getItem('CURRENT_TEACHER_TERM_ID') || '').trim();
+    }
+
+    function getTeacherTermBase(termId) {
+        if (ExamState && typeof ExamState.getTeacherTermBase === 'function') {
+            return String(ExamState.getTeacherTermBase(termId) || '').trim();
+        }
+        const text = String(termId || '').trim();
+        if (!text) return '';
+        const parts = text.split('_').filter(Boolean);
+        if (parts.length >= 2 && /^\d{4}-\d{4}$/.test(parts[0])) {
+            return parts.slice(0, 2).join('_');
+        }
+        return text;
+    }
+
+    function syncTeacherTermState(termId) {
+        const exactTermId = String(termId || '').trim();
+        if (ExamState && typeof ExamState.syncTeacherTerm === 'function') {
+            return ExamState.syncTeacherTerm(exactTermId);
+        }
+        if (!exactTermId) {
+            localStorage.removeItem('CURRENT_TEACHER_TERM_ID');
+            localStorage.removeItem('CURRENT_TERM_ID');
+            window.CURRENT_TEACHER_TERM_ID = '';
+            window.CURRENT_TERM_ID = '';
+            return { exactTermId: '', baseTermId: '' };
+        }
+        localStorage.setItem('CURRENT_TEACHER_TERM_ID', exactTermId);
+        window.CURRENT_TEACHER_TERM_ID = exactTermId;
+        const baseTermId = getTeacherTermBase(exactTermId);
+        if (baseTermId) {
+            localStorage.setItem('CURRENT_TERM_ID', baseTermId);
+            window.CURRENT_TERM_ID = baseTermId;
+        }
+        return { exactTermId, baseTermId };
     }
 
     function hasSavedWorkspaceState() {
@@ -962,7 +1299,7 @@
         const candidateRows = Array.isArray(candidatePayload?.RAW_DATA) ? candidatePayload.RAW_DATA.length : 0;
         if (baseRows > 0 && candidateRows === baseRows) score += 90;
 
-        const cohortId = normalizeCohortId(basePayload?.CURRENT_COHORT_ID || preferredKey || localStorage.getItem('CURRENT_COHORT_ID'));
+        const cohortId = normalizeCohortId(basePayload?.CURRENT_COHORT_ID || preferredKey || getCurrentCohortId());
         if (cohortId && candidateKey === `cohort::${cohortId}`) score += 40;
 
         return score;
@@ -974,8 +1311,7 @@
         const cohortId = normalizeCohortId(
             payload?.CURRENT_COHORT_ID
             || extractCohortIdFromKey(preferredKey)
-            || window.CURRENT_COHORT_ID
-            || localStorage.getItem('CURRENT_COHORT_ID')
+            || getCurrentCohortId()
         );
         if (!cohortId) return payload;
 
@@ -1154,8 +1490,7 @@
 
         const cid = normalizeCohortId(
             extractCohortIdFromKey(rawKey)
-            || window.CURRENT_COHORT_ID
-            || localStorage.getItem('CURRENT_COHORT_ID')
+            || getCurrentCohortId()
         );
         let query = window.sbClient.from(CLOUD_TABLE).select('key,updated_at');
         if (cid) query = query.like('key', `${cid}%`);
@@ -1284,11 +1619,11 @@
                 ? `${meta.year}_${meta.term}${meta.grade ? '_' + meta.grade + '年级' : ''}`
                 : '';
             const termId = termSel?.value
-                || localStorage.getItem('CURRENT_TEACHER_TERM_ID')
+                || getCurrentTeacherTermId()
                 || exactUiTeacherTerm
-                || localStorage.getItem('CURRENT_TERM_ID')
+                || getCurrentTermId()
                 || (typeof getTermId === 'function' ? getTermId(meta) : '');
-            const cohortId = window.CURRENT_COHORT_ID || window.CURRENT_COHORT_META?.id || meta.cohortId || localStorage.getItem('CURRENT_COHORT_ID');
+            const cohortId = getCurrentCohortId() || window.CURRENT_COHORT_META?.id || meta.cohortId;
             if (!termId || !cohortId) return null;
             return `${KEY_PREFIX_TEACHERS}${cohortId}级_${termId}`;
         },
@@ -1361,7 +1696,7 @@
                 }
 
                 if (!row) {
-                    const cohortId = normalizeCohortId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+                    const cohortId = getCurrentCohortId();
                     const termSel = document.getElementById('dm-teacher-term-select');
                     const meta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
                     const exactUiTeacherTerm = meta.year && meta.term
@@ -1369,9 +1704,9 @@
                         : '';
                     const desiredTerms = [
                         termSel?.value,
-                        localStorage.getItem('CURRENT_TEACHER_TERM_ID'),
+                        getCurrentTeacherTermId(),
                         exactUiTeacherTerm,
-                        localStorage.getItem('CURRENT_TERM_ID')
+                        getCurrentTermId()
                     ].map(v => String(v || '').trim()).filter(Boolean);
                     let query = window.sbClient
                         .from(CLOUD_TABLE)
@@ -1407,19 +1742,13 @@
                 const map = parsed.map && typeof parsed.map === 'object' ? parsed.map : {};
                 const schoolMap = parsed.schoolMap && typeof parsed.schoolMap === 'object' ? parsed.schoolMap : {};
                 const keyTermId = String(key || row?.key || '').replace(/^TEACHERS_[^_]+_/, '').trim();
-                if (keyTermId) {
-                    localStorage.setItem('CURRENT_TEACHER_TERM_ID', keyTermId);
-                    const baseTermId = typeof getTeacherTermBase === 'function'
-                        ? getTeacherTermBase(keyTermId)
-                        : keyTermId.split('_').slice(0, 2).join('_');
-                    if (baseTermId) localStorage.setItem('CURRENT_TERM_ID', baseTermId);
-                }
+                if (keyTermId) syncTeacherTermState(keyTermId);
 
                 if (typeof setTeacherMap === 'function') setTeacherMap(map);
                 if (typeof setTeacherSchoolMap === 'function') setTeacherSchoolMap(schoolMap);
                 if (window.DataManager && typeof DataManager.syncTeacherHistory === 'function') {
                     DataManager.syncTeacherHistory({
-                        termId: keyTermId || localStorage.getItem('CURRENT_TEACHER_TERM_ID') || localStorage.getItem('CURRENT_TERM_ID') || '',
+                        termId: keyTermId || getCurrentTeacherTermId() || getCurrentTermId() || '',
                         source: 'cloud',
                         timestamp: row?.updated_at || ''
                     });
@@ -1451,7 +1780,7 @@
             setCloudStatus('syncing', '拉取历史');
             if (!student || !student.name) return { success: false, message: '学生信息无效' };
 
-            const cohortId = normalizeCohortId(student.cohort || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+            const cohortId = normalizeCohortId(student.cohort || getCurrentCohortId());
             if (!cohortId) return { success: false, message: '无法确定学生届别' };
 
             try {
@@ -9045,6 +9374,174 @@ function clearWorkspaceRuntimeIdentity(options = {}) {
     if (options.clearCohortDb) window.COHORT_DB = null;
     return readWorkspaceSnapshot();
 }
+const ExamStateRuntime = window.ExamState || null;
+
+function readArchiveMeta() {
+    if (ExamStateRuntime && typeof ExamStateRuntime.getArchiveMeta === 'function') {
+        return ExamStateRuntime.getArchiveMeta() || null;
+    }
+    if (window.ARCHIVE_META && typeof window.ARCHIVE_META === 'object') return window.ARCHIVE_META;
+    try {
+        return JSON.parse(localStorage.getItem('ARCHIVE_META') || 'null');
+    } catch (e) {
+        return null;
+    }
+}
+
+function writeArchiveMeta(meta) {
+    if (ExamStateRuntime && typeof ExamStateRuntime.setArchiveMeta === 'function') {
+        return ExamStateRuntime.setArchiveMeta(meta);
+    }
+    if (!meta || typeof meta !== 'object') {
+        localStorage.removeItem('ARCHIVE_META');
+        window.ARCHIVE_META = null;
+        return null;
+    }
+    const nextMeta = { ...meta };
+    localStorage.setItem('ARCHIVE_META', JSON.stringify(nextMeta));
+    window.ARCHIVE_META = nextMeta;
+    return nextMeta;
+}
+
+function readCurrentTermId() {
+    if (ExamStateRuntime && typeof ExamStateRuntime.getCurrentTermId === 'function') {
+        return String(ExamStateRuntime.getCurrentTermId() || '').trim();
+    }
+    return String(window.CURRENT_TERM_ID || localStorage.getItem('CURRENT_TERM_ID') || '').trim();
+}
+
+function writeCurrentTermId(termId) {
+    if (ExamStateRuntime && typeof ExamStateRuntime.setCurrentTermId === 'function') {
+        return ExamStateRuntime.setCurrentTermId(termId);
+    }
+    const nextTermId = String(termId || '').trim();
+    if (!nextTermId) {
+        localStorage.removeItem('CURRENT_TERM_ID');
+        window.CURRENT_TERM_ID = '';
+        return '';
+    }
+    localStorage.setItem('CURRENT_TERM_ID', nextTermId);
+    window.CURRENT_TERM_ID = nextTermId;
+    return nextTermId;
+}
+
+function readCurrentTeacherTermId() {
+    if (ExamStateRuntime && typeof ExamStateRuntime.getCurrentTeacherTermId === 'function') {
+        return String(ExamStateRuntime.getCurrentTeacherTermId() || '').trim();
+    }
+    return String(window.CURRENT_TEACHER_TERM_ID || localStorage.getItem('CURRENT_TEACHER_TERM_ID') || '').trim();
+}
+
+function writeCurrentTeacherTermId(termId, options = {}) {
+    if (ExamStateRuntime && typeof ExamStateRuntime.setCurrentTeacherTermId === 'function') {
+        return ExamStateRuntime.setCurrentTeacherTermId(termId, options);
+    }
+    const nextTeacherTermId = String(termId || '').trim();
+    if (!nextTeacherTermId) {
+        localStorage.removeItem('CURRENT_TEACHER_TERM_ID');
+        window.CURRENT_TEACHER_TERM_ID = '';
+        if (options.syncBaseTerm === true) writeCurrentTermId('');
+        return '';
+    }
+    localStorage.setItem('CURRENT_TEACHER_TERM_ID', nextTeacherTermId);
+    window.CURRENT_TEACHER_TERM_ID = nextTeacherTermId;
+    return nextTeacherTermId;
+}
+
+function syncTeacherTermRuntimeState(termId) {
+    if (ExamStateRuntime && typeof ExamStateRuntime.syncTeacherTerm === 'function') {
+        return ExamStateRuntime.syncTeacherTerm(termId);
+    }
+    const exactTermId = String(termId || '').trim();
+    if (!exactTermId) {
+        writeCurrentTeacherTermId('', { syncBaseTerm: true });
+        return { exactTermId: '', baseTermId: '' };
+    }
+    const baseTermId = getTeacherTermBase(exactTermId);
+    writeCurrentTeacherTermId(exactTermId, { syncBaseTerm: false });
+    if (baseTermId) writeCurrentTermId(baseTermId);
+    return { exactTermId, baseTermId };
+}
+
+function readArchiveLockState() {
+    if (ExamStateRuntime && typeof ExamStateRuntime.getArchiveLocked === 'function' && typeof ExamStateRuntime.getArchiveLockedKey === 'function') {
+        return {
+            locked: ExamStateRuntime.getArchiveLocked(),
+            lockedKey: String(ExamStateRuntime.getArchiveLockedKey() || '').trim()
+        };
+    }
+    return {
+        locked: localStorage.getItem('ARCHIVE_LOCKED') === 'true',
+        lockedKey: String(localStorage.getItem('ARCHIVE_LOCKED_KEY') || '').trim()
+    };
+}
+
+function writeArchiveLockState(locked, lockedKey = '') {
+    if (ExamStateRuntime && typeof ExamStateRuntime.setArchiveLock === 'function') {
+        return ExamStateRuntime.setArchiveLock(locked, lockedKey);
+    }
+    localStorage.setItem('ARCHIVE_LOCKED', locked ? 'true' : 'false');
+    window.ARCHIVE_LOCKED = locked ? 'true' : 'false';
+    if (!locked || !String(lockedKey || '').trim()) {
+        localStorage.removeItem('ARCHIVE_LOCKED_KEY');
+        window.ARCHIVE_LOCKED_KEY = '';
+        return { locked: !!locked, lockedKey: '' };
+    }
+    localStorage.setItem('ARCHIVE_LOCKED_KEY', String(lockedKey).trim());
+    window.ARCHIVE_LOCKED_KEY = String(lockedKey).trim();
+    return { locked: !!locked, lockedKey: String(lockedKey).trim() };
+}
+
+function isArchiveLockedState(currentExamId) {
+    if (ExamStateRuntime && typeof ExamStateRuntime.isArchiveLocked === 'function') {
+        return ExamStateRuntime.isArchiveLocked(currentExamId);
+    }
+    const lockState = readArchiveLockState();
+    const targetExamId = String(currentExamId || readWorkspaceExamId() || '').trim();
+    return !!(lockState.locked && lockState.lockedKey && targetExamId && lockState.lockedKey === targetExamId);
+}
+
+function syncExamRuntimeState(patch = {}) {
+    if (ExamStateRuntime && typeof ExamStateRuntime.syncExamState === 'function') {
+        return ExamStateRuntime.syncExamState(patch);
+    }
+    const next = patch && typeof patch === 'object' ? patch : {};
+    if (Object.prototype.hasOwnProperty.call(next, 'archiveMeta')) writeArchiveMeta(next.archiveMeta);
+    if (Object.prototype.hasOwnProperty.call(next, 'currentTeacherTermId')) {
+        syncTeacherTermRuntimeState(next.currentTeacherTermId);
+    } else if (Object.prototype.hasOwnProperty.call(next, 'currentTermId')) {
+        writeCurrentTermId(next.currentTermId);
+    }
+    if (Object.prototype.hasOwnProperty.call(next, 'archiveLocked') || Object.prototype.hasOwnProperty.call(next, 'archiveLockedKey')) {
+        writeArchiveLockState(!!next.archiveLocked, next.archiveLockedKey || '');
+    }
+    return {
+        archiveMeta: readArchiveMeta(),
+        currentTermId: readCurrentTermId(),
+        currentTeacherTermId: readCurrentTeacherTermId(),
+        archiveLocked: readArchiveLockState().locked,
+        archiveLockedKey: readArchiveLockState().lockedKey
+    };
+}
+
+function clearExamRuntimeState(options = {}) {
+    if (ExamStateRuntime && typeof ExamStateRuntime.clearExamState === 'function') {
+        return ExamStateRuntime.clearExamState(options);
+    }
+    localStorage.removeItem('ARCHIVE_META');
+    localStorage.removeItem('ARCHIVE_LOCKED');
+    localStorage.removeItem('ARCHIVE_LOCKED_KEY');
+    window.ARCHIVE_META = null;
+    window.ARCHIVE_LOCKED = '';
+    window.ARCHIVE_LOCKED_KEY = '';
+    if (!options.keepTermIds) {
+        localStorage.removeItem('CURRENT_TERM_ID');
+        localStorage.removeItem('CURRENT_TEACHER_TERM_ID');
+        window.CURRENT_TERM_ID = '';
+        window.CURRENT_TEACHER_TERM_ID = '';
+    }
+    return syncExamRuntimeState({});
+}
 
 // 🔐 权限与账号管理系统核心
 const Auth = {
@@ -12923,7 +13420,7 @@ const DataManager = {
         const baseTerm = parts.slice(0, 2).join('_'); // "2025-2026_上学期"
         const gradeInfo = parts[2]; // "9年级" 或 undefined
 
-        localStorage.setItem('CURRENT_TERM_ID', baseTerm);
+        syncTeacherTermStorage(termId);
 
         // 如果有年级信息，计算并设置cohortId
         if (gradeInfo) {
@@ -13020,7 +13517,7 @@ const DataManager = {
     },
 
     syncTeacherHistory: function (opts = {}) {
-        const termId = opts.termId || localStorage.getItem('CURRENT_TERM_ID') || getTermId(getExamMetaFromUI());
+        const termId = opts.termId || readCurrentTermId() || getTermId(getExamMetaFromUI());
         if (!termId) return;
         const db = CohortDB.ensure();
         db.teachingHistory = db.teachingHistory || {};
@@ -13088,7 +13585,7 @@ const DataManager = {
         }
 
         // 检查学期
-        const termId = localStorage.getItem('CURRENT_TERM_ID') || getTermId(getExamMetaFromUI());
+        const termId = readCurrentTermId() || getTermId(getExamMetaFromUI());
         if (!termId) {
             alert('⚠️ 请先选择学期！\n\n点击【学期】下拉框选择一个学期后再导入Excel。');
             return;
@@ -13616,7 +14113,7 @@ const DataManager = {
         const liveMap = window.TEACHER_MAP && typeof window.TEACHER_MAP === 'object' ? window.TEACHER_MAP : {};
         const liveSchoolMap = window.TEACHER_SCHOOL_MAP && typeof window.TEACHER_SCHOOL_MAP === 'object' ? window.TEACHER_SCHOOL_MAP : {};
         const termId = resolved?.key || preferredTermId;
-        const loadedTermId = String(localStorage.getItem('CURRENT_TEACHER_TERM_ID') || '').trim();
+        const loadedTermId = readCurrentTeacherTermId();
         const localSignature = this.buildTeacherSignature(localMap, localSchoolMap);
         const liveSignature = this.buildTeacherSignature(liveMap, liveSchoolMap);
         const localCount = Object.keys(localMap || {}).length;
@@ -16076,7 +16573,7 @@ function SIG_buildTeacherProtection(classes, subjectName, teacherName) {
     const history = db?.teachingHistory || {};
     const currentTermId = String(
         (typeof getPreferredTeacherTermId === 'function' ? getPreferredTeacherTermId() : '')
-        || localStorage.getItem('CURRENT_TEACHER_TERM_ID')
+        || readCurrentTeacherTermId()
         || ''
     ).trim();
     const classList = [...new Set((classes || []).map((item) => normalizeClass(item)).filter(Boolean))];
@@ -17058,7 +17555,7 @@ function guardBeforeSwitch(id) {
     ];
     if (!needGuard.includes(id)) return true;
 
-    const termId = localStorage.getItem('CURRENT_TERM_ID') || (typeof getTermId === 'function' ? getTermId(getExamMetaFromUI()) : '');
+    const termId = readCurrentTermId() || (typeof getTermId === 'function' ? getTermId(getExamMetaFromUI()) : '');
     const hasSchool = !!MY_SCHOOL;
     const hasScores = RAW_DATA && RAW_DATA.length > 0;
     const missing = [];
@@ -18376,7 +18873,7 @@ function tmRenderModuleStateBar(moduleId) {
         || { text: teacherCoverage.mappingCount > 0 ? '已加载' : '缺任课表', tone: teacherCoverage.mappingCount > 0 ? 'ok' : 'warn' };
     const teacherTerm = String(
         statusModel?.teacherSnapshot?.termId
-        || localStorage.getItem('CURRENT_TEACHER_TERM_ID')
+        || readCurrentTeacherTermId()
         || (typeof getPreferredTeacherTermId === 'function' ? getPreferredTeacherTermId() : '')
         || (typeof pickAutoTeacherTerm === 'function' ? pickAutoTeacherTerm() : '')
         || ''
@@ -18803,10 +19300,10 @@ function renderTeachingOverview() {
         || '未选择';
     const teacherTerm = String(
         statusModel?.teacherSnapshot?.termId
-        || localStorage.getItem('CURRENT_TEACHER_TERM_ID')
+        || readCurrentTeacherTermId()
         || (typeof getPreferredTeacherTermId === 'function' ? getPreferredTeacherTermId() : '')
         || (typeof pickAutoTeacherTerm === 'function' ? pickAutoTeacherTerm() : '')
-        || localStorage.getItem('CURRENT_TERM_ID')
+        || readCurrentTermId()
         || ''
     ).trim() || '未识别';
     const lastSyncText = String(statusModel?.lastSyncText || '').trim() || '尚未记录';
@@ -23341,7 +23838,7 @@ function getStudentExamHistory(student) {
 function getIndicatorContext() {
     const liveMeta = (typeof getExamMetaFromUI === 'function') ? (getExamMetaFromUI() || {}) : {};
     let archiveMeta = null;
-    try { archiveMeta = JSON.parse(localStorage.getItem('ARCHIVE_META') || 'null'); } catch (e) { }
+    archiveMeta = readArchiveMeta();
     const hasLive = !!(liveMeta && (liveMeta.grade || liveMeta.type || liveMeta.year || liveMeta.term));
     const meta = hasLive ? liveMeta : (archiveMeta || liveMeta);
     const grade = String(meta?.grade || computeCohortGrade(CURRENT_COHORT_META, meta) || '');
@@ -29928,28 +30425,23 @@ function getPreferredTeacherTermId() {
     const termSel = document.getElementById('dm-teacher-term-select');
     return String(
         termSel?.value
-        || localStorage.getItem('CURRENT_TEACHER_TERM_ID')
+        || readCurrentTeacherTermId()
         || uiTeacherTermId
-        || localStorage.getItem('CURRENT_TERM_ID')
+        || readCurrentTermId()
         || ''
     ).trim();
 }
 
 function syncTeacherTermStorage(termId) {
-    const exactTermId = String(termId || '').trim();
-    if (!exactTermId) return { exactTermId: '', baseTermId: '' };
-    const baseTermId = getTeacherTermBase(exactTermId);
-    localStorage.setItem('CURRENT_TEACHER_TERM_ID', exactTermId);
-    if (baseTermId) localStorage.setItem('CURRENT_TERM_ID', baseTermId);
-    return { exactTermId, baseTermId };
+    return syncTeacherTermRuntimeState(termId);
 }
 
 function getTeacherTermCandidates(termId) {
     const preferred = String(termId || '').trim();
     const uiMeta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
     const uiTeacherTermId = buildTeacherTermId(uiMeta);
-    const savedTeacherTermId = String(localStorage.getItem('CURRENT_TEACHER_TERM_ID') || '').trim();
-    const savedBaseTerm = String(localStorage.getItem('CURRENT_TERM_ID') || '').trim();
+    const savedTeacherTermId = readCurrentTeacherTermId();
+    const savedBaseTerm = readCurrentTermId();
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
     const history = db?.teachingHistory || {};
     const candidates = [];
@@ -30170,11 +30662,7 @@ function showCohortPicker() {
 }
 
 function resetCohortSelection() {
-    localStorage.removeItem('CURRENT_COHORT_ID');
-    localStorage.removeItem('CURRENT_COHORT_META');
-    localStorage.removeItem('CURRENT_EXAM_ID');
-    localStorage.removeItem('CURRENT_TERM_ID');
-    localStorage.removeItem('CURRENT_TEACHER_TERM_ID');
+    clearExamRuntimeState();
     clearWorkspaceRuntimeIdentity({ clearCohortDb: true });
     COHORT_DB = null;
     CURRENT_COHORT_ID = '';
@@ -30184,13 +30672,8 @@ function resetCohortSelection() {
 }
 
 function getActiveGrade() {
-    const metaStr = localStorage.getItem('ARCHIVE_META');
-    if (metaStr) {
-        try {
-            const meta = JSON.parse(metaStr);
-            if (meta && meta.grade) return meta.grade;
-        } catch (e) { }
-    }
+    const meta = readArchiveMeta();
+    if (meta && meta.grade) return meta.grade;
     if (CURRENT_COHORT_META) {
         const guess = computeCohortGrade(CURRENT_COHORT_META, getExamMetaFromUI());
         if (guess) return guess;
@@ -30393,8 +30876,8 @@ function migrateLegacyExamKey(meta, nextKey) {
     if (Array.isArray(db?.resetPoints)) {
         db.resetPoints = db.resetPoints.map((examId) => (examId === legacyKey ? nextKey : examId));
     }
-    if (localStorage.getItem('ARCHIVE_LOCKED_KEY') === legacyKey) {
-        localStorage.setItem('ARCHIVE_LOCKED_KEY', nextKey);
+    if (readArchiveLockState().lockedKey === legacyKey) {
+        writeArchiveLockState(readArchiveLockState().locked, nextKey);
     }
 }
 
@@ -30507,8 +30990,9 @@ function setCurrentExamMeta(silent = false) {
     if (effectiveGrade && meta.grade !== effectiveGrade) meta.grade = effectiveGrade;
     CURRENT_EXAM_ID = key;
     writeWorkspaceExamId(key);
-    localStorage.setItem('ARCHIVE_META', JSON.stringify(meta));
+    writeArchiveMeta(meta);
     if (COHORT_DB) COHORT_DB.currentExamId = key;
+    syncExamRuntimeState({ archiveMeta: meta });
     syncRuntimeStateToWindow();
     applyModeByGrade(effectiveGrade || meta.grade);
     applyExamMetaUI();
@@ -30518,31 +31002,27 @@ function setCurrentExamMeta(silent = false) {
 }
 
 function applyExamMetaUI() {
-    const metaStr = localStorage.getItem('ARCHIVE_META');
-    let meta = null;
-    if (metaStr) {
-        try {
-            meta = JSON.parse(metaStr);
-            const yearEl = document.getElementById('exam-year');
-            const termEl = document.getElementById('exam-term');
-            const typeEl = document.getElementById('exam-type');
-            const dateEl = document.getElementById('exam-date');
-            const nameEl = document.getElementById('exam-name');
-            const resetEl = document.getElementById('exam-reset-point');
-            if (yearEl && meta.year) yearEl.value = meta.year;
-            if (termEl && meta.term) termEl.value = meta.term;
-            if (typeEl && meta.type) typeEl.value = meta.type;
-            if (dateEl && meta.date) dateEl.value = meta.date;
-            if (nameEl && meta.name) nameEl.value = meta.name;
-            if (resetEl) resetEl.checked = !!meta.resetPoint;
-            if (CURRENT_COHORT_META) {
-                const recalculated = computeCohortGrade(CURRENT_COHORT_META, meta);
-                if (recalculated && meta.grade !== recalculated) {
-                    meta.grade = recalculated;
-                    localStorage.setItem('ARCHIVE_META', JSON.stringify(meta));
-                }
+    let meta = readArchiveMeta();
+    if (meta) {
+        const yearEl = document.getElementById('exam-year');
+        const termEl = document.getElementById('exam-term');
+        const typeEl = document.getElementById('exam-type');
+        const dateEl = document.getElementById('exam-date');
+        const nameEl = document.getElementById('exam-name');
+        const resetEl = document.getElementById('exam-reset-point');
+        if (yearEl && meta.year) yearEl.value = meta.year;
+        if (termEl && meta.term) termEl.value = meta.term;
+        if (typeEl && meta.type) typeEl.value = meta.type;
+        if (dateEl && meta.date) dateEl.value = meta.date;
+        if (nameEl && meta.name) nameEl.value = meta.name;
+        if (resetEl) resetEl.checked = !!meta.resetPoint;
+        if (CURRENT_COHORT_META) {
+            const recalculated = computeCohortGrade(CURRENT_COHORT_META, meta);
+            if (recalculated && meta.grade !== recalculated) {
+                meta = { ...meta, grade: recalculated };
+                writeArchiveMeta(meta);
             }
-        } catch (e) { }
+        }
     }
     const key = readWorkspaceExamId() || '未设置';
     const keyEl = document.getElementById('exam-key-display');
@@ -30563,10 +31043,7 @@ function applyExamMetaUI() {
 }
 
 function isArchiveLocked() {
-    const locked = localStorage.getItem('ARCHIVE_LOCKED') === 'true';
-    const lockedKey = localStorage.getItem('ARCHIVE_LOCKED_KEY');
-    const currentKey = readWorkspaceExamId();
-    return locked && lockedKey && currentKey && lockedKey === currentKey;
+    return isArchiveLockedState(readWorkspaceExamId());
 }
 
 async function archiveCurrentExam() {
@@ -30580,8 +31057,9 @@ async function archiveCurrentExam() {
     migrateLegacyExamKey(meta, key);
     CURRENT_EXAM_ID = key;
     writeWorkspaceExamId(key);
-    localStorage.setItem('ARCHIVE_META', JSON.stringify(meta));
+    writeArchiveMeta(meta);
     if (COHORT_DB) COHORT_DB.currentExamId = key;
+    syncExamRuntimeState({ archiveMeta: meta });
     syncRuntimeStateToWindow();
 
     // 保存真实考试快照，并同步整届工作区
@@ -30589,8 +31067,7 @@ async function archiveCurrentExam() {
     await saveCloudData({ mode: 'workspace' });
     createAutoSnapshot(getCurrentSnapshotPayload());
 
-    localStorage.setItem('ARCHIVE_LOCKED', 'true');
-    localStorage.setItem('ARCHIVE_LOCKED_KEY', key);
+    writeArchiveLockState(true, key);
     applyExamMetaUI();
     applyArchiveLockUI();
     if (window.UI) UI.toast("✅ 已封存并进入只读模式", "success");
@@ -30600,8 +31077,7 @@ async function archiveCurrentExam() {
 function unlockArchive() {
     if (!isArchiveLocked()) return alert("当前未封存");
     if (!confirm("⚠️ 解除封存将允许编辑历史数据，是否继续？")) return;
-    localStorage.setItem('ARCHIVE_LOCKED', 'false');
-    localStorage.removeItem('ARCHIVE_LOCKED_KEY');
+    writeArchiveLockState(false, '');
     applyExamMetaUI();
     applyArchiveLockUI();
     if (window.UI) UI.toast("✅ 已解除封存", "success");
@@ -30782,12 +31258,12 @@ const CohortDB = {
 
         CURRENT_EXAM_ID = examId;
         writeWorkspaceExamId(examId);
-        localStorage.setItem('ARCHIVE_META', JSON.stringify(exam.meta || {}));
+        writeArchiveMeta(exam.meta || {});
         syncRuntimeStateToWindow();
         const effectiveGrade = getEffectiveGrade(exam.meta || {});
         if (effectiveGrade && exam.meta && exam.meta.grade !== effectiveGrade) exam.meta.grade = effectiveGrade;
         const termId = getTermId(exam.meta || {});
-        if (termId) localStorage.setItem('CURRENT_TERM_ID', termId);
+        if (termId) writeCurrentTermId(termId);
         applyModeByGrade(effectiveGrade || exam.meta?.grade);
 
         if (RAW_DATA.length > 0 && typeof processData === 'function') {
@@ -31078,16 +31554,26 @@ const CohortGrowth = {
 function getCurrentSnapshotPayload() {
     window.getCurrentSnapshotPayload = getCurrentSnapshotPayload;
     const workspaceSnapshot = readWorkspaceSnapshot();
+    const examSnapshot = ExamStateRuntime && typeof ExamStateRuntime.snapshotExamState === 'function'
+        ? ExamStateRuntime.snapshotExamState()
+        : {
+            archiveMeta: readArchiveMeta(),
+            currentTermId: readCurrentTermId(),
+            currentTeacherTermId: readCurrentTeacherTermId(),
+            archiveLocked: readArchiveLockState().locked,
+            archiveLockedKey: readArchiveLockState().lockedKey
+        };
     return {
         CURRENT_PROJECT_KEY: workspaceSnapshot.currentProjectKey || '',
         COHORT_DB: workspaceSnapshot.cohortDb || null,
         CURRENT_COHORT_ID: workspaceSnapshot.currentCohortId || '',
         CURRENT_COHORT_META: workspaceSnapshot.currentCohortMeta || null,
         CURRENT_EXAM_ID: workspaceSnapshot.currentExamId || '',
-        CURRENT_TERM_ID: localStorage.getItem('CURRENT_TERM_ID') || '',
-        ARCHIVE_META: (() => {
-            try { return JSON.parse(localStorage.getItem('ARCHIVE_META') || 'null'); } catch (e) { return null; }
-        })(),
+        CURRENT_TERM_ID: examSnapshot.currentTermId || '',
+        CURRENT_TEACHER_TERM_ID: examSnapshot.currentTeacherTermId || '',
+        ARCHIVE_META: examSnapshot.archiveMeta || null,
+        ARCHIVE_LOCKED: examSnapshot.archiveLocked ? 'true' : 'false',
+        ARCHIVE_LOCKED_KEY: examSnapshot.archiveLockedKey || '',
         RAW_DATA: window.RAW_DATA || [],
         SCHOOLS: window.SCHOOLS || {},
         SUBJECTS: window.SUBJECTS || [],
@@ -31292,10 +31778,13 @@ function applySnapshotPayload(db) {
     CURRENT_COHORT_ID = db.CURRENT_COHORT_ID || CURRENT_COHORT_ID || '';
     CURRENT_COHORT_META = db.CURRENT_COHORT_META || CURRENT_COHORT_META || null;
     CURRENT_EXAM_ID = db.CURRENT_EXAM_ID || CURRENT_EXAM_ID || '';
-    if (db.CURRENT_TERM_ID) localStorage.setItem('CURRENT_TERM_ID', db.CURRENT_TERM_ID);
-    if (db.ARCHIVE_META) {
-        localStorage.setItem('ARCHIVE_META', JSON.stringify(db.ARCHIVE_META));
-    }
+    syncExamRuntimeState({
+        currentTermId: db.CURRENT_TERM_ID || readCurrentTermId(),
+        currentTeacherTermId: db.CURRENT_TEACHER_TERM_ID || readCurrentTeacherTermId(),
+        archiveMeta: db.ARCHIVE_META || readArchiveMeta(),
+        archiveLocked: String(db.ARCHIVE_LOCKED || '').trim() === 'true',
+        archiveLockedKey: db.ARCHIVE_LOCKED_KEY || ''
+    });
     syncWorkspaceRuntimeState({
         currentProjectKey: String(db.CURRENT_PROJECT_KEY || '').trim() || (CURRENT_COHORT_ID ? getCohortKey(CURRENT_COHORT_ID) : readWorkspaceProjectKey()),
         cohortDb: COHORT_DB,
@@ -31304,11 +31793,10 @@ function applySnapshotPayload(db) {
         currentExamId: CURRENT_EXAM_ID
     });
     if (readWorkspaceExamId()) {
-        const metaStr = localStorage.getItem('ARCHIVE_META');
         try {
-            const meta = metaStr ? JSON.parse(metaStr) : null;
+            const meta = readArchiveMeta();
             const termId = getTermId(meta || {});
-            if (termId) localStorage.setItem('CURRENT_TERM_ID', termId);
+            if (termId) writeCurrentTermId(termId);
         } catch (e) { }
     }
     window.RAW_DATA = db.RAW_DATA || [];
@@ -32581,7 +33069,7 @@ async function manualRestore() {
 function updateStatusPanel() {
     if (!document.getElementById('starter-status-panel')) return;
     const panel = document.getElementById('starter-status-panel');
-    const termId = localStorage.getItem('CURRENT_TERM_ID') || (typeof getTermId === 'function' ? getTermId(getExamMetaFromUI()) : '');
+    const termId = readCurrentTermId() || (typeof getTermId === 'function' ? getTermId(getExamMetaFromUI()) : '');
     const examId = CURRENT_EXAM_ID || readWorkspaceExamId() || '未选择';
     const cohortId = CURRENT_COHORT_ID || readWorkspaceCohortId() || '未选择';
     const savedSchool = localStorage.getItem('MY_SCHOOL');
@@ -32652,7 +33140,7 @@ function openStarterGuide() {
 }
 
 async function runAutoDiagnosis() {
-    const termId = localStorage.getItem('CURRENT_TERM_ID') || (typeof getTermId === 'function' ? getTermId(getExamMetaFromUI()) : '');
+    const termId = readCurrentTermId() || (typeof getTermId === 'function' ? getTermId(getExamMetaFromUI()) : '');
     const hasScores = RAW_DATA && RAW_DATA.length > 0;
     const hasTeachers = window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0;
     const hasSchool = !!MY_SCHOOL;
@@ -32728,7 +33216,7 @@ async function loadDemoData() {
     });
 
     MY_SCHOOL = demoSchool;
-    localStorage.setItem('CURRENT_TERM_ID', localStorage.getItem('CURRENT_TERM_ID') || '2025-2026_上学期');
+    writeCurrentTermId(readCurrentTermId() || '2025-2026_上学期');
     CURRENT_COHORT_ID = CURRENT_COHORT_ID || 'DEMO';
     CURRENT_EXAM_ID = CURRENT_EXAM_ID || 'DEMO_EXAM';
     syncWorkspaceRuntimeState({
@@ -32817,7 +33305,7 @@ function getTeacherTermOptions() {
     });
 
     const meta = (typeof getExamMetaFromUI === 'function') ? getExamMetaFromUI() : {};
-    const termId = localStorage.getItem('CURRENT_TERM_ID') || (meta.year && meta.term ? `${meta.year}_${meta.term}` : '');
+    const termId = readCurrentTermId() || (meta.year && meta.term ? `${meta.year}_${meta.term}` : '');
     if (termId && !options.find(o => o.value === termId)) {
         options.push({ value: termId, label: termId });
     }
@@ -32852,7 +33340,7 @@ function pickAutoTeacherTerm() {
         .filter(x => x.termId && x.size > 0);
 
     if (!entries.length) {
-        return localStorage.getItem('CURRENT_TERM_ID') || '';
+        return readCurrentTermId() || '';
     }
 
     entries.sort((a, b) => {
@@ -32924,12 +33412,12 @@ function promptTeacherSyncIfNeeded() {
     const opts = getTeacherTermOptions();
     if (!opts.length) return false;
 
-    const current = localStorage.getItem('CURRENT_TERM_ID');
+    const current = readCurrentTermId();
     const defaultValue = current || opts[0].value;
 
     const doSync = (termId) => {
         if (!termId) return;
-        localStorage.setItem('CURRENT_TERM_ID', termId);
+        writeCurrentTermId(termId);
         const termSel = document.getElementById('dm-teacher-term-select');
         if (termSel) termSel.value = termId;
         if (window.CloudManager && CloudManager.loadTeachers) CloudManager.loadTeachers();
@@ -33035,7 +33523,7 @@ function renderTeacherAnalysisState() {
     } else {
         const compTable = document.getElementById('teacherComparisonTable');
         if (compTable) {
-            const teacherTerm = localStorage.getItem('CURRENT_TEACHER_TERM_ID') || getPreferredTeacherTermId() || '当前学期';
+            const teacherTerm = readCurrentTeacherTermId() || getPreferredTeacherTermId() || '当前学期';
             const message = hasTeacherMap
                 ? `
                     <p style="font-size:16px; font-weight:bold; color:#333;">无法自动识别“本校”</p>

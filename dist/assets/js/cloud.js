@@ -9,6 +9,7 @@
     ];
     const AUTO_COHORT_SYNC_COOLDOWN_MS = 10 * 60 * 1000;
     const WorkspaceState = window.WorkspaceState || null;
+    const ExamState = window.ExamState || null;
 
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -59,6 +60,55 @@
             return normalizeCohortId(WorkspaceState.getCurrentCohortId());
         }
         return normalizeCohortId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+    }
+
+    function getCurrentTermId() {
+        if (ExamState && typeof ExamState.getCurrentTermId === 'function') {
+            return String(ExamState.getCurrentTermId() || '').trim();
+        }
+        return String(window.CURRENT_TERM_ID || localStorage.getItem('CURRENT_TERM_ID') || '').trim();
+    }
+
+    function getCurrentTeacherTermId() {
+        if (ExamState && typeof ExamState.getCurrentTeacherTermId === 'function') {
+            return String(ExamState.getCurrentTeacherTermId() || '').trim();
+        }
+        return String(window.CURRENT_TEACHER_TERM_ID || localStorage.getItem('CURRENT_TEACHER_TERM_ID') || '').trim();
+    }
+
+    function getTeacherTermBase(termId) {
+        if (ExamState && typeof ExamState.getTeacherTermBase === 'function') {
+            return String(ExamState.getTeacherTermBase(termId) || '').trim();
+        }
+        const text = String(termId || '').trim();
+        if (!text) return '';
+        const parts = text.split('_').filter(Boolean);
+        if (parts.length >= 2 && /^\d{4}-\d{4}$/.test(parts[0])) {
+            return parts.slice(0, 2).join('_');
+        }
+        return text;
+    }
+
+    function syncTeacherTermState(termId) {
+        const exactTermId = String(termId || '').trim();
+        if (ExamState && typeof ExamState.syncTeacherTerm === 'function') {
+            return ExamState.syncTeacherTerm(exactTermId);
+        }
+        if (!exactTermId) {
+            localStorage.removeItem('CURRENT_TEACHER_TERM_ID');
+            localStorage.removeItem('CURRENT_TERM_ID');
+            window.CURRENT_TEACHER_TERM_ID = '';
+            window.CURRENT_TERM_ID = '';
+            return { exactTermId: '', baseTermId: '' };
+        }
+        localStorage.setItem('CURRENT_TEACHER_TERM_ID', exactTermId);
+        window.CURRENT_TEACHER_TERM_ID = exactTermId;
+        const baseTermId = getTeacherTermBase(exactTermId);
+        if (baseTermId) {
+            localStorage.setItem('CURRENT_TERM_ID', baseTermId);
+            window.CURRENT_TERM_ID = baseTermId;
+        }
+        return { exactTermId, baseTermId };
     }
 
     function hasSavedWorkspaceState() {
@@ -274,7 +324,7 @@
         const candidateRows = Array.isArray(candidatePayload?.RAW_DATA) ? candidatePayload.RAW_DATA.length : 0;
         if (baseRows > 0 && candidateRows === baseRows) score += 90;
 
-        const cohortId = normalizeCohortId(basePayload?.CURRENT_COHORT_ID || preferredKey || localStorage.getItem('CURRENT_COHORT_ID'));
+        const cohortId = normalizeCohortId(basePayload?.CURRENT_COHORT_ID || preferredKey || getCurrentCohortId());
         if (cohortId && candidateKey === `cohort::${cohortId}`) score += 40;
 
         return score;
@@ -286,8 +336,7 @@
         const cohortId = normalizeCohortId(
             payload?.CURRENT_COHORT_ID
             || extractCohortIdFromKey(preferredKey)
-            || window.CURRENT_COHORT_ID
-            || localStorage.getItem('CURRENT_COHORT_ID')
+            || getCurrentCohortId()
         );
         if (!cohortId) return payload;
 
@@ -466,8 +515,7 @@
 
         const cid = normalizeCohortId(
             extractCohortIdFromKey(rawKey)
-            || window.CURRENT_COHORT_ID
-            || localStorage.getItem('CURRENT_COHORT_ID')
+            || getCurrentCohortId()
         );
         let query = window.sbClient.from(CLOUD_TABLE).select('key,updated_at');
         if (cid) query = query.like('key', `${cid}%`);
@@ -596,11 +644,11 @@
                 ? `${meta.year}_${meta.term}${meta.grade ? '_' + meta.grade + '年级' : ''}`
                 : '';
             const termId = termSel?.value
-                || localStorage.getItem('CURRENT_TEACHER_TERM_ID')
+                || getCurrentTeacherTermId()
                 || exactUiTeacherTerm
-                || localStorage.getItem('CURRENT_TERM_ID')
+                || getCurrentTermId()
                 || (typeof getTermId === 'function' ? getTermId(meta) : '');
-            const cohortId = window.CURRENT_COHORT_ID || window.CURRENT_COHORT_META?.id || meta.cohortId || localStorage.getItem('CURRENT_COHORT_ID');
+            const cohortId = getCurrentCohortId() || window.CURRENT_COHORT_META?.id || meta.cohortId;
             if (!termId || !cohortId) return null;
             return `${KEY_PREFIX_TEACHERS}${cohortId}级_${termId}`;
         },
@@ -673,7 +721,7 @@
                 }
 
                 if (!row) {
-                    const cohortId = normalizeCohortId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+                    const cohortId = getCurrentCohortId();
                     const termSel = document.getElementById('dm-teacher-term-select');
                     const meta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
                     const exactUiTeacherTerm = meta.year && meta.term
@@ -681,9 +729,9 @@
                         : '';
                     const desiredTerms = [
                         termSel?.value,
-                        localStorage.getItem('CURRENT_TEACHER_TERM_ID'),
+                        getCurrentTeacherTermId(),
                         exactUiTeacherTerm,
-                        localStorage.getItem('CURRENT_TERM_ID')
+                        getCurrentTermId()
                     ].map(v => String(v || '').trim()).filter(Boolean);
                     let query = window.sbClient
                         .from(CLOUD_TABLE)
@@ -719,19 +767,13 @@
                 const map = parsed.map && typeof parsed.map === 'object' ? parsed.map : {};
                 const schoolMap = parsed.schoolMap && typeof parsed.schoolMap === 'object' ? parsed.schoolMap : {};
                 const keyTermId = String(key || row?.key || '').replace(/^TEACHERS_[^_]+_/, '').trim();
-                if (keyTermId) {
-                    localStorage.setItem('CURRENT_TEACHER_TERM_ID', keyTermId);
-                    const baseTermId = typeof getTeacherTermBase === 'function'
-                        ? getTeacherTermBase(keyTermId)
-                        : keyTermId.split('_').slice(0, 2).join('_');
-                    if (baseTermId) localStorage.setItem('CURRENT_TERM_ID', baseTermId);
-                }
+                if (keyTermId) syncTeacherTermState(keyTermId);
 
                 if (typeof setTeacherMap === 'function') setTeacherMap(map);
                 if (typeof setTeacherSchoolMap === 'function') setTeacherSchoolMap(schoolMap);
                 if (window.DataManager && typeof DataManager.syncTeacherHistory === 'function') {
                     DataManager.syncTeacherHistory({
-                        termId: keyTermId || localStorage.getItem('CURRENT_TEACHER_TERM_ID') || localStorage.getItem('CURRENT_TERM_ID') || '',
+                        termId: keyTermId || getCurrentTeacherTermId() || getCurrentTermId() || '',
                         source: 'cloud',
                         timestamp: row?.updated_at || ''
                     });
@@ -763,7 +805,7 @@
             setCloudStatus('syncing', '拉取历史');
             if (!student || !student.name) return { success: false, message: '学生信息无效' };
 
-            const cohortId = normalizeCohortId(student.cohort || window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+            const cohortId = normalizeCohortId(student.cohort || getCurrentCohortId());
             if (!cohortId) return { success: false, message: '无法确定学生届别' };
 
             try {
