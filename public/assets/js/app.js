@@ -26674,6 +26674,21 @@ if (typeof DataManager !== 'undefined') {
                 buildInlineChip('目标', targetsMeta.title, targetsMeta.tone),
                 buildInlineChip('任课表', teachersMeta.title, teachersMeta.tone)
             ].join('');
+            syncChipEl && (syncChipEl.innerHTML = `
+                <span class="dm-tab-sync-dot"></span>
+                <div class="dm-tab-sync-copy">
+                    <strong>最近同步</strong>
+                    <span>${hasSyncRecord ? `${lastSyncText} · ${lastSyncSource}` : lastSyncText}</span>
+                </div>
+            `);
+            if (syncChipEl) {
+                syncChipEl.title = hasSyncRecord ? `${lastSyncText} / ${lastSyncSource}` : '暂无云端同步记录';
+            }
+            inlineStatusGroupEl.innerHTML = [
+                buildInlineChip('参数', paramsMeta.title, paramsMeta.tone),
+                buildInlineChip('目标', targetsMeta.title, targetsMeta.tone),
+                buildInlineChip('任课表', teachersMeta.title, teachersMeta.tone)
+            ].join('');
         }
 
         if (tipEl) {

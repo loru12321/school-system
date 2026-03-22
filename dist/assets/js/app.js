@@ -2106,7 +2106,13 @@ DEBUG: `+s.message)}},n.readAsText(t)}function openTargetEditor(){if(Object.keys
                             <span>${x}</span>
                         </div>
                     </div>
-                `;a.innerHTML=[b("参数",m.title,m.tone),b("目标",h.title,h.tone),b("任课表",g.title,g.tone)].join(""),a.innerHTML=[b("参数",m.title,m.tone),b("目标",h.title,h.tone),b("任课表",g.title,g.tone)].join("")}if(t){const S=i[p]||i.info;t.innerHTML=`
+                `;a.innerHTML=[b("参数",m.title,m.tone),b("目标",h.title,h.tone),b("任课表",g.title,g.tone)].join(""),a.innerHTML=[b("参数",m.title,m.tone),b("目标",h.title,h.tone),b("任课表",g.title,g.tone)].join(""),s&&(s.innerHTML=`
+                <span class="dm-tab-sync-dot"></span>
+                <div class="dm-tab-sync-copy">
+                    <strong>最近同步</strong>
+                    <span>${hasSyncRecord?`${lastSyncText} · ${lastSyncSource}`:lastSyncText}</span>
+                </div>
+            `),s&&(s.title=hasSyncRecord?`${lastSyncText} / ${lastSyncSource}`:"暂无云端同步记录"),a.innerHTML=[b("参数",m.title,m.tone),b("目标",h.title,h.tone),b("任课表",g.title,g.tone)].join("")}if(t){const S=i[p]||i.info;t.innerHTML=`
                 <div style="padding:10px 12px; border-radius:10px; border:1px solid ${S.border}; background:${S.bg}; color:${S.color}; font-size:12px; line-height:1.8;">
                     <strong>当前提醒：</strong>${y}
                 </div>
