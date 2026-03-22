@@ -9,6 +9,7 @@ async function main() {
 
     const input = [
         '<html><body>',
+        '<!-- remove me -->',
         '<style>body {\n  color: red;\n  margin: 0;\n}\n</style>',
         '<style media="print">.box {\n  padding: 4px 8px;\n}\n</style>',
         '<script>const value = 1 + 2;\nwindow.answer = value;\n</script>',
@@ -19,6 +20,7 @@ async function main() {
 
     const output = optimizeDistHtml(input);
 
+    assert.strictEqual(output.includes('<!-- remove me -->'), false, 'should remove html comments outside protected blocks');
     assert.ok(/<style>body\{color:red;margin:0\}\s*<\/style>/.test(output), 'should minify plain inline styles');
     assert.ok(/<style media="print">\.box\{padding:4px 8px\}\s*<\/style>/.test(output), 'should preserve style tag attributes while minifying');
     assert.ok(/<script>const value=3;window\.answer=3;\s*<\/script>/.test(output), 'should minify plain inline scripts');
