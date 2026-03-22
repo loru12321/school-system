@@ -1895,7 +1895,18 @@ function getBaselineDataFromExam(examId) {
     })).filter(s => typeof s.total === 'number');
 }
 
-let MULTI_PERIOD_COMPARE_CACHE = null;
+const readMultiPeriodCompareCacheState = typeof window.readMultiPeriodCompareCacheState === 'function'
+    ? window.readMultiPeriodCompareCacheState
+    : (() => (window.MULTI_PERIOD_COMPARE_CACHE && typeof window.MULTI_PERIOD_COMPARE_CACHE === 'object'
+        ? window.MULTI_PERIOD_COMPARE_CACHE
+        : null));
+const setMultiPeriodCompareCacheState = typeof window.setMultiPeriodCompareCacheState === 'function'
+    ? window.setMultiPeriodCompareCacheState
+    : ((cache) => {
+        const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+        window.MULTI_PERIOD_COMPARE_CACHE = nextCache;
+        return nextCache;
+    });
 // 多期对比选择器运行时已拆分到 public/assets/js/compare-selectors-runtime.js
 
 function setProgressBaselineStatus(message, tone = 'info') {
@@ -2300,12 +2311,13 @@ function renderMultiPeriodComparison() {
 
     hintEl.innerHTML = `✅ 已完成 ${periodCount} 期对比：${examIds.join(' → ')}`;
     hintEl.style.color = '#16a34a';
-    MULTI_PERIOD_COMPARE_CACHE = { school, examIds, periodCount, summaryByExam, studentRows };
+    setMultiPeriodCompareCacheState({ school, examIds, periodCount, summaryByExam, studentRows });
 }
 
 function exportMultiPeriodComparison() {
-    if (!MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成多期对比结果');
-    const { school, examIds, periodCount, summaryByExam, studentRows } = MULTI_PERIOD_COMPARE_CACHE;
+    const multiPeriodCompareCache = readMultiPeriodCompareCacheState();
+    if (!multiPeriodCompareCache) return alert('请先生成多期对比结果');
+    const { school, examIds, periodCount, summaryByExam, studentRows } = multiPeriodCompareCache;
     const wb = XLSX.utils.book_new();
 
     const sumHeader = ['学校', '期次', '人数', '总分均分', '优秀率', '及格率', '校际均分排位'];
@@ -2331,9 +2343,6 @@ function exportMultiPeriodComparison() {
     XLSX.writeFile(wb, `多期对比_${school}_${examIds.join('_')}.xlsx`);
 }
 
-let MACRO_MULTI_PERIOD_COMPARE_CACHE = null;
-let TEACHER_MULTI_PERIOD_COMPARE_CACHE = null;
-let STUDENT_MULTI_PERIOD_COMPARE_CACHE = null;
 const CompareSessionStateRuntime = window.CompareSessionState || null;
 let CLOUD_STUDENT_COMPARE_CONTEXT = null;
 let CLOUD_COMPARE_TARGET = null;

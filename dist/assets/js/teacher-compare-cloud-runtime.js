@@ -13,6 +13,18 @@
             window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = nextCache;
             return nextCache;
         });
+    const readAllTeachersDiffCacheState = typeof window.readAllTeachersDiffCacheState === 'function'
+        ? window.readAllTeachersDiffCacheState
+        : (() => (window.ALL_TEACHERS_DIFF_CACHE && typeof window.ALL_TEACHERS_DIFF_CACHE === 'object'
+            ? window.ALL_TEACHERS_DIFF_CACHE
+            : null));
+    const setAllTeachersDiffCacheState = typeof window.setAllTeachersDiffCacheState === 'function'
+        ? window.setAllTeachersDiffCacheState
+        : ((cache) => {
+            const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+            window.ALL_TEACHERS_DIFF_CACHE = nextCache;
+            return nextCache;
+        });
 
     async function saveTeacherMultiPeriodCompareToCloud() {
         const TEACHER_MULTI_PERIOD_COMPARE_CACHE = readTeacherCompareCacheState();
@@ -190,7 +202,7 @@
 
         if (isBatchMode) {
             if (batchResults) {
-                window.ALL_TEACHERS_DIFF_CACHE = { results: batchResults, school, examIds, periodCount: payload.periodCount };
+                setAllTeachersDiffCacheState({ results: batchResults, school, examIds, periodCount: payload.periodCount });
             }
             resultEl.innerHTML = `
                     <div class="sub-header" style="color:#7c3aed;">☁️ [云端存档] ${title}</div>

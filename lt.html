@@ -2242,6 +2242,104 @@
 
 </script>
     <script>
+(function (root, factory) {
+    const runtime = factory(root || {});
+
+    if (typeof module === 'object' && module.exports) {
+        const createRuntime = function (overrideRoot) {
+            return factory(overrideRoot || root || {});
+        };
+        createRuntime.runtime = runtime;
+        module.exports = createRuntime;
+    }
+
+    if (!root || root.CompareSummaryState) return;
+    root.CompareSummaryState = runtime;
+    root.readMultiPeriodCompareCacheState = runtime.getMultiPeriodCompareCache;
+    root.setMultiPeriodCompareCacheState = runtime.setMultiPeriodCompareCache;
+    root.readAllTeachersDiffCacheState = runtime.getAllTeachersDiffCache;
+    root.setAllTeachersDiffCacheState = runtime.setAllTeachersDiffCache;
+    root.syncCompareSummaryRuntimeState = runtime.syncCompareSummaryState;
+    runtime.syncCompareSummaryState(runtime.snapshotCompareSummaryState());
+})(typeof globalThis !== 'undefined' ? globalThis : this, function createCompareSummaryStateRuntime(root) {
+    function normalizeObject(value) {
+        return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+    }
+
+    function cloneJson(value, fallbackValue) {
+        if (value == null) return fallbackValue;
+        try {
+            return JSON.parse(JSON.stringify(value));
+        } catch {
+            return fallbackValue;
+        }
+    }
+
+    function getMultiPeriodCompareCache() {
+        const nextCache = normalizeObject(root.MULTI_PERIOD_COMPARE_CACHE);
+        root.MULTI_PERIOD_COMPARE_CACHE = nextCache;
+        return nextCache;
+    }
+
+    function setMultiPeriodCompareCache(cache) {
+        const nextCache = normalizeObject(cache);
+        root.MULTI_PERIOD_COMPARE_CACHE = nextCache;
+        return nextCache;
+    }
+
+    function getAllTeachersDiffCache() {
+        const nextCache = normalizeObject(root.ALL_TEACHERS_DIFF_CACHE);
+        root.ALL_TEACHERS_DIFF_CACHE = nextCache;
+        return nextCache;
+    }
+
+    function setAllTeachersDiffCache(cache) {
+        const nextCache = normalizeObject(cache);
+        root.ALL_TEACHERS_DIFF_CACHE = nextCache;
+        return nextCache;
+    }
+
+    function snapshotCompareSummaryState() {
+        return {
+            multiPeriodCompareCache: cloneJson(getMultiPeriodCompareCache(), null),
+            allTeachersDiffCache: cloneJson(getAllTeachersDiffCache(), null)
+        };
+    }
+
+    function syncCompareSummaryState(nextState = {}) {
+        const source = nextState && typeof nextState === 'object' ? nextState : {};
+        setMultiPeriodCompareCache(
+            Object.prototype.hasOwnProperty.call(source, 'multiPeriodCompareCache')
+                ? source.multiPeriodCompareCache
+                : (Object.prototype.hasOwnProperty.call(source, 'MULTI_PERIOD_COMPARE_CACHE') ? source.MULTI_PERIOD_COMPARE_CACHE : getMultiPeriodCompareCache())
+        );
+        setAllTeachersDiffCache(
+            Object.prototype.hasOwnProperty.call(source, 'allTeachersDiffCache')
+                ? source.allTeachersDiffCache
+                : (Object.prototype.hasOwnProperty.call(source, 'ALL_TEACHERS_DIFF_CACHE') ? source.ALL_TEACHERS_DIFF_CACHE : getAllTeachersDiffCache())
+        );
+        return snapshotCompareSummaryState();
+    }
+
+    function clearCompareSummaryState() {
+        setMultiPeriodCompareCache(null);
+        setAllTeachersDiffCache(null);
+        return snapshotCompareSummaryState();
+    }
+
+    return {
+        getMultiPeriodCompareCache,
+        setMultiPeriodCompareCache,
+        getAllTeachersDiffCache,
+        setAllTeachersDiffCache,
+        snapshotCompareSummaryState,
+        syncCompareSummaryState,
+        clearCompareSummaryState
+    };
+});
+
+</script>
+    <script>
 ﻿(function () {
     const CLOUD_TABLE = 'system_data';
     const KEY_PREFIX_TEACHERS = 'TEACHERS_';
@@ -42225,7 +42323,18 @@ function getBaselineDataFromExam(examId) {
     })).filter(s => typeof s.total === 'number');
 }
 
-let MULTI_PERIOD_COMPARE_CACHE = null;
+const readMultiPeriodCompareCacheState = typeof window.readMultiPeriodCompareCacheState === 'function'
+    ? window.readMultiPeriodCompareCacheState
+    : (() => (window.MULTI_PERIOD_COMPARE_CACHE && typeof window.MULTI_PERIOD_COMPARE_CACHE === 'object'
+        ? window.MULTI_PERIOD_COMPARE_CACHE
+        : null));
+const setMultiPeriodCompareCacheState = typeof window.setMultiPeriodCompareCacheState === 'function'
+    ? window.setMultiPeriodCompareCacheState
+    : ((cache) => {
+        const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+        window.MULTI_PERIOD_COMPARE_CACHE = nextCache;
+        return nextCache;
+    });
 // 多期对比选择器运行时已拆分到 public/assets/js/compare-selectors-runtime.js
 
 function setProgressBaselineStatus(message, tone = 'info') {
@@ -42630,12 +42739,13 @@ function renderMultiPeriodComparison() {
 
     hintEl.innerHTML = `✅ 已完成 ${periodCount} 期对比：${examIds.join(' → ')}`;
     hintEl.style.color = '#16a34a';
-    MULTI_PERIOD_COMPARE_CACHE = { school, examIds, periodCount, summaryByExam, studentRows };
+    setMultiPeriodCompareCacheState({ school, examIds, periodCount, summaryByExam, studentRows });
 }
 
 function exportMultiPeriodComparison() {
-    if (!MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成多期对比结果');
-    const { school, examIds, periodCount, summaryByExam, studentRows } = MULTI_PERIOD_COMPARE_CACHE;
+    const multiPeriodCompareCache = readMultiPeriodCompareCacheState();
+    if (!multiPeriodCompareCache) return alert('请先生成多期对比结果');
+    const { school, examIds, periodCount, summaryByExam, studentRows } = multiPeriodCompareCache;
     const wb = XLSX.utils.book_new();
 
     const sumHeader = ['学校', '期次', '人数', '总分均分', '优秀率', '及格率', '校际均分排位'];
@@ -42661,9 +42771,6 @@ function exportMultiPeriodComparison() {
     XLSX.writeFile(wb, `多期对比_${school}_${examIds.join('_')}.xlsx`);
 }
 
-let MACRO_MULTI_PERIOD_COMPARE_CACHE = null;
-let TEACHER_MULTI_PERIOD_COMPARE_CACHE = null;
-let STUDENT_MULTI_PERIOD_COMPARE_CACHE = null;
 const CompareSessionStateRuntime = window.CompareSessionState || null;
 let CLOUD_STUDENT_COMPARE_CONTEXT = null;
 let CLOUD_COMPARE_TARGET = null;
@@ -46719,6 +46826,18 @@ const setTeacherCompareCacheState = typeof window.setTeacherCompareCacheState ==
         window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = nextCache;
         return nextCache;
     });
+const readAllTeachersDiffCacheState = typeof window.readAllTeachersDiffCacheState === 'function'
+    ? window.readAllTeachersDiffCacheState
+    : (() => (window.ALL_TEACHERS_DIFF_CACHE && typeof window.ALL_TEACHERS_DIFF_CACHE === 'object'
+        ? window.ALL_TEACHERS_DIFF_CACHE
+        : null));
+const setAllTeachersDiffCacheState = typeof window.setAllTeachersDiffCacheState === 'function'
+    ? window.setAllTeachersDiffCacheState
+    : ((cache) => {
+        const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+        window.ALL_TEACHERS_DIFF_CACHE = nextCache;
+        return nextCache;
+    });
 
 function buildTeacherStatsForExam(rows, school, subjectFilter) {
     const rowsSchool = rows.filter(r => r.school === school);
@@ -47099,7 +47218,7 @@ function renderAllTeachersMultiPeriodComparison() {
         `;
 
     // 缓存结果用于导出和云端保存
-    window.ALL_TEACHERS_DIFF_CACHE = { results, school, examIds, periodCount };
+    setAllTeachersDiffCacheState({ results, school, examIds, periodCount });
     window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = {
         school,
         subject: '全学科',
@@ -47122,8 +47241,9 @@ function renderAllTeachersMultiPeriodComparison() {
 
 // 🆕 导出全校教师对比
 function exportAllTeachersMultiPeriodDiff(school, examIdsStr) {
-    if (!window.ALL_TEACHERS_DIFF_CACHE) return alert('请先生成表格');
-    const { results, examIds } = window.ALL_TEACHERS_DIFF_CACHE;
+    const ALL_TEACHERS_DIFF_CACHE = readAllTeachersDiffCacheState();
+    if (!ALL_TEACHERS_DIFF_CACHE) return alert('请先生成表格');
+    const { results, examIds } = ALL_TEACHERS_DIFF_CACHE;
 
     // 构建 Excel 数据 [Teacher, Subject, 每期三类镇排, 变化三类镇排]
     const header = ['教师', '学科'];
@@ -48180,6 +48300,18 @@ function exportMacroMultiPeriodComparison() {
             window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = nextCache;
             return nextCache;
         });
+    const readAllTeachersDiffCacheState = typeof window.readAllTeachersDiffCacheState === 'function'
+        ? window.readAllTeachersDiffCacheState
+        : (() => (window.ALL_TEACHERS_DIFF_CACHE && typeof window.ALL_TEACHERS_DIFF_CACHE === 'object'
+            ? window.ALL_TEACHERS_DIFF_CACHE
+            : null));
+    const setAllTeachersDiffCacheState = typeof window.setAllTeachersDiffCacheState === 'function'
+        ? window.setAllTeachersDiffCacheState
+        : ((cache) => {
+            const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+            window.ALL_TEACHERS_DIFF_CACHE = nextCache;
+            return nextCache;
+        });
 
     async function saveTeacherMultiPeriodCompareToCloud() {
         const TEACHER_MULTI_PERIOD_COMPARE_CACHE = readTeacherCompareCacheState();
@@ -48357,7 +48489,7 @@ function exportMacroMultiPeriodComparison() {
 
         if (isBatchMode) {
             if (batchResults) {
-                window.ALL_TEACHERS_DIFF_CACHE = { results: batchResults, school, examIds, periodCount: payload.periodCount };
+                setAllTeachersDiffCacheState({ results: batchResults, school, examIds, periodCount: payload.periodCount });
             }
             resultEl.innerHTML = `
                     <div class="sub-header" style="color:#7c3aed;">☁️ [云端存档] ${title}</div>

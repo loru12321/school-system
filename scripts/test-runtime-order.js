@@ -14,6 +14,7 @@ const progressRuntimePath = path.resolve(__dirname, '../public/assets/js/progres
 const reportSessionRuntimePath = path.resolve(__dirname, '../public/assets/js/report-session-state-runtime.js');
 const compareSessionRuntimePath = path.resolve(__dirname, '../public/assets/js/compare-session-state-runtime.js');
 const compareResultRuntimePath = path.resolve(__dirname, '../public/assets/js/compare-result-state-runtime.js');
+const compareSummaryRuntimePath = path.resolve(__dirname, '../public/assets/js/compare-summary-state-runtime.js');
 const townSubmoduleCompareStateRuntimePath = path.resolve(__dirname, '../public/assets/js/town-submodule-compare-state-runtime.js');
 const townSubmoduleCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/town-submodule-compare-runtime.js');
 
@@ -28,6 +29,7 @@ assert.ok(fs.existsSync(progressRuntimePath), 'progress-state-runtime.js should 
 assert.ok(fs.existsSync(reportSessionRuntimePath), 'report-session-state-runtime.js should exist');
 assert.ok(fs.existsSync(compareSessionRuntimePath), 'compare-session-state-runtime.js should exist');
 assert.ok(fs.existsSync(compareResultRuntimePath), 'compare-result-state-runtime.js should exist');
+assert.ok(fs.existsSync(compareSummaryRuntimePath), 'compare-summary-state-runtime.js should exist');
 assert.ok(fs.existsSync(townSubmoduleCompareStateRuntimePath), 'town-submodule-compare-state-runtime.js should exist');
 assert.ok(fs.existsSync(townSubmoduleCompareRuntimePath), 'town-submodule-compare-runtime.js should exist');
 
@@ -43,6 +45,7 @@ const progressStateRef = './assets/js/progress-state-runtime.js';
 const reportSessionStateRef = './assets/js/report-session-state-runtime.js';
 const compareSessionStateRef = './assets/js/compare-session-state-runtime.js';
 const compareResultStateRef = './assets/js/compare-result-state-runtime.js';
+const compareSummaryStateRef = './assets/js/compare-summary-state-runtime.js';
 const townSubmoduleCompareStateRef = './assets/js/town-submodule-compare-state-runtime.js';
 const townSubmoduleCompareRef = './assets/js/town-submodule-compare-runtime.js';
 const cloudWorkspaceRef = './assets/js/cloud-workspace-runtime.js';
@@ -60,6 +63,7 @@ const progressStateIndex = indexHtml.indexOf(progressStateRef);
 const reportSessionStateIndex = indexHtml.indexOf(reportSessionStateRef);
 const compareSessionStateIndex = indexHtml.indexOf(compareSessionStateRef);
 const compareResultStateIndex = indexHtml.indexOf(compareResultStateRef);
+const compareSummaryStateIndex = indexHtml.indexOf(compareSummaryStateRef);
 const townSubmoduleCompareStateIndex = indexHtml.indexOf(townSubmoduleCompareStateRef);
 const townSubmoduleCompareIndex = indexHtml.indexOf(townSubmoduleCompareRef);
 const cloudIndex = indexHtml.indexOf(cloudRef);
@@ -77,6 +81,7 @@ assert.ok(progressStateIndex >= 0, 'index.html should load progress-state-runtim
 assert.ok(reportSessionStateIndex >= 0, 'index.html should load report-session-state-runtime.js');
 assert.ok(compareSessionStateIndex >= 0, 'index.html should load compare-session-state-runtime.js');
 assert.ok(compareResultStateIndex >= 0, 'index.html should load compare-result-state-runtime.js');
+assert.ok(compareSummaryStateIndex >= 0, 'index.html should load compare-summary-state-runtime.js');
 assert.ok(townSubmoduleCompareStateIndex >= 0, 'index.html should load town-submodule-compare-state-runtime.js');
 assert.ok(townSubmoduleCompareIndex >= 0, 'index.html should load town-submodule-compare-runtime.js');
 assert.ok(cloudIndex >= 0, 'index.html should load cloud.js');
@@ -92,7 +97,8 @@ assert.ok(supportStateIndex < progressStateIndex, 'support-state-runtime.js must
 assert.ok(progressStateIndex < reportSessionStateIndex, 'progress-state-runtime.js must load before report-session-state-runtime.js');
 assert.ok(reportSessionStateIndex < compareSessionStateIndex, 'report-session-state-runtime.js must load before compare-session-state-runtime.js');
 assert.ok(compareSessionStateIndex < compareResultStateIndex, 'compare-session-state-runtime.js must load before compare-result-state-runtime.js');
-assert.ok(compareResultStateIndex < townSubmoduleCompareStateIndex, 'compare-result-state-runtime.js must load before town-submodule-compare-state-runtime.js');
+assert.ok(compareResultStateIndex < compareSummaryStateIndex, 'compare-result-state-runtime.js must load before compare-summary-state-runtime.js');
+assert.ok(compareSummaryStateIndex < townSubmoduleCompareStateIndex, 'compare-summary-state-runtime.js must load before town-submodule-compare-state-runtime.js');
 assert.ok(townSubmoduleCompareStateIndex < townSubmoduleCompareIndex, 'town-submodule-compare-state-runtime.js must load before town-submodule-compare-runtime.js');
 assert.ok(progressStateIndex < cloudIndex, 'progress-state-runtime.js must load before cloud.js');
 assert.ok(progressStateIndex < cloudWorkspaceIndex, 'progress-state-runtime.js must load before cloud-workspace-runtime.js');
@@ -106,6 +112,9 @@ assert.ok(compareSessionStateIndex < appIndex, 'compare-session-state-runtime.js
 assert.ok(compareResultStateIndex < cloudIndex, 'compare-result-state-runtime.js must load before cloud.js');
 assert.ok(compareResultStateIndex < cloudWorkspaceIndex, 'compare-result-state-runtime.js must load before cloud-workspace-runtime.js');
 assert.ok(compareResultStateIndex < appIndex, 'compare-result-state-runtime.js must load before app.js');
+assert.ok(compareSummaryStateIndex < cloudIndex, 'compare-summary-state-runtime.js must load before cloud.js');
+assert.ok(compareSummaryStateIndex < cloudWorkspaceIndex, 'compare-summary-state-runtime.js must load before cloud-workspace-runtime.js');
+assert.ok(compareSummaryStateIndex < appIndex, 'compare-summary-state-runtime.js must load before app.js');
 assert.ok(supportStateIndex < cloudIndex, 'support-state-runtime.js must load before cloud.js');
 assert.ok(supportStateIndex < cloudWorkspaceIndex, 'support-state-runtime.js must load before cloud-workspace-runtime.js');
 assert.ok(supportStateIndex < appIndex, 'support-state-runtime.js must load before app.js');

@@ -13,6 +13,18 @@ const setTeacherCompareCacheState = typeof window.setTeacherCompareCacheState ==
         window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = nextCache;
         return nextCache;
     });
+const readAllTeachersDiffCacheState = typeof window.readAllTeachersDiffCacheState === 'function'
+    ? window.readAllTeachersDiffCacheState
+    : (() => (window.ALL_TEACHERS_DIFF_CACHE && typeof window.ALL_TEACHERS_DIFF_CACHE === 'object'
+        ? window.ALL_TEACHERS_DIFF_CACHE
+        : null));
+const setAllTeachersDiffCacheState = typeof window.setAllTeachersDiffCacheState === 'function'
+    ? window.setAllTeachersDiffCacheState
+    : ((cache) => {
+        const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+        window.ALL_TEACHERS_DIFF_CACHE = nextCache;
+        return nextCache;
+    });
 
 function buildTeacherStatsForExam(rows, school, subjectFilter) {
     const rowsSchool = rows.filter(r => r.school === school);
@@ -393,7 +405,7 @@ function renderAllTeachersMultiPeriodComparison() {
         `;
 
     // 缓存结果用于导出和云端保存
-    window.ALL_TEACHERS_DIFF_CACHE = { results, school, examIds, periodCount };
+    setAllTeachersDiffCacheState({ results, school, examIds, periodCount });
     window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = {
         school,
         subject: '全学科',
@@ -416,8 +428,9 @@ function renderAllTeachersMultiPeriodComparison() {
 
 // 🆕 导出全校教师对比
 function exportAllTeachersMultiPeriodDiff(school, examIdsStr) {
-    if (!window.ALL_TEACHERS_DIFF_CACHE) return alert('请先生成表格');
-    const { results, examIds } = window.ALL_TEACHERS_DIFF_CACHE;
+    const ALL_TEACHERS_DIFF_CACHE = readAllTeachersDiffCacheState();
+    if (!ALL_TEACHERS_DIFF_CACHE) return alert('请先生成表格');
+    const { results, examIds } = ALL_TEACHERS_DIFF_CACHE;
 
     // 构建 Excel 数据 [Teacher, Subject, 每期三类镇排, 变化三类镇排]
     const header = ['教师', '学科'];
