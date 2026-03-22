@@ -7,11 +7,13 @@
     <link rel="icon" href="./favicon.ico?v=20260321-localgrades-v4" sizes="any">
     <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
     <link rel="dns-prefetch" href="//unpkg.com">
+    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
     <link rel="dns-prefetch" href="//okwcciujnfvobbwaydiv.supabase.co">
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <link rel="preconnect" href="https://okwcciujnfvobbwaydiv.supabase.co" crossorigin>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 
 
     <script>
@@ -68,7 +70,7 @@
     <!-- 🟢 [新增] 添加 jsPDF（PDF导出） -->
     <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" crossorigin="anonymous"
         onerror="this.onerror=null;this.src='https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'"></script>
-    <script>
+    <script defer>
 (function (root, factory) {
     const runtime = factory(root || {});
 
@@ -390,7 +392,7 @@
 });
 
 </script>
-    <script>
+    <script defer>
 (function (root, factory) {
     const runtime = factory(root || {});
 
@@ -692,7 +694,7 @@
 });
 
 </script>
-    <script>
+    <script defer>
 (function (root, factory) {
     const runtime = factory(root || {});
 
@@ -979,7 +981,7 @@
 });
 
 </script>
-    <script>
+    <script defer>
 (function (root, factory) {
     const runtime = factory(root || {});
 
@@ -1064,7 +1066,7 @@
 });
 
 </script>
-    <script>
+    <script defer>
 (function (root, factory) {
     const runtime = factory(root || {});
 
@@ -1172,7 +1174,7 @@
 });
 
 </script>
-    <script>
+    <script defer>
 (function (root, factory) {
     const runtime = factory(root || {});
 
@@ -1310,7 +1312,7 @@
 });
 
 </script>
-    <script>
+    <script defer>
 (function (root, factory) {
     const runtime = factory(root || {});
 
@@ -1552,7 +1554,7 @@
 });
 
 </script>
-    <script>
+    <script defer>
 (function (root, factory) {
     function installProgressState(target, runtime) {
         if (!target || !runtime) return;
@@ -1751,7 +1753,7 @@
 });
 
 </script>
-    <script>
+    <script defer>
 (function (root, factory) {
     function installReportSessionState(target, runtime) {
         if (!target || !runtime) return runtime;
@@ -1919,7 +1921,7 @@
 });
 
 </script>
-    <script>
+    <script defer>
 (function (root, factory) {
     function installCompareSessionState(target, runtime) {
         if (!target || !runtime) return runtime;
@@ -2187,7 +2189,7 @@
 });
 
 </script>
-    <script>
+    <script defer>
 (function (root, factory) {
     function installCompareResultState(target, runtime) {
         if (!target || !runtime) return;
@@ -2317,7 +2319,7 @@
 });
 
 </script>
-    <script>
+    <script defer>
 (function (root, factory) {
     function installCompareSummaryState(target, runtime) {
         if (!target || !runtime) return;
@@ -2424,7 +2426,7 @@
 });
 
 </script>
-    <script>
+    <script defer>
 ﻿(function () {
     const CLOUD_TABLE = 'system_data';
     const KEY_PREFIX_TEACHERS = 'TEACHERS_';
@@ -3387,7 +3389,7 @@
 })();
 
 </script>
-    <script>
+    <script defer>
 (() => {
     if (typeof window === 'undefined') return;
     const CloudManager = window.CloudManager;
@@ -10074,7 +10076,7 @@
     </script>
 
     <!-- 核心逻辑脚本 -->
-<script>
+<script defer>
 window.onerror = function (msg, url, lineNo, columnNo, error) {
     // 忽略第三方插件的非关键错误
     if (msg.includes('Script error')) return false;
@@ -36578,7 +36580,7 @@ window.addEventListener('load', () => {
 window.DataManager = DataManager;
 
 </script>
-    <script>
+    <script defer>
 (() => {
     if (typeof window === 'undefined' || window.__SCHOOL_NORMALIZATION_RUNTIME_PATCHED__) return;
 
@@ -37208,7 +37210,7 @@ function inferDefaultSchoolFromContext() {
 })();
 
 </script>
-    <script>
+    <script defer>
 (() => {
     if (typeof window === 'undefined' || window.__COMPARE_SHARED_RUNTIME_PATCHED__) return;
 
@@ -37825,7 +37827,7 @@ function buildSchoolSummaryForExam(rows) {
 })();
 
 </script>
-    <script>
+    <script defer>
 (function (root, factory) {
     function installCompareCloudContext(target, runtime) {
         if (!target || !runtime) return runtime;
@@ -37935,7 +37937,7 @@ function buildSchoolSummaryForExam(rows) {
 });
 
 </script>
-    <script>
+    <script defer>
 (function (root, factory) {
     function installCompareExamSyncRuntime(target, runtime) {
         if (!target || !runtime) return runtime;
@@ -38082,7 +38084,7 @@ function buildSchoolSummaryForExam(rows) {
 });
 
 </script>
-    <script>
+    <script defer>
 (() => {
     if (typeof window === 'undefined' || window.__REPORT_COMPARE_RUNTIME_PATCHED__) return;
 
@@ -38199,7 +38201,7 @@ function loadCloudStudentCompareForCurrentStudent(key) {
 })();
 
 </script>
-    <script>
+    <script defer>
 (() => {
     if (typeof window === 'undefined' || window.__REPORT_RENDER_RUNTIME_PATCHED__) return;
 
@@ -40479,7 +40481,7 @@ var igInsightHtml = '';
 })();
 
 </script>
-    <script>
+    <script defer>
 (() => {
     if (typeof window === 'undefined' || window.__COMPARE_SELECTORS_RUNTIME_PATCHED__) return;
 
@@ -40999,7 +41001,7 @@ var igInsightHtml = '';
 })();
 
 </script>
-    <script>
+    <script defer>
 (() => {
     if (typeof window === 'undefined' || window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__) return;
 
@@ -44241,7 +44243,7 @@ refreshTeacherPerformanceCopy();
 })();
 
 </script>
-    <script>
+    <script defer>
 (function (root, factory) {
     const runtime = factory(root || {});
 
@@ -44341,7 +44343,7 @@ refreshTeacherPerformanceCopy();
 });
 
 </script>
-    <script>
+    <script defer>
 (() => {
     if (typeof window === 'undefined' || window.__TOWN_SUBMODULE_COMPARE_RUNTIME_PATCHED__) return;
 
@@ -44781,7 +44783,7 @@ async function loadCloudTownSubmoduleCompare(submoduleId, key) {
 })();
 
 </script>
-    <script>
+    <script defer>
 ﻿(() => {
     if (typeof window === 'undefined' || window.__PROGRESS_ANALYSIS_RUNTIME_PATCHED__) return;
 
@@ -46167,7 +46169,7 @@ function resetProgressFilter() {
 })();
 
 </script>
-    <script>
+    <script defer>
 (() => {
     if (typeof window === 'undefined' || window.__STUDENT_COMPARE_RESULT_RUNTIME_PATCHED__) return;
 
@@ -47212,7 +47214,7 @@ function updateStudentCompareSummary() {
 })();
 
 </script>
-    <script>
+    <script defer>
 (() => {
     if (typeof window === 'undefined' || window.__STUDENT_COMPARE_GENERATE_RUNTIME_PATCHED__) return;
 
@@ -47513,7 +47515,7 @@ function renderStudentMultiPeriodComparison() {
 })();
 
 </script>
-    <script>
+    <script defer>
 (() => {
     if (typeof window === 'undefined' || window.__TEACHER_COMPARE_RESULT_RUNTIME_PATCHED__) return;
 
@@ -48042,7 +48044,7 @@ function exportTeacherMultiPeriodComparison() {
 })();
 
 </script>
-    <script>
+    <script defer>
 (() => {
     if (typeof window === 'undefined' || window.__MACRO_COMPARE_RESULT_RUNTIME_PATCHED__) return;
 
@@ -48279,7 +48281,7 @@ function exportMacroMultiPeriodComparison() {
 })();
 
 </script>
-    <script>
+    <script defer>
 (() => {
     if (typeof window === 'undefined' || window.__STUDENT_COMPARE_CLOUD_RUNTIME_PATCHED__) return;
 
@@ -49091,7 +49093,7 @@ function exportMacroMultiPeriodComparison() {
 })();
 
 </script>
-    <script>
+    <script defer>
 (() => {
     if (typeof window === 'undefined' || window.__TEACHER_COMPARE_CLOUD_RUNTIME_PATCHED__) return;
 
@@ -49363,7 +49365,7 @@ function exportMacroMultiPeriodComparison() {
 })();
 
 </script>
-    <script>
+    <script defer>
 (() => {
     if (typeof window === 'undefined' || window.__MACRO_COMPARE_CLOUD_RUNTIME_PATCHED__) return;
 
@@ -49534,7 +49536,7 @@ function exportMacroMultiPeriodComparison() {
 })();
 
 </script>
-    <script>
+    <script defer>
 (() => {
     const DM = typeof DataManager !== 'undefined' ? DataManager : window.DataManager;
     if (!DM || window.__DATA_MANAGER_SQL_PATCHED__) return;
@@ -49812,7 +49814,7 @@ function exportMacroMultiPeriodComparison() {
 })();
 
 </script>
-    <script>
+    <script defer>
 (() => {
     if (typeof window === 'undefined' || window.__MOBILE_MANAGER_PATCHED__) return;
 
@@ -50866,8 +50868,8 @@ function exportMacroMultiPeriodComparison() {
     
     <!-- ============ Phase 5: 全息教育大脑与元宇宙交互 ============ -->
     <!-- 全息学情 3D 建模引擎 (需要 Three.js) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script defer>
 /**
  * 🌐 全息学情 3D 建模引擎
  * 
@@ -51346,7 +51348,7 @@ if (typeof window !== 'undefined') {
 </script>
     
     <!-- 学情预知与模拟实验室 -->
-    <script>
+    <script defer>
 /**
  * 🔮 学情预知与模拟实验室
  * 
@@ -51756,7 +51758,7 @@ if (typeof window !== 'undefined') {
 </script>
     
     <!-- 元宇宙虚拟教研室 -->
-    <script>
+    <script defer>
 /**
  * 🌌 元宇宙虚拟教研室
  * 
@@ -52249,7 +52251,7 @@ if (typeof window !== 'undefined') {
 </script>
     
     <!-- 智能情感与心理预警系统 -->
-    <script>
+    <script defer>
 /**
  * 💭 智能情感与心理预警系统
  * 
