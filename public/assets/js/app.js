@@ -1999,16 +1999,20 @@ const Auth = {
         });
 
         const badgeEl = document.getElementById('login-portal-badge');
-        const copyEl = document.getElementById('login-portal-copy') || document.querySelector('#login-overlay > div > div p');
+        const copyEl = document.getElementById('login-portal-copy');
         const userInput = document.getElementById('login-user');
         const classInput = document.getElementById('login-class');
-        const classGroup = classInput ? classInput.closest('.form-group') : null;
+        const classGroup = document.getElementById('login-class-group');
         const userHelper = document.getElementById('login-user-helper');
         const portalHelper = document.getElementById('login-portal-helper');
         const submitButton = document.getElementById('login-submit-button');
-        const userLabel = document.querySelector('#login-form .form-group label');
-        const classLabel = classGroup ? classGroup.querySelector('label') : null;
-        const classNote = classLabel ? classLabel.querySelector('span') : null;
+        const userLabel = document.getElementById('login-user-label');
+        const classNote = document.getElementById('login-class-label-note');
+        const stageKicker = document.getElementById('login-stage-kicker');
+        const stageTitle = document.getElementById('login-stage-title');
+        const stageCopy = document.getElementById('login-stage-copy');
+        const stageFeatureTitle = document.getElementById('login-stage-featured-title');
+        const stageFeatureCopy = document.getElementById('login-stage-featured-copy');
 
         const config = nextPortal === 'parent'
             ? {
@@ -2020,7 +2024,12 @@ const Auth = {
                 classNote: '(家长端必填，如 701)',
                 classPlaceholder: '请输入学生班级，如 701',
                 helper: '家长端将进入成长报告、成绩单与家校沟通视图。',
-                submit: '进入家长端'
+                submit: '进入家长端',
+                stageKicker: 'Family Growth Portal',
+                stageTitle: '把成长报告、成绩查询与家校沟通集中到一块更易读的入口',
+                stageCopy: '输入学生姓名、班级和密码即可进入家长端，按移动优先方式查看成长报告、成绩单与关键提醒。',
+                stageFeatureTitle: '一屏直达成长报告、成绩单、班级信息与关键提醒',
+                stageFeatureCopy: '为家长保留更轻量、更直观的入口路径，减少输入成本和找入口的时间。'
             }
             : {
                 badge: '学校端入口',
@@ -2031,7 +2040,12 @@ const Auth = {
                 classNote: '(学校端无需填写)',
                 classPlaceholder: '学校端无需填写',
                 helper: '学校端用于成绩分析、教学管理与数据维护。',
-                submit: '进入学校端'
+                submit: '进入学校端',
+                stageKicker: 'School Command Center',
+                stageTitle: '把教学分析、账号入口与管理驾驶舱放进同一块全屏舞台',
+                stageCopy: '从学校大屏到教师工作台，登录前先看见关键能力，登录后直接进入数据分析、账号管理与云端同步链路。',
+                stageFeatureTitle: '一屏直达成绩分析、教学管理、质量预警与数据维护',
+                stageFeatureCopy: '像内容平台首页一样把高价值入口、重点模块和实时状态直接铺开，减少跳转与寻找成本。'
             };
 
         if (badgeEl) badgeEl.textContent = config.badge;
@@ -2041,9 +2055,17 @@ const Auth = {
         if (userHelper) userHelper.textContent = config.userHelper;
         if (classNote) classNote.textContent = config.classNote;
         if (classInput) classInput.placeholder = config.classPlaceholder;
-        if (classGroup) classGroup.style.display = nextPortal === 'parent' ? 'block' : 'none';
+        if (classGroup) {
+            classGroup.style.display = nextPortal === 'parent' ? 'block' : 'none';
+            classGroup.setAttribute('aria-hidden', nextPortal === 'parent' ? 'false' : 'true');
+        }
         if (portalHelper) portalHelper.textContent = config.helper;
         if (submitButton) submitButton.textContent = config.submit;
+        if (stageKicker) stageKicker.textContent = config.stageKicker;
+        if (stageTitle) stageTitle.textContent = config.stageTitle;
+        if (stageCopy) stageCopy.textContent = config.stageCopy;
+        if (stageFeatureTitle) stageFeatureTitle.textContent = config.stageFeatureTitle;
+        if (stageFeatureCopy) stageFeatureCopy.textContent = config.stageFeatureCopy;
     },
 
     resolveLocalManagedSchool: function (name, className = '') {
@@ -3639,8 +3661,20 @@ const Packager = {
 
                 // A. 强制显示登录遮罩，隐藏主界面
                 htmlContent = htmlContent.replace(
-                    /id="login-overlay"\s+style="([^"]*)"/,
-                    'id="login-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#f3f4f6; z-index:50000; display:flex; align-items:center; justify-content:center; background-image: radial-gradient(#e5e7eb 1px, transparent 1px); background-size: 20px 20px;"'
+                    /<div id="login-overlay"([^>]*)>/,
+                    (match, attrs = '') => {
+                        if (/style="([^"]*)"/i.test(attrs)) {
+                            const nextAttrs = attrs.replace(/style="([^"]*)"/i, (_, styleValue) => {
+                                const normalized = String(styleValue || '')
+                                    .replace(/display\s*:\s*[^;"]+;?/i, '')
+                                    .trim();
+                                const prefix = normalized ? `${normalized}${normalized.endsWith(';') ? '' : ';'}` : '';
+                                return `style="${prefix}display:flex;"`;
+                            });
+                            return `<div id="login-overlay"${nextAttrs}>`;
+                        }
+                        return `<div id="login-overlay"${attrs} style="display:flex;">`;
+                    }
                 );
 
                 // 强制隐藏主容器
