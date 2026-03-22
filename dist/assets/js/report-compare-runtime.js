@@ -1,7 +1,7 @@
 (() => {
     if (typeof window === 'undefined' || window.__REPORT_COMPARE_RUNTIME_PATCHED__) return;
 
-const readCloudStudentCompareContextState = typeof window.readCloudStudentCompareContextState === 'function'
+const readCloudStudentCompareContextSessionState = typeof window.readCloudStudentCompareContextState === 'function'
     ? window.readCloudStudentCompareContextState
     : (() => (window.CLOUD_STUDENT_COMPARE_CONTEXT && typeof window.CLOUD_STUDENT_COMPARE_CONTEXT === 'object'
         ? window.CLOUD_STUDENT_COMPARE_CONTEXT
@@ -9,12 +9,12 @@ const readCloudStudentCompareContextState = typeof window.readCloudStudentCompar
 
 function getCloudPreviousRecord(student) {
     if (!isCloudContextMatchStudent(student) && !isCloudContextLikelyCurrentTarget(student)) return null;
-    return readCloudStudentCompareContextState()?.previousRecord || null;
+    return readCloudStudentCompareContextSessionState()?.previousRecord || null;
 }
 
 function getCloudPreviousSubjectScores(subject, student) {
     if (!isCloudContextMatchStudent(student) && !isCloudContextLikelyCurrentTarget(student)) return null;
-    const scores = readCloudStudentCompareContextState()?.previousSubjectScores?.[subject];
+    const scores = readCloudStudentCompareContextSessionState()?.previousSubjectScores?.[subject];
     return Array.isArray(scores) ? scores : null;
 }
 
@@ -23,7 +23,7 @@ function getPreviousExamSubjectScores(subject, student, prevStu) {
     let scores = getCloudPreviousSubjectScores(subject, student);
     if (Array.isArray(scores) && scores.length >= 5) return scores;
 
-    const cloudCompareContext = readCloudStudentCompareContextState();
+    const cloudCompareContext = readCloudStudentCompareContextSessionState();
     const examKey = String(
         cloudCompareContext?.prevExamId ||
         prevStu?._sourceExam ||

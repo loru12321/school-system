@@ -1,10 +1,15 @@
 (() => {
     if (typeof window === 'undefined' || window.__REPORT_RENDER_RUNTIME_PATCHED__) return;
 
-const readCloudStudentCompareContextState = typeof window.readCloudStudentCompareContextState === 'function'
+const readCloudStudentCompareContextSessionState = typeof window.readCloudStudentCompareContextState === 'function'
     ? window.readCloudStudentCompareContextState
     : (() => (window.CLOUD_STUDENT_COMPARE_CONTEXT && typeof window.CLOUD_STUDENT_COMPARE_CONTEXT === 'object'
         ? window.CLOUD_STUDENT_COMPARE_CONTEXT
+        : null));
+const readCurrentReportStudentSessionState = typeof window.readCurrentReportStudentState === 'function'
+    ? window.readCurrentReportStudentState
+    : (() => (window.CURRENT_REPORT_STUDENT && typeof window.CURRENT_REPORT_STUDENT === 'object'
+        ? window.CURRENT_REPORT_STUDENT
         : null));
 const readDuplicateCompareExamsState = typeof window.readDuplicateCompareExamsState === 'function'
     ? window.readDuplicateCompareExamsState
@@ -83,7 +88,7 @@ function renderSingleReportCardHTML(stu, mode) {
 
     // 获取对比数据（云端上下文优先，避免回退导致“看不到对比”）
     const cloudHint = (isCloudContextMatchStudent(reportStu) || isCloudContextLikelyCurrentTarget(reportStu))
-        ? readCloudStudentCompareContextState()
+        ? readCloudStudentCompareContextSessionState()
         : null;
     const prevStu = cloudHint?.previousRecord || findPreviousRecord(reportStu);
     const reportExamHistory = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(reportStu) : [];
@@ -374,7 +379,7 @@ function renderInstagramCard(stu) {
     const pct = (typeof rank === 'number') ? ((1 - rank / totalStudents) * 100).toFixed(0) : '-';
     const avatarLetter = stu.name.charAt(0); // 头像取首字
     const cloudHint = (isCloudContextMatchStudent(reportStu) || isCloudContextLikelyCurrentTarget(reportStu))
-        ? readCloudStudentCompareContextState()
+        ? readCloudStudentCompareContextSessionState()
         : null;
 
     // 判断是否为单校模式
@@ -1100,9 +1105,7 @@ async function callLLM(prompt, onChunk, onFinish) {
 // 3. 生成单个学生评语
 function callAIForComment() {
     if (AI_DISABLED) return aiDisabledAlert();
-    const stu = typeof window.readCurrentReportStudentState === 'function'
-        ? window.readCurrentReportStudentState()
-        : window.CURRENT_REPORT_STUDENT;
+    const stu = readCurrentReportStudentSessionState();
     if (!stu) return alert("请先查询一名学生");
 
     const box = document.getElementById('ai-comment-box');

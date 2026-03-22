@@ -15860,11 +15860,12 @@ function findPreviousRecord(student) {
         return cloudPrev;
     }
 
-    const cloudCompareContext = typeof window.readCloudStudentCompareContextState === 'function'
-        ? window.readCloudStudentCompareContextState()
-        : (window.CLOUD_STUDENT_COMPARE_CONTEXT && typeof window.CLOUD_STUDENT_COMPARE_CONTEXT === 'object'
+    const readCloudStudentCompareContextSessionState = typeof window.readCloudStudentCompareContextState === 'function'
+        ? window.readCloudStudentCompareContextState
+        : (() => (window.CLOUD_STUDENT_COMPARE_CONTEXT && typeof window.CLOUD_STUDENT_COMPARE_CONTEXT === 'object'
             ? window.CLOUD_STUDENT_COMPARE_CONTEXT
-            : null);
+            : null));
+    const cloudCompareContext = readCloudStudentCompareContextSessionState();
     if (cloudCompareContext?.previousRecord && isCloudContextLikelyCurrentTarget(student)) {
         return cloudCompareContext.previousRecord;
     }

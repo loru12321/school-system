@@ -1,4 +1,12 @@
 async function doQuery() {
+    const setCurrentReportStudentSessionState = typeof window.setCurrentReportStudentState === 'function'
+        ? window.setCurrentReportStudentState
+        : (window.ReportSessionState && typeof window.ReportSessionState.setCurrentReportStudent === 'function'
+            ? window.ReportSessionState.setCurrentReportStudent.bind(window.ReportSessionState)
+            : ((student) => {
+                window.CURRENT_REPORT_STUDENT = student && typeof student === 'object' && !Array.isArray(student) ? student : null;
+                return window.CURRENT_REPORT_STUDENT;
+            }));
     const name = document.getElementById('inp-name').value;
     const sch = document.getElementById('sel-school').value;
     const cls = document.getElementById('sel-class').value;
@@ -45,9 +53,7 @@ async function doQuery() {
 
     clearCloudStudentCompareContext();
     setCloudCompareTarget(stu);
-    if (typeof window.setCurrentReportStudentState === 'function') window.setCurrentReportStudentState(stu);
-    else if (window.ReportSessionState && typeof window.ReportSessionState.setCurrentReportStudent === 'function') window.ReportSessionState.setCurrentReportStudent(stu);
-    else window.CURRENT_REPORT_STUDENT = stu;
+    setCurrentReportStudentSessionState(stu);
 
     document.getElementById('single-report-result').classList.remove('hidden');
     const container = document.getElementById('report-card-capture-area');
