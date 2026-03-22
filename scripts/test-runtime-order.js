@@ -19,6 +19,7 @@ const compareCloudContextRuntimePath = path.resolve(__dirname, '../public/assets
 const compareExamSyncRuntimePath = path.resolve(__dirname, '../public/assets/js/compare-exam-sync-runtime.js');
 const townSubmoduleCompareStateRuntimePath = path.resolve(__dirname, '../public/assets/js/town-submodule-compare-state-runtime.js');
 const townSubmoduleCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/town-submodule-compare-runtime.js');
+const accountAdminRuntimePath = path.resolve(__dirname, '../public/assets/js/account-admin-runtime.js');
 const historyCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/history-compare-runtime.js');
 const perfMobileRuntimePath = path.resolve(__dirname, '../public/assets/js/perf-mobile-runtime.js');
 
@@ -38,6 +39,7 @@ assert.ok(fs.existsSync(compareCloudContextRuntimePath), 'compare-cloud-context-
 assert.ok(fs.existsSync(compareExamSyncRuntimePath), 'compare-exam-sync-runtime.js should exist');
 assert.ok(fs.existsSync(townSubmoduleCompareStateRuntimePath), 'town-submodule-compare-state-runtime.js should exist');
 assert.ok(fs.existsSync(townSubmoduleCompareRuntimePath), 'town-submodule-compare-runtime.js should exist');
+assert.ok(fs.existsSync(accountAdminRuntimePath), 'account-admin-runtime.js should exist');
 assert.ok(fs.existsSync(historyCompareRuntimePath), 'history-compare-runtime.js should exist');
 assert.ok(fs.existsSync(perfMobileRuntimePath), 'perf-mobile-runtime.js should exist');
 
@@ -65,6 +67,7 @@ const studentCompareCloudRef = './assets/js/student-compare-cloud-runtime.js';
 const cloudWorkspaceRef = './assets/js/cloud-workspace-runtime.js';
 const cloudRef = './assets/js/cloud.js';
 const appRef = './assets/js/app.js';
+const accountAdminRef = './assets/js/account-admin-runtime.js';
 const historyCompareRef = './assets/js/history-compare-runtime.js';
 const perfMobileRef = './assets/js/perf-mobile-runtime.js';
 const holographicRef = './assets/js/holographic-student-3d.js';
@@ -104,6 +107,7 @@ const studentCompareCloudIndex = indexHtml.indexOf(studentCompareCloudRef);
 const cloudIndex = indexHtml.indexOf(cloudRef);
 const cloudWorkspaceIndex = indexHtml.indexOf(cloudWorkspaceRef);
 const appIndex = indexHtml.indexOf(appRef);
+const accountAdminIndex = indexHtml.indexOf(accountAdminRef);
 const historyCompareIndex = indexHtml.indexOf(historyCompareRef);
 const perfMobileIndex = indexHtml.indexOf(perfMobileRef);
 
@@ -130,6 +134,7 @@ assert.ok(studentCompareCloudIndex >= 0, 'index.html should load student-compare
 assert.ok(cloudIndex >= 0, 'index.html should load cloud.js');
 assert.ok(cloudWorkspaceIndex >= 0, 'index.html should load cloud-workspace-runtime.js');
 assert.ok(appIndex >= 0, 'index.html should load app.js');
+assert.ok(accountAdminIndex >= 0, 'index.html should load account-admin-runtime.js');
 assert.ok(historyCompareIndex >= 0, 'index.html should load history-compare-runtime.js');
 assert.ok(perfMobileIndex >= 0, 'index.html should load perf-mobile-runtime.js');
 
@@ -158,6 +163,7 @@ assert.ok(perfMobileIndex >= 0, 'index.html should load perf-mobile-runtime.js')
     progressAnalysisRef,
     teacherAnalysisMainRef,
     studentCompareCloudRef,
+    accountAdminRef,
     townSubmoduleCompareStateRef,
     townSubmoduleCompareRef,
     historyCompareRef,
@@ -228,6 +234,7 @@ assert.ok(workspaceStateIndex < cloudWorkspaceIndex, 'workspace-state-runtime.js
 assert.ok(workspaceStateIndex < appIndex, 'workspace-state-runtime.js must load before app.js');
 assert.ok(authStateIndex < cloudWorkspaceIndex, 'auth-state-runtime.js must load before cloud-workspace-runtime.js');
 assert.ok(authStateIndex < appIndex, 'auth-state-runtime.js must load before app.js');
+assert.ok(accountAdminIndex < appIndex, 'account-admin-runtime.js should load before app.js');
 assert.ok(appIndex < historyCompareIndex, 'app.js must load before history-compare-runtime.js');
 assert.ok(appIndex < perfMobileIndex, 'app.js must load before perf-mobile-runtime.js');
 
