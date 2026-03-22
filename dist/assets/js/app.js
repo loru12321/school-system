@@ -1443,31 +1443,35 @@ function setMpSnapshotsState(snapshots) {
     return nextSnapshots;
 }
 
+function applySupportLateBoundState(snapshot = {}) {
+    const nextTargets = snapshot.targets || {};
+    const nextPrevData = snapshot.prevData || [];
+    const nextHistoryArchive = snapshot.historyArchive || {};
+    const nextFbClasses = snapshot.fbClasses || [];
+    const nextMpSnapshots = snapshot.mpSnapshots || {};
+    writeLateBoundState((value) => { TARGETS = value; }, nextTargets);
+    writeLateBoundState((value) => { PREV_DATA = value; }, nextPrevData);
+    writeLateBoundState((value) => { HISTORY_ARCHIVE = value; }, nextHistoryArchive);
+    writeLateBoundState((value) => { FB_CLASSES = value; }, nextFbClasses);
+    writeLateBoundState((value) => { MP_SNAPSHOTS = value; }, nextMpSnapshots);
+    window.TARGETS = readLateBoundState(() => TARGETS, nextTargets);
+    window.PREV_DATA = readLateBoundState(() => PREV_DATA, nextPrevData);
+    window.HISTORY_ARCHIVE = readLateBoundState(() => HISTORY_ARCHIVE, nextHistoryArchive);
+    window.FB_CLASSES = readLateBoundState(() => FB_CLASSES, nextFbClasses);
+    window.MP_SNAPSHOTS = readLateBoundState(() => MP_SNAPSHOTS, nextMpSnapshots);
+    ensureSupportSysVars().targets = window.TARGETS;
+    return snapshot;
+}
+
 function syncSupportRuntimeState(patch = {}) {
     if (SupportStateRuntime && typeof SupportStateRuntime.syncSupportState === 'function') {
-        const snapshot = SupportStateRuntime.syncSupportState(patch);
-        const nextTargets = snapshot.targets || {};
-        const nextPrevData = snapshot.prevData || [];
-        const nextHistoryArchive = snapshot.historyArchive || {};
-        const nextFbClasses = snapshot.fbClasses || [];
-        const nextMpSnapshots = snapshot.mpSnapshots || {};
-        writeLateBoundState((value) => { TARGETS = value; }, nextTargets);
-        writeLateBoundState((value) => { PREV_DATA = value; }, nextPrevData);
-        writeLateBoundState((value) => { HISTORY_ARCHIVE = value; }, nextHistoryArchive);
-        writeLateBoundState((value) => { FB_CLASSES = value; }, nextFbClasses);
-        writeLateBoundState((value) => { MP_SNAPSHOTS = value; }, nextMpSnapshots);
-        window.TARGETS = readLateBoundState(() => TARGETS, nextTargets);
-        window.PREV_DATA = readLateBoundState(() => PREV_DATA, nextPrevData);
-        window.HISTORY_ARCHIVE = readLateBoundState(() => HISTORY_ARCHIVE, nextHistoryArchive);
-        window.FB_CLASSES = readLateBoundState(() => FB_CLASSES, nextFbClasses);
-        window.MP_SNAPSHOTS = readLateBoundState(() => MP_SNAPSHOTS, nextMpSnapshots);
+        const snapshot = applySupportLateBoundState(SupportStateRuntime.syncSupportState(patch));
         ensureSupportSysVars().indicator = snapshot.indicator || { ind1: '', ind2: '' };
-        ensureSupportSysVars().targets = window.TARGETS;
         ensureSupportSysVars().schoolAliases = snapshot.schoolAliases || [];
         ensureSupportSysVars().dataManagerSyncState = snapshot.dataManagerSyncState || {};
         return snapshot;
     }
-    return {
+    return applySupportLateBoundState({
         indicator: setIndicatorState(patch.indicator ?? patch.INDICATOR_PARAMS ?? readIndicatorState()),
         targets: setTargetsState(patch.targets ?? patch.TARGETS ?? readTargetsState()),
         schoolAliases: setSchoolAliasState(patch.schoolAliases ?? patch.SCHOOL_ALIAS_SETTINGS ?? readSchoolAliasState()),
@@ -1476,7 +1480,7 @@ function syncSupportRuntimeState(patch = {}) {
         historyArchive: setHistoryArchiveState(patch.historyArchive ?? patch.HISTORY_ARCHIVE ?? readHistoryArchiveState()),
         fbClasses: setFbClassesState(patch.fbClasses ?? patch.FB_CLASSES ?? readFbClassesState()),
         mpSnapshots: setMpSnapshotsState(patch.mpSnapshots ?? patch.MP_SNAPSHOTS ?? readMpSnapshotsState())
-    };
+    });
 }
 
 window.ensureSupportSysVars = ensureSupportSysVars;
@@ -1601,29 +1605,32 @@ function setProgressQuickModeState(mode) {
     return window.__PROGRESS_QUICK_MODE;
 }
 
+function applyProgressLateBoundState(snapshot = {}) {
+    const nextCache = snapshot.progressCache || [];
+    const nextMappings = snapshot.manualIdMappings || {};
+    writeLateBoundState((value) => { PROGRESS_CACHE = value; }, nextCache);
+    writeLateBoundState((value) => { MANUAL_ID_MAPPINGS = value; }, nextMappings);
+    window.PROGRESS_CACHE = nextCache;
+    window.PROGRESS_CACHE_FULL = snapshot.progressCacheFull || [];
+    window.MANUAL_ID_MAPPINGS = nextMappings;
+    window.LAST_VA_DATA = snapshot.lastVaData || [];
+    window.VA_VIEW_MODE = snapshot.vaViewMode || 'school';
+    window.__PROGRESS_QUICK_MODE = snapshot.quickMode || 'all';
+    return snapshot;
+}
+
 function syncProgressRuntimeState(patch = {}) {
     if (ProgressStateRuntime && typeof ProgressStateRuntime.syncProgressState === 'function') {
-        const snapshot = ProgressStateRuntime.syncProgressState(patch);
-        const nextCache = snapshot.progressCache || [];
-        const nextMappings = snapshot.manualIdMappings || {};
-        writeLateBoundState((value) => { PROGRESS_CACHE = value; }, nextCache);
-        writeLateBoundState((value) => { MANUAL_ID_MAPPINGS = value; }, nextMappings);
-        window.PROGRESS_CACHE = nextCache;
-        window.PROGRESS_CACHE_FULL = snapshot.progressCacheFull || [];
-        window.MANUAL_ID_MAPPINGS = nextMappings;
-        window.LAST_VA_DATA = snapshot.lastVaData || [];
-        window.VA_VIEW_MODE = snapshot.vaViewMode || 'school';
-        window.__PROGRESS_QUICK_MODE = snapshot.quickMode || 'all';
-        return snapshot;
+        return applyProgressLateBoundState(ProgressStateRuntime.syncProgressState(patch));
     }
-    return {
+    return applyProgressLateBoundState({
         progressCache: setProgressCacheState(patch.progressCache ?? patch.PROGRESS_CACHE ?? readProgressCacheState()),
         progressCacheFull: setProgressCacheFullState(patch.progressCacheFull ?? patch.PROGRESS_CACHE_FULL ?? readProgressCacheFullState()),
         manualIdMappings: setManualIdMappingsState(patch.manualIdMappings ?? patch.MANUAL_ID_MAPPINGS ?? readManualIdMappingsState()),
         lastVaData: setLastVaDataState(patch.lastVaData ?? patch.LAST_VA_DATA ?? readLastVaDataState()),
         vaViewMode: setProgressViewModeState(patch.vaViewMode ?? patch.VA_VIEW_MODE ?? readProgressViewModeState()),
         quickMode: setProgressQuickModeState(patch.quickMode ?? patch.__PROGRESS_QUICK_MODE ?? readProgressQuickModeState())
-    };
+    });
 }
 
 window.readProgressCacheState = readProgressCacheState;
@@ -7594,11 +7601,7 @@ function syncRuntimeStateToWindow() {
         mpSnapshots: readLateBoundState(() => MP_SNAPSHOTS, readMpSnapshotsState())
     });
     TARGETS = supportSnapshot.targets || {};
-    writeLateBoundState((value) => { PREV_DATA = value; }, supportSnapshot.prevData || []);
-    writeLateBoundState((value) => { HISTORY_ARCHIVE = value; }, supportSnapshot.historyArchive || {});
-    writeLateBoundState((value) => { FB_CLASSES = value; }, supportSnapshot.fbClasses || []);
-    writeLateBoundState((value) => { MP_SNAPSHOTS = value; }, supportSnapshot.mpSnapshots || {});
-    const progressSnapshot = syncProgressRuntimeState({
+    syncProgressRuntimeState({
         progressCache: readLateBoundState(() => PROGRESS_CACHE, readProgressCacheState()),
         progressCacheFull: readProgressCacheFullState(),
         manualIdMappings: readLateBoundState(() => MANUAL_ID_MAPPINGS, readManualIdMappingsState()),
@@ -7606,15 +7609,12 @@ function syncRuntimeStateToWindow() {
         vaViewMode: readProgressViewModeState(),
         quickMode: readProgressQuickModeState()
     });
-    writeLateBoundState((value) => { PROGRESS_CACHE = value; }, progressSnapshot.progressCache || []);
-    writeLateBoundState((value) => { MANUAL_ID_MAPPINGS = value; }, progressSnapshot.manualIdMappings || {});
-    const reportSessionSnapshot = syncReportSessionRuntimeState({
+    syncReportSessionRuntimeState({
         currentReportStudent: readLateBoundState(() => CURRENT_REPORT_STUDENT, readCurrentReportStudentState()),
         batchAiCache: readLateBoundState(() => BATCH_AI_CACHE, readBatchAICacheState()),
         isBatchAiRunning: readLateBoundState(() => IS_BATCH_AI_RUNNING, readIsBatchAIRunningState()),
         currentContextStudents: readLateBoundState(() => CURRENT_CONTEXT_STUDENTS, readCurrentContextStudentsState())
     });
-    applyReportSessionLateBoundState(reportSessionSnapshot);
     const teacherSnapshot = syncTeacherRuntimeState({
         teacherMap: TEACHER_MAP,
         teacherSchoolMap: TEACHER_SCHOOL_MAP,
