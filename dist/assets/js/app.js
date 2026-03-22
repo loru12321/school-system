@@ -1739,25 +1739,28 @@ function setCurrentContextStudentsState(students) {
     return nextStudents;
 }
 
+function applyReportSessionLateBoundState(snapshot = {}) {
+    writeLateBoundState((value) => { CURRENT_REPORT_STUDENT = value; }, snapshot.currentReportStudent || null);
+    writeLateBoundState((value) => { BATCH_AI_CACHE = value; }, snapshot.batchAiCache || {});
+    writeLateBoundState((value) => { IS_BATCH_AI_RUNNING = value; }, !!snapshot.isBatchAiRunning);
+    writeLateBoundState((value) => { CURRENT_CONTEXT_STUDENTS = value; }, snapshot.currentContextStudents || []);
+    window.CURRENT_REPORT_STUDENT = snapshot.currentReportStudent || null;
+    window.BATCH_AI_CACHE = snapshot.batchAiCache || {};
+    window.IS_BATCH_AI_RUNNING = !!snapshot.isBatchAiRunning;
+    window.CURRENT_CONTEXT_STUDENTS = snapshot.currentContextStudents || [];
+    return snapshot;
+}
+
 function syncReportSessionRuntimeState(patch = {}) {
     if (ReportSessionStateRuntime && typeof ReportSessionStateRuntime.syncReportSessionState === 'function') {
-        const snapshot = ReportSessionStateRuntime.syncReportSessionState(patch);
-        writeLateBoundState((value) => { CURRENT_REPORT_STUDENT = value; }, snapshot.currentReportStudent || null);
-        writeLateBoundState((value) => { BATCH_AI_CACHE = value; }, snapshot.batchAiCache || {});
-        writeLateBoundState((value) => { IS_BATCH_AI_RUNNING = value; }, !!snapshot.isBatchAiRunning);
-        writeLateBoundState((value) => { CURRENT_CONTEXT_STUDENTS = value; }, snapshot.currentContextStudents || []);
-        window.CURRENT_REPORT_STUDENT = snapshot.currentReportStudent || null;
-        window.BATCH_AI_CACHE = snapshot.batchAiCache || {};
-        window.IS_BATCH_AI_RUNNING = !!snapshot.isBatchAiRunning;
-        window.CURRENT_CONTEXT_STUDENTS = snapshot.currentContextStudents || [];
-        return snapshot;
+        return applyReportSessionLateBoundState(ReportSessionStateRuntime.syncReportSessionState(patch));
     }
-    return {
+    return applyReportSessionLateBoundState({
         currentReportStudent: setCurrentReportStudentState(patch.currentReportStudent ?? patch.CURRENT_REPORT_STUDENT ?? readCurrentReportStudentState()),
         batchAiCache: setBatchAICacheState(patch.batchAiCache ?? patch.BATCH_AI_CACHE ?? readBatchAICacheState()),
         isBatchAiRunning: setBatchAIRunningState(patch.isBatchAiRunning ?? patch.IS_BATCH_AI_RUNNING ?? readIsBatchAIRunningState()),
         currentContextStudents: setCurrentContextStudentsState(patch.currentContextStudents ?? patch.CURRENT_CONTEXT_STUDENTS ?? readCurrentContextStudentsState())
-    };
+    });
 }
 
 window.readCurrentReportStudentState = readCurrentReportStudentState;
@@ -7611,10 +7614,7 @@ function syncRuntimeStateToWindow() {
         isBatchAiRunning: readLateBoundState(() => IS_BATCH_AI_RUNNING, readIsBatchAIRunningState()),
         currentContextStudents: readLateBoundState(() => CURRENT_CONTEXT_STUDENTS, readCurrentContextStudentsState())
     });
-    writeLateBoundState((value) => { CURRENT_REPORT_STUDENT = value; }, reportSessionSnapshot.currentReportStudent || null);
-    writeLateBoundState((value) => { BATCH_AI_CACHE = value; }, reportSessionSnapshot.batchAiCache || {});
-    writeLateBoundState((value) => { IS_BATCH_AI_RUNNING = value; }, !!reportSessionSnapshot.isBatchAiRunning);
-    writeLateBoundState((value) => { CURRENT_CONTEXT_STUDENTS = value; }, reportSessionSnapshot.currentContextStudents || []);
+    applyReportSessionLateBoundState(reportSessionSnapshot);
     const teacherSnapshot = syncTeacherRuntimeState({
         teacherMap: TEACHER_MAP,
         teacherSchoolMap: TEACHER_SCHOOL_MAP,
