@@ -4620,14 +4620,6 @@ const AccountManager = {
 };
 
 // 📊 [新增] 数据综合管理器 (学生/教师/档案/参数/目标)
-var syncChipEl = null;
-var inlineStatusGroupEl = null;
-
-function refreshDataManagerRailRefs() {
-    syncChipEl = document.getElementById('dm-tab-sync-chip');
-    inlineStatusGroupEl = document.getElementById('dm-tab-status-group');
-}
-
 const DataManager = {
     init: function () {
         window.DataManager = this;
@@ -4711,7 +4703,6 @@ const DataManager = {
             return alert("⛔ 权限不足：只有管理员或教务主任可操作底层数据。");
         }
 
-        refreshDataManagerRailRefs();
         document.getElementById('data-manager-modal').style.display = 'flex';
         this.decorateLayout();
         this.switchTab('student');
@@ -6786,9 +6777,7 @@ const DataManager = {
         const tipEl = document.getElementById('dm-status-overview-tip');
         const paramsEl = document.getElementById('dm-params-status');
         const targetsEl = document.getElementById('dm-targets-status');
-        const syncChipEl = document.getElementById('dm-tab-sync-chip');
-        const inlineStatusGroupEl = document.getElementById('dm-tab-status-group');
-        if (!summaryEl && !tipEl && !paramsEl && !targetsEl && !syncChipEl && !inlineStatusGroupEl) return;
+        if (!summaryEl && !tipEl && !paramsEl && !targetsEl) return;
 
         const model = this.getDataManagerStatusModel();
         const toneMap = {
@@ -26488,9 +26477,7 @@ if (typeof DataManager !== 'undefined') {
         const tipEl = document.getElementById('dm-status-overview-tip');
         const paramsEl = document.getElementById('dm-params-status');
         const targetsEl = document.getElementById('dm-targets-status');
-        const syncChipEl = document.getElementById('dm-tab-sync-chip');
-        const inlineStatusGroupEl = document.getElementById('dm-tab-status-group');
-        if (!summaryEl && !tipEl && !paramsEl && !targetsEl && !syncChipEl && !inlineStatusGroupEl) return;
+        if (!summaryEl && !tipEl && !paramsEl && !targetsEl) return;
 
         const model = this.getDataManagerStatusModel();
         const toneMap = {
@@ -26590,105 +26577,6 @@ if (typeof DataManager !== 'undefined') {
                     </div>
                 </div>
             `;
-        }
-
-        if (summaryEl) {
-            const indicatorLine1 = model.indicator.ind1 || '未填写';
-            const indicatorLine2 = model.indicator.ind2 || '未填写';
-            const teacherCount = model.teacherSnapshot.count || 0;
-            const teacherLoadedCount = model.teacherSnapshot.loadedCount || 0;
-            summaryEl.innerHTML = `
-                <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:stretch;">
-                    <div style="flex:1; min-width:240px; background:#ffffff; border:1px solid #dbeafe; border-radius:10px; padding:12px;">
-                        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
-                            <strong style="color:#0f172a;">年级指标参数</strong>
-                            ${pill(paramsMeta.title, paramsMeta.tone)}
-                        </div>
-                        <div style="margin-top:8px; font-size:12px; color:#475569;">优生线：${indicatorLine1} | 普高线：${indicatorLine2}</div>
-                        <div style="margin-top:6px; font-size:12px; color:#64748b;">${paramsMeta.detail}</div>
-                    </div>
-                    <div style="flex:1; min-width:240px; background:#ffffff; border:1px solid #dcfce7; border-radius:10px; padding:12px;">
-                        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
-                            <strong style="color:#0f172a;">目标人数</strong>
-                            ${pill(targetsMeta.title, targetsMeta.tone)}
-                        </div>
-                        <div style="margin-top:8px; font-size:12px; color:#475569;">已识别学校：${model.targetCount} 所</div>
-                        <div style="margin-top:6px; font-size:12px; color:#64748b;">${targetsMeta.detail}</div>
-                    </div>
-                    <div style="flex:1; min-width:240px; background:#ffffff; border:1px solid #fde68a; border-radius:10px; padding:12px;">
-                        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
-                            <strong style="color:#0f172a;">当前学期任课表</strong>
-                            ${pill(teachersMeta.title, teachersMeta.tone)}
-                        </div>
-                        <div style="margin-top:8px; font-size:12px; color:#475569;">学期：${teacherTermText}</div>
-                        <div style="margin-top:4px; font-size:12px; color:#475569;">记录：${teacherCount} 条，本页已加载：${teacherLoadedCount} 条</div>
-                        <div style="margin-top:6px; font-size:12px; color:#64748b;">${teachersMeta.detail}</div>
-                    </div>
-                </div>
-            `;
-        }
-
-        if (syncChipEl) {
-            const lastSyncText = String(model.lastSyncText || '').trim() || '灏氭湭璁板綍';
-            const lastSyncSource = String(model.lastSyncSource || '').trim() || '鏆傛棤浜戠鍚屾璁板綍';
-            const hasSyncRecord = lastSyncText !== '灏氭湭璁板綍';
-            syncChipEl.classList.toggle('is-recorded', hasSyncRecord);
-            syncChipEl.classList.toggle('is-idle', !hasSyncRecord);
-            syncChipEl.innerHTML = `
-                <span class="dm-tab-sync-dot"></span>
-                <div class="dm-tab-sync-copy">
-                    <strong>鏈€杩戝悓姝?/strong>
-                    <span>${hasSyncRecord ? `${lastSyncText} · ${lastSyncSource}` : lastSyncText}</span>
-                </div>
-            `;
-            syncChipEl.title = hasSyncRecord ? `${lastSyncText} / ${lastSyncSource}` : '鏆傛棤浜戠鍚屾璁板綍';
-        }
-
-        if (inlineStatusGroupEl) {
-            const chipToneMap = {
-                success: 'is-success',
-                info: 'is-info',
-                warning: 'is-warning',
-                error: 'is-error',
-                neutral: ''
-            };
-            const buildInlineChip = (label, value, tone) => {
-                const toneClass = chipToneMap[tone] || '';
-                return `
-                    <div class="dm-inline-status ${toneClass}">
-                        <span class="dm-inline-dot"></span>
-                        <div class="dm-inline-copy">
-                            <strong>${label}</strong>
-                            <span>${value}</span>
-                        </div>
-                    </div>
-                `;
-            };
-            inlineStatusGroupEl.innerHTML = [
-                buildInlineChip('参数', paramsMeta.title, paramsMeta.tone),
-                buildInlineChip('目标', targetsMeta.title, targetsMeta.tone),
-                buildInlineChip('任课表', teachersMeta.title, teachersMeta.tone)
-            ].join('');
-            inlineStatusGroupEl.innerHTML = [
-                buildInlineChip('参数', paramsMeta.title, paramsMeta.tone),
-                buildInlineChip('目标', targetsMeta.title, targetsMeta.tone),
-                buildInlineChip('任课表', teachersMeta.title, teachersMeta.tone)
-            ].join('');
-            syncChipEl && (syncChipEl.innerHTML = `
-                <span class="dm-tab-sync-dot"></span>
-                <div class="dm-tab-sync-copy">
-                    <strong>最近同步</strong>
-                    <span>${hasSyncRecord ? `${lastSyncText} · ${lastSyncSource}` : lastSyncText}</span>
-                </div>
-            `);
-            if (syncChipEl) {
-                syncChipEl.title = hasSyncRecord ? `${lastSyncText} / ${lastSyncSource}` : '暂无云端同步记录';
-            }
-            inlineStatusGroupEl.innerHTML = [
-                buildInlineChip('参数', paramsMeta.title, paramsMeta.tone),
-                buildInlineChip('目标', targetsMeta.title, targetsMeta.tone),
-                buildInlineChip('任课表', teachersMeta.title, teachersMeta.tone)
-            ].join('');
         }
 
         if (tipEl) {
