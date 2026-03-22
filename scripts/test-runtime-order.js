@@ -10,6 +10,7 @@ const schoolRuntimePath = path.resolve(__dirname, '../public/assets/js/school-st
 const teacherRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-state-runtime.js');
 const dataRuntimePath = path.resolve(__dirname, '../public/assets/js/data-state-runtime.js');
 const supportRuntimePath = path.resolve(__dirname, '../public/assets/js/support-state-runtime.js');
+const progressRuntimePath = path.resolve(__dirname, '../public/assets/js/progress-state-runtime.js');
 
 assert.ok(fs.existsSync(runtimePath), 'auth-state-runtime.js should exist');
 assert.ok(fs.existsSync(workspaceRuntimePath), 'workspace-state-runtime.js should exist');
@@ -18,6 +19,7 @@ assert.ok(fs.existsSync(schoolRuntimePath), 'school-state-runtime.js should exis
 assert.ok(fs.existsSync(teacherRuntimePath), 'teacher-state-runtime.js should exist');
 assert.ok(fs.existsSync(dataRuntimePath), 'data-state-runtime.js should exist');
 assert.ok(fs.existsSync(supportRuntimePath), 'support-state-runtime.js should exist');
+assert.ok(fs.existsSync(progressRuntimePath), 'progress-state-runtime.js should exist');
 
 const indexHtml = fs.readFileSync(indexPath, 'utf8');
 const authStateRef = './assets/js/auth-state-runtime.js';
@@ -27,6 +29,7 @@ const schoolStateRef = './assets/js/school-state-runtime.js';
 const teacherStateRef = './assets/js/teacher-state-runtime.js';
 const dataStateRef = './assets/js/data-state-runtime.js';
 const supportStateRef = './assets/js/support-state-runtime.js';
+const progressStateRef = './assets/js/progress-state-runtime.js';
 const cloudWorkspaceRef = './assets/js/cloud-workspace-runtime.js';
 const cloudRef = './assets/js/cloud.js';
 const appRef = './assets/js/app.js';
@@ -38,6 +41,7 @@ const schoolStateIndex = indexHtml.indexOf(schoolStateRef);
 const teacherStateIndex = indexHtml.indexOf(teacherStateRef);
 const dataStateIndex = indexHtml.indexOf(dataStateRef);
 const supportStateIndex = indexHtml.indexOf(supportStateRef);
+const progressStateIndex = indexHtml.indexOf(progressStateRef);
 const cloudIndex = indexHtml.indexOf(cloudRef);
 const cloudWorkspaceIndex = indexHtml.indexOf(cloudWorkspaceRef);
 const appIndex = indexHtml.indexOf(appRef);
@@ -49,6 +53,7 @@ assert.ok(schoolStateIndex >= 0, 'index.html should load school-state-runtime.js
 assert.ok(teacherStateIndex >= 0, 'index.html should load teacher-state-runtime.js');
 assert.ok(dataStateIndex >= 0, 'index.html should load data-state-runtime.js');
 assert.ok(supportStateIndex >= 0, 'index.html should load support-state-runtime.js');
+assert.ok(progressStateIndex >= 0, 'index.html should load progress-state-runtime.js');
 assert.ok(cloudIndex >= 0, 'index.html should load cloud.js');
 assert.ok(cloudWorkspaceIndex >= 0, 'index.html should load cloud-workspace-runtime.js');
 assert.ok(appIndex >= 0, 'index.html should load app.js');
@@ -58,6 +63,10 @@ assert.ok(examStateIndex < schoolStateIndex, 'exam-state-runtime.js must load be
 assert.ok(schoolStateIndex < teacherStateIndex, 'school-state-runtime.js must load before teacher-state-runtime.js');
 assert.ok(teacherStateIndex < dataStateIndex, 'teacher-state-runtime.js must load before data-state-runtime.js');
 assert.ok(dataStateIndex < supportStateIndex, 'data-state-runtime.js must load before support-state-runtime.js');
+assert.ok(supportStateIndex < progressStateIndex, 'support-state-runtime.js must load before progress-state-runtime.js');
+assert.ok(progressStateIndex < cloudIndex, 'progress-state-runtime.js must load before cloud.js');
+assert.ok(progressStateIndex < cloudWorkspaceIndex, 'progress-state-runtime.js must load before cloud-workspace-runtime.js');
+assert.ok(progressStateIndex < appIndex, 'progress-state-runtime.js must load before app.js');
 assert.ok(supportStateIndex < cloudIndex, 'support-state-runtime.js must load before cloud.js');
 assert.ok(supportStateIndex < cloudWorkspaceIndex, 'support-state-runtime.js must load before cloud-workspace-runtime.js');
 assert.ok(supportStateIndex < appIndex, 'support-state-runtime.js must load before app.js');

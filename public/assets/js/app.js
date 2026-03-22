@@ -1497,6 +1497,149 @@ window.setFbClassesState = setFbClassesState;
 window.readMpSnapshotsState = readMpSnapshotsState;
 window.setMpSnapshotsState = setMpSnapshotsState;
 
+const ProgressStateRuntime = window.ProgressState || null;
+
+function readProgressCacheState() {
+    const lateRows = readLateBoundState(() => PROGRESS_CACHE, []);
+    const nextRows = ProgressStateRuntime && typeof ProgressStateRuntime.getProgressCache === 'function'
+        ? (ProgressStateRuntime.getProgressCache() || [])
+        : (window.PROGRESS_CACHE && Array.isArray(window.PROGRESS_CACHE) ? window.PROGRESS_CACHE : (Array.isArray(lateRows) ? lateRows : []));
+    writeLateBoundState((value) => { PROGRESS_CACHE = value; }, nextRows);
+    window.PROGRESS_CACHE = nextRows;
+    return nextRows;
+}
+
+function setProgressCacheState(rows) {
+    const nextRows = ProgressStateRuntime && typeof ProgressStateRuntime.setProgressCache === 'function'
+        ? (ProgressStateRuntime.setProgressCache(rows) || [])
+        : (Array.isArray(rows) ? rows : []);
+    writeLateBoundState((value) => { PROGRESS_CACHE = value; }, nextRows);
+    window.PROGRESS_CACHE = nextRows;
+    return nextRows;
+}
+
+function readProgressCacheFullState() {
+    const nextRows = ProgressStateRuntime && typeof ProgressStateRuntime.getProgressCacheFull === 'function'
+        ? (ProgressStateRuntime.getProgressCacheFull() || [])
+        : (window.PROGRESS_CACHE_FULL && Array.isArray(window.PROGRESS_CACHE_FULL) ? window.PROGRESS_CACHE_FULL : []);
+    window.PROGRESS_CACHE_FULL = nextRows;
+    return nextRows;
+}
+
+function setProgressCacheFullState(rows) {
+    const nextRows = ProgressStateRuntime && typeof ProgressStateRuntime.setProgressCacheFull === 'function'
+        ? (ProgressStateRuntime.setProgressCacheFull(rows) || [])
+        : (Array.isArray(rows) ? rows : []);
+    window.PROGRESS_CACHE_FULL = nextRows;
+    return nextRows;
+}
+
+function readManualIdMappingsState() {
+    const lateMappings = readLateBoundState(() => MANUAL_ID_MAPPINGS, {});
+    const nextMappings = ProgressStateRuntime && typeof ProgressStateRuntime.getManualIdMappings === 'function'
+        ? (ProgressStateRuntime.getManualIdMappings() || {})
+        : (window.MANUAL_ID_MAPPINGS && typeof window.MANUAL_ID_MAPPINGS === 'object' ? window.MANUAL_ID_MAPPINGS : (lateMappings && typeof lateMappings === 'object' ? lateMappings : {}));
+    writeLateBoundState((value) => { MANUAL_ID_MAPPINGS = value; }, nextMappings);
+    window.MANUAL_ID_MAPPINGS = nextMappings;
+    return nextMappings;
+}
+
+function setManualIdMappingsState(mappings) {
+    const nextMappings = ProgressStateRuntime && typeof ProgressStateRuntime.setManualIdMappings === 'function'
+        ? (ProgressStateRuntime.setManualIdMappings(mappings) || {})
+        : (mappings && typeof mappings === 'object' && !Array.isArray(mappings) ? mappings : {});
+    writeLateBoundState((value) => { MANUAL_ID_MAPPINGS = value; }, nextMappings);
+    window.MANUAL_ID_MAPPINGS = nextMappings;
+    return nextMappings;
+}
+
+function readLastVaDataState() {
+    const nextRows = ProgressStateRuntime && typeof ProgressStateRuntime.getLastVaData === 'function'
+        ? (ProgressStateRuntime.getLastVaData() || [])
+        : (window.LAST_VA_DATA && Array.isArray(window.LAST_VA_DATA) ? window.LAST_VA_DATA : []);
+    window.LAST_VA_DATA = nextRows;
+    return nextRows;
+}
+
+function setLastVaDataState(rows) {
+    const nextRows = ProgressStateRuntime && typeof ProgressStateRuntime.setLastVaData === 'function'
+        ? (ProgressStateRuntime.setLastVaData(rows) || [])
+        : (Array.isArray(rows) ? rows : []);
+    window.LAST_VA_DATA = nextRows;
+    return nextRows;
+}
+
+function readProgressViewModeState() {
+    const nextMode = ProgressStateRuntime && typeof ProgressStateRuntime.getVaViewMode === 'function'
+        ? String(ProgressStateRuntime.getVaViewMode() || 'school').trim()
+        : String(window.VA_VIEW_MODE || 'school').trim();
+    window.VA_VIEW_MODE = nextMode === 'class' ? 'class' : 'school';
+    return window.VA_VIEW_MODE;
+}
+
+function setProgressViewModeState(mode) {
+    const nextMode = ProgressStateRuntime && typeof ProgressStateRuntime.setVaViewMode === 'function'
+        ? String(ProgressStateRuntime.setVaViewMode(mode) || 'school').trim()
+        : String(mode || 'school').trim();
+    window.VA_VIEW_MODE = nextMode === 'class' ? 'class' : 'school';
+    return window.VA_VIEW_MODE;
+}
+
+function readProgressQuickModeState() {
+    const nextMode = ProgressStateRuntime && typeof ProgressStateRuntime.getQuickMode === 'function'
+        ? String(ProgressStateRuntime.getQuickMode() || 'all').trim()
+        : String(window.__PROGRESS_QUICK_MODE || 'all').trim();
+    window.__PROGRESS_QUICK_MODE = ['all', 'my_class', 'focus'].includes(nextMode) ? nextMode : 'all';
+    return window.__PROGRESS_QUICK_MODE;
+}
+
+function setProgressQuickModeState(mode) {
+    const nextMode = ProgressStateRuntime && typeof ProgressStateRuntime.setQuickMode === 'function'
+        ? String(ProgressStateRuntime.setQuickMode(mode) || 'all').trim()
+        : String(mode || 'all').trim();
+    window.__PROGRESS_QUICK_MODE = ['all', 'my_class', 'focus'].includes(nextMode) ? nextMode : 'all';
+    return window.__PROGRESS_QUICK_MODE;
+}
+
+function syncProgressRuntimeState(patch = {}) {
+    if (ProgressStateRuntime && typeof ProgressStateRuntime.syncProgressState === 'function') {
+        const snapshot = ProgressStateRuntime.syncProgressState(patch);
+        const nextCache = snapshot.progressCache || [];
+        const nextMappings = snapshot.manualIdMappings || {};
+        writeLateBoundState((value) => { PROGRESS_CACHE = value; }, nextCache);
+        writeLateBoundState((value) => { MANUAL_ID_MAPPINGS = value; }, nextMappings);
+        window.PROGRESS_CACHE = nextCache;
+        window.PROGRESS_CACHE_FULL = snapshot.progressCacheFull || [];
+        window.MANUAL_ID_MAPPINGS = nextMappings;
+        window.LAST_VA_DATA = snapshot.lastVaData || [];
+        window.VA_VIEW_MODE = snapshot.vaViewMode || 'school';
+        window.__PROGRESS_QUICK_MODE = snapshot.quickMode || 'all';
+        return snapshot;
+    }
+    return {
+        progressCache: setProgressCacheState(patch.progressCache ?? patch.PROGRESS_CACHE ?? readProgressCacheState()),
+        progressCacheFull: setProgressCacheFullState(patch.progressCacheFull ?? patch.PROGRESS_CACHE_FULL ?? readProgressCacheFullState()),
+        manualIdMappings: setManualIdMappingsState(patch.manualIdMappings ?? patch.MANUAL_ID_MAPPINGS ?? readManualIdMappingsState()),
+        lastVaData: setLastVaDataState(patch.lastVaData ?? patch.LAST_VA_DATA ?? readLastVaDataState()),
+        vaViewMode: setProgressViewModeState(patch.vaViewMode ?? patch.VA_VIEW_MODE ?? readProgressViewModeState()),
+        quickMode: setProgressQuickModeState(patch.quickMode ?? patch.__PROGRESS_QUICK_MODE ?? readProgressQuickModeState())
+    };
+}
+
+window.readProgressCacheState = readProgressCacheState;
+window.setProgressCacheState = setProgressCacheState;
+window.readProgressCacheFullState = readProgressCacheFullState;
+window.setProgressCacheFullState = setProgressCacheFullState;
+window.readManualIdMappingsState = readManualIdMappingsState;
+window.setManualIdMappingsState = setManualIdMappingsState;
+window.readLastVaDataState = readLastVaDataState;
+window.setLastVaDataState = setLastVaDataState;
+window.readProgressViewModeState = readProgressViewModeState;
+window.setProgressViewModeState = setProgressViewModeState;
+window.readProgressQuickModeState = readProgressQuickModeState;
+window.setProgressQuickModeState = setProgressQuickModeState;
+window.syncProgressRuntimeState = syncProgressRuntimeState;
+
 const Auth = {
     currentUser: null,
     _parentDataRecovering: false,
@@ -7245,6 +7388,14 @@ const initialSupportSnapshot = syncSupportRuntimeState({
     mpSnapshots: window.MP_SNAPSHOTS && typeof window.MP_SNAPSHOTS === 'object' ? window.MP_SNAPSHOTS : {}
 });
 TARGETS = initialSupportSnapshot.targets || {};
+const initialProgressSnapshot = syncProgressRuntimeState({
+    progressCache: Array.isArray(window.PROGRESS_CACHE) ? window.PROGRESS_CACHE : [],
+    progressCacheFull: Array.isArray(window.PROGRESS_CACHE_FULL) ? window.PROGRESS_CACHE_FULL : [],
+    manualIdMappings: window.MANUAL_ID_MAPPINGS && typeof window.MANUAL_ID_MAPPINGS === 'object' ? window.MANUAL_ID_MAPPINGS : {},
+    lastVaData: Array.isArray(window.LAST_VA_DATA) ? window.LAST_VA_DATA : [],
+    vaViewMode: window.VA_VIEW_MODE || 'school',
+    quickMode: window.__PROGRESS_QUICK_MODE || 'all'
+});
 // 🟢 [修复]：全局变量显式挂载到 window，确保 CloudManager 可访问
 var TEACHER_MAP = readTeacherMap(), TEACHER_SCHOOL_MAP = readTeacherSchoolMap(), MY_SCHOOL = "", TEACHER_STATS = readTeacherStats();
 window.TEACHER_MAP = TEACHER_MAP;
@@ -7305,6 +7456,16 @@ function syncRuntimeStateToWindow() {
     writeLateBoundState((value) => { HISTORY_ARCHIVE = value; }, supportSnapshot.historyArchive || {});
     writeLateBoundState((value) => { FB_CLASSES = value; }, supportSnapshot.fbClasses || []);
     writeLateBoundState((value) => { MP_SNAPSHOTS = value; }, supportSnapshot.mpSnapshots || {});
+    const progressSnapshot = syncProgressRuntimeState({
+        progressCache: readLateBoundState(() => PROGRESS_CACHE, readProgressCacheState()),
+        progressCacheFull: readProgressCacheFullState(),
+        manualIdMappings: readLateBoundState(() => MANUAL_ID_MAPPINGS, readManualIdMappingsState()),
+        lastVaData: readLastVaDataState(),
+        vaViewMode: readProgressViewModeState(),
+        quickMode: readProgressQuickModeState()
+    });
+    writeLateBoundState((value) => { PROGRESS_CACHE = value; }, progressSnapshot.progressCache || []);
+    writeLateBoundState((value) => { MANUAL_ID_MAPPINGS = value; }, progressSnapshot.manualIdMappings || {});
     const teacherSnapshot = syncTeacherRuntimeState({
         teacherMap: TEACHER_MAP,
         teacherSchoolMap: TEACHER_SCHOOL_MAP,
@@ -7596,6 +7757,8 @@ let STD_PAGINATION = {
 let PREV_DATA = readPrevDataState(); // 进退步分析专用
 let PROGRESS_CACHE = [];
 let MANUAL_ID_MAPPINGS = {}; // 存储用户手动确认的同名映射关系 key: "Current_Class_Name" -> val: "Prev_Class_Name"
+PROGRESS_CACHE = initialProgressSnapshot.progressCache || [];
+MANUAL_ID_MAPPINGS = initialProgressSnapshot.manualIdMappings || {};
 let balanceChartInstance = null;
 let AID_GROUPS_CACHE = [];
 let MP_DATA_CACHE = []; // 临界生数据缓存
@@ -11512,9 +11675,10 @@ function smBuildOverviewModel() {
         ? listAvailableSchoolsForCompare()
         : Object.keys(window.SCHOOLS || {});
     const selectedClass = normalizeClass(context.classValue || '');
-    const progressRows = (Array.isArray(window.PROGRESS_CACHE_FULL) && window.PROGRESS_CACHE_FULL.length)
-        ? window.PROGRESS_CACHE_FULL.slice()
-        : (Array.isArray(window.PROGRESS_CACHE) ? window.PROGRESS_CACHE.slice() : []);
+    const fullProgressRows = readProgressCacheFullState();
+    const progressRows = fullProgressRows.length
+        ? fullProgressRows.slice()
+        : readProgressCacheState().slice();
     const progressScopedRows = progressRows.filter((row) => {
         if (context.schoolValue && !smSchoolMatches(row.school, context.schoolValue)) return false;
         if (selectedClass && normalizeClass(row.class || '') !== selectedClass) return false;
@@ -15372,7 +15536,8 @@ function generateAIComment(student) {
     const style = 'encouraging';
     const teacherName = '老师'; // 默认称呼
     const totalRank = safeGet(student, 'ranks.total.township', 99999); const totalStudents = RAW_DATA.length || 1; const percentile = totalRank / totalStudents;
-    let progress = 0; if (PROGRESS_CACHE.length > 0) { const progRecord = PROGRESS_CACHE.find(p => p.name === student.name && p.class === student.class); if (progRecord) progress = progRecord.change; }
+    const progressCache = readProgressCacheState();
+    let progress = 0; if (progressCache.length > 0) { const progRecord = progressCache.find(p => p.name === student.name && p.class === student.class); if (progRecord) progress = progRecord.change; }
     let bestSub = { name: '', rank: 99999 }; let worstSub = { name: '', rank: 0 };
     SUBJECTS.forEach(sub => { const r = safeGet(student, `ranks.${sub}.township`, 0); if (r > 0) { if (r < bestSub.rank) bestSub = { name: sub, rank: r }; if (r > worstSub.rank) worstSub = { name: sub, rank: r }; } });
     const isPartial = (worstSub.rank - bestSub.rank) > (totalStudents * 0.4);
@@ -18681,9 +18846,10 @@ async function generateClassPPT() {
         const top10Names = students.slice(0, 10).map((s, i) => `${i + 1}.${s.name}(${s.total})`).join("  ");
         slide.addText(top10Names, { x: 0.8, y: 2.2, w: 11.5, h: 1.2, fill: "FFFBEB", color: "B45309", fontSize: 14, inset: 0.2, border: { color: "FCD34D" } });
 
-        if (PROGRESS_CACHE && PROGRESS_CACHE.length > 0) {
+        const progressCache = readProgressCacheState();
+        if (progressCache && progressCache.length > 0) {
             slide.addText("📈 进步之星 (较上次考试)", { x: 0.8, y: 3.8, fontSize: 14, bold: true, color: "16A34A" });
-            const stars = PROGRESS_CACHE.filter(p => p.class === cls && p.change > 0).sort((a, b) => b.change - a.change).slice(0, 12);
+            const stars = progressCache.filter(p => p.class === cls && p.change > 0).sort((a, b) => b.change - a.change).slice(0, 12);
             const starNames = stars.map(p => `${p.name}↑${p.change}`).join("  ");
             slide.addText(starNames || "暂无显著进步数据", { x: 0.8, y: 4.2, w: 11.5, h: 1.2, fill: "DCFCE7", color: "166534", fontSize: 14, inset: 0.2, border: { color: "86EFAC" } });
         }
@@ -21475,10 +21641,12 @@ function SSE_calculate() {
 
     // 3. 准备数据 (仅在勾选了增值时才请求历史数据)
     if (useProgress) {
-        if (PREV_DATA.length > 0 && (!PROGRESS_CACHE || PROGRESS_CACHE.length === 0)) {
+        let progressCache = readProgressCacheState();
+        if (PREV_DATA.length > 0 && (!progressCache || progressCache.length === 0)) {
             performSilentMatching();
+            progressCache = readProgressCacheState();
         }
-        if (PROGRESS_CACHE.length === 0) {
+        if (progressCache.length === 0) {
             // 仅做轻提示，不阻断计算
             UI.toast("⚠️ 未检测到历史数据，增值项将记为0分。如只需本次成绩，请取消勾选“生源增值”。", "warning");
         }
@@ -21540,9 +21708,10 @@ function SSE_calculate() {
         let avgProgress = 0;
         let matchedCount = 0;
         if (useProgress) {
+            const progressCache = readProgressCacheState();
             let progressSum = 0;
             cls.validStudents.forEach(stu => {
-                const rec = PROGRESS_CACHE.find(p => p.name === stu.name && p.class === stu.class);
+                const rec = progressCache.find(p => p.name === stu.name && p.class === stu.class);
                 if (rec) { progressSum += rec.change; matchedCount++; }
             });
             avgProgress = matchedCount > 0 ? (progressSum / matchedCount) : 0;
@@ -23564,6 +23733,12 @@ function getCurrentSnapshotPayload() {
         INDICATOR_PARAMS: readIndicatorState(),
         SCHOOL_ALIAS_SETTINGS: readSchoolAliasState(),
         PREV_DATA: readPrevDataState(),
+        PROGRESS_CACHE: readProgressCacheState(),
+        PROGRESS_CACHE_FULL: readProgressCacheFullState(),
+        MANUAL_ID_MAPPINGS: readManualIdMappingsState(),
+        LAST_VA_DATA: readLastVaDataState(),
+        VA_VIEW_MODE: readProgressViewModeState(),
+        __PROGRESS_QUICK_MODE: readProgressQuickModeState(),
         TEACHER_STATS: window.TEACHER_STATS || {},
         HISTORY_ARCHIVE: readHistoryArchiveState(),
         FB_CLASSES: readFbClassesState(),
@@ -23802,6 +23977,14 @@ function applySnapshotPayload(db) {
         if (main2) main2.value = indicator.ind2;
     }
     if (db.PREV_DATA) setPrevDataState(db.PREV_DATA);
+    syncProgressRuntimeState({
+        progressCache: db.PROGRESS_CACHE || [],
+        progressCacheFull: db.PROGRESS_CACHE_FULL || [],
+        manualIdMappings: db.MANUAL_ID_MAPPINGS || {},
+        lastVaData: db.LAST_VA_DATA || [],
+        vaViewMode: db.VA_VIEW_MODE || 'school',
+        quickMode: db.__PROGRESS_QUICK_MODE || 'all'
+    });
     if (db.TEACHER_STATS) setTeacherStats(db.TEACHER_STATS);
     if (db.HISTORY_ARCHIVE) setHistoryArchiveState(db.HISTORY_ARCHIVE);
     if (db.FB_CLASSES) setFbClassesState(db.FB_CLASSES);
@@ -23850,7 +24033,14 @@ function saveProjectSnapshot() {
             CONFIG, MY_SCHOOL, RAW_DATA, SCHOOLS, SUBJECTS, THRESHOLDS,
             TARGETS, // 👈 确保这里包含目标人数对象
             TEACHER_MAP, TEACHER_STATS, TEACHER_TOWNSHIP_RANKINGS, TEACHER_STAMP_BASE64,
-            PREV_DATA, PROGRESS_CACHE, MARGINAL_STUDENTS, POTENTIAL_STUDENTS_CACHE,
+            PREV_DATA,
+            PROGRESS_CACHE: readProgressCacheState(),
+            PROGRESS_CACHE_FULL: readProgressCacheFullState(),
+            MANUAL_ID_MAPPINGS: readManualIdMappingsState(),
+            LAST_VA_DATA: readLastVaDataState(),
+            VA_VIEW_MODE: readProgressViewModeState(),
+            __PROGRESS_QUICK_MODE: readProgressQuickModeState(),
+            MARGINAL_STUDENTS, POTENTIAL_STUDENTS_CACHE,
             MP_DATA_CACHE, FB_STUDENTS, FB_CLASSES, FB_SIMULATED_DATA, EXAM_DATA,
             EXAM_ROOMS, AID_GROUPS_CACHE, HISTORY_ARCHIVE, ROLLER_COASTER_STUDENTS,
             MP_SNAPSHOTS,
@@ -23958,6 +24148,11 @@ function loadProjectSnapshot(input) {
                     TEACHER_TOWNSHIP_RANKINGS: db.TEACHER_TOWNSHIP_RANKINGS || {},
                     PREV_DATA: db.PREV_DATA || [],
                     PROGRESS_CACHE: db.PROGRESS_CACHE || [],
+                    PROGRESS_CACHE_FULL: db.PROGRESS_CACHE_FULL || [],
+                    MANUAL_ID_MAPPINGS: db.MANUAL_ID_MAPPINGS || {},
+                    LAST_VA_DATA: db.LAST_VA_DATA || [],
+                    VA_VIEW_MODE: db.VA_VIEW_MODE || 'school',
+                    __PROGRESS_QUICK_MODE: db.__PROGRESS_QUICK_MODE || 'all',
                     MARGINAL_STUDENTS: db.MARGINAL_STUDENTS || {},
                     POTENTIAL_STUDENTS_CACHE: db.POTENTIAL_STUDENTS_CACHE || [],
                     FB_STUDENTS: db.FB_STUDENTS || [],

@@ -1,12 +1,64 @@
 ﻿(() => {
     if (typeof window === 'undefined' || window.__PROGRESS_ANALYSIS_RUNTIME_PATCHED__) return;
 
+    const syncProgressState = typeof window.syncProgressRuntimeState === 'function'
+        ? window.syncProgressRuntimeState
+        : null;
+    const readProgressCacheState = typeof window.readProgressCacheState === 'function'
+        ? window.readProgressCacheState
+        : (() => (Array.isArray(window.PROGRESS_CACHE) ? window.PROGRESS_CACHE : []));
+    const readProgressCacheFullState = typeof window.readProgressCacheFullState === 'function'
+        ? window.readProgressCacheFullState
+        : (() => (Array.isArray(window.PROGRESS_CACHE_FULL) ? window.PROGRESS_CACHE_FULL : []));
+    const readManualIdMappingsState = typeof window.readManualIdMappingsState === 'function'
+        ? window.readManualIdMappingsState
+        : (() => (window.MANUAL_ID_MAPPINGS && typeof window.MANUAL_ID_MAPPINGS === 'object' ? window.MANUAL_ID_MAPPINGS : {}));
+    const readLastVaDataState = typeof window.readLastVaDataState === 'function'
+        ? window.readLastVaDataState
+        : (() => (Array.isArray(window.LAST_VA_DATA) ? window.LAST_VA_DATA : []));
+    const readProgressViewModeState = typeof window.readProgressViewModeState === 'function'
+        ? window.readProgressViewModeState
+        : (() => (String(window.VA_VIEW_MODE || 'school').trim() === 'class' ? 'class' : 'school'));
+    const readProgressQuickModeState = typeof window.readProgressQuickModeState === 'function'
+        ? window.readProgressQuickModeState
+        : (() => {
+            const mode = String(window.__PROGRESS_QUICK_MODE || 'all').trim();
+            return ['all', 'my_class', 'focus'].includes(mode) ? mode : 'all';
+        });
+
+    let PROGRESS_CACHE = [];
+    let MANUAL_ID_MAPPINGS = {};
+    let VA_VIEW_MODE = 'school';
     let trendChartInstance = window.trendChartInstance || null;
     let sankeyChartInstance = window.sankeyChartInstance || null;
-    const initialProgressCache = Array.isArray(window.PROGRESS_CACHE)
-        ? window.PROGRESS_CACHE
-        : (typeof PROGRESS_CACHE !== 'undefined' && Array.isArray(PROGRESS_CACHE) ? PROGRESS_CACHE : []);
-    window.PROGRESS_CACHE = initialProgressCache;
+
+    function syncLocalProgressState(patch = {}) {
+        const snapshot = syncProgressState
+            ? syncProgressState(patch)
+            : {
+                progressCache: Array.isArray(patch.progressCache) ? patch.progressCache : readProgressCacheState(),
+                progressCacheFull: Array.isArray(patch.progressCacheFull) ? patch.progressCacheFull : readProgressCacheFullState(),
+                manualIdMappings: patch.manualIdMappings && typeof patch.manualIdMappings === 'object' ? patch.manualIdMappings : readManualIdMappingsState(),
+                lastVaData: Array.isArray(patch.lastVaData) ? patch.lastVaData : readLastVaDataState(),
+                vaViewMode: String(patch.vaViewMode || readProgressViewModeState()).trim() === 'class' ? 'class' : 'school',
+                quickMode: ['all', 'my_class', 'focus'].includes(String(patch.quickMode || readProgressQuickModeState()).trim())
+                    ? String(patch.quickMode || readProgressQuickModeState()).trim()
+                    : 'all'
+            };
+        PROGRESS_CACHE = Array.isArray(snapshot.progressCache) ? snapshot.progressCache : [];
+        MANUAL_ID_MAPPINGS = snapshot.manualIdMappings && typeof snapshot.manualIdMappings === 'object' ? snapshot.manualIdMappings : {};
+        VA_VIEW_MODE = String(snapshot.vaViewMode || 'school').trim() === 'class' ? 'class' : 'school';
+        return snapshot;
+    }
+
+    syncLocalProgressState({
+        progressCache: readProgressCacheState(),
+        progressCacheFull: readProgressCacheFullState(),
+        manualIdMappings: readManualIdMappingsState(),
+        lastVaData: readLastVaDataState(),
+        vaViewMode: readProgressViewModeState(),
+        quickMode: readProgressQuickModeState()
+    });
 
 function updateProgressSchoolSelect() {
     const sel = document.getElementById('progressSchoolSelect');
@@ -127,7 +179,7 @@ function updateProgressBaselineSelect() {
     if (preferredId) sel.value = preferredId;
 
     sel.onchange = () => {
-        window.PROGRESS_CACHE = [];
+        syncLocalProgressState({ progressCache: [], progressCacheFull: [], lastVaData: [] });
         window.__PROGRESS_BASELINE_ACTIVE_ID = '';
         Promise.resolve(ensureProgressBaselineData({
             allowCloudSync: false,
@@ -296,14 +348,14 @@ async function ensureProgressBaselineData(options = {}) {
     }
 
     const baselineChanged = String(window.__PROGRESS_BASELINE_ACTIVE_ID || '') !== String(baselineId || '');
-    if (baselineChanged) window.PROGRESS_CACHE = [];
+    if (baselineChanged) syncLocalProgressState({ progressCache: [], progressCacheFull: [], lastVaData: [] });
     window.__PROGRESS_BASELINE_ACTIVE_ID = baselineId || '';
     PREV_DATA = baselineData;
     window.PREV_DATA = baselineData;
     setProgressBaselineStatus(`✅ 已自动加载上次考试数据（${baselineData.length} 条）${baselineId ? `：${baselineId}` : ''}`, 'success');
 
     try {
-        if ((!window.PROGRESS_CACHE || window.PROGRESS_CACHE.length === 0) && typeof performSilentMatching === 'function') {
+        if ((readProgressCacheState().length === 0) && typeof performSilentMatching === 'function') {
             performSilentMatching();
         }
         if (rerenderReport && typeof renderValueAddedReport === 'function') renderValueAddedReport(true);
@@ -436,15 +488,14 @@ function confirmMappingsAndRun() {
 
     if (!allSelected) return alert("请为所有疑似学生选择对应关系（如果是新生，请选“不是同一个人”）");
 
+    syncLocalProgressState({ manualIdMappings: MANUAL_ID_MAPPINGS });
     document.getElementById('mappingModal').style.display = 'none';
     performProgressCalculation(); // 继续计算
 }
 
-let VA_VIEW_MODE = window.VA_VIEW_MODE || 'school'; // school | class
-
 function switchValueAddedView(mode, btn) {
-    VA_VIEW_MODE = mode;
-    window.VA_VIEW_MODE = VA_VIEW_MODE;
+    VA_VIEW_MODE = String(mode || '').trim() === 'class' ? 'class' : 'school';
+    syncLocalProgressState({ vaViewMode: VA_VIEW_MODE });
 
     // 1. 切换按钮自身的激活状态 (视觉反馈)
     // 找到同一组的所有按钮 (它们都在同一个父容器里)
@@ -465,12 +516,13 @@ function switchValueAddedView(mode, btn) {
 }
 
 function exportValueAddedExcel() {
-    if (!window.LAST_VA_DATA || window.LAST_VA_DATA.length === 0) return alert("请先生成报表");
+    const lastVaData = readLastVaDataState();
+    if (!lastVaData || lastVaData.length === 0) return alert("请先生成报表");
 
     const wb = XLSX.utils.book_new();
     const data = [['单位名称', '匹配人数', '入口均位(上次排名)', '出口均位(本次排名)', '平均增值(名次)', '增值排名']];
 
-    window.LAST_VA_DATA.forEach(d => {
+    lastVaData.forEach(d => {
         data.push([d.name, d.count, d.entryAvg.toFixed(2), d.exitAvg.toFixed(2), d.valueAdded.toFixed(2), d.rank]);
     });
 
@@ -644,10 +696,11 @@ function performProgressCalculation(options = {}) {
     const baselineRows = getProgressBaselineRowsForSchool(schoolName);
 
     window.__PROGRESS_CALCULATING = true;
-    PROGRESS_CACHE = [];
-    window.PROGRESS_CACHE = PROGRESS_CACHE;
-    window.PROGRESS_CACHE_FULL = [];
-    window.LAST_VA_DATA = [];
+    syncLocalProgressState({
+        progressCache: [],
+        progressCacheFull: [],
+        lastVaData: []
+    });
 
     if (!currentStudents.length) {
         clearProgressVisuals();
@@ -706,9 +759,10 @@ function performProgressCalculation(options = {}) {
         });
     });
 
-    window.PROGRESS_CACHE_FULL = results.slice();
-    PROGRESS_CACHE = results.slice();
-    window.PROGRESS_CACHE = PROGRESS_CACHE;
+    syncLocalProgressState({
+        progressCache: results.slice(),
+        progressCacheFull: results.slice()
+    });
     applyProgressFilter();
     if (shouldRenderReport) renderValueAddedReport(true);
 
@@ -885,14 +939,14 @@ function renderValueAddedReport(isSwitching = false) {
         return;
     }
 
-    let sourceList = Array.isArray(window.PROGRESS_CACHE_FULL) && window.PROGRESS_CACHE_FULL.length
-        ? window.PROGRESS_CACHE_FULL.slice()
+    let sourceList = readProgressCacheFullState().length
+        ? readProgressCacheFullState().slice()
         : (PROGRESS_CACHE || []).slice();
 
     if (!sourceList.length && PREV_DATA.length > 0 && RAW_DATA.length > 0 && !window.__PROGRESS_CALCULATING) {
         performSilentMatching();
-        sourceList = Array.isArray(window.PROGRESS_CACHE_FULL) && window.PROGRESS_CACHE_FULL.length
-            ? window.PROGRESS_CACHE_FULL.slice()
+        sourceList = readProgressCacheFullState().length
+            ? readProgressCacheFullState().slice()
             : (PROGRESS_CACHE || []).slice();
     }
 
@@ -900,7 +954,7 @@ function renderValueAddedReport(isSwitching = false) {
     if (!sourceList.length) {
         if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">暂无可用匹配数据</td></tr>';
         if (statusEl) statusEl.innerHTML = '⚠️ 暂无可用的增值评价数据';
-        window.LAST_VA_DATA = [];
+        syncLocalProgressState({ lastVaData: [] });
         return;
     }
 
@@ -971,7 +1025,7 @@ function renderValueAddedReport(isSwitching = false) {
     }
 
     if (statusEl) statusEl.innerHTML = `✅ 数据就绪（已匹配 ${sourceList.length} 人）`;
-    window.LAST_VA_DATA = reportData;
+    syncLocalProgressState({ lastVaData: reportData });
 }
 
 function performSilentMatching() {
@@ -979,7 +1033,7 @@ function performSilentMatching() {
     const schoolName = getProgressSelectedSchoolName();
     if (!schoolName || !SCHOOLS[schoolName]) return [];
     performProgressCalculation({ schoolName, silent: true, rerenderReport: false });
-    return window.PROGRESS_CACHE_FULL || [];
+    return readProgressCacheFullState() || [];
 }
 
 function exportProgressAnalysis() {
@@ -1056,8 +1110,7 @@ function updateProgressModuleCopy() {
 }
 
 function getProgressQuickFilterMode() {
-    const mode = String(window.__PROGRESS_QUICK_MODE || 'all');
-    return ['all', 'my_class', 'focus'].includes(mode) ? mode : 'all';
+    return readProgressQuickModeState();
 }
 
 function getProgressQuickFilterThreshold() {
@@ -1136,14 +1189,14 @@ function updateProgressFilterSummary(meta = {}) {
 function setProgressQuickFilter(mode) {
     const myClass = getProgressQuickFilterClass();
     if (mode === 'my_class' && !myClass) {
-        window.__PROGRESS_QUICK_MODE = 'all';
+        syncLocalProgressState({ quickMode: 'all' });
         syncProgressQuickFilterButtons();
         updateProgressFilterSummary();
         if (window.UI?.toast) window.UI.toast('当前账号没有班级范围，已切回全部学生。', 'warning');
         applyProgressFilter();
         return;
     }
-    window.__PROGRESS_QUICK_MODE = ['all', 'my_class', 'focus'].includes(mode) ? mode : 'all';
+    syncLocalProgressState({ quickMode: ['all', 'my_class', 'focus'].includes(mode) ? mode : 'all' });
     syncProgressQuickFilterButtons();
     applyProgressFilter();
 }
@@ -1181,7 +1234,7 @@ function applyProgressFilter() {
     const sortMode = sortEl ? sortEl.value : 'improve_desc';
     const quickMode = getProgressQuickFilterMode();
 
-    let list = (window.PROGRESS_CACHE_FULL || []).slice();
+    let list = readProgressCacheFullState().slice();
     if (quickMode === 'my_class') {
         const myClass = getProgressQuickFilterClass();
         if (myClass) list = list.filter(item => isClassEquivalent(item.class, myClass));
@@ -1210,8 +1263,7 @@ function applyProgressFilter() {
         }
     });
 
-    PROGRESS_CACHE = list;
-    window.PROGRESS_CACHE = PROGRESS_CACHE;
+    syncLocalProgressState({ progressCache: list });
     syncProgressQuickFilterButtons();
     updateProgressFilterSummary({ mode: quickMode, type, threshold, sortMode });
     renderProgressTable(list);
@@ -1231,7 +1283,7 @@ function resetProgressFilter() {
     if (typeEl) typeEl.value = 'all';
     if (thresholdEl) thresholdEl.value = 20;
     if (sortEl) sortEl.value = 'improve_desc';
-    window.__PROGRESS_QUICK_MODE = 'all';
+    syncLocalProgressState({ quickMode: 'all' });
     applyProgressFilter();
 }
 
@@ -1283,8 +1335,14 @@ function resetProgressFilter() {
         resetProgressFilter
     });
 
-    window.VA_VIEW_MODE = VA_VIEW_MODE;
-    window.PROGRESS_CACHE = PROGRESS_CACHE;
+    syncLocalProgressState({
+        progressCache: PROGRESS_CACHE,
+        progressCacheFull: readProgressCacheFullState(),
+        manualIdMappings: MANUAL_ID_MAPPINGS,
+        lastVaData: readLastVaDataState(),
+        vaViewMode: VA_VIEW_MODE,
+        quickMode: readProgressQuickModeState()
+    });
     window.trendChartInstance = trendChartInstance;
     window.sankeyChartInstance = sankeyChartInstance;
     window.__PROGRESS_ANALYSIS_RUNTIME_PATCHED__ = true;
