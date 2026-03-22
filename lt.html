@@ -1922,7 +1922,9 @@
         target.readCompareExamSyncState = runtime.getCompareExamSyncState;
         target.setCompareExamSyncState = runtime.setCompareExamSyncState;
         target.ensureCompareExamSyncStateEntry = runtime.ensureCompareExamSyncStateEntry;
+        target.clearCloudCompareSessionState = runtime.clearCloudCompareState;
         target.syncCompareSessionRuntimeState = runtime.syncCompareSessionState;
+        target.clearCompareSessionRuntimeState = runtime.clearCompareSessionState;
         runtime.syncCompareSessionState(runtime.snapshotCompareSessionState());
         return runtime;
     }

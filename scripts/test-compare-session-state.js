@@ -34,7 +34,9 @@ function run() {
     assert.strictEqual(typeof root.readCompareExamSyncState, 'function');
     assert.strictEqual(typeof root.setCompareExamSyncState, 'function');
     assert.strictEqual(typeof root.ensureCompareExamSyncStateEntry, 'function');
+    assert.strictEqual(typeof root.clearCloudCompareSessionState, 'function');
     assert.strictEqual(typeof root.syncCompareSessionRuntimeState, 'function');
+    assert.strictEqual(typeof root.clearCompareSessionRuntimeState, 'function');
 
     assert.deepStrictEqual(compareSessionState.getCloudCompareTarget(), { name: 'Alice', class: '701', school: 'Demo School' });
     assert.strictEqual(compareSessionState.getCloudStudentCompareContext().prevExamId, 'exam-prev');
@@ -70,6 +72,14 @@ function run() {
     assert.strictEqual(root.readDuplicateCompareWarnedKeyState(), '');
     assert.deepStrictEqual(root.readCompareExamSyncState(), { '2024': { pending: true, lastAttempt: 9999 } });
 
+    root.clearCloudCompareSessionState();
+    assert.strictEqual(root.readCloudCompareTargetState(), null);
+    assert.strictEqual(root.readCloudStudentCompareContextState(), null);
+    assert.strictEqual(root.readCloudComparePrevDataBackupState(), null);
+    assert.deepStrictEqual(root.readDuplicateCompareExamsState(), []);
+    assert.strictEqual(root.readDuplicateCompareWarnedKeyState(), '');
+    assert.deepStrictEqual(root.readCompareExamSyncState(), { '2024': { pending: true, lastAttempt: 9999 } });
+
     compareSessionState.clearCompareSessionState();
     assert.strictEqual(compareSessionState.getCloudCompareTarget(), null);
     assert.strictEqual(compareSessionState.getCloudStudentCompareContext(), null);
@@ -77,6 +87,11 @@ function run() {
     assert.deepStrictEqual(compareSessionState.getDuplicateCompareExams(), []);
     assert.strictEqual(compareSessionState.getDuplicateCompareWarnedKey(), '');
     assert.deepStrictEqual(compareSessionState.getCompareExamSyncState(), {});
+
+    const isolatedRoot = {};
+    const isolatedRuntime = createCompareSessionStateRuntime(isolatedRoot);
+    assert.strictEqual(isolatedRoot.clearCloudCompareSessionState, isolatedRuntime.clearCloudCompareState);
+    assert.strictEqual(isolatedRoot.clearCompareSessionRuntimeState, isolatedRuntime.clearCompareSessionState);
 
     console.log('compare-session-state-runtime tests passed');
 }
