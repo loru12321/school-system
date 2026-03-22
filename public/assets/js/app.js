@@ -4628,6 +4628,7 @@ const DataManager = {
     cloudPanelView: 'list',
     pagination: { page: 1, size: 50, total: 0 },
     cloudSelection: new Set(),
+    cloudBackupRows: new Map(),
     studentSelection: new Set(),
 
     isGrade9Context: function () {
@@ -5109,6 +5110,7 @@ const DataManager = {
             if (error) throw error;
 
             const allRows = Array.isArray(data) ? data : [];
+            this.cloudBackupRows = new Map(allRows.map(item => [String(item.key || '').trim(), item]));
             const visibleRows = allRows.filter(item => {
                 if (filterSnapshotsOnly && !this.isCloudWorkspaceSnapshotKey(item.key)) return false;
                 if (filterCurrent && !this.isCloudRecordInCurrentWorkspace(item.key)) return false;
@@ -5205,6 +5207,9 @@ const DataManager = {
                                 <button class="btn btn-sm btn-primary" onclick="DataManager.loadCloudBackup('${item.key}')" title="读取此存档">
                                     <i class="ti ti-download"></i> 读取
                                 </button>
+                                <button class="btn btn-sm btn-green" onclick="DataManager.downloadCloudBackup('${item.key}')" title="下载此存档文档">
+                                    <i class="ti ti-file-download"></i> 下载存档
+                                </button>
                                 <button class="btn btn-sm btn-danger" onclick="DataManager.deleteCloudBackup('${item.key}')" title="永久删除">
                                     <i class="ti ti-trash"></i>
                                 </button>
@@ -5219,6 +5224,7 @@ const DataManager = {
 
         } catch (err) {
             console.error(err);
+            this.cloudBackupRows = new Map();
             if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#ef4444;">❌ 加载失败: ${err.message}</td></tr>`;
             this.updateCloudSelectionUI();
         }
@@ -5295,6 +5301,150 @@ const DataManager = {
     },
 
     // 加载指定的云端存档
+    getCloudBackupRow: async function (key) {
+        const normalizedKey = String(key || '').trim();
+        if (!normalizedKey) throw new Error('存档 Key 不能为空');
+
+        const cached = this.cloudBackupRows instanceof Map ? this.cloudBackupRows.get(normalizedKey) : null;
+        if (cached) return cached;
+
+        const { data, error } = await sbClient
+            .from('system_data')
+            .select('key, created_at, updated_at, content')
+            .eq('key', normalizedKey)
+            .maybeSingle();
+
+        if (error) throw error;
+        if (!data) throw new Error(`未找到存档：${normalizedKey}`);
+
+        if (!(this.cloudBackupRows instanceof Map)) this.cloudBackupRows = new Map();
+        this.cloudBackupRows.set(normalizedKey, data);
+        return data;
+    },
+
+    buildCloudArchiveExportPayload: function (item) {
+        return {
+            format: 'school-system-cloud-archive',
+            version: 1,
+            key: String(item?.key || '').trim(),
+            content: Object.prototype.hasOwnProperty.call(item || {}, 'content') ? item.content : null,
+            created_at: item?.created_at || null,
+            updated_at: item?.updated_at || null,
+            exported_at: new Date().toISOString()
+        };
+    },
+
+    getCloudArchiveDownloadName: function (key) {
+        const base = String(key || 'cloud-archive')
+            .trim()
+            .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
+            .replace(/\s+/g, '_')
+            .slice(0, 96) || 'cloud-archive';
+        return `${base}.school-archive.json`;
+    },
+
+    downloadCloudBackup: async function (key) {
+        UI.loading(true, `正在准备下载 ${key}...`);
+        try {
+            const item = await this.getCloudBackupRow(key);
+            const payload = this.buildCloudArchiveExportPayload(item);
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = this.getCloudArchiveDownloadName(payload.key);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            UI.toast(`✅ 已下载存档：${payload.key}`, 'success');
+        } catch (e) {
+            alert('下载存档失败: ' + e.message);
+        } finally {
+            UI.loading(false);
+        }
+    },
+
+    triggerCloudArchiveUpload: function () {
+        if (!sbClient) return alert('云端连接未就绪，暂时无法上传存档文档');
+        const input = document.getElementById('dm-cloud-upload-input');
+        if (!input) return alert('上传控件未初始化');
+        input.value = '';
+        input.click();
+    },
+
+    parseCloudArchiveImportRecords: function (rawText, fallbackName = '') {
+        let parsed;
+        try {
+            parsed = JSON.parse(String(rawText || '').trim());
+        } catch (e) {
+            throw new Error('文件不是有效的 JSON 存档文档');
+        }
+
+        const items = Array.isArray(parsed) ? parsed : [parsed];
+        const fallbackKey = String(fallbackName || '')
+            .replace(/\.school-archive\.json$/i, '')
+            .replace(/\.json$/i, '')
+            .trim();
+
+        return items.map((entry, index) => {
+            const source = entry && typeof entry.record === 'object' ? entry.record : entry;
+            const key = String(source?.key || fallbackKey || '').trim();
+            if (!key) {
+                throw new Error(`第 ${index + 1} 条记录缺少存档 Key`);
+            }
+            if (!Object.prototype.hasOwnProperty.call(source || {}, 'content')) {
+                throw new Error(`第 ${index + 1} 条记录缺少 content 字段`);
+            }
+            return {
+                key,
+                content: source.content
+            };
+        });
+    },
+
+    handleCloudArchiveUpload: async function (input) {
+        const files = Array.from(input?.files || []);
+        if (!files.length) return;
+
+        try {
+            UI.loading(true, `正在解析 ${files.length} 个上传文档...`);
+            const parsedRecords = [];
+
+            for (const file of files) {
+                const text = await file.text();
+                const records = this.parseCloudArchiveImportRecords(text, file.name);
+                records.forEach(record => parsedRecords.push(record));
+            }
+
+            const dedupeMap = new Map();
+            parsedRecords.forEach(record => {
+                dedupeMap.set(record.key, record);
+            });
+            const recordsToUpload = Array.from(dedupeMap.values());
+
+            if (!recordsToUpload.length) throw new Error('没有可上传的有效存档记录');
+
+            const shouldContinue = confirm(`确定上传 ${recordsToUpload.length} 份存档到云端吗？\n若 Key 已存在，将直接覆盖同名存档。`);
+            if (!shouldContinue) return;
+
+            const { error } = await sbClient
+                .from('system_data')
+                .upsert(recordsToUpload, { onConflict: 'key' });
+
+            if (error) throw error;
+
+            UI.toast(`✅ 已上传 ${recordsToUpload.length} 份存档文档`, 'success');
+            this.renderCloudBackups();
+        } catch (e) {
+            console.error(e);
+            alert('上传存档文档失败: ' + e.message);
+        } finally {
+            if (input) input.value = '';
+            UI.loading(false);
+        }
+    },
+
     loadCloudBackup: async function (key) {
         if (!this.isCloudWorkspaceSnapshotKey(key)) {
             return alert('该记录不是工作区快照。教师任课和各类对比请在对应模块中查看。');

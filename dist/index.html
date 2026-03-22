@@ -807,7 +807,10 @@
                         style="display:flex; gap:8px; align-items:center; font-size:12px; color:#475569; margin-bottom:8px;"><span id="cloud-selected-count">已选 0 项</span><button class="btn btn-sm btn-danger" id="btn-cloud-batch-delete"
                             onclick="DataManager.deleteSelectedCloudBackups()" disabled title="请先勾选需要删除的存档"
                             style="opacity:0.6;"><i class="ti ti-trash"></i> 批量删除
-                        </button></div><div class="table-wrap" style="flex:1; min-height:0; overflow:auto;"><table class="comparison-table" id="dm-cloud-table"><thead><tr><th style="width:44px; text-align:center;"><input type="checkbox"
+                        </button><button class="btn btn-sm btn-primary" id="btn-cloud-upload-archive"
+                            onclick="DataManager.triggerCloudArchiveUpload()" title="上传本地存档文档到云端"><i class="ti ti-upload"></i> 上传文档
+                        </button><input type="file" id="dm-cloud-upload-input" accept=".json,application/json" multiple hidden
+                            onchange="DataManager.handleCloudArchiveUpload(this)"></div><div class="table-wrap" style="flex:1; min-height:0; overflow:auto;"><table class="comparison-table" id="dm-cloud-table"><thead><tr><th style="width:44px; text-align:center;"><input type="checkbox"
                                             id="dm-cloud-select-all"
                                             onchange="DataManager.toggleCloudSelectAll(this.checked)" title="全选/取消全选"></th><th>存档 Key (项目名)</th><th>上传时间</th><th>数据大小</th><th>操作</th></tr></thead><tbody></tbody></table></div></div><div id="dm-pagination"
                     style="padding-top:10px; text-align:right; font-size:12px; color:#666; display:flex; justify-content:flex-end; gap:10px; align-items:center;"><button class="btn btn-sm btn-gray" onclick="DataManager.changePage(-1)">上一页</button><span id="dm-page-info">1 / 1</span><button class="btn btn-sm btn-gray" onclick="DataManager.changePage(1)">下一页</button></div></div></main></div>

@@ -6825,6 +6825,12 @@
                             style="opacity:0.6;">
                             <i class="ti ti-trash"></i> 批量删除
                         </button>
+                        <button class="btn btn-sm btn-primary" id="btn-cloud-upload-archive"
+                            onclick="DataManager.triggerCloudArchiveUpload()" title="上传本地存档文档到云端">
+                            <i class="ti ti-upload"></i> 上传文档
+                        </button>
+                        <input type="file" id="dm-cloud-upload-input" accept=".json,application/json" multiple hidden
+                            onchange="DataManager.handleCloudArchiveUpload(this)">
                     </div>
                     <div class="table-wrap" style="flex:1; min-height:0; overflow:auto;">
                         <table class="comparison-table" id="dm-cloud-table">

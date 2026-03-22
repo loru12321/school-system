@@ -389,6 +389,35 @@ async function smokeDataManagerTab(page, id) {
             await Promise.resolve(window.DataManager.switchTab(tabId));
             await new Promise(resolve => setTimeout(resolve, 800));
             const activePanel = document.querySelector('.data-manager-tab.active,[data-dm-tab].active,.tab-pane.active');
+            if (tabId === 'sql') {
+                const checks = {
+                    setQuickSQL: typeof window.DataManager.setQuickSQL === 'function',
+                    runSQL: typeof window.DataManager.runSQL === 'function',
+                    exportSQLResult: typeof window.DataManager.exportSQLResult === 'function',
+                    talkToData: typeof window.talkToData === 'function'
+                };
+                return {
+                    ok: Object.values(checks).every(Boolean),
+                    id: tabId,
+                    checks
+                };
+            }
+            if (tabId === 'cloud') {
+                const hasCloudRows = !!document.querySelector('#dm-cloud-table tbody .dm-cloud-select');
+                const checks = {
+                    triggerCloudArchiveUpload: typeof window.DataManager.triggerCloudArchiveUpload === 'function',
+                    handleCloudArchiveUpload: typeof window.DataManager.handleCloudArchiveUpload === 'function',
+                    downloadCloudBackup: typeof window.DataManager.downloadCloudBackup === 'function',
+                    uploadButton: !!document.getElementById('btn-cloud-upload-archive'),
+                    uploadInput: !!document.getElementById('dm-cloud-upload-input'),
+                    rowDownloadButton: !hasCloudRows || !!document.querySelector('#dm-cloud-table tbody button[onclick*="downloadCloudBackup"]')
+                };
+                return {
+                    ok: Object.values(checks).every(Boolean),
+                    id: tabId,
+                    checks
+                };
+            }
             return {
                 ok: true,
                 id: tabId,
