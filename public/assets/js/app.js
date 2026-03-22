@@ -1264,6 +1264,212 @@ window.setThresholds = setThresholds;
 window.readConfigState = readConfigState;
 window.setConfigState = setConfigState;
 
+const SupportStateRuntime = window.SupportState || null;
+
+function ensureSupportSysVars() {
+    if (SupportStateRuntime && typeof SupportStateRuntime.ensureSysVars === 'function') {
+        return SupportStateRuntime.ensureSysVars();
+    }
+    window.SYS_VARS = window.SYS_VARS || {};
+    if (!window.SYS_VARS.indicator || typeof window.SYS_VARS.indicator !== 'object') window.SYS_VARS.indicator = { ind1: '', ind2: '' };
+    if (!window.SYS_VARS.targets || typeof window.SYS_VARS.targets !== 'object') window.SYS_VARS.targets = {};
+    if (!Array.isArray(window.SYS_VARS.schoolAliases)) window.SYS_VARS.schoolAliases = [];
+    if (!window.SYS_VARS.dataManagerSyncState || typeof window.SYS_VARS.dataManagerSyncState !== 'object') window.SYS_VARS.dataManagerSyncState = {};
+    return window.SYS_VARS;
+}
+
+function readIndicatorState() {
+    const nextIndicator = SupportStateRuntime && typeof SupportStateRuntime.getIndicator === 'function'
+        ? (SupportStateRuntime.getIndicator() || { ind1: '', ind2: '' })
+        : (ensureSupportSysVars().indicator || { ind1: '', ind2: '' });
+    ensureSupportSysVars().indicator = nextIndicator;
+    return nextIndicator;
+}
+
+function setIndicatorState(indicator) {
+    const nextIndicator = SupportStateRuntime && typeof SupportStateRuntime.setIndicator === 'function'
+        ? (SupportStateRuntime.setIndicator(indicator) || { ind1: '', ind2: '' })
+        : {
+            ind1: String(indicator?.ind1 || '').trim(),
+            ind2: String(indicator?.ind2 || '').trim()
+        };
+    ensureSupportSysVars().indicator = nextIndicator;
+    return nextIndicator;
+}
+
+function readTargetsState() {
+    const nextTargets = SupportStateRuntime && typeof SupportStateRuntime.getTargets === 'function'
+        ? (SupportStateRuntime.getTargets() || {})
+        : (window.TARGETS && typeof window.TARGETS === 'object' ? window.TARGETS : (typeof TARGETS !== 'undefined' && TARGETS && typeof TARGETS === 'object' ? TARGETS : {}));
+    if (typeof TARGETS !== 'undefined') TARGETS = nextTargets;
+    window.TARGETS = nextTargets;
+    ensureSupportSysVars().targets = nextTargets;
+    return nextTargets;
+}
+
+function setTargetsState(targets) {
+    const nextTargets = SupportStateRuntime && typeof SupportStateRuntime.setTargets === 'function'
+        ? (SupportStateRuntime.setTargets(targets) || {})
+        : (targets && typeof targets === 'object' && !Array.isArray(targets) ? targets : {});
+    if (typeof TARGETS !== 'undefined') TARGETS = nextTargets;
+    window.TARGETS = nextTargets;
+    ensureSupportSysVars().targets = nextTargets;
+    return nextTargets;
+}
+
+function readSchoolAliasState() {
+    const nextAliases = SupportStateRuntime && typeof SupportStateRuntime.getSchoolAliases === 'function'
+        ? (SupportStateRuntime.getSchoolAliases() || [])
+        : (Array.isArray(ensureSupportSysVars().schoolAliases) ? ensureSupportSysVars().schoolAliases : []);
+    ensureSupportSysVars().schoolAliases = nextAliases;
+    return nextAliases;
+}
+
+function setSchoolAliasState(list) {
+    const nextAliases = SupportStateRuntime && typeof SupportStateRuntime.setSchoolAliases === 'function'
+        ? (SupportStateRuntime.setSchoolAliases(list) || [])
+        : (Array.isArray(list) ? list : []);
+    ensureSupportSysVars().schoolAliases = nextAliases;
+    return nextAliases;
+}
+
+function readDataManagerSyncStateValue() {
+    const nextState = SupportStateRuntime && typeof SupportStateRuntime.getDataManagerSyncState === 'function'
+        ? (SupportStateRuntime.getDataManagerSyncState() || {})
+        : (ensureSupportSysVars().dataManagerSyncState || {});
+    ensureSupportSysVars().dataManagerSyncState = nextState;
+    return nextState;
+}
+
+function setDataManagerSyncStateValue(syncState) {
+    const nextState = SupportStateRuntime && typeof SupportStateRuntime.setDataManagerSyncState === 'function'
+        ? (SupportStateRuntime.setDataManagerSyncState(syncState) || {})
+        : (syncState && typeof syncState === 'object' && !Array.isArray(syncState) ? syncState : {});
+    ensureSupportSysVars().dataManagerSyncState = nextState;
+    return nextState;
+}
+
+function readPrevDataState() {
+    const nextRows = SupportStateRuntime && typeof SupportStateRuntime.getPrevData === 'function'
+        ? (SupportStateRuntime.getPrevData() || [])
+        : (window.PREV_DATA && Array.isArray(window.PREV_DATA) ? window.PREV_DATA : (typeof PREV_DATA !== 'undefined' && Array.isArray(PREV_DATA) ? PREV_DATA : []));
+    if (typeof PREV_DATA !== 'undefined') PREV_DATA = nextRows;
+    window.PREV_DATA = nextRows;
+    return nextRows;
+}
+
+function setPrevDataState(rows) {
+    const nextRows = SupportStateRuntime && typeof SupportStateRuntime.setPrevData === 'function'
+        ? (SupportStateRuntime.setPrevData(rows) || [])
+        : (Array.isArray(rows) ? rows : []);
+    if (typeof PREV_DATA !== 'undefined') PREV_DATA = nextRows;
+    window.PREV_DATA = nextRows;
+    return nextRows;
+}
+
+function readHistoryArchiveState() {
+    const nextArchive = SupportStateRuntime && typeof SupportStateRuntime.getHistoryArchive === 'function'
+        ? (SupportStateRuntime.getHistoryArchive() || {})
+        : (window.HISTORY_ARCHIVE && typeof window.HISTORY_ARCHIVE === 'object' ? window.HISTORY_ARCHIVE : (typeof HISTORY_ARCHIVE !== 'undefined' && HISTORY_ARCHIVE && typeof HISTORY_ARCHIVE === 'object' ? HISTORY_ARCHIVE : {}));
+    if (typeof HISTORY_ARCHIVE !== 'undefined') HISTORY_ARCHIVE = nextArchive;
+    window.HISTORY_ARCHIVE = nextArchive;
+    return nextArchive;
+}
+
+function setHistoryArchiveState(archive) {
+    const nextArchive = SupportStateRuntime && typeof SupportStateRuntime.setHistoryArchive === 'function'
+        ? (SupportStateRuntime.setHistoryArchive(archive) || {})
+        : (archive && typeof archive === 'object' && !Array.isArray(archive) ? archive : {});
+    if (typeof HISTORY_ARCHIVE !== 'undefined') HISTORY_ARCHIVE = nextArchive;
+    window.HISTORY_ARCHIVE = nextArchive;
+    return nextArchive;
+}
+
+function readFbClassesState() {
+    const nextClasses = SupportStateRuntime && typeof SupportStateRuntime.getFbClasses === 'function'
+        ? (SupportStateRuntime.getFbClasses() || [])
+        : (window.FB_CLASSES && Array.isArray(window.FB_CLASSES) ? window.FB_CLASSES : (typeof FB_CLASSES !== 'undefined' && Array.isArray(FB_CLASSES) ? FB_CLASSES : []));
+    if (typeof FB_CLASSES !== 'undefined') FB_CLASSES = nextClasses;
+    window.FB_CLASSES = nextClasses;
+    return nextClasses;
+}
+
+function setFbClassesState(classes) {
+    const nextClasses = SupportStateRuntime && typeof SupportStateRuntime.setFbClasses === 'function'
+        ? (SupportStateRuntime.setFbClasses(classes) || [])
+        : (Array.isArray(classes) ? classes : []);
+    if (typeof FB_CLASSES !== 'undefined') FB_CLASSES = nextClasses;
+    window.FB_CLASSES = nextClasses;
+    return nextClasses;
+}
+
+function readMpSnapshotsState() {
+    const nextSnapshots = SupportStateRuntime && typeof SupportStateRuntime.getMpSnapshots === 'function'
+        ? (SupportStateRuntime.getMpSnapshots() || {})
+        : (window.MP_SNAPSHOTS && typeof window.MP_SNAPSHOTS === 'object' ? window.MP_SNAPSHOTS : (typeof MP_SNAPSHOTS !== 'undefined' && MP_SNAPSHOTS && typeof MP_SNAPSHOTS === 'object' ? MP_SNAPSHOTS : {}));
+    if (typeof MP_SNAPSHOTS !== 'undefined') MP_SNAPSHOTS = nextSnapshots;
+    window.MP_SNAPSHOTS = nextSnapshots;
+    return nextSnapshots;
+}
+
+function setMpSnapshotsState(snapshots) {
+    const nextSnapshots = SupportStateRuntime && typeof SupportStateRuntime.setMpSnapshots === 'function'
+        ? (SupportStateRuntime.setMpSnapshots(snapshots) || {})
+        : (snapshots && typeof snapshots === 'object' && !Array.isArray(snapshots) ? snapshots : {});
+    if (typeof MP_SNAPSHOTS !== 'undefined') MP_SNAPSHOTS = nextSnapshots;
+    window.MP_SNAPSHOTS = nextSnapshots;
+    return nextSnapshots;
+}
+
+function syncSupportRuntimeState(patch = {}) {
+    if (SupportStateRuntime && typeof SupportStateRuntime.syncSupportState === 'function') {
+        const snapshot = SupportStateRuntime.syncSupportState(patch);
+        if (typeof TARGETS !== 'undefined') TARGETS = snapshot.targets || {};
+        if (typeof PREV_DATA !== 'undefined') PREV_DATA = snapshot.prevData || [];
+        if (typeof HISTORY_ARCHIVE !== 'undefined') HISTORY_ARCHIVE = snapshot.historyArchive || {};
+        if (typeof FB_CLASSES !== 'undefined') FB_CLASSES = snapshot.fbClasses || [];
+        if (typeof MP_SNAPSHOTS !== 'undefined') MP_SNAPSHOTS = snapshot.mpSnapshots || {};
+        window.TARGETS = TARGETS;
+        window.PREV_DATA = PREV_DATA;
+        window.HISTORY_ARCHIVE = HISTORY_ARCHIVE;
+        window.FB_CLASSES = FB_CLASSES;
+        window.MP_SNAPSHOTS = MP_SNAPSHOTS;
+        ensureSupportSysVars().indicator = snapshot.indicator || { ind1: '', ind2: '' };
+        ensureSupportSysVars().targets = TARGETS;
+        ensureSupportSysVars().schoolAliases = snapshot.schoolAliases || [];
+        ensureSupportSysVars().dataManagerSyncState = snapshot.dataManagerSyncState || {};
+        return snapshot;
+    }
+    return {
+        indicator: setIndicatorState(patch.indicator ?? patch.INDICATOR_PARAMS ?? readIndicatorState()),
+        targets: setTargetsState(patch.targets ?? patch.TARGETS ?? readTargetsState()),
+        schoolAliases: setSchoolAliasState(patch.schoolAliases ?? patch.SCHOOL_ALIAS_SETTINGS ?? readSchoolAliasState()),
+        dataManagerSyncState: setDataManagerSyncStateValue(patch.dataManagerSyncState ?? readDataManagerSyncStateValue()),
+        prevData: setPrevDataState(patch.prevData ?? patch.PREV_DATA ?? readPrevDataState()),
+        historyArchive: setHistoryArchiveState(patch.historyArchive ?? patch.HISTORY_ARCHIVE ?? readHistoryArchiveState()),
+        fbClasses: setFbClassesState(patch.fbClasses ?? patch.FB_CLASSES ?? readFbClassesState()),
+        mpSnapshots: setMpSnapshotsState(patch.mpSnapshots ?? patch.MP_SNAPSHOTS ?? readMpSnapshotsState())
+    };
+}
+
+window.ensureSupportSysVars = ensureSupportSysVars;
+window.readIndicatorState = readIndicatorState;
+window.setIndicatorState = setIndicatorState;
+window.readTargetsState = readTargetsState;
+window.setTargetsState = setTargetsState;
+window.readSchoolAliasState = readSchoolAliasState;
+window.setSchoolAliasState = setSchoolAliasState;
+window.readDataManagerSyncStateValue = readDataManagerSyncStateValue;
+window.setDataManagerSyncStateValue = setDataManagerSyncStateValue;
+window.readPrevDataState = readPrevDataState;
+window.setPrevDataState = setPrevDataState;
+window.readHistoryArchiveState = readHistoryArchiveState;
+window.setHistoryArchiveState = setHistoryArchiveState;
+window.readFbClassesState = readFbClassesState;
+window.setFbClassesState = setFbClassesState;
+window.readMpSnapshotsState = readMpSnapshotsState;
+window.setMpSnapshotsState = setMpSnapshotsState;
+
 const Auth = {
     currentUser: null,
     _parentDataRecovering: false,
@@ -3948,8 +4154,7 @@ const DataManager = {
             if (!raw) return false;
             const saved = JSON.parse(raw);
             if (!saved || (!saved.ind1 && !saved.ind2)) return false;
-            if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {}, schoolAliases: [] };
-            window.SYS_VARS.indicator = { ind1: saved.ind1 || '', ind2: saved.ind2 || '' };
+            setIndicatorState({ ind1: saved.ind1 || '', ind2: saved.ind2 || '' });
             const main1 = document.getElementById('ind1');
             const main2 = document.getElementById('ind2');
             if (main1 && !main1.value) main1.value = saved.ind1 || '';
@@ -3962,7 +4167,7 @@ const DataManager = {
 
     persistGrade9IndicatorTemplate: function () {
         if (!this.isGrade9Context()) return;
-        const ind = window.SYS_VARS?.indicator || {};
+        const ind = readIndicatorState();
         const payload = { ind1: ind.ind1 || '', ind2: ind.ind2 || '' };
         if (!payload.ind1 && !payload.ind2) return;
         localStorage.setItem(this.getGrade9TemplateKey('INDICATOR'), JSON.stringify(payload));
@@ -3975,10 +4180,7 @@ const DataManager = {
             if (!raw) return false;
             const saved = JSON.parse(raw);
             if (!saved || !Object.keys(saved).length) return false;
-            window.TARGETS = saved;
-            TARGETS = window.TARGETS;
-            if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {}, schoolAliases: [] };
-            window.SYS_VARS.targets = saved;
+            setTargetsState(saved);
             return true;
         } catch (e) {
             return false;
@@ -3987,7 +4189,7 @@ const DataManager = {
 
     persistGrade9TargetsTemplate: function () {
         if (!this.isGrade9Context()) return;
-        const targets = window.TARGETS || {};
+        const targets = readTargetsState();
         const key = this.getGrade9TemplateKey('TARGETS');
         if (!Object.keys(targets).length) {
             localStorage.removeItem(key);
@@ -4772,7 +4974,7 @@ const DataManager = {
                 });
                 // ==========================================
 
-                window.PREV_DATA = parsedHistory;
+                setPrevDataState(parsedHistory);
 
                 // 更新 UI
                 const statusEl = document.getElementById('dm-history-status');
@@ -5755,10 +5957,7 @@ const DataManager = {
         } catch (e) { }
         const scoped = all && typeof all[scope] === 'object' ? all[scope] : null;
         if (scoped) return scoped;
-        if (window.SYS_VARS?.dataManagerSyncState && typeof window.SYS_VARS.dataManagerSyncState === 'object') {
-            return window.SYS_VARS.dataManagerSyncState;
-        }
-        return {};
+        return readDataManagerSyncStateValue();
     },
 
     writeDataManagerSyncState: function (patch) {
@@ -5774,13 +5973,11 @@ const DataManager = {
         try {
             localStorage.setItem(storageKey, JSON.stringify(all));
         } catch (e) { }
-        if (!window.SYS_VARS) window.SYS_VARS = { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
-        window.SYS_VARS.dataManagerSyncState = next;
-        return next;
+        return setDataManagerSyncStateValue(next);
     },
 
     getCurrentIndicatorValues: function () {
-        const indicator = window.SYS_VARS?.indicator || {};
+        const indicator = readIndicatorState();
         const input1 = document.getElementById('dm_ind1_input') || document.getElementById('ind1');
         const input2 = document.getElementById('dm_ind2_input') || document.getElementById('ind2');
         const ind1 = String((input1 && input1.value) || indicator.ind1 || '').trim();
@@ -5796,7 +5993,7 @@ const DataManager = {
     getTargetsSyncSignature: function () {
         const targets = typeof ensureNormalizedTargets === 'function'
             ? (ensureNormalizedTargets() || {})
-            : (window.TARGETS || {});
+            : readTargetsState();
         return Object.keys(targets)
             .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'))
             .map(name => {
@@ -5868,7 +6065,7 @@ const DataManager = {
         const paramsSignature = this.getParamsSyncSignature();
         const targets = typeof ensureNormalizedTargets === 'function'
             ? (ensureNormalizedTargets() || {})
-            : (window.TARGETS || {});
+            : readTargetsState();
         const targetNames = Object.keys(targets).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'));
         const targetsSignature = this.getTargetsSyncSignature();
         const syncState = this.readDataManagerSyncState();
@@ -6020,17 +6217,16 @@ const DataManager = {
             return;
         }
         // 1. 确保全局变量结构存在
-        if (!window.SYS_VARS) window.SYS_VARS = { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
-        if (!window.SYS_VARS.indicator) window.SYS_VARS.indicator = { ind1: '', ind2: '' };
+        ensureSupportSysVars();
 
         // 2. 优先从全局变量读取
-        let i1 = window.SYS_VARS.indicator.ind1;
-        let i2 = window.SYS_VARS.indicator.ind2;
+        let i1 = readIndicatorState().ind1;
+        let i2 = readIndicatorState().ind2;
 
         if (!i1 && !i2) {
             this.restoreGrade9IndicatorTemplate();
-            i1 = window.SYS_VARS?.indicator?.ind1;
-            i2 = window.SYS_VARS?.indicator?.ind2;
+            i1 = readIndicatorState().ind1;
+            i2 = readIndicatorState().ind2;
         }
 
         // 3. 兜底：如果全局变量为空，尝试从主界面 DOM 获取（防止主界面有值但这里没显示）
@@ -6048,8 +6244,7 @@ const DataManager = {
             el1.value = i1 || '';
             // 绑定实时更新
             el1.oninput = function () {
-                if (!window.SYS_VARS.indicator) window.SYS_VARS.indicator = {};
-                window.SYS_VARS.indicator.ind1 = this.value;
+                setIndicatorState({ ...readIndicatorState(), ind1: this.value });
                 if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') {
                     DataManager.renderDataManagerStatus();
                 }
@@ -6058,8 +6253,7 @@ const DataManager = {
         if (el2) {
             el2.value = i2 || '';
             el2.oninput = function () {
-                if (!window.SYS_VARS.indicator) window.SYS_VARS.indicator = {};
-                window.SYS_VARS.indicator.ind2 = this.value;
+                setIndicatorState({ ...readIndicatorState(), ind2: this.value });
                 if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') {
                     DataManager.renderDataManagerStatus();
                 }
@@ -6071,14 +6265,14 @@ const DataManager = {
     saveParamsLocally: async function (skipCloudSync = false) {
         if (!isIndicatorAllowed()) return;
         // 1. 防御性初始化
-        if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {}, schoolAliases: [] };
+        ensureSupportSysVars();
 
         // 2. 获取管理面板弹窗内的值
         const v1 = document.getElementById('dm_ind1_input').value;
         const v2 = document.getElementById('dm_ind2_input').value;
 
         // 3. 更新内存全局变量
-        window.SYS_VARS.indicator = { ind1: v1, ind2: v2 };
+        setIndicatorState({ ind1: v1, ind2: v2 });
 
         // 4. 同步更新主界面的输入框 (确保 processData 运行时能读到)
         const main1 = document.getElementById('ind1');
@@ -6109,14 +6303,14 @@ const DataManager = {
         if (!tbody) return;
 
         // 确保全局变量存在
-        if (typeof window.TARGETS === 'undefined') window.TARGETS = {};
+        readTargetsState();
         ensureNormalizedTargets();
-        if (Object.keys(window.TARGETS).length === 0) {
+        if (Object.keys(readTargetsState()).length === 0) {
             this.restoreGrade9TargetsTemplate();
             ensureNormalizedTargets();
         }
 
-        const list = Object.keys(window.TARGETS).sort();
+        const list = Object.keys(readTargetsState()).sort();
         this.renderSchoolAliasMappings();
 
         if (list.length === 0) {
@@ -6126,7 +6320,7 @@ const DataManager = {
 
         let html = '';
         list.forEach(sch => {
-            const t = window.TARGETS[sch];
+            const t = readTargetsState()[sch];
             html += `<tr><td style="font-weight:bold;">${sch}</td><td>${t.t1}</td><td>${t.t2}</td><td><button class="btn btn-sm btn-primary" onclick="DataManager.editTarget('${sch}')" style="padding:2px 6px;">修改</button> <button class="btn btn-sm btn-danger" onclick="DataManager.deleteTarget('${sch}')" style="padding:2px 6px;">删除</button></td></tr>`;
         });
         tbody.innerHTML = html;
@@ -6265,8 +6459,7 @@ const DataManager = {
             const next = ensureSchoolAliasStore().slice();
             if (index >= 0) next[index] = result.value;
             else next.push(result.value);
-            window.SYS_VARS = window.SYS_VARS || { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
-            window.SYS_VARS.schoolAliases = next;
+            setSchoolAliasState(next);
             this.renderSchoolAliasMappings();
             try {
                 await this.persistSchoolAliasSettings();
@@ -6283,8 +6476,7 @@ const DataManager = {
         if (!current) return;
         if (!confirm(`确定删除对应：${current.alias} → ${current.canonical} 吗？`)) return;
         list.splice(index, 1);
-        window.SYS_VARS = window.SYS_VARS || { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
-        window.SYS_VARS.schoolAliases = list;
+        setSchoolAliasState(list);
         this.renderSchoolAliasMappings();
         try {
             await this.persistSchoolAliasSettings();
@@ -6414,9 +6606,8 @@ const DataManager = {
             // 1. 确保参数已同步到全局
             await this.saveParamsLocally(true);
             this.syncTeacherHistory();
-            if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {}, schoolAliases: [] };
-            window.SYS_VARS.targets = ensureNormalizedTargets();
-            window.SYS_VARS.schoolAliases = ensureSchoolAliasStore();
+            setTargetsState(ensureNormalizedTargets());
+            setSchoolAliasState(ensureSchoolAliasStore());
 
             // 2. 重新计算数据 (会读取 ind1, ind2)
             if (window.RAW_DATA && window.RAW_DATA.length) {
@@ -6626,32 +6817,29 @@ async function switchCohort(cohortId) {
 
         // ★★★ 关键：恢复指标参数输入框 (安全检查版) ★★★
         if (data.INDICATOR_PARAMS) {
+            const indicator = setIndicatorState(data.INDICATOR_PARAMS);
             const i1 = document.getElementById('ind1');
             const i2 = document.getElementById('ind2');
             // 🟢 修复：先检查元素是否存在，再赋值
-            if (i1) i1.value = data.INDICATOR_PARAMS.ind1 || '';
-            if (i2) i2.value = data.INDICATOR_PARAMS.ind2 || '';
+            if (i1) i1.value = indicator.ind1 || '';
+            if (i2) i2.value = indicator.ind2 || '';
 
             // 同时更新内存
-            if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {}, schoolAliases: [] };
-            window.SYS_VARS.indicator = data.INDICATOR_PARAMS;
+            setIndicatorState(indicator);
         }
 
         // 恢复其他变量
         if (data.TARGETS) {
-            TARGETS = data.TARGETS;
-            window.TARGETS = TARGETS;
-            if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {}, schoolAliases: [] };
-            window.SYS_VARS.targets = data.TARGETS;
+            setTargetsState(data.TARGETS);
         }
         if (Array.isArray(data.SCHOOL_ALIAS_SETTINGS)) {
-            window.SYS_VARS = window.SYS_VARS || { indicator: {}, targets: {}, schoolAliases: [] };
-            window.SYS_VARS.schoolAliases = data.SCHOOL_ALIAS_SETTINGS;
+            setSchoolAliasState(data.SCHOOL_ALIAS_SETTINGS);
             persistSchoolAliasSettingsLocal();
         }
-        if (data.PREV_DATA) PREV_DATA = data.PREV_DATA;
-        if (data.HISTORY_ARCHIVE) HISTORY_ARCHIVE = data.HISTORY_ARCHIVE;
-        if (data.FB_CLASSES) FB_CLASSES = data.FB_CLASSES;
+        if (data.PREV_DATA) setPrevDataState(data.PREV_DATA);
+        if (data.HISTORY_ARCHIVE) setHistoryArchiveState(data.HISTORY_ARCHIVE);
+        if (data.FB_CLASSES) setFbClassesState(data.FB_CLASSES);
+        if (data.MP_SNAPSHOTS) setMpSnapshotsState(data.MP_SNAPSHOTS);
 
         // 4. 刷新界面
         const restoredGrade = getEffectiveGrade(getExamMetaFromUI());
@@ -6789,10 +6977,7 @@ window.addEventListener('load', async () => {
                 if (i2) i2.value = db.INDICATOR_PARAMS.ind2 || '';
             }, 100);
         }
-        if (db.TARGETS) {
-            window.TARGETS = db.TARGETS;
-            TARGETS = window.TARGETS;
-        }
+        if (db.TARGETS) setTargetsState(db.TARGETS);
 
         // 刷新
         updateSchoolSelect();
@@ -6857,8 +7042,7 @@ window.addEventListener('load', async () => {
                 if (backup.INDICATOR_PARAMS) {
                     // 1. 核心修复：必须更新全局内存变量！
                     // 这样当你打开管理面板时，switchTab 才能读取到正确的值
-                    if (!window.SYS_VARS) window.SYS_VARS = { indicator: {}, targets: {}, schoolAliases: [] };
-                    window.SYS_VARS.indicator = backup.INDICATOR_PARAMS;
+                    const indicator = setIndicatorState(backup.INDICATOR_PARAMS);
 
                     // 2. 尝试回填到 DOM (使用正确的新 ID: dm_ind..._input)
                     // 使用 setTimeout 确保模态框DOM已就绪
@@ -6866,23 +7050,24 @@ window.addEventListener('load', async () => {
                         const dm1 = document.getElementById('dm_ind1_input');
                         const dm2 = document.getElementById('dm_ind2_input');
 
-                        if (dm1) dm1.value = backup.INDICATOR_PARAMS.ind1 || '';
-                        if (dm2) dm2.value = backup.INDICATOR_PARAMS.ind2 || '';
+                        if (dm1) dm1.value = indicator.ind1 || '';
+                        if (dm2) dm2.value = indicator.ind2 || '';
 
                     }, 500);
 
-                    console.log("✅ [自动恢复] 指标参数已加载到内存:", window.SYS_VARS.indicator);
+                    console.log("✅ [自动恢复] 指标参数已加载到内存:", readIndicatorState());
                 }
-                if (backup.TARGETS) TARGETS = backup.TARGETS;
+                if (backup.TARGETS) setTargetsState(backup.TARGETS);
                 if (Array.isArray(backup.SCHOOL_ALIAS_SETTINGS)) {
-                    window.SYS_VARS = window.SYS_VARS || { indicator: {}, targets: {}, schoolAliases: [] };
-                    window.SYS_VARS.schoolAliases = backup.SCHOOL_ALIAS_SETTINGS;
+                    setSchoolAliasState(backup.SCHOOL_ALIAS_SETTINGS);
                     persistSchoolAliasSettingsLocal();
                 }
 
                 // 恢复其他
-                if (backup.PREV_DATA) PREV_DATA = backup.PREV_DATA;
-                if (backup.HISTORY_ARCHIVE) HISTORY_ARCHIVE = backup.HISTORY_ARCHIVE;
+                if (backup.PREV_DATA) setPrevDataState(backup.PREV_DATA);
+                if (backup.HISTORY_ARCHIVE) setHistoryArchiveState(backup.HISTORY_ARCHIVE);
+                if (backup.FB_CLASSES) setFbClassesState(backup.FB_CLASSES);
+                if (backup.MP_SNAPSHOTS) setMpSnapshotsState(backup.MP_SNAPSHOTS);
                 syncRuntimeStateToWindow();
 
                 const restoredExamMeta =
@@ -7022,6 +7207,17 @@ RAW_DATA = initialDataSnapshot.rawData || [];
 SCHOOLS = initialDataSnapshot.schools || {};
 SUBJECTS = initialDataSnapshot.subjects || [];
 THRESHOLDS = initialDataSnapshot.thresholds || {};
+const initialSupportSnapshot = syncSupportRuntimeState({
+    indicator: window.SYS_VARS?.indicator || { ind1: '', ind2: '' },
+    targets: window.TARGETS && typeof window.TARGETS === 'object' ? window.TARGETS : TARGETS,
+    schoolAliases: Array.isArray(window.SYS_VARS?.schoolAliases) ? window.SYS_VARS.schoolAliases : [],
+    dataManagerSyncState: window.SYS_VARS?.dataManagerSyncState || {},
+    prevData: Array.isArray(window.PREV_DATA) ? window.PREV_DATA : [],
+    historyArchive: window.HISTORY_ARCHIVE && typeof window.HISTORY_ARCHIVE === 'object' ? window.HISTORY_ARCHIVE : {},
+    fbClasses: Array.isArray(window.FB_CLASSES) ? window.FB_CLASSES : [],
+    mpSnapshots: window.MP_SNAPSHOTS && typeof window.MP_SNAPSHOTS === 'object' ? window.MP_SNAPSHOTS : {}
+});
+TARGETS = initialSupportSnapshot.targets || {};
 // 🟢 [修复]：全局变量显式挂载到 window，确保 CloudManager 可访问
 var TEACHER_MAP = readTeacherMap(), TEACHER_SCHOOL_MAP = readTeacherSchoolMap(), MY_SCHOOL = "", TEACHER_STATS = readTeacherStats();
 window.TEACHER_MAP = TEACHER_MAP;
@@ -7067,6 +7263,21 @@ function syncRuntimeStateToWindow() {
     SUBJECTS = dataSnapshot.subjects || [];
     THRESHOLDS = dataSnapshot.thresholds || {};
     CONFIG = dataSnapshot.config || {};
+    const supportSnapshot = syncSupportRuntimeState({
+        indicator: window.SYS_VARS?.indicator || readIndicatorState(),
+        targets: TARGETS,
+        schoolAliases: Array.isArray(window.SYS_VARS?.schoolAliases) ? window.SYS_VARS.schoolAliases : readSchoolAliasState(),
+        dataManagerSyncState: window.SYS_VARS?.dataManagerSyncState || readDataManagerSyncStateValue(),
+        prevData: typeof PREV_DATA !== 'undefined' ? PREV_DATA : readPrevDataState(),
+        historyArchive: typeof HISTORY_ARCHIVE !== 'undefined' ? HISTORY_ARCHIVE : readHistoryArchiveState(),
+        fbClasses: typeof FB_CLASSES !== 'undefined' ? FB_CLASSES : readFbClassesState(),
+        mpSnapshots: typeof MP_SNAPSHOTS !== 'undefined' ? MP_SNAPSHOTS : readMpSnapshotsState()
+    });
+    TARGETS = supportSnapshot.targets || {};
+    if (typeof PREV_DATA !== 'undefined') PREV_DATA = supportSnapshot.prevData || [];
+    if (typeof HISTORY_ARCHIVE !== 'undefined') HISTORY_ARCHIVE = supportSnapshot.historyArchive || {};
+    if (typeof FB_CLASSES !== 'undefined') FB_CLASSES = supportSnapshot.fbClasses || [];
+    if (typeof MP_SNAPSHOTS !== 'undefined') MP_SNAPSHOTS = supportSnapshot.mpSnapshots || {};
     const teacherSnapshot = syncTeacherRuntimeState({
         teacherMap: TEACHER_MAP,
         teacherSchoolMap: TEACHER_SCHOOL_MAP,
@@ -7114,7 +7325,7 @@ let segmentChartInstance = null; // 新增：分数段直方图实例
 let trendChartInstance = null; // 进退步趋势图实例
 let TEACHER_STAMP_BASE64 = "";
 // 存储结构: { "学校_姓名": [ {exam:"初一上", rank:100}, {exam:"初一下", rank:50} ... ] }
-let HISTORY_ARCHIVE = {};
+let HISTORY_ARCHIVE = readHistoryArchiveState();
 let ROLLER_COASTER_STUDENTS = []; // 存储波动剧烈的学生名单
 let historyChartInstance = null;
 let LLM_CONFIG = {
@@ -7355,17 +7566,17 @@ let STD_PAGINATION = {
     data: []       // 缓存当前筛选后的完整数据，避免翻页时重复筛选
 };
 
-let PREV_DATA = []; // 进退步分析专用
+let PREV_DATA = readPrevDataState(); // 进退步分析专用
 let PROGRESS_CACHE = [];
 let MANUAL_ID_MAPPINGS = {}; // 存储用户手动确认的同名映射关系 key: "Current_Class_Name" -> val: "Prev_Class_Name"
 let balanceChartInstance = null;
 let AID_GROUPS_CACHE = [];
 let MP_DATA_CACHE = []; // 临界生数据缓存
-let MP_SNAPSHOTS = JSON.parse(localStorage.getItem('MP_SNAPSHOTS') || '{}'); // 持久化存储临界生快照
+let MP_SNAPSHOTS = readMpSnapshotsState(); // 持久化存储临界生快照
 let CURRENT_CONTEXT_STUDENTS = []; // 标签组件用
 
 // 考务与分班相关变量
-let FB_STUDENTS = []; let FB_CLASSES = []; let FB_CUR_CLASS_IDX = -1; let FB_SIMULATED_DATA = {};
+let FB_STUDENTS = []; let FB_CLASSES = readFbClassesState(); let FB_CUR_CLASS_IDX = -1; let FB_SIMULATED_DATA = {};
 let EXAM_DATA = []; let EXAM_ROOMS = [];
 
 let FB_SCHEMES_CACHE = []; // 存储生成的多种方案
@@ -9148,7 +9359,7 @@ function togglePrivacyMode() {
         if (DATA_BACKUP_PRIVACY) {
             setRawData(DATA_BACKUP_PRIVACY.RAW_DATA);
             setTeacherMap(DATA_BACKUP_PRIVACY.TEACHER_MAP);
-            PREV_DATA = DATA_BACKUP_PRIVACY.PREV_DATA;
+            setPrevDataState(DATA_BACKUP_PRIVACY.PREV_DATA);
             DATA_BACKUP_PRIVACY = null;
         }
 
@@ -12732,7 +12943,7 @@ function switchTab(id) {
                 }
 
                 // 如果还没有生成缓存(PROGRESS_CACHE)，立即执行静默匹配
-                window.PREV_DATA = baselineData;
+                setPrevDataState(baselineData);
                 if (!window.PROGRESS_CACHE || window.PROGRESS_CACHE.length === 0) {
                     if (typeof performSilentMatching === 'function') performSilentMatching();
                 }
@@ -14881,7 +15092,7 @@ async function doQuery() {
                 const selectedForCompare = selectedReportExamIds.length
                     ? selectedReportExamIds
                     : [];
-                window.PREV_DATA = historyRes.data.filter(h => {
+                setPrevDataState(historyRes.data.filter(h => {
                     const hid = String(h.examFullKey || h.examId || '').trim();
                     if (!hid) return false;
                     if (selectedForCompare.length > 0) {
@@ -14917,7 +15128,7 @@ async function doQuery() {
                         updatedAt: h.updatedAt || new Date().toISOString()
                     },
                     percentiles: h.percentiles || {}
-                }));
+                })));
                 if (window.UI) UI.toast(`✅ 已自动匹配 ${historyRes.data.length} 次历史成绩`, "success");
                 // 🆕 取到云端历史后，立即刷新下拉框，让用户能选
                 if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
@@ -17723,7 +17934,7 @@ function FB_applyScheme(id) {
     if (!scheme) return;
 
     // 更新全局变量
-    FB_CLASSES = scheme.data;
+    setFbClassesState(scheme.data);
     FB_SIMULATED_DATA = {};
     FB_CLASSES.forEach(c => FB_SIMULATED_DATA[c.name] = c.students);
 
@@ -23322,14 +23533,14 @@ function getCurrentSnapshotPayload() {
         TEACHER_SCHOOL_MAP: window.TEACHER_SCHOOL_MAP || {},
         CONFIG: readConfigState(),
         MY_SCHOOL: readCurrentSchool(),
-        TARGETS: window.SYS_VARS?.targets || window.TARGETS || {},
-        INDICATOR_PARAMS: window.SYS_VARS?.indicator || { ind1: '', ind2: '' },
-        SCHOOL_ALIAS_SETTINGS: ensureSchoolAliasStore(),
-        PREV_DATA: window.PREV_DATA || [],
+        TARGETS: readTargetsState(),
+        INDICATOR_PARAMS: readIndicatorState(),
+        SCHOOL_ALIAS_SETTINGS: readSchoolAliasState(),
+        PREV_DATA: readPrevDataState(),
         TEACHER_STATS: window.TEACHER_STATS || {},
-        HISTORY_ARCHIVE: window.HISTORY_ARCHIVE || {},
-        FB_CLASSES: window.FB_CLASSES || [],
-        MP_SNAPSHOTS: window.MP_SNAPSHOTS || {},
+        HISTORY_ARCHIVE: readHistoryArchiveState(),
+        FB_CLASSES: readFbClassesState(),
+        MP_SNAPSHOTS: readMpSnapshotsState(),
         FINGERPRINT: computeExamDataFingerprint(readRawData()),
         timestamp: new Date().getTime()
     };
@@ -23549,29 +23760,25 @@ function applySnapshotPayload(db) {
     setTeacherMap(db.TEACHER_MAP || {});
     setTeacherSchoolMap(db.TEACHER_SCHOOL_MAP || {});
     writeCurrentSchool(db.MY_SCHOOL || '');
-    window.TARGETS = db.TARGETS || {};
-    TARGETS = window.TARGETS;
-    window.SYS_VARS = window.SYS_VARS || { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
-    window.SYS_VARS.targets = window.TARGETS;
-    window.SYS_VARS.schoolAliases = Array.isArray(db.SCHOOL_ALIAS_SETTINGS) ? db.SCHOOL_ALIAS_SETTINGS : ensureSchoolAliasStore();
+    setTargetsState(db.TARGETS || {});
+    setSchoolAliasState(Array.isArray(db.SCHOOL_ALIAS_SETTINGS) ? db.SCHOOL_ALIAS_SETTINGS : readSchoolAliasState());
     persistSchoolAliasSettingsLocal();
     if (db.INDICATOR_PARAMS) {
-        window.SYS_VARS.indicator.ind1 = db.INDICATOR_PARAMS.ind1 || '';
-        window.SYS_VARS.indicator.ind2 = db.INDICATOR_PARAMS.ind2 || '';
+        const indicator = setIndicatorState(db.INDICATOR_PARAMS);
         const dm1 = document.getElementById('dm_ind1_input');
         const dm2 = document.getElementById('dm_ind2_input');
         const main1 = document.getElementById('ind1');
         const main2 = document.getElementById('ind2');
-        if (dm1) dm1.value = window.SYS_VARS.indicator.ind1;
-        if (dm2) dm2.value = window.SYS_VARS.indicator.ind2;
-        if (main1) main1.value = window.SYS_VARS.indicator.ind1;
-        if (main2) main2.value = window.SYS_VARS.indicator.ind2;
+        if (dm1) dm1.value = indicator.ind1;
+        if (dm2) dm2.value = indicator.ind2;
+        if (main1) main1.value = indicator.ind1;
+        if (main2) main2.value = indicator.ind2;
     }
-    if (db.PREV_DATA) window.PREV_DATA = db.PREV_DATA;
+    if (db.PREV_DATA) setPrevDataState(db.PREV_DATA);
     if (db.TEACHER_STATS) setTeacherStats(db.TEACHER_STATS);
-    if (db.HISTORY_ARCHIVE) window.HISTORY_ARCHIVE = db.HISTORY_ARCHIVE;
-    if (db.FB_CLASSES) window.FB_CLASSES = db.FB_CLASSES;
-    if (db.MP_SNAPSHOTS) window.MP_SNAPSHOTS = db.MP_SNAPSHOTS;
+    if (db.HISTORY_ARCHIVE) setHistoryArchiveState(db.HISTORY_ARCHIVE);
+    if (db.FB_CLASSES) setFbClassesState(db.FB_CLASSES);
+    if (db.MP_SNAPSHOTS) setMpSnapshotsState(db.MP_SNAPSHOTS);
     syncRuntimeStateToWindow();
 
     if (window.COHORT_DB && window.COHORT_DB.currentExamId) {
@@ -23700,8 +23907,7 @@ function loadProjectSnapshot(input) {
             // 3. 恢复 IndexedDB 数据 (关键步骤：写入后刷新页面)
             if (Object.keys(db).length > 0) {
                 /* 👇👇👇 🟢 关键：恢复全局变量 TARGETS (防止刷新前点击无效) 🟢 👇👇👇 */
-                window.TARGETS = db.TARGETS || {};
-                TARGETS = window.TARGETS;
+                setTargetsState(db.TARGETS || {});
 
                 await DB.save('autosave_backup', {
                     timestamp: Date.now(),
@@ -23799,18 +24005,18 @@ function saveTargetEditor() {
     const rows = document.querySelectorAll('#target-editor-table tbody tr');
     let updateCount = 0;
 
-    window.TARGETS = ensureNormalizedTargets();
+    setTargetsState(ensureNormalizedTargets());
 
     rows.forEach(tr => {
-        const sch = getCanonicalSchoolName(tr.dataset.school, [...Object.keys(window.TARGETS || {}), ...Object.keys(SCHOOLS || {}), tr.dataset.school]);
+        const sch = getCanonicalSchoolName(tr.dataset.school, [...Object.keys(readTargetsState() || {}), ...Object.keys(SCHOOLS || {}), tr.dataset.school]);
         const t1 = parseInt(tr.querySelector('.inp-t1').value) || 0;
         const t2 = parseInt(tr.querySelector('.inp-t2').value) || 0;
 
-        window.TARGETS[sch] = { t1: t1, t2: t2 };
+        readTargetsState()[sch] = { t1: t1, t2: t2 };
         updateCount++;
     });
 
-    window.TARGETS = ensureNormalizedTargets();
+    setTargetsState(ensureNormalizedTargets());
 
     document.getElementById('target-editor-modal').style.display = 'none';
 

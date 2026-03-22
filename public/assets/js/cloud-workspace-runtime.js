@@ -94,13 +94,24 @@
 
             safeLoading(true, '正在同步云端数据...');
             try {
-                if (!window.SYS_VARS) window.SYS_VARS = { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
                 const ind1 = document.getElementById('dm_ind1_input');
                 const ind2 = document.getElementById('dm_ind2_input');
-                if (ind1) window.SYS_VARS.indicator.ind1 = ind1.value;
-                if (ind2) window.SYS_VARS.indicator.ind2 = ind2.value;
-                window.SYS_VARS.targets = (typeof ensureNormalizedTargets === 'function') ? ensureNormalizedTargets() : (window.TARGETS || {});
-                window.SYS_VARS.schoolAliases = (typeof ensureSchoolAliasStore === 'function') ? ensureSchoolAliasStore() : (window.SYS_VARS.schoolAliases || []);
+                if (typeof window.ensureSupportSysVars === 'function') window.ensureSupportSysVars();
+                if (typeof window.setIndicatorState === 'function') {
+                    const currentIndicator = typeof window.readIndicatorState === 'function'
+                        ? window.readIndicatorState()
+                        : { ind1: '', ind2: '' };
+                    window.setIndicatorState({
+                        ind1: ind1 ? ind1.value : currentIndicator.ind1,
+                        ind2: ind2 ? ind2.value : currentIndicator.ind2
+                    });
+                }
+                if (typeof window.setTargetsState === 'function') {
+                    window.setTargetsState((typeof ensureNormalizedTargets === 'function') ? ensureNormalizedTargets() : (window.TARGETS || {}));
+                }
+                if (typeof window.setSchoolAliasState === 'function') {
+                    window.setSchoolAliasState((typeof ensureSchoolAliasStore === 'function') ? ensureSchoolAliasStore() : (typeof window.readSchoolAliasState === 'function' ? window.readSchoolAliasState() : []));
+                }
 
                 const payload = typeof getCurrentSnapshotPayload === 'function' ? getCurrentSnapshotPayload() : {};
                 if (mode === 'workspace') normalizeWorkspacePayload(payload);
