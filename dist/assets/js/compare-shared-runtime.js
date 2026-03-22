@@ -1,23 +1,40 @@
 (() => {
     if (typeof window === 'undefined' || window.__COMPARE_SHARED_RUNTIME_PATCHED__) return;
 
+const CompareSessionStateRuntime = window.CompareSessionState || null;
 const readDuplicateCompareExamsState = typeof window.readDuplicateCompareExamsState === 'function'
     ? window.readDuplicateCompareExamsState
-    : (() => (Array.isArray(window.DUPLICATE_COMPARE_EXAMS) ? window.DUPLICATE_COMPARE_EXAMS : []));
+    : (() => {
+        if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getDuplicateCompareExams === 'function') {
+            return CompareSessionStateRuntime.getDuplicateCompareExams() || [];
+        }
+        return Array.isArray(window.DUPLICATE_COMPARE_EXAMS) ? window.DUPLICATE_COMPARE_EXAMS : [];
+    });
 const setDuplicateCompareExamsState = typeof window.setDuplicateCompareExamsState === 'function'
     ? window.setDuplicateCompareExamsState
     : ((groups) => {
         const nextGroups = Array.isArray(groups) ? groups : [];
+        if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.setDuplicateCompareExams === 'function') {
+            return CompareSessionStateRuntime.setDuplicateCompareExams(nextGroups) || [];
+        }
         window.DUPLICATE_COMPARE_EXAMS = nextGroups;
         return nextGroups;
     });
 const readDuplicateCompareWarnedKeyState = typeof window.readDuplicateCompareWarnedKeyState === 'function'
     ? window.readDuplicateCompareWarnedKeyState
-    : (() => String(window.__DUPLICATE_COMPARE_WARNED_KEY || '').trim());
+    : (() => {
+        if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getDuplicateCompareWarnedKey === 'function') {
+            return String(CompareSessionStateRuntime.getDuplicateCompareWarnedKey() || '').trim();
+        }
+        return String(window.__DUPLICATE_COMPARE_WARNED_KEY || '').trim();
+    });
 const setDuplicateCompareWarnedKeyState = typeof window.setDuplicateCompareWarnedKeyState === 'function'
     ? window.setDuplicateCompareWarnedKeyState
     : ((key) => {
         const nextKey = String(key || '').trim();
+        if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.setDuplicateCompareWarnedKey === 'function') {
+            return String(CompareSessionStateRuntime.setDuplicateCompareWarnedKey(nextKey) || '').trim();
+        }
         window.__DUPLICATE_COMPARE_WARNED_KEY = nextKey;
         return nextKey;
     });

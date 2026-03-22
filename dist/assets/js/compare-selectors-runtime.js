@@ -1,18 +1,23 @@
 (() => {
     if (typeof window === 'undefined' || window.__COMPARE_SELECTORS_RUNTIME_PATCHED__) return;
 
+    const CompareSessionStateRuntime = window.CompareSessionState || null;
     const ensureCompareExamSyncStateEntry = typeof window.ensureCompareExamSyncStateEntry === 'function'
         ? window.ensureCompareExamSyncStateEntry
         : ((cohortId) => {
             const key = String(cohortId || '').trim();
             const currentState = typeof window.readCompareExamSyncState === 'function'
                 ? window.readCompareExamSyncState()
-                : (window.__COMPARE_EXAM_SYNC_STATE && typeof window.__COMPARE_EXAM_SYNC_STATE === 'object' ? window.__COMPARE_EXAM_SYNC_STATE : {});
+                : (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getCompareExamSyncState === 'function'
+                    ? (CompareSessionStateRuntime.getCompareExamSyncState() || {})
+                    : (window.__COMPARE_EXAM_SYNC_STATE && typeof window.__COMPARE_EXAM_SYNC_STATE === 'object' ? window.__COMPARE_EXAM_SYNC_STATE : {}));
             if (!key) return { pending: false, lastAttempt: 0 };
             if (!currentState[key]) {
                 currentState[key] = { pending: false, lastAttempt: 0 };
                 if (typeof window.setCompareExamSyncState === 'function') {
                     window.setCompareExamSyncState(currentState);
+                } else if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.setCompareExamSyncState === 'function') {
+                    CompareSessionStateRuntime.setCompareExamSyncState(currentState);
                 } else {
                     window.__COMPARE_EXAM_SYNC_STATE = currentState;
                 }

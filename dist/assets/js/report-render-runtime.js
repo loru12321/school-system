@@ -25,7 +25,12 @@ const readCurrentReportStudentSessionState = typeof window.readCurrentReportStud
     });
 const readDuplicateCompareExamsState = typeof window.readDuplicateCompareExamsState === 'function'
     ? window.readDuplicateCompareExamsState
-    : (() => (Array.isArray(window.DUPLICATE_COMPARE_EXAMS) ? window.DUPLICATE_COMPARE_EXAMS : []));
+    : (() => {
+        if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getDuplicateCompareExams === 'function') {
+            return CompareSessionStateRuntime.getDuplicateCompareExams() || [];
+        }
+        return Array.isArray(window.DUPLICATE_COMPARE_EXAMS) ? window.DUPLICATE_COMPARE_EXAMS : [];
+    });
 
 function getTrendBadge(current, previous, type = 'score') {
     if (previous === undefined || previous === null || previous === '-' || previous === '') return '';
