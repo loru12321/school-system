@@ -1640,6 +1640,138 @@ window.readProgressQuickModeState = readProgressQuickModeState;
 window.setProgressQuickModeState = setProgressQuickModeState;
 window.syncProgressRuntimeState = syncProgressRuntimeState;
 
+const ReportSessionStateRuntime = window.ReportSessionState || null;
+
+function readCurrentReportStudentState() {
+    const lateStudent = readLateBoundState(() => CURRENT_REPORT_STUDENT, null);
+    const nextStudent = ReportSessionStateRuntime && typeof ReportSessionStateRuntime.getCurrentReportStudent === 'function'
+        ? (ReportSessionStateRuntime.getCurrentReportStudent() || null)
+        : (window.CURRENT_REPORT_STUDENT && typeof window.CURRENT_REPORT_STUDENT === 'object'
+            ? window.CURRENT_REPORT_STUDENT
+            : (lateStudent && typeof lateStudent === 'object' ? lateStudent : null));
+    writeLateBoundState((value) => { CURRENT_REPORT_STUDENT = value; }, nextStudent);
+    window.CURRENT_REPORT_STUDENT = nextStudent;
+    return nextStudent;
+}
+
+function setCurrentReportStudentState(student) {
+    const nextStudent = ReportSessionStateRuntime && typeof ReportSessionStateRuntime.setCurrentReportStudent === 'function'
+        ? (ReportSessionStateRuntime.setCurrentReportStudent(student) || null)
+        : (student && typeof student === 'object' ? student : null);
+    writeLateBoundState((value) => { CURRENT_REPORT_STUDENT = value; }, nextStudent);
+    window.CURRENT_REPORT_STUDENT = nextStudent;
+    return nextStudent;
+}
+
+function readBatchAICacheState() {
+    const lateCache = readLateBoundState(() => BATCH_AI_CACHE, {});
+    const nextCache = ReportSessionStateRuntime && typeof ReportSessionStateRuntime.getBatchAICache === 'function'
+        ? (ReportSessionStateRuntime.getBatchAICache() || {})
+        : (window.BATCH_AI_CACHE && typeof window.BATCH_AI_CACHE === 'object' && !Array.isArray(window.BATCH_AI_CACHE)
+            ? window.BATCH_AI_CACHE
+            : (lateCache && typeof lateCache === 'object' && !Array.isArray(lateCache) ? lateCache : {}));
+    writeLateBoundState((value) => { BATCH_AI_CACHE = value; }, nextCache);
+    window.BATCH_AI_CACHE = nextCache;
+    return nextCache;
+}
+
+function setBatchAICacheState(cache) {
+    const nextCache = ReportSessionStateRuntime && typeof ReportSessionStateRuntime.setBatchAICache === 'function'
+        ? (ReportSessionStateRuntime.setBatchAICache(cache) || {})
+        : (cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : {});
+    writeLateBoundState((value) => { BATCH_AI_CACHE = value; }, nextCache);
+    window.BATCH_AI_CACHE = nextCache;
+    return nextCache;
+}
+
+function upsertBatchAICacheEntryState(key, value) {
+    const normalizedKey = String(key || '').trim();
+    if (!normalizedKey) return readBatchAICacheState();
+    const nextCache = { ...readBatchAICacheState(), [normalizedKey]: value };
+    return setBatchAICacheState(nextCache);
+}
+
+function removeBatchAICacheEntryState(key) {
+    const normalizedKey = String(key || '').trim();
+    const nextCache = { ...readBatchAICacheState() };
+    if (!normalizedKey) return nextCache;
+    delete nextCache[normalizedKey];
+    return setBatchAICacheState(nextCache);
+}
+
+function readIsBatchAIRunningState() {
+    const lateFlag = readLateBoundState(() => IS_BATCH_AI_RUNNING, false);
+    const nextFlag = ReportSessionStateRuntime && typeof ReportSessionStateRuntime.getIsBatchAiRunning === 'function'
+        ? !!ReportSessionStateRuntime.getIsBatchAiRunning()
+        : !!(window.IS_BATCH_AI_RUNNING ?? lateFlag);
+    writeLateBoundState((value) => { IS_BATCH_AI_RUNNING = value; }, nextFlag);
+    window.IS_BATCH_AI_RUNNING = nextFlag;
+    return nextFlag;
+}
+
+function setBatchAIRunningState(flag) {
+    const nextFlag = ReportSessionStateRuntime && typeof ReportSessionStateRuntime.setIsBatchAiRunning === 'function'
+        ? !!ReportSessionStateRuntime.setIsBatchAiRunning(flag)
+        : !!flag;
+    writeLateBoundState((value) => { IS_BATCH_AI_RUNNING = value; }, nextFlag);
+    window.IS_BATCH_AI_RUNNING = nextFlag;
+    return nextFlag;
+}
+
+function readCurrentContextStudentsState() {
+    const lateStudents = readLateBoundState(() => CURRENT_CONTEXT_STUDENTS, []);
+    const nextStudents = ReportSessionStateRuntime && typeof ReportSessionStateRuntime.getCurrentContextStudents === 'function'
+        ? (ReportSessionStateRuntime.getCurrentContextStudents() || [])
+        : (Array.isArray(window.CURRENT_CONTEXT_STUDENTS)
+            ? window.CURRENT_CONTEXT_STUDENTS
+            : (Array.isArray(lateStudents) ? lateStudents : []));
+    writeLateBoundState((value) => { CURRENT_CONTEXT_STUDENTS = value; }, nextStudents);
+    window.CURRENT_CONTEXT_STUDENTS = nextStudents;
+    return nextStudents;
+}
+
+function setCurrentContextStudentsState(students) {
+    const nextStudents = ReportSessionStateRuntime && typeof ReportSessionStateRuntime.setCurrentContextStudents === 'function'
+        ? (ReportSessionStateRuntime.setCurrentContextStudents(students) || [])
+        : (Array.isArray(students) ? students : []);
+    writeLateBoundState((value) => { CURRENT_CONTEXT_STUDENTS = value; }, nextStudents);
+    window.CURRENT_CONTEXT_STUDENTS = nextStudents;
+    return nextStudents;
+}
+
+function syncReportSessionRuntimeState(patch = {}) {
+    if (ReportSessionStateRuntime && typeof ReportSessionStateRuntime.syncReportSessionState === 'function') {
+        const snapshot = ReportSessionStateRuntime.syncReportSessionState(patch);
+        writeLateBoundState((value) => { CURRENT_REPORT_STUDENT = value; }, snapshot.currentReportStudent || null);
+        writeLateBoundState((value) => { BATCH_AI_CACHE = value; }, snapshot.batchAiCache || {});
+        writeLateBoundState((value) => { IS_BATCH_AI_RUNNING = value; }, !!snapshot.isBatchAiRunning);
+        writeLateBoundState((value) => { CURRENT_CONTEXT_STUDENTS = value; }, snapshot.currentContextStudents || []);
+        window.CURRENT_REPORT_STUDENT = snapshot.currentReportStudent || null;
+        window.BATCH_AI_CACHE = snapshot.batchAiCache || {};
+        window.IS_BATCH_AI_RUNNING = !!snapshot.isBatchAiRunning;
+        window.CURRENT_CONTEXT_STUDENTS = snapshot.currentContextStudents || [];
+        return snapshot;
+    }
+    return {
+        currentReportStudent: setCurrentReportStudentState(patch.currentReportStudent ?? patch.CURRENT_REPORT_STUDENT ?? readCurrentReportStudentState()),
+        batchAiCache: setBatchAICacheState(patch.batchAiCache ?? patch.BATCH_AI_CACHE ?? readBatchAICacheState()),
+        isBatchAiRunning: setBatchAIRunningState(patch.isBatchAiRunning ?? patch.IS_BATCH_AI_RUNNING ?? readIsBatchAIRunningState()),
+        currentContextStudents: setCurrentContextStudentsState(patch.currentContextStudents ?? patch.CURRENT_CONTEXT_STUDENTS ?? readCurrentContextStudentsState())
+    };
+}
+
+window.readCurrentReportStudentState = readCurrentReportStudentState;
+window.setCurrentReportStudentState = setCurrentReportStudentState;
+window.readBatchAICacheState = readBatchAICacheState;
+window.setBatchAICacheState = setBatchAICacheState;
+window.upsertBatchAICacheEntryState = upsertBatchAICacheEntryState;
+window.removeBatchAICacheEntryState = removeBatchAICacheEntryState;
+window.readIsBatchAIRunningState = readIsBatchAIRunningState;
+window.setBatchAIRunningState = setBatchAIRunningState;
+window.readCurrentContextStudentsState = readCurrentContextStudentsState;
+window.setCurrentContextStudentsState = setCurrentContextStudentsState;
+window.syncReportSessionRuntimeState = syncReportSessionRuntimeState;
+
 const Auth = {
     currentUser: null,
     _parentDataRecovering: false,
@@ -2251,9 +2383,10 @@ const Auth = {
             }
 
             // 容错查找：优先使用当前报告学生（云端对比命中后会写入）
-            const stuFromCurrent = CURRENT_REPORT_STUDENT && CURRENT_REPORT_STUDENT.scores && (
-                normalizeCompareName(CURRENT_REPORT_STUDENT.name || '') === normalizeCompareName(this.currentUser?.name || '')
-            ) ? CURRENT_REPORT_STUDENT : null;
+            const currentReportStudent = readCurrentReportStudentState();
+            const stuFromCurrent = currentReportStudent && currentReportStudent.scores && (
+                normalizeCompareName(currentReportStudent.name || '') === normalizeCompareName(this.currentUser?.name || '')
+            ) ? currentReportStudent : null;
 
             // 回退：姓名 + 班级(宽容匹配)
             const stu = stuFromCurrent || getCurrentBoundStudentFromUser(this.currentUser) || RAW_DATA.find(s => s.name === this.currentUser.name && s.class === this.currentUser.class);
@@ -7396,6 +7529,12 @@ const initialProgressSnapshot = syncProgressRuntimeState({
     vaViewMode: window.VA_VIEW_MODE || 'school',
     quickMode: window.__PROGRESS_QUICK_MODE || 'all'
 });
+const initialReportSessionSnapshot = syncReportSessionRuntimeState({
+    currentReportStudent: window.CURRENT_REPORT_STUDENT && typeof window.CURRENT_REPORT_STUDENT === 'object' ? window.CURRENT_REPORT_STUDENT : null,
+    batchAiCache: window.BATCH_AI_CACHE && typeof window.BATCH_AI_CACHE === 'object' && !Array.isArray(window.BATCH_AI_CACHE) ? window.BATCH_AI_CACHE : {},
+    isBatchAiRunning: !!window.IS_BATCH_AI_RUNNING,
+    currentContextStudents: Array.isArray(window.CURRENT_CONTEXT_STUDENTS) ? window.CURRENT_CONTEXT_STUDENTS : []
+});
 // 🟢 [修复]：全局变量显式挂载到 window，确保 CloudManager 可访问
 var TEACHER_MAP = readTeacherMap(), TEACHER_SCHOOL_MAP = readTeacherSchoolMap(), MY_SCHOOL = "", TEACHER_STATS = readTeacherStats();
 window.TEACHER_MAP = TEACHER_MAP;
@@ -7466,6 +7605,16 @@ function syncRuntimeStateToWindow() {
     });
     writeLateBoundState((value) => { PROGRESS_CACHE = value; }, progressSnapshot.progressCache || []);
     writeLateBoundState((value) => { MANUAL_ID_MAPPINGS = value; }, progressSnapshot.manualIdMappings || {});
+    const reportSessionSnapshot = syncReportSessionRuntimeState({
+        currentReportStudent: readLateBoundState(() => CURRENT_REPORT_STUDENT, readCurrentReportStudentState()),
+        batchAiCache: readLateBoundState(() => BATCH_AI_CACHE, readBatchAICacheState()),
+        isBatchAiRunning: readLateBoundState(() => IS_BATCH_AI_RUNNING, readIsBatchAIRunningState()),
+        currentContextStudents: readLateBoundState(() => CURRENT_CONTEXT_STUDENTS, readCurrentContextStudentsState())
+    });
+    writeLateBoundState((value) => { CURRENT_REPORT_STUDENT = value; }, reportSessionSnapshot.currentReportStudent || null);
+    writeLateBoundState((value) => { BATCH_AI_CACHE = value; }, reportSessionSnapshot.batchAiCache || {});
+    writeLateBoundState((value) => { IS_BATCH_AI_RUNNING = value; }, !!reportSessionSnapshot.isBatchAiRunning);
+    writeLateBoundState((value) => { CURRENT_CONTEXT_STUDENTS = value; }, reportSessionSnapshot.currentContextStudents || []);
     const teacherSnapshot = syncTeacherRuntimeState({
         teacherMap: TEACHER_MAP,
         teacherSchoolMap: TEACHER_SCHOOL_MAP,
@@ -7744,10 +7893,18 @@ async function generateClassDiagnosisReport() {
                 <p style="font-size:12px; color:#666;">如果是本地模式，请确保模型已加载且显存充足。</p>
             </div>`;
     }
+}
+/*
 } let CURRENT_REPORT_STUDENT = null; // 暂存当前正在查询的学生对象
-let BATCH_AI_CACHE = {}; // 存储批量生成的评语 key: "学校_班级_姓名"
-let IS_BATCH_AI_RUNNING = false; // 控制批量任务状态
+let CURRENT_REPORT_STUDENT = initialReportSessionSnapshot.currentReportStudent || null; // 暂存当前正在查询的学生对象
+let BATCH_AI_CACHE = initialReportSessionSnapshot.batchAiCache || {}; // 存储批量生成的评语 key: "学校_班级_姓名"
+let IS_BATCH_AI_RUNNING = !!initialReportSessionSnapshot.isBatchAiRunning; // 控制批量任务状态
 // ✋ 性能优化：定义学生明细表的分页状态
+*/
+let CURRENT_REPORT_STUDENT = initialReportSessionSnapshot.currentReportStudent || null; // 鏆傚瓨褰撳墠姝ｅ湪鏌ヨ鐨勫鐢熷璞?
+let BATCH_AI_CACHE = initialReportSessionSnapshot.batchAiCache || {}; // 瀛樺偍鎵归噺鐢熸垚鐨勮瘎璇?key: "瀛︽牎_鐝骇_濮撳悕"
+let IS_BATCH_AI_RUNNING = !!initialReportSessionSnapshot.isBatchAiRunning; // 鎺у埗鎵归噺浠诲姟鐘舵€?
+// 鉁?鎬ц兘浼樺寲锛氬畾涔夊鐢熸槑缁嗚〃鐨勫垎椤电姸鎬?
 let STD_PAGINATION = {
     page: 1,       // 当前页码
     size: 100,     // 每页显示条数 (调整此数值平衡性能与信息量)
@@ -7763,7 +7920,7 @@ let balanceChartInstance = null;
 let AID_GROUPS_CACHE = [];
 let MP_DATA_CACHE = []; // 临界生数据缓存
 let MP_SNAPSHOTS = readMpSnapshotsState(); // 持久化存储临界生快照
-let CURRENT_CONTEXT_STUDENTS = []; // 标签组件用
+let CURRENT_CONTEXT_STUDENTS = initialReportSessionSnapshot.currentContextStudents || []; // 标签组件用
 
 // 考务与分班相关变量
 let FB_STUDENTS = []; let FB_CLASSES = readFbClassesState(); let FB_CUR_CLASS_IDX = -1; let FB_SIMULATED_DATA = {};
@@ -15125,19 +15282,21 @@ function generateTeacherInputs() {
             clearTimeout(window.saveTimer);
             window.saveTimer = setTimeout(() => {
                 const currentKey = readWorkspaceProjectKey() || 'autosave_backup';
-
-                DB.save(currentKey, {
-                    timestamp: Date.now(),
-                    RAW_DATA: RAW_DATA,
-                    SCHOOLS: SCHOOLS,
-                    SUBJECTS: SUBJECTS,
-                    THRESHOLDS: THRESHOLDS,
-                    TEACHER_MAP: TEACHER_MAP, // 重点保存这个
-                    TEACHER_STATS: TEACHER_STATS,
-                    FB_CLASSES: FB_CLASSES,
-                    CONFIG: CONFIG,
-                    MY_SCHOOL: MY_SCHOOL
-                });
+                const snapshotPayload = typeof getCurrentSnapshotPayload === 'function'
+                    ? getCurrentSnapshotPayload()
+                    : {
+                        timestamp: Date.now(),
+                        RAW_DATA: RAW_DATA,
+                        SCHOOLS: SCHOOLS,
+                        SUBJECTS: SUBJECTS,
+                        THRESHOLDS: THRESHOLDS,
+                        TEACHER_MAP: TEACHER_MAP,
+                        TEACHER_STATS: TEACHER_STATS,
+                        FB_CLASSES: FB_CLASSES,
+                        CONFIG: CONFIG,
+                        MY_SCHOOL: MY_SCHOOL
+                    };
+                DB.save(currentKey, snapshotPayload);
             }, 1000);
         });
     });
@@ -15331,7 +15490,7 @@ async function doQuery() {
 
     clearCloudStudentCompareContext();
     setCloudCompareTarget(stu);
-    CURRENT_REPORT_STUDENT = stu;
+    setCurrentReportStudentState(stu);
 
     const resultEl = document.getElementById('single-report-result');
     const container = document.getElementById('report-card-capture-area');
@@ -18360,7 +18519,7 @@ function generateInquiryPackage() {
         // C. 获取或生成评语
         // 优先从批量生成缓存中取，如果没有则现场生成一条简单的
         const cacheKey = `${stu.school}_${stu.class}_${stu.name}`;
-        const aiComment = BATCH_AI_CACHE[cacheKey] || generateAIComment(stu);
+        const aiComment = readBatchAICacheState()[cacheKey] || generateAIComment(stu);
 
         secureData[key] = {
             cls: stu.class,  // 存储班级
@@ -20789,7 +20948,7 @@ function updateSeatAdjSelects() {
     schSel.onchange = () => {
         syncSeatAdjClasses('');
         // 清空学生列表
-        CURRENT_CONTEXT_STUDENTS = [];
+        setCurrentContextStudentsState([]);
         updateConstraintWidgetsContext('adj'); // 立即更新一次，清空下拉框
     };
 
@@ -21013,7 +21172,7 @@ function initTagWidget(wrapperId, hiddenInputId) {
         input.addEventListener('input', function () {
             const val = this.value.trim().toLowerCase();
             if (!val) { dropdown.style.display = 'none'; return; }
-            const matches = CURRENT_CONTEXT_STUDENTS.filter(s => s.name.includes(val)).slice(0, 8);
+            const matches = readCurrentContextStudentsState().filter(s => s.name.includes(val)).slice(0, 8);
             if (matches.length) { dropdown.innerHTML = matches.map(s => `<div class="suggestion-item" onclick="addTagToWidget('${wrapperId}', '${hiddenInputId}', '${s.name}')">${s.name} <small>${s.score || s.total}分</small></div>`).join(''); dropdown.style.display = 'block'; }
             else { dropdown.style.display = 'none'; }
         });
@@ -21080,7 +21239,7 @@ function updateConstraintWidgetsContext(type) {
         }
 
         // 更新全局上下文
-        CURRENT_CONTEXT_STUDENTS = students;
+        setCurrentContextStudentsState(students);
 
         // 初始化其他标签组件
         ['diff', 'vision', 'psy', 'talk'].forEach(f => {
@@ -21095,7 +21254,7 @@ function updateConstraintWidgetsContext(type) {
             students = FB_CLASSES[FB_CUR_CLASS_IDX].students;
         }
 
-        CURRENT_CONTEXT_STUDENTS = students;
+        setCurrentContextStudentsState(students);
 
         ['diff', 'vision', 'talk'].forEach(f => {
             initTagWidget(`widget_fb_${f}`, `fb_c_${f}`);
@@ -21153,12 +21312,13 @@ function openBatchAIModal() {
 
     // 初始化列表预览
     const students = SCHOOLS[sch].students.filter(s => s.class === cls).sort((a, b) => b.total - a.total);
+    const batchAiCache = readBatchAICacheState();
     const tbody = document.querySelector('#batch-ai-table tbody');
     tbody.innerHTML = '';
 
     students.forEach(s => {
         const key = `${s.school}_${s.class}_${s.name}`;
-        const hasComment = BATCH_AI_CACHE[key];
+        const hasComment = batchAiCache[key];
         const statusIcon = hasComment ? '✅' : '⚪';
         const commentPreview = hasComment ? hasComment : '<span style="color:#ccc">等待生成...</span>';
 
@@ -21274,7 +21434,7 @@ function buildStudentPrompt(stu) {
 // 4. 停止生成
 function stopBatchAI() {
     if (AI_DISABLED) return aiDisabledAlert();
-    IS_BATCH_AI_RUNNING = false;
+    setBatchAIRunningState(false);
     document.getElementById('btn-start-batch-ai').classList.remove('hidden');
     document.getElementById('btn-stop-batch-ai').classList.add('hidden');
 }
@@ -21287,20 +21447,21 @@ async function startBatchAIComments() {
     const cls = document.getElementById('sel-class').value;
     const students = SCHOOLS[sch].students.filter(s => s.class === cls).sort((a, b) => b.total - a.total);
     const interval = (parseFloat(document.getElementById('batch-ai-interval').value) || 3) * 1000;
+    let batchAiCache = readBatchAICacheState();
 
-    IS_BATCH_AI_RUNNING = true;
+    setBatchAIRunningState(true);
     document.getElementById('btn-start-batch-ai').classList.add('hidden');
     document.getElementById('btn-stop-batch-ai').classList.remove('hidden');
 
     let processedCount = 0;
     for (let i = 0; i < students.length; i++) {
-        if (!IS_BATCH_AI_RUNNING) break;
+        if (!readIsBatchAIRunningState()) break;
         const s = students[i];
         const key = `${s.school}_${s.class}_${s.name}`;
         const rowId = `row-${key.replace(/\s+/g, '')}`;
         const row = document.getElementById(rowId);
 
-        if (BATCH_AI_CACHE[key]) { processedCount++; updateBatchProgress(processedCount, students.length); continue; }
+        if (batchAiCache[key]) { processedCount++; updateBatchProgress(processedCount, students.length); continue; }
 
         if (row) { row.querySelector('.status-cell').innerHTML = '⏳'; row.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
 
@@ -21311,13 +21472,14 @@ async function startBatchAIComments() {
                 callLLM(prompt, null, (fullText) => { aiResponse = fullText; resolve(); });
             });
             if (aiResponse && !aiResponse.includes("失败")) {
-                BATCH_AI_CACHE[key] = aiResponse;
+                upsertBatchAICacheEntryState(key, aiResponse);
+                batchAiCache = readBatchAICacheState();
                 if (row) { row.querySelector('.status-cell').innerHTML = '✅'; row.querySelector('.comment-cell').innerText = aiResponse; }
             } else { if (row) row.querySelector('.status-cell').innerHTML = '❌'; }
         } catch (e) { if (row) row.querySelector('.status-cell').innerHTML = '❌'; }
 
         processedCount++; updateBatchProgress(processedCount, students.length);
-        if (i < students.length - 1 && IS_BATCH_AI_RUNNING) await new Promise(r => setTimeout(r, interval));
+        if (i < students.length - 1 && readIsBatchAIRunningState()) await new Promise(r => setTimeout(r, interval));
     }
     stopBatchAI(); alert("批量生成任务结束！");
 }
@@ -21328,13 +21490,13 @@ function regenerateOneAI(key) {
     const [sch, cls, name] = key.split('_');
     const stu = SCHOOLS[sch].students.find(s => s.name === name && s.class === cls);
     if (!stu) return;
-    delete BATCH_AI_CACHE[key];
+    removeBatchAICacheEntryState(key);
     const rowId = `row-${key.replace(/\s+/g, '')}`;
     const row = document.getElementById(rowId);
     if (row) { row.querySelector('.status-cell').innerHTML = '⏳'; row.querySelector('.comment-cell').innerText = "重试中..."; }
     callLLM(buildStudentPrompt(stu), null, (fullText) => {
         if (fullText && !fullText.includes("失败")) {
-            BATCH_AI_CACHE[key] = fullText;
+            upsertBatchAICacheEntryState(key, fullText);
             if (row) { row.querySelector('.status-cell').innerHTML = '✅'; row.querySelector('.comment-cell').innerText = fullText; }
         } else { if (row) row.querySelector('.comment-cell').innerText = "生成失败"; }
     });
@@ -21349,9 +21511,10 @@ function exportAICommentsExcel() {
     const wb = XLSX.utils.book_new();
     const data = [['学校', '班级', '姓名', '总分', '评语']];
     const students = SCHOOLS[sch].students.filter(s => s.class === cls).sort((a, b) => b.total - a.total);
+    const batchAiCache = readBatchAICacheState();
     students.forEach(s => {
         const key = `${s.school}_${s.class}_${s.name}`;
-        data.push([s.school, s.class, s.name, s.total, BATCH_AI_CACHE[key] || ""]);
+        data.push([s.school, s.class, s.name, s.total, batchAiCache[key] || ""]);
     });
     const ws = XLSX.utils.aoa_to_sheet(data); ws['!cols'] = [{ wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 80 }];
     XLSX.utils.book_append_sheet(wb, ws, "AI评语导出");
@@ -23739,6 +23902,10 @@ function getCurrentSnapshotPayload() {
         LAST_VA_DATA: readLastVaDataState(),
         VA_VIEW_MODE: readProgressViewModeState(),
         __PROGRESS_QUICK_MODE: readProgressQuickModeState(),
+        CURRENT_REPORT_STUDENT: readCurrentReportStudentState(),
+        BATCH_AI_CACHE: readBatchAICacheState(),
+        IS_BATCH_AI_RUNNING: readIsBatchAIRunningState(),
+        CURRENT_CONTEXT_STUDENTS: readCurrentContextStudentsState(),
         TEACHER_STATS: window.TEACHER_STATS || {},
         HISTORY_ARCHIVE: readHistoryArchiveState(),
         FB_CLASSES: readFbClassesState(),
@@ -23985,6 +24152,12 @@ function applySnapshotPayload(db) {
         vaViewMode: db.VA_VIEW_MODE || 'school',
         quickMode: db.__PROGRESS_QUICK_MODE || 'all'
     });
+    syncReportSessionRuntimeState({
+        currentReportStudent: db.CURRENT_REPORT_STUDENT || null,
+        batchAiCache: db.BATCH_AI_CACHE || {},
+        isBatchAiRunning: db.IS_BATCH_AI_RUNNING === true || String(db.IS_BATCH_AI_RUNNING || '').trim() === 'true',
+        currentContextStudents: db.CURRENT_CONTEXT_STUDENTS || []
+    });
     if (db.TEACHER_STATS) setTeacherStats(db.TEACHER_STATS);
     if (db.HISTORY_ARCHIVE) setHistoryArchiveState(db.HISTORY_ARCHIVE);
     if (db.FB_CLASSES) setFbClassesState(db.FB_CLASSES);
@@ -24040,6 +24213,10 @@ function saveProjectSnapshot() {
             LAST_VA_DATA: readLastVaDataState(),
             VA_VIEW_MODE: readProgressViewModeState(),
             __PROGRESS_QUICK_MODE: readProgressQuickModeState(),
+            CURRENT_REPORT_STUDENT: readCurrentReportStudentState(),
+            BATCH_AI_CACHE: readBatchAICacheState(),
+            IS_BATCH_AI_RUNNING: readIsBatchAIRunningState(),
+            CURRENT_CONTEXT_STUDENTS: readCurrentContextStudentsState(),
             MARGINAL_STUDENTS, POTENTIAL_STUDENTS_CACHE,
             MP_DATA_CACHE, FB_STUDENTS, FB_CLASSES, FB_SIMULATED_DATA, EXAM_DATA,
             EXAM_ROOMS, AID_GROUPS_CACHE, HISTORY_ARCHIVE, ROLLER_COASTER_STUDENTS,
@@ -24153,6 +24330,10 @@ function loadProjectSnapshot(input) {
                     LAST_VA_DATA: db.LAST_VA_DATA || [],
                     VA_VIEW_MODE: db.VA_VIEW_MODE || 'school',
                     __PROGRESS_QUICK_MODE: db.__PROGRESS_QUICK_MODE || 'all',
+                    CURRENT_REPORT_STUDENT: db.CURRENT_REPORT_STUDENT || null,
+                    BATCH_AI_CACHE: db.BATCH_AI_CACHE || {},
+                    IS_BATCH_AI_RUNNING: db.IS_BATCH_AI_RUNNING || false,
+                    CURRENT_CONTEXT_STUDENTS: db.CURRENT_CONTEXT_STUDENTS || [],
                     MARGINAL_STUDENTS: db.MARGINAL_STUDENTS || {},
                     POTENTIAL_STUDENTS_CACHE: db.POTENTIAL_STUDENTS_CACHE || [],
                     FB_STUDENTS: db.FB_STUDENTS || [],

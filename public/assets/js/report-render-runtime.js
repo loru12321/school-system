@@ -1086,7 +1086,9 @@ async function callLLM(prompt, onChunk, onFinish) {
 // 3. 生成单个学生评语
 function callAIForComment() {
     if (AI_DISABLED) return aiDisabledAlert();
-    const stu = CURRENT_REPORT_STUDENT;
+    const stu = typeof window.readCurrentReportStudentState === 'function'
+        ? window.readCurrentReportStudentState()
+        : window.CURRENT_REPORT_STUDENT;
     if (!stu) return alert("请先查询一名学生");
 
     const box = document.getElementById('ai-comment-box');

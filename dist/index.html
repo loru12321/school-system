@@ -69,6 +69,7 @@
     <script src="./assets/js/data-state-runtime.js?v=20260322-data-v1"></script>
     <script src="./assets/js/support-state-runtime.js?v=20260322-support-v1"></script>
     <script src="./assets/js/progress-state-runtime.js?v=20260322-progress-v1"></script>
+    <script src="./assets/js/report-session-state-runtime.js?v=20260322-report-session-v1"></script>
     <script src="./assets/js/cloud.js?v=20260322-teacher-v1"></script>
     <script src="./assets/js/cloud-workspace-runtime.js?v=20260322-teacher-v1"></script>
 
@@ -6403,11 +6404,11 @@
     </script>
 
     <!-- 核心逻辑脚本 -->
-<script src="./assets/js/app.js?v=20260322-data-v1"></script>
+<script src="./assets/js/app.js?v=20260322-report-session-v1"></script>
     <script src="./assets/js/school-normalization-runtime.js?v=20260321-localgrades-v4"></script>
     <script src="./assets/js/compare-shared-runtime.js?v=20260321-localgrades-v4"></script>
     <script src="./assets/js/report-compare-runtime.js?v=20260321-localgrades-v4"></script>
-    <script src="./assets/js/report-render-runtime.js?v=20260321-localgrades-v4"></script>
+    <script src="./assets/js/report-render-runtime.js?v=20260322-report-session-v1"></script>
     <script src="./assets/js/compare-selectors-runtime.js?v=20260321-localgrades-v4"></script>
     <script src="./assets/js/teacher-analysis-main-runtime.js?v=20260321-localgrades-v4"></script>
     <script src="./assets/js/town-submodule-compare-runtime.js?v=20260321-localgrades-v4"></script>
@@ -6801,7 +6802,8 @@
             
             clearCloudStudentCompareContext();
             setCloudCompareTarget(stu);
-            CURRENT_REPORT_STUDENT = stu;
+            if (typeof window.setCurrentReportStudentState === 'function') window.setCurrentReportStudentState(stu);
+            else window.CURRENT_REPORT_STUDENT = stu;
             
             document.getElementById('single-report-result').classList.remove('hidden');
             const container = document.getElementById('report-card-capture-area');

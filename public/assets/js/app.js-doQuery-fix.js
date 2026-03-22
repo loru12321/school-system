@@ -45,7 +45,8 @@ async function doQuery() {
 
     clearCloudStudentCompareContext();
     setCloudCompareTarget(stu);
-    CURRENT_REPORT_STUDENT = stu;
+    if (typeof window.setCurrentReportStudentState === 'function') window.setCurrentReportStudentState(stu);
+    else window.CURRENT_REPORT_STUDENT = stu;
 
     document.getElementById('single-report-result').classList.remove('hidden');
     const container = document.getElementById('report-card-capture-area');
