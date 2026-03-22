@@ -6,6 +6,7 @@
         target.setCloudCompareTargetState = runtime.setCloudCompareTarget;
         target.readCloudStudentCompareContextState = runtime.getCloudStudentCompareContext;
         target.setCloudStudentCompareContextState = runtime.setCloudStudentCompareContext;
+        target.clearCloudStudentCompareContextState = runtime.clearCloudStudentCompareContext;
         target.readCloudComparePrevDataBackupState = runtime.getCloudComparePrevDataBackup;
         target.setCloudComparePrevDataBackupState = runtime.setCloudComparePrevDataBackup;
         target.readDuplicateCompareExamsState = runtime.getDuplicateCompareExams;
@@ -228,6 +229,11 @@
         return snapshotCompareSessionState();
     }
 
+    function clearCloudStudentCompareContext() {
+        setCloudStudentCompareContext(null);
+        return snapshotCompareSessionState();
+    }
+
     function clearCompareSessionState(options = {}) {
         clearCloudCompareState();
         if (!options.keepDuplicateCompareExams) setDuplicateCompareExams([]);
@@ -253,6 +259,7 @@
         snapshotCompareSessionState,
         syncCompareSessionState,
         clearCloudCompareState,
+        clearCloudStudentCompareContext,
         clearCompareSessionState
     };
 });

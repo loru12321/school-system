@@ -1913,6 +1913,7 @@
         target.setCloudCompareTargetState = runtime.setCloudCompareTarget;
         target.readCloudStudentCompareContextState = runtime.getCloudStudentCompareContext;
         target.setCloudStudentCompareContextState = runtime.setCloudStudentCompareContext;
+        target.clearCloudStudentCompareContextState = runtime.clearCloudStudentCompareContext;
         target.readCloudComparePrevDataBackupState = runtime.getCloudComparePrevDataBackup;
         target.setCloudComparePrevDataBackupState = runtime.setCloudComparePrevDataBackup;
         target.readDuplicateCompareExamsState = runtime.getDuplicateCompareExams;
@@ -2135,6 +2136,11 @@
         return snapshotCompareSessionState();
     }
 
+    function clearCloudStudentCompareContext() {
+        setCloudStudentCompareContext(null);
+        return snapshotCompareSessionState();
+    }
+
     function clearCompareSessionState(options = {}) {
         clearCloudCompareState();
         if (!options.keepDuplicateCompareExams) setDuplicateCompareExams([]);
@@ -2160,6 +2166,7 @@
         snapshotCompareSessionState,
         syncCompareSessionState,
         clearCloudCompareState,
+        clearCloudStudentCompareContext,
         clearCompareSessionState
     };
 });
@@ -42883,6 +42890,16 @@ const setCloudStudentCompareContextSessionState = typeof window.setCloudStudentC
         window.CLOUD_STUDENT_COMPARE_CONTEXT = nextContext;
         return nextContext;
     });
+const clearCloudStudentCompareContextSessionState = typeof window.clearCloudStudentCompareContextState === 'function'
+    ? window.clearCloudStudentCompareContextState
+    : (() => {
+        setCloudStudentCompareContextSessionState(null);
+        return {
+            cloudCompareTarget: readCloudCompareTargetSessionState() || null,
+            cloudStudentCompareContext: null,
+            cloudComparePrevDataBackup: readCloudComparePrevDataBackupSessionState() ?? null
+        };
+    });
 const readCloudComparePrevDataBackupSessionState = typeof window.readCloudComparePrevDataBackupState === 'function'
     ? window.readCloudComparePrevDataBackupState
     : (() => (window.CLOUD_COMPARE_PREV_DATA_BACKUP ?? null));
@@ -43063,6 +43080,7 @@ function syncCloudContextToPrevData() {
 
 function clearCloudStudentCompareContext() {
     CLOUD_STUDENT_COMPARE_CONTEXT = null;
+    clearCloudStudentCompareContextSessionState();
     syncLocalCompareSessionState({ cloudStudentCompareContext: null });
     restorePrevDataFromCloudCompare();
 }
@@ -47747,6 +47765,16 @@ function exportMacroMultiPeriodComparison() {
             window.CLOUD_STUDENT_COMPARE_CONTEXT = nextContext;
             return nextContext;
         });
+    const clearCloudStudentCompareContextSessionState = typeof window.clearCloudStudentCompareContextState === 'function'
+        ? window.clearCloudStudentCompareContextState
+        : (() => {
+            setCloudStudentCompareContextSessionState(null);
+            return {
+                cloudCompareTarget: readCloudCompareTargetSessionState() || null,
+                cloudStudentCompareContext: null,
+                cloudComparePrevDataBackup: readCloudComparePrevDataBackupSessionState() ?? null
+            };
+        });
     const readCloudComparePrevDataBackupSessionState = typeof window.readCloudComparePrevDataBackupState === 'function'
         ? window.readCloudComparePrevDataBackupState
         : (() => (window.CLOUD_COMPARE_PREV_DATA_BACKUP ?? null));
@@ -47941,6 +47969,7 @@ function exportMacroMultiPeriodComparison() {
 
     function clearCloudStudentCompareContext() {
         CLOUD_STUDENT_COMPARE_CONTEXT = null;
+        clearCloudStudentCompareContextSessionState();
         syncCloudCompareGlobals();
         restorePrevDataFromCloudCompare();
     }

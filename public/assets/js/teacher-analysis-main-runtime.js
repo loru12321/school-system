@@ -2379,6 +2379,16 @@ const setCloudStudentCompareContextSessionState = typeof window.setCloudStudentC
         window.CLOUD_STUDENT_COMPARE_CONTEXT = nextContext;
         return nextContext;
     });
+const clearCloudStudentCompareContextSessionState = typeof window.clearCloudStudentCompareContextState === 'function'
+    ? window.clearCloudStudentCompareContextState
+    : (() => {
+        setCloudStudentCompareContextSessionState(null);
+        return {
+            cloudCompareTarget: readCloudCompareTargetSessionState() || null,
+            cloudStudentCompareContext: null,
+            cloudComparePrevDataBackup: readCloudComparePrevDataBackupSessionState() ?? null
+        };
+    });
 const readCloudComparePrevDataBackupSessionState = typeof window.readCloudComparePrevDataBackupState === 'function'
     ? window.readCloudComparePrevDataBackupState
     : (() => (window.CLOUD_COMPARE_PREV_DATA_BACKUP ?? null));
@@ -2559,6 +2569,7 @@ function syncCloudContextToPrevData() {
 
 function clearCloudStudentCompareContext() {
     CLOUD_STUDENT_COMPARE_CONTEXT = null;
+    clearCloudStudentCompareContextSessionState();
     syncLocalCompareSessionState({ cloudStudentCompareContext: null });
     restorePrevDataFromCloudCompare();
 }
