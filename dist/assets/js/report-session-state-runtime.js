@@ -4,6 +4,7 @@
         target.ReportSessionState = runtime;
         target.readCurrentReportStudentState = runtime.getCurrentReportStudent;
         target.setCurrentReportStudentState = runtime.setCurrentReportStudent;
+        target.clearCurrentReportStudentState = runtime.clearCurrentReportStudent;
         target.readBatchAICacheState = runtime.getBatchAICache;
         target.setBatchAICacheState = runtime.setBatchAICache;
         target.readIsBatchAIRunningState = runtime.getIsBatchAiRunning;
@@ -11,6 +12,7 @@
         target.readCurrentContextStudentsState = runtime.getCurrentContextStudents;
         target.setCurrentContextStudentsState = runtime.setCurrentContextStudents;
         target.syncReportSessionRuntimeState = runtime.syncReportSessionState;
+        target.clearReportSessionRuntimeState = runtime.clearReportSessionState;
         runtime.syncReportSessionState(runtime.snapshotReportSessionState());
         return runtime;
     }
@@ -61,6 +63,11 @@
         const nextStudent = normalizeStudent(student);
         root.CURRENT_REPORT_STUDENT = nextStudent;
         return nextStudent;
+    }
+
+    function clearCurrentReportStudent() {
+        root.CURRENT_REPORT_STUDENT = null;
+        return root.CURRENT_REPORT_STUDENT;
     }
 
     function getBatchAICache() {
@@ -144,6 +151,7 @@
     return {
         getCurrentReportStudent,
         setCurrentReportStudent,
+        clearCurrentReportStudent,
         getBatchAICache,
         setBatchAICache,
         getIsBatchAiRunning,

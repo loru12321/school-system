@@ -16,6 +16,7 @@ function run() {
     assert.strictEqual(root.ReportSessionState, reportSessionState);
     assert.strictEqual(typeof root.readCurrentReportStudentState, 'function');
     assert.strictEqual(typeof root.setCurrentReportStudentState, 'function');
+    assert.strictEqual(typeof root.clearCurrentReportStudentState, 'function');
     assert.strictEqual(typeof root.readBatchAICacheState, 'function');
     assert.strictEqual(typeof root.setBatchAICacheState, 'function');
     assert.strictEqual(typeof root.readIsBatchAIRunningState, 'function');
@@ -23,6 +24,7 @@ function run() {
     assert.strictEqual(typeof root.readCurrentContextStudentsState, 'function');
     assert.strictEqual(typeof root.setCurrentContextStudentsState, 'function');
     assert.strictEqual(typeof root.syncReportSessionRuntimeState, 'function');
+    assert.strictEqual(typeof root.clearReportSessionRuntimeState, 'function');
 
     assert.deepStrictEqual(reportSessionState.getCurrentReportStudent(), { name: 'Alice', class: '701', scores: { math: 96 } });
     assert.deepStrictEqual(reportSessionState.getBatchAICache(), { sample_key: 'stable output' });
@@ -47,11 +49,22 @@ function run() {
     assert.strictEqual(root.readIsBatchAIRunningState(), false);
     assert.deepStrictEqual(root.readCurrentContextStudentsState(), [{ name: 'Carol' }]);
 
+    root.clearCurrentReportStudentState();
+    assert.strictEqual(root.readCurrentReportStudentState(), null);
+    assert.deepStrictEqual(root.readBatchAICacheState(), { carol_key: 'math advantage' });
+    assert.strictEqual(root.readIsBatchAIRunningState(), false);
+    assert.deepStrictEqual(root.readCurrentContextStudentsState(), [{ name: 'Carol' }]);
+
     reportSessionState.clearReportSessionState();
     assert.strictEqual(reportSessionState.getCurrentReportStudent(), null);
     assert.deepStrictEqual(reportSessionState.getBatchAICache(), {});
     assert.strictEqual(reportSessionState.getIsBatchAiRunning(), false);
     assert.deepStrictEqual(reportSessionState.getCurrentContextStudents(), []);
+
+    const isolatedRoot = {};
+    const isolatedRuntime = createReportSessionStateRuntime(isolatedRoot);
+    assert.strictEqual(isolatedRoot.clearCurrentReportStudentState, isolatedRuntime.clearCurrentReportStudent);
+    assert.strictEqual(isolatedRoot.clearReportSessionRuntimeState, isolatedRuntime.clearReportSessionState);
 
     console.log('report-session-state-runtime tests passed');
 }
