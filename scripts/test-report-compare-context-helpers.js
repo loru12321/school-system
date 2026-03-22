@@ -34,7 +34,7 @@ function run() {
             activeElement: null
         },
         isCloudContextMatchStudent: (student) => String(student?.name || '').trim() === 'Alice',
-        isCloudContextLikelyCurrentTarget: () => false,
+        isCloudContextLikelyCurrentTarget: (student) => String(student?.name || '').trim() === 'Alicia',
         doQuery: () => {},
         getComparisonTotalSubjects: () => [],
         getComparisonStudentView: (student) => student,
@@ -67,9 +67,11 @@ function run() {
     assert.strictEqual(typeof context.window.getCloudPreviousSubjectScores, 'function');
 
     const student = { name: 'Alice', class: '901' };
+    const likelyTargetStudent = { name: 'Alicia', class: '901' };
     const nonMatchStudent = { name: 'Bob', class: '902' };
 
     assert.deepStrictEqual(context.window.getCloudCompareHint(student), cloudCompareContext);
+    assert.deepStrictEqual(context.window.getCloudCompareHint(likelyTargetStudent), cloudCompareContext);
     assert.strictEqual(context.window.getCloudCompareHint(nonMatchStudent), null);
     assert.deepStrictEqual(context.window.getCloudPreviousRecord(student), cloudCompareContext.previousRecord);
     assert.strictEqual(context.window.getCloudPreviousRecord(nonMatchStudent), null);

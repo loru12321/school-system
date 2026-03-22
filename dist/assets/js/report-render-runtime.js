@@ -30,6 +30,15 @@ const readDuplicateCompareExamsState = typeof window.readDuplicateCompareExamsSt
         return [];
     });
 
+function resolveCloudCompareHint(student) {
+    if (typeof getCloudCompareHint === 'function') {
+        return getCloudCompareHint(student);
+    }
+    return (isCloudContextMatchStudent(student) || isCloudContextLikelyCurrentTarget(student))
+        ? readCloudStudentCompareContextSessionState()
+        : null;
+}
+
 function getTrendBadge(current, previous, type = 'score') {
     if (previous === undefined || previous === null || previous === '-' || previous === '') return '';
 
@@ -102,11 +111,7 @@ function renderSingleReportCardHTML(stu, mode) {
     const reportStu = getComparisonStudentView(stu, RAW_DATA);
 
     // 获取对比数据（云端上下文优先，避免回退导致“看不到对比”）
-    const cloudHint = typeof getCloudCompareHint === 'function'
-        ? getCloudCompareHint(reportStu)
-        : ((isCloudContextMatchStudent(reportStu) || isCloudContextLikelyCurrentTarget(reportStu))
-            ? readCloudStudentCompareContextSessionState()
-            : null);
+    const cloudHint = resolveCloudCompareHint(reportStu);
     const prevStu = cloudHint?.previousRecord || findPreviousRecord(reportStu);
     const reportExamHistory = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(reportStu) : [];
     const currentExamId = getEffectiveCurrentExamId();
@@ -395,11 +400,7 @@ function renderInstagramCard(stu) {
     const rank = safeGet(reportStu, 'ranks.total.township', '-');
     const pct = (typeof rank === 'number') ? ((1 - rank / totalStudents) * 100).toFixed(0) : '-';
     const avatarLetter = stu.name.charAt(0); // 头像取首字
-    const cloudHint = typeof getCloudCompareHint === 'function'
-        ? getCloudCompareHint(reportStu)
-        : ((isCloudContextMatchStudent(reportStu) || isCloudContextLikelyCurrentTarget(reportStu))
-            ? readCloudStudentCompareContextSessionState()
-            : null);
+    const cloudHint = resolveCloudCompareHint(reportStu);
 
     // 判断是否为单校模式
     const isSingleSchool = Object.keys(SCHOOLS).length <= 1;

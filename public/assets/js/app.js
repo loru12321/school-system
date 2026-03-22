@@ -15954,6 +15954,9 @@ function getComparisonTotalValue(record, subjects) {
 }
 
 function readCloudPreviousRecordForStudent(student) {
+    if (typeof window.getCloudCompareHint === 'function') {
+        return window.getCloudCompareHint(student)?.previousRecord || null;
+    }
     if (typeof window.getCloudPreviousRecord === 'function') {
         return window.getCloudPreviousRecord(student) || null;
     }
