@@ -1,21 +1,30 @@
 (function (root, factory) {
+    function installCompareSummaryState(target, runtime) {
+        if (!target || !runtime) return;
+        target.readMultiPeriodCompareCacheState = runtime.getMultiPeriodCompareCache;
+        target.setMultiPeriodCompareCacheState = runtime.setMultiPeriodCompareCache;
+        target.readAllTeachersDiffCacheState = runtime.getAllTeachersDiffCache;
+        target.setAllTeachersDiffCacheState = runtime.setAllTeachersDiffCache;
+        target.syncCompareSummaryRuntimeState = runtime.syncCompareSummaryState;
+        target.clearCompareSummaryRuntimeState = runtime.clearCompareSummaryState;
+    }
+
     const runtime = factory(root || {});
 
     if (typeof module === 'object' && module.exports) {
         const createRuntime = function (overrideRoot) {
-            return factory(overrideRoot || root || {});
+            const nextRoot = overrideRoot || root || {};
+            const nextRuntime = factory(nextRoot);
+            installCompareSummaryState(nextRoot, nextRuntime);
+            return nextRuntime;
         };
         createRuntime.runtime = runtime;
         module.exports = createRuntime;
     }
 
     if (!root || root.CompareSummaryState) return;
+    installCompareSummaryState(root, runtime);
     root.CompareSummaryState = runtime;
-    root.readMultiPeriodCompareCacheState = runtime.getMultiPeriodCompareCache;
-    root.setMultiPeriodCompareCacheState = runtime.setMultiPeriodCompareCache;
-    root.readAllTeachersDiffCacheState = runtime.getAllTeachersDiffCache;
-    root.setAllTeachersDiffCacheState = runtime.setAllTeachersDiffCache;
-    root.syncCompareSummaryRuntimeState = runtime.syncCompareSummaryState;
     runtime.syncCompareSummaryState(runtime.snapshotCompareSummaryState());
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createCompareSummaryStateRuntime(root) {
     function normalizeObject(value) {

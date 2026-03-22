@@ -1,23 +1,32 @@
 (function (root, factory) {
+    function installCompareResultState(target, runtime) {
+        if (!target || !runtime) return;
+        target.readMacroCompareCacheState = runtime.getMacroCompareCache;
+        target.setMacroCompareCacheState = runtime.setMacroCompareCache;
+        target.readTeacherCompareCacheState = runtime.getTeacherCompareCache;
+        target.setTeacherCompareCacheState = runtime.setTeacherCompareCache;
+        target.readStudentCompareCacheState = runtime.getStudentCompareCache;
+        target.setStudentCompareCacheState = runtime.setStudentCompareCache;
+        target.syncCompareResultRuntimeState = runtime.syncCompareResultState;
+        target.clearCompareResultRuntimeState = runtime.clearCompareResultState;
+    }
+
     const runtime = factory(root || {});
 
     if (typeof module === 'object' && module.exports) {
         const createRuntime = function (overrideRoot) {
-            return factory(overrideRoot || root || {});
+            const nextRoot = overrideRoot || root || {};
+            const nextRuntime = factory(nextRoot);
+            installCompareResultState(nextRoot, nextRuntime);
+            return nextRuntime;
         };
         createRuntime.runtime = runtime;
         module.exports = createRuntime;
     }
 
     if (!root || root.CompareResultState) return;
+    installCompareResultState(root, runtime);
     root.CompareResultState = runtime;
-    root.readMacroCompareCacheState = runtime.getMacroCompareCache;
-    root.setMacroCompareCacheState = runtime.setMacroCompareCache;
-    root.readTeacherCompareCacheState = runtime.getTeacherCompareCache;
-    root.setTeacherCompareCacheState = runtime.setTeacherCompareCache;
-    root.readStudentCompareCacheState = runtime.getStudentCompareCache;
-    root.setStudentCompareCacheState = runtime.setStudentCompareCache;
-    root.syncCompareResultRuntimeState = runtime.syncCompareResultState;
     runtime.syncCompareResultState(runtime.snapshotCompareResultState());
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createCompareResultStateRuntime(root) {
     function normalizeCache(value) {
