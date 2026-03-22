@@ -40,6 +40,32 @@ function shouldIgnoreConsoleMessage(msg) {
         || text.includes('Fallback font will be used while loading');
 }
 
+function isExecutionContextDestroyed(error) {
+    const message = String(error?.message || error || '');
+    return message.includes('Execution context was destroyed')
+        || message.includes('Cannot find context with specified id');
+}
+
+async function waitForPageStability(page, timeout = 15000) {
+    await page.waitForLoadState('domcontentloaded', { timeout }).catch(() => { });
+    await page.waitForTimeout(300);
+}
+
+async function withNavigationRetry(page, task, options = {}) {
+    const attempts = Math.max(1, Number(options.attempts || 3));
+    let lastError = null;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+        try {
+            return await task(attempt);
+        } catch (error) {
+            lastError = error;
+            if (!isExecutionContextDestroyed(error) || attempt >= attempts) throw error;
+            await waitForPageStability(page);
+        }
+    }
+    throw lastError;
+}
+
 async function login(page, user, pass) {
     await page.goto(process.env.SMOKE_URL || 'https://schoolsystem.com.cn/', {
         waitUntil: 'domcontentloaded',
@@ -51,22 +77,26 @@ async function login(page, user, pass) {
     await page.fill('#login-pass', pass);
     await page.click('button[onclick="window.Auth?.login()"]');
 
-    await page.waitForFunction(() => {
-        const overlay = document.getElementById('login-overlay');
-        return overlay && getComputedStyle(overlay).display === 'none';
-    }, { timeout: 30000 });
+    await withNavigationRetry(page, async () => {
+        await page.waitForFunction(() => {
+            const overlay = document.getElementById('login-overlay');
+            return overlay && getComputedStyle(overlay).display === 'none';
+        }, { timeout: 30000 });
+    }, { attempts: 4 });
 
     await ensureCohortEntered(page);
 
-    await page.waitForFunction(() => {
-        const app = document.getElementById('app');
-        if (!app) return false;
-        return getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden');
-    }, { timeout: 30000 });
+    await withNavigationRetry(page, async () => {
+        await page.waitForFunction(() => {
+            const app = document.getElementById('app');
+            if (!app) return false;
+            return getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden');
+        }, { timeout: 30000 });
+    }, { attempts: 4 });
 }
 
 async function ensureCohortEntered(page) {
-    const state = await page.evaluate(() => {
+    const state = await withNavigationRetry(page, () => page.evaluate(() => {
         const mask = document.getElementById('mode-mask');
         const input = document.getElementById('entry-cohort-year');
         const selector = document.getElementById('cohort-selector');
@@ -86,7 +116,7 @@ async function ensureCohortEntered(page) {
                 ? Array.from(selector.options || []).map((option) => String(option.value || '').trim()).filter(Boolean)
                 : []
         };
-    });
+    }), { attempts: 4 });
 
     if (!state.maskVisible) return state;
 
@@ -101,19 +131,41 @@ async function ensureCohortEntered(page) {
 
     if (!candidate) return state;
 
-    const input = page.locator('#entry-cohort-year');
-    if (await input.count()) {
-        await input.fill(candidate);
-    }
-    await page.click('button[onclick="enterCohortFromMask()"]');
-    await page.waitForFunction(() => {
-        const mask = document.getElementById('mode-mask');
-        const app = document.getElementById('app');
-        return (!mask || getComputedStyle(mask).display === 'none')
-            && !!app
-            && getComputedStyle(app).display !== 'none'
-            && !app.classList.contains('hidden');
-    }, { timeout: 20000 });
+    await withNavigationRetry(page, async () => {
+        await page.waitForFunction(() => (
+            typeof window.enterCohortFromMask === 'function'
+            && (() => {
+                try {
+                    return typeof CohortManager !== 'undefined'
+                        && !!CohortManager
+                        && typeof CohortManager.addCohort === 'function';
+                } catch (error) {
+                    return false;
+                }
+            })()
+        ), { timeout: 20000 });
+        const input = page.locator('#entry-cohort-year');
+        if (await input.count()) {
+            await input.fill(candidate);
+        }
+        await page.evaluate(() => {
+            if (typeof window.enterCohortFromMask === 'function') {
+                window.enterCohortFromMask();
+                return;
+            }
+            const button = document.querySelector('button[onclick="enterCohortFromMask()"]');
+            if (button) button.click();
+        });
+        await waitForPageStability(page, 10000);
+        await page.waitForFunction(() => {
+            const mask = document.getElementById('mode-mask');
+            const app = document.getElementById('app');
+            return (!mask || getComputedStyle(mask).display === 'none')
+                && !!app
+                && getComputedStyle(app).display !== 'none'
+                && !app.classList.contains('hidden');
+        }, { timeout: 20000 });
+    }, { attempts: 4 });
 }
 
 async function waitForAppReady(page) {

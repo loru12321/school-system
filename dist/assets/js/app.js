@@ -1349,11 +1349,30 @@ function setDataManagerSyncStateValue(syncState) {
     return nextState;
 }
 
+function readLateBoundState(readValue, fallbackValue) {
+    try {
+        const value = readValue();
+        return value === undefined ? fallbackValue : value;
+    } catch (error) {
+        return fallbackValue;
+    }
+}
+
+function writeLateBoundState(writeValue, value) {
+    try {
+        writeValue(value);
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
+
 function readPrevDataState() {
+    const latePrevData = readLateBoundState(() => PREV_DATA, []);
     const nextRows = SupportStateRuntime && typeof SupportStateRuntime.getPrevData === 'function'
         ? (SupportStateRuntime.getPrevData() || [])
-        : (window.PREV_DATA && Array.isArray(window.PREV_DATA) ? window.PREV_DATA : (typeof PREV_DATA !== 'undefined' && Array.isArray(PREV_DATA) ? PREV_DATA : []));
-    if (typeof PREV_DATA !== 'undefined') PREV_DATA = nextRows;
+        : (window.PREV_DATA && Array.isArray(window.PREV_DATA) ? window.PREV_DATA : (Array.isArray(latePrevData) ? latePrevData : []));
+    writeLateBoundState((value) => { PREV_DATA = value; }, nextRows);
     window.PREV_DATA = nextRows;
     return nextRows;
 }
@@ -1362,16 +1381,17 @@ function setPrevDataState(rows) {
     const nextRows = SupportStateRuntime && typeof SupportStateRuntime.setPrevData === 'function'
         ? (SupportStateRuntime.setPrevData(rows) || [])
         : (Array.isArray(rows) ? rows : []);
-    if (typeof PREV_DATA !== 'undefined') PREV_DATA = nextRows;
+    writeLateBoundState((value) => { PREV_DATA = value; }, nextRows);
     window.PREV_DATA = nextRows;
     return nextRows;
 }
 
 function readHistoryArchiveState() {
+    const lateHistoryArchive = readLateBoundState(() => HISTORY_ARCHIVE, {});
     const nextArchive = SupportStateRuntime && typeof SupportStateRuntime.getHistoryArchive === 'function'
         ? (SupportStateRuntime.getHistoryArchive() || {})
-        : (window.HISTORY_ARCHIVE && typeof window.HISTORY_ARCHIVE === 'object' ? window.HISTORY_ARCHIVE : (typeof HISTORY_ARCHIVE !== 'undefined' && HISTORY_ARCHIVE && typeof HISTORY_ARCHIVE === 'object' ? HISTORY_ARCHIVE : {}));
-    if (typeof HISTORY_ARCHIVE !== 'undefined') HISTORY_ARCHIVE = nextArchive;
+        : (window.HISTORY_ARCHIVE && typeof window.HISTORY_ARCHIVE === 'object' ? window.HISTORY_ARCHIVE : (lateHistoryArchive && typeof lateHistoryArchive === 'object' ? lateHistoryArchive : {}));
+    writeLateBoundState((value) => { HISTORY_ARCHIVE = value; }, nextArchive);
     window.HISTORY_ARCHIVE = nextArchive;
     return nextArchive;
 }
@@ -1380,16 +1400,17 @@ function setHistoryArchiveState(archive) {
     const nextArchive = SupportStateRuntime && typeof SupportStateRuntime.setHistoryArchive === 'function'
         ? (SupportStateRuntime.setHistoryArchive(archive) || {})
         : (archive && typeof archive === 'object' && !Array.isArray(archive) ? archive : {});
-    if (typeof HISTORY_ARCHIVE !== 'undefined') HISTORY_ARCHIVE = nextArchive;
+    writeLateBoundState((value) => { HISTORY_ARCHIVE = value; }, nextArchive);
     window.HISTORY_ARCHIVE = nextArchive;
     return nextArchive;
 }
 
 function readFbClassesState() {
+    const lateFbClasses = readLateBoundState(() => FB_CLASSES, []);
     const nextClasses = SupportStateRuntime && typeof SupportStateRuntime.getFbClasses === 'function'
         ? (SupportStateRuntime.getFbClasses() || [])
-        : (window.FB_CLASSES && Array.isArray(window.FB_CLASSES) ? window.FB_CLASSES : (typeof FB_CLASSES !== 'undefined' && Array.isArray(FB_CLASSES) ? FB_CLASSES : []));
-    if (typeof FB_CLASSES !== 'undefined') FB_CLASSES = nextClasses;
+        : (window.FB_CLASSES && Array.isArray(window.FB_CLASSES) ? window.FB_CLASSES : (Array.isArray(lateFbClasses) ? lateFbClasses : []));
+    writeLateBoundState((value) => { FB_CLASSES = value; }, nextClasses);
     window.FB_CLASSES = nextClasses;
     return nextClasses;
 }
@@ -1398,16 +1419,17 @@ function setFbClassesState(classes) {
     const nextClasses = SupportStateRuntime && typeof SupportStateRuntime.setFbClasses === 'function'
         ? (SupportStateRuntime.setFbClasses(classes) || [])
         : (Array.isArray(classes) ? classes : []);
-    if (typeof FB_CLASSES !== 'undefined') FB_CLASSES = nextClasses;
+    writeLateBoundState((value) => { FB_CLASSES = value; }, nextClasses);
     window.FB_CLASSES = nextClasses;
     return nextClasses;
 }
 
 function readMpSnapshotsState() {
+    const lateMpSnapshots = readLateBoundState(() => MP_SNAPSHOTS, {});
     const nextSnapshots = SupportStateRuntime && typeof SupportStateRuntime.getMpSnapshots === 'function'
         ? (SupportStateRuntime.getMpSnapshots() || {})
-        : (window.MP_SNAPSHOTS && typeof window.MP_SNAPSHOTS === 'object' ? window.MP_SNAPSHOTS : (typeof MP_SNAPSHOTS !== 'undefined' && MP_SNAPSHOTS && typeof MP_SNAPSHOTS === 'object' ? MP_SNAPSHOTS : {}));
-    if (typeof MP_SNAPSHOTS !== 'undefined') MP_SNAPSHOTS = nextSnapshots;
+        : (window.MP_SNAPSHOTS && typeof window.MP_SNAPSHOTS === 'object' ? window.MP_SNAPSHOTS : (lateMpSnapshots && typeof lateMpSnapshots === 'object' ? lateMpSnapshots : {}));
+    writeLateBoundState((value) => { MP_SNAPSHOTS = value; }, nextSnapshots);
     window.MP_SNAPSHOTS = nextSnapshots;
     return nextSnapshots;
 }
@@ -1416,7 +1438,7 @@ function setMpSnapshotsState(snapshots) {
     const nextSnapshots = SupportStateRuntime && typeof SupportStateRuntime.setMpSnapshots === 'function'
         ? (SupportStateRuntime.setMpSnapshots(snapshots) || {})
         : (snapshots && typeof snapshots === 'object' && !Array.isArray(snapshots) ? snapshots : {});
-    if (typeof MP_SNAPSHOTS !== 'undefined') MP_SNAPSHOTS = nextSnapshots;
+    writeLateBoundState((value) => { MP_SNAPSHOTS = value; }, nextSnapshots);
     window.MP_SNAPSHOTS = nextSnapshots;
     return nextSnapshots;
 }
@@ -1424,18 +1446,23 @@ function setMpSnapshotsState(snapshots) {
 function syncSupportRuntimeState(patch = {}) {
     if (SupportStateRuntime && typeof SupportStateRuntime.syncSupportState === 'function') {
         const snapshot = SupportStateRuntime.syncSupportState(patch);
-        if (typeof TARGETS !== 'undefined') TARGETS = snapshot.targets || {};
-        if (typeof PREV_DATA !== 'undefined') PREV_DATA = snapshot.prevData || [];
-        if (typeof HISTORY_ARCHIVE !== 'undefined') HISTORY_ARCHIVE = snapshot.historyArchive || {};
-        if (typeof FB_CLASSES !== 'undefined') FB_CLASSES = snapshot.fbClasses || [];
-        if (typeof MP_SNAPSHOTS !== 'undefined') MP_SNAPSHOTS = snapshot.mpSnapshots || {};
-        window.TARGETS = TARGETS;
-        window.PREV_DATA = PREV_DATA;
-        window.HISTORY_ARCHIVE = HISTORY_ARCHIVE;
-        window.FB_CLASSES = FB_CLASSES;
-        window.MP_SNAPSHOTS = MP_SNAPSHOTS;
+        const nextTargets = snapshot.targets || {};
+        const nextPrevData = snapshot.prevData || [];
+        const nextHistoryArchive = snapshot.historyArchive || {};
+        const nextFbClasses = snapshot.fbClasses || [];
+        const nextMpSnapshots = snapshot.mpSnapshots || {};
+        writeLateBoundState((value) => { TARGETS = value; }, nextTargets);
+        writeLateBoundState((value) => { PREV_DATA = value; }, nextPrevData);
+        writeLateBoundState((value) => { HISTORY_ARCHIVE = value; }, nextHistoryArchive);
+        writeLateBoundState((value) => { FB_CLASSES = value; }, nextFbClasses);
+        writeLateBoundState((value) => { MP_SNAPSHOTS = value; }, nextMpSnapshots);
+        window.TARGETS = readLateBoundState(() => TARGETS, nextTargets);
+        window.PREV_DATA = readLateBoundState(() => PREV_DATA, nextPrevData);
+        window.HISTORY_ARCHIVE = readLateBoundState(() => HISTORY_ARCHIVE, nextHistoryArchive);
+        window.FB_CLASSES = readLateBoundState(() => FB_CLASSES, nextFbClasses);
+        window.MP_SNAPSHOTS = readLateBoundState(() => MP_SNAPSHOTS, nextMpSnapshots);
         ensureSupportSysVars().indicator = snapshot.indicator || { ind1: '', ind2: '' };
-        ensureSupportSysVars().targets = TARGETS;
+        ensureSupportSysVars().targets = window.TARGETS;
         ensureSupportSysVars().schoolAliases = snapshot.schoolAliases || [];
         ensureSupportSysVars().dataManagerSyncState = snapshot.dataManagerSyncState || {};
         return snapshot;
@@ -7268,16 +7295,16 @@ function syncRuntimeStateToWindow() {
         targets: TARGETS,
         schoolAliases: Array.isArray(window.SYS_VARS?.schoolAliases) ? window.SYS_VARS.schoolAliases : readSchoolAliasState(),
         dataManagerSyncState: window.SYS_VARS?.dataManagerSyncState || readDataManagerSyncStateValue(),
-        prevData: typeof PREV_DATA !== 'undefined' ? PREV_DATA : readPrevDataState(),
-        historyArchive: typeof HISTORY_ARCHIVE !== 'undefined' ? HISTORY_ARCHIVE : readHistoryArchiveState(),
-        fbClasses: typeof FB_CLASSES !== 'undefined' ? FB_CLASSES : readFbClassesState(),
-        mpSnapshots: typeof MP_SNAPSHOTS !== 'undefined' ? MP_SNAPSHOTS : readMpSnapshotsState()
+        prevData: readLateBoundState(() => PREV_DATA, readPrevDataState()),
+        historyArchive: readLateBoundState(() => HISTORY_ARCHIVE, readHistoryArchiveState()),
+        fbClasses: readLateBoundState(() => FB_CLASSES, readFbClassesState()),
+        mpSnapshots: readLateBoundState(() => MP_SNAPSHOTS, readMpSnapshotsState())
     });
     TARGETS = supportSnapshot.targets || {};
-    if (typeof PREV_DATA !== 'undefined') PREV_DATA = supportSnapshot.prevData || [];
-    if (typeof HISTORY_ARCHIVE !== 'undefined') HISTORY_ARCHIVE = supportSnapshot.historyArchive || {};
-    if (typeof FB_CLASSES !== 'undefined') FB_CLASSES = supportSnapshot.fbClasses || [];
-    if (typeof MP_SNAPSHOTS !== 'undefined') MP_SNAPSHOTS = supportSnapshot.mpSnapshots || {};
+    writeLateBoundState((value) => { PREV_DATA = value; }, supportSnapshot.prevData || []);
+    writeLateBoundState((value) => { HISTORY_ARCHIVE = value; }, supportSnapshot.historyArchive || {});
+    writeLateBoundState((value) => { FB_CLASSES = value; }, supportSnapshot.fbClasses || []);
+    writeLateBoundState((value) => { MP_SNAPSHOTS = value; }, supportSnapshot.mpSnapshots || {});
     const teacherSnapshot = syncTeacherRuntimeState({
         teacherMap: TEACHER_MAP,
         teacherSchoolMap: TEACHER_SCHOOL_MAP,
