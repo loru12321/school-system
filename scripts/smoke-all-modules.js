@@ -120,7 +120,14 @@ async function waitForAppReady(page) {
     await page.waitForFunction(() => {
         const termId = localStorage.getItem('CURRENT_TERM_ID') || '';
         const cohortId = localStorage.getItem('CURRENT_COHORT_ID') || '';
-        const school = String(window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '').trim();
+    const school = String(
+        (window.SchoolState && typeof window.SchoolState.getCurrentSchool === 'function'
+            ? window.SchoolState.getCurrentSchool()
+            : '')
+        || window.MY_SCHOOL
+        || localStorage.getItem('MY_SCHOOL')
+        || ''
+    ).trim();
         const scoresReady = Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0;
         return !!termId && !!cohortId && !!school && scoresReady;
     }, { timeout: 60000 });
@@ -429,7 +436,9 @@ async function smokeDataManagerTab(page, id) {
             roleText: document.body.innerText.includes('Role:'),
             termId: localStorage.getItem('CURRENT_TERM_ID') || '',
             cohortId: localStorage.getItem('CURRENT_COHORT_ID') || '',
-            mySchool: window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '',
+        mySchool: (window.SchoolState && typeof window.SchoolState.getCurrentSchool === 'function'
+            ? window.SchoolState.getCurrentSchool()
+            : '') || window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '',
             scoreCount: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0
         })),
         switchModules: [],

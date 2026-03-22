@@ -97,6 +97,13 @@
     }
 
     function getCurrentSchool() {
+        if (window.SchoolState && typeof window.SchoolState.getCurrentSchool === 'function') {
+            return String(
+                getCurrentUser()?.school ||
+                window.SchoolState.getCurrentSchool() ||
+                ''
+            ).trim();
+        }
         return String(
             getCurrentUser()?.school ||
             window.MY_SCHOOL ||

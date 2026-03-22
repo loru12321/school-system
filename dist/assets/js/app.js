@@ -963,6 +963,50 @@ function clearExamRuntimeState(options = {}) {
     return syncExamRuntimeState({});
 }
 
+const SchoolStateRuntime = window.SchoolState || null;
+
+function readCurrentSchool() {
+    const nextSchool = SchoolStateRuntime && typeof SchoolStateRuntime.getCurrentSchool === 'function'
+        ? String(SchoolStateRuntime.getCurrentSchool() || '').trim()
+        : String(
+            (typeof MY_SCHOOL !== 'undefined' ? MY_SCHOOL : '')
+            || window.MY_SCHOOL
+            || localStorage.getItem('MY_SCHOOL')
+            || ''
+        ).trim();
+    if (typeof MY_SCHOOL !== 'undefined') MY_SCHOOL = nextSchool;
+    window.MY_SCHOOL = nextSchool;
+    return nextSchool;
+}
+
+function writeCurrentSchool(school) {
+    const nextSchool = String(school || '').trim();
+    if (SchoolStateRuntime && typeof SchoolStateRuntime.setCurrentSchool === 'function') {
+        SchoolStateRuntime.setCurrentSchool(nextSchool);
+    } else if (nextSchool) {
+        localStorage.setItem('MY_SCHOOL', nextSchool);
+        window.MY_SCHOOL = nextSchool;
+    } else {
+        localStorage.removeItem('MY_SCHOOL');
+        window.MY_SCHOOL = '';
+    }
+    if (typeof MY_SCHOOL !== 'undefined') MY_SCHOOL = nextSchool;
+    window.MY_SCHOOL = nextSchool;
+    return nextSchool;
+}
+
+function clearCurrentSchool() {
+    if (SchoolStateRuntime && typeof SchoolStateRuntime.clearCurrentSchool === 'function') {
+        SchoolStateRuntime.clearCurrentSchool();
+    } else {
+        localStorage.removeItem('MY_SCHOOL');
+        window.MY_SCHOOL = '';
+    }
+    if (typeof MY_SCHOOL !== 'undefined') MY_SCHOOL = '';
+    window.MY_SCHOOL = '';
+    return '';
+}
+
 // 🔐 权限与账号管理系统核心
 const Auth = {
     currentUser: null,
@@ -1077,7 +1121,7 @@ const Auth = {
                 if (classRow && classRow.school) return String(classRow.school).trim();
             }
         }
-        return String(MY_SCHOOL || '').trim();
+        return readCurrentSchool();
     },
 
     tryLocalManagedLogin: function (username, password, inputClass = '') {
@@ -1327,12 +1371,12 @@ const Auth = {
                 // A. 如果有学校绑定 (除管理员外通常都有)
                 if (matchedUser.school) {
                     // 自动设置本校全局变量
-                    window.MY_SCHOOL = matchedUser.school;
+                    writeCurrentSchool(matchedUser.school);
 
                     // 尝试更新界面上的“选择本校”下拉框
                     const sel = document.getElementById('mySchoolSelect');
                     if (sel) {
-                        sel.value = matchedUser.school;
+                        sel.value = readCurrentSchool();
                         // 触发一次 change 事件以更新相关下拉框 (如班级列表)
                         sel.dispatchEvent(new Event('change'));
                     }
@@ -4720,7 +4764,7 @@ const DataManager = {
         const sel = document.getElementById('dm-teacher-school-select');
         const selectedSchool = sel ? sel.value : '';
         if (selectedSchool) {
-            window.MY_SCHOOL = selectedSchool;
+            writeCurrentSchool(selectedSchool);
             const mainSelect = document.getElementById('mySchoolSelect');
             if (mainSelect) {
                 mainSelect.value = selectedSchool;
@@ -5216,9 +5260,8 @@ const DataManager = {
             }
 
             // 如果找到了有效学校，且当前未设置或不一致，则强制自动同步
-            if (autoDetectedSchool && window.MY_SCHOOL !== autoDetectedSchool) {
-                window.MY_SCHOOL = autoDetectedSchool;
-                localStorage.setItem('MY_SCHOOL', autoDetectedSchool);
+            if (autoDetectedSchool && readCurrentSchool() !== autoDetectedSchool) {
+                writeCurrentSchool(autoDetectedSchool);
                 console.log(`🤖 系统已自动将本校锁定为：${autoDetectedSchool}`);
 
                 // 同步更新主界面的下拉框 UI
@@ -6475,7 +6518,7 @@ window.addEventListener('load', async () => {
         THRESHOLDS = db.THRESHOLDS || {};
         setTeacherMap(db.TEACHER_MAP || {});
         setTeacherSchoolMap(db.TEACHER_SCHOOL_MAP || {});
-        MY_SCHOOL = db.MY_SCHOOL || "";
+        writeCurrentSchool(db.MY_SCHOOL || '');
         CONFIG = db.CONFIG || {};
 
         // 恢复账号 (分发版核心)
@@ -6545,7 +6588,7 @@ window.addEventListener('load', async () => {
                 THRESHOLDS = backup.THRESHOLDS || {};
                 setTeacherMap(backup.TEACHER_MAP || {});
                 setTeacherSchoolMap(backup.TEACHER_SCHOOL_MAP || {});
-                MY_SCHOOL = backup.MY_SCHOOL || "";
+                writeCurrentSchool(backup.MY_SCHOOL || '');
                 if (backup.CONFIG) CONFIG = backup.CONFIG;
 
                 // ★★★ 恢复账号 ★★★
@@ -6711,6 +6754,7 @@ let RAW_DATA = [], SCHOOLS = {}, SUBJECTS = [], THRESHOLDS = {}, TARGETS = {};
 var TEACHER_MAP = {}, TEACHER_SCHOOL_MAP = {}, MY_SCHOOL = "", TEACHER_STATS = {};
 window.TEACHER_MAP = TEACHER_MAP;
 window.TEACHER_SCHOOL_MAP = TEACHER_SCHOOL_MAP;
+MY_SCHOOL = readCurrentSchool();
 window.MY_SCHOOL = MY_SCHOOL;
 window.TEACHER_STATS = TEACHER_STATS;
 
@@ -9102,7 +9146,7 @@ let TM_VERSION_DIFF_STATE = {
 function tmGetCurrentGatewayScope() {
     const school = tmGetSelectDisplayValue(
         ['teacherCompareSchool', 'mySchoolSelect', 'studentSchoolSelect'],
-        String(window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '').trim() || ''
+        readCurrentSchool() || ''
     );
     return {
         project_key: readWorkspaceProjectKey() || 'cohort::2022',
@@ -10281,7 +10325,7 @@ function tmRenderModuleStateBar(moduleId) {
         : null;
     const exams = tmGetAvailableExamList();
     const teacherCoverage = tmGetTeacherCoverageFromMap();
-    const fallbackSchool = String(window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '').trim() || '未识别';
+    const fallbackSchool = readCurrentSchool() || '未识别';
     const teacherStateMap = {
         synced: { text: '已同步并加载', tone: 'ok' },
         synced_unloaded: { text: '已同步待恢复', tone: 'warn' },
@@ -10907,7 +10951,7 @@ function smBuildMarginalSummary() {
 }
 
 function smGetCurrentStudentContext() {
-    const fallbackSchool = String(window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '').trim();
+    const fallbackSchool = readCurrentSchool();
     const schoolValue = tmGetSelectRawValue(
         ['studentSchoolSelect', 'progressSchoolSelect', 'progressCompareSchool', 'marginalSchoolSelect', 'sbSchoolSelect', 'potSchoolSelect', 'segSchoolSelect', 'corrSchoolSelect', 'sel-school'],
         fallbackSchool
@@ -12273,7 +12317,7 @@ function switchTab(id) {
             // 策略A: 如果全镇只有一所学校（单校版），直接锁定
             const schoolNames = Object.keys(SCHOOLS);
             if (schoolNames.length === 1) {
-                MY_SCHOOL = schoolNames[0];
+                writeCurrentSchool(schoolNames[0]);
             }
             // 策略B: 如果有多所学校，根据任课表反推“最可能的学校”
             else if (typeof TEACHER_MAP !== 'undefined' && Object.keys(TEACHER_MAP).length > 0) {
@@ -12302,15 +12346,15 @@ function switchTab(id) {
                 }
 
                 if (winner) {
-                    MY_SCHOOL = winner;
+                    writeCurrentSchool(winner);
                     console.log("🤖 [智能修复] 系统已自动根据任课表锁定本校为:", MY_SCHOOL);
                 }
             }
 
             // 如果推断成功，自动同步 UI 下拉框，让用户无感
-            if (MY_SCHOOL) {
+            if (readCurrentSchool()) {
                 const sel = document.getElementById('mySchoolSelect');
-                if (sel) sel.value = MY_SCHOOL;
+                if (sel) sel.value = readCurrentSchool();
             }
         }
 
@@ -12373,7 +12417,7 @@ function switchTab(id) {
                 });
                 let max = 0; let winner = "";
                 for (const [s, c] of Object.entries(schoolCounts)) { if (c > max) { max = c; winner = s; } }
-                if (winner) { MY_SCHOOL = winner; }
+                if (winner) { writeCurrentSchool(winner); }
             }
 
             // 2. 初始化下拉框
@@ -12734,7 +12778,7 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
     Perf.runAsync(async () => {
         // 重置数据
         RAW_DATA = []; SCHOOLS = {}; SUBJECTS = []; setTeacherMap({}); TEACHER_STATS = {};
-        TEACHER_TOWNSHIP_RANKINGS = {}; MARGINAL_STUDENTS = {}; POTENTIAL_STUDENTS_CACHE = []; TOWNSHIP_RANKING_DATA = {}; MY_SCHOOL = "";
+        TEACHER_TOWNSHIP_RANKINGS = {}; MARGINAL_STUDENTS = {}; POTENTIAL_STUDENTS_CACHE = []; TOWNSHIP_RANKING_DATA = {}; clearCurrentSchool();
         const teacherCards = document.getElementById('teacherCardsContainer');
         const teacherTable = document.getElementById('teacherComparisonTable');
         const teacherTownship = document.getElementById('teacher-township-ranking-container');
@@ -13523,46 +13567,37 @@ function updateMySchoolSelect() {
         ? listAvailableSchoolsForCompare()
         : Object.keys(SCHOOLS || {});
     const schoolSet = new Set((schools || []).map(s => String(s || '').trim()).filter(Boolean));
-    const persistedSchool = String(localStorage.getItem('MY_SCHOOL') || '').trim();
-    const runtimeSchool = String(MY_SCHOOL || '').trim();
-    if (persistedSchool) schoolSet.add(persistedSchool);
-    if (runtimeSchool) schoolSet.add(runtimeSchool);
+    const currentSchool = readCurrentSchool();
+    if (currentSchool) schoolSet.add(currentSchool);
     const mergedSchools = [...schoolSet].sort((a, b) => a.localeCompare(b, 'zh-CN'));
     mergedSchools.forEach(school => {
         select.innerHTML += `<option value="${school}">${school}</option>`;
     });
 
-    const savedSchool = localStorage.getItem('MY_SCHOOL');
-    const savedTrim = String(savedSchool || '').trim();
+    const savedTrim = String(currentSchool || '').trim();
     const matchedSaved = mergedSchools.find(s => String(s).trim() === savedTrim) || '';
-    const currentTrim = String(MY_SCHOOL || '').trim();
+    const currentTrim = String(currentSchool || '').trim();
     const matchedCurrent = mergedSchools.find(s => String(s).trim() === currentTrim) || '';
 
     if (matchedSaved) {
-        MY_SCHOOL = matchedSaved;
-        window.MY_SCHOOL = MY_SCHOOL;
+        writeCurrentSchool(matchedSaved);
         select.value = matchedSaved;
     } else if (matchedCurrent) {
-        MY_SCHOOL = matchedCurrent;
-        window.MY_SCHOOL = MY_SCHOOL;
+        writeCurrentSchool(matchedCurrent);
         select.value = matchedCurrent;
     } else if (mergedSchools.length === 1) {
-        MY_SCHOOL = mergedSchools[0];
-        window.MY_SCHOOL = MY_SCHOOL;
-        select.value = MY_SCHOOL;
-        localStorage.setItem('MY_SCHOOL', MY_SCHOOL);
+        writeCurrentSchool(mergedSchools[0]);
+        select.value = readCurrentSchool();
     }
 
     // 当学校数据更新时，顺便刷新管理员面板里的“学校复选框列表” (此处旧代码已在上面第一步执行了，这里不需要重复)
 
     select.addEventListener('change', function () {
-        MY_SCHOOL = this.value;
-        window.MY_SCHOOL = MY_SCHOOL;
-        if (MY_SCHOOL) localStorage.setItem('MY_SCHOOL', MY_SCHOOL);
-        if (MY_SCHOOL) generateTeacherInputs();
+        writeCurrentSchool(this.value);
+        if (readCurrentSchool()) generateTeacherInputs();
         renderTables();
         const mySchoolInput = document.getElementById('mySchool');
-        if (mySchoolInput && MY_SCHOOL) mySchoolInput.value = MY_SCHOOL;
+        if (mySchoolInput && readCurrentSchool()) mySchoolInput.value = readCurrentSchool();
         updateStatusPanel();
     });
 }
@@ -13670,14 +13705,12 @@ function autoDetectMySchool() {
 
     if (!detectedSchool) return alert('未能自动识别本校，请手动选择');
 
-    MY_SCHOOL = detectedSchool;
+    writeCurrentSchool(detectedSchool);
 
-    window.MY_SCHOOL = MY_SCHOOL;
-    localStorage.setItem('MY_SCHOOL', MY_SCHOOL);
     const sel = document.getElementById('mySchoolSelect');
-    if (sel) sel.value = MY_SCHOOL;
+    if (sel) sel.value = readCurrentSchool();
     const mySchoolInput = document.getElementById('mySchool');
-    if (mySchoolInput) mySchoolInput.value = MY_SCHOOL;
+    if (mySchoolInput) mySchoolInput.value = readCurrentSchool();
     updateStatusPanel();
     if (window.UI) UI.toast(`✅ 已识别本校：${MY_SCHOOL}`, 'success');
 }
@@ -23001,7 +23034,7 @@ function getCurrentSnapshotPayload() {
         TEACHER_MAP: window.TEACHER_MAP || {},
         TEACHER_SCHOOL_MAP: window.TEACHER_SCHOOL_MAP || {},
         CONFIG: window.CONFIG || {},
-        MY_SCHOOL: window.MY_SCHOOL || "",
+        MY_SCHOOL: readCurrentSchool(),
         TARGETS: window.SYS_VARS?.targets || window.TARGETS || {},
         INDICATOR_PARAMS: window.SYS_VARS?.indicator || { ind1: '', ind2: '' },
         SCHOOL_ALIAS_SETTINGS: ensureSchoolAliasStore(),
@@ -23226,7 +23259,7 @@ function applySnapshotPayload(db) {
     setTeacherMap(db.TEACHER_MAP || {});
     setTeacherSchoolMap(db.TEACHER_SCHOOL_MAP || {});
     window.CONFIG = db.CONFIG || {};
-    window.MY_SCHOOL = db.MY_SCHOOL || "";
+    writeCurrentSchool(db.MY_SCHOOL || '');
     window.TARGETS = db.TARGETS || {};
     TARGETS = window.TARGETS;
     window.SYS_VARS = window.SYS_VARS || { indicator: { ind1: '', ind2: '' }, targets: {}, schoolAliases: [] };
@@ -24018,7 +24051,7 @@ const PermissionPolicy = {
         return role === 'parent' || role === 'student';
     },
     getBoundSchool(user = getCurrentUser()) {
-        return this.normalizeSchool(user?.school || MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '');
+        return this.normalizeSchool(user?.school || readCurrentSchool() || '');
     },
     getBoundGrade(user = getCurrentUser()) {
         return this.extractGrade(user?.grade_name || user?.class || '');
@@ -24479,7 +24512,7 @@ async function manualRestore() {
         setTeacherMap(data.TEACHER_MAP || {});
         setTeacherSchoolMap(data.TEACHER_SCHOOL_MAP || {});
         CONFIG = data.CONFIG || CONFIG;
-        MY_SCHOOL = data.MY_SCHOOL || MY_SCHOOL;
+        writeCurrentSchool(data.MY_SCHOOL || readCurrentSchool());
     }
     updateStatusPanel();
     logAction('恢复', `已从 ${key} 恢复`);
@@ -24492,12 +24525,7 @@ function updateStatusPanel() {
     const termId = readCurrentTermId() || (typeof getTermId === 'function' ? getTermId(getExamMetaFromUI()) : '');
     const examId = CURRENT_EXAM_ID || readWorkspaceExamId() || '未选择';
     const cohortId = CURRENT_COHORT_ID || readWorkspaceCohortId() || '未选择';
-    const savedSchool = localStorage.getItem('MY_SCHOOL');
-    if (!MY_SCHOOL && savedSchool) {
-        MY_SCHOOL = savedSchool;
-        window.MY_SCHOOL = MY_SCHOOL;
-    }
-    const mySchool = MY_SCHOOL || savedSchool || '未选择';
+    const mySchool = readCurrentSchool() || '未选择';
     const hasScores = RAW_DATA && RAW_DATA.length > 0;
     const teacherCount = window.TEACHER_MAP ? Object.keys(window.TEACHER_MAP).length : 0;
     const syncCloud = localStorage.getItem('CLOUD_SYNC_AT');
@@ -24635,7 +24663,7 @@ async function loadDemoData() {
         '9.2_英语': '孙老师'
     });
 
-    MY_SCHOOL = demoSchool;
+    writeCurrentSchool(demoSchool);
     writeCurrentTermId(readCurrentTermId() || '2025-2026_上学期');
     CURRENT_COHORT_ID = CURRENT_COHORT_ID || 'DEMO';
     CURRENT_EXAM_ID = CURRENT_EXAM_ID || 'DEMO_EXAM';
@@ -24805,8 +24833,7 @@ function syncTeacherAnalysisSchoolContext(preferredSchool = '') {
     const candidates = [
         preferredSchool,
         schoolSel?.value,
-        MY_SCHOOL,
-        localStorage.getItem('MY_SCHOOL'),
+        readCurrentSchool(),
         inferredSchool
     ].map(v => String(v || '').trim()).filter(Boolean);
     const schoolNames = Object.keys(SCHOOLS || {});
@@ -24814,9 +24841,7 @@ function syncTeacherAnalysisSchoolContext(preferredSchool = '') {
         || (schoolNames.length === 1 ? schoolNames[0] : candidates[0] || '');
 
     if (resolvedSchool) {
-        MY_SCHOOL = resolvedSchool;
-        window.MY_SCHOOL = resolvedSchool;
-        localStorage.setItem('MY_SCHOOL', resolvedSchool);
+        writeCurrentSchool(resolvedSchool);
         if (schoolSel && schoolSel.value !== resolvedSchool) schoolSel.value = resolvedSchool;
     }
 
