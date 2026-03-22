@@ -2121,6 +2121,127 @@
 
 </script>
     <script>
+(function (root, factory) {
+    const runtime = factory(root || {});
+
+    if (typeof module === 'object' && module.exports) {
+        const createRuntime = function (overrideRoot) {
+            return factory(overrideRoot || root || {});
+        };
+        createRuntime.runtime = runtime;
+        module.exports = createRuntime;
+    }
+
+    if (!root || root.CompareResultState) return;
+    root.CompareResultState = runtime;
+    root.readMacroCompareCacheState = runtime.getMacroCompareCache;
+    root.setMacroCompareCacheState = runtime.setMacroCompareCache;
+    root.readTeacherCompareCacheState = runtime.getTeacherCompareCache;
+    root.setTeacherCompareCacheState = runtime.setTeacherCompareCache;
+    root.readStudentCompareCacheState = runtime.getStudentCompareCache;
+    root.setStudentCompareCacheState = runtime.setStudentCompareCache;
+    root.syncCompareResultRuntimeState = runtime.syncCompareResultState;
+    runtime.syncCompareResultState(runtime.snapshotCompareResultState());
+})(typeof globalThis !== 'undefined' ? globalThis : this, function createCompareResultStateRuntime(root) {
+    function normalizeCache(value) {
+        return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+    }
+
+    function cloneJson(value, fallbackValue) {
+        if (value == null) return fallbackValue;
+        try {
+            return JSON.parse(JSON.stringify(value));
+        } catch {
+            return fallbackValue;
+        }
+    }
+
+    function getMacroCompareCache() {
+        const nextCache = normalizeCache(root.MACRO_MULTI_PERIOD_COMPARE_CACHE);
+        root.MACRO_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+        return nextCache;
+    }
+
+    function setMacroCompareCache(cache) {
+        const nextCache = normalizeCache(cache);
+        root.MACRO_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+        return nextCache;
+    }
+
+    function getTeacherCompareCache() {
+        const nextCache = normalizeCache(root.TEACHER_MULTI_PERIOD_COMPARE_CACHE);
+        root.TEACHER_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+        return nextCache;
+    }
+
+    function setTeacherCompareCache(cache) {
+        const nextCache = normalizeCache(cache);
+        root.TEACHER_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+        return nextCache;
+    }
+
+    function getStudentCompareCache() {
+        const nextCache = normalizeCache(root.STUDENT_MULTI_PERIOD_COMPARE_CACHE);
+        root.STUDENT_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+        return nextCache;
+    }
+
+    function setStudentCompareCache(cache) {
+        const nextCache = normalizeCache(cache);
+        root.STUDENT_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+        return nextCache;
+    }
+
+    function snapshotCompareResultState() {
+        return {
+            macroCompareCache: cloneJson(getMacroCompareCache(), null),
+            teacherCompareCache: cloneJson(getTeacherCompareCache(), null),
+            studentCompareCache: cloneJson(getStudentCompareCache(), null)
+        };
+    }
+
+    function syncCompareResultState(nextState = {}) {
+        const source = nextState && typeof nextState === 'object' ? nextState : {};
+        setMacroCompareCache(
+            Object.prototype.hasOwnProperty.call(source, 'macroCompareCache')
+                ? source.macroCompareCache
+                : (Object.prototype.hasOwnProperty.call(source, 'MACRO_MULTI_PERIOD_COMPARE_CACHE') ? source.MACRO_MULTI_PERIOD_COMPARE_CACHE : getMacroCompareCache())
+        );
+        setTeacherCompareCache(
+            Object.prototype.hasOwnProperty.call(source, 'teacherCompareCache')
+                ? source.teacherCompareCache
+                : (Object.prototype.hasOwnProperty.call(source, 'TEACHER_MULTI_PERIOD_COMPARE_CACHE') ? source.TEACHER_MULTI_PERIOD_COMPARE_CACHE : getTeacherCompareCache())
+        );
+        setStudentCompareCache(
+            Object.prototype.hasOwnProperty.call(source, 'studentCompareCache')
+                ? source.studentCompareCache
+                : (Object.prototype.hasOwnProperty.call(source, 'STUDENT_MULTI_PERIOD_COMPARE_CACHE') ? source.STUDENT_MULTI_PERIOD_COMPARE_CACHE : getStudentCompareCache())
+        );
+        return snapshotCompareResultState();
+    }
+
+    function clearCompareResultState() {
+        setMacroCompareCache(null);
+        setTeacherCompareCache(null);
+        setStudentCompareCache(null);
+        return snapshotCompareResultState();
+    }
+
+    return {
+        getMacroCompareCache,
+        setMacroCompareCache,
+        getTeacherCompareCache,
+        setTeacherCompareCache,
+        getStudentCompareCache,
+        setStudentCompareCache,
+        snapshotCompareResultState,
+        syncCompareResultState,
+        clearCompareResultState
+    };
+});
+
+</script>
+    <script>
 ﻿(function () {
     const CLOUD_TABLE = 'system_data';
     const KEY_PREFIX_TEACHERS = 'TEACHERS_';
@@ -45119,7 +45240,14 @@ function resetProgressFilter() {
 (() => {
     if (typeof window === 'undefined' || window.__STUDENT_COMPARE_RESULT_RUNTIME_PATCHED__) return;
 
+    const readStudentCompareCacheState = typeof window.readStudentCompareCacheState === 'function'
+        ? window.readStudentCompareCacheState
+        : (() => (window.STUDENT_MULTI_PERIOD_COMPARE_CACHE && typeof window.STUDENT_MULTI_PERIOD_COMPARE_CACHE === 'object'
+            ? window.STUDENT_MULTI_PERIOD_COMPARE_CACHE
+            : null));
+
 function renderStudentComparePage(page) {
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
     const resultEl = document.getElementById('studentCompareResult');
@@ -45342,6 +45470,7 @@ function generateStudentCard(student, periodCount, totalLabel, subjects) {
 }
 
 function showStudentComparePopup(student) {
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
     if (!student || typeof Swal === 'undefined' || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return false;
 
     const { periodCount, subjects } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
@@ -45369,6 +45498,7 @@ function showStudentComparePopup(student) {
 
 function changePageSize() {
     const pageSizeEl = document.getElementById('studentComparePageSize');
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
     if (!pageSizeEl || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
     STUDENT_MULTI_PERIOD_COMPARE_CACHE.pageSize = parseInt(pageSizeEl.value);
@@ -45376,6 +45506,7 @@ function changePageSize() {
 }
 
 function applyStudentCompareFilters(options = {}) {
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return [];
 
     const {
@@ -45461,6 +45592,7 @@ function applyStudentCompareFilters(options = {}) {
 
 function filterStudentCompareByName() {
     const nameInput = document.getElementById('studentCompareNameInput');
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
 
     if (!nameInput) return;
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) {
@@ -45488,6 +45620,7 @@ function filterStudentCompareByName() {
 
 function filterStudentCompareByClass() {
     const classFilterEl = document.getElementById('studentCompareClassFilter');
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
 
     if (!classFilterEl || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
@@ -45498,6 +45631,7 @@ function filterStudentCompareByClass() {
 function clearStudentCompareFilter() {
     const nameInput = document.getElementById('studentCompareNameInput');
     const classFilterEl = document.getElementById('studentCompareClassFilter');
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
 
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
     if (nameInput) nameInput.value = '';
@@ -45527,6 +45661,7 @@ function toggleStudentDetail(btn) {
 
 function filterByProgress(type) {
     const nameInput = document.getElementById('studentCompareNameInput');
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
 
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
     if (nameInput) nameInput.value = '';
@@ -45570,6 +45705,7 @@ function getSortedStudentCompareData(data, sortBy) {
 
 function sortStudentCompare() {
     const sortEl = document.getElementById('studentCompareSortBy');
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
 
     if (!sortEl || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
@@ -45582,6 +45718,7 @@ function sortStudentCompare() {
 }
 
 function updateClassGroupOptions() {
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
     const optgroup = document.getElementById('classGroupOptions');
@@ -45654,6 +45791,7 @@ function updateClassGroupOptions() {
 function toggleGroupDisplay() {
     const groupEl = document.getElementById('studentCompareGroupBy');
     const paginationEl = document.getElementById('studentComparePagination');
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
 
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
     if (!groupEl) {
@@ -45791,6 +45929,7 @@ function toggleClassGroup(headerEl) {
 }
 
 function exportStudentMultiPeriodComparison() {
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成学生多期对比结果');
 
     const { school, examIds, periodCount, studentsCompareData, subjects } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
@@ -46055,6 +46194,7 @@ function exportStudentMultiPeriodComparison() {
 // 🆕 更新统计面板
 function updateStudentCompareSummary() {
     const summaryEl = document.getElementById('studentCompareSummary');
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
     if (!summaryEl || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
     const { studentsCompareData, periodCount, activeClassFilter } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
@@ -46144,6 +46284,14 @@ function updateStudentCompareSummary() {
     <script>
 (() => {
     if (typeof window === 'undefined' || window.__STUDENT_COMPARE_GENERATE_RUNTIME_PATCHED__) return;
+
+const setStudentCompareCacheState = typeof window.setStudentCompareCacheState === 'function'
+    ? window.setStudentCompareCacheState
+    : ((cache) => {
+        const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+        window.STUDENT_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+        return nextCache;
+    });
 
 function renderStudentMultiPeriodComparison() {
     const schoolEl = document.getElementById('studentCompareSchool');
@@ -46412,6 +46560,7 @@ function renderStudentMultiPeriodComparison() {
             activeProgressFilter: '',
             activeClassFilter: ''
         };
+        setStudentCompareCacheState(STUDENT_MULTI_PERIOD_COMPARE_CACHE);
 
         // 🟢 [新增]：更新班级下拉选项
         updateClassGroupOptions();
@@ -46436,6 +46585,19 @@ function renderStudentMultiPeriodComparison() {
     <script>
 (() => {
     if (typeof window === 'undefined' || window.__TEACHER_COMPARE_RESULT_RUNTIME_PATCHED__) return;
+
+const readTeacherCompareCacheState = typeof window.readTeacherCompareCacheState === 'function'
+    ? window.readTeacherCompareCacheState
+    : (() => (window.TEACHER_MULTI_PERIOD_COMPARE_CACHE && typeof window.TEACHER_MULTI_PERIOD_COMPARE_CACHE === 'object'
+        ? window.TEACHER_MULTI_PERIOD_COMPARE_CACHE
+        : null));
+const setTeacherCompareCacheState = typeof window.setTeacherCompareCacheState === 'function'
+    ? window.setTeacherCompareCacheState
+    : ((cache) => {
+        const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+        window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+        return nextCache;
+    });
 
 function buildTeacherStatsForExam(rows, school, subjectFilter) {
     const rowsSchool = rows.filter(r => r.school === school);
@@ -46641,6 +46803,7 @@ function renderTeacherMultiPeriodComparison() {
     hintEl.innerHTML = `✅ 已完成 ${periodCount} 期教师对比：${examIds.join(' → ')}`;
     hintEl.style.color = '#16a34a';
     window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = { school, subject, teacher, examIds, periodCount, examStats, delta, metricRows };
+    setTeacherCompareCacheState(window.TEACHER_MULTI_PERIOD_COMPARE_CACHE);
 }
 
 // 🆕 生成某学校所有教师的多期对比（大表模式）
@@ -46832,6 +46995,7 @@ function renderAllTeachersMultiPeriodComparison() {
     hintEl.innerHTML = `✅ 已生成 ${school} 全校 ${results.length} 条对比记录；点击表格上方可导出。`;
     hintEl.style.color = '#16a34a';
 
+    setTeacherCompareCacheState(window.TEACHER_MULTI_PERIOD_COMPARE_CACHE);
     if (window.UI) UI.loading(false);
 }
 
@@ -46889,6 +47053,7 @@ function exportAllTeachersMultiPeriodDiff(school, examIdsStr) {
 // 教师云对比运行时已拆分到 public/assets/js/teacher-compare-cloud-runtime.js
 
 function exportTeacherMultiPeriodComparison() {
+    const TEACHER_MULTI_PERIOD_COMPARE_CACHE = readTeacherCompareCacheState();
     if (!TEACHER_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成教师多期对比结果');
     const { school, subject, teacher, examIds, examStats, delta } = TEACHER_MULTI_PERIOD_COMPARE_CACHE;
     const wb = XLSX.utils.book_new();
@@ -46936,6 +47101,19 @@ function exportTeacherMultiPeriodComparison() {
     <script>
 (() => {
     if (typeof window === 'undefined' || window.__MACRO_COMPARE_RESULT_RUNTIME_PATCHED__) return;
+
+const readMacroCompareCacheState = typeof window.readMacroCompareCacheState === 'function'
+    ? window.readMacroCompareCacheState
+    : (() => (window.MACRO_MULTI_PERIOD_COMPARE_CACHE && typeof window.MACRO_MULTI_PERIOD_COMPARE_CACHE === 'object'
+        ? window.MACRO_MULTI_PERIOD_COMPARE_CACHE
+        : null));
+const setMacroCompareCacheState = typeof window.setMacroCompareCacheState === 'function'
+    ? window.setMacroCompareCacheState
+    : ((cache) => {
+        const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+        window.MACRO_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+        return nextCache;
+    });
 
 function renderMacroMultiPeriodComparison() {
     const hintEl = document.getElementById('macroCompareHint');
@@ -47101,7 +47279,7 @@ function renderMacroMultiPeriodComparison() {
 
     hintEl.innerHTML = `✅ 已完成 ${periodCount} 期校际对比：${examIds.join(' → ')}`;
     hintEl.style.color = '#16a34a';
-    MACRO_MULTI_PERIOD_COMPARE_CACHE = {
+    setMacroCompareCacheState({
         school,
         examIds,
         periodCount,
@@ -47109,10 +47287,11 @@ function renderMacroMultiPeriodComparison() {
         allSchoolsChange,
         moduleSeries,
         html: resultEl.innerHTML
-    };
+    });
 }
 
 function exportMacroMultiPeriodComparison() {
+    const MACRO_MULTI_PERIOD_COMPARE_CACHE = readMacroCompareCacheState();
     if (!MACRO_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成校际多期对比结果');
     const { school, examIds, summaryByExam, allSchoolsChange, moduleSeries = [] } = MACRO_MULTI_PERIOD_COMPARE_CACHE;
     const wb = XLSX.utils.book_new();
@@ -47161,6 +47340,18 @@ function exportMacroMultiPeriodComparison() {
     if (typeof window === 'undefined' || window.__STUDENT_COMPARE_CLOUD_RUNTIME_PATCHED__) return;
 
     const CompareSessionStateRuntime = window.CompareSessionState || null;
+    const readStudentCompareCacheState = typeof window.readStudentCompareCacheState === 'function'
+        ? window.readStudentCompareCacheState
+        : (() => (window.STUDENT_MULTI_PERIOD_COMPARE_CACHE && typeof window.STUDENT_MULTI_PERIOD_COMPARE_CACHE === 'object'
+            ? window.STUDENT_MULTI_PERIOD_COMPARE_CACHE
+            : null));
+    const setStudentCompareCacheState = typeof window.setStudentCompareCacheState === 'function'
+        ? window.setStudentCompareCacheState
+        : ((cache) => {
+            const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+            window.STUDENT_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+            return nextCache;
+        });
 
     let CLOUD_COMPARE_TARGET = null;
     let CLOUD_STUDENT_COMPARE_CONTEXT = null;
@@ -47462,6 +47653,8 @@ function exportMacroMultiPeriodComparison() {
     }
 
     async function saveStudentCompareToCloud() {
+        const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
+        window.STUDENT_MULTI_PERIOD_COMPARE_CACHE = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
         if (!window.STUDENT_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成学生多期对比结果');
         if (!window.sbClient) return alert('☁️ 云端服务未连接，无法保存');
 
@@ -47773,6 +47966,7 @@ function exportMacroMultiPeriodComparison() {
                 activeProgressFilter: '',
                 activeClassFilter: ''
             };
+            setStudentCompareCacheState(STUDENT_MULTI_PERIOD_COMPARE_CACHE);
 
             let picked = null;
             if (selfOnly) {
@@ -47853,7 +48047,22 @@ function exportMacroMultiPeriodComparison() {
 (() => {
     if (typeof window === 'undefined' || window.__TEACHER_COMPARE_CLOUD_RUNTIME_PATCHED__) return;
 
+    const readTeacherCompareCacheState = typeof window.readTeacherCompareCacheState === 'function'
+        ? window.readTeacherCompareCacheState
+        : (() => (window.TEACHER_MULTI_PERIOD_COMPARE_CACHE && typeof window.TEACHER_MULTI_PERIOD_COMPARE_CACHE === 'object'
+            ? window.TEACHER_MULTI_PERIOD_COMPARE_CACHE
+            : null));
+    const setTeacherCompareCacheState = typeof window.setTeacherCompareCacheState === 'function'
+        ? window.setTeacherCompareCacheState
+        : ((cache) => {
+            const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+            window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+            return nextCache;
+        });
+
     async function saveTeacherMultiPeriodCompareToCloud() {
+        const TEACHER_MULTI_PERIOD_COMPARE_CACHE = readTeacherCompareCacheState();
+        window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = TEACHER_MULTI_PERIOD_COMPARE_CACHE;
         if (!window.TEACHER_MULTI_PERIOD_COMPARE_CACHE) {
             return alert('请先生成教师多期对比或全校对比结果');
         }
@@ -47867,7 +48076,7 @@ function exportMacroMultiPeriodComparison() {
             return alert('⛔ 权限不足：只有登录用户可以保存对比结果到云端');
         }
 
-        const cache = window.TEACHER_MULTI_PERIOD_COMPARE_CACHE;
+        const cache = TEACHER_MULTI_PERIOD_COMPARE_CACHE;
         const isBatch = !!cache.isBatchMode;
         const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || 'unknown';
         const timestamp = new Date().toISOString().split('T')[0];
@@ -48068,6 +48277,19 @@ function exportMacroMultiPeriodComparison() {
             hintEl.innerHTML = `✅ 已加载云端存档：${title}`;
             hintEl.style.color = '#7c3aed';
         }
+        setTeacherCompareCacheState({
+            school,
+            subject: payload.subject,
+            teacher: payload.teacher,
+            examIds,
+            periodCount: payload.periodCount,
+            examStats: payload.examStats || [],
+            delta,
+            metricRows,
+            isBatchMode: !!isBatchMode,
+            batchResults: batchResults || null,
+            thsHtml: thsHtml || null
+        });
     }
 
     Object.assign(window, {
@@ -48085,7 +48307,22 @@ function exportMacroMultiPeriodComparison() {
 (() => {
     if (typeof window === 'undefined' || window.__MACRO_COMPARE_CLOUD_RUNTIME_PATCHED__) return;
 
+    const readMacroCompareCacheState = typeof window.readMacroCompareCacheState === 'function'
+        ? window.readMacroCompareCacheState
+        : (() => (window.MACRO_MULTI_PERIOD_COMPARE_CACHE && typeof window.MACRO_MULTI_PERIOD_COMPARE_CACHE === 'object'
+            ? window.MACRO_MULTI_PERIOD_COMPARE_CACHE
+            : null));
+    const setMacroCompareCacheState = typeof window.setMacroCompareCacheState === 'function'
+        ? window.setMacroCompareCacheState
+        : ((cache) => {
+            const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+            window.MACRO_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+            return nextCache;
+        });
+
     async function saveMacroMultiPeriodCompareToCloud() {
+        const MACRO_MULTI_PERIOD_COMPARE_CACHE = readMacroCompareCacheState();
+        window.MACRO_MULTI_PERIOD_COMPARE_CACHE = MACRO_MULTI_PERIOD_COMPARE_CACHE;
         if (!window.MACRO_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成校际多期对比结果');
         if (!window.sbClient) return alert('☁️ 云端服务未连接，无法保存');
 
@@ -48218,6 +48455,7 @@ function exportMacroMultiPeriodComparison() {
                 moduleSeries: payload.moduleSeries,
                 html: payload.html
             };
+            setMacroCompareCacheState(window.MACRO_MULTI_PERIOD_COMPARE_CACHE);
         } catch (e) {
             console.error(e);
             alert('加载失败: ' + e.message);

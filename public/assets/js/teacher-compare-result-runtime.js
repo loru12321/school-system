@@ -1,6 +1,19 @@
 (() => {
     if (typeof window === 'undefined' || window.__TEACHER_COMPARE_RESULT_RUNTIME_PATCHED__) return;
 
+const readTeacherCompareCacheState = typeof window.readTeacherCompareCacheState === 'function'
+    ? window.readTeacherCompareCacheState
+    : (() => (window.TEACHER_MULTI_PERIOD_COMPARE_CACHE && typeof window.TEACHER_MULTI_PERIOD_COMPARE_CACHE === 'object'
+        ? window.TEACHER_MULTI_PERIOD_COMPARE_CACHE
+        : null));
+const setTeacherCompareCacheState = typeof window.setTeacherCompareCacheState === 'function'
+    ? window.setTeacherCompareCacheState
+    : ((cache) => {
+        const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+        window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+        return nextCache;
+    });
+
 function buildTeacherStatsForExam(rows, school, subjectFilter) {
     const rowsSchool = rows.filter(r => r.school === school);
     const classSet = new Set(rowsSchool.map(r => normalizeClass(r.class)));
@@ -205,6 +218,7 @@ function renderTeacherMultiPeriodComparison() {
     hintEl.innerHTML = `✅ 已完成 ${periodCount} 期教师对比：${examIds.join(' → ')}`;
     hintEl.style.color = '#16a34a';
     window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = { school, subject, teacher, examIds, periodCount, examStats, delta, metricRows };
+    setTeacherCompareCacheState(window.TEACHER_MULTI_PERIOD_COMPARE_CACHE);
 }
 
 // 🆕 生成某学校所有教师的多期对比（大表模式）
@@ -396,6 +410,7 @@ function renderAllTeachersMultiPeriodComparison() {
     hintEl.innerHTML = `✅ 已生成 ${school} 全校 ${results.length} 条对比记录；点击表格上方可导出。`;
     hintEl.style.color = '#16a34a';
 
+    setTeacherCompareCacheState(window.TEACHER_MULTI_PERIOD_COMPARE_CACHE);
     if (window.UI) UI.loading(false);
 }
 
@@ -453,6 +468,7 @@ function exportAllTeachersMultiPeriodDiff(school, examIdsStr) {
 // 教师云对比运行时已拆分到 public/assets/js/teacher-compare-cloud-runtime.js
 
 function exportTeacherMultiPeriodComparison() {
+    const TEACHER_MULTI_PERIOD_COMPARE_CACHE = readTeacherCompareCacheState();
     if (!TEACHER_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成教师多期对比结果');
     const { school, subject, teacher, examIds, examStats, delta } = TEACHER_MULTI_PERIOD_COMPARE_CACHE;
     const wb = XLSX.utils.book_new();

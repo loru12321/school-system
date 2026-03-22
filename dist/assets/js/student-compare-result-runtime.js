@@ -1,7 +1,14 @@
 (() => {
     if (typeof window === 'undefined' || window.__STUDENT_COMPARE_RESULT_RUNTIME_PATCHED__) return;
 
+    const readStudentCompareCacheState = typeof window.readStudentCompareCacheState === 'function'
+        ? window.readStudentCompareCacheState
+        : (() => (window.STUDENT_MULTI_PERIOD_COMPARE_CACHE && typeof window.STUDENT_MULTI_PERIOD_COMPARE_CACHE === 'object'
+            ? window.STUDENT_MULTI_PERIOD_COMPARE_CACHE
+            : null));
+
 function renderStudentComparePage(page) {
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
     const resultEl = document.getElementById('studentCompareResult');
@@ -224,6 +231,7 @@ function generateStudentCard(student, periodCount, totalLabel, subjects) {
 }
 
 function showStudentComparePopup(student) {
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
     if (!student || typeof Swal === 'undefined' || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return false;
 
     const { periodCount, subjects } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
@@ -251,6 +259,7 @@ function showStudentComparePopup(student) {
 
 function changePageSize() {
     const pageSizeEl = document.getElementById('studentComparePageSize');
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
     if (!pageSizeEl || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
     STUDENT_MULTI_PERIOD_COMPARE_CACHE.pageSize = parseInt(pageSizeEl.value);
@@ -258,6 +267,7 @@ function changePageSize() {
 }
 
 function applyStudentCompareFilters(options = {}) {
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return [];
 
     const {
@@ -343,6 +353,7 @@ function applyStudentCompareFilters(options = {}) {
 
 function filterStudentCompareByName() {
     const nameInput = document.getElementById('studentCompareNameInput');
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
 
     if (!nameInput) return;
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) {
@@ -370,6 +381,7 @@ function filterStudentCompareByName() {
 
 function filterStudentCompareByClass() {
     const classFilterEl = document.getElementById('studentCompareClassFilter');
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
 
     if (!classFilterEl || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
@@ -380,6 +392,7 @@ function filterStudentCompareByClass() {
 function clearStudentCompareFilter() {
     const nameInput = document.getElementById('studentCompareNameInput');
     const classFilterEl = document.getElementById('studentCompareClassFilter');
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
 
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
     if (nameInput) nameInput.value = '';
@@ -409,6 +422,7 @@ function toggleStudentDetail(btn) {
 
 function filterByProgress(type) {
     const nameInput = document.getElementById('studentCompareNameInput');
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
 
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
     if (nameInput) nameInput.value = '';
@@ -452,6 +466,7 @@ function getSortedStudentCompareData(data, sortBy) {
 
 function sortStudentCompare() {
     const sortEl = document.getElementById('studentCompareSortBy');
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
 
     if (!sortEl || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
@@ -464,6 +479,7 @@ function sortStudentCompare() {
 }
 
 function updateClassGroupOptions() {
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
     const optgroup = document.getElementById('classGroupOptions');
@@ -536,6 +552,7 @@ function updateClassGroupOptions() {
 function toggleGroupDisplay() {
     const groupEl = document.getElementById('studentCompareGroupBy');
     const paginationEl = document.getElementById('studentComparePagination');
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
 
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
     if (!groupEl) {
@@ -673,6 +690,7 @@ function toggleClassGroup(headerEl) {
 }
 
 function exportStudentMultiPeriodComparison() {
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成学生多期对比结果');
 
     const { school, examIds, periodCount, studentsCompareData, subjects } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
@@ -937,6 +955,7 @@ function exportStudentMultiPeriodComparison() {
 // 🆕 更新统计面板
 function updateStudentCompareSummary() {
     const summaryEl = document.getElementById('studentCompareSummary');
+    const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
     if (!summaryEl || !STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
     const { studentsCompareData, periodCount, activeClassFilter } = STUDENT_MULTI_PERIOD_COMPARE_CACHE;

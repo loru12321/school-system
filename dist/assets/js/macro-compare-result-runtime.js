@@ -1,6 +1,19 @@
 (() => {
     if (typeof window === 'undefined' || window.__MACRO_COMPARE_RESULT_RUNTIME_PATCHED__) return;
 
+const readMacroCompareCacheState = typeof window.readMacroCompareCacheState === 'function'
+    ? window.readMacroCompareCacheState
+    : (() => (window.MACRO_MULTI_PERIOD_COMPARE_CACHE && typeof window.MACRO_MULTI_PERIOD_COMPARE_CACHE === 'object'
+        ? window.MACRO_MULTI_PERIOD_COMPARE_CACHE
+        : null));
+const setMacroCompareCacheState = typeof window.setMacroCompareCacheState === 'function'
+    ? window.setMacroCompareCacheState
+    : ((cache) => {
+        const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+        window.MACRO_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+        return nextCache;
+    });
+
 function renderMacroMultiPeriodComparison() {
     const hintEl = document.getElementById('macroCompareHint');
     const resultEl = document.getElementById('macroCompareResult');
@@ -165,7 +178,7 @@ function renderMacroMultiPeriodComparison() {
 
     hintEl.innerHTML = `✅ 已完成 ${periodCount} 期校际对比：${examIds.join(' → ')}`;
     hintEl.style.color = '#16a34a';
-    MACRO_MULTI_PERIOD_COMPARE_CACHE = {
+    setMacroCompareCacheState({
         school,
         examIds,
         periodCount,
@@ -173,10 +186,11 @@ function renderMacroMultiPeriodComparison() {
         allSchoolsChange,
         moduleSeries,
         html: resultEl.innerHTML
-    };
+    });
 }
 
 function exportMacroMultiPeriodComparison() {
+    const MACRO_MULTI_PERIOD_COMPARE_CACHE = readMacroCompareCacheState();
     if (!MACRO_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成校际多期对比结果');
     const { school, examIds, summaryByExam, allSchoolsChange, moduleSeries = [] } = MACRO_MULTI_PERIOD_COMPARE_CACHE;
     const wb = XLSX.utils.book_new();

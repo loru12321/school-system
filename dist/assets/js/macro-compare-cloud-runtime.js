@@ -1,7 +1,22 @@
 (() => {
     if (typeof window === 'undefined' || window.__MACRO_COMPARE_CLOUD_RUNTIME_PATCHED__) return;
 
+    const readMacroCompareCacheState = typeof window.readMacroCompareCacheState === 'function'
+        ? window.readMacroCompareCacheState
+        : (() => (window.MACRO_MULTI_PERIOD_COMPARE_CACHE && typeof window.MACRO_MULTI_PERIOD_COMPARE_CACHE === 'object'
+            ? window.MACRO_MULTI_PERIOD_COMPARE_CACHE
+            : null));
+    const setMacroCompareCacheState = typeof window.setMacroCompareCacheState === 'function'
+        ? window.setMacroCompareCacheState
+        : ((cache) => {
+            const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+            window.MACRO_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+            return nextCache;
+        });
+
     async function saveMacroMultiPeriodCompareToCloud() {
+        const MACRO_MULTI_PERIOD_COMPARE_CACHE = readMacroCompareCacheState();
+        window.MACRO_MULTI_PERIOD_COMPARE_CACHE = MACRO_MULTI_PERIOD_COMPARE_CACHE;
         if (!window.MACRO_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成校际多期对比结果');
         if (!window.sbClient) return alert('☁️ 云端服务未连接，无法保存');
 
@@ -134,6 +149,7 @@
                 moduleSeries: payload.moduleSeries,
                 html: payload.html
             };
+            setMacroCompareCacheState(window.MACRO_MULTI_PERIOD_COMPARE_CACHE);
         } catch (e) {
             console.error(e);
             alert('加载失败: ' + e.message);

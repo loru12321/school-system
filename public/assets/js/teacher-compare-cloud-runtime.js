@@ -1,7 +1,22 @@
 (() => {
     if (typeof window === 'undefined' || window.__TEACHER_COMPARE_CLOUD_RUNTIME_PATCHED__) return;
 
+    const readTeacherCompareCacheState = typeof window.readTeacherCompareCacheState === 'function'
+        ? window.readTeacherCompareCacheState
+        : (() => (window.TEACHER_MULTI_PERIOD_COMPARE_CACHE && typeof window.TEACHER_MULTI_PERIOD_COMPARE_CACHE === 'object'
+            ? window.TEACHER_MULTI_PERIOD_COMPARE_CACHE
+            : null));
+    const setTeacherCompareCacheState = typeof window.setTeacherCompareCacheState === 'function'
+        ? window.setTeacherCompareCacheState
+        : ((cache) => {
+            const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+            window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+            return nextCache;
+        });
+
     async function saveTeacherMultiPeriodCompareToCloud() {
+        const TEACHER_MULTI_PERIOD_COMPARE_CACHE = readTeacherCompareCacheState();
+        window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = TEACHER_MULTI_PERIOD_COMPARE_CACHE;
         if (!window.TEACHER_MULTI_PERIOD_COMPARE_CACHE) {
             return alert('请先生成教师多期对比或全校对比结果');
         }
@@ -15,7 +30,7 @@
             return alert('⛔ 权限不足：只有登录用户可以保存对比结果到云端');
         }
 
-        const cache = window.TEACHER_MULTI_PERIOD_COMPARE_CACHE;
+        const cache = TEACHER_MULTI_PERIOD_COMPARE_CACHE;
         const isBatch = !!cache.isBatchMode;
         const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || 'unknown';
         const timestamp = new Date().toISOString().split('T')[0];
@@ -216,6 +231,19 @@
             hintEl.innerHTML = `✅ 已加载云端存档：${title}`;
             hintEl.style.color = '#7c3aed';
         }
+        setTeacherCompareCacheState({
+            school,
+            subject: payload.subject,
+            teacher: payload.teacher,
+            examIds,
+            periodCount: payload.periodCount,
+            examStats: payload.examStats || [],
+            delta,
+            metricRows,
+            isBatchMode: !!isBatchMode,
+            batchResults: batchResults || null,
+            thsHtml: thsHtml || null
+        });
     }
 
     Object.assign(window, {

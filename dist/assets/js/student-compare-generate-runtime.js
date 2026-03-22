@@ -1,6 +1,14 @@
 (() => {
     if (typeof window === 'undefined' || window.__STUDENT_COMPARE_GENERATE_RUNTIME_PATCHED__) return;
 
+const setStudentCompareCacheState = typeof window.setStudentCompareCacheState === 'function'
+    ? window.setStudentCompareCacheState
+    : ((cache) => {
+        const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+        window.STUDENT_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+        return nextCache;
+    });
+
 function renderStudentMultiPeriodComparison() {
     const schoolEl = document.getElementById('studentCompareSchool');
     const hintEl = document.getElementById('studentCompareHint');
@@ -268,6 +276,7 @@ function renderStudentMultiPeriodComparison() {
             activeProgressFilter: '',
             activeClassFilter: ''
         };
+        setStudentCompareCacheState(STUDENT_MULTI_PERIOD_COMPARE_CACHE);
 
         // 🟢 [新增]：更新班级下拉选项
         updateClassGroupOptions();

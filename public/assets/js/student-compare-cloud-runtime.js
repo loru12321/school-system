@@ -2,6 +2,18 @@
     if (typeof window === 'undefined' || window.__STUDENT_COMPARE_CLOUD_RUNTIME_PATCHED__) return;
 
     const CompareSessionStateRuntime = window.CompareSessionState || null;
+    const readStudentCompareCacheState = typeof window.readStudentCompareCacheState === 'function'
+        ? window.readStudentCompareCacheState
+        : (() => (window.STUDENT_MULTI_PERIOD_COMPARE_CACHE && typeof window.STUDENT_MULTI_PERIOD_COMPARE_CACHE === 'object'
+            ? window.STUDENT_MULTI_PERIOD_COMPARE_CACHE
+            : null));
+    const setStudentCompareCacheState = typeof window.setStudentCompareCacheState === 'function'
+        ? window.setStudentCompareCacheState
+        : ((cache) => {
+            const nextCache = cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : null;
+            window.STUDENT_MULTI_PERIOD_COMPARE_CACHE = nextCache;
+            return nextCache;
+        });
 
     let CLOUD_COMPARE_TARGET = null;
     let CLOUD_STUDENT_COMPARE_CONTEXT = null;
@@ -303,6 +315,8 @@
     }
 
     async function saveStudentCompareToCloud() {
+        const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
+        window.STUDENT_MULTI_PERIOD_COMPARE_CACHE = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
         if (!window.STUDENT_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成学生多期对比结果');
         if (!window.sbClient) return alert('☁️ 云端服务未连接，无法保存');
 
@@ -614,6 +628,7 @@
                 activeProgressFilter: '',
                 activeClassFilter: ''
             };
+            setStudentCompareCacheState(STUDENT_MULTI_PERIOD_COMPARE_CACHE);
 
             let picked = null;
             if (selfOnly) {
