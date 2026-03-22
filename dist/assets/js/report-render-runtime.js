@@ -1,6 +1,15 @@
 (() => {
     if (typeof window === 'undefined' || window.__REPORT_RENDER_RUNTIME_PATCHED__) return;
 
+const readCloudStudentCompareContextState = typeof window.readCloudStudentCompareContextState === 'function'
+    ? window.readCloudStudentCompareContextState
+    : (() => (window.CLOUD_STUDENT_COMPARE_CONTEXT && typeof window.CLOUD_STUDENT_COMPARE_CONTEXT === 'object'
+        ? window.CLOUD_STUDENT_COMPARE_CONTEXT
+        : null));
+const readDuplicateCompareExamsState = typeof window.readDuplicateCompareExamsState === 'function'
+    ? window.readDuplicateCompareExamsState
+    : (() => (Array.isArray(window.DUPLICATE_COMPARE_EXAMS) ? window.DUPLICATE_COMPARE_EXAMS : []));
+
 function getTrendBadge(current, previous, type = 'score') {
     if (previous === undefined || previous === null || previous === '-' || previous === '') return '';
 
@@ -73,7 +82,9 @@ function renderSingleReportCardHTML(stu, mode) {
     const reportStu = getComparisonStudentView(stu, RAW_DATA);
 
     // 获取对比数据（云端上下文优先，避免回退导致“看不到对比”）
-    const cloudHint = (isCloudContextMatchStudent(reportStu) || isCloudContextLikelyCurrentTarget(reportStu)) ? CLOUD_STUDENT_COMPARE_CONTEXT : null;
+    const cloudHint = (isCloudContextMatchStudent(reportStu) || isCloudContextLikelyCurrentTarget(reportStu))
+        ? readCloudStudentCompareContextState()
+        : null;
     const prevStu = cloudHint?.previousRecord || findPreviousRecord(reportStu);
     const reportExamHistory = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(reportStu) : [];
     const currentExamId = getEffectiveCurrentExamId();
@@ -252,7 +263,8 @@ function renderSingleReportCardHTML(stu, mode) {
             </div>
         </div>` : '';
 
-    const duplicateCompareHintHtml = (Array.isArray(window.DUPLICATE_COMPARE_EXAMS) && window.DUPLICATE_COMPARE_EXAMS.length > 0) ? `
+    const duplicateCompareGroups = readDuplicateCompareExamsState();
+    const duplicateCompareHintHtml = duplicateCompareGroups.length > 0 ? `
         <div class="fluent-card" style="padding:10px 14px; margin-bottom:12px; background:#fff7ed; border:1px solid #fdba74; color:#9a3412;">
             <div style="font-size:12px; line-height:1.7;">
                 检测到重复考试快照，系统已自动去重，避免把同一份数据误判为持平。
@@ -361,7 +373,9 @@ function renderInstagramCard(stu) {
     const rank = safeGet(reportStu, 'ranks.total.township', '-');
     const pct = (typeof rank === 'number') ? ((1 - rank / totalStudents) * 100).toFixed(0) : '-';
     const avatarLetter = stu.name.charAt(0); // 头像取首字
-    const cloudHint = (isCloudContextMatchStudent(reportStu) || isCloudContextLikelyCurrentTarget(reportStu)) ? CLOUD_STUDENT_COMPARE_CONTEXT : null;
+    const cloudHint = (isCloudContextMatchStudent(reportStu) || isCloudContextLikelyCurrentTarget(reportStu))
+        ? readCloudStudentCompareContextState()
+        : null;
 
     // 判断是否为单校模式
     const isSingleSchool = Object.keys(SCHOOLS).length <= 1;

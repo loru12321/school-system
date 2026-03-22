@@ -1,15 +1,42 @@
 (() => {
     if (typeof window === 'undefined' || window.__STUDENT_COMPARE_CLOUD_RUNTIME_PATCHED__) return;
 
-    let CLOUD_COMPARE_TARGET = window.CLOUD_COMPARE_TARGET || null;
-    let CLOUD_STUDENT_COMPARE_CONTEXT = window.CLOUD_STUDENT_COMPARE_CONTEXT || null;
-    let CLOUD_COMPARE_PREV_DATA_BACKUP = window.CLOUD_COMPARE_PREV_DATA_BACKUP ?? null;
+    const CompareSessionStateRuntime = window.CompareSessionState || null;
+
+    let CLOUD_COMPARE_TARGET = null;
+    let CLOUD_STUDENT_COMPARE_CONTEXT = null;
+    let CLOUD_COMPARE_PREV_DATA_BACKUP = null;
+
+    function syncLocalCompareSessionState(patch = {}) {
+        const snapshot = CompareSessionStateRuntime && typeof CompareSessionStateRuntime.syncCompareSessionState === 'function'
+            ? CompareSessionStateRuntime.syncCompareSessionState(patch)
+            : {
+                cloudCompareTarget: Object.prototype.hasOwnProperty.call(patch, 'cloudCompareTarget') ? patch.cloudCompareTarget : (Object.prototype.hasOwnProperty.call(patch, 'CLOUD_COMPARE_TARGET') ? patch.CLOUD_COMPARE_TARGET : (window.CLOUD_COMPARE_TARGET || CLOUD_COMPARE_TARGET || null)),
+                cloudStudentCompareContext: Object.prototype.hasOwnProperty.call(patch, 'cloudStudentCompareContext') ? patch.cloudStudentCompareContext : (Object.prototype.hasOwnProperty.call(patch, 'CLOUD_STUDENT_COMPARE_CONTEXT') ? patch.CLOUD_STUDENT_COMPARE_CONTEXT : (window.CLOUD_STUDENT_COMPARE_CONTEXT || CLOUD_STUDENT_COMPARE_CONTEXT || null)),
+                cloudComparePrevDataBackup: Object.prototype.hasOwnProperty.call(patch, 'cloudComparePrevDataBackup') ? patch.cloudComparePrevDataBackup : (Object.prototype.hasOwnProperty.call(patch, 'CLOUD_COMPARE_PREV_DATA_BACKUP') ? patch.CLOUD_COMPARE_PREV_DATA_BACKUP : (window.CLOUD_COMPARE_PREV_DATA_BACKUP ?? CLOUD_COMPARE_PREV_DATA_BACKUP ?? null))
+            };
+        CLOUD_COMPARE_TARGET = snapshot.cloudCompareTarget || null;
+        CLOUD_STUDENT_COMPARE_CONTEXT = snapshot.cloudStudentCompareContext || null;
+        CLOUD_COMPARE_PREV_DATA_BACKUP = snapshot.cloudComparePrevDataBackup ?? null;
+        return snapshot;
+    }
 
     function syncCloudCompareGlobals() {
-        window.CLOUD_COMPARE_TARGET = CLOUD_COMPARE_TARGET;
-        window.CLOUD_STUDENT_COMPARE_CONTEXT = CLOUD_STUDENT_COMPARE_CONTEXT;
-        window.CLOUD_COMPARE_PREV_DATA_BACKUP = CLOUD_COMPARE_PREV_DATA_BACKUP;
+        const snapshot = syncLocalCompareSessionState({
+            cloudCompareTarget: CLOUD_COMPARE_TARGET,
+            cloudStudentCompareContext: CLOUD_STUDENT_COMPARE_CONTEXT,
+            cloudComparePrevDataBackup: CLOUD_COMPARE_PREV_DATA_BACKUP
+        });
+        window.CLOUD_COMPARE_TARGET = snapshot.cloudCompareTarget || null;
+        window.CLOUD_STUDENT_COMPARE_CONTEXT = snapshot.cloudStudentCompareContext || null;
+        window.CLOUD_COMPARE_PREV_DATA_BACKUP = snapshot.cloudComparePrevDataBackup ?? null;
     }
+
+    syncLocalCompareSessionState({
+        cloudCompareTarget: window.CLOUD_COMPARE_TARGET || null,
+        cloudStudentCompareContext: window.CLOUD_STUDENT_COMPARE_CONTEXT || null,
+        cloudComparePrevDataBackup: window.CLOUD_COMPARE_PREV_DATA_BACKUP ?? null
+    });
 
     function normalizeCompareName(name) {
         return String(name || '').trim().replace(/\s+/g, '').toLowerCase();
@@ -213,7 +240,7 @@
             });
         });
 
-        CLOUD_STUDENT_COMPARE_CONTEXT = {
+        const nextContext = {
             key: payload?.key || '',
             title: payload?.title || '',
             owner: {
@@ -237,6 +264,7 @@
                 _sourceExam: prevPeriod.examId || ''
             }
         };
+        syncLocalCompareSessionState({ cloudStudentCompareContext: nextContext });
         syncCloudCompareGlobals();
         return CLOUD_STUDENT_COMPARE_CONTEXT;
     }

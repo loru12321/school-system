@@ -25,6 +25,17 @@
             const mode = String(window.__PROGRESS_QUICK_MODE || 'all').trim();
             return ['all', 'my_class', 'focus'].includes(mode) ? mode : 'all';
         });
+    const ensureCompareExamSyncStateEntry = typeof window.ensureCompareExamSyncStateEntry === 'function'
+        ? window.ensureCompareExamSyncStateEntry
+        : ((cohortId) => {
+            const key = String(cohortId || '').trim();
+            if (!window.__COMPARE_EXAM_SYNC_STATE) window.__COMPARE_EXAM_SYNC_STATE = {};
+            if (!key) return { pending: false, lastAttempt: 0 };
+            if (!window.__COMPARE_EXAM_SYNC_STATE[key]) {
+                window.__COMPARE_EXAM_SYNC_STATE[key] = { pending: false, lastAttempt: 0 };
+            }
+            return window.__COMPARE_EXAM_SYNC_STATE[key];
+        });
 
     let PROGRESS_CACHE = [];
     let MANUAL_ID_MAPPINGS = {};
@@ -229,9 +240,7 @@ function refreshCompareExamSelectors() {
 function trySyncCompareExamOptions() {
     const cohortId = CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID');
     if (!cohortId || !window.CloudManager || typeof window.CloudManager.fetchCohortExamsToLocal !== 'function') return false;
-    if (!window.__COMPARE_EXAM_SYNC_STATE) window.__COMPARE_EXAM_SYNC_STATE = {};
-    const state = window.__COMPARE_EXAM_SYNC_STATE[cohortId] || { pending: false, lastAttempt: 0 };
-    window.__COMPARE_EXAM_SYNC_STATE[cohortId] = state;
+    const state = ensureCompareExamSyncStateEntry(cohortId);
     if (state.pending) return true;
     if (Date.now() - Number(state.lastAttempt || 0) < 5000) return false;
     state.pending = true;

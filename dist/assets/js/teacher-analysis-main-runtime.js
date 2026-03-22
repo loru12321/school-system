@@ -2334,9 +2334,33 @@ function exportMultiPeriodComparison() {
 let MACRO_MULTI_PERIOD_COMPARE_CACHE = null;
 let TEACHER_MULTI_PERIOD_COMPARE_CACHE = null;
 let STUDENT_MULTI_PERIOD_COMPARE_CACHE = null;
+const CompareSessionStateRuntime = window.CompareSessionState || null;
 let CLOUD_STUDENT_COMPARE_CONTEXT = null;
 let CLOUD_COMPARE_TARGET = null;
 let CLOUD_COMPARE_PREV_DATA_BACKUP = null;
+
+function syncLocalCompareSessionState(patch = {}) {
+    const snapshot = CompareSessionStateRuntime && typeof CompareSessionStateRuntime.syncCompareSessionState === 'function'
+        ? CompareSessionStateRuntime.syncCompareSessionState(patch)
+        : {
+            cloudCompareTarget: Object.prototype.hasOwnProperty.call(patch, 'cloudCompareTarget') ? patch.cloudCompareTarget : (Object.prototype.hasOwnProperty.call(patch, 'CLOUD_COMPARE_TARGET') ? patch.CLOUD_COMPARE_TARGET : (window.CLOUD_COMPARE_TARGET || CLOUD_COMPARE_TARGET || null)),
+            cloudStudentCompareContext: Object.prototype.hasOwnProperty.call(patch, 'cloudStudentCompareContext') ? patch.cloudStudentCompareContext : (Object.prototype.hasOwnProperty.call(patch, 'CLOUD_STUDENT_COMPARE_CONTEXT') ? patch.CLOUD_STUDENT_COMPARE_CONTEXT : (window.CLOUD_STUDENT_COMPARE_CONTEXT || CLOUD_STUDENT_COMPARE_CONTEXT || null)),
+            cloudComparePrevDataBackup: Object.prototype.hasOwnProperty.call(patch, 'cloudComparePrevDataBackup') ? patch.cloudComparePrevDataBackup : (Object.prototype.hasOwnProperty.call(patch, 'CLOUD_COMPARE_PREV_DATA_BACKUP') ? patch.CLOUD_COMPARE_PREV_DATA_BACKUP : (window.CLOUD_COMPARE_PREV_DATA_BACKUP ?? CLOUD_COMPARE_PREV_DATA_BACKUP ?? null))
+        };
+    CLOUD_COMPARE_TARGET = snapshot.cloudCompareTarget || null;
+    CLOUD_STUDENT_COMPARE_CONTEXT = snapshot.cloudStudentCompareContext || null;
+    CLOUD_COMPARE_PREV_DATA_BACKUP = snapshot.cloudComparePrevDataBackup ?? null;
+    window.CLOUD_COMPARE_TARGET = CLOUD_COMPARE_TARGET;
+    window.CLOUD_STUDENT_COMPARE_CONTEXT = CLOUD_STUDENT_COMPARE_CONTEXT;
+    window.CLOUD_COMPARE_PREV_DATA_BACKUP = CLOUD_COMPARE_PREV_DATA_BACKUP;
+    return snapshot;
+}
+
+syncLocalCompareSessionState({
+    cloudCompareTarget: window.CLOUD_COMPARE_TARGET || null,
+    cloudStudentCompareContext: window.CLOUD_STUDENT_COMPARE_CONTEXT || null,
+    cloudComparePrevDataBackup: window.CLOUD_COMPARE_PREV_DATA_BACKUP ?? null
+});
 
 function normalizeCompareName(name) {
     return String(name || '').trim().replace(/\s+/g, '').toLowerCase();
@@ -2345,6 +2369,7 @@ function normalizeCompareName(name) {
 function setCloudCompareTarget(targetOrName, className, schoolName) {
     if (!targetOrName) {
         CLOUD_COMPARE_TARGET = null;
+        syncLocalCompareSessionState({ cloudCompareTarget: null });
         return null;
     }
     if (typeof targetOrName === 'object') {
@@ -2353,6 +2378,7 @@ function setCloudCompareTarget(targetOrName, className, schoolName) {
             class: String(targetOrName.class || '').trim(),
             school: String(targetOrName.school || '').trim()
         };
+        syncLocalCompareSessionState({ cloudCompareTarget: CLOUD_COMPARE_TARGET });
         return CLOUD_COMPARE_TARGET;
     }
     CLOUD_COMPARE_TARGET = {
@@ -2360,6 +2386,7 @@ function setCloudCompareTarget(targetOrName, className, schoolName) {
         class: String(className || '').trim(),
         school: String(schoolName || '').trim()
     };
+    syncLocalCompareSessionState({ cloudCompareTarget: CLOUD_COMPARE_TARGET });
     return CLOUD_COMPARE_TARGET;
 }
 
@@ -2416,6 +2443,7 @@ function restorePrevDataFromCloudCompare() {
     if (CLOUD_COMPARE_PREV_DATA_BACKUP !== null) {
         PREV_DATA = JSON.parse(JSON.stringify(CLOUD_COMPARE_PREV_DATA_BACKUP));
         CLOUD_COMPARE_PREV_DATA_BACKUP = null;
+        syncLocalCompareSessionState({ cloudComparePrevDataBackup: null });
         if (typeof performSilentMatching === 'function') {
             try { performSilentMatching(); } catch (e) { console.warn('恢复历史匹配失败:', e); }
         }
@@ -2463,6 +2491,10 @@ function syncCloudContextToPrevData() {
     }
 
     PREV_DATA = [historyRow];
+    syncLocalCompareSessionState({
+        cloudStudentCompareContext: CLOUD_STUDENT_COMPARE_CONTEXT,
+        cloudComparePrevDataBackup: CLOUD_COMPARE_PREV_DATA_BACKUP
+    });
     if (typeof performSilentMatching === 'function') {
         try { performSilentMatching(); } catch (e) { console.warn('云端历史匹配失败:', e); }
     }
@@ -2471,6 +2503,7 @@ function syncCloudContextToPrevData() {
 
 function clearCloudStudentCompareContext() {
     CLOUD_STUDENT_COMPARE_CONTEXT = null;
+    syncLocalCompareSessionState({ cloudStudentCompareContext: null });
     restorePrevDataFromCloudCompare();
 }
 
@@ -2559,6 +2592,7 @@ function applyCloudStudentCompareContext(payload, compareStudent, allCompareStud
             _sourceExam: prevPeriod.examId || ''
         }
     };
+    syncLocalCompareSessionState({ cloudStudentCompareContext: CLOUD_STUDENT_COMPARE_CONTEXT });
     return CLOUD_STUDENT_COMPARE_CONTEXT;
 }
 

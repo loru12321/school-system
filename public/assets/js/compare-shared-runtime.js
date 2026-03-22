@@ -1,6 +1,27 @@
 (() => {
     if (typeof window === 'undefined' || window.__COMPARE_SHARED_RUNTIME_PATCHED__) return;
 
+const readDuplicateCompareExamsState = typeof window.readDuplicateCompareExamsState === 'function'
+    ? window.readDuplicateCompareExamsState
+    : (() => (Array.isArray(window.DUPLICATE_COMPARE_EXAMS) ? window.DUPLICATE_COMPARE_EXAMS : []));
+const setDuplicateCompareExamsState = typeof window.setDuplicateCompareExamsState === 'function'
+    ? window.setDuplicateCompareExamsState
+    : ((groups) => {
+        const nextGroups = Array.isArray(groups) ? groups : [];
+        window.DUPLICATE_COMPARE_EXAMS = nextGroups;
+        return nextGroups;
+    });
+const readDuplicateCompareWarnedKeyState = typeof window.readDuplicateCompareWarnedKeyState === 'function'
+    ? window.readDuplicateCompareWarnedKeyState
+    : (() => String(window.__DUPLICATE_COMPARE_WARNED_KEY || '').trim());
+const setDuplicateCompareWarnedKeyState = typeof window.setDuplicateCompareWarnedKeyState === 'function'
+    ? window.setDuplicateCompareWarnedKeyState
+    : ((key) => {
+        const nextKey = String(key || '').trim();
+        window.__DUPLICATE_COMPARE_WARNED_KEY = nextKey;
+        return nextKey;
+    });
+
 function isExamKeyEquivalentForCompare(a, b) {
     const normalize = (key) => String(key || '').trim().replace(/\s+/g, '_').toLowerCase();
     const ka = normalize(a);
@@ -297,11 +318,11 @@ function pickPreferredExamEntry(existing, candidate) {
 }
 
 function warnIfDuplicateCompareSnapshots() {
-    const groups = Array.isArray(window.DUPLICATE_COMPARE_EXAMS) ? window.DUPLICATE_COMPARE_EXAMS : [];
+    const groups = readDuplicateCompareExamsState();
     if (!groups.length) return;
     const key = groups.map(group => group.map(item => item.label || item.id).join('|')).join('||');
-    if (window.__DUPLICATE_COMPARE_WARNED_KEY === key) return;
-    window.__DUPLICATE_COMPARE_WARNED_KEY = key;
+    if (readDuplicateCompareWarnedKeyState() === key) return;
+    setDuplicateCompareWarnedKeyState(key);
     if (window.UI) UI.toast('检测到重复考试快照，系统已自动去重；如期数异常请重新封存对应考试。', 'warning');
 }
 
@@ -400,7 +421,7 @@ function listAvailableExamsForCompare() {
         });
     }
     const finalExamList = Array.from(examMap.values());
-    window.DUPLICATE_COMPARE_EXAMS = [];
+    setDuplicateCompareExamsState([]);
     warnIfDuplicateCompareSnapshots();
     finalExamList.sort((a, b) => {
         const ta = Number(a.sortTs || a.createdAt || 0);

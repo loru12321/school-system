@@ -15863,8 +15863,11 @@ function findPreviousRecord(student) {
         return cloudPrev;
     }
 
-    if (CLOUD_STUDENT_COMPARE_CONTEXT?.previousRecord && isCloudContextLikelyCurrentTarget(student)) {
-        return CLOUD_STUDENT_COMPARE_CONTEXT.previousRecord;
+    const cloudCompareContext = typeof window.readCloudStudentCompareContextState === 'function'
+        ? window.readCloudStudentCompareContextState()
+        : (window.CLOUD_STUDENT_COMPARE_CONTEXT || null);
+    if (cloudCompareContext?.previousRecord && isCloudContextLikelyCurrentTarget(student)) {
+        return cloudCompareContext.previousRecord;
     }
 
     // 🟢 [Bug #2/#5 修复] 标准化工具函数
@@ -15948,7 +15951,7 @@ function findPreviousRecord(student) {
     const user = getCurrentUser();
     const isParentOrStudent = user && RoleManager.hasAnyRole(user, ['parent', 'student']) &&
         !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director', 'teacher', 'class_teacher']);
-    if (!CLOUD_STUDENT_COMPARE_CONTEXT?.previousRecord && !isParentOrStudent) {
+    if (!cloudCompareContext?.previousRecord && !isParentOrStudent) {
         console.warn("历史数据(PREV_DATA)为空且COHORT_DB中无历史快照，无法进行对比。");
     }
 
