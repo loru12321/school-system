@@ -132,18 +132,27 @@ async function ensureCohortEntered(page) {
     if (!candidate) return state;
 
     await withNavigationRetry(page, async () => {
-        await page.waitForFunction(() => (
-            typeof window.enterCohortFromMask === 'function'
-            && (() => {
-                try {
-                    return typeof CohortManager !== 'undefined'
-                        && !!CohortManager
-                        && typeof CohortManager.addCohort === 'function';
-                } catch (error) {
-                    return false;
-                }
-            })()
-        ), { timeout: 20000 });
+        await page.waitForFunction(() => {
+            const mask = document.getElementById('mode-mask');
+            if (!mask || getComputedStyle(mask).display === 'none') return true;
+            return (
+                typeof window.enterCohortFromMask === 'function'
+                && (() => {
+                    try {
+                        return typeof CohortManager !== 'undefined'
+                            && !!CohortManager
+                            && typeof CohortManager.addCohort === 'function';
+                    } catch (error) {
+                        return false;
+                    }
+                })()
+            );
+        }, { timeout: 20000 });
+        const maskVisible = await page.evaluate(() => {
+            const mask = document.getElementById('mode-mask');
+            return !!mask && getComputedStyle(mask).display !== 'none';
+        });
+        if (!maskVisible) return;
         const input = page.locator('#entry-cohort-year');
         if (await input.count()) {
             await input.fill(candidate);
