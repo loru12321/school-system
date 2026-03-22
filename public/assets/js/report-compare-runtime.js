@@ -1,11 +1,17 @@
 (() => {
     if (typeof window === 'undefined' || window.__REPORT_COMPARE_RUNTIME_PATCHED__) return;
 
+const CompareSessionStateRuntime = window.CompareSessionState || null;
 const readCloudStudentCompareContextSessionState = typeof window.readCloudStudentCompareContextState === 'function'
     ? window.readCloudStudentCompareContextState
-    : (() => (window.CLOUD_STUDENT_COMPARE_CONTEXT && typeof window.CLOUD_STUDENT_COMPARE_CONTEXT === 'object'
-        ? window.CLOUD_STUDENT_COMPARE_CONTEXT
-        : null));
+    : (() => {
+        if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getCloudStudentCompareContext === 'function') {
+            return CompareSessionStateRuntime.getCloudStudentCompareContext() || null;
+        }
+        return window.CLOUD_STUDENT_COMPARE_CONTEXT && typeof window.CLOUD_STUDENT_COMPARE_CONTEXT === 'object'
+            ? window.CLOUD_STUDENT_COMPARE_CONTEXT
+            : null;
+    });
 
 function getCloudPreviousRecord(student) {
     if (!isCloudContextMatchStudent(student) && !isCloudContextLikelyCurrentTarget(student)) return null;

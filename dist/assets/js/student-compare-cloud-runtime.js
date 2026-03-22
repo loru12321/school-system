@@ -2,6 +2,7 @@
     if (typeof window === 'undefined' || window.__STUDENT_COMPARE_CLOUD_RUNTIME_PATCHED__) return;
 
     const CompareSessionStateRuntime = window.CompareSessionState || null;
+    const ReportSessionStateRuntime = window.ReportSessionState || null;
     const readStudentCompareCacheState = typeof window.readStudentCompareCacheState === 'function'
         ? window.readStudentCompareCacheState
         : (() => (window.STUDENT_MULTI_PERIOD_COMPARE_CACHE && typeof window.STUDENT_MULTI_PERIOD_COMPARE_CACHE === 'object'
@@ -16,25 +17,41 @@
         });
     const readCloudCompareTargetSessionState = typeof window.readCloudCompareTargetState === 'function'
         ? window.readCloudCompareTargetState
-        : (() => (window.CLOUD_COMPARE_TARGET && typeof window.CLOUD_COMPARE_TARGET === 'object'
-            ? window.CLOUD_COMPARE_TARGET
-            : null));
+        : (() => {
+            if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getCloudCompareTarget === 'function') {
+                return CompareSessionStateRuntime.getCloudCompareTarget() || null;
+            }
+            return window.CLOUD_COMPARE_TARGET && typeof window.CLOUD_COMPARE_TARGET === 'object'
+                ? window.CLOUD_COMPARE_TARGET
+                : null;
+        });
     const setCloudCompareTargetSessionState = typeof window.setCloudCompareTargetState === 'function'
         ? window.setCloudCompareTargetState
         : ((target) => {
             const nextTarget = target && typeof target === 'object' && !Array.isArray(target) ? target : null;
+            if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.setCloudCompareTarget === 'function') {
+                return CompareSessionStateRuntime.setCloudCompareTarget(nextTarget) || null;
+            }
             window.CLOUD_COMPARE_TARGET = nextTarget;
             return nextTarget;
         });
     const readCloudStudentCompareContextSessionState = typeof window.readCloudStudentCompareContextState === 'function'
         ? window.readCloudStudentCompareContextState
-        : (() => (window.CLOUD_STUDENT_COMPARE_CONTEXT && typeof window.CLOUD_STUDENT_COMPARE_CONTEXT === 'object'
-            ? window.CLOUD_STUDENT_COMPARE_CONTEXT
-            : null));
+        : (() => {
+            if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getCloudStudentCompareContext === 'function') {
+                return CompareSessionStateRuntime.getCloudStudentCompareContext() || null;
+            }
+            return window.CLOUD_STUDENT_COMPARE_CONTEXT && typeof window.CLOUD_STUDENT_COMPARE_CONTEXT === 'object'
+                ? window.CLOUD_STUDENT_COMPARE_CONTEXT
+                : null;
+        });
     const setCloudStudentCompareContextSessionState = typeof window.setCloudStudentCompareContextState === 'function'
         ? window.setCloudStudentCompareContextState
         : ((context) => {
             const nextContext = context && typeof context === 'object' && !Array.isArray(context) ? context : null;
+            if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.setCloudStudentCompareContext === 'function') {
+                return CompareSessionStateRuntime.setCloudStudentCompareContext(nextContext) || null;
+            }
             window.CLOUD_STUDENT_COMPARE_CONTEXT = nextContext;
             return nextContext;
         });
@@ -50,22 +67,38 @@
         });
     const readCloudComparePrevDataBackupSessionState = typeof window.readCloudComparePrevDataBackupState === 'function'
         ? window.readCloudComparePrevDataBackupState
-        : (() => (window.CLOUD_COMPARE_PREV_DATA_BACKUP ?? null));
+        : (() => {
+            if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getCloudComparePrevDataBackup === 'function') {
+                return CompareSessionStateRuntime.getCloudComparePrevDataBackup() ?? null;
+            }
+            return window.CLOUD_COMPARE_PREV_DATA_BACKUP ?? null;
+        });
     const setCloudComparePrevDataBackupSessionState = typeof window.setCloudComparePrevDataBackupState === 'function'
         ? window.setCloudComparePrevDataBackupState
         : ((rows) => {
+            if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.setCloudComparePrevDataBackup === 'function') {
+                return CompareSessionStateRuntime.setCloudComparePrevDataBackup(rows) ?? null;
+            }
             window.CLOUD_COMPARE_PREV_DATA_BACKUP = rows ?? null;
             return window.CLOUD_COMPARE_PREV_DATA_BACKUP;
         });
     const readCurrentReportStudentState = typeof window.readCurrentReportStudentState === 'function'
         ? window.readCurrentReportStudentState
-        : (() => (CURRENT_REPORT_STUDENT && typeof CURRENT_REPORT_STUDENT === 'object'
-            ? CURRENT_REPORT_STUDENT
-            : null));
+        : (() => {
+            if (ReportSessionStateRuntime && typeof ReportSessionStateRuntime.getCurrentReportStudent === 'function') {
+                return ReportSessionStateRuntime.getCurrentReportStudent() || null;
+            }
+            return CURRENT_REPORT_STUDENT && typeof CURRENT_REPORT_STUDENT === 'object'
+                ? CURRENT_REPORT_STUDENT
+                : null;
+        });
     const setCurrentReportStudentState = typeof window.setCurrentReportStudentState === 'function'
         ? window.setCurrentReportStudentState
         : ((student) => {
             const nextStudent = student && typeof student === 'object' && !Array.isArray(student) ? student : null;
+            if (ReportSessionStateRuntime && typeof ReportSessionStateRuntime.setCurrentReportStudent === 'function') {
+                return ReportSessionStateRuntime.setCurrentReportStudent(nextStudent) || null;
+            }
             CURRENT_REPORT_STUDENT = nextStudent;
             return nextStudent;
         });

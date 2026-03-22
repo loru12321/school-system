@@ -1,16 +1,28 @@
 (() => {
     if (typeof window === 'undefined' || window.__REPORT_RENDER_RUNTIME_PATCHED__) return;
 
+const CompareSessionStateRuntime = window.CompareSessionState || null;
+const ReportSessionStateRuntime = window.ReportSessionState || null;
 const readCloudStudentCompareContextSessionState = typeof window.readCloudStudentCompareContextState === 'function'
     ? window.readCloudStudentCompareContextState
-    : (() => (window.CLOUD_STUDENT_COMPARE_CONTEXT && typeof window.CLOUD_STUDENT_COMPARE_CONTEXT === 'object'
-        ? window.CLOUD_STUDENT_COMPARE_CONTEXT
-        : null));
+    : (() => {
+        if (CompareSessionStateRuntime && typeof CompareSessionStateRuntime.getCloudStudentCompareContext === 'function') {
+            return CompareSessionStateRuntime.getCloudStudentCompareContext() || null;
+        }
+        return window.CLOUD_STUDENT_COMPARE_CONTEXT && typeof window.CLOUD_STUDENT_COMPARE_CONTEXT === 'object'
+            ? window.CLOUD_STUDENT_COMPARE_CONTEXT
+            : null;
+    });
 const readCurrentReportStudentSessionState = typeof window.readCurrentReportStudentState === 'function'
     ? window.readCurrentReportStudentState
-    : (() => (window.CURRENT_REPORT_STUDENT && typeof window.CURRENT_REPORT_STUDENT === 'object'
-        ? window.CURRENT_REPORT_STUDENT
-        : null));
+    : (() => {
+        if (ReportSessionStateRuntime && typeof ReportSessionStateRuntime.getCurrentReportStudent === 'function') {
+            return ReportSessionStateRuntime.getCurrentReportStudent() || null;
+        }
+        return window.CURRENT_REPORT_STUDENT && typeof window.CURRENT_REPORT_STUDENT === 'object'
+            ? window.CURRENT_REPORT_STUDENT
+            : null;
+    });
 const readDuplicateCompareExamsState = typeof window.readDuplicateCompareExamsState === 'function'
     ? window.readDuplicateCompareExamsState
     : (() => (Array.isArray(window.DUPLICATE_COMPARE_EXAMS) ? window.DUPLICATE_COMPARE_EXAMS : []));
