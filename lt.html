@@ -37824,6 +37824,116 @@ function buildSchoolSummaryForExam(rows) {
 
 </script>
     <script>
+(function (root, factory) {
+    function installCompareCloudContext(target, runtime) {
+        if (!target || !runtime) return runtime;
+        target.CompareCloudContext = runtime;
+        target.normalizeCompareCloudName = runtime.normalizeCompareName;
+        target.isCloudCompareClassEquivalent = function (a, b, normalizeClassFn) {
+            return runtime.isClassEquivalent(a, b, { normalizeClass: normalizeClassFn });
+        };
+        target.isCloudCompareContextMatchStudent = runtime.isContextMatchStudent;
+        target.isCloudCompareContextLikelyCurrentTarget = runtime.isLikelyCurrentTarget;
+        return runtime;
+    }
+
+    const runtime = factory(root || {});
+
+    if (typeof module === 'object' && module.exports) {
+        const createRuntime = function (overrideRoot) {
+            return installCompareCloudContext(overrideRoot || root || {}, factory(overrideRoot || root || {}));
+        };
+        createRuntime.runtime = runtime;
+        module.exports = createRuntime;
+    }
+
+    if (!root || root.CompareCloudContext) return;
+    installCompareCloudContext(root, runtime);
+})(typeof globalThis !== 'undefined' ? globalThis : this, function createCompareCloudContextRuntime(root) {
+    function normalizeString(value) {
+        return String(value || '').trim();
+    }
+
+    function normalizeCompareName(name) {
+        return normalizeString(name).replace(/\s+/g, '').toLowerCase();
+    }
+
+    function normalizeClassValue(normalizeClassFn, value) {
+        const normalized = typeof normalizeClassFn === 'function'
+            ? normalizeClassFn(value || '')
+            : value;
+        return normalizeString(normalized);
+    }
+
+    function resolveNormalizeName(options = {}) {
+        return typeof options.normalizeCompareName === 'function'
+            ? options.normalizeCompareName
+            : normalizeCompareName;
+    }
+
+    function isClassEquivalent(a, b, options = {}) {
+        const normalizeClassFn = options.normalizeClass || options.normalizeClassFn;
+        const c1 = normalizeClassValue(normalizeClassFn, a);
+        const c2 = normalizeClassValue(normalizeClassFn, b);
+        if (!c1 || !c2) return false;
+        if (c1 === c2) return true;
+        const n1 = c1.replace(/0/g, '');
+        const n2 = c2.replace(/0/g, '');
+        return n1.length > 0 && n1 === n2;
+    }
+
+    function resolveClassEquivalent(options = {}) {
+        return typeof options.isClassEquivalent === 'function'
+            ? options.isClassEquivalent
+            : function defaultClassEquivalent(a, b) {
+                return isClassEquivalent(a, b, options);
+            };
+    }
+
+    function isContextMatchStudent(context, student, options = {}) {
+        if (!context || !student) return false;
+        const owner = context.owner || {};
+        const normalizeName = resolveNormalizeName(options);
+        const classEquivalent = resolveClassEquivalent(options);
+        const studentName = normalizeName(student.name || '');
+        const studentClass = String(student.class || '');
+        const ownerName = normalizeName(owner.name || '');
+        const ownerClass = String(owner.class || '');
+        return studentName === ownerName && classEquivalent(studentClass, ownerClass);
+    }
+
+    function isLikelyCurrentTarget(context, student, target, options = {}) {
+        if (!context || !student) return false;
+        const owner = context.owner || {};
+        const normalizeName = resolveNormalizeName(options);
+        const classEquivalent = resolveClassEquivalent(options);
+        const studentName = normalizeName(student?.name || '');
+        const ownerName = normalizeName(owner?.name || '');
+        const targetName = normalizeName(target?.name || '');
+        const ownerClass = String(owner?.class || '');
+        const targetClass = String(target?.class || '');
+        const studentClass = String(student?.class || '');
+
+        const nameMatchByOwner = !!ownerName && studentName === ownerName;
+        const nameMatchByTarget = !!targetName && studentName === targetName;
+        const classMatchByOwner = !!ownerClass && classEquivalent(studentClass, ownerClass);
+        const classMatchByTarget = !!targetClass && classEquivalent(studentClass, targetClass);
+
+        if (nameMatchByOwner && (classMatchByOwner || !ownerClass)) return true;
+        if (nameMatchByTarget && (classMatchByTarget || !targetClass)) return true;
+        return nameMatchByOwner || nameMatchByTarget;
+    }
+
+    return {
+        normalizeCompareName,
+        isClassEquivalent,
+        isContextMatchStudent,
+        isLikelyCurrentTarget
+    };
+});
+
+</script>
+    <script>
 (() => {
     if (typeof window === 'undefined' || window.__REPORT_COMPARE_RUNTIME_PATCHED__) return;
 
@@ -43087,6 +43197,7 @@ function exportMultiPeriodComparison() {
 
 const CompareSessionStateRuntime = window.CompareSessionState || null;
 const ReportSessionStateRuntime = window.ReportSessionState || null;
+const CompareCloudContextRuntime = window.CompareCloudContext || null;
 const readCloudCompareTargetSessionState = typeof window.readCloudCompareTargetState === 'function'
     ? window.readCloudCompareTargetState
     : (() => {
@@ -43184,6 +43295,9 @@ syncLocalCompareSessionState({
 });
 
 function normalizeCompareName(name) {
+    if (CompareCloudContextRuntime && typeof CompareCloudContextRuntime.normalizeCompareName === 'function') {
+        return CompareCloudContextRuntime.normalizeCompareName(name);
+    }
     return String(name || '').trim().replace(/\s+/g, '').toLowerCase();
 }
 
@@ -43243,6 +43357,9 @@ function resolveCloudCompareTarget(user) {
 }
 
 function isClassEquivalent(a, b) {
+    if (CompareCloudContextRuntime && typeof CompareCloudContextRuntime.isClassEquivalent === 'function') {
+        return CompareCloudContextRuntime.isClassEquivalent(a, b, { normalizeClass });
+    }
     const c1 = normalizeClass(a || '');
     const c2 = normalizeClass(b || '');
     if (!c1 || !c2) return false;
@@ -43420,6 +43537,13 @@ function applyCloudStudentCompareContext(payload, compareStudent, allCompareStud
 
 function isCloudContextMatchStudent(student) {
     if (!CLOUD_STUDENT_COMPARE_CONTEXT || !student) return false;
+    if (CompareCloudContextRuntime && typeof CompareCloudContextRuntime.isContextMatchStudent === 'function') {
+        return CompareCloudContextRuntime.isContextMatchStudent(
+            CLOUD_STUDENT_COMPARE_CONTEXT,
+            student,
+            { normalizeCompareName, isClassEquivalent }
+        );
+    }
 
     const owner = CLOUD_STUDENT_COMPARE_CONTEXT.owner || {};
     const targetName = normalizeCompareName(student.name || '');
@@ -43441,6 +43565,14 @@ function isCloudContextLikelyCurrentTarget(student) {
     if (!CLOUD_STUDENT_COMPARE_CONTEXT || !student) return false;
     const owner = CLOUD_STUDENT_COMPARE_CONTEXT.owner || {};
     const target = resolveCloudCompareTarget(getCurrentUser());
+    if (CompareCloudContextRuntime && typeof CompareCloudContextRuntime.isLikelyCurrentTarget === 'function') {
+        return CompareCloudContextRuntime.isLikelyCurrentTarget(
+            CLOUD_STUDENT_COMPARE_CONTEXT,
+            student,
+            target,
+            { normalizeCompareName, isClassEquivalent }
+        );
+    }
     const stuName = normalizeCompareName(student?.name || '');
     const ownerName = normalizeCompareName(owner?.name || '');
     const targetName = normalizeCompareName(target?.name || '');
@@ -47978,6 +48110,7 @@ function exportMacroMultiPeriodComparison() {
     if (typeof window === 'undefined' || window.__STUDENT_COMPARE_CLOUD_RUNTIME_PATCHED__) return;
 
     const CompareSessionStateRuntime = window.CompareSessionState || null;
+    const CompareCloudContextRuntime = window.CompareCloudContext || null;
     const ReportSessionStateRuntime = window.ReportSessionState || null;
     const readStudentCompareCacheState = typeof window.readStudentCompareCacheState === 'function'
         ? window.readStudentCompareCacheState
@@ -48111,6 +48244,9 @@ function exportMacroMultiPeriodComparison() {
     });
 
     function normalizeCompareName(name) {
+        if (CompareCloudContextRuntime && typeof CompareCloudContextRuntime.normalizeCompareName === 'function') {
+            return CompareCloudContextRuntime.normalizeCompareName(name);
+        }
         return String(name || '').trim().replace(/\s+/g, '').toLowerCase();
     }
 
@@ -48139,6 +48275,9 @@ function exportMacroMultiPeriodComparison() {
     }
 
     function isClassEquivalent(a, b) {
+        if (CompareCloudContextRuntime && typeof CompareCloudContextRuntime.isClassEquivalent === 'function') {
+            return CompareCloudContextRuntime.isClassEquivalent(a, b, { normalizeClass });
+        }
         const c1 = normalizeClass(a || '');
         const c2 = normalizeClass(b || '');
         if (!c1 || !c2) return false;
@@ -48341,6 +48480,12 @@ function exportMacroMultiPeriodComparison() {
     }
 
     function isCloudContextMatchStudent(student) {
+        if (CompareCloudContextRuntime && typeof CompareCloudContextRuntime.isContextMatchStudent === 'function') {
+            return CompareCloudContextRuntime.isContextMatchStudent(CLOUD_STUDENT_COMPARE_CONTEXT, student, {
+                normalizeCompareName,
+                isClassEquivalent
+            });
+        }
         if (!CLOUD_STUDENT_COMPARE_CONTEXT || !student) return false;
 
         const owner = CLOUD_STUDENT_COMPARE_CONTEXT.owner || {};
@@ -48353,9 +48498,15 @@ function exportMacroMultiPeriodComparison() {
     }
 
     function isCloudContextLikelyCurrentTarget(student) {
+        const target = resolveCloudCompareTarget(getCurrentUser());
+        if (CompareCloudContextRuntime && typeof CompareCloudContextRuntime.isLikelyCurrentTarget === 'function') {
+            return CompareCloudContextRuntime.isLikelyCurrentTarget(CLOUD_STUDENT_COMPARE_CONTEXT, student, target, {
+                normalizeCompareName,
+                isClassEquivalent
+            });
+        }
         if (!CLOUD_STUDENT_COMPARE_CONTEXT || !student) return false;
         const owner = CLOUD_STUDENT_COMPARE_CONTEXT.owner || {};
-        const target = resolveCloudCompareTarget(getCurrentUser());
         const studentName = normalizeCompareName(student?.name || '');
         const ownerName = normalizeCompareName(owner?.name || '');
         const targetName = normalizeCompareName(target?.name || '');
