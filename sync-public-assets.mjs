@@ -7,27 +7,62 @@ const __dirname = path.dirname(__filename);
 
 const sourceDir = path.join(__dirname, 'public', 'assets', 'js');
 const targetDir = path.join(__dirname, 'dist', 'assets', 'js');
+const sourceIndexPath = path.join(__dirname, 'src', 'index.html');
 const rootPublicFiles = ['favicon.ico'];
 
-if (!fs.existsSync(sourceDir)) {
-  console.error(`Source JS directory not found: ${sourceDir}`);
-  process.exit(1);
+export function collectReferencedJsAssets(html) {
+  const refs = new Set();
+  const scriptRegex = /<script[^>]*src="([^"]+)"[^>]*><\/script>/gi;
+  for (const match of String(html || '').matchAll(scriptRegex)) {
+    const src = String(match[1] || '').trim();
+    if (!src.startsWith('./assets/js/') && !src.startsWith('/assets/js/')) continue;
+    refs.add(src.replace(/^\.?\//, '').split('?')[0].split('#')[0].replace(/^assets\/js\//, ''));
+  }
+  return refs;
 }
 
-fs.mkdirSync(targetDir, { recursive: true });
+export function syncReferencedAssets({
+  sourceJsDir = sourceDir,
+  targetJsDir = targetDir,
+  indexHtmlPath = sourceIndexPath,
+  projectRoot = __dirname
+} = {}) {
+  if (!fs.existsSync(sourceJsDir)) {
+    throw new Error(`Source JS directory not found: ${sourceJsDir}`);
+  }
 
-for (const entry of fs.readdirSync(sourceDir, { withFileTypes: true })) {
-  if (!entry.isFile() || !entry.name.endsWith('.js')) continue;
-  const sourcePath = path.join(sourceDir, entry.name);
-  const targetPath = path.join(targetDir, entry.name);
-  fs.copyFileSync(sourcePath, targetPath);
-  console.log(`Synced asset: ${sourcePath} -> ${targetPath}`);
+  fs.mkdirSync(targetJsDir, { recursive: true });
+
+  const sourceIndexHtml = fs.readFileSync(indexHtmlPath, 'utf8');
+  const referencedAssets = collectReferencedJsAssets(sourceIndexHtml);
+
+  for (const entry of fs.readdirSync(sourceJsDir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.js')) continue;
+    if (!referencedAssets.has(entry.name)) continue;
+    const sourcePath = path.join(sourceJsDir, entry.name);
+    const targetPath = path.join(targetJsDir, entry.name);
+    fs.copyFileSync(sourcePath, targetPath);
+    console.log(`Synced asset: ${sourcePath} -> ${targetPath}`);
+  }
+
+  for (const fileName of rootPublicFiles) {
+    const sourcePath = path.join(projectRoot, 'public', fileName);
+    if (!fs.existsSync(sourcePath)) continue;
+    const targetPath = path.join(projectRoot, 'dist', fileName);
+    fs.copyFileSync(sourcePath, targetPath);
+    console.log(`Synced root asset: ${sourcePath} -> ${targetPath}`);
+  }
 }
 
-for (const fileName of rootPublicFiles) {
-  const sourcePath = path.join(__dirname, 'public', fileName);
-  if (!fs.existsSync(sourcePath)) continue;
-  const targetPath = path.join(__dirname, 'dist', fileName);
-  fs.copyFileSync(sourcePath, targetPath);
-  console.log(`Synced root asset: ${sourcePath} -> ${targetPath}`);
+function main() {
+  try {
+    syncReferencedAssets();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  main();
 }
