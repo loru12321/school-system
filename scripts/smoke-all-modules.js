@@ -136,15 +136,7 @@ async function ensureCohortEntered(page) {
             if (!mask || getComputedStyle(mask).display === 'none') return true;
             return (
                 typeof window.enterCohortFromMask === 'function'
-                && (() => {
-                    try {
-                        return typeof CohortManager !== 'undefined'
-                            && !!CohortManager
-                            && typeof CohortManager.addCohort === 'function';
-                    } catch (error) {
-                        return false;
-                    }
-                })()
+                || !!document.querySelector('button[onclick="enterCohortFromMask()"]')
             );
         }, { timeout: 20000 });
         const maskVisible = await page.evaluate(() => {
