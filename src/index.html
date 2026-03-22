@@ -7344,6 +7344,158 @@
                 box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
             }
 
+            #dm-teacher-area,
+            #dm-targets-area,
+            #dm-sql-area,
+            #dm-cloud-area {
+                gap: 14px;
+            }
+
+            #dm-teacher-area>div:first-child,
+            #dm-targets-area>div:first-child,
+            #dm-sql-area>div:nth-of-type(1),
+            #dm-sql-area>div:nth-of-type(2),
+            #dm-sql-area>div:nth-of-type(3),
+            #dm-cloud-area .info-bar,
+            #dm-cloud-area>div:nth-of-type(3),
+            #dm-cloud-area>div:nth-of-type(4) {
+                border: 1px solid var(--dm-line) !important;
+                border-radius: 20px !important;
+                background: rgba(255, 255, 255, 0.9) !important;
+                box-shadow: var(--dm-soft-shadow) !important;
+            }
+
+            #dm-teacher-area>div:first-child,
+            #dm-targets-area>div:first-child {
+                padding: 16px !important;
+                border-bottom: 1px solid var(--dm-line) !important;
+                background:
+                    linear-gradient(135deg, rgba(248, 250, 252, 0.96), rgba(239, 246, 255, 0.86)) !important;
+            }
+
+            #dm-teacher-area>div:first-child::before,
+            #dm-targets-area>div:first-child::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(120deg, rgba(255, 255, 255, 0.46), transparent 60%);
+                pointer-events: none;
+            }
+
+            #dm-teacher-area>div:first-child,
+            #dm-targets-area>div:first-child,
+            #dm-sql-area>div:nth-of-type(1),
+            #dm-sql-area>div:nth-of-type(2),
+            #dm-sql-area>div:nth-of-type(3) {
+                position: relative;
+                overflow: hidden;
+            }
+
+            #dm-teacher-area>div:first-child label,
+            #dm-targets-area h4,
+            #dm-sql-area b {
+                color: #334155 !important;
+                letter-spacing: -0.02em;
+            }
+
+            #dm-teacher-area>div:nth-of-type(2),
+            #dm-targets-area .info-bar,
+            #dm-cloud-area .info-bar {
+                border-left-width: 0 !important;
+                padding: 16px 18px !important;
+                border-radius: 20px !important;
+                background:
+                    linear-gradient(135deg, rgba(239, 246, 255, 0.94), rgba(248, 250, 252, 0.9)) !important;
+                color: #1d4ed8 !important;
+                font-size: 13px !important;
+                line-height: 1.7 !important;
+            }
+
+            #dm-targets-area>div:last-child,
+            #dm-teacher-area>div:nth-of-type(3),
+            #dm-sql-area>div:nth-of-type(5),
+            #dm-cloud-area>div:last-child {
+                border-radius: 24px !important;
+                border: 1px solid var(--dm-line) !important;
+                background: rgba(255, 255, 255, 0.92) !important;
+                box-shadow: var(--dm-soft-shadow) !important;
+            }
+
+            #dm-teacher-area>div:nth-of-type(3),
+            #dm-targets-area>div:last-child {
+                padding: 8px !important;
+            }
+
+            #dm-targets-area>div:last-child>div:first-child,
+            #dm-sql-area>div:nth-of-type(1),
+            #dm-sql-area>div:nth-of-type(2),
+            #dm-sql-area>div:nth-of-type(3),
+            #dm-cloud-area>div:nth-of-type(3),
+            #dm-cloud-area>div:nth-of-type(4) {
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
+            }
+
+            #dm-targets-area .comparison-table th[style*="background:#e0f2fe"],
+            #dm-targets-area .comparison-table th[style*="background:#fff7ed"] {
+                color: #0f172a !important;
+                font-weight: 800 !important;
+            }
+
+            #dm-sql-area {
+                display: none;
+            }
+
+            #dm-sql-area #dm-sql-input {
+                min-height: 150px !important;
+                border-radius: 22px !important;
+                border: 1px solid rgba(37, 99, 235, 0.14) !important;
+                background:
+                    linear-gradient(180deg, #0f172a 0%, #111827 100%) !important;
+                color: #c4b5fd !important;
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 18px 36px rgba(15, 23, 42, 0.14);
+                padding: 16px 18px !important;
+            }
+
+            #dm-sql-area #dm-sql-input::placeholder {
+                color: rgba(196, 181, 253, 0.58) !important;
+            }
+
+            #dm-sql-area #sql-status-msg {
+                min-height: 36px;
+                display: flex;
+                align-items: center;
+                padding: 0 10px;
+                border-radius: 999px;
+                background: rgba(248, 250, 252, 0.92);
+                border: 1px solid var(--dm-line);
+            }
+
+            #dm-cloud-area .table-wrap,
+            #dm-targets-area .table-wrap,
+            #dm-sql-area .table-wrap,
+            #dm-teacher-area table {
+                overflow: auto !important;
+            }
+
+            #dm-cloud-area .btn-sm,
+            #dm-targets-area .btn-sm,
+            #dm-sql-area .btn-sm,
+            #dm-teacher-area .btn-sm {
+                min-height: 40px;
+                padding: 0 16px !important;
+            }
+
+            #dm-cloud-area #btn-cloud-upload-archive,
+            #dm-cloud-area #btn-cloud-batch-delete {
+                min-width: 128px;
+                justify-content: center;
+            }
+
+            #data-manager-modal table tbody td:last-child .btn {
+                min-width: 88px;
+                justify-content: center;
+            }
+
             @media (max-width: 960px) {
                 #data-manager-modal .modal-content {
                     padding: 18px 16px 16px !important;
@@ -7365,6 +7517,22 @@
 
                 #dm-status-overview-summary>div {
                     grid-template-columns: 1fr !important;
+                }
+
+                #dm-teacher-area>div:first-child,
+                #dm-targets-area>div:first-child,
+                #dm-sql-area>div:nth-of-type(1),
+                #dm-sql-area>div:nth-of-type(2),
+                #dm-sql-area>div:nth-of-type(3),
+                #dm-cloud-area>div:nth-of-type(3),
+                #dm-cloud-area>div:nth-of-type(4) {
+                    padding: 14px !important;
+                }
+
+                #data-manager-modal table thead th,
+                #data-manager-modal table tbody td {
+                    padding: 14px 12px !important;
+                    font-size: 13px !important;
                 }
             }
 
@@ -7416,6 +7584,41 @@
             body.dark-mode #dm-status-overview {
                 background: linear-gradient(135deg, rgba(30, 41, 59, 0.94), rgba(15, 23, 42, 0.94)) !important;
                 border-color: rgba(59, 130, 246, 0.18) !important;
+            }
+
+            body.dark-mode #dm-teacher-area>div:first-child,
+            body.dark-mode #dm-targets-area>div:first-child,
+            body.dark-mode #dm-sql-area>div:nth-of-type(1),
+            body.dark-mode #dm-sql-area>div:nth-of-type(2),
+            body.dark-mode #dm-sql-area>div:nth-of-type(3),
+            body.dark-mode #dm-targets-area>div:last-child,
+            body.dark-mode #dm-teacher-area>div:nth-of-type(3),
+            body.dark-mode #dm-sql-area>div:nth-of-type(5),
+            body.dark-mode #dm-cloud-area>div:last-child,
+            body.dark-mode #dm-cloud-area .info-bar,
+            body.dark-mode #dm-cloud-area>div:nth-of-type(3),
+            body.dark-mode #dm-cloud-area>div:nth-of-type(4) {
+                background: rgba(15, 23, 42, 0.76) !important;
+                border-color: rgba(148, 163, 184, 0.18) !important;
+                color: #e2e8f0 !important;
+            }
+
+            body.dark-mode #dm-teacher-area>div:nth-of-type(2),
+            body.dark-mode #dm-targets-area .info-bar,
+            body.dark-mode #dm-cloud-area .info-bar {
+                background: linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(30, 64, 175, 0.28)) !important;
+                color: #bfdbfe !important;
+            }
+
+            body.dark-mode #dm-sql-area #dm-sql-input {
+                background: linear-gradient(180deg, rgba(2, 6, 23, 0.96), rgba(15, 23, 42, 0.94)) !important;
+                border-color: rgba(96, 165, 250, 0.14) !important;
+                color: #c4b5fd !important;
+            }
+
+            body.dark-mode #dm-sql-area #sql-status-msg {
+                background: rgba(15, 23, 42, 0.74) !important;
+                border-color: rgba(148, 163, 184, 0.18) !important;
             }
 
             body.dark-mode #dm-status-overview-summary>div>div {
