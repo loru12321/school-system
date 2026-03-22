@@ -2396,16 +2396,6 @@ const setCloudStudentCompareContextSessionState = typeof window.setCloudStudentC
         window.CLOUD_STUDENT_COMPARE_CONTEXT = nextContext;
         return nextContext;
     });
-const clearCloudStudentCompareContextSessionState = typeof window.clearCloudStudentCompareContextState === 'function'
-    ? window.clearCloudStudentCompareContextState
-    : (() => {
-        setCloudStudentCompareContextSessionState(null);
-        return {
-            cloudCompareTarget: readCloudCompareTargetSessionState() || null,
-            cloudStudentCompareContext: null,
-            cloudComparePrevDataBackup: readCloudComparePrevDataBackupSessionState() ?? null
-        };
-    });
 const readCloudComparePrevDataBackupSessionState = typeof window.readCloudComparePrevDataBackupState === 'function'
     ? window.readCloudComparePrevDataBackupState
     : (() => {
@@ -2448,6 +2438,14 @@ function syncLocalCompareSessionState(patch = {}) {
     return applyLocalCompareSessionSnapshot(snapshot);
 }
 
+function syncCloudCompareGlobals() {
+    return syncLocalCompareSessionState({
+        cloudCompareTarget: CLOUD_COMPARE_TARGET,
+        cloudStudentCompareContext: CLOUD_STUDENT_COMPARE_CONTEXT,
+        cloudComparePrevDataBackup: CLOUD_COMPARE_PREV_DATA_BACKUP
+    });
+}
+
 syncLocalCompareSessionState({
     cloudCompareTarget: readCloudCompareTargetSessionState() || null,
     cloudStudentCompareContext: readCloudStudentCompareContextSessionState() || null,
@@ -2461,7 +2459,7 @@ function normalizeCompareName(name) {
 function setCloudCompareTarget(targetOrName, className, schoolName) {
     if (!targetOrName) {
         CLOUD_COMPARE_TARGET = null;
-        syncLocalCompareSessionState({ cloudCompareTarget: null });
+        syncCloudCompareGlobals();
         return null;
     }
     if (typeof targetOrName === 'object') {
@@ -2470,7 +2468,7 @@ function setCloudCompareTarget(targetOrName, className, schoolName) {
             class: String(targetOrName.class || '').trim(),
             school: String(targetOrName.school || '').trim()
         };
-        syncLocalCompareSessionState({ cloudCompareTarget: CLOUD_COMPARE_TARGET });
+        syncCloudCompareGlobals();
         return CLOUD_COMPARE_TARGET;
     }
     CLOUD_COMPARE_TARGET = {
@@ -2478,7 +2476,7 @@ function setCloudCompareTarget(targetOrName, className, schoolName) {
         class: String(className || '').trim(),
         school: String(schoolName || '').trim()
     };
-    syncLocalCompareSessionState({ cloudCompareTarget: CLOUD_COMPARE_TARGET });
+    syncCloudCompareGlobals();
     return CLOUD_COMPARE_TARGET;
 }
 
@@ -2540,7 +2538,7 @@ function restorePrevDataFromCloudCompare() {
     if (CLOUD_COMPARE_PREV_DATA_BACKUP !== null) {
         PREV_DATA = JSON.parse(JSON.stringify(CLOUD_COMPARE_PREV_DATA_BACKUP));
         CLOUD_COMPARE_PREV_DATA_BACKUP = null;
-        syncLocalCompareSessionState({ cloudComparePrevDataBackup: null });
+        syncCloudCompareGlobals();
         if (typeof performSilentMatching === 'function') {
             try { performSilentMatching(); } catch (e) { console.warn('恢复历史匹配失败:', e); }
         }
@@ -2588,10 +2586,7 @@ function syncCloudContextToPrevData() {
     }
 
     PREV_DATA = [historyRow];
-    syncLocalCompareSessionState({
-        cloudStudentCompareContext: CLOUD_STUDENT_COMPARE_CONTEXT,
-        cloudComparePrevDataBackup: CLOUD_COMPARE_PREV_DATA_BACKUP
-    });
+    syncCloudCompareGlobals();
     if (typeof performSilentMatching === 'function') {
         try { performSilentMatching(); } catch (e) { console.warn('云端历史匹配失败:', e); }
     }
@@ -2600,8 +2595,7 @@ function syncCloudContextToPrevData() {
 
 function clearCloudStudentCompareContext() {
     CLOUD_STUDENT_COMPARE_CONTEXT = null;
-    clearCloudStudentCompareContextSessionState();
-    syncLocalCompareSessionState({ cloudStudentCompareContext: null });
+    syncCloudCompareGlobals();
     restorePrevDataFromCloudCompare();
 }
 
@@ -2666,7 +2660,7 @@ function applyCloudStudentCompareContext(payload, compareStudent, allCompareStud
         });
     });
 
-    CLOUD_STUDENT_COMPARE_CONTEXT = {
+    const nextContext = {
         key: payload?.key || '',
         title: payload?.title || '',
         owner: {
@@ -2690,8 +2684,7 @@ function applyCloudStudentCompareContext(payload, compareStudent, allCompareStud
             _sourceExam: prevPeriod.examId || ''
         }
     };
-    syncLocalCompareSessionState({ cloudStudentCompareContext: CLOUD_STUDENT_COMPARE_CONTEXT });
-    return CLOUD_STUDENT_COMPARE_CONTEXT;
+    return syncLocalCompareSessionState({ cloudStudentCompareContext: nextContext }).cloudStudentCompareContext || null;
 }
 
 function isCloudContextMatchStudent(student) {
