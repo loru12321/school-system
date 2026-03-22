@@ -65,6 +65,9 @@ const holographicRef = './assets/js/holographic-student-3d.js';
 const predictiveRef = './assets/js/predictive-simulation-lab.js';
 const metaverseRef = './assets/js/metaverse-collab-space.js';
 const emotionalRef = './assets/js/emotional-ai-monitor.js';
+const supabaseCdnRef = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+const lzStringCdnRef = 'https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js';
+const xlsxCdnRef = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
 
 function findScriptTag(html, src) {
     const normalizedSrc = src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -121,6 +124,9 @@ assert.ok(cloudWorkspaceIndex >= 0, 'index.html should load cloud-workspace-runt
 assert.ok(appIndex >= 0, 'index.html should load app.js');
 
 [
+    supabaseCdnRef,
+    lzStringCdnRef,
+    xlsxCdnRef,
     authStateRef,
     workspaceStateRef,
     examStateRef,
