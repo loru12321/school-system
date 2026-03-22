@@ -12,16 +12,7 @@
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="preconnect" href="https://okwcciujnfvobbwaydiv.supabase.co" crossorigin>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
-
-
-    <script>var sbClient=window.sbClient||null;window.SUPABASE_URL=localStorage.getItem("SUPABASE_URL")||"https://okwcciujnfvobbwaydiv.supabase.co",window.SUPABASE_KEY=localStorage.getItem("SUPABASE_KEY")||"sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4",window.EDGE_GATEWAY_URL=localStorage.getItem("EDGE_GATEWAY_URL")||"https://okwcciujnfvobbwaydiv.supabase.co/functions/v1/edu-gateway-v2",window.initSupabase=function(){window.supabase&&!sbClient&&(sbClient=window.supabase.createClient(window.SUPABASE_URL,window.SUPABASE_KEY),window.sbClient=sbClient,console.log("✅ Supabase 连接初始化成功"))};
-</script>
-    <script>document.addEventListener("DOMContentLoaded",function(){typeof initMacroAnomalyConfigUI=="function"&&initMacroAnomalyConfigUI()});
-</script>
-    <script>function scrollToAnchor(o,n){var e=document.getElementById(o);if(e){var t=document.querySelector("header")?document.querySelector("header").offsetHeight:0,r=e.getBoundingClientRect().top+window.pageYOffset-t-20;window.scrollTo({top:r,behavior:"smooth"})}}
-</script>
-    <script>window.ensureTeacherDataAlpineStore=function(){if(!window.Alpine||typeof window.Alpine.store!="function")return;const e=window.Alpine.store("teacherData");if(e){Array.isArray(e.list)||(e.list=[]);return}window.Alpine.store("teacherData",{list:[]})},document.addEventListener("alpine:init",window.ensureTeacherDataAlpineStore);
-</script>
+    <script defer src="./assets/js/boot-runtime.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"
         onload="window.initSupabase()"
         onerror="this.onerror=null;this.src='https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js';this.onload=function(){window.initSupabase()}"></script>
@@ -4229,17 +4220,6 @@
     <script defer src="./assets/js/data-manager-sql.js?v=20260321-localgrades-v4"></script>
     <script defer src="./assets/js/mobile-manager.js?v=20260321-security-v5"></script>
     <script defer src="./assets/js/history-compare-runtime.js"></script>
-
-    <script></script>
-    <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" style="position: fixed; bottom: 30px; left: 30px; width: 45px; height: 45px; 
-               border-radius: 50%; background: rgba(30, 41, 59, 0.8); color: white; 
-               border: none; cursor: pointer; display: none; z-index: 999; 
-               box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.3s;">
-        <i class="ti ti-arrow-up" style="font-size: 20px;"></i>
-    </button>
-
-    <script>window.addEventListener("scroll",()=>{const e=document.getElementById("back-to-top");window.scrollY>300?(e.style.display="block",e.style.opacity="1"):e.style.display="none"});
-</script>
     
     <div id="user-password-modal" class="modal" style="display: none; z-index: 70000;">
         <div class="modal-content" style="max-width: 400px;">

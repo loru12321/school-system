@@ -19,6 +19,7 @@ const compareCloudContextRuntimePath = path.resolve(__dirname, '../public/assets
 const compareExamSyncRuntimePath = path.resolve(__dirname, '../public/assets/js/compare-exam-sync-runtime.js');
 const townSubmoduleCompareStateRuntimePath = path.resolve(__dirname, '../public/assets/js/town-submodule-compare-state-runtime.js');
 const townSubmoduleCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/town-submodule-compare-runtime.js');
+const bootRuntimePath = path.resolve(__dirname, '../public/assets/js/boot-runtime.js');
 const accountAdminRuntimePath = path.resolve(__dirname, '../public/assets/js/account-admin-runtime.js');
 const historyCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/history-compare-runtime.js');
 const perfMobileRuntimePath = path.resolve(__dirname, '../public/assets/js/perf-mobile-runtime.js');
@@ -39,6 +40,7 @@ assert.ok(fs.existsSync(compareCloudContextRuntimePath), 'compare-cloud-context-
 assert.ok(fs.existsSync(compareExamSyncRuntimePath), 'compare-exam-sync-runtime.js should exist');
 assert.ok(fs.existsSync(townSubmoduleCompareStateRuntimePath), 'town-submodule-compare-state-runtime.js should exist');
 assert.ok(fs.existsSync(townSubmoduleCompareRuntimePath), 'town-submodule-compare-runtime.js should exist');
+assert.ok(fs.existsSync(bootRuntimePath), 'boot-runtime.js should exist');
 assert.ok(fs.existsSync(accountAdminRuntimePath), 'account-admin-runtime.js should exist');
 assert.ok(fs.existsSync(historyCompareRuntimePath), 'history-compare-runtime.js should exist');
 assert.ok(fs.existsSync(perfMobileRuntimePath), 'perf-mobile-runtime.js should exist');
@@ -77,6 +79,7 @@ const emotionalRef = './assets/js/emotional-ai-monitor.js';
 const supabaseCdnRef = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
 const lzStringCdnRef = 'https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js';
 const xlsxCdnRef = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+const bootRuntimeRef = './assets/js/boot-runtime.js';
 
 function findScriptTag(html, src) {
     const normalizedSrc = src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -107,11 +110,13 @@ const studentCompareCloudIndex = indexHtml.indexOf(studentCompareCloudRef);
 const cloudIndex = indexHtml.indexOf(cloudRef);
 const cloudWorkspaceIndex = indexHtml.indexOf(cloudWorkspaceRef);
 const appIndex = indexHtml.indexOf(appRef);
+const bootRuntimeIndex = indexHtml.indexOf(bootRuntimeRef);
 const accountAdminIndex = indexHtml.indexOf(accountAdminRef);
 const historyCompareIndex = indexHtml.indexOf(historyCompareRef);
 const perfMobileIndex = indexHtml.indexOf(perfMobileRef);
 
 assert.ok(authStateIndex >= 0, 'index.html should load auth-state-runtime.js');
+assert.ok(bootRuntimeIndex >= 0, 'index.html should load boot-runtime.js');
 assert.ok(workspaceStateIndex >= 0, 'index.html should load workspace-state-runtime.js');
 assert.ok(examStateIndex >= 0, 'index.html should load exam-state-runtime.js');
 assert.ok(schoolStateIndex >= 0, 'index.html should load school-state-runtime.js');
@@ -139,6 +144,7 @@ assert.ok(historyCompareIndex >= 0, 'index.html should load history-compare-runt
 assert.ok(perfMobileIndex >= 0, 'index.html should load perf-mobile-runtime.js');
 
 [
+    bootRuntimeRef,
     supabaseCdnRef,
     lzStringCdnRef,
     xlsxCdnRef,
@@ -232,6 +238,7 @@ assert.ok(examStateIndex < appIndex, 'exam-state-runtime.js must load before app
 assert.ok(workspaceStateIndex < cloudIndex, 'workspace-state-runtime.js must load before cloud.js');
 assert.ok(workspaceStateIndex < cloudWorkspaceIndex, 'workspace-state-runtime.js must load before cloud-workspace-runtime.js');
 assert.ok(workspaceStateIndex < appIndex, 'workspace-state-runtime.js must load before app.js');
+assert.ok(bootRuntimeIndex < authStateIndex, 'boot-runtime.js should load before auth-state-runtime.js');
 assert.ok(authStateIndex < cloudWorkspaceIndex, 'auth-state-runtime.js must load before cloud-workspace-runtime.js');
 assert.ok(authStateIndex < appIndex, 'auth-state-runtime.js must load before app.js');
 assert.ok(accountAdminIndex < appIndex, 'account-admin-runtime.js should load before app.js');

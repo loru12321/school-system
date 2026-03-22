@@ -13,52 +13,7 @@
     <link rel="preconnect" href="https://okwcciujnfvobbwaydiv.supabase.co" crossorigin>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
     <link rel="stylesheet" href="./assets/css/main.css">
-
-
-    <script>
-        // ✅ 兜底初始化 Supabase，防止 sbClient 未定义
-        var sbClient = window.sbClient || null;
-        window.SUPABASE_URL = localStorage.getItem('SUPABASE_URL') || "https://okwcciujnfvobbwaydiv.supabase.co";
-        window.SUPABASE_KEY = localStorage.getItem('SUPABASE_KEY') || "sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4";
-        window.EDGE_GATEWAY_URL = localStorage.getItem('EDGE_GATEWAY_URL') || "https://okwcciujnfvobbwaydiv.supabase.co/functions/v1/edu-gateway-v2";
-        window.initSupabase = function () {
-            if (window.supabase && !sbClient) {
-                sbClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
-                window.sbClient = sbClient;
-                console.log("✅ Supabase 连接初始化成功");
-            }
-        };
-    </script>
-    <script>
-        // 页面加载后自动初始化异常阈值输入框
-        document.addEventListener('DOMContentLoaded', function () {
-            if (typeof initMacroAnomalyConfigUI === 'function') initMacroAnomalyConfigUI();
-        });
-    </script>
-    <script>
-        // 滚动到指定锚点区域 (供 Cohorts 等导航按钮使用)
-        function scrollToAnchor(id, triggerEl) {
-            var el = document.getElementById(id);
-            if (el) {
-                var headerH = document.querySelector('header') ? document.querySelector('header').offsetHeight : 0;
-                var y = el.getBoundingClientRect().top + window.pageYOffset - headerH - 20;
-                window.scrollTo({ top: y, behavior: 'smooth' });
-            }
-        }
-    </script>
-    <script>
-        // Pre-register a minimal Alpine store so templates can read teacherData safely before the main runtime hydrates it.
-        window.ensureTeacherDataAlpineStore = function () {
-            if (!window.Alpine || typeof window.Alpine.store !== 'function') return;
-            const existing = window.Alpine.store('teacherData');
-            if (existing) {
-                if (!Array.isArray(existing.list)) existing.list = [];
-                return;
-            }
-            window.Alpine.store('teacherData', { list: [] });
-        };
-        document.addEventListener('alpine:init', window.ensureTeacherDataAlpineStore);
-    </script>
+    <script defer src="./assets/js/boot-runtime.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"
         onload="window.initSupabase()"
         onerror="this.onerror=null;this.src='https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js';this.onload=function(){window.initSupabase()}"></script>
@@ -6195,29 +6150,6 @@
     <script defer src="./assets/js/data-manager-sql.js?v=20260321-localgrades-v4"></script>
     <script defer src="./assets/js/mobile-manager.js?v=20260321-security-v5"></script>
     <script defer src="./assets/js/history-compare-runtime.js"></script>
-
-    <script>
-        // ✋ 🔴 [已移除]：删除了整个 MobApp 对象及其所有逻辑，确保手机端不再加载极简版代码 🔴
-    </script>
-    <button id="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" style="position: fixed; bottom: 30px; left: 30px; width: 45px; height: 45px; 
-               border-radius: 50%; background: rgba(30, 41, 59, 0.8); color: white; 
-               border: none; cursor: pointer; display: none; z-index: 999; 
-               box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.3s;">
-        <i class="ti ti-arrow-up" style="font-size: 20px;"></i>
-    </button>
-
-    <script>
-        // 监听滚动，自动显示/隐藏按钮
-        window.addEventListener('scroll', () => {
-            const btn = document.getElementById('back-to-top');
-            if (window.scrollY > 300) {
-                btn.style.display = 'block';
-                btn.style.opacity = '1';
-            } else {
-                btn.style.display = 'none';
-            }
-        });
-    </script>
     <!-- 修改密码模态框 -->
     <div id="user-password-modal" class="modal" style="display: none; z-index: 70000;">
         <div class="modal-content" style="max-width: 400px;">
