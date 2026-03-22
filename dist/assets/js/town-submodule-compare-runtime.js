@@ -1,6 +1,32 @@
 (() => {
     if (typeof window === 'undefined' || window.__TOWN_SUBMODULE_COMPARE_RUNTIME_PATCHED__) return;
 
+    const readTownSubmoduleCompareEntryState = typeof window.readTownSubmoduleCompareEntryState === 'function'
+        ? window.readTownSubmoduleCompareEntryState
+        : ((submoduleId) => {
+            const cache = window.TOWN_SUBMODULE_COMPARE_CACHE && typeof window.TOWN_SUBMODULE_COMPARE_CACHE === 'object'
+                ? window.TOWN_SUBMODULE_COMPARE_CACHE
+                : {};
+            return submoduleId && Object.prototype.hasOwnProperty.call(cache, submoduleId)
+                ? cache[submoduleId]
+                : null;
+        });
+    const setTownSubmoduleCompareEntryState = typeof window.setTownSubmoduleCompareEntryState === 'function'
+        ? window.setTownSubmoduleCompareEntryState
+        : ((submoduleId, entry) => {
+            const cache = window.TOWN_SUBMODULE_COMPARE_CACHE && typeof window.TOWN_SUBMODULE_COMPARE_CACHE === 'object'
+                ? { ...window.TOWN_SUBMODULE_COMPARE_CACHE }
+                : {};
+            if (!submoduleId) return null;
+            if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
+                cache[submoduleId] = entry;
+            } else {
+                delete cache[submoduleId];
+            }
+            window.TOWN_SUBMODULE_COMPARE_CACHE = cache;
+            return Object.prototype.hasOwnProperty.call(cache, submoduleId) ? cache[submoduleId] : null;
+        });
+
 const TOWN_SUBMODULE_META = {
     summary: '综合评价总榜',
     analysis: '两率一分(横向)',
@@ -9,7 +35,6 @@ const TOWN_SUBMODULE_META = {
     indicator: '指标生达标核算',
     bottom3: '低分率/后1/3核算'
 };
-let TOWN_SUBMODULE_COMPARE_CACHE = {};
 
 function ensureTownSubmoduleCompareUIs() {
     Object.entries(TOWN_SUBMODULE_META).forEach(([submoduleId, title]) => {
@@ -257,7 +282,7 @@ function renderTownSubmoduleMultiPeriodComparison(submoduleId, school, examIds, 
     hintEl.innerHTML = `✅ 已完成 ${periodCount} 期对比：${examIds.join(' → ')}`;
     hintEl.style.color = '#16a34a';
 
-    TOWN_SUBMODULE_COMPARE_CACHE[submoduleId] = {
+    setTownSubmoduleCompareEntryState(submoduleId, {
         submoduleId,
         title,
         school,
@@ -267,11 +292,11 @@ function renderTownSubmoduleMultiPeriodComparison(submoduleId, school, examIds, 
         rows: data.rows,
         note: data.note,
         html
-    };
+    });
 }
 
 function exportTownSubmoduleCompare(submoduleId) {
-    const cache = TOWN_SUBMODULE_COMPARE_CACHE[submoduleId];
+    const cache = readTownSubmoduleCompareEntryState(submoduleId);
     if (!cache) return alert('请先生成多期对比结果');
     const wb = XLSX.utils.book_new();
     const aoa = [cache.headers, ...cache.rows];
@@ -280,7 +305,7 @@ function exportTownSubmoduleCompare(submoduleId) {
 }
 
 async function saveTownSubmoduleCompareToCloud(submoduleId) {
-    const cache = TOWN_SUBMODULE_COMPARE_CACHE[submoduleId];
+    const cache = readTownSubmoduleCompareEntryState(submoduleId);
     if (!cache) return alert('请先生成多期对比结果');
     if (!sbClient) return alert('☁️ 云端服务未连接，无法保存');
 
@@ -387,7 +412,7 @@ async function loadCloudTownSubmoduleCompare(submoduleId, key) {
         resultEl.innerHTML = payload.html || '<div style="color:#94a3b8;">云端记录缺少展示内容</div>';
         hintEl.innerHTML = `✅ 已加载云端记录：${payload.title || key}`;
         hintEl.style.color = '#7c3aed';
-        TOWN_SUBMODULE_COMPARE_CACHE[submoduleId] = payload;
+        setTownSubmoduleCompareEntryState(submoduleId, payload);
     } catch (e) {
         console.error(e);
         alert('加载失败: ' + e.message);

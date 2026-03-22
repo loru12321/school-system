@@ -18,7 +18,6 @@ const SWITCH_MODULE_IDS = [
     'marginal-push',
     'progress-analysis',
     'report-generator',
-    'school-internal-grades',
     'freshman-simulator',
     'exam-arranger',
     'teaching-overview',
@@ -386,56 +385,6 @@ async function runModuleDeepCheck(page, id) {
             };
         });
     }
-    if (id === 'school-internal-grades') {
-        return page.evaluate(async () => {
-            if (typeof window.SIG_render !== 'function') {
-                return { ok: false, error: 'SIG_render is not available' };
-            }
-            window.SIG_render();
-            await new Promise(resolve => setTimeout(resolve, 600));
-            const before = document.querySelector('.section.active')?.id || '';
-            const quickButtons = Array.from(document.querySelectorAll('#sig-view-teaching button')).map((btn) => ({
-                text: btn.textContent.trim(),
-                onclick: btn.getAttribute('onclick') || ''
-            }));
-            const baselineButton = Array.from(document.querySelectorAll('#sig-view-teaching button')).find((btn) => {
-                const action = btn.getAttribute('onclick') || '';
-                return action.includes('sigBaselineTable');
-            });
-            if (baselineButton) {
-                baselineButton.click();
-                await new Promise(resolve => setTimeout(resolve, 300));
-            }
-            const after = document.querySelector('.section.active')?.id || '';
-            const activeView = Array.from(document.querySelectorAll('[data-sig-view-btn]'))
-                .find((btn) => btn.classList.contains('active'))?.dataset.sigViewBtn || '';
-            const summaryCount = document.querySelectorAll('#sigSummaryGrid .fb-card').length;
-            const classRows = document.querySelectorAll('#sigClassTable tbody tr').length;
-            const teacherRows = document.querySelectorAll('#sigTeacherTable tbody tr').length;
-            const baselineRows = document.querySelectorAll('#sigBaselineTable tbody tr').length;
-            const teacherHeadCount = document.querySelectorAll('#sigTeacherTable thead th').length;
-            const localQuickActions = quickButtons.length > 0 && quickButtons.every((btn) => !btn.onclick.includes("switchTab('"));
-            return {
-                ok: summaryCount >= 4
-                    && classRows >= 0
-                    && teacherRows >= 0
-                    && baselineRows >= 0
-                    && teacherHeadCount === 7
-                    && localQuickActions
-                    && before === 'school-internal-grades'
-                    && after === 'school-internal-grades'
-                    && activeView === 'diagnosis',
-                summaryCount,
-                classRows,
-                teacherRows,
-                baselineRows,
-                teacherHeadCount,
-                activeView,
-                localQuickActions,
-                hasFileInput: !!document.querySelector('#school-internal-grades input[type="file"]')
-            };
-        });
-    }
     return { ok: true };
 }
 
@@ -497,9 +446,11 @@ async function smokeDataManagerTab(page, id) {
             roleText: document.body.innerText.includes('Role:'),
             termId: localStorage.getItem('CURRENT_TERM_ID') || '',
             cohortId: localStorage.getItem('CURRENT_COHORT_ID') || '',
-        mySchool: (window.SchoolState && typeof window.SchoolState.getCurrentSchool === 'function'
-            ? window.SchoolState.getCurrentSchool()
-            : '') || window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '',
+            mySchool: (window.SchoolState && typeof window.SchoolState.getCurrentSchool === 'function'
+                ? window.SchoolState.getCurrentSchool()
+                : '') || window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '',
+            schoolInternalRemoved: !document.getElementById('school-internal-grades')
+                && !document.querySelector('[onclick*="school-internal-grades"]'),
             scoreCount: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0
         })),
         switchModules: [],
@@ -529,7 +480,7 @@ async function smokeDataManagerTab(page, id) {
 
     const failedSwitch = summary.switchModules.find(item => !item.ok);
     const failedDm = summary.dataManagerTabs.find(item => !item.ok);
-    if (!summary.login.overlayHidden || !summary.login.appVisible || failedSwitch || failedDm || errors.length > 0) {
+    if (!summary.login.overlayHidden || !summary.login.appVisible || !summary.login.schoolInternalRemoved || failedSwitch || failedDm || errors.length > 0) {
         process.exit(1);
     }
 })().catch(async (error) => {

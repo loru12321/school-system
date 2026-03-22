@@ -7993,7 +7993,6 @@ const NAV_STRUCTURE = {
         color: '#7c3aed', // 紫色 Violet
         icon: 'ti-briefcase',
         items: [
-            { id: 'school-internal-grades', icon: 'ti-building-bank', text: '校内成绩' },
             { id: 'exam-arranger', icon: 'ti-id-badge-2', text: '智能考场编排' },
             { id: 'freshman-simulator', icon: 'ti-arrows-split', text: '新生均衡分班' },
             { id: 'grade-scheduler', icon: 'ti-calendar-time', text: '级部智能排课' },
@@ -8347,8 +8346,8 @@ function SIG_renderAnalysisHint() {
     }
     const schoolCount = SIG_getAccessibleSchools().length;
     hint.textContent = schoolCount <= 1
-        ? '当前只有本校数据，校际联考横向排名不适用。建议优先使用“考务工具 -> 校内成绩”子模块。'
-        : '如当前处理的是本校月考/校考，建议改用“考务工具 -> 校内成绩”子模块，避免误用联考口径。';
+        ? '当前只有本校数据，校际联考横向排名不适用。请重点查看本页趋势和本校执行类模块。'
+        : '如当前处理的是本校月考或校考，请谨慎使用联考横向口径，优先结合本校执行与学情模块判断。';
 }
 
 let SIG_LOCAL_STATE = {
@@ -9854,7 +9853,7 @@ function guardBeforeSwitch(id) {
         'summary', 'analysis', 'macro-watch', 'high-score', 'indicator', 'bottom3',
         'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'teacher-analysis', 'single-school-eval', 'class-comparison', 'class-diagnosis',
         'student-overview', 'student-details', 'subject-balance', 'marginal-push', 'progress-analysis', 'cohort-growth',
-        'potential-analysis', 'segment-analysis', 'correlation-analysis', 'report-generator', 'school-internal-grades'
+        'potential-analysis', 'segment-analysis', 'correlation-analysis', 'report-generator'
     ];
     if (!needGuard.includes(id)) return true;
 
@@ -12970,6 +12969,10 @@ function resetMainViewport() {
 }
 
 function switchTab(id) {
+    if (id === 'school-internal-grades') {
+        console.warn('school-internal-grades has been removed; redirecting to exam-arranger');
+        id = 'exam-arranger';
+    }
     console.log(`🔄 切换模块: ${id}`);
     if (!canAccessModule(id)) {
         alert('⛔ 权限不足：该模块对当前角色不可见');
@@ -13086,9 +13089,6 @@ function switchTab(id) {
     if (id === 'analysis') {
         updateMacroMultiExamSelects();
         SIG_renderAnalysisHint();
-    }
-    if (id === 'school-internal-grades') {
-        SIG_render();
     }
     if (id === 'indicator') refreshIndicatorResults(true);
     if (id === 'high-score') renderHighScoreTable();
@@ -13228,9 +13228,6 @@ function switchTab(id) {
     try {
         if (id === 'exam-arranger') {
             EXAM_initProctorUI();
-        }
-        if (id === 'school-internal-grades') {
-            SIG_render();
         }
         if (id === 'report-generator') { updateClassSelect(); }
         if (id === 'segment-analysis') updateSegmentSelects();
@@ -24576,7 +24573,6 @@ function doSpotlightSearch() {
     const modules = [
         { name: "新生分班", id: "freshman-simulator" },
         { name: "考场编排", id: "exam-arranger" },
-        { name: "校内成绩", id: "school-internal-grades" },
         { name: "座位微调", id: "seat-adjustment" },
         { name: "教学总览", id: "teaching-overview" },
         { name: "教学问题清单", id: "teaching-issue-board" },
@@ -24883,10 +24879,10 @@ function getTeacherScopeForUser(user) {
 
 const QUERY_MODULE_ACCESS = {
     admin: ['*'],
-    director: ['starter-hub', 'upload', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'freshman-simulator', 'exam-arranger', 'school-internal-grades', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis'],
-    grade_director: ['starter-hub', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'school-internal-grades', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis'],
-    class_teacher: ['starter-hub', 'student-overview', 'student-details', 'teacher-analysis', 'school-internal-grades', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator'],
-    teacher: ['starter-hub', 'student-overview', 'student-details', 'teacher-analysis', 'school-internal-grades', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator'],
+    director: ['starter-hub', 'upload', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'freshman-simulator', 'exam-arranger', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis'],
+    grade_director: ['starter-hub', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis'],
+    class_teacher: ['starter-hub', 'student-overview', 'student-details', 'teacher-analysis', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator'],
+    teacher: ['starter-hub', 'student-overview', 'student-details', 'teacher-analysis', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator'],
     parent: ['report-generator'],
     student: ['report-generator'],
     guest: ['starter-hub']
