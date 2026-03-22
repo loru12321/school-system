@@ -91,6 +91,11 @@
         return rawRoles.map(role => String(role || '').trim()).filter(Boolean);
     }
 
+    function isParentLikeRole(role = getCurrentRole()) {
+        const normalizedRole = String(role || '').trim();
+        return normalizedRole === 'parent' || normalizedRole === 'student';
+    }
+
     function hasRole(allowedRoles) {
         const roleSet = new Set(getCurrentRoles());
         return allowedRoles.some(role => roleSet.has(role));
@@ -303,7 +308,7 @@
     }
 
     function showDesktopAppForMobile(role = '') {
-        if (role === 'parent') return;
+        if (isParentLikeRole(role)) return;
         const appEl = document.getElementById('app');
         if (appEl) {
             appEl.classList.remove('hidden');
@@ -863,7 +868,7 @@
 
     function syncShellVisibility() {
         const root = ensureMobileShell();
-        const shouldShow = isMobileViewport() && isLoggedIn() && getCurrentRole() !== 'parent';
+        const shouldShow = isMobileViewport() && isLoggedIn() && !isParentLikeRole(getCurrentRole());
         root.style.display = shouldShow ? 'block' : 'none';
         if (!shouldShow) {
             setSheetMode('');
@@ -874,7 +879,7 @@
 
     function enhanceParentView() {
         const container = document.getElementById('parent-view-container');
-        if (!container || !isMobileViewport() || getCurrentRole() !== 'parent') return;
+        if (!container || !isMobileViewport() || !isParentLikeRole(getCurrentRole())) return;
 
         if (container.dataset.mobileParentBound !== '1') {
             container.addEventListener('click', handleShellClick);
@@ -935,7 +940,7 @@
             return;
         }
 
-        if (getCurrentRole() !== 'parent') {
+        if (!isParentLikeRole(getCurrentRole())) {
             showDesktopAppForMobile(getCurrentRole());
         }
 

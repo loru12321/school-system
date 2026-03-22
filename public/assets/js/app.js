@@ -640,6 +640,20 @@ const AuthState = window.AuthState || {
         return null;
     }
 };
+
+function isParentLikeRole(role) {
+    const normalizedRole = String(role || '').trim();
+    return normalizedRole === 'parent' || normalizedRole === 'student';
+}
+
+function isParentLikeUser(user) {
+    if (!user || typeof user !== 'object') return false;
+    const roles = Array.isArray(user.roles) && user.roles.length
+        ? user.roles
+        : [user.role].filter(Boolean);
+    return roles.some(isParentLikeRole);
+}
+
 const MASKED_PASSWORD_DISPLAY = AuthState.MASKED_PASSWORD_DISPLAY;
 const sanitizeLocalAuthDb = AuthState.sanitizeLocalAuthDb.bind(AuthState);
 const persistLocalAuthDb = AuthState.persistLocalAuthDb.bind(AuthState);
@@ -2104,7 +2118,7 @@ const Auth = {
             role,
             roles: [role],
             school: localSchool,
-            class_name: role === 'parent' ? normalizedClass : '教师',
+            class_name: isParentLikeRole(role) ? normalizedClass : '教师',
             local_only: true
         };
     },
@@ -2115,7 +2129,7 @@ const Auth = {
         this.syncLoginOverlayState(!sessionUser);
         if (sessionUser) {
             this.currentUser = sessionUser;
-            this.setLoginPortal(this.currentUser.role === 'parent' ? 'parent' : 'school');
+            this.setLoginPortal(isParentLikeUser(this.currentUser) ? 'parent' : 'school');
             if (window.EdgeGateway && typeof EdgeGateway.verify === 'function' && EdgeGateway.getToken()) {
                 EdgeGateway.verify().catch(err => {
                     console.warn('[EdgeGateway] session verify failed:', err?.message || err);
@@ -2126,7 +2140,7 @@ const Auth = {
             this.syncLoginOverlayState(false);
 
             // 如果是家长，恢复视图
-            if (this.currentUser.role === 'parent') {
+            if (isParentLikeUser(this.currentUser)) {
                 if (!this.currentUser.local_only && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function' && !this._parentDataRecovering) {
                     this._parentDataRecovering = true;
                     try {
@@ -2142,7 +2156,7 @@ const Auth = {
                 this.renderParentView();
             }
             // 🟢 补充：如果是其他角色，恢复主视图 (防止刷新后空白)
-            else if (this.currentUser.role !== 'parent') {
+            else if (!isParentLikeUser(this.currentUser)) {
                 document.getElementById('app').classList.remove('hidden');
                 if (typeof renderNavigation === 'function') renderNavigation();
                 if (!this.currentUser.local_only && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function') {
@@ -2220,9 +2234,9 @@ const Auth = {
             }
 
             /* 👇👇👇 🟢 新增代码：家长角色强制校验班级 🟢 👇👇👇 */
-            if (data.role === 'parent' || data.role === 'class_teacher') {
+            if (isParentLikeRole(data.role) || data.role === 'class_teacher') {
                 if (!inputClass) {
-                    if (data.role === 'parent') {
+                    if (isParentLikeRole(data.role)) {
                         return alert("❌ 登录失败：家长/学生必须输入【班级】才能登录。");
                     }
                 }
@@ -2250,10 +2264,10 @@ const Auth = {
 
             const isLocalOnlySession = !!data.local_only;
             this.currentUser = matchedUser;
-            this.setLoginPortal(matchedUser.role === 'parent' ? 'parent' : 'school');
+            this.setLoginPortal(isParentLikeUser(matchedUser) ? 'parent' : 'school');
             AuthState.setCurrentUser(matchedUser);
             if (!isLocalOnlySession && (!window.EdgeGateway || !EdgeGateway.getToken()) && window.EdgeGateway && typeof EdgeGateway.login === 'function') {
-                const gatewayClassName = (matchedUser.role === 'parent' || matchedUser.role === 'class_teacher') ? inputClass : '';
+                const gatewayClassName = (isParentLikeUser(matchedUser) || matchedUser.role === 'class_teacher') ? inputClass : '';
                 EdgeGateway.login(user, pass, gatewayClassName).catch(err => {
                     console.warn('[EdgeGateway] login skipped:', err?.message || err);
                 });
@@ -2314,7 +2328,7 @@ const Auth = {
             }
 
             // 6. 分流跳转与权限初始化
-            if (matchedUser.role === 'parent') {
+            if (isParentLikeUser(matchedUser)) {
                 // === 家长模式 ===
                 this.renderParentView();
             } else {
