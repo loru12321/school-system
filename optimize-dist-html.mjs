@@ -66,8 +66,25 @@ export function stripHtmlComments(html) {
     return stripped.replace(/__HTML_BLOCK_(\d+)__/g, (_, index) => placeholders[Number(index)] || '');
 }
 
+export function collapseInterTagWhitespace(html) {
+    const placeholders = [];
+    const protectedHtml = String(html || '').replace(/<(script|style|pre|textarea)\b[\s\S]*?<\/\1>/gi, (block) => {
+        const token = `__HTML_BLOCK_${placeholders.length}__`;
+        placeholders.push(block);
+        return token;
+    });
+    const collapsed = protectedHtml.replace(/>\s+</g, '><').trim();
+    return collapsed.replace(/__HTML_BLOCK_(\d+)__/g, (_, index) => placeholders[Number(index)] || '');
+}
+
 export function optimizeDistHtml(html) {
-    return stripHtmlComments(minifyInlineStyles(minifyInlineScripts(html)));
+    return collapseInterTagWhitespace(
+        stripHtmlComments(
+            minifyInlineStyles(
+                minifyInlineScripts(html)
+            )
+        )
+    );
 }
 
 function main() {
