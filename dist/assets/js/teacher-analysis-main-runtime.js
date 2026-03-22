@@ -2414,11 +2414,14 @@ function resolveCloudCompareTarget(user) {
     if (CLOUD_COMPARE_TARGET && CLOUD_COMPARE_TARGET.name) {
         return CLOUD_COMPARE_TARGET;
     }
-    if (CURRENT_REPORT_STUDENT) {
+    const currentReportStudent = typeof window.readCurrentReportStudentState === 'function'
+        ? window.readCurrentReportStudentState()
+        : (CURRENT_REPORT_STUDENT || null);
+    if (currentReportStudent) {
         return {
-            name: String(CURRENT_REPORT_STUDENT.name || '').trim(),
-            class: String(CURRENT_REPORT_STUDENT.class || '').trim(),
-            school: String(CURRENT_REPORT_STUDENT.school || '').trim()
+            name: String(currentReportStudent.name || '').trim(),
+            class: String(currentReportStudent.class || '').trim(),
+            school: String(currentReportStudent.school || '').trim()
         };
     }
     const bound = getCurrentBoundStudentFromUser(user);

@@ -46,6 +46,7 @@ async function doQuery() {
     clearCloudStudentCompareContext();
     setCloudCompareTarget(stu);
     if (typeof window.setCurrentReportStudentState === 'function') window.setCurrentReportStudentState(stu);
+    else if (window.ReportSessionState && typeof window.ReportSessionState.setCurrentReportStudent === 'function') window.ReportSessionState.setCurrentReportStudent(stu);
     else window.CURRENT_REPORT_STUDENT = stu;
 
     document.getElementById('single-report-result').classList.remove('hidden');

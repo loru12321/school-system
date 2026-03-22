@@ -5,30 +5,47 @@ const createReportSessionStateRuntime = require(path.resolve(__dirname, '../publ
 
 function run() {
     const root = {
-        CURRENT_REPORT_STUDENT: { name: 'Alice', class: '701', scores: { 语文: 96 } },
-        BATCH_AI_CACHE: { '示范学校_701_Alice': '表现稳定，继续保持。' },
+        CURRENT_REPORT_STUDENT: { name: 'Alice', class: '701', scores: { math: 96 } },
+        BATCH_AI_CACHE: { sample_key: 'stable output' },
         IS_BATCH_AI_RUNNING: true,
         CURRENT_CONTEXT_STUDENTS: [{ name: 'Alice' }, { name: 'Bob' }]
     };
 
     const reportSessionState = createReportSessionStateRuntime(root);
 
-    assert.deepStrictEqual(reportSessionState.getCurrentReportStudent(), { name: 'Alice', class: '701', scores: { 语文: 96 } });
-    assert.deepStrictEqual(reportSessionState.getBatchAICache(), { '示范学校_701_Alice': '表现稳定，继续保持。' });
+    assert.strictEqual(root.ReportSessionState, reportSessionState);
+    assert.strictEqual(typeof root.readCurrentReportStudentState, 'function');
+    assert.strictEqual(typeof root.setCurrentReportStudentState, 'function');
+    assert.strictEqual(typeof root.readBatchAICacheState, 'function');
+    assert.strictEqual(typeof root.setBatchAICacheState, 'function');
+    assert.strictEqual(typeof root.readIsBatchAIRunningState, 'function');
+    assert.strictEqual(typeof root.setBatchAIRunningState, 'function');
+    assert.strictEqual(typeof root.readCurrentContextStudentsState, 'function');
+    assert.strictEqual(typeof root.setCurrentContextStudentsState, 'function');
+    assert.strictEqual(typeof root.syncReportSessionRuntimeState, 'function');
+
+    assert.deepStrictEqual(reportSessionState.getCurrentReportStudent(), { name: 'Alice', class: '701', scores: { math: 96 } });
+    assert.deepStrictEqual(reportSessionState.getBatchAICache(), { sample_key: 'stable output' });
     assert.strictEqual(reportSessionState.getIsBatchAiRunning(), true);
     assert.deepStrictEqual(reportSessionState.getCurrentContextStudents(), [{ name: 'Alice' }, { name: 'Bob' }]);
 
     const snapshot = reportSessionState.syncReportSessionState({
-        currentReportStudent: { name: 'Carol', class: '702', scores: { 数学: 101 } },
-        batchAiCache: { '实验学校_702_Carol': '数学优势明显。' },
+        currentReportStudent: { name: 'Carol', class: '702', scores: { math: 101 } },
+        batchAiCache: { carol_key: 'math advantage' },
         isBatchAiRunning: false,
         currentContextStudents: [{ name: 'Carol' }]
     });
 
-    assert.deepStrictEqual(snapshot.currentReportStudent, { name: 'Carol', class: '702', scores: { 数学: 101 } });
-    assert.deepStrictEqual(snapshot.batchAiCache, { '实验学校_702_Carol': '数学优势明显。' });
+    assert.deepStrictEqual(snapshot.currentReportStudent, { name: 'Carol', class: '702', scores: { math: 101 } });
+    assert.deepStrictEqual(snapshot.batchAiCache, { carol_key: 'math advantage' });
     assert.strictEqual(snapshot.isBatchAiRunning, false);
     assert.deepStrictEqual(snapshot.currentContextStudents, [{ name: 'Carol' }]);
+    assert.strictEqual(root.readCurrentReportStudentState().name, 'Carol');
+    assert.strictEqual(root.readCurrentReportStudentState().class, '702');
+    assert.strictEqual(root.readCurrentReportStudentState().scores.math, 101);
+    assert.deepStrictEqual(root.readBatchAICacheState(), { carol_key: 'math advantage' });
+    assert.strictEqual(root.readIsBatchAIRunningState(), false);
+    assert.deepStrictEqual(root.readCurrentContextStudentsState(), [{ name: 'Carol' }]);
 
     reportSessionState.clearReportSessionState();
     assert.strictEqual(reportSessionState.getCurrentReportStudent(), null);

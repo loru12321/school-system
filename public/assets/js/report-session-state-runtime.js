@@ -1,17 +1,32 @@
 (function (root, factory) {
+    function installReportSessionState(target, runtime) {
+        if (!target || !runtime) return runtime;
+        target.ReportSessionState = runtime;
+        target.readCurrentReportStudentState = runtime.getCurrentReportStudent;
+        target.setCurrentReportStudentState = runtime.setCurrentReportStudent;
+        target.readBatchAICacheState = runtime.getBatchAICache;
+        target.setBatchAICacheState = runtime.setBatchAICache;
+        target.readIsBatchAIRunningState = runtime.getIsBatchAiRunning;
+        target.setBatchAIRunningState = runtime.setIsBatchAiRunning;
+        target.readCurrentContextStudentsState = runtime.getCurrentContextStudents;
+        target.setCurrentContextStudentsState = runtime.setCurrentContextStudents;
+        target.syncReportSessionRuntimeState = runtime.syncReportSessionState;
+        runtime.syncReportSessionState(runtime.snapshotReportSessionState());
+        return runtime;
+    }
+
     const runtime = factory(root || {});
 
     if (typeof module === 'object' && module.exports) {
         const createRuntime = function (overrideRoot) {
-            return factory(overrideRoot || root || {});
+            return installReportSessionState(overrideRoot || root || {}, factory(overrideRoot || root || {}));
         };
         createRuntime.runtime = runtime;
         module.exports = createRuntime;
     }
 
     if (!root || root.ReportSessionState) return;
-    root.ReportSessionState = runtime;
-    runtime.syncReportSessionState(runtime.snapshotReportSessionState());
+    installReportSessionState(root, runtime);
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createReportSessionStateRuntime(root) {
     function cloneJson(value, fallbackValue) {
         if (value == null) return fallbackValue;

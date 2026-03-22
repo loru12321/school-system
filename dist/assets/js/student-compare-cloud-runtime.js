@@ -14,6 +14,18 @@
             window.STUDENT_MULTI_PERIOD_COMPARE_CACHE = nextCache;
             return nextCache;
         });
+    const readCurrentReportStudentState = typeof window.readCurrentReportStudentState === 'function'
+        ? window.readCurrentReportStudentState
+        : (() => (CURRENT_REPORT_STUDENT && typeof CURRENT_REPORT_STUDENT === 'object'
+            ? CURRENT_REPORT_STUDENT
+            : null));
+    const setCurrentReportStudentState = typeof window.setCurrentReportStudentState === 'function'
+        ? window.setCurrentReportStudentState
+        : ((student) => {
+            const nextStudent = student && typeof student === 'object' && !Array.isArray(student) ? student : null;
+            CURRENT_REPORT_STUDENT = nextStudent;
+            return nextStudent;
+        });
 
     let CLOUD_COMPARE_TARGET = null;
     let CLOUD_STUDENT_COMPARE_CONTEXT = null;
@@ -103,11 +115,12 @@
 
     function resolveCloudCompareTarget(user) {
         if (CLOUD_COMPARE_TARGET && CLOUD_COMPARE_TARGET.name) return CLOUD_COMPARE_TARGET;
-        if (CURRENT_REPORT_STUDENT) {
+        const currentReportStudent = readCurrentReportStudentState();
+        if (currentReportStudent) {
             return {
-                name: String(CURRENT_REPORT_STUDENT.name || '').trim(),
-                class: String(CURRENT_REPORT_STUDENT.class || '').trim(),
-                school: String(CURRENT_REPORT_STUDENT.school || '').trim()
+                name: String(currentReportStudent.name || '').trim(),
+                class: String(currentReportStudent.class || '').trim(),
+                school: String(currentReportStudent.school || '').trim()
             };
         }
         const bound = getCurrentBoundStudentFromUser(user);
@@ -461,7 +474,7 @@
         ) : null);
 
         if (bound && bound.scores) {
-            CURRENT_REPORT_STUDENT = bound;
+            setCurrentReportStudentState(bound);
         } else {
             const periods = Array.isArray(selfStudent.periods) ? selfStudent.periods : [];
             const latestPeriod = periods.length > 0 ? periods[periods.length - 1] : null;
@@ -471,7 +484,7 @@
                 if (Number.isFinite(score)) synthesizedScores[subject] = score;
             });
 
-            CURRENT_REPORT_STUDENT = {
+            setCurrentReportStudentState({
                 name: selfStudent.name || user.name || '',
                 class: selfStudent.class || user.class || '',
                 school: selfStudent.school || user.school || '',
@@ -485,8 +498,10 @@
                         township: latestPeriod?.rankTown ?? '-'
                     }
                 }
-            };
+            });
         }
+
+        const currentReportStudent = readCurrentReportStudentState();
 
         if (typeof Auth !== 'undefined' && typeof Auth.renderParentView === 'function') {
             Auth.renderParentView();
@@ -495,14 +510,14 @@
 
         const reportWrap = document.getElementById('single-report-result');
         const reportArea = document.getElementById('report-card-capture-area');
-        if (reportWrap && reportArea && typeof renderSingleReportCardHTML === 'function') {
+        if (currentReportStudent && reportWrap && reportArea && typeof renderSingleReportCardHTML === 'function') {
             reportWrap.classList.remove('hidden');
-            reportArea.innerHTML = renderSingleReportCardHTML(CURRENT_REPORT_STUDENT, 'A4');
+            reportArea.innerHTML = renderSingleReportCardHTML(currentReportStudent, 'A4');
             setTimeout(() => {
-                if (typeof renderRadarChart === 'function') renderRadarChart(CURRENT_REPORT_STUDENT);
-                if (typeof renderVarianceChart === 'function') renderVarianceChart(CURRENT_REPORT_STUDENT);
+                if (typeof renderRadarChart === 'function') renderRadarChart(currentReportStudent);
+                if (typeof renderVarianceChart === 'function') renderVarianceChart(currentReportStudent);
             }, 100);
-            if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(CURRENT_REPORT_STUDENT);
+            if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(currentReportStudent);
         }
     }
 

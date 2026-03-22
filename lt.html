@@ -1724,19 +1724,34 @@
 </script>
     <script>
 (function (root, factory) {
+    function installReportSessionState(target, runtime) {
+        if (!target || !runtime) return runtime;
+        target.ReportSessionState = runtime;
+        target.readCurrentReportStudentState = runtime.getCurrentReportStudent;
+        target.setCurrentReportStudentState = runtime.setCurrentReportStudent;
+        target.readBatchAICacheState = runtime.getBatchAICache;
+        target.setBatchAICacheState = runtime.setBatchAICache;
+        target.readIsBatchAIRunningState = runtime.getIsBatchAiRunning;
+        target.setBatchAIRunningState = runtime.setIsBatchAiRunning;
+        target.readCurrentContextStudentsState = runtime.getCurrentContextStudents;
+        target.setCurrentContextStudentsState = runtime.setCurrentContextStudents;
+        target.syncReportSessionRuntimeState = runtime.syncReportSessionState;
+        runtime.syncReportSessionState(runtime.snapshotReportSessionState());
+        return runtime;
+    }
+
     const runtime = factory(root || {});
 
     if (typeof module === 'object' && module.exports) {
         const createRuntime = function (overrideRoot) {
-            return factory(overrideRoot || root || {});
+            return installReportSessionState(overrideRoot || root || {}, factory(overrideRoot || root || {}));
         };
         createRuntime.runtime = runtime;
         module.exports = createRuntime;
     }
 
     if (!root || root.ReportSessionState) return;
-    root.ReportSessionState = runtime;
-    runtime.syncReportSessionState(runtime.snapshotReportSessionState());
+    installReportSessionState(root, runtime);
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createReportSessionStateRuntime(root) {
     function cloneJson(value, fallbackValue) {
         if (value == null) return fallbackValue;
@@ -42842,11 +42857,14 @@ function resolveCloudCompareTarget(user) {
     if (CLOUD_COMPARE_TARGET && CLOUD_COMPARE_TARGET.name) {
         return CLOUD_COMPARE_TARGET;
     }
-    if (CURRENT_REPORT_STUDENT) {
+    const currentReportStudent = typeof window.readCurrentReportStudentState === 'function'
+        ? window.readCurrentReportStudentState()
+        : (CURRENT_REPORT_STUDENT || null);
+    if (currentReportStudent) {
         return {
-            name: String(CURRENT_REPORT_STUDENT.name || '').trim(),
-            class: String(CURRENT_REPORT_STUDENT.class || '').trim(),
-            school: String(CURRENT_REPORT_STUDENT.school || '').trim()
+            name: String(currentReportStudent.name || '').trim(),
+            class: String(currentReportStudent.class || '').trim(),
+            school: String(currentReportStudent.school || '').trim()
         };
     }
     const bound = getCurrentBoundStudentFromUser(user);
@@ -47604,6 +47622,18 @@ function exportMacroMultiPeriodComparison() {
             window.STUDENT_MULTI_PERIOD_COMPARE_CACHE = nextCache;
             return nextCache;
         });
+    const readCurrentReportStudentState = typeof window.readCurrentReportStudentState === 'function'
+        ? window.readCurrentReportStudentState
+        : (() => (CURRENT_REPORT_STUDENT && typeof CURRENT_REPORT_STUDENT === 'object'
+            ? CURRENT_REPORT_STUDENT
+            : null));
+    const setCurrentReportStudentState = typeof window.setCurrentReportStudentState === 'function'
+        ? window.setCurrentReportStudentState
+        : ((student) => {
+            const nextStudent = student && typeof student === 'object' && !Array.isArray(student) ? student : null;
+            CURRENT_REPORT_STUDENT = nextStudent;
+            return nextStudent;
+        });
 
     let CLOUD_COMPARE_TARGET = null;
     let CLOUD_STUDENT_COMPARE_CONTEXT = null;
@@ -47693,11 +47723,12 @@ function exportMacroMultiPeriodComparison() {
 
     function resolveCloudCompareTarget(user) {
         if (CLOUD_COMPARE_TARGET && CLOUD_COMPARE_TARGET.name) return CLOUD_COMPARE_TARGET;
-        if (CURRENT_REPORT_STUDENT) {
+        const currentReportStudent = readCurrentReportStudentState();
+        if (currentReportStudent) {
             return {
-                name: String(CURRENT_REPORT_STUDENT.name || '').trim(),
-                class: String(CURRENT_REPORT_STUDENT.class || '').trim(),
-                school: String(CURRENT_REPORT_STUDENT.school || '').trim()
+                name: String(currentReportStudent.name || '').trim(),
+                class: String(currentReportStudent.class || '').trim(),
+                school: String(currentReportStudent.school || '').trim()
             };
         }
         const bound = getCurrentBoundStudentFromUser(user);
@@ -48051,7 +48082,7 @@ function exportMacroMultiPeriodComparison() {
         ) : null);
 
         if (bound && bound.scores) {
-            CURRENT_REPORT_STUDENT = bound;
+            setCurrentReportStudentState(bound);
         } else {
             const periods = Array.isArray(selfStudent.periods) ? selfStudent.periods : [];
             const latestPeriod = periods.length > 0 ? periods[periods.length - 1] : null;
@@ -48061,7 +48092,7 @@ function exportMacroMultiPeriodComparison() {
                 if (Number.isFinite(score)) synthesizedScores[subject] = score;
             });
 
-            CURRENT_REPORT_STUDENT = {
+            setCurrentReportStudentState({
                 name: selfStudent.name || user.name || '',
                 class: selfStudent.class || user.class || '',
                 school: selfStudent.school || user.school || '',
@@ -48075,8 +48106,10 @@ function exportMacroMultiPeriodComparison() {
                         township: latestPeriod?.rankTown ?? '-'
                     }
                 }
-            };
+            });
         }
+
+        const currentReportStudent = readCurrentReportStudentState();
 
         if (typeof Auth !== 'undefined' && typeof Auth.renderParentView === 'function') {
             Auth.renderParentView();
@@ -48085,14 +48118,14 @@ function exportMacroMultiPeriodComparison() {
 
         const reportWrap = document.getElementById('single-report-result');
         const reportArea = document.getElementById('report-card-capture-area');
-        if (reportWrap && reportArea && typeof renderSingleReportCardHTML === 'function') {
+        if (currentReportStudent && reportWrap && reportArea && typeof renderSingleReportCardHTML === 'function') {
             reportWrap.classList.remove('hidden');
-            reportArea.innerHTML = renderSingleReportCardHTML(CURRENT_REPORT_STUDENT, 'A4');
+            reportArea.innerHTML = renderSingleReportCardHTML(currentReportStudent, 'A4');
             setTimeout(() => {
-                if (typeof renderRadarChart === 'function') renderRadarChart(CURRENT_REPORT_STUDENT);
-                if (typeof renderVarianceChart === 'function') renderVarianceChart(CURRENT_REPORT_STUDENT);
+                if (typeof renderRadarChart === 'function') renderRadarChart(currentReportStudent);
+                if (typeof renderVarianceChart === 'function') renderVarianceChart(currentReportStudent);
             }, 100);
-            if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(CURRENT_REPORT_STUDENT);
+            if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(currentReportStudent);
         }
     }
 
