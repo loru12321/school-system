@@ -11,14 +11,17 @@ const readCloudStudentCompareContextSessionState = typeof window.readCloudStuden
         return null;
     });
 
-function getCloudPreviousRecord(student) {
+function getCloudCompareHint(student) {
     if (!isCloudContextMatchStudent(student) && !isCloudContextLikelyCurrentTarget(student)) return null;
-    return readCloudStudentCompareContextSessionState()?.previousRecord || null;
+    return readCloudStudentCompareContextSessionState() || null;
+}
+
+function getCloudPreviousRecord(student) {
+    return getCloudCompareHint(student)?.previousRecord || null;
 }
 
 function getCloudPreviousSubjectScores(subject, student) {
-    if (!isCloudContextMatchStudent(student) && !isCloudContextLikelyCurrentTarget(student)) return null;
-    const scores = readCloudStudentCompareContextSessionState()?.previousSubjectScores?.[subject];
+    const scores = getCloudCompareHint(student)?.previousSubjectScores?.[subject];
     return Array.isArray(scores) ? scores : null;
 }
 
@@ -27,7 +30,7 @@ function getPreviousExamSubjectScores(subject, student, prevStu) {
     let scores = getCloudPreviousSubjectScores(subject, student);
     if (Array.isArray(scores) && scores.length >= 5) return scores;
 
-    const cloudCompareContext = readCloudStudentCompareContextSessionState();
+    const cloudCompareContext = getCloudCompareHint(student) || readCloudStudentCompareContextSessionState();
     const examKey = String(
         cloudCompareContext?.prevExamId ||
         prevStu?._sourceExam ||
@@ -88,6 +91,7 @@ function loadCloudStudentCompareForCurrentStudent(key) {
 // Compare exam identity runtime moved to public/assets/js/compare-shared-runtime.js
 
     Object.assign(window, {
+        getCloudCompareHint,
         getCloudPreviousRecord,
         getCloudPreviousSubjectScores,
         getPreviousExamSubjectScores,

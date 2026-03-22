@@ -37834,14 +37834,17 @@ const readCloudStudentCompareContextSessionState = typeof window.readCloudStuden
         return null;
     });
 
-function getCloudPreviousRecord(student) {
+function getCloudCompareHint(student) {
     if (!isCloudContextMatchStudent(student) && !isCloudContextLikelyCurrentTarget(student)) return null;
-    return readCloudStudentCompareContextSessionState()?.previousRecord || null;
+    return readCloudStudentCompareContextSessionState() || null;
+}
+
+function getCloudPreviousRecord(student) {
+    return getCloudCompareHint(student)?.previousRecord || null;
 }
 
 function getCloudPreviousSubjectScores(subject, student) {
-    if (!isCloudContextMatchStudent(student) && !isCloudContextLikelyCurrentTarget(student)) return null;
-    const scores = readCloudStudentCompareContextSessionState()?.previousSubjectScores?.[subject];
+    const scores = getCloudCompareHint(student)?.previousSubjectScores?.[subject];
     return Array.isArray(scores) ? scores : null;
 }
 
@@ -37850,7 +37853,7 @@ function getPreviousExamSubjectScores(subject, student, prevStu) {
     let scores = getCloudPreviousSubjectScores(subject, student);
     if (Array.isArray(scores) && scores.length >= 5) return scores;
 
-    const cloudCompareContext = readCloudStudentCompareContextSessionState();
+    const cloudCompareContext = getCloudCompareHint(student) || readCloudStudentCompareContextSessionState();
     const examKey = String(
         cloudCompareContext?.prevExamId ||
         prevStu?._sourceExam ||
@@ -37911,6 +37914,7 @@ function loadCloudStudentCompareForCurrentStudent(key) {
 // Compare exam identity runtime moved to public/assets/js/compare-shared-runtime.js
 
     Object.assign(window, {
+        getCloudCompareHint,
         getCloudPreviousRecord,
         getCloudPreviousSubjectScores,
         getPreviousExamSubjectScores,
@@ -38038,9 +38042,11 @@ function renderSingleReportCardHTML(stu, mode) {
     const reportStu = getComparisonStudentView(stu, RAW_DATA);
 
     // 获取对比数据（云端上下文优先，避免回退导致“看不到对比”）
-    const cloudHint = (isCloudContextMatchStudent(reportStu) || isCloudContextLikelyCurrentTarget(reportStu))
-        ? readCloudStudentCompareContextSessionState()
-        : null;
+    const cloudHint = typeof getCloudCompareHint === 'function'
+        ? getCloudCompareHint(reportStu)
+        : ((isCloudContextMatchStudent(reportStu) || isCloudContextLikelyCurrentTarget(reportStu))
+            ? readCloudStudentCompareContextSessionState()
+            : null);
     const prevStu = cloudHint?.previousRecord || findPreviousRecord(reportStu);
     const reportExamHistory = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(reportStu) : [];
     const currentExamId = getEffectiveCurrentExamId();
@@ -38329,9 +38335,11 @@ function renderInstagramCard(stu) {
     const rank = safeGet(reportStu, 'ranks.total.township', '-');
     const pct = (typeof rank === 'number') ? ((1 - rank / totalStudents) * 100).toFixed(0) : '-';
     const avatarLetter = stu.name.charAt(0); // 头像取首字
-    const cloudHint = (isCloudContextMatchStudent(reportStu) || isCloudContextLikelyCurrentTarget(reportStu))
-        ? readCloudStudentCompareContextSessionState()
-        : null;
+    const cloudHint = typeof getCloudCompareHint === 'function'
+        ? getCloudCompareHint(reportStu)
+        : ((isCloudContextMatchStudent(reportStu) || isCloudContextLikelyCurrentTarget(reportStu))
+            ? readCloudStudentCompareContextSessionState()
+            : null);
 
     // 判断是否为单校模式
     const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
