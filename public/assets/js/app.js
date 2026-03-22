@@ -13403,6 +13403,9 @@ function switchTab(id) {
         updateTeacherMultiExamSelects();
         updateTeacherCompareTeacherSelect();
     }
+    if (id === 'report-generator' && typeof window.ensureHistoryCompareRuntimeLoaded === 'function') {
+        window.ensureHistoryCompareRuntimeLoaded().catch((error) => console.warn(error));
+    }
     try {
         if (id === 'exam-arranger') {
             EXAM_initProctorUI();

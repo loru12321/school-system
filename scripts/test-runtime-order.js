@@ -139,9 +139,6 @@ assert.ok(studentCompareCloudIndex >= 0, 'index.html should load student-compare
 assert.ok(cloudIndex >= 0, 'index.html should load cloud.js');
 assert.ok(cloudWorkspaceIndex >= 0, 'index.html should load cloud-workspace-runtime.js');
 assert.ok(appIndex >= 0, 'index.html should load app.js');
-assert.ok(accountAdminIndex >= 0, 'index.html should load account-admin-runtime.js');
-assert.ok(historyCompareIndex >= 0, 'index.html should load history-compare-runtime.js');
-assert.ok(perfMobileIndex >= 0, 'index.html should load perf-mobile-runtime.js');
 
 [
     bootRuntimeRef,
@@ -169,11 +166,8 @@ assert.ok(perfMobileIndex >= 0, 'index.html should load perf-mobile-runtime.js')
     progressAnalysisRef,
     teacherAnalysisMainRef,
     studentCompareCloudRef,
-    accountAdminRef,
     townSubmoduleCompareStateRef,
-    townSubmoduleCompareRef,
-    historyCompareRef,
-    perfMobileRef
+    townSubmoduleCompareRef
 ].forEach((src) => {
     const scriptTag = findScriptTag(indexHtml, src);
     assert.ok(scriptTag, `index.html should contain a script tag for ${src}`);
@@ -181,6 +175,9 @@ assert.ok(perfMobileIndex >= 0, 'index.html should load perf-mobile-runtime.js')
 });
 
 [
+    accountAdminRef,
+    historyCompareRef,
+    perfMobileRef,
     holographicRef,
     predictiveRef,
     metaverseRef,
@@ -241,8 +238,5 @@ assert.ok(workspaceStateIndex < appIndex, 'workspace-state-runtime.js must load 
 assert.ok(bootRuntimeIndex < authStateIndex, 'boot-runtime.js should load before auth-state-runtime.js');
 assert.ok(authStateIndex < cloudWorkspaceIndex, 'auth-state-runtime.js must load before cloud-workspace-runtime.js');
 assert.ok(authStateIndex < appIndex, 'auth-state-runtime.js must load before app.js');
-assert.ok(accountAdminIndex < appIndex, 'account-admin-runtime.js should load before app.js');
-assert.ok(appIndex < historyCompareIndex, 'app.js must load before history-compare-runtime.js');
-assert.ok(appIndex < perfMobileIndex, 'app.js must load before perf-mobile-runtime.js');
 
 console.log('runtime order tests passed');

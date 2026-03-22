@@ -44,3 +44,108 @@ window.addEventListener('scroll', function () {
         btn.style.display = 'none';
     }
 });
+
+window.__optionalRuntimeLoaders = window.__optionalRuntimeLoaders || {};
+function loadOptionalRuntime(key, src) {
+    if (window.__optionalRuntimeLoaders[key]) return window.__optionalRuntimeLoaders[key];
+
+    const existing = document.querySelector(`script[data-runtime="${key}"]`);
+    if (existing) {
+        window.__optionalRuntimeLoaders[key] = Promise.resolve();
+        return window.__optionalRuntimeLoaders[key];
+    }
+
+    window.__optionalRuntimeLoaders[key] = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.defer = true;
+        script.async = true;
+        script.dataset.runtime = key;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`Failed to load runtime: ${src}`));
+        document.head.appendChild(script);
+    });
+    return window.__optionalRuntimeLoaders[key];
+}
+
+window.ensureAccountAdminRuntimeLoaded = function () {
+    return loadOptionalRuntime('account-admin', './assets/js/account-admin-runtime.js');
+};
+
+window.ensureHistoryCompareRuntimeLoaded = function () {
+    return loadOptionalRuntime('history-compare', './assets/js/history-compare-runtime.js');
+};
+
+window.ensurePerfMobileRuntimeLoaded = function () {
+    return loadOptionalRuntime('perf-mobile', './assets/js/perf-mobile-runtime.js');
+};
+
+const accountAdminStub = {
+    downloadTemplate(...args) {
+        return window.ensureAccountAdminRuntimeLoaded().then(() => {
+            if (window.AccountExcel !== accountAdminStub && typeof window.AccountExcel?.downloadTemplate === 'function') {
+                return window.AccountExcel.downloadTemplate(...args);
+            }
+            throw new Error('AccountExcel runtime not loaded');
+        });
+    },
+    upload(...args) {
+        return window.ensureAccountAdminRuntimeLoaded().then(() => {
+            if (window.AccountExcel !== accountAdminStub && typeof window.AccountExcel?.upload === 'function') {
+                return window.AccountExcel.upload(...args);
+            }
+            throw new Error('AccountExcel runtime not loaded');
+        });
+    }
+};
+
+if (!window.AccountExcel) {
+    window.AccountExcel = accountAdminStub;
+}
+
+['toggleAdminManualInput', 'changeAdminPass', 'openUserPasswordModal', 'submitUserPasswordChange'].forEach((name) => {
+    if (typeof window[name] === 'function') return;
+    window[name] = function (...args) {
+        const current = window[name];
+        return window.ensureAccountAdminRuntimeLoaded().then(() => {
+            const next = window[name];
+            if (typeof next === 'function' && next !== current) {
+                return next.apply(this, args);
+            }
+            throw new Error(`${name} runtime not loaded`);
+        });
+    };
+});
+
+if (window.innerWidth <= 768 || localStorage.getItem('DEV_MODE') === 'true') {
+    window.ensurePerfMobileRuntimeLoaded().catch((error) => {
+        console.warn(error);
+    });
+}
+
+function installHistoryDoQueryWrapper() {
+    if (window.__historyDoQueryWrapped || typeof window.doQuery !== 'function') return false;
+    const base = window.doQuery;
+    const wrapped = async function (...args) {
+        try {
+            await window.ensureHistoryCompareRuntimeLoaded();
+        } catch (error) {
+            console.warn(error);
+        }
+        const next = window.doQuery !== wrapped ? window.doQuery : base;
+        return next.apply(this, args);
+    };
+    window.doQuery = wrapped;
+    window.__historyDoQueryWrapped = true;
+    return true;
+}
+
+if (!installHistoryDoQueryWrapper()) {
+    let tries = 0;
+    const timer = setInterval(() => {
+        tries += 1;
+        if (installHistoryDoQueryWrapper() || tries >= 30) {
+            clearInterval(timer);
+        }
+    }, 250);
+}

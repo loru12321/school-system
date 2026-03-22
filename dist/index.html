@@ -623,12 +623,7 @@
                             style="padding:8px; border:1px solid #ccc; width:25%;"><input type="text" id="manual-name" placeholder="账号/姓名"
                             style="padding:8px; border:1px solid #ccc; flex:1;"></div><div id="manual-class-wrap" style="margin-bottom:10px; display:none;"><input type="text" id="manual-class" placeholder="输入班级 (如: 701，家长必填)"
                             style="width:100%; padding:8px; border:1px solid #ccc;"></div><div style="display:flex; gap:10px;"><input type="text" id="manual-pass" value="123456" placeholder="密码"
-                            style="padding:8px; border-radius:4px; border:1px solid #ccc; width:60%;"><button class="btn btn-primary" onclick="Auth.addCloudAccount()" style="flex:1;">添加/更新</button></div><p style="font-size:12px; color:#999; margin-top:5px;">提示：直接写入云端数据库。账号必须唯一。</p></div>
-
-                <script defer src="./assets/js/account-admin-runtime.js"></script>
-
-                
-                <div style="background:#fff; padding:15px; border:1px solid #eee; border-radius:8px;"><h4 style="margin-bottom:10px; color:#333;">3. 修改管理员密码</h4><div style="display:flex; gap:10px;"><input type="text" id="new-admin-pass" placeholder="输入新密码"
+                            style="padding:8px; border-radius:4px; border:1px solid #ccc; width:60%;"><button class="btn btn-primary" onclick="Auth.addCloudAccount()" style="flex:1;">添加/更新</button></div><p style="font-size:12px; color:#999; margin-top:5px;">提示：直接写入云端数据库。账号必须唯一。</p></div><div style="background:#fff; padding:15px; border:1px solid #eee; border-radius:8px;"><h4 style="margin-bottom:10px; color:#333;">3. 修改管理员密码</h4><div style="display:flex; gap:10px;"><input type="text" id="new-admin-pass" placeholder="输入新密码"
                             style="padding:8px; flex:1; border:1px solid #cbd5e1; border-radius:4px;"><button class="btn btn-gray" onclick="changeAdminPass()">确认修改</button></div></div><div
                     style="background:#f0fdf4; padding:15px; border:1px solid #86efac; border-radius:8px; margin-top:5px;"><h4 style="margin-bottom:10px; color:#166534;"><i class="ti ti-cloud-download"></i> 4. 导出云端所有账号
                         (完整备份)</h4><div style="display:flex; justify-content:space-between; align-items:center;"><p style="font-size:12px; color:#15803d; margin:0; flex:1;">
@@ -660,7 +655,7 @@
     <script defer src="./assets/js/macro-compare-cloud-runtime.js?v=20260321-localgrades-v4"></script>
     <script defer src="./assets/js/data-manager-sql.js?v=20260321-localgrades-v4"></script>
     <script defer src="./assets/js/mobile-manager.js?v=20260321-security-v5"></script>
-    <script defer src="./assets/js/history-compare-runtime.js"></script>
+    
     
     <div id="user-password-modal" class="modal" style="display: none; z-index: 70000;"><div class="modal-content" style="max-width: 400px;"><div
                 style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;"><h3 style="color:var(--primary); margin:0;"><i class="ti ti-lock"></i> 修改个人密码</h3><button onclick="document.getElementById('user-password-modal').style.display='none'"
@@ -827,7 +822,7 @@
                                             onchange="DataManager.toggleCloudSelectAll(this.checked)" title="全选/取消全选"></th><th>存档 Key (项目名)</th><th>上传时间</th><th>数据大小</th><th>操作</th></tr></thead><tbody></tbody></table></div></div><div id="dm-pagination"
                     style="padding-top:10px; text-align:right; font-size:12px; color:#666; display:flex; justify-content:flex-end; gap:10px; align-items:center;"><button class="btn btn-sm btn-gray" onclick="DataManager.changePage(-1)">上一页</button><span id="dm-page-info">1 / 1</span><button class="btn btn-sm btn-gray" onclick="DataManager.changePage(1)">下一页</button></div></div></main></div>
 
-        <script defer src="./assets/js/perf-mobile-runtime.js"></script>
+        
 
 
         
