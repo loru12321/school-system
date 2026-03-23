@@ -11,8 +11,9 @@ const AIDiagnosis = {
     // 配置
     config: {
         apiEndpoint: '/api/ai/diagnose',  // 本地 API 端点
-        openaiApiKey: '',                  // OpenAI API Key（从环境变量读取）
-        model: 'gpt-3.5-turbo',           // 使用的模型
+        openaiApiKey: '',                  // 兼容旧字段，实际也可用于 DeepSeek/OpenAI 兼容接口
+        baseURL: 'https://api.deepseek.com',
+        model: 'deepseek-chat',           // 使用的模型
         maxTokens: 500,                    // 最大 token 数
         temperature: 0.7,                  // 温度（创意度）
         timeout: 10000                     // 超时时间（ms）
@@ -26,7 +27,16 @@ const AIDiagnosis = {
      * @param {Object} config - 配置选项
      */
     init(config = {}) {
-        this.config = { ...this.config, ...config };
+        const savedApiKey = localStorage.getItem('LLM_API_KEY') || '';
+        const savedBaseURL = localStorage.getItem('LLM_BASE_URL') || this.config.baseURL;
+        const savedModel = localStorage.getItem('LLM_MODEL') || this.config.model;
+        this.config = {
+            ...this.config,
+            openaiApiKey: savedApiKey,
+            baseURL: savedBaseURL,
+            model: savedModel,
+            ...config
+        };
         console.log('✅ AI 诊断模块已初始化');
     },
 
@@ -143,34 +153,32 @@ const AIDiagnosis = {
     async _callLLM(context) {
         const prompt = this._buildPrompt(context);
 
-        // 尝试调用本地 API
         try {
             const response = await fetch(this.config.apiEndpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     prompt: prompt,
+                    systemPrompt: '你是一位资深的教育诊断专家，请根据学生数据提供具体、温和、可执行的学习建议。',
                     model: this.config.model,
                     maxTokens: this.config.maxTokens,
-                    temperature: this.config.temperature
-                }),
-                timeout: this.config.timeout
+                    temperature: this.config.temperature,
+                    apiKey: this.config.openaiApiKey,
+                    baseURL: this.config.baseURL
+                })
             });
 
             if (response.ok) {
                 const data = await response.json();
                 return data.diagnosis || data.result || '诊断生成失败';
             }
+            const errorData = await response.json().catch(() => null);
+            throw new Error(errorData?.detail || errorData?.error || `AI API 错误: ${response.status}`);
         } catch (error) {
-            console.warn('⚠️ 本地 API 调用失败，尝试 OpenAI:', error);
+            console.warn('⚠️ AI 诊断网关调用失败:', error);
         }
 
-        // 回退到 OpenAI API
-        if (this.config.openaiApiKey) {
-            return await this._callOpenAI(prompt);
-        }
-
-        throw new Error('未配置 LLM 接口');
+        throw new Error('AI 诊断服务暂不可用');
     },
 
     /**
@@ -178,24 +186,15 @@ const AIDiagnosis = {
      * @private
      */
     async _callOpenAI(prompt) {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        const response = await fetch(this.config.apiEndpoint, {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.config.openaiApiKey}`,
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                prompt,
+                systemPrompt: '你是一位资深的教育诊断专家，请根据学生数据提供具体、温和、可执行的学习建议。',
+                apiKey: this.config.openaiApiKey,
+                baseURL: this.config.baseURL,
                 model: this.config.model,
-                messages: [
-                    {
-                        role: 'system',
-                        content: '你是一位资深的教育诊断专家，根据学生的成绩数据提供个性化的学习建议。'
-                    },
-                    {
-                        role: 'user',
-                        content: prompt
-                    }
-                ],
                 max_tokens: this.config.maxTokens,
                 temperature: this.config.temperature
             })
@@ -206,7 +205,7 @@ const AIDiagnosis = {
         }
 
         const data = await response.json();
-        return data.choices?.[0]?.message?.content || '诊断生成失败';
+        return data.diagnosis || data.result || data.choices?.[0]?.message?.content || '诊断生成失败';
     },
 
     /**

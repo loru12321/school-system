@@ -8118,6 +8118,18 @@ function getWebLLMModuleCandidates() {
     return Array.from(new Set(candidates));
 }
 
+function canUseSameOriginAIGatewayFromApp() {
+    if (!window.location) return false;
+    const protocol = String(window.location.protocol || '').trim().toLowerCase();
+    if (protocol !== 'https:' && protocol !== 'http:') return false;
+    const hostname = String(window.location.hostname || '').trim().toLowerCase();
+    return !!hostname
+        && hostname !== 'localhost'
+        && hostname !== '127.0.0.1'
+        && hostname !== '[::1]'
+        && !hostname.endsWith('.local');
+}
+
 async function loadLocalWebLLMModule() {
     let lastError = null;
     for (const candidate of getWebLLMModuleCandidates()) {
@@ -22023,7 +22035,9 @@ function stopBatchAI() {
 // 5. 开始批量生成 (核心循环)
 async function startBatchAIComments() {
     if (AI_DISABLED) return aiDisabledAlert();
-    if (!LLM_CONFIG.apiKey) return alert("请先在【数据中心 -> AI 配置】中设置 API Key");
+    if (!LLM_CONFIG.apiKey && !canUseSameOriginAIGatewayFromApp()) {
+        return alert("请先在【数据中心 -> AI 配置】中设置 API Key");
+    }
     const sch = document.getElementById('sel-school').value;
     const cls = document.getElementById('sel-class').value;
     const students = SCHOOLS[sch].students.filter(s => s.class === cls).sort((a, b) => b.total - a.total);

@@ -1065,32 +1065,84 @@ window.addEventListener('load', () => {
     modelEl.value = LLM_CONFIG.model;
 });
 
+function isLocalAIHost(hostname) {
+    const normalized = String(hostname || '').trim().toLowerCase();
+    return !normalized
+        || normalized === 'localhost'
+        || normalized === '127.0.0.1'
+        || normalized === '[::1]'
+        || normalized.endsWith('.local');
+}
+
+function shouldUseSameOriginAIGateway() {
+    if (!window.location) return false;
+    const protocol = String(window.location.protocol || '').trim().toLowerCase();
+    if (protocol !== 'https:' && protocol !== 'http:') return false;
+    return !isLocalAIHost(window.location.hostname);
+}
+
+function getSameOriginAIChatUrl() {
+    if (!window.location || !window.location.origin) return '/api/ai/chat';
+    return String(window.location.origin).replace(/\/$/, '') + '/api/ai/chat';
+}
+
 // 2. 通用 LLM 请求函数
 async function callLLM(prompt, onChunk, onFinish) {
     if (AI_DISABLED) {
         if (onFinish) onFinish("(请求失败)");
         throw new Error('AI 功能已移除');
     }
-    if (!LLM_CONFIG.apiKey) return alert("请先在【数据中心】设置 AI API Key");
+    const useGateway = shouldUseSameOriginAIGateway();
+    if (!LLM_CONFIG.apiKey && !useGateway) return alert("请先在【数据中心】设置 AI API Key");
 
     try {
-        const response = await fetch(`${LLM_CONFIG.baseURL}/v1/chat/completions`, {
+        const requestBody = {
+            model: LLM_CONFIG.model,
+            messages: [
+                { role: "system", content: LLM_CONFIG.systemPrompt },
+                { role: "user", content: prompt }
+            ],
+            stream: true
+        };
+        const headers = {
+            "Content-Type": "application/json"
+        };
+        let endpoint = `${LLM_CONFIG.baseURL}/v1/chat/completions`;
+        if (useGateway) {
+            endpoint = getSameOriginAIChatUrl();
+            requestBody.baseURL = LLM_CONFIG.baseURL;
+            requestBody.apiKey = LLM_CONFIG.apiKey;
+            requestBody.prompt = prompt;
+            requestBody.systemPrompt = LLM_CONFIG.systemPrompt;
+        } else {
+            headers.Authorization = `Bearer ${LLM_CONFIG.apiKey}`;
+        }
+
+        const response = await fetch(endpoint, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${LLM_CONFIG.apiKey}`
-            },
-            body: JSON.stringify({
-                model: LLM_CONFIG.model,
-                messages: [
-                    { role: "system", content: LLM_CONFIG.systemPrompt },
-                    { role: "user", content: prompt }
-                ],
-                stream: true // 开启流式输出
-            })
+            headers,
+            body: JSON.stringify(requestBody)
         });
 
-        if (!response.ok) throw new Error(`API Error: ${response.status}`);
+        if (!response.ok) {
+            let detail = '';
+            try {
+                const errorBody = await response.json();
+                detail = errorBody?.detail || errorBody?.error || '';
+            } catch (e) {
+                detail = await response.text().catch(() => '');
+            }
+            throw new Error(detail || `API Error: ${response.status}`);
+        }
+
+        const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+        if (contentType.includes('application/json')) {
+            const data = await response.json();
+            const fullText = data?.choices?.[0]?.message?.content || data?.result || data?.diagnosis || '';
+            if (onChunk && fullText) onChunk(fullText);
+            if (onFinish) onFinish(fullText);
+            return;
+        }
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder("utf-8");
