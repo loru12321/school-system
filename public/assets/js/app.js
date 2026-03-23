@@ -17297,6 +17297,7 @@ async function exportPPTReport() {
         alert("请先点击【生成总排名】按钮，计算完各项指标后再导出。");
         return;
     }
+    var isGrade9 = CONFIG.name && CONFIG.name.includes('9');
 
     // --- 1. PPT 初始化 ---
     var pptx = new PptxGenJS();
