@@ -70,8 +70,31 @@ npm run build
 ```bash
 npm run smoke:modules
 npm run smoke:report-compare
+npm run test:ai-gateway
 npm run push
 ```
+
+## AI Gateway
+
+Production now proxies AI requests through same-origin Worker routes instead of calling AI vendors directly from the browser:
+
+- `/api/ai/chat`
+- `/api/ai/diagnose`
+
+Recommended Worker environment variables:
+
+- `AI_API_KEY`
+- `AI_BASE_URL`
+- `AI_MODEL`
+- `AI_ALLOWED_HOSTS`
+
+Quick validation:
+
+```bash
+npm run test:ai-gateway
+```
+
+If the Worker has no AI key yet, the script still treats `AI_API_KEY_MISSING` as a valid route-level response so you can distinguish routing problems from missing vendor credentials.
 
 ## 发布流程
 

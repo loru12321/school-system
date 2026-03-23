@@ -29,6 +29,7 @@
     "test:optimize-dist-html": "node scripts/test-optimize-dist-html.js",
     "test:inline-scripts": "node scripts/test-inline-scripts.js",
     "test:runtime-order": "node scripts/test-runtime-order.js",
+    "test:ai-gateway": "node scripts/test-ai-gateway.js",
     "validate": "npm run check:syntax && npm run test:auth-state && npm run test:workspace-state && npm run test:exam-state && npm run test:school-state && npm run test:teacher-state && npm run test:data-state && npm run test:support-state && npm run test:progress-state && npm run test:report-session-state && npm run test:report-compare-context && npm run test:compare-cloud-context && npm run test:compare-exam-sync && npm run test:compare-session-state && npm run test:compare-result-state && npm run test:compare-summary-state && npm run test:compare-helper-fallbacks && npm run test:town-submodule-compare-state && npm run test:sync-public-assets && npm run test:optimize-dist-html && npm run test:inline-scripts && npm run test:runtime-order && npm run build && npm run test:build-size-budget",
     "push": "powershell -ExecutionPolicy Bypass -File ./deploy.ps1",
     "sync": "npm run build && npm run push",
@@ -36,6 +37,7 @@
     "smoke:modules:local": "node scripts/run-local-smoke.js",
     "smoke:modules:lt": "node scripts/smoke-all-modules.js",
     "smoke:report-compare": "node scripts/smoke-report-compare.js",
+    "smoke:ai-gateway": "node scripts/test-ai-gateway.js",
     "preview": "vite preview"
   },
   "keywords": [],

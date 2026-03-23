@@ -64,6 +64,26 @@
 3.  确保发布命令是 `npx wrangler deploy` (默认会读取 `wrangler.json`)。
 4.  Worker 会自动代理 `dist` 目录下的静态资源。
 
+### AI Gateway Worker 变量
+
+如果你要启用云端 AI，请在 Worker 环境里补这些变量：
+
+- `AI_API_KEY`
+- `AI_BASE_URL`
+- `AI_MODEL`
+- `AI_ALLOWED_HOSTS`
+
+发布后可运行：
+
+```powershell
+npm run test:ai-gateway
+```
+
+说明：
+
+- 如果路由正常但还没配置 AI Key，脚本会返回 `AI_API_KEY_MISSING`
+- 如果连 `/api/health` 都失败，则说明当前 Worker 发布或域名路由有问题
+
 ---
 
 ## 🌐 步骤 3: 绑定域名 (schoolsystem.com.cn)
