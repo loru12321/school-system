@@ -110,55 +110,17 @@ export function injectInlineRuntimeRegistry(html, { projectRoot = __dirname } = 
     return html.replace('</head>', registryScript + '\n</head>');
 }
 
-// =====================================================================
-// viteSingleFile strips external <script> tags from <head>.
-// Re-inject them so the deployed build keeps Supabase, XLSX, and other CDNs.
-// =====================================================================
-const cdnScripts = `
-    <!-- Re-injected by inline-scripts.mjs (viteSingleFile strips these) -->
-    <script>
-        // Fallback Supabase init so sbClient is always available.
-        var sbClient = window.sbClient || null;
-        window.SUPABASE_URL = localStorage.getItem('SUPABASE_URL') || "https://okwcciujnfvobbwaydiv.supabase.co";
-        window.SUPABASE_KEY = localStorage.getItem('SUPABASE_KEY') || "sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4";
-        window.EDGE_GATEWAY_URL = localStorage.getItem('EDGE_GATEWAY_URL') || "https://okwcciujnfvobbwaydiv.supabase.co/functions/v1/edu-gateway-v2";
-        window.initSupabase = function () {
-            if (window.supabase && !sbClient) {
-                sbClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
-                window.sbClient = sbClient;
-                console.log("Supabase initialized");
-            }
-        };
-    </script>
-    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"
-        onload="window.initSupabase()"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js" crossorigin="anonymous"
-        onerror="this.onerror=null;this.src='https://unpkg.com/lz-string@1.5.0/libs/lz-string.min.js'"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"
-        onerror="this.onerror=null;this.src='https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" crossorigin="anonymous"
-        onerror="this.onerror=null;this.src='https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js'"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"
-        onerror="this.onerror=null;this.src='https://unpkg.com/chart.js@4.4.1/dist/chart.umd.min.js'"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js" crossorigin="anonymous"
-        onerror="this.onerror=null;this.src='https://unpkg.com/sweetalert2@11/dist/sweetalert2.all.min.js'"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" crossorigin="anonymous"
-        onerror="this.onerror=null;this.src='https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js'"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" crossorigin="anonymous"
-        onerror="this.onerror=null;this.src='https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js'"></script>
-`;
-
-function injectCdnScripts(html) {
-    if (!html.includes('</head>')) {
-        console.warn('Could not find </head> tag to inject CDN scripts.');
-        return html;
-    }
-    console.log('Injected CDN scripts and Supabase init into lt.html');
-    return html.replace('</head>', cdnScripts + '\n</head>');
+function rewriteLtAssetPaths(html) {
+    return String(html || '').replace(/(\.\/|\/)assets\/vendor\//g, './public/assets/vendor/');
 }
 
 export function buildLtHtml(html, { projectRoot = __dirname } = {}) {
-    return injectCdnScripts(injectInlineRuntimeRegistry(inlineLocalScripts(html, { projectRoot }), { projectRoot }));
+    return rewriteLtAssetPaths(
+        injectInlineRuntimeRegistry(
+            inlineLocalScripts(html, { projectRoot }),
+            { projectRoot }
+        )
+    );
 }
 
 function main() {
