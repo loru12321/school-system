@@ -14,6 +14,87 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof initMacroAnomalyConfigUI === 'function') initMacroAnomalyConfigUI();
 });
 
+var DIRECT_SUPABASE_URL = 'https://okwcciujnfvobbwaydiv.supabase.co';
+var DIRECT_SUPABASE_KEY = 'sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4';
+var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2';
+
+function isLocalSupabaseHost(hostname) {
+    var normalized = String(hostname || '').trim().toLowerCase();
+    return !normalized
+        || normalized === 'localhost'
+        || normalized === '127.0.0.1'
+        || normalized === '[::1]'
+        || normalized.endsWith('.local');
+}
+
+function shouldUseSameOriginSupabaseProxy() {
+    if (!window.location) return false;
+    var protocol = String(window.location.protocol || '').trim().toLowerCase();
+    if (protocol !== 'https:' && protocol !== 'http:') return false;
+    return !isLocalSupabaseHost(window.location.hostname);
+}
+
+function getSameOriginSupabaseUrl() {
+    if (!window.location || !window.location.origin) return DIRECT_SUPABASE_URL;
+    return String(window.location.origin).replace(/\/$/, '') + '/sb';
+}
+
+function getSameOriginGatewayUrl() {
+    if (!window.location || !window.location.origin) return DIRECT_EDGE_GATEWAY_URL;
+    return String(window.location.origin).replace(/\/$/, '') + '/api/edu-gateway';
+}
+
+function createSupabaseFetchWithTimeout(timeoutMs) {
+    var requestTimeoutMs = Number(timeoutMs || 15000);
+    return function (input, init) {
+        var controller = typeof AbortController === 'function' ? new AbortController() : null;
+        var parentSignal = init && init.signal;
+        var cleanupParentAbort = function () { };
+        var timer = null;
+        if (controller && parentSignal && typeof parentSignal.addEventListener === 'function') {
+            if (parentSignal.aborted) {
+                controller.abort();
+            } else {
+                var abortFromParent = function () {
+                    controller.abort();
+                };
+                parentSignal.addEventListener('abort', abortFromParent, { once: true });
+                cleanupParentAbort = function () {
+                    parentSignal.removeEventListener('abort', abortFromParent);
+                };
+            }
+        }
+        if (controller && requestTimeoutMs > 0) {
+            timer = window.setTimeout(function () {
+                controller.abort();
+            }, requestTimeoutMs);
+        }
+        var nextInit = Object.assign({}, init || {});
+        if (controller) nextInit.signal = controller.signal;
+        return fetch(input, nextInit).finally(function () {
+            if (timer) window.clearTimeout(timer);
+            cleanupParentAbort();
+        });
+    };
+}
+
+window.__DIRECT_SUPABASE_URL = DIRECT_SUPABASE_URL;
+window.__DIRECT_EDGE_GATEWAY_URL = DIRECT_EDGE_GATEWAY_URL;
+window.SUPABASE_URL = localStorage.getItem('SUPABASE_URL') || (shouldUseSameOriginSupabaseProxy() ? getSameOriginSupabaseUrl() : DIRECT_SUPABASE_URL);
+window.SUPABASE_KEY = localStorage.getItem('SUPABASE_KEY') || DIRECT_SUPABASE_KEY;
+window.EDGE_GATEWAY_URL = localStorage.getItem('EDGE_GATEWAY_URL') || (shouldUseSameOriginSupabaseProxy() ? getSameOriginGatewayUrl() : DIRECT_EDGE_GATEWAY_URL);
+window.initSupabase = function () {
+    if (window.supabase && !sbClient) {
+        sbClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY, {
+            global: {
+                fetch: createSupabaseFetchWithTimeout(15000)
+            }
+        });
+        window.sbClient = sbClient;
+        console.log('Supabase client initialized');
+    }
+};
+
 window.scrollToAnchor = function (id, triggerEl) {
     var el = document.getElementById(id);
     if (el) {

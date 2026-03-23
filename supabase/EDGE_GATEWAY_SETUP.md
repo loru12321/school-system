@@ -147,4 +147,6 @@ Search for:
 - It does not require moving login to Supabase Auth right now.
 - Passwords are now expected to be stored as bcrypt hashes in `system_users.password_hash`.
 - After the hardening SQL is applied, browser direct access to `system_users` should remain disabled and all account operations should go through `edu-gateway-v2`.
+- The production site now prefers same-origin proxy routes at `https://schoolsystem.com.cn/api/edu-gateway` and `https://schoolsystem.com.cn/sb/*`.
+- Those Worker routes forward traffic to the Supabase project and reduce direct cross-border browser requests from mainland China.
 - Later, you can upgrade to Supabase Auth + JWT claims and then move more permission logic into RLS itself.
