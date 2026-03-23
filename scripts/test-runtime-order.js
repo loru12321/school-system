@@ -105,10 +105,20 @@ const holographicRef = './assets/js/holographic-student-3d.js';
 const predictiveRef = './assets/js/predictive-simulation-lab.js';
 const metaverseRef = './assets/js/metaverse-collab-space.js';
 const emotionalRef = './assets/js/emotional-ai-monitor.js';
-const supabaseCdnRef = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-const lzStringCdnRef = 'https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js';
-const xlsxCdnRef = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
 const bootRuntimeRef = './assets/js/boot-runtime.js';
+const tablerIconsRef = './assets/vendor/tabler-icons/tabler-icons.min.css';
+const supabaseVendorRef = './assets/vendor/supabase/supabase.min.js';
+const lzStringVendorRef = './assets/vendor/lz-string/lz-string.min.js';
+const cryptoJsVendorRef = './assets/vendor/crypto-js/crypto-js.min.js';
+const xlsxVendorRef = './assets/vendor/xlsx/xlsx.full.min.js';
+const alpineVendorRef = './assets/vendor/alpinejs/cdn.min.js';
+const chartVendorRef = './assets/vendor/chart.js/chart.umd.min.js';
+const jszipVendorRef = './assets/vendor/jszip/jszip.min.js';
+const pptxgenVendorRef = './assets/vendor/pptxgenjs/pptxgen.min.js';
+const alasqlVendorRef = './assets/vendor/alasql/alasql.min.js';
+const sweetalertVendorRef = './assets/vendor/sweetalert2/sweetalert2.all.min.js';
+const jspdfVendorRef = './assets/vendor/jspdf/jspdf.umd.min.js';
+const html2canvasVendorRef = './assets/vendor/html2canvas/html2canvas.min.js';
 
 function findScriptTag(html, src) {
     const normalizedSrc = src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -169,9 +179,18 @@ assert.ok(appIndex >= 0, 'index.html should load app.js');
 
 [
     bootRuntimeRef,
-    supabaseCdnRef,
-    lzStringCdnRef,
-    xlsxCdnRef,
+    supabaseVendorRef,
+    lzStringVendorRef,
+    cryptoJsVendorRef,
+    xlsxVendorRef,
+    alpineVendorRef,
+    chartVendorRef,
+    jszipVendorRef,
+    pptxgenVendorRef,
+    alasqlVendorRef,
+    sweetalertVendorRef,
+    jspdfVendorRef,
+    html2canvasVendorRef,
     authStateRef,
     workspaceStateRef,
     examStateRef,
@@ -199,6 +218,8 @@ assert.ok(appIndex >= 0, 'index.html should load app.js');
     assert.ok(scriptTag, `index.html should contain a script tag for ${src}`);
     assert.ok(/\sdefer(\s|>|=)/i.test(scriptTag), `${src} should load with defer`);
 });
+
+assert.ok(indexHtml.includes(tablerIconsRef), 'index.html should load local tabler icons CSS');
 
 [
     accountAdminRef,

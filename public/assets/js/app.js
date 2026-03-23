@@ -3848,8 +3848,7 @@ const HelpSystem = {
             {
                 title: '👋 欢迎使用智能教务系统',
                 html: '只需 3 步完成一次完整流程：<strong>导入 → 分析 → 导出</strong>。',
-                imageUrl: 'https://cdn-icons-png.flaticon.com/512/4205/4205622.png',
-                imageWidth: 100,
+                icon: 'info',
                 confirmButtonText: '下一步: 导入数据'
             },
             {
@@ -8110,6 +8109,27 @@ syncRuntimeStateToWindow();
 let LOCAL_ENGINE = null;
 let IS_LOCAL_LOADING = false;
 
+function getWebLLMModuleCandidates() {
+    const candidates = ['./assets/vendor/web-llm/index.js'];
+    if (window.location && window.location.protocol === 'file:') {
+        candidates.push('./public/assets/vendor/web-llm/index.js');
+        candidates.push('./dist/assets/vendor/web-llm/index.js');
+    }
+    return Array.from(new Set(candidates));
+}
+
+async function loadLocalWebLLMModule() {
+    let lastError = null;
+    for (const candidate of getWebLLMModuleCandidates()) {
+        try {
+            return await import(candidate);
+        } catch (error) {
+            lastError = error instanceof Error ? error : new Error(String(error));
+        }
+    }
+    throw lastError || new Error('WEBLLM_MODULE_LOAD_FAILED');
+}
+
 // 2. 切换 AI 来源 (UI 交互)
 function toggleAISource() {
     if (AI_DISABLED) return aiDisabledAlert();
@@ -8136,12 +8156,12 @@ async function initLocalModel() {
     // 尝试等待模块加载（如果是异步导入）
     if (!window.webllm) {
         try {
-            // 动态再次导入尝试，确保模块就绪
-            const loadedModule = await import("https://esm.run/@mlc-ai/web-llm");
+            // 优先从同域本地模块加载，避免依赖外部 ESM CDN。
+            const loadedModule = await loadLocalWebLLMModule();
             window.webllm = loadedModule;
         } catch (e) {
             console.error("WebLLM module load failed:", e);
-            return alert("WebLLM AI 引擎加载失败。请检查网络连接（需要访问 jsdelivr CDN）。");
+            return alert("WebLLM AI 引擎加载失败。请确认本地 AI 依赖资源可访问后重试。");
         }
     }
 
