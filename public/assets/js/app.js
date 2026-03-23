@@ -7352,6 +7352,22 @@ const DataManager = {
     }
 }; // DataManager 对象结束；SQL 相关逻辑已拆分到 public/assets/js/data-manager-sql.js
 
+function isRecoverableCloudSyncError(error) {
+    const text = `${error?.message || ''} ${error?.details || ''} ${error || ''}`.toLowerCase();
+    return text.includes('aborterror')
+        || text.includes('signal is aborted')
+        || text.includes('request was aborted')
+        || text.includes('timeout');
+}
+
+function logCloudSyncIssue(label, error) {
+    if (isRecoverableCloudSyncError(error)) {
+        console.warn(label, error);
+        return;
+    }
+    console.error(label, error);
+}
+
 // 🟢 [优化版] 数据持久化工具：支持 Supabase 云端同步 + IndexedDB 本地缓存
 const DB = {
     getLocal: async (key) => {
@@ -7389,13 +7405,13 @@ const DB = {
                 .upsert({ key: key, content: compressedStr }, { onConflict: 'key' });
 
             if (error) {
-                console.error("云端备份失败:", error);
+                logCloudSyncIssue("云端备份失败:", error);
             } else {
                 const statusEl = document.getElementById('auto-backup-status');
                 if (statusEl) statusEl.innerHTML = `<span style="color:#16a34a;">☁️ 云端已同步</span>`;
             }
         } catch (e) {
-            console.error("云端同步出错:", e);
+            logCloudSyncIssue("云端同步出错:", e);
         }
     },
 
@@ -14087,7 +14103,7 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
         // 注意：因为是异步，我们在后台默默保存，不阻塞界面显示
         saveCloudData().then(() => {
             console.log("自动备份完成");
-        }).catch(e => console.error("自动备份失败", e));
+        }).catch(e => logCloudSyncIssue("自动备份失败", e));
         renderTables();
         applySchoolModeToTables();
         // 更新所有下拉框
@@ -18904,9 +18920,92 @@ function FB_openSeatMap(clsId) {
 }
 
 // --- 家长查分轻量包生成器 (严格验证版：必须输入 密码+班级+姓名) ---
-function generateInquiryPackage() {
+const STANDALONE_EXPORT_LIB_SOURCE_CACHE = Object.create(null);
+
+function getStandaloneExportLibraryCandidates(src) {
+    const normalized = String(src || '').trim();
+    const candidates = [];
+    const pushCandidate = (value) => {
+        const text = String(value || '').trim();
+        if (!text || candidates.includes(text)) return;
+        candidates.push(text);
+    };
+    pushCandidate(normalized);
+    if (window.location && window.location.protocol === 'file:' && normalized.startsWith('./assets/')) {
+        const relativePath = normalized.replace(/^\.\//, '');
+        pushCandidate(`./public/${relativePath}`);
+        pushCandidate(`./dist/${relativePath}`);
+    }
+    return candidates;
+}
+
+function escapeInlineScriptContent(content) {
+    return String(content || '').replace(/<\/script/gi, '<\\/script');
+}
+
+async function readStandaloneExportLibrarySource(key, fallbackSrc) {
+    if (STANDALONE_EXPORT_LIB_SOURCE_CACHE[key]) return STANDALONE_EXPORT_LIB_SOURCE_CACHE[key];
+
+    const scripts = Array.from(document.querySelectorAll(`script[data-standalone-lib="${key}"]`));
+    for (const script of scripts) {
+        const inlineText = String(script.textContent || '').trim();
+        if (!script.src && inlineText) {
+            STANDALONE_EXPORT_LIB_SOURCE_CACHE[key] = inlineText;
+            return inlineText;
+        }
+    }
+
+    const candidates = [];
+    scripts.forEach(script => {
+        const src = String(script.getAttribute('src') || script.src || '').trim();
+        if (src && !candidates.includes(src)) candidates.push(src);
+    });
+    getStandaloneExportLibraryCandidates(fallbackSrc).forEach(src => {
+        if (!candidates.includes(src)) candidates.push(src);
+    });
+
+    let lastError = null;
+    for (const candidate of candidates) {
+        try {
+            const response = await fetch(candidate, { cache: 'force-cache' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const text = await response.text();
+            if (!text.trim()) throw new Error('EMPTY_SOURCE');
+            STANDALONE_EXPORT_LIB_SOURCE_CACHE[key] = text;
+            return text;
+        } catch (error) {
+            lastError = error instanceof Error ? error : new Error(String(error));
+        }
+    }
+
+    throw lastError || new Error(`${key} source unavailable`);
+}
+
+async function getStandaloneInquiryPackageLibraries() {
+    const [cryptoJsSource, chartJsSource] = await Promise.all([
+        readStandaloneExportLibrarySource('crypto-js', './assets/vendor/crypto-js/crypto-js.min.js'),
+        readStandaloneExportLibrarySource('chart.js', './assets/vendor/chart.js/chart.umd.min.js')
+    ]);
+
+    return {
+        cryptoJsSource: escapeInlineScriptContent(cryptoJsSource),
+        chartJsSource: escapeInlineScriptContent(chartJsSource)
+    };
+}
+
+async function generateInquiryPackage() {
     const sch = document.getElementById('studentSchoolSelect').value;
     if (!sch || sch.includes('请选择')) return alert("请先选择一个学校，系统将生成该校的查分包。");
+
+    if (typeof CryptoJS === 'undefined') {
+        try {
+            const cryptoJsSource = await readStandaloneExportLibrarySource('crypto-js', './assets/vendor/crypto-js/crypto-js.min.js');
+            window.eval(cryptoJsSource);
+        } catch (error) {
+            console.error('[InquiryPackage] crypto-js load failed:', error);
+            return alert("❌ 导出失败：加密库未加载完成，请刷新页面后重试。");
+        }
+    }
 
     // 1. 准备数据
     const schoolStudents = SCHOOLS[sch].students;
@@ -18999,6 +19098,14 @@ function generateInquiryPackage() {
     // 使用 CryptoJS 进行 AES 加密
     const jsonStr = JSON.stringify(secureData);
     const encryptedData = CryptoJS.AES.encrypt(jsonStr, password).toString();
+    let inquiryPackageLibraries = null;
+    try {
+        inquiryPackageLibraries = await getStandaloneInquiryPackageLibraries();
+    } catch (error) {
+        console.error('[InquiryPackage] standalone libs unavailable:', error);
+        return alert("❌ 导出失败：查分包依赖未准备好，请刷新页面后重试。");
+    }
+    const encryptedPayloadLiteral = JSON.stringify(encryptedData).replace(/</g, '\\u003c');
 
     // 4. 构建独立的 HTML 模板 (包含班级输入框)
     const examName = CONFIG.name || "期中考试";
@@ -19011,8 +19118,8 @@ function generateInquiryPackage() {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${sch} - 成绩查询</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"><\/script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
+<script>${inquiryPackageLibraries.cryptoJsSource}<\/script>
+<script>${inquiryPackageLibraries.chartJsSource}<\/script>
 <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; color: #333; }
     .container { max-width: 420px; margin: 0 auto; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
@@ -19086,7 +19193,7 @@ function generateInquiryPackage() {
 <div class="footer">AES 256位端对端加密<br>仅限查询本人成绩</div>
 
 <script>
-    const PAYLOAD = "${encryptedData}";
+    const PAYLOAD = ${encryptedPayloadLiteral};
     const IS_SINGLE_SCHOOL = ${isSingleSchool}; 
 
     let radarInst = null;
@@ -19258,7 +19365,7 @@ function generateInquiryPackage() {
 async function generateClassPPT() {
     // 1. 检查库
     if (typeof PptxGenJS === 'undefined') {
-        return alert("❌ 错误：缺少 PPT 生成库。\n请刷新页面重试，或检查网络是否能加载 cdn.jsdelivr.net。");
+        return alert("❌ 错误：缺少 PPT 生成库。\n请刷新页面重试，并确认导出依赖已成功加载。");
     }
 
     const sch = document.getElementById('studentSchoolSelect').value;
