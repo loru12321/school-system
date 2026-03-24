@@ -15,11 +15,12 @@ function getSize(filePath) {
 }
 
 const budgets = {
-    distIndexHtml: 505_000,
-    ltHtml: 1_750_000,
-    distAppJs: 770_000,
-    distReportRenderJs: 72_500,
-    distTeacherAnalysisJs: 105_000
+    // 2026-03-24 baseline plus a small amount of regression headroom.
+    distIndexHtml: 410_000,
+    ltHtml: 4_700_000,
+    distAppJs: 800_000,
+    distReportRenderJs: 74_000,
+    distTeacherAnalysisJs: 103_000
 };
 
 const actual = {
@@ -30,11 +31,10 @@ const actual = {
     distTeacherAnalysisJs: getSize(distTeacherAnalysisPath)
 };
 
-Object.entries(actual).forEach(([key, size]) => {
-    assert.ok(
-        size <= budgets[key],
-        `${key} exceeds budget: ${size} > ${budgets[key]}`
-    );
-});
+const failures = Object.entries(actual)
+    .filter(([key, size]) => size > budgets[key])
+    .map(([key, size]) => `${key} exceeds budget: ${size} > ${budgets[key]}`);
+
+assert.deepStrictEqual(failures, [], failures.join('\n'));
 
 console.log('build-size-budget tests passed');

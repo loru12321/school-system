@@ -38,11 +38,13 @@ function summarizeResult(name, result) {
     const status = result.response ? result.response.status : 0;
     const dataError = result.data && typeof result.data === 'object' ? result.data.error : '';
     const text = String(result.text || '').trim();
+    const ok = status >= 200 && status < 300;
     return {
         name,
         status,
-        ok: status >= 200 && status < 300,
-        error: dataError || text.slice(0, 200)
+        ok,
+        error: ok ? '' : (dataError || text.slice(0, 200)),
+        preview: ok ? text.slice(0, 200) : ''
     };
 }
 
@@ -78,12 +80,16 @@ async function main() {
         })
     });
 
+    const healthSummary = summarizeResult('health', health);
+    const chatSummary = summarizeResult('chat', chat);
+    const diagnoseSummary = summarizeResult('diagnose', diagnose);
+
     const summary = {
         baseUrl,
-        health: summarizeResult('health', health),
-        chat: summarizeResult('chat', chat),
-        diagnose: summarizeResult('diagnose', diagnose),
-        configured: chat.ok || diagnose.ok,
+        health: healthSummary,
+        chat: chatSummary,
+        diagnose: diagnoseSummary,
+        configured: chatSummary.ok || diagnoseSummary.ok,
         missingKey: isMissingKeyResponse(chat) && isMissingKeyResponse(diagnose)
     };
 
