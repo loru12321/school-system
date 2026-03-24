@@ -1175,12 +1175,32 @@ async function callLLM(prompt, onChunk, onFinish) {
 }
 
 // 3. 生成单个学生评语
+function isVisibleAICommentBox(el) {
+    if (!el || !el.isConnected) return false;
+    const style = window.getComputedStyle(el);
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+}
+
+function resolveAICommentBox() {
+    const candidates = [
+        document.querySelector('#parent-view-container #parent-ai-comment-box'),
+        document.querySelector('#ai-analysis #ai-hub-comment-box'),
+        document.getElementById('parent-ai-comment-box'),
+        document.getElementById('ai-hub-comment-box'),
+        document.getElementById('ai-comment-box')
+    ].filter(Boolean);
+    return candidates.find(isVisibleAICommentBox) || candidates[0] || null;
+}
+
 function callAIForComment() {
     if (AI_DISABLED) return aiDisabledAlert();
     const stu = readCurrentReportStudentSessionState();
     if (!stu) return alert("请先查询一名学生");
 
-    const box = document.getElementById('ai-comment-box');
+    const box = resolveAICommentBox();
+    if (!box) return alert("AI 评语容器未找到，请刷新页面后重试");
     // 增加一个 Loading 动画效果
     box.innerHTML = `
             <div style="text-align:center; padding:20px;">

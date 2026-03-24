@@ -2878,10 +2878,10 @@ const Auth = {
                             </div>
                             <div style="display:flex; gap:8px; flex-wrap:wrap;">
                                 <button class="btn btn-primary" onclick="runSingleStudentAIFromHub()"><i class="ti ti-brain"></i> 生成 AI 评语</button>
-                                <button class="btn btn-gray" onclick="switchTab('ai-analysis')"><i class="ti ti-layout-dashboard"></i> 打开 AI 工作台</button>
+                                <button class="btn btn-gray" onclick="openAIAnalysisHubForCurrentUser()"><i class="ti ti-layout-dashboard"></i> 打开 AI 工作台</button>
                             </div>
                         </div>
-                        <div id="ai-comment-box" style="min-height:110px; margin-top:14px; border:1px solid #ddd6fe; background:#ffffff; border-radius:16px; padding:16px 18px; font-size:14px; color:#4c1d95; line-height:1.9;">
+                        <div id="parent-ai-comment-box" style="min-height:110px; margin-top:14px; border:1px solid #ddd6fe; background:#ffffff; border-radius:16px; padding:16px 18px; font-size:14px; color:#4c1d95; line-height:1.9;">
                             点击上方按钮后，会在这里显示当前学生的 AI 个性化学情建议。
                         </div>
                     </div>
@@ -22322,6 +22322,27 @@ async function runSingleStudentAIFromHub() {
         return alert('AI 评语运行时未加载，请刷新后重试。');
     }
     window.callAIForComment();
+}
+
+function openAIAnalysisHubForCurrentUser() {
+    const user = getCurrentUser();
+    if (PermissionPolicy.isParentLike(user)) {
+        const parentContainer = document.getElementById('parent-view-container');
+        const app = document.getElementById('app');
+        const header = document.querySelector('header');
+        if (parentContainer) parentContainer.style.display = 'none';
+        if (app) {
+            app.style.display = 'block';
+            app.classList.remove('hidden');
+        }
+        if (header) header.style.display = '';
+        if (typeof renderNavigation === 'function') renderNavigation();
+    }
+
+    if (typeof window.switchNavCategory === 'function') {
+        window.switchNavCategory('ai');
+    }
+    switchTab('ai-analysis');
 }
 
 async function runAIMacroReportFromHub() {
