@@ -5857,6 +5857,109 @@
                 <div id="marginal-student-results"></div>
             </div>
 
+            <div id="ai-analysis" class="section card-box">
+                <div class="module-desc-bar" style="border-color:#f97316;">
+                    <h3><i class="ti ti-brain"></i> AI分析 <span class="badge" style="background:#f97316;">统一入口</span></h3>
+                    <p><strong>一句话目的：</strong>把 AI 配置、单学生 AI 评语、宏观 AI 报告和批量 AI 评语集中到一个入口。</p>
+                    <p><strong>推荐顺序：</strong>先保存 AI 配置，再选班级，随后按“单学生评语 → 批量评语 → 宏观报告”使用。</p>
+                </div>
+                <div class="sec-head">
+                    <h2><i class="ti ti-sparkles"></i> AI工作台</h2>
+                </div>
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px;">
+                    <div class="card-box" style="padding:18px; border-left:4px solid #f97316;">
+                        <div class="sub-header" style="margin-top:0;">AI 配置</div>
+                        <div style="display:grid; gap:10px;">
+                            <input id="llm_apikey" type="password" placeholder="AI API Key（生产环境可留空走同域网关）" style="width:100%;">
+                            <input id="llm_baseurl" type="text" placeholder="https://api.deepseek.com" style="width:100%;">
+                            <input id="llm_model" type="text" placeholder="deepseek-chat" style="width:100%;">
+                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                <button class="btn btn-primary" onclick="saveAIConfigFromHub()"><i class="ti ti-device-floppy"></i> 保存 AI 配置</button>
+                                <button class="btn btn-gray" onclick="testAIConnectionFromHub()"><i class="ti ti-plug-connected"></i> 测试 AI 连接</button>
+                            </div>
+                            <div id="ai-gateway-status" style="font-size:12px; color:#64748b; line-height:1.7;">当前环境将自动判断是走同域 AI 网关还是本地填写的 API 配置。</div>
+                        </div>
+                    </div>
+
+                    <div class="card-box" style="padding:18px; border-left:4px solid #6366f1;">
+                        <div class="sub-header" style="margin-top:0;">单学生 AI 评语</div>
+                        <div id="ai-current-student-summary" style="font-size:13px; color:#475569; line-height:1.8; min-height:46px;">
+                            当前还没有已查询的学生。请先到“成绩单/家长查分”里查询一名学生。
+                        </div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                            <button class="btn btn-primary" onclick="runSingleStudentAIFromHub()"><i class="ti ti-sparkles"></i> 为当前学生生成 AI 评语</button>
+                            <button class="btn btn-gray" onclick="openReportGeneratorForAI()"><i class="ti ti-certificate"></i> 前往成绩单模块</button>
+                        </div>
+                        <div id="ai-comment-box" style="min-height:110px; margin-top:14px; border:1px solid #ddd6fe; background:#faf5ff; border-radius:16px; padding:16px 18px; font-size:14px; color:#4c1d95; line-height:1.9;">
+                            点击上方按钮后，会在这里显示当前学生的 AI 个性化评语。
+                        </div>
+                    </div>
+
+                    <div class="card-box" style="padding:18px; border-left:4px solid #10b981;">
+                        <div class="sub-header" style="margin-top:0;">批量 AI 评语</div>
+                        <div style="display:grid; gap:10px;">
+                            <select id="ai-school-select" onchange="syncAIAnalysisClassOptions(); updateAIAnalysisHubStatus();" style="width:100%;">
+                                <option value="">-- 请选择学校 --</option>
+                            </select>
+                            <select id="ai-class-select" onchange="updateAIAnalysisHubStatus();" style="width:100%;">
+                                <option value="">-- 请选择班级 --</option>
+                            </select>
+                            <div id="ai-batch-summary" style="font-size:13px; color:#475569; line-height:1.8;">请选择学校和班级，再打开批量 AI 工作台。</div>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                <button class="btn btn-primary" onclick="openAIBatchWorkspaceFromHub()"><i class="ti ti-layout-grid"></i> 打开批量 AI 工作台</button>
+                                <button class="btn btn-green" onclick="startAIBatchFromHub()"><i class="ti ti-player-play"></i> 开始批量生成</button>
+                                <button class="btn btn-gray" onclick="exportAIBatchFromHub()"><i class="ti ti-file-export"></i> 导出 AI 评语</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-box" style="padding:18px; border-left:4px solid #8b5cf6;">
+                        <div class="sub-header" style="margin-top:0;">宏观 AI 报告</div>
+                        <div id="ai-macro-summary" style="font-size:13px; color:#475569; line-height:1.8; min-height:46px;">
+                            当前还没有锁定本校，请先在页面顶部或数据中心选择本校。
+                        </div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                            <button class="btn btn-purple" onclick="runAIMacroReportFromHub()"><i class="ti ti-report-analytics"></i> 生成本校宏观 AI 报告</button>
+                            <button class="btn btn-gray" onclick="switchTab('summary')"><i class="ti ti-report"></i> 前往综合分析</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="batch-ai-workspace" class="hidden" style="margin-top:20px; padding:18px; border:1px solid #e2e8f0; border-radius:16px; background:#fff;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
+                        <div>
+                            <h3 style="margin:0; color:#4f46e5;"><i class="ti ti-brain"></i> 批量 AI 评语工作台</h3>
+                            <div style="font-size:12px; color:#64748b; margin-top:4px;">按当前所选班级逐个生成 AI 评语，支持暂停、重试和导出。</div>
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                            <label style="font-size:12px; color:#475569;">间隔(秒)</label>
+                            <input id="batch-ai-interval" type="number" min="0" step="0.1" value="3" style="width:90px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:8px;">
+                            <button id="btn-start-batch-ai" class="btn btn-primary" onclick="startBatchAIComments()">开始</button>
+                            <button id="btn-stop-batch-ai" class="btn btn-gray hidden" onclick="stopBatchAI()">停止</button>
+                        </div>
+                    </div>
+                    <div style="height:10px; background:#e2e8f0; border-radius:999px; overflow:hidden; margin-bottom:8px;">
+                        <div id="batch-ai-progress" style="height:100%; width:0%; background:linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);"></div>
+                    </div>
+                    <div id="batch-ai-progress-text" style="font-size:12px; color:#64748b; margin-bottom:14px;">0 / 0</div>
+                    <div class="table-wrap" style="max-height:420px;">
+                        <table id="batch-ai-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:60px;">状态</th>
+                                    <th style="width:120px;">姓名</th>
+                                    <th style="width:80px;">镇排</th>
+                                    <th>AI 评语</th>
+                                    <th style="width:90px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <div id="subject-balance" class="section card-box">
                 <div class="module-desc-bar" style="border-color: #059669">
                     <h3><i class="ti ti-scale"></i> 学生优劣势学科可视化透视</h3>
