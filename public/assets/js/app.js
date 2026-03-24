@@ -2853,6 +2853,8 @@ const Auth = {
                 }
             }
 
+            setCurrentReportStudentState(stu);
+
             // 渲染报表 HTML
             let reportHtml = renderSingleReportCardHTML(stu, 'A4');
 
@@ -2865,6 +2867,25 @@ const Auth = {
             const safeName = stu.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
             const safeClass = stu.class.replace(/'/g, "\\'").replace(/"/g, '&quot;');
             const safeSchool = stu.school.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+            // 家长/学生端追加 AI 学情建议区
+            reportHtml += `
+                    <div style="margin-top:24px; padding:18px; border:1px solid #ddd6fe; background:#faf5ff; border-radius:18px;">
+                        <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap;">
+                            <div>
+                                <div style="font-size:18px; font-weight:800; color:#5b21b6;"><i class="ti ti-sparkles"></i> AI 学情建议</div>
+                                <div style="font-size:13px; color:#6d28d9; margin-top:6px;">根据当前学生的成绩、排名和历史变化，生成可读的学习建议。</div>
+                            </div>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                <button class="btn btn-primary" onclick="runSingleStudentAIFromHub()"><i class="ti ti-brain"></i> 生成 AI 评语</button>
+                                <button class="btn btn-gray" onclick="switchTab('ai-analysis')"><i class="ti ti-layout-dashboard"></i> 打开 AI 工作台</button>
+                            </div>
+                        </div>
+                        <div id="ai-comment-box" style="min-height:110px; margin-top:14px; border:1px solid #ddd6fe; background:#ffffff; border-radius:16px; padding:16px 18px; font-size:14px; color:#4c1d95; line-height:1.9;">
+                            点击上方按钮后，会在这里显示当前学生的 AI 个性化学情建议。
+                        </div>
+                    </div>
+                `;
 
             // 追加底部功能栏 (申诉 & 退出)
             reportHtml += `
@@ -22294,7 +22315,9 @@ async function runSingleStudentAIFromHub() {
         return alert('请先在“成绩单/家长查分”模块查询一名学生，再回来生成 AI 评语。');
     }
     await ensureAIRuntimeReady();
-    switchTab('ai-analysis');
+    if (!PermissionPolicy.isParentLike(getCurrentUser())) {
+        switchTab('ai-analysis');
+    }
     if (typeof window.callAIForComment !== 'function') {
         return alert('AI 评语运行时未加载，请刷新后重试。');
     }
@@ -25957,8 +25980,8 @@ const QUERY_MODULE_ACCESS = {
     grade_director: ['starter-hub', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'ai-analysis'],
     class_teacher: ['starter-hub', 'student-overview', 'student-details', 'teacher-analysis', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator', 'ai-analysis'],
     teacher: ['starter-hub', 'student-overview', 'student-details', 'teacher-analysis', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator', 'ai-analysis'],
-    parent: ['report-generator'],
-    student: ['report-generator'],
+    parent: ['report-generator', 'ai-analysis'],
+    student: ['report-generator', 'ai-analysis'],
     guest: ['starter-hub']
 };
 
