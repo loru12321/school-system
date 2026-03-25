@@ -72,16 +72,34 @@ async function login(page, user, pass) {
         timeout: 60000
     });
 
-    await page.waitForSelector('#login-user', { timeout: 30000 });
-    await page.fill('#login-user', user);
-    await page.fill('#login-pass', pass);
-    await page.click('button[onclick="window.Auth?.login()"]');
+    const bootState = await page.evaluate(() => {
+        const overlay = document.getElementById('login-overlay');
+        const app = document.getElementById('app');
+        const mask = document.getElementById('mode-mask');
+        return {
+            overlayHidden: !overlay || getComputedStyle(overlay).display === 'none',
+            appVisible: !!app && getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden'),
+            maskVisible: !!mask && getComputedStyle(mask).display !== 'none'
+        };
+    });
+
+    if (!(bootState.overlayHidden && (bootState.appVisible || bootState.maskVisible))) {
+        await page.waitForSelector('#login-user', { timeout: 30000 });
+        await page.fill('#login-user', user);
+        await page.fill('#login-pass', pass);
+        await page.click('button[onclick="window.Auth?.login()"]');
+    }
 
     await withNavigationRetry(page, async () => {
         await page.waitForFunction(() => {
             const overlay = document.getElementById('login-overlay');
-            return overlay && getComputedStyle(overlay).display === 'none';
-        }, { timeout: 30000 });
+            const app = document.getElementById('app');
+            const mask = document.getElementById('mode-mask');
+            const overlayHidden = !overlay || getComputedStyle(overlay).display === 'none';
+            const appVisible = !!app && getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden');
+            const maskVisible = !!mask && getComputedStyle(mask).display !== 'none';
+            return overlayHidden && (appVisible || maskVisible);
+        }, { timeout: 40000 });
     }, { attempts: 4 });
 
     await ensureCohortEntered(page);
