@@ -3704,11 +3704,19 @@
                     <i class="ti ti-school default-logo" id="default-sidebar-logo"></i>
                 </div>
                 <div class="sidebar-title-text">
-                    <h2
-                        style="margin:0; font-size:16px; font-weight:700; color:var(--text-color); letter-spacing:-0.5px;">
-                        SmartEdu Analytics</h2>
-                    <span id="role-hint-sidebar" style="font-size:11px; color:#64748b; font-weight:500;">Role:
+                    <h2 class="sidebar-brand-title">SmartEdu Analytics</h2>
+                    <span id="role-hint-sidebar" class="sidebar-role-hint">Role:
                         Guest</span>
+                </div>
+            </div>
+
+            <div class="sidebar-workbench-card">
+                <span class="sidebar-workbench-kicker">Command Deck</span>
+                <strong>把数据、教学、预警和工具链收进同一个工作台。</strong>
+                <div class="sidebar-workbench-pills">
+                    <span>分析</span>
+                    <span>云端</span>
+                    <span>协同</span>
                 </div>
             </div>
 
@@ -3766,21 +3774,22 @@
         <!-- 主内容区 -->
         <main class="app-main">
             <!-- 重新设计的顶部标题栏，You-Tube 风格 Grid 布局 -->
-            <header id="main-header"
+            <header id="main-header" class="app-toolbar"
                 style="padding: 12px 24px; border-bottom: 1px solid var(--border-color); background: var(--bg-color); display: grid; grid-template-columns: 1fr minmax(300px, 600px) 1fr; align-items: center; position: sticky; top: 0; z-index: 50; gap: 20px;">
 
                 <!-- 左侧: 状态/提示区 -->
-                <div style="display: flex; align-items: center; gap: 15px;">
+                <div class="toolbar-left" style="display: flex; align-items: center; gap: 15px;">
                     <button class="btn mobile-menu-toggle"
                         onclick="document.getElementById('app-sidebar').classList.toggle('show-mobile')"
                         style="display:none; padding: 8px; background:transparent; border:none; font-size: 20px;">
                         <i class="ti ti-menu-2"></i>
                     </button>
                     <span id="mode-badge" class="badge" style="font-size:14px; padding: 4px 10px;"></span>
+                    <span class="toolbar-caption">统一工作台</span>
                 </div>
 
                 <!-- 中间: 搜索框 (You-Tube Style) -->
-                <div style="display: flex; justify-content: center; width: 100%;">
+                <div class="toolbar-center" style="display: flex; justify-content: center; width: 100%;">
                     <div id="global-search-container" onclick="openSpotlight()"
                         style="display: flex; align-items: center; width: 100%; max-width: 600px; height: 40px; background: var(--bg-light); border: 1px solid var(--border-color); border-radius: 20px; overflow: hidden; cursor: text; transition: all 0.2s;">
                         <div class="search-input-wrapper" style="flex: 1; height: 100%;">
@@ -3795,7 +3804,7 @@
                 </div>
 
                 <!-- 右侧工具栏: 图标按钮区 -->
-                <div style="display:flex; gap:16px; align-items:center; justify-content: flex-end;">
+                <div class="toolbar-right" style="display:flex; gap:16px; align-items:center; justify-content: flex-end;">
                     <select id="cohort-selector" onchange="CohortManager.switchTo(this.value)"
                         style="background:transparent; color:var(--text-color); border:none; font-size:13px; font-weight:600; cursor:pointer; outline:none; transition: all 0.2s;">
                         <option value="" style="color:#64748b">选届别</option>
