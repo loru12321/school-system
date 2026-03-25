@@ -24,6 +24,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.25-sse-runtime-split-v7`
   - Meaning: move single-school-eval out of app.js into an optional runtime, add lazy loader wiring, and keep smoke/runtime-order coverage in sync
 
+- Release tag: `school-system-v2026.03.26-entry-ui-polish-v8`
+  - Meaning: refresh the login overlay and cohort-entry mask so the system entrance feels more intentional, structured, and visually consistent on desktop and mobile
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -46,3 +49,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest SSE runtime split release:
   - `git checkout school-system-v2026.03.25-sse-runtime-split-v7`
+
+- Roll back to the latest entry UI polish release:
+  - `git checkout school-system-v2026.03.26-entry-ui-polish-v8`

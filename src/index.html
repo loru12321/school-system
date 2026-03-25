@@ -3037,6 +3037,87 @@
             body[data-mobile-query="true"]:not([data-role="parent"]) #cohort-growth.active {
                 display: block !important;
             }
+
+            /* ================== Entry Polish Override ================== */
+            #login-overlay {
+                background:
+                    radial-gradient(circle at 18% 18%, rgba(251, 146, 60, 0.16), rgba(251, 146, 60, 0) 28%),
+                    radial-gradient(circle at 82% 12%, rgba(56, 189, 248, 0.16), rgba(56, 189, 248, 0) 26%),
+                    linear-gradient(135deg, #f8fafc 0%, #eef2ff 52%, #fff7ed 100%) !important;
+            }
+
+            .login-stage {
+                background:
+                    radial-gradient(circle at top right, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 30%),
+                    linear-gradient(160deg, #111827 0%, #172554 42%, #0f766e 115%) !important;
+                box-shadow: 0 30px 70px rgba(15, 23, 42, 0.18);
+            }
+
+            .login-stage-featured,
+            .login-stage-tile,
+            .login-stage-foot-card {
+                border-color: rgba(255, 255, 255, 0.16) !important;
+            }
+
+            .login-stage-featured {
+                box-shadow:
+                    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+                    0 24px 44px rgba(2, 6, 23, 0.24);
+            }
+
+            .login-stage-tile,
+            .login-stage-foot-card {
+                background: rgba(255, 255, 255, 0.10) !important;
+            }
+
+            .login-auth-panel {
+                background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.84)) !important;
+                border-color: rgba(255, 255, 255, 0.48) !important;
+                box-shadow: 0 30px 70px rgba(15, 23, 42, 0.12) !important;
+            }
+
+            .login-auth-card {
+                background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94)) !important;
+                border-color: rgba(148, 163, 184, 0.18) !important;
+                box-shadow:
+                    0 20px 46px rgba(15, 23, 42, 0.08),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.7) !important;
+            }
+
+            .login-portal-card {
+                min-height: 168px;
+            }
+
+            #login-form input {
+                background: linear-gradient(180deg, #f8fafc, #ffffff) !important;
+                border-color: rgba(148, 163, 184, 0.20) !important;
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
+            }
+
+            #login-submit-button {
+                background: linear-gradient(95deg, #fb7185 0%, #f97316 54%, #f59e0b 100%) !important;
+                box-shadow: 0 18px 34px rgba(236, 72, 153, 0.24) !important;
+            }
+
+            #login-submit-button:hover {
+                box-shadow: 0 22px 38px rgba(236, 72, 153, 0.28) !important;
+                filter: saturate(1.04);
+            }
+
+            #login-overlay[data-login-portal="parent"] #login-submit-button {
+                background: linear-gradient(95deg, #0ea5e9 0%, #14b8a6 48%, #22c55e 100%) !important;
+                box-shadow: 0 18px 34px rgba(14, 165, 233, 0.22) !important;
+            }
+
+            #login-overlay[data-login-portal="parent"] #login-submit-button:hover {
+                box-shadow: 0 22px 38px rgba(14, 165, 233, 0.28) !important;
+            }
+
+            @media screen and (max-width: 768px) {
+                .login-auth-card {
+                    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08) !important;
+                }
+            }
         }
     </style>
 </head>
@@ -3466,14 +3547,45 @@
     <!-- 届别入口弹窗 -->
     <div id="mode-mask">
         <div class="mode-box">
-            <h2 style="color:var(--primary); margin-bottom:15px; font-size:24px;">📂 进入届别档案</h2>
-            <p style="color:#64748b;">以“入学年份”为主线建立完整成长周期，系统将自动匹配年级与核算模式</p>
-            <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
-                <input id="entry-cohort-year" type="number" min="2000" max="2100" placeholder="入学年份 (如 2022)"
-                    style="padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; width:200px;">
-                <button class="btn btn-primary" onclick="enterCohortFromMask()">进入届别</button>
+            <div class="mode-shell">
+                <div class="mode-topline">
+                    <span class="mode-kicker">Cohort Workspace</span>
+                    <span class="mode-status"><i class="ti ti-sparkles"></i> 自动匹配年级与核算模式</span>
+                </div>
+                <div class="mode-copy">
+                    <h2 class="mode-title">进入届别档案</h2>
+                    <p class="mode-desc">以“入学年份”为主线建立完整成长周期，把成绩、增值、教学管理和成长报告统一收进同一条届别链路。</p>
+                </div>
+                <div class="mode-pill-row">
+                    <span class="mode-pill"><i class="ti ti-timeline"></i> 成长轨迹</span>
+                    <span class="mode-pill"><i class="ti ti-chart-histogram"></i> 进退步分析</span>
+                    <span class="mode-pill"><i class="ti ti-building-bank"></i> 教学评价</span>
+                    <span class="mode-pill"><i class="ti ti-file-analytics"></i> 家校报告</span>
+                </div>
+                <div class="mode-entry-row">
+                    <label class="mode-field" for="entry-cohort-year">
+                        <span class="mode-field-label">入学年份</span>
+                        <input id="entry-cohort-year" class="mode-field-input" type="number" min="2000" max="2100"
+                            placeholder="入学年份 (如 2022)">
+                    </label>
+                    <button class="btn btn-primary" onclick="enterCohortFromMask()">进入届别</button>
+                </div>
+                <div class="mode-foot-grid">
+                    <div class="mode-foot-card">
+                        <span>主线组织</span>
+                        <strong>按届别收拢多次考试与历史快照</strong>
+                    </div>
+                    <div class="mode-foot-card">
+                        <span>自动判断</span>
+                        <strong>根据年份匹配年级、学期与分析模式</strong>
+                    </div>
+                    <div class="mode-foot-card">
+                        <span>快速切换</span>
+                        <strong>已有届别可在顶部下拉直接切换</strong>
+                    </div>
+                </div>
+                <div class="mode-note">首次进入只需填写一次入学年份，后续系统会记住并在当前浏览器中继续使用。</div>
             </div>
-            <div style="margin-top:10px; font-size:12px; color:#64748b;">已有届别可在顶部下拉直接切换</div>
         </div>
     </div>
 
