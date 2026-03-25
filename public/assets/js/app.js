@@ -21614,15 +21614,6 @@ function updateSSESchoolSelect() {
     if (old && SCHOOLS[old]) sel.value = old;
 }
 
-// Hook: 劫持 switchTab 函数，在切换到该页面时自动刷新下拉框
-const originalSwitchTabSSE = switchTab;
-switchTab = function (id) {
-    originalSwitchTabSSE(id);
-    if (id === 'single-school-eval') {
-        updateSSESchoolSelect();
-    }
-};
-
 // 辅助：动态更新表头显示权重
 function SSE_updateHeaderLabels(wExc, wPass, wAvg, wProg) {
     const thead = document.querySelector('#sse_table thead');

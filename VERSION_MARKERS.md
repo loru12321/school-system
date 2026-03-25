@@ -12,6 +12,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.25-legacy-cleanup-v2`
   - Meaning: remove retired school-internal legacy panel and SIG dead code, keep lightweight analysis hint, add smoke coverage for single-school-eval
 
+- Release tag: `school-system-v2026.03.25-switchtab-cleanup-v3`
+  - Meaning: remove single-school-eval switchTab monkey patch and enforce single switchTab definition via tests
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -22,3 +25,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest optimized release:
   - `git checkout school-system-v2026.03.25-legacy-cleanup-v2`
+
+- Roll back to the newest optimized release:
+  - `git checkout school-system-v2026.03.25-switchtab-cleanup-v3`

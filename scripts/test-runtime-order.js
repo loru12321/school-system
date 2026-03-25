@@ -67,10 +67,13 @@ assert.ok(fs.existsSync(macroCompareCloudRuntimePath), 'macro-compare-cloud-runt
 
 const indexHtml = fs.readFileSync(indexPath, 'utf8');
 const bootRuntime = fs.readFileSync(bootRuntimePath, 'utf8');
+const appSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
 const initSupabaseMatches = bootRuntime.match(/window\.initSupabase\s*=\s*function/g) || [];
 const supabaseUrlAssignments = bootRuntime.match(/window\.SUPABASE_URL\s*=/g) || [];
 const supabaseKeyAssignments = bootRuntime.match(/window\.SUPABASE_KEY\s*=/g) || [];
 const gatewayUrlAssignments = bootRuntime.match(/window\.EDGE_GATEWAY_URL\s*=/g) || [];
+const switchTabDefinitions = appSource.match(/function\s+switchTab\s*\(/g) || [];
+const switchTabOverrides = appSource.match(/switchTab\s*=\s*function\s*\(/g) || [];
 const authStateRef = './assets/js/auth-state-runtime.js';
 const workspaceStateRef = './assets/js/workspace-state-runtime.js';
 const examStateRef = './assets/js/exam-state-runtime.js';
@@ -184,6 +187,8 @@ assert.strictEqual(initSupabaseMatches.length, 1, 'boot-runtime.js should define
 assert.strictEqual(supabaseUrlAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_URL exactly once');
 assert.strictEqual(supabaseKeyAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_KEY exactly once');
 assert.strictEqual(gatewayUrlAssignments.length, 1, 'boot-runtime.js should resolve EDGE_GATEWAY_URL exactly once');
+assert.strictEqual(switchTabDefinitions.length, 1, 'app.js should define switchTab exactly once');
+assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign switchTab after definition');
 
 [
     bootRuntimeRef,
