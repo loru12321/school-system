@@ -30,6 +30,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.26-shell-ui-polish-v9`
   - Meaning: refine the post-login shell with a clearer sidebar, floating toolbar, and stronger workbench framing for the first screen
 
+- Release tag: `school-system-v2026.03.26-starter-hub-ui-v10`
+  - Meaning: reshape the starter-hub into a clearer workbench-style landing area with better card hierarchy and denser status presentation
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -58,3 +61,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest shell UI polish release:
   - `git checkout school-system-v2026.03.26-shell-ui-polish-v9`
+
+- Roll back to the latest starter-hub UI release:
+  - `git checkout school-system-v2026.03.26-starter-hub-ui-v10`
