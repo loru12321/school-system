@@ -15,6 +15,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.25-switchtab-cleanup-v3`
   - Meaning: remove single-school-eval switchTab monkey patch and enforce single switchTab definition via tests
 
+- Release tag: `school-system-v2026.03.25-switchtab-cleanup-v4`
+  - Meaning: sync build artifacts for the switchTab cleanup round and use this as the deployed release marker
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -28,3 +31,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the newest optimized release:
   - `git checkout school-system-v2026.03.25-switchtab-cleanup-v3`
+
+- Roll back to the final deployed release of this round:
+  - `git checkout school-system-v2026.03.25-switchtab-cleanup-v4`
