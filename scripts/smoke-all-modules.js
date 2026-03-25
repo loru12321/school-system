@@ -13,6 +13,7 @@ const SWITCH_MODULE_IDS = [
     'summary',
     'analysis',
     'teacher-analysis',
+    'single-school-eval',
     'indicator',
     'bottom3',
     'marginal-push',
@@ -294,6 +295,49 @@ async function runModuleDeepCheck(page, id) {
             };
         });
     }
+    if (id === 'single-school-eval') {
+        return page.evaluate(async () => {
+            const checks = {
+                updateSSESchoolSelect: typeof window.updateSSESchoolSelect === 'function',
+                SSE_calculate: typeof window.SSE_calculate === 'function',
+                SSE_export: typeof window.SSE_export === 'function',
+                schoolSelect: !!document.getElementById('sse_school_select'),
+                resultContainer: !!document.getElementById('sse_result_container'),
+                resultTable: !!document.getElementById('sse_table')
+            };
+            if (!Object.values(checks).every(Boolean)) {
+                return { ok: false, checks, schoolOptionCount: 0, rows: 0, resultVisible: false };
+            }
+
+            window.updateSSESchoolSelect();
+            await new Promise(resolve => setTimeout(resolve, 150));
+
+            const schoolSelect = document.getElementById('sse_school_select');
+            const schoolValues = Array.from(schoolSelect.options || [])
+                .map((option) => String(option.value || '').trim())
+                .filter(Boolean);
+
+            if (!schoolValues.length) {
+                return { ok: false, checks, schoolOptionCount: 0, rows: 0, resultVisible: false };
+            }
+
+            schoolSelect.value = schoolValues[0];
+            window.SSE_calculate();
+            await new Promise(resolve => setTimeout(resolve, 600));
+
+            const resultContainer = document.getElementById('sse_result_container');
+            const rows = document.querySelectorAll('#sse_table tbody tr').length;
+            const resultVisible = !!resultContainer && !resultContainer.classList.contains('hidden');
+
+            return {
+                ok: Object.values(checks).every(Boolean) && schoolValues.length > 0 && resultVisible && rows > 0,
+                checks,
+                schoolOptionCount: schoolValues.length,
+                rows,
+                resultVisible
+            };
+        });
+    }
     if (id === 'teaching-warning-center') {
         return page.evaluate(async () => {
             const refreshButton = document.getElementById('tmWarningCenterRefreshBtn');
@@ -531,6 +575,9 @@ async function smokeDataManagerTab(page, id) {
 
     const summary = {
         login: await page.evaluate(() => ({
+            legacySchoolInternalSectionPresent: !!document.getElementById('school-internal-grades'),
+            legacyRemovedSigPanelPresent: !!document.getElementById('removed-sig-panel'),
+            legacyInlineTriggerPresent: !!document.querySelector('[onclick*="school-internal-grades"]'),
             overlayHidden: getComputedStyle(document.getElementById('login-overlay')).display === 'none',
             appVisible: getComputedStyle(document.getElementById('app')).display !== 'none',
             roleText: document.body.innerText.includes('Role:'),
@@ -540,6 +587,7 @@ async function smokeDataManagerTab(page, id) {
                 ? window.SchoolState.getCurrentSchool()
                 : '') || window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '',
             schoolInternalRemoved: !document.getElementById('school-internal-grades')
+                && !document.getElementById('removed-sig-panel')
                 && !document.querySelector('[onclick*="school-internal-grades"]'),
             scoreCount: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0
         })),

@@ -9,6 +9,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.25-runtime-cleanup-v1`
   - Meaning: teacher-analysis lazy loading stabilization, boot runtime de-dup, duplicate logic cleanup, stronger smoke/runtime guards
 
+- Release tag: `school-system-v2026.03.25-legacy-cleanup-v2`
+  - Meaning: remove retired school-internal legacy panel and SIG dead code, keep lightweight analysis hint, add smoke coverage for single-school-eval
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -16,3 +19,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the current optimized release:
   - `git checkout school-system-v2026.03.25-runtime-cleanup-v1`
+
+- Roll back to the latest optimized release:
+  - `git checkout school-system-v2026.03.25-legacy-cleanup-v2`
