@@ -4,10 +4,14 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 
 const viteLogger = createLogger();
 const noisyClassicScriptWarning = `can't be bundled without type="module" attribute`;
+const knownPublicAssetWarning = `./assets/vendor/tabler-icons/tabler-icons.min.css doesn't exist at build time`;
 const originalWarn = viteLogger.warn;
 
 viteLogger.warn = (msg, options) => {
   if (typeof msg === 'string' && msg.includes(noisyClassicScriptWarning)) {
+    return;
+  }
+  if (typeof msg === 'string' && msg.includes(knownPublicAssetWarning)) {
     return;
   }
   originalWarn(msg, options);

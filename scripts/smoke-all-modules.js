@@ -276,8 +276,10 @@ async function runModuleDeepCheck(page, id) {
         });
     }
     if (id === 'teacher-analysis') {
+        await page.waitForFunction(() => window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__ === true, { timeout: 15000 });
         return page.evaluate(async () => {
             const checks = {
+                runtimeLoaded: window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__ === true,
                 analyzeTeachers: typeof window.analyzeTeachers === 'function',
                 renderTeacherCards: typeof window.renderTeacherCards === 'function',
                 renderTeacherComparisonTable: typeof window.renderTeacherComparisonTable === 'function',
@@ -285,6 +287,73 @@ async function runModuleDeepCheck(page, id) {
                 renderTeacherMultiPeriodComparison: typeof window.renderTeacherMultiPeriodComparison === 'function',
                 renderAllTeachersMultiPeriodComparison: typeof window.renderAllTeachersMultiPeriodComparison === 'function',
                 exportTeacherMultiPeriodComparison: typeof window.exportTeacherMultiPeriodComparison === 'function'
+            };
+            return {
+                ok: Object.values(checks).every(Boolean),
+                checks
+            };
+        });
+    }
+    if (id === 'teaching-warning-center') {
+        return page.evaluate(async () => {
+            const refreshButton = document.getElementById('tmWarningCenterRefreshBtn');
+            const checks = {
+                tmRenderWarningCenter: typeof window.tmRenderWarningCenter === 'function',
+                tmRefreshCloudOps: typeof window.tmRefreshCloudOps === 'function',
+                tmCreateRectifyTaskFromWarning: typeof window.tmCreateRectifyTaskFromWarning === 'function',
+                tmIgnoreCloudWarning: typeof window.tmIgnoreCloudWarning === 'function',
+                refreshButton: !!refreshButton,
+                refreshBound: !!refreshButton && typeof refreshButton.onclick === 'function',
+                listReady: !!document.getElementById('tmWarningCenterList')
+            };
+            return {
+                ok: Object.values(checks).every(Boolean),
+                checks
+            };
+        });
+    }
+    if (id === 'teaching-rectify-center') {
+        return page.evaluate(async () => {
+            const refreshButton = document.getElementById('tmRectifyCenterRefreshBtn');
+            const createButton = document.getElementById('tmRectifyCreateBtn');
+            const checks = {
+                tmRenderRectifyCenter: typeof window.tmRenderRectifyCenter === 'function',
+                tmRefreshCloudOps: typeof window.tmRefreshCloudOps === 'function',
+                tmCreateManualRectifyTask: typeof window.tmCreateManualRectifyTask === 'function',
+                tmUpdateRectifyTaskStatus: typeof window.tmUpdateRectifyTaskStatus === 'function',
+                tmPromptRectifyProgress: typeof window.tmPromptRectifyProgress === 'function',
+                refreshButton: !!refreshButton,
+                refreshBound: !!refreshButton && typeof refreshButton.onclick === 'function',
+                createButton: !!createButton,
+                createBound: !!createButton && typeof createButton.onclick === 'function',
+                listReady: !!document.getElementById('tmRectifyCenterList')
+            };
+            return {
+                ok: Object.values(checks).every(Boolean),
+                checks
+            };
+        });
+    }
+    if (id === 'teaching-version-center') {
+        return page.evaluate(async () => {
+            const refreshButton = document.getElementById('tmVersionRefreshBtn');
+            const createButton = document.getElementById('tmVersionCreateBtn');
+            const stableButton = document.getElementById('tmVersionMarkLatestStableBtn');
+            const compareButton = document.getElementById('tmVersionCompareStableBtn');
+            const checks = {
+                tmRefreshVersionCenter: typeof window.tmRefreshVersionCenter === 'function',
+                tmCreateCurrentVersionSnapshot: typeof window.tmCreateCurrentVersionSnapshot === 'function',
+                tmMarkLatestVersionStable: typeof window.tmMarkLatestVersionStable === 'function',
+                tmShowVersionDiff: typeof window.tmShowVersionDiff === 'function',
+                refreshButton: !!refreshButton,
+                refreshBound: !!refreshButton && typeof refreshButton.onclick === 'function',
+                createButton: !!createButton,
+                createBound: !!createButton && typeof createButton.onclick === 'function',
+                stableButton: !!stableButton,
+                stableBound: !!stableButton && typeof stableButton.onclick === 'function',
+                compareButton: !!compareButton,
+                compareBound: !!compareButton && typeof compareButton.onclick === 'function',
+                listReady: !!document.getElementById('tmVersionCenterList')
             };
             return {
                 ok: Object.values(checks).every(Boolean),
@@ -499,7 +568,7 @@ async function smokeDataManagerTab(page, id) {
     console.log(JSON.stringify(summary, null, 2));
     await browser.close();
 
-    const failedSwitch = summary.switchModules.find(item => !item.ok);
+    const failedSwitch = summary.switchModules.find(item => !item.ok || !item.deepCheck?.ok);
     const failedDm = summary.dataManagerTabs.find(item => !item.ok);
     if (!summary.login.overlayHidden || !summary.login.appVisible || !summary.login.schoolInternalRemoved || failedSwitch || failedDm || errors.length > 0) {
         process.exit(1);

@@ -1,14 +1,4 @@
 var sbClient = window.sbClient || null;
-window.SUPABASE_URL = localStorage.getItem('SUPABASE_URL') || 'https://okwcciujnfvobbwaydiv.supabase.co';
-window.SUPABASE_KEY = localStorage.getItem('SUPABASE_KEY') || 'sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4';
-window.EDGE_GATEWAY_URL = localStorage.getItem('EDGE_GATEWAY_URL') || 'https://okwcciujnfvobbwaydiv.supabase.co/functions/v1/edu-gateway-v2';
-window.initSupabase = function () {
-    if (window.supabase && !sbClient) {
-        sbClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
-        window.sbClient = sbClient;
-        console.log('✅ Supabase 连接初始化成功');
-    }
-};
 
 document.addEventListener('DOMContentLoaded', function () {
     if (typeof initMacroAnomalyConfigUI === 'function') initMacroAnomalyConfigUI();
@@ -42,6 +32,15 @@ function getSameOriginSupabaseUrl() {
 function getSameOriginGatewayUrl() {
     if (!window.location || !window.location.origin) return DIRECT_EDGE_GATEWAY_URL;
     return String(window.location.origin).replace(/\/$/, '') + '/api/edu-gateway';
+}
+
+function getBootStorageValue(key) {
+    try {
+        if (!window.localStorage || typeof window.localStorage.getItem !== 'function') return '';
+        return String(window.localStorage.getItem(key) || '').trim();
+    } catch (error) {
+        return '';
+    }
 }
 
 function createSupabaseFetchWithTimeout(timeoutMs) {
@@ -80,9 +79,9 @@ function createSupabaseFetchWithTimeout(timeoutMs) {
 
 window.__DIRECT_SUPABASE_URL = DIRECT_SUPABASE_URL;
 window.__DIRECT_EDGE_GATEWAY_URL = DIRECT_EDGE_GATEWAY_URL;
-window.SUPABASE_URL = localStorage.getItem('SUPABASE_URL') || (shouldUseSameOriginSupabaseProxy() ? getSameOriginSupabaseUrl() : DIRECT_SUPABASE_URL);
-window.SUPABASE_KEY = localStorage.getItem('SUPABASE_KEY') || DIRECT_SUPABASE_KEY;
-window.EDGE_GATEWAY_URL = localStorage.getItem('EDGE_GATEWAY_URL') || (shouldUseSameOriginSupabaseProxy() ? getSameOriginGatewayUrl() : DIRECT_EDGE_GATEWAY_URL);
+window.SUPABASE_URL = getBootStorageValue('SUPABASE_URL') || (shouldUseSameOriginSupabaseProxy() ? getSameOriginSupabaseUrl() : DIRECT_SUPABASE_URL);
+window.SUPABASE_KEY = getBootStorageValue('SUPABASE_KEY') || DIRECT_SUPABASE_KEY;
+window.EDGE_GATEWAY_URL = getBootStorageValue('EDGE_GATEWAY_URL') || (shouldUseSameOriginSupabaseProxy() ? getSameOriginGatewayUrl() : DIRECT_EDGE_GATEWAY_URL);
 window.initSupabase = function () {
     if (window.supabase && !sbClient) {
         sbClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY, {
@@ -254,6 +253,10 @@ window.ensureReportRenderRuntimeLoaded = function () {
     return loadOptionalRuntime('report-render', './assets/js/report-render-runtime.js');
 };
 
+window.ensureTeacherAnalysisMainRuntimeLoaded = function () {
+    return loadOptionalRuntime('teacher-analysis-main', './assets/js/teacher-analysis-main-runtime.js');
+};
+
 window.ensureStudentCompareRuntimeLoaded = function () {
     return loadOptionalRuntimeBundle('student-compare-bundle', [
         { key: 'student-compare-result', src: './assets/js/student-compare-result-runtime.js' },
@@ -326,6 +329,21 @@ if (!window.AccountExcel) {
 
 ['printSingleReport', 'downloadSingleReportPDF', 'batchGeneratePDF', 'copyReport', 'exportToWord'].forEach((name) => {
     installOptionalRuntimeMethod(name, window.ensureReportRenderRuntimeLoaded);
+});
+
+[
+    'analyzeTeachers',
+    'generateTeacherPairing',
+    'renderTeacherCards',
+    'showTeacherDetails',
+    'renderTeacherComparisonTable',
+    'renderTeacherTownshipRanking',
+    'updateCorrelationSchoolSelect',
+    'renderCorrelationAnalysis',
+    'exportTeacherComparisonExcel',
+    'exportTeacherTownshipRankExcel'
+].forEach((name) => {
+    installOptionalRuntimeMethod(name, window.ensureTeacherAnalysisMainRuntimeLoaded);
 });
 
 ['renderStudentMultiPeriodComparison', 'saveStudentCompareToCloud', 'viewCloudStudentCompares', 'exportStudentMultiPeriodComparison', 'loadCloudStudentCompare'].forEach((name) => {

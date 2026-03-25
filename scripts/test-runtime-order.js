@@ -66,6 +66,11 @@ assert.ok(fs.existsSync(macroCompareResultRuntimePath), 'macro-compare-result-ru
 assert.ok(fs.existsSync(macroCompareCloudRuntimePath), 'macro-compare-cloud-runtime.js should exist');
 
 const indexHtml = fs.readFileSync(indexPath, 'utf8');
+const bootRuntime = fs.readFileSync(bootRuntimePath, 'utf8');
+const initSupabaseMatches = bootRuntime.match(/window\.initSupabase\s*=\s*function/g) || [];
+const supabaseUrlAssignments = bootRuntime.match(/window\.SUPABASE_URL\s*=/g) || [];
+const supabaseKeyAssignments = bootRuntime.match(/window\.SUPABASE_KEY\s*=/g) || [];
+const gatewayUrlAssignments = bootRuntime.match(/window\.EDGE_GATEWAY_URL\s*=/g) || [];
 const authStateRef = './assets/js/auth-state-runtime.js';
 const workspaceStateRef = './assets/js/workspace-state-runtime.js';
 const examStateRef = './assets/js/exam-state-runtime.js';
@@ -106,7 +111,7 @@ const predictiveRef = './assets/js/predictive-simulation-lab.js';
 const metaverseRef = './assets/js/metaverse-collab-space.js';
 const emotionalRef = './assets/js/emotional-ai-monitor.js';
 const bootRuntimeRef = './assets/js/boot-runtime.js';
-const tablerIconsRef = './assets/vendor/tabler-icons/tabler-icons.min.css';
+const tablerIconsRef = '/assets/vendor/tabler-icons/tabler-icons.min.css';
 const supabaseVendorRef = './assets/vendor/supabase/supabase.min.js';
 const lzStringVendorRef = './assets/vendor/lz-string/lz-string.min.js';
 const cryptoJsVendorRef = './assets/vendor/crypto-js/crypto-js.min.js';
@@ -144,7 +149,6 @@ const townSubmoduleCompareStateIndex = indexHtml.indexOf(townSubmoduleCompareSta
 const townSubmoduleCompareIndex = indexHtml.indexOf(townSubmoduleCompareRef);
 const compareSelectorsIndex = indexHtml.indexOf(compareSelectorsRef);
 const progressAnalysisIndex = indexHtml.indexOf(progressAnalysisRef);
-const teacherAnalysisMainIndex = indexHtml.indexOf(teacherAnalysisMainRef);
 const cloudIndex = indexHtml.indexOf(cloudRef);
 const cloudWorkspaceIndex = indexHtml.indexOf(cloudWorkspaceRef);
 const appIndex = indexHtml.indexOf(appRef);
@@ -172,10 +176,14 @@ assert.ok(townSubmoduleCompareStateIndex >= 0, 'index.html should load town-subm
 assert.ok(townSubmoduleCompareIndex >= 0, 'index.html should load town-submodule-compare-runtime.js');
 assert.ok(compareSelectorsIndex >= 0, 'index.html should load compare-selectors-runtime.js');
 assert.ok(progressAnalysisIndex >= 0, 'index.html should load progress-analysis-runtime.js');
-assert.ok(teacherAnalysisMainIndex >= 0, 'index.html should load teacher-analysis-main-runtime.js');
 assert.ok(cloudIndex >= 0, 'index.html should load cloud.js');
 assert.ok(cloudWorkspaceIndex >= 0, 'index.html should load cloud-workspace-runtime.js');
 assert.ok(appIndex >= 0, 'index.html should load app.js');
+assert.ok(bootRuntime.includes(teacherAnalysisMainRef), 'boot-runtime.js should reference teacher-analysis-main-runtime.js for lazy loading');
+assert.strictEqual(initSupabaseMatches.length, 1, 'boot-runtime.js should define initSupabase exactly once');
+assert.strictEqual(supabaseUrlAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_URL exactly once');
+assert.strictEqual(supabaseKeyAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_KEY exactly once');
+assert.strictEqual(gatewayUrlAssignments.length, 1, 'boot-runtime.js should resolve EDGE_GATEWAY_URL exactly once');
 
 [
     bootRuntimeRef,
@@ -210,7 +218,6 @@ assert.ok(appIndex >= 0, 'index.html should load app.js');
     compareExamSyncRef,
     compareSelectorsRef,
     progressAnalysisRef,
-    teacherAnalysisMainRef,
     townSubmoduleCompareStateRef,
     townSubmoduleCompareRef
 ].forEach((src) => {
@@ -228,6 +235,7 @@ assert.ok(indexHtml.includes(tablerIconsRef), 'index.html should load local tabl
     mobileManagerRef,
     dataManagerSqlRef,
     reportRenderRef,
+    teacherAnalysisMainRef,
     studentCompareGenerateRef,
     studentCompareResultRef,
     studentCompareCloudRef,
@@ -253,7 +261,6 @@ assert.ok(progressStateIndex < reportSessionStateIndex, 'progress-state-runtime.
 assert.ok(reportSessionStateIndex < compareSessionStateIndex, 'report-session-state-runtime.js must load before compare-session-state-runtime.js');
 assert.ok(compareSessionStateIndex < compareResultStateIndex, 'compare-session-state-runtime.js must load before compare-result-state-runtime.js');
 assert.ok(compareResultStateIndex < compareSummaryStateIndex, 'compare-result-state-runtime.js must load before compare-summary-state-runtime.js');
-assert.ok(compareCloudContextIndex < teacherAnalysisMainIndex, 'compare-cloud-context-runtime.js must load before teacher-analysis-main-runtime.js');
 assert.ok(compareExamSyncIndex < compareSelectorsIndex, 'compare-exam-sync-runtime.js must load before compare-selectors-runtime.js');
 assert.ok(compareExamSyncIndex < progressAnalysisIndex, 'compare-exam-sync-runtime.js must load before progress-analysis-runtime.js');
 assert.ok(compareSummaryStateIndex < townSubmoduleCompareStateIndex, 'compare-summary-state-runtime.js must load before town-submodule-compare-state-runtime.js');
