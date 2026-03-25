@@ -257,6 +257,10 @@ window.ensureTeacherAnalysisMainRuntimeLoaded = function () {
     return loadOptionalRuntime('teacher-analysis-main', './assets/js/teacher-analysis-main-runtime.js');
 };
 
+window.ensureSingleSchoolEvalRuntimeLoaded = function () {
+    return loadOptionalRuntime('single-school-eval', './assets/js/single-school-eval-runtime.js');
+};
+
 window.ensureStudentCompareRuntimeLoaded = function () {
     return loadOptionalRuntimeBundle('student-compare-bundle', [
         { key: 'student-compare-result', src: './assets/js/student-compare-result-runtime.js' },
@@ -344,6 +348,14 @@ if (!window.AccountExcel) {
     'exportTeacherTownshipRankExcel'
 ].forEach((name) => {
     installOptionalRuntimeMethod(name, window.ensureTeacherAnalysisMainRuntimeLoaded);
+});
+
+[
+    'updateSSESchoolSelect',
+    'SSE_calculate',
+    'SSE_export'
+].forEach((name) => {
+    installOptionalRuntimeMethod(name, window.ensureSingleSchoolEvalRuntimeLoaded);
 });
 
 ['renderStudentMultiPeriodComparison', 'saveStudentCompareToCloud', 'viewCloudStudentCompares', 'exportStudentMultiPeriodComparison', 'loadCloudStudentCompare'].forEach((name) => {

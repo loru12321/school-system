@@ -21,6 +21,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.25-smoke-login-hardening-v6`
   - Meaning: make smoke login tolerate cached sessions and cohort-mask-first boot states, reducing false production failures
 
+- Release tag: `school-system-v2026.03.25-sse-runtime-split-v7`
+  - Meaning: move single-school-eval out of app.js into an optional runtime, add lazy loader wiring, and keep smoke/runtime-order coverage in sync
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -40,3 +43,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest smoke-hardening release:
   - `git checkout school-system-v2026.03.25-smoke-login-hardening-v6`
+
+- Roll back to the latest SSE runtime split release:
+  - `git checkout school-system-v2026.03.25-sse-runtime-split-v7`

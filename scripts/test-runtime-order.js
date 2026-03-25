@@ -23,6 +23,7 @@ const bootRuntimePath = path.resolve(__dirname, '../public/assets/js/boot-runtim
 const accountAdminRuntimePath = path.resolve(__dirname, '../public/assets/js/account-admin-runtime.js');
 const historyCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/history-compare-runtime.js');
 const perfMobileRuntimePath = path.resolve(__dirname, '../public/assets/js/perf-mobile-runtime.js');
+const singleSchoolEvalRuntimePath = path.resolve(__dirname, '../public/assets/js/single-school-eval-runtime.js');
 const mobileManagerRuntimePath = path.resolve(__dirname, '../public/assets/js/mobile-manager.js');
 const dataManagerSqlRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-sql.js');
 const reportRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/report-render-runtime.js');
@@ -54,6 +55,7 @@ assert.ok(fs.existsSync(bootRuntimePath), 'boot-runtime.js should exist');
 assert.ok(fs.existsSync(accountAdminRuntimePath), 'account-admin-runtime.js should exist');
 assert.ok(fs.existsSync(historyCompareRuntimePath), 'history-compare-runtime.js should exist');
 assert.ok(fs.existsSync(perfMobileRuntimePath), 'perf-mobile-runtime.js should exist');
+assert.ok(fs.existsSync(singleSchoolEvalRuntimePath), 'single-school-eval-runtime.js should exist');
 assert.ok(fs.existsSync(mobileManagerRuntimePath), 'mobile-manager.js should exist');
 assert.ok(fs.existsSync(dataManagerSqlRuntimePath), 'data-manager-sql.js should exist');
 assert.ok(fs.existsSync(reportRenderRuntimePath), 'report-render-runtime.js should exist');
@@ -99,6 +101,7 @@ const appRef = './assets/js/app.js';
 const accountAdminRef = './assets/js/account-admin-runtime.js';
 const historyCompareRef = './assets/js/history-compare-runtime.js';
 const perfMobileRef = './assets/js/perf-mobile-runtime.js';
+const singleSchoolEvalRef = './assets/js/single-school-eval-runtime.js';
 const mobileManagerRef = './assets/js/mobile-manager.js';
 const dataManagerSqlRef = './assets/js/data-manager-sql.js';
 const reportRenderRef = './assets/js/report-render-runtime.js';
@@ -183,6 +186,7 @@ assert.ok(cloudIndex >= 0, 'index.html should load cloud.js');
 assert.ok(cloudWorkspaceIndex >= 0, 'index.html should load cloud-workspace-runtime.js');
 assert.ok(appIndex >= 0, 'index.html should load app.js');
 assert.ok(bootRuntime.includes(teacherAnalysisMainRef), 'boot-runtime.js should reference teacher-analysis-main-runtime.js for lazy loading');
+assert.ok(bootRuntime.includes(singleSchoolEvalRef), 'boot-runtime.js should reference single-school-eval-runtime.js for lazy loading');
 assert.strictEqual(initSupabaseMatches.length, 1, 'boot-runtime.js should define initSupabase exactly once');
 assert.strictEqual(supabaseUrlAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_URL exactly once');
 assert.strictEqual(supabaseKeyAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_KEY exactly once');
@@ -237,6 +241,7 @@ assert.ok(indexHtml.includes(tablerIconsRef), 'index.html should load local tabl
     accountAdminRef,
     historyCompareRef,
     perfMobileRef,
+    singleSchoolEvalRef,
     mobileManagerRef,
     dataManagerSqlRef,
     reportRenderRef,

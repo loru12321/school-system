@@ -314,8 +314,15 @@ async function runModuleDeepCheck(page, id) {
         });
     }
     if (id === 'single-school-eval') {
+        await page.evaluate(async () => {
+            if (typeof window.ensureSingleSchoolEvalRuntimeLoaded === 'function') {
+                await window.ensureSingleSchoolEvalRuntimeLoaded();
+            }
+        });
+        await page.waitForFunction(() => window.__SINGLE_SCHOOL_EVAL_RUNTIME_PATCHED__ === true, { timeout: 15000 });
         return page.evaluate(async () => {
             const checks = {
+                runtimeLoaded: window.__SINGLE_SCHOOL_EVAL_RUNTIME_PATCHED__ === true,
                 updateSSESchoolSelect: typeof window.updateSSESchoolSelect === 'function',
                 SSE_calculate: typeof window.SSE_calculate === 'function',
                 SSE_export: typeof window.SSE_export === 'function',
@@ -327,7 +334,7 @@ async function runModuleDeepCheck(page, id) {
                 return { ok: false, checks, schoolOptionCount: 0, rows: 0, resultVisible: false };
             }
 
-            window.updateSSESchoolSelect();
+            await window.updateSSESchoolSelect();
             await new Promise(resolve => setTimeout(resolve, 150));
 
             const schoolSelect = document.getElementById('sse_school_select');
@@ -340,7 +347,7 @@ async function runModuleDeepCheck(page, id) {
             }
 
             schoolSelect.value = schoolValues[0];
-            window.SSE_calculate();
+            await window.SSE_calculate();
             await new Promise(resolve => setTimeout(resolve, 600));
 
             const resultContainer = document.getElementById('sse_result_container');
