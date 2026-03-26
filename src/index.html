@@ -5718,12 +5718,46 @@
             </div>
 
             <!-- 8. 班情诊断 -->
-            <div id="class-diagnosis" class="section card-box">
-                <div class="sec-head">
-                    <h2><i class="ti ti-activity"></i> 班情诊断 (标准差/分化度分析)</h2><button class="btn btn-green"
-                        onclick="exportDiagnosisExcel()">导出诊断表</button>
+            <div id="class-diagnosis" class="section card-box analysis-workspace analysis-workspace-amber">
+                <div class="module-desc-bar analysis-hero" style="border-color: var(--color-diag)">
+                    <h3><i class="ti ti-activity"></i> 班情诊断 (标准差 / 分化度分析)</h3>
+                    <p>通过标准差和分数分布判断班级是两极分化、整体均衡，还是需要做整体拔高。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">分化 / 均衡</strong>
+                            <span class="analysis-scan-note">先看标准差，再看成绩分布，判断班级结构是否健康。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">班级诊断</strong>
+                            <span class="analysis-scan-note">适合班主任和年级组做班情诊断与分层跟踪。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">诊断表</strong>
+                            <span class="analysis-scan-note">支持导出诊断表，便于留档和班级复盘。</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="info-bar">通过标准差（SD）判断班级成绩是“两极分化”还是“整体均衡”。</div>
+                <div class="sec-head analysis-shell-head">
+                    <h2><i class="ti ti-activity"></i> 班情诊断 (标准差/分化度分析)</h2>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先选学校和学科，再生成诊断表；导出更适合做班级诊断留档。</div>
+                        <div class="analysis-actions">
+                            <button class="btn btn-green" onclick="exportDiagnosisExcel()">导出诊断表</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="info-bar analysis-info-band">通过标准差（SD）判断班级成绩是“两极分化”还是“整体均衡”。</div>
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>诊断口径与使用建议</summary>
+                    <div class="explain-content">
+                        <p>标准差越大，代表班级分差越大；标准差越小，代表成绩更集中。</p>
+                        <p>建议先看平均分与标准差，再结合分布图区分“分化严重”与“整体偏弱”。</p>
+                        <p>导出诊断表适合班主任、年级组做班情跟踪，不建议单独脱离成绩背景使用。</p>
+                    </div>
+                </details>
                 <div class="control-panel">
                     <label>学校：</label><select id="diagSchoolSelect" style="min-width:200px;">
                         <option value="">--请选择--</option>
@@ -5736,21 +5770,62 @@
                     <button class="btn" style="margin-left:15px;" onclick="renderClassDiagnosis()">诊断分析</button>
                 </div>
                 <div id="tmModuleState-class-diagnosis"></div>
+                <div class="analysis-anchor-panel">
+                    <div class="sub-header analysis-section-head">📉 班情诊断结果</div>
+                    <div class="analysis-table-meta">
+                        <span><strong>阅读建议：</strong>先看标准差和诊断结论，再看分布图是否偏离正常。</span>
+                        <span><strong>导出建议：</strong>适合班级结构分析和后续班主任跟踪。</span>
+                    </div>
                 <div id="diagnosis-results">
-                    <div style="text-align:center; padding:40px; color:#94a3b8;"><i class="ti ti-chart-bar"
+                    <div class="analysis-empty-state"><i class="ti ti-chart-bar"
                             style="font-size:48px; display:block; margin-bottom:10px;"></i>
                         <p>请选择学校和学科开始诊断</p>
                     </div>
                 </div>
+                </div>
             </div>
 
             <!-- 9. 分数段统计 -->
-            <div id="segment-analysis" class="section card-box">
-                <div class="sec-head">
-                    <h2><i class="ti ti-chart-histogram"></i> 分数段统计分析</h2><button class="btn btn-green"
-                        onclick="renderSegmentAnalysis()">生成统计表</button><button class="btn btn-green"
-                        onclick="exportSegmentExcel()">导出Excel</button>
+            <div id="segment-analysis" class="section card-box analysis-workspace analysis-workspace-violet">
+                <div class="module-desc-bar analysis-hero" style="border-color:#7c3aed;">
+                    <h3><i class="ti ti-chart-histogram"></i> 分数段统计分析</h3>
+                    <p>按分数区间统计人数和累计比例，帮助快速判断学校或全镇成绩分布形态和高低段堆积情况。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">分布 / 累计</strong>
+                            <span class="analysis-scan-note">先看分数段分布，再看累计比例和高低分段堆积情况。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">统计 / 汇报</strong>
+                            <span class="analysis-scan-note">适合教务做学校分布汇总和阶段统计汇报。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">图表 / 统计表</strong>
+                            <span class="analysis-scan-note">支持柱状分布图与明细表导出，也可点击柱子下钻名单。</span>
+                        </div>
+                    </div>
                 </div>
+                <div class="sec-head analysis-shell-head">
+                    <h2><i class="ti ti-chart-histogram"></i> 分数段统计分析</h2>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先选范围和学科，再生成统计表；图表支持点击柱子下钻查看名单。</div>
+                        <div class="analysis-actions">
+                            <button class="btn btn-green" onclick="renderSegmentAnalysis()">生成统计表</button><button class="btn btn-green"
+                                onclick="exportSegmentExcel()">导出Excel</button>
+                        </div>
+                    </div>
+                </div>
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>统计口径与使用建议</summary>
+                    <div class="explain-content">
+                        <p>分段跨度决定每个区间的宽度，跨度越小越细，跨度越大越适合整体汇总。</p>
+                        <p>建议先看图表形态，再看表格里的累计人数与累计比例。</p>
+                        <p>点击柱子可以直接下钻对应分数段学生名单，适合做高低分段专项分析。</p>
+                    </div>
+                </details>
                 <div class="control-panel">
                     <label>统计范围：</label><select id="segSchoolSelect" style="min-width:150px;">
                         <option value="ALL">全乡镇</option>
@@ -5761,12 +5836,16 @@
                     <label style="margin-left:10px;">分段跨度：</label><input type="number" id="segStep" value="10"
                         style="width:80px;">
                 </div>
-                <div
-                    style="background:white; padding:15px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:15px; height:350px; position:relative;">
+                <div class="analysis-chart-card"
+                    style="margin-bottom:15px; height:350px;">
                     <canvas id="segmentChart"></canvas>
                 </div>
-                <div class="table-wrap">
-                    <table id="tb-segment">
+                <div class="analysis-table-meta">
+                    <span><strong>阅读建议：</strong>先看人数分布，再看累计人数和累计比例变化。</span>
+                    <span><strong>导出建议：</strong>适合成绩段统计汇报和分层教学准备。</span>
+                </div>
+                <div class="table-wrap analysis-table-shell">
+                    <table id="tb-segment" class="analysis-table-dense">
                         <thead></thead>
                         <tbody></tbody>
                     </table>

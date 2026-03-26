@@ -96,6 +96,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.27-marginal-push-ui-v31`
   - Meaning: align marginal-push with the analysis workspace so intervention filtering, ticket generation, conversion tracking, and ticket preview all read like one continuous intervention workbench
 
+- Release tag: `school-system-v2026.03.27-diagnostic-distribution-ui-v32`
+  - Meaning: align class-diagnosis and segment-analysis with the analysis workspace so class dispersion diagnosis and score-distribution statistics use the same support, action, and result language as the rest of the analysis chain
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -190,3 +193,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest marginal-push UI release:
   - `git checkout school-system-v2026.03.27-marginal-push-ui-v31`
+
+- Roll back to the latest diagnostic/distribution UI release:
+  - `git checkout school-system-v2026.03.27-diagnostic-distribution-ui-v32`
