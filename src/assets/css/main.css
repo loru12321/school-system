@@ -866,6 +866,39 @@ header {
     margin-top: 10px;
 }
 
+.upload-message-box {
+    margin-top: 16px;
+    min-height: 56px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+    color: #475569;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+}
+
+.upload-message-box.is-success {
+    color: #166534;
+    background: linear-gradient(90deg, rgba(220, 252, 231, 0.92), rgba(255, 255, 255, 0.96));
+    border-color: rgba(134, 239, 172, 0.9);
+}
+
+.upload-message-box.is-warning {
+    color: #b45309;
+    background: linear-gradient(90deg, rgba(255, 237, 213, 0.94), rgba(255, 255, 255, 0.96));
+    border-color: rgba(253, 186, 116, 0.9);
+}
+
+.upload-message-box.is-error {
+    color: #b91c1c;
+    background: linear-gradient(90deg, rgba(254, 226, 226, 0.94), rgba(255, 255, 255, 0.96));
+    border-color: rgba(252, 165, 165, 0.9);
+}
+
 .upload-workbench-grid {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -908,6 +941,61 @@ header {
 
 .upload-panel--templates::before {
     background: linear-gradient(90deg, rgba(34, 197, 94, 0.88), rgba(14, 165, 233, 0.72));
+}
+
+.upload-drop-copy {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.upload-drop-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    width: fit-content;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.12);
+    color: #1d4ed8;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.upload-drop-title {
+    margin: 0;
+    font-size: 22px;
+    line-height: 1.2;
+    letter-spacing: -0.03em;
+    color: #0f172a;
+}
+
+.upload-drop-desc {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.8;
+    color: #64748b;
+}
+
+.upload-drop-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.upload-drop-pills span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    color: #475569;
+    font-size: 11px;
+    font-weight: 700;
 }
 
 .upload-panel-meta {
@@ -1172,6 +1260,10 @@ header {
     .upload-summary-strip,
     .upload-feedback-board {
         grid-template-columns: 1fr;
+    }
+
+    .upload-drop-title {
+        font-size: 20px;
     }
 
     .upload-flow-grid--cohort,

@@ -13197,7 +13197,7 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
         updateProgressSchoolSelect();
         updateMutualAidSelects(); updateMpSchoolSelect();
 
-        document.getElementById('msg-box').innerText = `✅ 成功导入 ${Object.keys(SCHOOLS).length} 所学校，共 ${RAW_DATA.length} 名学生`;
+        setUploadMessage(`✅ 成功导入 ${Object.keys(SCHOOLS).length} 所学校，共 ${RAW_DATA.length} 名学生。下一步建议确认本校、任课表与当前考试是否都已就绪。`, 'success');
         UI.toast(`✅ 导入成功！包含 ${RAW_DATA.length} 条数据`, 'success');
         logAction('导入', `成绩导入 ${RAW_DATA.length} 条`);
         updateStatusPanel();
@@ -25021,7 +25021,8 @@ function updateUploadWorkbenchStatus() {
     const summaryEl = document.getElementById('upload-summary-strip');
     const noticeEl = document.getElementById('upload-flow-notice');
     const feedbackEl = document.getElementById('upload-feedback-board');
-    if (!summaryEl && !noticeEl && !feedbackEl) return;
+    const msgBox = document.getElementById('msg-box');
+    if (!summaryEl && !noticeEl && !feedbackEl && !msgBox) return;
 
     const termId = readCurrentTermId() || (typeof getTermId === 'function' ? getTermId(getExamMetaFromUI()) : '');
     const examId = CURRENT_EXAM_ID || readWorkspaceExamId() || '未设置';
@@ -25114,6 +25115,21 @@ function updateUploadWorkbenchStatus() {
             </div>
         `;
     }
+
+    if (msgBox && !String(msgBox.textContent || '').trim()) {
+        msgBox.className = 'upload-message-box';
+        msgBox.textContent = noticeText;
+    }
+}
+
+function setUploadMessage(message, tone = 'neutral') {
+    const msgBox = document.getElementById('msg-box');
+    if (!msgBox) return;
+    msgBox.className = 'upload-message-box';
+    if (tone === 'success') msgBox.classList.add('is-success');
+    else if (tone === 'warning') msgBox.classList.add('is-warning');
+    else if (tone === 'error') msgBox.classList.add('is-error');
+    msgBox.textContent = String(message || '').trim();
 }
 
 function updateStatusPanel() {

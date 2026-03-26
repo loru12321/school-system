@@ -4103,6 +4103,16 @@
                 </div>
                 </div>
                 <div class="upload-drop-shell">
+                    <div class="upload-drop-copy">
+                        <div class="upload-drop-eyebrow">Step 3</div>
+                        <h3 class="upload-drop-title">上传成绩文件并开始构建当前届别的数据底座</h3>
+                        <p class="upload-drop-desc">上传后系统会自动识别学校、班级、学科与考试快照，并刷新后续分析模块可用状态。</p>
+                        <div class="upload-drop-pills">
+                            <span>支持多文件</span>
+                            <span>自动识别学校 / 班级</span>
+                            <span>导入后自动刷新分析</span>
+                        </div>
+                    </div>
                     <div class="upload-box" id="uploadBox" onclick="document.getElementById('fileInput').click()"
                         tabindex="0" role="button" aria-label="上传成绩文件，按回车键可打开文件选择器">
                         <div class="upload-icon"><i class="ti ti-cloud-upload"></i></div>
@@ -4112,6 +4122,7 @@
                     </div>
                 </div>
                 <div id="upload-feedback-board" class="upload-feedback-board"></div>
+                <div id="msg-box" class="upload-message-box"></div>
 
                 <!-- [新增] 届别快照管理区域 -->
                 <div class="upload-ops-grid">
@@ -4157,9 +4168,6 @@
                     </div>
                 </div>
 
-                <div id="msg-box"
-                    style="margin-top:20px; font-weight:bold; color:var(--success); text-align:center; font-size:16px;">
-                </div>
             </div>
 
             <!-- 2. 乡镇学校分析 -->

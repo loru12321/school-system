@@ -42,6 +42,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.26-upload-status-ui-v13`
   - Meaning: add a compact upload summary strip and a clearer feedback board so data-hub readiness, sync state, archive state, and backup state can be read at a glance
 
+- Release tag: `school-system-v2026.03.26-upload-action-guidance-v14`
+  - Meaning: make the upload action area itself more self-explanatory and persistent by adding step copy, next-step guidance, and page-level status messaging
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -82,3 +85,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest upload status UI release:
   - `git checkout school-system-v2026.03.26-upload-status-ui-v13`
+
+- Roll back to the latest upload action guidance release:
+  - `git checkout school-system-v2026.03.26-upload-action-guidance-v14`
