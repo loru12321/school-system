@@ -105,6 +105,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.27-mutual-aid-ui-v34`
   - Meaning: align mutual-aid with the student analysis workspace so group setup, guidance, and generated group cards read like one continuous collaborative-learning workbench
 
+- Release tag: `school-system-v2026.03.27-seat-adjustment-ui-v35`
+  - Meaning: align seat-adjustment with the student support workspace so seat strategy guidance, constraints, and generated seating layouts read like one continuous classroom-arrangement workbench
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -208,3 +211,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest mutual-aid UI release:
   - `git checkout school-system-v2026.03.27-mutual-aid-ui-v34`
+
+- Roll back to the latest seat-adjustment UI release:
+  - `git checkout school-system-v2026.03.27-seat-adjustment-ui-v35`
