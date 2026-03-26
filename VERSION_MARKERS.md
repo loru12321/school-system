@@ -108,6 +108,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.27-seat-adjustment-ui-v35`
   - Meaning: align seat-adjustment with the student support workspace so seat strategy guidance, constraints, and generated seating layouts read like one continuous classroom-arrangement workbench
 
+- Release tag: `school-system-v2026.03.27-freshman-simulator-ui-v36`
+  - Meaning: align freshman-simulator with the student support workspace so admission list import, class-balance diagnosis, result cards, and follow-on seat planning read like one continuous class-setup workbench
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -214,3 +217,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest seat-adjustment UI release:
   - `git checkout school-system-v2026.03.27-seat-adjustment-ui-v35`
+
+- Roll back to the latest freshman-simulator UI release:
+  - `git checkout school-system-v2026.03.27-freshman-simulator-ui-v36`

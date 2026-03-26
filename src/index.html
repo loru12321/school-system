@@ -6935,17 +6935,49 @@
             </div>
 
             <!-- 13. 新生分班 & 座位编排 -->
-            <div id="freshman-simulator" class="section card-box">
-                <div class="sec-head">
+            <div id="freshman-simulator" class="section card-box analysis-workspace analysis-workspace-violet">
+                <div class="module-desc-bar analysis-hero" style="border-color: var(--color-tools)">
+                    <h3><i class="ti ti-arrows-split"></i> 新生均衡分班</h3>
+                    <p>通过综合算法把新生成绩、性别、关系约束和难管因素一起纳入，生成更均衡的新生分班方案。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">分班 / 均衡</strong>
+                            <span class="analysis-scan-note">先导入名单，再配置班级数和规则，最后比较方案均衡度。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">分班决策</strong>
+                            <span class="analysis-scan-note">适合新生入学前做均衡分班、方案对比和座位编排衔接。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">方案 / 座位</strong>
+                            <span class="analysis-scan-note">支持保存方案、导出分班结果，并继续进入座位编排。</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-arrows-split"></i> 新生均衡分班
                         <span class="module-help-btn" onclick="showModuleHelp('tools')">📘 算法逻辑</span>
                     </h2>
-                    <div>
-                        <button class="btn btn-purple" onclick="FB_saveToLocal()">💾 保存方案</button>
-                        <button class="btn btn-green" onclick="FB_exportResult()">📊 导出结果</button>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先生成分班方案，再保存、导出并继续进入座位编排；多方案时优先看均分极差最小的结果。</div>
+                        <div class="analysis-actions">
+                            <button class="btn btn-purple" onclick="FB_saveToLocal()">💾 保存方案</button>
+                            <button class="btn btn-green" onclick="FB_exportResult()">📊 导出结果</button>
+                        </div>
                     </div>
                 </div>
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>分班口径与使用建议</summary>
+                    <div class="explain-content">
+                        <p>建议先导入名单，再配置班级数、班额微调、性别控制和难管分散规则。</p>
+                        <p>综合智能优化更适合生成多套均衡方案，蛇形分班更适合做标准基准方案。</p>
+                        <p>生成后建议先看均衡度诊断，再进入班级卡片和座位编排页面继续细化。</p>
+                    </div>
+                </details>
                 <div class="control-panel" style="flex-direction: column; align-items: stretch;">
                     <div
                         style="display:flex; gap:20px; flex-wrap:wrap; border-bottom:1px dashed #cbd5e1; padding-bottom:15px; margin-bottom:15px;">
@@ -6988,21 +7020,29 @@
                             onclick="FB_runDivision()">🚀 开始智能分班</button>
                     </div>
                 </div>
-                <div id="fb-results-area" class="hidden">
+                <div id="fb-results-area" class="hidden analysis-anchor-panel" style="margin-top:20px;">
+                    <div class="sub-header analysis-section-head">⚖️ 分班均衡度诊断 (箱线图)</div>
+                    <div class="analysis-table-meta">
+                        <span><strong>阅读建议：</strong>先看均分极差和标准差，再决定使用哪套分班方案。</span>
+                        <span><strong>导出建议：</strong>适合招生分班留档和开学前方案确认。</span>
+                    </div>
                     <div
-                        style="background:white; border-radius:8px; padding:15px; margin-top:20px; border:1px solid #e2e8f0;">
-                        <h3 style="margin-bottom:15px; color:#333; font-size:16px;">⚖️ 分班均衡度诊断 (箱线图)</h3>
+                        style="background:white; border-radius:8px; padding:15px; border:1px solid #e2e8f0;">
                         <div style="height:300px; position:relative;">
                             <canvas id="balanceChart"></canvas>
                         </div>
                         <div id="balanceTableContainer" style="margin-top:20px; overflow-x:auto;"></div>
                     </div>
 
-                    <div class="sub-header" style="margin-top:20px;">🏫 分班结果列表 (点击班级卡片进入座位编排)</div>
+                    <div class="sub-header analysis-section-head" style="margin-top:20px;">🏫 分班结果列表 (点击班级卡片进入座位编排)</div>
                     <div class="fb-class-grid" id="fb_class_container"></div>
                 </div>
                 <div id="fb_seat_view" class="hidden"
                     style="margin-top:30px; border-top:3px solid var(--primary); padding-top:20px; background:#fff;">
+                    <div class="analysis-table-meta" style="margin-bottom:10px;">
+                        <span><strong>用途：</strong>在班级方案确定后继续细化同桌和共同体座位。</span>
+                        <span><strong>提示：</strong>锁定后再一键重排，能减少已确认座位被打乱。</span>
+                    </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                         <h2 style="color:var(--primary); margin:0;"><i class="ti ti-armchair"></i> <span
                                 id="seat_class_title"></span> 座位编排</h2>
