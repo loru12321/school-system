@@ -4073,36 +4073,49 @@
                         历史考试: 0 期｜最近快照: 无
                     </div>
                 </div>
-                <div class="upload-panel upload-panel--templates"
-                    style="background: #f0fdf4; border: 1px dashed #86efac; padding: 10px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-                    <div style="font-weight: bold; color: #166534; display: flex; align-items: center; gap: 5px;">
-                        <i class="ti ti-template"></i> 新手必读：标准模板下载
-                    </div>
-                    <div style="flex: 1; display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button class="btn btn-sm"
-                            style="background: white; color: #166534; border: 1px solid #166534; font-size: 12px;"
-                            onclick="downloadTemplate('primary')">
-                            <i class="ti ti-download"></i> 小学期末模板
-                        </button>
-                        <button class="btn btn-sm"
-                            style="background: white; color: #166534; border: 1px solid #166534; font-size: 12px;"
-                            onclick="downloadTemplate('junior')">
-                            <i class="ti ti-download"></i> 初中月考模板 (7-8年级)
-                        </button>
-                        <button class="btn btn-sm"
-                            style="background: white; color: #166534; border: 1px solid #166534; font-size: 12px;"
-                            onclick="downloadTemplate('grade9')">
-                            <i class="ti ti-download"></i> 中考一模模板 (9年级)
-                        </button>
-                        <button class="btn btn-sm"
-                            style="background: white; color: #0369a1; border: 1px solid #0369a1; font-size: 12px;"
-                            onclick="downloadTemplate('teacher')">
-                            <i class="ti ti-id"></i> 教师任课导入模板
-                        </button>
-                    </div>
                 </div>
-                </div>
-                <div class="upload-drop-shell">
+                <div class="upload-intake-grid">
+                    <div class="upload-panel upload-panel--templates upload-intake-card">
+                        <div class="upload-template-copy">
+                            <div class="upload-drop-eyebrow">Before Upload</div>
+                            <h3 class="upload-drop-title">先准备模板，再回到右侧上传成绩文件</h3>
+                            <p class="upload-drop-desc">如果你还没整理 Excel，先下载对应模板；已经有考务系统导出的成绩文件，也可以直接跳过这一步。</p>
+                        </div>
+                        <div class="upload-template-grid">
+                            <div class="upload-template-group">
+                                <span class="upload-template-group-title">成绩模板</span>
+                                <div class="upload-template-links">
+                                    <button class="btn btn-sm"
+                                        style="background: white; color: #166534; border: 1px solid #166534; font-size: 12px;"
+                                        onclick="downloadTemplate('primary')">
+                                        <i class="ti ti-download"></i> 小学期末模板
+                                    </button>
+                                    <button class="btn btn-sm"
+                                        style="background: white; color: #166534; border: 1px solid #166534; font-size: 12px;"
+                                        onclick="downloadTemplate('junior')">
+                                        <i class="ti ti-download"></i> 初中月考模板 (7-8年级)
+                                    </button>
+                                    <button class="btn btn-sm"
+                                        style="background: white; color: #166534; border: 1px solid #166534; font-size: 12px;"
+                                        onclick="downloadTemplate('grade9')">
+                                        <i class="ti ti-download"></i> 中考一模模板 (9年级)
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="upload-template-group upload-template-group--teacher">
+                                <span class="upload-template-group-title">教师任课模板</span>
+                                <div class="upload-template-links">
+                                    <button class="btn btn-sm"
+                                        style="background: white; color: #0369a1; border: 1px solid #0369a1; font-size: 12px;"
+                                        onclick="downloadTemplate('teacher')">
+                                        <i class="ti ti-id"></i> 教师任课导入模板
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="upload-template-note">如果已经有考务系统导出的 Excel，可直接跳过模板下载，去右侧上传。</div>
+                    </div>
+                    <div class="upload-drop-shell upload-intake-card">
                     <div class="upload-drop-copy">
                         <div class="upload-drop-eyebrow">Step 3</div>
                         <h3 class="upload-drop-title">上传成绩文件并开始构建当前届别的数据底座</h3>
@@ -4119,6 +4132,12 @@
                         <p style="font-size:18px; margin-bottom:10px; font-weight:600;">点击上传成绩 Excel 文件</p>
                         <p style="color:#94a3b8;">支持多文件上传 (.xlsx, .xls)</p>
                         <input type="file" id="fileInput" multiple accept=".xlsx,.xls" hidden>
+                    </div>
+                    <div class="upload-drop-actions">
+                        <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">选择成绩文件</button>
+                        <button class="btn btn-gray" onclick="showModuleHelp('upload')">查看上传规范</button>
+                    </div>
+                    <div class="upload-drop-action-note">上传后系统会自动写入当前考试批次，并同步刷新届别摘要、分析模块和历史考试状态。</div>
                     </div>
                 </div>
                 <div id="upload-feedback-board" class="upload-feedback-board"></div>

@@ -45,6 +45,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.26-upload-action-guidance-v14`
   - Meaning: make the upload action area itself more self-explanatory and persistent by adding step copy, next-step guidance, and page-level status messaging
 
+- Release tag: `school-system-v2026.03.26-template-upload-flow-v15`
+  - Meaning: merge template download and score upload into one clearer intake flow so “download template -> upload data -> continue” reads as a single path
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -88,3 +91,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest upload action guidance release:
   - `git checkout school-system-v2026.03.26-upload-action-guidance-v14`
+
+- Roll back to the latest template/upload flow release:
+  - `git checkout school-system-v2026.03.26-template-upload-flow-v15`
