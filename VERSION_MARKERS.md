@@ -90,6 +90,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.27-student-overview-ui-v29`
   - Meaning: align student-overview with the student analysis workspace so readiness checks, insight cards, quick-entry actions, and summary blocks read like one continuous student-analysis command page
 
+- Release tag: `school-system-v2026.03.27-student-analysis-cluster-v30`
+  - Meaning: align subject-balance and potential-analysis with the student analysis workspace so subject-strength mapping, cluster guidance, and potential-student mining follow the same support, action, and result language as the rest of the student-analysis chain
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -178,3 +181,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest student-overview UI release:
   - `git checkout school-system-v2026.03.27-student-overview-ui-v29`
+
+- Roll back to the latest student analysis cluster UI release:
+  - `git checkout school-system-v2026.03.27-student-analysis-cluster-v30`

@@ -6520,15 +6520,45 @@
                 </div>
             </div>
 
-            <div id="subject-balance" class="section card-box">
-                <div class="module-desc-bar" style="border-color: #059669">
+            <div id="subject-balance" class="section card-box analysis-workspace analysis-workspace-emerald">
+                <div class="module-desc-bar analysis-hero" style="border-color: #059669">
                     <h3><i class="ti ti-scale"></i> 学生优劣势学科可视化透视</h3>
                     <p>说明：以全镇平均分为基准，直观展示每个学生“强在哪、弱在哪”。绿色代表优势，红色代表劣势，长度代表程度。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">优势 / 劣势</strong>
+                            <span class="analysis-scan-note">先看总分与镇排，再看每个学生在哪些学科明显领先或落后。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">班级分层</strong>
+                            <span class="analysis-scan-note">适合班主任和科任教师快速判断学生学科结构与偏科方向。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">透视 / 聚类</strong>
+                            <span class="analysis-scan-note">支持优劣势透视表与瘸腿聚类，方便做策略分组。</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="sec-head">
+                <div class="sec-head analysis-shell-head">
                     <h2><i class="ti ti-activity"></i> 优劣势学科透视表</h2>
-                    <button class="btn btn-green" onclick="SB_exportExcel()">📊 导出Excel</button>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先按学校/班级分析，再导出透视表和聚类结果，适合班主任做结构诊断。</div>
+                        <div class="analysis-actions">
+                            <button class="btn btn-green" onclick="SB_exportExcel()">📊 导出Excel</button>
+                        </div>
+                    </div>
                 </div>
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>透视口径与使用建议</summary>
+                    <div class="explain-content">
+                        <p>绿色条表示高于全镇平均，红色条表示低于全镇平均，长度表示偏离程度。</p>
+                        <p>先看全班学生优劣势分布，再决定是否进入下方聚类做分组辅导。</p>
+                        <p>聚类结果更适合做学科分层和辅导策略模板，不建议直接替代教师判断。</p>
+                    </div>
+                </details>
 
                 <div class="control-panel">
                     <label>选择学校：</label>
@@ -6551,19 +6581,23 @@
                 </div>
 
                 <!-- 图例说明 -->
-                <div style="font-size:12px; margin:10px 0; color:#666; display:flex; gap:15px; align-items:center;">
+                <div class="analysis-legend-row">
                     <span>图例说明：</span>
-                    <span style="display:flex; align-items:center;">
-                        <div style="width:15px; height:8px; background:#16a34a; margin-right:5px;"></div> 优势 (高于均分)
+                    <span class="analysis-legend-chip">
+                        <div class="analysis-legend-bar" style="background:#16a34a;"></div> 优势 (高于均分)
                     </span>
-                    <span style="display:flex; align-items:center;">
-                        <div style="width:15px; height:8px; background:#dc2626; margin-right:5px;"></div> 劣势 (低于均分)
+                    <span class="analysis-legend-chip">
+                        <div class="analysis-legend-bar" style="background:#dc2626;"></div> 劣势 (低于均分)
                     </span>
                     <span style="color:#94a3b8;">(数值表示与全镇平均分的分差)</span>
                 </div>
 
-                <div class="table-wrap">
-                    <table id="sb-table">
+                <div class="analysis-table-meta">
+                    <span><strong>阅读建议：</strong>先看总分和镇排，再读优劣势分布图。</span>
+                    <span><strong>导出建议：</strong>适合做偏科结构分析和班级分层辅导准备。</span>
+                </div>
+                <div class="table-wrap analysis-table-shell">
+                    <table id="sb-table" class="analysis-table-dense">
                         <thead>
                             <tr>
                                 <th style="width:80px;">姓名</th>
@@ -6580,7 +6614,7 @@
                     </table>
                 </div>
 
-                <div class="card-box" style="border-left:4px solid #f59e0b; background:#fff7ed; margin-top:15px;">
+                <div class="analysis-anchor-panel" style="margin-top:15px;">
                     <div class="sec-head" style="border-bottom-color:#fed7aa; margin-bottom:10px;">
                         <h2 style="color:#9a3412;"><i class="ti ti-cluster"></i> 学科瘸腿深度聚类</h2>
                         <button class="btn btn-orange" onclick="SB_runCluster()">🔬 生成聚类与辅导策略</button>
@@ -6593,17 +6627,34 @@
             </div>
 
             <!-- 12. 偏科潜力生挖掘 -->
-            <div id="potential-analysis" class="section card-box">
-                <div class="sec-head">
+            <div id="potential-analysis" class="section card-box analysis-workspace analysis-workspace-amber">
+                <div class="module-desc-bar analysis-hero" style="border-color:#f59e0b;">
+                    <h3><i class="ti ti-bulb"></i> 偏科潜力生挖掘</h3>
+                    <p>筛选总分靠前但单科明显滞后的学生，帮助班主任和科任教师尽早识别“可拉升”的偏科潜力对象。</p>
+                </div>
+                <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-bulb"></i> 偏科潜力生挖掘
                         <span class="module-help-btn" onclick="showModuleHelp('student-diag')">📘 挖掘原理</span>
                     </h2>
-                    <button class="btn btn-green" onclick="exportPotentialAnalysis()">导出名单</button>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">适合识别“总分不错但单科掉队”的学生，导出后便于做培优补短跟进。</div>
+                        <div class="analysis-actions">
+                            <button class="btn btn-green" onclick="exportPotentialAnalysis()">导出名单</button>
+                        </div>
+                    </div>
                 </div>
-                <div class="info-bar"><span class="text-blue">核心逻辑：</span> 筛选出 <strong>总分排名靠前</strong> (如前20%)，但
+                <div class="info-bar analysis-info-band"><span class="text-blue">核心逻辑：</span> 筛选出 <strong>总分排名靠前</strong> (如前20%)，但
                     <strong>单科排名严重滞后</strong> (如50%以后) 的学生。
                 </div>
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>挖掘口径与使用建议</summary>
+                    <div class="explain-content">
+                        <p>先用总分前段筛出有整体潜力的学生，再用单科排名后段找出最值得补短的科目。</p>
+                        <p>更适合做“偏科潜力生”跟踪名单，不适合直接当成最终分层结论。</p>
+                        <p>建议结合学生明细、成绩单和科任教师反馈一起使用。</p>
+                    </div>
+                </details>
                 <div class="control-panel" style="background:#fffbeb; border-color:#fcd34d;">
                     <label>范围：</label><select id="potSchoolSelect" style="min-width:150px;">
                         <option value="ALL">全乡镇</option>
@@ -6624,8 +6675,12 @@
                     <button class="btn btn-orange" style="margin-left:15px;" onclick="renderPotentialAnalysis()">🔍
                         一键挖掘</button>
                 </div>
+                <div class="analysis-table-meta">
+                    <span><strong>阅读建议：</strong>先看总分前段范围，再看单科排名阈值设得是否过宽或过窄。</span>
+                    <span><strong>导出建议：</strong>适合做偏科潜力名单和个别生辅导计划。</span>
+                </div>
                 <div id="potential-results">
-                    <div style="text-align:center; padding:40px; color:#94a3b8;"><i class="ti ti-search"
+                    <div class="analysis-empty-state"><i class="ti ti-search"
                             style="font-size:48px; display:block; margin-bottom:10px;"></i>
                         <p>请点击上方“一键挖掘”按钮开始分析</p>
                     </div>

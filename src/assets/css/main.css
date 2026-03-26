@@ -1222,6 +1222,28 @@ header {
     margin-top: 12px;
 }
 
+.analysis-legend-row {
+    font-size: 12px;
+    margin: 10px 0;
+    color: #666;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.analysis-legend-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.analysis-legend-bar {
+    width: 15px;
+    height: 8px;
+    border-radius: 999px;
+}
+
 .analysis-chart-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
