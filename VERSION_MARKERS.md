@@ -46,7 +46,7 @@ This file records the rollback markers for the current optimization round.
   - Meaning: make the upload action area itself more self-explanatory and persistent by adding step copy, next-step guidance, and page-level status messaging
 
 - Release tag: `school-system-v2026.03.26-template-upload-flow-v15`
-  - Meaning: merge template download and score upload into one clearer intake flow so “download template -> upload data -> continue” reads as a single path
+  - Meaning: merge template download and score upload into one clearer intake flow so "download template -> upload data -> continue" reads as a single path
 
 - Release tag: `school-system-v2026.03.26-backup-snapshot-ui-v16`
   - Meaning: reshape backup, restore, and auto-snapshot controls into clearer workflow cards with stronger rollback visibility
