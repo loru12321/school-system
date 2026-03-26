@@ -84,6 +84,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.26-report-generator-ui-v27`
   - Meaning: align report-generator with the analysis workspace shell so student report query, compare settings, PDF actions, and marginal-student analysis read like one continuous class-report workbench
 
+- Release tag: `school-system-v2026.03.26-student-details-ui-v28`
+  - Meaning: align student-details with the student analysis workspace so detail queries, student multi-period compare, export actions, and the main detail table read as one continuous student-detail workbench
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -166,3 +169,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest report-generator UI release:
   - `git checkout school-system-v2026.03.26-report-generator-ui-v27`
+
+- Roll back to the latest student-details UI release:
+  - `git checkout school-system-v2026.03.26-student-details-ui-v28`

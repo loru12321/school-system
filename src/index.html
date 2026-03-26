@@ -5824,17 +5824,47 @@
             </div>
 
             <!-- 10. 学生考试明细 -->
-            <div id="student-details" class="section card-box">
-                <div class="module-desc-bar" style="border-color: var(--color-student)">
+            <div id="student-details" class="section card-box analysis-workspace analysis-workspace-student">
+                <div class="module-desc-bar analysis-hero" style="border-color: var(--color-student)">
                     <h3><i class="ti ti-users"></i> 学生考试明细 <span class="badge" style="background:#16a34a;">⭐ 教务常用</span>
                     </h3>
                     <p><strong>一句话目的：</strong>快速查看学生明细与班级成绩列表。</p>
                     <p><strong>推荐顺序：</strong>总体分析后进入本模块进行班级/学生筛选。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">学生 / 班级</strong>
+                            <span class="analysis-scan-note">先按学校和班级筛选，再进入学生明细、长图和家长查分包。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">明细 / 长图 / PPT</strong>
+                            <span class="analysis-scan-note">适合班会、家校沟通和班级分析会材料准备。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">筛选 / 导出</strong>
+                            <span class="analysis-scan-note">支持单表筛选、多期学生对比与班级报告导出。</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="sec-head">
-                    <h2><i class="ti ti-users"></i> 学生考试明细</h2><button class="btn"
-                        onclick="exportStudentDetails()">导出Excel</button>
+                <div class="sec-head analysis-shell-head">
+                    <h2><i class="ti ti-users"></i> 学生考试明细</h2>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先筛选学校/班级，再决定是导出 Excel、长图、查分包还是班级分析会 PPT。</div>
+                        <div class="analysis-actions">
+                            <button class="btn" onclick="exportStudentDetails()">导出Excel</button>
+                        </div>
+                    </div>
                 </div>
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>学生明细使用建议</summary>
+                    <div class="explain-content">
+                        <p>先筛选学校与班级，再导出结果，能减少无关学生信息干扰。</p>
+                        <p>长图更适合手机端转发，家长查分包更适合班级统一发放，PPT 更适合班会复盘。</p>
+                        <p>多期对比适合追踪个人趋势，主表更适合快速查找学生即时状态。</p>
+                    </div>
+                </details>
                 <div class="control-panel">
                     <label>选择本校：</label><select id="studentSchoolSelect" style="min-width:150px;">
                         <option value="">--请选择--</option>
@@ -5862,9 +5892,14 @@
                     </button>
                 </div>
 
-
-
-<div class="control-panel" style="background:#f8fafc; border-color:var(--primary-light); display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding: 12px 16px;">
+                <div class="analysis-inline-panel">
+                    <div class="analysis-inline-top">
+                        <div class="analysis-inline-title">🧭 学生多期对比 (2期 / 3期)</div>
+                        <div class="analysis-inline-meta">
+                            <span>用于全校学生跨考试对比、云端保存与导出</span>
+                        </div>
+                    </div>
+                <div class="control-panel" style="background:#f8fafc; border-color:var(--primary-light); display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding: 12px 16px;">
                     <label style="font-size:13px; font-weight:600;">学校：</label>
                     <select id="studentCompareSchool" style="min-width:150px; background:#fff; border-radius:6px;"></select>
                     
@@ -5896,9 +5931,10 @@
                         </select>
                     </div>
                 </div>
+                <div class="analysis-hint analysis-status-text">选择学校和期次后可生成学生多期对比，并按权限保存到云端。</div>
 
                 <!-- 结果展示区域 -->
-                <div id="student-multi-period-compare-section" style="margin-top:10px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:15px; display:none;">
+                <div id="student-multi-period-compare-section" class="analysis-anchor-panel" style="margin-top:10px; display:none;">
                     <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
                         <label style="font-size:12px; color:#475569;">🔍 筛选：</label>
                         <select id="studentCompareClassFilter" style="padding:4px 12px; border-radius:20px; min-width:140px;"
@@ -5947,9 +5983,16 @@
                     </div>
                     <div id="studentCompareResult" style="margin-top:10px;"></div>
                 </div>
+                </div>
 
-                <div class="table-wrap">
-                    <table id="studentDetailTable" class="mobile-card-table">
+                <div class="analysis-anchor-panel" style="margin-top: 16px;">
+                <div class="sub-header analysis-section-head">📋 当前筛选学生明细</div>
+                <div class="analysis-table-meta">
+                    <span><strong>阅读建议：</strong>先看班级、姓名与总分，再按考号、考场做查询与核对。</span>
+                    <span><strong>导出建议：</strong>导出 Excel 会保留当前学校/班级筛选范围。</span>
+                </div>
+                <div class="table-wrap analysis-table-shell">
+                    <table id="studentDetailTable" class="mobile-card-table analysis-table-dense">
                         <thead>
                             <tr>
                                 <th>学校</th>
@@ -5961,6 +6004,7 @@
                         </thead>
                         <tbody></tbody>
                     </table>
+                </div>
                 </div>
                 <div id="mobile-share-render-area" class="mobile-share-container"></div>
             </div>
