@@ -6202,15 +6202,40 @@
             </div>
 
             <!-- 11. 个性化成绩单生成器 -->
-            <div id="report-generator" class="section card-box">
-                <div class="module-desc-bar" style="border-color: var(--color-student)">
+            <div id="report-generator" class="section card-box analysis-workspace analysis-workspace-student">
+                <div class="module-desc-bar analysis-hero" style="border-color: var(--color-student)">
                     <h3><i class="ti ti-user-heart"></i> 05 学生发展与家校沟通 <span class="badge" style="background:#0ea5e9;">📊
                             班主任必看</span></h3>
                     <p><strong>一句话目的：</strong>生成成绩单与家长查分材料。</p>
                     <p><strong>推荐顺序：</strong>完成分析后，用于班级汇报与家校沟通。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">查询 / 成绩单</strong>
+                            <span class="analysis-scan-note">用于单人查询、全班导出和家校沟通材料准备。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">报告 / PDF</strong>
+                            <span class="analysis-scan-note">支持单份打印或下载 PDF，也支持整班批量生成。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">班会 / 家校</strong>
+                            <span class="analysis-scan-note">适合班主任汇报、家长沟通和重点学生跟踪。</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="sec-head">
+                <div class="sec-head analysis-shell-head">
                     <h2><i class="ti ti-certificate"></i> 个性化成绩单生成器</h2>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先完成成绩查询，再按需导出单份 PDF 或批量生成全班材料。</div>
+                        <div class="analysis-actions">
+                            <button class="btn btn-primary" onclick="batchGeneratePDF()">
+                                <i class="ti ti-files"></i> 批量生成全班 PDF
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="report-query-copy">
@@ -6228,13 +6253,17 @@
                     </select>
                     <input type="text" id="inp-name" placeholder="查询单个学生姓名" style="width:120px; margin-left:10px;">
                     <button class="btn" style="background:var(--primary); color:white;" onclick="window.doQuery()">查询单人报告</button>
-                    <button class="btn btn-primary" style="margin-left:auto;" onclick="batchGeneratePDF()">
-                        <i class="ti ti-files"></i> 批量生成全班 PDF
-                    </button>
                 </div>
 
                 <!-- 🆕 自定义历史对比考试 (覆盖自动获取) -->
-                <div class="control-panel" style="background:#f8fafc; border-color:var(--primary-light); display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding: 12px 16px; margin-top:10px;">
+                <div class="analysis-inline-panel">
+                    <div class="analysis-inline-top">
+                        <div class="analysis-inline-title">🧭 历史对比考试设置</div>
+                        <div class="analysis-inline-meta">
+                            <span>用于成绩单里的历史趋势与学科结构对比</span>
+                        </div>
+                    </div>
+                    <div class="analysis-inline-controls">
                     <div style="display:flex; align-items:center; gap:8px;">
                         <label style="font-size:13px; font-weight:600; color:#475569;">对比期数：</label>
                         <select id="reportComparePeriodCount" style="padding:4px 8px; border-radius:6px;" onchange="onReportComparePeriodCountChange()">
@@ -6259,10 +6288,18 @@
                     </button>
                     
                     <span style="font-size:12px; color:#64748b; margin-left:auto;">（留空则自动搜索最近历史）</span>
+                    </div>
                 </div>
-                <div id="single-report-result" class="hidden">
-                    <div
-                        style="text-align: right; margin-bottom: 10px; display:flex; justify-content:flex-end; gap:10px;">
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>成绩单生成与导出建议</summary>
+                    <div class="explain-content">
+                        <p>单人查询更适合个体沟通，批量 PDF 更适合班级发放或班会复盘。</p>
+                        <p>历史对比期数建议按月考、期中、期末顺序配置，方便家长读懂变化趋势。</p>
+                        <p>如果对比期次留空，系统会优先尝试自动搜索最近历史考试。</p>
+                    </div>
+                </details>
+                <div id="single-report-result" class="hidden analysis-anchor-panel analysis-report-result">
+                    <div class="analysis-report-actions">
                         <!-- [修改] 打印/PDF -->
                         <button class="btn btn-purple" onclick="printSingleReport()">
                             <i class="ti ti-printer"></i> 打印 / 另存为 PDF
@@ -6273,7 +6310,12 @@
                     </div>
                     <div id="report-card-capture-area" class="report-card-container"></div>
                 </div>
-                <div class="sub-header" style="margin-top: 50px;">🎯 优秀和及格边缘生分析</div>
+                <div class="analysis-anchor-panel" style="margin-top: 24px;">
+                <div class="sub-header analysis-section-head">🎯 优秀和及格边缘生分析</div>
+                <div class="analysis-table-meta">
+                    <span><strong>用途：</strong>识别可冲优与临界保线学生，辅助班主任做谈话和分层跟进。</span>
+                    <span><strong>导出建议：</strong>适合用于重点学生名单和家校沟通材料。</span>
+                </div>
                 <div class="control-panel">
                     <label>选择本校：</label><select id="marginalSchoolSelect" style="min-width:200px;">
                         <option value="">--请选择--</option>
@@ -6282,6 +6324,7 @@
                     <button class="btn btn-green" onclick="exportMarginalStudents()">导出Excel</button>
                 </div>
                 <div id="marginal-student-results"></div>
+                </div>
             </div>
 
             <div id="ai-analysis" class="section card-box">

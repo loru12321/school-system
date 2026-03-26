@@ -506,6 +506,13 @@ header {
     --analysis-border: #fde68a;
 }
 
+.analysis-workspace-student {
+    --analysis-accent: #0ea5e9;
+    --analysis-surface: #f0f9ff;
+    --analysis-surface-strong: #e0f2fe;
+    --analysis-border: #bae6fd;
+}
+
 .analysis-workspace .module-desc-bar.analysis-hero {
     background: linear-gradient(135deg, var(--analysis-surface) 0%, #ffffff 78%);
     border: 1px solid var(--analysis-border);
@@ -1187,6 +1194,25 @@ header {
 
 .analysis-workspace .t-sub {
     color: #475569;
+}
+
+.analysis-workspace .report-query-copy {
+    margin-top: 14px;
+    border-color: var(--analysis-border);
+    background: linear-gradient(135deg, var(--analysis-surface) 0%, #ffffff 58%, rgba(224, 242, 254, 0.85) 100%);
+    box-shadow: 0 18px 36px -34px rgba(14, 165, 233, 0.18);
+}
+
+.analysis-report-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.analysis-report-result {
+    margin-top: 12px;
 }
 
 .analysis-chart-grid {
