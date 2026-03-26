@@ -7340,24 +7340,52 @@
                 </div>
             </div>
 
-            <div id="grade-scheduler" class="section card-box">
-                <div class="module-desc-bar" style="border-color: #7c3aed">
+            <div id="grade-scheduler" class="section card-box analysis-workspace analysis-workspace-violet">
+                <div class="module-desc-bar analysis-hero" style="border-color: #7c3aed">
                     <h3><i class="ti ti-calendar-time"></i> 下一年级部排课系统</h3>
                     <p>说明：独立于当前成绩数据。用于新学期排课，支持自定义课时结构、合堂课、早晚自习特定规则以及教师均衡排班。</p>
-                </div>
-
-                <div class="sec-head">
-                    <h2><i class="ti ti-layout-grid"></i> 级部智能排课</h2>
-                    <div>
-                        <button class="btn btn-purple" onclick="SCHEDULER.exportResult()">📥 导出课表(Excel)</button>
-                        <button class="btn btn-orange"
-                            onclick="document.getElementById('schedulerImportFile').click()">📤
-                            导入已有课表优化</button>
-                        <button class="btn btn-gray" onclick="SCHEDULER.auditFatigue()">🧠 AI疲劳审计</button>
-                        <input type="file" id="schedulerImportFile" accept=".xlsx,.xls" hidden
-                            onchange="SCHEDULER.importExisting(this)">
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">课时 / 约束</strong>
+                            <span class="analysis-scan-note">先配置课时结构，再导入任课表和特殊约束，最后生成排课结果。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">级部排课</strong>
+                            <span class="analysis-scan-note">适合新学期前完成年级排课、约束校验和疲劳审计。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">课表 / 审计</strong>
+                            <span class="analysis-scan-note">支持结果预览、Excel 导出和疲劳审计，便于多轮微调。</span>
+                        </div>
                     </div>
                 </div>
+
+                <div class="sec-head analysis-shell-head">
+                    <h2><i class="ti ti-layout-grid"></i> 级部智能排课</h2>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先完成课时结构和约束设置，再导入现有课表做优化；导出 Excel 适合留档，疲劳审计适合二次微调。</div>
+                        <div class="analysis-actions">
+                            <button class="btn btn-purple" onclick="SCHEDULER.exportResult()">📥 导出课表(Excel)</button>
+                            <button class="btn btn-orange"
+                                onclick="document.getElementById('schedulerImportFile').click()">📤
+                                导入已有课表优化</button>
+                            <button class="btn btn-gray" onclick="SCHEDULER.auditFatigue()">🧠 AI疲劳审计</button>
+                            <input type="file" id="schedulerImportFile" accept=".xlsx,.xls" hidden
+                                onchange="SCHEDULER.importExisting(this)">
+                        </div>
+                    </div>
+                </div>
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>排课口径与使用建议</summary>
+                    <div class="explain-content">
+                        <p>建议先配置课时结构与常规规则，再导入教师任课表和动态约束，最后统一生成课表。</p>
+                        <p>合堂规则、教师禁排和教研活动适合先少量添加，再结合结果逐步微调。</p>
+                        <p>生成课表后建议先看预览，再做疲劳审计，确认没有连续高负荷或冲突安排。</p>
+                    </div>
+                </details>
 
                 <!-- 1. 基础配置面板 -->
                 <div class="control-panel" style="display:block;">
@@ -7589,8 +7617,12 @@
                 </div>
 
                 <!-- 4. 结果展示 -->
-                <div id="sch_result_area" class="hidden" style="margin-top:20px;">
-                    <div class="sub-header">📅 排课结果预览 (点击单元格可微调)</div>
+                <div id="sch_result_area" class="hidden analysis-anchor-panel" style="margin-top:20px;">
+                    <div class="sub-header analysis-section-head">📅 排课结果预览 (点击单元格可微调)</div>
+                    <div class="analysis-table-meta">
+                        <span><strong>阅读建议：</strong>先切换按班级/按教师查看，再检查关键约束时段是否被占满。</span>
+                        <span><strong>导出建议：</strong>适合生成正式课表前做人工复核和局部微调。</span>
+                    </div>
                     <div style="display:flex; gap:10px; margin-bottom:10px;">
                         <select id="sch_view_mode" onchange="SCHEDULER.renderTable()">
                             <option value="class">按班级查看</option>
@@ -7600,17 +7632,17 @@
                             <!-- 动态填充班级或教师名 -->
                         </select>
                     </div>
-                    <div class="table-wrap">
-                        <table id="sch_table" style="text-align:center; font-size:12px;">
+                    <div class="table-wrap analysis-table-shell">
+                        <table id="sch_table" class="analysis-table-dense" style="text-align:center; font-size:12px;">
                             <!-- JS 渲染 -->
                         </table>
                     </div>
                 </div>
 
                 <!-- 5. AI 疲劳审计 -->
-                <div id="sch_audit_area" class="hidden"
+                <div id="sch_audit_area" class="hidden analysis-anchor-panel"
                     style="margin-top:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
-                    <div class="sub-header">🧠 排课疲劳审计结果</div>
+                    <div class="sub-header analysis-section-head">🧠 排课疲劳审计结果</div>
                     <div id="sch_audit_summary" style="font-size:12px; color:#64748b; margin-bottom:6px;"></div>
                     <div id="sch_audit_list" class="tag-widget-container" style="min-height:40px; background:white;">
                     </div>

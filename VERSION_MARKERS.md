@@ -114,6 +114,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.27-exam-arranger-ui-v37`
   - Meaning: align exam-arranger with the tools workspace so roster import, room generation, invigilation setup, room cards, and export actions share the same guidance and result language as the rest of the operations chain
 
+- Release tag: `school-system-v2026.03.27-grade-scheduler-ui-v38`
+  - Meaning: align grade-scheduler with the tools workspace so structure setup, teacher-resource import, dynamic constraints, timetable preview, and audit output read like one continuous scheduling workbench
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -226,3 +229,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest exam-arranger UI release:
   - `git checkout school-system-v2026.03.27-exam-arranger-ui-v37`
+
+- Roll back to the latest grade-scheduler UI release:
+  - `git checkout school-system-v2026.03.27-grade-scheduler-ui-v38`
