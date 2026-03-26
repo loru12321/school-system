@@ -4348,19 +4348,51 @@
             </div>
 
             <!-- 2.1 镇域预警与亮点看板 -->
-            <div id="macro-watch" class="section card-box">
-                <div class="module-desc-bar" style="border-color: var(--color-macro)">
+            <div id="macro-watch" class="section card-box analysis-workspace analysis-workspace-macro">
+                <div class="module-desc-bar analysis-hero" style="border-color: var(--color-macro)">
                     <h3><i class="ti ti-alert-triangle"></i> 02A 镇域预警与亮点看板</h3>
                     <p>说明：集中呈现全镇核心KPI与红黄绿预警清单，便于快速定位问题学校与标杆学校。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">风险 / 标杆</strong>
+                            <span class="analysis-scan-note">先看异常学校，再看可复制的亮点学校和学科。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Signal</span>
+                            <strong class="analysis-scan-value">红黄绿分层</strong>
+                            <span class="analysis-scan-note">把高风险、待关注和稳定领先对象放到同一张总览面。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">巡检 / 教研</strong>
+                            <span class="analysis-scan-note">适合教务巡检、周例会和阶段性问题追踪。</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="sec-head">
+                <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-dashboard"></i> 风险预警与亮点总览
                         <span class="module-help-btn" onclick="showModuleHelp('macro')">📘 规则说明</span>
                     </h2>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先看 KPI 摘要，再按红黄绿列表定位学校与学科，适合问题巡检和亮点推广。</div>
+                    </div>
                 </div>
-                <div id="macro-dashboard" class="fb-dashboard" style="margin-bottom:25px;"></div>
-                <div id="traffic-light-dashboard" class="traffic-grid hidden">
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>预警口径与看板建议</summary>
+                    <div class="explain-content">
+                        <p>红色预警优先看及格率与排名垫底项，适合进入整改任务。</p>
+                        <p>黄色关注重点看优秀率不足和临界生密集项，适合培优提质。</p>
+                        <p>绿色标杆用于筛选可复制经验，适合教研组做案例分享。</p>
+                    </div>
+                </details>
+                <div class="analysis-table-meta">
+                    <span><strong>阅读建议：</strong>先看摘要卡，再下钻红黄绿预警列表。</span>
+                    <span><strong>使用建议：</strong>适合作为阶段巡检、问题派单和经验推广入口。</span>
+                </div>
+                <div id="macro-dashboard" class="fb-dashboard analysis-board-grid" style="margin-bottom:25px;"></div>
+                <div id="traffic-light-dashboard" class="traffic-grid analysis-traffic-grid hidden">
                     <!-- 红灯区：严重预警 -->
                     <div class="traffic-col red">
                         <div class="traffic-head red">

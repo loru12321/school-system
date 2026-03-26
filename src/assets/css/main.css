@@ -1139,6 +1139,49 @@ header {
     box-shadow: 0 22px 40px -34px rgba(15, 23, 42, 0.46);
 }
 
+.analysis-board-grid {
+    margin-bottom: 18px !important;
+}
+
+.analysis-workspace .fb-card {
+    border-radius: 16px;
+    padding: 16px;
+    border-color: var(--analysis-border);
+    box-shadow: 0 18px 36px -34px rgba(15, 23, 42, 0.34);
+}
+
+.analysis-workspace .fb-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 22px 42px -34px rgba(15, 23, 42, 0.42);
+}
+
+.analysis-traffic-grid {
+    margin-bottom: 0;
+}
+
+.analysis-workspace .traffic-col {
+    border-radius: 18px;
+    padding: 16px;
+    box-shadow: 0 22px 44px -38px rgba(15, 23, 42, 0.35);
+}
+
+.analysis-workspace .traffic-item {
+    border-radius: 12px;
+    box-shadow: 0 12px 28px -28px rgba(15, 23, 42, 0.35);
+}
+
+.analysis-workspace .traffic-item:hover {
+    transform: translateX(3px);
+}
+
+.analysis-workspace .t-school {
+    color: #0f172a;
+}
+
+.analysis-workspace .t-sub {
+    color: #475569;
+}
+
 @media (max-width: 900px) {
     .analysis-shell-head {
         padding: 16px;

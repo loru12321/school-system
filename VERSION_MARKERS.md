@@ -75,6 +75,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.26-analysis-cluster-ui-v24`
   - Meaning: bring high-score, bottom3, and indicator into the same analysis workspace language so their help panels, action zones, dense tables, and export guidance match the rest of the analysis cluster
 
+- Release tag: `school-system-v2026.03.26-macro-watch-ui-v25`
+  - Meaning: align the township warning and highlight board with the analysis workspace shell so its KPI summary cards, red/yellow/green lanes, and rule guidance read like one continuous macro-analysis experience
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -148,3 +151,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest analysis cluster UI release:
   - `git checkout school-system-v2026.03.26-analysis-cluster-ui-v24`
+
+- Roll back to the latest macro-watch UI release:
+  - `git checkout school-system-v2026.03.26-macro-watch-ui-v25`
