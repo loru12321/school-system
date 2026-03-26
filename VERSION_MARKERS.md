@@ -232,3 +232,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest grade-scheduler UI release:
   - `git checkout school-system-v2026.03.27-grade-scheduler-ui-v38`
+
+- Roll back to the latest AI analysis UI release:
+  - `git checkout school-system-v2026.03.27-ai-analysis-ui-v39`

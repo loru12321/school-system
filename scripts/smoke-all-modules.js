@@ -19,6 +19,7 @@ const SWITCH_MODULE_IDS = [
     'marginal-push',
     'progress-analysis',
     'report-generator',
+    'ai-analysis',
     'freshman-simulator',
     'exam-arranger',
     'teaching-overview',
@@ -512,6 +513,34 @@ async function runModuleDeepCheck(page, id) {
                 checks,
                 reportVisible,
                 contentReady
+            };
+        });
+    }
+    if (id === 'ai-analysis') {
+        return page.evaluate(async () => {
+            const checks = {
+                sectionReady: !!document.querySelector('#ai-analysis.analysis-workspace-ai'),
+                heroReady: !!document.querySelector('#ai-analysis .analysis-hero'),
+                shellHeadReady: !!document.querySelector('#ai-analysis .analysis-shell-head'),
+                configInputsReady: !!document.getElementById('llm_apikey')
+                    && !!document.getElementById('llm_baseurl')
+                    && !!document.getElementById('llm_model'),
+                batchSelectorsReady: !!document.getElementById('ai-school-select')
+                    && !!document.getElementById('ai-class-select'),
+                batchWorkspaceReady: !!document.getElementById('batch-ai-workspace'),
+                statusBoxesReady: !!document.getElementById('ai-gateway-status')
+                    && !!document.getElementById('ai-current-student-summary')
+                    && !!document.getElementById('ai-batch-summary')
+                    && !!document.getElementById('ai-macro-summary'),
+                connectionActionReady: typeof window.testAIConnectionFromHub === 'function',
+                batchActionReady: typeof window.openAIBatchWorkspaceFromHub === 'function',
+                macroActionReady: typeof window.runAIMacroReportFromHub === 'function'
+            };
+            const panelCount = document.querySelectorAll('#ai-analysis .analysis-ai-panel').length;
+            return {
+                ok: Object.values(checks).every(Boolean) && panelCount >= 4,
+                checks,
+                panelCount
             };
         });
     }

@@ -6664,47 +6664,94 @@
                 </div>
             </div>
 
-            <div id="ai-analysis" class="section card-box">
-                <div class="module-desc-bar" style="border-color:#f97316;">
+            <div id="ai-analysis" class="section card-box analysis-workspace analysis-workspace-ai">
+                <div class="module-desc-bar analysis-hero" style="border-color:#f97316;">
                     <h3><i class="ti ti-brain"></i> AI分析 <span class="badge" style="background:#f97316;">统一入口</span></h3>
                     <p><strong>一句话目的：</strong>把 AI 配置、单学生 AI 评语、宏观 AI 报告和批量 AI 评语集中到一个入口。</p>
                     <p><strong>推荐顺序：</strong>先保存 AI 配置，再选班级，随后按“单学生评语 → 批量评语 → 宏观报告”使用。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">连接 / 场景</strong>
+                            <span class="analysis-scan-note">先确认 AI 网关或 API 配置可用，再根据单学生、整班和本校三个场景进入生成流程。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">评语 / 洞察</strong>
+                            <span class="analysis-scan-note">既能给学生生成个性化评语，也能支持班级批量输出和本校宏观诊断。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">页内结果 / 导出</strong>
+                            <span class="analysis-scan-note">单学生结果在页内直接预览，整班流程支持暂停、重试与导出，宏观报告可联动综合分析。</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="sec-head">
+                <div class="sec-head analysis-shell-head">
                     <h2><i class="ti ti-sparkles"></i> AI工作台</h2>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先做连接测试，再按“当前学生 → 当前班级 → 当前本校”逐步生成，能更快定位数据和模型是否准备完成。</div>
+                        <div class="analysis-actions">
+                            <button class="btn btn-primary" onclick="testAIConnectionFromHub()"><i class="ti ti-plug-connected"></i> 先测连接</button>
+                            <button class="btn btn-gray" onclick="openAIBatchWorkspaceFromHub()"><i class="ti ti-layout-grid"></i> 打开批量工作台</button>
+                        </div>
+                    </div>
                 </div>
+                <div class="info-bar analysis-info-band">
+                    <span>这个入口把连接配置、单学生评语、批量班级生成和本校宏观洞察收在一处；优先确认连接可用，再选择单人、整班或本校分析路径，能减少重复试跑。</span>
+                </div>
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>AI 工作台使用建议</summary>
+                    <div class="explain-content">
+                        <p>如果是第一次使用，先保存 AI 配置并测试连接；生产环境走同域网关时，API Key 可以留空。</p>
+                        <p>单学生评语依赖“成绩单/家长查分”模块中最近一次已查询学生；批量 AI 评语依赖已选学校和班级。</p>
+                        <p>宏观 AI 报告会基于当前锁定本校和当前工作区数据生成，更适合和“综合分析”联动阅读。</p>
+                    </div>
+                </details>
 
-                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px;">
-                    <div class="card-box" style="padding:18px; border-left:4px solid #f97316;">
-                        <div class="sub-header" style="margin-top:0;">AI 配置</div>
+                <div class="analysis-ai-grid">
+                    <div class="analysis-ai-panel" style="--panel-accent:#f97316;">
+                        <div class="sub-header">AI 配置</div>
+                        <div class="analysis-table-meta">
+                            <span><strong>用途：</strong>配置 AI 网关或第三方模型入口，确保后续单学生、批量和宏观流程都能直接调用。</span>
+                            <span><strong>建议：</strong>首次使用先点“测试 AI 连接”，确认通路后再开始生成。</span>
+                        </div>
                         <div style="display:grid; gap:10px;">
                             <input id="llm_apikey" type="password" placeholder="AI API Key（生产环境可留空走同域网关）" style="width:100%;">
                             <input id="llm_baseurl" type="text" placeholder="https://api.deepseek.com" style="width:100%;">
                             <input id="llm_model" type="text" placeholder="deepseek-chat" style="width:100%;">
-                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <div class="analysis-actions">
                                 <button class="btn btn-primary" onclick="saveAIConfigFromHub()"><i class="ti ti-device-floppy"></i> 保存 AI 配置</button>
                                 <button class="btn btn-gray" onclick="testAIConnectionFromHub()"><i class="ti ti-plug-connected"></i> 测试 AI 连接</button>
                             </div>
-                            <div id="ai-gateway-status" style="font-size:12px; color:#64748b; line-height:1.7;">当前环境将自动判断是走同域 AI 网关还是本地填写的 API 配置。</div>
+                            <div id="ai-gateway-status" class="analysis-ai-status-box">当前环境将自动判断是走同域 AI 网关还是本地填写的 API 配置。</div>
                         </div>
                     </div>
 
-                    <div class="card-box" style="padding:18px; border-left:4px solid #6366f1;">
-                        <div class="sub-header" style="margin-top:0;">单学生 AI 评语</div>
-                        <div id="ai-current-student-summary" style="font-size:13px; color:#475569; line-height:1.8; min-height:46px;">
+                    <div class="analysis-ai-panel" style="--panel-accent:#6366f1;">
+                        <div class="sub-header">单学生 AI 评语</div>
+                        <div class="analysis-table-meta">
+                            <span><strong>用途：</strong>面向单个学生快速生成个性化评语，适合成绩单输出和家校沟通。</span>
+                            <span><strong>前置：</strong>先到“成绩单/家长查分”查询一名学生，这里会自动接续当前对象。</span>
+                        </div>
+                        <div id="ai-current-student-summary" class="analysis-ai-status-box">
                             当前还没有已查询的学生。请先到“成绩单/家长查分”里查询一名学生。
                         </div>
-                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                        <div class="analysis-actions" style="margin-top:10px;">
                             <button class="btn btn-primary" onclick="runSingleStudentAIFromHub()"><i class="ti ti-sparkles"></i> 为当前学生生成 AI 评语</button>
                             <button class="btn btn-gray" onclick="openReportGeneratorForAI()"><i class="ti ti-certificate"></i> 前往成绩单模块</button>
                         </div>
-                        <div id="ai-hub-comment-box" style="min-height:110px; margin-top:14px; border:1px solid #ddd6fe; background:#faf5ff; border-radius:16px; padding:16px 18px; font-size:14px; color:#4c1d95; line-height:1.9;">
+                        <div id="ai-hub-comment-box" class="analysis-ai-status-box analysis-ai-comment-box">
                             点击上方按钮后，会在这里显示当前学生的 AI 个性化评语。
                         </div>
                     </div>
 
-                    <div class="card-box" style="padding:18px; border-left:4px solid #10b981;">
-                        <div class="sub-header" style="margin-top:0;">批量 AI 评语</div>
+                    <div class="analysis-ai-panel" style="--panel-accent:#10b981;">
+                        <div class="sub-header">批量 AI 评语</div>
+                        <div class="analysis-table-meta">
+                            <span><strong>用途：</strong>按学校和班级批量生成评语，适合班主任、年级组统一导出和回看。</span>
+                            <span><strong>导出建议：</strong>先打开工作台确认名单与进度，再批量生成并导出 AI 评语。</span>
+                        </div>
                         <div style="display:grid; gap:10px;">
                             <select id="ai-school-select" onchange="syncAIAnalysisClassOptions(); updateAIAnalysisHubStatus();" style="width:100%;">
                                 <option value="">-- 请选择学校 --</option>
@@ -6712,8 +6759,8 @@
                             <select id="ai-class-select" onchange="updateAIAnalysisHubStatus();" style="width:100%;">
                                 <option value="">-- 请选择班级 --</option>
                             </select>
-                            <div id="ai-batch-summary" style="font-size:13px; color:#475569; line-height:1.8;">请选择学校和班级，再打开批量 AI 工作台。</div>
-                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <div id="ai-batch-summary" class="analysis-ai-status-box">请选择学校和班级，再打开批量 AI 工作台。</div>
+                            <div class="analysis-actions">
                                 <button class="btn btn-primary" onclick="openAIBatchWorkspaceFromHub()"><i class="ti ti-layout-grid"></i> 打开批量 AI 工作台</button>
                                 <button class="btn btn-green" onclick="startAIBatchFromHub()"><i class="ti ti-player-play"></i> 开始批量生成</button>
                                 <button class="btn btn-gray" onclick="exportAIBatchFromHub()"><i class="ti ti-file-export"></i> 导出 AI 评语</button>
@@ -6721,37 +6768,44 @@
                         </div>
                     </div>
 
-                    <div class="card-box" style="padding:18px; border-left:4px solid #8b5cf6;">
-                        <div class="sub-header" style="margin-top:0;">宏观 AI 报告</div>
-                        <div id="ai-macro-summary" style="font-size:13px; color:#475569; line-height:1.8; min-height:46px;">
+                    <div class="analysis-ai-panel" style="--panel-accent:#8b5cf6;">
+                        <div class="sub-header">宏观 AI 报告</div>
+                        <div class="analysis-table-meta">
+                            <span><strong>用途：</strong>基于当前本校数据生成宏观诊断，适合校务复盘和综合分析串读。</span>
+                            <span><strong>阅读建议：</strong>先锁定本校，再生成宏观报告，随后切到综合分析对照核心指标。</span>
+                        </div>
+                        <div id="ai-macro-summary" class="analysis-ai-status-box">
                             当前还没有锁定本校，请先在页面顶部或数据中心选择本校。
                         </div>
-                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                        <div class="analysis-actions" style="margin-top:10px;">
                             <button class="btn btn-purple" onclick="runAIMacroReportFromHub()"><i class="ti ti-report-analytics"></i> 生成本校宏观 AI 报告</button>
                             <button class="btn btn-gray" onclick="switchTab('summary')"><i class="ti ti-report"></i> 前往综合分析</button>
                         </div>
                     </div>
                 </div>
 
-                <div id="batch-ai-workspace" class="hidden" style="margin-top:20px; padding:18px; border:1px solid #e2e8f0; border-radius:16px; background:#fff;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
+                <div id="batch-ai-workspace" class="hidden analysis-anchor-panel analysis-ai-batch-shell">
+                    <div class="analysis-generated-header">
                         <div>
-                            <h3 style="margin:0; color:#4f46e5;"><i class="ti ti-brain"></i> 批量 AI 评语工作台</h3>
-                            <div style="font-size:12px; color:#64748b; margin-top:4px;">按当前所选班级逐个生成 AI 评语，支持暂停、重试和导出。</div>
+                            <div class="sub-header analysis-section-head" style="margin-bottom:10px;"><i class="ti ti-brain"></i> 批量 AI 评语工作台</div>
+                            <div class="analysis-table-meta">
+                                <span><strong>用途：</strong>按当前所选班级逐个生成 AI 评语，支持暂停、重试和导出。</span>
+                                <span><strong>节奏建议：</strong>网络波动时适当增加间隔秒数，优先保证稳定性。</span>
+                            </div>
                         </div>
-                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                            <label style="font-size:12px; color:#475569;">间隔(秒)</label>
-                            <input id="batch-ai-interval" type="number" min="0" step="0.1" value="3" style="width:90px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:8px;">
+                        <div class="analysis-inline-controls">
+                            <label>间隔(秒)</label>
+                            <input id="batch-ai-interval" type="number" min="0" step="0.1" value="3" style="width:90px;">
                             <button id="btn-start-batch-ai" class="btn btn-primary" onclick="startBatchAIComments()">开始</button>
                             <button id="btn-stop-batch-ai" class="btn btn-gray hidden" onclick="stopBatchAI()">停止</button>
                         </div>
                     </div>
-                    <div style="height:10px; background:#e2e8f0; border-radius:999px; overflow:hidden; margin-bottom:8px;">
-                        <div id="batch-ai-progress" style="height:100%; width:0%; background:linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);"></div>
+                    <div class="analysis-ai-progress-track">
+                        <div id="batch-ai-progress" class="analysis-ai-progress-bar"></div>
                     </div>
-                    <div id="batch-ai-progress-text" style="font-size:12px; color:#64748b; margin-bottom:14px;">0 / 0</div>
-                    <div class="table-wrap" style="max-height:420px;">
-                        <table id="batch-ai-table">
+                    <div id="batch-ai-progress-text" class="analysis-ai-progress-copy">0 / 0</div>
+                    <div class="table-wrap analysis-table-shell analysis-ai-batch-table">
+                        <table id="batch-ai-table" class="analysis-table-dense">
                             <thead>
                                 <tr>
                                     <th style="width:60px;">状态</th>
