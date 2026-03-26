@@ -5634,16 +5634,50 @@
             </div>
 
             <!-- 学科互助分组 -->
-            <div id="mutual-aid" class="section card-box">
-                <div class="sec-head">
-                    <h2><i class="ti ti-friends"></i> 学科互助分组</h2><button class="btn btn-green"
-                        onclick="exportMutualAidGroups()">导出Excel</button>
+            <div id="mutual-aid" class="section card-box analysis-workspace analysis-workspace-student">
+                <div class="module-desc-bar analysis-hero" style="border-color: var(--color-student)">
+                    <h3><i class="ti ti-friends"></i> 学科互助分组</h3>
+                    <p>按成绩层级和学科强弱自动生成互助小组，帮助班主任与科任教师快速搭建合作学习共同体。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">组长 / 组员</strong>
+                            <span class="analysis-scan-note">先选学校、班级和学科，再生成组长带动的互助结构。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">合作学习</strong>
+                            <span class="analysis-scan-note">适合班主任、科任教师做课堂合作与课后结对安排。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">分组 / 导出</strong>
+                            <span class="analysis-scan-note">支持分组预览和 Excel 导出，方便课堂布置与留档。</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="info-bar">
+                <div class="sec-head analysis-shell-head">
+                    <h2><i class="ti ti-friends"></i> 学科互助分组</h2>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先确认数据源和班级，再生成分组；导出结果适合课堂实施和班级留档。</div>
+                        <div class="analysis-actions">
+                            <button class="btn btn-green" onclick="exportMutualAidGroups()">导出Excel</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="info-bar analysis-info-band">
                     <strong>组长(小老师)选拔标准：</strong>
                     ① 单科成绩班级前 <strong>25%</strong>；
                     ② 总分成绩班级前 <strong>40%</strong> (拒绝严重偏科，确保综合辅导能力)。
                 </div>
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>分组口径与使用建议</summary>
+                    <div class="explain-content">
+                        <p>建议先按学校、班级和互助学科生成，再按每组人数调整分组紧密度。</p>
+                        <p>组长标准更强调综合辅导能力，适合做课堂合作而不是单纯按单科最高分分组。</p>
+                        <p>老生与新生数据源都支持，适合在考试后或分班完成后快速建立互助共同体。</p>
+                    </div>
+                </details>
                 <div class="control-panel">
                     <div style="flex:1; border-right:1px solid #ccc; padding-right:10px; margin-right:10px;">
                         <label><strong>数据源：</strong></label>
@@ -5667,11 +5701,18 @@
                     </div>
                     <button class="btn btn-primary" onclick="renderMutualAidGroups()">⚡ 生成分组</button>
                 </div>
+                <div class="analysis-anchor-panel">
+                    <div class="sub-header analysis-section-head">🤝 当前互助小组预览</div>
+                    <div class="analysis-table-meta">
+                        <span><strong>阅读建议：</strong>先看组长，再看组员是否覆盖强弱搭配。</span>
+                        <span><strong>导出建议：</strong>适合课堂合作安排、课后互助和班级管理留档。</span>
+                    </div>
                 <div id="aid-groups-container" class="aid-grid">
                     <div style="grid-column:1/-1; text-align:center; padding:40px; color:#999;">
                         <i class="ti ti-users" style="font-size:48px; margin-bottom:10px;"></i>
                         <p>请选择班级和学科后点击生成</p>
                     </div>
+                </div>
                 </div>
             </div>
 

@@ -102,6 +102,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.27-class-comparison-ui-v33`
   - Meaning: align class-comparison with the analysis workspace so class totals, subject-detail sections, and the balance matrix share the same shell, guidance, and generated-result language as the rest of the analysis cluster
 
+- Release tag: `school-system-v2026.03.27-mutual-aid-ui-v34`
+  - Meaning: align mutual-aid with the student analysis workspace so group setup, guidance, and generated group cards read like one continuous collaborative-learning workbench
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -202,3 +205,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest class-comparison UI release:
   - `git checkout school-system-v2026.03.27-class-comparison-ui-v33`
+
+- Roll back to the latest mutual-aid UI release:
+  - `git checkout school-system-v2026.03.27-mutual-aid-ui-v34`
