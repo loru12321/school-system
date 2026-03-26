@@ -13749,16 +13749,24 @@ function renderTables() {
 
     SUBJECTS.forEach(sub => {
         const thresh = THRESHOLDS[sub];
+        const subList = Object.values(SCHOOLS).filter(s => s.metrics[sub]).sort((a, b) => (a.rankings[sub].avg - b.rankings[sub].avg));
         const box = document.createElement('div');
         const anchorId = `anchor-subject-${sub}`;
         box.id = anchorId;
-        box.className = 'anchor-target';
-        box.style.paddingTop = '20px';
-        box.innerHTML = `<div class="sub-header"><span>📘 ${sub}</span><span style="font-weight:normal; font-size:12px; opacity:0.8;">优秀线≥${(thresh?.exc || 0).toFixed(1)}, 及格线≥${(thresh?.pass || 0).toFixed(1)}</span></div><div class="table-wrap"><table><thead><tr><th>学校名称</th><th>实考人数</th><th>平均分</th><th>优秀率</th><th>及格率</th></tr></thead><tbody></tbody></table></div>`;
+        box.className = 'anchor-target analysis-anchor-panel analysis-generated-panel';
+        box.innerHTML = `<div class="sub-header analysis-section-head analysis-generated-header"><span>📘 ${sub} 学科明细</span><span class="analysis-generated-meta"><span class="analysis-table-tag">覆盖 ${subList.length} 校</span><span class="analysis-table-tag">优秀线 ≥ ${(thresh?.exc || 0).toFixed(1)}</span><span class="analysis-table-tag">及格线 ≥ ${(thresh?.pass || 0).toFixed(1)}</span></span></div><div class="analysis-generated-note">按平均分排序，可快速定位本校在该学科的站位与各校差距。</div><div class="table-wrap analysis-table-shell"><table class="analysis-generated-table"><thead><tr><th>学校名称</th><th>实考人数</th><th>平均分</th><th>优秀率</th><th>及格率</th></tr></thead><tbody></tbody></table></div>`;
         const tbody = box.querySelector('tbody');
-        const subList = Object.values(SCHOOLS).filter(s => s.metrics[sub]).sort((a, b) => (a.rankings[sub].avg - b.rankings[sub].avg));
         let htmlSub = '';
-        subList.forEach(s => { const m = s.metrics[sub]; const r = s.rankings[sub]; const isMySchool = s.name === MY_SCHOOL; htmlSub += `<tr class="${isMySchool ? 'bg-highlight' : ''}"><td>${s.name}</td><td>${m.count}</td><td>${formatRankDisplay(m.avg, r.avg)}</td><td>${formatRankDisplay(m.excRate, r.excRate, 'school', true)}</td><td>${formatRankDisplay(m.passRate, r.passRate, 'school', true)}</td></tr>`; });
+        if (subList.length === 0) {
+            htmlSub = `<tr><td colspan="5" class="analysis-empty-cell">暂无 ${sub} 学科数据</td></tr>`;
+        } else {
+            subList.forEach(s => {
+                const m = s.metrics[sub];
+                const r = s.rankings[sub];
+                const isMySchool = s.name === MY_SCHOOL;
+                htmlSub += `<tr class="${isMySchool ? 'bg-highlight' : ''}"><td data-label="学校名称">${s.name}</td><td data-label="实考人数">${m.count}</td><td data-label="平均分">${formatRankDisplay(m.avg, r.avg)}</td><td data-label="优秀率">${formatRankDisplay(m.excRate, r.excRate, 'school', true)}</td><td data-label="及格率">${formatRankDisplay(m.passRate, r.passRate, 'school', true)}</td></tr>`;
+            });
+        }
         tbody.innerHTML = htmlSub; subContainer.appendChild(box); const navLink = document.createElement('a'); navLink.className = 'side-nav-sub-link'; navLink.innerText = sub; navLink.onclick = () => scrollToSubAnchor(anchorId, navLink); sideNavSubjects.appendChild(navLink);
     });
 

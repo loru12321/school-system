@@ -57,6 +57,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.26-analysis-results-rail-v18`
   - Meaning: reshape the lower analysis work area with a clearer navigation rail, flow banner, and continuous result panels so macro analysis and teacher analysis read as one guided workspace instead of disconnected blocks
 
+- Release tag: `school-system-v2026.03.26-analysis-dynamic-panels-v19`
+  - Meaning: restyle runtime-generated subject detail tables and teacher township ranking panels so dynamic output inherits the same panel headers, empty states, table labels, and density rules as the static analysis workspace
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -112,3 +115,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest analysis results rail UI release:
   - `git checkout school-system-v2026.03.26-analysis-results-rail-v18`
+
+- Roll back to the latest analysis dynamic panels UI release:
+  - `git checkout school-system-v2026.03.26-analysis-dynamic-panels-v19`

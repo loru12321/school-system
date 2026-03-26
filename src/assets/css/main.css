@@ -841,6 +841,111 @@ header {
     margin-top: 12px;
 }
 
+.analysis-generated-panel {
+    display: grid;
+    gap: 10px;
+}
+
+.analysis-generated-panel .analysis-section-head {
+    margin-bottom: 0;
+}
+
+.analysis-generated-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.analysis-generated-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 500;
+    color: #475569;
+}
+
+.analysis-table-tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid var(--analysis-border);
+    background: rgba(255, 255, 255, 0.88);
+    color: #334155;
+}
+
+.analysis-generated-note {
+    font-size: 12px;
+    line-height: 1.6;
+    color: #64748b;
+    padding: 0 2px;
+}
+
+.analysis-generated-table {
+    min-width: 760px;
+}
+
+.analysis-generated-table thead th {
+    font-size: 11px;
+    letter-spacing: 0.02em;
+}
+
+.analysis-generated-table td:first-child {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.analysis-empty-state {
+    padding: 18px;
+    border: 1px dashed var(--analysis-border);
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--analysis-surface) 0%, rgba(255, 255, 255, 0.95) 100%);
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.6;
+    text-align: center;
+}
+
+.analysis-empty-cell {
+    padding: 18px !important;
+    text-align: center !important;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.analysis-row-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    border: 1px solid transparent;
+}
+
+.analysis-row-badge-teacher {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+}
+
+.analysis-row-badge-school {
+    background: #f8fafc;
+    color: #475569;
+    border-color: #cbd5e1;
+}
+
+.analysis-row-emphasis td:first-child {
+    color: var(--analysis-accent);
+}
+
 .analysis-inline-export {
     display: flex;
     justify-content: flex-end;
@@ -882,6 +987,11 @@ header {
         padding: 14px;
     }
 
+    .analysis-generated-header,
+    .analysis-generated-meta {
+        align-items: flex-start;
+    }
+
     .analysis-shell-head,
     .analysis-inline-top,
     .analysis-info-band {
@@ -914,6 +1024,10 @@ header {
 
     .analysis-inline-export .btn {
         width: 100%;
+    }
+
+    .analysis-generated-table {
+        min-width: 680px;
     }
 }
 

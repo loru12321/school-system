@@ -1288,7 +1288,7 @@ function renderTeacherTownshipRanking() {
     const visibleSubjectSet = (role === 'teacher' || role === 'class_teacher') ? getVisibleSubjectsForTeacherUser(user) : null;
     const container = document.getElementById('teacher-township-ranking-container');
     const sideNavTeacherRanks = document.getElementById('side-nav-teacher-ranks-container'); sideNavTeacherRanks.innerHTML = '';
-    if (!TOWNSHIP_RANKING_DATA || Object.keys(TOWNSHIP_RANKING_DATA).length === 0) { container.innerHTML = '<p style="text-align: center; color: #666;">暂无教师乡镇排名数据</p>'; return; }
+    if (!TOWNSHIP_RANKING_DATA || Object.keys(TOWNSHIP_RANKING_DATA).length === 0) { container.innerHTML = '<div class="analysis-empty-state">暂无教师乡镇排名数据</div>'; return; }
     const townshipAverages = {};
     SUBJECTS.forEach(subject => {
         if (visibleSubjectSet && visibleSubjectSet.size > 0 && !visibleSubjectSet.has(normalizeSubject(subject))) return;
@@ -1303,11 +1303,17 @@ function renderTeacherTownshipRanking() {
         const townshipAvg = townshipAverages[subject] || { avg: 0, excRate: 0, passRate: 0 }; let tbodyHtml = '';
         rankingData.forEach((item) => {
             const avgComparison = townshipAvg.avg ? ((item.avg - townshipAvg.avg) / townshipAvg.avg * 100).toFixed(2) : 0; const excComparison = townshipAvg.excRate ? ((item.excellentRate - townshipAvg.excRate) / townshipAvg.excRate * 100).toFixed(2) : 0; const passComparison = townshipAvg.passRate ? ((item.passRate - townshipAvg.passRate) / townshipAvg.passRate * 100).toFixed(2) : 0; const typeClass = item.type === 'teacher' ? 'text-blue' : ''; const typeText = item.type === 'teacher' ? '教师' : '学校';
-            tbodyHtml += `<tr><td class="${typeClass}">${item.name}</td><td>${typeText}</td><td>${formatRankDisplay(item.avg, item.rankAvg, 'teacher')}</td><td class="${avgComparison >= 0 ? 'positive-percent' : 'negative-percent'}">${avgComparison >= 0 ? '+' : ''}${avgComparison}%</td><td>${item.rankAvg}</td><td>${formatRankDisplay(item.excellentRate, item.rankExc, 'teacher', true)}</td><td class="${excComparison >= 0 ? 'positive-percent' : 'negative-percent'}">${excComparison >= 0 ? '+' : ''}${excComparison}%</td><td>${item.rankExc}</td><td>${formatRankDisplay(item.passRate, item.rankPass, 'teacher', true)}</td><td class="${passComparison >= 0 ? 'positive-percent' : 'negative-percent'}">${passComparison >= 0 ? '+' : ''}${passComparison}%</td><td>${item.rankPass}</td></tr>`;
+            const rowClass = item.type === 'teacher' ? 'analysis-row-emphasis' : '';
+            const badgeClass = item.type === 'teacher' ? 'analysis-row-badge analysis-row-badge-teacher' : 'analysis-row-badge analysis-row-badge-school';
+            tbodyHtml += `<tr class="${rowClass}"><td data-label="教师/学校" class="${typeClass}">${item.name}</td><td data-label="类型"><span class="${badgeClass}">${typeText}</span></td><td data-label="平均分">${formatRankDisplay(item.avg, item.rankAvg, 'teacher')}</td><td data-label="与镇均比" class="${avgComparison >= 0 ? 'positive-percent' : 'negative-percent'}">${avgComparison >= 0 ? '+' : ''}${avgComparison}%</td><td data-label="镇排">${item.rankAvg}</td><td data-label="优秀率">${formatRankDisplay(item.excellentRate, item.rankExc, 'teacher', true)}</td><td data-label="与镇均比" class="${excComparison >= 0 ? 'positive-percent' : 'negative-percent'}">${excComparison >= 0 ? '+' : ''}${excComparison}%</td><td data-label="镇排">${item.rankExc}</td><td data-label="及格率">${formatRankDisplay(item.passRate, item.rankPass, 'teacher', true)}</td><td data-label="与镇均比" class="${passComparison >= 0 ? 'positive-percent' : 'negative-percent'}">${passComparison >= 0 ? '+' : ''}${passComparison}%</td><td data-label="镇排">${item.rankPass}</td></tr>`;
         });
-        const anchorId = `rank-anchor-${subject}`; htmlAll += `<div id="${anchorId}" class="anchor-target" style="padding-top:20px;"><div class="sub-header">🏅 ${subject} 教师乡镇排名 <span style="font-size:12px; font-weight:normal; margin-left:10px;">(含外校整体数据)</span></div><div class="table-wrap"><table class="comparison-table"><thead><tr><th>教师/学校</th><th>类型</th><th>平均分</th><th>与镇均比</th><th>镇排</th><th>优秀率</th><th>与镇均比</th><th>镇排</th><th>及格率</th><th>与镇均比</th><th>镇排</th></tr></thead><tbody>${tbodyHtml}</tbody></table></div></div>`;
+        const anchorId = `rank-anchor-${subject}`; htmlAll += `<div id="${anchorId}" class="anchor-target analysis-anchor-panel analysis-generated-panel"><div class="sub-header analysis-section-head analysis-generated-header"><span>🏅 ${subject} 教师乡镇排名</span><span class="analysis-generated-meta"><span class="analysis-table-tag">共 ${rankingData.length} 条</span><span class="analysis-table-tag">含外校整体数据</span></span></div><div class="analysis-generated-note">教师与学校数据同表展示，便于对照镇均水平、乡镇排名和学科整体波动。</div><div class="table-wrap analysis-table-shell"><table class="comparison-table analysis-generated-table"><thead><tr><th>教师/学校</th><th>类型</th><th>平均分</th><th>与镇均比</th><th>镇排</th><th>优秀率</th><th>与镇均比</th><th>镇排</th><th>及格率</th><th>与镇均比</th><th>镇排</th></tr></thead><tbody>${tbodyHtml}</tbody></table></div></div>`;
         const navLink = document.createElement('a'); navLink.className = 'side-nav-sub-link'; navLink.innerText = subject; navLink.onclick = () => scrollToSubAnchor(anchorId, navLink); sideNavTeacherRanks.appendChild(navLink);
     });
+    if (!htmlAll) {
+        container.innerHTML = '<div class="analysis-empty-state">当前角色下暂无可见学科的教师乡镇排名数据</div>';
+        return;
+    }
     container.innerHTML = htmlAll;
 }
 
