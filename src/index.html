@@ -4264,9 +4264,13 @@
                         <button class="btn btn-sm" style="background:#06b6d4; color:white;"
                             onclick="viewCloudMacroCompares()">📋 查看云端对比</button>
                     </div>
-                    <div id="macroCompareHint" class="analysis-hint">请选择2期或3期考试后生成。
+                    <div id="macroCompareHint" class="analysis-hint analysis-status-text">请选择2期或3期考试后生成。
                     </div>
-                    <div id="macroCompareResult" style="margin-top:10px;"></div>
+                    <div id="macroCompareResult" class="analysis-result-slot">
+                        <div class="analysis-empty-state analysis-empty-state-compact">
+                            选择学校与考试期次后，这里会生成校际多期对比结果。
+                        </div>
+                    </div>
                 </div>
                 <div class="layout-grid analysis-results-layout">
                     <div class="side-nav analysis-side-nav">
@@ -4929,9 +4933,13 @@
                         <button class="btn btn-sm" style="background:#06b6d4; color:white;"
                             onclick="viewCloudTeacherCompares()" title="查看已保存的教师对比记录">📋 查看云端对比</button>
                     </div>
-                    <div id="teacherCompareHint" class="analysis-hint">
+                    <div id="teacherCompareHint" class="analysis-hint analysis-status-text">
                         请选择学校+学科+教师并选择2期或3期考试后生成。</div>
-                    <div id="teacherCompareResult" style="margin-top:10px;"></div>
+                    <div id="teacherCompareResult" class="analysis-result-slot">
+                        <div class="analysis-empty-state analysis-empty-state-compact">
+                            选择教师或全校对比范围后，这里会生成多期变化结果。
+                        </div>
+                    </div>
                 </div>
                 <div id="tmModuleState-teacher-analysis"></div>
                 <details class="explain-panel">

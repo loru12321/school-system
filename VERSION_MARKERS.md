@@ -60,6 +60,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.26-analysis-dynamic-panels-v19`
   - Meaning: restyle runtime-generated subject detail tables and teacher township ranking panels so dynamic output inherits the same panel headers, empty states, table labels, and density rules as the static analysis workspace
 
+- Release tag: `school-system-v2026.03.26-analysis-compare-feedback-v20`
+  - Meaning: unify macro compare and teacher compare result containers so empty states, validation errors, success hints, and generated comparison panels all follow the same analysis workspace language
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -118,3 +121,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest analysis dynamic panels UI release:
   - `git checkout school-system-v2026.03.26-analysis-dynamic-panels-v19`
+
+- Roll back to the latest analysis compare feedback UI release:
+  - `git checkout school-system-v2026.03.26-analysis-compare-feedback-v20`

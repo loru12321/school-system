@@ -26,6 +26,17 @@ const setAllTeachersDiffCacheState = typeof window.setAllTeachersDiffCacheState 
         return nextCache;
     });
 
+function setTeacherCompareHintState(hintEl, message, state = 'idle') {
+    if (!hintEl) return;
+    hintEl.textContent = message;
+    hintEl.className = `analysis-hint analysis-status-text${state === 'success' ? ' is-success' : state === 'error' ? ' is-error' : ''}`;
+}
+
+function renderTeacherCompareEmptyState(resultEl, title, message) {
+    if (!resultEl) return;
+    resultEl.innerHTML = `<div class="analysis-empty-state analysis-empty-state-compact"><strong>${title}</strong>${message}</div>`;
+}
+
 function buildTeacherStatsForExam(rows, school, subjectFilter) {
     const rowsSchool = rows.filter(r => r.school === school);
     const classSet = new Set(rowsSchool.map(r => normalizeClass(r.class)));
@@ -171,18 +182,18 @@ function renderTeacherMultiPeriodComparison() {
     const examIds = periodCount === 3 ? [e1El.value, e2El.value, e3El.value] : [e1El.value, e2El.value];
 
     if (!school || !subject || !teacher) {
-        hintEl.innerHTML = '❌ 请先选择学校、学科、教师。';
-        resultEl.innerHTML = '';
+        setTeacherCompareHintState(hintEl, '请先选择学校、学科、教师。', 'error');
+        renderTeacherCompareEmptyState(resultEl, '尚未生成教师对比', '先补齐学校、学科和教师，再生成多期表现。');
         return;
     }
     if (examIds.some(x => !x)) {
-        hintEl.innerHTML = '❌ 请完整选择所有考试期次。';
-        resultEl.innerHTML = '';
+        setTeacherCompareHintState(hintEl, '请完整选择所有考试期次。', 'error');
+        renderTeacherCompareEmptyState(resultEl, '考试期次未选完整', '补齐所有考试期次后，这里会显示教师多期结果。');
         return;
     }
     if (new Set(examIds).size !== examIds.length) {
-        hintEl.innerHTML = '❌ 期次不能重复，请选择不同考试。';
-        resultEl.innerHTML = '';
+        setTeacherCompareHintState(hintEl, '期次不能重复，请选择不同考试。', 'error');
+        renderTeacherCompareEmptyState(resultEl, '期次配置有冲突', '请使用不同考试期次进行教师多期对比。');
         return;
     }
 
@@ -195,8 +206,8 @@ function renderTeacherMultiPeriodComparison() {
     });
 
     if (examStats.some(x => !x.current)) {
-        hintEl.innerHTML = '❌ 该教师在某些期次无有效数据（可能未任教该学科或缺少成绩）。';
-        resultEl.innerHTML = '';
+        setTeacherCompareHintState(hintEl, '该教师在某些期次无有效数据（可能未任教该学科或缺少成绩）。', 'error');
+        renderTeacherCompareEmptyState(resultEl, '教师数据不完整', '当前教师在部分期次没有有效任教或成绩数据，无法形成连续对比。');
         return;
     }
 
@@ -217,18 +228,26 @@ function renderTeacherMultiPeriodComparison() {
     const dPass = (typeof delta.townshipPass === 'number') ? delta.townshipPass : null;
 
     resultEl.innerHTML = `
-            <div class="sub-header">👨‍🏫 教师同学科多期表现（${teacher} / ${subject}）</div>
-            <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>期次</th><th>均分镇排</th><th>优秀率镇排</th><th>及格率镇排</th></tr></thead><tbody>${metricRows}</tbody></table></div>
-            <div style="margin-top:8px; font-size:12px; color:#475569;">
-                首末期变化（${examIds[0]} → ${examIds[examIds.length - 1]}）：
-                均分镇排 ${dAvg === null ? '-' : (dAvg >= 0 ? '+' : '') + dAvg}，
-                优秀率镇排 ${dExc === null ? '-' : (dExc >= 0 ? '+' : '') + dExc}，
-                及格率镇排 ${dPass === null ? '-' : (dPass >= 0 ? '+' : '') + dPass}
+            <div class="analysis-generated-panel analysis-compare-panel">
+                <div class="sub-header analysis-section-head analysis-generated-header">
+                    <span>👨‍🏫 教师同学科多期表现（${teacher} / ${subject}）</span>
+                    <span class="analysis-generated-meta">
+                        <span class="analysis-table-tag">${periodCount} 期对比</span>
+                        <span class="analysis-table-tag">${school}</span>
+                    </span>
+                </div>
+                <div class="analysis-generated-note">聚焦镇域排名变化，先看均分，再看优秀率和及格率，判断教师在同学科里的趋势是否稳定改善。</div>
+                <div class="table-wrap analysis-table-shell"><table class="mobile-card-table analysis-generated-table"><thead><tr><th>期次</th><th>均分镇排</th><th>优秀率镇排</th><th>及格率镇排</th></tr></thead><tbody>${metricRows}</tbody></table></div>
+                <div class="analysis-generated-note">
+                    首末期变化（${examIds[0]} → ${examIds[examIds.length - 1]}）：
+                    均分镇排 ${dAvg === null ? '-' : (dAvg >= 0 ? '+' : '') + dAvg}，
+                    优秀率镇排 ${dExc === null ? '-' : (dExc >= 0 ? '+' : '') + dExc}，
+                    及格率镇排 ${dPass === null ? '-' : (dPass >= 0 ? '+' : '') + dPass}
+                </div>
             </div>
         `;
 
-    hintEl.innerHTML = `✅ 已完成 ${periodCount} 期教师对比：${examIds.join(' → ')}`;
-    hintEl.style.color = '#16a34a';
+    setTeacherCompareHintState(hintEl, `已完成 ${periodCount} 期教师对比：${examIds.join(' → ')}`, 'success');
     window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = { school, subject, teacher, examIds, periodCount, examStats, delta, metricRows };
     setTeacherCompareCacheState(window.TEACHER_MULTI_PERIOD_COMPARE_CACHE);
 }
@@ -249,9 +268,21 @@ function renderAllTeachersMultiPeriodComparison() {
     const school = schoolEl.value;
     const examIds = periodCount === 3 ? [e1El.value, e2El.value, e3El.value] : [e1El.value, e2El.value];
 
-    if (!school) return alert('请先选择学校');
-    if (examIds.some(x => !x)) return alert('请先选择所有对比的考试期次');
-    if (new Set(examIds).size !== examIds.length) return alert('期次不能重复');
+    if (!school) {
+        setTeacherCompareHintState(hintEl, '请先选择学校。', 'error');
+        renderTeacherCompareEmptyState(resultEl, '尚未生成全校教师对比', '先选择学校后再生成全校多期结果。');
+        return;
+    }
+    if (examIds.some(x => !x)) {
+        setTeacherCompareHintState(hintEl, '请先选择所有对比的考试期次。', 'error');
+        renderTeacherCompareEmptyState(resultEl, '考试期次未选完整', '补齐所有期次后，系统会生成全校教师总表。');
+        return;
+    }
+    if (new Set(examIds).size !== examIds.length) {
+        setTeacherCompareHintState(hintEl, '期次不能重复。', 'error');
+        renderTeacherCompareEmptyState(resultEl, '期次配置有冲突', '请使用不同考试期次进行全校教师对比。');
+        return;
+    }
 
     if (window.UI) UI.loading(true, `正在生成 ${school} 全校教师对比...`);
 
@@ -283,7 +314,9 @@ function renderAllTeachersMultiPeriodComparison() {
 
     if (allTeachersSet.size === 0) {
         if (window.UI) UI.loading(false);
-        return alert('未找到该校的相关教师数据');
+        setTeacherCompareHintState(hintEl, '未找到该校的相关教师数据。', 'error');
+        renderTeacherCompareEmptyState(resultEl, '当前学校暂无教师结果', '请确认任课表与成绩数据已同步完成。');
+        return;
     }
 
     // 2. 对每个 (教师, 学科) 生成对比数据
@@ -392,17 +425,28 @@ function renderAllTeachersMultiPeriodComparison() {
     }).join('');
 
     resultEl.innerHTML = `
-            <div class="sub-header" style="color:#ea580c;">📊 全校教师多期对比总表（${school}）</div>
-            <div class="table-wrap" style="max-height:600px; overflow-y:auto;">
-                <table class="common-table" style="font-size:13px;">
+            <div class="analysis-generated-panel analysis-compare-panel">
+                <div class="sub-header analysis-section-head analysis-generated-header">
+                    <span>📊 全校教师多期对比总表（${school}）</span>
+                    <span class="analysis-generated-meta">
+                        <span class="analysis-table-tag">${results.length} 条教师/学科记录</span>
+                        <span class="analysis-table-tag">${examIds[0]} → ${examIds[examIds.length - 1]}</span>
+                    </span>
+                </div>
+                <div class="analysis-generated-note">按学科和教师分组展示多期镇域排名，适合先扫整体变化，再导出做教研复盘或校内汇报。</div>
+                <div class="table-wrap analysis-table-shell analysis-scroll-shell">
+                    <table class="common-table analysis-generated-table" style="font-size:13px;">
                     <thead style="position:sticky; top:0; z-index:10;"><tr>${ths}</tr></thead>
                     <tbody>${trs}</tbody>
                 </table>
             </div>
-            <div style="margin-top:10px; display:flex; gap:10px;">
-                <button class="btn btn-sm" onclick="exportAllTeachersMultiPeriodDiff('${school}', '${examIds.join('_')}')">📤 导出Excel</button>
+                <div class="analysis-inline-export">
+                    <button class="btn btn-sm" onclick="exportAllTeachersMultiPeriodDiff('${school}', '${examIds.join('_')}')">📤 导出Excel</button>
+                </div>
             </div>
         `;
+
+    setTeacherCompareHintState(hintEl, `已完成 ${periodCount} 期全校教师对比：${examIds.join(' → ')}`, 'success');
 
     // 缓存结果用于导出和云端保存
     setAllTeachersDiffCacheState({ results, school, examIds, periodCount });

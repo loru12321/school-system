@@ -651,6 +651,38 @@ header {
     color: #64748b;
 }
 
+.analysis-status-text {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1.6;
+}
+
+.analysis-status-text::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #94a3b8;
+    flex: 0 0 auto;
+}
+
+.analysis-status-text.is-success {
+    color: #15803d;
+}
+
+.analysis-status-text.is-success::before {
+    background: #22c55e;
+}
+
+.analysis-status-text.is-error {
+    color: #b91c1c;
+}
+
+.analysis-status-text.is-error::before {
+    background: #ef4444;
+}
+
 .analysis-info-band {
     align-items: flex-start;
     justify-content: space-between;
@@ -886,6 +918,22 @@ header {
     padding: 0 2px;
 }
 
+.analysis-result-slot {
+    margin-top: 10px;
+    display: grid;
+    gap: 12px;
+}
+
+.analysis-compare-panel {
+    display: grid;
+    gap: 10px;
+}
+
+.analysis-scroll-shell {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
 .analysis-generated-table {
     min-width: 760px;
 }
@@ -909,6 +957,18 @@ header {
     font-size: 13px;
     line-height: 1.6;
     text-align: center;
+}
+
+.analysis-empty-state-compact {
+    padding: 14px 16px;
+    font-size: 12px;
+}
+
+.analysis-empty-state strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #334155;
+    font-size: 14px;
 }
 
 .analysis-empty-cell {

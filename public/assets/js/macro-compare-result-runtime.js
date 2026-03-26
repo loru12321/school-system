@@ -14,6 +14,17 @@ const setMacroCompareCacheState = typeof window.setMacroCompareCacheState === 'f
         return nextCache;
     });
 
+function setMacroCompareHintState(hintEl, message, state = 'idle') {
+    if (!hintEl) return;
+    hintEl.textContent = message;
+    hintEl.className = `analysis-hint analysis-status-text${state === 'success' ? ' is-success' : state === 'error' ? ' is-error' : ''}`;
+}
+
+function renderMacroCompareEmptyState(resultEl, title, message) {
+    if (!resultEl) return;
+    resultEl.innerHTML = `<div class="analysis-empty-state analysis-empty-state-compact"><strong>${title}</strong>${message}</div>`;
+}
+
 function renderMacroMultiPeriodComparison() {
     const hintEl = document.getElementById('macroCompareHint');
     const resultEl = document.getElementById('macroCompareResult');
@@ -29,33 +40,33 @@ function renderMacroMultiPeriodComparison() {
     const examIds = periodCount === 3 ? [e1El.value, e2El.value, e3El.value] : [e1El.value, e2El.value];
 
     if (!school) {
-        hintEl.innerHTML = '❌ 请先选择学校。';
-        resultEl.innerHTML = '';
+        setMacroCompareHintState(hintEl, '请先选择学校。', 'error');
+        renderMacroCompareEmptyState(resultEl, '尚未生成校际对比', '先选择学校后再生成多期结果。');
         return;
     }
     if (examIds.some(x => !x)) {
-        hintEl.innerHTML = '❌ 请完整选择所有考试期次。';
-        resultEl.innerHTML = '';
+        setMacroCompareHintState(hintEl, '请完整选择所有考试期次。', 'error');
+        renderMacroCompareEmptyState(resultEl, '考试期次未选完整', '补齐所需期次后，系统会生成校际对比结果。');
         return;
     }
     if (new Set(examIds).size !== examIds.length) {
-        hintEl.innerHTML = '❌ 期次不能重复，请选择不同考试。';
-        resultEl.innerHTML = '';
+        setMacroCompareHintState(hintEl, '期次不能重复，请选择不同考试。', 'error');
+        renderMacroCompareEmptyState(resultEl, '期次配置有冲突', '请使用不同的考试期次进行对比。');
         return;
     }
 
     const rowsByExam = examIds.map(id => ({ examId: id, rows: getExamRowsForCompare(id) }));
     if (rowsByExam.some(x => !x.rows.length)) {
-        hintEl.innerHTML = '❌ 某些期次没有可用数据，请检查考试数据。';
-        resultEl.innerHTML = '';
+        setMacroCompareHintState(hintEl, '某些期次没有可用数据，请检查考试数据。', 'error');
+        renderMacroCompareEmptyState(resultEl, '缺少可用成绩数据', '至少有一期考试没有可用于校际对比的成绩。');
         return;
     }
 
     const summaryByExam = rowsByExam.map(x => ({ examId: x.examId, summary: buildSchoolSummaryForExam(x.rows) }));
     const selectedByExam = rowsByExam.map(x => ({ examId: x.examId, rows: filterRowsBySchool(x.rows, school) }));
     if (!selectedByExam.every(x => x.rows.length > 0)) {
-        hintEl.innerHTML = '❌ 所选学校在某些期次中无数据，无法对比。';
-        resultEl.innerHTML = '';
+        setMacroCompareHintState(hintEl, '所选学校在某些期次中无数据，无法对比。', 'error');
+        renderMacroCompareEmptyState(resultEl, '学校数据不完整', '所选学校在部分考试里没有成绩，当前无法生成连续对比。');
         return;
     }
 
@@ -168,16 +179,41 @@ function renderMacroMultiPeriodComparison() {
         `).join('');
 
     resultEl.innerHTML = `
-            <div class="sub-header">🏫 校际联考分析六子模块多期对比（${school}）</div>
-            <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>期次</th><th>人数</th><th>总分均分</th><th>优秀率</th><th>及格率</th><th>校际均分排位</th></tr></thead><tbody>${schoolRows}</tbody></table></div>
-            <div class="sub-header" style="margin-top:10px;">📌 子模块指标（预警/高分段/指标生/后1/3）</div>
-            <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>期次</th><th>预警等级</th><th>高分段</th><th>指标生(${moduleSeries[0]?.indicatorLabel || '未设置'})</th><th>后1/3均分</th><th>低分率</th></tr></thead><tbody>${moduleRows}</tbody></table></div>
-            <div class="sub-header" style="margin-top:10px;">🌍 全镇学校首末期变化（${changeLabel}）</div>
-            <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>学校</th><th>均分变化</th><th>优秀率变化</th><th>及格率变化</th><th>排位变化</th></tr></thead><tbody>${allRows}</tbody></table></div>
+            <div class="analysis-generated-panel analysis-compare-panel">
+                <div class="sub-header analysis-section-head analysis-generated-header">
+                    <span>🏫 校际联考分析六子模块多期对比（${school}）</span>
+                    <span class="analysis-generated-meta">
+                        <span class="analysis-table-tag">${periodCount} 期对比</span>
+                        <span class="analysis-table-tag">${examIds[0]} → ${examIds[examIds.length - 1]}</span>
+                    </span>
+                </div>
+                <div class="analysis-generated-note">先看学校主指标走势，再结合子模块和全镇变化判断站位是否稳定、预警是否缓解。</div>
+                <div class="table-wrap analysis-table-shell"><table class="mobile-card-table analysis-generated-table"><thead><tr><th>期次</th><th>人数</th><th>总分均分</th><th>优秀率</th><th>及格率</th><th>校际均分排位</th></tr></thead><tbody>${schoolRows}</tbody></table></div>
+            </div>
+            <div class="analysis-generated-panel analysis-compare-panel">
+                <div class="sub-header analysis-section-head analysis-generated-header">
+                    <span>📌 子模块指标追踪</span>
+                    <span class="analysis-generated-meta">
+                        <span class="analysis-table-tag">指标生 ${moduleSeries[0]?.indicatorLabel || '未设置'}</span>
+                    </span>
+                </div>
+                <div class="analysis-generated-note">同步观察预警等级、高分段、指标生与后 1/3 均分，判断学校结构性变化是否真实发生。</div>
+                <div class="table-wrap analysis-table-shell"><table class="mobile-card-table analysis-generated-table"><thead><tr><th>期次</th><th>预警等级</th><th>高分段</th><th>指标生(${moduleSeries[0]?.indicatorLabel || '未设置'})</th><th>后1/3均分</th><th>低分率</th></tr></thead><tbody>${moduleRows}</tbody></table></div>
+            </div>
+            <div class="analysis-generated-panel analysis-compare-panel">
+                <div class="sub-header analysis-section-head analysis-generated-header">
+                    <span>🌍 全镇学校首末期变化</span>
+                    <span class="analysis-generated-meta">
+                        <span class="analysis-table-tag">${changeLabel}</span>
+                        <span class="analysis-table-tag">按均分波动排序</span>
+                    </span>
+                </div>
+                <div class="analysis-generated-note">查看本校与其他学校同步拉开还是缩小差距，辅助判断这次变化是个体波动还是全镇性变化。</div>
+                <div class="table-wrap analysis-table-shell"><table class="mobile-card-table analysis-generated-table"><thead><tr><th>学校</th><th>均分变化</th><th>优秀率变化</th><th>及格率变化</th><th>排位变化</th></tr></thead><tbody>${allRows}</tbody></table></div>
+            </div>
         `;
 
-    hintEl.innerHTML = `✅ 已完成 ${periodCount} 期校际对比：${examIds.join(' → ')}`;
-    hintEl.style.color = '#16a34a';
+    setMacroCompareHintState(hintEl, `已完成 ${periodCount} 期校际对比：${examIds.join(' → ')}`, 'success');
     setMacroCompareCacheState({
         school,
         examIds,
