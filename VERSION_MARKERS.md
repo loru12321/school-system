@@ -69,6 +69,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.26-analysis-table-density-v22`
   - Meaning: tighten the main analysis tables and add print/export guidance notes around core result panels so macro totals, summary results, teacher detail tables, and township ranking exports are easier to scan and easier to export intentionally
 
+- Release tag: `school-system-v2026.03.26-analysis-print-layout-v23`
+  - Meaning: make printed analysis pages cleaner by hiding interactive guidance layers and converting the analysis workspace into a report-first layout with clean section heads and printable tables
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -136,3 +139,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest analysis table density UI release:
   - `git checkout school-system-v2026.03.26-analysis-table-density-v22`
+
+- Roll back to the latest analysis print layout UI release:
+  - `git checkout school-system-v2026.03.26-analysis-print-layout-v23`

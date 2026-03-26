@@ -5097,6 +5097,109 @@ body.parent-fullscreen-mode thead th {
         border: 2px solid #333 !important;
     }
 
+    .analysis-workspace .module-desc-bar.analysis-hero,
+    .analysis-workspace .analysis-flow-banner,
+    .analysis-workspace .analysis-side-nav,
+    .analysis-workspace .analysis-action-stack,
+    .analysis-workspace .analysis-inline-panel,
+    .analysis-workspace .analysis-doc-panel,
+    .analysis-workspace .analysis-table-meta,
+    .analysis-workspace .analysis-status-text,
+    .analysis-workspace .analysis-inline-export,
+    .analysis-workspace #tmModuleState-teacher-analysis {
+        display: none !important;
+    }
+
+    .analysis-workspace,
+    .analysis-workspace .analysis-results-layout,
+    .analysis-workspace .analysis-content-stack,
+    .analysis-workspace .analysis-result-slot,
+    .analysis-workspace .analysis-ranking-panel {
+        display: block !important;
+        width: 100% !important;
+        gap: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .analysis-workspace .analysis-anchor-panel,
+    .analysis-workspace .analysis-generated-panel {
+        display: block !important;
+        background: #fff !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        padding: 0 0 14px !important;
+        margin: 0 0 16px !important;
+        break-inside: avoid-page;
+        page-break-inside: avoid;
+    }
+
+    .analysis-workspace .analysis-section-head {
+        background: #fff !important;
+        border: none !important;
+        border-bottom: 2px solid #cbd5e1 !important;
+        border-radius: 0 !important;
+        padding: 0 0 8px !important;
+        margin: 0 0 8px !important;
+        color: #000 !important;
+    }
+
+    .analysis-workspace .analysis-generated-note {
+        color: #475569 !important;
+        padding: 0 !important;
+        margin: 0 0 8px !important;
+    }
+
+    .analysis-workspace .analysis-table-shell,
+    .analysis-workspace .table-wrap {
+        background: #fff !important;
+        border: 1px solid #d1d5db !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        margin-top: 8px !important;
+        overflow: visible !important;
+        max-height: none !important;
+    }
+
+    .analysis-workspace table,
+    .analysis-workspace .analysis-generated-table,
+    .analysis-workspace .analysis-table-dense,
+    .analysis-workspace .comparison-table {
+        width: 100% !important;
+        min-width: 0 !important;
+        font-size: 11px !important;
+        border-spacing: 0 !important;
+    }
+
+    .analysis-workspace th,
+    .analysis-workspace td {
+        padding: 6px 5px !important;
+        white-space: normal !important;
+        word-break: break-word;
+    }
+
+    .analysis-workspace thead th,
+    .analysis-workspace table th:first-child,
+    .analysis-workspace table td:first-child {
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
+        background: #fff !important;
+        box-shadow: none !important;
+        border-right: 1px solid #e5e7eb !important;
+        z-index: auto !important;
+    }
+
+    .analysis-workspace tr:nth-child(even),
+    .analysis-workspace tr:hover {
+        background: #fff !important;
+    }
+
+    .analysis-workspace #horizontal-box.hidden {
+        display: none !important;
+    }
+
 }
 
 #desk-labels-print-area {
