@@ -520,6 +520,13 @@ header {
     --analysis-border: #a7f3d0;
 }
 
+.analysis-workspace-tools {
+    --analysis-accent: #ea580c;
+    --analysis-surface: #fff7ed;
+    --analysis-surface-strong: #ffedd5;
+    --analysis-border: #fdba74;
+}
+
 .analysis-workspace .module-desc-bar.analysis-hero {
     background: linear-gradient(135deg, var(--analysis-surface) 0%, #ffffff 78%);
     border: 1px solid var(--analysis-border);
@@ -1244,6 +1251,71 @@ header {
     border-color: #dbe5f1;
     background: #fff;
     border-radius: 14px;
+}
+
+.analysis-workspace .proctor-setup-grid {
+    border-radius: 16px;
+    border-color: var(--analysis-border);
+    box-shadow: 0 18px 36px -34px rgba(15, 23, 42, 0.28);
+}
+
+.analysis-workspace .teacher-scroll-list {
+    border-color: var(--analysis-border);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.analysis-workspace .teacher-item {
+    border-radius: 8px;
+}
+
+.analysis-workspace .role-group {
+    border: 1px solid var(--analysis-border);
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--analysis-surface) 0%, #ffffff 100%);
+}
+
+.analysis-exam-room-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+    margin-top: 12px;
+}
+
+.analysis-exam-room-card {
+    background: #fff;
+    border: 1px solid var(--analysis-border);
+    border-radius: 16px;
+    padding: 14px 16px;
+    box-shadow: 0 18px 36px -34px rgba(15, 23, 42, 0.28);
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.analysis-exam-room-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 22px 42px -34px rgba(15, 23, 42, 0.4);
+}
+
+.analysis-exam-room-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.analysis-exam-room-info {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #475569;
+    display: flex;
+    justify-content: space-between;
+}
+
+.analysis-exam-room-range {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #9a3412;
+    font-weight: 700;
 }
 
 .analysis-workspace .fb-class-box {

@@ -19210,7 +19210,7 @@ function EXAM_switchView(view, btn) {
 
 function EXAM_renderOverview() {
     const container = document.getElementById('exam_room_grid'); container.innerHTML = '';
-    EXAM_ROOMS.forEach(room => { const first = room.students[0].examNo; const last = room.students[room.students.length - 1].examNo; container.innerHTML += `<div class="exam-room-card" onclick="alert('提示：请使用“打印桌贴”功能查看该考场的详细座次表')"><div class="exam-room-title">第 ${String(room.id).padStart(2, '0')} 考场</div><div class="exam-room-info"><span>人数: ${room.students.length}</span></div><div class="exam-room-range">${first} - ${last}</div></div>`; });
+    EXAM_ROOMS.forEach(room => { const first = room.students[0].examNo; const last = room.students[room.students.length - 1].examNo; container.innerHTML += `<div class="exam-room-card analysis-exam-room-card" onclick="alert('提示：请使用“打印桌贴”功能查看该考场的详细座次表')"><div class="exam-room-title analysis-exam-room-title">第 ${String(room.id).padStart(2, '0')} 考场</div><div class="exam-room-info analysis-exam-room-info"><span>人数: ${room.students.length}</span></div><div class="exam-room-range analysis-exam-room-range">${first} - ${last}</div></div>`; });
 }
 
 function EXAM_renderStudentList() {

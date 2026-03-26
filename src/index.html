@@ -7182,17 +7182,47 @@
                 </div>
             </div>
 
-            <div id="exam-arranger" class="section card-box">
-                <div class="module-desc-bar" style="border-color: var(--color-tools)">
+            <div id="exam-arranger" class="section card-box analysis-workspace analysis-workspace-tools">
+                <div class="module-desc-bar analysis-hero" style="border-color: var(--color-tools)">
                     <h3><i class="ti ti-settings-automation"></i> 06 智慧教务事务工具</h3>
                     <p>说明：解决日常繁杂教务。包含考场智能编排、自动生成桌贴、新生均衡分班、座位表智能排列（考虑视力/身高/矛盾）等功能。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">考场 / 监考</strong>
+                            <span class="analysis-scan-note">先导入名单，再生成考场安排，最后补全监考和桌贴。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">考务编排</strong>
+                            <span class="analysis-scan-note">适合教务快速完成考场、监考和桌贴的成套安排。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">考场 / 桌贴 / 表格</strong>
+                            <span class="analysis-scan-note">支持考场概览、监考表、桌贴打印和 Excel 导出。</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="sec-head">
+                <div class="sec-head analysis-shell-head">
                     <h2><i class="ti ti-id-badge-2"></i> 智能考场编排器</h2>
-                    <div><button class="btn btn-green" onclick="EXAM_exportResult()">📊 导出考务Excel</button><button
-                            class="btn btn-orange" onclick="EXAM_generateDeskLabels()">🏷️ 批量打印桌贴</button><button
-                            class="btn btn-purple" onclick="window.print()">🖨 批量打印桌贴</button></div>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先生成考场安排，再进入人员配置和桌贴打印；Excel 导出更适合考务留档。</div>
+                        <div class="analysis-actions">
+                            <button class="btn btn-green" onclick="EXAM_exportResult()">📊 导出考务Excel</button><button
+                                class="btn btn-orange" onclick="EXAM_generateDeskLabels()">🏷️ 批量打印桌贴</button><button
+                                class="btn btn-purple" onclick="window.print()">🖨 批量打印桌贴</button>
+                        </div>
+                    </div>
                 </div>
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>考务编排口径与使用建议</summary>
+                    <div class="explain-content">
+                        <p>建议先导入学生名单，再设置考号前缀、每场人数和同班互斥规则后生成。</p>
+                        <p>考场概览适合快速核对分配结果，监考配置适合编排人员，桌贴打印适合考前执行。</p>
+                        <p>如果要做正式留档，优先导出 Excel；如果要现场张贴，优先使用桌贴打印。</p>
+                    </div>
+                </details>
                 <div class="control-panel" style="flex-direction: column; align-items: stretch;">
                     <div
                         style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:15px; padding-bottom:15px; border-bottom:1px dashed #e2e8f0;">
@@ -7229,6 +7259,10 @@
                         </div>
                     </div>
                     <div id="exam-results-area" class="hidden">
+                        <div class="analysis-table-meta" style="margin-bottom:12px;">
+                            <span><strong>阅读建议：</strong>先看考场概览，再检查考生表和监考配置是否完整。</span>
+                            <span><strong>导出建议：</strong>桌贴和考务 Excel 适合不同场景，建议都留一份。</span>
+                        </div>
                         <div class="nav-sub-items"
                             style="margin-bottom:15px; background:#f1f5f9; border-radius:6px; border:none;">
                             <div class="nav-link active" onclick="EXAM_switchView('overview', this)">👀 考场概览</div>
@@ -7238,7 +7272,7 @@
                         </div>
                         <div id="exam-view-overview">
                             <div class="info-bar">💡 点击考场卡片可查看该考场的详细座次表。打印时会自动分页。</div>
-                            <div id="exam_room_grid" class="exam-room-grid"></div>
+                            <div id="exam_room_grid" class="exam-room-grid analysis-exam-room-grid"></div>
                         </div>
                         <div id="exam-view-students" class="hidden">
                             <div class="table-wrap">

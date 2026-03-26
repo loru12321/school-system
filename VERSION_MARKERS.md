@@ -111,6 +111,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.27-freshman-simulator-ui-v36`
   - Meaning: align freshman-simulator with the student support workspace so admission list import, class-balance diagnosis, result cards, and follow-on seat planning read like one continuous class-setup workbench
 
+- Release tag: `school-system-v2026.03.27-exam-arranger-ui-v37`
+  - Meaning: align exam-arranger with the tools workspace so roster import, room generation, invigilation setup, room cards, and export actions share the same guidance and result language as the rest of the operations chain
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -220,3 +223,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest freshman-simulator UI release:
   - `git checkout school-system-v2026.03.27-freshman-simulator-ui-v36`
+
+- Roll back to the latest exam-arranger UI release:
+  - `git checkout school-system-v2026.03.27-exam-arranger-ui-v37`
