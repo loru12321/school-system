@@ -72,6 +72,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.26-analysis-print-layout-v23`
   - Meaning: make printed analysis pages cleaner by hiding interactive guidance layers and converting the analysis workspace into a report-first layout with clean section heads and printable tables
 
+- Release tag: `school-system-v2026.03.26-analysis-cluster-ui-v24`
+  - Meaning: bring high-score, bottom3, and indicator into the same analysis workspace language so their help panels, action zones, dense tables, and export guidance match the rest of the analysis cluster
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -142,3 +145,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest analysis print layout UI release:
   - `git checkout school-system-v2026.03.26-analysis-print-layout-v23`
+
+- Roll back to the latest analysis cluster UI release:
+  - `git checkout school-system-v2026.03.26-analysis-cluster-ui-v24`

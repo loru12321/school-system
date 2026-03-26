@@ -4400,19 +4400,24 @@
             </div>
 
             <!-- 2.1 新增：高分段核算独立模块 -->
-            <div id="high-score" class="section card-box">
-                <div class="module-desc-bar" style="border-color: #b45309">
+            <div id="high-score" class="section card-box analysis-workspace analysis-workspace-amber">
+                <div class="module-desc-bar analysis-hero" style="border-color: #b45309">
                     <h3><i class="ti ti-trophy"></i> 9年级高分段核算</h3>
                     <p>考核标准：总分≥490分。赋分公式：(本校高分率 / 全镇最高高分率) × 50。</p>
                 </div>
-                <div class="sec-head">
+                <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-trophy"></i> 高分段赋分详情
                         <span class="module-help-btn" onclick="showModuleHelp('high-score')">📘 核算规则</span>
                     </h2>
-                    <button class="btn btn-green" onclick="exportHighScoreExcel()">📊 导出Excel</button>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">适合快速识别尖子生密度和高分学校梯队，导出后可直接做年级汇报附件。</div>
+                        <div class="analysis-actions">
+                            <button class="btn btn-green" onclick="exportHighScoreExcel()">📊 导出Excel</button>
+                        </div>
+                    </div>
                 </div>
-                <details class="explain-panel">
+                <details class="explain-panel analysis-doc-panel">
                     <summary>口径说明（点击展开）</summary>
                     <div class="explain-content">
                         <p>实考人数：本次有有效成绩的学生数。</p>
@@ -4421,8 +4426,12 @@
                         <p>高分赋分：以高分率进行标准化折算，用于横向比较。</p>
                     </div>
                 </details>
-                <div class="table-wrap">
-                    <table id="tb-high-score">
+                <div class="analysis-table-meta">
+                    <span><strong>阅读建议：</strong>先看高分人数，再看高分率和赋分是否同步领先。</span>
+                    <span><strong>导出建议：</strong>适合做尖子生培养和冲刺目标复盘材料。</span>
+                </div>
+                <div class="table-wrap analysis-table-shell">
+                    <table id="tb-high-score" class="analysis-table-dense">
                         <thead>
                             <tr>
                                 <th>学校名称</th>
@@ -4440,17 +4449,26 @@
 
 
             <!-- 3. 后1/3核算 -->
-            <div id="bottom3" class="section card-box">
-                <div class="sec-head">
+            <div id="bottom3" class="section card-box analysis-workspace analysis-workspace-amber">
+                <div class="module-desc-bar analysis-hero" style="border-color:#ea580c;">
+                    <h3><i class="ti ti-arrow-bar-to-down"></i> 后1/3学生核算</h3>
+                    <p>聚焦薄弱学生区间，剔除约定比例后观察真实托底能力与学校补弱结果。</p>
+                </div>
+                <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-arrow-bar-to-down"></i> 后1/3学生核算
                         <span class="module-help-btn" onclick="showModuleHelp('bottom3')">📘 剔除规则</span>
                         <span style="font-size:14px; font-weight:normal; color:#666; margin-left:5px;">(剔除率: <span
                                 id="label-exc"></span>)</span>
                     </h2>
-                    <button class="btn" onclick="exportExcel('bottom3')">导出结果</button>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">适合看学校补弱稳定性和底部学生改善幅度，导出后便于跟进帮扶策略。</div>
+                        <div class="analysis-actions">
+                            <button class="btn" onclick="exportExcel('bottom3')">导出结果</button>
+                        </div>
+                    </div>
                 </div>
-                <details class="explain-panel">
+                <details class="explain-panel analysis-doc-panel">
                     <summary>口径说明（点击展开）</summary>
                     <div class="explain-content">
                         <p>总人数：学校在籍人数（含缺考）。</p>
@@ -4460,8 +4478,12 @@
                         <p>核算得分：有效后1/3均分按全镇最高值折算，用于排名。</p>
                     </div>
                 </details>
-                <div class="table-wrap">
-                    <table id="tb-bottom3">
+                <div class="analysis-table-meta">
+                    <span><strong>阅读建议：</strong>先看有效后1/3均分，再看剔除人数和核算得分。</span>
+                    <span><strong>导出建议：</strong>适合做托底复盘、后进生帮扶和风险学校跟踪。</span>
+                </div>
+                <div class="table-wrap analysis-table-shell">
+                    <table id="tb-bottom3" class="analysis-table-dense">
                         <thead>
                             <tr>
                                 <th>学校名称</th>
@@ -4479,21 +4501,28 @@
             </div>
 
             <!-- 4. 指标生核算 -->
-            <div id="indicator" class="section card-box">
-                <div class="sec-head">
+            <div id="indicator" class="section card-box analysis-workspace analysis-workspace-violet">
+                <div class="module-desc-bar analysis-hero" style="border-color:#7c3aed;">
+                    <h3><i class="ti ti-target"></i> 指标生达标核算</h3>
+                    <p>把目标人数、指标线和达标结果放在同一张工作面里，方便教务快速判断是否达成招生与培养目标。</p>
+                </div>
+                <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-target"></i> 指标生达标核算
                         <span class="module-help-btn" onclick="showModuleHelp('indicator')">📘 计分公式</span>
                     </h2>
-                    <div>
-                        <button class="btn btn-blue" onclick="openTargetEditor()">
-                            <i class="ti ti-edit"></i> 在线调整目标
-                        </button>
-                        <button class="btn btn-green" id="btn-indicator-calc" onclick="calcIndicators()">开始计算</button>
-                        <button class="btn" onclick="exportExcel('indicator')">导出结果</button>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先确认目标口径，再计算达标情况；导出结果更适合做指标生专项追踪。</div>
+                        <div class="analysis-actions">
+                            <button class="btn btn-blue" onclick="openTargetEditor()">
+                                <i class="ti ti-edit"></i> 在线调整目标
+                            </button>
+                            <button class="btn btn-green" id="btn-indicator-calc" onclick="calcIndicators()">开始计算</button>
+                            <button class="btn" onclick="exportExcel('indicator')">导出结果</button>
+                        </div>
                     </div>
                 </div>
-                <details class="explain-panel">
+                <details class="explain-panel analysis-doc-panel">
                     <summary>口径说明（点击展开）</summary>
                     <div class="explain-content">
                         <p>指标线：根据设定的名次或比例自动换算为分数线。</p>
@@ -4502,8 +4531,12 @@
                         <p>指标得分：按达标率进行标准化折算，用于校际比较。</p>
                     </div>
                 </details>
-                <div class="table-wrap">
-                    <table id="tb-indicator">
+                <div class="analysis-table-meta">
+                    <span><strong>阅读建议：</strong>先看目标与达标人数，再看两项得分如何叠加成总分。</span>
+                    <span><strong>导出建议：</strong>适合招生目标复盘和指标生完成情况说明。</span>
+                </div>
+                <div class="table-wrap analysis-table-shell">
+                    <table id="tb-indicator" class="analysis-table-dense">
                         <thead>
                             <tr>
                                 <th>学校名称</th>

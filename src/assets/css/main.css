@@ -485,6 +485,20 @@ header {
     --analysis-border: #bfdbfe;
 }
 
+.analysis-workspace-amber {
+    --analysis-accent: #b45309;
+    --analysis-surface: #fffbeb;
+    --analysis-surface-strong: #fef3c7;
+    --analysis-border: #fde68a;
+}
+
+.analysis-workspace-violet {
+    --analysis-accent: #7c3aed;
+    --analysis-surface: #faf5ff;
+    --analysis-surface-strong: #f3e8ff;
+    --analysis-border: #ddd6fe;
+}
+
 .analysis-workspace .module-desc-bar.analysis-hero {
     background: linear-gradient(135deg, var(--analysis-surface) 0%, #ffffff 78%);
     border: 1px solid var(--analysis-border);
