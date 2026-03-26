@@ -66,6 +66,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.26-analysis-support-layer-v21`
   - Meaning: unify help entry styling, export guidance, and analysis explain panels so macro analysis, summary, and teacher analysis share one clearer support layer around their main working surfaces
 
+- Release tag: `school-system-v2026.03.26-analysis-table-density-v22`
+  - Meaning: tighten the main analysis tables and add print/export guidance notes around core result panels so macro totals, summary results, teacher detail tables, and township ranking exports are easier to scan and easier to export intentionally
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -130,3 +133,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest analysis support layer UI release:
   - `git checkout school-system-v2026.03.26-analysis-support-layer-v21`
+
+- Roll back to the latest analysis table density UI release:
+  - `git checkout school-system-v2026.03.26-analysis-table-density-v22`
