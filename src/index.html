@@ -3964,7 +3964,8 @@
                     </div>
                 </div>
                 <div class="info-bar"><span>当前模式：<strong id="mode-info"></strong>。系统将自动过滤无关数据。</span></div>
-                <div class="card-box" style="border-left:4px solid #7c3aed; background:#f5f3ff; margin-top:10px;">
+                <div class="upload-workbench-grid">
+                <div class="card-box upload-panel upload-panel--cohort" style="border-left:4px solid #7c3aed; background:#f5f3ff; margin-top:10px;">
                     <div class="sec-head" style="border-bottom-color:#ddd6fe; margin-bottom:10px;">
                         <h2 style="color:#5b21b6;"><i class="ti ti-users-group"></i> 届别管理 (Cohort)</h2>
                         <div style="font-size:12px; color:#6b7280;">以“入学年份”为主轴，贯穿三年成长档案</div>
@@ -3980,7 +3981,7 @@
                         当前届别：<strong id="cohort-current-label">未选择</strong>
                     </div>
                 </div>
-                <div class="card-box" style="border-left:4px solid #0ea5e9; background:#f0f9ff; margin-top:10px;">
+                <div class="card-box upload-panel upload-panel--exam" style="border-left:4px solid #0ea5e9; background:#f0f9ff; margin-top:10px;">
                     <div class="sec-head" style="border-bottom-color:#bae6fd; margin-bottom:10px;">
                         <h2 style="color:#0369a1;"><i class="ti ti-archive"></i> 考试批次 / 学期档案化</h2>
                         <div style="display:flex; gap:8px; align-items:center;">
@@ -4037,7 +4038,7 @@
                         <button class="btn btn-sm btn-gray" onclick="showMultiCompareDataSourceDiag()">多期数据源诊断</button>
                     </div>
                 </div>
-                <div
+                <div class="upload-panel upload-panel--templates"
                     style="background: #f0fdf4; border: 1px dashed #86efac; padding: 10px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
                     <div style="font-weight: bold; color: #166534; display: flex; align-items: center; gap: 5px;">
                         <i class="ti ti-template"></i> 新手必读：标准模板下载
@@ -4065,53 +4066,58 @@
                         </button>
                     </div>
                 </div>
-                <div class="upload-box" id="uploadBox" onclick="document.getElementById('fileInput').click()"
-                    tabindex="0" role="button" aria-label="上传成绩文件，按回车键可打开文件选择器">
-                    <div class="upload-icon"><i class="ti ti-cloud-upload"></i></div>
-                    <p style="font-size:18px; margin-bottom:10px; font-weight:600;">点击上传成绩 Excel 文件</p>
-                    <p style="color:#94a3b8;">支持多文件上传 (.xlsx, .xls)</p>
-                    <input type="file" id="fileInput" multiple accept=".xlsx,.xls" hidden>
+                </div>
+                <div class="upload-drop-shell">
+                    <div class="upload-box" id="uploadBox" onclick="document.getElementById('fileInput').click()"
+                        tabindex="0" role="button" aria-label="上传成绩文件，按回车键可打开文件选择器">
+                        <div class="upload-icon"><i class="ti ti-cloud-upload"></i></div>
+                        <p style="font-size:18px; margin-bottom:10px; font-weight:600;">点击上传成绩 Excel 文件</p>
+                        <p style="color:#94a3b8;">支持多文件上传 (.xlsx, .xls)</p>
+                        <input type="file" id="fileInput" multiple accept=".xlsx,.xls" hidden>
+                    </div>
                 </div>
 
                 <!-- [新增] 届别快照管理区域 -->
-                <div class="control-panel" style="background: #eff6ff; border-color: #bfdbfe; margin-top: 15px;">
-                    <div style="flex: 1;">
-                        <h3 style="margin: 0 0 5px 0; color: var(--primary); font-size: 15px;">
-                            💾 届别状态管理 <span id="auto-backup-status"
-                                style="font-size:11px; color:#64748b; font-weight:normal; margin-left:10px;"></span>
-                        </h3>
-                        <p style="font-size: 12px; color: #64748b; margin: 0;">保存当前届别所有进度（含成绩、教师设置、排座、分班结果），下次可直接恢复。</p>
+                <div class="upload-ops-grid">
+                    <div class="control-panel upload-ops-card" style="background: #eff6ff; border-color: #bfdbfe; margin-top: 15px;">
+                        <div style="flex: 1;">
+                            <h3 style="margin: 0 0 5px 0; color: var(--primary); font-size: 15px;">
+                                💾 届别状态管理 <span id="auto-backup-status"
+                                    style="font-size:11px; color:#64748b; font-weight:normal; margin-left:10px;"></span>
+                            </h3>
+                            <p style="font-size: 12px; color: #64748b; margin: 0;">保存当前届别所有进度（含成绩、教师设置、排座、分班结果），下次可直接恢复。</p>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-primary" id="btn-save-project" onclick="saveProjectSnapshot()">
+                                <i class="ti ti-download"></i> 保存项目 (.json)
+                            </button>
+                            <button class="btn btn-orange" id="btn-load-project"
+                                onclick="document.getElementById('projectFileInput').click()">
+                                <i class="ti ti-upload"></i> 恢复项目
+                            </button>
+                            <input type="file" id="projectFileInput" accept=".json" hidden
+                                onchange="loadProjectSnapshot(this)">
+                            <button class="btn btn-danger" id="btn-reset-system" onclick="resetSystem()"
+                                style="background: #dc2626; color: white;">
+                                <i class="ti ti-trash"></i> 清空重置
+                            </button>
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 10px;">
-                        <button class="btn btn-primary" id="btn-save-project" onclick="saveProjectSnapshot()">
-                            <i class="ti ti-download"></i> 保存项目 (.json)
-                        </button>
-                        <button class="btn btn-orange" id="btn-load-project"
-                            onclick="document.getElementById('projectFileInput').click()">
-                            <i class="ti ti-upload"></i> 恢复项目
-                        </button>
-                        <input type="file" id="projectFileInput" accept=".json" hidden
-                            onchange="loadProjectSnapshot(this)">
-                        <button class="btn btn-danger" id="btn-reset-system" onclick="resetSystem()"
-                            style="background: #dc2626; color: white;">
-                            <i class="ti ti-trash"></i> 清空重置
-                        </button>
-                    </div>
-                </div>
 
-                <div class="control-panel" id="auto-snapshot-panel"
-                    style="background:#fff7ed; border-color:#fed7aa; margin-top:10px;">
-                    <div style="flex:1;">
-                        <h3 style="margin:0 0 5px 0; color:#b45309; font-size:15px;">
-                            🕘 自动快照 / 回滚
-                        </h3>
-                        <p style="font-size:12px; color:#64748b; margin:0;">每次保存前自动保留最近 5 版，可一键回滚。</p>
-                    </div>
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <button class="btn btn-sm btn-orange"
-                            onclick="createAutoSnapshot(getCurrentSnapshotPayload())">手动生成快照</button>
-                    </div>
-                    <div id="auto-snapshot-list" style="width:100%; margin-top:8px; font-size:12px; color:#7c2d12;">
+                    <div class="control-panel upload-ops-card" id="auto-snapshot-panel"
+                        style="background:#fff7ed; border-color:#fed7aa; margin-top:10px;">
+                        <div style="flex:1;">
+                            <h3 style="margin:0 0 5px 0; color:#b45309; font-size:15px;">
+                                🕘 自动快照 / 回滚
+                            </h3>
+                            <p style="font-size:12px; color:#64748b; margin:0;">每次保存前自动保留最近 5 版，可一键回滚。</p>
+                        </div>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <button class="btn btn-sm btn-orange"
+                                onclick="createAutoSnapshot(getCurrentSnapshotPayload())">手动生成快照</button>
+                        </div>
+                        <div id="auto-snapshot-list" style="width:100%; margin-top:8px; font-size:12px; color:#7c2d12;">
+                        </div>
                     </div>
                 </div>
 
