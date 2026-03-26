@@ -813,6 +813,187 @@ header {
     background: linear-gradient(90deg, rgba(34, 197, 94, 0.88), rgba(14, 165, 233, 0.72));
 }
 
+.upload-panel-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.upload-step-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.upload-step-badge--violet {
+    background: rgba(124, 58, 237, 0.12);
+    color: #6d28d9;
+}
+
+.upload-step-badge--cyan {
+    background: rgba(14, 165, 233, 0.12);
+    color: #0369a1;
+}
+
+.upload-flow-grid {
+    display: grid;
+    gap: 12px;
+}
+
+.upload-flow-grid--cohort {
+    grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+    align-items: end;
+}
+
+.upload-flow-grid--exam {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    margin-top: 10px;
+}
+
+.upload-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.upload-field--compact {
+    max-width: 220px;
+}
+
+.upload-field--wide {
+    grid-column: span 2;
+}
+
+.upload-field-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #64748b;
+}
+
+.upload-field-input {
+    width: 100%;
+    min-height: 42px;
+    padding: 0 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(203, 213, 225, 0.88);
+    background: rgba(255, 255, 255, 0.9);
+    color: #0f172a;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68);
+}
+
+.upload-field-input--compact {
+    min-width: 220px;
+}
+
+.upload-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.upload-action-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.upload-action-row--wide {
+    grid-column: span 3;
+    align-self: end;
+}
+
+.upload-status-row,
+.upload-status-strip {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.upload-inline-card {
+    min-height: 64px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(226, 232, 240, 0.92);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+}
+
+.upload-inline-card span {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #64748b;
+}
+
+.upload-inline-card strong {
+    font-size: 14px;
+    line-height: 1.4;
+    color: #0f172a;
+}
+
+.upload-inline-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.76);
+    border: 1px dashed rgba(148, 163, 184, 0.34);
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.upload-inline-status--block {
+    display: flex;
+    margin-top: 10px;
+}
+
+.upload-history-row {
+    margin-top: 12px;
+}
+
+.upload-history-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.upload-history-controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.upload-history-controls .btn {
+    flex-shrink: 0;
+}
+
 .upload-drop-shell {
     margin-top: 18px;
     padding: 18px;
@@ -870,8 +1051,39 @@ header {
         grid-column: 1 / -1;
     }
 
+    .upload-flow-grid--cohort,
+    .upload-flow-grid--exam {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .upload-field--wide,
+    .upload-action-row--wide {
+        grid-column: span 2;
+    }
+
     .upload-ops-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .upload-flow-grid--cohort,
+    .upload-flow-grid--exam {
+        grid-template-columns: 1fr;
+    }
+
+    .upload-field--wide,
+    .upload-action-row--wide {
+        grid-column: span 1;
+    }
+
+    .upload-field-input--compact {
+        min-width: 0;
+    }
+
+    .upload-history-controls {
+        flex-direction: column;
+        align-items: stretch;
     }
 }
 

@@ -36,6 +36,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.26-upload-workbench-ui-v11`
   - Meaning: reorganize the data hub into a clearer upload workbench with stronger cohort, exam archive, template, and backup panel hierarchy
 
+- Release tag: `school-system-v2026.03.26-cohort-exam-flow-ui-v12`
+  - Meaning: reshape cohort management and exam archive controls into a clearer step-by-step flow with stronger summary cards and status messaging
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -70,3 +73,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest upload workbench UI release:
   - `git checkout school-system-v2026.03.26-upload-workbench-ui-v11`
+
+- Roll back to the latest cohort/exam flow UI release:
+  - `git checkout school-system-v2026.03.26-cohort-exam-flow-ui-v12`

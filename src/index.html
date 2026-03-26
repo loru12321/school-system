@@ -3968,74 +3968,107 @@
                 <div class="card-box upload-panel upload-panel--cohort" style="border-left:4px solid #7c3aed; background:#f5f3ff; margin-top:10px;">
                     <div class="sec-head" style="border-bottom-color:#ddd6fe; margin-bottom:10px;">
                         <h2 style="color:#5b21b6;"><i class="ti ti-users-group"></i> 届别管理 (Cohort)</h2>
-                        <div style="font-size:12px; color:#6b7280;">以“入学年份”为主轴，贯穿三年成长档案</div>
+                        <div class="upload-panel-meta">
+                            <span class="upload-step-badge upload-step-badge--violet">Step 1</span>
+                            <span style="font-size:12px; color:#6b7280;">以“入学年份”为主轴，贯穿三年成长档案</span>
+                        </div>
                     </div>
-                    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-                        <input id="cohort-year" type="number" min="2000" max="2100" placeholder="入学年份 (如 2022)"
-                            style="padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; width:180px;">
-                        <button class="btn btn-purple" onclick="CohortManager.addFromUI()">➕ 新建届别</button>
-                        <button class="btn btn-gray" onclick="resetCohortSelection()">↩ 重新选择届别</button>
-                        <span id="cohort-status" style="font-size:12px; color:#64748b;"></span>
+                    <div class="upload-flow-grid upload-flow-grid--cohort">
+                        <label class="upload-field upload-field--compact">
+                            <span class="upload-field-label">入学年份</span>
+                            <input id="cohort-year" class="upload-field-input upload-field-input--compact" type="number" min="2000" max="2100" placeholder="入学年份 (如 2022)">
+                        </label>
+                        <div class="upload-action-row">
+                            <button class="btn btn-purple" onclick="CohortManager.addFromUI()">➕ 新建届别</button>
+                            <button class="btn btn-gray" onclick="resetCohortSelection()">↩ 重新选择届别</button>
+                        </div>
                     </div>
-                    <div style="margin-top:8px; font-size:12px; color:#475569;">
-                        当前届别：<strong id="cohort-current-label">未选择</strong>
+                    <div class="upload-status-row">
+                        <div class="upload-inline-card">
+                            <span>当前届别</span>
+                            <strong id="cohort-current-label">未选择</strong>
+                        </div>
+                        <div id="cohort-status" class="upload-inline-status">等待创建或切换届别</div>
                     </div>
                 </div>
                 <div class="card-box upload-panel upload-panel--exam" style="border-left:4px solid #0ea5e9; background:#f0f9ff; margin-top:10px;">
                     <div class="sec-head" style="border-bottom-color:#bae6fd; margin-bottom:10px;">
                         <h2 style="color:#0369a1;"><i class="ti ti-archive"></i> 考试批次 / 学期档案化</h2>
-                        <div style="display:flex; gap:8px; align-items:center;">
-                            <span id="exam-archive-status" style="font-size:12px; color:#64748b;">未封存</span>
+                        <div class="upload-panel-meta" style="display:flex; gap:8px; align-items:center;">
+                            <span class="upload-step-badge upload-step-badge--cyan">Step 2</span>
+                            <span id="exam-archive-status" class="upload-inline-status">未封存</span>
                         </div>
                     </div>
-                    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-                        <span style="font-size:12px; color:#475569;">届别：</span>
-                        <span id="exam-cohort-label" style="font-size:12px; font-weight:bold; color:#1e3a8a;">未选择</span>
-                        <select id="exam-year" style="padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px;"
-                            onchange="refreshExamGradePreview(); onExamTermChange();">
-                            <option value="2025-2026">2025-2026</option>
-                            <option value="2026-2027">2026-2027</option>
-                            <option value="2027-2028">2027-2028</option>
-                        </select>
-                        <select id="exam-term" style="padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px;"
-                            onchange="refreshExamGradePreview(); onExamTermChange();">
-                            <option value="上学期">上学期</option>
-                            <option value="下学期">下学期</option>
-                        </select>
-                        <select id="exam-type" style="padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px;">
-                            <option value="月考">月考</option>
-                            <option value="期中">期中</option>
-                            <option value="期末">期末</option>
-                            <option value="模拟">模拟</option>
-                        </select>
-                        <input id="exam-date" type="date"
-                            style="padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px;">
-                        <input id="exam-name" type="text" placeholder="考试名称(优先，留空则用考试类型)"
-                            style="padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; width:200px;">
-                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#475569;">
+                    <div class="upload-status-strip">
+                        <div class="upload-inline-card">
+                            <span>届别</span>
+                            <strong id="exam-cohort-label">未选择</strong>
+                        </div>
+                        <div class="upload-inline-card">
+                            <span>当前考试</span>
+                            <strong id="exam-key-display">未设置</strong>
+                        </div>
+                        <div class="upload-inline-card">
+                            <span>本次年级</span>
+                            <strong id="exam-grade-label">-</strong>
+                        </div>
+                    </div>
+                    <div class="upload-flow-grid upload-flow-grid--exam">
+                        <label class="upload-field">
+                            <span class="upload-field-label">学年</span>
+                            <select id="exam-year" class="upload-field-input"
+                                onchange="refreshExamGradePreview(); onExamTermChange();">
+                                <option value="2025-2026">2025-2026</option>
+                                <option value="2026-2027">2026-2027</option>
+                                <option value="2027-2028">2027-2028</option>
+                            </select>
+                        </label>
+                        <label class="upload-field">
+                            <span class="upload-field-label">学期</span>
+                            <select id="exam-term" class="upload-field-input"
+                                onchange="refreshExamGradePreview(); onExamTermChange();">
+                                <option value="上学期">上学期</option>
+                                <option value="下学期">下学期</option>
+                            </select>
+                        </label>
+                        <label class="upload-field">
+                            <span class="upload-field-label">考试类型</span>
+                            <select id="exam-type" class="upload-field-input">
+                                <option value="月考">月考</option>
+                                <option value="期中">期中</option>
+                                <option value="期末">期末</option>
+                                <option value="模拟">模拟</option>
+                            </select>
+                        </label>
+                        <label class="upload-field">
+                            <span class="upload-field-label">考试日期</span>
+                            <input id="exam-date" class="upload-field-input" type="date">
+                        </label>
+                        <label class="upload-field upload-field--wide">
+                            <span class="upload-field-label">考试名称</span>
+                            <input id="exam-name" class="upload-field-input" type="text" placeholder="考试名称(优先，留空则用考试类型)">
+                        </label>
+                        <label class="upload-checkbox">
                             <input type="checkbox" id="exam-reset-point"> 本次考试经历重新分班
                         </label>
-                        <span style="font-size:12px; color:#475569;">本次年级：</span>
-                        <strong id="exam-grade-label" style="font-size:12px; color:#1e3a8a;">-</strong>
-                        <button class="btn btn-primary" onclick="setCurrentExamMeta()">设为当前考试</button>
-                        <button class="btn btn-orange" onclick="archiveCurrentExam()">一键封存本次考试</button>
-                        <button class="btn btn-gray" onclick="unlockArchive()">解除封存</button>
+                        <div class="upload-action-row upload-action-row--wide">
+                            <button class="btn btn-primary" onclick="setCurrentExamMeta()">设为当前考试</button>
+                            <button class="btn btn-orange" onclick="archiveCurrentExam()">一键封存本次考试</button>
+                            <button class="btn btn-gray" onclick="unlockArchive()">解除封存</button>
+                        </div>
                     </div>
-                    <div style="margin-top:8px; font-size:12px; color:#475569;">
-                        当前考试ID：<strong id="exam-key-display">未设置</strong>
+                    <div class="upload-history-row">
+                        <div class="upload-history-field">
+                            <span class="upload-field-label">历史考试</span>
+                            <div class="upload-history-controls">
+                                <select id="exam-history-select" class="upload-field-input upload-field-input--compact"></select>
+                                <button class="btn btn-sm btn-gray" onclick="CohortDB.loadExamFromSelect()">切换到该考试</button>
+                                <button class="btn btn-sm btn-gray" onclick="showMultiCompareDataSourceDiag()">多期数据源诊断</button>
+                            </div>
+                        </div>
                     </div>
-                    <div
-                        style="margin-top:8px; font-size:12px; color:#475569; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                        历史考试：
-                        <select id="exam-history-select"
-                            style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:6px; min-width:220px;"></select>
-                        <button class="btn btn-sm btn-gray" onclick="CohortDB.loadExamFromSelect()">切换到该考试</button>
-                    </div>
-                    <div id="exam-history-status" style="margin-top:6px; font-size:12px; color:#64748b;">
+                    <div id="exam-history-status" class="upload-inline-status upload-inline-status--block">
                         历史考试: 0 期｜最近快照: 无
-                    </div>
-                    <div style="margin-top:6px;">
-                        <button class="btn btn-sm btn-gray" onclick="showMultiCompareDataSourceDiag()">多期数据源诊断</button>
                     </div>
                 </div>
                 <div class="upload-panel upload-panel--templates"
