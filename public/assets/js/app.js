@@ -23582,13 +23582,16 @@ function renderAutoSnapshotsUI() {
     if (!container) return;
     const list = JSON.parse(localStorage.getItem('AUTO_SNAPSHOTS') || '[]');
     if (list.length === 0) {
-        container.innerHTML = '暂无快照';
+        container.innerHTML = '<div class="upload-inline-status upload-inline-status--block">暂无快照</div>';
         return;
     }
     container.innerHTML = list.map((item, idx) => {
         const time = new Date(item.ts).toLocaleString();
-        return `<div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px dashed #fed7aa;">
-                <span>⏱️ ${time} <span style="color:#64748b;">(${item.key})</span></span>
+        return `<div class="auto-snapshot-card">
+                <div class="auto-snapshot-copy">
+                    <strong>⏱️ ${time}</strong>
+                    <span>${item.key}</span>
+                </div>
                 <button class="btn btn-sm btn-gray" onclick="restoreAutoSnapshot(${idx})">回滚</button>
             </div>`;
     }).join('');

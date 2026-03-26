@@ -48,6 +48,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.26-template-upload-flow-v15`
   - Meaning: merge template download and score upload into one clearer intake flow so “download template -> upload data -> continue” reads as a single path
 
+- Release tag: `school-system-v2026.03.26-backup-snapshot-ui-v16`
+  - Meaning: reshape backup, restore, and auto-snapshot controls into clearer workflow cards with stronger rollback visibility
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -94,3 +97,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest template/upload flow release:
   - `git checkout school-system-v2026.03.26-template-upload-flow-v15`
+
+- Roll back to the latest backup/snapshot UI release:
+  - `git checkout school-system-v2026.03.26-backup-snapshot-ui-v16`

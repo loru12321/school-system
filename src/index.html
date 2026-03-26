@@ -4145,15 +4145,16 @@
 
                 <!-- [新增] 届别快照管理区域 -->
                 <div class="upload-ops-grid">
-                    <div class="control-panel upload-ops-card" style="background: #eff6ff; border-color: #bfdbfe; margin-top: 15px;">
-                        <div style="flex: 1;">
-                            <h3 style="margin: 0 0 5px 0; color: var(--primary); font-size: 15px;">
-                                💾 届别状态管理 <span id="auto-backup-status"
-                                    style="font-size:11px; color:#64748b; font-weight:normal; margin-left:10px;"></span>
-                            </h3>
+                    <div class="control-panel upload-ops-card upload-ops-card--backup" style="background: #eff6ff; border-color: #bfdbfe; margin-top: 15px;">
+                        <div class="upload-ops-copy" style="flex: 1;">
+                            <div class="upload-panel-meta">
+                                <span class="upload-step-badge upload-step-badge--slate">Step 4</span>
+                                <span id="auto-backup-status" class="upload-inline-status">本地与云端待确认</span>
+                            </div>
+                            <h3 style="margin: 10px 0 5px 0; color: var(--primary); font-size: 15px;">💾 届别状态管理</h3>
                             <p style="font-size: 12px; color: #64748b; margin: 0;">保存当前届别所有进度（含成绩、教师设置、排座、分班结果），下次可直接恢复。</p>
                         </div>
-                        <div style="display: flex; gap: 10px;">
+                        <div class="upload-ops-actions" style="display: flex; gap: 10px;">
                             <button class="btn btn-primary" id="btn-save-project" onclick="saveProjectSnapshot()">
                                 <i class="ti ti-download"></i> 保存项目 (.json)
                             </button>
@@ -4168,20 +4169,24 @@
                                 <i class="ti ti-trash"></i> 清空重置
                             </button>
                         </div>
+                        <div class="upload-ops-note">建议在切换届别、导入新考试批次或大批量修改前，先做一次手动备份。</div>
                     </div>
 
-                    <div class="control-panel upload-ops-card" id="auto-snapshot-panel"
+                    <div class="control-panel upload-ops-card upload-ops-card--snapshot" id="auto-snapshot-panel"
                         style="background:#fff7ed; border-color:#fed7aa; margin-top:10px;">
-                        <div style="flex:1;">
-                            <h3 style="margin:0 0 5px 0; color:#b45309; font-size:15px;">
-                                🕘 自动快照 / 回滚
-                            </h3>
+                        <div class="upload-ops-copy" style="flex:1;">
+                            <div class="upload-panel-meta">
+                                <span class="upload-step-badge upload-step-badge--amber">Step 5</span>
+                                <span class="upload-inline-status">保留最近 5 版</span>
+                            </div>
+                            <h3 style="margin:10px 0 5px 0; color:#b45309; font-size:15px;">🕘 自动快照 / 回滚</h3>
                             <p style="font-size:12px; color:#64748b; margin:0;">每次保存前自动保留最近 5 版，可一键回滚。</p>
                         </div>
-                        <div style="display:flex; gap:10px; align-items:center;">
+                        <div class="upload-ops-actions" style="display:flex; gap:10px; align-items:center;">
                             <button class="btn btn-sm btn-orange"
                                 onclick="createAutoSnapshot(getCurrentSnapshotPayload())">手动生成快照</button>
                         </div>
+                        <div class="upload-ops-note">如果本次导入或配置不满意，可以直接从最近快照回滚，不需要重头再来。</div>
                         <div id="auto-snapshot-list" style="width:100%; margin-top:8px; font-size:12px; color:#7c2d12;">
                         </div>
                     </div>
