@@ -769,6 +769,103 @@ header {
         linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.94)) !important;
 }
 
+.upload-summary-strip {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.upload-summary-card {
+    min-height: 108px;
+    padding: 14px 16px;
+    border-radius: 20px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.92)),
+        linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(255, 255, 255, 0));
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.05);
+}
+
+.upload-summary-card span {
+    display: block;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #64748b;
+}
+
+.upload-summary-card strong {
+    display: block;
+    margin-top: 12px;
+    font-size: 18px;
+    line-height: 1.3;
+    color: #0f172a;
+}
+
+.upload-summary-card em {
+    display: block;
+    margin-top: 8px;
+    font-style: normal;
+    font-size: 12px;
+    line-height: 1.55;
+    color: #64748b;
+}
+
+.upload-flow-notice {
+    margin-top: 14px;
+    min-height: 48px;
+    padding: 12px 14px;
+    border-radius: 18px;
+    background:
+        linear-gradient(90deg, rgba(14, 165, 233, 0.10), rgba(255, 255, 255, 0.94)),
+        rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(186, 230, 253, 0.94);
+    color: #0369a1;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+}
+
+.upload-feedback-board {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.upload-feedback-card {
+    min-height: 112px;
+    padding: 14px 16px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05);
+}
+
+.upload-feedback-card h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.upload-feedback-card p {
+    margin: 12px 0 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: #64748b;
+}
+
+.upload-feedback-card .status-badge {
+    margin-top: 10px;
+}
+
 .upload-workbench-grid {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -1045,6 +1142,11 @@ header {
 }
 
 @media screen and (max-width: 1100px) {
+    .upload-summary-strip,
+    .upload-feedback-board {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .upload-panel--cohort,
     .upload-panel--exam,
     .upload-panel--templates {
@@ -1067,6 +1169,11 @@ header {
 }
 
 @media screen and (max-width: 768px) {
+    .upload-summary-strip,
+    .upload-feedback-board {
+        grid-template-columns: 1fr;
+    }
+
     .upload-flow-grid--cohort,
     .upload-flow-grid--exam {
         grid-template-columns: 1fr;

@@ -39,6 +39,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.26-cohort-exam-flow-ui-v12`
   - Meaning: reshape cohort management and exam archive controls into a clearer step-by-step flow with stronger summary cards and status messaging
 
+- Release tag: `school-system-v2026.03.26-upload-status-ui-v13`
+  - Meaning: add a compact upload summary strip and a clearer feedback board so data-hub readiness, sync state, archive state, and backup state can be read at a glance
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -76,3 +79,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest cohort/exam flow UI release:
   - `git checkout school-system-v2026.03.26-cohort-exam-flow-ui-v12`
+
+- Roll back to the latest upload status UI release:
+  - `git checkout school-system-v2026.03.26-upload-status-ui-v13`

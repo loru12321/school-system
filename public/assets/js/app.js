@@ -22990,6 +22990,7 @@ function applyArchiveLockUI() {
         const el = document.getElementById(id);
         if (el) el.disabled = !!locked;
     });
+    if (typeof updateUploadWorkbenchStatus === 'function') updateUploadWorkbenchStatus();
 }
 
 // === Cohort DB & Smart Link ===
@@ -23536,6 +23537,7 @@ function updateExamHistoryStatusBar() {
         ? `${latest.key}（${new Date(latest.ts).toLocaleString('zh-CN')}）`
         : '无';
     statusEl.textContent = `历史考试: ${examCount} 期｜最近快照: ${latestText}`;
+    if (typeof updateUploadWorkbenchStatus === 'function') updateUploadWorkbenchStatus();
 }
 
 function showMultiCompareDataSourceDiag() {
@@ -24987,6 +24989,7 @@ function manualBackup() {
     }
     localStorage.setItem('MANUAL_BACKUP_AT', new Date().toISOString());
     logAction('备份', `已备份到 ${key}`);
+    if (typeof updateUploadWorkbenchStatus === 'function') updateUploadWorkbenchStatus();
     if (window.UI) UI.toast('✅ 备份完成', 'success');
 }
 
@@ -25009,8 +25012,108 @@ async function manualRestore() {
         writeCurrentSchool(data.MY_SCHOOL || readCurrentSchool());
     }
     updateStatusPanel();
+    if (typeof updateUploadWorkbenchStatus === 'function') updateUploadWorkbenchStatus();
     logAction('恢复', `已从 ${key} 恢复`);
     if (window.UI) UI.toast('✅ 恢复完成', 'success');
+}
+
+function updateUploadWorkbenchStatus() {
+    const summaryEl = document.getElementById('upload-summary-strip');
+    const noticeEl = document.getElementById('upload-flow-notice');
+    const feedbackEl = document.getElementById('upload-feedback-board');
+    if (!summaryEl && !noticeEl && !feedbackEl) return;
+
+    const termId = readCurrentTermId() || (typeof getTermId === 'function' ? getTermId(getExamMetaFromUI()) : '');
+    const examId = CURRENT_EXAM_ID || readWorkspaceExamId() || '未设置';
+    const cohortId = CURRENT_COHORT_ID || readWorkspaceCohortId() || '';
+    const cohortLabel = String(document.getElementById('cohort-current-label')?.innerText || '').trim() || (cohortId || '未选择');
+    const gradeLabel = String(document.getElementById('exam-grade-label')?.innerText || '').trim() || '-';
+    const mySchool = readCurrentSchool() || '未选择';
+    const scoreCount = Array.isArray(RAW_DATA) ? RAW_DATA.length : 0;
+    const teacherCount = window.TEACHER_MAP && typeof window.TEACHER_MAP === 'object' ? Object.keys(window.TEACHER_MAP).length : 0;
+    const syncCloud = localStorage.getItem('CLOUD_SYNC_AT');
+    const syncTeacher = localStorage.getItem('TEACHER_SYNC_AT');
+    const manualBackupAt = localStorage.getItem('MANUAL_BACKUP_AT');
+    const locked = isArchiveLocked();
+
+    const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : (window.COHORT_DB || null);
+    const examCount = db?.exams ? Object.keys(db.exams).length : 0;
+    const snapshots = JSON.parse(localStorage.getItem('AUTO_SNAPSHOTS') || '[]');
+    const latestSnapshot = snapshots.reduce((acc, item) => {
+        const ts = Number(item?.ts || 0);
+        return ts > acc.ts ? { ts, key: String(item?.key || '').trim() || '未知项目' } : acc;
+    }, { ts: 0, key: '' });
+    const latestSnapshotText = latestSnapshot.ts > 0 ? `${latestSnapshot.key}｜${new Date(latestSnapshot.ts).toLocaleString('zh-CN')}` : '暂无自动快照';
+
+    const flowReady = {
+        cohort: !!cohortId,
+        exam: examId && examId !== '未设置',
+        scores: scoreCount > 0,
+        teacher: teacherCount > 0,
+        school: !!mySchool && mySchool !== '未选择'
+    };
+    const readyCount = Object.values(flowReady).filter(Boolean).length;
+    const noticeText = readyCount === 5
+        ? '当前届别、考试、本校、成绩和任课表都已就绪，可以直接进入分析模块。'
+        : readyCount >= 3
+            ? '当前基础链路已部分就绪，建议先补齐剩余项，再进行全量分析与导出。'
+            : '当前仍处在导入准备阶段，建议先完成届别、考试和成绩导入。';
+
+    const summaryCards = [
+        { label: '当前届别', value: cohortLabel, meta: flowReady.cohort ? '成长主线已锁定' : '先创建或切换届别' },
+        { label: '当前考试', value: examId, meta: flowReady.exam ? `年级 ${gradeLabel}` : '请先设置当前考试' },
+        { label: '成绩数据', value: flowReady.scores ? `${scoreCount} 条` : '未导入', meta: flowReady.scores ? '可进入成绩分析' : '请先上传成绩 Excel' },
+        { label: '任课表', value: flowReady.teacher ? `${teacherCount} 条` : '未导入', meta: flowReady.teacher ? '教学画像可用' : '建议同步任课表' },
+        { label: '本校定位', value: mySchool, meta: flowReady.school ? '筛选口径已锁定' : '请先选择本校' }
+    ];
+
+    if (summaryEl) {
+        summaryEl.innerHTML = summaryCards.map((card) => `
+            <div class="upload-summary-card">
+                <span>${card.label}</span>
+                <strong>${card.value}</strong>
+                <em>${card.meta}</em>
+            </div>
+        `).join('');
+    }
+
+    if (noticeEl) {
+        noticeEl.textContent = noticeText;
+    }
+
+    if (feedbackEl) {
+        const cloudBadge = syncCloud
+            ? '<span class="status-badge badge-ok">云端已同步</span>'
+            : '<span class="status-badge badge-warn">待同步</span>';
+        const teacherBadge = syncTeacher
+            ? '<span class="status-badge badge-ok">任课已同步</span>'
+            : '<span class="status-badge badge-warn">待同步</span>';
+        const archiveBadge = locked
+            ? '<span class="status-badge badge-err">只读模式</span>'
+            : '<span class="status-badge badge-ok">可编辑</span>';
+        const backupBadge = manualBackupAt
+            ? '<span class="status-badge badge-ok">已有手动备份</span>'
+            : '<span class="status-badge badge-warn">建议先备份</span>';
+
+        feedbackEl.innerHTML = `
+            <div class="upload-feedback-card">
+                <h4><i class="ti ti-cloud-check"></i> 云端与任课同步</h4>
+                ${cloudBadge}
+                ${teacherBadge}
+                <p>全量云端同步：${syncCloud ? new Date(syncCloud).toLocaleString('zh-CN') : '尚未同步'}<br>任课同步：${syncTeacher ? new Date(syncTeacher).toLocaleString('zh-CN') : '尚未同步'}</p>
+            </div>
+            <div class="upload-feedback-card">
+                <h4><i class="ti ti-lock-access"></i> 当前考试状态</h4>
+                ${archiveBadge}
+                <p>当前考试：${examId}<br>当前年级：${gradeLabel}<br>历史考试：${examCount} 期</p>
+            </div>
+            <div class="upload-feedback-card">
+                <h4><i class="ti ti-history-toggle"></i> 快照与恢复</h4>
+                ${backupBadge}
+                <p>手动备份：${manualBackupAt ? new Date(manualBackupAt).toLocaleString('zh-CN') : '尚未创建'}<br>最近自动快照：${latestSnapshotText}</p>
+            </div>
+        `;
+    }
 }
 
 function updateStatusPanel() {
@@ -25055,6 +25158,7 @@ function updateStatusPanel() {
     renderActionLogs();
     scanDataIssues();
     updateRoleHint();
+    updateUploadWorkbenchStatus();
 }
 window.updateStatusPanel = updateStatusPanel;
 
