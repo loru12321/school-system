@@ -4268,21 +4268,39 @@
                     </div>
                     <div id="macroCompareResult" style="margin-top:10px;"></div>
                 </div>
-                <div class="layout-grid">
-                    <div class="side-nav">
+                <div class="layout-grid analysis-results-layout">
+                    <div class="side-nav analysis-side-nav">
                         <div class="side-nav-title">快速定位</div>
+                        <div class="analysis-side-note">先从总览判断站位，再切换到学科明细和横向对比。</div>
                         <div class="side-nav-link active" onclick="scrollToAnchor('anchor-total', this)">🏆 综合总表</div>
                         <div class="side-nav-link" onclick="toggleSubNav(this)"><span>📘 各科详情</span><i
                                 class="ti ti-chevron-right nav-caret"></i></div>
                         <div id="side-nav-subjects-container" class="side-nav-sub-container"></div>
                         <div class="side-nav-link" onclick="scrollToAnchor('horizontal-box', this)">↔️ 横向对比</div>
                     </div>
-                    <div class="content-area">
-                        <div id="anchor-total" class="anchor-target">
-                            <div class="sub-header" style="margin-top:0;"><span>🏆 <span class="label-total">全科总</span>
+                    <div class="content-area analysis-content-stack">
+                        <div class="analysis-flow-banner">
+                            <div class="analysis-flow-step">
+                                <span class="analysis-flow-kicker">Step 1</span>
+                                <strong class="analysis-flow-value">综合总表</strong>
+                                <span class="analysis-flow-note">先判断全镇整体站位、排名与波动区间。</span>
+                            </div>
+                            <div class="analysis-flow-step">
+                                <span class="analysis-flow-kicker">Step 2</span>
+                                <strong class="analysis-flow-value">学科明细</strong>
+                                <span class="analysis-flow-note">再查看各学科优势、短板和具体排名分布。</span>
+                            </div>
+                            <div class="analysis-flow-step">
+                                <span class="analysis-flow-kicker">Step 3</span>
+                                <strong class="analysis-flow-value">横向对比</strong>
+                                <span class="analysis-flow-note">最后导出横向表，沉淀联考复盘和沟通材料。</span>
+                            </div>
+                        </div>
+                        <div id="anchor-total" class="anchor-target analysis-anchor-panel">
+                            <div class="sub-header analysis-section-head"><span>🏆 <span class="label-total">全科总</span>
                                     -
                                     综合分析表</span></div>
-                            <div class="table-wrap">
+                            <div class="table-wrap analysis-table-shell">
                                 <table id="tb-total">
                                     <thead>
                                         <tr>
@@ -4302,14 +4320,13 @@
                                 </table>
                             </div>
                         </div>
-                        <div id="subject-tables-container" class="anchor-target" style="padding-top:20px;"></div>
-                        <div id="horizontal-box" class="hidden anchor-target" style="padding-top:20px;">
-                            <div class="sub-header"
-                                style="display:flex; justify-content:space-between; align-items:center;">
+                        <div id="subject-tables-container" class="anchor-target analysis-subject-stack"></div>
+                        <div id="horizontal-box" class="hidden anchor-target analysis-anchor-panel">
+                            <div class="sub-header analysis-section-head">
                                 <span>↔️ 横向对比一览表</span>
                                 <button class="btn btn-green" onclick="exportHorizontalExcel()">导出横向Excel</button>
                             </div>
-                            <div class="table-wrap" id="horizontal-table"></div>
+                            <div class="table-wrap analysis-table-shell" id="horizontal-table"></div>
                         </div>
                     </div>
                 </div>
@@ -4933,9 +4950,10 @@
                         <p>校内排名：同学科教师按综合得分排序，分数并列时共享名次。</p>
                     </div>
                 </details>
-                <div class="layout-grid">
-                    <div class="side-nav">
+                <div class="layout-grid analysis-results-layout analysis-results-layout-teacher">
+                    <div class="side-nav analysis-side-nav">
                         <div class="side-nav-title">功能导航</div>
+                        <div class="analysis-side-note">先扫教师概况，再看明细对比，最后处理结对子与乡镇排名。</div>
                         <div class="side-nav-link active" onclick="scrollToAnchor('anchor-cards', this)">📇 教师概况卡片</div>
                         <div class="side-nav-link" onclick="scrollToAnchor('anchor-detail', this)">📊 详细数据对比</div>
                         <div class="side-nav-link" onclick="scrollToAnchor('anchor-pair', this)">🤝 结对子建议</div>
@@ -4943,8 +4961,25 @@
                                 class="ti ti-chevron-right nav-caret"></i></div>
                         <div id="side-nav-teacher-ranks-container" class="side-nav-sub-container"></div>
                     </div>
-                    <div class="content-area">
-                        <div id="anchor-cards" class="anchor-target"> <!-- 使用 x-data 声明这是一个 Alpine 组件，x-show 控制显示 -->
+                    <div class="content-area analysis-content-stack">
+                        <div class="analysis-flow-banner">
+                            <div class="analysis-flow-step">
+                                <span class="analysis-flow-kicker">Step 1</span>
+                                <strong class="analysis-flow-value">教师概况</strong>
+                                <span class="analysis-flow-note">先看谁稳定、谁波动、谁需要支持。</span>
+                            </div>
+                            <div class="analysis-flow-step">
+                                <span class="analysis-flow-kicker">Step 2</span>
+                                <strong class="analysis-flow-value">明细对比</strong>
+                                <span class="analysis-flow-note">再比均分、优率、及格率和综合得分。</span>
+                            </div>
+                            <div class="analysis-flow-step">
+                                <span class="analysis-flow-kicker">Step 3</span>
+                                <strong class="analysis-flow-value">互助与排名</strong>
+                                <span class="analysis-flow-note">最后形成结对子建议，并输出乡镇排名结果。</span>
+                            </div>
+                        </div>
+                        <div id="anchor-cards" class="anchor-target analysis-anchor-panel"> <!-- 使用 x-data 声明这是一个 Alpine 组件，x-show 控制显示 -->
                             <div class="teacher-cards-container" id="teacherCardsContainer" x-data>
 
                                 <!-- 空状态提示 -->
@@ -4996,13 +5031,12 @@
                                 </template>
                             </div>
                         </div>
-                        <div id="anchor-detail" class="anchor-target" style="padding-top:30px;">
-                            <div class="sub-header"
-                                style="display:flex; justify-content:space-between; align-items:center;">
+                        <div id="anchor-detail" class="anchor-target analysis-anchor-panel">
+                            <div class="sub-header analysis-section-head">
                                 <span>📊 教师教学详细数据对比表</span>
                                 <button class="btn btn-green" onclick="exportTeacherComparisonExcel()">导出Excel</button>
                             </div>
-                            <div class="table-wrap">
+                            <div class="table-wrap analysis-table-shell">
                                 <table class="comparison-table" id="teacherComparisonTable">
                                     <thead>
                                         <tr>
@@ -5032,15 +5066,17 @@
                                 </table>
                             </div>
                         </div>
-                        <div id="anchor-pair" class="anchor-target" style="padding-top:30px;">
+                        <div id="anchor-pair" class="anchor-target analysis-anchor-panel">
                             <div id="teacher-pairing-box">
-                                <div class="sub-header">🤝 校内教师“结对子”互助建议 (基于数据分析)</div>
+                                <div class="sub-header analysis-section-head">🤝 校内教师“结对子”互助建议 (基于数据分析)</div>
                                 <div id="teacher-pairing-suggestions" class="pairing-container"></div>
                             </div>
                         </div>
-                        <div id="teacher-township-ranking-container"></div>
-                        <div style="margin-top:10px; text-align:right;"><button class="btn btn-green"
-                                onclick="exportTeacherTownshipRankExcel()">导出教师乡镇排名</button></div>
+                        <div class="analysis-anchor-panel analysis-ranking-panel">
+                            <div id="teacher-township-ranking-container"></div>
+                            <div class="analysis-inline-export"><button class="btn btn-green"
+                                    onclick="exportTeacherTownshipRankExcel()">导出教师乡镇排名</button></div>
+                        </div>
                     </div>
                 </div>
             </div>

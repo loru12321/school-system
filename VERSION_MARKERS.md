@@ -54,6 +54,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.26-analysis-shell-ui-v17`
   - Meaning: unify the first-screen hierarchy of macro analysis, summary, and teacher analysis so the three highest-frequency analysis surfaces share the same workspace shell, guidance strips, and comparison panel language
 
+- Release tag: `school-system-v2026.03.26-analysis-results-rail-v18`
+  - Meaning: reshape the lower analysis work area with a clearer navigation rail, flow banner, and continuous result panels so macro analysis and teacher analysis read as one guided workspace instead of disconnected blocks
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -106,3 +109,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest analysis shell UI release:
   - `git checkout school-system-v2026.03.26-analysis-shell-ui-v17`
+
+- Roll back to the latest analysis results rail UI release:
+  - `git checkout school-system-v2026.03.26-analysis-results-rail-v18`
