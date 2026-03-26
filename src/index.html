@@ -4225,12 +4225,15 @@
                         <i class="ti ti-chart-dots"></i> 乡镇学校分析 - 两率一分
                         <span class="module-help-btn" onclick="showModuleHelp('macro')">📘 算法说明</span>
                     </h2>
-                    <div class="control-panel analysis-toolbar">
-                        <input type="text" id="mySchool" placeholder="输入本校名称高亮" style="width:180px;">
-                        <button class="btn" onclick="renderHorizontalTable()">生成横向对比表</button>
-                        <button class="btn btn-purple" onclick="toggleTableHeatmap('horizontal-table')">🎨
-                            开启热力图</button>
-                        <button class="btn btn-green" onclick="exportMacroTables()">导出全科分析表</button>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">支持横向对比、热力图和全科导出，适合联考复盘前先快速定站位。</div>
+                        <div class="control-panel analysis-toolbar">
+                            <input type="text" id="mySchool" placeholder="输入本校名称高亮" style="width:180px;">
+                            <button class="btn" onclick="renderHorizontalTable()">生成横向对比表</button>
+                            <button class="btn btn-purple" onclick="toggleTableHeatmap('horizontal-table')">🎨
+                                开启热力图</button>
+                            <button class="btn btn-green" onclick="exportMacroTables()">导出全科分析表</button>
+                        </div>
                     </div>
                 </div>
                 <div class="analysis-inline-panel">
@@ -4539,14 +4542,25 @@
                             教务常用</span>
                         <span class="module-help-btn" onclick="showModuleHelp('summary')">📘 权重说明</span>
                     </h2>
-                    <div class="analysis-actions">
-                        <button class="btn btn-green" onclick="calcSummary()">生成总排名</button>
-                        <button class="btn btn-green" onclick="exportSummaryTable()">导出报告</button>
-                        <button class="btn btn-orange" onclick="exportPPTReport()">
-                            <i class="ti ti-presentation"></i> 导出汇报PPT
-                        </button>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">适合考试后的教务汇总与校长汇报，建议完成前置分析后再统一导出。</div>
+                        <div class="analysis-actions">
+                            <button class="btn btn-green" onclick="calcSummary()">生成总排名</button>
+                            <button class="btn btn-green" onclick="exportSummaryTable()">导出报告</button>
+                            <button class="btn btn-orange" onclick="exportPPTReport()">
+                                <i class="ti ti-presentation"></i> 导出汇报PPT
+                            </button>
+                        </div>
                     </div>
                 </div>
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>汇总口径与导出建议</summary>
+                    <div class="explain-content">
+                        <p>建议先完成横向分析、指标生、后 1/3 与教师分析，再生成综合总排名。</p>
+                        <p>表格导出更适合二次整理，PPT 导出更适合会议汇报和阶段复盘。</p>
+                        <p>如果刚调整过目标、权重或届别数据，建议重新生成各模块结果后再汇总一次。</p>
+                    </div>
+                </details>
                 <div class="table-wrap analysis-summary-table">
                     <table id="tb-summary">
                         <thead>
@@ -4886,7 +4900,12 @@
                             班主任必看</span>
                         <span class="module-help-btn" onclick="showModuleHelp('teacher')">📘 评价模型</span>
                     </h2>
-                    <button class="btn" onclick="exportTeacherAnalysis()">导出教师分析</button>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">先查看画像和多期趋势，再导出教师分析与乡镇排名，适合教研组复盘。</div>
+                        <div class="analysis-actions">
+                            <button class="btn" onclick="exportTeacherAnalysis()">导出教师分析</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="info-bar analysis-info-band"
                     style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
@@ -4942,7 +4961,7 @@
                     </div>
                 </div>
                 <div id="tmModuleState-teacher-analysis"></div>
-                <details class="explain-panel">
+                <details class="explain-panel analysis-doc-panel">
                     <summary>指标口径说明（点击展开）</summary>
                     <div class="explain-content">
                         <p>平均分：该教师所教班级、该学科所有有效成绩的算术平均。</p>

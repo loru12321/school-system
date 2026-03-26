@@ -583,12 +583,41 @@ header {
     align-items: center;
 }
 
+.analysis-action-stack {
+    display: grid;
+    gap: 8px;
+    justify-items: end;
+}
+
+.analysis-action-note {
+    font-size: 12px;
+    line-height: 1.55;
+    color: #64748b;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--analysis-border);
+    background: linear-gradient(135deg, var(--analysis-surface) 0%, rgba(255, 255, 255, 0.96) 100%);
+    text-align: right;
+}
+
 .analysis-actions .btn {
     white-space: nowrap;
 }
 
 .analysis-shell-head > .btn {
     white-space: nowrap;
+}
+
+.analysis-workspace .module-help-btn {
+    border-color: var(--analysis-border);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, var(--analysis-surface) 100%);
+    color: #334155;
+}
+
+.analysis-workspace .module-help-btn:hover {
+    color: var(--analysis-accent);
+    border-color: var(--analysis-accent);
+    background: linear-gradient(135deg, var(--analysis-surface) 0%, rgba(255, 255, 255, 0.96) 100%);
 }
 
 .analysis-inline-panel {
@@ -709,6 +738,27 @@ header {
     flex: 1;
     min-width: 220px;
     color: #334155;
+}
+
+.analysis-doc-panel {
+    margin-top: 14px;
+    border-radius: 16px;
+    border-color: var(--analysis-border);
+    background: linear-gradient(135deg, var(--analysis-surface) 0%, rgba(255, 255, 255, 0.98) 100%);
+    box-shadow: 0 18px 36px -34px rgba(15, 23, 42, 0.32);
+}
+
+.analysis-doc-panel summary {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.analysis-doc-panel .explain-content {
+    color: #475569;
+}
+
+.analysis-doc-panel .explain-content p {
+    margin: 6px 0;
 }
 
 .analysis-summary-table {
@@ -1064,12 +1114,22 @@ header {
 
     .analysis-toolbar,
     .analysis-inline-controls,
-    .analysis-actions {
+    .analysis-actions,
+    .analysis-action-stack {
         width: 100%;
     }
 
     .analysis-inline-controls span {
         width: 100%;
+    }
+
+    .analysis-action-stack {
+        justify-items: stretch;
+    }
+
+    .analysis-action-note {
+        border-radius: 14px;
+        text-align: left;
     }
 
     .analysis-side-nav {

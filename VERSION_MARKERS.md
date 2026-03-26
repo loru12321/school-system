@@ -63,6 +63,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.26-analysis-compare-feedback-v20`
   - Meaning: unify macro compare and teacher compare result containers so empty states, validation errors, success hints, and generated comparison panels all follow the same analysis workspace language
 
+- Release tag: `school-system-v2026.03.26-analysis-support-layer-v21`
+  - Meaning: unify help entry styling, export guidance, and analysis explain panels so macro analysis, summary, and teacher analysis share one clearer support layer around their main working surfaces
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -124,3 +127,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest analysis compare feedback UI release:
   - `git checkout school-system-v2026.03.26-analysis-compare-feedback-v20`
+
+- Roll back to the latest analysis support layer UI release:
+  - `git checkout school-system-v2026.03.26-analysis-support-layer-v21`
