@@ -4195,20 +4195,37 @@
             </div>
 
             <!-- 2. 乡镇学校分析 -->
-            <div id="analysis" class="section card-box">
-                <div class="module-desc-bar" style="border-color: var(--color-macro)">
+            <div id="analysis" class="section card-box analysis-workspace analysis-workspace-macro">
+                <div class="module-desc-bar analysis-hero" style="border-color: var(--color-macro)">
                     <h3><i class="ti ti-world-latitude"></i> 02 镇域宏观横向评价 <span class="badge"
                             style="background:#0ea5e9;">📊
                             班主任必看</span></h3>
                     <p><strong>一句话目的：</strong>快速比较学校/班级整体水平与排名位置。</p>
                     <p><strong>推荐顺序：</strong>导入完成后优先查看本模块，确定整体站位。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">镜像横向站位</strong>
+                            <span class="analysis-scan-note">先看综合总表，再钻取学科明细与热力图。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Audience</span>
+                            <strong class="analysis-scan-value">班主任 / 教务</strong>
+                            <span class="analysis-scan-note">快速判断学校、班级和学科在镇域中的位置。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">总表 / 多期 / 导出</strong>
+                            <span class="analysis-scan-note">支持全科分析导出，也可以保存云端对比。</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="sec-head">
+                <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-chart-dots"></i> 乡镇学校分析 - 两率一分
                         <span class="module-help-btn" onclick="showModuleHelp('macro')">📘 算法说明</span>
                     </h2>
-                    <div class="control-panel" style="margin-bottom:0; padding:5px;">
+                    <div class="control-panel analysis-toolbar">
                         <input type="text" id="mySchool" placeholder="输入本校名称高亮" style="width:180px;">
                         <button class="btn" onclick="renderHorizontalTable()">生成横向对比表</button>
                         <button class="btn btn-purple" onclick="toggleTableHeatmap('horizontal-table')">🎨
@@ -4216,35 +4233,27 @@
                         <button class="btn btn-green" onclick="exportMacroTables()">导出全科分析表</button>
                     </div>
                 </div>
-                <div
-                    style="margin:12px 0 14px 0; padding:10px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc;">
-                    <div
-                        style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-                        <div style="font-weight:600; color:#334155;">🧭 校际联考多期对比（2期/3期）</div>
-                        <div style="display:flex; gap:8px; align-items:center; font-size:12px;">
+                <div class="analysis-inline-panel">
+                    <div class="analysis-inline-top">
+                        <div class="analysis-inline-title">🧭 校际联考多期对比（2期/3期）</div>
+                        <div class="analysis-inline-meta">
                             <label>期数：</label>
-                            <select id="macroComparePeriodCount"
-                                style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px;"
-                                onchange="onMacroComparePeriodCountChange()">
+                            <select id="macroComparePeriodCount" onchange="onMacroComparePeriodCountChange()">
                                 <option value="2">2期</option>
                                 <option value="3">3期</option>
                             </select>
                         </div>
                     </div>
-                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+                    <div class="analysis-inline-controls">
                         <label style="font-size:12px; color:#475569;">学校：</label>
-                        <select id="macroCompareSchool"
-                            style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:130px;"></select>
+                        <select id="macroCompareSchool" style="min-width:130px;"></select>
                         <label style="font-size:12px; color:#475569;">第1期：</label>
-                        <select id="macroCompareExam1"
-                            style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:180px;"></select>
+                        <select id="macroCompareExam1" style="min-width:180px;"></select>
                         <label style="font-size:12px; color:#475569;">第2期：</label>
-                        <select id="macroCompareExam2"
-                            style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:180px;"></select>
+                        <select id="macroCompareExam2" style="min-width:180px;"></select>
                         <span id="macroCompareExam3Wrap" style="display:none;">
                             <label style="font-size:12px; color:#475569; margin-left:2px;">第3期：</label>
-                            <select id="macroCompareExam3"
-                                style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:180px;"></select>
+                            <select id="macroCompareExam3" style="min-width:180px;"></select>
                         </span>
                         <button class="btn btn-sm btn-blue"
                             onclick="renderMacroMultiPeriodComparison()">生成校际多期对比</button>
@@ -4255,7 +4264,7 @@
                         <button class="btn btn-sm" style="background:#06b6d4; color:white;"
                             onclick="viewCloudMacroCompares()">📋 查看云端对比</button>
                     </div>
-                    <div id="macroCompareHint" style="margin-top:6px; font-size:12px; color:#64748b;">请选择2期或3期考试后生成。
+                    <div id="macroCompareHint" class="analysis-hint">请选择2期或3期考试后生成。
                     </div>
                     <div id="macroCompareResult" style="margin-top:10px;"></div>
                 </div>
@@ -4480,14 +4489,36 @@
             </div>
 
             <!-- 5. 综合总排名 -->
-            <div id="summary" class="section card-box">
-                <div class="sec-head">
+            <div id="summary" class="section card-box analysis-workspace analysis-workspace-summary">
+                <div class="module-desc-bar analysis-hero" style="border-color:#16a34a;">
+                    <h3><i class="ti ti-report"></i> 综合分析报告 <span class="badge" style="background:#16a34a;">核心汇总</span></h3>
+                    <p><strong>一句话目的：</strong>把关键分析指标汇总成最终排序，方便汇报、复盘和导出。</p>
+                    <p><strong>推荐顺序：</strong>完成横向分析和学科分析后再生成，避免在数据尚未校准时直接汇总。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Decision</span>
+                            <strong class="analysis-scan-value">综合排名</strong>
+                            <span class="analysis-scan-note">把多个核心指标压缩成最终排序，适合教务统一判断。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">表格 / PPT</strong>
+                            <span class="analysis-scan-note">支持直接导出报告和汇报稿，减少二次整理时间。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Timing</span>
+                            <strong class="analysis-scan-value">汇总 / 复盘</strong>
+                            <span class="analysis-scan-note">适合考试后的教务汇总、校长汇报和阶段复盘。</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-report"></i> 综合分析报告 <span class="badge" style="background:#16a34a;">⭐
                             教务常用</span>
                         <span class="module-help-btn" onclick="showModuleHelp('summary')">📘 权重说明</span>
                     </h2>
-                    <div>
+                    <div class="analysis-actions">
                         <button class="btn btn-green" onclick="calcSummary()">生成总排名</button>
                         <button class="btn btn-green" onclick="exportSummaryTable()">导出报告</button>
                         <button class="btn btn-orange" onclick="exportPPTReport()">
@@ -4495,7 +4526,7 @@
                         </button>
                     </div>
                 </div>
-                <div class="table-wrap">
+                <div class="table-wrap analysis-summary-table">
                     <table id="tb-summary">
                         <thead>
                             <tr>
@@ -4805,8 +4836,30 @@
             </div>
 
             <!-- 6. 本校教师分析 -->
-            <div id="teacher-analysis" class="section card-box">
-                <div class="sec-head">
+            <div id="teacher-analysis" class="section card-box analysis-workspace analysis-workspace-teacher">
+                <div class="module-desc-bar analysis-hero" style="border-color:#2563eb;">
+                    <h3><i class="ti ti-school"></i> 教师教学分析 <span class="badge" style="background:#0ea5e9;">高频使用</span></h3>
+                    <p><strong>一句话目的：</strong>聚焦本校教师与学科组表现，快速定位优势、波动与支持对象。</p>
+                    <p><strong>推荐顺序：</strong>先同步任课表，再结合多期对比查看教师变化趋势和学科组稳定性。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">教师 / 学科组</strong>
+                            <span class="analysis-scan-note">先看卡片概览，再钻取明细对比与镇域排名。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Need</span>
+                            <strong class="analysis-scan-value">任课表 + 成绩</strong>
+                            <span class="analysis-scan-note">依赖任课同步和考试成绩，缺少任课信息时无法精确到教师。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Action</span>
+                            <strong class="analysis-scan-value">多期 / 云端 / 导出</strong>
+                            <span class="analysis-scan-note">支持单教师和全校对比，也能保存云端结果方便追踪。</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-school"></i> 本校教师教学分析 <span class="badge" style="background:#0ea5e9;">📊
                             班主任必看</span>
@@ -4814,49 +4867,39 @@
                     </h2>
                     <button class="btn" onclick="exportTeacherAnalysis()">导出教师分析</button>
                 </div>
-                <div class="info-bar"
+                <div class="info-bar analysis-info-band"
                     style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
                     <span>本校教师教学分析基于导入的教师信息和成绩数据，展示教师所教班级的整体表现，并与乡镇学校进行对比。</span>
                     <button id="teacher-sync-cta" class="btn btn-orange" style="display:none; white-space:nowrap;"
                         onclick="openTeacherSync()">去同步任课表</button>
                 </div>
-                <div
-                    style="margin:12px 0 14px 0; padding:10px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc;">
-                    <div
-                        style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-                        <div style="font-weight:600; color:#334155;">🧭 教师同学科多期对比（2期/3期）</div>
-                        <div style="display:flex; gap:8px; align-items:center; font-size:12px;">
+                <div class="analysis-inline-panel">
+                    <div class="analysis-inline-top">
+                        <div class="analysis-inline-title">🧭 教师同学科多期对比（2期/3期）</div>
+                        <div class="analysis-inline-meta">
                             <label>期数：</label>
-                            <select id="teacherComparePeriodCount"
-                                style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px;"
-                                onchange="onTeacherComparePeriodCountChange()">
+                            <select id="teacherComparePeriodCount" onchange="onTeacherComparePeriodCountChange()">
                                 <option value="2">2期</option>
                                 <option value="3">3期</option>
                             </select>
                         </div>
                     </div>
-                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+                    <div class="analysis-inline-controls">
                         <label style="font-size:12px; color:#475569;">学校：</label>
-                        <select id="teacherCompareSchool"
-                            style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:130px;"
+                        <select id="teacherCompareSchool" style="min-width:130px;"
                             onchange="updateTeacherCompareTeacherSelect()"></select>
                         <label style="font-size:12px; color:#475569;">学科：</label>
-                        <select id="teacherCompareSubject"
-                            style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:110px;"
+                        <select id="teacherCompareSubject" style="min-width:110px;"
                             onchange="updateTeacherCompareTeacherSelect()"></select>
                         <label style="font-size:12px; color:#475569;">教师：</label>
-                        <select id="teacherCompareTeacher"
-                            style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:120px;"></select>
+                        <select id="teacherCompareTeacher" style="min-width:120px;"></select>
                         <label style="font-size:12px; color:#475569;">第1期：</label>
-                        <select id="teacherCompareExam1"
-                            style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:180px;"></select>
+                        <select id="teacherCompareExam1" style="min-width:180px;"></select>
                         <label style="font-size:12px; color:#475569;">第2期：</label>
-                        <select id="teacherCompareExam2"
-                            style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:180px;"></select>
+                        <select id="teacherCompareExam2" style="min-width:180px;"></select>
                         <span id="teacherCompareExam3Wrap" style="display:none;">
                             <label style="font-size:12px; color:#475569; margin-left:2px;">第3期：</label>
-                            <select id="teacherCompareExam3"
-                                style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:180px;"></select>
+                            <select id="teacherCompareExam3" style="min-width:180px;"></select>
                         </span>
                         <button class="btn btn-sm btn-blue"
                             onclick="renderTeacherMultiPeriodComparison()">生成教师多期对比</button>
@@ -4869,7 +4912,7 @@
                         <button class="btn btn-sm" style="background:#06b6d4; color:white;"
                             onclick="viewCloudTeacherCompares()" title="查看已保存的教师对比记录">📋 查看云端对比</button>
                     </div>
-                    <div id="teacherCompareHint" style="margin-top:6px; font-size:12px; color:#64748b;">
+                    <div id="teacherCompareHint" class="analysis-hint">
                         请选择学校+学科+教师并选择2期或3期考试后生成。</div>
                     <div id="teacherCompareResult" style="margin-top:10px;"></div>
                 </div>

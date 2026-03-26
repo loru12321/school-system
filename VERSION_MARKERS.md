@@ -51,6 +51,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.26-backup-snapshot-ui-v16`
   - Meaning: reshape backup, restore, and auto-snapshot controls into clearer workflow cards with stronger rollback visibility
 
+- Release tag: `school-system-v2026.03.26-analysis-shell-ui-v17`
+  - Meaning: unify the first-screen hierarchy of macro analysis, summary, and teacher analysis so the three highest-frequency analysis surfaces share the same workspace shell, guidance strips, and comparison panel language
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -100,3 +103,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest backup/snapshot UI release:
   - `git checkout school-system-v2026.03.26-backup-snapshot-ui-v16`
+
+- Roll back to the latest analysis shell UI release:
+  - `git checkout school-system-v2026.03.26-analysis-shell-ui-v17`
