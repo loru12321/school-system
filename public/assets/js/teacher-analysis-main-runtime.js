@@ -2210,34 +2210,43 @@ function renderMultiPeriodComparison() {
     const selectedExamIds = periodCount === 3 ? [e1El.value, e2El.value, e3El.value] : [e1El.value, e2El.value];
     const examIds = sortExamIdsChronologically(selectedExamIds);
 
+    const setProgressCompareHintState = (message, state = 'idle') => {
+        hintEl.textContent = message;
+        hintEl.className = `analysis-hint analysis-status-text${state === 'success' ? ' is-success' : state === 'error' ? ' is-error' : ''}`;
+    };
+
+    const renderProgressCompareEmptyState = (title, message) => {
+        resultEl.innerHTML = `<div class="analysis-empty-state analysis-empty-state-compact"><strong>${title}</strong>${message}</div>`;
+    };
+
     if (!school) {
-        hintEl.innerHTML = '❌ 请先选择学校。';
-        resultEl.innerHTML = '';
+        setProgressCompareHintState('请先选择学校。', 'error');
+        renderProgressCompareEmptyState('尚未生成多期对比', '先选择学校后再生成多期进退步结果。');
         return;
     }
     if (examIds.some(x => !x)) {
-        hintEl.innerHTML = '❌ 请完整选择所有考试期次。';
-        resultEl.innerHTML = '';
+        setProgressCompareHintState('请完整选择所有考试期次。', 'error');
+        renderProgressCompareEmptyState('考试期次未选完整', '补齐所需期次后，这里会生成多期变化结果。');
         return;
     }
     if (new Set(examIds).size !== examIds.length) {
-        hintEl.innerHTML = '❌ 期次不能重复，请选择不同考试。';
-        resultEl.innerHTML = '';
+        setProgressCompareHintState('期次不能重复，请选择不同考试。', 'error');
+        renderProgressCompareEmptyState('期次配置有冲突', '请使用不同考试期次进行进退步多期对比。');
         return;
     }
 
     const rowsByExam = examIds.map(id => ({ examId: id, rows: getExamRowsForCompare(id) }));
     if (rowsByExam.some(x => !x.rows.length)) {
-        hintEl.innerHTML = '❌ 某些期次没有可用数据，请检查考试数据。';
-        resultEl.innerHTML = '';
+        setProgressCompareHintState('某些期次没有可用数据，请检查考试数据。', 'error');
+        renderProgressCompareEmptyState('缺少可用成绩数据', '至少有一期考试没有可用于进退步对比的成绩。');
         return;
     }
 
     const summaryByExam = rowsByExam.map(x => ({ examId: x.examId, summary: buildSchoolSummaryForExam(x.rows) }));
     const selectedByExam = rowsByExam.map(x => ({ examId: x.examId, rows: filterRowsBySchool(x.rows, school) }));
     if (!selectedByExam.every(x => x.rows.length > 0)) {
-        hintEl.innerHTML = '❌ 所选学校在某些期次中无数据，无法对比。';
-        resultEl.innerHTML = '';
+        setProgressCompareHintState('所选学校在某些期次中无数据，无法对比。', 'error');
+        renderProgressCompareEmptyState('学校数据不完整', '所选学校在部分考试里没有成绩，当前无法生成连续多期结果。');
         return;
     }
 
@@ -2319,15 +2328,31 @@ function renderMultiPeriodComparison() {
         })();
 
     resultEl.innerHTML = `
-            <div class="sub-header">🏫 学校多期指标对比（${school}）</div>
-            <div class="table-wrap"><table class="mobile-card-table"><thead><tr><th>期次</th><th>人数</th><th>总分均分</th><th>优秀率</th><th>及格率</th><th>校际均分排位</th></tr></thead><tbody>${schoolTableRows}</tbody></table></div>
-            <div style="margin:8px 0; font-size:12px; color:#475569;">${avgChangeText}；匹配学生数：${studentRows.length}</div>
-            <div class="sub-header">👤 学生多期排名变化明细</div>
-            <div class="table-wrap">${detailHtml}</div>
+            <div class="analysis-generated-panel analysis-compare-panel">
+                <div class="sub-header analysis-section-head analysis-generated-header">
+                    <span>🏫 学校多期指标对比（${school}）</span>
+                    <span class="analysis-generated-meta">
+                        <span class="analysis-table-tag">${periodCount} 期对比</span>
+                        <span class="analysis-table-tag">${examIds[0]} → ${examIds[examIds.length - 1]}</span>
+                    </span>
+                </div>
+                <div class="analysis-generated-note">先看学校整体指标走势，再结合平均名次变化判断是阶段波动还是连续上浮。</div>
+                <div class="table-wrap analysis-table-shell"><table class="mobile-card-table analysis-generated-table"><thead><tr><th>期次</th><th>人数</th><th>总分均分</th><th>优秀率</th><th>及格率</th><th>校际均分排位</th></tr></thead><tbody>${schoolTableRows}</tbody></table></div>
+                <div class="analysis-generated-note">${avgChangeText}；匹配学生数：${studentRows.length}</div>
+            </div>
+            <div class="analysis-generated-panel analysis-compare-panel">
+                <div class="sub-header analysis-section-head analysis-generated-header">
+                    <span>👤 学生多期排名变化明细</span>
+                    <span class="analysis-generated-meta">
+                        <span class="analysis-table-tag">最多展示 200 人</span>
+                    </span>
+                </div>
+                <div class="analysis-generated-note">优先展示变化最明显的学生，适合班主任做重点跟踪、谈话和分层辅导。</div>
+                <div class="table-wrap analysis-table-shell">${detailHtml}</div>
+            </div>
         `;
 
-    hintEl.innerHTML = `✅ 已完成 ${periodCount} 期对比：${examIds.join(' → ')}`;
-    hintEl.style.color = '#16a34a';
+    setProgressCompareHintState(`已完成 ${periodCount} 期对比：${examIds.join(' → ')}`, 'success');
     setMultiPeriodCompareCacheState({ school, examIds, periodCount, summaryByExam, studentRows });
 }
 

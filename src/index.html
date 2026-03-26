@@ -5966,47 +5966,98 @@
             </div>
 
             <!-- 进退步追踪分析 (修复缺失模块) -->
-            <div id="progress-analysis" class="section card-box">
-                <div class="module-desc-bar" style="border-color: var(--color-diag)">
+            <div id="progress-analysis" class="section card-box analysis-workspace analysis-workspace-progress">
+                <div class="module-desc-bar analysis-hero" style="border-color: var(--color-diag)">
                     <h3><i class="ti ti-trending-up"></i> 进退步追踪与增值评价 <span class="badge" style="background:#f59e0b;">📊
                             班主任必看</span></h3>
                     <p><strong>一句话目的：</strong>定位学生进退步与班级增值效果。</p>
                     <p><strong>推荐顺序：</strong>先上传历史成绩，再进入本模块看进步分布。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">进步 / 退步</strong>
+                            <span class="analysis-scan-note">先看学校或班级整体增值，再下钻到学生个人变化。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Need</span>
+                            <strong class="analysis-scan-value">历史基准数据</strong>
+                            <span class="analysis-scan-note">依赖上次考试或历史基准，缺少基准时无法形成增值判断。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">报表 / 明细</strong>
+                            <span class="analysis-scan-note">支持增值报表、多期对比与个人进退步明细导出。</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="sec-head">
+                <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-trending-up"></i> 学生进退步追踪分析
                         <span class="module-help-btn" onclick="showModuleHelp('value-added')">📘 增值评价</span>
                     </h2>
-                    <div style="display:flex; gap:10px;">
-                        <div style="display:flex; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden;">
-                            <button class="btn btn-sm active" onclick="switchValueAddedView('school', this)"
-                                style="border-radius:0; background:#e0f2fe; color:#0369a1;">按学校看</button>
-                            <button class="btn btn-sm" onclick="switchValueAddedView('class', this)"
-                                style="border-radius:0; background:white; color:#64748b;">按班级看</button>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先看集体增值结果，再切到个人变化明细；导出更适合班主任复盘和年级跟踪。</div>
+                        <div style="display:flex; gap:10px;">
+                            <div style="display:flex; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden;">
+                                <button class="btn btn-sm active" onclick="switchValueAddedView('school', this)"
+                                    style="border-radius:0; background:#e0f2fe; color:#0369a1;">按学校看</button>
+                                <button class="btn btn-sm" onclick="switchValueAddedView('class', this)"
+                                    style="border-radius:0; background:white; color:#64748b;">按班级看</button>
+                            </div>
+                            <button class="btn btn-green" onclick="exportValueAddedExcel()">📊 导出增值评价表</button>
                         </div>
-                        <button class="btn btn-green" onclick="exportValueAddedExcel()">📊 导出增值评价表</button>
                     </div>
                 </div>
 
-                <div class="info-bar">
+                <div class="info-bar analysis-info-band">
                     <span id="va-data-status">⚠️ 请先上传“上次考试”数据以激活此功能</span>
                     <span style="margin-left:auto; font-size:12px;">核心算法：(入口排名 - 出口排名) = 增值名次</span>
                 </div>
 
-                <div class="layout-grid">
-                    <div class="side-nav">
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>增值口径与使用建议</summary>
+                    <div class="explain-content">
+                        <p>先看集体增值，判断学校或班级整体是否产生正向变化，再下钻到个人明细。</p>
+                        <p>多期对比更适合看趋势，单次进退步明细更适合用于班主任个体跟进。</p>
+                        <p>如果系统提示缺少历史基准，请先同步上次考试数据或选择可用历史考试。</p>
+                    </div>
+                </details>
+
+                <div class="layout-grid analysis-results-layout">
+                    <div class="side-nav analysis-side-nav">
                         <div class="side-nav-title">功能视图</div>
+                        <div class="analysis-side-note">先看集体增值报表，再切到个人进退步明细和多期变化。</div>
                         <div class="side-nav-link active" onclick="scrollToAnchor('anchor-va-report', this)">📈 增值性评价报表
                         </div>
                         <div class="side-nav-link" onclick="scrollToAnchor('anchor-va-trend', this)">🔍 个人进退步追踪</div>
                     </div>
-                    <div class="content-area">
+                    <div class="content-area analysis-content-stack">
+                        <div class="analysis-flow-banner">
+                            <div class="analysis-flow-step">
+                                <span class="analysis-flow-kicker">Step 1</span>
+                                <strong class="analysis-flow-value">集体增值</strong>
+                                <span class="analysis-flow-note">先判断学校或班级整体是上浮、持平还是回落。</span>
+                            </div>
+                            <div class="analysis-flow-step">
+                                <span class="analysis-flow-kicker">Step 2</span>
+                                <strong class="analysis-flow-value">多期趋势</strong>
+                                <span class="analysis-flow-note">再看 2 期 / 3 期变化，确认是偶发波动还是连续趋势。</span>
+                            </div>
+                            <div class="analysis-flow-step">
+                                <span class="analysis-flow-kicker">Step 3</span>
+                                <strong class="analysis-flow-value">个人明细</strong>
+                                <span class="analysis-flow-note">最后筛出重点学生，导出做跟踪、谈话和班级复盘。</span>
+                            </div>
+                        </div>
                         <!-- 增值评价表 -->
-                        <div id="anchor-va-report" class="anchor-target">
-                            <div class="sub-header">🏫 教学效能增值评价表 (集体)</div>
-                            <div class="table-wrap">
-                                <table id="tb-value-added">
+                        <div id="anchor-va-report" class="anchor-target analysis-anchor-panel">
+                            <div class="sub-header analysis-section-head">🏫 教学效能增值评价表 (集体)</div>
+                            <div class="analysis-table-meta">
+                                <span><strong>阅读建议：</strong>先看平均增值，再看评价和排名。</span>
+                                <span><strong>导出建议：</strong>适合年级组、班主任和校内阶段复盘。</span>
+                            </div>
+                            <div class="table-wrap analysis-table-shell">
+                                <table id="tb-value-added" class="analysis-table-dense">
                                     <thead>
                                         <tr>
                                             <th>单位名称</th>
@@ -6024,8 +6075,8 @@
                         </div>
 
                         <!-- 个人追踪 -->
-                        <div id="anchor-va-trend" class="anchor-target" style="margin-top:30px;">
-                            <div class="sub-header"
+                        <div id="anchor-va-trend" class="anchor-target analysis-anchor-panel">
+                            <div class="sub-header analysis-section-head"
                                 style="display:flex; justify-content:space-between; align-items:center;">
                                 <span>👤 学生个人进退步详情</span>
                                 <div style="font-size:12px; font-weight:normal;">
@@ -6045,65 +6096,52 @@
                                 </div>
                             </div>
 
-                            <div
-                                style="margin:12px 0 14px 0; padding:10px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc;">
-                                <div
-                                    style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-                                    <div style="font-weight:600; color:#334155;">🧭 多期对比 (支持2期/3期：月考/期中/期末等任意组合)</div>
-                                    <div style="display:flex; gap:8px; align-items:center; font-size:12px;">
+                            <div class="analysis-inline-panel">
+                                <div class="analysis-inline-top">
+                                    <div class="analysis-inline-title">🧭 多期对比 (支持2期/3期：月考/期中/期末等任意组合)</div>
+                                    <div class="analysis-inline-meta">
                                         <label>期数：</label>
-                                        <select id="progressComparePeriodCount"
-                                            style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px;"
-                                            onchange="onProgressComparePeriodCountChange()">
+                                        <select id="progressComparePeriodCount" onchange="onProgressComparePeriodCountChange()">
                                             <option value="2">2期</option>
                                             <option value="3">3期</option>
                                         </select>
                                     </div>
                                 </div>
-                                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px;">
-                                    <label style="font-size:12px; color:#475569;">对比学校：</label>
-                                    <select id="progressCompareSchool"
-                                        style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:130px;"></select>
-                                    <label style="font-size:12px; color:#475569;">第1期：</label>
-                                    <select id="progressCompareExam1"
-                                        style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:180px;"></select>
-                                    <label style="font-size:12px; color:#475569;">第2期：</label>
-                                    <select id="progressCompareExam2"
-                                        style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:180px;"></select>
+                                <div class="analysis-inline-controls">
+                                    <label>对比学校：</label>
+                                    <select id="progressCompareSchool" style="min-width:130px;"></select>
+                                    <label>第1期：</label>
+                                    <select id="progressCompareExam1" style="min-width:180px;"></select>
+                                    <label>第2期：</label>
+                                    <select id="progressCompareExam2" style="min-width:180px;"></select>
                                     <span id="progressCompareExam3Wrap" style="display:none;">
-                                        <label style="font-size:12px; color:#475569; margin-left:2px;">第3期：</label>
-                                        <select id="progressCompareExam3"
-                                            style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px; min-width:180px;"></select>
+                                        <label>第3期：</label>
+                                        <select id="progressCompareExam3" style="min-width:180px;"></select>
                                     </span>
                                     <button class="btn btn-sm btn-blue"
                                         onclick="renderMultiPeriodComparison()">生成多期对比</button>
                                     <button class="btn btn-sm btn-green"
                                         onclick="exportMultiPeriodComparison()">导出多期对比</button>
                                 </div>
-                                <div id="multiPeriodCompareHint" style="margin-top:6px; font-size:12px; color:#64748b;">
-                                    请选择2期或3期考试后生成。</div>
-                                <div id="multiPeriodCompareResult" style="margin-top:10px;"></div>
+                                <div id="multiPeriodCompareHint" class="analysis-hint analysis-status-text">请选择2期或3期考试后生成。</div>
+                                <div id="multiPeriodCompareResult" class="analysis-result-slot">
+                                    <div class="analysis-empty-state analysis-empty-state-compact">选择学校与期次后，这里会生成多期进退步结果。</div>
+                                </div>
                             </div>
 
-                            <div
-                                style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px; height:300px;">
-                                <div
-                                    style="background:white; border:1px solid #e2e8f0; border-radius:8px; padding:10px; position:relative;">
-                                    <h4 style="margin:0 0 10px 0; font-size:13px; color:#666;">🛤️ 排名散点分布 (上浮为进，下沉为退)
-                                    </h4>
+                            <div class="analysis-chart-grid">
+                                <div class="analysis-chart-card">
+                                    <h4>🛤️ 排名散点分布 (上浮为进，下沉为退)</h4>
                                     <div style="height:calc(100% - 30px);"><canvas id="trendChart"></canvas></div>
                                 </div>
-                                <div
-                                    style="background:white; border:1px solid #e2e8f0; border-radius:8px; padding:10px; position:relative;">
-                                    <h4 style="margin:0 0 10px 0; font-size:13px; color:#666;">🌊 生源层级流动桑基图 (A/B/C/D层)
-                                    </h4>
+                                <div class="analysis-chart-card">
+                                    <h4>🌊 生源层级流动桑基图 (A/B/C/D层)</h4>
                                     <div style="height:calc(100% - 30px);"><canvas id="sankeyChart"></canvas></div>
                                 </div>
                             </div>
 
-                            <div
-                                style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:5px; flex-wrap:wrap;">
-                                <div style="display:flex; gap:8px; align-items:center; font-size:12px; flex-wrap:wrap;">
+                            <div class="analysis-filter-strip">
+                                <div class="analysis-filter-group">
                                     <label>筛选：</label>
                                     <span style="color:#475569; font-weight:700;">查看范围</span>
                                     <button type="button" id="progressQuickAllBtn" class="btn btn-sm progress-quick-btn"
@@ -6125,7 +6163,6 @@
                                         oninput="applyProgressFilter()">
                                     <label>排序</label>
                                     <select id="progressSortOrder"
-                                        style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px;"
                                         onchange="applyProgressFilter()">
                                         <option value="improve_desc">进步优先</option>
                                         <option value="regress_desc">退步优先</option>
@@ -6138,8 +6175,12 @@
                                 <button class="btn btn-sm btn-green" onclick="exportProgressAnalysis()">📥
                                     导出个人明细</button>
                             </div>
-                            <div class="table-wrap">
-                                <table id="progressTable" class="mobile-card-table">
+                            <div class="analysis-table-meta">
+                                <span><strong>阅读建议：</strong>先看变化方向，再按阈值和排序筛出重点学生。</span>
+                                <span><strong>导出建议：</strong>导出结果会保留当前筛选范围，适合班主任跟踪使用。</span>
+                            </div>
+                            <div class="table-wrap analysis-table-shell">
+                                <table id="progressTable" class="mobile-card-table analysis-table-dense">
                                     <thead>
                                         <tr>
                                             <th>班级</th>

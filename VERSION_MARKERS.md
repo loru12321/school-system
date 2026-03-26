@@ -78,6 +78,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.26-macro-watch-ui-v25`
   - Meaning: align the township warning and highlight board with the analysis workspace shell so its KPI summary cards, red/yellow/green lanes, and rule guidance read like one continuous macro-analysis experience
 
+- Release tag: `school-system-v2026.03.26-progress-analysis-ui-v26`
+  - Meaning: reshape progress-analysis into the same analysis workspace shell so collective value-added results, multi-period compare, charts, filters, and student detail tables read as one continuous progress-analysis workbench
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -154,3 +157,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest macro-watch UI release:
   - `git checkout school-system-v2026.03.26-macro-watch-ui-v25`
+
+- Roll back to the latest progress-analysis UI release:
+  - `git checkout school-system-v2026.03.26-progress-analysis-ui-v26`
