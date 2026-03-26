@@ -5738,15 +5738,34 @@
             </div>
 
             <!-- 10. 学情总览 -->
-            <div id="student-overview" class="section card-box">
-                <div class="module-desc-bar" style="border-color:#059669;">
-                    <div
-                        style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
-                        <div>
-                            <h3><i class="ti ti-layout-dashboard"></i> 学情总览</h3>
-                            <p>先看成绩库、学校范围、进退步与临界生准备情况，再进入学生明细、进退步、偏科和家校沟通页面。</p>
+            <div id="student-overview" class="section card-box analysis-workspace analysis-workspace-emerald">
+                <div class="module-desc-bar analysis-hero" style="border-color:#059669;">
+                    <h3><i class="ti ti-layout-dashboard"></i> 学情总览</h3>
+                    <p>先看成绩库、学校范围、进退步与临界生准备情况，再进入学生明细、进退步、偏科和家校沟通页面。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">学情入口</strong>
+                            <span class="analysis-scan-note">先判断数据是否就绪，再决定进入明细、进退步还是家校沟通页。</span>
                         </div>
-                        <div class="tm-overview-actions">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Scope</span>
+                            <strong class="analysis-scan-value">学校 / 班级 / 历史</strong>
+                            <span class="analysis-scan-note">把当前学校范围、历史对比和临界生准备情况集中展示。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">总览 / 分流</strong>
+                            <span class="analysis-scan-note">适合作为班主任和教务进入学生分析链前的第一站。</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sec-head analysis-shell-head">
+                    <h2><i class="ti ti-layout-dashboard"></i> 学情总览</h2>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">先看总览和数据就绪状态，再进入学生明细、进退步、偏科和成绩单模块。</div>
+                        <div class="analysis-actions tm-overview-actions">
                             <button id="smQuickStudentBtn" class="btn btn-green" type="button"><i class="ti ti-users"></i> 学生明细</button>
                             <button id="smQuickProgressBtn" class="btn btn-orange" type="button"><i class="ti ti-trending-up"></i> 进退步分析</button>
                             <button id="smQuickReportBtn" class="btn" type="button"><i class="ti ti-certificate"></i> 成绩单/家长查分</button>
@@ -5754,14 +5773,23 @@
                     </div>
                 </div>
 
-                <div class="tm-overview-card-grid">
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>总览使用建议</summary>
+                    <div class="explain-content">
+                        <p>先看成绩、范围、进退步和临界生准备情况，再决定进入哪个子模块继续分析。</p>
+                        <p>如果“数据就绪”里仍有未准备项，建议先回数据中心或历史考试入口补齐。</p>
+                        <p>这个页面更适合作为分流入口，而不是直接做最终导出。</p>
+                    </div>
+                </details>
+
+                <div class="tm-overview-card-grid analysis-board-grid">
                     <div id="smStatScores" class="tm-overview-slot"></div>
                     <div id="smStatScope" class="tm-overview-slot"></div>
                     <div id="smStatProgress" class="tm-overview-slot"></div>
                     <div id="smStatSupport" class="tm-overview-slot"></div>
                 </div>
 
-                <div class="card-box" style="margin-bottom:14px;">
+                <div class="analysis-anchor-panel" style="margin-bottom:14px;">
                     <div style="font-weight:800; color:#0f172a; margin-bottom:10px;">当前学情依据</div>
                     <div class="tm-context-grid">
                         <div id="smCtxSchool"></div>
@@ -5773,18 +5801,36 @@
                     </div>
                 </div>
 
-                <div class="layout-grid">
-                    <div class="side-nav">
+                <div class="layout-grid analysis-results-layout">
+                    <div class="side-nav analysis-side-nav">
                         <div class="side-nav-title">总览导航</div>
+                        <div class="analysis-side-note">先看就绪状态与提示，再决定进入哪个学生分析子模块。</div>
                         <div class="side-nav-link active" onclick="scrollToAnchor('smReadiness', this)">📋 数据就绪</div>
                         <div class="side-nav-link" onclick="scrollToAnchor('smInsights', this)">🧭 学情提示</div>
                         <div class="side-nav-link" onclick="scrollToAnchor('smQuickEntry', this)">⚡ 快捷入口</div>
                         <div class="side-nav-link" onclick="scrollToAnchor('smSummary', this)">📊 本次摘要</div>
                     </div>
 
-                    <div class="content-area">
-                        <div id="smReadiness" class="anchor-target card-box" style="margin-bottom:14px;">
-                            <h4 style="margin:0 0 12px; color:#0f172a;">数据就绪检查</h4>
+                    <div class="content-area analysis-content-stack">
+                        <div class="analysis-flow-banner">
+                            <div class="analysis-flow-step">
+                                <span class="analysis-flow-kicker">Step 1</span>
+                                <strong class="analysis-flow-value">数据就绪</strong>
+                                <span class="analysis-flow-note">确认成绩、范围、进退步和支持数据是否准备完成。</span>
+                            </div>
+                            <div class="analysis-flow-step">
+                                <span class="analysis-flow-kicker">Step 2</span>
+                                <strong class="analysis-flow-value">学情提示</strong>
+                                <span class="analysis-flow-note">先看当前提醒，再决定优先处理哪个学生分析方向。</span>
+                            </div>
+                            <div class="analysis-flow-step">
+                                <span class="analysis-flow-kicker">Step 3</span>
+                                <strong class="analysis-flow-value">快捷分流</strong>
+                                <span class="analysis-flow-note">从这里快速进入明细、进退步、潜力与成绩单模块。</span>
+                            </div>
+                        </div>
+                        <div id="smReadiness" class="anchor-target analysis-anchor-panel" style="margin-bottom:14px;">
+                            <div class="sub-header analysis-section-head">📋 数据就绪检查</div>
                             <div class="tm-readiness-grid">
                                 <div id="smReadyScore"></div>
                                 <div id="smReadySchool"></div>
@@ -5793,13 +5839,13 @@
                             </div>
                         </div>
 
-                        <div id="smInsights" class="anchor-target card-box" style="margin-bottom:14px;">
-                            <h4 style="margin:0 0 12px; color:#0f172a;">学情提示</h4>
+                        <div id="smInsights" class="anchor-target analysis-anchor-panel" style="margin-bottom:14px;">
+                            <div class="sub-header analysis-section-head">🧭 学情提示</div>
                             <div id="smInsightList">正在汇总当前学情提示...</div>
                         </div>
 
-                        <div id="smQuickEntry" class="anchor-target card-box" style="margin-bottom:14px;">
-                            <h4 style="margin:0 0 12px; color:#0f172a;">快捷入口</h4>
+                        <div id="smQuickEntry" class="anchor-target analysis-anchor-panel" style="margin-bottom:14px;">
+                            <div class="sub-header analysis-section-head">⚡ 快捷入口</div>
                             <div class="tm-quick-grid">
                                 <button type="button" class="btn" data-target="student-details"><i class="ti ti-users"></i> 进入学生明细</button>
                                 <button type="button" class="btn" data-target="progress-analysis"><i class="ti ti-trending-up"></i> 进入进退步分析</button>
@@ -5810,8 +5856,8 @@
                             </div>
                         </div>
 
-                        <div id="smSummary" class="anchor-target card-box">
-                            <h4 style="margin:0 0 12px; color:#0f172a;">本次摘要</h4>
+                        <div id="smSummary" class="anchor-target analysis-anchor-panel">
+                            <div class="sub-header analysis-section-head">📊 本次摘要</div>
                             <div class="tm-summary-grid">
                                 <div id="smSummarySchools"></div>
                                 <div id="smSummaryStudents"></div>

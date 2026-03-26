@@ -513,6 +513,13 @@ header {
     --analysis-border: #bae6fd;
 }
 
+.analysis-workspace-emerald {
+    --analysis-accent: #059669;
+    --analysis-surface: #ecfdf5;
+    --analysis-surface-strong: #d1fae5;
+    --analysis-border: #a7f3d0;
+}
+
 .analysis-workspace .module-desc-bar.analysis-hero {
     background: linear-gradient(135deg, var(--analysis-surface) 0%, #ffffff 78%);
     border: 1px solid var(--analysis-border);

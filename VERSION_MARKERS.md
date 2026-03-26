@@ -87,6 +87,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.26-student-details-ui-v28`
   - Meaning: align student-details with the student analysis workspace so detail queries, student multi-period compare, export actions, and the main detail table read as one continuous student-detail workbench
 
+- Release tag: `school-system-v2026.03.27-student-overview-ui-v29`
+  - Meaning: align student-overview with the student analysis workspace so readiness checks, insight cards, quick-entry actions, and summary blocks read like one continuous student-analysis command page
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -172,3 +175,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest student-details UI release:
   - `git checkout school-system-v2026.03.26-student-details-ui-v28`
+
+- Roll back to the latest student-overview UI release:
+  - `git checkout school-system-v2026.03.27-student-overview-ui-v29`
