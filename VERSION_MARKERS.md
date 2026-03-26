@@ -93,6 +93,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.27-student-analysis-cluster-v30`
   - Meaning: align subject-balance and potential-analysis with the student analysis workspace so subject-strength mapping, cluster guidance, and potential-student mining follow the same support, action, and result language as the rest of the student-analysis chain
 
+- Release tag: `school-system-v2026.03.27-marginal-push-ui-v31`
+  - Meaning: align marginal-push with the analysis workspace so intervention filtering, ticket generation, conversion tracking, and ticket preview all read like one continuous intervention workbench
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -184,3 +187,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest student analysis cluster UI release:
   - `git checkout school-system-v2026.03.27-student-analysis-cluster-v30`
+
+- Roll back to the latest marginal-push UI release:
+  - `git checkout school-system-v2026.03.27-marginal-push-ui-v31`
