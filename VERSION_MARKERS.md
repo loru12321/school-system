@@ -99,6 +99,9 @@ This file records the rollback markers for the current optimization round.
 - Release tag: `school-system-v2026.03.27-diagnostic-distribution-ui-v32`
   - Meaning: align class-diagnosis and segment-analysis with the analysis workspace so class dispersion diagnosis and score-distribution statistics use the same support, action, and result language as the rest of the analysis chain
 
+- Release tag: `school-system-v2026.03.27-class-comparison-ui-v33`
+  - Meaning: align class-comparison with the analysis workspace so class totals, subject-detail sections, and the balance matrix share the same shell, guidance, and generated-result language as the rest of the analysis cluster
+
 ## Rollback
 
 - Roll back to the original baseline:
@@ -196,3 +199,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest diagnostic/distribution UI release:
   - `git checkout school-system-v2026.03.27-diagnostic-distribution-ui-v32`
+
+- Roll back to the latest class-comparison UI release:
+  - `git checkout school-system-v2026.03.27-class-comparison-ui-v33`

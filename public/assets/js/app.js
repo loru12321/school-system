@@ -16794,12 +16794,14 @@ function renderClassComparison() {
     // classList 是所有班级名的数组
 
     let matrixHtml = `
-            <div class="anchor-target" id="anchor-matrix">
-                <div class="sub-header" style="background:linear-gradient(to right, #fdf4ff, transparent); border-left-color:#d946ef; color:#86198f;">
-                    🧩 班级学科均衡性全景矩阵 (数字为校内排名)
+            <div class="anchor-target analysis-anchor-panel analysis-generated-panel" id="anchor-matrix">
+                <div class="sub-header analysis-section-head analysis-generated-header">
+                    <span>🧩 班级学科均衡性全景矩阵</span>
+                    <span class="analysis-generated-meta"><span class="analysis-table-tag">数字为校内排名</span></span>
                 </div>
-                <div class="table-wrap">
-                    <table class="comparison-table" style="text-align:center;">
+                <div class="analysis-generated-note">横向看班级结构，纵向看学科整体水平，适合快速识别“总分不错但单科偏弱”的班级。</div>
+                <div class="table-wrap analysis-table-shell">
+                    <table class="comparison-table analysis-generated-table analysis-table-dense" style="text-align:center;">
                         <thead>
                             <tr>
                                 <th style="width:80px; background:#faf5ff;">班级</th>
@@ -16862,8 +16864,8 @@ function renderClassComparison() {
             `;
     });
 
-    matrixHtml += `</tbody></table></div>
-            <div style="font-size:12px; color:#666; margin-top:5px; margin-bottom:20px; padding:5px;">
+        matrixHtml += `</tbody></table></div>
+            <div class="analysis-generated-note">
                 💡 <strong>读图指南：</strong> 
                 <span style="background:#dcfce7; color:#16a34a; padding:0 4px;">绿色</span> 代表该科进入前3名 (优势)，
                 <span style="background:#fee2e2; color:#dc2626; padding:0 4px;">红色</span> 代表该科处于后3名 (短板)。
@@ -16877,7 +16879,7 @@ function renderClassComparison() {
     const allStudents = sch.students;
     const gradeTotalScores = allStudents.map(s => s.total); const gradeTotalLen = gradeTotalScores.length || 1; const gradeTotalAvg = gradeTotalScores.reduce((a, b) => a + b, 0) / gradeTotalLen; const gradeTotalExc = gradeTotalScores.filter(v => v >= (THRESHOLDS.total?.exc || 0)).length / gradeTotalLen; const gradeTotalPass = gradeTotalScores.filter(v => v >= (THRESHOLDS.total?.pass || 0)).length / gradeTotalLen;
     const anchorTotal = 'anchor-class-total';
-    html += `<div id="${anchorTotal}" class="anchor-target"><div class="sub-header">📊 ${CONFIG.label}</div><div class="table-wrap"><table class="comparison-table"><thead><tr><th>班级</th><th>人数</th><th>平均分</th><th>校排</th><th>优秀率</th><th>及格率</th><th style="background:#fff7ed; color:#c2410c; min-width:150px;">🏗️ 木桶效应诊断 (学科均衡性)</th></tr></thead><tbody>`;
+    html += `<div id="${anchorTotal}" class="anchor-target analysis-anchor-panel analysis-generated-panel"><div class="sub-header analysis-section-head">📊 ${CONFIG.label}</div><div class="analysis-generated-note">先看总分与两率，再看木桶效应诊断，判断是整体偏弱还是结构性短板。</div><div class="table-wrap analysis-table-shell"><table class="comparison-table analysis-generated-table analysis-table-dense"><thead><tr><th>班级</th><th>人数</th><th>平均分</th><th>校排</th><th>优秀率</th><th>及格率</th><th style="background:#fff7ed; color:#c2410c; min-width:150px;">🏗️ 木桶效应诊断 (学科均衡性)</th></tr></thead><tbody>`;
     const totalStats = classList.map(c => {
         const scores = classes[c].map(s => s.total); const len = scores.length || 1; const avg = scores.reduce((a, b) => a + b, 0) / len; const exc = scores.filter(v => v >= (THRESHOLDS.total?.exc || 0)).length / len; const pass = scores.filter(v => v >= (THRESHOLDS.total?.pass || 0)).length / len;
         const avgDiff = gradeTotalAvg ? (avg - gradeTotalAvg) / gradeTotalAvg : 0; const excDiff = gradeTotalExc ? (exc - gradeTotalExc) / gradeTotalExc : 0; const passDiff = gradeTotalPass ? (pass - gradeTotalPass) / gradeTotalPass : 0;
@@ -16911,7 +16913,7 @@ function renderClassComparison() {
     SUBJECTS.forEach(sub => {
         const gradeSubScores = allStudents.map(s => s.scores[sub]).filter(v => typeof v === 'number'); const gradeSubLen = gradeSubScores.length || 1; const gradeSubAvg = gradeSubScores.reduce((a, b) => a + b, 0) / gradeSubLen; const gradeSubExc = gradeSubScores.filter(v => v >= THRESHOLDS[sub].exc).length / gradeSubLen; const gradeSubPass = gradeSubScores.filter(v => v >= THRESHOLDS[sub].pass).length / gradeSubLen;
         const anchorSub = `anchor-class-${sub}`;
-        html += `<div id="${anchorSub}" class="anchor-target" style="padding-top:20px;"><div class="sub-header">📘 ${sub}</div><div class="table-wrap"><table class="comparison-table"><thead><tr><th>班级</th><th>人数</th><th>平均分</th><th>与级比</th><th>校排</th><th>优秀率</th><th>与级比</th><th>校排</th><th>及格率</th><th>与级比</th><th>校排</th></tr></thead><tbody>`;
+        html += `<div id="${anchorSub}" class="anchor-target analysis-anchor-panel analysis-generated-panel"><div class="sub-header analysis-section-head">📘 ${sub}</div><div class="analysis-generated-note">查看该学科在各班的平均分、优秀率和及格率相对级部的变化。</div><div class="table-wrap analysis-table-shell"><table class="comparison-table analysis-generated-table analysis-table-dense"><thead><tr><th>班级</th><th>人数</th><th>平均分</th><th>与级比</th><th>校排</th><th>优秀率</th><th>与级比</th><th>校排</th><th>及格率</th><th>与级比</th><th>校排</th></tr></thead><tbody>`;
         const subStats = classList.map(c => {
             const scores = classes[c].map(s => s.scores[sub]).filter(v => typeof v === 'number'); const len = scores.length || 1; const avg = len > 0 ? scores.reduce((a, b) => a + b, 0) / len : 0; const exc = len > 0 ? scores.filter(v => v >= THRESHOLDS[sub].exc).length / len : 0; const pass = len > 0 ? scores.filter(v => v >= THRESHOLDS[sub].pass).length / len : 0;
             const avgDiff = (gradeSubAvg && avg) ? (avg - gradeSubAvg) / gradeSubAvg : 0; const excDiff = (gradeSubExc && exc) ? (exc - gradeSubExc) / gradeSubExc : 0; const passDiff = (gradeSubPass && pass) ? (pass - gradeSubPass) / gradeSubPass : 0;
