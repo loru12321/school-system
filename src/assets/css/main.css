@@ -1824,6 +1824,111 @@ header {
     word-break: break-word;
 }
 
+.sse-principle-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+}
+
+.sse-principle-card {
+    display: grid;
+    gap: 10px;
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid var(--analysis-border);
+    background: linear-gradient(180deg, var(--analysis-surface) 0%, #ffffff 100%);
+    box-shadow: 0 18px 36px -34px rgba(15, 23, 42, 0.28);
+}
+
+.sse-principle-title {
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.45;
+}
+
+.sse-principle-card p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.75;
+    color: #475569;
+}
+
+.sse-control-panel {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(320px, 2fr) auto;
+    gap: 14px;
+    align-items: end;
+}
+
+.sse-metric-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.sse-metric-toggles label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.sse-metric-toggles input {
+    margin: 0;
+}
+
+.sse-export-box {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.sse-result-note {
+    margin-top: 15px;
+    padding: 12px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #f8fafc;
+    font-size: 12px;
+    line-height: 1.75;
+    color: #475569;
+}
+
+.corr-board-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 18px;
+}
+
+.corr-chart-card {
+    min-height: 360px;
+}
+
+#contributionChartContainer {
+    display: grid;
+    gap: 10px;
+}
+
+#contributionChartContainer .contribution-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+}
+
 .analysis-workspace .seat-tools {
     border-radius: 16px;
     border-color: var(--analysis-border);

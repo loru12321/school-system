@@ -244,3 +244,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest teaching version center UI release:
   - `git checkout school-system-v2026.03.27-teaching-version-center-ui-v42`
+
+- Roll back to the latest SSE & correlation UI release:
+  - `git checkout school-system-v2026.03.27-sse-correlation-ui-v43`

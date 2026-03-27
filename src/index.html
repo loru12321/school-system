@@ -5538,19 +5538,45 @@
             </div>
 
             <!-- ================== 新增模块：校内绩效公平考核 (单校模式) ================== -->
-            <div id="single-school-eval" class="section card-box">
-                <div class="module-desc-bar" style="border-color: var(--color-internal)">
+            <div id="single-school-eval" class="section card-box analysis-workspace analysis-workspace-management">
+                <div class="module-desc-bar analysis-hero" style="border-color: var(--color-internal)">
                     <h3><i class="ti ti-scale"></i> 03 校内绩效管理与评价</h3>
                     <p>说明：面向校长室。解决生源不均导致的考核不公，通过“生源增值模型”和“大班额补偿系数”，科学核算每位教师、每个班级的真实教学贡献。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">公平 / 增值</strong>
+                            <span class="analysis-scan-note">先看优秀率、及格率和均分，再决定是否启用生源增值与班额补偿一起做校内公平排序。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">校内考核</strong>
+                            <span class="analysis-scan-note">适合校长室、教导处快速比较同校班级与教师真实教学贡献，减少生源差异带来的考核失真。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">排名 / 导出</strong>
+                            <span class="analysis-scan-note">支持生成赋分排行榜并导出，适合做校内绩效讨论、复盘与留档。</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="sec-head">
+                <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-scale"></i> 校内绩效公平考核模型
                         <span class="module-help-btn" onclick="showModuleHelp('sse')">📘 100分制详解</span>
                     </h2>
-                    <button class="btn btn-green" onclick="SSE_calculate()">🚀 开始考核计算</button>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先确认考核学校和权重项，再生成赋分结果；如果历史数据不足，系统会自动退回单次模式，避免误算。</div>
+                        <div class="analysis-actions">
+                            <button class="btn btn-green" onclick="SSE_calculate()">🚀 开始考核计算</button>
+                            <button class="btn btn-purple" onclick="SSE_export()">📥 导出考核表</button>
+                        </div>
+                    </div>
                 </div>
-                <details class="explain-panel">
+                <div class="info-bar analysis-info-band">
+                    <span>这页更适合做“先统一口径、再做公平比较”的校内绩效判断。先看核心理念和考核设置，再生成结果，比直接算分更不容易误用模型。</span>
+                </div>
+                <details class="explain-panel analysis-doc-panel">
                     <summary>绩效分口径说明（点击展开）</summary>
                     <div class="explain-content">
                         <p>实考人数：本次有有效成绩的学生数；在籍人数用于计算班额补偿。</p>
@@ -5561,75 +5587,86 @@
                         <p>最终绩效分：优秀率、及格率、均分对比、生源增值及班额补偿的加总，用于校内公平排序。</p>
                     </div>
                 </details>
+                <div class="analysis-flow-banner">
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 1</span>
+                        <strong class="analysis-flow-value">定口径</strong>
+                        <span class="analysis-flow-note">先选学校并确认优秀、及格、均分和增值四类权重项是否要纳入本轮考核。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 2</span>
+                        <strong class="analysis-flow-value">看公平性</strong>
+                        <span class="analysis-flow-note">再通过增值项和大班补偿判断是否真正做到“同等贡献、同等评价”。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 3</span>
+                        <strong class="analysis-flow-value">做排序</strong>
+                        <span class="analysis-flow-note">最后再看班级与教师排序结果，避免脱离口径直接用总分下结论。</span>
+                    </div>
+                </div>
 
-                <!-- 核心理念展示区 -->
-                <div
-                    style="background: linear-gradient(to right, #f0f9ff, #e0f2fe); border: 1px solid #bae6fd; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-                    <h3 style="color: #0369a1; margin-bottom: 10px; font-size: 18px;"><i class="ti ti-bulb"></i>
-                        核心理念：“不让老实人吃亏”</h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
-                        <div
-                            style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                            <div style="color: var(--primary); font-weight: bold; margin-bottom: 5px;">1. 不看人口看密度
-                                (35+35分)
-                            </div>
-                            <p style="font-size: 12px; color: #666;">
-                                摒弃“优生人数”绝对值，改用<strong>“优秀率/及格率”</strong>。<br>
-                                <span style="background: #dcfce7; padding: 1px 4px;">60人班15个优生 =
-                                    40人班10个优生</span>，得分完全一致。
-                            </p>
+                <div class="analysis-anchor-panel">
+                    <div class="sub-header analysis-section-head">核心理念：“不让老实人吃亏”</div>
+                    <div class="analysis-table-meta">
+                        <span><strong>用途：</strong>解释为什么这套模型不只看绝对优生人数，而更强调密度、变化和班额成本。</span>
+                        <span><strong>阅读建议：</strong>如果这是第一次使用，建议先看完三条原则，再决定是否启用增值项。</span>
+                    </div>
+                    <div class="sse-principle-grid">
+                        <div class="sse-principle-card">
+                            <div class="sse-principle-title">1. 不看人口看密度（35 + 35 分）</div>
+                            <p>摒弃“优生人数”绝对值，改用<strong>优秀率 / 及格率</strong>。<span class="status-chip ok">60人班15个优生 = 40人班10个优生</span>，得分完全一致。</p>
                         </div>
-                        <div
-                            style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                            <div style="color: var(--primary); font-weight: bold; margin-bottom: 5px;">2. 不看起点看变化 (10分)
-                            </div>
-                            <p style="font-size: 12px; color: #666;">
-                                引入<strong>“生源增值分”</strong>。对比上次考试排位百分比变化。<br>
-                                差班从年级后20%进步到后40%，即视为高绩效，奖励<strong>“加工能力”</strong>。
-                            </p>
+                        <div class="sse-principle-card">
+                            <div class="sse-principle-title">2. 不看起点看变化（10 分）</div>
+                            <p>引入<strong>生源增值分</strong>，对比上次考试排位百分比变化。差班从年级后20%进步到后40%，也应奖励真实的“加工能力”。</p>
                         </div>
-                        <div
-                            style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                            <div style="color: var(--primary); font-weight: bold; margin-bottom: 5px;">3. 大班额补偿系数 (额外加分)
-                            </div>
-                            <p style="font-size: 12px; color: #666;">
-                                承认管理成本。以年级平均人数为基准。<br>
-                                每多 <strong>1</strong> 名学生，总分额外补偿 <strong>0.1</strong> 分辛苦分。
-                            </p>
+                        <div class="sse-principle-card">
+                            <div class="sse-principle-title">3. 大班额补偿系数（额外加分）</div>
+                            <p>承认管理成本。以年级平均人数为基准，每多 <strong>1</strong> 名学生，总分额外补偿 <strong>0.1</strong> 分辛苦分，人数低于均线不倒扣。</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- 控制面板 -->
-                <div class="control-panel">
-                    <div style="flex: 1;">
-                        <label><strong>选择考核学校：</strong></label>
-                        <select id="sse_school_select" style="min-width: 200px; padding: 8px;">
-                            <option value="">-- 请选择 --</option>
-                        </select>
+                <div class="analysis-anchor-panel">
+                    <div class="sub-header analysis-section-head">考核设置</div>
+                    <div class="analysis-table-meta">
+                        <span><strong>用途：</strong>配置学校范围和本轮纳入的考核项，决定最终赋分模型。</span>
+                        <span><strong>建议：</strong>如果历史数据未准备好，先取消“生源增值”或让系统自动退回单次模式。</span>
                     </div>
-                    <div style="flex: 2; display: flex; gap: 15px; align-items: center; font-size: 13px;">
-                        <label><input type="checkbox" id="sse_check_exc" checked> 优秀贡献(前25%)</label>
-                        <label><input type="checkbox" id="sse_check_pass" checked> 及格保底(前80%)</label>
-                        <label><input type="checkbox" id="sse_check_avg" checked> 均分水位</label>
-                        <label><input type="checkbox" id="sse_check_prog" checked> 生源增值</label>
-                    </div>
-                    <div style="border-left: 1px solid #ccc; padding-left: 15px;">
-                        <button class="btn btn-purple" onclick="SSE_export()">📥 导出考核表</button>
+                    <div class="control-panel sse-control-panel">
+                        <div>
+                            <label><strong>选择考核学校：</strong></label>
+                            <select id="sse_school_select" style="min-width: 200px; padding: 8px;">
+                                <option value="">-- 请选择 --</option>
+                            </select>
+                        </div>
+                        <div class="sse-metric-toggles">
+                            <label><input type="checkbox" id="sse_check_exc" checked> 优秀贡献(前25%)</label>
+                            <label><input type="checkbox" id="sse_check_pass" checked> 及格保底(前80%)</label>
+                            <label><input type="checkbox" id="sse_check_avg" checked> 均分水位</label>
+                            <label><input type="checkbox" id="sse_check_prog" checked> 生源增值</label>
+                        </div>
+                        <div class="sse-export-box">
+                            <button class="btn btn-purple" onclick="SSE_export()">📥 导出考核表</button>
+                        </div>
                     </div>
                 </div>
                 <div id="tmModuleState-single-school-eval"></div>
 
                 <!-- 结果展示区 -->
-                <div id="sse_result_container" class="hidden">
-                    <div class="sub-header">
+                <div id="sse_result_container" class="hidden analysis-anchor-panel">
+                    <div class="sub-header analysis-section-head">
                         <span>📊 绩效赋分排行榜</span>
                         <span style="font-size: 12px; font-weight: normal; margin-left: 10px;">
                             (基准: 优秀35 + 及格35 + 均分20 + 增值10 = 100分 + 班额补偿)
                         </span>
                     </div>
-                    <div class="table-wrap">
-                        <table id="sse_table">
+                    <div class="analysis-table-meta">
+                        <span><strong>阅读建议：</strong>先看最终考核分，再回头对照优秀、及格、均分和增值的构成。</span>
+                        <span><strong>导出建议：</strong>适合做校内绩效讨论、班级公平性解释和后续复盘留档。</span>
+                    </div>
+                    <div class="table-wrap analysis-table-shell">
+                        <table id="sse_table" class="analysis-table-dense">
                             <thead>
                                 <tr>
                                     <th>排名</th>
@@ -5648,8 +5685,7 @@
                         </table>
                     </div>
 
-                    <div
-                        style="margin-top: 15px; font-size: 12px; color: #666; background: #f9fafb; padding: 10px; border-radius: 6px;">
+                    <div class="sse-result-note">
                         <strong>ℹ️ 算法说明：</strong><br>
                         1. <strong>优秀/及格得分：</strong> (本班率 / 年级最高率) × 权重分。鼓励向最高标准看齐。<br>
                         2. <strong>均分得分：</strong> (本班均分 / 年级均分) × 权重分。<br>
@@ -5660,38 +5696,108 @@
             </div>
 
             <!-- 学科深度关联分析 -->
-            <div id="correlation-analysis" class="section card-box">
-                <div class="sec-head">
-                    <h2><i class="ti ti-topology-star-3"></i> 学科贡献度与关联性深度分析</h2><button class="btn btn-green"
-                        onclick="exportCorrelationExcel()">导出分析Excel</button>
+            <div id="correlation-analysis" class="section card-box analysis-workspace analysis-workspace-violet">
+                <div class="module-desc-bar analysis-hero" style="border-color:#7c3aed;">
+                    <h3><i class="ti ti-topology-star-3"></i> 学科贡献度与关联性深度分析</h3>
+                    <p>探索学科间的内在联系以及各学科对总分排名的贡献度（区分度），帮助判断哪些学科在“拉分”与“拖分”中更关键。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">相关 / 贡献</strong>
+                            <span class="analysis-scan-note">先看学科间相关性，再看对总排名的贡献度，最后判断哪些学科更常成为提分项或拖分项。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">教研 / 诊断</strong>
+                            <span class="analysis-scan-note">适合教研组判断学科联动关系、关键拉分学科和薄弱环节，不只看单科均分高低。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">矩阵 / 频率</strong>
+                            <span class="analysis-scan-note">支持热力矩阵、贡献条和提分拖分频率表，适合做深度分析和专题复盘。</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="info-bar">探索学科间的内在联系以及各学科对总分排名的贡献度（区分度）。</div>
+                <div class="sec-head analysis-shell-head">
+                    <h2><i class="ti ti-topology-star-3"></i> 学科贡献度与关联性深度分析</h2>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先选分析范围，再生成结果；阅读顺序最好是“相关矩阵 -> 贡献度 -> 提分/拖分频率”，这样更容易形成完整判断。</div>
+                        <div class="analysis-actions">
+                            <button class="btn btn-purple" onclick="renderCorrelationAnalysis()">🚀 开始深度分析</button>
+                            <button class="btn btn-green" onclick="exportCorrelationExcel()">导出分析Excel</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="info-bar analysis-info-band">探索学科间的内在联系以及各学科对总分排名的贡献度（区分度），帮助判断“哪些学科一起动、哪些学科最能决定排名”。</div>
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>关联分析阅读建议</summary>
+                    <div class="explain-content">
+                        <p>相关性热力矩阵反映两科成绩是否同步波动；接近 1.0 越强，接近 0 越弱，接近负值则方向相反。</p>
+                        <p>贡献度并不等于学科重要性本身，而是说明该学科对总排名区分更敏感，适合与教研策略一起理解。</p>
+                        <p>最后再看“提分项 / 拖后腿”频率，能更直观看到某一学科在学生结构中的净贡献方向。</p>
+                    </div>
+                </details>
+                <div class="analysis-flow-banner">
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 1</span>
+                        <strong class="analysis-flow-value">看相关</strong>
+                        <span class="analysis-flow-note">先看哪几科成绩最同步，判断学科之间是否存在明显联动。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 2</span>
+                        <strong class="analysis-flow-value">看贡献</strong>
+                        <span class="analysis-flow-note">再看哪些学科最能解释总排名变化，识别关键拉分学科。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 3</span>
+                        <strong class="analysis-flow-value">看频率</strong>
+                        <span class="analysis-flow-note">最后结合提分项和拖后腿频率，判断学科在学生结构中的净贡献方向。</span>
+                    </div>
+                </div>
                 <div class="control-panel">
                     <label>分析范围：</label><select id="corrSchoolSelect" style="min-width:200px;">
                         <option value="ALL">全乡镇</option>
                     </select>
                     <button class="btn btn-purple" onclick="renderCorrelationAnalysis()">🚀 开始深度分析</button>
                 </div>
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap:20px;">
-                    <div class="bg-gray-50">
-                        <h3 style="margin-bottom:15px; color:#333;">🔗 学科间相关性热力矩阵 (Pearson)</h3>
-                        <p style="font-size:12px; color:#666; margin-bottom:10px;">数值越接近1.0(深红)，表示两科成绩越同步。</p>
-                        <div class="table-wrap" style="box-shadow:none; border:none; margin-top:0;">
-                            <table class="heatmap-table" id="corrMatrixTable">
-                                <tbody></tbody>
+                <div class="corr-board-grid">
+                    <div class="analysis-anchor-panel">
+                        <div class="sub-header analysis-section-head">🔗 学科间相关性热力矩阵 (Pearson)</div>
+                        <div class="analysis-table-meta">
+                            <span><strong>用途：</strong>查看不同学科成绩是否同步波动，识别强关联与弱关联组合。</span>
+                            <span><strong>阅读建议：</strong>数值越接近 1.0 说明越同步，建议优先看深红区域和跨学科的高相关组合。</span>
+                        </div>
+                        <div class="table-wrap analysis-table-shell" style="margin-top:0;">
+                            <table class="heatmap-table analysis-table-dense" id="corrMatrixTable">
+                                <tbody>
+                                    <tr>
+                                        <td class="analysis-empty-cell">请选择范围并点击“开始深度分析”后生成相关性矩阵。</td>
+                                    </tr>
+                                </tbody>
                             </table>
                         </div>
                     </div>
-                    <div class="bg-gray-50">
-                        <h3 style="margin-bottom:15px; color:#333;">⚖️ 学科对总排名贡献度 (区分度)</h3>
-                        <p style="font-size:12px; color:#666; margin-bottom:10px;">数值越高，说明该学科越能决定总排名的位次。</p>
-                        <div id="contributionChartContainer"></div>
+                    <div class="analysis-anchor-panel">
+                        <div class="sub-header analysis-section-head">⚖️ 学科对总排名贡献度 (区分度)</div>
+                        <div class="analysis-table-meta">
+                            <span><strong>用途：</strong>查看哪一科更能决定总排名位次，识别关键拉分学科。</span>
+                            <span><strong>阅读建议：</strong>数值越高，说明该学科越能区分总排名；建议结合热力矩阵一起读，不单看一科高低。</span>
+                        </div>
+                        <div class="analysis-chart-card corr-chart-card">
+                            <div id="contributionChartContainer">
+                                <div class="analysis-empty-state">请选择范围并开始分析，这里会生成学科对总排名的贡献度条形结果。</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="bg-gray-50" style="margin-top:20px;">
-                    <h3 style="margin-bottom:15px; color:#333;">📉 “提分项”与“拖后腿”频率分析</h3>
-                    <div class="table-wrap">
-                        <table id="liftDragTable">
+                <div class="analysis-anchor-panel">
+                    <div class="sub-header analysis-section-head">📉 “提分项”与“拖后腿”频率分析</div>
+                    <div class="analysis-table-meta">
+                        <span><strong>用途：</strong>统计各学科更常成为提分项还是拖分项，辅助判断教研优先级。</span>
+                        <span><strong>阅读建议：</strong>先看净贡献，再看提分主力与拖分主力的比例差，判断学科总体方向。</span>
+                    </div>
+                    <div class="table-wrap analysis-table-shell">
+                        <table id="liftDragTable" class="analysis-table-dense">
                             <thead>
                                 <tr>
                                     <th>学科</th>
@@ -5701,7 +5807,11 @@
                                     <th>净贡献 (提分-拖分)</th>
                                 </tr>
                             </thead>
-                            <tbody></tbody>
+                            <tbody>
+                                <tr>
+                                    <td colspan="5" class="analysis-empty-cell">请选择范围并点击“开始深度分析”后生成提分项与拖后腿频率表。</td>
+                                </tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>

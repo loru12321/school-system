@@ -14,6 +14,7 @@ const SWITCH_MODULE_IDS = [
     'analysis',
     'teacher-analysis',
     'single-school-eval',
+    'correlation-analysis',
     'indicator',
     'bottom3',
     'marginal-push',
@@ -346,13 +347,18 @@ async function runModuleDeepCheck(page, id) {
         await page.waitForFunction(() => window.__SINGLE_SCHOOL_EVAL_RUNTIME_PATCHED__ === true, { timeout: 15000 });
         return page.evaluate(async () => {
             const checks = {
+                sectionReady: !!document.querySelector('#single-school-eval.analysis-workspace-management'),
+                heroReady: !!document.querySelector('#single-school-eval .analysis-hero'),
+                shellHeadReady: !!document.querySelector('#single-school-eval .analysis-shell-head'),
                 runtimeLoaded: window.__SINGLE_SCHOOL_EVAL_RUNTIME_PATCHED__ === true,
                 updateSSESchoolSelect: typeof window.updateSSESchoolSelect === 'function',
                 SSE_calculate: typeof window.SSE_calculate === 'function',
                 SSE_export: typeof window.SSE_export === 'function',
                 schoolSelect: !!document.getElementById('sse_school_select'),
                 resultContainer: !!document.getElementById('sse_result_container'),
-                resultTable: !!document.getElementById('sse_table')
+                resultTable: !!document.getElementById('sse_table'),
+                principleReady: document.querySelectorAll('#single-school-eval .sse-principle-card').length >= 3,
+                flowReady: document.querySelectorAll('#single-school-eval .analysis-flow-step').length >= 3
             };
             if (!Object.values(checks).every(Boolean)) {
                 return { ok: false, checks, schoolOptionCount: 0, rows: 0, resultVisible: false };
@@ -384,6 +390,47 @@ async function runModuleDeepCheck(page, id) {
                 schoolOptionCount: schoolValues.length,
                 rows,
                 resultVisible
+            };
+        });
+    }
+    if (id === 'correlation-analysis') {
+        return page.evaluate(async () => {
+            const checks = {
+                sectionReady: !!document.querySelector('#correlation-analysis.analysis-workspace-violet'),
+                heroReady: !!document.querySelector('#correlation-analysis .analysis-hero'),
+                shellHeadReady: !!document.querySelector('#correlation-analysis .analysis-shell-head'),
+                updateCorrelationSchoolSelect: typeof window.updateCorrelationSchoolSelect === 'function',
+                renderCorrelationAnalysis: typeof window.renderCorrelationAnalysis === 'function',
+                exportCorrelationExcel: typeof window.exportCorrelationExcel === 'function',
+                scopeSelect: !!document.getElementById('corrSchoolSelect'),
+                matrixTable: !!document.getElementById('corrMatrixTable'),
+                contributionChartContainer: !!document.getElementById('contributionChartContainer'),
+                liftDragTable: !!document.getElementById('liftDragTable'),
+                flowReady: document.querySelectorAll('#correlation-analysis .analysis-flow-step').length >= 3
+            };
+            if (!Object.values(checks).every(Boolean)) {
+                return { ok: false, checks, matrixRows: 0, liftRows: 0, chartReady: false };
+            }
+
+            await window.updateCorrelationSchoolSelect();
+            await new Promise(resolve => setTimeout(resolve, 120));
+            const scopeSelect = document.getElementById('corrSchoolSelect');
+            if (scopeSelect && !String(scopeSelect.value || '').trim()) {
+                scopeSelect.value = 'ALL';
+            }
+            await window.renderCorrelationAnalysis();
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            const matrixRows = document.querySelectorAll('#corrMatrixTable tbody tr').length;
+            const liftRows = document.querySelectorAll('#liftDragTable tbody tr').length;
+            const chartReady = String(document.getElementById('contributionChartContainer')?.innerHTML || '').trim().length > 0;
+
+            return {
+                ok: Object.values(checks).every(Boolean) && matrixRows > 0 && liftRows > 0 && chartReady,
+                checks,
+                matrixRows,
+                liftRows,
+                chartReady
             };
         });
     }
