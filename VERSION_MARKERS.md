@@ -235,3 +235,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest AI analysis UI release:
   - `git checkout school-system-v2026.03.27-ai-analysis-ui-v39`
+
+- Roll back to the latest teaching overview UI release:
+  - `git checkout school-system-v2026.03.27-teaching-overview-ui-v40`

@@ -4656,15 +4656,33 @@
             </div>
 
             <!-- 6. 教学管理总览 -->
-            <div id="teaching-overview" class="section card-box">
-                <div class="module-desc-bar" style="border-color:#dc2626;">
-                    <div
-                        style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
-                        <div>
-                            <h3><i class="ti ti-layout-dashboard"></i> 教学管理总览</h3>
-                            <p>先检查成绩、任课表、多期数据和同步状态，再进入教师画像、班级对比、分化诊断和绩效考核。</p>
+            <div id="teaching-overview" class="section card-box analysis-workspace analysis-workspace-management">
+                <div class="module-desc-bar analysis-hero" style="border-color:#dc2626;">
+                    <h3><i class="ti ti-layout-dashboard"></i> 教学管理总览 <span class="badge" style="background:#dc2626;">教学指挥台</span></h3>
+                    <p>先检查成绩、任课表、多期数据和同步状态，再进入教师画像、班级对比、分化诊断和绩效考核。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">数据 / 口径</strong>
+                            <span class="analysis-scan-note">先确认当前成绩库、任课表、对比考试和本校识别都已到位，避免带着错误口径进入下游分析。</span>
                         </div>
-                        <div class="tm-overview-actions">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">预警 / 决策</strong>
+                            <span class="analysis-scan-note">把云端预警、整改任务和推荐下一步收成一张总览页，适合主任、年级组和教师日常巡检。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">跳转 / 派发</strong>
+                            <span class="analysis-scan-note">确认当前状态后，可以直接带着上下文跳到教师画像、班级对比、分化诊断和绩效考核。</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="sec-head analysis-shell-head">
+                    <h2><i class="ti ti-layout-dashboard"></i> 教学管理总览</h2>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先看数据就绪、云端状态和推荐下一步，再决定进入哪个分析页，这样能减少在条件未齐时重复试跑。</div>
+                        <div class="analysis-actions tm-overview-actions">
                             <button id="tmQuickSyncTeacherBtn" class="btn btn-orange" type="button"><i
                                     class="ti ti-refresh"></i> 同步任课表</button>
                             <button id="tmQuickOpenConsoleBtn" class="btn" type="button"><i
@@ -4674,6 +4692,17 @@
                         </div>
                     </div>
                 </div>
+                <div class="info-bar analysis-info-band">
+                    <span>这个页面把成绩、任课表、多期对比、云端预警和推荐动作收成一条工作流。先确认“当前分析依据”和“数据就绪检查”，再看预警与下一步，会比直接跳功能页更稳。</span>
+                </div>
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>教学总览阅读顺序</summary>
+                    <div class="explain-content">
+                        <p>先看顶部状态卡，确认当前成绩库、任课表、多期对比和最近同步是否都到位。</p>
+                        <p>再看当前分析依据与数据就绪检查，确认学校、教师、考试和期数口径没有漂移。</p>
+                        <p>最后再处理云端预警、推荐下一步和快捷入口，避免带着错误口径进入教师画像或班级分析。</p>
+                    </div>
+                </details>
 
                 <div id="tm-status-strip" class="tm-overview-card-grid">
                     <div id="tmStatExam" class="tm-overview-slot"></div>
@@ -4682,8 +4711,12 @@
                     <div id="tmStatSync" class="tm-overview-slot"></div>
                 </div>
 
-                <div id="tm-context-panel" class="card-box" style="margin-bottom:14px;">
-                    <div style="font-weight:800; color:#0f172a; margin-bottom:10px;">当前分析依据</div>
+                <div id="tm-context-panel" class="analysis-anchor-panel">
+                    <div class="sub-header analysis-section-head">当前分析依据</div>
+                    <div class="analysis-table-meta">
+                        <span><strong>用途：</strong>快速确认当前学校、学科、教师和多期考试口径，避免跨页操作后误用旧筛选。</span>
+                        <span><strong>阅读建议：</strong>如果这里的学校、考试或期数不对，先修正再进入教师画像或分化诊断。</span>
+                    </div>
                     <div class="tm-context-grid">
                         <div id="tmCtxSchool"></div>
                         <div id="tmCtxSubject"></div>
@@ -4694,9 +4727,10 @@
                     </div>
                 </div>
 
-                <div class="layout-grid">
-                    <div class="side-nav">
+                <div class="layout-grid analysis-results-layout">
+                    <div class="side-nav analysis-side-nav">
                         <div class="side-nav-title">总览导航</div>
+                        <div class="analysis-side-note">先确认当前分析依据和数据就绪，再看预警、云端状态与推荐动作，最后进入具体分析页。</div>
                         <div class="side-nav-link active" onclick="scrollToAnchor('tmReadiness', this)">📋 数据就绪</div>
                         <div class="side-nav-link" onclick="scrollToAnchor('tmAlerts', this)">🚨 教学预警</div>
                         <div class="side-nav-link" onclick="scrollToAnchor('tmCloudOps', this)">☁️ 云端预警与整改</div>
@@ -4705,9 +4739,31 @@
                         <div class="side-nav-link" onclick="scrollToAnchor('tmSummary', this)">📊 本次摘要</div>
                     </div>
 
-                    <div class="content-area">
-                        <div id="tmReadiness" class="anchor-target card-box" style="margin-bottom:14px;">
-                            <h4 style="margin:0 0 12px; color:#0f172a;">数据就绪检查</h4>
+                    <div class="content-area analysis-content-stack">
+                        <div class="analysis-flow-banner">
+                            <div class="analysis-flow-step">
+                                <span class="analysis-flow-kicker">Step 1</span>
+                                <strong class="analysis-flow-value">数据就绪</strong>
+                                <span class="analysis-flow-note">先确认成绩、任课表、本校识别和多期考试条件是否到位，再决定后续分析路径。</span>
+                            </div>
+                            <div class="analysis-flow-step">
+                                <span class="analysis-flow-kicker">Step 2</span>
+                                <strong class="analysis-flow-value">云端状态</strong>
+                                <span class="analysis-flow-note">接着看云端预警、整改任务和稳定版变化，判断当前环境是否适合直接导出或派发任务。</span>
+                            </div>
+                            <div class="analysis-flow-step">
+                                <span class="analysis-flow-kicker">Step 3</span>
+                                <strong class="analysis-flow-value">推荐动作</strong>
+                                <span class="analysis-flow-note">最后按推荐下一步和快捷入口跳转，避免在多个分析页之间盲目来回切换。</span>
+                            </div>
+                        </div>
+
+                        <div id="tmReadiness" class="anchor-target analysis-anchor-panel">
+                            <div class="sub-header analysis-section-head">数据就绪检查</div>
+                            <div class="analysis-table-meta">
+                                <span><strong>用途：</strong>确认成绩、任课表、本校识别和多期对比条件是否满足教学分析基础要求。</span>
+                                <span><strong>建议：</strong>如果某项未就绪，优先回到教务控制台或同步入口补齐，再做教师画像和班级诊断。</span>
+                            </div>
                             <div class="tm-readiness-grid">
                                 <div id="tmReadyScore"></div>
                                 <div id="tmReadyTeacherMap"></div>
@@ -4716,15 +4772,23 @@
                             </div>
                         </div>
 
-                        <div id="tmAlerts" class="anchor-target card-box" style="margin-bottom:14px;">
-                            <h4 style="margin:0 0 12px; color:#0f172a;">教学预警</h4>
+                        <div id="tmAlerts" class="anchor-target analysis-anchor-panel">
+                            <div class="sub-header analysis-section-head">教学预警</div>
+                            <div class="analysis-table-meta">
+                                <span><strong>用途：</strong>汇总当前稳定版偏移、成绩缺口、任课表缺失和教师风险信号。</span>
+                                <span><strong>阅读建议：</strong>优先处理能阻断分析结论的预警，再下钻到教师画像或整改中心。</span>
+                            </div>
                             <div id="tmAlertList">暂无预警</div>
                         </div>
 
-                        <div id="tmCloudOps" class="anchor-target card-box" style="margin-bottom:14px;">
-                            <div class="tm-section-head">
-                                <h4 style="margin:0; color:#0f172a;">云端预警与整改</h4>
+                        <div id="tmCloudOps" class="anchor-target analysis-anchor-panel">
+                            <div class="tm-section-head analysis-section-head">
+                                <span>云端预警与整改</span>
                                 <button type="button" id="tmRefreshCloudOpsBtn" class="btn btn-orange">刷新云端状态</button>
+                            </div>
+                            <div class="analysis-table-meta">
+                                <span><strong>用途：</strong>查看云端预警数量、严重级别和整改任务推进状态。</span>
+                                <span><strong>建议：</strong>派发整改前先刷新一次，确保看到的是最新云端状态。</span>
                             </div>
                             <div class="tm-readiness-grid">
                                 <div id="tmWarningCount"></div>
@@ -4737,13 +4801,21 @@
                             </div>
                         </div>
 
-                        <div id="tmRecommend" class="anchor-target card-box" style="margin-bottom:14px;">
-                            <h4 style="margin:0 0 12px; color:#0f172a;">推荐下一步</h4>
+                        <div id="tmRecommend" class="anchor-target analysis-anchor-panel">
+                            <div class="sub-header analysis-section-head">推荐下一步</div>
+                            <div class="analysis-table-meta">
+                                <span><strong>用途：</strong>根据当前成绩、任课表、教师风险和多期条件，给出最值得先做的一步。</span>
+                                <span><strong>建议：</strong>如果推荐动作和你的预期不一致，先回头检查“当前分析依据”里的学校与考试口径。</span>
+                            </div>
                             <div id="tmNextAction">正在分析当前数据状态...</div>
                         </div>
 
-                        <div id="tmQuickEntry" class="anchor-target card-box" style="margin-bottom:14px;">
-                            <h4 style="margin:0 0 12px; color:#0f172a;">快捷入口</h4>
+                        <div id="tmQuickEntry" class="anchor-target analysis-anchor-panel">
+                            <div class="sub-header analysis-section-head">快捷入口</div>
+                            <div class="analysis-table-meta">
+                                <span><strong>用途：</strong>带着当前学校、学科和考试上下文直接跳到高频教学分析页。</span>
+                                <span><strong>导向：</strong>这里的入口会自动根据当前状态显示“可进入、待补数据、可预填”等提示。</span>
+                            </div>
                             <div class="tm-quick-grid">
                                 <button type="button" class="btn" data-target="teacher-analysis"><i class="ti ti-school"></i>
                                     进入教师画像</button>
@@ -4756,8 +4828,12 @@
                             </div>
                         </div>
 
-                        <div id="tmSummary" class="anchor-target card-box">
-                            <h4 style="margin:0 0 12px; color:#0f172a;">本次摘要</h4>
+                        <div id="tmSummary" class="anchor-target analysis-anchor-panel">
+                            <div class="sub-header analysis-section-head">本次摘要</div>
+                            <div class="analysis-table-meta">
+                                <span><strong>用途：</strong>把当前可分析教师、覆盖班级、风险教师和考试期数做成收口摘要。</span>
+                                <span><strong>适合：</strong>用于每日巡检、组会开场或进入具体教学页面前的快速扫读。</span>
+                            </div>
                             <div class="tm-summary-grid">
                                 <div id="tmSummaryTeacherCount"></div>
                                 <div id="tmSummaryClassCount"></div>

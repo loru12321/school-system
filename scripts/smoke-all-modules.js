@@ -314,6 +314,29 @@ async function runModuleDeepCheck(page, id) {
             };
         });
     }
+    if (id === 'teaching-overview') {
+        return page.evaluate(async () => {
+            const checks = {
+                renderTeachingOverview: typeof window.renderTeachingOverview === 'function',
+                sectionReady: !!document.querySelector('#teaching-overview.analysis-workspace-management'),
+                heroReady: !!document.querySelector('#teaching-overview .analysis-hero'),
+                shellHeadReady: !!document.querySelector('#teaching-overview .analysis-shell-head'),
+                statusStripReady: document.querySelectorAll('#tm-status-strip .tm-stat-card-inner').length >= 4,
+                contextReady: !!document.querySelector('#tm-context-panel .analysis-section-head'),
+                flowReady: document.querySelectorAll('#teaching-overview .analysis-flow-step').length >= 3,
+                nextActionReady: !!document.querySelector('#tmNextAction .tm-next-card'),
+                quickEntryReady: document.querySelectorAll('#tmQuickEntry [data-target]').length >= 4,
+                cloudPanelReady: !!document.getElementById('tmCloudOpsList'),
+                quickActionsReady: !!document.getElementById('tmQuickSyncTeacherBtn')
+                    && !!document.getElementById('tmQuickOpenConsoleBtn')
+                    && !!document.getElementById('tmQuickExportBtn')
+            };
+            return {
+                ok: Object.values(checks).every(Boolean),
+                checks
+            };
+        });
+    }
     if (id === 'single-school-eval') {
         await page.evaluate(async () => {
             if (typeof window.ensureSingleSchoolEvalRuntimeLoaded === 'function') {

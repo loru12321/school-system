@@ -534,6 +534,13 @@ header {
     --analysis-border: #fdba74;
 }
 
+.analysis-workspace-management {
+    --analysis-accent: #dc2626;
+    --analysis-surface: #fff1f2;
+    --analysis-surface-strong: #ffe4e6;
+    --analysis-border: #fecdd3;
+}
+
 .analysis-workspace .module-desc-bar.analysis-hero {
     background: linear-gradient(135deg, var(--analysis-surface) 0%, #ffffff 78%);
     border: 1px solid var(--analysis-border);
@@ -1315,6 +1322,244 @@ header {
 
 .analysis-ai-batch-table {
     max-height: 420px;
+}
+
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.status-chip.ok {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+}
+
+.status-chip.warn {
+    background: #fff7ed;
+    color: #c2410c;
+    border-color: #fdba74;
+}
+
+.status-chip.info {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+}
+
+.status-chip.neutral {
+    background: #f8fafc;
+    color: #475569;
+    border-color: #cbd5e1;
+}
+
+.analysis-workspace-management .tm-overview-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.analysis-workspace-management .tm-overview-card-grid,
+.analysis-workspace-management .tm-context-grid,
+.analysis-workspace-management .tm-readiness-grid,
+.analysis-workspace-management .tm-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+}
+
+.analysis-workspace-management .tm-overview-card-grid {
+    margin-bottom: 16px;
+}
+
+.analysis-workspace-management .tm-overview-slot,
+.analysis-workspace-management .tm-context-grid > div,
+.analysis-workspace-management .tm-readiness-grid > div,
+.analysis-workspace-management .tm-summary-grid > div {
+    min-width: 0;
+}
+
+.analysis-workspace-management .tm-stat-card-inner,
+.analysis-workspace-management .tm-mini-card {
+    display: grid;
+    gap: 10px;
+    min-height: 120px;
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 18px 36px -34px rgba(15, 23, 42, 0.28);
+}
+
+.analysis-workspace-management .tm-stat-card-inner {
+    border-color: var(--analysis-border);
+    background: linear-gradient(180deg, var(--analysis-surface) 0%, #ffffff 100%);
+}
+
+.analysis-workspace-management .tm-stat-head,
+.analysis-workspace-management .tm-quick-head,
+.analysis-workspace-management .tm-section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.analysis-workspace-management .tm-stat-head strong,
+.analysis-workspace-management .tm-mini-card strong,
+.analysis-workspace-management .tm-quick-title,
+.analysis-workspace-management .tm-next-title {
+    color: #0f172a;
+    font-weight: 800;
+}
+
+.analysis-workspace-management .tm-stat-head strong {
+    font-size: 13px;
+}
+
+.analysis-workspace-management .tm-stat-main {
+    font-size: 18px;
+    line-height: 1.35;
+    color: #0f172a;
+    font-weight: 800;
+}
+
+.analysis-workspace-management .tm-stat-sub,
+.analysis-workspace-management .tm-mini-card span,
+.analysis-workspace-management .tm-quick-desc,
+.analysis-workspace-management .tm-next-desc {
+    font-size: 13px;
+    line-height: 1.7;
+    color: #64748b;
+}
+
+.analysis-workspace-management .tm-mini-card strong {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #64748b;
+}
+
+.analysis-workspace-management .tm-mini-card span {
+    font-size: 15px;
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.analysis-workspace-management .tm-section-head {
+    margin-bottom: 12px;
+}
+
+.analysis-workspace-management .tm-section-head > * {
+    margin: 0;
+}
+
+.analysis-workspace-management .tm-section-head .btn {
+    white-space: nowrap;
+}
+
+.analysis-workspace-management .tm-cloud-columns,
+.analysis-workspace-management .tm-quick-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+.analysis-workspace-management .tm-cloud-columns {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.analysis-workspace-management .tm-next-card,
+.analysis-workspace-management .tm-quick-entry-btn,
+.analysis-workspace-management .tm-cloud-columns > * {
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 18px 36px -34px rgba(15, 23, 42, 0.28);
+}
+
+.analysis-workspace-management .tm-next-card {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 18px;
+    border-color: var(--analysis-border);
+    background: linear-gradient(135deg, var(--analysis-surface) 0%, #ffffff 100%);
+}
+
+.analysis-workspace-management .tm-next-desc {
+    margin-top: 6px;
+    max-width: 700px;
+}
+
+.analysis-workspace-management .tm-next-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.analysis-workspace-management .tm-next-btn {
+    white-space: nowrap;
+}
+
+.analysis-workspace-management .tm-quick-entry-btn {
+    display: grid;
+    align-content: space-between;
+    gap: 12px;
+    min-height: 148px;
+    padding: 16px;
+    text-align: left;
+    color: #0f172a;
+}
+
+.analysis-workspace-management .tm-quick-entry-btn:hover {
+    transform: translateY(-3px);
+    border-color: var(--analysis-border);
+    box-shadow: 0 22px 42px -34px rgba(15, 23, 42, 0.36);
+}
+
+.analysis-workspace-management .tm-quick-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.analysis-workspace-management .tm-cloud-empty {
+    padding: 18px;
+    border: 1px dashed var(--analysis-border);
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--analysis-surface) 0%, #ffffff 100%);
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.analysis-workspace-management .plain-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding-left: 18px;
+    color: #475569;
+}
+
+.analysis-workspace-management .plain-list li {
+    line-height: 1.75;
 }
 
 .analysis-workspace .seat-tools {
