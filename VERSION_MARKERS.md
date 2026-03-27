@@ -256,3 +256,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest school modal mobile-close fix:
   - `git checkout school-system-v2026.03.27-school-modal-mobile-close-v46`
+
+- Roll back to the latest school modal overlay-layer fix:
+  - `git checkout school-system-v2026.03.27-school-modal-layer-fix-v47`
