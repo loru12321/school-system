@@ -470,6 +470,9 @@ async function runModuleDeepCheck(page, id) {
             const stableButton = document.getElementById('tmVersionMarkLatestStableBtn');
             const compareButton = document.getElementById('tmVersionCompareStableBtn');
             const checks = {
+                sectionReady: !!document.querySelector('#teaching-version-center.analysis-workspace-version'),
+                heroReady: !!document.querySelector('#teaching-version-center .analysis-hero'),
+                shellHeadReady: !!document.querySelector('#teaching-version-center .analysis-shell-head'),
                 tmRefreshVersionCenter: typeof window.tmRefreshVersionCenter === 'function',
                 tmCreateCurrentVersionSnapshot: typeof window.tmCreateCurrentVersionSnapshot === 'function',
                 tmMarkLatestVersionStable: typeof window.tmMarkLatestVersionStable === 'function',
@@ -482,6 +485,17 @@ async function runModuleDeepCheck(page, id) {
                 stableBound: !!stableButton && typeof stableButton.onclick === 'function',
                 compareButton: !!compareButton,
                 compareBound: !!compareButton && typeof compareButton.onclick === 'function',
+                toolbarReady: !!document.getElementById('tmVersionSearchInput')
+                    && !!document.getElementById('tmVersionStableFilter')
+                    && !!document.getElementById('tmVersionSortOrder')
+                    && !!document.getElementById('tmVersionDiffOnlyBtn')
+                    && !!document.getElementById('tmVersionNormalDiffBtn'),
+                summaryReady: document.querySelectorAll('#teaching-version-center .tm-center-summary-grid > div').length >= 4,
+                metaReady: !!document.getElementById('tmVersionScopeMeta')
+                    && !!document.getElementById('tmVersionStableMeta'),
+                diffPanelReady: !!document.getElementById('tmVersionDiffPanel')
+                    && !!document.getElementById('tmVersionDiffEmpty'),
+                flowReady: document.querySelectorAll('#teaching-version-center .analysis-flow-step').length >= 3,
                 listReady: !!document.getElementById('tmVersionCenterList')
             };
             return {

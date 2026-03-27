@@ -5158,56 +5158,136 @@
                 </div>
             </div>
 
-            <div id="teaching-version-center" class="section card-box">
-                <div class="sec-head">
-                    <h2><i class="ti ti-stack-2"></i> 版本归档中心</h2>
-                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <button type="button" id="tmVersionRefreshBtn" class="btn btn-orange"><i class="ti ti-refresh"></i> 刷新版本</button>
-                        <button type="button" id="tmVersionCreateBtn" class="btn btn-green"><i class="ti ti-plus"></i> 生成当前版本</button>
-                        <button type="button" id="tmVersionMarkLatestStableBtn" class="btn btn-orange"><i class="ti ti-award"></i> 设最新为稳定版</button>
-                        <button type="button" id="tmVersionCompareStableBtn" class="btn btn-blue" style="display:none;"><i class="ti ti-arrows-diff"></i> 查看稳定版差异</button>
-                        <button type="button" class="btn btn-purple" onclick="DataManager.open(); DataManager.switchTab('cloud');"><i class="ti ti-cloud"></i> 打开云端存档</button>
-                    </div>
-                </div>
-                <div class="info-bar">把当前届别、成绩库、任课表、参数与目标人数状态生成结构化版本，方便后续追踪与比对。</div>
-                <div id="tmVersionScopeMeta" class="tm-center-scope">正在识别当前版本范围...</div>
-                <div id="tmVersionStableMeta" class="tm-center-scope" style="margin-top:-6px; margin-bottom:12px;">正在检查稳定版基线...</div>
-                <div class="control-panel tm-center-toolbar" style="margin-bottom:14px;">
-                    <div style="min-width:220px; flex:1;">
-                        <label>版本搜索</label>
-                        <input id="tmVersionSearchInput" type="text" placeholder="搜索版本名、创建人、快照键..." style="padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; width:100%; min-height:38px;">
-                    </div>
-                    <div>
-                        <label>版本类型</label>
-                        <select id="tmVersionStableFilter">
-                            <option value="all">全部版本</option>
-                            <option value="stable">仅稳定版</option>
-                            <option value="normal">仅普通版</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>时间排序</label>
-                        <select id="tmVersionSortOrder">
-                            <option value="desc">最新在前</option>
-                            <option value="asc">最早在前</option>
-                        </select>
-                    </div>
-                    <div style="display:flex; align-items:flex-end;">
-                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                            <button type="button" id="tmVersionDiffOnlyBtn" class="btn btn-secondary" style="min-height:38px;">只看有差异</button>
-                            <button type="button" id="tmVersionNormalDiffBtn" class="btn btn-secondary" style="min-height:38px;">普通版差异</button>
+            <div id="teaching-version-center" class="section card-box analysis-workspace analysis-workspace-management analysis-workspace-version">
+                <div class="module-desc-bar analysis-hero" style="border-color:#2563eb;">
+                    <h3><i class="ti ti-stack-2"></i> 版本归档中心 <span class="badge" style="background:#2563eb;">基线管理</span></h3>
+                    <p>把当前届别、成绩库、任课表、参数与目标人数状态生成结构化版本，方便后续追踪与比对。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">稳定版 / 当前差异</strong>
+                            <span class="analysis-scan-note">先确认当前基线和稳定版状态，再看本轮环境相对稳定版到底改了多少项。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">筛选 / 比对</strong>
+                            <span class="analysis-scan-note">支持按关键词、版本类型和差异状态筛选，快速定位真正值得保留或回看的版本。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">版本决策</strong>
+                            <span class="analysis-scan-note">适合在成绩、任课表或目标人数调整后判断：现在是否应生成一版新快照，或把当前结果标成稳定版。</span>
                         </div>
                     </div>
                 </div>
-                <div class="tm-center-summary-grid" style="margin-bottom:14px;">
+                <div class="sec-head analysis-shell-head">
+                    <h2><i class="ti ti-stack-2"></i> 版本归档中心</h2>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先看稳定版基线和当前差异，再决定是生成当前版本、查看差异，还是把最新版本标记成稳定版。</div>
+                        <div class="analysis-actions">
+                            <button type="button" id="tmVersionRefreshBtn" class="btn btn-orange"><i class="ti ti-refresh"></i> 刷新版本</button>
+                            <button type="button" id="tmVersionCreateBtn" class="btn btn-green"><i class="ti ti-plus"></i> 生成当前版本</button>
+                            <button type="button" id="tmVersionMarkLatestStableBtn" class="btn btn-orange"><i class="ti ti-award"></i> 设最新为稳定版</button>
+                            <button type="button" id="tmVersionCompareStableBtn" class="btn btn-blue" style="display:none;"><i class="ti ti-arrows-diff"></i> 查看稳定版差异</button>
+                            <button type="button" class="btn btn-purple" onclick="DataManager.open(); DataManager.switchTab('cloud');"><i class="ti ti-cloud"></i> 打开云端存档</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="info-bar analysis-info-band">
+                    <span>这个页面更像版本判断台。先确认当前范围与稳定版基线，再用筛选和差异面板判断当前环境是否值得固化成新版本，还是应该继续观察。</span>
+                </div>
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>版本中心阅读建议</summary>
+                    <div class="explain-content">
+                        <p>先看当前版本范围和稳定版基线，确认你比较的是同一届别、同一成绩库和同一任课表上下文。</p>
+                        <p>如果只是想知道“这轮到底改了什么”，优先用“查看稳定版差异”或“只看有差异”来缩小范围。</p>
+                        <p>确认当前环境已稳定后，再生成版本或标记稳定版，这样回退点会更可信。</p>
+                    </div>
+                </details>
+                <div class="analysis-flow-banner">
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 1</span>
+                        <strong class="analysis-flow-value">看基线</strong>
+                        <span class="analysis-flow-note">先确认当前范围与稳定版基线是否一致，避免在错误上下文里比较。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 2</span>
+                        <strong class="analysis-flow-value">筛差异</strong>
+                        <span class="analysis-flow-note">再按关键词、版本类型和“只看有差异”缩小范围，优先锁定真正发生变化的版本。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 3</span>
+                        <strong class="analysis-flow-value">做决策</strong>
+                        <span class="analysis-flow-note">最后根据差异结果决定生成当前版本、查看稳定版差异，还是标记新稳定版。</span>
+                    </div>
+                </div>
+                <div class="tm-center-summary-grid">
                     <div id="tmVersionSummaryCurrent"></div>
                     <div id="tmVersionSummaryScores"></div>
                     <div id="tmVersionSummaryTeachers"></div>
                     <div id="tmVersionSummaryTargets"></div>
                 </div>
-                <div id="tmVersionDiffPanel" class="tm-version-diff-panel" style="display:none;"></div>
-                <div id="tmVersionCenterList" class="tm-center-list">
-                    <div class="tm-cloud-empty">正在读取版本归档...</div>
+                <div class="analysis-anchor-panel">
+                    <div class="sub-header analysis-section-head">当前范围与稳定版基线</div>
+                    <div class="analysis-table-meta">
+                        <span><strong>用途：</strong>确认当前届别、成绩库、任课表和目标人数的版本范围，并查看稳定版是否已建立。</span>
+                        <span><strong>建议：</strong>如果这里的范围或稳定版状态不对，先刷新版本再做任何生成或比对动作。</span>
+                    </div>
+                    <div id="tmVersionScopeMeta" class="tm-center-scope">正在识别当前版本范围...</div>
+                    <div id="tmVersionStableMeta" class="tm-center-scope">正在检查稳定版基线...</div>
+                </div>
+                <div class="analysis-anchor-panel">
+                    <div class="sub-header analysis-section-head">筛选与检索</div>
+                    <div class="analysis-table-meta">
+                        <span><strong>用途：</strong>按关键词、版本类型、时间排序和差异状态筛选版本记录。</span>
+                        <span><strong>建议：</strong>优先用“只看有差异”或“仅稳定版”缩小范围，再进入逐条比对。</span>
+                    </div>
+                    <div class="control-panel tm-center-toolbar">
+                        <div style="min-width:220px; flex:1;">
+                            <label>版本搜索</label>
+                            <input id="tmVersionSearchInput" type="text" placeholder="搜索版本名、创建人、快照键...">
+                        </div>
+                        <div>
+                            <label>版本类型</label>
+                            <select id="tmVersionStableFilter">
+                                <option value="all">全部版本</option>
+                                <option value="stable">仅稳定版</option>
+                                <option value="normal">仅普通版</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>时间排序</label>
+                            <select id="tmVersionSortOrder">
+                                <option value="desc">最新在前</option>
+                                <option value="asc">最早在前</option>
+                            </select>
+                        </div>
+                        <div class="tm-toolbar-actions">
+                            <div class="tm-toolbar-button-row">
+                                <button type="button" id="tmVersionDiffOnlyBtn" class="btn btn-secondary" style="min-height:38px;">只看有差异</button>
+                                <button type="button" id="tmVersionNormalDiffBtn" class="btn btn-secondary" style="min-height:38px;">普通版差异</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="analysis-anchor-panel">
+                    <div class="sub-header analysis-section-head">当前差异面板</div>
+                    <div class="analysis-table-meta">
+                        <span><strong>用途：</strong>查看某个归档版本与当前环境之间的字段差异，尤其适合对照稳定版。</span>
+                        <span><strong>动作：</strong>从下方列表进入“查看与当前差异”，这里会展开详细比对。</span>
+                    </div>
+                    <div id="tmVersionDiffPanel" class="tm-version-diff-panel" style="display:none;"></div>
+                    <div id="tmVersionDiffEmpty" class="tm-cloud-empty">选择下方某个版本后，这里会显示它与当前环境的详细差异。</div>
+                </div>
+                <div class="analysis-anchor-panel">
+                    <div class="sub-header analysis-section-head">版本列表</div>
+                    <div class="analysis-table-meta">
+                        <span><strong>用途：</strong>查看所有归档版本的摘要、差异项数量、创建人和生成时间。</span>
+                        <span><strong>动作：</strong>可直接查看差异、标记稳定版或删除不再需要的版本。</span>
+                    </div>
+                    <div id="tmVersionCenterList" class="tm-center-list">
+                        <div class="tm-cloud-empty">正在读取版本归档...</div>
+                    </div>
                 </div>
             </div>
 

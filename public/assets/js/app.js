@@ -12038,12 +12038,14 @@ function tmBuildVersionDiffRows(saved, currentPayload) {
 
 function tmRenderVersionDiffPanel() {
     const panel = document.getElementById('tmVersionDiffPanel');
+    const empty = document.getElementById('tmVersionDiffEmpty');
     if (!panel) return;
 
     const versionId = String(TM_VERSION_DIFF_STATE.versionId || '').trim();
     if (!versionId) {
         panel.style.display = 'none';
         panel.innerHTML = '';
+        if (empty) empty.style.display = '';
         return;
     }
 
@@ -12052,6 +12054,7 @@ function tmRenderVersionDiffPanel() {
         TM_VERSION_DIFF_STATE = { versionId: '', html: '', title: '' };
         panel.style.display = 'none';
         panel.innerHTML = '';
+        if (empty) empty.style.display = '';
         return;
     }
 
@@ -12061,6 +12064,7 @@ function tmRenderVersionDiffPanel() {
     const unchangedRows = rows.filter((row) => !row.changed);
 
     panel.style.display = '';
+    if (empty) empty.style.display = 'none';
     panel.innerHTML = `
         <div class="tm-version-diff-card">
             <div class="tm-version-diff-head">
