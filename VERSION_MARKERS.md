@@ -262,3 +262,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest modal interaction consistency fix:
   - `git checkout school-system-v2026.03.27-modal-consistency-v48`
+
+- Roll back to the latest student-details mobile card fix:
+  - `git checkout school-system-v2026.03.27-student-details-mobile-fix-v49`

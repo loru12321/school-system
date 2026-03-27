@@ -8518,12 +8518,17 @@
     <!-- 同名同姓/转班 手动映射确认框 -->
     <div class="modal" id="mappingModal" style="display: none; z-index: 10002;">
         <div class="modal-content" style="max-width: 700px;">
-            <div style="border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;">
-                <h3 style="color:#d97706; font-size:18px;">⚠️ 检测到疑似同名/转班学生</h3>
-                <p style="font-size:13px; color:#666; margin-top:5px;">
-                    系统发现以下学生在“上次考试”中有同名记录，但班级不一致（可能转班了）。<br>
-                    请手动确认对应关系，以便精确计算进退步。
-                </p>
+            <div
+                style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;">
+                <div>
+                    <h3 style="color:#d97706; font-size:18px; margin:0;">⚠️ 检测到疑似同名/转班学生</h3>
+                    <p style="font-size:13px; color:#666; margin-top:5px;">
+                        系统发现以下学生在“上次考试”中有同名记录，但班级不一致（可能转班了）。<br>
+                        请手动确认对应关系，以便精确计算进退步。
+                    </p>
+                </div>
+                <button type="button" class="modal-close-btn" aria-label="关闭映射确认弹窗"
+                    onclick="document.getElementById('mappingModal').style.display='none'">&times;</button>
             </div>
 
             <div class="table-wrap" style="max-height: 50vh; overflow-y: auto;">
@@ -8548,6 +8553,11 @@
     <!-- 电子奖状模态框 -->
     <div id="cert-modal" class="modal" style="display: none; z-index: 10005;">
         <div class="modal-content" style="max-width: 550px; text-align: center; background: #fff; padding: 10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="color:#b45309; font-size:16px; margin:0;">🏅 电子奖状预览</h3>
+                <button type="button" class="modal-close-btn" aria-label="关闭电子奖状弹窗"
+                    onclick="document.getElementById('cert-modal').style.display='none'">&times;</button>
+            </div>
             <!-- 这里是奖状的可视化区域 -->
             <div id="cert-capture-area"
                 style="padding: 40px; background: #fffaf0; border: 12px double #b45309; position: relative; overflow: hidden; box-shadow: inset 0 0 50px rgba(180,83,9,0.05);">
@@ -8938,9 +8948,14 @@
     <!-- 1. 家长端：申诉提交弹窗 -->
     <div id="issue-submit-modal" class="modal" style="display: none; z-index: 75000;">
         <div class="modal-content" style="max-width: 500px;">
-            <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:15px;">
-                <h3 style="color:#b45309; margin:0; font-size:18px;">📝 成绩核查申请</h3>
-                <p style="font-size:12px; color:#666; margin-top:5px;">请填写具体问题，教务处将在核实后处理。</p>
+            <div
+                style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:15px;">
+                <div>
+                    <h3 style="color:#b45309; margin:0; font-size:18px;">📝 成绩核查申请</h3>
+                    <p style="font-size:12px; color:#666; margin-top:5px;">请填写具体问题，教务处将在核实后处理。</p>
+                </div>
+                <button type="button" class="modal-close-btn" aria-label="关闭成绩核查申请弹窗"
+                    onclick="document.getElementById('issue-submit-modal').style.display='none'">&times;</button>
             </div>
 
             <div style="display:grid; gap:15px;">

@@ -334,7 +334,7 @@
 
             table.classList.add('mobile-card-table');
             Array.from(table.querySelectorAll('tbody tr')).forEach((row) => {
-                let title = '';
+                let title = String(row.getAttribute('data-mobile-card-title') || '').trim();
                 Array.from(row.children).forEach((cell, index) => {
                     if (!(cell instanceof HTMLElement)) return;
                     if (cell.hasAttribute('colspan')) return;

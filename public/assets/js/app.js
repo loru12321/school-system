@@ -14431,8 +14431,9 @@ function renderStudentDetails(reset = true) {
     // 生成数据行
     let rowsHTML = displayList.map(student => {
         const nameLink = `<a href="javascript:void(0)" onclick="jumpToStudent('${student.name}', '${student.school}', '${student.class}')" style="color:var(--primary); font-weight:800;">${student.name}</a>`;
+        const mobileCardTitle = `${String(student.name || '').replace(/"/g, '&quot;')} · ${String(student.class || '-').replace(/"/g, '&quot;')}`;
 
-        let row = `<tr>
+        let row = `<tr data-mobile-card-title="${mobileCardTitle}">
                 <td data-label="学校">${student.school}</td>
                 <td data-label="班级">${student.class}</td>
                 <td data-label="姓名">${nameLink}</td>
