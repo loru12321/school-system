@@ -3485,29 +3485,76 @@
     </div>
 
     <!-- 纵向成长档案 (Cohort Growth) -->
-    <div id="cohort-growth" class="section card-box">
-        <div class="module-desc-bar" style="border-color: var(--color-diag)">
-            <h3><i class="ti ti-timeline"></i> 纵向成长档案 <span class="badge" style="background:#0ea5e9;">📈
-                    班主任必看</span></h3>
-            <p><strong>一句话目的：</strong>基于届别ID构建学生成长曲线与稳定性画像。</p>
-            <p><strong>推荐顺序：</strong>完成多次考试导入后使用。</p>
-        </div>
-        <div class="sec-head">
-            <h2><i class="ti ti-timeline"></i> 成长轨迹与稳定性分析</h2>
-            <div style="display:flex; gap:10px;">
-                <button class="btn btn-purple" onclick="CohortGrowth.render()">🔎 生成成长档案</button>
-                <button class="btn btn-gray" onclick="CohortGrowth.exportVolatility()">📥 导出波动名单</button>
+    <div id="cohort-growth" class="section card-box analysis-workspace analysis-workspace-progress">
+        <div class="module-desc-bar analysis-hero" style="border-color: var(--color-diag)">
+            <h3><i class="ti ti-timeline"></i> 纵向成长档案 <span class="badge" style="background:#0ea5e9;">📈 班主任必看</span></h3>
+            <p><strong>一句话目的：</strong>基于届别 ID 构建学生成长曲线与稳定性画像。</p>
+            <p><strong>推荐顺序：</strong>完成多次考试导入后使用，至少准备 4 次考试数据再看波动率更稳。</p>
+            <div class="analysis-scan-strip">
+                <div class="analysis-scan-item">
+                    <span class="analysis-scan-label">Focus</span>
+                    <strong class="analysis-scan-value">稳定 / 成长</strong>
+                    <span class="analysis-scan-note">先看 Z-Score 波动率识别稳定性，再看排名百分位的首尾变化判断长期成长趋势。</span>
+                </div>
+                <div class="analysis-scan-item">
+                    <span class="analysis-scan-label">Use</span>
+                    <strong class="analysis-scan-value">纵向跟踪</strong>
+                    <span class="analysis-scan-note">适合班主任、年级组用来区分“短期起伏”与“长期向上/向下”的学生画像。</span>
+                </div>
+                <div class="analysis-scan-item">
+                    <span class="analysis-scan-label">Output</span>
+                    <strong class="analysis-scan-value">名单 / 画像</strong>
+                    <span class="analysis-scan-note">支持生成波动名单与成长名单，适合后续谈话、家校沟通和稳定性跟踪。</span>
+                </div>
             </div>
         </div>
-        <div class="info-bar">
-            <span>基于届别历史考试，计算 $Z$ 分数波动率、排名百分位变化。</span>
-            <span style="margin-left:auto; font-size:12px;">建议至少 4 次考试数据</span>
+        <div class="sec-head analysis-shell-head">
+            <h2><i class="ti ti-timeline"></i> 成长轨迹与稳定性分析</h2>
+            <div class="analysis-action-stack">
+                <div class="analysis-action-note">建议先确保同一届别下已经累计多次考试，再生成成长档案；如果考试次数太少，这页更适合先当作趋势预览而不是结论依据。</div>
+                <div class="analysis-actions">
+                    <button class="btn btn-purple" onclick="CohortGrowth.render()">🔎 生成成长档案</button>
+                    <button class="btn btn-gray" onclick="CohortGrowth.exportVolatility()">📥 导出波动名单</button>
+                </div>
+            </div>
         </div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-            <div class="card-box" style="border-left:4px solid #38bdf8; background:#f0f9ff;">
-                <div class="sub-header">🌊 Z-Score 波动率 (稳定性)</div>
-                <div class="table-wrap">
-                    <table id="cohort-volatility-table">
+        <div class="info-bar analysis-info-band">
+            <span>基于届别历史考试，计算 $Z$ 分数波动率与排名百分位变化。建议至少累计 4 次考试数据后再正式使用稳定性结果，否则更适合做阶段参考。</span>
+        </div>
+        <details class="explain-panel analysis-doc-panel">
+            <summary>成长档案阅读建议</summary>
+            <div class="explain-content">
+                <p>Z-Score 波动率反映学生成绩的稳定程度，波动越大，越需要关注“忽高忽低”的学习状态。</p>
+                <p>排名百分位首尾对比更适合看长期趋势，能帮助区分“偶然高分”与“持续成长”。</p>
+                <p>建议先看波动率名单，再看成长名单，避免只看上升幅度而忽略不稳定风险。</p>
+            </div>
+        </details>
+        <div class="analysis-flow-banner">
+            <div class="analysis-flow-step">
+                <span class="analysis-flow-kicker">Step 1</span>
+                <strong class="analysis-flow-value">看波动</strong>
+                <span class="analysis-flow-note">先看 Z-Score 波动率，识别成绩最不稳定、最需要持续关注的学生。</span>
+            </div>
+            <div class="analysis-flow-step">
+                <span class="analysis-flow-kicker">Step 2</span>
+                <strong class="analysis-flow-value">看成长</strong>
+                <span class="analysis-flow-note">再看排名百分位的首尾变化，判断长期成长是上升、停滞还是回落。</span>
+            </div>
+            <div class="analysis-flow-step">
+                <span class="analysis-flow-kicker">Step 3</span>
+                <strong class="analysis-flow-value">做跟进</strong>
+                <span class="analysis-flow-note">最后导出波动名单或成长名单，用于谈话、家校沟通与阶段跟踪。</span>
+            </div>
+        </div>
+        <div class="cohort-growth-grid">
+            <div class="analysis-anchor-panel">
+                <div class="sub-header analysis-section-head">🌊 Z-Score 波动率（稳定性）</div>
+                <div class="analysis-table-meta">
+                    <span><strong>用途：</strong>识别成绩忽高忽低、学习状态波动明显的学生。</span>
+                    <span><strong>阅读建议：</strong>波动率越高越需要重点关注，建议结合班级背景判断是阶段起伏还是持续不稳。</span>
+                </div>
+                <div class="table-wrap analysis-table-shell">
+                    <table id="cohort-volatility-table" class="analysis-table-dense">
                         <thead>
                             <tr>
                                 <th>姓名</th>
@@ -3516,14 +3563,22 @@
                                 <th>波动率(σ)</th>
                             </tr>
                         </thead>
-                        <tbody></tbody>
+                        <tbody>
+                            <tr>
+                                <td colspan="4" class="analysis-empty-cell">点击“生成成长档案”后，这里会展示波动率最高的学生名单。</td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
             </div>
-            <div class="card-box" style="border-left:4px solid #22c55e; background:#f0fdf4;">
-                <div class="sub-header">🚀 排名百分位成长 (首尾对比)</div>
-                <div class="table-wrap">
-                    <table id="cohort-growth-table">
+            <div class="analysis-anchor-panel">
+                <div class="sub-header analysis-section-head">🚀 排名百分位成长（首尾对比）</div>
+                <div class="analysis-table-meta">
+                    <span><strong>用途：</strong>查看学生在届别内的长期成长方向，而不是只看单次涨跌。</span>
+                    <span><strong>阅读建议：</strong>优先关注变化幅度大的学生，再结合波动率判断是真成长还是高波动。</span>
+                </div>
+                <div class="table-wrap analysis-table-shell">
+                    <table id="cohort-growth-table" class="analysis-table-dense">
                         <thead>
                             <tr>
                                 <th>姓名</th>
@@ -3533,7 +3588,11 @@
                                 <th>变化</th>
                             </tr>
                         </thead>
-                        <tbody></tbody>
+                        <tbody>
+                            <tr>
+                                <td colspan="5" class="analysis-empty-cell">点击“生成成长档案”后，这里会展示排名百分位成长最明显的学生。</td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
             </div>

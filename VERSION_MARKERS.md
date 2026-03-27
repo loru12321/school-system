@@ -247,3 +247,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest SSE & correlation UI release:
   - `git checkout school-system-v2026.03.27-sse-correlation-ui-v43`
+
+- Roll back to the latest cohort growth UI release:
+  - `git checkout school-system-v2026.03.27-cohort-growth-ui-v44`

@@ -19,6 +19,7 @@ const SWITCH_MODULE_IDS = [
     'bottom3',
     'marginal-push',
     'progress-analysis',
+    'cohort-growth',
     'report-generator',
     'ai-analysis',
     'freshman-simulator',
@@ -633,6 +634,44 @@ async function runModuleDeepCheck(page, id) {
                 checks,
                 reportVisible,
                 contentReady
+            };
+        });
+    }
+    if (id === 'cohort-growth') {
+        return page.evaluate(async () => {
+            const growthApi = typeof CohortGrowth !== 'undefined'
+                ? CohortGrowth
+                : (window.CohortGrowth || null);
+            const checks = {
+                sectionReady: !!document.querySelector('#cohort-growth.analysis-workspace-progress'),
+                heroReady: !!document.querySelector('#cohort-growth .analysis-hero'),
+                shellHeadReady: !!document.querySelector('#cohort-growth .analysis-shell-head'),
+                growthObjectReady: !!growthApi,
+                renderReady: !!growthApi && typeof growthApi.render === 'function',
+                exportReady: !!growthApi && typeof growthApi.exportVolatility === 'function',
+                volatilityTable: !!document.getElementById('cohort-volatility-table'),
+                growthTable: !!document.getElementById('cohort-growth-table'),
+                flowReady: document.querySelectorAll('#cohort-growth .analysis-flow-step').length >= 3
+            };
+            if (!Object.values(checks).every(Boolean)) {
+                return { ok: false, checks, examCount: 0, volatilityRows: 0, growthRows: 0 };
+            }
+
+            const examCount = Object.keys((window.COHORT_DB && window.COHORT_DB.exams) || {}).length;
+            if (examCount > 0) {
+                await growthApi.render();
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+
+            const volatilityRows = document.querySelectorAll('#cohort-volatility-table tbody tr').length;
+            const growthRows = document.querySelectorAll('#cohort-growth-table tbody tr').length;
+
+            return {
+                ok: Object.values(checks).every(Boolean) && (examCount === 0 || (volatilityRows > 0 && growthRows > 0)),
+                checks,
+                examCount,
+                volatilityRows,
+                growthRows
             };
         });
     }

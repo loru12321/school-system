@@ -1908,6 +1908,12 @@ header {
     gap: 18px;
 }
 
+.cohort-growth-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 18px;
+}
+
 .corr-chart-card {
     min-height: 360px;
 }
