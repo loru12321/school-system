@@ -268,13 +268,33 @@ async function runModuleDeepCheck(page, id) {
                 exportTownSubmoduleCompare: typeof window.exportTownSubmoduleCompare === 'function',
                 saveTownSubmoduleCompareToCloud: typeof window.saveTownSubmoduleCompareToCloud === 'function',
                 viewCloudTownSubmoduleCompares: typeof window.viewCloudTownSubmoduleCompares === 'function',
-                loadCloudTownSubmoduleCompare: typeof window.loadCloudTownSubmoduleCompare === 'function'
+                loadCloudTownSubmoduleCompare: typeof window.loadCloudTownSubmoduleCompare === 'function',
+                showSchoolProfile: typeof window.showSchoolProfile === 'function' || typeof showSchoolProfile === 'function',
+                schoolProfileModal: !!document.getElementById('school-profile-modal'),
+                schoolProfileClose: !!document.querySelector('#school-profile-modal .school-modal-close')
             };
             const panel = document.querySelector('.town-submodule-compare-panel[data-submodule="summary"]');
+            let schoolProfileCloseWorks = false;
+            const schoolNames = Object.keys(window.SCHOOLS || {});
+            const modal = document.getElementById('school-profile-modal');
+            const closeBtn = document.querySelector('#school-profile-modal .school-modal-close');
+            const openSchoolProfile = typeof window.showSchoolProfile === 'function'
+                ? window.showSchoolProfile
+                : (typeof showSchoolProfile === 'function' ? showSchoolProfile : null);
+            if (modal && closeBtn && schoolNames.length && openSchoolProfile) {
+                openSchoolProfile(schoolNames[0]);
+                await new Promise(resolve => setTimeout(resolve, 120));
+                const modalVisible = getComputedStyle(modal).display !== 'none';
+                closeBtn.click();
+                await new Promise(resolve => setTimeout(resolve, 80));
+                const modalClosed = getComputedStyle(modal).display === 'none';
+                schoolProfileCloseWorks = modalVisible && modalClosed;
+            }
             return {
-                ok: Object.values(checks).every(Boolean) && !!panel,
+                ok: Object.values(checks).every(Boolean) && !!panel && schoolProfileCloseWorks,
                 checks,
-                panelReady: !!panel
+                panelReady: !!panel,
+                schoolProfileCloseWorks
             };
         });
     }

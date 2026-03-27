@@ -253,3 +253,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest upload shell UI release:
   - `git checkout school-system-v2026.03.27-upload-shell-ui-v45`
+
+- Roll back to the latest school modal mobile-close fix:
+  - `git checkout school-system-v2026.03.27-school-modal-mobile-close-v46`
