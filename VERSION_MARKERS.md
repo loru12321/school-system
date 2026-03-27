@@ -238,3 +238,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest teaching overview UI release:
   - `git checkout school-system-v2026.03.27-teaching-overview-ui-v40`
+
+- Roll back to the latest teaching ops center UI release:
+  - `git checkout school-system-v2026.03.27-teaching-ops-centers-ui-v41`

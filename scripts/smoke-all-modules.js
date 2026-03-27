@@ -391,13 +391,21 @@ async function runModuleDeepCheck(page, id) {
         return page.evaluate(async () => {
             const refreshButton = document.getElementById('tmWarningCenterRefreshBtn');
             const checks = {
+                sectionReady: !!document.querySelector('#teaching-warning-center.analysis-workspace-management'),
+                heroReady: !!document.querySelector('#teaching-warning-center .analysis-hero'),
+                shellHeadReady: !!document.querySelector('#teaching-warning-center .analysis-shell-head'),
                 tmRenderWarningCenter: typeof window.tmRenderWarningCenter === 'function',
                 tmRefreshCloudOps: typeof window.tmRefreshCloudOps === 'function',
                 tmCreateRectifyTaskFromWarning: typeof window.tmCreateRectifyTaskFromWarning === 'function',
                 tmIgnoreCloudWarning: typeof window.tmIgnoreCloudWarning === 'function',
                 refreshButton: !!refreshButton,
                 refreshBound: !!refreshButton && typeof refreshButton.onclick === 'function',
-                listReady: !!document.getElementById('tmWarningCenterList')
+                toolbarReady: !!document.getElementById('tmWarningLevelFilter')
+                    && !!document.getElementById('tmWarningStatusFilter')
+                    && !!document.getElementById('tmWarningTypeFilter'),
+                listReady: !!document.getElementById('tmWarningCenterList'),
+                summaryReady: document.querySelectorAll('#teaching-warning-center .tm-center-summary-grid > div').length >= 4,
+                flowReady: document.querySelectorAll('#teaching-warning-center .analysis-flow-step').length >= 3
             };
             return {
                 ok: Object.values(checks).every(Boolean),
@@ -410,6 +418,9 @@ async function runModuleDeepCheck(page, id) {
             const refreshButton = document.getElementById('tmRectifyCenterRefreshBtn');
             const createButton = document.getElementById('tmRectifyCreateBtn');
             const checks = {
+                sectionReady: !!document.querySelector('#teaching-rectify-center.analysis-workspace-management'),
+                heroReady: !!document.querySelector('#teaching-rectify-center .analysis-hero'),
+                shellHeadReady: !!document.querySelector('#teaching-rectify-center .analysis-shell-head'),
                 tmRenderRectifyCenter: typeof window.tmRenderRectifyCenter === 'function',
                 tmRefreshCloudOps: typeof window.tmRefreshCloudOps === 'function',
                 tmCreateManualRectifyTask: typeof window.tmCreateManualRectifyTask === 'function',
@@ -419,7 +430,32 @@ async function runModuleDeepCheck(page, id) {
                 refreshBound: !!refreshButton && typeof refreshButton.onclick === 'function',
                 createButton: !!createButton,
                 createBound: !!createButton && typeof createButton.onclick === 'function',
-                listReady: !!document.getElementById('tmRectifyCenterList')
+                toolbarReady: !!document.getElementById('tmRectifyStatusFilter')
+                    && !!document.getElementById('tmRectifyPriorityFilter')
+                    && !!document.getElementById('tmRectifyOwnerFilter'),
+                listReady: !!document.getElementById('tmRectifyCenterList'),
+                summaryReady: document.querySelectorAll('#teaching-rectify-center .tm-center-summary-grid > div').length >= 4,
+                flowReady: document.querySelectorAll('#teaching-rectify-center .analysis-flow-step').length >= 3
+            };
+            return {
+                ok: Object.values(checks).every(Boolean),
+                checks
+            };
+        });
+    }
+    if (id === 'teaching-issue-board') {
+        return page.evaluate(async () => {
+            const refreshButton = document.getElementById('tmIssueBoardRefreshBtn');
+            const checks = {
+                sectionReady: !!document.querySelector('#teaching-issue-board.analysis-workspace-management'),
+                heroReady: !!document.querySelector('#teaching-issue-board .analysis-hero'),
+                shellHeadReady: !!document.querySelector('#teaching-issue-board .analysis-shell-head'),
+                tmRenderIssueBoard: typeof window.tmRenderIssueBoard === 'function',
+                refreshButton: !!refreshButton,
+                refreshBound: !!refreshButton && typeof refreshButton.onclick === 'function',
+                listReady: !!document.getElementById('tmIssueBoardList'),
+                summaryReady: document.querySelectorAll('#teaching-issue-board .tm-center-summary-grid > div').length >= 4,
+                flowReady: document.querySelectorAll('#teaching-issue-board .analysis-flow-step').length >= 3
             };
             return {
                 ok: Object.values(checks).every(Boolean),

@@ -4846,127 +4846,315 @@
             </div>
 
             <!-- 6.1 教学异常预警中心 -->
-            <div id="teaching-warning-center" class="section card-box">
-                <div class="sec-head">
+            <div id="teaching-warning-center" class="section card-box analysis-workspace analysis-workspace-management">
+                <div class="module-desc-bar analysis-hero" style="border-color:#ea580c;">
+                    <h3><i class="ti ti-alert-triangle"></i> 教学异常预警中心 <span class="badge" style="background:#ea580c;">云端巡检</span></h3>
+                    <p>集中查看当前届别与当前学校范围内的云端结构化预警，支持按等级筛选、忽略预警与一键转为整改任务。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">等级 / 类型</strong>
+                            <span class="analysis-scan-note">先看严重与高风险预警，再按教师、班级、学生等类型下钻，避免把精力分散到低优先级项。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">筛选 / 转整改</strong>
+                            <span class="analysis-scan-note">支持按等级、状态和类型收敛问题，再把需要持续跟踪的项直接转成整改任务。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">待处理清单</strong>
+                            <span class="analysis-scan-note">适合主任和教研组每日巡检，先确认范围与数量，再派发整改或忽略无效预警。</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="sec-head analysis-shell-head">
                     <h2><i class="ti ti-alert-triangle"></i> 教学异常预警中心</h2>
-                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <button type="button" id="tmWarningCenterRefreshBtn" class="btn btn-orange"><i class="ti ti-refresh"></i> 刷新预警</button>
-                        <button type="button" class="btn btn-purple" onclick="switchTab('teaching-rectify-center')"><i class="ti ti-list-check"></i> 查看整改任务</button>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先筛出严重和高风险，再决定是忽略噪音项还是直接转整改任务，这样能让预警中心更像处置台而不是消息堆积区。</div>
+                        <div class="analysis-actions">
+                            <button type="button" id="tmWarningCenterRefreshBtn" class="btn btn-orange"><i class="ti ti-refresh"></i> 刷新预警</button>
+                            <button type="button" class="btn btn-purple" onclick="switchTab('teaching-rectify-center')"><i class="ti ti-list-check"></i> 查看整改任务</button>
+                        </div>
                     </div>
                 </div>
-                <div class="info-bar">集中查看当前届别与当前学校范围内的云端结构化预警，支持按等级筛选、忽略预警与一键转为整改任务。</div>
-                <div class="control-panel tm-center-toolbar">
-                    <div>
-                        <label>风险等级</label>
-                        <select id="tmWarningLevelFilter">
-                            <option value="all">全部等级</option>
-                            <option value="critical">严重预警</option>
-                            <option value="high">高风险</option>
-                            <option value="medium">中风险</option>
-                            <option value="low">低风险</option>
-                        </select>
+                <div class="info-bar analysis-info-band">
+                    <span>这个页面更适合做“先判断范围，再决定处置”的云端巡检。优先结合预警范围、摘要卡和过滤条件阅读，再处理具体卡片，效率会比直接逐条翻看高很多。</span>
+                </div>
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>预警中心使用建议</summary>
+                    <div class="explain-content">
+                        <p>先按风险等级和状态收敛问题范围，再看教师类、班级类或学生类预警的结构分布。</p>
+                        <p>如果一条预警需要持续跟踪，优先转为整改任务；如果确认是噪音项或已处理，再做忽略。</p>
+                        <p>刷新后优先看摘要卡变化，能更快判断这轮问题是在扩散还是在收敛。</p>
                     </div>
-                    <div>
-                        <label>处理状态</label>
-                        <select id="tmWarningStatusFilter">
-                            <option value="open">待处理</option>
-                            <option value="ignored">已忽略</option>
-                            <option value="all">全部状态</option>
-                        </select>
+                </details>
+                <div class="analysis-flow-banner">
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 1</span>
+                        <strong class="analysis-flow-value">筛选范围</strong>
+                        <span class="analysis-flow-note">先按等级、状态和类型收敛问题范围，减少无关项干扰。</span>
                     </div>
-                    <div>
-                        <label>预警类型</label>
-                        <select id="tmWarningTypeFilter">
-                            <option value="all">全部类型</option>
-                            <option value="data">数据异常</option>
-                            <option value="teacher">教师异常</option>
-                            <option value="class">班级异常</option>
-                            <option value="student">学生异常</option>
-                        </select>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 2</span>
+                        <strong class="analysis-flow-value">判断优先级</strong>
+                        <span class="analysis-flow-note">优先处理严重、高风险和可复发问题，再看中低风险提示。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 3</span>
+                        <strong class="analysis-flow-value">转整改</strong>
+                        <span class="analysis-flow-note">对需要持续跟踪的预警直接生成整改任务，形成闭环。</span>
                     </div>
                 </div>
-                <div id="tmWarningScopeMeta" class="tm-center-scope">正在识别当前预警范围...</div>
-                <div class="tm-center-summary-grid" style="margin-bottom:14px;">
+                <div class="tm-center-summary-grid">
                     <div id="tmWarningSummaryOpen"></div>
                     <div id="tmWarningSummaryCritical"></div>
                     <div id="tmWarningSummaryTeacher"></div>
                     <div id="tmWarningSummaryClass"></div>
                 </div>
-                <div id="tmWarningCenterList" class="tm-center-list">
-                    <div class="tm-cloud-empty">正在准备预警数据...</div>
+                <div class="analysis-anchor-panel">
+                    <div class="sub-header analysis-section-head">筛选与范围</div>
+                    <div class="analysis-table-meta">
+                        <span><strong>用途：</strong>控制预警的等级、状态和类型，只看当前最需要处理的部分。</span>
+                        <span><strong>建议：</strong>先看“待处理 + 高风险/严重”，确认主问题后再扩大到全部状态。</span>
+                    </div>
+                    <div class="control-panel tm-center-toolbar">
+                        <div>
+                            <label>风险等级</label>
+                            <select id="tmWarningLevelFilter">
+                                <option value="all">全部等级</option>
+                                <option value="critical">严重预警</option>
+                                <option value="high">高风险</option>
+                                <option value="medium">中风险</option>
+                                <option value="low">低风险</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>处理状态</label>
+                            <select id="tmWarningStatusFilter">
+                                <option value="open">待处理</option>
+                                <option value="ignored">已忽略</option>
+                                <option value="all">全部状态</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>预警类型</label>
+                            <select id="tmWarningTypeFilter">
+                                <option value="all">全部类型</option>
+                                <option value="data">数据异常</option>
+                                <option value="teacher">教师异常</option>
+                                <option value="class">班级异常</option>
+                                <option value="student">学生异常</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="tmWarningScopeMeta" class="tm-center-scope">正在识别当前预警范围...</div>
+                </div>
+                <div class="analysis-anchor-panel">
+                    <div class="sub-header analysis-section-head">预警列表</div>
+                    <div class="analysis-table-meta">
+                        <span><strong>用途：</strong>逐条查看当前范围内的预警内容、来源、时间和对象范围。</span>
+                        <span><strong>动作：</strong>可直接忽略或一键转整改，避免在多页间来回切换。</span>
+                    </div>
+                    <div id="tmWarningCenterList" class="tm-center-list">
+                        <div class="tm-cloud-empty">正在准备预警数据...</div>
+                    </div>
                 </div>
             </div>
 
             <!-- 6.2 教学整改任务列表 -->
-            <div id="teaching-rectify-center" class="section card-box">
-                <div class="sec-head">
+            <div id="teaching-rectify-center" class="section card-box analysis-workspace analysis-workspace-management">
+                <div class="module-desc-bar analysis-hero" style="border-color:#16a34a;">
+                    <h3><i class="ti ti-list-check"></i> 教学整改任务列表 <span class="badge" style="background:#16a34a;">闭环跟进</span></h3>
+                    <p>对接云端整改台账，支持查看待办、推进中、已完成任务，并按当前学校范围持续跟踪。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">状态 / 截止</strong>
+                            <span class="analysis-scan-note">先看未完成、进行中和临近截止任务，优先处理会阻塞分析闭环的事项。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">推进 / 完成</strong>
+                            <span class="analysis-scan-note">支持按优先级和负责人过滤，并直接在页内推进状态或补充进度。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">任务节奏</strong>
+                            <span class="analysis-scan-note">适合每周追踪整改节奏，看问题是否真正进入执行而不是停留在预警层。</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="sec-head analysis-shell-head">
                     <h2><i class="ti ti-list-check"></i> 教学整改任务列表</h2>
-                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <button type="button" id="tmRectifyCenterRefreshBtn" class="btn btn-orange"><i class="ti ti-refresh"></i> 刷新任务</button>
-                        <button type="button" id="tmRectifyCreateBtn" class="btn btn-green"><i class="ti ti-plus"></i> 新建整改任务</button>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先看未完成和临近截止任务，再决定推进、完成或补进度，能更快恢复任务节奏感。</div>
+                        <div class="analysis-actions">
+                            <button type="button" id="tmRectifyCenterRefreshBtn" class="btn btn-orange"><i class="ti ti-refresh"></i> 刷新任务</button>
+                            <button type="button" id="tmRectifyCreateBtn" class="btn btn-green"><i class="ti ti-plus"></i> 新建整改任务</button>
+                        </div>
                     </div>
                 </div>
-                <div class="info-bar">对接云端整改台账，支持查看待办、推进中、已完成任务，并按当前学校范围持续跟踪。</div>
-                <div class="control-panel tm-center-toolbar">
-                    <div>
-                        <label>任务状态</label>
-                        <select id="tmRectifyStatusFilter">
-                            <option value="open">未完成</option>
-                            <option value="todo">待开始</option>
-                            <option value="doing">进行中</option>
-                            <option value="done">已完成</option>
-                            <option value="closed">已关闭</option>
-                            <option value="all">全部状态</option>
-                        </select>
+                <div class="info-bar analysis-info-band">
+                    <span>这个页面更像整改执行面板。先确认范围和摘要，再看任务卡片的状态、负责人和截止时间，最后推进或补进度，会比直接翻任务列表更清楚。</span>
+                </div>
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>整改中心阅读顺序</summary>
+                    <div class="explain-content">
+                        <p>先按状态、优先级和负责人筛出当前真正需要推进的任务，再看摘要卡是否与预期一致。</p>
+                        <p>如果一个任务还停留在待开始，优先推进到进行中；如果已经完成处置，再及时标记完成。</p>
+                        <p>负责人和截止日期是最关键的节奏信息，适合在组会前快速扫一遍。</p>
                     </div>
-                    <div>
-                        <label>优先级</label>
-                        <select id="tmRectifyPriorityFilter">
-                            <option value="all">全部优先级</option>
-                            <option value="high">高优先级</option>
-                            <option value="medium">中优先级</option>
-                            <option value="low">低优先级</option>
-                        </select>
+                </details>
+                <div class="analysis-flow-banner">
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 1</span>
+                        <strong class="analysis-flow-value">筛任务</strong>
+                        <span class="analysis-flow-note">先按状态、优先级和负责人过滤，只看当前真正需要推进的任务。</span>
                     </div>
-                    <div>
-                        <label>负责人</label>
-                        <select id="tmRectifyOwnerFilter">
-                            <option value="all">全部负责人</option>
-                            <option value="assigned">已指派</option>
-                            <option value="unassigned">未指派</option>
-                            <option value="mine">与我相关</option>
-                        </select>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 2</span>
+                        <strong class="analysis-flow-value">看节奏</strong>
+                        <span class="analysis-flow-note">用摘要卡判断未完成、进行中和临近截止任务是否在可控范围内。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 3</span>
+                        <strong class="analysis-flow-value">推进闭环</strong>
+                        <span class="analysis-flow-note">直接更新状态或补进度，确保整改从预警真正走向闭环。</span>
                     </div>
                 </div>
-                <div id="tmRectifyScopeMeta" class="tm-center-scope">正在识别当前整改范围...</div>
-                <div class="tm-center-summary-grid" style="margin-bottom:14px;">
+                <div class="tm-center-summary-grid">
                     <div id="tmRectifySummaryOpen"></div>
                     <div id="tmRectifySummaryDoing"></div>
                     <div id="tmRectifySummaryDone"></div>
                     <div id="tmRectifySummaryOverdue"></div>
                 </div>
-                <div id="tmRectifyCenterList" class="tm-center-list">
-                    <div class="tm-cloud-empty">正在准备整改任务数据...</div>
+                <div class="analysis-anchor-panel">
+                    <div class="sub-header analysis-section-head">筛选与范围</div>
+                    <div class="analysis-table-meta">
+                        <span><strong>用途：</strong>按任务状态、优先级和负责人定位当前真正需要推进的整改事项。</span>
+                        <span><strong>建议：</strong>优先看“未完成 + 高优先级”或“与我相关”，更容易抓住本轮闭环重点。</span>
+                    </div>
+                    <div class="control-panel tm-center-toolbar">
+                        <div>
+                            <label>任务状态</label>
+                            <select id="tmRectifyStatusFilter">
+                                <option value="open">未完成</option>
+                                <option value="todo">待开始</option>
+                                <option value="doing">进行中</option>
+                                <option value="done">已完成</option>
+                                <option value="closed">已关闭</option>
+                                <option value="all">全部状态</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>优先级</label>
+                            <select id="tmRectifyPriorityFilter">
+                                <option value="all">全部优先级</option>
+                                <option value="high">高优先级</option>
+                                <option value="medium">中优先级</option>
+                                <option value="low">低优先级</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>负责人</label>
+                            <select id="tmRectifyOwnerFilter">
+                                <option value="all">全部负责人</option>
+                                <option value="assigned">已指派</option>
+                                <option value="unassigned">未指派</option>
+                                <option value="mine">与我相关</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="tmRectifyScopeMeta" class="tm-center-scope">正在识别当前整改范围...</div>
+                </div>
+                <div class="analysis-anchor-panel">
+                    <div class="sub-header analysis-section-head">整改任务列表</div>
+                    <div class="analysis-table-meta">
+                        <span><strong>用途：</strong>查看任务标题、范围、负责人、截止与推进动作。</span>
+                        <span><strong>动作：</strong>可直接推进到进行中、标记完成或更新进度，无需离开当前页面。</span>
+                    </div>
+                    <div id="tmRectifyCenterList" class="tm-center-list">
+                        <div class="tm-cloud-empty">正在准备整改任务数据...</div>
+                    </div>
                 </div>
             </div>
 
-            <div id="teaching-issue-board" class="section card-box">
-                <div class="sec-head">
-                    <h2><i class="ti ti-clipboard-list"></i> 教学问题清单</h2>
-                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <button type="button" id="tmIssueBoardRefreshBtn" class="btn btn-orange"><i class="ti ti-refresh"></i> 刷新清单</button>
-                        <button type="button" class="btn btn-purple" onclick="switchTab('teacher-analysis')"><i class="ti ti-school"></i> 查看教师画像</button>
+            <div id="teaching-issue-board" class="section card-box analysis-workspace analysis-workspace-management">
+                <div class="module-desc-bar analysis-hero" style="border-color:#7c3aed;">
+                    <h3><i class="ti ti-clipboard-list"></i> 教学问题清单 <span class="badge" style="background:#7c3aed;">日常跟进</span></h3>
+                    <p>把教师风险、待处理预警、整改任务合并到一页查看，适合作为教导处或教研组的日常跟进面板。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">教师 / 预警 / 任务</strong>
+                            <span class="analysis-scan-note">把教师风险、待跟进预警和整改任务放在一页，更适合做连续跟进而不是单点查看。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">研组晨会</strong>
+                            <span class="analysis-scan-note">适合用作日常巡检或组会开场页，快速判断问题集中在哪个环节。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">聚焦对象</strong>
+                            <span class="analysis-scan-note">可以快速定位风险教师、待处理预警和整改进展，决定先去教师画像还是整改中心。</span>
+                        </div>
                     </div>
                 </div>
-                <div class="info-bar">把教师风险、待处理预警、整改任务合并到一页查看，适合作为教导处或教研组的日常跟进面板。</div>
-                <div class="tm-center-summary-grid" style="margin-bottom:14px;">
+                <div class="sec-head analysis-shell-head">
+                    <h2><i class="ti ti-clipboard-list"></i> 教学问题清单</h2>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议先看摘要卡确定问题集中在哪一层，再查看三组清单，这样比从教师、预警、任务三个页面分别切换更省时间。</div>
+                        <div class="analysis-actions">
+                            <button type="button" id="tmIssueBoardRefreshBtn" class="btn btn-orange"><i class="ti ti-refresh"></i> 刷新清单</button>
+                            <button type="button" class="btn btn-purple" onclick="switchTab('teacher-analysis')"><i class="ti ti-school"></i> 查看教师画像</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="info-bar analysis-info-band">
+                    <span>这个页面更像“问题跟进汇总台”。先看摘要卡，再按教师风险、待跟进预警、整改任务三组连续阅读，能更快判断问题是出在教学质量、异常事件还是执行闭环。</span>
+                </div>
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>问题清单阅读建议</summary>
+                    <div class="explain-content">
+                        <p>如果问题集中在教师风险，优先跳到教师画像做下钻；如果集中在待跟进预警，优先判断是否需要转整改。</p>
+                        <p>整改任务如果长期高位不降，说明问题已经从识别阶段进入执行瓶颈，应优先排查负责人和截止时间。</p>
+                        <p>这页更适合做“先定焦点，再决定下一步”的日常跟进，而不是替代具体分析页。</p>
+                    </div>
+                </details>
+                <div class="analysis-flow-banner">
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 1</span>
+                        <strong class="analysis-flow-value">看摘要</strong>
+                        <span class="analysis-flow-note">先判断是教师风险、预警积压还是整改推进最突出。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 2</span>
+                        <strong class="analysis-flow-value">定焦点</strong>
+                        <span class="analysis-flow-note">再进入对应清单组，确认问题对象、范围和优先级。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 3</span>
+                        <strong class="analysis-flow-value">跳执行页</strong>
+                        <span class="analysis-flow-note">最后带着焦点跳到教师画像或整改中心，完成进一步处置。</span>
+                    </div>
+                </div>
+                <div class="tm-center-summary-grid">
                     <div id="tmIssueSummaryTeacherRisk"></div>
                     <div id="tmIssueSummaryWarnings"></div>
                     <div id="tmIssueSummaryTasks"></div>
                     <div id="tmIssueSummaryFocus"></div>
                 </div>
-                <div id="tmIssueBoardList" class="tm-center-list">
-                    <div class="tm-cloud-empty">正在生成问题清单...</div>
+                <div class="analysis-anchor-panel">
+                    <div class="sub-header analysis-section-head">问题清单</div>
+                    <div class="analysis-table-meta">
+                        <span><strong>用途：</strong>把教师风险、待跟进预警和整改任务并排汇总，方便决定本轮应优先跟哪类问题。</span>
+                        <span><strong>动作：</strong>可直接定位教师画像、忽略预警、转整改或推进任务。</span>
+                    </div>
+                    <div id="tmIssueBoardList" class="tm-center-list">
+                        <div class="tm-cloud-empty">正在生成问题清单...</div>
+                    </div>
                 </div>
             </div>
 
