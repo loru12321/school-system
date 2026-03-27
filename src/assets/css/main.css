@@ -4697,6 +4697,43 @@ select:focus {
     /* 垂直排列 */
 }
 
+.modal-close-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    border: 1px solid #dbe5f1;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    touch-action: manipulation;
+    flex: 0 0 auto;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.modal-close-btn:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+
+.modal-close-btn--light {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+}
+
+.modal-close-btn--light:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.34);
+    color: #ffffff;
+}
+
 .school-modal-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -4786,6 +4823,13 @@ select:focus {
     }
 
     .school-modal-close {
+        width: 48px;
+        height: 48px;
+        min-width: 48px;
+        font-size: 26px;
+    }
+
+    .modal-close-btn {
         width: 48px;
         height: 48px;
         min-width: 48px;

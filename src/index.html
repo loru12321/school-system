@@ -8310,8 +8310,8 @@
                     <button id="drill-export-btn" class="btn btn-sm btn-green" onclick="DrillSystem.exportExcel()">
                         <i class="ti ti-file-export"></i> 导出为Excel
                     </button>
-                    <button onclick="document.getElementById('drill-modal').style.display='none'"
-                        style="border:none; background:none; font-size:24px; cursor:pointer;">&times;</button>
+                    <button type="button" class="modal-close-btn" aria-label="关闭数据详情弹窗"
+                        onclick="document.getElementById('drill-modal').style.display='none'">&times;</button>
                 </div>
             </div>
 
@@ -8330,8 +8330,8 @@
             <div
                 style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px;">
                 <h3 style="color:var(--primary); margin:0;">🎯 设定各校指标目标</h3>
-                <button onclick="document.getElementById('target-editor-modal').style.display='none'"
-                    style="border:none; background:none; font-size:24px; cursor:pointer;">&times;</button>
+                <button type="button" class="modal-close-btn" aria-label="关闭目标设定弹窗"
+                    onclick="document.getElementById('target-editor-modal').style.display='none'">&times;</button>
             </div>
 
             <div class="info-bar" style="margin-bottom:10px;">
@@ -8450,8 +8450,8 @@
         <div class="modal-content">
             <div
                 style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:15px;">
-                <h3 id="modalTeacherName" style="color:var(--primary);">教师姓名</h3><button id="closeModal"
-                    style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
+                <h3 id="modalTeacherName" style="color:var(--primary);">教师姓名</h3><button id="closeModal" type="button"
+                    class="modal-close-btn" aria-label="关闭教师详情弹窗">&times;</button>
             </div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
                 <div class="bg-gray-50">
@@ -8504,8 +8504,8 @@
         <div class="modal-content" style="max-width: 450px; text-align: center; background: #333;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <h3 style="color:white; font-size:16px;">📱 长按/右键保存图片</h3>
-                <button onclick="document.getElementById('mobileShareModal').style.display='none'"
-                    style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
+                <button type="button" class="modal-close-btn modal-close-btn--light" aria-label="关闭分享图片弹窗"
+                    onclick="document.getElementById('mobileShareModal').style.display='none'">&times;</button>
             </div>
             <div id="mobile-img-result" style="max-height: 80vh; overflow-y: auto; border:1px solid #555;">
                 <!-- 图片将生成在这里 -->
@@ -8664,8 +8664,8 @@
             <div
                 style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:10px;">
                 <h3 style="margin:0; color:var(--primary);"><i class="ti ti-palette"></i> 系统外观定制</h3>
-                <button onclick="document.getElementById('skin-modal').style.display='none'"
-                    style="border:none; background:none; font-size:24px; cursor:pointer;">&times;</button>
+                <button type="button" class="modal-close-btn" aria-label="关闭外观设置弹窗"
+                    onclick="document.getElementById('skin-modal').style.display='none'">&times;</button>
             </div>
 
             <!-- 1. 主题色设置 -->
@@ -8733,8 +8733,8 @@
                         <i class="ti ti-history"></i> 操作日志
                     </button>
                 </div>
-                <button onclick="document.getElementById('admin-modal').style.display='none'"
-                    style="border:none; background:none; font-size:24px; cursor:pointer;">&times;</button>
+                <button type="button" class="modal-close-btn" aria-label="关闭管理员面板"
+                    onclick="document.getElementById('admin-modal').style.display='none'">&times;</button>
             </div>
 
             <div class="info-bar" style="margin-bottom:20px;">
@@ -8906,8 +8906,8 @@
             <div
                 style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;">
                 <h3 style="color:var(--primary); margin:0;"><i class="ti ti-lock"></i> 修改个人密码</h3>
-                <button onclick="document.getElementById('user-password-modal').style.display='none'"
-                    style="border:none; background:none; font-size:24px; cursor:pointer;">&times;</button>
+                <button type="button" class="modal-close-btn" aria-label="关闭修改密码弹窗"
+                    onclick="document.getElementById('user-password-modal').style.display='none'">&times;</button>
             </div>
 
             <div style="display:flex; flex-direction:column; gap:15px;">
@@ -9001,8 +9001,8 @@
                     <button class="btn btn-sm btn-gray" onclick="IssueManager.loadIssues()"><i
                             class="ti ti-refresh"></i> 刷新</button>
                 </div>
-                <button onclick="document.getElementById('admin-issue-modal').style.display='none'"
-                    style="border:none; background:none; font-size:24px; cursor:pointer;">&times;</button>
+                <button type="button" class="modal-close-btn" aria-label="关闭申诉反馈中心"
+                    onclick="document.getElementById('admin-issue-modal').style.display='none'">&times;</button>
             </div>
 
             <!-- 操作工具栏 (包含正常模式和历史模式两套按钮) -->
@@ -9068,8 +9068,8 @@
                     <button class="btn btn-sm btn-gray" onclick="Logger.loadLogs()"><i class="ti ti-refresh"></i>
                         刷新</button>
                 </div>
-                <button onclick="document.getElementById('admin-log-modal').style.display='none'"
-                    style="border:none; background:none; font-size:24px; cursor:pointer;">&times;</button>
+                <button type="button" class="modal-close-btn" aria-label="关闭日志中心"
+                    onclick="document.getElementById('admin-log-modal').style.display='none'">&times;</button>
             </div>
 
             <!-- 操作栏 -->
@@ -9128,8 +9128,8 @@
             <div
                 style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:15px;">
                 <h3 style="color:var(--primary); margin:0;"><i class="ti ti-user-search"></i> 账号搜索与管理</h3>
-                <button onclick="document.getElementById('account-manager-modal').style.display='none'"
-                    style="border:none; background:none; font-size:24px; cursor:pointer;">&times;</button>
+                <button type="button" class="modal-close-btn" aria-label="关闭账号管理弹窗"
+                    onclick="document.getElementById('account-manager-modal').style.display='none'">&times;</button>
             </div>
 
             <!-- 搜索区 -->
@@ -9187,8 +9187,8 @@
                     <button class="btn btn-sm btn-purple" onclick="DataManager.saveAndSync()">
                         <i class="ti ti-cloud-upload"></i> 保存修改并同步云端
                     </button>
-                    <button onclick="document.getElementById('data-manager-modal').style.display='none'"
-                        style="border:none; background:none; font-size:24px; cursor:pointer;">&times;</button>
+                    <button type="button" class="modal-close-btn" aria-label="关闭数据管理弹窗"
+                        onclick="document.getElementById('data-manager-modal').style.display='none'">&times;</button>
                 </div>
             </div>
 

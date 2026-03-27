@@ -259,3 +259,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest school modal overlay-layer fix:
   - `git checkout school-system-v2026.03.27-school-modal-layer-fix-v47`
+
+- Roll back to the latest modal interaction consistency fix:
+  - `git checkout school-system-v2026.03.27-modal-consistency-v48`

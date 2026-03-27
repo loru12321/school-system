@@ -8555,7 +8555,7 @@ async function generateClassDiagnosisReport() {
                 <div class="modal-content" style="max-width:800px; display:flex; flex-direction:column; max-height:85vh;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:10px;">
                         <h3 style="color:var(--primary)"><i class="ti ti-brain"></i> AI 班级诊断报告</h3>
-                        <button onclick="document.getElementById('${modalId}').style.display='none'" style="border:none;background:none;font-size:20px;cursor:pointer;">&times;</button>
+                        <button type="button" class="modal-close-btn" aria-label="关闭 AI 班级诊断弹窗" onclick="document.getElementById('${modalId}').style.display='none'">&times;</button>
                     </div>
                     <div id="ai-class-report-content" style="background:#f8fafc; padding:20px; border-radius:8px; line-height:1.6; flex:1; overflow-y:auto; white-space:pre-wrap; font-family: sans-serif;">🤔 正在通过 ${LLM_CONFIG.source === 'local' ? '本地显卡' : '云端 API'} 进行深度分析，请稍候...</div>
                     <div style="margin-top:15px; text-align:right; padding-top:10px; border-top:1px solid #eee;">
@@ -8564,6 +8564,7 @@ async function generateClassDiagnosisReport() {
                     </div>
                 </div>`;
         document.body.appendChild(modal);
+        if (typeof bindModalInteractionGuards === 'function') bindModalInteractionGuards();
     }
     modal.style.display = 'flex';
 
@@ -22100,6 +22101,48 @@ function jumpToModule(moduleId) {
         if (window.UI) UI.toast(`已跳转至 ${currentModalSchool}`, 'success');
     }, 100);
 }
+
+function bindModalInteractionGuards() {
+    const modalIds = [
+        'drill-modal',
+        'target-editor-modal',
+        'teacherModal',
+        'mobileShareModal',
+        'mappingModal',
+        'cert-modal',
+        'school-profile-modal',
+        'skin-modal',
+        'admin-modal',
+        'user-password-modal',
+        'issue-submit-modal',
+        'admin-issue-modal',
+        'admin-log-modal',
+        'account-manager-modal',
+        'data-manager-modal'
+    ];
+
+    modalIds.forEach((id) => {
+        const modal = document.getElementById(id);
+        if (!modal || modal.dataset.modalGuardBound === '1') return;
+        modal.dataset.modalGuardBound = '1';
+
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        const content = modal.querySelector('.modal-content');
+        if (content && content.dataset.modalGuardBound !== '1') {
+            content.dataset.modalGuardBound = '1';
+            content.addEventListener('click', (event) => {
+                event.stopPropagation();
+            });
+        }
+    });
+}
+
+window.bindModalInteractionGuards = bindModalInteractionGuards;
 // 页面加载完成后，强制移除所有 max-height 限制
 window.addEventListener('load', () => {
     const style = document.createElement('style');
@@ -22130,7 +22173,9 @@ window.addEventListener('load', () => {
     if (Auth?.currentUser && !ensureCurrentCohortIdentity()) {
         showCohortPicker();
     }
+    bindModalInteractionGuards();
 });
+document.addEventListener('DOMContentLoaded', bindModalInteractionGuards);
 
 function initModuleDescToggles() {
     const collapsed = localStorage.getItem('desc_collapsed') !== 'false';
