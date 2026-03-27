@@ -250,3 +250,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest cohort growth UI release:
   - `git checkout school-system-v2026.03.27-cohort-growth-ui-v44`
+
+- Roll back to the latest upload shell UI release:
+  - `git checkout school-system-v2026.03.27-upload-shell-ui-v45`

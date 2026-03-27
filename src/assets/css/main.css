@@ -548,6 +548,13 @@ header {
     --analysis-border: #bfdbfe;
 }
 
+.analysis-workspace-upload {
+    --analysis-accent: #0f172a;
+    --analysis-surface: #f8fafc;
+    --analysis-surface-strong: #e2e8f0;
+    --analysis-border: #cbd5e1;
+}
+
 .analysis-workspace .module-desc-bar.analysis-hero {
     background: linear-gradient(135deg, var(--analysis-surface) 0%, #ffffff 78%);
     border: 1px solid var(--analysis-border);

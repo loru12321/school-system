@@ -284,11 +284,19 @@ async function runModuleDeepCheck(page, id) {
                 ? window.listAvailableSchoolsForCompare()
                 : [];
             const checks = {
+                sectionReady: !!document.querySelector('#upload.analysis-workspace-upload'),
+                heroReady: !!document.querySelector('#upload .analysis-hero'),
+                shellHeadReady: !!document.querySelector('#upload .analysis-shell-head'),
                 normalizeSchoolName: typeof window.normalizeSchoolName === 'function',
                 getCanonicalSchoolName: typeof window.getCanonicalSchoolName === 'function',
                 ensureNormalizedTargets: typeof window.ensureNormalizedTargets === 'function',
                 buildIndicatorSchoolBuckets: typeof window.buildIndicatorSchoolBuckets === 'function',
-                listAvailableSchoolsForCompare: typeof window.listAvailableSchoolsForCompare === 'function'
+                listAvailableSchoolsForCompare: typeof window.listAvailableSchoolsForCompare === 'function',
+                summaryStripReady: !!document.getElementById('upload-summary-strip'),
+                flowNoticeReady: !!document.getElementById('upload-flow-notice'),
+                workbenchReady: !!document.querySelector('#upload .upload-workbench-grid'),
+                intakeReady: !!document.getElementById('fileInput') && !!document.getElementById('uploadBox'),
+                flowReady: document.querySelectorAll('#upload .analysis-flow-step').length >= 3
             };
             return {
                 ok: Object.values(checks).every(Boolean) && Array.isArray(schools),

@@ -4003,26 +4003,71 @@
             </div>
 
             <!-- 1. 数据上传 & 项目管理 -->
-            <div id="upload" class="section card-box">
-                <div class="module-desc-bar" style="border-color: var(--color-data)">
+            <div id="upload" class="section card-box analysis-workspace analysis-workspace-upload">
+                <div class="module-desc-bar analysis-hero" style="border-color: var(--color-data)">
                     <h3><i class="ti ti-database-import"></i> 01 数据枢纽中心 <span class="badge"
                             style="background:#16a34a;">⭐
                             教务常用</span></h3>
                     <p><strong>一句话目的：</strong>导入并规范化成绩数据，建立分析基础。</p>
                     <p><strong>推荐顺序：</strong>第1步（导入数据）→ 第2步（生成分析）→ 第3步（导出结果）。</p>
+                    <div class="analysis-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Focus</span>
+                            <strong class="analysis-scan-value">届别 / 考试 / 成绩</strong>
+                            <span class="analysis-scan-note">先确认届别和考试批次，再导入成绩与任课表，避免后续分析口径漂移。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Use</span>
+                            <strong class="analysis-scan-value">导入 / 快照 / 诊断</strong>
+                            <span class="analysis-scan-note">适合教务做成绩导入、模板管理、数据体检、快照回滚和项目恢复。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">分析底座</strong>
+                            <span class="analysis-scan-note">这里决定后续所有分析模块可用状态，是整套系统最重要的数据入口。</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="sec-head">
+                <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-file-upload"></i> 数据文件上传
                         <span class="module-help-btn" onclick="showModuleHelp('upload')">📘 使用说明</span>
                     </h2>
-                    <div style="margin-left: auto;">
-                        <button class="btn btn-orange" onclick="runDataDoctor()">
-                            <i class="ti ti-stethoscope"></i> 数据体检
-                        </button>
+                    <div class="analysis-action-stack">
+                        <div class="analysis-action-note">建议按“届别 -> 考试 -> 上传 -> 快照”顺序完成本页操作；每次批量导入前先看顶部摘要和当前模式，更不容易把数据导错届别。</div>
+                        <div class="analysis-actions">
+                            <button class="btn btn-orange" onclick="runDataDoctor()">
+                                <i class="ti ti-stethoscope"></i> 数据体检
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div class="info-bar"><span>当前模式：<strong id="mode-info"></strong>。系统将自动过滤无关数据。</span></div>
+                <div class="info-bar analysis-info-band"><span>当前模式：<strong id="mode-info"></strong>。系统将自动过滤无关数据，并在上传后刷新后续分析模块的可用状态。</span></div>
+                <details class="explain-panel analysis-doc-panel">
+                    <summary>数据中枢使用建议</summary>
+                    <div class="explain-content">
+                        <p>先确认当前届别和考试批次，再上传成绩文件；如果届别或考试口径错了，后面的分析结论都会偏掉。</p>
+                        <p>成绩文件上传后，建议立刻看上传摘要、数据体检和历史考试状态，及时发现异常学校、班级或学科。</p>
+                        <p>切换届别、导入新批次或做大范围修改前，建议先做一次手动备份或快照，便于回滚。</p>
+                    </div>
+                </details>
+                <div class="analysis-flow-banner">
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 1</span>
+                        <strong class="analysis-flow-value">定届别</strong>
+                        <span class="analysis-flow-note">先确认入学年份和当前届别，保证后续所有考试与成长链路挂在同一主线上。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 2</span>
+                        <strong class="analysis-flow-value">定考试</strong>
+                        <span class="analysis-flow-note">再设置当前考试批次和学期信息，形成这次导入的统一快照口径。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 3</span>
+                        <strong class="analysis-flow-value">传文件</strong>
+                        <span class="analysis-flow-note">最后上传成绩、检查反馈并做快照，确保分析底座稳定后再进入下游模块。</span>
+                    </div>
+                </div>
                 <div id="upload-summary-strip" class="upload-summary-strip"></div>
                 <div id="upload-flow-notice" class="upload-flow-notice">正在汇总当前上传进度...</div>
                 <div class="upload-workbench-grid">
