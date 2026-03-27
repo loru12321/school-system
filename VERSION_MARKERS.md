@@ -265,3 +265,6 @@ This file records the rollback markers for the current optimization round.
 
 - Roll back to the latest student-details mobile card fix:
   - `git checkout school-system-v2026.03.27-student-details-mobile-fix-v49`
+
+- Roll back to the latest student-details mobile card v2:
+  - `git checkout school-system-v2026.03.27-student-details-mobile-cards-v50`

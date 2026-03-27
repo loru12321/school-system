@@ -14185,6 +14185,119 @@ function getClassTeacherStudentViewMode() {
     return (val === 'teaching') ? 'teaching' : 'class_all';
 }
 
+function isStudentDetailsMobileCardMode() {
+    if (document.body?.dataset?.mobileQuery === 'true') return true;
+    return typeof window !== 'undefined'
+        && typeof window.matchMedia === 'function'
+        && window.matchMedia('(max-width: 768px)').matches;
+}
+
+function buildStudentDetailMobileInfoItem(label, value, accentClass = '') {
+    const displayValue = value == null || value === '' ? '-' : String(value);
+    return `
+        <div class="student-detail-mobile-info ${accentClass}">
+            <span>${tmEscapeHtml(label)}</span>
+            <strong>${tmEscapeHtml(displayValue)}</strong>
+        </div>
+    `;
+}
+
+function buildStudentDetailMobileSubjectCard(student, sub, isTeacher, isClassTeacher, townRankVisible) {
+    const score = student.scores[sub] !== undefined ? student.scores[sub] : '-';
+    const t = student.tScores ? (student.tScores[sub] || '-') : '-';
+    const clickAttr = `onclick="updateStudentScore('${student.name}', '${student.class}', '${sub}', ${score})"`;
+    const scoreButton = `
+        <button type="button" class="student-detail-mobile-score-btn" ${clickAttr} title="点击修改${tmEscapeHtml(sub)}成绩">
+            ${tmEscapeHtml(score)}
+        </button>
+    `;
+
+    const rankChips = [];
+    if (!isTeacher && !isClassTeacher) {
+        if (t !== '-') rankChips.push(`<span>T ${tmEscapeHtml(t)}</span>`);
+        rankChips.push(`<span>校 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.school`, '-'))}</span>`);
+        rankChips.push(`<span>班 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.class`, '-'))}</span>`);
+        if (townRankVisible) rankChips.push(`<span>镇 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.township`, '-'))}</span>`);
+    } else {
+        rankChips.push(`<span>班 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.class`, '-'))}</span>`);
+        rankChips.push(`<span>级 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.school`, '-'))}</span>`);
+        if (townRankVisible) rankChips.push(`<span>镇 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.township`, '-'))}</span>`);
+    }
+
+    return `
+        <div class="student-detail-mobile-subject">
+            <div class="student-detail-mobile-subject-head">
+                <span>${tmEscapeHtml(sub)}</span>
+                ${scoreButton}
+            </div>
+            <div class="student-detail-mobile-rank-row">
+                ${rankChips.join('')}
+            </div>
+        </div>
+    `;
+}
+
+function buildStudentDetailMobileRow(student, visibleSubjects, isTeacher, isClassTeacher, townRankVisible) {
+    const schoolText = student.school || '-';
+    const classText = student.class || '-';
+    const totalText = student.total != null ? student.total : '-';
+    const totalTText = student.totalTScore || '-';
+    const idText = student.id || '-';
+    const examRoomText = student.examRoom || '-';
+    const totalRankLabel = isTeacher || isClassTeacher ? '总分级排' : '总分校排';
+    const totalRankValue = isTeacher || isClassTeacher
+        ? safeGet(student, 'ranks.total.school', '-')
+        : safeGet(student, 'ranks.total.school', '-');
+    const totalRankClassLabel = '总分班排';
+    const totalRankClassValue = safeGet(student, 'ranks.total.class', '-');
+    const totalRankTownValue = safeGet(student, 'ranks.total.township', '-');
+
+    const subjectCards = visibleSubjects.map((sub) => (
+        buildStudentDetailMobileSubjectCard(student, sub, isTeacher, isClassTeacher, townRankVisible)
+    )).join('');
+
+    const metaCards = [
+        buildStudentDetailMobileInfoItem('学校', schoolText),
+        buildStudentDetailMobileInfoItem('考号', idText),
+        buildStudentDetailMobileInfoItem('考场', examRoomText),
+        buildStudentDetailMobileInfoItem('T分', totalTText, 'is-accent')
+    ].join('');
+
+    const rankCards = [
+        buildStudentDetailMobileInfoItem(totalRankLabel, totalRankValue),
+        buildStudentDetailMobileInfoItem(totalRankClassLabel, totalRankClassValue),
+        townRankVisible ? buildStudentDetailMobileInfoItem('总分镇排', totalRankTownValue) : ''
+    ].join('');
+
+    return `
+        <tr class="student-detail-mobile-row">
+            <td colspan="100" class="student-detail-mobile-cell">
+                <article class="student-detail-mobile-card">
+                    <div class="student-detail-mobile-head">
+                        <div>
+                            <a href="javascript:void(0)" class="student-detail-mobile-name" onclick="jumpToStudent('${student.name}', '${student.school}', '${student.class}')">${tmEscapeHtml(student.name || '-')}</a>
+                            <div class="student-detail-mobile-submeta">${tmEscapeHtml(`${schoolText} · ${classText}`)}</div>
+                        </div>
+                        <div class="student-detail-mobile-score-summary">
+                            <span>总分</span>
+                            <strong>${tmEscapeHtml(totalText)}</strong>
+                        </div>
+                    </div>
+                    <div class="student-detail-mobile-meta-grid">
+                        ${metaCards}
+                    </div>
+                    <div class="student-detail-mobile-rank-grid">
+                        ${rankCards}
+                    </div>
+                    <div class="student-detail-mobile-subject-grid">
+                        ${subjectCards}
+                    </div>
+                </article>
+            </td>
+        </tr>
+    `;
+}
+
 function renderStudentDetails(reset = true) {
     // 隐藏可能存在的筛选菜单
     closeAllMenus();
@@ -14354,6 +14467,14 @@ function renderStudentDetails(reset = true) {
 
     const thead = document.querySelector('#studentDetailTable thead tr');
     const tbody = document.querySelector('#studentDetailTable tbody');
+    const detailTable = document.getElementById('studentDetailTable');
+    const isMobileStudentDetails = isStudentDetailsMobileCardMode();
+    if (detailTable) {
+        detailTable.classList.toggle('student-detail-mobile-table', isMobileStudentDetails);
+        if (isMobileStudentDetails) {
+            detailTable.classList.remove('mobile-card-table');
+        }
+    }
 
     const user = getCurrentUser();
     const role = user?.role || 'guest';
@@ -14429,55 +14550,73 @@ function renderStudentDetails(reset = true) {
     thead.innerHTML = headerHTML;
 
     // 生成数据行
-    let rowsHTML = displayList.map(student => {
-        const nameLink = `<a href="javascript:void(0)" onclick="jumpToStudent('${student.name}', '${student.school}', '${student.class}')" style="color:var(--primary); font-weight:800;">${student.name}</a>`;
-        const mobileCardTitle = `${String(student.name || '').replace(/"/g, '&quot;')} · ${String(student.class || '-').replace(/"/g, '&quot;')}`;
+    let rowsHTML = '';
+    if (isMobileStudentDetails) {
+        rowsHTML = displayList.map(student => (
+            buildStudentDetailMobileRow(student, visibleSubjects, isTeacher, isClassTeacher, !isSingleSchool)
+        )).join('');
+    } else {
+        rowsHTML = displayList.map(student => {
+            const nameLink = `<a href="javascript:void(0)" onclick="jumpToStudent('${student.name}', '${student.school}', '${student.class}')" style="color:var(--primary); font-weight:800;">${student.name}</a>`;
 
-        let row = `<tr data-mobile-card-title="${mobileCardTitle}">
-                <td data-label="学校">${student.school}</td>
-                <td data-label="班级">${student.class}</td>
-                <td data-label="姓名">${nameLink}</td>
-                ${!isTeacher && !isClassTeacher ? `<td data-label="考号">${student.id}</td><td data-label="考场">${student.examRoom || '-'}</td><td data-label="T分" style="color:#b45309; font-weight:bold;">${student.totalTScore || '-'}</td>` : ''}`;
+            let row = `<tr>
+                    <td data-label="学校">${student.school}</td>
+                    <td data-label="班级">${student.class}</td>
+                    <td data-label="姓名">${nameLink}</td>
+                    ${!isTeacher && !isClassTeacher ? `<td data-label="考号">${student.id}</td><td data-label="考场">${student.examRoom || '-'}</td><td data-label="T分" style="color:#b45309; font-weight:bold;">${student.totalTScore || '-'}</td>` : ''}`;
 
-        visibleSubjects.forEach(sub => {
-            const score = student.scores[sub] !== undefined ? student.scores[sub] : '-';
-            const t = student.tScores ? (student.tScores[sub] || '-') : '-';
+            visibleSubjects.forEach(sub => {
+                const score = student.scores[sub] !== undefined ? student.scores[sub] : '-';
+                const t = student.tScores ? (student.tScores[sub] || '-') : '-';
 
-            // 修改功能链接
-            const clickAttr = `onclick="updateStudentScore('${student.name}', '${student.class}', '${sub}', ${score})"`;
+                const clickAttr = `onclick="updateStudentScore('${student.name}', '${student.class}', '${sub}', ${score})"`;
+
+                if (!isTeacher && !isClassTeacher) {
+                    row += `<td data-label="${sub}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${score}</td>
+                                <td data-label="${sub}T分" class="text-gray">${t}</td>
+                                <td data-label="${sub}校排" class="text-gray">${safeGet(student, `ranks.${sub}.school`, '-')}</td>
+                                <td data-label="${sub}班排" class="text-gray">${safeGet(student, `ranks.${sub}.class`, '-')}</td>
+                                <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${safeGet(student, `ranks.${sub}.township`, '-')}</td>`;
+                } else {
+                    row += `<td data-label="${sub}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${score}</td>
+                                <td data-label="${sub}班排" class="text-gray">${safeGet(student, `ranks.${sub}.class`, '-')}</td>
+                                <td data-label="${sub}级排" class="text-gray">${safeGet(student, `ranks.${sub}.school`, '-')}</td>
+                                <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${safeGet(student, `ranks.${sub}.township`, '-')}</td>`;
+                }
+            });
 
             if (!isTeacher && !isClassTeacher) {
-                row += `<td data-label="${sub}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${score}</td>
-                            <td data-label="${sub}T分" class="text-gray">${t}</td>
-                            <td data-label="${sub}校排" class="text-gray">${safeGet(student, `ranks.${sub}.school`, '-')}</td>
-                            <td data-label="${sub}班排" class="text-gray">${safeGet(student, `ranks.${sub}.class`, '-')}</td>
-                            <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${safeGet(student, `ranks.${sub}.township`, '-')}</td>`;
+                row += `<td data-label="总分" style="color:#2563eb; font-weight:bold;">${student.total}</td>
+                            <td data-label="总分校排">${safeGet(student, 'ranks.total.school', '-')}</td>
+                            <td data-label="总分班排">${safeGet(student, 'ranks.total.class', '-')}</td>
+                            <td data-label="总分镇排">${safeGet(student, 'ranks.total.township', '-')}</td>
+                        </tr>`;
             } else {
-                row += `<td data-label="${sub}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${score}</td>
-                            <td data-label="${sub}班排" class="text-gray">${safeGet(student, `ranks.${sub}.class`, '-')}</td>
-                            <td data-label="${sub}级排" class="text-gray">${safeGet(student, `ranks.${sub}.school`, '-')}</td>
-                            <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${safeGet(student, `ranks.${sub}.township`, '-')}</td>`;
-            }
-        });
-
-        if (!isTeacher && !isClassTeacher) {
-            row += `<td data-label="总分" style="color:#2563eb; font-weight:bold;">${student.total}</td>
-                        <td data-label="总分校排">${safeGet(student, 'ranks.total.school', '-')}</td>
+                row += `<td data-label="总分" style="color:#2563eb; font-weight:bold;">${student.total}</td>
                         <td data-label="总分班排">${safeGet(student, 'ranks.total.class', '-')}</td>
-                        <td data-label="总分镇排">${safeGet(student, 'ranks.total.township', '-')}</td>
+                        <td data-label="总分级排">${safeGet(student, 'ranks.total.school', '-')}</td>
+                        <td data-label="总分镇排" style="${townHeaderStyle}">${safeGet(student, 'ranks.total.township', '-')}</td>
                     </tr>`;
-        } else {
-            row += `<td data-label="总分" style="color:#2563eb; font-weight:bold;">${student.total}</td>
-                    <td data-label="总分班排">${safeGet(student, 'ranks.total.class', '-')}</td>
-                    <td data-label="总分级排">${safeGet(student, 'ranks.total.school', '-')}</td>
-                    <td data-label="总分镇排" style="${townHeaderStyle}">${safeGet(student, 'ranks.total.township', '-')}</td>
-                </tr>`;
-        }
-        return row;
-    }).join('');
+            }
+            return row;
+        }).join('');
+    }
 
     // 分页条
-    const paginationHTML = `
+    const paginationHTML = isMobileStudentDetails
+        ? `
+            <tr class="student-detail-mobile-pagination">
+                <td colspan="100" class="student-detail-mobile-pagination-cell">
+                    <div class="student-detail-mobile-pagination-bar">
+                        <span>共 ${totalItems} 条 · ${STD_STATE.page}/${totalPages} 页</span>
+                        <div class="student-detail-mobile-pagination-actions">
+                            <button class="btn btn-sm" onclick="changeStdPage(-1)" ${STD_STATE.page === 1 ? 'disabled' : ''}>◀ 上一页</button>
+                            <button class="btn btn-sm" onclick="changeStdPage(1)" ${STD_STATE.page === totalPages ? 'disabled' : ''}>下一页 ▶</button>
+                        </div>
+                    </div>
+                </td>
+            </tr>`
+        : `
             <tr style="background:#f8fafc; font-weight:bold; position:sticky; bottom:0; z-index:150; border-top:2px solid #cbd5e1;">
                 <td colspan="100" style="text-align:center; padding:8px;">
                     <div style="display:flex; align-items:center; justify-content:center; gap:15px;">
