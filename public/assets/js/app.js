@@ -197,6 +197,7 @@ function installMojibakeNormalizer() {
     window.__MOJIBAKE_NORMALIZER_INSTALLED__ = true;
 
     let isNormalizing = false;
+    let fullDocumentScheduled = false;
     const runNormalize = (target) => {
         if (isNormalizing) return;
         isNormalizing = true;
@@ -207,8 +208,16 @@ function installMojibakeNormalizer() {
         }
     };
 
-    const start = () => {
-        runNormalize(document.documentElement);
+    const scheduleTask = (callback, timeout = 1200) => {
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(() => callback(), { timeout });
+            return;
+        }
+        window.setTimeout(callback, timeout);
+    };
+
+    const installObserver = () => {
+        if (window.__MOJIBAKE_NORMALIZER_OBSERVER__) return;
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 if (mutation.type === 'characterData' || mutation.type === 'attributes') {
@@ -228,7 +237,39 @@ function installMojibakeNormalizer() {
             attributeFilter: ['placeholder', 'title', 'aria-label', 'value']
         });
         window.__MOJIBAKE_NORMALIZER_OBSERVER__ = observer;
-        window.normalizeMojibakeUi = () => runNormalize(document.documentElement);
+    };
+
+    const normalizeCriticalUi = () => {
+        [
+            document.getElementById('login-overlay'),
+            document.getElementById('global-loader'),
+            document.getElementById('cloud-sync-indicator')
+        ].forEach((node) => {
+            if (node) runNormalize(node);
+        });
+    };
+
+    const scheduleFullDocumentStart = () => {
+        if (fullDocumentScheduled) return;
+        fullDocumentScheduled = true;
+        scheduleTask(() => {
+            runNormalize(document.documentElement);
+            installObserver();
+        });
+    };
+
+    window.normalizeMojibakeUi = (target) => {
+        runNormalize(target || document.documentElement);
+        scheduleFullDocumentStart();
+    };
+
+    const start = () => {
+        normalizeCriticalUi();
+        if (document.readyState === 'complete') {
+            scheduleFullDocumentStart();
+            return;
+        }
+        window.addEventListener('load', scheduleFullDocumentStart, { once: true });
     };
 
     if (document.readyState === 'loading') {

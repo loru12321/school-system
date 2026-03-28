@@ -117,7 +117,7 @@ async function login(page, user, pass) {
 }
 
 async function ensureCohortEntered(page) {
-    const state = await withNavigationRetry(page, () => page.evaluate(() => {
+    const readEntryState = () => page.evaluate(() => {
         const mask = document.getElementById('mode-mask');
         const input = document.getElementById('entry-cohort-year');
         const selector = document.getElementById('cohort-selector');
@@ -133,13 +133,32 @@ async function ensureCohortEntered(page) {
                 || infer(localStorage.getItem('CURRENT_EXAM_ID'))
                 || ''
             ).trim(),
+            examId: String(localStorage.getItem('CURRENT_EXAM_ID') || '').trim(),
+            rawDataLen: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
             knownCohorts: selector
                 ? Array.from(selector.options || []).map((option) => String(option.value || '').trim()).filter(Boolean)
                 : []
         };
-    }), { attempts: 4 });
+    });
+
+    let state = await withNavigationRetry(page, readEntryState, { attempts: 4 });
 
     if (!state.maskVisible) return state;
+
+    try {
+        await withNavigationRetry(page, () => page.waitForFunction(() => {
+            const mask = document.getElementById('mode-mask');
+            const examId = String(localStorage.getItem('CURRENT_EXAM_ID') || '').trim();
+            const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+            return (!mask || getComputedStyle(mask).display === 'none')
+                || (!!examId && rawDataLen > 0);
+        }, { timeout: 15000 }), { attempts: 1 });
+    } catch (_) {
+        // 云端恢复可能仍在进行，超时后再决定是否需要手动进入届别。
+    }
+
+    state = await withNavigationRetry(page, readEntryState, { attempts: 4 });
+    if (!state.maskVisible || (state.examId && state.rawDataLen > 0)) return state;
 
     const candidate = String(
         process.env.SMOKE_COHORT_YEAR

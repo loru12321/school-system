@@ -136,11 +136,31 @@ async function startServer() {
 }
 
 async function ensureCohortEntered(page) {
-    const maskVisible = await page.evaluate(() => {
+    const readEntryState = () => page.evaluate(() => {
         const mask = document.getElementById('mode-mask');
-        return !!mask && getComputedStyle(mask).display !== 'none';
+        return {
+            maskVisible: !!mask && getComputedStyle(mask).display !== 'none',
+            examId: String(localStorage.getItem('CURRENT_EXAM_ID') || '').trim(),
+            rawDataLen: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0
+        };
     });
-    if (!maskVisible) return;
+    let state = await readEntryState();
+    if (!state.maskVisible) return;
+
+    try {
+        await page.waitForFunction(() => {
+            const mask = document.getElementById('mode-mask');
+            const examId = String(localStorage.getItem('CURRENT_EXAM_ID') || '').trim();
+            const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+            return (!mask || getComputedStyle(mask).display === 'none')
+                || (!!examId && rawDataLen > 0);
+        }, { timeout: 15000 });
+    } catch (_) {
+        // 云端恢复未接管时，再回退到手动进入届别。
+    }
+
+    state = await readEntryState();
+    if (!state.maskVisible || (state.examId && state.rawDataLen > 0)) return;
 
     const candidate = String(process.env.SMOKE_COHORT_YEAR || '2022').trim();
     const input = page.locator('#entry-cohort-year');
