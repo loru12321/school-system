@@ -429,52 +429,6 @@ function teacherBuildConversionMetrics(students, subject, currentThresholds, pri
     };
 }
 
-function refreshTeacherPerformanceCopy() {
-    const teacherSection = document.getElementById('teacher-analysis');
-    const explain = teacherSection?.querySelector('.explain-panel .explain-content');
-    if (explain) {
-        explain.innerHTML = `
-            <p>联考赋分：按系统现有“两率一分”标准，对同校同学科教师的均分、优秀率、及格率进行赋分。6-8 年级权重为 60/70/70，9 年级权重为 50/80/50。</p>
-            <p>基线校正：使用最近一次历史考试中可匹配的学生，按同基础分层计算预计均分、预计优秀率、预计及格率和预计低分率，再比较“实际值 - 预计值”，折算为校正分。</p>
-            <p>低分率：低于及格线 × 0.6 的学生占比，用于观察薄弱尾部是否得到有效控制。</p>
-            <p>公平绩效分：联考赋分折算到 100 分后，叠加基线校正、工作量修正，再乘置信系数得到的结果，更适合做教师横向比较。</p>
-            <p>重点学生：系统会自动识别培优边缘生、及格临界生、辅差关注生，方便教师直接用于培优和辅差。</p>
-        `;
-    }
-    const sseSection = document.getElementById('single-school-eval');
-    const sseExplain = sseSection?.querySelector('.explain-panel .explain-content');
-    if (sseExplain) {
-        sseExplain.innerHTML = `
-            <p>本模块仍用于班级层面的公平考核，重点看班级工作量、整体结果和生源变化。</p>
-            <p>教师教学质量画像中的“公平绩效分”则是教师学科层面的口径，会额外考虑联考赋分、历史基线校正和重点学生结构。</p>
-            <p>建议：班级管理与班主任评价看本模块，任课教师的教学加工效果看“教师教学质量画像”。</p>
-        `;
-    }
-}
-
-refreshTeacherPerformanceCopy = function () {
-    const teacherSection = document.getElementById('teacher-analysis');
-    const explain = teacherSection?.querySelector('.explain-panel .explain-content');
-    if (explain) {
-        explain.innerHTML = `
-            <p>联考赋分：按系统现有“两率一分”标准，对同校同学科教师的均分、优秀率、及格率进行赋分。6-8 年级权重为 60/70/70，9 年级权重为 50/80/50。</p>
-            <p>基线校正：只使用最近一次历史考试里的共同样本。共同样本不足、缺考/新增太多时，系统会自动降低校正分权重，避免“48 人变 46 人”这类样本变化被误算成教师增值。</p>
-            <p>低分率：低于及格线 × 0.6 的学生占比，用于观察薄弱尾部是否得到有效控制。</p>
-            <p>公平绩效分：联考赋分折算到 100 分后，叠加基线校正、工作量修正，再乘置信系数得到的结果，更适合做教师横向比较。</p>
-            <p>重点学生：系统会自动识别培优边缘生、及格临界生、辅差关注生，并列出共同样本、样本变动、新增、缺考/退出提示。</p>
-        `;
-    }
-    const sseSection = document.getElementById('single-school-eval');
-    const sseExplain = sseSection?.querySelector('.explain-panel .explain-content');
-    if (sseExplain) {
-        sseExplain.innerHTML = `
-            <p>本模块仍用于班级层面的公平考核，重点看班级工作量、整体结果和生源变化。</p>
-            <p>教师教学质量画像中的“公平绩效分”则是教师学科层面的口径，会额外考虑联考赋分、历史基线校正、共同样本和重点学生结构。</p>
-            <p>建议：班级管理与班主任评价看本模块，任课教师的教学加工效果看“教师教学质量画像”。</p>
-        `;
-    }
-};
-
 function analyzeTeachers() {
     const resolveRowsForTeacherAnalysis = () => {
         if (Array.isArray(RAW_DATA) && RAW_DATA.length > 0) return RAW_DATA;

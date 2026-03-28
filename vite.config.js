@@ -23,7 +23,9 @@ export default defineConfig({
   base: './', // Use relative paths for assets so it works on GitHub Pages/Cloudflare without domain root
   customLogger: viteLogger,
   plugins: [
-    viteSingleFile()
+    // Keep the production HTML lighter by leaving the Vite-built stylesheet as an external file.
+    // `lt.html` still inlines that stylesheet during the post-build step.
+    viteSingleFile({ inlinePattern: ['**/*.js'] })
   ],
   build: {
     outDir: '../dist',

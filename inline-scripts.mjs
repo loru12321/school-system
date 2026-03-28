@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { collectLazyLoadedJsAssets } from './sync-public-assets.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,6 +10,10 @@ const outPath = path.join(__dirname, 'lt.html');
 
 // Keep original script semantics intact; only normalize newlines.
 function normalizeScript(content) {
+    return String(content || '').replace(/\r\n/g, '\n');
+}
+
+function normalizeStyle(content) {
     return String(content || '').replace(/\r\n/g, '\n');
 }
 
@@ -47,6 +50,16 @@ function readLocalScriptContent(projectRoot, src) {
     return normalizeScript(content);
 }
 
+function readLocalStyleContent(projectRoot, href) {
+    const builtPath = resolveBuiltScriptPath(projectRoot, href);
+    const publicPath = resolvePublicScriptPath(projectRoot, href);
+    const sourcePath = fs.existsSync(builtPath) ? builtPath : publicPath;
+    if (!fs.existsSync(sourcePath)) {
+        return '';
+    }
+    return normalizeStyle(fs.readFileSync(sourcePath, 'utf-8'));
+}
+
 // Use regex to locate tags like <script defer src="./assets/js/cloud.js?v=1"></script>
 export function inlineLocalScripts(html, { projectRoot = __dirname } = {}) {
     const scriptRegex = /<script([^>]*)\bsrc="([^"]+)"([^>]*)><\/script>/gi;
@@ -74,40 +87,33 @@ export function inlineLocalScripts(html, { projectRoot = __dirname } = {}) {
     });
 }
 
-export function buildInlineRuntimeRegistry({ projectRoot = __dirname } = {}) {
-    const bootRuntimePath = path.join(projectRoot, 'public', 'assets', 'js', 'boot-runtime.js');
-    if (!fs.existsSync(bootRuntimePath)) {
-        return {};
-    }
+export function inlineLocalStyles(html, { projectRoot = __dirname } = {}) {
+    const styleLinkRegex = /<link([^>]*)\bhref="([^"]+\.css(?:\?[^"]*)?)"([^>]*)>/gi;
 
-    const bootRuntime = fs.readFileSync(bootRuntimePath, 'utf8');
-    const registry = {};
+    return String(html || '').replace(styleLinkRegex, (match, beforeHref, href, afterHref) => {
+        const attrs = `${beforeHref} ${afterHref}`;
+        if (!/\brel\s*=\s*["']stylesheet["']/i.test(attrs)) {
+            return match;
+        }
+        if (!(href.startsWith('./') || href.startsWith('/'))) {
+            return match;
+        }
+        if (/\/assets\/vendor\//.test(href)) {
+            return match;
+        }
 
-    for (const assetName of collectLazyLoadedJsAssets(bootRuntime)) {
-        const logicalSrc = `./assets/js/${assetName}`;
-        const content = readLocalScriptContent(projectRoot, logicalSrc);
-        if (!content) continue;
-        registry[logicalSrc] = content;
-    }
+        const builtPath = resolveBuiltScriptPath(projectRoot, href);
+        const publicPath = resolvePublicScriptPath(projectRoot, href);
+        const sourcePath = fs.existsSync(builtPath) ? builtPath : publicPath;
+        if (!fs.existsSync(sourcePath)) {
+            console.warn(`Local stylesheet not found: ${publicPath}`);
+            return match;
+        }
 
-    return registry;
-}
-
-export function injectInlineRuntimeRegistry(html, { projectRoot = __dirname } = {}) {
-    const registry = buildInlineRuntimeRegistry({ projectRoot });
-    const keys = Object.keys(registry);
-    if (!keys.length || !html.includes('</head>')) {
-        return html;
-    }
-
-    const registryPayload = JSON.stringify(registry).replace(/</g, '\\u003c');
-    const registryScript = `
-    <script>
-        window.__INLINE_RUNTIME_SOURCES = Object.assign({}, window.__INLINE_RUNTIME_SOURCES || {}, ${registryPayload});
-    </script>
-`;
-
-    return html.replace('</head>', registryScript + '\n</head>');
+        console.log(`Inlining stylesheet: ${sourcePath}`);
+        const content = readLocalStyleContent(projectRoot, href);
+        return `<style>\n${content}\n</style>`;
+    });
 }
 
 function rewriteLtAssetPaths(html) {
@@ -116,8 +122,8 @@ function rewriteLtAssetPaths(html) {
 
 export function buildLtHtml(html, { projectRoot = __dirname } = {}) {
     return rewriteLtAssetPaths(
-        injectInlineRuntimeRegistry(
-            inlineLocalScripts(html, { projectRoot }),
+        inlineLocalScripts(
+            inlineLocalStyles(html, { projectRoot }),
             { projectRoot }
         )
     );
