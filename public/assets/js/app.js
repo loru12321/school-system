@@ -428,9 +428,9 @@ function toggleDarkMode() {
     document.body.classList.toggle('dark-mode');
     const isDark = document.body.classList.contains('dark-mode');
     localStorage.setItem('theme-dark', isDark);
-    const style = getComputedStyle(document.body);
-    const textColor = style.getPropertyValue('--chart-axis-color').trim() || (isDark ? '#cbd5e1' : '#666');
-    const gridColor = style.getPropertyValue('--chart-grid-color').trim() || (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
+    // 定义颜色变量
+    const textColor = isDark ? '#cbd5e1' : '#666';
+    const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
 
     // 更新 Chart.js 全局默认配置
     if (window.Chart) {
@@ -13783,89 +13783,6 @@ function formatVal(val) {
 }
 function formatRankDisplay(value, rank, type = 'school', isPercent = false) { const displayValue = isPercent ? (value * 100).toFixed(2) + '%' : value.toFixed(2); return `${displayValue} <span style="font-size:0.9em; color:#94a3b8">(${rank})</span>`; }
 
-function tmCompactAxisLabel(label, maxLength = 4) {
-    const text = String(label || '').trim();
-    if (!text) return '未命名';
-    return text.length > maxLength ? `${text.slice(0, maxLength)}…` : text;
-}
-
-function tmBuildSparklinePoints(values, minValue, maxValue, width = 320, height = 120, padding = 14) {
-    const list = Array.isArray(values) ? values.map((value) => Number(value || 0)) : [];
-    if (!list.length) return [];
-    const range = Math.max((maxValue ?? Math.max(...list)) - (minValue ?? Math.min(...list)), 1);
-    return list.map((value, index) => {
-        const x = padding + (index * ((width - padding * 2) / Math.max(list.length - 1, 1)));
-        const y = height - padding - (((value - minValue) / range) * (height - padding * 2));
-        return [Number(x.toFixed(2)), Number(y.toFixed(2))];
-    });
-}
-
-function tmBuildSparklinePath(points) {
-    return points.map(([x, y], index) => `${index === 0 ? 'M' : 'L'} ${x} ${y}`).join(' ');
-}
-
-function tmBuildSparklineArea(points, height = 120, padding = 14) {
-    if (!points.length) return '';
-    const first = points[0];
-    const last = points[points.length - 1];
-    return `${tmBuildSparklinePath(points)} L ${last[0]} ${height - padding} L ${first[0]} ${height - padding} Z`;
-}
-
-function tmBuildMacroTrendCard(rows) {
-    const list = Array.isArray(rows) ? rows.filter((row) => Number.isFinite(row?.avgScore) && Number.isFinite(row?.excellentRate)) : [];
-    if (!list.length) return '';
-    const avgValues = list.map((row) => Number(row.avgScore || 0));
-    const excValues = list.map((row) => Number(row.excellentRate || 0));
-    const minValue = Math.min(...avgValues, ...excValues);
-    const maxValue = Math.max(...avgValues, ...excValues);
-    const avgPoints = tmBuildSparklinePoints(avgValues, minValue, maxValue);
-    const excPoints = tmBuildSparklinePoints(excValues, minValue, maxValue);
-    const avgPath = tmBuildSparklinePath(avgPoints);
-    const excPath = tmBuildSparklinePath(excPoints);
-    const avgArea = tmBuildSparklineArea(avgPoints);
-    const leader = list[0];
-    const leaderName = tmEscapeHtml(String(leader?.name || '当前学校'));
-    const dots = avgPoints.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.5" fill="#38bdf8"></circle>`).join('')
-        + excPoints.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3" fill="#14b8a6"></circle>`).join('');
-
-    return `
-        <div class="fb-card fb-card--chart">
-            <div class="fb-card-head">
-                <div>
-                    <div class="fb-lbl">校际走势曲线</div>
-                    <div class="fb-val fb-val--label">均分 vs 优秀率</div>
-                </div>
-                <span class="fb-pill">Nexus Curve</span>
-            </div>
-            <div class="fb-meta-row">
-                <span>领跑学校 <strong>${leaderName}</strong></span>
-                <span>采样 ${list.length} 校</span>
-            </div>
-            <div class="fb-trend-chart">
-                <svg viewBox="0 0 320 120" role="img" aria-label="校际走势曲线">
-                    <defs>
-                        <linearGradient id="macro-trend-fill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.34"></stop>
-                            <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.02"></stop>
-                        </linearGradient>
-                    </defs>
-                    <path d="${avgArea}" fill="url(#macro-trend-fill)"></path>
-                    <path d="${avgPath}" fill="none" stroke="#38bdf8" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"></path>
-                    <path d="${excPath}" fill="none" stroke="#14b8a6" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 5"></path>
-                    ${dots}
-                </svg>
-            </div>
-            <div class="fb-legend">
-                <span class="fb-legend-item"><span class="fb-legend-dot" style="background:#38bdf8;"></span>平均分曲线</span>
-                <span class="fb-legend-item"><span class="fb-legend-dot" style="background:#14b8a6;"></span>优秀率曲线</span>
-            </div>
-            <div class="fb-chart-axis" style="--axis-count:${list.length};">
-                ${list.map((row) => `<span title="${tmEscapeHtml(String(row.name || ''))}">${tmEscapeHtml(tmCompactAxisLabel(row.name))}</span>`).join('')}
-            </div>
-        </div>
-    `;
-}
-
 function renderTables() {
     updateSchoolMode();
     const tbTotal = document.querySelector('#tb-total tbody');
@@ -13876,37 +13793,9 @@ function renderTables() {
         // 计算全镇数据
         const totalStudents = RAW_DATA.length;
         const totalSchools = Object.keys(SCHOOLS).length;
-        const allScores = RAW_DATA.map(s => Number(s.total || 0));
-        const totalScore = allScores.reduce((sum, value) => sum + value, 0);
-        const globalAvg = totalStudents ? (totalScore / totalStudents).toFixed(1) : '0.0';
-        const maxScore = totalStudents ? Math.max(...allScores) : 0;
-        const minScore = totalStudents ? Math.min(...allScores) : 0;
-        const excellentCount = allScores.filter(score => score >= 85).length;
-        const passCount = allScores.filter(score => score >= 60).length;
-        const excellentRate = totalStudents ? (excellentCount / totalStudents) * 100 : 0;
-        const passRate = totalStudents ? (passCount / totalStudents) * 100 : 0;
-        const trimRate = Number(CONFIG.excRate || 0) * 100;
-        let trendSchools = Object.values(SCHOOLS)
-            .filter((school) => Number.isFinite(Number(school?.metrics?.total?.avg)))
-            .sort((a, b) => Number(b?.metrics?.total?.avg || 0) - Number(a?.metrics?.total?.avg || 0))
-            .slice(0, 6)
-            .map((school) => ({
-                name: school.name,
-                avgScore: Number(school?.metrics?.total?.avg || 0),
-                excellentRate: Number(school?.metrics?.total?.excRate || 0) * 100
-            }));
-        if (MY_SCHOOL && !trendSchools.some((school) => school.name === MY_SCHOOL)) {
-            const currentSchool = Object.values(SCHOOLS).find((school) => school.name === MY_SCHOOL && Number.isFinite(Number(school?.metrics?.total?.avg)));
-            if (currentSchool) {
-                trendSchools = trendSchools.slice(0, 5);
-                trendSchools.push({
-                    name: currentSchool.name,
-                    avgScore: Number(currentSchool?.metrics?.total?.avg || 0),
-                    excellentRate: Number(currentSchool?.metrics?.total?.excRate || 0) * 100
-                });
-                trendSchools.sort((a, b) => b.avgScore - a.avgScore);
-            }
-        }
+        const allScores = RAW_DATA.map(s => s.total);
+        const globalAvg = (allScores.reduce((a, b) => a + b, 0) / totalStudents).toFixed(1);
+        const maxScore = Math.max(...allScores);
 
         // 在看板模块中渲染KPI
         let dashboard = document.getElementById('macro-dashboard');
@@ -13921,40 +13810,26 @@ function renderTables() {
 
         // 渲染卡片内容
         dashboard.innerHTML = `
-                <div class="fb-card fb-card--hero">
-                    <span class="fb-pill">Macro View</span>
+                <div class="fb-card">
                     <div class="fb-lbl">参考总人数</div>
                     <div class="fb-val text-blue">${totalStudents}</div>
-                    <div class="fb-meta-row">
-                        <span>覆盖 ${totalSchools} 所学校</span>
-                        <span>当前考试 ${tmEscapeHtml(String(CONFIG.name || '未命名'))}</span>
-                    </div>
+                    <div class="fb-lbl">覆盖 ${totalSchools} 所学校</div>
                 </div>
                 <div class="fb-card">
                     <div class="fb-lbl">全镇平均分</div>
                     <div class="fb-val text-green">${globalAvg}</div>
-                    <div class="fb-meta-row">
-                        <span>优秀率 ${excellentRate.toFixed(1)}%</span>
-                        <span>及格率 ${passRate.toFixed(1)}%</span>
-                    </div>
+                    <div class="fb-lbl">总分基准线</div>
                 </div>
                 <div class="fb-card">
                     <div class="fb-lbl">最高分 (状元)</div>
                     <div class="fb-val text-orange">${maxScore}</div>
-                    <div class="fb-meta-row">
-                        <span>最低分 ${minScore}</span>
-                        <span>分差 ${maxScore - minScore} 分</span>
-                    </div>
+                    <div class="fb-lbl">分差 ${(maxScore - Math.min(...allScores))} 分</div>
                 </div>
                 <div class="fb-card">
                     <div class="fb-lbl">数据状态</div>
-                    <div class="fb-val fb-val--label">${tmEscapeHtml(String(CONFIG.name || '未命名'))}</div>
-                    <div class="fb-meta-row">
-                        <span>已剔除 ${trimRate.toFixed(0)}%</span>
-                        <span>${totalSchools > 1 ? '支持校际横比' : '当前为单校模式'}</span>
-                    </div>
+                    <div class="fb-val" style="font-size:18px; color:#64748b; margin-top:5px;">${CONFIG.name}</div>
+                    <div class="fb-lbl">已剔除后 ${(CONFIG.excRate * 100)}%</div>
                 </div>
-                ${tmBuildMacroTrendCard(trendSchools)}
             `;
     }
     // --- 📊 新增：数据统计看板逻辑 结束 ---
