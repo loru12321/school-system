@@ -44,6 +44,34 @@ Useful local checks:
 npm run check
 ```
 
+## Authentication
+
+By default, the app is `localhost-only`.
+
+- If `SCHOOL_OPS_APP_TOKEN` is not set, `/mcp` and `/health` only accept loopback requests.
+- If `SCHOOL_OPS_APP_TOKEN` is set, `/mcp` and `/health` require either:
+  - `Authorization: Bearer <token>`
+  - `x-school-ops-token: <token>`
+
+Example:
+
+```bash
+SCHOOL_OPS_APP_TOKEN=replace-me npm run dev
+```
+
+PowerShell example:
+
+```powershell
+$env:SCHOOL_OPS_APP_TOKEN='replace-me'
+npm run dev
+```
+
+Authenticated health check example:
+
+```bash
+curl -H "Authorization: Bearer replace-me" http://localhost:8788/health
+```
+
 Health route:
 
 ```text
@@ -59,8 +87,9 @@ http://localhost:8788/mcp
 ## Connect in ChatGPT Developer Mode
 
 1. Start the local server.
-2. Add a custom connector/server that points to `http://localhost:8788/mcp`.
-3. Ask ChatGPT to `search` for deployment or gateway topics, then `fetch` the returned ids.
+2. If you enabled `SCHOOL_OPS_APP_TOKEN`, configure the connector to send `Authorization: Bearer <token>` or `x-school-ops-token`.
+3. Add a custom connector/server that points to `http://localhost:8788/mcp`.
+4. Ask ChatGPT to `search` for deployment or gateway topics, then `fetch` the returned ids.
 
 ## Docs used
 

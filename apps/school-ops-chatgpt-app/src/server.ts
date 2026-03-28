@@ -1,4 +1,4 @@
-import { createServer } from "node:http";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,6 +36,8 @@ const APP_VERSION = "0.1.0";
 const APP_ARCHETYPE = "tool-only";
 const MCP_PATH = "/mcp";
 const PORT = Number(process.env.PORT ?? "8788");
+const APP_TOKEN = String(process.env.SCHOOL_OPS_APP_TOKEN || "").trim();
+const AUTH_MODE = APP_TOKEN ? "token" : "localhost-only";
 const LIVE_HEALTH_URL = "https://schoolsystem.com.cn/api/health";
 const GITHUB_BASE_URL = "https://github.com/loru12321/school-system/blob/main";
 const MAX_FETCH_CHARS = 18000;
@@ -231,6 +233,81 @@ function listDocs(): DocDescriptor[] {
 
 function jsonText(value: unknown): string {
   return JSON.stringify(value, null, 2);
+}
+
+function normalizeHostname(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (trimmed.startsWith("[")) {
+    const closingIndex = trimmed.indexOf("]");
+    if (closingIndex >= 0) {
+      return trimmed.slice(1, closingIndex).toLowerCase();
+    }
+  }
+
+  const firstColon = trimmed.indexOf(":");
+  const lastColon = trimmed.lastIndexOf(":");
+  if (firstColon >= 0 && firstColon === lastColon) {
+    return trimmed.slice(0, firstColon).toLowerCase();
+  }
+
+  return trimmed.toLowerCase();
+}
+
+function isLoopbackValue(value: string | undefined): boolean {
+  const normalized = normalizeHostname(String(value || ""));
+  return normalized === "localhost" || normalized === "127.0.0.1" || normalized === "::1" || normalized === "::ffff:127.0.0.1";
+}
+
+function getPresentedToken(req: IncomingMessage): string {
+  const authHeader = String(req.headers.authorization || "").trim();
+  if (authHeader.toLowerCase().startsWith("bearer ")) {
+    return authHeader.slice(7).trim();
+  }
+
+  return String(req.headers["x-school-ops-token"] || "").trim();
+}
+
+function isLoopbackRequest(req: IncomingMessage): boolean {
+  return isLoopbackValue(req.socket.remoteAddress);
+}
+
+function isAuthorizedRequest(req: IncomingMessage): boolean {
+  if (!APP_TOKEN) {
+    return isLoopbackRequest(req);
+  }
+
+  return getPresentedToken(req) === APP_TOKEN;
+}
+
+function writeUnauthorizedResponse(res: ServerResponse) {
+  const status = APP_TOKEN ? 401 : 403;
+  const body = APP_TOKEN
+    ? {
+        ok: false,
+        error: "UNAUTHORIZED",
+        message: "Provide Authorization: Bearer <token> or x-school-ops-token."
+      }
+    : {
+        ok: false,
+        error: "LOCALHOST_ONLY",
+        message: "This app accepts unauthenticated requests only from localhost. Set SCHOOL_OPS_APP_TOKEN to allow authenticated remote access."
+      };
+  const headers: Record<string, string> = {
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store",
+    "access-control-allow-origin": "*"
+  };
+
+  if (APP_TOKEN) {
+    headers["www-authenticate"] = 'Bearer realm="school-ops-chatgpt-app"';
+  }
+
+  res.writeHead(status, headers);
+  res.end(jsonText(body));
 }
 
 function truncateText(value: string): { text: string; truncated: boolean } {
@@ -430,7 +507,7 @@ function createAppServer(): McpServer {
   return server;
 }
 
-function writeJson(res: import("node:http").ServerResponse, status: number, body: Record<string, unknown>) {
+function writeJson(res: ServerResponse, status: number, body: Record<string, unknown>) {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
   res.end(jsonText(body));
 }
@@ -448,7 +525,7 @@ const httpServer = createServer(async (req, res) => {
     res.writeHead(204, {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "POST, GET, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "content-type, mcp-session-id",
+      "Access-Control-Allow-Headers": "authorization, content-type, mcp-session-id, x-school-ops-token",
       "Access-Control-Expose-Headers": "Mcp-Session-Id"
     });
     res.end();
@@ -462,11 +539,17 @@ const httpServer = createServer(async (req, res) => {
   }
 
   if (req.method === "GET" && url.pathname === "/health") {
+    if (!isAuthorizedRequest(req)) {
+      writeUnauthorizedResponse(res);
+      return;
+    }
+
     writeJson(res, 200, {
       ok: true,
       name: APP_NAME,
       version: APP_VERSION,
       archetype: APP_ARCHETYPE,
+      authMode: AUTH_MODE,
       mcpPath: MCP_PATH,
       documents: listDocs().length
     });
@@ -475,6 +558,11 @@ const httpServer = createServer(async (req, res) => {
 
   const transportMethods = new Set(["GET", "POST", "DELETE"]);
   if (isMcpRoute && req.method && transportMethods.has(req.method)) {
+    if (!isAuthorizedRequest(req)) {
+      writeUnauthorizedResponse(res);
+      return;
+    }
+
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
 
@@ -516,4 +604,5 @@ httpServer.on("error", (error: NodeJS.ErrnoException) => {
 
 httpServer.listen(PORT, () => {
   console.log(`${APP_NAME} listening on http://localhost:${PORT}${MCP_PATH}`);
+  console.log(`${APP_NAME} auth mode: ${AUTH_MODE}`);
 });
