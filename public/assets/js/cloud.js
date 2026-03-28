@@ -150,6 +150,77 @@
         }
     }
 
+    function parseTeacherHistoryTimestamp(entry) {
+        if (!entry || typeof entry !== 'object') return 0;
+        const rawTs = entry.savedAt || entry.updated_at || entry.updatedAt || entry.importedAt || entry.createdAt;
+        if (typeof rawTs === 'number' && Number.isFinite(rawTs)) return rawTs;
+        const parsed = Date.parse(String(rawTs || ''));
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function resolveLocalTeacherHistoryEntry(termId) {
+        const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+        const history = db?.teachingHistory || {};
+        const candidates = [];
+        const pushUnique = (value) => {
+            const text = String(value || '').trim();
+            if (!text || candidates.includes(text)) return;
+            candidates.push(text);
+        };
+
+        const preferred = String(termId || '').trim();
+        const savedTeacherTermId = getCurrentTeacherTermId();
+        const savedBaseTerm = getCurrentTermId();
+        [
+            preferred,
+            savedTeacherTermId,
+            savedBaseTerm,
+            getTeacherTermBase(preferred),
+            getTeacherTermBase(savedTeacherTermId)
+        ].forEach(pushUnique);
+
+        const baseTerms = [...new Set(candidates.map(getTeacherTermBase).filter(Boolean))];
+        Object.keys(history).forEach(key => {
+            const text = String(key || '').trim();
+            if (!text || candidates.includes(text)) return;
+            if (baseTerms.includes(getTeacherTermBase(text))) pushUnique(text);
+        });
+
+        for (const key of candidates) {
+            const entry = history[key];
+            const map = entry?.map && typeof entry.map === 'object' ? entry.map : (entry || {});
+            const schoolMap = entry?.schoolMap && typeof entry.schoolMap === 'object' ? entry.schoolMap : {};
+            if (map && typeof map === 'object' && Object.keys(map).length > 0) {
+                return {
+                    key,
+                    map,
+                    schoolMap,
+                    savedAt: parseTeacherHistoryTimestamp(entry)
+                };
+            }
+        }
+        return null;
+    }
+
+    function applyLoadedTeacherPayload(map, schoolMap, keyTermId, updatedAt) {
+        if (keyTermId) syncTeacherTermState(keyTermId);
+        applyTeacherState(map, schoolMap);
+        if (window.DataManager && typeof DataManager.syncTeacherHistory === 'function') {
+            DataManager.syncTeacherHistory({
+                termId: keyTermId || getCurrentTeacherTermId() || getCurrentTermId() || '',
+                source: 'cloud',
+                timestamp: updatedAt || ''
+            });
+        }
+        if (window.DataManager && typeof DataManager.rememberDataManagerSyncSnapshot === 'function') {
+            DataManager.rememberDataManagerSyncSnapshot('teacher-cloud-load');
+        }
+        if (window.DataManager && typeof DataManager.renderTeachers === 'function') DataManager.renderTeachers();
+        if (window.DataManager && typeof DataManager.refreshTeacherAnalysis === 'function') DataManager.refreshTeacherAnalysis();
+        if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') DataManager.renderDataManagerStatus();
+        if (typeof updateStatusPanel === 'function') updateStatusPanel();
+    }
+
     function hasSavedWorkspaceState() {
         if (WorkspaceState && typeof WorkspaceState.hasSavedWorkspace === 'function') {
             return WorkspaceState.hasSavedWorkspace();
@@ -746,21 +817,29 @@
             }
         },
 
-        loadTeachers: async function () {
+        loadTeachers: async function (options = {}) {
+            const opts = options && typeof options === 'object' ? { ...options } : {};
+            const background = Boolean(opts.background);
+            const showBlocking = !background && opts.blocking !== false;
+            const showToast = opts.toast === false ? false : !background;
             if (!(await this.ensureClientReady())) return false;
-            setCloudStatus('syncing', '拉取任课');
-            safeLoading(true, '正在从云端拉取任课表...');
-            try {
-                let key = this.getTeacherKey();
-                let row = null;
 
-                if (key) {
-                    const { data, error } = await window.sbClient.from(CLOUD_TABLE).select('key,content,updated_at').eq('key', key).maybeSingle();
-                    if (error) throw error;
-                    row = data || null;
-                }
+            const requestKey = [
+                this.getTeacherKey(),
+                getCurrentTeacherTermId(),
+                getCurrentTermId(),
+                getCurrentCohortId()
+            ].map(v => String(v || '').trim()).filter(Boolean).join('|') || 'default';
+            this._teacherLoadTasks = this._teacherLoadTasks || {};
+            if (this._teacherLoadTasks[requestKey]) return this._teacherLoadTasks[requestKey];
 
-                if (!row) {
+            this._teacherLoadTasks[requestKey] = (async () => {
+                setCloudStatus('syncing', background ? '检查任课' : '拉取任课');
+                if (showBlocking) safeLoading(true, '正在从云端拉取任课表...');
+                try {
+                    let key = this.getTeacherKey();
+                    let metaRow = null;
+                    let row = null;
                     const cohortId = getCurrentCohortId();
                     const termSel = document.getElementById('dm-teacher-term-select');
                     const meta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
@@ -773,70 +852,100 @@
                         exactUiTeacherTerm,
                         getCurrentTermId()
                     ].map(v => String(v || '').trim()).filter(Boolean);
-                    let query = window.sbClient
-                        .from(CLOUD_TABLE)
-                        .select('key,content,updated_at')
-                        .like('key', `${KEY_PREFIX_TEACHERS}%`)
-                        .order('updated_at', { ascending: false })
-                        .limit(20);
 
-                    if (cohortId) {
-                        query = window.sbClient
+                    if (key) {
+                        const { data, error } = await window.sbClient
                             .from(CLOUD_TABLE)
-                            .select('key,content,updated_at')
-                            .like('key', `${KEY_PREFIX_TEACHERS}${cohortId}%`)
-                            .order('updated_at', { ascending: false })
-                            .limit(20);
+                            .select('key,updated_at')
+                            .eq('key', key)
+                            .maybeSingle();
+                        if (error) throw error;
+                        metaRow = data || null;
                     }
 
-                    const { data: rows, error } = await query;
+                    if (!metaRow) {
+                        let query = window.sbClient
+                            .from(CLOUD_TABLE)
+                            .select('key,updated_at')
+                            .like('key', `${KEY_PREFIX_TEACHERS}%`)
+                            .order('updated_at', { ascending: false })
+                            .limit(20);
+
+                        if (cohortId) {
+                            query = window.sbClient
+                                .from(CLOUD_TABLE)
+                                .select('key,updated_at')
+                                .like('key', `${KEY_PREFIX_TEACHERS}${cohortId}%`)
+                                .order('updated_at', { ascending: false })
+                                .limit(20);
+                        }
+
+                        const { data: rows, error } = await query;
+                        if (error) throw error;
+                        metaRow = (rows || []).find(item => desiredTerms.some(term => {
+                            const keyText = String(item?.key || '');
+                            return keyText.endsWith(`_${term}`) || keyText.includes(`_${term}_`);
+                        })) || rows?.[0] || null;
+                        key = metaRow?.key || key;
+                    }
+
+                    const keyTermId = String(key || metaRow?.key || '').replace(/^TEACHERS_[^_]+_/, '').trim();
+                    const localEntry = resolveLocalTeacherHistoryEntry(keyTermId || desiredTerms[0] || '');
+                    const remoteTs = Number.isFinite(Date.parse(String(metaRow?.updated_at || '')))
+                        ? Date.parse(String(metaRow?.updated_at || ''))
+                        : 0;
+
+                    if (localEntry && (!metaRow || (remoteTs && localEntry.savedAt >= (remoteTs - 1000)))) {
+                        applyLoadedTeacherPayload(localEntry.map, localEntry.schoolMap, localEntry.key || keyTermId, metaRow?.updated_at || localEntry.savedAt || '');
+                        if (showToast && !metaRow) safeToast(`已使用本地任课缓存（${Object.keys(localEntry.map).length} 条）`, 'success');
+                        if (typeof logAction === 'function') logAction('任课同步', `任课表使用缓存：${localEntry.key || keyTermId || 'local'}`);
+                        setCloudStatus('success', '任课已就绪');
+                        return true;
+                    }
+
+                    if (!metaRow) {
+                        if (showToast) safeToast('未找到可用任课表', 'warning');
+                        setCloudStatus('success', '暂无任课');
+                        return false;
+                    }
+
+                    setCloudStatus('syncing', '拉取任课');
+                    const { data, error } = await window.sbClient
+                        .from(CLOUD_TABLE)
+                        .select('key,content,updated_at')
+                        .eq('key', metaRow.key)
+                        .maybeSingle();
                     if (error) throw error;
-                    row = (rows || []).find(item => desiredTerms.some(term => {
-                        const keyText = String(item?.key || '');
-                        return keyText.endsWith(`_${term}`) || keyText.includes(`_${term}_`);
-                    })) || rows?.[0] || null;
-                    key = row?.key || key;
-                }
+                    row = data || null;
 
-                if (!row || !row.content) {
-                    safeToast('未找到可用任课表', 'warning');
+                    if (!row || !row.content) {
+                        if (showToast) safeToast('未找到可用任课表', 'warning');
+                        setCloudStatus('success', '暂无任课');
+                        return false;
+                    }
+
+                    const parsed = parsePayload(row.content) || {};
+                    const map = parsed.map && typeof parsed.map === 'object' ? parsed.map : {};
+                    const schoolMap = parsed.schoolMap && typeof parsed.schoolMap === 'object' ? parsed.schoolMap : {};
+                    applyLoadedTeacherPayload(map, schoolMap, keyTermId, row?.updated_at || '');
+
+                    if (showToast) safeToast(`已加载任课表（${Object.keys(map).length} 条）`, 'success');
+                    if (typeof logAction === 'function') logAction('任课同步', `任课表已加载：${metaRow.key || key || 'latest'}`);
+                    setCloudStatus('success', '任课已拉取');
+                    return true;
+                } catch (e) {
+                    console.error('Teacher load error:', e);
+                    if (showToast) safeToast('任课表加载失败', 'error');
+                    setCloudStatus('error', '任课拉取失败');
                     return false;
+                } finally {
+                    if (showBlocking) safeLoading(false);
                 }
+            })().finally(() => {
+                delete this._teacherLoadTasks[requestKey];
+            });
 
-                const parsed = parsePayload(row.content) || {};
-                const map = parsed.map && typeof parsed.map === 'object' ? parsed.map : {};
-                const schoolMap = parsed.schoolMap && typeof parsed.schoolMap === 'object' ? parsed.schoolMap : {};
-                const keyTermId = String(key || row?.key || '').replace(/^TEACHERS_[^_]+_/, '').trim();
-                if (keyTermId) syncTeacherTermState(keyTermId);
-
-                applyTeacherState(map, schoolMap);
-                if (window.DataManager && typeof DataManager.syncTeacherHistory === 'function') {
-                    DataManager.syncTeacherHistory({
-                        termId: keyTermId || getCurrentTeacherTermId() || getCurrentTermId() || '',
-                        source: 'cloud',
-                        timestamp: row?.updated_at || ''
-                    });
-                }
-                if (window.DataManager && typeof DataManager.rememberDataManagerSyncSnapshot === 'function') {
-                    DataManager.rememberDataManagerSyncSnapshot('teacher-cloud-load');
-                }
-                if (window.DataManager && typeof DataManager.renderTeachers === 'function') DataManager.renderTeachers();
-                if (window.DataManager && typeof DataManager.refreshTeacherAnalysis === 'function') DataManager.refreshTeacherAnalysis();
-                if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') DataManager.renderDataManagerStatus();
-                if (typeof updateStatusPanel === 'function') updateStatusPanel();
-
-                safeToast(`已加载任课表（${Object.keys(map).length} 条）`, 'success');
-                if (typeof logAction === 'function') logAction('任课同步', `任课表已加载：${key || 'latest'}`);
-                setCloudStatus('success', '任课已拉取');
-                return true;
-            } catch (e) {
-                console.error('Teacher load error:', e);
-                safeToast('任课表加载失败', 'error');
-                setCloudStatus('error', '任课拉取失败');
-                return false;
-            } finally {
-                safeLoading(false);
-            }
+            return this._teacherLoadTasks[requestKey];
         },
 
         fetchStudentExamHistory: async function (student) {

@@ -6406,7 +6406,7 @@ const DataManager = {
             // 异步从云端加载
             if (window.CloudManager && CloudManager.loadTeachers) {
                 if (window.UI) UI.toast('🔄 正在从云端加载教师任课数据...', 'info');
-                CloudManager.loadTeachers().then(() => {
+                CloudManager.loadTeachers({ background: true }).then(() => {
                     console.log('✅ 云端数据加载完成');
                 }).catch(err => {
                     console.warn('云端加载失败:', err);
@@ -6456,7 +6456,7 @@ const DataManager = {
         }
 
         if (triggerCloud && window.CloudManager && CloudManager.loadTeachers) {
-            CloudManager.loadTeachers();
+            CloudManager.loadTeachers({ background: true });
         }
         return false;
     },
@@ -23077,7 +23077,7 @@ function onExamTermChange() {
             console.log('⏸️ 当前不在教师/数据模块，暂不自动拉取云端任课表');
         } else if (window.CloudManager && typeof CloudManager.loadTeachers === 'function') {
             if (window.UI) UI.toast('🔄 正在从云端加载该学期的教师任课数据...', 'info');
-            CloudManager.loadTeachers().then(() => {
+            CloudManager.loadTeachers({ background: true }).then(() => {
                 console.log('✅ 云端数据加载完成');
                 const newMap = window.TEACHER_MAP || {};
                 if (Object.keys(newMap).length > 0) {
@@ -25907,7 +25907,7 @@ if (typeof DataManager !== 'undefined') {
         console.log(`⚠️ 本地无学期 ${baseTermId || exactTermId} 的任课数据，尝试从云端同步...`);
         if (window.CloudManager && CloudManager.loadTeachers) {
             if (window.UI) UI.toast('📧 正在从云端加载该学期任课表...', 'info');
-            CloudManager.loadTeachers().then(ok => {
+            CloudManager.loadTeachers({ background: true }).then(ok => {
                 if (!ok && window.UI) UI.toast('☁️ 云端暂无该学期任课数据', 'warning');
             }).catch(err => {
                 console.warn('云端加载失败:', err);
@@ -25954,7 +25954,7 @@ if (typeof DataManager !== 'undefined') {
         }
 
         if (triggerCloud && window.CloudManager && CloudManager.loadTeachers) {
-            CloudManager.loadTeachers();
+            CloudManager.loadTeachers({ background: true });
         }
         return false;
     };
