@@ -5405,15 +5405,40 @@ const DataManager = {
         }
 
         try {
-            // 1. 获取数据列表 (只取元数据，不取你可以让载荷过大的 content)
-            const { data, error } = await sbClient
-                .from('system_data')
-                .select('key, created_at, updated_at, content') // content 用于计算大小
-                .order('updated_at', { ascending: false });
+            // 1. 同源代理环境优先用轻量元数据；本地/单文件直连 Supabase 时直接走 legacy content 查询，避免无意义的 400 探测
+            let data = null;
+            let error = null;
+            const preferMetadataQuery = typeof shouldUseSameOriginSupabaseProxy === 'function'
+                ? shouldUseSameOriginSupabaseProxy()
+                : false;
+            let usingLegacyContentQuery = !preferMetadataQuery;
+
+            if (preferMetadataQuery) {
+                const metaResult = await sbClient
+                    .from('system_data')
+                    .select('key, created_at, updated_at, size_bytes')
+                    .order('updated_at', { ascending: false });
+
+                data = metaResult?.data || null;
+                error = metaResult?.error || null;
+            }
+
+            if (usingLegacyContentQuery || (error && /size_bytes/i.test(String(error.message || error.code || '')))) {
+                usingLegacyContentQuery = true;
+                const legacyResult = await sbClient
+                    .from('system_data')
+                    .select('key, created_at, updated_at, content')
+                    .order('updated_at', { ascending: false });
+                data = legacyResult?.data || null;
+                error = legacyResult?.error || null;
+            }
 
             if (error) throw error;
 
-            const allRows = Array.isArray(data) ? data : [];
+            const allRows = (Array.isArray(data) ? data : []).map(item => ({
+                ...item,
+                size_bytes: Number(item?.size_bytes) || (typeof item?.content === 'string' ? item.content.length : 0)
+            }));
             this.cloudBackupRows = new Map(allRows.map(item => [String(item.key || '').trim(), item]));
             const visibleRows = allRows.filter(item => {
                 if (filterSnapshotsOnly && !this.isCloudWorkspaceSnapshotKey(item.key)) return false;
@@ -5449,13 +5474,13 @@ const DataManager = {
             });
 
             // 2. 统计信息
-            const totalSize = visibleRows.reduce((acc, item) => acc + (item.content ? item.content.length : 0), 0);
+            const totalSize = visibleRows.reduce((acc, item) => acc + (Number(item.size_bytes) || 0), 0);
             const totalSizeMB = (totalSize / 1024 / 1024).toFixed(2);
             if (summaryEl) {
                 summaryEl.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>📌 云端共 <b>${data.length}</b> 个存档 | 总占用: <b>${totalSizeMB} MB</b></span>
-                        <span style="font-size:11px; color:#94a3b8;">只显示最近更新的记录</span>
+                        <span>📌 云端共 <b>${allRows.length}</b> 个存档 | 总占用: <b>${totalSizeMB} MB</b></span>
+                        <span style="font-size:11px; color:#94a3b8;">${usingLegacyContentQuery ? '已兼容旧版云端接口' : '只显示最近更新的记录'}</span>
                     </div>
                 `;
             }
@@ -5478,7 +5503,7 @@ const DataManager = {
 
             visibleRows.forEach(item => {
                 const isCurrent = (item.key === currentKey);
-                const sizeKB = (item.content ? item.content.length / 1024 : 0).toFixed(1);
+                const sizeKB = ((Number(item.size_bytes) || 0) / 1024).toFixed(1);
                 const time = new Date(item.updated_at || item.created_at).toLocaleString();
 
                 // 解析Key结构：2022级_9年级_2025-2026_上学期_期中_全镇联考
@@ -5610,7 +5635,7 @@ const DataManager = {
         if (!normalizedKey) throw new Error('存档 Key 不能为空');
 
         const cached = this.cloudBackupRows instanceof Map ? this.cloudBackupRows.get(normalizedKey) : null;
-        if (cached) return cached;
+        if (cached && Object.prototype.hasOwnProperty.call(cached, 'content')) return cached;
 
         const { data, error } = await sbClient
             .from('system_data')
@@ -5621,9 +5646,13 @@ const DataManager = {
         if (error) throw error;
         if (!data) throw new Error(`未找到存档：${normalizedKey}`);
 
+        const merged = cached && typeof cached === 'object'
+            ? { ...cached, ...data }
+            : data;
+
         if (!(this.cloudBackupRows instanceof Map)) this.cloudBackupRows = new Map();
-        this.cloudBackupRows.set(normalizedKey, data);
-        return data;
+        this.cloudBackupRows.set(normalizedKey, merged);
+        return merged;
     },
 
     buildCloudArchiveExportPayload: function (item) {

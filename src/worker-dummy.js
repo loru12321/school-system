@@ -177,6 +177,7 @@ function mapSystemDataResponseRow(row, selectSet, content) {
   if (selectSet.has('key')) out.key = row.key;
   if (selectSet.has('created_at')) out.created_at = row.created_at;
   if (selectSet.has('updated_at')) out.updated_at = row.updated_at;
+  if (selectSet.has('size_bytes')) out.size_bytes = Number(row.size_bytes || 0);
   if (selectSet.has('content')) out.content = content;
   return out;
 }
@@ -204,7 +205,7 @@ async function querySystemDataRows(env, request, url) {
   }
 
   const sql = [
-    'SELECT key, created_at, updated_at, content_text, object_key',
+    'SELECT key, created_at, updated_at, size_bytes, content_text, object_key',
     `FROM ${SYSTEM_DATA_TABLE}`,
     whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '',
     `ORDER BY ${order.column} ${order.direction}`,
