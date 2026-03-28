@@ -179,10 +179,12 @@
                 seedCurrentExamToCohortDb(payload, key, data.updated_at);
                 if (typeof applySnapshotPayload === 'function') applySnapshotPayload(payload);
                 const cohortId = normalizeCohortId(payload?.CURRENT_COHORT_ID || getCurrentCohortId());
-                if (cohortId && typeof this.fetchCohortExamsToLocal === 'function') {
-                    await this.fetchCohortExamsToLocal(cohortId);
-                }
                 await refreshCompareSelectors();
+                if (cohortId && typeof this.fetchCohortExamsToLocal === 'function') {
+                    this.fetchCohortExamsToLocal(cohortId, { background: true }).catch((syncError) => {
+                        console.warn('[CloudExams] background sync failed:', syncError);
+                    });
+                }
                 if (typeof logAction === 'function') logAction('云端加载', `已加载全量数据：${key}`);
                 safeToast('数据已同步到本地', 'success');
                 setCloudStatus('success', '已拉取');
@@ -319,6 +321,64 @@
             return this.fetchCohortExamsToLocal(cid, options);
         }
     });
+
+    const originalFetchCohortExamsToLocal = CloudManager.fetchCohortExamsToLocal;
+    const originalWorkspaceLoad = CloudManager.load;
+
+    async function runCohortExamSync(manager, cohortId, options = {}) {
+        const nextOptions = options && typeof options === 'object' ? { ...options } : {};
+        const background = Boolean(nextOptions.background);
+        if (!background) {
+            return originalFetchCohortExamsToLocal.call(manager, cohortId, nextOptions);
+        }
+
+        const previousToast = window.UI && typeof window.UI.toast === 'function'
+            ? window.UI.toast
+            : null;
+        const previousSetCloudSyncStatus = typeof window.setCloudSyncStatus === 'function'
+            ? window.setCloudSyncStatus
+            : null;
+
+        if (window.UI && typeof window.UI.toast === 'function') {
+            window.UI.toast = function () { };
+        }
+        if (typeof window.setCloudSyncStatus === 'function') {
+            window.setCloudSyncStatus = function () { };
+        }
+
+        try {
+            return await originalFetchCohortExamsToLocal.call(manager, cohortId, nextOptions);
+        } finally {
+            if (window.UI && previousToast) {
+                window.UI.toast = previousToast;
+            }
+            if (previousSetCloudSyncStatus) {
+                window.setCloudSyncStatus = previousSetCloudSyncStatus;
+            }
+        }
+    }
+
+    CloudManager.fetchCohortExamsToLocal = function (cohortId, options = {}) {
+        return runCohortExamSync(this, cohortId, options);
+    };
+
+    CloudManager.load = async function () {
+        const manager = this;
+        const previousFetch = manager.fetchCohortExamsToLocal;
+
+        manager.fetchCohortExamsToLocal = function (cohortId, options = {}) {
+            runCohortExamSync(manager, cohortId, { ...(options || {}), background: true }).catch((syncError) => {
+                console.warn('[CloudExams] background sync failed:', syncError);
+            });
+            return Promise.resolve({ success: true, queued: true, background: true });
+        };
+
+        try {
+            return await originalWorkspaceLoad.call(manager);
+        } finally {
+            manager.fetchCohortExamsToLocal = previousFetch;
+        }
+    };
 
     window.__CLOUD_WORKSPACE_RUNTIME_PATCHED__ = true;
 })();

@@ -954,7 +954,9 @@
                 openStarterGuide();
             }
             if (typeof scheduleTeacherSyncPrompt === 'function') scheduleTeacherSyncPrompt();
-            if (hasSessionUser && typeof CloudManager.fetchAllCohortExams === 'function') CloudManager.fetchAllCohortExams();
+            if (hasSessionUser && typeof CloudManager.fetchAllCohortExams === 'function') {
+                CloudManager.fetchAllCohortExams({ background: true });
+            }
         }, 800);
     });
 })();

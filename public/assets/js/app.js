@@ -23043,8 +23043,10 @@ function onExamTermChange() {
             DataManager.renderTeachers();
         }
 
-        // 异步从云端加载
-        if (window.CloudManager && typeof CloudManager.loadTeachers === 'function') {
+        // Avoid forcing a cloud teacher sync during generic startup flows.
+        if (!shouldAutoLoadTeacherData()) {
+            console.log('⏸️ 当前不在教师/数据模块，暂不自动拉取云端任课表');
+        } else if (window.CloudManager && typeof CloudManager.loadTeachers === 'function') {
             if (window.UI) UI.toast('🔄 正在从云端加载该学期的教师任课数据...', 'info');
             CloudManager.loadTeachers().then(() => {
                 console.log('✅ 云端数据加载完成');
@@ -25637,11 +25639,15 @@ function applyTeacherTermWithoutPrompt(termId) {
         return true;
     }
 
-    if (window.CloudManager && typeof CloudManager.loadTeachers === 'function') {
-        CloudManager.loadTeachers();
-        return true;
-    }
     return false;
+}
+
+function shouldAutoLoadTeacherData() {
+    if (window.__FORCE_TEACHER_CLOUD_LOAD__ === true) return true;
+    const teacherSection = document.getElementById('teacher-analysis');
+    if (teacherSection && teacherSection.classList.contains('active')) return true;
+    const uploadSection = document.getElementById('upload');
+    return !!(uploadSection && uploadSection.classList.contains('active'));
 }
 
 function syncTeacherAnalysisSchoolContext(preferredSchool = '') {
@@ -25684,7 +25690,8 @@ function buildTeacherExportTag(user, subjectSet) {
 }
 
 function promptTeacherSyncIfNeeded() {
-    return applyTeacherTermWithoutPrompt(pickAutoTeacherTerm());
+    if (applyTeacherTermWithoutPrompt(pickAutoTeacherTerm())) return true;
+    if (!shouldAutoLoadTeacherData()) return false;
     if (localStorage.getItem('SUPPRESS_TEACHER_SYNC_PROMPT') === '1') return;
     if (sessionStorage.getItem('TEACHER_SYNC_PROMPT_SHOWN') === '1') return;
     if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return;
@@ -25733,6 +25740,7 @@ function promptTeacherSyncIfNeeded() {
 
 function scheduleTeacherSyncPrompt() {
     if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return;
+    if (!shouldAutoLoadTeacherData()) return;
     let tries = 0;
     const timer = setInterval(() => {
         tries += 1;
