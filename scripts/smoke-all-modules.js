@@ -191,20 +191,57 @@ async function ensureCohortEntered(page) {
 }
 
 async function waitForAppReady(page) {
-    await page.waitForFunction(() => {
-        const termId = localStorage.getItem('CURRENT_TERM_ID') || '';
-        const cohortId = localStorage.getItem('CURRENT_COHORT_ID') || '';
-    const school = String(
-        (window.SchoolState && typeof window.SchoolState.getCurrentSchool === 'function'
-            ? window.SchoolState.getCurrentSchool()
-            : '')
-        || window.MY_SCHOOL
-        || localStorage.getItem('MY_SCHOOL')
-        || ''
-    ).trim();
-        const scoresReady = Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0;
-        return !!termId && !!cohortId && !!school && scoresReady;
-    }, { timeout: 60000 });
+    const deadline = Date.now() + 90000;
+    let lastState = null;
+
+    while (Date.now() < deadline) {
+        try {
+            lastState = await page.evaluate(() => {
+                const app = document.getElementById('app');
+                const mask = document.getElementById('mode-mask');
+                const termId = String(localStorage.getItem('CURRENT_TERM_ID') || '').trim();
+                const cohortId = String(localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
+                const examId = String(localStorage.getItem('CURRENT_EXAM_ID') || '').trim();
+                const school = String(
+                    (window.SchoolState && typeof window.SchoolState.getCurrentSchool === 'function'
+                        ? window.SchoolState.getCurrentSchool()
+                        : '')
+                    || window.MY_SCHOOL
+                    || localStorage.getItem('MY_SCHOOL')
+                    || ''
+                ).trim();
+                const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+                return {
+                    appVisible: !!app && getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden'),
+                    maskHidden: !mask || getComputedStyle(mask).display === 'none',
+                    termId,
+                    cohortId,
+                    examId,
+                    school,
+                    rawDataLen
+                };
+            });
+        } catch (error) {
+            lastState = { error: error?.message || String(error) };
+        }
+
+        if (
+            lastState
+            && lastState.appVisible
+            && lastState.maskHidden
+            && lastState.termId
+            && lastState.cohortId
+            && lastState.examId
+            && lastState.school
+            && lastState.rawDataLen > 0
+        ) {
+            return lastState;
+        }
+
+        await page.waitForTimeout(1000);
+    }
+
+    throw new Error(`app not ready for smoke run: ${JSON.stringify(lastState)}`);
 }
 
 async function smokeSwitchModule(page, id) {

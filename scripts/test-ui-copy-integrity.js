@@ -161,6 +161,64 @@ async function ensureCohortEntered(page) {
     }, { timeout: 20000 });
 }
 
+async function readAppReadyState(page) {
+    return page.evaluate(() => {
+        const overlay = document.getElementById('login-overlay');
+        const app = document.getElementById('app');
+        const mask = document.getElementById('mode-mask');
+        const school = String(
+            (window.SchoolState && typeof window.SchoolState.getCurrentSchool === 'function'
+                ? window.SchoolState.getCurrentSchool()
+                : '')
+            || window.MY_SCHOOL
+            || localStorage.getItem('MY_SCHOOL')
+            || ''
+        ).trim();
+
+        return {
+            overlayHidden: !overlay || getComputedStyle(overlay).display === 'none',
+            appVisible: !!app && getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden'),
+            maskHidden: !mask || getComputedStyle(mask).display === 'none',
+            rawDataLen: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
+            cohortId: String(localStorage.getItem('CURRENT_COHORT_ID') || '').trim(),
+            termId: String(localStorage.getItem('CURRENT_TERM_ID') || '').trim(),
+            examId: String(localStorage.getItem('CURRENT_EXAM_ID') || '').trim(),
+            school
+        };
+    });
+}
+
+async function waitForAppReady(page, timeout = 90000) {
+    const deadline = Date.now() + timeout;
+    let lastState = null;
+
+    while (Date.now() < deadline) {
+        try {
+            lastState = await readAppReadyState(page);
+        } catch (error) {
+            lastState = { error: error?.message || String(error) };
+        }
+
+        if (
+            lastState
+            && lastState.overlayHidden
+            && lastState.appVisible
+            && lastState.maskHidden
+            && lastState.rawDataLen > 100
+            && lastState.cohortId
+            && lastState.termId
+            && lastState.examId
+            && lastState.school
+        ) {
+            return lastState;
+        }
+
+        await page.waitForTimeout(1000);
+    }
+
+    throw new Error(`app not ready for ui-copy-integrity: ${JSON.stringify(lastState)}`);
+}
+
 async function login(page) {
     await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.waitForSelector('#login-user', { timeout: 30000 });
@@ -180,9 +238,7 @@ async function login(page) {
 
     await ensureCohortEntered(page);
 
-    await page.waitForFunction(() => {
-        return Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 100;
-    }, { timeout: 60000 });
+    await waitForAppReady(page);
 }
 
 async function verifyTeacherAiWorkbench(page) {
