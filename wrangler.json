@@ -5,5 +5,15 @@
     "directory": "./dist",
     "binding": "ASSETS"
   },
+  "vars": {
+    "CLOUD_SYSTEM_DATA_MODE": "primary"
+  },
+  "d1_databases": [
+    {
+      "binding": "CLOUD_SYSTEM_DATA_DB",
+      "database_name": "school-system-cloud-metadata",
+      "database_id": "4ce32844-b42d-45ff-b436-818ffe714a08"
+    }
+  ],
   "main": "src/worker-dummy.js"
 }

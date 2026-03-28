@@ -39,6 +39,7 @@
     "smoke:modules:lt": "node scripts/smoke-all-modules.js",
     "smoke:report-compare": "node scripts/smoke-report-compare.js",
     "smoke:ai-gateway": "node scripts/test-ai-gateway.js",
+    "migrate:system-data:cloudflare": "node scripts/migrate-system-data-to-cloudflare.js",
     "preview": "vite preview"
   },
   "keywords": [],
