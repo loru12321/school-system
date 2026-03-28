@@ -137,8 +137,19 @@ const MOJIBAKE_REPLACEMENTS = [
     ['只看有差�', '只看有差异']
 ];
 
+const MOJIBAKE_PATTERNS = MOJIBAKE_REPLACEMENTS
+    .map(([bad]) => String(bad || '').trim())
+    .filter(Boolean);
+
+const MOJIBAKE_MATCH_RE = new RegExp(
+    MOJIBAKE_PATTERNS
+        .map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+        .join('|')
+);
+
 function normalizeMojibakeText(value) {
     let text = String(value ?? '');
+    if (!text || !MOJIBAKE_MATCH_RE.test(text)) return text;
     for (const [bad, good] of MOJIBAKE_REPLACEMENTS) {
         if (text.includes(bad)) text = text.split(bad).join(good);
     }
@@ -146,31 +157,41 @@ function normalizeMojibakeText(value) {
 }
 
 function normalizeMojibakeElement(el) {
-    if (!el || el.nodeType !== 1) return;
+    if (!el || el.nodeType !== 1) return 0;
+    let changeCount = 0;
     ['placeholder', 'title', 'aria-label', 'value'].forEach((attr) => {
         if (!el.hasAttribute(attr)) return;
         const current = el.getAttribute(attr);
         const next = normalizeMojibakeText(current);
-        if (next !== current) el.setAttribute(attr, next);
+        if (next !== current) {
+            el.setAttribute(attr, next);
+            changeCount += 1;
+        }
     });
+    return changeCount;
 }
 
 function normalizeMojibakeSubtree(root) {
-    if (!root) return;
+    if (!root) return 0;
     const elementRoot = root.nodeType === 1 ? root : root.parentElement;
-    if (elementRoot && /^(SCRIPT|STYLE|NOSCRIPT|TEXTAREA)$/i.test(elementRoot.tagName)) return;
+    if (elementRoot && /^(SCRIPT|STYLE|NOSCRIPT|TEXTAREA)$/i.test(elementRoot.tagName)) return 0;
+
+    let changeCount = 0;
 
     if (root.nodeType === 3) {
         const current = root.nodeValue || '';
         const next = normalizeMojibakeText(current);
-        if (next !== current) root.nodeValue = next;
-        return;
+        if (next !== current) {
+            root.nodeValue = next;
+            changeCount += 1;
+        }
+        return changeCount;
     }
 
     const base = root.nodeType === 1 ? root : (document.body || document.documentElement);
-    if (!base) return;
+    if (!base) return 0;
 
-    normalizeMojibakeElement(base);
+    changeCount += normalizeMojibakeElement(base);
     const walker = document.createTreeWalker(base, NodeFilter.SHOW_TEXT, {
         acceptNode(node) {
             const parent = node.parentElement;
@@ -184,12 +205,19 @@ function normalizeMojibakeSubtree(root) {
         const node = walker.currentNode;
         const current = node.nodeValue || '';
         const next = normalizeMojibakeText(current);
-        if (next !== current) node.nodeValue = next;
+        if (next !== current) {
+            node.nodeValue = next;
+            changeCount += 1;
+        }
     }
 
     if (base.querySelectorAll) {
-        base.querySelectorAll('*').forEach(normalizeMojibakeElement);
+        base.querySelectorAll('*').forEach((el) => {
+            changeCount += normalizeMojibakeElement(el);
+        });
     }
+
+    return changeCount;
 }
 
 function installMojibakeNormalizer() {
@@ -199,10 +227,10 @@ function installMojibakeNormalizer() {
     let isNormalizing = false;
     let fullDocumentScheduled = false;
     const runNormalize = (target) => {
-        if (isNormalizing) return;
+        if (isNormalizing) return 0;
         isNormalizing = true;
         try {
-            normalizeMojibakeSubtree(target || document.documentElement);
+            return normalizeMojibakeSubtree(target || document.documentElement);
         } finally {
             isNormalizing = false;
         }
@@ -253,14 +281,16 @@ function installMojibakeNormalizer() {
         if (fullDocumentScheduled) return;
         fullDocumentScheduled = true;
         scheduleTask(() => {
-            runNormalize(document.documentElement);
-            installObserver();
+            const changeCount = runNormalize(document.documentElement);
+            if (changeCount > 0) installObserver();
         });
     };
 
     window.normalizeMojibakeUi = (target) => {
-        runNormalize(target || document.documentElement);
+        const changeCount = runNormalize(target || document.documentElement);
+        if (changeCount > 0) installObserver();
         scheduleFullDocumentStart();
+        return changeCount;
     };
 
     const start = () => {
