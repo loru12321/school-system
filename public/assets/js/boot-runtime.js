@@ -94,6 +94,333 @@ window.initSupabase = function () {
     }
 };
 
+(function installBootLoginShell() {
+    const BOOT_LOGIN_PORTAL_STORAGE_KEY = 'LOGIN_PORTAL_V1';
+    const BOOT_GATEWAY_REQUEST = createSupabaseFetchWithTimeout(12000);
+    const bootPortalConfigs = {
+        school: {
+            badge: '学校端入口',
+            copy: '教务、年级、班主任与教师统一进入教学分析与管理工作台',
+            userLabel: '账号 / 姓名',
+            userPlaceholder: '管理员账号 / 教师姓名',
+            userHelper: '学校端支持管理员、教务、年级、班主任与教师账号登录。',
+            classNote: '(学校端无需填写)',
+            classPlaceholder: '学校端无需填写',
+            helper: '学校端用于成绩分析、教学管理与数据维护。',
+            submit: '进入学校端',
+            success: '验证成功，正在进入工作台...'
+        },
+        parent: {
+            badge: '家长端入口',
+            copy: '输入学生姓名、班级和密码，进入成长报告与成绩查询视图',
+            userLabel: '学生姓名',
+            userPlaceholder: '请输入学生姓名',
+            userHelper: '家长端建议使用学生姓名登录，并完整填写班级信息',
+            classNote: '(家长端必填，如 701)',
+            classPlaceholder: '请输入学生班级，如 701',
+            helper: '家长端将进入成长报告、成绩单与家校沟通视图。',
+            submit: '进入家长端',
+            success: '验证成功，正在进入成长报告...'
+        }
+    };
+
+    const bootGateway = window.EdgeGateway || {
+        tokenStorageKey: 'EDGE_GATEWAY_TOKEN_V1',
+        userStorageKey: 'EDGE_GATEWAY_USER_V1',
+        resolvedGatewayUrl: '',
+        normalizeGatewayUrl(url) {
+            return String(url || '').trim().replace(/\/$/, '');
+        },
+        getGatewayCandidates() {
+            const candidates = [];
+            const pushCandidate = (value) => {
+                const normalized = this.normalizeGatewayUrl(value);
+                if (!normalized || candidates.includes(normalized)) return;
+                candidates.push(normalized);
+            };
+            pushCandidate(this.resolvedGatewayUrl);
+            pushCandidate(localStorage.getItem('EDGE_GATEWAY_URL'));
+            pushCandidate(window.EDGE_GATEWAY_URL);
+            const supabaseUrl = this.normalizeGatewayUrl(localStorage.getItem('SUPABASE_URL') || window.SUPABASE_URL || '');
+            if (supabaseUrl) {
+                pushCandidate(`${supabaseUrl}/functions/v1/edu-gateway-v2`);
+                pushCandidate(`${supabaseUrl}/functions/v1/edu-gateway`);
+            }
+            return candidates;
+        },
+        getGatewayUrl() {
+            return this.getGatewayCandidates()[0] || '';
+        },
+        getPublishableKey() {
+            return String(localStorage.getItem('SUPABASE_KEY') || window.SUPABASE_KEY || '').trim();
+        },
+        getToken() {
+            return String(sessionStorage.getItem(this.tokenStorageKey) || '').trim();
+        },
+        setToken(token) {
+            if (!token) return;
+            sessionStorage.setItem(this.tokenStorageKey, String(token).trim());
+        },
+        clearSession() {
+            sessionStorage.removeItem(this.tokenStorageKey);
+            sessionStorage.removeItem(this.userStorageKey);
+        },
+        hasGatewayConfig() {
+            return !!(this.getGatewayUrl() && this.getPublishableKey());
+        },
+        shouldRetryRequest(status, message) {
+            if (status === 404 || status >= 500) return true;
+            const text = String(message || '').trim().toLowerCase();
+            return text.includes('function not found')
+                || text.includes('edge_gateway_http_404')
+                || text.includes('failed to fetch')
+                || text.includes('networkerror');
+        },
+        async request(action, payload = {}, options = {}) {
+            const urls = this.getGatewayCandidates();
+            const apikey = this.getPublishableKey();
+            if (!urls.length || !apikey) {
+                throw new Error('EDGE_GATEWAY_NOT_CONFIGURED');
+            }
+            const headers = {
+                'Content-Type': 'application/json',
+                'apikey': apikey
+            };
+            const token = options.allowAnonymous ? '' : (options.token || this.getToken());
+            if (!options.allowAnonymous) {
+                if (!token) throw new Error('EDGE_GATEWAY_SESSION_MISSING');
+                headers.Authorization = `Bearer ${token}`;
+            }
+            let lastError = null;
+            for (let i = 0; i < urls.length; i += 1) {
+                const url = urls[i];
+                try {
+                    const response = await BOOT_GATEWAY_REQUEST(url, {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({ action, payload })
+                    });
+                    let data = null;
+                    try {
+                        data = await response.json();
+                    } catch (error) { }
+                    if (response.ok && data?.ok) {
+                        this.resolvedGatewayUrl = url;
+                        return data;
+                    }
+                    const message = data?.error || `EDGE_GATEWAY_HTTP_${response.status}`;
+                    lastError = new Error(message);
+                    if (i < urls.length - 1 && this.shouldRetryRequest(response.status, message)) {
+                        continue;
+                    }
+                    throw lastError;
+                } catch (error) {
+                    lastError = error instanceof Error ? error : new Error(String(error));
+                    if (i < urls.length - 1 && this.shouldRetryRequest(0, lastError.message)) {
+                        continue;
+                    }
+                    throw lastError;
+                }
+            }
+            throw lastError || new Error('EDGE_GATEWAY_REQUEST_FAILED');
+        },
+        async login(username, password, className = '') {
+            const data = await this.request('login', {
+                username,
+                password,
+                class_name: className || ''
+            }, { allowAnonymous: true });
+            if (data?.token) this.setToken(data.token);
+            if (data?.user) sessionStorage.setItem(this.userStorageKey, JSON.stringify(data.user));
+            return data;
+        }
+    };
+
+    if (!window.EdgeGateway) {
+        window.EdgeGateway = bootGateway;
+    }
+
+    function readBootSessionUser() {
+        try {
+            const raw = sessionStorage.getItem('CURRENT_USER');
+            return raw ? JSON.parse(raw) : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function writeBootSessionUser(user) {
+        if (!user || typeof user !== 'object') return;
+        sessionStorage.setItem('CURRENT_USER', JSON.stringify(user));
+        sessionStorage.setItem('CURRENT_ROLE', String(user.role || 'guest').trim() || 'guest');
+        sessionStorage.setItem('CURRENT_ROLES', JSON.stringify(Array.isArray(user.roles) ? user.roles : [user.role].filter(Boolean)));
+    }
+
+    function getPortalConfig(portal) {
+        return portal === 'parent' ? bootPortalConfigs.parent : bootPortalConfigs.school;
+    }
+
+    function setBootSubmitState(options = {}) {
+        const button = document.getElementById('login-submit-button');
+        if (!button) return;
+        const busy = !!options.busy;
+        button.disabled = busy;
+        button.dataset.bootBusy = busy ? '1' : '0';
+        if (options.text) button.textContent = options.text;
+    }
+
+    function setBootHelperMessage(message, tone = 'info') {
+        const helper = document.getElementById('login-portal-helper');
+        if (!helper) return;
+        helper.textContent = String(message || '').trim();
+        const palette = {
+            info: '#475569',
+            success: '#166534',
+            error: '#b91c1c'
+        };
+        helper.style.color = palette[tone] || palette.info;
+    }
+
+    function syncBootLoginOverlayState(visible) {
+        const overlay = document.getElementById('login-overlay');
+        const app = document.getElementById('app');
+        document.body.classList.toggle('login-overlay-active', !!visible);
+        document.body.dataset.authState = visible ? 'logged_out' : 'logged_in';
+        if (overlay) overlay.style.display = visible ? 'flex' : 'none';
+        if (app && visible) app.classList.add('hidden');
+    }
+
+    const bootAuth = window.Auth || {
+        __bootLoginShell: true,
+        __bootLoginBusy: false,
+        loginPortalStorageKey: BOOT_LOGIN_PORTAL_STORAGE_KEY,
+        getLoginPortal() {
+            return localStorage.getItem(this.loginPortalStorageKey) === 'parent' ? 'parent' : 'school';
+        },
+        setLoginPortal(portal) {
+            const nextPortal = portal === 'parent' ? 'parent' : 'school';
+            localStorage.setItem(this.loginPortalStorageKey, nextPortal);
+            this.syncLoginPortalUI(nextPortal);
+            return nextPortal;
+        },
+        syncLoginOverlayState(visible) {
+            syncBootLoginOverlayState(visible);
+        },
+        syncLoginPortalUI(portal = this.getLoginPortal()) {
+            const nextPortal = portal === 'parent' ? 'parent' : 'school';
+            const overlay = document.getElementById('login-overlay');
+            const config = getPortalConfig(nextPortal);
+            if (overlay) overlay.dataset.loginPortal = nextPortal;
+            document.querySelectorAll('.login-portal-card[data-portal]').forEach((card) => {
+                card.classList.toggle('active', card.dataset.portal === nextPortal);
+            });
+            const badgeEl = document.getElementById('login-portal-badge');
+            const copyEl = document.getElementById('login-portal-copy');
+            const userLabel = document.getElementById('login-user-label');
+            const userInput = document.getElementById('login-user');
+            const userHelper = document.getElementById('login-user-helper');
+            const classGroup = document.getElementById('login-class-group');
+            const classNote = document.getElementById('login-class-label-note');
+            const classInput = document.getElementById('login-class');
+            if (badgeEl) badgeEl.textContent = config.badge;
+            if (copyEl) copyEl.textContent = config.copy;
+            if (userLabel) userLabel.textContent = config.userLabel;
+            if (userInput) userInput.placeholder = config.userPlaceholder;
+            if (userHelper) userHelper.textContent = config.userHelper;
+            if (classNote) classNote.textContent = config.classNote;
+            if (classInput) classInput.placeholder = config.classPlaceholder;
+            if (classGroup) {
+                classGroup.style.display = nextPortal === 'parent' ? 'block' : 'none';
+                classGroup.setAttribute('aria-hidden', nextPortal === 'parent' ? 'false' : 'true');
+            }
+            if (!this.__bootLoginBusy) {
+                setBootHelperMessage(config.helper, 'info');
+                setBootSubmitState({ busy: false, text: config.submit });
+            }
+        },
+        init() {
+            this.syncLoginPortalUI(this.getLoginPortal());
+            if (!readBootSessionUser()) {
+                this.syncLoginOverlayState(true);
+            }
+        },
+        async login() {
+            if (window.Auth && window.Auth !== this && !window.Auth.__bootLoginShell && typeof window.Auth.login === 'function') {
+                return window.Auth.login();
+            }
+            if (this.__bootLoginBusy) return;
+            const portal = this.getLoginPortal();
+            const config = getPortalConfig(portal);
+            const user = String(document.getElementById('login-user')?.value || '').trim();
+            const pass = String(document.getElementById('login-pass')?.value || '').trim();
+            const className = String(document.getElementById('login-class')?.value || '').trim();
+            if (!user || !pass) {
+                setBootHelperMessage('请输入账号和密码。', 'error');
+                return;
+            }
+            if (portal === 'parent' && !className) {
+                setBootHelperMessage('家长端请输入学生班级。', 'error');
+                return;
+            }
+            if (!bootGateway.hasGatewayConfig()) {
+                setBootHelperMessage('登录模块仍在加载，请稍候再试。', 'error');
+                return;
+            }
+            this.__bootLoginBusy = true;
+            setBootSubmitState({ busy: true, text: '正在验证身份...' });
+            setBootHelperMessage('正在连接云端验证身份，请稍候...', 'info');
+            try {
+                const result = await bootGateway.login(user, pass, className);
+                const matchedUser = result?.user || null;
+                if (!matchedUser) {
+                    throw new Error('Invalid username or password');
+                }
+                writeBootSessionUser(matchedUser);
+                const nextPortal = Array.isArray(matchedUser.roles) && matchedUser.roles.some((role) => role === 'parent' || role === 'student')
+                    || matchedUser.role === 'parent'
+                    || matchedUser.role === 'student'
+                    ? 'parent'
+                    : 'school';
+                localStorage.setItem(this.loginPortalStorageKey, nextPortal);
+                setBootHelperMessage(getPortalConfig(nextPortal).success, 'success');
+                setBootSubmitState({ busy: true, text: '正在进入...' });
+                const loader = document.getElementById('global-loader');
+                const loaderText = loader ? loader.querySelector('.loader-text') : null;
+                if (loader) loader.classList.remove('hidden');
+                if (loaderText) loaderText.textContent = getPortalConfig(nextPortal).success;
+                window.__BOOT_AUTH_PENDING_HANDOFF__ = true;
+            } catch (error) {
+                const message = String(error?.message || '').trim();
+                const nextMessage = message.includes('Invalid username or password')
+                    ? '账号、密码或班级不正确，请检查后重试。'
+                    : '云端登录暂时失败，请稍后再试。';
+                setBootHelperMessage(nextMessage, 'error');
+                this.__bootLoginBusy = false;
+                this.syncLoginPortalUI(portal);
+            }
+        },
+        logout() {
+            bootGateway.clearSession();
+            sessionStorage.removeItem('CURRENT_USER');
+            sessionStorage.removeItem('CURRENT_ROLE');
+            sessionStorage.removeItem('CURRENT_ROLES');
+            this.__bootLoginBusy = false;
+            this.syncLoginOverlayState(true);
+            this.syncLoginPortalUI(this.getLoginPortal());
+        }
+    };
+
+    if (!window.Auth || window.Auth.__bootLoginShell) {
+        window.Auth = bootAuth;
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => bootAuth.init(), { once: true });
+    } else {
+        bootAuth.init();
+    }
+})();
+
 window.scrollToAnchor = function (id, triggerEl) {
     var el = document.getElementById(id);
     if (el) {
