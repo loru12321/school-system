@@ -3983,12 +3983,12 @@
                     </div>
                     <div class="starter-card starter-card--backup">
                         <h4><i class="ti ti-database-export"></i> 备份与恢复</h4>
-                        <div style="font-size:12px; color:#64748b;">建议在切换届别或大批量修改前手动备份。</div>
+                        <div style="font-size:12px; color:#64748b;">建议在切换届别或大批量修改前，先把当前项目保存到文件。</div>
                         <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-                            <button class="btn btn-blue" onclick="manualBackup()"><i class="ti ti-device-floppy"></i>
-                                一键备份</button>
-                            <button class="btn btn-gray" onclick="manualRestore()"><i class="ti ti-rotate"></i>
-                                一键恢复</button>
+                            <button class="btn btn-blue" onclick="saveProjectSnapshot()"><i class="ti ti-device-floppy"></i>
+                                保存到文件</button>
+                            <button class="btn btn-gray" onclick="document.getElementById('projectFileInput').click()"><i class="ti ti-rotate"></i>
+                                从文件恢复</button>
                         </div>
                     </div>
                     <div class="starter-card starter-card--templates">
@@ -4048,7 +4048,7 @@
                     <div class="explain-content">
                         <p>先确认当前届别和考试批次，再上传成绩文件；如果届别或考试口径错了，后面的分析结论都会偏掉。</p>
                         <p>成绩文件上传后，建议立刻看上传摘要、数据体检和历史考试状态，及时发现异常学校、班级或学科。</p>
-                        <p>切换届别、导入新批次或做大范围修改前，建议先做一次手动备份或快照，便于回滚。</p>
+                        <p>切换届别、导入新批次或做大范围修改前，建议先把当前项目保存到文件或创建快照，便于回滚。</p>
                     </div>
                 </details>
                 <div class="analysis-flow-banner">
@@ -4260,11 +4260,11 @@
                         </div>
                         <div class="upload-ops-actions" style="display: flex; gap: 10px;">
                             <button class="btn btn-primary" id="btn-save-project" onclick="saveProjectSnapshot()">
-                                <i class="ti ti-download"></i> 保存项目 (.json)
+                                <i class="ti ti-download"></i> 保存到文件 (.json)
                             </button>
                             <button class="btn btn-orange" id="btn-load-project"
                                 onclick="document.getElementById('projectFileInput').click()">
-                                <i class="ti ti-upload"></i> 恢复项目
+                                <i class="ti ti-upload"></i> 从文件恢复
                             </button>
                             <input type="file" id="projectFileInput" accept=".json" hidden
                                 onchange="loadProjectSnapshot(this)">
@@ -4273,7 +4273,7 @@
                                 <i class="ti ti-trash"></i> 清空重置
                             </button>
                         </div>
-                        <div class="upload-ops-note">建议在切换届别、导入新考试批次或大批量修改前，先做一次手动备份。</div>
+                        <div class="upload-ops-note">建议在切换届别、导入新考试批次或大批量修改前，先把当前项目保存到文件。</div>
                     </div>
 
                     <div class="control-panel upload-ops-card upload-ops-card--snapshot" id="auto-snapshot-panel"
@@ -8907,6 +8907,7 @@
     </div>
 
     <!-- 核心逻辑脚本 -->
+<script defer src="./assets/js/config-transfer-runtime.js?v=20260329-config-transfer-v1"></script>
 <script defer src="./assets/js/app.js?v=20260322-compare-session-v1"></script>
     <script defer src="./assets/js/school-normalization-runtime.js?v=20260321-localgrades-v4"></script>
     <script defer src="./assets/js/compare-shared-runtime.js?v=20260322-compare-session-v1"></script>

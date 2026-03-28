@@ -111,9 +111,9 @@ const MOJIBAKE_REPLACEMENTS = [
     ['鎿嶄綔璁板綍', '操作记录'],
     ['娓呯┖璁板綍', '清空记录'],
     ['澶囦唤涓庢仮澶?', '备份与恢复'],
-    ['寤鸿鍦ㄥ垏鎹㈠眾鍒垨澶ф壒閲忎慨鏀瑰墠鎵嬪姩澶囦唤銆?', '建议在切换届别或大批量修改前手动备份。'],
-    ['涓€閿浠?', '一键备份'],
-    ['涓€閿仮澶?', '一键恢复'],
+    ['寤鸿鍦ㄥ垏鎹㈠眾鍒垨澶ф壒閲忎慨鏀瑰墠鎵嬪姩澶囦唤銆?', '建议在切换届别或大批量修改前，先把当前项目保存到文件。'],
+    ['涓€閿浠?', '保存到文件'],
+    ['涓€閿仮澶?', '从文件恢复'],
     ['妯℃澘涓嬭浇', '模板下载'],
     ['浠昏妯℃澘', '任课模板'],
     ['猸?', '⭐'],
@@ -24112,6 +24112,51 @@ function applySnapshotPayload(db) {
     if (typeof DataManager !== 'undefined' && DataManager.renderHistoryPreview) DataManager.renderHistoryPreview();
 }
 // === 项目快照逻辑 ===
+function getConfigTransferRuntime() {
+    if (window.ConfigTransferRuntime) return window.ConfigTransferRuntime;
+    return {
+        downloadJson(data, options = {}) {
+            const fileName = String(options.fileName || 'config.json').trim() || 'config.json';
+            const space = typeof options.space === 'number' ? options.space : 2;
+            const content = typeof data === 'string' ? data : JSON.stringify(data, null, space);
+            const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+            return fileName;
+        },
+        async readJson(file) {
+            if (!file) throw new Error('未选择文件');
+            const text = typeof file.text === 'function'
+                ? await file.text()
+                : await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(String(reader.result || ''));
+                    reader.onerror = () => reject(reader.error || new Error('文件读取失败'));
+                    reader.readAsText(file, 'utf-8');
+                });
+            return JSON.parse(text);
+        }
+    };
+}
+
+function buildProjectSnapshotFileName() {
+    const dateStr = new Date().toLocaleDateString('en-CA').replace(/\//g, '-');
+    return `system-project-backup-${dateStr}.json`;
+}
+
+function markProjectFileBackupSaved(fileName) {
+    localStorage.setItem('MANUAL_BACKUP_AT', new Date().toISOString());
+    if (typeof logAction === 'function') logAction('文件备份', `已保存到 ${fileName}`);
+    if (typeof updateStatusPanel === 'function') updateStatusPanel();
+    if (typeof updateUploadWorkbenchStatus === 'function') updateUploadWorkbenchStatus();
+}
+
 function saveProjectSnapshot() {
     const hasData = RAW_DATA.length > 0 || Object.keys(TEACHER_MAP).length > 0;
     const hasConfig = localStorage.getItem('LLM_API_KEY') || localStorage.getItem('app_skin_config');
@@ -24170,139 +24215,128 @@ function saveProjectSnapshot() {
     };
 
     try {
-        const jsonStr = JSON.stringify(snapshot);
-        const blob = new Blob([jsonStr], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const dateStr = new Date().toLocaleDateString().replace(/\//g, "-");
-        const fileName = `全站备份_${dateStr}.json`;
-
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        UI.toast("✅ 备份已下载 (含指标参数)", "success");
+        const transfer = getConfigTransferRuntime();
+        const fileName = transfer.downloadJson(snapshot, { fileName: buildProjectSnapshotFileName() });
+        markProjectFileBackupSaved(fileName);
+        UI.toast("✅ 当前项目已保存到文件", "success");
     } catch (e) {
         console.error(e);
-        alert("备份失败：" + e.message);
+        alert("保存失败：" + e.message);
     }
 }
 
-function loadProjectSnapshot(input) {
-    if (isArchiveLocked()) return alert("⛔ 当前考试已封存，禁止恢复项目");
-    const file = input.files[0];
+async function loadProjectSnapshot(input) {
+    if (isArchiveLocked()) return alert("⛔ 当前考试已封存，禁止从文件恢复项目");
+    const file = input && input.files ? input.files[0] : input;
     if (!file) return;
 
-    if (!confirm("⚠️ 警告：导入备份将【覆盖】当前系统中的所有数据！\n确定要继续吗？")) {
-        input.value = ''; return;
+    if (!confirm("⚠️ 警告：从文件恢复会覆盖当前系统中的所有数据！\n确定要继续吗？")) {
+        if (input && input.value !== undefined) input.value = '';
+        return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async function (e) {
-        try {
-            UI.loading(true, "正在恢复全站数据...");
+    try {
+        UI.loading(true, "正在从文件恢复全站数据...");
+        const transfer = getConfigTransferRuntime();
+        const snapshot = await transfer.readJson(file);
 
-            const jsonStr = e.target.result;
-            const snapshot = JSON.parse(jsonStr);
+        // 1. 校验版本结构
+        if (!snapshot.meta || (!snapshot.data && !snapshot.db)) {
+            throw new Error("文件格式不兼容或已损坏");
+        }
 
-            // 1. 校验版本结构
-            if (!snapshot.meta || (!snapshot.data && !snapshot.db)) {
-                throw new Error("文件格式不兼容或已损坏");
-            }
+        // 兼容旧版备份 (旧版数据在 .data，新版在 .db)
+        const db = snapshot.db || snapshot.data || {};
+        const settings = snapshot.settings || {};
 
-            // 兼容旧版备份 (旧版数据在 .data，新版在 .db)
-            const db = snapshot.db || snapshot.data || {};
-            const settings = snapshot.settings || {};
+        // 2. 恢复 LocalStorage 配置
+        if (settings.ai) {
+            if (settings.ai.key) localStorage.setItem('LLM_API_KEY', settings.ai.key);
+            if (settings.ai.url) localStorage.setItem('LLM_BASE_URL', settings.ai.url);
+            if (settings.ai.model) localStorage.setItem('LLM_MODEL', settings.ai.model);
+        }
+        if (settings.skin) localStorage.setItem('app_skin_config', settings.skin);
+        if (settings.themeDark) localStorage.setItem('theme-dark', settings.themeDark);
+        if (settings.hasSeenTour) localStorage.setItem('hasSeenV3Tour', settings.hasSeenTour);
 
-            // 2. 恢复 LocalStorage 配置
-            if (settings.ai) {
-                if (settings.ai.key) localStorage.setItem('LLM_API_KEY', settings.ai.key);
-                if (settings.ai.url) localStorage.setItem('LLM_BASE_URL', settings.ai.url);
-                if (settings.ai.model) localStorage.setItem('LLM_MODEL', settings.ai.model);
-            }
-            if (settings.skin) localStorage.setItem('app_skin_config', settings.skin);
-            if (settings.themeDark) localStorage.setItem('theme-dark', settings.themeDark);
-            if (settings.hasSeenTour) localStorage.setItem('hasSeenV3Tour', settings.hasSeenTour);
+        // 3. 恢复 IndexedDB 数据 (关键步骤：写入后刷新页面)
+        if (Object.keys(db).length > 0) {
+            /* 👇👇👇 🟢 关键：恢复全局变量 TARGETS (防止刷新前点击无效) 🟢 👇👇👇 */
+            setTargetsState(db.TARGETS || {});
 
-            // 3. 恢复 IndexedDB 数据 (关键步骤：写入后刷新页面)
-            if (Object.keys(db).length > 0) {
-                /* 👇👇👇 🟢 关键：恢复全局变量 TARGETS (防止刷新前点击无效) 🟢 👇👇👇 */
-                setTargetsState(db.TARGETS || {});
+            await DB.save('autosave_backup', {
+                timestamp: Date.now(),
+                RAW_DATA: db.RAW_DATA || [],
+                SCHOOLS: db.SCHOOLS || {},
+                SUBJECTS: db.SUBJECTS || [],
+                THRESHOLDS: db.THRESHOLDS || {},
 
-                await DB.save('autosave_backup', {
-                    timestamp: Date.now(),
-                    RAW_DATA: db.RAW_DATA || [],
-                    SCHOOLS: db.SCHOOLS || {},
-                    SUBJECTS: db.SUBJECTS || [],
-                    THRESHOLDS: db.THRESHOLDS || {},
+                /* 👇👇👇 🟢 关键：写入 TARGETS 到缓存 🟢 👇👇👇 */
+                TARGETS: db.TARGETS || {},
 
-                    /* 👇👇👇 🟢 关键：写入 TARGETS 到缓存 🟢 👇👇👇 */
-                    TARGETS: db.TARGETS || {},
+                /* 👇👇👇 🟢 关键：写入 指标参数 到缓存 🟢 👇👇👇 */
+                INDICATOR_PARAMS: db.INDICATOR_PARAMS || { ind1: '', ind2: '' },
 
-                    /* 👇👇👇 🟢 关键：写入 指标参数 到缓存 🟢 👇👇👇 */
-                    INDICATOR_PARAMS: db.INDICATOR_PARAMS || { ind1: '', ind2: '' },
-
-                    TEACHER_MAP: db.TEACHER_MAP || {},
-                    TEACHER_STATS: db.TEACHER_STATS || {},
-                    FB_CLASSES: db.FB_CLASSES || [],
-                    CONFIG: db.CONFIG || {},
-                    MY_SCHOOL: db.MY_SCHOOL || "",
-                    // 其他字段...
-                    TEACHER_TOWNSHIP_RANKINGS: db.TEACHER_TOWNSHIP_RANKINGS || {},
-                    PREV_DATA: db.PREV_DATA || [],
-                    PROGRESS_CACHE: db.PROGRESS_CACHE || [],
-                    PROGRESS_CACHE_FULL: db.PROGRESS_CACHE_FULL || [],
-                    MANUAL_ID_MAPPINGS: db.MANUAL_ID_MAPPINGS || {},
-                    LAST_VA_DATA: db.LAST_VA_DATA || [],
-                    VA_VIEW_MODE: db.VA_VIEW_MODE || 'school',
-                    __PROGRESS_QUICK_MODE: db.__PROGRESS_QUICK_MODE || 'all',
-                    CURRENT_REPORT_STUDENT: db.CURRENT_REPORT_STUDENT || null,
-                    BATCH_AI_CACHE: db.BATCH_AI_CACHE || {},
-                    IS_BATCH_AI_RUNNING: db.IS_BATCH_AI_RUNNING || false,
-                    CURRENT_CONTEXT_STUDENTS: db.CURRENT_CONTEXT_STUDENTS || [],
-                    MARGINAL_STUDENTS: db.MARGINAL_STUDENTS || {},
-                    POTENTIAL_STUDENTS_CACHE: db.POTENTIAL_STUDENTS_CACHE || [],
-                    FB_STUDENTS: db.FB_STUDENTS || [],
-                    FB_SIMULATED_DATA: db.FB_SIMULATED_DATA || {},
-                    EXAM_DATA: db.EXAM_DATA || [],
-                    EXAM_ROOMS: db.EXAM_ROOMS || [],
-                    AID_GROUPS_CACHE: db.AID_GROUPS_CACHE || [],
-                    HISTORY_ARCHIVE: db.HISTORY_ARCHIVE || {},
-                    ROLLER_COASTER_STUDENTS: db.ROLLER_COASTER_STUDENTS || []
-                });
-
-                // 恢复临界生快照到 LocalStorage
-                if (db.MP_SNAPSHOTS) {
-                    localStorage.setItem('MP_SNAPSHOTS', JSON.stringify(db.MP_SNAPSHOTS));
-                }
-            }
-
-            // 标记强制恢复
-            localStorage.setItem('SYS_FORCE_RESTORE', 'true');
-
-            UI.loading(false);
-
-            // 4. 成功提示并刷新
-            Swal.fire({
-                title: '恢复成功',
-                text: '数据已导入，系统即将重启以应用更改...',
-                icon: 'success',
-                timer: 1500,
-                showConfirmButton: false
-            }).then(() => {
-                location.reload();
+                TEACHER_MAP: db.TEACHER_MAP || {},
+                TEACHER_STATS: db.TEACHER_STATS || {},
+                FB_CLASSES: db.FB_CLASSES || [],
+                CONFIG: db.CONFIG || {},
+                MY_SCHOOL: db.MY_SCHOOL || "",
+                // 其他字段...
+                TEACHER_TOWNSHIP_RANKINGS: db.TEACHER_TOWNSHIP_RANKINGS || {},
+                PREV_DATA: db.PREV_DATA || [],
+                PROGRESS_CACHE: db.PROGRESS_CACHE || [],
+                PROGRESS_CACHE_FULL: db.PROGRESS_CACHE_FULL || [],
+                MANUAL_ID_MAPPINGS: db.MANUAL_ID_MAPPINGS || {},
+                LAST_VA_DATA: db.LAST_VA_DATA || [],
+                VA_VIEW_MODE: db.VA_VIEW_MODE || 'school',
+                __PROGRESS_QUICK_MODE: db.__PROGRESS_QUICK_MODE || 'all',
+                CURRENT_REPORT_STUDENT: db.CURRENT_REPORT_STUDENT || null,
+                BATCH_AI_CACHE: db.BATCH_AI_CACHE || {},
+                IS_BATCH_AI_RUNNING: db.IS_BATCH_AI_RUNNING || false,
+                CURRENT_CONTEXT_STUDENTS: db.CURRENT_CONTEXT_STUDENTS || [],
+                MARGINAL_STUDENTS: db.MARGINAL_STUDENTS || {},
+                POTENTIAL_STUDENTS_CACHE: db.POTENTIAL_STUDENTS_CACHE || [],
+                FB_STUDENTS: db.FB_STUDENTS || [],
+                FB_SIMULATED_DATA: db.FB_SIMULATED_DATA || {},
+                EXAM_DATA: db.EXAM_DATA || [],
+                EXAM_ROOMS: db.EXAM_ROOMS || [],
+                AID_GROUPS_CACHE: db.AID_GROUPS_CACHE || [],
+                HISTORY_ARCHIVE: db.HISTORY_ARCHIVE || {},
+                ROLLER_COASTER_STUDENTS: db.ROLLER_COASTER_STUDENTS || []
             });
 
-        } catch (err) {
-            UI.loading(false);
-            console.error(err);
-            alert("❌ 恢复失败：文件可能损坏。\nDEBUG: " + err.message);
+            // 恢复临界生快照到 LocalStorage
+            if (db.MP_SNAPSHOTS) {
+                localStorage.setItem('MP_SNAPSHOTS', JSON.stringify(db.MP_SNAPSHOTS));
+            }
         }
-    };
-    reader.readAsText(file);
+
+        if (typeof logAction === 'function') logAction('文件恢复', `已从 ${file.name || '备份文件'} 恢复项目`);
+
+        // 标记强制恢复
+        localStorage.setItem('SYS_FORCE_RESTORE', 'true');
+
+        UI.loading(false);
+
+        // 4. 成功提示并刷新
+        Swal.fire({
+            title: '恢复成功',
+            text: '项目已从文件恢复，系统即将重启以应用更改...',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false
+        }).then(() => {
+            location.reload();
+        });
+
+    } catch (err) {
+        UI.loading(false);
+        console.error(err);
+        alert("❌ 恢复失败：所选文件可能已损坏。\nDEBUG: " + err.message);
+    } finally {
+        if (input && input.value !== undefined) input.value = '';
+    }
 }
 
 function openTargetEditor() {
@@ -25438,8 +25472,8 @@ function updateUploadWorkbenchStatus() {
             ? '<span class="status-badge badge-err">只读模式</span>'
             : '<span class="status-badge badge-ok">可编辑</span>';
         const backupBadge = manualBackupAt
-            ? '<span class="status-badge badge-ok">已有手动备份</span>'
-            : '<span class="status-badge badge-warn">建议先备份</span>';
+            ? '<span class="status-badge badge-ok">已有文件备份</span>'
+            : '<span class="status-badge badge-warn">建议先保存到文件</span>';
 
         feedbackEl.innerHTML = `
             <div class="upload-feedback-card">
@@ -25456,7 +25490,7 @@ function updateUploadWorkbenchStatus() {
             <div class="upload-feedback-card">
                 <h4><i class="ti ti-history-toggle"></i> 快照与恢复</h4>
                 ${backupBadge}
-                <p>手动备份：${manualBackupAt ? new Date(manualBackupAt).toLocaleString('zh-CN') : '尚未创建'}<br>最近自动快照：${latestSnapshotText}</p>
+                <p>最近文件备份：${manualBackupAt ? new Date(manualBackupAt).toLocaleString('zh-CN') : '尚未创建'}<br>最近自动快照：${latestSnapshotText}</p>
             </div>
         `;
     }
