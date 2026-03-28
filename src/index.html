@@ -3949,6 +3949,8 @@
                                 教师任课</button>
                             <button class="btn btn-green" onclick="switchTab('teacher-analysis')"><i
                                     class="ti ti-school"></i> 教师画像</button>
+                            <button class="btn btn-blue" onclick="switchTab('zhongkao-countdown')"><i
+                                    class="ti ti-calendar-event"></i> 中考倒计时</button>
                             <button class="btn btn-gray" onclick="showModuleHelp('permissions')"><i
                                     class="ti ti-shield-lock"></i> 权限说明</button>
                         </div>
@@ -3999,6 +4001,15 @@
                             <button class="btn btn-orange" onclick="downloadTemplate('teacher')">任课模板</button>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div id="zhongkao-countdown" class="section card-box analysis-workspace analysis-workspace-tools">
+                <div class="module-desc-bar analysis-hero" style="border-color:#ec4899;">
+                    <h3><i class="ti ti-calendar-event"></i> 中考倒计时 <span class="badge"
+                            style="background:#ec4899;">独立页面</span></h3>
+                    <p><strong>一句话目的：</strong>把中考日期、法定节假日、长假区间和实时倒计时集中在同一页维护。</p>
+                    <p><strong>推荐顺序：</strong>先确认中考日期，再同步法定节假日，最后按学校实际添加寒暑假或校内长假。</p>
                 </div>
             </div>
 
@@ -8908,6 +8919,7 @@
 
     <!-- 核心逻辑脚本 -->
 <script defer src="./assets/js/config-transfer-runtime.js?v=20260329-config-transfer-v1"></script>
+<script defer src="./assets/js/zhongkao-countdown-runtime.js?v=20260329-zhongkao-countdown-v1"></script>
 <script defer src="./assets/js/app.js?v=20260322-compare-session-v1"></script>
     <script defer src="./assets/js/school-normalization-runtime.js?v=20260321-localgrades-v4"></script>
     <script defer src="./assets/js/compare-shared-runtime.js?v=20260322-compare-session-v1"></script>

@@ -8811,6 +8811,7 @@ const NAV_STRUCTURE = {
         color: '#059669', // 绿色 Emerald 
         icon: 'ti-user-scan',
         items: [
+            { id: 'zhongkao-countdown', icon: 'ti-calendar-event', text: '中考倒计时' },
             { id: 'student-overview', icon: 'ti-layout-dashboard', text: '学情总览' },
             { id: 'student-details', icon: 'ti-list-details', text: '学生档案查询' },
             { id: 'subject-balance', icon: 'ti-scale', text: '优劣势学科透视' },
@@ -12757,6 +12758,9 @@ function switchTab(id) {
         if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
         if (typeof updateClassSelect === 'function') updateClassSelect();
         renderStudentOverview();
+    }
+    if (id === 'zhongkao-countdown' && window.ZhongkaoCountdownModule && typeof window.ZhongkaoCountdownModule.ensureInitialized === 'function') {
+        window.ZhongkaoCountdownModule.ensureInitialized();
     }
     if (id === 'teaching-issue-board') {
         bindTeachingOverviewActions();
@@ -24855,10 +24859,10 @@ function getTeacherScopeForUser(user) {
 
 const QUERY_MODULE_ACCESS = {
     admin: ['*'],
-    director: ['starter-hub', 'upload', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'freshman-simulator', 'exam-arranger', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'ai-analysis'],
-    grade_director: ['starter-hub', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'ai-analysis'],
-    class_teacher: ['starter-hub', 'student-overview', 'student-details', 'teacher-analysis', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator', 'ai-analysis'],
-    teacher: ['starter-hub', 'student-overview', 'student-details', 'teacher-analysis', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator', 'ai-analysis'],
+    director: ['starter-hub', 'upload', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'freshman-simulator', 'exam-arranger', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'zhongkao-countdown', 'ai-analysis'],
+    grade_director: ['starter-hub', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'zhongkao-countdown', 'ai-analysis'],
+    class_teacher: ['starter-hub', 'student-overview', 'student-details', 'teacher-analysis', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator', 'zhongkao-countdown', 'ai-analysis'],
+    teacher: ['starter-hub', 'student-overview', 'student-details', 'teacher-analysis', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator', 'zhongkao-countdown', 'ai-analysis'],
     parent: ['report-generator', 'ai-analysis'],
     student: ['report-generator', 'ai-analysis'],
     guest: ['starter-hub']
