@@ -6,6 +6,8 @@ It gives ChatGPT a safe, read-only operations surface over this repository by ex
 
 - `search`: search the key runbooks, gateway notes, repo skills, and worker/code entry points
 - `fetch`: fetch a specific document by id, including a live production read of `https://schoolsystem.com.cn/api/health`
+- `status`: return a compact operational snapshot for production, gateway, skills, and app state
+- `runbook`: return recommended step order for release, browser regression, gateway work, and ops-app setup
 
 ## Archetype
 
@@ -20,6 +22,7 @@ This app intentionally uses the `tool-only` archetype. The current need is repos
 - `src/worker-dummy.js`
 - `supabase/EDGE_GATEWAY_SETUP.md`
 - `supabase/functions/edu-gateway/index.ts`
+- `.agents/skills/school-browser-regression/SKILL.md`
 - `.agents/skills/school-release-smoke/SKILL.md`
 - `.agents/skills/school-supabase-gateway/SKILL.md`
 - live production `https://schoolsystem.com.cn/api/health`
@@ -90,6 +93,13 @@ http://localhost:8788/mcp
 2. If you enabled `SCHOOL_OPS_APP_TOKEN`, configure the connector to send `Authorization: Bearer <token>` or `x-school-ops-token`.
 3. Add a custom connector/server that points to `http://localhost:8788/mcp`.
 4. Ask ChatGPT to `search` for deployment or gateway topics, then `fetch` the returned ids.
+
+Suggested starter prompts:
+
+- `Get status for production`
+- `Get the gateway runbook`
+- `Search for browser regression`
+- `Fetch skill-browser-regression`
 
 ## Docs used
 

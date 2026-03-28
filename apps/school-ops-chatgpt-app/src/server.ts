@@ -30,10 +30,13 @@ type LiveDoc = {
 };
 
 type DocDescriptor = StaticDoc | LiveDoc;
+type RunbookTopic = "release" | "browser_regression" | "gateway" | "ops_app";
+type StatusArea = "overview" | "production" | "gateway" | "skills";
 
 const APP_NAME = "school-ops-chatgpt-app";
 const APP_VERSION = "0.1.0";
 const APP_ARCHETYPE = "tool-only";
+const TOOL_NAMES = ["search", "fetch", "status", "runbook"] as const;
 const MCP_PATH = "/mcp";
 const PORT = Number(process.env.PORT ?? "8788");
 const APP_TOKEN = String(process.env.SCHOOL_OPS_APP_TOKEN || "").trim();
@@ -118,6 +121,16 @@ const STATIC_DOCS: StaticDoc[] = [
     priority: 12
   },
   {
+    id: "skill-browser-regression",
+    title: "Repo skill: school-browser-regression",
+    repoPath: ".agents/skills/school-browser-regression/SKILL.md",
+    url: `${GITHUB_BASE_URL}/.agents/skills/school-browser-regression/SKILL.md`,
+    kind: "skill",
+    keywords: ["skill", "browser", "playwright", "regression", "smoke", "production", "codex"],
+    description: "Repo-level Codex skill for browser smoke checks, module switching, and production regression.",
+    priority: 7
+  },
+  {
     id: "skill-release-smoke",
     title: "Repo skill: school-release-smoke",
     repoPath: ".agents/skills/school-release-smoke/SKILL.md",
@@ -147,6 +160,83 @@ const LIVE_DOC: LiveDoc = {
   keywords: ["live", "health", "production", "gateway", "worker", "supabase", "api"],
   description: "Fetches the current JSON payload from the production same-origin health route.",
   priority: 1
+};
+
+const RUNBOOKS: Record<
+  RunbookTopic,
+  {
+    title: string;
+    summary: string;
+    steps: string[];
+    validation: string[];
+    documents: string[];
+    notes?: string[];
+  }
+> = {
+  release: {
+    title: "Release and deploy",
+    summary: "Follow the repo validate, smoke, deploy, and production verification order.",
+    steps: [
+      "Run `cmd /c npm run validate` to rebuild artifacts and verify the baseline.",
+      "Run `cmd /c npm run smoke:modules:local` to verify the built `dist/` site in a browser.",
+      "If the single-file artifact matters, set `SMOKE_URL=file:///C:/Users/loru/Desktop/system/lt.html` and run `node scripts/smoke-all-modules.js`.",
+      "Commit and push only the intended source and release artifacts.",
+      "After deploy, set `SMOKE_URL=https://schoolsystem.com.cn/` and run `node scripts/smoke-all-modules.js`."
+    ],
+    validation: [
+      "Use `cmd /c npm run smoke:ai-gateway` when Worker or AI routes changed.",
+      "Treat production browser smoke as the final release gate."
+    ],
+    documents: ["repo-readme", "skill-release-smoke", "deploy-guide", "live-health"]
+  },
+  browser_regression: {
+    title: "Browser regression",
+    summary: "Use the existing Playwright-backed smoke scripts for login, cohort entry, and module switching.",
+    steps: [
+      "Use the default smoke credentials unless the task clearly requires different ones.",
+      "Run `cmd /c npm run smoke:modules:local` for local `dist/` browser verification.",
+      "Run `node scripts/smoke-all-modules.js` against `lt.html` when single-file behavior matters.",
+      "Run the same smoke script against `https://schoolsystem.com.cn/` after deploy.",
+      "When a failure appears, report the failing module id or browser step instead of a generic summary."
+    ],
+    validation: [
+      "Pair this with `cmd /c npm run smoke:ai-gateway` if the change touched auth, Worker routing, or gateway paths.",
+      "Capture screenshots only after reproducing the failing step consistently."
+    ],
+    documents: ["skill-browser-regression", "skill-release-smoke", "repo-readme"]
+  },
+  gateway: {
+    title: "Gateway and Supabase path",
+    summary: "Follow the gateway-first architecture and safe deployment order for auth and account changes.",
+    steps: [
+      "Update `supabase/functions/edu-gateway/index.ts` first.",
+      "Deploy `edu-gateway-v2` before any browser-side hardening or SQL migration that depends on it.",
+      "Run SQL in order: `001_management_tables.sql`, `002_management_rls_minimal.sql`, `003_system_users_password_hardening.sql`.",
+      "Retest `login`, `session.verify`, `account.search`, and `account.change_password`.",
+      "Finish with browser smoke locally and on production."
+    ],
+    validation: [
+      "Do not move account operations back to direct browser table access.",
+      "Confirm same-origin proxy routes still work through `/api/edu-gateway` and `/sb/*`."
+    ],
+    documents: ["edge-gateway-setup", "edu-gateway-function", "skill-supabase-gateway", "live-health"]
+  },
+  ops_app: {
+    title: "Ops app setup",
+    summary: "Start the local tool-only app securely, verify auth, and connect it to ChatGPT Developer Mode.",
+    steps: [
+      "Set `SCHOOL_OPS_APP_TOKEN` if the app will be accessed from anything other than localhost-only development.",
+      "Start the app with `npm run dev` inside `apps/school-ops-chatgpt-app`.",
+      "Verify `/health` locally, first expecting `401` without a token when token mode is enabled, then `200` with the bearer token.",
+      "Connect ChatGPT Developer Mode to `http://localhost:8788/mcp` and include the same auth header when token mode is enabled.",
+      "Test `search`, `fetch`, `status`, and `runbook` before relying on the connector."
+    ],
+    validation: [
+      "Run `npm run check` after any server change.",
+      "Keep the app read-only unless auth, audit, and rollback expectations are redesigned explicitly."
+    ],
+    documents: ["repo-readme", "skill-browser-regression", "skill-release-smoke", "live-health"]
+  }
 };
 
 function normalizeSearchText(value: string): string {
@@ -229,6 +319,14 @@ function scoreDocument(doc: DocDescriptor, query: string): number {
 
 function listDocs(): DocDescriptor[] {
   return [...STATIC_DOCS, LIVE_DOC];
+}
+
+function getStaticDocById(id: string): StaticDoc {
+  const doc = STATIC_DOCS.find((candidate) => candidate.id === id);
+  if (!doc) {
+    throw new Error(`Unknown static document id: ${id}`);
+  }
+  return doc;
 }
 
 function jsonText(value: unknown): string {
@@ -434,6 +532,132 @@ async function searchDocuments(query: string) {
   return ranked;
 }
 
+function listSkillSummaries() {
+  return STATIC_DOCS.filter((doc) => doc.kind === "skill").map((doc) => ({
+    id: doc.id,
+    title: doc.title,
+    url: doc.url
+  }));
+}
+
+function extractGatewayActions(): string[] {
+  const gatewaySource = readStaticDocText(getStaticDocById("edu-gateway-function"));
+  const matches = [...gatewaySource.matchAll(/case\s+["']([^"']+)["']\s*:/g)];
+  return [...new Set(matches.map((match) => String(match[1] || "").trim()).filter(Boolean))].sort();
+}
+
+async function getLiveHealthSummary() {
+  try {
+    const liveHealth = await fetchLiveHealth();
+    let body: unknown = liveHealth.text;
+    try {
+      body = JSON.parse(liveHealth.text);
+    } catch {
+      body = liveHealth.text;
+    }
+
+    return {
+      ok: true,
+      url: liveHealth.url,
+      metadata: liveHealth.metadata,
+      body
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      url: LIVE_HEALTH_URL,
+      error: String((error as Error)?.message || error || "Unknown error")
+    };
+  }
+}
+
+function resolveRunbookDocuments(topic: RunbookTopic) {
+  return RUNBOOKS[topic].documents.map((id) => {
+    if (id === LIVE_DOC.id) {
+      return {
+        id: LIVE_DOC.id,
+        title: LIVE_DOC.title,
+        url: LIVE_DOC.url
+      };
+    }
+
+    const doc = getStaticDocById(id);
+    return {
+      id: doc.id,
+      title: doc.title,
+      url: doc.url
+    };
+  });
+}
+
+async function buildStatus(area: StatusArea, includeLiveHealth?: boolean) {
+  const resolvedArea = area || "overview";
+  const shouldIncludeLiveHealth =
+    includeLiveHealth ?? (resolvedArea === "overview" || resolvedArea === "production");
+
+  const status: Record<string, unknown> = {
+    checkedAt: new Date().toISOString(),
+    area: resolvedArea,
+    app: {
+      name: APP_NAME,
+      version: APP_VERSION,
+      archetype: APP_ARCHETYPE,
+      authMode: AUTH_MODE,
+      mcpPath: MCP_PATH,
+      tools: [...TOOL_NAMES],
+      documents: listDocs().length
+    }
+  };
+
+  if (resolvedArea === "overview" || resolvedArea === "skills") {
+    status.repoSkills = listSkillSummaries();
+    status.availableRunbooks = Object.entries(RUNBOOKS).map(([topic, runbook]) => ({
+      topic,
+      title: runbook.title
+    }));
+  }
+
+  if (resolvedArea === "overview" || resolvedArea === "gateway") {
+    status.gateway = {
+      healthUrl: LIVE_HEALTH_URL,
+      actions: extractGatewayActions(),
+      recommendedDocs: resolveRunbookDocuments("gateway")
+    };
+  }
+
+  if (resolvedArea === "overview" || resolvedArea === "production") {
+    status.browserRegression = {
+      defaultCredentials: {
+        SMOKE_USER: "admin",
+        SMOKE_PASS: "admin123",
+        SMOKE_COHORT_YEAR: "2022"
+      },
+      localCommand: "cmd /c npm run smoke:modules:local",
+      productionCommand: "node scripts/smoke-all-modules.js with SMOKE_URL=https://schoolsystem.com.cn/",
+      skill: resolveRunbookDocuments("browser_regression")[0]
+    };
+  }
+
+  if (shouldIncludeLiveHealth) {
+    status.productionHealth = await getLiveHealthSummary();
+  }
+
+  return status;
+}
+
+function buildRunbook(topic: RunbookTopic) {
+  const runbook = RUNBOOKS[topic];
+  return {
+    topic,
+    title: runbook.title,
+    summary: runbook.summary,
+    steps: runbook.steps,
+    validation: runbook.validation,
+    documents: resolveRunbookDocuments(topic),
+    notes: runbook.notes || []
+  };
+}
+
 function createAppServer(): McpServer {
   const server = new McpServer({
     name: APP_NAME,
@@ -504,6 +728,77 @@ function createAppServer(): McpServer {
     })
   );
 
+  registerAppTool(
+    server,
+    "status",
+    {
+      title: "Get a compact school-system ops status",
+      description:
+        "Use this when you want a concise operations snapshot for the repo, production health route, gateway surface, or available repo skills.",
+      inputSchema: {
+        area: z
+          .enum(["overview", "production", "gateway", "skills"])
+          .optional()
+          .describe("Optional focus area. Defaults to overview."),
+        includeLiveHealth: z
+          .boolean()
+          .optional()
+          .describe("When true, include a live read of the production /api/health payload.")
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
+        idempotentHint: true
+      },
+      _meta: {
+        "openai/toolInvocation/invoking": "Collecting school-system ops status",
+        "openai/toolInvocation/invoked": "Ops status ready"
+      }
+    },
+    async ({ area, includeLiveHealth }) => ({
+      content: [
+        {
+          type: "text" as const,
+          text: jsonText(await buildStatus((area || "overview") as StatusArea, includeLiveHealth))
+        }
+      ]
+    })
+  );
+
+  registerAppTool(
+    server,
+    "runbook",
+    {
+      title: "Get a school-system operations runbook",
+      description:
+        "Use this when you need the recommended step order for release, browser regression, gateway changes, or local ops-app setup.",
+      inputSchema: {
+        topic: z
+          .enum(["release", "browser_regression", "gateway", "ops_app"])
+          .describe("Runbook topic to retrieve.")
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: false,
+        idempotentHint: true
+      },
+      _meta: {
+        "openai/toolInvocation/invoking": "Loading school-system runbook",
+        "openai/toolInvocation/invoked": "Runbook ready"
+      }
+    },
+    async ({ topic }) => ({
+      content: [
+        {
+          type: "text" as const,
+          text: jsonText(buildRunbook(topic as RunbookTopic))
+        }
+      ]
+    })
+  );
+
   return server;
 }
 
@@ -551,7 +846,8 @@ const httpServer = createServer(async (req, res) => {
       archetype: APP_ARCHETYPE,
       authMode: AUTH_MODE,
       mcpPath: MCP_PATH,
-      documents: listDocs().length
+      documents: listDocs().length,
+      tools: [...TOOL_NAMES]
     });
     return;
   }
