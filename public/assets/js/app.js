@@ -7950,6 +7950,42 @@ async function switchCohort(cohortId) {
 // 兼容旧入口
 window.switchProject = switchCohort;
 
+function scheduleStartupHydration(label, callback, options = {}) {
+    const safeRun = () => {
+        try {
+            callback();
+        } catch (error) {
+            console.warn(`[StartupHydration:${label}]`, error);
+        }
+    };
+
+    const trigger = () => {
+        if (options.idle) {
+            if (typeof window.requestIdleCallback === 'function') {
+                window.requestIdleCallback(() => safeRun(), { timeout: Number(options.timeout || 1200) });
+                return;
+            }
+            window.setTimeout(safeRun, Math.max(0, Number(options.timeout || 180)));
+            return;
+        }
+
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => window.requestAnimationFrame(safeRun));
+            return;
+        }
+
+        window.setTimeout(safeRun, 0);
+    };
+
+    const delay = Math.max(0, Number(options.delay || 0));
+    if (delay > 0) {
+        window.setTimeout(trigger, delay);
+        return;
+    }
+
+    trigger();
+}
+
 
 // 4. 启动时自动检查恢复 (程序入口)
 window.addEventListener('load', async () => {
@@ -8112,9 +8148,11 @@ window.addEventListener('load', async () => {
                 const restoredGrade = getEffectiveGrade(restoredExamMeta);
                 if (restoredGrade) applyModeByGrade(restoredGrade);
 
-                // 刷新界面
-                document.getElementById('mode-mask').style.display = 'none';
-                document.getElementById('app').classList.remove('hidden');
+                // 先展示主工作区，重表格和下拉框刷新改到后续帧补齐。
+                const modeMask = document.getElementById('mode-mask');
+                const appRoot = document.getElementById('app');
+                if (modeMask) modeMask.style.display = 'none';
+                if (appRoot) appRoot.classList.remove('hidden');
 
                 if (CONFIG.name) {
                     document.getElementById('mode-badge').innerText = CONFIG.name;
@@ -8122,19 +8160,22 @@ window.addEventListener('load', async () => {
                     renderNavigation();
                 }
 
-                updateSchoolSelect();
-                updateMySchoolSelect();
-                // 👈 修复位置：添加 null 检查，防止元素不存在时报错
-                const mySchoolSelect = document.getElementById('mySchoolSelect');
-                if (MY_SCHOOL && mySchoolSelect) mySchoolSelect.value = MY_SCHOOL;
+                scheduleStartupHydration('restore-shell', () => {
+                    updateSchoolSelect();
+                    updateMySchoolSelect();
 
-                if (typeof CohortDB !== 'undefined') CohortDB.renderExamList();
-                updateExamHistoryStatusBar();
+                    const mySchoolSelect = document.getElementById('mySchoolSelect');
+                    if (MY_SCHOOL && mySchoolSelect) mySchoolSelect.value = MY_SCHOOL;
 
-                renderTables();
-                if (MY_SCHOOL) generateTeacherInputs();
+                    if (typeof CohortDB !== 'undefined') CohortDB.renderExamList();
+                    updateExamHistoryStatusBar();
+                    UI.toast(`✅ 已加载项目：[${currentKey}]`, 'success');
+                });
 
-                UI.toast(`✅ 已加载项目：[${currentKey}]`, 'success');
+                scheduleStartupHydration('restore-tables', () => {
+                    renderTables();
+                    if (MY_SCHOOL) generateTeacherInputs();
+                }, { delay: 60 });
 
                 // ✅ [新增] 页面初始化后自动从云端拉取历史考试到对比期数下拉框
                 setTimeout(() => {

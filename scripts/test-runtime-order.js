@@ -230,8 +230,6 @@ assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign swi
     xlsxVendorRef,
     alpineVendorRef,
     chartVendorRef,
-    jszipVendorRef,
-    pptxgenVendorRef,
     alasqlVendorRef,
     sweetalertVendorRef,
     jspdfVendorRef,
@@ -240,6 +238,15 @@ assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign swi
     const scriptTag = findScriptTag(indexHtml, src);
     assert.ok(scriptTag, `index.html should contain a script tag for ${src}`);
     assert.ok(/\sasync(\s|>|=)/i.test(scriptTag), `${src} should load with async`);
+});
+
+[
+    jszipVendorRef,
+    pptxgenVendorRef
+].forEach((src) => {
+    const scriptTag = findScriptTag(indexHtml, src);
+    assert.ok(scriptTag, `index.html should contain a script tag for ${src}`);
+    assert.ok(/\sdefer(\s|>|=)/i.test(scriptTag), `${src} should load with defer`);
 });
 
 assert.ok(indexHtml.includes(tablerIconsRef), 'index.html should load local tabler icons CSS');
