@@ -181,10 +181,10 @@ assert.ok(compareExamSyncIndex >= 0, 'index.html should load compare-exam-sync-r
 assert.ok(townSubmoduleCompareStateIndex >= 0, 'index.html should load town-submodule-compare-state-runtime.js');
 assert.ok(townSubmoduleCompareIndex >= 0, 'index.html should load town-submodule-compare-runtime.js');
 assert.ok(compareSelectorsIndex >= 0, 'index.html should load compare-selectors-runtime.js');
-assert.ok(progressAnalysisIndex >= 0, 'index.html should load progress-analysis-runtime.js');
 assert.ok(cloudIndex >= 0, 'index.html should load cloud.js');
 assert.ok(cloudWorkspaceIndex >= 0, 'index.html should load cloud-workspace-runtime.js');
 assert.ok(appIndex >= 0, 'index.html should load app.js');
+assert.ok(bootRuntime.includes(progressAnalysisRef), 'boot-runtime.js should reference progress-analysis-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(teacherAnalysisMainRef), 'boot-runtime.js should reference teacher-analysis-main-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(singleSchoolEvalRef), 'boot-runtime.js should reference single-school-eval-runtime.js for lazy loading');
 assert.strictEqual(initSupabaseMatches.length, 1, 'boot-runtime.js should define initSupabase exactly once');
@@ -217,7 +217,6 @@ assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign swi
     compareCloudContextRef,
     compareExamSyncRef,
     compareSelectorsRef,
-    progressAnalysisRef,
     townSubmoduleCompareStateRef,
     townSubmoduleCompareRef
 ].forEach((src) => {
@@ -286,7 +285,6 @@ assert.ok(reportSessionStateIndex < compareSessionStateIndex, 'report-session-st
 assert.ok(compareSessionStateIndex < compareResultStateIndex, 'compare-session-state-runtime.js must load before compare-result-state-runtime.js');
 assert.ok(compareResultStateIndex < compareSummaryStateIndex, 'compare-result-state-runtime.js must load before compare-summary-state-runtime.js');
 assert.ok(compareExamSyncIndex < compareSelectorsIndex, 'compare-exam-sync-runtime.js must load before compare-selectors-runtime.js');
-assert.ok(compareExamSyncIndex < progressAnalysisIndex, 'compare-exam-sync-runtime.js must load before progress-analysis-runtime.js');
 assert.ok(compareSummaryStateIndex < townSubmoduleCompareStateIndex, 'compare-summary-state-runtime.js must load before town-submodule-compare-state-runtime.js');
 assert.ok(townSubmoduleCompareStateIndex < townSubmoduleCompareIndex, 'town-submodule-compare-state-runtime.js must load before town-submodule-compare-runtime.js');
 assert.ok(progressStateIndex < cloudIndex, 'progress-state-runtime.js must load before cloud.js');

@@ -588,6 +588,10 @@ window.ensureSingleSchoolEvalRuntimeLoaded = function () {
     return loadOptionalRuntime('single-school-eval', './assets/js/single-school-eval-runtime.js');
 };
 
+window.ensureProgressAnalysisRuntimeLoaded = function () {
+    return loadOptionalRuntime('progress-analysis', './assets/js/progress-analysis-runtime.js');
+};
+
 window.ensureStudentCompareRuntimeLoaded = function () {
     return loadOptionalRuntimeBundle('student-compare-bundle', [
         { key: 'student-compare-result', src: './assets/js/student-compare-result-runtime.js' },
@@ -683,6 +687,26 @@ if (!window.AccountExcel) {
     'SSE_export'
 ].forEach((name) => {
     installOptionalRuntimeMethod(name, window.ensureSingleSchoolEvalRuntimeLoaded);
+});
+
+[
+    'switchValueAddedView',
+    'exportValueAddedExcel',
+    'updateProgressSchoolSelect',
+    'updateProgressBaselineSelect',
+    'onProgressComparePeriodCountChange',
+    'setProgressBaselineStatus',
+    'ensureProgressBaselineData',
+    'updateProgressMultiExamSelects',
+    'renderValueAddedReport',
+    'performSilentMatching',
+    'exportProgressAnalysis',
+    'setProgressQuickFilter',
+    'renderProgressAnalysis',
+    'applyProgressFilter',
+    'resetProgressFilter'
+].forEach((name) => {
+    installOptionalRuntimeMethod(name, window.ensureProgressAnalysisRuntimeLoaded);
 });
 
 ['renderStudentMultiPeriodComparison', 'saveStudentCompareToCloud', 'viewCloudStudentCompares', 'exportStudentMultiPeriodComparison', 'loadCloudStudentCompare'].forEach((name) => {

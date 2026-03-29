@@ -12919,43 +12919,60 @@ function switchTab(id) {
         if (id === 'seat-adjustment') updateSeatAdjSelects();
         if (id === 'subject-balance') updateSubjectBalanceSelects();
         if (id === 'progress-analysis') {
-
-            // 1. 智能推断本校 (逻辑保持不变)
-            if (!MY_SCHOOL && typeof TEACHER_MAP !== 'undefined' && Object.keys(TEACHER_MAP).length > 0 && typeof SCHOOLS !== 'undefined') {
-                const schoolCounts = {};
-                const schoolNames = Object.keys(SCHOOLS);
-                Object.keys(TEACHER_MAP).forEach(key => {
-                    const cls = key.split('_')[0];
-                    for (const sName of schoolNames) {
-                        if (SCHOOLS[sName].students.some(s => s.class == cls)) {
-                            schoolCounts[sName] = (schoolCounts[sName] || 0) + 1;
-                            break;
+            const initProgressAnalysisSection = () => {
+                // 1. 智能推断本校 (逻辑保持不变)
+                if (!MY_SCHOOL && typeof TEACHER_MAP !== 'undefined' && Object.keys(TEACHER_MAP).length > 0 && typeof SCHOOLS !== 'undefined') {
+                    const schoolCounts = {};
+                    const schoolNames = Object.keys(SCHOOLS);
+                    Object.keys(TEACHER_MAP).forEach(key => {
+                        const cls = key.split('_')[0];
+                        for (const sName of schoolNames) {
+                            if (SCHOOLS[sName].students.some(s => s.class == cls)) {
+                                schoolCounts[sName] = (schoolCounts[sName] || 0) + 1;
+                                break;
+                            }
                         }
+                    });
+                    let max = 0; let winner = "";
+                    for (const [s, c] of Object.entries(schoolCounts)) { if (c > max) { max = c; winner = s; } }
+                    if (winner) { writeCurrentSchool(winner); }
+                }
+
+                // 2. 初始化下拉框
+                updateProgressSchoolSelect();
+                updateProgressBaselineSelect();
+                updateProgressMultiExamSelects();
+                if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+                if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
+                const progSel = document.getElementById('progressSchoolSelect');
+                if (MY_SCHOOL && progSel) progSel.value = MY_SCHOOL;
+
+                // 3. 检查内存数据并激活
+                Promise.resolve(ensureProgressBaselineData({
+                    allowCloudSync: true,
+                    rerenderReport: true,
+                    rerenderAnalysis: !!(progSel && progSel.value)
+                })).catch(err => {
+                    console.warn('[progress] 自动加载历史基准失败:', err);
+                    if (typeof setProgressBaselineStatus === 'function') {
+                        setProgressBaselineStatus('❌ 自动加载上次考试数据失败，请稍后重试', 'error');
                     }
                 });
-                let max = 0; let winner = "";
-                for (const [s, c] of Object.entries(schoolCounts)) { if (c > max) { max = c; winner = s; } }
-                if (winner) { writeCurrentSchool(winner); }
+            };
+
+            if (typeof window.ensureProgressAnalysisRuntimeLoaded === 'function' && !window.__PROGRESS_ANALYSIS_RUNTIME_PATCHED__) {
+                window.ensureProgressAnalysisRuntimeLoaded()
+                    .then(() => {
+                        if (document.getElementById('progress-analysis')?.classList.contains('active')) {
+                            initProgressAnalysisSection();
+                        }
+                    })
+                    .catch((error) => {
+                        console.warn('[progress] runtime load failed:', error);
+                    });
+            } else {
+                initProgressAnalysisSection();
             }
-
-            // 2. 初始化下拉框
-            updateProgressSchoolSelect();
-            updateProgressBaselineSelect();
-            updateProgressMultiExamSelects();
-            if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-            if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
-            const progSel = document.getElementById('progressSchoolSelect');
-            if (MY_SCHOOL && progSel) progSel.value = MY_SCHOOL;
-
-            // 3. 🔥 核心修复：检查内存数据并激活 🔥
-            Promise.resolve(ensureProgressBaselineData({
-                allowCloudSync: true,
-                rerenderReport: true,
-                rerenderAnalysis: !!(progSel && progSel.value)
-            })).catch(err => {
-                console.warn('[progress] 自动加载历史基准失败:', err);
-                setProgressBaselineStatus('❌ 自动加载上次考试数据失败，请稍后重试', 'error');
-            });
             /*
 
 
