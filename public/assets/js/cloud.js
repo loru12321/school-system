@@ -615,6 +615,14 @@
         const topLevelSubjects = Array.isArray(next.SUBJECTS) ? next.SUBJECTS : [];
         const currentExamId = String(next.CURRENT_EXAM_ID || next?.COHORT_DB?.currentExamId || '').trim();
 
+        // Keep these as local-only session/runtime state to reduce cloud payload size.
+        delete next.CURRENT_REPORT_STUDENT;
+        delete next.CURRENT_CONTEXT_STUDENTS;
+        delete next.IS_BATCH_AI_RUNNING;
+        delete next.VA_VIEW_MODE;
+        delete next.__PROGRESS_QUICK_MODE;
+        delete next.TEACHER_STATS;
+
         if (Array.isArray(next.RAW_DATA) && next.RAW_DATA.length) {
             next.RAW_DATA = compactStudentRows(next.RAW_DATA, topLevelSubjects);
         }

@@ -24087,16 +24087,28 @@ function applySnapshotPayload(db) {
         progressCacheFull: db.PROGRESS_CACHE_FULL || [],
         manualIdMappings: db.MANUAL_ID_MAPPINGS || {},
         lastVaData: db.LAST_VA_DATA || [],
-        vaViewMode: db.VA_VIEW_MODE || 'school',
-        quickMode: db.__PROGRESS_QUICK_MODE || 'all'
+        vaViewMode: Object.prototype.hasOwnProperty.call(db, 'VA_VIEW_MODE')
+            ? db.VA_VIEW_MODE
+            : readProgressViewModeState(),
+        quickMode: Object.prototype.hasOwnProperty.call(db, '__PROGRESS_QUICK_MODE')
+            ? db.__PROGRESS_QUICK_MODE
+            : readProgressQuickModeState()
     });
     syncReportSessionRuntimeState({
-        currentReportStudent: db.CURRENT_REPORT_STUDENT || null,
+        currentReportStudent: Object.prototype.hasOwnProperty.call(db, 'CURRENT_REPORT_STUDENT')
+            ? (db.CURRENT_REPORT_STUDENT || null)
+            : readCurrentReportStudentState(),
         batchAiCache: db.BATCH_AI_CACHE || {},
-        isBatchAiRunning: db.IS_BATCH_AI_RUNNING === true || String(db.IS_BATCH_AI_RUNNING || '').trim() === 'true',
-        currentContextStudents: db.CURRENT_CONTEXT_STUDENTS || []
+        isBatchAiRunning: Object.prototype.hasOwnProperty.call(db, 'IS_BATCH_AI_RUNNING')
+            ? (db.IS_BATCH_AI_RUNNING === true || String(db.IS_BATCH_AI_RUNNING || '').trim() === 'true')
+            : readIsBatchAIRunningState(),
+        currentContextStudents: Object.prototype.hasOwnProperty.call(db, 'CURRENT_CONTEXT_STUDENTS')
+            ? (db.CURRENT_CONTEXT_STUDENTS || [])
+            : readCurrentContextStudentsState()
     });
-    if (db.TEACHER_STATS) setTeacherStats(db.TEACHER_STATS);
+    if (Object.prototype.hasOwnProperty.call(db, 'TEACHER_STATS')) {
+        setTeacherStats(db.TEACHER_STATS || {});
+    }
     if (db.HISTORY_ARCHIVE) setHistoryArchiveState(db.HISTORY_ARCHIVE);
     if (db.FB_CLASSES) setFbClassesState(db.FB_CLASSES);
     if (db.MP_SNAPSHOTS) setMpSnapshotsState(db.MP_SNAPSHOTS);
