@@ -7725,8 +7725,9 @@ const DB = {
         // 2. 异步同步到云端
         if (!sbClient) return;
         try {
-            const jsonStr = JSON.stringify(value);
-            const compressedStr = "LZ|" + LZString.compressToUTF16(jsonStr);
+            const compressedStr = window.CloudWorkspaceRuntimeDeps && typeof window.CloudWorkspaceRuntimeDeps.packPayload === 'function'
+                ? window.CloudWorkspaceRuntimeDeps.packPayload(value)
+                : ("LZ|" + LZString.compressToUTF16(JSON.stringify(value)));
 
             const { error } = await sbClient
                 .from('system_data')
@@ -7778,16 +7779,21 @@ const DB = {
             if (error) throw error;
 
             if (data && data.content) {
-                let db = data.content;
-                if (typeof db === 'string' && db.startsWith("LZ|")) {
-                    if (typeof LZString === 'undefined') {
-                        throw new Error('LZString 未加载，无法解压云端内容');
-                    }
-                    const decompressed = LZString.decompressFromUTF16(db.substring(3));
-                    db = JSON.parse(decompressed);
-                } else if (typeof db === 'string') {
-                    db = JSON.parse(db);
-                }
+                const db = window.CloudWorkspaceRuntimeDeps && typeof window.CloudWorkspaceRuntimeDeps.parsePayload === 'function'
+                    ? window.CloudWorkspaceRuntimeDeps.parsePayload(data.content)
+                    : (() => {
+                        let parsed = data.content;
+                        if (typeof parsed === 'string' && parsed.startsWith("LZ|")) {
+                            if (typeof LZString === 'undefined') {
+                                throw new Error('LZString 未加载，无法解压云端内容');
+                            }
+                            const decompressed = LZString.decompressFromUTF16(parsed.substring(3));
+                            parsed = JSON.parse(decompressed);
+                        } else if (typeof parsed === 'string') {
+                            parsed = JSON.parse(parsed);
+                        }
+                        return parsed;
+                    })();
 
                 // 更新本地缓存
                 if (window.idbKeyval) await idbKeyval.set(`cache_${key}`, db);

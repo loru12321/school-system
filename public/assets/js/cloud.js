@@ -281,11 +281,12 @@
         if (typeof raw === 'string' && raw.startsWith('LZ|')) {
             raw = LZString.decompressFromUTF16(raw.slice(3));
         }
-        return typeof raw === 'string' ? JSON.parse(raw) : raw;
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        return inflatePayloadFromStorage(parsed);
     }
 
     function normalizeWorkspacePayload(payload) {
-        const next = (payload && typeof payload === 'object') ? payload : {};
+        const next = ensureCurrentExamBundled((payload && typeof payload === 'object') ? payload : {});
         const db = next.COHORT_DB && typeof next.COHORT_DB === 'object' ? next.COHORT_DB : null;
         const examMap = db?.exams && typeof db.exams === 'object' ? db.exams : null;
         if (!examMap) return next;
@@ -324,9 +325,14 @@
         }
 
         if (preferredCurrentExamPayload && typeof preferredCurrentExamPayload === 'object') {
+            const rows = clonePayloadFragment(preferredCurrentExamPayload.data || next.RAW_DATA || []);
+            const schools = rebuildSchoolStudentLinks(
+                rows,
+                clonePayloadFragment(preferredCurrentExamPayload.schools || next.SCHOOLS || {})
+            );
             next.ARCHIVE_META = clonePayloadFragment(preferredCurrentExamPayload.meta || next.ARCHIVE_META || null);
-            next.RAW_DATA = clonePayloadFragment(preferredCurrentExamPayload.data || next.RAW_DATA || []);
-            next.SCHOOLS = clonePayloadFragment(preferredCurrentExamPayload.schools || next.SCHOOLS || {});
+            next.RAW_DATA = rows;
+            next.SCHOOLS = schools;
             next.SUBJECTS = clonePayloadFragment(preferredCurrentExamPayload.subjects || next.SUBJECTS || []);
             next.THRESHOLDS = clonePayloadFragment(preferredCurrentExamPayload.thresholds || next.THRESHOLDS || {});
             next.TEACHER_MAP = clonePayloadFragment(preferredCurrentExamPayload.teacherMap || next.TEACHER_MAP || {});
@@ -337,13 +343,332 @@
     }
 
     function packPayload(payload) {
-        const json = JSON.stringify(payload || {});
+        const json = JSON.stringify(compactPayloadForStorage(payload || {}));
         return 'LZ|' + LZString.compressToUTF16(json);
     }
 
     function clonePayloadFragment(value) {
         if (value == null) return value;
         return JSON.parse(JSON.stringify(value));
+    }
+
+    function collectPackedSubjects(rows, subjectHint = []) {
+        const subjects = [];
+        const pushUnique = (value) => {
+            const text = String(value || '').trim();
+            if (!text || subjects.includes(text)) return;
+            subjects.push(text);
+        };
+
+        (Array.isArray(subjectHint) ? subjectHint : []).forEach(pushUnique);
+        (Array.isArray(rows) ? rows : []).forEach((row) => {
+            Object.keys(row?.scores || {}).forEach(pushUnique);
+            Object.keys(row?.ranks || {}).forEach((key) => {
+                if (key !== 'total') pushUnique(key);
+            });
+        });
+        return subjects;
+    }
+
+    function compactStudentRows(rows, subjectHint = []) {
+        const list = Array.isArray(rows) ? rows : [];
+        if (!list.length) return [];
+        if (list.__packedRows === 'rows-v1') return clonePayloadFragment(list);
+
+        const subjects = collectPackedSubjects(list, subjectHint);
+        const reservedKeys = new Set([
+            'school', 'class', 'name', 'id', 'total', 'scores', 'ranks',
+            'uuid', 'status', 'townRank', 'schoolRank', 'classRank'
+        ]);
+
+        return {
+            __packedRows: 'rows-v1',
+            subjects,
+            rows: list.map((row) => {
+                const extras = {};
+                Object.keys(row || {}).forEach((key) => {
+                    if (!reservedKeys.has(key)) extras[key] = clonePayloadFragment(row[key]);
+                });
+
+                const totalRanks = row?.ranks?.total && typeof row.ranks.total === 'object' ? row.ranks.total : {};
+                const totalRankTuple = [
+                    totalRanks.class ?? row?.classRank ?? null,
+                    totalRanks.school ?? row?.schoolRank ?? null,
+                    totalRanks.township ?? row?.townRank ?? null
+                ];
+
+                return [
+                    String(row?.school || ''),
+                    String(row?.class || ''),
+                    String(row?.name || ''),
+                    row?.id ?? null,
+                    row?.total ?? null,
+                    subjects.map((subject) => {
+                        const value = row?.scores && Object.prototype.hasOwnProperty.call(row.scores, subject)
+                            ? row.scores[subject]
+                            : null;
+                        return value === undefined ? null : value;
+                    }),
+                    totalRankTuple.some(value => value != null) ? totalRankTuple : null,
+                    subjects.map((subject) => {
+                        const ranks = row?.ranks?.[subject];
+                        if (!ranks || typeof ranks !== 'object') return null;
+                        const tuple = [ranks.class ?? null, ranks.school ?? null, ranks.township ?? null];
+                        return tuple.some(value => value != null) ? tuple : null;
+                    }),
+                    row?.uuid ?? null,
+                    row?.status ?? null,
+                    Object.keys(extras).length ? extras : null
+                ];
+            })
+        };
+    }
+
+    function inflateStudentRows(packedRows, subjectHint = []) {
+        if (!packedRows || typeof packedRows !== 'object' || packedRows.__packedRows !== 'rows-v1') {
+            return Array.isArray(packedRows) ? packedRows : [];
+        }
+
+        const subjects = collectPackedSubjects([], Array.isArray(packedRows.subjects) ? packedRows.subjects : subjectHint);
+        return (Array.isArray(packedRows.rows) ? packedRows.rows : []).map((entry) => {
+            if (!Array.isArray(entry)) return null;
+
+            const row = {
+                school: String(entry[0] || ''),
+                class: String(entry[1] || ''),
+                name: String(entry[2] || ''),
+                total: entry[4] ?? 0,
+                scores: {},
+                ranks: {}
+            };
+
+            if (entry[3] !== null && entry[3] !== undefined && entry[3] !== '') row.id = entry[3];
+            if (entry[8] !== null && entry[8] !== undefined && entry[8] !== '') row.uuid = entry[8];
+            if (entry[9] !== null && entry[9] !== undefined && entry[9] !== '') row.status = entry[9];
+
+            const scoreValues = Array.isArray(entry[5]) ? entry[5] : [];
+            subjects.forEach((subject, index) => {
+                const value = scoreValues[index];
+                if (value !== null && value !== undefined && value !== '') {
+                    row.scores[subject] = value;
+                }
+            });
+
+            const totalRanks = Array.isArray(entry[6]) ? entry[6] : null;
+            if (totalRanks) {
+                const totalRankMap = {};
+                if (totalRanks[0] !== null && totalRanks[0] !== undefined) {
+                    totalRankMap.class = totalRanks[0];
+                    row.classRank = totalRanks[0];
+                }
+                if (totalRanks[1] !== null && totalRanks[1] !== undefined) {
+                    totalRankMap.school = totalRanks[1];
+                    row.schoolRank = totalRanks[1];
+                }
+                if (totalRanks[2] !== null && totalRanks[2] !== undefined) {
+                    totalRankMap.township = totalRanks[2];
+                    row.townRank = totalRanks[2];
+                }
+                if (Object.keys(totalRankMap).length) row.ranks.total = totalRankMap;
+            }
+
+            const subjectRanks = Array.isArray(entry[7]) ? entry[7] : [];
+            subjects.forEach((subject, index) => {
+                const tuple = subjectRanks[index];
+                if (!Array.isArray(tuple)) return;
+                const rankMap = {};
+                if (tuple[0] !== null && tuple[0] !== undefined) rankMap.class = tuple[0];
+                if (tuple[1] !== null && tuple[1] !== undefined) rankMap.school = tuple[1];
+                if (tuple[2] !== null && tuple[2] !== undefined) rankMap.township = tuple[2];
+                if (Object.keys(rankMap).length) row.ranks[subject] = rankMap;
+            });
+
+            const extras = entry[10];
+            if (extras && typeof extras === 'object' && !Array.isArray(extras)) {
+                Object.keys(extras).forEach((key) => {
+                    if (!Object.prototype.hasOwnProperty.call(row, key)) {
+                        row[key] = clonePayloadFragment(extras[key]);
+                    }
+                });
+            }
+
+            return row;
+        }).filter(Boolean);
+    }
+
+    function shrinkSchoolMapForStorage(schoolMap) {
+        if (!schoolMap || typeof schoolMap !== 'object') return {};
+        const compact = {};
+        Object.entries(schoolMap).forEach(([schoolName, schoolValue]) => {
+            if (!schoolValue || typeof schoolValue !== 'object') return;
+            const nextSchool = {};
+            Object.keys(schoolValue).forEach((key) => {
+                if (key === 'students') return;
+                nextSchool[key] = clonePayloadFragment(schoolValue[key]);
+            });
+            if (!nextSchool.name) nextSchool.name = String(schoolName || '').trim();
+            compact[String(schoolName || '').trim()] = nextSchool;
+        });
+        return compact;
+    }
+
+    function rebuildSchoolStudentLinks(rows, schoolMap) {
+        const base = schoolMap && typeof schoolMap === 'object'
+            ? clonePayloadFragment(schoolMap)
+            : {};
+
+        Object.values(base).forEach((school) => {
+            if (!school || typeof school !== 'object') return;
+            school.students = [];
+        });
+
+        (Array.isArray(rows) ? rows : []).forEach((row) => {
+            const schoolName = String(row?.school || '').trim() || '未命名学校';
+            if (!base[schoolName] || typeof base[schoolName] !== 'object') {
+                base[schoolName] = { name: schoolName, metrics: {}, rankings: {}, students: [] };
+            }
+            if (!Array.isArray(base[schoolName].students)) base[schoolName].students = [];
+            base[schoolName].students.push(row);
+            if (!base[schoolName].name) base[schoolName].name = schoolName;
+        });
+
+        return base;
+    }
+
+    function buildCurrentExamEntryFromPayload(payload) {
+        const currentExamId = String(payload?.CURRENT_EXAM_ID || payload?.COHORT_DB?.currentExamId || '').trim();
+        const rows = Array.isArray(payload?.RAW_DATA) ? payload.RAW_DATA : [];
+        if (!currentExamId || !rows.length) return null;
+
+        return {
+            examId: currentExamId,
+            meta: clonePayloadFragment(payload?.ARCHIVE_META || payload?.CONFIG || {}),
+            data: clonePayloadFragment(rows),
+            schools: rebuildSchoolStudentLinks(rows, payload?.SCHOOLS || {}),
+            teacherMap: clonePayloadFragment(payload?.TEACHER_MAP || {}),
+            subjects: clonePayloadFragment(payload?.SUBJECTS || []),
+            thresholds: clonePayloadFragment(payload?.THRESHOLDS || {}),
+            config: clonePayloadFragment(payload?.CONFIG || {}),
+            fingerprint: String(payload?.FINGERPRINT || computeExamDataFingerprint(rows)).trim(),
+            createdAt: Number(payload?.timestamp || Date.now()),
+            updatedAt: ''
+        };
+    }
+
+    function ensureCurrentExamBundled(payload) {
+        const next = (payload && typeof payload === 'object') ? payload : {};
+        const currentExam = buildCurrentExamEntryFromPayload(next);
+        if (!currentExam) return next;
+
+        if (!next.COHORT_DB || typeof next.COHORT_DB !== 'object') {
+            next.COHORT_DB = {
+                cohortId: next.CURRENT_COHORT_ID || '',
+                cohortMeta: next.CURRENT_COHORT_META || null,
+                students: {},
+                teachingHistory: {},
+                exams: {},
+                currentExamId: currentExam.examId,
+                resetPoints: []
+            };
+        }
+
+        next.COHORT_DB.exams = next.COHORT_DB.exams && typeof next.COHORT_DB.exams === 'object'
+            ? next.COHORT_DB.exams
+            : {};
+
+        const existing = next.COHORT_DB.exams[currentExam.examId];
+        const existingRows = Array.isArray(existing?.data) ? existing.data.length : 0;
+        if (!existing || existingRows === 0) {
+            next.COHORT_DB.exams[currentExam.examId] = currentExam;
+        }
+        next.COHORT_DB.currentExamId = currentExam.examId;
+        return next;
+    }
+
+    function compactExamPayloadForStorage(examPayload) {
+        if (!examPayload || typeof examPayload !== 'object') return examPayload;
+        const nextExam = clonePayloadFragment(examPayload);
+        const subjectHint = Array.isArray(nextExam.subjects) ? nextExam.subjects : [];
+        if (Array.isArray(nextExam.data) && nextExam.data.length) {
+            nextExam.data = compactStudentRows(nextExam.data, subjectHint);
+        }
+        if (nextExam.schools && typeof nextExam.schools === 'object') {
+            nextExam.schools = shrinkSchoolMapForStorage(nextExam.schools);
+        }
+        return nextExam;
+    }
+
+    function inflateExamPayloadFromStorage(examPayload) {
+        if (!examPayload || typeof examPayload !== 'object') return examPayload;
+        const nextExam = clonePayloadFragment(examPayload);
+        const subjectHint = Array.isArray(nextExam.subjects) ? nextExam.subjects : [];
+        const rows = inflateStudentRows(nextExam.data, subjectHint);
+        if (rows.length) nextExam.data = rows;
+        if (nextExam.schools && typeof nextExam.schools === 'object') {
+            nextExam.schools = rebuildSchoolStudentLinks(nextExam.data || [], nextExam.schools);
+        }
+        return nextExam;
+    }
+
+    function compactPayloadForStorage(payload) {
+        const next = clonePayloadFragment(payload || {});
+        const topLevelSubjects = Array.isArray(next.SUBJECTS) ? next.SUBJECTS : [];
+        const currentExamId = String(next.CURRENT_EXAM_ID || next?.COHORT_DB?.currentExamId || '').trim();
+
+        if (Array.isArray(next.RAW_DATA) && next.RAW_DATA.length) {
+            next.RAW_DATA = compactStudentRows(next.RAW_DATA, topLevelSubjects);
+        }
+        if (Array.isArray(next.PREV_DATA) && next.PREV_DATA.length) {
+            next.PREV_DATA = compactStudentRows(next.PREV_DATA, topLevelSubjects);
+        }
+        if (next.SCHOOLS && typeof next.SCHOOLS === 'object') {
+            next.SCHOOLS = shrinkSchoolMapForStorage(next.SCHOOLS);
+        }
+
+        if (next.COHORT_DB && typeof next.COHORT_DB === 'object') {
+            const exams = next.COHORT_DB.exams && typeof next.COHORT_DB.exams === 'object'
+                ? next.COHORT_DB.exams
+                : {};
+            const compactExams = {};
+
+            Object.entries(exams).forEach(([examId, examPayload]) => {
+                const exactExamId = String(examId || '').trim();
+                if (!exactExamId) return;
+                if (currentExamId && exactExamId === currentExamId && next.RAW_DATA) return;
+                compactExams[exactExamId] = compactExamPayloadForStorage(examPayload);
+            });
+
+            next.COHORT_DB.exams = compactExams;
+        }
+
+        next.__CLOUD_PAYLOAD_FORMAT = 'compact-v2';
+        return next;
+    }
+
+    function inflatePayloadFromStorage(payload) {
+        const next = clonePayloadFragment(payload || {});
+        const topLevelSubjects = Array.isArray(next.SUBJECTS) ? next.SUBJECTS : [];
+
+        const inflatedRows = inflateStudentRows(next.RAW_DATA, topLevelSubjects);
+        if (inflatedRows.length) next.RAW_DATA = inflatedRows;
+
+        const inflatedPrevRows = inflateStudentRows(next.PREV_DATA, topLevelSubjects);
+        if (inflatedPrevRows.length) next.PREV_DATA = inflatedPrevRows;
+
+        if (next.SCHOOLS && typeof next.SCHOOLS === 'object') {
+            next.SCHOOLS = rebuildSchoolStudentLinks(next.RAW_DATA || [], next.SCHOOLS);
+        }
+
+        if (next.COHORT_DB && typeof next.COHORT_DB === 'object' && next.COHORT_DB.exams && typeof next.COHORT_DB.exams === 'object') {
+            const inflatedExams = {};
+            Object.entries(next.COHORT_DB.exams).forEach(([examId, examPayload]) => {
+                inflatedExams[String(examId || '').trim()] = inflateExamPayloadFromStorage(examPayload);
+            });
+            next.COHORT_DB.exams = inflatedExams;
+        }
+
+        delete next.__CLOUD_PAYLOAD_FORMAT;
+        return ensureCurrentExamBundled(next);
     }
 
     function getPayloadTargetCount(payload) {
