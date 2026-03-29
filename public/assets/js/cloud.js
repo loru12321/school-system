@@ -592,9 +592,7 @@
         if (Array.isArray(nextExam.data) && nextExam.data.length) {
             nextExam.data = compactStudentRows(nextExam.data, subjectHint);
         }
-        if (nextExam.schools && typeof nextExam.schools === 'object') {
-            nextExam.schools = shrinkSchoolMapForStorage(nextExam.schools);
-        }
+        delete nextExam.schools;
         return nextExam;
     }
 
@@ -604,9 +602,7 @@
         const subjectHint = Array.isArray(nextExam.subjects) ? nextExam.subjects : [];
         const rows = inflateStudentRows(nextExam.data, subjectHint);
         if (rows.length) nextExam.data = rows;
-        if (nextExam.schools && typeof nextExam.schools === 'object') {
-            nextExam.schools = rebuildSchoolStudentLinks(nextExam.data || [], nextExam.schools);
-        }
+        nextExam.schools = rebuildSchoolStudentLinks(nextExam.data || [], nextExam.schools || {});
         return nextExam;
     }
 
@@ -629,9 +625,7 @@
         if (Array.isArray(next.PREV_DATA) && next.PREV_DATA.length) {
             next.PREV_DATA = compactStudentRows(next.PREV_DATA, topLevelSubjects);
         }
-        if (next.SCHOOLS && typeof next.SCHOOLS === 'object') {
-            next.SCHOOLS = shrinkSchoolMapForStorage(next.SCHOOLS);
-        }
+        delete next.SCHOOLS;
 
         if (next.COHORT_DB && typeof next.COHORT_DB === 'object') {
             const exams = next.COHORT_DB.exams && typeof next.COHORT_DB.exams === 'object'
@@ -663,9 +657,7 @@
         const inflatedPrevRows = inflateStudentRows(next.PREV_DATA, topLevelSubjects);
         if (inflatedPrevRows.length) next.PREV_DATA = inflatedPrevRows;
 
-        if (next.SCHOOLS && typeof next.SCHOOLS === 'object') {
-            next.SCHOOLS = rebuildSchoolStudentLinks(next.RAW_DATA || [], next.SCHOOLS);
-        }
+        next.SCHOOLS = rebuildSchoolStudentLinks(next.RAW_DATA || [], next.SCHOOLS || {});
 
         if (next.COHORT_DB && typeof next.COHORT_DB === 'object' && next.COHORT_DB.exams && typeof next.COHORT_DB.exams === 'object') {
             const inflatedExams = {};
