@@ -722,7 +722,7 @@ if (!window.AccountExcel) {
 });
 
 ['renderSingleReportCardHTML', 'renderRadarChart', 'renderVarianceChart', 'analyzeStrengthsAndWeaknesses'].forEach((name) => {
-    installOptionalRuntimePlaceholder(name, `${name} runtime not loaded`);
+    installOptionalRuntimeMethod(name, window.ensureReportRenderRuntimeLoaded);
 });
 
 if (window.innerWidth <= 960 || localStorage.getItem('DEV_MODE') === 'true') {
@@ -821,22 +821,37 @@ function installDataManagerSqlHooks() {
     return true;
 }
 
-if (!installHistoryDoQueryWrapper()) {
+function retryInstallLateHook(installer, options) {
+    const opts = options || {};
+    const maxTries = Number(opts.maxTries || 480);
+    const intervalMs = Number(opts.intervalMs || 250);
+    const onExhausted = typeof opts.onExhausted === 'function' ? opts.onExhausted : null;
+    if (installer()) return;
+
     let tries = 0;
     const timer = setInterval(() => {
         tries += 1;
-        if (installHistoryDoQueryWrapper() || tries >= 30) {
+        if (installer() || tries >= maxTries) {
             clearInterval(timer);
+            if (tries >= maxTries && !installer() && onExhausted) onExhausted();
         }
-    }, 250);
+    }, intervalMs);
+
+    if (typeof window.addEventListener === 'function') {
+        const runOnce = () => installer();
+        window.addEventListener('load', runOnce, { once: true });
+        window.addEventListener('focus', runOnce, { once: true });
+    }
 }
 
-if (!installDataManagerSqlHooks()) {
-    let tries = 0;
-    const timer = setInterval(() => {
-        tries += 1;
-        if (installDataManagerSqlHooks() || tries >= 30) {
-            clearInterval(timer);
-        }
-    }, 250);
-}
+retryInstallLateHook(installHistoryDoQueryWrapper, {
+    onExhausted: function () {
+        console.warn('[boot-runtime] history compare hook install timed out');
+    }
+});
+
+retryInstallLateHook(installDataManagerSqlHooks, {
+    onExhausted: function () {
+        console.warn('[boot-runtime] data manager SQL hook install timed out');
+    }
+});

@@ -12884,27 +12884,12 @@ function switchTab(id) {
         updateTeacherMultiExamSelects();
         updateTeacherCompareTeacherSelect();
     }
-    if (id === 'report-generator' && typeof window.ensureReportRenderRuntimeLoaded === 'function') {
-        window.ensureReportRenderRuntimeLoaded().catch((error) => console.warn(error));
-    }
-    if (id === 'report-generator' && typeof window.ensureStudentCompareRuntimeLoaded === 'function') {
-        window.ensureStudentCompareRuntimeLoaded().catch((error) => console.warn(error));
-    }
-    if (id === 'student-details' && typeof window.ensureStudentCompareRuntimeLoaded === 'function') {
-        window.ensureStudentCompareRuntimeLoaded().catch((error) => console.warn(error));
-    }
     if ((id === 'teacher-analysis' || id === 'correlation-analysis')
         && typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function') {
         window.ensureTeacherAnalysisMainRuntimeLoaded().catch((error) => console.warn(error));
     }
     if (id === 'single-school-eval' && typeof window.ensureSingleSchoolEvalRuntimeLoaded === 'function') {
         window.ensureSingleSchoolEvalRuntimeLoaded().catch((error) => console.warn(error));
-    }
-    if (id === 'teacher-analysis' && typeof window.ensureTeacherCompareRuntimeLoaded === 'function') {
-        window.ensureTeacherCompareRuntimeLoaded().catch((error) => console.warn(error));
-    }
-    if (id === 'analysis' && typeof window.ensureMacroCompareRuntimeLoaded === 'function') {
-        window.ensureMacroCompareRuntimeLoaded().catch((error) => console.warn(error));
     }
     try {
         if (id === 'exam-arranger') {
