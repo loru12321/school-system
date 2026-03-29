@@ -6032,7 +6032,11 @@ const DataManager = {
 
                 DataManager.renderHistoryPreview();
                 if (typeof performSilentMatching === 'function') performSilentMatching();
-                if (typeof saveCloudData === 'function') saveCloudData();
+                if (typeof saveCloudData === 'function') {
+                    saveCloudData({ background: true, sourceLabel: 'history-import-auto' }).catch(err => {
+                        logCloudSyncIssue("历史数据后台同步失败", err);
+                    });
+                }
 
                 alert(`历史数据导入成功！\n共 ${parsedHistory.length} 人。\n✅ 已自动计算历史总分及单科的三级排名(班/校/镇)。`);
                 DataManager.renderDataManagerStatus();
@@ -7333,11 +7337,10 @@ const DataManager = {
         // 5. 🔥 核心新增：立即触发云端同步 🔥
         if (!skipCloudSync && typeof saveCloudData === 'function') {
             // 使用 toast 提示正在保存，体验更好
-            UI.toast('💾 正在同步参数至云端...', 'info');
-            const ok = await saveCloudData();
-            if (ok) this.rememberDataManagerSyncSnapshot('params-auto-save');
+            UI.toast('💾 参数已暂存，正在后台同步...', 'info');
+            const ok = await saveCloudData({ background: true, sourceLabel: 'params-auto-save' });
             if (ok) {
-                UI.toast('✅ 参数已保存并同步云端', 'success');
+                UI.toast('✅ 参数已写入本地缓存，云端将继续后台同步', 'success');
             } else {
                 UI.toast('⚠️ 参数已暂存，本次未成功同步到云端', 'warning');
             }
@@ -7455,9 +7458,8 @@ const DataManager = {
         }
         let snapshotOk = false;
         if (typeof saveCloudData === 'function') {
-            const ok = await saveCloudData();
+            const ok = await saveCloudData({ background: true, sourceLabel: 'school-alias-save' });
             snapshotOk = !!ok;
-            if (ok) this.rememberDataManagerSyncSnapshot('school-alias-save');
         }
         this.renderDataManagerStatus();
         if (!(gatewayOk || snapshotOk) && gatewayError) throw gatewayError;
@@ -7590,10 +7592,9 @@ const DataManager = {
                 DataManager.persistGrade9TargetsTemplate();
 
                 if (typeof saveCloudData === 'function') {
-                    const ok = await saveCloudData();
-                    if (ok) DataManager.rememberDataManagerSyncSnapshot('targets-upload');
+                    const ok = await saveCloudData({ background: true, sourceLabel: 'targets-upload' });
                     if (window.UI) {
-                        UI.toast(ok ? "✅ 目标数据已自动同步云端" : "⚠️ 目标数据已暂存，本次未成功同步云端", ok ? "success" : "warning");
+                        UI.toast(ok ? "✅ 目标数据已写入本地缓存，云端正在后台同步" : "⚠️ 目标数据已暂存，本次未成功同步云端", ok ? "success" : "warning");
                     }
                 }
 
@@ -7623,9 +7624,8 @@ const DataManager = {
                 this.renderTargets();
                 this.persistGrade9TargetsTemplate();
                 if (typeof saveCloudData === 'function') {
-                    const ok = await saveCloudData();
-                    if (ok) this.rememberDataManagerSyncSnapshot('targets-edit');
-                    if (window.UI) UI.toast(ok ? "✅ 目标修改已同步云端" : "⚠️ 目标修改已暂存，本次未成功同步云端", ok ? "success" : "warning");
+                    const ok = await saveCloudData({ background: true, sourceLabel: 'targets-edit' });
+                    if (window.UI) UI.toast(ok ? "✅ 目标修改已暂存，云端正在后台同步" : "⚠️ 目标修改已暂存，本次未成功同步云端", ok ? "success" : "warning");
                 }
             }
         });
@@ -7637,9 +7637,8 @@ const DataManager = {
         this.renderTargets();
         this.persistGrade9TargetsTemplate();
         if (typeof saveCloudData === 'function') {
-            const ok = await saveCloudData();
-            if (ok) this.rememberDataManagerSyncSnapshot('targets-delete');
-            if (window.UI) UI.toast(ok ? "✅ 目标删除已同步云端" : "⚠️ 目标删除已暂存，本次未成功同步云端", ok ? "success" : "warning");
+            const ok = await saveCloudData({ background: true, sourceLabel: 'targets-delete' });
+            if (window.UI) UI.toast(ok ? "✅ 目标删除已暂存，云端正在后台同步" : "⚠️ 目标删除已暂存，本次未成功同步云端", ok ? "success" : "warning");
         }
         this.renderDataManagerStatus();
     },
@@ -7669,11 +7668,11 @@ const DataManager = {
             }
 
             // 3. 上传到云端
-            await saveCloudData();
-            this.rememberDataManagerSyncSnapshot('save-and-sync');
+            const ok = await saveCloudData({ background: true, sourceLabel: 'save-and-sync' });
+            if (!ok) throw new Error('云端同步任务未能创建');
 
             UI.loading(false);
-            Swal.fire('成功', '数据已更新并同步至云端！', 'success');
+            Swal.fire('成功', '数据已更新，本地已秒级生效，云端正在后台同步。', 'success');
         } catch (e) {
             UI.loading(false);
             alert("保存失败: " + e.message);
@@ -13333,7 +13332,7 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
 
         // 🟢 [新增] 处理完数据后，立即同步到云端 (仅管理员有效)
         // 注意：因为是异步，我们在后台默默保存，不阻塞界面显示
-        saveCloudData().then(() => {
+        saveCloudData({ background: true, sourceLabel: 'auto-backup' }).then(() => {
             console.log("自动备份完成");
         }).catch(e => logCloudSyncIssue("自动备份失败", e));
         renderTables();
@@ -15196,12 +15195,12 @@ function importTeacherExcel() {
             // 同步到云端
             if (typeof saveCloudData === 'function') {
                 try {
-                    await saveCloudData();
+                    await saveCloudData({ background: true, sourceLabel: 'teacher-import' });
                     if (window.UI) {
                         UI.loading(false);
-                        UI.toast(`✅ 成功导入 ${count} 条教师信息并同步到云端`, "success");
+                        UI.toast(`✅ 成功导入 ${count} 条教师信息，云端正在后台同步`, "success");
                     } else {
-                        alert(`✅ 成功导入 ${count} 条教师信息并同步到云端`);
+                        alert(`✅ 成功导入 ${count} 条教师信息，云端正在后台同步`);
                     }
                 } catch (err) {
                     if (window.UI) UI.loading(false);
@@ -26127,7 +26126,10 @@ if (typeof DataManager !== 'undefined') {
             teacherTermId: teacherSnapshot.termId || '',
             teacherCount: teacherSnapshot.count || 0,
             lastCloudSyncAt: Date.now(),
-            lastSyncSource: sourceLabel
+            lastSyncSource: sourceLabel,
+            pendingCloudSync: false,
+            pendingSyncSource: '',
+            lastCloudError: ''
         });
     };
 
@@ -26144,6 +26146,10 @@ if (typeof DataManager !== 'undefined') {
         const teacherSnapshot = this.getTeacherStatusSnapshot();
         const syncState = this.readDataManagerSyncState();
         const hasBaseline = !!(syncState.paramsSignature || syncState.targetsSignature || syncState.lastCloudSyncAt);
+        const pendingCloudSync = !!syncState.pendingCloudSync;
+        const pendingSyncSource = String(syncState.pendingSyncSource || '').trim();
+        const lastCloudError = String(syncState.lastCloudError || '').trim();
+        const lastQueuedSyncAt = Number(syncState.lastQueuedSyncAt || 0);
 
         let paramsState = 'missing';
         if (!paramsNeeded) paramsState = 'not_needed';
@@ -26182,10 +26188,18 @@ if (typeof DataManager !== 'undefined') {
             teachersState,
             syncState,
             hasBaseline,
-            lastSyncText: syncState.lastCloudSyncAt
-                ? new Date(syncState.lastCloudSyncAt).toLocaleString('zh-CN')
-                : '尚未记录',
-            lastSyncSource: syncState.lastSyncSource || ''
+            pendingCloudSync,
+            lastCloudError,
+            lastSyncText: pendingCloudSync && lastQueuedSyncAt
+                ? `后台同步中 · ${new Date(lastQueuedSyncAt).toLocaleString('zh-CN')}`
+                : (syncState.lastCloudSyncAt
+                    ? new Date(syncState.lastCloudSyncAt).toLocaleString('zh-CN')
+                    : '尚未记录'),
+            lastSyncSource: pendingCloudSync
+                ? (pendingSyncSource || '本地已暂存，正在后台同步云端')
+                : (lastCloudError
+                    ? `最近失败：${lastCloudError}`
+                    : (syncState.lastSyncSource || ''))
         };
     };
 
@@ -26238,7 +26252,10 @@ if (typeof DataManager !== 'undefined') {
 
         let tipTone = 'success';
         let tipText = '当前参数、目标人数和任课表状态已经清晰，可以直接回到分析页面使用。';
-        if (model.teachersState === 'missing') {
+        if (model.pendingCloudSync) {
+            tipTone = 'info';
+            tipText = '修改已经先写入本地，系统正在后台同步云端。你可以继续操作，不需要原地等待。';
+        } else if (model.teachersState === 'missing') {
             tipTone = 'warning';
             tipText = '教师分析页依赖“当前学期任课表”。先在“教师任课”导入或拉取本学期任课表，再回到教师画像。';
         } else if (model.teachersState === 'synced_unloaded') {
@@ -26325,6 +26342,37 @@ if (typeof DataManager !== 'undefined') {
             `;
         }
     };
+
+    if (!window.__DATA_MANAGER_CLOUD_SYNC_EVENTS__) {
+        window.__DATA_MANAGER_CLOUD_SYNC_EVENTS__ = true;
+        window.addEventListener('cloud-sync-state', (event) => {
+            const detail = event?.detail || {};
+            if (detail.mode && detail.mode !== 'workspace') return;
+            if (!window.DataManager || typeof DataManager.writeDataManagerSyncState !== 'function') return;
+
+            if (detail.stage === 'queued') {
+                DataManager.writeDataManagerSyncState({
+                    pendingCloudSync: true,
+                    pendingSyncSource: String(detail.sourceLabel || '').trim(),
+                    lastQueuedSyncAt: Date.now(),
+                    lastCloudError: ''
+                });
+            } else if (detail.stage === 'success' || detail.stage === 'skipped') {
+                DataManager.rememberDataManagerSyncSnapshot(String(detail.sourceLabel || '').trim() || 'cloud-sync');
+            } else if (detail.stage === 'error') {
+                DataManager.writeDataManagerSyncState({
+                    pendingCloudSync: true,
+                    pendingSyncSource: String(detail.sourceLabel || '').trim(),
+                    lastQueuedSyncAt: Date.now(),
+                    lastCloudError: String(detail.message || '').trim()
+                });
+            }
+
+            if (typeof DataManager.renderDataManagerStatus === 'function') {
+                DataManager.renderDataManagerStatus();
+            }
+        });
+    }
 }
 function runDataDoctor() {
     if (!RAW_DATA.length) return alert("请先上传数据，医生才能进行诊断！");
