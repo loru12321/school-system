@@ -1,3 +1,5 @@
+import { handleGatewayRequest, handleManagedRestRequest } from './worker-gateway-d1.js';
+
 const DEFAULT_SUPABASE_ORIGIN = 'https://okwcciujnfvobbwaydiv.supabase.co';
 const DEFAULT_AI_BASE_URL = 'https://api.deepseek.com';
 const DEFAULT_AI_MODEL = 'deepseek-chat';
@@ -649,6 +651,17 @@ async function proxyRequest(url, request, targetUrl, bodyBuffer, extraHeaders = 
 }
 
 async function handleGatewayProxy(request, env, url) {
+  try {
+    const managed = await handleGatewayRequest(request, env);
+    if (managed) return managed;
+  } catch (error) {
+    return jsonResponse(500, {
+      ok: false,
+      error: 'GATEWAY_DATA_RUNTIME_FAILED',
+      detail: error instanceof Error ? error.message : String(error)
+    }, request);
+  }
+
   const supabaseOrigin = getSupabaseOrigin(env);
   const bodyBuffer = await readRequestBody(request);
   let lastResponse = null;
@@ -782,6 +795,16 @@ async function handleSystemDataProxy(request, env, url) {
 }
 
 async function handleSupabaseProxy(request, env, url) {
+  try {
+    const managed = await handleManagedRestRequest(request, env, url);
+    if (managed) return managed;
+  } catch (error) {
+    return jsonResponse(500, {
+      ok: false,
+      error: 'MANAGED_REST_RUNTIME_FAILED',
+      detail: error instanceof Error ? error.message : String(error)
+    }, request);
+  }
   if (url.pathname === SYSTEM_DATA_PATH) {
     return handleSystemDataProxy(request, env, url);
   }

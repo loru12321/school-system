@@ -1,5 +1,4 @@
 import { execFile } from 'node:child_process';
-import fs from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
@@ -17,9 +16,10 @@ const DEFAULT_PAGE_SIZE = 500;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const workspaceRoot = path.resolve(__dirname, '..');
-const schemaFile = path.resolve(workspaceRoot, 'cloudflare', 'd1', '002_gateway_data.sql');
-const tempSqlFile = path.resolve(workspaceRoot, '.tmp-cloudflare-gateway-import.sql');
-
+const schemaFiles = [
+  path.resolve(workspaceRoot, 'cloudflare', 'd1', '002_gateway_data.sql'),
+  path.resolve(workspaceRoot, 'cloudflare', 'd1', '003_gateway_accounts.sql')
+];
 function normalizeBaseUrl(value) {
   return String(value || '').trim().replace(/\/+$/, '');
 }
@@ -125,7 +125,7 @@ function sqlJson(value, fallback) {
 function buildInsertStatements(tableName, columns, rows) {
   if (!Array.isArray(rows) || rows.length === 0) return [];
   const chunks = [];
-  const batchSize = 100;
+  const batchSize = 25;
   for (let index = 0; index < rows.length; index += batchSize) {
     const batch = rows.slice(index, index + batchSize);
     const valuesSql = batch.map((row) => `(${columns.map((column) => sqlValue(row[column])).join(', ')})`).join(',\n');
@@ -271,6 +271,27 @@ function normalizeAccountStagingRow(row, importedAt) {
   };
 }
 
+function normalizeSystemUserRow(row, importedAt) {
+  const roles = Array.isArray(row?.roles) ? row.roles : [row?.role].filter(Boolean);
+  return {
+    username: String(row?.username || '').trim(),
+    role: String(row?.role || 'guest').trim() || 'guest',
+    roles_json: JSON.stringify(roles),
+    school: row?.school ?? null,
+    class_name: row?.class_name ?? null,
+    teacher_name: row?.teacher_name ?? row?.username ?? null,
+    password_hash: null,
+    password_scheme: '',
+    password_source: row?.has_password ? 'supabase_export' : '',
+    has_password: row?.has_password ? 1 : 0,
+    password_display: row?.password_display ?? null,
+    is_active: 1,
+    last_login_at: null,
+    created_at: importedAt,
+    updated_at: importedAt
+  };
+}
+
 async function runWranglerD1(args, cwd) {
   const { stdout, stderr } = await execFileAsync('cmd.exe', ['/c', 'npx', 'wrangler', 'd1', ...args], {
     cwd,
@@ -280,8 +301,25 @@ async function runWranglerD1(args, cwd) {
   return `${stdout || ''}${stderr || ''}`.trim();
 }
 
+async function runWranglerD1Commands(targetDb, statements) {
+  for (const statement of statements) {
+    const sql = String(statement || '').replace(/\s+/g, ' ').trim();
+    if (!sql) continue;
+    await runWranglerD1(['execute', targetDb, '--remote', '--command', sql], workspaceRoot);
+  }
+}
+
 async function ensureSchema(targetDb) {
-  await runWranglerD1(['execute', targetDb, '--remote', '--file', schemaFile], workspaceRoot);
+  for (const schemaFile of schemaFiles) {
+    const statements = (await import('node:fs/promises')).readFile(schemaFile, 'utf8').then((content) =>
+      content
+        .split(/;\s*(?:\r?\n|$)/)
+        .map((statement) => statement.trim())
+        .filter(Boolean)
+        .map((statement) => `${statement};`)
+    );
+    await runWranglerD1Commands(targetDb, await statements);
+  }
 }
 
 async function importIntoD1(targetDb, datasets) {
@@ -293,6 +331,7 @@ async function importIntoD1(targetDb, datasets) {
     'DELETE FROM warning_records;',
     'DELETE FROM rectify_tasks;',
     'DELETE FROM snapshot_versions;',
+    'DELETE FROM system_users;',
     'DELETE FROM system_users_staging;'
   ];
 
@@ -303,6 +342,7 @@ async function importIntoD1(targetDb, datasets) {
     ...buildInsertStatements('warning_records', ['id', 'warning_type', 'warning_code', 'warning_level', 'project_key', 'cohort_id', 'snapshot_key', 'exam_id', 'school_name', 'grade_name', 'class_name', 'subject_name', 'teacher_name', 'student_name', 'source_module', 'metric_name', 'metric_value', 'threshold_value', 'description', 'status', 'created_at', 'updated_at'], datasets.warnings.map(normalizeWarningRow)),
     ...buildInsertStatements('rectify_tasks', ['id', 'source_warning_id', 'task_type', 'title', 'project_key', 'cohort_id', 'exam_id', 'school_name', 'grade_name', 'class_name', 'subject_name', 'teacher_name', 'student_name', 'problem_desc', 'action_plan', 'owner_name', 'assist_users_json', 'due_date', 'priority', 'status', 'progress', 'review_result', 'created_by', 'created_at', 'updated_at'], datasets.rectify_tasks.map(normalizeRectifyRow)),
     ...buildInsertStatements('snapshot_versions', ['id', 'version_name', 'project_key', 'cohort_id', 'snapshot_key', 'exam_scope', 'score_hash', 'teacher_hash', 'target_hash', 'alias_hash', 'config_hash', 'summary_json', 'is_stable', 'created_by', 'created_at'], datasets.snapshot_versions.map(normalizeVersionRow)),
+    ...buildInsertStatements('system_users', ['username', 'role', 'roles_json', 'school', 'class_name', 'teacher_name', 'password_hash', 'password_scheme', 'password_source', 'has_password', 'password_display', 'is_active', 'last_login_at', 'created_at', 'updated_at'], datasets.accounts.map((row) => normalizeSystemUserRow(row, importedAt))),
     ...buildInsertStatements('system_users_staging', ['username', 'role', 'roles_json', 'school', 'class_name', 'teacher_name', 'has_password', 'password_display', 'imported_at'], datasets.accounts.map((row) => normalizeAccountStagingRow(row, importedAt)))
   );
 
@@ -313,6 +353,7 @@ async function importIntoD1(targetDb, datasets) {
     { dataset_name: 'warning_records', row_count: datasets.warnings.length },
     { dataset_name: 'rectify_tasks', row_count: datasets.rectify_tasks.length },
     { dataset_name: 'snapshot_versions', row_count: datasets.snapshot_versions.length },
+    { dataset_name: 'system_users', row_count: datasets.accounts.length },
     { dataset_name: 'system_users_staging', row_count: datasets.accounts.length }
   ];
   const detailJson = JSON.stringify({
@@ -324,12 +365,7 @@ async function importIntoD1(targetDb, datasets) {
     ...summaryRows.map((row) => `INSERT INTO migration_runs (source_name, dataset_name, row_count, detail_json) VALUES (${sqlValue('supabase')}, ${sqlValue(row.dataset_name)}, ${sqlValue(row.row_count)}, ${sqlValue(detailJson)});`)
   );
 
-  fs.writeFileSync(tempSqlFile, sqlParts.join('\n') + '\n', 'utf8');
-  try {
-    await runWranglerD1(['execute', targetDb, '--remote', '--file', tempSqlFile], workspaceRoot);
-  } finally {
-    if (fs.existsSync(tempSqlFile)) fs.unlinkSync(tempSqlFile);
-  }
+  await runWranglerD1Commands(targetDb, sqlParts);
 }
 
 async function readD1Counts(targetDb) {
@@ -340,6 +376,7 @@ async function readD1Counts(targetDb) {
     'warning_records',
     'rectify_tasks',
     'snapshot_versions',
+    'system_users',
     'system_users_staging'
   ];
   const results = [];
