@@ -1,6 +1,6 @@
 const DEFAULT_SOURCE_SUPABASE_URL = 'https://okwcciujnfvobbwaydiv.supabase.co';
 const DEFAULT_SOURCE_SUPABASE_KEY = 'sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4';
-const DEFAULT_TARGET_BASE_URL = 'https://schoolsystem.com.cn';
+const DEFAULT_TARGET_BASE_URL = 'https://school-system.hkakjiweu.workers.dev';
 const DEFAULT_BATCH_SIZE = 20;
 
 function normalizeBaseUrl(value) {

@@ -45,8 +45,16 @@ function getSystemDataDb(env) {
   return env.CLOUD_SYSTEM_DATA_DB || null;
 }
 
+function getGatewayDataDb(env) {
+  return env.GATEWAY_DATA_DB || null;
+}
+
 function hasSystemDataStorage(env) {
   return !!getSystemDataDb(env);
+}
+
+function hasGatewayDataStorage(env) {
+  return !!getGatewayDataDb(env);
 }
 
 function getSystemDataMode(env) {
@@ -801,7 +809,9 @@ export default {
         supabaseOrigin: getSupabaseOrigin(env),
         cloudSystemDataBackend: hasSystemDataStorage(env) ? 'd1' : 'supabase',
         cloudSystemDataReady: hasSystemDataStorage(env),
-        cloudSystemDataMode: getSystemDataMode(env)
+        cloudSystemDataMode: getSystemDataMode(env),
+        gatewayDataBackend: hasGatewayDataStorage(env) ? 'd1' : 'supabase',
+        gatewayDataReady: hasGatewayDataStorage(env)
       }), {
         status: 200,
         headers: {

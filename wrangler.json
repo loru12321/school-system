@@ -13,6 +13,11 @@
       "binding": "CLOUD_SYSTEM_DATA_DB",
       "database_name": "school-system-cloud-metadata",
       "database_id": "4ce32844-b42d-45ff-b436-818ffe714a08"
+    },
+    {
+      "binding": "GATEWAY_DATA_DB",
+      "database_name": "school-system-gateway",
+      "database_id": "0af7205c-eead-4c60-a792-b67f8198ac0b"
     }
   ],
   "main": "src/worker-dummy.js"
