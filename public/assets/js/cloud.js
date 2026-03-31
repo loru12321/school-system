@@ -205,6 +205,8 @@
     function applyLoadedTeacherPayload(map, schoolMap, keyTermId, updatedAt) {
         if (keyTermId) syncTeacherTermState(keyTermId);
         applyTeacherState(map, schoolMap);
+        const syncStamp = String(updatedAt || '').trim() || new Date().toISOString();
+        localStorage.setItem('TEACHER_SYNC_AT', syncStamp);
         if (window.DataManager && typeof DataManager.syncTeacherHistory === 'function') {
             DataManager.syncTeacherHistory({
                 termId: keyTermId || getCurrentTeacherTermId() || getCurrentTermId() || '',

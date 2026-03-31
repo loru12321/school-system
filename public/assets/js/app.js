@@ -2444,7 +2444,14 @@ const Auth = {
                 if (typeof renderNavigation === 'function') renderNavigation();
                 if (!this.currentUser.local_only && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function') {
                     withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout')
+                        .then(() => {
+                            if (typeof scheduleTeacherSyncPrompt === 'function') {
+                                setTimeout(() => scheduleTeacherSyncPrompt(), 200);
+                            }
+                        })
                         .catch(e => console.warn('[Auth.init] background cloud load failed:', e));
+                } else if (typeof scheduleTeacherSyncPrompt === 'function') {
+                    setTimeout(() => scheduleTeacherSyncPrompt(), 200);
                 }
             }
         }
@@ -2603,6 +2610,9 @@ const Auth = {
                 withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout')
                     .then(() => {
                         tryAutoEnterReadyCohortWorkspace();
+                        if (typeof scheduleTeacherSyncPrompt === 'function') {
+                            setTimeout(() => scheduleTeacherSyncPrompt(), 200);
+                        }
                     })
                     .catch(err => {
                         console.warn('[Auth.login] background cloud load failed:', err);
@@ -2610,6 +2620,9 @@ const Auth = {
                             loadCloudData()
                                 .then(() => {
                                     tryAutoEnterReadyCohortWorkspace();
+                                    if (typeof scheduleTeacherSyncPrompt === 'function') {
+                                        setTimeout(() => scheduleTeacherSyncPrompt(), 200);
+                                    }
                                 })
                                 .catch(bgErr => console.warn('[Auth.login] delayed cloud retry failed:', bgErr));
                         }
@@ -26119,7 +26132,10 @@ function shouldAutoLoadTeacherData() {
     const teacherSection = document.getElementById('teacher-analysis');
     if (teacherSection && teacherSection.classList.contains('active')) return true;
     const uploadSection = document.getElementById('upload');
-    return !!(uploadSection && uploadSection.classList.contains('active'));
+    if (uploadSection && uploadSection.classList.contains('active')) return true;
+    const starterSection = document.getElementById('starter-hub');
+    if (starterSection && starterSection.classList.contains('active')) return true;
+    return !!document.getElementById('starter-status-panel');
 }
 
 function syncTeacherAnalysisSchoolContext(preferredSchool = '') {
@@ -26210,14 +26226,48 @@ function promptTeacherSyncIfNeeded() {
     return true;
 }
 
+async function tryAutoRestoreTeacherMap() {
+    if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return true;
+    if (!shouldAutoLoadTeacherData()) return false;
+    if (!(window.CloudManager && typeof CloudManager.loadTeachers === 'function')) return false;
+
+    const preferredTerm = getPreferredTeacherTermId() || pickAutoTeacherTerm();
+    if (preferredTerm) {
+        syncTeacherTermStorage(preferredTerm);
+    }
+
+    try {
+        const ok = await CloudManager.loadTeachers({ background: true, toast: false, blocking: false });
+        if (ok) {
+            if (typeof updateStatusPanel === 'function') updateStatusPanel();
+            if (typeof renderTeachingOverview === 'function') renderTeachingOverview();
+            return true;
+        }
+    } catch (error) {
+        console.warn('[TeacherSync] auto restore failed:', error);
+    }
+    return false;
+}
+
 function scheduleTeacherSyncPrompt() {
     if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return;
     if (!shouldAutoLoadTeacherData()) return;
     let tries = 0;
     const timer = setInterval(() => {
         tries += 1;
-        const done = promptTeacherSyncIfNeeded();
-        if (done || tries >= 10) {
+        Promise.resolve(tryAutoRestoreTeacherMap()).then((autoLoaded) => {
+            const done = autoLoaded || promptTeacherSyncIfNeeded();
+            if (done || tries >= 10) {
+                clearInterval(timer);
+            }
+        }).catch((error) => {
+            console.warn('[TeacherSync] schedule auto restore failed:', error);
+            const done = promptTeacherSyncIfNeeded();
+            if (done || tries >= 10) {
+                clearInterval(timer);
+            }
+        });
+        if (tries >= 10) {
             clearInterval(timer);
         }
     }, 400);
