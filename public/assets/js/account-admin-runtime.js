@@ -70,6 +70,9 @@ const AccountExcel = {
                 await EdgeGateway.upsertAccounts(batchData);
 
                 UI.loading(false);
+                if (window.Auth && typeof window.Auth.refreshCloudAccountMigrationStatus === 'function') {
+                    window.Auth.refreshCloudAccountMigrationStatus();
+                }
                 alert(`✅ 成功导入 ${batchData.length} 个账号！`);
                 input.value = '';
             } catch (err) {
@@ -141,6 +144,9 @@ async function changeAdminPass() {
         try {
             await EdgeGateway.resetAccountPassword('admin', p);
             if (loader) loader.classList.add('hidden');
+            if (window.Auth && typeof window.Auth.refreshCloudAccountMigrationStatus === 'function') {
+                window.Auth.refreshCloudAccountMigrationStatus();
+            }
             alert('✅ 管理员密码已修改！\n本地与云端已同步更新。');
             document.getElementById('new-admin-pass').value = '';
         } catch (err) {

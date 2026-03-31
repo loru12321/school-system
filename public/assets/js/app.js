@@ -829,6 +829,9 @@ const EdgeGateway = {
     },
     deleteManagedAccounts: async function () {
         return await this.request('account.delete_non_admin', {});
+    },
+    getAccountMigrationStatus: async function () {
+        return await this.request('account.migration_status', {});
     }
 };
 
@@ -2418,6 +2421,9 @@ const Auth = {
             }
             this.applyRoleView();
             this.syncLoginOverlayState(false);
+            if ((this.currentUser.role === 'admin' || this.currentUser.role === 'director') && typeof this.refreshCloudAccountMigrationStatus === 'function') {
+                setTimeout(() => this.refreshCloudAccountMigrationStatus(), 300);
+            }
 
             // 如果是家长，恢复视图
             if (isParentLikeUser(this.currentUser)) {
@@ -2557,6 +2563,9 @@ const Auth = {
             updateAdminOnlyButtons();
             updateWatermark();
             updateRoleHint();
+            if ((matchedUser.role === 'admin' || matchedUser.role === 'director') && typeof this.refreshCloudAccountMigrationStatus === 'function') {
+                setTimeout(() => this.refreshCloudAccountMigrationStatus(), 300);
+            }
 
             // 🆕 记录所有角色信息
             const rolesInfo = matchedUser.roles && matchedUser.roles.length > 1
@@ -3296,6 +3305,9 @@ const Auth = {
             alert("❌ 操作失败：" + (error.message || error));
         } else {
             UI.toast(`✅ 账号 [${username}] 已添加/更新成功！`, "success");
+            if (typeof this.refreshCloudAccountMigrationStatus === 'function') {
+                this.refreshCloudAccountMigrationStatus();
+            }
             // 清空姓名输入框，方便继续添加
             document.getElementById('manual-name').value = '';
             // 如果是家长，不清空班级，方便连续添加同班学生
@@ -3441,6 +3453,10 @@ const Auth = {
                 if (window.Logger) Logger.log('同步账号', `同步了 ${successCount} 个账号`);
             }
 
+            if (typeof this.refreshCloudAccountMigrationStatus === 'function') {
+                this.refreshCloudAccountMigrationStatus();
+            }
+
         } catch (e) {
             UI.loading(false);
             console.error(e);
@@ -3478,6 +3494,9 @@ const Auth = {
 
             // 🛡️ [日志埋点] 记录清空账号操作
             Logger.log('清空账号', `管理员执行了清空云端普通账号操作 (影响:${count}人)`);
+            if (typeof this.refreshCloudAccountMigrationStatus === 'function') {
+                this.refreshCloudAccountMigrationStatus();
+            }
 
         } catch (e) {
             UI.loading(false);
@@ -3546,6 +3565,118 @@ const Auth = {
             UI.loading(false);
             console.error(err);
             alert("❌ 导出失败: " + err.message);
+        }
+    },
+
+    formatCloudAccountMigrationRoleLabel: function (role) {
+        const roleMap = {
+            admin: '管理员',
+            director: '教务主任',
+            grade_director: '级部主任',
+            class_teacher: '班主任',
+            teacher: '教师',
+            parent: '家长/学生'
+        };
+        return roleMap[String(role || '').trim()] || String(role || '未知角色').trim() || '未知角色';
+    },
+
+    renderCloudAccountMigrationStatus: function (payload) {
+        const summaryEl = document.getElementById('cloud-account-migration-status');
+        const updatedEl = document.getElementById('cloud-account-migration-updated');
+        if (!summaryEl) return;
+
+        const summary = payload && payload.summary ? payload.summary : {};
+        const total = Number(summary.total_accounts || 0);
+        const migrated = Number(summary.migrated_accounts || 0);
+        const pending = Number(summary.pending_accounts || 0);
+        const rate = Number(summary.completion_rate || 0);
+        const roles = Array.isArray(payload?.roles) ? payload.roles : [];
+        const sources = Array.isArray(payload?.sources) ? payload.sources : [];
+
+        const roleRows = roles.slice(0, 6).map((row) => {
+            const label = this.formatCloudAccountMigrationRoleLabel(row.role);
+            const roleMigrated = Number(row.migrated_accounts || 0);
+            const roleTotal = Number(row.total_accounts || 0);
+            return `<div style="display:flex; justify-content:space-between; gap:10px;"><span>${label}</span><span>${roleMigrated}/${roleTotal}</span></div>`;
+        }).join('');
+
+        const sourceText = sources.slice(0, 3).map((row) => {
+            const labelMap = {
+                pending: '待迁移',
+                supabase_export: '已导入待激活',
+                supabase_login: '登录回填',
+                cloudflare_upsert: '云端同步',
+                cloudflare_reset: '后台重置',
+                cloudflare_change: '用户改密'
+            };
+            const label = labelMap[String(row.password_source || '').trim()] || String(row.password_source || 'unknown').trim();
+            return `${label} ${Number(row.account_count || 0)} 个`;
+        }).join(' / ');
+
+        summaryEl.innerHTML = `
+            <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; margin-bottom:10px;">
+                <div style="background:white; border-radius:8px; padding:10px; border:1px solid #dbeafe;">
+                    <div style="font-size:11px; color:#64748b;">活跃账号</div>
+                    <div style="font-size:18px; font-weight:700; color:#0f172a;">${total}</div>
+                </div>
+                <div style="background:white; border-radius:8px; padding:10px; border:1px solid #dbeafe;">
+                    <div style="font-size:11px; color:#64748b;">已迁移</div>
+                    <div style="font-size:18px; font-weight:700; color:#166534;">${migrated}</div>
+                </div>
+                <div style="background:white; border-radius:8px; padding:10px; border:1px solid #dbeafe;">
+                    <div style="font-size:11px; color:#64748b;">待迁移</div>
+                    <div style="font-size:18px; font-weight:700; color:#b45309;">${pending}</div>
+                </div>
+            </div>
+            <div style="margin-bottom:10px;">
+                <div style="display:flex; justify-content:space-between; font-size:12px; color:#475569; margin-bottom:4px;">
+                    <span>Cloudflare 登录脱离进度</span>
+                    <span>${rate.toFixed(1)}%</span>
+                </div>
+                <div style="height:8px; border-radius:999px; background:#dbeafe; overflow:hidden;">
+                    <div style="height:100%; width:${Math.max(0, Math.min(rate, 100))}%; background:linear-gradient(90deg,#2563eb,#16a34a);"></div>
+                </div>
+            </div>
+            <div style="display:grid; gap:4px; font-size:12px; color:#334155; margin-bottom:8px;">
+                ${roleRows || '<div>暂无角色分布数据</div>'}
+            </div>
+            <div style="font-size:12px; color:#64748b;">
+                ${sourceText || '待迁移账号会在首次成功登录、后台重置密码或重新同步账号后自动补迁到 Cloudflare。'}
+            </div>
+        `;
+
+        if (updatedEl) {
+            updatedEl.textContent = `最近刷新：${new Date().toLocaleString()}`;
+        }
+    },
+
+    refreshCloudAccountMigrationStatus: async function () {
+        const summaryEl = document.getElementById('cloud-account-migration-status');
+        const updatedEl = document.getElementById('cloud-account-migration-updated');
+        if (!summaryEl) return;
+        const canUseWorkerStatus = typeof shouldUseSameOriginSupabaseProxy === 'function'
+            ? shouldUseSameOriginSupabaseProxy()
+            : false;
+        if (!canUseWorkerStatus) {
+            summaryEl.innerHTML = '<span style="color:#64748b;">本地开发或离线环境下不显示迁移看板，请在线上域名查看 Cloudflare 迁移进度。</span>';
+            if (updatedEl) updatedEl.textContent = '当前环境不支持';
+            return;
+        }
+        if (!window.EdgeGateway || typeof EdgeGateway.getAccountMigrationStatus !== 'function') {
+            summaryEl.innerHTML = '<span style="color:#b91c1c;">账号网关未就绪，暂时无法读取迁移状态。</span>';
+            return;
+        }
+
+        summaryEl.innerHTML = '<span style="color:#475569;">正在读取 Cloudflare 迁移状态...</span>';
+        if (updatedEl) updatedEl.textContent = '刷新中...';
+
+        try {
+            const payload = await EdgeGateway.getAccountMigrationStatus();
+            this.renderCloudAccountMigrationStatus(payload || {});
+        } catch (error) {
+            console.warn(error);
+            summaryEl.innerHTML = `<span style="color:#b91c1c;">读取失败：${error?.message || error}</span>`;
+            if (updatedEl) updatedEl.textContent = '刷新失败';
         }
     },
 

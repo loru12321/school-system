@@ -1418,6 +1418,69 @@ async function handleAccountDeleteNonAdmin(request, db, session) {
   return jsonResponse(200, { ok: true, count: Number(result?.meta?.changes || 0) }, request);
 }
 
+async function handleAccountMigrationStatus(request, db, session) {
+  if (!canBulkManageAccounts(session)) return forbidden(request, 'No permission to view migration status');
+  const summary = await db.prepare(`
+    SELECT
+      SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) AS total_accounts,
+      SUM(CASE WHEN is_active = 1 AND password_hash IS NOT NULL AND password_hash <> '' THEN 1 ELSE 0 END) AS migrated_accounts,
+      SUM(CASE WHEN is_active = 1 AND (password_hash IS NULL OR password_hash = '') THEN 1 ELSE 0 END) AS pending_accounts
+    FROM system_users
+  `).first();
+  const roles = await queryRows(db, `
+    SELECT
+      role,
+      SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) AS total_accounts,
+      SUM(CASE WHEN is_active = 1 AND password_hash IS NOT NULL AND password_hash <> '' THEN 1 ELSE 0 END) AS migrated_accounts,
+      SUM(CASE WHEN is_active = 1 AND (password_hash IS NULL OR password_hash = '') THEN 1 ELSE 0 END) AS pending_accounts
+    FROM system_users
+    GROUP BY role
+    ORDER BY total_accounts DESC, role ASC
+  `);
+  const sources = await queryRows(db, `
+    SELECT
+      CASE
+        WHEN password_source IS NULL OR password_source = '' THEN 'pending'
+        ELSE password_source
+      END AS password_source,
+      COUNT(*) AS account_count
+    FROM system_users
+    WHERE is_active = 1
+    GROUP BY CASE
+      WHEN password_source IS NULL OR password_source = '' THEN 'pending'
+      ELSE password_source
+    END
+    ORDER BY account_count DESC, password_source ASC
+  `);
+
+  const totalAccounts = Number(summary?.total_accounts || 0);
+  const migratedAccounts = Number(summary?.migrated_accounts || 0);
+  const pendingAccounts = Number(summary?.pending_accounts || 0);
+  const completionRate = totalAccounts > 0
+    ? Number(((migratedAccounts / totalAccounts) * 100).toFixed(1))
+    : 100;
+
+  return jsonResponse(200, {
+    ok: true,
+    summary: {
+      total_accounts: totalAccounts,
+      migrated_accounts: migratedAccounts,
+      pending_accounts: pendingAccounts,
+      completion_rate: completionRate
+    },
+    roles: roles.map((row) => ({
+      role: normalizeText(row.role) || 'guest',
+      total_accounts: Number(row.total_accounts || 0),
+      migrated_accounts: Number(row.migrated_accounts || 0),
+      pending_accounts: Number(row.pending_accounts || 0)
+    })),
+    sources: sources.map((row) => ({
+      password_source: normalizeText(row.password_source) || 'pending',
+      account_count: Number(row.account_count || 0)
+    }))
+  }, request);
+}
+
 async function routeGatewayAction(request, env, body) {
   const db = getGatewayDb(env);
   if (!db || !normalizeText(env.APP_SESSION_SECRET)) return null;
@@ -1452,6 +1515,7 @@ async function routeGatewayAction(request, env, body) {
     case 'account.export': return handleAccountExport(request, db, session);
     case 'account.upsert_many': return handleAccountUpsertMany(request, db, session, payload);
     case 'account.delete_non_admin': return handleAccountDeleteNonAdmin(request, db, session);
+    case 'account.migration_status': return handleAccountMigrationStatus(request, db, session);
     default: return null;
   }
 }
