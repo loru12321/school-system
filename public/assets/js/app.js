@@ -15561,7 +15561,8 @@ async function doQuery() {
         resultEl.classList.remove('hidden');
         // 强制使用 'A4' 模式进行渲染
         try {
-            container.innerHTML = renderSingleReportCardHTML(stu, 'A4');
+            const reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'A4'));
+            container.innerHTML = typeof reportHtml === 'string' ? reportHtml : '';
             enhanceStudentReportMetrics(container);
         } catch (e) {
             console.error('Render Report Error:', e);

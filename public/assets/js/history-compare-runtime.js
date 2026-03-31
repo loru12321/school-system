@@ -361,9 +361,20 @@ function initHistoryComparePatch() {
         if (typeof window.setCurrentReportStudentState === 'function') window.setCurrentReportStudentState(stu);
         else window.CURRENT_REPORT_STUDENT = stu;
 
+        if (typeof window.ensureReportRenderRuntimeLoaded === 'function') {
+            try {
+                await window.ensureReportRenderRuntimeLoaded();
+            } catch (error) {
+                console.error('Failed to load report render runtime before history compare query:', error);
+                alert('报告渲染模块加载失败，请刷新后重试。');
+                return;
+            }
+        }
+
         document.getElementById('single-report-result').classList.remove('hidden');
         const container = document.getElementById('report-card-capture-area');
-        container.innerHTML = renderSingleReportCardHTML(stu, 'A4');
+        const reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'A4'));
+        container.innerHTML = typeof reportHtml === 'string' ? reportHtml : '';
         setTimeout(function () { renderRadarChart(stu); renderVarianceChart(stu); }, 100);
         analyzeStrengthsAndWeaknesses(stu);
 
