@@ -856,6 +856,13 @@ function printSingleReport() {
 
 async function downloadSingleReportPDF() {
     const reportContent = document.getElementById('report-card-capture-area');
+    if ((!window.jspdf || !window.jspdf.jsPDF || typeof html2canvas === 'undefined') && typeof window.ensurePdfExportVendorsLoaded === 'function') {
+        try {
+            await window.ensurePdfExportVendorsLoaded();
+        } catch (error) {
+            return uiAlert('PDF 导出依赖加载失败，请刷新页面后重试', 'error');
+        }
+    }
     if (!reportContent || reportContent.innerHTML.trim() === "") return uiAlert("请先查询生成报告", 'warning');
     if (!window.jspdf || !window.jspdf.jsPDF) return uiAlert('PDF 库未加载，请刷新页面重试', 'error');
     if (typeof html2canvas === 'undefined') return uiAlert('截图引擎未加载，请刷新页面重试', 'error');
@@ -884,6 +891,13 @@ async function downloadSingleReportPDF() {
 }
 
 async function batchGeneratePDF() {
+    if ((!window.jspdf || !window.jspdf.jsPDF || typeof html2canvas === 'undefined') && typeof window.ensurePdfExportVendorsLoaded === 'function') {
+        try {
+            await window.ensurePdfExportVendorsLoaded();
+        } catch (error) {
+            return uiAlert('PDF 导出依赖加载失败，请刷新页面后重试', 'error');
+        }
+    }
     const sch = document.getElementById('sel-school').value; const cls = document.getElementById('sel-class').value;
     if (!sch || sch === '--请先选择学校--' || !cls || cls === '--请先选择学校--') { return uiAlert("请先选择学校和班级！", 'warning'); }
     const students = SCHOOLS[sch].students.filter(s => s.class === cls); if (students.length === 0) { return uiAlert("该班级没有学生数据", 'warning'); }

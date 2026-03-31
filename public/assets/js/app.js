@@ -2421,9 +2421,6 @@ const Auth = {
             }
             this.applyRoleView();
             this.syncLoginOverlayState(false);
-            if ((this.currentUser.role === 'admin' || this.currentUser.role === 'director') && typeof this.refreshCloudAccountMigrationStatus === 'function') {
-                setTimeout(() => this.refreshCloudAccountMigrationStatus(), 300);
-            }
 
             // 如果是家长，恢复视图
             if (isParentLikeUser(this.currentUser)) {
@@ -2563,9 +2560,6 @@ const Auth = {
             updateAdminOnlyButtons();
             updateWatermark();
             updateRoleHint();
-            if ((matchedUser.role === 'admin' || matchedUser.role === 'director') && typeof this.refreshCloudAccountMigrationStatus === 'function') {
-                setTimeout(() => this.refreshCloudAccountMigrationStatus(), 300);
-            }
 
             // 🆕 记录所有角色信息
             const rolesInfo = matchedUser.roles && matchedUser.roles.length > 1
@@ -2601,23 +2595,45 @@ const Auth = {
 
             if (window.UI) UI.toast(`登录成功！欢迎 ${matchedUser.name}`, 'success');
 
-            // 5. 云端同步改为“限时 + 后台”，避免登录阻塞接近1分钟
-            if (!isLocalOnlySession) {
-                UI.loading(true, "正在同步最新成绩数据...");
-                try {
-                    await withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout');
-                } catch (e) {
-                    console.warn('[Auth.login] initial cloud load timeout/fail:', e);
-                    if (typeof loadCloudData === 'function') {
-                        loadCloudData().catch(err => console.warn('[Auth.login] background cloud load failed:', err));
-                    }
-                } finally {
-                    UI.loading(false);
-                }
-            }
+            const shouldHydrateCloudInBackground = !isLocalOnlySession && typeof loadCloudData === 'function';
+            const startBackgroundCloudHydration = (loaderText) => {
+                if (!shouldHydrateCloudInBackground) return;
+                const shouldShowLoader = !RAW_DATA || RAW_DATA.length === 0;
+                if (shouldShowLoader && window.UI) UI.loading(true, loaderText || "正在后台恢复成绩数据...");
+                withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout')
+                    .then(() => {
+                        tryAutoEnterReadyCohortWorkspace();
+                    })
+                    .catch(err => {
+                        console.warn('[Auth.login] background cloud load failed:', err);
+                        if (typeof loadCloudData === 'function') {
+                            loadCloudData()
+                                .then(() => {
+                                    tryAutoEnterReadyCohortWorkspace();
+                                })
+                                .catch(bgErr => console.warn('[Auth.login] delayed cloud retry failed:', bgErr));
+                        }
+                    })
+                    .finally(() => {
+                        if (shouldShowLoader && window.UI) UI.loading(false);
+                    });
+            };
 
-            // 6. 分流跳转与权限初始化
+            // 5. 分流跳转与权限初始化
             if (isParentLikeUser(matchedUser)) {
+                if (!isLocalOnlySession && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function') {
+                    UI.loading(true, "正在恢复学生数据...");
+                    try {
+                        await withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout');
+                    } catch (e) {
+                        console.warn('[Auth.login] parent cloud load timeout/fail:', e);
+                        if (typeof loadCloudData === 'function') {
+                            loadCloudData().catch(err => console.warn('[Auth.login] parent background cloud load failed:', err));
+                        }
+                    } finally {
+                        UI.loading(false);
+                    }
+                }
                 // === 家长模式 ===
                 this.renderParentView();
             } else {
@@ -2684,6 +2700,8 @@ const Auth = {
                     // 轮询交由 applyRoleView 统一管理，避免重复定时器导致卡顿
                 }
                 /* 👆👆👆 🟢 结束 🟢 👆👆👆 */
+
+                startBackgroundCloudHydration("正在后台恢复成绩数据...");
             }
 
         } catch (err) {
@@ -3778,6 +3796,16 @@ const Auth = {
 // 🟢 [修复] 确保 Auth 挂载到 window 以便 HTML onclick 访问
 window.Auth = Auth;
 Auth.syncLoginPortalUI();
+window.openAdminCloudAccountModal = function () {
+    const modal = document.getElementById('admin-modal');
+    if (modal) modal.style.display = 'flex';
+    if (window.Auth && typeof window.Auth.renderSchoolCheckboxes === 'function') {
+        window.Auth.renderSchoolCheckboxes();
+    }
+    if (window.Auth && typeof window.Auth.refreshCloudAccountMigrationStatus === 'function') {
+        window.Auth.refreshCloudAccountMigrationStatus();
+    }
+};
 
 // 🆕 多角色权限系统
 window.RoleManager = {
@@ -23288,6 +23316,35 @@ function enterCohortFromMask() {
     setTimeout(() => {
         scheduleTeacherSyncPrompt();
     }, 1200);
+}
+
+function tryAutoEnterReadyCohortWorkspace() {
+    const mask = document.getElementById('mode-mask');
+    const app = document.getElementById('app');
+    if (!mask || !app) return false;
+    if (getComputedStyle(mask).display === 'none') return false;
+
+    const cohortId = CURRENT_COHORT_ID || readWorkspaceCohortId();
+    const examId = CURRENT_EXAM_ID || readWorkspaceExamId();
+    const hasReadyData = Array.isArray(RAW_DATA) && RAW_DATA.length > 0;
+    if (!cohortId || !examId || !hasReadyData) return false;
+
+    mask.style.display = 'none';
+    app.classList.remove('hidden');
+
+    if (CONFIG.name) {
+        const badge = document.getElementById('mode-badge');
+        if (badge) badge.innerText = CONFIG.name;
+        if (typeof renderNavigation === 'function') renderNavigation();
+    }
+
+    scheduleStartupHydration('auto-enter-ready-cohort', () => {
+        try { updateSchoolSelect(); } catch (e) { console.warn(e); }
+        try { updateMySchoolSelect(); } catch (e) { console.warn(e); }
+        try { renderTables(); } catch (e) { console.warn(e); }
+        try { if (MY_SCHOOL) generateTeacherInputs(); } catch (e) { console.warn(e); }
+    }, { delay: 30 });
+    return true;
 }
 
 function parseYearFromInput(id) {

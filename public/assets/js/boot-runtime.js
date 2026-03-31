@@ -456,7 +456,7 @@ window.__optionalRuntimeLoaders = window.__optionalRuntimeLoaders || {};
 function getOptionalRuntimeCandidates(src) {
     const normalized = String(src || '').trim();
     const candidates = [normalized];
-    if (window.location && window.location.protocol === 'file:' && normalized.startsWith('./assets/js/')) {
+    if (window.location && window.location.protocol === 'file:' && (normalized.startsWith('./assets/js/') || normalized.startsWith('./assets/vendor/'))) {
         const relativePath = normalized.replace(/^\.\//, '');
         candidates.push(`./dist/${relativePath}`);
         candidates.push(`./public/${relativePath}`);
@@ -574,6 +574,17 @@ window.ensureMobileManagerRuntimeLoaded = function () {
 
 window.ensureDataManagerSqlRuntimeLoaded = function () {
     return loadOptionalRuntime('data-manager-sql', './assets/js/data-manager-sql.js');
+};
+
+window.ensureAlasqlVendorLoaded = function () {
+    return loadOptionalRuntime('alasql-vendor', './assets/vendor/alasql/alasql.min.js');
+};
+
+window.ensurePdfExportVendorsLoaded = function () {
+    return loadOptionalRuntimeBundle('pdf-export-vendors', [
+        { key: 'jspdf-vendor', src: './assets/vendor/jspdf/jspdf.umd.min.js' },
+        { key: 'html2canvas-vendor', src: './assets/vendor/html2canvas/html2canvas.min.js' }
+    ]);
 };
 
 window.ensureReportRenderRuntimeLoaded = function () {

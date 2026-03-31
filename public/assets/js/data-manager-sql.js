@@ -34,9 +34,11 @@
             const sel = document.getElementById('dm-sql-history-select');
             if (!sel) return;
             const list = this.getSQLHistory();
-            let options = '<option value="">🕘 最近/收藏</option>';
+            let options = '<option value="">最近 / 收藏</option>';
             list.forEach((item, idx) => {
-                const label = item.pinned ? `⭐ ${item.name}` : `🕘 ${item.sql.slice(0, 28)}${item.sql.length > 28 ? '...' : ''}`;
+                const label = item.pinned
+                    ? `★ ${item.name}`
+                    : `最近 ${item.sql.slice(0, 28)}${item.sql.length > 28 ? '...' : ''}`;
                 options += `<option value="${idx}">${label}</option>`;
             });
             sel.innerHTML = options;
@@ -63,11 +65,11 @@
             this.setSQLHistory(list);
             if (nameInput) nameInput.value = '';
             this.renderSQLHistory();
-            if (window.UI) UI.toast('✅ 已保存收藏', 'success');
+            if (window.UI) UI.toast('已保存收藏', 'success');
         },
 
         clearSQLHistory: function () {
-            if (!confirm('确定清空SQL历史吗？')) return;
+            if (!confirm('确定清空 SQL 历史吗？')) return;
             localStorage.removeItem(this.sqlHistoryKey);
             this.renderSQLHistory();
         },
@@ -116,7 +118,7 @@
             return { students: studentsTable, teachers: teachersTable };
         },
 
-        runSQL: function () {
+        runSQL: async function () {
             const sql = document.getElementById('dm-sql-input').value.trim();
             const msgEl = document.getElementById('sql-status-msg');
             const thead = document.querySelector('#dm-sql-table thead');
@@ -127,6 +129,17 @@
             tbody.innerHTML = '';
 
             if (!sql) return;
+
+            if (typeof alasql === 'undefined' && typeof window.ensureAlasqlVendorLoaded === 'function') {
+                msgEl.innerText = '⏳ 正在加载 SQL 引擎...';
+                try {
+                    await window.ensureAlasqlVendorLoaded();
+                } catch (error) {
+                    msgEl.innerText = '❌ SQL 引擎加载失败，请刷新页面后重试';
+                    return;
+                }
+            }
+
             if (typeof alasql === 'undefined') {
                 msgEl.innerText = '❌ SQL 引擎未加载，请刷新页面后重试';
                 return;
@@ -208,13 +221,13 @@
             const sql = extractSQLFromAI(aiText);
 
             if (!isSafeSQL(sql)) {
-                statusEl.innerText = '⚠️ 生成SQL不安全或不完整，请修改后再执行';
+                statusEl.innerText = '⚠️ 生成 SQL 不安全或不完整，请修改后再执行';
                 return;
             }
 
             document.getElementById('dm-sql-input').value = sql;
-            DM.runSQL();
-            statusEl.innerText = '✅ 已生成SQL并执行';
+            await DM.runSQL();
+            statusEl.innerText = '✅ 已生成 SQL 并执行';
         } catch (e) {
             console.error(e);
             statusEl.innerText = '❌ 解析失败，请重试';
@@ -231,20 +244,12 @@
                 students: studentsCols,
                 teachers: teachersCols
             },
-            notes: 'students含成绩字段，teachers为任课表，可JOIN students.class=teachers.class'
+            notes: 'students 含成绩字段，teachers 为任课表，可 JOIN students.class=teachers.class'
         };
     }
 
     function buildNLQPrompt(question, schema) {
-        return `你是校务数据分析师。请把用户的自然语言查询转换为可执行的 AlaSQL SELECT 语句。
-要求：
-1) 只允许 SELECT 查询；不要使用 INSERT/UPDATE/DELETE/CREATE/DROP。
-2) 表只有 students 和 teachers。
-3) 优先输出明确字段，不要 SELECT *。
-4) 输出仅包含 SQL，不要解释，不要 Markdown。
-
-【表结构】\n${JSON.stringify(schema)}\n
-【用户问题】\n${question}\n`;
+        return `你是校务数据分析师。请把用户的自然语言查询转换为可执行的 AlaSQL SELECT 语句。要求：1) 只允许 SELECT 查询；不要使用 INSERT/UPDATE/DELETE/CREATE/DROP。2) 表只有 students 和 teachers。3) 优先输出明确字段，不要 SELECT *。4) 输出仅包含 SQL，不要解释，不要 Markdown。\n【表结构】\n${JSON.stringify(schema)}\n【用户问题】\n${question}\n`;
     }
 
     function extractSQLFromAI(text) {
