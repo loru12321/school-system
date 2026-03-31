@@ -3319,23 +3319,9 @@ const Auth = {
     },
     // 🛠️ 管理员工具：批量同步本地生成的账号到云端 (V4 智能容错版)
     // 特性：自动去重 + 失败自动降级为单条上传 + 精确报错
-    syncBatchToCloud: async function () {
-        if (!window.EdgeGateway || typeof EdgeGateway.upsertAccounts !== 'function') {
-            return alert("❌ 账号网关未就绪，请稍后重试。");
-        }
-
+    buildRecoverableCloudAccountRows: function () {
         const parents = this.db.parents || [];
         const teachers = this.db.teachers || [];
-
-        if (parents.length === 0 && teachers.length === 0) {
-            return alert("⚠️ 本地账号为空！请先点击【👤 一键生成所有账号】。");
-        }
-
-        if (!confirm(`⚠️ 准备同步账号到云端：\n\n👨‍👩‍👧 家长：${parents.length}\n👨‍🏫 教师：${teachers.length}\n\n确定覆盖云端数据吗？`)) return;
-
-        UI.loading(true, "正在清洗并去重数据...");
-
-        // 1. 构建映射表与去重容器
         const uniqueMap = new Map(); // key: username, value: dataObj
         const globalDefaultSchool = window.MY_SCHOOL || "默认学校";
 
@@ -3396,8 +3382,23 @@ const Auth = {
             });
         });
 
-        const batchData = Array.from(uniqueMap.values());
-        console.log(`[同步准备] 原始:${parents.length + teachers.length} -> 去重后:${batchData.length}`);
+        return {
+            parents,
+            teachers,
+            batchData: Array.from(uniqueMap.values())
+        };
+    },
+
+    uploadRecoverableCloudAccounts: async function (batchData) {
+        if (!window.EdgeGateway || typeof EdgeGateway.upsertAccounts !== 'function') {
+            throw new Error("账号网关未就绪，请稍后重试。");
+        }
+        const safeRows = Array.isArray(batchData) ? batchData : [];
+        if (!safeRows.length) {
+            return { successCount: 0, failCount: 0, errorDetails: [] };
+        }
+
+        console.log(`[同步准备] 去重后:${safeRows.length}`);
 
         // --- C. 智能分批上传 ---
         const BATCH_SIZE = 10; // 保守批次大小
@@ -3422,35 +3423,53 @@ const Auth = {
             return ok;
         };
 
-        try {
-            for (let i = 0; i < batchData.length; i += BATCH_SIZE) {
-                const chunk = batchData.slice(i, i + BATCH_SIZE);
+        for (let i = 0; i < safeRows.length; i += BATCH_SIZE) {
+            const chunk = safeRows.slice(i, i + BATCH_SIZE);
 
-                // 1. 尝试批量写入
-                const pct = Math.round(((i + chunk.length) / batchData.length) * 100);
-                try {
-                    await EdgeGateway.upsertAccounts(chunk);
-                    successCount += chunk.length;
-                } catch (error) {
-                    console.warn(`⚠️ 批次 ${Math.ceil(i / BATCH_SIZE) + 1} 报错 (HTTP 500/409)，自动降级为单条上传模式...`);
-                    // 2. 批量失败，自动降级为单条循环
-                    await uploadOneByOne(chunk);
-                }
-
-                UI.loading(true, `☁️ 同步中... ${pct}% (成功:${successCount} / 失败:${failCount})`);
-                // 稍微延时防止数据库压力过大
-                if (failCount > 50) throw new Error("错误过多，中止上传"); // 熔断机制
-                await new Promise(r => setTimeout(r, 50));
+            // 1. 尝试批量写入
+            const pct = Math.round(((i + chunk.length) / safeRows.length) * 100);
+            try {
+                await EdgeGateway.upsertAccounts(chunk);
+                successCount += chunk.length;
+            } catch (error) {
+                console.warn(`⚠️ 批次 ${Math.ceil(i / BATCH_SIZE) + 1} 报错 (HTTP 500/409)，自动降级为单条上传模式...`);
+                // 2. 批量失败，自动降级为单条循环
+                await uploadOneByOne(chunk);
             }
 
+            UI.loading(true, `☁️ 同步中... ${pct}% (成功:${successCount} / 失败:${failCount})`);
+            // 稍微延时防止数据库压力过大
+            if (failCount > 50) throw new Error("错误过多，中止上传"); // 熔断机制
+            await new Promise(r => setTimeout(r, 50));
+        }
+
+        return { successCount, failCount, errorDetails };
+    },
+
+    syncBatchToCloud: async function () {
+        const payload = this.buildRecoverableCloudAccountRows();
+        const parents = payload.parents || [];
+        const teachers = payload.teachers || [];
+        const batchData = payload.batchData || [];
+
+        if (parents.length === 0 && teachers.length === 0) {
+            return alert("⚠️ 本地账号为空！请先点击【👤 一键生成所有账号】。");
+        }
+
+        if (!confirm(`⚠️ 准备同步账号到云端：\n\n👨‍👩‍👧 家长：${parents.length}\n👨‍🏫 教师：${teachers.length}\n\n确定覆盖云端数据吗？`)) return;
+
+        UI.loading(true, "正在清洗并去重数据...");
+
+        try {
+            const result = await this.uploadRecoverableCloudAccounts(batchData);
             UI.loading(false);
 
-            if (failCount > 0) {
-                console.error("失败详情:", errorDetails);
-                alert(`⚠️ 同步完成，但有 ${failCount} 个账号失败！\n\n✅ 成功：${successCount}\n❌ 失败：${failCount}\n\n可能原因：账号包含非法字符或数据库字段超长。\n按 F12 查看控制台可看具体失败名单。`);
+            if (result.failCount > 0) {
+                console.error("失败详情:", result.errorDetails);
+                alert(`⚠️ 同步完成，但有 ${result.failCount} 个账号失败！\n\n✅ 成功：${result.successCount}\n❌ 失败：${result.failCount}\n\n可能原因：账号包含非法字符或数据库字段超长。\n按 F12 查看控制台可看具体失败名单。`);
             } else {
-                UI.toast(`✅ 完美同步！共 ${successCount} 个账号已上线`, "success");
-                if (window.Logger) Logger.log('同步账号', `同步了 ${successCount} 个账号`);
+                UI.toast(`✅ 完美同步！共 ${result.successCount} 个账号已上线`, "success");
+                if (window.Logger) Logger.log('同步账号', `同步了 ${result.successCount} 个账号`);
             }
 
             if (typeof this.refreshCloudAccountMigrationStatus === 'function') {
@@ -3461,6 +3480,45 @@ const Auth = {
             UI.loading(false);
             console.error(e);
             alert("❌ 同步中断：" + e.message);
+        }
+    },
+
+    migrateRecoverableAccountsToCloud: async function () {
+        const payload = this.buildRecoverableCloudAccountRows();
+        const parents = payload.parents || [];
+        const teachers = payload.teachers || [];
+        const batchData = payload.batchData || [];
+
+        if (parents.length === 0 && teachers.length === 0) {
+            return alert("⚠️ 当前本地没有可恢复密码的老师/家长账号。");
+        }
+
+        const roleSummary = `👨‍👩‍👧 家长：${parents.length}\n👨‍🏫 教师：${teachers.length}\n🔐 可补迁账号：${batchData.length}`;
+        const ok = confirm(`⚠️ 准备将本地可恢复密码的账号批量补迁到 Cloudflare。\n\n${roleSummary}\n\n说明：\n1. 只会补迁本地能恢复密码的账号\n2. 管理员/主任若未回填，仍需登录一次或后台改密\n3. 同名账号会直接更新为 Cloudflare 哈希\n\n是否继续？`);
+        if (!ok) return;
+
+        UI.loading(true, "正在补迁本地可恢复账号...");
+        try {
+            const result = await this.uploadRecoverableCloudAccounts(batchData);
+            UI.loading(false);
+
+            if (result.failCount > 0) {
+                console.error("失败详情:", result.errorDetails);
+                alert(`⚠️ 补迁完成，但有 ${result.failCount} 个账号失败！\n\n✅ 成功：${result.successCount}\n❌ 失败：${result.failCount}`);
+            } else {
+                UI.toast(`✅ 已补迁 ${result.successCount} 个本地可恢复账号`, "success");
+            }
+
+            if (window.Logger) {
+                Logger.log('补迁账号', `从本地密码库补迁了 ${result.successCount} 个可恢复账号到 Cloudflare`);
+            }
+            if (typeof this.refreshCloudAccountMigrationStatus === 'function') {
+                this.refreshCloudAccountMigrationStatus();
+            }
+        } catch (error) {
+            UI.loading(false);
+            console.error(error);
+            alert("❌ 补迁失败：" + (error?.message || error));
         }
     },
 
