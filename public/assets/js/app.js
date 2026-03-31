@@ -3025,6 +3025,84 @@ const Auth = {
         document.querySelectorAll('.gen-school-check').forEach(el => el.checked = check);
     },
 
+    generateRecoverableAccountsForSchools: function (selectedSchools, options = {}) {
+        const schools = Array.isArray(selectedSchools)
+            ? Array.from(new Set(selectedSchools.map(item => String(item || '').trim()).filter(Boolean)))
+            : [];
+        if (!RAW_DATA.length) {
+            return { ok: false, error: "请先在【数据中心】上传成绩数据" };
+        }
+        if (!schools.length) {
+            return { ok: false, error: "请至少选择一所学校" };
+        }
+
+        let countParentNew = 0;
+        let countParentUpd = 0;
+        let countTeacherNew = 0;
+
+        const targetStudents = RAW_DATA.filter(s => schools.includes(s.school));
+        targetStudents.forEach(s => {
+            const existIdx = this.db.parents.findIndex(p => p.name === s.name && p.class === s.class);
+            const newAccount = {
+                name: s.name,
+                class: s.class,
+                password_mode: 'default'
+            };
+            if (existIdx >= 0) {
+                this.db.parents[existIdx] = newAccount;
+                countParentUpd++;
+            } else {
+                this.db.parents.push(newAccount);
+                countParentNew++;
+            }
+        });
+
+        const targetClasses = new Set();
+        targetStudents.forEach(s => targetClasses.add(s.class));
+
+        const targetTeachers = new Set();
+        if (Object.keys(TEACHER_MAP).length > 0) {
+            Object.keys(TEACHER_MAP).forEach(key => {
+                const [cls] = key.split('_');
+                if (targetClasses.has(cls)) {
+                    targetTeachers.add(TEACHER_MAP[key]);
+                }
+            });
+        } else {
+            console.warn("未配置教师任课表，仅能生成家长账号");
+        }
+
+        targetTeachers.forEach(tName => {
+            const existIdx = this.db.teachers.findIndex(t => t.name === tName);
+            const newAccount = {
+                name: tName,
+                password_mode: 'default',
+                grade: 'all'
+            };
+            if (existIdx >= 0) {
+                this.db.teachers[existIdx].password_mode = 'default';
+                delete this.db.teachers[existIdx].pass;
+            } else {
+                this.db.teachers.push(newAccount);
+                countTeacherNew++;
+            }
+        });
+
+        if (options.persist !== false) {
+            this.db = persistLocalAuthDb(this.db);
+        }
+
+        return {
+            ok: true,
+            selectedSchools: schools,
+            parentNew: countParentNew,
+            parentReset: countParentUpd,
+            teacherNew: countTeacherNew,
+            teacherTouched: targetTeachers.size,
+            targetStudentCount: targetStudents.length
+        };
+    },
+
     // 🛠️ 管理员工具：批量生成账号 (支持指定学校增量更新)
     generateAccounts: function () {
         if (!RAW_DATA.length) return alert("请先在【数据中心】上传成绩数据");
@@ -3038,84 +3116,15 @@ const Auth = {
         }
 
         if (!confirm(`⚠️ 确定要为选中的 [${selectedSchools.length}] 所学校生成账号吗？\n\n1. 仅生成/更新选中学校的学生和老师账号。\n2. 未选中学校的现有账号将【保留】。\n3. 教师初始密码为 yssy2016，其余账号初始密码为 123456。`)) return;
-
-        let countParentNew = 0;
-        let countParentUpd = 0;
-        let countTeacherNew = 0;
-
-        // --- A. 生成家长账号 (增量更新) ---
-        // 策略：遍历数据，如果该学生属于选中学校，则更新/添加；否则不动。
-
-        // 筛选出属于选中學校的学生
-        const targetStudents = RAW_DATA.filter(s => selectedSchools.includes(s.school));
-
-        targetStudents.forEach(s => {
-            // 检查是否已存在账号 (唯一键：姓名+班级)
-            const existIdx = this.db.parents.findIndex(p => p.name === s.name && p.class === s.class);
-
-            const newAccount = {
-                name: s.name,
-                class: s.class,
-                password_mode: 'default'
-            };
-
-            if (existIdx >= 0) {
-                // 已存在，强制重置密码为默认 (也可选择不重置，看需求)
-                this.db.parents[existIdx] = newAccount;
-                countParentUpd++;
-            } else {
-                // 不存在，添加
-                this.db.parents.push(newAccount);
-                countParentNew++;
-            }
-        });
-
-        // --- B. 生成教师账号 (增量更新) ---
-        // 策略：先找到选中学校涉及的所有班级，再反查 TEACHER_MAP 里的老师
-        const targetClasses = new Set();
-        targetStudents.forEach(s => targetClasses.add(s.class));
-
-        // 收集涉及到的老师名字 (去重)
-        let targetTeachers = new Set();
-        if (Object.keys(TEACHER_MAP).length > 0) {
-            Object.keys(TEACHER_MAP).forEach(key => {
-                // key 格式通常为 "701_语文" 或 "701_班主任"
-                const [cls, sub] = key.split('_');
-                // 如果这个班级属于选中的学校
-                if (targetClasses.has(cls)) {
-                    targetTeachers.add(TEACHER_MAP[key]);
-                }
-            });
-        } else {
-            console.warn("未配置教师任课表，仅能生成家长账号");
+        const generation = this.generateRecoverableAccountsForSchools(selectedSchools, { persist: true });
+        if (!generation.ok) {
+            return alert(`❌ ${generation.error}`);
         }
 
-        targetTeachers.forEach(tName => {
-            // 检查是否存在
-            const existIdx = this.db.teachers.findIndex(t => t.name === tName);
-            const newAccount = {
-                name: tName,
-                password_mode: 'default',
-                grade: 'all'
-            };
-
-            if (existIdx >= 0) {
-                // 教师账号通常跨年级，如果已存在，一般不重置密码，或者也重置
-                this.db.teachers[existIdx].password_mode = 'default';
-                delete this.db.teachers[existIdx].pass;
-            } else {
-                this.db.teachers.push(newAccount);
-                countTeacherNew++;
-            }
-        });
-
-        // 4. 保存结果到本地存储
-        this.db = persistLocalAuthDb(this.db);
-
         let msg = `✅ 操作完成！\n\n`;
-        msg += `覆盖学校：${selectedSchools.join(', ')}\n`;
-        msg += `家长账号：新增 ${countParentNew} / 重置 ${countParentUpd}\n`;
-        msg += `教师账号：新增 ${countTeacherNew} / 涉及 ${targetTeachers.size}\n`;
+        msg += `覆盖学校：${generation.selectedSchools.join(', ')}\n`;
+        msg += `家长账号：新增 ${generation.parentNew} / 重置 ${generation.parentReset}\n`;
+        msg += `教师账号：新增 ${generation.teacherNew} / 涉及 ${generation.teacherTouched}\n`;
         msg += `\n(提示：未选中学校的旧账号已自动保留)`;
 
         // 🚫 已注释掉成功后的弹窗，避免干扰
@@ -3485,15 +3494,17 @@ const Auth = {
 
     migrateRecoverableAccountsToCloud: async function () {
         const payload = this.buildRecoverableCloudAccountRows();
-        const parents = payload.parents || [];
-        const teachers = payload.teachers || [];
         const batchData = payload.batchData || [];
 
-        if (parents.length === 0 && teachers.length === 0) {
-            return alert("⚠️ 当前本地没有可恢复密码的老师/家长账号。");
+        if (!batchData.length) {
+            this.setCloudAccountMigrationInlineMessage(
+                '当前浏览器没有本地可恢复账号。这个按钮只会补迁本浏览器已保存的老师/家长账号，不会直接重置云端现有密码。请先点击上方“生成账号”或“一键同步所有账号到云端”。',
+                'warning'
+            );
+            return alert("⚠️ 当前浏览器还没有可恢复密码的老师/家长账号。\n\n请先导入或生成账号，或改用“管理员/主任登录一次、后台改密一次”的方式完成迁移。");
         }
 
-        const roleSummary = `👨‍👩‍👧 家长：${parents.length}\n👨‍🏫 教师：${teachers.length}\n🔐 可补迁账号：${batchData.length}`;
+        const roleSummary = `👨‍👩‍👧 家长：${(payload.parents || []).length}\n👨‍🏫 教师：${(payload.teachers || []).length}\n🔐 可补迁账号：${batchData.length}`;
         const ok = confirm(`⚠️ 准备将本地可恢复密码的账号批量补迁到 Cloudflare。\n\n${roleSummary}\n\n说明：\n1. 只会补迁本地能恢复密码的账号\n2. 管理员/主任若未回填，仍需登录一次或后台改密\n3. 同名账号会直接更新为 Cloudflare 哈希\n\n是否继续？`);
         if (!ok) return;
 
@@ -3705,6 +3716,22 @@ const Auth = {
 
         if (updatedEl) {
             updatedEl.textContent = `最近刷新：${new Date().toLocaleString()}`;
+        }
+    },
+
+    setCloudAccountMigrationInlineMessage: function (message, tone = 'info') {
+        const summaryEl = document.getElementById('cloud-account-migration-status');
+        const updatedEl = document.getElementById('cloud-account-migration-updated');
+        if (!summaryEl) return;
+        const colorMap = {
+            info: '#475569',
+            warning: '#b45309',
+            error: '#b91c1c',
+            success: '#166534'
+        };
+        summaryEl.innerHTML = `<div style="font-size:13px; color:${colorMap[tone] || colorMap.info}; line-height:1.8;">${String(message || '').trim()}</div>`;
+        if (updatedEl) {
+            updatedEl.textContent = `最近提示：${new Date().toLocaleString()}`;
         }
     },
 
