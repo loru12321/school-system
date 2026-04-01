@@ -620,6 +620,14 @@ window.ensureReportRenderRuntimeLoaded = function () {
     return loadOptionalRuntime('report-render', './assets/js/report-render-runtime.js');
 };
 
+window.ensureAIHubRuntimeLoaded = function () {
+    return loadOptionalRuntime('ai-hub', './assets/js/ai-hub-runtime.js');
+};
+
+window.ensureSchoolProfileRuntimeLoaded = function () {
+    return loadOptionalRuntime('school-profile', './assets/js/school-profile-runtime.js');
+};
+
 window.ensureTeacherAnalysisMainRuntimeLoaded = function () {
     return loadOptionalRuntime('teacher-analysis-main', './assets/js/teacher-analysis-main-runtime.js');
 };
@@ -704,6 +712,31 @@ if (!window.AccountExcel) {
 
 ['printSingleReport', 'downloadSingleReportPDF', 'batchGeneratePDF', 'copyReport', 'exportToWord'].forEach((name) => {
     installOptionalRuntimeMethod(name, window.ensureReportRenderRuntimeLoaded);
+});
+
+[
+    'syncAIAnalysisClassOptions',
+    'updateAIAnalysisHubStatus',
+    'renderAIAnalysisHub',
+    'openReportGeneratorForAI',
+    'saveAIConfigFromHub',
+    'testAIConnectionFromHub',
+    'runSingleStudentAIFromHub',
+    'openAIAnalysisHubForCurrentUser',
+    'runAIMacroReportFromHub',
+    'openAIBatchWorkspaceFromHub',
+    'startAIBatchFromHub',
+    'exportAIBatchFromHub',
+    'openBatchAIModal',
+    'startBatchAIComments',
+    'regenerateOneAI',
+    'exportAICommentsExcel'
+].forEach((name) => {
+    installOptionalRuntimeMethod(name, window.ensureAIHubRuntimeLoaded);
+});
+
+['showSchoolProfile', 'jumpToModule'].forEach((name) => {
+    installOptionalRuntimeMethod(name, window.ensureSchoolProfileRuntimeLoaded);
 });
 
 [
