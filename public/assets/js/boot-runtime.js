@@ -687,6 +687,23 @@ function installOptionalRuntimePlaceholder(name, message) {
     };
 }
 
+function warmOptionalRuntimeAfterLoad(flagName, loader, delayMs = 1200) {
+    if (typeof loader !== 'function') return;
+    const run = () => {
+        if (flagName && window[flagName]) return;
+        loader().catch((error) => {
+            console.warn(error);
+        });
+    };
+    if (document.readyState === 'complete') {
+        window.setTimeout(run, delayMs);
+        return;
+    }
+    window.addEventListener('load', () => {
+        window.setTimeout(run, delayMs);
+    }, { once: true });
+}
+
 const accountAdminStub = {
     downloadTemplate(...args) {
         return window.ensureAccountAdminRuntimeLoaded().then(() => {
@@ -807,6 +824,9 @@ if (window.innerWidth <= 960 || localStorage.getItem('DEV_MODE') === 'true') {
         console.warn(error);
     });
 }
+
+warmOptionalRuntimeAfterLoad('__SCHOOL_PROFILE_RUNTIME_PATCHED__', window.ensureSchoolProfileRuntimeLoaded, 600);
+warmOptionalRuntimeAfterLoad('__TEACHING_MANAGEMENT_RUNTIME_PATCHED__', window.ensureTeachingManagementRuntimeLoaded, 1200);
 
 if (window.innerWidth <= 768 || localStorage.getItem('DEV_MODE') === 'true') {
     window.ensureMobileManagerRuntimeLoaded().then(() => {
