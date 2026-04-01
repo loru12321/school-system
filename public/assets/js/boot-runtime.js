@@ -452,6 +452,35 @@ window.addEventListener('scroll', function () {
     }
 });
 
+window.ensureLazySectionLoaded = function (sectionId) {
+    const id = String(sectionId || '').trim();
+    if (!id) return null;
+
+    const section = document.getElementById(id);
+    if (!section) return null;
+
+    const templateId = String(section.dataset.lazySectionTemplate || '').trim();
+    if (!templateId) return section;
+
+    const templateNode = document.getElementById(templateId);
+    if (!templateNode) return section;
+
+    const html = String(templateNode.textContent || '').trim();
+    if (!html) return section;
+
+    const parser = document.createElement('template');
+    parser.innerHTML = html;
+    const replacement = parser.content.firstElementChild;
+    if (!replacement || replacement.id !== id) {
+        console.warn(`[lazy-section] invalid template for ${id}`);
+        return section;
+    }
+
+    section.replaceWith(replacement);
+    templateNode.remove();
+    return replacement;
+};
+
 window.__optionalRuntimeLoaders = window.__optionalRuntimeLoaders || {};
 function getOptionalRuntimeCandidates(src) {
     const normalized = String(src || '').trim();

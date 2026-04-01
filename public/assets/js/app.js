@@ -12889,6 +12889,9 @@ function switchTab(id) {
     }
     if (!__guardBypass && !guardBeforeSwitch(id)) return;
     if (__guardBypass) __guardBypass = false;
+    if (typeof window.ensureLazySectionLoaded === 'function') {
+        window.ensureLazySectionLoaded(id);
+    }
 
     // 1. 切换内容区域显示
     forceHideAllSectionsExcept();
@@ -13152,7 +13155,10 @@ function switchTab(id) {
         if (id === 'exam-arranger') {
             EXAM_initProctorUI();
         }
-        if (id === 'report-generator') { updateClassSelect(); }
+        if (id === 'report-generator') {
+            updateSchoolSelect();
+            updateClassSelect();
+        }
         if (id === 'segment-analysis') updateSegmentSelects();
         if (id === 'class-comparison') updateClassCompSchoolSelect();
         if (id === 'potential-analysis') updatePotentialSchoolSelect();
@@ -14323,9 +14329,17 @@ function jumpToDetail(school, subject) {
 // ================= 教师配置与分析 =================
 function updateSchoolSelect() {
     const sel = document.getElementById('sel-school');
-    sel.innerHTML = '<option>--请选择学校--</option>';
+    if (!sel) return;
+    const previousValue = String(sel.value || '').trim();
+    sel.innerHTML = '<option value="">--请选择学校--</option>';
     const user = getCurrentUser();
-    PermissionPolicy.getAccessibleSchoolNames(user, Object.keys(SCHOOLS || {})).forEach(n => sel.innerHTML += `<option>${n}</option>`);
+    const schools = PermissionPolicy.getAccessibleSchoolNames(user, Object.keys(SCHOOLS || {}));
+    schools.forEach((name) => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        sel.appendChild(option);
+    });
     if (!PermissionPolicy.isAdmin(user)) {
         const boundSchool = PermissionPolicy.getBoundSchool(user);
         if (boundSchool && Array.from(sel.options).some(option => option.value === boundSchool)) {
@@ -14334,8 +14348,14 @@ function updateSchoolSelect() {
         }
     } else {
         sel.disabled = false;
+        if (previousValue && schools.includes(previousValue)) {
+            sel.value = previousValue;
+        }
     }
-    sel.addEventListener('change', updateClassSelect);
+    if (sel.dataset.boundUpdateClassSelect !== '1') {
+        sel.dataset.boundUpdateClassSelect = '1';
+        sel.addEventListener('change', updateClassSelect);
+    }
 }
 
 function updateMySchoolSelect() {
@@ -14393,7 +14413,9 @@ function updateMySchoolSelect() {
 }
 
 function updateClassSelect() {
-    const schoolSelect = document.getElementById('sel-school'); const classSelect = document.getElementById('sel-class');
+    const schoolSelect = document.getElementById('sel-school');
+    const classSelect = document.getElementById('sel-class');
+    if (!schoolSelect || !classSelect) return;
     classSelect.innerHTML = '<option>--请先选择学校--</option>';
     if (schoolSelect.value && SCHOOLS[schoolSelect.value]) {
         const user = getCurrentUser();
