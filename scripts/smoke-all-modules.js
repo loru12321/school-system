@@ -71,9 +71,20 @@ async function withNavigationRetry(page, task, options = {}) {
 
 async function login(page, user, pass) {
     await page.goto(process.env.SMOKE_URL || 'https://schoolsystem.com.cn/', {
-        waitUntil: 'domcontentloaded',
-        timeout: 60000
+        waitUntil: 'commit',
+        timeout: 90000
     });
+
+    await withNavigationRetry(page, async () => {
+        await page.waitForFunction(() => {
+            const overlay = document.getElementById('login-overlay');
+            const app = document.getElementById('app');
+            const mask = document.getElementById('mode-mask');
+            return !!overlay || !!app || !!mask;
+        }, undefined, { timeout: 90000 });
+    }, { attempts: 4 });
+
+    await waitForPageStability(page, 10000);
 
     const bootState = await page.evaluate(() => {
         const overlay = document.getElementById('login-overlay');
@@ -102,7 +113,7 @@ async function login(page, user, pass) {
             const appVisible = !!app && getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden');
             const maskVisible = !!mask && getComputedStyle(mask).display !== 'none';
             return overlayHidden && (appVisible || maskVisible);
-        }, { timeout: 40000 });
+        }, undefined, { timeout: 90000 });
     }, { attempts: 4 });
 
     await ensureCohortEntered(page);
@@ -112,7 +123,7 @@ async function login(page, user, pass) {
             const app = document.getElementById('app');
             if (!app) return false;
             return getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden');
-        }, { timeout: 30000 });
+        }, undefined, { timeout: 45000 });
     }, { attempts: 4 });
 }
 
@@ -152,7 +163,7 @@ async function ensureCohortEntered(page) {
             const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
             return (!mask || getComputedStyle(mask).display === 'none')
                 || (!!examId && rawDataLen > 0);
-        }, { timeout: 15000 }), { attempts: 1 });
+        }, undefined, { timeout: 15000 }), { attempts: 1 });
     } catch (_) {
         // 云端恢复可能仍在进行，超时后再决定是否需要手动进入届别。
     }
@@ -179,7 +190,7 @@ async function ensureCohortEntered(page) {
                 typeof window.enterCohortFromMask === 'function'
                 || !!document.querySelector('button[onclick="enterCohortFromMask()"]')
             );
-        }, { timeout: 20000 });
+        }, undefined, { timeout: 20000 });
         const maskVisible = await page.evaluate(() => {
             const mask = document.getElementById('mode-mask');
             return !!mask && getComputedStyle(mask).display !== 'none';
@@ -205,7 +216,7 @@ async function ensureCohortEntered(page) {
                 && !!app
                 && getComputedStyle(app).display !== 'none'
                 && !app.classList.contains('hidden');
-        }, { timeout: 20000 });
+        }, undefined, { timeout: 20000 });
     }, { attempts: 4 });
 }
 
@@ -382,7 +393,7 @@ async function runModuleDeepCheck(page, id) {
         });
     }
     if (id === 'teacher-analysis') {
-        await page.waitForFunction(() => window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__ === true, { timeout: 15000 });
+        await page.waitForFunction(() => window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__ === true, undefined, { timeout: 15000 });
         return page.evaluate(async () => {
             const checks = {
                 runtimeLoaded: window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__ === true,
@@ -429,7 +440,7 @@ async function runModuleDeepCheck(page, id) {
                 await window.ensureSingleSchoolEvalRuntimeLoaded();
             }
         });
-        await page.waitForFunction(() => window.__SINGLE_SCHOOL_EVAL_RUNTIME_PATCHED__ === true, { timeout: 15000 });
+        await page.waitForFunction(() => window.__SINGLE_SCHOOL_EVAL_RUNTIME_PATCHED__ === true, undefined, { timeout: 15000 });
         return page.evaluate(async () => {
             const checks = {
                 sectionReady: !!document.querySelector('#single-school-eval.analysis-workspace-management'),
