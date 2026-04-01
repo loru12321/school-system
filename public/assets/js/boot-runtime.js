@@ -628,6 +628,10 @@ window.ensureSchoolProfileRuntimeLoaded = function () {
     return loadOptionalRuntime('school-profile', './assets/js/school-profile-runtime.js');
 };
 
+window.ensureTeachingManagementRuntimeLoaded = function () {
+    return loadOptionalRuntime('teaching-management', './assets/js/teaching-management-runtime.js');
+};
+
 window.ensureTeacherAnalysisMainRuntimeLoaded = function () {
     return loadOptionalRuntime('teacher-analysis-main', './assets/js/teacher-analysis-main-runtime.js');
 };
