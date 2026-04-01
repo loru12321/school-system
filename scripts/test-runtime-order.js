@@ -187,6 +187,11 @@ assert.ok(appIndex >= 0, 'index.html should load app.js');
 assert.ok(bootRuntime.includes(progressAnalysisRef), 'boot-runtime.js should reference progress-analysis-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(teacherAnalysisMainRef), 'boot-runtime.js should reference teacher-analysis-main-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(singleSchoolEvalRef), 'boot-runtime.js should reference single-school-eval-runtime.js for lazy loading');
+assert.ok(bootRuntime.includes(alasqlVendorRef), 'boot-runtime.js should reference alasql.min.js for lazy loading');
+assert.ok(bootRuntime.includes(jspdfVendorRef), 'boot-runtime.js should reference jspdf.umd.min.js for lazy loading');
+assert.ok(bootRuntime.includes(html2canvasVendorRef), 'boot-runtime.js should reference html2canvas.min.js for lazy loading');
+assert.ok(bootRuntime.includes("window.ensureAlasqlVendorLoaded = function ()"), 'boot-runtime.js should expose ensureAlasqlVendorLoaded');
+assert.ok(bootRuntime.includes("window.ensurePdfExportVendorsLoaded = function ()"), 'boot-runtime.js should expose ensurePdfExportVendorsLoaded');
 assert.strictEqual(initSupabaseMatches.length, 1, 'boot-runtime.js should define initSupabase exactly once');
 assert.strictEqual(supabaseUrlAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_URL exactly once');
 assert.strictEqual(supabaseKeyAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_KEY exactly once');
@@ -229,10 +234,7 @@ assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign swi
     xlsxVendorRef,
     alpineVendorRef,
     chartVendorRef,
-    alasqlVendorRef,
-    sweetalertVendorRef,
-    jspdfVendorRef,
-    html2canvasVendorRef
+    sweetalertVendorRef
 ].forEach((src) => {
     const scriptTag = findScriptTag(indexHtml, src);
     assert.ok(scriptTag, `index.html should contain a script tag for ${src}`);
@@ -251,6 +253,9 @@ assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign swi
 assert.ok(indexHtml.includes(tablerIconsRef), 'index.html should load local tabler icons CSS');
 
 [
+    alasqlVendorRef,
+    jspdfVendorRef,
+    html2canvasVendorRef,
     accountAdminRef,
     historyCompareRef,
     perfMobileRef,
