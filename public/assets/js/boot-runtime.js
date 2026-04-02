@@ -482,15 +482,27 @@ window.ensureLazySectionLoaded = function (sectionId) {
 };
 
 window.__optionalRuntimeLoaders = window.__optionalRuntimeLoaders || {};
-function getOptionalRuntimeCandidates(src) {
+window.__optionalStylesheetLoaders = window.__optionalStylesheetLoaders || {};
+function getOptionalAssetCandidates(src, localPrefixes = []) {
     const normalized = String(src || '').trim();
     const candidates = [normalized];
-    if (window.location && window.location.protocol === 'file:' && (normalized.startsWith('./assets/js/') || normalized.startsWith('./assets/vendor/'))) {
+    if (window.location
+        && window.location.protocol === 'file:'
+        && Array.isArray(localPrefixes)
+        && localPrefixes.some((prefix) => normalized.startsWith(prefix))) {
         const relativePath = normalized.replace(/^\.\//, '');
         candidates.push(`./dist/${relativePath}`);
         candidates.push(`./public/${relativePath}`);
     }
     return Array.from(new Set(candidates.filter(Boolean)));
+}
+
+function getOptionalRuntimeCandidates(src) {
+    return getOptionalAssetCandidates(src, ['./assets/js/', './assets/vendor/']);
+}
+
+function getOptionalStylesheetCandidates(href) {
+    return getOptionalAssetCandidates(href, ['./assets/css/', './assets/vendor/']);
 }
 
 function getInlineOptionalRuntimeSource(src) {
@@ -574,6 +586,52 @@ function loadOptionalRuntime(key, src) {
     return window.__optionalRuntimeLoaders[key];
 }
 
+function injectOptionalStylesheet(key, href) {
+    return new Promise((resolve, reject) => {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = href;
+        link.dataset.optionalStylesheet = key;
+        link.dataset.optionalStylesheetCandidate = href;
+        link.onload = () => {
+            link.dataset.optionalStylesheetLoaded = 'true';
+            resolve();
+        };
+        link.onerror = () => {
+            link.remove();
+            reject(new Error(`Failed to load stylesheet: ${href}`));
+        };
+        document.head.appendChild(link);
+    });
+}
+
+function loadOptionalStylesheet(key, href) {
+    if (window.__optionalStylesheetLoaders[key]) return window.__optionalStylesheetLoaders[key];
+
+    const existing = document.querySelector(`link[data-optional-stylesheet="${key}"][data-optional-stylesheet-loaded="true"]`);
+    if (existing) {
+        window.__optionalStylesheetLoaders[key] = Promise.resolve(existing);
+        return window.__optionalStylesheetLoaders[key];
+    }
+
+    window.__optionalStylesheetLoaders[key] = (async () => {
+        let lastError = null;
+        for (const candidate of getOptionalStylesheetCandidates(href)) {
+            try {
+                await injectOptionalStylesheet(key, candidate);
+                return document.querySelector(`link[data-optional-stylesheet="${key}"][data-optional-stylesheet-loaded="true"]`);
+            } catch (error) {
+                lastError = error;
+            }
+        }
+        throw lastError || new Error(`Failed to load stylesheet: ${href}`);
+    })().catch((error) => {
+        delete window.__optionalStylesheetLoaders[key];
+        throw error;
+    });
+    return window.__optionalStylesheetLoaders[key];
+}
+
 function loadOptionalRuntimeBundle(key, entries) {
     if (window.__optionalRuntimeLoaders[key]) return window.__optionalRuntimeLoaders[key];
     window.__optionalRuntimeLoaders[key] = entries.reduce((chain, entry) => {
@@ -617,7 +675,16 @@ window.ensurePdfExportVendorsLoaded = function () {
 };
 
 window.ensureReportRenderRuntimeLoaded = function () {
-    return loadOptionalRuntime('report-render', './assets/js/report-render-runtime.js');
+    return loadOptionalRuntimeBundle('report-render-bundle', [
+        { key: 'report-render', src: './assets/js/report-render-runtime.js' },
+        { key: 'report-chart', src: './assets/js/report-chart-runtime.js' },
+        { key: 'report-export', src: './assets/js/report-export-runtime.js' },
+        { key: 'report-ai', src: './assets/js/report-ai-runtime.js' }
+    ]);
+};
+
+window.ensureOptionalStylesheetLoaded = function (key, href) {
+    return loadOptionalStylesheet(key, href);
 };
 
 window.ensureAIHubRuntimeLoaded = function () {

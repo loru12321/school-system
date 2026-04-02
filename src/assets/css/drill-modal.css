@@ -1,0 +1,69 @@
+/* 钻取弹窗专用样式 */
+        .drill-class-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+        }
+
+        .drill-class-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .drill-class-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+
+        .drill-val {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--primary);
+            margin: 5px 0;
+        }
+
+        .drill-label {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        .drill-stu-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .drill-stu-tag {
+            background: white;
+            border: 1px solid #cbd5e1;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .drill-stu-score {
+            color: var(--primary);
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        .clickable-num {
+            cursor: pointer;
+            text-decoration: underline;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .clickable-num:hover {
+            color: #d97706;
+        }

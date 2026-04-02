@@ -1,0 +1,220 @@
+/* Teacher and cohort lazy module styles */
+.analysis-workspace .teacher-cards-container {
+    gap: 16px;
+    margin-top: 12px;
+}
+
+.analysis-workspace .teacher-card {
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 18px 36px -34px rgba(15, 23, 42, 0.38);
+    border-color: #dbe5f1;
+}
+
+.analysis-workspace .teacher-card::before {
+    width: 5px;
+    background: linear-gradient(180deg, var(--analysis-accent) 0%, #60a5fa 100%);
+}
+
+.analysis-workspace .teacher-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 22px 40px -34px rgba(15, 23, 42, 0.46);
+}
+
+.cohort-growth-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 18px;
+}
+
+.teacher-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.teacher-card {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.teacher-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--primary);
+}
+
+.teacher-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.teacher-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+}
+
+.teacher-classes {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.performance-badge {
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.performance-excellent {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.performance-good {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.performance-average {
+    background: #e0f2fe;
+    color: #075985;
+}
+
+.performance-poor {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.teacher-stats {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    background: #f8fafc;
+    padding: 8px;
+    border-radius: 6px;
+}
+
+.stat-item {
+    text-align: center;
+    flex: 1;
+}
+
+.stat-value {
+    font-size: 16px;
+    font-weight: 800;
+    color: #333;
+}
+
+.stat-label {
+    font-size: 10px;
+    color: #64748b;
+    text-transform: uppercase;
+}
+
+.view-details-btn {
+    width: 100%;
+    padding: 8px;
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #475569;
+    font-weight: 500;
+    transition: 0.2s;
+}
+
+.view-details-btn:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.pairing-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.pairing-card {
+    background: linear-gradient(to bottom right, #ffffff, #f8fafc);
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    gap: 10px;
+    position: relative;
+}
+
+.pairing-card::after {
+    content: '🤝';
+    position: absolute;
+    right: 15px;
+    top: 15px;
+    font-size: 24px;
+    opacity: 0.2;
+}
+
+.pairing-side {
+    flex: 1;
+}
+
+.pairing-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    font-size: 20px;
+}
+
+.pairing-role {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    margin-bottom: 4px;
+}
+
+.pairing-name {
+    font-weight: bold;
+    color: #1e293b;
+    font-size: 14px;
+}
+
+.pairing-skill {
+    font-size: 11px;
+    color: var(--success);
+    margin-top: 2px;
+}
+
+.pairing-need {
+    font-size: 11px;
+    color: var(--danger);
+    margin-top: 2px;
+}
+
+.pairing-tag {
+    background: var(--primary-light);
+    color: var(--primary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    display: inline-block;
+    margin-top: 5px;
+}

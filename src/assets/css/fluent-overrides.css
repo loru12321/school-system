@@ -1,0 +1,1358 @@
+/* 1. 全局字体与背景 (Flat Minimalism) */
+        body {
+            /* Variables from main.css handle the actual colors */
+            -webkit-font-smoothing: antialiased;
+            /* 移除了斑驳的径向渐变背景 */
+        }
+
+        /* 2. 卡片与容器：纯净扁平化 (移除亚克力磨砂) */
+        .card-box,
+        .section,
+        .nav-wrapper,
+        .spotlight-box,
+        .side-nav,
+        .control-panel {
+            background: var(--bg-card) !important;
+            backdrop-filter: none !important;
+            /* 彻底移除毛玻璃性能消耗 */
+            border: 1px solid var(--border) !important;
+            box-shadow: var(--shadow) !important;
+            border-radius: var(--radius) !important;
+        }
+
+        /* 弹窗稍微保留一点浮力 */
+        .modal-content {
+            background: var(--bg-card) !important;
+            border: 1px solid var(--border) !important;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08) !important;
+            border-radius: 20px !important;
+        }
+
+        /* 3. 顶部 Header：极致干净 (X / YouTube 风格) */
+        header {
+            background: var(--bg-card) !important;
+            border: none !important;
+            border-bottom: 1px solid var(--border) !important;
+            /* 仅底边框 */
+            box-shadow: none !important;
+            color: #0f1419 !important;
+            margin-bottom: 20px !important;
+            border-radius: 0 !important;
+            /* 顶栏不圆角 */
+        }
+
+        /* 强制标题文字颜色变深，适应浅色背景 (仅限浅色模式) */
+        body:not(.dark-mode) header h1,
+        body:not(.dark-mode) header p,
+        body:not(.dark-mode) header .btn,
+        body:not(.dark-mode) header select,
+        body:not(.dark-mode) header div,
+        body:not(.dark-mode) header span,
+        body:not(.dark-mode) header i,
+        body:not(.dark-mode) header a {
+            color: #0f1419 !important;
+            text-shadow: none !important;
+        }
+
+        /* 顶栏图标/按钮变为圆角磁贴 (X 风格悬浮) */
+        header .btn,
+        header select,
+        header div[onclick] {
+            background: transparent !important;
+            border: none !important;
+            color: #0f1419 !important;
+            border-radius: 9999px !important;
+            /* 全圆角胶囊/圆形 */
+            padding: 8px 16px !important;
+            font-weight: 600 !important;
+            transition: background 0.2s ease !important;
+        }
+
+        /* 图标按钮如果是方形，强制变正圆 */
+        header .btn:not(:has(#cohort-selector)),
+        header div[onclick] {
+            padding: 10px !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        header .btn:hover,
+        header select:hover,
+        header div[onclick]:hover {
+            background: var(--primary-light) !important;
+            /* 浅灰悬浮底色 */
+            box-shadow: none !important;
+        }
+
+        /* 4. 按钮：扁平胶囊化 */
+        .btn {
+            border-radius: 9999px !important;
+            /* 胶囊按键 */
+            border: 1px solid transparent !important;
+            font-weight: 700 !important;
+            transition: background 0.2s ease !important;
+            box-shadow: none !important;
+        }
+
+        .btn:active {
+            transform: scale(0.96) !important;
+            /* 点击缩放 */
+            opacity: 0.8;
+        }
+
+        /* 5. 输入框：X 风格胶囊 */
+        input[type="text"],
+        input[type="number"],
+        input[type="password"],
+        select,
+        textarea {
+            background-color: var(--bg-body) !important;
+            /* 跟随背景 */
+            border: 1px solid var(--border) !important;
+            border-bottom: 1px solid var(--border) !important;
+            border-radius: 9999px !important;
+            /* 胶囊输入框 */
+            transition: all 0.2s !important;
+            color: #0f1419 !important;
+            padding: 10px 16px !important;
+            box-shadow: none !important;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            background-color: var(--bg-card) !important;
+            border-color: var(--primary) !important;
+            box-shadow: none !important;
+        }
+
+        /* 6. 表格：极简风，去竖线 */
+        table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+        }
+
+        thead th {
+            background: transparent !important;
+            border-bottom: 1px solid var(--border) !important;
+            color: var(--secondary) !important;
+            font-size: 13px !important;
+            text-transform: none !important;
+            padding: 12px 16px !important;
+            font-weight: 600 !important;
+        }
+
+        /* 悬浮行效果 */
+        tbody tr {
+            transition: background 0.1s !important;
+            border-radius: 0 !important;
+            /* X风表格行不圆角 */
+        }
+
+        tbody tr:hover td {
+            background-color: rgba(0, 0, 0, 0.02) !important;
+            /* 极淡的灰 */
+        }
+
+        td {
+            border-right: none !important;
+            /* 去除竖线 */
+            border-bottom: 1px solid var(--border) !important;
+            padding: 14px 16px !important;
+            color: #0f1419 !important;
+        }
+
+        /* 修复首列冻结的背景 */
+        table th:first-child,
+        table td:first-child {
+            background: var(--bg-card) !important;
+            backdrop-filter: none;
+        }
+
+        /* 7. 导航栏：极简底栏 */
+        .nav-wrapper {
+            background: var(--bg-card) !important;
+            box-shadow: none !important;
+            border: none !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding: 0 16px !important;
+            border-radius: 0 !important;
+        }
+
+        .nav-categories {
+            background: transparent !important;
+            gap: 16px !important;
+            /* 增加导航间距 */
+            padding: 0 !important;
+            border: none !important;
+        }
+
+        .nav-cat-item {
+            color: var(--secondary) !important;
+            border-radius: 0 !important;
+            border-bottom: 4px solid transparent !important;
+            /* X 风格底边指示线 */
+            padding: 16px 8px !important;
+            background: transparent !important;
+            font-weight: 500 !important;
+        }
+
+        .nav-cat-item:hover {
+            background-color: var(--primary-light) !important;
+            color: #0f1419 !important;
+        }
+
+        .nav-cat-item.active {
+            background-color: transparent !important;
+            color: #0f1419 !important;
+            box-shadow: none !important;
+            border-bottom: 4px solid var(--primary) !important;
+            /* 激活底边线 */
+            font-weight: 700 !important;
+        }
+
+        /* 二级导航胶囊 */
+        .nav-link {
+            border-radius: 9999px !important;
+            background: transparent !important;
+            border: none !important;
+            padding: 8px 16px !important;
+            color: var(--secondary) !important;
+        }
+
+        .nav-link:hover {
+            background: var(--primary-light) !important;
+            color: #0f1419 !important;
+        }
+
+        .nav-link.active {
+            background: #0f1419 !important;
+            color: white !important;
+            box-shadow: none !important;
+        }
+
+        /* 8. 弹窗 Modal：居中悬浮卡片 */
+        .modal {
+            background: rgba(0, 0, 0, 0.4) !important;
+            backdrop-filter: blur(2px) !important;
+            /* 极弱模糊 */
+        }
+
+        /* 9. 滚动条美化 (Overlay Scrollbars) */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 9999px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+
+        /* 10. 修复左侧导航 (Side Nav) */
+        .side-nav {
+            background: var(--bg-card) !important;
+            border: none !important;
+            border-right: 1px solid var(--border) !important;
+            border-radius: 0 !important;
+        }
+
+        .side-nav-link.active {
+            background: var(--primary-light) !important;
+            color: #0f1419 !important;
+            border-left: 3px solid var(--primary) !important;
+            /* removed closing bracket here because it attaches to next section */
+        }
+
+        /* Teaching Overview */
+        #teaching-overview .module-desc-bar {
+            margin-bottom: 14px;
+        }
+
+        .tm-overview-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tm-overview-card-grid,
+        .tm-readiness-grid,
+        .tm-summary-grid,
+        .tm-quick-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .tm-context-grid {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .tm-overview-slot {
+            min-height: 122px;
+        }
+
+        .tm-stat-card-inner,
+        .tm-mini-card {
+            height: 100%;
+            padding: 16px 18px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+        }
+
+        .tm-stat-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 14px;
+            color: #334155;
+        }
+
+        .tm-stat-main {
+            font-size: 18px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.45;
+            word-break: break-word;
+        }
+
+        .tm-stat-sub {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #64748b;
+            line-height: 1.7;
+        }
+
+        .status-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 28px;
+            padding: 0 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+            border: 1px solid transparent;
+        }
+
+        .status-chip.ok {
+            color: #166534;
+            background: #dcfce7;
+            border-color: #86efac;
+        }
+
+        .status-chip.warn {
+            color: #9a3412;
+            background: #ffedd5;
+            border-color: #fdba74;
+        }
+
+        .status-chip.info {
+            color: #1d4ed8;
+            background: #eff6ff;
+            border-color: #bfdbfe;
+        }
+
+        .status-chip.neutral {
+            color: #475569;
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        .tm-mini-card strong {
+            display: block;
+            margin-bottom: 6px;
+            color: #0f172a;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .tm-mini-card span {
+            color: #475569;
+            line-height: 1.7;
+            word-break: break-word;
+        }
+
+        .tm-quick-grid button {
+            width: 100%;
+        }
+
+        .tm-quick-entry-btn {
+            min-height: 92px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            gap: 8px;
+            text-align: left;
+            padding: 14px 16px !important;
+            border-radius: 14px !important;
+            border: 1px solid #dbe2ea !important;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+            color: #0f172a !important;
+        }
+
+        .tm-quick-entry-btn .tm-quick-head {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .tm-quick-entry-btn .tm-quick-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #0f172a;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tm-quick-entry-btn .tm-quick-desc {
+            font-size: 12px;
+            line-height: 1.7;
+            color: #64748b;
+            text-align: left;
+        }
+
+        .tm-next-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 16px 18px;
+            border: 1px solid #dbe2ea;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%);
+        }
+
+        .tm-next-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 6px;
+        }
+
+        .tm-next-desc {
+            font-size: 13px;
+            line-height: 1.75;
+            color: #64748b;
+        }
+
+        .tm-next-meta {
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tm-next-btn {
+            white-space: nowrap;
+        }
+
+        .tm-section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .tm-cloud-columns {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .tm-cloud-group {
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            padding: 14px 16px;
+        }
+
+        .tm-cloud-group h5 {
+            margin: 0 0 12px;
+            font-size: 14px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .tm-cloud-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .tm-cloud-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.92);
+            padding: 12px 14px;
+        }
+
+        .tm-cloud-item.warning {
+            border-color: #fed7aa;
+            background: linear-gradient(180deg, #ffffff 0%, #fff7ed 100%);
+        }
+
+        .tm-cloud-item.task {
+            border-color: #dbeafe;
+            background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+        }
+
+        .tm-cloud-item-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .tm-cloud-item-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.6;
+        }
+
+        .tm-cloud-item-desc {
+            font-size: 12px;
+            color: #475569;
+            line-height: 1.75;
+        }
+
+        .tm-cloud-item-meta {
+            margin-top: 8px;
+            font-size: 11px;
+            color: #64748b;
+            line-height: 1.7;
+        }
+
+        .tm-cloud-item-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tm-cloud-empty {
+            padding: 14px 16px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 14px;
+            color: #64748b;
+            font-size: 12px;
+            line-height: 1.75;
+            background: #f8fafc;
+        }
+
+        .tm-center-toolbar {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+
+        .tm-center-toolbar>div {
+            min-width: 160px;
+        }
+
+        .tm-center-toolbar label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+        }
+
+        .tm-center-scope {
+            margin: 0 0 14px;
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #f8fafc;
+            color: #475569;
+            font-size: 12px;
+            line-height: 1.75;
+        }
+
+        .tm-center-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .tm-center-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .tm-center-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            padding: 16px 18px;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+        }
+
+        .tm-center-card.warning {
+            border-color: #fed7aa;
+            background: linear-gradient(180deg, #ffffff 0%, #fff7ed 100%);
+        }
+
+        .tm-center-card.task {
+            border-color: #dbeafe;
+            background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+        }
+
+        .tm-center-card-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .tm-center-card-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.6;
+        }
+
+        .tm-center-card-scope {
+            margin-bottom: 10px;
+            font-size: 12px;
+            color: #64748b;
+            line-height: 1.75;
+        }
+
+        .tm-center-card-desc {
+            font-size: 13px;
+            color: #475569;
+            line-height: 1.8;
+        }
+
+        .tm-center-card-meta {
+            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        .tm-center-card-actions {
+            margin-top: 12px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tm-inline-chip {
+            display: inline-flex;
+            align-items: center;
+            min-height: 24px;
+            padding: 0 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.86);
+            border: 1px solid #dbe2ea;
+        }
+
+        .tm-version-diff-panel {
+            margin-bottom: 14px;
+        }
+
+        .tm-version-diff-card {
+            padding: 16px 18px;
+            border-radius: 16px;
+            border: 1px solid #fed7aa;
+            background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
+            box-shadow: 0 8px 24px rgba(249, 115, 22, 0.08);
+        }
+
+        .tm-version-diff-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .tm-version-diff-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: #9a3412;
+        }
+
+        .tm-version-diff-subtitle {
+            margin-top: 4px;
+            font-size: 12px;
+            color: #7c2d12;
+        }
+
+        .tm-version-diff-summary {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .tm-version-diff-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .tm-version-diff-item {
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid #e5e7eb;
+            background: rgba(255, 255, 255, 0.92);
+        }
+
+        .tm-version-diff-item.changed {
+            border-color: #fdba74;
+            background: #fff7ed;
+        }
+
+        .tm-version-diff-label {
+            margin-bottom: 10px;
+            font-size: 13px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .tm-version-diff-values {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .tm-version-diff-caption {
+            margin-bottom: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+        }
+
+        .tm-version-diff-value {
+            font-size: 13px;
+            color: #334155;
+            line-height: 1.7;
+            word-break: break-word;
+        }
+
+        .tm-module-statebar {
+            margin: 12px 0 14px;
+            padding: 14px 16px;
+            border: 1px solid #dbe2ea;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.03);
+        }
+
+        .tm-module-state-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .tm-module-state-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .tm-module-state-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .tm-module-state-item {
+            padding: 12px 14px;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.92);
+        }
+
+        .tm-module-state-item.is-interactive {
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            appearance: none;
+            transition: transform 0.16s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .tm-module-state-item.is-interactive:hover {
+            border-color: #fdba74;
+            box-shadow: 0 10px 22px rgba(249, 115, 22, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .tm-module-state-item.is-interactive:focus-visible {
+            outline: 2px solid #fb923c;
+            outline-offset: 2px;
+            border-color: #fb923c;
+        }
+
+        .tm-module-state-item.tone-ok {
+            border-color: #bbf7d0;
+            background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
+        }
+
+        .tm-module-state-item.tone-warn {
+            border-color: #fed7aa;
+            background: linear-gradient(180deg, #ffffff 0%, #fff7ed 100%);
+        }
+
+        .tm-module-state-item.tone-info,
+        .tm-module-state-item.tone-neutral {
+            border-color: #dbeafe;
+            background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+        }
+
+        .tm-module-state-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+            margin-bottom: 6px;
+        }
+
+        .tm-module-state-value {
+            font-size: 14px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.65;
+            word-break: break-word;
+        }
+
+        .tm-module-state-meta {
+            margin-top: 8px;
+        }
+
+        .tm-module-state-action {
+            margin-top: 8px;
+            font-size: 11px;
+            font-weight: 800;
+            color: #ea580c;
+            letter-spacing: 0.02em;
+        }
+
+        .tm-field-flash {
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.18) !important;
+            border-color: #fb923c !important;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        #tmAlertList .plain-list,
+        #smInsightList .plain-list {
+            margin: 0;
+            padding-left: 18px;
+            color: #334155;
+            line-height: 1.85;
+        }
+
+        body.dark-mode .tm-stat-card-inner,
+        body.dark-mode .tm-mini-card {
+            background: rgba(30, 41, 59, 0.78) !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+            color: #e2e8f0 !important;
+        }
+
+        body.dark-mode .tm-stat-main,
+        body.dark-mode .tm-mini-card strong {
+            color: #f8fafc !important;
+        }
+
+        body.dark-mode .tm-stat-sub,
+        body.dark-mode .tm-mini-card span,
+        body.dark-mode #tmAlertList .plain-list,
+        body.dark-mode #smInsightList .plain-list,
+        body.dark-mode .tm-quick-entry-btn .tm-quick-desc,
+        body.dark-mode .tm-next-desc {
+            color: #cbd5e1 !important;
+        }
+
+        body.dark-mode .tm-cloud-group,
+        body.dark-mode .tm-cloud-item,
+        body.dark-mode .tm-quick-entry-btn,
+        body.dark-mode .tm-next-card,
+        body.dark-mode .tm-module-statebar,
+        body.dark-mode .tm-module-state-item,
+        body.dark-mode .tm-version-diff-card,
+        body.dark-mode .tm-version-diff-item {
+            background: rgba(30, 41, 59, 0.78) !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        body.dark-mode .tm-version-diff-title,
+        body.dark-mode .tm-version-diff-label,
+        body.dark-mode .tm-version-diff-value {
+            color: #f8fafc !important;
+        }
+
+        body.dark-mode .tm-version-diff-subtitle,
+        body.dark-mode .tm-version-diff-caption {
+            color: #cbd5e1 !important;
+        }
+
+        body.dark-mode .tm-cloud-item-title,
+        body.dark-mode .tm-cloud-group h5 {
+            color: #f8fafc !important;
+        }
+
+        body.dark-mode .tm-cloud-item-desc,
+        body.dark-mode .tm-cloud-item-meta,
+        body.dark-mode .tm-cloud-empty {
+            color: #cbd5e1 !important;
+        }
+
+        body.dark-mode .tm-center-card,
+        body.dark-mode .tm-center-scope {
+            background: rgba(30, 41, 59, 0.78) !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        body.dark-mode .tm-center-card-title {
+            color: #f8fafc !important;
+        }
+
+        body.dark-mode .tm-center-card-scope,
+        body.dark-mode .tm-center-card-desc,
+        body.dark-mode .tm-center-card-meta,
+        body.dark-mode .tm-center-scope {
+            color: #cbd5e1 !important;
+        }
+
+        body.dark-mode .tm-inline-chip {
+            background: rgba(15, 23, 42, 0.7);
+            border-color: rgba(148, 163, 184, 0.35);
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .tm-cloud-empty {
+            background: rgba(15, 23, 42, 0.72) !important;
+            border-color: rgba(148, 163, 184, 0.28) !important;
+        }
+
+        body.dark-mode .tm-module-state-item.is-interactive:hover {
+            border-color: rgba(251, 146, 60, 0.55) !important;
+            box-shadow: 0 10px 22px rgba(251, 146, 60, 0.16);
+        }
+
+        body.dark-mode .tm-module-state-item.is-interactive:focus-visible {
+            outline-color: rgba(251, 146, 60, 0.92);
+            border-color: rgba(251, 146, 60, 0.65) !important;
+        }
+
+        body.dark-mode .tm-module-state-item.tone-ok {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.88) 0%, rgba(20, 83, 45, 0.52) 100%) !important;
+        }
+
+        body.dark-mode .tm-module-state-item.tone-warn {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.88) 0%, rgba(124, 45, 18, 0.5) 100%) !important;
+        }
+
+        body.dark-mode .tm-module-state-item.tone-info,
+        body.dark-mode .tm-module-state-item.tone-neutral {
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.88) 0%, rgba(30, 64, 175, 0.42) 100%) !important;
+        }
+
+        body.dark-mode .tm-module-state-action {
+            color: #fdba74 !important;
+        }
+
+        body.dark-mode .tm-field-flash {
+            box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.28) !important;
+            border-color: rgba(251, 146, 60, 0.78) !important;
+        }
+
+        body.dark-mode .tm-quick-entry-btn .tm-quick-title,
+        body.dark-mode .tm-next-title,
+        body.dark-mode .tm-module-state-title,
+        body.dark-mode .tm-module-state-value {
+            color: #f8fafc !important;
+        }
+
+        @media (max-width: 1200px) {
+
+            .tm-overview-card-grid,
+            .tm-readiness-grid,
+            .tm-summary-grid,
+            .tm-context-grid,
+            .tm-module-state-grid,
+            .tm-cloud-columns,
+            .tm-center-summary-grid,
+            .tm-version-diff-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .tm-quick-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+
+            .tm-overview-actions,
+            .tm-overview-card-grid,
+            .tm-readiness-grid,
+            .tm-summary-grid,
+            .tm-context-grid,
+            .tm-quick-grid,
+            .tm-module-state-grid,
+            .tm-cloud-columns,
+            .tm-center-summary-grid,
+            .tm-version-diff-grid,
+            .tm-version-diff-values {
+                grid-template-columns: 1fr;
+            }
+
+            .tm-center-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .tm-center-toolbar>div,
+            .tm-center-toolbar select {
+                width: 100%;
+            }
+
+            #teaching-overview .layout-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 11. 消息提示 Toast */
+        .toast-msg {
+            background: var(--bg-card) !important;
+            border: 1px solid var(--border) !important;
+            box-shadow: var(--shadow-lg) !important;
+        }
+
+        /* ================== 【终极版】全域沉浸式深色模式 (True Dark / Lights Out) ================== */
+        /* 1. 整体背景：深邃黑 */
+        body.dark-mode {
+            background-color: var(--bg-body) !important;
+            background-image: none !important;
+            color: var(--color-data) !important;
+        }
+
+        /* 2. 核心容器变黑 (卡片、头部、导航、弹窗、侧边栏) */
+        body.dark-mode .card-box,
+        body.dark-mode .section,
+        body.dark-mode .nav-wrapper,
+        body.dark-mode .modal-content,
+        body.dark-mode .spotlight-box,
+        body.dark-mode .side-nav,
+        body.dark-mode .control-panel,
+        body.dark-mode .upload-box,
+        body.dark-mode header,
+        body.dark-mode .teacher-card,
+        body.dark-mode .mob-card,
+        body.dark-mode .sub-header {
+            background: var(--bg-card) !important;
+            backdrop-filter: none !important;
+            /* 彻底移除性能消耗极大的毛玻璃 */
+            border: 1px solid var(--border) !important;
+            box-shadow: none !important;
+            color: var(--color-data) !important;
+        }
+
+        /* 3. 字体反白 (由暗色模式全局变量控制，只需补充特定元素) */
+        body.dark-mode .nav-cat-item,
+        body.dark-mode .side-nav-link,
+        body.dark-mode h1,
+        body.dark-mode h2,
+        body.dark-mode h3 {
+            color: var(--color-data) !important;
+        }
+
+        body.dark-mode .text-gray,
+        body.dark-mode small,
+        body.dark-mode .nav-link {
+            color: var(--secondary) !important;
+        }
+
+        /* 4. 输入框、下拉框：深灰底白字 */
+        body.dark-mode input,
+        body.dark-mode select,
+        body.dark-mode textarea {
+            background-color: transparent !important;
+            border: 1px solid var(--border) !important;
+            color: var(--color-data) !important;
+        }
+
+        body.dark-mode input:focus,
+        body.dark-mode select:focus {
+            border-color: var(--primary) !important;
+            background-color: var(--primary-light) !important;
+        }
+
+        /* 5. 按钮：微调 */
+        body.dark-mode .btn:not(.btn-primary):not(.btn-danger):not(.btn-success) {
+            background-color: transparent !important;
+            border: 1px solid var(--border) !important;
+            color: var(--color-data) !important;
+        }
+
+        /* 6. 表格特殊处理 */
+        body.dark-mode thead th {
+            background-color: transparent !important;
+            color: var(--secondary) !important;
+            border-bottom: 1px solid var(--border) !important;
+        }
+
+        body.dark-mode td {
+            border-bottom: 1px solid var(--border) !important;
+            color: var(--color-data) !important;
+        }
+
+        /* 冻结列背景必须变黑 */
+        body.dark-mode table th:first-child,
+        body.dark-mode table td:first-child {
+            background: var(--bg-card) !important;
+            border-right: 1px solid var(--border) !important;
+        }
+
+        body.dark-mode tbody tr:hover td {
+            background-color: var(--primary-light) !important;
+        }
+
+        /* 7. 导航栏激活状态 */
+        body.dark-mode .nav-cat-item.active,
+        body.dark-mode .nav-link.active,
+        body.dark-mode .side-nav-link.active {
+            background-color: transparent !important;
+            color: var(--color-data) !important;
+            box-shadow: none !important;
+            border-bottom-color: var(--primary) !important;
+        }
+
+        /* 8. 去除白色背景的补丁 */
+        body.dark-mode .bg-gray-50,
+        body.dark-mode .bg-white {
+            background-color: transparent !important;
+        }
+
+        /* ================== 3. 字体层级与间距优化 (Typography & Spacing) ================== */
+
+        /* A. 增加表格舒适度 (Loose Display) */
+        td,
+        th {
+            padding: 14px 12px !important;
+            /* 增加上下内边距，让数据不拥挤 */
+            font-size: 13px !important;
+            /* 稍微调小字号，显得更精致 */
+        }
+
+        /* B. 强调数字列字体 (Tabular Nums) */
+        /* 从第3列开始通常是数字，使用等宽字体对齐更整齐 */
+        td:nth-child(n+3) {
+            font-family: "Cascadia Code", "Consolas", "Roboto Mono", "Menlo", monospace !important;
+            letter-spacing: -0.5px;
+            /* 数字稍微紧凑一点 */
+            font-feature-settings: "tnum";
+            /* 开启等宽数字特性 */
+        }
+
+        /* C. 模块标题增加呼吸感 */
+        .sec-head {
+            margin-bottom: 25px !important;
+            padding-bottom: 15px !important;
+            border-bottom-width: 1px !important;
+            /* 细线更现代 */
+        }
+
+        /* D. 优化卡片内间距 */
+        .card-box,
+        .section {
+            padding: 25px !important;
+            /* 加大卡片内边距 */
+        }
+
+        /* E. 优化统计数字字重 */
+        .stat-value,
+        .fb-val,
+        .total-val {
+            font-weight: 700 !important;
+            letter-spacing: -1px !important;
+            /* 大数字紧凑更具张力 */
+        }
+
+        /* ================== 4. 骨架屏加载效果 (Skeleton Loading) ================== */
+
+        /* A. 定义微光流体动画 (Shimmer Animation) */
+        @keyframes skeleton-shimmer {
+            0% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0 50%;
+            }
+        }
+
+        /* B. 表格加载态容器 */
+        /* 当给 table 或 div 加上 class="loading-mask" 时触发 */
+        .loading-mask {
+            position: relative;
+            pointer-events: none;
+            /* 禁止点击 */
+            min-height: 200px;
+        }
+
+        /* C. 覆盖在内容上的骨架层 */
+        .loading-mask::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            /* 浅色模式下的骨架背景：灰白相间流光 */
+            background: linear-gradient(90deg,
+                    rgba(255, 255, 255, 0) 0%,
+                    rgba(255, 255, 255, 0.8) 20%,
+                    rgba(240, 240, 240, 0.9) 50%,
+                    rgba(255, 255, 255, 0.8) 80%,
+                    rgba(255, 255, 255, 0) 100%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.5s infinite linear;
+            backdrop-filter: blur(2px);
+            /* 轻微模糊底层文字 */
+            border-radius: 8px;
+        }
+
+        /* D. 针对表格行的条纹骨架 (更逼真) */
+        /* 自动匹配空表格或加载中的表格 */
+        .loading-mask tbody tr td {
+            position: relative;
+            color: transparent !important;
+            /* 隐藏真实文字 */
+        }
+
+        .loading-mask tbody tr td::before {
+            content: "";
+            position: absolute;
+            top: 12px;
+            bottom: 12px;
+            left: 10px;
+            right: 10px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            /* 骨架条的微光效果 */
+            background-image: linear-gradient(90deg,
+                    rgba(255, 255, 255, 0) 0,
+                    rgba(255, 255, 255, 0.5) 20%,
+                    rgba(255, 255, 255, 0.8) 60%,
+                    rgba(255, 255, 255, 0));
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 2s infinite linear;
+        }
+
+        /* E. 深色模式适配 (Dark Mode Skeleton) */
+        body.dark-mode .loading-mask::after {
+            /* 深色模式下的流光：深灰到黑 */
+            background: linear-gradient(90deg,
+                    rgba(30, 30, 30, 0) 0%,
+                    rgba(50, 50, 50, 0.5) 50%,
+                    rgba(30, 30, 30, 0) 100%);
+        }
+
+        body.dark-mode .loading-mask tbody tr td::before {
+            background: #2d2d2d;
+            /* 深色骨架条底色 */
+            background-image: linear-gradient(90deg,
+                    rgba(255, 255, 255, 0) 0,
+                    rgba(255, 255, 255, 0.05) 50%,
+                    rgba(255, 255, 255, 0));
+        }
+
+        /* ================== 5. 移动端底部导航质感增强 (Mobile Glassmorphism) ================== */
+        @media screen and (max-width: 768px) {
+            .mob-bottom-nav {
+                background: rgba(255, 255, 255, 0.85) !important;
+                /* 高透白 */
+                backdrop-filter: blur(20px) saturate(180%) !important;
+                /* iOS 风格毛玻璃 */
+                -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+                border-top: 1px solid rgba(0, 0, 0, 0.05) !important;
+                box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.05) !important;
+                /* 适配全面屏底部横条 (Safe Area) */
+                padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
+                height: auto !important;
+                min-height: 65px;
+                z-index: 99999 !important;
+                /* 确保最顶层 */
+            }
+
+            .mob-nav-item {
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                opacity: 0.6;
+                padding-top: 8px;
+            }
+
+            .mob-nav-item.active {
+                color: #0067c0 !important;
+                opacity: 1;
+                transform: translateY(-2px);
+                /* 选中微浮动 */
+            }
+
+            /* 选中时图标加个胶囊微光背景 */
+            .mob-nav-item.active i {
+                background: rgba(0, 103, 192, 0.1);
+                border-radius: 16px;
+                padding: 6px 20px;
+                margin-bottom: 2px;
+                transition: 0.3s;
+            }
+
+            /* --- 深色模式适配 (Dark Mode Mobile Nav) --- */
+            body.dark-mode .mob-bottom-nav {
+                background: rgba(30, 30, 30, 0.85) !important;
+                border-top-color: rgba(255, 255, 255, 0.1) !important;
+                box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.5) !important;
+            }
+
+            body.dark-mode .mob-nav-item {
+                color: #a0a0a0 !important;
+            }
+
+            body.dark-mode .mob-nav-item.active {
+                color: #3b82f6 !important;
+            }
+
+            body.dark-mode .mob-nav-item.active i {
+                background: rgba(59, 130, 246, 0.25);
+                color: #ffffff !important;
+                box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+            }
+        }

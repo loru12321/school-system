@@ -36,6 +36,9 @@ const teacherAnalysisBridgeRuntimePath = path.resolve(__dirname, '../public/asse
 const mobileManagerRuntimePath = path.resolve(__dirname, '../public/assets/js/mobile-manager.js');
 const dataManagerSqlRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-sql.js');
 const reportRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/report-render-runtime.js');
+const reportChartRuntimePath = path.resolve(__dirname, '../public/assets/js/report-chart-runtime.js');
+const reportExportRuntimePath = path.resolve(__dirname, '../public/assets/js/report-export-runtime.js');
+const reportAiRuntimePath = path.resolve(__dirname, '../public/assets/js/report-ai-runtime.js');
 const studentCompareGenerateRuntimePath = path.resolve(__dirname, '../public/assets/js/student-compare-generate-runtime.js');
 const studentCompareResultRuntimePath = path.resolve(__dirname, '../public/assets/js/student-compare-result-runtime.js');
 const studentCompareCloudRuntimePath = path.resolve(__dirname, '../public/assets/js/student-compare-cloud-runtime.js');
@@ -77,6 +80,9 @@ assert.ok(fs.existsSync(teacherAnalysisBridgeRuntimePath), 'teacher-analysis-bri
 assert.ok(fs.existsSync(mobileManagerRuntimePath), 'mobile-manager.js should exist');
 assert.ok(fs.existsSync(dataManagerSqlRuntimePath), 'data-manager-sql.js should exist');
 assert.ok(fs.existsSync(reportRenderRuntimePath), 'report-render-runtime.js should exist');
+assert.ok(fs.existsSync(reportChartRuntimePath), 'report-chart-runtime.js should exist');
+assert.ok(fs.existsSync(reportExportRuntimePath), 'report-export-runtime.js should exist');
+assert.ok(fs.existsSync(reportAiRuntimePath), 'report-ai-runtime.js should exist');
 assert.ok(fs.existsSync(studentCompareGenerateRuntimePath), 'student-compare-generate-runtime.js should exist');
 assert.ok(fs.existsSync(studentCompareResultRuntimePath), 'student-compare-result-runtime.js should exist');
 assert.ok(fs.existsSync(studentCompareCloudRuntimePath), 'student-compare-cloud-runtime.js should exist');
@@ -132,6 +138,9 @@ const teachingManagementRef = './assets/js/teaching-management-runtime.js';
 const mobileManagerRef = './assets/js/mobile-manager.js';
 const dataManagerSqlRef = './assets/js/data-manager-sql.js';
 const reportRenderRef = './assets/js/report-render-runtime.js';
+const reportChartRef = './assets/js/report-chart-runtime.js';
+const reportExportRef = './assets/js/report-export-runtime.js';
+const reportAiRef = './assets/js/report-ai-runtime.js';
 const studentCompareGenerateRef = './assets/js/student-compare-generate-runtime.js';
 const studentCompareResultRef = './assets/js/student-compare-result-runtime.js';
 const studentCompareCloudRef = './assets/js/student-compare-cloud-runtime.js';
@@ -233,6 +242,9 @@ assert.ok(bootRuntime.includes(singleSchoolEvalRef), 'boot-runtime.js should ref
 assert.ok(bootRuntime.includes(aiHubRef), 'boot-runtime.js should reference ai-hub-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(schoolProfileRef), 'boot-runtime.js should reference school-profile-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(teachingManagementRef), 'boot-runtime.js should reference teaching-management-runtime.js for lazy loading');
+assert.ok(bootRuntime.includes(reportChartRef), 'boot-runtime.js should reference report-chart-runtime.js for lazy loading');
+assert.ok(bootRuntime.includes(reportExportRef), 'boot-runtime.js should reference report-export-runtime.js for lazy loading');
+assert.ok(bootRuntime.includes(reportAiRef), 'boot-runtime.js should reference report-ai-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(alasqlVendorRef), 'boot-runtime.js should reference alasql.min.js for lazy loading');
 assert.ok(bootRuntime.includes(jspdfVendorRef), 'boot-runtime.js should reference jspdf.umd.min.js for lazy loading');
 assert.ok(bootRuntime.includes(html2canvasVendorRef), 'boot-runtime.js should reference html2canvas.min.js for lazy loading');
@@ -317,6 +329,9 @@ assert.ok(indexHtml.includes(tablerIconsRef), 'index.html should load local tabl
     mobileManagerRef,
     dataManagerSqlRef,
     reportRenderRef,
+    reportChartRef,
+    reportExportRef,
+    reportAiRef,
     teacherAnalysisCoreRef,
     teacherAnalysisUiRef,
     teacherAnalysisBridgeRef,

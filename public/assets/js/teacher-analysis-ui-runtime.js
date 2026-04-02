@@ -422,6 +422,31 @@
         container.innerHTML = tableHtml;
     }
 
+    function ensureTeacherModalDom() {
+        if (typeof window.ensureLazySectionLoaded === 'function') {
+            window.ensureLazySectionLoaded('teacherModal');
+        }
+        return document.getElementById('teacherModal');
+    }
+
+    function bindTeacherModalEvents() {
+        if (window.__TEACHER_ANALYSIS_MODAL_BOUND__) return true;
+        const modal = ensureTeacherModalDom();
+        const closeButton = document.getElementById('closeModal');
+        if (!modal || !closeButton) return false;
+
+        closeButton.addEventListener('click', () => {
+            const currentModal = document.getElementById('teacherModal');
+            if (currentModal) currentModal.style.display = 'none';
+        });
+        window.addEventListener('click', (event) => {
+            const currentModal = document.getElementById('teacherModal');
+            if (currentModal && event.target === currentModal) currentModal.style.display = 'none';
+        });
+        window.__TEACHER_ANALYSIS_MODAL_BOUND__ = true;
+        return true;
+    }
+
     function showTeacherDetailsV2(teacher, subject) {
         const stats = getTeacherStats();
         const data = stats[teacher] ? stats[teacher][subject] : null;
@@ -429,7 +454,8 @@
             if (window.UI) window.UI.toast('当前筛选范围下暂无该教师该学科数据', 'warning');
             return;
         }
-        const modal = document.getElementById('teacherModal');
+        bindTeacherModalEvents();
+        const modal = ensureTeacherModalDom();
         const table = document.getElementById('modalSubjectTable');
         const progressEl = document.getElementById('modalAvgProgress');
         if (!modal || !table || !progressEl) return;
@@ -638,20 +664,7 @@
         window.XLSX.writeFile(workbook, `教师公平绩效明细_${exportTag}.xlsx`);
     }
 
-    if (!window.__TEACHER_ANALYSIS_MODAL_BOUND__) {
-        const closeButton = document.getElementById('closeModal');
-        if (closeButton) {
-            closeButton.addEventListener('click', () => {
-                const modal = document.getElementById('teacherModal');
-                if (modal) modal.style.display = 'none';
-            });
-        }
-        window.addEventListener('click', (event) => {
-            const modal = document.getElementById('teacherModal');
-            if (modal && event.target === modal) modal.style.display = 'none';
-        });
-        window.__TEACHER_ANALYSIS_MODAL_BOUND__ = true;
-    }
+    bindTeacherModalEvents();
 
     Object.assign(window, {
         renderTeacherTownshipRanking,

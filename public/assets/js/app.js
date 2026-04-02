@@ -9880,6 +9880,13 @@ function switchTab(id) {
     }
 }
 
+function ensureDrillModalDom() {
+    if (typeof window.ensureLazySectionLoaded === 'function') {
+        window.ensureLazySectionLoaded('drill-modal');
+    }
+    return document.getElementById('drill-modal');
+}
+
 const DrillSystem = {
     history: [], // 导航历史栈
     currentData: null, // 当前暂存数据
@@ -9887,6 +9894,7 @@ const DrillSystem = {
 
     // 1. 打开入口
     open: function (title, studentList, scoreLabel = "总分") {
+        ensureDrillModalDom();
         this.history = []; // 清空历史
         this.currentData = { title, list: studentList, scoreLabel };
 
@@ -13456,6 +13464,7 @@ function analyzeTargetGap(schoolName, type, lineScore) {
     html += `</tbody></table></div>`;
 
     // 8. 调用通用弹窗显示
+    ensureDrillModalDom();
     document.getElementById('drill-title').innerText = title;
     document.getElementById('drill-back-btn').classList.add('hidden');
     document.getElementById('drill-content').innerHTML = html;

@@ -8,6 +8,32 @@
         'teaching-rectify-center',
         'teaching-version-center'
     ]);
+    const TEACHER_INSIGHT_MODULE_IDS = new Set([
+        'teacher-analysis',
+        'cohort-growth'
+    ]);
+
+    function ensureModuleStylesFor(id) {
+        if (typeof window.ensureOptionalStylesheetLoaded !== 'function') return Promise.resolve();
+        const loaders = [];
+
+        if (TEACHING_MANAGEMENT_MODULE_IDS.has(id)) {
+            loaders.push(window.ensureOptionalStylesheetLoaded(
+                'teaching-management-module',
+                './assets/css/teaching-management-module.css'
+            ));
+        }
+
+        if (TEACHER_INSIGHT_MODULE_IDS.has(id)) {
+            loaders.push(window.ensureOptionalStylesheetLoaded(
+                'teacher-insights-module',
+                './assets/css/teacher-insights-module.css'
+            ));
+        }
+
+        if (!loaders.length) return Promise.resolve();
+        return Promise.all(loaders).then(() => undefined);
+    }
 
     function activateTeachingManagementModule(id) {
         if (id === 'teaching-overview') {
@@ -234,6 +260,9 @@
     }
 
     function initTeacherAnalysisEntry() {
+        if (typeof window.ensureLazySectionLoaded === 'function') {
+            window.ensureLazySectionLoaded('teacherModal');
+        }
         if (window.DataManager && typeof DataManager.ensureTeacherMap === 'function') {
             DataManager.ensureTeacherMap(true);
         }
@@ -411,18 +440,21 @@
 
         syncModuleEnterChrome(context);
 
-        try {
-            const result = runModuleSpecificInit(id);
-            if (['teacher-analysis', 'class-comparison', 'class-diagnosis', 'single-school-eval'].includes(id)) {
-                setTimeout(() => {
-                    if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars();
-                }, 0);
-            }
-            return Promise.resolve(result);
-        } catch (error) {
-            console.error('runModuleTabEnter failed:', error);
-            return Promise.reject(error);
-        }
+        return Promise.resolve()
+            .then(() => ensureModuleStylesFor(id))
+            .then(() => {
+                const result = runModuleSpecificInit(id);
+                if (['teacher-analysis', 'class-comparison', 'class-diagnosis', 'single-school-eval'].includes(id)) {
+                    setTimeout(() => {
+                        if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars();
+                    }, 0);
+                }
+                return result;
+            })
+            .catch((error) => {
+                console.error('runModuleTabEnter failed:', error);
+                return Promise.reject(error);
+            });
     };
 
     window.activateTeachingManagementModule = activateTeachingManagementModule;
