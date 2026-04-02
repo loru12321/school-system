@@ -15,6 +15,8 @@ async function main() {
         '<style media="print">.box {\n  padding: 4px 8px;\n}\n</style>',
         '<script>const value = 1 + 2;\nwindow.answer = value;\n</script>',
         '<script defer>function named () { return 42; }\nwindow.named = named;\n</script>',
+        '<script type="text/html" id="card-template">\n  <!-- keep structure only -->\n  <div class="card">\n    <span> hi </span>\n  </div>\n</script>',
+        '<script type="application/json" id="payload">{\n  \"enabled\": true,\n  \"items\": [1, 2, 3]\n}</script>',
         '<script src="./assets/js/app.js"></script>',
         '</body></html>'
     ].join('');
@@ -27,6 +29,8 @@ async function main() {
     assert.ok(/<style media="print">\.box\{padding:4px 8px\}\s*<\/style>/.test(output), 'should preserve style tag attributes while minifying');
     assert.ok(/<script>const value=3;window\.answer=3;\s*<\/script>/.test(output), 'should minify plain inline scripts');
     assert.ok(/<script defer>function named\(\)\{return 42\}window\.named=named;\s*<\/script>/.test(output), 'should preserve attributes while minifying');
+    assert.ok(output.includes('<script type="text/html" id="card-template"><div class="card"><span> hi </span></div></script>'), 'should minify html template scripts as html fragments');
+    assert.ok(output.includes('<script type="application/json" id="payload">{\n  \"enabled\": true,\n  \"items\": [1, 2, 3]\n}</script>'), 'should leave non-javascript inline scripts untouched');
     assert.ok(output.includes('<script src="./assets/js/app.js"></script>'), 'should keep external scripts untouched');
 
     console.log('optimize-dist-html tests passed');

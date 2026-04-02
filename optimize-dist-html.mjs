@@ -7,11 +7,52 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const distIndexPath = path.join(__dirname, 'dist', 'index.html');
 
+function normalizeScriptType(attrs) {
+    const attrText = String(attrs || '');
+    const match = attrText.match(/\btype\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+    return String(match?.[1] || match?.[2] || match?.[3] || '').trim().toLowerCase();
+}
+
+function isJavaScriptScriptType(type) {
+    return !type
+        || type === 'module'
+        || type === 'text/javascript'
+        || type === 'application/javascript'
+        || type === 'application/ecmascript'
+        || type === 'text/ecmascript';
+}
+
+function isHtmlTemplateScriptType(type) {
+    return type === 'text/html' || type === 'text/x-template';
+}
+
+function optimizeHtmlFragment(html) {
+    return collapseInterTagWhitespace(
+        stripHtmlComments(
+            minifyInlineStyles(String(html || ''))
+        )
+    );
+}
+
 export function minifyInlineScripts(html) {
     const inlineScriptRegex = /<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/gi;
     return String(html || '').replace(inlineScriptRegex, (match, attrs, content) => {
         const code = String(content || '');
         if (!code.trim()) return match;
+        const normalizedAttrs = String(attrs || '').trim();
+        const scriptType = normalizeScriptType(normalizedAttrs);
+
+        if (isHtmlTemplateScriptType(scriptType)) {
+            const optimized = optimizeHtmlFragment(code);
+            return normalizedAttrs
+                ? `<script ${normalizedAttrs}>${optimized}</script>`
+                : `<script>${optimized}</script>`;
+        }
+
+        if (!isJavaScriptScriptType(scriptType)) {
+            return match;
+        }
+
         try {
             const result = transformSync(code, {
                 loader: 'js',
@@ -20,7 +61,6 @@ export function minifyInlineScripts(html) {
                 charset: 'utf8',
                 target: 'es2018'
             });
-            const normalizedAttrs = String(attrs || '').trim();
             return normalizedAttrs
                 ? `<script ${normalizedAttrs}>${result.code}</script>`
                 : `<script>${result.code}</script>`;
