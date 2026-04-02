@@ -7,7 +7,7 @@
             eyebrow: 'Setup Flow',
             summary: '先把届别、数据、权限和参数校准，再进入分析与执行链路。',
             items: [
-                { id: 'starter-hub', icon: 'ti-rocket', text: '新手入口与诊断', hint: '完成初始化检查，快速确认系统是否已经进入可分析状态。' },
+                { id: 'starter-hub', icon: 'ti-rocket', text: '新手入口与诊断', hint: '完成初始化检查，快速确认系统已经进入可分析状态。' },
                 { id: 'upload', icon: 'ti-database-import', text: '数据上传与设置', hint: '管理数据导入、映射、科目与基础配置。' }
             ]
         },
@@ -16,14 +16,14 @@
             color: '#b45309',
             icon: 'ti-trophy',
             eyebrow: 'Insight Deck',
-            summary: '像看频道总后台一样先看总榜、亮点、风险和关键层次位次。',
+            summary: '先看总览、亮点、风险和关键位次，再拆细到指标与群体。',
             items: [
-                { id: 'summary', icon: 'ti-report', text: '综合评价总榜', hint: '先看全局排名、梯队分布和学校位置。' },
-                { id: 'analysis', icon: 'ti-chart-pie', text: '两率一分(横向)', hint: '用横向口径查看重点率、及格率和均分变化。' },
-                { id: 'macro-watch', icon: 'ti-alert-triangle', text: '预警与亮点看板', hint: '把风险点和高表现项目收敛到一张处置板。' },
+                { id: 'summary', icon: 'ti-report', text: '综合评价总览', hint: '先看全局排名、梯队分布和学校站位。' },
+                { id: 'analysis', icon: 'ti-chart-pie', text: '两率一分(横向)', hint: '从横向口径查看重点率、及格率和均分变化。' },
+                { id: 'macro-watch', icon: 'ti-alert-triangle', text: '预警与亮点看板', hint: '把风险点和高表现项目收进同一张看板。' },
                 { id: 'high-score', icon: 'ti-trophy', text: '高分段/尖子生', hint: '追踪尖子层和高分段的规模与稳定度。' },
                 { id: 'indicator', icon: 'ti-target', text: '指标生达标核算', hint: '快速核对指标生口径、边缘人数和达标压力。' },
-                { id: 'bottom3', icon: 'ti-arrow-bar-to-down', text: '低分率/后1/3核算', hint: '定位底部群体波动，提前准备补弱动作。' }
+                { id: 'bottom3', icon: 'ti-arrow-bar-to-down', text: '低分群体/后1/3', hint: '定位底部群体波动，提前准备补弱动作。' }
             ]
         },
         class: {
@@ -36,11 +36,11 @@
                 { id: 'teaching-overview', icon: 'ti-layout-dashboard', text: '教学总览', hint: '像工作室总览页一样汇总核心状态和待办动作。' },
                 { id: 'teaching-issue-board', icon: 'ti-clipboard-list', text: '教学问题清单', hint: '集中收口课堂、成绩和流程中的异常问题。' },
                 { id: 'teaching-warning-center', icon: 'ti-alert-triangle', text: '异常预警中心', hint: '按风险等级查看当前最值得优先处理的提醒。' },
-                { id: 'teaching-rectify-center', icon: 'ti-list-check', text: '整改任务列表', hint: '将问题转成可追踪、可验收的整改任务。' },
+                { id: 'teaching-rectify-center', icon: 'ti-list-check', text: '整改任务列表', hint: '把问题转成可追踪、可验收的整改任务。' },
                 { id: 'teaching-version-center', icon: 'ti-stack-2', text: '版本归档中心', hint: '沉淀口径版本、历史决策与回滚节点。' },
                 { id: 'teacher-analysis', icon: 'ti-school', text: '教师教学质量画像', hint: '从教师视角查看贡献、波动和结构性问题。' },
                 { id: 'single-school-eval', icon: 'ti-scale', text: '绩效公平考核模型', hint: '结合口径和上下文做公平性核算。' },
-                { id: 'class-comparison', icon: 'ti-layout-columns', text: '班级横向对比', hint: '横向对比班级表现，快速识别差异来源。' },
+                { id: 'class-comparison', icon: 'ti-layout-columns', text: '班级横向对比', hint: '横向比较班级表现，快速识别差异来源。' },
                 { id: 'class-diagnosis', icon: 'ti-activity', text: '班级分化诊断(SD)', hint: '追踪班级内部离散度，判断分化是否加剧。' }
             ]
         },
@@ -49,18 +49,18 @@
             color: '#059669',
             icon: 'ti-user-scan',
             eyebrow: 'Learner Feed',
-            summary: '像刷内容流一样连续查看学生画像、成长轨迹和临界干预点。',
+            summary: '连续查看学生画像、成长轨迹和临界干预点，像刷内容流一样快速切换视角。',
             items: [
                 { id: 'zhongkao-countdown', icon: 'ti-calendar-event', text: '中考倒计时', hint: '用时间视角拉齐当前冲刺阶段和节奏。' },
                 { id: 'student-overview', icon: 'ti-layout-dashboard', text: '学情总览', hint: '先看整体学情结构、风险分层和关键信号。' },
                 { id: 'student-details', icon: 'ti-list-details', text: '学生档案查询', hint: '按学生查看成绩、班级和画像细节。' },
-                { id: 'subject-balance', icon: 'ti-scale', text: '优劣势学科透视', hint: '识别学生的拉分学科和短板学科。' },
-                { id: 'marginal-push', icon: 'ti-target-arrow', text: '临界生精准干预', hint: '锁定边缘学生，安排最值当的干预资源。' },
-                { id: 'progress-analysis', icon: 'ti-trending-up', text: '进退步/增值评价', hint: '判断学生是在稳定上行、停滞还是下滑。' },
+                { id: 'subject-balance', icon: 'ti-scale', text: '优势劣势学科透视', hint: '识别学生的拉分学科和短板学科。' },
+                { id: 'marginal-push', icon: 'ti-target-arrow', text: '临界生精准干预', hint: '锁定边缘学生，安排最值得的干预资源。' },
+                { id: 'progress-analysis', icon: 'ti-trending-up', text: '进退步/增值评价', hint: '判断学生是在稳定上行、停滞还是回落。' },
                 { id: 'cohort-growth', icon: 'ti-timeline', text: '纵向成长档案', hint: '把多次考试串成个人成长轨迹。' },
                 { id: 'potential-analysis', icon: 'ti-bulb', text: '偏科潜力挖掘', hint: '抓住潜力学科和被掩盖的提升空间。' },
                 { id: 'segment-analysis', icon: 'ti-chart-histogram', text: '分数段统计', hint: '看不同分段的人数密度和迁移趋势。' },
-                { id: 'correlation-analysis', icon: 'ti-topology-star-3', text: '学科关联度分析', hint: '判断学科间的联动和迁移机会。' },
+                { id: 'correlation-analysis', icon: 'ti-topology-star-3', text: '学科关联度分析', hint: '判断学科之间的联动和迁移机会。' },
                 { id: 'report-generator', icon: 'ti-certificate', text: '成绩单/家长查分', hint: '生成面向学生与家长的成绩反馈出口。' }
             ]
         },
@@ -82,7 +82,7 @@
             summary: '把排考、分班、排课和协作工具收进一套执行工具箱。',
             items: [
                 { id: 'exam-arranger', icon: 'ti-id-badge-2', text: '智能考场编排', hint: '生成更稳妥的考场、监考与座位安排。' },
-                { id: 'freshman-simulator', icon: 'ti-arrows-split', text: '新生均衡分班', hint: '快速模拟均衡分班方案并对比结果。' },
+                { id: 'freshman-simulator', icon: 'ti-arrows-split', text: '新生均衡分班', hint: '快速模拟均衡分班方案并比较结果。' },
                 { id: 'grade-scheduler', icon: 'ti-calendar-time', text: '级部智能排课', hint: '协同安排课程资源和排课节奏。' },
                 { id: 'seat-adjustment', icon: 'ti-armchair', text: '考后排座/互助组', hint: '考试后按策略重新排座和组织互助。' },
                 { id: 'mutual-aid', icon: 'ti-friends', text: '学科小老师分组', hint: '按学科优势自动形成互助学习小组。' }
@@ -101,6 +101,12 @@
     };
 
     let currentCategory = 'data';
+
+    function notifyShellEnhancements() {
+        if (typeof window.refreshShellEnhancements === 'function') {
+            window.refreshShellEnhancements();
+        }
+    }
 
     function toSoftColor(hex, alpha) {
         const clean = String(hex || '').replace('#', '');
@@ -218,7 +224,10 @@
         if (categoryDesc) categoryDesc.textContent = category.summary;
 
         const moduleCount = document.getElementById('shell-module-count');
-        if (moduleCount) moduleCount.textContent = `${visibleItems.length} 个模块`;
+        if (moduleCount) {
+            moduleCount.textContent = `${visibleItems.length} 个模块`;
+            moduleCount.setAttribute('data-shell-tooltip', `${category.title} 当前可见模块数：${visibleItems.length}`);
+        }
 
         const cohortSelector = document.getElementById('cohort-selector');
         const cohortChip = document.getElementById('shell-cohort-chip');
@@ -227,6 +236,7 @@
                 ? String(cohortSelector.options[cohortSelector.selectedIndex].text || '').trim()
                 : '';
             cohortChip.textContent = selectedText || '届别未选择';
+            cohortChip.setAttribute('data-shell-tooltip', `当前届别：${cohortChip.textContent}`);
         }
 
         const modeChip = document.getElementById('shell-mode-chip');
@@ -234,6 +244,7 @@
             const modeBadge = document.getElementById('mode-badge');
             const modeText = modeBadge ? String(modeBadge.textContent || '').trim() : '';
             modeChip.textContent = modeText ? `${modeText} 模式` : '模式待加载';
+            modeChip.setAttribute('data-shell-tooltip', `当前模式：${modeChip.textContent}`);
         }
 
         const roleText = `角色：${resolveRoleLabel()}`;
@@ -241,13 +252,24 @@
         if (roleHint) roleHint.textContent = roleText;
 
         const rolePill = document.getElementById('shell-role-pill');
-        if (rolePill) rolePill.textContent = roleText;
+        if (rolePill) {
+            rolePill.textContent = roleText;
+            rolePill.setAttribute('data-shell-tooltip', roleText);
+        }
 
         const activeModule = document.getElementById('shell-active-module');
-        if (activeModule) activeModule.textContent = activeTitle;
+        if (activeModule) {
+            activeModule.textContent = activeTitle;
+            activeModule.setAttribute('data-shell-tooltip', `当前焦点：${activeTitle}`);
+        }
 
         const activeHintEl = document.getElementById('shell-active-hint');
-        if (activeHintEl) activeHintEl.textContent = activeHint || category.summary;
+        if (activeHintEl) {
+            activeHintEl.textContent = activeHint || category.summary;
+            activeHintEl.setAttribute('data-shell-tooltip', activeHintEl.textContent);
+        }
+
+        notifyShellEnhancements();
     }
 
     function renderNavigation() {
@@ -272,6 +294,8 @@
             item.className = 'sidebar-menu-item';
             if (key === currentCategory) item.classList.add('active');
             item.title = category.title;
+            item.setAttribute('data-shell-summary', category.summary || category.title);
+            item.setAttribute('data-shell-tooltip', category.summary || category.title);
             item.style.setProperty('--nav-accent', category.color);
             item.style.setProperty('--accent-soft', toSoftColor(category.color, 0.14));
             item.style.setProperty('--accent-ring', toSoftColor(category.color, 0.20));
@@ -307,6 +331,7 @@
 
         renderSubNavigation();
         updateShellChrome();
+        notifyShellEnhancements();
     }
 
     function renderSubNavigation() {
@@ -330,6 +355,7 @@
             const card = document.createElement('div');
             card.className = 'shell-story-card';
             card.title = item.text;
+            card.setAttribute('data-shell-tooltip', item.hint || item.text);
             card.style.setProperty('--nav-accent', category.color);
             card.style.setProperty('--accent-soft', toSoftColor(category.color, 0.10));
 
@@ -370,6 +396,7 @@
         }, 100);
 
         updateShellChrome(activeSectionId);
+        notifyShellEnhancements();
     }
 
     function switchCategory(key) {

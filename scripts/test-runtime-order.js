@@ -24,6 +24,7 @@ const accountAdminRuntimePath = path.resolve(__dirname, '../public/assets/js/acc
 const historyCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/history-compare-runtime.js');
 const perfMobileRuntimePath = path.resolve(__dirname, '../public/assets/js/perf-mobile-runtime.js');
 const shellRuntimePath = path.resolve(__dirname, '../public/assets/js/shell-runtime.js');
+const shellPolishRuntimePath = path.resolve(__dirname, '../public/assets/js/shell-polish-runtime.js');
 const singleSchoolEvalRuntimePath = path.resolve(__dirname, '../public/assets/js/single-school-eval-runtime.js');
 const aiHubRuntimePath = path.resolve(__dirname, '../public/assets/js/ai-hub-runtime.js');
 const schoolProfileRuntimePath = path.resolve(__dirname, '../public/assets/js/school-profile-runtime.js');
@@ -60,6 +61,7 @@ assert.ok(fs.existsSync(accountAdminRuntimePath), 'account-admin-runtime.js shou
 assert.ok(fs.existsSync(historyCompareRuntimePath), 'history-compare-runtime.js should exist');
 assert.ok(fs.existsSync(perfMobileRuntimePath), 'perf-mobile-runtime.js should exist');
 assert.ok(fs.existsSync(shellRuntimePath), 'shell-runtime.js should exist');
+assert.ok(fs.existsSync(shellPolishRuntimePath), 'shell-polish-runtime.js should exist');
 assert.ok(fs.existsSync(singleSchoolEvalRuntimePath), 'single-school-eval-runtime.js should exist');
 assert.ok(fs.existsSync(aiHubRuntimePath), 'ai-hub-runtime.js should exist');
 assert.ok(fs.existsSync(schoolProfileRuntimePath), 'school-profile-runtime.js should exist');
@@ -105,6 +107,7 @@ const progressAnalysisRef = './assets/js/progress-analysis-runtime.js';
 const teacherAnalysisMainRef = './assets/js/teacher-analysis-main-runtime.js';
 const cloudWorkspaceRef = './assets/js/cloud-workspace-runtime.js';
 const shellRuntimeRef = './assets/js/shell-runtime.js';
+const shellPolishRuntimeRef = './assets/js/shell-polish-runtime.js';
 const cloudRef = './assets/js/cloud.js';
 const appRef = './assets/js/app.js';
 const accountAdminRef = './assets/js/account-admin-runtime.js';
@@ -140,6 +143,11 @@ const jszipVendorRef = './assets/vendor/jszip/jszip.min.js';
 const pptxgenVendorRef = './assets/vendor/pptxgenjs/pptxgen.min.js';
 const alasqlVendorRef = './assets/vendor/alasql/alasql.min.js';
 const sweetalertVendorRef = './assets/vendor/sweetalert2/sweetalert2.all.min.js';
+const gsapVendorRef = './assets/vendor/gsap/gsap.min.js';
+const scrollTriggerVendorRef = './assets/vendor/gsap/ScrollTrigger.min.js';
+const popperVendorRef = './assets/vendor/popperjs/popper.min.js';
+const tippyVendorRef = './assets/vendor/tippyjs/tippy.umd.min.js';
+const simplebarVendorRef = './assets/vendor/simplebar/simplebar.min.js';
 const jspdfVendorRef = './assets/vendor/jspdf/jspdf.umd.min.js';
 const html2canvasVendorRef = './assets/vendor/html2canvas/html2canvas.min.js';
 
@@ -170,8 +178,11 @@ const progressAnalysisIndex = indexHtml.indexOf(progressAnalysisRef);
 const cloudIndex = indexHtml.indexOf(cloudRef);
 const cloudWorkspaceIndex = indexHtml.indexOf(cloudWorkspaceRef);
 const shellRuntimeIndex = indexHtml.indexOf(shellRuntimeRef);
+const shellPolishRuntimeIndex = indexHtml.indexOf(shellPolishRuntimeRef);
 const appIndex = indexHtml.indexOf(appRef);
 const bootRuntimeIndex = indexHtml.indexOf(bootRuntimeRef);
+const popperVendorIndex = indexHtml.indexOf(popperVendorRef);
+const tippyVendorIndex = indexHtml.indexOf(tippyVendorRef);
 const accountAdminIndex = indexHtml.indexOf(accountAdminRef);
 const historyCompareIndex = indexHtml.indexOf(historyCompareRef);
 const perfMobileIndex = indexHtml.indexOf(perfMobileRef);
@@ -197,6 +208,7 @@ assert.ok(compareSelectorsIndex >= 0, 'index.html should load compare-selectors-
 assert.ok(cloudIndex >= 0, 'index.html should load cloud.js');
 assert.ok(cloudWorkspaceIndex >= 0, 'index.html should load cloud-workspace-runtime.js');
 assert.ok(shellRuntimeIndex >= 0, 'index.html should load shell-runtime.js');
+assert.ok(shellPolishRuntimeIndex >= 0, 'index.html should load shell-polish-runtime.js');
 assert.ok(appIndex >= 0, 'index.html should load app.js');
 assert.ok(bootRuntime.includes(progressAnalysisRef), 'boot-runtime.js should reference progress-analysis-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(teacherAnalysisMainRef), 'boot-runtime.js should reference teacher-analysis-main-runtime.js for lazy loading');
@@ -236,6 +248,7 @@ assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign swi
     cloudRef,
     cloudWorkspaceRef,
     shellRuntimeRef,
+    shellPolishRuntimeRef,
     appRef,
     compareCloudContextRef,
     compareExamSyncRef,
@@ -261,7 +274,12 @@ assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign swi
 
 [
     jszipVendorRef,
-    pptxgenVendorRef
+    pptxgenVendorRef,
+    gsapVendorRef,
+    scrollTriggerVendorRef,
+    popperVendorRef,
+    tippyVendorRef,
+    simplebarVendorRef
 ].forEach((src) => {
     const scriptTag = findScriptTag(indexHtml, src);
     assert.ok(scriptTag, `index.html should contain a script tag for ${src}`);
@@ -347,5 +365,8 @@ assert.ok(bootRuntimeIndex < authStateIndex, 'boot-runtime.js should load before
 assert.ok(authStateIndex < cloudWorkspaceIndex, 'auth-state-runtime.js must load before cloud-workspace-runtime.js');
 assert.ok(authStateIndex < appIndex, 'auth-state-runtime.js must load before app.js');
 assert.ok(shellRuntimeIndex < appIndex, 'shell-runtime.js must load before app.js');
+assert.ok(shellRuntimeIndex < shellPolishRuntimeIndex, 'shell-runtime.js must load before shell-polish-runtime.js');
+assert.ok(shellPolishRuntimeIndex < appIndex, 'shell-polish-runtime.js must load before app.js');
+assert.ok(popperVendorIndex < tippyVendorIndex, 'popper.min.js must load before tippy.umd.min.js');
 
 console.log('runtime order tests passed');

@@ -6,7 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <link rel="icon" href="./favicon.ico?v=20260321-localgrades-v4" sizes="any">
     <link rel="stylesheet" href="/assets/vendor/tabler-icons/tabler-icons.min.css">
-    <link rel="stylesheet" href="./assets/css/main.css">
+    <link rel="stylesheet" href="./assets/css/main.css?v=20260402-plugin-v1">
+    <link rel="stylesheet" href="./assets/vendor/tippyjs/tippy.css?v=20260402-plugin-v1">
+    <link rel="stylesheet" href="./assets/vendor/simplebar/simplebar.min.css?v=20260402-plugin-v1">
     <script defer src="./assets/js/boot-runtime.js"></script>
     <script defer src="./assets/vendor/supabase/supabase.min.js" onload="window.initSupabase()"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
@@ -23,6 +25,11 @@
     <script defer src="./assets/vendor/pptxgenjs/pptxgen.min.js"></script>
     <!-- 🟢 [修复] 添加 SweetAlert2（Swal 依赖） -->
     <script async src="./assets/vendor/sweetalert2/sweetalert2.all.min.js"></script>
+    <script defer src="./assets/vendor/gsap/gsap.min.js?v=20260402-plugin-v1"></script>
+    <script defer src="./assets/vendor/gsap/ScrollTrigger.min.js?v=20260402-plugin-v1"></script>
+    <script defer src="./assets/vendor/popperjs/popper.min.js?v=20260402-plugin-v1"></script>
+    <script defer src="./assets/vendor/tippyjs/tippy.umd.min.js?v=20260402-plugin-v1"></script>
+    <script defer src="./assets/vendor/simplebar/simplebar.min.js?v=20260402-plugin-v1"></script>
     <script defer src="./assets/js/auth-state-runtime.js?v=20260322-school-v1"></script>
     <script defer src="./assets/js/workspace-state-runtime.js?v=20260322-school-v1"></script>
     <script defer src="./assets/js/exam-state-runtime.js?v=20260322-school-v1"></script>
@@ -3763,7 +3770,7 @@
                 </div>
             </div>
 
-            <div class="sidebar-workbench-card">
+            <div class="sidebar-workbench-card" data-shell-tooltip="把数据流、教学流和执行流收进同一条生产线，像运营频道一样看全局节奏。">
                 <span class="sidebar-workbench-kicker">Creator Studio</span>
                 <strong>把数据流、教学流和执行流像频道运营一样收进同一条生产线。</strong>
                 <div class="sidebar-workbench-pills">
@@ -3853,7 +3860,8 @@
 
                 <!-- 中间: 搜索框 (You-Tube Style) -->
                 <div class="toolbar-center shell-toolbar-panel shell-toolbar-panel--search">
-                    <div id="global-search-container" onclick="openSpotlight()">
+                    <div id="global-search-container" onclick="openSpotlight()"
+                        data-shell-tooltip="搜索组件、报表和功能入口，支持 Alt+K 快速打开。">
                         <div class="search-input-wrapper">
                             <input type="text" placeholder="全局搜索组件、报表、功能 (Alt+K)" readonly>
                         </div>
@@ -7754,7 +7762,8 @@
     <!-- 核心逻辑脚本 -->
 <script defer src="./assets/js/config-transfer-runtime.js?v=20260329-config-transfer-v1"></script>
 <script defer src="./assets/js/zhongkao-countdown-runtime.js?v=20260329-zhongkao-countdown-v1"></script>
-<script defer src="./assets/js/shell-runtime.js?v=20260402-shell-v1"></script>
+<script defer src="./assets/js/shell-runtime.js?v=20260402-shell-v2"></script>
+<script defer src="./assets/js/shell-polish-runtime.js?v=20260402-plugin-v1"></script>
 <script defer src="./assets/js/app.js?v=20260322-compare-session-v1"></script>
     <script defer src="./assets/js/school-normalization-runtime.js?v=20260321-localgrades-v4"></script>
     <script defer src="./assets/js/compare-shared-runtime.js?v=20260322-compare-session-v1"></script>
