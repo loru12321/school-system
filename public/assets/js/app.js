@@ -9142,31 +9142,6 @@ enhanceStudentReportMetrics = function (root) {
     });
 };
 
-function renderSingleSchoolAnalysisHint() {
-    const section = document.getElementById('analysis');
-    if (!section) return;
-    let hint = document.getElementById('analysis-local-hint');
-    if (!hint) {
-        hint = document.createElement('div');
-        hint.id = 'analysis-local-hint';
-        hint.className = 'info-bar';
-        hint.style.marginBottom = '12px';
-        const head = section.querySelector('.sec-head');
-        if (head) head.insertAdjacentElement('afterend', hint);
-    }
-    const user = getCurrentUser();
-    const schools = (typeof listAvailableSchoolsForCompare === 'function')
-        ? listAvailableSchoolsForCompare()
-        : Object.keys(SCHOOLS || {});
-    const visibleSchools = (window.PermissionPolicy && typeof PermissionPolicy.getAccessibleSchoolNames === 'function')
-        ? PermissionPolicy.getAccessibleSchoolNames(user, schools)
-        : schools;
-    const schoolCount = Array.isArray(visibleSchools) ? visibleSchools.length : 0;
-    hint.textContent = schoolCount <= 1
-        ? '当前只有本校数据，校际联考横向排名不适用。请重点查看本页趋势和本校执行类模块。'
-        : '如当前处理的是本校月考或校考，请谨慎使用联考横向口径，优先结合本校执行与学情模块判断。';
-}
-
 // ================= 侧边栏与通用工具 =================
 window.toggleSidebarMoreMenu = function () {
     const menu = document.getElementById('sidebar-more-menu');
@@ -9841,47 +9816,6 @@ function resetMainViewport() {
     }
 }
 
-const TEACHING_MANAGEMENT_MODULE_IDS = new Set([
-    'teaching-overview',
-    'teaching-issue-board',
-    'teaching-warning-center',
-    'teaching-rectify-center',
-    'teaching-version-center'
-]);
-
-function activateTeachingManagementModule(id) {
-    if (id === 'teaching-overview') {
-        renderTeachingOverview();
-        tmRefreshVersionCenter(false);
-        return true;
-    }
-    if (id === 'teaching-issue-board') {
-        bindTeachingOverviewActions();
-        tmRenderIssueBoard();
-        tmRefreshCloudOps(false);
-        return true;
-    }
-    if (id === 'teaching-warning-center') {
-        bindTeachingOverviewActions();
-        tmRenderWarningCenter();
-        tmRefreshCloudOps(false);
-        return true;
-    }
-    if (id === 'teaching-rectify-center') {
-        bindTeachingOverviewActions();
-        tmRenderRectifyCenter();
-        tmRefreshCloudOps(false);
-        return true;
-    }
-    if (id === 'teaching-version-center') {
-        bindTeachingOverviewActions();
-        tmRenderVersionCenter();
-        tmRefreshVersionCenter(false);
-        return true;
-    }
-    return false;
-}
-
 function switchTab(id) {
     if (id === 'school-internal-grades') {
         console.warn('school-internal-grades has been removed; redirecting to exam-arranger');
@@ -9938,340 +9872,11 @@ function switchTab(id) {
         }
     }
 
-    // [新增] 切换标签页时隐藏可能属于之前任务的对比及结果区域
-    const reportResult = document.getElementById('single-report-result');
-    if (reportResult) reportResult.classList.add('hidden');
-    const compareSection = document.getElementById('student-multi-period-compare-section');
-    if (compareSection) compareSection.style.display = 'none';
-
-    // [新增] 5. 自动同步当前页面的“说明条”颜色 (视觉统一)
-    // 找到当前激活的 section
     const currentCategoryMeta = NAV_STRUCTURE[currentCategory] || NAV_STRUCTURE.data || null;
-    const activeSection = document.getElementById(id);
-    if (activeSection) {
-        // 找到内部的 module-desc-bar
-        const descBar = activeSection.querySelector('.module-desc-bar');
-        if (descBar && currentCategoryMeta) {
-            // 强制应用当前大类的颜色
-            descBar.style.borderLeftColor = currentCategoryMeta.color;
-            // 可选：同时让标题颜色也跟随变化
-            const descTitle = descBar.querySelector('h3');
-            if (descTitle) descTitle.style.color = '#333'; // 保持深色或设为当前分类颜色
-        }
-    }
-    syncShellChromeBridge(id);
-    ensureModuleHelpButton(id);
-    if (currentCategory === 'town') {
-        ensureTownSubmoduleCompareUIs();
-    }
-
-    // 6. 模块特定初始化逻辑 (保持原有逻辑不变)
-    if (id === 'student-details') {
-        updateStudentSchoolSelect();
-        if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-        if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
-
-        // 🔐 学生多期对比权限控制
-        const user = getCurrentUser();
-        const role = user?.role || 'guest';
-        const multiPeriodSection = document.getElementById('student-multi-period-compare-section');
-
-        if (multiPeriodSection) {
-            // 只对管理员、教务主任、班主任、教师开放；家长不可见
-            if (role === 'admin' || role === 'director' || role === 'grade_director' || role === 'class_teacher' || role === 'teacher') {
-                multiPeriodSection.style.display = 'block';
-
-                // 对教师和班主任，隐藏部分高级功能
-                const saveCloudBtn = multiPeriodSection.querySelector('[onclick="saveStudentCompareToCloud()"]');
-                const viewCloudBtn = multiPeriodSection.querySelector('[onclick="viewCloudStudentCompares()"]');
-
-                if (role === 'teacher' || role === 'class_teacher') {
-                    // 教师和班主任可以查看云端对比，但不能保存
-                    if (saveCloudBtn) saveCloudBtn.style.display = 'none';
-                }
-            } else {
-                // 家长和其他角色不可见
-                multiPeriodSection.style.display = 'none';
-            }
-        }
-    }
-
-    if (id === 'summary'
-        && typeof window.ensureSchoolProfileRuntimeLoaded === 'function'
-        && !window.__SCHOOL_PROFILE_RUNTIME_PATCHED__) {
-        window.ensureSchoolProfileRuntimeLoaded().catch((error) => console.warn(error));
-    }
-    if (id === 'ai-analysis') {
-        if (typeof window.ensureAIHubRuntimeLoaded === 'function'
-            && !window.__AI_HUB_RUNTIME_PATCHED__) {
-            window.ensureAIHubRuntimeLoaded()
-                .then(() => {
-                    if (document.getElementById('ai-analysis')?.classList.contains('active')
-                        && typeof window.renderAIAnalysisHub === 'function') {
-                        window.renderAIAnalysisHub();
-                    }
-                })
-                .catch((error) => console.warn(error));
-        } else {
-            renderAIAnalysisHub();
-        }
-    }
-    if (id === 'analysis') {
-        updateMacroMultiExamSelects();
-        renderSingleSchoolAnalysisHint();
-    }
-    if (TEACHING_MANAGEMENT_MODULE_IDS.has(id)) {
-        if (typeof window.ensureTeachingManagementRuntimeLoaded === 'function'
-            && !window.__TEACHING_MANAGEMENT_RUNTIME_PATCHED__) {
-            window.ensureTeachingManagementRuntimeLoaded()
-                .then(() => {
-                    const activeTeachingSection = document.getElementById(id);
-                    if (!activeTeachingSection || !activeTeachingSection.classList.contains('active')) return;
-                    activateTeachingManagementModule(id);
-                })
-                .catch((error) => console.warn(error));
-        } else {
-            activateTeachingManagementModule(id);
-        }
-    }
-    if (id === 'indicator') refreshIndicatorResults(true);
-    if (id === 'high-score') renderHighScoreTable();
-    if (id === 'student-overview') {
-        if (typeof updateStudentSchoolSelect === 'function') updateStudentSchoolSelect();
-        if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-        if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
-        if (typeof updateMarginalSchoolSelect === 'function') updateMarginalSchoolSelect();
-        if (typeof updateSubjectBalanceSelects === 'function') updateSubjectBalanceSelects();
-        if (typeof updatePotentialSchoolSelect === 'function') updatePotentialSchoolSelect();
-        if (typeof updateSegmentSelects === 'function') updateSegmentSelects();
-        if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
-        if (typeof updateClassSelect === 'function') updateClassSelect();
-        renderStudentOverview();
-    }
-    if (id === 'zhongkao-countdown' && window.ZhongkaoCountdownModule && typeof window.ZhongkaoCountdownModule.ensureInitialized === 'function') {
-        window.ZhongkaoCountdownModule.ensureInitialized();
-    }
-    if (id === 'teacher-analysis') {
-        if (window.DataManager && typeof DataManager.ensureTeacherMap === 'function') {
-            DataManager.ensureTeacherMap(true);
-        }
-        // 🔥 自动初始化教师多期对比选择器
-        if (typeof updateTeacherCompareExamSelects === 'function') {
-            updateTeacherCompareExamSelects();
-        }
-        const cta = document.getElementById('teacher-sync-cta');
-        if (cta) cta.style.display = (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) ? 'none' : 'inline-flex';
-
-        const user = getCurrentUser();
-        const role = user?.role || 'guest';
-        const restricted = (role === 'teacher' || role === 'class_teacher');
-        const exportBtn = document.querySelector('#teacher-analysis .sec-head button');
-        if (exportBtn) exportBtn.style.display = 'inline-flex';
-        const detailSection = document.getElementById('anchor-detail');
-        const pairSection = document.getElementById('anchor-pair');
-        const townshipContainer = document.getElementById('teacher-township-ranking-container');
-        if (detailSection) detailSection.style.display = 'block';
-        if (pairSection) pairSection.style.display = 'block';
-        if (townshipContainer) townshipContainer.style.display = 'block';
-
-        // 1. 核心修复：如果本校变量为空，立即根据数据进行暴力推断
-        if (!MY_SCHOOL && typeof SCHOOLS !== 'undefined' && Object.keys(SCHOOLS).length > 0) {
-
-            // 策略A: 如果全镇只有一所学校（单校版），直接锁定
-            const schoolNames = Object.keys(SCHOOLS);
-            if (schoolNames.length === 1) {
-                writeCurrentSchool(schoolNames[0]);
-            }
-            // 策略B: 如果有多所学校，根据任课表反推“最可能的学校”
-            else if (typeof TEACHER_MAP !== 'undefined' && Object.keys(TEACHER_MAP).length > 0) {
-                const schoolCounts = {};
-
-                // 遍历任课表中的每一个“班级_科目”键
-                Object.keys(TEACHER_MAP).forEach(key => {
-                    const cls = key.split('_')[0]; // 提取班级名，如 "9.1"
-
-                    // 在所有学校中搜寻：谁拥有这个班级？
-                    for (const sName of schoolNames) {
-                        const hasClass = SCHOOLS[sName].students.some(s => s.class == cls);
-                        if (hasClass) {
-                            // 找到归属，给该学校投一票
-                            schoolCounts[sName] = (schoolCounts[sName] || 0) + 1;
-                            break;
-                        }
-                    }
-                });
-
-                // 票数最高的学校即为本校
-                let max = 0;
-                let winner = "";
-                for (const [s, c] of Object.entries(schoolCounts)) {
-                    if (c > max) { max = c; winner = s; }
-                }
-
-                if (winner) {
-                    writeCurrentSchool(winner);
-                    console.log("🤖 [智能修复] 系统已自动根据任课表锁定本校为:", MY_SCHOOL);
-                }
-            }
-
-            // 如果推断成功，自动同步 UI 下拉框，让用户无感
-            if (readCurrentSchool()) {
-                const sel = document.getElementById('mySchoolSelect');
-                if (sel) sel.value = readCurrentSchool();
-            }
-        }
-
-        // 2. 执行分析 (现在 MY_SCHOOL 应该已经被自动填好了)
-        if (MY_SCHOOL && Object.keys(TEACHER_MAP).length > 0) {
-            analyzeTeachers();
-            renderTeacherComparisonTable();
-            renderTeacherTownshipRanking();
-        } else {
-            // 3. 如果还是失败（通常是因为还没上传学生成绩，只有教师名单是无法分析的）
-            const compTable = document.getElementById('teacherComparisonTable');
-            if (compTable) {
-                compTable.innerHTML = `
-                        <div style="text-align:center; padding:40px; color:#999;">
-                            <div style="font-size:48px; margin-bottom:10px;">🏫❓</div>
-                            <p style="font-size:16px; font-weight:bold; color:#333;">无法自动识别“本校”</p>
-                            <div style="background:#f9fafb; padding:10px 20px; border-radius:6px; display:inline-block; text-align:left; margin-top:10px; font-size:13px; color:#666; line-height:1.8;">
-                                <strong>可能原因：</strong><br>
-                                1. 您仅导入了教师配置，但尚未上传<strong>【学生成绩】</strong>数据。<br>
-                                <span style="color:#d97706">(系统需要结合学生名单才能确认班级归属)</span><br>
-                                2. 任课表中的班级名 (如 9.1) 与成绩表中的班级名 (如 901) 不一致。<br>
-                            </div>
-                        </div>`;
-            }
-            document.getElementById('teacher-township-ranking-container').innerHTML = '';
-        }
-
-        updateTeacherMultiExamSelects();
-        updateTeacherCompareTeacherSelect();
-    }
-    if ((id === 'teacher-analysis' || id === 'correlation-analysis')
-        && typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function') {
-        window.ensureTeacherAnalysisMainRuntimeLoaded().catch((error) => console.warn(error));
-    }
-    if (id === 'single-school-eval' && typeof window.ensureSingleSchoolEvalRuntimeLoaded === 'function') {
-        window.ensureSingleSchoolEvalRuntimeLoaded().catch((error) => console.warn(error));
-    }
-    try {
-        if (id === 'exam-arranger') {
-            EXAM_initProctorUI();
-        }
-        if (id === 'report-generator') {
-            updateSchoolSelect();
-            updateClassSelect();
-        }
-        if (id === 'segment-analysis') updateSegmentSelects();
-        if (id === 'class-comparison') updateClassCompSchoolSelect();
-        if (id === 'potential-analysis') updatePotentialSchoolSelect();
-        if (id === 'class-diagnosis') updateDiagnosisSelects();
-        if (id === 'correlation-analysis' && typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
-        if (id === 'seat-adjustment') updateSeatAdjSelects();
-        if (id === 'subject-balance') updateSubjectBalanceSelects();
-        if (id === 'progress-analysis') {
-            const initProgressAnalysisSection = () => {
-                // 1. 智能推断本校 (逻辑保持不变)
-                if (!MY_SCHOOL && typeof TEACHER_MAP !== 'undefined' && Object.keys(TEACHER_MAP).length > 0 && typeof SCHOOLS !== 'undefined') {
-                    const schoolCounts = {};
-                    const schoolNames = Object.keys(SCHOOLS);
-                    Object.keys(TEACHER_MAP).forEach(key => {
-                        const cls = key.split('_')[0];
-                        for (const sName of schoolNames) {
-                            if (SCHOOLS[sName].students.some(s => s.class == cls)) {
-                                schoolCounts[sName] = (schoolCounts[sName] || 0) + 1;
-                                break;
-                            }
-                        }
-                    });
-                    let max = 0; let winner = "";
-                    for (const [s, c] of Object.entries(schoolCounts)) { if (c > max) { max = c; winner = s; } }
-                    if (winner) { writeCurrentSchool(winner); }
-                }
-
-                // 2. 初始化下拉框
-                updateProgressSchoolSelect();
-                updateProgressBaselineSelect();
-                updateProgressMultiExamSelects();
-                if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-                if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
-                const progSel = document.getElementById('progressSchoolSelect');
-                if (MY_SCHOOL && progSel) progSel.value = MY_SCHOOL;
-
-                // 3. 检查内存数据并激活
-                Promise.resolve(ensureProgressBaselineData({
-                    allowCloudSync: true,
-                    rerenderReport: true,
-                    rerenderAnalysis: !!(progSel && progSel.value)
-                })).catch(err => {
-                    console.warn('[progress] 自动加载历史基准失败:', err);
-                    if (typeof setProgressBaselineStatus === 'function') {
-                        setProgressBaselineStatus('❌ 自动加载上次考试数据失败，请稍后重试', 'error');
-                    }
-                });
-            };
-
-            if (typeof window.ensureProgressAnalysisRuntimeLoaded === 'function' && !window.__PROGRESS_ANALYSIS_RUNTIME_PATCHED__) {
-                window.ensureProgressAnalysisRuntimeLoaded()
-                    .then(() => {
-                        if (document.getElementById('progress-analysis')?.classList.contains('active')) {
-                            initProgressAnalysisSection();
-                        }
-                    })
-                    .catch((error) => {
-                        console.warn('[progress] runtime load failed:', error);
-                    });
-            } else {
-                initProgressAnalysisSection();
-            }
-            /*
-
-
-
-            // 只要 baseline 有长度，就说明云端或本地已加载
-                // 成功状态
-                if (statusEl) {
-                    statusEl.innerHTML = `✅ 数据就绪 (已加载 ${baselineData.length} 条历史记录)`;
-                    statusEl.style.color = "#16a34a";
-                    statusEl.style.fontWeight = "bold";
-                }
-
-                // 如果还没有生成缓存(PROGRESS_CACHE)，立即执行静默匹配
-                setPrevDataState(baselineData);
-                if (readProgressCacheState().length === 0) {
-                    if (typeof performSilentMatching === 'function') performSilentMatching();
-                }
-
-                // 渲染报表
-                if (typeof renderValueAddedReport === 'function') renderValueAddedReport(true);
-
-                // 如果选中了学校，渲染个人追踪
-                if (progSel && progSel.value && typeof renderProgressAnalysis === 'function') {
-                    renderProgressAnalysis();
-                }
-            } else {
-                // 失败状态
-                if (statusEl) {
-                    statusEl.innerHTML = `❌ 缺上次考试数据 (请先同步当前届别考试或导入历史成绩)`;
-                    statusEl.style.color = "#dc2626";
-                }
-            }
-            */
-        }
-        if (id === 'mutual-aid') updateMutualAidSelects();
-        if (id === 'marginal-push') updateMpSchoolSelect();
-        // 如果是单校绩效模块，触发一次下拉框更新
-        if (id === 'single-school-eval' && typeof updateSSESchoolSelect === 'function') {
-            Promise.resolve(updateSSESchoolSelect()).catch((error) => console.warn(error));
-        }
-    } catch (err) {
-        console.error("switchTab 初始化 Hook 发生错误:", err);
-    }
-    if (['teacher-analysis', 'class-comparison', 'class-diagnosis', 'single-school-eval'].includes(id)) {
-        setTimeout(() => {
-            if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars();
-        }, 0);
+    if (typeof window.runModuleTabEnter === 'function') {
+        window.runModuleTabEnter({ id, currentCategory, currentCategoryMeta }).catch((error) => {
+            console.error('switchTab module dispatch failed:', error);
+        });
     }
 }
 
@@ -11536,6 +11141,9 @@ function updateStudentSchoolSelect() {
     const classSelect = document.getElementById('studentClassSelect');
     const modeWrap = document.getElementById('classTeacherViewModeWrap');
     const modeSelect = document.getElementById('classTeacherViewMode');
+    if (!select || !classSelect) return;
+    select.disabled = false;
+    classSelect.disabled = false;
     select.innerHTML = '<option value="">--请选择本校--</option>';
     classSelect.innerHTML = '<option value="">全部班级</option>';
     if (modeWrap) modeWrap.style.display = 'none';
@@ -11578,7 +11186,7 @@ function updateStudentSchoolSelect() {
         classes.forEach(c => classSelect.innerHTML += `<option value="${c}">${c}</option>`);
     }
 
-    select.addEventListener('change', function () {
+    select.onchange = function () {
         const selectedSchool = this.value;
         classSelect.innerHTML = '<option value="">全部班级</option>';
         if (selectedSchool && SCHOOLS[selectedSchool]) {
@@ -11588,12 +11196,12 @@ function updateStudentSchoolSelect() {
         }
         // ✋ 性能优化关键：切换学校时，重置分页并立即渲染
         renderStudentDetails(true);
-    });
+    };
 
     // 🟢 新增：班级切换也触发重置
-    classSelect.addEventListener('change', function () {
+    classSelect.onchange = function () {
         renderStudentDetails(true);
-    });
+    };
 
     if (modeSelect) {
         modeSelect.onchange = function () {

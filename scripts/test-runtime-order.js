@@ -25,10 +25,14 @@ const historyCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/h
 const perfMobileRuntimePath = path.resolve(__dirname, '../public/assets/js/perf-mobile-runtime.js');
 const shellRuntimePath = path.resolve(__dirname, '../public/assets/js/shell-runtime.js');
 const shellPolishRuntimePath = path.resolve(__dirname, '../public/assets/js/shell-polish-runtime.js');
+const moduleEntryRuntimePath = path.resolve(__dirname, '../public/assets/js/module-entry-runtime.js');
 const singleSchoolEvalRuntimePath = path.resolve(__dirname, '../public/assets/js/single-school-eval-runtime.js');
 const aiHubRuntimePath = path.resolve(__dirname, '../public/assets/js/ai-hub-runtime.js');
 const schoolProfileRuntimePath = path.resolve(__dirname, '../public/assets/js/school-profile-runtime.js');
 const teachingManagementRuntimePath = path.resolve(__dirname, '../public/assets/js/teaching-management-runtime.js');
+const teacherAnalysisCoreRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-analysis-core-runtime.js');
+const teacherAnalysisUiRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-analysis-ui-runtime.js');
+const teacherAnalysisBridgeRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-analysis-bridge-runtime.js');
 const mobileManagerRuntimePath = path.resolve(__dirname, '../public/assets/js/mobile-manager.js');
 const dataManagerSqlRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-sql.js');
 const reportRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/report-render-runtime.js');
@@ -62,10 +66,14 @@ assert.ok(fs.existsSync(historyCompareRuntimePath), 'history-compare-runtime.js 
 assert.ok(fs.existsSync(perfMobileRuntimePath), 'perf-mobile-runtime.js should exist');
 assert.ok(fs.existsSync(shellRuntimePath), 'shell-runtime.js should exist');
 assert.ok(fs.existsSync(shellPolishRuntimePath), 'shell-polish-runtime.js should exist');
+assert.ok(fs.existsSync(moduleEntryRuntimePath), 'module-entry-runtime.js should exist');
 assert.ok(fs.existsSync(singleSchoolEvalRuntimePath), 'single-school-eval-runtime.js should exist');
 assert.ok(fs.existsSync(aiHubRuntimePath), 'ai-hub-runtime.js should exist');
 assert.ok(fs.existsSync(schoolProfileRuntimePath), 'school-profile-runtime.js should exist');
 assert.ok(fs.existsSync(teachingManagementRuntimePath), 'teaching-management-runtime.js should exist');
+assert.ok(fs.existsSync(teacherAnalysisCoreRuntimePath), 'teacher-analysis-core-runtime.js should exist');
+assert.ok(fs.existsSync(teacherAnalysisUiRuntimePath), 'teacher-analysis-ui-runtime.js should exist');
+assert.ok(fs.existsSync(teacherAnalysisBridgeRuntimePath), 'teacher-analysis-bridge-runtime.js should exist');
 assert.ok(fs.existsSync(mobileManagerRuntimePath), 'mobile-manager.js should exist');
 assert.ok(fs.existsSync(dataManagerSqlRuntimePath), 'data-manager-sql.js should exist');
 assert.ok(fs.existsSync(reportRenderRuntimePath), 'report-render-runtime.js should exist');
@@ -105,9 +113,13 @@ const townSubmoduleCompareRef = './assets/js/town-submodule-compare-runtime.js';
 const compareSelectorsRef = './assets/js/compare-selectors-runtime.js';
 const progressAnalysisRef = './assets/js/progress-analysis-runtime.js';
 const teacherAnalysisMainRef = './assets/js/teacher-analysis-main-runtime.js';
+const teacherAnalysisCoreRef = './assets/js/teacher-analysis-core-runtime.js';
+const teacherAnalysisUiRef = './assets/js/teacher-analysis-ui-runtime.js';
+const teacherAnalysisBridgeRef = './assets/js/teacher-analysis-bridge-runtime.js';
 const cloudWorkspaceRef = './assets/js/cloud-workspace-runtime.js';
 const shellRuntimeRef = './assets/js/shell-runtime.js';
 const shellPolishRuntimeRef = './assets/js/shell-polish-runtime.js';
+const moduleEntryRuntimeRef = './assets/js/module-entry-runtime.js';
 const cloudRef = './assets/js/cloud.js';
 const appRef = './assets/js/app.js';
 const accountAdminRef = './assets/js/account-admin-runtime.js';
@@ -179,6 +191,7 @@ const cloudIndex = indexHtml.indexOf(cloudRef);
 const cloudWorkspaceIndex = indexHtml.indexOf(cloudWorkspaceRef);
 const shellRuntimeIndex = indexHtml.indexOf(shellRuntimeRef);
 const shellPolishRuntimeIndex = indexHtml.indexOf(shellPolishRuntimeRef);
+const moduleEntryRuntimeIndex = indexHtml.indexOf(moduleEntryRuntimeRef);
 const appIndex = indexHtml.indexOf(appRef);
 const bootRuntimeIndex = indexHtml.indexOf(bootRuntimeRef);
 const popperVendorIndex = indexHtml.indexOf(popperVendorRef);
@@ -209,9 +222,13 @@ assert.ok(cloudIndex >= 0, 'index.html should load cloud.js');
 assert.ok(cloudWorkspaceIndex >= 0, 'index.html should load cloud-workspace-runtime.js');
 assert.ok(shellRuntimeIndex >= 0, 'index.html should load shell-runtime.js');
 assert.ok(shellPolishRuntimeIndex >= 0, 'index.html should load shell-polish-runtime.js');
+assert.ok(moduleEntryRuntimeIndex >= 0, 'index.html should load module-entry-runtime.js');
 assert.ok(appIndex >= 0, 'index.html should load app.js');
 assert.ok(bootRuntime.includes(progressAnalysisRef), 'boot-runtime.js should reference progress-analysis-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(teacherAnalysisMainRef), 'boot-runtime.js should reference teacher-analysis-main-runtime.js for lazy loading');
+assert.ok(bootRuntime.includes(teacherAnalysisCoreRef), 'boot-runtime.js should reference teacher-analysis-core-runtime.js for lazy loading');
+assert.ok(bootRuntime.includes(teacherAnalysisUiRef), 'boot-runtime.js should reference teacher-analysis-ui-runtime.js for lazy loading');
+assert.ok(bootRuntime.includes(teacherAnalysisBridgeRef), 'boot-runtime.js should reference teacher-analysis-bridge-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(singleSchoolEvalRef), 'boot-runtime.js should reference single-school-eval-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(aiHubRef), 'boot-runtime.js should reference ai-hub-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(schoolProfileRef), 'boot-runtime.js should reference school-profile-runtime.js for lazy loading');
@@ -249,6 +266,7 @@ assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign swi
     cloudWorkspaceRef,
     shellRuntimeRef,
     shellPolishRuntimeRef,
+    moduleEntryRuntimeRef,
     appRef,
     compareCloudContextRef,
     compareExamSyncRef,
@@ -299,6 +317,9 @@ assert.ok(indexHtml.includes(tablerIconsRef), 'index.html should load local tabl
     mobileManagerRef,
     dataManagerSqlRef,
     reportRenderRef,
+    teacherAnalysisCoreRef,
+    teacherAnalysisUiRef,
+    teacherAnalysisBridgeRef,
     teacherAnalysisMainRef,
     studentCompareGenerateRef,
     studentCompareResultRef,
@@ -366,7 +387,8 @@ assert.ok(authStateIndex < cloudWorkspaceIndex, 'auth-state-runtime.js must load
 assert.ok(authStateIndex < appIndex, 'auth-state-runtime.js must load before app.js');
 assert.ok(shellRuntimeIndex < appIndex, 'shell-runtime.js must load before app.js');
 assert.ok(shellRuntimeIndex < shellPolishRuntimeIndex, 'shell-runtime.js must load before shell-polish-runtime.js');
-assert.ok(shellPolishRuntimeIndex < appIndex, 'shell-polish-runtime.js must load before app.js');
+assert.ok(shellPolishRuntimeIndex < moduleEntryRuntimeIndex, 'shell-polish-runtime.js must load before module-entry-runtime.js');
+assert.ok(moduleEntryRuntimeIndex < appIndex, 'module-entry-runtime.js must load before app.js');
 assert.ok(popperVendorIndex < tippyVendorIndex, 'popper.min.js must load before tippy.umd.min.js');
 
 console.log('runtime order tests passed');

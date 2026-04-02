@@ -633,7 +633,12 @@ window.ensureTeachingManagementRuntimeLoaded = function () {
 };
 
 window.ensureTeacherAnalysisMainRuntimeLoaded = function () {
-    return loadOptionalRuntime('teacher-analysis-main', './assets/js/teacher-analysis-main-runtime.js');
+    return loadOptionalRuntimeBundle('teacher-analysis-main-bundle', [
+        { key: 'teacher-analysis-core', src: './assets/js/teacher-analysis-core-runtime.js' },
+        { key: 'teacher-analysis-ui', src: './assets/js/teacher-analysis-ui-runtime.js' },
+        { key: 'teacher-analysis-bridge', src: './assets/js/teacher-analysis-bridge-runtime.js' },
+        { key: 'teacher-analysis-main', src: './assets/js/teacher-analysis-main-runtime.js' }
+    ]);
 };
 
 window.ensureSingleSchoolEvalRuntimeLoaded = function () {
