@@ -20,7 +20,6 @@ $trackedUpdatePaths = @(
     "sync-public-assets.mjs",
     "inline-scripts.mjs",
     "lt.html",
-    "index.html",
     "dist"
 )
 
@@ -35,8 +34,7 @@ $explicitStagePaths = @(
     "vite.config.js",
     "sync-public-assets.mjs",
     "inline-scripts.mjs",
-    "lt.html",
-    "index.html"
+    "lt.html"
 )
 
 git add -u -- $trackedUpdatePaths
