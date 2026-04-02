@@ -3759,18 +3759,17 @@
                 </div>
                 <div class="sidebar-title-text">
                     <h2 class="sidebar-brand-title">SmartEdu Analytics</h2>
-                    <span id="role-hint-sidebar" class="sidebar-role-hint">Role:
-                        Guest</span>
+                    <span id="role-hint-sidebar" class="sidebar-role-hint">角色：访客</span>
                 </div>
             </div>
 
             <div class="sidebar-workbench-card">
-                <span class="sidebar-workbench-kicker">Command Deck</span>
-                <strong>把数据、教学、预警和工具链收进同一个工作台。</strong>
+                <span class="sidebar-workbench-kicker">Creator Studio</span>
+                <strong>把数据流、教学流和执行流像频道运营一样收进同一条生产线。</strong>
                 <div class="sidebar-workbench-pills">
-                    <span>分析</span>
-                    <span>云端</span>
-                    <span>协同</span>
+                    <span>Insight Loop</span>
+                    <span>Studio Ops</span>
+                    <span>Reel Feed</span>
                 </div>
             </div>
 
@@ -3779,13 +3778,13 @@
             </nav>
 
             <div class="sidebar-footer">
-                <div class="sidebar-footer-item" onclick="openSpotlight()" title="全局搜索 (Search)">
+                <div class="sidebar-footer-item" onclick="openSpotlight()" title="全局搜索">
                     <i class="ti ti-search"></i>
                     <span>全局搜索</span>
                 </div>
                 <!-- 通知 -->
                 <div class="sidebar-footer-item" id="admin-msg-btn-sidebar" onclick="IssueManager.openAdminPanel()"
-                    title="消息与申诉">
+                    title="消息中心">
                     <i class="ti ti-bell"></i>
                     <span>消息中心</span>
                     <div id="msg-badge-sidebar" class="notification-badge hidden">0</div>
@@ -3793,7 +3792,7 @@
                 <!-- 外观设置 -->
                 <div class="sidebar-footer-item" onclick="openSkinModal()" title="主题配置">
                     <i class="ti ti-palette"></i>
-                    <span>外观与主题</span>
+                    <span>外观主题</span>
                 </div>
                 <!-- 深色模式 -->
                 <div class="sidebar-footer-item" onclick="toggleDarkMode()" title="切换深色模式">
@@ -3828,40 +3827,47 @@
         <!-- 主内容区 -->
         <main class="app-main">
             <!-- 重新设计的顶部标题栏，You-Tube 风格 Grid 布局 -->
-            <header id="main-header" class="app-toolbar"
-                style="padding: 12px 24px; border-bottom: 1px solid var(--border-color); background: var(--bg-color); display: grid; grid-template-columns: 1fr minmax(300px, 600px) 1fr; align-items: center; position: sticky; top: 0; z-index: 50; gap: 20px;">
+            <header id="main-header" class="app-toolbar shell-toolbar">
 
                 <!-- 左侧: 状态/提示区 -->
-                <div class="toolbar-left" style="display: flex; align-items: center; gap: 15px;">
+                <div class="toolbar-left shell-toolbar-panel shell-toolbar-panel--identity">
                     <button class="btn mobile-menu-toggle"
-                        onclick="document.getElementById('app-sidebar').classList.toggle('show-mobile')"
-                        style="display:none; padding: 8px; background:transparent; border:none; font-size: 20px;">
+                        onclick="document.getElementById('app-sidebar').classList.toggle('show-mobile')">
                         <i class="ti ti-menu-2"></i>
                     </button>
-                    <span id="mode-badge" class="badge" style="font-size:14px; padding: 4px 10px;"></span>
-                    <span class="toolbar-caption">统一工作台</span>
+                    <div class="shell-title-stack">
+                        <div class="shell-title-meta">
+                            <span id="mode-badge" class="badge shell-mode-badge"></span>
+                            <span class="toolbar-caption">Creator studio workspace</span>
+                        </div>
+                        <div id="app-subtitle" class="shell-subtitle">数据管理 / 新手入口与诊断</div>
+                        <div class="shell-headline-row">
+                            <h1 id="shell-current-title" class="shell-current-title">统一工作台</h1>
+                            <span id="shell-role-pill" class="shell-inline-pill">角色：访客</span>
+                        </div>
+                        <p id="shell-current-desc" class="shell-current-desc">
+                            把数据、教学、预警和工具收进一条连续工作流，像运营频道一样管理整个系统节奏。
+                        </p>
+                    </div>
                 </div>
 
                 <!-- 中间: 搜索框 (You-Tube Style) -->
-                <div class="toolbar-center" style="display: flex; justify-content: center; width: 100%;">
-                    <div id="global-search-container" onclick="openSpotlight()"
-                        style="display: flex; align-items: center; width: 100%; max-width: 600px; height: 40px; background: var(--bg-light); border: 1px solid var(--border-color); border-radius: 20px; overflow: hidden; cursor: text; transition: all 0.2s;">
-                        <div class="search-input-wrapper" style="flex: 1; height: 100%;">
-                            <input type="text" placeholder="全局搜索组件、报表、功能 (Alt+K)" readonly
-                                style="width: 100%; height: 100%; border: none; background: transparent; padding: 0 16px; font-size: 15px; color: var(--text-color); cursor: text; outline: none;">
+                <div class="toolbar-center shell-toolbar-panel shell-toolbar-panel--search">
+                    <div id="global-search-container" onclick="openSpotlight()">
+                        <div class="search-input-wrapper">
+                            <input type="text" placeholder="全局搜索组件、报表、功能 (Alt+K)" readonly>
                         </div>
-                        <div class="search-icon-btn"
-                            style="width: 64px; height: 100%; background: var(--hover-color); border-left: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s;">
-                            <i class="ti ti-search" style="font-size: 18px; color: var(--secondary);"></i>
+                        <div class="search-icon-btn">
+                            <i class="ti ti-search"></i>
                         </div>
                     </div>
                 </div>
 
                 <!-- 右侧工具栏: 图标按钮区 -->
-                <div class="toolbar-right" style="display:flex; gap:16px; align-items:center; justify-content: flex-end;">
+                <div class="toolbar-right shell-toolbar-panel shell-toolbar-panel--actions" style="display:flex; gap:16px; align-items:center; justify-content: flex-end;">
                     <select id="cohort-selector" onchange="CohortManager.switchTo(this.value)"
                         style="background:transparent; color:var(--text-color); border:none; font-size:13px; font-weight:600; cursor:pointer; outline:none; transition: all 0.2s;">
-                        <option value="" style="color:#64748b">选届别</option>
+                        <option value="">选择届别</option>
                     </select>
 
                     <div id="admin-msg-btn" class="notification-btn" style="display:none;"
@@ -3883,12 +3889,43 @@
                     </button>
 
                     <!-- 个人中心/密码修改注入容器 -->
-                    <div id="account-actions" style="display: flex; align-items: center; gap: 8px;"></div>
+                    <div id="account-actions"></div>
                 </div>
             </header>
 
-            <!-- 📱 You-Tube 风格的子模块 Chip 栏 -->
-            <div id="sub-nav-container" class="sub-nav-chips"></div>
+            <!-- 工作区总览与模块导航 -->
+            <section id="shell-overview" class="shell-overview">
+                <article class="shell-overview-card shell-overview-card--focus">
+                    <span class="shell-overview-kicker" id="shell-category-kicker">Today Focus</span>
+                    <div class="shell-overview-grid">
+                        <div>
+                            <h2 id="shell-category-title">数据管理</h2>
+                            <p id="shell-category-desc">先把届别、数据和权限校准，再进入分析与执行链路。</p>
+                        </div>
+                        <div class="shell-overview-pills">
+                            <span id="shell-module-count">2 个模块</span>
+                            <span id="shell-cohort-chip">届别未选择</span>
+                            <span id="shell-mode-chip">模式待加载</span>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="shell-overview-card shell-overview-card--pulse">
+                    <span class="shell-overview-kicker">Live Board</span>
+                    <div class="shell-pulse-grid">
+                        <div class="shell-pulse-item">
+                            <strong>当前焦点</strong>
+                            <span id="shell-active-module">新手入口与诊断</span>
+                        </div>
+                        <div class="shell-pulse-item">
+                            <strong>下一步</strong>
+                            <span id="shell-active-hint">先完成数据准备，再进入联考、教学或学情模块。</span>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+            <div id="sub-nav-container" class="sub-nav-chips" aria-label="模块导航"></div>
 
             <!-- 隐藏原有的双层顶部导航以免冲突 -->
             <div class="nav-wrapper" style="display: none !important;">
@@ -7717,6 +7754,7 @@
     <!-- 核心逻辑脚本 -->
 <script defer src="./assets/js/config-transfer-runtime.js?v=20260329-config-transfer-v1"></script>
 <script defer src="./assets/js/zhongkao-countdown-runtime.js?v=20260329-zhongkao-countdown-v1"></script>
+<script defer src="./assets/js/shell-runtime.js?v=20260402-shell-v1"></script>
 <script defer src="./assets/js/app.js?v=20260322-compare-session-v1"></script>
     <script defer src="./assets/js/school-normalization-runtime.js?v=20260321-localgrades-v4"></script>
     <script defer src="./assets/js/compare-shared-runtime.js?v=20260322-compare-session-v1"></script>

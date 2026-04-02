@@ -262,7 +262,12 @@ async function login(page) {
 }
 
 async function verifyTeacherAiWorkbench(page) {
-    const sidebarText = await page.evaluate(() => Array.from(document.querySelectorAll('#sidebar-nav .sidebar-menu-item span')).map((el) => el.textContent.trim()).join('\n'));
+    const sidebarText = await page.evaluate(() => {
+        const labels = Array.from(document.querySelectorAll('#sidebar-nav .sidebar-menu-item .sidebar-menu-item__title'));
+        const fallback = Array.from(document.querySelectorAll('#sidebar-nav .sidebar-menu-item span'));
+        const source = labels.length > 0 ? labels : fallback;
+        return source.map((el) => el.textContent.trim()).join('\n');
+    });
     assertContainsAll('sidebar navigation', sidebarText, requiredSidebarText);
     assertContainsNoForbidden('sidebar navigation', sidebarText);
 
@@ -272,7 +277,7 @@ async function verifyTeacherAiWorkbench(page) {
     });
     await page.waitForTimeout(700);
     await page.evaluate(() => {
-        const chips = Array.from(document.querySelectorAll('#sub-nav-container .chip-item'));
+        const chips = Array.from(document.querySelectorAll('#sub-nav-container .shell-story-card, #sub-nav-container .chip-item'));
         if (chips[0]) chips[0].click();
     });
     await page.waitForTimeout(700);

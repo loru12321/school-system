@@ -23,6 +23,7 @@ const bootRuntimePath = path.resolve(__dirname, '../public/assets/js/boot-runtim
 const accountAdminRuntimePath = path.resolve(__dirname, '../public/assets/js/account-admin-runtime.js');
 const historyCompareRuntimePath = path.resolve(__dirname, '../public/assets/js/history-compare-runtime.js');
 const perfMobileRuntimePath = path.resolve(__dirname, '../public/assets/js/perf-mobile-runtime.js');
+const shellRuntimePath = path.resolve(__dirname, '../public/assets/js/shell-runtime.js');
 const singleSchoolEvalRuntimePath = path.resolve(__dirname, '../public/assets/js/single-school-eval-runtime.js');
 const aiHubRuntimePath = path.resolve(__dirname, '../public/assets/js/ai-hub-runtime.js');
 const schoolProfileRuntimePath = path.resolve(__dirname, '../public/assets/js/school-profile-runtime.js');
@@ -58,6 +59,7 @@ assert.ok(fs.existsSync(bootRuntimePath), 'boot-runtime.js should exist');
 assert.ok(fs.existsSync(accountAdminRuntimePath), 'account-admin-runtime.js should exist');
 assert.ok(fs.existsSync(historyCompareRuntimePath), 'history-compare-runtime.js should exist');
 assert.ok(fs.existsSync(perfMobileRuntimePath), 'perf-mobile-runtime.js should exist');
+assert.ok(fs.existsSync(shellRuntimePath), 'shell-runtime.js should exist');
 assert.ok(fs.existsSync(singleSchoolEvalRuntimePath), 'single-school-eval-runtime.js should exist');
 assert.ok(fs.existsSync(aiHubRuntimePath), 'ai-hub-runtime.js should exist');
 assert.ok(fs.existsSync(schoolProfileRuntimePath), 'school-profile-runtime.js should exist');
@@ -102,6 +104,7 @@ const compareSelectorsRef = './assets/js/compare-selectors-runtime.js';
 const progressAnalysisRef = './assets/js/progress-analysis-runtime.js';
 const teacherAnalysisMainRef = './assets/js/teacher-analysis-main-runtime.js';
 const cloudWorkspaceRef = './assets/js/cloud-workspace-runtime.js';
+const shellRuntimeRef = './assets/js/shell-runtime.js';
 const cloudRef = './assets/js/cloud.js';
 const appRef = './assets/js/app.js';
 const accountAdminRef = './assets/js/account-admin-runtime.js';
@@ -166,6 +169,7 @@ const compareSelectorsIndex = indexHtml.indexOf(compareSelectorsRef);
 const progressAnalysisIndex = indexHtml.indexOf(progressAnalysisRef);
 const cloudIndex = indexHtml.indexOf(cloudRef);
 const cloudWorkspaceIndex = indexHtml.indexOf(cloudWorkspaceRef);
+const shellRuntimeIndex = indexHtml.indexOf(shellRuntimeRef);
 const appIndex = indexHtml.indexOf(appRef);
 const bootRuntimeIndex = indexHtml.indexOf(bootRuntimeRef);
 const accountAdminIndex = indexHtml.indexOf(accountAdminRef);
@@ -192,6 +196,7 @@ assert.ok(townSubmoduleCompareIndex >= 0, 'index.html should load town-submodule
 assert.ok(compareSelectorsIndex >= 0, 'index.html should load compare-selectors-runtime.js');
 assert.ok(cloudIndex >= 0, 'index.html should load cloud.js');
 assert.ok(cloudWorkspaceIndex >= 0, 'index.html should load cloud-workspace-runtime.js');
+assert.ok(shellRuntimeIndex >= 0, 'index.html should load shell-runtime.js');
 assert.ok(appIndex >= 0, 'index.html should load app.js');
 assert.ok(bootRuntime.includes(progressAnalysisRef), 'boot-runtime.js should reference progress-analysis-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(teacherAnalysisMainRef), 'boot-runtime.js should reference teacher-analysis-main-runtime.js for lazy loading');
@@ -230,6 +235,7 @@ assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign swi
     compareSummaryStateRef,
     cloudRef,
     cloudWorkspaceRef,
+    shellRuntimeRef,
     appRef,
     compareCloudContextRef,
     compareExamSyncRef,
@@ -340,5 +346,6 @@ assert.ok(workspaceStateIndex < appIndex, 'workspace-state-runtime.js must load 
 assert.ok(bootRuntimeIndex < authStateIndex, 'boot-runtime.js should load before auth-state-runtime.js');
 assert.ok(authStateIndex < cloudWorkspaceIndex, 'auth-state-runtime.js must load before cloud-workspace-runtime.js');
 assert.ok(authStateIndex < appIndex, 'auth-state-runtime.js must load before app.js');
+assert.ok(shellRuntimeIndex < appIndex, 'shell-runtime.js must load before app.js');
 
 console.log('runtime order tests passed');

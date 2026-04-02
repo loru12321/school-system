@@ -9029,84 +9029,28 @@ const SUBJECT_ORDER = ['语文', '数学', '英语', '物理', '化学', '政治
 
 // [修改] 导航配置与逻辑 (方案二：功能场景导向版)
 // 说明：按“管数据 -> 比学校 -> 评班级 -> 抓学生 -> 用工具”的逻辑排列
-const NAV_STRUCTURE = {
-    'data': {
-        title: '数据管理',
-        color: '#334155', // 深灰 Slate
-        icon: 'ti-database',
-        items: [
-            { id: 'starter-hub', icon: 'ti-rocket', text: '新手入口与诊断' },
-            { id: 'upload', icon: 'ti-database-import', text: '数据上传与设置' }
-        ]
-    },
-    'town': {
-        title: '联考分析',
-        color: '#b45309', // 金色 Amber 
-        icon: 'ti-trophy',
-        items: [
-            { id: 'summary', icon: 'ti-report', text: '综合评价总榜' },
-            { id: 'analysis', icon: 'ti-chart-pie', text: '两率一分(横向)' },
-            { id: 'macro-watch', icon: 'ti-alert-triangle', text: '预警与亮点看板' },
-            { id: 'high-score', icon: 'ti-trophy', text: '高分段/尖子生' },
-            { id: 'indicator', icon: 'ti-target', text: '指标生达标核算' },
-            { id: 'bottom3', icon: 'ti-arrow-bar-to-down', text: '低分率/后1/3核算' }
-        ]
-    },
-    'class': {
-        title: '教学管理',
-        color: '#dc2626', // 红色 Red 
-        icon: 'ti-school',
-        items: [
-            { id: 'teaching-overview', icon: 'ti-layout-dashboard', text: '教学总览' },
-            { id: 'teaching-issue-board', icon: 'ti-clipboard-list', text: '教学问题清单' },
-            { id: 'teaching-warning-center', icon: 'ti-alert-triangle', text: '异常预警中心' },
-            { id: 'teaching-rectify-center', icon: 'ti-list-check', text: '整改任务列表' },
-            { id: 'teaching-version-center', icon: 'ti-stack-2', text: '版本归档中心' },
-            { id: 'teacher-analysis', icon: 'ti-school', text: '教师教学质量画像' },
-            { id: 'single-school-eval', icon: 'ti-scale', text: '绩效公平考核模型' },
-            { id: 'class-comparison', icon: 'ti-layout-columns', text: '班级横向对比' },
-            { id: 'class-diagnosis', icon: 'ti-activity', text: '班级分化诊断(SD)' }
-        ]
-    },
-    'student': {
-        title: '学情诊断',
-        color: '#059669', // 绿色 Emerald 
-        icon: 'ti-user-scan',
-        items: [
-            { id: 'zhongkao-countdown', icon: 'ti-calendar-event', text: '中考倒计时' },
-            { id: 'student-overview', icon: 'ti-layout-dashboard', text: '学情总览' },
-            { id: 'student-details', icon: 'ti-list-details', text: '学生档案查询' },
-            { id: 'subject-balance', icon: 'ti-scale', text: '优劣势学科透视' },
-            { id: 'marginal-push', icon: 'ti-target-arrow', text: '临界生精准干预' },
-            { id: 'progress-analysis', icon: 'ti-trending-up', text: '进退步/增值评价' },
-            { id: 'cohort-growth', icon: 'ti-timeline', text: '纵向成长档案' },
-            { id: 'potential-analysis', icon: 'ti-bulb', text: '偏科潜力挖掘' },
-            { id: 'segment-analysis', icon: 'ti-chart-histogram', text: '分数段统计' },
-            { id: 'correlation-analysis', icon: 'ti-topology-star-3', text: '学科关联度分析' },
-            { id: 'report-generator', icon: 'ti-certificate', text: '成绩单/家长查分' }
-        ]
-    },
-    'ai': {
-        title: 'AI分析',
-        color: '#f97316',
-        icon: 'ti-brain',
-        items: [
-            { id: 'ai-analysis', icon: 'ti-sparkles', text: 'AI工作台' }
-        ]
-    },
-    'tools': {
-        title: '考务工具',
-        color: '#7c3aed', // 紫色 Violet
-        icon: 'ti-briefcase',
-        items: [
-            { id: 'exam-arranger', icon: 'ti-id-badge-2', text: '智能考场编排' },
-            { id: 'freshman-simulator', icon: 'ti-arrows-split', text: '新生均衡分班' },
-            { id: 'grade-scheduler', icon: 'ti-calendar-time', text: '级部智能排课' },
-            { id: 'seat-adjustment', icon: 'ti-armchair', text: '考后排座/互助组' },
-            { id: 'mutual-aid', icon: 'ti-friends', text: '学科小老师分组' },
-        ]
+const NAV_STRUCTURE = window.NAV_STRUCTURE || {};
+if (!window.NAV_STRUCTURE) {
+    console.warn('shell-runtime.js 未加载，导航结构将保持空对象。');
+}
+
+function getCurrentCategoryKey() {
+    return (typeof window.getCurrentNavCategory === 'function')
+        ? window.getCurrentNavCategory()
+        : 'data';
+}
+
+function setCurrentCategoryKey(key) {
+    if (typeof window.setCurrentNavCategorySilently === 'function') {
+        window.setCurrentNavCategorySilently(key);
     }
-};
+}
+
+function syncShellChromeBridge(activeId) {
+    if (typeof window.syncShellChrome === 'function') {
+        window.syncShellChrome(activeId);
+    }
+}
 
 function enhanceStudentReportMetrics(root) {
     const scope = root || document;
@@ -9198,8 +9142,6 @@ enhanceStudentReportMetrics = function (root) {
     });
 };
 
-window.NAV_STRUCTURE = NAV_STRUCTURE;
-
 function renderSingleSchoolAnalysisHint() {
     const section = document.getElementById('analysis');
     if (!section) return;
@@ -9224,142 +9166,6 @@ function renderSingleSchoolAnalysisHint() {
         ? '当前只有本校数据，校际联考横向排名不适用。请重点查看本页趋势和本校执行类模块。'
         : '如当前处理的是本校月考或校考，请谨慎使用联考横向口径，优先结合本校执行与学情模块判断。';
 }
-
-let currentCategory = 'data';
-
-function renderNavigation() {
-    const sidebarNav = document.getElementById('sidebar-nav');
-    if (!sidebarNav) return;
-
-    sidebarNav.innerHTML = '';
-
-    const role = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser.role : 'guest';
-    const restrictedRoles = ['teacher', 'class_teacher'];
-    const isRestricted = restrictedRoles.includes(role);
-    const isTeacherRole = (role === 'teacher' || role === 'class_teacher');
-
-    if (isRestricted && (currentCategory === 'data' || currentCategory === 'tools')) {
-        currentCategory = 'town';
-        document.documentElement.style.setProperty('--primary', NAV_STRUCTURE['town'].color);
-    }
-
-    Object.keys(NAV_STRUCTURE).forEach(key => {
-        const cat = NAV_STRUCTURE[key];
-
-        // 权限过滤整块大类
-        if (isRestricted && (key === 'data' || key === 'tools')) return;
-        if (isTeacherRole && key === 'town') return;
-
-        // 创建侧边栏主菜单项 (Parent Module)
-        const catItem = document.createElement('div');
-        catItem.className = 'sidebar-menu-item';
-
-        if (key === currentCategory) {
-            catItem.classList.add('active');
-        }
-
-        catItem.onmouseover = () => { if (key !== currentCategory) catItem.style.color = cat.color; };
-        catItem.onmouseout = () => { if (key !== currentCategory) catItem.style.color = 'var(--secondary)'; };
-
-        catItem.title = cat.title;
-        catItem.innerHTML = `<i class="ti ${cat.icon}"></i><span>${cat.title}</span>`;
-
-        catItem.onclick = (e) => {
-            e.stopPropagation();
-            if (currentCategory !== key) {
-                switchCategory(key);
-            }
-
-            // On mobile, auto-close sidebar after click
-            const sidebar = document.getElementById('app-sidebar');
-            if (sidebar && sidebar.classList.contains('show-mobile')) {
-                sidebar.classList.remove('show-mobile');
-            }
-        };
-
-        sidebarNav.appendChild(catItem);
-    });
-
-    renderSubNavigation();
-}
-
-function renderSubNavigation() {
-    const subNavContainer = document.getElementById('sub-nav-container');
-    if (!subNavContainer) return;
-
-    subNavContainer.innerHTML = '';
-
-    const role = (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser.role : 'guest';
-    const cat = NAV_STRUCTURE[currentCategory];
-    if (!cat || !cat.items) return;
-
-    const validItems = cat.items.filter(item => {
-        if ((role === 'teacher' || role === 'class_teacher') && typeof canAccessModule === 'function' && !canAccessModule(item.id)) return false;
-        if (role === 'teacher' && ['single-school-eval', 'exam-arranger', 'freshman-simulator'].includes(item.id)) return false;
-        if (item.id === 'report-generator' && typeof CONFIG !== 'undefined' && !CONFIG.showQuery) return false;
-        return true;
-    });
-
-    if (validItems.length === 0) return;
-
-    validItems.forEach(item => {
-        const chip = document.createElement('div');
-        chip.className = 'chip-item';
-
-        const targetElement = document.getElementById(item.id);
-        const isActive = targetElement && targetElement.classList.contains('active');
-
-        if (isActive) {
-            chip.classList.add('active');
-        }
-
-        const cleanText = item.text.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
-        chip.title = cleanText;
-        // 使用图标增强视觉
-        chip.innerHTML = `<i class="ti ${item.icon}"></i><span>${cleanText}</span>`;
-
-        chip.onclick = (e) => {
-            e.stopPropagation();
-            document.documentElement.style.setProperty('--primary', cat.color);
-            switchTab(item.id);
-            renderSubNavigation(); // Refresh chip active states
-        };
-
-        subNavContainer.appendChild(chip);
-    });
-
-    // 如果当前没有任何激活的section，自动激活可用的第一个模块
-    setTimeout(() => {
-        const hasActiveSection = document.querySelector('.section.active');
-        if (!hasActiveSection && subNavContainer.querySelector('.chip-item')) {
-            subNavContainer.querySelector('.chip-item').click();
-        }
-    }, 100);
-}
-
-function switchCategory(key) {
-    currentCategory = key;
-    document.documentElement.style.setProperty('--primary', NAV_STRUCTURE[key].color);
-    forceHideAllSectionsExcept();
-    resetMainViewport();
-    renderNavigation();
-
-    // Auto click first item of new category
-    setTimeout(() => {
-        const subNavContainer = document.getElementById('sub-nav-container');
-        if (subNavContainer && subNavContainer.querySelector('.chip-item')) {
-            subNavContainer.querySelector('.chip-item').click();
-        }
-    }, 50);
-}
-
-window.getCurrentNavCategory = function () {
-    return currentCategory;
-};
-
-window.switchNavCategory = function (key) {
-    switchCategory(key);
-};
 
 // ================= 侧边栏与通用工具 =================
 window.toggleSidebarMoreMenu = function () {
@@ -10106,40 +9912,30 @@ function switchTab(id) {
     resetMainViewport();
 
     // 2. 定位所属大类
+    let currentCategory = getCurrentCategoryKey();
     let foundCategory = null;
-    let currentItemName = '';
 
     Object.keys(NAV_STRUCTURE).forEach(catKey => {
         const item = NAV_STRUCTURE[catKey].items.find(i => i.id === id);
         if (item) {
             foundCategory = catKey;
-            currentItemName = item.text;
         }
     });
 
     // 3. 如果大类变化，刷新导航和全局颜色
     if (foundCategory && foundCategory !== currentCategory) {
+        setCurrentCategoryKey(foundCategory);
         currentCategory = foundCategory;
-        const newColor = NAV_STRUCTURE[currentCategory].color;
+        const newColor = NAV_STRUCTURE[currentCategory]?.color || '#334155';
         document.documentElement.style.setProperty('--primary', newColor);
 
         // 重新渲染导航以更新高亮
-        renderNavigation();
+        if (typeof renderNavigation === 'function') renderNavigation();
     } else {
         // 如果大类没变，仅更新子模块芯片的高亮状态
         if (typeof renderSubNavigation === 'function') {
             renderSubNavigation();
         }
-    }
-
-    // 4. [新增] 动态更新 Header 副标题 (面包屑效果)
-    const catTitle = NAV_STRUCTURE[currentCategory].title; // e.g. "🏆 校际联考"
-    const subTitleEl = document.getElementById('app-subtitle');
-    if (subTitleEl) {
-        subTitleEl.innerHTML = `<span style="opacity:0.7">${catTitle}</span> <i class="ti ti-chevron-right" style="font-size:10px;"></i> <strong>${currentItemName}</strong>`;
-        subTitleEl.style.animation = 'none';
-        subTitleEl.offsetHeight; /* trigger reflow */
-        subTitleEl.style.animation = 'fadeIn 0.5s';
     }
 
     // [新增] 切换标签页时隐藏可能属于之前任务的对比及结果区域
@@ -10150,18 +9946,20 @@ function switchTab(id) {
 
     // [新增] 5. 自动同步当前页面的“说明条”颜色 (视觉统一)
     // 找到当前激活的 section
+    const currentCategoryMeta = NAV_STRUCTURE[currentCategory] || NAV_STRUCTURE.data || null;
     const activeSection = document.getElementById(id);
     if (activeSection) {
         // 找到内部的 module-desc-bar
         const descBar = activeSection.querySelector('.module-desc-bar');
-        if (descBar) {
+        if (descBar && currentCategoryMeta) {
             // 强制应用当前大类的颜色
-            descBar.style.borderLeftColor = NAV_STRUCTURE[currentCategory].color;
+            descBar.style.borderLeftColor = currentCategoryMeta.color;
             // 可选：同时让标题颜色也跟随变化
             const descTitle = descBar.querySelector('h3');
-            if (descTitle) descTitle.style.color = '#333'; // 保持深色或设为 NAV_STRUCTURE[currentCategory].color
+            if (descTitle) descTitle.style.color = '#333'; // 保持深色或设为当前分类颜色
         }
     }
+    syncShellChromeBridge(id);
     ensureModuleHelpButton(id);
     if (currentCategory === 'town') {
         ensureTownSubmoduleCompareUIs();
@@ -19902,6 +19700,7 @@ const CohortManager = {
                 setTimeout(() => scheduleTeacherSyncPrompt(), 1200);
             }
         };
+        syncShellChromeBridge();
     },
 
     addFromUI: function () {
@@ -21767,8 +21566,12 @@ function ensureModuleHelpButton(sectionId) {
 }
 
 function updateRoleHint() {
-    const el = document.getElementById('role-hint');
-    if (!el) return;
+    const targets = [
+        document.getElementById('role-hint'),
+        document.getElementById('role-hint-sidebar'),
+        document.getElementById('shell-role-pill')
+    ].filter(Boolean);
+    if (targets.length === 0) return;
     const user = Auth?.currentUser;
 
     const roleMap = {
@@ -21786,16 +21589,23 @@ function updateRoleHint() {
         const roles = RoleManager.getUserRoles(user);
         if (roles.length > 1) {
             const roleLabels = roles.map(r => roleMap[r] || r).join(' + ');
-            el.textContent = `角色: ${roleLabels}`;
-            el.title = `您拥有多个角色：${roles.join(', ')}`;
+            targets.forEach((el) => {
+                el.textContent = `角色：${roleLabels}`;
+                el.title = `您拥有多个角色：${roles.join(', ')}`;
+            });
         } else {
             const role = roles[0] || 'guest';
-            el.textContent = `角色: ${roleMap[role] || role}`;
+            targets.forEach((el) => {
+                el.textContent = `角色：${roleMap[role] || role}`;
+            });
         }
     } else {
         const role = user?.role || 'guest';
-        el.textContent = `角色: ${roleMap[role] || role}`;
+        targets.forEach((el) => {
+            el.textContent = `角色：${roleMap[role] || role}`;
+        });
     }
+    syncShellChromeBridge();
 }
 
 function getCurrentUser() {
