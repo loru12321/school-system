@@ -1,5 +1,9 @@
 {
   "appId": "com.loru.schoolsystem",
   "appName": "school-system",
-  "webDir": "dist"
+  "webDir": "dist",
+  "server": {
+    "url": "https://schoolsystem.com.cn/",
+    "cleartext": false
+  }
 }
