@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.serialization.json.Json
 import java.io.InputStreamReader
+import java.nio.charset.StandardCharsets
 
 class SchoolRepository(private val context: Context) {
 
@@ -19,17 +20,14 @@ class SchoolRepository(private val context: Context) {
 
     fun getSchoolData(): Flow<SchoolSystemData?> = flow {
         try {
-            val assetManager = context.assets
-            // Using the specific file identified in mapping
-            val inputStream = assetManager.open("模拟对比验证明细.json")
-            val reader = InputStreamReader(inputStream)
-            val content = reader.readText()
-            reader.close()
-            
-            val data = json.decodeFromString<SchoolSystemData>(content)
-            emit(data)
-        } catch (e: Exception) {
-            e.printStackTrace()
+            val content = context.assets.open("模拟对比验证明细.json").use { inputStream ->
+                InputStreamReader(inputStream, StandardCharsets.UTF_8).use { reader ->
+                    reader.readText()
+                }
+            }
+            emit(json.decodeFromString<SchoolSystemData>(content))
+        } catch (exception: Exception) {
+            exception.printStackTrace()
             emit(null)
         }
     }.flowOn(Dispatchers.IO)

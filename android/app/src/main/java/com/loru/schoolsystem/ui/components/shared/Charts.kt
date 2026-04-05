@@ -1,95 +1,120 @@
 package com.loru.schoolsystem.ui.components.shared
 
+import android.graphics.Paint
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.unit.dp
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
-
-/**
- * A professional radar chart component for visualizing multi-dimensional data.
- */
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.dp
 
 @Composable
-fun RadarChart(
+fun ScoreTrendChart(
     labels: List<String>,
-    data: List<Double>,
+    values: List<Float>,
     modifier: Modifier = Modifier
 ) {
-    val count = labels.size
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val secondaryColor = primaryColor.copy(alpha = 0.15f)
-    val gridColor = Color.Gray.copy(alpha = 0.3f)
-    
-    Canvas(modifier = modifier.fillMaxSize().padding(32.dp)) {
-        val center = Offset(size.width / 2, size.height / 2)
-        val radius = size.width / 2
-        
-        // Draw grid levels (concentric polygons)
-        for (level in 1..4) {
-            val r = radius * (level / 4f)
+    LineChart(
+        labels = labels,
+        currentValues = values,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun ComparisonTrendChart(
+    labels: List<String>,
+    baselineValues: List<Float>,
+    currentValues: List<Float>,
+    modifier: Modifier = Modifier
+) {
+    LineChart(
+        labels = labels,
+        currentValues = currentValues,
+        baselineValues = baselineValues,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun LineChart(
+    labels: List<String>,
+    currentValues: List<Float>,
+    baselineValues: List<Float>? = null,
+    modifier: Modifier = Modifier
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    val secondary = MaterialTheme.colorScheme.secondary
+    val grid = MaterialTheme.colorScheme.outline.copy(alpha = 0.24f)
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val maxValue = (currentValues + (baselineValues ?: emptyList())).maxOrNull()?.coerceAtLeast(1f) ?: 1f
+
+    Canvas(modifier = modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 12.dp)) {
+        if (labels.isEmpty() || currentValues.isEmpty()) return@Canvas
+
+        val chartLeft = 20.dp.toPx()
+        val chartTop = 16.dp.toPx()
+        val chartBottom = size.height - 28.dp.toPx()
+        val chartWidth = size.width - chartLeft - 12.dp.toPx()
+        val chartHeight = chartBottom - chartTop
+        val stepX = if (labels.size > 1) chartWidth / (labels.size - 1) else 0f
+
+        repeat(4) { index ->
+            val y = chartTop + chartHeight * (index / 3f)
+            drawLine(
+                color = grid,
+                start = Offset(chartLeft, y),
+                end = Offset(chartLeft + chartWidth, y),
+                strokeWidth = 1.dp.toPx()
+            )
+        }
+
+        fun buildPath(values: List<Float>): Pair<Path, List<Offset>> {
+            val points = values.mapIndexed { index, value ->
+                Offset(
+                    x = chartLeft + stepX * index,
+                    y = chartBottom - (value / maxValue) * chartHeight
+                )
+            }
             val path = Path()
-            for (i in 0 until count) {
-                val angle = i * (2 * PI / count) - PI / 2
-                val x = center.x + r * cos(angle).toFloat()
-                val y = center.y + r * sin(angle).toFloat()
-                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            points.forEachIndexed { index, point ->
+                if (index == 0) path.moveTo(point.x, point.y) else path.lineTo(point.x, point.y)
             }
-            path.close()
-            drawPath(path, gridColor, style = Stroke(width = 1.dp.toPx()))
+            return path to points
         }
-        
-        // Draw axes and labels
-        for (i in 0 until count) {
-            val angle = i * (2 * PI / count) - PI / 2
-            val x = center.x + radius * cos(angle).toFloat()
-            val y = center.y + radius * sin(angle).toFloat()
-            drawLine(gridColor, center, Offset(x, y), strokeWidth = 1.dp.toPx())
-            
-            // Draw Labels (Simple implementation using nativeCanvas for spacing)
-            drawIntoCanvas { canvas ->
-                val paint = android.graphics.Paint().apply {
-                    color = android.graphics.Color.GRAY
-                    textSize = 10.dp.toPx()
-                    textAlign = android.graphics.Paint.Align.CENTER
-                }
-                val labelX = center.x + (radius + 20.dp.toPx()) * cos(angle).toFloat()
-                val labelY = center.y + (radius + 20.dp.toPx()) * sin(angle).toFloat()
-                canvas.nativeCanvas.drawText(labels[i], labelX, labelY, paint)
+
+        val secondSeries = baselineValues?.let { buildPath(it) }
+        secondSeries?.let { (path, points) ->
+            drawPath(path = path, color = secondary.copy(alpha = 0.6f), style = Stroke(width = 2.dp.toPx()))
+            points.forEach { point ->
+                drawCircle(color = secondary, radius = 3.dp.toPx(), center = point)
             }
         }
-        
-        // Draw data area
-        val dataPath = Path()
-        val vertexPoints = mutableListOf<Offset>()
-        for (i in 0 until count) {
-            val angle = i * (2 * PI / count) - PI / 2
-            val r = radius * data[i].toFloat().coerceIn(0f, 1f)
-            val x = center.x + r * cos(angle).toFloat()
-            val y = center.y + r * sin(angle).toFloat()
-            val point = Offset(x, y)
-            vertexPoints.add(point)
-            if (i == 0) dataPath.moveTo(x, y) else dataPath.lineTo(x, y)
+
+        val (currentPath, currentPoints) = buildPath(currentValues)
+        drawPath(path = currentPath, color = primary, style = Stroke(width = 3.dp.toPx()))
+        currentPoints.forEach { point ->
+            drawCircle(color = primary, radius = 4.dp.toPx(), center = point)
         }
-        dataPath.close()
-        drawPath(dataPath, secondaryColor, style = Fill)
-        drawPath(dataPath, primaryColor, style = Stroke(width = 3.dp.toPx()))
-        
-        // Draw vertex dots
-        vertexPoints.forEach { point ->
-            drawCircle(primaryColor, radius = 4.dp.toPx(), center = point)
-            drawCircle(Color.White, radius = 2.dp.toPx(), center = point)
+
+        drawIntoCanvas { canvas ->
+            val paint = Paint().apply {
+                color = labelColor.toArgb()
+                textSize = 10.dp.toPx()
+                textAlign = Paint.Align.CENTER
+                isAntiAlias = true
+            }
+            labels.forEachIndexed { index, label ->
+                val x = chartLeft + stepX * index
+                canvas.nativeCanvas.drawText(label, x, size.height - 6.dp.toPx(), paint)
+            }
         }
     }
 }

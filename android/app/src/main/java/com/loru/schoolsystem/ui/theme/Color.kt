@@ -2,20 +2,17 @@ package com.loru.schoolsystem.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Primary Brand Colors
-val SchoolPrimary = Color(0xFF0056D2)
-val SchoolPrimaryContainer = Color(0xFFD8E2FF)
+val SchoolPrimary = Color(0xFF15426B)
+val SchoolPrimaryContainer = Color(0xFFDCE8F7)
 val SchoolOnPrimary = Color(0xFFFFFFFF)
-
-// Secondary & Tertiary
-val SchoolSecondary = Color(0xFF535E78)
-val SchoolAccent = Color(0xFFB45309) // Amber/Gold for awards
-
-// Backgrounds
-val SchoolBackground = Color(0xFFF8F9FA)
+val SchoolSecondary = Color(0xFF18A999)
+val SchoolSecondaryContainer = Color(0xFFD0F5EF)
+val SchoolAccent = Color(0xFFF5A524)
+val SchoolBackground = Color(0xFFF4F7FB)
 val SchoolSurface = Color(0xFFFFFFFF)
+val SchoolSurfaceAlt = Color(0xFFEAF0F8)
 
-// Dark Theme Variants
-val SchoolPrimaryDark = Color(0xFFADC6FF)
-val SchoolBackgroundDark = Color(0xFF1B1B1F)
-val SchoolSurfaceDark = Color(0xFF1B1B1F)
+val SchoolPrimaryDark = Color(0xFFA9CAE9)
+val SchoolSecondaryDark = Color(0xFF69DDCF)
+val SchoolBackgroundDark = Color(0xFF0E1A26)
+val SchoolSurfaceDark = Color(0xFF122232)
