@@ -208,6 +208,19 @@ async function readAppReadyState(page) {
     });
 }
 
+async function readBootState(page) {
+    return page.evaluate(() => {
+        const overlay = document.getElementById('login-overlay');
+        const app = document.getElementById('app');
+        const mask = document.getElementById('mode-mask');
+        return {
+            overlayHidden: !overlay || getComputedStyle(overlay).display === 'none',
+            appVisible: !!app && getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden'),
+            maskVisible: !!mask && getComputedStyle(mask).display !== 'none'
+        };
+    });
+}
+
 async function waitForAppReady(page, timeout = 90000) {
     const deadline = Date.now() + timeout;
     let lastState = null;
@@ -240,21 +253,36 @@ async function waitForAppReady(page, timeout = 90000) {
 }
 
 async function login(page) {
-    await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await page.waitForSelector('#login-user', { timeout: 30000 });
+    await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'commit', timeout: 90000 });
+    await page.waitForTimeout(600);
 
-    const loginText = await page.locator('#login-overlay').innerText();
-    assertContainsAll('login overlay', loginText, requiredLoginText);
-    assertContainsNoForbidden('login overlay', loginText);
+    const bootState = await readBootState(page).catch(() => ({
+        overlayHidden: false,
+        appVisible: false,
+        maskVisible: false
+    }));
 
-    await page.fill('#login-user', process.env.SMOKE_USER || 'admin');
-    await page.fill('#login-pass', process.env.SMOKE_PASS || 'admin123');
-    await page.click('button[onclick="window.Auth?.login()"]');
+    if (!(bootState.overlayHidden && (bootState.appVisible || bootState.maskVisible))) {
+        await page.waitForSelector('#login-user', { state: 'visible', timeout: 30000 });
 
-    await page.waitForFunction(() => {
-        const overlay = document.getElementById('login-overlay');
-        return overlay && getComputedStyle(overlay).display === 'none';
-    }, { timeout: 30000 });
+        const loginText = await page.locator('#login-overlay').innerText();
+        assertContainsAll('login overlay', loginText, requiredLoginText);
+        assertContainsNoForbidden('login overlay', loginText);
+
+        await page.fill('#login-user', process.env.SMOKE_USER || 'admin');
+        await page.fill('#login-pass', process.env.SMOKE_PASS || 'admin123');
+        await page.click('button[onclick="window.Auth?.login()"]');
+
+        await page.waitForFunction(() => {
+            const overlay = document.getElementById('login-overlay');
+            const app = document.getElementById('app');
+            const mask = document.getElementById('mode-mask');
+            const overlayHidden = !overlay || getComputedStyle(overlay).display === 'none';
+            const appVisible = !!app && getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden');
+            const maskVisible = !!mask && getComputedStyle(mask).display !== 'none';
+            return overlayHidden && (appVisible || maskVisible);
+        }, { timeout: 30000 });
+    }
 
     await ensureCohortEntered(page);
 

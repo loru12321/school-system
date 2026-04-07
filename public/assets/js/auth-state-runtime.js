@@ -26,6 +26,44 @@
         return String(value || '').trim();
     }
 
+    function normalizeClassName(value) {
+        const raw = normalizeText(value)
+            .replace(/[()（）]/g, '')
+            .replace(/(?:班级|班|年级|grade|class)/gi, '')
+            .replace(/[／/、_-]+/g, '.')
+            .replace(/[·,，]+/g, '.')
+            .replace(/\s+/g, '')
+            .replace(/\.{2,}/g, '.')
+            .replace(/^\./, '')
+            .replace(/\.$/, '');
+
+        if (!raw) return '';
+
+        const digitChunks = raw.match(/\d+/g) || [];
+        if ((raw.includes('.') || digitChunks.length >= 2) && digitChunks.length >= 2) {
+            const grade = String(Number(digitChunks[0] || 0));
+            const classNum = String(Number(digitChunks.slice(1).join('') || 0));
+            if (grade && classNum) return `${grade}.${classNum}`;
+        }
+
+        const digitsOnly = raw.replace(/\D/g, '');
+        if (/^[6-9]\d{1,3}$/.test(digitsOnly)) {
+            return `${digitsOnly.charAt(0)}.${String(Number(digitsOnly.slice(1)))}`;
+        }
+        if (digitsOnly) return digitsOnly;
+        return raw;
+    }
+
+    function areEquivalentClasses(left, right) {
+        const normalizedLeft = normalizeClassName(left);
+        const normalizedRight = normalizeClassName(right);
+        if (!normalizedLeft || !normalizedRight) {
+            return normalizedLeft === normalizedRight;
+        }
+        if (normalizedLeft === normalizedRight) return true;
+        return normalizedLeft.replace(/[^\d]/g, '') === normalizedRight.replace(/[^\d]/g, '');
+    }
+
     function getStorage(name) {
         try {
             const storage = root && root[name];
@@ -268,12 +306,20 @@
 
     function findManagedAccount(authDb, username, className) {
         const normalizedUsername = normalizeText(username);
-        const normalizedClass = normalizeText(className);
+        const normalizedClass = normalizeClassName(className);
+        const rawClass = normalizeText(className);
         const safeDb = sanitizeLocalAuthDb(authDb);
 
         const parent = safeDb.parents.find((record) =>
             normalizeText(record && record.name) === normalizedUsername
-            && normalizeText(record && record.class) === normalizedClass
+            && (() => {
+                const recordClass = normalizeText(record && record.class);
+                const normalizedRecordClass = normalizeClassName(recordClass);
+                if (normalizedClass && normalizedRecordClass) {
+                    return areEquivalentClasses(normalizedRecordClass, normalizedClass);
+                }
+                return recordClass === rawClass;
+            })()
         );
         if (parent) return { role: 'parent', record: parent };
 
@@ -314,6 +360,8 @@
         getCurrentRoles,
         hasActiveSession,
         applyRolesToBody,
+        normalizeClassName,
+        areEquivalentClasses,
         findManagedAccount
     };
 });

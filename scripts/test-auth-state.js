@@ -47,11 +47,12 @@ function run() {
         admin: { pass: 'admin123' },
         director: { pass: 'director123' },
         teachers: [
-            { name: '张老师', pass: 'yssy2016' },
-            { name: '李老师', pass: 'custom123' }
+            { name: 'Teacher Default', pass: 'yssy2016' },
+            { name: 'Teacher Custom', pass: 'custom123' }
         ],
         parents: [
-            { name: '王小明', class: '701', pass: '123456' }
+            { name: 'Parent Local', class: '701', pass: '123456' },
+            { name: 'Parent Variant', class: '9.04', pass: '123456' }
         ]
     });
 
@@ -71,10 +72,10 @@ function run() {
     assert.strictEqual(Object.prototype.hasOwnProperty.call(storedDb.teachers[0], 'pass'), false);
 
     const currentUser = authState.setCurrentUser({
-        name: '管理员',
+        name: 'Director User',
         role: 'director',
         roles: ['director', 'admin'],
-        school: '实验中学',
+        school: 'Demo School',
         class_name: '701'
     });
 
@@ -90,9 +91,20 @@ function run() {
     assert.ok(root.document.body.className.includes('role-admin'));
     assert.ok(root.document.body.className.includes('role-director'));
 
-    const parentMatch = authState.findManagedAccount(storedDb, '王小明', '701');
+    assert.strictEqual(authState.normalizeClassName('9.4'), '9.4');
+    assert.strictEqual(authState.normalizeClassName('94'), '9.4');
+    assert.strictEqual(authState.normalizeClassName('904'), '9.4');
+    assert.strictEqual(authState.normalizeClassName('9/04班'), '9.4');
+    assert.strictEqual(authState.areEquivalentClasses('9.4', '94'), true);
+    assert.strictEqual(authState.areEquivalentClasses('9.4', '904'), true);
+    assert.strictEqual(authState.areEquivalentClasses('701', '7.01'), true);
+
+    const parentMatch = authState.findManagedAccount(storedDb, 'Parent Local', '701');
     assert.strictEqual(parentMatch.role, 'parent');
-    const teacherMatch = authState.findManagedAccount(storedDb, '张老师', '');
+    assert.strictEqual(authState.findManagedAccount(storedDb, 'Parent Variant', '9.4').record.class, '9.04');
+    assert.strictEqual(authState.findManagedAccount(storedDb, 'Parent Variant', '94').record.class, '9.04');
+
+    const teacherMatch = authState.findManagedAccount(storedDb, 'Teacher Default', '');
     assert.strictEqual(teacherMatch.role, 'teacher');
 
     authState.clearCurrentUser();

@@ -698,6 +698,47 @@ const EdgeGateway = {
             || text.includes('failed to fetch')
             || text.includes('networkerror');
     },
+    buildLoginClassCandidates: function (className = '') {
+        const rawValue = String(className || '').trim();
+        const candidates = [];
+        const push = (value) => {
+            const normalized = String(value || '').trim();
+            if (!normalized || candidates.includes(normalized)) return;
+            candidates.push(normalized);
+        };
+
+        if (!rawValue) return [''];
+
+        push(rawValue);
+
+        const normalized = (typeof AuthState !== 'undefined' && AuthState && typeof AuthState.normalizeClassName === 'function')
+            ? AuthState.normalizeClassName(rawValue)
+            : rawValue;
+        push(normalized);
+
+        const digitsOnly = String(normalized || rawValue).replace(/\D/g, '');
+        if (/^[6-9]\d{1,3}$/.test(digitsOnly)) {
+            const grade = digitsOnly.charAt(0);
+            const classNumber = String(Number(digitsOnly.slice(1)));
+            const paddedClassNumber = classNumber.padStart(2, '0');
+            push(`${grade}.${classNumber}`);
+            push(`${grade}.${paddedClassNumber}`);
+            push(`${grade}${classNumber}`);
+            push(`${grade}${paddedClassNumber}`);
+            push(`${grade}-${classNumber}`);
+            push(`${grade}/${classNumber}`);
+            push(`${grade}.${classNumber}班`);
+        } else if (digitsOnly) {
+            push(digitsOnly);
+        }
+
+        return candidates.length ? candidates : [rawValue];
+    },
+    isClassVariantRetryableError: function (message = '') {
+        const text = String(message || '').trim().toLowerCase();
+        return text.includes('class_name mismatch')
+            || text.includes('invalid username or password');
+    },
     request: async function (action, payload = {}, options = {}) {
         const urls = this.getGatewayCandidates();
         const apikey = this.getPublishableKey();
@@ -749,14 +790,31 @@ const EdgeGateway = {
         throw lastError || new Error('EDGE_GATEWAY_REQUEST_FAILED');
     },
     login: async function (username, password, className = '') {
-        const data = await this.request('login', {
-            username,
-            password,
-            class_name: className || ''
-        }, { allowAnonymous: true });
-        if (data?.token) this.setToken(data.token);
-        if (data?.user) sessionStorage.setItem(this.userStorageKey, JSON.stringify(data.user));
-        return data;
+        const classCandidates = this.buildLoginClassCandidates(className);
+        let lastError = null;
+
+        for (let index = 0; index < classCandidates.length; index += 1) {
+            const currentClassName = classCandidates[index];
+            try {
+                const data = await this.request('login', {
+                    username,
+                    password,
+                    class_name: currentClassName || ''
+                }, { allowAnonymous: true });
+                if (data?.token) this.setToken(data.token);
+                if (data?.user) sessionStorage.setItem(this.userStorageKey, JSON.stringify(data.user));
+                return data;
+            } catch (error) {
+                lastError = error instanceof Error ? error : new Error(String(error));
+                const canRetryWithClassVariant = !!className
+                    && index < classCandidates.length - 1
+                    && this.isClassVariantRetryableError(lastError.message);
+                if (canRetryWithClassVariant) continue;
+                throw lastError;
+            }
+        }
+
+        throw lastError || new Error('EDGE_GATEWAY_LOGIN_FAILED');
     },
     verify: async function () {
         return await this.request('session.verify', {});
@@ -912,15 +970,41 @@ const AuthState = window.AuthState || {
     matchesManagedPassword: function (record, role, password) {
         return this.getManagedAccountPassword(record, role) === String(password || '').trim();
     },
+    normalizeManagedClass: function (value) {
+        if (typeof AuthState !== 'undefined' && AuthState && typeof AuthState.normalizeClassName === 'function') {
+            return AuthState.normalizeClassName(value);
+        }
+        return normalizeClass(value);
+    },
+    areEquivalentClasses: function (left, right) {
+        if (typeof AuthState !== 'undefined' && AuthState && typeof AuthState.areEquivalentClasses === 'function') {
+            return AuthState.areEquivalentClasses(left, right);
+        }
+        return normalizeClass(left) === normalizeClass(right);
+    },
     findManagedAccount: function (authDb, username, className) {
         const safeDb = authDb && typeof authDb === 'object' ? authDb : { teachers: [], parents: [] };
         const normalizedName = String(username || '').trim();
-        const normalizedClass = String(className || '').trim();
-        const parent = (safeDb.parents || []).find(item => String(item?.name || '').trim() === normalizedName && String(item?.class || '').trim() === normalizedClass);
+        const normalizedClass = this.normalizeManagedClass(className);
+        const rawClass = String(className || '').trim();
+        const parent = (safeDb.parents || []).find(item => {
+            if (String(item?.name || '').trim() !== normalizedName) return false;
+            const recordClass = String(item?.class || '').trim();
+            const normalizedRecordClass = this.normalizeManagedClass(recordClass);
+            if (normalizedClass && normalizedRecordClass) {
+                return this.areEquivalentClasses(normalizedRecordClass, normalizedClass);
+            }
+            return recordClass === rawClass;
+        });
         if (parent) return { role: 'parent', record: parent };
         const teacher = (safeDb.teachers || []).find(item => String(item?.name || '').trim() === normalizedName);
         if (teacher) return { role: 'teacher', record: teacher };
         return null;
+    },
+    syncParentMobileScrollRoot: function (enabled) {
+        const shouldEnable = !!enabled && window.matchMedia && window.matchMedia('(max-width: 960px)').matches;
+        document.documentElement.classList.toggle('parent-mobile-scroll-root', shouldEnable);
+        document.body.classList.toggle('parent-mobile-scroll-root', shouldEnable);
     }
 };
 
@@ -2253,6 +2337,24 @@ const Auth = {
     currentUser: null,
     _parentDataRecovering: false,
     _parentRenderRetrying: false,
+    normalizeManagedClass: function (value) {
+        if (typeof AuthState !== 'undefined' && AuthState && typeof AuthState.normalizeClassName === 'function') {
+            return AuthState.normalizeClassName(value);
+        }
+        return normalizeClass(value);
+    },
+    areEquivalentClasses: function (left, right) {
+        if (typeof AuthState !== 'undefined' && AuthState && typeof AuthState.areEquivalentClasses === 'function') {
+            return AuthState.areEquivalentClasses(left, right);
+        }
+        return normalizeClass(left) === normalizeClass(right);
+    },
+    syncParentMobileScrollRoot: function (enabled) {
+        const canUseMatchMedia = typeof window.matchMedia === 'function';
+        const shouldEnable = !!enabled && (!canUseMatchMedia || window.matchMedia('(max-width: 960px)').matches);
+        document.documentElement.classList.toggle('parent-mobile-scroll-root', shouldEnable);
+        document.body.classList.toggle('parent-mobile-scroll-root', shouldEnable);
+    },
 
     // 模拟数据库 (实际存储在 localStorage 'SYS_USERS')
     db: (typeof AuthState.readLocalAuthDb === 'function'
@@ -2280,6 +2382,13 @@ const Auth = {
     syncLoginOverlayState: function (visible) {
         const overlay = document.getElementById('login-overlay');
         const app = document.getElementById('app');
+        if (visible) {
+            this.syncParentMobileScrollRoot(false);
+            if (this._parentRenderTimer) {
+                clearTimeout(this._parentRenderTimer);
+                this._parentRenderTimer = null;
+            }
+        }
         document.body.classList.toggle('login-overlay-active', !!visible);
         document.body.dataset.authState = visible ? 'logged_out' : 'logged_in';
         if (overlay) overlay.style.display = visible ? 'flex' : 'none';
@@ -2367,9 +2476,12 @@ const Auth = {
 
     resolveLocalManagedSchool: function (name, className = '') {
         const normalizedName = String(name || '').trim();
-        const normalizedClass = String(className || '').trim();
+        const normalizedClass = this.normalizeManagedClass(className);
         if (normalizedName && normalizedClass && Array.isArray(RAW_DATA)) {
-            const parentRow = RAW_DATA.find(row => String(row?.name || '').trim() === normalizedName && String(row?.class || '').trim() === normalizedClass);
+            const parentRow = RAW_DATA.find(row =>
+                String(row?.name || '').trim() === normalizedName
+                && this.areEquivalentClasses(row?.class, normalizedClass)
+            );
             if (parentRow && parentRow.school) return String(parentRow.school).trim();
         }
         if (normalizedName && typeof TEACHER_SCHOOL_MAP === 'object' && TEACHER_SCHOOL_MAP) {
@@ -2531,12 +2643,14 @@ const Auth = {
                     }
                 }
 
-                // 对比输入的班级和数据库存的班级 (去除空格后比较，防止 '701 ' 和 '701' 不匹配)
-                // data.class_name 是数据库里的列名
-                const dbClass = (data.class_name || "").toString().replace(/\s+/g, "");
-                const userClass = inputClass.toString().replace(/\s+/g, "");
+                // 对比输入的班级和数据库存的班级，兼容 9.4 / 94 / 904 这类常见写法差异
+                const dbClass = String(data.class_name || '').trim();
+                const userClass = String(inputClass || '').trim();
+                const classMatches = userClass
+                    && dbClass
+                    && this.areEquivalentClasses(dbClass, userClass);
 
-                if (userClass && dbClass !== userClass) {
+                if (userClass && (!dbClass || !classMatches)) {
                     return alert(`❌ 班级不匹配！\n\n您输入的班级：${inputClass}\n系统记录的班级：${data.class_name || '未录入'}\n\n请核对后重试。`);
                 }
             }
@@ -2740,6 +2854,7 @@ const Auth = {
 
         // 🆕 使用 RoleManager 应用多角色
         RoleManager.applyRolesToBody(this.currentUser);
+        this.syncParentMobileScrollRoot(isParentLikeUser(this.currentUser));
 
         const role = this.currentUser.role; // 主角色（兼容旧代码）
 
@@ -2859,6 +2974,11 @@ const Auth = {
         const overlay = document.getElementById('login-overlay');
         const loader = document.getElementById('global-loader');
 
+        if (this._parentRenderTimer) {
+            clearTimeout(this._parentRenderTimer);
+            this._parentRenderTimer = null;
+        }
+
         if (app) app.style.display = 'none'; // 关键：隐藏主应用
         if (header) header.style.display = 'none';
         if (nav) nav.style.display = 'none';
@@ -2875,6 +2995,8 @@ const Auth = {
 
         // 确保容器可见
         container.style.display = 'block';
+        container.scrollTop = 0;
+        this.syncParentMobileScrollRoot(true);
 
         // 3. 移动端视口适配 (防止表格太宽看不全)
         let viewport = document.querySelector('meta[name="viewport"]');
@@ -2893,7 +3015,9 @@ const Auth = {
             `;
 
         // 延时加载数据，给骨架屏一点展示时间
-        setTimeout(async () => {
+        this._parentRenderTimer = setTimeout(async () => {
+            this._parentRenderTimer = null;
+            if (!isParentLikeUser(this.currentUser)) return;
             if (!RAW_DATA || RAW_DATA.length === 0) {
                 container.innerHTML = `<div style="text-align:center; padding:50px; color:#666;">
                         <i class="ti ti-database-off" style="font-size:48px; margin-bottom:10px; display:block;"></i>
@@ -10493,16 +10617,53 @@ function parseRows(rows, defaultSchool) {
 }
 
 
+function normalizeComparableClassValue(classStr) {
+    const raw = String(classStr || '')
+        .trim()
+        .replace(/[()（）]/g, '')
+        .replace(/(?:班级|班|年级|grade|class)/gi, '')
+        .replace(/[／/、_-]+/g, '.')
+        .replace(/[·,，]+/g, '.')
+        .replace(/\s+/g, '')
+        .replace(/\.{2,}/g, '.')
+        .replace(/^\./, '')
+        .replace(/\.$/, '');
+
+    if (!raw) return '';
+
+    const digitChunks = raw.match(/\d+/g) || [];
+    if ((raw.includes('.') || digitChunks.length >= 2) && digitChunks.length >= 2) {
+        const grade = String(Number(digitChunks[0] || 0));
+        const classNum = String(Number(digitChunks.slice(1).join('') || 0));
+        if (grade && classNum) return `${grade}.${classNum}`;
+    }
+
+    const digitsOnly = raw.replace(/\D/g, '');
+    if (/^[6-9]\d{1,3}$/.test(digitsOnly)) {
+        return `${digitsOnly.charAt(0)}.${String(Number(digitsOnly.slice(1)))}`;
+    }
+    if (/^\d+$/.test(digitsOnly)) {
+        const grade = String(getActiveGrade() || '6');
+        return `${grade}.${String(Number(digitsOnly))}`;
+    }
+    return raw;
+}
 
 function normalizeClass(classStr) {
     if (!classStr) return '';
-    let normalized = String(classStr).replace(/班/g, '').replace(/\s/g, '');
-    if (normalized.includes('.')) return normalized;
-    else if (/^\d+$/.test(normalized)) {
-        const grade = String(getActiveGrade() || '6');
-        return `${grade}.${normalized}`;
-    } else if (/^[6789]\d+$/.test(normalized)) { const grade = normalized.charAt(0); const classNum = normalized.substring(1); return `${grade}.${classNum}`; }
-    return classStr;
+    if (typeof AuthState !== 'undefined' && AuthState && typeof AuthState.normalizeClassName === 'function') {
+        const normalized = AuthState.normalizeClassName(classStr);
+        if (/^\d+$/.test(String(normalized || ''))) {
+            const digitsOnly = String(normalized);
+            if (/^[6-9]\d{1,3}$/.test(digitsOnly)) {
+                return `${digitsOnly.charAt(0)}.${String(Number(digitsOnly.slice(1)))}`;
+            }
+            const grade = String(getActiveGrade() || '6');
+            return `${grade}.${String(Number(digitsOnly))}`;
+        }
+        return normalized;
+    }
+    return normalizeComparableClassValue(classStr);
 }
 
 function normalizeSubject(subj) {

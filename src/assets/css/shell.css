@@ -2050,13 +2050,34 @@ body.shell-sidebar-collapsed .sidebar-footer-item {
     }
 
     body[data-mobile-query="true"] #parent-view-container {
-        position: static !important;
         width: 100% !important;
-        height: auto !important;
-        min-height: 100vh !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+        background: #f7fafc !important;
+    }
+
+    html.parent-mobile-scroll-root,
+    body.parent-mobile-scroll-root {
+        overflow: hidden !important;
+        height: calc(var(--app-vh, 1vh) * 100) !important;
+        overscroll-behavior: none !important;
+    }
+
+    body.parent-mobile-scroll-root[data-mobile-query="true"] #parent-view-container {
+        position: fixed !important;
+        inset: 0 !important;
+        width: auto !important;
+        height: calc(var(--app-vh, 1vh) * 100) !important;
+        min-height: 0 !important;
         overflow-x: hidden !important;
         overflow-y: auto !important;
-        padding: 16px 12px 40px !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior-y: contain !important;
+        touch-action: pan-y pinch-zoom !important;
+        padding-top: max(16px, env(safe-area-inset-top)) !important;
+        padding-right: 14px !important;
+        padding-bottom: calc(env(safe-area-inset-bottom) + 40px) !important;
+        padding-left: 14px !important;
         background: #f7fafc !important;
     }
 
