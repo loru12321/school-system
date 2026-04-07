@@ -280,9 +280,19 @@ async function verifyTeacherAiWorkbench(page) {
         const chips = Array.from(document.querySelectorAll('#sub-nav-container .shell-story-card, #sub-nav-container .chip-item'));
         if (chips[0]) chips[0].click();
     });
-    await page.waitForTimeout(700);
+    await page.waitForFunction(() => {
+        const section = document.getElementById('ai-analysis');
+        const heading = document.querySelector('#ai-analysis .analysis-shell-head h2');
+        return !!section
+            && section.classList.contains('active')
+            && !!heading
+            && String(heading.textContent || '').includes('AI工作台');
+    }, undefined, { timeout: 5000 });
 
-    const aiText = await page.locator('#ai-analysis').innerText();
+    const aiText = await page.evaluate(() => {
+        const section = document.getElementById('ai-analysis');
+        return section ? section.textContent : '';
+    });
     assertContainsAll('AI workbench', aiText, requiredAIWorkbenchText);
     assertContainsNoForbidden('AI workbench', aiText);
 }

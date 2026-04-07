@@ -1,8 +1,9 @@
 (function () {
     const DESKTOP_MEDIA_QUERY = '(min-width: 1100px)';
-    const SIDEBAR_STORAGE_KEY = 'studio-shell-sidebar-collapsed-v1';
-    const ANALYSIS_STORAGE_PREFIX = 'studio-analysis-side-collapsed:';
+    const DEFAULT_DESKTOP_COLLAPSED = true;
     let refreshFrame = 0;
+    let desktopSidebarCollapsed = DEFAULT_DESKTOP_COLLAPSED;
+    const analysisRailStates = new Map();
 
     function isDesktopViewport() {
         return window.matchMedia(DESKTOP_MEDIA_QUERY).matches;
@@ -23,9 +24,10 @@
             button.setAttribute('aria-label', label);
             button.setAttribute('title', label);
             button.setAttribute('aria-pressed', isCollapsed ? 'true' : 'false');
+
             const icon = button.querySelector('[data-sidebar-toggle-icon="true"]');
             if (icon) {
-                icon.className = `ti ${isCollapsed ? 'ti-chevrons-right' : 'ti-chevrons-left'}`;
+                icon.className = 'ti ' + (isCollapsed ? 'ti-chevrons-right' : 'ti-chevrons-left');
             }
         });
     }
@@ -34,21 +36,23 @@
         const sidebar = getSidebar();
         if (!sidebar) return;
 
-        const persist = !options || options.persist !== false;
-        const shouldCollapse = !!collapsed && isDesktopViewport();
+        const rememberState = !options || options.rememberState !== false;
+        const desiredCollapsed = !!collapsed;
+        const shouldCollapse = desiredCollapsed && isDesktopViewport();
+
+        if (rememberState) {
+            desktopSidebarCollapsed = desiredCollapsed;
+        }
 
         sidebar.classList.toggle('is-collapsed', shouldCollapse);
         document.body.classList.toggle('shell-sidebar-collapsed', shouldCollapse);
-        syncSidebarToggleButtons(shouldCollapse);
-
-        if (persist) {
-            window.localStorage.setItem(SIDEBAR_STORAGE_KEY, shouldCollapse ? '1' : '0');
-        }
 
         if (!isDesktopViewport()) {
             sidebar.classList.remove('is-collapsed');
             document.body.classList.remove('shell-sidebar-collapsed');
         }
+
+        syncSidebarToggleButtons(shouldCollapse);
 
         if (typeof window.refreshShellEnhancements === 'function') {
             window.refreshShellEnhancements();
@@ -72,19 +76,22 @@
     }
 
     function restoreAppSidebar() {
-        const saved = window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === '1';
-        setAppSidebarCollapsed(saved, { persist: false });
+        setAppSidebarCollapsed(desktopSidebarCollapsed, { rememberState: false });
     }
 
     function resolveAnalysisLayoutId(layout) {
         const owner = layout.closest('.section[id]');
         if (owner && owner.id) return owner.id;
         if (layout.id) return layout.id;
-        return `analysis-layout-${Array.from(document.querySelectorAll('.analysis-results-layout')).indexOf(layout)}`;
+        return 'analysis-layout-' + Array.from(document.querySelectorAll('.analysis-results-layout')).indexOf(layout);
     }
 
-    function getAnalysisStorageKey(layout) {
-        return `${ANALYSIS_STORAGE_PREFIX}${resolveAnalysisLayoutId(layout)}`;
+    function getAnalysisRailState(layout) {
+        const stateKey = resolveAnalysisLayoutId(layout);
+        if (!analysisRailStates.has(stateKey)) {
+            analysisRailStates.set(stateKey, DEFAULT_DESKTOP_COLLAPSED);
+        }
+        return analysisRailStates.get(stateKey);
     }
 
     function countAnalysisEntries(sideNav) {
@@ -99,31 +106,37 @@
 
         const titleText = layout.__analysisRailTitle || '功能导航';
         const count = countAnalysisEntries(sideNav);
+        const collapsed = layout.classList.contains('is-side-collapsed');
 
         const collapseLabel = collapseButton.querySelector('[data-rail-label="true"]');
-        if (collapseLabel) collapseLabel.textContent = `收起${titleText}`;
+        if (collapseLabel) collapseLabel.textContent = '收起' + titleText;
 
         const revealLabel = revealButton.querySelector('[data-rail-label="true"]');
-        if (revealLabel) revealLabel.textContent = `展开${titleText}`;
+        if (revealLabel) revealLabel.textContent = '展开' + titleText;
 
         const collapseCount = collapseButton.querySelector('[data-rail-count="true"]');
         if (collapseCount) collapseCount.textContent = String(count);
 
         const revealCount = revealButton.querySelector('[data-rail-count="true"]');
         if (revealCount) revealCount.textContent = String(count);
+
+        collapseButton.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
+        revealButton.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
     }
 
     function setAnalysisRailCollapsed(layout, collapsed, options) {
         if (!layout) return;
 
-        const persist = !options || options.persist !== false;
-        const shouldCollapse = !!collapsed && isDesktopViewport();
-        layout.classList.toggle('is-side-collapsed', shouldCollapse);
+        const rememberState = !options || options.rememberState !== false;
+        const desiredCollapsed = !!collapsed;
+        const shouldCollapse = desiredCollapsed && isDesktopViewport();
+        const stateKey = resolveAnalysisLayoutId(layout);
 
-        if (persist) {
-            window.localStorage.setItem(getAnalysisStorageKey(layout), shouldCollapse ? '1' : '0');
+        if (rememberState) {
+            analysisRailStates.set(stateKey, desiredCollapsed);
         }
 
+        layout.classList.toggle('is-side-collapsed', shouldCollapse);
         syncAnalysisRailUi(layout);
     }
 
@@ -131,11 +144,12 @@
         const button = document.createElement('button');
         button.type = 'button';
         button.className = className;
-        button.innerHTML = `
-            <i class="ti ${iconName}"></i>
-            <span data-rail-label="true">${labelText}</span>
-            <span class="${className.indexOf('reveal') >= 0 ? 'analysis-side-reveal__count' : 'analysis-side-toggle__count'}" data-rail-count="true">0</span>
-        `;
+        button.innerHTML =
+            '<i class="ti ' + iconName + '"></i>' +
+            '<span data-rail-label="true">' + labelText + '</span>' +
+            '<span class="' +
+            (className.indexOf('reveal') >= 0 ? 'analysis-side-reveal__count' : 'analysis-side-toggle__count') +
+            '" data-rail-count="true">0</span>';
         return button;
     }
 
@@ -150,7 +164,7 @@
         const toolbar = document.createElement('div');
         toolbar.className = 'analysis-side-toolbar';
 
-        const collapseButton = createRailButton('analysis-side-toggle', `收起${titleText}`, 'ti-chevrons-left');
+        const collapseButton = createRailButton('analysis-side-toggle', '收起' + titleText, 'ti-chevrons-left');
         collapseButton.addEventListener('click', function () {
             setAnalysisRailCollapsed(layout, true);
         });
@@ -161,7 +175,7 @@
         const revealWrap = document.createElement('div');
         revealWrap.className = 'analysis-side-reveal';
 
-        const revealButton = createRailButton('analysis-side-reveal-btn', `展开${titleText}`, 'ti-chevrons-right');
+        const revealButton = createRailButton('analysis-side-reveal-btn', '展开' + titleText, 'ti-chevrons-right');
         revealButton.addEventListener('click', function () {
             setAnalysisRailCollapsed(layout, false);
         });
@@ -181,8 +195,7 @@
         const layouts = Array.from(document.querySelectorAll('.analysis-results-layout'));
         layouts.forEach((layout) => {
             enhanceAnalysisLayout(layout);
-            const saved = window.localStorage.getItem(getAnalysisStorageKey(layout)) === '1';
-            setAnalysisRailCollapsed(layout, saved, { persist: false });
+            setAnalysisRailCollapsed(layout, getAnalysisRailState(layout), { rememberState: false });
         });
     }
 

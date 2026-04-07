@@ -64,7 +64,7 @@
     
 </head>
 
-<body>
+<body class="shell-sidebar-collapsed">
 
     <!-- 全局加载遮罩 -->
     <div id="global-loader" class="hidden">
@@ -584,7 +584,7 @@
     <div id="watermark-layer" aria-hidden="true"></div>
     <div class="app-layout hidden" id="app">
         <!-- 📱 新版宽阔侧边栏 (SaaS / Vercel / Notion 风格) -->
-        <aside id="app-sidebar" class="sidebar-spacious">
+        <aside id="app-sidebar" class="sidebar-spacious is-collapsed">
             <div class="sidebar-header">
                 <div class="sidebar-logo-container">
                     <img id="custom-logo-img" src="" alt="Logo" onerror="this.style.display='none'">
@@ -675,8 +675,8 @@
                 <!-- 左侧: 状态/提示区 -->
                 <div class="toolbar-left shell-toolbar-panel shell-toolbar-panel--identity">
                     <button class="btn mobile-menu-toggle workspace-rail-toggle" type="button" data-sidebar-toggle="true"
-                        onclick="window.toggleAppSidebar()" aria-label="切换左侧工作区" title="切换左侧工作区">
-                        <i class="ti ti-chevrons-left" data-sidebar-toggle-icon="true"></i>
+                        onclick="window.toggleAppSidebar()" aria-label="展开左侧工作区" title="展开左侧工作区">
+                        <i class="ti ti-chevrons-right" data-sidebar-toggle-icon="true"></i>
                     </button>
                     <div class="shell-title-stack">
                         <div class="shell-title-meta">
@@ -1310,7 +1310,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="layout-grid analysis-results-layout">
+                <div class="layout-grid analysis-results-layout is-side-collapsed">
                     <div class="side-nav analysis-side-nav">
                         <div class="side-nav-title">快速定位</div>
                         <div class="analysis-side-note">先从总览判断站位，再切换到学科明细和横向对比。</div>
@@ -1769,7 +1769,7 @@
                     </div>
                 </div>
                 <div id="tmModuleState-class-comparison"></div>
-                <div class="layout-grid analysis-results-layout">
+                <div class="layout-grid analysis-results-layout is-side-collapsed">
                     <div class="side-nav analysis-side-nav">
                         <div class="side-nav-title">快速定位</div>
                         <div class="analysis-side-note">先看总分，再进入单科详情和均衡矩阵，便于快速比较班级结构。</div>
@@ -2006,7 +2006,7 @@
                     </div>
                 </details>
 
-                <div class="layout-grid analysis-results-layout">
+                <div class="layout-grid analysis-results-layout is-side-collapsed">
                     <div class="side-nav analysis-side-nav">
                         <div class="side-nav-title">功能视图</div>
                         <div class="analysis-side-note">先看集体增值报表，再切到个人进退步明细和多期变化。</div>
@@ -4398,7 +4398,7 @@
                     </div>
                 </div>
 
-                <div class="layout-grid analysis-results-layout">
+                <div class="layout-grid analysis-results-layout is-side-collapsed">
                     <div class="side-nav analysis-side-nav">
                         <div class="side-nav-title">总览导航</div>
                         <div class="analysis-side-note">先确认当前分析依据和数据就绪，再看预警、云端状态与推荐动作，最后进入具体分析页。</div>
@@ -5033,7 +5033,7 @@
                     </div>
                 </div>
 
-                <div class="layout-grid analysis-results-layout">
+                <div class="layout-grid analysis-results-layout is-side-collapsed">
                     <div class="side-nav analysis-side-nav">
                         <div class="side-nav-title">总览导航</div>
                         <div class="analysis-side-note">先看就绪状态与提示，再决定进入哪个学生分析子模块。</div>
@@ -5814,7 +5814,7 @@
                         <p>校内排名：同学科教师按综合得分排序，分数并列时共享名次。</p>
                     </div>
                 </details>
-                <div class="layout-grid analysis-results-layout analysis-results-layout-teacher">
+                <div class="layout-grid analysis-results-layout analysis-results-layout-teacher is-side-collapsed">
                     <div class="side-nav analysis-side-nav">
                         <div class="side-nav-title">功能导航</div>
                         <div class="analysis-side-note">先扫教师概况，再看明细对比，最后处理结对子与乡镇排名。</div>
