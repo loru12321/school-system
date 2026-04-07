@@ -656,7 +656,7 @@ window.ensurePerfMobileRuntimeLoaded = function () {
 };
 
 window.ensureMobileManagerRuntimeLoaded = function () {
-    return loadOptionalRuntime('mobile-manager', './assets/js/mobile-manager.js');
+    return loadOptionalRuntime('mobile-manager', './assets/js/mobile-app-runtime.js');
 };
 
 window.ensureDataManagerSqlRuntimeLoaded = function () {

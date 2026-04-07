@@ -11349,6 +11349,42 @@ function buildStudentDetailMobileRow(student, visibleSubjects, isTeacher, isClas
     `;
 }
 
+function shouldAutoFocusStudentDetailsDataOnMobile(reset) {
+    if (!reset) return false;
+    return document.body?.dataset?.mobileQuery === 'true' || window.innerWidth <= 768;
+}
+
+function focusStudentDetailsPrimaryFlow() {
+    const section = document.getElementById('student-details');
+    const firstCard = section?.querySelector('.student-detail-mobile-card');
+    const primaryFlow = section?.querySelector('.student-details-primary-flow');
+    const tableWrap = section?.querySelector('.table-wrap');
+    const target = firstCard || primaryFlow || tableWrap || section;
+    if (!target) return;
+
+    const appMain = document.querySelector('main.app-main');
+    const mainCanScroll = appMain
+        && typeof appMain.scrollTo === 'function'
+        && (appMain.scrollHeight - appMain.clientHeight) > 24;
+    if (mainCanScroll) {
+        const nextTop = appMain.scrollTop + target.getBoundingClientRect().top - appMain.getBoundingClientRect().top - 16;
+        appMain.scrollTo({ top: Math.max(0, nextTop), behavior: 'auto' });
+        return;
+    }
+
+    const scrollingEl = document.scrollingElement || document.documentElement || document.body;
+    if (scrollingEl && typeof scrollingEl.scrollTo === 'function') {
+        const currentTop = window.scrollY || scrollingEl.scrollTop || document.documentElement.scrollTop || document.body.scrollTop || 0;
+        const nextTop = currentTop + target.getBoundingClientRect().top - 16;
+        scrollingEl.scrollTo({ top: Math.max(0, nextTop), behavior: 'auto' });
+        return;
+    }
+
+    if (typeof target.scrollIntoView === 'function') {
+        target.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
+}
+
 function renderStudentDetails(reset = true) {
     // 隐藏可能存在的筛选菜单
     closeAllMenus();
@@ -11520,6 +11556,7 @@ function renderStudentDetails(reset = true) {
     const tbody = document.querySelector('#studentDetailTable tbody');
     const detailTable = document.getElementById('studentDetailTable');
     const isMobileStudentDetails = isStudentDetailsMobileCardMode();
+    const shouldAutoFocusData = shouldAutoFocusStudentDetailsDataOnMobile(reset);
     if (detailTable) {
         detailTable.classList.toggle('student-detail-mobile-table', isMobileStudentDetails);
         if (isMobileStudentDetails) {
@@ -11690,10 +11727,8 @@ function renderStudentDetails(reset = true) {
         const tableWrap = document.querySelector('#student-details .table-wrap');
         const isMobileViewport = document.body?.dataset?.mobileQuery === 'true' || window.innerWidth <= 768;
         if (isMobileViewport) {
-            if (typeof resetMainViewport === 'function') {
-                resetMainViewport();
-            } else if (typeof window.scrollTo === 'function') {
-                window.scrollTo({ top: 0, behavior: 'auto' });
+            if (shouldAutoFocusData) {
+                focusStudentDetailsPrimaryFlow();
             }
             return;
         }

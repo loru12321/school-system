@@ -122,6 +122,25 @@
         if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
         if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
 
+        const triggerRender = () => {
+            const section = document.getElementById('student-details');
+            if (!section || !section.classList.contains('active')) return;
+            if (typeof window.renderStudentDetails === 'function') {
+                window.renderStudentDetails(true);
+            }
+        };
+
+        setTimeout(triggerRender, 0);
+        setTimeout(() => {
+            const section = document.getElementById('student-details');
+            const renderedRows = document.querySelectorAll('#student-details table tbody tr').length;
+            if (!section || !section.classList.contains('active')) return;
+            if (renderedRows > 1) return;
+            if (typeof window.renderStudentDetails === 'function') {
+                window.renderStudentDetails(true);
+            }
+        }, 900);
+
         const user = getCurrentUser();
         const role = user?.role || 'guest';
         const multiPeriodSection = document.getElementById('student-multi-period-compare-section');

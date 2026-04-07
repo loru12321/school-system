@@ -1,0 +1,960 @@
+(() => {
+    if (typeof window === 'undefined' || window.__MOBILE_APP_RUNTIME_PATCHED__) return;
+
+    const MOBILE_BREAKPOINT = 960;
+    const REFRESH_DELAYS = [80, 260, 900];
+    const HOME_BY_ROLE = {
+        admin: 'starter-hub',
+        director: 'starter-hub',
+        grade_director: 'starter-hub',
+        class_teacher: 'student-details',
+        teacher: 'teacher-analysis'
+    };
+    const QUICK_MODULE_IDS = [
+        'student-details',
+        'summary',
+        'teacher-analysis',
+        'report-generator',
+        'progress-analysis',
+        'analysis',
+        'teaching-warning-center'
+    ];
+    const ROLE_LABELS = {
+        admin: '管理员',
+        director: '校级管理',
+        grade_director: '级部主任',
+        class_teacher: '班主任',
+        teacher: '教师',
+        parent: '家长',
+        student: '学生',
+        guest: '访客'
+    };
+
+    const isNativeApp = !!(
+        window.Capacitor
+        && (
+            (typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform())
+            || (typeof window.Capacitor.getPlatform === 'function' && window.Capacitor.getPlatform() !== 'web')
+        )
+    );
+
+    let refreshHandle = 0;
+    let sheetMode = '';
+    let themeMedia = null;
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[char]));
+    }
+
+    function getViewportWidth() {
+        const candidates = [
+            Number(window.innerWidth || 0),
+            Number(document.documentElement?.clientWidth || 0),
+            Number(window.outerWidth || 0),
+            Number(window.screen?.width || 0),
+            Number(window.screen?.availWidth || 0)
+        ].filter((value) => Number.isFinite(value) && value > 0);
+        return candidates.length ? Math.min(...candidates) : 0;
+    }
+
+    function isMobileViewport() {
+        return getViewportWidth() <= MOBILE_BREAKPOINT;
+    }
+
+    function getCurrentUser() {
+        if (window.AuthState && typeof window.AuthState.getCurrentUser === 'function') {
+            return window.AuthState.getCurrentUser();
+        }
+        if (window.Auth && window.Auth.currentUser) return window.Auth.currentUser;
+        return null;
+    }
+
+    function getCurrentRole() {
+        if (window.AuthState && typeof window.AuthState.getCurrentRole === 'function') {
+            return window.AuthState.getCurrentRole();
+        }
+        return String(getCurrentUser()?.role || document.body?.dataset?.role || 'guest').trim() || 'guest';
+    }
+
+    function getCurrentRoles() {
+        if (window.AuthState && typeof window.AuthState.getCurrentRoles === 'function') {
+            return window.AuthState.getCurrentRoles();
+        }
+        const user = getCurrentUser();
+        const rawRoles = Array.isArray(user?.roles) && user.roles.length
+            ? user.roles
+            : [user?.role].filter(Boolean);
+        return rawRoles.map((role) => String(role || '').trim()).filter(Boolean);
+    }
+
+    function hasRole(expectedRoles) {
+        const roleSet = new Set(getCurrentRoles());
+        return expectedRoles.some((role) => roleSet.has(role));
+    }
+
+    function isParentLikeRole(role = getCurrentRole()) {
+        const normalizedRole = String(role || '').trim();
+        return normalizedRole === 'parent' || normalizedRole === 'student';
+    }
+
+    function humanizeRole(role = getCurrentRole()) {
+        return ROLE_LABELS[String(role || '').trim()] || String(role || '访客');
+    }
+
+    function getCurrentSchool() {
+        if (window.SchoolState && typeof window.SchoolState.getCurrentSchool === 'function') {
+            return String(
+                getCurrentUser()?.school
+                || window.SchoolState.getCurrentSchool()
+                || ''
+            ).trim();
+        }
+        return String(
+            getCurrentUser()?.school
+            || window.MY_SCHOOL
+            || localStorage.getItem('MY_SCHOOL')
+            || ''
+        ).trim();
+    }
+
+    function isLoggedIn() {
+        const overlay = document.getElementById('login-overlay');
+        const overlayVisible = !!(overlay && getComputedStyle(overlay).display !== 'none');
+        return !!getCurrentUser() && !overlayVisible;
+    }
+
+    function getNavStructure() {
+        if (window.NAV_STRUCTURE) return window.NAV_STRUCTURE;
+        try {
+            return NAV_STRUCTURE;
+        } catch {
+            return null;
+        }
+    }
+
+    function canUseModule(id) {
+        const role = getCurrentRole();
+        if ((role === 'teacher' || role === 'class_teacher')
+            && typeof window.canAccessModule === 'function'
+            && !window.canAccessModule(id)) {
+            return false;
+        }
+        if (role === 'teacher' && ['single-school-eval', 'exam-arranger', 'freshman-simulator'].includes(id)) {
+            return false;
+        }
+        if (id === 'report-generator' && typeof window.CONFIG !== 'undefined' && window.CONFIG && !window.CONFIG.showQuery) {
+            return false;
+        }
+        return true;
+    }
+
+    function getAllowedCategories() {
+        const nav = getNavStructure();
+        if (!nav) return [];
+
+        const role = getCurrentRole();
+        const restrictedRole = role === 'teacher' || role === 'class_teacher';
+
+        return Object.keys(nav)
+            .filter((key) => {
+                if (restrictedRole && (key === 'data' || key === 'tools')) return false;
+                if (restrictedRole && role === 'teacher' && key === 'town') return false;
+                return true;
+            })
+            .map((key) => {
+                const category = nav[key];
+                return {
+                    ...category,
+                    key,
+                    items: Array.isArray(category?.items)
+                        ? category.items.filter((item) => canUseModule(item.id))
+                        : []
+                };
+            })
+            .filter((category) => category.items.length > 0);
+    }
+
+    function findAllowedItem(moduleId) {
+        if (!moduleId) return null;
+        const categories = getAllowedCategories();
+        for (const category of categories) {
+            const match = category.items.find((item) => item.id === moduleId);
+            if (match) {
+                return {
+                    ...match,
+                    categoryKey: category.key,
+                    categoryTitle: category.title,
+                    categoryColor: category.color
+                };
+            }
+        }
+        return null;
+    }
+
+    function getHomeModuleId() {
+        const preferred = HOME_BY_ROLE[getCurrentRole()] || 'starter-hub';
+        const preferredItem = findAllowedItem(preferred);
+        if (preferredItem) return preferredItem.id;
+        return getAllowedCategories()[0]?.items?.[0]?.id || 'starter-hub';
+    }
+
+    function getActiveModuleId() {
+        return document.querySelector('.section.active')?.id || getHomeModuleId();
+    }
+
+    function getActiveItem() {
+        return findAllowedItem(getActiveModuleId()) || findAllowedItem(getHomeModuleId()) || null;
+    }
+
+    function getCurrentCategory() {
+        const categories = getAllowedCategories();
+        const activeItem = getActiveItem();
+        if (activeItem) {
+            const match = categories.find((category) => category.key === activeItem.categoryKey);
+            if (match) return match;
+        }
+        const currentKey = typeof window.getCurrentNavCategory === 'function'
+            ? String(window.getCurrentNavCategory() || '').trim()
+            : '';
+        return categories.find((category) => category.key === currentKey) || categories[0] || null;
+    }
+
+    function uniqueItems(items) {
+        const seen = new Set();
+        return items.filter((item) => {
+            if (!item || !item.id || seen.has(item.id)) return false;
+            seen.add(item.id);
+            return true;
+        });
+    }
+
+    function getQuickModules() {
+        const modules = [
+            findAllowedItem(getHomeModuleId()),
+            ...QUICK_MODULE_IDS.map((moduleId) => findAllowedItem(moduleId)),
+            getActiveItem()
+        ];
+        return uniqueItems(modules).slice(0, 6);
+    }
+
+    function getModeLabel() {
+        const badge = document.getElementById('mode-badge');
+        const badgeText = String(badge?.textContent || '').trim();
+        if (badgeText) return badgeText;
+        return String(window.CONFIG?.name || '学校工作台').trim();
+    }
+
+    function getCurrentCohortLabel() {
+        const select = document.getElementById('cohort-selector');
+        if (!select?.selectedOptions?.[0]) return '届别未选择';
+        return String(select.selectedOptions[0].textContent || select.value || '届别未选择').trim() || '届别未选择';
+    }
+
+    function getCohortOptions() {
+        const select = document.getElementById('cohort-selector');
+        if (!select) return [];
+        return Array.from(select.options || [])
+            .filter((option) => String(option.value || '').trim())
+            .map((option) => ({
+                value: String(option.value || '').trim(),
+                label: String(option.textContent || option.value || '').trim()
+            }));
+    }
+
+    function getAppMain() {
+        return document.querySelector('main.app-main');
+    }
+
+    function scrollPrimaryViewportToTop() {
+        const appMain = getAppMain();
+        if (appMain && typeof appMain.scrollTo === 'function') {
+            appMain.scrollTo({ top: 0, behavior: 'auto' });
+            return;
+        }
+        const scrollingEl = document.scrollingElement || document.documentElement || document.body;
+        if (scrollingEl && typeof scrollingEl.scrollTo === 'function') {
+            scrollingEl.scrollTo({ top: 0, behavior: 'auto' });
+            return;
+        }
+        if (typeof window.scrollTo === 'function') {
+            window.scrollTo({ top: 0, behavior: 'auto' });
+        }
+    }
+
+    function markResponsiveTables(scope = document) {
+        if (!isMobileViewport()) return;
+        const tables = scope.querySelectorAll('.table-wrap table, table.comparison-table, table.fluent-table, #tb-query, #studentDetailTable');
+        tables.forEach((table) => {
+            const headerRows = table.querySelectorAll('thead tr');
+            const columns = headerRows.length ? Array.from(headerRows[headerRows.length - 1].children) : [];
+            if (!columns.length) return;
+            table.classList.add('mobile-card-table');
+            Array.from(table.querySelectorAll('tbody tr')).forEach((row) => {
+                let title = String(row.getAttribute('data-mobile-card-title') || '').trim();
+                Array.from(row.children).forEach((cell, index) => {
+                    if (!(cell instanceof HTMLElement) || cell.hasAttribute('colspan')) return;
+                    const label = String(columns[index]?.textContent || `字段${index + 1}`).replace(/\s+/g, ' ').trim();
+                    const value = String(cell.textContent || '').replace(/\s+/g, ' ').trim();
+                    if (!title && value && index <= 1) title = value;
+                    cell.setAttribute('data-label', label);
+                });
+                if (title) row.setAttribute('data-mobile-card-title', title);
+            });
+        });
+    }
+
+    function markFlexibleRows(scope = document) {
+        if (!isMobileViewport()) return;
+        scope.querySelectorAll('.section [style*="grid-template-columns"]').forEach((element) => {
+            if (element.closest('#parent-view-container')) return;
+            element.classList.add('mobile-stack-grid');
+        });
+        scope.querySelectorAll('.section [style*="display:flex"]').forEach((element) => {
+            if (element.closest('#parent-view-container') || element.closest('#apk-mobile-shell')) return;
+            if (element.children.length < 2) return;
+            element.classList.add('mobile-wrap-row');
+        });
+    }
+
+    function refreshContentEnhancements() {
+        const scope = document.querySelector('.section.active') || document;
+        markResponsiveTables(scope);
+        markFlexibleRows(scope);
+    }
+
+    function hideLegacyMobileShells() {
+        ['mobile-manager-app', 'mobile-query-shell'].forEach((id) => {
+            const node = document.getElementById(id);
+            if (!node) return;
+            node.setAttribute('aria-hidden', 'true');
+            node.style.display = 'none';
+        });
+    }
+
+    function syncDesktopAppVisibility() {
+        const app = document.getElementById('app');
+        if (!app) return;
+
+        if (!isMobileViewport()) {
+            app.classList.remove('hidden');
+            app.style.display = '';
+            return;
+        }
+
+        if (!isLoggedIn()) {
+            app.classList.add('hidden');
+            app.style.display = 'none';
+            return;
+        }
+
+        if (!isParentLikeRole()) {
+            app.classList.remove('hidden');
+            app.style.display = '';
+        }
+    }
+
+    function syncThemeColorMeta() {
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (!meta) return;
+        meta.setAttribute('content', document.body.classList.contains('dark-mode') ? '#08111d' : '#eef3f8');
+    }
+
+    function syncSystemTheme() {
+        const isDark = !!themeMedia?.matches;
+        document.body.dataset.nativeApp = isNativeApp ? 'true' : 'false';
+        document.body.dataset.systemTheme = isDark ? 'dark' : 'light';
+        if (isNativeApp && isMobileViewport()) {
+            document.body.classList.toggle('dark-mode', isDark);
+            localStorage.setItem('theme-dark', isDark ? 'true' : 'false');
+        }
+        document.documentElement.style.colorScheme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
+        syncThemeColorMeta();
+    }
+
+    function ensureShellRoot() {
+        let root = document.getElementById('apk-mobile-shell');
+        if (root) return root;
+
+        root = document.createElement('div');
+        root.id = 'apk-mobile-shell';
+        root.setAttribute('aria-hidden', 'true');
+        root.innerHTML = `
+            <div class="apk-shell-top">
+                <div class="apk-shell-topbar apk-shell-surface">
+                    <button type="button" class="apk-shell-icon" data-apk-action="modules" aria-label="打开模块面板">
+                        <i class="ti ti-layout-grid"></i>
+                    </button>
+                    <div class="apk-shell-copy">
+                        <span class="apk-shell-kicker" data-apk-field="role">学校工作台</span>
+                        <strong class="apk-shell-title" data-apk-field="title">智慧教务</strong>
+                        <span class="apk-shell-subtitle" data-apk-field="subtitle">移动工作台正在准备中</span>
+                    </div>
+                    <button type="button" class="apk-shell-icon" data-apk-action="search" aria-label="打开搜索">
+                        <i class="ti ti-search"></i>
+                    </button>
+                </div>
+                <div class="apk-shell-meta">
+                    <button type="button" class="apk-shell-pill apk-shell-surface" data-apk-action="cohorts">
+                        <i class="ti ti-id-badge-2"></i>
+                        <span data-apk-field="cohort">届别未选择</span>
+                    </button>
+                    <div class="apk-shell-pill apk-shell-surface is-static">
+                        <i class="ti ti-device-imac"></i>
+                        <span data-apk-field="mode">学校工作台</span>
+                    </div>
+                </div>
+                <div class="apk-shell-rail" data-apk-rail></div>
+            </div>
+            <button type="button" class="apk-shell-backdrop" data-apk-action="close-sheet" aria-label="关闭面板"></button>
+            <div class="apk-shell-sheet">
+                <div class="apk-shell-sheet-panel apk-shell-surface" data-apk-sheet-panel></div>
+            </div>
+            <div class="apk-shell-tabs apk-shell-surface">
+                <button type="button" class="apk-shell-tab" data-apk-tab="home">
+                    <i class="ti ti-home"></i>
+                    <span>工作台</span>
+                </button>
+                <button type="button" class="apk-shell-tab" data-apk-tab="modules">
+                    <i class="ti ti-layout-grid"></i>
+                    <span>模块</span>
+                </button>
+                <button type="button" class="apk-shell-tab" data-apk-tab="quick">
+                    <i class="ti ti-bolt"></i>
+                    <span>快捷</span>
+                </button>
+                <button type="button" class="apk-shell-tab" data-apk-tab="account">
+                    <i class="ti ti-user-circle"></i>
+                    <span>我的</span>
+                </button>
+            </div>
+        `;
+
+        root.addEventListener('click', handleShellClick);
+        document.body.appendChild(root);
+        return root;
+    }
+
+    function buildSheetHeader(title, copy) {
+        return `
+            <div class="apk-sheet-header">
+                <div>
+                    <strong>${escapeHtml(title)}</strong>
+                    <span>${escapeHtml(copy)}</span>
+                </div>
+                <button type="button" class="apk-shell-icon is-compact" data-apk-action="close-sheet" aria-label="关闭面板">
+                    <i class="ti ti-x"></i>
+                </button>
+            </div>
+        `;
+    }
+
+    function buildModuleCard(item, activeId) {
+        const active = item.id === activeId ? ' is-active' : '';
+        return `
+            <button type="button" class="apk-sheet-card${active}" data-apk-module="${escapeHtml(item.id)}">
+                <strong>${escapeHtml(item.text || item.id)}</strong>
+                <span>${escapeHtml(item.hint || item.categoryTitle || '打开该模块')}</span>
+            </button>
+        `;
+    }
+
+    function buildActionCard(action, title, copy, icon, extraClass = '') {
+        return `
+            <button type="button" class="apk-sheet-card apk-sheet-card--action${extraClass ? ` ${extraClass}` : ''}" data-apk-action="${escapeHtml(action)}">
+                <i class="${escapeHtml(icon)}"></i>
+                <strong>${escapeHtml(title)}</strong>
+                <span>${escapeHtml(copy)}</span>
+            </button>
+        `;
+    }
+
+    function buildModulesSheetHtml() {
+        const categories = getAllowedCategories();
+        const activeId = getActiveModuleId();
+
+        if (!categories.length) {
+            return `${buildSheetHeader('模块总览', '当前角色暂无可用模块。')}
+                <div class="apk-sheet-empty">当前账号还没有可切换的模块入口。</div>`;
+        }
+
+        return [
+            buildSheetHeader('模块总览', '按分类切换工作模块，避免手机端多层入口互相干扰。'),
+            ...categories.map((category) => `
+                <section class="apk-sheet-section">
+                    <div class="apk-sheet-section-head">
+                        <span class="apk-sheet-section-title">${escapeHtml(category.title)}</span>
+                        <span class="apk-sheet-section-note">${escapeHtml(category.eyebrow || 'Workspace')}</span>
+                    </div>
+                    <div class="apk-sheet-grid">
+                        ${category.items.map((item) => buildModuleCard(item, activeId)).join('')}
+                    </div>
+                </section>
+            `)
+        ].join('');
+    }
+
+    function buildQuickSheetHtml() {
+        const activeId = getActiveModuleId();
+        const quickModules = getQuickModules();
+        const quickActions = [
+            buildActionCard('search', '全局搜索', '快速搜索学生、模块和操作入口。', 'ti ti-search'),
+            buildActionCard('cohorts', '切换届别', '在不同届别工作区之间快速切换。', 'ti ti-id-badge-2'),
+            typeof window.openUserPasswordModal === 'function'
+                ? buildActionCard('password', '修改密码', '直接打开当前账号的密码修改入口。', 'ti ti-lock')
+                : '',
+            buildActionCard('logout', '退出登录', '返回登录页，重新选择账号进入。', 'ti ti-logout', 'is-danger')
+        ].filter(Boolean);
+
+        return `
+            ${buildSheetHeader('快捷入口', '保留高频动作，其余能力统一收进模块总览。')}
+            <section class="apk-sheet-section">
+                <div class="apk-sheet-section-head">
+                    <span class="apk-sheet-section-title">高频模块</span>
+                    <span class="apk-sheet-section-note">Quick Access</span>
+                </div>
+                <div class="apk-sheet-grid">
+                    ${quickModules.map((item) => buildModuleCard(item, activeId)).join('')}
+                </div>
+            </section>
+            <section class="apk-sheet-section">
+                <div class="apk-sheet-section-head">
+                    <span class="apk-sheet-section-title">系统动作</span>
+                    <span class="apk-sheet-section-note">Utilities</span>
+                </div>
+                <div class="apk-sheet-grid">
+                    ${quickActions.join('')}
+                </div>
+            </section>
+        `;
+    }
+
+    function buildAccountSheetHtml() {
+        const user = getCurrentUser();
+        const themeLabel = document.body.dataset.systemTheme === 'dark' ? '深色' : '浅色';
+
+        return `
+            ${buildSheetHeader('账号与设置', 'APK 端默认跟随系统主题，并把常用动作集中到这一层。')}
+            <section class="apk-sheet-section">
+                <div class="apk-account-card">
+                    <div class="apk-account-name">${escapeHtml(user?.name || '未登录')}</div>
+                    <div class="apk-account-role">${escapeHtml(humanizeRole())}</div>
+                    <div class="apk-account-grid">
+                        <div class="apk-account-row">
+                            <span>当前学校</span>
+                            <strong>${escapeHtml(getCurrentSchool() || '未识别学校')}</strong>
+                        </div>
+                        <div class="apk-account-row">
+                            <span>当前届别</span>
+                            <strong>${escapeHtml(getCurrentCohortLabel())}</strong>
+                        </div>
+                        <div class="apk-account-row">
+                            <span>主题模式</span>
+                            <strong>跟随系统 · ${escapeHtml(themeLabel)}</strong>
+                        </div>
+                        <div class="apk-account-row">
+                            <span>运行环境</span>
+                            <strong>${isNativeApp ? 'Android APK' : '移动浏览器'}</strong>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section class="apk-sheet-section">
+                <div class="apk-sheet-grid">
+                    ${buildActionCard('cohorts', '切换届别', '重新选择当前工作的届别。', 'ti ti-id-badge-2')}
+                    ${buildActionCard('search', '全局搜索', '搜索学生、模块和快捷动作。', 'ti ti-search')}
+                    ${typeof window.openUserPasswordModal === 'function'
+                        ? buildActionCard('password', '修改密码', '打开当前账号密码修改面板。', 'ti ti-lock')
+                        : ''}
+                    ${buildActionCard('logout', '退出登录', '返回登录页，重新选择账号。', 'ti ti-logout', 'is-danger')}
+                </div>
+            </section>
+        `;
+    }
+
+    function buildCohortsSheetHtml() {
+        const options = getCohortOptions();
+        const currentValue = document.getElementById('cohort-selector')?.value || '';
+
+        if (!options.length) {
+            return `${buildSheetHeader('切换届别', '当前没有可切换的届别，请先完成数据恢复。')}
+                <div class="apk-sheet-empty">暂无可切换届别。</div>`;
+        }
+
+        return `
+            ${buildSheetHeader('切换届别', '统一从这里切届别，避免手机端入口和工作区状态脱节。')}
+            <section class="apk-sheet-section">
+                <div class="apk-sheet-grid">
+                    ${options.map((option) => `
+                        <button type="button" class="apk-sheet-card${option.value === currentValue ? ' is-active' : ''}" data-apk-cohort="${escapeHtml(option.value)}">
+                            <strong>${escapeHtml(option.label)}</strong>
+                            <span>${option.value === currentValue ? '当前正在使用的届别。' : '点击切换到这一届别。'}</span>
+                        </button>
+                    `).join('')}
+                </div>
+            </section>
+        `;
+    }
+
+    function renderSheet() {
+        const root = ensureShellRoot();
+        const panel = root.querySelector('[data-apk-sheet-panel]');
+        if (!panel) return;
+
+        if (!sheetMode) {
+            panel.innerHTML = '';
+            return;
+        }
+        if (sheetMode === 'modules') {
+            panel.innerHTML = buildModulesSheetHtml();
+            return;
+        }
+        if (sheetMode === 'quick') {
+            panel.innerHTML = buildQuickSheetHtml();
+            return;
+        }
+        if (sheetMode === 'account') {
+            panel.innerHTML = buildAccountSheetHtml();
+            return;
+        }
+        if (sheetMode === 'cohorts') {
+            panel.innerHTML = buildCohortsSheetHtml();
+        }
+    }
+
+    function scrollActiveRailChipIntoView(root) {
+        const activeChip = root.querySelector('.apk-rail-chip.is-active');
+        if (!activeChip || typeof activeChip.scrollIntoView !== 'function') return;
+        activeChip.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'auto' });
+    }
+
+    function renderRail(root) {
+        const rail = root.querySelector('[data-apk-rail]');
+        if (!rail) return;
+
+        const currentCategory = getCurrentCategory();
+        const activeId = getActiveModuleId();
+
+        if (!currentCategory?.items?.length) {
+            rail.innerHTML = '<div class="apk-rail-empty">当前分类暂无可用模块</div>';
+            return;
+        }
+
+        rail.innerHTML = currentCategory.items.map((item) => `
+            <button type="button" class="apk-rail-chip${item.id === activeId ? ' is-active' : ''}" data-apk-module="${escapeHtml(item.id)}">
+                ${escapeHtml(item.text || item.id)}
+            </button>
+        `).join('');
+
+        window.requestAnimationFrame(() => scrollActiveRailChipIntoView(root));
+    }
+
+    function renderTabs(root) {
+        const activeId = getActiveModuleId();
+        const homeId = getHomeModuleId();
+        root.querySelectorAll('.apk-shell-tab').forEach((button) => {
+            const tab = button.getAttribute('data-apk-tab');
+            const active = (
+                (tab === 'home' && !sheetMode && activeId === homeId)
+                || (tab === 'modules' && sheetMode === 'modules')
+                || (tab === 'quick' && sheetMode === 'quick')
+                || (tab === 'account' && sheetMode === 'account')
+            );
+            button.classList.toggle('is-active', active);
+        });
+    }
+
+    function renderShell() {
+        const root = ensureShellRoot();
+        const activeItem = getActiveItem();
+        const currentCategory = getCurrentCategory();
+        const subtitle = [getCurrentSchool() || '未识别学校', currentCategory?.title || '工作台', getCurrentCohortLabel()]
+            .filter(Boolean)
+            .join(' · ');
+
+        root.style.setProperty('--apk-accent', activeItem?.categoryColor || currentCategory?.color || '#2563eb');
+        root.setAttribute('aria-hidden', 'false');
+        root.dataset.sheetOpen = sheetMode ? 'true' : 'false';
+        root.dataset.sheetMode = sheetMode || '';
+
+        const fields = {
+            role: `${humanizeRole()}工作台`,
+            title: activeItem?.text || '智慧教务',
+            subtitle,
+            cohort: getCurrentCohortLabel(),
+            mode: getModeLabel()
+        };
+
+        Object.entries(fields).forEach(([key, value]) => {
+            const node = root.querySelector(`[data-apk-field="${key}"]`);
+            if (node) node.textContent = value;
+        });
+
+        renderRail(root);
+        renderSheet();
+        renderTabs(root);
+    }
+
+    function setSheetMode(mode = '') {
+        sheetMode = mode;
+        renderShell();
+    }
+
+    function toggleSheet(mode) {
+        setSheetMode(sheetMode === mode ? '' : mode);
+    }
+
+    function switchCohort(value) {
+        const selector = document.getElementById('cohort-selector');
+        if (!selector || !value) return;
+        selector.value = value;
+        selector.dispatchEvent(new Event('change', { bubbles: true }));
+        setSheetMode('');
+        REFRESH_DELAYS.forEach((delay) => {
+            window.setTimeout(() => {
+                scrollPrimaryViewportToTop();
+                scheduleRefresh();
+            }, delay);
+        });
+    }
+
+    function activateModule(moduleId) {
+        if (!moduleId || typeof window.switchTab !== 'function') return;
+        setSheetMode('');
+        scrollPrimaryViewportToTop();
+        window.switchTab(moduleId);
+        REFRESH_DELAYS.forEach((delay) => {
+            window.setTimeout(() => {
+                if (document.getElementById(moduleId)?.classList.contains('active')) {
+                    refreshContentEnhancements();
+                }
+                scheduleRefresh();
+            }, delay);
+        });
+    }
+
+    function openSpotlightSearch() {
+        setSheetMode('');
+        if (typeof window.openSpotlight === 'function') {
+            window.openSpotlight();
+        }
+    }
+
+    function openPasswordModal() {
+        setSheetMode('');
+        if (typeof window.openUserPasswordModal === 'function') {
+            window.openUserPasswordModal();
+        }
+    }
+
+    function handleTab(tabName) {
+        if (tabName === 'home') {
+            activateModule(getHomeModuleId());
+            return;
+        }
+        if (tabName === 'modules') {
+            toggleSheet('modules');
+            return;
+        }
+        if (tabName === 'quick') {
+            toggleSheet('quick');
+            return;
+        }
+        if (tabName === 'account') {
+            toggleSheet('account');
+        }
+    }
+
+    function handleShellClick(event) {
+        const trigger = event.target.closest('[data-apk-action], [data-apk-module], [data-apk-cohort], [data-apk-tab]');
+        if (!trigger) return;
+
+        event.preventDefault();
+
+        const moduleId = trigger.getAttribute('data-apk-module');
+        if (moduleId) {
+            activateModule(moduleId);
+            return;
+        }
+
+        const cohortValue = trigger.getAttribute('data-apk-cohort');
+        if (cohortValue) {
+            switchCohort(cohortValue);
+            return;
+        }
+
+        const tabName = trigger.getAttribute('data-apk-tab');
+        if (tabName) {
+            handleTab(tabName);
+            return;
+        }
+
+        const action = trigger.getAttribute('data-apk-action');
+        if (action === 'close-sheet') {
+            setSheetMode('');
+            return;
+        }
+        if (action === 'modules') {
+            toggleSheet('modules');
+            return;
+        }
+        if (action === 'quick') {
+            toggleSheet('quick');
+            return;
+        }
+        if (action === 'account') {
+            toggleSheet('account');
+            return;
+        }
+        if (action === 'cohorts') {
+            toggleSheet('cohorts');
+            return;
+        }
+        if (action === 'search') {
+            openSpotlightSearch();
+            return;
+        }
+        if (action === 'password') {
+            openPasswordModal();
+            return;
+        }
+        if (action === 'logout' && window.Auth && typeof window.Auth.logout === 'function') {
+            setSheetMode('');
+            window.Auth.logout();
+        }
+    }
+
+    function wrapMethod(target, methodName, marker) {
+        if (!target || typeof target[methodName] !== 'function' || target[methodName][marker]) return;
+        const original = target[methodName];
+        const wrapped = function () {
+            const result = original.apply(this, arguments);
+            scheduleRefresh();
+            return result;
+        };
+        wrapped[marker] = true;
+        target[methodName] = wrapped;
+    }
+
+    function ensureHooks() {
+        wrapMethod(window, 'switchTab', '__apkMobileWrapped__');
+        wrapMethod(window, 'renderNavigation', '__apkMobileWrapped__');
+        wrapMethod(window, 'switchNavCategory', '__apkMobileWrapped__');
+        if (window.Auth) {
+            wrapMethod(window.Auth, 'applyRoleView', '__apkMobileWrapped__');
+            wrapMethod(window.Auth, 'renderParentView', '__apkMobileWrapped__');
+        }
+    }
+
+    function refreshMobileArchitecture() {
+        ensureHooks();
+        syncSystemTheme();
+
+        const isMobile = isMobileViewport();
+        const shouldUseShell = isMobile && isLoggedIn() && !isParentLikeRole();
+
+        document.body.dataset.mobileQuery = isMobile ? 'true' : 'false';
+        if (shouldUseShell) {
+            document.body.dataset.mobileArchitecture = 'apk-v2';
+        } else {
+            delete document.body.dataset.mobileArchitecture;
+        }
+
+        syncDesktopAppVisibility();
+        hideLegacyMobileShells();
+
+        const root = ensureShellRoot();
+        root.style.display = shouldUseShell ? 'block' : 'none';
+        root.setAttribute('aria-hidden', shouldUseShell ? 'false' : 'true');
+
+        if (!shouldUseShell) {
+            sheetMode = '';
+            root.dataset.sheetOpen = 'false';
+            root.dataset.sheetMode = '';
+            return;
+        }
+
+        refreshContentEnhancements();
+        renderShell();
+    }
+
+    function scheduleRefresh() {
+        clearTimeout(refreshHandle);
+        refreshHandle = window.setTimeout(refreshMobileArchitecture, 60);
+    }
+
+    const MobMgr = {
+        switchTab(tabName) {
+            const map = {
+                home: getHomeModuleId(),
+                students: 'student-details',
+                analysis: 'summary'
+            };
+            if (tabName === 'me') {
+                setSheetMode('account');
+                return;
+            }
+            const moduleId = map[tabName] || tabName;
+            activateModule(moduleId);
+        },
+        renderStudentList() {
+            scheduleRefresh();
+        },
+        showStudentDetail() {
+            scheduleRefresh();
+        },
+        renderAnalysis() {
+            scheduleRefresh();
+        },
+        openModules() {
+            setSheetMode('modules');
+        },
+        openQuickActions() {
+            setSheetMode('quick');
+        },
+        openAccountSheet() {
+            setSheetMode('account');
+        },
+        openCohortSheet() {
+            setSheetMode('cohorts');
+        },
+        refresh: scheduleRefresh
+    };
+
+    window.MobMgr = MobMgr;
+    window.MobileQueryUI = {
+        refresh: scheduleRefresh,
+        openModules: () => setSheetMode('modules'),
+        openQuick: () => setSheetMode('quick'),
+        openAccount: () => setSheetMode('account'),
+        openCohorts: () => setSheetMode('cohorts')
+    };
+    window.switchMobileTab = (tabName) => MobMgr.switchTab(tabName);
+
+    if (window.matchMedia) {
+        themeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+        if (typeof themeMedia.addEventListener === 'function') {
+            themeMedia.addEventListener('change', scheduleRefresh);
+        } else if (typeof themeMedia.addListener === 'function') {
+            themeMedia.addListener(scheduleRefresh);
+        }
+    }
+
+    window.addEventListener('resize', scheduleRefresh);
+    window.addEventListener('orientationchange', scheduleRefresh);
+    window.addEventListener('load', scheduleRefresh);
+    window.addEventListener('pageshow', scheduleRefresh);
+
+    REFRESH_DELAYS.forEach((delay) => {
+        window.setTimeout(scheduleRefresh, delay);
+    });
+
+    scheduleRefresh();
+    window.__MOBILE_MANAGER_PATCHED__ = true;
+    window.__MOBILE_APP_RUNTIME_PATCHED__ = true;
+})();
