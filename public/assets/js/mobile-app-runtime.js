@@ -3,6 +3,7 @@
 
     const MOBILE_BREAKPOINT = 960;
     const REFRESH_DELAYS = [80, 260, 900];
+    const MODULE_FOCUS_DELAYS = [140, 420, 980, 1600];
     const HOME_BY_ROLE = {
         admin: 'starter-hub',
         director: 'starter-hub',
@@ -326,6 +327,58 @@
         const scope = document.querySelector('.section.active') || document;
         markResponsiveTables(scope);
         markFlexibleRows(scope);
+    }
+
+    function isVisiblyRendered(node) {
+        if (!(node instanceof HTMLElement)) return false;
+        const style = window.getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity || 1) === 0) {
+            return false;
+        }
+        if (node.getAttribute('aria-hidden') === 'true' || node.hidden) return false;
+        return node.getClientRects().length > 0;
+    }
+
+    function isBlockingDialogVisible() {
+        if (window.Swal && typeof window.Swal.isVisible === 'function' && window.Swal.isVisible()) {
+            return true;
+        }
+        const selectors = [
+            '.swal2-container',
+            '.modal',
+            '[role="dialog"]',
+            '[aria-modal="true"]',
+            '.dialog-overlay',
+            '.dialog-backdrop'
+        ];
+        return Array.from(document.querySelectorAll(selectors.join(','))).some((node) => {
+            if (!(node instanceof HTMLElement) || node.closest('#apk-mobile-shell')) return false;
+            if (!isVisiblyRendered(node)) return false;
+            const style = window.getComputedStyle(node);
+            const zIndex = Number(style.zIndex || 0);
+            return style.position === 'fixed' || zIndex >= 1000;
+        });
+    }
+
+    function syncShellModalState(root = document.getElementById('apk-mobile-shell')) {
+        if (!root) return;
+        root.dataset.modalOpen = isBlockingDialogVisible() ? 'true' : 'false';
+    }
+
+    function scheduleStudentDetailsModuleFocus() {
+        MODULE_FOCUS_DELAYS.forEach((delay, index) => {
+            window.setTimeout(() => {
+                const section = document.getElementById('student-details');
+                if (!section || !section.classList.contains('active')) return;
+                if (typeof window.requestStudentDetailsPrimaryFocus === 'function') {
+                    window.requestStudentDetailsPrimaryFocus(index);
+                    return;
+                }
+                if (typeof window.focusStudentDetailsPrimaryFlow === 'function') {
+                    window.focusStudentDetailsPrimaryFlow();
+                }
+            }, delay);
+        });
     }
 
     function hideLegacyMobileShells() {
@@ -695,6 +748,7 @@
             if (node) node.textContent = value;
         });
 
+        syncShellModalState(root);
         renderRail(root);
         renderSheet();
         renderTabs(root);
@@ -728,10 +782,16 @@
         setSheetMode('');
         scrollPrimaryViewportToTop();
         window.switchTab(moduleId);
+        if (moduleId === 'student-details') {
+            scheduleStudentDetailsModuleFocus();
+        }
         REFRESH_DELAYS.forEach((delay) => {
             window.setTimeout(() => {
                 if (document.getElementById(moduleId)?.classList.contains('active')) {
                     refreshContentEnhancements();
+                    if (moduleId === 'student-details' && typeof window.requestStudentDetailsPrimaryFocus === 'function') {
+                        window.requestStudentDetailsPrimaryFocus();
+                    }
                 }
                 scheduleRefresh();
             }, delay);
@@ -835,10 +895,38 @@
         const wrapped = function () {
             const result = original.apply(this, arguments);
             scheduleRefresh();
+            REFRESH_DELAYS.forEach((delay) => {
+                window.setTimeout(scheduleRefresh, delay);
+            });
             return result;
         };
         wrapped[marker] = true;
         target[methodName] = wrapped;
+    }
+
+    function hookSwalLifecycle() {
+        if (!window.Swal) return;
+        wrapMethod(window.Swal, 'close', '__apkMobileWrapped__');
+        if (typeof window.Swal.fire === 'function' && !window.Swal.fire.__apkMobileWrapped__) {
+            const originalFire = window.Swal.fire;
+            const wrappedFire = function () {
+                const result = originalFire.apply(window.Swal, arguments);
+                scheduleRefresh();
+                REFRESH_DELAYS.forEach((delay) => {
+                    window.setTimeout(scheduleRefresh, delay);
+                });
+                if (result && typeof result.finally === 'function') {
+                    result.finally(() => {
+                        REFRESH_DELAYS.forEach((delay) => {
+                            window.setTimeout(scheduleRefresh, delay);
+                        });
+                    });
+                }
+                return result;
+            };
+            wrappedFire.__apkMobileWrapped__ = true;
+            window.Swal.fire = wrappedFire;
+        }
     }
 
     function ensureHooks() {
@@ -849,6 +937,7 @@
             wrapMethod(window.Auth, 'applyRoleView', '__apkMobileWrapped__');
             wrapMethod(window.Auth, 'renderParentView', '__apkMobileWrapped__');
         }
+        hookSwalLifecycle();
     }
 
     function refreshMobileArchitecture() {
@@ -876,6 +965,7 @@
             sheetMode = '';
             root.dataset.sheetOpen = 'false';
             root.dataset.sheetMode = '';
+            root.dataset.modalOpen = 'false';
             return;
         }
 
@@ -945,10 +1035,16 @@
         }
     }
 
+    window.addEventListener('cloud-load-state', scheduleRefresh);
     window.addEventListener('resize', scheduleRefresh);
     window.addEventListener('orientationchange', scheduleRefresh);
     window.addEventListener('load', scheduleRefresh);
     window.addEventListener('pageshow', scheduleRefresh);
+    window.addEventListener('focus', scheduleRefresh);
+    document.addEventListener('resume', scheduleRefresh, false);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) scheduleRefresh();
+    });
 
     REFRESH_DELAYS.forEach((delay) => {
         window.setTimeout(scheduleRefresh, delay);

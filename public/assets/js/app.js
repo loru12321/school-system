@@ -9531,6 +9531,110 @@ function initSystem(type) {
 }
 
 let __guardBypass = false;
+let __guardResumeModuleId = '';
+let __guardResumeToastAt = 0;
+
+function getGuardSessionUser() {
+    if (window.AuthState && typeof window.AuthState.getCurrentUser === 'function') {
+        return window.AuthState.getCurrentUser();
+    }
+    if (window.Auth && window.Auth.currentUser) return window.Auth.currentUser;
+    return null;
+}
+
+function canRecoverCloudScoresFromGuard() {
+    const user = getGuardSessionUser();
+    return !!(user && !user.local_only && typeof loadCloudData === 'function');
+}
+
+function showBaseConfigGuardModal(missing) {
+    const missingList = Array.isArray(missing) ? missing.filter(Boolean) : [];
+    if (!missingList.length) return;
+    if (!window.Swal || typeof Swal.fire !== 'function') {
+        alert(`需要先完成基础配置：${missingList.join('、')}`);
+        return;
+    }
+    Swal.fire({
+        title: '⛔ 需要先完成基础配置',
+        html: `<div style="text-align:left; font-size:13px; color:#475569;">
+                    缺少：<strong>${missingList.join('、')}</strong><br>
+                    建议先进入<strong>新手入口</strong>完成引导步骤。
+                </div>`,
+        showCancelButton: true,
+        confirmButtonText: '去新手入口',
+        cancelButtonText: '我知道了',
+        confirmButtonColor: '#0ea5e9'
+    }).then((r) => {
+        if (r.isConfirmed) {
+            __guardBypass = true;
+            switchTab('starter-hub');
+        }
+    });
+}
+
+function closeBaseConfigGuardModalIfRecovered() {
+    if (!Array.isArray(RAW_DATA) || RAW_DATA.length === 0) return;
+    if (!window.Swal || typeof Swal.isVisible !== 'function' || typeof Swal.close !== 'function') return;
+    if (!Swal.isVisible()) return;
+    const title = String(Swal.getTitle?.()?.textContent || '').trim();
+    if (title.includes('需要先完成基础配置')) {
+        Swal.close();
+    }
+}
+
+function flushDeferredGuardResume(reason = '') {
+    if (!__guardResumeModuleId || !Array.isArray(RAW_DATA) || RAW_DATA.length === 0) return false;
+    const pendingId = __guardResumeModuleId;
+    __guardResumeModuleId = '';
+    closeBaseConfigGuardModalIfRecovered();
+    window.setTimeout(() => {
+        if (typeof switchTab !== 'function') return;
+        __guardBypass = true;
+        switchTab(pendingId);
+    }, reason === 'snapshot' ? 90 : 140);
+    return true;
+}
+
+function queueGuardedModuleUntilScoresReady(id) {
+    if (!id || typeof loadCloudData !== 'function') return false;
+    __guardResumeModuleId = id;
+    closeBaseConfigGuardModalIfRecovered();
+    const now = Date.now();
+    if (window.UI && now - __guardResumeToastAt > 1500) {
+        UI.toast('成绩数据正在恢复，稍后会自动进入该模块。', 'info');
+        __guardResumeToastAt = now;
+    }
+    Promise.resolve(loadCloudData())
+        .then(() => {
+            if (flushDeferredGuardResume('cloud-load')) return;
+            if (__guardResumeModuleId === id) {
+                __guardResumeModuleId = '';
+                showBaseConfigGuardModal(['成绩数据']);
+            }
+        })
+        .catch((error) => {
+            console.warn('[Guard] deferred cloud restore failed:', error);
+            if (__guardResumeModuleId === id) {
+                __guardResumeModuleId = '';
+                showBaseConfigGuardModal(['成绩数据']);
+            }
+        });
+    return false;
+}
+
+if (!window.__BASE_CONFIG_GUARD_CLOUD_EVENTS__) {
+    window.__BASE_CONFIG_GUARD_CLOUD_EVENTS__ = true;
+    window.addEventListener('cloud-load-state', (event) => {
+        const detail = event?.detail || {};
+        if (detail.stage === 'loaded' || detail.stage === 'settled') {
+            closeBaseConfigGuardModalIfRecovered();
+            if (detail.hasScores) {
+                flushDeferredGuardResume('cloud-event');
+            }
+        }
+    });
+}
+
 function guardBeforeSwitch(id) {
     if (id === 'starter-hub' || id === 'upload') return true;
     const needGuard = [
@@ -9549,23 +9653,12 @@ function guardBeforeSwitch(id) {
     if (!hasSchool) missing.push('本校');
     if (!hasScores) missing.push('成绩数据');
 
+    if (!hasScores && missing.length === 1 && missing[0] === '成绩数据' && canRecoverCloudScoresFromGuard()) {
+        return queueGuardedModuleUntilScoresReady(id);
+    }
+
     if (missing.length) {
-        Swal.fire({
-            title: '⛔ 需要先完成基础配置',
-            html: `<div style="text-align:left; font-size:13px; color:#475569;">
-                        缺少：<strong>${missing.join('、')}</strong><br>
-                        建议先进入<strong>新手入口</strong>完成引导步骤。
-                    </div>`,
-            showCancelButton: true,
-            confirmButtonText: '去新手入口',
-            cancelButtonText: '我知道了',
-            confirmButtonColor: '#0ea5e9'
-        }).then((r) => {
-            if (r.isConfirmed) {
-                __guardBypass = true;
-                switchTab('starter-hub');
-            }
-        });
+        showBaseConfigGuardModal(missing);
         return false;
     }
     return true;
@@ -11354,13 +11447,16 @@ function shouldAutoFocusStudentDetailsDataOnMobile(reset) {
     return document.body?.dataset?.mobileQuery === 'true' || window.innerWidth <= 768;
 }
 
+let __studentDetailsPrimaryFocusTimer = 0;
+const STUDENT_DETAILS_PRIMARY_FOCUS_DELAYS = [0, 120, 320, 760, 1280];
+
 function focusStudentDetailsPrimaryFlow() {
     const section = document.getElementById('student-details');
     const firstCard = section?.querySelector('.student-detail-mobile-card');
     const primaryFlow = section?.querySelector('.student-details-primary-flow');
     const tableWrap = section?.querySelector('.table-wrap');
     const target = firstCard || primaryFlow || tableWrap || section;
-    if (!target) return;
+    if (!target) return false;
 
     const appMain = document.querySelector('main.app-main');
     const mainCanScroll = appMain
@@ -11369,7 +11465,7 @@ function focusStudentDetailsPrimaryFlow() {
     if (mainCanScroll) {
         const nextTop = appMain.scrollTop + target.getBoundingClientRect().top - appMain.getBoundingClientRect().top - 16;
         appMain.scrollTo({ top: Math.max(0, nextTop), behavior: 'auto' });
-        return;
+        return true;
     }
 
     const scrollingEl = document.scrollingElement || document.documentElement || document.body;
@@ -11377,13 +11473,39 @@ function focusStudentDetailsPrimaryFlow() {
         const currentTop = window.scrollY || scrollingEl.scrollTop || document.documentElement.scrollTop || document.body.scrollTop || 0;
         const nextTop = currentTop + target.getBoundingClientRect().top - 16;
         scrollingEl.scrollTo({ top: Math.max(0, nextTop), behavior: 'auto' });
-        return;
+        return true;
     }
 
     if (typeof target.scrollIntoView === 'function') {
         target.scrollIntoView({ behavior: 'auto', block: 'start' });
+        return true;
     }
+    return false;
 }
+
+function requestStudentDetailsPrimaryFocus(startIndex = 0) {
+    if (!(document.body?.dataset?.mobileQuery === 'true' || window.innerWidth <= 768)) return;
+    clearTimeout(__studentDetailsPrimaryFocusTimer);
+    const initialIndex = Math.max(0, Math.min(Number(startIndex) || 0, STUDENT_DETAILS_PRIMARY_FOCUS_DELAYS.length - 1));
+    const runFocus = (index) => {
+        const section = document.getElementById('student-details');
+        if (!section || !section.classList.contains('active')) return;
+        const target = section.querySelector('.student-detail-mobile-card')
+            || section.querySelector('.student-details-primary-flow')
+            || section.querySelector('.table-wrap')
+            || section;
+        const appMain = document.querySelector('main.app-main');
+        const didScroll = focusStudentDetailsPrimaryFlow();
+        const targetTop = target?.getBoundingClientRect?.().top ?? 0;
+        const appTop = appMain?.getBoundingClientRect?.().top ?? 0;
+        const aligned = !!target && Math.abs(targetTop - appTop) <= 96;
+        if ((didScroll && aligned) || index >= (STUDENT_DETAILS_PRIMARY_FOCUS_DELAYS.length - 1)) return;
+        const nextIndex = index + 1;
+        __studentDetailsPrimaryFocusTimer = window.setTimeout(() => runFocus(nextIndex), STUDENT_DETAILS_PRIMARY_FOCUS_DELAYS[nextIndex]);
+    };
+    __studentDetailsPrimaryFocusTimer = window.setTimeout(() => runFocus(initialIndex), STUDENT_DETAILS_PRIMARY_FOCUS_DELAYS[initialIndex]);
+}
+window.requestStudentDetailsPrimaryFocus = requestStudentDetailsPrimaryFocus;
 
 function renderStudentDetails(reset = true) {
     // 隐藏可能存在的筛选菜单
@@ -11728,7 +11850,7 @@ function renderStudentDetails(reset = true) {
         const isMobileViewport = document.body?.dataset?.mobileQuery === 'true' || window.innerWidth <= 768;
         if (isMobileViewport) {
             if (shouldAutoFocusData) {
-                focusStudentDetailsPrimaryFlow();
+                requestStudentDetailsPrimaryFocus();
             }
             return;
         }
@@ -20562,6 +20684,8 @@ function applySnapshotPayload(db) {
     } catch (e) { }
     try { updateExamHistoryStatusBar(); } catch (e) { }
     if (typeof DataManager !== 'undefined' && DataManager.renderHistoryPreview) DataManager.renderHistoryPreview();
+    closeBaseConfigGuardModalIfRecovered();
+    flushDeferredGuardResume('snapshot');
 }
 // === 项目快照逻辑 ===
 function getConfigTransferRuntime() {

@@ -1361,12 +1361,42 @@
     window.CloudManager = CloudManager;
     window.saveCloudData = (options = {}) => CloudManager.save(options);
 
+    function dispatchCloudLoadState(stage, detail = {}) {
+        if (typeof window.CustomEvent !== 'function') return;
+        window.dispatchEvent(new CustomEvent('cloud-load-state', {
+            detail: {
+                stage,
+                ...(detail && typeof detail === 'object' ? detail : {})
+            }
+        }));
+    }
+
     let cloudLoadPromise = null;
     window.loadCloudData = () => {
         if (cloudLoadPromise) return cloudLoadPromise;
-        cloudLoadPromise = Promise.resolve(CloudManager.load()).finally(() => {
-            cloudLoadPromise = null;
-        });
+        window.__CLOUD_WORKSPACE_HYDRATING__ = true;
+        dispatchCloudLoadState('start');
+        cloudLoadPromise = Promise.resolve(CloudManager.load())
+            .then((result) => {
+                dispatchCloudLoadState('loaded', {
+                    ok: result === true,
+                    hasScores: Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0
+                });
+                return result;
+            })
+            .catch((error) => {
+                dispatchCloudLoadState('error', {
+                    message: error?.message || String(error)
+                });
+                throw error;
+            })
+            .finally(() => {
+                window.__CLOUD_WORKSPACE_HYDRATING__ = false;
+                dispatchCloudLoadState('settled', {
+                    hasScores: Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0
+                });
+                cloudLoadPromise = null;
+            });
         return cloudLoadPromise;
     };
 

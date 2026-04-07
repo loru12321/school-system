@@ -9,9 +9,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.getcapacitor.BridgeActivity
 
 class MainActivity : BridgeActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
+    private fun applySystemBarStyle() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
@@ -25,5 +23,15 @@ class MainActivity : BridgeActivity() {
         val controller = WindowInsetsControllerCompat(window, window.decorView)
         controller.isAppearanceLightStatusBars = !isDark
         controller.isAppearanceLightNavigationBars = !isDark
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        applySystemBarStyle()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applySystemBarStyle()
     }
 }

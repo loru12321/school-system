@@ -84,12 +84,12 @@ body.dark-mode[data-mobile-architecture="apk-v2"] {
         -webkit-backdrop-filter: none !important;
     }
 
-    #apk-mobile-shell {
-        position: fixed;
-        inset: 0;
-        z-index: 28000;
-        pointer-events: none;
-    }
+#apk-mobile-shell {
+    position: fixed;
+    inset: 0;
+    z-index: 15000;
+    pointer-events: none;
+}
 
     #apk-mobile-shell .apk-shell-surface {
         background: var(--apk-shell-card);
@@ -97,14 +97,30 @@ body.dark-mode[data-mobile-architecture="apk-v2"] {
         box-shadow: var(--apk-shell-shadow);
     }
 
-    #apk-mobile-shell .apk-shell-top {
-        position: absolute;
-        top: 0;
-        left: 0;
+#apk-mobile-shell .apk-shell-top {
+    position: absolute;
+    top: 0;
+    left: 0;
         right: 0;
         padding: calc(var(--app-safe-top) + 10px) 12px 0;
-        pointer-events: none;
-    }
+    pointer-events: none;
+}
+
+#apk-mobile-shell .apk-shell-top,
+#apk-mobile-shell .apk-shell-tabs,
+#apk-mobile-shell .apk-shell-sheet,
+#apk-mobile-shell .apk-shell-backdrop {
+    transition: opacity 0.18s ease, visibility 0.18s ease, transform 0.22s ease;
+}
+
+#apk-mobile-shell[data-modal-open="true"] .apk-shell-top,
+#apk-mobile-shell[data-modal-open="true"] .apk-shell-tabs,
+#apk-mobile-shell[data-modal-open="true"] .apk-shell-sheet,
+#apk-mobile-shell[data-modal-open="true"] .apk-shell-backdrop {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
 
     #apk-mobile-shell .apk-shell-topbar,
     #apk-mobile-shell .apk-shell-meta,
