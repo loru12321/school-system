@@ -11688,6 +11688,15 @@ function renderStudentDetails(reset = true) {
     // 滚动到学生明细区域
     setTimeout(() => {
         const tableWrap = document.querySelector('#student-details .table-wrap');
+        const isMobileViewport = document.body?.dataset?.mobileQuery === 'true' || window.innerWidth <= 768;
+        if (isMobileViewport) {
+            if (typeof resetMainViewport === 'function') {
+                resetMainViewport();
+            } else if (typeof window.scrollTo === 'function') {
+                window.scrollTo({ top: 0, behavior: 'auto' });
+            }
+            return;
+        }
         if (tableWrap) {
             tableWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
@@ -12544,6 +12553,16 @@ function getComparisonTotalValue(record, subjects) {
     return (typeof record.total === 'number' && Number.isFinite(record.total)) ? record.total : null;
 }
 
+function resolveIsClassEquivalent(leftClass, rightClass) {
+    if (typeof window.isClassEquivalent === 'function') {
+        return window.isClassEquivalent(leftClass, rightClass);
+    }
+    if (window.CompareCloudContextRuntime && typeof window.CompareCloudContextRuntime.isClassEquivalent === 'function') {
+        return window.CompareCloudContextRuntime.isClassEquivalent(leftClass, rightClass);
+    }
+    return String(leftClass || '').trim() === String(rightClass || '').trim();
+}
+
 function readCloudPreviousRecordForStudent(student) {
     if (typeof window.getCloudCompareHint === 'function') {
         return window.getCloudCompareHint(student)?.previousRecord || null;
@@ -12586,7 +12605,7 @@ function createComparisonStudentView(record, allStudents) {
 
     const townRankMap = buildCompetitionRankMap(withTotals, item => keyOf(item.row), item => item.total);
     const schoolRankMap = buildCompetitionRankMap(withTotals.filter(item => String(item.row?.school || '').trim() === String(record.school || '').trim()), item => keyOf(item.row), item => item.total);
-    const classRankMap = buildCompetitionRankMap(withTotals.filter(item => String(item.row?.school || '').trim() === String(record.school || '').trim() && isClassEquivalent(item.row?.class || '', record.class || '')), item => keyOf(item.row), item => item.total);
+    const classRankMap = buildCompetitionRankMap(withTotals.filter(item => String(item.row?.school || '').trim() === String(record.school || '').trim() && resolveIsClassEquivalent(item.row?.class || '', record.class || '')), item => keyOf(item.row), item => item.total);
 
     view.ranks.total = {
         ...view.ranks.total,
