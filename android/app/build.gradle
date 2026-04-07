@@ -48,6 +48,8 @@ repositories {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation project(':capacitor-android')
+    implementation project(':capacitor-cordova-android-plugins')
     
     // Core Android & Compose
     implementation "androidx.core:core-ktx:1.12.0"
