@@ -3102,25 +3102,29 @@ const Auth = {
             const safeName = stu.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
             const safeClass = stu.class.replace(/'/g, "\\'").replace(/"/g, '&quot;');
             const safeSchool = stu.school.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const isMobileParentViewport = document.body?.dataset?.mobileQuery === 'true'
+                || (typeof window !== 'undefined' && window.innerWidth <= 768);
 
-            // 家长/学生端追加 AI 学情建议区
-            reportHtml += `
-                    <div style="margin-top:24px; padding:18px; border:1px solid #ddd6fe; background:#faf5ff; border-radius:18px;">
-                        <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap;">
-                            <div>
-                                <div style="font-size:18px; font-weight:800; color:#5b21b6;"><i class="ti ti-sparkles"></i> AI 学情建议</div>
-                                <div style="font-size:13px; color:#6d28d9; margin-top:6px;">根据当前学生的成绩、排名和历史变化，生成可读的学习建议。</div>
+            if (!isMobileParentViewport) {
+                // 家长/学生端追加 AI 学情建议区
+                reportHtml += `
+                        <div style="margin-top:24px; padding:18px; border:1px solid #ddd6fe; background:#faf5ff; border-radius:18px;">
+                            <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap;">
+                                <div>
+                                    <div style="font-size:18px; font-weight:800; color:#5b21b6;"><i class="ti ti-sparkles"></i> AI 学情建议</div>
+                                    <div style="font-size:13px; color:#6d28d9; margin-top:6px;">根据当前学生的成绩、排名和历史变化，生成可读的学习建议。</div>
+                                </div>
+                                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                    <button class="btn btn-primary" onclick="runSingleStudentAIFromHub()"><i class="ti ti-brain"></i> 生成 AI 评语</button>
+                                    <button class="btn btn-gray" onclick="openAIAnalysisHubForCurrentUser()"><i class="ti ti-layout-dashboard"></i> 打开 AI 工作台</button>
+                                </div>
                             </div>
-                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                <button class="btn btn-primary" onclick="runSingleStudentAIFromHub()"><i class="ti ti-brain"></i> 生成 AI 评语</button>
-                                <button class="btn btn-gray" onclick="openAIAnalysisHubForCurrentUser()"><i class="ti ti-layout-dashboard"></i> 打开 AI 工作台</button>
+                            <div id="parent-ai-comment-box" style="min-height:110px; margin-top:14px; border:1px solid #ddd6fe; background:#ffffff; border-radius:16px; padding:16px 18px; font-size:14px; color:#4c1d95; line-height:1.9;">
+                                点击上方按钮后，会在这里显示当前学生的 AI 个性化学情建议。
                             </div>
                         </div>
-                        <div id="parent-ai-comment-box" style="min-height:110px; margin-top:14px; border:1px solid #ddd6fe; background:#ffffff; border-radius:16px; padding:16px 18px; font-size:14px; color:#4c1d95; line-height:1.9;">
-                            点击上方按钮后，会在这里显示当前学生的 AI 个性化学情建议。
-                        </div>
-                    </div>
-                `;
+                    `;
+            }
 
             // 追加底部功能栏 (申诉 & 退出)
             reportHtml += `

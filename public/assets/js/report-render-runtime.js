@@ -127,6 +127,12 @@ function renderSingleReportCardHTML(stu, mode) {
         if (scoreLike && typeof scoreLike === 'object' && typeof scoreLike.score === 'number' && Number.isFinite(scoreLike.score)) return scoreLike.score;
         return '-';
     };
+    const escapeTableDataLabel = (label) => String(label ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    const renderResponsiveTableCell = (label, content, style = '') => `<td data-label="${escapeTableDataLabel(label)}"${style ? ` style="${style}"` : ''}>${content}</td>`;
     const normalizeRankInfo = (rankLike) => ({
         class: rankLike?.class ?? rankLike?.rankClass ?? '-',
         school: rankLike?.school ?? rankLike?.rankSchool ?? '-',
@@ -159,9 +165,11 @@ function renderSingleReportCardHTML(stu, mode) {
         });
         if (count > 0) {
             tableRows += `<tr style="background:rgba(248,250,252,0.5);">
-                    <td style="font-weight:bold; color:#475569;">🏁 核心五科</td>
-                    <td style="font-weight:bold; color:#2563eb;">${fiveTotal.toFixed(1)}</td>
-                    <td>-</td><td>-</td><td style="${townColStyle}">-</td>
+                    ${renderResponsiveTableCell('科目', '🏁 核心五科', 'font-weight:bold; color:#475569;')}
+                    ${renderResponsiveTableCell('成绩（对比）', fiveTotal.toFixed(1), 'font-weight:bold; color:#2563eb;')}
+                    ${renderResponsiveTableCell('班级排名', '-')}
+                    ${renderResponsiveTableCell('校级排名', '-')}
+                    ${renderResponsiveTableCell('全镇排名', '-', townColStyle)}
                 </tr>`;
         }
     }
@@ -177,11 +185,11 @@ function renderSingleReportCardHTML(stu, mode) {
     const trendTown = getTrendBadge(curTownRank, prevTownRank, 'rank');
 
     tableRows += `<tr style="background:rgba(239,246,255,0.7); backdrop-filter:blur(4px); border-bottom:2px solid #fff;">
-            <td style="font-weight:bold; color:#1e3a8a;">🏆 ${totalLabel}</td>
-            <td style="font-weight:800; font-size:16px; color:#1e40af;">${Number.isFinite(currentTotal) ? currentTotal.toFixed(2) : '-'} ${trendTotal}</td>
-            <td style="font-weight:bold; color:#334155;">${curClassRank} ${trendClass}</td>
-            <td style="font-weight:bold; color:#334155;">${curSchoolRank} ${trendSchool}</td>
-            <td style="${townColStyle} font-weight:bold; color:#334155;">${curTownRank} ${trendTown}</td>
+            ${renderResponsiveTableCell('科目', `🏆 ${totalLabel}`, 'font-weight:bold; color:#1e3a8a;')}
+            ${renderResponsiveTableCell('成绩（对比）', `${Number.isFinite(currentTotal) ? currentTotal.toFixed(2) : '-'} ${trendTotal}`, 'font-weight:800; font-size:16px; color:#1e40af;')}
+            ${renderResponsiveTableCell('班级排名', `${curClassRank} ${trendClass}`, 'font-weight:bold; color:#334155;')}
+            ${renderResponsiveTableCell('校级排名', `${curSchoolRank} ${trendSchool}`, 'font-weight:bold; color:#334155;')}
+            ${renderResponsiveTableCell('全镇排名', `${curTownRank} ${trendTown}`, `${townColStyle} font-weight:bold; color:#334155;`)}
         </tr>`;
 
     // C. 单科行
@@ -204,11 +212,11 @@ function renderSingleReportCardHTML(stu, mode) {
             const tT = getTrendBadge(curTR, prevRanks.township || '-', 'rank');
 
             tableRows += `<tr style="transition:0.2s;" onmouseover="this.style.background='rgba(241,245,249,0.5)'" onmouseout="this.style.background='transparent'">
-                    <td style="font-weight:600; color:#475569;">${sub}</td>
-                    <td style="font-weight:bold; color:#334155;">${stuScores[sub]} ${subTrend}</td>
-                    <td style="color:#64748b;">${curCR} <span style="font-size:0.9em;">${tC}</span></td>
-                    <td style="color:#64748b;">${curSR} <span style="font-size:0.9em;">${tS}</span></td>
-                    <td style="color:#64748b; ${townColStyle}">${curTR} <span style="font-size:0.9em;">${tT}</span></td>
+                    ${renderResponsiveTableCell('科目', sub, 'font-weight:600; color:#475569;')}
+                    ${renderResponsiveTableCell('成绩（对比）', `${stuScores[sub]} ${subTrend}`, 'font-weight:bold; color:#334155;')}
+                    ${renderResponsiveTableCell('班级排名', `${curCR} <span style="font-size:0.9em;">${tC}</span>`, 'color:#64748b;')}
+                    ${renderResponsiveTableCell('校级排名', `${curSR} <span style="font-size:0.9em;">${tS}</span>`, 'color:#64748b;')}
+                    ${renderResponsiveTableCell('全镇排名', `${curTR} <span style="font-size:0.9em;">${tT}</span>`, `color:#64748b; ${townColStyle}`)}
                 </tr>`;
         }
     });
@@ -354,10 +362,10 @@ function renderSingleReportCardHTML(stu, mode) {
             const tRank = safeGet(stuObj, 'ranks.total.township', h.rankTown || '-');
 
             historyRows += `<tr style="${bgStyle}">
-                <td style="text-align:left; padding-left:20px; color:#475569;">${isCurrent ? '⭐ ' : ''}${h.examLabel || h.examId || h.examFullKey || '-'}</td>
-                <td style="color:#2563eb;">${tScore}</td>
-                <td style="color:#64748b;">${sRank}</td>
-                ${!isSingleSchool ? `<td style="color:#64748b;">${tRank}</td>` : ''}
+                ${renderResponsiveTableCell('考试名称', `${isCurrent ? '⭐ ' : ''}${h.examLabel || h.examId || h.examFullKey || '-'}`, 'text-align:left; padding-left:20px; color:#475569;')}
+                ${renderResponsiveTableCell(totalLabel, tScore, 'color:#2563eb;')}
+                ${renderResponsiveTableCell('校级排名', sRank, 'color:#64748b;')}
+                ${!isSingleSchool ? renderResponsiveTableCell('全镇排名', tRank, 'color:#64748b;') : ''}
             </tr>`;
         }
 
