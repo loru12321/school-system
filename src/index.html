@@ -596,13 +596,22 @@
                 </div>
             </div>
 
-            <div class="sidebar-workbench-card" data-shell-tooltip="把数据流、教学流和执行流收进同一条生产线，像运营频道一样看全局节奏。">
-                <span class="sidebar-workbench-kicker">Creator Studio</span>
-                <strong>把数据流、教学流和执行流像频道运营一样收进同一条生产线。</strong>
+            <div class="sidebar-workbench-card"
+                data-shell-tooltip="默认收起模块与学习流，需要时再展开，保持主画布更清爽。"
+                onclick="window.toggleWorkspaceDrawer(true)">
+                <div class="sidebar-workbench-topline">
+                    <span class="sidebar-workbench-kicker">Workspace Deck</span>
+                    <button type="button" class="sidebar-workbench-trigger" data-workspace-toggle="true"
+                        onclick="event.stopPropagation(); window.toggleWorkspaceDrawer(true)">
+                        <i class="ti ti-layout-grid"></i>
+                        <span>打开</span>
+                    </button>
+                </div>
+                <strong>把模块入口收进呼出式面板，需要时再展开，主画面更像 Mac/iOS 工作台。</strong>
                 <div class="sidebar-workbench-pills">
-                    <span>Insight Loop</span>
-                    <span>Studio Ops</span>
-                    <span>Reel Feed</span>
+                    <span>Focus First</span>
+                    <span>Drawer Nav</span>
+                    <span>Quick Launch</span>
                 </div>
             </div>
 
@@ -615,22 +624,17 @@
                     <i class="ti ti-search"></i>
                     <span>全局搜索</span>
                 </div>
+                <div class="sidebar-footer-item" data-workspace-toggle="true"
+                    onclick="window.toggleWorkspaceDrawer(true)" title="工作区面板">
+                    <i class="ti ti-layout-grid"></i>
+                    <span>工作区面板</span>
+                </div>
                 <!-- 通知 -->
                 <div class="sidebar-footer-item" id="admin-msg-btn-sidebar" onclick="IssueManager.openAdminPanel()"
                     title="消息中心">
                     <i class="ti ti-bell"></i>
                     <span>消息中心</span>
                     <div id="msg-badge-sidebar" class="notification-badge hidden">0</div>
-                </div>
-                <!-- 外观设置 -->
-                <div class="sidebar-footer-item" onclick="openSkinModal()" title="主题配置">
-                    <i class="ti ti-palette"></i>
-                    <span>外观主题</span>
-                </div>
-                <!-- 深色模式 -->
-                <div class="sidebar-footer-item" onclick="toggleDarkMode()" title="切换深色模式">
-                    <i class="ti ti-moon" id="sidebar-moon-icon"></i>
-                    <span>深色模式</span>
                 </div>
                 <!-- 更多收起菜单 (设置、备份等) -->
                 <div class="sidebar-footer-item sidebar-more" onclick="toggleSidebarMoreMenu()" title="更多系统设置">
@@ -640,6 +644,12 @@
 
                 <!-- 极简更多菜单框 (浮动) -->
                 <div id="sidebar-more-menu" class="hidden">
+                    <div class="more-menu-item" onclick="openSkinModal()">
+                        <i class="ti ti-palette"></i> <span>外观主题</span>
+                    </div>
+                    <div class="more-menu-item" onclick="toggleDarkMode()">
+                        <i class="ti ti-moon" id="sidebar-moon-icon"></i> <span>深色模式</span>
+                    </div>
                     <div class="more-menu-item" onclick="HelpSystem.startTour()">
                         <i class="ti ti-help-circle"></i> <span>新手指引</span>
                     </div>
@@ -699,6 +709,12 @@
 
                 <!-- 右侧工具栏: 图标按钮区 -->
                 <div class="toolbar-right shell-toolbar-panel shell-toolbar-panel--actions" style="display:flex; gap:16px; align-items:center; justify-content: flex-end;">
+                    <button class="btn shell-launcher-button" id="shell-launcher-btn" data-workspace-toggle="true"
+                        onclick="window.toggleWorkspaceDrawer()">
+                        <i class="ti ti-layout-grid"></i>
+                        <span>工作区</span>
+                    </button>
+
                     <select id="cohort-selector" onchange="CohortManager.switchTo(this.value)"
                         style="background:transparent; color:var(--text-color); border:none; font-size:13px; font-weight:600; cursor:pointer; outline:none; transition: all 0.2s;">
                         <option value="">选择届别</option>
@@ -729,37 +745,75 @@
 
             <!-- 工作区总览与模块导航 -->
             <section id="shell-overview" class="shell-overview">
-                <article class="shell-overview-card shell-overview-card--focus">
-                    <span class="shell-overview-kicker" id="shell-category-kicker">Today Focus</span>
-                    <div class="shell-overview-grid">
-                        <div>
-                            <h2 id="shell-category-title">数据管理</h2>
+                <article class="shell-overview-card shell-overview-card--focus shell-overview-card--dock">
+                    <div class="shell-overview-dock-main">
+                        <div class="shell-overview-copy">
+                            <span class="shell-overview-kicker" id="shell-category-kicker">Today Focus</span>
+                            <div class="shell-overview-heading">
+                                <h2 id="shell-category-title">数据管理</h2>
+                                <span id="shell-module-count">2 个模块</span>
+                            </div>
                             <p id="shell-category-desc">先把届别、数据和权限校准，再进入分析与执行链路。</p>
                         </div>
                         <div class="shell-overview-pills">
-                            <span id="shell-module-count">2 个模块</span>
                             <span id="shell-cohort-chip">届别未选择</span>
                             <span id="shell-mode-chip">模式待加载</span>
                         </div>
                     </div>
-                </article>
 
-                <article class="shell-overview-card shell-overview-card--pulse">
-                    <span class="shell-overview-kicker">Live Board</span>
-                    <div class="shell-pulse-grid">
-                        <div class="shell-pulse-item">
-                            <strong>当前焦点</strong>
-                            <span id="shell-active-module">新手入口与诊断</span>
+                    <div class="shell-overview-dock-side">
+                        <div class="shell-pulse-grid shell-pulse-grid--dock">
+                            <div class="shell-pulse-item">
+                                <strong>当前焦点</strong>
+                                <span id="shell-active-module">新手入口与诊断</span>
+                            </div>
+                            <div class="shell-pulse-item">
+                                <strong>下一步</strong>
+                                <span id="shell-active-hint">先完成数据准备，再进入联考、教学或学情模块。</span>
+                            </div>
                         </div>
-                        <div class="shell-pulse-item">
-                            <strong>下一步</strong>
-                            <span id="shell-active-hint">先完成数据准备，再进入联考、教学或学情模块。</span>
-                        </div>
+                        <button type="button" class="shell-overview-launcher" data-workspace-toggle="true"
+                            onclick="window.toggleWorkspaceDrawer(true)">
+                            <i class="ti ti-layout-grid"></i>
+                            <span>打开工作区面板</span>
+                        </button>
                     </div>
                 </article>
             </section>
 
-            <div id="sub-nav-container" class="sub-nav-chips" aria-label="模块导航"></div>
+            <section id="workspace-drawer" class="workspace-drawer" aria-hidden="true">
+                <button type="button" class="workspace-drawer-backdrop" aria-label="关闭工作区面板"
+                    onclick="window.closeWorkspaceDrawer()"></button>
+                <div class="workspace-drawer-panel" role="dialog" aria-modal="true" aria-label="工作区面板">
+                    <div class="workspace-drawer-header">
+                        <div class="workspace-drawer-copy">
+                            <span class="workspace-drawer-kicker">Workspace Launcher</span>
+                            <h2 id="workspace-drawer-category">数据管理</h2>
+                            <p id="workspace-drawer-copy">先把届别、数据和权限校准，再进入分析与执行链路。</p>
+                        </div>
+                        <button type="button" class="workspace-drawer-close" onclick="window.closeWorkspaceDrawer()">
+                            <i class="ti ti-x"></i>
+                        </button>
+                    </div>
+
+                    <div class="workspace-drawer-meta">
+                        <div class="workspace-drawer-stat">
+                            <span>当前模块</span>
+                            <strong id="workspace-drawer-active">新手入口与诊断</strong>
+                        </div>
+                        <div class="workspace-drawer-stat">
+                            <span>工作模式</span>
+                            <strong id="workspace-drawer-mode">模式待加载</strong>
+                        </div>
+                        <div class="workspace-drawer-stat">
+                            <span>已选届别</span>
+                            <strong id="workspace-drawer-cohort">届别未选择</strong>
+                        </div>
+                    </div>
+
+                    <div id="sub-nav-container" class="sub-nav-chips" aria-label="模块导航"></div>
+                </div>
+            </section>
 
             <!-- 隐藏原有的双层顶部导航以免冲突 -->
             <div class="nav-wrapper" style="display: none !important;">

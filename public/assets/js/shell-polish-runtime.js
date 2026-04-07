@@ -99,6 +99,11 @@
             targets.push(sidebarWorkbench);
         }
 
+        document.querySelectorAll('.sidebar-workbench-trigger, .shell-launcher-button, .shell-overview-launcher, .workspace-drawer-close').forEach((item) => {
+            setTooltipText(item, item.getAttribute('title') || getText(item));
+            targets.push(item);
+        });
+
         document.querySelectorAll('#sidebar-nav .sidebar-menu-item').forEach((item) => {
             const title = getText(item, '.sidebar-menu-item__title');
             const meta = getText(item, '.sidebar-menu-item__meta');
@@ -162,7 +167,7 @@
 
     function ensurePulseTween() {
         if (!window.gsap || pulseTweenBound) return;
-        const nodes = Array.from(document.querySelectorAll('.shell-overview-card--pulse .shell-pulse-item'));
+        const nodes = Array.from(document.querySelectorAll('#shell-overview .shell-pulse-item'));
         if (!nodes.length) return;
         pulseTweenBound = true;
         window.gsap.to(nodes, {

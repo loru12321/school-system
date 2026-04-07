@@ -102,6 +102,52 @@
 
     let currentCategory = 'data';
 
+    function setWorkspaceDrawerState(isOpen) {
+        const drawer = document.getElementById('workspace-drawer');
+        if (!drawer) return;
+
+        const shouldOpen = !!isOpen;
+        drawer.classList.toggle('is-open', shouldOpen);
+        drawer.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
+
+        if (document.body) {
+            document.body.classList.toggle('workspace-drawer-open', shouldOpen);
+        }
+
+        document.querySelectorAll('[data-workspace-toggle="true"]').forEach((element) => {
+            element.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+        });
+
+        if (shouldOpen) {
+            const sidebar = document.getElementById('app-sidebar');
+            if (sidebar && sidebar.classList.contains('show-mobile')) {
+                sidebar.classList.remove('show-mobile');
+            }
+        }
+
+        notifyShellEnhancements();
+    }
+
+    function openWorkspaceDrawer() {
+        setWorkspaceDrawerState(true);
+    }
+
+    function closeWorkspaceDrawer() {
+        setWorkspaceDrawerState(false);
+    }
+
+    function toggleWorkspaceDrawer(forceOpen) {
+        const drawer = document.getElementById('workspace-drawer');
+        const isOpen = !!drawer && drawer.classList.contains('is-open');
+
+        if (typeof forceOpen === 'boolean') {
+            setWorkspaceDrawerState(forceOpen);
+            return;
+        }
+
+        setWorkspaceDrawerState(!isOpen);
+    }
+
     function notifyShellEnhancements() {
         if (typeof window.refreshShellEnhancements === 'function') {
             window.refreshShellEnhancements();
@@ -248,6 +294,21 @@
         }
 
         const roleText = `角色：${resolveRoleLabel()}`;
+        const drawerCategory = document.getElementById('workspace-drawer-category');
+        if (drawerCategory) drawerCategory.textContent = category.title;
+
+        const drawerCopy = document.getElementById('workspace-drawer-copy');
+        if (drawerCopy) drawerCopy.textContent = category.summary;
+
+        const drawerActive = document.getElementById('workspace-drawer-active');
+        if (drawerActive) drawerActive.textContent = activeTitle;
+
+        const drawerMode = document.getElementById('workspace-drawer-mode');
+        if (drawerMode && modeChip) drawerMode.textContent = modeChip.textContent || '';
+
+        const drawerCohort = document.getElementById('workspace-drawer-cohort');
+        if (drawerCohort && cohortChip) drawerCohort.textContent = cohortChip.textContent || '';
+
         const roleHint = document.getElementById('role-hint-sidebar');
         if (roleHint) roleHint.textContent = roleText;
 
@@ -382,6 +443,7 @@
                 if (typeof switchTab === 'function') switchTab(item.id);
                 renderSubNavigation();
                 updateShellChrome(item.id);
+                closeWorkspaceDrawer();
             };
 
             subNavContainer.appendChild(card);
@@ -421,6 +483,9 @@
     window.renderNavigation = renderNavigation;
     window.renderSubNavigation = renderSubNavigation;
     window.switchNavCategory = switchCategory;
+    window.openWorkspaceDrawer = openWorkspaceDrawer;
+    window.closeWorkspaceDrawer = closeWorkspaceDrawer;
+    window.toggleWorkspaceDrawer = toggleWorkspaceDrawer;
     window.getCurrentNavCategory = function () { return currentCategory; };
     window.setCurrentNavCategorySilently = function (key) {
         if (!NAV_STRUCTURE[key]) return;
@@ -430,6 +495,13 @@
     window.syncShellChrome = updateShellChrome;
 
     document.addEventListener('DOMContentLoaded', function () {
+        setWorkspaceDrawerState(false);
         updateShellChrome();
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            closeWorkspaceDrawer();
+        }
     });
 })();
