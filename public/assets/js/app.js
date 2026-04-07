@@ -3770,9 +3770,11 @@ const Auth = {
         const summaryEl = document.getElementById('cloud-account-migration-status');
         const updatedEl = document.getElementById('cloud-account-migration-updated');
         if (!summaryEl) return;
-        const canUseWorkerStatus = typeof shouldUseSameOriginSupabaseProxy === 'function'
-            ? shouldUseSameOriginSupabaseProxy()
-            : false;
+        const canUseWorkerStatus = typeof shouldUseSupabaseProxy === 'function'
+            ? shouldUseSupabaseProxy()
+            : (typeof shouldUseSameOriginSupabaseProxy === 'function'
+                ? shouldUseSameOriginSupabaseProxy()
+                : false);
         if (!canUseWorkerStatus) {
             summaryEl.innerHTML = '<span style="color:#64748b;">本地开发或离线环境下不显示迁移看板，请在线上域名查看 Cloudflare 迁移进度。</span>';
             if (updatedEl) updatedEl.textContent = '当前环境不支持';
@@ -5736,9 +5738,11 @@ const DataManager = {
             // 1. 同源代理环境优先用轻量元数据；本地/单文件直连 Supabase 时直接走 legacy content 查询，避免无意义的 400 探测
             let data = null;
             let error = null;
-            const preferMetadataQuery = typeof shouldUseSameOriginSupabaseProxy === 'function'
-                ? shouldUseSameOriginSupabaseProxy()
-                : false;
+            const preferMetadataQuery = typeof shouldUseSupabaseProxy === 'function'
+                ? shouldUseSupabaseProxy()
+                : (typeof shouldUseSameOriginSupabaseProxy === 'function'
+                    ? shouldUseSameOriginSupabaseProxy()
+                    : false);
             let usingLegacyContentQuery = !preferMetadataQuery;
 
             if (preferMetadataQuery) {

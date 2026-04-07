@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
 var DIRECT_SUPABASE_URL = 'https://okwcciujnfvobbwaydiv.supabase.co';
 var DIRECT_SUPABASE_KEY = 'sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4';
 var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2';
+var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 
 function isLocalSupabaseHost(hostname) {
     var normalized = String(hostname || '').trim().toLowerCase();
@@ -17,6 +18,28 @@ function isLocalSupabaseHost(hostname) {
         || normalized.endsWith('.local');
 }
 
+function isNativeCapacitorShell() {
+    if (typeof window === 'undefined') return false;
+    try {
+        if (window.Capacitor) {
+            if (typeof window.Capacitor.isNativePlatform === 'function') {
+                return !!window.Capacitor.isNativePlatform();
+            }
+            if (typeof window.Capacitor.getPlatform === 'function') {
+                return window.Capacitor.getPlatform() !== 'web';
+            }
+            return true;
+        }
+    } catch (error) { }
+
+    var protocol = String(window.location && window.location.protocol || '').trim().toLowerCase();
+    if (protocol === 'capacitor:' || protocol === 'ionic:' || protocol === 'app:') return true;
+
+    var hostname = String(window.location && window.location.hostname || '').trim().toLowerCase();
+    var userAgent = String(window.navigator && window.navigator.userAgent || '').trim().toLowerCase();
+    return isLocalSupabaseHost(hostname) && /\bwv\b/.test(userAgent);
+}
+
 function shouldUseSameOriginSupabaseProxy() {
     if (!window.location) return false;
     var protocol = String(window.location.protocol || '').trim().toLowerCase();
@@ -24,14 +47,37 @@ function shouldUseSameOriginSupabaseProxy() {
     return !isLocalSupabaseHost(window.location.hostname);
 }
 
+function normalizeProxyOrigin(origin) {
+    return String(origin || '').trim().replace(/\/$/, '');
+}
+
+function getHostedSupabaseProxyOrigin() {
+    return normalizeProxyOrigin(getBootStorageValue('SUPABASE_PROXY_ORIGIN') || DIRECT_PROXY_ORIGIN);
+}
+
+function getSupabaseProxyOrigin() {
+    if (!window.location) return '';
+    if (shouldUseSameOriginSupabaseProxy()) {
+        return normalizeProxyOrigin(window.location.origin);
+    }
+    if (isNativeCapacitorShell()) {
+        return getHostedSupabaseProxyOrigin();
+    }
+    return '';
+}
+
+function shouldUseSupabaseProxy() {
+    return !!getSupabaseProxyOrigin();
+}
+
 function getSameOriginSupabaseUrl() {
-    if (!window.location || !window.location.origin) return DIRECT_SUPABASE_URL;
-    return String(window.location.origin).replace(/\/$/, '') + '/sb';
+    var proxyOrigin = getSupabaseProxyOrigin();
+    return proxyOrigin ? proxyOrigin + '/sb' : DIRECT_SUPABASE_URL;
 }
 
 function getSameOriginGatewayUrl() {
-    if (!window.location || !window.location.origin) return DIRECT_EDGE_GATEWAY_URL;
-    return String(window.location.origin).replace(/\/$/, '') + '/api/edu-gateway';
+    var proxyOrigin = getSupabaseProxyOrigin();
+    return proxyOrigin ? proxyOrigin + '/api/edu-gateway' : DIRECT_EDGE_GATEWAY_URL;
 }
 
 function getBootStorageValue(key) {
@@ -79,9 +125,13 @@ function createSupabaseFetchWithTimeout(timeoutMs) {
 
 window.__DIRECT_SUPABASE_URL = DIRECT_SUPABASE_URL;
 window.__DIRECT_EDGE_GATEWAY_URL = DIRECT_EDGE_GATEWAY_URL;
-window.SUPABASE_URL = getBootStorageValue('SUPABASE_URL') || (shouldUseSameOriginSupabaseProxy() ? getSameOriginSupabaseUrl() : DIRECT_SUPABASE_URL);
+window.__DIRECT_PROXY_ORIGIN = DIRECT_PROXY_ORIGIN;
+window.__SUPABASE_PROXY_ORIGIN = getSupabaseProxyOrigin();
+window.isNativeCapacitorShell = isNativeCapacitorShell;
+window.shouldUseSupabaseProxy = shouldUseSupabaseProxy;
+window.SUPABASE_URL = getBootStorageValue('SUPABASE_URL') || (shouldUseSupabaseProxy() ? getSameOriginSupabaseUrl() : DIRECT_SUPABASE_URL);
 window.SUPABASE_KEY = getBootStorageValue('SUPABASE_KEY') || DIRECT_SUPABASE_KEY;
-window.EDGE_GATEWAY_URL = getBootStorageValue('EDGE_GATEWAY_URL') || (shouldUseSameOriginSupabaseProxy() ? getSameOriginGatewayUrl() : DIRECT_EDGE_GATEWAY_URL);
+window.EDGE_GATEWAY_URL = getBootStorageValue('EDGE_GATEWAY_URL') || (shouldUseSupabaseProxy() ? getSameOriginGatewayUrl() : DIRECT_EDGE_GATEWAY_URL);
 window.initSupabase = function () {
     if (window.supabase && !sbClient) {
         sbClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY, {
