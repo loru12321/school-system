@@ -20,6 +20,9 @@
         'analysis',
         'teaching-warning-center'
     ];
+    const RECENT_MODULE_STORAGE_KEY = 'apk-recent-modules-v1';
+    const RECENT_MODULE_LIMIT = 8;
+    const QUICK_MODULE_LIMIT = 6;
     const ROLE_LABELS = {
         admin: '管理员',
         director: '校级管理',
@@ -235,13 +238,57 @@
         });
     }
 
-    function getQuickModules() {
+    function readRecentModuleIds() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(RECENT_MODULE_STORAGE_KEY) || '[]');
+            if (!Array.isArray(parsed)) return [];
+            return parsed
+                .map((value) => String(value || '').trim())
+                .filter(Boolean);
+        } catch {
+            return [];
+        }
+    }
+
+    function writeRecentModuleIds(moduleIds) {
+        try {
+            localStorage.setItem(
+                RECENT_MODULE_STORAGE_KEY,
+                JSON.stringify(
+                    moduleIds
+                        .map((value) => String(value || '').trim())
+                        .filter(Boolean)
+                        .slice(0, RECENT_MODULE_LIMIT)
+                )
+            );
+        } catch {}
+    }
+
+    function rememberRecentModule(moduleId) {
+        const item = findAllowedItem(moduleId);
+        if (!item) return;
+        writeRecentModuleIds([
+            item.id,
+            ...readRecentModuleIds().filter((id) => id !== item.id)
+        ]);
+    }
+
+    function getRecentModules(limit = RECENT_MODULE_LIMIT) {
+        return uniqueItems(
+            readRecentModuleIds()
+                .map((moduleId) => findAllowedItem(moduleId))
+                .filter(Boolean)
+        ).slice(0, limit);
+    }
+
+    function getQuickModules(limit = QUICK_MODULE_LIMIT) {
         const modules = [
+            ...getRecentModules(limit),
+            getActiveItem(),
             findAllowedItem(getHomeModuleId()),
-            ...QUICK_MODULE_IDS.map((moduleId) => findAllowedItem(moduleId)),
-            getActiveItem()
+            ...QUICK_MODULE_IDS.map((moduleId) => findAllowedItem(moduleId))
         ];
-        return uniqueItems(modules).slice(0, 6);
+        return uniqueItems(modules).slice(0, limit);
     }
 
     function getModeLabel() {
@@ -527,6 +574,19 @@
         `;
     }
 
+    function buildSwitchRow(item, activeId) {
+        const active = item.id === activeId;
+        return `
+            <button type="button" class="apk-switch-row${active ? ' is-active' : ''}" data-apk-module="${escapeHtml(item.id)}">
+                <span class="apk-switch-row-copy">
+                    <strong>${escapeHtml(item.text || item.id)}</strong>
+                    <span>${escapeHtml(item.hint || item.categoryTitle || '\u8de8\u5206\u7c7b\u5feb\u901f\u76f4\u8fbe')}</span>
+                </span>
+                <span class="apk-switch-row-meta">${active ? '\u5f53\u524d' : '\u6253\u5f00'}</span>
+            </button>
+        `;
+    }
+
     function buildModulesSheetHtml() {
         const categories = getAllowedCategories();
         const activeId = getActiveModuleId();
@@ -578,6 +638,67 @@
             <section class="apk-sheet-section">
                 <div class="apk-sheet-section-head">
                     <span class="apk-sheet-section-title">系统动作</span>
+                    <span class="apk-sheet-section-note">Utilities</span>
+                </div>
+                <div class="apk-sheet-grid">
+                    ${quickActions.join('')}
+                </div>
+            </section>
+        `;
+    }
+
+    function buildRecentQuickSheetHtml() {
+        const activeId = getActiveModuleId();
+        const recentModules = uniqueItems([
+            ...getRecentModules(RECENT_MODULE_LIMIT),
+            getActiveItem()
+        ]).slice(0, 4);
+        const recentIds = new Set(recentModules.map((item) => item.id));
+        const quickModules = getQuickModules(QUICK_MODULE_LIMIT + recentIds.size)
+            .filter((item) => !recentIds.has(item.id))
+            .slice(0, QUICK_MODULE_LIMIT);
+        const quickActions = [
+            buildActionCard('modules', '\u5168\u90e8\u6a21\u5757', '\u627e\u4e0d\u5230\u6240\u9700\u529f\u80fd\u65f6\uff0c\u76f4\u63a5\u6253\u5f00\u5168\u91cf\u6a21\u5757\u603b\u89c8\u3002', 'ti ti-layout-grid'),
+            buildActionCard('search', '\u5168\u5c40\u641c\u7d22', '\u5feb\u901f\u641c\u7d22\u5b66\u751f\u3001\u6a21\u5757\u548c\u5e38\u7528\u5165\u53e3\u3002', 'ti ti-search'),
+            buildActionCard('cohorts', '\u5207\u6362\u5c4a\u522b', '\u5728\u4e0d\u540c\u5c4a\u522b\u5de5\u4f5c\u533a\u4e4b\u95f4\u5feb\u901f\u8df3\u8f6c\u3002', 'ti ti-id-badge-2'),
+            typeof window.openUserPasswordModal === 'function'
+                ? buildActionCard('password', '\u4fee\u6539\u5bc6\u7801', '\u76f4\u63a5\u6253\u5f00\u5f53\u524d\u8d26\u53f7\u7684\u5bc6\u7801\u4fee\u6539\u5165\u53e3\u3002', 'ti ti-lock')
+                : '',
+            buildActionCard('logout', '\u9000\u51fa\u767b\u5f55', '\u8fd4\u56de\u767b\u5f55\u9875\uff0c\u91cd\u65b0\u9009\u62e9\u8d26\u53f7\u8fdb\u5165\u3002', 'ti ti-logout', 'is-danger')
+        ].filter(Boolean);
+
+        return `
+            ${buildSheetHeader('\u6700\u8fd1\u4e0e\u5e38\u7528', '\u624b\u673a\u7aef\u5148\u7ed9\u4f60\u6700\u8fd1\u7528\u8fc7\u7684\u6a21\u5757\uff0c\u51cf\u5c11\u53cd\u590d\u8fdb\u51fa\u5206\u7c7b\u9762\u677f\u7684\u8def\u5f84\u3002')}
+            <section class="apk-quick-hero">
+                <div class="apk-quick-hero-copy">
+                    <strong>\u8de8\u5206\u7c7b\u5207\u6362\u5148\u770b\u8fd9\u91cc</strong>
+                    <span>\u9ed8\u8ba4\u4f18\u5148\u663e\u793a\u6700\u8fd1\u4f7f\u7528\uff0c\u4ecd\u7136\u4fdd\u7559\u5168\u90e8\u6a21\u5757\u5165\u53e3\uff0c\u65b9\u4fbf\u5feb\u901f\u8df3\u8f6c\u3002</span>
+                </div>
+                <button type="button" class="apk-shell-icon is-compact" data-apk-action="modules" aria-label="\u6253\u5f00\u5168\u90e8\u6a21\u5757">
+                    <i class="ti ti-layout-grid"></i>
+                </button>
+            </section>
+            <section class="apk-sheet-section">
+                <div class="apk-sheet-section-head">
+                    <span class="apk-sheet-section-title">\u6700\u8fd1\u4f7f\u7528</span>
+                    <span class="apk-sheet-section-note">Recent Modules</span>
+                </div>
+                ${recentModules.length
+                    ? `<div class="apk-switch-list">${recentModules.map((item) => buildSwitchRow(item, activeId)).join('')}</div>`
+                    : '<div class="apk-sheet-empty">\u8fd8\u6ca1\u6709\u53ef\u4ee5\u56de\u8df3\u7684\u6700\u8fd1\u6a21\u5757\uff0c\u53ef\u4ee5\u5148\u4ece\u5168\u90e8\u6a21\u5757\u6216\u5f53\u524d\u5206\u7c7b\u8fdb\u5165\u3002</div>'}
+            </section>
+            <section class="apk-sheet-section">
+                <div class="apk-sheet-section-head">
+                    <span class="apk-sheet-section-title">\u5e38\u7528\u5165\u53e3</span>
+                    <span class="apk-sheet-section-note">Suggested</span>
+                </div>
+                <div class="apk-sheet-grid">
+                    ${quickModules.map((item) => buildModuleCard(item, activeId)).join('')}
+                </div>
+            </section>
+            <section class="apk-sheet-section">
+                <div class="apk-sheet-section-head">
+                    <span class="apk-sheet-section-title">绯荤粺鍔ㄤ綔</span>
                     <span class="apk-sheet-section-note">Utilities</span>
                 </div>
                 <div class="apk-sheet-grid">
@@ -668,7 +789,7 @@
             return;
         }
         if (sheetMode === 'quick') {
-            panel.innerHTML = buildQuickSheetHtml();
+            panel.innerHTML = buildRecentQuickSheetHtml();
             return;
         }
         if (sheetMode === 'account') {
@@ -748,6 +869,11 @@
             if (node) node.textContent = value;
         });
 
+        const quickTab = root.querySelector('[data-apk-tab="quick"] span');
+        if (quickTab) quickTab.textContent = '\u6700\u8fd1';
+        const quickTabIcon = root.querySelector('[data-apk-tab="quick"] i');
+        if (quickTabIcon) quickTabIcon.className = 'ti ti-history';
+
         syncShellModalState(root);
         renderRail(root);
         renderSheet();
@@ -782,6 +908,7 @@
         setSheetMode('');
         scrollPrimaryViewportToTop();
         window.switchTab(moduleId);
+        rememberRecentModule(moduleId);
         if (moduleId === 'student-details') {
             scheduleStudentDetailsModuleFocus();
         }
