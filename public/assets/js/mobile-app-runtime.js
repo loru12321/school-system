@@ -44,6 +44,9 @@
 
     let refreshHandle = 0;
     let sheetMode = '';
+    let libraryOpen = false;
+    let libraryQuery = '';
+    let shellGesture = null;
     let themeMedia = null;
 
     function escapeHtml(value) {
@@ -1016,6 +1019,837 @@
         }
     }
 
+    function getShellCopy() {
+        return {
+            workbench: '学校工作台',
+            mobileWorkbench: '移动工作台',
+            mobilePreparing: '移动工作台正在准备中',
+            openLibrary: '打开模块资源库',
+            openSearch: '打开全局搜索',
+            closeSheet: '关闭面板',
+            closeLibrary: '关闭模块资源库',
+            cohortPlaceholder: '届别未选择',
+            home: '工作台',
+            modules: '模块',
+            recent: '最近',
+            account: '我的',
+            openModule: '打开该模块',
+            currentCategoryEmpty: '当前分类暂无可用模块',
+            current: '当前',
+            open: '打开',
+            workspaceNote: 'Workspace',
+            moduleOverviewTitle: '模块总览',
+            moduleOverviewCopy: '按分类切换工作模块，减少手机端来回翻找入口的次数。',
+            noModules: '当前账号还没有可切换的模块入口。',
+            quickTitle: '最近与常用',
+            quickCopy: '先给你最近用过的模块，再补高频入口，减少反复进出分类面板。',
+            quickHeroTitle: '跨分类切换先看这里',
+            quickHeroCopy: '默认优先展示最近使用，同时保留完整模块资源库入口。',
+            recentModulesTitle: '最近使用',
+            recentModulesNote: 'Recent Modules',
+            suggestedTitle: '高频推荐',
+            suggestedNote: 'Suggested',
+            utilitiesTitle: '系统动作',
+            utilitiesNote: 'Utilities',
+            noRecent: '还没有可回跳的最近模块，可以先从当前分类或全部模块进入。',
+            appLibraryTitle: '模块资源库',
+            appLibraryCopy: '像 App 资源库一样集中浏览全部模块，支持最近使用、当前分类和快速搜索。',
+            appLibrarySearch: '搜索模块、功能或分类',
+            appLibrarySearchTitle: '搜索结果',
+            appLibrarySearchNote: 'Results',
+            appLibrarySearchEmpty: '没有匹配的模块，试试更短的关键词。',
+            appLibraryCurrentTitle: '当前分类',
+            appLibraryCurrentNote: 'Now Browsing',
+            appLibraryAllTitle: '全部分类',
+            appLibraryAllNote: 'App Library',
+            allModulesTitle: '全部模块',
+            allModulesCopy: '找不到所需功能时，直接打开完整模块总览。',
+            searchTitle: '全局搜索',
+            searchCopy: '快速搜索学生、模块和常用入口。',
+            cohortsTitle: '切换届别',
+            cohortsCopy: '在不同届别工作区之间快速跳转。',
+            passwordTitle: '修改密码',
+            passwordCopy: '直接打开当前账号的密码修改入口。',
+            logoutTitle: '退出登录',
+            logoutCopy: '返回登录页，重新选择账号进入。',
+            accountTitle: '账号与设置',
+            accountCopy: 'APK 默认跟随系统主题，并把常用设置集中到这一层。',
+            currentSchool: '当前学校',
+            currentCohort: '当前届别',
+            themeMode: '主题模式',
+            themeDark: '深色',
+            themeLight: '浅色',
+            followSystem: '跟随系统',
+            runtimeEnv: '运行环境',
+            mobileBrowser: '移动浏览器',
+            notLoggedIn: '未登录',
+            unknownSchool: '未识别学校',
+            switchCohortTitle: '切换届别',
+            switchCohortCopy: '统一从这里切届别，避免手机端入口与工作区状态脱节。',
+            noCohorts: '暂无可切换届别。',
+            noCohortChoices: '当前没有可切换的届别，请先完成数据恢复。',
+            usingCurrentCohort: '当前正在使用的届别。',
+            switchToThisCohort: '点击切换到这个届别。'
+        };
+    }
+
+    function getThemeLabel() {
+        return document.body.dataset.systemTheme === 'dark' ? getShellCopy().themeDark : getShellCopy().themeLight;
+    }
+
+    function getModuleSearchText(item, category = null) {
+        return [
+            item?.text,
+            item?.hint,
+            item?.id,
+            category?.title,
+            category?.eyebrow
+        ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+    }
+
+    function getLibrarySearchResults() {
+        const needle = String(libraryQuery || '').trim().toLowerCase();
+        if (!needle) return [];
+
+        return uniqueItems(
+            getAllowedCategories().flatMap((category) => category.items
+                .filter((item) => getModuleSearchText(item, category).includes(needle))
+                .map((item) => ({
+                    ...item,
+                    categoryTitle: category.title,
+                    categoryKey: category.key,
+                    categoryColor: category.color
+                })))
+        );
+    }
+
+    function buildSheetHeader(title, copy) {
+        return `
+            <div class="apk-sheet-header">
+                <div>
+                    <strong>${escapeHtml(title)}</strong>
+                    <span>${escapeHtml(copy)}</span>
+                </div>
+                <button type="button" class="apk-shell-icon is-compact" data-apk-action="close-sheet" aria-label="${escapeHtml(getShellCopy().closeSheet)}">
+                    <i class="ti ti-x"></i>
+                </button>
+            </div>
+        `;
+    }
+
+    function buildSectionHead(title, note) {
+        return `
+            <div class="apk-sheet-section-head">
+                <span class="apk-sheet-section-title">${escapeHtml(title)}</span>
+                <span class="apk-sheet-section-note">${escapeHtml(note)}</span>
+            </div>
+        `;
+    }
+
+    function buildModuleCard(item, activeId) {
+        const copy = getShellCopy();
+        const active = item.id === activeId ? ' is-active' : '';
+        return `
+            <button type="button" class="apk-sheet-card${active}" data-apk-module="${escapeHtml(item.id)}">
+                <strong>${escapeHtml(item.text || item.id)}</strong>
+                <span>${escapeHtml(item.hint || item.categoryTitle || copy.openModule)}</span>
+            </button>
+        `;
+    }
+
+    function buildActionCard(action, title, copy, icon, extraClass = '') {
+        return `
+            <button type="button" class="apk-sheet-card apk-sheet-card--action${extraClass ? ` ${extraClass}` : ''}" data-apk-action="${escapeHtml(action)}">
+                <i class="${escapeHtml(icon)}"></i>
+                <strong>${escapeHtml(title)}</strong>
+                <span>${escapeHtml(copy)}</span>
+            </button>
+        `;
+    }
+
+    function buildSwitchRow(item, activeId) {
+        const copy = getShellCopy();
+        const active = item.id === activeId;
+        return `
+            <button type="button" class="apk-switch-row${active ? ' is-active' : ''}" data-apk-module="${escapeHtml(item.id)}">
+                <span class="apk-switch-row-copy">
+                    <strong>${escapeHtml(item.text || item.id)}</strong>
+                    <span>${escapeHtml(item.hint || item.categoryTitle || '跨分类快速直达')}</span>
+                </span>
+                <span class="apk-switch-row-meta">${active ? copy.current : copy.open}</span>
+            </button>
+        `;
+    }
+
+    function buildLibraryMiniTile(item, activeId) {
+        const badge = String(item.text || item.id || '').trim().slice(0, 2) || '模块';
+        return `
+            <button type="button" class="apk-library-mini${item.id === activeId ? ' is-active' : ''}" data-apk-module="${escapeHtml(item.id)}">
+                <span class="apk-library-mini-badge">${escapeHtml(badge)}</span>
+                <span class="apk-library-mini-copy">
+                    <strong>${escapeHtml(item.text || item.id)}</strong>
+                    <span>${escapeHtml(item.hint || item.categoryTitle || '模块')}</span>
+                </span>
+            </button>
+        `;
+    }
+
+    function buildLibraryCategoryCard(category, activeId) {
+        return `
+            <article class="apk-library-card" style="--apk-library-accent:${escapeHtml(category.color || '#2563eb')}">
+                <div class="apk-library-card-head">
+                    <div>
+                        <strong>${escapeHtml(category.title)}</strong>
+                        <span>${escapeHtml(`${category.items.length} 个模块`)}</span>
+                    </div>
+                    <span class="apk-library-card-count">${escapeHtml(String(category.items.length).padStart(2, '0'))}</span>
+                </div>
+                <div class="apk-library-mini-grid">
+                    ${category.items.slice(0, 4).map((item) => buildLibraryMiniTile({
+                        ...item,
+                        categoryTitle: category.title
+                    }, activeId)).join('')}
+                </div>
+            </article>
+        `;
+    }
+
+    function buildLibraryHtml() {
+        const copy = getShellCopy();
+        const activeId = getActiveModuleId();
+        const searchValue = String(libraryQuery || '').trim();
+        const searchResults = getLibrarySearchResults();
+        const currentCategory = getCurrentCategory();
+        const recentModules = uniqueItems([
+            ...getRecentModules(6),
+            getActiveItem()
+        ]).slice(0, 6);
+        const recentIds = new Set(recentModules.map((item) => item.id));
+        const suggestedModules = getQuickModules(6 + recentIds.size)
+            .filter((item) => !recentIds.has(item.id))
+            .slice(0, 6);
+        const categories = getAllowedCategories();
+
+        return `
+            <div class="apk-library-head">
+                <div class="apk-library-head-copy">
+                    <strong>${escapeHtml(copy.appLibraryTitle)}</strong>
+                    <span>${escapeHtml(copy.appLibraryCopy)}</span>
+                </div>
+                <button type="button" class="apk-shell-icon is-compact" data-apk-action="close-library" aria-label="${escapeHtml(copy.closeLibrary)}">
+                    <i class="ti ti-arrow-left"></i>
+                </button>
+            </div>
+            <label class="apk-library-search">
+                <i class="ti ti-search"></i>
+                <input type="search" data-apk-library-search value="${escapeHtml(searchValue)}" placeholder="${escapeHtml(copy.appLibrarySearch)}" autocomplete="off" />
+            </label>
+            ${searchValue
+                ? `
+                    <section class="apk-library-section">
+                        ${buildSectionHead(copy.appLibrarySearchTitle, copy.appLibrarySearchNote)}
+                        ${searchResults.length
+                            ? `<div class="apk-sheet-grid apk-library-results">${searchResults.map((item) => buildModuleCard(item, activeId)).join('')}</div>`
+                            : `<div class="apk-sheet-empty">${escapeHtml(copy.appLibrarySearchEmpty)}</div>`}
+                    </section>
+                `
+                : `
+                    <section class="apk-library-section">
+                        ${buildSectionHead(copy.recentModulesTitle, copy.recentModulesNote)}
+                        ${recentModules.length
+                            ? `<div class="apk-switch-list">${recentModules.map((item) => buildSwitchRow(item, activeId)).join('')}</div>`
+                            : `<div class="apk-sheet-empty">${escapeHtml(copy.noRecent)}</div>`}
+                    </section>
+                    ${suggestedModules.length
+                        ? `
+                            <section class="apk-library-section">
+                                ${buildSectionHead(copy.suggestedTitle, copy.suggestedNote)}
+                                <div class="apk-sheet-grid apk-library-results">
+                                    ${suggestedModules.map((item) => buildModuleCard(item, activeId)).join('')}
+                                </div>
+                            </section>
+                        `
+                        : ''}
+                    ${currentCategory?.items?.length
+                        ? `
+                            <section class="apk-library-section">
+                                ${buildSectionHead(copy.appLibraryCurrentTitle, copy.appLibraryCurrentNote)}
+                                <article class="apk-library-spotlight" style="--apk-library-accent:${escapeHtml(currentCategory.color || '#2563eb')}">
+                                    <div class="apk-library-card-head">
+                                        <div>
+                                            <strong>${escapeHtml(currentCategory.title)}</strong>
+                                            <span>${escapeHtml(`${currentCategory.items.length} 个模块`)}</span>
+                                        </div>
+                                        <span class="apk-library-card-count">${escapeHtml(String(currentCategory.items.length).padStart(2, '0'))}</span>
+                                    </div>
+                                    <div class="apk-library-mini-grid">
+                                        ${currentCategory.items.slice(0, 4).map((item) => buildLibraryMiniTile({
+                                            ...item,
+                                            categoryTitle: currentCategory.title
+                                        }, activeId)).join('')}
+                                    </div>
+                                </article>
+                            </section>
+                        `
+                        : ''}
+                    <section class="apk-library-section">
+                        ${buildSectionHead(copy.appLibraryAllTitle, copy.appLibraryAllNote)}
+                        <div class="apk-library-clusters">
+                            ${categories.map((category) => buildLibraryCategoryCard(category, activeId)).join('')}
+                        </div>
+                    </section>
+                `}
+        `;
+    }
+
+    function ensureShellRoot() {
+        let root = document.getElementById('apk-mobile-shell');
+        if (root) return root;
+
+        const copy = getShellCopy();
+        root = document.createElement('div');
+        root.id = 'apk-mobile-shell';
+        root.setAttribute('aria-hidden', 'true');
+        root.innerHTML = `
+            <div class="apk-shell-top">
+                <div class="apk-shell-topbar apk-shell-surface">
+                    <button type="button" class="apk-shell-icon" data-apk-action="library" aria-label="${escapeHtml(copy.openLibrary)}">
+                        <i class="ti ti-layout-sidebar-left-expand"></i>
+                    </button>
+                    <div class="apk-shell-copy">
+                        <span class="apk-shell-kicker" data-apk-field="role">${escapeHtml(copy.workbench)}</span>
+                        <strong class="apk-shell-title" data-apk-field="title">智慧教务</strong>
+                        <span class="apk-shell-subtitle" data-apk-field="subtitle">${escapeHtml(copy.mobilePreparing)}</span>
+                    </div>
+                    <button type="button" class="apk-shell-icon" data-apk-action="search" aria-label="${escapeHtml(copy.openSearch)}">
+                        <i class="ti ti-search"></i>
+                    </button>
+                </div>
+                <div class="apk-shell-meta">
+                    <button type="button" class="apk-shell-pill apk-shell-surface" data-apk-action="cohorts">
+                        <i class="ti ti-id-badge-2"></i>
+                        <span data-apk-field="cohort">${escapeHtml(copy.cohortPlaceholder)}</span>
+                    </button>
+                    <div class="apk-shell-pill apk-shell-surface is-static">
+                        <i class="ti ti-device-imac"></i>
+                        <span data-apk-field="mode">${escapeHtml(copy.workbench)}</span>
+                    </div>
+                </div>
+                <div class="apk-shell-rail" data-apk-rail></div>
+            </div>
+            <button type="button" class="apk-shell-library-backdrop" data-apk-action="close-library" aria-label="${escapeHtml(copy.closeLibrary)}"></button>
+            <div class="apk-shell-library">
+                <div class="apk-shell-library-panel apk-shell-surface" data-apk-library-panel></div>
+            </div>
+            <button type="button" class="apk-shell-backdrop" data-apk-action="close-sheet" aria-label="${escapeHtml(copy.closeSheet)}"></button>
+            <div class="apk-shell-sheet">
+                <div class="apk-shell-sheet-panel apk-shell-surface" data-apk-sheet-panel></div>
+            </div>
+            <div class="apk-shell-tabs apk-shell-surface">
+                <button type="button" class="apk-shell-tab" data-apk-tab="home">
+                    <i class="ti ti-home"></i>
+                    <span>${escapeHtml(copy.home)}</span>
+                </button>
+                <button type="button" class="apk-shell-tab" data-apk-tab="modules">
+                    <i class="ti ti-layout-grid"></i>
+                    <span>${escapeHtml(copy.modules)}</span>
+                </button>
+                <button type="button" class="apk-shell-tab" data-apk-tab="quick">
+                    <i class="ti ti-history"></i>
+                    <span>${escapeHtml(copy.recent)}</span>
+                </button>
+                <button type="button" class="apk-shell-tab" data-apk-tab="account">
+                    <i class="ti ti-user-circle"></i>
+                    <span>${escapeHtml(copy.account)}</span>
+                </button>
+            </div>
+        `;
+
+        root.addEventListener('click', handleShellClick);
+        root.addEventListener('input', handleShellInput);
+        document.body.appendChild(root);
+        return root;
+    }
+
+    function buildModulesSheetHtml() {
+        const copy = getShellCopy();
+        const categories = getAllowedCategories();
+        const activeId = getActiveModuleId();
+
+        if (!categories.length) {
+            return `${buildSheetHeader(copy.moduleOverviewTitle, copy.noModules)}
+                <div class="apk-sheet-empty">${escapeHtml(copy.noModules)}</div>`;
+        }
+
+        return [
+            buildSheetHeader(copy.moduleOverviewTitle, copy.moduleOverviewCopy),
+            ...categories.map((category) => `
+                <section class="apk-sheet-section">
+                    ${buildSectionHead(category.title, category.eyebrow || copy.workspaceNote)}
+                    <div class="apk-sheet-grid">
+                        ${category.items.map((item) => buildModuleCard({
+                            ...item,
+                            categoryTitle: category.title
+                        }, activeId)).join('')}
+                    </div>
+                </section>
+            `)
+        ].join('');
+    }
+
+    function buildRecentQuickSheetHtml() {
+        const copy = getShellCopy();
+        const activeId = getActiveModuleId();
+        const recentModules = uniqueItems([
+            ...getRecentModules(RECENT_MODULE_LIMIT),
+            getActiveItem()
+        ]).slice(0, 4);
+        const recentIds = new Set(recentModules.map((item) => item.id));
+        const quickModules = getQuickModules(QUICK_MODULE_LIMIT + recentIds.size)
+            .filter((item) => !recentIds.has(item.id))
+            .slice(0, QUICK_MODULE_LIMIT);
+        const quickActions = [
+            buildActionCard('library', copy.allModulesTitle, copy.allModulesCopy, 'ti ti-layout-sidebar-left-expand'),
+            buildActionCard('search', copy.searchTitle, copy.searchCopy, 'ti ti-search'),
+            buildActionCard('cohorts', copy.cohortsTitle, copy.cohortsCopy, 'ti ti-id-badge-2'),
+            typeof window.openUserPasswordModal === 'function'
+                ? buildActionCard('password', copy.passwordTitle, copy.passwordCopy, 'ti ti-lock')
+                : '',
+            buildActionCard('logout', copy.logoutTitle, copy.logoutCopy, 'ti ti-logout', 'is-danger')
+        ].filter(Boolean);
+
+        return `
+            ${buildSheetHeader(copy.quickTitle, copy.quickCopy)}
+            <section class="apk-quick-hero">
+                <div class="apk-quick-hero-copy">
+                    <strong>${escapeHtml(copy.quickHeroTitle)}</strong>
+                    <span>${escapeHtml(copy.quickHeroCopy)}</span>
+                </div>
+                <button type="button" class="apk-shell-icon is-compact" data-apk-action="library" aria-label="${escapeHtml(copy.openLibrary)}">
+                    <i class="ti ti-layout-sidebar-left-expand"></i>
+                </button>
+            </section>
+            <section class="apk-sheet-section">
+                ${buildSectionHead(copy.recentModulesTitle, copy.recentModulesNote)}
+                ${recentModules.length
+                    ? `<div class="apk-switch-list">${recentModules.map((item) => buildSwitchRow(item, activeId)).join('')}</div>`
+                    : `<div class="apk-sheet-empty">${escapeHtml(copy.noRecent)}</div>`}
+            </section>
+            ${quickModules.length
+                ? `
+                    <section class="apk-sheet-section">
+                        ${buildSectionHead(copy.suggestedTitle, copy.suggestedNote)}
+                        <div class="apk-sheet-grid">
+                            ${quickModules.map((item) => buildModuleCard(item, activeId)).join('')}
+                        </div>
+                    </section>
+                `
+                : ''}
+            <section class="apk-sheet-section">
+                ${buildSectionHead(copy.utilitiesTitle, copy.utilitiesNote)}
+                <div class="apk-sheet-grid">
+                    ${quickActions.join('')}
+                </div>
+            </section>
+        `;
+    }
+
+    function buildAccountSheetHtml() {
+        const copy = getShellCopy();
+        const user = getCurrentUser();
+
+        return `
+            ${buildSheetHeader(copy.accountTitle, copy.accountCopy)}
+            <section class="apk-sheet-section">
+                <div class="apk-account-card">
+                    <div class="apk-account-name">${escapeHtml(user?.name || copy.notLoggedIn)}</div>
+                    <div class="apk-account-role">${escapeHtml(humanizeRole())}</div>
+                    <div class="apk-account-grid">
+                        <div class="apk-account-row">
+                            <span>${escapeHtml(copy.currentSchool)}</span>
+                            <strong>${escapeHtml(getCurrentSchool() || copy.unknownSchool)}</strong>
+                        </div>
+                        <div class="apk-account-row">
+                            <span>${escapeHtml(copy.currentCohort)}</span>
+                            <strong>${escapeHtml(getCurrentCohortLabel())}</strong>
+                        </div>
+                        <div class="apk-account-row">
+                            <span>${escapeHtml(copy.themeMode)}</span>
+                            <strong>${escapeHtml(`${copy.followSystem} · ${getThemeLabel()}`)}</strong>
+                        </div>
+                        <div class="apk-account-row">
+                            <span>${escapeHtml(copy.runtimeEnv)}</span>
+                            <strong>${escapeHtml(isNativeApp ? 'Android APK' : copy.mobileBrowser)}</strong>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section class="apk-sheet-section">
+                <div class="apk-sheet-grid">
+                    ${buildActionCard('cohorts', copy.cohortsTitle, copy.cohortsCopy, 'ti ti-id-badge-2')}
+                    ${buildActionCard('search', copy.searchTitle, copy.searchCopy, 'ti ti-search')}
+                    ${buildActionCard('library', copy.allModulesTitle, copy.allModulesCopy, 'ti ti-layout-sidebar-left-expand')}
+                    ${typeof window.openUserPasswordModal === 'function'
+                        ? buildActionCard('password', copy.passwordTitle, copy.passwordCopy, 'ti ti-lock')
+                        : ''}
+                    ${buildActionCard('logout', copy.logoutTitle, copy.logoutCopy, 'ti ti-logout', 'is-danger')}
+                </div>
+            </section>
+        `;
+    }
+
+    function buildCohortsSheetHtml() {
+        const copy = getShellCopy();
+        const options = getCohortOptions();
+        const currentValue = document.getElementById('cohort-selector')?.value || '';
+
+        if (!options.length) {
+            return `${buildSheetHeader(copy.switchCohortTitle, copy.noCohortChoices)}
+                <div class="apk-sheet-empty">${escapeHtml(copy.noCohorts)}</div>`;
+        }
+
+        return `
+            ${buildSheetHeader(copy.switchCohortTitle, copy.switchCohortCopy)}
+            <section class="apk-sheet-section">
+                <div class="apk-sheet-grid">
+                    ${options.map((option) => `
+                        <button type="button" class="apk-sheet-card${option.value === currentValue ? ' is-active' : ''}" data-apk-cohort="${escapeHtml(option.value)}">
+                            <strong>${escapeHtml(option.label)}</strong>
+                            <span>${escapeHtml(option.value === currentValue ? copy.usingCurrentCohort : copy.switchToThisCohort)}</span>
+                        </button>
+                    `).join('')}
+                </div>
+            </section>
+        `;
+    }
+
+    function renderLibrary(root) {
+        const panel = root.querySelector('[data-apk-library-panel]');
+        if (!panel) return;
+        panel.innerHTML = libraryOpen ? buildLibraryHtml() : '';
+    }
+
+    function renderSheet() {
+        const root = ensureShellRoot();
+        const panel = root.querySelector('[data-apk-sheet-panel]');
+        if (!panel) return;
+
+        if (!sheetMode) {
+            panel.innerHTML = '';
+            return;
+        }
+        if (sheetMode === 'modules') {
+            panel.innerHTML = buildModulesSheetHtml();
+            return;
+        }
+        if (sheetMode === 'quick') {
+            panel.innerHTML = buildRecentQuickSheetHtml();
+            return;
+        }
+        if (sheetMode === 'account') {
+            panel.innerHTML = buildAccountSheetHtml();
+            return;
+        }
+        if (sheetMode === 'cohorts') {
+            panel.innerHTML = buildCohortsSheetHtml();
+        }
+    }
+
+    function renderRail(root) {
+        const copy = getShellCopy();
+        const rail = root.querySelector('[data-apk-rail]');
+        if (!rail) return;
+
+        const currentCategory = getCurrentCategory();
+        const activeId = getActiveModuleId();
+
+        if (!currentCategory?.items?.length) {
+            rail.innerHTML = `<div class="apk-rail-empty">${escapeHtml(copy.currentCategoryEmpty)}</div>`;
+            return;
+        }
+
+        rail.innerHTML = currentCategory.items.map((item) => `
+            <button type="button" class="apk-rail-chip${item.id === activeId ? ' is-active' : ''}" data-apk-module="${escapeHtml(item.id)}">
+                ${escapeHtml(item.text || item.id)}
+            </button>
+        `).join('');
+
+        window.requestAnimationFrame(() => scrollActiveRailChipIntoView(root));
+    }
+
+    function renderTabs(root) {
+        const activeId = getActiveModuleId();
+        const homeId = getHomeModuleId();
+        root.querySelectorAll('.apk-shell-tab').forEach((button) => {
+            const tab = button.getAttribute('data-apk-tab');
+            const active = (
+                !libraryOpen
+                && (
+                    (tab === 'home' && !sheetMode && activeId === homeId)
+                    || (tab === 'modules' && sheetMode === 'modules')
+                    || (tab === 'quick' && sheetMode === 'quick')
+                    || (tab === 'account' && sheetMode === 'account')
+                )
+            );
+            button.classList.toggle('is-active', active);
+        });
+    }
+
+    function renderShell() {
+        const copy = getShellCopy();
+        const root = ensureShellRoot();
+        const activeItem = getActiveItem();
+        const currentCategory = getCurrentCategory();
+        const subtitle = [
+            getCurrentSchool() || copy.unknownSchool,
+            currentCategory?.title || copy.workbench,
+            getCurrentCohortLabel()
+        ].filter(Boolean).join(' · ');
+
+        root.style.setProperty('--apk-accent', activeItem?.categoryColor || currentCategory?.color || '#2563eb');
+        root.setAttribute('aria-hidden', 'false');
+        root.dataset.sheetOpen = sheetMode ? 'true' : 'false';
+        root.dataset.sheetMode = sheetMode || '';
+        root.dataset.libraryOpen = libraryOpen ? 'true' : 'false';
+
+        const fields = {
+            role: `${humanizeRole()}工作台`,
+            title: activeItem?.text || '智慧教务',
+            subtitle,
+            cohort: getCurrentCohortLabel(),
+            mode: copy.workbench
+        };
+
+        Object.entries(fields).forEach(([key, value]) => {
+            const node = root.querySelector(`[data-apk-field="${key}"]`);
+            if (node) node.textContent = value;
+        });
+
+        syncShellModalState(root);
+        renderRail(root);
+        renderSheet();
+        renderLibrary(root);
+        renderTabs(root);
+    }
+
+    function setLibraryOpen(nextOpen, options = {}) {
+        libraryOpen = !!nextOpen;
+        if (libraryOpen) {
+            sheetMode = '';
+        }
+        if (!libraryOpen && options.resetQuery !== false) {
+            libraryQuery = '';
+        }
+        renderShell();
+    }
+
+    function toggleLibrary(forceOpen) {
+        const nextOpen = typeof forceOpen === 'boolean' ? forceOpen : !libraryOpen;
+        setLibraryOpen(nextOpen);
+    }
+
+    function setSheetMode(mode = '') {
+        sheetMode = mode;
+        if (mode) {
+            libraryOpen = false;
+            libraryQuery = '';
+        }
+        renderShell();
+    }
+
+    function toggleSheet(mode) {
+        setSheetMode(sheetMode === mode ? '' : mode);
+    }
+
+    function activateModule(moduleId) {
+        if (!moduleId || typeof window.switchTab !== 'function') return;
+        sheetMode = '';
+        libraryOpen = false;
+        libraryQuery = '';
+        renderShell();
+        scrollPrimaryViewportToTop();
+        window.switchTab(moduleId);
+        rememberRecentModule(moduleId);
+        if (moduleId === 'student-details') {
+            scheduleStudentDetailsModuleFocus();
+        }
+        REFRESH_DELAYS.forEach((delay) => {
+            window.setTimeout(() => {
+                if (document.getElementById(moduleId)?.classList.contains('active')) {
+                    refreshContentEnhancements();
+                    if (moduleId === 'student-details' && typeof window.requestStudentDetailsPrimaryFocus === 'function') {
+                        window.requestStudentDetailsPrimaryFocus();
+                    }
+                }
+                scheduleRefresh();
+            }, delay);
+        });
+    }
+
+    function openSpotlightSearch() {
+        libraryOpen = false;
+        libraryQuery = '';
+        setSheetMode('');
+        if (typeof window.openSpotlight === 'function') {
+            window.openSpotlight();
+        }
+    }
+
+    function openPasswordModal() {
+        libraryOpen = false;
+        libraryQuery = '';
+        setSheetMode('');
+        if (typeof window.openUserPasswordModal === 'function') {
+            window.openUserPasswordModal();
+        }
+    }
+
+    function handleTab(tabName) {
+        if (tabName === 'home') {
+            activateModule(getHomeModuleId());
+            return;
+        }
+        if (tabName === 'modules') {
+            toggleSheet('modules');
+            return;
+        }
+        if (tabName === 'quick') {
+            toggleSheet('quick');
+            return;
+        }
+        if (tabName === 'account') {
+            toggleSheet('account');
+        }
+    }
+
+    function handleShellInput(event) {
+        const searchInput = event.target.closest('[data-apk-library-search]');
+        if (!searchInput) return;
+        const caret = typeof searchInput.selectionStart === 'number'
+            ? searchInput.selectionStart
+            : String(searchInput.value || '').length;
+        libraryQuery = String(searchInput.value || '');
+        renderShell();
+        if (!libraryOpen) return;
+        const nextInput = document.querySelector('[data-apk-library-search]');
+        if (!nextInput) return;
+        if (typeof nextInput.focus === 'function') {
+            nextInput.focus({ preventScroll: true });
+        }
+        if (typeof nextInput.setSelectionRange === 'function') {
+            nextInput.setSelectionRange(caret, caret);
+        }
+    }
+
+    function handleShellClick(event) {
+        const trigger = event.target.closest('[data-apk-action], [data-apk-module], [data-apk-cohort], [data-apk-tab]');
+        if (!trigger) return;
+
+        event.preventDefault();
+
+        const moduleId = trigger.getAttribute('data-apk-module');
+        if (moduleId) {
+            activateModule(moduleId);
+            return;
+        }
+
+        const cohortValue = trigger.getAttribute('data-apk-cohort');
+        if (cohortValue) {
+            switchCohort(cohortValue);
+            return;
+        }
+
+        const tabName = trigger.getAttribute('data-apk-tab');
+        if (tabName) {
+            handleTab(tabName);
+            return;
+        }
+
+        const action = trigger.getAttribute('data-apk-action');
+        if (action === 'close-sheet') {
+            setSheetMode('');
+            return;
+        }
+        if (action === 'library') {
+            toggleLibrary();
+            return;
+        }
+        if (action === 'close-library') {
+            toggleLibrary(false);
+            return;
+        }
+        if (action === 'modules') {
+            toggleSheet('modules');
+            return;
+        }
+        if (action === 'quick') {
+            toggleSheet('quick');
+            return;
+        }
+        if (action === 'account') {
+            toggleSheet('account');
+            return;
+        }
+        if (action === 'cohorts') {
+            toggleSheet('cohorts');
+            return;
+        }
+        if (action === 'search') {
+            openSpotlightSearch();
+            return;
+        }
+        if (action === 'password') {
+            openPasswordModal();
+            return;
+        }
+        if (action === 'logout' && window.Auth && typeof window.Auth.logout === 'function') {
+            libraryOpen = false;
+            libraryQuery = '';
+            setSheetMode('');
+            window.Auth.logout();
+        }
+    }
+
+    function handleShellTouchStart(event) {
+        if (!isMobileViewport() || !isLoggedIn() || isParentLikeRole() || isBlockingDialogVisible()) return;
+        const touch = event.touches?.[0];
+        if (!touch) return;
+        shellGesture = {
+            startX: touch.clientX,
+            startY: touch.clientY,
+            canOpenLibrary: !libraryOpen && !sheetMode && touch.clientX <= 28,
+            canCloseLibrary: libraryOpen
+        };
+    }
+
+    function handleShellTouchMove(event) {
+        if (!shellGesture) return;
+        const touch = event.touches?.[0];
+        if (!touch) return;
+        const deltaX = touch.clientX - shellGesture.startX;
+        const deltaY = touch.clientY - shellGesture.startY;
+        if (Math.abs(deltaY) > 42) {
+            shellGesture = null;
+            return;
+        }
+        if (shellGesture.canOpenLibrary && deltaX >= 80) {
+            toggleLibrary(true);
+            shellGesture = null;
+            return;
+        }
+        if (shellGesture.canCloseLibrary && deltaX <= -80) {
+            toggleLibrary(false);
+            shellGesture = null;
+        }
+    }
+
+    function handleShellTouchEnd() {
+        shellGesture = null;
+    }
+
     function wrapMethod(target, methodName, marker) {
         if (!target || typeof target[methodName] !== 'function' || target[methodName][marker]) return;
         const original = target[methodName];
@@ -1090,8 +1924,11 @@
 
         if (!shouldUseShell) {
             sheetMode = '';
+            libraryOpen = false;
+            libraryQuery = '';
             root.dataset.sheetOpen = 'false';
             root.dataset.sheetMode = '';
+            root.dataset.libraryOpen = 'false';
             root.dataset.modalOpen = 'false';
             return;
         }
@@ -1131,6 +1968,9 @@
         openModules() {
             setSheetMode('modules');
         },
+        openLibrary() {
+            toggleLibrary(true);
+        },
         openQuickActions() {
             setSheetMode('quick');
         },
@@ -1146,6 +1986,7 @@
     window.MobMgr = MobMgr;
     window.MobileQueryUI = {
         refresh: scheduleRefresh,
+        openLibrary: () => toggleLibrary(true),
         openModules: () => setSheetMode('modules'),
         openQuick: () => setSheetMode('quick'),
         openAccount: () => setSheetMode('account'),
@@ -1168,6 +2009,10 @@
     window.addEventListener('load', scheduleRefresh);
     window.addEventListener('pageshow', scheduleRefresh);
     window.addEventListener('focus', scheduleRefresh);
+    document.addEventListener('touchstart', handleShellTouchStart, { passive: true });
+    document.addEventListener('touchmove', handleShellTouchMove, { passive: true });
+    document.addEventListener('touchend', handleShellTouchEnd, { passive: true });
+    document.addEventListener('touchcancel', handleShellTouchEnd, { passive: true });
     document.addEventListener('resume', scheduleRefresh, false);
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) scheduleRefresh();
