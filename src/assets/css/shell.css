@@ -1,4 +1,14 @@
 /* Main layout wrapper */
+:root {
+    --shell-sidebar-expanded: 280px;
+    --shell-sidebar-collapsed: 92px;
+    --shell-sidebar-current: var(--shell-sidebar-expanded);
+}
+
+body.shell-sidebar-collapsed {
+    --shell-sidebar-current: var(--shell-sidebar-collapsed);
+}
+
 .app-layout {
     display: flex;
     height: 100vh;
@@ -9,8 +19,8 @@
 
 /* Spacious Sidebar */
 .sidebar-spacious {
-    width: 280px;
-    min-width: 280px;
+    width: var(--shell-sidebar-current);
+    min-width: var(--shell-sidebar-current);
     height: 100vh;
     background:
         radial-gradient(circle at top left, rgba(249, 115, 22, 0.07), rgba(249, 115, 22, 0) 32%),
@@ -18,9 +28,10 @@
     border-right: 1px solid rgba(226, 232, 240, 0.78);
     display: flex;
     flex-direction: column;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: width 0.26s ease, min-width 0.26s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 100;
     box-shadow: 24px 0 48px rgba(15, 23, 42, 0.04);
+    overflow: hidden;
 }
 
 /* Header inside sidebar */
@@ -28,7 +39,35 @@
     padding: 28px 22px 18px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 14px;
+}
+
+#main-header .mobile-menu-toggle {
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(226, 232, 240, 0.88);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.86);
+    color: #0f172a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+#main-header .mobile-menu-toggle:hover {
+    transform: translateY(-1px);
+    border-color: rgba(249, 115, 22, 0.22);
+    background: rgba(255, 247, 237, 0.96);
+    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+}
+
+#main-header .mobile-menu-toggle i {
+    font-size: 18px;
 }
 
 .sidebar-logo-container {
@@ -48,6 +87,8 @@
 .sidebar-title-text {
     display: flex;
     flex-direction: column;
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
     white-space: nowrap;
 }
@@ -226,6 +267,69 @@
 .sidebar-footer-item i {
     font-size: 18px;
     opacity: 0.8;
+}
+
+body.shell-sidebar-collapsed .sidebar-header {
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 12px 14px;
+    gap: 10px;
+}
+
+body.shell-sidebar-collapsed .sidebar-title-text,
+body.shell-sidebar-collapsed .sidebar-workbench-card strong,
+body.shell-sidebar-collapsed .sidebar-workbench-pills,
+body.shell-sidebar-collapsed .sidebar-menu-item__text,
+body.shell-sidebar-collapsed .sidebar-menu-item__count,
+body.shell-sidebar-collapsed .sidebar-footer-item span {
+    display: none !important;
+}
+
+body.shell-sidebar-collapsed .sidebar-workbench-card {
+    margin: 0 10px 14px;
+    padding: 12px;
+    border-radius: 20px;
+}
+
+body.shell-sidebar-collapsed .sidebar-workbench-topline {
+    justify-content: center;
+    margin-bottom: 0;
+}
+
+body.shell-sidebar-collapsed .sidebar-workbench-kicker {
+    display: none;
+}
+
+body.shell-sidebar-collapsed .sidebar-workbench-trigger {
+    width: 100%;
+    padding: 0;
+}
+
+body.shell-sidebar-collapsed .sidebar-workbench-trigger span {
+    display: none;
+}
+
+body.shell-sidebar-collapsed .sidebar-nav-container {
+    padding: 10px 8px 14px;
+}
+
+body.shell-sidebar-collapsed .sidebar-menu-item {
+    justify-content: center;
+    padding: 12px 10px;
+}
+
+body.shell-sidebar-collapsed .sidebar-menu-item__main {
+    justify-content: center;
+}
+
+body.shell-sidebar-collapsed .sidebar-footer {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 14px 10px 16px;
+}
+
+body.shell-sidebar-collapsed .sidebar-footer-item {
+    justify-content: center;
+    padding: 12px;
 }
 
 /* Main Content Area */
@@ -2863,8 +2967,8 @@ textarea {
 .workspace-drawer-panel {
     position: absolute;
     top: 118px;
-    left: clamp(16px, 23vw, 328px);
-    width: min(620px, calc(100vw - clamp(16px, 23vw, 328px) - 24px));
+    left: calc(var(--shell-sidebar-current) + 30px);
+    width: min(620px, calc(100vw - var(--shell-sidebar-current) - 54px));
     max-height: calc(100vh - 142px);
     overflow: auto;
     padding: 22px;

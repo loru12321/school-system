@@ -674,9 +674,9 @@
 
                 <!-- 左侧: 状态/提示区 -->
                 <div class="toolbar-left shell-toolbar-panel shell-toolbar-panel--identity">
-                    <button class="btn mobile-menu-toggle"
-                        onclick="document.getElementById('app-sidebar').classList.toggle('show-mobile')">
-                        <i class="ti ti-menu-2"></i>
+                    <button class="btn mobile-menu-toggle workspace-rail-toggle" type="button" data-sidebar-toggle="true"
+                        onclick="window.toggleAppSidebar()" aria-label="切换左侧工作区" title="切换左侧工作区">
+                        <i class="ti ti-chevrons-left" data-sidebar-toggle-icon="true"></i>
                     </button>
                     <div class="shell-title-stack">
                         <div class="shell-title-meta">
@@ -3581,6 +3581,7 @@
 <script defer src="./assets/js/config-transfer-runtime.js?v=20260329-config-transfer-v1"></script>
 <script defer src="./assets/js/zhongkao-countdown-runtime.js?v=20260329-zhongkao-countdown-v1"></script>
 <script defer src="./assets/js/shell-runtime.js?v=20260402-shell-v2"></script>
+<script defer src="./assets/js/workspace-rail-runtime.js?v=20260407-workspace-rail-v1"></script>
 <script defer src="./assets/js/shell-polish-runtime.js?v=20260402-plugin-v1"></script>
 <script defer src="./assets/js/module-entry-runtime.js?v=20260402-module-entry-v1"></script>
 <script defer src="./assets/js/app.js?v=20260402-module-entry-v1"></script>

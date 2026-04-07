@@ -965,6 +965,83 @@ header {
     border-left-color: var(--analysis-border);
 }
 
+.analysis-results-layout {
+    transition: grid-template-columns 0.24s ease, gap 0.24s ease;
+}
+
+.analysis-side-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.analysis-side-toggle,
+.analysis-side-reveal-btn {
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(191, 219, 254, 0.9);
+    background: rgba(255, 255, 255, 0.92);
+    color: #0f172a;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    box-shadow: 0 16px 30px -26px rgba(15, 23, 42, 0.36);
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.analysis-side-toggle:hover,
+.analysis-side-reveal-btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(96, 165, 250, 0.82);
+    box-shadow: 0 20px 34px -24px rgba(15, 23, 42, 0.42);
+}
+
+.analysis-side-toggle i,
+.analysis-side-reveal-btn i {
+    font-size: 16px;
+}
+
+.analysis-side-toggle__count,
+.analysis-side-reveal__count {
+    min-width: 24px;
+    height: 24px;
+    padding: 0 7px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(219, 234, 254, 0.78);
+    color: #1d4ed8;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.analysis-side-reveal {
+    display: none;
+    align-items: center;
+    justify-content: flex-start;
+    margin-bottom: 6px;
+}
+
+.analysis-results-layout.is-side-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+}
+
+.analysis-results-layout.is-side-collapsed .analysis-side-nav {
+    display: none;
+}
+
+.analysis-results-layout.is-side-collapsed .analysis-side-reveal {
+    display: flex;
+}
+
 .analysis-content-stack {
     display: grid;
     gap: 18px;
@@ -4859,6 +4936,15 @@ body.parent-fullscreen-mode thead th {
     .layout-grid {
         display: block !important;
         /* 取消 Grid，改为流式布局 */
+    }
+
+    .analysis-side-toolbar,
+    .analysis-side-reveal {
+        display: none !important;
+    }
+
+    .analysis-results-layout.is-side-collapsed .analysis-side-nav {
+        display: block !important;
     }
 
     .side-nav {
