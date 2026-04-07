@@ -328,8 +328,7 @@
         if (!isMobileViewport()) return;
         const tables = scope.querySelectorAll('.table-wrap table, table.comparison-table, table.fluent-table, #tb-query, #studentDetailTable');
         tables.forEach((table) => {
-            const headerRows = table.querySelectorAll('thead tr');
-            const headerCells = headerRows.length ? Array.from(headerRows[headerRows.length - 1].children) : [];
+            const headerCells = extractResponsiveTableHeaders(table);
             if (!headerCells.length) return;
 
             table.classList.add('mobile-card-table');
@@ -338,7 +337,7 @@
                 Array.from(row.children).forEach((cell, index) => {
                     if (!(cell instanceof HTMLElement)) return;
                     if (cell.hasAttribute('colspan')) return;
-                    const headerText = headerCells[index]?.textContent?.replace(/\s+/g, ' ').trim() || `字段${index + 1}`;
+                    const headerText = String(headerCells[index] || `字段${index + 1}`).replace(/\s+/g, ' ').trim();
                     const cellText = cell.textContent?.replace(/\s+/g, ' ').trim() || '';
                     if (!title && cellText && index <= 1) {
                         title = cellText;
@@ -352,6 +351,89 @@
             table.dataset.mobileEnhanced = '1';
         });
     }
+
+    function extractResponsiveTableHeaders(table) {
+        const headerRows = Array.from(table.querySelectorAll('thead tr'));
+        if (!headerRows.length) return [];
+        const grid = [];
+        let maxColumns = 0;
+        headerRows.forEach((row, rowIndex) => {
+            if (!grid[rowIndex]) grid[rowIndex] = [];
+            let columnIndex = 0;
+            Array.from(row.children).forEach((cell) => {
+                while (grid[rowIndex][columnIndex]) columnIndex += 1;
+                const colspan = Math.max(parseInt(cell.getAttribute('colspan') || '1', 10) || 1, 1);
+                const rowspan = Math.max(parseInt(cell.getAttribute('rowspan') || '1', 10) || 1, 1);
+                const text = String(cell.textContent || '').replace(/\s+/g, ' ').trim();
+                for (let r = 0; r < rowspan; r += 1) {
+                    if (!grid[rowIndex + r]) grid[rowIndex + r] = [];
+                    for (let c = 0; c < colspan; c += 1) {
+                        grid[rowIndex + r][columnIndex + c] = text;
+                    }
+                }
+                columnIndex += colspan;
+                if (columnIndex > maxColumns) maxColumns = columnIndex;
+            });
+        });
+        return Array.from({ length: maxColumns }, (_, columnIndex) => {
+            const parts = [];
+            grid.forEach((row) => {
+                const text = String(row?.[columnIndex] || '').trim();
+                if (!text || parts[parts.length - 1] === text) return;
+                parts.push(text);
+            });
+            return parts.join(' / ');
+        });
+    }
+
+    function refreshResponsiveTablesNow(scope = document) {
+        if (!isMobileViewport()) return;
+        const targetScope = scope && typeof scope.querySelectorAll === 'function'
+            ? scope
+            : (document.querySelector('.section.active') || document);
+        markResponsiveTables(targetScope);
+    }
+
+    function scheduleResponsiveTableRefresh(scope = document) {
+        if (!isMobileViewport()) return;
+        const targetScope = scope && typeof scope.querySelectorAll === 'function'
+            ? scope
+            : (document.querySelector('.section.active') || document);
+        clearTimeout(window.__RESPONSIVE_TABLE_REFRESH_TIMER__ || 0);
+        window.__RESPONSIVE_TABLE_REFRESH_TIMER__ = setTimeout(() => {
+            refreshResponsiveTablesNow(targetScope);
+        }, 60);
+    }
+
+    function installResponsiveTableObserver() {
+        if (window.__RESPONSIVE_TABLE_OBSERVER__ || typeof MutationObserver !== 'function') return;
+        const root = document.body || document.documentElement;
+        if (!root) return;
+        const observer = new MutationObserver((mutations) => {
+            if (!isMobileViewport()) return;
+            const shouldRefresh = mutations.some((mutation) => {
+                if (mutation.type === 'attributes') {
+                    return mutation.target instanceof HTMLElement
+                        && (mutation.target.matches('table, tbody, tr, td, .section, #parent-view-container')
+                            || !!mutation.target.closest?.('table, .section, #parent-view-container'));
+                }
+                return Array.from(mutation.addedNodes || []).some((node) => {
+                    if (!(node instanceof HTMLElement)) return false;
+                    return node.matches('table, tbody, tr, td, .table-wrap, .comparison-table, .fluent-table, .section, #parent-view-container')
+                        || !!node.querySelector?.('table, tbody, tr, td, .table-wrap, .comparison-table, .fluent-table');
+                });
+            });
+            if (shouldRefresh) scheduleResponsiveTableRefresh(document);
+        });
+        observer.observe(root, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class', 'style']
+        });
+        window.__RESPONSIVE_TABLE_OBSERVER__ = observer;
+    }
+    window.refreshResponsiveMobileTables = refreshResponsiveTablesNow;
 
     function markResponsiveLayouts(scope = document) {
         if (!isMobileViewport()) return;
@@ -944,7 +1026,9 @@
             showDesktopAppForMobile(getCurrentRole());
         }
 
-        markResponsiveTables(document);
+        refreshResponsiveTablesNow(document);
+        scheduleResponsiveTableRefresh(document);
+        installResponsiveTableObserver();
         markResponsiveLayouts(document);
         enhanceParentView();
         syncShellVisibility();

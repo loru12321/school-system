@@ -420,6 +420,9 @@
         tableHtml += '</tbody>';
         container.classList.add('comparison-table');
         container.innerHTML = tableHtml;
+        if (typeof window.refreshResponsiveMobileTables === 'function') {
+            window.refreshResponsiveMobileTables(container.closest('.section') || container);
+        }
     }
 
     function ensureTeacherModalDom() {
