@@ -349,10 +349,10 @@
 
             <section class="login-auth-panel" aria-label="统一登录入口">
                 <div class="login-brand-block">
-                    <div id="login-portal-badge" class="login-portal-badge">学校端入口</div>
+                    <div id="login-portal-badge" class="login-portal-badge">学校工作台</div>
                     <span class="login-brand-kicker">School Intelligence OS</span>
                     <h1>智慧教务管理系统</h1>
-                    <p id="login-portal-copy">教务、年级、班主任与教师统一进入教学分析与管理工作台。</p>
+                    <p id="login-portal-copy">统一验证后，直接进入教学分析、数据维护与学校工作台。</p>
                 </div>
 
                 <div class="login-mobile-highlights">
@@ -378,14 +378,14 @@
                         onclick="window.Auth?.setLoginPortal('school')">
                         <span class="login-portal-icon"><i class="ti ti-building-community"></i></span>
                         <span class="login-portal-title">学校端</span>
-                        <span class="login-portal-desc">教务、年级、班主任、教师统一进入教学分析与管理工作台。</span>
-                        <span class="login-portal-meta">分析看板 / 数据中心</span>
+                        <span class="login-portal-desc">适用于教务、年级、班主任与教师的统一工作台。</span>
+                        <span class="login-portal-meta">教学分析 / 数据维护</span>
                     </button>
                     <button type="button" class="login-portal-card" data-portal="parent"
                         onclick="window.Auth?.setLoginPortal('parent')">
                         <span class="login-portal-icon"><i class="ti ti-heart-handshake"></i></span>
                         <span class="login-portal-title">家长端</span>
-                        <span class="login-portal-desc">输入学生姓名、班级和密码，进入成长报告、成绩单与家校沟通视图。</span>
+                        <span class="login-portal-desc">输入学生姓名、班级与密码，查看成长报告、成绩与家校提醒。</span>
                         <span class="login-portal-meta">成长报告 / 成绩查询</span>
                     </button>
                 </div>
@@ -394,9 +394,9 @@
                     <div id="login-form">
                         <div class="form-group">
                             <label id="login-user-label" for="login-user">账号 / 姓名</label>
-                            <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名 / 学生姓名"
+                            <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名"
                                 onkeydown="if(event.key==='Enter') Auth.login()">
-                            <div id="login-user-helper" class="login-inline-tip">学校端支持管理员、教务、年级、班主任与教师账号登录。</div>
+                            <div id="login-user-helper" class="login-inline-tip">支持管理员、教务、年级、班主任与教师账号登录。</div>
                         </div>
 
                         <div id="login-class-group" class="form-group">
@@ -411,14 +411,14 @@
                                 onkeydown="if(event.key==='Enter') window.Auth?.login()">
                         </div>
 
-                        <div id="login-portal-helper" class="login-portal-helper">学校端用于成绩分析、教学管理与数据维护。</div>
+                        <div id="login-portal-helper" class="login-portal-helper">当前为学校工作台，可在上方切换家长端入口。</div>
 
-                        <button id="login-submit-button" onclick="window.Auth?.login()">进入学校端</button>
+                        <button id="login-submit-button" onclick="window.Auth?.login()">进入学校工作台</button>
 
                         <div class="login-trust-strip">
                             <span><i class="ti ti-shield-lock"></i> 统一身份认证</span>
-                            <span><i class="ti ti-cloud-lock"></i> 云端数据安全</span>
-                            <span><i class="ti ti-bolt"></i> 登录后快速进入</span>
+                            <span><i class="ti ti-cloud-lock"></i> 云端安全校验</span>
+                            <span><i class="ti ti-bolt"></i> 验证后直达工作台</span>
                         </div>
                     </div>
                 </div>

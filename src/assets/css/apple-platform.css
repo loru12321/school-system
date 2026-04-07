@@ -386,13 +386,14 @@ table th {
 
 #login-overlay > .login-shell,
 .login-shell {
-    width: min(1320px, 100%);
-    max-width: 1320px !important;
+    width: min(760px, 100%);
+    max-width: 760px !important;
     min-width: 0;
     display: grid !important;
-    grid-template-columns: minmax(0, 1.04fr) minmax(420px, 0.96fr);
+    grid-template-columns: minmax(0, 1fr) !important;
+    justify-items: center;
     align-items: center;
-    gap: 28px;
+    gap: 0;
     margin: 0 auto !important;
     padding: 0 !important;
     background: transparent !important;
@@ -410,9 +411,7 @@ table th {
 }
 
 .login-stage {
-    padding: 28px !important;
-    background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(242, 247, 255, 0.72)) !important;
+    display: none !important;
 }
 
 .login-stage-featured,
@@ -449,12 +448,171 @@ table th {
     color: #43607f !important;
 }
 
+.login-auth-panel {
+    width: min(680px, 100%) !important;
+    max-width: 680px !important;
+    min-height: 0 !important;
+    margin: 0 auto !important;
+    padding: clamp(24px, 3vw, 36px) !important;
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(244, 248, 255, 0.78)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.62) !important;
+    box-shadow:
+        0 34px 76px rgba(15, 23, 42, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.7) !important;
+    backdrop-filter: blur(30px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(30px) saturate(150%) !important;
+}
+
+.login-brand-block {
+    width: 100%;
+    max-width: 540px;
+    margin: 0 auto !important;
+    display: grid;
+    gap: 8px;
+    justify-items: center;
+    text-align: center !important;
+}
+
+.login-brand-kicker {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.login-auth-panel h1 {
+    margin: 6px 0 0 !important;
+    font-size: clamp(36px, 4.6vw, 44px) !important;
+    line-height: 1.02 !important;
+    text-align: center !important;
+}
+
+.login-mobile-highlights {
+    display: none !important;
+}
+
+.login-portal-grid {
+    width: 100%;
+    max-width: 540px;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+    margin: 20px auto 0 !important;
+}
+
+.login-portal-card {
+    min-height: 146px !important;
+    padding: 16px 15px !important;
+    gap: 9px !important;
+    align-content: start;
+    justify-items: center;
+    text-align: center !important;
+    box-shadow: 0 18px 32px rgba(15, 23, 42, 0.08) !important;
+}
+
+.login-portal-title,
+.login-portal-desc,
+.login-portal-meta {
+    text-align: center !important;
+}
+
+.login-portal-meta {
+    display: block !important;
+    margin-top: auto;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #73849b !important;
+}
+
 #login-overlay p,
 .login-portal-desc,
 .login-inline-tip,
 .login-stage-featured-copy,
 .login-stage-copy-wrap p {
     color: #56657d !important;
+}
+
+#login-portal-copy {
+    max-width: 34ch;
+    margin: 2px auto 0 !important;
+    text-align: center !important;
+    font-size: 16px !important;
+    line-height: 1.68 !important;
+}
+
+.login-auth-card {
+    width: 100%;
+    max-width: 540px;
+    margin: 20px auto 0 !important;
+    padding: 22px 20px !important;
+    border-radius: 28px !important;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9)) !important;
+    border: 1px solid rgba(226, 232, 240, 0.9) !important;
+    box-shadow: 0 20px 46px rgba(15, 23, 42, 0.08) !important;
+}
+
+#login-form {
+    width: 100%;
+    margin-top: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+#login-form .form-group {
+    margin-top: 16px !important;
+}
+
+#login-form .form-group:first-child {
+    margin-top: 0 !important;
+}
+
+#login-form label,
+#login-form input,
+.login-inline-tip {
+    width: 100%;
+    text-align: left !important;
+}
+
+.login-inline-tip {
+    display: block !important;
+    margin-top: 8px !important;
+}
+
+.login-portal-helper {
+    display: flex !important;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    margin-top: 16px !important;
+    padding: 12px 14px !important;
+    border-radius: 18px !important;
+    border: 1px solid rgba(148, 163, 184, 0.18) !important;
+    background: rgba(248, 250, 252, 0.9) !important;
+    text-align: center;
+}
+
+.login-trust-strip {
+    display: flex !important;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px !important;
+    margin-top: 16px !important;
+}
+
+.login-trust-strip span {
+    min-height: 34px;
+    padding: 0 12px;
 }
 
 #login-form input {
@@ -552,8 +710,15 @@ body.dark-mode {
 .dark-mode #shell-category-desc,
 .dark-mode .shell-story-card__desc,
 .dark-mode #login-overlay p,
-.dark-mode .login-inline-tip {
+.dark-mode .login-inline-tip,
+.dark-mode .login-portal-meta,
+.dark-mode .login-portal-helper {
     color: #95a6be !important;
+}
+
+.dark-mode .login-portal-helper {
+    background: rgba(11, 20, 35, 0.8) !important;
+    border-color: rgba(148, 163, 184, 0.14) !important;
 }
 
 .dark-mode .shell-inline-pill,
@@ -697,15 +862,8 @@ html[data-pointer-mode="coarse"] textarea {
 
     #login-overlay > .login-shell,
     .login-shell {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .login-stage {
-        order: 2;
-    }
-
-    .login-auth-panel {
-        order: 1;
+        width: min(760px, 100%);
+        grid-template-columns: minmax(0, 1fr) !important;
     }
 }
 
@@ -735,7 +893,24 @@ html[data-pointer-mode="coarse"] textarea {
     }
 
     #login-overlay {
-        align-items: flex-start !important;
+        align-items: center !important;
+    }
+
+    .login-auth-panel {
+        padding: 24px 20px !important;
+    }
+
+    .login-auth-panel h1 {
+        font-size: clamp(32px, 9vw, 40px) !important;
+    }
+
+    .login-auth-card {
+        padding: 20px 16px !important;
+    }
+
+    .login-portal-card {
+        min-height: 132px !important;
+        padding: 14px 12px !important;
     }
 
     .login-stage,
@@ -762,8 +937,49 @@ html[data-pointer-mode="coarse"] textarea {
         grid-template-columns: minmax(0, 1fr);
     }
 
+    #login-overlay > .login-shell,
+    .login-shell,
+    .login-auth-panel,
+    .login-brand-block,
+    .login-portal-grid,
+    .login-auth-card {
+        width: 100% !important;
+        max-width: none !important;
+    }
+
+    .login-auth-panel {
+        padding: 24px 18px !important;
+        border-radius: 26px !important;
+    }
+
+    .login-portal-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        margin-top: 20px !important;
+    }
+
+    .login-portal-card {
+        min-height: 0 !important;
+    }
+
+    .login-trust-strip span {
+        width: 100%;
+        justify-content: center;
+    }
+
     #mobile-query-shell .mq-sheet {
         left: 10px;
         right: 10px;
+    }
+}
+
+@media screen and (max-width: 380px) {
+    .login-portal-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media screen and (max-height: 980px) {
+    #login-overlay {
+        align-items: flex-start !important;
     }
 }

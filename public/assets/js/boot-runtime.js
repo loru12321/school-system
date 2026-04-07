@@ -99,26 +99,26 @@ window.initSupabase = function () {
     const BOOT_GATEWAY_REQUEST = createSupabaseFetchWithTimeout(12000);
     const bootPortalConfigs = {
         school: {
-            badge: '学校端入口',
-            copy: '教务、年级、班主任与教师统一进入教学分析与管理工作台',
+            badge: '学校工作台',
+            copy: '统一验证后，直接进入教学分析、数据维护与学校工作台。',
             userLabel: '账号 / 姓名',
             userPlaceholder: '管理员账号 / 教师姓名',
-            userHelper: '学校端支持管理员、教务、年级、班主任与教师账号登录。',
+            userHelper: '支持管理员、教务、年级、班主任与教师账号登录。',
             classNote: '(学校端无需填写)',
             classPlaceholder: '学校端无需填写',
-            helper: '学校端用于成绩分析、教学管理与数据维护。',
-            submit: '进入学校端',
-            success: '验证成功，正在进入工作台...'
+            helper: '当前为学校工作台，可在上方切换家长端入口。',
+            submit: '进入学校工作台',
+            success: '验证成功，正在进入学校工作台...'
         },
         parent: {
-            badge: '家长端入口',
-            copy: '输入学生姓名、班级和密码，进入成长报告与成绩查询视图',
+            badge: '家长成长入口',
+            copy: '输入学生姓名、班级与密码，查看成长报告、成绩与家校提醒。',
             userLabel: '学生姓名',
             userPlaceholder: '请输入学生姓名',
-            userHelper: '家长端建议使用学生姓名登录，并完整填写班级信息',
+            userHelper: '建议使用学生姓名登录，并完整填写班级信息。',
             classNote: '(家长端必填，如 701)',
             classPlaceholder: '请输入学生班级，如 701',
-            helper: '家长端将进入成长报告、成绩单与家校沟通视图。',
+            helper: '当前为家长端，登录后进入成长报告与成绩视图。',
             submit: '进入家长端',
             success: '验证成功，正在进入成长报告...'
         }
