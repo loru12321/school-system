@@ -24,7 +24,7 @@ class HomeViewModel(private val repository: SchoolRepository) : ViewModel() {
                 if (data != null) {
                     _uiState.value = HomeUiState.Success(data)
                 } else {
-                    _uiState.value = HomeUiState.Error("Failed to load school data")
+                    _uiState.value = HomeUiState.Error("学校数据加载失败，请检查 APK 内置资源是否完整。")
                 }
             }
         }
@@ -32,7 +32,7 @@ class HomeViewModel(private val repository: SchoolRepository) : ViewModel() {
 }
 
 sealed class HomeUiState {
-    object Loading : HomeUiState()
+    data object Loading : HomeUiState()
     data class Success(val data: SchoolSystemData) : HomeUiState()
     data class Error(val message: String) : HomeUiState()
 }
