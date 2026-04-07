@@ -35,12 +35,42 @@ const SWITCH_MODULE_IDS = [
 
 const DATA_MANAGER_TABS = ['student', 'teacher', 'targets', 'params', 'sql', 'cloud'];
 
-function shouldIgnoreConsoleMessage(msg) {
+function isCloudflareBeaconFailure(entry) {
+    const url = String(entry?.url || '');
+    const errorText = String(entry?.errorText || '');
+    return /static\.cloudflareinsights\.com\/beacon\.min\.js/i.test(url)
+        || /cloudflareinsights|data-cf-beacon|beacon\.min\.js/i.test(errorText);
+}
+
+function hasRecentCloudflareBeaconFailure(entries, windowMs = 15000) {
+    if (!Array.isArray(entries) || !entries.length) return false;
+    const cutoff = Date.now() - windowMs;
+    return entries.some((entry) => Number(entry?.time || 0) >= cutoff && isCloudflareBeaconFailure(entry));
+}
+
+function shouldIgnoreConsoleMessage(msg, context = {}) {
     const text = String(msg || '');
-    return text.includes('favicon.ico')
+    if (text.includes('favicon.ico')
         || text.includes('ERR_FILE_NOT_FOUND')
         || text.includes('Slow network is detected')
-        || text.includes('Fallback font will be used while loading');
+        || text.includes('Fallback font will be used while loading')) {
+        return true;
+    }
+
+    if (/cloudflareinsights|data-cf-beacon|beacon\.min\.js/i.test(text)) {
+        return true;
+    }
+
+    const smokeUrl = String(context.smokeUrl || '');
+    if (!smokeUrl.includes('schoolsystem.com.cn')) {
+        return false;
+    }
+
+    if (!text.includes('Failed to load resource: net::ERR_CONNECTION_CLOSED')) {
+        return false;
+    }
+
+    return hasRecentCloudflareBeaconFailure(context.recentFailedRequests);
 }
 
 function isExecutionContextDestroyed(error) {
@@ -865,16 +895,31 @@ async function smokeDataManagerTab(page, id) {
     const user = process.env.SMOKE_USER || 'admin';
     const pass = process.env.SMOKE_PASS || 'admin123';
     const errors = [];
+    const recentFailedRequests = [];
     let currentScope = 'boot';
 
     page.on('pageerror', error => {
         errors.push({ scope: currentScope, type: 'pageerror', message: error.message });
     });
 
+    page.on('requestfailed', request => {
+        recentFailedRequests.push({
+            url: request.url(),
+            errorText: request.failure()?.errorText || '',
+            time: Date.now()
+        });
+        if (recentFailedRequests.length > 20) {
+            recentFailedRequests.splice(0, recentFailedRequests.length - 20);
+        }
+    });
+
     page.on('console', msg => {
         if (msg.type() !== 'error') return;
         const text = msg.text();
-        if (shouldIgnoreConsoleMessage(text)) return;
+        if (shouldIgnoreConsoleMessage(text, {
+            smokeUrl: process.env.SMOKE_URL || 'https://schoolsystem.com.cn/',
+            recentFailedRequests
+        })) return;
         errors.push({ scope: currentScope, type: 'console', message: text });
     });
 

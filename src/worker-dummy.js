@@ -599,6 +599,39 @@ function buildCorsHeaders(request) {
   };
 }
 
+function mergeCacheControl(currentValue, directives) {
+  const current = String(currentValue || '')
+    .split(',')
+    .map((part) => String(part || '').trim())
+    .filter(Boolean);
+  const next = [...current];
+  directives.forEach((directive) => {
+    if (!next.some((item) => item.toLowerCase() === directive.toLowerCase())) {
+      next.push(directive);
+    }
+  });
+  return next.join(', ');
+}
+
+function shouldProtectHtmlResponse(request, response) {
+  if (!response || !response.ok) return false;
+  const method = String(request.method || 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'HEAD') return false;
+  const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+  return contentType.includes('text/html');
+}
+
+function protectHtmlResponse(request, response) {
+  if (!shouldProtectHtmlResponse(request, response)) return response;
+  const headers = new Headers(response.headers);
+  headers.set('Cache-Control', mergeCacheControl(headers.get('Cache-Control'), ['public', 'no-transform']));
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
+
 function filterProxyHeaders(headers) {
   const nextHeaders = new Headers(headers);
   HOP_BY_HOP_HEADERS.forEach((name) => nextHeaders.delete(name));
@@ -861,7 +894,8 @@ export default {
     }
 
     try {
-      return await env.ASSETS.fetch(request);
+      const response = await env.ASSETS.fetch(request);
+      return protectHtmlResponse(request, response);
     } catch (error) {
       return new Response('Not Found', { status: 404 });
     }
