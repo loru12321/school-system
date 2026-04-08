@@ -2433,9 +2433,38 @@ const Auth = {
         return nextPortal;
     },
 
+    openLoginPortalModal: function (portal) {
+        const nextPortal = this.setLoginPortal(portal);
+        const overlay = document.getElementById('login-overlay');
+        const backdrop = document.getElementById('login-modal-backdrop');
+        if (overlay) overlay.dataset.loginModal = 'open';
+        if (backdrop) {
+            backdrop.style.display = 'flex';
+            backdrop.setAttribute('aria-hidden', 'false');
+        }
+        document.body.classList.add('login-modal-open');
+        setTimeout(() => {
+            const focusTarget = document.getElementById('login-user');
+            if (focusTarget && typeof focusTarget.focus === 'function') focusTarget.focus();
+        }, 40);
+        return nextPortal;
+    },
+
+    closeLoginPortalModal: function () {
+        const overlay = document.getElementById('login-overlay');
+        const backdrop = document.getElementById('login-modal-backdrop');
+        if (overlay) overlay.dataset.loginModal = 'closed';
+        if (backdrop) {
+            backdrop.style.display = 'none';
+            backdrop.setAttribute('aria-hidden', 'true');
+        }
+        document.body.classList.remove('login-modal-open');
+    },
+
     syncLoginOverlayState: function (visible) {
         const overlay = document.getElementById('login-overlay');
         const app = document.getElementById('app');
+        this.closeLoginPortalModal();
         if (visible) {
             this.syncParentMobileScrollRoot(false);
             if (this._parentRenderTimer) {
@@ -2473,6 +2502,9 @@ const Auth = {
         const stageCopy = document.getElementById('login-stage-copy');
         const stageFeatureTitle = document.getElementById('login-stage-featured-title');
         const stageFeatureCopy = document.getElementById('login-stage-featured-copy');
+        const modalChip = document.getElementById('login-modal-chip');
+        const modalTitle = document.getElementById('login-modal-title');
+        const modalCopy = document.getElementById('login-modal-copy');
 
         const config = nextPortal === 'parent'
             ? {
@@ -2483,13 +2515,16 @@ const Auth = {
                 userHelper: '建议使用学生姓名登录，并完整填写班级信息。',
                 classNote: '(家长端必填，如 701)',
                 classPlaceholder: '请输入学生班级，如 701',
-                helper: '当前为家长端，登录后进入成长报告与成绩视图。',
+                helper: '当前为家长端，登录后进入成长报告与成绩视图；如需切换，请关闭弹窗后重新选择入口。',
                 submit: '进入家长端',
                 stageKicker: 'Family Growth Portal',
                 stageTitle: '把成长报告、成绩查询与家校沟通集中到一块更易读的入口',
                 stageCopy: '输入学生姓名、班级和密码即可进入家长端，按移动优先方式查看成长报告、成绩单与关键提醒。',
                 stageFeatureTitle: '一屏直达成长报告、成绩单、班级信息与关键提醒',
-                stageFeatureCopy: '为家长保留更轻量、更直观的入口路径，减少输入成本和找入口的时间。'
+                stageFeatureCopy: '为家长保留更轻量、更直观的入口路径，减少输入成本和找入口的时间。',
+                modalChip: '家长端登录',
+                modalTitle: '进入家长成长入口',
+                modalCopy: '在弹窗中输入学生姓名、班级与密码，即可查看成长报告、成绩与家校提醒。'
             }
             : {
                 badge: '学校工作台',
@@ -2499,13 +2534,16 @@ const Auth = {
                 userHelper: '支持管理员、教务、年级、班主任与教师账号登录。',
                 classNote: '(学校端无需填写)',
                 classPlaceholder: '学校端无需填写',
-                helper: '当前为学校工作台，可在上方切换家长端入口。',
+                helper: '当前为学校工作台，验证通过后直达教学分析与数据维护；如需切换，请关闭弹窗后重新选择入口。',
                 submit: '进入学校工作台',
                 stageKicker: 'School Command Center',
                 stageTitle: '把教学分析、账号入口与管理驾驶舱放进同一块全屏舞台',
                 stageCopy: '从学校大屏到教师工作台，登录前先看见关键能力，登录后直接进入数据分析、账号管理与云端同步链路。',
                 stageFeatureTitle: '一屏直达成绩分析、教学管理、质量预警与数据维护',
-                stageFeatureCopy: '像内容平台首页一样把高价值入口、重点模块和实时状态直接铺开，减少跳转与寻找成本。'
+                stageFeatureCopy: '像内容平台首页一样把高价值入口、重点模块和实时状态直接铺开，减少跳转与寻找成本。',
+                modalChip: '学校端登录',
+                modalTitle: '进入学校工作台',
+                modalCopy: '在弹窗中完成身份验证后，直接进入教学分析、数据维护与学校工作台。'
             };
 
         if (badgeEl) badgeEl.textContent = config.badge;
@@ -2526,6 +2564,9 @@ const Auth = {
         if (stageCopy) stageCopy.textContent = config.stageCopy;
         if (stageFeatureTitle) stageFeatureTitle.textContent = config.stageFeatureTitle;
         if (stageFeatureCopy) stageFeatureCopy.textContent = config.stageFeatureCopy;
+        if (modalChip) modalChip.textContent = config.modalChip;
+        if (modalTitle) modalTitle.textContent = config.modalTitle;
+        if (modalCopy) modalCopy.textContent = config.modalCopy;
     },
 
     resolveLocalManagedSchool: function (name, className = '') {
@@ -2574,6 +2615,13 @@ const Auth = {
 
     init: async function () {
         this.syncLoginPortalUI();
+        this.closeLoginPortalModal();
+        if (!this._loginModalEscapeBound) {
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') this.closeLoginPortalModal();
+            });
+            this._loginModalEscapeBound = true;
+        }
         const sessionUser = AuthState.getCurrentUser();
         this.syncLoginOverlayState(!sessionUser);
         if (sessionUser) {

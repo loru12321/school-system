@@ -347,6 +347,239 @@
     }
 }
 
+/* ================== Login Launcher Centered Override ================== */
+#login-overlay[data-login-layout="portal-modal"] > .login-shell,
+#login-overlay[data-login-layout="portal-modal"] .login-shell {
+    width: min(980px, 100%) !important;
+    max-width: min(980px, 100%) !important;
+    min-height: min(940px, calc(100svh - clamp(32px, 4vw, 56px))) !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    justify-items: center !important;
+    align-items: center !important;
+    gap: 0 !important;
+}
+
+#login-overlay[data-login-layout="portal-modal"] .login-stage {
+    display: none !important;
+}
+
+#login-overlay[data-login-layout="portal-modal"] .login-auth-panel {
+    position: relative;
+    overflow: hidden;
+    width: min(860px, 100%) !important;
+    max-width: min(860px, 100%) !important;
+    min-height: min(920px, calc(100svh - 32px)) !important;
+    justify-content: flex-start !important;
+    padding: clamp(32px, 4vw, 48px) !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.90), rgba(248, 250, 252, 0.84)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.76) !important;
+    box-shadow:
+        0 42px 110px rgba(15, 23, 42, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(28px) saturate(1.08) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(1.08) !important;
+}
+
+#login-overlay[data-login-layout="portal-modal"] .login-auth-panel::before {
+    display: block !important;
+    width: 240px !important;
+    height: 240px !important;
+    right: -104px !important;
+    top: -96px !important;
+    background: radial-gradient(circle, rgba(255, 153, 105, 0.26), rgba(255, 153, 105, 0) 72%) !important;
+}
+
+#login-overlay[data-login-portal="parent"][data-login-layout="portal-modal"] .login-auth-panel::before {
+    background: radial-gradient(circle, rgba(34, 211, 238, 0.24), rgba(34, 211, 238, 0) 72%) !important;
+}
+
+#login-overlay[data-login-layout="portal-modal"] .login-brand-block,
+#login-overlay[data-login-layout="portal-modal"] .login-system-overview,
+#login-overlay[data-login-layout="portal-modal"] .login-mobile-highlights,
+#login-overlay[data-login-layout="portal-modal"] .login-portal-grid,
+#login-overlay[data-login-layout="portal-modal"] .login-auth-card,
+#login-overlay[data-login-layout="portal-modal"] .login-portal-launch-head,
+#login-overlay[data-login-layout="portal-modal"] .login-portal-note {
+    width: min(100%, 560px) !important;
+    max-width: min(100%, 560px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+#login-overlay[data-login-layout="portal-modal"] .login-brand-block,
+#login-overlay[data-login-layout="portal-modal"] .login-system-overview-head,
+#login-overlay[data-login-layout="portal-modal"] .login-portal-launch-head,
+#login-overlay[data-login-layout="portal-modal"] #login-portal-copy {
+    text-align: center !important;
+}
+
+#login-overlay[data-login-layout="portal-modal"] .login-system-overview {
+    margin-top: 24px !important;
+}
+
+#login-overlay[data-login-layout="portal-modal"] .login-system-overview-head p {
+    max-width: 42ch;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+#login-overlay[data-login-layout="portal-modal"] .login-system-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+#login-overlay[data-login-layout="portal-modal"] .login-mobile-highlights {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+#login-overlay[data-login-layout="portal-modal"] .login-portal-grid {
+    gap: 14px !important;
+}
+
+#login-overlay[data-login-layout="portal-modal"] .login-portal-card {
+    min-height: 210px !important;
+    padding: 18px !important;
+}
+
+#login-overlay[data-login-layout="portal-modal"] > #login-modal-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: clamp(20px, 3vw, 32px) !important;
+    border: none !important;
+    z-index: 61000 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(7, 11, 20, 0.34) !important;
+    backdrop-filter: blur(18px) saturate(130%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(130%) !important;
+}
+
+#login-overlay[data-login-layout="portal-modal"] > #login-modal-backdrop .login-modal-dialog {
+    width: min(560px, calc(100vw - (clamp(20px, 3vw, 32px) * 2))) !important;
+    max-width: min(560px, calc(100vw - (clamp(20px, 3vw, 32px) * 2))) !important;
+    margin: 0 !important;
+}
+
+.dark-mode #login-overlay[data-login-layout="portal-modal"] {
+    background:
+        radial-gradient(circle at 12% 16%, rgba(249, 115, 22, 0.16), transparent 34%),
+        radial-gradient(circle at 88% 14%, rgba(236, 72, 153, 0.12), transparent 30%),
+        radial-gradient(circle at 76% 86%, rgba(59, 130, 246, 0.12), transparent 28%),
+        linear-gradient(145deg, #040b17 0%, #0b1425 46%, #111827 100%) !important;
+}
+
+.dark-mode #login-overlay[data-login-portal="parent"][data-login-layout="portal-modal"] {
+    background:
+        radial-gradient(circle at 12% 16%, rgba(34, 211, 238, 0.14), transparent 34%),
+        radial-gradient(circle at 88% 14%, rgba(59, 130, 246, 0.12), transparent 30%),
+        radial-gradient(circle at 76% 86%, rgba(16, 185, 129, 0.12), transparent 28%),
+        linear-gradient(145deg, #040b17 0%, #07192a 46%, #0b1220 100%) !important;
+}
+
+.dark-mode #login-overlay[data-login-layout="portal-modal"] .login-auth-panel {
+    background: linear-gradient(180deg, rgba(8, 15, 29, 0.78), rgba(11, 20, 35, 0.88)) !important;
+    border-color: rgba(148, 163, 184, 0.14) !important;
+    box-shadow:
+        0 42px 110px rgba(2, 8, 23, 0.48),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+.dark-mode #login-overlay[data-login-layout="portal-modal"] .login-auth-panel::before {
+    background: radial-gradient(circle, rgba(249, 115, 22, 0.18), rgba(249, 115, 22, 0) 72%) !important;
+}
+
+.dark-mode #login-overlay[data-login-portal="parent"][data-login-layout="portal-modal"] .login-auth-panel::before {
+    background: radial-gradient(circle, rgba(14, 165, 233, 0.18), rgba(14, 165, 233, 0) 72%) !important;
+}
+
+@media screen and (max-width: 960px) {
+    #login-overlay[data-login-layout="portal-modal"] > .login-shell,
+    #login-overlay[data-login-layout="portal-modal"] .login-shell {
+        width: min(100%, 720px) !important;
+        max-width: min(100%, 720px) !important;
+        min-height: auto !important;
+    }
+
+    #login-overlay[data-login-layout="portal-modal"] .login-auth-panel {
+        width: min(100%, 720px) !important;
+        max-width: min(100%, 720px) !important;
+        min-height: calc(100svh - 24px) !important;
+        padding: 28px 24px !important;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    #login-overlay[data-login-layout="portal-modal"] {
+        padding: 0 !important;
+    }
+
+    #login-overlay[data-login-layout="portal-modal"] > .login-shell,
+    #login-overlay[data-login-layout="portal-modal"] .login-shell {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 100svh !important;
+        display: block !important;
+    }
+
+    #login-overlay[data-login-layout="portal-modal"] .login-auth-panel {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 100svh !important;
+        border-radius: 0 !important;
+        padding: max(22px, calc(env(safe-area-inset-top) + 14px)) 16px calc(env(safe-area-inset-bottom) + 24px) !important;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.88)) !important;
+        border: none !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    #login-overlay[data-login-layout="portal-modal"] .login-auth-panel::before {
+        display: none !important;
+    }
+
+    #login-overlay[data-login-layout="portal-modal"] > #login-modal-backdrop {
+        padding: 0 !important;
+        align-items: flex-end !important;
+    }
+
+    #login-overlay[data-login-layout="portal-modal"] > #login-modal-backdrop .login-modal-dialog {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    #login-overlay[data-login-layout="portal-modal"] .login-brand-block,
+    #login-overlay[data-login-layout="portal-modal"] .login-system-overview,
+    #login-overlay[data-login-layout="portal-modal"] .login-mobile-highlights,
+    #login-overlay[data-login-layout="portal-modal"] .login-portal-grid,
+    #login-overlay[data-login-layout="portal-modal"] .login-auth-card,
+    #login-overlay[data-login-layout="portal-modal"] .login-portal-launch-head,
+    #login-overlay[data-login-layout="portal-modal"] .login-portal-note {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    #login-overlay[data-login-layout="portal-modal"] .login-system-metrics,
+    #login-overlay[data-login-layout="portal-modal"] .login-mobile-highlights {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media screen and (max-width: 420px) {
+    #login-overlay[data-login-layout="portal-modal"] .login-system-metrics,
+    #login-overlay[data-login-layout="portal-modal"] .login-mobile-highlights {
+        grid-template-columns: 1fr !important;
+    }
+}
+
 /* ================== Login Poster Refresh ================== */
 #login-overlay {
     --login-poster-shell-max: 1480px;

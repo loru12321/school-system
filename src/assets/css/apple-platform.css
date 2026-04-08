@@ -1249,3 +1249,468 @@ body[data-platform-shell="apple"] #login-portal-copy {
         align-items: flex-start !important;
     }
 }
+
+body[data-platform-shell="apple"] .login-portal-launch-head,
+body[data-platform-shell="apple"] .login-portal-note {
+    width: min(100%, 460px) !important;
+    max-width: min(100%, 460px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+body[data-platform-shell="apple"] .login-portal-launch-head {
+    margin-top: 18px;
+    display: grid;
+    gap: 8px;
+}
+
+body[data-platform-shell="apple"] .login-portal-launch-head span {
+    color: #7c8698;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+body[data-platform-shell="apple"] .login-portal-launch-head p {
+    margin: 0;
+    color: #516173;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+body[data-platform-shell="apple"] .login-portal-note {
+    margin-top: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.68);
+    border: 1px solid rgba(226, 232, 240, 0.92);
+    color: #5f6b7c;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+body[data-platform-shell="apple"] .login-portal-note i,
+body[data-platform-shell="apple"] .login-portal-action {
+    color: #fb7185;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-portal="parent"] .login-portal-note i,
+body[data-platform-shell="apple"] #login-overlay[data-login-portal="parent"] .login-portal-action {
+    color: #0ea5e9;
+}
+
+body[data-platform-shell="apple"] .login-portal-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+body[data-platform-shell="apple"] .login-portal-card {
+    position: relative;
+    overflow: hidden;
+    min-height: 198px !important;
+    justify-content: flex-start;
+}
+
+body[data-platform-shell="apple"] .login-portal-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    margin-top: auto;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(251, 113, 133, 0.10);
+    border: 1px solid rgba(251, 113, 133, 0.16);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-portal="parent"] .login-portal-action {
+    background: rgba(14, 165, 233, 0.10);
+    border-color: rgba(14, 165, 233, 0.16);
+}
+
+body[data-platform-shell="apple"] .login-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 61000;
+    padding: clamp(20px, 3vw, 32px);
+    align-items: center;
+    justify-content: center;
+    background: rgba(7, 11, 20, 0.34);
+    backdrop-filter: blur(18px) saturate(130%);
+    -webkit-backdrop-filter: blur(18px) saturate(130%);
+}
+
+body[data-platform-shell="apple"] .login-modal-dialog {
+    width: min(560px, 100%);
+    max-height: min(92svh, 860px);
+    overflow-y: auto;
+    padding: 22px;
+    border-radius: 32px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.88)),
+        linear-gradient(135deg, rgba(255, 122, 24, 0.08), rgba(255, 255, 255, 0));
+    border: 1px solid rgba(255, 255, 255, 0.74);
+    box-shadow:
+        0 34px 76px rgba(15, 23, 42, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.76);
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-portal="parent"] .login-modal-dialog {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.88)),
+        linear-gradient(135deg, rgba(14, 165, 233, 0.08), rgba(255, 255, 255, 0));
+}
+
+body[data-platform-shell="apple"] .login-modal-head {
+    display: grid;
+    gap: 10px;
+}
+
+body[data-platform-shell="apple"] .login-modal-head-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+body[data-platform-shell="apple"] .login-modal-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 14px;
+    border-radius: 999px;
+    color: #fb7185;
+    background: rgba(251, 113, 133, 0.10);
+    border: 1px solid rgba(251, 113, 133, 0.18);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-portal="parent"] .login-modal-chip {
+    color: #0ea5e9;
+    background: rgba(14, 165, 233, 0.10);
+    border-color: rgba(14, 165, 233, 0.18);
+}
+
+body[data-platform-shell="apple"] .login-modal-close {
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(148, 163, 184, 0.20);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.82);
+    color: #344256;
+    cursor: pointer;
+}
+
+body[data-platform-shell="apple"] .login-modal-title {
+    margin: 0;
+    color: #081427;
+    font-size: clamp(28px, 3vw, 34px);
+    line-height: 1.08;
+    letter-spacing: -0.04em;
+}
+
+body[data-platform-shell="apple"] .login-modal-copy {
+    margin: 0;
+    color: #5f6b7c;
+    font-size: 13px;
+    line-height: 1.75;
+}
+
+body[data-platform-shell="apple"] .login-modal-dialog .login-auth-card {
+    width: 100% !important;
+    max-width: none !important;
+    margin-top: 18px !important;
+}
+
+body[data-platform-shell="apple"] .login-modal-dialog #login-form {
+    width: 100%;
+}
+
+@media screen and (max-width: 960px) {
+    body[data-platform-shell="apple"] .login-portal-launch-head,
+    body[data-platform-shell="apple"] .login-portal-note {
+        width: min(100%, 560px) !important;
+        max-width: min(100%, 560px) !important;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    body[data-platform-shell="apple"] .login-portal-launch-head,
+    body[data-platform-shell="apple"] .login-portal-note {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    body[data-platform-shell="apple"] .login-portal-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    body[data-platform-shell="apple"] .login-modal-backdrop {
+        padding: 0;
+        align-items: flex-end;
+    }
+
+    body[data-platform-shell="apple"] .login-modal-dialog {
+        width: 100%;
+        max-height: min(94svh, 100%);
+        padding: 20px 16px calc(env(safe-area-inset-bottom) + 22px);
+        border-radius: 28px 28px 0 0;
+    }
+}
+
+@media screen and (max-width: 540px) {
+    body[data-platform-shell="apple"] .login-portal-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media screen and (max-width: 380px) {
+    body[data-platform-shell="apple"] .login-portal-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ================== Apple Centered Login Launcher ================== */
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] > .login-shell,
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-shell {
+    width: min(980px, 100%) !important;
+    max-width: min(980px, 100%) !important;
+    min-height: min(940px, calc(100svh - clamp(32px, 4vw, 56px))) !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    justify-items: center !important;
+    align-items: center !important;
+    gap: 0 !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-stage {
+    display: none !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-auth-panel {
+    position: relative;
+    overflow: hidden;
+    width: min(860px, 100%) !important;
+    max-width: min(860px, 100%) !important;
+    min-height: min(920px, calc(100svh - 32px)) !important;
+    justify-content: flex-start !important;
+    padding: clamp(32px, 4vw, 48px) !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.90), rgba(248, 250, 252, 0.84)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.76) !important;
+    box-shadow:
+        0 42px 110px rgba(15, 23, 42, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(28px) saturate(1.08) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(1.08) !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-auth-panel::before {
+    display: block !important;
+    width: 240px !important;
+    height: 240px !important;
+    right: -104px !important;
+    top: -96px !important;
+    background: radial-gradient(circle, rgba(255, 153, 105, 0.26), rgba(255, 153, 105, 0) 72%) !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-portal="parent"][data-login-layout="portal-modal"] .login-auth-panel::before {
+    background: radial-gradient(circle, rgba(34, 211, 238, 0.24), rgba(34, 211, 238, 0) 72%) !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-brand-block,
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-system-overview,
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-mobile-highlights,
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-portal-grid,
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-auth-card,
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-portal-launch-head,
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-portal-note {
+    width: min(100%, 560px) !important;
+    max-width: min(100%, 560px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-brand-block,
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-system-overview-head,
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-portal-launch-head,
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] #login-portal-copy {
+    text-align: center !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-system-overview {
+    margin-top: 24px !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-system-overview-head p {
+    max-width: 42ch;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-system-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-mobile-highlights {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-portal-grid {
+    gap: 14px !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-portal-card {
+    min-height: 210px !important;
+    padding: 18px !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] > #login-modal-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: clamp(20px, 3vw, 32px) !important;
+    border: none !important;
+    z-index: 61000 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(7, 11, 20, 0.34) !important;
+    backdrop-filter: blur(18px) saturate(130%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(130%) !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] > #login-modal-backdrop .login-modal-dialog {
+    width: min(560px, calc(100vw - (clamp(20px, 3vw, 32px) * 2))) !important;
+    max-width: min(560px, calc(100vw - (clamp(20px, 3vw, 32px) * 2))) !important;
+    margin: 0 !important;
+}
+
+body.dark-mode[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] {
+    background:
+        radial-gradient(circle at 12% 16%, rgba(249, 115, 22, 0.16), transparent 34%),
+        radial-gradient(circle at 88% 14%, rgba(236, 72, 153, 0.12), transparent 30%),
+        radial-gradient(circle at 76% 86%, rgba(59, 130, 246, 0.12), transparent 28%),
+        linear-gradient(145deg, #040b17 0%, #0b1425 46%, #111827 100%) !important;
+}
+
+body.dark-mode[data-platform-shell="apple"] #login-overlay[data-login-portal="parent"][data-login-layout="portal-modal"] {
+    background:
+        radial-gradient(circle at 12% 16%, rgba(34, 211, 238, 0.14), transparent 34%),
+        radial-gradient(circle at 88% 14%, rgba(59, 130, 246, 0.12), transparent 30%),
+        radial-gradient(circle at 76% 86%, rgba(16, 185, 129, 0.12), transparent 28%),
+        linear-gradient(145deg, #040b17 0%, #07192a 46%, #0b1220 100%) !important;
+}
+
+body.dark-mode[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-auth-panel {
+    background: linear-gradient(180deg, rgba(8, 15, 29, 0.78), rgba(11, 20, 35, 0.88)) !important;
+    border-color: rgba(148, 163, 184, 0.14) !important;
+    box-shadow:
+        0 42px 110px rgba(2, 8, 23, 0.48),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+body.dark-mode[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-auth-panel::before {
+    background: radial-gradient(circle, rgba(249, 115, 22, 0.18), rgba(249, 115, 22, 0) 72%) !important;
+}
+
+body.dark-mode[data-platform-shell="apple"] #login-overlay[data-login-portal="parent"][data-login-layout="portal-modal"] .login-auth-panel::before {
+    background: radial-gradient(circle, rgba(14, 165, 233, 0.18), rgba(14, 165, 233, 0) 72%) !important;
+}
+
+@media screen and (max-width: 960px) {
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] > .login-shell,
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-shell {
+        width: min(100%, 720px) !important;
+        max-width: min(100%, 720px) !important;
+        min-height: auto !important;
+    }
+
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-auth-panel {
+        width: min(100%, 720px) !important;
+        max-width: min(100%, 720px) !important;
+        min-height: calc(100svh - 24px) !important;
+        padding: 28px 24px !important;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] {
+        padding: 0 !important;
+    }
+
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] > .login-shell,
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-shell {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 100svh !important;
+        display: block !important;
+    }
+
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-auth-panel {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 100svh !important;
+        border-radius: 0 !important;
+        padding: max(22px, calc(env(safe-area-inset-top) + 14px)) 16px calc(env(safe-area-inset-bottom) + 24px) !important;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.88)) !important;
+        border: none !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-auth-panel::before {
+        display: none !important;
+    }
+
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] > #login-modal-backdrop {
+        padding: 0 !important;
+        align-items: flex-end !important;
+    }
+
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] > #login-modal-backdrop .login-modal-dialog {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-brand-block,
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-system-overview,
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-mobile-highlights,
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-portal-grid,
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-auth-card,
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-portal-launch-head,
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-portal-note {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-system-metrics,
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-mobile-highlights {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media screen and (max-width: 420px) {
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-system-metrics,
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="portal-modal"] .login-mobile-highlights {
+        grid-template-columns: 1fr !important;
+    }
+}

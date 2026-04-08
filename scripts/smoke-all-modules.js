@@ -129,6 +129,14 @@ async function login(page, user, pass) {
     });
 
     if (!(bootState.overlayHidden && (bootState.appVisible || bootState.maskVisible))) {
+        const schoolPortalCard = page.locator('[data-login-open="school"]').first();
+        if (await schoolPortalCard.count()) {
+            const loginUser = page.locator('#login-user');
+            const userVisible = await loginUser.isVisible().catch(() => false);
+            if (!userVisible) {
+                await schoolPortalCard.click();
+            }
+        }
         await page.waitForSelector('#login-user', { timeout: 30000 });
         await page.fill('#login-user', user);
         await page.fill('#login-pass', pass);
