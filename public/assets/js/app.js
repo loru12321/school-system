@@ -2500,16 +2500,33 @@ const Auth = {
         const stageKicker = document.getElementById('login-stage-kicker');
         const stageTitle = document.getElementById('login-stage-title');
         const stageCopy = document.getElementById('login-stage-copy');
+        const stageMeta = document.querySelector('.login-stage-meta');
         const stageFeatureTitle = document.getElementById('login-stage-featured-title');
         const stageFeatureCopy = document.getElementById('login-stage-featured-copy');
         const modalChip = document.getElementById('login-modal-chip');
         const modalTitle = document.getElementById('login-modal-title');
         const modalCopy = document.getElementById('login-modal-copy');
+        const authHead = document.querySelector('.login-auth-head');
+        const authTitle = document.querySelector('.login-auth-title');
+        const portalLaunchKicker = document.querySelector('.login-portal-launch-head span');
+        const portalLaunchCopy = document.querySelector('.login-portal-launch-head p');
+
+        let authFacts = document.getElementById('login-auth-facts');
+        if (!authFacts && authHead) {
+            authFacts = document.createElement('div');
+            authFacts.id = 'login-auth-facts';
+            authFacts.className = 'login-auth-facts';
+            authFacts.setAttribute('aria-label', '系统特点');
+            const utility = authHead.querySelector('.login-auth-utility');
+            if (utility) utility.insertAdjacentElement('afterend', authFacts);
+            else authHead.appendChild(authFacts);
+        }
 
         const config = nextPortal === 'parent'
             ? {
                 badge: '家长成长入口',
-                copy: '点击家长端卡片后弹出登录框，进入成长报告、成绩查询与家校提醒。',
+                authTitle: '登录与下载',
+                copy: '选择家长端后弹出登录框，进入成长报告、成绩查询与家校提醒；下载入口仍保留在同页。',
                 userLabel: '学生姓名',
                 userPlaceholder: '请输入学生姓名',
                 userHelper: '建议使用学生姓名登录，并完整填写班级信息。',
@@ -2518,8 +2535,20 @@ const Auth = {
                 helper: '当前为家长端，登录后进入成长报告与成绩视图；如需切换，请关闭弹窗后重新选择入口。',
                 submit: '进入家长端',
                 stageKicker: 'Family Growth Portal',
-                stageTitle: '一个全屏入口，连接成长报告、成绩查询与家校提醒',
-                stageCopy: '像流行应用官网首页一样把下载、登录与家校沟通入口集中到一屏里，先选择角色，再通过弹窗完成验证。',
+                stageTitle: '<span class="login-stage-title-line">成长报告与成绩查询</span><span class="login-stage-title-line login-stage-title-line--accent">在同一张首页里进入</span>',
+                stageCopy: '把成长报告、成绩查询与家校提醒收进同一张首页，先完成验证，再查看学生数据。',
+                stageMeta: [
+                    { icon: 'ti ti-heart-handshake', text: '成长报告 / 成绩查询 / 家校提醒' },
+                    { icon: 'ti ti-device-mobile', text: '手机与电脑使用同一套入口' },
+                    { icon: 'ti ti-sparkles', text: '当前稳定版 v1.0 · 2026-04-08' }
+                ],
+                facts: [
+                    { icon: 'ti ti-report-analytics', text: '成绩查询、成长报告与提醒集中在同一页完成' },
+                    { icon: 'ti ti-device-mobile', text: 'Web 与 Android 使用同一套家长入口逻辑' },
+                    { icon: 'ti ti-bolt', text: '点击卡片即弹出登录框，不打断浏览与下载' }
+                ],
+                launchKicker: 'Choose Portal',
+                launchCopy: '右侧保留两个清晰入口：家长端负责成长报告、成绩查询与提醒，学校端负责教学分析与管理。',
                 stageFeatureTitle: '家长端适合成绩查询、成长报告、关键提醒与班级信息',
                 stageFeatureCopy: '在同一首页中保留下载、登录与家校沟通入口，减少寻找入口的步骤。',
                 modalChip: '家长端登录',
@@ -2528,7 +2557,8 @@ const Auth = {
             }
             : {
                 badge: '学校工作台',
-                copy: '点击学校端卡片后弹出登录框，进入教学分析、数据维护与学校工作台。',
+                authTitle: '登录与下载',
+                copy: '选择学校端后弹出登录框，进入教学分析、数据维护与学校工作台；下载入口与版本信息保留在同一页。',
                 userLabel: '账号 / 姓名',
                 userPlaceholder: '管理员账号 / 教师姓名',
                 userHelper: '支持管理员、教务、年级、班主任与教师账号登录。',
@@ -2537,8 +2567,20 @@ const Auth = {
                 helper: '当前为学校工作台，验证通过后直达教学分析与数据维护；如需切换，请关闭弹窗后重新选择入口。',
                 submit: '进入学校工作台',
                 stageKicker: 'School Command Center',
-                stageTitle: '一个全屏入口，连接学校工作台、家长查询与 Android 应用',
-                stageCopy: '参考流行应用官网的全屏首页，把登录、下载、系统介绍与核心能力压进同一块舞台，进入系统前先看清角色入口。',
+                stageTitle: '<span class="login-stage-title-line">学校工作台与家长查询</span><span class="login-stage-title-line login-stage-title-line--accent">在同一张首页里进入</span>',
+                stageCopy: '把学校工作台、家长查询与 Android 应用下载整合到同一张首页，先选入口，再进入系统。',
+                stageMeta: [
+                    { icon: 'ti ti-layout-dashboard', text: '教学分析 / 数据维护 / 学校工作台' },
+                    { icon: 'ti ti-device-mobile', text: 'Web 与 Android 共用入口逻辑' },
+                    { icon: 'ti ti-sparkles', text: '当前稳定版 v1.0 · 2026-04-08' }
+                ],
+                facts: [
+                    { icon: 'ti ti-layout-dashboard', text: '教学分析、成长查询与 APK 下载同页组织' },
+                    { icon: 'ti ti-device-mobile', text: 'Web 与 Android 使用同一套入口逻辑' },
+                    { icon: 'ti ti-bolt', text: '点击卡片即弹出对应登录框，不打断浏览' }
+                ],
+                launchKicker: 'Choose Portal',
+                launchCopy: '右侧保留两个清晰入口：学校端负责教学分析与管理，家长端负责成长报告、成绩查询与提醒。',
                 stageFeatureTitle: '一屏直达成绩分析、教学管理、质量预警与数据维护',
                 stageFeatureCopy: '像流行官网首页一样把高价值入口、重点模块和实时状态直接铺开，减少跳转与寻找成本。',
                 modalChip: '学校端登录',
@@ -2560,10 +2602,23 @@ const Auth = {
         if (portalHelper) portalHelper.textContent = config.helper;
         if (submitButton) submitButton.textContent = config.submit;
         if (stageKicker) stageKicker.textContent = config.stageKicker;
-        if (stageTitle) stageTitle.textContent = config.stageTitle;
+        if (stageTitle) stageTitle.innerHTML = config.stageTitle;
         if (stageCopy) stageCopy.textContent = config.stageCopy;
+        if (stageMeta) {
+            stageMeta.innerHTML = (config.stageMeta || [])
+                .map(item => `<span><i class="${item.icon}"></i> ${item.text}</span>`)
+                .join('');
+        }
         if (stageFeatureTitle) stageFeatureTitle.textContent = config.stageFeatureTitle;
         if (stageFeatureCopy) stageFeatureCopy.textContent = config.stageFeatureCopy;
+        if (authTitle) authTitle.textContent = config.authTitle;
+        if (authFacts) {
+            authFacts.innerHTML = (config.facts || [])
+                .map(item => `<span><i class="${item.icon}"></i>${item.text}</span>`)
+                .join('');
+        }
+        if (portalLaunchKicker) portalLaunchKicker.textContent = config.launchKicker;
+        if (portalLaunchCopy) portalLaunchCopy.textContent = config.launchCopy;
         if (modalChip) modalChip.textContent = config.modalChip;
         if (modalTitle) modalTitle.textContent = config.modalTitle;
         if (modalCopy) modalCopy.textContent = config.modalCopy;
