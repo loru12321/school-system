@@ -817,6 +817,30 @@ function performProgressCalculation(options = {}) {
 }
 
 
+function syncProgressResponsiveTableState() {
+    const table = document.getElementById('progressTable');
+    if (!table) return;
+
+    const isMobileViewport = document.body?.dataset?.mobileQuery === 'true'
+        || window.innerWidth <= 768;
+
+    if (isMobileViewport) {
+        if (typeof window.refreshResponsiveMobileTables === 'function') {
+            window.refreshResponsiveMobileTables(table.closest('.section') || table);
+        }
+        return;
+    }
+
+    table.classList.remove('mobile-card-table');
+    delete table.dataset.mobileEnhanced;
+    Array.from(table.querySelectorAll('tbody tr')).forEach((row) => {
+        row.removeAttribute('data-mobile-card-title');
+    });
+    Array.from(table.querySelectorAll('tbody td')).forEach((cell) => {
+        cell.removeAttribute('data-label');
+    });
+}
+
 function renderProgressTable(list) {
     const tbody = document.querySelector('#progressTable tbody');
     const thead = document.querySelector('#progressTable thead tr');
@@ -826,6 +850,7 @@ function renderProgressTable(list) {
 
     if (!list || list.length === 0) {
         tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px; color:#999;">暂无符合条件的学生</td></tr>';
+        syncProgressResponsiveTableState();
         return;
     }
 
@@ -845,6 +870,7 @@ function renderProgressTable(list) {
             <td data-label="状态">${statusHtml}</td>
         </tr>`;
     }).join('');
+    syncProgressResponsiveTableState();
 }
 
 function renderTrendChart() {
