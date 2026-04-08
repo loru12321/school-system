@@ -978,6 +978,272 @@ html[data-pointer-mode="coarse"] textarea {
     }
 }
 
+/* ================== Apple Login Poster Alignment ================== */
+body[data-platform-shell="apple"] #login-overlay {
+    align-items: center !important;
+    justify-content: center !important;
+    padding: max(20px, var(--app-safe-top)) max(18px, var(--app-safe-right)) max(20px, var(--app-safe-bottom)) max(18px, var(--app-safe-left)) !important;
+    background:
+        radial-gradient(circle at 12% 16%, rgba(255, 191, 128, 0.28), transparent 34%),
+        radial-gradient(circle at 88% 14%, rgba(255, 145, 176, 0.24), transparent 30%),
+        radial-gradient(circle at 76% 86%, rgba(148, 163, 255, 0.16), transparent 28%),
+        linear-gradient(135deg, #fbfdff 0%, #eef4ff 46%, #fff5ec 100%) !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-portal="parent"] {
+    background:
+        radial-gradient(circle at 12% 16%, rgba(110, 231, 183, 0.22), transparent 34%),
+        radial-gradient(circle at 88% 14%, rgba(56, 189, 248, 0.20), transparent 30%),
+        radial-gradient(circle at 76% 86%, rgba(96, 165, 250, 0.16), transparent 28%),
+        linear-gradient(135deg, #fbfdff 0%, #ecfeff 46%, #eff6ff 100%) !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay > .login-shell,
+body[data-platform-shell="apple"] .login-shell {
+    width: min(1480px, 100%) !important;
+    max-width: min(1480px, 100%) !important;
+    min-height: min(960px, calc(100svh - clamp(32px, 4vw, 56px))) !important;
+    grid-template-columns: minmax(0, 1.18fr) minmax(420px, 540px) !important;
+    justify-items: stretch !important;
+    align-items: stretch !important;
+    gap: clamp(18px, 1.8vw, 28px) !important;
+}
+
+body[data-platform-shell="apple"] .login-stage,
+body[data-platform-shell="apple"] .login-auth-panel,
+body[data-platform-shell="apple"] .login-auth-card,
+body[data-platform-shell="apple"] #login-form,
+body[data-platform-shell="apple"] .login-stage-featured,
+body[data-platform-shell="apple"] .login-stage-tile,
+body[data-platform-shell="apple"] .login-stage-foot-card,
+body[data-platform-shell="apple"] .login-portal-card {
+    border-radius: 32px !important;
+}
+
+body[data-platform-shell="apple"] .login-stage {
+    display: flex !important;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: clamp(34px, 4vw, 54px) !important;
+    color: #fff !important;
+    background:
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 32%),
+        linear-gradient(145deg, rgba(8, 15, 29, 0.97) 0%, rgba(18, 24, 42, 0.94) 42%, rgba(55, 24, 84, 0.92) 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    box-shadow:
+        0 40px 100px rgba(15, 23, 42, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-portal="parent"] .login-stage {
+    background:
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 34%),
+        linear-gradient(145deg, rgba(8, 15, 29, 0.97) 0%, rgba(10, 42, 74, 0.94) 42%, rgba(10, 111, 119, 0.92) 100%) !important;
+}
+
+body[data-platform-shell="apple"] .login-stage::after {
+    width: 320px !important;
+    height: 320px !important;
+    top: -96px !important;
+    right: -84px !important;
+    border-radius: 40px !important;
+    background: linear-gradient(135deg, rgba(255, 122, 24, 0.26), rgba(255, 71, 126, 0.10)) !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-portal="parent"] .login-stage::after {
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.22), rgba(34, 197, 94, 0.10)) !important;
+}
+
+body[data-platform-shell="apple"] .login-stage-featured,
+body[data-platform-shell="apple"] .login-stage-tile,
+body[data-platform-shell="apple"] .login-stage-foot-card {
+    background: rgba(255, 255, 255, 0.10) !important;
+    border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+body[data-platform-shell="apple"] .login-stage-featured {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08)),
+        linear-gradient(140deg, rgba(255, 122, 24, 0.12), rgba(255, 255, 255, 0.03)) !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-portal="parent"] .login-stage-featured {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08)),
+        linear-gradient(140deg, rgba(14, 165, 233, 0.12), rgba(255, 255, 255, 0.03)) !important;
+}
+
+body[data-platform-shell="apple"] .login-stage h1,
+body[data-platform-shell="apple"] #login-stage-title,
+body[data-platform-shell="apple"] .login-stage-featured-title,
+body[data-platform-shell="apple"] .login-stage-stat strong,
+body[data-platform-shell="apple"] .login-stage-tile strong,
+body[data-platform-shell="apple"] .login-stage-foot-card strong {
+    color: #fff !important;
+}
+
+body[data-platform-shell="apple"] #login-stage-copy,
+body[data-platform-shell="apple"] .login-stage-featured-copy,
+body[data-platform-shell="apple"] .login-stage-copy-wrap p {
+    color: rgba(255, 255, 255, 0.76) !important;
+}
+
+body[data-platform-shell="apple"] .login-stage-chip,
+body[data-platform-shell="apple"] .login-stage-status,
+body[data-platform-shell="apple"] .login-stage-pill,
+body[data-platform-shell="apple"] .login-stage-meta span {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: rgba(255, 255, 255, 0.88) !important;
+}
+
+body[data-platform-shell="apple"] .login-auth-panel {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 auto !important;
+    padding: clamp(28px, 3vw, 40px) !important;
+    align-items: stretch !important;
+    justify-content: center !important;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(244, 248, 255, 0.80)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.72) !important;
+    box-shadow:
+        0 34px 76px rgba(15, 23, 42, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.7) !important;
+}
+
+body[data-platform-shell="apple"] .login-brand-block,
+body[data-platform-shell="apple"] .login-system-overview,
+body[data-platform-shell="apple"] .login-mobile-highlights,
+body[data-platform-shell="apple"] .login-portal-grid,
+body[data-platform-shell="apple"] .login-auth-card {
+    width: min(100%, 460px) !important;
+    max-width: min(100%, 460px) !important;
+}
+
+body[data-platform-shell="apple"] .login-mobile-highlights {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+}
+
+body[data-platform-shell="apple"] .login-mobile-highlights span {
+    background: rgba(255, 255, 255, 0.74) !important;
+    border-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+body[data-platform-shell="apple"] .login-portal-grid {
+    margin-top: 18px !important;
+}
+
+body[data-platform-shell="apple"] .login-portal-card {
+    min-height: 176px !important;
+    padding: 16px !important;
+    justify-items: start !important;
+    text-align: left !important;
+}
+
+body[data-platform-shell="apple"] .login-portal-title,
+body[data-platform-shell="apple"] .login-portal-desc,
+body[data-platform-shell="apple"] .login-portal-meta {
+    text-align: left !important;
+}
+
+body[data-platform-shell="apple"] .login-inline-tip,
+body[data-platform-shell="apple"] .login-portal-helper,
+body[data-platform-shell="apple"] .login-trust-strip,
+body[data-platform-shell="apple"] .login-portal-desc,
+body[data-platform-shell="apple"] .login-portal-meta {
+    display: block !important;
+}
+
+body[data-platform-shell="apple"] .login-trust-strip {
+    display: flex !important;
+}
+
+body[data-platform-shell="apple"] .login-auth-card {
+    margin-top: 18px !important;
+    padding: 24px !important;
+}
+
+@media screen and (max-width: 960px) {
+    body[data-platform-shell="apple"] #login-overlay > .login-shell,
+    body[data-platform-shell="apple"] .login-shell {
+        width: min(100%, 720px) !important;
+        max-width: min(100%, 720px) !important;
+        min-height: auto !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    body[data-platform-shell="apple"] .login-stage {
+        display: none !important;
+    }
+
+    body[data-platform-shell="apple"] .login-auth-panel {
+        min-height: calc(100svh - 24px) !important;
+        justify-content: flex-start !important;
+    }
+
+    body[data-platform-shell="apple"] .login-brand-block,
+    body[data-platform-shell="apple"] .login-system-overview,
+    body[data-platform-shell="apple"] .login-mobile-highlights,
+    body[data-platform-shell="apple"] .login-portal-grid,
+    body[data-platform-shell="apple"] .login-auth-card {
+        width: min(100%, 560px) !important;
+        max-width: min(100%, 560px) !important;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    body[data-platform-shell="apple"] #login-overlay {
+        padding: 0 !important;
+    }
+
+    body[data-platform-shell="apple"] #login-overlay > .login-shell,
+    body[data-platform-shell="apple"] .login-shell {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 100svh !important;
+        display: block !important;
+    }
+
+    body[data-platform-shell="apple"] .login-auth-panel {
+        min-height: 100svh !important;
+        border-radius: 0 !important;
+        padding: max(22px, calc(env(safe-area-inset-top) + 14px)) 16px calc(env(safe-area-inset-bottom) + 24px) !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+
+    body[data-platform-shell="apple"] .login-brand-block,
+    body[data-platform-shell="apple"] .login-system-overview,
+    body[data-platform-shell="apple"] .login-mobile-highlights,
+    body[data-platform-shell="apple"] .login-portal-grid,
+    body[data-platform-shell="apple"] .login-auth-card {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    body[data-platform-shell="apple"] .login-mobile-highlights {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+}
+
+@media screen and (max-width: 540px) {
+    body[data-platform-shell="apple"] .login-system-metrics,
+    body[data-platform-shell="apple"] .login-mobile-highlights,
+    body[data-platform-shell="apple"] .login-portal-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+body[data-platform-shell="apple"] .login-brand-block,
+body[data-platform-shell="apple"] .login-brand-block h1,
+body[data-platform-shell="apple"] #login-portal-copy {
+    text-align: center !important;
+    justify-items: center !important;
+}
+
 @media screen and (max-height: 980px) {
     #login-overlay {
         align-items: flex-start !important;

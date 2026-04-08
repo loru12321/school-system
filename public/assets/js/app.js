@@ -2333,6 +2333,60 @@ window.readCompareExamSyncState = readCompareExamSyncState;
 window.setCompareExamSyncState = setCompareExamSyncState;
 window.syncCompareSessionRuntimeState = syncCompareSessionRuntimeState;
 
+const PUBLIC_APK_DOWNLOAD_URL = 'https://schoolsystem.com.cn/downloads/school-system-android-v1.0.apk';
+
+function notifyPublicDownloadAction(message, type = 'success') {
+    if (window.UI && typeof window.UI.toast === 'function') {
+        window.UI.toast(message, type);
+        return;
+    }
+    if (window.Swal && typeof window.Swal.fire === 'function') {
+        window.Swal.fire({
+            toast: true,
+            position: 'top',
+            icon: type === 'error' ? 'error' : 'success',
+            title: message,
+            showConfirmButton: false,
+            timer: 1800
+        });
+        return;
+    }
+    console.log(message);
+}
+
+window.PUBLIC_APK_DOWNLOAD_URL = PUBLIC_APK_DOWNLOAD_URL;
+window.copyPublicApkDownloadLink = async function () {
+    try {
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            await navigator.clipboard.writeText(PUBLIC_APK_DOWNLOAD_URL);
+            notifyPublicDownloadAction('下载链接已复制');
+            return true;
+        }
+    } catch (error) {
+        console.warn('[login-download] clipboard copy failed:', error);
+    }
+
+    const input = document.createElement('textarea');
+    input.value = PUBLIC_APK_DOWNLOAD_URL;
+    input.setAttribute('readonly', 'readonly');
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.appendChild(input);
+    input.select();
+
+    try {
+        document.execCommand('copy');
+        notifyPublicDownloadAction('下载链接已复制');
+        return true;
+    } catch (error) {
+        console.warn('[login-download] fallback copy failed:', error);
+        notifyPublicDownloadAction('复制失败，请手动复制下载链接', 'error');
+        return false;
+    } finally {
+        input.remove();
+    }
+};
+
 const Auth = {
     currentUser: null,
     _parentDataRecovering: false,
