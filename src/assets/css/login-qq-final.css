@@ -2280,3 +2280,59 @@ body.login-system-intro-open :is(#login-overlay[data-login-layout="qq-fullscreen
         border-radius: 22px !important;
     }
 }
+
+@media screen and (max-width: 768px) {
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-stage {
+        padding-bottom: 332px !important;
+    }
+
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-stage-hero {
+        max-width: min(100%, 360px) !important;
+        min-height: 0 !important;
+        padding: 96px 0 52px !important;
+        display: grid !important;
+        justify-items: center !important;
+        align-content: start !important;
+        gap: 0 !important;
+    }
+
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) #login-stage-kicker,
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) #login-stage-title,
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) #login-stage-copy,
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-stage-meta,
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-stage-platforms {
+        display: none !important;
+    }
+
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-stage-actions {
+        width: 100% !important;
+        margin-top: 0 !important;
+    }
+}
+
+body[data-mobile-architecture="apk-v2"] #login-overlay[data-login-layout="qq-fullscreen"] .login-stage {
+    padding-bottom: 332px !important;
+}
+
+body[data-mobile-architecture="apk-v2"] #login-overlay[data-login-layout="qq-fullscreen"] .login-stage-hero {
+    max-width: min(100%, 360px) !important;
+    min-height: 0 !important;
+    padding: 96px 0 52px !important;
+    display: grid !important;
+    justify-items: center !important;
+    align-content: start !important;
+    gap: 0 !important;
+}
+
+body[data-mobile-architecture="apk-v2"] #login-overlay[data-login-layout="qq-fullscreen"] #login-stage-kicker,
+body[data-mobile-architecture="apk-v2"] #login-overlay[data-login-layout="qq-fullscreen"] #login-stage-title,
+body[data-mobile-architecture="apk-v2"] #login-overlay[data-login-layout="qq-fullscreen"] #login-stage-copy,
+body[data-mobile-architecture="apk-v2"] #login-overlay[data-login-layout="qq-fullscreen"] .login-stage-meta,
+body[data-mobile-architecture="apk-v2"] #login-overlay[data-login-layout="qq-fullscreen"] .login-stage-platforms {
+    display: none !important;
+}
+
+body[data-mobile-architecture="apk-v2"] #login-overlay[data-login-layout="qq-fullscreen"] .login-stage-actions {
+    width: 100% !important;
+    margin-top: 0 !important;
+}
