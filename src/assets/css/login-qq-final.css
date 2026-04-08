@@ -1206,3 +1206,332 @@ body.login-overlay-active #mode-mask {
         font-size: clamp(24px, 7.8vw, 32px) !important;
     }
 }
+
+/* Modal Login Launcher Refresh */
+body.login-overlay-active #mode-mask {
+    display: none !important;
+}
+
+body.login-modal-open {
+    overflow: hidden !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-stage {
+    padding-bottom: 332px !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-stage-hero {
+    padding-bottom: 166px !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-stage-nav-links {
+    gap: 14px !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-stage-nav-links a {
+    min-height: 36px !important;
+    padding: 0 2px !important;
+    border-radius: 999px !important;
+    color: rgba(16, 24, 40, 0.72) !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-stage-nav-links a[data-nav="modal"] {
+    padding: 0 16px !important;
+    background: rgba(45, 108, 255, 0.1) !important;
+    border: 1px solid rgba(45, 108, 255, 0.14) !important;
+    color: #234cb0 !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-stage-nav-login {
+    display: none !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-auth-panel {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.86fr) !important;
+    gap: 22px 28px !important;
+    bottom: 30px !important;
+    width: min(960px, calc(100% - 56px)) !important;
+    max-width: min(960px, calc(100% - 56px)) !important;
+    padding: 28px 30px !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(247, 250, 255, 0.82)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.84) !important;
+    box-shadow: 0 30px 72px rgba(79, 104, 144, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.92) !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-auth-head {
+    grid-column: 1 !important;
+    grid-row: 1 / span 2 !important;
+    display: grid !important;
+    gap: 18px !important;
+    align-content: space-between !important;
+    min-height: 100% !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-brand-block {
+    max-width: 500px !important;
+    margin: 0 !important;
+    text-align: left !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-portal-badge {
+    margin: 0 0 14px !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-auth-title {
+    font-size: clamp(36px, 2.8vw, 46px) !important;
+    line-height: 0.98 !important;
+    letter-spacing: -0.05em !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) #login-portal-copy {
+    max-width: 42ch !important;
+    margin: 0 !important;
+    text-align: left !important;
+    font-size: 15px !important;
+    line-height: 1.82 !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-auth-utility {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-auth-facts {
+    display: grid !important;
+    gap: 12px !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-auth-facts span {
+    padding: 14px 16px !important;
+    border-radius: 18px !important;
+    background: rgba(238, 244, 255, 0.78) !important;
+    border: 1px solid rgba(202, 216, 242, 0.86) !important;
+    color: #42536f !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-portal-launch-head {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    padding-top: 6px !important;
+    border-top: none !important;
+    align-content: start !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-portal-grid {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    width: 100% !important;
+    max-width: none !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-portal-card {
+    min-height: 168px !important;
+    padding: 20px 20px 18px !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-portal-note {
+    grid-column: 1 / -1 !important;
+    grid-row: 3 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    margin-top: 2px !important;
+    align-self: auto !important;
+    padding: 14px 16px !important;
+    border-radius: 18px !important;
+    background: rgba(245, 247, 255, 0.8) !important;
+    border: 1px solid rgba(210, 220, 240, 0.86) !important;
+    color: #52627b !important;
+    font-size: 13px !important;
+    line-height: 1.65 !important;
+    text-align: center !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) > #login-modal-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 65000 !important;
+    display: none !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 28px !important;
+    background: rgba(9, 14, 28, 0.34) !important;
+    backdrop-filter: blur(18px) saturate(128%) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(128%) !important;
+}
+
+body.login-modal-open :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) > #login-modal-backdrop {
+    display: flex !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) > #login-modal-backdrop .login-modal-dialog {
+    width: min(580px, calc(100vw - 56px)) !important;
+    max-width: min(580px, calc(100vw - 56px)) !important;
+    margin: 0 !important;
+    padding: 26px 24px 22px !important;
+    border-radius: 32px !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 248, 255, 0.96)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.92) !important;
+    box-shadow: 0 36px 90px rgba(16, 24, 40, 0.22) !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-modal-head {
+    display: grid !important;
+    gap: 12px !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-modal-head-top {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 14px !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-modal-chip {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 34px !important;
+    padding: 0 12px !important;
+    border-radius: 999px !important;
+    background: rgba(45, 108, 255, 0.1) !important;
+    border: 1px solid rgba(45, 108, 255, 0.14) !important;
+    color: #2750af !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.04em !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"][data-login-portal="parent"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"][data-login-portal="parent"]) .login-modal-chip {
+    background: rgba(15, 155, 216, 0.1) !important;
+    border-color: rgba(15, 155, 216, 0.14) !important;
+    color: #147789 !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-modal-close {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(207, 217, 238, 0.9) !important;
+    background: rgba(255, 255, 255, 0.86) !important;
+    color: #3c4b65 !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-modal-title {
+    margin: 0 !important;
+    color: #16233f !important;
+    font-size: clamp(30px, 2.6vw, 40px) !important;
+    line-height: 1.02 !important;
+    letter-spacing: -0.05em !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-modal-copy {
+    margin: 0 !important;
+    color: #5a6983 !important;
+    font-size: 15px !important;
+    line-height: 1.72 !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-auth-card {
+    width: 100% !important;
+    margin: 18px 0 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) #login-form {
+    display: grid !important;
+    gap: 16px !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) #login-form .form-group {
+    display: grid !important;
+    gap: 8px !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) #login-form input {
+    min-height: 56px !important;
+    border-radius: 18px !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    border: 1px solid rgba(196, 209, 235, 0.88) !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) #login-submit-button {
+    width: 100% !important;
+    min-height: 58px !important;
+    margin-top: 4px !important;
+    border-radius: 20px !important;
+}
+
+@media screen and (max-width: 1160px) {
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-stage {
+        padding-bottom: 366px !important;
+    }
+
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-auth-panel {
+        width: min(860px, calc(100% - 40px)) !important;
+        max-width: min(860px, calc(100% - 40px)) !important;
+    }
+}
+
+@media screen and (max-width: 960px) {
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-auth-panel {
+        position: relative !important;
+        left: auto !important;
+        bottom: auto !important;
+        transform: none !important;
+        width: min(100%, 720px) !important;
+        max-width: min(100%, 720px) !important;
+        margin: 0 auto !important;
+        grid-template-columns: 1fr !important;
+        padding: 24px !important;
+    }
+
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-auth-head,
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-portal-launch-head,
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-portal-grid,
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-portal-note {
+        grid-column: auto !important;
+        grid-row: auto !important;
+    }
+
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-portal-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media screen and (max-width: 640px) {
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-auth-panel {
+        width: calc(100% - 16px) !important;
+        max-width: calc(100% - 16px) !important;
+        padding: 20px 18px !important;
+        border-radius: 24px !important;
+    }
+
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-portal-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) > #login-modal-backdrop {
+        align-items: flex-end !important;
+        padding: 12px !important;
+    }
+
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) > #login-modal-backdrop .login-modal-dialog {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 22px 18px 18px !important;
+        border-radius: 28px !important;
+    }
+}
