@@ -2426,6 +2426,28 @@ const Auth = {
         return localStorage.getItem(this.loginPortalStorageKey) === 'parent' ? 'parent' : 'school';
     },
 
+    getPublicApkDownloadUrl: function () {
+        const fallbackUrl = typeof PUBLIC_APK_DOWNLOAD_URL === 'string' ? PUBLIC_APK_DOWNLOAD_URL : '';
+        const runtimeUrl = typeof window.PUBLIC_APK_DOWNLOAD_URL === 'string' ? window.PUBLIC_APK_DOWNLOAD_URL : '';
+        return String(runtimeUrl || fallbackUrl || 'https://schoolsystem.com.cn/downloads/school-system-android-v1.0.apk').trim();
+    },
+
+    getPublicApkDownloadFileName: function (url = this.getPublicApkDownloadUrl()) {
+        const normalizedUrl = String(url || '').split('#')[0].split('?')[0];
+        const fileName = normalizedUrl.split('/').filter(Boolean).pop();
+        return fileName || 'school-system-android-v1.0.apk';
+    },
+
+    syncPublicDownloadLinks: function () {
+        const downloadUrl = this.getPublicApkDownloadUrl();
+        const fileName = this.getPublicApkDownloadFileName(downloadUrl);
+        document.querySelectorAll('.login-system-download-link, .login-stage-tertiary-action').forEach((link) => {
+            if (!(link instanceof HTMLAnchorElement)) return;
+            link.href = downloadUrl;
+            link.setAttribute('download', fileName);
+        });
+    },
+
     setLoginPortal: function (portal) {
         const nextPortal = portal === 'parent' ? 'parent' : 'school';
         localStorage.setItem(this.loginPortalStorageKey, nextPortal);
@@ -2438,6 +2460,7 @@ const Auth = {
         const panel = document.getElementById('login-portal-hub');
         const modalBackdrop = document.getElementById('login-modal-backdrop');
         if (!overlay || !panel) return;
+        this.syncPublicDownloadLinks();
 
         if (modalBackdrop && modalBackdrop.dataset.loginModalBound !== 'true') {
             modalBackdrop.addEventListener('click', (event) => {
@@ -2462,15 +2485,25 @@ const Auth = {
         });
 
         if (introLink) {
-            introLink.textContent = '应用介绍';
-            introLink.href = '#login-hero';
+            introLink.textContent = '系统介绍';
+            introLink.href = '#login-auth-facts';
             introLink.dataset.nav = 'intro';
+            introLink.onclick = (event) => {
+                event.preventDefault();
+                const target = document.getElementById('login-auth-facts') || document.querySelector('.login-auth-head');
+                if (target && typeof target.scrollIntoView === 'function') {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+                }
+            };
         }
 
         if (downloadLink) {
+            const downloadUrl = this.getPublicApkDownloadUrl();
             downloadLink.textContent = '应用下载';
-            downloadLink.href = '#app-download';
+            downloadLink.href = downloadUrl;
+            downloadLink.setAttribute('download', this.getPublicApkDownloadFileName(downloadUrl));
             downloadLink.dataset.nav = 'download';
+            downloadLink.onclick = null;
         }
 
         if (modalLink) {
@@ -2611,11 +2644,44 @@ const Auth = {
             else authHead.appendChild(authFacts);
         }
 
+        const sharedSystemGuide = [
+            {
+                icon: 'ti ti-route-2',
+                title: '如何使用',
+                desc: '登录后先导入成绩、名册与参数，再进入分析模块查看结果，最后导出报表或同步到云端。',
+                tone: 'blue'
+            },
+            {
+                icon: 'ti ti-layout-dashboard',
+                title: '核心模块',
+                desc: '覆盖数据枢纽、综合分析、教师分析、成长报告、应用下载中心与教学管理等常用场景。',
+                tone: 'violet'
+            },
+            {
+                icon: 'ti ti-user-shield',
+                title: '角色权限',
+                desc: '管理员与教务负责全局维护，班主任和教师聚焦班级与学科，家长端只查看成绩、报告与提醒。',
+                tone: 'cyan'
+            },
+            {
+                icon: 'ti ti-calculator',
+                title: '成绩计算',
+                desc: '系统会按导入数据自动汇总总分、均分、等级、排名、达线和分层结果，并支持指标参数口径。',
+                tone: 'amber'
+            },
+            {
+                icon: 'ti ti-chart-arcs-3',
+                title: '绩效比较',
+                desc: '支持学校、教师、班级与多期成绩对比，用统一口径比较进退步、目标达成和教学绩效差异。',
+                tone: 'slate'
+            }
+        ];
+
         const config = nextPortal === 'parent'
             ? {
                 badge: '家长成长入口',
-                authTitle: '应用介绍',
-                copy: '查看家长端能力、下载 Android 应用，并从角色卡片里打开唯一登录窗口。',
+                authTitle: '系统介绍',
+                copy: '登录前先看清系统使用路径、核心模块、角色权限、成绩口径与绩效比较规则，再打开对应登录窗口。',
                 userLabel: '学生姓名',
                 userPlaceholder: '请输入学生姓名',
                 userHelper: '建议使用学生姓名登录，并完整填写班级信息。',
@@ -2631,14 +2697,10 @@ const Auth = {
                     { icon: 'ti ti-device-mobile', text: '手机与电脑使用同一套入口' },
                     { icon: 'ti ti-sparkles', text: '当前稳定版 v1.0 · 2026-04-08' }
                 ],
-                facts: [
-                    { icon: 'ti ti-layout-panel-top', text: '登录表单改为唯一弹窗，不再常驻在主面板' },
-                    { icon: 'ti ti-device-mobile', text: 'Web 与 Android 共用家长端入口与验证逻辑' },
-                    { icon: 'ti ti-bolt', text: '角色卡片与右上导航都能直接打开登录窗口' }
-                ],
+                facts: sharedSystemGuide,
                 launchKicker: '登录窗口',
-                launchCopy: '点击角色卡片后弹出对应登录窗口；主界面只负责介绍、下载与入口选择。',
-                launchNote: '现在只有一个登录弹窗，学校端与家长端切换时只更新弹窗内容，不会再出现重复窗口。',
+                launchCopy: '左侧先看系统介绍与 APK 下载，右侧再按角色打开唯一登录窗口。',
+                launchNote: '系统介绍会先说明模块、权限、成绩口径与绩效比较；登录仍只保留一个弹窗，不会重复开窗。',
                 stageFeatureTitle: '家长端适合成绩查询、成长报告、关键提醒与班级信息',
                 stageFeatureCopy: '下载、介绍与登录入口被拆成更清楚的层次，浏览和操作都更轻。',
                 modalChip: '家长端登录窗口',
@@ -2648,8 +2710,8 @@ const Auth = {
             }
             : {
                 badge: '学校工作台',
-                authTitle: '应用介绍',
-                copy: '把学校端能力、应用下载与角色入口分层展示，登录只在弹窗里完成。',
+                authTitle: '系统介绍',
+                copy: '登录前先看清系统如何使用、包含哪些模块、不同角色有哪些权限，以及成绩和绩效比较的主要口径。',
                 userLabel: '账号 / 姓名',
                 userPlaceholder: '管理员账号 / 教师姓名',
                 userHelper: '支持管理员、教务、年级、班主任与教师账号登录。',
@@ -2665,14 +2727,10 @@ const Auth = {
                     { icon: 'ti ti-device-mobile', text: 'Web 与 Android 共用入口逻辑' },
                     { icon: 'ti ti-sparkles', text: '当前稳定版 v1.0 · 2026-04-08' }
                 ],
-                facts: [
-                    { icon: 'ti ti-layout-panel-top', text: '主面板只负责介绍、入口和下载，登录表单改为单独弹窗' },
-                    { icon: 'ti ti-device-mobile', text: 'Web 与 Android 共用学校端入口与验证逻辑' },
-                    { icon: 'ti ti-bolt', text: '角色卡片与右上导航都能直接打开登录窗口' }
-                ],
+                facts: sharedSystemGuide,
                 launchKicker: '登录窗口',
-                launchCopy: '点击角色卡片后弹出对应登录窗口；主界面保持简洁，只承载介绍、下载与入口切换。',
-                launchNote: '现在只有一个登录弹窗，学校端与家长端切换时只更新弹窗内容，不会再出现重复窗口。',
+                launchCopy: '左侧先看系统介绍与 APK 下载，右侧再按角色打开唯一登录窗口。',
+                launchNote: '系统介绍会先说明模块、权限、成绩口径与绩效比较；登录仍只保留一个弹窗，不会重复开窗。',
                 stageFeatureTitle: '一屏直达成绩分析、教学管理、质量预警与数据维护',
                 stageFeatureCopy: '像流行官网首页一样把高价值入口、重点模块和实时状态直接铺开，减少跳转与寻找成本。',
                 modalChip: '学校端登录窗口',
@@ -2735,7 +2793,15 @@ const Auth = {
         if (authTitle) authTitle.textContent = config.authTitle;
         if (authFacts) {
             authFacts.innerHTML = (config.facts || [])
-                .map(item => `<span><i class="${item.icon}"></i>${item.text}</span>`)
+                .map(item => `
+                    <article class="login-auth-fact-card" data-tone="${item.tone || 'blue'}">
+                        <span class="login-auth-fact-icon"><i class="${item.icon}"></i></span>
+                        <div class="login-auth-fact-body">
+                            <strong>${item.title}</strong>
+                            <p>${item.desc}</p>
+                        </div>
+                    </article>
+                `)
                 .join('');
         }
         if (portalLaunchKicker) portalLaunchKicker.textContent = config.launchKicker;
