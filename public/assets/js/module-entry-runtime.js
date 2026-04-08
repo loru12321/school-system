@@ -499,6 +499,20 @@
         return Promise.resolve();
     }
 
+    function warmAppDownloadCenterRuntime() {
+        if (typeof window.ensureAppDownloadRuntimeLoaded !== 'function') return Promise.resolve(false);
+        if (window.__APP_DOWNLOAD_RUNTIME_PATCHED__) return Promise.resolve(true);
+        if (window.__APP_DOWNLOAD_RUNTIME_PRELOAD_PROMISE__) return window.__APP_DOWNLOAD_RUNTIME_PRELOAD_PROMISE__;
+
+        window.__APP_DOWNLOAD_RUNTIME_PRELOAD_PROMISE__ = window.ensureAppDownloadRuntimeLoaded()
+            .then(() => true)
+            .catch((error) => {
+                console.warn('preload app-download runtime failed:', error);
+                return false;
+            });
+        return window.__APP_DOWNLOAD_RUNTIME_PRELOAD_PROMISE__;
+    }
+
     window.runModuleTabEnter = function (context = {}) {
         const id = String(context.id || '').trim();
         if (!id) return Promise.resolve(false);
@@ -522,6 +536,7 @@
             });
     };
 
+    warmAppDownloadCenterRuntime();
     window.activateTeachingManagementModule = activateTeachingManagementModule;
     window.renderSingleSchoolAnalysisHint = renderSingleSchoolAnalysisHint;
     window.__MODULE_ENTRY_RUNTIME_PATCHED__ = true;
