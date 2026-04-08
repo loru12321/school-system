@@ -2509,7 +2509,7 @@ const Auth = {
         const config = nextPortal === 'parent'
             ? {
                 badge: '家长成长入口',
-                copy: '输入学生姓名、班级与密码，查看成长报告、成绩与家校提醒。',
+                copy: '点击家长端卡片后弹出登录框，进入成长报告、成绩查询与家校提醒。',
                 userLabel: '学生姓名',
                 userPlaceholder: '请输入学生姓名',
                 userHelper: '建议使用学生姓名登录，并完整填写班级信息。',
@@ -2518,17 +2518,17 @@ const Auth = {
                 helper: '当前为家长端，登录后进入成长报告与成绩视图；如需切换，请关闭弹窗后重新选择入口。',
                 submit: '进入家长端',
                 stageKicker: 'Family Growth Portal',
-                stageTitle: '把成长报告、成绩查询与家校沟通集中到一块更易读的入口',
-                stageCopy: '输入学生姓名、班级和密码即可进入家长端，按移动优先方式查看成长报告、成绩单与关键提醒。',
-                stageFeatureTitle: '一屏直达成长报告、成绩单、班级信息与关键提醒',
-                stageFeatureCopy: '为家长保留更轻量、更直观的入口路径，减少输入成本和找入口的时间。',
+                stageTitle: '一个全屏入口，连接成长报告、成绩查询与家校提醒',
+                stageCopy: '像流行应用官网首页一样把下载、登录与家校沟通入口集中到一屏里，先选择角色，再通过弹窗完成验证。',
+                stageFeatureTitle: '家长端适合成绩查询、成长报告、关键提醒与班级信息',
+                stageFeatureCopy: '在同一首页中保留下载、登录与家校沟通入口，减少寻找入口的步骤。',
                 modalChip: '家长端登录',
                 modalTitle: '进入家长成长入口',
                 modalCopy: '在弹窗中输入学生姓名、班级与密码，即可查看成长报告、成绩与家校提醒。'
             }
             : {
                 badge: '学校工作台',
-                copy: '统一验证后，直接进入教学分析、数据维护与学校工作台。',
+                copy: '点击学校端卡片后弹出登录框，进入教学分析、数据维护与学校工作台。',
                 userLabel: '账号 / 姓名',
                 userPlaceholder: '管理员账号 / 教师姓名',
                 userHelper: '支持管理员、教务、年级、班主任与教师账号登录。',
@@ -2537,10 +2537,10 @@ const Auth = {
                 helper: '当前为学校工作台，验证通过后直达教学分析与数据维护；如需切换，请关闭弹窗后重新选择入口。',
                 submit: '进入学校工作台',
                 stageKicker: 'School Command Center',
-                stageTitle: '把教学分析、账号入口与管理驾驶舱放进同一块全屏舞台',
-                stageCopy: '从学校大屏到教师工作台，登录前先看见关键能力，登录后直接进入数据分析、账号管理与云端同步链路。',
+                stageTitle: '一个全屏入口，连接学校工作台、家长查询与 Android 应用',
+                stageCopy: '参考流行应用官网的全屏首页，把登录、下载、系统介绍与核心能力压进同一块舞台，进入系统前先看清角色入口。',
                 stageFeatureTitle: '一屏直达成绩分析、教学管理、质量预警与数据维护',
-                stageFeatureCopy: '像内容平台首页一样把高价值入口、重点模块和实时状态直接铺开，减少跳转与寻找成本。',
+                stageFeatureCopy: '像流行官网首页一样把高价值入口、重点模块和实时状态直接铺开，减少跳转与寻找成本。',
                 modalChip: '学校端登录',
                 modalTitle: '进入学校工作台',
                 modalCopy: '在弹窗中完成身份验证后，直接进入教学分析、数据维护与学校工作台。'

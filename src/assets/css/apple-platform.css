@@ -1714,3 +1714,131 @@ body.dark-mode[data-platform-shell="apple"] #login-overlay[data-login-portal="pa
         grid-template-columns: 1fr !important;
     }
 }
+
+/* ================== Apple QQ Fullscreen Layout Bridge ================== */
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"] {
+    padding: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+    background:
+        radial-gradient(circle at 18% 18%, rgba(47, 212, 255, 0.56), transparent 24%),
+        radial-gradient(circle at 84% 20%, rgba(173, 127, 255, 0.40), transparent 24%),
+        radial-gradient(circle at 50% 84%, rgba(255, 210, 178, 0.38), transparent 24%),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.11) 0 26px, rgba(255, 255, 255, 0.04) 26px 52px),
+        linear-gradient(180deg, #0f66d2 0%, #2256c8 24%, #463bac 56%, #b998ca 82%, #f2dccc 100%) !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"][data-login-portal="parent"] {
+    background:
+        radial-gradient(circle at 18% 18%, rgba(45, 212, 191, 0.44), transparent 24%),
+        radial-gradient(circle at 84% 20%, rgba(56, 189, 248, 0.34), transparent 24%),
+        radial-gradient(circle at 50% 84%, rgba(255, 224, 188, 0.34), transparent 24%),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.11) 0 26px, rgba(255, 255, 255, 0.04) 26px 52px),
+        linear-gradient(180deg, #0f6a94 0%, #145c8d 24%, #17647f 56%, #99b9c7 82%, #f1dcc8 100%) !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"] > .login-shell,
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"] .login-shell {
+    position: relative !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 100svh !important;
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"] .login-stage {
+    min-height: 100svh !important;
+    padding: clamp(18px, 2.4vw, 34px) clamp(18px, 3vw, 36px) 230px !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"] .login-auth-panel {
+    position: absolute !important;
+    left: 50%;
+    bottom: 30px;
+    transform: translateX(-50%);
+    width: min(1180px, calc(100% - 48px)) !important;
+    max-width: min(1180px, calc(100% - 48px)) !important;
+    min-height: 0 !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.02fr) minmax(320px, 460px) !important;
+    gap: 18px 28px;
+    padding: 28px 30px !important;
+    border-radius: 32px !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.12)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    box-shadow: 0 34px 80px rgba(9, 20, 44, 0.28) !important;
+    backdrop-filter: blur(28px) saturate(1.2) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(1.2) !important;
+}
+
+body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"] .login-auth-panel::before {
+    display: none !important;
+}
+
+body.dark-mode[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"] {
+    background:
+        radial-gradient(circle at 18% 18%, rgba(45, 212, 191, 0.24), transparent 24%),
+        radial-gradient(circle at 84% 20%, rgba(129, 140, 248, 0.24), transparent 24%),
+        radial-gradient(circle at 50% 84%, rgba(251, 191, 36, 0.14), transparent 24%),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0 26px, rgba(255, 255, 255, 0.02) 26px 52px),
+        linear-gradient(180deg, #06142f 0%, #0a2550 24%, #1b2060 56%, #2c2f51 82%, #1b2031 100%) !important;
+}
+
+body.dark-mode[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"] .login-auth-panel {
+    background: linear-gradient(180deg, rgba(5, 12, 24, 0.38), rgba(5, 12, 24, 0.24)) !important;
+    border-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+@media screen and (max-width: 1160px) {
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"] .login-stage {
+        min-height: auto !important;
+        padding-bottom: 120px !important;
+    }
+
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"] .login-auth-panel {
+        position: relative !important;
+        left: auto;
+        bottom: auto;
+        transform: none !important;
+        width: min(100%, 860px) !important;
+        max-width: min(100%, 860px) !important;
+        margin: -82px auto 28px !important;
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"] {
+        padding: 0 !important;
+    }
+
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"] .login-stage {
+        padding: 0 16px 88px !important;
+    }
+
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"] .login-auth-panel {
+        width: calc(100% - 24px) !important;
+        max-width: calc(100% - 24px) !important;
+        margin: -56px auto 16px !important;
+        padding: 20px 18px !important;
+        border-radius: 28px !important;
+    }
+
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"] > #login-modal-backdrop {
+        padding: 0 !important;
+        align-items: flex-end !important;
+    }
+
+    body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"] > #login-modal-backdrop .login-modal-dialog {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
