@@ -12,6 +12,9 @@
         'teacher-analysis',
         'cohort-growth'
     ]);
+    const APP_DOWNLOAD_MODULE_IDS = new Set([
+        'app-download-center'
+    ]);
 
     function ensureModuleStylesFor(id) {
         if (typeof window.ensureOptionalStylesheetLoaded !== 'function') return Promise.resolve();
@@ -28,6 +31,13 @@
             loaders.push(window.ensureOptionalStylesheetLoaded(
                 'teacher-insights-module',
                 './assets/css/teacher-insights-module.css'
+            ));
+        }
+
+        if (APP_DOWNLOAD_MODULE_IDS.has(id)) {
+            loaders.push(window.ensureOptionalStylesheetLoaded(
+                'app-download-module',
+                './assets/css/app-download-module.css'
             ));
         }
 
@@ -155,6 +165,41 @@
         } else {
             multiPeriodSection.style.display = 'none';
         }
+    }
+
+    function initAppDownloadCenterEntry() {
+        const render = () => {
+            if (typeof window.renderAppDownloadCenter === 'function') {
+                window.renderAppDownloadCenter();
+                return true;
+            }
+            return false;
+        };
+
+        const scheduleRender = (attempt = 0) => {
+            if (render()) return true;
+            if (attempt >= 8) return false;
+            setTimeout(() => {
+                scheduleRender(attempt + 1);
+            }, attempt < 2 ? 80 : 180);
+            return false;
+        };
+
+        if (scheduleRender()) return Promise.resolve(true);
+
+        if (typeof window.ensureAppDownloadRuntimeLoaded === 'function' && !window.__APP_DOWNLOAD_RUNTIME_PATCHED__) {
+            return window.ensureAppDownloadRuntimeLoaded()
+                .then(() => {
+                    scheduleRender();
+                    return true;
+                })
+                .catch((error) => {
+                    console.warn('initAppDownloadCenterEntry failed:', error);
+                    return false;
+                });
+        }
+
+        return Promise.resolve(scheduleRender());
     }
 
     function initAIAnalysisEntry() {
@@ -419,6 +464,7 @@
             && !window.__SCHOOL_PROFILE_RUNTIME_PATCHED__) {
             return window.ensureSchoolProfileRuntimeLoaded().catch((error) => console.warn(error));
         }
+        if (id === 'app-download-center') return initAppDownloadCenterEntry();
         if (id === 'ai-analysis') return initAIAnalysisEntry();
         if (id === 'analysis') {
             if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();

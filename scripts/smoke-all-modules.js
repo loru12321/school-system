@@ -22,6 +22,7 @@ const SWITCH_MODULE_IDS = [
     'cohort-growth',
     'report-generator',
     'ai-analysis',
+    'app-download-center',
     'freshman-simulator',
     'exam-arranger',
     'teaching-overview',
@@ -825,6 +826,25 @@ async function runModuleDeepCheck(page, id) {
                 ok: Object.values(checks).every(Boolean) && panelCount >= 4,
                 checks,
                 panelCount
+            };
+        });
+    }
+    if (id === 'app-download-center') {
+        return page.evaluate(async () => {
+            const primaryLink = document.getElementById('app-download-primary-link');
+            const checks = {
+                sectionReady: !!document.querySelector('#app-download-center.analysis-workspace-version'),
+                heroReady: !!document.querySelector('#app-download-center .analysis-hero'),
+                shellHeadReady: !!document.querySelector('#app-download-center .analysis-shell-head'),
+                primaryLinkReady: !!primaryLink && /\.apk($|\?)/i.test(String(primaryLink.getAttribute('href') || '')),
+                linkInputReady: !!document.getElementById('app-download-link-input'),
+                featureGridReady: document.querySelectorAll('#app-download-feature-grid .app-download-feature-card').length >= 4,
+                releaseListReady: document.querySelectorAll('#app-download-release-list [data-app-release-item="true"]').length >= 2,
+                specGridReady: document.querySelectorAll('#app-download-spec-grid .app-download-spec-card').length >= 6
+            };
+            return {
+                ok: Object.values(checks).every(Boolean),
+                checks
             };
         });
     }

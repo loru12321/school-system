@@ -21292,7 +21292,8 @@ function doSpotlightSearch() {
         { name: "两率一分(宏观)", id: "analysis" },
         { name: "临界生任务单", id: "marginal-push" },
         { name: "学生成绩单", id: "report-generator" },
-        { name: "AI工作台", id: "ai-analysis" }
+        { name: "AI工作台", id: "ai-analysis" },
+        { name: "应用下载中心", id: "app-download-center" }
     ];
 
     modules.forEach(m => {
@@ -21345,6 +21346,18 @@ const SYSTEM_MANUAL = {
                     <li><strong>进退步基准：</strong>若要分析进退步，请在“历史成绩档案库”上传上次考试的成绩文件。</li>
                   </ul>`,
         calc: `系统自动清洗数据，缺考/作弊记为0分。`
+    },
+    'app-download-center': {
+        title: '📱 应用下载中心·使用说明',
+        fit: `用于<strong>统一分发安卓 APK</strong>，集中查看安装包、版本信息、安装步骤和更新记录。`,
+        when: `需要把 APK 发给教师、班主任、家长或学生，或确认当前移动端版本时使用。`,
+        use: `<ul>
+                    <li><strong>直接下载：</strong>点击页面中的“下载 APK”即可获取当前安装包，适合网页端统一分发。</li>
+                    <li><strong>查看版本：</strong>同页可查看版本号、包名、更新时间、安装包大小与 SHA-256 校验值。</li>
+                    <li><strong>安装说明：</strong>页面右侧提供安装步骤和升级说明，便于在安卓手机上直接完成安装。</li>
+                    <li><strong>后续更新：</strong>当 APK 版本更新时，可继续在本页面集中查看更新记录与新版下载入口。</li>
+                  </ul>`,
+        calc: `当前页展示的是安装包的版本信息，不参与成绩计算；其中 SHA-256 可用于校验安装包是否完整。`
     },
     'macro': {
         title: '🏆 镇域宏观横向评价·算法说明',
@@ -21611,13 +21624,13 @@ function getTeacherScopeForUser(user) {
 
 const QUERY_MODULE_ACCESS = {
     admin: ['*'],
-    director: ['starter-hub', 'upload', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'freshman-simulator', 'exam-arranger', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'zhongkao-countdown', 'ai-analysis'],
-    grade_director: ['starter-hub', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'zhongkao-countdown', 'ai-analysis'],
-    class_teacher: ['starter-hub', 'student-overview', 'student-details', 'teacher-analysis', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator', 'zhongkao-countdown', 'ai-analysis'],
-    teacher: ['starter-hub', 'student-overview', 'student-details', 'teacher-analysis', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator', 'zhongkao-countdown', 'ai-analysis'],
-    parent: ['report-generator', 'ai-analysis'],
-    student: ['report-generator', 'ai-analysis'],
-    guest: ['starter-hub']
+    director: ['starter-hub', 'upload', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'freshman-simulator', 'exam-arranger', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'zhongkao-countdown', 'ai-analysis', 'app-download-center'],
+    grade_director: ['starter-hub', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'zhongkao-countdown', 'ai-analysis', 'app-download-center'],
+    class_teacher: ['starter-hub', 'student-overview', 'student-details', 'teacher-analysis', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator', 'zhongkao-countdown', 'ai-analysis', 'app-download-center'],
+    teacher: ['starter-hub', 'student-overview', 'student-details', 'teacher-analysis', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator', 'zhongkao-countdown', 'ai-analysis', 'app-download-center'],
+    parent: ['report-generator', 'ai-analysis', 'app-download-center'],
+    student: ['report-generator', 'ai-analysis', 'app-download-center'],
+    guest: ['starter-hub', 'app-download-center']
 };
 
 const PermissionPolicy = {

@@ -749,6 +749,10 @@ window.ensureTeachingManagementRuntimeLoaded = function () {
     return loadOptionalRuntime('teaching-management', './assets/js/teaching-management-runtime.js');
 };
 
+window.ensureAppDownloadRuntimeLoaded = function () {
+    return loadOptionalRuntime('app-download', './assets/js/app-download-runtime.js');
+};
+
 window.ensureTeacherAnalysisMainRuntimeLoaded = function () {
     return loadOptionalRuntimeBundle('teacher-analysis-main-bundle', [
         { key: 'teacher-analysis-core', src: './assets/js/teacher-analysis-core-runtime.js' },

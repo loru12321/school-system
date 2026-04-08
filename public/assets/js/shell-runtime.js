@@ -87,6 +87,16 @@
                 { id: 'seat-adjustment', icon: 'ti-armchair', text: '考后排座/互助组', hint: '考试后按策略重新排座和组织互助。' },
                 { id: 'mutual-aid', icon: 'ti-friends', text: '学科小老师分组', hint: '按学科优势自动形成互助学习小组。' }
             ]
+        },
+        apps: {
+            title: '\u5e94\u7528\u670d\u52a1',
+            color: '#2563eb',
+            icon: 'ti-device-mobile',
+            eyebrow: 'App Hub',
+            summary: '\u96c6\u4e2d\u67e5\u770b Android APK \u5b89\u88c5\u5305\u3001\u7248\u672c\u66f4\u65b0\u548c\u5b89\u88c5\u6307\u5f15\u3002',
+            items: [
+                { id: 'app-download-center', icon: 'ti-download', text: '\u5e94\u7528\u4e0b\u8f7d\u4e2d\u5fc3', hint: '\u53ef\u4ee5\u76f4\u63a5\u4e0b\u8f7d APK\uff0c\u67e5\u770b\u529f\u80fd\u4ecb\u7ecd\u3001\u7248\u672c\u8bb0\u5f55\u548c\u5b89\u88c5\u65b9\u5f0f\u3002' }
+            ]
         }
     };
 
