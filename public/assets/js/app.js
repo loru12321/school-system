@@ -2626,7 +2626,7 @@ const Auth = {
             quickStats: [
                 { label: '适用角色', value: '管理员 / 教务 / 年级负责人 / 班主任 / 教师 / 家长' },
                 { label: '核心模块', value: '数据导入、综合分析、教师分析、成长报告、绩效比较、应用下载' },
-                { label: '统一口径', value: 'Web、Android 与家长端共用同一套数据和规则' }
+                { label: '统一口径', value: 'Web、Android、Desktop EXE 与家长端共用同一套数据和规则' }
             ],
             sections: [
                 {
@@ -2692,7 +2692,7 @@ const Auth = {
                     copy: '系统既适合办公室 Web，也支持移动端分发与外部查看。',
                     type: 'grid',
                     items: [
-                        { label: 'Web 与 Android', text: '网页端和 APK 共用统一登录入口与主要工作流，便于电脑端和手机端切换。' },
+                        { label: 'Web / Android / Desktop EXE', text: '网页端、安卓 APK 和桌面 EXE 共用统一登录入口与主要工作流，便于办公室电脑、手机和本地桌面端切换。' },
                         { label: '导出与分发', text: '可输出成绩单、成长报告、对比结果与分发版页面，便于班主任或家长查看。' },
                         { label: '云端协同', text: '支持账号同步、数据同步与统一下载入口，版本更新后能继续集中分发 APK。' },
                         { label: '使用建议', text: '每次新考试先导入原始数据并核对阈值，再做分析和绩效比较，结果会更稳定。' }
@@ -2913,7 +2913,7 @@ const Auth = {
             ? {
                 badge: '家长成长入口',
                 authTitle: '统一登录入口',
-                copy: '首页只保留统一入口与下载操作；详细的系统说明、模块、权限和成绩口径已收进右上角“系统介绍”。',
+                copy: '',
                 userLabel: '学生姓名',
                 userPlaceholder: '请输入学生姓名',
                 userHelper: '建议使用学生姓名登录，并完整填写班级信息。',
@@ -2942,7 +2942,7 @@ const Auth = {
             : {
                 badge: '学校工作台',
                 authTitle: '统一登录入口',
-                copy: '首页不再直接展开系统说明；右上角“系统介绍”集中讲清模块、权限、成绩计算和绩效比较，当前区域只保留登录与下载。',
+                copy: '',
                 userLabel: '账号 / 姓名',
                 userPlaceholder: '管理员账号 / 教师姓名',
                 userHelper: '支持管理员、教务、年级、班主任与教师账号登录。',
@@ -2998,7 +2998,12 @@ const Auth = {
         });
 
         if (badgeEl) badgeEl.textContent = config.badge;
-        if (copyEl) copyEl.textContent = config.copy;
+        if (copyEl) {
+            const nextCopy = String(config.copy || '').trim();
+            copyEl.textContent = nextCopy;
+            copyEl.style.display = nextCopy ? '' : 'none';
+            copyEl.setAttribute('aria-hidden', nextCopy ? 'false' : 'true');
+        }
         if (userLabel) userLabel.textContent = config.userLabel;
         if (userInput) userInput.placeholder = config.userPlaceholder;
         if (userHelper) userHelper.textContent = config.userHelper;

@@ -1,0 +1,48 @@
+{
+  "name": "school-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Windows desktop wrapper for SmartEdu Analytics",
+  "main": "main.js",
+  "author": "SmartEdu",
+  "license": "ISC",
+  "scripts": {
+    "sync:web": "powershell -ExecutionPolicy Bypass -File ./scripts/generate-icon.ps1 && node ./scripts/sync-bundle.mjs",
+    "start": "npm run sync:web && electron .",
+    "smoke": "npm run sync:web && electron . --smoke-test",
+    "build:dir": "npm run sync:web && electron-builder --win dir",
+    "build:portable": "npm run sync:web && electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.smartedu.desktop",
+    "productName": "SmartEdu Desktop",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "splash.html",
+      "bundle/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "icon": "bundle/app-icon.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "requestedExecutionLevel": "asInvoker",
+      "artifactName": "smartedu-desktop-${version}-${arch}.${ext}"
+    }
+  },
+  "devDependencies": {
+    "electron": "^36.3.2",
+    "electron-builder": "^26.0.12"
+  }
+}

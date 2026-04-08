@@ -1277,6 +1277,8 @@ body.login-system-intro-open {
 }
 
 :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-brand-block {
+    display: grid !important;
+    gap: 16px !important;
     max-width: 430px !important;
     margin: 0 !important;
     text-align: left !important;
@@ -1299,6 +1301,10 @@ body.login-system-intro-open {
     font-size: 15px !important;
     line-height: 1.78 !important;
     color: #596a84 !important;
+}
+
+:is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) #login-portal-copy[aria-hidden="true"] {
+    display: none !important;
 }
 
 :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-auth-utility {
