@@ -11,7 +11,9 @@
     "start": "npm run sync:web && electron .",
     "smoke": "npm run sync:web && electron . --smoke-test",
     "build:dir": "npm run sync:web && electron-builder --win dir",
-    "build:portable": "npm run sync:web && electron-builder --win portable"
+    "build:installer": "npm run sync:web && electron-builder --win nsis",
+    "build:portable": "npm run sync:web && electron-builder --win portable",
+    "build:win": "npm run build:installer"
   },
   "build": {
     "appId": "com.smartedu.desktop",
@@ -31,7 +33,7 @@
       "icon": "bundle/app-icon.ico",
       "target": [
         {
-          "target": "portable",
+          "target": "nsis",
           "arch": [
             "x64"
           ]
@@ -39,6 +41,17 @@
       ],
       "requestedExecutionLevel": "asInvoker",
       "artifactName": "smartedu-desktop-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "智慧教务管理系统",
+      "installerIcon": "bundle/app-icon.ico",
+      "uninstallerIcon": "bundle/app-icon.ico"
     }
   },
   "devDependencies": {
