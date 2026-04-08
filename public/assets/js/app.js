@@ -2333,7 +2333,48 @@ window.readCompareExamSyncState = readCompareExamSyncState;
 window.setCompareExamSyncState = setCompareExamSyncState;
 window.syncCompareSessionRuntimeState = syncCompareSessionRuntimeState;
 
-const PUBLIC_APK_DOWNLOAD_URL = 'https://schoolsystem.com.cn/downloads/school-system-android-v1.0.apk';
+const PUBLIC_DOWNLOAD_RELEASE_PAGE_URL = 'https://github.com/loru12321/school-system/releases/latest';
+const PUBLIC_DOWNLOAD_CHANNELS = {
+    android: {
+        key: 'android',
+        label: '安卓下载',
+        shortLabel: 'Android APK',
+        badge: '手机 / 平板',
+        icon: 'ti-brand-android',
+        accent: '#22c55e',
+        url: 'https://github.com/loru12321/school-system/releases/latest/download/school-system-android-latest.apk',
+        fileName: 'school-system-android-latest.apk',
+        helper: '适合安卓手机和平板直接安装，安装后沿用现有账号登录。',
+        notes: [
+            '适合教师、班主任、家长与学生在移动端直接打开系统。',
+            '建议在安卓浏览器里下载，安装完成后使用现有账号登录。',
+            '如需统一转发，优先复制当前链接或 release 页面链接。'
+        ]
+    },
+    desktop: {
+        key: 'desktop',
+        label: '桌面端下载',
+        shortLabel: 'Windows EXE',
+        badge: 'Windows 桌面',
+        icon: 'ti-brand-windows',
+        accent: '#60a5fa',
+        url: 'https://github.com/loru12321/school-system/releases/latest/download/smartedu-desktop-windows-latest.exe',
+        fileName: 'smartedu-desktop-windows-latest.exe',
+        helper: '适合 Windows 办公电脑本地打开，内置单实例桌面壳。',
+        notes: [
+            '适合教务处、办公室、机房与固定工位使用。',
+            '双击 EXE 即可打开桌面端，避免反复找浏览器入口。',
+            '桌面端和网页端使用同一套数据口径与登录逻辑。'
+        ]
+    }
+};
+const PUBLIC_APK_DOWNLOAD_URL = PUBLIC_DOWNLOAD_CHANNELS.android.url;
+const PUBLIC_DESKTOP_DOWNLOAD_URL = PUBLIC_DOWNLOAD_CHANNELS.desktop.url;
+
+function getPublicDownloadChannel(type = 'android') {
+    const key = type === 'desktop' ? 'desktop' : 'android';
+    return PUBLIC_DOWNLOAD_CHANNELS[key];
+}
 
 function notifyPublicDownloadAction(message, type = 'success') {
     if (window.UI && typeof window.UI.toast === 'function') {
@@ -2354,12 +2395,21 @@ function notifyPublicDownloadAction(message, type = 'success') {
     console.log(message);
 }
 
+window.PUBLIC_DOWNLOAD_RELEASE_PAGE_URL = PUBLIC_DOWNLOAD_RELEASE_PAGE_URL;
+window.PUBLIC_DOWNLOAD_CHANNELS = PUBLIC_DOWNLOAD_CHANNELS;
 window.PUBLIC_APK_DOWNLOAD_URL = PUBLIC_APK_DOWNLOAD_URL;
-window.copyPublicApkDownloadLink = async function () {
+window.PUBLIC_DESKTOP_DOWNLOAD_URL = PUBLIC_DESKTOP_DOWNLOAD_URL;
+window.copyPublicDownloadLink = async function (type = 'android') {
+    const channel = getPublicDownloadChannel(type);
+    const downloadUrl = String(channel?.url || '').trim();
+    if (!downloadUrl) {
+        notifyPublicDownloadAction('下载链接暂未准备好，请稍后再试', 'error');
+        return false;
+    }
     try {
         if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-            await navigator.clipboard.writeText(PUBLIC_APK_DOWNLOAD_URL);
-            notifyPublicDownloadAction('下载链接已复制');
+            await navigator.clipboard.writeText(downloadUrl);
+            notifyPublicDownloadAction(`${channel?.label || '下载'}链接已复制`);
             return true;
         }
     } catch (error) {
@@ -2367,7 +2417,7 @@ window.copyPublicApkDownloadLink = async function () {
     }
 
     const input = document.createElement('textarea');
-    input.value = PUBLIC_APK_DOWNLOAD_URL;
+    input.value = downloadUrl;
     input.setAttribute('readonly', 'readonly');
     input.style.position = 'fixed';
     input.style.opacity = '0';
@@ -2376,7 +2426,7 @@ window.copyPublicApkDownloadLink = async function () {
 
     try {
         document.execCommand('copy');
-        notifyPublicDownloadAction('下载链接已复制');
+        notifyPublicDownloadAction(`${channel?.label || '下载'}链接已复制`);
         return true;
     } catch (error) {
         console.warn('[login-download] fallback copy failed:', error);
@@ -2385,6 +2435,12 @@ window.copyPublicApkDownloadLink = async function () {
     } finally {
         input.remove();
     }
+};
+window.copyPublicApkDownloadLink = function () {
+    return window.copyPublicDownloadLink('android');
+};
+window.copyPublicDesktopDownloadLink = function () {
+    return window.copyPublicDownloadLink('desktop');
 };
 
 const Auth = {
@@ -2426,25 +2482,65 @@ const Auth = {
         return localStorage.getItem(this.loginPortalStorageKey) === 'parent' ? 'parent' : 'school';
     },
 
+    getPublicDownloadCatalog: function () {
+        const runtimeCatalog = window.PUBLIC_DOWNLOAD_CHANNELS && typeof window.PUBLIC_DOWNLOAD_CHANNELS === 'object'
+            ? window.PUBLIC_DOWNLOAD_CHANNELS
+            : {};
+        return {
+            android: {
+                ...PUBLIC_DOWNLOAD_CHANNELS.android,
+                ...(runtimeCatalog.android || {})
+            },
+            desktop: {
+                ...PUBLIC_DOWNLOAD_CHANNELS.desktop,
+                ...(runtimeCatalog.desktop || {})
+            }
+        };
+    },
+
+    getPublicDownloadChannel: function (type = 'android') {
+        const catalog = this.getPublicDownloadCatalog();
+        return catalog[type === 'desktop' ? 'desktop' : 'android'];
+    },
+
     getPublicApkDownloadUrl: function () {
-        const fallbackUrl = typeof PUBLIC_APK_DOWNLOAD_URL === 'string' ? PUBLIC_APK_DOWNLOAD_URL : '';
-        const runtimeUrl = typeof window.PUBLIC_APK_DOWNLOAD_URL === 'string' ? window.PUBLIC_APK_DOWNLOAD_URL : '';
-        return String(runtimeUrl || fallbackUrl || 'https://schoolsystem.com.cn/downloads/school-system-android-v1.0.apk').trim();
+        return String(this.getPublicDownloadChannel('android')?.url || PUBLIC_APK_DOWNLOAD_URL).trim();
     },
 
     getPublicApkDownloadFileName: function (url = this.getPublicApkDownloadUrl()) {
         const normalizedUrl = String(url || '').split('#')[0].split('?')[0];
         const fileName = normalizedUrl.split('/').filter(Boolean).pop();
-        return fileName || 'school-system-android-v1.0.apk';
+        return fileName || this.getPublicDownloadChannel('android')?.fileName || 'school-system-android-latest.apk';
+    },
+
+    getPublicDesktopDownloadUrl: function () {
+        return String(this.getPublicDownloadChannel('desktop')?.url || PUBLIC_DESKTOP_DOWNLOAD_URL).trim();
+    },
+
+    getPublicDesktopDownloadFileName: function (url = this.getPublicDesktopDownloadUrl()) {
+        const normalizedUrl = String(url || '').split('#')[0].split('?')[0];
+        const fileName = normalizedUrl.split('/').filter(Boolean).pop();
+        return fileName || this.getPublicDownloadChannel('desktop')?.fileName || 'smartedu-desktop-windows-latest.exe';
     },
 
     syncPublicDownloadLinks: function () {
-        const downloadUrl = this.getPublicApkDownloadUrl();
-        const fileName = this.getPublicApkDownloadFileName(downloadUrl);
-        document.querySelectorAll('.login-system-download-link, .login-stage-tertiary-action').forEach((link) => {
+        const linkMap = {
+            android: {
+                url: this.getPublicApkDownloadUrl(),
+                fileName: this.getPublicApkDownloadFileName()
+            },
+            desktop: {
+                url: this.getPublicDesktopDownloadUrl(),
+                fileName: this.getPublicDesktopDownloadFileName()
+            }
+        };
+        document.querySelectorAll('[data-public-download]').forEach((link) => {
             if (!(link instanceof HTMLAnchorElement)) return;
-            link.href = downloadUrl;
-            link.setAttribute('download', fileName);
+            const type = link.dataset.publicDownload === 'desktop' ? 'desktop' : 'android';
+            const config = linkMap[type];
+            if (!config?.url) return;
+            link.href = config.url;
+            link.setAttribute('download', config.fileName);
         });
     },
 
@@ -2462,6 +2558,7 @@ const Auth = {
         if (!overlay || !panel) return;
         this.syncPublicDownloadLinks();
         this.ensureSystemIntroModal();
+        this.ensureDownloadHubModal();
 
         if (modalBackdrop && modalBackdrop.dataset.loginModalBound !== 'true') {
             modalBackdrop.addEventListener('click', (event) => {
@@ -2496,12 +2593,14 @@ const Auth = {
         }
 
         if (downloadLink) {
-            const downloadUrl = this.getPublicApkDownloadUrl();
             downloadLink.textContent = '应用下载';
-            downloadLink.href = downloadUrl;
-            downloadLink.setAttribute('download', this.getPublicApkDownloadFileName(downloadUrl));
+            downloadLink.href = '#';
             downloadLink.dataset.nav = 'download';
-            downloadLink.onclick = null;
+            downloadLink.removeAttribute('download');
+            downloadLink.onclick = (event) => {
+                event.preventDefault();
+                this.openDownloadHubModal('android');
+            };
         }
 
         if (modalLink) {
@@ -2604,6 +2703,128 @@ const Auth = {
         return backdrop;
     },
 
+    ensureDownloadHubModal: function () {
+        const overlay = document.getElementById('login-overlay');
+        if (!overlay) return null;
+
+        let backdrop = document.getElementById('login-download-hub-backdrop');
+        if (!backdrop) {
+            backdrop = document.createElement('div');
+            backdrop.id = 'login-download-hub-backdrop';
+            backdrop.className = 'login-download-hub-backdrop';
+            backdrop.style.display = 'none';
+            backdrop.setAttribute('aria-hidden', 'true');
+            backdrop.innerHTML = `
+                <div class="login-download-hub-dialog" role="dialog" aria-modal="true" aria-labelledby="login-download-hub-title">
+                    <div class="login-download-hub-shell">
+                        <div class="login-download-hub-top">
+                            <span class="login-download-hub-chip">应用下载</span>
+                            <button type="button" class="login-download-hub-close" data-download-close aria-label="关闭应用下载">
+                                <i class="ti ti-x"></i>
+                            </button>
+                        </div>
+                        <div class="login-download-hub-brand">
+                            <h2 id="login-download-hub-title" tabindex="-1">Android 与桌面端统一下载中心</h2>
+                            <p>先选平台，再复制链接或直接下载；安卓 APK 和 Windows EXE 都跟随最新 GitHub release 更新。</p>
+                        </div>
+                        <div class="login-download-hub-platforms" data-download-platforms></div>
+                        <div class="login-download-hub-detail" data-download-detail></div>
+                    </div>
+                </div>
+            `;
+            overlay.appendChild(backdrop);
+        }
+
+        if (backdrop.dataset.downloadBound !== 'true') {
+            backdrop.addEventListener('click', (event) => {
+                if (event.target === backdrop) this.closeDownloadHubModal();
+            });
+            const closeButton = backdrop.querySelector('[data-download-close]');
+            if (closeButton) {
+                closeButton.addEventListener('click', () => this.closeDownloadHubModal());
+            }
+            backdrop.dataset.downloadBound = 'true';
+        }
+
+        return backdrop;
+    },
+
+    renderDownloadHubModal: function (type = 'android') {
+        const backdrop = this.ensureDownloadHubModal();
+        if (!backdrop) return null;
+
+        const channels = ['android', 'desktop']
+            .map((key) => this.getPublicDownloadChannel(key))
+            .filter(Boolean);
+        const activeType = type === 'desktop' ? 'desktop' : 'android';
+        const activeChannel = this.getPublicDownloadChannel(activeType);
+        const platformWrap = backdrop.querySelector('[data-download-platforms]');
+        const detailWrap = backdrop.querySelector('[data-download-detail]');
+
+        if (platformWrap) {
+            platformWrap.innerHTML = channels.map((channel) => `
+                <button
+                    type="button"
+                    class="login-download-hub-platform${channel.key === activeType ? ' is-active' : ''}"
+                    data-download-platform="${channel.key}"
+                    style="--download-accent:${channel.accent || '#22c55e'};"
+                >
+                    <span class="login-download-hub-platform-icon"><i class="ti ${channel.icon || 'ti-download'}"></i></span>
+                    <span class="login-download-hub-platform-copy">
+                        <strong>${channel.label}</strong>
+                        <span>${channel.badge || ''}</span>
+                    </span>
+                </button>
+            `).join('');
+
+            platformWrap.querySelectorAll('[data-download-platform]').forEach((button) => {
+                button.addEventListener('click', () => this.renderDownloadHubModal(button.dataset.downloadPlatform || 'android'));
+            });
+        }
+
+        if (detailWrap && activeChannel) {
+            const notes = Array.isArray(activeChannel.notes) ? activeChannel.notes : [];
+            detailWrap.innerHTML = `
+                <div class="login-download-hub-card" style="--download-accent:${activeChannel.accent || '#22c55e'};">
+                    <div class="login-download-hub-card-head">
+                        <div>
+                            <span class="login-download-hub-card-kicker">${activeChannel.shortLabel || activeChannel.label}</span>
+                            <h3>${activeChannel.badge || activeChannel.label}</h3>
+                        </div>
+                        <span class="login-download-hub-card-badge">Latest</span>
+                    </div>
+                    <p class="login-download-hub-card-copy">${activeChannel.helper || ''}</p>
+                    <div class="login-download-hub-link">
+                        <input type="text" readonly value="${activeChannel.url || ''}" />
+                    </div>
+                    <div class="login-download-hub-actions">
+                        <a class="btn btn-blue" href="${activeChannel.url || '#'}" download="${activeChannel.fileName || ''}">
+                            <i class="ti ti-download"></i> 直接下载
+                        </a>
+                        <button type="button" class="btn btn-gray" data-download-copy="${activeChannel.key}">
+                            <i class="ti ti-copy"></i> 复制链接
+                        </button>
+                        <a class="btn btn-green" href="${PUBLIC_DOWNLOAD_RELEASE_PAGE_URL}" target="_blank" rel="noopener">
+                            <i class="ti ti-brand-github"></i> 查看 Release
+                        </a>
+                    </div>
+                    <div class="login-download-hub-note-list">
+                        ${notes.map((note) => `<span>${note}</span>`).join('')}
+                    </div>
+                </div>
+            `;
+
+            const copyButton = detailWrap.querySelector('[data-download-copy]');
+            if (copyButton) {
+                copyButton.addEventListener('click', () => {
+                    window.copyPublicDownloadLink?.(copyButton.dataset.downloadCopy || activeType);
+                });
+            }
+        }
+
+        return backdrop;
+    },
+
     getSystemIntroContent: function (portal = this.getLoginPortal()) {
         const nextPortal = portal === 'parent' ? 'parent' : 'school';
         const spotlight = nextPortal === 'parent'
@@ -2650,7 +2871,7 @@ const Auth = {
                         { label: '教师分析 / 教学评价', text: '结合任课表、历史基线和联考口径比较教师学科绩效。' },
                         { label: '学生详情 / 成长报告', text: '查看单个学生成绩、排名变化、报告卡和家长端展示结果。' },
                         { label: '横向对比 / 绩效比较', text: '按学校、班级、教师、学科和多次考试做同口径比较。' },
-                        { label: '应用下载中心 / 系统维护', text: '统一分发 APK，维护账号、权限、版本信息与云端同步。' }
+                        { label: '应用下载中心 / 系统维护', text: '统一分发 Android APK 与桌面端 EXE，维护账号、权限、版本信息与云端同步。' }
                     ]
                 },
                 {
@@ -2784,10 +3005,43 @@ const Auth = {
         return backdrop;
     },
 
+    openDownloadHubModal: function (type = 'android') {
+        this.ensureLoginWorkbench();
+        this.closeSystemIntroModal();
+        this.closeLoginPortalModal();
+        const backdrop = this.renderDownloadHubModal(type);
+        if (backdrop) {
+            backdrop.style.display = 'flex';
+            backdrop.setAttribute('aria-hidden', 'false');
+        }
+        document.body.classList.add('login-download-hub-open');
+        this.setLoginWorkbenchNavState('download');
+        setTimeout(() => {
+            const title = backdrop?.querySelector('#login-download-hub-title');
+            if (title && typeof title.focus === 'function') {
+                title.focus({ preventScroll: true });
+            }
+        }, 60);
+        return type === 'desktop' ? 'desktop' : 'android';
+    },
+
+    closeDownloadHubModal: function () {
+        const backdrop = document.getElementById('login-download-hub-backdrop');
+        if (backdrop) {
+            backdrop.style.display = 'none';
+            backdrop.setAttribute('aria-hidden', 'true');
+        }
+        document.body.classList.remove('login-download-hub-open');
+        if (!document.body.classList.contains('login-system-intro-open')) {
+            this.setLoginWorkbenchNavState('modal');
+        }
+    },
+
     openSystemIntroModal: function (portal) {
         this.ensureLoginWorkbench();
         this.ensureSystemIntroModal();
         const nextPortal = this.setLoginPortal(portal || this.getLoginPortal());
+        this.closeDownloadHubModal();
         this.closeLoginPortalModal();
         const backdrop = this.renderSystemIntroModal(nextPortal);
         if (backdrop) {
@@ -2818,6 +3072,7 @@ const Auth = {
     openLoginPortalModal: function (portal) {
         this.ensureLoginWorkbench();
         this.closeSystemIntroModal();
+        this.closeDownloadHubModal();
         const nextPortal = this.setLoginPortal(portal);
         const overlay = document.getElementById('login-overlay');
         const backdrop = document.getElementById('login-modal-backdrop');
@@ -2853,6 +3108,7 @@ const Auth = {
         const overlay = document.getElementById('login-overlay');
         const app = document.getElementById('app');
         this.closeSystemIntroModal();
+        this.closeDownloadHubModal();
         this.closeLoginPortalModal();
         if (visible) {
             this.syncParentMobileScrollRoot(false);
@@ -2926,12 +3182,12 @@ const Auth = {
                 stageCopy: '把介绍、下载与登录拆成三种清楚动作，首页更干净，移动端也不会堆叠重复窗口。',
                 stageMeta: [
                     { icon: 'ti ti-heart-handshake', text: '成长报告 / 成绩查询 / 家校提醒' },
-                    { icon: 'ti ti-device-mobile', text: '手机与电脑使用同一套入口' },
+                    { icon: 'ti ti-devices', text: '手机、安卓与桌面端共用同一套入口' },
                     { icon: 'ti ti-sparkles', text: '当前稳定版 v1.0 · 2026-04-08' }
                 ],
                 launchKicker: '登录窗口',
                 launchCopy: '先选择角色，再打开唯一登录窗口；需要了解流程、权限和成绩规则时，从右上角进入“系统介绍”。',
-                launchNote: '点击“应用下载”会直接下载 APK；点击“系统介绍”可查看模块说明、角色权限、成绩计算与绩效比较。',
+                launchNote: '点击“应用下载”会打开下载中心，可在里面切换安卓下载与桌面端下载，并复制对应链接。',
                 stageFeatureTitle: '家长端聚焦成绩查询、成长报告与关键提醒',
                 stageFeatureCopy: '说明内容不再直接压在首页，浏览路径更顺，手机上也能更快进入登录动作。',
                 modalChip: '家长端登录窗口',
@@ -2955,12 +3211,12 @@ const Auth = {
                 stageCopy: '把说明内容藏进独立弹窗，把登录动作收回唯一窗口，让首屏更像正式产品首页而不是信息堆叠页。',
                 stageMeta: [
                     { icon: 'ti ti-layout-dashboard', text: '教学分析 / 数据维护 / 学校工作台' },
-                    { icon: 'ti ti-device-mobile', text: 'Web 与 Android 共用入口逻辑' },
+                    { icon: 'ti ti-devices', text: 'Web、Android 与 Desktop 共用入口逻辑' },
                     { icon: 'ti ti-sparkles', text: '当前稳定版 v1.0 · 2026-04-08' }
                 ],
                 launchKicker: '登录窗口',
                 launchCopy: '按角色选择学校端或家长端，再在唯一登录窗口中完成验证；系统介绍已移到右上角独立弹窗。',
-                launchNote: '系统介绍会完整说明模块结构、角色权限、成绩计算和绩效比较逻辑，首页不再重复铺开。',
+                launchNote: '应用下载会打开双端下载中心，系统介绍会完整说明模块结构、角色权限、成绩计算和绩效比较逻辑。',
                 stageFeatureTitle: '一屏直达成绩分析、教学管理、质量预警与数据维护',
                 stageFeatureCopy: '首屏保留强入口和关键价值点，详细说明延后到独立弹窗，整体层次更清爽也更接近国际化产品首页。',
                 modalChip: '学校端登录窗口',
@@ -21927,15 +22183,15 @@ const SYSTEM_MANUAL = {
     },
     'app-download-center': {
         title: '📱 应用下载中心·使用说明',
-        fit: `用于<strong>统一分发安卓 APK</strong>，集中查看安装包、版本信息、安装步骤和更新记录。`,
-        when: `需要把 APK 发给教师、班主任、家长或学生，或确认当前移动端版本时使用。`,
+        fit: `用于<strong>统一分发安卓 APK 与桌面 EXE</strong>，集中查看平台链接、版本说明和 release 记录。`,
+        when: `需要把安卓版或 Windows 桌面端发给教师、班主任、家长或办公室电脑时使用。`,
         use: `<ul>
-                    <li><strong>直接下载：</strong>点击页面中的“下载 APK”即可获取当前安装包，适合网页端统一分发。</li>
-                    <li><strong>查看版本：</strong>同页可查看版本号、包名、更新时间、安装包大小与 SHA-256 校验值。</li>
-                    <li><strong>安装说明：</strong>页面右侧提供安装步骤和升级说明，便于在安卓手机上直接完成安装。</li>
-                    <li><strong>后续更新：</strong>当 APK 版本更新时，可继续在本页面集中查看更新记录与新版下载入口。</li>
+                    <li><strong>先选平台：</strong>点击 Android 或 Desktop 卡片，页面会切换成对应的下载入口和说明。</li>
+                    <li><strong>复制链接：</strong>可以直接复制当前平台链接，再统一发到群或发给对应设备使用者。</li>
+                    <li><strong>查看 release：</strong>同页可跳转 GitHub release，确认最新 APK 和 EXE 是否已经更新。</li>
+                    <li><strong>后续更新：</strong>后面每次发新版，只需要替换最新 release 资产即可继续沿用同一入口。</li>
                   </ul>`,
-        calc: `当前页展示的是安装包的版本信息，不参与成绩计算；其中 SHA-256 可用于校验安装包是否完整。`
+        calc: `当前页展示的是下载入口和分发说明，不参与成绩计算；安卓包和桌面端都以最新 release 资产为准。`
     },
     'macro': {
         title: '🏆 镇域宏观横向评价·算法说明',

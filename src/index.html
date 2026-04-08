@@ -285,22 +285,22 @@
                             onclick="window.Auth?.openLoginPortalModal('parent')">
                             <i class="ti ti-heart-handshake"></i> 家长端登录
                         </button>
-                        <a class="login-stage-tertiary-action"
-                            href="https://schoolsystem.com.cn/downloads/school-system-android-v1.0.apk"
-                            download="school-system-android-v1.0.apk">
-                            <i class="ti ti-download"></i> 下载 Android 应用
-                        </a>
+                        <button type="button" class="login-stage-tertiary-action"
+                            onclick="window.Auth?.openDownloadHubModal('android')">
+                            <i class="ti ti-download"></i> 打开应用下载
+                        </button>
                     </div>
                     <div class="login-stage-meta">
-                        <span><i class="ti ti-device-laptop"></i> Web 与 Android 统一入口</span>
+                        <span><i class="ti ti-device-laptop"></i> Web / Android / Desktop 统一入口</span>
                         <span><i class="ti ti-sparkles"></i> 当前版本 v1.0 · 2026-04-08</span>
                     </div>
                     <div class="login-stage-platforms" aria-label="支持终端">
                         <span><i class="ti ti-device-desktop"></i> Web</span>
                         <span><i class="ti ti-device-mobile"></i> Android</span>
+                        <span><i class="ti ti-brand-windows"></i> Desktop EXE</span>
                         <span><i class="ti ti-chart-bar"></i> 教学分析</span>
                         <span><i class="ti ti-users-group"></i> 家校协同</span>
-                        <span><i class="ti ti-cloud-up"></i> 云端同步</span>
+                        <span><i class="ti ti-cloud-up"></i> Release 统一分发</span>
                     </div>
                 </div>
 
@@ -338,14 +338,13 @@
                         <p id="login-portal-copy">选择学校端或家长端，在弹窗里完成登录验证。</p>
                     </div>
                     <div class="login-auth-utility" id="app-download">
-                        <a class="login-system-download-link"
-                            href="https://schoolsystem.com.cn/downloads/school-system-android-v1.0.apk"
-                            download="school-system-android-v1.0.apk">
-                            <i class="ti ti-download"></i> 下载 APK
-                        </a>
+                        <button type="button" class="login-system-download-link"
+                            onclick="window.Auth?.openDownloadHubModal('android')">
+                            <i class="ti ti-download"></i> 打开下载中心
+                        </button>
                         <button type="button" class="login-system-download-ghost"
-                            onclick="window.copyPublicApkDownloadLink?.()">
-                            <i class="ti ti-link"></i> 复制下载链接
+                            onclick="window.copyPublicDownloadLink?.('android')">
+                            <i class="ti ti-link"></i> 复制安卓链接
                         </button>
                     </div>
                 </div>
@@ -5025,66 +5024,80 @@
         </script>
 
         <script type="text/html" id="lazy-section-template-app-download-center">
-<div id="app-download-center" class="section card-box analysis-workspace analysis-workspace-version">
-                <div class="module-desc-bar analysis-hero" style="border-color:#2563eb;">
-                    <h3><i class="ti ti-device-mobile"></i> 应用下载中心 <span class="badge" style="background:#2563eb;">Android APK</span></h3>
-                    <p><strong>一句话目的：</strong>在网页端统一查看安卓安装包、版本说明、安装步骤与更新记录。</p>
-                    <p><strong>推荐顺序：</strong>先核对版本与安装说明，再下载安装，安装后按现有账号直接登录系统。</p>
+            <div id="app-download-center" class="section card-box analysis-workspace analysis-workspace-version">
+                <div class="module-desc-bar analysis-hero" style="border-color:#16a34a;">
+                    <h3><i class="ti ti-download"></i> 应用下载中心 <span class="badge" style="background:#16a34a;">Android + Desktop</span></h3>
+                    <p><strong>一句话目的：</strong>在同一个入口里统一分发安卓 APK 和 Windows 桌面 EXE。</p>
+                    <p><strong>推荐顺序：</strong>先选择终端，再复制链接或直接下载；如需统一转发，优先使用 GitHub release 最新链接。</p>
                     <div class="analysis-scan-strip">
                         <div class="analysis-scan-item">
-                            <span class="analysis-scan-label">Package</span>
-                            <strong class="analysis-scan-value">APK / Android</strong>
-                            <span class="analysis-scan-note">统一从网页端下载安装包，减少群聊反复发送和版本混用。</span>
+                            <span class="analysis-scan-label">Platform</span>
+                            <strong class="analysis-scan-value">Android / Desktop</strong>
+                            <span class="analysis-scan-note">同一页面切换安卓下载与桌面端下载，避免手机包和电脑包发混。</span>
                         </div>
                         <div class="analysis-scan-item">
-                            <span class="analysis-scan-label">Update</span>
-                            <strong class="analysis-scan-value">版本 / 更新记录</strong>
-                            <span class="analysis-scan-note">同页查看版本号、更新时间、安装包大小、更新说明和校验信息。</span>
+                            <span class="analysis-scan-label">Release</span>
+                            <strong class="analysis-scan-value">Latest GitHub Release</strong>
+                            <span class="analysis-scan-note">网页版入口、APK 与 EXE 会统一跟随最新 release 更新。</span>
                         </div>
                         <div class="analysis-scan-item">
-                            <span class="analysis-scan-label">Install</span>
-                            <strong class="analysis-scan-value">说明 / 校验 / 升级</strong>
-                            <span class="analysis-scan-note">适合给教师、班主任、家长和学生统一分发安卓安装版。</span>
+                            <span class="analysis-scan-label">Delivery</span>
+                            <strong class="analysis-scan-value">链接 / 说明 / 分发</strong>
+                            <span class="analysis-scan-note">先点平台卡片，再拿对应链接，适合学校统一转发给教师和电脑端使用者。</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="sec-head analysis-shell-head">
-                    <h2><i class="ti ti-download"></i> Android 安装包下载与版本说明</h2>
+                <div class="sec-head analysis-shell-head app-download-shell-head">
+                    <h2><i class="ti ti-download"></i> 双端下载分发中心</h2>
                     <div class="analysis-action-stack">
-                        <div class="analysis-action-note">当前页面会同步展示 APK 下载入口、版本信息、安装步骤、更新记录和 SHA-256 校验值，便于网页端统一分发。</div>
-                        <div class="analysis-actions">
-                            <a id="app-download-primary-link" class="btn btn-blue" href="./downloads/school-system-android-v1.0.apk" download="school-system-android-v1.0.apk" data-app-download-primary="true"><i class="ti ti-download"></i> 下载 APK</a>
-                            <button type="button" class="btn btn-gray" id="app-download-copy-link"><i class="ti ti-link"></i> 复制下载链接</button>
-                        </div>
+                        <div class="analysis-action-note">保留安卓 APK 与桌面端 EXE 的统一入口，同时继续兼容现有模块冒烟与巡检校验。</div>
                     </div>
                 </div>
 
-                <div class="info-bar analysis-info-band app-download-summary-note">
-                    <span id="app-download-summary">下载中心会同步展示 APK 包、版本信息、更新记录、安装方式和校验值，方便统一分发与升级。</span>
-                    <code id="app-download-short-checksum">1633EFAAD554...56C45DD4</code>
-                </div>
-
-                <div class="app-download-layout">
-                    <section class="app-download-hero-panel">
-                        <div class="app-download-hero-copy">
-                            <span class="app-download-kicker">SmartEdu Analytics</span>
-                            <h2 id="app-download-hero-title">把学校工作台装进随身设备</h2>
-                            <p id="app-download-hero-copy">Android 版延续网页端同一套账号与模块入口，适合在教室、办公室、会议和家校沟通场景下直接打开系统。</p>
+                <section class="app-download-stage">
+                    <div class="app-download-stage-surface">
+                        <div class="app-download-stage-head">
+                            <span class="app-download-kicker">Unified Download Hub</span>
+                            <h2 id="app-download-hero-title">一个入口，同时分发安卓与桌面端</h2>
+                            <p id="app-download-hero-copy">点击下方平台卡片，即可切换 Android APK 与 Windows EXE 的对应下载链接。</p>
                         </div>
-                        <div id="app-download-meta-grid" class="app-download-meta-grid"></div>
+
+                        <div id="app-download-platform-grid" class="app-download-platform-grid"></div>
+
+                        <div class="app-download-stage-actions">
+                            <a id="app-download-primary-link" class="btn btn-blue" href="https://github.com/loru12321/school-system/releases/latest/download/school-system-android-latest.apk" download="school-system-android-latest.apk" data-app-download-primary="true"><i class="ti ti-download"></i> 下载当前版本</a>
+                            <button type="button" class="btn btn-gray" id="app-download-copy-link"><i class="ti ti-link"></i> 复制下载链接</button>
+                            <a id="app-download-release-link" class="btn btn-green" href="https://github.com/loru12321/school-system/releases/latest" target="_blank" rel="noopener"><i class="ti ti-brand-github"></i> 查看 Release</a>
+                        </div>
+
                         <div class="app-download-linkbar">
-                            <label>直接下载链接</label>
+                            <label>当前下载链接</label>
                             <div class="app-download-linkfield">
-                                <input id="app-download-link-input" type="text" readonly value="./downloads/school-system-android-v1.0.apk">
+                                <input id="app-download-link-input" type="text" readonly value="https://github.com/loru12321/school-system/releases/latest/download/school-system-android-latest.apk">
                                 <button type="button" class="btn btn-gray" onclick="copyAppDownloadLink()"><i class="ti ti-copy"></i> 复制</button>
                             </div>
                         </div>
+
+                        <div class="info-bar analysis-info-band app-download-summary-note">
+                            <span id="app-download-summary">当前页会跟随所选平台切换对应的下载链接、分发说明、安装步骤和更新记录。</span>
+                            <code id="app-download-short-checksum">Android / Desktop</code>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="app-download-layout">
+                    <section class="app-download-panel">
+                        <div class="analysis-section-head">
+                            <h3>当前平台概览</h3>
+                            <span>Selected Platform</span>
+                        </div>
+                        <div id="app-download-meta-grid" class="app-download-meta-grid"></div>
                     </section>
 
                     <aside class="app-download-side-panel">
                         <div class="app-download-side-card">
-                            <h3>安装步骤</h3>
+                            <h3>安装 / 打开步骤</h3>
                             <ol id="app-download-install-list" style="padding:0; margin:0; list-style:none;"></ol>
                         </div>
                         <div class="app-download-side-card">
@@ -5097,8 +5110,8 @@
                 <div class="app-download-section-grid">
                     <section class="app-download-panel">
                         <div class="analysis-section-head">
-                            <h3>核心能力</h3>
-                            <span>Mobile Ready</span>
+                            <h3>为什么这样分发</h3>
+                            <span>Delivery Logic</span>
                         </div>
                         <div id="app-download-feature-grid" class="app-download-feature-grid"></div>
                     </section>
@@ -5113,10 +5126,10 @@
 
                 <section class="app-download-panel">
                     <div class="analysis-section-head">
-                        <h3>版本信息与校验</h3>
+                        <h3>版本信息与链接</h3>
                         <div class="analysis-actions">
-                            <a id="app-download-secondary-link" class="btn btn-blue" href="./downloads/school-system-android-v1.0.apk" download="school-system-android-v1.0.apk"><i class="ti ti-download"></i> 重新下载</a>
-                            <button type="button" class="btn btn-gray" id="app-download-copy-checksum"><i class="ti ti-shield-check"></i> 复制校验值</button>
+                            <a id="app-download-secondary-link" class="btn btn-blue" href="https://github.com/loru12321/school-system/releases/latest/download/school-system-android-latest.apk" download="school-system-android-latest.apk"><i class="ti ti-download"></i> 打开当前下载</a>
+                            <button type="button" class="btn btn-gray" id="app-download-copy-checksum"><i class="ti ti-copy"></i> 复制当前说明</button>
                         </div>
                     </div>
                     <div id="app-download-spec-grid" class="app-download-spec-grid"></div>

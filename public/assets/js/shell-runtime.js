@@ -93,9 +93,9 @@
             color: '#2563eb',
             icon: 'ti-device-mobile',
             eyebrow: 'App Hub',
-            summary: '\u96c6\u4e2d\u67e5\u770b Android APK \u5b89\u88c5\u5305\u3001\u7248\u672c\u66f4\u65b0\u548c\u5b89\u88c5\u6307\u5f15\u3002',
+            summary: '\u96c6\u4e2d\u67e5\u770b Android APK \u4e0e Windows EXE \u4e0b\u8f7d\u5165\u53e3\u3001release \u66f4\u65b0\u548c\u5206\u53d1\u8bf4\u660e\u3002',
             items: [
-                { id: 'app-download-center', icon: 'ti-download', text: '\u5e94\u7528\u4e0b\u8f7d\u4e2d\u5fc3', hint: '\u53ef\u4ee5\u76f4\u63a5\u4e0b\u8f7d APK\uff0c\u67e5\u770b\u529f\u80fd\u4ecb\u7ecd\u3001\u7248\u672c\u8bb0\u5f55\u548c\u5b89\u88c5\u65b9\u5f0f\u3002' }
+                { id: 'app-download-center', icon: 'ti-download', text: '\u5e94\u7528\u4e0b\u8f7d\u4e2d\u5fc3', hint: '\u53ef\u4ee5\u5728\u540c\u4e00\u5165\u53e3\u5207\u6362 Android \u4e0e Windows \u4e0b\u8f7d\uff0c\u590d\u5236\u5bf9\u5e94\u94fe\u63a5\u5e76\u67e5\u770b release \u8bf4\u660e\u3002' }
             ]
         }
     };
