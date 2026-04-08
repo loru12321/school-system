@@ -1570,6 +1570,7 @@ body.login-system-intro-open :is(#login-overlay[data-login-layout="qq-fullscreen
     max-height: min(88vh, 920px) !important;
     display: grid !important;
     grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.18fr) !important;
+    align-items: stretch !important;
     gap: 20px !important;
     margin: 0 !important;
     padding: 24px !important;
@@ -1584,6 +1585,7 @@ body.login-system-intro-open :is(#login-overlay[data-login-layout="qq-fullscreen
     display: grid !important;
     gap: 18px !important;
     align-content: start !important;
+    min-height: 0 !important;
     padding: 24px !important;
     border-radius: 28px !important;
     background:
@@ -1705,7 +1707,10 @@ body.login-system-intro-open :is(#login-overlay[data-login-layout="qq-fullscreen
 
 :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-system-intro-body {
     min-height: 0 !important;
+    max-height: 100% !important;
     overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
     padding-right: 8px !important;
     display: grid !important;
     gap: 16px !important;
@@ -1828,6 +1833,7 @@ body.login-system-intro-open :is(#login-overlay[data-login-layout="qq-fullscreen
     }
 
     :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) > #login-system-intro-backdrop .login-system-intro-dialog {
+        grid-template-rows: auto minmax(0, 1fr) !important;
         grid-template-columns: 1fr !important;
         width: min(900px, calc(100vw - 40px)) !important;
         max-width: min(900px, calc(100vw - 40px)) !important;
@@ -1877,7 +1883,11 @@ body.login-system-intro-open :is(#login-overlay[data-login-layout="qq-fullscreen
         width: 100% !important;
         max-width: 100% !important;
         max-height: min(90vh, 960px) !important;
+        grid-template-rows: auto minmax(0, 1fr) !important;
         grid-template-columns: 1fr !important;
+        overflow-y: auto !important;
+        overscroll-behavior: contain !important;
+        -webkit-overflow-scrolling: touch !important;
         padding: 16px !important;
         border-radius: 28px !important;
     }
@@ -1895,6 +1905,12 @@ body.login-system-intro-open :is(#login-overlay[data-login-layout="qq-fullscreen
     :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-system-intro-role-row {
         grid-template-columns: 1fr !important;
         gap: 10px !important;
+    }
+
+    :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-system-intro-body {
+        max-height: none !important;
+        overflow: visible !important;
+        padding-right: 0 !important;
     }
 
     :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-system-intro-section-head {
@@ -1949,6 +1965,10 @@ body.login-system-intro-open :is(#login-overlay[data-login-layout="qq-fullscreen
         width: 100% !important;
         max-width: 100% !important;
         max-height: min(92vh, 1000px) !important;
+        grid-template-rows: auto minmax(0, 1fr) !important;
+        overflow-y: auto !important;
+        overscroll-behavior: contain !important;
+        -webkit-overflow-scrolling: touch !important;
         padding: 12px !important;
         border-radius: 28px !important;
     }
@@ -1963,6 +1983,8 @@ body.login-system-intro-open :is(#login-overlay[data-login-layout="qq-fullscreen
     }
 
     :is(#login-overlay[data-login-layout="qq-fullscreen"], body[data-platform-shell="apple"] #login-overlay[data-login-layout="qq-fullscreen"]) .login-system-intro-body {
+        max-height: none !important;
+        overflow: visible !important;
         padding-right: 0 !important;
     }
 
