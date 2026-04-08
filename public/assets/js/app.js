@@ -2461,6 +2461,7 @@ const Auth = {
         const modalBackdrop = document.getElementById('login-modal-backdrop');
         if (!overlay || !panel) return;
         this.syncPublicDownloadLinks();
+        this.ensureSystemIntroModal();
 
         if (modalBackdrop && modalBackdrop.dataset.loginModalBound !== 'true') {
             modalBackdrop.addEventListener('click', (event) => {
@@ -2486,14 +2487,11 @@ const Auth = {
 
         if (introLink) {
             introLink.textContent = '系统介绍';
-            introLink.href = '#login-auth-facts';
+            introLink.href = '#';
             introLink.dataset.nav = 'intro';
             introLink.onclick = (event) => {
                 event.preventDefault();
-                const target = document.getElementById('login-auth-facts') || document.querySelector('.login-auth-head');
-                if (target && typeof target.scrollIntoView === 'function') {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
-                }
+                this.openSystemIntroModal(this.getLoginPortal());
             };
         }
 
@@ -2525,6 +2523,7 @@ const Auth = {
         if (!overlay.dataset.loginModal || overlay.dataset.loginModal === 'inline') {
             overlay.dataset.loginModal = 'closed';
         }
+        this.setLoginWorkbenchNavState(document.body.classList.contains('login-system-intro-open') ? 'intro' : 'modal');
         panel.dataset.loginWorkbenchReady = 'true';
     },
 
@@ -2546,8 +2545,279 @@ const Auth = {
         }, typeof options.delay === 'number' ? options.delay : 60);
     },
 
+    setLoginWorkbenchNavState: function (activeNav = 'modal') {
+        const overlay = document.getElementById('login-overlay');
+        if (!overlay) return;
+        overlay.querySelectorAll('.login-stage-nav-links a[data-nav]').forEach((link) => {
+            link.classList.toggle('active', link.dataset.nav === activeNav);
+        });
+    },
+
+    ensureSystemIntroModal: function () {
+        const overlay = document.getElementById('login-overlay');
+        if (!overlay) return null;
+
+        let backdrop = document.getElementById('login-system-intro-backdrop');
+        if (!backdrop) {
+            backdrop = document.createElement('div');
+            backdrop.id = 'login-system-intro-backdrop';
+            backdrop.className = 'login-system-intro-backdrop';
+            backdrop.style.display = 'none';
+            backdrop.setAttribute('aria-hidden', 'true');
+            backdrop.innerHTML = `
+                <div class="login-system-intro-dialog" role="dialog" aria-modal="true" aria-labelledby="login-system-intro-title">
+                    <div class="login-system-intro-hero">
+                        <div class="login-system-intro-top">
+                            <span class="login-system-intro-chip" data-intro-chip>系统介绍</span>
+                            <button type="button" class="login-system-intro-close" data-intro-close aria-label="关闭系统介绍">
+                                <i class="ti ti-x"></i>
+                            </button>
+                        </div>
+                        <div class="login-system-intro-copy-block">
+                            <h2 id="login-system-intro-title" class="login-system-intro-title" data-intro-title tabindex="-1">系统介绍</h2>
+                            <p class="login-system-intro-copy" data-intro-copy></p>
+                        </div>
+                        <section class="login-system-intro-focus" aria-label="当前入口重点">
+                            <span class="login-system-intro-focus-label" data-intro-focus-label></span>
+                            <strong class="login-system-intro-focus-title" data-intro-focus-title></strong>
+                            <p class="login-system-intro-focus-copy" data-intro-focus-copy></p>
+                        </section>
+                        <div class="login-system-intro-quickstats" data-intro-quickstats></div>
+                    </div>
+                    <div class="login-system-intro-body" data-intro-body></div>
+                </div>
+            `;
+            overlay.appendChild(backdrop);
+        }
+
+        if (backdrop.dataset.introBound !== 'true') {
+            backdrop.addEventListener('click', (event) => {
+                if (event.target === backdrop) this.closeSystemIntroModal();
+            });
+            const closeButton = backdrop.querySelector('[data-intro-close]');
+            if (closeButton) {
+                closeButton.addEventListener('click', () => this.closeSystemIntroModal());
+            }
+            backdrop.dataset.introBound = 'true';
+        }
+
+        return backdrop;
+    },
+
+    getSystemIntroContent: function (portal = this.getLoginPortal()) {
+        const nextPortal = portal === 'parent' ? 'parent' : 'school';
+        const spotlight = nextPortal === 'parent'
+            ? {
+                label: '当前入口重点',
+                title: '家长端只看学生个人成绩、成长报告与关键提醒',
+                copy: '无论从家长端还是学校端进入，系统都使用同一份成绩数据、同一套比较口径与统一权限边界。'
+            }
+            : {
+                label: '当前入口重点',
+                title: '学校端覆盖数据维护、教学分析、绩效比较与结果输出',
+                copy: '管理员、教务、班主任与教师都在同一套口径下工作，网页端与 Android 端看到的核心结果保持一致。'
+            };
+
+        return {
+            chip: nextPortal === 'parent' ? '家长端说明' : '学校端说明',
+            title: '智慧教务管理系统如何使用',
+            copy: '系统介绍集中说明使用流程、模块结构、角色权限、成绩计算和绩效比较规则，首页不再直接展开这些说明。',
+            spotlight,
+            quickStats: [
+                { label: '适用角色', value: '管理员 / 教务 / 年级负责人 / 班主任 / 教师 / 家长' },
+                { label: '核心模块', value: '数据导入、综合分析、教师分析、成长报告、绩效比较、应用下载' },
+                { label: '统一口径', value: 'Web、Android 与家长端共用同一套数据和规则' }
+            ],
+            sections: [
+                {
+                    title: '系统如何使用',
+                    copy: '建议按“导入数据 -> 校验参数 -> 进入分析 -> 生成结果 -> 导出或同步”的顺序使用。',
+                    type: 'steps',
+                    items: [
+                        { label: '1. 导入与建档', text: '在数据枢纽上传原始成绩、班级名册、任课表与历史考试，系统会自动识别学校、班级和学科。' },
+                        { label: '2. 校验口径', text: '按考试或年级配置总分、优良及格线、分层阈值和比较参数，确保不同批次结果可直接对照。' },
+                        { label: '3. 进入分析', text: '进入综合分析、教师分析、进退步追踪、学生详情和横向对比模块查看结果。' },
+                        { label: '4. 输出结果', text: '生成成绩单、成长报告、整改任务、绩效比较结果，并按需要同步云端或分发移动端。' }
+                    ]
+                },
+                {
+                    title: '系统有哪些模块',
+                    copy: '工作区按“数据、分析、管理、报告、服务”组织，常用模块会围绕同一份成绩库联动。',
+                    type: 'grid',
+                    items: [
+                        { label: '数据枢纽', text: '导入成绩、历史档案、任课表和基础配置，是全部分析的起点。' },
+                        { label: '综合分析 / 两率一分', text: '查看均分、优秀率、及格率、总分、排名、分层和质量预警。' },
+                        { label: '教师分析 / 教学评价', text: '结合任课表、历史基线和联考口径比较教师学科绩效。' },
+                        { label: '学生详情 / 成长报告', text: '查看单个学生成绩、排名变化、报告卡和家长端展示结果。' },
+                        { label: '横向对比 / 绩效比较', text: '按学校、班级、教师、学科和多次考试做同口径比较。' },
+                        { label: '应用下载中心 / 系统维护', text: '统一分发 APK，维护账号、权限、版本信息与云端同步。' }
+                    ]
+                },
+                {
+                    title: '不同角色有哪些权限',
+                    copy: '系统按职责分层授权，用户只会看到与自己职责相关的模块和数据范围。',
+                    type: 'roles',
+                    items: [
+                        { label: '管理员 / 教务', text: '维护账号与权限、导入全校数据、管理考试参数、查看全部分析和导出结果。' },
+                        { label: '年级负责人', text: '查看本年级质量分析、横向比较、分层名单、整改任务和汇总结果。' },
+                        { label: '班主任', text: '查看本班学生成绩、成长报告、临界生名单、班级比较和家校提醒。' },
+                        { label: '学科教师', text: '聚焦本人任课班级与学科，查看教学绩效、进退步和培优辅差名单。' },
+                        { label: '家长 / 学生', text: '只查看个人成绩、成长报告、排名变化与提醒，不参与后台维护。' }
+                    ]
+                },
+                {
+                    title: '如何计算成绩',
+                    copy: '所有结果都基于导入成绩与当前参数自动计算，不依赖人工手工拼表。',
+                    type: 'metrics',
+                    items: [
+                        { label: '基础汇总', text: '系统会按科目自动生成单科分、总分、均分、班级/年级/镇域排名，并保留缺考、作弊等特殊值处理口径。' },
+                        { label: '等级与达线', text: '根据优良及格线、目标线或分层线自动生成优秀率、及格率、达线人数与临界名单。' },
+                        { label: '进退步', text: '把本次考试和历史考试按学生或班级匹配，比对总分、单科、排名和达线变化。' },
+                        { label: '统一结果', text: '同一套配置会同时作用于网页端、Android 和家长端，保证查看和导出结果一致。' }
+                    ]
+                },
+                {
+                    title: '如何比较绩效',
+                    copy: '绩效比较强调同条件、同口径、同维度，避免只看单次原始分数。',
+                    type: 'metrics',
+                    items: [
+                        { label: '横向比较', text: '在同年级、同学科、同考试条件下比较学校、班级和教师的均分、两率一分与达线情况。' },
+                        { label: '纵向比较', text: '按多次考试连续比较进退步、稳定性、目标达成率和阶段改善幅度。' },
+                        { label: '基线校正', text: '教师绩效会结合历史基础或同基础学生分层，比较实际表现与预期表现，减少生源差异影响。' },
+                        { label: '结果落地', text: '比较结果会继续联动到培优辅差、整改任务、学生详情和报告生成，形成闭环。' }
+                    ]
+                },
+                {
+                    title: '数据同步与结果输出',
+                    copy: '系统既适合办公室 Web，也支持移动端分发与外部查看。',
+                    type: 'grid',
+                    items: [
+                        { label: 'Web 与 Android', text: '网页端和 APK 共用统一登录入口与主要工作流，便于电脑端和手机端切换。' },
+                        { label: '导出与分发', text: '可输出成绩单、成长报告、对比结果与分发版页面，便于班主任或家长查看。' },
+                        { label: '云端协同', text: '支持账号同步、数据同步与统一下载入口，版本更新后能继续集中分发 APK。' },
+                        { label: '使用建议', text: '每次新考试先导入原始数据并核对阈值，再做分析和绩效比较，结果会更稳定。' }
+                    ]
+                }
+            ]
+        };
+    },
+
+    renderSystemIntroModal: function (portal = this.getLoginPortal()) {
+        const backdrop = this.ensureSystemIntroModal();
+        if (!backdrop) return null;
+
+        const content = this.getSystemIntroContent(portal);
+        const chip = backdrop.querySelector('[data-intro-chip]');
+        const title = backdrop.querySelector('[data-intro-title]');
+        const copy = backdrop.querySelector('[data-intro-copy]');
+        const focusLabel = backdrop.querySelector('[data-intro-focus-label]');
+        const focusTitle = backdrop.querySelector('[data-intro-focus-title]');
+        const focusCopy = backdrop.querySelector('[data-intro-focus-copy]');
+        const quickStats = backdrop.querySelector('[data-intro-quickstats]');
+        const body = backdrop.querySelector('[data-intro-body]');
+
+        if (chip) chip.textContent = content.chip;
+        if (title) title.textContent = content.title;
+        if (copy) copy.textContent = content.copy;
+        if (focusLabel) focusLabel.textContent = content.spotlight?.label || '';
+        if (focusTitle) focusTitle.textContent = content.spotlight?.title || '';
+        if (focusCopy) focusCopy.textContent = content.spotlight?.copy || '';
+        if (quickStats) {
+            quickStats.innerHTML = (content.quickStats || [])
+                .map((item) => `
+                    <article class="login-system-intro-stat">
+                        <span>${item.label}</span>
+                        <strong>${item.value}</strong>
+                    </article>
+                `)
+                .join('');
+        }
+        if (body) {
+            const renderCollection = (section) => {
+                const items = Array.isArray(section.items) ? section.items : [];
+                if (section.type === 'roles') {
+                    return `
+                        <div class="login-system-intro-role-list">
+                            ${items.map((item) => `
+                                <div class="login-system-intro-role-row">
+                                    <strong>${item.label}</strong>
+                                    <p>${item.text}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+                const itemClass = section.type === 'steps'
+                    ? 'login-system-intro-step'
+                    : 'login-system-intro-metric';
+                const wrapperClass = section.type === 'steps'
+                    ? 'login-system-intro-flow'
+                    : 'login-system-intro-grid';
+                return `
+                    <div class="${wrapperClass}">
+                        ${items.map((item) => `
+                            <article class="${itemClass}">
+                                <strong>${item.label}</strong>
+                                <p>${item.text}</p>
+                            </article>
+                        `).join('')}
+                    </div>
+                `;
+            };
+
+            body.innerHTML = (content.sections || [])
+                .map((section, index) => `
+                    <article class="login-system-intro-section login-system-intro-section--${section.type || 'grid'}">
+                        <div class="login-system-intro-section-head">
+                            <span class="login-system-intro-section-index">${String(index + 1).padStart(2, '0')}</span>
+                            <div>
+                                <h3>${section.title}</h3>
+                                <p>${section.copy}</p>
+                            </div>
+                        </div>
+                        ${renderCollection(section)}
+                    </article>
+                `)
+                .join('');
+        }
+
+        return backdrop;
+    },
+
+    openSystemIntroModal: function (portal) {
+        this.ensureLoginWorkbench();
+        this.ensureSystemIntroModal();
+        const nextPortal = this.setLoginPortal(portal || this.getLoginPortal());
+        this.closeLoginPortalModal();
+        const backdrop = this.renderSystemIntroModal(nextPortal);
+        if (backdrop) {
+            backdrop.style.display = 'flex';
+            backdrop.setAttribute('aria-hidden', 'false');
+        }
+        document.body.classList.add('login-system-intro-open');
+        this.setLoginWorkbenchNavState('intro');
+        setTimeout(() => {
+            const title = backdrop?.querySelector('[data-intro-title]');
+            if (title && typeof title.focus === 'function') {
+                title.focus({ preventScroll: true });
+            }
+        }, 60);
+        return nextPortal;
+    },
+
+    closeSystemIntroModal: function () {
+        const backdrop = document.getElementById('login-system-intro-backdrop');
+        if (backdrop) {
+            backdrop.style.display = 'none';
+            backdrop.setAttribute('aria-hidden', 'true');
+        }
+        document.body.classList.remove('login-system-intro-open');
+        this.setLoginWorkbenchNavState('modal');
+    },
+
     openLoginPortalModal: function (portal) {
         this.ensureLoginWorkbench();
+        this.closeSystemIntroModal();
         const nextPortal = this.setLoginPortal(portal);
         const overlay = document.getElementById('login-overlay');
         const backdrop = document.getElementById('login-modal-backdrop');
@@ -2557,6 +2827,7 @@ const Auth = {
             backdrop.setAttribute('aria-hidden', 'false');
         }
         document.body.classList.add('login-modal-open');
+        this.setLoginWorkbenchNavState('modal');
         this.focusLoginWorkbench({ scroll: false });
         return nextPortal;
     },
@@ -2573,11 +2844,15 @@ const Auth = {
             document.activeElement.blur();
         }
         document.body.classList.remove('login-modal-open');
+        if (!document.body.classList.contains('login-system-intro-open')) {
+            this.setLoginWorkbenchNavState('modal');
+        }
     },
 
     syncLoginOverlayState: function (visible) {
         const overlay = document.getElementById('login-overlay');
         const app = document.getElementById('app');
+        this.closeSystemIntroModal();
         this.closeLoginPortalModal();
         if (visible) {
             this.syncParentMobileScrollRoot(false);
@@ -2627,61 +2902,18 @@ const Auth = {
         const modalChip = document.getElementById('login-modal-chip');
         const modalTitle = document.getElementById('login-modal-title');
         const modalCopy = document.getElementById('login-modal-copy');
-        const authHead = document.querySelector('.login-auth-head');
         const authTitle = document.querySelector('.login-auth-title');
         const portalLaunchKicker = document.querySelector('.login-portal-launch-head span');
         const portalLaunchCopy = document.querySelector('.login-portal-launch-head p');
         const portalNote = document.querySelector('.login-portal-note');
-
-        let authFacts = document.getElementById('login-auth-facts');
-        if (!authFacts && authHead) {
-            authFacts = document.createElement('div');
-            authFacts.id = 'login-auth-facts';
-            authFacts.className = 'login-auth-facts';
-            authFacts.setAttribute('aria-label', '系统特点');
-            const utility = authHead.querySelector('.login-auth-utility');
-            if (utility) utility.insertAdjacentElement('afterend', authFacts);
-            else authHead.appendChild(authFacts);
-        }
-
-        const sharedSystemGuide = [
-            {
-                icon: 'ti ti-route-2',
-                title: '如何使用',
-                desc: '登录后先导入成绩、名册与参数，再进入分析模块查看结果，最后导出报表或同步到云端。',
-                tone: 'blue'
-            },
-            {
-                icon: 'ti ti-layout-dashboard',
-                title: '核心模块',
-                desc: '覆盖数据枢纽、综合分析、教师分析、成长报告、应用下载中心与教学管理等常用场景。',
-                tone: 'violet'
-            },
-            {
-                icon: 'ti ti-user-shield',
-                title: '角色权限',
-                desc: '管理员与教务负责全局维护，班主任和教师聚焦班级与学科，家长端只查看成绩、报告与提醒。',
-                tone: 'cyan'
-            },
-            {
-                icon: 'ti ti-calculator',
-                title: '成绩计算',
-                desc: '系统会按导入数据自动汇总总分、均分、等级、排名、达线和分层结果，并支持指标参数口径。',
-                tone: 'amber'
-            },
-            {
-                icon: 'ti ti-chart-arcs-3',
-                title: '绩效比较',
-                desc: '支持学校、教师、班级与多期成绩对比，用统一口径比较进退步、目标达成和教学绩效差异。',
-                tone: 'slate'
-            }
-        ];
+        const authFacts = document.getElementById('login-auth-facts');
+        if (authFacts) authFacts.remove();
 
         const config = nextPortal === 'parent'
             ? {
                 badge: '家长成长入口',
-                authTitle: '系统介绍',
-                copy: '登录前先看清系统使用路径、核心模块、角色权限、成绩口径与绩效比较规则，再打开对应登录窗口。',
+                authTitle: '统一登录入口',
+                copy: '首页只保留统一入口与下载操作；详细的系统说明、模块、权限和成绩口径已收进右上角“系统介绍”。',
                 userLabel: '学生姓名',
                 userPlaceholder: '请输入学生姓名',
                 userHelper: '建议使用学生姓名登录，并完整填写班级信息。',
@@ -2691,18 +2923,17 @@ const Auth = {
                 submit: '进入家长端',
                 stageKicker: 'Family Growth Portal',
                 stageTitle: '<span class="login-stage-title-line">成长报告与成绩查询</span><span class="login-stage-title-line login-stage-title-line--accent">在同一张首页里打开登录窗口</span>',
-                stageCopy: '保留首页展示、下载入口与角色切换，登录动作只在一层弹窗里完成。',
+                stageCopy: '把介绍、下载与登录拆成三种清楚动作，首页更干净，移动端也不会堆叠重复窗口。',
                 stageMeta: [
                     { icon: 'ti ti-heart-handshake', text: '成长报告 / 成绩查询 / 家校提醒' },
                     { icon: 'ti ti-device-mobile', text: '手机与电脑使用同一套入口' },
                     { icon: 'ti ti-sparkles', text: '当前稳定版 v1.0 · 2026-04-08' }
                 ],
-                facts: sharedSystemGuide,
                 launchKicker: '登录窗口',
-                launchCopy: '左侧先看系统介绍与 APK 下载，右侧再按角色打开唯一登录窗口。',
-                launchNote: '系统介绍会先说明模块、权限、成绩口径与绩效比较；登录仍只保留一个弹窗，不会重复开窗。',
-                stageFeatureTitle: '家长端适合成绩查询、成长报告、关键提醒与班级信息',
-                stageFeatureCopy: '下载、介绍与登录入口被拆成更清楚的层次，浏览和操作都更轻。',
+                launchCopy: '先选择角色，再打开唯一登录窗口；需要了解流程、权限和成绩规则时，从右上角进入“系统介绍”。',
+                launchNote: '点击“应用下载”会直接下载 APK；点击“系统介绍”可查看模块说明、角色权限、成绩计算与绩效比较。',
+                stageFeatureTitle: '家长端聚焦成绩查询、成长报告与关键提醒',
+                stageFeatureCopy: '说明内容不再直接压在首页，浏览路径更顺，手机上也能更快进入登录动作。',
                 modalChip: '家长端登录窗口',
                 modalTitle: '进入家长成长入口',
                 modalCopy: '输入学生姓名、班级与密码后，即可查看成长报告、成绩与家校提醒。',
@@ -2710,8 +2941,8 @@ const Auth = {
             }
             : {
                 badge: '学校工作台',
-                authTitle: '系统介绍',
-                copy: '登录前先看清系统如何使用、包含哪些模块、不同角色有哪些权限，以及成绩和绩效比较的主要口径。',
+                authTitle: '统一登录入口',
+                copy: '首页不再直接展开系统说明；右上角“系统介绍”集中讲清模块、权限、成绩计算和绩效比较，当前区域只保留登录与下载。',
                 userLabel: '账号 / 姓名',
                 userPlaceholder: '管理员账号 / 教师姓名',
                 userHelper: '支持管理员、教务、年级、班主任与教师账号登录。',
@@ -2721,18 +2952,17 @@ const Auth = {
                 submit: '进入学校工作台',
                 stageKicker: 'School Command Center',
                 stageTitle: '<span class="login-stage-title-line">学校工作台与家长入口</span><span class="login-stage-title-line login-stage-title-line--accent">在同一张首页里打开登录窗口</span>',
-                stageCopy: '保留大画面首页和入口卡片，把登录动作收回唯一弹窗，减少主面板负担。',
+                stageCopy: '把说明内容藏进独立弹窗，把登录动作收回唯一窗口，让首屏更像正式产品首页而不是信息堆叠页。',
                 stageMeta: [
                     { icon: 'ti ti-layout-dashboard', text: '教学分析 / 数据维护 / 学校工作台' },
                     { icon: 'ti ti-device-mobile', text: 'Web 与 Android 共用入口逻辑' },
                     { icon: 'ti ti-sparkles', text: '当前稳定版 v1.0 · 2026-04-08' }
                 ],
-                facts: sharedSystemGuide,
                 launchKicker: '登录窗口',
-                launchCopy: '左侧先看系统介绍与 APK 下载，右侧再按角色打开唯一登录窗口。',
-                launchNote: '系统介绍会先说明模块、权限、成绩口径与绩效比较；登录仍只保留一个弹窗，不会重复开窗。',
+                launchCopy: '按角色选择学校端或家长端，再在唯一登录窗口中完成验证；系统介绍已移到右上角独立弹窗。',
+                launchNote: '系统介绍会完整说明模块结构、角色权限、成绩计算和绩效比较逻辑，首页不再重复铺开。',
                 stageFeatureTitle: '一屏直达成绩分析、教学管理、质量预警与数据维护',
-                stageFeatureCopy: '像流行官网首页一样把高价值入口、重点模块和实时状态直接铺开，减少跳转与寻找成本。',
+                stageFeatureCopy: '首屏保留强入口和关键价值点，详细说明延后到独立弹窗，整体层次更清爽也更接近国际化产品首页。',
                 modalChip: '学校端登录窗口',
                 modalTitle: '进入学校工作台',
                 modalCopy: '输入账号与密码后，直接进入教学分析、数据维护与学校工作台。',
@@ -2791,19 +3021,6 @@ const Auth = {
         if (stageFeatureTitle) stageFeatureTitle.textContent = config.stageFeatureTitle;
         if (stageFeatureCopy) stageFeatureCopy.textContent = config.stageFeatureCopy;
         if (authTitle) authTitle.textContent = config.authTitle;
-        if (authFacts) {
-            authFacts.innerHTML = (config.facts || [])
-                .map(item => `
-                    <article class="login-auth-fact-card" data-tone="${item.tone || 'blue'}">
-                        <span class="login-auth-fact-icon"><i class="${item.icon}"></i></span>
-                        <div class="login-auth-fact-body">
-                            <strong>${item.title}</strong>
-                            <p>${item.desc}</p>
-                        </div>
-                    </article>
-                `)
-                .join('');
-        }
         if (portalLaunchKicker) portalLaunchKicker.textContent = config.launchKicker;
         if (portalLaunchCopy) portalLaunchCopy.textContent = config.launchCopy;
         if (portalNote) portalNote.textContent = config.launchNote;
@@ -2812,6 +3029,7 @@ const Auth = {
         if (modalCopy) modalCopy.textContent = config.modalCopy;
         const navButton = document.querySelector('.login-stage-nav-login');
         if (navButton) navButton.textContent = config.navButton || '打开登录窗口';
+        this.renderSystemIntroModal(nextPortal);
     },
 
     resolveLocalManagedSchool: function (name, className = '') {
@@ -2861,10 +3079,16 @@ const Auth = {
     init: async function () {
         this.ensureLoginWorkbench();
         this.syncLoginPortalUI();
+        this.closeSystemIntroModal();
         this.closeLoginPortalModal();
         if (!this._loginModalEscapeBound) {
             document.addEventListener('keydown', (event) => {
-                if (event.key === 'Escape') this.closeLoginPortalModal();
+                if (event.key !== 'Escape') return;
+                if (document.body.classList.contains('login-system-intro-open')) {
+                    this.closeSystemIntroModal();
+                    return;
+                }
+                this.closeLoginPortalModal();
             });
             this._loginModalEscapeBound = true;
         }

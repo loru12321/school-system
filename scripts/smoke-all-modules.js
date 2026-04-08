@@ -129,15 +129,29 @@ async function login(page, user, pass) {
     });
 
     if (!(bootState.overlayHidden && (bootState.appVisible || bootState.maskVisible))) {
-        const schoolPortalCard = page.locator('[data-login-open="school"]').first();
-        if (await schoolPortalCard.count()) {
-            const loginUser = page.locator('#login-user');
-            const userVisible = await loginUser.isVisible().catch(() => false);
-            if (!userVisible) {
-                await schoolPortalCard.click();
+        const loginUser = page.locator('#login-user');
+        const ensureLoginWindowVisible = async () => {
+            if (await loginUser.isVisible().catch(() => false)) return;
+            const openers = [
+                page.locator('[data-login-open="school"]').first(),
+                page.locator('.login-stage-nav-links a[data-nav="modal"]').first(),
+                page.locator('.login-stage-primary-action').first(),
+                page.locator('button[onclick="window.Auth?.openLoginPortalModal(\'school\')"]').first()
+            ];
+            for (const opener of openers) {
+                if (!(await opener.count().catch(() => 0))) continue;
+                await opener.click({ force: true }).catch(() => { });
+                if (await loginUser.isVisible().catch(() => false)) return;
             }
-        }
-        await page.waitForSelector('#login-user', { timeout: 30000 });
+            await page.evaluate(() => {
+                if (window.Auth && typeof window.Auth.openLoginPortalModal === 'function') {
+                    window.Auth.openLoginPortalModal('school');
+                }
+            }).catch(() => { });
+            await page.waitForSelector('#login-user', { state: 'visible', timeout: 30000 });
+        };
+
+        await ensureLoginWindowVisible();
         await page.fill('#login-user', user);
         await page.fill('#login-pass', pass);
         await page.click('button[onclick="window.Auth?.login()"]');

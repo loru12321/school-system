@@ -263,6 +263,28 @@ async function login(page) {
     }));
 
     if (!(bootState.overlayHidden && (bootState.appVisible || bootState.maskVisible))) {
+        const loginUser = page.locator('#login-user');
+        if (!(await loginUser.isVisible().catch(() => false))) {
+            const openers = [
+                page.locator('[data-login-open="school"]').first(),
+                page.locator('.login-stage-nav-links a[data-nav="modal"]').first(),
+                page.locator('.login-stage-primary-action').first(),
+                page.locator('button[onclick="window.Auth?.openLoginPortalModal(\'school\')"]').first()
+            ];
+            for (const opener of openers) {
+                if (!(await opener.count().catch(() => 0))) continue;
+                await opener.click({ force: true }).catch(() => { });
+                if (await loginUser.isVisible().catch(() => false)) break;
+            }
+            if (!(await loginUser.isVisible().catch(() => false))) {
+                await page.evaluate(() => {
+                    if (window.Auth && typeof window.Auth.openLoginPortalModal === 'function') {
+                        window.Auth.openLoginPortalModal('school');
+                    }
+                }).catch(() => { });
+            }
+        }
+
         await page.waitForSelector('#login-user', { state: 'visible', timeout: 30000 });
 
         const loginText = await page.locator('#login-overlay').innerText();
