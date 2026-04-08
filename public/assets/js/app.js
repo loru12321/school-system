@@ -2433,30 +2433,92 @@ const Auth = {
         return nextPortal;
     },
 
+    ensureLoginWorkbench: function () {
+        const overlay = document.getElementById('login-overlay');
+        const panel = document.getElementById('login-portal-hub');
+        if (!overlay || !panel || panel.dataset.loginWorkbenchReady === 'true') return;
+
+        const authHead = panel.querySelector('.login-auth-head');
+        const launcherHead = panel.querySelector('.login-portal-launch-head');
+        const portalGrid = panel.querySelector('.login-portal-grid');
+        const portalNote = panel.querySelector('.login-portal-note');
+        const modalBackdrop = document.getElementById('login-modal-backdrop');
+        const authCard = modalBackdrop
+            ? modalBackdrop.querySelector('.login-auth-card')
+            : panel.querySelector('.login-auth-card');
+
+        if (!authHead || !launcherHead || !portalGrid || !authCard) return;
+
+        const workbench = document.createElement('div');
+        workbench.className = 'login-auth-workbench';
+
+        const portalRail = document.createElement('div');
+        portalRail.className = 'login-auth-rail login-auth-rail-portals';
+
+        const formRail = document.createElement('div');
+        formRail.className = 'login-auth-rail login-auth-rail-form';
+
+        const formHead = document.createElement('div');
+        formHead.className = 'login-auth-card-head';
+        ['login-modal-chip', 'login-modal-title', 'login-modal-copy'].forEach((id) => {
+            const node = document.getElementById(id);
+            if (node) formHead.appendChild(node);
+        });
+
+        portalRail.appendChild(launcherHead);
+        portalRail.appendChild(portalGrid);
+        if (portalNote) portalRail.appendChild(portalNote);
+
+        if (formHead.childElementCount) {
+            authCard.insertAdjacentElement('afterbegin', formHead);
+        }
+        formRail.appendChild(authCard);
+
+        workbench.appendChild(portalRail);
+        workbench.appendChild(formRail);
+        panel.appendChild(workbench);
+
+        if (modalBackdrop && typeof modalBackdrop.remove === 'function') {
+            modalBackdrop.remove();
+        }
+
+        overlay.dataset.loginModal = 'inline';
+        panel.dataset.loginWorkbenchReady = 'true';
+    },
+
+    focusLoginWorkbench: function (options = {}) {
+        this.ensureLoginWorkbench();
+        const anchor = document.querySelector('.login-auth-card') || document.getElementById('login-portal-hub');
+        const focusTarget = document.getElementById('login-user');
+        const behavior = options.instant ? 'auto' : 'smooth';
+
+        if (options.scroll !== false && anchor && typeof anchor.scrollIntoView === 'function') {
+            anchor.scrollIntoView({ behavior, block: 'nearest', inline: 'nearest' });
+        }
+
+        if (options.focus === false) return;
+
+        setTimeout(() => {
+            if (focusTarget && typeof focusTarget.focus === 'function') {
+                focusTarget.focus({ preventScroll: true });
+            }
+        }, typeof options.delay === 'number' ? options.delay : 60);
+    },
+
     openLoginPortalModal: function (portal) {
+        this.ensureLoginWorkbench();
         const nextPortal = this.setLoginPortal(portal);
         const overlay = document.getElementById('login-overlay');
-        const backdrop = document.getElementById('login-modal-backdrop');
-        if (overlay) overlay.dataset.loginModal = 'open';
-        if (backdrop) {
-            backdrop.style.display = 'flex';
-            backdrop.setAttribute('aria-hidden', 'false');
-        }
-        document.body.classList.add('login-modal-open');
-        setTimeout(() => {
-            const focusTarget = document.getElementById('login-user');
-            if (focusTarget && typeof focusTarget.focus === 'function') focusTarget.focus();
-        }, 40);
+        if (overlay) overlay.dataset.loginModal = 'inline';
+        this.focusLoginWorkbench();
         return nextPortal;
     },
 
     closeLoginPortalModal: function () {
         const overlay = document.getElementById('login-overlay');
-        const backdrop = document.getElementById('login-modal-backdrop');
         if (overlay) overlay.dataset.loginModal = 'closed';
-        if (backdrop) {
-            backdrop.style.display = 'none';
-            backdrop.setAttribute('aria-hidden', 'true');
+        if (document.activeElement && typeof document.activeElement.blur === 'function') {
+            document.activeElement.blur();
         }
         document.body.classList.remove('login-modal-open');
     },
@@ -2474,7 +2536,11 @@ const Auth = {
         }
         document.body.classList.toggle('login-overlay-active', !!visible);
         document.body.dataset.authState = visible ? 'logged_out' : 'logged_in';
-        if (overlay) overlay.style.display = visible ? 'flex' : 'none';
+        if (overlay) {
+            overlay.style.display = visible ? 'flex' : 'none';
+            overlay.dataset.loginState = visible ? 'active' : 'hidden';
+            if (visible && !overlay.dataset.loginModal) overlay.dataset.loginModal = 'inline';
+        }
         if (app && visible) app.classList.add('hidden');
     },
 
@@ -2482,9 +2548,12 @@ const Auth = {
         const nextPortal = portal === 'parent' ? 'parent' : 'school';
         const overlay = document.getElementById('login-overlay');
         if (overlay) overlay.dataset.loginPortal = nextPortal;
+        const panel = document.getElementById('login-portal-hub');
+        if (panel) panel.dataset.loginPortal = nextPortal;
 
         document.querySelectorAll('.login-portal-card[data-portal]').forEach(card => {
             card.classList.toggle('active', card.dataset.portal === nextPortal);
+            card.setAttribute('aria-pressed', card.dataset.portal === nextPortal ? 'true' : 'false');
         });
 
         const badgeEl = document.getElementById('login-portal-badge');
@@ -2510,6 +2579,7 @@ const Auth = {
         const authTitle = document.querySelector('.login-auth-title');
         const portalLaunchKicker = document.querySelector('.login-portal-launch-head span');
         const portalLaunchCopy = document.querySelector('.login-portal-launch-head p');
+        const portalNote = document.querySelector('.login-portal-note');
 
         let authFacts = document.getElementById('login-auth-facts');
         if (!authFacts && authHead) {
@@ -2524,69 +2594,99 @@ const Auth = {
 
         const config = nextPortal === 'parent'
             ? {
-                badge: '家长成长入口',
-                authTitle: '登录与下载',
-                copy: '选择家长端后弹出登录框，进入成长报告、成绩查询与家校提醒；下载入口仍保留在同页。',
+                badge: 'Family Access',
+                authTitle: 'Unified Access',
+                copy: '像国际主流应用一样，把角色切换、验证与 Android 下载收在同一块登录工作面里。',
                 userLabel: '学生姓名',
                 userPlaceholder: '请输入学生姓名',
                 userHelper: '建议使用学生姓名登录，并完整填写班级信息。',
                 classNote: '(家长端必填，如 701)',
                 classPlaceholder: '请输入学生班级，如 701',
-                helper: '当前为家长端，登录后进入成长报告与成绩视图；如需切换，请关闭弹窗后重新选择入口。',
+                helper: '当前为家长端，登录后进入成长报告与成绩视图；上方切换角色后，表单会原位切换。',
                 submit: '进入家长端',
                 stageKicker: 'Family Growth Portal',
-                stageTitle: '<span class="login-stage-title-line">成长报告与成绩查询</span><span class="login-stage-title-line login-stage-title-line--accent">在同一张首页里进入</span>',
-                stageCopy: '把成长报告、成绩查询与家校提醒收进同一张首页，先完成验证，再查看学生数据。',
+                stageTitle: '<span class="login-stage-title-line">成长报告与成绩查询</span><span class="login-stage-title-line login-stage-title-line--accent">在同一张首页里完成登录</span>',
+                stageCopy: '保留首页视觉与下载入口，同时把家长端验证收在单一工作面里，减少重复弹窗。',
                 stageMeta: [
                     { icon: 'ti ti-heart-handshake', text: '成长报告 / 成绩查询 / 家校提醒' },
                     { icon: 'ti ti-device-mobile', text: '手机与电脑使用同一套入口' },
                     { icon: 'ti ti-sparkles', text: '当前稳定版 v1.0 · 2026-04-08' }
                 ],
                 facts: [
-                    { icon: 'ti ti-report-analytics', text: '成绩查询、成长报告与提醒集中在同一页完成' },
+                    { icon: 'ti ti-layout-panel-top', text: '单一登录工作面，不再叠加第二层窗口' },
                     { icon: 'ti ti-device-mobile', text: 'Web 与 Android 使用同一套家长入口逻辑' },
-                    { icon: 'ti ti-bolt', text: '点击卡片即弹出登录框，不打断浏览与下载' }
+                    { icon: 'ti ti-bolt', text: '角色切换与登录验证在当前面板原位完成' }
                 ],
-                launchKicker: 'Choose Portal',
-                launchCopy: '右侧保留两个清晰入口：家长端负责成长报告、成绩查询与提醒，学校端负责教学分析与管理。',
+                launchKicker: 'Portal Switch',
+                launchCopy: '先选角色，再在右侧表单里直接验证，桌面端与安卓端都不再出现重复弹窗。',
+                launchNote: '家长端与学校端现在共用同一登录工作区，切换角色时表单会在当前面板直接刷新。',
                 stageFeatureTitle: '家长端适合成绩查询、成长报告、关键提醒与班级信息',
-                stageFeatureCopy: '在同一首页中保留下载、登录与家校沟通入口，减少寻找入口的步骤。',
-                modalChip: '家长端登录',
+                stageFeatureCopy: '把下载、登录与家校沟通入口收在同一视觉节奏里，减少寻找入口的步骤。',
+                modalChip: 'Parent Sign In',
                 modalTitle: '进入家长成长入口',
-                modalCopy: '在弹窗中输入学生姓名、班级与密码，即可查看成长报告、成绩与家校提醒。'
+                modalCopy: '输入学生姓名、班级与密码后，即可查看成长报告、成绩与家校提醒。'
             }
             : {
-                badge: '学校工作台',
-                authTitle: '登录与下载',
-                copy: '选择学校端后弹出登录框，进入教学分析、数据维护与学校工作台；下载入口与版本信息保留在同一页。',
+                badge: 'School Workspace',
+                authTitle: 'Unified Access',
+                copy: '把学校端、家长端与 Android 下载整理成单一登录工作面，保留大屏视觉但不再重复开窗。',
                 userLabel: '账号 / 姓名',
                 userPlaceholder: '管理员账号 / 教师姓名',
                 userHelper: '支持管理员、教务、年级、班主任与教师账号登录。',
                 classNote: '(学校端无需填写)',
                 classPlaceholder: '学校端无需填写',
-                helper: '当前为学校工作台，验证通过后直达教学分析与数据维护；如需切换，请关闭弹窗后重新选择入口。',
+                helper: '当前为学校端，验证通过后直达教学分析与数据维护；上方切换角色后，表单会原位切换。',
                 submit: '进入学校工作台',
                 stageKicker: 'School Command Center',
-                stageTitle: '<span class="login-stage-title-line">学校工作台与家长查询</span><span class="login-stage-title-line login-stage-title-line--accent">在同一张首页里进入</span>',
-                stageCopy: '把学校工作台、家长查询与 Android 应用下载整合到同一张首页，先选入口，再进入系统。',
+                stageTitle: '<span class="login-stage-title-line">学校工作台与家长入口</span><span class="login-stage-title-line login-stage-title-line--accent">在同一张首页里完成登录</span>',
+                stageCopy: '保留国际流行应用常见的大画面首页，同时让学校端登录在当前工作面中直接完成。',
                 stageMeta: [
                     { icon: 'ti ti-layout-dashboard', text: '教学分析 / 数据维护 / 学校工作台' },
                     { icon: 'ti ti-device-mobile', text: 'Web 与 Android 共用入口逻辑' },
                     { icon: 'ti ti-sparkles', text: '当前稳定版 v1.0 · 2026-04-08' }
                 ],
                 facts: [
-                    { icon: 'ti ti-layout-dashboard', text: '教学分析、成长查询与 APK 下载同页组织' },
+                    { icon: 'ti ti-layout-panel-top', text: '登录、入口切换与下载统一在一块工作面里' },
                     { icon: 'ti ti-device-mobile', text: 'Web 与 Android 使用同一套入口逻辑' },
-                    { icon: 'ti ti-bolt', text: '点击卡片即弹出对应登录框，不打断浏览' }
+                    { icon: 'ti ti-bolt', text: '点击卡片后表单原位切换，不再出现第二层窗口' }
                 ],
-                launchKicker: 'Choose Portal',
-                launchCopy: '右侧保留两个清晰入口：学校端负责教学分析与管理，家长端负责成长报告、成绩查询与提醒。',
+                launchKicker: 'Portal Switch',
+                launchCopy: '先选角色，再在右侧表单里直接验证，桌面端与安卓端都不会再看到重复窗口。',
+                launchNote: '学校端与家长端现在共用同一登录工作区，切换入口时只更新内容，不再额外弹窗。',
                 stageFeatureTitle: '一屏直达成绩分析、教学管理、质量预警与数据维护',
                 stageFeatureCopy: '像流行官网首页一样把高价值入口、重点模块和实时状态直接铺开，减少跳转与寻找成本。',
-                modalChip: '学校端登录',
+                modalChip: 'School Sign In',
                 modalTitle: '进入学校工作台',
-                modalCopy: '在弹窗中完成身份验证后，直接进入教学分析、数据维护与学校工作台。'
+                modalCopy: '输入账号与密码后，直接进入教学分析、数据维护与学校工作台。'
             };
+
+        const portalCards = {
+            school: {
+                title: '学校端',
+                desc: '教学分析、数据维护与学校管理统一收进一个工作入口。',
+                meta: 'Analysis / Data / Workspace',
+                action: '切换到学校端'
+            },
+            parent: {
+                title: '家长端',
+                desc: '成长报告、成绩查询与家校提醒共用同一套登录逻辑。',
+                meta: 'Report / Score / Reminder',
+                action: '切换到家长端'
+            }
+        };
+
+        Object.entries(portalCards).forEach(([portalName, cardConfig]) => {
+            const card = document.querySelector(`.login-portal-card[data-portal="${portalName}"]`);
+            if (!card) return;
+            const titleEl = card.querySelector('.login-portal-title');
+            const descEl = card.querySelector('.login-portal-desc');
+            const metaEl = card.querySelector('.login-portal-meta');
+            const actionEl = card.querySelector('.login-portal-action');
+            if (titleEl) titleEl.textContent = cardConfig.title;
+            if (descEl) descEl.textContent = cardConfig.desc;
+            if (metaEl) metaEl.textContent = cardConfig.meta;
+            if (actionEl) actionEl.textContent = cardConfig.action;
+        });
 
         if (badgeEl) badgeEl.textContent = config.badge;
         if (copyEl) copyEl.textContent = config.copy;
@@ -2619,6 +2719,7 @@ const Auth = {
         }
         if (portalLaunchKicker) portalLaunchKicker.textContent = config.launchKicker;
         if (portalLaunchCopy) portalLaunchCopy.textContent = config.launchCopy;
+        if (portalNote) portalNote.textContent = config.launchNote;
         if (modalChip) modalChip.textContent = config.modalChip;
         if (modalTitle) modalTitle.textContent = config.modalTitle;
         if (modalCopy) modalCopy.textContent = config.modalCopy;
@@ -2669,6 +2770,7 @@ const Auth = {
     },
 
     init: async function () {
+        this.ensureLoginWorkbench();
         this.syncLoginPortalUI();
         this.closeLoginPortalModal();
         if (!this._loginModalEscapeBound) {
@@ -4095,6 +4197,7 @@ const Auth = {
 
 // 🟢 [修复] 确保 Auth 挂载到 window 以便 HTML onclick 访问
 window.Auth = Auth;
+Auth.ensureLoginWorkbench();
 Auth.syncLoginPortalUI();
 window.openAdminCloudAccountModal = function () {
     const modal = document.getElementById('admin-modal');
