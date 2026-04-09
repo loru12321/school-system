@@ -491,16 +491,164 @@ window.ensureTeacherDataAlpineStore = function () {
 };
 document.addEventListener('alpine:init', window.ensureTeacherDataAlpineStore);
 
-window.addEventListener('scroll', function () {
-    const btn = document.getElementById('back-to-top');
-    if (!btn) return;
-    if (window.scrollY > 300) {
-        btn.style.display = 'block';
-        btn.style.opacity = '1';
-    } else {
-        btn.style.display = 'none';
+let __backToTopSyncTimer = 0;
+
+function isVisibleBackToTopTarget(element) {
+    if (!element) return false;
+    if (element === document.documentElement || element === document.body || element === document.scrollingElement) {
+        return true;
     }
-});
+
+    const style = window.getComputedStyle(element);
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+}
+
+function canScrollBackToTopTarget(element) {
+    if (!element || typeof element.scrollTo !== 'function') return false;
+    return (Number(element.scrollHeight || 0) - Number(element.clientHeight || 0)) > 24;
+}
+
+function readBackToTopScrollTop(element) {
+    if (!element) return 0;
+    if (element === window) {
+        return Number(window.scrollY || window.pageYOffset || 0);
+    }
+    return Number(element.scrollTop || 0);
+}
+
+function scrollBackToTopTarget(element, behavior) {
+    if (!element) return;
+
+    if (element === window) {
+        window.scrollTo({ top: 0, behavior: behavior || 'smooth' });
+        return;
+    }
+
+    if (typeof element.scrollTo === 'function') {
+        element.scrollTo({ top: 0, behavior: behavior || 'smooth' });
+        return;
+    }
+
+    element.scrollTop = 0;
+}
+
+function pushBackToTopTarget(targets, element) {
+    if (!element || targets.indexOf(element) !== -1) return;
+    targets.push(element);
+}
+
+function collectBackToTopTargets() {
+    const targets = [];
+
+    [
+        '.workspace-drawer.is-open .workspace-drawer-panel',
+        '.modal[style*="display:block"] .modal-content',
+        '.modal[style*="display: block"] .modal-content',
+        '.modal.show .modal-content',
+        'main.app-main'
+    ].forEach((selector) => {
+        pushBackToTopTarget(targets, document.querySelector(selector));
+    });
+
+    pushBackToTopTarget(targets, document.scrollingElement || document.documentElement || document.body);
+    return targets.filter(isVisibleBackToTopTarget);
+}
+
+function resolveBackToTopTarget() {
+    const targets = collectBackToTopTargets();
+    return targets.find((element) => canScrollBackToTopTarget(element) && readBackToTopScrollTop(element) > 1)
+        || targets.find((element) => canScrollBackToTopTarget(element))
+        || null;
+}
+
+function ensureBackToTopButton() {
+    let button = document.getElementById('back-to-top');
+    if (button) return button;
+    if (!document.body) return null;
+
+    button = document.createElement('button');
+    button.type = 'button';
+    button.id = 'back-to-top';
+    button.setAttribute('aria-label', '回到顶部');
+    button.setAttribute('title', '回到顶部');
+    button.setAttribute('aria-hidden', 'true');
+    button.innerHTML = '<i class="ti ti-arrow-up"></i><span>顶部</span>';
+    button.addEventListener('click', function () {
+        window.scrollAppToTop('smooth');
+    });
+    document.body.appendChild(button);
+    return button;
+}
+
+function bindBackToTopScrollTargets() {
+    collectBackToTopTargets().forEach((element) => {
+        if (!element || typeof element.addEventListener !== 'function') return;
+        if (element === document.scrollingElement || element === document.documentElement || element === document.body) return;
+        if (element.dataset.backToTopScrollBound === 'true') return;
+
+        element.dataset.backToTopScrollBound = 'true';
+        element.addEventListener('scroll', syncBackToTopButton, { passive: true });
+    });
+}
+
+function syncBackToTopButton() {
+    const button = ensureBackToTopButton();
+    if (!button) return;
+    bindBackToTopScrollTargets();
+
+    const target = resolveBackToTopTarget();
+    const isVisible = !!target && readBackToTopScrollTop(target) > 260;
+
+    button.classList.toggle('is-visible', isVisible);
+    button.setAttribute('aria-hidden', isVisible ? 'false' : 'true');
+}
+
+function scheduleBackToTopButtonSync() {
+    clearTimeout(__backToTopSyncTimer);
+    __backToTopSyncTimer = window.setTimeout(syncBackToTopButton, 60);
+}
+
+window.scrollAppToTop = function (behavior) {
+    let didScroll = false;
+
+    collectBackToTopTargets().forEach((element) => {
+        if (!canScrollBackToTopTarget(element) || readBackToTopScrollTop(element) <= 1) return;
+        scrollBackToTopTarget(element, behavior || 'smooth');
+        didScroll = true;
+    });
+
+    if (!didScroll && typeof window.scrollTo === 'function') {
+        window.scrollTo({ top: 0, behavior: behavior || 'smooth' });
+    }
+
+    window.requestAnimationFrame(syncBackToTopButton);
+};
+
+function bindBackToTopButton() {
+    if (window.__backToTopButtonBound) return;
+    window.__backToTopButtonBound = true;
+
+    ensureBackToTopButton();
+    document.addEventListener('scroll', syncBackToTopButton, true);
+    document.addEventListener('click', scheduleBackToTopButtonSync, true);
+    window.addEventListener('scroll', syncBackToTopButton, { passive: true });
+    window.addEventListener('resize', scheduleBackToTopButtonSync, { passive: true });
+    window.addEventListener('load', scheduleBackToTopButtonSync, { once: true });
+    scheduleBackToTopButtonSync();
+    window.setTimeout(scheduleBackToTopButtonSync, 300);
+    window.setTimeout(scheduleBackToTopButtonSync, 1200);
+}
+
+window.syncBackToTopButton = syncBackToTopButton;
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindBackToTopButton, { once: true });
+} else {
+    bindBackToTopButton();
+}
 
 window.ensureLazySectionLoaded = function (sectionId) {
     const id = String(sectionId || '').trim();

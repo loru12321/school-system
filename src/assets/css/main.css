@@ -6829,6 +6829,7 @@ body.parent-fullscreen-mode thead th {
     border-radius: 24px;
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.97) 0%, rgba(248, 250, 252, 0.98) 100%);
     box-shadow: 0 22px 42px -36px rgba(15, 23, 42, 0.38);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .shell-module-rail-meta {
@@ -6869,12 +6870,26 @@ body.parent-fullscreen-mode thead th {
     display: flex;
     gap: 10px;
     overflow-x: auto;
-    padding: 2px 2px 4px;
-    scrollbar-width: none;
+    padding: 2px 2px 8px;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: var(--rail-accent, #2563eb) rgba(226, 232, 240, 0.92);
 }
 
 .shell-module-rail::-webkit-scrollbar {
-    display: none;
+    display: block;
+    height: 8px;
+}
+
+.shell-module-rail::-webkit-scrollbar-track {
+    background: rgba(226, 232, 240, 0.92);
+    border-radius: 999px;
+}
+
+.shell-module-rail::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--rail-accent, #2563eb), rgba(59, 130, 246, 0.72));
+    border: 2px solid rgba(255, 255, 255, 0.96);
 }
 
 .shell-module-rail-chip {
@@ -6908,6 +6923,45 @@ body.parent-fullscreen-mode thead th {
     background: var(--rail-accent-soft, rgba(37, 99, 235, 0.12));
     color: var(--rail-accent, #2563eb);
     box-shadow: 0 0 0 1px var(--rail-accent-strong, rgba(37, 99, 235, 0.20));
+}
+
+.shell-module-rail-shell[data-horizontal-scrollable="true"] {
+    box-shadow: 0 24px 44px -34px rgba(15, 23, 42, 0.42);
+}
+
+.shell-module-rail-shell[data-horizontal-scrollable="true"] .shell-module-rail {
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+}
+
+.shell-module-rail-shell[data-horizontal-scrollable="true"][data-horizontal-scroll-start="true"] .shell-module-rail {
+    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 18px), transparent 100%);
+    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 18px), transparent 100%);
+}
+
+.shell-module-rail-shell[data-horizontal-scrollable="true"][data-horizontal-scroll-end="true"] .shell-module-rail {
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 100%);
+}
+
+.shell-module-rail-shell[data-horizontal-scrollable="true"][data-horizontal-scroll-start="true"][data-horizontal-scroll-end="true"] .shell-module-rail {
+    -webkit-mask-image: none;
+    mask-image: none;
+}
+
+.shell-module-rail-shell[data-horizontal-scrollable="true"] .shell-module-rail-status::after {
+    content: ' · 鼠标滚轮可横向浏览';
+    color: #94a3b8;
+}
+
+.shell-module-rail-shell[data-horizontal-scrolling="true"] {
+    border-color: var(--rail-accent-strong, rgba(37, 99, 235, 0.2));
+    box-shadow: 0 24px 46px -32px rgba(15, 23, 42, 0.44), 0 0 0 1px var(--rail-accent-strong, rgba(37, 99, 235, 0.2));
+}
+
+.shell-module-rail-shell[data-horizontal-scrolling="true"] .shell-module-rail-status::after {
+    content: ' · 正在横向滚动';
+    color: var(--rail-accent, #2563eb);
 }
 
 @media (max-width: 960px) {
@@ -8165,12 +8219,85 @@ body[data-role="admin"] #admin-panel-btn {
     font-size: 14px;
 }
 
+#back-to-top {
+    position: fixed;
+    right: 24px;
+    bottom: 28px;
+    min-width: 58px;
+    height: 52px;
+    padding: 0 14px;
+    border: 1px solid rgba(226, 232, 240, 0.94);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #0f172a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 20px 38px rgba(15, 23, 42, 0.14);
+    backdrop-filter: blur(18px) saturate(1.04);
+    -webkit-backdrop-filter: blur(18px) saturate(1.04);
+    cursor: pointer;
+    z-index: 320;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(12px) scale(0.96);
+    transition: transform 0.22s ease, opacity 0.22s ease, visibility 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+}
+
+#back-to-top i {
+    font-size: 18px;
+}
+
+#back-to-top span {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+#back-to-top.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+}
+
+#back-to-top:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary, #2563eb);
+    box-shadow: 0 24px 42px rgba(15, 23, 42, 0.16);
+}
+
+#back-to-top:focus-visible {
+    outline: none;
+    border-color: var(--primary, #2563eb);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18), 0 24px 42px rgba(15, 23, 42, 0.16);
+}
+
+body.dark-mode #back-to-top {
+    border-color: rgba(51, 65, 85, 0.92);
+    background: rgba(2, 6, 23, 0.94);
+    color: #f8fafc;
+    box-shadow: 0 24px 42px rgba(2, 6, 23, 0.34);
+}
+
 /* 手机端适配调整 */
 @media screen and (max-width: 768px) {
 
     /* 如果在手机上，且不是家长模式，隐藏PC端的某些悬浮元素 */
     #back-to-top {
+        right: 14px;
         bottom: 80px !important;
+        width: 48px;
+        min-width: 48px;
+        height: 48px;
+        padding: 0;
+        border-radius: 16px;
+    }
+
+    #back-to-top span {
+        display: none;
     }
 
     /* 避开底部导航 */

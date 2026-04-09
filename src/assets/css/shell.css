@@ -2470,6 +2470,31 @@ body[data-mobile-query="true"] #parent-view-container .fluent-card {
     top: 216px;
 }
 
+.sub-nav-chips[data-horizontal-scrollable="true"] {
+    scrollbar-width: thin;
+    scrollbar-color: var(--shell-accent, #2563eb) rgba(226, 232, 240, 0.9);
+}
+
+.sub-nav-chips[data-horizontal-scrollable="true"]::-webkit-scrollbar {
+    display: block;
+    height: 8px;
+}
+
+.sub-nav-chips[data-horizontal-scrollable="true"]::-webkit-scrollbar-track {
+    background: rgba(226, 232, 240, 0.92);
+    border-radius: 999px;
+}
+
+.sub-nav-chips[data-horizontal-scrollable="true"]::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--shell-accent, #2563eb), rgba(59, 130, 246, 0.72));
+    border: 2px solid rgba(255, 255, 255, 0.96);
+}
+
+.sub-nav-chips[data-horizontal-scrollable="true"][data-horizontal-scrolling="true"] {
+    box-shadow: 0 18px 30px rgba(15, 23, 42, 0.08);
+}
+
 .shell-story-card {
     min-width: 0;
     min-height: 120px;

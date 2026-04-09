@@ -249,6 +249,31 @@
         activeChip.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'auto' });
     }
 
+    function updateHorizontalScrollState(scrollTarget, stateTarget) {
+        const target = scrollTarget || stateTarget;
+        const host = stateTarget || scrollTarget;
+        if (!target || !host) return;
+
+        const maxScrollLeft = Math.max(0, target.scrollWidth - target.clientWidth);
+        const currentScrollLeft = Math.max(0, Math.min(maxScrollLeft, Number(target.scrollLeft || 0)));
+        const progress = maxScrollLeft > 0 ? (currentScrollLeft / maxScrollLeft) : 0;
+
+        host.dataset.horizontalScrollable = maxScrollLeft > 1 ? 'true' : 'false';
+        host.dataset.horizontalScrollStart = currentScrollLeft <= 1 ? 'true' : 'false';
+        host.dataset.horizontalScrollEnd = maxScrollLeft <= 1 || currentScrollLeft >= maxScrollLeft - 1 ? 'true' : 'false';
+        host.style.setProperty('--horizontal-scroll-progress', progress.toFixed(4));
+    }
+
+    function flashHorizontalScrollState(stateTarget) {
+        if (!stateTarget) return;
+
+        stateTarget.dataset.horizontalScrolling = 'true';
+        clearTimeout(stateTarget.__horizontalScrollFeedbackTimer);
+        stateTarget.__horizontalScrollFeedbackTimer = window.setTimeout(function () {
+            stateTarget.dataset.horizontalScrolling = 'false';
+        }, 220);
+    }
+
     function normalizeHorizontalWheelDelta(event) {
         if (!event) return 0;
         const dominantDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY)
@@ -261,27 +286,56 @@
         return dominantDelta;
     }
 
-    function bindHorizontalWheelScroll(container) {
-        if (!container || container.dataset.horizontalWheelBound === 'true') return;
+    function bindHorizontalWheelScroll(container, scrollTarget, stateTarget) {
+        const listenerHost = container || scrollTarget || stateTarget;
+        const target = scrollTarget || container;
+        const stateHost = stateTarget || listenerHost || target;
+        if (!listenerHost || !target || !stateHost) return;
 
-        container.dataset.horizontalWheelBound = 'true';
-        container.addEventListener('wheel', function (event) {
+        updateHorizontalScrollState(target, stateHost);
+        if (listenerHost.dataset.horizontalWheelBound === 'true') return;
+
+        listenerHost.dataset.horizontalWheelBound = 'true';
+
+        const syncState = function () {
+            updateHorizontalScrollState(target, stateHost);
+        };
+
+        listenerHost.addEventListener('wheel', function (event) {
             if (!event || event.ctrlKey || event.defaultPrevented) return;
             if (window.matchMedia && window.matchMedia('(max-width: 960px)').matches) return;
 
-            const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+            const maxScrollLeft = Math.max(0, target.scrollWidth - target.clientWidth);
             if (maxScrollLeft <= 1) return;
 
             const delta = normalizeHorizontalWheelDelta(event);
             if (!delta) return;
 
-            const currentScrollLeft = container.scrollLeft;
+            const currentScrollLeft = target.scrollLeft;
             const nextScrollLeft = Math.min(maxScrollLeft, Math.max(0, currentScrollLeft + delta));
             if (Math.abs(nextScrollLeft - currentScrollLeft) < 1) return;
 
             event.preventDefault();
-            container.scrollLeft = nextScrollLeft;
+            target.scrollLeft = nextScrollLeft;
+            flashHorizontalScrollState(stateHost);
+            syncState();
         }, { passive: false });
+
+        target.addEventListener('scroll', function () {
+            flashHorizontalScrollState(stateHost);
+            syncState();
+        }, { passive: true });
+
+        window.addEventListener('resize', syncState, { passive: true });
+
+        if (typeof ResizeObserver === 'function') {
+            const observer = new ResizeObserver(syncState);
+            observer.observe(target);
+            if (stateHost !== target) observer.observe(stateHost);
+            listenerHost.__horizontalWheelResizeObserver = observer;
+        }
+
+        window.requestAnimationFrame(syncState);
     }
 
     function renderModuleRail(category, visibleItems, activeItem) {
@@ -334,8 +388,11 @@
             });
         });
 
-        bindHorizontalWheelScroll(rail);
-        window.requestAnimationFrame(scrollActiveModuleRailChipIntoView);
+        bindHorizontalWheelScroll(railShell, rail, railShell);
+        window.requestAnimationFrame(function () {
+            scrollActiveModuleRailChipIntoView();
+            updateHorizontalScrollState(rail, railShell);
+        });
     }
 
     function updateShellChrome(activeId) {
@@ -506,7 +563,7 @@
         if (!subNavContainer) return;
 
         subNavContainer.innerHTML = '';
-        bindHorizontalWheelScroll(subNavContainer);
+        bindHorizontalWheelScroll(subNavContainer, subNavContainer, subNavContainer);
         resolveCategoryState();
         const category = NAV_STRUCTURE[currentCategory];
         if (!category) return;
@@ -564,6 +621,9 @@
             }
         }, 100);
 
+        window.requestAnimationFrame(function () {
+            updateHorizontalScrollState(subNavContainer, subNavContainer);
+        });
         updateShellChrome(activeSectionId);
         notifyShellEnhancements();
     }
