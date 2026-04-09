@@ -27,9 +27,8 @@
       "output": "release"
     },
     "files": [
-      "main.js",
-      "preload.js",
-      "splash.html",
+      "*.js",
+      "*.html",
       "bundle/**/*",
       "package.json"
     ],
