@@ -792,6 +792,18 @@
                 </div>
             </header>
 
+            <div id="shell-module-rail-floating-shell" class="shell-module-rail-shell shell-module-rail-shell--floating"
+                data-shell-module-rail-shell="floating" aria-label="滚动快捷切换" aria-hidden="true">
+                <div class="shell-module-rail-meta">
+                    <div class="shell-module-rail-copy">
+                        <span class="shell-module-rail-label">Quick Switch</span>
+                        <strong data-shell-module-rail-title>当前分类模块快切</strong>
+                    </div>
+                    <span class="shell-module-rail-status" data-shell-module-rail-status>点击下方标签快速切换模块</span>
+                </div>
+                <div class="shell-module-rail" data-shell-module-rail></div>
+            </div>
+
             <!-- 工作区总览与模块导航 -->
             <section id="shell-overview" class="shell-overview">
                 <article class="shell-overview-card shell-overview-card--focus shell-overview-card--dock">
@@ -828,15 +840,17 @@
                         </button>
                     </div>
                 </article>
-                <div id="shell-module-rail-shell" class="shell-module-rail-shell" aria-label="当前分类快捷切换">
+                <div id="shell-module-rail-shell" class="shell-module-rail-shell"
+                    data-shell-module-rail-shell="primary" aria-label="当前分类快捷切换">
                     <div class="shell-module-rail-meta">
                         <div class="shell-module-rail-copy">
                             <span class="shell-module-rail-label">Quick Switch</span>
-                            <strong id="shell-module-rail-title">当前分类模块快切</strong>
+                            <strong id="shell-module-rail-title" data-shell-module-rail-title>当前分类模块快切</strong>
                         </div>
-                        <span id="shell-module-rail-status" class="shell-module-rail-status">点击下方标签快速切换模块</span>
+                        <span id="shell-module-rail-status" class="shell-module-rail-status"
+                            data-shell-module-rail-status>点击下方标签快速切换模块</span>
                     </div>
-                    <div id="shell-module-rail" class="shell-module-rail"></div>
+                    <div id="shell-module-rail" class="shell-module-rail" data-shell-module-rail></div>
                 </div>
             </section>
 

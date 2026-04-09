@@ -111,6 +111,7 @@
     };
 
     let currentCategory = 'data';
+    let moduleRailFloatingSyncFrame = 0;
 
     function setWorkspaceDrawerState(isOpen) {
         const drawer = document.getElementById('workspace-drawer');
@@ -159,6 +160,7 @@
     }
 
     function notifyShellEnhancements() {
+        scheduleFloatingModuleRailSync();
         if (typeof window.refreshShellEnhancements === 'function') {
             window.refreshShellEnhancements();
         }
@@ -243,10 +245,126 @@
         document.documentElement.style.setProperty('--primary', category.color);
     }
 
-    function scrollActiveModuleRailChipIntoView() {
-        const activeChip = document.querySelector('#shell-module-rail .shell-module-rail-chip.is-active');
+    function getModuleRailInstances() {
+        return Array.from(document.querySelectorAll('[data-shell-module-rail-shell]'))
+            .map(function (shell) {
+                const rail = shell.querySelector('[data-shell-module-rail]');
+                const title = shell.querySelector('[data-shell-module-rail-title]');
+                const status = shell.querySelector('[data-shell-module-rail-status]');
+                if (!rail || !title || !status) return null;
+                return { shell, rail, title, status };
+            })
+            .filter(Boolean);
+    }
+
+    function getPrimaryModuleRailShell() {
+        return document.querySelector('[data-shell-module-rail-shell="primary"]')
+            || document.getElementById('shell-module-rail-shell');
+    }
+
+    function getFloatingModuleRailShell() {
+        return document.querySelector('[data-shell-module-rail-shell="floating"]');
+    }
+
+    function getMainScrollContainer() {
+        return document.querySelector('main.app-main');
+    }
+
+    function isDesktopModuleRailViewport() {
+        if (document.body && document.body.dataset.mobileQuery === 'true') return false;
+        return !(window.matchMedia && window.matchMedia('(max-width: 960px)').matches);
+    }
+
+    function scrollActiveModuleRailChipIntoView(rail) {
+        if (!rail) return;
+        const activeChip = rail.querySelector('.shell-module-rail-chip.is-active');
         if (!activeChip || typeof activeChip.scrollIntoView !== 'function') return;
         activeChip.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'auto' });
+    }
+
+    function syncFloatingModuleRailLayout() {
+        const floatingShell = getFloatingModuleRailShell();
+        const header = document.getElementById('main-header');
+        if (!floatingShell || !header || !isDesktopModuleRailViewport()) return;
+
+        const headerRect = header.getBoundingClientRect();
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+        const left = Math.max(12, Math.round(headerRect.left));
+        const maxWidth = Math.max(280, viewportWidth - left - 12);
+        const width = Math.max(280, Math.min(Math.round(headerRect.width), maxWidth));
+        const top = Math.max(12, Math.round(headerRect.bottom + 10));
+
+        floatingShell.style.setProperty('--shell-module-rail-floating-top', `${top}px`);
+        floatingShell.style.setProperty('--shell-module-rail-floating-left', `${left}px`);
+        floatingShell.style.setProperty('--shell-module-rail-floating-width', `${width}px`);
+    }
+
+    function syncFloatingModuleRailVisibility() {
+        const floatingShell = getFloatingModuleRailShell();
+        const sourceShell = getPrimaryModuleRailShell();
+        const header = document.getElementById('main-header');
+        if (!floatingShell) return;
+
+        let shouldShow = false;
+        if (sourceShell && header && isDesktopModuleRailViewport()) {
+            const sourceRail = sourceShell.querySelector('[data-shell-module-rail]');
+            const hasRailContent = sourceShell.style.display !== 'none'
+                && sourceRail
+                && sourceRail.childElementCount > 0;
+
+            if (hasRailContent) {
+                const headerRect = header.getBoundingClientRect();
+                const sourceRect = sourceShell.getBoundingClientRect();
+                shouldShow = sourceRect.bottom <= headerRect.bottom + 16;
+            }
+        }
+
+        floatingShell.classList.toggle('is-visible', shouldShow);
+        floatingShell.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+    }
+
+    function scheduleFloatingModuleRailSync() {
+        if (moduleRailFloatingSyncFrame) return;
+        moduleRailFloatingSyncFrame = window.requestAnimationFrame(function () {
+            moduleRailFloatingSyncFrame = 0;
+            syncFloatingModuleRailLayout();
+            syncFloatingModuleRailVisibility();
+        });
+    }
+
+    function bindFloatingModuleRailBehavior() {
+        const floatingShell = getFloatingModuleRailShell();
+        if (!floatingShell) return;
+
+        if (floatingShell.dataset.floatingRailBound === 'true') {
+            scheduleFloatingModuleRailSync();
+            return;
+        }
+
+        floatingShell.dataset.floatingRailBound = 'true';
+
+        const main = getMainScrollContainer();
+        const header = document.getElementById('main-header');
+        const sourceShell = getPrimaryModuleRailShell();
+        const scheduleSync = function () {
+            scheduleFloatingModuleRailSync();
+        };
+
+        if (main) {
+            main.addEventListener('scroll', scheduleSync, { passive: true });
+        }
+        window.addEventListener('resize', scheduleSync, { passive: true });
+        window.addEventListener('scroll', scheduleSync, { passive: true });
+
+        if (typeof ResizeObserver === 'function') {
+            const observer = new ResizeObserver(scheduleSync);
+            if (main) observer.observe(main);
+            if (header) observer.observe(header);
+            if (sourceShell) observer.observe(sourceShell);
+            floatingShell.__floatingRailResizeObserver = observer;
+        }
+
+        scheduleFloatingModuleRailSync();
     }
 
     function updateHorizontalScrollState(scrollTarget, stateTarget) {
@@ -338,7 +456,79 @@
         window.requestAnimationFrame(syncState);
     }
 
+    function renderModuleRailShell(instance, category, visibleItems, activeItem) {
+        if (!instance || !instance.shell || !instance.rail || !instance.title || !instance.status) return;
+
+        const activeId = activeItem ? activeItem.id : '';
+        const activeLabel = activeItem ? activeItem.text : '未选择模块';
+
+        instance.shell.style.display = '';
+        instance.shell.style.setProperty('--rail-accent', category.color);
+        instance.shell.style.setProperty('--rail-accent-soft', toSoftColor(category.color, 0.12));
+        instance.shell.style.setProperty('--rail-accent-strong', toSoftColor(category.color, 0.20));
+        instance.title.textContent = `${category.title} · 桌面快切`;
+        instance.status.textContent = `当前模块：${activeLabel}`;
+        instance.status.setAttribute('data-shell-tooltip', `${category.title} 当前模块：${activeLabel}`);
+
+        instance.rail.innerHTML = visibleItems.map((item) => `
+            <button
+                type="button"
+                class="shell-module-rail-chip${item.id === activeId ? ' is-active' : ''}"
+                data-module-id="${item.id}"
+                data-shell-summary="${item.hint || item.text}"
+                data-shell-tooltip="${item.hint || item.text}"
+                aria-pressed="${item.id === activeId ? 'true' : 'false'}"
+            >
+                <span>${item.text}</span>
+            </button>
+        `).join('');
+
+        instance.rail.querySelectorAll('.shell-module-rail-chip').forEach((button) => {
+            button.addEventListener('click', function (event) {
+                event.preventDefault();
+                const moduleId = button.getAttribute('data-module-id');
+                if (!moduleId) return;
+                if (typeof switchTab === 'function') {
+                    switchTab(moduleId);
+                } else {
+                    updateShellChrome(moduleId);
+                }
+            });
+        });
+
+        bindHorizontalWheelScroll(instance.shell, instance.rail, instance.shell);
+    }
+
     function renderModuleRail(category, visibleItems, activeItem) {
+        const instances = getModuleRailInstances();
+        if (instances.length) {
+            if (!category || !Array.isArray(visibleItems) || visibleItems.length === 0) {
+                instances.forEach(function (instance) {
+                    instance.shell.style.display = 'none';
+                    instance.rail.innerHTML = '';
+                    instance.shell.classList.remove('is-visible');
+                    if (instance.shell === getFloatingModuleRailShell()) {
+                        instance.shell.setAttribute('aria-hidden', 'true');
+                    }
+                });
+                scheduleFloatingModuleRailSync();
+                return;
+            }
+
+            instances.forEach(function (instance) {
+                renderModuleRailShell(instance, category, visibleItems, activeItem);
+            });
+
+            window.requestAnimationFrame(function () {
+                instances.forEach(function (instance) {
+                    scrollActiveModuleRailChipIntoView(instance.rail);
+                    updateHorizontalScrollState(instance.rail, instance.shell);
+                });
+                scheduleFloatingModuleRailSync();
+            });
+            return;
+        }
+
         const railShell = document.getElementById('shell-module-rail-shell');
         const rail = document.getElementById('shell-module-rail');
         const railTitle = document.getElementById('shell-module-rail-title');
@@ -662,8 +852,10 @@
     window.syncShellChrome = updateShellChrome;
 
     document.addEventListener('DOMContentLoaded', function () {
+        bindFloatingModuleRailBehavior();
         setWorkspaceDrawerState(false);
         updateShellChrome();
+        scheduleFloatingModuleRailSync();
     });
 
     document.addEventListener('keydown', function (event) {
