@@ -1,8 +1,15 @@
-const fs = require('node:fs');
+﻿const fs = require('node:fs');
 const path = require('node:path');
+const packageInfo = require('./package.json');
+const {
+    RELEASE_PAGE_URL,
+    fetchReleaseCatalog,
+    getDesktopUpdateState
+} = require('./release-service');
 const {
     app,
     BrowserWindow,
+    ipcMain,
     Menu,
     Tray,
     dialog,
@@ -16,6 +23,7 @@ const APP_USER_MODEL_ID = 'com.smartedu.desktop';
 const ENTRY_FILE_NAME = 'lt.html';
 const ICON_FILE_NAME = 'app-icon.ico';
 const FALLBACK_ICON_FILE_NAME = 'favicon.ico';
+const AUTO_UPDATE_CHECK_DELAY_MS = 6000;
 
 const isSmokeMode = process.argv.includes('--smoke-test');
 const smokeResultFile = String(process.env.SMARTEDU_SMOKE_FILE || '').trim();
@@ -25,6 +33,8 @@ let mainWindow = null;
 let splashWindow = null;
 let tray = null;
 let isQuitRequested = false;
+let autoUpdateCheckTimer = 0;
+let lastPromptedUpdateTag = '';
 
 if (!hasSingleInstanceLock) {
     app.quit();
@@ -179,6 +189,266 @@ function destroyTray() {
     tray = null;
 }
 
+function getNativeReleaseSummary() {
+    const releaseTag = String(packageInfo.smartEduBuild?.releaseTag || '').trim();
+    const releaseDate = String(packageInfo.smartEduBuild?.releaseDate || '').trim();
+    return [releaseTag, releaseDate].filter(Boolean).join(' 路 ');
+}
+
+function buildDesktopRendererMeta() {
+    return {
+        isDesktopApp: true,
+        shell: 'electron',
+        platform: process.platform,
+        appVersion: app.getVersion(),
+        productName: String(packageInfo.productName || packageInfo.name || 'SmartEdu Desktop').trim(),
+        releaseTag: String(packageInfo.smartEduBuild?.releaseTag || '').trim(),
+        releaseDate: String(packageInfo.smartEduBuild?.releaseDate || '').trim()
+    };
+}
+
+function getDialogTarget(targetWindow = getVisibleMainWindow()) {
+    return targetWindow && !targetWindow.isDestroyed() ? targetWindow : null;
+}
+
+function showMessageBoxForWindow(targetWindow, options) {
+    const dialogTarget = getDialogTarget(targetWindow);
+    return dialogTarget
+        ? dialog.showMessageBox(dialogTarget, options)
+        : dialog.showMessageBox(options);
+}
+
+function formatDialogDate(value) {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return new Intl.DateTimeFormat('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).format(parsed);
+}
+
+function buildUpdateDialogDetail(result) {
+    const latestRelease = result?.latestRelease || null;
+    const latestAsset = latestRelease?.assets?.desktop || null;
+    const lines = [
+        `当前版本: ${String(result?.currentVersion || app.getVersion() || '').trim() || '未标记'}`,
+        result?.currentReleaseTag ? `当前发行标签: ${result.currentReleaseTag}` : '',
+        latestRelease?.tag ? `线上最新发行: ${latestRelease.tag}` : '',
+        latestRelease?.date ? `线上发布时间: ${formatDialogDate(latestRelease.date)}` : '',
+        latestAsset?.name ? `下载文件: ${latestAsset.name}` : '',
+        latestAsset?.url ? `下载链接: ${latestAsset.url}` : latestRelease?.url ? `Release 页面: ${latestRelease.url}` : ''
+    ].filter(Boolean);
+
+    const bullets = Array.isArray(latestRelease?.bullets) ? latestRelease.bullets.slice(0, 4) : [];
+    if (bullets.length) {
+        lines.push('', '本次更新重点:');
+        bullets.forEach((bullet, index) => {
+            lines.push(`${index + 1}. ${bullet}`);
+        });
+    }
+
+    return lines.join('\n');
+}
+
+async function openExternalUrl(targetUrl) {
+    const url = String(targetUrl || '').trim();
+    if (!isExternalUrl(url)) return false;
+    await shell.openExternal(url).catch(() => {});
+    return true;
+}
+
+async function readDesktopUpdateStatus() {
+    const releases = await fetchReleaseCatalog();
+    return getDesktopUpdateState({
+        currentVersion: app.getVersion(),
+        currentReleaseTag: String(packageInfo.smartEduBuild?.releaseTag || '').trim(),
+        currentReleaseDate: String(packageInfo.smartEduBuild?.releaseDate || '').trim(),
+        releases
+    });
+}
+
+async function presentDesktopUpdateStatus(result, {
+    parentWindow = getVisibleMainWindow(),
+    announceIfCurrent = false,
+    source = 'manual'
+} = {}) {
+    if (!result) return result;
+
+    if (result.updateAvailable && result.latestRelease) {
+        if (source === 'auto' && lastPromptedUpdateTag === result.latestRelease.tag) {
+            return result;
+        }
+
+        lastPromptedUpdateTag = result.latestRelease.tag;
+        const response = await showMessageBoxForWindow(parentWindow, {
+            type: 'info',
+            buttons: ['下载新版', '打开当前 Release', '稍后'],
+            defaultId: 0,
+            cancelId: 2,
+            noLink: true,
+            title: '发现新版本',
+            message: `${result.statusLabel}: ${result.latestRelease.tag}`,
+            detail: buildUpdateDialogDetail(result)
+        }).catch(() => null);
+
+        if (response?.response === 0) {
+            await openExternalUrl(result.latestRelease.assets?.desktop?.url || result.latestRelease.url || RELEASE_PAGE_URL);
+        } else if (response?.response === 1) {
+            await openExternalUrl(result.latestRelease.url || RELEASE_PAGE_URL);
+        }
+        return result;
+    }
+
+    if (!announceIfCurrent) {
+        return result;
+    }
+
+    await showMessageBoxForWindow(parentWindow, {
+        type: result.status === 'unavailable' ? 'warning' : 'info',
+        buttons: ['知道了'],
+        defaultId: 0,
+        cancelId: 0,
+        noLink: true,
+        title: '检查更新',
+        message: result.statusLabel,
+        detail: buildUpdateDialogDetail(result) || result.statusBody
+    }).catch(() => {});
+
+    return result;
+}
+
+async function runDesktopUpdateCheck({
+    parentWindow = getVisibleMainWindow(),
+    announceIfCurrent = false,
+    prompt = true,
+    source = 'manual'
+} = {}) {
+    try {
+        const result = await readDesktopUpdateStatus();
+        if (prompt) {
+            await presentDesktopUpdateStatus(result, { parentWindow, announceIfCurrent, source });
+        }
+        return result;
+    } catch (error) {
+        if (prompt && (announceIfCurrent || source === 'manual' || source === 'tray')) {
+            await showMessageBoxForWindow(parentWindow, {
+                type: 'warning',
+                buttons: ['知道了'],
+                defaultId: 0,
+                cancelId: 0,
+                noLink: true,
+                title: '检查更新失败',
+                message: '暂时无法读取线上版本信息',
+                detail: error instanceof Error ? error.message : String(error)
+            }).catch(() => {});
+        }
+        throw error;
+    }
+}
+
+function clearAutoUpdateCheckTimer() {
+    if (!autoUpdateCheckTimer) return;
+    clearTimeout(autoUpdateCheckTimer);
+    autoUpdateCheckTimer = 0;
+}
+
+function scheduleAutoUpdateCheck() {
+    if (isSmokeMode || autoUpdateCheckTimer) return;
+
+    autoUpdateCheckTimer = setTimeout(() => {
+        autoUpdateCheckTimer = 0;
+        runDesktopUpdateCheck({
+            parentWindow: getVisibleMainWindow(),
+            announceIfCurrent: false,
+            prompt: true,
+            source: 'auto'
+        }).catch((error) => {
+            console.warn('[desktop] auto update check failed:', error);
+        });
+    }, AUTO_UPDATE_CHECK_DELAY_MS);
+}
+
+function registerDesktopShellIpc() {
+    ipcMain.removeHandler('desktop-shell:check-updates');
+    ipcMain.removeHandler('desktop-shell:open-external');
+
+    ipcMain.handle('desktop-shell:check-updates', async (event, payload = {}) => {
+        const parentWindow = BrowserWindow.fromWebContents(event.sender) || getVisibleMainWindow();
+        return runDesktopUpdateCheck({
+            parentWindow,
+            announceIfCurrent: payload && payload.announceIfCurrent !== false,
+            prompt: payload && payload.prompt !== false,
+            source: String(payload?.source || 'renderer').trim() || 'renderer'
+        });
+    });
+
+    ipcMain.handle('desktop-shell:open-external', async (_, payload = {}) => {
+        const url = String(payload?.url || '').trim();
+        if (!url || !isExternalUrl(url)) return false;
+        await shell.openExternal(url).catch(() => {});
+        return true;
+    });
+}
+
+async function injectDesktopRuntimeFlags(targetWindow) {
+    if (!targetWindow || targetWindow.isDestroyed()) return false;
+
+    return targetWindow.webContents.executeJavaScript(
+        `(() => {
+            const meta = ${JSON.stringify(buildDesktopRendererMeta())};
+            window.__SMARTEDU_DESKTOP_SHELL__ = meta;
+            const apply = (target) => {
+                if (!target || !target.dataset) return;
+                target.dataset.desktopShell = 'electron';
+                target.dataset.desktopAppVersion = String(meta.appVersion || '');
+                target.dataset.desktopProductName = String(meta.productName || '');
+                target.dataset.desktopReleaseTag = String(meta.releaseTag || '');
+                target.dataset.desktopReleaseDate = String(meta.releaseDate || '');
+            };
+            apply(document.documentElement);
+            apply(document.body);
+            return true;
+        })();`,
+        true
+    ).catch(() => false);
+}
+
+async function openVersionCenterFromNative(preferredPlatform = 'desktop') {
+    const targetWindow = getVisibleMainWindow();
+    if (!targetWindow) return false;
+
+    showMainWindow();
+    await injectDesktopRuntimeFlags(targetWindow);
+
+    try {
+        const opened = await targetWindow.webContents.executeJavaScript(
+            `(() => {
+                if (window.VersionCenter && typeof window.VersionCenter.openModal === 'function') {
+                    window.VersionCenter.openModal(${JSON.stringify(preferredPlatform === 'desktop' ? 'desktop' : 'android')});
+                    return true;
+                }
+                return false;
+            })();`,
+            true
+        );
+        if (opened) return true;
+    } catch (error) {
+        console.warn('[desktop] open version center failed:', error);
+    }
+
+    await showMessageBoxForWindow(targetWindow, {
+        type: 'info',
+        title: '关于与更新',
+        message: `当前版本 ${app.getVersion()}`,
+        detail: getNativeReleaseSummary() || '页面仍在初始化中，请稍后再试。'
+    }).catch(() => {});
+    return false;
+}
+
 function refreshTrayMenu() {
     if (!tray) return;
 
@@ -193,6 +463,23 @@ function refreshTrayMenu() {
             label: '隐藏到托盘',
             enabled: !!targetWindow && isWindowVisible,
             click: () => hideMainWindow()
+        },
+        {
+            label: '关于与更新',
+            click: () => {
+                openVersionCenterFromNative('desktop').catch(() => {});
+            }
+        },
+        {
+            label: '检查更新',
+            click: () => {
+                runDesktopUpdateCheck({
+                    parentWindow: getVisibleMainWindow(),
+                    announceIfCurrent: true,
+                    prompt: true,
+                    source: 'tray'
+                }).catch(() => {});
+            }
         },
         { type: 'separator' },
         {
@@ -308,9 +595,69 @@ async function runSmokeCheck(win) {
         throw new Error('Desktop shell loaded, but icon font assets were not ready.');
     }
 
+    const nativeVersionCenterOpened = await openVersionCenterFromNative('desktop');
+    const versionCenterPayload = await win.webContents.executeJavaScript(
+        `
+        (() => new Promise((resolve) => {
+            const start = Date.now();
+            const timeoutMs = 10000;
+
+            const collect = () => {
+                const backdrop = document.getElementById('version-center-backdrop');
+                const title = document.getElementById('version-center-title');
+                const copy = document.getElementById('version-center-copy');
+                return {
+                    desktopBridgeReady: (!!window.DesktopShell && window.DesktopShell.isDesktopApp === true)
+                        || (!!window.__SMARTEDU_DESKTOP_SHELL__ && window.__SMARTEDU_DESKTOP_SHELL__.isDesktopApp === true)
+                        || document.documentElement?.dataset?.desktopShell === 'electron'
+                        || document.body?.dataset?.desktopShell === 'electron',
+                    versionCenterReady: !!window.VersionCenter && typeof window.VersionCenter.openModal === 'function',
+                    modalVisible: !!backdrop && getComputedStyle(backdrop).display !== 'none' && backdrop.getAttribute('aria-hidden') !== 'true',
+                    titleText: String(title?.textContent || '').trim(),
+                    copyText: String(copy?.textContent || '').trim(),
+                    historyCount: document.querySelectorAll('[data-version-center-history] [data-app-release-item="true"]').length,
+                    latestActionCount: document.querySelectorAll('[data-version-center-latest] .version-center-inline-actions .btn').length
+                };
+            };
+
+            const isReady = (payload) => payload.desktopBridgeReady
+                && payload.versionCenterReady
+                && payload.modalVisible
+                && payload.historyCount >= 2
+                && payload.latestActionCount >= 2;
+
+            const tick = () => {
+                const payload = collect();
+                if (isReady(payload) || Date.now() - start >= timeoutMs) {
+                    resolve(payload);
+                    return;
+                }
+                setTimeout(tick, 150);
+            };
+
+            tick();
+        }))();
+        `,
+        true
+    );
+
+    if (!nativeVersionCenterOpened) {
+        throw new Error('Desktop native version center entry did not open successfully.');
+    }
+
+    if (!versionCenterPayload.desktopBridgeReady || !versionCenterPayload.versionCenterReady) {
+        throw new Error(`Desktop version center runtime bridge was not ready: ${JSON.stringify(versionCenterPayload)}`);
+    }
+
+    if (!versionCenterPayload.modalVisible || versionCenterPayload.historyCount < 2) {
+        throw new Error(`Desktop version center modal did not render release history: ${JSON.stringify(versionCenterPayload)}`);
+    }
+
     writeSmokeResult({
         ok: true,
-        ...smokePayload
+        ...smokePayload,
+        nativeVersionCenterOpened,
+        versionCenter: versionCenterPayload
     });
 }
 
@@ -399,7 +746,7 @@ function createMainWindow(icon) {
     });
 
     nextWindow.on('unresponsive', () => {
-        dialog.showMessageBox(nextWindow, {
+        showMessageBoxForWindow(nextWindow, {
             type: 'warning',
             title: '桌面端暂时没有响应',
             message: '桌面端正在尝试恢复界面。',
@@ -419,6 +766,11 @@ function createMainWindow(icon) {
         if (shouldReload && !nextWindow.isDestroyed()) {
             await nextWindow.loadFile(getEntryFile()).catch(() => {});
         }
+    });
+
+    nextWindow.webContents.on('did-finish-load', () => {
+        injectDesktopRuntimeFlags(nextWindow).catch(() => {});
+        scheduleAutoUpdateCheck();
     });
 
     nextWindow.once('ready-to-show', () => {
@@ -454,6 +806,7 @@ if (hasSingleInstanceLock) {
             session.defaultSession.on('will-download', (_, item) => {
                 item.setSavePath(createUniqueDownloadPath(item.getFilename()));
             });
+            registerDesktopShellIpc();
 
             try {
                 await launchDesktopApp();
@@ -476,6 +829,7 @@ if (hasSingleInstanceLock) {
 
     app.on('before-quit', () => {
         isQuitRequested = true;
+        clearAutoUpdateCheckTimer();
         destroyTray();
         closeSplashWindow();
     });
@@ -505,3 +859,8 @@ if (hasSingleInstanceLock) {
         }
     });
 }
+
+
+
+
+

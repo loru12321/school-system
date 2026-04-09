@@ -8920,6 +8920,53 @@ body.dark-mode #login-overlay {
     gap: 6px;
 }
 
+.app-download-release-version-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.app-download-release-version-list.is-compact {
+    margin-top: 14px;
+}
+
+.app-download-release-version-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(203, 213, 225, 0.88);
+    background: #f8fafc;
+    color: #334155;
+    font-size: 12px;
+    line-height: 1.2;
+}
+
+.app-download-release-version-pill i {
+    font-size: 15px;
+}
+
+.app-download-release-version-pill strong {
+    color: #0f172a;
+    font-size: 12px;
+}
+
+.app-download-release-version-pill span {
+    color: #475569;
+}
+
+.app-download-release-version-pill.is-android {
+    border-color: rgba(34, 197, 94, 0.28);
+    background: rgba(240, 253, 244, 0.96);
+}
+
+.app-download-release-version-pill.is-desktop {
+    border-color: rgba(96, 165, 250, 0.3);
+    background: rgba(239, 246, 255, 0.96);
+}
+
 .app-download-linkbar {
     display: grid;
     gap: 10px;
@@ -9057,6 +9104,20 @@ body.dark-mode .app-download-spec-code {
     color: #e2e8f0;
 }
 
+body.dark-mode .app-download-release-version-pill {
+    border-color: rgba(71, 85, 105, 0.72);
+    background: rgba(15, 23, 42, 0.94);
+    color: #cbd5e1;
+}
+
+body.dark-mode .app-download-release-version-pill strong {
+    color: #f8fafc;
+}
+
+body.dark-mode .app-download-release-version-pill span {
+    color: #94a3b8;
+}
+
 @media screen and (max-width: 960px) {
     .app-download-layout,
     .app-download-section-grid {
@@ -9097,6 +9158,333 @@ body.dark-mode .app-download-spec-code {
     .app-download-side-card {
         padding: 18px;
         border-radius: 20px;
+    }
+}
+
+.app-download-status-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.app-download-status-card {
+    padding: 16px 18px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}
+
+.app-download-status-card.is-success {
+    border-color: rgba(187, 247, 208, 0.82);
+    background: rgba(34, 197, 94, 0.16);
+}
+
+.app-download-status-card.is-warning {
+    border-color: rgba(253, 230, 138, 0.82);
+    background: rgba(245, 158, 11, 0.18);
+}
+
+.app-download-status-card.is-accent {
+    border-color: rgba(191, 219, 254, 0.82);
+    background: rgba(59, 130, 246, 0.18);
+}
+
+.app-download-status-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.app-download-status-value {
+    display: block;
+    margin-top: 8px;
+    font-size: 18px;
+    line-height: 1.35;
+}
+
+.app-download-status-copy {
+    margin: 8px 0 0;
+    color: rgba(255, 255, 255, 0.84);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.app-download-release-empty {
+    margin: 0;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.app-download-release-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.app-download-release-btn {
+    min-height: 38px;
+    border-radius: 999px;
+}
+
+.version-center-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 41000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(15, 23, 42, 0.56);
+    backdrop-filter: blur(10px);
+}
+
+.version-center-dialog {
+    width: min(1120px, 100%);
+    max-height: min(88vh, 940px);
+    overflow: auto;
+    padding: 24px;
+    border-radius: 30px;
+    border: 1px solid rgba(226, 232, 240, 0.94);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.96) 100%);
+    box-shadow: 0 40px 90px rgba(15, 23, 42, 0.24);
+}
+
+.version-center-top,
+.version-center-actions,
+.version-center-panel-head,
+.version-center-inline-actions,
+.version-center-meta-list {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.version-center-chip,
+.version-center-kicker {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.1);
+    color: #1d4ed8;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.version-center-top h2,
+.version-center-panel-head h3,
+.version-center-latest-card h4 {
+    margin: 10px 0 0;
+    color: #0f172a;
+}
+
+.version-center-top p,
+.version-center-latest-card p,
+.version-center-status-card p,
+.version-center-bullet-list li {
+    color: #475569;
+    line-height: 1.7;
+}
+
+.version-center-close {
+    width: 42px;
+    height: 42px;
+    border: 1px solid rgba(226, 232, 240, 0.92);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.94);
+    color: #0f172a;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.version-center-platform-grid,
+.version-center-status-grid,
+.version-center-latest-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 18px;
+}
+
+.version-center-platform-card,
+.version-center-status-card,
+.version-center-latest-card,
+.version-center-panel {
+    border: 1px solid rgba(226, 232, 240, 0.92);
+    border-radius: 24px;
+    background: #ffffff;
+}
+
+.version-center-platform-card,
+.version-center-status-card,
+.version-center-latest-card {
+    padding: 18px 20px;
+}
+
+.version-center-platform-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.version-center-platform-card.is-active {
+    border-color: var(--version-accent, #2563eb);
+    box-shadow: 0 24px 44px -36px rgba(37, 99, 235, 0.42);
+}
+
+.version-center-platform-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 16px;
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--version-accent, #2563eb);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+
+.version-center-platform-copy strong,
+.version-center-status-card strong,
+.version-center-meta-list strong {
+    display: block;
+    color: #0f172a;
+}
+
+.version-center-platform-copy span,
+.version-center-status-card span,
+.version-center-meta-list span,
+.version-center-panel-head span {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.version-center-status-card.is-success {
+    border-color: rgba(34, 197, 94, 0.36);
+    background: rgba(240, 253, 244, 0.95);
+}
+
+.version-center-status-card.is-warning {
+    border-color: rgba(245, 158, 11, 0.36);
+    background: rgba(255, 251, 235, 0.96);
+}
+
+.version-center-status-card.is-accent {
+    border-color: rgba(59, 130, 246, 0.34);
+    background: rgba(239, 246, 255, 0.96);
+}
+
+.version-center-actions,
+.version-center-panel {
+    margin-top: 18px;
+}
+
+.version-center-panel {
+    padding: 20px;
+}
+
+.version-center-meta-list {
+    align-items: stretch;
+    justify-content: flex-start;
+    margin-top: 14px;
+}
+
+.version-center-meta-list > div {
+    min-width: 160px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+.version-center-inline-actions {
+    justify-content: flex-start;
+    margin-top: 14px;
+}
+
+.version-center-bullet-list {
+    margin: 14px 0 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 8px;
+}
+
+.version-center-history {
+    display: grid;
+    gap: 14px;
+    margin-top: 14px;
+}
+
+body.dark-mode .app-download-status-card,
+body.dark-mode .version-center-dialog,
+body.dark-mode .version-center-platform-card,
+body.dark-mode .version-center-status-card,
+body.dark-mode .version-center-latest-card,
+body.dark-mode .version-center-panel {
+    border-color: rgba(51, 65, 85, 0.92);
+    background: rgba(2, 6, 23, 0.96);
+    color: #e2e8f0;
+}
+
+body.dark-mode .app-download-release-empty,
+body.dark-mode .version-center-top p,
+body.dark-mode .version-center-latest-card p,
+body.dark-mode .version-center-status-card p,
+body.dark-mode .version-center-bullet-list li,
+body.dark-mode .version-center-platform-copy span,
+body.dark-mode .version-center-status-card span,
+body.dark-mode .version-center-meta-list span,
+body.dark-mode .version-center-panel-head span {
+    color: #94a3b8;
+}
+
+body.dark-mode .version-center-top h2,
+body.dark-mode .version-center-panel-head h3,
+body.dark-mode .version-center-latest-card h4,
+body.dark-mode .version-center-platform-copy strong,
+body.dark-mode .version-center-status-card strong,
+body.dark-mode .version-center-meta-list strong {
+    color: #f8fafc;
+}
+
+body.dark-mode .version-center-close,
+body.dark-mode .version-center-meta-list > div {
+    border-color: rgba(51, 65, 85, 0.92);
+    background: rgba(15, 23, 42, 0.94);
+    color: #e2e8f0;
+}
+
+@media screen and (max-width: 960px) {
+    .app-download-status-grid,
+    .version-center-platform-grid,
+    .version-center-status-grid,
+    .version-center-latest-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media screen and (max-width: 640px) {
+    .version-center-backdrop {
+        padding: 12px;
+    }
+
+    .version-center-dialog {
+        padding: 18px;
+        border-radius: 24px;
     }
 }
 

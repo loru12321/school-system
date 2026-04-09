@@ -1,15 +1,20 @@
 {
   "name": "school-desktop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Windows desktop wrapper for SmartEdu Analytics",
   "main": "main.js",
   "author": "SmartEdu",
   "license": "ISC",
+  "smartEduBuild": {
+    "releaseTag": "school-system-v2026.04.09-about-update-v59",
+    "releaseDate": "2026-04-09"
+  },
   "scripts": {
     "sync:web": "powershell -ExecutionPolicy Bypass -File ./scripts/generate-icon.ps1 && node ./scripts/sync-bundle.mjs",
     "start": "npm run sync:web && electron .",
     "smoke": "npm run sync:web && electron . --smoke-test",
+    "test:update-service": "node ./scripts/test-update-service.js",
     "build:dir": "npm run sync:web && electron-builder --win dir",
     "build:installer": "npm run sync:web && electron-builder --win nsis",
     "build:portable": "npm run sync:web && electron-builder --win portable",
