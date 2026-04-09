@@ -120,6 +120,13 @@
             targets.push(card);
         });
 
+        document.querySelectorAll('#shell-module-rail .shell-module-rail-chip').forEach((chip) => {
+            const text = getText(chip);
+            const summary = chip.getAttribute('data-shell-summary') || '';
+            setTooltipText(chip, summary || text);
+            targets.push(chip);
+        });
+
         [
             ['#shell-module-count', 'Current visible modules'],
             ['#shell-cohort-chip', 'Current cohort'],
@@ -241,6 +248,15 @@
             navCards,
             { autoAlpha: 0, y: 18, scale: 0.985 },
             { autoAlpha: 1, y: 0, scale: 1, duration: 0.46, ease: 'power2.out', stagger: 0.05 }
+        );
+
+        const railChips = Array.from(document.querySelectorAll('#shell-module-rail .shell-module-rail-chip'))
+            .filter((node) => node.dataset.shellAnimated !== 'true');
+        railChips.forEach((node) => { node.dataset.shellAnimated = 'true'; });
+        animateNodes(
+            railChips,
+            { autoAlpha: 0, y: 12, scale: 0.985 },
+            { autoAlpha: 1, y: 0, scale: 1, duration: 0.34, ease: 'power2.out', stagger: 0.03 }
         );
 
         const activeSection = document.querySelector('.section.active');

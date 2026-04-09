@@ -243,6 +243,65 @@
         document.documentElement.style.setProperty('--primary', category.color);
     }
 
+    function scrollActiveModuleRailChipIntoView() {
+        const activeChip = document.querySelector('#shell-module-rail .shell-module-rail-chip.is-active');
+        if (!activeChip || typeof activeChip.scrollIntoView !== 'function') return;
+        activeChip.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'auto' });
+    }
+
+    function renderModuleRail(category, visibleItems, activeItem) {
+        const railShell = document.getElementById('shell-module-rail-shell');
+        const rail = document.getElementById('shell-module-rail');
+        const railTitle = document.getElementById('shell-module-rail-title');
+        const railStatus = document.getElementById('shell-module-rail-status');
+
+        if (!railShell || !rail || !railTitle || !railStatus) return;
+
+        if (!category || !Array.isArray(visibleItems) || visibleItems.length === 0) {
+            railShell.style.display = 'none';
+            rail.innerHTML = '';
+            return;
+        }
+
+        const activeId = activeItem ? activeItem.id : '';
+        const activeLabel = activeItem ? activeItem.text : '未选择模块';
+        railShell.style.display = '';
+        railShell.style.setProperty('--rail-accent', category.color);
+        railShell.style.setProperty('--rail-accent-soft', toSoftColor(category.color, 0.12));
+        railShell.style.setProperty('--rail-accent-strong', toSoftColor(category.color, 0.20));
+        railTitle.textContent = `${category.title} · 桌面快切`;
+        railStatus.textContent = `当前模块：${activeLabel}`;
+        railStatus.setAttribute('data-shell-tooltip', `${category.title} 当前模块：${activeLabel}`);
+
+        rail.innerHTML = visibleItems.map((item) => `
+            <button
+                type="button"
+                class="shell-module-rail-chip${item.id === activeId ? ' is-active' : ''}"
+                data-module-id="${item.id}"
+                data-shell-summary="${item.hint || item.text}"
+                data-shell-tooltip="${item.hint || item.text}"
+                aria-pressed="${item.id === activeId ? 'true' : 'false'}"
+            >
+                <span>${item.text}</span>
+            </button>
+        `).join('');
+
+        rail.querySelectorAll('.shell-module-rail-chip').forEach((button) => {
+            button.addEventListener('click', function (event) {
+                event.preventDefault();
+                const moduleId = button.getAttribute('data-module-id');
+                if (!moduleId) return;
+                if (typeof switchTab === 'function') {
+                    switchTab(moduleId);
+                } else {
+                    updateShellChrome(moduleId);
+                }
+            });
+        });
+
+        window.requestAnimationFrame(scrollActiveModuleRailChipIntoView);
+    }
+
     function updateShellChrome(activeId) {
         resolveCategoryState();
         const category = NAV_STRUCTURE[currentCategory] || NAV_STRUCTURE.data;
@@ -340,6 +399,7 @@
             activeHintEl.setAttribute('data-shell-tooltip', activeHintEl.textContent);
         }
 
+        renderModuleRail(category, visibleItems, activeItem);
         notifyShellEnhancements();
     }
 

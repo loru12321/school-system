@@ -6822,6 +6822,100 @@ body.parent-fullscreen-mode thead th {
     overflow: hidden;
 }
 
+.shell-module-rail-shell {
+    margin-top: 14px;
+    padding: 14px 16px 16px;
+    border: 1px solid rgba(226, 232, 240, 0.96);
+    border-radius: 24px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.97) 0%, rgba(248, 250, 252, 0.98) 100%);
+    box-shadow: 0 22px 42px -36px rgba(15, 23, 42, 0.38);
+}
+
+.shell-module-rail-meta {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.shell-module-rail-copy {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.shell-module-rail-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #64748b;
+}
+
+.shell-module-rail-copy strong {
+    font-size: 15px;
+    line-height: 1.2;
+    color: #0f172a;
+}
+
+.shell-module-rail-status {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.shell-module-rail {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 2px 2px 4px;
+    scrollbar-width: none;
+}
+
+.shell-module-rail::-webkit-scrollbar {
+    display: none;
+}
+
+.shell-module-rail-chip {
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid rgba(203, 213, 225, 0.95);
+    border-radius: 999px;
+    background: #ffffff;
+    color: #334155;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    box-shadow: 0 12px 22px -26px rgba(15, 23, 42, 0.55);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+}
+
+.shell-module-rail-chip:hover {
+    transform: translateY(-1px);
+    border-color: var(--rail-accent, #2563eb);
+    color: #0f172a;
+    box-shadow: 0 18px 28px -24px rgba(15, 23, 42, 0.35);
+}
+
+.shell-module-rail-chip.is-active {
+    border-color: var(--rail-accent, #2563eb);
+    background: var(--rail-accent-soft, rgba(37, 99, 235, 0.12));
+    color: var(--rail-accent, #2563eb);
+    box-shadow: 0 0 0 1px var(--rail-accent-strong, rgba(37, 99, 235, 0.20));
+}
+
+@media (max-width: 960px) {
+    .shell-module-rail-shell {
+        display: none !important;
+    }
+}
+
 /* 考后排座专用样式 */
 .desk-rank-A {
     background-color: #dcfce7;
