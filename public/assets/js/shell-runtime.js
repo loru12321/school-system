@@ -249,6 +249,41 @@
         activeChip.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'auto' });
     }
 
+    function normalizeHorizontalWheelDelta(event) {
+        if (!event) return 0;
+        const dominantDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY)
+            ? event.deltaX
+            : event.deltaY;
+        if (!dominantDelta) return 0;
+
+        if (event.deltaMode === 1) return dominantDelta * 24;
+        if (event.deltaMode === 2) return dominantDelta * 72;
+        return dominantDelta;
+    }
+
+    function bindHorizontalWheelScroll(container) {
+        if (!container || container.dataset.horizontalWheelBound === 'true') return;
+
+        container.dataset.horizontalWheelBound = 'true';
+        container.addEventListener('wheel', function (event) {
+            if (!event || event.ctrlKey || event.defaultPrevented) return;
+            if (window.matchMedia && window.matchMedia('(max-width: 960px)').matches) return;
+
+            const maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+            if (maxScrollLeft <= 1) return;
+
+            const delta = normalizeHorizontalWheelDelta(event);
+            if (!delta) return;
+
+            const currentScrollLeft = container.scrollLeft;
+            const nextScrollLeft = Math.min(maxScrollLeft, Math.max(0, currentScrollLeft + delta));
+            if (Math.abs(nextScrollLeft - currentScrollLeft) < 1) return;
+
+            event.preventDefault();
+            container.scrollLeft = nextScrollLeft;
+        }, { passive: false });
+    }
+
     function renderModuleRail(category, visibleItems, activeItem) {
         const railShell = document.getElementById('shell-module-rail-shell');
         const rail = document.getElementById('shell-module-rail');
@@ -299,6 +334,7 @@
             });
         });
 
+        bindHorizontalWheelScroll(rail);
         window.requestAnimationFrame(scrollActiveModuleRailChipIntoView);
     }
 
@@ -470,6 +506,7 @@
         if (!subNavContainer) return;
 
         subNavContainer.innerHTML = '';
+        bindHorizontalWheelScroll(subNavContainer);
         resolveCategoryState();
         const category = NAV_STRUCTURE[currentCategory];
         if (!category) return;
