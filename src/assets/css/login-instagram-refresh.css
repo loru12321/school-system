@@ -1,0 +1,605 @@
+/* Instagram-inspired login refresh (desktop + mobile)
+   Loaded after login-qq-final.css to stabilize layout priority. */
+
+#login-overlay[data-login-layout="qq-fullscreen"] {
+    --ig-bg: #fafafa;
+    --ig-surface: #ffffff;
+    --ig-border: #dbdbdb;
+    --ig-text: #262626;
+    --ig-muted: #8e8e8e;
+    --ig-accent: #4f5bd5;
+    --ig-accent-strong: #3656e8;
+    --ig-accent-soft: rgba(79, 91, 213, 0.16);
+    background:
+        radial-gradient(1200px 520px at -8% -12%, rgba(214, 41, 118, 0.12), transparent 62%),
+        radial-gradient(980px 460px at 108% 120%, rgba(254, 218, 117, 0.18), transparent 66%),
+        linear-gradient(180deg, #fcfcfd 0%, #f4f6fb 100%) !important;
+    padding: clamp(16px, 2.4vw, 34px) !important;
+    overflow: auto !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"][data-login-portal="parent"] {
+    --ig-accent: #0ea5a5;
+    --ig-accent-strong: #0f766e;
+    --ig-accent-soft: rgba(14, 165, 165, 0.16);
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"]::before,
+#login-overlay[data-login-layout="qq-fullscreen"]::after {
+    display: none !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"]>.login-shell,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-shell {
+    width: min(1320px, 100%) !important;
+    min-height: min(880px, calc(100dvh - 2 * clamp(16px, 2.4vw, 34px))) !important;
+    margin: 0 auto !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.12fr) minmax(430px, 0.88fr) !important;
+    background: var(--ig-surface) !important;
+    border: 1px solid var(--ig-border) !important;
+    border-radius: 30px !important;
+    box-shadow: 0 26px 70px rgba(20, 20, 43, 0.12) !important;
+    overflow: hidden !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-auth-panel {
+    min-height: 0 !important;
+    max-height: none !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage {
+    position: relative !important;
+    background: linear-gradient(160deg, #fdfdff 0%, #f7f8ff 42%, #fbfbfe 100%) !important;
+    border-right: 1px solid var(--ig-border) !important;
+    padding: clamp(28px, 3vw, 44px) clamp(24px, 2.8vw, 44px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: clamp(16px, 1.8vw, 28px) !important;
+    overflow: hidden !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage::before {
+    content: "" !important;
+    position: absolute !important;
+    right: -52px !important;
+    top: -46px !important;
+    width: 280px !important;
+    height: 280px !important;
+    border-radius: 50% !important;
+    background: radial-gradient(circle at 32% 28%, rgba(214, 41, 118, 0.26), rgba(79, 91, 213, 0.08) 58%, transparent 72%) !important;
+    filter: blur(2px) !important;
+    pointer-events: none !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage::after {
+    content: "" !important;
+    position: absolute !important;
+    left: -70px !important;
+    bottom: -84px !important;
+    width: 320px !important;
+    height: 320px !important;
+    border-radius: 50% !important;
+    background: radial-gradient(circle at 56% 42%, rgba(254, 218, 117, 0.24), rgba(79, 91, 213, 0.05) 60%, transparent 74%) !important;
+    pointer-events: none !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-nav,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-hero,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-spotlight {
+    position: relative !important;
+    z-index: 2 !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-nav {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: none !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-brand-mark {
+    width: 50px !important;
+    height: 50px !important;
+    border-radius: 16px !important;
+    background: linear-gradient(135deg, #833ab4 0%, #fd1d1d 52%, #fcb045 100%) !important;
+    box-shadow: 0 12px 26px rgba(214, 41, 118, 0.22) !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-brand-copy strong {
+    color: var(--ig-text) !important;
+    font-size: clamp(21px, 2.1vw, 28px) !important;
+    letter-spacing: 0.01em !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-brand-copy small {
+    color: #64748b !important;
+    letter-spacing: 0.14em !important;
+    text-transform: uppercase !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-nav-links a,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-nav-login {
+    border-radius: 999px !important;
+    border: 1px solid #e4e7ef !important;
+    background: #ffffff !important;
+    color: #334155 !important;
+    font-weight: 600 !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-nav-links a.active,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-nav-links a:hover,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-nav-login:hover {
+    border-color: var(--ig-accent) !important;
+    color: var(--ig-accent) !important;
+    box-shadow: 0 10px 22px var(--ig-accent-soft) !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-hero {
+    max-width: 620px !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    display: grid !important;
+    gap: 12px !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-hero-kicker {
+    display: inline-flex !important;
+    align-items: center !important;
+    width: fit-content !important;
+    padding: 7px 14px !important;
+    border-radius: 999px !important;
+    background: #ffffff !important;
+    border: 1px solid #e8ebf2 !important;
+    color: #5b6477 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    font-size: 11px !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] #login-stage-title {
+    margin: 0 !important;
+    color: #0f172a !important;
+    font-size: clamp(34px, 3.2vw, 54px) !important;
+    line-height: 1.12 !important;
+    letter-spacing: 0.01em !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] #login-stage-copy {
+    margin: 0 !important;
+    max-width: 560px !important;
+    color: #5f6b7e !important;
+    font-size: clamp(16px, 1.2vw, 20px) !important;
+    line-height: 1.75 !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-actions {
+    margin-top: 8px !important;
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-primary-action,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-secondary-action,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-tertiary-action {
+    min-height: 46px !important;
+    border-radius: 999px !important;
+    border: 1px solid #dde2ee !important;
+    background: #ffffff !important;
+    color: #1f2937 !important;
+    font-weight: 700 !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-primary-action {
+    border-color: transparent !important;
+    background: linear-gradient(135deg, var(--ig-accent) 0%, var(--ig-accent-strong) 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 12px 30px var(--ig-accent-soft) !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-tertiary-action {
+    grid-column: 1 / -1 !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-meta,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-platforms {
+    margin-top: 4px !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-meta span,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-platforms span {
+    border-color: #e4e9f2 !important;
+    background: rgba(255, 255, 255, 0.86) !important;
+    color: #4b5565 !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-spotlight {
+    margin-top: auto !important;
+    padding: 18px !important;
+    border: 1px solid #e6eaf2 !important;
+    border-radius: 22px !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65) !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-spotlight-grid {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 0 !important;
+    margin-top: 16px !important;
+    justify-content: center !important;
+    align-items: flex-end !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-spotlight-item {
+    width: min(230px, 34vw) !important;
+    min-height: 148px !important;
+    border-radius: 18px !important;
+    border: 1px solid #ecf0f7 !important;
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12) !important;
+    background: linear-gradient(170deg, #ffffff 0%, #f7f9ff 100%) !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-spotlight-item:nth-child(1) {
+    transform: rotate(-8deg) translateX(18px) !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-spotlight-item:nth-child(2) {
+    transform: translateY(-8px) !important;
+    z-index: 2 !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-stage-spotlight-item:nth-child(3) {
+    transform: rotate(8deg) translateX(-18px) !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-auth-panel {
+    background: #ffffff !important;
+    padding: clamp(30px, 3vw, 44px) clamp(24px, 2.6vw, 40px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 18px !important;
+    overflow: auto !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-auth-panel::before {
+    display: none !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-auth-head {
+    gap: 12px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-auth-title {
+    margin: 0 !important;
+    color: #0f172a !important;
+    font-size: clamp(28px, 2.2vw, 38px) !important;
+    line-height: 1.18 !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] #login-portal-copy {
+    margin-top: 8px !important;
+    color: #667085 !important;
+    line-height: 1.7 !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-auth-utility {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-system-download-link,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-system-download-ghost {
+    min-height: 44px !important;
+    border-radius: 999px !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-system-overview,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-mobile-highlights,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-portal-note {
+    display: none !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-portal-launch-head {
+    margin-top: 2px !important;
+    padding: 0 !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-portal-grid {
+    margin: 0 !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    padding: 0 !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-portal-card {
+    border: 1px solid var(--ig-border) !important;
+    border-radius: 18px !important;
+    background: #ffffff !important;
+    padding: 16px 16px 14px !important;
+    min-height: 0 !important;
+    box-shadow: none !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-portal-card::before {
+    display: none !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-portal-card:hover,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-portal-card.active {
+    border-color: var(--ig-accent) !important;
+    box-shadow: 0 12px 24px var(--ig-accent-soft) !important;
+    transform: translateY(-2px) !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-portal-icon {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 12px !important;
+    background: linear-gradient(140deg, #ffffff 0%, #eef1ff 100%) !important;
+    border: 1px solid #e4e9f6 !important;
+    color: var(--ig-accent) !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-portal-title {
+    color: #0f172a !important;
+    font-size: 28px !important;
+    margin-top: 2px !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-portal-desc,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-portal-meta {
+    color: #64748b !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-portal-action {
+    margin-top: 10px !important;
+    border-radius: 999px !important;
+    border: 1px solid #dbe2f0 !important;
+    background: #f7f9fe !important;
+    color: #324767 !important;
+    min-height: 42px !important;
+    font-weight: 700 !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"][data-login-portal="parent"] .login-portal-action {
+    color: #0f766e !important;
+    border-color: #bae9ea !important;
+    background: #f0fdfd !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"]>#login-modal-backdrop {
+    background: rgba(15, 23, 42, 0.54) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"]>#login-modal-backdrop .login-modal-dialog {
+    width: min(940px, 92vw) !important;
+    min-height: 560px !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) !important;
+    border-radius: 30px !important;
+    border: 1px solid var(--ig-border) !important;
+    background: #ffffff !important;
+    overflow: hidden !important;
+    box-shadow: 0 28px 64px rgba(0, 0, 0, 0.24) !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-modal-head {
+    padding: clamp(26px, 2.8vw, 40px) !important;
+    margin: 0 !important;
+    border-right: 1px solid #e8ebf3 !important;
+    background:
+        radial-gradient(680px 260px at -10% -22%, rgba(214, 41, 118, 0.16), transparent 62%),
+        radial-gradient(520px 220px at 112% 130%, rgba(254, 218, 117, 0.18), transparent 68%),
+        linear-gradient(180deg, #f9fbff 0%, #f3f6ff 100%) !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-modal-head-top {
+    margin-bottom: 20px !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-modal-chip {
+    border-radius: 999px !important;
+    border: 1px solid #dbe2f4 !important;
+    background: #ffffff !important;
+    color: #334155 !important;
+    font-weight: 700 !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-modal-close {
+    border: 1px solid #dce2ef !important;
+    background: #ffffff !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-modal-title {
+    margin: 0 0 10px !important;
+    color: #111827 !important;
+    font-size: clamp(30px, 2.5vw, 44px) !important;
+    line-height: 1.12 !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-modal-copy {
+    margin: 0 !important;
+    color: #5f6b7d !important;
+    line-height: 1.8 !important;
+    max-width: 500px !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-auth-card {
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: clamp(26px, 2.8vw, 40px) !important;
+    background: #ffffff !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] #login-form {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] #login-form .form-group {
+    margin: 0 !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] #login-form label {
+    color: #4b5563 !important;
+    font-size: 13px !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] #login-form input {
+    min-height: 50px !important;
+    border-radius: 12px !important;
+    border: 1px solid #d5dbe7 !important;
+    background: #fafbfe !important;
+    color: #111827 !important;
+    font-size: 15px !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] #login-form input:focus {
+    border-color: #202938 !important;
+    background: #ffffff !important;
+    box-shadow: 0 0 0 3px rgba(32, 41, 56, 0.12) !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] #login-submit-button {
+    min-height: 48px !important;
+    margin-top: 4px !important;
+    border-radius: 999px !important;
+    border: none !important;
+    color: #ffffff !important;
+    background: linear-gradient(135deg, var(--ig-accent) 0%, var(--ig-accent-strong) 100%) !important;
+    box-shadow: 0 12px 26px var(--ig-accent-soft) !important;
+    font-size: 16px !important;
+    font-weight: 800 !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] #login-submit-button:hover {
+    transform: translateY(-1px) !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-inline-tip,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-portal-helper {
+    color: #64748b !important;
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 10px !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-trust-strip {
+    margin-top: 4px !important;
+    padding-top: 12px !important;
+    border-top: 1px solid #ebedf2 !important;
+    color: #64748b !important;
+}
+
+@media (max-width: 1160px) {
+    #login-overlay[data-login-layout="qq-fullscreen"]>.login-shell,
+    #login-overlay[data-login-layout="qq-fullscreen"] .login-shell {
+        grid-template-columns: 1fr !important;
+        border-radius: 22px !important;
+    }
+
+    #login-overlay[data-login-layout="qq-fullscreen"] .login-stage {
+        border-right: none !important;
+        border-bottom: 1px solid #e5e8ef !important;
+        min-height: 0 !important;
+    }
+
+    #login-overlay[data-login-layout="qq-fullscreen"] .login-stage-spotlight {
+        margin-top: 14px !important;
+    }
+
+    #login-overlay[data-login-layout="qq-fullscreen"] .login-auth-panel {
+        justify-content: flex-start !important;
+    }
+}
+
+@media (max-width: 920px) {
+    #login-overlay[data-login-layout="qq-fullscreen"] {
+        padding: 10px !important;
+    }
+
+    #login-overlay[data-login-layout="qq-fullscreen"] .login-stage-nav-links {
+        display: none !important;
+    }
+
+    #login-overlay[data-login-layout="qq-fullscreen"] .login-stage-actions {
+        grid-template-columns: 1fr !important;
+    }
+
+    #login-overlay[data-login-layout="qq-fullscreen"] .login-stage-tertiary-action {
+        grid-column: auto !important;
+    }
+
+    #login-overlay[data-login-layout="qq-fullscreen"] .login-stage-spotlight-item {
+        width: min(195px, 42vw) !important;
+    }
+
+    #login-overlay[data-login-layout="qq-fullscreen"]>#login-modal-backdrop .login-modal-dialog {
+        width: min(96vw, 760px) !important;
+        min-height: 0 !important;
+        grid-template-columns: 1fr !important;
+        border-radius: 22px !important;
+    }
+
+    #login-overlay[data-login-layout="qq-fullscreen"] .login-modal-head {
+        border-right: none !important;
+        border-bottom: 1px solid #e8ebf3 !important;
+        padding: 22px !important;
+    }
+
+    #login-overlay[data-login-layout="qq-fullscreen"] .login-auth-card {
+        padding: 22px !important;
+    }
+}
+
+@media (max-width: 640px) {
+    #login-overlay[data-login-layout="qq-fullscreen"] .login-stage {
+        padding: 18px 16px !important;
+    }
+
+    #login-overlay[data-login-layout="qq-fullscreen"] .login-stage-brand-copy strong {
+        font-size: 22px !important;
+    }
+
+    #login-overlay[data-login-layout="qq-fullscreen"] #login-stage-title {
+        font-size: clamp(28px, 7.8vw, 36px) !important;
+    }
+
+    #login-overlay[data-login-layout="qq-fullscreen"] #login-stage-copy {
+        font-size: 15px !important;
+    }
+
+    #login-overlay[data-login-layout="qq-fullscreen"] .login-stage-meta,
+    #login-overlay[data-login-layout="qq-fullscreen"] .login-stage-platforms {
+        display: none !important;
+    }
+
+    #login-overlay[data-login-layout="qq-fullscreen"] .login-stage-spotlight {
+        display: none !important;
+    }
+
+    #login-overlay[data-login-layout="qq-fullscreen"] .login-auth-panel {
+        padding: 18px 16px 20px !important;
+    }
+
+    #login-overlay[data-login-layout="qq-fullscreen"] .login-auth-title {
+        font-size: 26px !important;
+    }
+
+    #login-overlay[data-login-layout="qq-fullscreen"] .login-auth-utility {
+        grid-template-columns: 1fr !important;
+    }
+}
