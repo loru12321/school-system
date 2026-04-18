@@ -1,4 +1,4 @@
-﻿window.onerror = function (msg, url, lineNo, columnNo, error) {
+window.onerror = function (msg, url, lineNo, columnNo, error) {
     // 忽略第三方插件的非关键错误
     if (msg.includes('Script error')) return false;
 
@@ -3066,7 +3066,7 @@ const Auth = {
         overlay.dataset.loginPortal = portal;
         overlay.dataset.loginLayout = 'qq-fullscreen';
         overlay.dataset.loginSkin = 'instagram';
-        overlay.innerHTML = `
+        const dummyHTML = `
             <div class="login-shell login-shell--instagram">
                 <section class="login-stage login-stage--instagram" aria-label="系统首页">
                     <nav class="login-stage-nav login-stage-nav--instagram" aria-label="首页导航">

@@ -366,7 +366,7 @@
             overlay.dataset.loginPortal = portal;
             overlay.dataset.loginLayout = 'qq-fullscreen';
             overlay.dataset.loginSkin = 'instagram';
-            overlay.innerHTML = buildLoginShellHtml();
+            // overlay.innerHTML = buildLoginShellHtml();
             overlay.dataset.igRebuilt = 'true';
             return overlay;
         };
