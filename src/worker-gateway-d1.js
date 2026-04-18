@@ -1,5 +1,5 @@
-const DEFAULT_LEGACY_GATEWAY_ORIGIN = 'https://okwcciujnfvobbwaydiv.supabase.co';
-const DEFAULT_LEGACY_GATEWAY_API_KEY = 'sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4';
+const DEFAULT_LEGACY_GATEWAY_ORIGIN = 'https://dpwsxxgojpqevzwyxrot.supabase.co';
+const DEFAULT_LEGACY_GATEWAY_API_KEY = 'sb_publishable_J7f2UEVGfHQ_89MR09KTNA_wKFRGZ86';
 const LOCAL_SESSION_TTL_SECONDS = 60 * 60 * 12;
 const PBKDF2_ITERATIONS = 100000;
 const PBKDF2_SCHEME = 'pbkdf2-sha256';

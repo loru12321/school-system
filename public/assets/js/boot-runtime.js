@@ -4,9 +4,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof initMacroAnomalyConfigUI === 'function') initMacroAnomalyConfigUI();
 });
 
-var DIRECT_SUPABASE_URL = 'https://aqhdogbdqijppvujiawy.supabase.co';
-var DIRECT_SUPABASE_KEY = 'sb_publishable_QDC8L-A-LQ0o-wEr7vVn3Q_fkJyk_Pi';
-var DIRECT_EDGE_GATEWAY_URL = 'https://okwcciujnfvobbwaydiv.supabase.co/functions/v1/edu-gateway-v2';
+var DIRECT_SUPABASE_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co';
+var DIRECT_SUPABASE_KEY = 'sb_publishable_J7f2UEVGfHQ_89MR09KTNA_wKFRGZ86';
+var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 
 function isLocalSupabaseHost(hostname) {

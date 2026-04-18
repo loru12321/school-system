@@ -1,7 +1,7 @@
 import { handleGatewayRequest, handleManagedRestRequest } from './worker-gateway-d1.js';
 
-const DEFAULT_LEGACY_GATEWAY_ORIGIN = 'https://okwcciujnfvobbwaydiv.supabase.co';
-const DEFAULT_LEGACY_GATEWAY_API_KEY = 'sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4';
+const DEFAULT_LEGACY_GATEWAY_ORIGIN = 'https://dpwsxxgojpqevzwyxrot.supabase.co';
+const DEFAULT_LEGACY_GATEWAY_API_KEY = 'sb_publishable_J7f2UEVGfHQ_89MR09KTNA_wKFRGZ86';
 const DEFAULT_AI_BASE_URL = 'https://api.deepseek.com';
 const DEFAULT_AI_MODEL = 'deepseek-chat';
 const SYSTEM_DATA_PATH = '/sb/rest/v1/system_data';

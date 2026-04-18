@@ -9,7 +9,7 @@ const DEFAULT_SOURCE_GATEWAY_URL = 'https://okwcciujnfvobbwaydiv.supabase.co/fun
 const DEFAULT_SOURCE_KEY = 'sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4';
 const DEFAULT_ADMIN_USER = 'admin';
 const DEFAULT_ADMIN_PASS = 'admin123';
-const DEFAULT_TARGET_PROJECT_REF = 'aqhdogbdqijppvujiawy';
+const DEFAULT_TARGET_PROJECT_REF = 'dpwsxxgojpqevzwyxrot';
 const DEFAULT_PAGE_SIZE = 500;
 const DEFAULT_BATCH_SIZE = 200;
 const DEFAULT_CLOUDFLARE_D1_DB = 'school-system-gateway';
@@ -488,7 +488,7 @@ function normalizeCloudflareD1AccountRow(row) {
     password_scheme: normalizeText(row?.password_scheme) || (passwordHash ? 'pbkdf2-sha256' : ''),
     password_source: normalizeText(row?.password_source) || (hasPassword ? 'cloudflare_d1' : ''),
     has_password: hasPassword,
-    password_display: row?.password_display ?? (hasPassword ? '宸茶缃?涓嶆樉绀烘槑鏂?' : '鏈缃?),
+    password_display: row?.password_display ?? (hasPassword ? '已设置(不显示明文)' : '未设置'),
     is_active: row?.is_active !== false && Number(row?.is_active ?? 1) !== 0,
     last_login_at: row?.last_login_at ?? null,
     created_at: normalizeText(row?.created_at) || new Date().toISOString(),

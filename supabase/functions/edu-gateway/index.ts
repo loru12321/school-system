@@ -10,6 +10,8 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const sessionSecret = Deno.env.get("APP_SESSION_SECRET") ?? "";
 const bcryptRounds = 12;
+const PBKDF2_ITERATIONS = 100000;
+const PBKDF2_SCHEME = "pbkdf2-sha256";
 const admin = createClient(supabaseUrl, serviceRoleKey, {
   auth: { persistSession: false, autoRefreshToken: false }
 });
@@ -188,13 +190,54 @@ function getStoredPasswordHash(row) {
 function hasStoredPassword(row) {
   return !!(getStoredPasswordHash(row) || getStoredPassword(row));
 }
-function hashAccountPassword(password) {
-  return bcrypt.hashSync(normalizeAccountText(password), bcryptRounds);
+async function derivePbkdf2Bits(password, saltBytes, iterations) {
+  const baseKey = await crypto.subtle.importKey(
+    "raw",
+    textEncoder.encode(normalizeAccountText(password)),
+    "PBKDF2",
+    false,
+    ["deriveBits"]
+  );
+  return crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      hash: "SHA-256",
+      salt: saltBytes,
+      iterations
+    },
+    baseKey,
+    256
+  );
 }
-function verifyAccountPassword(row, password) {
+async function hashAccountPassword(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const derivedBits = await derivePbkdf2Bits(password, salt, PBKDF2_ITERATIONS);
+  const hashBytes = new Uint8Array(derivedBits);
+  return `${PBKDF2_SCHEME}$${PBKDF2_ITERATIONS}$${toBase64Url(salt)}$${toBase64Url(hashBytes)}`;
+}
+async function verifyPbkdf2PasswordHash(storedHash, password) {
+  const parts = normalizeAccountText(storedHash).split("$");
+  if (parts.length !== 4) return false;
+  const [scheme, iterationsText, saltText, hashText] = parts;
+  if (scheme !== PBKDF2_SCHEME) return false;
+  const iterations = Number(iterationsText);
+  if (!Number.isFinite(iterations) || iterations <= 0) return false;
+  const salt = fromBase64Url(saltText);
+  const expected = fromBase64Url(hashText);
+  const derivedBits = await derivePbkdf2Bits(password, salt, iterations);
+  const candidate = new Uint8Array(derivedBits);
+  return timingSafeEqual(
+    Array.from(candidate, (byte) => String.fromCharCode(byte)).join(""),
+    Array.from(expected, (byte) => String.fromCharCode(byte)).join("")
+  );
+}
+async function verifyAccountPassword(row, password) {
   const incomingPassword = normalizeAccountText(password);
   const passwordHash = getStoredPasswordHash(row);
   if (passwordHash) {
+    if (passwordHash.startsWith(`${PBKDF2_SCHEME}$`)) {
+      return await verifyPbkdf2PasswordHash(passwordHash, incomingPassword);
+    }
     try {
       return bcrypt.compareSync(incomingPassword, passwordHash);
     } catch {
@@ -205,9 +248,10 @@ function verifyAccountPassword(row, password) {
   if (!legacyPassword) return false;
   return timingSafeEqual(legacyPassword, incomingPassword);
 }
-function buildPasswordSecretPatch(password) {
+async function buildPasswordSecretPatch(password) {
   return {
-    password_hash: hashAccountPassword(password),
+    password_hash: await hashAccountPassword(password),
+    password_scheme: PBKDF2_SCHEME,
     password: null
   };
 }
@@ -218,7 +262,7 @@ async function migrateLegacyPasswordRecord(username, password) {
   try {
     await admin
       .from("system_users")
-      .update(buildPasswordSecretPatch(normalizedPassword))
+      .update(await buildPasswordSecretPatch(normalizedPassword))
       .eq("username", normalizedUsername);
   } catch (error) {
     console.warn("[edu-gateway] legacy password migration skipped", normalizedUsername, error);
@@ -304,7 +348,7 @@ function normalizeAccountUpsertRow(input, session) {
     ];
   return {
     username,
-    ...(password ? buildPasswordSecretPatch(password) : { password_hash: "", password: null }),
+    ...(password ? { password } : { password_hash: "", password: null, password_scheme: "" }),
     role,
     roles,
     school,
@@ -335,7 +379,7 @@ async function handleLogin(payload) {
   if (!username || !password) return badRequest("username and password are required");
   const { data, error } = await admin.from("system_users").select("*").eq("username", username).maybeSingle();
   if (error) return serverError("system_users query failed", { detail: error.message });
-  if (!data || !verifyAccountPassword(data, password)) return unauthorized("Invalid username or password");
+  if (!data || !(await verifyAccountPassword(data, password))) return unauthorized("Invalid username or password");
   const role = String(data.role || "guest");
   if ((role === "parent" || role === "class_teacher") && inputClass && String(data.class_name || "").trim() !== inputClass) {
     return forbidden("class_name mismatch");
@@ -632,7 +676,7 @@ async function handleAccountResetPassword(session, payload) {
   if (!existing) return badRequest("account not found");
   if (!accountEditable(session, existing)) return forbidden("Out of scope");
 
-  const { data, error } = await admin.from("system_users").update(buildPasswordSecretPatch(newPassword)).eq("username", username).select("*").maybeSingle();
+  const { data, error } = await admin.from("system_users").update(await buildPasswordSecretPatch(newPassword)).eq("username", username).select("*").maybeSingle();
   if (error) return serverError("system_users password reset failed", { detail: error.message });
   return json(200, { ok: true, record: sanitizeAccountRecord(data) });
 }
@@ -646,9 +690,9 @@ async function handleAccountChangePassword(session, payload) {
   const { data: existing, error: findError } = await admin.from("system_users").select("*").eq("username", normalizeAccountText(session.username)).maybeSingle();
   if (findError) return serverError("system_users lookup failed", { detail: findError.message });
   if (!existing) return badRequest("current account not found");
-  if (!verifyAccountPassword(existing, oldPassword)) return forbidden("old password mismatch");
+  if (!(await verifyAccountPassword(existing, oldPassword))) return forbidden("old password mismatch");
 
-  const { data, error } = await admin.from("system_users").update(buildPasswordSecretPatch(newPassword)).eq("username", normalizeAccountText(session.username)).select("*").maybeSingle();
+  const { data, error } = await admin.from("system_users").update(await buildPasswordSecretPatch(newPassword)).eq("username", normalizeAccountText(session.username)).select("*").maybeSingle();
   if (error) return serverError("system_users password update failed", { detail: error.message });
   return json(200, { ok: true, record: sanitizeAccountRecord(data) });
 }
@@ -666,7 +710,15 @@ async function handleAccountExport(session) {
 async function handleAccountUpsertMany(session, payload) {
   if (!canBulkManageAccounts(session)) return forbidden("No permission to manage accounts");
   const rows = Array.isArray(payload.rows) ? payload.rows : [payload];
-  const sanitizedRows = rows.map((row) => normalizeAccountUpsertRow(row, session));
+  const sanitizedRows = [];
+  for (const row of rows) {
+    const normalized = normalizeAccountUpsertRow(row, session);
+    if (normalized.password) {
+      Object.assign(normalized, await buildPasswordSecretPatch(normalized.password));
+      delete normalized.password;
+    }
+    sanitizedRows.push(normalized);
+  }
   for (let i = 0; i < sanitizedRows.length; i += 1) {
     const reason = validateAccountUpsertRow(session, sanitizedRows[i]);
     if (reason) return badRequest(`第 ${i + 1} 条账号数据无效: ${reason}`);
