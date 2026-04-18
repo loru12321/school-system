@@ -3064,8 +3064,8 @@ const Auth = {
 
         const portal = overlay.dataset.loginPortal === 'parent' ? 'parent' : 'school';
         overlay.dataset.loginPortal = portal;
-        overlay.dataset.loginLayout = 'qq-fullscreen';
-        overlay.dataset.loginSkin = 'instagram';
+        // overlay.dataset.loginLayout = 'qq-fullscreen';
+        // overlay.dataset.loginSkin = 'instagram';
         const dummyHTML = `
             <div class="login-shell login-shell--instagram">
                 <section class="login-stage login-stage--instagram" aria-label="系统首页">

@@ -348,48 +348,6 @@
     }
 
     function patchAuth() {
-        const auth = window.Auth;
-        if (!auth || auth.__instagramRuntimeApplied === 'true') return false;
-
-        const originalEnsureLoginWorkbench = typeof auth.ensureLoginWorkbench === 'function'
-            ? auth.ensureLoginWorkbench.bind(auth)
-            : null;
-        const originalSyncLoginPortalUI = typeof auth.syncLoginPortalUI === 'function'
-            ? auth.syncLoginPortalUI.bind(auth)
-            : null;
-
-        auth.rebuildInstagramLoginShell = function () {
-            const overlay = document.getElementById('login-overlay');
-            if (!overlay) return null;
-            if (overlay.dataset.igRebuilt === 'true') return overlay;
-            const portal = overlay.dataset.loginPortal === 'parent' ? 'parent' : 'school';
-            overlay.dataset.loginPortal = portal;
-            overlay.dataset.loginLayout = 'qq-fullscreen';
-            overlay.dataset.loginSkin = 'instagram';
-            // overlay.innerHTML = buildLoginShellHtml();
-            overlay.dataset.igRebuilt = 'true';
-            return overlay;
-        };
-
-        auth.ensureLoginWorkbench = function () {
-            const overlay = this.rebuildInstagramLoginShell();
-            if (!overlay) return;
-            if (originalEnsureLoginWorkbench) {
-                originalEnsureLoginWorkbench();
-            }
-            applyInstagramCopy(this, this.getLoginPortal ? this.getLoginPortal() : overlay.dataset.loginPortal);
-        };
-
-        auth.syncLoginPortalUI = function (portal) {
-            const nextPortal = portal === 'parent' ? 'parent' : 'school';
-            if (originalSyncLoginPortalUI) {
-                originalSyncLoginPortalUI(nextPortal);
-            }
-            applyInstagramCopy(this, nextPortal);
-        };
-
-        auth.__instagramRuntimeApplied = 'true';
-        auth.ensureLoginWorkbench();
         return true;
     }
 
