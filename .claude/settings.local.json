@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(du -sh /c/Users/loru/Desktop/system/dist/assets/*)",
+      "Bash(npm -v)",
+      "Bash(grep -l \"setTimeout\\\\|setInterval\\\\|requestAnimationFrame\" /c/Users/loru/Desktop/system/public/assets/js/*.js)",
+      "Bash(find /c/Users/loru/Desktop/system/supabase/sql -name \"*.sql\" -exec grep -l \"create policy\\\\|create.*policy\" {} \\\\;)"
+    ]
+  }
+}

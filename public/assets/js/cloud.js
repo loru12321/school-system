@@ -24,6 +24,34 @@
         if (window.UI && typeof UI.loading === 'function') UI.loading(show, text);
     }
 
+    function getCloudApi() {
+        return window.CloudApi && typeof window.CloudApi === 'object' ? window.CloudApi : null;
+    }
+
+    async function selectSystemData(options = {}) {
+        const api = getCloudApi();
+        if (api && typeof api.selectSystemData === 'function') {
+            return api.selectSystemData(options);
+        }
+        return {
+            data: options.maybeSingle ? null : [],
+            error: new Error('CLOUD_API_UNAVAILABLE'),
+            source: 'none'
+        };
+    }
+
+    async function upsertSystemData(rows) {
+        const api = getCloudApi();
+        if (api && typeof api.upsertSystemData === 'function') {
+            return api.upsertSystemData(rows);
+        }
+        return {
+            data: [],
+            error: new Error('CLOUD_API_UNAVAILABLE'),
+            source: 'none'
+        };
+    }
+
     function setCloudStatus(state, detail = '') {
         if (typeof window.setCloudSyncStatus === 'function') {
             window.setCloudSyncStatus(state, detail);
@@ -721,11 +749,11 @@
             console.warn('[CloudLoad] read snapshot cache failed:', e);
         }
 
-        const { data, error } = await window.sbClient
-            .from(CLOUD_TABLE)
-            .select('content')
-            .eq('key', snapshotKey)
-            .maybeSingle();
+        const { data, error } = await selectSystemData({
+            select: 'content',
+            keyEq: snapshotKey,
+            maybeSingle: true
+        });
         if (error) throw error;
         if (!data?.content) return null;
 
@@ -780,12 +808,12 @@
         const candidateKeys = new Set();
         candidateKeys.add(`cohort::${cohortId}`);
 
-        const { data, error } = await window.sbClient
-            .from(CLOUD_TABLE)
-            .select('key,updated_at')
-            .like('key', `${cohortId}%`)
-            .order('updated_at', { ascending: false })
-            .limit(50);
+        const { data, error } = await selectSystemData({
+            select: 'key,updated_at',
+            keyLike: `${cohortId}%`,
+            order: 'updated_at',
+            limit: 50
+        });
         if (error) throw error;
 
         (data || []).forEach((row) => {
@@ -954,9 +982,12 @@
             extractCohortIdFromKey(rawKey)
             || getCurrentCohortId()
         );
-        let query = window.sbClient.from(CLOUD_TABLE).select('key,updated_at');
-        if (cid) query = query.like('key', `${cid}%`);
-        const { data, error } = await query.order('updated_at', { ascending: false }).limit(50);
+        const { data, error } = await selectSystemData({
+            select: 'key,updated_at',
+            keyLike: cid ? `${cid}%` : '',
+            order: 'updated_at',
+            limit: 50
+        });
         if (error) throw error;
 
         const rows = (data || []).filter(row => {
@@ -1022,8 +1053,8 @@
 
     const CloudManager = {
         check: (silent = false) => {
-            if (!window.sbClient) {
-                if (!silent) safeToast('云端未连接 (Supabase Disconnected)', 'error');
+            if (!(window.cloudClient || window.sbClient)) {
+                if (!silent) safeToast('云端未连接', 'error');
                 return false;
             }
             return true;
@@ -1039,7 +1070,8 @@
                 return true;
             }
             setCloudStatus('connecting');
-            if (typeof window.initSupabase === 'function') window.initSupabase();
+            if (typeof window.initCloudClient === 'function') window.initCloudClient();
+            else if (typeof window.initSupabase === 'function') window.initSupabase();
 
             const start = Date.now();
             while (Date.now() - start < timeoutMs) {
@@ -1048,7 +1080,8 @@
                     return true;
                 }
                 await sleep(retryMs);
-                if (typeof window.initSupabase === 'function') window.initSupabase();
+                if (typeof window.initCloudClient === 'function') window.initCloudClient();
+                else if (typeof window.initSupabase === 'function') window.initSupabase();
             }
             const ok = this.check(silent);
             if (!ok) setCloudStatus('error', '连接失败');
@@ -1112,11 +1145,11 @@
                     map: teacherMap,
                     schoolMap: getTeacherSchoolMap()
                 });
-                const { error } = await window.sbClient.from(CLOUD_TABLE).upsert({
+                const { error } = await upsertSystemData({
                     key,
                     content,
                     updated_at: new Date().toISOString()
-                }, { onConflict: 'key' });
+                });
                 if (error) throw error;
 
                 localStorage.setItem('TEACHER_SYNC_AT', new Date().toISOString());
@@ -1181,33 +1214,22 @@
                     ].map(v => String(v || '').trim()).filter(Boolean);
 
                     if (key) {
-                        const { data, error } = await window.sbClient
-                            .from(CLOUD_TABLE)
-                            .select('key,updated_at')
-                            .eq('key', key)
-                            .maybeSingle();
+                        const { data, error } = await selectSystemData({
+                            select: 'key,updated_at',
+                            keyEq: key,
+                            maybeSingle: true
+                        });
                         if (error) throw error;
                         metaRow = data || null;
                     }
 
                     if (!metaRow) {
-                        let query = window.sbClient
-                            .from(CLOUD_TABLE)
-                            .select('key,updated_at')
-                            .like('key', `${KEY_PREFIX_TEACHERS}%`)
-                            .order('updated_at', { ascending: false })
-                            .limit(20);
-
-                        if (cohortId) {
-                            query = window.sbClient
-                                .from(CLOUD_TABLE)
-                                .select('key,updated_at')
-                                .like('key', `${KEY_PREFIX_TEACHERS}${cohortId}%`)
-                                .order('updated_at', { ascending: false })
-                                .limit(20);
-                        }
-
-                        const { data: rows, error } = await query;
+                        const { data: rows, error } = await selectSystemData({
+                            select: 'key,updated_at',
+                            keyLike: cohortId ? `${KEY_PREFIX_TEACHERS}${cohortId}%` : `${KEY_PREFIX_TEACHERS}%`,
+                            order: 'updated_at',
+                            limit: 20
+                        });
                         if (error) throw error;
                         metaRow = (rows || []).find(item => desiredTerms.some(term => {
                             const keyText = String(item?.key || '');
@@ -1237,11 +1259,11 @@
                     }
 
                     setCloudStatus('syncing', '拉取任课');
-                    const { data, error } = await window.sbClient
-                        .from(CLOUD_TABLE)
-                        .select('key,content,updated_at')
-                        .eq('key', metaRow.key)
-                        .maybeSingle();
+                    const { data, error } = await selectSystemData({
+                        select: 'key,content,updated_at',
+                        keyEq: metaRow.key,
+                        maybeSingle: true
+                    });
                     if (error) throw error;
                     row = data || null;
 
@@ -1284,11 +1306,12 @@
             if (!cohortId) return { success: false, message: '无法确定学生届别' };
 
             try {
-                const { data, error } = await window.sbClient
-                    .from(CLOUD_TABLE)
-                    .select('key, content, updated_at')
-                    .like('key', `${cohortId}%`)
-                    .order('updated_at', { ascending: true });
+                const { data, error } = await selectSystemData({
+                    select: 'key,content,updated_at',
+                    keyLike: `${cohortId}%`,
+                    order: 'updated_at',
+                    ascending: true
+                });
                 if (error) throw error;
 
                 const rows = (data || []).filter(row => !isIgnoredExamKey(row.key));

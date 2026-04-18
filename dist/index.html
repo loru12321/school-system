@@ -1,7 +1,6 @@
 <!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"><meta name="theme-color" content="#eef2f8"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="智慧教务"><meta name="mobile-web-app-capable" content="yes"><meta name="format-detection" content="telephone=no, email=no, address=no"><title>智慧教务管理系统</title><link rel="icon" href="./favicon.ico?v=20260321-localgrades-v4" sizes="any"><link rel="stylesheet" href="./assets/vendor/tabler-icons/tabler-icons.min.css">
     <script defer src="./assets/js/platform-compat-runtime.js?v=20260407-apple-v1"></script>
     <script defer src="./assets/js/boot-runtime.js"></script>
-    <script defer src="./assets/vendor/supabase/supabase.min.js" onload="window.initSupabase()"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script defer src="./assets/vendor/crypto-js/crypto-js.min.js" data-standalone-lib="crypto-js"></script>
     
@@ -33,15 +32,33 @@
     <script defer src="./assets/js/compare-session-state-runtime.js?v=20260322-compare-session-v1"></script>
     <script defer src="./assets/js/compare-result-state-runtime.js?v=20260322-compare-result-v1"></script>
     <script defer src="./assets/js/compare-summary-state-runtime.js?v=20260322-compare-summary-v1"></script>
+    <script defer src="./assets/js/cloud-api-runtime.js?v=20260411-cloud-api-v1"></script>
     <script defer src="./assets/js/cloud.js?v=20260322-teacher-v1"></script>
     <script defer src="./assets/js/cloud-workspace-runtime.js?v=20260322-teacher-v1"></script>
+    <script defer src="./assets/js/data-cloud-runtime.js?v=20260411-data-cloud-v1"></script>
+    <script defer src="./assets/js/issue-manager-runtime.js?v=20260411-issue-runtime-v1"></script>
+    <script defer src="./assets/js/packager-runtime.js?v=20260411-packager-runtime-v1"></script>
+    <script defer src="./assets/js/help-system-runtime.js?v=20260412-help-runtime-v1"></script>
+    <script defer src="./assets/js/logger-runtime.js?v=20260412-logger-runtime-v1"></script>
+    <script defer src="./assets/js/worker-api-runtime.js?v=20260412-worker-runtime-v1"></script>
+    <script defer src="./assets/js/account-manager-runtime.js?v=20260412-account-runtime-v1"></script>
+    <script defer src="./assets/js/data-manager-teacher-runtime.js?v=20260412-dm-teacher-runtime-v1"></script>
+    <script defer src="./assets/js/data-manager-student-runtime.js?v=20260412-dm-student-runtime-v1"></script>
+    <script defer src="./assets/js/data-manager-archive-runtime.js?v=20260412-dm-archive-runtime-v1"></script>
+    <script defer src="./assets/js/data-manager-grade9-template-runtime.js?v=20260412-dm-grade9-runtime-v1"></script>
+    <script defer src="./assets/js/data-manager-params-runtime.js?v=20260412-dm-params-runtime-v1"></script>
+    <script defer src="./assets/js/data-manager-targets-runtime.js?v=20260412-dm-targets-runtime-v1"></script>
+    <script defer src="./assets/js/data-manager-school-alias-runtime.js?v=20260412-dm-school-alias-runtime-v1"></script>
+    <script defer src="./assets/js/data-manager-save-sync-runtime.js?v=20260412-dm-save-sync-runtime-v1"></script>
+    <script defer src="./assets/js/data-manager-history-runtime.js?v=20260412-dm-history-runtime-v1"></script>
+    <script defer src="./assets/js/data-manager-tab-runtime.js?v=20260412-dm-tab-runtime-v1"></script>
 
     
     
 
     
     
-  <link rel="stylesheet" crossorigin href="./style-CRT7lLpL.css"></head><body class="shell-sidebar-collapsed"><div id="global-loader" class="hidden"><div class="loader-spinner"></div><div class="loader-text" id="loader-text">系统正在处理数据，请稍候...</div></div><div id="mobile-manager-app"
+  <link rel="stylesheet" crossorigin href="./style-ClyOn6nu.css"></head><body class="shell-sidebar-collapsed"><div id="global-loader" class="hidden"><div class="loader-spinner"></div><div class="loader-text" id="loader-text">系统正在处理数据，请稍候...</div></div><div id="mobile-manager-app"
         style="display:none; min-height:100vh; background:var(--bg-body, #f7f9f9); padding-bottom:80px;"><div
             style="background:linear-gradient(135deg, #4f46e5, #3b82f6); padding:20px 20px 25px 20px; color:white; border-radius:0 0 20px 20px; box-shadow:0 4px 15px rgba(59,130,246,0.3);"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><div style="font-size:18px; font-weight:bold;">📊 智慧教务</div><div
                     style="display:flex; align-items:center; gap:8px; font-size:14px; background:rgba(255,255,255,0.2); padding:5px 12px; border-radius:20px; backdrop-filter:blur(5px);"><i class="ti ti-user-circle" style="font-size:18px;"></i><span id="mob-user-name">用户</span></div></div><div style="font-size:13px; opacity:0.85;"><span id="mob-user-role">角色</span> · 今天是 <span id="mob-date-text"></span></div></div><div id="mob-view-home" class="mob-view active" style="padding:15px;"><div
@@ -483,6 +500,7 @@
 <script defer src="./assets/js/shell-polish-runtime.js?v=20260402-plugin-v1"></script>
 <script defer src="./assets/js/module-entry-runtime.js?v=20260402-module-entry-v1"></script>
 <script defer src="./assets/js/app.js?v=20260408-login-refine-v1"></script>
+<script defer src="./assets/js/login-instagram-runtime.js?v=20260412-ig-runtime-v1"></script>
     <script defer src="./assets/js/school-normalization-runtime.js?v=20260321-localgrades-v4"></script>
     <script defer src="./assets/js/compare-shared-runtime.js?v=20260322-compare-session-v1"></script>
     <script defer src="./assets/js/compare-cloud-context-runtime.js?v=20260322-compare-cloud-v1"></script>

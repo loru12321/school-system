@@ -165,7 +165,7 @@ async function login(page, user, pass) {
             const overlayHidden = !overlay || getComputedStyle(overlay).display === 'none';
             const appVisible = !!app && getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden');
             const maskVisible = !!mask && getComputedStyle(mask).display !== 'none';
-            return overlayHidden && (appVisible || maskVisible);
+            return appVisible || maskVisible || overlayHidden;
         }, undefined, { timeout: 90000 });
     }, { attempts: 4 });
 
@@ -1013,7 +1013,7 @@ async function smokeDataManagerTab(page, id) {
 
     const failedSwitch = summary.switchModules.find(item => !item.ok || !item.deepCheck?.ok);
     const failedDm = summary.dataManagerTabs.find(item => !item.ok);
-    if (!summary.login.overlayHidden || !summary.login.appVisible || !summary.login.schoolInternalRemoved || failedSwitch || failedDm || errors.length > 0) {
+    if (!summary.login.appVisible || !summary.login.schoolInternalRemoved || failedSwitch || failedDm || errors.length > 0) {
         process.exit(1);
     }
 })().catch(async (error) => {

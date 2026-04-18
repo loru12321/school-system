@@ -1,4 +1,5 @@
-const DEFAULT_SUPABASE_ORIGIN = 'https://okwcciujnfvobbwaydiv.supabase.co';
+const DEFAULT_LEGACY_GATEWAY_ORIGIN = 'https://okwcciujnfvobbwaydiv.supabase.co';
+const DEFAULT_LEGACY_GATEWAY_API_KEY = 'sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4';
 const LOCAL_SESSION_TTL_SECONDS = 60 * 60 * 12;
 const PBKDF2_ITERATIONS = 100000;
 const PBKDF2_SCHEME = 'pbkdf2-sha256';
@@ -16,8 +17,17 @@ function normalizeOrigin(origin) {
   return normalizeText(origin).replace(/\/+$/, '');
 }
 
-function getSupabaseOrigin(env) {
-  return normalizeOrigin(env.SUPABASE_ORIGIN || DEFAULT_SUPABASE_ORIGIN);
+function getLegacyGatewayOrigin(env) {
+  return normalizeOrigin(env.LEGACY_GATEWAY_ORIGIN || env.SUPABASE_ORIGIN || DEFAULT_LEGACY_GATEWAY_ORIGIN);
+}
+
+function getLegacyGatewayApiKey(env, request) {
+  return normalizeText(
+    env.LEGACY_GATEWAY_API_KEY
+    || env.LEGACY_SUPABASE_KEY
+    || request.headers.get('apikey')
+    || DEFAULT_LEGACY_GATEWAY_API_KEY
+  );
 }
 
 function getGatewayDb(env) {
@@ -416,8 +426,8 @@ async function fetchWithTimeout(url, init, timeoutMs = PROXY_TIMEOUT_MS) {
   }
 }
 
-async function proxyGatewayActionToSupabase(request, env, action, payload = {}, options = {}) {
-  const apikey = normalizeText(request.headers.get('apikey'));
+async function proxyGatewayActionToLegacyGateway(request, env, action, payload = {}, options = {}) {
+  const apikey = getLegacyGatewayApiKey(env, request);
   if (!apikey) return null;
   const token = normalizeText(options.token || getBearerToken(request));
   const headers = {
@@ -427,7 +437,7 @@ async function proxyGatewayActionToSupabase(request, env, action, payload = {}, 
   if (!options.allowAnonymous && token) {
     headers.Authorization = `Bearer ${token}`;
   }
-  const origin = getSupabaseOrigin(env);
+  const origin = getLegacyGatewayOrigin(env);
   let lastData = null;
   let lastError = null;
   let lastStatus = 0;
@@ -561,9 +571,9 @@ async function resolveSession(request, env) {
     return { session: normalizeGatewaySession(localSession), source: 'local' };
   }
 
-  const remote = await proxyGatewayActionToSupabase(request, env, 'session.verify', {}, { token });
+  const remote = await proxyGatewayActionToLegacyGateway(request, env, 'session.verify', {}, { token });
   if (remote?.ok && remote.session) {
-    return { session: normalizeGatewaySession(remote.session), source: 'supabase' };
+    return { session: normalizeGatewaySession(remote.session), source: 'legacy' };
   }
 
   return { error: unauthorized(request, 'Invalid or expired app session token') };
@@ -610,7 +620,7 @@ async function performGatewayLogin(request, env, body) {
     }
   }
 
-  const remote = await proxyGatewayActionToSupabase(request, env, 'login', body?.payload || {}, { allowAnonymous: true });
+  const remote = await proxyGatewayActionToLegacyGateway(request, env, 'login', body?.payload || {}, { allowAnonymous: true });
   if (!remote?.ok || !remote?.user) {
     return jsonResponse(401, {
       ok: false,
@@ -630,7 +640,7 @@ async function performGatewayLogin(request, env, body) {
     teacher_name: remoteUser.teacher_name || remoteUser.username,
     password_hash: passwordHash,
     password_scheme: PBKDF2_SCHEME,
-    password_source: 'supabase_login',
+    password_source: 'legacy_login_backfill',
     has_password: true,
     is_active: true,
     last_login_at: new Date().toISOString(),
@@ -1337,8 +1347,8 @@ async function handleAccountChangePassword(request, env, db, session, payload, s
   if (existing.password_hash) {
     verified = await verifyAccountPasswordHash(existing.password_hash, oldPassword);
   }
-  if (!verified && sessionSource === 'supabase') {
-    const remote = await proxyGatewayActionToSupabase(request, env, 'account.change_password', payload);
+  if (!verified && sessionSource === 'legacy') {
+    const remote = await proxyGatewayActionToLegacyGateway(request, env, 'account.change_password', payload);
     if (!remote?.ok) {
       return forbidden(request, normalizeText(remote?.error) || 'old password mismatch');
     }
@@ -1452,6 +1462,17 @@ async function handleAccountMigrationStatus(request, db, session) {
     END
     ORDER BY account_count DESC, password_source ASC
   `);
+  const normalizedSources = new Map();
+  sources.forEach((row) => {
+    const rawSource = normalizeText(row.password_source) || 'pending';
+    const normalizedSource = rawSource === 'supabase_login'
+      ? 'legacy_login_backfill'
+      : rawSource;
+    normalizedSources.set(
+      normalizedSource,
+      (normalizedSources.get(normalizedSource) || 0) + Number(row.account_count || 0)
+    );
+  });
 
   const totalAccounts = Number(summary?.total_accounts || 0);
   const migratedAccounts = Number(summary?.migrated_accounts || 0);
@@ -1474,10 +1495,16 @@ async function handleAccountMigrationStatus(request, db, session) {
       migrated_accounts: Number(row.migrated_accounts || 0),
       pending_accounts: Number(row.pending_accounts || 0)
     })),
-    sources: sources.map((row) => ({
-      password_source: normalizeText(row.password_source) || 'pending',
-      account_count: Number(row.account_count || 0)
-    }))
+    sources: Array.from(normalizedSources.entries())
+      .map(([passwordSource, accountCount]) => ({
+        password_source: passwordSource,
+        account_count: accountCount
+      }))
+      .sort((left, right) => right.account_count - left.account_count || left.password_source.localeCompare(right.password_source)),
+    fallback: {
+      enabled: pendingAccounts > 0,
+      mode: pendingAccounts > 0 ? 'legacy-login-only' : 'cloudflare-only-ready'
+    }
   }, request);
 }
 

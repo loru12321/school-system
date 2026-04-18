@@ -1,0 +1,214 @@
+const assert = require('assert');
+const path = require('path');
+
+const createCloudApiRuntime = require(path.resolve(__dirname, '../public/assets/js/cloud-api-runtime.js'));
+
+function createMockStorage(initialState = {}) {
+    const state = new Map(Object.entries(initialState));
+    return {
+        getItem(key) {
+            return state.has(key) ? state.get(key) : null;
+        },
+        setItem(key, value) {
+            state.set(key, String(value));
+        },
+        removeItem(key) {
+            state.delete(key);
+        }
+    };
+}
+
+function createJsonResponse(status, body) {
+    return {
+        ok: status >= 200 && status < 300,
+        status,
+        async text() {
+            return body == null ? '' : JSON.stringify(body);
+        }
+    };
+}
+
+function createSupabaseClient(log) {
+    return {
+        from(table) {
+            assert.strictEqual(table, 'system_data');
+            const state = {
+                table,
+                select: '',
+                keyEq: '',
+                keyLike: '',
+                keyIn: [],
+                order: '',
+                ascending: false,
+                limit: null,
+                maybeSingle: false,
+                deleting: false
+            };
+
+            function execute() {
+                log.push({ ...state });
+                if (state.deleting) {
+                    return { data: [], error: null };
+                }
+
+                const rows = state.keyEq
+                    ? [{ key: state.keyEq, content: '{"hello":"world"}' }]
+                    : [{ key: 'LOCAL_KEY', content: '{"hello":"world"}' }];
+
+                return {
+                    data: state.maybeSingle ? rows[0] || null : rows,
+                    error: null
+                };
+            }
+
+            const query = {
+                select(value) {
+                    state.select = String(value || '');
+                    return query;
+                },
+                eq(field, value) {
+                    if (field === 'key') state.keyEq = String(value || '');
+                    return query;
+                },
+                like(field, value) {
+                    if (field === 'key') state.keyLike = String(value || '');
+                    return query;
+                },
+                in(field, values) {
+                    if (field === 'key') state.keyIn = Array.isArray(values) ? values.slice() : [];
+                    return query;
+                },
+                order(field, options) {
+                    state.order = String(field || '');
+                    state.ascending = !!(options && options.ascending);
+                    return query;
+                },
+                limit(value) {
+                    state.limit = Number(value);
+                    return query;
+                },
+                maybeSingle() {
+                    state.maybeSingle = true;
+                    return query;
+                },
+                delete() {
+                    state.deleting = true;
+                    return query;
+                },
+                then(resolve, reject) {
+                    return Promise.resolve(execute()).then(resolve, reject);
+                }
+            };
+
+            query.upsert = async function (payload, options) {
+                log.push({
+                    type: 'upsert',
+                    payload,
+                    options
+                });
+                return { data: payload, error: null };
+            };
+
+            return query;
+        }
+    };
+}
+
+async function run() {
+    const fetchLog = [];
+    const apiRoot = {
+        location: {
+            protocol: 'https:',
+            origin: 'https://schoolsystem.com.cn',
+            hostname: 'schoolsystem.com.cn',
+            href: 'https://schoolsystem.com.cn/'
+        },
+        SUPABASE_KEY: 'sb_publishable_example',
+        sessionStorage: createMockStorage({
+            'edu:session:token': 'session-token-example'
+        }),
+        fetch: async (url, init = {}) => {
+            fetchLog.push({
+                url: String(url),
+                method: init.method || 'GET',
+                headers: init.headers || {},
+                body: init.body || ''
+            });
+            return createJsonResponse(200, [{ key: 'REMOTE_KEY', updated_at: '2026-04-11T00:00:00.000Z' }]);
+        }
+    };
+    const apiRuntime = createCloudApiRuntime(apiRoot);
+
+    assert.strictEqual(apiRuntime.getBackendMode(), 'api');
+    assert.strictEqual(apiRuntime.getSystemDataApiUrl(), 'https://schoolsystem.com.cn/api/system-data');
+
+    const apiResult = await apiRuntime.selectSystemData({
+        select: 'key,updated_at',
+        keyLike: '2022%',
+        order: 'updated_at',
+        limit: 50
+    });
+
+    assert.strictEqual(apiResult.error, null);
+    assert.deepStrictEqual(apiResult.data, [{ key: 'REMOTE_KEY', updated_at: '2026-04-11T00:00:00.000Z' }]);
+    assert.ok(fetchLog[0].url.includes('/api/system-data?'));
+    assert.ok(fetchLog[0].url.includes('select=key%2Cupdated_at'));
+    assert.ok(fetchLog[0].url.includes('key=like.2022%25'));
+    assert.ok(fetchLog[0].url.includes('order=updated_at.desc'));
+    assert.ok(fetchLog[0].url.includes('limit=50'));
+    assert.strictEqual(fetchLog[0].headers.apikey, 'sb_publishable_example');
+    assert.strictEqual(fetchLog[0].headers.Authorization, 'Bearer session-token-example');
+
+    await apiRuntime.upsertSystemData({ key: 'REMOTE_KEY', content: '{}' });
+    assert.strictEqual(fetchLog[1].method, 'POST');
+    assert.ok(String(fetchLog[1].body).includes('"key":"REMOTE_KEY"'));
+    assert.strictEqual(fetchLog[1].headers.apikey, 'sb_publishable_example');
+    assert.strictEqual(fetchLog[1].headers.Authorization, 'Bearer session-token-example');
+
+    await apiRuntime.deleteSystemData({ keyIn: ['REMOTE_KEY', 'OTHER_KEY'] });
+    assert.strictEqual(fetchLog[2].method, 'DELETE');
+    assert.ok(fetchLog[2].url.includes('key=in.%28REMOTE_KEY%2COTHER_KEY%29'));
+    assert.strictEqual(fetchLog[2].headers.apikey, 'sb_publishable_example');
+    assert.strictEqual(fetchLog[2].headers.Authorization, 'Bearer session-token-example');
+
+    const compatLog = [];
+    const localRoot = {
+        location: {
+            protocol: 'file:',
+            origin: 'null',
+            hostname: '',
+            href: 'file:///C:/Users/loru/Desktop/system/lt.html'
+        },
+        localStorage: createMockStorage(),
+        sbClient: createSupabaseClient(compatLog)
+    };
+    const compatRuntime = createCloudApiRuntime(localRoot);
+
+    assert.strictEqual(compatRuntime.getBackendMode(), 'compat');
+    assert.strictEqual(compatRuntime.getSystemDataApiUrl(), '');
+
+    const localRead = await compatRuntime.readSystemDataRecord('LOCAL_KEY', 'content');
+    assert.strictEqual(localRead.error, null);
+    assert.deepStrictEqual(localRead.data, { key: 'LOCAL_KEY', content: '{"hello":"world"}' });
+    assert.strictEqual(compatLog[0].select, 'content');
+    assert.strictEqual(compatLog[0].keyEq, 'LOCAL_KEY');
+    assert.strictEqual(compatLog[0].maybeSingle, true);
+
+    const localProbe = await compatRuntime.probeSystemData();
+    assert.strictEqual(localProbe.ok, true);
+
+    await compatRuntime.upsertSystemData({ key: 'LOCAL_KEY', content: '{}' });
+    assert.strictEqual(compatLog[2].type, 'upsert');
+    assert.deepStrictEqual(compatLog[2].payload, { key: 'LOCAL_KEY', content: '{}', created_at: '', updated_at: '' });
+
+    await compatRuntime.deleteSystemData({ keyEq: 'LOCAL_KEY' });
+    assert.strictEqual(compatLog[3].deleting, true);
+    assert.strictEqual(compatLog[3].keyEq, 'LOCAL_KEY');
+
+    console.log('cloud-api-runtime tests passed');
+}
+
+run().catch((error) => {
+    console.error(error);
+    process.exit(1);
+});

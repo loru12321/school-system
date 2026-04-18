@@ -619,12 +619,12 @@ const CloudSyncIndicator = {
             this.set('error', '离线');
             return;
         }
-        if (!window.sbClient) {
+        if (!window.CloudApi && !window.sbClient) {
             this.set('connecting', '等待初始化');
             return;
         }
         try {
-            await withTimeout(window.sbClient.from('system_data').select('key').limit(1), 4000, 'probe-timeout');
+            await withTimeout(probeSystemDataConnection(), 4000, 'probe-timeout');
             this.set('connected');
         } catch (e) {
             this.set('error', '连接异常');
@@ -638,6 +638,324 @@ const CloudSyncIndicator = {
         setInterval(() => this.probe(), 30000);
     }
 };
+
+function getCloudApiRuntime() {
+    return window.CloudApi && typeof window.CloudApi === 'object' ? window.CloudApi : null;
+}
+
+async function selectSystemDataRecords(options = {}) {
+    const api = getCloudApiRuntime();
+    if (api && typeof api.selectSystemData === 'function') {
+        return api.selectSystemData(options);
+    }
+
+    const cloudClient = window.cloudClient || window.sbClient;
+    if (!cloudClient) {
+        return {
+            data: options.maybeSingle ? null : [],
+            error: new Error('CLOUD_CLIENT_MISSING'),
+            source: 'none'
+        };
+    }
+
+    try {
+        let query = cloudClient.from('system_data').select(options.select || 'key');
+        if (options.keyEq) {
+            query = query.eq('key', options.keyEq);
+        } else if (options.keyLike) {
+            query = query.like('key', options.keyLike);
+        } else if (Array.isArray(options.keyIn) && options.keyIn.length) {
+            query = query.in('key', options.keyIn);
+        }
+        if (options.order) {
+            query = query.order(options.order, { ascending: !!options.ascending });
+        }
+        if (Number.isFinite(Number(options.limit)) && Number(options.limit) > 0) {
+            query = query.limit(Number(options.limit));
+        }
+        if (options.maybeSingle) {
+            query = query.maybeSingle();
+        }
+        const result = await query;
+        return {
+            data: result?.data ?? (options.maybeSingle ? null : []),
+            error: result?.error || null,
+            source: 'compat'
+        };
+    } catch (error) {
+        return {
+            data: options.maybeSingle ? null : [],
+            error: error instanceof Error ? error : new Error(String(error)),
+            source: 'compat'
+        };
+    }
+}
+
+async function readSystemDataRecord(key, select = 'content') {
+    return selectSystemDataRecords({
+        select,
+        keyEq: String(key || '').trim(),
+        maybeSingle: true
+    });
+}
+
+async function upsertSystemDataRecord(rows) {
+    const api = getCloudApiRuntime();
+    if (api && typeof api.upsertSystemData === 'function') {
+        return api.upsertSystemData(rows);
+    }
+    const cloudClient = window.cloudClient || window.sbClient;
+    if (!cloudClient) {
+        return { data: null, error: new Error('CLOUD_CLIENT_MISSING'), source: 'none' };
+    }
+    try {
+        const result = await cloudClient.from('system_data').upsert(rows, { onConflict: 'key' });
+        return { data: result?.data ?? null, error: result?.error || null, source: 'compat' };
+    } catch (error) {
+        return { data: null, error: error instanceof Error ? error : new Error(String(error)), source: 'compat' };
+    }
+}
+
+async function deleteSystemDataRecords(options = {}) {
+    const api = getCloudApiRuntime();
+    if (api && typeof api.deleteSystemData === 'function') {
+        return api.deleteSystemData(options);
+    }
+    const cloudClient = window.cloudClient || window.sbClient;
+    if (!cloudClient) {
+        return { data: null, error: new Error('CLOUD_CLIENT_MISSING'), source: 'none' };
+    }
+    try {
+        let query = cloudClient.from('system_data').delete();
+        if (options.keyEq) {
+            query = query.eq('key', options.keyEq);
+        } else if (Array.isArray(options.keyIn) && options.keyIn.length) {
+            query = query.in('key', options.keyIn);
+        } else {
+            return { data: null, error: new Error('SYSTEM_DATA_DELETE_FILTER_MISSING'), source: 'compat' };
+        }
+        const result = await query;
+        return { data: result?.data ?? null, error: result?.error || null, source: 'compat' };
+    } catch (error) {
+        return { data: null, error: error instanceof Error ? error : new Error(String(error)), source: 'compat' };
+    }
+}
+
+async function probeSystemDataConnection() {
+    const api = getCloudApiRuntime();
+    if (api && typeof api.probeSystemData === 'function') {
+        const result = await api.probeSystemData();
+        if (!result.ok) throw result.error || new Error('SYSTEM_DATA_PROBE_FAILED');
+        return result;
+    }
+    const result = await selectSystemDataRecords({ select: 'key', limit: 1 });
+    if (result.error) throw result.error;
+    return result;
+}
+
+function getDataCloudRuntime() {
+    return window.DataCloudRuntime && typeof window.DataCloudRuntime === 'object' ? window.DataCloudRuntime : null;
+}
+
+function requireDataCloudRuntime() {
+    const runtime = getDataCloudRuntime();
+    if (!runtime) {
+        throw new Error('DataCloudRuntime unavailable');
+    }
+    return runtime;
+}
+
+function getIssueManagerRuntime() {
+    return window.IssueManagerRuntime && typeof window.IssueManagerRuntime === 'object' ? window.IssueManagerRuntime : null;
+}
+
+function requireIssueManagerRuntime() {
+    const runtime = getIssueManagerRuntime();
+    if (!runtime) {
+        throw new Error('IssueManagerRuntime unavailable');
+    }
+    return runtime;
+}
+
+function getPackagerRuntime() {
+    return window.PackagerRuntime && typeof window.PackagerRuntime === 'object' ? window.PackagerRuntime : null;
+}
+
+function requirePackagerRuntime() {
+    const runtime = getPackagerRuntime();
+    if (!runtime) {
+        throw new Error('PackagerRuntime unavailable');
+    }
+    return runtime;
+}
+
+function getHelpSystemRuntime() {
+    return window.HelpSystemRuntime && typeof window.HelpSystemRuntime === 'object' ? window.HelpSystemRuntime : null;
+}
+
+function requireHelpSystemRuntime() {
+    const runtime = getHelpSystemRuntime();
+    if (!runtime) {
+        throw new Error('HelpSystemRuntime unavailable');
+    }
+    return runtime;
+}
+
+function getLoggerRuntime() {
+    return window.LoggerRuntime && typeof window.LoggerRuntime === 'object' ? window.LoggerRuntime : null;
+}
+
+function requireLoggerRuntime() {
+    const runtime = getLoggerRuntime();
+    if (!runtime) {
+        throw new Error('LoggerRuntime unavailable');
+    }
+    return runtime;
+}
+
+function getWorkerApiRuntime() {
+    return window.WorkerApiRuntime && typeof window.WorkerApiRuntime === 'object' ? window.WorkerApiRuntime : null;
+}
+
+function requireWorkerApiRuntime() {
+    const runtime = getWorkerApiRuntime();
+    if (!runtime) {
+        throw new Error('WorkerApiRuntime unavailable');
+    }
+    return runtime;
+}
+
+function getAccountManagerRuntime() {
+    return window.AccountManagerRuntime && typeof window.AccountManagerRuntime === 'object' ? window.AccountManagerRuntime : null;
+}
+
+function requireAccountManagerRuntime() {
+    const runtime = getAccountManagerRuntime();
+    if (!runtime) {
+        throw new Error('AccountManagerRuntime unavailable');
+    }
+    return runtime;
+}
+
+function getDataManagerTeacherRuntime() {
+    return window.DataManagerTeacherRuntime && typeof window.DataManagerTeacherRuntime === 'object' ? window.DataManagerTeacherRuntime : null;
+}
+
+function requireDataManagerTeacherRuntime() {
+    const runtime = getDataManagerTeacherRuntime();
+    if (!runtime) {
+        throw new Error('DataManagerTeacherRuntime unavailable');
+    }
+    return runtime;
+}
+
+function getDataManagerStudentRuntime() {
+    return window.DataManagerStudentRuntime && typeof window.DataManagerStudentRuntime === 'object' ? window.DataManagerStudentRuntime : null;
+}
+
+function requireDataManagerStudentRuntime() {
+    const runtime = getDataManagerStudentRuntime();
+    if (!runtime) {
+        throw new Error('DataManagerStudentRuntime unavailable');
+    }
+    return runtime;
+}
+
+function getDataManagerArchiveRuntime() {
+    return window.DataManagerArchiveRuntime && typeof window.DataManagerArchiveRuntime === 'object' ? window.DataManagerArchiveRuntime : null;
+}
+
+function requireDataManagerArchiveRuntime() {
+    const runtime = getDataManagerArchiveRuntime();
+    if (!runtime) {
+        throw new Error('DataManagerArchiveRuntime unavailable');
+    }
+    return runtime;
+}
+
+function getDataManagerGrade9TemplateRuntime() {
+    return window.DataManagerGrade9TemplateRuntime && typeof window.DataManagerGrade9TemplateRuntime === 'object' ? window.DataManagerGrade9TemplateRuntime : null;
+}
+
+function requireDataManagerGrade9TemplateRuntime() {
+    const runtime = getDataManagerGrade9TemplateRuntime();
+    if (!runtime) {
+        throw new Error('DataManagerGrade9TemplateRuntime unavailable');
+    }
+    return runtime;
+}
+
+function getDataManagerParamsRuntime() {
+    return window.DataManagerParamsRuntime && typeof window.DataManagerParamsRuntime === 'object' ? window.DataManagerParamsRuntime : null;
+}
+
+function requireDataManagerParamsRuntime() {
+    const runtime = getDataManagerParamsRuntime();
+    if (!runtime) {
+        throw new Error('DataManagerParamsRuntime unavailable');
+    }
+    return runtime;
+}
+
+function getDataManagerTargetsRuntime() {
+    return window.DataManagerTargetsRuntime && typeof window.DataManagerTargetsRuntime === 'object' ? window.DataManagerTargetsRuntime : null;
+}
+
+function requireDataManagerTargetsRuntime() {
+    const runtime = getDataManagerTargetsRuntime();
+    if (!runtime) {
+        throw new Error('DataManagerTargetsRuntime unavailable');
+    }
+    return runtime;
+}
+
+function getDataManagerSchoolAliasRuntime() {
+    return window.DataManagerSchoolAliasRuntime && typeof window.DataManagerSchoolAliasRuntime === 'object' ? window.DataManagerSchoolAliasRuntime : null;
+}
+
+function requireDataManagerSchoolAliasRuntime() {
+    const runtime = getDataManagerSchoolAliasRuntime();
+    if (!runtime) {
+        throw new Error('DataManagerSchoolAliasRuntime unavailable');
+    }
+    return runtime;
+}
+
+function getDataManagerSaveSyncRuntime() {
+    return window.DataManagerSaveSyncRuntime && typeof window.DataManagerSaveSyncRuntime === 'object' ? window.DataManagerSaveSyncRuntime : null;
+}
+
+function requireDataManagerSaveSyncRuntime() {
+    const runtime = getDataManagerSaveSyncRuntime();
+    if (!runtime) {
+        throw new Error('DataManagerSaveSyncRuntime unavailable');
+    }
+    return runtime;
+}
+
+function getDataManagerHistoryRuntime() {
+    return window.DataManagerHistoryRuntime && typeof window.DataManagerHistoryRuntime === 'object' ? window.DataManagerHistoryRuntime : null;
+}
+
+function requireDataManagerHistoryRuntime() {
+    const runtime = getDataManagerHistoryRuntime();
+    if (!runtime) {
+        throw new Error('DataManagerHistoryRuntime unavailable');
+    }
+    return runtime;
+}
+
+function getDataManagerTabRuntime() {
+    return window.DataManagerTabRuntime && typeof window.DataManagerTabRuntime === 'object' ? window.DataManagerTabRuntime : null;
+}
+
+function requireDataManagerTabRuntime() {
+    const runtime = getDataManagerTabRuntime();
+    if (!runtime) {
+        throw new Error('DataManagerTabRuntime unavailable');
+    }
+    return runtime;
+}
 
 window.setCloudSyncStatus = (state, detail = '') => {
     CloudSyncIndicator.set(state, detail);
@@ -660,18 +978,19 @@ const EdgeGateway = {
         pushCandidate(this.resolvedGatewayUrl);
         pushCandidate(localStorage.getItem('EDGE_GATEWAY_URL'));
         pushCandidate(window.EDGE_GATEWAY_URL);
-        const supabaseUrl = this.normalizeGatewayUrl(localStorage.getItem('SUPABASE_URL') || window.SUPABASE_URL || '');
-        if (supabaseUrl) {
-            pushCandidate(`${supabaseUrl}/functions/v1/edu-gateway-v2`);
-            pushCandidate(`${supabaseUrl}/functions/v1/edu-gateway`);
-        }
         return candidates;
     },
     getGatewayUrl: function () {
         return this.getGatewayCandidates()[0] || '';
     },
     getPublishableKey: function () {
-        return String(localStorage.getItem('SUPABASE_KEY') || window.SUPABASE_KEY || '').trim();
+        return String(
+            localStorage.getItem('CLOUD_API_KEY')
+            || localStorage.getItem('SUPABASE_KEY')
+            || window.CLOUD_API_KEY
+            || window.SUPABASE_KEY
+            || ''
+        ).trim();
     },
     getToken: function () {
         return String(sessionStorage.getItem(this.tokenStorageKey) || '').trim();
@@ -2738,8 +3057,218 @@ const Auth = {
         return nextPortal;
     },
 
-    ensureLoginWorkbench: function () {
+    rebuildInstagramLoginShell: function () {
         const overlay = document.getElementById('login-overlay');
+        if (!overlay) return null;
+        if (overlay.dataset.igRebuilt === 'true') return overlay;
+
+        const portal = overlay.dataset.loginPortal === 'parent' ? 'parent' : 'school';
+        overlay.dataset.loginPortal = portal;
+        overlay.dataset.loginLayout = 'qq-fullscreen';
+        overlay.dataset.loginSkin = 'instagram';
+        overlay.innerHTML = `
+            <div class="login-shell login-shell--instagram">
+                <section class="login-stage login-stage--instagram" aria-label="系统首页">
+                    <nav class="login-stage-nav login-stage-nav--instagram" aria-label="首页导航">
+                        <a class="login-stage-brand" href="#login-hero">
+                            <span class="login-stage-brand-mark">SE</span>
+                            <span class="login-stage-brand-copy">
+                                <strong>智慧教务管理系统</strong>
+                                <small>School Intelligence OS</small>
+                            </span>
+                        </a>
+                        <div class="login-stage-nav-links">
+                            <a href="#login-hero" class="active">首页</a>
+                            <a href="#login-portal-hub">登录</a>
+                            <a href="#app-download">下载</a>
+                            <button type="button" class="login-stage-nav-login" onclick="window.Auth?.openLoginPortalModal('school')">打开学校端</button>
+                        </div>
+                    </nav>
+
+                    <div id="login-hero" class="login-stage-hero login-stage-hero--instagram">
+                        <span id="login-stage-kicker" class="login-stage-hero-kicker">School Command Center</span>
+                        <h1 id="login-stage-title">
+                            <span class="login-stage-title-line">学校工作台与家长入口</span>
+                            <span class="login-stage-title-line login-stage-title-line--accent">在同一张首页里打开登录窗口</span>
+                        </h1>
+                        <p id="login-stage-copy">把说明、下载与登录动作拆开，让首页先呈现品牌感和唯一主入口，再进入真正的登录表单。</p>
+                        <div class="login-stage-actions">
+                            <button type="button" class="login-stage-primary-action" onclick="window.Auth?.openLoginPortalModal('school')">
+                                <i class="ti ti-building-community"></i> 学校端登录
+                            </button>
+                            <button type="button" class="login-stage-secondary-action" onclick="window.Auth?.openLoginPortalModal('parent')">
+                                <i class="ti ti-heart-handshake"></i> 家长端登录
+                            </button>
+                            <button type="button" class="login-stage-tertiary-action" onclick="window.Auth?.openDownloadHubModal('android')">
+                                <i class="ti ti-download"></i> 打开下载中心
+                            </button>
+                        </div>
+                        <div class="login-stage-meta">
+                            <span><i class="ti ti-layout-dashboard"></i> 教学分析 / 数据维护 / 学校工作台</span>
+                            <span><i class="ti ti-devices"></i> Web / Android / Desktop 共用登录入口</span>
+                            <span><i class="ti ti-sparkles"></i> 当前稳定版 v1.0 · 2026-04-08</span>
+                        </div>
+                        <div class="login-stage-platforms" aria-label="支持终端">
+                            <span><i class="ti ti-device-desktop"></i> Web</span>
+                            <span><i class="ti ti-device-mobile"></i> Android</span>
+                            <span><i class="ti ti-brand-windows"></i> Desktop</span>
+                        </div>
+                    </div>
+
+                    <div class="login-stage-spotlight login-stage-spotlight--instagram">
+                        <div class="login-stage-spotlight-grid login-stage-phone-stack">
+                            <article class="login-stage-spotlight-item">
+                                <span>学校驾驶舱</span>
+                                <strong>分析、预警、教学联动</strong>
+                            </article>
+                            <article class="login-stage-spotlight-item">
+                                <span>统一登录窗口</span>
+                                <strong>唯一表单，唯一验证入口</strong>
+                            </article>
+                            <article class="login-stage-spotlight-item">
+                                <span>家长端</span>
+                                <strong>成长报告、成绩与家校提醒</strong>
+                            </article>
+                        </div>
+                        <div class="login-stage-spotlight-copy">
+                            <span class="login-stage-featured-label">Instagram-inspired Entry</span>
+                            <strong id="login-stage-featured-title" class="login-stage-featured-title">一屏直达成绩分析、教学管理、质量预警与数据维护</strong>
+                            <p id="login-stage-featured-copy" class="login-stage-featured-copy">左侧只负责品牌和场景感，右侧只负责角色选择和打开表单，减少视觉噪音，让登录动作更集中。</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="login-auth-panel login-auth-panel--instagram" id="login-portal-hub" aria-label="统一登录入口">
+                    <div class="login-auth-panel-inner login-auth-panel-inner--instagram">
+                        <div class="login-auth-card login-auth-card--portal">
+                            <div class="login-auth-head">
+                                <div class="login-brand-block">
+                                    <div id="login-portal-badge" class="login-portal-badge">学校工作台</div>
+                                    <span class="login-brand-kicker">Login Center</span>
+                                    <h2 class="login-auth-title">统一登录入口</h2>
+                                    <p id="login-portal-copy">选择学校端或家长端，然后打开唯一登录窗口完成验证。</p>
+                                </div>
+                                <div class="login-auth-utility" id="app-download">
+                                    <button type="button" class="login-system-download-link" onclick="window.Auth?.openDownloadHubModal('android')">
+                                        <i class="ti ti-download"></i> 应用下载
+                                    </button>
+                                    <button type="button" class="login-system-download-ghost" onclick="window.copyPublicDownloadLink?.('android')">
+                                        <i class="ti ti-link"></i> 复制链接
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="login-portal-launch-head">
+                                <span>Choose Portal</span>
+                                <p>先切换角色，再进入唯一登录窗口；学校端与家长端共用同一套视觉与验证路径。</p>
+                            </div>
+
+                            <div class="login-portal-grid" aria-label="登录入口选择">
+                                <button type="button" class="login-portal-card active" data-portal="school" data-login-open="school" onclick="window.Auth?.openLoginPortalModal('school')">
+                                    <span class="login-portal-icon"><i class="ti ti-building-community"></i></span>
+                                    <span class="login-portal-title">学校端</span>
+                                    <span class="login-portal-desc">适用于教务、年级、班主任与教师的统一工作台。</span>
+                                    <span class="login-portal-meta">Analysis / Data / Workspace</span>
+                                    <span class="login-portal-action">打开学校端窗口</span>
+                                </button>
+                                <button type="button" class="login-portal-card" data-portal="parent" data-login-open="parent" onclick="window.Auth?.openLoginPortalModal('parent')">
+                                    <span class="login-portal-icon"><i class="ti ti-heart-handshake"></i></span>
+                                    <span class="login-portal-title">家长端</span>
+                                    <span class="login-portal-desc">输入学生姓名、班级与密码，查看成长报告、成绩与提醒。</span>
+                                    <span class="login-portal-meta">Report / Score / Reminder</span>
+                                    <span class="login-portal-action">打开家长端窗口</span>
+                                </button>
+                            </div>
+
+                            <div class="login-portal-note">
+                                <i class="ti ti-hand-click"></i> 首页只保留角色选择和下载动作，真正的账号验证统一在登录窗口中完成。
+                            </div>
+                        </div>
+
+                        <div class="login-auth-footer">
+                            <span>Web / Android / Desktop</span>
+                            <span>统一账号逻辑</span>
+                            <span>更接近 Instagram 的简洁登录骨架</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div id="login-modal-backdrop" class="login-modal-backdrop" style="display:none;" aria-hidden="true" onclick="if(event.target===this) window.Auth?.closeLoginPortalModal()">
+                <div class="login-modal-dialog login-modal-dialog--instagram" role="dialog" aria-modal="true" aria-labelledby="login-modal-title">
+                    <div class="login-modal-head login-modal-head--instagram">
+                        <div class="login-modal-head-top">
+                            <span id="login-modal-chip" class="login-modal-chip">学校端登录窗口</span>
+                            <button type="button" class="login-modal-close" onclick="window.Auth?.closeLoginPortalModal()" aria-label="关闭登录窗口">
+                                <i class="ti ti-x"></i>
+                            </button>
+                        </div>
+                        <h2 id="login-modal-title" class="login-modal-title">进入学校工作台</h2>
+                        <p id="login-modal-copy" class="login-modal-copy">输入账号与密码后，直接进入教学分析、数据维护与学校工作台。</p>
+                        <div class="login-modal-visuals">
+                            <div class="login-modal-visual-card">
+                                <span>Single Login Window</span>
+                                <strong>唯一表单，减少跳转与干扰</strong>
+                            </div>
+                            <div class="login-modal-visual-card">
+                                <span>School / Parent</span>
+                                <strong>切换角色，但保持同一套入口体验</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="login-auth-card login-auth-card--modal">
+                        <div class="login-auth-card-brand">
+                            <div class="login-auth-card-logo">SE</div>
+                            <div class="login-auth-card-copy">
+                                <strong>登录工作台</strong>
+                                <span>简洁表单、清晰层级、唯一主动作</span>
+                            </div>
+                        </div>
+
+                        <div id="login-form">
+                            <div class="form-group">
+                                <label id="login-user-label" for="login-user">账号 / 姓名</label>
+                                <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" onkeydown="if(event.key==='Enter') Auth.login()">
+                                <div id="login-user-helper" class="login-inline-tip">支持管理员、教务、年级、班主任与教师账号登录。</div>
+                            </div>
+
+                            <div id="login-class-group" class="form-group">
+                                <label for="login-class">班级 <span id="login-class-label-note">(学校端无需填写)</span></label>
+                                <input type="text" id="login-class" placeholder="请输入学生班级，如 701" onkeydown="if(event.key==='Enter') Auth.login()">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="login-pass">密码</label>
+                                <input type="password" id="login-pass" placeholder="输入密码" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                            </div>
+
+                            <button id="login-submit-button" onclick="window.Auth?.login()">进入学校工作台</button>
+
+                            <div id="login-portal-helper" class="login-portal-helper">当前为学校端，验证通过后直达教学分析与数据维护。</div>
+
+                            <div class="login-form-divider"><span>or</span></div>
+
+                            <button type="button" class="login-form-alt" onclick="window.Auth?.openDownloadHubModal('android')">
+                                <i class="ti ti-download"></i> 下载 Android / Desktop
+                            </button>
+
+                            <div class="login-trust-strip">
+                                <span><i class="ti ti-shield-lock"></i> 统一身份认证</span>
+                                <span><i class="ti ti-cloud-lock"></i> 云端安全校验</span>
+                                <span><i class="ti ti-bolt"></i> 验证后直达工作台</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        overlay.dataset.igRebuilt = 'true';
+        return overlay;
+    },
+
+    ensureLoginWorkbench: function () {
+        const overlay = this.rebuildInstagramLoginShell();
         const panel = document.getElementById('login-portal-hub');
         const modalBackdrop = document.getElementById('login-modal-backdrop');
         if (!overlay || !panel) return;
@@ -3355,7 +3884,7 @@ const Auth = {
         const config = nextPortal === 'parent'
             ? {
                 badge: '家长成长入口',
-                authTitle: '统一登录入口',
+                authTitle: '登录入口',
                 copy: '',
                 userLabel: '学生姓名',
                 userPlaceholder: '请输入学生姓名',
@@ -3365,26 +3894,26 @@ const Auth = {
                 helper: '当前为家长端，验证后进入成长报告与成绩视图。',
                 submit: '进入家长端',
                 stageKicker: 'Family Growth Portal',
-                stageTitle: '<span class="login-stage-title-line">成长报告与成绩查询</span><span class="login-stage-title-line login-stage-title-line--accent">在同一张首页里打开登录窗口</span>',
-                stageCopy: '把介绍、下载与登录拆成三种清楚动作，首页更干净，移动端也不会堆叠重复窗口。',
+                stageTitle: '<span class="login-stage-title-line">查看成长报告</span><span class="login-stage-title-line login-stage-title-line--accent">更轻、更清楚、更直接</span>',
+                stageCopy: '像 Instagram 一样把入口和动作分清楚，让家长端登录页更聚焦，也更适合移动端。',
                 stageMeta: [
                     { icon: 'ti ti-heart-handshake', text: '成长报告 / 成绩查询 / 家校提醒' },
                     { icon: 'ti ti-devices', text: '手机、安卓与桌面端共用同一套入口' },
                     { icon: 'ti ti-sparkles', text: '当前稳定版 v1.0 · 2026-04-08' }
                 ],
                 launchKicker: '登录窗口',
-                launchCopy: '先选择角色，再打开唯一登录窗口；需要了解流程、权限和成绩规则时，从右上角进入“系统介绍”。',
-                launchNote: '点击“应用下载”会打开下载中心，可在里面切换安卓下载与桌面端下载，并复制对应链接。',
-                stageFeatureTitle: '家长端聚焦成绩查询、成长报告与关键提醒',
-                stageFeatureCopy: '说明内容不再直接压在首页，浏览路径更顺，手机上也能更快进入登录动作。',
+                launchCopy: '先选择家长端，再打开唯一登录窗口；表单、说明和下载都各归其位。',
+                launchNote: '应用下载会打开下载中心，系统介绍会说明角色权限、流程和成绩规则。',
+                stageFeatureTitle: '家长端聚焦成绩、报告与提醒',
+                stageFeatureCopy: '首页只留下最重要的入口和价值点，避免像旧版那样把所有信息都堆在首屏。',
                 modalChip: '家长端登录窗口',
-                modalTitle: '进入家长成长入口',
-                modalCopy: '输入学生姓名、班级与密码后，即可查看成长报告、成绩与家校提醒。',
+                modalTitle: '进入家长端',
+                modalCopy: '输入学生姓名、班级与密码后，直接查看成长报告、成绩与家校提醒。',
                 navButton: '打开家长端'
             }
             : {
                 badge: '学校工作台',
-                authTitle: '统一登录入口',
+                authTitle: '登录入口',
                 copy: '',
                 userLabel: '账号 / 姓名',
                 userPlaceholder: '管理员账号 / 教师姓名',
@@ -3394,20 +3923,20 @@ const Auth = {
                 helper: '当前为学校端，验证通过后直达教学分析与数据维护。',
                 submit: '进入学校工作台',
                 stageKicker: 'School Command Center',
-                stageTitle: '<span class="login-stage-title-line">学校工作台与家长入口</span><span class="login-stage-title-line login-stage-title-line--accent">在同一张首页里打开登录窗口</span>',
-                stageCopy: '把说明内容藏进独立弹窗，把登录动作收回唯一窗口，让首屏更像正式产品首页而不是信息堆叠页。',
+                stageTitle: '<span class="login-stage-title-line">统一登录</span><span class="login-stage-title-line login-stage-title-line--accent">把学校端和家长端放在一张首页里</span>',
+                stageCopy: '借鉴 Instagram 的左右双栏逻辑，把品牌、入口和表单层级重新理顺。',
                 stageMeta: [
                     { icon: 'ti ti-layout-dashboard', text: '教学分析 / 数据维护 / 学校工作台' },
                     { icon: 'ti ti-devices', text: 'Web、Android 与 Desktop 共用入口逻辑' },
                     { icon: 'ti ti-sparkles', text: '当前稳定版 v1.0 · 2026-04-08' }
                 ],
                 launchKicker: '登录窗口',
-                launchCopy: '按角色选择学校端或家长端，再在唯一登录窗口中完成验证；系统介绍已移到右上角独立弹窗。',
-                launchNote: '应用下载会打开双端下载中心，系统介绍会完整说明模块结构、角色权限、成绩计算和绩效比较逻辑。',
-                stageFeatureTitle: '一屏直达成绩分析、教学管理、质量预警与数据维护',
-                stageFeatureCopy: '首屏保留强入口和关键价值点，详细说明延后到独立弹窗，整体层次更清爽也更接近国际化产品首页。',
+                launchCopy: '先选学校端或家长端，再在唯一登录窗口里完成验证，减少跳转和视觉噪音。',
+                launchNote: '应用下载会打开双端下载中心，系统介绍会说明模块结构、角色权限和核心逻辑。',
+                stageFeatureTitle: '登录、下载与系统说明各自独立',
+                stageFeatureCopy: '首屏只负责建立品牌感和主入口，不再把所有解释文字都堆到同一块大面板里。',
                 modalChip: '学校端登录窗口',
-                modalTitle: '进入学校工作台',
+                modalTitle: '进入学校端',
                 modalCopy: '输入账号与密码后，直接进入教学分析、数据维护与学校工作台。',
                 navButton: '打开学校端'
             };
@@ -3415,13 +3944,13 @@ const Auth = {
         const portalCards = {
             school: {
                 title: '学校端',
-                desc: '教学分析、数据维护与学校管理统一收进一个工作入口。',
+                desc: '教学分析、数据维护与学校管理入口。',
                 meta: 'Analysis / Data / Workspace',
                 action: '打开学校端窗口'
             },
             parent: {
                 title: '家长端',
-                desc: '成长报告、成绩查询与家校提醒共用同一套登录逻辑。',
+                desc: '成长报告、成绩查询与家校提醒入口。',
                 meta: 'Report / Score / Reminder',
                 action: '打开家长端窗口'
             }
@@ -4851,8 +5380,9 @@ const Auth = {
         const sourceText = sources.slice(0, 3).map((row) => {
             const labelMap = {
                 pending: '待迁移',
-                supabase_export: '已导入待激活',
-                supabase_login: '登录回填',
+                supabase_export: '历史导入待激活',
+                supabase_login: '旧登录回填',
+                legacy_login_backfill: '旧登录回填',
                 cloudflare_upsert: '云端同步',
                 cloudflare_reset: '后台重置',
                 cloudflare_change: '用户改密'
@@ -4878,7 +5408,7 @@ const Auth = {
             </div>
             <div style="margin-bottom:10px;">
                 <div style="display:flex; justify-content:space-between; font-size:12px; color:#475569; margin-bottom:4px;">
-                    <span>Cloudflare 登录脱离进度</span>
+                    <span>旧登录回退收口进度</span>
                     <span>${rate.toFixed(1)}%</span>
                 </div>
                 <div style="height:8px; border-radius:999px; background:#dbeafe; overflow:hidden;">
@@ -4918,11 +5448,15 @@ const Auth = {
         const summaryEl = document.getElementById('cloud-account-migration-status');
         const updatedEl = document.getElementById('cloud-account-migration-updated');
         if (!summaryEl) return;
-        const canUseWorkerStatus = typeof shouldUseSupabaseProxy === 'function'
-            ? shouldUseSupabaseProxy()
-            : (typeof shouldUseSameOriginSupabaseProxy === 'function'
-                ? shouldUseSameOriginSupabaseProxy()
-                : false);
+        const canUseWorkerStatus = typeof shouldUseCloudProxy === 'function'
+            ? shouldUseCloudProxy()
+            : (typeof shouldUseSupabaseProxy === 'function'
+                ? shouldUseSupabaseProxy()
+                : (typeof shouldUseSameOriginCloudProxy === 'function'
+                    ? shouldUseSameOriginCloudProxy()
+                    : (typeof shouldUseSameOriginSupabaseProxy === 'function'
+                        ? shouldUseSameOriginSupabaseProxy()
+                        : false)));
         if (!canUseWorkerStatus) {
             summaryEl.innerHTML = '<span style="color:#64748b;">本地开发或离线环境下不显示迁移看板，请在线上域名查看 Cloudflare 迁移进度。</span>';
             if (updatedEl) updatedEl.textContent = '当前环境不支持';
@@ -5049,608 +5583,78 @@ window.RoleManager = {
 const IssueManager = {
     isHistoryMode: false, // 状态标记：是否处于历史记录模式
 
-    // 1. 打开家长申诉弹窗
     openSubmitModal: function (name, cls, school) {
-        document.getElementById('issue-student-name').value = name;
-        document.getElementById('issue-student-class').value = cls;
-        document.getElementById('issue-student-school').value = school;
-        // 清空旧内容
-        const descArea = document.getElementById('issue-desc');
-        if (descArea) {
-            descArea.value = '';
-            descArea.style.borderColor = '#d1d5db'; // 重置边框颜色
-        }
-
-        document.getElementById('issue-submit-modal').style.display = 'flex';
+        return requireIssueManagerRuntime().openSubmitModal(name, cls, school);
     },
 
-    // 2. 提交申请
     submit: async function () {
-        const name = document.getElementById('issue-student-name').value.trim();
-        const cls = document.getElementById('issue-student-class').value.trim();
-        const school = document.getElementById('issue-student-school').value.trim();
-        const type = document.getElementById('issue-type').value;
-        const desc = document.getElementById('issue-desc').value.trim();
-        const contact = document.getElementById('issue-contact').value.trim();
-
-        if (!desc) {
-            document.getElementById('issue-desc').style.borderColor = '#ef4444';
-            return alert('请填写申诉内容');
-        }
-
-        if (window.UI) UI.loading(true, "正在提交申请...");
-
-        const { error } = await sbClient
-            .from('issues')
-            .insert([{
-                student_name: name,
-                student_class: cls,
-                school: school,
-                issue_type: type,
-                description: desc,
-                contact_info: contact,
-                status: 'pending' // 默认为待处理
-            }]);
-
-        if (window.UI) UI.loading(false);
-
-        if (error) {
-            alert("提交失败：" + error.message);
-        } else {
-            alert("✅ 申请已提交！\n教务处将尽快核查，请留意后续通知或老师反馈。");
-            document.getElementById('issue-submit-modal').style.display = 'none';
-            const descArea = document.getElementById('issue-desc');
-            if (descArea) descArea.value = '';
-        }
+        return requireIssueManagerRuntime().submit();
     },
 
-    // 3. 检查待处理消息 (红点轮询 - 核心权限逻辑)
     checkIssues: async function () {
-        if (!sbClient) return;
-        const user = typeof Auth !== 'undefined' ? Auth.currentUser : null;
-        if (!user || document.hidden) return;
-
-        // 基础条件是 status = pending
-        let query = sbClient
-            .from('issues')
-            .select('id', { count: 'exact', head: true })
-            .eq('status', 'pending');
-
-        // 🟢 [新增] 权限过滤：确保红点数量只统计自己管辖范围内的
-        if (user.role === 'grade_director') {
-            // 级部主任：看本年级 (模糊匹配 "7%")
-            if (user.class) query = query.ilike('student_class', `${user.class}%`);
-        } else if (user.role === 'class_teacher') {
-            // 🟢 班主任：只看本班 (精确匹配 "701")
-            if (user.class) query = query.eq('student_class', user.class);
-        } else if (user.role === 'director') {
-            // 教务主任：看本校
-            if (user.school) query = query.eq('school', user.school);
-        }
-
-        const { count, error } = await query;
-
-        if (!error) {
-            const badge = document.getElementById('msg-badge');
-            if (badge) {
-                if (count > 0) {
-                    badge.innerText = count > 99 ? '99+' : count;
-                    badge.classList.remove('hidden');
-                } else {
-                    badge.classList.add('hidden');
-                }
-            }
-        }
+        return requireIssueManagerRuntime().checkIssues();
     },
 
-    // 4. 打开管理员处理面板
     openAdminPanel: async function () {
-        this.isHistoryMode = false; // 默认进入看正常列表
-        this.updateUIState();
-        const modal = document.getElementById('admin-issue-modal');
-        modal.style.display = 'flex';
-        this.loadIssues();
+        return requireIssueManagerRuntime().openAdminPanel(this);
     },
 
-    // 切换 历史记录 / 正常视图
     toggleHistoryView: function () {
-        this.isHistoryMode = !this.isHistoryMode;
-        this.updateUIState();
-        this.loadIssues(); // 重新加载数据
+        return requireIssueManagerRuntime().toggleHistoryView(this);
     },
 
-    // 更新界面按钮状态
     updateUIState: function () {
-        const titleEl = document.getElementById('issue-modal-title');
-        const btnHistory = document.getElementById('btn-issue-history');
-        const normalActions = document.getElementById('issue-normal-actions');
-        const historyActions = document.getElementById('issue-history-actions');
-        const tipBar = document.getElementById('issue-tip-bar');
-
-        // 重置全选状态
-        if (document.getElementById('issue-check-all')) document.getElementById('issue-check-all').checked = false;
-        if (document.getElementById('issue-history-check-all')) document.getElementById('issue-history-check-all').checked = false;
-
-        if (this.isHistoryMode) {
-            titleEl.innerHTML = '<i class="ti ti-trash"></i> 删除历史记录 (回收站)';
-            titleEl.style.color = '#666';
-            btnHistory.innerHTML = '<i class="ti ti-arrow-back-up"></i> 返回列表';
-            btnHistory.className = 'btn btn-sm btn-primary';
-            normalActions.style.display = 'none';
-            historyActions.style.display = 'flex';
-            tipBar.style.display = 'none';
-        } else {
-            titleEl.innerHTML = '<i class="ti ti-bell"></i> 申诉反馈中心';
-            titleEl.style.color = 'var(--primary)';
-            btnHistory.innerHTML = '<i class="ti ti-history"></i> 查看删除记录';
-            btnHistory.className = 'btn btn-sm btn-gray';
-            normalActions.style.display = 'flex';
-            historyActions.style.display = 'none';
-            tipBar.style.display = 'block';
-        }
+        return requireIssueManagerRuntime().updateUIState(this);
     },
 
-    // 全选/反选
     toggleSelectAll: function (source) {
-        const checkboxes = document.querySelectorAll('.issue-item-check');
-        checkboxes.forEach(cb => cb.checked = source.checked);
+        return requireIssueManagerRuntime().toggleSelectAll(this, source);
     },
 
-    // 获取选中的ID
     getCheckedIds: function () {
-        const checkboxes = document.querySelectorAll('.issue-item-check:checked');
-        return Array.from(checkboxes).map(cb => cb.value);
+        return requireIssueManagerRuntime().getCheckedIds();
     },
 
-    // 5. 加载申诉列表 (列表渲染 - 核心权限逻辑)
     loadIssues: async function () {
-        const listEl = document.getElementById('admin-issue-list');
-        listEl.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">⏳ 加载中...</div>';
-
-        const user = typeof Auth !== 'undefined' ? Auth.currentUser : null;
-
-        // 构建查询
-        let query = sbClient
-            .from('issues')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(100);
-
-        // 状态过滤 (正常 vs 历史)
-        if (this.isHistoryMode) {
-            query = query.eq('status', 'deleted');
-        } else {
-            query = query.neq('status', 'deleted');
-        }
-
-        // 🟢 [新增] 权限过滤 (确保只能看到自己管辖的班级)
-        if (user && user.role === 'grade_director') {
-            if (user.class) query = query.ilike('student_class', `${user.class}%`);
-        } else if (user && user.role === 'class_teacher') {
-            // 🟢 班主任过滤：强制匹配 student_class == 班级名
-            if (user.class) query = query.eq('student_class', user.class);
-        } else if (user && user.role === 'director') {
-            if (user.school) query = query.eq('school', user.school);
-        }
-
-        const { data, error } = await query;
-
-        if (error) {
-            listEl.innerHTML = `<div style="color:red; text-align:center;">加载失败: ${error.message}</div>`;
-            return;
-        }
-
-        if (!data || data.length === 0) {
-            listEl.innerHTML = '<div style="text-align:center; padding:40px; color:#999;">📭 暂无相关记录</div>';
-            return;
-        }
-
-        let html = '';
-        data.forEach(item => {
-            const time = new Date(item.created_at).toLocaleString();
-            const isPending = item.status === 'pending';
-            const isDeleted = item.status === 'deleted';
-
-            let statusBadge = '';
-            let actionBtn = '';
-
-            if (isDeleted) {
-                statusBadge = `<span class="badge" style="background:#9ca3af; color:white;">已删除</span>`;
-                actionBtn = `<span style="font-size:12px; color:#999;">已删除</span>`;
-            } else {
-                statusBadge = isPending
-                    ? `<span class="badge" style="background:#ef4444; color:white;">待处理</span>`
-                    : `<span class="badge" style="background:#10b981; color:white;">已解决</span>`;
-
-                actionBtn = isPending
-                    ? `<button class="btn btn-sm btn-primary" onclick="IssueManager.resolve(${item.id})">✅ 标记已阅/解决</button>`
-                    : `<span style="font-size:12px; color:#ccc;">已归档</span>`;
-            }
-
-            html += `
-                    <div style="background:white; border:1px solid #e2e8f0; border-left:4px solid ${isPending ? '#ef4444' : (isDeleted ? '#9ca3af' : '#10b981')}; border-radius:8px; padding:15px; margin-bottom:10px; display:flex; gap:10px;">
-                        <div style="display:flex; align-items:center;">
-                            <input type="checkbox" class="issue-item-check" value="${item.id}" style="transform:scale(1.2); cursor:pointer;">
-                        </div>
-                        <div style="flex:1;">
-                            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                                <div style="font-weight:bold; color:#333;">
-                                    ${item.school} · ${item.student_class} · ${item.student_name}
-                                </div>
-                                <div style="font-size:12px; color:#64748b;">${time}</div>
-                            </div>
-                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:13px;">
-                                <span style="background:#f3f4f6; padding:2px 6px; border-radius:4px;">${item.issue_type}</span>
-                                ${statusBadge}
-                            </div>
-                            <div style="background:#f8fafc; padding:10px; border-radius:4px; font-size:14px; color:#475569; margin-bottom:10px;">
-                                ${item.description}
-                            </div>
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div style="font-size:12px; color:#0369a1;">📞 联系: ${item.contact_info || '无'}</div>
-                                <div>${actionBtn}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-        });
-        listEl.innerHTML = html;
+        return requireIssueManagerRuntime().loadIssues(this);
     },
 
-    // 6. 单条处理
     resolve: async function (id) {
-        if (!confirm("确认已核实并处理该问题了吗？\n标记为已解决后，该条目将不再显示红点。")) return;
-        const { error } = await sbClient.from('issues').update({ status: 'resolved' }).eq('id', id);
-        if (error) alert("操作失败：" + error.message);
-        else { this.loadIssues(); this.checkIssues(); }
+        return requireIssueManagerRuntime().resolve(this, id);
     },
 
-    // 7. 🟢 [新功能] 批量软删除 (移入历史)
     batchSoftDelete: async function () {
-        const ids = this.getCheckedIds();
-        if (ids.length === 0) return UI.toast("请至少选择一项", "error");
-        if (!confirm(`确定要删除选中的 ${ids.length} 条记录吗？\n(删除后可在“历史记录”中找回)`)) return;
-
-        UI.loading(true, "正在移除...");
-        // 将状态改为 deleted
-        const { error } = await sbClient.from('issues').update({ status: 'deleted' }).in('id', ids);
-        UI.loading(false);
-
-        if (error) alert("删除失败: " + error.message);
-        else {
-            UI.toast(`已删除 ${ids.length} 条记录`, 'success');
-            this.loadIssues(); // 重新加载，已删除的条目会消失
-            this.checkIssues(); // 刷新红点
-            document.getElementById('issue-check-all').checked = false;
-        }
+        return requireIssueManagerRuntime().batchSoftDelete(this);
     },
 
-    // 8. 🟢 [新功能] 批量还原
     batchRestore: async function () {
-        const ids = this.getCheckedIds();
-        if (ids.length === 0) return UI.toast("请至少选择一项", "error");
-
-        UI.loading(true, "正在还原...");
-        // 还原为 resolved (已读)，比较安全
-        const { error } = await sbClient.from('issues').update({ status: 'resolved' }).in('id', ids);
-        UI.loading(false);
-
-        if (error) alert("还原失败: " + error.message);
-        else {
-            UI.toast(`已还原 ${ids.length} 条记录`, 'success');
-            this.loadIssues(); // 重新加载，还原的条目会从历史列表中消失
-            document.getElementById('issue-history-check-all').checked = false;
-        }
+        return requireIssueManagerRuntime().batchRestore(this);
     },
 
-    // 9. 🟢 [新功能] 批量彻底删除 (物理删除)
     batchHardDelete: async function () {
-        const ids = this.getCheckedIds();
-        if (ids.length === 0) return UI.toast("请至少选择一项", "error");
-
-        // 双重确认，防止误删
-        if (!confirm(`⚠️ 高能预警 ⚠️\n\n确定要【彻底删除】选中的 ${ids.length} 条记录吗？\n此操作不可恢复！`)) return;
-
-        UI.loading(true, "正在彻底粉碎数据...");
-        const { error } = await sbClient.from('issues').delete().in('id', ids);
-        UI.loading(false);
-
-        if (error) alert("删除失败: " + error.message);
-        else {
-            UI.toast(`彻底删除了 ${ids.length} 条记录`, 'success');
-            this.loadIssues(); // 重新加载，数据将永久消失
-            document.getElementById('issue-history-check-all').checked = false;
-        }
+        return requireIssueManagerRuntime().batchHardDelete(this);
     }
 };
 
 // 📦 系统打包工具
 const Packager = {
-    // 生成包含数据的独立 HTML 文件
     exportDistributableHTML: function () {
-        // 1. 检查数据
-        if (!RAW_DATA.length) return alert("当前无成绩数据，无法生成分发版。");
-        if (!Auth.db.parents.length && !Auth.db.teachers.length) return alert("当前无账号信息，请先在账号管理中生成账号。");
-
-        if (!confirm("⚠️ 准备生成【分发版网页】...\n\n此文件将包含：\n1. 所有学生成绩数据\n2. 所有生成的账号密码\n\n请将生成的 .html 文件发送给家长/老师。\n他们无需上传Excel，直接输入账号即可登录。\n\n确定继续吗？")) return;
-
-        UI.loading(true, "正在打包全量数据...");
-
-        setTimeout(() => {
-            try {
-                // 2. 准备要注入的数据包
-                const dataPackage = {
-                    timestamp: new Date().getTime(),
-                    // 核心业务数据
-                    RAW_DATA: RAW_DATA,
-                    SCHOOLS: SCHOOLS, // 包含统计结果，避免重新计算
-                    SUBJECTS: SUBJECTS,
-                    THRESHOLDS: THRESHOLDS,
-                    TEACHER_MAP: TEACHER_MAP,
-                    TEACHER_SCHOOL_MAP: TEACHER_SCHOOL_MAP,
-                    MY_SCHOOL: MY_SCHOOL,
-                    CONFIG: CONFIG,
-                    // 核心权限数据
-                    AUTH_DB: Auth.db,
-                    // 其他配置
-                    LLM_CONFIG: LLM_CONFIG
-                };
-
-                // 3. 获取当前页面的完整源代码
-                let htmlContent = document.documentElement.outerHTML;
-
-                // A. 强制显示登录遮罩，隐藏主界面
-                htmlContent = htmlContent.replace(
-                    /<div id="login-overlay"([^>]*)>/,
-                    (match, attrs = '') => {
-                        if (/style="([^"]*)"/i.test(attrs)) {
-                            const nextAttrs = attrs.replace(/style="([^"]*)"/i, (_, styleValue) => {
-                                const normalized = String(styleValue || '')
-                                    .replace(/display\s*:\s*[^;"]+;?/i, '')
-                                    .trim();
-                                const prefix = normalized ? `${normalized}${normalized.endsWith(';') ? '' : ';'}` : '';
-                                return `style="${prefix}display:flex;"`;
-                            });
-                            return `<div id="login-overlay"${nextAttrs}>`;
-                        }
-                        return `<div id="login-overlay"${attrs} style="display:flex;">`;
-                    }
-                );
-
-                // 强制隐藏主容器
-                if (htmlContent.includes('id="app" class="container"')) {
-                    htmlContent = htmlContent.replace('id="app" class="container"', 'id="app" class="container hidden"');
-                } else {
-                    htmlContent = htmlContent.replace('id="app"', 'id="app" class="hidden"');
-                }
-
-                // B. 【修复弹窗问题】强制隐藏管理员模态框
-                htmlContent = htmlContent.replace(
-                    /id="admin-modal"\s+class="modal"\s+style="([^"]*)"/,
-                    'id="admin-modal" class="modal" style="display: none; z-index: 60000;"'
-                );
-
-                // C. 【修复右上角名字问题】移除已存在的退出按钮
-                htmlContent = htmlContent.replace(/<div id="logout-btn".*?<\/div>/, '');
-
-                // D. 隐藏管理员入口按钮
-                htmlContent = htmlContent.replace('id="admin-panel-btn" onclick', 'id="admin-panel-btn" style="display:none" onclick');
-
-                // E. 🔥【关键修复】强制隐藏全局加载遮罩 (修复一直转圈的问题) 🔥
-                // 使用正则替换，强制给 global-loader 加上 hidden 类，并去掉可能存在的内联 style
-                htmlContent = htmlContent.replace(
-                    /<div id="global-loader"[\s\S]*?>/,
-                    '<div id="global-loader" class="hidden">'
-                );
-
-                // 4. 构建注入脚本 (将数据对象转为 JSON 字符串)
-                // 为了防止 XSS 或闭合标签错误，进行简单的转义
-                const jsonStr = JSON.stringify(dataPackage).replace(/<\/script>/g, '<\\/script>');
-                const injectionCode = `window.EMBEDDED_DB = ${jsonStr};`;
-
-                // 5. 替换插槽内容
-                // 寻找第一步中预留的 window.EMBEDDED_DB = null;
-                const targetStr = "window.EMBEDDED_DB = null;";
-
-                if (!htmlContent.includes(targetStr)) {
-                    throw new Error("模板插槽未找到，请检查 HTML 头部是否添加了 id='embedded-data-script'");
-                }
-
-                // 执行替换
-                const newHtml = htmlContent.replace(targetStr, injectionCode);
-
-                // 6. 下载新文件
-                const blob = new Blob([newHtml], { type: "text/html;charset=utf-8" });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                // 文件名带上时间，方便区分
-                link.download = `查分系统_分发版_${new Date().toLocaleDateString().replace(/\//g, '-')}.html`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-
-                UI.loading(false);
-                alert("✅ 分发版已生成！\n\n请将下载的 .html 文件发送给家长。\n家长打开该文件后，可直接用账号登录。");
-
-            } catch (e) {
-                console.error(e);
-                UI.loading(false);
-                alert("打包失败: " + e.message);
-            }
-        }, 500);
+        return requirePackagerRuntime().exportDistributableHTML();
     }
 };
 
 const HelpSystem = {
-    // 定义各模块的帮助内容
-    content: {
-        'upload': {
-            title: '📁 数据上传规范',
-            html: `
-                    <div style="text-align:left; line-height:1.6;">
-                        <p><strong>1. Excel 格式要求：</strong></p>
-                        <ul>
-                            <li>第一行必须是表头（如：姓名、班级、语文、数学...）。</li>
-                            <li>必须包含<strong>姓名</strong>列。</li>
-                            <li>如果有多个学校，请使用不同的 Sheet 页，<strong>Sheet名称即为学校名</strong>。</li>
-                        </ul>
-                        <p style="margin-top:10px;"><strong>2. 常见问题：</strong></p>
-                        <ul>
-                            <li>缺考/作弊：可填 "0" 或 "缺考"（系统按0分处理）。</li>
-                            <li>列名识别：系统支持“语文/语/Chinese”等多种别名自动识别。</li>
-                        </ul>
-                    </div>
-                `,
-            icon: 'info'
-        },
-        'macro': {
-            title: '📊 两率一分算法说明',
-            html: `
-                    <div style="text-align:left;">
-                        <p><strong>核心公式：</strong></p>
-                        <p>总分 = (均分赋分) + (优率赋分) + (及格赋分)</p>
-                        <hr style="margin:10px 0; border:0; border-top:1px dashed #eee;">
-                        <p><strong>默认权重配置：</strong></p>
-                        <ul>
-                            <li><strong>6-8年级：</strong> 均分60 + 优率70 + 及格70 = 满分200</li>
-                            <li><strong>9年级：</strong> 均分50 + 优率80 + 及格50 = 满分180</li>
-                        </ul>
-                        <p style="font-size:12px; color:#666; margin-top:5px;">* 指标计算基准：以全镇最高值为满分进行归一化折算。</p>
-                    </div>
-                `
-        },
-        'teacher': {
-            title: '👨‍🏫 教师评价模型',
-            html: `
-                    <div style="text-align:left;">
-                        <p>系统通过以下维度评价教师教学质量：</p>
-                        <ol>
-                            <li><strong>三率指标：</strong> 优秀率、及格率、低分率。</li>
-                            <li><strong>贡献值：</strong> (班级均分 - 年级均分)。</li>
-                            <li><strong>乡镇排名：</strong> 该教师所教班级在全镇同科目的排名。</li>
-                        </ol>
-                        <div class="info-bar" style="margin-top:10px; font-size:12px;">
-                            💡 提示：请先在【数据上传】页面下方配置好“教师任课表”才能看到此分析。
-                        </div>
-                    </div>
-                `
-        }
-    },
-
-    // 显示单点帮助
+    content: requireHelpSystemRuntime().createDefaultContent(),
     show: function (key) {
-        if (this.content[key]) {
-            Swal.fire({
-                title: this.content[key].title,
-                html: this.content[key].html,
-                icon: 'question',
-                confirmButtonText: '明白了',
-                confirmButtonColor: '#4f46e5'
-            });
-        }
+        return requireHelpSystemRuntime().show(this, key);
     },
-
-    // 启动新手引导之旅 (Wizard)
     startTour: function () {
-        const steps = [
-            {
-                title: '👋 欢迎使用智能教务系统',
-                html: '只需 3 步完成一次完整流程：<strong>导入 → 分析 → 导出</strong>。',
-                icon: 'info',
-                confirmButtonText: '下一步: 导入数据'
-            },
-            {
-                title: '1️⃣ 导入',
-                html: '进入<strong>【数据枢纽】</strong>上传 Excel。<br><small style="color:#666">系统自动识别学校、班级与学科。</small>',
-                icon: 'info',
-                confirmButtonText: '下一步: 分析'
-            },
-            {
-                title: '2️⃣ 分析',
-                html: '进入<strong>【校际联考分析】</strong>查看横向排名，<br>进入<strong>【班级教学管理】</strong>看教师贡献度。',
-                icon: 'success',
-                confirmButtonText: '下一步: 导出'
-            },
-            {
-                title: '3️⃣ 导出',
-                html: '进入<strong>【综合分析报告】</strong>或<strong>【成绩单/家长查分】</strong>一键导出。',
-                icon: 'success',
-                confirmButtonText: '开始使用！'
-            }
-        ];
-
-        // 使用 SweetAlert2 的队列功能
-        let currentStep = 0;
-        const showStep = (index) => {
-            if (index >= steps.length) return;
-            Swal.fire({
-                ...steps[index],
-                showCancelButton: index < steps.length - 1,
-                cancelButtonText: '跳过教程',
-                confirmButtonColor: '#4f46e5',
-                allowOutsideClick: false
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    showStep(index + 1);
-                }
-            });
-        };
-        showStep(0);
+        return requireHelpSystemRuntime().startTour(this);
     },
-
-    // 检查是否首次访问
     checkFirstRun: function () {
-        if (!localStorage.getItem('hasSeenV3Tour')) {
-            setTimeout(() => {
-                this.startTour();
-                localStorage.setItem('hasSeenV3Tour', 'true');
-            }, 1000); // 延迟1秒显示，等待页面渲染
-        }
+        return requireHelpSystemRuntime().checkFirstRun(this);
     }
 };
-
-// 1. Worker 脚本源码 (后台线程逻辑)
-HelpSystem.checkFirstRun = function () {
-    const hasSeen = !!localStorage.getItem('hasSeenV3Tour');
-    const hasSessionUser = AuthState.hasActiveSession(window.Auth && Auth.currentUser);
-    const loginOverlay = document.getElementById('login-overlay');
-    const loginOverlayVisible = !!(loginOverlay && getComputedStyle(loginOverlay).display !== 'none');
-    const hasSavedWorkspace = !!(
-        (WorkspaceStateRuntime && typeof WorkspaceStateRuntime.hasSavedWorkspace === 'function'
-            ? WorkspaceStateRuntime.hasSavedWorkspace()
-            : (readWorkspaceExamId() || readWorkspaceProjectKey()))
-    );
-    const hasRuntimeScores = Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0;
-
-    if (hasSeen) return;
-    if (loginOverlayVisible) return;
-    if (hasSessionUser || hasSavedWorkspace || hasRuntimeScores) {
-        localStorage.setItem('hasSeenV3Tour', 'true');
-        return;
-    }
-
-    setTimeout(() => {
-        HelpSystem.startTour();
-        localStorage.setItem('hasSeenV3Tour', 'true');
-    }, 1000);
-};
-
-if (HelpSystem?.content?.teacher) {
-    HelpSystem.content.teacher.html = `
-        <div style="text-align:left;">
-            <p>系统现在按“联考赋分 + 基线校正 + 置信修正”评价教师学科绩效：</p>
-            <ol>
-                <li><strong>联考赋分：</strong> 按系统现有“两率一分”口径，对同校同学科教师做赋分。</li>
-                <li><strong>基线校正：</strong> 用最近一次历史考试匹配学生，按同基础分层比较“实际值 - 预计值”。</li>
-                <li><strong>重点学生：</strong> 自动给出培优边缘生、及格临界生、辅差关注生名单。</li>
-            </ol>
-            <div class="info-bar" style="margin-top:10px; font-size:12px;">
-                提示：请先完成任课表同步，并尽量加载最近一次历史考试，基线校正才会更稳定。
-            </div>
-        </div>
-    `;
-}
 
 const WORKER_SOURCE = `
     self.onmessage = function(e) {
@@ -5907,31 +5911,10 @@ const WORKER_SOURCE = `
 const WorkerAPI = {
     worker: null,
     init() {
-        if (this.worker) return;
-        const blob = new Blob([WORKER_SOURCE], { type: 'application/javascript' });
-        this.worker = new Worker(URL.createObjectURL(blob));
+        return requireWorkerApiRuntime().init(this, WORKER_SOURCE);
     },
     run(data) {
-        this.init();
-        return new Promise((resolve, reject) => {
-            this.worker.onmessage = (e) => {
-                if (e.data.status === 'ok') resolve(e.data);
-                else reject(e.data.msg);
-            };
-            this.worker.onerror = (e) => reject(e.message);
-
-            // 为了传输效率，剥离 SCHOOLS 中的 students 引用
-            const schoolsLite = {};
-            Object.keys(data.SCHOOLS).forEach(k => {
-                const { students, ...rest } = data.SCHOOLS[k];
-                schoolsLite[k] = rest;
-            });
-
-            this.worker.postMessage({
-                cmd: 'PROCESS_ALL',
-                data: { ...data, SCHOOLS_LITE: schoolsLite }
-            });
-        });
+        return requireWorkerApiRuntime().run(this, data, WORKER_SOURCE);
     }
 };
 
@@ -5978,417 +5961,54 @@ if (!window.originalConfirm) window.originalConfirm = window.confirm;
 // 🛡️ [升级版] 系统操作日志记录器 (支持回收站)
 const Logger = {
     isHistoryMode: false,
-
-    // 1. 写入日志 (保持不变)
     log: async function (action, details) {
-        if (!sbClient) return;
-        let operator = "未知/系统";
-        try {
-            const user = AuthState.getCurrentUser();
-            if (user) {
-                operator = `${user.name} (${user.role})`;
-            }
-        } catch (e) { }
-
-        try {
-            await sbClient.from('system_logs').insert([{
-                operator: operator,
-                action: action,
-                details: details,
-                status: 'normal' // 默认状态
-            }]);
-            console.log(`[Log] ${action}: ${details}`);
-        } catch (e) {
-            console.error("写日志失败:", e);
-        }
+        return requireLoggerRuntime().log(action, details);
     },
-
-    // 2. 打开查看面板 (UI升级)
     view: function () {
-        this.isHistoryMode = false;
-        this.updateUIState();
-        document.getElementById('admin-log-modal').style.display = 'flex';
-        this.loadLogs();
+        return requireLoggerRuntime().view(this);
     },
-
-    // 3. 切换视图
     toggleHistoryView: function () {
-        this.isHistoryMode = !this.isHistoryMode;
-        this.updateUIState();
-        this.loadLogs();
+        return requireLoggerRuntime().toggleHistoryView(this);
     },
-
-    // 4. 更新UI状态
     updateUIState: function () {
-        const titleEl = document.getElementById('log-modal-title');
-        const btnHistory = document.getElementById('btn-log-history');
-        const normalActions = document.getElementById('log-normal-actions');
-        const historyActions = document.getElementById('log-history-actions');
-
-        // 重置全选
-        if (document.getElementById('log-check-all')) document.getElementById('log-check-all').checked = false;
-        if (document.getElementById('log-history-check-all')) document.getElementById('log-history-check-all').checked = false;
-
-        if (this.isHistoryMode) {
-            titleEl.innerHTML = '<i class="ti ti-trash"></i> 日志回收站';
-            titleEl.style.color = '#666';
-            btnHistory.innerHTML = '<i class="ti ti-arrow-back-up"></i> 返回日志列表';
-            btnHistory.className = 'btn btn-sm btn-primary';
-            normalActions.style.display = 'none';
-            historyActions.style.display = 'flex';
-        } else {
-            titleEl.innerHTML = '<i class="ti ti-history"></i> 系统操作日志';
-            titleEl.style.color = '#333';
-            btnHistory.innerHTML = '<i class="ti ti-recycle"></i> 日志回收站';
-            btnHistory.className = 'btn btn-sm btn-gray';
-            normalActions.style.display = 'flex';
-            historyActions.style.display = 'none';
-        }
+        return requireLoggerRuntime().updateUIState(this);
     },
-
-    // 5. 加载日志数据
     loadLogs: async function () {
-        const listEl = document.getElementById('admin-log-list');
-        listEl.innerHTML = '<div style="padding:20px; text-align:center; color:#666;">⏳ 加载中...</div>';
-
-        let query = sbClient
-            .from('system_logs')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(100);
-
-        // 状态过滤
-        if (this.isHistoryMode) {
-            query = query.eq('status', 'deleted');
-        } else {
-            // 兼容旧数据：status 不等于 deleted，或者 status 为 null
-            query = query.or('status.eq.normal,status.is.null');
-        }
-
-        const { data, error } = await query;
-
-        if (error) return listEl.innerHTML = `<div style="color:red; padding:20px;">加载失败: ${error.message}</div>`;
-        if (!data || data.length === 0) return listEl.innerHTML = `<div style="padding:40px; text-align:center; color:#999;">📭 暂无记录</div>`;
-
-        // 渲染表格
-        let html = `
-            <table style="width:100%; border-collapse:collapse; font-size:12px;">
-                <thead style="position:sticky; top:0; background:#f3f4f6; z-index:1;">
-                    <tr style="border-bottom:1px solid #ddd; color:#64748b;">
-                        <th style="width:40px; padding:10px; text-align:center;">选</th>
-                        <th style="width:140px; padding:10px; text-align:left;">时间</th>
-                        <th style="width:120px; padding:10px; text-align:left;">操作人</th>
-                        <th style="width:100px; padding:10px; text-align:left;">动作</th>
-                        <th style="padding:10px; text-align:left;">详情</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-
-        data.forEach(log => {
-            const time = new Date(log.created_at).toLocaleString();
-            let color = "#333";
-            if (log.action.includes("删除")) color = "#dc2626";
-            if (log.action.includes("修改")) color = "#d97706";
-            if (log.action.includes("同步")) color = "#2563eb";
-
-            html += `
-                <tr style="border-bottom:1px solid #eee; background:white;">
-                    <td style="text-align:center;">
-                        <input type="checkbox" class="log-item-check" value="${log.id}">
-                    </td>
-                    <td style="padding:8px 10px; color:#666;">${time}</td>
-                    <td style="padding:8px 10px; font-weight:bold;">${log.operator || '-'}</td>
-                    <td style="padding:8px 10px; color:${color}; font-weight:bold;">${log.action}</td>
-                    <td style="padding:8px 10px; color:#444;">${log.details}</td>
-                </tr>
-            `;
-        });
-        html += `</tbody></table>`;
-        listEl.innerHTML = html;
+        return requireLoggerRuntime().loadLogs(this);
     },
-
-    // --- 批量操作逻辑 ---
-
     toggleSelectAll: function (source) {
-        document.querySelectorAll('.log-item-check').forEach(cb => cb.checked = source.checked);
+        return requireLoggerRuntime().toggleSelectAll(this, source);
     },
-
     getCheckedIds: function () {
-        return Array.from(document.querySelectorAll('.log-item-check:checked')).map(cb => cb.value);
+        return requireLoggerRuntime().getCheckedIds();
     },
-
-    // 批量软删除
     batchSoftDelete: async function () {
-        const ids = this.getCheckedIds();
-        if (ids.length === 0) return UI.toast("请至少选择一项", "error");
-
-        UI.loading(true, "正在删除...");
-        const { error } = await sbClient.from('system_logs').update({ status: 'deleted' }).in('id', ids);
-        UI.loading(false);
-
-        if (error) alert("删除失败: " + error.message);
-        else {
-            UI.toast(`已删除 ${ids.length} 条日志`, "success");
-            this.loadLogs();
-            if (document.getElementById('log-check-all')) document.getElementById('log-check-all').checked = false;
-        }
+        return requireLoggerRuntime().batchSoftDelete(this);
     },
-
-    // 批量还原
     batchRestore: async function () {
-        const ids = this.getCheckedIds();
-        if (ids.length === 0) return UI.toast("请至少选择一项", "error");
-
-        UI.loading(true, "正在还原...");
-        const { error } = await sbClient.from('system_logs').update({ status: 'normal' }).in('id', ids);
-        UI.loading(false);
-
-        if (error) alert("还原失败: " + error.message);
-        else {
-            UI.toast(`已还原 ${ids.length} 条日志`, "success");
-            this.loadLogs();
-            if (document.getElementById('log-history-check-all')) document.getElementById('log-history-check-all').checked = false;
-        }
+        return requireLoggerRuntime().batchRestore(this);
     },
-
-    // 批量彻底删除
     batchHardDelete: async function () {
-        const ids = this.getCheckedIds();
-        if (ids.length === 0) return UI.toast("请至少选择一项", "error");
-        if (!confirm(`⚠️ 确定要【彻底销毁】这 ${ids.length} 条日志吗？\n此操作不可恢复！`)) return;
-
-        UI.loading(true, "正在粉碎...");
-        const { error, count } = await sbClient.from('system_logs').delete({ count: 'exact' }).in('id', ids);
-        UI.loading(false);
-
-        if (error) {
-            alert("删除失败: " + error.message);
-        } else if (count === 0) {
-            alert("⚠️ 删除失败：权限不足！请在 Supabase 开启 system_logs 的 DELETE 权限。");
-        } else {
-            UI.toast(`彻底删除了 ${count} 条日志`, "success");
-            this.loadLogs();
-            if (document.getElementById('log-history-check-all')) document.getElementById('log-history-check-all').checked = false;
-        }
+        return requireLoggerRuntime().batchHardDelete(this);
     }
 };
 
 // 🔐 [新增] 多角色账号管理控制器 (管理员/主任/班主任)
 const AccountManager = {
-    // 1. 打开管理面板
     open: function () {
-        const user = Auth.currentUser;
-        if (!user) return alert("请先登录");
-
-        // 权限检查列表
-        const allowedRoles = ['admin', 'director', 'grade_director', 'class_teacher'];
-        if (!allowedRoles.includes(user.role)) {
-            return alert("⛔ 权限不足：只有管理员、主任或班主任可以使用此功能。");
-        }
-
-        // 根据角色设置提示文案
-        const hintEl = document.getElementById('acc-permission-hint');
-        let hintText = "";
-
-        if (user.role === 'admin') hintText = "👑 管理员权限：可管理系统中【所有】账号。";
-        else if (user.role === 'director') hintText = "🎓 教务主任权限：可管理本校【所有】账号。";
-        else if (user.role === 'grade_director') hintText = `🚀 级部主任权限：可管理 ${user.class}年级 的【家长】及本校【教师】。`;
-        else if (user.role === 'class_teacher') hintText = `📋 班主任权限：仅可管理 ${user.class}班 的【家长】账号。`;
-
-        hintEl.innerHTML = `<i class="ti ti-shield-lock"></i> ${hintText}`;
-
-        // 重置界面
-        document.getElementById('acc-result-table').querySelector('tbody').innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px; color:#999;">请输入关键字搜索</td></tr>';
-        document.getElementById('acc-search-input').value = "";
-
-        // 显示弹窗
-        document.getElementById('account-manager-modal').style.display = 'flex';
-        document.getElementById('acc-search-input').focus();
+        return requireAccountManagerRuntime().open(this);
     },
-
-    // 2. 执行搜索 (核心权限逻辑)
     search: async function () {
-        const keyword = document.getElementById('acc-search-input').value.trim();
-        if (!keyword) return UI.toast("请输入搜索关键字", "warning");
-
-        const user = Auth.currentUser;
-        if (!user) return;
-        if (!window.EdgeGateway || typeof EdgeGateway.searchAccounts !== 'function') {
-            return alert("❌ 账号网关未就绪，请稍后重试。");
-        }
-
-        UI.loading(true, "正在搜索账号...");
-        try {
-            const { records } = await EdgeGateway.searchAccounts(keyword, { limit: 50 });
-            this.renderTable(records || []);
-        } catch (error) {
-            alert("查询失败: " + (error?.message || error));
-        } finally {
-            UI.loading(false);
-        }
+        return requireAccountManagerRuntime().search(this);
     },
-
-    // 3. 渲染结果表格 (已添加“修改信息”按钮)
     renderTable: function (list) {
-        const tbody = document.querySelector('#acc-result-table tbody');
-        if (!list || list.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px; color:#999;">未找到匹配的账号 (或无权管理)</td></tr>';
-            return;
-        }
-
-        const roleMap = { 'admin': '👑 管理员', 'director': '🎓 教务主任', 'grade_director': '🚀 级部主任', 'class_teacher': '📋 班主任', 'teacher': '👨‍🏫 教师', 'parent': '👨‍👩‍👧 家长' };
-        const myRole = Auth.currentUser ? Auth.currentUser.role : 'guest';
-
-        let html = '';
-        list.forEach(u => {
-            const roleName = roleMap[u.role] || u.role;
-
-            let canEdit = false;
-
-            // 权限判定逻辑 (保持原有严谨性)
-            if (myRole === 'admin') {
-                canEdit = (u.role !== 'admin' || u.username === Auth.currentUser.name); // 可以改自己，不能改别的admin
-            } else if (myRole === 'director') {
-                canEdit = (u.role !== 'admin' && u.role !== 'director');
-            } else {
-                canEdit = (u.role === 'parent' || u.role === 'teacher');
-            }
-
-            // 按钮样式
-            const btnClass = canEdit ? 'btn-primary' : 'btn-gray';
-            const cursorStyle = canEdit ? '' : 'cursor:not-allowed; opacity:0.6;';
-            const disableAttr = canEdit ? '' : 'disabled';
-
-            // 转义处理，防止单引号破坏 HTML 结构
-            const safeUser = u.username.replace(/'/g, "\\'");
-            const safeRole = u.role;
-            const safeClass = (u.class_name || '').replace(/'/g, "\\'");
-
-            html += `
-                    <tr>
-                        <td style="font-weight:bold;">${u.username}</td>
-                        <td><span class="badge" style="background:#e0f2fe; color:#0369a1;">${roleName}</span></td>
-                        <td>${u.class_name || '-'}</td>
-                        <td style="font-family:monospace; color:#666;">${u.password_display || '未设置'}</td>
-                        <td>
-                            <!-- 🟢 新增：修改信息按钮 -->
-                            <button class="btn btn-sm btn-purple" ${disableAttr} style="padding:2px 6px; font-size:12px; margin-right:5px; ${cursorStyle}" 
-                                    onclick="AccountManager.editAttributes('${safeUser}', '${safeRole}', '${safeClass}')">
-                                <i class="ti ti-edit"></i> 修改
-                            </button>
-                            <!-- 原有：改密按钮 -->
-                            <button class="btn btn-sm ${btnClass}" ${disableAttr} style="padding:2px 6px; font-size:12px; ${cursorStyle}" 
-                                    onclick="AccountManager.resetPassword('${safeUser}')">
-                                <i class="ti ti-key"></i> 改密
-                            </button>
-                        </td>
-                    </tr>
-                `;
-        });
-        tbody.innerHTML = html;
+        return requireAccountManagerRuntime().renderTable(list);
     },
-
-
-    // 3.5 编辑用户属性 (角色 & 班级)
     editAttributes: async function (username, currentRole, currentClass) {
-        // 构建角色下拉选项
-        const roleOptions = [
-            { val: 'teacher', txt: '👨‍🏫 科任教师 (默认)' },
-            { val: 'class_teacher', txt: '📋 班主任 (需填班级)' },
-            { val: 'grade_director', txt: '🚀 级部主任 (需填年级)' },
-            { val: 'parent', txt: '👨‍👩‍👧 家长/学生 (需填班级)' },
-            { val: 'director', txt: '🎓 教务主任' },
-            { val: 'admin', txt: '👑 管理员' }
-        ].map(opt => `<option value="${opt.val}" ${opt.val === currentRole ? 'selected' : ''}>${opt.txt}</option>`).join('');
-
-        // 弹出 SweetAlert2 表单
-        const { value: formValues } = await Swal.fire({
-            title: `修改账号信息：${username}`,
-            html: `
-                    <div style="text-align:left; font-size:14px;">
-                        <label style="display:block; margin-bottom:5px; font-weight:bold;">角色权限</label>
-                        <select id="swal-edit-role" class="swal2-input" style="margin:0 0 15px 0; width:100%; font-size:14px;">
-                            ${roleOptions}
-                        </select>
-                        
-                        <label style="display:block; margin-bottom:5px; font-weight:bold;">
-                            班级 / 范围 <small style="color:#666; font-weight:normal;">(教师留空, 家长填班级, 主任填年级)</small>
-                        </label>
-                        <input id="swal-edit-class" class="swal2-input" value="${currentClass}" placeholder="例如: 901 或 9" style="margin:0; width:100%; font-size:14px;">
-                    </div>
-                `,
-            showCancelButton: true,
-            confirmButtonText: '保存修改',
-            cancelButtonText: '取消',
-            focusConfirm: false,
-            preConfirm: () => {
-                return {
-                    role: document.getElementById('swal-edit-role').value,
-                    class_name: document.getElementById('swal-edit-class').value.trim()
-                }
-            }
-        });
-
-        if (!formValues) return; // 用户取消
-
-        // 简单校验
-        if ((formValues.role === 'parent' || formValues.role === 'class_teacher') && !formValues.class_name) {
-            return Swal.fire('错误', '修改为家长或班主任时，【班级】不能为空！', 'error');
-        }
-
-        if (!window.EdgeGateway || typeof EdgeGateway.updateAccount !== 'function') {
-            return alert("❌ 账号网关未就绪，请稍后重试。");
-        }
-
-        UI.loading(true, "正在更新云端数据...");
-
-        try {
-            await EdgeGateway.updateAccount({
-                username,
-                role: formValues.role,
-                class_name: formValues.class_name
-            });
-            UI.loading(false);
-            UI.toast(`✅ 账号 [${username}] 信息已更新`, "success");
-            // 刷新列表
-            this.search();
-
-            // 记录日志
-            if (window.Logger) Logger.log('修改账号信息', `修改了 ${username} 的角色为 ${formValues.role}, 范围为 ${formValues.class_name}`);
-        } catch (error) {
-            UI.loading(false);
-            alert("❌ 更新失败: " + (error?.message || error));
-        }
+        return requireAccountManagerRuntime().editAttributes(this, username, currentRole, currentClass);
     },
-
-    // 4. 重置/修改密码
     resetPassword: async function (username) {
-        const newPass = prompt(`🔐 正在修改账号 [${username}] 的密码\n\n请输入新密码 (留空则取消):`);
-        if (newPass === null) return;
-        if (!newPass.trim()) return alert("密码不能为空");
-        const ok = confirm(`⚠️ 确认重置账号 [${username}] 的密码？\n\n新密码将立即生效。是否继续？`);
-        if (!ok) return;
-        if (!window.EdgeGateway || typeof EdgeGateway.resetAccountPassword !== 'function') {
-            return alert("❌ 账号网关未就绪，请稍后重试。");
-        }
-
-        UI.loading(true, "正在更新密码...");
-
-        try {
-            await EdgeGateway.resetAccountPassword(username, newPass.trim());
-            UI.loading(false);
-            UI.toast(`✅ 账号 [${username}] 密码已更新`, "success");
-
-            // 刷新列表显示新密码
-            this.search();
-
-            // 记录到操作日志 (如果有 Logger 模块)
-            if (window.Logger) Logger.log('修改密码', `修改了用户 ${username} 的密码`);
-        } catch (error) {
-            UI.loading(false);
-            alert("❌ 修改失败: " + (error?.message || error));
-        }
+        return requireAccountManagerRuntime().resetPassword(this, username);
     }
 };
 
@@ -6870,429 +6490,60 @@ const DataManager = {
     },
 
     renderCloudBackups: async function () {
-        if (!sbClient) return;
-        const tbody = document.querySelector('#dm-cloud-table tbody');
-        const summaryEl = document.getElementById('dm-cloud-summary');
-        const filterCurrent = document.getElementById('cloud-filter-current')?.checked !== false;
-        const filterSnapshotsOnly = document.getElementById('cloud-filter-snapshots')?.checked !== false;
-
-        // 初始化加载状态
-        if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">⏳ 正在读取云端数据库...</td></tr>';
-        if (summaryEl) {
-            summaryEl.style.display = 'block';
-            summaryEl.innerHTML = '⏳ 正在分析数据...';
-        }
-
-        try {
-            // 1. 同源代理环境优先用轻量元数据；本地/单文件直连 Supabase 时直接走 legacy content 查询，避免无意义的 400 探测
-            let data = null;
-            let error = null;
-            const preferMetadataQuery = typeof shouldUseSupabaseProxy === 'function'
-                ? shouldUseSupabaseProxy()
-                : (typeof shouldUseSameOriginSupabaseProxy === 'function'
-                    ? shouldUseSameOriginSupabaseProxy()
-                    : false);
-            let usingLegacyContentQuery = !preferMetadataQuery;
-
-            if (preferMetadataQuery) {
-                const metaResult = await sbClient
-                    .from('system_data')
-                    .select('key, created_at, updated_at, size_bytes')
-                    .order('updated_at', { ascending: false });
-
-                data = metaResult?.data || null;
-                error = metaResult?.error || null;
-            }
-
-            if (usingLegacyContentQuery || (error && /size_bytes/i.test(String(error.message || error.code || '')))) {
-                usingLegacyContentQuery = true;
-                const legacyResult = await sbClient
-                    .from('system_data')
-                    .select('key, created_at, updated_at, content')
-                    .order('updated_at', { ascending: false });
-                data = legacyResult?.data || null;
-                error = legacyResult?.error || null;
-            }
-
-            if (error) throw error;
-
-            const allRows = (Array.isArray(data) ? data : []).map(item => ({
-                ...item,
-                size_bytes: Number(item?.size_bytes) || (typeof item?.content === 'string' ? item.content.length : 0)
-            }));
-            this.cloudBackupRows = new Map(allRows.map(item => [String(item.key || '').trim(), item]));
-            const visibleRows = allRows.filter(item => {
-                if (filterSnapshotsOnly && !this.isCloudWorkspaceSnapshotKey(item.key)) return false;
-                if (filterCurrent && !this.isCloudRecordInCurrentWorkspace(item.key)) return false;
-                return true;
-            });
-
-            if (!allRows.length) {
-                this.cloudSelection.clear();
-                if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#64748b;">☁️ 云端数据库为空</td></tr>';
-                if (summaryEl) summaryEl.innerHTML = '📌 暂无存档记录';
-                this.updateCloudSelectionUI();
-                return;
-            }
-
-            if (!visibleRows.length) {
-                this.cloudSelection.clear();
-                if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#64748b;">当前筛选条件下暂无可显示的工作区快照</td></tr>';
-                if (summaryEl) {
-                    const filterText = [
-                        filterCurrent ? '当前届别/工作区' : '',
-                        filterSnapshotsOnly ? '工作区快照' : ''
-                    ].filter(Boolean).join(' + ') || '全部记录';
-                    summaryEl.innerHTML = `📌 当前云端共 ${allRows.length} 条记录，已按「${filterText}」过滤。`;
-                }
-                this.updateCloudSelectionUI();
-                return;
-            }
-
-            const keySet = new Set(visibleRows.map(item => item.key));
-            this.cloudSelection.forEach(key => {
-                if (!keySet.has(key)) this.cloudSelection.delete(key);
-            });
-
-            // 2. 统计信息
-            const totalSize = visibleRows.reduce((acc, item) => acc + (Number(item.size_bytes) || 0), 0);
-            const totalSizeMB = (totalSize / 1024 / 1024).toFixed(2);
-            if (summaryEl) {
-                summaryEl.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>📌 云端共 <b>${allRows.length}</b> 个存档 | 总占用: <b>${totalSizeMB} MB</b></span>
-                        <span style="font-size:11px; color:#94a3b8;">${usingLegacyContentQuery ? '已兼容旧版云端接口' : '只显示最近更新的记录'}</span>
-                    </div>
-                `;
-            }
-
-            // 3. 渲染列表
-            if (summaryEl) {
-                const suffix = visibleRows.length !== allRows.length
-                    ? `<span style="font-size:11px; color:#94a3b8;">当前显示 ${visibleRows.length} / ${allRows.length} 条</span>`
-                    : '<span style="font-size:11px; color:#94a3b8;">当前显示全部匹配记录</span>';
-                summaryEl.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>📌 当前云端清单 <b>${visibleRows.length}</b> 条 | 占用约 <b>${totalSizeMB} MB</b></span>
-                        ${suffix}
-                    </div>
-                `;
-            }
-
-            const currentKey = readWorkspaceProjectKey();
-            let rows = '';
-
-            visibleRows.forEach(item => {
-                const isCurrent = (item.key === currentKey);
-                const sizeKB = ((Number(item.size_bytes) || 0) / 1024).toFixed(1);
-                const time = new Date(item.updated_at || item.created_at).toLocaleString();
-
-                // 解析Key结构：2022级_9年级_2025-2026_上学期_期中_全镇联考
-                // 如果不符合结构，则直接显示Key
-                let displayName = item.key;
-                let tags = '';
-
-                const parts = item.key.split('_');
-                if (parts.length >= 5) {
-                    displayName = `<b>${parts[0]} ${parts[1]}</b><br><span style="color:#64748b; font-size:11px;">${parts[2]} ${parts[3]} ${parts[5] || ''}</span>`;
-                    tags = `<span class="badge" style="background:${parts[4] === '期末' ? '#ef4444' : '#3b82f6'}; color:white; padding:2px 6px; border-radius:4px; font-size:10px;">${parts[4]}</span>`;
-                }
-
-                rows += `
-                    <tr style="${isCurrent ? 'background:#f0fdf4;' : ''}">
-                        <td style="text-align:center; width:44px;">
-                            <input type="checkbox" class="dm-cloud-select" data-key="${item.key}" ${this.cloudSelection.has(item.key) ? 'checked' : ''} onchange="DataManager.toggleCloudSelection(this)">
-                        </td>
-                        <td>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                ${isCurrent ? '<i class="ti ti-current-location" style="color:#16a34a;" title="当前项目"></i>' : ''}
-                                <div>${displayName}</div>
-                                ${tags}
-                            </div>
-                        </td>
-                        <td style="font-size:12px; color:#64748b;">${time}</td>
-                        <td style="font-size:12px;">${sizeKB} KB</td>
-                        <td>
-                            <div style="display:flex; gap:6px;">
-                                <button class="btn btn-sm btn-primary" onclick="DataManager.loadCloudBackup('${item.key}')" title="读取此存档">
-                                    <i class="ti ti-download"></i> 读取
-                                </button>
-                                <button class="btn btn-sm btn-green" onclick="DataManager.downloadCloudBackup('${item.key}')" title="下载此存档文档">
-                                    <i class="ti ti-file-download"></i> 下载存档
-                                </button>
-                                <button class="btn btn-sm btn-danger" onclick="DataManager.deleteCloudBackup('${item.key}')" title="永久删除">
-                                    <i class="ti ti-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            if (tbody) tbody.innerHTML = rows;
-            this.updateCloudSelectionUI();
-
-        } catch (err) {
-            console.error(err);
-            this.cloudBackupRows = new Map();
-            if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#ef4444;">❌ 加载失败: ${err.message}</td></tr>`;
-            this.updateCloudSelectionUI();
-        }
+        return requireDataCloudRuntime().renderCloudBackups(this);
     },
 
     toggleCloudSelection: function (inputEl) {
-        if (!inputEl) return;
-        const key = inputEl.dataset.key;
-        if (!key) return;
-        if (inputEl.checked) this.cloudSelection.add(key);
-        else this.cloudSelection.delete(key);
-        this.updateCloudSelectionUI();
+        return requireDataCloudRuntime().toggleCloudSelection(this, inputEl);
     },
 
     toggleCloudSelectAll: function (checked) {
-        const boxes = Array.from(document.querySelectorAll('#dm-cloud-table tbody .dm-cloud-select'));
-        boxes.forEach(box => {
-            box.checked = !!checked;
-            const key = box.dataset.key;
-            if (!key) return;
-            if (checked) this.cloudSelection.add(key);
-            else this.cloudSelection.delete(key);
-        });
-        this.updateCloudSelectionUI();
+        return requireDataCloudRuntime().toggleCloudSelectAll(this, checked);
     },
 
     updateCloudSelectionUI: function () {
-        const boxes = Array.from(document.querySelectorAll('#dm-cloud-table tbody .dm-cloud-select'));
-        const headerBox = document.getElementById('dm-cloud-select-all');
-        const countEl = document.getElementById('cloud-selected-count');
-        const batchBtn = document.getElementById('btn-cloud-batch-delete');
-
-        let visibleSelected = 0;
-        boxes.forEach(box => {
-            if (this.cloudSelection.has(box.dataset.key)) {
-                box.checked = true;
-                visibleSelected++;
-            }
-        });
-
-        if (headerBox) {
-            headerBox.indeterminate = visibleSelected > 0 && visibleSelected < boxes.length;
-            headerBox.checked = boxes.length > 0 && visibleSelected === boxes.length;
-        }
-        if (countEl) countEl.textContent = `已选 ${this.cloudSelection.size} 项`;
-        if (batchBtn) {
-            batchBtn.disabled = this.cloudSelection.size === 0;
-            batchBtn.style.opacity = this.cloudSelection.size === 0 ? '0.6' : '1';
-            batchBtn.title = this.cloudSelection.size === 0 ? '请先勾选需要删除的存档' : '删除当前勾选的云端存档';
-        }
+        return requireDataCloudRuntime().updateCloudSelectionUI(this);
     },
 
     deleteSelectedCloudBackups: async function () {
-        const keys = Array.from(this.cloudSelection || []);
-        if (!keys.length) return alert('请先勾选要删除的云端存档');
-        if (!confirm(`🧨 危险操作！\n\n确定要永久删除选中的 ${keys.length} 个存档吗？\n删除后无法恢复！`)) return;
-
-        UI.loading(true, `正在批量删除 ${keys.length} 项...`);
-        try {
-            const { error } = await sbClient
-                .from('system_data')
-                .delete()
-                .in('key', keys);
-
-            if (error) throw error;
-            this.cloudSelection.clear();
-            UI.toast(`✅ 批量删除成功（${keys.length}项）`, 'success');
-            this.renderCloudBackups();
-        } catch (e) {
-            alert('批量删除失败: ' + e.message);
-        } finally {
-            UI.loading(false);
-        }
+        return requireDataCloudRuntime().deleteSelectedCloudBackups(this);
     },
 
     // 加载指定的云端存档
     getCloudBackupRow: async function (key) {
-        const normalizedKey = String(key || '').trim();
-        if (!normalizedKey) throw new Error('存档 Key 不能为空');
-
-        const cached = this.cloudBackupRows instanceof Map ? this.cloudBackupRows.get(normalizedKey) : null;
-        if (cached && Object.prototype.hasOwnProperty.call(cached, 'content')) return cached;
-
-        const { data, error } = await sbClient
-            .from('system_data')
-            .select('key, created_at, updated_at, content')
-            .eq('key', normalizedKey)
-            .maybeSingle();
-
-        if (error) throw error;
-        if (!data) throw new Error(`未找到存档：${normalizedKey}`);
-
-        const merged = cached && typeof cached === 'object'
-            ? { ...cached, ...data }
-            : data;
-
-        if (!(this.cloudBackupRows instanceof Map)) this.cloudBackupRows = new Map();
-        this.cloudBackupRows.set(normalizedKey, merged);
-        return merged;
+        return requireDataCloudRuntime().getCloudBackupRow(this, key);
     },
 
     buildCloudArchiveExportPayload: function (item) {
-        return {
-            format: 'school-system-cloud-archive',
-            version: 1,
-            key: String(item?.key || '').trim(),
-            content: Object.prototype.hasOwnProperty.call(item || {}, 'content') ? item.content : null,
-            created_at: item?.created_at || null,
-            updated_at: item?.updated_at || null,
-            exported_at: new Date().toISOString()
-        };
+        return requireDataCloudRuntime().buildCloudArchiveExportPayload(item);
     },
 
     getCloudArchiveDownloadName: function (key) {
-        const base = String(key || 'cloud-archive')
-            .trim()
-            .replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
-            .replace(/\s+/g, '_')
-            .slice(0, 96) || 'cloud-archive';
-        return `${base}.school-archive.json`;
+        return requireDataCloudRuntime().getCloudArchiveDownloadName(key);
     },
 
     downloadCloudBackup: async function (key) {
-        UI.loading(true, `正在准备下载 ${key}...`);
-        try {
-            const item = await this.getCloudBackupRow(key);
-            const payload = this.buildCloudArchiveExportPayload(item);
-            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = this.getCloudArchiveDownloadName(payload.key);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-            UI.toast(`✅ 已下载存档：${payload.key}`, 'success');
-        } catch (e) {
-            alert('下载存档失败: ' + e.message);
-        } finally {
-            UI.loading(false);
-        }
+        return requireDataCloudRuntime().downloadCloudBackup(this, key);
     },
 
     triggerCloudArchiveUpload: function () {
-        if (!sbClient) return alert('云端连接未就绪，暂时无法上传存档文档');
-        const input = document.getElementById('dm-cloud-upload-input');
-        if (!input) return alert('上传控件未初始化');
-        input.value = '';
-        input.click();
+        return requireDataCloudRuntime().triggerCloudArchiveUpload();
     },
 
     parseCloudArchiveImportRecords: function (rawText, fallbackName = '') {
-        let parsed;
-        try {
-            parsed = JSON.parse(String(rawText || '').trim());
-        } catch (e) {
-            throw new Error('文件不是有效的 JSON 存档文档');
-        }
-
-        const items = Array.isArray(parsed) ? parsed : [parsed];
-        const fallbackKey = String(fallbackName || '')
-            .replace(/\.school-archive\.json$/i, '')
-            .replace(/\.json$/i, '')
-            .trim();
-
-        return items.map((entry, index) => {
-            const source = entry && typeof entry.record === 'object' ? entry.record : entry;
-            const key = String(source?.key || fallbackKey || '').trim();
-            if (!key) {
-                throw new Error(`第 ${index + 1} 条记录缺少存档 Key`);
-            }
-            if (!Object.prototype.hasOwnProperty.call(source || {}, 'content')) {
-                throw new Error(`第 ${index + 1} 条记录缺少 content 字段`);
-            }
-            return {
-                key,
-                content: source.content
-            };
-        });
+        return requireDataCloudRuntime().parseCloudArchiveImportRecords(rawText, fallbackName);
     },
 
     handleCloudArchiveUpload: async function (input) {
-        const files = Array.from(input?.files || []);
-        if (!files.length) return;
-
-        try {
-            UI.loading(true, `正在解析 ${files.length} 个上传文档...`);
-            const parsedRecords = [];
-
-            for (const file of files) {
-                const text = await file.text();
-                const records = this.parseCloudArchiveImportRecords(text, file.name);
-                records.forEach(record => parsedRecords.push(record));
-            }
-
-            const dedupeMap = new Map();
-            parsedRecords.forEach(record => {
-                dedupeMap.set(record.key, record);
-            });
-            const recordsToUpload = Array.from(dedupeMap.values());
-
-            if (!recordsToUpload.length) throw new Error('没有可上传的有效存档记录');
-
-            const shouldContinue = confirm(`确定上传 ${recordsToUpload.length} 份存档到云端吗？\n若 Key 已存在，将直接覆盖同名存档。`);
-            if (!shouldContinue) return;
-
-            const { error } = await sbClient
-                .from('system_data')
-                .upsert(recordsToUpload, { onConflict: 'key' });
-
-            if (error) throw error;
-
-            UI.toast(`✅ 已上传 ${recordsToUpload.length} 份存档文档`, 'success');
-            this.renderCloudBackups();
-        } catch (e) {
-            console.error(e);
-            alert('上传存档文档失败: ' + e.message);
-        } finally {
-            if (input) input.value = '';
-            UI.loading(false);
-        }
+        return requireDataCloudRuntime().handleCloudArchiveUpload(this, input);
     },
 
     loadCloudBackup: async function (key) {
-        if (!this.isCloudWorkspaceSnapshotKey(key)) {
-            return alert('该记录不是工作区快照。教师任课和各类对比请在对应模块中查看。');
-        }
-        if (!confirm(`⚠️ 确定要切换到存档 [${key}] 吗？\n当前未保存的工作将会丢失。`)) return;
-
-        // 临时修改 Current Key，然后调用 CloudManager.load
-        writeWorkspaceProjectKey(key);
-        await CloudManager.load();
-
-        // 刷新列表状态
-        this.renderCloudBackups();
+        return requireDataCloudRuntime().loadCloudBackup(this, key);
     },
 
     deleteCloudBackup: async function (key) {
-        if (!confirm(`🧨 危险操作！\n\n确定要永久删除 [${key}] 吗？\n删除后无法恢复！`)) return;
-
-        UI.loading(true, `正在删除 ${key}...`);
-        try {
-            const { error } = await sbClient
-                .from('system_data')
-                .delete()
-                .eq('key', key);
-
-            if (error) throw error;
-
-            this.cloudSelection.delete(key);
-            UI.toast('✅ 删除成功', 'success');
-            this.renderCloudBackups();
-        } catch (e) {
-            alert('删除失败: ' + e.message);
-        } finally {
-            UI.loading(false);
-        }
+        return requireDataCloudRuntime().deleteCloudBackup(this, key);
     },
 
 
@@ -8085,7 +7336,7 @@ const DataManager = {
                                 alert(`✅ 成功导入 ${count} 条任课信息并同步到云端！`);
                             }
                         } else {
-                            alert(`✅ 成功导入 ${count} 条任课信息！\n\n⚠️ 但云端同步失败，请检查 Supabase 权限或 RLS 设置。`);
+                            alert(`✅ 成功导入 ${count} 条任课信息！\n\n⚠️ 但云端同步失败，请检查 Cloudflare 数据接口或登录状态。`);
                         }
                     } catch (cloudErr) {
                         if (window.UI) UI.loading(false);
@@ -8385,291 +7636,60 @@ const DataManager = {
     },
 
     loadCloudSnapshots: async function () {
-        if (!sbClient) return;
-        const tbody = document.getElementById('dm-cloud-tbody');
-        if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="3">⏳ 加载中...</td></tr>';
-        const { data } = await sbClient.from('system_data').select('key, created_at').order('created_at', { ascending: false });
-        if (!data || !data.length) {
-            tbody.innerHTML = '<tr><td colspan="3">无备份</td></tr>'; return;
-        }
-        tbody.innerHTML = data.map(i => `<tr><td>${i.key}</td><td>${new Date(i.created_at).toLocaleString()}</td><td><button class="btn btn-sm btn-danger" onclick="DataManager.deleteCloudSnapshot('${i.key}')">删除</button></td></tr>`).join('');
+        return requireDataCloudRuntime().loadCloudSnapshots(this);
     },
 
     deleteCloudSnapshot: async function (key) {
-        if (!confirm("确定删除？")) return;
-        await sbClient.from('system_data').delete().eq('key', key);
-        this.loadCloudSnapshots();
+        return requireDataCloudRuntime().deleteCloudSnapshot(this, key);
     },
 
     // 👇👇👇 🟢 [同步修复]：参数管理渲染逻辑优化 🟢 👇👇👇
     getDataManagerSyncStorageKey: function () {
-        return 'DM_SYNC_STATUS_V1';
+        return requireDataCloudRuntime().getDataManagerSyncStorageKey();
     },
 
     getDataManagerSyncScope: function () {
-        return String(readWorkspaceProjectKey() || readWorkspaceCohortId() || window.CONFIG?.name || 'default');
+        return requireDataCloudRuntime().getDataManagerSyncScope();
     },
 
     readDataManagerSyncState: function () {
-        const storageKey = this.getDataManagerSyncStorageKey();
-        const scope = this.getDataManagerSyncScope();
-        let all = {};
-        try {
-            all = JSON.parse(localStorage.getItem(storageKey) || '{}') || {};
-        } catch (e) { }
-        const scoped = all && typeof all[scope] === 'object' ? all[scope] : null;
-        if (scoped) return scoped;
-        return readDataManagerSyncStateValue();
+        return requireDataCloudRuntime().readDataManagerSyncState();
     },
 
     writeDataManagerSyncState: function (patch) {
-        const storageKey = this.getDataManagerSyncStorageKey();
-        const scope = this.getDataManagerSyncScope();
-        let all = {};
-        try {
-            all = JSON.parse(localStorage.getItem(storageKey) || '{}') || {};
-        } catch (e) { }
-        const current = all && typeof all[scope] === 'object' ? all[scope] : {};
-        const next = Object.assign({}, current, patch || {});
-        all[scope] = next;
-        try {
-            localStorage.setItem(storageKey, JSON.stringify(all));
-        } catch (e) { }
-        return setDataManagerSyncStateValue(next);
+        return requireDataCloudRuntime().writeDataManagerSyncState(patch);
     },
 
     getCurrentIndicatorValues: function () {
-        const indicator = readIndicatorState();
-        const input1 = document.getElementById('dm_ind1_input') || document.getElementById('ind1');
-        const input2 = document.getElementById('dm_ind2_input') || document.getElementById('ind2');
-        const ind1 = String((input1 && input1.value) || indicator.ind1 || '').trim();
-        const ind2 = String((input2 && input2.value) || indicator.ind2 || '').trim();
-        return { ind1, ind2 };
+        return requireDataCloudRuntime().getCurrentIndicatorValues();
     },
 
     getParamsSyncSignature: function () {
-        const current = this.getCurrentIndicatorValues();
-        return current.ind1 || current.ind2 ? `${current.ind1}::${current.ind2}` : '';
+        return requireDataCloudRuntime().getParamsSyncSignature();
     },
 
     getTargetsSyncSignature: function () {
-        const targets = typeof ensureNormalizedTargets === 'function'
-            ? (ensureNormalizedTargets() || {})
-            : readTargetsState();
-        return Object.keys(targets)
-            .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'))
-            .map(name => {
-                const item = targets[name] || {};
-                const normalized = typeof normalizeSchoolName === 'function'
-                    ? (normalizeSchoolName(name) || name)
-                    : name;
-                return `${normalized}:${parseInt(item.t1, 10) || 0}:${parseInt(item.t2, 10) || 0}`;
-            })
-            .join('|');
+        return requireDataCloudRuntime().getTargetsSyncSignature();
     },
 
     buildTeacherSignature: function (teacherMap, schoolMap) {
-        const map = teacherMap && typeof teacherMap === 'object' ? teacherMap : {};
-        const schools = schoolMap && typeof schoolMap === 'object' ? schoolMap : {};
-        return Object.keys(map)
-            .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }))
-            .map(key => `${key}:${String(map[key] || '').trim()}:${String(schools[key] || '').trim()}`)
-            .join('|');
+        return requireDataCloudRuntime().buildTeacherSignature(teacherMap, schoolMap);
     },
 
     getTeacherStatusSnapshot: function () {
-        const preferredTermId = getPreferredTeacherTermId() || '';
-        const resolved = typeof resolveTeacherHistoryEntry === 'function'
-            ? resolveTeacherHistoryEntry(preferredTermId)
-            : null;
-        const localMap = resolved?.map && typeof resolved.map === 'object'
-            ? resolved.map
-            : (window.TEACHER_MAP || {});
-        const localSchoolMap = resolved?.schoolMap && typeof resolved.schoolMap === 'object'
-            ? resolved.schoolMap
-            : (window.TEACHER_SCHOOL_MAP || {});
-        const liveMap = window.TEACHER_MAP && typeof window.TEACHER_MAP === 'object' ? window.TEACHER_MAP : {};
-        const liveSchoolMap = window.TEACHER_SCHOOL_MAP && typeof window.TEACHER_SCHOOL_MAP === 'object' ? window.TEACHER_SCHOOL_MAP : {};
-        const termId = resolved?.key || preferredTermId;
-        const loadedTermId = readCurrentTeacherTermId();
-        const localSignature = this.buildTeacherSignature(localMap, localSchoolMap);
-        const liveSignature = this.buildTeacherSignature(liveMap, liveSchoolMap);
-        const localCount = Object.keys(localMap || {}).length;
-        const liveCount = Object.keys(liveMap || {}).length;
-        const loadedMatches = !!liveCount
-            && (!termId || !loadedTermId || getTeacherTermBase(loadedTermId) === getTeacherTermBase(termId))
-            && (!localSignature || liveSignature === localSignature);
-
-        return {
-            termId,
-            loadedTermId,
-            count: localCount,
-            loadedCount: liveCount,
-            signature: localSignature || liveSignature,
-            loadedSignature: liveSignature,
-            loadedMatches
-        };
+        return requireDataCloudRuntime().getTeacherStatusSnapshot();
     },
 
     rememberDataManagerSyncSnapshot: function (sourceLabel = '统一保存同步') {
-        return this.writeDataManagerSyncState({
-            paramsSignature: this.getParamsSyncSignature(),
-            targetsSignature: this.getTargetsSyncSignature(),
-            lastCloudSyncAt: Date.now(),
-            lastSyncSource: sourceLabel
-        });
+        return requireDataCloudRuntime().rememberDataManagerSyncSnapshot(this, sourceLabel);
     },
 
     getDataManagerStatusModel: function () {
-        const indicator = this.getCurrentIndicatorValues();
-        const paramsNeeded = isIndicatorPromptAllowed();
-        const paramsFilledCount = [indicator.ind1, indicator.ind2].filter(Boolean).length;
-        const paramsSignature = this.getParamsSyncSignature();
-        const targets = typeof ensureNormalizedTargets === 'function'
-            ? (ensureNormalizedTargets() || {})
-            : readTargetsState();
-        const targetNames = Object.keys(targets).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'));
-        const targetsSignature = this.getTargetsSyncSignature();
-        const syncState = this.readDataManagerSyncState();
-        const hasBaseline = !!(syncState.paramsSignature || syncState.targetsSignature || syncState.lastCloudSyncAt);
-
-        let paramsState = 'missing';
-        if (!paramsNeeded) paramsState = 'not_needed';
-        else if (paramsFilledCount === 0) paramsState = 'missing';
-        else if (paramsFilledCount < 2) paramsState = 'partial';
-        else if (!hasBaseline) paramsState = 'unknown';
-        else paramsState = paramsSignature === syncState.paramsSignature ? 'synced' : 'pending';
-
-        let targetsState = 'missing';
-        if (targetNames.length === 0) targetsState = 'missing';
-        else if (!hasBaseline) targetsState = 'unknown';
-        else targetsState = targetsSignature === syncState.targetsSignature ? 'synced' : 'pending';
-
-        return {
-            paramsNeeded,
-            indicator,
-            paramsFilledCount,
-            paramsState,
-            targetNames,
-            targetCount: targetNames.length,
-            targetsState,
-            syncState,
-            hasBaseline,
-            lastSyncText: syncState.lastCloudSyncAt
-                ? new Date(syncState.lastCloudSyncAt).toLocaleString('zh-CN')
-                : '尚未记录',
-            lastSyncSource: syncState.lastSyncSource || ''
-        };
+        return requireDataCloudRuntime().getDataManagerStatusModel(this);
     },
 
     renderDataManagerStatus: function () {
-        const summaryEl = document.getElementById('dm-status-overview-summary');
-        const tipEl = document.getElementById('dm-status-overview-tip');
-        const paramsEl = document.getElementById('dm-params-status');
-        const targetsEl = document.getElementById('dm-targets-status');
-        if (!summaryEl && !tipEl && !paramsEl && !targetsEl) return;
-
-        const model = this.getDataManagerStatusModel();
-        const toneMap = {
-            success: { bg: '#dcfce7', color: '#166534', border: '#86efac' },
-            warning: { bg: '#fff7ed', color: '#9a3412', border: '#fdba74' },
-            error: { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca' },
-            info: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
-            neutral: { bg: '#f8fafc', color: '#475569', border: '#cbd5e1' }
-        };
-        const pill = (text, tone = 'neutral') => {
-            const theme = toneMap[tone] || toneMap.neutral;
-            return `<span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid ${theme.border}; background:${theme.bg}; color:${theme.color}; font-size:12px; font-weight:700;">${text}</span>`;
-        };
-
-        const paramsMetaMap = {
-            not_needed: { tone: 'neutral', title: '当前考试无需指标参数', detail: '当前场景不会使用优生线/普高线参与指标生计算。' },
-            missing: { tone: 'error', title: '未填写', detail: '请先填写优生线和普高线名次。' },
-            partial: { tone: 'warning', title: `已填写 ${model.paramsFilledCount}/2`, detail: '还有参数未填完，暂时不建议开始计算。' },
-            unknown: { tone: 'info', title: '已填写，建议同步确认', detail: '已经检测到参数，但还没有同步基线记录，建议点一次右上角保存。' },
-            pending: { tone: 'warning', title: '已暂存，待同步', detail: '参数已经变化，请在完成修改后点右上角统一同步。' },
-            synced: { tone: 'success', title: '已同步', detail: '当前参数和最近一次云端同步记录一致。' }
-        };
-        const targetsMetaMap = {
-            missing: { tone: 'error', title: '未导入', detail: '只保存参数不会自动生成目标人数，请在本页导入目标人数 Excel。' },
-            unknown: { tone: 'info', title: '已导入，建议同步确认', detail: `已检测到 ${model.targetCount} 所学校的目标人数，建议点一次右上角保存建立同步记录。` },
-            pending: { tone: 'warning', title: '已导入，待同步', detail: `已导入 ${model.targetCount} 所学校的目标人数，但还有修改未同步。` },
-            synced: { tone: 'success', title: '已导入并同步', detail: `已导入 ${model.targetCount} 所学校的目标人数，并已和最近一次云端同步保持一致。` }
-        };
-
-        const paramsMeta = paramsMetaMap[model.paramsState] || paramsMetaMap.missing;
-        const targetsMeta = targetsMetaMap[model.targetsState] || targetsMetaMap.missing;
-
-        let tipTone = 'success';
-        let tipText = '当前参数和目标人数状态已经清晰，可以直接回到分析页面使用。';
-        if (model.targetsState === 'missing' && model.paramsState !== 'missing' && model.paramsState !== 'partial') {
-            tipTone = 'warning';
-            tipText = '你已经设置了年级指标参数，但【目标人数】仍未导入。只保存参数不会自动生成目标人数，请切换到“目标人数管理”导入 Excel。';
-        } else if (model.paramsNeeded && (model.paramsState === 'missing' || model.paramsState === 'partial')) {
-            tipTone = 'warning';
-            tipText = '请先补齐优生线和普高线名次，再进行统一保存和指标相关计算。';
-        } else if (model.paramsState === 'unknown' || model.paramsState === 'pending' || model.targetsState === 'unknown' || model.targetsState === 'pending') {
-            tipTone = 'info';
-            tipText = '当前存在尚未确认同步的内容。建议完成修改后点右上角【保存修改并同步云端】。';
-        }
-
-        if (summaryEl) {
-            summaryEl.innerHTML = `
-                <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:stretch;">
-                    <div style="flex:1; min-width:240px; background:#ffffff; border:1px solid #dbeafe; border-radius:10px; padding:12px;">
-                        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
-                            <strong style="color:#0f172a;">年级指标参数</strong>
-                            ${pill(paramsMeta.title, paramsMeta.tone)}
-                        </div>
-                        <div style="margin-top:8px; font-size:12px; color:#475569;">优生线：${model.indicator.ind1 || '未填写'}　|　普高线：${model.indicator.ind2 || '未填写'}</div>
-                        <div style="margin-top:6px; font-size:12px; color:#64748b;">${paramsMeta.detail}</div>
-                    </div>
-                    <div style="flex:1; min-width:240px; background:#ffffff; border:1px solid #dcfce7; border-radius:10px; padding:12px;">
-                        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
-                            <strong style="color:#0f172a;">目标人数</strong>
-                            ${pill(targetsMeta.title, targetsMeta.tone)}
-                        </div>
-                        <div style="margin-top:8px; font-size:12px; color:#475569;">已识别学校：${model.targetCount} 所</div>
-                        <div style="margin-top:6px; font-size:12px; color:#64748b;">${targetsMeta.detail}</div>
-                    </div>
-                    <div style="flex:1; min-width:220px; background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:12px;">
-                        <strong style="color:#0f172a;">最近云端同步</strong>
-                        <div style="margin-top:8px; font-size:13px; color:#0f172a; font-weight:700;">${model.lastSyncText}</div>
-                        <div style="margin-top:6px; font-size:12px; color:#64748b;">${model.lastSyncSource || '尚未建立同步记录，建议完成修改后保存一次。'}</div>
-                    </div>
-                </div>
-            `;
-        }
-
-        if (tipEl) {
-            const tipTheme = toneMap[tipTone] || toneMap.info;
-            tipEl.innerHTML = `
-                <div style="padding:10px 12px; border-radius:10px; border:1px solid ${tipTheme.border}; background:${tipTheme.bg}; color:${tipTheme.color}; font-size:12px; line-height:1.8;">
-                    <strong>当前提醒：</strong>${tipText}
-                </div>
-            `;
-        }
-
-        if (paramsEl) {
-            paramsEl.innerHTML = `
-                <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
-                    <div><strong>参数状态：</strong>${paramsMeta.title}</div>
-                    ${pill(paramsMeta.title, paramsMeta.tone)}
-                </div>
-                <div style="margin-top:6px; line-height:1.8;">${paramsMeta.detail}</div>
-            `;
-        }
-
-        if (targetsEl) {
-            targetsEl.innerHTML = `
-                <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
-                    <div><strong>目标人数状态：</strong>${targetsMeta.title}</div>
-                    ${pill(targetsMeta.title, targetsMeta.tone)}
-                </div>
-                <div style="margin-top:6px; line-height:1.8;">${targetsMeta.detail}</div>
-            `;
-        }
+        return requireDataCloudRuntime().renderDataManagerStatus(this);
     },
 
     renderParams: function () {
@@ -9106,123 +8126,29 @@ function logCloudSyncIssue(label, error) {
     console.error(label, error);
 }
 
-// 🟢 [优化版] 数据持久化工具：支持 Supabase 云端同步 + IndexedDB 本地缓存
+// 🟢 [优化版] 数据持久化工具：支持云端同步 + IndexedDB 本地缓存
 const DB = {
     getLocal: async (key) => {
-        try {
-            if (window.idbKeyval) {
-                const localData = await idbKeyval.get(`cache_${key}`);
-                if (localData) {
-                    console.log(`馃殌 从本地缓存加载成�? ${key}`);
-                    return localData;
-                }
-            }
-        } catch (e) {
-            console.warn("读取本地缓存失败:", e);
-        }
-        return null;
+        return requireDataCloudRuntime().dbGetLocal(key);
     },
     // 保存数据：同时保存到云端和本地缓存
     save: async (key, value) => {
-        // 1. 优先保存到本地 IndexedDB (极速)
-        try {
-            if (window.idbKeyval) {
-                await idbKeyval.set(`cache_${key}`, value);
-                console.log(`💾 本地缓存已更新: ${key}`);
-            }
-        } catch (e) { console.warn("本地缓存失败:", e); }
-
-        // 2. 异步同步到云端
-        if (!sbClient) return;
-        try {
-            const compressedStr = window.CloudWorkspaceRuntimeDeps && typeof window.CloudWorkspaceRuntimeDeps.packPayload === 'function'
-                ? window.CloudWorkspaceRuntimeDeps.packPayload(value)
-                : ("LZ|" + LZString.compressToUTF16(JSON.stringify(value)));
-
-            const { error } = await sbClient
-                .from('system_data')
-                .upsert({ key: key, content: compressedStr }, { onConflict: 'key' });
-
-            if (error) {
-                logCloudSyncIssue("云端备份失败:", error);
-            } else {
-                const statusEl = document.getElementById('auto-backup-status');
-                if (statusEl) statusEl.innerHTML = `<span style="color:#16a34a;">☁️ 云端已同步</span>`;
-            }
-        } catch (e) {
-            logCloudSyncIssue("云端同步出错:", e);
-        }
+        return requireDataCloudRuntime().dbSave(key, value);
     },
 
     // 读取数据：优先本地缓存，后台静默更新
     get: async (key, options = {}) => {
-        const localOnly = Boolean(options.localOnly);
-        let localData = null;
-        // 1. 尝试从本地 IndexedDB 读取 (秒开)
-        try {
-            if (window.idbKeyval) {
-                localData = await idbKeyval.get(`cache_${key}`);
-                if (localData) {
-                    console.log(`🚀 从本地缓存加载成功: ${key}`);
-                    // 触发异步云端校验（可选，此处为了性能先返回本地）
-                    if (!localOnly) DB.syncFromCloud(key);
-                    return localData;
-                }
-            }
-        } catch (e) { console.warn("读取本地缓存失败:", e); }
-
-        // 2. 本地无数据，从云端读取
-        if (localOnly) return null;
-        return await DB.syncFromCloud(key);
+        return requireDataCloudRuntime().dbGet(key, options);
     },
 
     // 从云端强制同步并更新本地
     syncFromCloud: async (key) => {
-        if (!sbClient) return null;
-        try {
-            const { data, error } = await sbClient
-                .from('system_data')
-                .select('content')
-                .eq('key', key)
-                .maybeSingle();
-
-            if (error) throw error;
-
-            if (data && data.content) {
-                const db = window.CloudWorkspaceRuntimeDeps && typeof window.CloudWorkspaceRuntimeDeps.parsePayload === 'function'
-                    ? window.CloudWorkspaceRuntimeDeps.parsePayload(data.content)
-                    : (() => {
-                        let parsed = data.content;
-                        if (typeof parsed === 'string' && parsed.startsWith("LZ|")) {
-                            if (typeof LZString === 'undefined') {
-                                throw new Error('LZString 未加载，无法解压云端内容');
-                            }
-                            const decompressed = LZString.decompressFromUTF16(parsed.substring(3));
-                            parsed = JSON.parse(decompressed);
-                        } else if (typeof parsed === 'string') {
-                            parsed = JSON.parse(parsed);
-                        }
-                        return parsed;
-                    })();
-
-                // 更新本地缓存
-                if (window.idbKeyval) await idbKeyval.set(`cache_${key}`, db);
-                return db;
-            }
-        } catch (e) {
-            console.error("云端同步失败:", e);
-        }
-        return null;
+        return requireDataCloudRuntime().dbSyncFromCloud(key);
     },
 
     // 清除数据
     clear: async (key) => {
-        if (!sbClient) return;
-        try {
-            await sbClient.from('system_data').delete().eq('key', key);
-        } catch (e) {
-            console.error("清除数据失败", e);
-        }
+        return requireDataCloudRuntime().dbClear(key);
     }
 };
 
@@ -23377,9 +22303,12 @@ async function runAutoDiagnosis() {
     const hasSchool = !!MY_SCHOOL;
 
     let cloudStatus = { text: '未连接', badge: 'badge-err' };
-    if (window.sbClient) {
+    if (window.CloudApi || window.sbClient) {
         try {
-            const { error } = await sbClient.from('system_data').select('key').limit(1);
+            const { error } = await selectSystemDataRecords({
+                select: 'key',
+                limit: 1
+            });
             cloudStatus = error ? { text: '连接成功但可能无权限', badge: 'badge-warn' } : { text: '连接正常', badge: 'badge-ok' };
         } catch (e) {
             cloudStatus = { text: '连接异常', badge: 'badge-err' };
@@ -23846,325 +22775,192 @@ function renderTeacherAnalysisState() {
 }
 
 if (typeof DataManager !== 'undefined') {
+    DataManager.isGrade9Context = function () {
+        return requireDataManagerGrade9TemplateRuntime().isGrade9Context(this);
+    };
+
+    DataManager.getGrade9TemplateKey = function (type) {
+        return requireDataManagerGrade9TemplateRuntime().getGrade9TemplateKey(this, type);
+    };
+
+    DataManager.restoreGrade9IndicatorTemplate = function () {
+        return requireDataManagerGrade9TemplateRuntime().restoreGrade9IndicatorTemplate(this);
+    };
+
+    DataManager.persistGrade9IndicatorTemplate = function () {
+        return requireDataManagerGrade9TemplateRuntime().persistGrade9IndicatorTemplate(this);
+    };
+
+    DataManager.restoreGrade9TargetsTemplate = function () {
+        return requireDataManagerGrade9TemplateRuntime().restoreGrade9TargetsTemplate(this);
+    };
+
+    DataManager.persistGrade9TargetsTemplate = function () {
+        return requireDataManagerGrade9TemplateRuntime().persistGrade9TargetsTemplate(this);
+    };
+
+    DataManager.renderParams = function () {
+        return requireDataManagerParamsRuntime().renderParams(this);
+    };
+
+    DataManager.saveParamsLocally = async function (skipCloudSync = false) {
+        return requireDataManagerParamsRuntime().saveParamsLocally(this, skipCloudSync);
+    };
+
+    DataManager.renderTargets = function () {
+        return requireDataManagerTargetsRuntime().renderTargets(this);
+    };
+
+    DataManager.editTarget = function (schoolName) {
+        return requireDataManagerTargetsRuntime().editTarget(this, schoolName);
+    };
+
+    DataManager.deleteTarget = async function (schoolName) {
+        return requireDataManagerTargetsRuntime().deleteTarget(this, schoolName);
+    };
+
+    DataManager.handleTargetUpload = function (input) {
+        return requireDataManagerTargetsRuntime().handleTargetUpload(this, input);
+    };
+
+    DataManager.renderSchoolAliasMappings = function () {
+        return requireDataManagerSchoolAliasRuntime().renderSchoolAliasMappings(this);
+    };
+
+    DataManager.syncSchoolAliasSettingsFromGateway = async function () {
+        return requireDataManagerSchoolAliasRuntime().syncSchoolAliasSettingsFromGateway(this);
+    };
+
+    DataManager.persistSchoolAliasSettings = async function () {
+        return requireDataManagerSchoolAliasRuntime().persistSchoolAliasSettings(this);
+    };
+
+    DataManager.openSchoolAliasEditor = function (index = -1) {
+        return requireDataManagerSchoolAliasRuntime().openSchoolAliasEditor(this, index);
+    };
+
+    DataManager.deleteSchoolAliasMapping = async function (index) {
+        return requireDataManagerSchoolAliasRuntime().deleteSchoolAliasMapping(this, index);
+    };
+
+    DataManager.saveAndSync = async function () {
+        return requireDataManagerSaveSyncRuntime().saveAndSync(this);
+    };
+
+    DataManager.handleHistoryUpload = function (input) {
+        return requireDataManagerHistoryRuntime().handleHistoryUpload(this, input);
+    };
+
+    DataManager.renderHistoryPreview = function () {
+        return requireDataManagerHistoryRuntime().renderHistoryPreview(this);
+    };
+
+    DataManager.renderCurrentTab = function () {
+        return requireDataManagerTabRuntime().renderCurrentTab(this);
+    };
+
+    DataManager.updatePaginationUI = function (totalPages) {
+        return requireDataManagerTabRuntime().updatePaginationUI(this, totalPages);
+    };
+
+    DataManager.renderStudents = function (keyword) {
+        return requireDataManagerStudentRuntime().renderStudents(this, keyword);
+    };
+
+    DataManager.toggleStudentSelection = function (inputEl) {
+        return requireDataManagerStudentRuntime().toggleStudentSelection(this, inputEl);
+    };
+
+    DataManager.toggleStudentSelectAll = function (checked) {
+        return requireDataManagerStudentRuntime().toggleStudentSelectAll(this, checked);
+    };
+
+    DataManager.updateStudentSelectionUI = function () {
+        return requireDataManagerStudentRuntime().updateStudentSelectionUI(this);
+    };
+
+    DataManager.deleteSelectedStudents = function () {
+        return requireDataManagerStudentRuntime().deleteSelectedStudents(this);
+    };
+
+    DataManager.changePage = function (delta) {
+        return requireDataManagerStudentRuntime().changePage(this, delta);
+    };
+
+    DataManager.renderArchives = function () {
+        return requireDataManagerArchiveRuntime().renderArchives(this);
+    };
+
+    DataManager.deleteHistoryExam = function (examName) {
+        return requireDataManagerArchiveRuntime().deleteHistoryExam(this, examName);
+    };
+
+    DataManager.renameHistoryExam = function (oldName) {
+        return requireDataManagerArchiveRuntime().renameHistoryExam(this, oldName);
+    };
+
     DataManager.switchTeacherTerm = function (termId) {
-        if (!termId) return;
-        const exactTermId = String(termId || '').trim();
-        const { baseTermId } = syncTeacherTermStorage(exactTermId);
-        const parts = exactTermId.split('_');
-        const gradeInfo = parts[2] || '';
-
-        if (gradeInfo) {
-            const gradeMatch = gradeInfo.match(/(\d+)/);
-            const yearMatch = parts[0]?.match(/(\d{4})/);
-            if (gradeMatch && yearMatch) {
-                const grade = parseInt(gradeMatch[1], 10);
-                const currentYear = parseInt(yearMatch[1], 10);
-                const cohortId = currentYear - (grade - 6);
-                writeWorkspaceCohortId(String(cohortId));
-            }
-        }
-
-        const resolved = resolveTeacherHistoryEntry(exactTermId);
-        if (resolved) {
-            syncTeacherTermStorage(resolved.key);
-            setTeacherMap(JSON.parse(JSON.stringify(resolved.map || {})));
-            setTeacherSchoolMap(JSON.parse(JSON.stringify(resolved.schoolMap || {})));
-            if (typeof DataManager.renderTeachers === 'function') DataManager.renderTeachers();
-            if (typeof DataManager.refreshTeacherAnalysis === 'function') DataManager.refreshTeacherAnalysis();
-            return;
-        }
-
-        setTeacherMap({});
-        setTeacherSchoolMap({});
-        if (typeof DataManager.renderTeachers === 'function') DataManager.renderTeachers();
-        console.log(`⚠️ 本地无学期 ${baseTermId || exactTermId} 的任课数据，尝试从云端同步...`);
-        if (window.CloudManager && CloudManager.loadTeachers) {
-            if (window.UI) UI.toast('📧 正在从云端加载该学期任课表...', 'info');
-            CloudManager.loadTeachers({ background: true }).then(ok => {
-                if (!ok && window.UI) UI.toast('☁️ 云端暂无该学期任课数据', 'warning');
-            }).catch(err => {
-                console.warn('云端加载失败:', err);
-                if (window.UI) UI.toast('☁️ 云端暂无该学期任课数据', 'warning');
-            });
-        }
+        return requireDataManagerTeacherRuntime().switchTeacherTerm(this, termId);
     };
 
     DataManager.syncTeacherHistory = function (opts = {}) {
-        const termId = opts.termId || getPreferredTeacherTermId() || buildTeacherTermId(getExamMetaFromUI());
-        if (!termId) return;
-        syncTeacherTermStorage(termId);
-        const db = CohortDB.ensure();
-        db.teachingHistory = db.teachingHistory || {};
-        const savedAt = (() => {
-            const raw = opts.timestamp;
-            if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
-            if (typeof raw === 'string') {
-                const parsed = Date.parse(raw);
-                if (!Number.isNaN(parsed)) return parsed;
-            }
-            return Date.now();
-        })();
-        db.teachingHistory[termId] = {
-            map: JSON.parse(JSON.stringify(TEACHER_MAP || {})),
-            schoolMap: JSON.parse(JSON.stringify(TEACHER_SCHOOL_MAP || {})),
-            savedAt,
-            source: opts.source || 'local'
-        };
-        if (typeof DataManager.refreshTeacherAnalysis === 'function') DataManager.refreshTeacherAnalysis();
+        return requireDataManagerTeacherRuntime().syncTeacherHistory(this, opts);
     };
 
     DataManager.ensureTeacherMap = function (triggerCloud) {
-        const termId = getPreferredTeacherTermId();
-        if (!termId) return false;
-        if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return true;
-
-        const resolved = resolveTeacherHistoryEntry(termId);
-        if (resolved) {
-            syncTeacherTermStorage(resolved.key);
-            setTeacherMap(JSON.parse(JSON.stringify(resolved.map || {})));
-            setTeacherSchoolMap(JSON.parse(JSON.stringify(resolved.schoolMap || {})));
-            return true;
-        }
-
-        if (triggerCloud && window.CloudManager && CloudManager.loadTeachers) {
-            CloudManager.loadTeachers({ background: true });
-        }
-        return false;
+        return requireDataManagerTeacherRuntime().ensureTeacherMap(this, triggerCloud);
     };
 
     DataManager.refreshTeacherAnalysis = function () {
-        const section = document.getElementById('teacher-analysis');
-        syncTeacherAnalysisSchoolContext();
-        if (section && section.classList.contains('active')) {
-            renderTeacherAnalysisState();
-            if (typeof updateStatusPanel === 'function') updateStatusPanel();
-        }
+        return requireDataManagerTeacherRuntime().refreshTeacherAnalysis(this);
+    };
+
+    DataManager.getDataManagerSyncStorageKey = function () {
+        return requireDataCloudRuntime().getDataManagerSyncStorageKey();
+    };
+
+    DataManager.getDataManagerSyncScope = function () {
+        return requireDataCloudRuntime().getDataManagerSyncScope();
+    };
+
+    DataManager.readDataManagerSyncState = function () {
+        return requireDataCloudRuntime().readDataManagerSyncState();
+    };
+
+    DataManager.writeDataManagerSyncState = function (patch) {
+        return requireDataCloudRuntime().writeDataManagerSyncState(patch);
+    };
+
+    DataManager.getCurrentIndicatorValues = function () {
+        return requireDataCloudRuntime().getCurrentIndicatorValues();
+    };
+
+    DataManager.getParamsSyncSignature = function () {
+        return requireDataCloudRuntime().getParamsSyncSignature();
+    };
+
+    DataManager.getTargetsSyncSignature = function () {
+        return requireDataCloudRuntime().getTargetsSyncSignature();
+    };
+
+    DataManager.buildTeacherSignature = function (teacherMap, schoolMap) {
+        return requireDataCloudRuntime().buildTeacherSignature(teacherMap, schoolMap);
+    };
+
+    DataManager.getTeacherStatusSnapshot = function () {
+        return requireDataCloudRuntime().getTeacherStatusSnapshot();
     };
 
     DataManager.rememberDataManagerSyncSnapshot = function (sourceLabel = 'save-and-sync') {
-        const teacherSnapshot = this.getTeacherStatusSnapshot();
-        return this.writeDataManagerSyncState({
-            paramsSignature: this.getParamsSyncSignature(),
-            targetsSignature: this.getTargetsSyncSignature(),
-            teacherSignature: teacherSnapshot.signature || '',
-            teacherTermId: teacherSnapshot.termId || '',
-            teacherCount: teacherSnapshot.count || 0,
-            lastCloudSyncAt: Date.now(),
-            lastSyncSource: sourceLabel,
-            pendingCloudSync: false,
-            pendingSyncSource: '',
-            lastCloudError: ''
-        });
+        return requireDataCloudRuntime().rememberDataManagerSyncSnapshot(this, sourceLabel);
     };
 
     DataManager.getDataManagerStatusModel = function () {
-        const indicator = this.getCurrentIndicatorValues();
-        const paramsNeeded = isIndicatorPromptAllowed();
-        const paramsFilledCount = [indicator.ind1, indicator.ind2].filter(Boolean).length;
-        const paramsSignature = this.getParamsSyncSignature();
-        const targets = typeof ensureNormalizedTargets === 'function'
-            ? (ensureNormalizedTargets() || {})
-            : (window.TARGETS || {});
-        const targetNames = Object.keys(targets).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'));
-        const targetsSignature = this.getTargetsSyncSignature();
-        const teacherSnapshot = this.getTeacherStatusSnapshot();
-        const syncState = this.readDataManagerSyncState();
-        const hasBaseline = !!(syncState.paramsSignature || syncState.targetsSignature || syncState.lastCloudSyncAt);
-        const pendingCloudSync = !!syncState.pendingCloudSync;
-        const pendingSyncSource = String(syncState.pendingSyncSource || '').trim();
-        const lastCloudError = String(syncState.lastCloudError || '').trim();
-        const lastQueuedSyncAt = Number(syncState.lastQueuedSyncAt || 0);
-
-        let paramsState = 'missing';
-        if (!paramsNeeded) paramsState = 'not_needed';
-        else if (paramsFilledCount === 0) paramsState = 'missing';
-        else if (paramsFilledCount < 2) paramsState = 'partial';
-        else if (!hasBaseline) paramsState = 'unknown';
-        else paramsState = paramsSignature === syncState.paramsSignature ? 'synced' : 'pending';
-
-        let targetsState = 'missing';
-        if (targetNames.length === 0) targetsState = 'missing';
-        else if (!hasBaseline) targetsState = 'unknown';
-        else targetsState = targetsSignature === syncState.targetsSignature ? 'synced' : 'pending';
-
-        const teacherBaselineTerm = String(syncState.teacherTermId || '').trim();
-        const teacherBaselineSignature = String(syncState.teacherSignature || '').trim();
-        const teacherHasBaseline = !!teacherBaselineSignature;
-        const teacherMatchesBaseline = !!teacherSnapshot.signature
-            && teacherSnapshot.signature === teacherBaselineSignature
-            && (!teacherBaselineTerm || !teacherSnapshot.termId || teacherBaselineTerm === teacherSnapshot.termId);
-
-        let teachersState = 'missing';
-        if (teacherSnapshot.count === 0) teachersState = 'missing';
-        else if (!teacherHasBaseline) teachersState = 'unknown';
-        else if (!teacherMatchesBaseline) teachersState = 'pending';
-        else teachersState = teacherSnapshot.loadedMatches ? 'synced' : 'synced_unloaded';
-
-        return {
-            paramsNeeded,
-            indicator,
-            paramsFilledCount,
-            paramsState,
-            targetNames,
-            targetCount: targetNames.length,
-            targetsState,
-            teacherSnapshot,
-            teachersState,
-            syncState,
-            hasBaseline,
-            pendingCloudSync,
-            lastCloudError,
-            lastSyncText: pendingCloudSync && lastQueuedSyncAt
-                ? `后台同步中 · ${new Date(lastQueuedSyncAt).toLocaleString('zh-CN')}`
-                : (syncState.lastCloudSyncAt
-                    ? new Date(syncState.lastCloudSyncAt).toLocaleString('zh-CN')
-                    : '尚未记录'),
-            lastSyncSource: pendingCloudSync
-                ? (pendingSyncSource || '本地已暂存，正在后台同步云端')
-                : (lastCloudError
-                    ? `最近失败：${lastCloudError}`
-                    : (syncState.lastSyncSource || ''))
-        };
+        return requireDataCloudRuntime().getDataManagerStatusModel(this);
     };
 
     DataManager.renderDataManagerStatus = function () {
-        const summaryEl = document.getElementById('dm-status-overview-summary');
-        const tipEl = document.getElementById('dm-status-overview-tip');
-        const paramsEl = document.getElementById('dm-params-status');
-        const targetsEl = document.getElementById('dm-targets-status');
-        if (!summaryEl && !tipEl && !paramsEl && !targetsEl) return;
-
-        const model = this.getDataManagerStatusModel();
-        const toneMap = {
-            success: { bg: '#dcfce7', color: '#166534', border: '#86efac' },
-            warning: { bg: '#fff7ed', color: '#9a3412', border: '#fdba74' },
-            error: { bg: '#fef2f2', color: '#b91c1c', border: '#fecaca' },
-            info: { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
-            neutral: { bg: '#f8fafc', color: '#475569', border: '#cbd5e1' }
-        };
-        const pill = (text, tone = 'neutral') => {
-            const theme = toneMap[tone] || toneMap.neutral;
-            return `<span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid ${theme.border}; background:${theme.bg}; color:${theme.color}; font-size:12px; font-weight:700;">${text}</span>`;
-        };
-
-        const paramsMetaMap = {
-            not_needed: { tone: 'neutral', title: '当前考试无需参数', detail: '当前场景不会使用优生线/普高线参与指标计算。' },
-            missing: { tone: 'error', title: '未填写', detail: '请先填写优生线和普高线名次。' },
-            partial: { tone: 'warning', title: `已填写 ${model.paramsFilledCount}/2`, detail: '还有参数未填完，暂时不建议开始计算。' },
-            unknown: { tone: 'info', title: '已填写，建议同步确认', detail: '已检测到参数，但还没有同步基线记录，建议点一次右上角保存。' },
-            pending: { tone: 'warning', title: '已暂存，待同步', detail: '参数已经变化，请在完成修改后点右上角统一同步。' },
-            synced: { tone: 'success', title: '已同步', detail: '当前参数和最近一次云端同步记录一致。' }
-        };
-        const targetsMetaMap = {
-            missing: { tone: 'error', title: '未导入', detail: '只保存参数不会自动生成目标人数，请在本页导入目标人数 Excel。' },
-            unknown: { tone: 'info', title: '已导入，建议同步确认', detail: `已检测到 ${model.targetCount} 所学校的目标人数，建议点一次右上角保存建立同步记录。` },
-            pending: { tone: 'warning', title: '已导入，待同步', detail: `已导入 ${model.targetCount} 所学校的目标人数，但还有修改未同步。` },
-            synced: { tone: 'success', title: '已导入并同步', detail: `已导入 ${model.targetCount} 所学校的目标人数，并已和最近一次云端同步保持一致。` }
-        };
-        const teacherTermText = model.teacherSnapshot.termId || getPreferredTeacherTermId() || '未选择学期';
-        const teachersMetaMap = {
-            missing: { tone: 'error', title: '未导入', detail: `当前学期 ${teacherTermText} 还没有任课表。请在“教师任课”导入 Excel 或从云端拉取。` },
-            unknown: { tone: 'info', title: '已导入，建议同步确认', detail: `当前学期 ${teacherTermText} 已识别 ${model.teacherSnapshot.count} 条任课记录，建议同步一次建立基线。` },
-            pending: { tone: 'warning', title: '已导入，待同步', detail: `当前学期 ${teacherTermText} 的任课表有修改，尚未和最近一次云端同步保持一致。` },
-            synced_unloaded: { tone: 'warning', title: '已同步，未加载', detail: `当前学期 ${teacherTermText} 的任课表已同步，但还没恢复到当前分析页面。点击“去同步任课表”即可恢复。` },
-            synced: { tone: 'success', title: '已同步并加载', detail: `当前学期 ${teacherTermText} 的任课表已同步，当前页面正在使用这份任课表。` }
-        };
-
-        const paramsMeta = paramsMetaMap[model.paramsState] || paramsMetaMap.missing;
-        const targetsMeta = targetsMetaMap[model.targetsState] || targetsMetaMap.missing;
-        const teachersMeta = teachersMetaMap[model.teachersState] || teachersMetaMap.missing;
-
-        let tipTone = 'success';
-        let tipText = '当前参数、目标人数和任课表状态已经清晰，可以直接回到分析页面使用。';
-        if (model.pendingCloudSync) {
-            tipTone = 'info';
-            tipText = '修改已经先写入本地，系统正在后台同步云端。你可以继续操作，不需要原地等待。';
-        } else if (model.teachersState === 'missing') {
-            tipTone = 'warning';
-            tipText = '教师分析页依赖“当前学期任课表”。先在“教师任课”导入或拉取本学期任课表，再回到教师画像。';
-        } else if (model.teachersState === 'synced_unloaded') {
-            tipTone = 'info';
-            tipText = '任课表其实已经同步成功，只是还没恢复到当前页面。点击“去同步任课表”或重新进入“教师任课”即可自动恢复。';
-        } else if (model.targetsState === 'missing' && model.paramsState !== 'missing' && model.paramsState !== 'partial') {
-            tipTone = 'warning';
-            tipText = '你已经设置了年级指标参数，但【目标人数】仍未导入。只保存参数不会自动生成目标人数，请切换到“目标人数管理”导入 Excel。';
-        } else if (model.paramsNeeded && (model.paramsState === 'missing' || model.paramsState === 'partial')) {
-            tipTone = 'warning';
-            tipText = '请先补齐优生线和普高线名次，再进行统一保存和指标相关计算。';
-        } else if (
-            model.paramsState === 'unknown' || model.paramsState === 'pending'
-            || model.targetsState === 'unknown' || model.targetsState === 'pending'
-            || model.teachersState === 'unknown' || model.teachersState === 'pending'
-        ) {
-            tipTone = 'info';
-            tipText = '当前存在尚未确认同步的内容。建议完成修改后点右上角【保存修改并同步云端】。';
-        }
-
-        if (summaryEl) {
-            summaryEl.innerHTML = `
-                <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:stretch;">
-                    <div style="flex:1; min-width:220px; background:#ffffff; border:1px solid #dbeafe; border-radius:10px; padding:12px;">
-                        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
-                            <strong style="color:#0f172a;">年级指标参数</strong>
-                            ${pill(paramsMeta.title, paramsMeta.tone)}
-                        </div>
-                        <div style="margin-top:8px; font-size:12px; color:#475569;">优生线：${model.indicator.ind1 || '未填写'} | 普高线：${model.indicator.ind2 || '未填写'}</div>
-                        <div style="margin-top:6px; font-size:12px; color:#64748b;">${paramsMeta.detail}</div>
-                    </div>
-                    <div style="flex:1; min-width:220px; background:#ffffff; border:1px solid #dcfce7; border-radius:10px; padding:12px;">
-                        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
-                            <strong style="color:#0f172a;">目标人数</strong>
-                            ${pill(targetsMeta.title, targetsMeta.tone)}
-                        </div>
-                        <div style="margin-top:8px; font-size:12px; color:#475569;">已识别学校：${model.targetCount} 所</div>
-                        <div style="margin-top:6px; font-size:12px; color:#64748b;">${targetsMeta.detail}</div>
-                    </div>
-                    <div style="flex:1; min-width:220px; background:#ffffff; border:1px solid #fde68a; border-radius:10px; padding:12px;">
-                        <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
-                            <strong style="color:#0f172a;">当前学期任课表</strong>
-                            ${pill(teachersMeta.title, teachersMeta.tone)}
-                        </div>
-                        <div style="margin-top:8px; font-size:12px; color:#475569;">学期：${teacherTermText}</div>
-                        <div style="margin-top:4px; font-size:12px; color:#475569;">记录：${model.teacherSnapshot.count || 0} 条，本页已加载：${model.teacherSnapshot.loadedCount || 0} 条</div>
-                        <div style="margin-top:6px; font-size:12px; color:#64748b;">${teachersMeta.detail}</div>
-                    </div>
-                    <div style="flex:1; min-width:220px; background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:12px;">
-                        <strong style="color:#0f172a;">最近云端同步</strong>
-                        <div style="margin-top:8px; font-size:13px; color:#0f172a; font-weight:700;">${model.lastSyncText}</div>
-                        <div style="margin-top:6px; font-size:12px; color:#64748b;">${model.lastSyncSource || '尚未建立同步记录，建议完成修改后保存一次。'}</div>
-                    </div>
-                </div>
-            `;
-        }
-
-        if (tipEl) {
-            const tipTheme = toneMap[tipTone] || toneMap.info;
-            tipEl.innerHTML = `
-                <div style="padding:10px 12px; border-radius:10px; border:1px solid ${tipTheme.border}; background:${tipTheme.bg}; color:${tipTheme.color}; font-size:12px; line-height:1.8;">
-                    <strong>当前提醒：</strong>${tipText}
-                </div>
-            `;
-        }
-
-        if (paramsEl) {
-            paramsEl.innerHTML = `
-                <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
-                    <div><strong>参数状态：</strong>${paramsMeta.title}</div>
-                    ${pill(paramsMeta.title, paramsMeta.tone)}
-                </div>
-                <div style="margin-top:6px; line-height:1.8;">${paramsMeta.detail}</div>
-            `;
-        }
-
-        if (targetsEl) {
-            targetsEl.innerHTML = `
-                <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;">
-                    <div><strong>目标人数状态：</strong>${targetsMeta.title}</div>
-                    ${pill(targetsMeta.title, targetsMeta.tone)}
-                </div>
-                <div style="margin-top:6px; line-height:1.8;">${targetsMeta.detail}</div>
-            `;
-        }
+        return requireDataCloudRuntime().renderDataManagerStatus(this);
     };
 
     if (!window.__DATA_MANAGER_CLOUD_SYNC_EVENTS__) {

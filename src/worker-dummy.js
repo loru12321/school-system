@@ -1,9 +1,11 @@
 import { handleGatewayRequest, handleManagedRestRequest } from './worker-gateway-d1.js';
 
-const DEFAULT_SUPABASE_ORIGIN = 'https://okwcciujnfvobbwaydiv.supabase.co';
+const DEFAULT_LEGACY_GATEWAY_ORIGIN = 'https://okwcciujnfvobbwaydiv.supabase.co';
+const DEFAULT_LEGACY_GATEWAY_API_KEY = 'sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4';
 const DEFAULT_AI_BASE_URL = 'https://api.deepseek.com';
 const DEFAULT_AI_MODEL = 'deepseek-chat';
 const SYSTEM_DATA_PATH = '/sb/rest/v1/system_data';
+const SYSTEM_DATA_API_PATH = '/api/system-data';
 const SYSTEM_DATA_TABLE = 'cloud_system_data';
 const SYSTEM_DATA_COMPARE_PREFIXES = [
   'STUDENT_COMPARE_',
@@ -39,8 +41,17 @@ function normalizeOrigin(origin) {
   return String(origin || '').trim().replace(/\/+$/, '');
 }
 
-function getSupabaseOrigin(env) {
-  return normalizeOrigin(env.SUPABASE_ORIGIN || DEFAULT_SUPABASE_ORIGIN);
+function getLegacyGatewayOrigin(env) {
+  return normalizeOrigin(env.LEGACY_GATEWAY_ORIGIN || env.SUPABASE_ORIGIN || DEFAULT_LEGACY_GATEWAY_ORIGIN);
+}
+
+function getLegacyGatewayApiKey(env, request) {
+  return normalizeText(
+    env.LEGACY_GATEWAY_API_KEY
+    || env.LEGACY_SUPABASE_KEY
+    || request.headers.get('apikey')
+    || DEFAULT_LEGACY_GATEWAY_API_KEY
+  );
 }
 
 function getSystemDataDb(env) {
@@ -140,8 +151,20 @@ function parseSystemDataKeyFilter(rawFilter) {
   if (raw.startsWith('eq.')) {
     return { op: 'eq', value: parseSystemDataFilterValue(raw.slice(3)) };
   }
+  if (raw.startsWith('neq.')) {
+    return { op: 'neq', value: parseSystemDataFilterValue(raw.slice(4)) };
+  }
   if (raw.startsWith('like.')) {
     return { op: 'like', value: parseSystemDataFilterValue(raw.slice(5)) };
+  }
+  if (raw.startsWith('ilike.')) {
+    return { op: 'ilike', value: parseSystemDataFilterValue(raw.slice(6)).replace(/\*/g, '%') };
+  }
+  if (raw.startsWith('not.like.')) {
+    return { op: 'not_like', value: parseSystemDataFilterValue(raw.slice(9)) };
+  }
+  if (raw.startsWith('not.ilike.')) {
+    return { op: 'not_ilike', value: parseSystemDataFilterValue(raw.slice(10)).replace(/\*/g, '%') };
   }
   if (raw.startsWith('in.(') && raw.endsWith(')')) {
     const values = raw
@@ -159,7 +182,7 @@ function parseSystemDataOrder(searchParams) {
   const raw = normalizeText(searchParams.get('order'));
   if (!raw) return { column: 'updated_at', direction: 'DESC' };
   const [column, direction] = raw.split('.').map((item) => normalizeText(item).toLowerCase());
-  const safeColumn = ['key', 'updated_at', 'created_at'].includes(column) ? column : 'updated_at';
+  const safeColumn = ['key', 'updated_at', 'created_at', 'size_bytes'].includes(column) ? column : 'updated_at';
   const safeDirection = direction === 'asc' ? 'ASC' : 'DESC';
   return { column: safeColumn, direction: safeDirection };
 }
@@ -192,6 +215,63 @@ function mapSystemDataResponseRow(row, selectSet, content) {
   return out;
 }
 
+function appendSystemDataFilterClause(clauses, bindings, filter, column = 'key') {
+  if (!filter || !column) return;
+  if (filter.op === 'eq') {
+    clauses.push(`${column} = ?`);
+    bindings.push(filter.value);
+    return;
+  }
+  if (filter.op === 'neq') {
+    clauses.push(`${column} <> ?`);
+    bindings.push(filter.value);
+    return;
+  }
+  if (filter.op === 'like') {
+    clauses.push(`${column} LIKE ?`);
+    bindings.push(filter.value);
+    return;
+  }
+  if (filter.op === 'ilike') {
+    clauses.push(`LOWER(${column}) LIKE LOWER(?)`);
+    bindings.push(filter.value);
+    return;
+  }
+  if (filter.op === 'not_like') {
+    clauses.push(`${column} NOT LIKE ?`);
+    bindings.push(filter.value);
+    return;
+  }
+  if (filter.op === 'not_ilike') {
+    clauses.push(`LOWER(${column}) NOT LIKE LOWER(?)`);
+    bindings.push(filter.value);
+    return;
+  }
+  if (filter.op === 'in' && Array.isArray(filter.values) && filter.values.length) {
+    clauses.push(`${column} IN (${filter.values.map(() => '?').join(', ')})`);
+    bindings.push(...filter.values);
+  }
+}
+
+function buildSystemDataOrClause(rawOr) {
+  const text = normalizeText(rawOr);
+  if (!text) return { clause: '', bindings: [] };
+  const clauses = [];
+  const bindings = [];
+  for (const item of text.split(',')) {
+    const parts = String(item || '').split('.');
+    if (parts.length < 3) continue;
+    const [column, ...rest] = parts;
+    if (column !== 'key') continue;
+    const filter = parseSystemDataKeyFilter(rest.join('.'));
+    appendSystemDataFilterClause(clauses, bindings, filter, column);
+  }
+  return {
+    clause: clauses.length ? `(${clauses.join(' OR ')})` : '',
+    bindings
+  };
+}
+
 async function querySystemDataRows(env, request, url) {
   const db = getSystemDataDb(env);
   if (!db) return { rows: [], selectSet: new Set(['key', 'content', 'created_at', 'updated_at']) };
@@ -203,15 +283,11 @@ async function querySystemDataRows(env, request, url) {
   const whereClauses = [];
   const bindings = [];
 
-  if (keyFilter?.op === 'eq') {
-    whereClauses.push('key = ?');
-    bindings.push(keyFilter.value);
-  } else if (keyFilter?.op === 'like') {
-    whereClauses.push('key LIKE ?');
-    bindings.push(keyFilter.value);
-  } else if (keyFilter?.op === 'in' && Array.isArray(keyFilter.values) && keyFilter.values.length) {
-    whereClauses.push(`key IN (${keyFilter.values.map(() => '?').join(', ')})`);
-    bindings.push(...keyFilter.values);
+  appendSystemDataFilterClause(whereClauses, bindings, keyFilter, 'key');
+  const orClause = buildSystemDataOrClause(url.searchParams.get('or'));
+  if (orClause.clause) {
+    whereClauses.push(orClause.clause);
+    bindings.push(...orClause.bindings);
   }
 
   const sql = [
@@ -347,47 +423,6 @@ async function buildSystemDataJsonResponse(request, env, rows, selectSet) {
   const single = wantsSingleSystemDataObject(request);
   const body = single ? (payloadRows[0] || null) : payloadRows;
   return jsonResponse(200, body, request);
-}
-
-async function maybeWarmSystemDataCache(env, response) {
-  if (!hasSystemDataStorage(env) || !response.ok) return response;
-  const contentType = String(response.headers.get('content-type') || '').toLowerCase();
-  if (!contentType.includes('application/json')) return response;
-
-  const text = await response.text();
-  let parsed = null;
-  try {
-    parsed = JSON.parse(text);
-  } catch (_) {
-    return new Response(text, {
-      status: response.status,
-      headers: response.headers
-    });
-  }
-
-  const rows = Array.isArray(parsed) ? parsed : (parsed ? [parsed] : []);
-  const normalizedRows = rows
-    .filter((row) => row && typeof row === 'object' && normalizeText(row.key))
-    .map((row) => ({
-      key: normalizeText(row.key),
-      content: typeof row.content === 'string' ? row.content : '',
-      created_at: normalizeText(row.created_at),
-      updated_at: normalizeText(row.updated_at)
-    }))
-    .filter((row) => row.key && row.content);
-
-  if (normalizedRows.length) {
-    try {
-      await upsertSystemDataRows(env, normalizedRows);
-    } catch (error) {
-      console.warn('[system-data] warm cache failed', error);
-    }
-  }
-
-  return new Response(text, {
-    status: response.status,
-    headers: response.headers
-  });
 }
 
 function getAllowedAiHosts(env) {
@@ -695,14 +730,20 @@ async function handleGatewayProxy(request, env, url) {
     }, request);
   }
 
-  const supabaseOrigin = getSupabaseOrigin(env);
+  const legacyGatewayOrigin = getLegacyGatewayOrigin(env);
   const bodyBuffer = await readRequestBody(request);
   let lastResponse = null;
   let lastError = null;
 
   for (const path of GATEWAY_PATHS) {
     try {
-      const response = await proxyRequest(url, request, `${supabaseOrigin}${path}`, bodyBuffer);
+      const response = await proxyRequest(
+        url,
+        request,
+        `${legacyGatewayOrigin}${path}`,
+        bodyBuffer,
+        { apikey: getLegacyGatewayApiKey(env, request) }
+      );
       if (response.ok || (response.status !== 404 && response.status < 500)) {
         return response;
       }
@@ -715,21 +756,13 @@ async function handleGatewayProxy(request, env, url) {
   if (lastResponse) return lastResponse;
   return new Response(JSON.stringify({
     ok: false,
-    error: lastError ? String(lastError.message || lastError) : 'Supabase gateway unavailable'
+    error: lastError ? String(lastError.message || lastError) : 'LEGACY_GATEWAY_UNAVAILABLE'
   }), {
     status: 502,
     headers: {
       'Content-Type': 'application/json; charset=utf-8'
     }
   });
-}
-
-async function proxySupabaseRequest(request, env, url) {
-  const supabaseOrigin = getSupabaseOrigin(env);
-  const upstreamPath = url.pathname.replace(/^\/sb/, '') || '/';
-  const bodyBuffer = await readRequestBody(request);
-  const upstreamUrl = `${supabaseOrigin}${upstreamPath}${url.search}`;
-  return proxyRequest(url, request, upstreamUrl, bodyBuffer);
 }
 
 async function handleSystemDataRead(request, env, url) {
@@ -764,7 +797,7 @@ async function handleSystemDataWrite(request, env) {
 async function handleSystemDataDelete(request, env, url) {
   const db = getSystemDataDb(env);
   if (!db) {
-    return proxySupabaseRequest(request, env, url);
+    return jsonResponse(503, { ok: false, error: 'SYSTEM_DATA_STORAGE_UNAVAILABLE' }, request);
   }
 
   const keyFilter = parseSystemDataKeyFilter(url.searchParams.get('key'));
@@ -789,31 +822,13 @@ async function handleSystemDataDelete(request, env, url) {
 
 async function handleSystemDataProxy(request, env, url) {
   if (!hasSystemDataStorage(env)) {
-    return proxySupabaseRequest(request, env, url);
+    return jsonResponse(503, { ok: false, error: 'SYSTEM_DATA_STORAGE_UNAVAILABLE' }, request);
   }
 
   const method = String(request.method || 'GET').toUpperCase();
   if (method === 'GET' || method === 'HEAD') {
-    const mode = getSystemDataMode(env);
-    const keyFilter = parseSystemDataKeyFilter(url.searchParams.get('key'));
-    const shouldTryLocalFirst = mode === 'primary' || keyFilter?.op === 'eq';
-    const shouldUseLocalBatchOnly = keyFilter?.op === 'in' && Array.isArray(keyFilter.values) && keyFilter.values.length > 0;
-
-    if (shouldTryLocalFirst || shouldUseLocalBatchOnly) {
-      const { rows, selectSet } = await querySystemDataRows(env, request, url);
-      if (mode === 'primary' && shouldTryLocalFirst) {
-        return buildSystemDataJsonResponse(request, env, rows, selectSet);
-      }
-      if (shouldTryLocalFirst && rows.length > 0) {
-        return buildSystemDataJsonResponse(request, env, rows, selectSet);
-      }
-      if (shouldUseLocalBatchOnly && rows.length === keyFilter.values.length) {
-        return buildSystemDataJsonResponse(request, env, rows, selectSet);
-      }
-    }
-
-    const upstream = await proxySupabaseRequest(request, env, url);
-    return maybeWarmSystemDataCache(env, upstream);
+    const { rows, selectSet } = await querySystemDataRows(env, request, url);
+    return buildSystemDataJsonResponse(request, env, rows, selectSet);
   }
 
   if (method === 'POST') {
@@ -824,10 +839,10 @@ async function handleSystemDataProxy(request, env, url) {
     return handleSystemDataDelete(request, env, url);
   }
 
-  return proxySupabaseRequest(request, env, url);
+  return jsonResponse(405, { ok: false, error: 'SYSTEM_DATA_METHOD_NOT_ALLOWED' }, request);
 }
 
-async function handleSupabaseProxy(request, env, url) {
+async function handleCloudRestProxy(request, env, url) {
   try {
     const managed = await handleManagedRestRequest(request, env, url);
     if (managed) return managed;
@@ -841,7 +856,10 @@ async function handleSupabaseProxy(request, env, url) {
   if (url.pathname === SYSTEM_DATA_PATH) {
     return handleSystemDataProxy(request, env, url);
   }
-  return proxySupabaseRequest(request, env, url);
+  return jsonResponse(404, {
+    ok: false,
+    error: 'CLOUDFLARE_REST_PATH_NOT_SUPPORTED'
+  }, request);
 }
 
 export default {
@@ -850,6 +868,7 @@ export default {
 
     if (request.method === 'OPTIONS' && (
       url.pathname === '/api/edu-gateway'
+      || url.pathname === SYSTEM_DATA_API_PATH
       || url.pathname.startsWith('/sb/')
       || url.pathname.startsWith('/api/ai/')
     )) {
@@ -862,12 +881,12 @@ export default {
     if (url.pathname === '/api/health') {
       return new Response(JSON.stringify({
         ok: true,
-        supabaseOrigin: getSupabaseOrigin(env),
-        cloudSystemDataBackend: hasSystemDataStorage(env) ? 'd1' : 'supabase',
+        cloudSystemDataBackend: hasSystemDataStorage(env) ? 'd1' : 'unavailable',
         cloudSystemDataReady: hasSystemDataStorage(env),
         cloudSystemDataMode: getSystemDataMode(env),
-        gatewayDataBackend: hasGatewayDataStorage(env) ? 'd1' : 'supabase',
-        gatewayDataReady: hasGatewayDataStorage(env)
+        gatewayDataBackend: hasGatewayDataStorage(env) ? 'd1' : 'unavailable',
+        gatewayDataReady: hasGatewayDataStorage(env),
+        gatewayAuthFallback: 'legacy-login-only'
       }), {
         status: 200,
         headers: {
@@ -881,6 +900,10 @@ export default {
       return handleGatewayProxy(request, env, url);
     }
 
+    if (url.pathname === SYSTEM_DATA_API_PATH) {
+      return handleSystemDataProxy(request, env, url);
+    }
+
     if (url.pathname === '/api/ai/chat') {
       return handleAIChatProxy(request, env);
     }
@@ -890,7 +913,7 @@ export default {
     }
 
     if (url.pathname.startsWith('/sb/')) {
-      return handleSupabaseProxy(request, env, url);
+      return handleCloudRestProxy(request, env, url);
     }
 
     try {

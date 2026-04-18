@@ -37,6 +37,8 @@ on public.config_alias_rules (
 create index if not exists idx_config_alias_rules_type
 on public.config_alias_rules(rule_type, is_active);
 
+drop trigger if exists trg_config_alias_rules_updated_at on public.config_alias_rules;
+
 create trigger trg_config_alias_rules_updated_at
 before update on public.config_alias_rules
 for each row execute function public.set_updated_at();
@@ -60,6 +62,8 @@ create table if not exists public.import_mapping_rules (
 
 create index if not exists idx_import_mapping_rules_scope
 on public.import_mapping_rules(mapping_type, project_key, cohort_id, exam_id);
+
+drop trigger if exists trg_import_mapping_rules_updated_at on public.import_mapping_rules;
 
 create trigger trg_import_mapping_rules_updated_at
 before update on public.import_mapping_rules
@@ -116,6 +120,8 @@ on public.warning_records(project_key, cohort_id, exam_id);
 create index if not exists idx_warning_records_status
 on public.warning_records(status, warning_level);
 
+drop trigger if exists trg_warning_records_updated_at on public.warning_records;
+
 create trigger trg_warning_records_updated_at
 before update on public.warning_records
 for each row execute function public.set_updated_at();
@@ -153,6 +159,8 @@ on public.rectify_tasks(project_key, cohort_id, exam_id);
 
 create index if not exists idx_rectify_tasks_status
 on public.rectify_tasks(status, priority, due_date);
+
+drop trigger if exists trg_rectify_tasks_updated_at on public.rectify_tasks;
 
 create trigger trg_rectify_tasks_updated_at
 before update on public.rectify_tasks
