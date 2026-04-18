@@ -15,6 +15,24 @@ const reportSessionRuntimePath = path.resolve(__dirname, '../public/assets/js/re
 const compareSessionRuntimePath = path.resolve(__dirname, '../public/assets/js/compare-session-state-runtime.js');
 const compareResultRuntimePath = path.resolve(__dirname, '../public/assets/js/compare-result-state-runtime.js');
 const compareSummaryRuntimePath = path.resolve(__dirname, '../public/assets/js/compare-summary-state-runtime.js');
+const cloudApiRuntimePath = path.resolve(__dirname, '../public/assets/js/cloud-api-runtime.js');
+const dataCloudRuntimePath = path.resolve(__dirname, '../public/assets/js/data-cloud-runtime.js');
+const issueManagerRuntimePath = path.resolve(__dirname, '../public/assets/js/issue-manager-runtime.js');
+const packagerRuntimePath = path.resolve(__dirname, '../public/assets/js/packager-runtime.js');
+const helpSystemRuntimePath = path.resolve(__dirname, '../public/assets/js/help-system-runtime.js');
+const loggerRuntimePath = path.resolve(__dirname, '../public/assets/js/logger-runtime.js');
+const workerApiRuntimePath = path.resolve(__dirname, '../public/assets/js/worker-api-runtime.js');
+const accountManagerRuntimePath = path.resolve(__dirname, '../public/assets/js/account-manager-runtime.js');
+const dataManagerTeacherRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-teacher-runtime.js');
+const dataManagerStudentRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-student-runtime.js');
+const dataManagerArchiveRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-archive-runtime.js');
+const dataManagerGrade9TemplateRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-grade9-template-runtime.js');
+const dataManagerParamsRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-params-runtime.js');
+const dataManagerTargetsRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-targets-runtime.js');
+const dataManagerSchoolAliasRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-school-alias-runtime.js');
+const dataManagerSaveSyncRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-save-sync-runtime.js');
+const dataManagerHistoryRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-history-runtime.js');
+const dataManagerTabRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-tab-runtime.js');
 const compareCloudContextRuntimePath = path.resolve(__dirname, '../public/assets/js/compare-cloud-context-runtime.js');
 const compareExamSyncRuntimePath = path.resolve(__dirname, '../public/assets/js/compare-exam-sync-runtime.js');
 const townSubmoduleCompareStateRuntimePath = path.resolve(__dirname, '../public/assets/js/town-submodule-compare-state-runtime.js');
@@ -59,6 +77,24 @@ assert.ok(fs.existsSync(reportSessionRuntimePath), 'report-session-state-runtime
 assert.ok(fs.existsSync(compareSessionRuntimePath), 'compare-session-state-runtime.js should exist');
 assert.ok(fs.existsSync(compareResultRuntimePath), 'compare-result-state-runtime.js should exist');
 assert.ok(fs.existsSync(compareSummaryRuntimePath), 'compare-summary-state-runtime.js should exist');
+assert.ok(fs.existsSync(cloudApiRuntimePath), 'cloud-api-runtime.js should exist');
+assert.ok(fs.existsSync(dataCloudRuntimePath), 'data-cloud-runtime.js should exist');
+assert.ok(fs.existsSync(issueManagerRuntimePath), 'issue-manager-runtime.js should exist');
+assert.ok(fs.existsSync(packagerRuntimePath), 'packager-runtime.js should exist');
+assert.ok(fs.existsSync(helpSystemRuntimePath), 'help-system-runtime.js should exist');
+assert.ok(fs.existsSync(loggerRuntimePath), 'logger-runtime.js should exist');
+assert.ok(fs.existsSync(workerApiRuntimePath), 'worker-api-runtime.js should exist');
+assert.ok(fs.existsSync(accountManagerRuntimePath), 'account-manager-runtime.js should exist');
+assert.ok(fs.existsSync(dataManagerTeacherRuntimePath), 'data-manager-teacher-runtime.js should exist');
+assert.ok(fs.existsSync(dataManagerStudentRuntimePath), 'data-manager-student-runtime.js should exist');
+assert.ok(fs.existsSync(dataManagerArchiveRuntimePath), 'data-manager-archive-runtime.js should exist');
+assert.ok(fs.existsSync(dataManagerGrade9TemplateRuntimePath), 'data-manager-grade9-template-runtime.js should exist');
+assert.ok(fs.existsSync(dataManagerParamsRuntimePath), 'data-manager-params-runtime.js should exist');
+assert.ok(fs.existsSync(dataManagerTargetsRuntimePath), 'data-manager-targets-runtime.js should exist');
+assert.ok(fs.existsSync(dataManagerSchoolAliasRuntimePath), 'data-manager-school-alias-runtime.js should exist');
+assert.ok(fs.existsSync(dataManagerSaveSyncRuntimePath), 'data-manager-save-sync-runtime.js should exist');
+assert.ok(fs.existsSync(dataManagerHistoryRuntimePath), 'data-manager-history-runtime.js should exist');
+assert.ok(fs.existsSync(dataManagerTabRuntimePath), 'data-manager-tab-runtime.js should exist');
 assert.ok(fs.existsSync(compareCloudContextRuntimePath), 'compare-cloud-context-runtime.js should exist');
 assert.ok(fs.existsSync(compareExamSyncRuntimePath), 'compare-exam-sync-runtime.js should exist');
 assert.ok(fs.existsSync(townSubmoduleCompareStateRuntimePath), 'town-submodule-compare-state-runtime.js should exist');
@@ -112,6 +148,24 @@ const reportSessionStateRef = './assets/js/report-session-state-runtime.js';
 const compareSessionStateRef = './assets/js/compare-session-state-runtime.js';
 const compareResultStateRef = './assets/js/compare-result-state-runtime.js';
 const compareSummaryStateRef = './assets/js/compare-summary-state-runtime.js';
+const cloudApiRef = './assets/js/cloud-api-runtime.js';
+const dataCloudRef = './assets/js/data-cloud-runtime.js';
+const issueManagerRef = './assets/js/issue-manager-runtime.js';
+const packagerRef = './assets/js/packager-runtime.js';
+const helpSystemRef = './assets/js/help-system-runtime.js';
+const loggerRef = './assets/js/logger-runtime.js';
+const workerApiRef = './assets/js/worker-api-runtime.js';
+const accountManagerRef = './assets/js/account-manager-runtime.js';
+const dataManagerTeacherRef = './assets/js/data-manager-teacher-runtime.js';
+const dataManagerStudentRef = './assets/js/data-manager-student-runtime.js';
+const dataManagerArchiveRef = './assets/js/data-manager-archive-runtime.js';
+const dataManagerGrade9TemplateRef = './assets/js/data-manager-grade9-template-runtime.js';
+const dataManagerParamsRef = './assets/js/data-manager-params-runtime.js';
+const dataManagerTargetsRef = './assets/js/data-manager-targets-runtime.js';
+const dataManagerSchoolAliasRef = './assets/js/data-manager-school-alias-runtime.js';
+const dataManagerSaveSyncRef = './assets/js/data-manager-save-sync-runtime.js';
+const dataManagerHistoryRef = './assets/js/data-manager-history-runtime.js';
+const dataManagerTabRef = './assets/js/data-manager-tab-runtime.js';
 const compareCloudContextRef = './assets/js/compare-cloud-context-runtime.js';
 const compareExamSyncRef = './assets/js/compare-exam-sync-runtime.js';
 const townSubmoduleCompareStateRef = './assets/js/town-submodule-compare-state-runtime.js';
@@ -190,6 +244,24 @@ const reportSessionStateIndex = indexHtml.indexOf(reportSessionStateRef);
 const compareSessionStateIndex = indexHtml.indexOf(compareSessionStateRef);
 const compareResultStateIndex = indexHtml.indexOf(compareResultStateRef);
 const compareSummaryStateIndex = indexHtml.indexOf(compareSummaryStateRef);
+const cloudApiIndex = indexHtml.indexOf(cloudApiRef);
+const dataCloudIndex = indexHtml.indexOf(dataCloudRef);
+const issueManagerIndex = indexHtml.indexOf(issueManagerRef);
+const packagerIndex = indexHtml.indexOf(packagerRef);
+const helpSystemIndex = indexHtml.indexOf(helpSystemRef);
+const loggerIndex = indexHtml.indexOf(loggerRef);
+const workerApiIndex = indexHtml.indexOf(workerApiRef);
+const accountManagerIndex = indexHtml.indexOf(accountManagerRef);
+const dataManagerTeacherIndex = indexHtml.indexOf(dataManagerTeacherRef);
+const dataManagerStudentIndex = indexHtml.indexOf(dataManagerStudentRef);
+const dataManagerArchiveIndex = indexHtml.indexOf(dataManagerArchiveRef);
+const dataManagerGrade9TemplateIndex = indexHtml.indexOf(dataManagerGrade9TemplateRef);
+const dataManagerParamsIndex = indexHtml.indexOf(dataManagerParamsRef);
+const dataManagerTargetsIndex = indexHtml.indexOf(dataManagerTargetsRef);
+const dataManagerSchoolAliasIndex = indexHtml.indexOf(dataManagerSchoolAliasRef);
+const dataManagerSaveSyncIndex = indexHtml.indexOf(dataManagerSaveSyncRef);
+const dataManagerHistoryIndex = indexHtml.indexOf(dataManagerHistoryRef);
+const dataManagerTabIndex = indexHtml.indexOf(dataManagerTabRef);
 const compareCloudContextIndex = indexHtml.indexOf(compareCloudContextRef);
 const compareExamSyncIndex = indexHtml.indexOf(compareExamSyncRef);
 const townSubmoduleCompareStateIndex = indexHtml.indexOf(townSubmoduleCompareStateRef);
@@ -222,6 +294,24 @@ assert.ok(reportSessionStateIndex >= 0, 'index.html should load report-session-s
 assert.ok(compareSessionStateIndex >= 0, 'index.html should load compare-session-state-runtime.js');
 assert.ok(compareResultStateIndex >= 0, 'index.html should load compare-result-state-runtime.js');
 assert.ok(compareSummaryStateIndex >= 0, 'index.html should load compare-summary-state-runtime.js');
+assert.ok(cloudApiIndex >= 0, 'index.html should load cloud-api-runtime.js');
+assert.ok(dataCloudIndex >= 0, 'index.html should load data-cloud-runtime.js');
+assert.ok(issueManagerIndex >= 0, 'index.html should load issue-manager-runtime.js');
+assert.ok(packagerIndex >= 0, 'index.html should load packager-runtime.js');
+assert.ok(helpSystemIndex >= 0, 'index.html should load help-system-runtime.js');
+assert.ok(loggerIndex >= 0, 'index.html should load logger-runtime.js');
+assert.ok(workerApiIndex >= 0, 'index.html should load worker-api-runtime.js');
+assert.ok(accountManagerIndex >= 0, 'index.html should load account-manager-runtime.js');
+assert.ok(dataManagerTeacherIndex >= 0, 'index.html should load data-manager-teacher-runtime.js');
+assert.ok(dataManagerStudentIndex >= 0, 'index.html should load data-manager-student-runtime.js');
+assert.ok(dataManagerArchiveIndex >= 0, 'index.html should load data-manager-archive-runtime.js');
+assert.ok(dataManagerGrade9TemplateIndex >= 0, 'index.html should load data-manager-grade9-template-runtime.js');
+assert.ok(dataManagerParamsIndex >= 0, 'index.html should load data-manager-params-runtime.js');
+assert.ok(dataManagerTargetsIndex >= 0, 'index.html should load data-manager-targets-runtime.js');
+assert.ok(dataManagerSchoolAliasIndex >= 0, 'index.html should load data-manager-school-alias-runtime.js');
+assert.ok(dataManagerSaveSyncIndex >= 0, 'index.html should load data-manager-save-sync-runtime.js');
+assert.ok(dataManagerHistoryIndex >= 0, 'index.html should load data-manager-history-runtime.js');
+assert.ok(dataManagerTabIndex >= 0, 'index.html should load data-manager-tab-runtime.js');
 assert.ok(compareCloudContextIndex >= 0, 'index.html should load compare-cloud-context-runtime.js');
 assert.ok(compareExamSyncIndex >= 0, 'index.html should load compare-exam-sync-runtime.js');
 assert.ok(townSubmoduleCompareStateIndex >= 0, 'index.html should load town-submodule-compare-state-runtime.js');
@@ -229,6 +319,24 @@ assert.ok(townSubmoduleCompareIndex >= 0, 'index.html should load town-submodule
 assert.ok(compareSelectorsIndex >= 0, 'index.html should load compare-selectors-runtime.js');
 assert.ok(cloudIndex >= 0, 'index.html should load cloud.js');
 assert.ok(cloudWorkspaceIndex >= 0, 'index.html should load cloud-workspace-runtime.js');
+assert.ok(cloudApiIndex < cloudIndex, 'cloud-api-runtime.js should load before cloud.js');
+assert.ok(dataCloudIndex < appIndex, 'data-cloud-runtime.js should load before app.js');
+assert.ok(issueManagerIndex < appIndex, 'issue-manager-runtime.js should load before app.js');
+assert.ok(packagerIndex < appIndex, 'packager-runtime.js should load before app.js');
+assert.ok(helpSystemIndex < appIndex, 'help-system-runtime.js should load before app.js');
+assert.ok(loggerIndex < appIndex, 'logger-runtime.js should load before app.js');
+assert.ok(workerApiIndex < appIndex, 'worker-api-runtime.js should load before app.js');
+assert.ok(accountManagerIndex < appIndex, 'account-manager-runtime.js should load before app.js');
+assert.ok(dataManagerTeacherIndex < appIndex, 'data-manager-teacher-runtime.js should load before app.js');
+assert.ok(dataManagerStudentIndex < appIndex, 'data-manager-student-runtime.js should load before app.js');
+assert.ok(dataManagerArchiveIndex < appIndex, 'data-manager-archive-runtime.js should load before app.js');
+assert.ok(dataManagerGrade9TemplateIndex < appIndex, 'data-manager-grade9-template-runtime.js should load before app.js');
+assert.ok(dataManagerParamsIndex < appIndex, 'data-manager-params-runtime.js should load before app.js');
+assert.ok(dataManagerTargetsIndex < appIndex, 'data-manager-targets-runtime.js should load before app.js');
+assert.ok(dataManagerSchoolAliasIndex < appIndex, 'data-manager-school-alias-runtime.js should load before app.js');
+assert.ok(dataManagerSaveSyncIndex < appIndex, 'data-manager-save-sync-runtime.js should load before app.js');
+assert.ok(dataManagerHistoryIndex < appIndex, 'data-manager-history-runtime.js should load before app.js');
+assert.ok(dataManagerTabIndex < appIndex, 'data-manager-tab-runtime.js should load before app.js');
 assert.ok(shellRuntimeIndex >= 0, 'index.html should load shell-runtime.js');
 assert.ok(shellPolishRuntimeIndex >= 0, 'index.html should load shell-polish-runtime.js');
 assert.ok(moduleEntryRuntimeIndex >= 0, 'index.html should load module-entry-runtime.js');
@@ -259,7 +367,6 @@ assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign swi
 
 [
     bootRuntimeRef,
-    supabaseVendorRef,
     lzStringVendorRef,
     cryptoJsVendorRef,
     authStateRef,
@@ -274,6 +381,24 @@ assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign swi
     compareSessionStateRef,
     compareResultStateRef,
     compareSummaryStateRef,
+    cloudApiRef,
+    dataCloudRef,
+    issueManagerRef,
+    packagerRef,
+    helpSystemRef,
+    loggerRef,
+    workerApiRef,
+    accountManagerRef,
+    dataManagerTeacherRef,
+    dataManagerStudentRef,
+    dataManagerArchiveRef,
+    dataManagerGrade9TemplateRef,
+    dataManagerParamsRef,
+    dataManagerTargetsRef,
+    dataManagerSchoolAliasRef,
+    dataManagerSaveSyncRef,
+    dataManagerHistoryRef,
+    dataManagerTabRef,
     cloudRef,
     cloudWorkspaceRef,
     shellRuntimeRef,
@@ -290,6 +415,8 @@ assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign swi
     assert.ok(scriptTag, `index.html should contain a script tag for ${src}`);
     assert.ok(/\sdefer(\s|>|=)/i.test(scriptTag), `${src} should load with defer`);
 });
+
+assert.ok(!findScriptTag(indexHtml, supabaseVendorRef), 'index.html should not load the legacy supabase SDK script');
 
 [
     xlsxVendorRef,

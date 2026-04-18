@@ -4,9 +4,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof initMacroAnomalyConfigUI === 'function') initMacroAnomalyConfigUI();
 });
 
-var DIRECT_SUPABASE_URL = 'https://okwcciujnfvobbwaydiv.supabase.co';
-var DIRECT_SUPABASE_KEY = 'sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4';
-var DIRECT_EDGE_GATEWAY_URL = DIRECT_SUPABASE_URL + '/functions/v1/edu-gateway-v2';
+var DIRECT_SUPABASE_URL = 'https://aqhdogbdqijppvujiawy.supabase.co';
+var DIRECT_SUPABASE_KEY = 'sb_publishable_QDC8L-A-LQ0o-wEr7vVn3Q_fkJyk_Pi';
+var DIRECT_EDGE_GATEWAY_URL = 'https://okwcciujnfvobbwaydiv.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 
 function isLocalSupabaseHost(hostname) {
@@ -47,6 +47,10 @@ function shouldUseSameOriginSupabaseProxy() {
     return !isLocalSupabaseHost(window.location.hostname);
 }
 
+function shouldUseSameOriginCloudProxy() {
+    return shouldUseSameOriginSupabaseProxy();
+}
+
 function normalizeProxyOrigin(origin) {
     return String(origin || '').trim().replace(/\/$/, '');
 }
@@ -68,6 +72,10 @@ function getSupabaseProxyOrigin() {
 
 function shouldUseSupabaseProxy() {
     return !!getSupabaseProxyOrigin();
+}
+
+function shouldUseCloudProxy() {
+    return shouldUseSupabaseProxy();
 }
 
 function getSameOriginSupabaseUrl() {
@@ -123,26 +131,370 @@ function createSupabaseFetchWithTimeout(timeoutMs) {
     };
 }
 
+function getBootSessionValue(key) {
+    try {
+        if (!window.sessionStorage || typeof window.sessionStorage.getItem !== 'function') return '';
+        return String(window.sessionStorage.getItem(key) || '').trim();
+    } catch (error) {
+        return '';
+    }
+}
+
+function getCloudflareRestBaseUrl() {
+    var proxyOrigin = getSupabaseProxyOrigin();
+    if (proxyOrigin) return proxyOrigin + '/sb/rest/v1';
+    if (window.location && /^(https?:)$/i.test(String(window.location.protocol || '').trim())) {
+        return normalizeProxyOrigin(window.location.origin) + '/sb/rest/v1';
+    }
+    return '';
+}
+
+function parseCompatCount(value) {
+    var text = String(value || '').trim();
+    var match = text.match(/\/(\d+|\*)$/);
+    if (!match || match[1] === '*') return null;
+    var count = Number(match[1]);
+    return Number.isFinite(count) ? count : null;
+}
+
+function createCompatError(message, status, body) {
+    var error = new Error(String(message || '').trim() || 'CLOUDFLARE_REST_ERROR');
+    error.status = Number(status || 0);
+    error.body = body || null;
+    return error;
+}
+
+function normalizeCompatFilterValue(value) {
+    if (value == null) return '';
+    return String(value).trim();
+}
+
+function createCloudflareCompatClient() {
+    var fetchWithTimeout = createSupabaseFetchWithTimeout(15000);
+
+    function buildHeaders(extraHeaders) {
+        var headers = Object.assign({}, extraHeaders || {});
+        var apikey = String(
+            getBootStorageValue('CLOUD_API_KEY')
+            || getBootStorageValue('SUPABASE_KEY')
+            || window.CLOUD_API_KEY
+            || window.SUPABASE_KEY
+            || DIRECT_SUPABASE_KEY
+            || ''
+        ).trim();
+        var token = getBootSessionValue('EDGE_GATEWAY_TOKEN_V1');
+        if (apikey && !headers.apikey) headers.apikey = apikey;
+        if (token && !headers.Authorization) headers.Authorization = 'Bearer ' + token;
+        return headers;
+    }
+
+    function getTableEndpoint(tableName) {
+        var baseUrl = getCloudflareRestBaseUrl();
+        if (!baseUrl) return '';
+        return baseUrl + '/' + encodeURIComponent(String(tableName || '').trim());
+    }
+
+    function appendFilter(params, filter) {
+        if (!filter || !filter.column || !filter.op) return;
+        var column = String(filter.column).trim();
+        if (!column) return;
+        if (filter.op === 'or') {
+            params.set('or', String(filter.value || ''));
+            return;
+        }
+        if (filter.op === 'in') {
+            var values = Array.isArray(filter.value)
+                ? filter.value.map(function (item) { return normalizeCompatFilterValue(item); }).filter(Boolean)
+                : [];
+            if (!values.length) return;
+            params.append(column, 'in.(' + values.join(',') + ')');
+            return;
+        }
+        if (filter.op === 'not') {
+            params.append(column, 'not.' + String(filter.operator || 'eq').trim() + '.' + normalizeCompatFilterValue(filter.value));
+            return;
+        }
+        params.append(column, String(filter.op).trim() + '.' + normalizeCompatFilterValue(filter.value));
+    }
+
+    function finalizeSelectResult(state, payload, count) {
+        var data = payload;
+        if (state.single || state.maybeSingle) {
+            var rows = Array.isArray(payload)
+                ? payload
+                : (payload == null ? [] : [payload]);
+            if (rows.length === 1) {
+                data = rows[0];
+            } else if (rows.length === 0) {
+                if (state.maybeSingle) {
+                    data = null;
+                } else {
+                    return {
+                        data: null,
+                        error: createCompatError('PGRST116_SINGLE_ROW_NOT_FOUND', 406),
+                        count: count
+                    };
+                }
+            } else {
+                return {
+                    data: null,
+                    error: createCompatError('PGRST117_MULTIPLE_ROWS_RETURNED', 406),
+                    count: count
+                };
+            }
+        }
+        return {
+            data: data,
+            error: null,
+            count: count
+        };
+    }
+
+    function createQuery(tableName) {
+        var state = {
+            table: String(tableName || '').trim(),
+            action: 'select',
+            select: '*',
+            filters: [],
+            order: '',
+            ascending: true,
+            limit: 0,
+            single: false,
+            maybeSingle: false,
+            head: false,
+            count: '',
+            payload: null
+        };
+        var execution = null;
+
+        function execute() {
+            if (execution) return execution;
+            execution = (async function () {
+                var endpoint = getTableEndpoint(state.table);
+                if (!endpoint) {
+                    return {
+                        data: state.single || state.maybeSingle ? null : [],
+                        error: createCompatError('CLOUDFLARE_REST_UNAVAILABLE'),
+                        count: null
+                    };
+                }
+
+                var url = new URL(endpoint);
+                if (state.action === 'select') {
+                    if (state.select) url.searchParams.set('select', state.select);
+                    if (state.order) {
+                        url.searchParams.set('order', state.order + '.' + (state.ascending ? 'asc' : 'desc'));
+                    }
+                    if (state.limit > 0) {
+                        url.searchParams.set('limit', String(state.limit));
+                    }
+                }
+
+                state.filters.forEach(function (filter) {
+                    appendFilter(url.searchParams, filter);
+                });
+
+                var method = 'GET';
+                var headers = buildHeaders();
+                var body = null;
+                if (state.action === 'select') {
+                    method = state.head ? 'HEAD' : 'GET';
+                } else if (state.action === 'insert' || state.action === 'upsert') {
+                    method = 'POST';
+                    headers['Content-Type'] = 'application/json';
+                    body = JSON.stringify(state.payload);
+                } else if (state.action === 'update') {
+                    method = 'PATCH';
+                    headers['Content-Type'] = 'application/json';
+                    body = JSON.stringify(state.payload || {});
+                } else if (state.action === 'delete') {
+                    method = 'DELETE';
+                }
+
+                try {
+                    var response = await fetchWithTimeout(url.toString(), {
+                        method: method,
+                        headers: headers,
+                        body: body
+                    });
+                    var count = parseCompatCount(response.headers.get('Content-Range'));
+
+                    if (!response.ok) {
+                        var errorBody = null;
+                        try {
+                            errorBody = await response.json();
+                        } catch (error) { }
+                        return {
+                            data: state.single || state.maybeSingle ? null : [],
+                            error: createCompatError(
+                                errorBody && (errorBody.error || errorBody.message)
+                                    ? (errorBody.error || errorBody.message)
+                                    : ('CLOUDFLARE_REST_HTTP_' + response.status),
+                                response.status,
+                                errorBody
+                            ),
+                            count: count
+                        };
+                    }
+
+                    if (method === 'HEAD') {
+                        return { data: null, error: null, count: count };
+                    }
+
+                    var payload = null;
+                    try {
+                        payload = await response.json();
+                    } catch (error) {
+                        payload = state.single || state.maybeSingle ? null : [];
+                    }
+
+                    if (state.action === 'select') {
+                        return finalizeSelectResult(state, payload, count);
+                    }
+
+                    return {
+                        data: payload,
+                        error: null,
+                        count: count
+                    };
+                } catch (error) {
+                    return {
+                        data: state.single || state.maybeSingle ? null : [],
+                        error: error instanceof Error ? error : createCompatError(String(error || 'CLOUDFLARE_REST_FETCH_FAILED')),
+                        count: null
+                    };
+                }
+            })();
+            return execution;
+        }
+
+        var query = {
+            select: function (columns, options) {
+                state.action = 'select';
+                state.select = String(columns || '*').trim() || '*';
+                state.head = !!(options && options.head);
+                state.count = options && options.count ? String(options.count) : '';
+                return query;
+            },
+            insert: function (rows) {
+                state.action = 'insert';
+                state.payload = rows;
+                return query;
+            },
+            upsert: function (rows) {
+                state.action = 'upsert';
+                state.payload = rows;
+                return query;
+            },
+            update: function (values) {
+                state.action = 'update';
+                state.payload = values;
+                return query;
+            },
+            delete: function (options) {
+                state.action = 'delete';
+                state.count = options && options.count ? String(options.count) : '';
+                return query;
+            },
+            eq: function (column, value) {
+                state.filters.push({ column: column, op: 'eq', value: value });
+                return query;
+            },
+            neq: function (column, value) {
+                state.filters.push({ column: column, op: 'neq', value: value });
+                return query;
+            },
+            like: function (column, value) {
+                state.filters.push({ column: column, op: 'like', value: value });
+                return query;
+            },
+            ilike: function (column, value) {
+                state.filters.push({ column: column, op: 'ilike', value: value });
+                return query;
+            },
+            "in": function (column, values) {
+                state.filters.push({ column: column, op: 'in', value: values });
+                return query;
+            },
+            not: function (column, operator, value) {
+                state.filters.push({ column: column, op: 'not', operator: operator, value: value });
+                return query;
+            },
+            or: function (expression) {
+                state.filters.push({ op: 'or', value: expression });
+                return query;
+            },
+            order: function (column, options) {
+                state.order = String(column || '').trim();
+                state.ascending = !!(options && options.ascending);
+                return query;
+            },
+            limit: function (value) {
+                state.limit = Math.max(0, Math.floor(Number(value) || 0));
+                return query;
+            },
+            single: function () {
+                state.single = true;
+                state.maybeSingle = false;
+                return query;
+            },
+            maybeSingle: function () {
+                state.maybeSingle = true;
+                state.single = false;
+                return query;
+            },
+            then: function (resolve, reject) {
+                return execute().then(resolve, reject);
+            },
+            catch: function (reject) {
+                return execute().catch(reject);
+            },
+            finally: function (handler) {
+                return execute().finally(handler);
+            }
+        };
+
+        return query;
+    }
+
+    return {
+        from: function (tableName) {
+            return createQuery(tableName);
+        }
+    };
+}
+
 window.__DIRECT_SUPABASE_URL = DIRECT_SUPABASE_URL;
 window.__DIRECT_EDGE_GATEWAY_URL = DIRECT_EDGE_GATEWAY_URL;
 window.__DIRECT_PROXY_ORIGIN = DIRECT_PROXY_ORIGIN;
 window.__SUPABASE_PROXY_ORIGIN = getSupabaseProxyOrigin();
+window.__DIRECT_CLOUD_REST_URL = DIRECT_SUPABASE_URL;
+window.__DIRECT_CLOUD_PROXY_ORIGIN = DIRECT_PROXY_ORIGIN;
+window.__CLOUD_PROXY_ORIGIN = window.__SUPABASE_PROXY_ORIGIN;
 window.isNativeCapacitorShell = isNativeCapacitorShell;
 window.shouldUseSupabaseProxy = shouldUseSupabaseProxy;
-window.SUPABASE_URL = getBootStorageValue('SUPABASE_URL') || (shouldUseSupabaseProxy() ? getSameOriginSupabaseUrl() : DIRECT_SUPABASE_URL);
-window.SUPABASE_KEY = getBootStorageValue('SUPABASE_KEY') || DIRECT_SUPABASE_KEY;
-window.EDGE_GATEWAY_URL = getBootStorageValue('EDGE_GATEWAY_URL') || (shouldUseSupabaseProxy() ? getSameOriginGatewayUrl() : DIRECT_EDGE_GATEWAY_URL);
+window.shouldUseSameOriginCloudProxy = shouldUseSameOriginCloudProxy;
+window.shouldUseCloudProxy = shouldUseCloudProxy;
+window.CLOUD_REST_URL = getBootStorageValue('CLOUD_REST_URL') || getBootStorageValue('SUPABASE_URL') || (shouldUseCloudProxy() ? getSameOriginSupabaseUrl() : DIRECT_SUPABASE_URL);
+window.CLOUD_API_KEY = getBootStorageValue('CLOUD_API_KEY') || getBootStorageValue('SUPABASE_KEY') || DIRECT_SUPABASE_KEY;
+window.SUPABASE_URL = getBootStorageValue('SUPABASE_URL') || window.CLOUD_REST_URL;
+window.SUPABASE_KEY = getBootStorageValue('SUPABASE_KEY') || window.CLOUD_API_KEY;
+window.EDGE_GATEWAY_URL = getBootStorageValue('EDGE_GATEWAY_URL') || (shouldUseCloudProxy() ? getSameOriginGatewayUrl() : DIRECT_EDGE_GATEWAY_URL);
 window.initSupabase = function () {
-    if (window.supabase && !sbClient) {
-        sbClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY, {
-            global: {
-                fetch: createSupabaseFetchWithTimeout(15000)
-            }
-        });
+    if (!sbClient) {
+        sbClient = createCloudflareCompatClient();
         window.sbClient = sbClient;
-        console.log('Supabase client initialized');
+        window.cloudClient = sbClient;
+        console.log('Cloud data compatibility client initialized');
+    } else if (!window.cloudClient) {
+        window.cloudClient = sbClient;
     }
+    return sbClient;
 };
+window.initCloudClient = function () {
+    return window.initSupabase();
+};
+window.initCloudClient();
 
 (function installBootLoginShell() {
     const BOOT_LOGIN_PORTAL_STORAGE_KEY = 'LOGIN_PORTAL_V1';
@@ -191,18 +543,19 @@ window.initSupabase = function () {
             pushCandidate(this.resolvedGatewayUrl);
             pushCandidate(localStorage.getItem('EDGE_GATEWAY_URL'));
             pushCandidate(window.EDGE_GATEWAY_URL);
-            const supabaseUrl = this.normalizeGatewayUrl(localStorage.getItem('SUPABASE_URL') || window.SUPABASE_URL || '');
-            if (supabaseUrl) {
-                pushCandidate(`${supabaseUrl}/functions/v1/edu-gateway-v2`);
-                pushCandidate(`${supabaseUrl}/functions/v1/edu-gateway`);
-            }
             return candidates;
         },
         getGatewayUrl() {
             return this.getGatewayCandidates()[0] || '';
         },
         getPublishableKey() {
-            return String(localStorage.getItem('SUPABASE_KEY') || window.SUPABASE_KEY || '').trim();
+            return String(
+                localStorage.getItem('CLOUD_API_KEY')
+                || localStorage.getItem('SUPABASE_KEY')
+                || window.CLOUD_API_KEY
+                || window.SUPABASE_KEY
+                || ''
+            ).trim();
         },
         getToken() {
             return String(sessionStorage.getItem(this.tokenStorageKey) || '').trim();

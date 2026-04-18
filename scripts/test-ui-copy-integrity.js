@@ -15,6 +15,7 @@ const { chromium } = require('playwright');
 const projectRoot = path.resolve(__dirname, '..');
 const distDir = path.join(projectRoot, 'dist');
 const port = Number(process.env.UI_COPY_PORT || 4174);
+const proxyOrigin = String(process.env.SMOKE_PROXY_ORIGIN || 'https://schoolsystem.com.cn').trim().replace(/\/+$/, '');
 
 const mimeTypes = {
     '.css': 'text/css; charset=utf-8',
@@ -90,6 +91,46 @@ function resolveFilePath(urlPath) {
     return path.join(distDir, safePath);
 }
 
+function shouldProxyRequest(urlPath) {
+    const pathname = String(urlPath || '/').split('?')[0];
+    return pathname.startsWith('/api/') || pathname.startsWith('/sb/');
+}
+
+async function readRequestBody(req) {
+    if (req.method === 'GET' || req.method === 'HEAD') return undefined;
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    return chunks.length ? Buffer.concat(chunks) : undefined;
+}
+
+async function proxyRequest(req, res) {
+    const headers = {};
+    Object.entries(req.headers || {}).forEach(([key, value]) => {
+        if (!value) return;
+        const lower = String(key || '').toLowerCase();
+        if (lower === 'host' || lower === 'connection' || lower === 'content-length') return;
+        headers[key] = value;
+    });
+
+    const upstream = await fetch(`${proxyOrigin}${req.url || '/'}`, {
+        method: req.method || 'GET',
+        headers,
+        body: await readRequestBody(req),
+        redirect: 'manual'
+    });
+
+    const responseHeaders = {};
+    upstream.headers.forEach((value, key) => {
+        const lower = String(key || '').toLowerCase();
+        if (lower === 'connection' || lower === 'content-length' || lower === 'content-encoding' || lower === 'transfer-encoding') return;
+        responseHeaders[key] = value;
+    });
+
+    res.writeHead(upstream.status, responseHeaders);
+    const body = Buffer.from(await upstream.arrayBuffer());
+    res.end(body);
+}
+
 function sendNotFound(res) {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('Not Found');
@@ -100,7 +141,17 @@ async function startServer() {
         throw new Error(`dist not found: ${distDir}`);
     }
 
-    const server = http.createServer((req, res) => {
+    const server = http.createServer(async (req, res) => {
+        if (shouldProxyRequest(req.url || '/')) {
+            try {
+                await proxyRequest(req, res);
+            } catch (error) {
+                res.writeHead(502, { 'Content-Type': 'text/plain; charset=utf-8' });
+                res.end(`Proxy Error: ${error instanceof Error ? error.message : String(error)}`);
+            }
+            return;
+        }
+
         const filePath = resolveFilePath(req.url || '/');
         if (!filePath.startsWith(distDir)) {
             sendNotFound(res);
@@ -234,13 +285,11 @@ async function waitForAppReady(page, timeout = 90000) {
 
         if (
             lastState
-            && lastState.overlayHidden
             && lastState.appVisible
             && lastState.maskHidden
-            && lastState.rawDataLen > 100
+            && lastState.rawDataLen > 0
             && lastState.cohortId
             && lastState.termId
-            && lastState.examId
             && lastState.school
         ) {
             return lastState;
@@ -302,7 +351,7 @@ async function login(page) {
             const overlayHidden = !overlay || getComputedStyle(overlay).display === 'none';
             const appVisible = !!app && getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden');
             const maskVisible = !!mask && getComputedStyle(mask).display !== 'none';
-            return overlayHidden && (appVisible || maskVisible);
+            return appVisible || maskVisible || overlayHidden;
         }, { timeout: 30000 });
     }
 

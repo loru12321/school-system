@@ -6,6 +6,7 @@ const { spawn } = require('child_process');
 const distDir = path.resolve(__dirname, '../dist');
 const smokeScript = path.resolve(__dirname, './smoke-all-modules.js');
 const port = Number(process.env.SMOKE_LOCAL_PORT || 4173);
+const proxyOrigin = String(process.env.SMOKE_PROXY_ORIGIN || 'https://schoolsystem.com.cn').trim().replace(/\/+$/, '');
 
 const mimeTypes = {
     '.css': 'text/css; charset=utf-8',
@@ -33,12 +34,62 @@ function resolveFilePath(urlPath) {
     return path.join(distDir, safePath);
 }
 
+function shouldProxyRequest(urlPath) {
+    const pathname = String(urlPath || '/').split('?')[0];
+    return pathname.startsWith('/api/') || pathname.startsWith('/sb/');
+}
+
+async function readRequestBody(req) {
+    if (req.method === 'GET' || req.method === 'HEAD') return undefined;
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    return chunks.length ? Buffer.concat(chunks) : undefined;
+}
+
+async function proxyRequest(req, res) {
+    const headers = {};
+    Object.entries(req.headers || {}).forEach(([key, value]) => {
+        if (!value) return;
+        const lower = String(key || '').toLowerCase();
+        if (lower === 'host' || lower === 'connection' || lower === 'content-length') return;
+        headers[key] = value;
+    });
+
+    const upstream = await fetch(`${proxyOrigin}${req.url || '/'}`, {
+        method: req.method || 'GET',
+        headers,
+        body: await readRequestBody(req),
+        redirect: 'manual'
+    });
+
+    const responseHeaders = {};
+    upstream.headers.forEach((value, key) => {
+        const lower = String(key || '').toLowerCase();
+        if (lower === 'connection' || lower === 'content-length' || lower === 'content-encoding' || lower === 'transfer-encoding') return;
+        responseHeaders[key] = value;
+    });
+
+    res.writeHead(upstream.status, responseHeaders);
+    const body = Buffer.from(await upstream.arrayBuffer());
+    res.end(body);
+}
+
 async function startServer() {
     if (!fs.existsSync(distDir)) {
         throw new Error(`dist not found: ${distDir}`);
     }
 
-    const server = http.createServer((req, res) => {
+    const server = http.createServer(async (req, res) => {
+        if (shouldProxyRequest(req.url || '/')) {
+            try {
+                await proxyRequest(req, res);
+            } catch (error) {
+                res.writeHead(502, { 'Content-Type': 'text/plain; charset=utf-8' });
+                res.end(`Proxy Error: ${error instanceof Error ? error.message : String(error)}`);
+            }
+            return;
+        }
+
         const filePath = resolveFilePath(req.url || '/');
         if (!filePath.startsWith(distDir)) {
             sendNotFound(res);
