@@ -97,7 +97,10 @@
     }
 
     function getDefaultManagedPassword(role) {
-        return normalizeText(role) === 'teacher' ? 'yssy2016' : '123456';
+        const r = normalizeText(role);
+        if (r === 'admin') return 'admin123';
+        if (r === 'teacher') return 'yssy2016';
+        return '123456';
     }
 
     function isDefaultManagedPassword(role, password) {
@@ -127,9 +130,9 @@
 
     function getManagedAccountPassword(record, role) {
         const explicitPassword = normalizeText(record && record.pass);
-        if (explicitPassword) return explicitPassword;
+        if (explicitPassword && explicitPassword !== MASKED_PASSWORD_DISPLAY) return explicitPassword;
         const passwordMode = normalizeText(record && record.password_mode);
-        if (!passwordMode || passwordMode === 'default') {
+        if (!passwordMode || passwordMode === 'default' || passwordMode === 'masked') {
             return getDefaultManagedPassword(role);
         }
         return '';
@@ -322,6 +325,11 @@
             })()
         );
         if (parent) return { role: 'parent', record: parent };
+
+        // 0. 管理员
+        if (normalizedUsername === 'admin' && safeDb.admin) {
+            return { role: 'admin', record: safeDb.admin };
+        }
 
         const teacher = safeDb.teachers.find((record) =>
             normalizeText(record && record.name) === normalizedUsername

@@ -23,7 +23,7 @@
     <link rel="stylesheet" href="./assets/css/apk-mobile-shell.css?v=20260407-apk-v2">
     <link rel="stylesheet" href="./assets/css/modern-login.css?v=20260418-modern-v2">
     <script defer src="./assets/js/platform-compat-runtime.js?v=20260407-apple-v1"></script>
-    <script defer src="./assets/js/boot-runtime.js"></script>
+    <script defer src="./assets/js/boot-runtime.js?v=20260418-login-refine-v2"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script defer src="./assets/vendor/crypto-js/crypto-js.min.js" data-standalone-lib="crypto-js"></script>
     <!-- 🟢 [修复] 添加 XLSX 库支持 Excel 导入导出功能 -->
@@ -266,13 +266,28 @@
         </div>
     </div>
 
-    <div id="login-overlay" data-login-portal="school" style="display:flex;">
+    <div id="login-overlay" data-login-portal="school" data-login-workbench-ready="true" style="display:flex;">
+        <div class="login-bg-shapes">
+            <div class="bg-orb orb-1"></div>
+            <div class="bg-orb orb-2"></div>
+        </div>
+
         <div class="modern-login-container">
             <div class="modern-login-left">
                 <div class="brand-showcase">
                     <div class="brand-logo-mark">SE</div>
-                    <h1>SmartEdu Analytics</h1>
+                    <h1>SmartEdu<br>Analytics</h1>
                     <p>智慧教务管理系统 · 新一代校园数据中枢</p>
+                    <div style="margin-top: 40px; display: flex; gap: 20px;">
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <span style="font-size: 24px; font-weight: 700;">10k+</span>
+                            <span style="font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">活跃教师</span>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <span style="font-size: 24px; font-weight: 700;">500+</span>
+                            <span style="font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">合作院校</span>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="modern-login-right">
@@ -290,20 +305,38 @@
                     <div id="login-form" class="modern-form">
                         <div class="form-group">
                             <label id="login-user-label" for="login-user">账号 / 姓名</label>
-                            <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                            <div class="input-wrapper">
+                                <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                            </div>
                         </div>
 
                         <div id="login-class-group" class="form-group" style="display: none;">
                             <label for="login-class">班级</label>
-                            <input type="text" id="login-class" placeholder="请输入班级 (仅家长/学生必填)" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                            <div class="input-wrapper">
+                                <input type="text" id="login-class" placeholder="请输入班级 (仅家长/学生必填)" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                            </div>
                         </div>
 
                         <div class="form-group">
                             <label for="login-pass">密码</label>
-                            <input type="password" id="login-pass" placeholder="输入密码" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                            <div class="input-wrapper">
+                                <input type="password" id="login-pass" placeholder="输入密码" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                                <i class="ti ti-eye" id="toggle-password" style="position: absolute; right: 16px; cursor: pointer; color: #94a3b8;" onclick="togglePasswordVisibility()"></i>
+                            </div>
                         </div>
 
-                        <button id="login-submit-button" class="submit-btn" onclick="window.Auth?.login()">登录</button>
+                        <div class="form-options">
+                            <label class="remember-me">
+                                <input type="checkbox" id="remember-me">
+                                <span>记住我</span>
+                            </label>
+                            <a href="#" class="forgot-pass">忘记密码?</a>
+                        </div>
+
+                        <button id="login-submit-button" class="submit-btn" onclick="window.Auth?.login()">
+                            <span>立即登录</span>
+                            <i class="ti ti-arrow-right"></i>
+                        </button>
                     </div>
 
                     <div class="login-footer">
@@ -321,24 +354,59 @@
 
         <script>
             function switchLoginRole(role) {
-                document.getElementById('login-overlay').setAttribute('data-login-portal', role);
-                document.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('active'));
-                document.getElementById('btn-role-' + role).classList.add('active');
+                const overlay = document.getElementById('login-overlay');
+                if (overlay) overlay.setAttribute('data-login-portal', role);
+                
+                document.querySelectorAll('.role-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.id === 'btn-role-' + role);
+                });
                 
                 const userLabel = document.getElementById('login-user-label');
                 const userPlaceholder = document.getElementById('login-user');
                 const classGroup = document.getElementById('login-class-group');
+                const submitBtnSpan = document.querySelector('#login-submit-button span');
                 
                 if (role === 'school') {
-                    userLabel.innerText = '账号 / 姓名';
-                    userPlaceholder.placeholder = '管理员账号 / 教师姓名';
-                    classGroup.style.display = 'none';
+                    if (userLabel) userLabel.textContent = '账号 / 姓名';
+                    if (userPlaceholder) userPlaceholder.placeholder = '管理员账号 / 教师姓名';
+                    if (classGroup) classGroup.style.display = 'none';
+                    if (submitBtnSpan) submitBtnSpan.textContent = '进入学校工作台';
                 } else {
-                    userLabel.innerText = '学生姓名';
-                    userPlaceholder.placeholder = '请输入学生姓名';
-                    classGroup.style.display = 'block';
+                    if (userLabel) userLabel.textContent = '学生姓名';
+                    if (userPlaceholder) userPlaceholder.placeholder = '请输入学生姓名';
+                    if (classGroup) classGroup.style.display = 'block';
+                    if (submitBtnSpan) submitBtnSpan.textContent = '进入家长成长入口';
                 }
             }
+
+            function togglePasswordVisibility() {
+                const passInput = document.getElementById('login-pass');
+                const toggleIcon = document.getElementById('toggle-password');
+                if (passInput.type === 'password') {
+                    passInput.type = 'text';
+                    toggleIcon.classList.replace('ti-eye', 'ti-eye-off');
+                } else {
+                    passInput.type = 'password';
+                    toggleIcon.classList.replace('ti-eye-off', 'ti-eye');
+                }
+            }
+
+            // GSAP Animations
+            document.addEventListener('DOMContentLoaded', () => {
+                if (window.gsap) {
+                    const tl = gsap.timeline();
+                    tl.from('.modern-login-left', { duration: 1, x: -50, opacity: 0, ease: 'power3.out' })
+                      .from('.brand-showcase > *', { duration: 0.8, y: 30, opacity: 0, stagger: 0.2, ease: 'power3.out' }, '-=0.5')
+                      .from('.login-form-card', { duration: 1, scale: 0.95, opacity: 0, ease: 'power3.out' }, '-=0.8')
+                      .from('.login-header, .role-toggle, .form-group, .form-options, .submit-btn, .login-footer', { 
+                          duration: 0.6, y: 20, opacity: 0, stagger: 0.1, ease: 'power3.out' 
+                      }, '-=0.6');
+
+                    // Floating orbs animation
+                    gsap.to('.orb-1', { duration: 15, x: '20vw', y: '10vh', repeat: -1, yoyo: true, ease: 'sine.inOut' });
+                    gsap.to('.orb-2', { duration: 20, x: '-20vw', y: '-10vh', repeat: -1, yoyo: true, ease: 'sine.inOut' });
+                }
+            });
         </script>
     </div>
 
