@@ -864,63 +864,75 @@ async function handleCloudRestProxy(request, env, url) {
 
 export default {
   async fetch(request, env) {
-    const url = new URL(request.url);
-
-    if (request.method === 'OPTIONS' && (
-      url.pathname === '/api/edu-gateway'
-      || url.pathname === SYSTEM_DATA_API_PATH
-      || url.pathname.startsWith('/sb/')
-      || url.pathname.startsWith('/api/ai/')
-    )) {
-      return new Response(null, {
-        status: 204,
-        headers: buildCorsHeaders(request)
-      });
-    }
-
-    if (url.pathname === '/api/health') {
-      return new Response(JSON.stringify({
-        ok: true,
-        cloudSystemDataBackend: hasSystemDataStorage(env) ? 'd1' : 'unavailable',
-        cloudSystemDataReady: hasSystemDataStorage(env),
-        cloudSystemDataMode: getSystemDataMode(env),
-        gatewayDataBackend: hasGatewayDataStorage(env) ? 'd1' : 'unavailable',
-        gatewayDataReady: hasGatewayDataStorage(env),
-        gatewayAuthFallback: 'legacy-login-only'
-      }), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-          'Cache-Control': 'no-store'
-        }
-      });
-    }
-
-    if (url.pathname === '/api/edu-gateway') {
-      return handleGatewayProxy(request, env, url);
-    }
-
-    if (url.pathname === SYSTEM_DATA_API_PATH) {
-      return handleSystemDataProxy(request, env, url);
-    }
-
-    if (url.pathname === '/api/ai/chat') {
-      return handleAIChatProxy(request, env);
-    }
-
-    if (url.pathname === '/api/ai/diagnose') {
-      return handleAIDiagnoseProxy(request, env);
-    }
-
-    if (url.pathname.startsWith('/sb/')) {
-      return handleCloudRestProxy(request, env, url);
-    }
-
     try {
-      const response = await env.ASSETS.fetch(request);
-      return protectHtmlResponse(request, response);
+      const url = new URL(request.url);
+
+      if (request.method === 'OPTIONS' && (
+        url.pathname === '/api/edu-gateway'
+        || url.pathname === SYSTEM_DATA_API_PATH
+        || url.pathname.startsWith('/sb/')
+        || url.pathname.startsWith('/api/ai/')
+      )) {
+        return new Response(null, {
+          status: 204,
+          headers: buildCorsHeaders(request)
+        });
+      }
+
+      if (url.pathname === '/api/health') {
+        return new Response(JSON.stringify({
+          ok: true,
+          cloudSystemDataBackend: hasSystemDataStorage(env) ? 'd1' : 'unavailable',
+          cloudSystemDataReady: hasSystemDataStorage(env),
+          cloudSystemDataMode: getSystemDataMode(env),
+          gatewayDataBackend: hasGatewayDataStorage(env) ? 'd1' : 'unavailable',
+          gatewayDataReady: hasGatewayDataStorage(env),
+          gatewayAuthFallback: 'legacy-login-only'
+        }), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Cache-Control': 'no-store'
+          }
+        });
+      }
+
+      if (url.pathname === '/api/edu-gateway' || url.pathname === '/api/edu_gateway') {
+        return await handleGatewayProxy(request, env, url);
+      }
+
+      if (url.pathname === SYSTEM_DATA_API_PATH) {
+        return await handleSystemDataProxy(request, env, url);
+      }
+
+      if (url.pathname === '/api/ai/chat') {
+        return await handleAIChatProxy(request, env);
+      }
+
+      if (url.pathname === '/api/ai/diagnose') {
+        return await handleAIDiagnoseProxy(request, env);
+      }
+
+      if (url.pathname.startsWith('/sb/')) {
+        return await handleCloudRestProxy(request, env, url);
+      }
+
+      try {
+        const response = await env.ASSETS.fetch(request);
+        return protectHtmlResponse(request, response);
+      } catch (error) {
+        return new Response('Not Found', { status: 404 });
+      }
     } catch (error) {
-      return new Response('Not Found', { status: 404 });
+      return new Response(JSON.stringify({
+        ok: false,
+        error: 'WORKER_CRASHED',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : ''
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json; charset=utf-8' }
+      });
     }
   }
 };

@@ -1548,7 +1548,7 @@ async function routeGatewayAction(request, env, body) {
 }
 
 export async function handleGatewayRequest(request, env) {
-  const body = await request.json().catch(() => null);
+  const body = await request.clone().json().catch(() => null);
   if (!body) return badRequest(request, 'Invalid JSON body');
   return routeGatewayAction(request, env, body);
 }
