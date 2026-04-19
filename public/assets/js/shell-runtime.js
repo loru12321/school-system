@@ -101,13 +101,13 @@
     };
 
     const ROLE_LABELS = {
-        admin: '管理员',
-        director: '教务主任',
-        grade_director: '级部主任',
-        class_teacher: '班主任',
-        teacher: '任课教师',
-        parent: '家长',
-        guest: '访客'
+        admin: 'Admin',
+        director: 'Director',
+        grade_director: 'Grade Director',
+        class_teacher: 'Homeroom',
+        teacher: 'Teacher',
+        parent: 'Parent',
+        guest: 'Guest'
     };
 
     let currentCategory = 'data';
@@ -645,7 +645,7 @@
             modeChip.setAttribute('data-shell-tooltip', `当前模式：${modeChip.textContent}`);
         }
 
-        const roleText = `角色：${resolveRoleLabel()}`;
+        const roleText = resolveRoleLabel();
         const drawerCategory = document.getElementById('workspace-drawer-category');
         if (drawerCategory) drawerCategory.textContent = category.title;
 
