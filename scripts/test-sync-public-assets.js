@@ -6,7 +6,7 @@ const { pathToFileURL } = require('url');
 
 async function main() {
   const projectRoot = path.resolve(__dirname, '..');
-  const moduleUrl = pathToFileURL(path.join(projectRoot, 'sync-public-assets.mjs')).href;
+  const moduleUrl = pathToFileURL(path.join(projectRoot, 'scripts', 'build', 'sync-public-assets.mjs')).href;
   const { collectReferencedJsAssets, collectLazyLoadedJsAssets, syncReferencedAssets } = await import(moduleUrl);
 
   const sampleHtml = [

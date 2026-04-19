@@ -12,8 +12,7 @@ const API_CACHE = `${CACHE_VERSION}-api`;
 const APP_SHELL_ASSETS = [
     './',
     './index.html',
-    './favicon.ico',
-    './history-grade.js'
+    './favicon.ico'
 ];
 
 self.addEventListener('install', event => {

@@ -4,7 +4,7 @@ const { pathToFileURL } = require('url');
 
 async function main() {
     const projectRoot = path.resolve(__dirname, '..');
-    const moduleUrl = pathToFileURL(path.join(projectRoot, 'optimize-dist-html.mjs')).href;
+    const moduleUrl = pathToFileURL(path.join(projectRoot, 'scripts', 'build', 'optimize-dist-html.mjs')).href;
     const { optimizeDistHtml } = await import(moduleUrl);
 
     const input = [

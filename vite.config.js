@@ -32,6 +32,18 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    open: true
+    open: true,
+    proxy: {
+      '/api': {
+        target: 'https://schoolsystem.com.cn',
+        changeOrigin: true,
+        secure: true
+      },
+      '/sb': {
+        target: 'https://schoolsystem.com.cn',
+        changeOrigin: true,
+        secure: true
+      }
+    }
   }
 });

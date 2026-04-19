@@ -192,6 +192,32 @@
         const filterCurrent = doc ? doc.getElementById('cloud-filter-current')?.checked !== false : true;
         const filterSnapshotsOnly = doc ? doc.getElementById('cloud-filter-snapshots')?.checked !== false : true;
 
+        // 检测演示模式 (Demo Mode)
+        const isDemoMode = (sessionStorage.getItem('EDGE_GATEWAY_TOKEN_V1') === 'DEMO_TOKEN') || 
+                          (localStorage.getItem('DEV_MODE') === 'true');
+
+        if (isDemoMode) {
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align:center; padding:40px; color:#64748b;">
+                            <div style="font-size:24px; margin-bottom:12px;">🚧 演示模式限制</div>
+                            <div style="font-size:14px; line-height:1.6;">
+                                当前处于离线演示模式或本地开发环境，无法访问生产环境云端数据库。<br>
+                                <span style="opacity:0.8;">请恢复网络连接并使用真实账号登录以访问云端存档。</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+            if (summaryEl) {
+                summaryEl.style.display = 'block';
+                summaryEl.innerHTML = '⚠️ 演示模式：云端同步功能已禁用';
+                summaryEl.style.color = '#e11d48';
+            }
+            return;
+        }
+
         if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">⏳ 正在读取云端数据库...</td></tr>';
         if (summaryEl) {
             summaryEl.style.display = 'block';

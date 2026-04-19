@@ -273,14 +273,18 @@
         <div class="modern-login-container">
             <div class="login-glass-card">
                 <div class="login-card-header">
+                    <div id="login-portal-badge" class="login-portal-badge">学校工作台</div>
                     <div class="brand-logo-mark">SE</div>
                     <h2>SmartEdu Analytics</h2>
-                    <p id="login-portal-copy">智慧教务 · 新一代校园数据中枢</p>
+                    <p id="login-portal-copy" class="login-subtitle">智慧教务 · 新一代校园数据中枢</p>
                 </div>
 
-                <div class="role-toggle">
-                    <button type="button" class="role-btn active" onclick="switchLoginRole('school')" id="btn-role-school">学校端</button>
-                    <button type="button" class="role-btn" onclick="switchLoginRole('parent')" id="btn-role-parent">家长端</button>
+                <div class="role-selector-wrapper">
+                    <div class="role-selector-pill">
+                        <button type="button" class="role-pill-btn active" onclick="switchLoginRole('school')" id="btn-role-school">学校端</button>
+                        <button type="button" class="role-pill-btn" onclick="switchLoginRole('parent')" id="btn-role-parent">家长端</button>
+                        <div class="role-pill-slider"></div>
+                    </div>
                 </div>
 
                 <div id="login-form" class="modern-form">
@@ -288,15 +292,16 @@
                         <label id="login-user-label" for="login-user">账号 / 姓名</label>
                         <div class="input-wrapper">
                             <i class="ti ti-user"></i>
-                            <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                            <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" autocomplete="username">
                         </div>
+                        <div id="login-user-helper" class="login-inline-tip">支持管理员、教务、年级、班主任与教师账号登录。</div>
                     </div>
 
                     <div id="login-class-group" class="form-group" style="display: none;" aria-hidden="true">
-                        <label for="login-class">学生班级 <span id="login-class-label-note" style="color:var(--login-text-muted); font-size:12px; font-weight:normal;">(家长端必填)</span></label>
+                        <label for="login-class">学生班级 <span id="login-class-label-note" class="label-badge">(学校端无需填写)</span></label>
                         <div class="input-wrapper">
                             <i class="ti ti-users"></i>
-                            <input type="text" id="login-class" placeholder="请输入班级，如 701" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                            <input type="text" id="login-class" placeholder="请输入班级，如 701">
                         </div>
                     </div>
 
@@ -304,21 +309,25 @@
                         <label for="login-pass">密码</label>
                         <div class="input-wrapper">
                             <i class="ti ti-lock"></i>
-                            <input type="password" id="login-pass" placeholder="输入密码" onkeydown="if(event.key==='Enter') window.Auth?.login()">
-                            <i class="ti ti-eye" id="toggle-password" style="position: absolute; right: 16px; left: auto; cursor: pointer; color: #94a3b8;" onclick="togglePasswordVisibility()"></i>
+                            <input type="password" id="login-pass" placeholder="输入密码" autocomplete="current-password">
+                            <button type="button" class="password-toggle" onclick="togglePasswordVisibility()" aria-label="显示/隐藏密码">
+                                <i class="ti ti-eye" id="toggle-password-icon"></i>
+                            </button>
                         </div>
                     </div>
 
-                    <p id="login-portal-helper" class="login-helper-text">当前为学校端，验证通过后直达教学分析与数据维护。</p>
+                    <div class="form-actions">
+                        <button id="login-submit-button" class="submit-btn" onclick="window.Auth?.login()">
+                            <span>进入工作台</span>
+                            <i class="ti ti-arrow-right"></i>
+                        </button>
+                    </div>
 
-                    <button id="login-submit-button" class="submit-btn" onclick="window.Auth?.login()">
-                        <span>进入系统</span>
-                        <i class="ti ti-arrow-right"></i>
-                    </button>
+                    <div id="login-portal-helper" class="login-status-hint">当前为学校端，验证通过后直达教学分析与数据维护。</div>
                 </div>
 
                 <div class="login-card-footer">
-                    <button type="button" class="download-link" onclick="window.Auth?.openDownloadHubModal('android')">
+                    <button type="button" class="footer-link-btn" onclick="window.Auth?.openDownloadHubModal('android')">
                         <i class="ti ti-device-mobile"></i> 客户端下载中心
                     </button>
                 </div>
@@ -330,13 +339,19 @@
         <div id="login-download-hub-backdrop" style="display:none;" aria-hidden="true"></div>
 
         <script>
+            function syncLoginRoleButtons(role) {
+                document.querySelectorAll('.role-pill-btn, .role-btn').forEach((btn) => {
+                    const isActive = btn.id === 'btn-role-' + role;
+                    btn.classList.toggle('active', isActive);
+                    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                });
+            }
+
             function switchLoginRole(role) {
                 const overlay = document.getElementById('login-overlay');
                 if (overlay) overlay.setAttribute('data-login-portal', role);
-                
-                document.querySelectorAll('.role-btn').forEach(btn => {
-                    btn.classList.toggle('active', btn.id === 'btn-role-' + role);
-                });
+
+                syncLoginRoleButtons(role);
                 
                 if (window.Auth && typeof window.Auth.syncLoginPortalUI === 'function') {
                     window.Auth.syncLoginPortalUI(role);
@@ -347,7 +362,8 @@
 
             function togglePasswordVisibility() {
                 const passInput = document.getElementById('login-pass');
-                const toggleIcon = document.getElementById('toggle-password');
+                const toggleIcon = document.getElementById('toggle-password-icon') || document.getElementById('toggle-password');
+                if (!passInput || !toggleIcon) return;
                 if (passInput.type === 'password') {
                     passInput.type = 'text';
                     toggleIcon.classList.replace('ti-eye', 'ti-eye-off');
@@ -356,6 +372,23 @@
                     toggleIcon.classList.replace('ti-eye-off', 'ti-eye');
                 }
             }
+
+            function bindLoginEnterSubmit() {
+                ['login-user', 'login-pass', 'login-class'].forEach((id) => {
+                    const input = document.getElementById(id);
+                    if (!input || input.dataset.enterBound === 'true') return;
+                    input.dataset.enterBound = 'true';
+                    input.addEventListener('keydown', (event) => {
+                        if (event.key === 'Enter') {
+                            event.preventDefault();
+                            window.Auth?.login();
+                        }
+                    });
+                });
+            }
+
+            bindLoginEnterSubmit();
+            syncLoginRoleButtons(document.getElementById('login-overlay')?.getAttribute('data-login-portal') || 'school');
         </script>
     </div>
 

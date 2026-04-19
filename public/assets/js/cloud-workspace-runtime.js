@@ -72,6 +72,22 @@
         return next;
     }
 
+    function isRecoverableCloudRuntimeError(error) {
+        const text = `${error?.message || ''} ${error?.details || ''} ${error || ''}`.toLowerCase();
+        return text.includes('aborterror')
+            || text.includes('signal is aborted')
+            || text.includes('request was aborted')
+            || text.includes('timeout');
+    }
+
+    function logCloudRuntimeIssue(label, error) {
+        if (isRecoverableCloudRuntimeError(error)) {
+            console.warn(label, error);
+            return;
+        }
+        console.error(label, error);
+    }
+
     const WORKSPACE_SYNC_META_PREFIX = 'CLOUD_WORKSPACE_META_V2::';
     const WORKSPACE_SYNC_QUEUE_KEY = 'CLOUD_WORKSPACE_SYNC_QUEUE_V2';
 
@@ -337,7 +353,7 @@
                 key = await resolveCloudSnapshotKey(key);
                 if (key) syncWorkspaceState({ currentProjectKey: key });
             } catch (e) {
-                console.error('Cloud load key lookup error:', e);
+                logCloudRuntimeIssue('Cloud load key lookup error:', e);
                 setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '加载失败');
                 return false;
             }
@@ -371,7 +387,7 @@
                 setCloudStatus('success', '已拉取');
                 return true;
             } catch (e) {
-                console.error('Cloud load error:', e);
+                logCloudRuntimeIssue('Cloud load error:', e);
                 safeToast('加载失败', 'error');
                 setCloudStatus('error', e?.message ? String(e.message).slice(0, 24) : '拉取失败');
                 return false;
@@ -479,7 +495,7 @@
                     setCloudStatus('success', loadedCount > 0 ? `更新${loadedCount}期` : '已最新');
                     return { success: true, count: candidates.length, updated: loadedCount };
                 } catch (e) {
-                    console.error('[CloudExams] failed:', e);
+                    logCloudRuntimeIssue('[CloudExams] failed:', e);
                     setCloudStatus('error', '考试拉取失败');
                     return { success: false, message: e.message || String(e) };
                 }
@@ -762,7 +778,7 @@
             key = await resolveCloudSnapshotKey(key);
             if (key) syncWorkspaceState({ currentProjectKey: key });
         } catch (error) {
-            console.error('Cloud load key lookup error:', error);
+            logCloudRuntimeIssue('Cloud load key lookup error:', error);
             if (appliedCached) {
                 setCloudStatus('success', '缓存可用');
                 return true;
@@ -845,7 +861,7 @@
             setCloudStatus('success', '已拉取');
             return true;
         } catch (error) {
-            console.error('Cloud load error:', error);
+            logCloudRuntimeIssue('Cloud load error:', error);
             if (appliedCached) {
                 setCloudStatus('success', '缓存可用');
                 return true;

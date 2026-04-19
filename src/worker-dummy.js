@@ -54,6 +54,18 @@ function getLegacyGatewayApiKey(env, request) {
   );
 }
 
+function getSupabaseRestOrigin(env) {
+  return getLegacyGatewayOrigin(env);
+}
+
+function getSupabaseRestApiKey(env, request) {
+  return getLegacyGatewayApiKey(env, request);
+}
+
+function hasSupabaseRestOrigin(env) {
+  return !!getSupabaseRestOrigin(env);
+}
+
 function getSystemDataDb(env) {
   return env.CLOUD_SYSTEM_DATA_DB || null;
 }
@@ -72,7 +84,9 @@ function hasGatewayDataStorage(env) {
 
 function getSystemDataMode(env) {
   const mode = normalizeText(env.CLOUD_SYSTEM_DATA_MODE).toLowerCase();
-  return mode === 'primary' ? 'primary' : 'hybrid';
+  if (mode === 'primary') return 'primary';
+  if (mode === 'supabase') return 'supabase';
+  return 'hybrid';
 }
 
 function normalizeText(value) {
@@ -820,7 +834,160 @@ async function handleSystemDataDelete(request, env, url) {
   return jsonResponse(200, [], request);
 }
 
+function shouldProxySystemDataToSupabase(env) {
+  return getSystemDataMode(env) === 'supabase' || !hasSystemDataStorage(env);
+}
+
+function shouldProxyManagedRestToSupabase(env) {
+  return getSystemDataMode(env) === 'supabase' || !hasGatewayDataStorage(env);
+}
+
+function buildSupabaseRestTargetUrl(env, url, explicitPath = '') {
+  const origin = getSupabaseRestOrigin(env);
+  if (!origin) return '';
+  const pathname = explicitPath || String(url.pathname || '').replace(/^\/sb/, '');
+  if (pathname.includes('?')) return `${origin}${pathname}`;
+  return `${origin}${pathname}${url.search || ''}`;
+}
+
+async function readNormalizedSystemDataProxyBody(request) {
+  let bodyBuffer = await readRequestBody(request);
+  if (bodyBuffer) {
+    try {
+      const text = new TextDecoder().decode(bodyBuffer);
+      const payload = JSON.parse(text);
+      const normalizeRow = (row) => {
+        if (!row || typeof row !== 'object' || Array.isArray(row)) return row;
+        const next = { ...row };
+        if (next.created_at === '') delete next.created_at;
+        if (next.updated_at === '') delete next.updated_at;
+        return next;
+      };
+      const normalizedPayload = Array.isArray(payload)
+        ? payload.map((row) => normalizeRow(row))
+        : normalizeRow(payload);
+      bodyBuffer = new TextEncoder().encode(JSON.stringify(normalizedPayload));
+    } catch (_) {
+      // Keep the original payload if it is not JSON or cannot be normalized safely.
+    }
+  }
+  return bodyBuffer;
+}
+
+async function proxySupabaseRestRequest(request, env, url, explicitPath = '', options = {}) {
+  const targetUrl = buildSupabaseRestTargetUrl(env, url, explicitPath);
+  const apikey = getSupabaseRestApiKey(env, request);
+  if (!targetUrl || !apikey) {
+    return jsonResponse(503, {
+      ok: false,
+      error: 'SUPABASE_REST_PROXY_UNAVAILABLE'
+    }, request);
+  }
+
+  const bodyBuffer = options.bodyBuffer !== undefined
+    ? options.bodyBuffer
+    : await readRequestBody(request);
+  return proxyRequest(
+    url,
+    request,
+    targetUrl,
+    bodyBuffer,
+    Object.assign({
+      apikey,
+      Authorization: `Bearer ${apikey}`
+    }, options.extraHeaders || {})
+  );
+}
+
+async function proxySystemDataReadToSupabase(request, env, url) {
+  const targetUrl = new URL(buildSupabaseRestTargetUrl(env, url, '/rest/v1/system_data'));
+  const apikey = getSupabaseRestApiKey(env, request);
+  if (!apikey) {
+    return jsonResponse(503, { ok: false, error: 'SUPABASE_REST_PROXY_UNAVAILABLE' }, request);
+  }
+
+  const selectSet = parseSystemDataSelect(url.searchParams);
+  const requestedContent = selectSet.has('content');
+  const requestedSizeBytes = selectSet.has('size_bytes');
+  const upstreamSelect = new Set(selectSet);
+  upstreamSelect.delete('size_bytes');
+  if (requestedSizeBytes) upstreamSelect.add('content');
+  if (!upstreamSelect.size) upstreamSelect.add('key');
+  targetUrl.searchParams.set('select', Array.from(upstreamSelect).join(','));
+
+  const response = await fetchWithTimeout(targetUrl.toString(), {
+    method: 'GET',
+    headers: {
+      apikey,
+      Authorization: `Bearer ${apikey}`,
+      Accept: 'application/json'
+    }
+  }, PROXY_TIMEOUT_MS);
+
+  const text = await response.text();
+  if (!response.ok) {
+    return new Response(text, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: buildForwardHeaders(response.headers, request)
+    });
+  }
+
+  let parsed = [];
+  try {
+    parsed = text ? JSON.parse(text) : [];
+  } catch {
+    return new Response(text, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: buildForwardHeaders(response.headers, request)
+    });
+  }
+
+  const rows = Array.isArray(parsed) ? parsed : (parsed ? [parsed] : []);
+  const payloadRows = rows.map((row) => {
+    const next = {};
+    if (selectSet.has('key')) next.key = row.key;
+    if (selectSet.has('created_at')) next.created_at = row.created_at;
+    if (selectSet.has('updated_at')) next.updated_at = row.updated_at;
+    if (requestedContent) next.content = typeof row.content === 'string' ? row.content : '';
+    if (requestedSizeBytes) {
+      next.size_bytes = new TextEncoder().encode(typeof row.content === 'string' ? row.content : '').length;
+    }
+    return next;
+  });
+
+  const body = wantsSingleSystemDataObject(request) ? (payloadRows[0] || null) : payloadRows;
+  return jsonResponse(200, body, request);
+}
+
+async function proxySystemDataWriteToSupabase(request, env, url) {
+  const targetUrl = new URL(buildSupabaseRestTargetUrl(env, url, '/rest/v1/system_data'));
+  targetUrl.searchParams.set('on_conflict', 'key');
+  const bodyBuffer = await readNormalizedSystemDataProxyBody(request);
+  return proxySupabaseRestRequest(request, env, url, targetUrl.pathname + targetUrl.search, {
+    bodyBuffer,
+    extraHeaders: {
+      Prefer: 'resolution=merge-duplicates,return=representation'
+    }
+  });
+}
+
 async function handleSystemDataProxy(request, env, url) {
+  if (shouldProxySystemDataToSupabase(env)) {
+    const method = String(request.method || 'GET').toUpperCase();
+    if (method === 'GET' || method === 'HEAD') {
+      return proxySystemDataReadToSupabase(request, env, url);
+    }
+    if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
+      return proxySystemDataWriteToSupabase(request, env, url);
+    }
+    if (method === 'DELETE') {
+      return proxySupabaseRestRequest(request, env, url, '/rest/v1/system_data');
+    }
+    return jsonResponse(405, { ok: false, error: 'SYSTEM_DATA_METHOD_NOT_ALLOWED' }, request);
+  }
+
   if (!hasSystemDataStorage(env)) {
     return jsonResponse(503, { ok: false, error: 'SYSTEM_DATA_STORAGE_UNAVAILABLE' }, request);
   }
@@ -843,6 +1010,14 @@ async function handleSystemDataProxy(request, env, url) {
 }
 
 async function handleCloudRestProxy(request, env, url) {
+  if (url.pathname === SYSTEM_DATA_PATH) {
+    return handleSystemDataProxy(request, env, url);
+  }
+
+  if (shouldProxyManagedRestToSupabase(env)) {
+    return proxySupabaseRestRequest(request, env, url);
+  }
+
   try {
     const managed = await handleManagedRestRequest(request, env, url);
     if (managed) return managed;
@@ -852,9 +1027,6 @@ async function handleCloudRestProxy(request, env, url) {
       error: 'MANAGED_REST_RUNTIME_FAILED',
       detail: error instanceof Error ? error.message : String(error)
     }, request);
-  }
-  if (url.pathname === SYSTEM_DATA_PATH) {
-    return handleSystemDataProxy(request, env, url);
   }
   return jsonResponse(404, {
     ok: false,
@@ -880,14 +1052,20 @@ export default {
       }
 
       if (url.pathname === '/api/health') {
+        const cloudSystemDataBackend = shouldProxySystemDataToSupabase(env)
+          ? 'supabase'
+          : (hasSystemDataStorage(env) ? 'd1' : 'unavailable');
+        const gatewayDataBackend = shouldProxyManagedRestToSupabase(env)
+          ? 'supabase'
+          : (hasGatewayDataStorage(env) ? 'd1' : 'unavailable');
         return new Response(JSON.stringify({
           ok: true,
-          cloudSystemDataBackend: hasSystemDataStorage(env) ? 'd1' : 'unavailable',
-          cloudSystemDataReady: hasSystemDataStorage(env),
+          cloudSystemDataBackend,
+          cloudSystemDataReady: cloudSystemDataBackend === 'supabase' ? hasSupabaseRestOrigin(env) : hasSystemDataStorage(env),
           cloudSystemDataMode: getSystemDataMode(env),
-          gatewayDataBackend: hasGatewayDataStorage(env) ? 'd1' : 'unavailable',
-          gatewayDataReady: hasGatewayDataStorage(env),
-          gatewayAuthFallback: 'legacy-login-only'
+          gatewayDataBackend,
+          gatewayDataReady: gatewayDataBackend === 'supabase' ? hasSupabaseRestOrigin(env) : hasGatewayDataStorage(env),
+          gatewayAuthFallback: gatewayDataBackend === 'supabase' ? 'supabase-edge' : 'legacy-login-only'
         }), {
           status: 200,
           headers: {

@@ -5,7 +5,7 @@ const { pathToFileURL } = require('url');
 
 async function main() {
     const projectRoot = path.resolve(__dirname, '..');
-    const moduleUrl = pathToFileURL(path.join(projectRoot, 'inline-scripts.mjs')).href;
+    const moduleUrl = pathToFileURL(path.join(projectRoot, 'scripts', 'build', 'inline-scripts.mjs')).href;
     const { inlineLocalScripts, inlineLocalStyles, buildLtHtml } = await import(moduleUrl);
 
     const sourceHtml = [

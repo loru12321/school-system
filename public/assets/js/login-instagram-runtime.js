@@ -25,7 +25,7 @@
                             <span class="login-stage-title-line">统一登录</span>
                             <span class="login-stage-title-line login-stage-title-line--accent">把学校端和家长端放在一张首页里</span>
                         </h1>
-                        <p id="login-stage-copy">借鉴 Instagram 的左右双栏逻辑，把品牌、入口和表单层级重新理顺。</p>
+                        <p id="login-stage-copy">智慧教务管理系统为学校和家庭提供统一的教学管理与评价入口。</p>
                         <div class="login-stage-actions">
                             <button type="button" class="login-stage-primary-action" onclick="window.Auth?.openLoginPortalModal('school')">
                                 <i class="ti ti-building-community"></i> 学校端登录
@@ -65,9 +65,9 @@
                             </article>
                         </div>
                         <div class="login-stage-spotlight-copy">
-                            <span class="login-stage-featured-label">Instagram-inspired Entry</span>
-                            <strong id="login-stage-featured-title" class="login-stage-featured-title">登录、下载与系统说明各自独立</strong>
-                            <p id="login-stage-featured-copy" class="login-stage-featured-copy">首屏只负责建立品牌感和主入口，不再把所有解释文字都堆到同一块大面板里。</p>
+                            <span class="login-stage-featured-label">Unified Command Portal</span>
+                            <strong id="login-stage-featured-title" class="login-stage-featured-title">多维数据看板与自动化评估</strong>
+                            <p id="login-stage-featured-copy" class="login-stage-featured-copy">通过高效的底层逻辑，为教育决策提供精准的数据支撑与可视化洞察。</p>
                         </div>
                     </div>
                 </section>
@@ -120,9 +120,9 @@
                         </div>
 
                         <div class="login-auth-footer">
-                            <span>Web / Android / Desktop</span>
-                            <span>统一账号逻辑</span>
-                            <span>Instagram 风格双栏入口</span>
+                            <span>Analysis</span>
+                            <span>Data</span>
+                            <span>Workspace</span>
                         </div>
                     </div>
                 </section>
@@ -199,6 +199,26 @@
         `;
     }
 
+    function animateLoginShell() {
+        if (!window.gsap) return;
+        
+        const hero = document.getElementById('login-hero');
+        if (hero) {
+            window.gsap.fromTo(hero.children, 
+                { autoAlpha: 0, y: 20 },
+                { autoAlpha: 1, y: 0, duration: 0.8, stagger: 0.1, ease: 'power3.out' }
+            );
+        }
+
+        const cards = document.querySelectorAll('.login-portal-card');
+        if (cards.length) {
+            window.gsap.fromTo(cards,
+                { autoAlpha: 0, scale: 0.95, y: 15 },
+                { autoAlpha: 1, scale: 1, y: 0, duration: 0.6, stagger: 0.1, ease: 'back.out(1.7)', delay: 0.4 }
+            );
+        }
+    }
+
     function applyInstagramCopy(auth, portal) {
         const nextPortal = portal === 'parent' ? 'parent' : 'school';
         const config = nextPortal === 'parent'
@@ -214,7 +234,7 @@
                 submit: '进入家长端',
                 stageKicker: 'Family Growth Portal',
                 stageTitle: '<span class="login-stage-title-line">查看成长报告</span><span class="login-stage-title-line login-stage-title-line--accent">更轻、更清楚、更直接</span>',
-                stageCopy: '像 Instagram 一样把入口和动作分清楚，让家长端登录页更聚焦，也更适合移动端。',
+                stageCopy: '为教育管理者与家长提供高效、直观的统一入口体验。',
                 stageMeta: [
                     { icon: 'ti ti-heart-handshake', text: '成长报告 / 成绩查询 / 家校提醒' },
                     { icon: 'ti ti-devices', text: '手机、安卓与桌面端共用同一套入口' },
@@ -242,7 +262,7 @@
                 submit: '进入学校工作台',
                 stageKicker: 'School Command Center',
                 stageTitle: '<span class="login-stage-title-line">统一登录</span><span class="login-stage-title-line login-stage-title-line--accent">把学校端和家长端放在一张首页里</span>',
-                stageCopy: '借鉴 Instagram 的左右双栏逻辑，把品牌、入口和表单层级重新理顺。',
+                stageCopy: '学校端与家长端深度集成，为多角色协作提供流畅的数字化基础。',
                 stageMeta: [
                     { icon: 'ti ti-layout-dashboard', text: '教学分析 / 数据维护 / 学校工作台' },
                     { icon: 'ti ti-devices', text: 'Web、Android 与 Desktop 共用入口逻辑' },
@@ -345,9 +365,15 @@
         if (auth && typeof auth.renderSystemIntroModal === 'function') {
             auth.renderSystemIntroModal(nextPortal);
         }
+
+        animateLoginShell();
     }
 
     function patchAuth() {
+        if (!window.Auth || typeof window.Auth.getLoginShellHtml !== 'function') return false;
+        window.Auth.getLoginShellHtml = buildLoginShellHtml;
+        window.Auth.applyLoginShellCopy = applyInstagramCopy;
+        window.Auth.__bootLoginShell = 'instagram';
         return true;
     }
 

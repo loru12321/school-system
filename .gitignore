@@ -4,6 +4,8 @@ dist/
 .idea/
 .playwright-cli/
 output/
+.wrangler/
+scratch/
 
 supabase/.env
 supabase/.env.local
@@ -13,8 +15,10 @@ supabase/.temp/
 
 .tmp-*/
 .tmp-*.zip
+.tmp-lt-check.js
 tmp_*.png
 tmp-*.png
+build_error*.log
 diff.txt
 custom.html
 worker.html

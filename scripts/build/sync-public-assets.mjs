@@ -5,10 +5,11 @@ import { transformSync } from 'esbuild';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const DEFAULT_PROJECT_ROOT = path.resolve(__dirname, '../../');
 
-const sourceDir = path.join(__dirname, 'public', 'assets', 'js');
-const targetDir = path.join(__dirname, 'dist', 'assets', 'js');
-const sourceIndexPath = path.join(__dirname, 'src', 'index.html');
+const sourceDir = path.join(DEFAULT_PROJECT_ROOT, 'public', 'assets', 'js');
+const targetDir = path.join(DEFAULT_PROJECT_ROOT, 'dist', 'assets', 'js');
+const sourceIndexPath = path.join(DEFAULT_PROJECT_ROOT, 'src', 'index.html');
 const rootPublicFiles = ['favicon.ico'];
 
 export function collectReferencedJsAssets(html) {
@@ -35,7 +36,7 @@ export function syncReferencedAssets({
   sourceJsDir = sourceDir,
   targetJsDir = targetDir,
   indexHtmlPath = sourceIndexPath,
-  projectRoot = __dirname
+  projectRoot = DEFAULT_PROJECT_ROOT
 } = {}) {
   if (!fs.existsSync(sourceJsDir)) {
     throw new Error(`Source JS directory not found: ${sourceJsDir}`);

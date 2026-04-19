@@ -21,7 +21,7 @@
 | 层级 | 技术 |
 | --- | --- |
 | 前端 | Vite 7、原生 HTML/CSS/JavaScript、Alpine.js、Chart.js、XLSX、html2canvas |
-| 构建 | `vite-plugin-singlefile`、`sync-public-assets.mjs`、`inline-scripts.mjs` |
+| 构建 | `vite-plugin-singlefile`、`scripts/build/sync-public-assets.mjs`、`scripts/build/optimize-dist-html.mjs`、`scripts/build/inline-scripts.mjs` |
 | 云端 | Supabase Database、RLS、Edge Function `edu-gateway-v2`、同域 Worker 代理 `/api/edu-gateway` 与 `/sb/*`、`@supabase/supabase-js@2` |
 | 验收 | Node.js 烟测脚本、`scripts/smoke-all-modules.js`、`scripts/smoke-report-compare.js` |
 

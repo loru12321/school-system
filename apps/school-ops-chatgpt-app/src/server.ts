@@ -62,33 +62,13 @@ const STATIC_DOCS: StaticDoc[] = [
   },
   {
     id: "deploy-guide",
-    title: "Deployment guide",
-    repoPath: "DEPLOY.md",
-    url: `${GITHUB_BASE_URL}/DEPLOY.md`,
+    title: "Cloudflare auth cutover plan",
+    repoPath: "docs/cloudflare-auth-cutover.md",
+    url: `${GITHUB_BASE_URL}/docs/cloudflare-auth-cutover.md`,
     kind: "markdown",
-    keywords: ["deploy", "cloudflare", "worker", "pages", "domain", "production"],
-    description: "Deployment notes for GitHub, Cloudflare Pages, Workers, and domain binding.",
+    keywords: ["deploy", "cloudflare", "worker", "auth", "cutover", "production"],
+    description: "Cutover guidance for the Cloudflare-first auth path, fallback removal, and rollout order.",
     priority: 20
-  },
-  {
-    id: "system-architecture",
-    title: "System architecture",
-    repoPath: "SYSTEM_ARCHITECTURE.md",
-    url: `${GITHUB_BASE_URL}/SYSTEM_ARCHITECTURE.md`,
-    kind: "markdown",
-    keywords: ["architecture", "module", "analytics", "portal", "system"],
-    description: "High-level architecture, module layout, and capability map for the system.",
-    priority: 30
-  },
-  {
-    id: "version-markers",
-    title: "Version markers and milestones",
-    repoPath: "VERSION_MARKERS.md",
-    url: `${GITHUB_BASE_URL}/VERSION_MARKERS.md`,
-    kind: "markdown",
-    keywords: ["version", "milestone", "history", "release notes", "marker"],
-    description: "Version marker log and maintenance milestones.",
-    priority: 40
   },
   {
     id: "worker-proxy",

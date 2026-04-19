@@ -165,9 +165,18 @@ async function login(page, user, pass) {
             const overlayHidden = !overlay || getComputedStyle(overlay).display === 'none';
             const appVisible = !!app && getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden');
             const maskVisible = !!mask && getComputedStyle(mask).display !== 'none';
-            return appVisible || maskVisible || overlayHidden;
+            const authState = String(document.body?.dataset?.authState || '').trim();
+            const sessionUser = String(sessionStorage.getItem('CURRENT_USER') || '').trim();
+            return (
+                overlayHidden && (appVisible || maskVisible || authState === 'logged_in' || !!sessionUser)
+            ) || (
+                (authState === 'logged_in' || !!sessionUser)
+                && (appVisible || maskVisible)
+            );
         }, undefined, { timeout: 90000 });
     }, { attempts: 4 });
+
+    await waitForPageStability(page, 5000);
 
     await ensureCohortEntered(page);
 
@@ -183,13 +192,20 @@ async function login(page, user, pass) {
 async function ensureCohortEntered(page) {
     const readEntryState = () => page.evaluate(() => {
         const mask = document.getElementById('mode-mask');
+        const overlay = document.getElementById('login-overlay');
+        const app = document.getElementById('app');
         const input = document.getElementById('entry-cohort-year');
         const selector = document.getElementById('cohort-selector');
         const infer = typeof window.inferCohortIdFromValue === 'function'
             ? window.inferCohortIdFromValue
             : (() => '');
         return {
+            overlayHidden: !overlay || getComputedStyle(overlay).display === 'none',
+            appVisible: !!app && getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden'),
             maskVisible: !!mask && getComputedStyle(mask).display !== 'none',
+            authState: String(document.body?.dataset?.authState || '').trim(),
+            sessionUserPresent: !!String(sessionStorage.getItem('CURRENT_USER') || '').trim(),
+            bootPending: !!window.__BOOT_AUTH_PENDING_HANDOFF__,
             inputValue: String(input?.value || '').trim(),
             currentCohortId: String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim(),
             inferredCohortId: String(
@@ -209,20 +225,37 @@ async function ensureCohortEntered(page) {
 
     if (!state.maskVisible) return state;
 
+    if (!state.overlayHidden && (state.authState === 'logged_in' || state.sessionUserPresent || state.bootPending)) {
+        try {
+            await withNavigationRetry(page, () => page.waitForFunction(() => {
+                const overlay = document.getElementById('login-overlay');
+                return !overlay || getComputedStyle(overlay).display === 'none';
+            }, undefined, { timeout: 30000 }), { attempts: 2 });
+            await waitForPageStability(page, 5000);
+        } catch (_) {
+            // 登录接力可能还在收尾，超时后继续按当前状态判断。
+        }
+        state = await withNavigationRetry(page, readEntryState, { attempts: 4 });
+        if (!state.maskVisible) return state;
+    }
+
     try {
         await withNavigationRetry(page, () => page.waitForFunction(() => {
             const mask = document.getElementById('mode-mask');
             const examId = String(localStorage.getItem('CURRENT_EXAM_ID') || '').trim();
             const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+            const app = document.getElementById('app');
+            const appVisible = !!app && getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden');
             return (!mask || getComputedStyle(mask).display === 'none')
-                || (!!examId && rawDataLen > 0);
+                || (!!examId && rawDataLen > 0)
+                || (appVisible && !!examId && rawDataLen > 0);
         }, undefined, { timeout: 15000 }), { attempts: 1 });
     } catch (_) {
         // 云端恢复可能仍在进行，超时后再决定是否需要手动进入届别。
     }
 
     state = await withNavigationRetry(page, readEntryState, { attempts: 4 });
-    if (!state.maskVisible || (state.examId && state.rawDataLen > 0)) return state;
+    if (!state.maskVisible) return state;
 
     const candidate = String(
         process.env.SMOKE_COHORT_YEAR
@@ -265,11 +298,20 @@ async function ensureCohortEntered(page) {
         await page.waitForFunction(() => {
             const mask = document.getElementById('mode-mask');
             const app = document.getElementById('app');
-            return (!mask || getComputedStyle(mask).display === 'none')
-                && !!app
+            const overlay = document.getElementById('login-overlay');
+            const overlayHidden = !overlay || getComputedStyle(overlay).display === 'none';
+            const appVisible = !!app
                 && getComputedStyle(app).display !== 'none'
                 && !app.classList.contains('hidden');
-        }, undefined, { timeout: 20000 });
+            const cohortId = String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
+            const examId = String(localStorage.getItem('CURRENT_EXAM_ID') || '').trim();
+            const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+            const readyWorkspace = !!cohortId && !!examId && rawDataLen > 0;
+            return overlayHidden && (
+                ((!mask || getComputedStyle(mask).display === 'none') && appVisible)
+                || (appVisible && readyWorkspace)
+            );
+        }, undefined, { timeout: 40000 });
     }, { attempts: 4 });
 }
 

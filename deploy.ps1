@@ -9,31 +9,35 @@ $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
 $trackedUpdatePaths = @(
+    ".gitignore",
     "src",
     "public",
+    "apps",
+    "docs",
     "supabase",
     "scripts",
     "deploy.ps1",
+    "README.md",
     "package.json",
     "package-lock.json",
     "vite.config.js",
-    "sync-public-assets.mjs",
-    "inline-scripts.mjs",
     "lt.html",
     "dist"
 )
 
 $explicitStagePaths = @(
+    ".gitignore",
     "src",
     "public",
+    "apps",
+    "docs",
     "supabase",
     "scripts",
     "deploy.ps1",
+    "README.md",
     "package.json",
     "package-lock.json",
     "vite.config.js",
-    "sync-public-assets.mjs",
-    "inline-scripts.mjs",
     "lt.html"
 )
 

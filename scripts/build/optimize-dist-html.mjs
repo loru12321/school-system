@@ -5,7 +5,8 @@ import { transformSync } from 'esbuild';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const distIndexPath = path.join(__dirname, 'dist', 'index.html');
+const projectRoot = path.resolve(__dirname, '../../');
+const distIndexPath = path.join(projectRoot, 'dist', 'index.html');
 
 function normalizeScriptType(attrs) {
     const attrText = String(attrs || '');

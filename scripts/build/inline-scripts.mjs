@@ -4,9 +4,10 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const DEFAULT_PROJECT_ROOT = path.resolve(__dirname, '../../');
 
-const htmlPath = path.join(__dirname, 'dist', 'index.html');
-const outPath = path.join(__dirname, 'lt.html');
+const htmlPath = path.join(DEFAULT_PROJECT_ROOT, 'dist', 'index.html');
+const outPath = path.join(DEFAULT_PROJECT_ROOT, 'lt.html');
 
 // Keep original script semantics intact; only normalize newlines.
 function normalizeScript(content) {
@@ -61,7 +62,7 @@ function readLocalStyleContent(projectRoot, href) {
 }
 
 // Use regex to locate tags like <script defer src="./assets/js/cloud.js?v=1"></script>
-export function inlineLocalScripts(html, { projectRoot = __dirname } = {}) {
+export function inlineLocalScripts(html, { projectRoot = DEFAULT_PROJECT_ROOT } = {}) {
     const scriptRegex = /<script([^>]*)\bsrc="([^"]+)"([^>]*)><\/script>/gi;
 
     return String(html || '').replace(scriptRegex, (match, beforeSrc, src, afterSrc) => {
@@ -87,7 +88,7 @@ export function inlineLocalScripts(html, { projectRoot = __dirname } = {}) {
     });
 }
 
-export function inlineLocalStyles(html, { projectRoot = __dirname } = {}) {
+export function inlineLocalStyles(html, { projectRoot = DEFAULT_PROJECT_ROOT } = {}) {
     const styleLinkRegex = /<link([^>]*)\bhref="([^"]+\.css(?:\?[^"]*)?)"([^>]*)>/gi;
 
     return String(html || '').replace(styleLinkRegex, (match, beforeHref, href, afterHref) => {
@@ -120,7 +121,7 @@ function rewriteLtAssetPaths(html) {
     return String(html || '').replace(/(\.\/|\/)assets\/vendor\//g, './public/assets/vendor/');
 }
 
-export function buildLtHtml(html, { projectRoot = __dirname } = {}) {
+export function buildLtHtml(html, { projectRoot = DEFAULT_PROJECT_ROOT } = {}) {
     return rewriteLtAssetPaths(
         inlineLocalScripts(
             inlineLocalStyles(html, { projectRoot }),
@@ -136,7 +137,7 @@ function main() {
     }
 
     const html = fs.readFileSync(htmlPath, 'utf-8');
-    const output = buildLtHtml(html, { projectRoot: __dirname });
+    const output = buildLtHtml(html, { projectRoot: DEFAULT_PROJECT_ROOT });
     fs.writeFileSync(outPath, output, 'utf-8');
     console.log('Successfully generated lt.html with inlined local scripts.');
 }

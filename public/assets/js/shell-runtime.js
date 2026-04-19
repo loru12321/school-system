@@ -721,10 +721,9 @@
                     </span>
                     <span class="sidebar-menu-item__text">
                         <span class="sidebar-menu-item__title">${category.title}</span>
-                        <span class="sidebar-menu-item__meta">${visibleItems.length} 个模块 · ${category.eyebrow}</span>
+                        <span class="sidebar-menu-item__meta">${visibleItems.length} 个模块</span>
                     </span>
                 </div>
-                <span class="sidebar-menu-item__count">${visibleItems.length}</span>
             `;
 
             item.onclick = function (event) {
@@ -778,13 +777,11 @@
                 card.classList.add('active');
             }
 
-            const orderLabel = `${String(index + 1).padStart(2, '0')} · ${category.eyebrow}`;
             card.innerHTML = `
                 <span class="shell-story-card__icon">
                     <i class="ti ${item.icon}"></i>
                 </span>
                 <span class="shell-story-card__body">
-                    <span class="shell-story-card__meta">${orderLabel}</span>
                     <span class="shell-story-card__title">${item.text}</span>
                     <span class="shell-story-card__desc">${item.hint}</span>
                 </span>

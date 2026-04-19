@@ -16,9 +16,7 @@ This app intentionally uses the `tool-only` archetype. The current need is repos
 ## Data sources
 
 - `README.md`
-- `DEPLOY.md`
-- `SYSTEM_ARCHITECTURE.md`
-- `VERSION_MARKERS.md`
+- `docs/cloudflare-auth-cutover.md`
 - `src/worker-dummy.js`
 - `supabase/EDGE_GATEWAY_SETUP.md`
 - `supabase/functions/edu-gateway/index.ts`

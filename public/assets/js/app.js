@@ -4655,11 +4655,12 @@ const Auth = {
                 : this.currentUser.role;
             logAction('登录', `用户 ${this.currentUser.name} (${rolesInfo}) 登录`);
 
-            // === 🛡️ 安全检查：强制修改默认密码 ===
+            // === 🛡️ 安全检查：家长端首次登录强制修改默认密码 ===
             // 默认密码定义：教师是 yssy2016，其他人是 123456
+            // 仅家长端首次登录时强制弹出修改密码，其他角色不主动弹出
             const isDefaultPass = AuthState.isDefaultManagedPassword(this.currentUser.role, pass);
 
-            if (isDefaultPass) {
+            if (isDefaultPass && isParentLikeUser(this.currentUser)) {
                 this.syncLoginOverlayState(false); // 先关掉登录框
 
                 // 弹出提示
@@ -4684,13 +4685,28 @@ const Auth = {
             if (window.UI) UI.toast(`登录成功！欢迎 ${this.currentUser.name}`, 'success');
 
             const shouldHydrateCloudInBackground = !isLocalOnlySession && typeof loadCloudData === 'function';
+            const tryResumeReadyWorkspace = () => {
+                const restoredCohortId = String(CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
+                const restoredExamId = String(CURRENT_EXAM_ID || readWorkspaceExamId() || '').trim();
+                const hasReadyWorkspace = !!restoredCohortId
+                    && !!restoredExamId
+                    && Array.isArray(RAW_DATA)
+                    && RAW_DATA.length > 0;
+                if (!hasReadyWorkspace) return false;
+                const mask = document.getElementById('mode-mask');
+                const app = document.getElementById('app');
+                const maskVisible = !!mask && getComputedStyle(mask).display !== 'none';
+                const appHidden = !!app && app.classList.contains('hidden');
+                if (maskVisible && appHidden) setManualCohortSelectionGate(false);
+                return tryAutoEnterReadyCohortWorkspace();
+            };
             const startBackgroundCloudHydration = (loaderText) => {
                 if (!shouldHydrateCloudInBackground) return;
                 const shouldShowLoader = !RAW_DATA || RAW_DATA.length === 0;
                 if (shouldShowLoader && window.UI) UI.loading(true, loaderText || "正在后台恢复成绩数据...");
                 withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout')
                     .then(() => {
-                        tryAutoEnterReadyCohortWorkspace();
+                        tryResumeReadyWorkspace();
                         if (typeof scheduleTeacherSyncPrompt === 'function') {
                             setTimeout(() => scheduleTeacherSyncPrompt(), 200);
                         }
@@ -4700,7 +4716,7 @@ const Auth = {
                         if (typeof loadCloudData === 'function') {
                             loadCloudData()
                                 .then(() => {
-                                    tryAutoEnterReadyCohortWorkspace();
+                                    tryResumeReadyWorkspace();
                                     if (typeof scheduleTeacherSyncPrompt === 'function') {
                                         setTimeout(() => scheduleTeacherSyncPrompt(), 200);
                                     }
@@ -4743,8 +4759,17 @@ const Auth = {
                 if (typeof CohortManager !== 'undefined') {
                     CohortManager.init();
                 }
-                setManualCohortSelectionGate(true);
+                const restoredCohortId = String(CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
+                const restoredExamId = String(CURRENT_EXAM_ID || readWorkspaceExamId() || '').trim();
+                const hasReadyWorkspace = !!restoredCohortId
+                    && !!restoredExamId
+                    && Array.isArray(RAW_DATA)
+                    && RAW_DATA.length > 0;
+                setManualCohortSelectionGate(!hasReadyWorkspace);
                 showCohortPicker();
+                if (hasReadyWorkspace) {
+                    tryResumeReadyWorkspace();
+                }
 
                 // 👇👇👇 🟢 新增：角色专属初始化逻辑 🟢 👇👇👇
 
@@ -7759,7 +7784,7 @@ const DataManager = {
                         }
                     } catch (cloudErr) {
                         if (window.UI) UI.loading(false);
-                        console.error('云端同步失败:', cloudErr);
+                        logCloudSyncIssue('云端同步失败:', cloudErr);
                         alert(`✅ 成功导入 ${count} 条任课信息！\n\n⚠️ 但云端同步失败：${cloudErr.message}\n\n请手动点击右上角【保存修改并同步云端】按钮。`);
                     }
                 } else {
@@ -11307,6 +11332,10 @@ function formatRankDisplay(value, rank, type = 'school', isPercent = false) { co
 function renderTables() {
     updateSchoolMode();
     const tbTotal = document.querySelector('#tb-total tbody');
+    if (!tbTotal) {
+        console.warn("⚠️ [renderTables] 找不到 #tb-total tbody，跳过核心报表渲染。");
+        return;
+    }
 
     // --- 📊 新增：数据统计看板逻辑 开始 ---
     // 如果数据存在，且页面上有 KPI 容器 (我们可以动态插入一个)
@@ -11414,9 +11443,16 @@ function renderTables() {
     applySchoolModeToTables();
 
     // ... (下接各科渲染逻辑，保持不变) ...
-    const subContainer = document.getElementById('subject-tables-container'); const sideNavSubjects = document.getElementById('side-nav-subjects-container');
-    subContainer.innerHTML = '';
-    sideNavSubjects.innerHTML = '';
+    const subContainer = document.getElementById('subject-tables-container'); 
+    const sideNavSubjects = document.getElementById('side-nav-subjects-container');
+    
+    if (subContainer) subContainer.innerHTML = '';
+    if (sideNavSubjects) sideNavSubjects.innerHTML = '';
+
+    if (!subContainer || !sideNavSubjects) {
+        console.warn("⚠️ [renderTables] 找不到学科表格或导航容器，跳过学科详情渲染。");
+        return;
+    }
 
     SUBJECTS.forEach(sub => {
         const thresh = THRESHOLDS[sub];
@@ -12698,6 +12734,7 @@ function exportStudentDetails() {
 
 function updateMarginalSchoolSelect() {
     const select = document.getElementById('marginalSchoolSelect');
+    if (!select) return;
     select.innerHTML = '<option value="">--请选择本校--</option>';
     Object.keys(SCHOOLS).forEach(school => select.innerHTML += `<option value="${school}">${school}</option>`);
 }
@@ -12818,7 +12855,7 @@ function importTeacherExcel() {
                     }
                 } catch (err) {
                     if (window.UI) UI.loading(false);
-                    console.error('云端同步失败:', err);
+                    logCloudSyncIssue('云端同步失败:', err);
                     alert(`✅ 成功导入 ${count} 条教师信息\n\n⚠️ 但云端同步失败，请手动保存。`);
                 }
             } else {
@@ -14532,7 +14569,9 @@ function exportTeacherAnalysis() {
 }
 
 function updateSegmentSelects() {
-    const schSel = document.getElementById('segSchoolSelect'); const subSel = document.getElementById('segSubjectSelect'); const oldSch = schSel.value;
+    const schSel = document.getElementById('segSchoolSelect'); const subSel = document.getElementById('segSubjectSelect'); 
+    if (!schSel || !subSel) return;
+    const oldSch = schSel.value;
     schSel.innerHTML = '<option value="ALL">全乡镇</option>'; Object.keys(SCHOOLS).forEach(s => schSel.innerHTML += `<option value="${s}">${s}</option>`); if (oldSch && (oldSch === 'ALL' || SCHOOLS[oldSch])) schSel.value = oldSch;
     const oldSub = subSel.value; subSel.innerHTML = '<option value="total">总分</option>'; SUBJECTS.forEach(s => subSel.innerHTML += `<option value="${s}">${s}</option>`); if (oldSub) subSel.value = oldSub;
 }
@@ -14682,7 +14721,9 @@ function exportSegmentExcel() {
 }
 
 function updateClassCompSchoolSelect() {
-    const sel = document.getElementById('classCompSchoolSelect'); sel.innerHTML = '<option value="">--请选择学校--</option>'; Object.keys(SCHOOLS).forEach(s => sel.innerHTML += `<option value="${s}">${s}</option>`);
+    const sel = document.getElementById('classCompSchoolSelect'); 
+    if (!sel) return;
+    sel.innerHTML = '<option value="">--请选择学校--</option>'; Object.keys(SCHOOLS).forEach(s => sel.innerHTML += `<option value="${s}">${s}</option>`);
 }
 
 function renderClassComparison() {
@@ -15230,6 +15271,7 @@ function SB_exportExcel() {
 
 function updatePotentialSchoolSelect() {
     const sel = document.getElementById('potSchoolSelect');
+    if (!sel) return;
     const old = sel.value;
 
     sel.innerHTML = '<option value="ALL">全乡镇</option>';
@@ -15353,6 +15395,7 @@ function exportPotentialAnalysis() {
 function updateDiagnosisSelects() {
     const schSel = document.getElementById('diagSchoolSelect');
     const subSel = document.getElementById('diagSubjectSelect');
+    if (!schSel || !subSel) return;
     const oldSch = schSel.value;
     schSel.innerHTML = '<option value="">--请选择学校--</option>';
     Object.keys(SCHOOLS).forEach(s => schSel.innerHTML += `<option value="${s}">${s}</option>`);
@@ -18272,7 +18315,9 @@ function downloadPoster() {
 
 // ================== 临界生精准推送逻辑 ==================
 function updateMpSchoolSelect() {
-    const sel = document.getElementById('mpSchoolSelect'); const old = sel.value;
+    const sel = document.getElementById('mpSchoolSelect'); 
+    if (!sel) return;
+    const old = sel.value;
     sel.innerHTML = '<option value="">--请选择学校--</option>'; Object.keys(SCHOOLS).forEach(s => sel.innerHTML += `<option value="${s}">${s}</option>`);
     if (old && SCHOOLS[old]) sel.value = old;
     updateMpClassSelect();
@@ -18282,7 +18327,10 @@ function updateMpSchoolSelect() {
 }
 
 function updateMpClassSelect() {
-    const sch = document.getElementById('mpSchoolSelect').value; const clsSel = document.getElementById('mpClassSelect');
+    const schEl = document.getElementById('mpSchoolSelect');
+    const clsSel = document.getElementById('mpClassSelect');
+    if (!schEl || !clsSel) return;
+    const sch = schEl.value;
     clsSel.innerHTML = '<option value="">全部班级</option>';
     if (sch && SCHOOLS[sch]) { const classes = [...new Set(SCHOOLS[sch].students.map(s => s.class))].sort(); classes.forEach(c => clsSel.innerHTML += `<option value="${c}">${c}</option>`); }
 }
@@ -22781,55 +22829,89 @@ async function runAutoDiagnosis() {
 }
 
 async function loadDemoData() {
-    // 构造简易演示数据
-    const demoSchool = '示例学校';
-    const classes = ['9.1', '9.2'];
-    setSubjects(['语文', '数学', '英语']);
+    // 🎭 全方位演示数据引擎 - 营造“系统已就绪”的沉浸式体验
+    const demoSchool = '实验完全中学';
+    const subjects = ['语文', '数学', '英语', '物理', '化学', '生物', '政治', '历史', '地理'];
+    const cohorts = ['2022', '2023', '2024'];
+    const teachers = ['张伟', '王芳', '李娜', '刘强', '陈静', '杨敏', '黄磊', '赵磊', '周涛', '吴洋', '孙丽', '胡勇'];
+    
+    setSubjects(subjects);
     setRawData([]);
     setSchools({});
-    setThresholds({});
+    setThresholds({
+        '总分': { excellent: 650, pass: 420 },
+        '语文': { excellent: 108, pass: 72 },
+        '数学': { excellent: 108, pass: 72 },
+        '英语': { excellent: 108, pass: 72 }
+    });
 
-    let counter = 1;
-    classes.forEach(cls => {
-        for (let i = 0; i < 30; i++) {
-            const stu = {
-                name: `演示生${String(counter++).padStart(2, '0')}`,
-                school: demoSchool,
-                class: cls,
-                scores: {
-                    '语文': 60 + Math.random() * 40,
-                    '数学': 55 + Math.random() * 45,
-                    '英语': 58 + Math.random() * 42
-                },
-                total: 0
-            };
-            stu.total = stu.scores['语文'] + stu.scores['数学'] + stu.scores['英语'];
-            RAW_DATA.push(stu);
-            if (!SCHOOLS[demoSchool]) SCHOOLS[demoSchool] = { name: demoSchool, students: [], metrics: {}, rankings: {} };
-            SCHOOLS[demoSchool].students.push(stu);
+    let studentId = 1;
+    const teacherAssignments = {};
+
+    function generateChineseName() {
+        const familyNames = "赵钱孙李周吴郑王冯陈褚卫蒋沈韩杨朱秦尤许何吕施张孔曹严华金魏陶姜";
+        const givenNames = "嘉懿煜城懿轩烨华煜祺智宸正豪昊然志泽明杰弘文熠彤鸿煊远航旭尧";
+        const f = familyNames[Math.floor(Math.random() * familyNames.length)];
+        const g1 = givenNames[Math.floor(Math.random() * givenNames.length)];
+        const g2 = Math.random() > 0.3 ? givenNames[Math.floor(Math.random() * givenNames.length)] : "";
+        return f + g1 + g2;
+    }
+
+    // 为每个届别生成班级和学生
+    ['9', '8', '7'].forEach((gradeLevel, gIdx) => {
+        const cohort = cohorts[gIdx];
+        const classCount = 4;
+        
+        for (let cNum = 1; cNum <= classCount; cNum++) {
+            const cls = `${gradeLevel}.${cNum}`;
+            
+            // 为每个学科随机分配教师
+            subjects.forEach(sub => {
+                const tName = teachers[Math.floor(Math.random() * teachers.length)];
+                teacherAssignments[`${cls}_${sub}`] = tName;
+            });
+
+            // 生成学生
+            for (let i = 0; i < 40; i++) {
+                const stu = {
+                    id: `S${String(studentId).padStart(5, '0')}`,
+                    name: generateChineseName(),
+                    school: demoSchool,
+                    class: cls,
+                    cohort: cohort,
+                    scores: {},
+                    total: 0
+                };
+                
+                subjects.forEach(sub => {
+                    const base = 65 + Math.random() * 30;
+                    const bonus = Math.random() > 0.8 ? 5 : 0;
+                    stu.scores[sub] = Math.floor(Math.min(120, Math.max(20, base + bonus + (Math.random() * 10 - 5))));
+                    stu.total += stu.scores[sub];
+                });
+                
+                RAW_DATA.push(stu);
+                if (!SCHOOLS[demoSchool]) SCHOOLS[demoSchool] = { name: demoSchool, students: [], metrics: {}, rankings: {} };
+                SCHOOLS[demoSchool].students.push(stu);
+                studentId++;
+            }
         }
     });
 
-    setTeacherMap({
-        '9.1_语文': '张老师',
-        '9.1_数学': '李老师',
-        '9.1_英语': '王老师',
-        '9.2_语文': '赵老师',
-        '9.2_数学': '陈老师',
-        '9.2_英语': '孙老师'
-    });
-
+    setTeacherMap(teacherAssignments);
     writeCurrentSchool(demoSchool);
-    writeCurrentTermId(readCurrentTermId() || '2025-2026_上学期');
-    CURRENT_COHORT_ID = CURRENT_COHORT_ID || 'DEMO';
-    CURRENT_EXAM_ID = CURRENT_EXAM_ID || 'DEMO_EXAM';
+    writeCurrentTermId('2025-2026_上学期');
+    
+    CURRENT_COHORT_ID = '2022';
+    CURRENT_EXAM_ID = '2026_校内首模';
+    
     syncWorkspaceRuntimeState({
         currentCohortId: CURRENT_COHORT_ID,
-        currentCohortMeta: CURRENT_COHORT_META,
         currentExamId: CURRENT_EXAM_ID,
         cohortDb: COHORT_DB
     });
-    if (window.UI) UI.toast('✅ 已加载演示数据', 'success');
+
+    if (window.UI) UI.toast('✨ 演示环境已就绪，所有模块均已载入模拟数据', 'success');
 
     await processData();
     calculateRankings();
@@ -23567,3 +23649,18 @@ window.addEventListener('load', () => {
     }, 1000); // 延迟 1 秒执行
 });
 window.DataManager = DataManager;
+
+// 🚀 [AutoFix] Demo Mode Trigger
+(function autoTriggerDemoMode() {
+    const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    const hasData = Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0;
+    
+    if (user && user.id === 'demo-admin' && !hasData) {
+        console.log('[DemoMode] Auto-triggering demo data load for demo-admin');
+        window.setTimeout(() => {
+            if (typeof loadDemoData === 'function') {
+                loadDemoData();
+            }
+        }, 1500);
+    }
+})();

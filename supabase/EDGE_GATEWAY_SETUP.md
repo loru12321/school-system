@@ -133,7 +133,7 @@ Update these files:
 
 - `src/index.html`
 - `lt.html`
-- `inline-scripts.mjs`
+- `scripts/build/inline-scripts.mjs`
 
 Search for:
 
