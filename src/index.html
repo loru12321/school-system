@@ -21,9 +21,9 @@
     <link rel="stylesheet" href="./assets/css/vendor-polish.css?v=20260402-structure-v2">
     <link rel="stylesheet" href="./assets/css/apple-platform.css?v=20260407-apple-v1">
     <link rel="stylesheet" href="./assets/css/apk-mobile-shell.css?v=20260407-apk-v2">
-    <link rel="stylesheet" href="./assets/css/modern-login.css?v=20260418-modern-v2">
+    <link rel="stylesheet" href="./assets/css/modern-login.css?v=20260419-passport-v2">
     <script defer src="./assets/js/platform-compat-runtime.js?v=20260407-apple-v1"></script>
-    <script defer src="./assets/js/boot-runtime.js?v=20260418-login-refine-v2"></script>
+    <script defer src="./assets/js/boot-runtime.js?v=20260419-login-refine-v4"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script defer src="./assets/vendor/crypto-js/crypto-js.min.js" data-standalone-lib="crypto-js"></script>
     <!-- 🟢 [修复] 添加 XLSX 库支持 Excel 导入导出功能 -->
@@ -267,87 +267,64 @@
     </div>
 
     <div id="login-overlay" data-login-portal="school" data-login-workbench-ready="true" style="display:flex;">
-        <div class="login-bg-shapes">
-            <div class="bg-orb orb-1"></div>
-            <div class="bg-orb orb-2"></div>
-        </div>
+        <div class="login-bg-mesh"></div>
+        <div class="login-bg-glow"></div>
 
         <div class="modern-login-container">
-            <div class="modern-login-left">
-                <div class="brand-showcase">
+            <div class="login-glass-card">
+                <div class="login-card-header">
                     <div class="brand-logo-mark">SE</div>
-                    <h1>SmartEdu<br>Analytics</h1>
-                    <p>智慧教务管理系统 · 新一代校园数据中枢</p>
-                    <div style="margin-top: 40px; display: flex; gap: 20px;">
-                        <div style="display: flex; flex-direction: column; gap: 4px;">
-                            <span style="font-size: 24px; font-weight: 700;">10k+</span>
-                            <span style="font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">活跃教师</span>
-                        </div>
-                        <div style="display: flex; flex-direction: column; gap: 4px;">
-                            <span style="font-size: 24px; font-weight: 700;">500+</span>
-                            <span style="font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">合作院校</span>
-                        </div>
-                    </div>
+                    <h2>SmartEdu Analytics</h2>
+                    <p id="login-portal-copy">智慧教务 · 新一代校园数据中枢</p>
                 </div>
-            </div>
-            <div class="modern-login-right">
-                <div class="login-form-card">
-                    <div class="login-header">
-                        <h2>欢迎回来</h2>
-                        <p>请登录以继续访问系统</p>
+
+                <div class="role-toggle">
+                    <button type="button" class="role-btn active" onclick="switchLoginRole('school')" id="btn-role-school">学校端</button>
+                    <button type="button" class="role-btn" onclick="switchLoginRole('parent')" id="btn-role-parent">家长端</button>
+                </div>
+
+                <div id="login-form" class="modern-form">
+                    <div class="form-group">
+                        <label id="login-user-label" for="login-user">账号 / 姓名</label>
+                        <div class="input-wrapper">
+                            <i class="ti ti-user"></i>
+                            <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                        </div>
                     </div>
 
-                    <div class="role-toggle">
-                        <button type="button" class="role-btn active" onclick="switchLoginRole('school')" id="btn-role-school">学校端</button>
-                        <button type="button" class="role-btn" onclick="switchLoginRole('parent')" id="btn-role-parent">家长端</button>
+                    <div id="login-class-group" class="form-group" style="display: none;" aria-hidden="true">
+                        <label for="login-class">学生班级 <span id="login-class-label-note" style="color:var(--login-text-muted); font-size:12px; font-weight:normal;">(家长端必填)</span></label>
+                        <div class="input-wrapper">
+                            <i class="ti ti-users"></i>
+                            <input type="text" id="login-class" placeholder="请输入班级，如 701" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                        </div>
                     </div>
 
-                    <div id="login-form" class="modern-form">
-                        <div class="form-group">
-                            <label id="login-user-label" for="login-user">账号 / 姓名</label>
-                            <div class="input-wrapper">
-                                <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" onkeydown="if(event.key==='Enter') window.Auth?.login()">
-                            </div>
+                    <div class="form-group">
+                        <label for="login-pass">密码</label>
+                        <div class="input-wrapper">
+                            <i class="ti ti-lock"></i>
+                            <input type="password" id="login-pass" placeholder="输入密码" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                            <i class="ti ti-eye" id="toggle-password" style="position: absolute; right: 16px; left: auto; cursor: pointer; color: #94a3b8;" onclick="togglePasswordVisibility()"></i>
                         </div>
-
-                        <div id="login-class-group" class="form-group" style="display: none;">
-                            <label for="login-class">班级</label>
-                            <div class="input-wrapper">
-                                <input type="text" id="login-class" placeholder="请输入班级 (仅家长/学生必填)" onkeydown="if(event.key==='Enter') window.Auth?.login()">
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="login-pass">密码</label>
-                            <div class="input-wrapper">
-                                <input type="password" id="login-pass" placeholder="输入密码" onkeydown="if(event.key==='Enter') window.Auth?.login()">
-                                <i class="ti ti-eye" id="toggle-password" style="position: absolute; right: 16px; cursor: pointer; color: #94a3b8;" onclick="togglePasswordVisibility()"></i>
-                            </div>
-                        </div>
-
-                        <div class="form-options">
-                            <label class="remember-me">
-                                <input type="checkbox" id="remember-me">
-                                <span>记住我</span>
-                            </label>
-                            <a href="#" class="forgot-pass">忘记密码?</a>
-                        </div>
-
-                        <button id="login-submit-button" class="submit-btn" onclick="window.Auth?.login()">
-                            <span>立即登录</span>
-                            <i class="ti ti-arrow-right"></i>
-                        </button>
                     </div>
 
-                    <div class="login-footer">
-                        <button type="button" class="download-link" onclick="window.Auth?.openDownloadHubModal('android')">
-                            <i class="ti ti-download"></i> 下载 Android 客户端
-                        </button>
-                    </div>
+                    <p id="login-portal-helper" class="login-helper-text">当前为学校端，验证通过后直达教学分析与数据维护。</p>
+
+                    <button id="login-submit-button" class="submit-btn" onclick="window.Auth?.login()">
+                        <span>进入系统</span>
+                        <i class="ti ti-arrow-right"></i>
+                    </button>
+                </div>
+
+                <div class="login-card-footer">
+                    <button type="button" class="download-link" onclick="window.Auth?.openDownloadHubModal('android')">
+                        <i class="ti ti-device-mobile"></i> 客户端下载中心
+                    </button>
                 </div>
             </div>
         </div>
-        
+
         <!-- Hidden backdrop to avoid breaking existing auth scripts that might call closeLoginPortalModal() -->
         <div id="login-modal-backdrop" style="display:none;" aria-hidden="true"></div>
         <div id="login-download-hub-backdrop" style="display:none;" aria-hidden="true"></div>
@@ -361,21 +338,10 @@
                     btn.classList.toggle('active', btn.id === 'btn-role-' + role);
                 });
                 
-                const userLabel = document.getElementById('login-user-label');
-                const userPlaceholder = document.getElementById('login-user');
-                const classGroup = document.getElementById('login-class-group');
-                const submitBtnSpan = document.querySelector('#login-submit-button span');
-                
-                if (role === 'school') {
-                    if (userLabel) userLabel.textContent = '账号 / 姓名';
-                    if (userPlaceholder) userPlaceholder.placeholder = '管理员账号 / 教师姓名';
-                    if (classGroup) classGroup.style.display = 'none';
-                    if (submitBtnSpan) submitBtnSpan.textContent = '进入学校工作台';
-                } else {
-                    if (userLabel) userLabel.textContent = '学生姓名';
-                    if (userPlaceholder) userPlaceholder.placeholder = '请输入学生姓名';
-                    if (classGroup) classGroup.style.display = 'block';
-                    if (submitBtnSpan) submitBtnSpan.textContent = '进入家长成长入口';
+                if (window.Auth && typeof window.Auth.syncLoginPortalUI === 'function') {
+                    window.Auth.syncLoginPortalUI(role);
+                } else if (window.Auth && typeof window.Auth.setLoginPortal === 'function') {
+                    window.Auth.setLoginPortal(role);
                 }
             }
 
@@ -390,23 +356,6 @@
                     toggleIcon.classList.replace('ti-eye-off', 'ti-eye');
                 }
             }
-
-            // GSAP Animations
-            document.addEventListener('DOMContentLoaded', () => {
-                if (window.gsap) {
-                    const tl = gsap.timeline();
-                    tl.from('.modern-login-left', { duration: 1, x: -50, opacity: 0, ease: 'power3.out' })
-                      .from('.brand-showcase > *', { duration: 0.8, y: 30, opacity: 0, stagger: 0.2, ease: 'power3.out' }, '-=0.5')
-                      .from('.login-form-card', { duration: 1, scale: 0.95, opacity: 0, ease: 'power3.out' }, '-=0.8')
-                      .from('.login-header, .role-toggle, .form-group, .form-options, .submit-btn, .login-footer', { 
-                          duration: 0.6, y: 20, opacity: 0, stagger: 0.1, ease: 'power3.out' 
-                      }, '-=0.6');
-
-                    // Floating orbs animation
-                    gsap.to('.orb-1', { duration: 15, x: '20vw', y: '10vh', repeat: -1, yoyo: true, ease: 'sine.inOut' });
-                    gsap.to('.orb-2', { duration: 20, x: '-20vw', y: '-10vh', repeat: -1, yoyo: true, ease: 'sine.inOut' });
-                }
-            });
         </script>
     </div>
 
@@ -3597,7 +3546,7 @@
 <script defer src="./assets/js/workspace-rail-runtime.js?v=20260407-workspace-rail-v1"></script>
 <script defer src="./assets/js/shell-polish-runtime.js?v=20260402-plugin-v1"></script>
 <script defer src="./assets/js/module-entry-runtime.js?v=20260402-module-entry-v1"></script>
-<script defer src="./assets/js/app.js?v=20260408-login-refine-v1"></script>
+    <script defer src="./assets/js/app.js?v=20260419-passport-v2"></script>
 <script defer src="./assets/js/login-instagram-runtime.js?v=20260412-ig-runtime-v1"></script>
     <script defer src="./assets/js/school-normalization-runtime.js?v=20260321-localgrades-v4"></script>
     <script defer src="./assets/js/compare-shared-runtime.js?v=20260322-compare-session-v1"></script>

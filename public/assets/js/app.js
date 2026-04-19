@@ -1216,6 +1216,7 @@ window.EdgeGateway = EdgeGateway;
 
 const AuthState = window.AuthState || {
     MASKED_PASSWORD_DISPLAY: '已设置(不显示明文)',
+    ROLE_HIERARCHY: ['admin', 'director', 'grade_director', 'class_teacher', 'teacher', 'parent', 'student', 'guest'],
     sanitizeLocalAuthDb: function (rawDb) { return rawDb && typeof rawDb === 'object' ? rawDb : {}; },
     persistLocalAuthDb: function (rawDb) {
         const safeDb = rawDb && typeof rawDb === 'object' ? rawDb : {};
@@ -1232,17 +1233,30 @@ const AuthState = window.AuthState || {
     getCurrentUser: function () {
         try {
             const raw = sessionStorage.getItem('CURRENT_USER');
-            return raw ? JSON.parse(raw) : null;
+            if (!raw) return null;
+            const user = JSON.parse(raw);
+            if (!user || typeof user !== 'object') return null;
+            const roles = this.getUserRoles(user);
+            return {
+                ...user,
+                roles,
+                role: this.getPrimaryRole({ ...user, roles })
+            };
         } catch {
             return null;
         }
     },
     setCurrentUser: function (user) {
         if (!user) return this.clearCurrentUser();
-        sessionStorage.setItem('CURRENT_USER', JSON.stringify(user));
-        sessionStorage.setItem('CURRENT_ROLE', String(user.role || 'guest').trim() || 'guest');
-        sessionStorage.setItem('CURRENT_ROLES', JSON.stringify(Array.isArray(user.roles) ? user.roles : [user.role].filter(Boolean)));
-        return user;
+        const normalizedUser = {
+            ...user,
+            roles: this.getUserRoles(user)
+        };
+        normalizedUser.role = this.getPrimaryRole(normalizedUser);
+        sessionStorage.setItem('CURRENT_USER', JSON.stringify(normalizedUser));
+        sessionStorage.setItem('CURRENT_ROLE', normalizedUser.role);
+        sessionStorage.setItem('CURRENT_ROLES', JSON.stringify(normalizedUser.roles));
+        return normalizedUser;
     },
     clearCurrentUser: function () {
         sessionStorage.removeItem('CURRENT_USER');
@@ -1254,11 +1268,18 @@ const AuthState = window.AuthState || {
     },
     getUserRoles: function (user) {
         if (!user) return ['guest'];
-        if (Array.isArray(user.roles) && user.roles.length) return user.roles;
-        return user.role ? [user.role] : ['guest'];
+        const rawRoles = Array.isArray(user.roles) && user.roles.length ? user.roles : [user.role];
+        const roles = rawRoles
+            .map(role => String(role || '').trim())
+            .filter(Boolean);
+        return roles.length ? Array.from(new Set(roles)) : ['guest'];
     },
     getPrimaryRole: function (user) {
-        return this.getUserRoles(user)[0] || 'guest';
+        const roles = this.getUserRoles(user);
+        for (const role of this.ROLE_HIERARCHY) {
+            if (roles.includes(role)) return role;
+        }
+        return roles[0] || 'guest';
     },
     hasRole: function (user, roleName) {
         return this.getUserRoles(user).includes(roleName);
@@ -1275,7 +1296,14 @@ const AuthState = window.AuthState || {
     },
     applyRolesToBody: function (user) {
         if (!user) return;
-        document.body.dataset.role = this.getPrimaryRole(user);
+        const primaryRole = this.getPrimaryRole(user);
+        const roles = this.getUserRoles(user);
+        document.body.dataset.role = primaryRole;
+        Array.from(document.body.classList)
+            .filter(className => /^role-/.test(className))
+            .forEach(className => document.body.classList.remove(className));
+        roles.forEach(role => document.body.classList.add(`role-${role}`));
+        return primaryRole;
     },
     getDefaultManagedPassword: function (role) {
         return role === 'teacher' ? 'yssy2016' : '123456';
@@ -3267,8 +3295,361 @@ const Auth = {
         return overlay;
     },
 
+    rebuildCommandDeckLoginShell: function () {
+        const overlay = document.getElementById('login-overlay');
+        if (!overlay) return null;
+        if (overlay.dataset.commanddeckRebuilt === 'true') return overlay;
+
+        const portal = overlay.dataset.loginPortal === 'parent' ? 'parent' : 'school';
+        overlay.dataset.loginPortal = portal;
+        overlay.dataset.loginLayout = 'commanddeck';
+        overlay.dataset.loginSkin = 'commanddeck';
+        overlay.innerHTML = `
+            <div class="login-shell login-shell--commanddeck">
+                <section class="login-stage login-stage--commanddeck" aria-label="系统首页">
+                    <nav class="login-stage-nav login-stage-nav--commanddeck" aria-label="首页导航">
+                        <a class="login-stage-brand" href="#login-hero">
+                            <span class="login-stage-brand-mark">SE</span>
+                            <span class="login-stage-brand-copy">
+                                <strong>智慧教务管理系统</strong>
+                                <small>School Intelligence OS</small>
+                            </span>
+                        </a>
+                        <div class="login-stage-nav-links">
+                            <a href="#login-hero" class="active">首页</a>
+                            <a href="#login-portal-hub">登录</a>
+                            <a href="#app-download">下载</a>
+                            <button type="button" class="login-stage-nav-login" onclick="window.Auth?.openLoginPortalModal('school')">打开学校端</button>
+                        </div>
+                    </nav>
+
+                    <div id="login-hero" class="login-stage-hero login-stage-hero--commanddeck">
+                        <span id="login-stage-kicker" class="login-stage-hero-kicker">School Command Center</span>
+                        <h1 id="login-stage-title">
+                            <span class="login-stage-title-line">一个登录入口</span>
+                            <span class="login-stage-title-line login-stage-title-line--accent">直达学校工作台与家长成长端</span>
+                        </h1>
+                        <p id="login-stage-copy">把登录、下载和系统说明拆分成清晰的工作台入口。首屏只负责方向感，登录动作集中在同一张认证面板里完成。</p>
+                        <div class="login-stage-actions">
+                            <button type="button" class="login-stage-primary-action" onclick="window.Auth?.openLoginPortalModal('school')">
+                                <i class="ti ti-building-community"></i> 进入学校端
+                            </button>
+                            <button type="button" class="login-stage-secondary-action" onclick="window.Auth?.openLoginPortalModal('parent')">
+                                <i class="ti ti-heart-handshake"></i> 进入家长端
+                            </button>
+                            <button type="button" class="login-stage-tertiary-action" onclick="window.Auth?.openDownloadHubModal('android')">
+                                <i class="ti ti-download"></i> 打开下载中心
+                            </button>
+                        </div>
+                        <div class="login-stage-meta">
+                            <span><i class="ti ti-layout-dashboard"></i> 教学分析 / 数据维护 / 学校工作台</span>
+                            <span><i class="ti ti-devices"></i> Web / Android / Desktop 统一入口</span>
+                            <span><i class="ti ti-sparkles"></i> 新版登录工作台 · 2026-04-19</span>
+                        </div>
+                        <div class="login-stage-platforms" aria-label="支持终端">
+                            <span><i class="ti ti-device-desktop"></i> Web</span>
+                            <span><i class="ti ti-device-mobile"></i> Android</span>
+                            <span><i class="ti ti-brand-windows"></i> Desktop</span>
+                        </div>
+                        <div class="login-stage-scanline">
+                            <article class="login-stage-data-card">
+                                <span class="login-stage-data-label">工作台能力</span>
+                                <strong>分析、预警、整改、账号</strong>
+                                <p>把老师常用的数据链路集中在一张首页里，不再四处找入口。</p>
+                            </article>
+                            <article class="login-stage-data-card">
+                                <span class="login-stage-data-label">统一认证</span>
+                                <strong>学校端与家长端共用同一套登录面板</strong>
+                                <p>切换角色时只变更内容，不再切页面，使用路径更稳定。</p>
+                            </article>
+                            <article class="login-stage-data-card">
+                                <span class="login-stage-data-label">多端同步</span>
+                                <strong>网页、安卓、桌面保持同一操作习惯</strong>
+                                <p>入口和身份逻辑一致，登录后自动进入对应工作区。</p>
+                            </article>
+                        </div>
+                        <div class="login-stage-spotlight login-stage-spotlight--commanddeck">
+                            <div class="login-stage-spotlight-copy">
+                                <span class="login-stage-featured-label">Command Deck</span>
+                                <strong id="login-stage-featured-title" class="login-stage-featured-title">先看清入口，再完成身份验证</strong>
+                                <p id="login-stage-featured-copy" class="login-stage-featured-copy">左侧聚焦系统价值和工作流，右侧负责角色切换与登录动作，避免旧版首屏信息拥挤、登录位置不明确的问题。</p>
+                            </div>
+                            <div class="login-stage-status-grid">
+                                <div class="login-stage-status-pill"><span>01</span><strong>选择端口</strong></div>
+                                <div class="login-stage-status-pill"><span>02</span><strong>验证身份</strong></div>
+                                <div class="login-stage-status-pill"><span>03</span><strong>进入模块</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="login-auth-panel login-auth-panel--commanddeck" id="login-portal-hub" aria-label="统一登录入口">
+                    <div class="login-auth-panel-inner login-auth-panel-inner--commanddeck">
+                        <div class="login-auth-card login-auth-card--portal">
+                            <div class="login-auth-head">
+                                <div class="login-brand-block">
+                                    <div id="login-portal-badge" class="login-portal-badge">学校工作台</div>
+                                    <span class="login-brand-kicker">Login Center</span>
+                                    <h2 class="login-auth-title">统一登录入口</h2>
+                                    <p id="login-portal-copy">先选角色，再在同一张面板里完成验证。登录后会自动进入对应工作区，不需要额外跳转。</p>
+                                </div>
+                                <div class="login-auth-utility" id="app-download">
+                                    <button type="button" class="login-system-download-link" onclick="window.Auth?.openDownloadHubModal('android')">
+                                        <i class="ti ti-download"></i> 应用下载
+                                    </button>
+                                    <button type="button" class="login-system-download-ghost" onclick="window.copyPublicDownloadLink?.('android')">
+                                        <i class="ti ti-link"></i> 复制链接
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="login-portal-launch-head">
+                                <span>Choose Portal</span>
+                                <p>学校端和家长端共享同一套认证逻辑，但保留各自的引导文案和入口说明。</p>
+                            </div>
+
+                            <div class="login-portal-grid" aria-label="登录入口选择">
+                                <button type="button" class="login-portal-card active" data-portal="school" data-login-open="school" onclick="window.Auth?.openLoginPortalModal('school')">
+                                    <span class="login-portal-icon"><i class="ti ti-building-community"></i></span>
+                                    <span class="login-portal-title">学校端</span>
+                                    <span class="login-portal-desc">面向管理员、教务、年级主任、班主任和教师的统一工作台。</span>
+                                    <span class="login-portal-meta">Analysis / Data / Workspace</span>
+                                    <span class="login-portal-action">打开学校端窗口</span>
+                                </button>
+                                <button type="button" class="login-portal-card" data-portal="parent" data-login-open="parent" onclick="window.Auth?.openLoginPortalModal('parent')">
+                                    <span class="login-portal-icon"><i class="ti ti-heart-handshake"></i></span>
+                                    <span class="login-portal-title">家长端</span>
+                                    <span class="login-portal-desc">输入学生姓名、班级和密码后，直接查看成长报告、成绩与提醒。</span>
+                                    <span class="login-portal-meta">Report / Score / Reminder</span>
+                                    <span class="login-portal-action">打开家长端窗口</span>
+                                </button>
+                            </div>
+
+                            <div class="login-portal-note">
+                                <i class="ti ti-hand-click"></i> 首页只保留角色选择和关键动作，真实账号验证统一在登录窗口中完成。
+                            </div>
+                        </div>
+
+                        <div class="login-auth-footer">
+                            <span>Web / Android / Desktop</span>
+                            <span>统一账号逻辑</span>
+                            <span>新的工作台式登录体验</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div id="login-modal-backdrop" class="login-modal-backdrop" style="display:none;" aria-hidden="true" onclick="if(event.target===this) window.Auth?.closeLoginPortalModal()">
+                <div class="login-modal-dialog login-modal-dialog--commanddeck" role="dialog" aria-modal="true" aria-labelledby="login-modal-title">
+                    <div class="login-modal-head login-modal-head--commanddeck">
+                        <div class="login-modal-head-top">
+                            <span id="login-modal-chip" class="login-modal-chip">学校端登录窗口</span>
+                            <button type="button" class="login-modal-close" onclick="window.Auth?.closeLoginPortalModal()" aria-label="关闭登录窗口">
+                                <i class="ti ti-x"></i>
+                            </button>
+                        </div>
+                        <h2 id="login-modal-title" class="login-modal-title">进入学校工作台</h2>
+                        <p id="login-modal-copy" class="login-modal-copy">输入账号与密码后，直接进入教学分析、数据维护与学校工作台。</p>
+                        <div class="login-modal-visuals">
+                            <div class="login-modal-visual-card">
+                                <span>Single Login Window</span>
+                                <strong>唯一认证面板，减少跳转与干扰</strong>
+                            </div>
+                            <div class="login-modal-visual-card">
+                                <span>School / Parent</span>
+                                <strong>切换角色，但保持同一套入口体验</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="login-auth-card login-auth-card--modal">
+                        <div class="login-auth-card-brand">
+                            <div class="login-auth-card-logo">SE</div>
+                            <div class="login-auth-card-copy">
+                                <strong>登录工作台</strong>
+                                <span>清晰表单、明确角色、统一认证动作</span>
+                            </div>
+                        </div>
+
+                        <div id="login-form">
+                            <div class="form-group">
+                                <label id="login-user-label" for="login-user">账号 / 姓名</label>
+                                <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" onkeydown="if(event.key==='Enter') Auth.login()">
+                                <div id="login-user-helper" class="login-inline-tip">支持管理员、教务、年级、班主任与教师账号登录。</div>
+                            </div>
+
+                            <div id="login-class-group" class="form-group">
+                                <label for="login-class">班级 <span id="login-class-label-note">(学校端无需填写)</span></label>
+                                <input type="text" id="login-class" placeholder="请输入学生班级，如 701" onkeydown="if(event.key==='Enter') Auth.login()">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="login-pass">密码</label>
+                                <input type="password" id="login-pass" placeholder="输入密码" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                            </div>
+
+                            <button id="login-submit-button" onclick="window.Auth?.login()">进入学校工作台</button>
+
+                            <div id="login-portal-helper" class="login-portal-helper">当前为学校端，验证通过后直达教学分析与数据维护。</div>
+
+                            <div class="login-form-divider"><span>or</span></div>
+
+                            <button type="button" class="login-form-alt" onclick="window.Auth?.openDownloadHubModal('android')">
+                                <i class="ti ti-download"></i> 下载 Android / Desktop
+                            </button>
+
+                            <div class="login-trust-strip">
+                                <span><i class="ti ti-shield-lock"></i> 统一身份认证</span>
+                                <span><i class="ti ti-cloud-lock"></i> 云端安全校验</span>
+                                <span><i class="ti ti-bolt"></i> 验证后直达工作台</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        overlay.dataset.igRebuilt = 'true';
+        overlay.dataset.commanddeckRebuilt = 'true';
+        return overlay;
+    },
+
+    rebuildPassportLoginShell: function () {
+        const overlay = document.getElementById('login-overlay');
+        if (!overlay) return null;
+
+        const portal = this.getLoginPortal();
+        overlay.dataset.loginPortal = portal;
+        overlay.dataset.loginLayout = 'passport';
+        overlay.dataset.loginSkin = 'passport';
+        overlay.innerHTML = `
+            <div class="login-shell login-shell--passport">
+                <section class="login-stage login-stage--passport" aria-label="系统登录说明">
+                    <nav class="login-stage-nav login-stage-nav--passport" aria-label="登录辅助导航">
+                        <a class="login-stage-brand" href="#login-hero">
+                            <span class="login-stage-brand-mark">SE</span>
+                            <span class="login-stage-brand-copy">
+                                <strong>智慧教务管理系统</strong>
+                                <small>School Intelligence OS</small>
+                            </span>
+                        </a>
+                        <div class="login-stage-nav-links">
+                            <a href="#login-hero" class="active">登录验证</a>
+                            <a href="#login-portal-hub">流程说明</a>
+                            <a href="#app-download">应用下载</a>
+                            <button type="button" class="login-stage-nav-login" onclick="window.Auth?.openLoginPortalModal('school')">切到学校端</button>
+                        </div>
+                    </nav>
+
+                    <div id="login-hero" class="login-stage-hero login-stage-hero--passport">
+                        <span id="login-stage-kicker" class="login-stage-hero-kicker">Step 1 / Login</span>
+                        <h1 id="login-stage-title">
+                            <span class="login-stage-title-line">先登录</span>
+                            <span class="login-stage-title-line login-stage-title-line--accent">再选择届别进入工作台</span>
+                        </h1>
+                        <p id="login-stage-copy">登录页现在只负责身份验证。学校端验证成功后，会先进入届别选择界面，再由你决定进入哪个届别工作区。</p>
+                        <div class="login-stage-meta">
+                            <span><i class="ti ti-shield-lock"></i> 登录验证与工作区选择拆开</span>
+                            <span><i class="ti ti-route-2"></i> 学校端登录后固定进入届别选择</span>
+                            <span><i class="ti ti-devices"></i> Web / Android / Desktop 共用同一套流程</span>
+                        </div>
+                        <div class="login-stage-status-grid login-stage-status-grid--passport">
+                            <div class="login-stage-status-pill"><span>01</span><strong>登录界面</strong><p>只做账号验证，不直跳系统。</p></div>
+                            <div class="login-stage-status-pill"><span>02</span><strong>届别选择</strong><p>登录成功后，先选择届别。</p></div>
+                            <div class="login-stage-status-pill"><span>03</span><strong>进入工作台</strong><p>届别就绪后再装载模块。</p></div>
+                        </div>
+                        <div class="login-stage-spotlight login-stage-spotlight--passport">
+                            <div class="login-stage-spotlight-copy">
+                                <span class="login-stage-featured-label">Two-step Flow</span>
+                                <strong id="login-stage-featured-title" class="login-stage-featured-title">登录成功后不会直接进入系统</strong>
+                                <p id="login-stage-featured-copy" class="login-stage-featured-copy">学校端采用“登录验证 → 届别选择 → 工作台”的固定路径，避免直接落进空数据或错误届别。</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="login-auth-panel login-auth-panel--passport" id="login-portal-hub" aria-label="统一登录入口">
+                    <div class="login-auth-panel-inner login-auth-panel-inner--passport">
+                        <div class="login-auth-card login-auth-card--passport">
+                            <div class="login-auth-head login-auth-head--passport">
+                                <div class="login-brand-block">
+                                    <div id="login-portal-badge" class="login-portal-badge">学校身份验证</div>
+                                    <span class="login-brand-kicker">Inline Login</span>
+                                    <h2 class="login-auth-title">登录验证</h2>
+                                    <p id="login-portal-copy">学校端验证成功后进入届别选择，家长端保持直接进入成长查看界面。</p>
+                                </div>
+                                <div class="login-auth-utility" id="app-download">
+                                    <button type="button" class="login-system-download-link" onclick="window.Auth?.openDownloadHubModal('android')">
+                                        <i class="ti ti-download"></i> 应用下载
+                                    </button>
+                                    <button type="button" class="login-system-download-ghost" onclick="window.copyPublicDownloadLink?.('android')">
+                                        <i class="ti ti-link"></i> 复制链接
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="login-portal-launch-head">
+                                <span>Switch Portal</span>
+                                <p>学校端与家长端共用一张内联登录页，但学校端会在验证后进入届别选择，家长端保持直接查看成长数据。</p>
+                            </div>
+
+                            <div class="login-portal-switch" aria-label="登录入口选择">
+                                <button type="button" class="login-portal-chip active" data-portal="school" data-login-open="school" onclick="window.Auth?.openLoginPortalModal('school')">学校端</button>
+                                <button type="button" class="login-portal-chip" data-portal="parent" data-login-open="parent" onclick="window.Auth?.openLoginPortalModal('parent')">家长端</button>
+                            </div>
+
+                            <div class="login-portal-note">
+                                登录页已改为内联表单，不再打开单独的登录弹窗。
+                            </div>
+
+                            <div id="login-form">
+                                <div class="form-group">
+                                    <label id="login-user-label" for="login-user">账号 / 姓名</label>
+                                    <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" onkeydown="if(event.key==='Enter') Auth.login()">
+                                    <div id="login-user-helper" class="login-inline-tip">支持管理员、教务、年级主任、班主任和教师账号登录。</div>
+                                </div>
+
+                                <div id="login-class-group" class="form-group">
+                                    <label for="login-class">班级 <span id="login-class-label-note">(学校端无需填写)</span></label>
+                                    <input type="text" id="login-class" placeholder="请输入学生班级，如 701" onkeydown="if(event.key==='Enter') Auth.login()">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="login-pass">密码</label>
+                                    <input type="password" id="login-pass" placeholder="输入密码" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                                </div>
+
+                                <button id="login-submit-button" onclick="window.Auth?.login()">验证并进入届别选择</button>
+
+                                <div id="login-portal-helper" class="login-portal-helper">当前为学校端，验证成功后会先进入届别选择界面。</div>
+
+                                <div class="login-form-actions">
+                                    <button type="button" class="login-form-alt" onclick="window.Auth?.openSystemIntroModal(window.Auth?.getLoginPortal?.())">
+                                        <i class="ti ti-file-text"></i> 查看系统说明
+                                    </button>
+                                    <button type="button" class="login-form-alt" onclick="window.Auth?.openDownloadHubModal('android')">
+                                        <i class="ti ti-download"></i> 下载 Android / Desktop
+                                    </button>
+                                </div>
+
+                                <div class="login-trust-strip">
+                                    <span><i class="ti ti-shield-lock"></i> 统一身份认证</span>
+                                    <span><i class="ti ti-layers-subtract"></i> 登录与届别选择分步完成</span>
+                                    <span><i class="ti ti-database-export"></i> 模块按届别加载</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div id="login-modal-backdrop" class="login-modal-backdrop" style="display:none;" aria-hidden="true"></div>
+        `;
+        overlay.dataset.passportRebuilt = 'true';
+        return overlay;
+    },
+
     ensureLoginWorkbench: function () {
-        const overlay = this.rebuildInstagramLoginShell();
+        const overlay = this.rebuildPassportLoginShell();
         const panel = document.getElementById('login-portal-hub');
         const modalBackdrop = document.getElementById('login-modal-backdrop');
         if (!overlay || !panel) return;
@@ -3320,7 +3701,7 @@ const Auth = {
         }
 
         if (modalLink) {
-            modalLink.textContent = '登录窗口';
+            modalLink.textContent = '登录验证';
             modalLink.href = '#';
             modalLink.dataset.nav = 'modal';
             modalLink.classList.add('active');
@@ -3331,13 +3712,11 @@ const Auth = {
         }
 
         if (navButton) {
-            navButton.textContent = '打开学校端';
+            navButton.textContent = '切到学校端';
             navButton.onclick = () => this.openLoginPortalModal('school');
         }
 
-        if (!overlay.dataset.loginModal || overlay.dataset.loginModal === 'inline') {
-            overlay.dataset.loginModal = 'closed';
-        }
+        overlay.dataset.loginModal = 'inline';
         this.setLoginWorkbenchNavState(document.body.classList.contains('login-system-intro-open') ? 'intro' : 'modal');
         panel.dataset.loginWorkbenchReady = 'true';
     },
@@ -3792,12 +4171,12 @@ const Auth = {
         const nextPortal = this.setLoginPortal(portal);
         const overlay = document.getElementById('login-overlay');
         const backdrop = document.getElementById('login-modal-backdrop');
-        if (overlay) overlay.dataset.loginModal = 'open';
+        if (overlay) overlay.dataset.loginModal = 'inline';
         if (backdrop) {
-            backdrop.style.display = 'flex';
-            backdrop.setAttribute('aria-hidden', 'false');
+            backdrop.style.display = 'none';
+            backdrop.setAttribute('aria-hidden', 'true');
         }
-        document.body.classList.add('login-modal-open');
+        document.body.classList.remove('login-modal-open');
         this.setLoginWorkbenchNavState('modal');
         this.focusLoginWorkbench({ scroll: false });
         return nextPortal;
@@ -3806,7 +4185,7 @@ const Auth = {
     closeLoginPortalModal: function () {
         const overlay = document.getElementById('login-overlay');
         const backdrop = document.getElementById('login-modal-backdrop');
-        if (overlay) overlay.dataset.loginModal = 'closed';
+        if (overlay) overlay.dataset.loginModal = 'inline';
         if (backdrop) {
             backdrop.style.display = 'none';
             backdrop.setAttribute('aria-hidden', 'true');
@@ -3828,6 +4207,7 @@ const Auth = {
         this.closeLoginPortalModal();
         if (visible) {
             this.syncParentMobileScrollRoot(false);
+            setManualCohortSelectionGate(false);
             if (this._parentRenderTimer) {
                 clearTimeout(this._parentRenderTimer);
                 this._parentRenderTimer = null;
@@ -3838,7 +4218,7 @@ const Auth = {
         if (overlay) {
             overlay.style.display = visible ? 'flex' : 'none';
             overlay.dataset.loginState = visible ? 'active' : 'hidden';
-            if (visible && !overlay.dataset.loginModal) overlay.dataset.loginModal = 'closed';
+            if (visible) overlay.dataset.loginModal = 'inline';
         }
         if (app && visible) app.classList.add('hidden');
     },
@@ -3850,7 +4230,7 @@ const Auth = {
         const panel = document.getElementById('login-portal-hub');
         if (panel) panel.dataset.loginPortal = nextPortal;
 
-        document.querySelectorAll('.login-portal-card[data-portal]').forEach(card => {
+        document.querySelectorAll('.login-portal-card[data-portal], .login-portal-chip[data-portal]').forEach(card => {
             card.classList.toggle('active', card.dataset.portal === nextPortal);
             card.setAttribute('aria-pressed', card.dataset.portal === nextPortal ? 'true' : 'false');
         });
@@ -3941,6 +4321,40 @@ const Auth = {
                 navButton: '打开学校端'
             };
 
+        if (nextPortal === 'parent') {
+            Object.assign(config, {
+                badge: '家长身份验证',
+                authTitle: '家长登录',
+                copy: '家长端验证成功后，直接进入成长报告、成绩与提醒页面。',
+                helper: '当前为家长端，验证成功后直接进入成长查看界面。',
+                submit: '进入家长端',
+                stageKicker: 'Family Portal',
+                stageTitle: '<span class="login-stage-title-line">家长端登录</span><span class="login-stage-title-line login-stage-title-line--accent">验证后直接查看成长数据</span>',
+                stageCopy: '家长端保持轻量路径，输入学生姓名、班级和密码后，直接查看成长报告、成绩与提醒。',
+                stageFeatureTitle: '家长端保持直接进入成长视图',
+                stageFeatureCopy: '学校端与家长端共用同一张登录页，但家长端不进入届别选择，验证后直接打开成长数据。',
+                launchKicker: 'Switch Portal',
+                launchCopy: '切换到家长端后，内联表单会自动改成学生姓名、班级和密码验证。',
+                launchNote: '家长端仍然保留直接进入成长查看的短路径。'
+            });
+        } else {
+            Object.assign(config, {
+                badge: '学校身份验证',
+                authTitle: '登录验证',
+                copy: '学校端验证成功后，会先进入届别选择界面，再进入对应届别工作台。',
+                helper: '当前为学校端，验证成功后会先进入届别选择界面。',
+                submit: '验证并进入届别选择',
+                stageKicker: 'Step 1 / Login',
+                stageTitle: '<span class="login-stage-title-line">先登录</span><span class="login-stage-title-line login-stage-title-line--accent">再选择届别进入工作台</span>',
+                stageCopy: '登录页只负责身份验证，不再把届别选择和主工作台混在同一层里。',
+                stageFeatureTitle: '登录成功后不会直接进入系统',
+                stageFeatureCopy: '学校端固定采用“登录验证 → 届别选择 → 工作台”的路径，避免直接落到错误届别或空模块。',
+                launchKicker: 'Two-step Flow',
+                launchCopy: '学校端与家长端共用内联登录页，但学校端验证后必须先经过届别选择。',
+                launchNote: '下载与系统说明都留在辅助入口里，登录动作本身只负责验证。'
+            });
+        }
+
         const portalCards = {
             school: {
                 title: '学校端',
@@ -3957,7 +4371,7 @@ const Auth = {
         };
 
         Object.entries(portalCards).forEach(([portalName, cardConfig]) => {
-            const card = document.querySelector(`.login-portal-card[data-portal="${portalName}"]`);
+            const card = document.querySelector(`.login-portal-card[data-portal="${portalName}"], .login-portal-chip[data-portal="${portalName}"]`);
             if (!card) return;
             const titleEl = card.querySelector('.login-portal-title');
             const descEl = card.querySelector('.login-portal-desc');
@@ -3967,6 +4381,7 @@ const Auth = {
             if (descEl) descEl.textContent = cardConfig.desc;
             if (metaEl) metaEl.textContent = cardConfig.meta;
             if (actionEl) actionEl.textContent = cardConfig.action;
+            if (!titleEl && !descEl && !metaEl && !actionEl) card.textContent = cardConfig.title;
         });
 
         if (badgeEl) badgeEl.textContent = config.badge;
@@ -4103,6 +4518,10 @@ const Auth = {
             else if (!isParentLikeUser(this.currentUser)) {
                 document.getElementById('app').classList.remove('hidden');
                 if (typeof renderNavigation === 'function') renderNavigation();
+                const restoredCohortId = String(CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
+                if (!restoredCohortId) {
+                    showCohortPicker();
+                }
                 if (!this.currentUser.local_only && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function') {
                     withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout')
                         .then(() => {
@@ -4216,11 +4635,10 @@ const Auth = {
             };
 
             const isLocalOnlySession = !!data.local_only;
-            this.currentUser = matchedUser;
-            this.setLoginPortal(isParentLikeUser(matchedUser) ? 'parent' : 'school');
-            AuthState.setCurrentUser(matchedUser);
+            this.currentUser = AuthState.setCurrentUser(matchedUser) || matchedUser;
+            this.setLoginPortal(isParentLikeUser(this.currentUser) ? 'parent' : 'school');
             if (!isLocalOnlySession && (!window.EdgeGateway || !EdgeGateway.getToken()) && window.EdgeGateway && typeof EdgeGateway.login === 'function') {
-                const gatewayClassName = (isParentLikeUser(matchedUser) || matchedUser.role === 'class_teacher') ? inputClass : '';
+                const gatewayClassName = (isParentLikeUser(this.currentUser) || this.currentUser.role === 'class_teacher') ? inputClass : '';
                 EdgeGateway.login(user, pass, gatewayClassName).catch(err => {
                     console.warn('[EdgeGateway] login skipped:', err?.message || err);
                 });
@@ -4232,14 +4650,14 @@ const Auth = {
             updateRoleHint();
 
             // 🆕 记录所有角色信息
-            const rolesInfo = matchedUser.roles && matchedUser.roles.length > 1
-                ? `${matchedUser.role} (${matchedUser.roles.join(', ')})`
-                : matchedUser.role;
-            logAction('登录', `用户 ${matchedUser.name} (${rolesInfo}) 登录`);
+            const rolesInfo = this.currentUser.roles && this.currentUser.roles.length > 1
+                ? `${this.currentUser.role} (${this.currentUser.roles.join(', ')})`
+                : this.currentUser.role;
+            logAction('登录', `用户 ${this.currentUser.name} (${rolesInfo}) 登录`);
 
             // === 🛡️ 安全检查：强制修改默认密码 ===
             // 默认密码定义：教师是 yssy2016，其他人是 123456
-            const isDefaultPass = AuthState.isDefaultManagedPassword(matchedUser.role, pass);
+            const isDefaultPass = AuthState.isDefaultManagedPassword(this.currentUser.role, pass);
 
             if (isDefaultPass) {
                 this.syncLoginOverlayState(false); // 先关掉登录框
@@ -4263,7 +4681,7 @@ const Auth = {
             });
             this.syncLoginOverlayState(false);
 
-            if (window.UI) UI.toast(`登录成功！欢迎 ${matchedUser.name}`, 'success');
+            if (window.UI) UI.toast(`登录成功！欢迎 ${this.currentUser.name}`, 'success');
 
             const shouldHydrateCloudInBackground = !isLocalOnlySession && typeof loadCloudData === 'function';
             const startBackgroundCloudHydration = (loaderText) => {
@@ -4296,7 +4714,7 @@ const Auth = {
             };
 
             // 5. 分流跳转与权限初始化
-            if (isParentLikeUser(matchedUser)) {
+            if (isParentLikeUser(this.currentUser)) {
                 if (!isLocalOnlySession && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function') {
                     UI.loading(true, "正在恢复学生数据...");
                     try {
@@ -4321,18 +4739,19 @@ const Auth = {
                 if (typeof updateSchoolSelect === 'function') updateSchoolSelect();
                 if (typeof renderTables === 'function') renderTables();
 
-                // 7. 届别自动记忆/选择
+                // 7. 先展示届别选择，不再从登录页直接进入工作台
                 if (typeof CohortManager !== 'undefined') {
                     CohortManager.init();
-                    applyUserCohortPreference();
                 }
+                setManualCohortSelectionGate(true);
+                showCohortPicker();
 
                 // 👇👇👇 🟢 新增：角色专属初始化逻辑 🟢 👇👇👇
 
                 // A. 如果有学校绑定 (除管理员外通常都有)
-                if (matchedUser.school) {
+                if (this.currentUser.school) {
                     // 自动设置本校全局变量
-                    writeCurrentSchool(matchedUser.school);
+                    writeCurrentSchool(this.currentUser.school);
 
                     // 尝试更新界面上的“选择本校”下拉框
                     const sel = document.getElementById('mySchoolSelect');
@@ -4344,30 +4763,30 @@ const Auth = {
                 }
 
                 // B. 角色权限细分处理
-                if (matchedUser.role === 'teacher') {
+                if (this.currentUser.role === 'teacher') {
                     // 普通教师：后续将在 renderStudentDetails 中过滤只能看自己教的课
-                    UI.toast(`欢迎您，${matchedUser.name}老师`, "success");
+                    UI.toast(`欢迎您，${this.currentUser.name}老师`, "success");
                 }
-                else if (matchedUser.role === 'class_teacher') {
+                else if (this.currentUser.role === 'class_teacher') {
                     // 班主任：后续将在 renderStudentDetails 中过滤只能看本班
-                    UI.toast(`欢迎您，${matchedUser.class}班班主任`, "success");
+                    UI.toast(`欢迎您，${this.currentUser.class}班班主任`, "success");
 
                     // 尝试自动定位到“学生档案查询”模块的班级筛选
                     setTimeout(() => {
                         const clsSel = document.getElementById('studentClassSelect');
                         if (clsSel) {
-                            clsSel.value = matchedUser.class;
+                            clsSel.value = this.currentUser.class;
                             clsSel.dispatchEvent(new Event('change')); // 触发筛选
                         }
                     }, 500);
                 }
-                else if (matchedUser.role === 'grade_director') {
+                else if (this.currentUser.role === 'grade_director') {
                     // 级部主任：
                     // 1. 拥有修改成绩权限 (在 updateStudentScore 中控制)
                     // 2. 能接收消息 (需显示铃铛按钮)
                     // 3. 只能看本级部 (在 renderStudentDetails 中控制)
 
-                    UI.toast(`欢迎您，${matchedUser.class}年级主任`, "success");
+                    UI.toast(`欢迎您，${this.currentUser.class}年级主任`, "success");
 
                     // 开启消息轮询 (复用管理员的逻辑)
                     const msgBtn = document.getElementById('admin-msg-btn');
@@ -8153,16 +8572,21 @@ const DB = {
 };
 
 // 🔄 切换届别 (安全修复版)
-async function switchCohort(cohortId) {
+async function switchCohort(cohortId, options = {}) {
     if (!cohortId) return;
     const cohortKey = getCohortKey(cohortId);
     const current = readWorkspaceProjectKey() || '';
-    if (current === cohortKey) return;
+    const currentExamId = CURRENT_EXAM_ID || readWorkspaceExamId() || COHORT_DB?.currentExamId || '';
+    const hasReadyData = Array.isArray(RAW_DATA) && RAW_DATA.length > 0;
+    if (current === cohortKey && currentExamId && hasReadyData) {
+        tryAutoEnterReadyCohortWorkspace();
+        return true;
+    }
 
-    if (!confirm("⚠️ 正在切换届别档案...\n\n切换前请确保当前工作已保存（数据会自动保存），否则未同步的修改可能丢失。\n\n确定切换吗？")) {
+    if (!options.skipConfirm && !confirm("⚠️ 正在切换届别档案...\n\n切换前请确保当前工作已保存（数据会自动保存），否则未同步的修改可能丢失。\n\n确定切换吗？")) {
         const selector = document.getElementById('cohort-selector');
         if (selector) selector.value = readWorkspaceCohortId() || '';
-        return;
+        return false;
     }
 
     UI.loading(true, "正在从云端拉取 [" + cohortKey + "] 的数据...");
@@ -8316,6 +8740,7 @@ async function switchCohort(cohortId) {
     }
 
     UI.loading(false);
+    return true;
 }
 
 // 兼容旧入口
@@ -19538,6 +19963,17 @@ function showCohortPicker() {
     if (app) app.classList.add('hidden');
 }
 
+function setManualCohortSelectionGate(required = false) {
+    window.__REQUIRE_MANUAL_COHORT_SELECTION__ = !!required;
+    if (document.body) {
+        document.body.dataset.cohortGate = required ? 'manual' : 'auto';
+    }
+}
+
+function requiresManualCohortSelection() {
+    return !!window.__REQUIRE_MANUAL_COHORT_SELECTION__;
+}
+
 function resetCohortSelection() {
     clearExamRuntimeState();
     clearWorkspaceRuntimeIdentity({ clearCohortDb: true });
@@ -19616,22 +20052,22 @@ const CohortManager = {
         const year = parseYearFromInput('cohort-year');
         const startGrade = 6;
         if (!year || year < 2000) return alert('请输入有效的入学年份');
-        this.addCohort({ year, startGrade });
+        return this.addCohort({ year, startGrade });
     },
 
-    addCohort: function ({ year, startGrade }) {
+    addCohort: function ({ year, startGrade }, options = {}) {
         const id = String(year);
         if (this.list.some(c => c.id === id)) {
-            return this.switchTo(id);
+            return this.switchTo(id, options);
         }
         const meta = { id, year, startGrade, createdAt: Date.now() };
         this.list.unshift(meta);
         this.save();
         this.renderSelector();
-        this.switchTo(id);
+        return this.switchTo(id, options);
     },
 
-    switchTo: function (cohortId) {
+    switchTo: function (cohortId, options = {}) {
         if (!cohortId) return;
         const meta = this.list.find(c => c.id === cohortId);
         if (!meta) return alert('未找到该届别');
@@ -19653,7 +20089,7 @@ const CohortManager = {
         if (examCohortLabel) examCohortLabel.innerText = label;
         refreshExamYearOptions(meta.year);
         this.renderSelector();
-        switchCohort(cohortId);
+        return switchCohort(cohortId, options);
 
         // 🟢 [修复]：切换届别后，立即强制刷新教师学期下拉框，解决同步弹窗年级标签陈旧的问题
         if (window.DataManager && typeof DataManager.renderTeacherTermSelect === 'function') {
@@ -19699,16 +20135,12 @@ const CohortManager = {
     }
 };
 
-function enterCohortFromMask() {
+async function enterCohortFromMask() {
     const year = parseInt(resolveMaskCohortYear(), 10);
     const startGrade = 6;
     if (!year || year < 2000) return alert('请输入有效的入学年份');
-    CohortManager.addCohort({ year, startGrade });
-    document.getElementById('mode-mask').style.display = 'none';
-    document.getElementById('app').classList.remove('hidden');
-    setTimeout(() => {
-        scheduleTeacherSyncPrompt();
-    }, 1200);
+    setManualCohortSelectionGate(false);
+    await CohortManager.addCohort({ year, startGrade }, { skipConfirm: true });
 }
 
 function tryAutoEnterReadyCohortWorkspace() {
@@ -19716,6 +20148,7 @@ function tryAutoEnterReadyCohortWorkspace() {
     const app = document.getElementById('app');
     if (!mask || !app) return false;
     if (getComputedStyle(mask).display === 'none') return false;
+    if (requiresManualCohortSelection()) return false;
 
     const cohortId = CURRENT_COHORT_ID || readWorkspaceCohortId();
     const examId = CURRENT_EXAM_ID || readWorkspaceExamId();
@@ -21655,8 +22088,18 @@ const PermissionPolicy = {
         return getTeacherScopeForUser(user);
     },
     getAllowedModules(user = getCurrentUser()) {
-        const role = this.getPrimaryRole(user);
-        return QUERY_MODULE_ACCESS[role] || QUERY_MODULE_ACCESS.guest;
+        const roles = this.getQueryRoles(user);
+        if (!roles.length) return QUERY_MODULE_ACCESS.guest;
+        const merged = new Set();
+        for (const role of roles) {
+            const allow = QUERY_MODULE_ACCESS[role] || [];
+            if (allow.includes('*')) return ['*'];
+            allow.forEach(moduleId => merged.add(moduleId));
+        }
+        if (!merged.size) {
+            (QUERY_MODULE_ACCESS.guest || []).forEach(moduleId => merged.add(moduleId));
+        }
+        return Array.from(merged);
     },
     canAccessModule(user, moduleId) {
         const allow = this.getAllowedModules(user);

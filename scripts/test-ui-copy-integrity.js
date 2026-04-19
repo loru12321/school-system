@@ -303,6 +303,10 @@ async function waitForAppReady(page, timeout = 90000) {
 
 async function login(page) {
     await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'commit', timeout: 90000 });
+    await page.waitForFunction(() => {
+        const overlay = document.getElementById('login-overlay');
+        return document.readyState === 'complete' && !!overlay && !!window.Auth;
+    }, { timeout: 15000 }).catch(() => { });
     await page.waitForTimeout(600);
 
     const bootState = await readBootState(page).catch(() => ({
@@ -323,6 +327,7 @@ async function login(page) {
             for (const opener of openers) {
                 if (!(await opener.count().catch(() => 0))) continue;
                 await opener.click({ force: true }).catch(() => { });
+                await page.waitForTimeout(200);
                 if (await loginUser.isVisible().catch(() => false)) break;
             }
             if (!(await loginUser.isVisible().catch(() => false))) {
