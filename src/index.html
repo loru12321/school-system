@@ -21,60 +21,14 @@
     <link rel="stylesheet" href="./assets/css/vendor-polish.css?v=20260402-structure-v2">
     <link rel="stylesheet" href="./assets/css/apple-platform.css?v=20260407-apple-v1">
     <link rel="stylesheet" href="./assets/css/apk-mobile-shell.css?v=20260407-apk-v2">
-    <link rel="stylesheet" href="./assets/css/modern-login.css?v=20260419-passport-v2">
+    <link rel="stylesheet" href="./assets/css/ins-login.css?v=20260419-ins-v1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
     <script defer src="./assets/js/platform-compat-runtime.js?v=20260407-apple-v1"></script>
-    <script defer src="./assets/js/boot-runtime.js?v=20260419-login-refine-v4"></script>
-    <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
-    <script defer src="./assets/vendor/crypto-js/crypto-js.min.js" data-standalone-lib="crypto-js"></script>
-    <!-- 🟢 [修复] 添加 XLSX 库支持 Excel 导入导出功能 -->
-    <script async src="./assets/vendor/xlsx/xlsx.full.min.js"></script>
-    <!-- 🟢 [修复] 添加 Alpine.js（教师卡片依赖） -->
-    <script async src="./assets/vendor/alpinejs/cdn.min.js"></script>
-    <!-- 🟢 [修复] 添加 Chart.js（报告图表依赖） -->
-    <script async src="./assets/vendor/chart.js/chart.umd.min.js" data-standalone-lib="chart.js"></script>
-    <!-- 🟢 [优化] 本地 PPT 导出底层压缩依赖 -->
-    <script defer src="./assets/vendor/jszip/jszip.min.js"></script>
-    <!-- 🟢 [优化] 本地 PPT 导出依赖，避免外网 CDN 抖动影响汇报下载 -->
-    <script defer src="./assets/vendor/pptxgenjs/pptxgen.min.js"></script>
-    <!-- 🟢 [修复] 添加 SweetAlert2（Swal 依赖） -->
-    <script async src="./assets/vendor/sweetalert2/sweetalert2.all.min.js"></script>
     <script defer src="./assets/vendor/gsap/gsap.min.js?v=20260402-plugin-v1"></script>
-    <script defer src="./assets/vendor/gsap/ScrollTrigger.min.js?v=20260402-plugin-v1"></script>
-    <script defer src="./assets/vendor/popperjs/popper.min.js?v=20260402-plugin-v1"></script>
-    <script defer src="./assets/vendor/tippyjs/tippy.umd.min.js?v=20260402-plugin-v1"></script>
-    <script defer src="./assets/vendor/simplebar/simplebar.min.js?v=20260402-plugin-v1"></script>
-    <script defer src="./assets/js/auth-state-runtime.js?v=20260322-school-v1"></script>
-    <script defer src="./assets/js/workspace-state-runtime.js?v=20260322-school-v1"></script>
-    <script defer src="./assets/js/exam-state-runtime.js?v=20260322-school-v1"></script>
-    <script defer src="./assets/js/school-state-runtime.js?v=20260322-school-v1"></script>
-    <script defer src="./assets/js/teacher-state-runtime.js?v=20260322-teacher-v1"></script>
-    <script defer src="./assets/js/data-state-runtime.js?v=20260322-data-v1"></script>
-    <script defer src="./assets/js/support-state-runtime.js?v=20260322-support-v1"></script>
-    <script defer src="./assets/js/progress-state-runtime.js?v=20260322-progress-v1"></script>
-    <script defer src="./assets/js/report-session-state-runtime.js?v=20260322-report-session-v1"></script>
-    <script defer src="./assets/js/compare-session-state-runtime.js?v=20260322-compare-session-v1"></script>
-    <script defer src="./assets/js/compare-result-state-runtime.js?v=20260322-compare-result-v1"></script>
-    <script defer src="./assets/js/compare-summary-state-runtime.js?v=20260322-compare-summary-v1"></script>
-    <script defer src="./assets/js/cloud-api-runtime.js?v=20260411-cloud-api-v1"></script>
-    <script defer src="./assets/js/cloud.js?v=20260322-teacher-v1"></script>
-    <script defer src="./assets/js/cloud-workspace-runtime.js?v=20260322-teacher-v1"></script>
-    <script defer src="./assets/js/data-cloud-runtime.js?v=20260411-data-cloud-v1"></script>
-    <script defer src="./assets/js/issue-manager-runtime.js?v=20260411-issue-runtime-v1"></script>
-    <script defer src="./assets/js/packager-runtime.js?v=20260411-packager-runtime-v1"></script>
-    <script defer src="./assets/js/help-system-runtime.js?v=20260412-help-runtime-v1"></script>
-    <script defer src="./assets/js/logger-runtime.js?v=20260412-logger-runtime-v1"></script>
-    <script defer src="./assets/js/worker-api-runtime.js?v=20260412-worker-runtime-v1"></script>
-    <script defer src="./assets/js/account-manager-runtime.js?v=20260412-account-runtime-v1"></script>
-    <script defer src="./assets/js/data-manager-teacher-runtime.js?v=20260412-dm-teacher-runtime-v1"></script>
-    <script defer src="./assets/js/data-manager-student-runtime.js?v=20260412-dm-student-runtime-v1"></script>
-    <script defer src="./assets/js/data-manager-archive-runtime.js?v=20260412-dm-archive-runtime-v1"></script>
-    <script defer src="./assets/js/data-manager-grade9-template-runtime.js?v=20260412-dm-grade9-runtime-v1"></script>
-    <script defer src="./assets/js/data-manager-params-runtime.js?v=20260412-dm-params-runtime-v1"></script>
-    <script defer src="./assets/js/data-manager-targets-runtime.js?v=20260412-dm-targets-runtime-v1"></script>
-    <script defer src="./assets/js/data-manager-school-alias-runtime.js?v=20260412-dm-school-alias-runtime-v1"></script>
-    <script defer src="./assets/js/data-manager-save-sync-runtime.js?v=20260412-dm-save-sync-runtime-v1"></script>
-    <script defer src="./assets/js/data-manager-history-runtime.js?v=20260412-dm-history-runtime-v1"></script>
-    <script defer src="./assets/js/data-manager-tab-runtime.js?v=20260412-dm-tab-runtime-v1"></script>
+    <script defer src="./assets/js/boot-runtime.js?v=20260419-login-refine-v5"></script>
+    <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
 
     <!-- ================== Windows 11 Fluent Design UI 重构包 ================== -->
     
@@ -266,129 +220,180 @@
         </div>
     </div>
 
-    <div id="login-overlay" data-login-portal="school" data-login-workbench-ready="true" style="display:flex;">
-        <div class="login-bg-mesh"></div>
-        <div class="login-bg-glow"></div>
-
-        <div class="modern-login-container">
-            <div class="login-glass-card">
-                <div class="login-card-header">
-                    <div id="login-portal-badge" class="login-portal-badge">学校工作台</div>
-                    <div class="brand-logo-mark">SE</div>
-                    <h2>SmartEdu Analytics</h2>
-                    <p id="login-portal-copy" class="login-subtitle">智慧教务 · 新一代校园数据中枢</p>
+    <div id="login-overlay" data-login-portal="school">
+        <!-- Visual Branding Side -->
+        <div class="login-visual-panel">
+            <div class="login-bg-mesh"></div>
+            <div class="visual-content">
+                <div class="visual-logo">
+                    <i class="ti ti-school"></i>
+                    <span>SmartEdu</span>
                 </div>
-
-                <div class="role-selector-wrapper">
-                    <div class="role-selector-pill">
-                        <button type="button" class="role-pill-btn active" onclick="switchLoginRole('school')" id="btn-role-school">学校端</button>
-                        <button type="button" class="role-pill-btn" onclick="switchLoginRole('parent')" id="btn-role-parent">家长端</button>
-                        <div class="role-pill-slider"></div>
+                <h1 class="visual-title">
+                    <span>智慧教务</span>
+                    <span>数据决策中心</span>
+                </h1>
+                <p class="visual-desc">
+                    通过结构化数据与 AI 诊断，为每一位教师提供精准的教学洞察，助力学校实现高质量数字化转型。
+                </p>
+                <div class="visual-features">
+                    <div class="feature-item">
+                        <i class="ti ti-chart-bar"></i>
+                        <span>多维考向分析与成长轨迹追踪</span>
                     </div>
-                </div>
-
-                <div id="login-form" class="modern-form">
-                    <div class="form-group">
-                        <label id="login-user-label" for="login-user">账号 / 姓名</label>
-                        <div class="input-wrapper">
-                            <i class="ti ti-user"></i>
-                            <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" autocomplete="username">
-                        </div>
-                        <div id="login-user-helper" class="login-inline-tip">支持管理员、教务、年级、班主任与教师账号登录。</div>
+                    <div class="feature-item">
+                        <i class="ti ti-users"></i>
+                        <span>全场景教务管理与家校互动协同</span>
                     </div>
-
-                    <div id="login-class-group" class="form-group" style="display: none;" aria-hidden="true">
-                        <label for="login-class">学生班级 <span id="login-class-label-note" class="label-badge">(学校端无需填写)</span></label>
-                        <div class="input-wrapper">
-                            <i class="ti ti-users"></i>
-                            <input type="text" id="login-class" placeholder="请输入班级，如 701">
-                        </div>
+                    <div class="feature-item">
+                        <i class="ti ti-shield-lock"></i>
+                        <span>金融级数据加密与隐私安全保护</span>
                     </div>
-
-                    <div class="form-group">
-                        <label for="login-pass">密码</label>
-                        <div class="input-wrapper">
-                            <i class="ti ti-lock"></i>
-                            <input type="password" id="login-pass" placeholder="输入密码" autocomplete="current-password">
-                            <button type="button" class="password-toggle" onclick="togglePasswordVisibility()" aria-label="显示/隐藏密码">
-                                <i class="ti ti-eye" id="toggle-password-icon"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="form-actions">
-                        <button id="login-submit-button" class="submit-btn" onclick="window.Auth?.login()">
-                            <span>进入工作台</span>
-                            <i class="ti ti-arrow-right"></i>
-                        </button>
-                    </div>
-
-                    <div id="login-portal-helper" class="login-status-hint">当前为学校端，验证通过后直达教学分析与数据维护。</div>
-                </div>
-
-                <div class="login-card-footer">
-                    <button type="button" class="footer-link-btn" onclick="window.Auth?.openDownloadHubModal('android')">
-                        <i class="ti ti-device-mobile"></i> 客户端下载中心
-                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Hidden backdrop to avoid breaking existing auth scripts that might call closeLoginPortalModal() -->
+        <!-- Auth Form Side -->
+        <div class="login-form-panel">
+            <div class="modern-login-container">
+                <div class="login-glass-card">
+                    <!-- Phase 1: Identity -->
+                    <div id="login-identity-phase" class="login-phase phase-active">
+                        <div class="login-card-header">
+                            <h2>欢迎回来</h2>
+                            <p class="login-subtitle">请验证您的身份以访问工作台</p>
+                        </div>
+
+                        <div class="role-selector-pill">
+                            <button type="button" class="role-pill-btn active" onclick="switchLoginRole('school')" id="btn-role-school">学校工作台</button>
+                            <button type="button" class="role-pill-btn" onclick="switchLoginRole('parent')" id="btn-role-parent">家长入口</button>
+                            <div class="role-pill-slider"></div>
+                        </div>
+
+                        <div id="login-form" class="modern-form">
+                            <div class="form-group">
+                                <label id="login-user-label" for="login-user">账号 / Account</label>
+                                <div class="input-wrapper">
+                                    <i class="ti ti-user"></i>
+                                    <input type="text" id="login-user" placeholder="输入您的账号" autocomplete="username">
+                                </div>
+                            </div>
+
+                            <div id="login-class-group" class="form-group" style="display: none;" aria-hidden="true">
+                                <label for="login-class">班级 / Class</label>
+                                <div class="input-wrapper">
+                                    <i class="ti ti-users"></i>
+                                    <input type="text" id="login-class" placeholder="如：701">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="login-pass">密码 / Password</label>
+                                <div class="input-wrapper">
+                                    <i class="ti ti-lock"></i>
+                                    <input type="password" id="login-pass" placeholder="输入您的密码" autocomplete="current-password">
+                                    <button type="button" class="password-toggle" onclick="togglePasswordVisibility()" aria-label="Toggle Password">
+                                        <i class="ti ti-eye" id="toggle-password-icon"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button id="login-submit-button" class="submit-btn" onclick="window.Auth?.login()">
+                                <span>立即验证</span>
+                                <i class="ti ti-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Phase 2: Cohort Selection -->
+                    <div id="login-cohort-phase" class="login-phase" style="display: none;">
+                        <div class="login-card-header">
+                            <h2>选择届别</h2>
+                            <p class="login-subtitle">请选择您要进入的教学年度</p>
+                        </div>
+                        
+                        <div class="cohort-grid">
+                            <div class="cohort-card" onclick="enterCohort('2022')">
+                                <strong>2022 届</strong>
+                                <span>高三年级</span>
+                            </div>
+                            <div class="cohort-card" onclick="enterCohort('2023')">
+                                <strong>2023 届</strong>
+                                <span>高二年级</span>
+                            </div>
+                            <div class="cohort-card" onclick="enterCohort('2024')">
+                                <strong>2024 届</strong>
+                                <span>高一年级</span>
+                            </div>
+                            <div class="cohort-card" onclick="document.getElementById('mode-mask').style.display='flex'">
+                                <strong>更多届别</strong>
+                                <span>手动切换</span>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 24px; text-align: center;">
+                            <button class="footer-link-btn" onclick="location.reload()">
+                                <i class="ti ti-arrow-left"></i> 返回重新登录
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="login-portal-helper" class="login-status-hint"></div>
+
+                    <div class="login-card-footer">
+                        <button type="button" class="footer-link-btn" onclick="window.Auth?.openDownloadHubModal('android')">
+                            <i class="ti ti-download"></i> 下载中心
+                        </button>
+                        <button type="button" class="footer-link-btn" onclick="window.Auth?.openDownloadHubModal('android')">
+                            <i class="ti ti-help-circle"></i> 系统帮助
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Backdrops -->
         <div id="login-modal-backdrop" style="display:none;" aria-hidden="true"></div>
         <div id="login-download-hub-backdrop" style="display:none;" aria-hidden="true"></div>
 
         <script>
             function syncLoginRoleButtons(role) {
-                document.querySelectorAll('.role-pill-btn, .role-btn').forEach((btn) => {
+                document.querySelectorAll('.role-pill-btn').forEach((btn) => {
                     const isActive = btn.id === 'btn-role-' + role;
                     btn.classList.toggle('active', isActive);
-                    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
                 });
             }
 
             function switchLoginRole(role) {
                 const overlay = document.getElementById('login-overlay');
                 if (overlay) overlay.setAttribute('data-login-portal', role);
-
                 syncLoginRoleButtons(role);
-                
-                if (window.Auth && typeof window.Auth.syncLoginPortalUI === 'function') {
-                    window.Auth.syncLoginPortalUI(role);
-                } else if (window.Auth && typeof window.Auth.setLoginPortal === 'function') {
-                    window.Auth.setLoginPortal(role);
-                }
+                window.Auth?.syncLoginPortalUI?.(role);
             }
 
             function togglePasswordVisibility() {
                 const passInput = document.getElementById('login-pass');
-                const toggleIcon = document.getElementById('toggle-password-icon') || document.getElementById('toggle-password');
+                const toggleIcon = document.getElementById('toggle-password-icon');
                 if (!passInput || !toggleIcon) return;
-                if (passInput.type === 'password') {
-                    passInput.type = 'text';
-                    toggleIcon.classList.replace('ti-eye', 'ti-eye-off');
-                } else {
-                    passInput.type = 'password';
-                    toggleIcon.classList.replace('ti-eye-off', 'ti-eye');
-                }
+                const isPass = passInput.type === 'password';
+                passInput.type = isPass ? 'text' : 'password';
+                toggleIcon.classList.toggle('ti-eye', !isPass);
+                toggleIcon.classList.toggle('ti-eye-off', isPass);
             }
 
             function bindLoginEnterSubmit() {
                 ['login-user', 'login-pass', 'login-class'].forEach((id) => {
                     const input = document.getElementById(id);
-                    if (!input || input.dataset.enterBound === 'true') return;
-                    input.dataset.enterBound = 'true';
-                    input.addEventListener('keydown', (event) => {
-                        if (event.key === 'Enter') {
-                            event.preventDefault();
+                    if (!input) return;
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
                             window.Auth?.login();
                         }
                     });
                 });
             }
-
             bindLoginEnterSubmit();
-            syncLoginRoleButtons(document.getElementById('login-overlay')?.getAttribute('data-login-portal') || 'school');
         </script>
     </div>
 
@@ -3572,23 +3577,7 @@
         </div>
     </div>
 
-    <!-- 核心逻辑脚本 -->
-<script defer src="./assets/js/config-transfer-runtime.js?v=20260329-config-transfer-v1"></script>
-<script defer src="./assets/js/zhongkao-countdown-runtime.js?v=20260329-zhongkao-countdown-v1"></script>
-<script defer src="./assets/js/shell-runtime.js?v=20260402-shell-v2"></script>
-<script defer src="./assets/js/workspace-rail-runtime.js?v=20260407-workspace-rail-v1"></script>
-<script defer src="./assets/js/shell-polish-runtime.js?v=20260402-plugin-v1"></script>
-<script defer src="./assets/js/module-entry-runtime.js?v=20260402-module-entry-v1"></script>
-    <script defer src="./assets/js/app.js?v=20260419-passport-v2"></script>
-<script defer src="./assets/js/login-instagram-runtime.js?v=20260412-ig-runtime-v1"></script>
-    <script defer src="./assets/js/school-normalization-runtime.js?v=20260321-localgrades-v4"></script>
-    <script defer src="./assets/js/compare-shared-runtime.js?v=20260322-compare-session-v1"></script>
-    <script defer src="./assets/js/compare-cloud-context-runtime.js?v=20260322-compare-cloud-v1"></script>
-    <script defer src="./assets/js/compare-exam-sync-runtime.js?v=20260322-compare-sync-v1"></script>
-    <script defer src="./assets/js/report-compare-runtime.js?v=20260322-compare-session-v1"></script>
-    <script defer src="./assets/js/compare-selectors-runtime.js?v=20260322-compare-session-v1"></script>
-    <script defer src="./assets/js/town-submodule-compare-state-runtime.js?v=20260322-town-sub-state-v1"></script>
-    <script defer src="./assets/js/town-submodule-compare-runtime.js?v=20260321-localgrades-v4"></script>
+
     
     <!-- 修改密码模态框 -->
     <div id="user-password-modal" class="modal" style="display: none; z-index: 70000;">

@@ -2,7 +2,101 @@ var sbClient = window.sbClient || null;
 
 document.addEventListener('DOMContentLoaded', function () {
     if (typeof initMacroAnomalyConfigUI === 'function') initMacroAnomalyConfigUI();
+    if (window.Auth && typeof window.Auth.init === 'function') window.Auth.init();
 });
+
+var APP_MODULES = [
+    './assets/vendor/crypto-js/crypto-js.min.js',
+    './assets/vendor/xlsx/xlsx.full.min.js',
+    './assets/vendor/alpinejs/cdn.min.js',
+    './assets/vendor/chart.js/chart.umd.min.js',
+    './assets/vendor/jszip/jszip.min.js',
+    './assets/vendor/pptxgenjs/pptxgen.min.js',
+    './assets/vendor/sweetalert2/sweetalert2.all.min.js',
+    './assets/vendor/gsap/ScrollTrigger.min.js',
+    './assets/vendor/popperjs/popper.min.js',
+    './assets/vendor/tippyjs/tippy.umd.min.js',
+    './assets/vendor/simplebar/simplebar.min.js',
+    './assets/js/auth-state-runtime.js',
+    './assets/js/workspace-state-runtime.js',
+    './assets/js/exam-state-runtime.js',
+    './assets/js/school-state-runtime.js',
+    './assets/js/teacher-state-runtime.js',
+    './assets/js/data-state-runtime.js',
+    './assets/js/support-state-runtime.js',
+    './assets/js/progress-state-runtime.js',
+    './assets/js/report-session-state-runtime.js',
+    './assets/js/compare-session-state-runtime.js',
+    './assets/js/compare-result-state-runtime.js',
+    './assets/js/compare-summary-state-runtime.js',
+    './assets/js/cloud-api-runtime.js',
+    './assets/js/cloud.js',
+    './assets/js/cloud-workspace-runtime.js',
+    './assets/js/data-cloud-runtime.js',
+    './assets/js/issue-manager-runtime.js',
+    './assets/js/packager-runtime.js',
+    './assets/js/help-system-runtime.js',
+    './assets/js/logger-runtime.js',
+    './assets/js/worker-api-runtime.js',
+    './assets/js/account-manager-runtime.js',
+    './assets/js/data-manager-teacher-runtime.js',
+    './assets/js/data-manager-student-runtime.js',
+    './assets/js/data-manager-archive-runtime.js',
+    './assets/js/data-manager-grade9-template-runtime.js',
+    './assets/js/data-manager-params-runtime.js',
+    './assets/js/data-manager-targets-runtime.js',
+    './assets/js/data-manager-school-alias-runtime.js',
+    './assets/js/data-manager-save-sync-runtime.js',
+    './assets/js/data-manager-history-runtime.js',
+    './assets/js/data-manager-tab-runtime.js',
+    './assets/js/config-transfer-runtime.js',
+    './assets/js/zhongkao-countdown-runtime.js',
+    './assets/js/shell-runtime.js',
+    './assets/js/workspace-rail-runtime.js',
+    './assets/js/shell-polish-runtime.js',
+    './assets/js/module-entry-runtime.js',
+    './assets/js/app.js',
+    './assets/js/school-normalization-runtime.js',
+    './assets/js/compare-shared-runtime.js',
+    './assets/js/compare-cloud-context-runtime.js',
+    './assets/js/compare-exam-sync-runtime.js',
+    './assets/js/report-compare-runtime.js',
+    './assets/js/compare-selectors-runtime.js',
+    './assets/js/town-submodule-compare-state-runtime.js',
+    './assets/js/town-submodule-compare-runtime.js'
+];
+
+async function loadAppModules() {
+    if (window.__APP_MODULES_LOADED__) return;
+    const loaderText = document.getElementById('loader-text');
+    const total = APP_MODULES.length;
+    
+    for (let i = 0; i < total; i++) {
+        const src = APP_MODULES[i];
+        if (loaderText) loaderText.textContent = `正在初始化核心组件 (${i + 1}/${total})...`;
+        await new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = src + '?v=' + (window.__CORE_VERSION__ || Date.now());
+            script.onload = resolve;
+            script.onerror = resolve;
+            document.head.appendChild(script);
+        });
+    }
+    window.__APP_MODULES_LOADED__ = true;
+    if (loaderText) loaderText.textContent = '初始化完成';
+}
+
+function enterCohort(year) {
+    const yearInput = document.getElementById('entry-cohort-year');
+    if (yearInput) yearInput.value = year;
+    
+    if (typeof window.enterCohortFromMask === 'function') {
+        window.enterCohortFromMask();
+    } else {
+        // Fallback: hide login overlay manually if state manager isn't loaded yet
+        if (window.Auth) window.Auth.syncLoginOverlayState(false);
+    }
+}
 
 var DIRECT_SUPABASE_URL = 'https://aqhdogbdqijppvujiawy.supabase.co';
 var DIRECT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxaGRvZ2JkcWlqcHB2dWppYXd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjQwOTksImV4cCI6MjA4NDYwMDA5OX0.MUH4QgkBfmh1qDy09h4ObQWCUgpzG4Q-qnk-TT_Jz8o';
@@ -788,10 +882,10 @@ window.initCloudClient();
             }
             if (this.__bootLoginBusy) return;
             const portal = this.getLoginPortal();
-            const config = getPortalConfig(portal);
             const user = String(document.getElementById('login-user')?.value || '').trim();
             const pass = String(document.getElementById('login-pass')?.value || '').trim();
             const className = String(document.getElementById('login-class')?.value || '').trim();
+            
             if (!user || !pass) {
                 setBootHelperMessage('请输入账号和密码。', 'error');
                 return;
@@ -800,14 +894,12 @@ window.initCloudClient();
                 setBootHelperMessage('家长端请输入学生班级。', 'error');
                 return;
             }
-            if (!bootGateway.hasGatewayConfig()) {
-                setBootHelperMessage('登录模块仍在加载，请稍候再试。', 'error');
-                return;
-            }
+
             this.__bootLoginBusy = true;
             setBootSubmitState({ busy: true, text: '正在验证身份...' });
-            setBootHelperMessage('正在连接云端验证身份，请稍候...', 'info');
+            
             try {
+                // Connection attempt with offline fallback
                 const result = await bootGateway.login(user, pass, className).catch(err => {
                     const msg = String(err?.message || '').toLowerCase();
                     if (msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('connection refused')) {
@@ -822,36 +914,49 @@ window.initCloudClient();
                     }
                     throw err;
                 });
-                const matchedUser = result?.user || null;
-                if (!matchedUser) {
-                    throw new Error('Invalid username or password');
+
+                if (result && result.user) {
+                    const matchedUser = result.user;
+                    writeBootSessionUser(matchedUser);
+                    setBootHelperMessage('身份验证成功', 'success');
+                    
+                    // Phase transition to Cohort Selection (School only)
+                    if (portal === 'school' && window.gsap) {
+                        const form = document.getElementById('login-form');
+                        const cohortPhase = document.getElementById('login-cohort-phase');
+                        const submitBtn = document.getElementById('login-submit-button');
+                        
+                        if (form && cohortPhase) {
+                            window.gsap.to(form, { opacity: 0, x: -20, duration: 0.4, onComplete: () => {
+                                form.style.display = 'none';
+                                cohortPhase.style.display = 'block';
+                                if (submitBtn) submitBtn.style.display = 'none';
+                                window.gsap.fromTo(cohortPhase, { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.4 });
+                                // Start loading modules in background
+                                loadAppModules();
+                            }});
+                            return;
+                        }
+                    }
+                    
+                    // Fallback or Parent Portal: Load and enter
+                    const loader = document.getElementById('global-loader');
+                    if (loader) loader.classList.remove('hidden');
+                    await loadAppModules();
+                    this.syncLoginOverlayState(false);
+                } else {
+                    setBootHelperMessage('验证失败：' + (result?.error || '账号密码错误'), 'error');
+                    setBootSubmitState({ busy: false, text: getPortalConfig(portal).submit });
                 }
-                writeBootSessionUser(matchedUser);
-                const nextPortal = Array.isArray(matchedUser.roles) && matchedUser.roles.some((role) => role === 'parent' || role === 'student')
-                    || matchedUser.role === 'parent'
-                    || matchedUser.role === 'student'
-                    ? 'parent'
-                    : 'school';
-                localStorage.setItem(this.loginPortalStorageKey, nextPortal);
-                setBootHelperMessage(getPortalConfig(nextPortal).success, 'success');
-                setBootSubmitState({ busy: true, text: '正在进入...' });
-                const loader = document.getElementById('global-loader');
-                const loaderText = loader ? loader.querySelector('.loader-text') : null;
-                if (loader) loader.classList.remove('hidden');
-                if (loaderText) loaderText.textContent = getPortalConfig(nextPortal).success;
-                window.__BOOT_AUTH_PENDING_HANDOFF__ = true;
             } catch (error) {
-                const message = String(error?.message || '').trim();
-                const nextMessage = message.includes('Invalid username or password')
-                    ? '账号、密码或班级不正确，请检查后重试。'
-                    : '云端登录暂时失败，请稍后再试。';
-                setBootHelperMessage(nextMessage, 'error');
+                setBootHelperMessage('验证失败：' + (error.message || '网络连接异常'), 'error');
+                setBootSubmitState({ busy: false, text: getPortalConfig(portal).submit });
+            } finally {
                 this.__bootLoginBusy = false;
-                this.syncLoginPortalUI(portal);
             }
         },
         logout() {
-            bootGateway.clearSession();
+            if (typeof bootGateway.clearSession === 'function') bootGateway.clearSession();
             sessionStorage.removeItem('CURRENT_USER');
             sessionStorage.removeItem('CURRENT_ROLE');
             sessionStorage.removeItem('CURRENT_ROLES');
@@ -861,8 +966,13 @@ window.initCloudClient();
         }
     };
 
+    // Protect window.Auth from being overwritten by legacy scripts (like login-instagram-runtime.js)
     if (!window.Auth || window.Auth.__bootLoginShell) {
-        window.Auth = bootAuth;
+        Object.defineProperty(window, 'Auth', {
+            value: bootAuth,
+            writable: false,
+            configurable: false
+        });
     }
 
     if (document.readyState === 'loading') {
