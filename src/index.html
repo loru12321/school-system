@@ -221,28 +221,113 @@
     </div>
 
     <div id="login-overlay" data-login-portal="school">
-        <div class="login-dynamic-bg"></div>
-        <div class="login-center-card">
-            <div class="login-card-header">
-                <i class="ti ti-school login-logo-icon"></i>
-                <h2>SmartEdu</h2>
-                <p>Welcome back to the portal</p>
+        <div class="login-split-layout">
+            <!-- 左侧：品牌与下载舱 -->
+            <div class="login-left-brand">
+                <div class="login-brand-content">
+                    <h1>SmartEdu<br>智慧教务系统</h1>
+                    <p>重塑校园管理流程，连接家校数据孤岛。<br>为教育者减负，为学生成长护航。</p>
+                    
+                    <!-- 应用下载入口 -->
+                    <div class="login-app-download" onclick="alert('扫描二维码下载最新 SmartEdu App')">
+                        <div class="qr-placeholder">
+                            <span></span><span></span><span></span><span></span>
+                        </div>
+                        <div class="download-text">
+                            <h4>下载移动端 App</h4>
+                            <p>随时随地，掌握家校动态</p>
+                            <div class="store-badges">
+                                <span class="store-badge"><i class="ti ti-brand-apple"></i> iOS</span>
+                                <span class="store-badge"><i class="ti ti-brand-android"></i> Android</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div id="login-form" class="modern-form">
-                <div class="input-group">
-                    <i class="ti ti-user"></i>
-                    <input type="text" id="login-user" placeholder="Account" autocomplete="username">
+
+            <!-- 右侧：登录操作面板 -->
+            <div class="login-right-panel">
+                <div class="login-form-container">
+                    <div class="login-form-header">
+                        <h2>欢迎回来</h2>
+                        <p>请选择您的身份并登录系统</p>
+                    </div>
+
+                    <!-- 角色切换胶囊 -->
+                    <div class="role-switcher">
+                        <input type="radio" name="role" id="role-teacher" checked onchange="switchLoginForm('teacher')">
+                        <label for="role-teacher" class="role-label">教职工</label>
+                        
+                        <input type="radio" name="role" id="role-student" onchange="switchLoginForm('student')">
+                        <label for="role-student" class="role-label">学生端</label>
+                        
+                        <input type="radio" name="role" id="role-parent" onchange="switchLoginForm('parent')">
+                        <label for="role-parent" class="role-label">家长端</label>
+                        
+                        <div class="role-slider"></div>
+                    </div>
+
+                    <!-- 教师登录表单 (Default) -->
+                    <div id="form-teacher" class="form-view active">
+                        <div class="advanced-input-group">
+                            <input type="text" id="login-user" placeholder=" " autocomplete="username">
+                            <label>工号 / 手机号</label>
+                            <i class="ti ti-user"></i>
+                        </div>
+                        <div class="advanced-input-group">
+                            <input type="password" id="login-pass" placeholder=" " autocomplete="current-password">
+                            <label>登录密码</label>
+                            <i class="ti ti-lock"></i>
+                        </div>
+                        <button class="advanced-submit" onclick="window.Auth?.login()">
+                            进入系统 <i class="ti ti-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    <!-- 学生登录表单 -->
+                    <div id="form-student" class="form-view">
+                        <div class="advanced-input-group">
+                            <input type="text" id="login-user-stu" placeholder=" " autocomplete="username">
+                            <label>学号 / 身份证号</label>
+                            <i class="ti ti-id"></i>
+                        </div>
+                        <div class="advanced-input-group">
+                            <input type="password" id="login-pass-stu" placeholder=" " autocomplete="current-password">
+                            <label>查询密码</label>
+                            <i class="ti ti-lock"></i>
+                        </div>
+                        <button class="advanced-submit" onclick="alert('进入学生独立看板')">
+                            学生登录 <i class="ti ti-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    <!-- 家长登录表单 -->
+                    <div id="form-parent" class="form-view">
+                        <div class="advanced-input-group">
+                            <input type="text" id="login-user-parent" placeholder=" " autocomplete="username">
+                            <label>家长手机号</label>
+                            <i class="ti ti-device-mobile"></i>
+                        </div>
+                        <div class="advanced-input-group">
+                            <input type="text" id="login-pass-parent" placeholder=" " autocomplete="one-time-code">
+                            <label>验证码</label>
+                            <i class="ti ti-message"></i>
+                        </div>
+                        <button class="advanced-submit" onclick="alert('进入家长微信通知中心')">
+                            家长快捷登录 <i class="ti ti-arrow-right"></i>
+                        </button>
+                    </div>
+
                 </div>
-                <div class="input-group">
-                    <i class="ti ti-lock"></i>
-                    <input type="password" id="login-pass" placeholder="Password" autocomplete="current-password">
-                </div>
-                <button id="login-submit-button" class="submit-btn" onclick="window.Auth?.login()">
-                    Log In <i class="ti ti-arrow-right"></i>
-                </button>
             </div>
         </div>
+
         <script>
+            function switchLoginForm(role) {
+                document.querySelectorAll('.form-view').forEach(el => el.classList.remove('active'));
+                document.getElementById('form-' + role).classList.add('active');
+            }
+
             function bindLoginEnterSubmit() {
                 ['login-user', 'login-pass'].forEach((id) => {
                     const input = document.getElementById(id);
