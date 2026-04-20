@@ -42,7 +42,7 @@ const PORT = Number(process.env.PORT ?? "8788");
 const APP_TOKEN = String(process.env.SCHOOL_OPS_APP_TOKEN || "").trim();
 const AUTH_MODE = APP_TOKEN ? "token" : "localhost-only";
 const LIVE_HEALTH_URL = "https://schoolsystem.com.cn/api/health";
-const GITHUB_BASE_URL = "https://github.com/loru12321/school-system/blob/main";
+const GITHUB_BASE_URL = "https://github.com/hka123321/school-system/blob/main";
 const MAX_FETCH_CHARS = 18000;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

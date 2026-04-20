@@ -221,169 +221,30 @@
     </div>
 
     <div id="login-overlay" data-login-portal="school">
-        <!-- Visual Branding Side -->
-        <div class="login-visual-panel">
-            <div class="login-bg-mesh"></div>
-            <div class="visual-content">
-                <div class="visual-logo">
-                    <i class="ti ti-school"></i>
-                    <span>SmartEdu</span>
+        <div class="login-dynamic-bg"></div>
+        <div class="login-center-card">
+            <div class="login-card-header">
+                <i class="ti ti-school login-logo-icon"></i>
+                <h2>SmartEdu</h2>
+                <p>Welcome back to the portal</p>
+            </div>
+            <div id="login-form" class="modern-form">
+                <div class="input-group">
+                    <i class="ti ti-user"></i>
+                    <input type="text" id="login-user" placeholder="Account" autocomplete="username">
                 </div>
-                <h1 class="visual-title">
-                    <span>智慧教务</span>
-                    <span>数据决策中心</span>
-                </h1>
-                <p class="visual-desc">
-                    通过结构化数据与 AI 诊断，为每一位教师提供精准的教学洞察，助力学校实现高质量数字化转型。
-                </p>
-                <div class="visual-features">
-                    <div class="feature-item">
-                        <i class="ti ti-chart-bar"></i>
-                        <span>多维考向分析与成长轨迹追踪</span>
-                    </div>
-                    <div class="feature-item">
-                        <i class="ti ti-users"></i>
-                        <span>全场景教务管理与家校互动协同</span>
-                    </div>
-                    <div class="feature-item">
-                        <i class="ti ti-shield-lock"></i>
-                        <span>金融级数据加密与隐私安全保护</span>
-                    </div>
+                <div class="input-group">
+                    <i class="ti ti-lock"></i>
+                    <input type="password" id="login-pass" placeholder="Password" autocomplete="current-password">
                 </div>
+                <button id="login-submit-button" class="submit-btn" onclick="window.Auth?.login()">
+                    Log In <i class="ti ti-arrow-right"></i>
+                </button>
             </div>
         </div>
-
-        <!-- Auth Form Side -->
-        <div class="login-form-panel">
-            <div class="modern-login-container">
-                <div class="login-glass-card">
-                    <!-- Phase 1: Identity -->
-                    <div id="login-identity-phase" class="login-phase phase-active">
-                        <div class="login-card-header">
-                            <span id="login-portal-badge" class="login-portal-badge">学校工作台</span>
-                            <h2>欢迎回来</h2>
-                            <p class="login-subtitle">请验证您的身份以访问工作台</p>
-                        </div>
-
-                        <div class="role-selector-pill">
-                            <button type="button" class="role-pill-btn active" onclick="switchLoginRole('school')" id="btn-role-school">学校工作台</button>
-                            <button type="button" class="role-pill-btn" onclick="switchLoginRole('parent')" id="btn-role-parent">家长入口</button>
-                            <div class="role-pill-slider"></div>
-                        </div>
-
-                        <div id="login-form" class="modern-form">
-                            <div class="form-group">
-                                <label id="login-user-label" for="login-user">账号 / Account</label>
-                                <div class="input-wrapper">
-                                    <i class="ti ti-user"></i>
-                                    <input type="text" id="login-user" placeholder="输入您的账号" autocomplete="username">
-                                </div>
-                            </div>
-
-                            <div id="login-class-group" class="form-group" style="display: none;" aria-hidden="true">
-                                <label for="login-class">班级 / Class</label>
-                                <div class="input-wrapper">
-                                    <i class="ti ti-users"></i>
-                                    <input type="text" id="login-class" placeholder="如：701">
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="login-pass">密码 / Password</label>
-                                <div class="input-wrapper">
-                                    <i class="ti ti-lock"></i>
-                                    <input type="password" id="login-pass" placeholder="输入您的密码" autocomplete="current-password">
-                                    <button type="button" class="password-toggle" onclick="togglePasswordVisibility()" aria-label="Toggle Password">
-                                        <i class="ti ti-eye" id="toggle-password-icon"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <button id="login-submit-button" class="submit-btn" onclick="window.Auth?.login()">
-                                <span>立即验证</span>
-                                <i class="ti ti-arrow-right"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Phase 2: Cohort Selection -->
-                    <div id="login-cohort-phase" class="login-phase" style="display: none;">
-                        <div class="login-card-header">
-                            <h2>选择届别</h2>
-                            <p class="login-subtitle">请选择您要进入的教学年度</p>
-                        </div>
-                        
-                        <div class="cohort-grid">
-                            <div class="cohort-card" onclick="enterCohort('2022')">
-                                <strong>2022 届</strong>
-                                <span>高三年级</span>
-                            </div>
-                            <div class="cohort-card" onclick="enterCohort('2023')">
-                                <strong>2023 届</strong>
-                                <span>高二年级</span>
-                            </div>
-                            <div class="cohort-card" onclick="enterCohort('2024')">
-                                <strong>2024 届</strong>
-                                <span>高一年级</span>
-                            </div>
-                            <div class="cohort-card" onclick="document.getElementById('mode-mask').style.display='flex'">
-                                <strong>更多届别</strong>
-                                <span>手动切换</span>
-                            </div>
-                        </div>
-
-                        <div style="margin-top: 24px; text-align: center;">
-                            <button class="footer-link-btn" onclick="location.reload()">
-                                <i class="ti ti-arrow-left"></i> 返回重新登录
-                            </button>
-                        </div>
-                    </div>
-
-                    <div id="login-portal-helper" class="login-status-hint"></div>
-
-                    <div class="login-card-footer">
-                        <button type="button" class="footer-link-btn" onclick="window.Auth?.openDownloadHubModal('android')">
-                            <i class="ti ti-download"></i> 下载中心
-                        </button>
-                        <button type="button" class="footer-link-btn" onclick="window.Auth?.openDownloadHubModal('android')">
-                            <i class="ti ti-help-circle"></i> 系统帮助
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- System Backdrops -->
-        <div id="login-modal-backdrop" style="display:none;" aria-hidden="true"></div>
-        <div id="login-download-hub-backdrop" style="display:none;" aria-hidden="true"></div>
-
         <script>
-            function syncLoginRoleButtons(role) {
-                document.querySelectorAll('.role-pill-btn').forEach((btn) => {
-                    const isActive = btn.id === 'btn-role-' + role;
-                    btn.classList.toggle('active', isActive);
-                });
-            }
-
-            function switchLoginRole(role) {
-                const overlay = document.getElementById('login-overlay');
-                if (overlay) overlay.setAttribute('data-login-portal', role);
-                syncLoginRoleButtons(role);
-                window.Auth?.syncLoginPortalUI?.(role);
-            }
-
-            function togglePasswordVisibility() {
-                const passInput = document.getElementById('login-pass');
-                const toggleIcon = document.getElementById('toggle-password-icon');
-                if (!passInput || !toggleIcon) return;
-                const isPass = passInput.type === 'password';
-                passInput.type = isPass ? 'text' : 'password';
-                toggleIcon.classList.toggle('ti-eye', !isPass);
-                toggleIcon.classList.toggle('ti-eye-off', isPass);
-            }
-
             function bindLoginEnterSubmit() {
-                ['login-user', 'login-pass', 'login-class'].forEach((id) => {
+                ['login-user', 'login-pass'].forEach((id) => {
                     const input = document.getElementById(id);
                     if (!input) return;
                     input.addEventListener('keydown', (e) => {
@@ -4998,15 +4859,15 @@
                         <div id="app-download-platform-grid" class="app-download-platform-grid"></div>
 
                         <div class="app-download-stage-actions">
-                            <a id="app-download-primary-link" class="btn btn-blue" href="https://github.com/loru12321/school-system/releases/latest/download/school-system-android-latest.apk" download="school-system-android-latest.apk" data-app-download-primary="true"><i class="ti ti-download"></i> 下载当前版本</a>
+                            <a id="app-download-primary-link" class="btn btn-blue" href="https://github.com/hka123321/school-system/releases/latest/download/school-system-android-latest.apk" download="school-system-android-latest.apk" data-app-download-primary="true"><i class="ti ti-download"></i> 下载当前版本</a>
                             <button type="button" class="btn btn-gray" id="app-download-copy-link"><i class="ti ti-link"></i> 复制下载链接</button>
-                            <a id="app-download-release-link" class="btn btn-green" href="https://github.com/loru12321/school-system/releases/latest" target="_blank" rel="noopener"><i class="ti ti-brand-github"></i> 查看 Release</a>
+                            <a id="app-download-release-link" class="btn btn-green" href="https://github.com/hka123321/school-system/releases/latest" target="_blank" rel="noopener"><i class="ti ti-brand-github"></i> 查看 Release</a>
                         </div>
 
                         <div class="app-download-linkbar">
                             <label>当前下载链接</label>
                             <div class="app-download-linkfield">
-                                <input id="app-download-link-input" type="text" readonly value="https://github.com/loru12321/school-system/releases/latest/download/school-system-android-latest.apk">
+                                <input id="app-download-link-input" type="text" readonly value="https://github.com/hka123321/school-system/releases/latest/download/school-system-android-latest.apk">
                                 <button type="button" class="btn btn-gray" onclick="copyAppDownloadLink()"><i class="ti ti-copy"></i> 复制</button>
                             </div>
                         </div>
@@ -5060,7 +4921,7 @@
                     <div class="analysis-section-head">
                         <h3>版本信息与链接</h3>
                         <div class="analysis-actions">
-                            <a id="app-download-secondary-link" class="btn btn-blue" href="https://github.com/loru12321/school-system/releases/latest/download/school-system-android-latest.apk" download="school-system-android-latest.apk"><i class="ti ti-download"></i> 打开当前下载</a>
+                            <a id="app-download-secondary-link" class="btn btn-blue" href="https://github.com/hka123321/school-system/releases/latest/download/school-system-android-latest.apk" download="school-system-android-latest.apk"><i class="ti ti-download"></i> 打开当前下载</a>
                             <button type="button" class="btn btn-gray" id="app-download-copy-checksum"><i class="ti ti-copy"></i> 复制当前说明</button>
                         </div>
                     </div>

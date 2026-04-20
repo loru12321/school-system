@@ -1,7 +1,7 @@
 const https = require('node:https');
 
-const RELEASE_PAGE_URL = 'https://github.com/loru12321/school-system/releases/latest';
-const RELEASES_API_URL = 'https://api.github.com/repos/loru12321/school-system/releases?per_page=12';
+const RELEASE_PAGE_URL = 'https://github.com/hka123321/school-system/releases/latest';
+const RELEASES_API_URL = 'https://api.github.com/repos/hka123321/school-system/releases?per_page=12';
 
 function ensureArray(value) {
     return Array.isArray(value) ? value : [];

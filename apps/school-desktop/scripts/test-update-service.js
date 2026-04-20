@@ -9,7 +9,7 @@ function createRelease(tag, publishedAt) {
         tag_name: tag,
         name: tag,
         published_at: publishedAt,
-        html_url: `https://github.com/loru12321/school-system/releases/tag/${tag}`,
+        html_url: `https://github.com/hka123321/school-system/releases/tag/${tag}`,
         body: '- sample bullet',
         platform_versions: {
             android: { version: '1.0.1', build: '2' },

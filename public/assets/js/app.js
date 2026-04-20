@@ -2680,7 +2680,7 @@ window.readCompareExamSyncState = readCompareExamSyncState;
 window.setCompareExamSyncState = setCompareExamSyncState;
 window.syncCompareSessionRuntimeState = syncCompareSessionRuntimeState;
 
-const PUBLIC_DOWNLOAD_RELEASE_PAGE_URL = 'https://github.com/loru12321/school-system/releases/latest';
+const PUBLIC_DOWNLOAD_RELEASE_PAGE_URL = 'https://github.com/hka123321/school-system/releases/latest';
 const PUBLIC_VERSION_CENTER_BUILD_INFO = {
     shared: {
         releaseTag: 'school-system-v2026.04.09-about-update-v59',
@@ -2708,7 +2708,7 @@ const PUBLIC_VERSION_CENTER_RELEASES = [
         tag_name: 'school-system-v2026.04.09-about-update-v59',
         name: 'school-system-v2026.04.09-about-update-v59',
         published_at: '2026-04-09T00:00:00Z',
-        html_url: 'https://github.com/loru12321/school-system/releases/tag/school-system-v2026.04.09-about-update-v59',
+        html_url: 'https://github.com/hka123321/school-system/releases/tag/school-system-v2026.04.09-about-update-v59',
         body: '- 新增 Windows 客户端“关于与更新”入口，可查看当前版本、历史版本与每次 release 的细项更新。\n- 桌面端支持手动检查更新与启动自动检测：已是最新会提示，发现新版本会弹窗并提供下载链接。\n- 版本中心现已按日期展示 Android / Windows 版本信息，并保留历史版本下载入口。',
         platform_versions: {
             android: { version: '1.0.1', build: '2' },
@@ -2717,12 +2717,12 @@ const PUBLIC_VERSION_CENTER_RELEASES = [
         assets: [
             {
                 name: 'school-system-android-latest.apk',
-                browser_download_url: 'https://github.com/loru12321/school-system/releases/download/school-system-v2026.04.09-about-update-v59/school-system-android-latest.apk',
+                browser_download_url: 'https://github.com/hka123321/school-system/releases/download/school-system-v2026.04.09-about-update-v59/school-system-android-latest.apk',
                 size: 40869790
             },
             {
                 name: 'smartedu-desktop-windows-latest.exe',
-                browser_download_url: 'https://github.com/loru12321/school-system/releases/download/school-system-v2026.04.09-about-update-v59/smartedu-desktop-windows-latest.exe',
+                browser_download_url: 'https://github.com/hka123321/school-system/releases/download/school-system-v2026.04.09-about-update-v59/smartedu-desktop-windows-latest.exe',
                 size: 95000118
             }
         ]
@@ -2731,7 +2731,7 @@ const PUBLIC_VERSION_CENTER_RELEASES = [
         tag_name: 'school-system-v2026.04.09-floating-shell-rail-v58',
         name: 'school-system-v2026.04.09-floating-shell-rail-v58',
         published_at: '2026-04-09T02:11:54Z',
-        html_url: 'https://github.com/loru12321/school-system/releases/tag/school-system-v2026.04.09-floating-shell-rail-v58',
+        html_url: 'https://github.com/hka123321/school-system/releases/tag/school-system-v2026.04.09-floating-shell-rail-v58',
         body: '- 新增桌面端滚动悬浮模块快切条，页面滚动到工作区深处时会在顶部固定出现。\n- 悬浮快切条继续支持鼠标滚轮横向滚动，并与原始快切条保持同类模块切换能力。\n- 已同步 Web 生产环境、lt.html 单文件产物和 Windows 桌面安装包。',
         platform_versions: {
             android: { version: '1.0.1', build: '2' },
@@ -2740,12 +2740,12 @@ const PUBLIC_VERSION_CENTER_RELEASES = [
         assets: [
             {
                 name: 'school-system-android-latest.apk',
-                browser_download_url: 'https://github.com/loru12321/school-system/releases/download/school-system-v2026.04.09-floating-shell-rail-v58/school-system-android-latest.apk',
+                browser_download_url: 'https://github.com/hka123321/school-system/releases/download/school-system-v2026.04.09-floating-shell-rail-v58/school-system-android-latest.apk',
                 size: 40869790
             },
             {
                 name: 'smartedu-desktop-windows-latest.exe',
-                browser_download_url: 'https://github.com/loru12321/school-system/releases/download/school-system-v2026.04.09-floating-shell-rail-v58/smartedu-desktop-windows-latest.exe',
+                browser_download_url: 'https://github.com/hka123321/school-system/releases/download/school-system-v2026.04.09-floating-shell-rail-v58/smartedu-desktop-windows-latest.exe',
                 size: 94995074
             }
         ]
@@ -2754,7 +2754,7 @@ const PUBLIC_VERSION_CENTER_RELEASES = [
         tag_name: 'school-system-v2026.04.09-shell-scroll-feedback-v57',
         name: 'school-system-v2026.04.09-shell-scroll-feedback-v57',
         published_at: '2026-04-09T01:26:30Z',
-        html_url: 'https://github.com/loru12321/school-system/releases/tag/school-system-v2026.04.09-shell-scroll-feedback-v57',
+        html_url: 'https://github.com/hka123321/school-system/releases/tag/school-system-v2026.04.09-shell-scroll-feedback-v57',
         body: 'Desktop/Web shell updates:\n- module quick-switch rail now responds when the mouse wheel is used over the whole rail area\n- horizontal scrolling now has visible feedback\n- added a global back-to-top button for long pages',
         platform_versions: {
             android: { version: '1.0.1', build: '2' },
@@ -2763,12 +2763,12 @@ const PUBLIC_VERSION_CENTER_RELEASES = [
         assets: [
             {
                 name: 'school-system-android-latest.apk',
-                browser_download_url: 'https://github.com/loru12321/school-system/releases/download/school-system-v2026.04.09-shell-scroll-feedback-v57/school-system-android-latest.apk',
+                browser_download_url: 'https://github.com/hka123321/school-system/releases/download/school-system-v2026.04.09-shell-scroll-feedback-v57/school-system-android-latest.apk',
                 size: 40869790
             },
             {
                 name: 'smartedu-desktop-windows-latest.exe',
-                browser_download_url: 'https://github.com/loru12321/school-system/releases/download/school-system-v2026.04.09-shell-scroll-feedback-v57/smartedu-desktop-windows-latest.exe',
+                browser_download_url: 'https://github.com/hka123321/school-system/releases/download/school-system-v2026.04.09-shell-scroll-feedback-v57/smartedu-desktop-windows-latest.exe',
                 size: 94993394
             }
         ]
@@ -2777,7 +2777,7 @@ const PUBLIC_VERSION_CENTER_RELEASES = [
         tag_name: 'school-system-v2026.04.09-desktop-wheel-rail-v56',
         name: 'school-system-v2026.04.09-desktop-wheel-rail-v56',
         published_at: '2026-04-09T00:49:37Z',
-        html_url: 'https://github.com/loru12321/school-system/releases/tag/school-system-v2026.04.09-desktop-wheel-rail-v56',
+        html_url: 'https://github.com/hka123321/school-system/releases/tag/school-system-v2026.04.09-desktop-wheel-rail-v56',
         body: 'Desktop/Web:\n- horizontal module rails now follow mouse-wheel scrolling on desktop when overflow is present\n- validated local modules, lt.html, desktop smoke, packaged Windows client smoke, and production smoke',
         platform_versions: {
             android: { version: '1.0.1', build: '2' },
@@ -2786,12 +2786,12 @@ const PUBLIC_VERSION_CENTER_RELEASES = [
         assets: [
             {
                 name: 'school-system-android-latest.apk',
-                browser_download_url: 'https://github.com/loru12321/school-system/releases/download/school-system-v2026.04.09-desktop-wheel-rail-v56/school-system-android-latest.apk',
+                browser_download_url: 'https://github.com/hka123321/school-system/releases/download/school-system-v2026.04.09-desktop-wheel-rail-v56/school-system-android-latest.apk',
                 size: 40869790
             },
             {
                 name: 'smartedu-desktop-windows-latest.exe',
-                browser_download_url: 'https://github.com/loru12321/school-system/releases/download/school-system-v2026.04.09-desktop-wheel-rail-v56/smartedu-desktop-windows-latest.exe',
+                browser_download_url: 'https://github.com/hka123321/school-system/releases/download/school-system-v2026.04.09-desktop-wheel-rail-v56/smartedu-desktop-windows-latest.exe',
                 size: 94991893
             }
         ]
@@ -2800,7 +2800,7 @@ const PUBLIC_VERSION_CENTER_RELEASES = [
         tag_name: 'school-system-v2026.04.09-desktop-quick-rail-v55',
         name: 'school-system-v2026.04.09-desktop-quick-rail-v55',
         published_at: '2026-04-09T00:31:13Z',
-        html_url: 'https://github.com/loru12321/school-system/releases/tag/school-system-v2026.04.09-desktop-quick-rail-v55',
+        html_url: 'https://github.com/hka123321/school-system/releases/tag/school-system-v2026.04.09-desktop-quick-rail-v55',
         body: '- Add desktop quick module rail for computer web and Windows client.\n- Rebuild desktop installer and keep Android/Windows latest assets aligned.',
         platform_versions: {
             android: { version: '1.0.1', build: '2' },
@@ -2809,12 +2809,12 @@ const PUBLIC_VERSION_CENTER_RELEASES = [
         assets: [
             {
                 name: 'school-system-android-latest.apk',
-                browser_download_url: 'https://github.com/loru12321/school-system/releases/download/school-system-v2026.04.09-desktop-quick-rail-v55/school-system-android-latest.apk',
+                browser_download_url: 'https://github.com/hka123321/school-system/releases/download/school-system-v2026.04.09-desktop-quick-rail-v55/school-system-android-latest.apk',
                 size: 40869790
             },
             {
                 name: 'smartedu-desktop-windows-latest.exe',
-                browser_download_url: 'https://github.com/loru12321/school-system/releases/download/school-system-v2026.04.09-desktop-quick-rail-v55/smartedu-desktop-windows-latest.exe',
+                browser_download_url: 'https://github.com/hka123321/school-system/releases/download/school-system-v2026.04.09-desktop-quick-rail-v55/smartedu-desktop-windows-latest.exe',
                 size: 94990541
             }
         ]
@@ -2823,7 +2823,7 @@ const PUBLIC_VERSION_CENTER_RELEASES = [
         tag_name: 'school-system-v2026.04.09-desktop-client-fix-v54',
         name: 'school-system v2026.04.09 desktop client fix v54',
         published_at: '2026-04-08T22:36:09Z',
-        html_url: 'https://github.com/loru12321/school-system/releases/tag/school-system-v2026.04.09-desktop-client-fix-v54',
+        html_url: 'https://github.com/hka123321/school-system/releases/tag/school-system-v2026.04.09-desktop-client-fix-v54',
         body: '## Windows desktop client fixes\n- Desktop icon now reuses the Android launcher asset and ships as a multi-size ICO.\n- Added assisted Windows installer flow with install directory selection and shortcut options.\n- Added system tray entry points with show, hide, restart and quit actions.\n- Fixed desktop bundle asset syncing so icon fonts, lazy runtimes and module resources load correctly.\n- Ensured close requests can exit the desktop app instead of being blocked by page unload prompts.',
         platform_versions: {
             android: { version: '1.0.1', build: '2' },
@@ -2832,12 +2832,12 @@ const PUBLIC_VERSION_CENTER_RELEASES = [
         assets: [
             {
                 name: 'school-system-android-latest.apk',
-                browser_download_url: 'https://github.com/loru12321/school-system/releases/download/school-system-v2026.04.09-desktop-client-fix-v54/school-system-android-latest.apk',
+                browser_download_url: 'https://github.com/hka123321/school-system/releases/download/school-system-v2026.04.09-desktop-client-fix-v54/school-system-android-latest.apk',
                 size: 40869790
             },
             {
                 name: 'smartedu-desktop-windows-latest.exe',
-                browser_download_url: 'https://github.com/loru12321/school-system/releases/download/school-system-v2026.04.09-desktop-client-fix-v54/smartedu-desktop-windows-latest.exe',
+                browser_download_url: 'https://github.com/hka123321/school-system/releases/download/school-system-v2026.04.09-desktop-client-fix-v54/smartedu-desktop-windows-latest.exe',
                 size: 94990833
             }
         ]
@@ -2846,7 +2846,7 @@ const PUBLIC_VERSION_CENTER_RELEASES = [
         tag_name: 'school-system-v2026.04.08-mobile-hero-clean-v53',
         name: 'school-system v2026.04.08 mobile hero clean v53',
         published_at: '2026-04-08T12:05:57Z',
-        html_url: 'https://github.com/loru12321/school-system/releases/tag/school-system-v2026.04.08-mobile-hero-clean-v53',
+        html_url: 'https://github.com/hka123321/school-system/releases/tag/school-system-v2026.04.08-mobile-hero-clean-v53',
         body: '- 移除安卓手机 Web 端与 APK 登录首页主视觉中的大段标题、副文案与标签字样，登录按钮直接上提。\n- 手机视口与 APK 壳已同步隐藏该区域文案，避免首页再次出现你标红的那块内容。\n- 本次 release 同步包含最新 Android APK 与最新桌面端 EXE。',
         platform_versions: {
             android: { version: '1.0.1', build: '2' },
@@ -2855,12 +2855,12 @@ const PUBLIC_VERSION_CENTER_RELEASES = [
         assets: [
             {
                 name: 'school-system-android-latest.apk',
-                browser_download_url: 'https://github.com/loru12321/school-system/releases/download/school-system-v2026.04.08-mobile-hero-clean-v53/school-system-android-latest.apk',
+                browser_download_url: 'https://github.com/hka123321/school-system/releases/download/school-system-v2026.04.08-mobile-hero-clean-v53/school-system-android-latest.apk',
                 size: 40869790
             },
             {
                 name: 'smartedu-desktop-windows-latest.exe',
-                browser_download_url: 'https://github.com/loru12321/school-system/releases/download/school-system-v2026.04.08-mobile-hero-clean-v53/smartedu-desktop-windows-latest.exe',
+                browser_download_url: 'https://github.com/hka123321/school-system/releases/download/school-system-v2026.04.08-mobile-hero-clean-v53/smartedu-desktop-windows-latest.exe',
                 size: 79517294
             }
         ]
@@ -2874,7 +2874,7 @@ const PUBLIC_DOWNLOAD_CHANNELS = {
         badge: '手机 / 平板',
         icon: 'ti-brand-android',
         accent: '#22c55e',
-        url: 'https://github.com/loru12321/school-system/releases/latest/download/school-system-android-latest.apk',
+        url: 'https://github.com/hka123321/school-system/releases/latest/download/school-system-android-latest.apk',
         fileName: 'school-system-android-latest.apk',
         helper: '适合安卓手机和平板直接安装，安装后沿用现有账号登录。',
         notes: [
@@ -2890,7 +2890,7 @@ const PUBLIC_DOWNLOAD_CHANNELS = {
         badge: 'Windows 桌面',
         icon: 'ti-brand-windows',
         accent: '#60a5fa',
-        url: 'https://github.com/loru12321/school-system/releases/latest/download/smartedu-desktop-windows-latest.exe',
+        url: 'https://github.com/hka123321/school-system/releases/latest/download/smartedu-desktop-windows-latest.exe',
         fileName: 'smartedu-desktop-windows-latest.exe',
         helper: '适合 Windows 办公电脑本地打开，内置单实例桌面壳。',
         notes: [

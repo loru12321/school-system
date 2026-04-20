@@ -5,7 +5,7 @@
 ## 访问入口
 
 - 线上站点: [https://schoolsystem.com.cn/](https://schoolsystem.com.cn/)
-- GitHub 仓库: [https://github.com/loru12321/school-system](https://github.com/loru12321/school-system)
+- GitHub 仓库: [https://github.com/hka123321/school-system](https://github.com/hka123321/school-system)
 - 主要分支: `main`
 
 ## 功能概览

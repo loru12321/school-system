@@ -3,9 +3,9 @@
 
     const RELEASE_PAGE_URL = String(
         window.PUBLIC_DOWNLOAD_RELEASE_PAGE_URL
-        || 'https://github.com/loru12321/school-system/releases/latest'
+        || 'https://github.com/hka123321/school-system/releases/latest'
     ).trim();
-    const RELEASES_API_URL = 'https://api.github.com/repos/loru12321/school-system/releases?per_page=12';
+    const RELEASES_API_URL = 'https://api.github.com/repos/hka123321/school-system/releases?per_page=12';
     const RELEASE_CACHE_TTL_MS = 5 * 60 * 1000;
 
     const DEFAULT_BUILD_INFO = {
@@ -38,7 +38,7 @@
             badge: '手机 / 平板',
             icon: 'ti-brand-android',
             accent: '#22c55e',
-            url: 'https://github.com/loru12321/school-system/releases/latest/download/school-system-android-latest.apk',
+            url: 'https://github.com/hka123321/school-system/releases/latest/download/school-system-android-latest.apk',
             fileName: 'school-system-android-latest.apk',
             heroTitle: '安卓包、桌面端与历史版本统一查看',
             heroCopy: '登录后可继续查看关于与更新；登录前也可以在这里直接下载安卓 APK 或查看最新 release。',
@@ -99,7 +99,7 @@
             badge: 'Windows 10 / 11',
             icon: 'ti-brand-windows',
             accent: '#60a5fa',
-            url: 'https://github.com/loru12321/school-system/releases/latest/download/smartedu-desktop-windows-latest.exe',
+            url: 'https://github.com/hka123321/school-system/releases/latest/download/smartedu-desktop-windows-latest.exe',
             fileName: 'smartedu-desktop-windows-latest.exe',
             heroTitle: '桌面端关于、更新检查与历史下载统一入口',
             heroCopy: 'Windows 客户端、安卓客户端与网页端现在共用同一套版本中心，可查看当前版本、历史版本和每次 release 更新点。',
