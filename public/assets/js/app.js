@@ -2977,7 +2977,7 @@ window.copyPublicDesktopDownloadLink = function () {
     return window.copyPublicDownloadLink('desktop');
 };
 
-const Auth = {
+var Auth = {
     currentUser: null,
     _parentDataRecovering: false,
     _parentRenderRetrying: false,

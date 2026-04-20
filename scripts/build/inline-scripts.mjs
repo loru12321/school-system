@@ -118,7 +118,11 @@ export function inlineLocalStyles(html, { projectRoot = DEFAULT_PROJECT_ROOT } =
 }
 
 function rewriteLtAssetPaths(html) {
-    return String(html || '').replace(/(\.\/|\/)assets\//g, './public/assets/');
+    // Replace /assets/ with ./public/assets/
+    let result = String(html || '').replace(/(\.\/|\/)assets\//g, './public/assets/');
+    // Handle favicon.ico specifically
+    result = result.replace(/favicon\.ico/g, 'public/favicon.ico');
+    return result;
 }
 
 export function buildLtHtml(html, { projectRoot = DEFAULT_PROJECT_ROOT } = {}) {

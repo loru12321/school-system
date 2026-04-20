@@ -68,6 +68,14 @@ var APP_MODULES = [
 
 async function loadAppModules() {
     if (window.__APP_MODULES_LOADED__) return;
+    // Check if Auth is already defined (e.g. by Vite bundle) to avoid duplicate load
+    if (window.Auth && !window.Auth.__bootLoginShell) {
+        console.log('[boot-runtime] Auth module already present, skipping dynamic load');
+        window.__APP_MODULES_LOADED__ = true;
+        return;
+    }
+    
+    window.__APP_MODULES_LOADED__ = 'loading';
     const loaderText = document.getElementById('loader-text');
     const total = APP_MODULES.length;
     
