@@ -118,7 +118,7 @@ export function inlineLocalStyles(html, { projectRoot = DEFAULT_PROJECT_ROOT } =
 }
 
 function rewriteLtAssetPaths(html) {
-    return String(html || '').replace(/(\.\/|\/)assets\/vendor\//g, './public/assets/vendor/');
+    return String(html || '').replace(/(\.\/|\/)assets\//g, './public/assets/');
 }
 
 export function buildLtHtml(html, { projectRoot = DEFAULT_PROJECT_ROOT } = {}) {
