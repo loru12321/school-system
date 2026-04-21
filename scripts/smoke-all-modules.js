@@ -12,6 +12,7 @@ const SWITCH_MODULE_IDS = [
     'upload',
     'summary',
     'analysis',
+    'county-analysis',
     'teacher-analysis',
     'single-school-eval',
     'correlation-analysis',
@@ -533,6 +534,20 @@ async function runModuleDeepCheck(page, id) {
                 renderTeacherMultiPeriodComparison: typeof window.renderTeacherMultiPeriodComparison === 'function',
                 renderAllTeachersMultiPeriodComparison: typeof window.renderAllTeachersMultiPeriodComparison === 'function',
                 exportTeacherMultiPeriodComparison: typeof window.exportTeacherMultiPeriodComparison === 'function'
+            };
+            return {
+                ok: Object.values(checks).every(Boolean),
+                checks
+            };
+        });
+    }
+    if (id === 'county-analysis') {
+        return page.evaluate(() => {
+            const checks = {
+                runtimeLoaded: window.__COUNTY_ANALYSIS_RUNTIME_PATCHED__ === true,
+                rootReady: !!document.getElementById('county-analysis-root'),
+                renderReady: typeof window.renderCountyAnalysis === 'function',
+                scopeReady: !!window.CountyAnalysisRuntime && typeof window.CountyAnalysisRuntime.applyCountyRanks === 'function'
             };
             return {
                 ok: Object.values(checks).every(Boolean),

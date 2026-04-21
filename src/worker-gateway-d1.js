@@ -238,6 +238,14 @@ function buildSessionPayload(row) {
   };
 }
 
+function shouldForceManagedPasswordChange(row) {
+  const roles = normalizeRoles(row);
+  const role = getPrimaryRoleFromRoles(roles);
+  if (role !== 'parent' && role !== 'student') return false;
+  const source = normalizeText(row?.password_source);
+  return source !== 'cloudflare_change';
+}
+
 function hasRole(session, role) {
   return Array.isArray(session?.roles) && session.roles.includes(role);
 }
@@ -627,7 +635,8 @@ async function performGatewayLogin(request, env, body) {
           class_name: session.class_name,
           grade_name: session.grade_name,
           teacher_name: session.teacher_name,
-          expires_at: session.exp
+          expires_at: session.exp,
+          must_change_password: shouldForceManagedPasswordChange(existing)
         }
       }, request);
     }
@@ -673,7 +682,11 @@ async function performGatewayLogin(request, env, body) {
       class_name: session.class_name,
       grade_name: session.grade_name,
       teacher_name: session.teacher_name,
-      expires_at: session.exp
+      expires_at: session.exp,
+      must_change_password: shouldForceManagedPasswordChange({
+        ...remoteUser,
+        password_source: 'legacy_login_backfill'
+      })
     }
   }, request);
 }

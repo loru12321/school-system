@@ -4738,7 +4738,8 @@ var Auth = {
                 roles: data.roles || [data.role], // 🆕 支持多角色数组
                 school: data.school,
                 class: data.class_name, // 数据库字段名
-                local_only: !!data.local_only
+                local_only: !!data.local_only,
+                must_change_password: !!data.must_change_password
             };
 
             const isLocalOnlySession = !!data.local_only;
@@ -4767,7 +4768,7 @@ var Auth = {
             // 仅家长端首次登录时强制弹出修改密码，其他角色不主动弹出
             const isDefaultPass = AuthState.isDefaultManagedPassword(this.currentUser.role, pass);
 
-            if (isDefaultPass && isParentLikeUser(this.currentUser)) {
+            if ((isDefaultPass || this.currentUser.must_change_password) && isParentLikeUser(this.currentUser)) {
                 this.syncLoginOverlayState(false); // 先关掉登录框
 
                 // 弹出提示
@@ -10319,7 +10320,7 @@ if (!window.__BASE_CONFIG_GUARD_CLOUD_EVENTS__) {
 function guardBeforeSwitch(id) {
     if (id === 'starter-hub' || id === 'upload') return true;
     const needGuard = [
-        'summary', 'analysis', 'macro-watch', 'high-score', 'indicator', 'bottom3',
+        'summary', 'analysis', 'county-analysis', 'macro-watch', 'high-score', 'indicator', 'bottom3',
         'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'teacher-analysis', 'single-school-eval', 'class-comparison', 'class-diagnosis',
         'student-overview', 'student-details', 'subject-balance', 'marginal-push', 'progress-analysis', 'cohort-growth',
         'potential-analysis', 'segment-analysis', 'correlation-analysis', 'report-generator'
@@ -22343,10 +22344,10 @@ function getTeacherScopeForUser(user) {
 
 const QUERY_MODULE_ACCESS = {
     admin: ['*'],
-    director: ['starter-hub', 'upload', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'freshman-simulator', 'exam-arranger', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'zhongkao-countdown', 'ai-analysis', 'app-download-center'],
-    grade_director: ['starter-hub', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'zhongkao-countdown', 'ai-analysis', 'app-download-center'],
-    class_teacher: ['starter-hub', 'student-overview', 'student-details', 'teacher-analysis', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator', 'zhongkao-countdown', 'ai-analysis', 'app-download-center'],
-    teacher: ['starter-hub', 'student-overview', 'student-details', 'teacher-analysis', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator', 'zhongkao-countdown', 'ai-analysis', 'app-download-center'],
+    director: ['starter-hub', 'upload', 'county-analysis', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'freshman-simulator', 'exam-arranger', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'zhongkao-countdown', 'ai-analysis', 'app-download-center'],
+    grade_director: ['starter-hub', 'county-analysis', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'zhongkao-countdown', 'ai-analysis', 'app-download-center'],
+    class_teacher: ['starter-hub', 'student-overview', 'student-details', 'county-analysis', 'teacher-analysis', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator', 'zhongkao-countdown', 'ai-analysis', 'app-download-center'],
+    teacher: ['starter-hub', 'student-overview', 'student-details', 'county-analysis', 'teacher-analysis', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator', 'zhongkao-countdown', 'ai-analysis', 'app-download-center'],
     parent: ['report-generator', 'ai-analysis', 'app-download-center'],
     student: ['report-generator', 'ai-analysis', 'app-download-center'],
     guest: ['starter-hub', 'app-download-center']
@@ -22596,7 +22597,7 @@ function canAccessModule(id) {
     }
 
     if (RoleManager.hasAnyRole(user, ['teacher', 'class_teacher'])) {
-        const allow = ['starter-hub', 'student-overview', 'student-details', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teacher-analysis', 'class-diagnosis', 'progress-analysis', 'subject-balance', 'potential-analysis', 'report-generator'];
+        const allow = ['starter-hub', 'student-overview', 'student-details', 'county-analysis', 'teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teacher-analysis', 'class-diagnosis', 'progress-analysis', 'subject-balance', 'potential-analysis', 'report-generator'];
         return allow.includes(id);
     }
 
