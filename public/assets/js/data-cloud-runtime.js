@@ -16,6 +16,15 @@
         return String(value || '').trim();
     }
 
+    function escapeHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     function getUi() {
         return root.UI && typeof root.UI === 'object' ? root.UI : null;
     }
@@ -82,6 +91,41 @@
         return normalizeText(root.CURRENT_PROJECT_KEY);
     }
 
+    function getCurrentExamKey() {
+        if (root.WorkspaceState && typeof root.WorkspaceState.getCurrentExamId === 'function') {
+            return normalizeText(root.WorkspaceState.getCurrentExamId());
+        }
+        return normalizeText(root.CURRENT_EXAM_ID || (root.localStorage && root.localStorage.getItem('CURRENT_EXAM_ID')) || '');
+    }
+
+    function getCurrentCohortDb() {
+        if (root.WorkspaceState && typeof root.WorkspaceState.getCohortDb === 'function') {
+            return root.WorkspaceState.getCohortDb();
+        }
+        return root.COHORT_DB && typeof root.COHORT_DB === 'object' ? root.COHORT_DB : null;
+    }
+
+    function syncWorkspaceState(patch = {}) {
+        if (root.WorkspaceState && typeof root.WorkspaceState.syncWorkspaceState === 'function') {
+            return root.WorkspaceState.syncWorkspaceState(patch);
+        }
+        if (Object.prototype.hasOwnProperty.call(patch, 'cohortDb')) {
+            root.COHORT_DB = patch.cohortDb && typeof patch.cohortDb === 'object' ? patch.cohortDb : null;
+        }
+        if (Object.prototype.hasOwnProperty.call(patch, 'currentExamId')) {
+            const nextExamId = normalizeText(patch.currentExamId);
+            root.CURRENT_EXAM_ID = nextExamId;
+            if (root.localStorage) {
+                if (nextExamId) root.localStorage.setItem('CURRENT_EXAM_ID', nextExamId);
+                else root.localStorage.removeItem('CURRENT_EXAM_ID');
+            }
+        }
+        if (Object.prototype.hasOwnProperty.call(patch, 'currentProjectKey')) {
+            writeWorkspaceProjectKey(patch.currentProjectKey);
+        }
+        return patch;
+    }
+
     function writeWorkspaceProjectKey(key) {
         if (typeof root.writeWorkspaceProjectKey === 'function') {
             root.writeWorkspaceProjectKey(key);
@@ -128,6 +172,161 @@
 
     function ensureSelection(value) {
         return value instanceof Set ? value : new Set();
+    }
+
+    function getCurrentExamLabel(key) {
+        const normalizedKey = normalizeText(key);
+        if (!normalizedKey) return '';
+        if (typeof root.deriveExamLabel === 'function') {
+            const label = normalizeText(root.deriveExamLabel(normalizedKey, normalizedKey));
+            if (label) return label;
+        }
+        if (root.CloudWorkspaceRuntimeDeps && typeof root.CloudWorkspaceRuntimeDeps.deriveExamLabel === 'function') {
+            const label = normalizeText(root.CloudWorkspaceRuntimeDeps.deriveExamLabel(normalizedKey, normalizedKey));
+            if (label) return label;
+        }
+        const parts = normalizedKey.split('_').filter(Boolean);
+        return parts.length >= 5 ? parts.slice(4).join('_') : normalizedKey;
+    }
+
+    function getExamSortTimestamp(exam) {
+        if (!exam || typeof exam !== 'object') return 0;
+        const updatedTs = Date.parse(String(exam.updatedAt || '')) || Number(exam.updatedAt || 0) || 0;
+        const createdTs = Date.parse(String(exam.createdAt || '')) || Number(exam.createdAt || 0) || 0;
+        return Math.max(updatedTs, createdTs);
+    }
+
+    function pickFallbackExamId(db, removedExamId) {
+        const exams = db && db.exams && typeof db.exams === 'object' ? db.exams : {};
+        return Object.values(exams)
+            .filter((exam) => exam && typeof exam === 'object' && normalizeText(exam.examId) && normalizeText(exam.examId) !== normalizeText(removedExamId))
+            .sort((left, right) => {
+                const delta = getExamSortTimestamp(right) - getExamSortTimestamp(left);
+                if (delta !== 0) return delta;
+                return String(right.examId || '').localeCompare(String(left.examId || ''), 'zh-CN');
+            })[0]?.examId || '';
+    }
+
+    function refreshExamWorkspaceUi() {
+        if (root.CohortDB && typeof root.CohortDB.renderExamList === 'function') root.CohortDB.renderExamList();
+        if (typeof root.applyExamMetaUI === 'function') root.applyExamMetaUI();
+        if (typeof root.renderTables === 'function') root.renderTables();
+        if (typeof root.updateSchoolSelect === 'function') root.updateSchoolSelect();
+        if (typeof root.updateMySchoolSelect === 'function') root.updateMySchoolSelect();
+        if (typeof root.updateStudentSchoolSelect === 'function') root.updateStudentSchoolSelect();
+        if (typeof root.updateMarginalSchoolSelect === 'function') root.updateMarginalSchoolSelect();
+        if (typeof root.updateClassSelect === 'function') root.updateClassSelect();
+        if (typeof root.updateSegmentSelects === 'function') root.updateSegmentSelects();
+        if (typeof root.updateClassCompSchoolSelect === 'function') root.updateClassCompSchoolSelect();
+        if (typeof root.updatePotentialSchoolSelect === 'function') root.updatePotentialSchoolSelect();
+        if (typeof root.updateDiagnosisSelects === 'function') root.updateDiagnosisSelects();
+        if (typeof root.updateCorrelationSchoolSelect === 'function') root.updateCorrelationSchoolSelect();
+        if (typeof root.updateSeatAdjSelects === 'function') root.updateSeatAdjSelects();
+        if (typeof root.updateProgressSchoolSelect === 'function') root.updateProgressSchoolSelect();
+        if (typeof root.updateMutualAidSelects === 'function') root.updateMutualAidSelects();
+        if (typeof root.updateMpSchoolSelect === 'function') root.updateMpSchoolSelect();
+        if (typeof root.updateStatusPanel === 'function') root.updateStatusPanel();
+        if (root.DataManager && typeof root.DataManager.renderDataManagerStatus === 'function') {
+            root.DataManager.renderDataManagerStatus();
+        }
+    }
+
+    function clearCurrentExamWorkspace(db) {
+        if (typeof root.clearDataRuntimeState === 'function') {
+            root.clearDataRuntimeState({ keepConfig: true });
+        }
+        if (typeof root.clearExamRuntimeState === 'function') {
+            root.clearExamRuntimeState();
+        }
+        if (typeof root.clearTeacherRuntimeState === 'function') {
+            root.clearTeacherRuntimeState();
+        } else if (typeof root.setTeacherMap === 'function') {
+            root.setTeacherMap({});
+        }
+        syncWorkspaceState({
+            cohortDb: db,
+            currentExamId: ''
+        });
+        if (db && typeof db === 'object') db.currentExamId = '';
+        refreshExamWorkspaceUi();
+    }
+
+    function removeExamFromLocalState(examId) {
+        const normalizedExamId = normalizeText(examId);
+        const db = getCurrentCohortDb();
+        if (!db || !db.exams || typeof db.exams !== 'object' || !normalizedExamId) {
+            return { removed: false, fallbackExamId: '' };
+        }
+        if (!db.exams[normalizedExamId]) {
+            if (getCurrentExamKey() === normalizedExamId) {
+                clearCurrentExamWorkspace(db);
+                return { removed: true, fallbackExamId: '' };
+            }
+            return { removed: false, fallbackExamId: normalizeText(db.currentExamId) };
+        }
+
+        delete db.exams[normalizedExamId];
+        if (Array.isArray(db.resetPoints)) {
+            db.resetPoints = db.resetPoints.filter((item) => normalizeText(item) !== normalizedExamId);
+        }
+
+        const fallbackExamId = pickFallbackExamId(db, normalizedExamId);
+        db.currentExamId = fallbackExamId;
+        syncWorkspaceState({
+            cohortDb: db,
+            currentExamId: fallbackExamId
+        });
+
+        if (fallbackExamId && root.CohortDB && typeof root.CohortDB.applyExamToWorkspace === 'function') {
+            root.CohortDB.applyExamToWorkspace(fallbackExamId);
+            refreshExamWorkspaceUi();
+            return { removed: true, fallbackExamId };
+        }
+
+        clearCurrentExamWorkspace(db);
+        return { removed: true, fallbackExamId: '' };
+    }
+
+    async function deleteLocalCache(key) {
+        const store = getIdbKeyval();
+        if (!store || typeof store.del !== 'function') return false;
+        await store.del(`cache_${key}`);
+        return true;
+    }
+
+    function buildCurrentExamCloudActions(manager) {
+        manager.cloudBackupRows = ensureMap(manager.cloudBackupRows);
+        const currentExamKey = getCurrentExamKey();
+        const workspaceKey = getWorkspaceProjectKey();
+        const currentExamRow = currentExamKey ? manager.cloudBackupRows.get(currentExamKey) : null;
+        const currentExamLabel = getCurrentExamLabel(currentExamKey);
+        const hasCurrentExam = !!currentExamKey;
+        const currentExamStatus = !hasCurrentExam
+            ? '当前还没有选中的考试批次。'
+            : currentExamRow
+                ? `已找到当前考试的独立云端快照，最近更新时间：${new Date(currentExamRow.updated_at || currentExamRow.created_at).toLocaleString()}。`
+                : '当前考试没有独立快照记录，但仍会同步清理本地届别库和工作区快照中的该考试。';
+        const currentExamScope = workspaceKey
+            ? `工作区快照：${workspaceKey}`
+            : '工作区快照：未识别';
+        const disabledAttr = hasCurrentExam ? '' : 'disabled';
+        const disabledStyle = hasCurrentExam ? '' : 'opacity:0.55; cursor:not-allowed;';
+
+        return `
+            <div style="margin-top:10px; padding:10px 12px; border-radius:10px; border:1px solid #fecaca; background:#fff7ed; display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap;">
+                <div style="min-width:260px; flex:1;">
+                    <div style="font-size:12px; color:#9a3412; font-weight:700;">当前考试数据删除</div>
+                    <div style="margin-top:4px; font-size:13px; color:#7c2d12;">
+                        当前考试：<strong>${escapeHtml(currentExamKey || '未选择')}</strong>${currentExamLabel ? ` <span style="color:#9a3412;">(${escapeHtml(currentExamLabel)})</span>` : ''}
+                    </div>
+                    <div style="margin-top:4px; font-size:12px; color:#9a3412; line-height:1.7;">${escapeHtml(currentExamStatus)}</div>
+                    <div style="margin-top:4px; font-size:11px; color:#c2410c; line-height:1.6;">${escapeHtml(currentExamScope)}</div>
+                </div>
+                <button class="btn btn-sm btn-danger" ${disabledAttr} style="${disabledStyle}" onclick="window.DataCloudRuntime.deleteCurrentExamCloudBackup(window.DataManager)" title="删除当前考试的本地届别库数据、工作区快照引用和独立云端考试快照">
+                    <i class="ti ti-trash"></i> 删除当前考试数据
+                </button>
+            </div>
+        `;
     }
 
     function getIdbKeyval() {
@@ -271,7 +470,12 @@
             if (!allRows.length) {
                 manager.cloudSelection.clear();
                 if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#64748b;">☁️ 云端数据库为空</td></tr>';
-                if (summaryEl) summaryEl.innerHTML = '📌 暂无存档记录';
+                if (summaryEl) {
+                    summaryEl.innerHTML = `
+                        <div>📌 暂无存档记录</div>
+                        ${buildCurrentExamCloudActions(manager)}
+                    `;
+                }
                 api.updateCloudSelectionUI(manager);
                 return;
             }
@@ -284,7 +488,10 @@
                         filterCurrent ? '当前届别/工作区' : '',
                         filterSnapshotsOnly ? '工作区快照' : ''
                     ].filter(Boolean).join(' + ') || '全部记录';
-                    summaryEl.innerHTML = `📌 当前云端共 ${allRows.length} 条记录，已按「${filterText}」过滤。`;
+                    summaryEl.innerHTML = `
+                        <div>📌 当前云端共 ${allRows.length} 条记录，已按「${filterText}」过滤。</div>
+                        ${buildCurrentExamCloudActions(manager)}
+                    `;
                 }
                 api.updateCloudSelectionUI(manager);
                 return;
@@ -306,6 +513,7 @@
                         <span>📌 当前云端清单 <b>${visibleRows.length}</b> 条 | 占用约 <b>${totalSizeMB} MB</b></span>
                         ${suffix}
                     </div>
+                    ${buildCurrentExamCloudActions(manager)}
                 `;
             }
 
@@ -622,6 +830,80 @@
             await api.renderCloudBackups(manager);
         } catch (e) {
             safeAlert(`删除失败: ${e.message}`);
+        } finally {
+            safeLoading(false);
+        }
+    }
+
+    async function deleteCurrentExamCloudBackup(manager) {
+        const currentExamKey = getCurrentExamKey();
+        if (!currentExamKey) {
+            safeAlert('当前还没有可删除的考试批次，请先切换到目标考试。');
+            return;
+        }
+
+        const currentExamLabel = getCurrentExamLabel(currentExamKey);
+        const deleteSystemDataRecords = getDeleteSystemDataRecords();
+        if (!deleteSystemDataRecords) throw new Error('deleteSystemDataRecords unavailable');
+
+        const promptLines = [
+            '危险操作：',
+            '',
+            `确定要删除当前考试 [${currentExamKey}] 吗？`,
+            currentExamLabel ? `考试标签：${currentExamLabel}` : '',
+            '',
+            '系统会同时处理：',
+            '1. 本地届别库中的该次考试数据',
+            '2. 当前工作区快照中的该次考试引用',
+            '3. 云端独立考试快照（如果存在）',
+            '',
+            '删除后不可恢复。'
+        ].filter(Boolean);
+        if (!safeConfirm(promptLines.join('\n'))) return;
+
+        safeLoading(true, `正在删除当前考试 ${currentExamKey}...`);
+        try {
+            manager.cloudBackupRows = ensureMap(manager.cloudBackupRows);
+            const hadRemoteExamSnapshot = manager.cloudBackupRows.has(currentExamKey);
+
+            removeExamFromLocalState(currentExamKey);
+
+            if (root.CloudManager && typeof root.CloudManager.save === 'function') {
+                const synced = await root.CloudManager.save({
+                    mode: 'workspace',
+                    forceUpload: true,
+                    sourceLabel: 'delete-current-exam'
+                });
+                if (!synced) {
+                    throw new Error('工作区快照更新失败，请稍后重试。');
+                }
+            }
+
+            let remoteDeleteError = null;
+            if (hadRemoteExamSnapshot) {
+                const { error } = await deleteSystemDataRecords({ keyEq: currentExamKey });
+                if (error) remoteDeleteError = error;
+                else await deleteLocalCache(currentExamKey);
+            }
+
+            manager.cloudSelection = ensureSelection(manager.cloudSelection);
+            manager.cloudSelection.delete(currentExamKey);
+            manager.cloudBackupRows.delete(currentExamKey);
+
+            if (remoteDeleteError) {
+                safeAlert(`当前考试已从本地届别库和工作区快照中移除，但独立云端考试快照删除失败：${remoteDeleteError.message || remoteDeleteError}`);
+            } else {
+                safeToast(
+                    hadRemoteExamSnapshot
+                        ? `已删除当前考试：${currentExamLabel || currentExamKey}`
+                        : `已移除当前考试：${currentExamLabel || currentExamKey}`,
+                    'success'
+                );
+            }
+
+            await api.renderCloudBackups(manager);
+        } catch (e) {
+            safeAlert(`删除当前考试失败: ${e.message || e}`);
         } finally {
             safeLoading(false);
         }
@@ -1111,6 +1393,7 @@
         handleCloudArchiveUpload,
         loadCloudBackup,
         deleteCloudBackup,
+        deleteCurrentExamCloudBackup,
         loadCloudSnapshots,
         deleteCloudSnapshot,
         dbGetLocal,
