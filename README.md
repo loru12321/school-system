@@ -1,49 +1,102 @@
-# school-system
+# School System
 
-学校成绩分析与教务管理系统。当前仓库维护的是 [schoolsystem.com.cn](https://schoolsystem.com.cn/) 的实际运行代码、构建产物和 Supabase 配套脚本，不是演示模板。
+面向学校成绩分析、联考对比、教师教学诊断、县乡质量排名与教务管理的一体化系统。
+
+当前仓库维护的是正式站点 [schoolsystem.com.cn](https://schoolsystem.com.cn/) 的实际运行代码，而不是演示模板。
 
 ## 访问入口
 
-- 线上站点: [https://schoolsystem.com.cn/](https://schoolsystem.com.cn/)
-- GitHub 仓库: [https://github.com/hka123321/school-system](https://github.com/hka123321/school-system)
-- 主要分支: `main`
+- 正式站点：[https://schoolsystem.com.cn/](https://schoolsystem.com.cn/)
+- GitHub 仓库：[https://github.com/hka123321/school-system](https://github.com/hka123321/school-system)
+- 默认分支：`main`
+- 当前工作区：`C:\Users\loru\Desktop\system\school-system`
 
-## 功能概览
+## 系统覆盖范围
 
-- `数据管理`: 数据上传、届别管理、考试归档、云端恢复、目标人数与别名规则管理
-- `联考分析`: 综合分析、校际对比、多期对比、教师分析、高分段与临界生分析
-- `教学管理`: 总览、问题清单、预警中心、整改任务、版本归档
-- `学情诊断`: 学生明细、成长报告、历史成绩、进退步分析
-- `考务工具`: 校内成绩、智能考场编排、新生均衡分班、级部排课、互助组等
+当前主系统已经覆盖以下核心场景：
 
-## 技术栈
+- 数据枢纽中心：成绩上传、考试归档、届别管理、目标人数管理、学校别名、云端备份与恢复
+- 联考分析：综合总览、两率一分、县域质量排名、教师教学分析、指标生达标、后 1/3 学生核算
+- 学情诊断：学生总览、学生明细、成长档案、学生报告、进退步分析
+- 教学管理：总览、问题清单、异常预警、整改任务、版本归档
+- 教务工具：考务编排、新生均衡分班、应用下载中心
 
-| 层级 | 技术 |
-| --- | --- |
-| 前端 | Vite 7、原生 HTML/CSS/JavaScript、Alpine.js、Chart.js、XLSX、html2canvas |
-| 构建 | `vite-plugin-singlefile`、`scripts/build/sync-public-assets.mjs`、`scripts/build/optimize-dist-html.mjs`、`scripts/build/inline-scripts.mjs` |
-| 云端 | Supabase Database、RLS、Edge Function `edu-gateway-v2`、同域 Worker 代理 `/api/edu-gateway` 与 `/sb/*`、`@supabase/supabase-js@2` |
-| 验收 | Node.js 烟测脚本、`scripts/smoke-all-modules.js`、`scripts/smoke-report-compare.js` |
+## 当前模块状态
+
+截至 `2026-04-21`，已重新完成本地与线上全模块烟测：
+
+- 本地烟测：`npm run smoke:modules:local` 通过
+- 正式站点烟测：`SMOKE_URL=https://schoolsystem.com.cn/ node scripts/smoke-all-modules.js` 通过
+- 结果：`errorCount: 0`
+
+已覆盖确认的关键模块包括：
+
+- 综合分析报告
+- 镇域宏观横向评价
+- 县域质量排名
+- 教师教学分析
+- 校内绩效管理与评价
+- 学科贡献度与关联性分析
+- 进退步分析
+- 纵向成长档案
+- 学生报告生成
+- AI 分析统一入口
+- 应用下载中心
+- 教学管理五个子模块
+- 学生总览与学生明细
+- 数据枢纽中心全部页签
+
+## 技术架构
+
+前端与构建：
+
+- Vite 7
+- 原生 HTML / CSS / JavaScript
+- `vite-plugin-singlefile`
+- 构建后同步脚本：
+  - `scripts/build/sync-public-assets.mjs`
+  - `scripts/build/optimize-dist-html.mjs`
+  - `scripts/build/inline-scripts.mjs`
+
+前端运行时拆分：
+
+- 主入口：`public/assets/js/app.js`
+- 状态层：`*-state-runtime.js`
+- 模块层：`*-runtime.js`
+- 云端与账户：`cloud-api-runtime.js`、`data-cloud-runtime.js`、`account-manager-runtime.js`
+- 登录与壳层：`boot-runtime.js`、`login-entry-runtime.js`、`shell-runtime.js`
+
+云端与网关：
+
+- Supabase 数据库
+- Supabase Edge Functions
+- 同源代理网关 `/api/edu-gateway`
+- Cloudflare Workers
 
 ## 仓库结构
 
 ```text
-src/                              页面入口与内联脚本
-public/assets/js/                 前端运行时代码
-dist/                             构建产物
-lt.html                           单文件本地验收版本
-scripts/                          烟测与专项检查脚本
-supabase/functions/edu-gateway/   账号与管理网关
-supabase/sql/                     RLS、表结构、账号安全迁移脚本
+src/                               页面入口
+public/assets/js/                  前端运行时代码
+scripts/                           构建、校验、烟测、部署辅助脚本
+dist/                              构建产物
+supabase/functions/                Edge Functions
+supabase/sql/                      表结构、RLS、迁移脚本
+cloudflare/                        Worker 相关文件
+docs/                              补充文档
+lt.html                            单文件本地版本
+deploy.ps1                         部署脚本
+wrangler.jsonc                     Workers 部署配置
 ```
 
-重点文件：
+建议优先阅读：
 
-- [src/index.html](src/index.html)
-- [public/assets/js/app.js](public/assets/js/app.js)
-- [supabase/functions/edu-gateway/index.ts](supabase/functions/edu-gateway/index.ts)
-- [supabase/EDGE_GATEWAY_SETUP.md](supabase/EDGE_GATEWAY_SETUP.md)
+- [README.md](README.md)
+- [package.json](package.json)
 - [scripts/smoke-all-modules.js](scripts/smoke-all-modules.js)
+- [public/assets/js/app.js](public/assets/js/app.js)
+- [public/assets/js/data-cloud-runtime.js](public/assets/js/data-cloud-runtime.js)
+- [public/assets/js/county-analysis-runtime.js](public/assets/js/county-analysis-runtime.js)
 
 ## 本地开发
 
@@ -65,140 +118,97 @@ npm run dev
 npm run build
 ```
 
-常用脚本：
+全量校验：
 
 ```bash
-npm run smoke:modules
+npm run validate
+```
+
+## 验证命令
+
+本地全模块烟测：
+
+```powershell
+npm run smoke:modules:local
+```
+
+正式站点全模块烟测：
+
+```powershell
+$env:SMOKE_URL='https://schoolsystem.com.cn/'
+node scripts/smoke-all-modules.js
+```
+
+对比报告专项烟测：
+
+```powershell
 npm run smoke:report-compare
-npm run test:ai-gateway
+```
+
+AI 网关专项检查：
+
+```powershell
+npm run smoke:ai-gateway
+```
+
+## 部署流程
+
+标准发布流程：
+
+1. 修改代码
+2. 运行 `npm run build`
+3. 运行本地烟测
+4. 提交并推送到 `main`
+5. 部署 Worker / 站点
+6. 对正式站点再次跑烟测
+
+仓库内常用命令：
+
+```bash
 npm run push
 ```
 
-## AI Gateway
+如需手动部署 Worker，可参考项目中的 `wrangler.jsonc` 与 `deploy.ps1`。
 
-Production now proxies AI requests through same-origin Worker routes instead of calling AI vendors directly from the browser:
+## GitHub Releases 状态
 
-- `/api/ai/chat`
-- `/api/ai/diagnose`
+截至 `2026-04-21`，GitHub Releases 尚未完成客户端同步，当前公共地址检查结果如下：
 
-Recommended Worker environment variables:
+- [releases/latest](https://github.com/hka123321/school-system/releases/latest)：`404`
+- Android 安装包：`school-system-android-latest.apk` 下载地址返回 `404`
+- Windows 客户端：`smartedu-desktop-windows-latest.exe` 下载地址返回 `404`
 
-- `AI_API_KEY`
-- `AI_BASE_URL`
-- `AI_MODEL`
-- `AI_ALLOWED_HOSTS`
+这意味着：
 
-Quick validation:
+- 安卓客户端当前没有在 GitHub Releases 中对外发布
+- Windows 客户端当前也没有在 GitHub Releases 中对外发布
+- 如果应用下载中心仍指向 GitHub Releases，需要补齐发布资产或改为稳定的对象存储下载地址
 
-```bash
-npm run test:ai-gateway
-```
+## 当前数据与业务规则要点
 
-If the Worker has no AI key yet, the script still treats `AI_API_KEY_MISSING` as a valid route-level response so you can distinguish routing problems from missing vendor credentials.
+系统近阶段已经落地的关键规则包括：
 
-## 发布流程
+- 同一考试日期时间再次上传时，覆盖本次考试数据
+- 没有“目标人数管理”配置的学校，按县直学校处理
+- 县域质量排名支持县乡双口径
+- 县域质量排名内已纳入下载入口
+- 9 年级县域排名支持总分与分学科排名呈现
+- 教师在县直 + 乡镇的本学科县域总排名已纳入县域质量排名
 
-标准流程：
+## 维护建议
 
-1. 修改源码
-2. 运行 `npm run build`
-3. 运行 `npm run smoke:modules`
-4. 提交并推送 `main`
-5. 对线上站点做一次实际登录和关键模块回归
+如果继续优化，我建议优先做这三件事：
 
-如果这次改动涉及 Supabase：
-
-1. 更新 [supabase/functions/edu-gateway/index.ts](supabase/functions/edu-gateway/index.ts)
-2. 重新部署 `edu-gateway-v2`
-3. 再执行对应 SQL 脚本
-4. 最后做浏览器实测和烟测
-
-## 性能指标
-
-以下指标为 `2026-03-21` 当前构建基线，用于后续回归对比，不代表 Lighthouse 评分：
-
-| 指标 | 当前值 |
-| --- | --- |
-| `dist/index.html` 大小 | `552,926 bytes` |
-| `dist/assets/js/app.js` 大小 | `1,206,780 bytes` |
-| `lt.html` 大小 | `2,475,059 bytes` |
-| 整站烟测基线 | `npm run smoke:modules` 通过，目标 `errorCount: 0` |
-
-说明：
-
-- 当前仓库仍是“大运行时 + 单文件产物”结构，构建体积较大
-- 现阶段的性能回归，优先看“能否稳定构建”和“烟测是否通过”
-- 若后续做性能专项，优先方向是模块拆分、脚本按需加载、减少单文件内联体积
-
-## 账号安全现状
-
-`2026-03-21` 起，账号链路按下面的方向收口：
-
-- 浏览器端不再以 `system_users` 作为首选认证通道
-- 账号搜索、改密、导出、批量导入/删除统一走 `edu-gateway`
-- 云端账号列表只返回 `password_display`，不再返回明文密码
-- `system_users` 逐步从明文口令迁移到 `bcrypt` 哈希
-
-相关文件：
-
-- [supabase/sql/003_system_users_password_hardening.sql](supabase/sql/003_system_users_password_hardening.sql)
-- [supabase/EDGE_GATEWAY_SETUP.md](supabase/EDGE_GATEWAY_SETUP.md)
-
-建议的生产变更顺序：
-
-1. 先部署新版 `edu-gateway-v2`
-2. 再执行 `003_system_users_password_hardening.sql`
-3. 最后上线前端，确认浏览器端不再依赖旧直连逻辑
-
-## 验收方法
-
-本地烟测：
-
-```bash
-$env:SMOKE_URL='file:///C:/Users/loru/Desktop/system/lt.html'
-$env:SMOKE_USER='admin'
-$env:SMOKE_PASS='admin123'
-$env:SMOKE_COHORT_YEAR='2022'
-node scripts/smoke-all-modules.js
-```
-
-线上烟测：
-
-```bash
-$env:SMOKE_URL='https://schoolsystem.com.cn/'
-$env:SMOKE_USER='admin'
-$env:SMOKE_PASS='admin123'
-$env:SMOKE_COHORT_YEAR='2022'
-node scripts/smoke-all-modules.js
-```
-
-账号安全改动至少补做这几项：
-
-- 管理员登录
-- 普通用户改密
-- 账号搜索结果只返回脱敏字段
-- 页面不再暴露管理员明文口令
-
-## 版本历史
-
-以下只保留最近一轮连续维护记录，更早历史请直接查看 `git log`。
-同一天的连续提交已合并为一行，`提交范围` 显示当天首个到最后一个短 SHA 与提交数量。
-
-| 日期 | 提交范围 | 说明 |
-| --- | --- | --- |
-| 2026-03-23 | `923baf6` ~ `46bb7b5`（3 次） | 首页登录页改为简约布局，统一桌面端与手机端样式，并修复学生端刷新后白屏。 |
-| 2026-03-22 | `6d90292` ~ `c1642d8`（78 次） | 完成运行时拆分、构建体积治理、数据枢纽中心 UI 重做，以及首页登录体验与 SQL/Cloud 标签稳定性修复。 |
-| 2026-03-21 | `593c2ae` ~ `b28ebd6`（41 次） | 上线学校端/家长端双入口与移动端体验升级，收口账号网关安全链路，并回退校内成绩母模块方案。 |
+1. 补齐 GitHub Releases 发布链路，把 Android APK 和 Windows EXE 自动挂到同一个版本标签下。
+2. 给“应用下载中心”增加真实发布状态检测，避免页面显示可下载但实际链接 `404`。
+3. 继续压缩运行时体积，逐步把高耦合逻辑从 `app.js` 向独立 runtime 拆分，降低后续回归成本。
 
 ## 说明
 
-这个仓库仍在持续整理，当前最主要的技术债有两类：
+这是生产仓库，提交前建议至少完成：
 
-- 前端大文件运行时拆分与状态收口
-- Supabase 权限边界继续从浏览器侧收回到 Edge Function
+- `npm run build`
+- `npm run smoke:modules:local`
+- 正式站点回归一遍关键模块
 
-接手时建议优先看这几个文件：
-
-- [README.md](README.md)
-- [supabase/EDGE_GATEWAY_SETUP.md](supabase/EDGE_GATEWAY_SETUP.md)
-- [deploy.ps1](deploy.ps1)
+如果这次修改涉及云端、登录、县域排名、报告导出或数据覆盖逻辑，建议追加正式站点烟测，不要只看本地结果。
