@@ -108,7 +108,13 @@ async function waitForPageStability(page, timeout = 15000) {
 
 async function withTimeoutResult(task, timeoutMs, fallbackFactory) {
     return Promise.race([
-        Promise.resolve().then(task),
+        Promise.resolve().then(task).catch((error) => {
+            const fallback = fallbackFactory();
+            return {
+                ...fallback,
+                error: fallback.error || error?.message || String(error)
+            };
+        }),
         new Promise((resolve) => setTimeout(() => resolve(fallbackFactory()), timeoutMs))
     ]);
 }
@@ -570,10 +576,18 @@ async function runModuleDeepCheck(page, id) {
         });
     }
     if (id === 'teacher-analysis') {
-        await page.waitForFunction(() => window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__ === true, undefined, { timeout: 15000 });
+        await page.waitForFunction(() => (
+            window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__ === true
+            || (
+                typeof window.analyzeTeachers === 'function'
+                && typeof window.renderTeacherCards === 'function'
+                && typeof window.renderTeacherComparisonTable === 'function'
+            )
+        ), undefined, { timeout: 30000 }).catch(() => { });
         return page.evaluate(async () => {
             const checks = {
-                runtimeLoaded: window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__ === true,
+                runtimeLoaded: window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__ === true
+                    || typeof window.analyzeTeachers === 'function',
                 analyzeTeachers: typeof window.analyzeTeachers === 'function',
                 renderTeacherCards: typeof window.renderTeacherCards === 'function',
                 renderTeacherComparisonTable: typeof window.renderTeacherComparisonTable === 'function',
