@@ -20,7 +20,6 @@ var sbClient = window.sbClient || null;
 
 document.addEventListener('DOMContentLoaded', function () {
     if (typeof initMacroAnomalyConfigUI === 'function') initMacroAnomalyConfigUI();
-    if (window.Auth && typeof window.Auth.init === 'function') window.Auth.init();
 });
 
 var APP_MODULES = [
@@ -88,6 +87,10 @@ var APP_MODULES = [
 ];
 
 async function loadAppModules() {
+    if (window.__APP_MODULES_LOAD_PROMISE__) {
+        return window.__APP_MODULES_LOAD_PROMISE__;
+    }
+
     const hideGlobalLoader = (delay = 500) => {
         setTimeout(() => {
             const loader = document.getElementById('global-loader');
@@ -104,16 +107,18 @@ async function loadAppModules() {
 
     if (window.__APP_MODULES_LOADED__ === true || window.__APP_MODULES_LOADED__ === 'loading') {
         console.log('[boot-runtime] Module load already in progress or completed');
-        return;
+        return window.__APP_MODULES_LOAD_PROMISE__;
     }
 
     // Check if Auth is already defined (e.g. by Vite bundle) to avoid duplicate load
     if (window.Auth && !window.Auth.__bootLoginShell) {
         console.log('[boot-runtime] Auth module already present, skipping dynamic load');
         window.__APP_MODULES_LOADED__ = true;
-        return;
+        return Promise.resolve();
     }
 
+    window.__APP_MODULES_LOADED__ = 'loading';
+    window.__APP_MODULES_LOAD_PROMISE__ = (async () => {
     const loaderText = document.getElementById('loader-text');
 
     // Pre-flight gateway check
@@ -136,7 +141,6 @@ async function loadAppModules() {
         console.warn('[boot-runtime] Gateway pre-flight failed or timed out:', err);
     }
 
-    window.__APP_MODULES_LOADED__ = 'loading';
     const total = APP_MODULES.length;
 
     for (let i = 0; i < total; i++) {
@@ -177,6 +181,9 @@ async function loadAppModules() {
     console.log('[boot-runtime] All modules loaded');
 
     hideGlobalLoader(500);
+    })();
+
+    return window.__APP_MODULES_LOAD_PROMISE__;
 }
 
 function enterCohort(year) {
@@ -189,6 +196,19 @@ function enterCohort(year) {
         // Fallback: hide login overlay manually if state manager isn't loaded yet
         if (window.Auth) window.Auth.syncLoginOverlayState(false);
     }
+}
+
+window.enterCohort = enterCohort;
+if (typeof window.enterCohortFromMask !== 'function') {
+    window.enterCohortFromMask = async function bootEnterCohortFromMask() {
+        const yearInput = document.getElementById('entry-cohort-year');
+        await loadAppModules();
+        if (typeof window.enterCohortFromMask === 'function'
+            && window.enterCohortFromMask !== bootEnterCohortFromMask) {
+            return window.enterCohortFromMask();
+        }
+        return enterCohort(yearInput ? yearInput.value : '');
+    };
 }
 
 
@@ -1170,11 +1190,16 @@ window.initCloudClient();
         });
     }
 
+    function initBootAuthOnce() {
+        if (window.__BOOT_AUTH_INIT_DONE__) return;
+        window.__BOOT_AUTH_INIT_DONE__ = true;
+        bootAuth.init();
+    }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => bootAuth.init(), { once: true });
+        document.addEventListener('DOMContentLoaded', initBootAuthOnce, { once: true });
     } else {
-        bootAuth.init();
+        initBootAuthOnce();
     }
 })();
 
