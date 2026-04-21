@@ -6,7 +6,8 @@
     const state = {
         promptArmed: false,
         lastSignature: '',
-        teacherContextPromise: null
+        teacherContextPromise: null,
+        preUploadTownshipSchools: []
     };
 
     function escapeHtml(value) {
@@ -71,6 +72,47 @@
         return Object.keys(window.SCHOOLS || {}).filter(Boolean).sort((a, b) => a.localeCompare(b, 'zh-CN'));
     }
 
+    function isAggregateSchoolName(name) {
+        const text = String(name || '').trim();
+        return /^(?:\u6574\u4f53|\u5168\u90e8|\u6c47\u603b|\u603b\u8868|\u5408\u8ba1|\u5168\u53bf|\u53bf\u57df|Sheet\d*|\u5de5\u4f5c\u8868\d*)$/i.test(text);
+    }
+
+    function normalizeSchoolKey(name) {
+        if (typeof window.normalizeSchoolName === 'function') {
+            return window.normalizeSchoolName(name) || String(name || '').trim();
+        }
+        return String(name || '').trim();
+    }
+
+    function getTargetManagedTownshipSchools(names) {
+        const currentNames = Array.isArray(names) ? names.filter(Boolean) : getSchoolNames();
+        if (!currentNames.length) return [];
+        const targets = window.TARGETS && typeof window.TARGETS === 'object' ? window.TARGETS : {};
+        const targetKeys = Object.keys(targets);
+        if (!targetKeys.length) return [];
+
+        const byNormalizedName = new Map();
+        currentNames.forEach((name) => {
+            byNormalizedName.set(normalizeSchoolKey(name), name);
+        });
+
+        const resolved = targetKeys
+            .map((rawName) => {
+                if (typeof window.resolveSchoolNameFromCollection === 'function') {
+                    const exact = window.resolveSchoolNameFromCollection(currentNames, rawName);
+                    if (exact) return exact;
+                }
+                if (typeof window.getCanonicalSchoolName === 'function') {
+                    const canonical = window.getCanonicalSchoolName(rawName, currentNames);
+                    if (canonical && currentNames.includes(canonical)) return canonical;
+                }
+                return byNormalizedName.get(normalizeSchoolKey(rawName)) || '';
+            })
+            .filter((name) => name && !isAggregateSchoolName(name));
+
+        return Array.from(new Set(resolved)).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+    }
+
     function getDataSignature() {
         return [
             getExamKey(),
@@ -99,6 +141,35 @@
             .split(/[,\n，、]+/)
             .map((item) => item.trim())
             .filter(Boolean);
+    }
+
+    function getBestKnownTownshipSchools(names, existingScope = null) {
+        const currentNames = Array.isArray(names) ? names.filter(Boolean) : getSchoolNames();
+        const nameSet = new Set(currentNames);
+        const shouldDropAggregateNames = currentNames.filter((name) => !isAggregateSchoolName(name)).length > 1;
+        const candidates = [];
+        const pushCandidate = (scope, sourceWeight = 0) => {
+            const list = Array.isArray(scope?.townshipSchools)
+                ? scope.townshipSchools.filter((name) => nameSet.has(name) && (!shouldDropAggregateNames || !isAggregateSchoolName(name)))
+                : [];
+            if (!list.length) return;
+            const countyList = Array.isArray(scope?.countySchools)
+                ? scope.countySchools.filter((name) => nameSet.has(name))
+                : [];
+            candidates.push({
+                list,
+                score: sourceWeight + list.length * 10 + countyList.length + (scope?.includesCounty ? 5 : 0)
+            });
+        };
+
+        pushCandidate({ includesCounty: false, townshipSchools: getTargetManagedTownshipSchools(currentNames) }, 2000);
+        pushCandidate(existingScope, 1000);
+        pushCandidate({ includesCounty: false, townshipSchools: state.preUploadTownshipSchools }, 900);
+        const scopeMap = getScopeMap();
+        Object.values(scopeMap || {}).forEach((scope) => pushCandidate(scope, 0));
+
+        candidates.sort((a, b) => b.score - a.score);
+        return candidates[0]?.list || [];
     }
 
     function normalizeScope(scope) {
@@ -514,23 +585,31 @@
         const existing = getCurrentScope();
         if (existing?.signature === signature) return normalizeScope(existing);
 
-        const includesCounty = window.confirm(
-            '本次导入的成绩是否包含县里其他学校？\n\n确定：包含县域学校，系统会增加县排名。\n取消：仅乡镇学校，继续按乡镇口径分析。'
-        );
+        const knownTownshipSchools = getBestKnownTownshipSchools(names, existing);
+        const knownTownshipSet = new Set(knownTownshipSchools);
+        const inferredCountySchools = knownTownshipSchools.length
+            ? names.filter((name) => !knownTownshipSet.has(name))
+            : [];
 
-        let townshipSchools = names;
-        if (includesCounty) {
-            const previousTownship = existing?.townshipSchools?.length ? existing.townshipSchools : names;
-            const answer = window.prompt(
-                '请输入“本乡镇学校”名单，用逗号分隔。\n\n留空则先按全部学校都属于乡镇处理，后续可再调整。',
-                previousTownship.join('，')
+        let includesCounty = inferredCountySchools.length > 0;
+        let townshipSchools = knownTownshipSchools.length ? knownTownshipSchools : names;
+
+        if (!knownTownshipSchools.length) {
+            includesCounty = window.confirm(
+                '本次导入的成绩是否包含县里其他学校？\n\n确定：包含县域学校，系统会增加县排名。\n取消：仅乡镇学校，继续按乡镇口径分析。'
             );
-            const parsed = parseSchoolList(answer);
-            if (parsed.length) {
+            if (includesCounty) {
+                const answer = window.prompt(
+                    '首次启用县域排名时，需要标定一次“本乡镇学校”名单。\n后续再导入新增学校会自动识别为县直/县域学校，不会再重复询问。',
+                    names.join('，')
+                );
+                const parsed = parseSchoolList(answer);
                 const exactSet = new Set(names);
                 townshipSchools = parsed.filter((name) => exactSet.has(name));
                 if (!townshipSchools.length) townshipSchools = names;
             }
+        } else if (includesCounty && window.UI?.toast) {
+            window.UI.toast(`已按历史口径自动识别：乡镇 ${townshipSchools.length} 所，县直/县域 ${inferredCountySchools.length} 所`, 'info');
         }
 
         const scope = normalizeScope({
@@ -1301,7 +1380,10 @@
         document.addEventListener('change', (event) => {
             const target = event.target;
             if (!target || target.id !== 'fileInput') return;
-            if (target.files && target.files.length) state.promptArmed = true;
+            if (target.files && target.files.length) {
+                state.preUploadTownshipSchools = getSchoolNames().filter((name) => !isAggregateSchoolName(name));
+                state.promptArmed = true;
+            }
         }, true);
     }
 
