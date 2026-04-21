@@ -75,6 +75,7 @@ var APP_MODULES = [
     './assets/js/shell-polish-runtime.js',
     './assets/js/module-entry-runtime.js',
     './assets/js/app.js',
+    './assets/js/macro-analysis-compat-runtime.js',
     './assets/js/county-analysis-runtime.js',
     './assets/js/school-normalization-runtime.js',
     './assets/js/compare-shared-runtime.js',

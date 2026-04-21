@@ -522,6 +522,38 @@ async function runModuleDeepCheck(page, id) {
             };
         });
     }
+    if (id === 'analysis') {
+        return page.evaluate(() => {
+            const checks = {
+                renderHorizontalTable: typeof window.renderHorizontalTable === 'function',
+                exportHorizontalExcel: typeof window.exportHorizontalExcel === 'function',
+                exportMacroTables: typeof window.exportMacroTables === 'function',
+                renderTables: typeof window.renderTables === 'function',
+                toggleTableHeatmap: typeof window.toggleTableHeatmap === 'function'
+            };
+            let horizontalReady = false;
+            try {
+                if (checks.renderHorizontalTable) {
+                    window.renderHorizontalTable();
+                    const box = document.getElementById('horizontal-box');
+                    const table = document.querySelector('#horizontal-table table');
+                    horizontalReady = !!box && !box.classList.contains('hidden') && !!table;
+                }
+            } catch (error) {
+                return {
+                    ok: false,
+                    checks,
+                    horizontalReady: false,
+                    error: error?.message || String(error)
+                };
+            }
+            return {
+                ok: Object.values(checks).every(Boolean) && horizontalReady,
+                checks,
+                horizontalReady
+            };
+        });
+    }
     if (id === 'teacher-analysis') {
         await page.waitForFunction(() => window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__ === true, undefined, { timeout: 15000 });
         return page.evaluate(async () => {
