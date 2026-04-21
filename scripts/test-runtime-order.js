@@ -232,51 +232,52 @@ function findScriptTag(html, src) {
     return match ? match[0] : '';
 }
 
-const authStateIndex = indexHtml.indexOf(authStateRef);
-const workspaceStateIndex = indexHtml.indexOf(workspaceStateRef);
-const examStateIndex = indexHtml.indexOf(examStateRef);
-const schoolStateIndex = indexHtml.indexOf(schoolStateRef);
-const teacherStateIndex = indexHtml.indexOf(teacherStateRef);
-const dataStateIndex = indexHtml.indexOf(dataStateRef);
-const supportStateIndex = indexHtml.indexOf(supportStateRef);
-const progressStateIndex = indexHtml.indexOf(progressStateRef);
-const reportSessionStateIndex = indexHtml.indexOf(reportSessionStateRef);
-const compareSessionStateIndex = indexHtml.indexOf(compareSessionStateRef);
-const compareResultStateIndex = indexHtml.indexOf(compareResultStateRef);
-const compareSummaryStateIndex = indexHtml.indexOf(compareSummaryStateRef);
-const cloudApiIndex = indexHtml.indexOf(cloudApiRef);
-const dataCloudIndex = indexHtml.indexOf(dataCloudRef);
-const issueManagerIndex = indexHtml.indexOf(issueManagerRef);
-const packagerIndex = indexHtml.indexOf(packagerRef);
-const helpSystemIndex = indexHtml.indexOf(helpSystemRef);
-const loggerIndex = indexHtml.indexOf(loggerRef);
-const workerApiIndex = indexHtml.indexOf(workerApiRef);
-const accountManagerIndex = indexHtml.indexOf(accountManagerRef);
-const dataManagerTeacherIndex = indexHtml.indexOf(dataManagerTeacherRef);
-const dataManagerStudentIndex = indexHtml.indexOf(dataManagerStudentRef);
-const dataManagerArchiveIndex = indexHtml.indexOf(dataManagerArchiveRef);
-const dataManagerGrade9TemplateIndex = indexHtml.indexOf(dataManagerGrade9TemplateRef);
-const dataManagerParamsIndex = indexHtml.indexOf(dataManagerParamsRef);
-const dataManagerTargetsIndex = indexHtml.indexOf(dataManagerTargetsRef);
-const dataManagerSchoolAliasIndex = indexHtml.indexOf(dataManagerSchoolAliasRef);
-const dataManagerSaveSyncIndex = indexHtml.indexOf(dataManagerSaveSyncRef);
-const dataManagerHistoryIndex = indexHtml.indexOf(dataManagerHistoryRef);
-const dataManagerTabIndex = indexHtml.indexOf(dataManagerTabRef);
-const compareCloudContextIndex = indexHtml.indexOf(compareCloudContextRef);
-const compareExamSyncIndex = indexHtml.indexOf(compareExamSyncRef);
-const townSubmoduleCompareStateIndex = indexHtml.indexOf(townSubmoduleCompareStateRef);
-const townSubmoduleCompareIndex = indexHtml.indexOf(townSubmoduleCompareRef);
-const compareSelectorsIndex = indexHtml.indexOf(compareSelectorsRef);
-const progressAnalysisIndex = indexHtml.indexOf(progressAnalysisRef);
-const cloudIndex = indexHtml.indexOf(cloudRef);
-const cloudWorkspaceIndex = indexHtml.indexOf(cloudWorkspaceRef);
-const shellRuntimeIndex = indexHtml.indexOf(shellRuntimeRef);
-const shellPolishRuntimeIndex = indexHtml.indexOf(shellPolishRuntimeRef);
-const moduleEntryRuntimeIndex = indexHtml.indexOf(moduleEntryRuntimeRef);
-const appIndex = indexHtml.indexOf(appRef);
+const moduleManifest = bootRuntime;
+const authStateIndex = moduleManifest.indexOf(authStateRef);
+const workspaceStateIndex = moduleManifest.indexOf(workspaceStateRef);
+const examStateIndex = moduleManifest.indexOf(examStateRef);
+const schoolStateIndex = moduleManifest.indexOf(schoolStateRef);
+const teacherStateIndex = moduleManifest.indexOf(teacherStateRef);
+const dataStateIndex = moduleManifest.indexOf(dataStateRef);
+const supportStateIndex = moduleManifest.indexOf(supportStateRef);
+const progressStateIndex = moduleManifest.indexOf(progressStateRef);
+const reportSessionStateIndex = moduleManifest.indexOf(reportSessionStateRef);
+const compareSessionStateIndex = moduleManifest.indexOf(compareSessionStateRef);
+const compareResultStateIndex = moduleManifest.indexOf(compareResultStateRef);
+const compareSummaryStateIndex = moduleManifest.indexOf(compareSummaryStateRef);
+const cloudApiIndex = moduleManifest.indexOf(cloudApiRef);
+const dataCloudIndex = moduleManifest.indexOf(dataCloudRef);
+const issueManagerIndex = moduleManifest.indexOf(issueManagerRef);
+const packagerIndex = moduleManifest.indexOf(packagerRef);
+const helpSystemIndex = moduleManifest.indexOf(helpSystemRef);
+const loggerIndex = moduleManifest.indexOf(loggerRef);
+const workerApiIndex = moduleManifest.indexOf(workerApiRef);
+const accountManagerIndex = moduleManifest.indexOf(accountManagerRef);
+const dataManagerTeacherIndex = moduleManifest.indexOf(dataManagerTeacherRef);
+const dataManagerStudentIndex = moduleManifest.indexOf(dataManagerStudentRef);
+const dataManagerArchiveIndex = moduleManifest.indexOf(dataManagerArchiveRef);
+const dataManagerGrade9TemplateIndex = moduleManifest.indexOf(dataManagerGrade9TemplateRef);
+const dataManagerParamsIndex = moduleManifest.indexOf(dataManagerParamsRef);
+const dataManagerTargetsIndex = moduleManifest.indexOf(dataManagerTargetsRef);
+const dataManagerSchoolAliasIndex = moduleManifest.indexOf(dataManagerSchoolAliasRef);
+const dataManagerSaveSyncIndex = moduleManifest.indexOf(dataManagerSaveSyncRef);
+const dataManagerHistoryIndex = moduleManifest.indexOf(dataManagerHistoryRef);
+const dataManagerTabIndex = moduleManifest.indexOf(dataManagerTabRef);
+const compareCloudContextIndex = moduleManifest.indexOf(compareCloudContextRef);
+const compareExamSyncIndex = moduleManifest.indexOf(compareExamSyncRef);
+const townSubmoduleCompareStateIndex = moduleManifest.indexOf(townSubmoduleCompareStateRef);
+const townSubmoduleCompareIndex = moduleManifest.indexOf(townSubmoduleCompareRef);
+const compareSelectorsIndex = moduleManifest.indexOf(compareSelectorsRef);
+const progressAnalysisIndex = moduleManifest.indexOf(progressAnalysisRef);
+const cloudIndex = moduleManifest.indexOf(cloudRef);
+const cloudWorkspaceIndex = moduleManifest.indexOf(cloudWorkspaceRef);
+const shellRuntimeIndex = moduleManifest.indexOf(shellRuntimeRef);
+const shellPolishRuntimeIndex = moduleManifest.indexOf(shellPolishRuntimeRef);
+const moduleEntryRuntimeIndex = moduleManifest.indexOf(moduleEntryRuntimeRef);
+const appIndex = moduleManifest.indexOf(appRef);
 const bootRuntimeIndex = indexHtml.indexOf(bootRuntimeRef);
-const popperVendorIndex = indexHtml.indexOf(popperVendorRef);
-const tippyVendorIndex = indexHtml.indexOf(tippyVendorRef);
+const popperVendorIndex = moduleManifest.indexOf(popperVendorRef);
+const tippyVendorIndex = moduleManifest.indexOf(tippyVendorRef);
 const accountAdminIndex = indexHtml.indexOf(accountAdminRef);
 const historyCompareIndex = indexHtml.indexOf(historyCompareRef);
 const perfMobileIndex = indexHtml.indexOf(perfMobileRef);
@@ -366,8 +367,6 @@ assert.strictEqual(switchTabDefinitions.length, 1, 'app.js should define switchT
 assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign switchTab after definition');
 
 [
-    bootRuntimeRef,
-    lzStringVendorRef,
     cryptoJsVendorRef,
     authStateRef,
     workspaceStateRef,
@@ -411,9 +410,7 @@ assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign swi
     townSubmoduleCompareStateRef,
     townSubmoduleCompareRef
 ].forEach((src) => {
-    const scriptTag = findScriptTag(indexHtml, src);
-    assert.ok(scriptTag, `index.html should contain a script tag for ${src}`);
-    assert.ok(/\sdefer(\s|>|=)/i.test(scriptTag), `${src} should load with defer`);
+    assert.ok(moduleManifest.includes(src), `boot-runtime.js should contain APP_MODULES entry for ${src}`);
 });
 
 assert.ok(!findScriptTag(indexHtml, supabaseVendorRef), 'index.html should not load the legacy supabase SDK script');
@@ -424,24 +421,29 @@ assert.ok(!findScriptTag(indexHtml, supabaseVendorRef), 'index.html should not l
     chartVendorRef,
     sweetalertVendorRef
 ].forEach((src) => {
-    const scriptTag = findScriptTag(indexHtml, src);
-    assert.ok(scriptTag, `index.html should contain a script tag for ${src}`);
-    assert.ok(/\sasync(\s|>|=)/i.test(scriptTag), `${src} should load with async`);
+    assert.ok(moduleManifest.includes(src), `boot-runtime.js should contain APP_MODULES entry for ${src}`);
 });
 
 [
     jszipVendorRef,
     pptxgenVendorRef,
-    gsapVendorRef,
     scrollTriggerVendorRef,
     popperVendorRef,
     tippyVendorRef,
     simplebarVendorRef
 ].forEach((src) => {
-    const scriptTag = findScriptTag(indexHtml, src);
-    assert.ok(scriptTag, `index.html should contain a script tag for ${src}`);
-    assert.ok(/\sdefer(\s|>|=)/i.test(scriptTag), `${src} should load with defer`);
+    assert.ok(moduleManifest.includes(src), `boot-runtime.js should contain APP_MODULES entry for ${src}`);
 });
+
+const bootScriptTag = findScriptTag(indexHtml, bootRuntimeRef);
+assert.ok(bootScriptTag, 'index.html should contain a script tag for boot-runtime.js');
+assert.ok(/\sdefer(\s|>|=)/i.test(bootScriptTag), 'boot-runtime.js should load with defer');
+const lzScriptTag = findScriptTag(indexHtml, lzStringVendorRef);
+assert.ok(lzScriptTag, 'index.html should contain a script tag for lz-string.min.js');
+assert.ok(/\sdefer(\s|>|=)/i.test(lzScriptTag), 'lz-string.min.js should load with defer');
+const gsapScriptTag = findScriptTag(indexHtml, gsapVendorRef);
+assert.ok(gsapScriptTag, 'index.html should contain a script tag for gsap.min.js');
+assert.ok(/\sdefer(\s|>|=)/i.test(gsapScriptTag), 'gsap.min.js should load with defer');
 
 assert.ok(indexHtml.includes(tablerIconsRef), 'index.html should load local tabler icons CSS');
 
@@ -524,7 +526,7 @@ assert.ok(examStateIndex < appIndex, 'exam-state-runtime.js must load before app
 assert.ok(workspaceStateIndex < cloudIndex, 'workspace-state-runtime.js must load before cloud.js');
 assert.ok(workspaceStateIndex < cloudWorkspaceIndex, 'workspace-state-runtime.js must load before cloud-workspace-runtime.js');
 assert.ok(workspaceStateIndex < appIndex, 'workspace-state-runtime.js must load before app.js');
-assert.ok(bootRuntimeIndex < authStateIndex, 'boot-runtime.js should load before auth-state-runtime.js');
+assert.ok(bootRuntimeIndex >= 0, 'index.html should load boot-runtime.js before dynamic modules are requested');
 assert.ok(authStateIndex < cloudWorkspaceIndex, 'auth-state-runtime.js must load before cloud-workspace-runtime.js');
 assert.ok(authStateIndex < appIndex, 'auth-state-runtime.js must load before app.js');
 assert.ok(shellRuntimeIndex < appIndex, 'shell-runtime.js must load before app.js');

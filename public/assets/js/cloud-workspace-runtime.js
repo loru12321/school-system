@@ -227,6 +227,30 @@
         }, 0);
     }
 
+    function scheduleWorkspaceRemoteRefresh(manager, key, cachedMeta = {}) {
+        const normalizedKey = String(key || '').trim();
+        if (!normalizedKey) return;
+        manager._workspaceRefreshTasks = manager._workspaceRefreshTasks || {};
+        if (manager._workspaceRefreshTasks[normalizedKey]) return;
+
+        manager._workspaceRefreshTasks[normalizedKey] = (async () => {
+            if (!(await manager.ensureClientReady({ silent: true, timeoutMs: 3500 }))) return false;
+            const remoteMeta = await fetchWorkspaceSnapshotMeta(normalizedKey);
+            const remoteTs = Date.parse(String(remoteMeta?.updated_at || '')) || 0;
+            const localTs = Date.parse(String(cachedMeta.remoteUpdatedAt || cachedMeta.lastSyncedAt || '')) || 0;
+            if (!remoteMeta?.updated_at || remoteTs <= localTs + 1000) return false;
+            const row = await fetchWorkspaceSnapshotRow(normalizedKey);
+            return fetchAndApplyWorkspaceSnapshot(manager, normalizedKey, row);
+        })()
+            .catch((error) => {
+                console.warn('[CloudLoad] background remote refresh failed:', error);
+                return false;
+            })
+            .finally(() => {
+                delete manager._workspaceRefreshTasks[normalizedKey];
+            });
+    }
+
     async function fetchAndApplyWorkspaceSnapshot(manager, key, row) {
         const snapshotRow = row && typeof row === 'object' ? row : await fetchWorkspaceSnapshotRow(key);
         if (!snapshotRow || !snapshotRow.content) return false;
@@ -769,6 +793,12 @@
             return true;
         }
 
+        if (appliedCached) {
+            scheduleWorkspaceRemoteRefresh(this, requestedKey, cachedMeta);
+            setCloudStatus('success', '本地已就绪');
+            return true;
+        }
+
         if (!(await this.ensureClientReady({ silent: appliedCached }))) {
             return appliedCached;
         }
@@ -807,6 +837,11 @@
             }
             if (cachedMeta.pendingCloudSync) {
                 scheduleBackgroundQueueFlush(this);
+                setCloudStatus('success', '本地已就绪');
+                return true;
+            }
+            if (appliedCached) {
+                scheduleWorkspaceRemoteRefresh(this, key, cachedMeta);
                 setCloudStatus('success', '本地已就绪');
                 return true;
             }

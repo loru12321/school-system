@@ -822,21 +822,27 @@
             candidateKeys.add(key);
         });
 
-        let bestPayload = null;
-        let bestScore = Number.NEGATIVE_INFINITY;
-        for (const candidateKey of candidateKeys) {
-            if (!candidateKey || candidateKey === preferredKey) continue;
+        const candidateList = Array.from(candidateKeys)
+            .filter(candidateKey => candidateKey && candidateKey !== preferredKey)
+            .slice(0, 8);
+        const scoredCandidates = await Promise.all(candidateList.map(async (candidateKey) => {
             try {
                 const candidatePayload = await loadSnapshotPayloadByKey(candidateKey);
-                const score = scoreIndicatorSupplement(payload, preferredKey, candidateKey, candidatePayload);
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestPayload = candidatePayload;
-                }
+                return {
+                    payload: candidatePayload,
+                    score: scoreIndicatorSupplement(payload, preferredKey, candidateKey, candidatePayload)
+                };
             } catch (e) {
                 console.warn('[CloudLoad] supplement candidate skipped:', candidateKey, e?.message || e);
+                return { payload: null, score: Number.NEGATIVE_INFINITY };
             }
-        }
+        }));
+        const best = scoredCandidates.reduce((winner, item) => item.score > winner.score ? item : winner, {
+            payload: null,
+            score: Number.NEGATIVE_INFINITY
+        });
+        const bestPayload = best.payload;
+        const bestScore = best.score;
 
         if (!bestPayload || bestScore === Number.NEGATIVE_INFINITY) return payload;
         const merged = mergeIndicatorPayloadFields(payload, bestPayload);
