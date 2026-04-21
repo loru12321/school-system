@@ -20404,25 +20404,64 @@ function buildExamKey(meta) {
     return `${cohortLabel}-${gradeLabel}-${meta.year}-${meta.term}-${examName}` + (meta.date ? `-${meta.date}` : '');
 }
 
+function moveExamRecordKey(db, fromKey, toKey) {
+    if (!db || !fromKey || !toKey || fromKey === toKey) return false;
+    if (!db.exams?.[fromKey] || db.exams?.[toKey]) return false;
+    db.exams[toKey] = {
+        ...db.exams[fromKey],
+        examId: toKey
+    };
+    delete db.exams[fromKey];
+    if (db.currentExamId === fromKey) db.currentExamId = toKey;
+    if (Array.isArray(db.resetPoints)) {
+        db.resetPoints = db.resetPoints.map((examId) => (examId === fromKey ? toKey : examId));
+    }
+    const lockState = readArchiveLockState();
+    if (lockState.lockedKey === fromKey) {
+        writeArchiveLockState(lockState.locked, toKey);
+    }
+    return true;
+}
+
+function isSameExamMomentMeta(leftMeta, rightMeta) {
+    if (!leftMeta || !rightMeta) return false;
+    const leftCohort = String(leftMeta.cohortId || '').trim();
+    const rightCohort = String(rightMeta.cohortId || '').trim();
+    const leftYear = String(leftMeta.year || '').trim();
+    const rightYear = String(rightMeta.year || '').trim();
+    const leftTerm = String(leftMeta.term || '').trim();
+    const rightTerm = String(rightMeta.term || '').trim();
+    const leftDate = String(leftMeta.date || '').trim();
+    const rightDate = String(rightMeta.date || '').trim();
+    const leftGrade = String(getEffectiveGrade(leftMeta) || leftMeta.grade || '').trim();
+    const rightGrade = String(getEffectiveGrade(rightMeta) || rightMeta.grade || '').trim();
+    return !!leftCohort
+        && !!leftYear
+        && !!leftTerm
+        && !!leftDate
+        && leftCohort === rightCohort
+        && leftYear === rightYear
+        && leftTerm === rightTerm
+        && leftDate === rightDate
+        && leftGrade === rightGrade;
+}
+
+function migrateSameMomentExamKey(meta, nextKey) {
+    const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+    if (!db || !meta || !nextKey || db.exams?.[nextKey]) return;
+    const matchedEntry = Object.entries(db.exams || {})
+        .filter(([examId, exam]) => examId !== nextKey && isSameExamMomentMeta(meta, exam?.meta || {}))
+        .sort((a, b) => Number(b?.[1]?.createdAt || 0) - Number(a?.[1]?.createdAt || 0))[0];
+    if (!matchedEntry) return;
+    moveExamRecordKey(db, matchedEntry[0], nextKey);
+}
+
 function migrateLegacyExamKey(meta, nextKey) {
     const legacyKey = buildLegacyExamKey(meta);
     if (!legacyKey || !nextKey || legacyKey === nextKey) return;
 
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
-    if (db?.exams?.[legacyKey] && !db.exams[nextKey]) {
-        db.exams[nextKey] = {
-            ...db.exams[legacyKey],
-            examId: nextKey
-        };
-        delete db.exams[legacyKey];
-    }
-    if (db?.currentExamId === legacyKey) db.currentExamId = nextKey;
-    if (Array.isArray(db?.resetPoints)) {
-        db.resetPoints = db.resetPoints.map((examId) => (examId === legacyKey ? nextKey : examId));
-    }
-    if (readArchiveLockState().lockedKey === legacyKey) {
-        writeArchiveLockState(readArchiveLockState().locked, nextKey);
-    }
+    moveExamRecordKey(db, legacyKey, nextKey);
 }
 
 function getExamMetaFromUI() {
@@ -20637,6 +20676,7 @@ function setCurrentExamMeta(silent = false) {
     if (!meta.date) return alert("请填写考试日期");
     const key = buildExamKey(meta);
     migrateLegacyExamKey(meta, key);
+    migrateSameMomentExamKey(meta, key);
     const effectiveGrade = getEffectiveGrade(meta);
     if (effectiveGrade && meta.grade !== effectiveGrade) meta.grade = effectiveGrade;
     CURRENT_EXAM_ID = key;
@@ -20857,6 +20897,7 @@ const CohortDB = {
         const meta = getExamMetaFromUI();
         const db = this.ensure();
         const examId = CURRENT_EXAM_ID;
+        const existing = db.exams?.[examId] || null;
 
         await this.smartLinkStudents(examId, meta);
 
@@ -20870,7 +20911,8 @@ const CohortDB = {
             thresholds: JSON.parse(JSON.stringify(THRESHOLDS || {})),
             config: JSON.parse(JSON.stringify(CONFIG || {})),
             fingerprint: computeExamDataFingerprint(RAW_DATA || []),
-            createdAt: Date.now()
+            createdAt: existing?.createdAt || Date.now(),
+            updatedAt: Date.now()
         };
         db.currentExamId = examId;
         const termId = getTermId(meta);

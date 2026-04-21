@@ -575,15 +575,21 @@ async function runModuleDeepCheck(page, id) {
     }
     if (id === 'county-analysis') {
         return page.evaluate(() => {
+            if (typeof window.renderCountyAnalysis === 'function') {
+                window.renderCountyAnalysis();
+            }
             const checks = {
                 runtimeLoaded: window.__COUNTY_ANALYSIS_RUNTIME_PATCHED__ === true,
                 rootReady: !!document.getElementById('county-analysis-root'),
                 renderReady: typeof window.renderCountyAnalysis === 'function',
-                scopeReady: !!window.CountyAnalysisRuntime && typeof window.CountyAnalysisRuntime.applyCountyRanks === 'function'
+                scopeReady: !!window.CountyAnalysisRuntime && typeof window.CountyAnalysisRuntime.applyCountyRanks === 'function',
+                exportReady: typeof window.exportCountyAnalysisSection === 'function'
             };
+            const exportButtons = document.querySelectorAll('#county-analysis-root .county-section-actions button').length;
             return {
-                ok: Object.values(checks).every(Boolean),
-                checks
+                ok: Object.values(checks).every(Boolean) && exportButtons >= 4,
+                checks,
+                exportButtons
             };
         });
     }
