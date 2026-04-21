@@ -2787,8 +2787,8 @@ window.readCompareExamSyncState = readCompareExamSyncState;
 window.setCompareExamSyncState = setCompareExamSyncState;
 window.syncCompareSessionRuntimeState = syncCompareSessionRuntimeState;
 
-const PUBLIC_DOWNLOAD_RELEASE_PAGE_URL = 'https://github.com/hka123321/school-system/releases/latest';
-const PUBLIC_VERSION_CENTER_BUILD_INFO = {
+var PUBLIC_DOWNLOAD_RELEASE_PAGE_URL = 'https://github.com/hka123321/school-system/releases/latest';
+var PUBLIC_VERSION_CENTER_BUILD_INFO = {
     shared: {
         releaseTag: 'school-system-v2026.04.09-about-update-v59',
         releaseDate: '2026-04-09'
@@ -2810,7 +2810,7 @@ const PUBLIC_VERSION_CENTER_BUILD_INFO = {
         notes: 'Windows 客户端会跟随 GitHub release 同步更新。'
     }
 };
-const PUBLIC_VERSION_CENTER_RELEASES = [
+var PUBLIC_VERSION_CENTER_RELEASES = [
     {
         tag_name: 'school-system-v2026.04.09-about-update-v59',
         name: 'school-system-v2026.04.09-about-update-v59',
@@ -2973,7 +2973,7 @@ const PUBLIC_VERSION_CENTER_RELEASES = [
         ]
     }
 ];
-const PUBLIC_DOWNLOAD_CHANNELS = {
+var PUBLIC_DOWNLOAD_CHANNELS = {
     android: {
         key: 'android',
         label: '安卓下载',
@@ -3007,8 +3007,8 @@ const PUBLIC_DOWNLOAD_CHANNELS = {
         ]
     }
 };
-const PUBLIC_APK_DOWNLOAD_URL = PUBLIC_DOWNLOAD_CHANNELS.android.url;
-const PUBLIC_DESKTOP_DOWNLOAD_URL = PUBLIC_DOWNLOAD_CHANNELS.desktop.url;
+var PUBLIC_APK_DOWNLOAD_URL = PUBLIC_DOWNLOAD_CHANNELS.android.url;
+var PUBLIC_DESKTOP_DOWNLOAD_URL = PUBLIC_DOWNLOAD_CHANNELS.desktop.url;
 
 function getPublicDownloadChannel(type = 'android') {
     const key = type === 'desktop' ? 'desktop' : 'android';
