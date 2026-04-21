@@ -23,6 +23,25 @@
         return normalizeText(value).replace(/\/+$/, '');
     }
 
+    function normalizeTimestamp(value) {
+        if (value == null || value === '') return '';
+
+        const directDate = value instanceof Date ? value : null;
+        if (directDate && Number.isFinite(directDate.getTime())) {
+            return directDate.toISOString();
+        }
+
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            const numericDate = new Date(value);
+            return Number.isFinite(numericDate.getTime()) ? numericDate.toISOString() : '';
+        }
+
+        const text = normalizeText(value);
+        if (!text) return '';
+        const parsedDate = new Date(text);
+        return Number.isFinite(parsedDate.getTime()) ? parsedDate.toISOString() : '';
+    }
+
     function normalizeApiUrl(value) {
         const text = normalizeText(value);
         if (!text) return '';
@@ -35,6 +54,12 @@
         } catch (_) {
             return '';
         }
+    }
+
+    function isLocalFileRuntime() {
+        const location = root.location || null;
+        if (!location) return false;
+        return normalizeText(location.protocol).toLowerCase() === 'file:';
     }
 
     function isLocalHost(hostname) {
@@ -68,6 +93,7 @@
     }
 
     function getProxyOrigin() {
+        if (isLocalFileRuntime()) return '';
         const explicitApiUrl = normalizeApiUrl(root.SYSTEM_DATA_API_URL || getStoredValue('SYSTEM_DATA_API_URL'));
         if (explicitApiUrl) return explicitApiUrl;
 
@@ -148,6 +174,64 @@
             } catch (_) { }
         }
         return root.cloudClient || root.sbClient || null;
+    }
+
+    function isDuplicateKeyError(error) {
+        const message = normalizeText(
+            error && (error.message || error.error || error.code || '')
+        );
+        const bodyText = error && error.body ? normalizeText(JSON.stringify(error.body)) : '';
+        const combined = `${message} ${bodyText}`;
+        return /duplicate key|unique constraint|23505|system_data_pkey/i.test(combined);
+    }
+
+    function buildUpdatePayloadFromRow(row) {
+        const payload = Object.assign({}, row || {});
+        delete payload.key;
+        if (!payload.updated_at) {
+            payload.updated_at = new Date().toISOString();
+        }
+        delete payload.created_at;
+        return payload;
+    }
+
+    async function upsertCompatRows(client, rows) {
+        const list = Array.isArray(rows) ? rows : [rows];
+        const results = [];
+
+        for (const row of list) {
+            let result = await client.from(SYSTEM_DATA_TABLE).upsert(row, { onConflict: 'key' });
+            if (result && !result.error) {
+                results.push(result.data ?? null);
+                continue;
+            }
+
+            if (!isDuplicateKeyError(result && result.error) || !client || typeof client.from !== 'function') {
+                return {
+                    data: results,
+                    error: result && Object.prototype.hasOwnProperty.call(result, 'error') ? result.error : new Error('SYSTEM_DATA_UPSERT_FAILED'),
+                    source: 'compat'
+                };
+            }
+
+            const updatePayload = buildUpdatePayloadFromRow(row);
+            const updateQuery = client.from(SYSTEM_DATA_TABLE).update(updatePayload).eq('key', row.key);
+            result = await updateQuery;
+            if (result && result.error) {
+                return {
+                    data: results,
+                    error: result.error,
+                    source: 'compat'
+                };
+            }
+            results.push(result && Object.prototype.hasOwnProperty.call(result, 'data') ? result.data : null);
+        }
+
+        return {
+            data: Array.isArray(rows) ? results : results[0] ?? null,
+            error: null,
+            source: 'compat'
+        };
     }
 
     function buildSystemDataUrl(options) {
@@ -322,12 +406,17 @@
 
     async function upsertSystemData(rows) {
         const normalizedRows = (Array.isArray(rows) ? rows : [rows])
-            .map((row) => ({
-                key: normalizeText(row && row.key),
-                content: typeof (row && row.content) === 'string' ? row.content : '',
-                created_at: normalizeText(row && row.created_at),
-                updated_at: normalizeText(row && row.updated_at)
-            }))
+            .map((row) => {
+                const normalizedRow = {
+                    key: normalizeText(row && row.key),
+                    content: typeof (row && row.content) === 'string' ? row.content : ''
+                };
+                const createdAt = normalizeTimestamp(row && row.created_at);
+                const updatedAt = normalizeTimestamp(row && row.updated_at);
+                if (createdAt) normalizedRow.created_at = createdAt;
+                if (updatedAt) normalizedRow.updated_at = updatedAt;
+                return normalizedRow;
+            })
             .filter((row) => row.key);
 
         if (!normalizedRows.length) {
@@ -364,15 +453,7 @@
         }
 
         try {
-            const result = await client.from(SYSTEM_DATA_TABLE).upsert(
-                Array.isArray(rows) ? normalizedRows : normalizedRows[0],
-                { onConflict: 'key' }
-            );
-            return {
-                data: result && Object.prototype.hasOwnProperty.call(result, 'data') ? result.data : null,
-                error: result && Object.prototype.hasOwnProperty.call(result, 'error') ? result.error : null,
-                source: 'compat'
-            };
+            return await upsertCompatRows(client, Array.isArray(rows) ? normalizedRows : normalizedRows[0]);
         } catch (error) {
             return { data: [], error: error instanceof Error ? error : new Error(String(error)), source: 'compat' };
         }

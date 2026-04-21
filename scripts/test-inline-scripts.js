@@ -35,7 +35,8 @@ async function main() {
     assert.ok(inlinedStyles.includes('/assets/vendor/tabler-icons/tabler-icons.min.css'), 'should keep vendor stylesheets external');
 
     const ltHtml = buildLtHtml('<html><head><link rel="stylesheet" href="./test-style.css"><link rel="stylesheet" href="/assets/vendor/tabler-icons/tabler-icons.min.css"></head><body></body></html>', { projectRoot });
-    assert.ok(!ltHtml.includes('__INLINE_RUNTIME_SOURCES'), 'lt.html should not duplicate lazy runtime sources');
+    assert.ok(ltHtml.includes('__INLINE_RUNTIME_SOURCES'), 'lt.html should include lazy runtime inline sources');
+    assert.ok(ltHtml.includes('./assets/js/school-profile-runtime.js'), 'lt.html should carry school-profile runtime inline source');
     assert.ok(ltHtml.includes('./public/assets/vendor/tabler-icons/tabler-icons.min.css'), 'lt.html should rewrite vendor asset paths for local file usage');
     fs.unlinkSync(tempStylePath);
 

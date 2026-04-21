@@ -118,11 +118,28 @@ export function collapseInterTagWhitespace(html) {
     return collapsed.replace(/__HTML_BLOCK_(\d+)__/g, (_, index) => placeholders[Number(index)] || '');
 }
 
+export function normalizeLocalStylesheetLinks(html) {
+    return String(html || '').replace(/<link\b([^>]*\brel=["']stylesheet["'][^>]*)>/gi, (match, attrs) => {
+        const attrText = String(attrs || '');
+        const hrefMatch = attrText.match(/\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+        const href = String(hrefMatch?.[1] || hrefMatch?.[2] || hrefMatch?.[3] || '').trim();
+        if (!href || /^(?:[a-z]+:)?\/\//i.test(href) || /^data:/i.test(href)) {
+            return match;
+        }
+        const normalizedAttrs = attrText
+            .replace(/\s+crossorigin(?:=(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi, '')
+            .replace(/\s{2,}/g, ' ');
+        return `<link${normalizedAttrs}>`;
+    });
+}
+
 export function optimizeDistHtml(html) {
     return collapseInterTagWhitespace(
         stripHtmlComments(
-            minifyInlineStyles(
-                minifyInlineScripts(html)
+            normalizeLocalStylesheetLinks(
+                minifyInlineStyles(
+                    minifyInlineScripts(html)
+                )
             )
         )
     );

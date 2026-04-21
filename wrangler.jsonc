@@ -1,0 +1,34 @@
+{
+  "$schema": "https://developers.cloudflare.com/workers/wrangler/config-schema.json",
+  "name": "seongneung-bunseok",
+  "main": "src/worker-dummy.js",
+  "compatibility_date": "2026-04-20",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "CLOUD_SYSTEM_DATA_MODE": "supabase",
+    "LEGACY_GATEWAY_API_KEY": "sb_publishable_J7f2UEVGfHQ_89MR09KTNA_wKFRGZ86",
+    "LEGACY_GATEWAY_ORIGIN": "https://dpwsxxgojpqevzwyxrot.supabase.co",
+    "LEGACY_SUPABASE_KEY": "sb_publishable_J7f2UEVGfHQ_89MR09KTNA_wKFRGZ86",
+    "SUPABASE_ORIGIN": "https://dpwsxxgojpqevzwyxrot.supabase.co"
+  },
+  "routes": [
+    {
+      "pattern": "schoolsystem.com.cn/*",
+      "zone_name": "schoolsystem.com.cn"
+    },
+    {
+      "pattern": "www.schoolsystem.com.cn/*",
+      "zone_name": "schoolsystem.com.cn"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "GATEWAY_DATA_DB",
+      "database_name": "school-system-gateway",
+      "database_id": "0af7205c-eead-4c60-a792-b67f8198ac0b"
+    }
+  ]
+}

@@ -28,7 +28,7 @@ function createJsonResponse(status, body) {
     };
 }
 
-function createSupabaseClient(log) {
+function createSupabaseClient(log, options = {}) {
     return {
         from(table) {
             assert.strictEqual(table, 'system_data');
@@ -42,13 +42,18 @@ function createSupabaseClient(log) {
                 ascending: false,
                 limit: null,
                 maybeSingle: false,
-                deleting: false
+                deleting: false,
+                updating: false,
+                updatePayload: null
             };
 
             function execute() {
                 log.push({ ...state });
                 if (state.deleting) {
                     return { data: [], error: null };
+                }
+                if (state.updating) {
+                    return { data: [{ key: state.keyEq, ...state.updatePayload }], error: null };
                 }
 
                 const rows = state.keyEq
@@ -78,9 +83,9 @@ function createSupabaseClient(log) {
                     if (field === 'key') state.keyIn = Array.isArray(values) ? values.slice() : [];
                     return query;
                 },
-                order(field, options) {
+                order(field, orderOptions) {
                     state.order = String(field || '');
-                    state.ascending = !!(options && options.ascending);
+                    state.ascending = !!(orderOptions && orderOptions.ascending);
                     return query;
                 },
                 limit(value) {
@@ -95,17 +100,30 @@ function createSupabaseClient(log) {
                     state.deleting = true;
                     return query;
                 },
+                update(values) {
+                    state.updating = true;
+                    state.updatePayload = values;
+                    return query;
+                },
                 then(resolve, reject) {
                     return Promise.resolve(execute()).then(resolve, reject);
                 }
             };
 
-            query.upsert = async function (payload, options) {
+            query.upsert = async function (payload, upsertOptions) {
                 log.push({
                     type: 'upsert',
                     payload,
-                    options
+                    options: upsertOptions
                 });
+                if (options.duplicateOnUpsert) {
+                    return {
+                        data: null,
+                        error: {
+                            message: 'duplicate key value violates unique constraint "system_data_pkey"'
+                        }
+                    };
+                }
                 return { data: payload, error: null };
             };
 
@@ -199,11 +217,27 @@ async function run() {
 
     await compatRuntime.upsertSystemData({ key: 'LOCAL_KEY', content: '{}' });
     assert.strictEqual(compatLog[2].type, 'upsert');
-    assert.deepStrictEqual(compatLog[2].payload, { key: 'LOCAL_KEY', content: '{}', created_at: '', updated_at: '' });
+    assert.deepStrictEqual(compatLog[2].payload, { key: 'LOCAL_KEY', content: '{}' });
 
     await compatRuntime.deleteSystemData({ keyEq: 'LOCAL_KEY' });
     assert.strictEqual(compatLog[3].deleting, true);
     assert.strictEqual(compatLog[3].keyEq, 'LOCAL_KEY');
+
+    const duplicateLog = [];
+    const duplicateRoot = {
+        location: {
+            protocol: 'file:',
+            origin: 'null',
+            hostname: '',
+            href: 'file:///C:/Users/loru/Desktop/system/lt.html'
+        },
+        localStorage: createMockStorage(),
+        sbClient: createSupabaseClient(duplicateLog, { duplicateOnUpsert: true })
+    };
+    const duplicateRuntime = createCloudApiRuntime(duplicateRoot);
+    const duplicateResult = await duplicateRuntime.upsertSystemData({ key: 'LOCAL_KEY', content: '{"v":1}' });
+    assert.strictEqual(duplicateResult.error, null);
+    assert.ok(duplicateLog.some((entry) => entry.updating === true), 'should fall back to update on duplicate key');
 
     console.log('cloud-api-runtime tests passed');
 }

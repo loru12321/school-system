@@ -50,7 +50,8 @@
     "test:ai-gateway": "node scripts/test-ai-gateway.js",
     "validate": "npm run check:syntax && npm run test:auth-state && npm run test:workspace-state && npm run test:exam-state && npm run test:school-state && npm run test:teacher-state && npm run test:data-state && npm run test:support-state && npm run test:progress-state && npm run test:report-session-state && npm run test:report-compare-context && npm run test:compare-cloud-context && npm run test:compare-exam-sync && npm run test:compare-session-state && npm run test:compare-result-state && npm run test:compare-summary-state && npm run test:compare-helper-fallbacks && npm run test:town-submodule-compare-state && npm run test:sync-public-assets && npm run test:optimize-dist-html && npm run test:inline-scripts && npm run test:runtime-order && npm run test:cloud-api-runtime && npm run test:issue-manager-runtime && npm run test:packager-runtime && npm run test:help-system-runtime && npm run test:logger-runtime && npm run test:worker-api-runtime && npm run test:account-manager-runtime && npm run test:data-manager-teacher-runtime && npm run test:data-manager-student-runtime && npm run test:data-manager-archive-runtime && npm run test:data-manager-grade9-template-runtime && npm run test:data-manager-params-runtime && npm run test:data-manager-targets-runtime && npm run test:data-manager-school-alias-runtime && npm run test:data-manager-save-sync-runtime && npm run test:data-manager-history-runtime && npm run test:data-manager-tab-runtime && npm run build && npm run test:ui-copy-integrity && npm run test:build-size-budget",
     "push": "powershell -ExecutionPolicy Bypass -File ./deploy.ps1",
-    "sync": "npm run build && npm run push",
+    "deploy:oss": "node scripts/deploy-oss.js",
+    "sync": "npm run build && npm run deploy:oss && npm run push",
     "smoke:modules": "node scripts/smoke-all-modules.js",
     "smoke:modules:local": "node scripts/run-local-smoke.js",
     "smoke:modules:lt": "node scripts/smoke-all-modules.js",
@@ -66,6 +67,9 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@alicloud/cas20200407": "^3.2.3",
+    "@alicloud/openapi-client": "^0.4.15",
+    "acme-client": "^5.4.0",
     "playwright": "^1.58.2",
     "vite": "^7.3.1",
     "vite-plugin-singlefile": "^2.3.0",
@@ -74,7 +78,6 @@
   "dependencies": {
     "@alicloud/alidns20150109": "^4.3.5",
     "@alicloud/domain20180129": "^5.0.2",
-    "@alicloud/openapi-client": "^0.4.15",
     "@alicloud/tea-util": "^1.4.11",
     "@capacitor/android": "^8.1.0",
     "@capacitor/cli": "^8.1.0",

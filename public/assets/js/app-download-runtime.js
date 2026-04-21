@@ -8,6 +8,10 @@
     const RELEASES_API_URL = 'https://api.github.com/repos/hka123321/school-system/releases?per_page=12';
     const RELEASE_CACHE_TTL_MS = 5 * 60 * 1000;
 
+    function isLocalFileRuntime() {
+        return String(window.location?.protocol || '').trim().toLowerCase() === 'file:';
+    }
+
     const DEFAULT_BUILD_INFO = {
         shared: {
             releaseTag: 'school-system-v2026.04.09-about-update-v59',
@@ -209,11 +213,43 @@
     }
 
     function resolveUrl(url) {
+        const raw = String(url || '').trim();
+        if (!raw) return '';
         try {
-            return new URL(String(url || '').trim(), window.location.href).toString();
+            const resolved = new URL(raw, window.location.href).toString();
+            const currentUrl = String(window.location?.href || '').trim();
+            if (currentUrl && resolved === currentUrl && raw !== currentUrl) {
+                return '';
+            }
+            return resolved;
         } catch (_) {
-            return String(url || '').trim();
+            return raw;
         }
+    }
+
+    function applyActionLink(link, href, options = {}) {
+        if (!link) return;
+        const nextHref = String(href || '').trim();
+        const downloadName = String(options.downloadName || '').trim();
+        const labelHtml = typeof options.labelHtml === 'string' ? options.labelHtml : '';
+
+        if (labelHtml) link.innerHTML = labelHtml;
+
+        if (nextHref) {
+            link.href = nextHref;
+            if (downloadName) link.setAttribute('download', downloadName);
+            else link.removeAttribute('download');
+            link.removeAttribute('aria-disabled');
+            link.removeAttribute('tabindex');
+            link.classList.remove('is-disabled');
+            return;
+        }
+
+        link.removeAttribute('href');
+        link.removeAttribute('download');
+        link.setAttribute('aria-disabled', 'true');
+        link.setAttribute('tabindex', '-1');
+        link.classList.add('is-disabled');
     }
 
     function formatDate(value, withTime = false) {
@@ -753,10 +789,10 @@
                     ? `<ul>${bullets.map((bullet) => `<li>${escapeHtml(bullet)}</li>`).join('')}</ul>`
                     : `<p class="app-download-release-empty">当前版本暂未写入 release 说明。</p>`}
                 <div class="app-download-release-actions">
-                    ${androidAsset
+                    ${androidAsset && androidAsset.url
                         ? `<a class="btn btn-gray app-download-release-btn" href="${escapeHtml(androidAsset.url)}" download="${escapeHtml(androidAsset.name)}"><i class="ti ti-brand-android"></i> 安卓包</a>`
                         : ''}
-                    ${desktopAsset
+                    ${desktopAsset && desktopAsset.url
                         ? `<a class="btn btn-gray app-download-release-btn" href="${escapeHtml(desktopAsset.url)}" download="${escapeHtml(desktopAsset.name)}"><i class="ti ti-brand-windows"></i> 桌面端</a>`
                         : ''}
                     <a class="btn btn-green app-download-release-btn" href="${escapeHtml(release?.url || RELEASE_PAGE_URL)}" target="_blank" rel="noopener"><i class="ti ti-brand-github"></i> Release</a>
@@ -1048,21 +1084,19 @@
         const copyButton = root.querySelector('#app-download-copy-link');
         const linkInput = root.querySelector('#app-download-link-input');
         const digestButton = root.querySelector('#app-download-copy-checksum');
-        const assetUrl = latestAsset?.url || channel.url;
+        const assetUrl = resolveUrl(latestAsset?.url || channel.url);
         const assetName = latestAsset?.name || channel.fileName;
 
-        if (primaryLink) {
-            primaryLink.href = assetUrl;
-            primaryLink.setAttribute('download', assetName);
-            primaryLink.innerHTML = `<i class="ti ti-download"></i> ${escapeHtml(channel.primaryActionLabel)}`;
-        }
-        if (secondaryLink) {
-            secondaryLink.href = assetUrl;
-            secondaryLink.setAttribute('download', assetName);
-            secondaryLink.innerHTML = `<i class="ti ti-download"></i> ${escapeHtml(channel.secondaryActionLabel)}`;
-        }
-        if (releaseLink) releaseLink.href = latestRelease?.url || RELEASE_PAGE_URL;
-        if (linkInput) linkInput.value = assetUrl;
+        applyActionLink(primaryLink, assetUrl, {
+            downloadName: assetName,
+            labelHtml: `<i class="ti ti-download"></i> ${escapeHtml(channel.primaryActionLabel)}`
+        });
+        applyActionLink(secondaryLink, assetUrl, {
+            downloadName: assetName,
+            labelHtml: `<i class="ti ti-download"></i> ${escapeHtml(channel.secondaryActionLabel)}`
+        });
+        applyActionLink(releaseLink, resolveUrl(latestRelease?.url || RELEASE_PAGE_URL));
+        if (linkInput) linkInput.value = assetUrl || '';
         if (copyButton) copyButton.onclick = () => copyText(assetUrl, `${channel.label}链接已复制`);
         if (digestButton) digestButton.onclick = () => copyText(buildDigest(channel, latestRelease), `${channel.shortLabel}说明已复制`);
     }
@@ -1351,7 +1385,21 @@
     }
 
     async function refreshReleaseCatalog(force = false) {
+        if (isLocalFileRuntime() && !force) {
+            if (!state.releases.length) state.releases = [buildFallbackRelease()];
+            state.lastError = '';
+            state.lastFetchedAt = Date.now();
+            refreshSurfaces();
+            return state.releases;
+        }
         const now = Date.now();
+        if (!force) {
+            if (!state.releases.length) state.releases = [buildFallbackRelease()];
+            state.lastError = '';
+            if (!state.lastFetchedAt) state.lastFetchedAt = now;
+            refreshSurfaces();
+            return state.releases;
+        }
         if (!force && state.releases.length && now - state.lastFetchedAt < RELEASE_CACHE_TTL_MS) {
             return state.releases;
         }

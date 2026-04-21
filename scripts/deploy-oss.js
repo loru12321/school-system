@@ -3,25 +3,26 @@ const fs = require('fs');
 const path = require('path');
 const mime = require('mime-types');
 
-const client = new OSS({
-  region: 'oss-cn-hangzhou', // default region
-  accessKeyId: process.env.ALIBABA_CLOUD_ACCESS_KEY_ID || 'YOUR_AK',
-  accessKeySecret: process.env.ALIBABA_CLOUD_ACCESS_KEY_SECRET || 'YOUR_SK',
-});
+const bucketName = 'schoolsystem-global-001';
 
-const bucketName = 'schoolsystem-web-app-001';
+function requireEnv(name) {
+  const value = String(process.env[name] || '').trim();
+  if (!value) {
+    throw new Error(`Missing ${name}. Set it before running OSS deployment.`);
+  }
+  return value;
+}
 
 async function deploy() {
   try {
-    console.log(`Checking bucket ${bucketName}...`);
-    try {
-      await client.putBucket(bucketName);
-    } catch (e) {
-      if (e.code !== 'BucketAlreadyExists') {
-        console.log('Bucket creation issue:', e.message);
-      }
-    }
-    client.useBucket(bucketName);
+    const client = new OSS({
+      region: 'oss-cn-hongkong',
+      accessKeyId: requireEnv('ALIBABA_CLOUD_ACCESS_KEY_ID'),
+      accessKeySecret: requireEnv('ALIBABA_CLOUD_ACCESS_KEY_SECRET'),
+      bucket: bucketName
+    });
+
+    console.log(`Deploying to bucket ${bucketName} in Hong Kong...`);
 
     console.log('Attempting to set bucket ACL to public-read...');
     try {
@@ -75,7 +76,7 @@ async function deploy() {
     console.log('Upload complete!');
     console.log('================================================');
     console.log('DEPLOYMENT SUCCESSFUL!');
-    console.log(`OSS Bucket Domain: ${bucketName}.oss-cn-hangzhou.aliyuncs.com`);
+    console.log(`OSS Bucket Domain: ${bucketName}.oss-cn-hongkong.aliyuncs.com`);
     console.log('================================================');
 
   } catch (err) {

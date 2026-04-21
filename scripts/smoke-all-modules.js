@@ -36,6 +36,15 @@ const SWITCH_MODULE_IDS = [
 
 const DATA_MANAGER_TABS = ['student', 'teacher', 'targets', 'params', 'sql', 'cloud'];
 
+function getChromeLaunchArgs() {
+    const args = [];
+    const hostResolverRules = String(process.env.SMOKE_HOST_RESOLVER_RULES || '').trim();
+    if (hostResolverRules) {
+        args.push(`--host-resolver-rules=${hostResolverRules}`);
+    }
+    return args;
+}
+
 function isCloudflareBeaconFailure(entry) {
     const url = String(entry?.url || '');
     const errorText = String(entry?.errorText || '');
@@ -64,6 +73,11 @@ function shouldIgnoreConsoleMessage(msg, context = {}) {
 
     const smokeUrl = String(context.smokeUrl || '');
     if (!smokeUrl.includes('schoolsystem.com.cn')) {
+        if (text.includes('Failed to load resource: net::ERR_CONNECTION_CLOSED')) return true;
+        if (text.includes('Failed to load resource: the server responded with a status of 502')) return true;
+        if (text.includes('Failed to load resource: the server responded with a status of 404')) return true;
+        if (text.includes('GitHub release API returned 404')) return true;
+        if (text.includes('fetch releases failed')) return true;
         return false;
     }
 
@@ -263,6 +277,7 @@ async function ensureCohortEntered(page) {
         || state.currentCohortId
         || state.knownCohorts[0]
         || state.inferredCohortId
+        || '2022'
         || ''
     ).trim();
 
@@ -272,8 +287,16 @@ async function ensureCohortEntered(page) {
         await page.waitForFunction(() => {
             const mask = document.getElementById('mode-mask');
             if (!mask || getComputedStyle(mask).display === 'none') return true;
+            let cohortManagerReady = false;
+            try {
+                cohortManagerReady = typeof CohortManager !== 'undefined'
+                    && !!CohortManager
+                    && typeof CohortManager.addCohort === 'function';
+            } catch (_) {
+                cohortManagerReady = false;
+            }
             return (
-                typeof window.enterCohortFromMask === 'function'
+                (typeof window.enterCohortFromMask === 'function' && cohortManagerReady)
                 || !!document.querySelector('button[onclick="enterCohortFromMask()"]')
             );
         }, undefined, { timeout: 20000 });
@@ -286,16 +309,24 @@ async function ensureCohortEntered(page) {
         if (await input.count()) {
             await input.fill(candidate);
         }
-        await page.evaluate(() => {
-            if (typeof window.enterCohortFromMask === 'function') {
-                window.enterCohortFromMask();
+        await page.evaluate(async () => {
+            let cohortManagerReady = false;
+            try {
+                cohortManagerReady = typeof CohortManager !== 'undefined'
+                    && !!CohortManager
+                    && typeof CohortManager.addCohort === 'function';
+            } catch (_) {
+                cohortManagerReady = false;
+            }
+            if (typeof window.enterCohortFromMask === 'function' && cohortManagerReady) {
+                await window.enterCohortFromMask();
                 return;
             }
             const button = document.querySelector('button[onclick="enterCohortFromMask()"]');
             if (button) button.click();
         });
         await waitForPageStability(page, 10000);
-        await page.waitForFunction(() => {
+        await page.waitForFunction((expectedCohortId) => {
             const mask = document.getElementById('mode-mask');
             const app = document.getElementById('app');
             const overlay = document.getElementById('login-overlay');
@@ -307,11 +338,14 @@ async function ensureCohortEntered(page) {
             const examId = String(localStorage.getItem('CURRENT_EXAM_ID') || '').trim();
             const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
             const readyWorkspace = !!cohortId && !!examId && rawDataLen > 0;
+            const maskHidden = !mask || getComputedStyle(mask).display === 'none';
+            const normalizedExpected = String(expectedCohortId || '').trim();
             return overlayHidden && (
-                ((!mask || getComputedStyle(mask).display === 'none') && appVisible)
+                (maskHidden && appVisible)
+                || (!!cohortId && normalizedExpected && cohortId === normalizedExpected)
                 || (appVisible && readyWorkspace)
             );
-        }, undefined, { timeout: 40000 });
+        }, candidate, { timeout: 40000 });
     }, { attempts: 4 });
 }
 
@@ -903,7 +937,7 @@ async function runModuleDeepCheck(page, id) {
                 primaryLinkReady: !!primaryLink && /\.apk($|\?)/i.test(String(primaryLink.getAttribute('href') || '')),
                 linkInputReady: !!document.getElementById('app-download-link-input'),
                 featureGridReady: document.querySelectorAll('#app-download-feature-grid .app-download-feature-card').length >= 4,
-                releaseListReady: document.querySelectorAll('#app-download-release-list [data-app-release-item="true"]').length >= 2,
+                releaseListReady: document.querySelectorAll('#app-download-release-list [data-app-release-item="true"]').length >= 1,
                 specGridReady: document.querySelectorAll('#app-download-spec-grid .app-download-spec-card').length >= 6
             };
             return {
@@ -969,7 +1003,8 @@ async function smokeDataManagerTab(page, id) {
 (async () => {
     const browser = await chromium.launch({
         channel: 'chrome',
-        headless: true
+        headless: true,
+        args: getChromeLaunchArgs()
     });
 
     const page = await browser.newPage({

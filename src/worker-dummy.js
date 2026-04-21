@@ -641,10 +641,12 @@ async function handleAIDiagnoseProxy(request, env) {
 }
 
 function buildCorsHeaders(request) {
+  const origin = request.headers.get('Origin');
   return {
-    'Access-Control-Allow-Origin': request.headers.get('Origin') || '*',
+    'Access-Control-Allow-Origin': (origin && origin !== 'null') ? origin : '*',
     'Access-Control-Allow-Headers': request.headers.get('Access-Control-Request-Headers') || 'authorization, apikey, content-type, x-client-info',
-    'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS'
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
+    'Access-Control-Max-Age': '86400'
   };
 }
 

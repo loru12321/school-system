@@ -1,3 +1,21 @@
+var DIRECT_SUPABASE_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co';
+var DIRECT_SUPABASE_KEY = 'sb_publishable_J7f2UEVGfHQ_89MR09KTNA_wKFRGZ86';
+var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
+var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
+var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
+
+// Initialize AuthReady promise early to guard the UI transition
+window.AuthReady = new Promise((resolve) => {
+    window.resolveAuthReady = resolve;
+    // Safety timeout: if Auth doesn't signal ready in 20s, resolve anyway to avoid permanent hang
+    setTimeout(() => {
+        if (!window.__AUTH_READY__) {
+            console.warn('[boot-runtime] AuthReady safety timeout reached');
+            resolve();
+        }
+    }, 20000);
+});
+
 var sbClient = window.sbClient || null;
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -67,37 +85,101 @@ var APP_MODULES = [
 ];
 
 async function loadAppModules() {
-    if (window.__APP_MODULES_LOADED__) return;
+    const hideGlobalLoader = (delay = 500) => {
+        setTimeout(() => {
+            const loader = document.getElementById('global-loader');
+            if (loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => {
+                    loader.style.display = 'none';
+                    loader.classList.add('hidden');
+                    console.log('[boot-runtime] Global loader hidden');
+                }, 300);
+            }
+        }, delay);
+    };
+
+    if (window.__APP_MODULES_LOADED__ === true || window.__APP_MODULES_LOADED__ === 'loading') {
+        console.log('[boot-runtime] Module load already in progress or completed');
+        return;
+    }
+
     // Check if Auth is already defined (e.g. by Vite bundle) to avoid duplicate load
     if (window.Auth && !window.Auth.__bootLoginShell) {
         console.log('[boot-runtime] Auth module already present, skipping dynamic load');
         window.__APP_MODULES_LOADED__ = true;
         return;
     }
-    
-    window.__APP_MODULES_LOADED__ = 'loading';
+
     const loaderText = document.getElementById('loader-text');
+
+    // Pre-flight gateway check
+    try {
+        if (loaderText) loaderText.textContent = '正在检测网关连接...';
+        if (isLocalFileRuntime() || isLocalSupabaseHost(window.location && window.location.hostname)) {
+            console.log('[boot-runtime] Skipping gateway pre-flight in local mode');
+        } else {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        await fetch(DIRECT_PROXY_ORIGIN + '/api/health', {
+            method: 'GET',
+            mode: 'no-cors',
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        console.log('[boot-runtime] Gateway pre-flight successful');
+        }
+    } catch (err) {
+        console.warn('[boot-runtime] Gateway pre-flight failed or timed out:', err);
+    }
+
+    window.__APP_MODULES_LOADED__ = 'loading';
     const total = APP_MODULES.length;
-    
+
     for (let i = 0; i < total; i++) {
+        if (window.__BOOT_SKIP_INIT__ === true) {
+            console.warn('[boot-runtime] Initialization skipped by user');
+            break;
+        }
         const src = APP_MODULES[i];
         if (loaderText) loaderText.textContent = `正在初始化核心组件 (${i + 1}/${total})...`;
+
         await new Promise((resolve) => {
             const script = document.createElement('script');
             script.src = src + '?v=' + (window.__CORE_VERSION__ || Date.now());
-            script.onload = resolve;
-            script.onerror = resolve;
+
+            // Critical modules get more patience
+            const isCritical = src.includes('app.js') || src.includes('auth-state');
+            const timeoutMs = isCritical ? 15000 : 8000;
+
+            const timeout = setTimeout(() => {
+                console.warn(`[boot-runtime] Script load timeout (${timeoutMs}ms): ${src}`);
+                resolve();
+            }, timeoutMs);
+
+            script.onload = () => {
+                clearTimeout(timeout);
+                resolve();
+            };
+            script.onerror = () => {
+                console.warn(`[boot-runtime] Script load error: ${src}`);
+                clearTimeout(timeout);
+                resolve();
+            };
             document.head.appendChild(script);
         });
     }
     window.__APP_MODULES_LOADED__ = true;
-    if (loaderText) loaderText.textContent = '初始化完成';
+    if (loaderText) loaderText.textContent = '核心组件就绪，正在同步状态...';
+    console.log('[boot-runtime] All modules loaded');
+
+    hideGlobalLoader(500);
 }
 
 function enterCohort(year) {
     const yearInput = document.getElementById('entry-cohort-year');
     if (yearInput) yearInput.value = year;
-    
+
     if (typeof window.enterCohortFromMask === 'function') {
         window.enterCohortFromMask();
     } else {
@@ -106,10 +188,6 @@ function enterCohort(year) {
     }
 }
 
-var DIRECT_SUPABASE_URL = 'https://aqhdogbdqijppvujiawy.supabase.co';
-var DIRECT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxaGRvZ2JkcWlqcHB2dWppYXd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMjQwOTksImV4cCI6MjA4NDYwMDA5OX0.MUH4QgkBfmh1qDy09h4ObQWCUgpzG4Q-qnk-TT_Jz8o';
-var DIRECT_EDGE_GATEWAY_URL = 'https://aqhdogbdqijppvujiawy.supabase.co/functions/v1/edu-gateway-v2';
-var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 
 function isLocalSupabaseHost(hostname) {
     var normalized = String(hostname || '').trim().toLowerCase();
@@ -142,6 +220,11 @@ function isNativeCapacitorShell() {
     return isLocalSupabaseHost(hostname) && /\bwv\b/.test(userAgent);
 }
 
+function isLocalFileRuntime() {
+    if (!window.location) return false;
+    return String(window.location.protocol || '').trim().toLowerCase() === 'file:';
+}
+
 function shouldUseSameOriginSupabaseProxy() {
     if (!window.location) return false;
     var protocol = String(window.location.protocol || '').trim().toLowerCase();
@@ -158,6 +241,7 @@ function normalizeProxyOrigin(origin) {
 }
 
 function getHostedSupabaseProxyOrigin() {
+    if (isLocalFileRuntime()) return '';
     return normalizeProxyOrigin(getBootStorageValue('SUPABASE_PROXY_ORIGIN') || DIRECT_PROXY_ORIGIN);
 }
 
@@ -246,6 +330,19 @@ function getBootSessionValue(key) {
 }
 
 function getCloudflareRestBaseUrl() {
+    if (isLocalFileRuntime()) {
+        return normalizeProxyOrigin(DIRECT_SUPABASE_URL) + '/rest/v1';
+    }
+    if (window.__API_FALLBACK_ACTIVE__) {
+        return normalizeProxyOrigin(DIRECT_SUPABASE_URL) + '/rest/v1';
+    }
+    if (
+        window.location
+        && /^(https?:)$/i.test(String(window.location.protocol || '').trim())
+        && isLocalSupabaseHost(window.location.hostname)
+    ) {
+        return normalizeProxyOrigin(DIRECT_SUPABASE_URL) + '/rest/v1';
+    }
     var proxyOrigin = getSupabaseProxyOrigin();
     if (proxyOrigin) return proxyOrigin + '/sb/rest/v1';
     if (window.location && /^(https?:)$/i.test(String(window.location.protocol || '').trim())) {
@@ -391,7 +488,8 @@ function createCloudflareCompatClient() {
             maybeSingle: false,
             head: false,
             count: '',
-            payload: null
+            payload: null,
+            upsertOptions: null
         };
         var execution = null;
 
@@ -430,6 +528,16 @@ function createCloudflareCompatClient() {
                 } else if (state.action === 'insert' || state.action === 'upsert') {
                     method = 'POST';
                     headers['Content-Type'] = 'application/json';
+                    if (state.action === 'upsert') {
+                        var upsertOptions = state.upsertOptions || {};
+                        var onConflict = String(upsertOptions.onConflict || upsertOptions.on_conflict || '').trim();
+                        if (onConflict) {
+                            url.searchParams.set('on_conflict', onConflict);
+                        }
+                        headers['Prefer'] = headers['Prefer']
+                            ? headers['Prefer'] + ',resolution=merge-duplicates'
+                            : 'resolution=merge-duplicates';
+                    }
                     body = JSON.stringify(state.payload);
                 } else if (state.action === 'update') {
                     method = 'PATCH';
@@ -452,10 +560,16 @@ function createCloudflareCompatClient() {
                         try {
                             errorBody = await response.json();
                         } catch (error) { }
-                        
+
                         var rawMsg = (errorBody && (errorBody.error || errorBody.message)) || ('CLOUDFLARE_REST_HTTP_' + response.status);
                         var finalMsg = rawMsg;
-                        
+
+                        // Trigger fallback if proxy returns 500 or 502
+                        if ((response.status >= 500 || response.status === 404) && !window.__API_FALLBACK_ACTIVE__) {
+                            console.warn('[boot-runtime] Proxy error detected, activating direct Supabase fallback', response.status);
+                            window.__API_FALLBACK_ACTIVE__ = true;
+                        }
+
                         // 友好化处理特定的底层错误
                         if (rawMsg.includes('No suitable key') || rawMsg.includes('wrong key type')) {
                             finalMsg = '云端身份验证失败 (请检查登录状态或网络连接)';
@@ -489,6 +603,10 @@ function createCloudflareCompatClient() {
                         count: count
                     };
                 } catch (error) {
+                    if (!window.__API_FALLBACK_ACTIVE__) {
+                        console.warn('[boot-runtime] Network error detected, activating direct Supabase fallback', error);
+                        window.__API_FALLBACK_ACTIVE__ = true;
+                    }
                     return {
                         data: state.single || state.maybeSingle ? null : [],
                         error: error instanceof Error ? error : createCompatError(String(error || 'CLOUDFLARE_REST_FETCH_FAILED')),
@@ -512,9 +630,10 @@ function createCloudflareCompatClient() {
                 state.payload = rows;
                 return query;
             },
-            upsert: function (rows) {
+            upsert: function (rows, options) {
                 state.action = 'upsert';
                 state.payload = rows;
+                state.upsertOptions = options || null;
                 return query;
             },
             update: function (values) {
@@ -602,13 +721,19 @@ window.__SUPABASE_PROXY_ORIGIN = getSupabaseProxyOrigin();
 window.__DIRECT_CLOUD_REST_URL = DIRECT_SUPABASE_URL;
 window.__DIRECT_CLOUD_PROXY_ORIGIN = DIRECT_PROXY_ORIGIN;
 window.__CLOUD_PROXY_ORIGIN = window.__SUPABASE_PROXY_ORIGIN;
+window.__IS_LOCAL_FILE_RUNTIME__ = isLocalFileRuntime();
 window.isNativeCapacitorShell = isNativeCapacitorShell;
+window.isLocalFileRuntime = isLocalFileRuntime;
 window.shouldUseSupabaseProxy = shouldUseSupabaseProxy;
 window.shouldUseSameOriginCloudProxy = shouldUseSameOriginCloudProxy;
 window.shouldUseCloudProxy = shouldUseCloudProxy;
-window.CLOUD_REST_URL = getBootStorageValue('CLOUD_REST_URL') || getBootStorageValue('SUPABASE_URL') || (shouldUseCloudProxy() ? getSameOriginSupabaseUrl() : DIRECT_SUPABASE_URL);
+window.CLOUD_REST_URL = isLocalFileRuntime()
+    ? DIRECT_SUPABASE_URL
+    : (getBootStorageValue('CLOUD_REST_URL') || getBootStorageValue('SUPABASE_URL') || (shouldUseCloudProxy() ? getSameOriginSupabaseUrl() : DIRECT_SUPABASE_URL));
 window.CLOUD_API_KEY = getBootStorageValue('CLOUD_API_KEY') || getBootStorageValue('SUPABASE_KEY') || DIRECT_SUPABASE_KEY;
-window.SUPABASE_URL = getBootStorageValue('SUPABASE_URL') || window.CLOUD_REST_URL;
+window.SUPABASE_URL = isLocalFileRuntime()
+    ? DIRECT_SUPABASE_URL
+    : (getBootStorageValue('SUPABASE_URL') || window.CLOUD_REST_URL);
 window.SUPABASE_KEY = getBootStorageValue('SUPABASE_KEY') || window.CLOUD_API_KEY;
 window.EDGE_GATEWAY_URL = getSameOriginGatewayUrl();
 window.initSupabase = function () {
@@ -671,9 +796,14 @@ window.initCloudClient();
                 if (!normalized || candidates.includes(normalized)) return;
                 candidates.push(normalized);
             };
+            if (isLocalFileRuntime()) {
+                pushCandidate(DIRECT_EDGE_GATEWAY_URL);
+                return candidates;
+            }
             pushCandidate(window.EDGE_GATEWAY_URL);
             pushCandidate(this.resolvedGatewayUrl);
             pushCandidate(localStorage.getItem('EDGE_GATEWAY_URL'));
+            pushCandidate(window.DIRECT_CLOUDFLARE_GATEWAY_URL);
             pushCandidate(DIRECT_EDGE_GATEWAY_URL);
             return candidates;
         },
@@ -751,7 +881,25 @@ window.initCloudClient();
                     throw lastError;
                 } catch (error) {
                     lastError = error instanceof Error ? error : new Error(String(error));
+
+                    // Diagnostic logging for CORS and Origin issues
+                    const isNetworkError = lastError.message.toLowerCase().includes('failed to fetch') || lastError.message.toLowerCase().includes('networkerror');
+                    if (isNetworkError) {
+                        const origin = window.location ? window.location.origin : 'unknown';
+                        console.warn(`[boot-runtime] Network error for ${url}:`, {
+                            message: lastError.message,
+                            origin: origin,
+                            protocol: window.location ? window.location.protocol : 'unknown',
+                            isLocalFile: origin === 'null' || (window.location && window.location.protocol === 'file:')
+                        });
+
+                        if (origin === 'null' || (window.location && window.location.protocol === 'file:')) {
+                            console.error('[boot-runtime] CRITICAL: Running via file:// protocol. Direct API calls may be blocked by CORS (Origin: null). Please use a web server (npm run dev).');
+                        }
+                    }
+
                     if (i < urls.length - 1 && this.shouldRetryRequest(0, lastError.message)) {
+                        console.log(`[boot-runtime] Retrying with next candidate due to error: ${lastError.message}`);
                         continue;
                     }
                     throw lastError;
@@ -818,10 +966,18 @@ window.initCloudClient();
 
     function syncBootLoginOverlayState(visible) {
         const overlay = document.getElementById('login-overlay');
+        const loader = document.getElementById('global-loader');
         const app = document.getElementById('app');
+
         document.body.classList.toggle('login-overlay-active', !!visible);
         document.body.dataset.authState = visible ? 'logged_out' : 'logged_in';
+
         if (overlay) overlay.style.display = visible ? 'flex' : 'none';
+        if (loader && !visible) {
+            loader.classList.add('hidden');
+            // Ensure display is also set to none to be safe
+            setTimeout(() => { if (loader.classList.contains('hidden')) loader.style.display = 'none'; }, 300);
+        }
         if (app && visible) app.classList.add('hidden');
     }
 
@@ -882,7 +1038,16 @@ window.initCloudClient();
             this.syncLoginPortalUI(this.getLoginPortal());
             if (!readBootSessionUser()) {
                 this.syncLoginOverlayState(true);
+            } else {
+                console.log('[boot-auth] User already logged in, bypassing overlay and loading modules');
+                this.syncLoginOverlayState(false);
+                loadAppModules();
             }
+        },
+        // Stub to prevent race condition crashes if app.js calls it before replacing window.Auth
+        ensureLoginWorkbench() {
+            console.log('[boot-auth] ensureLoginWorkbench called on shell, waiting for modules...');
+            return null;
         },
         async login() {
             if (window.Auth && window.Auth !== this && !window.Auth.__bootLoginShell && typeof window.Auth.login === 'function') {
@@ -893,7 +1058,7 @@ window.initCloudClient();
             const user = String(document.getElementById('login-user')?.value || '').trim();
             const pass = String(document.getElementById('login-pass')?.value || '').trim();
             const className = String(document.getElementById('login-class')?.value || '').trim();
-            
+
             if (!user || !pass) {
                 setBootHelperMessage('请输入账号和密码。', 'error');
                 return;
@@ -905,14 +1070,15 @@ window.initCloudClient();
 
             this.__bootLoginBusy = true;
             setBootSubmitState({ busy: true, text: '正在验证身份...' });
-            
+
             try {
                 // Connection attempt with offline fallback
                 const result = await bootGateway.login(user, pass, className).catch(err => {
                     const msg = String(err?.message || '').toLowerCase();
-                    if (msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('connection refused')) {
+                    // Also fallback for 500 errors if it's the admin account (likely missing local gateway)
+                    if (msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('500') || msg.includes('connection refused')) {
                         if (user === 'admin' && pass === 'admin123') {
-                            console.warn('[boot-auth] Cloud unreachable, triggering offline demo mode');
+                            console.warn('[boot-auth] Cloud unreachable or 500 error, triggering offline demo mode');
                             return {
                                 ok: true,
                                 token: 'DEMO_TOKEN',
@@ -927,31 +1093,49 @@ window.initCloudClient();
                     const matchedUser = result.user;
                     writeBootSessionUser(matchedUser);
                     setBootHelperMessage('身份验证成功', 'success');
-                    
                     // Phase transition to Cohort Selection (School only)
                     if (portal === 'school' && window.gsap) {
                         const form = document.getElementById('login-form');
                         const cohortPhase = document.getElementById('login-cohort-phase');
                         const submitBtn = document.getElementById('login-submit-button');
-                        
+
                         if (form && cohortPhase) {
                             window.gsap.to(form, { opacity: 0, x: -20, duration: 0.4, onComplete: () => {
                                 form.style.display = 'none';
                                 cohortPhase.style.display = 'block';
                                 if (submitBtn) submitBtn.style.display = 'none';
                                 window.gsap.fromTo(cohortPhase, { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.4 });
-                                // Start loading modules in background
-                                loadAppModules();
+                                // Start loading modules and wait for auth readiness
+                                (async () => {
+                                    await loadAppModules();
+                                    await window.AuthReady;
+                                    const loader = document.getElementById('global-loader');
+                                    if (loader) {
+                                        loader.style.opacity = '0';
+                                        setTimeout(() => {
+                                            loader.style.display = 'none';
+                                            loader.classList.add('hidden');
+                                        }, 300);
+                                    }
+                                })();
                             }});
                             return;
                         }
                     }
-                    
+
                     // Fallback or Parent Portal: Load and enter
                     const loader = document.getElementById('global-loader');
                     if (loader) loader.classList.remove('hidden');
                     await loadAppModules();
+                    await window.AuthReady;
                     this.syncLoginOverlayState(false);
+                    if (loader) {
+                        loader.style.opacity = '0';
+                        setTimeout(() => {
+                            loader.style.display = 'none';
+                            loader.classList.add('hidden');
+                        }, 300);
+                    }
                 } else {
                     setBootHelperMessage('验证失败：' + (result?.error || '账号密码错误'), 'error');
                     setBootSubmitState({ busy: false, text: getPortalConfig(portal).submit });
@@ -978,10 +1162,11 @@ window.initCloudClient();
     if (!window.Auth || window.Auth.__bootLoginShell) {
         Object.defineProperty(window, 'Auth', {
             value: bootAuth,
-            writable: false,
-            configurable: false
+            writable: true,
+            configurable: true
         });
     }
+
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => bootAuth.init(), { once: true });
@@ -1202,15 +1387,37 @@ window.__optionalRuntimeLoaders = window.__optionalRuntimeLoaders || {};
 window.__optionalStylesheetLoaders = window.__optionalStylesheetLoaders || {};
 function getOptionalAssetCandidates(src, localPrefixes = []) {
     const normalized = String(src || '').trim();
-    const candidates = [normalized];
+    const candidates = [];
+    const relativePath = normalized.replace(/^(\.\/|\/)/, '');
+    const assetRelativePath = relativePath.replace(/^(?:dist|public)\//, '');
+    const currentPath = String(window.location && window.location.pathname || '').replace(/\\/g, '/');
+    const currentDir = currentPath.replace(/[^/]*$/, '');
+    const isDistDocument = /\/dist\/$/i.test(currentDir);
+    const isPublicDocument = /\/public\/$/i.test(currentDir);
+    const normalizedPrefixes = Array.isArray(localPrefixes)
+        ? localPrefixes
+            .map((prefix) => String(prefix || '').trim().replace(/^(\.\/|\/)/, ''))
+            .filter(Boolean)
+        : [];
+    const matchesLocalPrefix = normalizedPrefixes.some((prefix) => {
+        const assetPrefix = prefix.replace(/^(?:dist|public)\//, '');
+        return relativePath.startsWith(prefix)
+            || assetRelativePath.startsWith(prefix)
+            || assetRelativePath.startsWith(assetPrefix);
+    });
+    const referencesLocalAsset = /(^|\/)assets\//.test(relativePath);
     if (window.location
         && window.location.protocol === 'file:'
-        && Array.isArray(localPrefixes)
-        && localPrefixes.some((prefix) => normalized.startsWith(prefix))) {
-        const relativePath = normalized.replace(/^\.\//, '');
-        candidates.push(`./dist/${relativePath}`);
-        candidates.push(`./public/${relativePath}`);
+        && (matchesLocalPrefix || referencesLocalAsset)) {
+        candidates.push(`./${assetRelativePath}`);
+        if (!isDistDocument) {
+            candidates.push(`./dist/${assetRelativePath}`);
+        }
+        if (!isPublicDocument && !isDistDocument) {
+            candidates.push(`./public/${assetRelativePath}`);
+        }
     }
+    candidates.push(normalized);
     return Array.from(new Set(candidates.filter(Boolean)));
 }
 
@@ -1716,19 +1923,38 @@ function retryInstallLateHook(installer, options) {
     const maxTries = Number(opts.maxTries || 480);
     const intervalMs = Number(opts.intervalMs || 250);
     const onExhausted = typeof opts.onExhausted === 'function' ? opts.onExhausted : null;
-    if (installer()) return;
+
+    // Attempt immediate installation
+    try {
+        if (installer()) return;
+    } catch (e) {
+        console.warn('[boot-runtime] Hook install error (initial):', e);
+    }
 
     let tries = 0;
     const timer = setInterval(() => {
         tries += 1;
-        if (installer() || tries >= maxTries) {
-            clearInterval(timer);
-            if (tries >= maxTries && !installer() && onExhausted) onExhausted();
+        try {
+            const success = installer();
+            if (success || tries >= maxTries) {
+                clearInterval(timer);
+                if (tries >= maxTries && !success && onExhausted) onExhausted();
+            }
+        } catch (e) {
+            console.warn('[boot-runtime] Hook install error (retry):', e);
+            if (tries >= maxTries) {
+                clearInterval(timer);
+                if (onExhausted) onExhausted();
+            }
         }
     }, intervalMs);
 
     if (typeof window.addEventListener === 'function') {
-        const runOnce = () => installer();
+        const runOnce = () => {
+            try {
+                installer();
+            } catch (e) {}
+        };
         window.addEventListener('load', runOnce, { once: true });
         window.addEventListener('focus', runOnce, { once: true });
     }

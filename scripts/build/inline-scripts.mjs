@@ -8,6 +8,37 @@ const DEFAULT_PROJECT_ROOT = path.resolve(__dirname, '../../');
 
 const htmlPath = path.join(DEFAULT_PROJECT_ROOT, 'dist', 'index.html');
 const outPath = path.join(DEFAULT_PROJECT_ROOT, 'lt.html');
+const OPTIONAL_INLINE_RUNTIME_PATHS = [
+    './assets/js/account-admin-runtime.js',
+    './assets/js/history-compare-runtime.js',
+    './assets/js/perf-mobile-runtime.js',
+    './assets/js/mobile-app-runtime.js',
+    './assets/js/data-manager-sql.js',
+    './assets/vendor/alasql/alasql.min.js',
+    './assets/vendor/jspdf/jspdf.umd.min.js',
+    './assets/vendor/html2canvas/html2canvas.min.js',
+    './assets/js/report-render-runtime.js',
+    './assets/js/report-chart-runtime.js',
+    './assets/js/report-export-runtime.js',
+    './assets/js/report-ai-runtime.js',
+    './assets/js/ai-hub-runtime.js',
+    './assets/js/school-profile-runtime.js',
+    './assets/js/teaching-management-runtime.js',
+    './assets/js/app-download-runtime.js',
+    './assets/js/teacher-analysis-core-runtime.js',
+    './assets/js/teacher-analysis-ui-runtime.js',
+    './assets/js/teacher-analysis-bridge-runtime.js',
+    './assets/js/teacher-analysis-main-runtime.js',
+    './assets/js/single-school-eval-runtime.js',
+    './assets/js/progress-analysis-runtime.js',
+    './assets/js/student-compare-result-runtime.js',
+    './assets/js/student-compare-generate-runtime.js',
+    './assets/js/student-compare-cloud-runtime.js',
+    './assets/js/teacher-compare-result-runtime.js',
+    './assets/js/teacher-compare-cloud-runtime.js',
+    './assets/js/macro-compare-result-runtime.js',
+    './assets/js/macro-compare-cloud-runtime.js'
+];
 
 // Keep original script semantics intact; only normalize newlines.
 function normalizeScript(content) {
@@ -18,9 +49,8 @@ function normalizeStyle(content) {
     return String(content || '').replace(/\r\n/g, '\n');
 }
 
-// Fix synchronization issues (previously in fix_sync.ps1)
+// Fix synchronization issues
 function applySyncFixes(content) {
-    // Replace "res.success && res.count > 0" with "res.success"
     return content.replace(/if\s*\(\s*res\.success\s*&&\s*res\.count\s*>\s*0\s*\)/g, 'if (res.success)');
 }
 
@@ -34,14 +64,14 @@ function resolveBuiltScriptPath(projectRoot, src) {
     return path.join(projectRoot, 'dist', relativeSrc);
 }
 
-function normalizeScriptAttrs(beforeSrc = '', afterSrc = '') {
-    return `${beforeSrc} ${afterSrc}`.replace(/\s+/g, ' ').trim();
-}
-
 function readLocalScriptContent(projectRoot, src) {
     const builtPath = resolveBuiltScriptPath(projectRoot, src);
     const publicPath = resolvePublicScriptPath(projectRoot, src);
-    const sourcePath = fs.existsSync(builtPath) ? builtPath : publicPath;
+
+    // For boot-runtime.js, prefer public if it's been recently patched
+    const isBootRuntime = src.includes('boot-runtime.js');
+    const sourcePath = (isBootRuntime && fs.existsSync(publicPath)) ? publicPath : (fs.existsSync(builtPath) ? builtPath : publicPath);
+
     if (!fs.existsSync(sourcePath)) {
         return '';
     }
@@ -61,89 +91,134 @@ function readLocalStyleContent(projectRoot, href) {
     return normalizeStyle(fs.readFileSync(sourcePath, 'utf-8'));
 }
 
-// Use regex to locate tags like <script defer src="./assets/js/cloud.js?v=1"></script>
+/**
+ * Robustly inline scripts by parsing the HTML structure more safely than a single global regex.
+ */
 export function inlineLocalScripts(html, { projectRoot = DEFAULT_PROJECT_ROOT } = {}) {
     const scriptRegex = /<script([^>]*)\bsrc="([^"]+)"([^>]*)><\/script>/gi;
+    let result = '';
+    let lastIndex = 0;
+    let match;
 
-    return String(html || '').replace(scriptRegex, (match, beforeSrc, src, afterSrc) => {
+    while ((match = scriptRegex.exec(html)) !== null) {
+        const [fullMatch, beforeSrc, src, afterSrc] = match;
+
+        result += html.substring(lastIndex, match.index);
+
         if (!(src.startsWith('./') || src.startsWith('/'))) {
-            return match;
+            result += fullMatch;
+        } else {
+            const content = readLocalScriptContent(projectRoot, src);
+            if (content) {
+                console.log(`Inlining script: ${src}`);
+                const attrs = `${beforeSrc} ${afterSrc}`.replace(/\s+/g, ' ').trim();
+                result += attrs ? `<script ${attrs}>\n${content}\n</script>` : `<script>\n${content}\n</script>`;
+            } else {
+                result += fullMatch;
+            }
         }
-
-        const builtPath = resolveBuiltScriptPath(projectRoot, src);
-        const publicPath = resolvePublicScriptPath(projectRoot, src);
-        const sourcePath = fs.existsSync(builtPath) ? builtPath : publicPath;
-        if (!fs.existsSync(sourcePath)) {
-            console.warn(`Local script not found: ${publicPath}`);
-            return match;
-        }
-
-        console.log(`Inlining script: ${sourcePath}`);
-        const content = readLocalScriptContent(projectRoot, src);
-
-        const attrs = normalizeScriptAttrs(beforeSrc, afterSrc);
-        return attrs
-            ? `<script ${attrs}>\n${content}\n</script>`
-            : `<script>\n${content}\n</script>`;
-    });
+        lastIndex = scriptRegex.lastIndex;
+    }
+    result += html.substring(lastIndex);
+    return result;
 }
 
 export function inlineLocalStyles(html, { projectRoot = DEFAULT_PROJECT_ROOT } = {}) {
     const styleLinkRegex = /<link([^>]*)\bhref="([^"]+\.css(?:\?[^"]*)?)"([^>]*)>/gi;
+    let result = '';
+    let lastIndex = 0;
+    let match;
 
-    return String(html || '').replace(styleLinkRegex, (match, beforeHref, href, afterHref) => {
+    while ((match = styleLinkRegex.exec(html)) !== null) {
+        const [fullMatch, beforeHref, href, afterHref] = match;
+
+        result += html.substring(lastIndex, match.index);
+
         const attrs = `${beforeHref} ${afterHref}`;
-        if (!/\brel\s*=\s*["']stylesheet["']/i.test(attrs)) {
-            return match;
-        }
-        if (!(href.startsWith('./') || href.startsWith('/'))) {
-            return match;
-        }
-        if (/\/assets\/vendor\//.test(href)) {
-            return match;
-        }
+        const isStylesheet = /\brel\s*=\s*["']stylesheet["']/i.test(attrs);
+        const isLocal = href.startsWith('./') || href.startsWith('/');
+        const isVendor = /\/assets\/vendor\//.test(href);
 
-        const builtPath = resolveBuiltScriptPath(projectRoot, href);
-        const publicPath = resolvePublicScriptPath(projectRoot, href);
-        const sourcePath = fs.existsSync(builtPath) ? builtPath : publicPath;
-        if (!fs.existsSync(sourcePath)) {
-            console.warn(`Local stylesheet not found: ${publicPath}`);
-            return match;
+        if (isStylesheet && isLocal && !isVendor) {
+            const content = readLocalStyleContent(projectRoot, href);
+            if (content) {
+                console.log(`Inlining stylesheet: ${href}`);
+                result += `<style>\n${content}\n</style>`;
+            } else {
+                result += fullMatch;
+            }
+        } else {
+            result += fullMatch;
         }
-
-        console.log(`Inlining stylesheet: ${sourcePath}`);
-        const content = readLocalStyleContent(projectRoot, href);
-        return `<style>\n${content}\n</style>`;
-    });
+        lastIndex = styleLinkRegex.lastIndex;
+    }
+    result += html.substring(lastIndex);
+    return result;
 }
 
 function rewriteLtAssetPaths(html) {
-    // Replace /assets/ with ./public/assets/
     let result = String(html || '').replace(/(\.\/|\/)assets\//g, './public/assets/');
-    // Handle favicon.ico specifically
     result = result.replace(/favicon\.ico/g, 'public/favicon.ico');
     return result;
 }
 
+function buildInlineRuntimeSourceMap(projectRoot) {
+    const entries = OPTIONAL_INLINE_RUNTIME_PATHS
+        .map((src) => {
+            const content = readLocalScriptContent(projectRoot, src);
+            return content ? [src, content] : null;
+        })
+        .filter(Boolean);
+    return Object.fromEntries(entries);
+}
+
+function injectInlineRuntimeSourceMap(html, { projectRoot = DEFAULT_PROJECT_ROOT } = {}) {
+    const sourceMap = buildInlineRuntimeSourceMap(projectRoot);
+    const keys = Object.keys(sourceMap);
+    if (!keys.length) return String(html || '');
+    const payload = JSON.stringify(sourceMap).replace(/<\/script>/gi, '<\\/script>');
+    const injection = `<script>window.__INLINE_RUNTIME_SOURCES=${payload};</script>`;
+    const output = String(html || '');
+    if (/<\/head>/i.test(output)) {
+        return output.replace(/<\/head>/i, `${injection}</head>`);
+    }
+    return `${injection}${output}`;
+}
+
+function verifyIntegrity(html) {
+    if (!html.includes('</html>')) {
+        throw new Error('Integrity check failed: Missing </html> tag.');
+    }
+    if (html.length < 100000) { // Expected size for lt.html is ~700KB+
+        throw new Error(`Integrity check failed: File size too small (${html.length} bytes).`);
+    }
+    console.log(`Integrity check passed: ${html.length} bytes.`);
+}
+
 export function buildLtHtml(html, { projectRoot = DEFAULT_PROJECT_ROOT } = {}) {
-    return rewriteLtAssetPaths(
-        inlineLocalScripts(
-            inlineLocalStyles(html, { projectRoot }),
-            { projectRoot }
-        )
-    );
+    let processed = inlineLocalStyles(html, { projectRoot });
+    processed = inlineLocalScripts(processed, { projectRoot });
+    processed = rewriteLtAssetPaths(processed);
+    processed = injectInlineRuntimeSourceMap(processed, { projectRoot });
+    verifyIntegrity(processed);
+    return processed;
 }
 
 function main() {
-    if (!fs.existsSync(htmlPath)) {
-        console.error('dist/index.html not found!');
+    try {
+        if (!fs.existsSync(htmlPath)) {
+            console.error('dist/index.html not found!');
+            process.exit(1);
+        }
+
+        const html = fs.readFileSync(htmlPath, 'utf-8');
+        const output = buildLtHtml(html, { projectRoot: DEFAULT_PROJECT_ROOT });
+        fs.writeFileSync(outPath, output, 'utf-8');
+        console.log('Successfully generated lt.html with inlined local scripts.');
+    } catch (err) {
+        console.error('Build failed:', err.message);
         process.exit(1);
     }
-
-    const html = fs.readFileSync(htmlPath, 'utf-8');
-    const output = buildLtHtml(html, { projectRoot: DEFAULT_PROJECT_ROOT });
-    fs.writeFileSync(outPath, output, 'utf-8');
-    console.log('Successfully generated lt.html with inlined local scripts.');
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {

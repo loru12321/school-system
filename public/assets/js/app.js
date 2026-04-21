@@ -518,9 +518,21 @@ const UI = {
         const txt = document.getElementById('loader-text');
         if (show) {
             if (txt) txt.innerText = text;
-            loader.classList.remove('hidden');
+            if (loader) {
+                loader.classList.remove('hidden');
+                loader.style.display = 'flex';
+                loader.style.opacity = '1';
+            }
         } else {
-            setTimeout(() => loader.classList.add('hidden'), 200); // 稍微延迟防止闪烁
+            setTimeout(() => {
+                if (loader) {
+                    loader.style.opacity = '0';
+                    setTimeout(() => {
+                        loader.style.display = 'none';
+                        loader.classList.add('hidden');
+                    }, 300);
+                }
+            }, 200); // 稍微延迟防止闪烁
         }
     },
     // 2. 消息提示控制
@@ -961,6 +973,11 @@ window.setCloudSyncStatus = (state, detail = '') => {
     CloudSyncIndicator.set(state, detail);
 };
 
+function isLocalFileRuntimeForApp() {
+    return window.__IS_LOCAL_FILE_RUNTIME__ === true
+        || (window.location && String(window.location.protocol || '').trim().toLowerCase() === 'file:');
+}
+
 const EdgeGateway = {
     tokenStorageKey: 'EDGE_GATEWAY_TOKEN_V1',
     userStorageKey: 'EDGE_GATEWAY_USER_V1',
@@ -975,9 +992,32 @@ const EdgeGateway = {
             if (!normalized || candidates.includes(normalized)) return;
             candidates.push(normalized);
         };
+        if (isLocalFileRuntimeForApp()) {
+            if (typeof window.__DIRECT_EDGE_GATEWAY_URL !== 'undefined') {
+                pushCandidate(window.__DIRECT_EDGE_GATEWAY_URL);
+            } else if (typeof DIRECT_EDGE_GATEWAY_URL !== 'undefined') {
+                pushCandidate(DIRECT_EDGE_GATEWAY_URL);
+            }
+            return candidates;
+        }
+
+        // Priority 1: Direct Cloudflare Gateway (resilient to DNS/Proxy issues)
+        if (typeof window.DIRECT_CLOUDFLARE_GATEWAY_URL !== 'undefined') {
+            pushCandidate(window.DIRECT_CLOUDFLARE_GATEWAY_URL);
+        } else if (typeof DIRECT_CLOUDFLARE_GATEWAY_URL !== 'undefined') {
+            pushCandidate(DIRECT_CLOUDFLARE_GATEWAY_URL);
+        }
+
+        // Priority 2: Standard candidates
         pushCandidate(this.resolvedGatewayUrl);
         pushCandidate(localStorage.getItem('EDGE_GATEWAY_URL'));
         pushCandidate(window.EDGE_GATEWAY_URL);
+
+        // Fallback constant if defined
+        if (typeof DIRECT_EDGE_GATEWAY_URL !== 'undefined') {
+            pushCandidate(DIRECT_EDGE_GATEWAY_URL);
+        }
+
         return candidates;
     },
     getGatewayUrl: function () {
@@ -1008,6 +1048,73 @@ const EdgeGateway = {
     },
     canUseAuthorizedRequests: function () {
         return this.hasGatewayConfig() && !!this.getToken();
+    },
+    request: async function (action, payload = {}, options = {}) {
+        const urls = this.getGatewayCandidates();
+        const apikey = this.getPublishableKey();
+        if (!urls.length || !apikey) {
+            throw new Error('EDGE_GATEWAY_NOT_CONFIGURED');
+        }
+
+        const protocol = window.location.protocol;
+        const origin = window.location.origin;
+        console.log(`[EdgeGateway] Requesting ${action}, Protocol: ${protocol}, Origin: ${origin}`);
+        if (protocol === 'file:') {
+            console.warn('[EdgeGateway] Running from file:// may trigger CORS blocks (Origin: null). Recommended: Use local web server.');
+        }
+
+        const headers = {
+            'Content-Type': 'application/json',
+            'apikey': apikey
+        };
+        const token = options.allowAnonymous ? '' : (options.token || this.getToken());
+        if (!options.allowAnonymous) {
+            if (!token) throw new Error('EDGE_GATEWAY_SESSION_MISSING');
+            headers.Authorization = `Bearer ${token}`;
+        }
+        let lastError = null;
+        for (let i = 0; i < urls.length; i += 1) {
+            const url = urls[i];
+            console.log(`[EdgeGateway] Attempt ${i + 1}/${urls.length}: ${url}`);
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 18000); // 18s timeout per candidate
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ action, payload }),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch (e) { }
+                if (response.ok && data?.ok) {
+                    console.log(`[EdgeGateway] Success with ${url}`);
+                    this.resolvedGatewayUrl = url;
+                    return data;
+                }
+                const message = data?.error || `EDGE_GATEWAY_HTTP_${response.status}`;
+                console.warn(`[EdgeGateway] Failure with ${url}: ${message}`);
+                lastError = new Error(message);
+                if (i < urls.length - 1 && this.shouldRetryRequest(response.status, message)) {
+                    continue;
+                }
+                throw lastError;
+            } catch (error) {
+                lastError = error instanceof Error ? error : new Error(String(error));
+                console.error(`[EdgeGateway] Error with ${url}:`, lastError.message);
+                if (i < urls.length - 1 && this.shouldRetryRequest(0, lastError.message)) {
+                    continue;
+                }
+                throw lastError;
+            }
+        }
+        throw lastError || new Error('EDGE_GATEWAY_REQUEST_FAILED');
     },
     shouldRetryRequest: function (status, message) {
         if (status === 404 || status >= 500) return true;
@@ -4686,6 +4793,10 @@ var Auth = {
 
             const shouldHydrateCloudInBackground = !isLocalOnlySession && typeof loadCloudData === 'function';
             const tryResumeReadyWorkspace = () => {
+                tryAutoRestoreWorkspaceExam({
+                    preferredExamId: CURRENT_EXAM_ID || readWorkspaceExamId() || COHORT_DB?.currentExamId || '',
+                    cohortId: CURRENT_COHORT_ID || readWorkspaceCohortId() || ''
+                });
                 const restoredCohortId = String(CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
                 const restoredExamId = String(CURRENT_EXAM_ID || readWorkspaceExamId() || '').trim();
                 const hasReadyWorkspace = !!restoredCohortId
@@ -4943,14 +5054,20 @@ var Auth = {
         if (toolbar && dataRoles.includes(currentRole)) {
             const dataBtn = document.createElement('button');
             dataBtn.id = 'header-data-mgr-btn';
-            dataBtn.className = 'btn';
-            // 样式：纯图标按钮
-            dataBtn.style.cssText = 'background:transparent; border:none; color:var(--text-color); font-size: 22px; padding: 8px; border-radius: 50%; display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px;';
-            dataBtn.innerHTML = '<i class="ti ti-database-edit"></i>';
-            dataBtn.title = "管理原始成绩和教师设置";
+            dataBtn.className = 'btn shell-cloud-data-button';
+            dataBtn.style.cssText = 'background:linear-gradient(135deg,#0f766e 0%,#14b8a6 100%); border:none; color:#ffffff; font-size:13px; font-weight:800; padding:9px 14px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; gap:7px; min-width:96px; height:40px; box-shadow:0 14px 28px rgba(20,184,166,0.22); white-space:nowrap;';
+            dataBtn.innerHTML = '<i class="ti ti-cloud-data-connection" style="font-size:18px;"></i><span>云端数据</span>';
+            dataBtn.title = "打开云端教务数据管理";
 
             // 绑定点击事件
-            dataBtn.onclick = () => DataManager.open();
+            dataBtn.onclick = () => {
+                DataManager.open();
+                setTimeout(() => {
+                    if (window.DataManager && typeof window.DataManager.switchTab === 'function') {
+                        window.DataManager.switchTab('cloud');
+                    }
+                }, 0);
+            };
 
             // 插入到工具栏最前面 (作为最高频功能)
             toolbar.insertBefore(dataBtn, toolbar.firstChild);
@@ -5124,11 +5241,11 @@ var Auth = {
                     <div style="text-align:center; margin-top:30px; padding-bottom:80px; border-top:1px dashed #e5e7eb; padding-top:20px;">
                         <p style="font-size:14px; color:#64748b; margin-bottom:15px;">数据有疑问？</p>
                         <!-- 核心修复：使用转义后的变量 -->
-                        <button class="btn" style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; font-size:16px; padding:10px 20px; margin-bottom:20px;" 
+                        <button class="btn" style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; font-size:16px; padding:10px 20px; margin-bottom:20px;"
                                 onclick="IssueManager.openSubmitModal('${safeName}', '${safeClass}', '${safeSchool}')">
                             <i class="ti ti-alert-circle"></i> 申请成绩核查
                         </button>
-                        
+
                         <br>
                         <button onclick="Auth.logout()" style="background:none; border:none; color:#94a3b8; text-decoration:underline; font-size:14px; cursor:pointer;">
                             退出登录
@@ -5938,6 +6055,13 @@ var Auth = {
 window.Auth = Auth;
 Auth.ensureLoginWorkbench();
 Auth.syncLoginPortalUI();
+
+// Signal to the portal loader that Auth is ready
+if (typeof window.resolveAuthReady === 'function') {
+    window.__AUTH_READY__ = true;
+    window.resolveAuthReady();
+    console.log('[app] AuthReady signaled to portal');
+}
 window.openAdminCloudAccountModal = function () {
     const modal = document.getElementById('admin-modal');
     if (modal) modal.style.display = 'flex';
@@ -6106,7 +6230,7 @@ const WORKER_SOURCE = `
         if (cmd === 'PROCESS_ALL') {
             const { RAW_DATA, SUBJECTS, CONFIG, THRESHOLDS } = data;
             // 接收轻量版 SCHOOLS (无循环引用)
-            let SCHOOLS = data.SCHOOLS_LITE; 
+            let SCHOOLS = data.SCHOOLS_LITE;
 
             try {
                 // --- A. 重建索引 ---
@@ -6129,10 +6253,10 @@ const WORKER_SOURCE = `
                         const passN = vals.filter(v=>v>=THRESHOLDS[k].pass).length;
                         sch.metrics[k] = { count: vals.length, avg: avg, excRate: excN / vals.length, passRate: passN / vals.length };
                     });
-                    
+
                     // 后1/3计算
-                    const totalN = sch.students.length; 
-                    const bottomN = Math.ceil(totalN / 3); 
+                    const totalN = sch.students.length;
+                    const bottomN = Math.ceil(totalN / 3);
                     const excN = Math.ceil(bottomN * CONFIG.excRate);
                     const sorted = [...sch.students].sort((a,b)=>b.total - a.total);
                     const bottomGroup = sorted.slice(-bottomN);
@@ -6142,7 +6266,7 @@ const WORKER_SOURCE = `
                 });
 
                // === 新增功能：计算全镇各科标准差 & 学生 T 分 (T-Score) ===
-                
+
                 // 1. 计算全镇各科的统计指标 (均分 & 标准差)
                 const globalStats = {};
                 SUBJECTS.forEach(sub => {
@@ -6164,20 +6288,20 @@ const WORKER_SOURCE = `
                 RAW_DATA.forEach(stu => {
                     stu.tScores = {}; // 存储单科 T 分
                     stu.totalTScore = 0; // T 分总和
-                    
+
                     SUBJECTS.forEach(sub => {
                         const val = stu.scores[sub];
                         const stats = globalStats[sub];
-                        
+
                         // 必须确保 stats 存在，且标准差大于极小值防止除零
                         if (typeof val === 'number' && stats && stats.sd > 0.00001) {
                             // T分公式：50 + 10 * Z
                             const z = (val - stats.avg) / stats.sd;
                             let t = 50 + 10 * z;
-                            
+
                             // 边界保护：限制 T 分在 0-100 之间，防止极端离群值破坏总分
                             t = Math.max(0, Math.min(100, t));
-                            
+
                             // A. 记录单科 T 分 (所有科目都记录，方便查看单科强弱)
                             stu.tScores[sub] = parseFloat(t.toFixed(1));
 
@@ -6192,10 +6316,10 @@ const WORKER_SOURCE = `
                                 stu.totalTScore += t;
                             }
                         } else {
-                            stu.tScores[sub] = 0; 
+                            stu.tScores[sub] = 0;
                         }
                     });
-                    
+
                     stu.totalTScore = parseFloat(stu.totalTScore.toFixed(1));
                 });
 
@@ -6234,12 +6358,12 @@ const WORKER_SOURCE = `
                     list.sort((a,b) => b.metrics[sub][key] - a.metrics[sub][key]);
                     list.forEach((s, i) => {
                         if(!s.rankings) s.rankings = {}; if(!s.rankings[sub]) s.rankings[sub] = {};
-                        if(i>0 && Math.abs(s.metrics[sub][key] - list[i-1].metrics[sub][key]) < 0.0001) s.rankings[sub][key] = list[i-1].rankings[sub][key]; 
+                        if(i>0 && Math.abs(s.metrics[sub][key] - list[i-1].metrics[sub][key]) < 0.0001) s.rankings[sub][key] = list[i-1].rankings[sub][key];
                         else s.rankings[sub][key] = i + 1;
                     });
                 };
                 [...SUBJECTS, 'total'].forEach(sub => { doSchoolRank(sub, 'avg'); doSchoolRank(sub, 'excRate'); doSchoolRank(sub, 'passRate'); });
-                
+
                 // 计算综合得分的最大值基准
                 let max = { avg:0, exc:0, pass:0 };
                 Object.values(schoolMap).forEach(s => { if(s.metrics.total) { max.avg = Math.max(max.avg, s.metrics.total.avg); max.exc = Math.max(max.exc, s.metrics.total.excRate); max.pass = Math.max(max.pass, s.metrics.total.passRate); } });
@@ -6248,20 +6372,20 @@ const WORKER_SOURCE = `
                 let maxHighRatio = 0;
                 // 判断是否为9年级模式
                 const isGrade9 = CONFIG.name && CONFIG.name.includes('9');
-                
+
                 if (isGrade9) {
                     Object.values(schoolMap).forEach(s => {
                         // 计算高分人数 (总分 >= 490)
                         const highCount = s.students.filter(stu => stu.total >= 490).length;
                         const totalCount = s.metrics.total ? s.metrics.total.count : 1;
                         const ratio = totalCount > 0 ? (highCount / totalCount) : 0;
-                        
+
                         s.highScoreStats = {
                             count: highCount,
                             ratio: ratio,
                             score: 0 // 稍后计算
                         };
-                        
+
                         if (ratio > maxHighRatio) maxHighRatio = ratio;
                     });
                 }
@@ -6272,24 +6396,24 @@ const WORKER_SOURCE = `
                         const m = s.metrics.total;
                         // 定义默认权重 (6-8年级)
                         let wAvg = 60, wExc = 70, wPass = 70;
-                        
+
                         // 🟢 如果是 9年级模式，修改权重 (均分50 + 优秀80 + 及格50)
                         if (isGrade9) {
-                            wAvg = 50; 
-                            wExc = 80; 
-                            wPass = 50; 
+                            wAvg = 50;
+                            wExc = 80;
+                            wPass = 50;
                         }
 
                         // 分别计算三项赋分
                         const valAvg = (max.avg ? m.avg/max.avg * wAvg : 0);
                         const valExc = (max.exc ? m.excRate/max.exc * wExc : 0);
                         const valPass = (max.pass ? m.passRate/max.pass * wPass : 0);
-                        
+
                         // 保存到对象中供前端显示
                         m.ratedAvg = valAvg;
                         m.ratedExc = valExc;
                         m.ratedPass = valPass;
-                        
+
                         // 计算两率一分基准总分
                         s.score2Rate = valAvg + valExc + valPass;
 
@@ -6298,14 +6422,14 @@ const WORKER_SOURCE = `
                             // 赋分公式：(本校比例 / 最高比例) * 50
                             const highScore = maxHighRatio > 0 ? (s.highScoreStats.ratio / maxHighRatio * 50) : 0;
                             s.highScoreStats.score = highScore;
-                            
+
                             // ⚠️ 注意：目前高分赋分仅做展示，暂未叠加到 score2Rate (总排名分) 中。
                             // 如果需要叠加进总排名，请取消下一行的注释：
-                            // s.score2Rate += highScore; 
+                            // s.score2Rate += highScore;
                         }
 
-                    } else { 
-                        s.score2Rate = 0; 
+                    } else {
+                        s.score2Rate = 0;
                         // 防止空对象报错
                         if(isGrade9) s.highScoreStats = { count:0, ratio:0, score:0 };
                     }
@@ -6316,22 +6440,22 @@ const WORKER_SOURCE = `
                 const list = Object.values(schoolMap).sort((a,b) => {
                     const scoreA = a.score2Rate || 0;
                     const scoreB = b.score2Rate || 0;
-                    return scoreB - scoreA; 
+                    return scoreB - scoreA;
                 });
-                
+
                 // 重新赋予排名索引
                 list.forEach((s, i) => {
                     s.rank2Rate = i + 1;
                 });
-                
+
                 // 后1/3排序
-                let maxBAvg = 0; 
+                let maxBAvg = 0;
                 list.forEach(s => maxBAvg = Math.max(maxBAvg, s.bottom3.avg || 0));
-                
+
                 list.forEach(s => {
                     s.scoreBottom = maxBAvg ? (s.bottom3.avg / maxBAvg * 40) : 0;
                 });
-                
+
                 // 按后1/3得分排序
                 list.sort((a,b) => (b.scoreBottom || 0) - (a.scoreBottom || 0))
                     .forEach((s,i) => s.rankBottom = i + 1);
@@ -7259,7 +7383,7 @@ const DataManager = {
                     <td>${s.id}</td>
                     <td>${s.total}</td>
                     <td>
-                        <button class="btn btn-sm btn-primary" onclick="DataManager.editStudent(${s._originalIndex})" style="padding:2px 6px; font-size:11px;">编辑</button> 
+                        <button class="btn btn-sm btn-primary" onclick="DataManager.editStudent(${s._originalIndex})" style="padding:2px 6px; font-size:11px;">编辑</button>
                         <button class="btn btn-sm btn-danger" onclick="DataManager.deleteStudent(${s._originalIndex})" style="padding:2px 6px; background:#dc2626; font-size:11px;">删除</button>
                     </td>
                 </tr>`);
@@ -7922,7 +8046,7 @@ const DataManager = {
                         <td><span class="badge" style="background:#f1f5f9; color:#475569;">${t.subject}</span></td>
                         <td style="font-weight:bold; color:#1e293b;">${t.name}</td>
                         <td>
-                            <button class="btn btn-sm btn-primary" onclick="DataManager.editTeacher('${t.key}', '${t.name}')" style="padding:2px 6px; font-size:11px;">修改</button> 
+                            <button class="btn btn-sm btn-primary" onclick="DataManager.editTeacher('${t.key}', '${t.name}')" style="padding:2px 6px; font-size:11px;">修改</button>
                             <button class="btn btn-sm btn-danger" onclick="DataManager.deleteTeacher('${t.key}')" style="padding:2px 6px; background:#dc2626; font-size:11px;">删除</button>
                         </td>
                     </tr>`;
@@ -8662,6 +8786,10 @@ async function switchCohort(cohortId, options = {}) {
             setTeacherMap(data.TEACHER_MAP || {});
             setTeacherSchoolMap(data.TEACHER_SCHOOL_MAP || {});
         }
+        tryAutoRestoreWorkspaceExam({
+            preferredExamId: data.CURRENT_EXAM_ID || COHORT_DB?.currentExamId || '',
+            cohortId: CURRENT_COHORT_ID || cohortId
+        });
         scheduleTeacherSyncPrompt();
 
         // ★★★ 关键：恢复账号数据 ★★★
@@ -8716,6 +8844,7 @@ async function switchCohort(cohortId, options = {}) {
         if (window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
             window.CloudManager.fetchCohortExamsToLocal(cohortId).then(res => {
                 if (res.success) {
+                    tryAutoRestoreWorkspaceExam({ cohortId });
                     if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
                     if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
                     if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
@@ -8905,7 +9034,7 @@ window.addEventListener('load', async () => {
 
         // 定义统一的恢复函数
         const performRestore = async () => {
-            Perf.runAsync(async () => {
+            await Perf.runAsync(async () => {
                 // 恢复届别与考试主状态（历史考试下拉依赖）
                 COHORT_DB = backup.COHORT_DB || COHORT_DB || null;
                 CURRENT_COHORT_ID = backup.CURRENT_COHORT_ID || CURRENT_COHORT_ID || readWorkspaceCohortId() || '';
@@ -8961,6 +9090,10 @@ window.addEventListener('load', async () => {
                 if (backup.FB_CLASSES) setFbClassesState(backup.FB_CLASSES);
                 if (backup.MP_SNAPSHOTS) setMpSnapshotsState(backup.MP_SNAPSHOTS);
                 syncRuntimeStateToWindow();
+                tryAutoRestoreWorkspaceExam({
+                    preferredExamId: backup.CURRENT_EXAM_ID || COHORT_DB?.currentExamId || '',
+                    cohortId: CURRENT_COHORT_ID
+                });
 
                 const restoredExamMeta =
                     (COHORT_DB && CURRENT_EXAM_ID && COHORT_DB.exams && COHORT_DB.exams[CURRENT_EXAM_ID]?.meta)
@@ -9004,6 +9137,7 @@ window.addEventListener('load', async () => {
                     if (cid && window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
                         window.CloudManager.fetchCohortExamsToLocal(cid).then(res => {
                             if (res.success) {
+                                tryAutoRestoreWorkspaceExam({ cohortId: cid });
                                 if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
                                 if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
                                 if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
@@ -9042,6 +9176,7 @@ window.addEventListener('load', async () => {
             const cid = CURRENT_COHORT_ID || readWorkspaceCohortId();
             if (cid && window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
                 window.CloudManager.fetchCohortExamsToLocal(cid).then(() => {
+                    tryAutoRestoreWorkspaceExam({ cohortId: cid });
                     if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
                     if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
                     if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
@@ -9078,6 +9213,23 @@ const Perf = {
     }
 };
 // ================= 全局变量 =================
+Perf.runAsync = (fn, loadingText) => {
+    UI.loading(true, loadingText);
+    return new Promise((resolve) => {
+        setTimeout(async () => {
+            try {
+                resolve(await fn());
+            } catch (e) {
+                console.error(e);
+                UI.toast("发生错误: " + e.message, 'error');
+                resolve(undefined);
+            } finally {
+                UI.loading(false);
+            }
+        }, 50);
+    });
+};
+
 let CONFIG = {
     name: '6-8年级',
     label: '全科总',
@@ -9440,7 +9592,7 @@ async function generateClassDiagnosisReport() {
 
     // 构建提示词 (Prompt Engineering)
     let prompt = `你是一位拥有20年经验的资深教务主任。请根据以下 ${sch} 的班级成绩数据，撰写一份深度的“班级弱项诊断与提升方案”。
-        
+
 【全校基准数据】：
 - 全校均分: ${schoolData.metrics.total.avg.toFixed(1)}
 - 全校优秀率: ${(schoolData.metrics.total.excRate * 100).toFixed(1)}%
@@ -11424,12 +11576,12 @@ function renderTables() {
                     ${s.name} <i class="ti ti-chart-radar" style="font-size:12px; opacity:0.5;"></i>
                 </td>
                 <td data-label="人数">${m.count || 0}</td>
-                
+
                 <!-- 注入样式变量 --percent -->
                 <td data-label="平均分" class="data-bar-bg" style="--percent: ${barPercent}%">
                     ${formatRankDisplay(m.avg || 0, s.rankings.total?.avg || 0)}
                 </td>
-                
+
                 <td data-label="优秀率">${formatRankDisplay(m.excRate || 0, s.rankings.total?.excRate || 0, 'school', true)}</td>
                 <td data-label="及格率">${formatRankDisplay(m.passRate || 0, s.rankings.total?.passRate || 0, 'school', true)}</td>
                 <td data-label="均分赋分">${rA.toFixed(2)}</td>
@@ -11443,9 +11595,9 @@ function renderTables() {
     applySchoolModeToTables();
 
     // ... (下接各科渲染逻辑，保持不变) ...
-    const subContainer = document.getElementById('subject-tables-container'); 
+    const subContainer = document.getElementById('subject-tables-container');
     const sideNavSubjects = document.getElementById('side-nav-subjects-container');
-    
+
     if (subContainer) subContainer.innerHTML = '';
     if (sideNavSubjects) sideNavSubjects.innerHTML = '';
 
@@ -13956,35 +14108,35 @@ function calcIndicators(isSilent = false) {
         html += `
             <tr class="${isMySchool ? 'bg-highlight' : ''}">
                 <td style="font-weight:bold;" title="${d.targetKey ? `目标人数匹配：${d.targetKey}` : '未匹配目标人数'}">${d.name}${d.invalidTarget ? '<span style="display:block; font-size:11px; color:#d97706; font-weight:600;">目标异常</span>' : (d.missingTarget ? '<span style="display:block; font-size:11px; color:#dc2626; font-weight:600;">未匹配目标人数</span>' : '')}</td>
-                
+
                 <!-- 指标一 -->
                 <td>
                     <!-- 👇 新增点击事件：点击目标人数，分析如何达标 -->
-                    <span class="clickable-num" style="color:#d97706; border-bottom:1px dashed #d97706;" 
-                          onclick="analyzeTargetGap('${d.name}', 'ind1', ${line1})" 
+                    <span class="clickable-num" style="color:#d97706; border-bottom:1px dashed #d97706;"
+                          onclick="analyzeTargetGap('${d.name}', 'ind1', ${line1})"
                           title="点击分析：哪些学生差一点就达标？补哪科？">
                         ${d.t1 || (d.invalidTarget ? '异常' : (d.missingTarget ? '未匹配' : 0))}
-                    </span> / 
+                    </span> /
                     <strong class="clickable-num" onclick="handleIndicatorClick('${d.name}', 'ind1')">${d.r1}</strong>
                 </td>
                 <td>${d.base1.toFixed(2)}</td>
                 <td style="color:${d.bonus1 > 0 ? 'green' : '#ccc'}; font-weight:bold;">${d.bonus1 > 0 ? '+' : ''}${d.bonus1.toFixed(2)}</td>
                 <td style="background:#f0f9ff; font-weight:bold;">${d.score1.toFixed(2)}</td>
-                
+
                 <!-- 指标二 -->
                 <td>
-                    
-                    <span class="clickable-num" style="color:#d97706; border-bottom:1px dashed #d97706;" 
-                          onclick="analyzeTargetGap('${d.name}', 'ind2', ${line2})" 
+
+                    <span class="clickable-num" style="color:#d97706; border-bottom:1px dashed #d97706;"
+                          onclick="analyzeTargetGap('${d.name}', 'ind2', ${line2})"
                           title="点击分析：哪些学生差一点就达标？补哪科？">
                         ${d.t2 || (d.invalidTarget ? '异常' : (d.missingTarget ? '未匹配' : 0))}
-                    </span> / 
+                    </span> /
                     <strong class="clickable-num" onclick="handleIndicatorClick('${d.name}', 'ind2')">${d.r2}</strong>
                 </td>
                 <td>${d.base2.toFixed(2)}</td>
                 <td style="color:${d.bonus2 > 0 ? 'green' : '#ccc'}; font-weight:bold;">${d.bonus2 > 0 ? '+' : ''}${d.bonus2.toFixed(2)}</td>
                 <td style="background:#fffaf0; font-weight:bold;">${d.score2.toFixed(2)}</td>
-                
+
                 <!-- 总分 -->
                 <td class="text-red" style="font-size:1.1em; font-weight:bold;">${d.finalScore.toFixed(2)}</td>
                 ${getRankHTML(d.rank)}
@@ -14186,7 +14338,7 @@ function analyzeTargetGap(schoolName, type, lineScore) {
                     <td style="vertical-align:middle;">
                         <div style="font-weight:bold; font-size:14px;">${c.name}</div>
                     </td>
-                    
+
                     <!-- 🟢 改造：当前总分 + 可视化进度条 -->
                     <td style="vertical-align:middle;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-end; font-size:12px; margin-bottom:2px;">
@@ -14203,11 +14355,11 @@ function analyzeTargetGap(schoolName, type, lineScore) {
                             -${c.scoreGap.toFixed(1)}
                         </span>
                     </td>
-                    
+
                     <td style="vertical-align:middle; ${subStyle}">
                         ${c.worstSub}
                     </td>
-                    
+
                     <td style="vertical-align:middle; ${diffStyle}">
                         ${c.worstDiff}
                     </td>
@@ -14569,7 +14721,7 @@ function exportTeacherAnalysis() {
 }
 
 function updateSegmentSelects() {
-    const schSel = document.getElementById('segSchoolSelect'); const subSel = document.getElementById('segSubjectSelect'); 
+    const schSel = document.getElementById('segSchoolSelect'); const subSel = document.getElementById('segSubjectSelect');
     if (!schSel || !subSel) return;
     const oldSch = schSel.value;
     schSel.innerHTML = '<option value="ALL">全乡镇</option>'; Object.keys(SCHOOLS).forEach(s => schSel.innerHTML += `<option value="${s}">${s}</option>`); if (oldSch && (oldSch === 'ALL' || SCHOOLS[oldSch])) schSel.value = oldSch;
@@ -14721,7 +14873,7 @@ function exportSegmentExcel() {
 }
 
 function updateClassCompSchoolSelect() {
-    const sel = document.getElementById('classCompSchoolSelect'); 
+    const sel = document.getElementById('classCompSchoolSelect');
     if (!sel) return;
     sel.innerHTML = '<option value="">--请选择学校--</option>'; Object.keys(SCHOOLS).forEach(s => sel.innerHTML += `<option value="${s}">${s}</option>`);
 }
@@ -14822,7 +14974,7 @@ function renderClassComparison() {
 
         matrixHtml += `</tbody></table></div>
             <div class="analysis-generated-note">
-                💡 <strong>读图指南：</strong> 
+                💡 <strong>读图指南：</strong>
                 <span style="background:#dcfce7; color:#16a34a; padding:0 4px;">绿色</span> 代表该科进入前3名 (优势)，
                 <span style="background:#fee2e2; color:#dc2626; padding:0 4px;">红色</span> 代表该科处于后3名 (短板)。
                 横向看班级偏科情况，纵向看学科整体水平。
@@ -15053,9 +15205,9 @@ function SB_renderTable() {
                         <div style="font-size:10px; font-weight:bold; color:#333;">${item.sub}</div>
                         <div style="display:flex; align-items:flex-end; height:40px; justify-content:center; width:100%;">
                             <div style="
-                                width: 12px; 
-                                height: ${Math.max(barWidth, 2)}px; 
-                                background-color: ${color}; 
+                                width: 12px;
+                                height: ${Math.max(barWidth, 2)}px;
+                                background-color: ${color};
                                 border-radius: 2px;
                                 opacity: ${absDiff < 2 ? 0.3 : 1};
                             " title="分数: ${item.score} (比平均${item.diff > 0 ? '+' : ''}${item.diff.toFixed(1)})"></div>
@@ -15360,7 +15512,7 @@ function renderPotentialAnalysis() {
     POTENTIAL_STUDENTS_CACHE = candidates;
 
     let html = `<div class="info-bar">
-            <strong>💡 分析模型升级：</strong> 
+            <strong>💡 分析模型升级：</strong>
             系统已自动启用 <b>${candidates.length > 0 && candidates[0].gap.includes('T分') ? 'Z-Score标准分偏离模型' : '名次落差模型'}</b>。
             <br>筛选范围：总分前 ${(topRatio * 100).toFixed(0)}% 的学生中，单科显著“拖后腿”的潜力股。
         </div>
@@ -16162,7 +16314,7 @@ async function generateInquiryPackage() {
     input:focus { border-color: #2563eb; outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
     button { width: 100%; background: #2563eb; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
     button:active { transform: scale(0.98); }
-    
+
     .password-section { background: #fffbeb; padding: 10px; border-radius: 8px; border: 1px solid #fcd34d; margin-bottom: 15px; }
     .password-section label { color: #b45309; }
 
@@ -16200,7 +16352,7 @@ async function generateInquiryPackage() {
 <div class="container">
     <h2>${sch} 成绩查询</h2>
     <div class="sub-title">${examName} | 发布日期: ${genDate}</div>
-    
+
     <div class="password-section">
         <label>🔐 访问密码 (由老师提供)</label>
         <input type="password" id="inpPass" placeholder="请输入查看密码">
@@ -16216,7 +16368,7 @@ async function generateInquiryPackage() {
         <label>学生姓名</label>
         <input type="text" id="inpName" placeholder="请输入姓名 (如: 张三)">
     </div>
-    
+
     <button onclick="doSearch()">🔓 解密并查询</button>
 
     <div id="resultArea" class="result-box"></div>
@@ -16225,21 +16377,21 @@ async function generateInquiryPackage() {
 
 <script>
     const PAYLOAD = ${encryptedPayloadLiteral};
-    const IS_SINGLE_SCHOOL = ${isSingleSchool}; 
+    const IS_SINGLE_SCHOOL = ${isSingleSchool};
 
     let radarInst = null;
     let varInst = null;
-    
+
     function doSearch() {
         const pass = document.getElementById('inpPass').value.trim();
         const cls = document.getElementById('inpClass').value.trim();
         const name = document.getElementById('inpName').value.trim();
         const resBox = document.getElementById('resultArea');
-        
+
         if(!pass) return alert("❌ 请输入访问密码");
         if(!cls) return alert("❌ 请输入班级");
         if(!name) return alert("❌ 请输入学生姓名");
-        
+
         let allData = null;
 
         // 1. 解密数据
@@ -16260,7 +16412,7 @@ async function generateInquiryPackage() {
 
         // 3. 渲染结果
         resBox.innerHTML = '';
-        
+
         if(!res) {
             alert("❌ 未找到学生信息！\\n请检查【班级】和【姓名】是否输入正确。\\n(班级如：701)");
         } else {
@@ -16269,14 +16421,14 @@ async function generateInquiryPackage() {
                 const item = res.s[sub];
                 let rankHtml = '<span class="tag-rank">校: ' + item[1] + '</span>';
                 if (!IS_SINGLE_SCHOOL) rankHtml += '<span class="tag-rank">镇: ' + item[2] + '</span>';
-                subHtml += 
+                subHtml +=
                     '<div class="sub-item">' +
                         '<div class="sub-main"><div class="sub-name">' + sub + '</div><div class="sub-val">' + item[0] + '</div></div>' +
                         '<div class="sub-ranks">' + rankHtml + '</div>' +
                     '</div>';
             }
-            
-            let totalRankHtml = 
+
+            let totalRankHtml =
                 '<div class="rank-item"><div class="rank-val">' + res.cr + '</div><div class="rank-lbl">班排</div></div>' +
                 '<div class="rank-item"><div class="rank-val">' + res.sr + '</div><div class="rank-lbl">校排</div></div>';
             if (!IS_SINGLE_SCHOOL) totalRankHtml += '<div class="rank-item"><div class="rank-val">' + res.tr + '</div><div class="rank-lbl">镇排</div></div>';
@@ -16287,7 +16439,7 @@ async function generateInquiryPackage() {
                     <div class="comment-title">👩‍🏫 班主任评语</div>
                     <div class="comment-text">\${res.cm || '暂无评语'}</div>
                 </div>
-                
+
                 <div class="chart-box">
                     <div class="chart-title">📊 学科能力分布 (雷达图)</div>
                     <div style="height:200px; position:relative;">
@@ -16306,7 +16458,7 @@ async function generateInquiryPackage() {
                 </div>
             \`;
 
-            resBox.innerHTML = 
+            resBox.innerHTML =
                 '<div class="score-card">' +
                     '<div class="head-section">' +
                         '<div class="stu-info-bar">' + res.cls + '班 · ' + res.name + '</div>' +
@@ -16315,9 +16467,9 @@ async function generateInquiryPackage() {
                     '</div>' +
                     '<div class="rank-bar">' + totalRankHtml + '</div>' +
                     '<div class="sub-grid">' + subHtml + '</div>' +
-                '</div>' + 
+                '</div>' +
                 '<div style="text-align:center; color:green; font-size:12px; margin-top:10px;">✅ 查询成功</div>';
-            
+
             resBox.style.display = 'block';
 
             setTimeout(() => {
@@ -16364,7 +16516,7 @@ async function generateInquiryPackage() {
                         options: {
                             maintainAspectRatio: false,
                             indexAxis: 'y', // 横向柱状图更适合手机查看长标签
-                            scales: { 
+                            scales: {
                                 x: { grid: { display: true }, title: {display:true, text:'← 弱势 | 强势 →'} },
                                 y: { grid: { display: false } }
                             },
@@ -17208,13 +17360,13 @@ function EXAM_generateDeskLabels() {
                     <div class="desk-label-card">
                         <!-- 1. 顶部：考号 (最大) -->
                         <div class="dl-exam-no">${s.examNo}</div>
-                        
+
                         <!-- 2. 中间：班级(左) + 姓名(右) (中等) -->
                         <div class="dl-main-row">
                             <span>${s.class}</span>
                             <span>${s.name}</span>
                         </div>
-                        
+
                         <!-- 3. 底部：考场 + 座号 (最小) -->
                         <div class="dl-footer-row">
                             <span class="dl-room-box">${String(room.id).padStart(2, '0')}场</span>
@@ -18315,7 +18467,7 @@ function downloadPoster() {
 
 // ================== 临界生精准推送逻辑 ==================
 function updateMpSchoolSelect() {
-    const sel = document.getElementById('mpSchoolSelect'); 
+    const sel = document.getElementById('mpSchoolSelect');
     if (!sel) return;
     const old = sel.value;
     sel.innerHTML = '<option value="">--请选择学校--</option>'; Object.keys(SCHOOLS).forEach(s => sel.innerHTML += `<option value="${s}">${s}</option>`);
@@ -18972,7 +19124,7 @@ function buildStudentPrompt(stu) {
         优势学科：${strengthStr}
         待提升学科：${weakStr}
         ${trendInfo}
-        
+
         # Requirements
         1. **直面进退步**：如果存在历史数据，评语的第一句必须点评进退步情况（如“恭喜你，排名大幅上升”或“本次考试稍有遗憾，名次有所下滑”）。
         2. **归因分析**：
@@ -19257,6 +19409,7 @@ function handleLogoUpload(input) {
 
 function applyLogo(base64) {
     const img = document.getElementById('custom-logo-img');
+    if (!img) return;
     if (base64) {
         img.src = base64;
         img.onerror = function () {
@@ -19265,7 +19418,7 @@ function applyLogo(base64) {
         img.style.display = 'block';
     } else {
         img.style.display = 'none';
-        img.src = '';
+        img.removeAttribute('src');
     }
 }
 
@@ -19439,7 +19592,7 @@ const VoiceControl = {
                 matchedCmd.action();
                 // 执行后不关闭HUD，方便连续下达指令
                 // 如果希望执行后关闭，取消下面注释
-                // this.stop(); 
+                // this.stop();
             }, 500);
             return;
         }
@@ -19549,10 +19702,10 @@ window.bindModalInteractionGuards = bindModalInteractionGuards;
 window.addEventListener('load', () => {
     const style = document.createElement('style');
     style.innerHTML = `
-            .table-wrap { 
-                max-height: none !important; 
-                height: auto !important; 
-                overflow-y: visible !important; 
+            .table-wrap {
+                max-height: none !important;
+                height: auto !important;
+                overflow-y: visible !important;
                 display: block !important;
             }
             /* 防止 rank2Rate 计算错误导致行隐藏 */
@@ -20189,6 +20342,7 @@ async function enterCohortFromMask() {
     if (!year || year < 2000) return alert('请输入有效的入学年份');
     setManualCohortSelectionGate(false);
     await CohortManager.addCohort({ year, startGrade }, { skipConfirm: true });
+    refreshAuthRoleViewFromSession();
 }
 
 function tryAutoEnterReadyCohortWorkspace() {
@@ -20205,6 +20359,7 @@ function tryAutoEnterReadyCohortWorkspace() {
 
     mask.style.display = 'none';
     app.classList.remove('hidden');
+    refreshAuthRoleViewFromSession();
 
     if (CONFIG.name) {
         const badge = document.getElementById('mode-badge');
@@ -20367,6 +20522,111 @@ function onExamTermChange() {
     if (window.DataManager && typeof DataManager.refreshTeacherAnalysis === 'function') {
         DataManager.refreshTeacherAnalysis();
     }
+}
+
+function getAutoRestoreExamId(db, cohortId = '') {
+    const sourceDb = db && typeof db === 'object' ? db : null;
+    if (!sourceDb || !sourceDb.exams || typeof sourceDb.exams !== 'object') return '';
+    const normalizedCohortId = String(cohortId || CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
+    const entries = Object.values(sourceDb.exams)
+        .filter((exam) => {
+            const examId = String(exam?.examId || '').trim();
+            const rows = Array.isArray(exam?.data) ? exam.data : [];
+            if (!examId || rows.length === 0) return false;
+            if (!normalizedCohortId) return true;
+            const examCohortId = normalizeCompareCohortId(
+                exam?.meta?.cohortId
+                || (typeof inferCohortIdFromValue === 'function' ? inferCohortIdFromValue(examId) : '')
+                || ''
+            );
+            return !examCohortId || examCohortId === normalizedCohortId;
+        })
+        .map((exam) => {
+            const examId = String(exam?.examId || '').trim();
+            const ts = typeof getExamSortTimestamp === 'function'
+                ? getExamSortTimestamp(examId, Number(exam?.createdAt || exam?.updatedAt || 0))
+                : Number(exam?.createdAt || exam?.updatedAt || 0);
+            return { examId, ts };
+        });
+    if (!entries.length) return '';
+    entries.sort((a, b) => {
+        if (a.ts !== b.ts) return b.ts - a.ts;
+        return String(b.examId || '').localeCompare(String(a.examId || ''), 'zh-CN');
+    });
+    return entries[0].examId || '';
+}
+
+function ensureWorkspaceDefaultSchool() {
+    const current = String(readCurrentSchool() || '').trim();
+    if (current) return current;
+
+    const candidateSet = new Set();
+    const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    const boundSchool = String(user?.school || '').trim();
+    const inferredSchool = typeof inferDefaultSchoolFromContext === 'function'
+        ? String(inferDefaultSchoolFromContext() || '').trim()
+        : '';
+    if (boundSchool) candidateSet.add(boundSchool);
+    if (inferredSchool) candidateSet.add(inferredSchool);
+    Object.keys(SCHOOLS || {})
+        .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'))
+        .forEach((school) => {
+            const normalized = String(school || '').trim();
+            if (normalized) candidateSet.add(normalized);
+        });
+
+    const schoolNames = new Set(Object.keys(SCHOOLS || {}).map((school) => String(school || '').trim()).filter(Boolean));
+    const fallbackSchool = Array.from(candidateSet).find((school) => schoolNames.has(school)) || '';
+    if (!fallbackSchool) return '';
+
+    writeCurrentSchool(fallbackSchool);
+    ['mySchoolSelect', 'sel-school'].forEach((id) => {
+        const select = document.getElementById(id);
+        if (!select) return;
+        const optionHit = Array.from(select.options || []).find((option) => String(option.value || '').trim() === fallbackSchool);
+        if (optionHit) {
+            select.value = optionHit.value;
+            if (id === 'mySchoolSelect') {
+                select.dispatchEvent(new Event('change'));
+            }
+        }
+    });
+    return fallbackSchool;
+}
+
+function tryAutoRestoreWorkspaceExam(options = {}) {
+    const db = COHORT_DB || ((typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null);
+    if (!db) return false;
+
+    const preferredExamId = String(
+        options.preferredExamId
+        || db.currentExamId
+        || CURRENT_EXAM_ID
+        || readWorkspaceExamId()
+        || ''
+    ).trim();
+    const currentRows = Array.isArray(RAW_DATA) ? RAW_DATA : [];
+
+    if (preferredExamId && db.exams?.[preferredExamId] && currentRows.length > 0) {
+        ensureWorkspaceDefaultSchool();
+        return true;
+    }
+
+    const autoExamId = preferredExamId && db.exams?.[preferredExamId]
+        ? preferredExamId
+        : getAutoRestoreExamId(db, options.cohortId);
+    if (!autoExamId || typeof CohortDB === 'undefined' || typeof CohortDB.applyExamToWorkspace !== 'function') {
+        return false;
+    }
+
+    db.currentExamId = autoExamId;
+    window.COHORT_DB = db;
+    if (!CohortDB.applyExamToWorkspace(autoExamId)) return false;
+
+    ensureWorkspaceDefaultSchool();
+    if (typeof CohortDB.renderExamList === 'function') CohortDB.renderExamList();
+    if (typeof updateExamHistoryStatusBar === 'function') updateExamHistoryStatusBar();
+    return true;
 }
 
 function setCurrentExamMeta(silent = false) {
@@ -21970,6 +22230,37 @@ function ensureModuleHelpButton(sectionId) {
     titleEl.appendChild(btn);
 }
 
+function ensureAuthCurrentUserFromSession() {
+    let sessionUser = null;
+    try {
+        if (window.AuthState && typeof window.AuthState.getCurrentUser === 'function') {
+            sessionUser = window.AuthState.getCurrentUser();
+        }
+    } catch (_) {
+        sessionUser = null;
+    }
+
+    if (typeof Auth !== 'undefined' && Auth) {
+        if (!Auth.currentUser && sessionUser) {
+            Auth.currentUser = sessionUser;
+        }
+        return Auth.currentUser || sessionUser || null;
+    }
+    return sessionUser || null;
+}
+
+function refreshAuthRoleViewFromSession() {
+    const user = ensureAuthCurrentUserFromSession();
+    if (!user) return null;
+    if (typeof Auth !== 'undefined' && Auth && typeof Auth.applyRoleView === 'function') {
+        Auth.applyRoleView();
+    }
+    if (typeof updateRoleHint === 'function') {
+        updateRoleHint();
+    }
+    return user;
+}
+
 function updateRoleHint() {
     const targets = [
         document.getElementById('role-hint'),
@@ -21977,7 +22268,7 @@ function updateRoleHint() {
         document.getElementById('shell-role-pill')
     ].filter(Boolean);
     if (targets.length === 0) return;
-    const user = Auth?.currentUser;
+    const user = ensureAuthCurrentUserFromSession();
 
     const roleMap = {
         admin: '管理员',
@@ -22015,7 +22306,7 @@ function updateRoleHint() {
 
 function getCurrentUser() {
     window.getCurrentUser = getCurrentUser;
-    return (typeof Auth !== 'undefined' && Auth.currentUser) ? Auth.currentUser : null;
+    return ensureAuthCurrentUserFromSession();
 }
 
 function normalizeTeacherName(name) {
@@ -22834,7 +23125,7 @@ async function loadDemoData() {
     const subjects = ['语文', '数学', '英语', '物理', '化学', '生物', '政治', '历史', '地理'];
     const cohorts = ['2022', '2023', '2024'];
     const teachers = ['张伟', '王芳', '李娜', '刘强', '陈静', '杨敏', '黄磊', '赵磊', '周涛', '吴洋', '孙丽', '胡勇'];
-    
+
     setSubjects(subjects);
     setRawData([]);
     setSchools({});
@@ -22861,10 +23152,10 @@ async function loadDemoData() {
     ['9', '8', '7'].forEach((gradeLevel, gIdx) => {
         const cohort = cohorts[gIdx];
         const classCount = 4;
-        
+
         for (let cNum = 1; cNum <= classCount; cNum++) {
             const cls = `${gradeLevel}.${cNum}`;
-            
+
             // 为每个学科随机分配教师
             subjects.forEach(sub => {
                 const tName = teachers[Math.floor(Math.random() * teachers.length)];
@@ -22882,14 +23173,14 @@ async function loadDemoData() {
                     scores: {},
                     total: 0
                 };
-                
+
                 subjects.forEach(sub => {
                     const base = 65 + Math.random() * 30;
                     const bonus = Math.random() > 0.8 ? 5 : 0;
                     stu.scores[sub] = Math.floor(Math.min(120, Math.max(20, base + bonus + (Math.random() * 10 - 5))));
                     stu.total += stu.scores[sub];
                 });
-                
+
                 RAW_DATA.push(stu);
                 if (!SCHOOLS[demoSchool]) SCHOOLS[demoSchool] = { name: demoSchool, students: [], metrics: {}, rankings: {} };
                 SCHOOLS[demoSchool].students.push(stu);
@@ -22901,10 +23192,10 @@ async function loadDemoData() {
     setTeacherMap(teacherAssignments);
     writeCurrentSchool(demoSchool);
     writeCurrentTermId('2025-2026_上学期');
-    
+
     CURRENT_COHORT_ID = '2022';
     CURRENT_EXAM_ID = '2026_校内首模';
-    
+
     syncWorkspaceRuntimeState({
         currentCohortId: CURRENT_COHORT_ID,
         currentExamId: CURRENT_EXAM_ID,
@@ -23654,7 +23945,7 @@ window.DataManager = DataManager;
 (function autoTriggerDemoMode() {
     const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
     const hasData = Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0;
-    
+
     if (user && user.id === 'demo-admin' && !hasData) {
         console.log('[DemoMode] Auto-triggering demo data load for demo-admin');
         window.setTimeout(() => {

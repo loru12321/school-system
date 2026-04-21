@@ -18,6 +18,7 @@ supabase/.temp/
 .tmp-lt-check.js
 tmp_*.png
 tmp-*.png
+*.pem
 build_error*.log
 diff.txt
 custom.html
