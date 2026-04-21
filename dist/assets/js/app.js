@@ -1380,42 +1380,42 @@ ${d.length>0?`错误示例：
             <span>${tmEscapeHtml(e)}</span>
             <strong>${tmEscapeHtml(o)}</strong>
         </div>
-    `}function buildStudentDetailMobileSubjectCard(e,t,n,o,a){const s=e.scores[t]!==void 0?e.scores[t]:"-",r=e.tScores&&e.tScores[t]||"-",l=`
-        <button type="button" class="student-detail-mobile-score-btn" ${`onclick="updateStudentScore('${e.name}', '${e.class}', '${t}', ${s})"`} title="点击修改${tmEscapeHtml(t)}成绩">
-            ${tmEscapeHtml(s)}
+    `}function getStudentCountyRankValue(e,t="total"){var a;const n=t==="total"&&(a=e==null?void 0:e.countyRank)!=null?a:"-",o=safeGet(e,`ranks.${t}.county`,n);return o==null||o===""?n:o}function hasStudentCountyRankData(e=RAW_DATA,t=SUBJECTS){return!Array.isArray(e)||e.length===0?!1:e.some(n=>getStudentCountyRankValue(n,"total")!=="-"?!0:(t||[]).some(o=>getStudentCountyRankValue(n,o)!=="-"))}function buildStudentDetailMobileSubjectCard(e,t,n,o,a,s){const r=e.scores[t]!==void 0?e.scores[t]:"-",i=e.tScores&&e.tScores[t]||"-",c=`
+        <button type="button" class="student-detail-mobile-score-btn" ${`onclick="updateStudentScore('${e.name}', '${e.class}', '${t}', ${r})"`} title="点击修改${tmEscapeHtml(t)}成绩">
+            ${tmEscapeHtml(r)}
         </button>
-    `,c=[];return!n&&!o?(r!=="-"&&c.push(`<span>T ${tmEscapeHtml(r)}</span>`),c.push(`<span>校 ${tmEscapeHtml(safeGet(e,`ranks.${t}.school`,"-"))}</span>`),c.push(`<span>班 ${tmEscapeHtml(safeGet(e,`ranks.${t}.class`,"-"))}</span>`),a&&c.push(`<span>镇 ${tmEscapeHtml(safeGet(e,`ranks.${t}.township`,"-"))}</span>`)):(c.push(`<span>班 ${tmEscapeHtml(safeGet(e,`ranks.${t}.class`,"-"))}</span>`),c.push(`<span>级 ${tmEscapeHtml(safeGet(e,`ranks.${t}.school`,"-"))}</span>`),a&&c.push(`<span>镇 ${tmEscapeHtml(safeGet(e,`ranks.${t}.township`,"-"))}</span>`)),`
+    `,d=[];return!n&&!o?(i!=="-"&&d.push(`<span>T ${tmEscapeHtml(i)}</span>`),d.push(`<span>校 ${tmEscapeHtml(safeGet(e,`ranks.${t}.school`,"-"))}</span>`),d.push(`<span>班 ${tmEscapeHtml(safeGet(e,`ranks.${t}.class`,"-"))}</span>`),s&&d.push(`<span>县 ${tmEscapeHtml(getStudentCountyRankValue(e,t))}</span>`),a&&d.push(`<span>镇 ${tmEscapeHtml(safeGet(e,`ranks.${t}.township`,"-"))}</span>`)):(d.push(`<span>班 ${tmEscapeHtml(safeGet(e,`ranks.${t}.class`,"-"))}</span>`),d.push(`<span>级 ${tmEscapeHtml(safeGet(e,`ranks.${t}.school`,"-"))}</span>`),s&&d.push(`<span>县 ${tmEscapeHtml(getStudentCountyRankValue(e,t))}</span>`),a&&d.push(`<span>镇 ${tmEscapeHtml(safeGet(e,`ranks.${t}.township`,"-"))}</span>`)),`
         <div class="student-detail-mobile-subject">
             <div class="student-detail-mobile-subject-head">
                 <span>${tmEscapeHtml(t)}</span>
-                ${l}
+                ${c}
             </div>
             <div class="student-detail-mobile-rank-row">
-                ${c.join("")}
+                ${d.join("")}
             </div>
         </div>
-    `}function buildStudentDetailMobileRow(e,t,n,o,a){const s=e.school||"-",r=e.class||"-",i=e.total!=null?e.total:"-",l=e.totalTScore||"-",c=e.id||"-",d=e.examRoom||"-",f=n||o?"总分级排":"总分校排",u=safeGet(e,"ranks.total.school","-"),g="总分班排",p=safeGet(e,"ranks.total.class","-"),h=safeGet(e,"ranks.total.township","-"),m=t.map(y=>buildStudentDetailMobileSubjectCard(e,y,n,o,a)).join(""),S=[buildStudentDetailMobileInfoItem("学校",s),buildStudentDetailMobileInfoItem("考号",c),buildStudentDetailMobileInfoItem("考场",d),buildStudentDetailMobileInfoItem("T分",l,"is-accent")].join(""),E=[buildStudentDetailMobileInfoItem(f,u),buildStudentDetailMobileInfoItem(g,p),a?buildStudentDetailMobileInfoItem("总分镇排",h):""].join("");return`
+    `}function buildStudentDetailMobileRow(e,t,n,o,a,s){const r=e.school||"-",i=e.class||"-",l=e.total!=null?e.total:"-",c=e.totalTScore||"-",d=e.id||"-",f=e.examRoom||"-",u=n||o?"总分级排":"总分校排",g=safeGet(e,"ranks.total.school","-"),p="总分班排",h=safeGet(e,"ranks.total.class","-"),m=getStudentCountyRankValue(e,"total"),S=safeGet(e,"ranks.total.township","-"),E=t.map(w=>buildStudentDetailMobileSubjectCard(e,w,n,o,a,s)).join(""),y=[buildStudentDetailMobileInfoItem("学校",r),buildStudentDetailMobileInfoItem("考号",d),buildStudentDetailMobileInfoItem("考场",f),buildStudentDetailMobileInfoItem("T分",c,"is-accent")].join(""),b=[buildStudentDetailMobileInfoItem(u,g),buildStudentDetailMobileInfoItem(p,h),s?buildStudentDetailMobileInfoItem("总分县排",m):"",a?buildStudentDetailMobileInfoItem("总分镇排",S):""].join("");return`
         <tr class="student-detail-mobile-row">
             <td colspan="100" class="student-detail-mobile-cell">
                 <article class="student-detail-mobile-card">
                     <div class="student-detail-mobile-head">
                         <div>
                             <a href="javascript:void(0)" class="student-detail-mobile-name" onclick="jumpToStudent('${e.name}', '${e.school}', '${e.class}')">${tmEscapeHtml(e.name||"-")}</a>
-                            <div class="student-detail-mobile-submeta">${tmEscapeHtml(`${s} · ${r}`)}</div>
+                            <div class="student-detail-mobile-submeta">${tmEscapeHtml(`${r} · ${i}`)}</div>
                         </div>
                         <div class="student-detail-mobile-score-summary">
                             <span>总分</span>
-                            <strong>${tmEscapeHtml(i)}</strong>
+                            <strong>${tmEscapeHtml(l)}</strong>
                         </div>
                     </div>
                     <div class="student-detail-mobile-meta-grid">
-                        ${S}
+                        ${y}
                     </div>
                     <div class="student-detail-mobile-rank-grid">
-                        ${E}
+                        ${b}
                     </div>
                     <div class="student-detail-mobile-subject-grid">
-                        ${m}
+                        ${E}
                     </div>
                 </article>
             </td>

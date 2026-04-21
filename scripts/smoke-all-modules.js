@@ -583,13 +583,21 @@ async function runModuleDeepCheck(page, id) {
                 rootReady: !!document.getElementById('county-analysis-root'),
                 renderReady: typeof window.renderCountyAnalysis === 'function',
                 scopeReady: !!window.CountyAnalysisRuntime && typeof window.CountyAnalysisRuntime.applyCountyRanks === 'function',
-                exportReady: typeof window.exportCountyAnalysisSection === 'function'
+                exportReady: typeof window.exportCountyAnalysisSection === 'function',
+                teacherRankReady: !!window.COUNTY_TEACHER_RANKINGS,
+                subjectCountyRankReady: Array.isArray(window.SUBJECTS) && window.SUBJECTS.length > 0
+                    ? (window.RAW_DATA || []).some((student) => window.SUBJECTS.some((subject) => student?.ranks?.[subject]?.county))
+                    : true
             };
             const exportButtons = document.querySelectorAll('#county-analysis-root .county-section-actions button').length;
+            const teacherRankTable = !!document.querySelector('#county-analysis-root .county-teacher-rank-table');
+            const studentSubjectSummary = !!document.querySelector('#county-analysis-root .county-student-subject-summary');
             return {
-                ok: Object.values(checks).every(Boolean) && exportButtons >= 4,
+                ok: Object.values(checks).every(Boolean) && exportButtons >= 4 && teacherRankTable && studentSubjectSummary,
                 checks,
-                exportButtons
+                exportButtons,
+                teacherRankTable,
+                studentSubjectSummary
             };
         });
     }

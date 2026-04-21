@@ -12076,7 +12076,21 @@ function buildStudentDetailMobileInfoItem(label, value, accentClass = '') {
     `;
 }
 
-function buildStudentDetailMobileSubjectCard(student, sub, isTeacher, isClassTeacher, townRankVisible) {
+function getStudentCountyRankValue(student, key = 'total') {
+    const fallback = key === 'total' ? (student?.countyRank ?? '-') : '-';
+    const value = safeGet(student, `ranks.${key}.county`, fallback);
+    return value == null || value === '' ? fallback : value;
+}
+
+function hasStudentCountyRankData(list = RAW_DATA, subjects = SUBJECTS) {
+    if (!Array.isArray(list) || list.length === 0) return false;
+    return list.some((student) => {
+        if (getStudentCountyRankValue(student, 'total') !== '-') return true;
+        return (subjects || []).some((subject) => getStudentCountyRankValue(student, subject) !== '-');
+    });
+}
+
+function buildStudentDetailMobileSubjectCard(student, sub, isTeacher, isClassTeacher, townRankVisible, countyRankVisible) {
     const score = student.scores[sub] !== undefined ? student.scores[sub] : '-';
     const t = student.tScores ? (student.tScores[sub] || '-') : '-';
     const clickAttr = `onclick="updateStudentScore('${student.name}', '${student.class}', '${sub}', ${score})"`;
@@ -12091,10 +12105,12 @@ function buildStudentDetailMobileSubjectCard(student, sub, isTeacher, isClassTea
         if (t !== '-') rankChips.push(`<span>T ${tmEscapeHtml(t)}</span>`);
         rankChips.push(`<span>校 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.school`, '-'))}</span>`);
         rankChips.push(`<span>班 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.class`, '-'))}</span>`);
+        if (countyRankVisible) rankChips.push(`<span>县 ${tmEscapeHtml(getStudentCountyRankValue(student, sub))}</span>`);
         if (townRankVisible) rankChips.push(`<span>镇 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.township`, '-'))}</span>`);
     } else {
         rankChips.push(`<span>班 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.class`, '-'))}</span>`);
         rankChips.push(`<span>级 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.school`, '-'))}</span>`);
+        if (countyRankVisible) rankChips.push(`<span>县 ${tmEscapeHtml(getStudentCountyRankValue(student, sub))}</span>`);
         if (townRankVisible) rankChips.push(`<span>镇 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.township`, '-'))}</span>`);
     }
 
@@ -12111,7 +12127,7 @@ function buildStudentDetailMobileSubjectCard(student, sub, isTeacher, isClassTea
     `;
 }
 
-function buildStudentDetailMobileRow(student, visibleSubjects, isTeacher, isClassTeacher, townRankVisible) {
+function buildStudentDetailMobileRow(student, visibleSubjects, isTeacher, isClassTeacher, townRankVisible, countyRankVisible) {
     const schoolText = student.school || '-';
     const classText = student.class || '-';
     const totalText = student.total != null ? student.total : '-';
@@ -12124,10 +12140,11 @@ function buildStudentDetailMobileRow(student, visibleSubjects, isTeacher, isClas
         : safeGet(student, 'ranks.total.school', '-');
     const totalRankClassLabel = '总分班排';
     const totalRankClassValue = safeGet(student, 'ranks.total.class', '-');
+    const totalRankCountyValue = getStudentCountyRankValue(student, 'total');
     const totalRankTownValue = safeGet(student, 'ranks.total.township', '-');
 
     const subjectCards = visibleSubjects.map((sub) => (
-        buildStudentDetailMobileSubjectCard(student, sub, isTeacher, isClassTeacher, townRankVisible)
+        buildStudentDetailMobileSubjectCard(student, sub, isTeacher, isClassTeacher, townRankVisible, countyRankVisible)
     )).join('');
 
     const metaCards = [
@@ -12140,6 +12157,7 @@ function buildStudentDetailMobileRow(student, visibleSubjects, isTeacher, isClas
     const rankCards = [
         buildStudentDetailMobileInfoItem(totalRankLabel, totalRankValue),
         buildStudentDetailMobileInfoItem(totalRankClassLabel, totalRankClassValue),
+        countyRankVisible ? buildStudentDetailMobileInfoItem('总分县排', totalRankCountyValue) : '',
         townRankVisible ? buildStudentDetailMobileInfoItem('总分镇排', totalRankTownValue) : ''
     ].join('');
 
