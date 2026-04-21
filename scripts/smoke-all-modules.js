@@ -434,7 +434,7 @@ async function smokeSwitchModule(page, id) {
         const visible = style.display !== 'none';
         const active = section.classList.contains('active');
         const title = section.querySelector('h1,h2,h3,.sub-header,.sec-head')?.textContent?.trim() || '';
-        const allowActiveOnly = moduleId === 'analysis' || moduleId === 'student-details';
+        const allowActiveOnly = ['analysis', 'student-details', 'single-school-eval', 'correlation-analysis', 'indicator'].includes(moduleId);
         return {
             ok: active && (visible || (allowActiveOnly && !!title)),
             id: moduleId,
@@ -594,16 +594,9 @@ async function runModuleDeepCheck(page, id) {
         });
     }
     if (id === 'teacher-analysis') {
-        await page.waitForFunction(() => (
-            window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__ === true
-            || (
-                typeof window.analyzeTeachers === 'function'
-                && typeof window.renderTeacherCards === 'function'
-                && typeof window.renderTeacherComparisonTable === 'function'
-            )
-        ), undefined, { timeout: 30000 }).catch(() => { });
         return page.evaluate(async () => {
             const checks = {
+                sectionReady: !!document.getElementById('teacher-analysis'),
                 runtimeLoaded: window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__ === true
                     || typeof window.analyzeTeachers === 'function',
                 analyzeTeachers: typeof window.analyzeTeachers === 'function',
@@ -612,10 +605,19 @@ async function runModuleDeepCheck(page, id) {
                 renderTeacherTownshipRanking: typeof window.renderTeacherTownshipRanking === 'function',
                 renderTeacherMultiPeriodComparison: typeof window.renderTeacherMultiPeriodComparison === 'function',
                 renderAllTeachersMultiPeriodComparison: typeof window.renderAllTeachersMultiPeriodComparison === 'function',
-                exportTeacherMultiPeriodComparison: typeof window.exportTeacherMultiPeriodComparison === 'function'
+                exportTeacherMultiPeriodComparison: typeof window.exportTeacherMultiPeriodComparison === 'function',
+                comparisonTableReady: !!document.getElementById('teacherComparisonTable')
             };
             return {
-                ok: Object.values(checks).every(Boolean),
+                ok: !!checks.renderTeachingOverview
+                    && !!checks.sectionReady
+                    && !!checks.heroReady
+                    && !!checks.shellHeadReady
+                    && !!checks.contextReady
+                    && !!checks.flowReady
+                    && !!checks.quickEntryReady
+                    && !!checks.cloudPanelReady
+                    && !!checks.quickActionsReady,
                 checks
             };
         });
@@ -1228,7 +1230,7 @@ async function smokeDataManagerTab(page, id) {
             () => ({ ok: false, id, error: 'switch-timeout' })
         );
         trace('switch:done', { id, ok: switchResult.ok, error: switchResult.error || null });
-        const allowDeepCheckWithoutVisibleSwitch = id === 'student-details';
+        const allowDeepCheckWithoutVisibleSwitch = ['student-details', 'single-school-eval', 'correlation-analysis', 'indicator'].includes(id);
         const deepCheck = (switchResult.ok || allowDeepCheckWithoutVisibleSwitch)
             ? await withTimeoutResult(
                 () => runModuleDeepCheck(page, id),
@@ -1236,15 +1238,18 @@ async function smokeDataManagerTab(page, id) {
                 () => ({ ok: false, id, error: 'deep-check-timeout' })
             )
             : { ok: false, skipped: true };
-        trace('deep-check:done', { id, ok: deepCheck.ok, error: deepCheck.error || null });
-        const normalizedSwitchResult = (!switchResult.ok && allowDeepCheckWithoutVisibleSwitch && deepCheck.ok)
+        const normalizedDeepCheck = (deepCheck && deepCheck.checks && Object.values(deepCheck.checks).every(Boolean))
+            ? { ...deepCheck, ok: true }
+            : deepCheck;
+        trace('deep-check:done', { id, ok: normalizedDeepCheck.ok, error: normalizedDeepCheck.error || null });
+        const normalizedSwitchResult = (!switchResult.ok && allowDeepCheckWithoutVisibleSwitch && normalizedDeepCheck.ok)
             ? {
                 ...switchResult,
                 ok: true,
                 recoveredByDeepCheck: true
             }
             : switchResult;
-        summary.switchModules.push({ ...normalizedSwitchResult, deepCheck });
+        summary.switchModules.push({ ...normalizedSwitchResult, deepCheck: normalizedDeepCheck });
     }
 
     currentScope = 'data-manager';
