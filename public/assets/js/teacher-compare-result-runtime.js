@@ -117,6 +117,11 @@ function buildTeacherStatsForExam(rows, school, subjectFilter) {
 }
 
 function attachTeacherTownshipAvgRank(rows, school, teacherStatsList) {
+    const townshipSchoolSet = new Set(
+        typeof window.getTownshipManagedSchoolNames === 'function'
+            ? window.getTownshipManagedSchoolNames((rows || []).map((row) => row?.school).filter(Boolean))
+            : []
+    );
     const subjectSet = [...new Set(teacherStatsList.map(x => x.subject))];
     subjectSet.forEach(subject => {
         const ranking = [];
@@ -127,6 +132,7 @@ function attachTeacherTownshipAvgRank(rows, school, teacherStatsList) {
         const schoolScores = {};
         rows.forEach(r => {
             if (r.school === school) return;
+            if (townshipSchoolSet.size && !townshipSchoolSet.has(r.school)) return;
             const score = parseFloat(r.scores?.[subject]);
             if (isNaN(score)) return;
             if (!schoolScores[r.school]) schoolScores[r.school] = [];

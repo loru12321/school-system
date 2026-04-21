@@ -202,6 +202,11 @@
             return;
         }
 
+        const townshipSchoolSet = new Set(
+            typeof window.getTownshipManagedSchoolNames === 'function'
+                ? window.getTownshipManagedSchoolNames(Object.keys(window.SCHOOLS || {}))
+                : Object.keys(window.SCHOOLS || {})
+        );
         const townshipAverages = {};
         (window.SUBJECTS || []).forEach((subject) => {
             if (visibleSubjectSet && visibleSubjectSet.size > 0 && !visibleSubjectSet.has(normalizeSubjectFn(subject))) return;
@@ -211,7 +216,7 @@
             let count = 0;
             Object.keys(window.SCHOOLS || {}).forEach((schoolName) => {
                 const metrics = window.SCHOOLS?.[schoolName]?.metrics?.[subject];
-                if (!metrics || schoolName === window.MY_SCHOOL) return;
+                if (!metrics || schoolName === window.MY_SCHOOL || (townshipSchoolSet.size && !townshipSchoolSet.has(schoolName))) return;
                 totalAvg += teacherToNumber(metrics.avg, 0);
                 totalExc += teacherToNumber(metrics.excRate, 0);
                 totalPass += teacherToNumber(metrics.passRate, 0);

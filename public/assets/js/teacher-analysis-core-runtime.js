@@ -1072,6 +1072,11 @@
     function calculateTeacherTownshipRanking() {
         window.TEACHER_TOWNSHIP_RANKINGS = {};
         window.TOWNSHIP_RANKING_DATA = {};
+        const townshipSchoolSet = new Set(
+            typeof window.getTownshipManagedSchoolNames === 'function'
+                ? window.getTownshipManagedSchoolNames(Object.keys(window.SCHOOLS || {}))
+                : Object.keys(window.SCHOOLS || {})
+        );
         (window.SUBJECTS || []).forEach((subject) => {
             const rankingData = [];
             Object.keys(window.TEACHER_STATS || {}).forEach((teacherName) => {
@@ -1089,7 +1094,7 @@
             });
             Object.keys(window.SCHOOLS || {}).forEach((schoolName) => {
                 const metrics = window.SCHOOLS?.[schoolName]?.metrics?.[subject];
-                if (!metrics || schoolName === window.MY_SCHOOL) return;
+                if (!metrics || schoolName === window.MY_SCHOOL || (townshipSchoolSet.size && !townshipSchoolSet.has(schoolName))) return;
                 rankingData.push({
                     name: schoolName,
                     type: 'school',

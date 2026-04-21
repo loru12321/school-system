@@ -162,7 +162,7 @@
         const exam3Sel = document.getElementById('studentCompareExam3');
         if (!schoolSel || !exam1Sel || !exam2Sel || !exam3Sel) return;
 
-        const schoolList = listAvailableSchoolsForCompare();
+        const schoolList = listAvailableSchoolsForCompare('all');
         schoolSel.innerHTML = '<option value="">--请选择学校--</option>';
         schoolList.forEach(s => schoolSel.innerHTML += `<option value="${s}">${s}</option>`);
         if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) {

@@ -541,6 +541,109 @@ function listAvailableSchoolsForCompare() {
         .sort((a, b) => a.localeCompare(b, 'zh-CN'));
 }
 
+function collectAvailableCompareSchools() {
+    return listAvailableSchoolsForCompare('all');
+}
+
+function isAggregateCompareSchoolName(name) {
+    const text = String(name || '').trim();
+    if (!text) return true;
+    return /^(?:\u6574\u4f53|\u5168\u90e8|\u6c47\u603b|\u603b\u8868|\u5408\u8ba1|\u5168\u53bf|\u53bf\u57df|Sheet\d*|\u5de5\u4f5c\u8868\d*)$/i.test(text);
+}
+
+function getTownshipManagedSchoolNames(candidateNames = []) {
+    ensureNormalizedTargets();
+    const currentNames = Array.from(new Set(
+        (Array.isArray(candidateNames) && candidateNames.length ? candidateNames : listAvailableSchoolsForCompare('all'))
+            .map((name) => String(name || '').trim())
+            .filter((name) => name && !isAggregateCompareSchoolName(name))
+    ));
+    if (!currentNames.length) return [];
+
+    const targetKeys = Object.keys(window.TARGETS && typeof window.TARGETS === 'object' ? window.TARGETS : {});
+    if (!targetKeys.length) return [];
+
+    const matched = targetKeys
+        .map((rawName) => resolveSchoolNameFromCollection(currentNames, rawName) || getCanonicalSchoolName(rawName, currentNames))
+        .filter((name) => currentNames.includes(name));
+
+    return Array.from(new Set(matched)).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+}
+
+function getCountyDirectSchoolNames(candidateNames = []) {
+    const currentNames = Array.from(new Set(
+        (Array.isArray(candidateNames) && candidateNames.length ? candidateNames : listAvailableSchoolsForCompare('all'))
+            .map((name) => String(name || '').trim())
+            .filter((name) => name && !isAggregateCompareSchoolName(name))
+    ));
+    if (!currentNames.length) return [];
+    const townshipSet = new Set(getTownshipManagedSchoolNames(currentNames));
+    return currentNames.filter((name) => !townshipSet.has(name)).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+}
+
+function isTownshipManagedSchool(name, candidateNames = []) {
+    const school = String(name || '').trim();
+    if (!school || isAggregateCompareSchoolName(school)) return false;
+    const townshipSet = new Set(getTownshipManagedSchoolNames(candidateNames));
+    return townshipSet.has(school);
+}
+
+function filterRowsToTownshipSchools(rows, schoolNameResolver = null) {
+    const list = Array.isArray(rows) ? rows : [];
+    if (!list.length) return [];
+    const resolver = typeof schoolNameResolver === 'function'
+        ? schoolNameResolver
+        : ((row) => row?.school);
+    const candidateNames = Array.from(new Set(
+        list.map((row) => String(resolver(row) || '').trim()).filter(Boolean)
+    ));
+    const townshipSet = new Set(getTownshipManagedSchoolNames(candidateNames));
+    if (!townshipSet.size) return list.slice();
+    return list.filter((row) => townshipSet.has(String(resolver(row) || '').trim()));
+}
+
+function listAvailableSchoolsForCompare(scope = 'township') {
+    const allSchools = (() => {
+        const names = new Map();
+        const collectName = (rawName) => {
+            const school = String(rawName || '').trim();
+            if (!school) return;
+            const key = normalizeSchoolName(school) || school;
+            const existing = names.get(key);
+            names.set(key, existing ? pickPreferredSchoolDisplayName(existing, school) : school);
+        };
+
+        Object.keys(SCHOOLS || {}).forEach(collectName);
+        (RAW_DATA || []).forEach((row) => collectName(row?.school));
+        Object.values(window.TEACHER_SCHOOL_MAP || {}).forEach(collectName);
+
+        const persistedSchool = String(localStorage.getItem('MY_SCHOOL') || '').trim();
+        const runtimeSchool = String(MY_SCHOOL || '').trim();
+        if (persistedSchool) collectName(persistedSchool);
+        if (runtimeSchool) collectName(runtimeSchool);
+
+        const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+        if (db?.exams) {
+            Object.values(db.exams).forEach((exam) => {
+                (exam?.data || []).forEach((row) => collectName(row?.school));
+            });
+        }
+
+        const blockList = ['鏁欒偛灞€', '鏁欎綋灞€', '甯傚眬', '鍖哄眬', '甯傜洿灞€', '鍖虹洿灞€', 'admin', '娴嬭瘯', '榛樿'];
+        return [...names.values()]
+            .filter((name) => {
+                if (!name || /^Sheet\d+$/i.test(name)) return false;
+                if (isAggregateCompareSchoolName(name)) return false;
+                return !blockList.some((blocked) => name.includes(blocked) || name.toLowerCase() === blocked);
+            })
+            .sort((a, b) => a.localeCompare(b, 'zh-CN'));
+    })();
+
+    if (String(scope || '').toLowerCase() === 'all') return allSchools;
+    const townshipSchools = getTownshipManagedSchoolNames(allSchools);
+    return townshipSchools.length ? townshipSchools : allSchools;
+}
+
 function getClassSchoolMapForAllData() {
     const map = {};
 
@@ -618,6 +721,12 @@ function inferDefaultSchoolFromContext() {
         getEquivalentSchoolStudents,
         buildIndicatorSchoolBuckets,
         syncIndicatorScoreToSchools,
+        collectAvailableCompareSchools,
+        isAggregateCompareSchoolName,
+        getTownshipManagedSchoolNames,
+        getCountyDirectSchoolNames,
+        isTownshipManagedSchool,
+        filterRowsToTownshipSchools,
         listAvailableSchoolsForCompare,
         getClassSchoolMapForAllData,
         inferDefaultSchoolFromContext

@@ -562,10 +562,15 @@ function getSummaryEntryBySchool(summary, school) {
     return bestKey ? summary[bestKey] : null;
 }
 
-function buildSchoolSummaryForExam(rows) {
+function buildSchoolSummaryForExam(rows, scope = 'township') {
     const summary = {};
     const grouped = {};
-    (rows || []).forEach(r => {
+    const sourceRows = String(scope || '').toLowerCase() === 'all'
+        ? (Array.isArray(rows) ? rows : [])
+        : (typeof filterRowsToTownshipSchools === 'function'
+            ? filterRowsToTownshipSchools(rows)
+            : (Array.isArray(rows) ? rows : []));
+    sourceRows.forEach(r => {
         const school = String(r.school || '').trim();
         if (!school) return;
         if (!grouped[school]) grouped[school] = [];
