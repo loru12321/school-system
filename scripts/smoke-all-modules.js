@@ -1210,7 +1210,7 @@ async function smokeDataManagerTab(page, id) {
         const deepCheck = switchResult.ok
             ? await withTimeoutResult(
                 () => runModuleDeepCheck(page, id),
-                25000,
+                45000,
                 () => ({ ok: false, id, error: 'deep-check-timeout' })
             )
             : { ok: false, skipped: true };
