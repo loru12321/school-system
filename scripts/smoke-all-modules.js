@@ -7,6 +7,12 @@ try {
 
 const { chromium } = require('playwright');
 
+function trace(message, extra = undefined) {
+    if (!process.env.SMOKE_TRACE) return;
+    const suffix = extra === undefined ? '' : ` ${JSON.stringify(extra)}`;
+    console.error(`[smoke] ${new Date().toISOString()} ${message}${suffix}`);
+}
+
 const SWITCH_MODULE_IDS = [
     'starter-hub',
     'upload',
@@ -427,7 +433,7 @@ async function smokeSwitchModule(page, id) {
             if (typeof window.switchTab !== 'function') {
                 throw new Error('switchTab is not available');
             }
-            window.switchTab(moduleId);
+            window.setTimeout(() => window.switchTab(moduleId), 0);
         }, id);
 
         await page.waitForFunction((moduleId) => {
@@ -451,9 +457,11 @@ async function smokeSwitchModule(page, id) {
     }
 
     let result = await collectState();
-    if (!result.ok) {
-        await page.evaluate((moduleId) => {
-            if (typeof window.switchTab === 'function') window.switchTab(moduleId);
+        if (!result.ok) {
+            await page.evaluate((moduleId) => {
+            if (typeof window.switchTab === 'function') {
+                window.setTimeout(() => window.switchTab(moduleId), 0);
+            }
         }, id);
         await page.waitForTimeout(1200);
         result = await collectState();
@@ -1111,6 +1119,21 @@ async function smokeDataManagerTab(page, id) {
         errors.push({ scope: currentScope, type: 'pageerror', message: error.message });
     });
 
+    page.on('dialog', async dialog => {
+        trace('dialog', { scope: currentScope, type: dialog.type(), message: dialog.message().slice(0, 120) });
+        try {
+            if (dialog.type() === 'confirm') {
+                await dialog.accept();
+            } else if (dialog.type() === 'prompt') {
+                await dialog.accept('');
+            } else {
+                await dialog.dismiss();
+            }
+        } catch (_) {
+            // Dialog may already be closed by the app under test.
+        }
+    });
+
     page.on('requestfailed', request => {
         recentFailedRequests.push({
             url: request.url(),
@@ -1132,8 +1155,11 @@ async function smokeDataManagerTab(page, id) {
         errors.push({ scope: currentScope, type: 'console', message: text });
     });
 
+    trace('login:start');
     await login(page, user, pass);
+    trace('login:done');
     await waitForAppReady(page);
+    trace('app-ready:done');
 
     const summary = {
         login: await page.evaluate(() => ({
@@ -1160,11 +1186,13 @@ async function smokeDataManagerTab(page, id) {
 
     for (const id of SWITCH_MODULE_IDS) {
         currentScope = `switch:${id}`;
+        trace('switch:start', { id });
         const switchResult = await withTimeoutResult(
             () => smokeSwitchModule(page, id),
             20000,
             () => ({ ok: false, id, error: 'switch-timeout' })
         );
+        trace('switch:done', { id, ok: switchResult.ok, error: switchResult.error || null });
         const deepCheck = switchResult.ok
             ? await withTimeoutResult(
                 () => runModuleDeepCheck(page, id),
@@ -1172,18 +1200,23 @@ async function smokeDataManagerTab(page, id) {
                 () => ({ ok: false, id, error: 'deep-check-timeout' })
             )
             : { ok: false, skipped: true };
+        trace('deep-check:done', { id, ok: deepCheck.ok, error: deepCheck.error || null });
         summary.switchModules.push({ ...switchResult, deepCheck });
     }
 
     currentScope = 'data-manager';
+    trace('data-manager:switch-upload:start');
     await smokeSwitchModule(page, 'upload');
+    trace('data-manager:switch-upload:done');
     for (const id of DATA_MANAGER_TABS) {
         currentScope = `dm:${id}`;
+        trace('data-manager-tab:start', { id });
         summary.dataManagerTabs.push(await withTimeoutResult(
             () => smokeDataManagerTab(page, id),
             15000,
             () => ({ ok: false, id, error: 'data-manager-timeout' })
         ));
+        trace('data-manager-tab:done', { id, ok: summary.dataManagerTabs[summary.dataManagerTabs.length - 1].ok });
     }
 
     currentScope = 'final';

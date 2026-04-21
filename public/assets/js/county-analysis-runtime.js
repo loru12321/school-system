@@ -200,7 +200,7 @@
     }
 
     function getTeacherRows(limit = 12) {
-        if ((!window.TEACHER_STATS || !Object.keys(window.TEACHER_STATS).length) && typeof window.analyzeTeachers === 'function') {
+        if (!hasTeacherStats() && hasTeacherAssignments() && typeof window.analyzeTeachers === 'function') {
             try {
                 window.analyzeTeachers();
             } catch (error) {
@@ -889,12 +889,14 @@
         const root = document.getElementById('county-analysis-root');
         if (!root) return;
         const scope = applyCountyRanks();
-        void ensureTeacherContextForCountyAnalysis().then((result) => {
-            const isCountyVisible = document.getElementById('county-analysis')?.classList?.contains('active');
-            if (result?.changed && isCountyVisible) {
-                renderCountyAnalysis();
-            }
-        });
+        window.setTimeout(() => {
+            void ensureTeacherContextForCountyAnalysis().then((result) => {
+                const isCountyVisible = document.getElementById('county-analysis')?.classList?.contains('active');
+                if (result?.changed && isCountyVisible) {
+                    renderCountyAnalysis();
+                }
+            });
+        }, 0);
         const names = getSchoolNames();
         const countyCount = scope.countySchools?.length || 0;
         const townshipCount = scope.townshipSchools?.length || 0;
