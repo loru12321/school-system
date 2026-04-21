@@ -5,7 +5,8 @@
     const HISTORY_KEY = 'COUNTY_ANALYSIS_HISTORY_V1';
     const state = {
         promptArmed: false,
-        lastSignature: ''
+        lastSignature: '',
+        teacherContextPromise: null
     };
 
     function escapeHtml(value) {
@@ -31,6 +32,13 @@
     function formatPercent(value) {
         const num = Number(value);
         return Number.isFinite(num) ? `${(num * 100).toFixed(1)}%` : '-';
+    }
+
+    function withTimeout(task, ms = 5000, fallback = false) {
+        return Promise.race([
+            Promise.resolve(task).catch(() => fallback),
+            new Promise((resolve) => setTimeout(() => resolve(fallback), ms))
+        ]);
     }
 
     function readJson(key, fallback) {
@@ -120,6 +128,75 @@
             .filter((student) => Number.isFinite(Number(student?.total)))
             .slice()
             .sort((a, b) => (a.countyRank || 9999) - (b.countyRank || 9999));
+    }
+
+    function hasTeacherAssignments() {
+        return !!window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0;
+    }
+
+    function hasTeacherStats() {
+        return !!window.TEACHER_STATS && Object.keys(window.TEACHER_STATS).length > 0;
+    }
+
+    function shouldAttemptTeacherCloudLoad() {
+        const host = String(window.location?.hostname || '').trim().toLowerCase();
+        return host && host !== '127.0.0.1' && host !== 'localhost';
+    }
+
+    async function ensureTeacherContextForCountyAnalysis(force = false) {
+        if (!force && state.teacherContextPromise) return state.teacherContextPromise;
+        state.teacherContextPromise = (async () => {
+            let changed = false;
+
+            if (!hasTeacherAssignments() && typeof window.tryAutoRestoreTeacherMap === 'function') {
+                try {
+                    const restored = await withTimeout(window.tryAutoRestoreTeacherMap(), 4000, false);
+                    changed = !!restored || changed;
+                } catch (error) {
+                    console.warn('[county-analysis] tryAutoRestoreTeacherMap failed:', error);
+                }
+            }
+
+            if (!hasTeacherAssignments()
+                && shouldAttemptTeacherCloudLoad()
+                && window.CloudManager
+                && typeof window.CloudManager.loadTeachers === 'function') {
+                try {
+                    const loaded = await withTimeout(window.CloudManager.loadTeachers({
+                        background: true,
+                        toast: false,
+                        blocking: false
+                    }), 5000, false);
+                    changed = !!loaded || changed;
+                } catch (error) {
+                    console.warn('[county-analysis] loadTeachers failed:', error);
+                }
+            }
+
+            if (!hasTeacherStats() && hasTeacherAssignments() && typeof window.analyzeTeachers === 'function') {
+                try {
+                    window.analyzeTeachers();
+                    changed = true;
+                } catch (error) {
+                    console.warn('[county-analysis] analyzeTeachers failed:', error);
+                }
+            }
+
+            if (hasTeacherStats()) {
+                calculateCountyTeacherRanking(getCurrentScope());
+            }
+
+            return {
+                hasTeacherAssignments: hasTeacherAssignments(),
+                hasTeacherStats: hasTeacherStats(),
+                changed
+            };
+        })();
+        try {
+            return await state.teacherContextPromise;
+        } finally {
+            state.teacherContextPromise = null;
+        }
     }
 
     function getTeacherRows(limit = 12) {
@@ -812,6 +889,12 @@
         const root = document.getElementById('county-analysis-root');
         if (!root) return;
         const scope = applyCountyRanks();
+        void ensureTeacherContextForCountyAnalysis().then((result) => {
+            const isCountyVisible = document.getElementById('county-analysis')?.classList?.contains('active');
+            if (result?.changed && isCountyVisible) {
+                renderCountyAnalysis();
+            }
+        });
         const names = getSchoolNames();
         const countyCount = scope.countySchools?.length || 0;
         const townshipCount = scope.townshipSchools?.length || 0;
@@ -1267,6 +1350,7 @@
     window.CountyAnalysisRuntime = {
         applyCountyRanks,
         renderCountyAnalysis,
+        ensureTeacherContextForCountyAnalysis,
         promptCountyScopeIfNeeded,
         decorateAnalysisTable,
         decorateStudentDetails,

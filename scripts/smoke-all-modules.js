@@ -100,6 +100,13 @@ async function waitForPageStability(page, timeout = 15000) {
     await page.waitForTimeout(300);
 }
 
+async function withTimeoutResult(task, timeoutMs, fallbackFactory) {
+    return Promise.race([
+        Promise.resolve().then(task),
+        new Promise((resolve) => setTimeout(() => resolve(fallbackFactory()), timeoutMs))
+    ]);
+}
+
 async function withNavigationRetry(page, task, options = {}) {
     const attempts = Math.max(1, Number(options.attempts || 3));
     let lastError = null;
@@ -574,29 +581,51 @@ async function runModuleDeepCheck(page, id) {
         });
     }
     if (id === 'county-analysis') {
-        return page.evaluate(() => {
+        return page.evaluate(async () => {
+            const waitForTeacherContext = async () => {
+                if (!(window.CountyAnalysisRuntime && typeof window.CountyAnalysisRuntime.ensureTeacherContextForCountyAnalysis === 'function')) {
+                    return;
+                }
+                const timeoutMs = String(window.location?.hostname || '').includes('schoolsystem.com.cn') ? 6000 : 1200;
+                await Promise.race([
+                    Promise.resolve(window.CountyAnalysisRuntime.ensureTeacherContextForCountyAnalysis()).catch(() => null),
+                    new Promise((resolve) => setTimeout(resolve, timeoutMs))
+                ]);
+            };
+            await waitForTeacherContext();
             if (typeof window.renderCountyAnalysis === 'function') {
                 window.renderCountyAnalysis();
             }
+            await waitForTeacherContext();
+            if (typeof window.renderCountyAnalysis === 'function') {
+                window.renderCountyAnalysis();
+            }
+            const teacherRankRows = Object.values(window.COUNTY_TEACHER_RANKINGS || {}).flat().length;
             const checks = {
                 runtimeLoaded: window.__COUNTY_ANALYSIS_RUNTIME_PATCHED__ === true,
                 rootReady: !!document.getElementById('county-analysis-root'),
                 renderReady: typeof window.renderCountyAnalysis === 'function',
                 scopeReady: !!window.CountyAnalysisRuntime && typeof window.CountyAnalysisRuntime.applyCountyRanks === 'function',
                 exportReady: typeof window.exportCountyAnalysisSection === 'function',
-                teacherRankReady: !!window.COUNTY_TEACHER_RANKINGS,
+                teacherRankReady: teacherRankRows > 0 || Object.keys(window.TEACHER_MAP || {}).length === 0,
                 subjectCountyRankReady: Array.isArray(window.SUBJECTS) && window.SUBJECTS.length > 0
                     ? (window.RAW_DATA || []).some((student) => window.SUBJECTS.some((subject) => student?.ranks?.[subject]?.county))
                     : true
             };
             const exportButtons = document.querySelectorAll('#county-analysis-root .county-section-actions button').length;
             const teacherRankTable = !!document.querySelector('#county-analysis-root .county-teacher-rank-table');
+            const teacherEmptyState = !!document.querySelector('#county-analysis-root .county-empty');
             const studentSubjectSummary = !!document.querySelector('#county-analysis-root .county-student-subject-summary');
             return {
-                ok: Object.values(checks).every(Boolean) && exportButtons >= 4 && teacherRankTable && studentSubjectSummary,
+                ok: Object.values(checks).every(Boolean)
+                    && exportButtons >= 4
+                    && (teacherRankRows > 0 ? teacherRankTable : teacherEmptyState)
+                    && studentSubjectSummary,
                 checks,
                 exportButtons,
+                teacherRankRows,
                 teacherRankTable,
+                teacherEmptyState,
                 studentSubjectSummary
             };
         });
@@ -1131,8 +1160,18 @@ async function smokeDataManagerTab(page, id) {
 
     for (const id of SWITCH_MODULE_IDS) {
         currentScope = `switch:${id}`;
-        const switchResult = await smokeSwitchModule(page, id);
-        const deepCheck = switchResult.ok ? await runModuleDeepCheck(page, id) : { ok: false, skipped: true };
+        const switchResult = await withTimeoutResult(
+            () => smokeSwitchModule(page, id),
+            20000,
+            () => ({ ok: false, id, error: 'switch-timeout' })
+        );
+        const deepCheck = switchResult.ok
+            ? await withTimeoutResult(
+                () => runModuleDeepCheck(page, id),
+                25000,
+                () => ({ ok: false, id, error: 'deep-check-timeout' })
+            )
+            : { ok: false, skipped: true };
         summary.switchModules.push({ ...switchResult, deepCheck });
     }
 
@@ -1140,7 +1179,11 @@ async function smokeDataManagerTab(page, id) {
     await smokeSwitchModule(page, 'upload');
     for (const id of DATA_MANAGER_TABS) {
         currentScope = `dm:${id}`;
-        summary.dataManagerTabs.push(await smokeDataManagerTab(page, id));
+        summary.dataManagerTabs.push(await withTimeoutResult(
+            () => smokeDataManagerTab(page, id),
+            15000,
+            () => ({ ok: false, id, error: 'data-manager-timeout' })
+        ));
     }
 
     currentScope = 'final';
