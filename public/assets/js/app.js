@@ -11041,7 +11041,7 @@ function parseRows(rows, defaultSchool) {
     const aliasMap = {
         name: ['姓名', '学生姓名', '学生', 'Name', '考生姓名'],
         id: ['考号', '学号', '准考证号', 'ID', '考生号'],
-        // school: 忽略表内学校列，强制使用Sheet名
+        school: ['学校名称', '学校名', '学校', '校名', '所在学校', '就读学校', '毕业学校', '初中学校', '报名学校', '参考学校', '参考单位', '单位名称', '单位'],
         class: ['班级', '班', '班次', 'Class', '行政班'],
         examRoom: ['考场', '考室', 'Room', '考试地点']
     };
@@ -11051,9 +11051,29 @@ function parseRows(rows, defaultSchool) {
     const excludeKeywords = ['排', '次', '级', 'Rank', '赋分', '标准分', 'T分', '折算', '等级', '优劣'];
 
     // 3. 扫描表头
+    const schoolHeaderExcludeKeywords = ['排名', '名次', '序号', '代码', '编号', '赋分', '得分', '分数', '成绩', '班级', '年级'];
+    const findBestHeaderIndex = (aliases, excludes = []) => {
+        let best = { index: -1, score: -1 };
+        headers.forEach((header, index) => {
+            const text = String(header || '').trim().replace(/\s+/g, '').replace(/[：:]/g, '');
+            if (!text) return;
+            if (excludes.some(ex => text.includes(ex))) return;
+            aliases.forEach(alias => {
+                const key = String(alias || '').trim().replace(/\s+/g, '').replace(/[：:]/g, '');
+                if (!key) return;
+                let score = -1;
+                if (text === key) score = 100 + key.length;
+                else if (text.includes(key)) score = 50 + key.length;
+                if (score > best.score) best = { index, score };
+            });
+        });
+        return best.index;
+    };
+
     headers.forEach((h, i) => {
         const hTrim = h.replace(/\s+/g, '');
         for (const [key, aliases] of Object.entries(aliasMap)) {
+            if (key === 'school') continue;
             if (aliases.some(alias => hTrim.includes(alias))) idxMap[key] = i;
         }
         for (const [key, standardName] of Object.entries(subjectMap)) {
@@ -11064,6 +11084,7 @@ function parseRows(rows, defaultSchool) {
             }
         }
     });
+    idxMap.school = findBestHeaderIndex(aliasMap.school, schoolHeaderExcludeKeywords);
 
     if (CONFIG.analysisSubs && CONFIG.analysisSubs !== 'auto') {
         setSubjects(SUBJECTS.filter(s => CONFIG.analysisSubs.includes(s)));
@@ -11084,6 +11105,8 @@ function parseRows(rows, defaultSchool) {
     };
 
     // 4. 遍历数据 (核心修改区)
+    // 学校列支持逐行填写，也支持 Excel 合并单元格导出的“首行有值、后续空白”格式。
+    let lastDetectedSchool = '';
     for (let i = 1; i < rows.length; i++) {
         const r = rows[i];
         if (!r || !r.length) continue;
@@ -11104,12 +11127,27 @@ function parseRows(rows, defaultSchool) {
             classStr = normalizeClass(r[idxMap.class]);
         }
 
+        const rawSchool = idxMap.school !== -1 ? String(r[idxMap.school] || '').trim() : '';
+        const fallbackSchool = String(defaultSchool || '').trim();
+        const schoolCandidates = [
+            ...Object.keys(SCHOOLS || {}),
+            ...Object.keys(window.TARGETS || {}),
+            rawSchool,
+            fallbackSchool
+        ].filter(Boolean);
+        const detectedSchool = rawSchool
+            ? (typeof getCanonicalSchoolName === 'function'
+                ? (getCanonicalSchoolName(rawSchool, schoolCandidates) || rawSchool)
+                : rawSchool)
+            : '';
+        if (detectedSchool) lastDetectedSchool = detectedSchool;
+        const schoolName = detectedSchool || lastDetectedSchool || fallbackSchool;
+
         const stu = {
             name: nameStr,
             id: idxMap.id !== -1 ? r[idxMap.id] : '-',
 
-            // 强制使用Sheet名作为学校
-            school: defaultSchool,
+            school: schoolName || fallbackSchool || '未知学校',
             class: classStr,
 
             examRoom: idxMap.examRoom !== -1 ? r[idxMap.examRoom] : '-',
