@@ -5,12 +5,24 @@
         return !!(window.SCHOOLS && Object.keys(window.SCHOOLS).length);
     }
 
+    function getTownshipMacroSchools() {
+        const hasScopeHelper = typeof window.listAvailableSchoolsForCompare === 'function';
+        const townshipNames = hasScopeHelper
+            ? window.listAvailableSchoolsForCompare()
+            : Object.keys(window.SCHOOLS || {});
+        const townshipSet = new Set((townshipNames || []).map((name) => String(name || '').trim()).filter(Boolean));
+        if (hasScopeHelper && !townshipSet.size) return [];
+        return Object.values(window.SCHOOLS || {}).filter((school) => (
+            !townshipSet.size || townshipSet.has(String(school?.name || '').trim())
+        ));
+    }
+
     function getSortedSchoolNames() {
-        return Object.values(window.SCHOOLS || {})
+        return getTownshipMacroSchools()
             .slice()
             .sort((left, right) => {
-                const leftRank = Number(left?.rank2Rate || left?.countyRank2Rate || 9999);
-                const rightRank = Number(right?.rank2Rate || right?.countyRank2Rate || 9999);
+                const leftRank = Number(left?.rank2Rate || 9999);
+                const rightRank = Number(right?.rank2Rate || 9999);
                 return leftRank - rightRank || String(left?.name || '').localeCompare(String(right?.name || ''), 'zh-CN');
             })
             .map((school) => school.name)
@@ -260,7 +272,7 @@
         headerRow.push('赋分-均分', '赋分-优率', '赋分-及格', '两率一分总分', '排名');
 
         const summaryData = [headerRow];
-        const list = Object.values(window.SCHOOLS || {}).slice().sort((a, b) => (a.rank2Rate || 9999) - (b.rank2Rate || 9999));
+        const list = getTownshipMacroSchools().slice().sort((a, b) => (a.rank2Rate || 9999) - (b.rank2Rate || 9999));
         list.forEach((school) => {
             const metric = school.metrics?.total || {};
             const row = [
@@ -291,7 +303,7 @@
         (window.SUBJECTS || []).forEach((subject) => {
             const subHeaders = ['学校名称', '实考人数', '平均分', '优秀率', '及格率', '均分排名', '优率排名', '及格排名'];
             const subData = [subHeaders];
-            const subList = Object.values(window.SCHOOLS || {})
+            const subList = getTownshipMacroSchools()
                 .filter((school) => school.metrics?.[subject])
                 .sort((a, b) => ((a.rankings?.[subject]?.avg || 9999) - (b.rankings?.[subject]?.avg || 9999)));
             subList.forEach((school) => {

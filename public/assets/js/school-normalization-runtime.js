@@ -573,12 +573,10 @@ function getTownshipManagedSchoolNames(candidateNames = []) {
 
     const targetKeys = Object.keys(window.TARGETS && typeof window.TARGETS === 'object' ? window.TARGETS : {});
 
+    // Only schools that can be resolved from targetKeys are considered township schools
     const matched = targetKeys
         .map((rawName) => resolveSchoolNameFromCollection(currentNames, rawName) || getCanonicalSchoolName(rawName, currentNames))
         .filter((name) => currentNames.includes(name));
-    currentNames
-        .filter((name) => isLikelyTownshipSchoolName(name))
-        .forEach((name) => matched.push(name));
 
     return Array.from(new Set(matched)).sort((a, b) => a.localeCompare(b, 'zh-CN'));
 }
@@ -611,7 +609,7 @@ function filterRowsToTownshipSchools(rows, schoolNameResolver = null) {
         list.map((row) => String(resolver(row) || '').trim()).filter(Boolean)
     ));
     const townshipSet = new Set(getTownshipManagedSchoolNames(candidateNames));
-    if (!townshipSet.size) return list.slice();
+    if (!townshipSet.size) return [];
     return list.filter((row) => townshipSet.has(String(resolver(row) || '').trim()));
 }
 
@@ -654,7 +652,7 @@ function listAvailableSchoolsForCompare(scope = 'township') {
 
     if (String(scope || '').toLowerCase() === 'all') return allSchools;
     const townshipSchools = getTownshipManagedSchoolNames(allSchools);
-    return townshipSchools.length ? townshipSchools : allSchools;
+    return townshipSchools;
 }
 
 function getClassSchoolMapForAllData() {

@@ -109,6 +109,7 @@
     }
 
     function getSystemDataApiUrl() {
+        if (root && root.__API_FALLBACK_ACTIVE__) return '';
         return getProxyOrigin();
     }
 

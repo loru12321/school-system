@@ -7,7 +7,9 @@
         promptArmed: false,
         lastSignature: '',
         teacherContextPromise: null,
-        preUploadTownshipSchools: []
+        preUploadTownshipSchools: [],
+        isRendering: false,
+        lastRankSignature: ''
     };
 
     function escapeHtml(value) {
@@ -132,10 +134,13 @@
     }
 
     function getDataSignature() {
+        const targetKeys = Object.keys(window.TARGETS && typeof window.TARGETS === 'object' ? window.TARGETS : {})
+            .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'));
         return [
             getExamKey(),
             Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
-            getSchoolNames().join('|')
+            getSchoolNames().join('|'),
+            targetKeys.join('|')
         ].join('::');
     }
 
@@ -163,48 +168,21 @@
 
     function getBestKnownTownshipSchools(names, existingScope = null) {
         const currentNames = Array.isArray(names) ? names.filter(Boolean) : getSchoolNames();
-        const nameSet = new Set(currentNames);
-        const shouldDropAggregateNames = currentNames.filter((name) => !isAggregateSchoolName(name)).length > 1;
-        const candidates = [];
-        const pushCandidate = (scope, sourceWeight = 0) => {
-            const list = Array.isArray(scope?.townshipSchools)
-                ? scope.townshipSchools.filter((name) => nameSet.has(name) && (!shouldDropAggregateNames || !isAggregateSchoolName(name)))
-                : [];
-            if (!list.length) return;
-            const countyList = Array.isArray(scope?.countySchools)
-                ? scope.countySchools.filter((name) => nameSet.has(name))
-                : [];
-            candidates.push({
-                list,
-                score: sourceWeight + list.length * 10 + countyList.length + (scope?.includesCounty ? 5 : 0)
-            });
-        };
-
-        pushCandidate({ includesCounty: false, townshipSchools: getTargetManagedTownshipSchools(currentNames) }, 2000);
-        pushCandidate(existingScope, 1000);
-        pushCandidate({ includesCounty: false, townshipSchools: state.preUploadTownshipSchools }, 900);
-        const scopeMap = getScopeMap();
-        Object.values(scopeMap || {}).forEach((scope) => pushCandidate(scope, 0));
-
-        candidates.sort((a, b) => b.score - a.score);
-        return candidates[0]?.list || [];
+        return getTargetManagedTownshipSchools(currentNames);
     }
 
     function normalizeScope(scope) {
         const names = getSchoolNames();
         const nameSet = new Set(names);
         const inferredTownshipSchools = getTargetManagedTownshipSchools(names);
-        const townshipSchools = Array.from(new Set([
-            ...(scope?.townshipSchools || []),
-            ...inferredTownshipSchools
-        ])).filter((name) => nameSet.has(name));
+        const townshipSchools = Array.from(new Set(inferredTownshipSchools)).filter((name) => nameSet.has(name));
         const townshipSet = new Set(townshipSchools);
         const countySchools = names.filter((name) => !townshipSet.has(name));
         return {
             examKey: getExamKey(),
             includesCounty: !!scope?.includesCounty,
-            townshipSchools: townshipSchools.length ? townshipSchools : names,
-            countySchools: townshipSchools.length ? countySchools : [],
+            townshipSchools,
+            countySchools,
             signature: scope?.signature || getDataSignature(),
             updatedAt: scope?.updatedAt || new Date().toISOString()
         };
@@ -463,37 +441,6 @@
 
     function buildTeacherPortraitExportRows() {
         return [
-            ['序位', '教师', '学科', '综合得分', '均分', '优秀率', '及格率', '样本人数', '风险级别'],
-            ...getTeacherRows(Number.POSITIVE_INFINITY).map((row, index) => ([
-                index + 1,
-                row.teacherName || '',
-                row.subject || '',
-                formatNumber(row.score, 1),
-                formatNumber(row.avg, 1),
-                formatPercent(row.excellentRate),
-                formatPercent(row.passRate),
-                row.studentCount || 0,
-                row.riskLevel || 'normal'
-            ]))
-        ];
-    }
-
-    function buildStudentArchiveExportRows() {
-        return [
-            ['乡镇排名', '县排名', '学生', '学校', '班级', '总分'],
-            ...getStudentArchiveData().map((student) => ([
-                student.townshipRank || '-',
-                student.countyRank || '-',
-                student.name || '',
-                student.school || '',
-                student.class || '',
-                formatNumber(student.total, 1)
-            ]))
-        ];
-    }
-
-    function buildTeacherPortraitExportRows() {
-        return [
             ['序位', '教师', '学科', '综合得分', '均分', '优秀率', '及格率', '样本人数', '县域均分排', '县域优秀率排', '县域及格率排', '对标总量', '风险级别'],
             ...getTeacherRows(Number.POSITIVE_INFINITY).map((row, index) => ([
                 index + 1,
@@ -514,8 +461,9 @@
     }
 
     function buildStudentArchiveExportRows() {
+        const subjects = window.SUBJECTS || [];
         return [
-            ['乡镇排名', '县排名', '学生', '学校', '班级', '总分', '学科县排速览', ...(window.SUBJECTS || []).flatMap((subject) => [`${subject}乡排`, `${subject}县排`])],
+            ['乡镇排名', '县排名', '学生', '学校', '班级', '总分', '学科县排速览', ...subjects.flatMap((s) => [`${s}乡排`, `${s}县排`])],
             ...getStudentArchiveData().map((student) => ([
                 student.townshipRank || '-',
                 student.countyRank || '-',
@@ -524,9 +472,9 @@
                 student.class || '',
                 formatNumber(student.total, 1),
                 buildStudentSubjectRankSummary(student),
-                ...(window.SUBJECTS || []).flatMap((subject) => [
-                    student?.ranks?.[subject]?.township ?? '-',
-                    student?.ranks?.[subject]?.county ?? '-'
+                ...subjects.flatMap((s) => [
+                    student?.ranks?.[s]?.township ?? '-',
+                    student?.ranks?.[s]?.county ?? '-'
                 ])
             ]))
         ];
@@ -569,6 +517,11 @@
 
     function exportCountyAnalysisSection(section) {
         const examKey = getExamKey();
+        const key = String(section || '').trim();
+        if (key === 'student') {
+            if (window.UI?.toast) window.UI.toast('学生县排名已移到“学生档案查询”的学生考试明细中，县域质量排名不再单独导出学生档案县排。', 'info');
+            return;
+        }
         const exporters = {
             rank: {
                 fileName: `县域两率一分排名_${examKey}.xlsx`,
@@ -577,10 +530,6 @@
             teacher: {
                 fileName: `县域教师画像_${examKey}.xlsx`,
                 sheets: [{ name: '教师画像', rows: buildTeacherPortraitExportRows() }]
-            },
-            student: {
-                fileName: `县域学生档案_${examKey}.xlsx`,
-                sheets: [{ name: '学生县排', rows: buildStudentArchiveExportRows() }]
             },
             history: {
                 fileName: `县域历史对比_${examKey}.xlsx`,
@@ -591,12 +540,11 @@
                 sheets: [
                     { name: '县域排名', rows: buildCountyRankExportRows() },
                     { name: '教师画像', rows: buildTeacherPortraitExportRows() },
-                    { name: '学生县排', rows: buildStudentArchiveExportRows() },
                     { name: '历史对比', rows: buildHistoryCompareExportRows() }
                 ]
             }
         };
-        const target = exporters[String(section || '').trim()] || exporters.all;
+        const target = exporters[key] || exporters.all;
         exportWorkbook(target.fileName, target.sheets);
         if (window.UI?.toast) window.UI.toast('✅ 县域分析导出完成', 'success');
     }
@@ -616,27 +564,13 @@
         const knownTownshipSet = new Set(knownTownshipSchools);
         const inferredCountySchools = knownTownshipSchools.length
             ? names.filter((name) => !knownTownshipSet.has(name))
-            : [];
+            : names.slice();
 
-        let includesCounty = inferredCountySchools.length > 0;
-        let townshipSchools = knownTownshipSchools.length ? knownTownshipSchools : names;
+        const includesCounty = inferredCountySchools.length > 0;
+        const townshipSchools = knownTownshipSchools;
 
-        if (!knownTownshipSchools.length) {
-            includesCounty = window.confirm(
-                '本次导入的成绩是否包含县里其他学校？\n\n确定：包含县域学校，系统会增加县排名。\n取消：仅乡镇学校，继续按乡镇口径分析。'
-            );
-            if (includesCounty) {
-                const answer = window.prompt(
-                    '首次启用县域排名时，需要标定一次“本乡镇学校”名单。\n后续再导入新增学校会自动识别为县直/县域学校，不会再重复询问。',
-                    names.join('，')
-                );
-                const parsed = parseSchoolList(answer);
-                const exactSet = new Set(names);
-                townshipSchools = parsed.filter((name) => exactSet.has(name));
-                if (!townshipSchools.length) townshipSchools = names;
-            }
-        } else if (includesCounty && window.UI?.toast) {
-            window.UI.toast(`已按历史口径自动识别：乡镇 ${townshipSchools.length} 所，县直/县域 ${inferredCountySchools.length} 所`, 'info');
+        if (includesCounty && window.UI?.toast) {
+            window.UI.toast(`已按目标人数管理自动识别：乡镇 ${townshipSchools.length} 所，县直/县域 ${inferredCountySchools.length} 所`, 'info');
         }
 
         const scope = normalizeScope({
@@ -655,10 +589,17 @@
     }
 
     function applyCountyRanks() {
+        const sig = getDataSignature();
+        if (sig && sig === state.lastRankSignature && window.COUNTY_ANALYSIS_SCOPE) {
+            return window.COUNTY_ANALYSIS_SCOPE;
+        }
+        state.lastRankSignature = sig;
+
         const scope = normalizeScope(getCurrentScope() || { includesCounty: false, townshipSchools: getSchoolNames() });
         const townshipSet = new Set(scope.townshipSchools || []);
         const schools = Object.values(window.SCHOOLS || {});
 
+        // 1. 学校排名
         schools
             .slice()
             .sort((a, b) => toNumber(b.score2Rate) - toNumber(a.score2Rate))
@@ -676,93 +617,43 @@
                 if (school.metrics?.total) school.metrics.total.townshipRank2Rate = index + 1;
             });
 
-        const rankedAll = (window.RAW_DATA || [])
-            .filter((student) => Number.isFinite(Number(student?.total)))
-            .slice()
-            .sort((a, b) => Number(b.total) - Number(a.total));
+        // 2. 学生排名 (总分)
+        const allStudents = (window.RAW_DATA || []).filter((s) => Number.isFinite(Number(s?.total)));
+        const rankedAll = allStudents.slice().sort((a, b) => Number(b.total) - Number(a.total));
 
-        rankedAll.forEach((student, index) => {
-            student.countyRank = index + 1;
-            student.countyScope = townshipSet.has(student.school) ? 'township' : 'county';
+        assignCompetitionRanks(rankedAll, (s) => s.total, (s, rank) => {
+            if (!s.ranks) s.ranks = {};
+            if (!s.ranks.total) s.ranks.total = {};
+            s.countyRank = rank;
+            s.countyScope = townshipSet.has(s.school) ? 'township' : 'county';
+            s.ranks.total.county = rank;
         });
 
-        rankedAll
-            .filter((student) => townshipSet.has(student.school))
-            .forEach((student, index) => {
-                student.townshipRank = index + 1;
-            });
-
-        window.COUNTY_ANALYSIS_SCOPE = scope;
-        return scope;
-    }
-
-    function applyCountyRanks() {
-        const scope = normalizeScope(getCurrentScope() || { includesCounty: false, townshipSchools: getSchoolNames() });
-        const townshipSet = new Set(scope.townshipSchools || []);
-        const schools = Object.values(window.SCHOOLS || {});
-
-        schools
-            .slice()
-            .sort((a, b) => toNumber(b.score2Rate) - toNumber(a.score2Rate))
-            .forEach((school, index) => {
-                school.countyScope = townshipSet.has(school.name) ? 'township' : 'county';
-                school.countyRank2Rate = index + 1;
-                if (school.metrics?.total) school.metrics.total.countyRank2Rate = index + 1;
-            });
-
-        schools
-            .filter((school) => townshipSet.has(school.name))
-            .sort((a, b) => toNumber(b.score2Rate) - toNumber(a.score2Rate))
-            .forEach((school, index) => {
-                school.townshipRank2Rate = index + 1;
-                if (school.metrics?.total) school.metrics.total.townshipRank2Rate = index + 1;
-            });
-
-        const rankedAll = (window.RAW_DATA || [])
-            .filter((student) => Number.isFinite(Number(student?.total)))
-            .slice()
-            .sort((a, b) => Number(b.total) - Number(a.total));
-
-        assignCompetitionRanks(rankedAll, (student) => student.total, (student, rank) => {
-            if (!student.ranks) student.ranks = {};
-            if (!student.ranks.total) student.ranks.total = {};
-            student.countyRank = rank;
-            student.countyScope = townshipSet.has(student.school) ? 'township' : 'county';
-            student.ranks.total.county = rank;
+        const townshipStudents = rankedAll.filter((s) => townshipSet.has(s.school));
+        assignCompetitionRanks(townshipStudents, (s) => s.total, (s, rank) => {
+            s.townshipRank = rank;
+            if (!s.ranks.total) s.ranks.total = {};
+            s.ranks.total.township = rank;
         });
 
-        assignCompetitionRanks(
-            rankedAll.filter((student) => townshipSet.has(student.school)),
-            (student) => student.total,
-            (student, rank) => {
-                student.townshipRank = rank;
-                if (!student.ranks) student.ranks = {};
-                if (!student.ranks.total) student.ranks.total = {};
-                student.ranks.total.township = rank;
-            }
-        );
-
+        // 3. 学生排名 (各科)
         (window.SUBJECTS || []).forEach((subject) => {
-            const rankedSubjectAll = (window.RAW_DATA || [])
-                .filter((student) => Number.isFinite(Number(student?.scores?.[subject])))
+            const subjectStudents = (window.RAW_DATA || [])
+                .filter((s) => Number.isFinite(Number(s?.scores?.[subject])))
                 .slice()
                 .sort((a, b) => Number(b?.scores?.[subject]) - Number(a?.scores?.[subject]));
 
-            assignCompetitionRanks(rankedSubjectAll, (student) => student?.scores?.[subject], (student, rank) => {
-                if (!student.ranks) student.ranks = {};
-                if (!student.ranks[subject]) student.ranks[subject] = {};
-                student.ranks[subject].county = rank;
+            assignCompetitionRanks(subjectStudents, (s) => s?.scores?.[subject], (s, rank) => {
+                if (!s.ranks) s.ranks = {};
+                if (!s.ranks[subject]) s.ranks[subject] = {};
+                s.ranks[subject].county = rank;
             });
 
-            assignCompetitionRanks(
-                rankedSubjectAll.filter((student) => townshipSet.has(student.school)),
-                (student) => student?.scores?.[subject],
-                (student, rank) => {
-                    if (!student.ranks) student.ranks = {};
-                    if (!student.ranks[subject]) student.ranks[subject] = {};
-                    student.ranks[subject].township = rank;
-                }
-            );
+            const townshipSubjectStudents = subjectStudents.filter((s) => townshipSet.has(s.school));
+            assignCompetitionRanks(townshipSubjectStudents, (s) => s?.scores?.[subject], (s, rank) => {
+                if (!s.ranks[subject]) s.ranks[subject] = {};
+                s.ranks[subject].township = rank;
+            });
         });
 
         calculateCountyTeacherRanking(scope);
@@ -844,49 +735,6 @@
         if (!rows.length) {
             return '<div class="county-empty">暂无任课表或教师画像数据。导入任课表后，这里会展示县域样本下的教师教学画像。</div>';
         }
-        return `
-            <div class="county-portrait-grid">
-                ${rows.map((row, index) => `
-                    <article class="county-portrait-card ${row.riskLevel === 'risk' ? 'is-risk' : ''}">
-                        <span class="county-portrait-rank">#${index + 1}</span>
-                        <h4>${escapeHtml(row.teacherName)} / ${escapeHtml(row.subject)}</h4>
-                        <strong>${formatNumber(row.score, 1)}</strong>
-                        <p>均分 ${formatNumber(row.avg, 1)} · 优秀率 ${formatPercent(row.excellentRate)} · 及格率 ${formatPercent(row.passRate)} · 样本 ${row.studentCount}</p>
-                    </article>
-                `).join('')}
-            </div>
-        `;
-    }
-
-    function renderStudentArchiveRows() {
-        const rows = getStudentArchiveData().slice(0, 40);
-        if (!rows.length) return '<div class="county-empty">暂无学生成绩数据。</div>';
-        return `
-            <div class="table-wrap analysis-table-shell">
-                <table class="analysis-generated-table county-analysis-table">
-                    <thead><tr><th>乡镇排名</th><th>县排名</th><th>学生</th><th>学校</th><th>班级</th><th>总分</th></tr></thead>
-                    <tbody>
-                        ${rows.map((student) => `
-                            <tr>
-                                <td>${student.townshipRank || '-'}</td>
-                                <td>${student.countyRank || '-'}</td>
-                                <td>${escapeHtml(student.name)}</td>
-                                <td>${escapeHtml(student.school)}</td>
-                                <td>${escapeHtml(student.class || '')}</td>
-                                <td>${formatNumber(student.total, 1)}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-        `;
-    }
-
-    function renderTeacherPortraits() {
-        const rows = getTeacherRows(10);
-        if (!rows.length) {
-            return '<div class="county-empty">暂无任课表或教师画像数据。导入任课表后，这里会展示县域样本下的教师教学画像。</div>';
-        }
         const rankingRows = getTeacherCountyRankingRows();
         return `
             <div class="county-portrait-grid">
@@ -945,10 +793,21 @@
     function renderStudentArchiveRows() {
         const rows = getStudentArchiveData().slice(0, 40);
         if (!rows.length) return '<div class="county-empty">暂无学生成绩数据。</div>';
+        const subjects = window.SUBJECTS || [];
         return `
             <div class="table-wrap analysis-table-shell">
                 <table class="analysis-generated-table county-analysis-table">
-                    <thead><tr><th>乡镇排名</th><th>县排名</th><th>学生</th><th>学校</th><th>班级</th><th>总分</th><th>学科县排速览</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>乡镇排名</th>
+                            <th>县排名</th>
+                            <th>学生</th>
+                            <th>学校</th>
+                            <th>班级</th>
+                            <th>总分</th>
+                            ${subjects.map(s => `<th>${s}乡排</th><th>${s}县排</th>`).join('')}
+                        </tr>
+                    </thead>
                     <tbody>
                         ${rows.map((student) => `
                             <tr>
@@ -958,7 +817,10 @@
                                 <td>${escapeHtml(student.school)}</td>
                                 <td>${escapeHtml(student.class || '')}</td>
                                 <td>${formatNumber(student.total, 1)}</td>
-                                <td class="county-student-subject-summary">${escapeHtml(buildStudentSubjectRankSummary(student))}</td>
+                                ${subjects.map(s => `
+                                    <td>${student?.ranks?.[s]?.township || '-'}</td>
+                                    <td>${student?.ranks?.[s]?.county || '-'}</td>
+                                `).join('')}
                             </tr>
                         `).join('')}
                     </tbody>
@@ -996,13 +858,16 @@
     }
 
     function renderCountyAnalysis() {
-        const root = document.getElementById('county-analysis-root');
+        if (state.isRendering) return;
+        state.isRendering = true;
+        try {
+            const root = document.getElementById('county-analysis-root');
         if (!root) return;
         const scope = applyCountyRanks();
         window.setTimeout(() => {
             void ensureTeacherContextForCountyAnalysis().then((result) => {
                 const isCountyVisible = document.getElementById('county-analysis')?.classList?.contains('active');
-                if (result?.changed && isCountyVisible) {
+                if (result?.changed && isCountyVisible && !state.isRendering) {
                     renderCountyAnalysis();
                 }
             });
@@ -1011,7 +876,7 @@
         const countyCount = scope.countySchools?.length || 0;
         const townshipCount = scope.townshipSchools?.length || 0;
         const totalStudents = (window.RAW_DATA || []).length;
-        root.innerHTML = `
+        const html = `
             <div class="county-kpi-grid">
                 <div><span>本次范围</span><strong>${scope.includesCounty ? '县域 + 乡镇' : '乡镇'}</strong><em>${escapeHtml(getExamKey())}</em></div>
                 <div><span>学校数</span><strong>${names.length}</strong><em>乡镇 ${townshipCount} · 县域 ${countyCount}</em></div>
@@ -1041,15 +906,6 @@
             </div>
             <div class="analysis-anchor-panel">
                 <div class="county-section-head">
-                    <div class="sub-header analysis-section-head">学生档案县排名</div>
-                    <div class="county-section-actions">
-                        <button class="btn btn-sm btn-green" type="button" onclick="exportCountyAnalysisSection('student')">下载Excel</button>
-                    </div>
-                </div>
-                ${renderStudentArchiveRows()}
-            </div>
-            <div class="analysis-anchor-panel">
-                <div class="county-section-head">
                     <div class="sub-header analysis-section-head">县域历史对比</div>
                     <div class="county-section-actions">
                         <button class="btn btn-sm btn-green" type="button" onclick="exportCountyAnalysisSection('history')">下载Excel</button>
@@ -1059,167 +915,25 @@
                 ${renderHistoryCompare()}
             </div>
         `;
+        root.innerHTML = html;
+        } finally {
+            state.isRendering = false;
+        }
     }
 
     function decorateAnalysisTable() {
-        const scope = getCurrentScope();
-        if (!scope?.includesCounty) return;
-        applyCountyRanks();
-        const table = document.getElementById('tb-total');
-        if (!table) return;
-        const headRow = table.querySelector('thead tr');
-        if (headRow) {
-            const heads = Array.from(headRow.children);
-            const last = heads[heads.length - 1];
-            if (last && !last.dataset.countyRankLabel) {
-                last.textContent = '县排名';
-                last.dataset.countyRankLabel = '1';
-            }
-            if (!headRow.querySelector('[data-county-township-rank]')) {
-                const th = document.createElement('th');
-                th.dataset.countyTownshipRank = '1';
-                th.textContent = '乡镇排名';
-                headRow.appendChild(th);
-            }
-        }
-        const schoolMap = new Map(Object.values(window.SCHOOLS || {}).map((school) => [school.name, school]));
-        table.querySelectorAll('tbody tr').forEach((row) => {
-            const firstCellText = row.cells?.[0]?.textContent || '';
-            const schoolName = Array.from(schoolMap.keys()).find((name) => firstCellText.includes(name));
-            const school = schoolMap.get(schoolName);
-            if (!school) return;
-            let cell = row.querySelector('[data-county-township-rank-cell]');
-            if (!cell) {
-                cell = document.createElement('td');
-                cell.dataset.countyTownshipRankCell = '1';
-                row.appendChild(cell);
-            }
-            cell.textContent = school.countyScope === 'county' ? '-' : (school.townshipRank2Rate || '-');
-        });
+        // 按当前业务口径，常规镇域宏观模块始终只展示乡镇数据，
+        // 县直数据只在“学生之间排名对比”和“县域质量排名”中参与。
     }
 
     function decorateStudentDetails() {
-        const section = document.getElementById('student-details');
-        if (!section || !getCurrentScope()?.includesCounty) return;
-        let note = section.querySelector('#county-student-rank-note');
-        if (!note) {
-            note = document.createElement('div');
-            note.id = 'county-student-rank-note';
-            note.className = 'info-bar analysis-info-band';
-            const target = section.querySelector('.student-details-primary-flow') || section.firstElementChild;
-            if (target?.parentNode) target.parentNode.insertBefore(note, target);
-            else section.prepend(note);
-        }
-        note.innerHTML = '<span><strong>县域排名已启用：</strong>本次学生档案已写入 countyRank / townshipRank，成绩单与明细可同时引用县排名和乡镇排名。</span>';
+        // 学生明细保持原有乡镇口径，县排名只放在县域模块和学生对比模块中。
     }
 
-    function decorateStudentDetails() {
-        const section = document.getElementById('student-details');
-        if (!section || !getCurrentScope()?.includesCounty) return;
-        applyCountyRanks();
-
-        let note = section.querySelector('#county-student-rank-note');
-        if (!note) {
-            note = document.createElement('div');
-            note.id = 'county-student-rank-note';
-            note.className = 'info-bar analysis-info-band';
-            const target = section.querySelector('.student-details-primary-flow') || section.firstElementChild;
-            if (target?.parentNode) target.parentNode.insertBefore(note, target);
-            else section.prepend(note);
-        }
-        note.innerHTML = '<span><strong>县域排名已启用：</strong>本次学生档案已写入总分与单科的 county / township 排名，成绩单、学生明细和县域模块都可直接引用。</span>';
-
-        const table = document.getElementById('studentDetailTable');
-        const theadRow = table?.querySelector('thead tr');
-        const tbody = table?.querySelector('tbody');
-        const totalItems = Number(window.STD_STATE?.cacheData?.length || 0);
-        const startIdx = ((Number(window.STD_STATE?.page || 1) - 1) * Number(window.STD_STATE?.size || 50));
-        const displayList = Array.isArray(window.STD_STATE?.cacheData)
-            ? window.STD_STATE.cacheData.slice(startIdx, startIdx + Number(window.STD_STATE?.size || 50))
-            : [];
-        const user = typeof window.getCurrentUser === 'function' ? window.getCurrentUser() : null;
-        const role = user?.role || 'guest';
-        const isTeacher = role === 'teacher';
-        const isClassTeacher = role === 'class_teacher';
-        const classTeacherMode = isClassTeacher && typeof window.getClassTeacherStudentViewMode === 'function'
-            ? window.getClassTeacherStudentViewMode()
-            : 'teaching';
-        const teacherScope = (isTeacher || (isClassTeacher && classTeacherMode === 'teaching')) && typeof window.getTeacherScopeForUser === 'function'
-            ? window.getTeacherScopeForUser(user)
-            : null;
-        const visibleSubjects = (isTeacher || (isClassTeacher && classTeacherMode === 'teaching'))
-            ? (window.SUBJECTS || []).filter((subject) => teacherScope?.subjects?.has(window.normalizeSubject ? window.normalizeSubject(subject) : subject))
-            : (window.SUBJECTS || []);
-        const isMobileMode = table?.classList?.contains('student-detail-mobile-table');
-        const isSingleSchool = typeof window.isSingleSchoolMode === 'function' ? window.isSingleSchoolMode() : Object.keys(window.SCHOOLS || {}).length <= 1;
-
-        if (isMobileMode) {
-            const cards = Array.from(section.querySelectorAll('.student-detail-mobile-card'));
-            cards.forEach((card, index) => {
-                const student = displayList[index];
-                if (!student) return;
-                const rankGrid = card.querySelector('.student-detail-mobile-rank-grid');
-                if (rankGrid && !rankGrid.querySelector('[data-county-total-rank]')) {
-                    const item = document.createElement('div');
-                    item.className = 'student-detail-mobile-info';
-                    item.dataset.countyTotalRank = '1';
-                    item.innerHTML = `<span>总分县排</span><strong>${escapeHtml(getStudentCountyRankValue(student, 'total'))}</strong>`;
-                    rankGrid.appendChild(item);
-                }
-                Array.from(card.querySelectorAll('.student-detail-mobile-subject')).forEach((subjectCard, subjectIndex) => {
-                    const subject = visibleSubjects[subjectIndex];
-                    if (!subject) return;
-                    const rankRow = subjectCard.querySelector('.student-detail-mobile-rank-row');
-                    if (!rankRow || rankRow.querySelector('[data-county-subject-rank]')) return;
-                    const chip = document.createElement('span');
-                    chip.dataset.countySubjectRank = '1';
-                    chip.textContent = `县 ${getStudentCountyRankValue(student, subject)}`;
-                    rankRow.appendChild(chip);
-                });
-            });
-            return;
-        }
-
-        if (!theadRow || !tbody || !displayList.length || !totalItems) return;
-        if (theadRow.querySelector('[data-county-rank-col="1"]')) return;
-
-        const baseCount = (!isTeacher && !isClassTeacher) ? 6 : 3;
-        const subjectGroupSize = (!isTeacher && !isClassTeacher) ? (isSingleSchool ? 4 : 5) : (isSingleSchool ? 3 : 4);
-        const totalGroupSize = (!isTeacher && !isClassTeacher) ? (isSingleSchool ? 3 : 4) : (isSingleSchool ? 2 : 3);
-        const subjectInsertOffset = subjectGroupSize;
-        const totalInsertOffset = totalGroupSize;
-
-        for (let subjectIndex = visibleSubjects.length - 1; subjectIndex >= 0; subjectIndex -= 1) {
-            const insertPos = baseCount + (subjectIndex * subjectGroupSize) + subjectInsertOffset;
-            const th = document.createElement('th');
-            th.dataset.countyRankCol = '1';
-            th.textContent = '县';
-            theadRow.insertBefore(th, theadRow.children[insertPos] || null);
-        }
-        const totalInsertPos = baseCount + (visibleSubjects.length * subjectGroupSize) + totalInsertOffset;
-        const totalTh = document.createElement('th');
-        totalTh.dataset.countyRankCol = '1';
-        totalTh.textContent = '县';
-        theadRow.insertBefore(totalTh, theadRow.children[totalInsertPos] || null);
-
-        const dataRows = Array.from(tbody.querySelectorAll('tr')).filter((row) => !(row.cells.length === 1 && Number(row.cells[0]?.colSpan || 0) >= 50));
-        dataRows.forEach((row, index) => {
-            const student = displayList[index];
-            if (!student) return;
-            for (let subjectIndex = visibleSubjects.length - 1; subjectIndex >= 0; subjectIndex -= 1) {
-                const subject = visibleSubjects[subjectIndex];
-                const insertPos = baseCount + (subjectIndex * subjectGroupSize) + subjectInsertOffset;
-                const td = document.createElement('td');
-                td.className = 'text-gray';
-                td.dataset.countyRankCol = '1';
-                td.textContent = getStudentCountyRankValue(student, subject);
-                row.insertBefore(td, row.children[insertPos] || null);
-            }
-            const totalTd = document.createElement('td');
-            totalTd.dataset.countyRankCol = '1';
-            totalTd.textContent = getStudentCountyRankValue(student, 'total');
-            row.insertBefore(totalTd, row.children[totalInsertPos] || null);
-        });
+    function getStudentCountyRankValue(student, subject) {
+        if (!student?.ranks) return '-';
+        if (subject === 'total') return student.countyRank || '-';
+        return student.ranks[subject]?.county || '-';
     }
 
     function exportStudentDetailsWithCountyRanks() {
@@ -1395,15 +1109,9 @@
         });
         patchGlobalFunction('renderTables', () => {
             applyCountyRanks();
-            decorateAnalysisTable();
-        });
-        patchGlobalFunction('renderStudentDetails', () => {
-            applyCountyRanks();
-            decorateStudentDetails();
         });
         patchGlobalFunction('switchTab', (id) => {
             if (id === 'county-analysis') setTimeout(renderCountyAnalysis, 0);
-            if (id === 'student-details') setTimeout(decorateStudentDetails, 0);
         });
     }
 
@@ -1475,7 +1183,6 @@
     };
     window.renderCountyAnalysis = renderCountyAnalysis;
     window.exportCountyAnalysisSection = exportCountyAnalysisSection;
-    window.exportStudentDetails = exportStudentDetailsWithCountyRanks;
     window.__COUNTY_ANALYSIS_RUNTIME_PATCHED__ = true;
 
     if (document.readyState === 'loading') {

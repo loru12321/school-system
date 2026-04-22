@@ -127,18 +127,24 @@ async function loadAppModules() {
         if (isLocalFileRuntime() || isLocalSupabaseHost(window.location && window.location.hostname)) {
             console.log('[boot-runtime] Skipping gateway pre-flight in local mode');
         } else {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        await fetch(DIRECT_PROXY_ORIGIN + '/api/health', {
-            method: 'GET',
-            mode: 'no-cors',
-            signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        console.log('[boot-runtime] Gateway pre-flight successful');
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            try {
+                await fetch(DIRECT_PROXY_ORIGIN + '/api/health', {
+                    method: 'GET',
+                    mode: 'no-cors',
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                console.log('[boot-runtime] Gateway pre-flight successful');
+            } catch (fetchErr) {
+                clearTimeout(timeoutId);
+                console.warn('[boot-runtime] Gateway pre-flight failed, activating fallback:', fetchErr);
+                window.__API_FALLBACK_ACTIVE__ = true;
+            }
         }
     } catch (err) {
-        console.warn('[boot-runtime] Gateway pre-flight failed or timed out:', err);
+        console.warn('[boot-runtime] Gateway pre-flight check error:', err);
     }
 
     const total = APP_MODULES.length;
@@ -260,7 +266,12 @@ function shouldUseSameOriginCloudProxy() {
 }
 
 function normalizeProxyOrigin(origin) {
-    return String(origin || '').trim().replace(/\/$/, '');
+    var text = String(origin || '').trim().replace(/\/$/, '');
+    if (text.indexOf('schoolsystem.com.cn') !== -1 && text.startsWith('http:')) {
+        console.warn('[boot-runtime] Enforcing HTTPS for production domain:', text);
+        text = text.replace('http:', 'https:');
+    }
+    return text;
 }
 
 function getHostedSupabaseProxyOrigin() {
@@ -293,6 +304,9 @@ function getSameOriginSupabaseUrl() {
 }
 
 function getSameOriginGatewayUrl() {
+    if (window.__API_FALLBACK_ACTIVE__) {
+        return DIRECT_EDGE_GATEWAY_URL;
+    }
     if (window.location && /^(https?:)$/i.test(String(window.location.protocol || '').trim())) {
         return normalizeProxyOrigin(window.location.origin) + '/api/edu-gateway';
     }
