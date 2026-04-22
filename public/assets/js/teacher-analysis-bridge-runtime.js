@@ -6,7 +6,10 @@
         if (!select) return;
         const oldValue = select.value;
         select.innerHTML = '<option value="ALL">全乡镇（All）</option>';
-        Object.keys(SCHOOLS || {}).forEach((schoolName) => {
+        const schoolList = (typeof window.listAvailableSchoolsForCompare === 'function')
+            ? window.listAvailableSchoolsForCompare()
+            : Object.keys(SCHOOLS || {});
+        schoolList.forEach((schoolName) => {
             select.innerHTML += `<option value="${schoolName}">${schoolName}</option>`;
         });
         if (oldValue) select.value = oldValue;
@@ -35,7 +38,11 @@
     function renderCorrelationAnalysis() {
         const schoolSelect = document.getElementById('corrSchoolSelect');
         const scope = schoolSelect?.value || 'ALL';
-        const students = scope === 'ALL' ? RAW_DATA : (SCHOOLS?.[scope]?.students || []);
+        const students = scope === 'ALL'
+            ? ((typeof window.filterRowsToTownshipSchools === 'function')
+                ? window.filterRowsToTownshipSchools(RAW_DATA || [])
+                : (Array.isArray(RAW_DATA) ? RAW_DATA : []))
+            : (SCHOOLS?.[scope]?.students || []);
         if (!Array.isArray(students) || students.length < 5) {
             alert('样本数据过少，暂时无法生成有效的相关性分析。');
             return;

@@ -6339,10 +6339,16 @@ const WORKER_SOURCE = `
 
                 // 全镇排名
                 SUBJECTS.forEach(sub => {
-                    const validStus = RAW_DATA.filter(s => s.scores[sub] !== undefined);
+                    const townshipRows = (typeof filterRowsToTownshipSchools === 'function')
+                        ? filterRowsToTownshipSchools(RAW_DATA)
+                        : RAW_DATA;
+                    const validStus = townshipRows.filter(s => s.scores[sub] !== undefined);
                     calcRank(validStus, s => s.scores[sub], (s, r) => { if(!s.ranks) s.ranks={}; if(!s.ranks[sub]) s.ranks[sub]={}; s.ranks[sub].township = r; });
                 });
-                calcRank(RAW_DATA, s => s.total, (s, r) => { if(!s.ranks) s.ranks={}; if(!s.ranks.total) s.ranks.total={}; s.ranks.total.township = r; });
+                const townshipRowsForTotal = (typeof filterRowsToTownshipSchools === 'function')
+                    ? filterRowsToTownshipSchools(RAW_DATA)
+                    : RAW_DATA;
+                calcRank(townshipRowsForTotal, s => s.total, (s, r) => { if(!s.ranks) s.ranks={}; if(!s.ranks.total) s.ranks.total={}; s.ranks.total.township = r; });
 
                 // 校内排名
                 Object.values(schoolMap).forEach(sch => {
@@ -6354,8 +6360,12 @@ const WORKER_SOURCE = `
                 });
 
                // --- D. 学校综合排名 (原 calculateRankings) ---
+                const townshipSchoolNames = (typeof getTownshipManagedSchoolNames === 'function')
+                    ? getTownshipManagedSchoolNames(Object.keys(schoolMap || {}))
+                    : Object.keys(schoolMap || {});
+                const townshipSchoolSet = new Set((townshipSchoolNames || []).map(name => String(name || '').trim()).filter(Boolean));
                 const doSchoolRank = (sub, key) => {
-                    const list = Object.values(schoolMap).filter(s => s.metrics[sub]);
+                    const list = Object.values(schoolMap).filter(s => s.metrics[sub] && (!townshipSchoolSet.size || townshipSchoolSet.has(String(s?.name || '').trim())));
                     list.sort((a,b) => b.metrics[sub][key] - a.metrics[sub][key]);
                     list.forEach((s, i) => {
                         if(!s.rankings) s.rankings = {}; if(!s.rankings[sub]) s.rankings[sub] = {};
@@ -6367,7 +6377,7 @@ const WORKER_SOURCE = `
 
                 // 计算综合得分的最大值基准
                 let max = { avg:0, exc:0, pass:0 };
-                Object.values(schoolMap).forEach(s => { if(s.metrics.total) { max.avg = Math.max(max.avg, s.metrics.total.avg); max.exc = Math.max(max.exc, s.metrics.total.excRate); max.pass = Math.max(max.pass, s.metrics.total.passRate); } });
+                Object.values(schoolMap).forEach(s => { if((!townshipSchoolSet.size || townshipSchoolSet.has(String(s?.name || '').trim())) && s.metrics.total) { max.avg = Math.max(max.avg, s.metrics.total.avg); max.exc = Math.max(max.exc, s.metrics.total.excRate); max.pass = Math.max(max.pass, s.metrics.total.passRate); } });
 
                 // === 🔥 1. 新增：9年级高分段统计 (>=490分) ===
                 let maxHighRatio = 0;
@@ -6377,6 +6387,10 @@ const WORKER_SOURCE = `
                 if (isGrade9) {
                     Object.values(schoolMap).forEach(s => {
                         // 计算高分人数 (总分 >= 490)
+                        if (townshipSchoolSet.size && !townshipSchoolSet.has(String(s?.name || '').trim())) {
+                            s.highScoreStats = { count: 0, ratio: 0, score: 0 };
+                            return;
+                        }
                         const highCount = s.students.filter(stu => stu.total >= 490).length;
                         const totalCount = s.metrics.total ? s.metrics.total.count : 1;
                         const ratio = totalCount > 0 ? (highCount / totalCount) : 0;
@@ -6393,6 +6407,7 @@ const WORKER_SOURCE = `
 
                 // === 🔥 2. 计算各项赋分 (含9年级特殊权重) ===
                 Object.values(schoolMap).forEach(s => {
+                    const isTownshipSchool = !townshipSchoolSet.size || townshipSchoolSet.has(String(s?.name || '').trim());
                     if(s.metrics.total) {
                         const m = s.metrics.total;
                         // 定义默认权重 (6-8年级)
@@ -6411,18 +6426,18 @@ const WORKER_SOURCE = `
                         const valPass = (max.pass ? m.passRate/max.pass * wPass : 0);
 
                         // 保存到对象中供前端显示
-                        m.ratedAvg = valAvg;
-                        m.ratedExc = valExc;
-                        m.ratedPass = valPass;
+                        m.ratedAvg = isTownshipSchool ? valAvg : 0;
+                        m.ratedExc = isTownshipSchool ? valExc : 0;
+                        m.ratedPass = isTownshipSchool ? valPass : 0;
 
                         // 计算两率一分基准总分
-                        s.score2Rate = valAvg + valExc + valPass;
+                        s.score2Rate = isTownshipSchool ? (valAvg + valExc + valPass) : 0;
 
                         // === 🔥 3. 如果是9年级，计算高分赋分 ===
                         if (isGrade9 && s.highScoreStats) {
                             // 赋分公式：(本校比例 / 最高比例) * 50
                             const highScore = maxHighRatio > 0 ? (s.highScoreStats.ratio / maxHighRatio * 50) : 0;
-                            s.highScoreStats.score = highScore;
+                            s.highScoreStats.score = isTownshipSchool ? highScore : 0;
 
                             // ⚠️ 注意：目前高分赋分仅做展示，暂未叠加到 score2Rate (总排名分) 中。
                             // 如果需要叠加进总排名，请取消下一行的注释：
@@ -6438,7 +6453,7 @@ const WORKER_SOURCE = `
 
                 // 排序 (按两率一分总分降序)
                 // 修复：确保 list 包含所有学校，不进行任何 slice 截断
-                const list = Object.values(schoolMap).sort((a,b) => {
+                const list = Object.values(schoolMap).filter(s => !townshipSchoolSet.size || townshipSchoolSet.has(String(s?.name || '').trim())).sort((a,b) => {
                     const scoreA = a.score2Rate || 0;
                     const scoreB = b.score2Rate || 0;
                     return scoreB - scoreA;
@@ -10847,13 +10862,16 @@ function renderHighScoreTable() {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:#999;">🚫 当前非 9 年级模式，无高分段核算数据。</td></tr>';
         return;
     }
-    if (Object.keys(SCHOOLS).length === 0) {
+    const townshipSchoolNames = (typeof getTownshipManagedSchoolNames === 'function') ? getTownshipManagedSchoolNames(Object.keys(SCHOOLS || {})) : Object.keys(SCHOOLS || {});
+    const townshipSchoolSet = new Set((townshipSchoolNames || []).map(name => String(name || '').trim()).filter(Boolean));
+    const townshipSchools = Object.values(SCHOOLS).filter((school) => !townshipSchoolSet.size || townshipSchoolSet.has(String(school?.name || '').trim()));
+    if (townshipSchools.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px;">请先上传数据</td></tr>';
         return;
     }
 
     // 1. 提取所有学校数据
-    const list = Object.values(SCHOOLS).map(s => {
+    const list = townshipSchools.map(s => {
         const hs = s.highScoreStats || { count: 0, ratio: 0, score: 0 };
         return {
             name: s.name,
@@ -10893,14 +10911,17 @@ function renderHighScoreTable() {
 
 // === 导出高分段 Excel ===
 function exportHighScoreExcel() {
-    if (!Object.keys(SCHOOLS).length) return alert("无数据");
+    const townshipSchoolNames = (typeof getTownshipManagedSchoolNames === 'function') ? getTownshipManagedSchoolNames(Object.keys(SCHOOLS || {})) : Object.keys(SCHOOLS || {});
+    const townshipSchoolSet = new Set((townshipSchoolNames || []).map(name => String(name || '').trim()).filter(Boolean));
+    const townshipSchools = Object.values(SCHOOLS).filter((school) => !townshipSchoolSet.size || townshipSchoolSet.has(String(school?.name || '').trim()));
+    if (!townshipSchools.length) return alert("无数据");
     if (!CONFIG.name.includes('9')) return alert("非9年级模式无此数据");
 
     const wb = XLSX.utils.book_new();
     const headers = ["学校名称", "实考人数", "高分人数(≥490)", "高分率", "高分赋分(50)", "排名"];
     const wsData = [headers];
 
-    const list = Object.values(SCHOOLS).map(s => {
+    const list = townshipSchools.map(s => {
         const hs = s.highScoreStats || { count: 0, ratio: 0, score: 0 };
         return {
             name: s.name,
@@ -11499,7 +11520,7 @@ function calculateRankings() {
     const wAvg = isGrade9 ? 50 : 60;
     const wExc = isGrade9 ? 80 : 70;
     const wPass = isGrade9 ? 50 : 70;
-    Object.values(SCHOOLS).forEach(s => {
+    townshipSchools.forEach(s => {
         if (s.metrics.total) {
             const m = s.metrics.total; const ratedAvg = max.avg > 0 ? (m.avg / max.avg * wAvg) : 0; const ratedExc = max.exc > 0 ? (m.excRate / max.exc * wExc) : 0; const ratedPass = max.pass > 0 ? (m.passRate / max.pass * wPass) : 0;
             m.ratedAvg = ratedAvg; m.ratedExc = ratedExc; m.ratedPass = ratedPass; s.score2Rate = ratedAvg + ratedExc + ratedPass;
@@ -11523,6 +11544,16 @@ function formatRankDisplay(value, rank, type = 'school', isPercent = false) { co
 function renderTables() {
     updateSchoolMode();
     const tbTotal = document.querySelector('#tb-total tbody');
+    const townshipSchoolNames = (typeof getTownshipManagedSchoolNames === 'function')
+        ? getTownshipManagedSchoolNames(Object.keys(SCHOOLS || {}))
+        : Object.keys(SCHOOLS || {});
+    const townshipSchoolSet = new Set((townshipSchoolNames || []).map(name => String(name || '').trim()).filter(Boolean));
+    const townshipSchools = Object.values(SCHOOLS).filter((school) => (
+        !townshipSchoolSet.size || townshipSchoolSet.has(String(school?.name || '').trim())
+    ));
+    const townshipRows = (typeof filterRowsToTownshipSchools === 'function')
+        ? filterRowsToTownshipSchools(RAW_DATA || [])
+        : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
     if (!tbTotal) {
         console.warn("⚠️ [renderTables] 找不到 #tb-total tbody，跳过核心报表渲染。");
         return;
@@ -11530,11 +11561,11 @@ function renderTables() {
 
     // --- 📊 新增：数据统计看板逻辑 开始 ---
     // 如果数据存在，且页面上有 KPI 容器 (我们可以动态插入一个)
-    if (Object.keys(SCHOOLS).length > 0) {
+    if (townshipSchools.length > 0) {
         // 计算全镇数据
-        const totalStudents = RAW_DATA.length;
-        const totalSchools = Object.keys(SCHOOLS).length;
-        const allScores = RAW_DATA.map(s => s.total);
+        const totalStudents = townshipRows.length;
+        const totalSchools = townshipSchools.length;
+        const allScores = townshipRows.map(s => s.total).filter(v => typeof v === 'number');
         const globalAvg = (allScores.reduce((a, b) => a + b, 0) / totalStudents).toFixed(1);
         const maxScore = Math.max(...allScores);
 
@@ -11578,7 +11609,7 @@ function renderTables() {
     const theadTotal = document.querySelector('#tb-total thead tr');
 
     // 1. 获取所有学校列表 (移除任何排序过滤，先拿原始数据)
-    let list = Object.values(SCHOOLS);
+    let list = townshipSchools.slice();
 
     // --- 🔍 诊断代码开始 ---
     // 只有当点击“生成横向对比表”或页面加载时，如果学校数量少于预期(比如13)，可以在控制台看到
@@ -11647,7 +11678,7 @@ function renderTables() {
 
     SUBJECTS.forEach(sub => {
         const thresh = THRESHOLDS[sub];
-        const subList = Object.values(SCHOOLS).filter(s => s.metrics[sub]).sort((a, b) => (a.rankings[sub].avg - b.rankings[sub].avg));
+        const subList = townshipSchools.filter(s => s.metrics[sub]).sort((a, b) => (a.rankings[sub].avg - b.rankings[sub].avg));
         const box = document.createElement('div');
         const anchorId = `anchor-subject-${sub}`;
         box.id = anchorId;
@@ -11669,7 +11700,7 @@ function renderTables() {
     });
 
     const tbBottom = document.querySelector('#tb-bottom3 tbody'); let htmlBottom = '';
-    let bottomList = Object.values(SCHOOLS).sort((a, b) => (a.rankBottom || 9999) - (b.rankBottom || 9999));
+    let bottomList = townshipSchools.slice().sort((a, b) => (a.rankBottom || 9999) - (b.rankBottom || 9999));
     bottomList.forEach(s => {
         const isMySchool = s.name === MY_SCHOOL;
         htmlBottom += `
@@ -11697,8 +11728,15 @@ function renderTrafficLightDashboard() {
     const listRed = document.getElementById('list-red');
     const listYellow = document.getElementById('list-yellow');
     const listGreen = document.getElementById('list-green');
+    const townshipSchoolNames = (typeof listAvailableSchoolsForCompare === 'function')
+        ? listAvailableSchoolsForCompare()
+        : Object.keys(SCHOOLS || {});
+    const townshipSchoolSet = new Set((townshipSchoolNames || []).map(name => String(name || '').trim()).filter(Boolean));
+    const townshipSchools = Object.values(SCHOOLS || {}).filter((school) => (
+        !townshipSchoolSet.size || townshipSchoolSet.has(String(school?.name || '').trim())
+    ));
 
-    if (Object.keys(SCHOOLS).length === 0) {
+    if (townshipSchools.length === 0) {
         container.classList.add('hidden');
         return;
     }
@@ -11709,7 +11747,8 @@ function renderTrafficLightDashboard() {
     let cntRed = 0, cntYellow = 0, cntGreen = 0;
 
     // 遍历所有学校和所有科目进行“体检”
-    Object.values(SCHOOLS).forEach(s => {
+    townshipSchools.forEach(s => {
+        if (townshipSchoolSet.size && !townshipSchoolSet.has(String(s?.name || '').trim())) return;
         [...SUBJECTS, 'total'].forEach(sub => {
             const m = s.metrics[sub];
             if (!m) return;
@@ -11718,7 +11757,7 @@ function renderTrafficLightDashboard() {
             const excP = m.excRate * 100;
             const passP = m.passRate * 100;
             const rank = s.rankings[sub]?.avg || 999;
-            const totalSchools = Object.keys(SCHOOLS).length;
+            const totalSchools = townshipSchools.length;
 
             // 1. 🔴 红色预警条件：及格率 < 60% 或 排名垫底
             if (passP < 60 || rank === totalSchools) {
@@ -11811,7 +11850,10 @@ function updateSchoolSelect() {
     const previousValue = String(sel.value || '').trim();
     sel.innerHTML = '<option value="">--请选择学校--</option>';
     const user = getCurrentUser();
-    const schools = PermissionPolicy.getAccessibleSchoolNames(user, Object.keys(SCHOOLS || {}));
+    const availableSchools = (typeof listAvailableSchoolsForCompare === 'function')
+        ? listAvailableSchoolsForCompare()
+        : Object.keys(SCHOOLS || {});
+    const schools = PermissionPolicy.getAccessibleSchoolNames(user, availableSchools);
     schools.forEach((name) => {
         const option = document.createElement('option');
         option.value = name;
@@ -12019,7 +12061,10 @@ function updateStudentSchoolSelect() {
 
     const user = getCurrentUser();
     const role = user?.role;
-    const accessibleSchools = PermissionPolicy.getAccessibleSchoolNames(user, Object.keys(SCHOOLS || {}));
+    const availableSchools = (typeof listAvailableSchoolsForCompare === 'function')
+        ? listAvailableSchoolsForCompare()
+        : Object.keys(SCHOOLS || {});
+    const accessibleSchools = PermissionPolicy.getAccessibleSchoolNames(user, availableSchools);
     accessibleSchools.forEach(school => { select.innerHTML += `<option value="${school}">${school}</option>`; });
     if (role === 'class_teacher') {
         const school = user.school || MY_SCHOOL || '';
@@ -12945,7 +12990,8 @@ function updateMarginalSchoolSelect() {
     const select = document.getElementById('marginalSchoolSelect');
     if (!select) return;
     select.innerHTML = '<option value="">--请选择本校--</option>';
-    Object.keys(SCHOOLS).forEach(school => select.innerHTML += `<option value="${school}">${school}</option>`);
+    const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
+    schoolList.forEach(school => select.innerHTML += `<option value="${school}">${school}</option>`);
 }
 
 function generateTeacherInputs() {
@@ -14467,8 +14513,15 @@ function calcSummary(isSilent = false) {
         }
     }
 
-    // 1. 汇总各项得分 (Object.values(SCHOOLS) 包含所有学校)
-    const list = Object.values(SCHOOLS).map(s => {
+    const summarySchoolNames = (typeof listAvailableSchoolsForCompare === 'function')
+        ? listAvailableSchoolsForCompare()
+        : Object.keys(SCHOOLS || {});
+    const summarySchoolSet = new Set((summarySchoolNames || []).map(name => String(name || '').trim()).filter(Boolean));
+
+    // 1. 汇总各项得分 (仅乡镇学校)
+    const list = Object.values(SCHOOLS || {}).filter(s => (
+        !summarySchoolSet.size || summarySchoolSet.has(String(s?.name || '').trim())
+    )).map(s => {
         const s1 = s.score2Rate || 0;  // 两率一分
         const s2 = s.scoreBottom || 0; // 后1/3
         const s3 = isGrade9 ? (s.scoreInd || 0) : 0;    // 指标生仅9年级参与
@@ -14519,11 +14572,18 @@ function calcSummary(isSilent = false) {
 
 async function exportPPTReport() {
     // --- 0. 基础数据校验 ---
-    if (Object.keys(SCHOOLS).length === 0) {
+    const pptCheckSchoolNames = (typeof listAvailableSchoolsForCompare === 'function')
+        ? listAvailableSchoolsForCompare()
+        : Object.keys(SCHOOLS || {});
+    const pptCheckSchoolSet = new Set((pptCheckSchoolNames || []).map(name => String(name || '').trim()).filter(Boolean));
+    const pptCheckSchools = Object.values(SCHOOLS || {}).filter(s => (
+        !pptCheckSchoolSet.size || pptCheckSchoolSet.has(String(s?.name || '').trim())
+    ));
+    if (pptCheckSchools.length === 0) {
         alert("暂无数据，无法生成汇报。");
         return;
     }
-    var checkSchool = Object.values(SCHOOLS)[0];
+    var checkSchool = pptCheckSchools[0];
     if (!checkSchool.score2Rate) {
         alert("请先点击【生成总排名】按钮，计算完各项指标后再导出。");
         return;
@@ -14596,7 +14656,17 @@ async function exportPPTReport() {
 
     slide1.addText("汇报概要", { x: 0.5, y: 3.5, fontSize: 14, color: colorMain, bold: true });
     slide1.addShape(pptx.ShapeType.line, { x: 0.5, y: 3.8, w: 0.5, h: 0, line: { color: colorAccent, width: 2 } });
-    var summaryText = "本次考试共覆盖 " + Object.keys(SCHOOLS).length + " 所学校，参考学生 " + RAW_DATA.length + " 人。\n" +
+    var pptTownshipSchoolNames = (typeof listAvailableSchoolsForCompare === 'function')
+        ? listAvailableSchoolsForCompare()
+        : Object.keys(SCHOOLS || {});
+    var pptTownshipSchoolSet = new Set((pptTownshipSchoolNames || []).map(function (name) { return String(name || '').trim(); }).filter(Boolean));
+    var pptSchools = Object.values(SCHOOLS || {}).filter(function (school) {
+        return !pptTownshipSchoolSet.size || pptTownshipSchoolSet.has(String((school && school.name) || '').trim());
+    });
+    var pptRows = (typeof filterRowsToTownshipSchools === 'function')
+        ? filterRowsToTownshipSchools(RAW_DATA || [])
+        : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
+    var summaryText = "本次考试共覆盖 " + pptSchools.length + " 所学校，参考学生 " + pptRows.length + " 人。\n" +
         "分析维度包含：两率一分、后1/3转化、指标生完成度及学科均衡性诊断。";
     slide1.addText(summaryText, { x: 0.5, y: 4.0, w: 8, h: 1.5, fontSize: 12, color: "64748B", lineSpacing: 18 });
 
@@ -14604,22 +14674,22 @@ async function exportPPTReport() {
     var slide2 = pptx.addSlide({ masterName: 'EXEC_REPORT' });
     slide2.addText("核心指标看板", { x: 0.5, y: 0.8, fontSize: 20, bold: true, color: colorMain });
 
-    var allScores = RAW_DATA.map(function (s) { return s.total; });
+    var allScores = pptRows.map(function (s) { return s.total; }).filter(function (v) { return typeof v === 'number'; });
     var totalSum = allScores.reduce(function (a, b) { return a + b; }, 0);
-    var townAvg = totalSum / allScores.length;
-    var townMax = Math.max.apply(null, allScores);
-    var sortedSchools = Object.values(SCHOOLS).sort(function (a, b) { return (a.rank2Rate || 999) - (b.rank2Rate || 999); });
-    var topSchool = sortedSchools[0];
+    var townAvg = allScores.length ? (totalSum / allScores.length) : 0;
+    var townMax = allScores.length ? Math.max.apply(null, allScores) : 0;
+    var sortedSchools = pptSchools.slice().sort(function (a, b) { return (a.rank2Rate || 999) - (b.rank2Rate || 999); });
+    var topSchool = sortedSchools[0] || { name: '-' };
 
     // 调整卡片布局以适应更多学校（稍微紧凑一点）
     // 卡片1: 人数
     slide2.addShape(pptx.ShapeType.roundRect, { x: 0.5, y: 1.5, w: 2.0, h: 1.5, fill: "FFFFFF", line: { color: "E2E8F0" }, rectRadius: 0.1 });
-    slide2.addText(RAW_DATA.length, { x: 0.5, y: 1.7, w: 2.0, h: 0.6, fontSize: 24, bold: true, color: colorMain, align: 'center' });
+    slide2.addText(pptRows.length, { x: 0.5, y: 1.7, w: 2.0, h: 0.6, fontSize: 24, bold: true, color: colorMain, align: 'center' });
     slide2.addText("参考人数", { x: 0.5, y: 2.3, w: 2.0, h: 0.3, fontSize: 10, color: "64748B", align: 'center' });
 
     // 卡片2: 学校数
     slide2.addShape(pptx.ShapeType.roundRect, { x: 2.8, y: 1.5, w: 2.0, h: 1.5, fill: "FFFFFF", line: { color: "E2E8F0" }, rectRadius: 0.1 });
-    slide2.addText(Object.keys(SCHOOLS).length, { x: 2.8, y: 1.7, w: 2.0, h: 0.6, fontSize: 24, bold: true, color: colorSub, align: 'center' });
+    slide2.addText(pptSchools.length, { x: 2.8, y: 1.7, w: 2.0, h: 0.6, fontSize: 24, bold: true, color: colorSub, align: 'center' });
     slide2.addText("学校总数", { x: 2.8, y: 2.3, w: 2.0, h: 0.3, fontSize: 10, color: "64748B", align: 'center' });
 
     // 卡片3: 均分
@@ -14693,7 +14763,7 @@ async function exportPPTReport() {
     // --- 6. 循环生成学科页 (分页表格 + 分页图表) ---
     SUBJECTS.forEach(function (sub) {
         // 获取该学科数据并排序
-        var subData = Object.values(SCHOOLS).filter(function (s) { return s.metrics[sub] !== undefined; })
+        var subData = pptSchools.filter(function (s) { return s.metrics[sub] !== undefined; })
             .sort(function (a, b) { return b.metrics[sub].avg - a.metrics[sub].avg; });
 
         if (subData.length === 0) return;
@@ -14781,7 +14851,8 @@ function updateSegmentSelects() {
     const schSel = document.getElementById('segSchoolSelect'); const subSel = document.getElementById('segSubjectSelect');
     if (!schSel || !subSel) return;
     const oldSch = schSel.value;
-    schSel.innerHTML = '<option value="ALL">全乡镇</option>'; Object.keys(SCHOOLS).forEach(s => schSel.innerHTML += `<option value="${s}">${s}</option>`); if (oldSch && (oldSch === 'ALL' || SCHOOLS[oldSch])) schSel.value = oldSch;
+    const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
+    schSel.innerHTML = '<option value="ALL">全乡镇</option>'; schoolList.forEach(s => schSel.innerHTML += `<option value="${s}">${s}</option>`); if (oldSch && (oldSch === 'ALL' || SCHOOLS[oldSch])) schSel.value = oldSch;
     const oldSub = subSel.value; subSel.innerHTML = '<option value="total">总分</option>'; SUBJECTS.forEach(s => subSel.innerHTML += `<option value="${s}">${s}</option>`); if (oldSub) subSel.value = oldSub;
 }
 
@@ -14790,7 +14861,8 @@ function renderSegmentAnalysis() {
     const subject = document.getElementById('segSubjectSelect').value;
     const step = parseInt(document.getElementById('segStep').value) || 10;
 
-    let students = school === 'ALL' ? RAW_DATA : (SCHOOLS[school] ? SCHOOLS[school].students : []);
+    const townshipRows = (typeof filterRowsToTownshipSchools === 'function') ? filterRowsToTownshipSchools(RAW_DATA || []) : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
+    let students = school === 'ALL' ? townshipRows : (SCHOOLS[school] ? SCHOOLS[school].students : []);
     const validStudents = students.filter(s => {
         const v = subject === 'total' ? s.total : s.scores[subject];
         return typeof v === 'number';
@@ -14932,7 +15004,8 @@ function exportSegmentExcel() {
 function updateClassCompSchoolSelect() {
     const sel = document.getElementById('classCompSchoolSelect');
     if (!sel) return;
-    sel.innerHTML = '<option value="">--请选择学校--</option>'; Object.keys(SCHOOLS).forEach(s => sel.innerHTML += `<option value="${s}">${s}</option>`);
+    const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
+    sel.innerHTML = '<option value="">--请选择学校--</option>'; schoolList.forEach(s => sel.innerHTML += `<option value="${s}">${s}</option>`);
 }
 
 function renderClassComparison() {
@@ -15166,7 +15239,8 @@ function updateSubjectBalanceSelects() {
     const clsSel = document.getElementById('sbClassSelect');
 
     schSel.innerHTML = '<option value="">--请选择学校--</option>';
-    Object.keys(SCHOOLS).forEach(s => schSel.innerHTML += `<option value="${s}">${s}</option>`);
+    const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
+    schoolList.forEach(s => schSel.innerHTML += `<option value="${s}">${s}</option>`);
 
     // 联动更新班级
     schSel.onchange = () => {
@@ -15486,7 +15560,8 @@ function updatePotentialSchoolSelect() {
     sel.innerHTML = '<option value="ALL">全乡镇</option>';
 
     // 修复：确保 value 属性被引号包裹，防止学校名中有空格导致截断
-    Object.keys(SCHOOLS).forEach(s => {
+    const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
+    schoolList.forEach(s => {
         sel.innerHTML += `<option value="${s}">${s}</option>`;
     });
 
@@ -15500,10 +15575,13 @@ function renderPotentialAnalysis() {
     const topRatio = parseFloat(document.getElementById('potTopSelect').value);
 
     let candidates = [];
-    let scopeStudents = (scope === 'ALL') ? RAW_DATA : (SCHOOLS[scope]?.students || []);
+    const townshipRows = (typeof filterRowsToTownshipSchools === 'function')
+        ? filterRowsToTownshipSchools(RAW_DATA || [])
+        : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
+    let scopeStudents = (scope === 'ALL') ? townshipRows : (SCHOOLS[scope]?.students || []);
 
     // 1. 筛选总分优生
-    const totalCount = RAW_DATA.length;
+    const totalCount = townshipRows.length || RAW_DATA.length;
     const topRankThreshold = Math.floor(totalCount * topRatio);
 
     // 2. 遍历优生，计算偏科指数
@@ -15607,7 +15685,8 @@ function updateDiagnosisSelects() {
     if (!schSel || !subSel) return;
     const oldSch = schSel.value;
     schSel.innerHTML = '<option value="">--请选择学校--</option>';
-    Object.keys(SCHOOLS).forEach(s => schSel.innerHTML += `<option value="${s}">${s}</option>`);
+    const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
+    schoolList.forEach(s => schSel.innerHTML += `<option value="${s}">${s}</option>`);
     if (oldSch && SCHOOLS[oldSch]) schSel.value = oldSch;
 
     const user = getCurrentUser();
@@ -18527,7 +18606,8 @@ function updateMpSchoolSelect() {
     const sel = document.getElementById('mpSchoolSelect');
     if (!sel) return;
     const old = sel.value;
-    sel.innerHTML = '<option value="">--请选择学校--</option>'; Object.keys(SCHOOLS).forEach(s => sel.innerHTML += `<option value="${s}">${s}</option>`);
+    const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
+    sel.innerHTML = '<option value="">--请选择学校--</option>'; schoolList.forEach(s => sel.innerHTML += `<option value="${s}">${s}</option>`);
     if (old && SCHOOLS[old]) sel.value = old;
     updateMpClassSelect();
     const subSel = document.getElementById('mpSubjectSelect'); const oldSub = subSel.value;
@@ -23620,7 +23700,9 @@ function renderTeacherAnalysisState() {
     if (townshipContainer) townshipContainer.style.display = 'block';
 
     if (!activeSchool && typeof SCHOOLS !== 'undefined' && Object.keys(SCHOOLS).length > 0 && hasTeacherMap) {
-        const schoolNames = Object.keys(SCHOOLS);
+        const schoolNames = (typeof listAvailableSchoolsForCompare === 'function')
+            ? listAvailableSchoolsForCompare()
+            : Object.keys(SCHOOLS || {});
         if (schoolNames.length === 1) {
             activeSchool = syncTeacherAnalysisSchoolContext(schoolNames[0]);
         } else {

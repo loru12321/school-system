@@ -213,6 +213,13 @@ function callAIForComment() {
 function generateAIMacroReport() {
     if (AI_DISABLED) return aiDisabledAlert();
     if (!Object.keys(SCHOOLS).length) return alert("无数据");
+    const townshipSchoolNames = (typeof listAvailableSchoolsForCompare === 'function')
+        ? listAvailableSchoolsForCompare()
+        : Object.keys(SCHOOLS || {});
+    const townshipSchoolSet = new Set((townshipSchoolNames || []).map(name => String(name || '').trim()).filter(Boolean));
+    const townshipSchools = Object.values(SCHOOLS || {}).filter((school) => (
+        !townshipSchoolSet.size || townshipSchoolSet.has(String(school?.name || '').trim())
+    ));
 
     // 1. 强制检查本校设置 (关键逻辑：没有本校就无法做对比)
     if (!MY_SCHOOL || !SCHOOLS[MY_SCHOOL]) {
@@ -230,7 +237,7 @@ function generateAIMacroReport() {
                     <button onclick="this.closest('.modal').remove()" style="border:none; bg:none; cursor:pointer; font-size:20px;">&times;</button>
                 </div>
                 <div id="ai-report-content" style="flex:1; overflow-y:auto; padding:20px; white-space:pre-wrap; line-height:1.8; font-family:serif; font-size:16px;">
-                    正在调取 ${MY_SCHOOL} 与全镇其他 ${Object.keys(SCHOOLS).length - 1} 所学校的对比数据...
+                    正在调取 ${MY_SCHOOL} 与全镇其他 ${Math.max(0, townshipSchools.length - 1)} 所学校的对比数据...
                     <br>正在分析学科短板与提分空间...
                     <br>正在生成针对 ${CONFIG.name} 的备考建议...
                     <br><br>
@@ -248,7 +255,7 @@ function generateAIMacroReport() {
 
     // --- A. 数据准备 (Data Context) ---
     const myData = SCHOOLS[MY_SCHOOL];
-    const totalSchools = Object.keys(SCHOOLS).length;
+    const totalSchools = townshipSchools.length;
     const myRank = myData.rank2Rate || '-';
 
     // 计算全镇基准数据
@@ -259,7 +266,7 @@ function generateAIMacroReport() {
         if (!myData.metrics[sub]) return;
 
         // 全镇该科数据收集
-        const allSchoolsMetrics = Object.values(SCHOOLS).map(s => s.metrics[sub]).filter(m => m);
+        const allSchoolsMetrics = townshipSchools.map(s => s.metrics[sub]).filter(m => m);
         const townSubAvg = allSchoolsMetrics.reduce((a, b) => a + b.avg, 0) / allSchoolsMetrics.length;
         const maxSubAvg = Math.max(...allSchoolsMetrics.map(m => m.avg)); // 第一名均分
 

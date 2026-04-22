@@ -89,7 +89,10 @@ function updateProgressSchoolSelect() {
     if (!sel) return;
     sel.innerHTML = '<option value="">--请选择本校--</option>';
     const user = getCurrentUser();
-    PermissionPolicy.getAccessibleSchoolNames(user, Object.keys(SCHOOLS || {})).forEach((school) => {
+    const availableSchools = (typeof window.listAvailableSchoolsForCompare === 'function')
+        ? window.listAvailableSchoolsForCompare()
+        : Object.keys(SCHOOLS || {});
+    PermissionPolicy.getAccessibleSchoolNames(user, availableSchools).forEach((school) => {
         sel.innerHTML += `<option value="${school}">${school}</option>`;
     });
 
@@ -578,7 +581,10 @@ function getProgressCleanName(name) {
 
 function getProgressSelectedSchoolName() {
     const select = document.getElementById('progressSchoolSelect');
-    const schoolName = String(select?.value || MY_SCHOOL || Object.keys(SCHOOLS || {})[0] || '').trim();
+    const fallbackSchools = (typeof window.listAvailableSchoolsForCompare === 'function')
+        ? window.listAvailableSchoolsForCompare()
+        : Object.keys(SCHOOLS || {});
+    const schoolName = String(select?.value || MY_SCHOOL || fallbackSchools[0] || '').trim();
     if (select && schoolName && !select.value) select.value = schoolName;
     return schoolName;
 }

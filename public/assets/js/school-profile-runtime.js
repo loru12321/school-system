@@ -30,8 +30,15 @@
 
         SUBJECTS.forEach(sub => {
             if (s.metrics[sub] && s.metrics[sub].avg) {
-                const allAvgs = Object.values(SCHOOLS).map(sch => sch.metrics[sub]?.avg || 0).filter(v => v > 0);
-                const townAvg = allAvgs.reduce((a, b) => a + b, 0) / allAvgs.length;
+                const schoolList = (typeof listAvailableSchoolsForCompare === 'function')
+                    ? listAvailableSchoolsForCompare()
+                    : Object.keys(SCHOOLS || {});
+                const schoolSet = new Set((schoolList || []).map(name => String(name || '').trim()).filter(Boolean));
+                const allAvgs = Object.values(SCHOOLS || {})
+                    .filter(sch => !schoolSet.size || schoolSet.has(String(sch?.name || '').trim()))
+                    .map(sch => sch.metrics[sub]?.avg || 0)
+                    .filter(v => v > 0);
+                const townAvg = allAvgs.length ? (allAvgs.reduce((a, b) => a + b, 0) / allAvgs.length) : 0;
 
                 const ratio = townAvg ? (s.metrics[sub].avg / townAvg) : 0;
                 subjectLabels.push(sub);

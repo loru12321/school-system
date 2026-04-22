@@ -285,7 +285,9 @@
 
     function inferTeacherSchoolIfNeeded() {
         if (MY_SCHOOL || typeof SCHOOLS === 'undefined' || Object.keys(SCHOOLS).length === 0) return;
-        const schoolNames = Object.keys(SCHOOLS);
+        const schoolNames = (typeof window.listAvailableSchoolsForCompare === 'function')
+            ? window.listAvailableSchoolsForCompare()
+            : Object.keys(SCHOOLS);
         if (schoolNames.length === 1) {
             writeCurrentSchool(schoolNames[0]);
         } else if (typeof TEACHER_MAP !== 'undefined' && Object.keys(TEACHER_MAP).length > 0) {
@@ -391,7 +393,9 @@
         const runNow = () => {
             if (!MY_SCHOOL && typeof TEACHER_MAP !== 'undefined' && Object.keys(TEACHER_MAP).length > 0 && typeof SCHOOLS !== 'undefined') {
                 const schoolCounts = {};
-                const schoolNames = Object.keys(SCHOOLS);
+                const schoolNames = (typeof window.listAvailableSchoolsForCompare === 'function')
+                    ? window.listAvailableSchoolsForCompare()
+                    : Object.keys(SCHOOLS);
                 Object.keys(TEACHER_MAP).forEach((key) => {
                     const cls = key.split('_')[0];
                     for (const schoolName of schoolNames) {

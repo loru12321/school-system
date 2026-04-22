@@ -29,7 +29,10 @@
         const old = sel.value;
         const schools = getSchoolMap();
         sel.innerHTML = '<option value="">-- 请选择考核学校 --</option>';
-        Object.keys(schools).forEach((schoolName) => {
+        const schoolList = (typeof window.listAvailableSchoolsForCompare === 'function')
+            ? window.listAvailableSchoolsForCompare()
+            : Object.keys(schools);
+        schoolList.forEach((schoolName) => {
             sel.innerHTML += `<option value="${schoolName}">${schoolName}</option>`;
         });
         if (old && schools[old]) sel.value = old;
