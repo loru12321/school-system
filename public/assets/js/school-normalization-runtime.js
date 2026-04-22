@@ -551,6 +551,17 @@ function isAggregateCompareSchoolName(name) {
     return /^(?:\u6574\u4f53|\u5168\u90e8|\u6c47\u603b|\u603b\u8868|\u5408\u8ba1|\u5168\u53bf|\u53bf\u57df|Sheet\d*|\u5de5\u4f5c\u8868\d*)$/i.test(text);
 }
 
+function isLikelyTownshipSchoolName(name) {
+    const text = String(name || '').trim();
+    if (!text || isAggregateCompareSchoolName(text)) return false;
+    if (/(镇|乡|街道|办事处|中心校|学区)/.test(text)) return true;
+    return SCHOOL_ALIAS_GROUPS.some((group) => {
+        const names = [group?.canonical, ...(group?.aliases || [])].map((item) => String(item || '').trim()).filter(Boolean);
+        if (!names.some((item) => item === text)) return false;
+        return names.some((item) => /(镇|乡|街道|办事处|中心校|学区)/.test(item));
+    });
+}
+
 function getTownshipManagedSchoolNames(candidateNames = []) {
     ensureNormalizedTargets();
     const currentNames = Array.from(new Set(
@@ -561,11 +572,13 @@ function getTownshipManagedSchoolNames(candidateNames = []) {
     if (!currentNames.length) return [];
 
     const targetKeys = Object.keys(window.TARGETS && typeof window.TARGETS === 'object' ? window.TARGETS : {});
-    if (!targetKeys.length) return [];
 
     const matched = targetKeys
         .map((rawName) => resolveSchoolNameFromCollection(currentNames, rawName) || getCanonicalSchoolName(rawName, currentNames))
         .filter((name) => currentNames.includes(name));
+    currentNames
+        .filter((name) => isLikelyTownshipSchoolName(name))
+        .forEach((name) => matched.push(name));
 
     return Array.from(new Set(matched)).sort((a, b) => a.localeCompare(b, 'zh-CN'));
 }
@@ -723,6 +736,7 @@ function inferDefaultSchoolFromContext() {
         syncIndicatorScoreToSchools,
         collectAvailableCompareSchools,
         isAggregateCompareSchoolName,
+        isLikelyTownshipSchoolName,
         getTownshipManagedSchoolNames,
         getCountyDirectSchoolNames,
         isTownshipManagedSchool,

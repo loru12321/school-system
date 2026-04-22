@@ -25,6 +25,20 @@
         return Number.isFinite(num) ? num : fallback;
     }
 
+    function assignCompetitionRanks(rows, scoreGetter, rankSetter) {
+        let lastScore = null;
+        let lastRank = 0;
+        rows.forEach((row, index) => {
+            const score = Number(scoreGetter(row));
+            const rank = (lastScore !== null && Math.abs(score - lastScore) < 0.0001)
+                ? lastRank
+                : index + 1;
+            rankSetter(row, rank);
+            lastScore = score;
+            lastRank = rank;
+        });
+    }
+
     function formatNumber(value, digits = 2) {
         const num = Number(value);
         return Number.isFinite(num) ? num.toFixed(digits) : '-';
@@ -87,6 +101,10 @@
     function getTargetManagedTownshipSchools(names) {
         const currentNames = Array.isArray(names) ? names.filter(Boolean) : getSchoolNames();
         if (!currentNames.length) return [];
+        if (typeof window.getTownshipManagedSchoolNames === 'function') {
+            const inferred = window.getTownshipManagedSchoolNames(currentNames);
+            if (Array.isArray(inferred) && inferred.length) return inferred;
+        }
         const targets = window.TARGETS && typeof window.TARGETS === 'object' ? window.TARGETS : {};
         const targetKeys = Object.keys(targets);
         if (!targetKeys.length) return [];
@@ -175,7 +193,11 @@
     function normalizeScope(scope) {
         const names = getSchoolNames();
         const nameSet = new Set(names);
-        const townshipSchools = (scope?.townshipSchools || []).filter((name) => nameSet.has(name));
+        const inferredTownshipSchools = getTargetManagedTownshipSchools(names);
+        const townshipSchools = Array.from(new Set([
+            ...(scope?.townshipSchools || []),
+            ...inferredTownshipSchools
+        ])).filter((name) => nameSet.has(name));
         const townshipSet = new Set(townshipSchools);
         const countySchools = names.filter((name) => !townshipSet.has(name));
         return {
@@ -198,7 +220,12 @@
         return (window.RAW_DATA || [])
             .filter((student) => Number.isFinite(Number(student?.total)))
             .slice()
-            .sort((a, b) => (a.countyRank || 9999) - (b.countyRank || 9999));
+            .sort((a, b) => {
+                const townA = Number(a.townshipRank || 9999);
+                const townB = Number(b.townshipRank || 9999);
+                if (townA !== townB) return townA - townB;
+                return (a.countyRank || 9999) - (b.countyRank || 9999);
+            });
     }
 
     function hasTeacherAssignments() {
@@ -415,7 +442,7 @@
 
     function buildCountyRankExportRows() {
         return [
-            ['学校', '范围', '人数', '平均分', '优秀率', '及格率', '两率一分', '县排名', '乡镇排名'],
+            ['学校', '范围', '人数', '平均分', '优秀率', '及格率', '两率一分', '乡镇排名', '县排名'],
             ...getCountyRankRows().map((school) => {
                 const metric = school.metrics?.total || {};
                 const isTownship = school.countyScope !== 'county';
@@ -427,8 +454,8 @@
                     formatPercent(metric.excRate),
                     formatPercent(metric.passRate),
                     formatNumber(school.score2Rate),
-                    school.countyRank2Rate || school.rank2Rate || '-',
-                    isTownship ? (school.townshipRank2Rate || '-') : '-'
+                    isTownship ? (school.townshipRank2Rate || '-') : '-',
+                    school.countyRank2Rate || school.rank2Rate || '-'
                 ];
             })
         ];
@@ -453,10 +480,10 @@
 
     function buildStudentArchiveExportRows() {
         return [
-            ['县排名', '乡镇排名', '学生', '学校', '班级', '总分'],
+            ['乡镇排名', '县排名', '学生', '学校', '班级', '总分'],
             ...getStudentArchiveData().map((student) => ([
-                student.countyRank || '-',
                 student.townshipRank || '-',
+                student.countyRank || '-',
                 student.name || '',
                 student.school || '',
                 student.class || '',
@@ -488,18 +515,18 @@
 
     function buildStudentArchiveExportRows() {
         return [
-            ['县排名', '乡镇排名', '学生', '学校', '班级', '总分', '学科县排速览', ...(window.SUBJECTS || []).flatMap((subject) => [`${subject}县排`, `${subject}乡排`])],
+            ['乡镇排名', '县排名', '学生', '学校', '班级', '总分', '学科县排速览', ...(window.SUBJECTS || []).flatMap((subject) => [`${subject}乡排`, `${subject}县排`])],
             ...getStudentArchiveData().map((student) => ([
-                student.countyRank || '-',
                 student.townshipRank || '-',
+                student.countyRank || '-',
                 student.name || '',
                 student.school || '',
                 student.class || '',
                 formatNumber(student.total, 1),
                 buildStudentSubjectRankSummary(student),
                 ...(window.SUBJECTS || []).flatMap((subject) => [
-                    student?.ranks?.[subject]?.county ?? '-',
-                    student?.ranks?.[subject]?.township ?? '-'
+                    student?.ranks?.[subject]?.township ?? '-',
+                    student?.ranks?.[subject]?.county ?? '-'
                 ])
             ]))
         ];
@@ -696,22 +723,24 @@
             .slice()
             .sort((a, b) => Number(b.total) - Number(a.total));
 
-        rankedAll.forEach((student, index) => {
+        assignCompetitionRanks(rankedAll, (student) => student.total, (student, rank) => {
             if (!student.ranks) student.ranks = {};
             if (!student.ranks.total) student.ranks.total = {};
-            student.countyRank = index + 1;
+            student.countyRank = rank;
             student.countyScope = townshipSet.has(student.school) ? 'township' : 'county';
-            student.ranks.total.county = index + 1;
+            student.ranks.total.county = rank;
         });
 
-        rankedAll
-            .filter((student) => townshipSet.has(student.school))
-            .forEach((student, index) => {
-                student.townshipRank = index + 1;
+        assignCompetitionRanks(
+            rankedAll.filter((student) => townshipSet.has(student.school)),
+            (student) => student.total,
+            (student, rank) => {
+                student.townshipRank = rank;
                 if (!student.ranks) student.ranks = {};
                 if (!student.ranks.total) student.ranks.total = {};
-                student.ranks.total.township = index + 1;
-            });
+                student.ranks.total.township = rank;
+            }
+        );
 
         (window.SUBJECTS || []).forEach((subject) => {
             const rankedSubjectAll = (window.RAW_DATA || [])
@@ -719,19 +748,21 @@
                 .slice()
                 .sort((a, b) => Number(b?.scores?.[subject]) - Number(a?.scores?.[subject]));
 
-            rankedSubjectAll.forEach((student, index) => {
+            assignCompetitionRanks(rankedSubjectAll, (student) => student?.scores?.[subject], (student, rank) => {
                 if (!student.ranks) student.ranks = {};
                 if (!student.ranks[subject]) student.ranks[subject] = {};
-                student.ranks[subject].county = index + 1;
+                student.ranks[subject].county = rank;
             });
 
-            rankedSubjectAll
-                .filter((student) => townshipSet.has(student.school))
-                .forEach((student, index) => {
+            assignCompetitionRanks(
+                rankedSubjectAll.filter((student) => townshipSet.has(student.school)),
+                (student) => student?.scores?.[subject],
+                (student, rank) => {
                     if (!student.ranks) student.ranks = {};
                     if (!student.ranks[subject]) student.ranks[subject] = {};
-                    student.ranks[subject].township = index + 1;
-                });
+                    student.ranks[subject].township = rank;
+                }
+            );
         });
 
         calculateCountyTeacherRanking(scope);
@@ -780,8 +811,8 @@
                             <th>优秀率</th>
                             <th>及格率</th>
                             <th>两率一分</th>
-                            <th>县排名</th>
                             <th>乡镇排名</th>
+                            <th>县排名</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -797,8 +828,8 @@
                                     <td>${formatPercent(metric.excRate)}</td>
                                     <td>${formatPercent(metric.passRate)}</td>
                                     <td><strong>${formatNumber(school.score2Rate)}</strong></td>
-                                    <td>${school.countyRank2Rate || school.rank2Rate || '-'}</td>
                                     <td>${isTownship ? (school.townshipRank2Rate || '-') : '-'}</td>
+                                    <td>${school.countyRank2Rate || school.rank2Rate || '-'}</td>
                                 </tr>
                             `;
                         }).join('')}
@@ -833,16 +864,16 @@
         return `
             <div class="table-wrap analysis-table-shell">
                 <table class="analysis-generated-table county-analysis-table">
-                    <thead><tr><th>县排名</th><th>学生</th><th>学校</th><th>班级</th><th>总分</th><th>乡镇排名</th></tr></thead>
+                    <thead><tr><th>乡镇排名</th><th>县排名</th><th>学生</th><th>学校</th><th>班级</th><th>总分</th></tr></thead>
                     <tbody>
                         ${rows.map((student) => `
                             <tr>
+                                <td>${student.townshipRank || '-'}</td>
                                 <td>${student.countyRank || '-'}</td>
                                 <td>${escapeHtml(student.name)}</td>
                                 <td>${escapeHtml(student.school)}</td>
                                 <td>${escapeHtml(student.class || '')}</td>
                                 <td>${formatNumber(student.total, 1)}</td>
-                                <td>${student.townshipRank || '-'}</td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -917,16 +948,16 @@
         return `
             <div class="table-wrap analysis-table-shell">
                 <table class="analysis-generated-table county-analysis-table">
-                    <thead><tr><th>县排名</th><th>学生</th><th>学校</th><th>班级</th><th>总分</th><th>乡镇排名</th><th>学科县排速览</th></tr></thead>
+                    <thead><tr><th>乡镇排名</th><th>县排名</th><th>学生</th><th>学校</th><th>班级</th><th>总分</th><th>学科县排速览</th></tr></thead>
                     <tbody>
                         ${rows.map((student) => `
                             <tr>
+                                <td>${student.townshipRank || '-'}</td>
                                 <td>${student.countyRank || '-'}</td>
                                 <td>${escapeHtml(student.name)}</td>
                                 <td>${escapeHtml(student.school)}</td>
                                 <td>${escapeHtml(student.class || '')}</td>
                                 <td>${formatNumber(student.total, 1)}</td>
-                                <td>${student.townshipRank || '-'}</td>
                                 <td class="county-student-subject-summary">${escapeHtml(buildStudentSubjectRankSummary(student))}</td>
                             </tr>
                         `).join('')}
@@ -1155,8 +1186,8 @@
         const baseCount = (!isTeacher && !isClassTeacher) ? 6 : 3;
         const subjectGroupSize = (!isTeacher && !isClassTeacher) ? (isSingleSchool ? 4 : 5) : (isSingleSchool ? 3 : 4);
         const totalGroupSize = (!isTeacher && !isClassTeacher) ? (isSingleSchool ? 3 : 4) : (isSingleSchool ? 2 : 3);
-        const subjectInsertOffset = (!isTeacher && !isClassTeacher) ? 4 : 3;
-        const totalInsertOffset = (!isTeacher && !isClassTeacher) ? 3 : 2;
+        const subjectInsertOffset = subjectGroupSize;
+        const totalInsertOffset = totalGroupSize;
 
         for (let subjectIndex = visibleSubjects.length - 1; subjectIndex >= 0; subjectIndex -= 1) {
             const insertPos = baseCount + (subjectIndex * subjectGroupSize) + subjectInsertOffset;
@@ -1255,8 +1286,8 @@
             } else {
                 headers.push(`${subject} 分数`, `${subject} T分`, `${subject} 校排`, `${subject} 班排`);
             }
-            if (countyRankVisible) headers.push(`${subject} 县排`);
             if (!isSingleSchool) headers.push(`${subject} 镇排`);
+            if (countyRankVisible) headers.push(`${subject} 县排`);
         });
 
         const totalLabel = String(window.CONFIG?.name || '').includes('9') ? '五科总分' : '总分';
@@ -1265,8 +1296,8 @@
         } else {
             headers.push(totalLabel, `${totalLabel}校排`, `${totalLabel}班排`);
         }
-        if (countyRankVisible) headers.push(`${totalLabel}县排`);
         if (!isSingleSchool) headers.push(`${totalLabel}镇排`);
+        if (countyRankVisible) headers.push(`${totalLabel}县排`);
 
         const data = [headers];
         studentsToShow.forEach((student) => {
@@ -1289,8 +1320,8 @@
                         student?.ranks?.[subject]?.class ?? '-'
                     );
                 }
-                if (countyRankVisible) row.push(getStudentCountyRankValue(student, subject));
                 if (!isSingleSchool) row.push(student?.ranks?.[subject]?.township ?? '-');
+                if (countyRankVisible) row.push(getStudentCountyRankValue(student, subject));
             });
 
             if (isTeacher || isClassTeacher) {
@@ -1298,8 +1329,8 @@
             } else {
                 row.push(student.total, student?.ranks?.total?.school ?? '-', student?.ranks?.total?.class ?? '-');
             }
-            if (countyRankVisible) row.push(getStudentCountyRankValue(student, 'total'));
             if (!isSingleSchool) row.push(student?.ranks?.total?.township ?? '-');
+            if (countyRankVisible) row.push(getStudentCountyRankValue(student, 'total'));
             data.push(row);
         });
 

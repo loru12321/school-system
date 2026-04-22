@@ -802,9 +802,14 @@
         });
 
         setTimeout(function () {
+            const lastAuto = window.__SHELL_LAST_DEFAULT_MODULE_AUTO__ || {};
+            const now = Date.now();
             const hasActiveSection = document.querySelector('.section.active');
             const firstCard = subNavContainer.querySelector('.shell-story-card');
+            const firstModuleId = firstCard ? firstCard.getAttribute('data-module-id') : '';
+            if (firstModuleId && lastAuto.id === firstModuleId && now - Number(lastAuto.time || 0) < 10000) return;
             if (!hasActiveSection && firstCard) {
+                window.__SHELL_LAST_DEFAULT_MODULE_AUTO__ = { id: firstModuleId, time: now };
                 firstCard.click();
             }
         }, 100);
