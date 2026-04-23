@@ -972,7 +972,7 @@
     }
 
     function decorateStudentDetails() {
-        // 学生明细保持原有乡镇口径，县排名只放在县域模块和学生对比模块中。
+        // 学生明细保留乡镇主口径，同时在镇排后补充县排；县域模块不再单独渲染学生档案县排名块。
     }
 
     function getStudentCountyRankValue(student, subject) {

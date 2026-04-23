@@ -6270,12 +6270,21 @@ const WORKER_SOURCE = `
                     sch.bottom3 = { totalN, bottomN, excN, avg: bAvg };
                 });
 
+                const townshipSchoolSetForWorker = new Set((TOWNSHIP_SCHOOL_NAMES || []).map(name => String(name || '').trim()).filter(Boolean));
+                const isTownshipSchool = (schoolName) => {
+                    if (Array.isArray(TOWNSHIP_SCHOOL_NAMES)) {
+                        return townshipSchoolSetForWorker.has(String(schoolName || '').trim());
+                    }
+                    return true;
+                };
+                const townshipRows = RAW_DATA.filter(s => isTownshipSchool(s.school));
+
                // === 新增功能：计算全镇各科标准差 & 学生 T 分 (T-Score) ===
 
                 // 1. 计算全镇各科的统计指标 (均分 & 标准差)
                 const globalStats = {};
                 SUBJECTS.forEach(sub => {
-                    const scores = RAW_DATA.map(s => s.scores[sub]).filter(v => typeof v === 'number');
+                    const scores = townshipRows.map(s => s.scores[sub]).filter(v => typeof v === 'number');
                     if (scores.length > 1) {
                         const sum = scores.reduce((a, b) => a + b, 0);
                         const avg = sum / scores.length;
@@ -6342,14 +6351,6 @@ const WORKER_SOURCE = `
                     });
                 };
 
-                const townshipSchoolSetForWorker = new Set((TOWNSHIP_SCHOOL_NAMES || []).map(name => String(name || '').trim()).filter(Boolean));
-                const isTownshipSchool = (schoolName) => {
-                    if (Array.isArray(TOWNSHIP_SCHOOL_NAMES)) {
-                        return townshipSchoolSetForWorker.has(String(schoolName || '').trim());
-                    }
-                    return true;
-                };
-
                 // 1. 全县排名 (County Rank)
                 calcRank(RAW_DATA, s => s.total, (s, r) => {
                     if (!s.ranks) s.ranks = {}; if (!s.ranks.total) s.ranks.total = {};
@@ -6365,7 +6366,6 @@ const WORKER_SOURCE = `
                 });
 
                 // 2. 全镇排名 (Township Rank)
-                const townshipRows = RAW_DATA.filter(s => isTownshipSchool(s.school));
                 calcRank(townshipRows, s => s.total, (s, r) => {
                     if (!s.ranks.total) s.ranks.total = {};
                     s.ranks.total.township = r;
@@ -13544,10 +13544,78 @@ function getComparisonTotalSubjects() {
     return Array.isArray(subsForTotal) ? subsForTotal.filter(Boolean) : [];
 }
 
-function getComparisonStudentView(record, allStudents = RAW_DATA) {
+function buildComparisonStudentRankContext(allStudents, totalSubjects = getComparisonTotalSubjects()) {
+    const rows = Array.isArray(allStudents) ? allStudents.filter(Boolean) : [];
+    const keyOf = (row) => `${String(row?.school || '').trim()}::${String(row?.class || '').trim()}::${String(row?.name || '').trim()}`;
+    const classKeyOf = (value) => (typeof normalizeClass === 'function')
+        ? normalizeClass(value)
+        : String(value || '').trim();
+    const withTotals = rows
+        .map(row => ({ row, total: getComparisonTotalValue(row, totalSubjects) }))
+        .filter(item => Number.isFinite(item.total));
+    const townshipSourceRows = (() => {
+        if (typeof filterRowsToTownshipSchools !== 'function') return rows;
+        const filtered = filterRowsToTownshipSchools(rows);
+        return filtered.length ? filtered : rows;
+    })();
+    const townshipKeys = new Set(townshipSourceRows.map(row => keyOf(row)));
+    const townshipWithTotals = withTotals.filter(item => townshipKeys.has(keyOf(item.row)));
+    const townRankMap = buildCompetitionRankMap(townshipWithTotals, item => keyOf(item.row), item => item.total);
+    const countyRankMap = buildCompetitionRankMap(withTotals, item => keyOf(item.row), item => item.total);
+    const schoolRankMaps = new Map();
+    const classRankMaps = new Map();
+
+    const getSchoolRankMap = (school) => {
+        const schoolKey = String(school || '').trim();
+        if (!schoolRankMaps.has(schoolKey)) {
+            schoolRankMaps.set(
+                schoolKey,
+                buildCompetitionRankMap(
+                    withTotals.filter(item => String(item.row?.school || '').trim() === schoolKey),
+                    item => keyOf(item.row),
+                    item => item.total
+                )
+            );
+        }
+        return schoolRankMaps.get(schoolKey);
+    };
+
+    const getClassRankMap = (school, className) => {
+        const schoolKey = String(school || '').trim();
+        const classKey = classKeyOf(className);
+        const cacheKey = `${schoolKey}::${classKey}`;
+        if (!classRankMaps.has(cacheKey)) {
+            classRankMaps.set(
+                cacheKey,
+                buildCompetitionRankMap(
+                    withTotals.filter(item => (
+                        String(item.row?.school || '').trim() === schoolKey
+                        && classKeyOf(item.row?.class || '') === classKey
+                    )),
+                    item => keyOf(item.row),
+                    item => item.total
+                )
+            );
+        }
+        return classRankMaps.get(cacheKey);
+    };
+
+    return {
+        totalSubjects,
+        rows,
+        withTotals,
+        keyOf,
+        townRankMap,
+        countyRankMap,
+        getSchoolRankMap,
+        getClassRankMap
+    };
+}
+
+function getComparisonStudentView(record, allStudents = RAW_DATA, comparisonContext = null) {
     if (!record || typeof record !== 'object') return record;
     try {
-        return createComparisonStudentView(record, allStudents);
+        return createComparisonStudentView(record, allStudents, comparisonContext);
     } catch (error) {
         console.warn('[report] failed to normalize comparison student view:', error);
         return record;
@@ -13556,7 +13624,8 @@ function getComparisonStudentView(record, allStudents = RAW_DATA) {
 
 function getComparisonStudentList(records, allStudents = RAW_DATA) {
     if (!Array.isArray(records)) return [];
-    return records.map(record => getComparisonStudentView(record, allStudents));
+    const comparisonContext = buildComparisonStudentRankContext(allStudents);
+    return records.map(record => getComparisonStudentView(record, allStudents, comparisonContext));
 }
 
 function formatComparisonExamLabel(rawLabel, fallback = '本次') {
@@ -13641,10 +13710,10 @@ function readCloudPreviousRecordForStudent(student) {
     return null;
 }
 
-function createComparisonStudentView(record, allStudents) {
+function createComparisonStudentView(record, allStudents, comparisonContext = null) {
     if (!record || typeof record !== 'object') return record;
 
-    const totalSubjects = getComparisonTotalSubjects();
+    const totalSubjects = comparisonContext?.totalSubjects || getComparisonTotalSubjects();
     const normalizedTotal = getComparisonTotalValue(record, totalSubjects);
     const view = {
         ...record,
@@ -13659,24 +13728,22 @@ function createComparisonStudentView(record, allStudents) {
         view.total = normalizedTotal;
     }
 
-    const rows = Array.isArray(allStudents) ? allStudents.filter(Boolean) : [];
-    if (!rows.length) return view;
+    const context = comparisonContext || buildComparisonStudentRankContext(allStudents, totalSubjects);
+    if (!context.withTotals.length) return view;
 
-    const keyOf = (row) => `${String(row?.school || '').trim()}::${String(row?.class || '').trim()}::${String(row?.name || '').trim()}`;
-    const targetKey = keyOf(record);
-    const withTotals = rows.map(row => ({ row, total: getComparisonTotalValue(row, totalSubjects) })).filter(item => Number.isFinite(item.total));
-    if (!withTotals.length) return view;
-
-    const townRankMap = buildCompetitionRankMap(withTotals, item => keyOf(item.row), item => item.total);
-    const schoolRankMap = buildCompetitionRankMap(withTotals.filter(item => String(item.row?.school || '').trim() === String(record.school || '').trim()), item => keyOf(item.row), item => item.total);
-    const classRankMap = buildCompetitionRankMap(withTotals.filter(item => String(item.row?.school || '').trim() === String(record.school || '').trim() && resolveIsClassEquivalent(item.row?.class || '', record.class || '')), item => keyOf(item.row), item => item.total);
+    const targetKey = context.keyOf(record);
+    const schoolRankMap = context.getSchoolRankMap(record.school);
+    const classRankMap = context.getClassRankMap(record.school, record.class);
+    const countyRank = context.countyRankMap.get(targetKey) ?? view.ranks.total.county ?? view.countyRank ?? '-';
 
     view.ranks.total = {
         ...view.ranks.total,
-        township: townRankMap.get(targetKey) ?? view.ranks.total.township ?? '-',
+        township: context.townRankMap.get(targetKey) ?? view.ranks.total.township ?? '-',
+        county: countyRank,
         school: schoolRankMap.get(targetKey) ?? view.ranks.total.school ?? '-',
         class: classRankMap.get(targetKey) ?? view.ranks.total.class ?? '-'
     };
+    if (countyRank !== '-') view.countyRank = countyRank;
 
     return view;
 }

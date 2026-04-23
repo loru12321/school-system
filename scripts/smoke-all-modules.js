@@ -938,12 +938,23 @@ async function runModuleDeepCheck(page, id) {
             const section = document.getElementById('student-details');
             const table = document.getElementById('studentDetailTable');
             const rows = table?.querySelectorAll('tbody tr')?.length || 0;
+            const headers = Array.from(table?.querySelectorAll('thead th') || [])
+                .map((cell) => String(cell.textContent || '').replace(/\s+/g, '').trim());
+            const countyRankAfterTownRank = headers.some((header, index) => (
+                header.includes('镇排') && String(headers[index + 1] || '').includes('县排')
+            ));
+            const targetStudent = (window.RAW_DATA || []).find((student) => String(student?.name || '').trim() === '解洪旭');
+            const targetTownRank = Number(targetStudent?.ranks?.total?.township || 0);
+            const targetCountyRank = Number(targetStudent?.ranks?.total?.county || targetStudent?.countyRank || 0);
             const checks = {
                 sectionReady: !!section,
                 renderStudentDetails: typeof window.renderStudentDetails === 'function',
                 renderStudentMultiPeriodComparison: typeof window.renderStudentMultiPeriodComparison === 'function',
                 schoolSelectReady: !!document.getElementById('studentSchoolSelect'),
                 tableReady: !!table,
+                countyRankAfterTownRank,
+                targetStudentTownRankReady: !targetStudent || (targetTownRank >= 3 && targetTownRank <= 4),
+                targetStudentCountyRankReady: !targetStudent || targetCountyRank > targetTownRank,
                 compareSectionReady: !!document.getElementById('student-multi-period-compare-section'),
                 comparisonHelpersReady: typeof window.getComparisonStudentView === 'function'
                     && typeof window.getComparisonStudentList === 'function'
@@ -953,6 +964,13 @@ async function runModuleDeepCheck(page, id) {
                 ok: Object.values(checks).every(Boolean),
                 checks,
                 rows,
+                headers,
+                targetStudentRank: targetStudent ? {
+                    name: targetStudent.name,
+                    school: targetStudent.school,
+                    town: targetTownRank,
+                    county: targetCountyRank
+                } : null,
                 compareEntryReady: !!document.getElementById('student-multi-period-compare-section'),
                 comparisonHelpersReady: checks.comparisonHelpersReady
             };

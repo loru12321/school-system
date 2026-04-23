@@ -567,7 +567,8 @@
         };
     }
 
-    function analyzeTeachersV2() {
+    function analyzeTeachersV2(options = {}) {
+        const renderOptions = (options && typeof options === 'object') ? options : {};
         const resolveRowsForTeacherAnalysis = () => {
             if (Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0) return window.RAW_DATA;
             const db = (typeof window.CohortDB !== 'undefined' && typeof window.CohortDB.ensure === 'function')
@@ -993,8 +994,9 @@
             });
         });
 
-        if (typeof window.refreshTeacherPerformanceCopy === 'function') window.refreshTeacherPerformanceCopy();
         if (typeof window.calculateTeacherTownshipRanking === 'function') window.calculateTeacherTownshipRanking();
+        if (typeof window.refreshTeacherPerformanceCopy === 'function') window.refreshTeacherPerformanceCopy();
+        if (renderOptions.render === false) return;
         if (typeof window.renderTeacherCards === 'function') window.renderTeacherCards();
         if (typeof window.renderTeacherComparisonTable === 'function') window.renderTeacherComparisonTable();
         if (typeof window.generateTeacherPairing === 'function') window.generateTeacherPairing();

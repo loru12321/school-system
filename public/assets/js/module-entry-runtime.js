@@ -15,6 +15,9 @@
     const APP_DOWNLOAD_MODULE_IDS = new Set([
         'app-download-center'
     ]);
+    const TEACHER_ANALYSIS_RENDER_DELAY_MS = 1400;
+    let teacherAnalysisRenderTimer = 0;
+    let teacherAnalysisRenderToken = 0;
 
     function ensureModuleStylesFor(id) {
         if (typeof window.ensureOptionalStylesheetLoaded !== 'function') return Promise.resolve();
@@ -125,6 +128,92 @@
         if (currentCategory === 'town' && typeof ensureTownSubmoduleCompareUIs === 'function') {
             ensureTownSubmoduleCompareUIs();
         }
+    }
+
+    function isTeacherAnalysisActive() {
+        return !!document.getElementById('teacher-analysis')?.classList.contains('active');
+    }
+
+    function clearTeacherAnalysisDeferredRender() {
+        teacherAnalysisRenderToken += 1;
+        if (teacherAnalysisRenderTimer) {
+            window.clearTimeout(teacherAnalysisRenderTimer);
+            teacherAnalysisRenderTimer = 0;
+        }
+    }
+
+    function runTeacherAnalysisIfCurrent(token, task) {
+        if (token !== teacherAnalysisRenderToken || !isTeacherAnalysisActive()) return;
+        task();
+    }
+
+    function scheduleTeacherAnalysisPhase(token, task, delay = 0) {
+        window.setTimeout(() => runTeacherAnalysisIfCurrent(token, task), delay);
+    }
+
+    function showTeacherAnalysisPendingState() {
+        const placeholders = [
+            ['teacherCardsContainer', '正在后台计算教师画像，稍后自动刷新。'],
+            ['teacherComparisonTable', '正在整理教师对比表，稍后自动刷新。'],
+            ['teacher-township-ranking-container', '正在生成教师乡镇排名，稍后自动刷新。']
+        ];
+        placeholders.forEach(([id, message]) => {
+            const node = document.getElementById(id);
+            if (!node) return;
+            const currentHtml = String(node.innerHTML || '').trim();
+            if (currentHtml && node.dataset.released !== 'true') return;
+            node.innerHTML = `<div class="analysis-empty-state">${message}</div>`;
+        });
+    }
+
+    function scheduleTeacherAnalysisRenderWork() {
+        clearTeacherAnalysisDeferredRender();
+        const token = teacherAnalysisRenderToken;
+        showTeacherAnalysisPendingState();
+
+        teacherAnalysisRenderTimer = window.setTimeout(() => {
+            const startWork = () => runTeacherAnalysisIfCurrent(token, () => {
+                const teacherMapReady = window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0;
+                if (!teacherMapReady || typeof window.analyzeTeachers !== 'function') {
+                    renderTeacherAnalysisEmptyState();
+                    return;
+                }
+
+                window.analyzeTeachers({ render: false });
+                ['teacherCardsContainer', 'teacherComparisonTable', 'teacher-township-ranking-container'].forEach((id) => {
+                    const node = document.getElementById(id);
+                    if (node) delete node.dataset.released;
+                });
+                scheduleTeacherAnalysisPhase(token, () => {
+                    if (typeof window.renderTeacherCards === 'function') window.renderTeacherCards();
+                }, 0);
+                scheduleTeacherAnalysisPhase(token, () => {
+                    if (typeof window.renderTeacherComparisonTable === 'function') window.renderTeacherComparisonTable();
+                }, 80);
+                scheduleTeacherAnalysisPhase(token, () => {
+                    if (typeof window.generateTeacherPairing === 'function') window.generateTeacherPairing();
+                }, 140);
+                scheduleTeacherAnalysisPhase(token, () => {
+                    if (typeof window.renderTeachingOverview === 'function') window.renderTeachingOverview();
+                }, 200);
+                scheduleTeacherAnalysisPhase(token, () => {
+                    if (typeof window.renderTeacherTownshipRanking === 'function') window.renderTeacherTownshipRanking();
+                }, 320);
+                scheduleTeacherAnalysisPhase(token, () => {
+                    if (typeof window.tmRenderTeachingModuleStateBars === 'function') window.tmRenderTeachingModuleStateBars();
+                }, 380);
+                if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
+                if (typeof updateTeacherCompareTeacherSelect === 'function') updateTeacherCompareTeacherSelect();
+            });
+
+            if (typeof window.requestIdleCallback === 'function') {
+                window.requestIdleCallback(startWork, { timeout: 1500 });
+            } else if (typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(startWork);
+            } else {
+                startWork();
+            }
+        }, TEACHER_ANALYSIS_RENDER_DELAY_MS);
     }
 
     function initStudentDetailsEntry() {
@@ -336,6 +425,7 @@
         if (typeof window.ensureLazySectionLoaded === 'function') {
             window.ensureLazySectionLoaded('teacherModal');
         }
+        clearTeacherAnalysisDeferredRender();
         if (window.DataManager && typeof DataManager.ensureTeacherMap === 'function') {
             DataManager.ensureTeacherMap(true);
         }
@@ -358,14 +448,12 @@
             if (!document.getElementById('teacher-analysis')?.classList.contains('active')) return;
             const teacherMapReady = window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0;
             if (teacherMapReady && typeof window.analyzeTeachers === 'function') {
-                window.analyzeTeachers();
-                if (typeof window.renderTeacherComparisonTable === 'function') window.renderTeacherComparisonTable();
-                if (typeof window.renderTeacherTownshipRanking === 'function') window.renderTeacherTownshipRanking();
+                scheduleTeacherAnalysisRenderWork();
             } else {
                 renderTeacherAnalysisEmptyState();
+                if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
+                if (typeof updateTeacherCompareTeacherSelect === 'function') updateTeacherCompareTeacherSelect();
             }
-            if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
-            if (typeof updateTeacherCompareTeacherSelect === 'function') updateTeacherCompareTeacherSelect();
         };
 
         if (typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function') {
@@ -379,6 +467,7 @@
     }
 
     function releaseTeacherAnalysisHeavyDom() {
+        clearTeacherAnalysisDeferredRender();
         const section = document.getElementById('teacher-analysis');
         if (!section || section.classList.contains('active')) return;
         const heavyTargets = [
