@@ -378,6 +378,24 @@
         return Promise.resolve();
     }
 
+    function releaseTeacherAnalysisHeavyDom() {
+        const section = document.getElementById('teacher-analysis');
+        if (!section || section.classList.contains('active')) return;
+        const heavyTargets = [
+            ['teacherCardsContainer', '教师卡片已收起，重新进入本模块后自动刷新。'],
+            ['teacherComparisonTable', '教师对比表已收起，重新进入本模块后自动刷新。'],
+            ['teacher-township-ranking-container', '教师乡镇排名已收起，重新进入本模块后自动刷新。']
+        ];
+        heavyTargets.forEach(([id, message]) => {
+            const node = document.getElementById(id);
+            if (!node || !node.innerHTML) return;
+            node.dataset.released = 'true';
+            node.innerHTML = `<div class="analysis-empty-state">${message}</div>`;
+        });
+        const sideNav = document.getElementById('side-nav-teacher-ranks-container');
+        if (sideNav) sideNav.innerHTML = '';
+    }
+
     function initCorrelationAnalysisEntry() {
         const runAfterLoad = () => {
             if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
@@ -554,5 +572,6 @@
     warmAppDownloadCenterRuntime();
     window.activateTeachingManagementModule = activateTeachingManagementModule;
     window.renderSingleSchoolAnalysisHint = renderSingleSchoolAnalysisHint;
+    window.releaseTeacherAnalysisHeavyDom = releaseTeacherAnalysisHeavyDom;
     window.__MODULE_ENTRY_RUNTIME_PATCHED__ = true;
 })();

@@ -10653,6 +10653,9 @@ function switchTab(id) {
 
     // 1. 切换内容区域显示
     forceHideAllSectionsExcept();
+    if (id !== 'teacher-analysis' && typeof window.releaseTeacherAnalysisHeavyDom === 'function') {
+        window.setTimeout(() => window.releaseTeacherAnalysisHeavyDom(), 0);
+    }
     const targetSection = document.getElementById(id);
     if (!targetSection) {
         console.error(`❌ 找不到模块: ${id}`);
