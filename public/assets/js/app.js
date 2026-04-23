@@ -1983,6 +1983,7 @@ function setRawData(rows) {
         : (Array.isArray(rows) ? rows : []);
     if (typeof RAW_DATA !== 'undefined') RAW_DATA = nextRows;
     window.RAW_DATA = nextRows;
+    window.__RAW_DATA_VERSION = (Number(window.__RAW_DATA_VERSION) || 0) + 1;
     return nextRows;
 }
 
@@ -6230,6 +6231,9 @@ const WORKER_SOURCE = `
         const { cmd, data } = e.data;
         if (cmd === 'PROCESS_ALL') {
             const { RAW_DATA, SUBJECTS, CONFIG, THRESHOLDS } = data;
+            const TOWNSHIP_SCHOOL_NAMES = Array.isArray(data.TOWNSHIP_SCHOOL_NAMES)
+                ? data.TOWNSHIP_SCHOOL_NAMES.map(name => String(name || '').trim()).filter(Boolean)
+                : null;
             // 接收轻量版 SCHOOLS (无循环引用)
             let SCHOOLS = data.SCHOOLS_LITE;
 
@@ -6338,13 +6342,12 @@ const WORKER_SOURCE = `
                     });
                 };
 
+                const townshipSchoolSetForWorker = new Set((TOWNSHIP_SCHOOL_NAMES || []).map(name => String(name || '').trim()).filter(Boolean));
                 const isTownshipSchool = (schoolName) => {
-                    if (typeof window.isTownshipManagedSchool === 'function') {
-                        return window.isTownshipManagedSchool(schoolName, Object.keys(schoolMap || {}));
+                    if (Array.isArray(TOWNSHIP_SCHOOL_NAMES)) {
+                        return townshipSchoolSetForWorker.has(String(schoolName || '').trim());
                     }
-                    const targets = window.TARGETS || {};
-                    const normalized = String(schoolName || '').trim();
-                    return !!targets[normalized] || !!targets[normalized.replace(/中学$|小学$|学校$/, '')];
+                    return true;
                 };
 
                 // 1. 全县排名 (County Rank)
@@ -6385,9 +6388,9 @@ const WORKER_SOURCE = `
                 });
 
                // --- D. 学校综合排名 (原 calculateRankings) ---
-                const hasTownshipScopeHelper = typeof getTownshipManagedSchoolNames === 'function';
+                const hasTownshipScopeHelper = Array.isArray(TOWNSHIP_SCHOOL_NAMES);
                 const townshipSchoolNames = hasTownshipScopeHelper
-                    ? getTownshipManagedSchoolNames(Object.keys(schoolMap || {}))
+                    ? TOWNSHIP_SCHOOL_NAMES
                     : Object.keys(schoolMap || {});
                 const townshipSchoolSet = new Set((townshipSchoolNames || []).map(name => String(name || '').trim()).filter(Boolean));
                 const doSchoolRank = (sub, key) => {
@@ -10637,7 +10640,7 @@ function switchTab(id) {
         console.warn('school-internal-grades has been removed; redirecting to exam-arranger');
         id = 'exam-arranger';
     }
-    console.log(`🔄 切换模块: ${id}`);
+    if (window.DEBUG_MODULE_SWITCH) console.debug(`🔄 切换模块: ${id}`);
     if (!canAccessModule(id)) {
         alert('⛔ 权限不足：该模块对当前角色不可见');
         return;
@@ -10656,7 +10659,7 @@ function switchTab(id) {
         alert(`模块 "${id}" 不存在，请联系管理员`);
         return;
     }
-    console.log(`✅ 激活模块: ${id}`, targetSection);
+    if (window.DEBUG_MODULE_SWITCH) console.debug(`✅ 激活模块: ${id}`);
     targetSection.classList.add('active');
     targetSection.style.display = 'block';
     resetMainViewport();
@@ -10848,7 +10851,10 @@ function handleIndicatorClick(schoolName, type) {
     const r2 = parseInt(document.getElementById('ind2').value);
     if (!r1 || !r2) return alert("请先设置指标参数");
 
-    const allScores = RAW_DATA.map(s => s.total).sort((a, b) => b - a);
+    const townshipRows = (typeof filterRowsToTownshipSchools === 'function')
+        ? filterRowsToTownshipSchools(RAW_DATA || [])
+        : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
+    const allScores = townshipRows.map(s => s.total).filter(v => typeof v === 'number').sort((a, b) => b - a);
     const line = type === 'ind1' ? (allScores[r1 - 1] || 0) : (allScores[r2 - 1] || 0);
     const title = `${schoolName} - ${type === 'ind1' ? '指标一' : '指标二'}达标名单 (线≥${line})`;
 
@@ -10891,7 +10897,13 @@ function renderHighScoreTable() {
     const hasHighScoreScopeHelper = typeof getTownshipManagedSchoolNames === 'function';
     const townshipSchoolNames = hasHighScoreScopeHelper ? getTownshipManagedSchoolNames(Object.keys(SCHOOLS || {})) : Object.keys(SCHOOLS || {});
     const townshipSchoolSet = new Set((townshipSchoolNames || []).map(name => String(name || '').trim()).filter(Boolean));
-    const townshipSchools = Object.values(SCHOOLS).filter((school) => hasHighScoreScopeHelper ? townshipSchoolSet.has(String(school?.name || '').trim()) : true);
+    const townshipSchools = Object.values(SCHOOLS).filter((school) => {
+        if (!hasHighScoreScopeHelper) return true;
+        const name = String(school?.name || '').trim();
+        return typeof isTownshipManagedSchool === 'function'
+            ? isTownshipManagedSchool(name, Object.keys(SCHOOLS || {}))
+            : townshipSchoolSet.has(name);
+    });
     if (townshipSchools.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px;">请先上传数据</td></tr>';
         return;
@@ -10941,7 +10953,13 @@ function exportHighScoreExcel() {
     const hasHighScoreScopeHelper = typeof getTownshipManagedSchoolNames === 'function';
     const townshipSchoolNames = hasHighScoreScopeHelper ? getTownshipManagedSchoolNames(Object.keys(SCHOOLS || {})) : Object.keys(SCHOOLS || {});
     const townshipSchoolSet = new Set((townshipSchoolNames || []).map(name => String(name || '').trim()).filter(Boolean));
-    const townshipSchools = Object.values(SCHOOLS).filter((school) => hasHighScoreScopeHelper ? townshipSchoolSet.has(String(school?.name || '').trim()) : true);
+    const townshipSchools = Object.values(SCHOOLS).filter((school) => {
+        if (!hasHighScoreScopeHelper) return true;
+        const name = String(school?.name || '').trim();
+        return typeof isTownshipManagedSchool === 'function'
+            ? isTownshipManagedSchool(name, Object.keys(SCHOOLS || {}))
+            : townshipSchoolSet.has(name);
+    });
     if (!townshipSchools.length) return alert("无数据");
     if (!CONFIG.name.includes('9')) return alert("非9年级模式无此数据");
 
@@ -11343,9 +11361,14 @@ async function processData() {
     const input1 = parseFloat(window.SYS_VARS?.indicator?.ind1) || 0;
     const input2 = parseFloat(window.SYS_VARS?.indicator?.ind2) || 0;
 
+    const townshipRowsForCore = (typeof filterRowsToTownshipSchools === 'function')
+        ? filterRowsToTownshipSchools(RAW_DATA || [])
+        : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
+    const thresholdSourceRows = townshipRowsForCore.length ? townshipRowsForCore : (RAW_DATA || []);
+
     const keys = [...SUBJECTS, 'total'];
     keys.forEach(k => {
-        const vals = RAW_DATA.map(s => k === 'total' ? s.total : s.scores[k]).filter(v => v !== undefined).sort((a, b) => b - a);
+        const vals = thresholdSourceRows.map(s => k === 'total' ? s.total : s.scores[k]).filter(v => v !== undefined).sort((a, b) => b - a);
 
         if (vals.length) {
             // 如果是单校模式，且是总分，且用户输入了有效的名次指标
@@ -11374,7 +11397,10 @@ async function processData() {
     });
 
     // 2. 呼叫 Worker
-    const result = await WorkerAPI.run({ RAW_DATA, SUBJECTS, CONFIG, THRESHOLDS, SCHOOLS });
+    const townshipSchoolNamesForWorker = (typeof getTownshipManagedSchoolNames === 'function')
+        ? getTownshipManagedSchoolNames(Object.keys(SCHOOLS || {}))
+        : Object.keys(SCHOOLS || {});
+    const result = await WorkerAPI.run({ RAW_DATA, SUBJECTS, CONFIG, THRESHOLDS, SCHOOLS, TOWNSHIP_SCHOOL_NAMES: townshipSchoolNamesForWorker });
 
     // 3. 接收结果 (RAW_DATA 是全新的，带有排名的数组)
     setRawData(result.RAW_DATA || []);
@@ -11578,7 +11604,11 @@ function renderTables() {
         : Object.keys(SCHOOLS || {});
     const townshipSchoolSet = new Set((townshipSchoolNames || []).map(name => String(name || '').trim()).filter(Boolean));
     const townshipSchools = Object.values(SCHOOLS).filter((school) => (
-        hasTownshipScopeHelper ? townshipSchoolSet.has(String(school?.name || '').trim()) : true
+        hasTownshipScopeHelper
+            ? (typeof isTownshipManagedSchool === 'function'
+                ? isTownshipManagedSchool(school?.name, Object.keys(SCHOOLS || {}))
+                : townshipSchoolSet.has(String(school?.name || '').trim()))
+            : true
     ));
     const townshipRows = (typeof filterRowsToTownshipSchools === 'function')
         ? filterRowsToTownshipSchools(RAW_DATA || [])
@@ -11763,7 +11793,11 @@ function renderTrafficLightDashboard() {
         : Object.keys(SCHOOLS || {});
     const townshipSchoolSet = new Set((townshipSchoolNames || []).map(name => String(name || '').trim()).filter(Boolean));
     const townshipSchools = Object.values(SCHOOLS || {}).filter((school) => (
-        hasTrafficScopeHelper ? townshipSchoolSet.has(String(school?.name || '').trim()) : true
+        hasTrafficScopeHelper
+            ? (typeof isTownshipManagedSchool === 'function'
+                ? isTownshipManagedSchool(school?.name, Object.keys(SCHOOLS || {}))
+                : townshipSchoolSet.has(String(school?.name || '').trim()))
+            : true
     ));
 
     if (townshipSchools.length === 0) {
@@ -11778,7 +11812,8 @@ function renderTrafficLightDashboard() {
 
     // 遍历所有学校和所有科目进行“体检”
     townshipSchools.forEach(s => {
-        if (townshipSchoolSet.size && !townshipSchoolSet.has(String(s?.name || '').trim())) return;
+        if (hasTrafficScopeHelper && typeof isTownshipManagedSchool === 'function' && !isTownshipManagedSchool(s?.name, Object.keys(SCHOOLS || {}))) return;
+        if (townshipSchoolSet.size && typeof isTownshipManagedSchool !== 'function' && !townshipSchoolSet.has(String(s?.name || '').trim())) return;
         [...SUBJECTS, 'total'].forEach(sub => {
             const m = s.metrics[sub];
             if (!m) return;
@@ -12158,7 +12193,7 @@ function updateStudentSchoolSelect() {
 // 全局状态管理
 let STD_STATE = {
     page: 1,
-    size: 100,
+    size: 50,
     sortCol: null,     // 当前排序列
     sortDir: 'desc',   // desc 或 asc
     activeFilters: {}, // 存储筛选状态: { 'school': new Set(['实验中学', '二中']), '语文': ... }
@@ -12603,21 +12638,21 @@ function renderStudentDetails(reset = true) {
     visibleSubjects.forEach(sub => {
         headerHTML += buildTh(sub, sub, '80px');
         if (!isTeacher && !isClassTeacher) {
-            headerHTML += `<th>T</th><th>校</th><th>班</th><th style="${townHeaderStyle}">镇</th><th style="${townHeaderStyle}">县</th>`;
+            headerHTML += `<th>T</th><th>校排</th><th>班排</th><th style="${townHeaderStyle}">镇排</th><th style="${townHeaderStyle}">县排</th>`;
         } else {
             // 科任教师/班主任：展示分数 + 班排 + 级部排 + 镇排 + 县排
-            headerHTML += `<th>班</th><th>级</th><th style="${townHeaderStyle}">镇</th><th style="${townHeaderStyle}">县</th>`;
+            headerHTML += `<th>班排</th><th>级排</th><th style="${townHeaderStyle}">镇排</th><th style="${townHeaderStyle}">县排</th>`;
         }
     });
 
     const totalLabel = CONFIG.name === '9年级' ? '五科总分' : '总分';
     if (!isTeacher && !isClassTeacher) {
         headerHTML += buildTh(totalLabel, 'total', '80px');
-        headerHTML += `<th>校</th><th>班</th><th style="${townHeaderStyle}">镇</th><th style="${townHeaderStyle}">县</th>`;
+        headerHTML += `<th>校排</th><th>班排</th><th style="${townHeaderStyle}">镇排</th><th style="${townHeaderStyle}">县排</th>`;
     } else {
         // 科任教师/班主任：显示总分及排名（便于诊断学生整体位置）
         headerHTML += buildTh(totalLabel, 'total', '80px');
-        headerHTML += `<th>班</th><th>级</th><th style="${townHeaderStyle}">镇</th><th style="${townHeaderStyle}">县</th>`;
+        headerHTML += `<th>班排</th><th>级排</th><th style="${townHeaderStyle}">镇排</th><th style="${townHeaderStyle}">县排</th>`;
     }
 
     thead.innerHTML = headerHTML;
@@ -14136,9 +14171,11 @@ function calcIndicators(isSilent = false) {
         if (school && typeof school === 'object') school.scoreInd = 0;
     });
 
-    // 1. 确定全镇划线分数
-    // 9年级模式下 s.total 即为五科总分
-    const allScores = RAW_DATA.map(s => s.total).sort((a, b) => b - a);
+    // 1. 确定全镇划线分数。县直学校不参与指标生划线与达标统计。
+    const townshipRows = (typeof filterRowsToTownshipSchools === 'function')
+        ? filterRowsToTownshipSchools(RAW_DATA || [])
+        : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
+    const allScores = townshipRows.map(s => s.total).filter(v => typeof v === 'number').sort((a, b) => b - a);
     const line1 = allScores[r1 - 1] || 0;
     const line2 = allScores[r2 - 1] || 0;
 
@@ -14147,7 +14184,13 @@ function calcIndicators(isSilent = false) {
     let maxExcess1 = 0; // 指标一最大超额数
     let maxExcess2 = 0; // 指标二最大超额数
 
-    buildIndicatorSchoolBuckets().forEach(s => {
+    const indicatorBuckets = buildIndicatorSchoolBuckets().filter((bucket) => (
+        typeof isTownshipManagedSchool === 'function'
+            ? isTownshipManagedSchool(bucket.name, Object.keys(SCHOOLS || {}))
+            : true
+    ));
+
+    indicatorBuckets.forEach(s => {
         const scores = s.students.map(stu => stu.total);
         const reach1 = scores.filter(v => v >= line1).length; // 实际达标1
         const reach2 = scores.filter(v => v >= line2).length; // 实际达标2
@@ -14341,9 +14384,12 @@ function analyzeTargetGap(schoolName, type, lineScore) {
     }
 
     // 5. 计算全镇各科均分 (作为诊断弱科的基准)
+    const gradeStatsRows = (typeof filterRowsToTownshipSchools === 'function')
+        ? filterRowsToTownshipSchools(RAW_DATA || [])
+        : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
     const gradeStats = {};
     SUBJECTS.forEach(sub => {
-        const allScores = RAW_DATA.map(s => s.scores[sub]).filter(v => typeof v === 'number');
+        const allScores = gradeStatsRows.map(s => s.scores[sub]).filter(v => typeof v === 'number');
         gradeStats[sub] = allScores.reduce((a, b) => a + b, 0) / (allScores.length || 1);
     });
 
@@ -14557,7 +14603,11 @@ function calcSummary(isSilent = false) {
 
     // 1. 汇总各项得分 (仅乡镇学校)
     const list = Object.values(SCHOOLS || {}).filter(s => (
-        hasSummaryScopeHelper ? summarySchoolSet.has(String(s?.name || '').trim()) : true
+        hasSummaryScopeHelper
+            ? (typeof isTownshipManagedSchool === 'function'
+                ? isTownshipManagedSchool(s?.name, Object.keys(SCHOOLS || {}))
+                : summarySchoolSet.has(String(s?.name || '').trim()))
+            : true
     )).map(s => {
         const s1 = s.score2Rate || 0;  // 两率一分
         const s2 = s.scoreBottom || 0; // 后1/3
@@ -14643,7 +14693,11 @@ async function exportPPTReport() {
         : Object.keys(SCHOOLS || {});
     const pptCheckSchoolSet = new Set((pptCheckSchoolNames || []).map(name => String(name || '').trim()).filter(Boolean));
     const pptCheckSchools = Object.values(SCHOOLS || {}).filter(s => (
-        hasPptScopeHelper ? pptCheckSchoolSet.has(String(s?.name || '').trim()) : true
+        hasPptScopeHelper
+            ? (typeof isTownshipManagedSchool === 'function'
+                ? isTownshipManagedSchool(s?.name, Object.keys(SCHOOLS || {}))
+                : pptCheckSchoolSet.has(String(s?.name || '').trim()))
+            : true
     ));
     if (pptCheckSchools.length === 0) {
         alert("暂无数据，无法生成汇报。");
@@ -14728,7 +14782,11 @@ async function exportPPTReport() {
         : Object.keys(SCHOOLS || {});
     var pptTownshipSchoolSet = new Set((pptTownshipSchoolNames || []).map(function (name) { return String(name || '').trim(); }).filter(Boolean));
     var pptSchools = Object.values(SCHOOLS || {}).filter(function (school) {
-        return hasPptTownshipScopeHelper ? pptTownshipSchoolSet.has(String((school && school.name) || '').trim()) : true;
+        if (!hasPptTownshipScopeHelper) return true;
+        var name = String((school && school.name) || '').trim();
+        return typeof isTownshipManagedSchool === 'function'
+            ? isTownshipManagedSchool(name, Object.keys(SCHOOLS || {}))
+            : pptTownshipSchoolSet.has(name);
     });
     var pptRows = (typeof filterRowsToTownshipSchools === 'function')
         ? filterRowsToTownshipSchools(RAW_DATA || [])

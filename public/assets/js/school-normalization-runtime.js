@@ -14,12 +14,19 @@ const SCHOOL_ALIAS_GROUPS = [
     { canonical: '沙河站中学', aliases: ['沙河站镇中学'] },
     { canonical: '银山实验学校', aliases: ['银山镇实验学校', '银山实验中学', '银山镇实验中学'] },
     { canonical: '旧县中学', aliases: ['旧县乡中心学校', '旧县中心学校'] },
-    { canonical: '斑鸠店中学', aliases: ['斑鸠店镇中学'] },
+    { canonical: '斑鸠店镇中', aliases: ['斑鸠店中学', '斑鸠店镇中学', '斑鸠店中'] },
     { canonical: '戴庙中学', aliases: ['戴庙'] }
 ];
 
-function sanitizeSchoolText(name) {
+function normalizeSchoolDisplayName(name) {
     return String(name || '')
+        .normalize('NFKC')
+        .replace(/[\u200B-\u200D\uFEFF\u2060\u00A0]/g, '')
+        .trim();
+}
+
+function sanitizeSchoolText(name) {
+    return normalizeSchoolDisplayName(name)
         .replace(/\s+/g, '')
         .replace(/[()（）\-—_·、,，.。]/g, '')
         .trim();
@@ -276,7 +283,7 @@ function findBestFuzzySchoolNameMatch(collection, schoolName) {
     const candidates = Array.isArray(collection) ? collection : Object.keys(collection || {});
     const names = Array.from(new Set(
         candidates
-            .map(name => String(name || '').trim())
+            .map(name => normalizeSchoolDisplayName(name))
             .filter(Boolean)
     ));
     const scoredMatches = names
@@ -331,11 +338,11 @@ function areSchoolNamesMatched(a, b, allowFuzzy = false) {
 
 function getMatchedSchoolNamesFromCollection(collection, schoolName) {
     const candidates = Array.isArray(collection) ? collection : Object.keys(collection || {});
-    const raw = String(schoolName || '').trim();
+    const raw = normalizeSchoolDisplayName(schoolName);
     if (!raw) return [];
     const names = Array.from(new Set(
         candidates
-            .map(name => String(name || '').trim())
+            .map(name => normalizeSchoolDisplayName(name))
             .filter(Boolean)
     ));
     const exact = names.filter(name => name === raw);
@@ -358,7 +365,7 @@ function resolveSchoolNameFromCollection(collection, schoolName) {
 }
 
 function getCanonicalSchoolName(name, candidateNames = []) {
-    const raw = String(name || '').trim();
+    const raw = normalizeSchoolDisplayName(name);
     if (!raw) return '';
     const directCanonical = getMergedSchoolAliasCanonicalMap()[sanitizeSchoolText(raw)];
     if (directCanonical) return directCanonical;
@@ -546,17 +553,17 @@ function collectAvailableCompareSchools() {
 }
 
 function isAggregateCompareSchoolName(name) {
-    const text = String(name || '').trim();
+    const text = normalizeSchoolDisplayName(name);
     if (!text) return true;
     return /^(?:\u6574\u4f53|\u5168\u90e8|\u6c47\u603b|\u603b\u8868|\u5408\u8ba1|\u5168\u53bf|\u53bf\u57df|Sheet\d*|\u5de5\u4f5c\u8868\d*)$/i.test(text);
 }
 
 function isLikelyTownshipSchoolName(name) {
-    const text = String(name || '').trim();
+    const text = normalizeSchoolDisplayName(name);
     if (!text || isAggregateCompareSchoolName(text)) return false;
     if (/(镇|乡|街道|办事处|中心校|学区)/.test(text)) return true;
     return SCHOOL_ALIAS_GROUPS.some((group) => {
-        const names = [group?.canonical, ...(group?.aliases || [])].map((item) => String(item || '').trim()).filter(Boolean);
+        const names = [group?.canonical, ...(group?.aliases || [])].map((item) => normalizeSchoolDisplayName(item)).filter(Boolean);
         if (!names.some((item) => item === text)) return false;
         return names.some((item) => /(镇|乡|街道|办事处|中心校|学区)/.test(item));
     });
@@ -566,17 +573,22 @@ function getTownshipManagedSchoolNames(candidateNames = []) {
     ensureNormalizedTargets();
     const currentNames = Array.from(new Set(
         (Array.isArray(candidateNames) && candidateNames.length ? candidateNames : listAvailableSchoolsForCompare('all'))
-            .map((name) => String(name || '').trim())
+            .map((name) => normalizeSchoolDisplayName(name))
             .filter((name) => name && !isAggregateCompareSchoolName(name))
     ));
     if (!currentNames.length) return [];
 
     const targetKeys = Object.keys(window.TARGETS && typeof window.TARGETS === 'object' ? window.TARGETS : {});
 
-    // Only schools that can be resolved from targetKeys are considered township schools
-    const matched = targetKeys
-        .map((rawName) => resolveSchoolNameFromCollection(currentNames, rawName) || getCanonicalSchoolName(rawName, currentNames))
-        .filter((name) => currentNames.includes(name));
+    // Only schools that can be resolved from targetKeys are considered township schools.
+    // Keep the actual uploaded school display name, even when the target table uses an alias.
+    const matched = targetKeys.flatMap((rawName) => {
+        const directMatches = getMatchedSchoolNamesFromCollection(currentNames, rawName);
+        if (directMatches.length) return directMatches;
+        const canonical = getCanonicalSchoolName(rawName, currentNames);
+        if (canonical && currentNames.includes(canonical)) return [canonical];
+        return currentNames.filter((name) => areSchoolNamesMatched(name, rawName, true));
+    });
 
     return Array.from(new Set(matched)).sort((a, b) => a.localeCompare(b, 'zh-CN'));
 }
@@ -584,19 +596,26 @@ function getTownshipManagedSchoolNames(candidateNames = []) {
 function getCountyDirectSchoolNames(candidateNames = []) {
     const currentNames = Array.from(new Set(
         (Array.isArray(candidateNames) && candidateNames.length ? candidateNames : listAvailableSchoolsForCompare('all'))
-            .map((name) => String(name || '').trim())
+            .map((name) => normalizeSchoolDisplayName(name))
             .filter((name) => name && !isAggregateCompareSchoolName(name))
     ));
     if (!currentNames.length) return [];
-    const townshipSet = new Set(getTownshipManagedSchoolNames(currentNames));
-    return currentNames.filter((name) => !townshipSet.has(name)).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+    const townshipSchools = getTownshipManagedSchoolNames(currentNames);
+    const townshipSet = new Set(townshipSchools);
+    return currentNames.filter((name) => (
+        !townshipSet.has(name)
+        && !townshipSchools.some((item) => areSchoolNamesEquivalent(item, name) || areSchoolNamesMatched(item, name, true))
+    )).sort((a, b) => a.localeCompare(b, 'zh-CN'));
 }
 
 function isTownshipManagedSchool(name, candidateNames = []) {
-    const school = String(name || '').trim();
+    const school = normalizeSchoolDisplayName(name);
     if (!school || isAggregateCompareSchoolName(school)) return false;
     const townshipSet = new Set(getTownshipManagedSchoolNames(candidateNames));
-    return townshipSet.has(school);
+    if (townshipSet.has(school)) return true;
+    return Array.from(townshipSet).some((item) => (
+        areSchoolNamesEquivalent(item, school) || areSchoolNamesMatched(item, school, true)
+    ));
 }
 
 function filterRowsToTownshipSchools(rows, schoolNameResolver = null) {
@@ -606,18 +625,26 @@ function filterRowsToTownshipSchools(rows, schoolNameResolver = null) {
         ? schoolNameResolver
         : ((row) => row?.school);
     const candidateNames = Array.from(new Set(
-        list.map((row) => String(resolver(row) || '').trim()).filter(Boolean)
+        list.map((row) => normalizeSchoolDisplayName(resolver(row))).filter(Boolean)
     ));
-    const townshipSet = new Set(getTownshipManagedSchoolNames(candidateNames));
-    if (!townshipSet.size) return [];
-    return list.filter((row) => townshipSet.has(String(resolver(row) || '').trim()));
+    const townshipSchools = getTownshipManagedSchoolNames(candidateNames);
+    if (!townshipSchools.length) return [];
+    const townshipSet = new Set(townshipSchools);
+    return list.filter((row) => {
+        const school = normalizeSchoolDisplayName(resolver(row));
+        if (!school) return false;
+        if (townshipSet.has(school)) return true;
+        return townshipSchools.some((item) => (
+            areSchoolNamesEquivalent(item, school) || areSchoolNamesMatched(item, school, true)
+        ));
+    });
 }
 
 function listAvailableSchoolsForCompare(scope = 'township') {
     const allSchools = (() => {
         const names = new Map();
         const collectName = (rawName) => {
-            const school = String(rawName || '').trim();
+            const school = normalizeSchoolDisplayName(rawName);
             if (!school) return;
             const key = normalizeSchoolName(school) || school;
             const existing = names.get(key);

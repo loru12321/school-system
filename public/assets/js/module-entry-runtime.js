@@ -140,7 +140,14 @@
             }
         };
 
-        setTimeout(triggerRender, 0);
+        window.clearTimeout(window.__STUDENT_DETAILS_RENDER_TIMER__);
+        window.__STUDENT_DETAILS_RENDER_TIMER__ = setTimeout(() => {
+            if (typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(triggerRender);
+            } else {
+                triggerRender();
+            }
+        }, 80);
         setTimeout(() => {
             const section = document.getElementById('student-details');
             const renderedRows = document.querySelectorAll('#student-details table tbody tr').length;
@@ -527,7 +534,10 @@
         return Promise.resolve()
             .then(() => ensureModuleStylesFor(id))
             .then(() => {
-                const result = runModuleSpecificInit(id);
+                const runInit = () => runModuleSpecificInit(id);
+                const result = id === 'student-details'
+                    ? new Promise(resolve => setTimeout(() => resolve(runInit()), 40))
+                    : runInit();
                 if (['teacher-analysis', 'class-comparison', 'class-diagnosis', 'single-school-eval'].includes(id)) {
                     setTimeout(() => {
                         if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars();

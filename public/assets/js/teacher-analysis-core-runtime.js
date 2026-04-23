@@ -1072,11 +1072,19 @@
     function calculateTeacherTownshipRanking() {
         window.TEACHER_TOWNSHIP_RANKINGS = {};
         window.TOWNSHIP_RANKING_DATA = {};
+        const hasTownshipSchoolHelper = typeof window.getTownshipManagedSchoolNames === 'function';
         const townshipSchoolSet = new Set(
-            typeof window.getTownshipManagedSchoolNames === 'function'
+            hasTownshipSchoolHelper
                 ? window.getTownshipManagedSchoolNames(Object.keys(window.SCHOOLS || {}))
                 : Object.keys(window.SCHOOLS || {})
         );
+        const isTownshipSchoolName = (schoolName) => {
+            if (!hasTownshipSchoolHelper) return true;
+            if (typeof window.isTownshipManagedSchool === 'function') {
+                return window.isTownshipManagedSchool(schoolName, Object.keys(window.SCHOOLS || {}));
+            }
+            return townshipSchoolSet.has(String(schoolName || '').trim());
+        };
         (window.SUBJECTS || []).forEach((subject) => {
             const rankingData = [];
             Object.keys(window.TEACHER_STATS || {}).forEach((teacherName) => {
@@ -1094,7 +1102,7 @@
             });
             Object.keys(window.SCHOOLS || {}).forEach((schoolName) => {
                 const metrics = window.SCHOOLS?.[schoolName]?.metrics?.[subject];
-                if (!metrics || schoolName === window.MY_SCHOOL || (townshipSchoolSet.size && !townshipSchoolSet.has(schoolName))) return;
+                if (!metrics || schoolName === window.MY_SCHOOL || !isTownshipSchoolName(schoolName)) return;
                 rankingData.push({
                     name: schoolName,
                     type: 'school',

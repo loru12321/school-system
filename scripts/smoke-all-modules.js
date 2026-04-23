@@ -658,17 +658,18 @@ async function runModuleDeepCheck(page, id) {
             const teacherRankTable = !!document.querySelector('#county-analysis-root .county-teacher-rank-table');
             const teacherEmptyState = !!document.querySelector('#county-analysis-root .county-empty');
             const studentSubjectSummary = !!document.querySelector('#county-analysis-root .county-student-subject-summary');
+            const studentArchiveRemoved = !studentSubjectSummary;
             return {
                 ok: Object.values(checks).every(Boolean)
                     && exportButtons >= 4
                     && (teacherRankRows > 0 ? teacherRankTable : teacherEmptyState)
-                    && studentSubjectSummary,
+                    && studentArchiveRemoved,
                 checks,
                 exportButtons,
                 teacherRankRows,
                 teacherRankTable,
                 teacherEmptyState,
-                studentSubjectSummary
+                studentArchiveRemoved
             };
         });
     }

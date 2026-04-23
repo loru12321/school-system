@@ -51,6 +51,13 @@
         return Number.isFinite(num) ? `${(num * 100).toFixed(1)}%` : '-';
     }
 
+    function getTwoRateWeights() {
+        const name = String(window.CONFIG?.name || '').trim();
+        return name.includes('9')
+            ? { avg: 50, excellent: 80, pass: 50 }
+            : { avg: 60, excellent: 70, pass: 70 };
+    }
+
     function withTimeout(task, ms = 5000, fallback = false) {
         return Promise.race([
             Promise.resolve(task).catch(() => fallback),
@@ -136,9 +143,11 @@
     function getDataSignature() {
         const targetKeys = Object.keys(window.TARGETS && typeof window.TARGETS === 'object' ? window.TARGETS : {})
             .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'));
+        const rawDataVersion = Number(window.__RAW_DATA_VERSION || 0);
         return [
             getExamKey(),
             Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
+            rawDataVersion,
             getSchoolNames().join('|'),
             targetKeys.join('|')
         ].join('::');
@@ -173,11 +182,21 @@
 
     function normalizeScope(scope) {
         const names = getSchoolNames();
-        const nameSet = new Set(names);
         const inferredTownshipSchools = getTargetManagedTownshipSchools(names);
-        const townshipSchools = Array.from(new Set(inferredTownshipSchools)).filter((name) => nameSet.has(name));
-        const townshipSet = new Set(townshipSchools);
-        const countySchools = names.filter((name) => !townshipSet.has(name));
+        const townshipSet = new Set(inferredTownshipSchools);
+        const isTownship = (name) => {
+            if (townshipSet.has(name)) return true;
+            if (typeof window.isTownshipManagedSchool === 'function') {
+                return window.isTownshipManagedSchool(name, names);
+            }
+            return inferredTownshipSchools.some((item) => (
+                typeof window.areSchoolNamesMatched === 'function'
+                    ? window.areSchoolNamesMatched(item, name, true)
+                    : item === name
+            ));
+        };
+        const townshipSchools = names.filter((name) => isTownship(name));
+        const countySchools = names.filter((name) => !isTownship(name));
         return {
             examKey: getExamKey(),
             includesCounty: !!scope?.includesCounty,
@@ -431,7 +450,7 @@
                     formatNumber(metric.avg),
                     formatPercent(metric.excRate),
                     formatPercent(metric.passRate),
-                    formatNumber(school.score2Rate),
+                    formatNumber(school.countyScore2Rate ?? school.score2Rate),
                     isTownship ? (school.townshipRank2Rate || '-') : '-',
                     school.countyRank2Rate || school.rank2Rate || '-'
                 ];
@@ -598,11 +617,37 @@
         const scope = normalizeScope(getCurrentScope() || { includesCounty: false, townshipSchools: getSchoolNames() });
         const townshipSet = new Set(scope.townshipSchools || []);
         const schools = Object.values(window.SCHOOLS || {});
+        const weights = getTwoRateWeights();
+        const countyMax = { avg: 0, excellent: 0, pass: 0 };
+
+        schools.forEach((school) => {
+            const metric = school?.metrics?.total || {};
+            countyMax.avg = Math.max(countyMax.avg, toNumber(metric.avg));
+            countyMax.excellent = Math.max(countyMax.excellent, toNumber(metric.excRate));
+            countyMax.pass = Math.max(countyMax.pass, toNumber(metric.passRate));
+        });
+
+        schools.forEach((school) => {
+            const metric = school?.metrics?.total || {};
+            const ratedAvg = countyMax.avg ? (toNumber(metric.avg) / countyMax.avg * weights.avg) : 0;
+            const ratedExc = countyMax.excellent ? (toNumber(metric.excRate) / countyMax.excellent * weights.excellent) : 0;
+            const ratedPass = countyMax.pass ? (toNumber(metric.passRate) / countyMax.pass * weights.pass) : 0;
+            school.countyRatedAvg = ratedAvg;
+            school.countyRatedExc = ratedExc;
+            school.countyRatedPass = ratedPass;
+            school.countyScore2Rate = ratedAvg + ratedExc + ratedPass;
+            if (metric) {
+                metric.countyRatedAvg = ratedAvg;
+                metric.countyRatedExc = ratedExc;
+                metric.countyRatedPass = ratedPass;
+                metric.countyScore2Rate = school.countyScore2Rate;
+            }
+        });
 
         // 1. 学校排名
         schools
             .slice()
-            .sort((a, b) => toNumber(b.score2Rate) - toNumber(a.score2Rate))
+            .sort((a, b) => toNumber(b.countyScore2Rate) - toNumber(a.countyScore2Rate))
             .forEach((school, index) => {
                 school.countyScope = townshipSet.has(school.name) ? 'township' : 'county';
                 school.countyRank2Rate = index + 1;
@@ -675,7 +720,7 @@
             schools: Object.values(window.SCHOOLS || {}).map((school) => ({
                 name: school.name,
                 scope: school.countyScope || 'township',
-                score2Rate: toNumber(school.score2Rate),
+                score2Rate: toNumber(school.countyScore2Rate ?? school.score2Rate),
                 countyRank: school.countyRank2Rate || school.rank2Rate || 0,
                 townshipRank: school.townshipRank2Rate || 0
             }))
@@ -718,7 +763,7 @@
                                     <td>${formatNumber(metric.avg)}</td>
                                     <td>${formatPercent(metric.excRate)}</td>
                                     <td>${formatPercent(metric.passRate)}</td>
-                                    <td><strong>${formatNumber(school.score2Rate)}</strong></td>
+                                    <td><strong>${formatNumber(school.countyScore2Rate ?? school.score2Rate)}</strong></td>
                                     <td>${isTownship ? (school.townshipRank2Rate || '-') : '-'}</td>
                                     <td>${school.countyRank2Rate || school.rank2Rate || '-'}</td>
                                 </tr>
