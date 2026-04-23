@@ -15,7 +15,7 @@
     const APP_DOWNLOAD_MODULE_IDS = new Set([
         'app-download-center'
     ]);
-    const TEACHER_ANALYSIS_RENDER_DELAY_MS = 1400;
+    const TEACHER_ANALYSIS_RENDER_DELAY_MS = 8000;
     let teacherAnalysisRenderTimer = 0;
     let teacherAnalysisRenderToken = 0;
 
@@ -162,11 +162,18 @@
             if (!node) return;
             const currentHtml = String(node.innerHTML || '').trim();
             if (currentHtml && node.dataset.released !== 'true') return;
-            node.innerHTML = `<div class="analysis-empty-state">${message}</div>`;
+            node.innerHTML = `
+                <div class="analysis-empty-state">
+                    ${message}
+                    <div style="margin-top:10px;">
+                        <button class="btn btn-primary" onclick="window.renderTeacherAnalysisNow && window.renderTeacherAnalysisNow()">立即生成</button>
+                    </div>
+                </div>
+            `;
         });
     }
 
-    function scheduleTeacherAnalysisRenderWork() {
+    function scheduleTeacherAnalysisRenderWork(delay = TEACHER_ANALYSIS_RENDER_DELAY_MS) {
         clearTeacherAnalysisDeferredRender();
         const token = teacherAnalysisRenderToken;
         showTeacherAnalysisPendingState();
@@ -213,7 +220,17 @@
             } else {
                 startWork();
             }
-        }, TEACHER_ANALYSIS_RENDER_DELAY_MS);
+        }, delay);
+    }
+
+    function renderTeacherAnalysisNow() {
+        if (!isTeacherAnalysisActive()) return;
+        const run = () => scheduleTeacherAnalysisRenderWork(0);
+        if (typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function') {
+            window.ensureTeacherAnalysisMainRuntimeLoaded().then(run).catch((error) => console.warn(error));
+            return;
+        }
+        run();
     }
 
     function initStudentDetailsEntry() {
@@ -662,5 +679,6 @@
     window.activateTeachingManagementModule = activateTeachingManagementModule;
     window.renderSingleSchoolAnalysisHint = renderSingleSchoolAnalysisHint;
     window.releaseTeacherAnalysisHeavyDom = releaseTeacherAnalysisHeavyDom;
+    window.renderTeacherAnalysisNow = renderTeacherAnalysisNow;
     window.__MODULE_ENTRY_RUNTIME_PATCHED__ = true;
 })();
