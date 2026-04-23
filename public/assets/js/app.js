@@ -6284,10 +6284,10 @@ const WORKER_SOURCE = `
 
                     // 后1/3计算
                     const totalN = sch.students.length;
-                    const bottomN = Math.ceil(totalN / 3);
-                    const excN = Math.ceil(bottomN * CONFIG.excRate);
+                    const bottomN = Math.max(0, Math.floor(totalN / 3));
+                    const excN = bottomN > 0 ? Math.ceil(bottomN * CONFIG.excRate) : 0;
                     const sorted = [...sch.students].sort((a,b)=>b.total - a.total);
-                    const bottomGroup = sorted.slice(-bottomN);
+                    const bottomGroup = bottomN > 0 ? sorted.slice(-bottomN) : [];
                     const validGroup = bottomGroup.slice(0, Math.max(0, bottomGroup.length - excN));
                     const bAvg = validGroup.length ? validGroup.reduce((a,b)=>a+b.total,0)/validGroup.length : 0;
                     sch.bottom3 = { totalN, bottomN, excN, avg: bAvg };
@@ -6487,8 +6487,8 @@ const WORKER_SOURCE = `
 
                         // === 🔥 3. 如果是9年级，计算高分赋分 ===
                         if (isGrade9 && s.highScoreStats) {
-                            // 赋分公式：(本校比例 / 最高比例) * 50
-                            const highScore = maxHighRatio > 0 ? (s.highScoreStats.ratio / maxHighRatio * 50) : 0;
+                            // 赋分公式：(本校比例 / 最高比例) * 70
+                            const highScore = maxHighRatio > 0 ? (s.highScoreStats.ratio / maxHighRatio * 70) : 0;
                             s.highScoreStats.score = isTownshipSchool ? highScore : 0;
 
                             // ⚠️ 注意：目前高分赋分仅做展示，暂未叠加到 score2Rate (总排名分) 中。
@@ -11012,7 +11012,7 @@ function exportHighScoreExcel() {
     if (!CONFIG.name.includes('9')) return alert("非9年级模式无此数据");
 
     const wb = XLSX.utils.book_new();
-    const headers = ["学校名称", "实考人数", "高分人数(≥490)", "高分率", "高分赋分(50)", "排名"];
+    const headers = ["学校名称", "实考人数", "高分人数(≥490)", "高分率", "高分赋分(70)", "排名"];
     const wsData = [headers];
 
     const list = townshipSchools.map(s => {
@@ -14400,7 +14400,8 @@ function calcIndicators(isSilent = false) {
         // 基础分 (满分30)
         let base1 = 0;
         if (t.t1 > 0) {
-            if (reach1 >= t.t1) base1 = 30;
+            if (reach1 < t.t1 * 0.6) base1 = 0;
+            else if (reach1 >= t.t1) base1 = 30;
             else base1 = (reach1 / t.t1) * 30;
         }
 
@@ -14412,7 +14413,8 @@ function calcIndicators(isSilent = false) {
         // 基础分 (满分30)
         let base2 = 0;
         if (t.t2 > 0) {
-            if (reach2 >= t.t2) base2 = 30;
+            if (reach2 < t.t2 * 0.6) base2 = 0;
+            else if (reach2 >= t.t2) base2 = 30;
             else base2 = (reach2 / t.t2) * 30;
         }
 
@@ -14817,7 +14819,7 @@ function calcSummary(isSilent = false) {
     const thead = document.querySelector('#tb-summary thead');
     let theadHtml = `<tr><th>学校名称</th><th>两率一分得分</th><th>后1/3得分</th>`;
     if (isGrade9) theadHtml += `<th>指标生得分</th>`;
-    if (isGrade9) theadHtml += `<th style="color:#b45309; background:#fff7ed;">高分段赋分(50)</th>`;
+    if (isGrade9) theadHtml += `<th style="color:#b45309; background:#fff7ed;">高分段赋分(70)</th>`;
     theadHtml += `<th>综合总分</th><th>总排名</th></tr>`;
     thead.innerHTML = theadHtml;
 
@@ -15056,7 +15058,8 @@ async function exportPPTReport() {
         var bgColor = (i % 2 === 0) ? "FFFFFF" : "F1F5F9";
         var boldOpts = isTop3 ? { bold: true, color: colorDanger } : { color: "1E293B" };
         var indicatorScore = isGrade9 ? (s.scoreInd || 0) : 0;
-        var totalScore = (s.score2Rate || 0) + (s.scoreBottom || 0) + indicatorScore;
+        var highScore = isGrade9 ? (((s.highScoreStats ? s.highScoreStats.score : 0) || 0)) : 0;
+        var totalScore = (s.score2Rate || 0) + (s.scoreBottom || 0) + indicatorScore + highScore;
 
         var row = [
             { text: i + 1, options: { fill: bgColor, align: 'center', bold: boldOpts.bold, color: boldOpts.color } },
