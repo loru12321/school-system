@@ -5,15 +5,35 @@
         return !!(window.SCHOOLS && Object.keys(window.SCHOOLS).length);
     }
 
+    function isTownshipMacroSchoolName(schoolName, townshipNames) {
+        const name = String(schoolName || '').trim();
+        if (!name) return false;
+        const names = (townshipNames || [])
+            .map((item) => String(item || '').trim())
+            .filter(Boolean);
+        if (!names.length) return true;
+        if (names.includes(name)) return true;
+        if (typeof window.isTownshipManagedSchool === 'function'
+            && window.isTownshipManagedSchool(name, Object.keys(window.SCHOOLS || {}))) {
+            return true;
+        }
+        return names.some((item) => (
+            (typeof window.areSchoolNamesEquivalent === 'function' && window.areSchoolNamesEquivalent(item, name))
+            || (typeof window.areSchoolNamesMatched === 'function' && window.areSchoolNamesMatched(item, name, true))
+        ));
+    }
+
     function getTownshipMacroSchools() {
         const hasScopeHelper = typeof window.listAvailableSchoolsForCompare === 'function';
         const townshipNames = hasScopeHelper
             ? window.listAvailableSchoolsForCompare()
             : Object.keys(window.SCHOOLS || {});
-        const townshipSet = new Set((townshipNames || []).map((name) => String(name || '').trim()).filter(Boolean));
-        if (hasScopeHelper && !townshipSet.size) return [];
+        const normalizedTownshipNames = (townshipNames || [])
+            .map((name) => String(name || '').trim())
+            .filter(Boolean);
+        if (hasScopeHelper && !normalizedTownshipNames.length) return [];
         return Object.values(window.SCHOOLS || {}).filter((school) => (
-            !townshipSet.size || townshipSet.has(String(school?.name || '').trim())
+            isTownshipMacroSchoolName(school?.name, normalizedTownshipNames)
         ));
     }
 

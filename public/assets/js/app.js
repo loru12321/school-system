@@ -11496,18 +11496,31 @@ async function processData() {
                 // 9年级 15%，其他 20%
                 const excRatio = (CONFIG.name && CONFIG.name.includes('9')) ? 0.15 : 0.2;
                 // 单校模式下，如果没有手动指定，单科依然沿用百分比，但可以考虑后续增加单科手动设置
+                const pickPercentileLine = (ratio) => {
+                    // Match Excel LARGE(range, count * ratio): Excel's rank is 1-based.
+                    const index = Math.max(0, Math.ceil(vals.length * ratio) - 1);
+                    return vals[index] || 0;
+                };
                 THRESHOLDS[k] = {
-                    exc: vals[Math.floor(vals.length * excRatio)] || 0,
-                    pass: vals[Math.floor(vals.length * 0.5)] || 0
+                    exc: pickPercentileLine(excRatio),
+                    pass: pickPercentileLine(0.5)
                 };
             }
         }
     });
 
     // 2. 呼叫 Worker
+    const schoolKeysForWorker = Object.keys(SCHOOLS || {});
     const townshipSchoolNamesForWorker = (typeof getTownshipManagedSchoolNames === 'function')
-        ? getTownshipManagedSchoolNames(Object.keys(SCHOOLS || {}))
-        : Object.keys(SCHOOLS || {});
+        ? Array.from(new Set([
+            ...getTownshipManagedSchoolNames(schoolKeysForWorker),
+            ...schoolKeysForWorker.filter((name) => (
+                typeof isTownshipManagedSchool === 'function'
+                    ? isTownshipManagedSchool(name, schoolKeysForWorker)
+                    : false
+            ))
+        ]))
+        : schoolKeysForWorker;
     const result = await WorkerAPI.run({ RAW_DATA, SUBJECTS, CONFIG, THRESHOLDS, SCHOOLS, TOWNSHIP_SCHOOL_NAMES: townshipSchoolNamesForWorker });
 
     // 3. 接收结果 (RAW_DATA 是全新的，带有排名的数组)
