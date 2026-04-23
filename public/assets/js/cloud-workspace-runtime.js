@@ -90,6 +90,8 @@
 
     const WORKSPACE_SYNC_META_PREFIX = 'CLOUD_WORKSPACE_META_V2::';
     const WORKSPACE_SYNC_QUEUE_KEY = 'CLOUD_WORKSPACE_SYNC_QUEUE_V2';
+    const CACHE_MACHINE_ID_KEY = 'SCHOOL_SYSTEM_CACHE_MACHINE_ID_V1';
+    const CACHE_READY_KEY = 'SCHOOL_SYSTEM_LOCAL_CACHE_READY_V1';
 
     function hashText(text) {
         const raw = String(text || '');
@@ -143,6 +145,22 @@
         return writeStoredJson(WORKSPACE_SYNC_QUEUE_KEY, queue && typeof queue === 'object' ? queue : {});
     }
 
+    function ensureLocalCacheProfile() {
+        try {
+            let machineId = localStorage.getItem(CACHE_MACHINE_ID_KEY);
+            if (!machineId) {
+                machineId = `machine-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+                localStorage.setItem(CACHE_MACHINE_ID_KEY, machineId);
+            }
+            if (!localStorage.getItem(CACHE_READY_KEY)) {
+                localStorage.setItem(CACHE_READY_KEY, new Date().toISOString());
+            }
+            return machineId;
+        } catch (_) {
+            return '';
+        }
+    }
+
     function dispatchWorkspaceSyncEvent(stage, detail = {}) {
         if (typeof window.CustomEvent !== 'function') return;
         window.dispatchEvent(new CustomEvent('cloud-sync-state', {
@@ -154,6 +172,7 @@
     }
 
     async function readCachedWorkspaceSnapshot(key) {
+        ensureLocalCacheProfile();
         if (!(window.idbKeyval && typeof window.idbKeyval.get === 'function')) return null;
         try {
             const cached = await window.idbKeyval.get(`cache_${key}`);
@@ -165,9 +184,17 @@
     }
 
     async function writeCachedWorkspaceSnapshot(key, payload) {
+        const machineId = ensureLocalCacheProfile();
         if (!(window.idbKeyval && typeof window.idbKeyval.set === 'function')) return false;
         try {
             await window.idbKeyval.set(`cache_${key}`, payload);
+            if (machineId) {
+                await window.idbKeyval.set(`cache_meta_${key}`, {
+                    machineId,
+                    key,
+                    updatedAt: new Date().toISOString()
+                });
+            }
             return true;
         } catch (error) {
             console.warn('[CloudSync] write cache failed:', error);

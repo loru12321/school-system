@@ -109,7 +109,10 @@
         }
 
         const step = 50;
-        const allScores = RAW_DATA.map(s => s.total);
+        const townshipRows = (typeof window.filterRowsToTownshipSchools === 'function')
+            ? window.filterRowsToTownshipSchools(RAW_DATA || [])
+            : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
+        const allScores = townshipRows.map(s => s.total);
         const myScores = s.students.map(s => s.total);
 
         if (allScores.length > 0) {

@@ -20,7 +20,7 @@
             items: [
                 { id: 'summary', icon: 'ti-report', text: '综合评价总览', hint: '先看全局排名、梯队分布和学校站位。' },
                 { id: 'analysis', icon: 'ti-chart-pie', text: '两率一分(横向)', hint: '从横向口径查看重点率、及格率和均分变化。' },
-                { id: 'county-analysis', icon: 'ti-map-2', text: '县域质量排名', hint: '县里学校和乡镇学校同时导入时，拆分县排名与乡镇独立对比。' },
+                { id: 'county-analysis', icon: 'ti-map-2', text: '县域分析', hint: '县直学校只在这里参与县域两率一分和教师画像。' },
                 { id: 'macro-watch', icon: 'ti-alert-triangle', text: '预警与亮点看板', hint: '把风险点和高表现项目收进同一张看板。' },
                 { id: 'high-score', icon: 'ti-trophy', text: '高分段/尖子生', hint: '追踪尖子层和高分段的规模与稳定度。' },
                 { id: 'indicator', icon: 'ti-target', text: '指标生达标核算', hint: '快速核对指标生口径、边缘人数和达标压力。' },

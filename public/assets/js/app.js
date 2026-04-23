@@ -4324,11 +4324,22 @@ var Auth = {
         document.body.classList.toggle('login-overlay-active', !!visible);
         document.body.dataset.authState = visible ? 'logged_out' : 'logged_in';
         if (overlay) {
+            if (!visible && overlay.contains(document.activeElement) && typeof document.activeElement.blur === 'function') {
+                document.activeElement.blur();
+            }
             overlay.style.display = visible ? 'flex' : 'none';
+            overlay.style.visibility = visible ? 'visible' : 'hidden';
+            overlay.style.opacity = visible ? '1' : '0';
+            overlay.style.pointerEvents = visible ? 'auto' : 'none';
+            overlay.setAttribute('aria-hidden', visible ? 'false' : 'true');
+            try { overlay.inert = !visible; } catch (_) { /* inert is best-effort */ }
             overlay.dataset.loginState = visible ? 'active' : 'hidden';
             if (visible) overlay.dataset.loginModal = 'inline';
+            if (!visible) overlay.dataset.loginModal = 'hidden';
         }
-        if (app && visible) app.classList.add('hidden');
+        if (app && visible) {
+            app.classList.add('hidden');
+        }
     },
 
     syncLoginPortalUI: function (portal = this.getLoginPortal()) {
@@ -4603,8 +4614,8 @@ var Auth = {
                     EdgeGateway.clearSession();
                 });
             }
-            this.applyRoleView();
             this.syncLoginOverlayState(false);
+            this.applyRoleView();
 
             // 如果是家长，恢复视图
             if (isParentLikeUser(this.currentUser)) {
@@ -4624,15 +4635,27 @@ var Auth = {
             }
             // 🟢 补充：如果是其他角色，恢复主视图 (防止刷新后空白)
             else if (!isParentLikeUser(this.currentUser)) {
-                document.getElementById('app').classList.remove('hidden');
                 if (typeof renderNavigation === 'function') renderNavigation();
                 const restoredCohortId = String(CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
-                if (!restoredCohortId) {
+                const restoredExamId = String(CURRENT_EXAM_ID || readWorkspaceExamId() || COHORT_DB?.currentExamId || '').trim();
+                const hasReadyWorkspace = !!restoredCohortId
+                    && !!restoredExamId
+                    && Array.isArray(RAW_DATA)
+                    && RAW_DATA.length > 0;
+                if (hasReadyWorkspace) {
+                    tryAutoRestoreWorkspaceExam({ preferredExamId: restoredExamId, cohortId: restoredCohortId });
+                    tryAutoEnterReadyCohortWorkspace();
+                } else {
                     showCohortPicker();
                 }
                 if (!this.currentUser.local_only && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function') {
                     withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout')
                         .then(() => {
+                            tryAutoRestoreWorkspaceExam({
+                                preferredExamId: CURRENT_EXAM_ID || readWorkspaceExamId() || COHORT_DB?.currentExamId || '',
+                                cohortId: CURRENT_COHORT_ID || readWorkspaceCohortId() || ''
+                            });
+                            tryAutoEnterReadyCohortWorkspace();
                             if (typeof scheduleTeacherSyncPrompt === 'function') {
                                 setTimeout(() => scheduleTeacherSyncPrompt(), 200);
                             }
@@ -4752,6 +4775,8 @@ var Auth = {
                     console.warn('[EdgeGateway] login skipped:', err?.message || err);
                 });
             }
+            // 先彻底隐藏登录层，再进入业务界面，避免旧登录页残留一帧。
+            this.syncLoginOverlayState(false);
             // 界面切换
             this.applyRoleView();
             updateAdminOnlyButtons();
@@ -4861,8 +4886,6 @@ var Auth = {
                 this.renderParentView();
             } else {
                 // === 教职工模式 (管理员/主任/教师/班主任/级部主任) ===
-                document.getElementById('app').classList.remove('hidden');
-
                 // 初始化导航和表格
                 if (typeof renderNavigation === 'function') renderNavigation();
                 if (typeof updateSchoolSelect === 'function') updateSchoolSelect();
@@ -8902,6 +8925,28 @@ async function switchCohort(cohortId, options = {}) {
         logAction('届别切换', `已切换到 ${cohortKey}`);
         updateStatusPanel();
     } else {
+        if (window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
+            try {
+                const syncRes = await window.CloudManager.fetchCohortExamsToLocal(cohortId, { background: false });
+                const restoredFromExamArchive = syncRes && syncRes.success && tryAutoRestoreWorkspaceExam({ cohortId });
+                if (restoredFromExamArchive) {
+                    updateSchoolSelect();
+                    updateMySchoolSelect();
+                    if (CONFIG.name) renderNavigation();
+                    renderTables();
+                    document.getElementById('mode-mask').style.display = 'none';
+                    document.getElementById('app').classList.remove('hidden');
+                    CohortDB.renderExamList();
+                    UI.toast(`已从云端考试快照恢复 [${cohortKey}] 数据`, "success");
+                    logAction('届别切换', `已从云端考试快照恢复 ${cohortKey}`);
+                    updateStatusPanel();
+                    UI.loading(false);
+                    return true;
+                }
+            } catch (e) {
+                console.warn('[switchCohort] cloud exam snapshot restore failed:', e);
+            }
+        }
         // 4. 如果云端没这个届别的数据（新档案）
         clearDataRuntimeState();
         COHORT_DB = {
@@ -10997,6 +11042,61 @@ function exportHighScoreExcel() {
 }
 
 // ================= 数据处理 =================
+async function prepareSameExamOverwrite(currentExamId, existingExam = null) {
+    const examId = String(currentExamId || '').trim();
+    if (!examId) return { localRemoved: false, cloudRemoved: false };
+
+    let localRemoved = false;
+    try {
+        const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+        if (db && typeof db === 'object') {
+            db.exams = db.exams || {};
+            if (db.exams[examId]) {
+                delete db.exams[examId];
+                localRemoved = true;
+            }
+            if (Array.isArray(db.resetPoints)) {
+                db.resetPoints = db.resetPoints.filter((item) => String(item || '').trim() !== examId);
+            }
+            Object.values(db.students || {}).forEach((student) => {
+                if (!Array.isArray(student?.history)) return;
+                student.history = student.history.filter((item) => String(item?.examId || '').trim() !== examId);
+                if (String(student.lastExamId || '').trim() === examId) {
+                    const last = student.history[student.history.length - 1] || null;
+                    student.lastExamId = last?.examId || null;
+                    student.lastScore = typeof last?.total === 'number' ? last.total : null;
+                }
+            });
+            db.currentExamId = examId;
+            syncRuntimeStateToWindow();
+        }
+    } catch (error) {
+        console.warn('[upload] local overwrite cleanup failed:', error);
+    }
+
+    let cloudRemoved = false;
+    try {
+        if (typeof deleteSystemDataRecords === 'function') {
+            const { error } = await deleteSystemDataRecords({ keyEq: examId });
+            if (error && error.message !== 'CLOUD_CLIENT_MISSING') throw error;
+            cloudRemoved = !error;
+        }
+        if (window.idbKeyval && typeof window.idbKeyval.del === 'function') {
+            await window.idbKeyval.del(`cache_${examId}`);
+        }
+    } catch (error) {
+        console.warn('[upload] cloud overwrite cleanup failed:', error);
+    }
+
+    console.log('[upload] same exam overwrite prepared:', {
+        examId,
+        previousRows: Array.isArray(existingExam?.data) ? existingExam.data.length : 0,
+        localRemoved,
+        cloudRemoved
+    });
+    return { localRemoved, cloudRemoved };
+}
+
 document.getElementById('fileInput').addEventListener('change', function (e) {
     if (isArchiveLocked()) return alert("⛔ 当前考试已封存，禁止上传新数据");
     if (!CURRENT_COHORT_ID) return alert("请先选择或新建届别");
@@ -11010,6 +11110,7 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
     const existingExam = db?.exams?.[currentExamId];
     const hasExistingData = !!(existingExam && Array.isArray(existingExam.data) && existingExam.data.length > 0);
+    const shouldOverwriteExistingExam = hasExistingData;
     if (hasExistingData) {
         const ok = confirm(`⚠️ 检测到考试批次「${currentExamId}」已存在 ${existingExam.data.length} 条成绩数据。\n继续上传将覆盖该批次原数据，是否继续？`);
         if (!ok) {
@@ -11023,6 +11124,10 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
 
     // 使用 Perf.runAsync 包裹，实现加载动画 + 防卡死
     Perf.runAsync(async () => {
+        if (shouldOverwriteExistingExam) {
+            await prepareSameExamOverwrite(currentExamId, existingExam);
+        }
+
         // 重置数据
         clearDataRuntimeState({ keepConfig: true }); setTeacherMap({}); setTeacherStats({});
         TEACHER_TOWNSHIP_RANKINGS = {}; MARGINAL_STUDENTS = {}; POTENTIAL_STUDENTS_CACHE = []; TOWNSHIP_RANKING_DATA = {}; clearCurrentSchool();
@@ -21160,6 +21265,25 @@ const CohortDB = {
         return !loader.classList.contains('hidden');
     },
 
+    removeStudentHistoryByExamId: function (examId) {
+        const normalizedExamId = String(examId || '').trim();
+        if (!normalizedExamId) return 0;
+        const db = this.ensure();
+        let removed = 0;
+        Object.values(db.students || {}).forEach((student) => {
+            if (!Array.isArray(student?.history)) return;
+            const before = student.history.length;
+            student.history = student.history.filter((item) => String(item?.examId || '').trim() !== normalizedExamId);
+            removed += before - student.history.length;
+            if (String(student.lastExamId || '').trim() === normalizedExamId) {
+                const last = student.history[student.history.length - 1] || null;
+                student.lastExamId = last?.examId || null;
+                student.lastScore = typeof last?.total === 'number' ? last.total : null;
+            }
+        });
+        return removed;
+    },
+
     renderExamList: function () {
         const sel = document.getElementById('exam-history-select');
         if (!sel) {
@@ -21230,6 +21354,7 @@ const CohortDB = {
         const examId = CURRENT_EXAM_ID;
         const existing = db.exams?.[examId] || null;
 
+        this.removeStudentHistoryByExamId(examId);
         await this.smartLinkStudents(examId, meta);
 
         db.exams[examId] = {

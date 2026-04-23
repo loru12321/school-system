@@ -213,6 +213,128 @@
             .sort((a, b) => (a.countyRank2Rate || 9999) - (b.countyRank2Rate || 9999));
     }
 
+    function resolveCurrentCountySchoolName() {
+        const names = getSchoolNames();
+        if (!names.length) return '';
+        const candidates = [
+            typeof window.readCurrentSchool === 'function' ? window.readCurrentSchool() : '',
+            window.MY_SCHOOL,
+            (() => {
+                try { return localStorage.getItem('MY_SCHOOL') || ''; } catch (_) { return ''; }
+            })()
+        ].map((item) => String(item || '').trim()).filter(Boolean);
+
+        for (const rawName of candidates) {
+            if (names.includes(rawName)) return rawName;
+            if (typeof window.resolveSchoolNameFromCollection === 'function') {
+                const resolved = window.resolveSchoolNameFromCollection(names, rawName);
+                if (resolved) return resolved;
+            }
+            if (typeof window.getCanonicalSchoolName === 'function') {
+                const canonical = window.getCanonicalSchoolName(rawName, names);
+                if (canonical && names.includes(canonical)) return canonical;
+            }
+        }
+        return '';
+    }
+
+    function scoreMetricAgainstMax(metric, maxes) {
+        const weights = getTwoRateWeights();
+        return {
+            ratedAvg: maxes.avg ? (toNumber(metric?.avg) / maxes.avg * weights.avg) : 0,
+            ratedExc: maxes.excellent ? (toNumber(metric?.excRate) / maxes.excellent * weights.excellent) : 0,
+            ratedPass: maxes.pass ? (toNumber(metric?.passRate) / maxes.pass * weights.pass) : 0
+        };
+    }
+
+    function getSubjectSchoolRank(subject, schoolName, scopeName, scope) {
+        const normalizedScope = normalizeScope(scope || getCurrentScope() || {});
+        const townshipSet = new Set(normalizedScope.townshipSchools || []);
+        const rows = Object.values(window.SCHOOLS || {})
+            .filter((school) => school?.metrics?.[subject])
+            .filter((school) => scopeName !== 'township' || townshipSet.has(school.name));
+        if (!rows.length) return null;
+
+        const maxes = rows.reduce((acc, school) => {
+            const metric = school?.metrics?.[subject] || {};
+            acc.avg = Math.max(acc.avg, toNumber(metric.avg));
+            acc.excellent = Math.max(acc.excellent, toNumber(metric.excRate));
+            acc.pass = Math.max(acc.pass, toNumber(metric.passRate));
+            return acc;
+        }, { avg: 0, excellent: 0, pass: 0 });
+
+        const scored = rows.map((school) => {
+            const metric = school?.metrics?.[subject] || {};
+            const parts = scoreMetricAgainstMax(metric, maxes);
+            return {
+                name: school.name,
+                metric,
+                score: parts.ratedAvg + parts.ratedExc + parts.ratedPass
+            };
+        }).sort((a, b) => b.score - a.score);
+
+        let target = scored.find((row) => row.name === schoolName);
+        if (!target && typeof window.areSchoolNamesMatched === 'function') {
+            target = scored.find((row) => window.areSchoolNamesMatched(row.name, schoolName, true));
+        }
+        if (!target) return null;
+        const rank = scored.findIndex((row) => row === target) + 1;
+        return { rank, total: scored.length, score: target.score, metric: target.metric };
+    }
+
+    function renderMySchoolCountyFocus(scope) {
+        const schoolName = resolveCurrentCountySchoolName();
+        const school = schoolName ? (window.SCHOOLS || {})[schoolName] : null;
+        if (!school) {
+            return '<div class="county-empty">未锁定本校。请先在数据管理里设置本校，县域分析会自动补充本校学科对比。</div>';
+        }
+        const metric = school.metrics?.total || {};
+        const isTownship = school.countyScope !== 'county';
+        const subjectRows = (window.SUBJECTS || [])
+            .map((subject) => {
+                const countyRank = getSubjectSchoolRank(subject, schoolName, 'county', scope);
+                const townRank = isTownship ? getSubjectSchoolRank(subject, schoolName, 'township', scope) : null;
+                if (!countyRank && !townRank) return '';
+                const source = countyRank || townRank;
+                return `
+                    <tr>
+                        <td>${escapeHtml(subject)}</td>
+                        <td>${formatNumber(source?.metric?.avg, 1)}</td>
+                        <td>${formatPercent(source?.metric?.excRate)}</td>
+                        <td>${formatPercent(source?.metric?.passRate)}</td>
+                        <td>${townRank ? `${townRank.rank}/${townRank.total}` : '-'}</td>
+                        <td>${countyRank ? `${countyRank.rank}/${countyRank.total}` : '-'}</td>
+                    </tr>
+                `;
+            })
+            .filter(Boolean)
+            .join('');
+
+        return `
+            <div class="county-focus-card">
+                <div>
+                    <span>本校县域站位</span>
+                    <strong>${escapeHtml(schoolName)}</strong>
+                    <p>${isTownship ? '本校属于乡镇学校：普通模块只按乡镇计算，县域分析里同时显示县排名。' : '本校当前按县直学校处理：仅在县域分析和学生县排名场景参与。'}</p>
+                </div>
+                <div class="county-focus-metrics">
+                    <em>乡镇总排 <b>${isTownship ? (school.townshipRank2Rate || '-') : '-'}</b></em>
+                    <em>县域总排 <b>${school.countyRank2Rate || '-'}</b></em>
+                    <em>两率一分 <b>${formatNumber(school.countyScore2Rate ?? school.score2Rate)}</b></em>
+                    <em>样本 <b>${metric.count || 0}</b></em>
+                </div>
+            </div>
+            ${subjectRows ? `
+                <div class="table-wrap analysis-table-shell county-focus-table">
+                    <table class="analysis-generated-table county-analysis-table">
+                        <thead><tr><th>学科</th><th>均分</th><th>优秀率</th><th>及格率</th><th>乡镇学科排</th><th>县域学科排</th></tr></thead>
+                        <tbody>${subjectRows}</tbody>
+                    </table>
+                </div>
+            ` : ''}
+        `;
+    }
+
     function getStudentArchiveData() {
         return (window.RAW_DATA || [])
             .filter((student) => Number.isFinite(Number(student?.total)))
@@ -538,7 +660,7 @@
         const examKey = getExamKey();
         const key = String(section || '').trim();
         if (key === 'student') {
-            if (window.UI?.toast) window.UI.toast('学生县排名已移到“学生档案查询”的学生考试明细中，县域质量排名不再单独导出学生档案县排。', 'info');
+            if (window.UI?.toast) window.UI.toast('学生县排名已移到“学生档案查询”的学生考试明细中，县域分析不再单独导出学生档案县排。', 'info');
             return;
         }
         const exporters = {
@@ -555,7 +677,7 @@
                 sheets: [{ name: '历史对比', rows: buildHistoryCompareExportRows() }]
             },
             all: {
-                fileName: `县域质量排名_${examKey}.xlsx`,
+                fileName: `县域分析_${examKey}.xlsx`,
                 sheets: [
                     { name: '县域排名', rows: buildCountyRankExportRows() },
                     { name: '教师画像', rows: buildTeacherPortraitExportRows() },
@@ -775,6 +897,52 @@
         `;
     }
 
+    function renderMyTeacherCountyFocus(rankingRows) {
+        const rows = Array.isArray(rankingRows) ? rankingRows.slice() : getTeacherCountyRankingRows();
+        if (!rows.length) return '';
+        const bestAvg = rows.slice().sort((a, b) => (a.countyRankAvg || 9999) - (b.countyRankAvg || 9999))[0];
+        const bestExc = rows.slice().sort((a, b) => (a.countyRankExc || 9999) - (b.countyRankExc || 9999))[0];
+        const bestPass = rows.slice().sort((a, b) => (a.countyRankPass || 9999) - (b.countyRankPass || 9999))[0];
+        const subjectSet = new Set(rows.map((row) => row.subject).filter(Boolean));
+        const topRows = rows.slice()
+            .sort((a, b) => (a.countyRankAvg || 9999) - (b.countyRankAvg || 9999))
+            .slice(0, 8);
+        return `
+            <div class="county-focus-card county-teacher-focus">
+                <div>
+                    <span>本校教师县域画像</span>
+                    <strong>${rows.length} 个教师-学科样本</strong>
+                    <p>县域口径会把本校任课教师与县直、乡镇所有学校同学科整体表现放在一起对标，普通教师模块仍只看乡镇口径。</p>
+                </div>
+                <div class="county-focus-metrics">
+                    <em>覆盖学科 <b>${subjectSet.size}</b></em>
+                    <em>均分最好 <b>${escapeHtml(bestAvg?.teacherName || '-')} #${bestAvg?.countyRankAvg ?? '-'}</b></em>
+                    <em>优秀率最好 <b>${escapeHtml(bestExc?.teacherName || '-')} #${bestExc?.countyRankExc ?? '-'}</b></em>
+                    <em>及格率最好 <b>${escapeHtml(bestPass?.teacherName || '-')} #${bestPass?.countyRankPass ?? '-'}</b></em>
+                </div>
+            </div>
+            <div class="table-wrap analysis-table-shell county-focus-table">
+                <table class="analysis-generated-table county-analysis-table">
+                    <thead><tr><th>教师</th><th>学科</th><th>均分</th><th>优秀率</th><th>及格率</th><th>县均排</th><th>县优排</th><th>县及格排</th></tr></thead>
+                    <tbody>
+                        ${topRows.map((row) => `
+                            <tr>
+                                <td>${escapeHtml(row.teacherName)}</td>
+                                <td>${escapeHtml(row.subject)}</td>
+                                <td>${formatNumber(row.avg, 1)}</td>
+                                <td>${formatPercent(row.excellentRate)}</td>
+                                <td>${formatPercent(row.passRate)}</td>
+                                <td>${row.countyRankAvg ?? '-'}</td>
+                                <td>${row.countyRankExc ?? '-'}</td>
+                                <td>${row.countyRankPass ?? '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
     function renderTeacherPortraits() {
         const rows = getTeacherRows(10);
         if (!rows.length) {
@@ -797,6 +965,7 @@
                     </article>
                 `).join('')}
             </div>
+            ${renderMyTeacherCountyFocus(rankingRows)}
             ${rankingRows.length ? `
                 <div class="analysis-table-meta">
                     <span><strong>县域教师总排名：</strong>按“本校教师 + 县直/乡镇各校该学科整体”混合口径对标，便于快速判断老师在县域中的位置。</span>
@@ -922,15 +1091,20 @@
         const townshipCount = scope.townshipSchools?.length || 0;
         const totalStudents = (window.RAW_DATA || []).length;
         const html = `
+            <div class="county-module-nav">
+                <a href="#county-two-rate-panel">两率一分</a>
+                <a href="#county-teacher-panel">教师教学质量画像</a>
+                <span>县直学校只在本母模块、学情档案查询和成绩单/家长查分的县排名中参与。</span>
+            </div>
             <div class="county-kpi-grid">
                 <div><span>本次范围</span><strong>${scope.includesCounty ? '县域 + 乡镇' : '乡镇'}</strong><em>${escapeHtml(getExamKey())}</em></div>
                 <div><span>学校数</span><strong>${names.length}</strong><em>乡镇 ${townshipCount} · 县域 ${countyCount}</em></div>
                 <div><span>学生样本</span><strong>${totalStudents}</strong><em>已补充 countyRank / townshipRank</em></div>
                 <div><span>历史快照</span><strong>${readJson(HISTORY_KEY, []).length}</strong><em>支持县域排名对比</em></div>
             </div>
-            <div class="analysis-anchor-panel">
+            <div id="county-two-rate-panel" class="analysis-anchor-panel">
                 <div class="county-section-head">
-                    <div class="sub-header analysis-section-head">县域两率一分排名</div>
+                    <div class="sub-header analysis-section-head">县域分析 / 两率一分</div>
                     <div class="county-section-actions">
                         <button class="btn btn-sm btn-green" type="button" onclick="exportCountyAnalysisSection('rank')">下载Excel</button>
                     </div>
@@ -938,11 +1112,12 @@
                 <div class="analysis-table-meta">
                     <span><strong>口径：</strong>县排名按本次导入的全部学校排序；乡镇排名只在本乡镇学校内排序。</span>
                 </div>
+                ${renderMySchoolCountyFocus(scope)}
                 ${renderCountyRankTable()}
             </div>
-            <div class="analysis-anchor-panel">
+            <div id="county-teacher-panel" class="analysis-anchor-panel">
                 <div class="county-section-head">
-                    <div class="sub-header analysis-section-head">教师教学质量画像</div>
+                    <div class="sub-header analysis-section-head">县域分析 / 教师教学质量画像</div>
                     <div class="county-section-actions">
                         <button class="btn btn-sm btn-green" type="button" onclick="exportCountyAnalysisSection('teacher')">下载Excel</button>
                     </div>
@@ -967,8 +1142,8 @@
     }
 
     function decorateAnalysisTable() {
-        // 按当前业务口径，常规镇域宏观模块始终只展示乡镇数据，
-        // 县直数据只在“学生之间排名对比”和“县域质量排名”中参与。
+        // 常规校际/教师模块始终只展示乡镇数据。
+        // 县直数据只在“县域分析”、学情档案查询、成绩单/家长查分的县排名中参与。
     }
 
     function decorateStudentDetails() {
@@ -1176,10 +1351,22 @@
         const style = document.createElement('style');
         style.id = 'county-analysis-runtime-style';
         style.textContent = `
+            .county-module-nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 14px;padding:12px 14px;border:1px solid #99f6e4;border-radius:16px;background:linear-gradient(135deg,#ecfeff,#f8fafc)}
+            .county-module-nav a{display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border-radius:999px;background:#0f766e;color:#fff;font-size:12px;font-weight:900;text-decoration:none}
+            .county-module-nav span{color:#475569;font-size:12px;font-weight:700}
             .county-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}
             .county-kpi-grid>div{padding:16px;border:1px solid #ccfbf1;border-radius:18px;background:linear-gradient(135deg,#f0fdfa,#fff)}
             .county-kpi-grid span,.county-kpi-grid em{display:block;color:#64748b;font-size:12px;font-style:normal}
             .county-kpi-grid strong{display:block;margin:8px 0 4px;color:#0f766e;font-size:24px}
+            .county-focus-card{display:flex;align-items:stretch;justify-content:space-between;gap:16px;margin:12px 0;padding:16px;border:1px solid #bfdbfe;border-radius:18px;background:linear-gradient(135deg,#eff6ff,#fff)}
+            .county-focus-card span{display:block;color:#2563eb;font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+            .county-focus-card strong{display:block;margin:6px 0;color:#0f172a;font-size:20px}
+            .county-focus-card p{margin:0;color:#64748b;font-size:13px;line-height:1.7}
+            .county-focus-metrics{display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:8px;min-width:280px}
+            .county-focus-metrics em{display:block;padding:10px 12px;border:1px solid rgba(148,163,184,.28);border-radius:14px;background:#fff;color:#64748b;font-size:12px;font-style:normal}
+            .county-focus-metrics b{display:block;margin-top:4px;color:#0f766e;font-size:16px}
+            .county-focus-table{margin:12px 0}
+            .county-teacher-focus{border-color:#ddd6fe;background:linear-gradient(135deg,#f5f3ff,#fff)}
             .county-scope-badge{display:inline-flex;padding:4px 9px;border-radius:999px;font-size:12px;font-weight:800}
             .county-scope-badge.is-township{background:#dcfce7;color:#166534}
             .county-scope-badge.is-county{background:#dbeafe;color:#1d4ed8}
@@ -1195,7 +1382,7 @@
             .county-portrait-rankline span{background:#f8fafc;border:1px solid rgba(148,163,184,.35);border-radius:999px;padding:4px 10px}
             .county-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
             .county-section-actions{display:flex;gap:8px;flex-wrap:wrap}
-            @media(max-width:900px){.county-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+            @media(max-width:900px){.county-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.county-focus-card{display:block}.county-focus-metrics{grid-template-columns:1fr;min-width:0;margin-top:12px}}
             @media(max-width:560px){.county-kpi-grid{grid-template-columns:1fr}}
         `;
         document.head.appendChild(style);
