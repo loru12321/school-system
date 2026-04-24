@@ -3,23 +3,79 @@ var DIRECT_SUPABASE_KEY = 'sb_publishable_J7f2UEVGfHQ_89MR09KTNA_wKFRGZ86';
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
+var BOOT_ASSET_VERSION_FALLBACK = '20260424-startup-v2';
+
+function getBootRuntimeAssetVersion() {
+    const currentScript = document.currentScript;
+    const scripts = Array.from(document.scripts || []);
+    const bootScript = (currentScript && /boot-runtime\.js/i.test(String(currentScript.src || '')))
+        ? currentScript
+        : scripts.slice().reverse().find((script) => /boot-runtime\.js/i.test(String(script.src || '')));
+    const src = String(bootScript && bootScript.src || '');
+    const match = src.match(/[?&]v=([^&#]+)/i);
+    if (match && match[1]) {
+        try {
+            return decodeURIComponent(match[1]);
+        } catch (_) {
+            return match[1];
+        }
+    }
+    return String(window.__CORE_VERSION__ || '').trim() || BOOT_ASSET_VERSION_FALLBACK;
+}
+
+function getVersionedAssetPath(src) {
+    const cleanSrc = String(src || '').trim();
+    if (!cleanSrc) return cleanSrc;
+    const version = String(window.__BOOT_ASSET_VERSION__ || window.__CORE_VERSION__ || BOOT_ASSET_VERSION_FALLBACK).trim();
+    if (!version) return cleanSrc;
+    const separator = cleanSrc.includes('?') ? '&' : '?';
+    return `${cleanSrc}${separator}v=${encodeURIComponent(version)}`;
+}
+
+function clearAuthReadySafetyTimeout() {
+    if (window.__AUTH_READY_TIMEOUT_ID__) {
+        clearTimeout(window.__AUTH_READY_TIMEOUT_ID__);
+        window.__AUTH_READY_TIMEOUT_ID__ = 0;
+    }
+}
+
+function markAuthReadyResolved() {
+    if (window.__AUTH_READY__) return;
+    window.__AUTH_READY__ = true;
+    clearAuthReadySafetyTimeout();
+    if (typeof window.resolveAuthReady === 'function') {
+        const resolve = window.resolveAuthReady;
+        window.resolveAuthReady = null;
+        resolve();
+    }
+}
+
+function armAuthReadySafetyTimeout(timeoutMs = 15000) {
+    if (window.__AUTH_READY__ || window.__AUTH_READY_TIMEOUT_ID__) return;
+    window.__AUTH_READY_TIMEOUT_ID__ = window.setTimeout(() => {
+        if (window.__AUTH_READY__) return;
+        console.warn('[boot-runtime] AuthReady safety timeout reached');
+        markAuthReadyResolved();
+    }, timeoutMs);
+}
 
 // Initialize AuthReady promise early to guard the UI transition
+window.__BOOT_ASSET_VERSION__ = window.__BOOT_ASSET_VERSION__ || getBootRuntimeAssetVersion();
 window.AuthReady = new Promise((resolve) => {
     window.resolveAuthReady = resolve;
-    // Safety timeout: if Auth doesn't signal ready in 20s, resolve anyway to avoid permanent hang
-    setTimeout(() => {
-        if (!window.__AUTH_READY__) {
-            console.warn('[boot-runtime] AuthReady safety timeout reached');
-            resolve();
-        }
-    }, 20000);
 });
+window.markAuthReadyResolved = markAuthReadyResolved;
+window.armAuthReadySafetyTimeout = armAuthReadySafetyTimeout;
+window.waitForAuthReady = function waitForAuthReady(timeoutMs = 15000) {
+    armAuthReadySafetyTimeout(timeoutMs);
+    return window.AuthReady;
+};
 
 var sbClient = window.sbClient || null;
 
 document.addEventListener('DOMContentLoaded', function () {
     if (typeof initMacroAnomalyConfigUI === 'function') initMacroAnomalyConfigUI();
+    scheduleAppModuleWarmup();
 });
 
 var APP_MODULES = [
@@ -86,6 +142,35 @@ var APP_MODULES = [
     './assets/js/town-submodule-compare-runtime.js'
 ];
 
+function warmAppModuleCache() {
+    if (window.__APP_MODULE_WARMUP_STARTED__) return;
+    const head = document.head;
+    if (!head) return;
+    window.__APP_MODULE_WARMUP_STARTED__ = true;
+
+    APP_MODULES.forEach((src) => {
+        const href = getVersionedAssetPath(src);
+        if (!href || head.querySelector(`link[data-app-prefetch="${href}"]`)) return;
+        const link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.as = 'script';
+        link.href = href;
+        link.crossOrigin = 'anonymous';
+        link.dataset.appPrefetch = href;
+        head.appendChild(link);
+    });
+}
+
+function scheduleAppModuleWarmup() {
+    if (window.__APP_MODULES_LOADED__ === true || window.__APP_MODULES_LOAD_PROMISE__) return;
+    const runWarmup = () => warmAppModuleCache();
+    if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(runWarmup, { timeout: 1200 });
+        return;
+    }
+    window.setTimeout(runWarmup, 800);
+}
+
 async function loadAppModules() {
     if (window.__APP_MODULES_LOAD_PROMISE__) {
         return window.__APP_MODULES_LOAD_PROMISE__;
@@ -114,9 +199,11 @@ async function loadAppModules() {
     if (window.Auth && !window.Auth.__bootLoginShell) {
         console.log('[boot-runtime] Auth module already present, skipping dynamic load');
         window.__APP_MODULES_LOADED__ = true;
+        markAuthReadyResolved();
         return Promise.resolve();
     }
 
+    armAuthReadySafetyTimeout();
     window.__APP_MODULES_LOADED__ = 'loading';
     window.__APP_MODULES_LOAD_PROMISE__ = (async () => {
     const loaderText = document.getElementById('loader-text');
@@ -159,7 +246,7 @@ async function loadAppModules() {
 
         await new Promise((resolve) => {
             const script = document.createElement('script');
-            script.src = src + '?v=' + (window.__CORE_VERSION__ || Date.now());
+            script.src = getVersionedAssetPath(src);
 
             // Critical modules get more patience
             const isCritical = src.includes('app.js') || src.includes('auth-state');
@@ -1009,13 +1096,22 @@ window.initCloudClient();
         document.body.classList.toggle('login-overlay-active', !!visible);
         document.body.dataset.authState = visible ? 'logged_out' : 'logged_in';
 
-        if (overlay) overlay.style.display = visible ? 'flex' : 'none';
+        if (overlay) {
+            overlay.style.display = visible ? 'flex' : 'none';
+            overlay.style.visibility = visible ? 'visible' : 'hidden';
+            overlay.style.opacity = visible ? '1' : '0';
+            overlay.style.pointerEvents = visible ? 'auto' : 'none';
+            overlay.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        }
         if (loader && !visible) {
             loader.classList.add('hidden');
             // Ensure display is also set to none to be safe
             setTimeout(() => { if (loader.classList.contains('hidden')) loader.style.display = 'none'; }, 300);
         }
-        if (app && visible) app.classList.add('hidden');
+        if (app) {
+            app.classList.toggle('hidden', !!visible);
+            app.setAttribute('aria-hidden', visible ? 'true' : 'false');
+        }
     }
 
     const bootAuth = window.Auth || {
@@ -1145,7 +1241,7 @@ window.initCloudClient();
                                 // Start loading modules and wait for auth readiness
                                 (async () => {
                                     await loadAppModules();
-                                    await window.AuthReady;
+                                    await window.waitForAuthReady();
                                     const loader = document.getElementById('global-loader');
                                     if (loader) {
                                         loader.style.opacity = '0';
@@ -1164,7 +1260,7 @@ window.initCloudClient();
                     const loader = document.getElementById('global-loader');
                     if (loader) loader.classList.remove('hidden');
                     await loadAppModules();
-                    await window.AuthReady;
+                    await window.waitForAuthReady();
                     this.syncLoginOverlayState(false);
                     if (loader) {
                         loader.style.opacity = '0';

@@ -4337,8 +4337,9 @@ var Auth = {
             if (visible) overlay.dataset.loginModal = 'inline';
             if (!visible) overlay.dataset.loginModal = 'hidden';
         }
-        if (app && visible) {
-            app.classList.add('hidden');
+        if (app) {
+            app.classList.toggle('hidden', !!visible);
+            app.setAttribute('aria-hidden', visible ? 'true' : 'false');
         }
     },
 
@@ -6082,7 +6083,10 @@ Auth.ensureLoginWorkbench();
 Auth.syncLoginPortalUI();
 
 // Signal to the portal loader that Auth is ready
-if (typeof window.resolveAuthReady === 'function') {
+if (typeof window.markAuthReadyResolved === 'function') {
+    window.markAuthReadyResolved();
+    console.log('[app] AuthReady signaled to portal');
+} else if (typeof window.resolveAuthReady === 'function') {
     window.__AUTH_READY__ = true;
     window.resolveAuthReady();
     console.log('[app] AuthReady signaled to portal');
@@ -10890,13 +10894,22 @@ const DrillSystem = {
 };
 
 // 辅助：各模块的点击处理器
+function getIndicatorRankParams() {
+    const indicator = window.SYS_VARS?.indicator || {};
+    const raw1 = indicator.ind1 || document.getElementById('dm_ind1_input')?.value || document.getElementById('ind1')?.value || '';
+    const raw2 = indicator.ind2 || document.getElementById('dm_ind2_input')?.value || document.getElementById('ind2')?.value || '';
+    return {
+        r1: parseInt(String(raw1).trim(), 10) || 0,
+        r2: parseInt(String(raw2).trim(), 10) || 0
+    };
+}
+
 function handleIndicatorClick(schoolName, type) {
     const studentsBySchool = getEquivalentSchoolStudents(schoolName);
     if (!studentsBySchool.length) return;
 
     // 获取当前设定的划线
-    const r1 = parseInt(document.getElementById('ind1').value);
-    const r2 = parseInt(document.getElementById('ind2').value);
+    const { r1, r2 } = getIndicatorRankParams();
     if (!r1 || !r2) return alert("请先设置指标参数");
 
     const townshipRows = (typeof filterRowsToTownshipSchools === 'function')
@@ -22337,7 +22350,8 @@ function saveTargetEditor() {
     UI.toast(`✅ 已更新 ${updateCount} 所学校的目标设定`, "success");
 
     // 自动触发一次计算，让用户看到变化
-    if (document.getElementById('ind1').value && document.getElementById('ind2').value) {
+    const { r1, r2 } = getIndicatorRankParams();
+    if (r1 && r2) {
         calcIndicators();
     } else {
         alert("目标已保存！\n请记得在上方输入框设置【划线名次】，然后点击【开始计算】。");
