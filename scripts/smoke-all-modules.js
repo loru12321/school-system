@@ -1225,6 +1225,16 @@ async function smokeDataManagerTab(page, id) {
         }
     });
 
+    page.on('response', response => {
+        if (response.status() !== 404) return;
+        const message = `404 ${response.url()}`;
+        if (shouldIgnoreConsoleMessage(message, {
+            smokeUrl: process.env.SMOKE_URL || 'https://schoolsystem.com.cn/',
+            recentFailedRequests
+        })) return;
+        errors.push({ scope: currentScope, type: 'response', message });
+    });
+
     page.on('console', msg => {
         if (msg.type() !== 'error') return;
         const text = msg.text();
