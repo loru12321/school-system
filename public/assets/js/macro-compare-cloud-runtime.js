@@ -33,13 +33,20 @@
             summaryByExam: cache.summaryByExam,
             overviewByExam: cache.overviewByExam,
             allSchoolsChange: cache.allSchoolsChange,
-            countyInsightRows: cache.countyInsightRows || cache.moduleSeries || [],
-            schoolTrendRows: cache.schoolTrendRows,
-            latestRankMatrix: cache.latestRankMatrix,
-            rankMatrixHeaders: cache.rankMatrixHeaders,
-            rankMatrixRows: cache.rankMatrixRows,
+            countyInsightRows: cache.countyInsightRows || [],
+            schoolTrendRows: cache.schoolTrendRows || [],
+            latestRankMatrix: cache.latestRankMatrix || [],
+            rankMatrixHeaders: cache.rankMatrixHeaders || [],
+            rankMatrixRows: cache.rankMatrixRows || [],
+            countyHorizontalHeaders: cache.countyHorizontalHeaders || [],
+            countyHorizontalRows: cache.countyHorizontalRows || [],
+            countySubjectPortraitHeaders: cache.countySubjectPortraitHeaders || [],
+            countySubjectPortraitRows: cache.countySubjectPortraitRows || [],
+            countySubjectSchoolTables: cache.countySubjectSchoolTables || [],
             teacherCountyRows: cache.teacherCountyRows || [],
+            teacherCountyCards: cache.teacherCountyCards || [],
             teacherCountySummary: cache.teacherCountySummary || null,
+            teacherCountyRankingPanels: cache.teacherCountyRankingPanels || [],
             teacherCountyMessage: cache.teacherCountyMessage || '',
             html: cache.html,
             title,
@@ -57,16 +64,16 @@
             }, { onConflict: 'key' });
             if (error) throw error;
             if (window.UI) UI.toast('县域多期对比已保存到云端', 'success');
-        } catch (e) {
-            console.error(e);
-            alert('保存失败: ' + e.message);
+        } catch (error) {
+            console.error(error);
+            alert(`保存失败: ${error.message}`);
         } finally {
             if (window.UI) UI.loading(false);
         }
     }
 
     async function viewCloudMacroCompares() {
-        if (!sbClient) return alert('云端服务未连接');
+        if (!window.sbClient) return alert('云端服务未连接');
 
         try {
             if (window.UI) UI.loading(true, '正在加载县域多期对比云端列表...');
@@ -123,15 +130,15 @@
                     showConfirmButton: false
                 });
             }
-        } catch (e) {
+        } catch (error) {
             if (window.UI) UI.loading(false);
-            console.error(e);
-            alert('加载失败: ' + e.message);
+            console.error(error);
+            alert(`加载失败: ${error.message}`);
         }
     }
 
     async function loadCloudMacroCompare(key) {
-        if (!sbClient) return alert('云端服务未连接');
+        if (!window.sbClient) return alert('云端服务未连接');
 
         try {
             if (typeof Swal !== 'undefined') Swal.close();
@@ -162,22 +169,29 @@
                 summaryByExam: payload.summaryByExam,
                 overviewByExam: payload.overviewByExam,
                 allSchoolsChange: payload.allSchoolsChange,
-                countyInsightRows: payload.countyInsightRows || payload.moduleSeries || [],
-                schoolTrendRows: payload.schoolTrendRows,
-                latestRankMatrix: payload.latestRankMatrix,
-                rankMatrixHeaders: payload.rankMatrixHeaders,
-                rankMatrixRows: payload.rankMatrixRows,
+                countyInsightRows: payload.countyInsightRows || [],
+                schoolTrendRows: payload.schoolTrendRows || [],
+                latestRankMatrix: payload.latestRankMatrix || [],
+                rankMatrixHeaders: payload.rankMatrixHeaders || [],
+                rankMatrixRows: payload.rankMatrixRows || [],
+                countyHorizontalHeaders: payload.countyHorizontalHeaders || [],
+                countyHorizontalRows: payload.countyHorizontalRows || [],
+                countySubjectPortraitHeaders: payload.countySubjectPortraitHeaders || [],
+                countySubjectPortraitRows: payload.countySubjectPortraitRows || [],
+                countySubjectSchoolTables: payload.countySubjectSchoolTables || [],
                 teacherCountyRows: payload.teacherCountyRows || [],
+                teacherCountyCards: payload.teacherCountyCards || [],
                 teacherCountySummary: payload.teacherCountySummary || null,
+                teacherCountyRankingPanels: payload.teacherCountyRankingPanels || [],
                 teacherCountyMessage: payload.teacherCountyMessage || '',
                 html: payload.html
             };
 
             window.MACRO_MULTI_PERIOD_COMPARE_CACHE = cache;
             setMacroCompareCacheState(cache);
-        } catch (e) {
-            console.error(e);
-            alert('加载失败: ' + e.message);
+        } catch (error) {
+            console.error(error);
+            alert(`加载失败: ${error.message}`);
         } finally {
             if (window.UI) UI.loading(false);
         }
