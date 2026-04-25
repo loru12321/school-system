@@ -11,6 +11,18 @@
         isRendering: false,
         lastRankSignature: ''
     };
+    const COUNTY_SUBMODULES = {
+        'county-teacher-portrait': {
+            title: '县域教师画像',
+            badge: '教师县域排名',
+            description: '对照“教师教学质量画像”，把本校教师放到县域所有学校同学科样本中排名，查看学科教师县域站位。'
+        },
+        'county-school-horizontal': {
+            title: '县域学校横向分析',
+            badge: '全县横向对比',
+            description: '对照“两率一分(横向)”，生成五科总综合分析表和各学科明细表，按县域所有学校统一排名。'
+        }
+    };
 
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
@@ -582,6 +594,31 @@
         ];
     }
 
+    function buildCountySubjectExportRows(subject) {
+        return [
+            ['排名', '学校', '人数', '均分', '优秀率', '及格率', '两率一分'],
+            ...buildCountySubjectRows(subject).map((row) => [
+                row.rank,
+                row.schoolName || '',
+                row.count || 0,
+                formatNumber(row.avg, 1),
+                formatPercent(row.excellentRate),
+                formatPercent(row.passRate),
+                formatNumber(row.score)
+            ])
+        ];
+    }
+
+    function buildCountySchoolHorizontalSheets() {
+        return [
+            { name: '五科总-综合分析表', rows: buildCountyRankExportRows() },
+            ...(window.SUBJECTS || []).map((subject) => ({
+                name: `${subject}学科明细`,
+                rows: buildCountySubjectExportRows(subject)
+            }))
+        ];
+    }
+
     function buildTeacherPortraitExportRows() {
         return [
             ['序位', '教师', '学科', '综合得分', '均分', '优秀率', '及格率', '样本人数', '县域均分排', '县域优秀率排', '县域及格率排', '对标总量', '风险级别'],
@@ -670,6 +707,10 @@
                 fileName: `县域两率一分排名_${examKey}.xlsx`,
                 sheets: [{ name: '县域排名', rows: buildCountyRankExportRows() }]
             },
+            school: {
+                fileName: `县域学校横向分析_${examKey}.xlsx`,
+                sheets: buildCountySchoolHorizontalSheets()
+            },
             teacher: {
                 fileName: `县域教师画像_${examKey}.xlsx`,
                 sheets: [{ name: '教师画像', rows: buildTeacherPortraitExportRows() }]
@@ -681,7 +722,7 @@
             all: {
                 fileName: `县域分析_${examKey}.xlsx`,
                 sheets: [
-                    { name: '县域排名', rows: buildCountyRankExportRows() },
+                    ...buildCountySchoolHorizontalSheets(),
                     { name: '教师画像', rows: buildTeacherPortraitExportRows() },
                     { name: '历史对比', rows: buildHistoryCompareExportRows() }
                 ]
@@ -1074,18 +1115,159 @@
         `;
     }
 
-    function renderCountyAnalysis() {
+    function getActiveCountySubmoduleId() {
+        const active = ['county-teacher-portrait', 'county-school-horizontal', 'county-analysis']
+            .find((id) => document.getElementById(id)?.classList?.contains('active'));
+        return active === 'county-analysis' ? 'county-teacher-portrait' : (active || 'county-teacher-portrait');
+    }
+
+    function getCountyRootForSubmodule(id = getActiveCountySubmoduleId()) {
+        const section = document.getElementById(id) || document.getElementById('county-analysis');
+        return section?.querySelector?.('.county-analysis-root') || document.getElementById('county-analysis-root');
+    }
+
+    function ensureCountySubmoduleSections() {
+        const base = document.getElementById('county-analysis');
+        if (!base || base.dataset.countySubmoduleHost === '1') return;
+        base.dataset.countySubmoduleHost = '1';
+        Object.entries(COUNTY_SUBMODULES).forEach(([id, meta]) => {
+            if (document.getElementById(id)) return;
+            const section = document.createElement('div');
+            section.id = id;
+            section.className = 'section card-box analysis-workspace analysis-workspace-county';
+            section.innerHTML = `
+                <div class="module-desc-bar analysis-hero" style="border-color:#0f766e;">
+                    <h3><i class="ti ti-map-2"></i> ${escapeHtml(meta.title)} <span class="badge" style="background:#0f766e;">${escapeHtml(meta.badge)}</span></h3>
+                    <p>${escapeHtml(meta.description)}</p>
+                </div>
+                <div class="county-analysis-root">
+                    <div class="info-bar analysis-info-band">导入县级成绩后，这里只呈现县域专用分析，不改变联考分析、教学管理和学情诊断的原有口径。</div>
+                </div>
+            `;
+            base.insertAdjacentElement('afterend', section);
+        });
+    }
+
+    function buildCountySubjectRows(subject) {
+        const rows = Object.values(window.SCHOOLS || {})
+            .filter((school) => school?.metrics?.[subject])
+            .map((school) => ({ school, metric: school.metrics[subject] }));
+        if (!rows.length) return [];
+        const maxes = rows.reduce((acc, row) => {
+            acc.avg = Math.max(acc.avg, toNumber(row.metric.avg));
+            acc.excellent = Math.max(acc.excellent, toNumber(row.metric.excRate));
+            acc.pass = Math.max(acc.pass, toNumber(row.metric.passRate));
+            return acc;
+        }, { avg: 0, excellent: 0, pass: 0 });
+        return rows.map((row) => {
+            const parts = scoreMetricAgainstMax(row.metric, maxes);
+            return {
+                schoolName: row.school.name || '',
+                count: toNumber(row.metric.count),
+                avg: toNumber(row.metric.avg),
+                excellentRate: toNumber(row.metric.excRate),
+                passRate: toNumber(row.metric.passRate),
+                score: parts.ratedAvg + parts.ratedExc + parts.ratedPass
+            };
+        }).sort((a, b) => b.score - a.score)
+            .map((row, index) => ({ ...row, rank: index + 1 }));
+    }
+
+    function renderCountySchoolHorizontal() {
+        const totalRows = getCountyRankRows();
+        if (!totalRows.length) return '<div class="county-empty">暂无学校成绩数据，请先导入本次县级成绩。</div>';
+        const subjects = window.SUBJECTS || [];
+        const subjectTables = subjects.map((subject) => {
+            const rows = buildCountySubjectRows(subject);
+            if (!rows.length) return '';
+            return `
+                <div class="analysis-anchor-panel county-subject-detail">
+                    <div class="county-section-head">
+                        <div class="sub-header analysis-section-head">${escapeHtml(subject)} 学科明细</div>
+                    </div>
+                    <div class="table-wrap analysis-table-shell">
+                        <table class="analysis-generated-table county-analysis-table">
+                            <thead><tr><th>排名</th><th>学校</th><th>人数</th><th>均分</th><th>优秀率</th><th>及格率</th><th>两率一分</th></tr></thead>
+                            <tbody>
+                                ${rows.map((row) => `
+                                    <tr>
+                                        <td>${row.rank}</td>
+                                        <td>${escapeHtml(row.schoolName)}</td>
+                                        <td>${row.count || 0}</td>
+                                        <td>${formatNumber(row.avg, 1)}</td>
+                                        <td>${formatPercent(row.excellentRate)}</td>
+                                        <td>${formatPercent(row.passRate)}</td>
+                                        <td><strong>${formatNumber(row.score)}</strong></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }).filter(Boolean).join('');
+
+        return `
+            <div class="county-kpi-grid">
+                <div><span>学校样本</span><strong>${totalRows.length}</strong><em>县域所有学校</em></div>
+                <div><span>学科明细</span><strong>${subjects.length}</strong><em>按两率一分统一折算</em></div>
+                <div><span>学生样本</span><strong>${(window.RAW_DATA || []).length}</strong><em>${escapeHtml(getExamKey())}</em></div>
+                <div><span>输出</span><strong>横向表</strong><em>五科总 + 单科明细</em></div>
+            </div>
+            <div class="analysis-anchor-panel">
+                <div class="county-section-head">
+                    <div class="sub-header analysis-section-head">五科总 - 综合分析表</div>
+                    <div class="county-section-actions">
+                        <button class="btn btn-sm btn-green" type="button" onclick="exportCountyAnalysisSection('school')">下载Excel</button>
+                    </div>
+                </div>
+                <div class="analysis-table-meta">
+                    <span><strong>口径：</strong>本表只用于县域分析母模块，按当前导入的全部县级学校统一排名。</span>
+                </div>
+                ${renderCountyRankTable()}
+            </div>
+            ${subjectTables || '<div class="county-empty">暂无学科明细数据。</div>'}
+        `;
+    }
+
+    function renderCountyTeacherModule() {
+        return `
+            <div class="county-kpi-grid">
+                <div><span>教师样本</span><strong>${getTeacherRows(Number.POSITIVE_INFINITY).length}</strong><em>本校教师-学科</em></div>
+                <div><span>对标范围</span><strong>${getSchoolNames().length}</strong><em>县域所有学校</em></div>
+                <div><span>学科数</span><strong>${(window.SUBJECTS || []).length}</strong><em>同学科排名</em></div>
+                <div><span>输出</span><strong>画像表</strong><em>均分 / 优率 / 及格率</em></div>
+            </div>
+            <div class="analysis-anchor-panel">
+                <div class="county-section-head">
+                    <div class="sub-header analysis-section-head">县域教师教学质量画像</div>
+                    <div class="county-section-actions">
+                        <button class="btn btn-sm btn-green" type="button" onclick="exportCountyAnalysisSection('teacher')">下载Excel</button>
+                    </div>
+                </div>
+                <div class="analysis-table-meta">
+                    <span><strong>口径：</strong>本校教师按任教学科，与县域所有学校该学科整体表现同表排名。</span>
+                </div>
+                ${renderTeacherPortraits()}
+            </div>
+        `;
+    }
+
+    function renderCountyAnalysis(id = getActiveCountySubmoduleId()) {
         if (state.isRendering) return;
         state.isRendering = true;
         try {
-            const root = document.getElementById('county-analysis-root');
+        ensureCountySubmoduleSections();
+        const activeId = id === 'county-analysis' ? 'county-teacher-portrait' : id;
+        const root = getCountyRootForSubmodule(activeId);
         if (!root) return;
         const scope = applyCountyRanks();
         window.setTimeout(() => {
             void ensureTeacherContextForCountyAnalysis().then((result) => {
-                const isCountyVisible = document.getElementById('county-analysis')?.classList?.contains('active');
+                const isCountyVisible = ['county-teacher-portrait', 'county-school-horizontal', 'county-analysis']
+                    .some((sectionId) => document.getElementById(sectionId)?.classList?.contains('active'));
                 if (result?.changed && isCountyVisible && !state.isRendering) {
-                    renderCountyAnalysis();
+                    renderCountyAnalysis(activeId);
                 }
             });
         }, 0);
@@ -1094,49 +1276,13 @@
         const townshipCount = scope.townshipSchools?.length || 0;
         const totalStudents = (window.RAW_DATA || []).length;
         const html = `
-            <div class="county-module-nav">
-                <a href="#county-two-rate-panel">两率一分</a>
-                <a href="#county-teacher-panel">教师教学质量画像</a>
-                <span>县直学校只在本母模块、学情档案查询和成绩单/家长查分的县排名中参与。</span>
-            </div>
             <div class="county-kpi-grid">
                 <div><span>本次范围</span><strong>${scope.includesCounty ? '县域 + 乡镇' : '乡镇'}</strong><em>${escapeHtml(getExamKey())}</em></div>
                 <div><span>学校数</span><strong>${names.length}</strong><em>乡镇 ${townshipCount} · 县域 ${countyCount}</em></div>
                 <div><span>学生样本</span><strong>${totalStudents}</strong><em>已补充 countyRank / townshipRank</em></div>
-                <div><span>历史快照</span><strong>${readJson(HISTORY_KEY, []).length}</strong><em>支持县域排名对比</em></div>
+                <div><span>当前子模块</span><strong>${escapeHtml(COUNTY_SUBMODULES[activeId]?.title || '县域教师画像')}</strong><em>不影响其他母模块</em></div>
             </div>
-            <div id="county-two-rate-panel" class="analysis-anchor-panel">
-                <div class="county-section-head">
-                    <div class="sub-header analysis-section-head">县域分析 / 两率一分</div>
-                    <div class="county-section-actions">
-                        <button class="btn btn-sm btn-green" type="button" onclick="exportCountyAnalysisSection('rank')">下载Excel</button>
-                    </div>
-                </div>
-                <div class="analysis-table-meta">
-                    <span><strong>口径：</strong>县排名按本次导入的全部学校排序；乡镇排名只在本乡镇学校内排序。</span>
-                </div>
-                ${renderMySchoolCountyFocus(scope)}
-                ${renderCountyRankTable()}
-            </div>
-            <div id="county-teacher-panel" class="analysis-anchor-panel">
-                <div class="county-section-head">
-                    <div class="sub-header analysis-section-head">县域分析 / 教师教学质量画像</div>
-                    <div class="county-section-actions">
-                        <button class="btn btn-sm btn-green" type="button" onclick="exportCountyAnalysisSection('teacher')">下载Excel</button>
-                    </div>
-                </div>
-                ${renderTeacherPortraits()}
-            </div>
-            <div class="analysis-anchor-panel">
-                <div class="county-section-head">
-                    <div class="sub-header analysis-section-head">县域历史对比</div>
-                    <div class="county-section-actions">
-                        <button class="btn btn-sm btn-green" type="button" onclick="exportCountyAnalysisSection('history')">下载Excel</button>
-                        <button class="btn btn-sm btn-primary" type="button" onclick="exportCountyAnalysisSection('all')">打包下载</button>
-                    </div>
-                </div>
-                ${renderHistoryCompare()}
-            </div>
+            ${activeId === 'county-school-horizontal' ? renderCountySchoolHorizontal() : renderCountyTeacherModule()}
         `;
         root.innerHTML = html;
         } finally {
@@ -1334,7 +1480,9 @@
             applyCountyRanks();
         });
         patchGlobalFunction('switchTab', (id) => {
-            if (id === 'county-analysis') setTimeout(renderCountyAnalysis, 0);
+            if (id === 'county-analysis' || id === 'county-teacher-portrait' || id === 'county-school-horizontal') {
+                setTimeout(() => renderCountyAnalysis(id), 0);
+            }
         });
     }
 
@@ -1393,6 +1541,7 @@
 
     function boot() {
         installStyles();
+        ensureCountySubmoduleSections();
         bindUploadPromptArm();
         installPatches();
         applyCountyRanks();

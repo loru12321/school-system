@@ -607,7 +607,10 @@
         }
         if (TEACHING_MANAGEMENT_MODULE_IDS.has(id)) return initTeachingManagementEntry(id);
         if (id === 'indicator' && typeof refreshIndicatorResults === 'function') refreshIndicatorResults(true);
-        if (id === 'county-analysis' && typeof window.renderCountyAnalysis === 'function') return window.renderCountyAnalysis();
+        if ((id === 'county-analysis' || id === 'county-teacher-portrait' || id === 'county-school-horizontal')
+            && typeof window.renderCountyAnalysis === 'function') {
+            return window.renderCountyAnalysis(id);
+        }
         if (id === 'high-score' && typeof renderHighScoreTable === 'function') renderHighScoreTable();
         if (id === 'student-overview') return initStudentOverviewEntry();
         if (id === 'zhongkao-countdown'

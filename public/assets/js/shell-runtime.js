@@ -31,9 +31,10 @@
             color: '#0f766e',
             icon: 'ti-map-2',
             eyebrow: 'County Scope',
-            summary: '县直学校只在这里参与县域两率一分和教师教学质量画像；原有联考、校际和教师模块继续保持乡镇口径。',
+            summary: '县域分析只保留教师县域画像和学校横向分析两个子模块；其他母模块继续保持原口径。',
             items: [
-                { id: 'county-analysis', icon: 'ti-map-2', text: '县域分析总览', hint: '集中查看县域两率一分、教师教学质量画像与历史快照；县排名只在这里和学情档案/家长查分中参与。' }
+                { id: 'county-teacher-portrait', icon: 'ti-school', text: '县域教师画像', hint: '模仿教师教学质量画像，把本校教师放到县域所有学校同学科口径中排名。' },
+                { id: 'county-school-horizontal', icon: 'ti-chart-bar', text: '县域学校横向分析', hint: '模仿两率一分横向分析，输出五科总和各学科明细的全县学校排名与横向对比表。' }
             ]
         },
         class: {

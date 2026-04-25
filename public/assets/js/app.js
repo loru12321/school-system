@@ -23195,6 +23195,9 @@ const PermissionPolicy = {
         return Array.from(merged);
     },
     canAccessModule(user, moduleId) {
+        if (moduleId === 'county-teacher-portrait' || moduleId === 'county-school-horizontal') {
+            moduleId = 'county-analysis';
+        }
         const allow = this.getAllowedModules(user);
         return allow.includes('*') || allow.includes(moduleId);
     },
