@@ -516,7 +516,7 @@
                         toast: false,
                         blocking: false,
                         schoolName
-                    }), 5000, false);
+                    }), 10000, false);
                     changed = !!loaded || changed;
                 } catch (error) {
                     console.warn('[county-analysis] loadTeachers failed:', error);

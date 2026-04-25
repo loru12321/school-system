@@ -628,7 +628,7 @@ async function runModuleDeepCheck(page, id) {
                 if (!(window.CountyAnalysisRuntime && typeof window.CountyAnalysisRuntime.ensureTeacherContextForCountyAnalysis === 'function')) {
                     return;
                 }
-                const timeoutMs = String(window.location?.hostname || '').includes('schoolsystem.com.cn') ? 6000 : 1200;
+                const timeoutMs = String(window.location?.hostname || '').includes('schoolsystem.com.cn') ? 12000 : 1200;
                 await Promise.race([
                     Promise.resolve(window.CountyAnalysisRuntime.ensureTeacherContextForCountyAnalysis()).catch(() => null),
                     new Promise((resolve) => setTimeout(resolve, timeoutMs))
