@@ -10830,11 +10830,13 @@ function switchTab(id) {
     targetSection.classList.add('active');
     targetSection.style.display = 'block';
     resetMainViewport();
-    if ((id === 'county-teacher-portrait' || id === 'county-school-horizontal' || id === 'county-analysis')
-        && typeof window.renderCountyAnalysis === 'function') {
-        window.renderCountyAnalysis(id);
-        window.setTimeout(() => window.renderCountyAnalysis(id), 250);
-        window.setTimeout(() => window.renderCountyAnalysis(id), 900);
+    if (id === 'county-teacher-portrait' || id === 'county-school-horizontal' || id === 'county-analysis') {
+        const renderCounty = () => {
+            if (typeof window.renderCountyAnalysis === 'function') window.renderCountyAnalysis(id);
+        };
+        renderCounty();
+        window.setTimeout(renderCounty, 250);
+        window.setTimeout(renderCounty, 900);
     }
 
     // 2. 定位所属大类
