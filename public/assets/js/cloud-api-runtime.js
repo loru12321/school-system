@@ -14,8 +14,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createCloudApiRuntime(root) {
     const SYSTEM_DATA_TABLE = 'system_data';
     const SYSTEM_DATA_API_PATH = '/api/system-data';
-    const SELECT_CACHE_TTL_MS = 15000;
-    const SELECT_CACHE_MAX = 120;
+    const SELECT_CACHE_TTL_MS = 90000;
+    const SELECT_CACHE_MAX = 200;
     const selectCache = new Map();
     const selectInflight = new Map();
 

@@ -15154,6 +15154,12 @@ function exportSummaryTable() {
 window.exportSummaryTable = exportSummaryTable;
 
 async function exportPPTReport() {
+    if (typeof PptxGenJS === 'undefined' && typeof window.ensurePresentationVendorsLoaded === 'function') {
+        await window.ensurePresentationVendorsLoaded();
+    }
+    if (typeof PptxGenJS === 'undefined') {
+        return alert("缺少 PPT 生成库，请稍后重试。");
+    }
     // --- 0. 基础数据校验 ---
     const hasPptScopeHelper = typeof listAvailableSchoolsForCompare === 'function';
     const pptCheckSchoolNames = hasPptScopeHelper
@@ -17278,6 +17284,9 @@ async function generateInquiryPackage() {
 // --- 班级分析会 PPT 生成器 (修复图表数据结构) ---
 async function generateClassPPT() {
     // 1. 检查库
+    if (typeof PptxGenJS === 'undefined' && typeof window.ensurePresentationVendorsLoaded === 'function') {
+        await window.ensurePresentationVendorsLoaded();
+    }
     if (typeof PptxGenJS === 'undefined') {
         return alert("❌ 错误：缺少 PPT 生成库。\n请刷新页面重试，并确认导出依赖已成功加载。");
     }

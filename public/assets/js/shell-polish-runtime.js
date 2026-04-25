@@ -284,6 +284,7 @@
         }
 
         window.addEventListener('resize', scheduleRefresh, { passive: true });
+        window.addEventListener('school:deferred-vendors-ready', scheduleRefresh, { passive: true });
     }
 
     function refreshEnhancements() {

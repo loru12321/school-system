@@ -78,18 +78,24 @@ document.addEventListener('DOMContentLoaded', function () {
     scheduleAppModuleWarmup();
 });
 
-var APP_MODULES = [
+var BOOT_VENDOR_MODULES = [
     './assets/vendor/crypto-js/crypto-js.min.js',
     './assets/vendor/xlsx/xlsx.full.min.js',
     './assets/vendor/alpinejs/cdn.min.js',
     './assets/vendor/chart.js/chart.umd.min.js',
+    './assets/vendor/sweetalert2/sweetalert2.all.min.js'
+];
+
+var DEFERRED_APP_MODULES = [
     './assets/vendor/jszip/jszip.min.js',
     './assets/vendor/pptxgenjs/pptxgen.min.js',
-    './assets/vendor/sweetalert2/sweetalert2.all.min.js',
     './assets/vendor/gsap/ScrollTrigger.min.js',
     './assets/vendor/popperjs/popper.min.js',
     './assets/vendor/tippyjs/tippy.umd.min.js',
-    './assets/vendor/simplebar/simplebar.min.js',
+    './assets/vendor/simplebar/simplebar.min.js'
+];
+
+var APP_MODULES = [
     './assets/js/auth-state-runtime.js',
     './assets/js/login-entry-runtime.js',
     './assets/js/workspace-state-runtime.js',
@@ -143,33 +149,108 @@ var APP_MODULES = [
     './assets/js/town-submodule-compare-runtime.js'
 ];
 
-function warmAppModuleCache() {
-    if (window.__APP_MODULE_WARMUP_STARTED__) return;
+function prefetchAppModuleList(modules, key) {
     const head = document.head;
     if (!head) return;
-    window.__APP_MODULE_WARMUP_STARTED__ = true;
-
-    APP_MODULES.forEach((src) => {
+    modules.forEach((src) => {
         const href = getVersionedAssetPath(src);
-        if (!href || head.querySelector(`link[data-app-prefetch="${href}"]`)) return;
+        const attr = `data-${key}-prefetch`;
+        if (!href || head.querySelector(`link[${attr}="${href}"]`)) return;
         const link = document.createElement('link');
         link.rel = 'prefetch';
         link.as = 'script';
         link.href = href;
         link.crossOrigin = 'anonymous';
-        link.dataset.appPrefetch = href;
+        link.setAttribute(attr, href);
         head.appendChild(link);
     });
 }
 
+function preloadAppModuleList(modules, key) {
+    const head = document.head;
+    if (!head) return;
+    modules.forEach((src) => {
+        const href = getVersionedAssetPath(src);
+        const attr = `data-${key}-preload`;
+        if (!href || head.querySelector(`link[${attr}="${href}"]`)) return;
+        const link = document.createElement('link');
+        link.rel = 'preload';
+        link.as = 'script';
+        link.href = href;
+        link.crossOrigin = 'anonymous';
+        link.setAttribute(attr, href);
+        head.appendChild(link);
+    });
+}
+
+function warmAppModuleCache() {
+    if (window.__APP_MODULE_WARMUP_STARTED__) return;
+    window.__APP_MODULE_WARMUP_STARTED__ = true;
+    prefetchAppModuleList(DEFERRED_APP_MODULES, 'app-deferred');
+}
+
 function scheduleAppModuleWarmup() {
-    if (window.__APP_MODULES_LOADED__ === true || window.__APP_MODULES_LOAD_PROMISE__) return;
-    const runWarmup = () => warmAppModuleCache();
+    if (window.__APP_MODULES_LOADED__ !== true) return;
+    if (window.__APP_MODULE_WARMUP_SCHEDULED__) return;
+    window.__APP_MODULE_WARMUP_SCHEDULED__ = true;
+    const runWarmup = () => {
+        warmAppModuleCache();
+        window.setTimeout(() => {
+            if (typeof loadDeferredAppModules === 'function') {
+                loadDeferredAppModules().catch((error) => {
+                    console.warn('[boot-runtime] Deferred module hydration failed:', error);
+                });
+            }
+        }, 1200);
+    };
     if (typeof window.requestIdleCallback === 'function') {
-        window.requestIdleCallback(runWarmup, { timeout: 1200 });
+        window.requestIdleCallback(runWarmup, { timeout: 1800 });
         return;
     }
-    window.setTimeout(runWarmup, 800);
+    window.setTimeout(runWarmup, 1200);
+}
+
+function loadBootScript(src, timeoutMs) {
+    return new Promise((resolve) => {
+        const existingLoaded = Array.from(document.scripts || []).find((script) => {
+            const candidate = String(script.getAttribute('src') || script.src || '');
+            return candidate.includes(src.replace('./', '')) && script.dataset.bootLoaded === 'true';
+        });
+        if (existingLoaded) {
+            resolve();
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = getVersionedAssetPath(src);
+
+        const timeout = setTimeout(() => {
+            console.warn(`[boot-runtime] Script load timeout (${timeoutMs}ms): ${src}`);
+            resolve();
+        }, timeoutMs);
+
+        script.onload = () => {
+            script.dataset.bootLoaded = 'true';
+            clearTimeout(timeout);
+            resolve();
+        };
+        script.onerror = () => {
+            console.warn(`[boot-runtime] Script load error: ${src}`);
+            clearTimeout(timeout);
+            resolve();
+        };
+        document.head.appendChild(script);
+    });
+}
+
+function loadDeferredAppModules() {
+    if (!DEFERRED_APP_MODULES.length) return Promise.resolve();
+    return loadOptionalRuntimeBundle('deferred-app-modules', DEFERRED_APP_MODULES.map((src, index) => ({
+        key: `deferred-app-module-${index}`,
+        src
+    }))).then((result) => {
+        window.dispatchEvent(new CustomEvent('school:deferred-vendors-ready'));
+        return result;
+    });
 }
 
 async function loadAppModules() {
@@ -235,44 +316,37 @@ async function loadAppModules() {
         console.warn('[boot-runtime] Gateway pre-flight check error:', err);
     }
 
-    const total = APP_MODULES.length;
+    const total = BOOT_VENDOR_MODULES.length + APP_MODULES.length;
+    let loadedCount = 0;
+    preloadAppModuleList(APP_MODULES, 'app-core');
 
-    for (let i = 0; i < total; i++) {
+    if (BOOT_VENDOR_MODULES.length) {
+        if (loaderText) loaderText.textContent = `正在并行加载基础组件 (0/${BOOT_VENDOR_MODULES.length})...`;
+        await Promise.all(BOOT_VENDOR_MODULES.map(async (src) => {
+            await loadBootScript(src, 12000);
+            loadedCount += 1;
+            if (loaderText) loaderText.textContent = `正在并行加载基础组件 (${loadedCount}/${BOOT_VENDOR_MODULES.length})...`;
+        }));
+    }
+
+    for (let i = 0; i < APP_MODULES.length; i++) {
         if (window.__BOOT_SKIP_INIT__ === true) {
             console.warn('[boot-runtime] Initialization skipped by user');
             break;
         }
         const src = APP_MODULES[i];
-        if (loaderText) loaderText.textContent = `正在初始化核心组件 (${i + 1}/${total})...`;
+        if (loaderText) loaderText.textContent = `正在初始化核心组件 (${loadedCount + 1}/${total})...`;
 
-        await new Promise((resolve) => {
-            const script = document.createElement('script');
-            script.src = getVersionedAssetPath(src);
-
-            // Critical modules get more patience
-            const isCritical = src.includes('app.js') || src.includes('auth-state');
-            const timeoutMs = isCritical ? 15000 : 8000;
-
-            const timeout = setTimeout(() => {
-                console.warn(`[boot-runtime] Script load timeout (${timeoutMs}ms): ${src}`);
-                resolve();
-            }, timeoutMs);
-
-            script.onload = () => {
-                clearTimeout(timeout);
-                resolve();
-            };
-            script.onerror = () => {
-                console.warn(`[boot-runtime] Script load error: ${src}`);
-                clearTimeout(timeout);
-                resolve();
-            };
-            document.head.appendChild(script);
-        });
+        // Critical modules get more patience
+        const isCritical = src.includes('app.js') || src.includes('auth-state');
+        const timeoutMs = isCritical ? 15000 : 8000;
+        await loadBootScript(src, timeoutMs);
+        loadedCount += 1;
     }
     window.__APP_MODULES_LOADED__ = true;
     if (loaderText) loaderText.textContent = '核心组件就绪，正在同步状态...';
     console.log('[boot-runtime] All modules loaded');
+    scheduleAppModuleWarmup();
 
     hideGlobalLoader(500);
     })();
@@ -396,7 +470,10 @@ function getSameOriginGatewayUrl() {
         return DIRECT_EDGE_GATEWAY_URL;
     }
     if (window.location && /^(https?:)$/i.test(String(window.location.protocol || '').trim())) {
-        return normalizeProxyOrigin(window.location.origin) + '/api/edu-gateway';
+        if (!isLocalSupabaseHost(window.location.hostname)) {
+            return normalizeProxyOrigin(window.location.origin) + '/api/edu-gateway';
+        }
+        return DIRECT_EDGE_GATEWAY_URL;
     }
     var hostedProxyOrigin = getHostedSupabaseProxyOrigin();
     return hostedProxyOrigin ? hostedProxyOrigin + '/api/edu-gateway' : DIRECT_EDGE_GATEWAY_URL;
@@ -1734,6 +1811,13 @@ window.ensurePdfExportVendorsLoaded = function () {
     return loadOptionalRuntimeBundle('pdf-export-vendors', [
         { key: 'jspdf-vendor', src: './assets/vendor/jspdf/jspdf.umd.min.js' },
         { key: 'html2canvas-vendor', src: './assets/vendor/html2canvas/html2canvas.min.js' }
+    ]);
+};
+
+window.ensurePresentationVendorsLoaded = function () {
+    return loadOptionalRuntimeBundle('presentation-vendors', [
+        { key: 'jszip-vendor', src: './assets/vendor/jszip/jszip.min.js' },
+        { key: 'pptxgen-vendor', src: './assets/vendor/pptxgenjs/pptxgen.min.js' }
     ]);
 };
 
