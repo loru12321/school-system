@@ -3757,6 +3757,17 @@ var Auth = {
     },
 
     ensureLoginWorkbench: function () {
+        const existingOverlay = document.getElementById('login-overlay');
+        if (existingOverlay?.querySelector('.login-clean-shell')) {
+            existingOverlay.dataset.loginLayout = 'clean';
+            existingOverlay.dataset.loginSkin = 'clean';
+            existingOverlay.dataset.loginModal = 'inline';
+            this.syncPublicDownloadLinks();
+            this.ensureSystemIntroModal();
+            this.ensureDownloadHubModal();
+            return existingOverlay;
+        }
+
         const overlay = this.rebuildPassportLoginShell();
         const panel = document.getElementById('login-portal-hub');
         const modalBackdrop = document.getElementById('login-modal-backdrop');
