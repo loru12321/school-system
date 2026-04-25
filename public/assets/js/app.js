@@ -6317,7 +6317,7 @@ const WORKER_SOURCE = `
                 };
                 const townshipRows = RAW_DATA.filter(s => isTownshipSchool(s.school));
 
-               // === 新增功能：计算全镇各科标准差 & 学生 T 分 (T-Score) ===
+               // === 新增功能：计算全镇各科标准差与学生相对分 ===
 
                 // 1. 计算全镇各科的统计指标 (均分 & 标准差)
                 const globalStats = {};
@@ -6332,14 +6332,14 @@ const WORKER_SOURCE = `
                     }
                 });
 
-                // 2. 定义 9 年级核心五科 (用于锁定标准分总分计算范围)
+                // 2. 定义 9 年级核心五科 (用于锁定相对总分计算范围)
                 const isGrade9Mode = CONFIG.name && CONFIG.name.includes('9');
                 const grade9CoreSubjects = ['语文', '数学', '英语', '物理', '化学'];
 
-                // 3. 为每个学生计算 T 分
+                // 3. 为每个学生计算相对分
                 RAW_DATA.forEach(stu => {
-                    stu.tScores = {}; // 存储单科 T 分
-                    stu.totalTScore = 0; // T 分总和
+                    stu.tScores = {}; // 存储单科相对分
+                    stu.totalTScore = 0; // 相对分总和
 
                     SUBJECTS.forEach(sub => {
                         const val = stu.scores[sub];
@@ -6347,17 +6347,17 @@ const WORKER_SOURCE = `
 
                         // 必须确保 stats 存在，且标准差大于极小值防止除零
                         if (typeof val === 'number' && stats && stats.sd > 0.00001) {
-                            // T分公式：50 + 10 * Z
+                            // 相对分公式：50 + 10 * Z
                             const z = (val - stats.avg) / stats.sd;
                             let t = 50 + 10 * z;
 
-                            // 边界保护：限制 T 分在 0-100 之间，防止极端离群值破坏总分
+                            // 边界保护：限制相对分在 0-100 之间，防止极端离群值破坏总分
                             t = Math.max(0, Math.min(100, t));
 
-                            // A. 记录单科 T 分 (所有科目都记录，方便查看单科强弱)
+                            // A. 记录单科相对分 (所有科目都记录，方便查看单科强弱)
                             stu.tScores[sub] = parseFloat(t.toFixed(1));
 
-                            // B. 计算标准分总和 (根据年级模式筛选)
+                            // B. 计算相对总分 (根据年级模式筛选)
                             if (isGrade9Mode) {
                                 // ★ 9年级模式：只累加 语数英物化
                                 if (grade9CoreSubjects.includes(sub)) {
@@ -11247,7 +11247,7 @@ function parseRows(rows, defaultSchool) {
 
     // 增加容错：常见的学科名称
     const subjectMap = { '语文': '语文', '数学': '数学', '英语': '英语', '物理': '物理', '化学': '化学', '政治': '政治', '道法': '政治', '道德与法治': '政治', '历史': '历史', '地理': '地理', '生物': '生物', '科学': '科学' };
-    const excludeKeywords = ['排', '次', '级', 'Rank', '赋分', '标准分', 'T分', '折算', '等级', '优劣'];
+    const excludeKeywords = ['排', '次', '级', 'Rank', '赋分', '相对分', '折算', '等级', '优劣'];
 
     // 3. 扫描表头
     const schoolHeaderExcludeKeywords = ['排名', '名次', '序号', '代码', '编号', '赋分', '得分', '分数', '成绩', '班级', '年级'];
@@ -12376,6 +12376,39 @@ function getStudentCountyRankValue(student, key = 'total') {
 }
 window.getStudentCountyRankValue = getStudentCountyRankValue;
 
+function hasStudentClassRankScope(studentLike) {
+    const rawClass = String(studentLike?.class ?? '').trim();
+    const normalizedClass = typeof normalizeClass === 'function' ? normalizeClass(rawClass) : rawClass;
+    if (!normalizedClass || normalizedClass === '-') return false;
+    return !/^(?:无|未分班|无班级|暂无|undefined|null|nan)$/i.test(normalizedClass);
+}
+window.hasStudentClassRankScope = hasStudentClassRankScope;
+
+function isCountyDirectStudentForRank(studentLike) {
+    const schoolName = String(studentLike?.school || '').trim();
+    if (!schoolName || typeof getCountyDirectSchoolNames !== 'function' || typeof getTownshipManagedSchoolNames !== 'function') return false;
+    const candidateNames = Array.from(new Set([
+        ...Object.keys(SCHOOLS || {}),
+        ...(RAW_DATA || []).map(row => row?.school)
+    ].map(name => String(name || '').trim()).filter(Boolean)));
+    const townshipNames = getTownshipManagedSchoolNames(candidateNames);
+    if (!townshipNames.length) return false;
+    return getCountyDirectSchoolNames(candidateNames).some(name => (
+        name === schoolName
+        || (typeof areSchoolNamesEquivalent === 'function' && areSchoolNamesEquivalent(name, schoolName))
+        || (typeof areSchoolNamesMatched === 'function' && areSchoolNamesMatched(name, schoolName, true))
+    ));
+}
+window.isCountyDirectStudentForRank = isCountyDirectStudentForRank;
+
+function getDisplayRankValue(studentLike, keyPath, options = {}) {
+    if (options.scope === 'class' && !hasStudentClassRankScope(studentLike)) return '-';
+    if (options.scope === 'township' && isCountyDirectStudentForRank(studentLike)) return '-';
+    const value = safeGet(studentLike, keyPath, '-');
+    return value == null || value === '' ? '-' : value;
+}
+window.getDisplayRankValue = getDisplayRankValue;
+
 function hasStudentCountyRankData(list = RAW_DATA, subjects = SUBJECTS) {
     if (!Array.isArray(list) || list.length === 0) return false;
     return list.some((student) => {
@@ -12386,7 +12419,7 @@ function hasStudentCountyRankData(list = RAW_DATA, subjects = SUBJECTS) {
 
 function buildStudentDetailMobileSubjectCard(student, sub, isTeacher, isClassTeacher, townRankVisible, countyRankVisible) {
     const score = student.scores[sub] !== undefined ? student.scores[sub] : '-';
-    const t = student.tScores ? (student.tScores[sub] || '-') : '-';
+    const townRank = getDisplayRankValue(student, `ranks.${sub}.township`, { scope: 'township' });
     const clickAttr = `onclick="updateStudentScore('${student.name}', '${student.class}', '${sub}', ${score})"`;
     const scoreButton = `
         <button type="button" class="student-detail-mobile-score-btn" ${clickAttr} title="点击修改${tmEscapeHtml(sub)}成绩">
@@ -12396,15 +12429,14 @@ function buildStudentDetailMobileSubjectCard(student, sub, isTeacher, isClassTea
 
     const rankChips = [];
     if (!isTeacher && !isClassTeacher) {
-        if (t !== '-') rankChips.push(`<span>T ${tmEscapeHtml(t)}</span>`);
         rankChips.push(`<span>校 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.school`, '-'))}</span>`);
-        rankChips.push(`<span>班 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.class`, '-'))}</span>`);
-        if (townRankVisible) rankChips.push(`<span>镇 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.township`, '-'))}</span>`);
+        rankChips.push(`<span>班 ${tmEscapeHtml(getDisplayRankValue(student, `ranks.${sub}.class`, { scope: 'class' }))}</span>`);
+        if (townRankVisible) rankChips.push(`<span>镇 ${tmEscapeHtml(townRank)}</span>`);
         if (countyRankVisible) rankChips.push(`<span>县 ${tmEscapeHtml(getStudentCountyRankValue(student, sub))}</span>`);
     } else {
-        rankChips.push(`<span>班 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.class`, '-'))}</span>`);
+        rankChips.push(`<span>班 ${tmEscapeHtml(getDisplayRankValue(student, `ranks.${sub}.class`, { scope: 'class' }))}</span>`);
         rankChips.push(`<span>级 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.school`, '-'))}</span>`);
-        if (townRankVisible) rankChips.push(`<span>镇 ${tmEscapeHtml(safeGet(student, `ranks.${sub}.township`, '-'))}</span>`);
+        if (townRankVisible) rankChips.push(`<span>镇 ${tmEscapeHtml(townRank)}</span>`);
         if (countyRankVisible) rankChips.push(`<span>县 ${tmEscapeHtml(getStudentCountyRankValue(student, sub))}</span>`);
     }
 
@@ -12425,7 +12457,6 @@ function buildStudentDetailMobileRow(student, visibleSubjects, isTeacher, isClas
     const schoolText = student.school || '-';
     const classText = student.class || '-';
     const totalText = student.total != null ? student.total : '-';
-    const totalTText = student.totalTScore || '-';
     const idText = student.id || '-';
     const examRoomText = student.examRoom || '-';
     const totalRankLabel = isTeacher || isClassTeacher ? '总分级排' : '总分校排';
@@ -12433,9 +12464,9 @@ function buildStudentDetailMobileRow(student, visibleSubjects, isTeacher, isClas
         ? safeGet(student, 'ranks.total.school', '-')
         : safeGet(student, 'ranks.total.school', '-');
     const totalRankClassLabel = '总分班排';
-    const totalRankClassValue = safeGet(student, 'ranks.total.class', '-');
+    const totalRankClassValue = getDisplayRankValue(student, 'ranks.total.class', { scope: 'class' });
     const totalRankCountyValue = getStudentCountyRankValue(student, 'total');
-    const totalRankTownValue = safeGet(student, 'ranks.total.township', '-');
+    const totalRankTownValue = getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' });
 
     const subjectCards = visibleSubjects.map((sub) => (
         buildStudentDetailMobileSubjectCard(student, sub, isTeacher, isClassTeacher, townRankVisible, countyRankVisible)
@@ -12444,8 +12475,7 @@ function buildStudentDetailMobileRow(student, visibleSubjects, isTeacher, isClas
     const metaCards = [
         buildStudentDetailMobileInfoItem('学校', schoolText),
         buildStudentDetailMobileInfoItem('考号', idText),
-        buildStudentDetailMobileInfoItem('考场', examRoomText),
-        buildStudentDetailMobileInfoItem('T分', totalTText, 'is-accent')
+        buildStudentDetailMobileInfoItem('考场', examRoomText)
     ].join('');
 
     const rankCards = [
@@ -12773,7 +12803,6 @@ function renderStudentDetails(reset = true) {
     if (!isTeacher && !isClassTeacher) {
         headerHTML += buildTh('考号', 'id', '100px');
         headerHTML += buildTh('考场', 'examRoom', '80px');
-        headerHTML += buildTh('T分', 'totalTScore', '60px');
     }
 
     // 动态判断当前数据是否只有一所学校
@@ -12783,7 +12812,7 @@ function renderStudentDetails(reset = true) {
     visibleSubjects.forEach(sub => {
         headerHTML += buildTh(sub, sub, '80px');
         if (!isTeacher && !isClassTeacher) {
-            headerHTML += `<th>T</th><th>校排</th><th>班排</th><th style="${townHeaderStyle}">镇排</th><th style="${townHeaderStyle}">县排</th>`;
+            headerHTML += `<th>校排</th><th>班排</th><th style="${townHeaderStyle}">镇排</th><th style="${townHeaderStyle}">县排</th>`;
         } else {
             // 科任教师/班主任：展示分数 + 班排 + 级部排 + 镇排 + 县排
             headerHTML += `<th>班排</th><th>级排</th><th style="${townHeaderStyle}">镇排</th><th style="${townHeaderStyle}">县排</th>`;
@@ -12811,31 +12840,30 @@ function renderStudentDetails(reset = true) {
     } else {
         rowsHTML = displayList.map(student => {
             const nameLink = `<a href="javascript:void(0)" onclick="jumpToStudent('${student.name}', '${student.school}', '${student.class}')" style="color:var(--primary); font-weight:800;">${student.name}</a>`;
+            const showTownRankForStudent = !isCountyDirectStudentForRank(student);
 
             let row = `<tr>
                     <td data-label="学校">${student.school}</td>
                     <td data-label="班级">${student.class}</td>
                     <td data-label="姓名">${nameLink}</td>
-                    ${!isTeacher && !isClassTeacher ? `<td data-label="考号">${student.id}</td><td data-label="考场">${student.examRoom || '-'}</td><td data-label="T分" style="color:#b45309; font-weight:bold;">${student.totalTScore || '-'}</td>` : ''}`;
+                    ${!isTeacher && !isClassTeacher ? `<td data-label="考号">${student.id}</td><td data-label="考场">${student.examRoom || '-'}</td>` : ''}`;
 
             visibleSubjects.forEach(sub => {
                 const score = student.scores[sub] !== undefined ? student.scores[sub] : '-';
-                const t = student.tScores ? (student.tScores[sub] || '-') : '-';
 
                 const clickAttr = `onclick="updateStudentScore('${student.name}', '${student.class}', '${sub}', ${score})"`;
 
                 if (!isTeacher && !isClassTeacher) {
                     row += `<td data-label="${sub}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${score}</td>
-                                <td data-label="${sub}T分" class="text-gray">${t}</td>
                                 <td data-label="${sub}校排" class="text-gray">${safeGet(student, `ranks.${sub}.school`, '-')}</td>
-                                <td data-label="${sub}班排" class="text-gray">${safeGet(student, `ranks.${sub}.class`, '-')}</td>
-                                <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${safeGet(student, `ranks.${sub}.township`, '-')}</td>
+                                <td data-label="${sub}班排" class="text-gray">${getDisplayRankValue(student, `ranks.${sub}.class`, { scope: 'class' })}</td>
+                                <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${showTownRankForStudent ? getDisplayRankValue(student, `ranks.${sub}.township`, { scope: 'township' }) : '-'}</td>
                                 <td data-label="${sub}县排" class="text-gray" style="${townHeaderStyle}">${getStudentCountyRankValue(student, sub)}</td>`;
                 } else {
                     row += `<td data-label="${sub}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${score}</td>
-                                <td data-label="${sub}班排" class="text-gray">${safeGet(student, `ranks.${sub}.class`, '-')}</td>
+                                <td data-label="${sub}班排" class="text-gray">${getDisplayRankValue(student, `ranks.${sub}.class`, { scope: 'class' })}</td>
                                 <td data-label="${sub}级排" class="text-gray">${safeGet(student, `ranks.${sub}.school`, '-')}</td>
-                                <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${safeGet(student, `ranks.${sub}.township`, '-')}</td>
+                                <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${showTownRankForStudent ? getDisplayRankValue(student, `ranks.${sub}.township`, { scope: 'township' }) : '-'}</td>
                                 <td data-label="${sub}县排" class="text-gray" style="${townHeaderStyle}">${getStudentCountyRankValue(student, sub)}</td>`;
                 }
             });
@@ -12843,15 +12871,15 @@ function renderStudentDetails(reset = true) {
             if (!isTeacher && !isClassTeacher) {
                 row += `<td data-label="总分" style="color:#2563eb; font-weight:bold;">${student.total}</td>
                             <td data-label="总分校排">${safeGet(student, 'ranks.total.school', '-')}</td>
-                            <td data-label="总分班排">${safeGet(student, 'ranks.total.class', '-')}</td>
-                            <td data-label="总分镇排">${safeGet(student, 'ranks.total.township', '-')}</td>
+                            <td data-label="总分班排">${getDisplayRankValue(student, 'ranks.total.class', { scope: 'class' })}</td>
+                            <td data-label="总分镇排">${showTownRankForStudent ? getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }) : '-'}</td>
                             <td data-label="总分县排">${getStudentCountyRankValue(student, 'total')}</td>
                         </tr>`;
             } else {
                 row += `<td data-label="总分" style="color:#2563eb; font-weight:bold;">${student.total}</td>
-                        <td data-label="总分班排">${safeGet(student, 'ranks.total.class', '-')}</td>
+                        <td data-label="总分班排">${getDisplayRankValue(student, 'ranks.total.class', { scope: 'class' })}</td>
                         <td data-label="总分级排">${safeGet(student, 'ranks.total.school', '-')}</td>
-                        <td data-label="总分镇排" style="${townHeaderStyle}">${safeGet(student, 'ranks.total.township', '-')}</td>
+                        <td data-label="总分镇排" style="${townHeaderStyle}">${showTownRankForStudent ? getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }) : '-'}</td>
                         <td data-label="总分县排" style="${townHeaderStyle}">${getStudentCountyRankValue(student, 'total')}</td>
                     </tr>`;
             }
@@ -13077,14 +13105,14 @@ function exportStudentDetails() {
         ? ['学校', '班级', '姓名']
         : (isTeacher
             ? ['学校', '班级', '姓名']
-            : ['学校', '班级', '姓名', '考号', '考场', '标准分总和(T分)']);
+            : ['学校', '班级', '姓名', '考号', '考场']);
 
     visibleSubjects.forEach(subject => {
         if (isTeacher || isClassTeacher) {
             headers.push(`${subject} 分数`, `${subject} 班排`, `${subject} 级排`);
             if (!isSingleSchool) headers.push(`${subject} 镇排`, `${subject} 县排`);
         } else {
-            headers.push(`${subject} 分数`, `${subject} T分`, `${subject} 校排`, `${subject} 班排`);
+            headers.push(`${subject} 分数`, `${subject} 校排`, `${subject} 班排`);
             if (!isSingleSchool) headers.push(`${subject} 镇排`, `${subject} 县排`);
         }
     });
@@ -13139,28 +13167,27 @@ function exportStudentDetails() {
     studentsToShow.forEach(student => {
         const row = (isTeacher || isClassTeacher)
             ? [student.school, student.class, student.name]
-            : [student.school, student.class, student.name, student.id, student.examRoom, student.totalTScore || 0];
+            : [student.school, student.class, student.name, student.id, student.examRoom];
+        const showTownRankForStudent = !isCountyDirectStudentForRank(student);
 
         visibleSubjects.forEach(subject => {
-            const tVal = student.tScores && student.tScores[subject] ? student.tScores[subject] : '-';
             if (isTeacher || isClassTeacher) {
                 row.push(
                     student.scores[subject] || '-',
-                    safeGet(student, `ranks.${subject}.class`, '-'),
+                    getDisplayRankValue(student, `ranks.${subject}.class`, { scope: 'class' }),
                     safeGet(student, `ranks.${subject}.school`, '-')
                 );
                 if (!isSingleSchool) {
-                    row.push(safeGet(student, `ranks.${subject}.township`, '-'), getStudentCountyRankValue(student, subject));
+                    row.push(showTownRankForStudent ? getDisplayRankValue(student, `ranks.${subject}.township`, { scope: 'township' }) : '-', getStudentCountyRankValue(student, subject));
                 }
             } else {
                 row.push(
                     student.scores[subject] || '-',
-                    tVal,
                     safeGet(student, `ranks.${subject}.school`, '-'),
-                    safeGet(student, `ranks.${subject}.class`, '-')
+                    getDisplayRankValue(student, `ranks.${subject}.class`, { scope: 'class' })
                 );
                 if (!isSingleSchool) {
-                    row.push(safeGet(student, `ranks.${subject}.township`, '-'), getStudentCountyRankValue(student, subject));
+                    row.push(showTownRankForStudent ? getDisplayRankValue(student, `ranks.${subject}.township`, { scope: 'township' }) : '-', getStudentCountyRankValue(student, subject));
                 }
             }
         });
@@ -13169,19 +13196,19 @@ function exportStudentDetails() {
             row.push(
                 student.total,
                 safeGet(student, 'ranks.total.school', '-'),
-                safeGet(student, 'ranks.total.class', '-')
+                getDisplayRankValue(student, 'ranks.total.class', { scope: 'class' })
             );
             if (!isSingleSchool) {
-                row.push(safeGet(student, 'ranks.total.township', '-'), getStudentCountyRankValue(student, 'total'));
+                row.push(showTownRankForStudent ? getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }) : '-', getStudentCountyRankValue(student, 'total'));
             }
         } else {
             row.push(
                 student.total,
-                safeGet(student, 'ranks.total.class', '-'),
+                getDisplayRankValue(student, 'ranks.total.class', { scope: 'class' }),
                 safeGet(student, 'ranks.total.school', '-')
             );
             if (!isSingleSchool) {
-                row.push(safeGet(student, 'ranks.total.township', '-'), getStudentCountyRankValue(student, 'total'));
+                row.push(showTownRankForStudent ? getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }) : '-', getStudentCountyRankValue(student, 'total'));
             }
         }
 
@@ -15929,11 +15956,10 @@ function renderPotentialAnalysis() {
         const tRank = safeGet(stu, 'ranks.total.township', 99999);
         if (tRank === '-' || tRank > topRankThreshold) return;
 
-        // 获取该生的总分 T值 (如果没有计算过，用排名百分比估算)
-        // 之前的 processData 已经计算了 stu.totalTScore 和 stu.tScores
+        // 获取该生的总分相对位置值
 
         // 如果只有排名数据，回退到 Rank Gap 模式
-        // 如果有 T 分数据，使用 T 分差 (更科学)
+        // 如果有相对位置数据，使用科目偏离差
         const useAdvancedMetrics = (stu.tScores && stu.totalTScore);
 
         SUBJECTS.forEach(sub => {
@@ -15945,11 +15971,9 @@ function renderPotentialAnalysis() {
             let gapLabel = '';
 
             if (useAdvancedMetrics) {
-                // 业务逻辑深化：使用 T 分差
-                // 假设各科 T 分均值为 50。如果某科 T 分 < 40 (低于均值1个标准差)，且总 T 分较高
-                // 或者：该科 T 分 比 自身平均 T 分 低 10 分以上
+                // 业务逻辑深化：使用科目相对偏离差
                 const subT = stu.tScores[sub];
-                // 估算学生自身的平均水平 (总T分 / 科目数)
+                // 估算学生自身的平均水平
                 const validSubCount = Object.values(stu.tScores).filter(v => v > 0).length || 1;
                 const selfAvgT = stu.totalTScore / validSubCount;
 
@@ -15957,7 +15981,7 @@ function renderPotentialAnalysis() {
                 if ((selfAvgT - subT) > 8) {
                     isPotential = true;
                     gapVal = (selfAvgT - subT).toFixed(1);
-                    gapLabel = `T分偏离 -${gapVal}`;
+                    gapLabel = `相对偏离 -${gapVal}`;
                 }
             } else {
                 // 回退逻辑：排名落差法
@@ -15988,7 +16012,7 @@ function renderPotentialAnalysis() {
 
     let html = `<div class="info-bar">
             <strong>💡 分析模型升级：</strong>
-            系统已自动启用 <b>${candidates.length > 0 && candidates[0].gap.includes('T分') ? 'Z-Score标准分偏离模型' : '名次落差模型'}</b>。
+            系统已自动启用 <b>${candidates.length > 0 && candidates[0].gap.includes('相对偏离') ? '相对偏离模型' : '名次落差模型'}</b>。
             <br>筛选范围：总分前 ${(topRatio * 100).toFixed(0)}% 的学生中，单科显著“拖后腿”的潜力股。
         </div>
         <div class="table-wrap"><table><thead><tr><th>学校</th><th>班级</th><th>姓名</th><th>总分排名</th><th>跛脚学科</th><th>学科分数</th><th>学科排名</th><th>偏科指数</th></tr></thead><tbody>`;
@@ -16698,13 +16722,15 @@ async function generateInquiryPackage() {
 
         const radarData = { labels: [], data: [] }; // 雷达图数据
         const varianceData = { labels: [], data: [] }; // 均衡度数据
+        const canShowClassRank = typeof hasStudentClassRankScope === 'function' ? hasStudentClassRankScope(stu) : true;
+        const canShowTownRank = typeof isCountyDirectStudentForRank === 'function' ? !isCountyDirectStudentForRank(stu) : true;
 
         SUBJECTS.forEach(sub => {
             if (stu.scores[sub] !== undefined) {
                 scoresSimple[sub] = [
                     stu.scores[sub],
                     safeGet(stu, `ranks.${sub}.school`, '-'),
-                    safeGet(stu, `ranks.${sub}.township`, '-')
+                    canShowTownRank ? safeGet(stu, `ranks.${sub}.township`, '-') : '-'
                 ];
 
                 // A. 计算雷达图数据 (百分位)
@@ -16716,7 +16742,7 @@ async function generateInquiryPackage() {
                 radarData.labels.push(sub);
                 radarData.data.push(percentile);
 
-                // B. 计算均衡度数据 (Z-Score)
+                // B. 计算均衡度数据
                 const stats = gradeStats[sub];
                 let z = 0;
                 if (stats && stats.sd > 0) {
@@ -16737,9 +16763,11 @@ async function generateInquiryPackage() {
             name: stu.name,  // 存储姓名
             s: scoresSimple,
             t: stu.total,
-            tr: safeGet(stu, 'ranks.total.township', '-'),
+            tr: canShowTownRank ? safeGet(stu, 'ranks.total.township', '-') : '-',
             sr: safeGet(stu, 'ranks.total.school', '-'),
-            cr: safeGet(stu, 'ranks.total.class', '-'),
+            cr: canShowClassRank ? safeGet(stu, 'ranks.total.class', '-') : '-',
+            showClassRank: canShowClassRank,
+            showTownRank: canShowTownRank,
 
             rd: radarData,   // Radar Data
             vd: varianceData,// Variance Data
@@ -16896,7 +16924,7 @@ async function generateInquiryPackage() {
             for(let sub in res.s) {
                 const item = res.s[sub];
                 let rankHtml = '<span class="tag-rank">校: ' + item[1] + '</span>';
-                if (!IS_SINGLE_SCHOOL) rankHtml += '<span class="tag-rank">镇: ' + item[2] + '</span>';
+                if (!IS_SINGLE_SCHOOL && res.showTownRank) rankHtml += '<span class="tag-rank">镇: ' + item[2] + '</span>';
                 subHtml +=
                     '<div class="sub-item">' +
                         '<div class="sub-main"><div class="sub-name">' + sub + '</div><div class="sub-val">' + item[0] + '</div></div>' +
@@ -16905,9 +16933,9 @@ async function generateInquiryPackage() {
             }
 
             let totalRankHtml =
-                '<div class="rank-item"><div class="rank-val">' + res.cr + '</div><div class="rank-lbl">班排</div></div>' +
                 '<div class="rank-item"><div class="rank-val">' + res.sr + '</div><div class="rank-lbl">校排</div></div>';
-            if (!IS_SINGLE_SCHOOL) totalRankHtml += '<div class="rank-item"><div class="rank-val">' + res.tr + '</div><div class="rank-lbl">镇排</div></div>';
+            if (res.showClassRank) totalRankHtml = '<div class="rank-item"><div class="rank-val">' + res.cr + '</div><div class="rank-lbl">班排</div></div>' + totalRankHtml;
+            if (!IS_SINGLE_SCHOOL && res.showTownRank) totalRankHtml += '<div class="rank-item"><div class="rank-val">' + res.tr + '</div><div class="rank-lbl">镇排</div></div>';
 
             // 注意：Canvas 需要固定高度
             const chartsHtml = \`
@@ -16924,7 +16952,7 @@ async function generateInquiryPackage() {
                 </div>
 
                 <div class="chart-box">
-                    <div class="chart-title">⚖️ 学科均衡度诊断 (标准分)</div>
+                    <div class="chart-title">⚖️ 学科均衡度诊断</div>
                     <div style="height:200px; position:relative;">
                         <canvas id="mobVarChart"></canvas>
                     </div>
@@ -16983,7 +17011,7 @@ async function generateInquiryPackage() {
                         data: {
                             labels: res.vd.labels,
                             datasets: [{
-                                label: '标准分',
+                                label: '相对差异',
                                 data: res.vd.data,
                                 backgroundColor: colors,
                                 borderRadius: 3
@@ -19525,12 +19553,16 @@ function updateConstraintWidgetsContext(type) {
 
 function buildStudentPrompt(stu) {
     // 1. 获取基础上下文
-    const totalStudents = RAW_DATA.length;
-    const rawRank = safeGet(stu, 'ranks.total.township', null);
+    const isDirectStudent = typeof isCountyDirectStudentForRank === 'function' ? isCountyDirectStudentForRank(stu) : false;
+    const totalStudents = isDirectStudent
+        ? ((stu?.school && SCHOOLS?.[stu.school]?.students?.length) || RAW_DATA.length)
+        : RAW_DATA.length;
+    const rankScopeText = isDirectStudent ? '校内' : '全镇';
+    const rawRank = isDirectStudent ? safeGet(stu, 'ranks.total.school', null) : safeGet(stu, 'ranks.total.township', null);
     const rank = (typeof rawRank === 'number' && rawRank > 0) ? rawRank : null;
 
     // 防止除以0，排名未知时显示"未知"
-    const rankDisplay = rank !== null ? `${rank}/${totalStudents} (前${(rank / totalStudents * 100).toFixed(1)}%)` : `未知/${totalStudents}`;
+    const rankDisplay = rank !== null ? `${rankScopeText} ${rank}/${totalStudents} (前${(rank / totalStudents * 100).toFixed(1)}%)` : `${rankScopeText} 未知/${totalStudents}`;
 
     // 2. 进退步数据 (RAG: 检索历史)
     // 使用之前定义的新辅助函数 findPreviousRecord

@@ -138,15 +138,42 @@ function renderSingleReportCardHTML(stu, mode) {
         school: rankLike?.school ?? rankLike?.rankSchool ?? '-',
         township: rankLike?.township ?? rankLike?.rankTown ?? '-'
     });
+    const hasClassRankScope = (studentLike) => {
+        const rawClass = String(studentLike?.class ?? '').trim();
+        const normalizedClass = typeof normalizeClass === 'function' ? normalizeClass(rawClass) : rawClass;
+        if (!normalizedClass || normalizedClass === '-') return false;
+        return !/^(?:无|未分班|无班级|暂无|undefined|null|nan)$/i.test(normalizedClass);
+    };
+    const isCountyDirectStudent = (studentLike) => {
+        const schoolName = String(studentLike?.school || '').trim();
+        if (!schoolName || typeof getCountyDirectSchoolNames !== 'function' || typeof getTownshipManagedSchoolNames !== 'function') return false;
+        const candidateNames = Array.from(new Set([
+            ...Object.keys(SCHOOLS || {}),
+            ...(RAW_DATA || []).map(row => row?.school)
+        ].map(name => String(name || '').trim()).filter(Boolean)));
+        const townshipNames = getTownshipManagedSchoolNames(candidateNames);
+        if (!townshipNames.length) return false;
+        return getCountyDirectSchoolNames(candidateNames).some(name => (
+            name === schoolName
+            || (typeof areSchoolNamesEquivalent === 'function' && areSchoolNamesEquivalent(name, schoolName))
+            || (typeof areSchoolNamesMatched === 'function' && areSchoolNamesMatched(name, schoolName, true))
+        ));
+    };
+    const displayRankValue = (value, shouldShow = true) => {
+        if (!shouldShow) return '-';
+        return value == null || value === '' ? '-' : value;
+    };
 
     // 数据容错（云端简版对象可能缺少scores）
     const stuScores = (reportStu && typeof reportStu === 'object' && reportStu.scores && typeof reportStu.scores === 'object') ? reportStu.scores : {};
 
     // 排名数据准备
-    const curTownRank = safeGet(reportStu, 'ranks.total.township', '-');
-    const prevTownRank = compareTotalRanks.township ?? prevStu?.townRank ?? '-';
-    const curClassRank = safeGet(reportStu, 'ranks.total.class', '-');
-    const prevClassRank = compareTotalRanks.class ?? prevStu?.classRank ?? '-';
+    const showClassRank = hasClassRankScope(reportStu);
+    const showTownRank = !isCountyDirectStudent(reportStu);
+    const curTownRank = displayRankValue(safeGet(reportStu, 'ranks.total.township', '-'), showTownRank);
+    const prevTownRank = displayRankValue(compareTotalRanks.township ?? prevStu?.townRank ?? '-', showTownRank);
+    const curClassRank = displayRankValue(safeGet(reportStu, 'ranks.total.class', '-'), showClassRank);
+    const prevClassRank = displayRankValue(compareTotalRanks.class ?? prevStu?.classRank ?? '-', showClassRank);
     const curSchoolRank = safeGet(reportStu, 'ranks.total.school', '-');
     const prevSchoolRank = compareTotalRanks.school ?? prevStu?.schoolRank ?? '-';
     const curCountyRank = getStudentCountyRankValue(reportStu, 'total');
@@ -183,9 +210,9 @@ function renderSingleReportCardHTML(stu, mode) {
         const totalLabel = (CONFIG.name === '9年级' && comparisonTotalSubjects.length) ? '五科总分' : CONFIG.label;
         const prevTotal = compareStu ? recalcPrevTotal(compareStu) : '-';
         const trendTotal = getTrendBadge(currentTotal, prevTotal, 'score');
-    const trendClass = getTrendBadge(curClassRank, prevClassRank, 'rank');
+    const trendClass = showClassRank ? getTrendBadge(curClassRank, prevClassRank, 'rank') : '';
     const trendSchool = getTrendBadge(curSchoolRank, prevSchoolRank, 'rank');
-    const trendTown = getTrendBadge(curTownRank, prevTownRank, 'rank');
+    const trendTown = showTownRank ? getTrendBadge(curTownRank, prevTownRank, 'rank') : '';
     const trendCounty = getTrendBadge(curCountyRank, prevCountyRank, 'rank');
 
     tableRows += `<tr style="background:rgba(239,246,255,0.7); backdrop-filter:blur(4px); border-bottom:2px solid #fff;">
@@ -209,12 +236,12 @@ function renderSingleReportCardHTML(stu, mode) {
                 prevRanks = normalizeRankInfo(prevStu.ranks[sub]);
             }
 
-            const curCR = safeGet(reportStu, `ranks.${sub}.class`, '-');
-            const tC = getTrendBadge(curCR, prevRanks.class || '-', 'rank');
+            const curCR = displayRankValue(safeGet(reportStu, `ranks.${sub}.class`, '-'), showClassRank);
+            const tC = showClassRank ? getTrendBadge(curCR, prevRanks.class || '-', 'rank') : '';
             const curSR = safeGet(reportStu, `ranks.${sub}.school`, '-');
             const tS = getTrendBadge(curSR, prevRanks.school || '-', 'rank');
-            const curTR = safeGet(reportStu, `ranks.${sub}.township`, '-');
-            const tT = getTrendBadge(curTR, prevRanks.township || '-', 'rank');
+            const curTR = displayRankValue(safeGet(reportStu, `ranks.${sub}.township`, '-'), showTownRank);
+            const tT = showTownRank ? getTrendBadge(curTR, prevRanks.township || '-', 'rank') : '';
             const curCountyR = getStudentCountyRankValue(reportStu, sub);
             const tCounty = getTrendBadge(curCountyR, prevRanks.county || '-', 'rank');
 
@@ -396,7 +423,7 @@ function renderSingleReportCardHTML(stu, mode) {
                 <div style="flex:1; position:relative; min-height:220px;"><canvas id="radarChart"></canvas></div>
             </div>            
             <div class="fluent-card" style="flex:1; min-width:300px; margin-bottom:0; display:flex; flex-direction:column;">
-                <div class="fluent-header"><i class="ti ti-scale" style="color:#059669;"></i><span class="fluent-title">${CONFIG.name === '9年级' ? '五科学科均衡度诊断' : '学科均衡度诊断'} (Z-Score)</span></div>
+                <div class="fluent-header"><i class="ti ti-scale" style="color:#059669;"></i><span class="fluent-title">${CONFIG.name === '9年级' ? '五科学科均衡度诊断' : '学科均衡度诊断'}</span></div>
                 <div style="flex:1; position:relative; min-height:220px;"><canvas id="varianceChart"></canvas></div>
             </div> 
         </div>
@@ -413,14 +440,17 @@ function renderInstagramCard(stu) {
     const reportStu = getComparisonStudentView(stu, RAW_DATA);
     const comparisonTotalSubjects = getComparisonTotalSubjects();
     const currentTotal = getComparisonTotalValue(reportStu, comparisonTotalSubjects);
-    const rank = safeGet(reportStu, 'ranks.total.township', '-');
-    const pct = (typeof rank === 'number') ? ((1 - rank / totalStudents) * 100).toFixed(0) : '-';
+    const showTownRank = !isCountyDirectStudent(reportStu);
+    const rank = showTownRank ? safeGet(reportStu, 'ranks.total.township', '-') : safeGet(reportStu, 'ranks.total.school', '-');
+    const schoolTotalStudents = (reportStu?.school && SCHOOLS?.[reportStu.school]?.students?.length) || totalStudents || 1;
+    const scopeTotalStudents = showTownRank ? (totalStudents || 1) : schoolTotalStudents;
+    const pct = (typeof rank === 'number') ? ((1 - rank / scopeTotalStudents) * 100).toFixed(0) : '-';
     const avatarLetter = stu.name.charAt(0); // 头像取首字
     const cloudHint = resolveCloudCompareHint(reportStu);
 
     // 判断是否为单校模式
     const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
-    const scopeText = isSingleSchool ? "全校" : "全镇";
+    const scopeText = isSingleSchool ? "全校" : (showTownRank ? "全镇" : "本校");
 
     let statusTag = '';
     if (pct >= 90) statusTag = '🌟 卓越之星';
@@ -435,8 +465,11 @@ function renderInstagramCard(stu) {
 
             // 修改点 1：获取校内排名 (即年级排名/级排) 而不是班级排名 (.class)
             const subRank = safeGet(reportStu, `ranks.${sub}.school`, '-');
-            const townRank = safeGet(reportStu, `ranks.${sub}.township`, '-');
+            const townRank = showTownRank ? safeGet(reportStu, `ranks.${sub}.township`, '-') : '-';
             const countyRank = getStudentCountyRankValue(reportStu, sub);
+            const rankParts = [`级#${subRank}`];
+            if (showTownRank) rankParts.push(`镇#${townRank}`);
+            rankParts.push(`县#${countyRank}`);
 
             commentsHtml += `
                     <div class="insta-comment-row">
@@ -446,7 +479,7 @@ function renderInstagramCard(stu) {
                         </div>
                         <div>
                             <span class="insta-comm-score">${score}</span>
-                            <span class="insta-comm-rank">级#${subRank} | 镇#${townRank} | 县#${countyRank}</span>
+                            <span class="insta-comm-rank">${rankParts.join(' | ')}</span>
                         </div>
                     </div>
                 `;
@@ -482,7 +515,7 @@ function renderInstagramCard(stu) {
             </div>
         `;
 
-    // 1. 定义一个内部函数，用于计算 Z-Score 并对科目进行分层 (强/中/弱)
+    // 1. 定义一个内部函数，用于按相对位置对科目进行分层 (强/中/弱)
     // 目的：为后续的“一句话诊断”、“优势清单”、“家长建议”提供数据支撑
     const getSubjectLevels = () => {
         let strong = [], weak = [], mid = [], zScores = [];
@@ -490,7 +523,7 @@ function renderInstagramCard(stu) {
 
         linkedSubjects.forEach(sub => {
             if (stu.scores[sub] !== undefined) {
-                // A. 获取该科全镇数据 (用于计算标准分)
+                // A. 获取该科同届样本数据 (用于判断相对强弱)
                 const allScores = RAW_DATA.map(s => s.scores[sub]).filter(v => typeof v === 'number');
                 if (allScores.length < 2) return;
 
@@ -499,7 +532,7 @@ function renderInstagramCard(stu) {
                 const variance = allScores.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / allScores.length;
                 const sd = Math.sqrt(variance) || 1; // 防止除以0
 
-                // C. 计算标准分 Z-Score (反映该生在全体考生中的相对位置)
+                // C. 计算相对位置差异 (仅用于强弱分层，不在界面展示)
                 const z = (stu.scores[sub] - avg) / sd;
                 zScores.push(z);
 
@@ -579,7 +612,7 @@ function renderInstagramCard(stu) {
                 <!-- 优势科目 -->
                 <details open style="margin-bottom:10px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
                     <summary style="padding:10px 15px; font-size:13px; font-weight:bold; color:#333; cursor:pointer; background:#f8fafc; list-style:none; display:flex; align-items:center;">
-                        <span style="margin-right:8px;">☀️</span> 优势学科 (Z≥0.8)
+                        <span style="margin-right:8px;">☀️</span> 优势学科
                         <span style="margin-left:auto; font-size:10px; color:#999;">${levels.strong.length}科</span>
                     </summary>
                     <div style="padding:15px;">
@@ -590,7 +623,7 @@ function renderInstagramCard(stu) {
                 <!-- 薄弱科目 -->
                 <details ${levels.weak.length > 0 ? 'open' : ''} style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
                     <summary style="padding:10px 15px; font-size:13px; font-weight:bold; color:#333; cursor:pointer; background:#fff1f2; list-style:none; display:flex; align-items:center;">
-                        <span style="margin-right:8px;">🌧️</span> 需关注学科 (Z≤-0.8)
+                        <span style="margin-right:8px;">🌧️</span> 需关注学科
                         <span style="margin-left:auto; font-size:10px; color:#dc2626;">${levels.weak.length}科</span>
                     </summary>
                     <div style="padding:15px;">

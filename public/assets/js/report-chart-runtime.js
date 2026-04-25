@@ -60,7 +60,7 @@ function renderIGCharts(stu) {
             });
         }
 
-        // === 绘制均衡度图 (Z-Score) ===
+        // === 绘制均衡度图 ===
         const varCtx = document.getElementById('igVarianceChart');
         if (varCtx) {
             if (window.igVarianceInstance) window.igVarianceInstance.destroy();
@@ -98,7 +98,7 @@ function renderIGCharts(stu) {
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: '标准分 (Z-Score)',
+                        label: '相对差异',
                         data: zData,
                         backgroundColor: colors,
                         borderRadius: 4
@@ -473,7 +473,7 @@ function renderVarianceChart(student, passedHistory = null) {
                 legend: { display: true, position: 'bottom' },
                 tooltip: {
                     callbacks: {
-                        label: (ctx) => `${ctx.dataset.label} Z-Score: ${ctx.raw ? ctx.raw.toFixed(2) : '-'}`
+                        label: (ctx) => `${ctx.dataset.label} 相对差异: ${ctx.raw ? ctx.raw.toFixed(2) : '-'}`
                     }
                 }
             },
@@ -497,10 +497,17 @@ function buildStudentInsightModel(student, passedHistory = null) {
     const reportStudent = getComparisonStudentView(student, RAW_DATA);
     const totalSubjects = getComparisonTotalSubjects();
     const totalScore = getComparisonTotalValue(reportStudent, totalSubjects);
-    const totalCount = RAW_DATA.length || 1;
     const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
-    const scopeText = isSingleSchool ? '全校' : '全镇';
-    const effectiveRank = safeGet(reportStudent, 'ranks.total.township', safeGet(reportStudent, 'ranks.total.school', '-'));
+    const isCountyDirect = typeof isCountyDirectStudentForRank === 'function'
+        ? isCountyDirectStudentForRank(reportStudent)
+        : false;
+    const scopeText = isSingleSchool ? '全校' : (isCountyDirect ? '本校' : '全镇');
+    const effectiveRank = isCountyDirect
+        ? safeGet(reportStudent, 'ranks.total.school', '-')
+        : safeGet(reportStudent, 'ranks.total.township', safeGet(reportStudent, 'ranks.total.school', '-'));
+    const totalCount = isCountyDirect
+        ? ((reportStudent?.school && SCHOOLS?.[reportStudent.school]?.students?.length) || RAW_DATA.length || 1)
+        : (RAW_DATA.length || 1);
     const percentile = (typeof effectiveRank === 'number' && totalCount > 0)
         ? ((1 - effectiveRank / totalCount) * 100)
         : null;
@@ -841,7 +848,7 @@ function buildChartNarrative(student) {
             <div style="font-size:13px; color:#475569; line-height:1.8;">
                 <div><strong>${CONFIG.name === '9年级' ? '五科综合素质评价' : '综合素质评价'}（百分位）</strong>：表示学生在${scopeText}的相对位置，数值越高越优秀。</div>
                 <div>当前综合排名：${rank} / ${totalCount}，综合百分位约 <strong>${pctText}</strong>；单科平均百分位约 <strong>${avgPctText}</strong>。</div>
-                <div style="margin-top:6px;"><strong>${CONFIG.name === '9年级' ? '五科学科均衡度' : '学科均衡度'}（Z-Score）</strong>：正数代表优势、负数代表薄弱，绝对值越大差异越明显。</div>
+                <div style="margin-top:6px;"><strong>${CONFIG.name === '9年级' ? '五科学科均衡度' : '学科均衡度'}</strong>：向右代表相对优势，向左代表相对薄弱，偏离越大差异越明显。</div>
                 <div>均衡度判断：<strong>${balanceText}</strong>；${strengthText}；${weakText}。</div>
                 <div style="margin-top:6px;"><strong>学习建议</strong>：${advice.join(' ')}</div>
             </div>

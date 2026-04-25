@@ -1212,13 +1212,13 @@
 
         const headers = (isTeacher || isClassTeacher)
             ? ['学校', '班级', '姓名']
-            : ['学校', '班级', '姓名', '考号', '考场', '标准总T分'];
+            : ['学校', '班级', '姓名', '考号', '考场', '相对总分'];
 
         visibleSubjects.forEach((subject) => {
             if (isTeacher || isClassTeacher) {
                 headers.push(`${subject} 分数`, `${subject} 班排`, `${subject} 级排`);
             } else {
-                headers.push(`${subject} 分数`, `${subject} T分`, `${subject} 校排`, `${subject} 班排`);
+                headers.push(`${subject} 分数`, `${subject} 相对分`, `${subject} 校排`, `${subject} 班排`);
             }
             if (!isSingleSchool) headers.push(`${subject} 镇排`);
             if (countyRankVisible) headers.push(`${subject} 县排`);
