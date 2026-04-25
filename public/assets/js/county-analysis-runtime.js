@@ -7,6 +7,10 @@
         promptArmed: false,
         lastSignature: '',
         teacherContextPromise: null,
+        lastTeacherContextSignature: '',
+        lastTeacherContextAt: 0,
+        subjectRowCacheSignature: '',
+        subjectRowCache: new Map(),
         preUploadTownshipSchools: [],
         isRendering: false,
         lastRankSignature: ''
@@ -375,6 +379,18 @@
     }
 
     async function ensureTeacherContextForCountyAnalysis(force = false) {
+        const teacherSig = `${getDataSignature()}::${Object.keys(window.TEACHER_MAP || {}).length}::${Object.keys(window.TEACHER_STATS || {}).length}`;
+        const now = Date.now();
+        if (!force
+            && state.lastTeacherContextSignature === teacherSig
+            && now - Number(state.lastTeacherContextAt || 0) < 30000) {
+            return {
+                hasTeacherAssignments: hasTeacherAssignments(),
+                hasTeacherStats: hasTeacherStats(),
+                changed: false,
+                cached: true
+            };
+        }
         if (!force && state.teacherContextPromise) return state.teacherContextPromise;
         state.teacherContextPromise = (async () => {
             let changed = false;
@@ -424,7 +440,10 @@
             };
         })();
         try {
-            return await state.teacherContextPromise;
+            const result = await state.teacherContextPromise;
+            state.lastTeacherContextSignature = teacherSig;
+            state.lastTeacherContextAt = Date.now();
+            return result;
         } finally {
             state.teacherContextPromise = null;
         }
@@ -1149,17 +1168,26 @@
     }
 
     function buildCountySubjectRows(subject) {
+        const cacheSig = getDataSignature();
+        if (state.subjectRowCacheSignature !== cacheSig) {
+            state.subjectRowCacheSignature = cacheSig;
+            state.subjectRowCache = new Map();
+        }
+        if (state.subjectRowCache.has(subject)) return state.subjectRowCache.get(subject);
         const rows = Object.values(window.SCHOOLS || {})
             .filter((school) => school?.metrics?.[subject])
             .map((school) => ({ school, metric: school.metrics[subject] }));
-        if (!rows.length) return [];
+        if (!rows.length) {
+            state.subjectRowCache.set(subject, []);
+            return [];
+        }
         const maxes = rows.reduce((acc, row) => {
             acc.avg = Math.max(acc.avg, toNumber(row.metric.avg));
             acc.excellent = Math.max(acc.excellent, toNumber(row.metric.excRate));
             acc.pass = Math.max(acc.pass, toNumber(row.metric.passRate));
             return acc;
         }, { avg: 0, excellent: 0, pass: 0 });
-        return rows.map((row) => {
+        const result = rows.map((row) => {
             const parts = scoreMetricAgainstMax(row.metric, maxes);
             return {
                 schoolName: row.school.name || '',
@@ -1171,6 +1199,8 @@
             };
         }).sort((a, b) => b.score - a.score)
             .map((row, index) => ({ ...row, rank: index + 1 }));
+        state.subjectRowCache.set(subject, result);
+        return result;
     }
 
     function renderCountySchoolHorizontal() {
@@ -1262,15 +1292,17 @@
         const root = getCountyRootForSubmodule(activeId);
         if (!root) return;
         const scope = applyCountyRanks();
-        window.setTimeout(() => {
-            void ensureTeacherContextForCountyAnalysis().then((result) => {
-                const isCountyVisible = ['county-teacher-portrait', 'county-school-horizontal', 'county-analysis']
-                    .some((sectionId) => document.getElementById(sectionId)?.classList?.contains('active'));
-                if (result?.changed && isCountyVisible && !state.isRendering) {
-                    renderCountyAnalysis(activeId);
-                }
-            });
-        }, 0);
+        if (activeId === 'county-teacher-portrait') {
+            window.setTimeout(() => {
+                void ensureTeacherContextForCountyAnalysis().then((result) => {
+                    const isCountyVisible = ['county-teacher-portrait', 'county-analysis']
+                        .some((sectionId) => document.getElementById(sectionId)?.classList?.contains('active'));
+                    if (result?.changed && isCountyVisible && !state.isRendering) {
+                        renderCountyAnalysis(activeId);
+                    }
+                });
+            }, 0);
+        }
         const names = getSchoolNames();
         const countyCount = scope.countySchools?.length || 0;
         const townshipCount = scope.townshipSchools?.length || 0;
