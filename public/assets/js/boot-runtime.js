@@ -149,7 +149,7 @@ var SYSTEM_RUNTIME_SKILLS = {
     },
     'teaching-management': {
         mode: 'demand',
-        warmup: 'balanced',
+        warmup: 'demand',
         triggers: ['teaching-overview', 'student-overview', 'teaching-management-modules'],
         entries: [
             { key: 'teaching-management', src: './assets/js/teaching-management-runtime.js' }
@@ -185,7 +185,7 @@ var SYSTEM_RUNTIME_SKILLS = {
     },
     'app-download': {
         mode: 'demand',
-        warmup: 'balanced',
+        warmup: 'demand',
         triggers: ['app-download-center'],
         entries: [
             { key: 'app-download', src: './assets/js/app-download-runtime.js' }
@@ -217,7 +217,7 @@ var SYSTEM_RUNTIME_SKILLS = {
     },
     'county-analysis': {
         mode: 'demand',
-        warmup: 'balanced',
+        warmup: 'demand',
         triggers: ['county-analysis', 'county-teacher-portrait', 'county-school-horizontal'],
         entries: [
             { key: 'county-analysis', src: './assets/js/county-analysis-runtime.js' }
@@ -2278,8 +2278,6 @@ if (window.innerWidth <= 960 || localStorage.getItem('DEV_MODE') === 'true') {
 }
 
 warmOptionalRuntimeAfterLoad('__SCHOOL_PROFILE_RUNTIME_PATCHED__', window.ensureSchoolProfileRuntimeLoaded, 600);
-warmOptionalRuntimeAfterLoad('__TEACHING_MANAGEMENT_RUNTIME_PATCHED__', window.ensureTeachingManagementRuntimeLoaded, 1200);
-
 if (window.innerWidth <= 768 || localStorage.getItem('DEV_MODE') === 'true') {
     window.ensureMobileManagerRuntimeLoaded().then(() => {
         return window.ensurePerfMobileRuntimeLoaded();
