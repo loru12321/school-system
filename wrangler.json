@@ -1,6 +1,8 @@
 {
   "name": "school-system",
   "compatibility_date": "2024-02-18",
+  "workers_dev": true,
+  "preview_urls": true,
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS"
