@@ -481,17 +481,85 @@ function closeSpotlight() {
     document.getElementById('spotlight-mask').style.display = 'none';
 }
 
+function jsStringLiteral(value) {
+    return JSON.stringify(String(value ?? ''));
+}
+window.jsStringLiteral = jsStringLiteral;
+
+function normalizeJumpClass(value) {
+    return typeof normalizeClass === 'function'
+        ? normalizeClass(value)
+        : String(value || '').trim();
+}
+
+function ensureSelectValue(select, value, label = value) {
+    if (!select) return;
+    const target = String(value || '').trim();
+    if (!target) return;
+    let option = Array.from(select.options || []).find(opt => String(opt.value || '').trim() === target);
+    if (!option) {
+        option = document.createElement('option');
+        option.value = target;
+        option.textContent = String(label || target);
+        select.appendChild(option);
+    }
+    select.value = option.value;
+}
+
+function findStudentForJump(name, school, cls) {
+    const targetName = String(name || '').trim();
+    const targetSchool = String(school || '').trim();
+    const targetClass = normalizeJumpClass(cls);
+    if (!targetName) return null;
+
+    const matches = (student) => {
+        if (!student || String(student.name || '').trim() !== targetName) return false;
+        if (targetSchool && String(student.school || '').trim() !== targetSchool) return false;
+        if (targetClass && normalizeJumpClass(student.class) !== targetClass) return false;
+        return true;
+    };
+
+    const schoolStudents = targetSchool && SCHOOLS?.[targetSchool]?.students;
+    if (Array.isArray(schoolStudents)) {
+        const hit = schoolStudents.find(matches);
+        if (hit) return hit;
+    }
+
+    if (Array.isArray(RAW_DATA)) {
+        const rawHit = RAW_DATA.find(matches);
+        if (rawHit) return rawHit;
+    }
+
+    for (const schoolData of Object.values(SCHOOLS || {})) {
+        const hit = schoolData?.students?.find(matches);
+        if (hit) return hit;
+    }
+    return null;
+}
+
+function syncReportControlsToStudent(student) {
+    if (!student) return;
+    const schSel = document.getElementById('sel-school');
+    const clsSel = document.getElementById('sel-class');
+    const nameInput = document.getElementById('inp-name');
+    ensureSelectValue(schSel, student.school || '');
+    if (typeof updateClassSelect === 'function') updateClassSelect();
+    ensureSelectValue(clsSel, student.class || '');
+    if (nameInput) nameInput.value = student.name || '';
+}
+
 function jumpToStudent(name, school, cls) {
     closeSpotlight();
+    const targetStudent = findStudentForJump(name, school, cls);
+    if (!targetStudent) {
+        alert(`未找到该学生：${name || ''}`);
+        return;
+    }
     switchTab('report-generator');
-    const schSel = document.getElementById('sel-school');
-    schSel.value = school;
-    updateClassSelect(); // 触发更新班级下拉框
     setTimeout(() => {
-        document.getElementById('sel-class').value = cls;
-        document.getElementById('inp-name').value = name;
-        doQuery();
-    }, 100);
+        syncReportControlsToStudent(targetStudent);
+        doQuery(targetStudent);
+    }, 80);
 }
 
 function showCertificate(name, honorType) {
@@ -10886,7 +10954,7 @@ const DrillSystem = {
         students.forEach(s => {
             html += `
                     <div class="drill-stu-tag">
-                        <span style="cursor:pointer;" onclick="jumpToStudent('${s.name}', '${s.school}', '${s.class}'); document.getElementById('drill-modal').style.display='none';">${s.name}</span>
+                        <span style="cursor:pointer;" onclick="jumpToStudent(${jsStringLiteral(s.name)}, ${jsStringLiteral(s.school)}, ${jsStringLiteral(s.class)}); document.getElementById('drill-modal').style.display='none';">${s.name}</span>
                         <span class="drill-stu-score">${s.total}</span>
                     </div>`;
         });
@@ -12423,7 +12491,38 @@ function getDisplayRankValue(studentLike, keyPath, options = {}) {
 }
 window.getDisplayRankValue = getDisplayRankValue;
 
+function getCountyRankScopeForDisplay() {
+    if (window.COUNTY_ANALYSIS_SCOPE && typeof window.COUNTY_ANALYSIS_SCOPE === 'object') {
+        return window.COUNTY_ANALYSIS_SCOPE;
+    }
+    try {
+        const rawMap = localStorage.getItem('COUNTY_ANALYSIS_SCOPE_V1');
+        const map = rawMap ? JSON.parse(rawMap) : {};
+        const examKey = String(
+            window.CURRENT_EXAM_ID
+            || (typeof readWorkspaceExamId === 'function' ? readWorkspaceExamId() : '')
+            || window.COHORT_DB?.currentExamId
+            || 'current'
+        ).trim() || 'current';
+        return map?.[examKey] || null;
+    } catch (_) {
+        return null;
+    }
+}
+window.getCountyRankScopeForDisplay = getCountyRankScopeForDisplay;
+
+function hasCountyRankScopeForDisplay() {
+    const scope = getCountyRankScopeForDisplay();
+    if (!scope || scope.includesCounty !== true) return false;
+    if (scope.explicitCountyUpload !== true && scope.source !== 'county-upload') return false;
+    const countyCount = Array.isArray(scope.countySchools) ? scope.countySchools.length : 0;
+    const townshipCount = Array.isArray(scope.townshipSchools) ? scope.townshipSchools.length : 0;
+    return countyCount > 1 && townshipCount > 0;
+}
+window.hasCountyRankScopeForDisplay = hasCountyRankScopeForDisplay;
+
 function hasStudentCountyRankData(list = RAW_DATA, subjects = SUBJECTS) {
+    if (!hasCountyRankScopeForDisplay()) return false;
     if (!Array.isArray(list) || list.length === 0) return false;
     return list.some((student) => {
         if (getStudentCountyRankValue(student, 'total') !== '-') return true;
@@ -12516,7 +12615,7 @@ function buildStudentDetailMobileRow(student, visibleSubjects, isTeacher, isClas
                 <article class="student-detail-mobile-card">
                     <div class="student-detail-mobile-head">
                         <div>
-                            <a href="javascript:void(0)" class="student-detail-mobile-name" onclick="jumpToStudent('${student.name}', '${student.school}', '${student.class}')">${tmEscapeHtml(student.name || '-')}</a>
+                            <a href="javascript:void(0)" class="student-detail-mobile-name" onclick="jumpToStudent(${jsStringLiteral(student.name)}, ${jsStringLiteral(student.school)}, ${jsStringLiteral(student.class)})">${tmEscapeHtml(student.name || '-')}</a>
                             <div class="student-detail-mobile-submeta">${tmEscapeHtml(`${schoolText} · ${classText}`)}</div>
                         </div>
                         <div class="student-detail-mobile-score-summary">
@@ -12866,7 +12965,7 @@ function renderStudentDetails(reset = true) {
         )).join('');
     } else {
         rowsHTML = displayList.map(student => {
-            const nameLink = `<a href="javascript:void(0)" onclick="jumpToStudent('${student.name}', '${student.school}', '${student.class}')" style="color:var(--primary); font-weight:800;">${student.name}</a>`;
+            const nameLink = `<a href="javascript:void(0)" onclick="jumpToStudent(${jsStringLiteral(student.name)}, ${jsStringLiteral(student.school)}, ${jsStringLiteral(student.class)})" style="color:var(--primary); font-weight:800;">${student.name}</a>`;
             const showTownRankForStudent = !isCountyDirectStudentForRank(student);
 
             let row = `<tr>
@@ -13446,14 +13545,24 @@ function importTeacherExcel() {
 // Teacher analysis main runtime moved to public/assets/js/teacher-analysis-main-runtime.js
 
 
-async function doQuery() {
-    const name = document.getElementById('inp-name').value;
-    const sch = document.getElementById('sel-school').value;
-    const cls = document.getElementById('sel-class').value;
+async function doQuery(targetStudent = null) {
+    const name = String(document.getElementById('inp-name')?.value || targetStudent?.name || '').trim();
+    const sch = String(document.getElementById('sel-school')?.value || targetStudent?.school || '').trim();
+    const cls = String(document.getElementById('sel-class')?.value || targetStudent?.class || '').trim();
     const user = getCurrentUser();
 
-    let stu = SCHOOLS[sch]?.students.find(s => s.name === name && (cls === '--请先选择学校--' || s.class === cls));
+    let stu = targetStudent && typeof targetStudent === 'object' ? targetStudent : null;
+    if (!stu) {
+        stu = SCHOOLS[sch]?.students.find(s => (
+            String(s.name || '').trim() === name
+            && (cls === '--请先选择学校--' || !cls || normalizeJumpClass(s.class) === normalizeJumpClass(cls))
+        ));
+    }
+    if (!stu && name) {
+        stu = findStudentForJump(name, sch, cls);
+    }
     if (!stu) return alert("未找到该学生");
+    syncReportControlsToStudent(stu);
     const reportQueryMode = PermissionPolicy.isClassTeacher(user) ? 'homeroom' : 'teaching';
     if (!PermissionPolicy.canQueryStudent(user, stu, { mode: reportQueryMode })) return alert("当前角色没有权限查询该学生");
 
@@ -22654,7 +22763,7 @@ function doSpotlightSearch() {
         matches.forEach(s => {
             // 高亮匹配文字逻辑略复杂，这里直接显示结果
             resDiv.innerHTML += `
-                    <div class="spotlight-item" onclick="jumpToStudent('${s.name}', '${s.school}', '${s.class}')">
+                    <div class="spotlight-item" onclick="jumpToStudent(${jsStringLiteral(s.name)}, ${jsStringLiteral(s.school)}, ${jsStringLiteral(s.class)})">
                         <span>👤 ${s.name} <small style="color:#666">(${s.school} ${s.class})</small></span>
                         <span style="font-weight:bold;">${s.total}分</span>
                     </div>`;
