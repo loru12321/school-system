@@ -145,6 +145,7 @@ function renderSingleReportCardHTML(stu, mode) {
         return !/^(?:无|未分班|无班级|暂无|undefined|null|nan)$/i.test(normalizedClass);
     };
     const isCountyDirectStudent = (studentLike) => {
+        if (typeof isCountyDirectStudentForRank === 'function') return isCountyDirectStudentForRank(studentLike);
         const schoolName = String(studentLike?.school || '').trim();
         if (!schoolName || typeof getCountyDirectSchoolNames !== 'function' || typeof getTownshipManagedSchoolNames !== 'function') return false;
         const candidateNames = Array.from(new Set([
@@ -236,8 +237,6 @@ function renderSingleReportCardHTML(stu, mode) {
                 prevRanks = normalizeRankInfo(prevStu.ranks[sub]);
             }
 
-            const curCR = displayRankValue(safeGet(reportStu, `ranks.${sub}.class`, '-'), showClassRank);
-            const tC = showClassRank ? getTrendBadge(curCR, prevRanks.class || '-', 'rank') : '';
             const curSR = safeGet(reportStu, `ranks.${sub}.school`, '-');
             const tS = getTrendBadge(curSR, prevRanks.school || '-', 'rank');
             const curTR = displayRankValue(safeGet(reportStu, `ranks.${sub}.township`, '-'), showTownRank);
@@ -248,7 +247,7 @@ function renderSingleReportCardHTML(stu, mode) {
             tableRows += `<tr style="transition:0.2s;" onmouseover="this.style.background='rgba(241,245,249,0.5)'" onmouseout="this.style.background='transparent'">
                     ${renderResponsiveTableCell('科目', sub, 'font-weight:600; color:#475569;')}
                     ${renderResponsiveTableCell('成绩（对比）', `${stuScores[sub]} ${subTrend}`, 'font-weight:bold; color:#334155;')}
-                    ${renderResponsiveTableCell('班级排名', `${curCR} <span style="font-size:0.9em;">${tC}</span>`, 'color:#64748b;')}
+                    ${renderResponsiveTableCell('总分班排', '-', 'color:#cbd5e1;')}
                     ${renderResponsiveTableCell('校级排名', `${curSR} <span style="font-size:0.9em;">${tS}</span>`, 'color:#64748b;')}
                     ${renderResponsiveTableCell('全镇排名', `${curTR} <span style="font-size:0.9em;">${tT}</span>`, `color:#64748b; ${townColStyle}`)}
                     ${renderResponsiveTableCell('全县排名', `${curCountyR} <span style="font-size:0.9em;">${tCounty}</span>`, `color:#64748b; ${townColStyle}`)}
@@ -368,7 +367,7 @@ function renderSingleReportCardHTML(stu, mode) {
         </div>
         <div class="fluent-card" style="padding:0; overflow:hidden;">
             <table class="fluent-table" id="tb-query">
-                <thead><tr><th style="text-align:left; padding-left:20px;">科目</th><th>成绩 (对比)</th><th>班排</th><th>校排</th><th style="${townColStyle}">全镇排名</th><th style="${townColStyle}">全县排名</th></tr></thead>
+                <thead><tr><th style="text-align:left; padding-left:20px;">科目</th><th>成绩 (对比)</th><th>总分班排</th><th>校排</th><th style="${townColStyle}">全镇排名</th><th style="${townColStyle}">全县排名</th></tr></thead>
                 <tbody>${tableRows}</tbody>
             </table>
         </div>`;
