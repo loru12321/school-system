@@ -169,8 +169,16 @@ function renderSingleReportCardHTML(stu, mode) {
     const stuScores = (reportStu && typeof reportStu === 'object' && reportStu.scores && typeof reportStu.scores === 'object') ? reportStu.scores : {};
 
     // 排名数据准备
+    const reportSubjectsForRank = [...new Set(SUBJECTS)];
+    const hasTownshipRankData = typeof hasStudentTownshipRankData === 'function'
+        ? hasStudentTownshipRankData(RAW_DATA, reportSubjectsForRank)
+        : Object.keys(SCHOOLS).length > 1;
+    const hasCountyRankData = typeof hasStudentCountyRankData === 'function'
+        ? hasStudentCountyRankData(RAW_DATA, reportSubjectsForRank)
+        : getStudentCountyRankValue(reportStu, 'total') !== '-';
     const showClassRank = hasClassRankScope(reportStu);
-    const showTownRank = !isCountyDirectStudent(reportStu);
+    const showTownRank = hasTownshipRankData && !isCountyDirectStudent(reportStu);
+    const showCountyRank = hasCountyRankData;
     const curTownRank = displayRankValue(safeGet(reportStu, 'ranks.total.township', '-'), showTownRank);
     const prevTownRank = displayRankValue(compareTotalRanks.township ?? prevStu?.townRank ?? '-', showTownRank);
     const curClassRank = displayRankValue(safeGet(reportStu, 'ranks.total.class', '-'), showClassRank);
@@ -182,7 +190,8 @@ function renderSingleReportCardHTML(stu, mode) {
 
     // 单校判断
     const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
-    const townColStyle = isSingleSchool ? 'display:none !important;' : '';
+    const townColStyle = hasTownshipRankData ? '' : 'display:none !important;';
+    const countyColStyle = showCountyRank ? '' : 'display:none !important;';
 
     // 构建表格行
     let tableRows = '';
@@ -200,7 +209,7 @@ function renderSingleReportCardHTML(stu, mode) {
                     ${renderResponsiveTableCell('班级排名', '-')}
                     ${renderResponsiveTableCell('校级排名', '-')}
                     ${renderResponsiveTableCell('全镇排名', '-', townColStyle)}
-                    ${renderResponsiveTableCell('全县排名', '-', townColStyle)}
+                    ${renderResponsiveTableCell('全县排名', '-', countyColStyle)}
                 </tr>`;
         }
     }
@@ -214,7 +223,7 @@ function renderSingleReportCardHTML(stu, mode) {
     const trendClass = showClassRank ? getTrendBadge(curClassRank, prevClassRank, 'rank') : '';
     const trendSchool = getTrendBadge(curSchoolRank, prevSchoolRank, 'rank');
     const trendTown = showTownRank ? getTrendBadge(curTownRank, prevTownRank, 'rank') : '';
-    const trendCounty = getTrendBadge(curCountyRank, prevCountyRank, 'rank');
+    const trendCounty = showCountyRank ? getTrendBadge(curCountyRank, prevCountyRank, 'rank') : '';
 
     tableRows += `<tr style="background:rgba(239,246,255,0.7); backdrop-filter:blur(4px); border-bottom:2px solid #fff;">
             ${renderResponsiveTableCell('科目', `🏆 ${totalLabel}`, 'font-weight:bold; color:#1e3a8a;')}
@@ -222,7 +231,7 @@ function renderSingleReportCardHTML(stu, mode) {
             ${renderResponsiveTableCell('班级排名', `${curClassRank} ${trendClass}`, 'font-weight:bold; color:#334155;')}
             ${renderResponsiveTableCell('校级排名', `${curSchoolRank} ${trendSchool}`, 'font-weight:bold; color:#334155;')}
             ${renderResponsiveTableCell('全镇排名', `${curTownRank} ${trendTown}`, `${townColStyle} font-weight:bold; color:#334155;`)}
-            ${renderResponsiveTableCell('全县排名', `${curCountyRank} ${trendCounty}`, `${townColStyle} font-weight:bold; color:#334155;`)}
+            ${renderResponsiveTableCell('全县排名', `${showCountyRank ? curCountyRank : '-'} ${trendCounty}`, `${countyColStyle} font-weight:bold; color:#334155;`)}
         </tr>`;
 
     // C. 单科行
@@ -242,7 +251,7 @@ function renderSingleReportCardHTML(stu, mode) {
             const curTR = displayRankValue(safeGet(reportStu, `ranks.${sub}.township`, '-'), showTownRank);
             const tT = showTownRank ? getTrendBadge(curTR, prevRanks.township || '-', 'rank') : '';
             const curCountyR = getStudentCountyRankValue(reportStu, sub);
-            const tCounty = getTrendBadge(curCountyR, prevRanks.county || '-', 'rank');
+            const tCounty = showCountyRank ? getTrendBadge(curCountyR, prevRanks.county || '-', 'rank') : '';
 
             tableRows += `<tr style="transition:0.2s;" onmouseover="this.style.background='rgba(241,245,249,0.5)'" onmouseout="this.style.background='transparent'">
                     ${renderResponsiveTableCell('科目', sub, 'font-weight:600; color:#475569;')}
@@ -250,7 +259,7 @@ function renderSingleReportCardHTML(stu, mode) {
                     ${renderResponsiveTableCell('总分班排', '-', 'color:#cbd5e1;')}
                     ${renderResponsiveTableCell('校级排名', `${curSR} <span style="font-size:0.9em;">${tS}</span>`, 'color:#64748b;')}
                     ${renderResponsiveTableCell('全镇排名', `${curTR} <span style="font-size:0.9em;">${tT}</span>`, `color:#64748b; ${townColStyle}`)}
-                    ${renderResponsiveTableCell('全县排名', `${curCountyR} <span style="font-size:0.9em;">${tCounty}</span>`, `color:#64748b; ${townColStyle}`)}
+                    ${renderResponsiveTableCell('全县排名', `${showCountyRank ? curCountyR : '-'} <span style="font-size:0.9em;">${tCounty}</span>`, `color:#64748b; ${countyColStyle}`)}
                 </tr>`;
         }
     });
@@ -367,7 +376,7 @@ function renderSingleReportCardHTML(stu, mode) {
         </div>
         <div class="fluent-card" style="padding:0; overflow:hidden;">
             <table class="fluent-table" id="tb-query">
-                <thead><tr><th style="text-align:left; padding-left:20px;">科目</th><th>成绩 (对比)</th><th>总分班排</th><th>校排</th><th style="${townColStyle}">全镇排名</th><th style="${townColStyle}">全县排名</th></tr></thead>
+                <thead><tr><th style="text-align:left; padding-left:20px;">科目</th><th>成绩 (对比)</th><th>总分班排</th><th>校排</th><th style="${townColStyle}">全镇排名</th><th style="${countyColStyle}">全县排名</th></tr></thead>
                 <tbody>${tableRows}</tbody>
             </table>
         </div>`;
@@ -378,7 +387,7 @@ function renderSingleReportCardHTML(stu, mode) {
     if (examHistory.length > 1) {
         let historyRows = '';
         let thHtml = `<th style="text-align:left; padding-left:20px;">考试名称</th><th>${totalLabel}</th><th>校排</th>`;
-        if (!isSingleSchool) thHtml += `<th>镇排</th>`;
+        if (hasTownshipRankData) thHtml += `<th>镇排</th>`;
 
         for (let i = examHistory.length - 1; i >= 0; i--) {
             const h = examHistory[i];
@@ -399,7 +408,7 @@ function renderSingleReportCardHTML(stu, mode) {
                 ${renderResponsiveTableCell('考试名称', `${isCurrent ? '⭐ ' : ''}${h.examLabel || h.examId || h.examFullKey || '-'}`, 'text-align:left; padding-left:20px; color:#475569;')}
                 ${renderResponsiveTableCell(totalLabel, tScore, 'color:#2563eb;')}
                 ${renderResponsiveTableCell('校级排名', sRank, 'color:#64748b;')}
-                ${!isSingleSchool ? renderResponsiveTableCell('全镇排名', tRank, 'color:#64748b;') : ''}
+                ${hasTownshipRankData ? renderResponsiveTableCell('全镇排名', tRank, 'color:#64748b;') : ''}
             </tr>`;
         }
 
@@ -439,7 +448,13 @@ function renderInstagramCard(stu) {
     const reportStu = getComparisonStudentView(stu, RAW_DATA);
     const comparisonTotalSubjects = getComparisonTotalSubjects();
     const currentTotal = getComparisonTotalValue(reportStu, comparisonTotalSubjects);
-    const showTownRank = !isCountyDirectStudent(reportStu);
+    const hasTownshipRankData = typeof hasStudentTownshipRankData === 'function'
+        ? hasStudentTownshipRankData(RAW_DATA, comparisonTotalSubjects)
+        : Object.keys(SCHOOLS).length > 1;
+    const hasCountyRankData = typeof hasStudentCountyRankData === 'function'
+        ? hasStudentCountyRankData(RAW_DATA, comparisonTotalSubjects)
+        : getStudentCountyRankValue(reportStu, 'total') !== '-';
+    const showTownRank = hasTownshipRankData && !isCountyDirectStudent(reportStu);
     const rank = showTownRank ? safeGet(reportStu, 'ranks.total.township', '-') : safeGet(reportStu, 'ranks.total.school', '-');
     const schoolTotalStudents = (reportStu?.school && SCHOOLS?.[reportStu.school]?.students?.length) || totalStudents || 1;
     const scopeTotalStudents = showTownRank ? (totalStudents || 1) : schoolTotalStudents;
@@ -468,7 +483,7 @@ function renderInstagramCard(stu) {
             const countyRank = getStudentCountyRankValue(reportStu, sub);
             const rankParts = [`级#${subRank}`];
             if (showTownRank) rankParts.push(`镇#${townRank}`);
-            rankParts.push(`县#${countyRank}`);
+            if (hasCountyRankData) rankParts.push(`县#${countyRank}`);
 
             commentsHtml += `
                     <div class="insta-comment-row">

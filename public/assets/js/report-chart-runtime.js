@@ -498,14 +498,18 @@ function buildStudentInsightModel(student, passedHistory = null) {
     const totalSubjects = getComparisonTotalSubjects();
     const totalScore = getComparisonTotalValue(reportStudent, totalSubjects);
     const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
+    const hasTownshipRankData = typeof hasStudentTownshipRankData === 'function'
+        ? hasStudentTownshipRankData(RAW_DATA, totalSubjects)
+        : !isSingleSchool;
     const isCountyDirect = typeof isCountyDirectStudentForRank === 'function'
         ? isCountyDirectStudentForRank(reportStudent)
         : false;
-    const scopeText = isSingleSchool ? '全校' : (isCountyDirect ? '本校' : '全镇');
-    const effectiveRank = isCountyDirect
+    const useTownshipRank = hasTownshipRankData && !isCountyDirect;
+    const scopeText = isSingleSchool ? '全校' : (useTownshipRank ? '全镇' : '本校');
+    const effectiveRank = !useTownshipRank
         ? safeGet(reportStudent, 'ranks.total.school', '-')
         : safeGet(reportStudent, 'ranks.total.township', safeGet(reportStudent, 'ranks.total.school', '-'));
-    const totalCount = isCountyDirect
+    const totalCount = !useTownshipRank
         ? ((reportStudent?.school && SCHOOLS?.[reportStudent.school]?.students?.length) || RAW_DATA.length || 1)
         : (RAW_DATA.length || 1);
     const percentile = (typeof effectiveRank === 'number' && totalCount > 0)

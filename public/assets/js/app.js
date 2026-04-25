@@ -12430,6 +12430,19 @@ function hasStudentCountyRankData(list = RAW_DATA, subjects = SUBJECTS) {
         return (subjects || []).some((subject) => getStudentCountyRankValue(student, subject) !== '-');
     });
 }
+window.hasStudentCountyRankData = hasStudentCountyRankData;
+
+function hasStudentTownshipRankData(list = RAW_DATA, subjects = SUBJECTS) {
+    if (!Array.isArray(list) || list.length === 0 || isSingleSchoolMode()) return false;
+    return list.some((student) => {
+        if (isCountyDirectStudentForRank(student)) return false;
+        if (getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }) !== '-') return true;
+        return (subjects || []).some((subject) => (
+            getDisplayRankValue(student, `ranks.${subject}.township`, { scope: 'township' }) !== '-'
+        ));
+    });
+}
+window.hasStudentTownshipRankData = hasStudentTownshipRankData;
 
 function buildStudentDetailMobileSubjectCard(student, sub, isTeacher, isClassTeacher, townRankVisible, countyRankVisible) {
     const score = student.scores[sub] !== undefined ? student.scores[sub] : '-';
@@ -12781,6 +12794,7 @@ function renderStudentDetails(reset = true) {
         ? SUBJECTS.filter(s => teacherScope.subjects.has(normalizeSubject(s)))
         : SUBJECTS;
     const countyRankVisible = hasStudentCountyRankData(STD_STATE.cacheData, visibleSubjects);
+    const townRankVisible = hasStudentTownshipRankData(STD_STATE.cacheData, visibleSubjects);
 
     // 生成表头 (带漏斗图标)
     let headerHTML = '';
@@ -12819,26 +12833,27 @@ function renderStudentDetails(reset = true) {
 
     // 动态判断当前数据是否只有一所学校
     const isSingleSchool = isSingleSchoolMode();
-    const townHeaderStyle = isSingleSchool ? 'display:none;' : ''; // 如果单校，隐藏列
+    const townHeaderStyle = townRankVisible ? '' : 'display:none;'; // 没有全镇成绩时隐藏列
+    const countyHeaderStyle = countyRankVisible ? '' : 'display:none;'; // 没有全县成绩时隐藏列
 
     visibleSubjects.forEach(sub => {
         headerHTML += buildTh(sub, sub, '80px');
         if (!isTeacher && !isClassTeacher) {
-            headerHTML += `<th>校排</th><th style="${townHeaderStyle}">镇排</th><th style="${townHeaderStyle}">县排</th>`;
+            headerHTML += `<th>校排</th><th style="${townHeaderStyle}">镇排</th><th style="${countyHeaderStyle}">县排</th>`;
         } else {
             // 科任教师/班主任：展示分数 + 级部排 + 镇排 + 县排
-            headerHTML += `<th>级排</th><th style="${townHeaderStyle}">镇排</th><th style="${townHeaderStyle}">县排</th>`;
+            headerHTML += `<th>级排</th><th style="${townHeaderStyle}">镇排</th><th style="${countyHeaderStyle}">县排</th>`;
         }
     });
 
     const totalLabel = CONFIG.name === '9年级' ? '五科总分' : '总分';
     if (!isTeacher && !isClassTeacher) {
         headerHTML += buildTh(totalLabel, 'total', '80px');
-        headerHTML += `<th>班排</th><th>校排</th><th style="${townHeaderStyle}">镇排</th><th style="${townHeaderStyle}">县排</th>`;
+        headerHTML += `<th>班排</th><th>校排</th><th style="${townHeaderStyle}">镇排</th><th style="${countyHeaderStyle}">县排</th>`;
     } else {
         // 科任教师/班主任：显示总分及排名（便于诊断学生整体位置）
         headerHTML += buildTh(totalLabel, 'total', '80px');
-        headerHTML += `<th>班排</th><th>级排</th><th style="${townHeaderStyle}">镇排</th><th style="${townHeaderStyle}">县排</th>`;
+        headerHTML += `<th>班排</th><th>级排</th><th style="${townHeaderStyle}">镇排</th><th style="${countyHeaderStyle}">县排</th>`;
     }
 
     thead.innerHTML = headerHTML;
@@ -12847,7 +12862,7 @@ function renderStudentDetails(reset = true) {
     let rowsHTML = '';
     if (isMobileStudentDetails) {
         rowsHTML = displayList.map(student => (
-            buildStudentDetailMobileRow(student, visibleSubjects, isTeacher, isClassTeacher, !isSingleSchool, countyRankVisible)
+            buildStudentDetailMobileRow(student, visibleSubjects, isTeacher, isClassTeacher, townRankVisible, countyRankVisible)
         )).join('');
     } else {
         rowsHTML = displayList.map(student => {
@@ -12869,12 +12884,12 @@ function renderStudentDetails(reset = true) {
                     row += `<td data-label="${sub}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${score}</td>
                                 <td data-label="${sub}校排" class="text-gray">${safeGet(student, `ranks.${sub}.school`, '-')}</td>
                                 <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${showTownRankForStudent ? getDisplayRankValue(student, `ranks.${sub}.township`, { scope: 'township' }) : '-'}</td>
-                                <td data-label="${sub}县排" class="text-gray" style="${townHeaderStyle}">${getStudentCountyRankValue(student, sub)}</td>`;
+                                <td data-label="${sub}县排" class="text-gray" style="${countyHeaderStyle}">${getStudentCountyRankValue(student, sub)}</td>`;
                 } else {
                     row += `<td data-label="${sub}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${score}</td>
                                 <td data-label="${sub}级排" class="text-gray">${safeGet(student, `ranks.${sub}.school`, '-')}</td>
                                 <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${showTownRankForStudent ? getDisplayRankValue(student, `ranks.${sub}.township`, { scope: 'township' }) : '-'}</td>
-                                <td data-label="${sub}县排" class="text-gray" style="${townHeaderStyle}">${getStudentCountyRankValue(student, sub)}</td>`;
+                                <td data-label="${sub}县排" class="text-gray" style="${countyHeaderStyle}">${getStudentCountyRankValue(student, sub)}</td>`;
                 }
             });
 
@@ -12882,15 +12897,15 @@ function renderStudentDetails(reset = true) {
                 row += `<td data-label="总分" style="color:#2563eb; font-weight:bold;">${student.total}</td>
                             <td data-label="总分班排">${getDisplayRankValue(student, 'ranks.total.class', { scope: 'class' })}</td>
                             <td data-label="总分校排">${safeGet(student, 'ranks.total.school', '-')}</td>
-                            <td data-label="总分镇排">${showTownRankForStudent ? getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }) : '-'}</td>
-                            <td data-label="总分县排">${getStudentCountyRankValue(student, 'total')}</td>
+                            <td data-label="总分镇排" style="${townHeaderStyle}">${showTownRankForStudent ? getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }) : '-'}</td>
+                            <td data-label="总分县排" style="${countyHeaderStyle}">${getStudentCountyRankValue(student, 'total')}</td>
                         </tr>`;
             } else {
                 row += `<td data-label="总分" style="color:#2563eb; font-weight:bold;">${student.total}</td>
                         <td data-label="总分班排">${getDisplayRankValue(student, 'ranks.total.class', { scope: 'class' })}</td>
                         <td data-label="总分级排">${safeGet(student, 'ranks.total.school', '-')}</td>
                         <td data-label="总分镇排" style="${townHeaderStyle}">${showTownRankForStudent ? getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }) : '-'}</td>
-                        <td data-label="总分县排" style="${townHeaderStyle}">${getStudentCountyRankValue(student, 'total')}</td>
+                        <td data-label="总分县排" style="${countyHeaderStyle}">${getStudentCountyRankValue(student, 'total')}</td>
                     </tr>`;
             }
             return row;
@@ -13172,6 +13187,37 @@ function exportStudentDetails() {
 
     studentsToShow = getComparisonStudentList(studentsToShow, RAW_DATA);
     studentsToShow.sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0));
+    const exportTownRankVisible = hasStudentTownshipRankData(studentsToShow, visibleSubjects);
+    const exportCountyRankVisible = hasStudentCountyRankData(studentsToShow, visibleSubjects);
+
+    headers.length = isClassTeacher
+        ? 3
+        : (isTeacher ? 3 : 5);
+    visibleSubjects.forEach(subject => {
+        if (isTeacher || isClassTeacher) {
+            headers.push(`${subject} 分数`, `${subject} 级排`);
+        } else {
+            headers.push(`${subject} 分数`, `${subject} 校排`);
+        }
+        if (exportTownRankVisible) headers.push(`${subject} 镇排`);
+        if (exportCountyRankVisible) headers.push(`${subject} 县排`);
+    });
+
+    if (!isClassTeacher && !isTeacher) {
+        if (CONFIG.name === '9年级') {
+            headers.push('五科总分', '五科班排', '五科校排');
+            if (exportTownRankVisible) headers.push('五科镇排');
+            if (exportCountyRankVisible) headers.push('五科县排');
+        } else {
+            headers.push('总分', '总分班排', '总分校排');
+            if (exportTownRankVisible) headers.push('总分镇排');
+            if (exportCountyRankVisible) headers.push('总分县排');
+        }
+    } else {
+        headers.push(CONFIG.name === '9年级' ? '五科总分' : '总分', '总分班排', '总分级排');
+        if (exportTownRankVisible) headers.push('总分镇排');
+        if (exportCountyRankVisible) headers.push('总分县排');
+    }
 
     // 3. 填充数据行 (需与表头逻辑严格对应)
     studentsToShow.forEach(student => {
@@ -13186,16 +13232,22 @@ function exportStudentDetails() {
                     student.scores[subject] || '-',
                     safeGet(student, `ranks.${subject}.school`, '-')
                 );
-                if (!isSingleSchool) {
-                    row.push(showTownRankForStudent ? getDisplayRankValue(student, `ranks.${subject}.township`, { scope: 'township' }) : '-', getStudentCountyRankValue(student, subject));
+                if (exportTownRankVisible) {
+                    row.push(showTownRankForStudent ? getDisplayRankValue(student, `ranks.${subject}.township`, { scope: 'township' }) : '-');
+                }
+                if (exportCountyRankVisible) {
+                    row.push(getStudentCountyRankValue(student, subject));
                 }
             } else {
                 row.push(
                     student.scores[subject] || '-',
                     safeGet(student, `ranks.${subject}.school`, '-')
                 );
-                if (!isSingleSchool) {
-                    row.push(showTownRankForStudent ? getDisplayRankValue(student, `ranks.${subject}.township`, { scope: 'township' }) : '-', getStudentCountyRankValue(student, subject));
+                if (exportTownRankVisible) {
+                    row.push(showTownRankForStudent ? getDisplayRankValue(student, `ranks.${subject}.township`, { scope: 'township' }) : '-');
+                }
+                if (exportCountyRankVisible) {
+                    row.push(getStudentCountyRankValue(student, subject));
                 }
             }
         });
@@ -13206,8 +13258,11 @@ function exportStudentDetails() {
                 getDisplayRankValue(student, 'ranks.total.class', { scope: 'class' }),
                 safeGet(student, 'ranks.total.school', '-')
             );
-            if (!isSingleSchool) {
-                row.push(showTownRankForStudent ? getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }) : '-', getStudentCountyRankValue(student, 'total'));
+            if (exportTownRankVisible) {
+                row.push(showTownRankForStudent ? getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }) : '-');
+            }
+            if (exportCountyRankVisible) {
+                row.push(getStudentCountyRankValue(student, 'total'));
             }
         } else {
             row.push(
@@ -13215,8 +13270,11 @@ function exportStudentDetails() {
                 getDisplayRankValue(student, 'ranks.total.class', { scope: 'class' }),
                 safeGet(student, 'ranks.total.school', '-')
             );
-            if (!isSingleSchool) {
-                row.push(showTownRankForStudent ? getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }) : '-', getStudentCountyRankValue(student, 'total'));
+            if (exportTownRankVisible) {
+                row.push(showTownRankForStudent ? getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }) : '-');
+            }
+            if (exportCountyRankVisible) {
+                row.push(getStudentCountyRankValue(student, 'total'));
             }
         }
 
