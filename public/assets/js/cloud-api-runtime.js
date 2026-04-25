@@ -14,6 +14,10 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createCloudApiRuntime(root) {
     const SYSTEM_DATA_TABLE = 'system_data';
     const SYSTEM_DATA_API_PATH = '/api/system-data';
+    const SELECT_CACHE_TTL_MS = 15000;
+    const SELECT_CACHE_MAX = 120;
+    const selectCache = new Map();
+    const selectInflight = new Map();
 
     function normalizeText(value) {
         return String(value || '').trim();
@@ -40,6 +44,61 @@
         if (!text) return '';
         const parsedDate = new Date(text);
         return Number.isFinite(parsedDate.getTime()) ? parsedDate.toISOString() : '';
+    }
+
+    function normalizeKeyList(value) {
+        return Array.isArray(value)
+            ? value.map((item) => normalizeText(item)).filter(Boolean).sort()
+            : [];
+    }
+
+    function buildSelectCacheKey(options = {}) {
+        return JSON.stringify({
+            backend: getBackendMode(),
+            apiUrl: getSystemDataApiUrl(),
+            select: normalizeText(options.select || '*'),
+            keyEq: normalizeText(options.keyEq),
+            keyLike: normalizeText(options.keyLike),
+            keyIn: normalizeKeyList(options.keyIn),
+            order: normalizeText(options.order),
+            ascending: options.ascending !== false,
+            limit: Number.isFinite(Number(options.limit)) ? Number(options.limit) : 0,
+            maybeSingle: !!options.maybeSingle
+        });
+    }
+
+    function cloneCachedValue(value) {
+        if (value == null) return value;
+        try {
+            return JSON.parse(JSON.stringify(value));
+        } catch (_) {
+            return value;
+        }
+    }
+
+    function cloneSelectResult(result) {
+        if (!result || typeof result !== 'object') return result;
+        return {
+            ...result,
+            data: cloneCachedValue(result.data)
+        };
+    }
+
+    function clearSystemDataCache() {
+        selectCache.clear();
+        selectInflight.clear();
+    }
+
+    function rememberSelectResult(cacheKey, result) {
+        if (!cacheKey || (result && result.error)) return;
+        selectCache.set(cacheKey, {
+            time: Date.now(),
+            result: cloneSelectResult(result)
+        });
+        if (selectCache.size > SELECT_CACHE_MAX) {
+            const firstKey = selectCache.keys().next().value;
+            if (firstKey) selectCache.delete(firstKey);
+        }
     }
 
     function normalizeApiUrl(value) {
@@ -392,9 +451,30 @@
     }
 
     async function selectSystemData(options = {}) {
-        return getBackendMode() === 'api'
+        const useCache = options && options.cache !== false && options.noCache !== true;
+        const cacheKey = useCache ? buildSelectCacheKey(options) : '';
+        if (cacheKey) {
+            const cached = selectCache.get(cacheKey);
+            if (cached && Date.now() - cached.time < SELECT_CACHE_TTL_MS) {
+                return cloneSelectResult(cached.result);
+            }
+            if (selectInflight.has(cacheKey)) {
+                return cloneSelectResult(await selectInflight.get(cacheKey));
+            }
+        }
+
+        const request = (getBackendMode() === 'api'
             ? selectViaApi(options)
-            : selectViaCompat(options);
+            : selectViaCompat(options))
+            .then((result) => {
+                rememberSelectResult(cacheKey, result);
+                return result;
+            })
+            .finally(() => {
+                if (cacheKey) selectInflight.delete(cacheKey);
+            });
+        if (cacheKey) selectInflight.set(cacheKey, request);
+        return cloneSelectResult(await request);
     }
 
     async function readSystemDataRecord(key, select = 'content') {
@@ -442,6 +522,7 @@
                 if (!response.ok) {
                     return { data: body, error: buildApiError(response, body), source: 'api' };
                 }
+                clearSystemDataCache();
                 return { data: body, error: null, source: 'api' };
             } catch (error) {
                 return { data: [], error: error instanceof Error ? error : new Error(String(error)), source: 'api' };
@@ -454,7 +535,9 @@
         }
 
         try {
-            return await upsertCompatRows(client, Array.isArray(rows) ? normalizedRows : normalizedRows[0]);
+            const result = await upsertCompatRows(client, Array.isArray(rows) ? normalizedRows : normalizedRows[0]);
+            if (!result.error) clearSystemDataCache();
+            return result;
         } catch (error) {
             return { data: [], error: error instanceof Error ? error : new Error(String(error)), source: 'compat' };
         }
@@ -488,6 +571,7 @@
                 if (!response.ok) {
                     return { data: body, error: buildApiError(response, body), source: 'api' };
                 }
+                clearSystemDataCache();
                 return { data: body, error: null, source: 'api' };
             } catch (error) {
                 return { data: [], error: error instanceof Error ? error : new Error(String(error)), source: 'api' };
@@ -506,12 +590,14 @@
             } else {
                 query = query.in('key', keyIn);
             }
-            const result = await query;
-            return {
-                data: result && Object.prototype.hasOwnProperty.call(result, 'data') ? result.data : null,
-                error: result && Object.prototype.hasOwnProperty.call(result, 'error') ? result.error : null,
+            const queryResult = await query;
+            const result = {
+                data: queryResult && Object.prototype.hasOwnProperty.call(queryResult, 'data') ? queryResult.data : null,
+                error: queryResult && Object.prototype.hasOwnProperty.call(queryResult, 'error') ? queryResult.error : null,
                 source: 'compat'
             };
+            if (!result.error) clearSystemDataCache();
+            return result;
         } catch (error) {
             return { data: [], error: error instanceof Error ? error : new Error(String(error)), source: 'compat' };
         }
@@ -540,6 +626,7 @@
         readSystemDataRecord,
         upsertSystemData,
         deleteSystemData,
+        clearSystemDataCache,
         probeSystemData
     };
 });
