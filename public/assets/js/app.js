@@ -12524,13 +12524,17 @@ function hasCountyRankScopeForDisplay() {
 }
 window.hasCountyRankScopeForDisplay = hasCountyRankScopeForDisplay;
 
-function hasStudentCountyRankData(list = RAW_DATA, subjects = SUBJECTS) {
-    if (!hasCountyRankScopeForDisplay()) return false;
+function hasCountyRankValuesInData(list = RAW_DATA, subjects = SUBJECTS) {
     if (!Array.isArray(list) || list.length === 0) return false;
     return list.some((student) => {
         if (getStudentCountyRankValue(student, 'total') !== '-') return true;
         return (subjects || []).some((subject) => getStudentCountyRankValue(student, subject) !== '-');
     });
+}
+window.hasCountyRankValuesInData = hasCountyRankValuesInData;
+
+function hasStudentCountyRankData(list = RAW_DATA, subjects = SUBJECTS) {
+    return hasCountyRankValuesInData(list, subjects);
 }
 window.hasStudentCountyRankData = hasStudentCountyRankData;
 
