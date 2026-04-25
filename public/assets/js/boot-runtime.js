@@ -215,6 +215,14 @@ var SYSTEM_RUNTIME_SKILLS = {
             { key: 'single-school-eval', src: './assets/js/single-school-eval-runtime.js' }
         ]
     },
+    'county-analysis': {
+        mode: 'demand',
+        warmup: 'balanced',
+        triggers: ['county-analysis', 'county-teacher-portrait', 'county-school-horizontal'],
+        entries: [
+            { key: 'county-analysis', src: './assets/js/county-analysis-runtime.js' }
+        ]
+    },
     'progress-analysis': {
         mode: 'demand',
         warmup: 'full',
@@ -302,7 +310,6 @@ var APP_MODULES = [
     './assets/js/ranking-data-service-runtime.js',
     './assets/js/app.js',
     './assets/js/macro-analysis-compat-runtime.js',
-    './assets/js/county-analysis-runtime.js',
     './assets/js/school-normalization-runtime.js',
     './assets/js/compare-shared-runtime.js',
     './assets/js/compare-cloud-context-runtime.js',
@@ -2082,6 +2089,10 @@ window.ensureSingleSchoolEvalRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('single-school-eval');
 };
 
+window.ensureCountyAnalysisRuntimeLoaded = function () {
+    return window.SystemRuntimeLoader.load('county-analysis');
+};
+
 window.ensureProgressAnalysisRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('progress-analysis');
 };
@@ -2213,6 +2224,15 @@ if (!window.AccountExcel) {
     'SSE_export'
 ].forEach((name) => {
     installOptionalRuntimeMethod(name, window.ensureSingleSchoolEvalRuntimeLoaded);
+});
+
+[
+    'renderCountyAnalysis',
+    'exportCountyAnalysisSection',
+    'setCountyAnalysisSchoolNameFromInput',
+    'generateCountySchoolHorizontalTable'
+].forEach((name) => {
+    installOptionalRuntimeMethod(name, window.ensureCountyAnalysisRuntimeLoaded);
 });
 
 [

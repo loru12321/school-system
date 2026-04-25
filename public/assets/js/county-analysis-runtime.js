@@ -1777,7 +1777,6 @@
         ensureCountySubmoduleSections();
         bindUploadPromptArm();
         installPatches();
-        applyCountyRanks();
         decorateUploadCountyStatus();
         let attempts = 0;
         const timer = setInterval(() => {

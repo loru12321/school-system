@@ -234,6 +234,10 @@
     }
 
     function initStudentDetailsEntry() {
+        if (typeof window.ensureCountyAnalysisRuntimeLoaded === 'function'
+            && !window.__COUNTY_ANALYSIS_RUNTIME_PATCHED__) {
+            window.ensureCountyAnalysisRuntimeLoaded().catch((error) => console.warn('student county rank runtime failed:', error));
+        }
         updateStudentSchoolSelect();
         if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
         if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
@@ -607,9 +611,30 @@
         }
         if (TEACHING_MANAGEMENT_MODULE_IDS.has(id)) return initTeachingManagementEntry(id);
         if (id === 'indicator' && typeof refreshIndicatorResults === 'function') refreshIndicatorResults(true);
-        if ((id === 'county-analysis' || id === 'county-teacher-portrait' || id === 'county-school-horizontal')
-            && typeof window.renderCountyAnalysis === 'function') {
-            return window.renderCountyAnalysis(id);
+        if (id === 'county-analysis' || id === 'county-teacher-portrait' || id === 'county-school-horizontal') {
+            const renderCounty = () => {
+                if (typeof window.renderCountyAnalysis === 'function') {
+                    return window.renderCountyAnalysis(id);
+                }
+                return false;
+            };
+            if (typeof window.ensureCountyAnalysisRuntimeLoaded === 'function'
+                && !window.__COUNTY_ANALYSIS_RUNTIME_PATCHED__) {
+                return window.ensureCountyAnalysisRuntimeLoaded()
+                    .then(() => {
+                        const active = document.getElementById(id)?.classList.contains('active')
+                            || (id === 'county-analysis'
+                                && (document.getElementById('county-teacher-portrait')?.classList.contains('active')
+                                    || document.getElementById('county-school-horizontal')?.classList.contains('active')));
+                        if (active) return renderCounty();
+                        return false;
+                    })
+                    .catch((error) => {
+                        console.warn('init county analysis failed:', error);
+                        return false;
+                    });
+            }
+            return renderCounty();
         }
         if (id === 'high-score' && typeof renderHighScoreTable === 'function') renderHighScoreTable();
         if (id === 'student-overview') return initStudentOverviewEntry();

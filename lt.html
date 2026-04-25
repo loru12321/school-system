@@ -235,6 +235,14 @@ var SYSTEM_RUNTIME_SKILLS = {
             { key: 'single-school-eval', src: './public/assets/js/single-school-eval-runtime.js' }
         ]
     },
+    'county-analysis': {
+        mode: 'demand',
+        warmup: 'balanced',
+        triggers: ['county-analysis', 'county-teacher-portrait', 'county-school-horizontal'],
+        entries: [
+            { key: 'county-analysis', src: './public/assets/js/county-analysis-runtime.js' }
+        ]
+    },
     'progress-analysis': {
         mode: 'demand',
         warmup: 'full',
@@ -322,7 +330,6 @@ var APP_MODULES = [
     './public/assets/js/ranking-data-service-runtime.js',
     './public/assets/js/app.js',
     './public/assets/js/macro-analysis-compat-runtime.js',
-    './public/assets/js/county-analysis-runtime.js',
     './public/assets/js/school-normalization-runtime.js',
     './public/assets/js/compare-shared-runtime.js',
     './public/assets/js/compare-cloud-context-runtime.js',
@@ -2102,6 +2109,10 @@ window.ensureSingleSchoolEvalRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('single-school-eval');
 };
 
+window.ensureCountyAnalysisRuntimeLoaded = function () {
+    return window.SystemRuntimeLoader.load('county-analysis');
+};
+
 window.ensureProgressAnalysisRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('progress-analysis');
 };
@@ -2233,6 +2244,15 @@ if (!window.AccountExcel) {
     'SSE_export'
 ].forEach((name) => {
     installOptionalRuntimeMethod(name, window.ensureSingleSchoolEvalRuntimeLoaded);
+});
+
+[
+    'renderCountyAnalysis',
+    'exportCountyAnalysisSection',
+    'setCountyAnalysisSchoolNameFromInput',
+    'generateCountySchoolHorizontalTable'
+].forEach((name) => {
+    installOptionalRuntimeMethod(name, window.ensureCountyAnalysisRuntimeLoaded);
 });
 
 [
