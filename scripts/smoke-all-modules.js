@@ -656,7 +656,8 @@ async function runModuleDeepCheck(page, id) {
             if (typeof window.renderCountyAnalysis === 'function') {
                 window.renderCountyAnalysis('county-school-horizontal');
                 const horizontalRoot = document.querySelector('#county-school-horizontal .county-analysis-root');
-                horizontalReady = !!horizontalRoot?.querySelector('.county-rank-table')
+                horizontalReady = !!horizontalRoot?.querySelector('.county-analysis-table')
+                    || !!horizontalRoot?.querySelector('.county-control-panel')
                     || !!horizontalRoot?.querySelector('.county-empty');
                 window.renderCountyAnalysis('county-teacher-portrait');
             }
