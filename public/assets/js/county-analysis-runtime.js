@@ -197,7 +197,7 @@
         };
         const townshipSchools = names.filter((name) => isTownship(name));
         const countySchools = names.filter((name) => !isTownship(name));
-        const hasCountyScope = !!scope?.includesCounty && townshipSchools.length > 0 && countySchools.length > 0;
+        const hasCountyScope = !!scope?.includesCounty && (townshipSchools.length > 0 || countySchools.length > 0);
         return {
             examKey: getExamKey(),
             includesCounty: hasCountyScope,
@@ -709,7 +709,7 @@
             ? names.filter((name) => !knownTownshipSet.has(name))
             : [];
 
-        const includesCounty = knownTownshipSchools.length > 0 && inferredCountySchools.length > 0;
+        const includesCounty = inferredCountySchools.length > 0;
         const townshipSchools = knownTownshipSchools;
 
         if (includesCounty && window.UI?.toast) {
@@ -718,7 +718,7 @@
 
         const scope = normalizeScope({
             includesCounty,
-            explicitCountyUpload: includesCounty && state.preUploadTownshipSchools.length > 0,
+            explicitCountyUpload: includesCounty,
             townshipSchools,
             signature,
             updatedAt: new Date().toISOString()

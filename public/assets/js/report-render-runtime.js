@@ -136,8 +136,16 @@ function renderSingleReportCardHTML(stu, mode) {
     const normalizeRankInfo = (rankLike) => ({
         class: rankLike?.class ?? rankLike?.rankClass ?? '-',
         school: rankLike?.school ?? rankLike?.rankSchool ?? '-',
-        township: rankLike?.township ?? rankLike?.rankTown ?? '-'
+        township: rankLike?.township ?? rankLike?.rankTown ?? '-',
+        county: rankLike?.county ?? rankLike?.rankCounty ?? '-'
     });
+    const hasHistoricalCountyRank = (studentLike, subject = 'total') => {
+        if (!studentLike || typeof studentLike !== 'object') return false;
+        const rankValue = subject === 'total'
+            ? (studentLike?.ranks?.total?.county ?? studentLike?.rankCounty ?? studentLike?.countyRank)
+            : (studentLike?.ranks?.[subject]?.county ?? studentLike?.subjectRanks?.[subject]?.county);
+        return rankValue !== undefined && rankValue !== null && rankValue !== '';
+    };
     const hasClassRankScope = (studentLike) => {
         const rawClass = String(studentLike?.class ?? '').trim();
         const normalizedClass = typeof normalizeClass === 'function' ? normalizeClass(rawClass) : rawClass;
@@ -186,7 +194,7 @@ function renderSingleReportCardHTML(stu, mode) {
     const curSchoolRank = safeGet(reportStu, 'ranks.total.school', '-');
     const prevSchoolRank = compareTotalRanks.school ?? prevStu?.schoolRank ?? '-';
     const curCountyRank = getStudentCountyRankValue(reportStu, 'total');
-    const prevCountyRank = compareTotalRanks.county ?? '-';
+    const prevCountyRank = hasHistoricalCountyRank(compareStu, 'total') ? (compareTotalRanks.county ?? '-') : '-';
 
     // 单校判断
     const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
@@ -251,7 +259,7 @@ function renderSingleReportCardHTML(stu, mode) {
             const curTR = displayRankValue(safeGet(reportStu, `ranks.${sub}.township`, '-'), showTownRank);
             const tT = showTownRank ? getTrendBadge(curTR, prevRanks.township || '-', 'rank') : '';
             const curCountyR = getStudentCountyRankValue(reportStu, sub);
-            const tCounty = showCountyRank ? getTrendBadge(curCountyR, prevRanks.county || '-', 'rank') : '';
+            const tCounty = showCountyRank && hasHistoricalCountyRank(compareStu, sub) ? getTrendBadge(curCountyR, prevRanks.county || '-', 'rank') : '';
 
             tableRows += `<tr style="transition:0.2s;" onmouseover="this.style.background='rgba(241,245,249,0.5)'" onmouseout="this.style.background='transparent'">
                     ${renderResponsiveTableCell('科目', sub, 'font-weight:600; color:#475569;')}

@@ -12518,10 +12518,9 @@ window.getCountyRankScopeForDisplay = getCountyRankScopeForDisplay;
 function hasCountyRankScopeForDisplay() {
     const scope = getCountyRankScopeForDisplay();
     if (!scope || scope.includesCounty !== true) return false;
-    if (scope.explicitCountyUpload !== true && scope.source !== 'county-upload') return false;
     const countyCount = Array.isArray(scope.countySchools) ? scope.countySchools.length : 0;
     const townshipCount = Array.isArray(scope.townshipSchools) ? scope.townshipSchools.length : 0;
-    return countyCount > 1 && townshipCount > 0;
+    return countyCount > 0 || townshipCount > 0;
 }
 window.hasCountyRankScopeForDisplay = hasCountyRankScopeForDisplay;
 
