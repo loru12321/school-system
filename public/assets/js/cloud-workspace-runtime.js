@@ -88,6 +88,23 @@
         console.error(label, error);
     }
 
+    async function selectSystemData(options = {}) {
+        if (window.CloudApi && typeof window.CloudApi.selectSystemData === 'function') {
+            return window.CloudApi.selectSystemData(options);
+        }
+        if (!window.sbClient || typeof window.sbClient.from !== 'function') {
+            return { data: options.maybeSingle ? null : [], error: new Error('CLOUD_CLIENT_MISSING') };
+        }
+        let query = window.sbClient.from(CLOUD_TABLE).select(options.select || '*');
+        if (options.keyEq) query = query.eq('key', options.keyEq);
+        if (options.keyLike) query = query.like('key', options.keyLike);
+        if (Array.isArray(options.keyIn) && options.keyIn.length) query = query.in('key', options.keyIn);
+        if (options.order) query = query.order(options.order, { ascending: options.ascending !== false });
+        if (Number.isFinite(Number(options.limit)) && Number(options.limit) > 0) query = query.limit(Number(options.limit));
+        if (options.maybeSingle && typeof query.maybeSingle === 'function') query = query.maybeSingle();
+        return query;
+    }
+
     const WORKSPACE_SYNC_META_PREFIX = 'CLOUD_WORKSPACE_META_V2::';
     const WORKSPACE_SYNC_QUEUE_KEY = 'CLOUD_WORKSPACE_SYNC_QUEUE_V2';
     const CACHE_MACHINE_ID_KEY = 'SCHOOL_SYSTEM_CACHE_MACHINE_ID_V1';
@@ -215,21 +232,21 @@
     }
 
     async function fetchWorkspaceSnapshotMeta(key) {
-        const { data, error } = await window.sbClient
-            .from(CLOUD_TABLE)
-            .select('updated_at')
-            .eq('key', key)
-            .maybeSingle();
+        const { data, error } = await selectSystemData({
+            select: 'updated_at',
+            keyEq: key,
+            maybeSingle: true
+        });
         if (error) throw error;
         return data || null;
     }
 
     async function fetchWorkspaceSnapshotRow(key) {
-        const { data, error } = await window.sbClient
-            .from(CLOUD_TABLE)
-            .select('content,updated_at')
-            .eq('key', key)
-            .maybeSingle();
+        const { data, error } = await selectSystemData({
+            select: 'content,updated_at',
+            keyEq: key,
+            maybeSingle: true
+        });
         if (error) throw error;
         return data || null;
     }
@@ -413,11 +430,11 @@
 
             safeToast('正在检查云端数据...', 'info');
             try {
-                const { data, error } = await window.sbClient
-                    .from(CLOUD_TABLE)
-                    .select('content,updated_at')
-                    .eq('key', key)
-                    .maybeSingle();
+                const { data, error } = await selectSystemData({
+                    select: 'content,updated_at',
+                    keyEq: key,
+                    maybeSingle: true
+                });
                 if (error) throw error;
                 if (!data) return false;
 
@@ -481,11 +498,12 @@
 
                 try {
                     const chunkSize = 10;
-                    const { data: metaRows, error: metaErr } = await window.sbClient
-                        .from(CLOUD_TABLE)
-                        .select('key, updated_at')
-                        .like('key', `${cid}%`)
-                        .order('updated_at', { ascending: true });
+                    const { data: metaRows, error: metaErr } = await selectSystemData({
+                        select: 'key,updated_at',
+                        keyLike: `${cid}%`,
+                        order: 'updated_at',
+                        ascending: true
+                    });
                     if (metaErr) throw metaErr;
 
                     const candidates = (metaRows || []).filter(row => {
@@ -517,10 +535,10 @@
                     const rowMap = new Map();
                     for (let i = 0; i < keysToFetch.length; i += chunkSize) {
                         const chunk = keysToFetch.slice(i, i + chunkSize);
-                        const { data: chunkRows, error: chunkErr } = await window.sbClient
-                            .from(CLOUD_TABLE)
-                            .select('key, content, updated_at')
-                            .in('key', chunk);
+                        const { data: chunkRows, error: chunkErr } = await selectSystemData({
+                            select: 'key,content,updated_at',
+                            keyIn: chunk
+                        });
                         if (chunkErr) throw chunkErr;
                         (chunkRows || []).forEach(r => rowMap.set(r.key, r));
                     }
