@@ -154,12 +154,13 @@
             specNote: '如果 Windows 弹出 SmartScreen，请选择“更多信息”后继续运行当前 EXE。'
         }
     };
+    const seedReleases = getSeedReleases();
     const state = {
         pagePlatform: detectPreferredDownloadPlatform(),
         modalPlatform: detectPreferredDownloadPlatform(),
-        releases: getSeedReleases(),
+        releases: seedReleases,
         lastError: '',
-        lastFetchedAt: 0,
+        lastFetchedAt: seedReleases.length ? Date.now() : 0,
         loading: false,
         fetchPromise: null,
         nativeInfo: null,
@@ -236,6 +237,18 @@
 
     function ensureArray(value) {
         return Array.isArray(value) ? value : [];
+    }
+
+    function shouldLogVersionCenterDiagnostics() {
+        try {
+            return String(localStorage.getItem('DEBUG_VERSION_CENTER') || '').trim() === 'true';
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function logVersionCenterWarning(...args) {
+        if (shouldLogVersionCenterDiagnostics()) console.warn(...args);
     }
 
     function normalizePlatformVersion(entry, fallbackLabel = '') {
@@ -383,7 +396,7 @@
                 return state.nativeInfo;
             })
             .catch((error) => {
-                console.warn('[version-center] read native app info failed:', error);
+                logVersionCenterWarning('[version-center] read native app info failed:', error);
                 state.nativeInfo = {};
                 return state.nativeInfo;
             })
@@ -1149,7 +1162,7 @@
                     prompt: true,
                     source: 'version-center'
                 }).catch((error) => {
-                    console.warn('[version-center] check updates failed:', error);
+                    logVersionCenterWarning('[version-center] check updates failed:', error);
                     notify('检查更新失败，请稍后重试', 'error');
                 });
                 return;
@@ -1378,7 +1391,7 @@
                 return state.releases;
             })
             .catch((error) => {
-                console.warn('[version-center] fetch releases failed:', error);
+                logVersionCenterWarning('[version-center] fetch releases failed:', error);
                 state.lastError = error instanceof Error ? error.message : String(error);
                 if (!state.releases.length) state.releases = [buildFallbackRelease()];
                 refreshSurfaces();

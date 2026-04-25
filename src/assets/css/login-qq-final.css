@@ -2336,3 +2336,17 @@ body[data-mobile-architecture="apk-v2"] #login-overlay[data-login-layout="qq-ful
     width: 100% !important;
     margin-top: 0 !important;
 }
+
+/* Guard against stale login HTML that rendered the old inline form inside the portal panel. */
+#login-overlay[data-login-layout="qq-fullscreen"] .login-auth-panel > .login-auth-utility,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-auth-panel > .login-system-overview,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-auth-panel > .login-mobile-highlights,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-auth-panel > .login-auth-card,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-auth-panel > #login-form {
+    display: none !important;
+}
+
+#login-overlay[data-login-layout="qq-fullscreen"] .login-modal-backdrop .login-auth-card,
+#login-overlay[data-login-layout="qq-fullscreen"] .login-modal-backdrop #login-form {
+    display: block !important;
+}

@@ -624,7 +624,9 @@ function shouldProtectHtmlResponse(request, response) {
 function protectHtmlResponse(request, response) {
   if (!shouldProtectHtmlResponse(request, response)) return response;
   const headers = new Headers(response.headers);
-  headers.set('Cache-Control', mergeCacheControl(headers.get('Cache-Control'), ['public', 'no-transform']));
+  headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, no-transform');
+  headers.set('Pragma', 'no-cache');
+  headers.set('Expires', '0');
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,

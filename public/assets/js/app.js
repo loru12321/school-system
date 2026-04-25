@@ -2757,12 +2757,15 @@ const Auth = {
         const navLinks = Array.from(overlay.querySelectorAll('.login-stage-nav-links a'));
         const navLinksWrap = overlay.querySelector('.login-stage-nav-links');
         const navButton = overlay.querySelector('.login-stage-nav-login');
-        const introLink = navLinks[0];
-        const modalLink = navLinks[1];
-        const downloadLink = navLinks[2];
+        const pickNavLink = (nav, fallbackIndex) => {
+            return overlay.querySelector(`.login-stage-nav-links a[data-nav="${nav}"]`) || navLinks[fallbackIndex] || null;
+        };
+        const introLink = pickNavLink('intro', 0);
+        const modalLink = pickNavLink('modal', 1);
+        const downloadLink = pickNavLink('download', 2);
 
-        if (navLinksWrap && modalLink && downloadLink && introLink) {
-            [modalLink, downloadLink, introLink].forEach((link) => navLinksWrap.appendChild(link));
+        if (navLinksWrap) {
+            [introLink, modalLink, downloadLink].filter(Boolean).forEach((link) => navLinksWrap.appendChild(link));
         }
 
         [introLink, modalLink, downloadLink].forEach((link) => {
@@ -3374,7 +3377,7 @@ const Auth = {
                 ],
                 launchKicker: '登录窗口',
                 launchCopy: '先选择角色，再打开唯一登录窗口；需要了解流程、权限和成绩规则时，从右上角进入“系统介绍”。',
-                launchNote: '点击“应用下载”会打开下载中心，可在里面切换安卓下载与桌面端下载，并复制对应链接。',
+                launchNote: '登录窗口只负责身份验证，系统介绍与下载中心都放在独立入口里，不再混在登录框内。',
                 stageFeatureTitle: '家长端聚焦成绩查询、成长报告与关键提醒',
                 stageFeatureCopy: '说明内容不再直接压在首页，浏览路径更顺，手机上也能更快进入登录动作。',
                 modalChip: '家长端登录窗口',
@@ -3403,7 +3406,7 @@ const Auth = {
                 ],
                 launchKicker: '登录窗口',
                 launchCopy: '按角色选择学校端或家长端，再在唯一登录窗口中完成验证；系统介绍已移到右上角独立弹窗。',
-                launchNote: '应用下载会打开双端下载中心，系统介绍会完整说明模块结构、角色权限、成绩计算和绩效比较逻辑。',
+                launchNote: '登录窗口只负责身份验证；系统介绍会完整说明模块结构、角色权限、成绩计算和绩效比较逻辑。',
                 stageFeatureTitle: '一屏直达成绩分析、教学管理、质量预警与数据维护',
                 stageFeatureCopy: '首屏保留强入口和关键价值点，详细说明延后到独立弹窗，整体层次更清爽也更接近国际化产品首页。',
                 modalChip: '学校端登录窗口',
