@@ -482,7 +482,11 @@ function closeSpotlight() {
 }
 
 function jsStringLiteral(value) {
-    return JSON.stringify(String(value ?? ''));
+    return JSON.stringify(String(value ?? ''))
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
 }
 window.jsStringLiteral = jsStringLiteral;
 
