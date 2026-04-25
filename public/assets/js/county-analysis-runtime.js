@@ -366,11 +366,53 @@
     }
 
     function hasTeacherAssignments() {
-        return !!window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0;
+        return Object.keys(getScopedTeacherAssignmentsForCounty().map || {}).length > 0;
     }
 
     function hasTeacherStats() {
         return !!window.TEACHER_STATS && Object.keys(window.TEACHER_STATS).length > 0;
+    }
+
+    function getCurrentSchoolNameForTeacherScope() {
+        if (typeof window.readCurrentSchool === 'function') return String(window.readCurrentSchool() || '').trim();
+        return String(window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || document.getElementById('mySchoolSelect')?.value || '').trim();
+    }
+
+    function getScopedTeacherAssignmentsForCounty() {
+        const teacherMap = window.TEACHER_MAP && typeof window.TEACHER_MAP === 'object' ? window.TEACHER_MAP : {};
+        const schoolMap = window.TEACHER_SCHOOL_MAP && typeof window.TEACHER_SCHOOL_MAP === 'object' ? window.TEACHER_SCHOOL_MAP : {};
+        const schoolName = getCurrentSchoolNameForTeacherScope();
+        const schoolValues = Object.values(schoolMap).map((value) => String(value || '').trim()).filter(Boolean);
+        if (!schoolName || !schoolValues.length) {
+            return { map: teacherMap, schoolMap, schoolName, scoped: false, matched: Object.keys(teacherMap).length > 0 };
+        }
+        const scopedMap = {};
+        const scopedSchoolMap = {};
+        Object.entries(teacherMap).forEach(([key, teacherName]) => {
+            if (String(schoolMap[key] || '').trim() !== schoolName) return;
+            scopedMap[key] = teacherName;
+            scopedSchoolMap[key] = schoolMap[key];
+        });
+        return {
+            map: scopedMap,
+            schoolMap: scopedSchoolMap,
+            schoolName,
+            scoped: true,
+            matched: Object.keys(scopedMap).length > 0
+        };
+    }
+
+    function applyScopedTeacherAssignmentsForCounty() {
+        const scoped = getScopedTeacherAssignmentsForCounty();
+        if (!scoped.scoped || !scoped.matched) return scoped;
+        if (Object.keys(scoped.map).length === Object.keys(window.TEACHER_MAP || {}).length) return scoped;
+        if (typeof window.setTeacherMap === 'function') window.setTeacherMap(scoped.map);
+        else window.TEACHER_MAP = scoped.map;
+        if (typeof window.setTeacherSchoolMap === 'function') window.setTeacherSchoolMap(scoped.schoolMap);
+        else window.TEACHER_SCHOOL_MAP = scoped.schoolMap;
+        if (typeof window.setTeacherStats === 'function') window.setTeacherStats({});
+        else window.TEACHER_STATS = {};
+        return scoped;
     }
 
     function shouldAttemptTeacherCloudLoad() {
@@ -379,7 +421,9 @@
     }
 
     async function ensureTeacherContextForCountyAnalysis(force = false) {
-        const teacherSig = `${getDataSignature()}::${Object.keys(window.TEACHER_MAP || {}).length}::${Object.keys(window.TEACHER_STATS || {}).length}`;
+        const schoolName = getCurrentSchoolNameForTeacherScope();
+        const scopedAssignments = getScopedTeacherAssignmentsForCounty();
+        const teacherSig = `${getDataSignature()}::${schoolName}::${Object.keys(scopedAssignments.map || {}).length}::${Object.keys(window.TEACHER_STATS || {}).length}`;
         const now = Date.now();
         if (!force
             && state.lastTeacherContextSignature === teacherSig
@@ -395,7 +439,7 @@
         state.teacherContextPromise = (async () => {
             let changed = false;
 
-            if (!hasTeacherAssignments() && typeof window.tryAutoRestoreTeacherMap === 'function') {
+            if (!hasTeacherAssignments() && !schoolName && typeof window.tryAutoRestoreTeacherMap === 'function') {
                 try {
                     const restored = await withTimeout(window.tryAutoRestoreTeacherMap(), 4000, false);
                     changed = !!restored || changed;
@@ -412,13 +456,16 @@
                     const loaded = await withTimeout(window.CloudManager.loadTeachers({
                         background: true,
                         toast: false,
-                        blocking: false
+                        blocking: false,
+                        schoolName
                     }), 5000, false);
                     changed = !!loaded || changed;
                 } catch (error) {
                     console.warn('[county-analysis] loadTeachers failed:', error);
                 }
             }
+
+            applyScopedTeacherAssignmentsForCounty();
 
             if (!hasTeacherStats() && hasTeacherAssignments() && typeof window.analyzeTeachers === 'function') {
                 try {
@@ -450,6 +497,7 @@
     }
 
     function getTeacherRows(limit = 12) {
+        applyScopedTeacherAssignmentsForCounty();
         if (!hasTeacherStats() && hasTeacherAssignments() && typeof window.analyzeTeachers === 'function') {
             try {
                 window.analyzeTeachers();

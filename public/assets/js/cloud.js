@@ -105,6 +105,60 @@
         return String(window.CURRENT_TEACHER_TERM_ID || localStorage.getItem('CURRENT_TEACHER_TERM_ID') || '').trim();
     }
 
+    function getCurrentSchoolName() {
+        if (typeof window.readCurrentSchool === 'function') return String(window.readCurrentSchool() || '').trim();
+        return String(window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '').trim();
+    }
+
+    function normalizeTeacherSchoolForKey(schoolName) {
+        return String(schoolName || '')
+            .trim()
+            .replace(/[\s\/\\?&=#%:;|]+/g, '')
+            .replace(/[^\u4e00-\u9fa5\w.-]/g, '');
+    }
+
+    function getScopedTeacherKey(baseKey, schoolName) {
+        const safeSchool = normalizeTeacherSchoolForKey(schoolName);
+        if (!baseKey || !safeSchool) return baseKey || '';
+        return String(baseKey).replace(/^TEACHERS_([^_]+)_/, `TEACHERS_$1_${safeSchool}_`);
+    }
+
+    function teacherSchoolMatches(left, right) {
+        const a = String(left || '').trim();
+        const b = String(right || '').trim();
+        return !!a && !!b && a === b;
+    }
+
+    function filterTeacherPayloadBySchool(map, schoolMap, schoolName) {
+        const sourceMap = map && typeof map === 'object' ? map : {};
+        const sourceSchoolMap = schoolMap && typeof schoolMap === 'object' ? schoolMap : {};
+        const wantedSchool = String(schoolName || '').trim();
+        if (!wantedSchool) return { map: sourceMap, schoolMap: sourceSchoolMap, matched: false, scoped: false };
+        const schoolValues = Object.values(sourceSchoolMap).map(value => String(value || '').trim()).filter(Boolean);
+        if (!schoolValues.length) return { map: sourceMap, schoolMap: sourceSchoolMap, matched: false, scoped: false };
+        const scopedMap = {};
+        const scopedSchoolMap = {};
+        Object.entries(sourceMap).forEach(([key, teacherName]) => {
+            if (!teacherSchoolMatches(sourceSchoolMap[key], wantedSchool)) return;
+            scopedMap[key] = teacherName;
+            scopedSchoolMap[key] = sourceSchoolMap[key];
+        });
+        return {
+            map: scopedMap,
+            schoolMap: scopedSchoolMap,
+            matched: Object.keys(scopedMap).length > 0,
+            scoped: true
+        };
+    }
+
+    function extractTeacherTermIdFromKey(key, schoolName = '') {
+        const text = String(key || '').trim();
+        const body = text.replace(/^TEACHERS_/, '').replace(/^[^_]+_/, '');
+        const safeSchool = normalizeTeacherSchoolForKey(schoolName);
+        if (safeSchool && body.startsWith(`${safeSchool}_`)) return body.slice(safeSchool.length + 1);
+        return body;
+    }
+
     function getTeacherTermBase(termId) {
         if (ExamState && typeof ExamState.getTeacherTermBase === 'function') {
             return String(ExamState.getTeacherTermBase(termId) || '').trim();
@@ -1113,7 +1167,7 @@
             return parts.join('_').replace(/[\s\/\\?]/g, '');
         },
 
-        getTeacherKey: () => {
+        getTeacherKey: (options = {}) => {
             const termSel = document.getElementById('dm-teacher-term-select');
             const meta = typeof getExamMetaFromUI === 'function' ? getExamMetaFromUI() : {};
             const exactUiTeacherTerm = meta.year && meta.term
@@ -1126,7 +1180,9 @@
                 || (typeof getTermId === 'function' ? getTermId(meta) : '');
             const cohortId = getCurrentCohortId() || window.CURRENT_COHORT_META?.id || meta.cohortId;
             if (!termId || !cohortId) return null;
-            return `${KEY_PREFIX_TEACHERS}${cohortId}级_${termId}`;
+            const baseKey = `${KEY_PREFIX_TEACHERS}${cohortId}级_${termId}`;
+            const schoolName = options && typeof options === 'object' ? String(options.schoolName || '').trim() : '';
+            return schoolName ? getScopedTeacherKey(baseKey, schoolName) : baseKey;
         },
 
         // 工作区/考试快照运行时已拆分到 public/assets/js/cloud-workspace-runtime.js
@@ -1151,12 +1207,23 @@
                     map: teacherMap,
                     schoolMap: getTeacherSchoolMap()
                 });
+                const nowIso = new Date().toISOString();
                 const { error } = await upsertSystemData({
                     key,
                     content,
-                    updated_at: new Date().toISOString()
+                    updated_at: nowIso
                 });
                 if (error) throw error;
+
+                const schoolKey = this.getTeacherKey({ schoolName: getCurrentSchoolName() });
+                if (schoolKey && schoolKey !== key) {
+                    const { error: schoolError } = await upsertSystemData({
+                        key: schoolKey,
+                        content,
+                        updated_at: nowIso
+                    });
+                    if (schoolError) throw schoolError;
+                }
 
                 localStorage.setItem('TEACHER_SYNC_AT', new Date().toISOString());
                 if (typeof logAction === 'function') logAction('任课同步', `任课表已保存：${key}`);
@@ -1188,13 +1255,15 @@
             const background = Boolean(opts.background);
             const showBlocking = !background && opts.blocking !== false;
             const showToast = opts.toast === false ? false : !background;
+            const requestedSchool = String(opts.schoolName || opts.scopeSchool || '').trim();
             if (!(await this.ensureClientReady())) return false;
 
             const requestKey = [
-                this.getTeacherKey(),
+                requestedSchool ? this.getTeacherKey({ schoolName: requestedSchool }) : this.getTeacherKey(),
                 getCurrentTeacherTermId(),
                 getCurrentTermId(),
-                getCurrentCohortId()
+                getCurrentCohortId(),
+                requestedSchool
             ].map(v => String(v || '').trim()).filter(Boolean).join('|') || 'default';
             this._teacherLoadTasks = this._teacherLoadTasks || {};
             if (this._teacherLoadTasks[requestKey]) return this._teacherLoadTasks[requestKey];
@@ -1203,7 +1272,7 @@
                 setCloudStatus('syncing', background ? '检查任课' : '拉取任课');
                 if (showBlocking) safeLoading(true, '正在从云端拉取任课表...');
                 try {
-                    let key = this.getTeacherKey();
+                    let key = requestedSchool ? this.getTeacherKey({ schoolName: requestedSchool }) : this.getTeacherKey();
                     let metaRow = null;
                     let row = null;
                     const cohortId = getCurrentCohortId();
@@ -1237,25 +1306,37 @@
                             limit: 20
                         });
                         if (error) throw error;
-                        metaRow = (rows || []).find(item => desiredTerms.some(term => {
+                        const scopedKeyPrefix = requestedSchool
+                            ? `${KEY_PREFIX_TEACHERS}${cohortId || ''}级_${normalizeTeacherSchoolForKey(requestedSchool)}_`
+                            : '';
+                        metaRow = (requestedSchool && scopedKeyPrefix
+                            ? (rows || []).find(item => String(item?.key || '').startsWith(scopedKeyPrefix)
+                                && desiredTerms.some(term => String(item?.key || '').endsWith(`_${term}`)))
+                            : null)
+                            || (rows || []).find(item => desiredTerms.some(term => {
                             const keyText = String(item?.key || '');
                             return keyText.endsWith(`_${term}`) || keyText.includes(`_${term}_`);
                         })) || rows?.[0] || null;
                         key = metaRow?.key || key;
                     }
 
-                    const keyTermId = String(key || metaRow?.key || '').replace(/^TEACHERS_[^_]+_/, '').trim();
+                    const keyTermId = extractTeacherTermIdFromKey(key || metaRow?.key || '', requestedSchool).trim();
                     const localEntry = resolveLocalTeacherHistoryEntry(keyTermId || desiredTerms[0] || '');
                     const remoteTs = Number.isFinite(Date.parse(String(metaRow?.updated_at || '')))
                         ? Date.parse(String(metaRow?.updated_at || ''))
                         : 0;
 
                     if (localEntry && (!metaRow || (remoteTs && localEntry.savedAt >= (remoteTs - 1000)))) {
-                        applyLoadedTeacherPayload(localEntry.map, localEntry.schoolMap, localEntry.key || keyTermId, metaRow?.updated_at || localEntry.savedAt || '');
-                        if (showToast && !metaRow) safeToast(`已使用本地任课缓存（${Object.keys(localEntry.map).length} 条）`, 'success');
-                        if (typeof logAction === 'function') logAction('任课同步', `任课表使用缓存：${localEntry.key || keyTermId || 'local'}`);
-                        setCloudStatus('success', '任课已就绪');
-                        return true;
+                        const localPayload = requestedSchool
+                            ? filterTeacherPayloadBySchool(localEntry.map, localEntry.schoolMap, requestedSchool)
+                            : { map: localEntry.map, schoolMap: localEntry.schoolMap, matched: true, scoped: false };
+                        if (!requestedSchool || localPayload.matched || !localPayload.scoped) {
+                            applyLoadedTeacherPayload(localPayload.map, localPayload.schoolMap, localEntry.key || keyTermId, metaRow?.updated_at || localEntry.savedAt || '');
+                            if (showToast && !metaRow) safeToast(`已使用本地任课缓存（${Object.keys(localPayload.map).length} 条）`, 'success');
+                            if (typeof logAction === 'function') logAction('任课同步', `任课表使用缓存：${localEntry.key || keyTermId || 'local'}`);
+                            setCloudStatus('success', '任课已就绪');
+                            return true;
+                        }
                     }
 
                     if (!metaRow) {
@@ -1282,9 +1363,17 @@
                     const parsed = parsePayload(row.content) || {};
                     const map = parsed.map && typeof parsed.map === 'object' ? parsed.map : {};
                     const schoolMap = parsed.schoolMap && typeof parsed.schoolMap === 'object' ? parsed.schoolMap : {};
-                    applyLoadedTeacherPayload(map, schoolMap, keyTermId, row?.updated_at || '');
+                    const payload = requestedSchool
+                        ? filterTeacherPayloadBySchool(map, schoolMap, requestedSchool)
+                        : { map, schoolMap, matched: true, scoped: false };
+                    if (requestedSchool && payload.scoped && !payload.matched) {
+                        if (showToast) safeToast(`未找到 ${requestedSchool} 的任课表`, 'warning');
+                        setCloudStatus('success', '暂无本校任课');
+                        return false;
+                    }
+                    applyLoadedTeacherPayload(payload.map, payload.schoolMap, keyTermId, row?.updated_at || '');
 
-                    if (showToast) safeToast(`已加载任课表（${Object.keys(map).length} 条）`, 'success');
+                    if (showToast) safeToast(`已加载任课表（${Object.keys(payload.map).length} 条）`, 'success');
                     if (typeof logAction === 'function') logAction('任课同步', `任课表已加载：${metaRow.key || key || 'latest'}`);
                     setCloudStatus('success', '任课已拉取');
                     return true;
