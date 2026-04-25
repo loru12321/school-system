@@ -367,6 +367,11 @@ assert.ok(bootRuntime.includes(html2canvasVendorRef), 'boot-runtime.js should re
 assert.ok(bootRuntime.includes("window.ensureAlasqlVendorLoaded = function ()"), 'boot-runtime.js should expose ensureAlasqlVendorLoaded');
 assert.ok(bootRuntime.includes("window.ensurePdfExportVendorsLoaded = function ()"), 'boot-runtime.js should expose ensurePdfExportVendorsLoaded');
 assert.ok(bootRuntime.includes("window.ensurePresentationVendorsLoaded = function ()"), 'boot-runtime.js should expose ensurePresentationVendorsLoaded');
+assert.ok(bootRuntime.includes('var SYSTEM_RUNTIME_SKILLS = {'), 'boot-runtime.js should declare a runtime skill manifest');
+assert.ok(bootRuntime.includes('window.SystemRuntimeLoader'), 'boot-runtime.js should expose the runtime skill loader');
+assert.ok(bootRuntime.includes("'teacher-analysis':"), 'runtime skill manifest should include teacher-analysis');
+assert.ok(bootRuntime.includes("'presentation-export':"), 'runtime skill manifest should include presentation-export');
+assert.ok(bootRuntime.includes('loadAll()'), 'runtime skill loader should support full loading');
 assert.strictEqual(initSupabaseMatches.length, 1, 'boot-runtime.js should define initSupabase exactly once');
 assert.strictEqual(supabaseUrlAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_URL exactly once');
 assert.strictEqual(supabaseKeyAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_KEY exactly once');

@@ -95,6 +95,169 @@ var DEFERRED_APP_MODULES = [
     './assets/vendor/simplebar/simplebar.min.js'
 ];
 
+var SYSTEM_RUNTIME_SKILLS = {
+    'shell-enhancements': {
+        mode: 'idle',
+        warmup: 'balanced',
+        triggers: ['app-shell', 'hover-tooltips', 'scroll-effects'],
+        entries: [
+            { key: 'scroll-trigger-vendor', src: './assets/vendor/gsap/ScrollTrigger.min.js' },
+            { key: 'popper-vendor', src: './assets/vendor/popperjs/popper.min.js' },
+            { key: 'tippy-vendor', src: './assets/vendor/tippyjs/tippy.umd.min.js' },
+            { key: 'simplebar-vendor', src: './assets/vendor/simplebar/simplebar.min.js' }
+        ]
+    },
+    'presentation-export': {
+        mode: 'demand',
+        warmup: 'balanced',
+        triggers: ['exportPPTReport', 'generateClassPPT'],
+        entries: [
+            { key: 'jszip-vendor', src: './assets/vendor/jszip/jszip.min.js' },
+            { key: 'pptxgen-vendor', src: './assets/vendor/pptxgenjs/pptxgen.min.js' }
+        ]
+    },
+    'pdf-export': {
+        mode: 'demand',
+        warmup: 'full',
+        triggers: ['downloadSingleReportPDF', 'batchGeneratePDF'],
+        entries: [
+            { key: 'jspdf-vendor', src: './assets/vendor/jspdf/jspdf.umd.min.js' },
+            { key: 'html2canvas-vendor', src: './assets/vendor/html2canvas/html2canvas.min.js' }
+        ]
+    },
+    'report-render': {
+        mode: 'demand',
+        warmup: 'full',
+        triggers: ['report-generator', 'printSingleReport', 'renderSingleReportCardHTML'],
+        entries: [
+            { key: 'report-render', src: './assets/js/report-render-runtime.js' },
+            { key: 'report-chart', src: './assets/js/report-chart-runtime.js' },
+            { key: 'report-export', src: './assets/js/report-export-runtime.js' },
+            { key: 'report-ai', src: './assets/js/report-ai-runtime.js' }
+        ]
+    },
+    'teacher-analysis': {
+        mode: 'demand',
+        warmup: 'full',
+        triggers: ['teacher-analysis', 'cohort-growth', 'correlation-analysis'],
+        entries: [
+            { key: 'teacher-analysis-core', src: './assets/js/teacher-analysis-core-runtime.js' },
+            { key: 'teacher-analysis-ui', src: './assets/js/teacher-analysis-ui-runtime.js' },
+            { key: 'teacher-analysis-bridge', src: './assets/js/teacher-analysis-bridge-runtime.js' },
+            { key: 'teacher-analysis-main', src: './assets/js/teacher-analysis-main-runtime.js' }
+        ]
+    },
+    'teaching-management': {
+        mode: 'demand',
+        warmup: 'balanced',
+        triggers: ['teaching-overview', 'student-overview', 'teaching-management-modules'],
+        entries: [
+            { key: 'teaching-management', src: './assets/js/teaching-management-runtime.js' }
+        ]
+    },
+    'student-compare': {
+        mode: 'demand',
+        warmup: 'full',
+        triggers: ['student-details', 'renderStudentMultiPeriodComparison'],
+        entries: [
+            { key: 'student-compare-result', src: './assets/js/student-compare-result-runtime.js' },
+            { key: 'student-compare-generate', src: './assets/js/student-compare-generate-runtime.js' },
+            { key: 'student-compare-cloud', src: './assets/js/student-compare-cloud-runtime.js' }
+        ]
+    },
+    'teacher-compare': {
+        mode: 'demand',
+        warmup: 'full',
+        triggers: ['renderTeacherMultiPeriodComparison'],
+        entries: [
+            { key: 'teacher-compare-result', src: './assets/js/teacher-compare-result-runtime.js' },
+            { key: 'teacher-compare-cloud', src: './assets/js/teacher-compare-cloud-runtime.js' }
+        ]
+    },
+    'macro-compare': {
+        mode: 'demand',
+        warmup: 'full',
+        triggers: ['renderMacroMultiPeriodComparison'],
+        entries: [
+            { key: 'macro-compare-result', src: './assets/js/macro-compare-result-runtime.js' },
+            { key: 'macro-compare-cloud', src: './assets/js/macro-compare-cloud-runtime.js' }
+        ]
+    },
+    'app-download': {
+        mode: 'demand',
+        warmup: 'balanced',
+        triggers: ['app-download-center'],
+        entries: [
+            { key: 'app-download', src: './assets/js/app-download-runtime.js' }
+        ]
+    },
+    'ai-hub': {
+        mode: 'demand',
+        warmup: 'full',
+        triggers: ['ai-analysis'],
+        entries: [
+            { key: 'ai-hub', src: './assets/js/ai-hub-runtime.js' }
+        ]
+    },
+    'school-profile': {
+        mode: 'demand',
+        warmup: 'balanced',
+        triggers: ['summary', 'showSchoolProfile'],
+        entries: [
+            { key: 'school-profile', src: './assets/js/school-profile-runtime.js' }
+        ]
+    },
+    'single-school-eval': {
+        mode: 'demand',
+        warmup: 'full',
+        triggers: ['single-school-eval'],
+        entries: [
+            { key: 'single-school-eval', src: './assets/js/single-school-eval-runtime.js' }
+        ]
+    },
+    'progress-analysis': {
+        mode: 'demand',
+        warmup: 'full',
+        triggers: ['progress-analysis'],
+        entries: [
+            { key: 'progress-analysis', src: './assets/js/progress-analysis-runtime.js' }
+        ]
+    },
+    'data-manager-sql': {
+        mode: 'demand',
+        warmup: 'full',
+        triggers: ['data-manager-sql', 'talkToData'],
+        entries: [
+            { key: 'data-manager-sql', src: './assets/js/data-manager-sql.js' }
+        ]
+    },
+    'mobile-manager': {
+        mode: 'conditional',
+        warmup: 'mobile',
+        triggers: ['mobile-layout'],
+        entries: [
+            { key: 'mobile-manager', src: './assets/js/mobile-app-runtime.js' },
+            { key: 'perf-mobile', src: './assets/js/perf-mobile-runtime.js' }
+        ]
+    },
+    'account-admin': {
+        mode: 'demand',
+        warmup: 'full',
+        triggers: ['account-admin', 'AccountExcel'],
+        entries: [
+            { key: 'account-admin', src: './assets/js/account-admin-runtime.js' }
+        ]
+    },
+    'history-compare': {
+        mode: 'demand',
+        warmup: 'full',
+        triggers: ['history-compare'],
+        entries: [
+            { key: 'history-compare', src: './assets/js/history-compare-runtime.js' }
+        ]
+    }
+};
+
 var APP_MODULES = [
     './assets/js/auth-state-runtime.js',
     './assets/js/login-entry-runtime.js',
@@ -243,6 +406,9 @@ function loadBootScript(src, timeoutMs) {
 }
 
 function loadDeferredAppModules() {
+    if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.warmup === 'function') {
+        return window.SystemRuntimeLoader.warmup();
+    }
     if (!DEFERRED_APP_MODULES.length) return Promise.resolve();
     return loadOptionalRuntimeBundle('deferred-app-modules', DEFERRED_APP_MODULES.map((src, index) => ({
         key: `deferred-app-module-${index}`,
@@ -1783,12 +1949,80 @@ function loadOptionalRuntimeBundle(key, entries) {
     return window.__optionalRuntimeLoaders[key];
 }
 
+function getRuntimeLoadProfile() {
+    try {
+        const stored = String(localStorage.getItem('SYSTEM_LOAD_PROFILE') || '').trim().toLowerCase();
+        if (stored === 'full' || stored === 'lazy' || stored === 'balanced') return stored;
+    } catch (_) {}
+    return 'balanced';
+}
+
+function getRuntimeSkillEntries(skillId) {
+    const skill = SYSTEM_RUNTIME_SKILLS[skillId];
+    return skill && Array.isArray(skill.entries) ? skill.entries.slice() : [];
+}
+
+function shouldWarmRuntimeSkill(skill, profile) {
+    if (!skill) return false;
+    if (profile === 'lazy') return false;
+    if (profile === 'full') return skill.warmup !== 'mobile';
+    return skill.warmup === 'balanced';
+}
+
+function createSystemRuntimeLoader() {
+    const loadSkill = function (skillId) {
+        const id = String(skillId || '').trim();
+        const skill = SYSTEM_RUNTIME_SKILLS[id];
+        if (!skill) return Promise.reject(new Error(`Unknown runtime skill: ${id}`));
+        return loadOptionalRuntimeBundle(`runtime-skill:${id}`, getRuntimeSkillEntries(id));
+    };
+    const loadMany = function (skillIds) {
+        return (Array.isArray(skillIds) ? skillIds : [])
+            .reduce((chain, skillId) => chain.then(() => loadSkill(skillId)), Promise.resolve());
+    };
+    const preloadSkill = function (skillId) {
+        const entries = getRuntimeSkillEntries(skillId);
+        prefetchAppModuleList(entries.map((entry) => entry.src), `runtime-skill-${String(skillId || '').replace(/[^a-z0-9-]/gi, '-')}`);
+        return Promise.resolve(true);
+    };
+    const warmup = function (profile = getRuntimeLoadProfile()) {
+        if (window.__RUNTIME_SKILL_WARMUP_PROMISE__) return window.__RUNTIME_SKILL_WARMUP_PROMISE__;
+        const skillIds = Object.keys(SYSTEM_RUNTIME_SKILLS)
+            .filter((skillId) => shouldWarmRuntimeSkill(SYSTEM_RUNTIME_SKILLS[skillId], profile));
+        skillIds.forEach(preloadSkill);
+        window.__RUNTIME_SKILL_WARMUP_PROMISE__ = loadMany(skillIds).then((result) => {
+            window.dispatchEvent(new CustomEvent('school:runtime-skills-ready', {
+                detail: { profile, skillIds }
+            }));
+            window.dispatchEvent(new CustomEvent('school:deferred-vendors-ready'));
+            return result;
+        }).catch((error) => {
+            delete window.__RUNTIME_SKILL_WARMUP_PROMISE__;
+            throw error;
+        });
+        return window.__RUNTIME_SKILL_WARMUP_PROMISE__;
+    };
+    return {
+        manifest: SYSTEM_RUNTIME_SKILLS,
+        profile: getRuntimeLoadProfile,
+        load: loadSkill,
+        loadMany,
+        preload: preloadSkill,
+        warmup,
+        loadAll() {
+            return warmup('full');
+        }
+    };
+}
+
+window.SystemRuntimeLoader = window.SystemRuntimeLoader || createSystemRuntimeLoader();
+
 window.ensureAccountAdminRuntimeLoaded = function () {
-    return loadOptionalRuntime('account-admin', './assets/js/account-admin-runtime.js');
+    return window.SystemRuntimeLoader.load('account-admin');
 };
 
 window.ensureHistoryCompareRuntimeLoaded = function () {
-    return loadOptionalRuntime('history-compare', './assets/js/history-compare-runtime.js');
+    return window.SystemRuntimeLoader.load('history-compare');
 };
 
 window.ensurePerfMobileRuntimeLoaded = function () {
@@ -1796,11 +2030,11 @@ window.ensurePerfMobileRuntimeLoaded = function () {
 };
 
 window.ensureMobileManagerRuntimeLoaded = function () {
-    return loadOptionalRuntime('mobile-manager', './assets/js/mobile-app-runtime.js');
+    return window.SystemRuntimeLoader.load('mobile-manager');
 };
 
 window.ensureDataManagerSqlRuntimeLoaded = function () {
-    return loadOptionalRuntime('data-manager-sql', './assets/js/data-manager-sql.js');
+    return window.SystemRuntimeLoader.load('data-manager-sql');
 };
 
 window.ensureAlasqlVendorLoaded = function () {
@@ -1808,26 +2042,15 @@ window.ensureAlasqlVendorLoaded = function () {
 };
 
 window.ensurePdfExportVendorsLoaded = function () {
-    return loadOptionalRuntimeBundle('pdf-export-vendors', [
-        { key: 'jspdf-vendor', src: './assets/vendor/jspdf/jspdf.umd.min.js' },
-        { key: 'html2canvas-vendor', src: './assets/vendor/html2canvas/html2canvas.min.js' }
-    ]);
+    return window.SystemRuntimeLoader.load('pdf-export');
 };
 
 window.ensurePresentationVendorsLoaded = function () {
-    return loadOptionalRuntimeBundle('presentation-vendors', [
-        { key: 'jszip-vendor', src: './assets/vendor/jszip/jszip.min.js' },
-        { key: 'pptxgen-vendor', src: './assets/vendor/pptxgenjs/pptxgen.min.js' }
-    ]);
+    return window.SystemRuntimeLoader.load('presentation-export');
 };
 
 window.ensureReportRenderRuntimeLoaded = function () {
-    return loadOptionalRuntimeBundle('report-render-bundle', [
-        { key: 'report-render', src: './assets/js/report-render-runtime.js' },
-        { key: 'report-chart', src: './assets/js/report-chart-runtime.js' },
-        { key: 'report-export', src: './assets/js/report-export-runtime.js' },
-        { key: 'report-ai', src: './assets/js/report-ai-runtime.js' }
-    ]);
+    return window.SystemRuntimeLoader.load('report-render');
 };
 
 window.ensureOptionalStylesheetLoaded = function (key, href) {
@@ -1835,58 +2058,43 @@ window.ensureOptionalStylesheetLoaded = function (key, href) {
 };
 
 window.ensureAIHubRuntimeLoaded = function () {
-    return loadOptionalRuntime('ai-hub', './assets/js/ai-hub-runtime.js');
+    return window.SystemRuntimeLoader.load('ai-hub');
 };
 
 window.ensureSchoolProfileRuntimeLoaded = function () {
-    return loadOptionalRuntime('school-profile', './assets/js/school-profile-runtime.js');
+    return window.SystemRuntimeLoader.load('school-profile');
 };
 
 window.ensureTeachingManagementRuntimeLoaded = function () {
-    return loadOptionalRuntime('teaching-management', './assets/js/teaching-management-runtime.js');
+    return window.SystemRuntimeLoader.load('teaching-management');
 };
 
 window.ensureAppDownloadRuntimeLoaded = function () {
-    return loadOptionalRuntime('app-download', './assets/js/app-download-runtime.js');
+    return window.SystemRuntimeLoader.load('app-download');
 };
 
 window.ensureTeacherAnalysisMainRuntimeLoaded = function () {
-    return loadOptionalRuntimeBundle('teacher-analysis-main-bundle', [
-        { key: 'teacher-analysis-core', src: './assets/js/teacher-analysis-core-runtime.js' },
-        { key: 'teacher-analysis-ui', src: './assets/js/teacher-analysis-ui-runtime.js' },
-        { key: 'teacher-analysis-bridge', src: './assets/js/teacher-analysis-bridge-runtime.js' },
-        { key: 'teacher-analysis-main', src: './assets/js/teacher-analysis-main-runtime.js' }
-    ]);
+    return window.SystemRuntimeLoader.load('teacher-analysis');
 };
 
 window.ensureSingleSchoolEvalRuntimeLoaded = function () {
-    return loadOptionalRuntime('single-school-eval', './assets/js/single-school-eval-runtime.js');
+    return window.SystemRuntimeLoader.load('single-school-eval');
 };
 
 window.ensureProgressAnalysisRuntimeLoaded = function () {
-    return loadOptionalRuntime('progress-analysis', './assets/js/progress-analysis-runtime.js');
+    return window.SystemRuntimeLoader.load('progress-analysis');
 };
 
 window.ensureStudentCompareRuntimeLoaded = function () {
-    return loadOptionalRuntimeBundle('student-compare-bundle', [
-        { key: 'student-compare-result', src: './assets/js/student-compare-result-runtime.js' },
-        { key: 'student-compare-generate', src: './assets/js/student-compare-generate-runtime.js' },
-        { key: 'student-compare-cloud', src: './assets/js/student-compare-cloud-runtime.js' }
-    ]);
+    return window.SystemRuntimeLoader.load('student-compare');
 };
 
 window.ensureTeacherCompareRuntimeLoaded = function () {
-    return loadOptionalRuntimeBundle('teacher-compare-bundle', [
-        { key: 'teacher-compare-result', src: './assets/js/teacher-compare-result-runtime.js' },
-        { key: 'teacher-compare-cloud', src: './assets/js/teacher-compare-cloud-runtime.js' }
-    ]);
+    return window.SystemRuntimeLoader.load('teacher-compare');
 };
 
 window.ensureMacroCompareRuntimeLoaded = function () {
-    return loadOptionalRuntimeBundle('macro-compare-bundle', [
-        { key: 'macro-compare-result', src: './assets/js/macro-compare-result-runtime.js' },
-        { key: 'macro-compare-cloud', src: './assets/js/macro-compare-cloud-runtime.js' }
-    ]);
+    return window.SystemRuntimeLoader.load('macro-compare');
 };
 
 function installOptionalRuntimeMethod(name, loader) {
