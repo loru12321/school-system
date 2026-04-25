@@ -4,6 +4,7 @@
     const DEFAULT_TTL_MS = 30000;
     const MAX_CACHE_SIZE = 80;
     const MAX_CONCURRENT_TASKS = 2;
+    const DIRECT_READ_METHODS = new Set(['loadTeachers']);
     const state = {
         active: 0,
         queue: [],
@@ -151,6 +152,22 @@
             const isBackground = !!options.background;
             const noCache = options.cache === false || options.noCache === true || options.force === true;
             const cacheKey = noCache ? '' : buildCloudKey(method, args);
+            if (DIRECT_READ_METHODS.has(method)) {
+                const cached = noCache ? { hit: false } : readCache(cacheKey);
+                if (cached.hit) return Promise.resolve(cached.value);
+                if (cacheKey && state.inflight.has(cacheKey)) return state.inflight.get(cacheKey);
+                const directPromise = Promise.resolve()
+                    .then(() => original.apply(this, args))
+                    .then((value) => {
+                        remember(cacheKey, value, noCache ? 0 : ttlMs);
+                        return value;
+                    })
+                    .finally(() => {
+                        if (cacheKey) state.inflight.delete(cacheKey);
+                    });
+                if (cacheKey) state.inflight.set(cacheKey, directPromise);
+                return directPromise;
+            }
             return enqueue(() => original.apply(this, args), {
                 label: method,
                 cacheKey,
