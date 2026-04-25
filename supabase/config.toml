@@ -1,0 +1,5 @@
+[functions.edu-gateway]
+verify_jwt = false
+
+[functions.edu-gateway-v2]
+verify_jwt = false

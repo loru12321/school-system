@@ -23,3 +23,4 @@ build_error*.log
 diff.txt
 custom.html
 worker.html
+.tmp-*
