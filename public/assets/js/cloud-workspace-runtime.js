@@ -469,11 +469,12 @@
                 const cacheKey = getCohortSyncCacheKey(cid);
                 const forceSync = Boolean(options.force);
                 const minCount = Math.max(1, Number(options.minCount || 2));
+                const shouldRefreshSelectors = options.refreshSelectors !== false;
                 const lastSyncAt = Number(localStorage.getItem(cacheKey) || 0);
                 const localExamCount = countCachedCohortExams(db, cid);
 
                 if (!forceSync && localExamCount >= minCount && lastSyncAt && (Date.now() - lastSyncAt) < AUTO_COHORT_SYNC_COOLDOWN_MS) {
-                    await refreshCompareSelectors();
+                    if (shouldRefreshSelectors) await refreshCompareSelectors();
                     setCloudStatus('success', '使用缓存');
                     return { success: true, count: localExamCount, updated: 0, cached: true };
                 }
@@ -508,7 +509,7 @@
 
                     if (keysToFetch.length === 0) {
                         localStorage.setItem(cacheKey, String(Date.now()));
-                        await refreshCompareSelectors();
+                        if (shouldRefreshSelectors) await refreshCompareSelectors();
                         setCloudStatus('success', '已最新');
                         return { success: true, count: candidates.length, updated: 0 };
                     }
@@ -540,7 +541,7 @@
 
                     window.COHORT_DB = db;
                     localStorage.setItem(cacheKey, String(Date.now()));
-                    await refreshCompareSelectors();
+                    if (shouldRefreshSelectors) await refreshCompareSelectors();
 
                     if (loadedCount > 0) safeToast(`已从云端加载 ${loadedCount} 期历史考试`, 'success');
                     setCloudStatus('success', loadedCount > 0 ? `更新${loadedCount}期` : '已最新');

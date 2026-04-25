@@ -8998,18 +8998,10 @@ async function switchCohort(cohortId, options = {}) {
 
         CohortDB.renderExamList();
 
-        // ✅ [新增] 自动从云端拉取该届所有历史考试到对比期数下拉框
-        if (window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
-            window.CloudManager.fetchCohortExamsToLocal(cohortId).then(res => {
-                if (res.success) {
-                    tryAutoRestoreWorkspaceExam({ cohortId });
-                    if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
-                    if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
-                    if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-                    if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
-                }
-            }).catch(e => console.warn('[switchCohort] 云端历史考试拉取失败:', e));
-        }
+        CohortExamHydrationScheduler.schedule(cohortId, {
+            delay: 0,
+            warnPrefix: '[switchCohort] 云端历史考试拉取失败:'
+        });
 
         UI.toast(`✅ 已切换到 [${cohortKey}]，数据加载完毕`, "success");
         logAction('届别切换', `已切换到 ${cohortKey}`);
@@ -9115,6 +9107,88 @@ function scheduleStartupHydration(label, callback, options = {}) {
 
     trigger();
 }
+
+const CohortExamHydrationScheduler = (() => {
+    const tasks = new Map();
+    const timers = new Map();
+    const lastRun = new Map();
+    const MIN_INTERVAL_MS = 2500;
+
+    function getCurrentCohortForHydration(rawCohortId) {
+        return String(rawCohortId || CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
+    }
+
+    function refreshHydratedExamViews(cohortId) {
+        tryAutoRestoreWorkspaceExam({ cohortId });
+        if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
+        if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
+        if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+        if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
+        if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
+        if (typeof updateProgressBaselineSelect === 'function') updateProgressBaselineSelect();
+        try { updateExamHistoryStatusBar(); } catch (e) { console.warn('状态条刷新异常:', e); }
+    }
+
+    function run(cohortId, options = {}) {
+        const cid = getCurrentCohortForHydration(cohortId);
+        if (!cid || !window.CloudManager || typeof window.CloudManager.fetchCohortExamsToLocal !== 'function') {
+            return Promise.resolve({ success: false, skipped: true, message: '云端历史考试同步未就绪' });
+        }
+        if (tasks.has(cid)) return tasks.get(cid);
+
+        const now = Date.now();
+        const force = options.force === true;
+        if (!force && now - Number(lastRun.get(cid) || 0) < MIN_INTERVAL_MS) {
+            return Promise.resolve({ success: true, skipped: true, throttled: true });
+        }
+        lastRun.set(cid, now);
+
+        const fetchOptions = {
+            background: options.background !== false,
+            minCount: Math.max(1, Number(options.minCount || 2)),
+            refreshSelectors: false
+        };
+        if (force) fetchOptions.force = true;
+
+        const task = Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cid, fetchOptions))
+            .then((res) => {
+                if (!res || res.success !== false) refreshHydratedExamViews(cid);
+                return res;
+            })
+            .catch((error) => {
+                console.warn(options.warnPrefix || '[CohortExamHydration] 云端历史考试拉取失败:', error);
+                return { success: false, error };
+            })
+            .finally(() => {
+                tasks.delete(cid);
+            });
+
+        tasks.set(cid, task);
+        return task;
+    }
+
+    function schedule(cohortId, options = {}) {
+        const cid = getCurrentCohortForHydration(cohortId);
+        if (!cid) return Promise.resolve({ success: false, skipped: true, message: '未选择届别' });
+        if (tasks.has(cid)) return tasks.get(cid);
+        if (timers.has(cid)) {
+            clearTimeout(timers.get(cid));
+            timers.delete(cid);
+        }
+        const delay = Math.max(0, Number(options.delay || 0));
+        return new Promise((resolve) => {
+            const timer = setTimeout(() => {
+                timers.delete(cid);
+                run(cid, options).then(resolve);
+            }, delay);
+            timers.set(cid, timer);
+        });
+    }
+
+    return { run, schedule, refreshViews: refreshHydratedExamViews };
+})();
+
+window.CohortExamHydrationScheduler = CohortExamHydrationScheduler;
 
 
 // 4. 启动时自动检查恢复 (程序入口)
@@ -9311,21 +9385,10 @@ window.addEventListener('load', async () => {
                     if (MY_SCHOOL) generateTeacherInputs();
                 }, { delay: 60 });
 
-                // ✅ [新增] 页面初始化后自动从云端拉取历史考试到对比期数下拉框
-                setTimeout(() => {
-                    const cid = CURRENT_COHORT_ID || readWorkspaceCohortId();
-                    if (cid && window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
-                        window.CloudManager.fetchCohortExamsToLocal(cid).then(res => {
-                            if (res.success) {
-                                tryAutoRestoreWorkspaceExam({ cohortId: cid });
-                                if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
-                                if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
-                                if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-                                if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
-                            }
-                        }).catch(e => console.warn('[Init] 云端历史考试拉取失败:', e));
-                    }
-                }, 700);
+                CohortExamHydrationScheduler.schedule(CURRENT_COHORT_ID || readWorkspaceCohortId(), {
+                    delay: 700,
+                    warnPrefix: '[Init] 云端历史考试拉取失败:'
+                });
             }, "正在加载数据...");
         };
 
@@ -9350,22 +9413,10 @@ window.addEventListener('load', async () => {
         }
     }
 
-    // 启动后延迟执行：自动拉取云端历史考试并刷新对比下拉框
-    setTimeout(() => {
-        try {
-            const cid = CURRENT_COHORT_ID || readWorkspaceCohortId();
-            if (cid && window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
-                window.CloudManager.fetchCohortExamsToLocal(cid).then(() => {
-                    tryAutoRestoreWorkspaceExam({ cohortId: cid });
-                    if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
-                    if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
-                    if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-                    if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
-                }).catch(e => console.warn('[Startup] fetch cohort exams failed:', e));
-            }
-        } catch (e) { console.warn('[Startup] auto cloud exam sync error:', e); }
-        try { updateExamHistoryStatusBar(); } catch (e) { console.warn('状态条刷新异常:', e); }
-    }, 1200);
+    CohortExamHydrationScheduler.schedule(CURRENT_COHORT_ID || readWorkspaceCohortId(), {
+        delay: 1200,
+        warnPrefix: '[Startup] fetch cohort exams failed:'
+    });
 });
 
 

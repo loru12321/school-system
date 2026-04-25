@@ -49,9 +49,11 @@
         if (window.RankingDataService && typeof window.RankingDataService.assignCompetitionRanks === 'function') {
             return window.RankingDataService.assignCompetitionRanks(rows, scoreGetter, rankSetter);
         }
+        const list = Array.isArray(rows) ? rows.slice() : [];
+        list.sort((a, b) => Number(scoreGetter(b) || 0) - Number(scoreGetter(a) || 0));
         let lastScore = null;
         let lastRank = 0;
-        rows.forEach((row, index) => {
+        list.forEach((row, index) => {
             const score = Number(scoreGetter(row));
             const rank = (lastScore !== null && Math.abs(score - lastScore) < 0.0001)
                 ? lastRank
@@ -60,6 +62,7 @@
             lastScore = score;
             lastRank = rank;
         });
+        return list;
     }
 
     function formatNumber(value, digits = 2) {
@@ -553,13 +556,6 @@
 
     function getTeacherRows(limit = 12) {
         applyScopedTeacherAssignmentsForCounty();
-        if (!hasTeacherStats() && hasTeacherAssignments() && typeof window.analyzeTeachers === 'function') {
-            try {
-                window.analyzeTeachers();
-            } catch (error) {
-                console.warn('[county-analysis] analyzeTeachers failed:', error);
-            }
-        }
         const rankings = window.COUNTY_TEACHER_RANKINGS || {};
         const rows = [];
         Object.entries(window.TEACHER_STATS || {}).forEach(([teacherName, subjects]) => {
@@ -986,9 +982,7 @@
 
         // 2. 学生排名 (总分)
         const allStudents = (window.RAW_DATA || []).filter((s) => Number.isFinite(Number(s?.total)));
-        const rankedAll = allStudents.slice().sort((a, b) => Number(b.total) - Number(a.total));
-
-        assignCompetitionRanks(rankedAll, (s) => s.total, (s, rank) => {
+        const rankedAll = assignCompetitionRanks(allStudents, (s) => s.total, (s, rank) => {
             if (!s.ranks) s.ranks = {};
             if (!s.ranks.total) s.ranks.total = {};
             s.countyRank = rank;
@@ -1006,17 +1000,15 @@
         // 3. 学生排名 (各科)
         (window.SUBJECTS || []).forEach((subject) => {
             const subjectStudents = (window.RAW_DATA || [])
-                .filter((s) => Number.isFinite(Number(s?.scores?.[subject])))
-                .slice()
-                .sort((a, b) => Number(b?.scores?.[subject]) - Number(a?.scores?.[subject]));
+                .filter((s) => Number.isFinite(Number(s?.scores?.[subject])));
 
-            assignCompetitionRanks(subjectStudents, (s) => s?.scores?.[subject], (s, rank) => {
+            const rankedSubjectStudents = assignCompetitionRanks(subjectStudents, (s) => s?.scores?.[subject], (s, rank) => {
                 if (!s.ranks) s.ranks = {};
                 if (!s.ranks[subject]) s.ranks[subject] = {};
                 s.ranks[subject].county = rank;
             });
 
-            const townshipSubjectStudents = subjectStudents.filter((s) => townshipSet.has(s.school));
+            const townshipSubjectStudents = rankedSubjectStudents.filter((s) => townshipSet.has(s.school));
             assignCompetitionRanks(townshipSubjectStudents, (s) => s?.scores?.[subject], (s, rank) => {
                 if (!s.ranks[subject]) s.ranks[subject] = {};
                 s.ranks[subject].township = rank;
