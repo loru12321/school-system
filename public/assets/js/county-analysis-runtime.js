@@ -485,7 +485,8 @@
         const now = Date.now();
         if (!force
             && state.lastTeacherContextSignature === teacherSig
-            && now - Number(state.lastTeacherContextAt || 0) < 30000) {
+            && now - Number(state.lastTeacherContextAt || 0) < 30000
+            && (hasTeacherAssignments() || hasTeacherStats())) {
             return {
                 hasTeacherAssignments: hasTeacherAssignments(),
                 hasTeacherStats: hasTeacherStats(),
@@ -546,8 +547,10 @@
         })();
         try {
             const result = await state.teacherContextPromise;
-            state.lastTeacherContextSignature = teacherSig;
-            state.lastTeacherContextAt = Date.now();
+            if (result?.hasTeacherAssignments || result?.hasTeacherStats) {
+                state.lastTeacherContextSignature = teacherSig;
+                state.lastTeacherContextAt = Date.now();
+            }
             return result;
         } finally {
             state.teacherContextPromise = null;
