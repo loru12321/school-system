@@ -9108,6 +9108,85 @@ function scheduleStartupHydration(label, callback, options = {}) {
     trigger();
 }
 
+const ExamSelectorRefreshScheduler = (() => {
+    let queued = false;
+    let pending = null;
+
+    const DEFAULT_FLAGS = {
+        status: true,
+        macro: true,
+        teacher: true,
+        teacherCompareTeacher: false,
+        studentCompare: true,
+        reportCompare: true,
+        progress: true,
+        progressBaseline: false
+    };
+
+    function mergeOptions(options = {}) {
+        pending = Object.assign({}, DEFAULT_FLAGS, pending || {}, options);
+    }
+
+    function callRefresh(name, callback, warnLabel) {
+        if (typeof callback !== 'function') return;
+        try {
+            callback();
+        } catch (error) {
+            console.warn(warnLabel || `${name} refresh failed:`, error);
+        }
+    }
+
+    function run(options = {}) {
+        const flags = Object.assign({}, DEFAULT_FLAGS, pending || {}, options);
+        pending = null;
+        queued = false;
+
+        if (flags.status) callRefresh('examHistoryStatusBar', typeof updateExamHistoryStatusBar === 'function' ? updateExamHistoryStatusBar : null, '状态条刷新异常:');
+        if (flags.macro) callRefresh('macroMultiExamSelects', typeof updateMacroMultiExamSelects === 'function' ? updateMacroMultiExamSelects : null);
+        if (flags.teacher) callRefresh('teacherMultiExamSelects', typeof updateTeacherMultiExamSelects === 'function' ? updateTeacherMultiExamSelects : null);
+        if (flags.teacherCompareTeacher) callRefresh('teacherCompareTeacherSelect', typeof updateTeacherCompareTeacherSelect === 'function' ? updateTeacherCompareTeacherSelect : null);
+        if (flags.studentCompare) callRefresh('studentCompareExamSelects', typeof updateStudentCompareExamSelects === 'function' ? updateStudentCompareExamSelects : null);
+        if (flags.reportCompare) callRefresh('reportCompareExamSelects', typeof updateReportCompareExamSelects === 'function' ? updateReportCompareExamSelects : null);
+        if (flags.progress) callRefresh('progressMultiExamSelects', typeof updateProgressMultiExamSelects === 'function' ? updateProgressMultiExamSelects : null);
+        if (flags.progressBaseline) callRefresh('progressBaselineSelect', typeof updateProgressBaselineSelect === 'function' ? updateProgressBaselineSelect : null);
+    }
+
+    function schedule(options = {}) {
+        if (options.immediate) {
+            run(options);
+            return;
+        }
+
+        mergeOptions(options);
+        if (queued) return;
+        queued = true;
+
+        const execute = () => run();
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(execute, { timeout: Number(options.timeout || 700) });
+            return;
+        }
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => window.setTimeout(execute, 0));
+            return;
+        }
+        window.setTimeout(execute, 0);
+    }
+
+    return { schedule, run };
+})();
+
+function scheduleExamSelectorRefresh(options = {}) {
+    ExamSelectorRefreshScheduler.schedule(options);
+}
+
+function runExamSelectorRefresh(options = {}) {
+    ExamSelectorRefreshScheduler.run(options);
+}
+
+window.scheduleExamSelectorRefresh = scheduleExamSelectorRefresh;
+window.runExamSelectorRefresh = runExamSelectorRefresh;
+
 const CohortExamHydrationScheduler = (() => {
     const tasks = new Map();
     const timers = new Map();
@@ -9120,13 +9199,7 @@ const CohortExamHydrationScheduler = (() => {
 
     function refreshHydratedExamViews(cohortId) {
         tryAutoRestoreWorkspaceExam({ cohortId });
-        if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
-        if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
-        if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-        if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
-        if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
-        if (typeof updateProgressBaselineSelect === 'function') updateProgressBaselineSelect();
-        try { updateExamHistoryStatusBar(); } catch (e) { console.warn('状态条刷新异常:', e); }
+        scheduleExamSelectorRefresh({ progressBaseline: true });
     }
 
     function run(cohortId, options = {}) {
@@ -11354,12 +11427,7 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
         await CohortDB.syncCurrentExam();
 
         // 🟣 上传后立即刷新多期对比选择器（analysis / teacher / progress）
-        if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
-        if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
-        if (typeof updateTeacherCompareTeacherSelect === 'function') updateTeacherCompareTeacherSelect();
-        if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
-        if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-        if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
+        scheduleExamSelectorRefresh({ teacherCompareTeacher: true });
 
         // 🟢 [新增] 处理完数据后，立即同步到云端 (仅管理员有效)
         // 注意：因为是异步，我们在后台默默保存，不阻塞界面显示
@@ -21656,35 +21724,20 @@ const CohortDB = {
     renderExamList: function () {
         const sel = document.getElementById('exam-history-select');
         if (!sel) {
-            if (typeof updateExamHistoryStatusBar === 'function') updateExamHistoryStatusBar();
-            if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
-            if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
-            if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
-            if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-            if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
+            scheduleExamSelectorRefresh();
             return;
         }
         const db = this.ensure();
         const exams = Object.values(db.exams || {});
         if (!exams.length) {
             sel.innerHTML = '<option value="">暂无历史考试</option>';
-            if (typeof updateExamHistoryStatusBar === 'function') updateExamHistoryStatusBar();
-            if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
-            if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
-            if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
-            if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-            if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
+            scheduleExamSelectorRefresh();
             return;
         }
         exams.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         sel.innerHTML = exams.map(ex => `<option value="${ex.examId}">${ex.examId}</option>`).join('');
         if (db.currentExamId) sel.value = db.currentExamId;
-        if (typeof updateExamHistoryStatusBar === 'function') updateExamHistoryStatusBar();
-        if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
-        if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
-        if (typeof updateProgressMultiExamSelects === 'function') updateProgressMultiExamSelects();
-        if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-        if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
+        scheduleExamSelectorRefresh();
     },
 
     loadExamFromSelect: function () {
