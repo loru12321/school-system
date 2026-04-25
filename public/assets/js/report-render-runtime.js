@@ -139,8 +139,28 @@ function renderSingleReportCardHTML(stu, mode) {
         township: rankLike?.township ?? rankLike?.rankTown ?? '-',
         county: rankLike?.county ?? rankLike?.rankCounty ?? '-'
     });
-    const hasHistoricalCountyRank = (studentLike, subject = 'total') => {
+    const getCountyScopeForHistoryEntry = (historyEntry, studentLike = null) => {
+        const historyKey = String(
+            historyEntry?.examFullKey
+            || historyEntry?.examId
+            || studentLike?._sourceExam
+            || studentLike?.examFullKey
+            || studentLike?.examId
+            || ''
+        ).trim();
+        if (!historyKey) return null;
+        try {
+            const rawMap = localStorage.getItem('COUNTY_ANALYSIS_SCOPE_V1');
+            const map = rawMap ? JSON.parse(rawMap) : {};
+            return map?.[historyKey] || null;
+        } catch (_) {
+            return null;
+        }
+    };
+    const hasHistoricalCountyRank = (studentLike, subject = 'total', historyEntry = null) => {
         if (!studentLike || typeof studentLike !== 'object') return false;
+        const scope = getCountyScopeForHistoryEntry(historyEntry, studentLike);
+        if (!scope || scope.includesCounty !== true) return false;
         const rankValue = subject === 'total'
             ? (studentLike?.ranks?.total?.county ?? studentLike?.rankCounty ?? studentLike?.countyRank)
             : (studentLike?.ranks?.[subject]?.county ?? studentLike?.subjectRanks?.[subject]?.county);
@@ -194,7 +214,7 @@ function renderSingleReportCardHTML(stu, mode) {
     const curSchoolRank = safeGet(reportStu, 'ranks.total.school', '-');
     const prevSchoolRank = compareTotalRanks.school ?? prevStu?.schoolRank ?? '-';
     const curCountyRank = getStudentCountyRankValue(reportStu, 'total');
-    const prevCountyRank = hasHistoricalCountyRank(compareStu, 'total') ? (compareTotalRanks.county ?? '-') : '-';
+    const prevCountyRank = hasHistoricalCountyRank(compareStu, 'total', prevHistoryEntry) ? (compareTotalRanks.county ?? '-') : '-';
 
     // 单校判断
     const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
@@ -259,7 +279,7 @@ function renderSingleReportCardHTML(stu, mode) {
             const curTR = displayRankValue(safeGet(reportStu, `ranks.${sub}.township`, '-'), showTownRank);
             const tT = showTownRank ? getTrendBadge(curTR, prevRanks.township || '-', 'rank') : '';
             const curCountyR = getStudentCountyRankValue(reportStu, sub);
-            const tCounty = showCountyRank && hasHistoricalCountyRank(compareStu, sub) ? getTrendBadge(curCountyR, prevRanks.county || '-', 'rank') : '';
+            const tCounty = showCountyRank && hasHistoricalCountyRank(compareStu, sub, prevHistoryEntry) ? getTrendBadge(curCountyR, prevRanks.county || '-', 'rank') : '';
 
             tableRows += `<tr style="transition:0.2s;" onmouseover="this.style.background='rgba(241,245,249,0.5)'" onmouseout="this.style.background='transparent'">
                     ${renderResponsiveTableCell('科目', sub, 'font-weight:600; color:#475569;')}
