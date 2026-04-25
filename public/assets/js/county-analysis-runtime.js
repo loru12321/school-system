@@ -46,6 +46,9 @@
     }
 
     function assignCompetitionRanks(rows, scoreGetter, rankSetter) {
+        if (window.RankingDataService && typeof window.RankingDataService.assignCompetitionRanks === 'function') {
+            return window.RankingDataService.assignCompetitionRanks(rows, scoreGetter, rankSetter);
+        }
         let lastScore = null;
         let lastRank = 0;
         rows.forEach((row, index) => {

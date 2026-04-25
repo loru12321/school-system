@@ -299,6 +299,7 @@ var APP_MODULES = [
     './assets/js/workspace-rail-runtime.js',
     './assets/js/shell-polish-runtime.js',
     './assets/js/module-entry-runtime.js',
+    './assets/js/ranking-data-service-runtime.js',
     './assets/js/app.js',
     './assets/js/macro-analysis-compat-runtime.js',
     './assets/js/county-analysis-runtime.js',

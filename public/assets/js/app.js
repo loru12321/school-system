@@ -6451,16 +6451,17 @@ const WORKER_SOURCE = `
 
                 // --- C. 计算排名 (原 calculateStudentRanks 部分) ---
                 const calcRank = (list, keyGetter, rankSetter) => {
-                    if (!list || !list.length) return;
-                    list.sort((a, b) => keyGetter(b) - keyGetter(a));
-                    list.forEach((item, i) => {
+                    const rows = Array.isArray(list) ? list.slice() : [];
+                    rows.sort((a, b) => keyGetter(b) - keyGetter(a));
+                    rows.forEach((item, i) => {
                         let rank = i + 1;
-                        if (i > 0 && Math.abs(keyGetter(item) - keyGetter(list[i - 1])) < 0.0001) {
-                            rank = list[i - 1]._tempRank;
+                        if (i > 0 && Math.abs(keyGetter(item) - keyGetter(rows[i - 1])) < 0.0001) {
+                            rank = rows[i - 1]._tempRank;
                         }
                         item._tempRank = rank;
                         rankSetter(item, rank);
                     });
+                    return rows;
                 };
 
                 // 1. 全县排名 (County Rank)
@@ -11776,12 +11777,21 @@ function calculateClassRanksOnly() {
 
     Object.values(classes).forEach(group => {
         // 总分
-        group.sort((a, b) => b.total - a.total);
-        group.forEach((s, i) => { if (!s.ranks) s.ranks = {}; if (!s.ranks.total) s.ranks.total = {}; s.ranks.total.class = i + 1; });
+        if (window.RankingDataService && typeof window.RankingDataService.assignRankScope === 'function') {
+            window.RankingDataService.assignRankScope(group, 'total', 'class', s => s.total);
+        } else {
+            group.sort((a, b) => b.total - a.total);
+            group.forEach((s, i) => { if (!s.ranks) s.ranks = {}; if (!s.ranks.total) s.ranks.total = {}; s.ranks.total.class = i + 1; });
+        }
         // 单科
         SUBJECTS.forEach(sub => {
-            const subGroup = group.filter(s => s.scores[sub] !== undefined).sort((a, b) => b.scores[sub] - a.scores[sub]);
-            subGroup.forEach((s, i) => { if (!s.ranks[sub]) s.ranks[sub] = {}; s.ranks[sub].class = i + 1; });
+            const subGroup = group.filter(s => s.scores[sub] !== undefined);
+            if (window.RankingDataService && typeof window.RankingDataService.assignRankScope === 'function') {
+                window.RankingDataService.assignRankScope(subGroup, sub, 'class', s => s.scores[sub]);
+            } else {
+                subGroup.sort((a, b) => b.scores[sub] - a.scores[sub]);
+                subGroup.forEach((s, i) => { if (!s.ranks[sub]) s.ranks[sub] = {}; s.ranks[sub].class = i + 1; });
+            }
         });
     });
 }

@@ -45,6 +45,7 @@ const perfMobileRuntimePath = path.resolve(__dirname, '../public/assets/js/perf-
 const shellRuntimePath = path.resolve(__dirname, '../public/assets/js/shell-runtime.js');
 const shellPolishRuntimePath = path.resolve(__dirname, '../public/assets/js/shell-polish-runtime.js');
 const moduleEntryRuntimePath = path.resolve(__dirname, '../public/assets/js/module-entry-runtime.js');
+const rankingDataServiceRuntimePath = path.resolve(__dirname, '../public/assets/js/ranking-data-service-runtime.js');
 const singleSchoolEvalRuntimePath = path.resolve(__dirname, '../public/assets/js/single-school-eval-runtime.js');
 const aiHubRuntimePath = path.resolve(__dirname, '../public/assets/js/ai-hub-runtime.js');
 const schoolProfileRuntimePath = path.resolve(__dirname, '../public/assets/js/school-profile-runtime.js');
@@ -108,6 +109,7 @@ assert.ok(fs.existsSync(perfMobileRuntimePath), 'perf-mobile-runtime.js should e
 assert.ok(fs.existsSync(shellRuntimePath), 'shell-runtime.js should exist');
 assert.ok(fs.existsSync(shellPolishRuntimePath), 'shell-polish-runtime.js should exist');
 assert.ok(fs.existsSync(moduleEntryRuntimePath), 'module-entry-runtime.js should exist');
+assert.ok(fs.existsSync(rankingDataServiceRuntimePath), 'ranking-data-service-runtime.js should exist');
 assert.ok(fs.existsSync(singleSchoolEvalRuntimePath), 'single-school-eval-runtime.js should exist');
 assert.ok(fs.existsSync(aiHubRuntimePath), 'ai-hub-runtime.js should exist');
 assert.ok(fs.existsSync(schoolProfileRuntimePath), 'school-profile-runtime.js should exist');
@@ -183,6 +185,7 @@ const cloudWorkspaceRef = './assets/js/cloud-workspace-runtime.js';
 const shellRuntimeRef = './assets/js/shell-runtime.js';
 const shellPolishRuntimeRef = './assets/js/shell-polish-runtime.js';
 const moduleEntryRuntimeRef = './assets/js/module-entry-runtime.js';
+const rankingDataServiceRef = './assets/js/ranking-data-service-runtime.js';
 const cloudRef = './assets/js/cloud.js';
 const appRef = './assets/js/app.js';
 const accountAdminRef = './assets/js/account-admin-runtime.js';
@@ -278,6 +281,7 @@ const cloudWorkspaceIndex = moduleManifest.indexOf(cloudWorkspaceRef);
 const shellRuntimeIndex = moduleManifest.indexOf(shellRuntimeRef);
 const shellPolishRuntimeIndex = moduleManifest.indexOf(shellPolishRuntimeRef);
 const moduleEntryRuntimeIndex = moduleManifest.indexOf(moduleEntryRuntimeRef);
+const rankingDataServiceIndex = moduleManifest.indexOf(rankingDataServiceRef);
 const appIndex = moduleManifest.indexOf(appRef);
 const bootRuntimeIndex = indexHtml.indexOf(bootRuntimeRef);
 const popperVendorIndex = moduleManifest.indexOf(popperVendorRef);
@@ -348,6 +352,7 @@ assert.ok(dataManagerTabIndex < appIndex, 'data-manager-tab-runtime.js should lo
 assert.ok(shellRuntimeIndex >= 0, 'index.html should load shell-runtime.js');
 assert.ok(shellPolishRuntimeIndex >= 0, 'index.html should load shell-polish-runtime.js');
 assert.ok(moduleEntryRuntimeIndex >= 0, 'index.html should load module-entry-runtime.js');
+assert.ok(rankingDataServiceIndex >= 0, 'index.html should load ranking-data-service-runtime.js');
 assert.ok(appIndex >= 0, 'index.html should load app.js');
 assert.ok(bootRuntime.includes(progressAnalysisRef), 'boot-runtime.js should reference progress-analysis-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(teacherAnalysisMainRef), 'boot-runtime.js should reference teacher-analysis-main-runtime.js for lazy loading');
@@ -417,6 +422,7 @@ assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign swi
     shellRuntimeRef,
     shellPolishRuntimeRef,
     moduleEntryRuntimeRef,
+    rankingDataServiceRef,
     appRef,
     compareCloudContextRef,
     compareExamSyncRef,
@@ -546,7 +552,8 @@ assert.ok(authStateIndex < appIndex, 'auth-state-runtime.js must load before app
 assert.ok(shellRuntimeIndex < appIndex, 'shell-runtime.js must load before app.js');
 assert.ok(shellRuntimeIndex < shellPolishRuntimeIndex, 'shell-runtime.js must load before shell-polish-runtime.js');
 assert.ok(shellPolishRuntimeIndex < moduleEntryRuntimeIndex, 'shell-polish-runtime.js must load before module-entry-runtime.js');
-assert.ok(moduleEntryRuntimeIndex < appIndex, 'module-entry-runtime.js must load before app.js');
+assert.ok(moduleEntryRuntimeIndex < rankingDataServiceIndex, 'module-entry-runtime.js must load before ranking-data-service-runtime.js');
+assert.ok(rankingDataServiceIndex < appIndex, 'ranking-data-service-runtime.js must load before app.js');
 assert.ok(popperVendorIndex < tippyVendorIndex, 'popper.min.js must load before tippy.umd.min.js');
 
 console.log('runtime order tests passed');

@@ -264,6 +264,11 @@ function sortExamIdsChronologically(examIds) {
 
 
 function assignCompetitionRanks(list, scoreGetter, rankSetter) {
+    if (typeof window !== 'undefined'
+        && window.RankingDataService
+        && typeof window.RankingDataService.assignCompetitionRanks === 'function') {
+        return window.RankingDataService.assignCompetitionRanks(list, scoreGetter, rankSetter);
+    }
     const rows = Array.isArray(list) ? list.slice() : [];
     rows.sort((a, b) => Number(scoreGetter(b) ?? Number.NEGATIVE_INFINITY) - Number(scoreGetter(a) ?? Number.NEGATIVE_INFINITY));
 
