@@ -144,19 +144,6 @@ window.initSupabase = function () {
     }
 };
 
-(function installConsoleNoiseFilter() {
-    if (window.__BOOT_CONSOLE_NOISE_FILTER_INSTALLED__) return;
-    window.__BOOT_CONSOLE_NOISE_FILTER_INSTALLED__ = true;
-    window.addEventListener('unhandledrejection', function (event) {
-        var reason = event && event.reason;
-        var message = String(reason && reason.message ? reason.message : reason || '');
-        if (message.includes('A listener indicated an asynchronous response')
-            && message.includes('message channel closed before a response was received')) {
-            event.preventDefault();
-        }
-    });
-})();
-
 (function installBootLoginShell() {
     const BOOT_LOGIN_PORTAL_STORAGE_KEY = 'LOGIN_PORTAL_V1';
     const BOOT_GATEWAY_REQUEST = createSupabaseFetchWithTimeout(12000);
@@ -694,21 +681,6 @@ window.ensureLazySectionLoaded = function (sectionId) {
 
 window.__optionalRuntimeLoaders = window.__optionalRuntimeLoaders || {};
 window.__optionalStylesheetLoaders = window.__optionalStylesheetLoaders || {};
-const OPTIONAL_RUNTIME_CACHE_VERSION = '20260425-login-clean-v1';
-
-function stripOptionalAssetQuery(src) {
-    return String(src || '').trim().split('#')[0].split('?')[0];
-}
-
-function appendOptionalRuntimeVersion(src) {
-    const text = String(src || '').trim();
-    if (!text || text.startsWith('data:') || text.startsWith('blob:') || /[?&]v=/.test(text)) return text;
-    const hashIndex = text.indexOf('#');
-    const hash = hashIndex >= 0 ? text.slice(hashIndex) : '';
-    const base = hashIndex >= 0 ? text.slice(0, hashIndex) : text;
-    return `${base}${base.includes('?') ? '&' : '?'}v=${OPTIONAL_RUNTIME_CACHE_VERSION}${hash}`;
-}
-
 function getOptionalAssetCandidates(src, localPrefixes = []) {
     const normalized = String(src || '').trim();
     const candidates = [normalized];
@@ -732,7 +704,7 @@ function getOptionalStylesheetCandidates(href) {
 }
 
 function getInlineOptionalRuntimeSource(src) {
-    const normalized = stripOptionalAssetQuery(src);
+    const normalized = String(src || '').trim();
     if (!window.__INLINE_RUNTIME_SOURCES || typeof window.__INLINE_RUNTIME_SOURCES !== 'object') {
         return '';
     }
@@ -768,19 +740,18 @@ function injectOptionalRuntimeScript(key, src) {
         }
 
         const script = document.createElement('script');
-        const versionedSrc = appendOptionalRuntimeVersion(src);
-        script.src = versionedSrc;
+        script.src = src;
         script.defer = true;
         script.async = true;
         script.dataset.runtime = key;
-        script.dataset.runtimeCandidate = versionedSrc;
+        script.dataset.runtimeCandidate = src;
         script.onload = () => {
             script.dataset.runtimeLoaded = 'true';
             resolve();
         };
         script.onerror = () => {
             script.remove();
-            reject(new Error(`Failed to load runtime: ${versionedSrc}`));
+            reject(new Error(`Failed to load runtime: ${src}`));
         };
         document.head.appendChild(script);
     });

@@ -16,15 +16,15 @@
     <link rel="stylesheet" href="./assets/css/main.css?v=20260402-structure-v1">
     <link rel="stylesheet" href="./assets/css/shell.css?v=20260402-structure-v1">
     <link rel="stylesheet" href="./assets/css/fluent-overrides.css?v=20260402-structure-v1">
-    <link rel="stylesheet" href="./assets/css/mobile-login.css?v=20260425-login-clean-v1">
+    <link rel="stylesheet" href="./assets/css/mobile-login.css?v=20260408-login-poster-v2">
     <link rel="stylesheet" href="./assets/css/drill-modal.css?v=20260402-structure-v1">
     <link rel="stylesheet" href="./assets/css/dark-mode-fixes.css?v=20260402-structure-v1">
     <link rel="stylesheet" href="./assets/css/vendor-polish.css?v=20260402-structure-v2">
-    <link rel="stylesheet" href="./assets/css/apple-platform.css?v=20260425-login-clean-v1">
+    <link rel="stylesheet" href="./assets/css/apple-platform.css?v=20260407-apple-v1">
     <link rel="stylesheet" href="./assets/css/apk-mobile-shell.css?v=20260407-apk-v2">
-    <link rel="stylesheet" href="./assets/css/login-qq-final.css?v=20260425-login-clean-v1">
-    <script defer src="./assets/js/platform-compat-runtime.js?v=20260425-login-clean-v1"></script>
-    <script defer src="./assets/js/boot-runtime.js?v=20260425-login-clean-v1"></script>
+    <link rel="stylesheet" href="./assets/css/login-qq-final.css?v=20260408-qq-final-v2">
+    <script defer src="./assets/js/platform-compat-runtime.js?v=20260407-apple-v1"></script>
+    <script defer src="./assets/js/boot-runtime.js"></script>
     <script defer src="./assets/vendor/supabase/supabase.min.js" onload="window.initSupabase()"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script defer src="./assets/vendor/crypto-js/crypto-js.min.js" data-standalone-lib="crypto-js"></script>
@@ -262,8 +262,9 @@
                         </span>
                     </a>
                     <div class="login-stage-nav-links">
-                        <a href="#login-hero" data-nav="intro">系统介绍</a>
-                        <a href="#login-portal-hub" class="active" data-nav="modal">登录入口</a>
+                        <a href="#login-hero" class="active">首页</a>
+                        <a href="#login-portal-hub">登录入口</a>
+                        <a href="#app-download">应用下载</a>
                         <button type="button" class="login-stage-nav-login"
                             onclick="window.Auth?.openLoginPortalModal('school')">学校端登录</button>
                     </div>
@@ -271,9 +272,9 @@
 
                 <div id="login-hero" class="login-stage-hero">
                     <span id="login-stage-kicker" class="login-stage-hero-kicker">School Command Center</span>
-                    <h1 id="login-stage-title">学校工作台与家长查询，一页进入</h1>
+                    <h1 id="login-stage-title">学校工作台、家长查询与应用下载，一页进入</h1>
                     <p id="login-stage-copy">
-                        把学校驾驶舱和家长查询收进同一张首屏，先选角色，再进入系统。
+                        把学校驾驶舱、家长查询和 Android 下载收进同一张首屏，先选角色，再进入系统。
                     </p>
                     <div class="login-stage-actions">
                         <button type="button" class="login-stage-primary-action"
@@ -336,6 +337,61 @@
                         <h2 class="login-auth-title">登录中心</h2>
                         <p id="login-portal-copy">选择学校端或家长端，在弹窗里完成登录验证。</p>
                     </div>
+                    <div class="login-auth-utility" id="app-download">
+                        <button type="button" class="login-system-download-link"
+                            onclick="window.Auth?.openDownloadHubModal('android')">
+                            <i class="ti ti-download"></i> 打开下载中心
+                        </button>
+                        <button type="button" class="login-system-download-ghost"
+                            onclick="window.copyPublicDownloadLink?.('android')">
+                            <i class="ti ti-link"></i> 复制安卓链接
+                        </button>
+                    </div>
+                </div>
+
+                <section class="login-system-overview" aria-label="系统介绍与应用下载">
+                    <div class="login-system-overview-head">
+                        <span class="login-system-kicker">System Introduction</span>
+                        <h2>全屏首页同时承载系统介绍、下载入口与登录流程</h2>
+                        <p>学校端适合教学分析、数据维护与学校驾驶舱，家长端适合成长报告、成绩查询与家校提醒，Web 与 Android 共用同一套入口逻辑。</p>
+                    </div>
+
+                    <div class="login-system-metrics">
+                        <div class="login-system-metric">
+                            <span>核心能力</span>
+                            <strong>教学分析 / 数据维护 / 家长查询</strong>
+                        </div>
+                        <div class="login-system-metric">
+                            <span>终端形态</span>
+                            <strong>Web 全屏首页 + Android APK</strong>
+                        </div>
+                        <div class="login-system-metric">
+                            <span>角色入口</span>
+                            <strong>学校端 / 家长端 双入口弹窗登录</strong>
+                        </div>
+                        <div class="login-system-metric">
+                            <span>版本更新</span>
+                            <strong>登录页可直接下载 APK 与查看版本</strong>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="login-mobile-highlights">
+                    <span>
+                        <i class="ti ti-device-mobile"></i>
+                        <em>手机友好</em>
+                        <small>完整适配手机与电脑端登录体验</small>
+                    </span>
+                    <span>
+                        <i class="ti ti-shield-check"></i>
+                        <em>双入口</em>
+                        <small>学校端与家长端在同一首页切换</small>
+                    </span>
+                    <span>
+                        <i class="ti ti-cloud-lock"></i>
+                        <em>云端安全</em>
+                        <small>网关会话与数据同步分层处理</small>
+                    </span>
                 </div>
 
                 <div class="login-portal-launch-head">
@@ -3606,7 +3662,7 @@
 <script defer src="./assets/js/workspace-rail-runtime.js?v=20260407-workspace-rail-v1"></script>
 <script defer src="./assets/js/shell-polish-runtime.js?v=20260402-plugin-v1"></script>
 <script defer src="./assets/js/module-entry-runtime.js?v=20260402-module-entry-v1"></script>
-<script defer src="./assets/js/app.js?v=20260425-login-clean-v1"></script>
+<script defer src="./assets/js/app.js?v=20260408-login-refine-v1"></script>
     <script defer src="./assets/js/school-normalization-runtime.js?v=20260321-localgrades-v4"></script>
     <script defer src="./assets/js/compare-shared-runtime.js?v=20260322-compare-session-v1"></script>
     <script defer src="./assets/js/compare-cloud-context-runtime.js?v=20260322-compare-cloud-v1"></script>
