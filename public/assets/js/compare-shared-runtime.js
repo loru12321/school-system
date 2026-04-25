@@ -262,58 +262,6 @@ function sortExamIdsChronologically(examIds) {
     });
 }
 
-function ensureCompareSharedComputationCache() {
-    const cache = window.__COMPARE_SHARED_COMPUTATION_CACHE__ && typeof window.__COMPARE_SHARED_COMPUTATION_CACHE__ === 'object'
-        ? window.__COMPARE_SHARED_COMPUTATION_CACHE__
-        : {};
-    if (!cache.examRows || typeof cache.examRows !== 'object') cache.examRows = {};
-    if (!cache.schoolOverviews || typeof cache.schoolOverviews !== 'object') cache.schoolOverviews = {};
-    if (!cache.rawCurrent || typeof cache.rawCurrent !== 'object') {
-        cache.rawCurrent = { ref: null, length: 0, fingerprint: '' };
-    }
-    window.__COMPARE_SHARED_COMPUTATION_CACHE__ = cache;
-    return cache;
-}
-
-function clearCompareSharedComputationCache() {
-    window.__COMPARE_SHARED_COMPUTATION_CACHE__ = {
-        examRows: {},
-        schoolOverviews: {},
-        rawCurrent: { ref: null, length: 0, fingerprint: '' }
-    };
-    return window.__COMPARE_SHARED_COMPUTATION_CACHE__;
-}
-
-function tagCompareCacheKey(target, cacheKey) {
-    if (!target || typeof target !== 'object' || !cacheKey) return target;
-    try {
-        Object.defineProperty(target, '__compareCacheKey', {
-            value: cacheKey,
-            configurable: true,
-            enumerable: false,
-            writable: true
-        });
-    } catch (e) {
-        target.__compareCacheKey = cacheKey;
-    }
-    return target;
-}
-
-function getLiveRawDataFingerprint() {
-    const cache = ensureCompareSharedComputationCache();
-    const rows = Array.isArray(RAW_DATA) ? RAW_DATA : [];
-    if (cache.rawCurrent.ref === rows && cache.rawCurrent.length === rows.length && cache.rawCurrent.fingerprint) {
-        return cache.rawCurrent.fingerprint;
-    }
-    const fingerprint = computeExamDataFingerprint(rows);
-    cache.rawCurrent = {
-        ref: rows,
-        length: rows.length,
-        fingerprint
-    };
-    return fingerprint;
-}
-
 
 function assignCompetitionRanks(list, scoreGetter, rankSetter) {
     const rows = Array.isArray(list) ? list.slice() : [];
@@ -515,16 +463,9 @@ function getSelectedReportCompareExamIds() {
 function getExamRowsForCompare(examId) {
     if (!examId) return [];
     if (!isExamSelectableForCompare(examId)) return [];
-
-    const normalizedExamId = String(examId || '').trim();
     let rawRows = [];
-    let sourceFingerprint = '';
 
-    if (CURRENT_EXAM_ID && isExamKeyEquivalentForCompare(normalizedExamId, CURRENT_EXAM_ID)) {
-        sourceFingerprint = getLiveRawDataFingerprint();
-        const cacheKey = `current:${sourceFingerprint}`;
-        const cachedRows = ensureCompareSharedComputationCache().examRows[cacheKey];
-        if (Array.isArray(cachedRows)) return cachedRows;
+    if (CURRENT_EXAM_ID && isExamKeyEquivalentForCompare(examId, CURRENT_EXAM_ID)) {
         rawRows = (RAW_DATA || []).map(s => ({
             name: s.name,
             school: s.school,
@@ -534,18 +475,13 @@ function getExamRowsForCompare(examId) {
         }));
     } else {
         const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
-        const identity = getCompareExamIdentity({ id: normalizedExamId });
-        const exam = db?.exams?.[normalizedExamId] || Object.values(db?.exams || {}).find(item => {
+        const identity = getCompareExamIdentity({ id: examId });
+        const exam = db?.exams?.[examId] || Object.values(db?.exams || {}).find(item => {
             const storedId = String(item?.examId || '').trim();
             if (!storedId || !isExamSelectableForCompare(storedId)) return false;
-            if (isExamKeyEquivalentForCompare(storedId, normalizedExamId)) return true;
+            if (isExamKeyEquivalentForCompare(storedId, examId)) return true;
             return getCompareExamIdentity({ id: storedId, label: item?.examLabel || '' }) === identity;
         });
-        if (!exam) return [];
-        sourceFingerprint = String(exam?.fingerprint || '').trim() || computeExamDataFingerprint(exam?.data || []);
-        const cacheKey = `exam:${normalizedExamId}:${sourceFingerprint}`;
-        const cachedRows = ensureCompareSharedComputationCache().examRows[cacheKey];
-        if (Array.isArray(cachedRows)) return cachedRows;
         const list = exam?.data || [];
         const examSubjects = Array.isArray(exam?.subjects) && exam.subjects.length
             ? exam.subjects
@@ -583,12 +519,6 @@ function getExamRowsForCompare(examId) {
             else r.rankSchool = i + 1;
         });
     });
-
-    const cacheKey = (CURRENT_EXAM_ID && isExamKeyEquivalentForCompare(normalizedExamId, CURRENT_EXAM_ID))
-        ? `current:${sourceFingerprint || getLiveRawDataFingerprint()}`
-        : `exam:${normalizedExamId}:${sourceFingerprint}`;
-    tagCompareCacheKey(rows, cacheKey);
-    ensureCompareSharedComputationCache().examRows[cacheKey] = rows;
     return rows;
 }
 
@@ -623,183 +553,6 @@ function calcSchoolMetricsFromRows(rows) {
     return { count, avg, excRate, passRate };
 }
 
-function calcSubjectMetricsFromRows(rows, subject) {
-    const list = (rows || [])
-        .map(r => Number(r?.scores?.[subject]))
-        .filter(v => Number.isFinite(v));
-    const count = list.length;
-    if (!count) return null;
-
-    const avg = list.reduce((a, b) => a + b, 0) / count;
-    const sorted = list.slice().sort((a, b) => b - a);
-    const configured = THRESHOLDS?.[subject] || {};
-    let exc = Number(configured.exc);
-    let pass = Number(configured.pass);
-
-    if (!Number.isFinite(exc)) {
-        const excRate = Number(CONFIG?.excRate);
-        const excIndex = Math.max(0, Math.floor(sorted.length * (Number.isFinite(excRate) ? excRate : 0.2)) - 1);
-        exc = sorted[excIndex] || 0;
-    }
-    if (!Number.isFinite(pass)) {
-        const passIndex = Math.max(0, Math.floor(sorted.length * 0.5) - 1);
-        pass = sorted[passIndex] || 0;
-    }
-
-    return {
-        count,
-        avg,
-        exc,
-        pass,
-        excRate: list.filter(v => v >= exc).length / count,
-        passRate: list.filter(v => v >= pass).length / count
-    };
-}
-
-function buildSchoolRankOverviewForRows(rows, subjectList = SUBJECTS) {
-    const list = Array.isArray(rows) ? rows.filter(Boolean) : [];
-    const normalizedSubjects = Array.isArray(subjectList)
-        ? subjectList.map(subject => String(subject || '').trim()).filter(Boolean)
-        : [];
-    const subjectSignature = normalizedSubjects.join('|');
-    const cacheKey = rows && typeof rows === 'object' && rows.__compareCacheKey
-        ? `${rows.__compareCacheKey}|overview|${subjectSignature}`
-        : '';
-    if (cacheKey) {
-        const cached = ensureCompareSharedComputationCache().schoolOverviews[cacheKey];
-        if (cached) return cached;
-    }
-
-    const grouped = {};
-    list.forEach((row) => {
-        const school = String(row?.school || '').trim();
-        if (!school) return;
-        if (!grouped[school]) grouped[school] = [];
-        grouped[school].push(row);
-    });
-
-    const schools = Object.entries(grouped).map(([school, schoolRows]) => {
-        const total = calcSchoolMetricsFromRows(schoolRows);
-        const subjects = {};
-        normalizedSubjects.forEach((subject) => {
-            const metrics = calcSubjectMetricsFromRows(schoolRows, subject);
-            if (metrics) subjects[subject] = metrics;
-        });
-        return {
-            school,
-            total,
-            subjects,
-            avgSubjectRank: null,
-            subjectLeaderCount: 0,
-            leaderSubjects: [],
-            advantageSubjects: [],
-            weakSubjects: [],
-            subjectRankSummary: ''
-        };
-    }).filter(entry => entry.total);
-
-    assignCompetitionRanks(
-        schools.filter(entry => entry.total),
-        entry => entry.total.avg,
-        (entry, rank) => { entry.total.rankAvg = rank; }
-    );
-    assignCompetitionRanks(
-        schools.filter(entry => entry.total),
-        entry => entry.total.excRate,
-        (entry, rank) => { entry.total.rankExc = rank; }
-    );
-    assignCompetitionRanks(
-        schools.filter(entry => entry.total),
-        entry => entry.total.passRate,
-        (entry, rank) => { entry.total.rankPass = rank; }
-    );
-
-    normalizedSubjects.forEach((subject) => {
-        const ranked = schools.filter(entry => entry.subjects[subject]);
-        assignCompetitionRanks(
-            ranked,
-            entry => entry.subjects[subject].avg,
-            (entry, rank) => { entry.subjects[subject].rankAvg = rank; }
-        );
-        assignCompetitionRanks(
-            ranked,
-            entry => entry.subjects[subject].excRate,
-            (entry, rank) => { entry.subjects[subject].rankExc = rank; }
-        );
-        assignCompetitionRanks(
-            ranked,
-            entry => entry.subjects[subject].passRate,
-            (entry, rank) => { entry.subjects[subject].rankPass = rank; }
-        );
-    });
-
-    schools.forEach((entry) => {
-        const rankedSubjects = normalizedSubjects
-            .map(subject => ({ subject, metrics: entry.subjects[subject] || null }))
-            .filter(item => item.metrics && Number.isFinite(Number(item.metrics.rankAvg)));
-        const totalRank = Number(entry.total?.rankAvg || NaN);
-        const subjectRanks = rankedSubjects.map(item => Number(item.metrics.rankAvg)).filter(Number.isFinite);
-        entry.avgSubjectRank = subjectRanks.length
-            ? subjectRanks.reduce((sum, rank) => sum + rank, 0) / subjectRanks.length
-            : null;
-        entry.subjectLeaderCount = rankedSubjects.filter(item => item.metrics.rankAvg === 1).length;
-        entry.leaderSubjects = rankedSubjects.filter(item => item.metrics.rankAvg === 1).map(item => item.subject);
-
-        const bestSubjects = rankedSubjects
-            .slice()
-            .sort((left, right) => (left.metrics.rankAvg - right.metrics.rankAvg) || (right.metrics.avg - left.metrics.avg));
-        const weakSubjects = rankedSubjects
-            .slice()
-            .sort((left, right) => (right.metrics.rankAvg - left.metrics.rankAvg) || (left.metrics.avg - right.metrics.avg));
-
-        entry.advantageSubjects = rankedSubjects
-            .filter(item => Number.isFinite(totalRank) && item.metrics.rankAvg < totalRank)
-            .sort((left, right) => (left.metrics.rankAvg - right.metrics.rankAvg) || (right.metrics.avg - left.metrics.avg))
-            .slice(0, 3)
-            .map(item => item.subject);
-        if (!entry.advantageSubjects.length) {
-            entry.advantageSubjects = bestSubjects.slice(0, 2).map(item => item.subject);
-        }
-
-        entry.weakSubjects = rankedSubjects
-            .filter(item => Number.isFinite(totalRank) && item.metrics.rankAvg > totalRank)
-            .sort((left, right) => (right.metrics.rankAvg - left.metrics.rankAvg) || (left.metrics.avg - right.metrics.avg))
-            .slice(0, 3)
-            .map(item => item.subject);
-        if (!entry.weakSubjects.length) {
-            entry.weakSubjects = weakSubjects.slice(0, 2).map(item => item.subject);
-        }
-
-        entry.subjectRankSummary = rankedSubjects
-            .map(item => `${item.subject}#${item.metrics.rankAvg}`)
-            .join(' / ');
-    });
-
-    schools.sort((left, right) => {
-        const totalRankDiff = Number(left.total?.rankAvg || Number.POSITIVE_INFINITY) - Number(right.total?.rankAvg || Number.POSITIVE_INFINITY);
-        if (totalRankDiff !== 0) return totalRankDiff;
-        const subjectRankDiff = Number(left.avgSubjectRank || Number.POSITIVE_INFINITY) - Number(right.avgSubjectRank || Number.POSITIVE_INFINITY);
-        if (subjectRankDiff !== 0) return subjectRankDiff;
-        return String(left.school || '').localeCompare(String(right.school || ''), 'zh-CN');
-    });
-
-    const bySchool = {};
-    schools.forEach((entry) => {
-        bySchool[entry.school] = entry;
-    });
-
-    const overview = {
-        subjectList: normalizedSubjects,
-        schools,
-        bySchool
-    };
-
-    if (cacheKey) {
-        ensureCompareSharedComputationCache().schoolOverviews[cacheKey] = overview;
-    }
-    return overview;
-}
-
 function getSummaryEntryBySchool(summary, school) {
     if (!summary) return null;
     if (summary[school]) return summary[school];
@@ -829,15 +582,6 @@ function buildSchoolSummaryForExam(rows) {
     return summary;
 }
 
-function getSchoolRankOverviewEntryBySchool(overview, school) {
-    if (!overview || !school) return null;
-    if (overview.bySchool?.[school]) return overview.bySchool[school];
-    const matchedKeys = getMatchedSchoolNamesFromCollection(Object.keys(overview.bySchool || {}), school);
-    if (!matchedKeys.length) return null;
-    const bestKey = matchedKeys.reduce((best, item) => pickPreferredSchoolDisplayName(best, item), '');
-    return bestKey ? (overview.bySchool?.[bestKey] || null) : null;
-}
-
     Object.assign(window, {
         isExamKeyEquivalentForCompare,
         getEffectiveCurrentExamId,
@@ -857,19 +601,13 @@ function getSchoolRankOverviewEntryBySchool(overview, school) {
         extractCohortIdFromExamKey,
         isRealExamIdForCompare,
         isExamSelectableForCompare,
-        ensureCompareSharedComputationCache,
-        clearCompareSharedComputationCache,
-        getLiveRawDataFingerprint,
         listAvailableExamsForCompare,
         getSelectedReportCompareExamIds,
         getExamRowsForCompare,
         filterRowsBySchool,
         calcSchoolMetricsFromRows,
-        calcSubjectMetricsFromRows,
-        buildSchoolRankOverviewForRows,
         getSummaryEntryBySchool,
-        buildSchoolSummaryForExam,
-        getSchoolRankOverviewEntryBySchool
+        buildSchoolSummaryForExam
     });
 
     window.__COMPARE_SHARED_RUNTIME_PATCHED__ = true;

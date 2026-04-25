@@ -49,18 +49,6 @@ function hasRecentCloudflareBeaconFailure(entries, windowMs = 15000) {
     return entries.some((entry) => Number(entry?.time || 0) >= cutoff && isCloudflareBeaconFailure(entry));
 }
 
-function isGitHubReleaseApiFailure(entry) {
-    const url = String(entry?.url || '');
-    const status = Number(entry?.status || 0);
-    return /api\.github\.com\/repos\/loru12321\/school-system\/releases/i.test(url) && status === 403;
-}
-
-function hasRecentGitHubReleaseApiFailure(entries, windowMs = 15000) {
-    if (!Array.isArray(entries) || !entries.length) return false;
-    const cutoff = Date.now() - windowMs;
-    return entries.some((entry) => Number(entry?.time || 0) >= cutoff && isGitHubReleaseApiFailure(entry));
-}
-
 function shouldIgnoreConsoleMessage(msg, context = {}) {
     const text = String(msg || '');
     if (text.includes('favicon.ico')
@@ -71,11 +59,6 @@ function shouldIgnoreConsoleMessage(msg, context = {}) {
     }
 
     if (/cloudflareinsights|data-cf-beacon|beacon\.min\.js/i.test(text)) {
-        return true;
-    }
-
-    if (text.includes('Failed to load resource: the server responded with a status of 403')
-        && hasRecentGitHubReleaseApiFailure(context.recentHttpErrors)) {
         return true;
     }
 
@@ -955,7 +938,6 @@ async function smokeDataManagerTab(page, id) {
     const pass = process.env.SMOKE_PASS || 'admin123';
     const errors = [];
     const recentFailedRequests = [];
-    const recentHttpErrors = [];
     let currentScope = 'boot';
 
     page.on('pageerror', error => {
@@ -973,25 +955,12 @@ async function smokeDataManagerTab(page, id) {
         }
     });
 
-    page.on('response', response => {
-        if (response.status() < 400) return;
-        recentHttpErrors.push({
-            url: response.url(),
-            status: response.status(),
-            time: Date.now()
-        });
-        if (recentHttpErrors.length > 20) {
-            recentHttpErrors.splice(0, recentHttpErrors.length - 20);
-        }
-    });
-
     page.on('console', msg => {
         if (msg.type() !== 'error') return;
         const text = msg.text();
         if (shouldIgnoreConsoleMessage(text, {
             smokeUrl: process.env.SMOKE_URL || 'https://schoolsystem.com.cn/',
-            recentFailedRequests,
-            recentHttpErrors
+            recentFailedRequests
         })) return;
         errors.push({ scope: currentScope, type: 'console', message: text });
     });

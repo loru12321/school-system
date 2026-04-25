@@ -15,32 +15,26 @@
         });
 
     async function saveMacroMultiPeriodCompareToCloud() {
-        const cache = readMacroCompareCacheState();
-        if (!cache) return alert('请先生成县域多期对比结果');
-        if (!window.sbClient) return alert('云端服务未连接，无法保存');
+        const MACRO_MULTI_PERIOD_COMPARE_CACHE = readMacroCompareCacheState();
+        window.MACRO_MULTI_PERIOD_COMPARE_CACHE = MACRO_MULTI_PERIOD_COMPARE_CACHE;
+        if (!window.MACRO_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成校际多期对比结果');
+        if (!window.sbClient) return alert('☁️ 云端服务未连接，无法保存');
 
+        const cache = MACRO_MULTI_PERIOD_COMPARE_CACHE;
         const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || 'unknown';
         const stamp = new Date().toISOString().split('T')[0];
         const rand = Date.now().toString().slice(-4);
         const safeSchool = String(cache.school || '').replace(/[^\w\u4e00-\u9fa5]/g, '');
-        const key = `MACRO_COMPARE_${cohortId}_${safeSchool}_${stamp}_${rand}`;
-        const title = `${cache.school} 县域多期对比`;
+        const key = `MACRO_COMPARE_${cohortId}级_${safeSchool}_${stamp}_${rand}`;
+        const title = `${cache.school} 校际联考六子模块多期对比`;
 
         const payload = {
             school: cache.school,
             examIds: cache.examIds,
             periodCount: cache.periodCount,
             summaryByExam: cache.summaryByExam,
-            overviewByExam: cache.overviewByExam,
             allSchoolsChange: cache.allSchoolsChange,
-            countyInsightRows: cache.countyInsightRows || cache.moduleSeries || [],
-            schoolTrendRows: cache.schoolTrendRows,
-            latestRankMatrix: cache.latestRankMatrix,
-            rankMatrixHeaders: cache.rankMatrixHeaders,
-            rankMatrixRows: cache.rankMatrixRows,
-            teacherCountyRows: cache.teacherCountyRows || [],
-            teacherCountySummary: cache.teacherCountySummary || null,
-            teacherCountyMessage: cache.teacherCountyMessage || '',
+            moduleSeries: cache.moduleSeries,
             html: cache.html,
             title,
             createdAt: new Date().toISOString(),
@@ -48,7 +42,7 @@
         };
 
         try {
-            if (window.UI) UI.loading(true, '正在保存县域多期对比...');
+            if (window.UI) UI.loading(true, '☁️ 正在保存校际多期对比...');
             const compressed = 'LZ|' + LZString.compressToUTF16(JSON.stringify(payload));
             const { error } = await sbClient.from('system_data').upsert({
                 key,
@@ -56,7 +50,7 @@
                 updated_at: new Date().toISOString()
             }, { onConflict: 'key' });
             if (error) throw error;
-            if (window.UI) UI.toast('县域多期对比已保存到云端', 'success');
+            if (window.UI) UI.toast('✅ 校际多期对比已保存到云端', 'success');
         } catch (e) {
             console.error(e);
             alert('保存失败: ' + e.message);
@@ -66,10 +60,9 @@
     }
 
     async function viewCloudMacroCompares() {
-        if (!sbClient) return alert('云端服务未连接');
-
+        if (!sbClient) return alert('☁️ 云端服务未连接');
         try {
-            if (window.UI) UI.loading(true, '正在加载县域多期对比云端列表...');
+            if (window.UI) UI.loading(true, '☁️ 正在加载校际对比云端列表...');
 
             const user = getCurrentUser();
             const isAdmin = RoleManager.hasAnyRole(user, ['admin', 'director']);
@@ -77,7 +70,7 @@
 
             let query = sbClient.from('system_data').select('key, updated_at');
             if (!isAdmin && cohortId) {
-                query = query.like('key', `MACRO_COMPARE_${cohortId}_%`);
+                query = query.like('key', `MACRO_COMPARE_${cohortId}级_%`);
             } else {
                 query = query.like('key', 'MACRO_COMPARE_%');
             }
@@ -86,17 +79,12 @@
             if (error) throw error;
             if (window.UI) UI.loading(false);
 
-            if (!data || data.length === 0) return alert('云端暂无县域多期对比记录');
+            if (!data || data.length === 0) return alert('☁️ 云端暂无校际多期对比记录');
 
             const html = data.map((item) => {
-                const prefix = 'MACRO_COMPARE_';
-                const body = String(item.key || '').startsWith(prefix)
-                    ? String(item.key || '').slice(prefix.length)
-                    : String(item.key || '');
-                const parts = body.split('_');
-                const cohort = parts[0] || '未知届别';
-                const school = parts[1] || '未知学校';
-
+                const keyParts = item.key.split('_');
+                const cohort = keyParts[1] || '未知届别';
+                const school = keyParts[2] || '未知学校';
                 return `
                     <div style="padding:12px; border-bottom:1px solid #e2e8f0; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="loadCloudMacroCompare('${item.key}')">
                         <div style="flex:1;">
@@ -108,7 +96,7 @@
                         </div>
                         <div style="text-align:right;">
                             <div style="font-size:12px; color:#64748b;">${new Date(item.updated_at).toLocaleString('zh-CN')}</div>
-                            <div style="font-size:11px; color:#3b82f6; margin-top:2px;">查看详情 &gt;</div>
+                            <div style="font-size:11px; color:#3b82f6; margin-top:2px;">详情 &gt;</div>
                         </div>
                     </div>
                 `;
@@ -116,7 +104,7 @@
 
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
-                    title: '县域多期对比云端记录',
+                    title: '☁️ 校际多期对比云端记录',
                     html: `<div style="max-height:400px; overflow-y:auto; text-align:left;">${html}</div>`,
                     width: 640,
                     showCloseButton: true,
@@ -131,11 +119,10 @@
     }
 
     async function loadCloudMacroCompare(key) {
-        if (!sbClient) return alert('云端服务未连接');
-
+        if (!sbClient) return alert('☁️ 云端服务未连接');
         try {
             if (typeof Swal !== 'undefined') Swal.close();
-            if (window.UI) UI.loading(true, '正在加载县域多期对比详情...');
+            if (window.UI) UI.loading(true, '☁️ 正在加载校际对比详情...');
             const { data, error } = await sbClient.from('system_data').select('content').eq('key', key).single();
             if (error) throw error;
 
@@ -147,34 +134,22 @@
 
             const hintEl = document.getElementById('macroCompareHint');
             const resultEl = document.getElementById('macroCompareResult');
-            if (resultEl) {
-                resultEl.innerHTML = payload.html || '<div style="color:#94a3b8;">云端记录缺少展示内容</div>';
-            }
+            if (resultEl) resultEl.innerHTML = payload.html || '<div style="color:#94a3b8;">云端记录缺少展示内容</div>';
             if (hintEl) {
-                hintEl.innerHTML = `已加载云端县域对比：${payload.title || key}`;
+                hintEl.innerHTML = `✅ 已加载云端校际对比：${payload.title || key}`;
                 hintEl.style.color = '#7c3aed';
             }
 
-            const cache = {
+            window.MACRO_MULTI_PERIOD_COMPARE_CACHE = {
                 school: payload.school,
                 examIds: payload.examIds,
                 periodCount: payload.periodCount,
                 summaryByExam: payload.summaryByExam,
-                overviewByExam: payload.overviewByExam,
                 allSchoolsChange: payload.allSchoolsChange,
-                countyInsightRows: payload.countyInsightRows || payload.moduleSeries || [],
-                schoolTrendRows: payload.schoolTrendRows,
-                latestRankMatrix: payload.latestRankMatrix,
-                rankMatrixHeaders: payload.rankMatrixHeaders,
-                rankMatrixRows: payload.rankMatrixRows,
-                teacherCountyRows: payload.teacherCountyRows || [],
-                teacherCountySummary: payload.teacherCountySummary || null,
-                teacherCountyMessage: payload.teacherCountyMessage || '',
+                moduleSeries: payload.moduleSeries,
                 html: payload.html
             };
-
-            window.MACRO_MULTI_PERIOD_COMPARE_CACHE = cache;
-            setMacroCompareCacheState(cache);
+            setMacroCompareCacheState(window.MACRO_MULTI_PERIOD_COMPARE_CACHE);
         } catch (e) {
             console.error(e);
             alert('加载失败: ' + e.message);

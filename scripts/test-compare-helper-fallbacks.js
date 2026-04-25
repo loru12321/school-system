@@ -36,17 +36,6 @@ function runCompareSharedFallbackTest() {
             }
         }
     };
-    context.SUBJECTS = ['语文', '数学'];
-    context.THRESHOLDS = {
-        语文: { exc: 90, pass: 60 },
-        数学: { exc: 90, pass: 60 }
-    };
-    context.CONFIG = { excRate: 0.2 };
-    context.RAW_DATA = [];
-    context.window.SUBJECTS = context.SUBJECTS;
-    context.window.THRESHOLDS = context.THRESHOLDS;
-    context.window.CONFIG = context.CONFIG;
-    context.window.RAW_DATA = context.RAW_DATA;
     context.UI = context.window.UI;
     context.globalThis = context.window;
 
@@ -58,22 +47,6 @@ function runCompareSharedFallbackTest() {
     assert.strictEqual(warnedKey, 'Exam A|Exam B');
     assert.strictEqual(toasts.length, 1);
     assert.strictEqual(toasts[0].type, 'warning');
-
-    const overview = context.window.buildSchoolRankOverviewForRows([
-        { school: '甲校', total: 180, scores: { 语文: 92, 数学: 88 } },
-        { school: '甲校', total: 170, scores: { 语文: 89, 数学: 81 } },
-        { school: '乙校', total: 160, scores: { 语文: 84, 数学: 79 } },
-        { school: '乙校', total: 150, scores: { 语文: 80, 数学: 72 } }
-    ], ['语文', '数学']);
-
-    assert.ok(overview);
-    assert.strictEqual(overview.schools.length, 2);
-    assert.strictEqual(overview.schools[0].school, '甲校');
-    assert.strictEqual(overview.schools[0].total.rankAvg, 1);
-    assert.strictEqual(overview.schools[0].subjects['语文'].rankAvg, 1);
-    assert.strictEqual(overview.schools[1].subjects['数学'].rankAvg, 2);
-    assert.strictEqual(typeof context.window.getSchoolRankOverviewEntryBySchool, 'function');
-    assert.strictEqual(context.window.getSchoolRankOverviewEntryBySchool(overview, '甲校').school, '甲校');
 }
 
 function runCompareSelectorsFallbackTest() {
