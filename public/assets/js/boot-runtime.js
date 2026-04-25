@@ -87,8 +87,6 @@ var BOOT_VENDOR_MODULES = [
 ];
 
 var DEFERRED_APP_MODULES = [
-    './assets/vendor/jszip/jszip.min.js',
-    './assets/vendor/pptxgenjs/pptxgen.min.js',
     './assets/vendor/gsap/ScrollTrigger.min.js',
     './assets/vendor/popperjs/popper.min.js',
     './assets/vendor/tippyjs/tippy.umd.min.js',
@@ -105,15 +103,6 @@ var SYSTEM_RUNTIME_SKILLS = {
             { key: 'popper-vendor', src: './assets/vendor/popperjs/popper.min.js' },
             { key: 'tippy-vendor', src: './assets/vendor/tippyjs/tippy.umd.min.js' },
             { key: 'simplebar-vendor', src: './assets/vendor/simplebar/simplebar.min.js' }
-        ]
-    },
-    'presentation-export': {
-        mode: 'demand',
-        warmup: 'balanced',
-        triggers: ['exportPPTReport', 'generateClassPPT'],
-        entries: [
-            { key: 'jszip-vendor', src: './assets/vendor/jszip/jszip.min.js' },
-            { key: 'pptxgen-vendor', src: './assets/vendor/pptxgenjs/pptxgen.min.js' }
         ]
     },
     'pdf-export': {
@@ -201,7 +190,7 @@ var SYSTEM_RUNTIME_SKILLS = {
     },
     'school-profile': {
         mode: 'demand',
-        warmup: 'balanced',
+        warmup: 'demand',
         triggers: ['summary', 'showSchoolProfile'],
         entries: [
             { key: 'school-profile', src: './assets/js/school-profile-runtime.js' }
@@ -2053,10 +2042,6 @@ window.ensurePdfExportVendorsLoaded = function () {
     return window.SystemRuntimeLoader.load('pdf-export');
 };
 
-window.ensurePresentationVendorsLoaded = function () {
-    return window.SystemRuntimeLoader.load('presentation-export');
-};
-
 window.ensureReportRenderRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('report-render');
 };
@@ -2277,7 +2262,6 @@ if (window.innerWidth <= 960 || localStorage.getItem('DEV_MODE') === 'true') {
     });
 }
 
-warmOptionalRuntimeAfterLoad('__SCHOOL_PROFILE_RUNTIME_PATCHED__', window.ensureSchoolProfileRuntimeLoaded, 600);
 if (window.innerWidth <= 768 || localStorage.getItem('DEV_MODE') === 'true') {
     window.ensureMobileManagerRuntimeLoaded().then(() => {
         return window.ensurePerfMobileRuntimeLoaded();
