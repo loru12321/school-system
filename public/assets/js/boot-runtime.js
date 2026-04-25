@@ -105,6 +105,7 @@ var APP_MODULES = [
     './assets/js/compare-summary-state-runtime.js',
     './assets/js/cloud-api-runtime.js',
     './assets/js/cloud.js',
+    './assets/js/system-performance-runtime.js',
     './assets/js/cloud-workspace-runtime.js',
     './assets/js/data-cloud-runtime.js',
     './assets/js/issue-manager-runtime.js',

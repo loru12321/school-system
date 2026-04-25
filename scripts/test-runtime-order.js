@@ -16,6 +16,7 @@ const compareSessionRuntimePath = path.resolve(__dirname, '../public/assets/js/c
 const compareResultRuntimePath = path.resolve(__dirname, '../public/assets/js/compare-result-state-runtime.js');
 const compareSummaryRuntimePath = path.resolve(__dirname, '../public/assets/js/compare-summary-state-runtime.js');
 const cloudApiRuntimePath = path.resolve(__dirname, '../public/assets/js/cloud-api-runtime.js');
+const systemPerformanceRuntimePath = path.resolve(__dirname, '../public/assets/js/system-performance-runtime.js');
 const dataCloudRuntimePath = path.resolve(__dirname, '../public/assets/js/data-cloud-runtime.js');
 const issueManagerRuntimePath = path.resolve(__dirname, '../public/assets/js/issue-manager-runtime.js');
 const packagerRuntimePath = path.resolve(__dirname, '../public/assets/js/packager-runtime.js');
@@ -78,6 +79,7 @@ assert.ok(fs.existsSync(compareSessionRuntimePath), 'compare-session-state-runti
 assert.ok(fs.existsSync(compareResultRuntimePath), 'compare-result-state-runtime.js should exist');
 assert.ok(fs.existsSync(compareSummaryRuntimePath), 'compare-summary-state-runtime.js should exist');
 assert.ok(fs.existsSync(cloudApiRuntimePath), 'cloud-api-runtime.js should exist');
+assert.ok(fs.existsSync(systemPerformanceRuntimePath), 'system-performance-runtime.js should exist');
 assert.ok(fs.existsSync(dataCloudRuntimePath), 'data-cloud-runtime.js should exist');
 assert.ok(fs.existsSync(issueManagerRuntimePath), 'issue-manager-runtime.js should exist');
 assert.ok(fs.existsSync(packagerRuntimePath), 'packager-runtime.js should exist');
@@ -149,6 +151,7 @@ const compareSessionStateRef = './assets/js/compare-session-state-runtime.js';
 const compareResultStateRef = './assets/js/compare-result-state-runtime.js';
 const compareSummaryStateRef = './assets/js/compare-summary-state-runtime.js';
 const cloudApiRef = './assets/js/cloud-api-runtime.js';
+const systemPerformanceRef = './assets/js/system-performance-runtime.js';
 const dataCloudRef = './assets/js/data-cloud-runtime.js';
 const issueManagerRef = './assets/js/issue-manager-runtime.js';
 const packagerRef = './assets/js/packager-runtime.js';
@@ -246,6 +249,7 @@ const compareSessionStateIndex = moduleManifest.indexOf(compareSessionStateRef);
 const compareResultStateIndex = moduleManifest.indexOf(compareResultStateRef);
 const compareSummaryStateIndex = moduleManifest.indexOf(compareSummaryStateRef);
 const cloudApiIndex = moduleManifest.indexOf(cloudApiRef);
+const systemPerformanceIndex = moduleManifest.indexOf(systemPerformanceRef);
 const dataCloudIndex = moduleManifest.indexOf(dataCloudRef);
 const issueManagerIndex = moduleManifest.indexOf(issueManagerRef);
 const packagerIndex = moduleManifest.indexOf(packagerRef);
@@ -296,6 +300,7 @@ assert.ok(compareSessionStateIndex >= 0, 'index.html should load compare-session
 assert.ok(compareResultStateIndex >= 0, 'index.html should load compare-result-state-runtime.js');
 assert.ok(compareSummaryStateIndex >= 0, 'index.html should load compare-summary-state-runtime.js');
 assert.ok(cloudApiIndex >= 0, 'index.html should load cloud-api-runtime.js');
+assert.ok(systemPerformanceIndex >= 0, 'index.html should load system-performance-runtime.js');
 assert.ok(dataCloudIndex >= 0, 'index.html should load data-cloud-runtime.js');
 assert.ok(issueManagerIndex >= 0, 'index.html should load issue-manager-runtime.js');
 assert.ok(packagerIndex >= 0, 'index.html should load packager-runtime.js');
@@ -321,6 +326,8 @@ assert.ok(compareSelectorsIndex >= 0, 'index.html should load compare-selectors-
 assert.ok(cloudIndex >= 0, 'index.html should load cloud.js');
 assert.ok(cloudWorkspaceIndex >= 0, 'index.html should load cloud-workspace-runtime.js');
 assert.ok(cloudApiIndex < cloudIndex, 'cloud-api-runtime.js should load before cloud.js');
+assert.ok(cloudIndex < systemPerformanceIndex, 'system-performance-runtime.js should load after cloud.js');
+assert.ok(systemPerformanceIndex < cloudWorkspaceIndex, 'system-performance-runtime.js should load before cloud-workspace-runtime.js');
 assert.ok(dataCloudIndex < appIndex, 'data-cloud-runtime.js should load before app.js');
 assert.ok(issueManagerIndex < appIndex, 'issue-manager-runtime.js should load before app.js');
 assert.ok(packagerIndex < appIndex, 'packager-runtime.js should load before app.js');
@@ -381,6 +388,7 @@ assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign swi
     compareResultStateRef,
     compareSummaryStateRef,
     cloudApiRef,
+    systemPerformanceRef,
     dataCloudRef,
     issueManagerRef,
     packagerRef,
