@@ -1,8 +1,10 @@
 window.onerror = function (msg, url, lineNo, columnNo, error) {
     // 忽略第三方插件的非关键错误
-    if (msg.includes('Script error')) return false;
+    const message = String(msg || '');
+    if (message.includes('Script error')) return false;
+    if (!message && !error) return true;
 
-    console.error('全局错误捕获:', error);
+    console.error('全局错误捕获:', error || message);
 
     // 如果 SweetAlert2 已加载，用它提示
     if (typeof Swal !== 'undefined') {

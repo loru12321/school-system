@@ -1289,7 +1289,8 @@
                     setCloudStatus('success', '任课已拉取');
                     return true;
                 } catch (e) {
-                    console.error('Teacher load error:', e);
+                    const log = background || !showToast ? console.warn : console.error;
+                    log('Teacher load error:', e);
                     if (showToast) safeToast('任课表加载失败', 'error');
                     setCloudStatus('error', '任课拉取失败');
                     return false;
