@@ -9892,6 +9892,37 @@ if (!window.NAV_STRUCTURE) {
     console.warn('shell-runtime.js 未加载，导航结构将保持空对象。');
 }
 
+function ensureCountySubmoduleSectionForSwitch(id) {
+    if (id !== 'county-teacher-portrait' && id !== 'county-school-horizontal') return;
+    if (document.getElementById(id)) return;
+    const base = document.getElementById('county-analysis');
+    if (!base) return;
+    const meta = id === 'county-school-horizontal'
+        ? {
+            title: '县域学校横向分析',
+            badge: '全县横向对比',
+            desc: '对照“两率一分(横向)”，生成五科总综合分析表和各学科明细表，按县域所有学校统一排名。'
+        }
+        : {
+            title: '县域教师画像',
+            badge: '教师县域排名',
+            desc: '对照“教师教学质量画像”，把本校教师放到县域所有学校同学科样本中排名，查看学科教师县域站位。'
+        };
+    const section = document.createElement('div');
+    section.id = id;
+    section.className = 'section card-box analysis-workspace analysis-workspace-county';
+    section.innerHTML = `
+        <div class="module-desc-bar analysis-hero" style="border-color:#0f766e;">
+            <h3><i class="ti ti-map-2"></i> ${tmEscapeHtml(meta.title)} <span class="badge" style="background:#0f766e;">${tmEscapeHtml(meta.badge)}</span></h3>
+            <p>${tmEscapeHtml(meta.desc)}</p>
+        </div>
+        <div class="county-analysis-root">
+            <div class="info-bar analysis-info-band">导入县级成绩后，这里只呈现县域专用分析，不改变联考分析、教学管理和学情诊断的原有口径。</div>
+        </div>
+    `;
+    base.insertAdjacentElement('afterend', section);
+}
+
 function getCurrentCategoryKey() {
     return (typeof window.getCurrentNavCategory === 'function')
         ? window.getCurrentNavCategory()
@@ -10782,6 +10813,7 @@ function switchTab(id) {
     if (typeof window.ensureLazySectionLoaded === 'function') {
         window.ensureLazySectionLoaded(id);
     }
+    ensureCountySubmoduleSectionForSwitch(id);
 
     // 1. 切换内容区域显示
     forceHideAllSectionsExcept();
