@@ -138,8 +138,41 @@
         });
     }
 
+    function normalizeCloudReadArgs(method, args) {
+        const list = Array.isArray(args) ? args.slice() : [];
+        if (method === 'load') return [];
+        if (method === 'loadTeachers') {
+            const options = list.find((item) => item && typeof item === 'object' && !Array.isArray(item)) || {};
+            return [{
+                schoolName: options.schoolName || options.scopeSchool || '',
+                termId: options.termId || options.teacherTermId || '',
+                cohortId: options.cohortId || ''
+            }];
+        }
+        if (method === 'fetchCohortExamsToLocal') {
+            const cohortId = list[0] || '';
+            const options = list[1] && typeof list[1] === 'object' ? list[1] : {};
+            return [cohortId, { minCount: options.minCount || 2 }];
+        }
+        if (method === 'fetchAllCohortExams') {
+            const options = list[0] && typeof list[0] === 'object' ? list[0] : {};
+            return [{ cohortId: options.cohortId || '' }];
+        }
+        if (method === 'fetchStudentExamHistory') {
+            const student = list[0] && typeof list[0] === 'object' ? list[0] : {};
+            return [{
+                name: student.name || '',
+                school: student.school || '',
+                class: student.class || '',
+                examNo: student.examNo || student.id || '',
+                cohort: student.cohort || ''
+            }];
+        }
+        return list;
+    }
+
     function buildCloudKey(method, args) {
-        return `cloud:${method}:${stableStringify(args)}`;
+        return `cloud:${method}:${stableStringify(normalizeCloudReadArgs(method, args))}`;
     }
 
     function wrapCloudRead(manager, method, ttlMs) {
