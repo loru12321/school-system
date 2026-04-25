@@ -1299,16 +1299,30 @@
                     }
 
                     if (!metaRow) {
-                        const { data: rows, error } = await selectSystemData({
-                            select: 'key,updated_at',
-                            keyLike: cohortId ? `${KEY_PREFIX_TEACHERS}${cohortId}%` : `${KEY_PREFIX_TEACHERS}%`,
-                            order: 'updated_at',
-                            limit: 20
-                        });
-                        if (error) throw error;
                         const scopedKeyPrefix = requestedSchool
                             ? `${KEY_PREFIX_TEACHERS}${cohortId || ''}级_${normalizeTeacherSchoolForKey(requestedSchool)}_`
                             : '';
+                        let rows = [];
+                        if (requestedSchool && scopedKeyPrefix) {
+                            const { data: scopedRows, error: scopedError } = await selectSystemData({
+                                select: 'key,updated_at',
+                                keyLike: scopedKeyPrefix,
+                                order: 'updated_at',
+                                limit: 80
+                            });
+                            if (scopedError) throw scopedError;
+                            rows = scopedRows || [];
+                        }
+                        if (!rows.length) {
+                            const { data: fallbackRows, error } = await selectSystemData({
+                                select: 'key,updated_at',
+                                keyLike: cohortId ? `${KEY_PREFIX_TEACHERS}${cohortId}%` : `${KEY_PREFIX_TEACHERS}%`,
+                                order: 'updated_at',
+                                limit: requestedSchool ? 120 : 50
+                            });
+                            if (error) throw error;
+                            rows = fallbackRows || [];
+                        }
                         metaRow = (requestedSchool && scopedKeyPrefix
                             ? (rows || []).find(item => String(item?.key || '').startsWith(scopedKeyPrefix)
                                 && desiredTerms.some(term => String(item?.key || '').endsWith(`_${term}`)))
