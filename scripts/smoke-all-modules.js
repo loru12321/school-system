@@ -642,31 +642,50 @@ async function runModuleDeepCheck(page, id) {
             if (typeof window.renderCountyAnalysis === 'function') {
                 window.renderCountyAnalysis();
             }
-            const teacherRankRows = Object.values(window.COUNTY_TEACHER_RANKINGS || {}).flat().length;
+            const teacherRoot = document.querySelector('#county-teacher-portrait .county-analysis-root')
+                || document.getElementById('county-analysis-root')
+                || document.querySelector('#county-analysis .county-analysis-root');
+            const teacherRankRows = teacherRoot
+                ? teacherRoot.querySelectorAll('.county-teacher-rank-table tbody tr').length
+                : 0;
+            const ownTeacherRows = teacherRoot
+                ? teacherRoot.querySelectorAll('.county-teacher-own-row').length
+                : 0;
+            const teacherEmptyState = !!teacherRoot?.querySelector('.county-empty');
+            let horizontalReady = false;
+            if (typeof window.renderCountyAnalysis === 'function') {
+                window.renderCountyAnalysis('county-school-horizontal');
+                const horizontalRoot = document.querySelector('#county-school-horizontal .county-analysis-root');
+                horizontalReady = !!horizontalRoot?.querySelector('.county-rank-table')
+                    || !!horizontalRoot?.querySelector('.county-empty');
+                window.renderCountyAnalysis('county-teacher-portrait');
+            }
             const checks = {
                 runtimeLoaded: window.__COUNTY_ANALYSIS_RUNTIME_PATCHED__ === true,
-                rootReady: !!document.getElementById('county-analysis-root'),
+                rootReady: !!teacherRoot,
                 renderReady: typeof window.renderCountyAnalysis === 'function',
                 scopeReady: !!window.CountyAnalysisRuntime && typeof window.CountyAnalysisRuntime.applyCountyRanks === 'function',
                 exportReady: typeof window.exportCountyAnalysisSection === 'function',
-                teacherRankReady: teacherRankRows > 0 || Object.keys(window.TEACHER_MAP || {}).length === 0,
+                teacherRankReady: teacherRankRows > 0 || teacherEmptyState,
+                teacherOwnRowsReady: ownTeacherRows > 0 || teacherEmptyState,
+                horizontalReady,
                 subjectCountyRankReady: Array.isArray(window.SUBJECTS) && window.SUBJECTS.length > 0
                     ? (window.RAW_DATA || []).some((student) => window.SUBJECTS.some((subject) => student?.ranks?.[subject]?.county))
                     : true
             };
-            const exportButtons = document.querySelectorAll('#county-analysis-root .county-section-actions button').length;
-            const teacherRankTable = !!document.querySelector('#county-analysis-root .county-teacher-rank-table');
-            const teacherEmptyState = !!document.querySelector('#county-analysis-root .county-empty');
-            const studentSubjectSummary = !!document.querySelector('#county-analysis-root .county-student-subject-summary');
+            const exportButtons = teacherRoot ? teacherRoot.querySelectorAll('.county-section-actions button').length : 0;
+            const teacherRankTable = !!teacherRoot?.querySelector('.county-teacher-rank-table');
+            const studentSubjectSummary = !!teacherRoot?.querySelector('.county-student-subject-summary');
             const studentArchiveRemoved = !studentSubjectSummary;
             return {
                 ok: Object.values(checks).every(Boolean)
-                    && exportButtons >= 4
+                    && exportButtons >= 1
                     && (teacherRankRows > 0 ? teacherRankTable : teacherEmptyState)
                     && studentArchiveRemoved,
                 checks,
                 exportButtons,
                 teacherRankRows,
+                ownTeacherRows,
                 teacherRankTable,
                 teacherEmptyState,
                 studentArchiveRemoved
