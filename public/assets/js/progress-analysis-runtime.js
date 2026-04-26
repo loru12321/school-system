@@ -84,17 +84,38 @@
         quickMode: readProgressQuickModeState()
     });
 
+function progressEscapeHtml(value) {
+    if (typeof window.tmEscapeHtml === 'function') return window.tmEscapeHtml(value);
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function setProgressSelectOptionsIfChanged(select, html, signature) {
+    if (!select) return;
+    const nextSignature = String(signature || html || '');
+    if (select.dataset.progressOptionsSig === nextSignature) return;
+    select.innerHTML = html;
+    select.dataset.progressOptionsSig = nextSignature;
+}
+
 function updateProgressSchoolSelect() {
     const sel = document.getElementById('progressSchoolSelect');
     if (!sel) return;
-    sel.innerHTML = '<option value="">--请选择本校--</option>';
     const user = getCurrentUser();
     const availableSchools = (typeof window.listAvailableSchoolsForCompare === 'function')
         ? window.listAvailableSchoolsForCompare()
         : Object.keys(SCHOOLS || {});
-    PermissionPolicy.getAccessibleSchoolNames(user, availableSchools).forEach((school) => {
-        sel.innerHTML += `<option value="${school}">${school}</option>`;
-    });
+    const schools = PermissionPolicy.getAccessibleSchoolNames(user, availableSchools);
+    const optionsHtml = '<option value="">--请选择本校--</option>'
+        + schools.map((school) => {
+            const safeSchool = progressEscapeHtml(school);
+            return `<option value="${safeSchool}">${safeSchool}</option>`;
+        }).join('');
+    setProgressSelectOptionsIfChanged(sel, optionsHtml, `progress-school:${schools.join('|')}`);
 
     const role = user?.role || 'guest';
     if (role === 'teacher' || role === 'class_teacher' || role === 'director' || role === 'grade_director') {
@@ -195,10 +216,12 @@ function updateProgressBaselineSelect() {
     const examList = getProgressBaselineExamList();
     const baselineList = examList.filter((exam) => !CURRENT_EXAM_ID || !isExamKeyEquivalentForCompare(exam.id, CURRENT_EXAM_ID));
 
-    sel.innerHTML = '<option value="">--请选择历史考试--</option>';
-    baselineList.forEach((exam) => {
-        sel.innerHTML += `<option value="${exam.id}">${exam.id}</option>`;
-    });
+    const optionsHtml = '<option value="">--请选择历史考试--</option>'
+        + baselineList.map((exam) => {
+            const safeId = progressEscapeHtml(exam.id);
+            return `<option value="${safeId}">${safeId}</option>`;
+        }).join('');
+    setProgressSelectOptionsIfChanged(sel, optionsHtml, `progress-baseline:${baselineList.map((exam) => exam.id).join('|')}`);
 
     const preferredId = baselineList.some((exam) => exam.id === currentValue)
         ? currentValue
@@ -416,11 +439,18 @@ function updateProgressMultiExamSelects() {
     const schoolList = (typeof listAvailableSchoolsForCompare === 'function')
         ? listAvailableSchoolsForCompare()
         : Object.keys(SCHOOLS || {});
-    schoolSel.innerHTML = '<option value="">--请选择学校--</option>';
-    schoolList.forEach((school) => {
-        schoolSel.innerHTML += `<option value="${school}">${school}</option>`;
-    });
-    if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) schoolSel.value = MY_SCHOOL;
+    const previousSchool = schoolSel.value || '';
+    const schoolOptionsHtml = '<option value="">--请选择学校--</option>'
+        + schoolList.map((school) => {
+            const safeSchool = progressEscapeHtml(school);
+            return `<option value="${safeSchool}">${safeSchool}</option>`;
+        }).join('');
+    setProgressSelectOptionsIfChanged(schoolSel, schoolOptionsHtml, `progress-compare-schools:${schoolList.join('|')}`);
+    if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) {
+        schoolSel.value = MY_SCHOOL;
+    } else if (previousSchool && schoolList.includes(previousSchool)) {
+        schoolSel.value = previousSchool;
+    }
 
     const examList = getProgressBaselineExamList().map((exam) => ({
         id: exam.id,
@@ -439,16 +469,21 @@ function updateProgressMultiExamSelects() {
             return;
         }
         const msg = '<option value="">--考试数量不足(至少2次)--</option>';
-        exam1Sel.innerHTML = msg;
-        exam2Sel.innerHTML = msg;
-        exam3Sel.innerHTML = msg;
+        setProgressSelectOptionsIfChanged(exam1Sel, msg, 'progress-compare-exams:insufficient');
+        setProgressSelectOptionsIfChanged(exam2Sel, msg, 'progress-compare-exams:insufficient');
+        setProgressSelectOptionsIfChanged(exam3Sel, msg, 'progress-compare-exams:insufficient');
         return;
     }
 
-    const optionsHtml = examList.map((exam) => `<option value="${exam.id}">${exam.label}</option>`).join('');
-    exam1Sel.innerHTML = optionsHtml;
-    exam2Sel.innerHTML = optionsHtml;
-    exam3Sel.innerHTML = optionsHtml;
+    const optionsHtml = examList.map((exam) => {
+        const safeId = progressEscapeHtml(exam.id);
+        const safeLabel = progressEscapeHtml(exam.label);
+        return `<option value="${safeId}">${safeLabel}</option>`;
+    }).join('');
+    const examSignature = `progress-compare-exams:${examList.map((exam) => `${exam.id}:${exam.label}`).join('|')}`;
+    setProgressSelectOptionsIfChanged(exam1Sel, optionsHtml, examSignature);
+    setProgressSelectOptionsIfChanged(exam2Sel, optionsHtml, examSignature);
+    setProgressSelectOptionsIfChanged(exam3Sel, optionsHtml, examSignature);
 
     const currentIndex = (CURRENT_EXAM_ID && examList.some((exam) => exam.id === CURRENT_EXAM_ID))
         ? examList.findIndex((exam) => exam.id === CURRENT_EXAM_ID)
@@ -471,23 +506,25 @@ function updateProgressMultiExamSelects() {
 function showMappingModal(cases) {
     const modal = document.getElementById('mappingModal');
     const tbody = document.querySelector('#mappingModal tbody');
-    tbody.innerHTML = '';
+    if (!modal || !tbody) return;
 
-    cases.forEach((item, idx) => {
+    const rows = (cases || []).map((item) => {
         const curr = item.curr;
         let optionsHtml = `<option value="">-- 请选择对应的上次记录 --</option>`;
         // 默认选项：如果只有一个候选人，为了方便，默认选中它？还是强制让用户选？
         // 建议：强制选，或者提供一个"不匹配(视为新生)"选项
-        item.candidates.forEach(cand => {
-            optionsHtml += `<option value="${cand.class}">上次在：${cand.class} (排名:${cand.rank})</option>`;
+        (item.candidates || []).forEach(cand => {
+            const safeClass = progressEscapeHtml(cand.class);
+            const safeRank = progressEscapeHtml(cand.rank);
+            optionsHtml += `<option value="${safeClass}">上次在：${safeClass} (排名:${safeRank})</option>`;
         });
         optionsHtml += `<option value="__IGNORE__">❌ 不是同一个人 (视为新生)</option>`;
 
-        const row = `
-                <tr data-school="${curr.school}" data-class="${curr.class}" data-name="${curr.name}">
+        return `
+                <tr data-school="${progressEscapeHtml(curr.school)}" data-class="${progressEscapeHtml(curr.class)}" data-name="${progressEscapeHtml(curr.name)}">
                     <td style="padding:10px;">
-                        <div style="font-weight:bold;">${curr.name}</div>
-                        <div style="font-size:12px; color:#666;">本次：${curr.class}</div>
+                        <div style="font-weight:bold;">${progressEscapeHtml(curr.name)}</div>
+                        <div style="font-size:12px; color:#666;">本次：${progressEscapeHtml(curr.class)}</div>
                     </td>
                     <td style="padding:10px;">
                         <select class="mapping-select" style="width:100%; padding:5px; border:1px solid #d97706; border-radius:4px;">
@@ -496,8 +533,8 @@ function showMappingModal(cases) {
                     </td>
                 </tr>
             `;
-        tbody.innerHTML += row;
     });
+    tbody.innerHTML = rows.join('');
 
     modal.style.display = 'flex';
 }
