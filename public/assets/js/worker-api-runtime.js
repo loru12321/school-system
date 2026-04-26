@@ -43,14 +43,24 @@
         return schoolsLite;
     }
 
-    function init(manager, workerSource) {
+    function init(manager, workerSource, workerScriptUrl) {
         if (!manager) throw new Error('WorkerAPI manager unavailable');
         if (manager.worker) return manager.worker;
 
-        const BlobCtor = getBlobCtor();
         const WorkerCtor = getWorkerCtor();
+        if (!WorkerCtor) {
+            throw new Error('Worker runtime unavailable');
+        }
+
+        const scriptUrl = String(workerScriptUrl || '').trim();
+        if (scriptUrl) {
+            manager.worker = new WorkerCtor(scriptUrl);
+            return manager.worker;
+        }
+
+        const BlobCtor = getBlobCtor();
         const urlApi = getUrlApi();
-        if (!BlobCtor || !WorkerCtor || !urlApi) {
+        if (!BlobCtor || !urlApi) {
             throw new Error('Worker runtime unavailable');
         }
 
@@ -60,8 +70,8 @@
         return manager.worker;
     }
 
-    function run(manager, data, workerSource) {
-        const worker = init(manager, workerSource);
+    function run(manager, data, workerSource, workerScriptUrl) {
+        const worker = init(manager, workerSource, workerScriptUrl);
         return new Promise((resolve, reject) => {
             worker.onmessage = (event) => {
                 if (event && event.data && event.data.status === 'ok') resolve(event.data);

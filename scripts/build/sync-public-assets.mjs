@@ -53,6 +53,13 @@ export function syncReferencedAssets({
       referencedAssets.add(asset);
     }
   }
+  const resolvedAppRuntimePath = path.join(sourceJsDir, 'app.js');
+  if (fs.existsSync(resolvedAppRuntimePath)) {
+    const appRuntime = fs.readFileSync(resolvedAppRuntimePath, 'utf8');
+    for (const asset of collectLazyLoadedJsAssets(appRuntime)) {
+      referencedAssets.add(asset);
+    }
+  }
 
   for (const entry of fs.readdirSync(targetJsDir, { withFileTypes: true })) {
     if (!entry.isFile() || !entry.name.endsWith('.js')) continue;

@@ -84,6 +84,16 @@ async function run() {
     }, 'self.onmessage = function(){};');
     assert.strictEqual(workerCreatedCount, 1);
 
+    const urlManager = { worker: null };
+    blobParts = null;
+    await runtime.run(urlManager, {
+        RAW_DATA: [],
+        SCHOOLS: {}
+    }, '', './assets/js/data-processing-worker.js?v=test');
+    assert.strictEqual(workerCreatedCount, 2);
+    assert.strictEqual(urlManager.worker.url, './assets/js/data-processing-worker.js?v=test');
+    assert.strictEqual(blobParts, null, 'script URL workers should not create blob sources');
+
     console.log('worker-api-runtime tests passed');
 }
 
