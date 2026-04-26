@@ -170,6 +170,27 @@
         setWorkspaceDrawerState(!isOpen);
     }
 
+    function setTextIfChanged(element, value) {
+        if (!element) return;
+        const next = value == null ? '' : String(value);
+        if (element.textContent !== next) {
+            element.textContent = next;
+        }
+    }
+
+    function setAttrIfChanged(element, name, value) {
+        if (!element) return;
+        const next = value == null ? '' : String(value);
+        if (element.getAttribute(name) !== next) {
+            element.setAttribute(name, next);
+        }
+    }
+
+    function setTextAndTooltip(element, text, tooltip) {
+        setTextIfChanged(element, text);
+        setAttrIfChanged(element, 'data-shell-tooltip', tooltip == null ? text : tooltip);
+    }
+
     function notifyShellEnhancements() {
         scheduleFloatingModuleRailSync();
         if (typeof window.refreshShellEnhancements === 'function') {
@@ -614,28 +635,22 @@
         const activeHint = activeItem ? activeItem.hint : category.summary;
         const subtitle = activeItem ? `${category.title} / ${activeItem.text}` : `${category.title} / 模块导航`;
 
-        const appSubtitle = document.getElementById('app-subtitle');
-        if (appSubtitle) appSubtitle.textContent = subtitle;
+        setTextIfChanged(document.getElementById('app-subtitle'), subtitle);
 
-        const currentTitle = document.getElementById('shell-current-title');
-        if (currentTitle) currentTitle.textContent = activeTitle;
+        setTextIfChanged(document.getElementById('shell-current-title'), activeTitle);
 
-        const currentDesc = document.getElementById('shell-current-desc');
-        if (currentDesc) currentDesc.textContent = activeHint || category.summary;
+        setTextIfChanged(document.getElementById('shell-current-desc'), activeHint || category.summary);
 
-        const categoryKicker = document.getElementById('shell-category-kicker');
-        if (categoryKicker) categoryKicker.textContent = category.eyebrow;
+        setTextIfChanged(document.getElementById('shell-category-kicker'), category.eyebrow);
 
-        const categoryTitle = document.getElementById('shell-category-title');
-        if (categoryTitle) categoryTitle.textContent = category.title;
+        setTextIfChanged(document.getElementById('shell-category-title'), category.title);
 
-        const categoryDesc = document.getElementById('shell-category-desc');
-        if (categoryDesc) categoryDesc.textContent = category.summary;
+        setTextIfChanged(document.getElementById('shell-category-desc'), category.summary);
 
         const moduleCount = document.getElementById('shell-module-count');
         if (moduleCount) {
-            moduleCount.textContent = `${visibleItems.length} 个模块`;
-            moduleCount.setAttribute('data-shell-tooltip', `${category.title} 当前可见模块数：${visibleItems.length}`);
+            const countText = `${visibleItems.length} 个模块`;
+            setTextAndTooltip(moduleCount, countText, `${category.title} 当前可见模块数：${visibleItems.length}`);
         }
 
         const cohortSelector = document.getElementById('cohort-selector');
@@ -644,53 +659,48 @@
             const selectedText = cohortSelector && cohortSelector.selectedIndex >= 0
                 ? String(cohortSelector.options[cohortSelector.selectedIndex].text || '').trim()
                 : '';
-            cohortChip.textContent = selectedText || '届别未选择';
-            cohortChip.setAttribute('data-shell-tooltip', `当前届别：${cohortChip.textContent}`);
+            const cohortText = selectedText || '届别未选择';
+            setTextAndTooltip(cohortChip, cohortText, `当前届别：${cohortText}`);
         }
 
         const modeChip = document.getElementById('shell-mode-chip');
         if (modeChip) {
             const modeBadge = document.getElementById('mode-badge');
             const modeText = modeBadge ? String(modeBadge.textContent || '').trim() : '';
-            modeChip.textContent = modeText ? `${modeText} 模式` : '模式待加载';
-            modeChip.setAttribute('data-shell-tooltip', `当前模式：${modeChip.textContent}`);
+            const shellModeText = modeText ? `${modeText} 模式` : '模式待加载';
+            setTextAndTooltip(modeChip, shellModeText, `当前模式：${shellModeText}`);
         }
 
         const roleText = resolveRoleLabel();
-        const drawerCategory = document.getElementById('workspace-drawer-category');
-        if (drawerCategory) drawerCategory.textContent = category.title;
+        setTextIfChanged(document.getElementById('workspace-drawer-category'), category.title);
 
-        const drawerCopy = document.getElementById('workspace-drawer-copy');
-        if (drawerCopy) drawerCopy.textContent = category.summary;
+        setTextIfChanged(document.getElementById('workspace-drawer-copy'), category.summary);
 
-        const drawerActive = document.getElementById('workspace-drawer-active');
-        if (drawerActive) drawerActive.textContent = activeTitle;
+        setTextIfChanged(document.getElementById('workspace-drawer-active'), activeTitle);
 
         const drawerMode = document.getElementById('workspace-drawer-mode');
-        if (drawerMode && modeChip) drawerMode.textContent = modeChip.textContent || '';
+        if (drawerMode && modeChip) setTextIfChanged(drawerMode, modeChip.textContent || '');
 
         const drawerCohort = document.getElementById('workspace-drawer-cohort');
-        if (drawerCohort && cohortChip) drawerCohort.textContent = cohortChip.textContent || '';
+        if (drawerCohort && cohortChip) setTextIfChanged(drawerCohort, cohortChip.textContent || '');
 
         const roleHint = document.getElementById('role-hint-sidebar');
-        if (roleHint) roleHint.textContent = roleText;
+        setTextIfChanged(roleHint, roleText);
 
         const rolePill = document.getElementById('shell-role-pill');
         if (rolePill) {
-            rolePill.textContent = roleText;
-            rolePill.setAttribute('data-shell-tooltip', roleText);
+            setTextAndTooltip(rolePill, roleText, roleText);
         }
 
         const activeModule = document.getElementById('shell-active-module');
         if (activeModule) {
-            activeModule.textContent = activeTitle;
-            activeModule.setAttribute('data-shell-tooltip', `当前焦点：${activeTitle}`);
+            setTextAndTooltip(activeModule, activeTitle, `当前焦点：${activeTitle}`);
         }
 
         const activeHintEl = document.getElementById('shell-active-hint');
         if (activeHintEl) {
-            activeHintEl.textContent = activeHint || category.summary;
-            activeHintEl.setAttribute('data-shell-tooltip', activeHintEl.textContent);
+            const activeHintText = activeHint || category.summary;
+            setTextAndTooltip(activeHintEl, activeHintText, activeHintText);
         }
 
         renderModuleRail(category, visibleItems, activeItem);

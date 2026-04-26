@@ -8852,8 +8852,10 @@ window.addEventListener('load', async () => {
                 if (appRoot) appRoot.classList.remove('hidden');
 
                 if (CONFIG.name) {
-                    document.getElementById('mode-badge').innerText = CONFIG.name;
-                    document.getElementById('mode-info').innerText = `${CONFIG.name}模式`;
+                    const modeBadge = document.getElementById('mode-badge');
+                    const modeInfo = document.getElementById('mode-info');
+                    if (modeBadge) modeBadge.innerText = CONFIG.name;
+                    if (modeInfo) modeInfo.innerText = `${CONFIG.name}模式`;
                     renderNavigation();
                 }
 
@@ -9937,10 +9939,13 @@ function initSystem(type) {
     document.getElementById('app').classList.remove('hidden');
     if (type === '6-8') setConfigState({ name: '6-8年级', label: '全科总', excRate: 0.05, totalSubs: 'auto', analysisSubs: 'auto', showQuery: true });
     else setConfigState({ name: '9年级', label: '五科总', excRate: 0.06, totalSubs: ['语文', '数学', '英语', '物理', '化学'], analysisSubs: ['语文', '数学', '英语', '物理', '化学'], showQuery: true });
-    document.getElementById('mode-badge').innerText = CONFIG.name;
-    document.getElementById('mode-info').innerText = `${CONFIG.name}模式 (总分: ${CONFIG.label}, 后1/3剔除: ${CONFIG.excRate * 100}%)`;
+    const modeBadge = document.getElementById('mode-badge');
+    const modeInfo = document.getElementById('mode-info');
+    if (modeBadge) modeBadge.innerText = CONFIG.name;
+    if (modeInfo) modeInfo.innerText = `${CONFIG.name}模式 (总分: ${CONFIG.label}, 后1/3剔除: ${CONFIG.excRate * 100}%)`;
     document.querySelectorAll('.label-total').forEach(e => e.innerText = CONFIG.label);
-    document.getElementById('label-exc').innerText = (CONFIG.excRate * 100) + '%';
+    const labelExc = document.getElementById('label-exc');
+    if (labelExc) labelExc.innerText = (CONFIG.excRate * 100) + '%';
     renderNavigation();
 }
 
