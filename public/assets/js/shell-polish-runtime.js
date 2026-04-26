@@ -93,13 +93,7 @@
             targets.push(item);
         });
 
-        const sidebarWorkbench = document.querySelector('.sidebar-workbench-card');
-        if (sidebarWorkbench) {
-            setTooltipText(sidebarWorkbench, sidebarWorkbench.getAttribute('data-shell-tooltip') || getText(sidebarWorkbench));
-            targets.push(sidebarWorkbench);
-        }
-
-        document.querySelectorAll('.sidebar-workbench-trigger, .shell-launcher-button, .shell-overview-launcher, .workspace-drawer-close').forEach((item) => {
+        document.querySelectorAll('.shell-launcher-button, .shell-overview-launcher, .workspace-drawer-close').forEach((item) => {
             setTooltipText(item, item.getAttribute('title') || getText(item));
             targets.push(item);
         });
@@ -109,6 +103,11 @@
             const meta = getText(item, '.sidebar-menu-item__meta');
             const summary = item.getAttribute('data-shell-summary') || '';
             setTooltipText(item, summary || [title, meta].filter(Boolean).join(' · '));
+            targets.push(item);
+        });
+
+        document.querySelectorAll('#sidebar-submodule-nav .sidebar-submodule-nav__item').forEach((item) => {
+            setTooltipText(item, item.getAttribute('aria-label') || getText(item));
             targets.push(item);
         });
 

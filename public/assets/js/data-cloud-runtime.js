@@ -174,6 +174,8 @@
         return value instanceof Set ? value : new Set();
     }
 
+    const cloudSyncInflight = new Map();
+
     function getCurrentExamLabel(key) {
         const normalizedKey = normalizeText(key);
         if (!normalizedKey) return '';
@@ -987,7 +989,9 @@
             if (localData) {
                 console.log(`cache ready: ${key}`);
                 if (!localOnly) {
-                    api.dbSyncFromCloud(key);
+                    api.dbSyncFromCloud(key, { background: true }).catch((error) => {
+                        console.warn('后台云端同步失败:', error);
+                    });
                 }
                 return localData;
             }
@@ -999,23 +1003,37 @@
         return api.dbSyncFromCloud(key);
     }
 
-    async function dbSyncFromCloud(key) {
+    async function dbSyncFromCloud(key, options = {}) {
         if (!ensureCloudAccess()) return null;
+        const normalizedKey = normalizeText(key);
+        if (!normalizedKey) return null;
+        if (cloudSyncInflight.has(normalizedKey)) {
+            return cloudSyncInflight.get(normalizedKey);
+        }
         const readSystemDataRecord = getReadSystemDataRecord();
         if (!readSystemDataRecord) return null;
 
-        try {
-            const { data, error } = await readSystemDataRecord(key, 'content');
+        const task = (async () => {
+            const { data, error } = await readSystemDataRecord(normalizedKey, 'content');
             if (error) throw error;
             if (data && data.content) {
                 const db = parseCloudPayload(data.content);
-                await writeLocalCache(key, db);
+                await writeLocalCache(normalizedKey, db);
                 return db;
             }
+            return null;
+        })();
+
+        cloudSyncInflight.set(normalizedKey, task);
+        try {
+            return await task;
         } catch (e) {
-            console.error('云端同步失败:', e);
+            if (options.background) console.warn('云端同步失败:', e);
+            else console.error('云端同步失败:', e);
+            return null;
+        } finally {
+            cloudSyncInflight.delete(normalizedKey);
         }
-        return null;
     }
 
     async function dbClear(key) {

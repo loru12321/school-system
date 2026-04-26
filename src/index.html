@@ -437,39 +437,11 @@
     <div class="app-layout hidden" id="app">
         <!-- 📱 新版宽阔侧边栏 (SaaS / Vercel / Notion 风格) -->
         <aside id="app-sidebar" class="sidebar-spacious is-collapsed">
-            <div class="sidebar-header">
-                <div class="sidebar-logo-container">
-                    <img id="custom-logo-img" alt="Logo" onerror="this.style.display='none'">
-                    <i class="ti ti-school default-logo" id="default-sidebar-logo"></i>
-                </div>
-                <div class="sidebar-title-text">
-                    <h2 class="sidebar-brand-title">SmartEdu Analytics</h2>
-                    <span id="role-hint-sidebar" class="sidebar-role-hint">角色：访客</span>
-                </div>
-            </div>
-
-            <div class="sidebar-workbench-card"
-                data-shell-tooltip="默认收起模块与学习流，需要时再展开，保持主画布更清爽。"
-                onclick="window.toggleWorkspaceDrawer(true)">
-                <div class="sidebar-workbench-topline">
-                    <span class="sidebar-workbench-kicker">Workspace Deck</span>
-                    <button type="button" class="sidebar-workbench-trigger" data-workspace-toggle="true"
-                        onclick="event.stopPropagation(); window.toggleWorkspaceDrawer(true)">
-                        <i class="ti ti-layout-grid"></i>
-                        <span>打开</span>
-                    </button>
-                </div>
-                <strong>把模块入口收进呼出式面板，需要时再展开，主画面更像 Mac/iOS 工作台。</strong>
-                <div class="sidebar-workbench-pills">
-                    <span>Focus First</span>
-                    <span>Drawer Nav</span>
-                    <span>Quick Launch</span>
-                </div>
-            </div>
-
             <nav class="sidebar-nav-container" id="sidebar-nav">
                 <!-- 导航通过 JS 动态渲染到这里 -->
             </nav>
+
+            <nav class="sidebar-submodule-nav" id="sidebar-submodule-nav" aria-label="当前母模块子模块导航"></nav>
 
             <div class="sidebar-footer">
                 <div class="sidebar-footer-item" onclick="openSpotlight()" title="全局搜索">

@@ -415,6 +415,7 @@ function warmAppModuleCache() {
 function scheduleAppModuleWarmup() {
     if (window.__APP_MODULES_LOADED__ !== true) return;
     if (window.__APP_MODULE_WARMUP_SCHEDULED__) return;
+    if (getRuntimeLoadProfile() === 'lazy') return;
     window.__APP_MODULE_WARMUP_SCHEDULED__ = true;
     const runWarmup = () => {
         warmAppModuleCache();
@@ -2013,6 +2014,17 @@ function getRuntimeLoadProfile() {
     try {
         const stored = String(localStorage.getItem('SYSTEM_LOAD_PROFILE') || '').trim().toLowerCase();
         if (stored === 'full' || stored === 'lazy' || stored === 'balanced') return stored;
+    } catch (_) {}
+    try {
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+        const saveData = !!connection?.saveData;
+        const effectiveType = String(connection?.effectiveType || '').toLowerCase();
+        const slowNetwork = effectiveType === 'slow-2g' || effectiveType === '2g';
+        const lowMemory = Number(navigator.deviceMemory || 0) > 0 && Number(navigator.deviceMemory || 0) <= 2;
+        const lowCpu = Number(navigator.hardwareConcurrency || 0) > 0 && Number(navigator.hardwareConcurrency || 0) <= 4;
+        const mobileViewport = typeof window.matchMedia === 'function'
+            && window.matchMedia('(max-width: 768px)').matches;
+        if (saveData || slowNetwork || lowMemory || (mobileViewport && lowCpu)) return 'lazy';
     } catch (_) {}
     return 'balanced';
 }

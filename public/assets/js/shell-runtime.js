@@ -758,28 +758,96 @@
         notifyShellEnhancements();
     }
 
+    function activateSubmodule(item, category) {
+        if (!item || !item.id) return;
+        document.documentElement.style.setProperty('--primary', category.color);
+        if (typeof switchTab === 'function') switchTab(item.id);
+        const scrollToActiveSection = () => {
+            const section = document.getElementById(item.id);
+            if (section && section.classList.contains('active')) {
+                section.scrollIntoView({ block: 'start', behavior: 'smooth' });
+            }
+        };
+        window.setTimeout(scrollToActiveSection, 60);
+        renderSubNavigation();
+        updateShellChrome(item.id);
+        closeWorkspaceDrawer();
+    }
+
+    function renderSidebarSubmoduleNavigation(category, visibleItems, activeSectionId) {
+        const sideNav = document.getElementById('sidebar-submodule-nav');
+        if (!sideNav) return;
+        sideNav.innerHTML = '';
+
+        if (!category || !Array.isArray(visibleItems) || visibleItems.length === 0) {
+            sideNav.classList.add('is-empty');
+            return;
+        }
+
+        sideNav.classList.remove('is-empty');
+        sideNav.style.setProperty('--nav-accent', category.color);
+        sideNav.style.setProperty('--accent-soft', toSoftColor(category.color, 0.12));
+
+        const title = document.createElement('div');
+        title.className = 'sidebar-submodule-nav__title';
+        title.textContent = '子模块';
+        sideNav.appendChild(title);
+
+        visibleItems.forEach((item, index) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'sidebar-submodule-nav__item';
+            if (item.id === activeSectionId) button.classList.add('active');
+            button.title = item.text;
+            button.setAttribute('aria-label', item.text);
+            button.setAttribute('data-module-id', item.id);
+            button.setAttribute('data-shell-tooltip', item.hint || item.text);
+            button.innerHTML = `
+                <span class="sidebar-submodule-nav__index">${String(index + 1).padStart(2, '0')}</span>
+                <span class="sidebar-submodule-nav__icon"><i class="ti ${item.icon}"></i></span>
+                <span class="sidebar-submodule-nav__label">${item.text}</span>
+            `;
+            button.onclick = function (event) {
+                event.stopPropagation();
+                activateSubmodule(item, category);
+            };
+            sideNav.appendChild(button);
+        });
+    }
+
     function renderSubNavigation() {
         const subNavContainer = document.getElementById('sub-nav-container');
-        if (!subNavContainer) return;
+        const sideNav = document.getElementById('sidebar-submodule-nav');
+        if (!subNavContainer && !sideNav) return;
 
-        subNavContainer.innerHTML = '';
-        bindHorizontalWheelScroll(subNavContainer, subNavContainer, subNavContainer);
+        if (subNavContainer) {
+            subNavContainer.innerHTML = '';
+            bindHorizontalWheelScroll(subNavContainer, subNavContainer, subNavContainer);
+        }
         resolveCategoryState();
         const category = NAV_STRUCTURE[currentCategory];
         if (!category) return;
 
         const visibleItems = resolveVisibleItems(category);
         if (visibleItems.length === 0) {
+            renderSidebarSubmoduleNavigation(category, visibleItems, getActiveSectionId());
             updateShellChrome();
             return;
         }
 
         const activeSectionId = getActiveSectionId();
+        renderSidebarSubmoduleNavigation(category, visibleItems, activeSectionId);
+        if (!subNavContainer) {
+            updateShellChrome(activeSectionId);
+            notifyShellEnhancements();
+            return;
+        }
 
         visibleItems.forEach((item, index) => {
             const card = document.createElement('div');
             card.className = 'shell-story-card';
             card.title = item.text;
+            card.setAttribute('data-module-id', item.id);
             card.setAttribute('data-shell-tooltip', item.hint || item.text);
             card.style.setProperty('--nav-accent', category.color);
             card.style.setProperty('--accent-soft', toSoftColor(category.color, 0.10));
@@ -801,11 +869,7 @@
 
             card.onclick = function (event) {
                 event.stopPropagation();
-                document.documentElement.style.setProperty('--primary', category.color);
-                if (typeof switchTab === 'function') switchTab(item.id);
-                renderSubNavigation();
-                updateShellChrome(item.id);
-                closeWorkspaceDrawer();
+                activateSubmodule(item, category);
             };
 
             subNavContainer.appendChild(card);

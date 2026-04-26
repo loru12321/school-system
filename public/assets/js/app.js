@@ -16996,18 +16996,7 @@ function handleLogoUpload(input) {
 }
 
 function applyLogo(base64) {
-    const img = document.getElementById('custom-logo-img');
-    if (!img) return;
-    if (base64) {
-        img.src = base64;
-        img.onerror = function () {
-            this.style.display = 'none';
-        };
-        img.style.display = 'block';
-    } else {
-        img.style.display = 'none';
-        img.removeAttribute('src');
-    }
+    void base64;
 }
 
 function clearLogo() {
