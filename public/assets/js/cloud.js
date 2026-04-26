@@ -8,6 +8,8 @@
         'TOWN_SUB_COMPARE_'
     ];
     const AUTO_COHORT_SYNC_COOLDOWN_MS = 10 * 60 * 1000;
+    const TEACHER_LOAD_CACHE_TTL_MS = 90 * 1000;
+    const STUDENT_HISTORY_CACHE_TTL_MS = 2 * 60 * 1000;
     const WorkspaceState = window.WorkspaceState || null;
     const ExamState = window.ExamState || null;
     const TeacherState = window.TeacherState || null;
@@ -1255,6 +1257,7 @@
             const background = Boolean(opts.background);
             const showBlocking = !background && opts.blocking !== false;
             const showToast = opts.toast === false ? false : !background;
+            const forceRefresh = opts.force === true || opts.refresh === true;
             const requestedSchool = String(opts.schoolName || opts.scopeSchool || '').trim();
             if (!(await this.ensureClientReady())) return false;
 
@@ -1266,6 +1269,12 @@
                 requestedSchool
             ].map(v => String(v || '').trim()).filter(Boolean).join('|') || 'default';
             this._teacherLoadTasks = this._teacherLoadTasks || {};
+            this._teacherLoadCache = this._teacherLoadCache || {};
+            const cached = this._teacherLoadCache[requestKey];
+            if (!forceRefresh && cached && Date.now() - cached.at < TEACHER_LOAD_CACHE_TTL_MS) {
+                setCloudStatus(cached.result ? 'success' : 'connected', cached.result ? '任课已就绪' : '暂无任课');
+                return cached.result;
+            }
             if (this._teacherLoadTasks[requestKey]) return this._teacherLoadTasks[requestKey];
 
             this._teacherLoadTasks[requestKey] = (async () => {
@@ -1400,7 +1409,10 @@
                 } finally {
                     if (showBlocking) safeLoading(false);
                 }
-            })().finally(() => {
+            })().then((result) => {
+                this._teacherLoadCache[requestKey] = { at: Date.now(), result };
+                return result;
+            }).finally(() => {
                 delete this._teacherLoadTasks[requestKey];
             });
 
@@ -1414,8 +1426,23 @@
 
             const cohortId = normalizeCohortId(student.cohort || getCurrentCohortId());
             if (!cohortId) return { success: false, message: '无法确定学生届别' };
+            const historyKey = [
+                cohortId,
+                String(student.school || '').trim(),
+                String(student.class || '').trim(),
+                String(student.id || student.examNo || '').trim(),
+                String(student.name || '').trim()
+            ].join('|');
+            this._studentHistoryTasks = this._studentHistoryTasks || {};
+            this._studentHistoryCache = this._studentHistoryCache || {};
+            const cachedHistory = this._studentHistoryCache[historyKey];
+            if (cachedHistory && Date.now() - cachedHistory.at < STUDENT_HISTORY_CACHE_TTL_MS) {
+                setCloudStatus('success', `历史${cachedHistory.result?.data?.length || 0}条`);
+                return cachedHistory.result;
+            }
+            if (this._studentHistoryTasks[historyKey]) return this._studentHistoryTasks[historyKey];
 
-            try {
+            this._studentHistoryTasks[historyKey] = (async () => {
                 const { data, error } = await selectSystemData({
                     select: 'key,content,updated_at',
                     keyLike: `${cohortId}%`,
@@ -1448,11 +1475,17 @@
 
                         if (!match) {
                             const list = payload.students || payload.RAW_DATA || [];
-                            match = list.find(s => {
-                                if (String(s?.name || '').trim() !== targetName) return false;
-                                if (!targetClassNum) return true;
-                                return String(s?.class || '').replace(/[^0-9]/g, '') === targetClassNum;
-                            });
+                            match = window.RankingDataService && typeof window.RankingDataService.findStudent === 'function'
+                                ? window.RankingDataService.findStudent(list, {
+                                    name: student.name,
+                                    school: student.school,
+                                    className: student.class
+                                })
+                                : list.find(s => {
+                                    if (String(s?.name || '').trim() !== targetName) return false;
+                                    if (!targetClassNum) return true;
+                                    return String(s?.class || '').replace(/[^0-9]/g, '') === targetClassNum;
+                                });
                         }
 
                         if (!match) continue;
@@ -1481,10 +1514,17 @@
 
                 setCloudStatus('success', `历史${history.length}条`);
                 return { success: true, data: history };
+            })();
+            try {
+                const result = await this._studentHistoryTasks[historyKey];
+                this._studentHistoryCache[historyKey] = { at: Date.now(), result };
+                return result;
             } catch (e) {
                 console.error('[CloudHistory] failed:', e);
                 setCloudStatus('error', '历史拉取失败');
                 return { success: false, message: e.message || String(e) };
+            } finally {
+                delete this._studentHistoryTasks[historyKey];
             }
         },
 
