@@ -277,6 +277,14 @@ var SYSTEM_RUNTIME_SKILLS = {
             { key: 'grade-scheduler', src: './assets/js/grade-scheduler-runtime.js' }
         ]
     },
+    'voice-control': {
+        mode: 'idle',
+        warmup: 'balanced',
+        triggers: ['voice-control', 'voice-fab', 'VoiceControl.toggle'],
+        entries: [
+            { key: 'voice-control', src: './assets/js/voice-control-runtime.js' }
+        ]
+    },
     'packager': {
         mode: 'demand',
         warmup: 'demand',
@@ -2151,6 +2159,10 @@ window.ensureGradeSchedulerRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('grade-scheduler');
 };
 
+window.ensureVoiceControlRuntimeLoaded = function () {
+    return window.SystemRuntimeLoader.load('voice-control');
+};
+
 window.ensurePackagerRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('packager');
 };
@@ -2374,6 +2386,24 @@ if (!window.SCHEDULER) {
         };
     });
     window.SCHEDULER = schedulerStub;
+}
+
+if (!window.VoiceControl) {
+    const voiceControlStub = {};
+    ['init', 'toggle', 'stop', 'processCommand', 'toggleFullScreen'].forEach((name) => {
+        voiceControlStub[name] = function (...args) {
+            const current = window.VoiceControl && window.VoiceControl !== voiceControlStub ? window.VoiceControl : null;
+            if (current && typeof current[name] === 'function') return current[name](...args);
+            return window.ensureVoiceControlRuntimeLoaded().then(() => {
+                const next = window.VoiceControl;
+                if (next && next !== voiceControlStub && typeof next[name] === 'function') {
+                    return next[name](...args);
+                }
+                throw new Error(`VoiceControl.${name} runtime not loaded`);
+            });
+        };
+    });
+    window.VoiceControl = voiceControlStub;
 }
 
 if (window.innerWidth <= 960 || localStorage.getItem('DEV_MODE') === 'true') {
