@@ -355,19 +355,42 @@
             activateTeachingManagementModule(id);
         };
 
-        if (typeof window.ensureTeachingManagementRuntimeLoaded === 'function'
-            && !window.__TEACHING_MANAGEMENT_RUNTIME_PATCHED__) {
-            return window.ensureTeachingManagementRuntimeLoaded()
-                .then(() => {
-                    const activeSection = document.getElementById(id);
-                    if (!activeSection || !activeSection.classList.contains('active')) return;
-                    renderNow();
-                })
-                .catch((error) => console.warn(error));
+        const scheduleRender = (attempt = 0) => {
+            if (typeof window.renderTeachingOverview === 'function') {
+                renderNow();
+                return true;
+            }
+            if (attempt >= 6) return false;
+            setTimeout(() => scheduleRender(attempt + 1), attempt < 2 ? 120 : 260);
+            return false;
+        };
+
+        const loadRuntime = () => {
+            if (window.__TEACHING_MANAGEMENT_RUNTIME_PATCHED__ || typeof window.renderTeachingOverview === 'function') {
+                return Promise.resolve();
+            }
+            if (typeof window.ensureTeachingManagementRuntimeLoaded === 'function') {
+                return window.ensureTeachingManagementRuntimeLoaded();
+            }
+            if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
+                return window.SystemRuntimeLoader.load('teaching-management');
+            }
+            return Promise.reject(new Error('teaching management runtime loader unavailable'));
+        };
+
+        if (window.__TEACHING_MANAGEMENT_RUNTIME_PATCHED__ || typeof window.renderTeachingOverview === 'function') {
+            scheduleRender();
+            return Promise.resolve();
         }
 
-        renderNow();
-        return Promise.resolve();
+        return loadRuntime()
+            .then(() => {
+                scheduleRender();
+            })
+            .catch((error) => {
+                console.warn('initTeachingManagementEntry failed:', error);
+                scheduleRender();
+            });
     }
 
     function initStudentOverviewEntry() {
