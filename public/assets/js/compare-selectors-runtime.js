@@ -109,6 +109,32 @@
         return selected.map(item => item.id);
     }
 
+    function setSelectOptionsIfChanged(select, html, signature) {
+        if (!select) return;
+        const nextSignature = String(signature || html || '');
+        if (select.dataset.compareOptionsSig === nextSignature) return;
+        select.innerHTML = html;
+        select.dataset.compareOptionsSig = nextSignature;
+    }
+
+    function buildSchoolOptionsHtml(schoolList, placeholder = '--请选择学校--') {
+        return `<option value="">${placeholder}</option>` + (schoolList || []).map(s => `<option value="${s}">${s}</option>`).join('');
+    }
+
+    function buildExamOptionsHtml(examList, options = {}) {
+        const defaultOption = options.defaultOption || '';
+        return defaultOption + (examList || []).map(e => {
+            let label = e.label;
+            if (options.decorateSource && e.source === 'cloud') label = '☁️ ' + label;
+            if (options.decorateSource && e.source === 'local') label = '📇 ' + label;
+            return `<option value="${e.id}">${label}</option>`;
+        }).join('');
+    }
+
+    function signatureFromList(prefix, list, pick = item => item) {
+        return `${prefix}:${(list || []).map(pick).join('|')}`;
+    }
+
     function updateProgressMultiExamSelects() {
         const schoolSel = document.getElementById('progressCompareSchool');
         const exam1Sel = document.getElementById('progressCompareExam1');
@@ -117,8 +143,11 @@
         if (!schoolSel || !exam1Sel || !exam2Sel || !exam3Sel) return;
 
         const schoolList = listAvailableSchoolsForCompare();
-        schoolSel.innerHTML = '<option value="">--请选择学校--</option>';
-        schoolList.forEach(s => schoolSel.innerHTML += `<option value="${s}">${s}</option>`);
+        setSelectOptionsIfChanged(
+            schoolSel,
+            buildSchoolOptionsHtml(schoolList),
+            signatureFromList('schools', schoolList)
+        );
         if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) schoolSel.value = MY_SCHOOL;
 
         const examList = listAvailableExamsForCompare();
@@ -135,10 +164,11 @@
             return;
         }
 
-        const optionsHtml = examList.map(e => `<option value="${e.id}">${e.label}</option>`).join('');
-        exam1Sel.innerHTML = optionsHtml;
-        exam2Sel.innerHTML = optionsHtml;
-        exam3Sel.innerHTML = optionsHtml;
+        const optionsHtml = buildExamOptionsHtml(examList);
+        const optionsSig = signatureFromList('exams', examList, e => `${e.id}:${e.label}`);
+        setSelectOptionsIfChanged(exam1Sel, optionsHtml, optionsSig);
+        setSelectOptionsIfChanged(exam2Sel, optionsHtml, optionsSig);
+        setSelectOptionsIfChanged(exam3Sel, optionsHtml, optionsSig);
 
         const defaultIds = getDefaultCompareExamIds(examList, examList.length >= 3 ? 3 : 2, CURRENT_EXAM_ID);
         exam1Sel.value = defaultIds[0] || '';
@@ -163,8 +193,11 @@
         if (!schoolSel || !exam1Sel || !exam2Sel || !exam3Sel) return;
 
         const schoolList = listAvailableSchoolsForCompare('all');
-        schoolSel.innerHTML = '<option value="">--请选择学校--</option>';
-        schoolList.forEach(s => schoolSel.innerHTML += `<option value="${s}">${s}</option>`);
+        setSelectOptionsIfChanged(
+            schoolSel,
+            buildSchoolOptionsHtml(schoolList),
+            signatureFromList('schools-all', schoolList)
+        );
         if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) {
             schoolSel.value = MY_SCHOOL;
         }
@@ -183,10 +216,11 @@
             return;
         }
 
-        const optionsHtml = examList.map(e => `<option value="${e.id}">${e.label}</option>`).join('');
-        exam1Sel.innerHTML = optionsHtml;
-        exam2Sel.innerHTML = optionsHtml;
-        exam3Sel.innerHTML = optionsHtml;
+        const optionsHtml = buildExamOptionsHtml(examList);
+        const optionsSig = signatureFromList('exams', examList, e => `${e.id}:${e.label}`);
+        setSelectOptionsIfChanged(exam1Sel, optionsHtml, optionsSig);
+        setSelectOptionsIfChanged(exam2Sel, optionsHtml, optionsSig);
+        setSelectOptionsIfChanged(exam3Sel, optionsHtml, optionsSig);
 
         const defaultIds = getDefaultCompareExamIds(examList, examList.length >= 3 ? 3 : 2, CURRENT_EXAM_ID);
         exam1Sel.value = defaultIds[0] || '';
@@ -226,15 +260,11 @@
         const count3Option = countEl.querySelector('option[value="3"]');
         if (count3Option) count3Option.disabled = examList.length < 3;
         onReportComparePeriodCountChange();
-        const optionsHtml = defaultOption + examList.map(e => {
-            let label = e.label;
-            if (e.source === 'cloud') label = '☁️ ' + label;
-            if (e.source === 'local') label = '📇 ' + label;
-            return `<option value="${e.id}">${label}</option>`;
-        }).join('');
-        exam1Sel.innerHTML = optionsHtml;
-        exam2Sel.innerHTML = optionsHtml;
-        exam3Sel.innerHTML = optionsHtml;
+        const optionsHtml = buildExamOptionsHtml(examList, { defaultOption, decorateSource: true });
+        const optionsSig = signatureFromList('report-exams', examList, e => `${e.id}:${e.label}:${e.source || ''}`);
+        setSelectOptionsIfChanged(exam1Sel, optionsHtml, optionsSig);
+        setSelectOptionsIfChanged(exam2Sel, optionsHtml, optionsSig);
+        setSelectOptionsIfChanged(exam3Sel, optionsHtml, optionsSig);
         const resolveExamId = (value) => {
             if (!value) return '';
             const hit = examList.find(e => isExamKeyEquivalentForCompare(e.id, value));
@@ -286,8 +316,11 @@
         if (!schoolSel || !exam1Sel || !exam2Sel || !exam3Sel) return;
 
         const schoolList = listAvailableSchoolsForCompare();
-        schoolSel.innerHTML = '<option value="">--请选择学校--</option>';
-        schoolList.forEach(s => schoolSel.innerHTML += `<option value="${s}">${s}</option>`);
+        setSelectOptionsIfChanged(
+            schoolSel,
+            buildSchoolOptionsHtml(schoolList),
+            signatureFromList('schools', schoolList)
+        );
         if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) schoolSel.value = MY_SCHOOL;
 
         const examList = listAvailableExamsForCompare();
@@ -304,10 +337,11 @@
             return;
         }
 
-        const optionsHtml = examList.map(e => `<option value="${e.id}">${e.label}</option>`).join('');
-        exam1Sel.innerHTML = optionsHtml;
-        exam2Sel.innerHTML = optionsHtml;
-        exam3Sel.innerHTML = optionsHtml;
+        const optionsHtml = buildExamOptionsHtml(examList);
+        const optionsSig = signatureFromList('exams', examList, e => `${e.id}:${e.label}`);
+        setSelectOptionsIfChanged(exam1Sel, optionsHtml, optionsSig);
+        setSelectOptionsIfChanged(exam2Sel, optionsHtml, optionsSig);
+        setSelectOptionsIfChanged(exam3Sel, optionsHtml, optionsSig);
 
         const defaultIds = getDefaultCompareExamIds(examList, examList.length >= 3 ? 3 : 2, CURRENT_EXAM_ID);
         exam1Sel.value = defaultIds[0] || '';
@@ -333,15 +367,20 @@
         if (!schoolSel || !subjectSel || !exam1Sel || !exam2Sel || !exam3Sel) return;
 
         const schoolList = listAvailableSchoolsForCompare();
-        schoolSel.innerHTML = '<option value="">--请选择学校--</option>';
-        schoolList.forEach(s => schoolSel.innerHTML += `<option value="${s}">${s}</option>`);
+        setSelectOptionsIfChanged(
+            schoolSel,
+            buildSchoolOptionsHtml(schoolList),
+            signatureFromList('schools', schoolList)
+        );
         if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) schoolSel.value = MY_SCHOOL;
         else if (!schoolSel.value && schoolList.length > 0) schoolSel.value = schoolList[0];
 
-        subjectSel.innerHTML = '<option value="">--请选择学科--</option>';
-        [...SUBJECTS].sort(sortSubjects).forEach(sub => {
-            subjectSel.innerHTML += `<option value="${sub}">${sub}</option>`;
-        });
+        const sortedSubjects = [...SUBJECTS].sort(sortSubjects);
+        setSelectOptionsIfChanged(
+            subjectSel,
+            '<option value="">--请选择学科--</option>' + sortedSubjects.map(sub => `<option value="${sub}">${sub}</option>`).join(''),
+            signatureFromList('subjects-sorted', sortedSubjects)
+        );
 
         const examList = listAvailableExamsForCompare();
         if (examList.length < 2) {
@@ -357,10 +396,11 @@
             return;
         }
 
-        const optionsHtml = examList.map(e => `<option value="${e.id}">${e.label}</option>`).join('');
-        exam1Sel.innerHTML = optionsHtml;
-        exam2Sel.innerHTML = optionsHtml;
-        exam3Sel.innerHTML = optionsHtml;
+        const optionsHtml = buildExamOptionsHtml(examList);
+        const optionsSig = signatureFromList('exams', examList, e => `${e.id}:${e.label}`);
+        setSelectOptionsIfChanged(exam1Sel, optionsHtml, optionsSig);
+        setSelectOptionsIfChanged(exam2Sel, optionsHtml, optionsSig);
+        setSelectOptionsIfChanged(exam3Sel, optionsHtml, optionsSig);
 
         const defaultIds = getDefaultCompareExamIds(examList, examList.length >= 3 ? 3 : 2, CURRENT_EXAM_ID);
         exam1Sel.value = defaultIds[0] || '';
@@ -381,18 +421,22 @@
         if (!schoolEl || !subjectEl || !exam1El || !exam2El || !exam3El) return;
 
         const schoolList = listAvailableSchoolsForCompare();
-        schoolEl.innerHTML = '<option value="">--请选择学校--</option>';
-        schoolList.forEach(s => schoolEl.innerHTML += `<option value="${s}">${s}</option>`);
+        setSelectOptionsIfChanged(
+            schoolEl,
+            buildSchoolOptionsHtml(schoolList),
+            signatureFromList('schools', schoolList)
+        );
         if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) {
             schoolEl.value = MY_SCHOOL;
         } else if (!schoolEl.value && schoolList.length > 0) {
             schoolEl.value = schoolList[0];
         }
 
-        subjectEl.innerHTML = '<option value="">--请选择学科--</option>';
-        (SUBJECTS || []).forEach(sub => {
-            subjectEl.innerHTML += `<option value="${sub}">${sub}</option>`;
-        });
+        setSelectOptionsIfChanged(
+            subjectEl,
+            '<option value="">--请选择学科--</option>' + (SUBJECTS || []).map(sub => `<option value="${sub}">${sub}</option>`).join(''),
+            signatureFromList('subjects', SUBJECTS || [])
+        );
 
         const examList = listAvailableExamsForCompare();
         if (examList.length < 2) {
@@ -408,10 +452,11 @@
             return;
         }
 
-        const optionsHtml = examList.map(e => `<option value="${e.id}">${e.label}</option>`).join('');
-        exam1El.innerHTML = optionsHtml;
-        exam2El.innerHTML = optionsHtml;
-        exam3El.innerHTML = optionsHtml;
+        const optionsHtml = buildExamOptionsHtml(examList);
+        const optionsSig = signatureFromList('exams', examList, e => `${e.id}:${e.label}`);
+        setSelectOptionsIfChanged(exam1El, optionsHtml, optionsSig);
+        setSelectOptionsIfChanged(exam2El, optionsHtml, optionsSig);
+        setSelectOptionsIfChanged(exam3El, optionsHtml, optionsSig);
 
         const defaultIds = getDefaultCompareExamIds(examList, examList.length >= 3 ? 3 : 2, CURRENT_EXAM_ID);
         exam1El.value = defaultIds[0] || '';
