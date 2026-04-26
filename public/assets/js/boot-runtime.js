@@ -350,6 +350,7 @@ var APP_MODULES = [
     './assets/js/shell-polish-runtime.js',
     './assets/js/module-entry-runtime.js',
     './assets/js/ranking-data-service-runtime.js',
+    './assets/js/student-jump-runtime.js',
     './assets/js/app.js',
     './assets/js/macro-analysis-compat-runtime.js',
     './assets/js/school-normalization-runtime.js',
