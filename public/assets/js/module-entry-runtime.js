@@ -285,6 +285,10 @@
     }
 
     function initAppDownloadCenterEntry() {
+        if (typeof window.ensureLazySectionLoaded === 'function') {
+            window.ensureLazySectionLoaded('app-download-center');
+        }
+
         const render = () => {
             if (typeof window.renderAppDownloadCenter === 'function') {
                 window.renderAppDownloadCenter();
@@ -302,21 +306,33 @@
             return false;
         };
 
-        if (scheduleRender()) return Promise.resolve(true);
+        const loadRuntime = () => {
+            if (window.__APP_DOWNLOAD_RUNTIME_PATCHED__ || typeof window.renderAppDownloadCenter === 'function') {
+                return Promise.resolve();
+            }
+            if (typeof window.ensureAppDownloadRuntimeLoaded === 'function') {
+                return window.ensureAppDownloadRuntimeLoaded();
+            }
+            if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
+                return window.SystemRuntimeLoader.load('app-download');
+            }
+            return Promise.reject(new Error('app download runtime loader unavailable'));
+        };
 
-        if (typeof window.ensureAppDownloadRuntimeLoaded === 'function' && !window.__APP_DOWNLOAD_RUNTIME_PATCHED__) {
-            return window.ensureAppDownloadRuntimeLoaded()
-                .then(() => {
-                    scheduleRender();
-                    return true;
-                })
-                .catch((error) => {
-                    console.warn('initAppDownloadCenterEntry failed:', error);
-                    return false;
-                });
+        if (window.__APP_DOWNLOAD_RUNTIME_PATCHED__ || typeof window.renderAppDownloadCenter === 'function') {
+            return Promise.resolve(scheduleRender());
         }
 
-        return Promise.resolve(scheduleRender());
+        return loadRuntime()
+            .then(() => {
+                scheduleRender();
+                return true;
+            })
+            .catch((error) => {
+                console.warn('initAppDownloadCenterEntry failed:', error);
+                scheduleRender();
+                return false;
+            });
     }
 
     function initAIAnalysisEntry() {
