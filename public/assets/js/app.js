@@ -11022,10 +11022,16 @@ function switchTab(id) {
     }
 
     const currentCategoryMeta = NAV_STRUCTURE[currentCategory] || NAV_STRUCTURE.data || null;
-    if (typeof window.runModuleTabEnter === 'function') {
+    const dispatchModuleEnter = () => {
+        if (typeof window.runModuleTabEnter !== 'function') return false;
         window.runModuleTabEnter({ id, currentCategory, currentCategoryMeta }).catch((error) => {
             console.error('switchTab module dispatch failed:', error);
         });
+        return true;
+    };
+    if (!dispatchModuleEnter()) {
+        window.setTimeout(dispatchModuleEnter, 180);
+        window.setTimeout(dispatchModuleEnter, 700);
     }
 }
 
