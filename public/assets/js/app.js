@@ -587,6 +587,11 @@ const CloudSyncIndicator = {
     el: null,
     timer: null,
     state: 'idle',
+    started: false,
+    probeTimer: null,
+    probePromise: null,
+    lastProbeAt: 0,
+    probeMinInterval: 12000,
     ensure: function () {
         if (this.el && document.body.contains(this.el)) return this.el;
         const node = document.createElement('div');
@@ -637,33 +642,47 @@ const CloudSyncIndicator = {
             this.timer = setTimeout(() => this.set('connected'), 2200);
         }
     },
-    probe: async function () {
-        const hasSessionUser = AuthState.hasActiveSession(window.Auth && Auth.currentUser);
-        if (!hasSessionUser) {
-            this.set('idle');
+    probe: async function (force = false) {
+        if (this.probePromise) return this.probePromise;
+        const now = Date.now();
+        const recentlyChecked = this.lastProbeAt && now - this.lastProbeAt < this.probeMinInterval;
+        if (!force && recentlyChecked && (this.state === 'connected' || this.state === 'connecting')) {
             return;
         }
-        if (!navigator.onLine) {
-            this.set('error', '离线');
-            return;
-        }
-        if (!window.CloudApi && !window.sbClient) {
-            this.set('connecting', '等待初始化');
-            return;
-        }
-        try {
-            await withTimeout(probeSystemDataConnection(), 4000, 'probe-timeout');
-            this.set('connected');
-        } catch (e) {
-            this.set('error', '连接异常');
-        }
+        this.lastProbeAt = now;
+        this.probePromise = (async () => {
+            const hasSessionUser = AuthState.hasActiveSession(window.Auth && Auth.currentUser);
+            if (!hasSessionUser) {
+                this.set('idle');
+                return;
+            }
+            if (!navigator.onLine) {
+                this.set('error', '离线');
+                return;
+            }
+            if (!window.CloudApi && !window.sbClient) {
+                this.set('connecting', '等待初始化');
+                return;
+            }
+            try {
+                await withTimeout(probeSystemDataConnection(), 4000, 'probe-timeout');
+                this.set('connected');
+            } catch (e) {
+                this.set('error', '连接异常');
+            }
+        })().finally(() => {
+            this.probePromise = null;
+        });
+        return this.probePromise;
     },
     start: function () {
+        if (this.started) return;
+        this.started = true;
         this.ensure();
-        this.probe();
-        window.addEventListener('online', () => this.probe());
+        this.probe(true);
+        window.addEventListener('online', () => this.probe(true));
         window.addEventListener('offline', () => this.set('error', '离线'));
-        setInterval(() => this.probe(), 30000);
+        this.probeTimer = setInterval(() => this.probe(), 30000);
     }
 };
 
