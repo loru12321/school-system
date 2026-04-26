@@ -285,6 +285,14 @@ var SYSTEM_RUNTIME_SKILLS = {
             { key: 'voice-control', src: './assets/js/voice-control-runtime.js' }
         ]
     },
+    'module-help': {
+        mode: 'demand',
+        warmup: 'demand',
+        triggers: ['showModuleHelp', 'ensureModuleHelpButton', 'module-help'],
+        entries: [
+            { key: 'module-help', src: './assets/js/module-help-runtime.js' }
+        ]
+    },
     'packager': {
         mode: 'demand',
         warmup: 'demand',
@@ -2163,6 +2171,10 @@ window.ensureVoiceControlRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('voice-control');
 };
 
+window.ensureModuleHelpRuntimeLoaded = function () {
+    return window.SystemRuntimeLoader.load('module-help');
+};
+
 window.ensurePackagerRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('packager');
 };
@@ -2404,6 +2416,22 @@ if (!window.VoiceControl) {
         };
     });
     window.VoiceControl = voiceControlStub;
+}
+
+installOptionalRuntimeMethod('showModuleHelp', window.ensureModuleHelpRuntimeLoaded);
+
+if (typeof window.ensureModuleHelpButton !== 'function') {
+    window.ensureModuleHelpButton = function (sectionId) {
+        const section = document.getElementById(sectionId);
+        if (!section) return;
+        const titleEl = section.querySelector('.sec-head h2') || section.querySelector('.module-desc-bar h3');
+        if (!titleEl || titleEl.querySelector('.module-help-btn')) return;
+        const btn = document.createElement('span');
+        btn.className = 'module-help-btn';
+        btn.textContent = '📘 模型说明';
+        btn.onclick = () => window.showModuleHelp(sectionId);
+        titleEl.appendChild(btn);
+    };
 }
 
 if (window.innerWidth <= 960 || localStorage.getItem('DEV_MODE') === 'true') {
