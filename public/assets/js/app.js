@@ -10394,6 +10394,35 @@ function resetMainViewport() {
     }
 }
 
+function scheduleCountyAnalysisRenderAfterSwitch(id) {
+    if (id !== 'county-teacher-portrait' && id !== 'county-school-horizontal' && id !== 'county-analysis') {
+        return;
+    }
+    const isCountyTargetActive = () => {
+        if (document.getElementById(id)?.classList.contains('active')) return true;
+        return id === 'county-analysis'
+            && (document.getElementById('county-teacher-portrait')?.classList.contains('active')
+                || document.getElementById('county-school-horizontal')?.classList.contains('active'));
+    };
+    const renderCounty = () => {
+        if (!isCountyTargetActive()) return false;
+        if (typeof window.renderCountyAnalysis !== 'function') return false;
+        window.renderCountyAnalysis(id);
+        return true;
+    };
+    if (renderCounty()) return;
+    const retryDelays = [160, 480, 1000, 1800];
+    retryDelays.forEach(delay => window.setTimeout(renderCounty, delay));
+    if (typeof window.ensureCountyAnalysisRuntimeLoaded === 'function') {
+        window.ensureCountyAnalysisRuntimeLoaded()
+            .then(() => {
+                renderCounty();
+                window.setTimeout(renderCounty, 120);
+            })
+            .catch(error => console.warn('county analysis runtime load failed:', error));
+    }
+}
+
 function switchTab(id) {
     if (id === 'school-internal-grades') {
         console.warn('school-internal-grades has been removed; redirecting to exam-arranger');
@@ -10426,17 +10455,7 @@ function switchTab(id) {
     targetSection.classList.add('active');
     targetSection.style.display = 'block';
     resetMainViewport();
-    if (id === 'county-teacher-portrait' || id === 'county-school-horizontal' || id === 'county-analysis') {
-        const tryRenderCounty = () => {
-            if (typeof window.renderCountyAnalysis !== 'function') return false;
-            window.renderCountyAnalysis(id);
-            return true;
-        };
-        if (!tryRenderCounty()) {
-            window.setTimeout(tryRenderCounty, 250);
-            window.setTimeout(tryRenderCounty, 900);
-        }
-    }
+    scheduleCountyAnalysisRenderAfterSwitch(id);
 
     // 2. 定位所属大类
     let currentCategory = getCurrentCategoryKey();
