@@ -12476,10 +12476,21 @@ function updateStudentSchoolSelect() {
     const modeWrap = document.getElementById('classTeacherViewModeWrap');
     const modeSelect = document.getElementById('classTeacherViewMode');
     if (!select || !classSelect) return;
+    const setOptionsIfChanged = (target, html, signature) => {
+        const sig = String(signature || html || '');
+        if (target.dataset.studentDetailOptionsSig === sig) return;
+        target.innerHTML = html;
+        target.dataset.studentDetailOptionsSig = sig;
+    };
+    const buildClassOptions = (classes, includeAll = true) => {
+        const classList = Array.from(classes || []).map(c => String(c || '').trim()).filter(Boolean);
+        return (includeAll ? '<option value="">全部班级</option>' : '')
+            + classList.map(c => `<option value="${c}">${c}</option>`).join('');
+    };
+    const previousSchool = select.value;
+    const previousClass = classSelect.value;
     select.disabled = false;
     classSelect.disabled = false;
-    select.innerHTML = '<option value="">--请选择本校--</option>';
-    classSelect.innerHTML = '<option value="">全部班级</option>';
     if (modeWrap) modeWrap.style.display = 'none';
 
     const user = getCurrentUser();
@@ -12488,15 +12499,37 @@ function updateStudentSchoolSelect() {
         ? listAvailableSchoolsForCompare()
         : Object.keys(SCHOOLS || {});
     const accessibleSchools = PermissionPolicy.getAccessibleSchoolNames(user, availableSchools);
-    accessibleSchools.forEach(school => { select.innerHTML += `<option value="${school}">${school}</option>`; });
+    const schoolOptionsHtml = '<option value="">--请选择本校--</option>'
+        + accessibleSchools.map(school => `<option value="${school}">${school}</option>`).join('');
+    setOptionsIfChanged(select, schoolOptionsHtml, `schools:${accessibleSchools.join('|')}`);
+    if (previousSchool && accessibleSchools.includes(previousSchool)) select.value = previousSchool;
+
+    const updateClassOptionsForSchool = (school, options = {}) => {
+        const includeAll = options.includeAll !== false;
+        const selectedSchool = String(school || '').trim();
+        let classes = [];
+        if (selectedSchool && SCHOOLS[selectedSchool]) {
+            const classQueryMode = role === 'class_teacher' ? getClassTeacherStudentViewMode() : (options.mode || 'teaching');
+            classes = PermissionPolicy.getAccessibleClassNames(
+                user,
+                [...new Set(SCHOOLS[selectedSchool].students.map(s => s.class))].sort(),
+                selectedSchool,
+                { mode: classQueryMode }
+            );
+        }
+        const html = buildClassOptions(classes, includeAll);
+        setOptionsIfChanged(classSelect, html || '<option value="">全部班级</option>', `classes:${selectedSchool}:${includeAll}:${classes.join('|')}`);
+        if (options.preservePrevious !== false && previousClass && classes.includes(previousClass)) classSelect.value = previousClass;
+        else if (includeAll) classSelect.value = '';
+    };
+
     if (role === 'class_teacher') {
         const school = user.school || MY_SCHOOL || '';
         if (school) {
             select.value = school;
             select.disabled = true;
         }
-        classSelect.innerHTML = '';
-        classSelect.innerHTML = `<option value="${user.class}">${user.class}</option>`;
+        setOptionsIfChanged(classSelect, `<option value="${user.class}">${user.class}</option>`, `class-teacher:${user.class}`);
         classSelect.value = user.class;
         classSelect.disabled = true;
 
@@ -12509,28 +12542,26 @@ function updateStudentSchoolSelect() {
             select.disabled = true;
         }
         const scope = getTeacherScopeForUser(user);
-        classSelect.innerHTML = '<option value="">全部班级</option>';
         const classes = Array.from(scope.classes).sort();
-        classes.forEach(c => classSelect.innerHTML += `<option value="${c}">${c}</option>`);
+        setOptionsIfChanged(classSelect, buildClassOptions(classes, true), `teacher:${school}:${classes.join('|')}`);
+        if (previousClass && classes.includes(previousClass)) classSelect.value = previousClass;
     } else if (role === 'director' || role === 'grade_director') {
         const school = PermissionPolicy.getBoundSchool(user);
         if (school) {
             select.value = school;
             select.disabled = true;
         }
-        classSelect.innerHTML = '<option value="">全部班级</option>';
         const classes = PermissionPolicy.getAccessibleClassNames(user, [...new Set((SCHOOLS[school]?.students || []).map(s => s.class))].sort(), school, { mode: 'homeroom' });
-        classes.forEach(c => classSelect.innerHTML += `<option value="${c}">${c}</option>`);
+        setOptionsIfChanged(classSelect, buildClassOptions(classes, true), `director:${school}:${classes.join('|')}`);
+        if (previousClass && classes.includes(previousClass)) classSelect.value = previousClass;
+    } else {
+        updateClassOptionsForSchool(select.value);
     }
 
     select.onchange = function () {
         const selectedSchool = this.value;
-        classSelect.innerHTML = '<option value="">全部班级</option>';
-        if (selectedSchool && SCHOOLS[selectedSchool]) {
-            const classQueryMode = role === 'class_teacher' ? getClassTeacherStudentViewMode() : 'teaching';
-            const classes = PermissionPolicy.getAccessibleClassNames(user, [...new Set(SCHOOLS[selectedSchool].students.map(s => s.class))].sort(), selectedSchool, { mode: classQueryMode });
-            classes.forEach(c => classSelect.innerHTML += `<option value="${c}">${c}</option>`);
-        }
+        classSelect.value = '';
+        updateClassOptionsForSchool(selectedSchool, { preservePrevious: false });
         // ✋ 性能优化关键：切换学校时，重置分页并立即渲染
         renderStudentDetails(true);
     };
