@@ -34,6 +34,33 @@ window.onerror = function (msg, url, lineNo, columnNo, error) {
     return false;
 };
 
+function isAppDebugEnabled() {
+    if (window.LoggerRuntime && typeof window.LoggerRuntime.isDebugEnabled === 'function') {
+        return window.LoggerRuntime.isDebugEnabled();
+    }
+    try {
+        return window.APP_DEBUG === true
+            || localStorage.getItem('APP_DEBUG') === '1'
+            || new URLSearchParams(window.location.search || '').has('debug');
+    } catch (e) {
+        return window.APP_DEBUG === true;
+    }
+}
+
+function appDebug(...args) {
+    if (window.LoggerRuntime && typeof window.LoggerRuntime.debug === 'function') {
+        window.LoggerRuntime.debug(...args);
+        return;
+    }
+    if (!isAppDebugEnabled()) return;
+    console.debug(...args);
+}
+
+window.AppDebug = window.AppDebug || {
+    isEnabled: isAppDebugEnabled,
+    log: appDebug
+};
+
 const MOJIBAKE_REPLACEMENTS = [
     ['宸ヤ綔鍙?', '工作台'],
     ['閫氳褰?', '通讯录'],
@@ -1069,7 +1096,7 @@ const EdgeGateway = {
 
         const protocol = window.location.protocol;
         const origin = window.location.origin;
-        console.log(`[EdgeGateway] Requesting ${action}, Protocol: ${protocol}, Origin: ${origin}`);
+        appDebug(`[EdgeGateway] Requesting ${action}, Protocol: ${protocol}, Origin: ${origin}`);
         if (protocol === 'file:') {
             console.warn('[EdgeGateway] Running from file:// may trigger CORS blocks (Origin: null). Recommended: Use local web server.');
         }
@@ -1086,7 +1113,7 @@ const EdgeGateway = {
         let lastError = null;
         for (let i = 0; i < urls.length; i += 1) {
             const url = urls[i];
-            console.log(`[EdgeGateway] Attempt ${i + 1}/${urls.length}: ${url}`);
+            appDebug(`[EdgeGateway] Attempt ${i + 1}/${urls.length}: ${url}`);
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 18000); // 18s timeout per candidate
@@ -1105,7 +1132,7 @@ const EdgeGateway = {
                     data = await response.json();
                 } catch (e) { }
                 if (response.ok && data?.ok) {
-                    console.log(`[EdgeGateway] Success with ${url}`);
+                    appDebug(`[EdgeGateway] Success with ${url}`);
                     this.resolvedGatewayUrl = url;
                     return data;
                 }
@@ -3043,7 +3070,7 @@ function notifyPublicDownloadAction(message, type = 'success') {
         });
         return;
     }
-    console.log(message);
+    appDebug(message);
 }
 
 window.PUBLIC_DOWNLOAD_RELEASE_PAGE_URL = PUBLIC_DOWNLOAD_RELEASE_PAGE_URL;
@@ -5013,7 +5040,7 @@ var Auth = {
         // 🟢 [Bug #1 修复] 设置全局年级过滤器，供其他模块使用
         if (role === 'grade_director' && this.currentUser.class) {
             window.USER_GRADE_FILTER = String(this.currentUser.class).trim();
-            console.log(`[权限] 级部主任年级过滤已启用: ${window.USER_GRADE_FILTER}`);
+            appDebug(`[权限] 级部主任年级过滤已启用: ${window.USER_GRADE_FILTER}`);
         } else {
             window.USER_GRADE_FILTER = null;
         }
@@ -5724,7 +5751,7 @@ var Auth = {
             return { successCount: 0, failCount: 0, errorDetails: [] };
         }
 
-        console.log(`[同步准备] 去重后:${safeRows.length}`);
+        appDebug(`[同步准备] 去重后:${safeRows.length}`);
 
         // --- C. 智能分批上传 ---
         const BATCH_SIZE = 10; // 保守批次大小
@@ -6107,11 +6134,11 @@ Auth.syncLoginPortalUI();
 // Signal to the portal loader that Auth is ready
 if (typeof window.markAuthReadyResolved === 'function') {
     window.markAuthReadyResolved();
-    console.log('[app] AuthReady signaled to portal');
+    appDebug('[app] AuthReady signaled to portal');
 } else if (typeof window.resolveAuthReady === 'function') {
     window.__AUTH_READY__ = true;
     window.resolveAuthReady();
-    console.log('[app] AuthReady signaled to portal');
+    appDebug('[app] AuthReady signaled to portal');
 }
 window.openAdminCloudAccountModal = function () {
     const modal = document.getElementById('admin-modal');
@@ -6145,7 +6172,7 @@ window.RoleManager = {
         const primaryRole = AuthState.applyRolesToBody(user);
         if (user) {
             const roles = AuthState.getUserRoles(user);
-            console.log(`🎭 用户角色：${roles.join(', ')} (主角色：${primaryRole})`);
+            appDebug(`🎭 用户角色：${roles.join(', ')} (主角色：${primaryRole})`);
         }
     },
 
@@ -6175,27 +6202,27 @@ window.RoleManager = {
             updateRoleHint();
         }
 
-        console.log(`✅ 已添加角色 ${roleName}，当前角色：${newRoles.join(', ')}`);
-        console.log('💡 提示：这只是临时测试，刷新页面后会恢复。要永久设置，请在数据库中修改用户数据。');
+        appDebug(`✅ 已添加角色 ${roleName}，当前角色：${newRoles.join(', ')}`);
+        appDebug('💡 提示：这只是临时测试，刷新页面后会恢复。要永久设置，请在数据库中修改用户数据。');
     },
 
     // 🆕 测试工具：查看当前用户的所有权限
     showCurrentPermissions: function () {
         const user = Auth.currentUser;
         if (!user) {
-            console.log('❌ 没有登录用户');
+            appDebug('❌ 没有登录用户');
             return;
         }
 
         const roles = this.getUserRoles(user);
-        console.log('%c当前用户权限信息', 'color: #10b981; font-weight: bold; font-size: 16px;');
-        console.log('用户名:', user.name);
-        console.log('所有角色:', roles.join(', '));
-        console.log('主角色:', this.getPrimaryRole(user));
-        console.log('\n权限检查示例:');
-        console.log('- 是否是管理员:', this.hasRole(user, 'admin'));
-        console.log('- 是否是教师类角色:', this.hasAnyRole(user, ['teacher', 'class_teacher']));
-        console.log('- 是否是管理类角色:', this.hasAnyRole(user, ['admin', 'director', 'grade_director']));
+        appDebug('%c当前用户权限信息', 'color: #10b981; font-weight: bold; font-size: 16px;');
+        appDebug('用户名:', user.name);
+        appDebug('所有角色:', roles.join(', '));
+        appDebug('主角色:', this.getPrimaryRole(user));
+        appDebug('\n权限检查示例:');
+        appDebug('- 是否是管理员:', this.hasRole(user, 'admin'));
+        appDebug('- 是否是教师类角色:', this.hasAnyRole(user, ['teacher', 'class_teacher']));
+        appDebug('- 是否是管理类角色:', this.hasAnyRole(user, ['admin', 'director', 'grade_director']));
     }
 };
 
@@ -7591,10 +7618,10 @@ const DataManager = {
             sel.value = currentVal;
         } else if (MY_SCHOOL && schools.has(MY_SCHOOL)) {
             sel.value = MY_SCHOOL;
-            console.log(`✅ 自动选择本校：${MY_SCHOOL}`);
+            appDebug(`✅ 自动选择本校：${MY_SCHOOL}`);
         } else if (inferredSchool) {
             sel.value = inferredSchool;
-            console.log(`✅ 自动推断学校：${inferredSchool}`);
+            appDebug(`✅ 自动推断学校：${inferredSchool}`);
         }
     },
 
@@ -7738,7 +7765,7 @@ const DataManager = {
 
                     // 更新全局cohortId
                     writeWorkspaceCohortId(String(cohortId));
-                    console.log(`📅 已设置届数：${cohortId}级 (${grade}年级)`);
+                    appDebug(`📅 已设置届数：${cohortId}级 (${grade}年级)`);
                 }
             }
         }
@@ -7796,11 +7823,11 @@ const DataManager = {
             setTeacherMap(JSON.parse(JSON.stringify(localMap)));
             setTeacherSchoolMap(JSON.parse(JSON.stringify(localSchoolMap)));
             this.renderTeachers();
-            console.log(`✅ 已从本地历史加载学期 ${baseTerm} 的任课表，共展示 ${Object.keys(localMap).length} 条`);
+            appDebug(`✅ 已从本地历史加载学期 ${baseTerm} 的任课表，共展示 ${Object.keys(localMap).length} 条`);
             if (typeof this.refreshTeacherAnalysis === 'function') this.refreshTeacherAnalysis();
         } else {
             // 🟢 [修复]：本地无数据，自动尝试从云端拉取
-            console.log(`⚠️ 本地无学期 ${baseTerm} 的任课数据，尝试从云端同步...`);
+            appDebug(`⚠️ 本地无学期 ${baseTerm} 的任课数据，尝试从云端同步...`);
             setTeacherMap({});
             setTeacherSchoolMap({});
             this.renderTeachers(); // 先渲染空表
@@ -7809,7 +7836,7 @@ const DataManager = {
             if (window.CloudManager && CloudManager.loadTeachers) {
                 if (window.UI) UI.toast('🔄 正在从云端加载教师任课数据...', 'info');
                 CloudManager.loadTeachers({ background: true }).then(() => {
-                    console.log('✅ 云端数据加载完成');
+                    appDebug('✅ 云端数据加载完成');
                 }).catch(err => {
                     console.warn('云端加载失败:', err);
                     if (window.UI) UI.toast('☁️ 云端暂无该学期任课数据', 'warning');
@@ -7894,7 +7921,7 @@ const DataManager = {
         }
         syncTeacherTermStorage(termId);
 
-        console.log(`开始导入教师Excel: ${file.name}, 学期: ${termId}`);
+        appDebug(`开始导入教师Excel: ${file.name}, 学期: ${termId}`);
 
         if (window.UI) UI.loading(true, '✨ 正在解析Excel...');
 
@@ -7972,8 +7999,8 @@ const DataManager = {
                     DataManager.updateTeacherSchoolSelect();
                 }
 
-                console.log(`导入成功: ${count} 条记录`);
-                console.log(`解析总行数: ${totalRows}`);
+                appDebug(`导入成功: ${count} 条记录`);
+                appDebug(`解析总行数: ${totalRows}`);
 
                 if (count === 0) {
                     if (window.UI) UI.loading(false);
@@ -7992,7 +8019,7 @@ const DataManager = {
                 // 自动同步到云端
                 if (window.CloudManager && CloudManager.saveTeachers) {
                     try {
-                        console.log('[TeacherSync] 尝试上传任课表到云端...');
+                        appDebug('[TeacherSync] 尝试上传任课表到云端...');
                         const ok = await CloudManager.saveTeachers();
                         if (window.UI) UI.loading(false);
                         if (ok) {
@@ -8100,7 +8127,7 @@ const DataManager = {
             // 如果找到了有效学校，且当前未设置或不一致，则强制自动同步
             if (autoDetectedSchool && readCurrentSchool() !== autoDetectedSchool) {
                 writeCurrentSchool(autoDetectedSchool);
-                console.log(`🤖 系统已自动将本校锁定为：${autoDetectedSchool}`);
+                appDebug(`🤖 系统已自动将本校锁定为：${autoDetectedSchool}`);
 
                 // 同步更新主界面的下拉框 UI
                 const mainSelect = document.getElementById('mySchoolSelect');
@@ -8893,7 +8920,7 @@ async function switchCohort(cohortId, options = {}) {
         // ★★★ 关键：恢复账号数据 ★★★
         if (data.AUTH_DB) {
             Auth.db = persistLocalAuthDb(data.AUTH_DB);
-            console.log("✅ 账号已切换为 [" + cohortKey + "] 的版本");
+            appDebug("✅ 账号已切换为 [" + cohortKey + "] 的版本");
         }
 
         // ★★★ 关键：恢复指标参数输入框 (安全检查版) ★★★
@@ -9231,7 +9258,7 @@ window.addEventListener('load', async () => {
 
     // 🟢 分支一：这是分发版 (有内置数据) -> 加载内置数据
     if (window.EMBEDDED_DB) {
-        console.log("检测到内置数据包，正在装载...");
+        appDebug("检测到内置数据包，正在装载...");
         const loader = document.getElementById('global-loader');
         if (loader) loader.classList.add('hidden');
         AuthState.clearCurrentUser();
@@ -9323,7 +9350,7 @@ window.addEventListener('load', async () => {
                 // ★★★ 恢复账号 ★★★
                 if (backup.AUTH_DB) {
                     Auth.db = persistLocalAuthDb(backup.AUTH_DB);
-                    console.log("✅ 账号信息已同步");
+                    appDebug("✅ 账号信息已同步");
                 }
 
                 // ★★★ 恢复指标参数 (修复版) ★★★
@@ -9343,7 +9370,7 @@ window.addEventListener('load', async () => {
 
                     }, 500);
 
-                    console.log("✅ [自动恢复] 指标参数已加载到内存:", readIndicatorState());
+                    appDebug("✅ [自动恢复] 指标参数已加载到内存:", readIndicatorState());
                 }
                 if (backup.TARGETS) setTargetsState(backup.TARGETS);
                 if (Array.isArray(backup.SCHOOL_ALIAS_SETTINGS)) {
@@ -9748,7 +9775,7 @@ async function initLocalModel() {
     try {
         // 定义加载进度回调
         const initProgressCallback = (report) => {
-            console.log(report); // 控制台调试
+            appDebug(report); // 控制台调试
             statusEl.innerText = report.text; // 显示具体阶段
             // 解析进度 (WebLLM返回 0.0 ~ 1.0)
             const pct = Math.round(report.progress * 100);
@@ -11205,7 +11232,7 @@ function renderHighScoreTable() {
     tbody.innerHTML = html;
 
     // 更新 UI 提示
-    console.log(`已渲染 ${list.length} 所学校的高分数据`);
+    appDebug(`已渲染 ${list.length} 所学校的高分数据`);
 }
 
 // === 导出高分段 Excel ===
@@ -11300,7 +11327,7 @@ async function prepareSameExamOverwrite(currentExamId, existingExam = null) {
         console.warn('[upload] cloud overwrite cleanup failed:', error);
     }
 
-    console.log('[upload] same exam overwrite prepared:', {
+    appDebug('[upload] same exam overwrite prepared:', {
         examId,
         previousRows: Array.isArray(existingExam?.data) ? existingExam.data.length : 0,
         localRemoved,
@@ -11378,7 +11405,7 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
         // 🟢 [新增] 处理完数据后，立即同步到云端 (仅管理员有效)
         // 注意：因为是异步，我们在后台默默保存，不阻塞界面显示
         saveCloudData({ background: true, sourceLabel: 'auto-backup' }).then(() => {
-            console.log("自动备份完成");
+            appDebug("自动备份完成");
         }).catch(e => logCloudSyncIssue("自动备份失败", e));
         renderTables();
         applySchoolModeToTables();
@@ -11697,7 +11724,7 @@ async function processData() {
                     exc: vals[Math.max(0, idx1)] || 0,
                     pass: vals[Math.max(0, idx2)] || 0
                 };
-                console.log(`[单校模式] 总分划线锁定: 优=${THRESHOLDS[k].exc} (Top${input1}), 良=${THRESHOLDS[k].pass} (Top${input2})`);
+                appDebug(`[单校模式] 总分划线锁定: 优=${THRESHOLDS[k].exc} (Top${input1}), 良=${THRESHOLDS[k].pass} (Top${input2})`);
             } else {
                 // 🌍 多校联考模式 / 单科默认逻辑：按固定比例
                 // 9年级 15%，其他 20%
@@ -11770,7 +11797,7 @@ async function processData() {
     setThresholds(THRESHOLDS);
 
     if (isSingleSchool) {
-        console.log("🏫 检测到单校数据，自动切换 UI 为年级模式...");
+        appDebug("🏫 检测到单校数据，自动切换 UI 为年级模式...");
 
         // 1. 隐藏横向对比入口 (自己跟自己没法比)
         const analysisMod = document.getElementById('analysis');
@@ -11790,7 +11817,7 @@ async function processData() {
     }
 
     try {
-        console.log("🔄 正在自动执行衍生计算...");
+        appDebug("🔄 正在自动执行衍生计算...");
 
         // 1. 自动计算指标生 (依赖 RAW_DATA 和 TARGETS)
         // 即使没有设置划线，运行一下也不会报错，只是得分为0
@@ -11828,7 +11855,7 @@ async function processData() {
             console.warn(`[AutoSave] skip partial cohort snapshot without targets: ${currentKey}`);
         } else {
             DB.save(currentKey, snapshotPayload);
-            console.log(`✅ 数据已自动保存至: ${currentKey}`);
+            appDebug(`✅ 数据已自动保存至: ${currentKey}`);
         }
         // 👆 🟢 [修复结束]
     }
@@ -12007,16 +12034,10 @@ function renderTables() {
     // 1. 获取所有学校列表 (移除任何排序过滤，先拿原始数据)
     let list = townshipSchools.slice();
 
-    // --- 🔍 诊断代码开始 ---
-    // 只有当点击“生成横向对比表”或页面加载时，如果学校数量少于预期(比如13)，可以在控制台看到
-    console.log(`系统共识别到 ${list.length} 所学校：`, list.map(s => s.name));
-
-    // 在表头显示醒目的数量
-    const countInfo = `<span style="background:#ef4444; color:white; padding:2px 6px; border-radius:4px; font-size:11px;">共识别 ${list.length} 所</span>`;
-    // --- 🔍 诊断代码结束 ---
+    appDebug(`系统共识别到 ${list.length} 所学校：`, list.map(s => s.name));
 
     theadTotal.innerHTML = `
-            <th>学校名称 ${countInfo}</th><th>实考人数</th><th>平均分</th><th>优秀率</th><th>及格率</th>
+            <th>学校名称</th><th>实考人数</th><th>平均分</th><th>优秀率</th><th>及格率</th>
             <th>平均分赋分</th><th>优秀率赋分</th><th>及格率赋分</th>
             <th>两率一分总分</th><th>排名</th>
         `;
@@ -12843,14 +12864,14 @@ function renderStudentDetails(reset = true) {
         const classTeacherMode = role === 'class_teacher' ? getClassTeacherStudentViewMode() : 'teaching';
         const queryMode = role === 'class_teacher' ? (classTeacherMode === 'class_all' ? 'homeroom' : 'teaching') : 'teaching';
         data = PermissionPolicy.filterStudentRows(user, data, { mode: queryMode });
-        console.log('[考试明细] 当前用户:', user);
+        appDebug('[考试明细] 当前用户:', user);
 
         // --- A. 权限过滤 ---
         // 🆕 使用多角色系统进行权限控制
         if (false && user && RoleManager.hasAnyRole(user, ['teacher', 'class_teacher']) &&
             !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director'])) {
             // 纯教师或班主任角色：只能看自己任教的班级
-            console.log('[考试明细] 🔒 检测到教师角色，启用权限过滤');
+            appDebug('[考试明细] 🔒 检测到教师角色，启用权限过滤');
             const scope = getTeacherScopeForUser(user);
 
             // 班主任“本班全科”模式：按本班过滤，不受任教学科限制
@@ -12862,15 +12883,15 @@ function renderStudentDetails(reset = true) {
                 } else {
                     const before = data.length;
                     data = data.filter(s => normalizeClass(s.class) === myClass);
-                    console.log(`[考试明细] 班主任本班全科模式：过滤前${before}人，过滤后${data.length}人，班级=${myClass}`);
+                    appDebug(`[考试明细] 班主任本班全科模式：过滤前${before}人，过滤后${data.length}人，班级=${myClass}`);
                 }
             } else if (scope.classes.size > 0) {
                 const originalCount = data.length;
 
                 if (data.length > 0) {
-                    console.log(`[考试明细] 数据样本班级: ${data[0].class} (规范化: ${normalizeClass(data[0].class)})`);
+                    appDebug(`[考试明细] 数据样本班级: ${data[0].class} (规范化: ${normalizeClass(data[0].class)})`);
                 }
-                console.log(`[考试明细] 权限班级:`, Array.from(scope.classes));
+                appDebug(`[考试明细] 权限班级:`, Array.from(scope.classes));
 
                 data = data.filter(s => {
                     const rawClass = String(s.class || '').trim();
@@ -12891,11 +12912,11 @@ function renderStudentDetails(reset = true) {
                     }
 
                     if (!hasPermission && Math.random() < 0.001) { // 抽样打印被过滤的
-                        console.log(`[考试明细] ❌ 过滤: ${s.class} -> ${normalizedClass}`);
+                        appDebug(`[考试明细] ❌ 过滤: ${s.class} -> ${normalizedClass}`);
                     }
                     return hasPermission;
                 });
-                console.log(`[考试明细] 🔐 权限筛选：过滤前${originalCount}人，过滤后${data.length}人`);
+                appDebug(`[考试明细] 🔐 权限筛选：过滤前${originalCount}人，过滤后${data.length}人`);
 
                 if (data.length === 0) {
                     console.warn('[考试明细] ⚠️ 过滤后无数据');
@@ -12919,7 +12940,7 @@ function renderStudentDetails(reset = true) {
                         // 班级号以年级号开头（例如年级"7" → 班级"701","702"等）
                         return cls.startsWith(gradePrefix);
                     });
-                    console.log(`[考试明细] 🔒 级部主任过滤: 年级=${gradePrefix}, 过滤前${beforeCount}人, 过滤后${data.length}人`);
+                    appDebug(`[考试明细] 🔒 级部主任过滤: 年级=${gradePrefix}, 过滤前${beforeCount}人, 过滤后${data.length}人`);
                     if (data.length === 0) {
                         UI.toast(`⚠️ 未找到${gradePrefix}年级的考试数据`, 'warning');
                     }
@@ -12927,10 +12948,10 @@ function renderStudentDetails(reset = true) {
                 // 非管理员、非教务主任、非级部主任的其他角色：按学校过滤
                 else if (user.school) {
                     data = data.filter(s => s.school === user.school);
-                    console.log(`[考试明细] 按学校过滤: ${user.school}`);
+                    appDebug(`[考试明细] 按学校过滤: ${user.school}`);
                 }
             }
-            console.log('[考试明细] 其他角色或管理员，显示所有/学校范围数据');
+            appDebug('[考试明细] 其他角色或管理员，显示所有/学校范围数据');
         }
 
         // --- B. 顶部下拉框过滤 (依然保留，作为一级筛选) ---
@@ -13591,7 +13612,7 @@ function importTeacherExcel() {
     }
 
     const file = fileInput.files[0];
-    console.log(`[旧版入口] 开始导入: ${file.name}`);
+    appDebug(`[旧版入口] 开始导入: ${file.name}`);
 
     if (window.UI) UI.loading(true, '✨ 正在导入教师信息...');
 
@@ -14307,7 +14328,7 @@ function findPreviousRecord(student) {
 
                     const found = examData.find(p => matchStudent(p, targetName, targetClass, targetSchool));
                     if (found) {
-                        console.log(`[对比] 从历史考试 "${examId}" 中找到 ${student.name} 的历史记录`);
+                        appDebug(`[对比] 从历史考试 "${examId}" 中找到 ${student.name} 的历史记录`);
                         return {
                             ...found,
                             townRank: found.ranks?.total?.township || '-',
@@ -15197,7 +15218,7 @@ function calcSummary(isSilent = false) {
     });
     document.querySelector('#tb-summary tbody').innerHTML = html;
 
-    console.log(`综合排名已生成，共 ${list.length} 所学校`);
+    appDebug(`综合排名已生成，共 ${list.length} 所学校`);
 }
 
 function exportSummaryTable() {
@@ -17470,7 +17491,7 @@ window.addEventListener('load', () => {
             tr { display: table-row !important; }
         `;
     document.head.appendChild(style);
-    console.log("✅ 已强制解除表格高度限制");
+    appDebug("✅ 已强制解除表格高度限制");
     applyExamMetaUI();
     applyArchiveLockUI();
     if (typeof CohortDB !== 'undefined') CohortDB.renderExamList();
@@ -18246,7 +18267,7 @@ function refreshExamGradePreview() {
 function onExamTermChange() {
     const meta = getExamMetaFromUI();
     if (!meta.cohortId || !meta.year || !meta.term) {
-        console.log('⏸️ 学期信息不完整，暂不加载教师数据');
+        appDebug('⏸️ 学期信息不完整，暂不加载教师数据');
         return;
     }
 
@@ -18254,7 +18275,7 @@ function onExamTermChange() {
     const termId = buildTeacherTermId(meta);
     const baseTerm = getTeacherTermBase(termId);
 
-    console.log(`📅 学期已选择：${termId}，准备加载教师任课数据...`);
+    appDebug(`📅 学期已选择：${termId}，准备加载教师任课数据...`);
 
     // 更新学期ID到localStorage，供DataManager使用
     syncTeacherTermStorage(termId);
@@ -18284,11 +18305,11 @@ function onExamTermChange() {
         if (window.DataManager && typeof DataManager.renderTeachers === 'function') {
             DataManager.renderTeachers();
         }
-        console.log(`✅ 已从本地历史加载 ${resolved.key} 的任课表（${Object.keys(resolved.map || {}).length}条）`);
+        appDebug(`✅ 已从本地历史加载 ${resolved.key} 的任课表（${Object.keys(resolved.map || {}).length}条）`);
         if (window.UI) UI.toast(`✅ 已加载该学期任课表（${Object.keys(resolved.map || {}).length}条）`, 'success');
     } else {
         // 本地无数据，尝试从云端加载
-        console.log(`⚠️ 本地无 ${baseTerm} 的任课数据，尝试从云端加载...`);
+        appDebug(`⚠️ 本地无 ${baseTerm} 的任课数据，尝试从云端加载...`);
         setTeacherMap({});
         setTeacherSchoolMap({});
         if (window.DataManager && typeof DataManager.renderTeachers === 'function') {
@@ -18297,11 +18318,11 @@ function onExamTermChange() {
 
         // Avoid forcing a cloud teacher sync during generic startup flows.
         if (!shouldAutoLoadTeacherData()) {
-            console.log('⏸️ 当前不在教师/数据模块，暂不自动拉取云端任课表');
+            appDebug('⏸️ 当前不在教师/数据模块，暂不自动拉取云端任课表');
         } else if (window.CloudManager && typeof CloudManager.loadTeachers === 'function') {
             if (window.UI) UI.toast('🔄 正在从云端加载该学期的教师任课数据...', 'info');
             CloudManager.loadTeachers({ background: true }).then(() => {
-                console.log('✅ 云端数据加载完成');
+                appDebug('✅ 云端数据加载完成');
                 const newMap = window.TEACHER_MAP || {};
                 if (Object.keys(newMap).length > 0) {
                     if (window.UI) UI.toast(`✅ 已从云端加载任课表（${Object.keys(newMap).length}条）`, 'success');
@@ -19928,8 +19949,8 @@ function getTeacherScopeForUser(user) {
     }
 
     const uname = normalizeTeacherName(user.name);
-    console.log(`[权限检查] 检查教师: ${user.name} (规范化: ${uname})`);
-    console.log('[权限检查] TEACHER_MAP内容:', TEACHER_MAP);
+    appDebug(`[权限检查] 检查教师: ${user.name} (规范化: ${uname})`);
+    appDebug('[权限检查] TEACHER_MAP内容:', TEACHER_MAP);
 
     Object.entries(TEACHER_MAP).forEach(([key, teacher]) => {
         const normalizedTeacher = normalizeTeacherName(teacher);
@@ -19937,14 +19958,14 @@ function getTeacherScopeForUser(user) {
             const parts = key.split('_');
             const cls = normalizeClass(parts[0]);
             const sub = normalizeSubject(parts[1] || '');
-            console.log(`[权限检查] ✅ 匹配到任课: ${key} -> 班级:${cls}, 科目:${sub}`);
+            appDebug(`[权限检查] ✅ 匹配到任课: ${key} -> 班级:${cls}, 科目:${sub}`);
             if (cls) scope.classes.add(cls);
             if (sub) scope.subjects.add(sub);
         }
     });
 
-    console.log(`[权限检查] 该教师任教班级:`, Array.from(scope.classes));
-    console.log(`[权限检查] 该教师任教科目:`, Array.from(scope.subjects));
+    appDebug(`[权限检查] 该教师任教班级:`, Array.from(scope.classes));
+    appDebug(`[权限检查] 该教师任教科目:`, Array.from(scope.subjects));
     return scope;
 }
 
@@ -21545,7 +21566,7 @@ window.addEventListener('load', () => {
             const el = document.getElementById(id);
             // 如果元素存在，且它不是 body 的直接子元素，就移动它
             if (el && el.parentNode !== document.body) {
-                console.log(`🔧 [AutoFix] 正在修复弹窗 DOM 位置: ${id}`);
+                appDebug(`🔧 [AutoFix] 正在修复弹窗 DOM 位置: ${id}`);
                 document.body.appendChild(el); // 移动到 body 末尾
             }
         });
@@ -21559,7 +21580,7 @@ window.DataManager = DataManager;
     const hasData = Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0;
 
     if (user && user.id === 'demo-admin' && !hasData) {
-        console.log('[DemoMode] Auto-triggering demo data load for demo-admin');
+        appDebug('[DemoMode] Auto-triggering demo data load for demo-admin');
         window.setTimeout(() => {
             if (typeof loadDemoData === 'function') {
                 loadDemoData();

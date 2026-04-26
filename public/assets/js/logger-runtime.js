@@ -24,6 +24,28 @@
         return root.sbClient || null;
     }
 
+    function isDebugEnabled() {
+        try {
+            return root.APP_DEBUG === true
+                || root.localStorage?.getItem('APP_DEBUG') === '1'
+                || new URLSearchParams(root.location?.search || '').has('debug');
+        } catch (_) {
+            return root.APP_DEBUG === true;
+        }
+    }
+
+    function debug(...args) {
+        if (!isDebugEnabled()) return;
+        console.debug(...args);
+    }
+
+    if (root && !root.AppDebug) {
+        root.AppDebug = {
+            isEnabled: isDebugEnabled,
+            log: debug
+        };
+    }
+
     function safeLoading(show, text) {
         const ui = getUi();
         if (ui && typeof ui.loading === 'function') ui.loading(show, text);
@@ -76,7 +98,7 @@
                 details,
                 status: 'normal'
             }]);
-            console.log(`[Log] ${action}: ${details}`);
+            debug(`[Log] ${action}: ${details}`);
         } catch (error) {
             console.error('写日志失败:', error);
         }
@@ -315,6 +337,8 @@
     }
 
     return {
+        isDebugEnabled,
+        debug,
         log,
         view,
         toggleHistoryView,
