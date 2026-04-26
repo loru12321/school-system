@@ -695,6 +695,13 @@ async function runModuleDeepCheck(page, id) {
     }
     if (id === 'teaching-overview') {
         return page.evaluate(async () => {
+            if (typeof window.ensureTeachingManagementRuntimeLoaded === 'function') {
+                await Promise.resolve(window.ensureTeachingManagementRuntimeLoaded()).catch(() => null);
+            }
+            if (typeof window.renderTeachingOverview === 'function') {
+                await Promise.resolve(window.renderTeachingOverview()).catch(() => null);
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
             const checks = {
                 renderTeachingOverview: typeof window.renderTeachingOverview === 'function',
                 sectionReady: !!document.querySelector('#teaching-overview.analysis-workspace-management'),
@@ -1112,6 +1119,9 @@ async function runModuleDeepCheck(page, id) {
     }
     if (id === 'app-download-center') {
         return page.evaluate(async () => {
+            if (typeof window.ensureAppDownloadRuntimeLoaded === 'function') {
+                await Promise.resolve(window.ensureAppDownloadRuntimeLoaded()).catch(() => null);
+            }
             if (typeof window.renderAppDownloadCenter === 'function') {
                 await Promise.resolve(window.renderAppDownloadCenter('android')).catch(() => null);
                 await new Promise(resolve => setTimeout(resolve, 500));
