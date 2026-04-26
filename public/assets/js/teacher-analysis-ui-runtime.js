@@ -329,6 +329,102 @@
             .join('、');
     }
 
+    const TEACHER_FOCUS_META = {
+        excellentEdges: { label: '培优', title: '培优边缘生', color: '#0f766e', empty: '暂无培优边缘生' },
+        passEdges: { label: '临界', title: '及格临界生', color: '#1d4ed8', empty: '暂无及格临界生' },
+        lowRisk: { label: '辅差', title: '辅差关注生', color: '#b45309', empty: '暂无辅差关注生' }
+    };
+
+    function teacherJsonAttr(value) {
+        return teacherEscapeHtml(JSON.stringify(String(value || '')));
+    }
+
+    function renderTeacherFocusButton(teacher, subject, type, data) {
+        const meta = TEACHER_FOCUS_META[type] || TEACHER_FOCUS_META.passEdges;
+        const rows = data?.focusTargets?.[type] || [];
+        return `
+            <button
+                type="button"
+                class="teacher-focus-chip"
+                data-teacher="${teacherEscapeHtml(teacher)}"
+                data-subject="${teacherEscapeHtml(subject)}"
+                data-focus-type="${teacherEscapeHtml(type)}"
+                onclick="window.showTeacherFocusTargetsFromButton && window.showTeacherFocusTargetsFromButton(this)"
+                title="点击查看${teacherEscapeHtml(meta.title)}名单和班级"
+                style="border:1px solid ${meta.color}; color:${meta.color}; background:#fff; border-radius:999px; padding:3px 8px; font-size:12px; font-weight:800; cursor:pointer; margin:2px;"
+            >${teacherEscapeHtml(meta.label)} ${rows.length}</button>
+        `;
+    }
+
+    function renderTeacherFocusSummaryCell(teacher, subject, data) {
+        const title = [
+            `培优: ${(data.focusTargets?.excellentEdges || []).slice(0, 6).map((row) => `${row.name}(${row.className || '-'}/${row.score})`).join('、') || '暂无'}`,
+            `临界: ${(data.focusTargets?.passEdges || []).slice(0, 6).map((row) => `${row.name}(${row.className || '-'}/${row.score})`).join('、') || '暂无'}`,
+            `辅差: ${(data.focusTargets?.lowRisk || []).slice(0, 6).map((row) => `${row.name}(${row.className || '-'}/${row.score})`).join('、') || '暂无'}`
+        ].join(' | ');
+        return `
+            <div title="${teacherEscapeHtml(title)}" style="display:flex; align-items:center; justify-content:center; gap:3px; flex-wrap:wrap;">
+                ${renderTeacherFocusButton(teacher, subject, 'excellentEdges', data)}
+                ${renderTeacherFocusButton(teacher, subject, 'passEdges', data)}
+                ${renderTeacherFocusButton(teacher, subject, 'lowRisk', data)}
+            </div>
+        `;
+    }
+
+    function showTeacherFocusTargets(teacher, subject, type) {
+        const stats = getTeacherStats();
+        const data = stats?.[teacher]?.[subject];
+        const meta = TEACHER_FOCUS_META[type] || TEACHER_FOCUS_META.passEdges;
+        const rows = Array.isArray(data?.focusTargets?.[type]) ? data.focusTargets[type] : [];
+        const title = `${teacher} / ${subject} · ${meta.title}`;
+        const html = rows.length ? `
+            <div style="text-align:left;">
+                <div style="margin-bottom:10px; color:#64748b; font-size:13px;">共 ${rows.length} 人。点击姓名可跳转到学生成绩单，便于继续查看个人成绩、排名和家校材料。</div>
+                <div class="table-wrap analysis-table-shell" style="max-height:55vh; overflow:auto;">
+                    <table class="analysis-generated-table" style="width:100%; font-size:13px;">
+                        <thead><tr><th>班级</th><th>姓名</th><th>当前分</th><th>差距</th><th>操作</th></tr></thead>
+                        <tbody>
+                            ${rows.map((row) => {
+                                const gapText = Number.isFinite(row.gap) ? Math.abs(row.gap).toFixed(1) : '-';
+                                const school = row.school || window.MY_SCHOOL || '';
+                                return `
+                                    <tr>
+                                        <td>${teacherEscapeHtml(row.className || '-')}</td>
+                                        <td><strong>${teacherEscapeHtml(row.name || '-')}</strong></td>
+                                        <td>${Number.isFinite(row.score) ? teacherEscapeHtml(row.score) : '-'}</td>
+                                        <td>${gapText}</td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-blue"
+                                                onclick="window.jumpToStudent && window.jumpToStudent(${teacherJsonAttr(row.name)}, ${teacherJsonAttr(school)}, ${teacherJsonAttr(row.className)})">
+                                                查看成绩单
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        ` : `<div style="padding:24px; color:#64748b;">${teacherEscapeHtml(meta.empty)}</div>`;
+        if (window.Swal && typeof window.Swal.fire === 'function') {
+            window.Swal.fire({
+                title: teacherEscapeHtml(title),
+                html,
+                width: 760,
+                confirmButtonText: '关闭',
+                confirmButtonColor: meta.color
+            });
+        } else {
+            alert(`${title}\n${rows.map((row) => `${row.className || '-'} ${row.name || '-'} ${row.score ?? '-'}`).join('\n') || meta.empty}`);
+        }
+    }
+
+    function showTeacherFocusTargetsFromButton(button) {
+        if (!button) return;
+        showTeacherFocusTargets(button.dataset.teacher || '', button.dataset.subject || '', button.dataset.focusType || 'passEdges');
+    }
+
     function renderTeacherComparisonTableV2() {
         const container = document.getElementById('teacherComparisonTable');
         const stats = getTeacherStats();
@@ -381,11 +477,6 @@
                     const baselineClass = teacherToNumber(data.baselineAdjustment, 0) >= 0 ? 'text-green' : 'text-red';
                     const lowStyle = teacherToNumber(data.lowRate, 0) >= 0.12 ? 'color:#dc2626; font-weight:700;' : 'color:#334155;';
                     const sampleTone = data.sampleWarning ? 'color:#b45309; font-weight:700;' : 'color:#334155;';
-                    const focusTitle = [
-                        `培优: ${(data.focusTargets?.excellentEdges || []).slice(0, 6).map((row) => `${row.name}(${row.score})`).join('、') || '暂无'}`,
-                        `临界: ${(data.focusTargets?.passEdges || []).slice(0, 6).map((row) => `${row.name}(${row.score})`).join('、') || '暂无'}`,
-                        `辅差: ${(data.focusTargets?.lowRisk || []).slice(0, 6).map((row) => `${row.name}(${row.score})`).join('、') || '暂无'}`
-                    ].join(' | ');
                     const baselineTitle = `基线覆盖 ${data.baselineCoverageText || '0%'}；预计均分 ${teacherToNumber(data.expectedAvg, 0).toFixed(2)}；预计优率 ${teacherFormatPercent(data.expectedExcellentRate, 1)}；预计及格率 ${teacherFormatPercent(data.expectedPassRate, 1)}；预计低分率 ${teacherFormatPercent(data.expectedLowRate, 1)}；任课连续性 ${data.teacherContinuityText || '任课连续'}${data.baselineExamId ? `；基线 ${data.baselineExamId}` : ''}`;
                     const sampleChangeText = (data.previousSampleCount || 0) > 0
                         ? `新增 ${data.addedSampleCount || 0} / 缺考退出 ${data.exitedSampleCount || 0}`
@@ -420,7 +511,7 @@
                                 <div style="font-weight:700; color:#0369a1;">${conversionText}</div>
                                 <div style="font-size:11px; color:#64748b;">${teacherEscapeHtml(data.conversionSummary || '暂无转化')}</div>
                             </td>
-                            <td title="${teacherEscapeHtml(focusTitle)}" style="font-size:12px;">${teacherEscapeHtml(data.focusSummary || '培优0 / 临界0 / 辅差0')}</td>
+                            <td style="font-size:12px;">${renderTeacherFocusSummaryCell(item.teacher, subject, data)}</td>
                             <td style="background:#fffbeb; font-weight:800; color:#b45309; font-size:1.1em;">
                                 <div>${teacherToNumber(data.fairScore, 0).toFixed(1)}</div>
                                 <div style="font-size:11px; color:#92400e;">同科第 ${teacherEscapeHtml(data.fairRank || '-')} 名</div>
@@ -578,15 +669,15 @@
                     <div style="font-size:13px; font-weight:700; color:#334155; margin-bottom:10px;">培优 / 辅差名单</div>
                     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px;">
                         <div>
-                            <div style="font-size:12px; color:#0f766e; font-weight:700; margin-bottom:4px;">培优边缘生</div>
+                            <button type="button" onclick="window.showTeacherFocusTargets(${teacherJsonAttr(teacher)}, ${teacherJsonAttr(subject)}, 'excellentEdges')" style="font-size:12px; color:#0f766e; font-weight:800; margin-bottom:4px; border:0; background:transparent; cursor:pointer; padding:0;">培优边缘生</button>
                             <div style="font-size:12px; color:#475569; line-height:1.7;">${teacherEscapeHtml(teacherFormatFocusList(data.focusTargets?.excellentEdges, '暂无培优边缘生'))}</div>
                         </div>
                         <div>
-                            <div style="font-size:12px; color:#1d4ed8; font-weight:700; margin-bottom:4px;">及格临界生</div>
+                            <button type="button" onclick="window.showTeacherFocusTargets(${teacherJsonAttr(teacher)}, ${teacherJsonAttr(subject)}, 'passEdges')" style="font-size:12px; color:#1d4ed8; font-weight:800; margin-bottom:4px; border:0; background:transparent; cursor:pointer; padding:0;">及格临界生</button>
                             <div style="font-size:12px; color:#475569; line-height:1.7;">${teacherEscapeHtml(teacherFormatFocusList(data.focusTargets?.passEdges, '暂无及格临界生'))}</div>
                         </div>
                         <div>
-                            <div style="font-size:12px; color:#b45309; font-weight:700; margin-bottom:4px;">辅差关注生</div>
+                            <button type="button" onclick="window.showTeacherFocusTargets(${teacherJsonAttr(teacher)}, ${teacherJsonAttr(subject)}, 'lowRisk')" style="font-size:12px; color:#b45309; font-weight:800; margin-bottom:4px; border:0; background:transparent; cursor:pointer; padding:0;">辅差关注生</button>
                             <div style="font-size:12px; color:#475569; line-height:1.7;">${teacherEscapeHtml(teacherFormatFocusList(data.focusTargets?.lowRisk, '暂无辅差关注生'))}</div>
                         </div>
                     </div>
@@ -692,6 +783,9 @@
         calculatePerformanceLevelV2,
         renderTeacherComparisonTable: renderTeacherComparisonTableV2,
         renderTeacherComparisonTableV2,
+        renderTeacherFocusSummaryCell,
+        showTeacherFocusTargets,
+        showTeacherFocusTargetsFromButton,
         showTeacherDetails: showTeacherDetailsV2,
         showTeacherDetailsV2,
         exportTeacherComparisonExcel: exportTeacherComparisonExcelV2,

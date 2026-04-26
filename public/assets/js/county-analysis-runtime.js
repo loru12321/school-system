@@ -75,6 +75,15 @@
         return Number.isFinite(num) ? `${(num * 100).toFixed(1)}%` : '-';
     }
 
+    function formatCountyRankDisplay(value, rank, isPercent = false) {
+        const num = Number(value);
+        const displayValue = Number.isFinite(num)
+            ? (isPercent ? `${(num * 100).toFixed(2)}%` : num.toFixed(2))
+            : '-';
+        const displayRank = rank ? ` <span style="font-size:0.9em; color:#94a3b8">(${rank})</span>` : '';
+        return `${displayValue}${displayRank}`;
+    }
+
     function normalizeCountySubjectName(subject) {
         const text = String(subject || '').trim();
         if (typeof window.normalizeSubject === 'function') return window.normalizeSubject(text);
@@ -287,6 +296,31 @@
         return Object.values(window.SCHOOLS || {})
             .slice()
             .sort((a, b) => (a.countyRank2Rate || 9999) - (b.countyRank2Rate || 9999));
+    }
+
+    function buildCountyHorizontalTotalRows() {
+        const rows = Object.values(window.SCHOOLS || {})
+            .filter((school) => school?.metrics?.total)
+            .map((school) => {
+                const metric = school.metrics.total || {};
+                return {
+                    school,
+                    schoolName: school.name || '',
+                    count: toNumber(metric.count),
+                    avg: toNumber(metric.avg),
+                    excellentRate: toNumber(metric.excRate),
+                    passRate: toNumber(metric.passRate),
+                    ratedAvg: toNumber(metric.countyRatedAvg ?? school.countyRatedAvg),
+                    ratedExc: toNumber(metric.countyRatedExc ?? school.countyRatedExc),
+                    ratedPass: toNumber(metric.countyRatedPass ?? school.countyRatedPass),
+                    score: toNumber(metric.countyScore2Rate ?? school.countyScore2Rate ?? school.score2Rate)
+                };
+            });
+        assignCompetitionRanks(rows, (row) => row.avg, (row, rank) => { row.rankAvg = rank; });
+        assignCompetitionRanks(rows, (row) => row.excellentRate, (row, rank) => { row.rankExcellent = rank; });
+        assignCompetitionRanks(rows, (row) => row.passRate, (row, rank) => { row.rankPass = rank; });
+        assignCompetitionRanks(rows, (row) => row.score, (row, rank) => { row.rankScore = rank; });
+        return rows.sort((a, b) => (a.rankScore || 9999) - (b.rankScore || 9999));
     }
 
     function resolveCurrentCountySchoolName() {
@@ -716,6 +750,48 @@
 
     function buildCountyRankExportRows() {
         return [
+            ['学校名称', '实考人数', '平均分', '平均分排名', '优秀率', '优秀率排名', '及格率', '及格率排名', '平均分赋分', '优秀率赋分', '及格率赋分', '两率一分总分', '县域排名'],
+            ...buildCountyHorizontalTotalRows().map((row) => [
+                row.schoolName || '',
+                row.count || 0,
+                formatNumber(row.avg),
+                row.rankAvg || '-',
+                formatPercent(row.excellentRate),
+                row.rankExcellent || '-',
+                formatPercent(row.passRate),
+                row.rankPass || '-',
+                formatNumber(row.ratedAvg),
+                formatNumber(row.ratedExc),
+                formatNumber(row.ratedPass),
+                formatNumber(row.score),
+                row.rankScore || '-'
+            ])
+        ];
+    }
+
+    function buildCountySubjectExportRows(subject) {
+        return [
+            ['学校名称', '实考人数', '平均分', '平均分排名', '优秀率', '优秀率排名', '及格率', '及格率排名', '平均分赋分', '优秀率赋分', '及格率赋分', '两率一分', '县域排名'],
+            ...buildCountySubjectRows(subject).map((row) => [
+                row.schoolName || '',
+                row.count || 0,
+                formatNumber(row.avg, 2),
+                row.rankAvg || '-',
+                formatPercent(row.excellentRate),
+                row.rankExcellent || '-',
+                formatPercent(row.passRate),
+                row.rankPass || '-',
+                formatNumber(row.ratedAvg),
+                formatNumber(row.ratedExc),
+                formatNumber(row.ratedPass),
+                formatNumber(row.score),
+                row.rank || '-'
+            ])
+        ];
+    }
+
+    function buildLegacyCountyRankExportRows() {
+        return [
             ['学校', '范围', '人数', '平均分', '优秀率', '及格率', '两率一分', '乡镇排名', '县排名'],
             ...getCountyRankRows().map((school) => {
                 const metric = school.metrics?.total || {};
@@ -732,21 +808,6 @@
                     school.countyRank2Rate || school.rank2Rate || '-'
                 ];
             })
-        ];
-    }
-
-    function buildCountySubjectExportRows(subject) {
-        return [
-            ['排名', '学校', '人数', '均分', '优秀率', '及格率', '两率一分'],
-            ...buildCountySubjectRows(subject).map((row) => [
-                row.rank,
-                row.schoolName || '',
-                row.count || 0,
-                formatNumber(row.avg, 1),
-                formatPercent(row.excellentRate),
-                formatPercent(row.passRate),
-                formatNumber(row.score)
-            ])
         ];
     }
 
@@ -1337,20 +1398,32 @@
                 avg: toNumber(row.metric.avg),
                 excellentRate: toNumber(row.metric.excRate),
                 passRate: toNumber(row.metric.passRate),
+                ratedAvg: parts.ratedAvg,
+                ratedExc: parts.ratedExc,
+                ratedPass: parts.ratedPass,
                 score: parts.ratedAvg + parts.ratedExc + parts.ratedPass
             };
-        }).sort((a, b) => b.score - a.score)
-            .map((row, index) => ({ ...row, rank: index + 1 }));
+        });
+        assignCompetitionRanks(result, (row) => row.avg, (row, rank) => { row.rankAvg = rank; });
+        assignCompetitionRanks(result, (row) => row.excellentRate, (row, rank) => { row.rankExcellent = rank; });
+        assignCompetitionRanks(result, (row) => row.passRate, (row, rank) => { row.rankPass = rank; });
+        assignCompetitionRanks(result, (row) => row.score, (row, rank) => { row.rank = rank; });
+        result.sort((a, b) => (a.rank || 9999) - (b.rank || 9999));
         state.subjectRowCache.set(subject, result);
         return result;
     }
 
-    function setCountyAnalysisSchoolNameFromInput() {
+    function setCountyAnalysisSchoolNameFromInput(options = {}) {
+        const required = options.required !== false;
+        const silent = options.silent === true;
         const input = document.getElementById('countySchoolNameInput');
         const rawName = String(input?.value || '').trim();
         if (!rawName) {
-            if (window.UI?.toast) window.UI.toast('请输入本校名称', 'warning');
-            return false;
+            if (required) {
+                if (!silent && window.UI?.toast) window.UI.toast('请输入本校名称', 'warning');
+                return false;
+            }
+            return true;
         }
         const names = getSchoolNames();
         let schoolName = rawName;
@@ -1363,7 +1436,7 @@
             }
         }
         if (names.length && !names.includes(schoolName)) {
-            if (window.UI?.toast) window.UI.toast('当前县级成绩中没有匹配到该学校，请核对名称', 'warning');
+            if (!silent && window.UI?.toast) window.UI.toast('当前县级成绩中没有匹配到该学校，请核对名称', 'warning');
             return false;
         }
         window.MY_SCHOOL = schoolName;
@@ -1374,12 +1447,12 @@
             selector.value = schoolName;
         }
         if (input) input.value = schoolName;
-        if (window.UI?.toast) window.UI.toast(`已锁定本校：${schoolName}`, 'success');
+        if (!silent && window.UI?.toast) window.UI.toast(`已锁定本校：${schoolName}`, 'success');
         return true;
     }
 
     function generateCountySchoolHorizontalTable() {
-        const locked = setCountyAnalysisSchoolNameFromInput();
+        const locked = setCountyAnalysisSchoolNameFromInput({ required: false, silent: true });
         if (!locked) return;
         state.subjectRowCache = new Map();
         applyCountyRanks();
@@ -1388,8 +1461,54 @@
         if (window.UI?.toast) window.UI.toast('县域学校横向对比表已生成', 'success');
     }
 
+    function renderCountyHorizontalTotalTable(currentSchoolName = '') {
+        const rows = buildCountyHorizontalTotalRows();
+        if (!rows.length) return '<div class="county-empty">暂无学校成绩数据，请先导入本次县级成绩。</div>';
+        const maxAvg = rows.reduce((max, row) => Math.max(max, toNumber(row.avg)), 0) || 100;
+        return `
+            <div class="table-wrap analysis-table-shell">
+                <table class="analysis-generated-table county-analysis-table">
+                    <thead>
+                        <tr>
+                            <th>学校名称 <span class="analysis-table-tag">共识别 ${rows.length} 所</span></th>
+                            <th>实考人数</th>
+                            <th>平均分</th>
+                            <th>优秀率</th>
+                            <th>及格率</th>
+                            <th>平均分赋分</th>
+                            <th>优秀率赋分</th>
+                            <th>及格率赋分</th>
+                            <th>两率一分总分</th>
+                            <th>县域排名</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map((row) => {
+                            const isCurrent = currentSchoolName && row.schoolName === currentSchoolName;
+                            const barPercent = row.avg ? Math.min(100, row.avg / maxAvg * 100).toFixed(1) : 0;
+                            return `
+                                <tr class="${isCurrent ? 'bg-highlight' : ''}">
+                                    <td data-label="学校名称">${escapeHtml(row.schoolName)}</td>
+                                    <td data-label="实考人数">${row.count || 0}</td>
+                                    <td data-label="平均分" class="data-bar-bg" style="--percent:${barPercent}%">${formatCountyRankDisplay(row.avg, row.rankAvg)}</td>
+                                    <td data-label="优秀率">${formatCountyRankDisplay(row.excellentRate, row.rankExcellent, true)}</td>
+                                    <td data-label="及格率">${formatCountyRankDisplay(row.passRate, row.rankPass, true)}</td>
+                                    <td data-label="平均分赋分">${formatNumber(row.ratedAvg)}</td>
+                                    <td data-label="优秀率赋分">${formatNumber(row.ratedExc)}</td>
+                                    <td data-label="及格率赋分">${formatNumber(row.ratedPass)}</td>
+                                    <td data-label="两率一分总分" class="text-red" style="font-size:1.1em; font-weight:800;">${formatNumber(row.score)}</td>
+                                    <td data-label="县域排名" class="rank-cell">${row.rankScore || '-'}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
     function renderCountySchoolHorizontal() {
-        const totalRows = getCountyRankRows();
+        const totalRows = buildCountyHorizontalTotalRows();
         if (!totalRows.length) return '<div class="county-empty">暂无学校成绩数据，请先导入本次县级成绩。</div>';
         const subjects = sortCountySubjects(window.SUBJECTS || []);
         const currentSchoolName = resolveCurrentCountySchoolName();
@@ -1403,17 +1522,20 @@
                     </div>
                     <div class="table-wrap analysis-table-shell">
                         <table class="analysis-generated-table county-analysis-table">
-                            <thead><tr><th>排名</th><th>学校</th><th>人数</th><th>均分</th><th>优秀率</th><th>及格率</th><th>两率一分</th></tr></thead>
+                            <thead><tr><th>学校名称</th><th>实考人数</th><th>平均分</th><th>优秀率</th><th>及格率</th><th>平均分赋分</th><th>优秀率赋分</th><th>及格率赋分</th><th>两率一分</th><th>县域排名</th></tr></thead>
                             <tbody>
                                 ${rows.map((row) => `
-                                    <tr>
-                                        <td>${row.rank}</td>
-                                        <td>${escapeHtml(row.schoolName)}</td>
-                                        <td>${row.count || 0}</td>
-                                        <td>${formatNumber(row.avg, 1)}</td>
-                                        <td>${formatPercent(row.excellentRate)}</td>
-                                        <td>${formatPercent(row.passRate)}</td>
-                                        <td><strong>${formatNumber(row.score)}</strong></td>
+                                    <tr class="${currentSchoolName && row.schoolName === currentSchoolName ? 'bg-highlight' : ''}">
+                                        <td data-label="学校名称">${escapeHtml(row.schoolName)}</td>
+                                        <td data-label="实考人数">${row.count || 0}</td>
+                                        <td data-label="平均分">${formatCountyRankDisplay(row.avg, row.rankAvg)}</td>
+                                        <td data-label="优秀率">${formatCountyRankDisplay(row.excellentRate, row.rankExcellent, true)}</td>
+                                        <td data-label="及格率">${formatCountyRankDisplay(row.passRate, row.rankPass, true)}</td>
+                                        <td data-label="平均分赋分">${formatNumber(row.ratedAvg)}</td>
+                                        <td data-label="优秀率赋分">${formatNumber(row.ratedExc)}</td>
+                                        <td data-label="及格率赋分">${formatNumber(row.ratedPass)}</td>
+                                        <td data-label="两率一分"><strong>${formatNumber(row.score)}</strong></td>
+                                        <td data-label="县域排名" class="rank-cell">${row.rank || '-'}</td>
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -1431,6 +1553,7 @@
                 </label>
                 <div class="county-control-actions">
                     <button class="btn btn-sm btn-green" type="button" onclick="generateCountySchoolHorizontalTable()">生成横向对比表</button>
+                    <button class="btn btn-sm btn-blue" type="button" onclick="exportCountyAnalysisSection('school')">下载横向对比表</button>
                     <button class="btn btn-sm btn-secondary" type="button" onclick="setCountyAnalysisSchoolNameFromInput()">锁定本校</button>
                 </div>
             </div>
@@ -1448,9 +1571,9 @@
                     </div>
                 </div>
                 <div class="analysis-table-meta">
-                    <span><strong>口径：</strong>本表只用于县域分析母模块，按当前导入的全部县级学校统一排名。</span>
+                    <span><strong>口径：</strong>参考乡镇“两率一分(横向)”表，按当前导入的全部县级学校统一折算、统一排名。</span>
                 </div>
-                ${renderCountyRankTable()}
+                ${renderCountyHorizontalTotalTable(currentSchoolName)}
             </div>
             ${subjectTables || '<div class="county-empty">暂无学科明细数据。</div>'}
         `;

@@ -176,15 +176,16 @@
             const score = teacherToNumber(student?.scores?.[subject], NaN);
             if (!Number.isFinite(score)) return;
             const name = String(student?.name || '').trim();
+            const school = String(student?.school || '').trim();
             const cls = normalizeClassFn(student?.class || '');
             if (score >= thresholds.exc - 5 && score < thresholds.exc) {
-                excellentEdges.push({ name, className: cls, score, gap: thresholds.exc - score });
+                excellentEdges.push({ name, school, className: cls, score, gap: thresholds.exc - score });
             }
             if (score >= thresholds.pass - 5 && score < thresholds.pass) {
-                passEdges.push({ name, className: cls, score, gap: thresholds.pass - score });
+                passEdges.push({ name, school, className: cls, score, gap: thresholds.pass - score });
             }
             if (score < thresholds.low || score <= thresholds.low + 5) {
-                lowRisk.push({ name, className: cls, score, gap: score - thresholds.low });
+                lowRisk.push({ name, school, className: cls, score, gap: score - thresholds.low });
             }
         });
         excellentEdges.sort((a, b) => b.score - a.score);
