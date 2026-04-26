@@ -18,6 +18,13 @@
     const SELECT_CACHE_MAX = 200;
     const selectCache = new Map();
     const selectInflight = new Map();
+    const cacheStats = {
+        hits: 0,
+        misses: 0,
+        inflightHits: 0,
+        writes: 0,
+        clears: 0
+    };
 
     function normalizeText(value) {
         return String(value || '').trim();
@@ -95,6 +102,7 @@
     function clearSystemDataCache() {
         selectCache.clear();
         selectInflight.clear();
+        cacheStats.clears += 1;
     }
 
     function rememberSelectResult(cacheKey, result) {
@@ -103,10 +111,21 @@
             time: Date.now(),
             result: cloneSelectResult(result)
         });
+        cacheStats.writes += 1;
         if (selectCache.size > SELECT_CACHE_MAX) {
             const firstKey = selectCache.keys().next().value;
             if (firstKey) selectCache.delete(firstKey);
         }
+    }
+
+    function getSystemDataCacheStats() {
+        return {
+            ...cacheStats,
+            size: selectCache.size,
+            inflight: selectInflight.size,
+            ttlMs: SELECT_CACHE_TTL_MS,
+            max: SELECT_CACHE_MAX
+        };
     }
 
     function normalizeApiUrl(value) {
@@ -464,12 +483,15 @@
         if (cacheKey) {
             const cached = selectCache.get(cacheKey);
             if (cached && Date.now() - cached.time < SELECT_CACHE_TTL_MS) {
+                cacheStats.hits += 1;
                 return cloneSelectResult(cached.result);
             }
             if (selectInflight.has(cacheKey)) {
+                cacheStats.inflightHits += 1;
                 return cloneSelectResult(await selectInflight.get(cacheKey));
             }
         }
+        cacheStats.misses += 1;
 
         const request = (getBackendMode() === 'api'
             ? selectViaApi(options)
@@ -482,7 +504,7 @@
                 if (cacheKey) selectInflight.delete(cacheKey);
             });
         if (cacheKey) selectInflight.set(cacheKey, request);
-        return cloneSelectResult(await request);
+        return await request;
     }
 
     async function readSystemDataRecord(key, select = 'content') {
@@ -635,6 +657,7 @@
         upsertSystemData,
         deleteSystemData,
         clearSystemDataCache,
+        getSystemDataCacheStats,
         probeSystemData
     };
 });

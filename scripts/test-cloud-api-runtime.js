@@ -177,6 +177,20 @@ async function run() {
     assert.strictEqual(fetchLog[0].headers.apikey, 'sb_publishable_example');
     assert.strictEqual(fetchLog[0].headers.Authorization, 'Bearer session-token-example');
 
+    apiResult.data[0].key = 'MUTATED_BY_CALLER';
+    const cachedApiResult = await apiRuntime.selectSystemData({
+        select: 'key,updated_at',
+        keyLike: '2022%',
+        order: 'updated_at',
+        limit: 50
+    });
+    assert.strictEqual(fetchLog.length, 1, 'identical select should reuse cache');
+    assert.deepStrictEqual(cachedApiResult.data, [{ key: 'REMOTE_KEY', updated_at: '2026-04-11T00:00:00.000Z' }]);
+    const cacheStats = apiRuntime.getSystemDataCacheStats();
+    assert.strictEqual(cacheStats.hits, 1);
+    assert.strictEqual(cacheStats.misses, 1);
+    assert.strictEqual(cacheStats.size, 1);
+
     await apiRuntime.upsertSystemData({ key: 'REMOTE_KEY', content: '{}' });
     assert.strictEqual(fetchLog[1].method, 'POST');
     assert.ok(String(fetchLog[1].body).includes('"key":"REMOTE_KEY"'));
