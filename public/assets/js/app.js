@@ -12857,7 +12857,13 @@ function renderStudentDetails(reset = true) {
 
     if (reset) {
         STD_STATE.page = 1;
-        let data = [...RAW_DATA]; // 从原始数据副本开始
+        const selectedSchool = document.getElementById('studentSchoolSelect')?.value;
+        const selectedClass = document.getElementById('studentClassSelect')?.value;
+        const hasSelectedSchool = selectedSchool && !selectedSchool.includes('请选择');
+        const hasSelectedClass = selectedClass && selectedClass !== '全部';
+        let data = window.RankingDataService && typeof window.RankingDataService.getRowsBySchoolClass === 'function'
+            ? window.RankingDataService.getRowsBySchoolClass(RAW_DATA, hasSelectedSchool ? selectedSchool : '', hasSelectedClass ? selectedClass : '')
+            : [...RAW_DATA];
 
         const user = getCurrentUser();
         const role = user?.role || 'guest';
@@ -12955,13 +12961,10 @@ function renderStudentDetails(reset = true) {
         }
 
         // --- B. 顶部下拉框过滤 (依然保留，作为一级筛选) ---
-        const selectedSchool = document.getElementById('studentSchoolSelect')?.value;
-        const selectedClass = document.getElementById('studentClassSelect')?.value;
-
         // 下拉框筛选逻辑（在权限筛选的基础上二次筛选）
-        if (selectedSchool && !selectedSchool.includes('请选择')) {
+        if (hasSelectedSchool && !(window.RankingDataService && typeof window.RankingDataService.getRowsBySchoolClass === 'function')) {
             data = data.filter(s => s.school === selectedSchool);
-            if (selectedClass && selectedClass !== '全部') {
+            if (hasSelectedClass) {
                 // 如果是教师，需要确保选中的班级在权限范围内（虽然下拉框可能已经限制了）
                 data = data.filter(s => s.class === selectedClass);
             }
@@ -13404,7 +13407,13 @@ function exportStudentDetails() {
 
     const data = [headers];
 
-    let studentsToShow = [...RAW_DATA];
+    let studentsToShow = window.RankingDataService && typeof window.RankingDataService.getRowsBySchoolClass === 'function'
+        ? window.RankingDataService.getRowsBySchoolClass(
+            RAW_DATA,
+            selectedSchool && !selectedSchool.includes('请选择') ? selectedSchool : '',
+            selectedClass && selectedClass !== '全部' ? selectedClass : ''
+        )
+        : [...RAW_DATA];
     if ((isTeacher || (isClassTeacher && classTeacherMode === 'teaching')) && teacherScope && teacherScope.classes.size > 0) {
         studentsToShow = studentsToShow.filter(s => {
             const rawClass = String(s.class || '').trim();
@@ -13420,15 +13429,15 @@ function exportStudentDetails() {
     } else if (isClassTeacher && user?.class) {
         const myClass = normalizeClass(user.class);
         studentsToShow = studentsToShow.filter(s => normalizeClass(s.class) === myClass);
-    } else if (selectedSchool && !selectedSchool.includes('请选择')) {
+    } else if (selectedSchool && !selectedSchool.includes('请选择') && !(window.RankingDataService && typeof window.RankingDataService.getRowsBySchoolClass === 'function')) {
         studentsToShow = studentsToShow.filter(s => s.school === selectedSchool);
         if (selectedClass && selectedClass !== '全部') studentsToShow = studentsToShow.filter(s => s.class === selectedClass);
     }
 
-    if (selectedSchool && !selectedSchool.includes('请选择')) {
+    if (selectedSchool && !selectedSchool.includes('请选择') && !(window.RankingDataService && typeof window.RankingDataService.getRowsBySchoolClass === 'function')) {
         studentsToShow = studentsToShow.filter(s => s.school === selectedSchool);
     }
-    if (selectedClass && selectedClass !== '全部') {
+    if (selectedClass && selectedClass !== '全部' && !(window.RankingDataService && typeof window.RankingDataService.getRowsBySchoolClass === 'function')) {
         studentsToShow = studentsToShow.filter(s => s.class === selectedClass);
     }
 
@@ -13701,10 +13710,18 @@ async function doQuery(targetStudent = null) {
 
     let stu = targetStudent && typeof targetStudent === 'object' ? targetStudent : null;
     if (!stu) {
-        stu = SCHOOLS[sch]?.students.find(s => (
-            String(s.name || '').trim() === name
-            && (cls === '--请先选择学校--' || !cls || normalizeJumpClass(s.class) === normalizeJumpClass(cls))
-        ));
+        if (window.RankingDataService && typeof window.RankingDataService.findStudent === 'function') {
+            stu = window.RankingDataService.findStudent(RAW_DATA, {
+                name,
+                school: sch,
+                className: (cls === '--请先选择学校--') ? '' : cls
+            });
+        } else {
+            stu = SCHOOLS[sch]?.students.find(s => (
+                String(s.name || '').trim() === name
+                && (cls === '--请先选择学校--' || !cls || normalizeJumpClass(s.class) === normalizeJumpClass(cls))
+            ));
+        }
     }
     if (!stu && name) {
         stu = findStudentForJump(name, sch, cls);
@@ -13879,6 +13896,9 @@ function setMultiSelectOptions(selectEl, values, preferredValues) {
 }
 
 function getSchoolClassOptions(schoolName) {
+    if (window.RankingDataService && typeof window.RankingDataService.getClassesForSchool === 'function') {
+        return window.RankingDataService.getClassesForSchool(RAW_DATA, schoolName);
+    }
     if (!schoolName || !SCHOOLS[schoolName] || !Array.isArray(SCHOOLS[schoolName].students)) return [];
     return [...new Set(SCHOOLS[schoolName].students.map(s => s.class).filter(Boolean))]
         .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
@@ -14326,7 +14346,13 @@ function findPreviousRecord(student) {
                     const examFingerprint = String(exam.fingerprint || computeExamDataFingerprint(examData)).trim();
                     if (currentFingerprint && examFingerprint && examFingerprint === currentFingerprint) continue;
 
-                    const found = examData.find(p => matchStudent(p, targetName, targetClass, targetSchool));
+                    const found = window.RankingDataService && typeof window.RankingDataService.findStudent === 'function'
+                        ? window.RankingDataService.findStudent(examData, {
+                            name: student.name,
+                            school: targetSchool,
+                            className: student.class
+                        })
+                        : examData.find(p => matchStudent(p, targetName, targetClass, targetSchool));
                     if (found) {
                         appDebug(`[对比] 从历史考试 "${examId}" 中找到 ${student.name} 的历史记录`);
                         return {
@@ -14413,15 +14439,21 @@ function getStudentExamHistory(student) {
                 continue;
             }
 
-            const found = examData.find(p => {
-                if (p.school && targetSchool && !areSchoolNamesEquivalent(p.school, targetSchool)) return false;
-                if (cleanStr(p.name) !== targetName) return false;
-                const histClass = normClass(p.class);
-                if (histClass === targetClass) return true;
-                const numC1 = histClass.replace(/0/g, '');
-                const numC2 = targetClass.replace(/0/g, '');
-                return numC1 === numC2 && numC1.length > 0;
-            });
+            const found = window.RankingDataService && typeof window.RankingDataService.findStudent === 'function'
+                ? window.RankingDataService.findStudent(examData, {
+                    name: student.name,
+                    school: targetSchool,
+                    className: student.class
+                })
+                : examData.find(p => {
+                    if (p.school && targetSchool && !areSchoolNamesEquivalent(p.school, targetSchool)) return false;
+                    if (cleanStr(p.name) !== targetName) return false;
+                    const histClass = normClass(p.class);
+                    if (histClass === targetClass) return true;
+                    const numC1 = histClass.replace(/0/g, '');
+                    const numC2 = targetClass.replace(/0/g, '');
+                    return numC1 === numC2 && numC1.length > 0;
+                });
 
             if (found) {
                 const normalizedStudent = createComparisonStudentView(found, examData);

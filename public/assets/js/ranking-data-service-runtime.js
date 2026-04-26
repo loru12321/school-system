@@ -160,6 +160,122 @@
         ].join('|');
     }
 
+    const studentIndexCache = new WeakMap();
+
+    function normalizeClassValue(value) {
+        if (root && typeof root.normalizeClass === 'function') {
+            return root.normalizeClass(value);
+        }
+        return normalizeText(value).replace(/[班级\(\)\.\-gradeclass]/gi, '');
+    }
+
+    function normalizeName(value) {
+        return normalizeText(value).replace(/\s+/g, '');
+    }
+
+    function getStudentNameKeys(row) {
+        const keys = new Set();
+        const name = normalizeName(row && row.name);
+        const id = normalizeText(row && (row.id || row.examNo || row.studentId));
+        if (name) keys.add(name);
+        if (id) keys.add(id);
+        return Array.from(keys);
+    }
+
+    function pushToMap(map, key, row) {
+        const normalizedKey = normalizeText(key);
+        if (!normalizedKey) return;
+        if (!map.has(normalizedKey)) map.set(normalizedKey, []);
+        const bucket = map.get(normalizedKey);
+        if (!bucket.includes(row)) bucket.push(row);
+    }
+
+    function getStudentIndex(rows) {
+        const list = Array.isArray(rows) ? rows : [];
+        const cached = studentIndexCache.get(list);
+        if (cached && cached.length === list.length) return cached;
+
+        const bySchool = new Map();
+        const bySchoolClass = new Map();
+        const byName = new Map();
+        const byExact = new Map();
+        const classesBySchool = new Map();
+
+        list.forEach((row) => {
+            if (!row || typeof row !== 'object') return;
+            const school = normalizeText(row.school);
+            const cls = normalizeClassValue(row.class);
+            const rawClass = normalizeText(row.class);
+            const exactKey = [
+                school,
+                cls,
+                normalizeText(row.id || row.examNo || row.studentId),
+                normalizeName(row.name)
+            ].join('|');
+
+            pushToMap(bySchool, school, row);
+            pushToMap(bySchoolClass, `${school}||${cls}`, row);
+            pushToMap(bySchoolClass, `${school}||${rawClass}`, row);
+            getStudentNameKeys(row).forEach((key) => pushToMap(byName, key, row));
+            if (exactKey.replace(/\|/g, '')) byExact.set(exactKey, row);
+            if (school && rawClass) {
+                if (!classesBySchool.has(school)) classesBySchool.set(school, new Set());
+                classesBySchool.get(school).add(rawClass);
+            }
+        });
+
+        const index = {
+            length: list.length,
+            rows: list,
+            bySchool,
+            bySchoolClass,
+            byName,
+            byExact,
+            classesBySchool
+        };
+        studentIndexCache.set(list, index);
+        return index;
+    }
+
+    function getRowsBySchoolClass(rows, school, className) {
+        const index = getStudentIndex(rows);
+        const schoolKey = normalizeText(school);
+        const classKey = normalizeClassValue(className);
+        const rawClassKey = normalizeText(className);
+        if (schoolKey && (classKey || rawClassKey)) {
+            return (index.bySchoolClass.get(`${schoolKey}||${classKey}`) || index.bySchoolClass.get(`${schoolKey}||${rawClassKey}`) || []).slice();
+        }
+        if (schoolKey) return (index.bySchool.get(schoolKey) || []).slice();
+        return index.rows.slice();
+    }
+
+    function getClassesForSchool(rows, school) {
+        const index = getStudentIndex(rows);
+        const classes = index.classesBySchool.get(normalizeText(school));
+        return Array.from(classes || []).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
+    }
+
+    function findStudent(rows, query = {}) {
+        const index = getStudentIndex(rows);
+        const nameKey = normalizeName(query.name);
+        const schoolKey = normalizeText(query.school);
+        const classKey = normalizeClassValue(query.className || query.class);
+        const rawClassKey = normalizeText(query.className || query.class);
+        if (!nameKey) return null;
+
+        const candidates = (index.byName.get(nameKey) || []).filter((row) => {
+            const rowSchool = normalizeText(row && row.school);
+            const rowClass = normalizeClassValue(row && row.class);
+            const rowRawClass = normalizeText(row && row.class);
+            if (schoolKey && rowSchool !== schoolKey) return false;
+            if (classKey || rawClassKey) {
+                return rowClass === classKey || rowRawClass === rawClassKey;
+            }
+            return true;
+        });
+        return candidates[0] || null;
+    }
+
     return {
         EPSILON,
         normalizeText,
@@ -173,6 +289,10 @@
         buildScopeMetadata,
         canShowRank,
         canShowRankComparison,
-        makeStudentKey
+        makeStudentKey,
+        getStudentIndex,
+        getRowsBySchoolClass,
+        getClassesForSchool,
+        findStudent
     };
 });
