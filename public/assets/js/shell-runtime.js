@@ -170,70 +170,6 @@
         setWorkspaceDrawerState(!isOpen);
     }
 
-    function setShellUtilityMenuState(shouldOpen) {
-        const panel = document.getElementById('shell-utility-menu-panel');
-        const toggle = document.querySelector('[data-shell-utility-toggle="true"]');
-        if (!panel) return;
-        panel.classList.toggle('hidden', !shouldOpen);
-        if (toggle) {
-            toggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
-        }
-    }
-
-    function closeShellUtilityMenu() {
-        setShellUtilityMenuState(false);
-    }
-
-    function toggleShellUtilityMenu(event) {
-        if (event && typeof event.preventDefault === 'function') {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-        const panel = document.getElementById('shell-utility-menu-panel');
-        const isOpen = !!panel && !panel.classList.contains('hidden');
-        setShellUtilityMenuState(!isOpen);
-    }
-
-    function runShellUtilityAction(action) {
-        closeShellUtilityMenu();
-        const safeCall = function (fn) {
-            if (typeof fn === 'function') fn();
-        };
-
-        switch (action) {
-            case 'search':
-                safeCall(window.openSpotlight);
-                break;
-            case 'workspace':
-                toggleWorkspaceDrawer(true);
-                break;
-            case 'messages':
-                if (window.IssueManager && typeof window.IssueManager.openAdminPanel === 'function') {
-                    window.IssueManager.openAdminPanel();
-                }
-                break;
-            case 'theme':
-                safeCall(window.openSkinModal);
-                break;
-            case 'dark':
-                safeCall(window.toggleDarkMode);
-                break;
-            case 'tour':
-                if (window.HelpSystem && typeof window.HelpSystem.startTour === 'function') {
-                    window.HelpSystem.startTour();
-                }
-                break;
-            case 'accounts':
-                safeCall(window.openAdminCloudAccountModal);
-                break;
-            case 'rollback':
-                safeCall(window.openCloudRollback);
-                break;
-            default:
-                break;
-        }
-    }
-
     function notifyShellEnhancements() {
         scheduleFloatingModuleRailSync();
         if (typeof window.refreshShellEnhancements === 'function') {
@@ -933,8 +869,6 @@
     window.openWorkspaceDrawer = openWorkspaceDrawer;
     window.closeWorkspaceDrawer = closeWorkspaceDrawer;
     window.toggleWorkspaceDrawer = toggleWorkspaceDrawer;
-    window.closeShellUtilityMenu = closeShellUtilityMenu;
-    window.toggleShellUtilityMenu = toggleShellUtilityMenu;
     window.getCurrentNavCategory = function () { return currentCategory; };
     window.setCurrentNavCategorySilently = function (key) {
         if (!NAV_STRUCTURE[key]) return;
@@ -946,31 +880,13 @@
     document.addEventListener('DOMContentLoaded', function () {
         bindFloatingModuleRailBehavior();
         setWorkspaceDrawerState(false);
-        document.querySelectorAll('[data-shell-utility-toggle="true"]').forEach(function (button) {
-            button.addEventListener('click', toggleShellUtilityMenu);
-        });
-        document.querySelectorAll('[data-shell-utility-action]').forEach(function (button) {
-            button.addEventListener('click', function (event) {
-                event.preventDefault();
-                event.stopPropagation();
-                runShellUtilityAction(button.getAttribute('data-shell-utility-action'));
-            });
-        });
         updateShellChrome();
         scheduleFloatingModuleRailSync();
-    });
-
-    document.addEventListener('click', function (event) {
-        const menu = document.getElementById('shell-utility-menu');
-        if (menu && !menu.contains(event.target)) {
-            closeShellUtilityMenu();
-        }
     });
 
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
             closeWorkspaceDrawer();
-            closeShellUtilityMenu();
         }
     });
 })();

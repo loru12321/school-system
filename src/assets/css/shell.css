@@ -3426,88 +3426,6 @@ body.shell-sidebar-collapsed .shell-utility-dock .sidebar-footer-item,
     min-width: 0;
 }
 
-.shell-utility-menu {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    flex: 0 0 auto;
-}
-
-.shell-utility-menu__button {
-    width: 42px;
-    height: 42px;
-    padding: 0 !important;
-    border-radius: 14px !important;
-    border: 1px solid rgba(226, 232, 240, 0.9) !important;
-    background: rgba(255, 255, 255, 0.86) !important;
-    color: #0f172a !important;
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-}
-
-.shell-utility-menu__button i {
-    font-size: 20px;
-}
-
-.shell-utility-menu__panel {
-    position: absolute;
-    top: calc(100% + 12px);
-    right: 0;
-    z-index: 560;
-    width: min(240px, calc(100vw - 32px));
-    padding: 8px;
-    border: 1px solid rgba(226, 232, 240, 0.92);
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.96);
-    box-shadow: 0 24px 56px rgba(15, 23, 42, 0.16);
-    backdrop-filter: blur(18px) saturate(1.04);
-    -webkit-backdrop-filter: blur(18px) saturate(1.04);
-}
-
-.shell-utility-menu__panel button {
-    width: 100%;
-    min-height: 42px;
-    border: 0;
-    border-radius: 12px;
-    background: transparent;
-    color: #334155;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 0 12px;
-    font-size: 13px;
-    font-weight: 800;
-    cursor: pointer;
-    text-align: left;
-}
-
-.shell-utility-menu__panel button:hover {
-    background: #f8fafc;
-    color: var(--nav-accent, var(--primary));
-}
-
-.shell-utility-menu__panel button i {
-    width: 18px;
-    font-size: 17px;
-}
-
-.dark-mode .shell-utility-menu__button,
-.dark-mode .shell-utility-menu__panel {
-    border-color: rgba(51, 65, 85, 0.92) !important;
-    background: rgba(15, 23, 42, 0.94) !important;
-    color: #f8fafc !important;
-}
-
-.dark-mode .shell-utility-menu__panel button {
-    color: #cbd5e1;
-}
-
-.dark-mode .shell-utility-menu__panel button:hover {
-    background: rgba(30, 41, 59, 0.9);
-    color: #fff;
-}
-
 @media screen and (max-width: 1280px) {
     #main-header.shell-toolbar {
         grid-template-columns: auto minmax(240px, 1fr) auto !important;
@@ -3573,8 +3491,4 @@ body.shell-sidebar-collapsed .shell-utility-dock .sidebar-footer-item,
         display: none !important;
     }
 
-    .shell-utility-menu__button {
-        width: 40px;
-        height: 40px;
-    }
 }
