@@ -10659,7 +10659,7 @@ function tmEscapeHtml(value) {
 
 function tmSetHtml(id, html) {
     const el = document.getElementById(id);
-    if (el) el.innerHTML = html;
+    if (el && el.innerHTML !== html) el.innerHTML = html;
 }
 
 function tmLooksLikePendingValue(value) {

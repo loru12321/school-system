@@ -23,6 +23,20 @@ let TM_VERSION_DIFF_STATE = {
     html: '',
     title: ''
 };
+let TM_OVERVIEW_RENDER_FRAME = 0;
+
+function tmScheduleTeachingOverviewRender() {
+    if (TM_OVERVIEW_RENDER_FRAME) return;
+    const runner = () => {
+        TM_OVERVIEW_RENDER_FRAME = 0;
+        if (typeof renderTeachingOverview === 'function') renderTeachingOverview();
+    };
+    if (typeof window.requestAnimationFrame === 'function') {
+        TM_OVERVIEW_RENDER_FRAME = window.requestAnimationFrame(runner);
+    } else {
+        TM_OVERVIEW_RENDER_FRAME = window.setTimeout(runner, 16);
+    }
+}
 
 function tmGetCurrentGatewayScope() {
     const school = tmGetSelectDisplayValue(
@@ -1244,8 +1258,7 @@ function bindTeachingOverviewWatchers() {
         if (!el || el.dataset.tmOverviewBound === '1') return;
         el.dataset.tmOverviewBound = '1';
         el.addEventListener('change', () => {
-            if (typeof renderTeachingOverview === 'function') renderTeachingOverview();
-            if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars();
+            tmScheduleTeachingOverviewRender();
         });
     });
 }
@@ -1267,8 +1280,7 @@ function bindTeachingOverviewActions() {
     if (syncBtn) {
         syncBtn.onclick = async () => {
             if (typeof openTeacherSync === 'function') await openTeacherSync();
-            renderTeachingOverview();
-            if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars();
+            tmScheduleTeachingOverviewRender();
         };
     }
 
@@ -2745,7 +2757,7 @@ function tmRenderVersionCenter() {
 function tmSyncVersionOverviewState() {
     const overview = document.getElementById('teaching-overview');
     if (overview && overview.classList.contains('active') && typeof renderTeachingOverview === 'function') {
-        renderTeachingOverview();
+        tmScheduleTeachingOverviewRender();
     }
 }
 
