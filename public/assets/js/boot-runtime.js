@@ -330,6 +330,8 @@ var APP_MODULES = [
     './assets/js/town-submodule-compare-runtime.js'
 ];
 
+var APP_MODULE_PRELOAD_LIMIT = 10;
+
 function prefetchAppModuleList(modules, key) {
     const head = document.head;
     if (!head) return;
@@ -341,7 +343,6 @@ function prefetchAppModuleList(modules, key) {
         link.rel = 'prefetch';
         link.as = 'script';
         link.href = href;
-        link.crossOrigin = 'anonymous';
         link.setAttribute(attr, href);
         head.appendChild(link);
     });
@@ -358,10 +359,17 @@ function preloadAppModuleList(modules, key) {
         link.rel = 'preload';
         link.as = 'script';
         link.href = href;
-        link.crossOrigin = 'anonymous';
         link.setAttribute(attr, href);
         head.appendChild(link);
     });
+}
+
+function hintAppCoreModules() {
+    const preloadCount = Math.min(APP_MODULE_PRELOAD_LIMIT, APP_MODULES.length);
+    preloadAppModuleList(APP_MODULES.slice(0, preloadCount), 'app-core');
+    if (preloadCount < APP_MODULES.length) {
+        prefetchAppModuleList(APP_MODULES.slice(preloadCount), 'app-core-late');
+    }
 }
 
 function warmAppModuleCache() {
@@ -502,7 +510,7 @@ async function loadAppModules() {
 
     const total = BOOT_VENDOR_MODULES.length + APP_MODULES.length;
     let loadedCount = 0;
-    preloadAppModuleList(APP_MODULES, 'app-core');
+    hintAppCoreModules();
 
     if (BOOT_VENDOR_MODULES.length) {
         if (loaderText) loaderText.textContent = `正在并行加载基础组件 (0/${BOOT_VENDOR_MODULES.length})...`;
