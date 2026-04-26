@@ -18,6 +18,13 @@
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    function scheduleIdleTask(callback, timeout = 2500) {
+        if (typeof window.requestIdleCallback === 'function') {
+            return window.requestIdleCallback(callback, { timeout });
+        }
+        return window.setTimeout(callback, timeout);
+    }
+
     function safeToast(msg, type) {
         if (window.UI && typeof UI.toast === 'function') UI.toast(msg, type);
     }
@@ -1594,7 +1601,13 @@
             }
             if (typeof scheduleTeacherSyncPrompt === 'function') scheduleTeacherSyncPrompt();
             if (hasSessionUser && typeof CloudManager.fetchAllCohortExams === 'function') {
-                CloudManager.fetchAllCohortExams({ background: true });
+                scheduleIdleTask(() => {
+                    CloudManager.fetchAllCohortExams({
+                        background: true,
+                        refreshSelectors: false,
+                        minCount: 1
+                    });
+                }, 3500);
             }
         }, 800);
     });

@@ -998,7 +998,11 @@
         const previousFetch = manager.fetchCohortExamsToLocal;
 
         manager.fetchCohortExamsToLocal = function (cohortId, options = {}) {
-            runCohortExamSync(manager, cohortId, { ...(options || {}), background: true }).catch((syncError) => {
+            runCohortExamSync(manager, cohortId, {
+                ...(options || {}),
+                background: true,
+                refreshSelectors: options.refreshSelectors === true
+            }).catch((syncError) => {
                 console.warn('[CloudExams] background sync failed:', syncError);
             });
             return Promise.resolve({ success: true, queued: true, background: true });
