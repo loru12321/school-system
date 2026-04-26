@@ -55,6 +55,102 @@
         return value == null || value === '' ? fallback : value;
     }
 
+    function normalizeRankValue(value, fallback = '-') {
+        return value == null || value === '' ? fallback : value;
+    }
+
+    function hasRankValue(value) {
+        const normalized = normalizeRankValue(value, '-');
+        return normalized !== '-' && normalized !== '—';
+    }
+
+    function hasStudentClassRankScope(studentLike) {
+        const rawClass = normalizeText(studentLike && studentLike.class);
+        const normalizedClass = normalizeClassValue(rawClass);
+        if (!normalizedClass || normalizedClass === '-') return false;
+        return !/^(?:无|未分班|无班级|暂无|undefined|null|nan)$/i.test(normalizedClass);
+    }
+
+    function getCandidateSchoolNames(rows) {
+        if (root && root.SCHOOLS && typeof root.SCHOOLS === 'object') {
+            const names = Object.keys(root.SCHOOLS).map(normalizeText).filter(Boolean);
+            if (names.length) return names;
+        }
+        return Array.from(new Set((Array.isArray(rows) ? rows : (root.RAW_DATA || []))
+            .map((row) => normalizeText(row && row.school))
+            .filter(Boolean)));
+    }
+
+    const countyDirectCache = new Map();
+
+    function isCountyDirectStudent(studentLike, options = {}) {
+        const schoolName = normalizeText(studentLike && studentLike.school);
+        if (!schoolName) return false;
+        if (typeof options.isCountyDirect === 'function') return !!options.isCountyDirect(studentLike);
+        if (!root || typeof root.getCountyDirectSchoolNames !== 'function' || typeof root.getTownshipManagedSchoolNames !== 'function') {
+            return false;
+        }
+
+        const candidateNames = getCandidateSchoolNames(options.rows);
+        const baseKey = candidateNames.slice().sort().join('||');
+        if (!countyDirectCache.has(baseKey)) {
+            const townshipNames = root.getTownshipManagedSchoolNames(candidateNames);
+            const directNames = townshipNames && townshipNames.length
+                ? root.getCountyDirectSchoolNames(candidateNames)
+                : [];
+            countyDirectCache.set(baseKey, {
+                townshipNames,
+                directNames,
+                resultBySchool: new Map()
+            });
+        }
+
+        const cache = countyDirectCache.get(baseKey);
+        if (!cache || !cache.townshipNames || !cache.townshipNames.length) return false;
+        if (cache.resultBySchool.has(schoolName)) return cache.resultBySchool.get(schoolName);
+        const direct = (cache.directNames || []).some((name) => {
+            const candidate = normalizeText(name);
+            return candidate === schoolName
+                || (typeof root.areSchoolNamesEquivalent === 'function' && root.areSchoolNamesEquivalent(candidate, schoolName))
+                || (typeof root.areSchoolNamesMatched === 'function' && root.areSchoolNamesMatched(candidate, schoolName, true));
+        });
+        cache.resultBySchool.set(schoolName, direct);
+        return direct;
+    }
+
+    function getStudentRankValue(studentLike, subject = 'total', scope = 'school', options = {}) {
+        const normalizedScope = normalizeText(scope);
+        if (normalizedScope === 'class' && !hasStudentClassRankScope(studentLike)) return '-';
+        if ((normalizedScope === 'township' || normalizedScope === 'town') && isCountyDirectStudent(studentLike, options)) return '-';
+        const key = normalizeText(subject) || 'total';
+        const fallback = key === 'total' && normalizedScope === 'county'
+            ? normalizeRankValue(studentLike && studentLike.countyRank, '-')
+            : '-';
+        return normalizeRankValue(getRank(studentLike, key, normalizedScope === 'town' ? 'township' : normalizedScope, fallback), fallback);
+    }
+
+    function hasStudentRankData(rows = [], subjects = [], scope = 'school', options = {}) {
+        const list = Array.isArray(rows) ? rows : [];
+        const subjectList = Array.isArray(subjects) && subjects.length ? subjects : ['total'];
+        return list.some((student) => {
+            if (hasRankValue(getStudentRankValue(student, 'total', scope, options))) return true;
+            return subjectList.some((subject) => hasRankValue(getStudentRankValue(student, subject, scope, options)));
+        });
+    }
+
+    function getStudentRankVisibility(rows = [], subjects = [], options = {}) {
+        const list = Array.isArray(rows) ? rows : [];
+        const subjectList = Array.isArray(subjects) ? subjects : [];
+        const singleSchool = typeof options.isSingleSchoolMode === 'function'
+            ? !!options.isSingleSchoolMode()
+            : !!options.isSingleSchool;
+        return {
+            countyRankVisible: hasStudentRankData(list, subjectList, 'county', options),
+            townRankVisible: !singleSchool && hasStudentRankData(list, subjectList, 'township', options),
+            classRankVisible: hasStudentRankData(list, ['total'], 'class', options)
+        };
+    }
+
     function assignCompetitionRanks(list, scoreGetter, rankSetter, options = {}) {
         const rows = Array.isArray(list) ? list.slice() : [];
         const desc = options.desc !== false;
@@ -283,6 +379,13 @@
         ensureSubjectRank,
         setRank,
         getRank,
+        normalizeRankValue,
+        hasRankValue,
+        hasStudentClassRankScope,
+        isCountyDirectStudent,
+        getStudentRankValue,
+        hasStudentRankData,
+        getStudentRankVisibility,
         assignCompetitionRanks,
         assignRankScope,
         assignGroupedRankScope,

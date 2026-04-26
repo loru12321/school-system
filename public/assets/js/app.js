@@ -12610,13 +12610,19 @@ function buildStudentDetailsRenderMeta(list = []) {
     const visibleSubjects = (isTeacher || (isClassTeacher && classTeacherMode === 'teaching'))
         ? SUBJECTS.filter(s => teacherScope.subjects.has(normalizeSubject(s)))
         : SUBJECTS;
+    const rankVisibility = window.RankingDataService && typeof window.RankingDataService.getStudentRankVisibility === 'function'
+        ? window.RankingDataService.getStudentRankVisibility(list, visibleSubjects, { isSingleSchoolMode })
+        : {
+            countyRankVisible: hasStudentCountyRankData(list, visibleSubjects),
+            townRankVisible: hasStudentTownshipRankData(list, visibleSubjects)
+        };
     return {
         role,
         isTeacher,
         isClassTeacher,
         visibleSubjects,
-        countyRankVisible: hasStudentCountyRankData(list, visibleSubjects),
-        townRankVisible: hasStudentTownshipRankData(list, visibleSubjects)
+        countyRankVisible: rankVisibility.countyRankVisible,
+        townRankVisible: rankVisibility.townRankVisible
     };
 }
 
@@ -12645,6 +12651,9 @@ function buildStudentDetailMobileInfoItem(label, value, accentClass = '') {
 }
 
 function getStudentCountyRankValue(student, key = 'total') {
+    if (window.RankingDataService && typeof window.RankingDataService.getStudentRankValue === 'function') {
+        return window.RankingDataService.getStudentRankValue(student, key, 'county');
+    }
     const fallback = key === 'total' ? (student?.countyRank ?? '-') : '-';
     const value = safeGet(student, `ranks.${key}.county`, fallback);
     return value == null || value === '' ? fallback : value;
@@ -12652,6 +12661,9 @@ function getStudentCountyRankValue(student, key = 'total') {
 window.getStudentCountyRankValue = getStudentCountyRankValue;
 
 function hasStudentClassRankScope(studentLike) {
+    if (window.RankingDataService && typeof window.RankingDataService.hasStudentClassRankScope === 'function') {
+        return window.RankingDataService.hasStudentClassRankScope(studentLike);
+    }
     const rawClass = String(studentLike?.class ?? '').trim();
     const normalizedClass = typeof normalizeClass === 'function' ? normalizeClass(rawClass) : rawClass;
     if (!normalizedClass || normalizedClass === '-') return false;
@@ -12660,6 +12672,9 @@ function hasStudentClassRankScope(studentLike) {
 window.hasStudentClassRankScope = hasStudentClassRankScope;
 
 function isCountyDirectStudentForRank(studentLike) {
+    if (window.RankingDataService && typeof window.RankingDataService.isCountyDirectStudent === 'function') {
+        return window.RankingDataService.isCountyDirectStudent(studentLike, { rows: RAW_DATA });
+    }
     const schoolName = String(studentLike?.school || '').trim();
     if (!schoolName || typeof getCountyDirectSchoolNames !== 'function' || typeof getTownshipManagedSchoolNames !== 'function') return false;
     const schoolKeys = Object.keys(SCHOOLS || {});
@@ -12691,6 +12706,10 @@ function isCountyDirectStudentForRank(studentLike) {
 window.isCountyDirectStudentForRank = isCountyDirectStudentForRank;
 
 function getDisplayRankValue(studentLike, keyPath, options = {}) {
+    if (window.RankingDataService && typeof window.RankingDataService.getStudentRankValue === 'function') {
+        const match = String(keyPath || '').match(/^ranks\.([^.]+)\.([^.]+)$/);
+        if (match) return window.RankingDataService.getStudentRankValue(studentLike, match[1], options.scope || match[2], { rows: RAW_DATA });
+    }
     if (options.scope === 'class' && !hasStudentClassRankScope(studentLike)) return '-';
     if (options.scope === 'township' && isCountyDirectStudentForRank(studentLike)) return '-';
     const value = safeGet(studentLike, keyPath, '-');
@@ -12737,11 +12756,17 @@ function hasCountyRankValuesInData(list = RAW_DATA, subjects = SUBJECTS) {
 window.hasCountyRankValuesInData = hasCountyRankValuesInData;
 
 function hasStudentCountyRankData(list = RAW_DATA, subjects = SUBJECTS) {
+    if (window.RankingDataService && typeof window.RankingDataService.hasStudentRankData === 'function') {
+        return window.RankingDataService.hasStudentRankData(list, subjects, 'county', { rows: RAW_DATA });
+    }
     return hasCountyRankValuesInData(list, subjects);
 }
 window.hasStudentCountyRankData = hasStudentCountyRankData;
 
 function hasStudentTownshipRankData(list = RAW_DATA, subjects = SUBJECTS) {
+    if (window.RankingDataService && typeof window.RankingDataService.hasStudentRankData === 'function') {
+        return !isSingleSchoolMode() && window.RankingDataService.hasStudentRankData(list, subjects, 'township', { rows: RAW_DATA });
+    }
     if (!Array.isArray(list) || list.length === 0 || isSingleSchoolMode()) return false;
     return list.some((student) => {
         if (isCountyDirectStudentForRank(student)) return false;
