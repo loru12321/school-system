@@ -12267,22 +12267,26 @@ function jumpToDetail(school, subject) {
 }
 
 // ================= 教师配置与分析 =================
+function setTeacherConfigSelectOptionsIfChanged(select, html, signature) {
+    if (!select) return;
+    const sig = String(signature || html || '');
+    if (select.dataset.teacherConfigOptionsSig === sig) return;
+    select.innerHTML = html;
+    select.dataset.teacherConfigOptionsSig = sig;
+}
+
 function updateSchoolSelect() {
     const sel = document.getElementById('sel-school');
     if (!sel) return;
     const previousValue = String(sel.value || '').trim();
-    sel.innerHTML = '<option value="">--请选择学校--</option>';
     const user = getCurrentUser();
     const availableSchools = (typeof listAvailableSchoolsForCompare === 'function')
         ? listAvailableSchoolsForCompare()
         : Object.keys(SCHOOLS || {});
     const schools = PermissionPolicy.getAccessibleSchoolNames(user, availableSchools);
-    schools.forEach((name) => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        sel.appendChild(option);
-    });
+    const optionsHtml = '<option value="">--请选择学校--</option>'
+        + schools.map(name => `<option value="${tmEscapeHtml(name)}">${tmEscapeHtml(name)}</option>`).join('');
+    setTeacherConfigSelectOptionsIfChanged(sel, optionsHtml, `schools:${schools.join('|')}`);
     if (!PermissionPolicy.isAdmin(user)) {
         const boundSchool = PermissionPolicy.getBoundSchool(user);
         if (boundSchool && Array.from(sel.options).some(option => option.value === boundSchool)) {
@@ -12315,7 +12319,6 @@ function updateMySchoolSelect() {
     if (!select) return;
 
     // 下面是原有的下拉框填充逻辑
-    select.innerHTML = '<option value="">--请选择本校--</option>';
     const schools = (typeof listAvailableSchoolsForCompare === 'function')
         ? listAvailableSchoolsForCompare()
         : Object.keys(SCHOOLS || {});
@@ -12323,9 +12326,9 @@ function updateMySchoolSelect() {
     const currentSchool = readCurrentSchool();
     if (currentSchool) schoolSet.add(currentSchool);
     const mergedSchools = [...schoolSet].sort((a, b) => a.localeCompare(b, 'zh-CN'));
-    mergedSchools.forEach(school => {
-        select.innerHTML += `<option value="${school}">${school}</option>`;
-    });
+    const optionsHtml = '<option value="">--请选择本校--</option>'
+        + mergedSchools.map(school => `<option value="${tmEscapeHtml(school)}">${tmEscapeHtml(school)}</option>`).join('');
+    setTeacherConfigSelectOptionsIfChanged(select, optionsHtml, `my-school:${mergedSchools.join('|')}`);
 
     const savedTrim = String(currentSchool || '').trim();
     const matchedSaved = mergedSchools.find(s => String(s).trim() === savedTrim) || '';
@@ -12345,27 +12348,33 @@ function updateMySchoolSelect() {
 
     // 当学校数据更新时，顺便刷新管理员面板里的“学校复选框列表” (此处旧代码已在上面第一步执行了，这里不需要重复)
 
-    select.addEventListener('change', function () {
-        writeCurrentSchool(this.value);
-        if (readCurrentSchool()) generateTeacherInputs();
-        renderTables();
-        const mySchoolInput = document.getElementById('mySchool');
-        if (mySchoolInput && readCurrentSchool()) mySchoolInput.value = readCurrentSchool();
-        updateStatusPanel();
-    });
+    if (select.dataset.boundMySchoolSelect !== '1') {
+        select.dataset.boundMySchoolSelect = '1';
+        select.addEventListener('change', function () {
+            writeCurrentSchool(this.value);
+            if (readCurrentSchool()) generateTeacherInputs();
+            renderTables();
+            const mySchoolInput = document.getElementById('mySchool');
+            if (mySchoolInput && readCurrentSchool()) mySchoolInput.value = readCurrentSchool();
+            updateStatusPanel();
+        });
+    }
 }
 
 function updateClassSelect() {
     const schoolSelect = document.getElementById('sel-school');
     const classSelect = document.getElementById('sel-class');
     if (!schoolSelect || !classSelect) return;
-    classSelect.innerHTML = '<option>--请先选择学校--</option>';
+    let optionsHtml = '<option>--请先选择学校--</option>';
+    let signature = `classes:${schoolSelect.value || ''}:empty`;
     if (schoolSelect.value && SCHOOLS[schoolSelect.value]) {
         const user = getCurrentUser();
         const classMode = PermissionPolicy.isClassTeacher(user) ? 'homeroom' : 'teaching';
         const classes = PermissionPolicy.getAccessibleClassNames(user, [...new Set(SCHOOLS[schoolSelect.value].students.map(s => s.class))].sort(), schoolSelect.value, { mode: classMode });
-        classes.forEach(cls => classSelect.innerHTML += `<option>${cls}</option>`);
+        optionsHtml = '<option>--请先选择学校--</option>' + classes.map(cls => `<option>${tmEscapeHtml(cls)}</option>`).join('');
+        signature = `classes:${schoolSelect.value}:${classMode}:${classes.join('|')}`;
     }
+    setTeacherConfigSelectOptionsIfChanged(classSelect, optionsHtml, signature);
 }
 
 function autoDetectMySchool() {
