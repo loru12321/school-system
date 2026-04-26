@@ -443,79 +443,23 @@
 
         </aside>
 
-        <div class="shell-utility-dock" aria-label="系统快捷工具">
-            <div class="sidebar-footer">
-                <div class="sidebar-footer-item" onclick="openSpotlight()" title="全局搜索">
-                    <i class="ti ti-search"></i>
-                    <span>全局搜索</span>
-                </div>
-                <div class="sidebar-footer-item" data-workspace-toggle="true"
-                    onclick="window.toggleWorkspaceDrawer(true)" title="工作区面板">
-                    <i class="ti ti-layout-grid"></i>
-                    <span>工作区面板</span>
-                </div>
-                <!-- 通知 -->
-                <div class="sidebar-footer-item" id="admin-msg-btn-sidebar" onclick="IssueManager.openAdminPanel()"
-                    title="消息中心">
-                    <i class="ti ti-bell"></i>
-                    <span>消息中心</span>
-                    <div id="msg-badge-sidebar" class="notification-badge hidden">0</div>
-                </div>
-                <!-- 更多收起菜单 (设置、备份等) -->
-                <div class="sidebar-footer-item sidebar-more" onclick="toggleSidebarMoreMenu()" title="更多系统设置">
-                    <i class="ti ti-settings"></i>
-                    <span>系统设置</span>
-                </div>
-
-                <!-- 极简更多菜单框 (浮动) -->
-                <div id="sidebar-more-menu" class="hidden">
-                    <div class="more-menu-item" onclick="openSkinModal()">
-                        <i class="ti ti-palette"></i> <span>外观主题</span>
-                    </div>
-                    <div class="more-menu-item" onclick="toggleDarkMode()">
-                        <i class="ti ti-moon" id="sidebar-moon-icon"></i> <span>深色模式</span>
-                    </div>
-                    <div class="more-menu-item" onclick="HelpSystem.startTour()">
-                        <i class="ti ti-help-circle"></i> <span>新手指引</span>
-                    </div>
-                    <div class="more-menu-item" onclick="toggleGuestMode()" id="sidebar-guest-btn">
-                        <i class="ti ti-flame"></i> <span>无恒模式 (阅后即焚)</span>
-                    </div>
-                    <div class="more-menu-item admin-only"
-                        onclick="openAdminCloudAccountModal()">
-                        <i class="ti ti-users"></i> <span>账号权限管理</span>
-                    </div>
-                    <div class="more-menu-item admin-only" onclick="openCloudRollback()">
-                        <i class="ti ti-rotate"></i> <span>云端数据回滚</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- 主内容区 -->
         <main class="app-main">
             <!-- 重新设计的顶部标题栏，You-Tube 风格 Grid 布局 -->
             <header id="main-header" class="app-toolbar shell-toolbar">
 
-                <!-- 左侧: 状态/提示区 -->
+                <!-- 左侧: 仅保留导航控制，模块标题放到正文主卡片中 -->
                 <div class="toolbar-left shell-toolbar-panel shell-toolbar-panel--identity">
                     <button class="btn mobile-menu-toggle workspace-rail-toggle" type="button" data-sidebar-toggle="true"
                         onclick="window.toggleAppSidebar()" aria-label="展开左侧工作区" title="展开左侧工作区">
                         <i class="ti ti-chevrons-right" data-sidebar-toggle-icon="true"></i>
                     </button>
-                    <div class="shell-title-stack">
-                        <div class="shell-breadcrumb-row">
-                            <span id="app-subtitle" class="shell-subtitle">数据管理 / 新手入口与诊断</span>
-                            <span id="mode-badge" class="badge shell-mode-badge"></span>
-                        </div>
-                        <div class="shell-headline-row">
-                            <h1 id="shell-current-title" class="shell-current-title">统一工作台</h1>
-                            <span id="shell-role-pill" class="shell-inline-pill">Admin</span>
-                            <i class="ti ti-info-circle shell-desc-tooltip-trigger" id="shell-desc-icon" data-shell-tooltip="把数据、教学、预警和工具收进一条连续工作流，像运营频道一样管理整个系统节奏。"></i>
-                        </div>
-                        <p id="shell-current-desc" class="shell-current-desc" style="display: none;">
-                            把数据、教学、预警和工具收进一条连续工作流，像运营频道一样管理整个系统节奏。
-                        </p>
+                    <div class="shell-toolbar-state-store" aria-hidden="true">
+                        <span id="app-subtitle">数据管理 / 新手入口与诊断</span>
+                        <span id="mode-badge" class="badge shell-mode-badge"></span>
+                        <span id="shell-current-title">统一工作台</span>
+                        <span id="shell-role-pill">Admin</span>
+                        <span id="shell-current-desc">把数据、教学、预警和工具收进一条连续工作流。</span>
                     </div>
                 </div>
 
@@ -565,6 +509,41 @@
 
                     <!-- 个人中心/密码修改注入容器 -->
                     <div id="account-actions"></div>
+
+                    <div class="shell-utility-menu" id="shell-utility-menu">
+                        <button class="btn shell-utility-menu__button" type="button"
+                            data-shell-utility-toggle="true" aria-haspopup="true" aria-expanded="false"
+                            title="系统工具" data-shell-tooltip="系统工具">
+                            <i class="ti ti-dots"></i>
+                        </button>
+                        <div class="shell-utility-menu__panel hidden" id="shell-utility-menu-panel" role="menu"
+                            aria-label="系统工具">
+                            <button type="button" data-shell-utility-action="search" role="menuitem">
+                                <i class="ti ti-search"></i><span>全局搜索</span>
+                            </button>
+                            <button type="button" data-shell-utility-action="workspace" role="menuitem">
+                                <i class="ti ti-layout-grid"></i><span>工作区面板</span>
+                            </button>
+                            <button type="button" data-shell-utility-action="messages" role="menuitem">
+                                <i class="ti ti-bell"></i><span>消息中心</span>
+                            </button>
+                            <button type="button" data-shell-utility-action="theme" role="menuitem">
+                                <i class="ti ti-palette"></i><span>界面主题</span>
+                            </button>
+                            <button type="button" data-shell-utility-action="dark" role="menuitem">
+                                <i class="ti ti-moon"></i><span>深色模式</span>
+                            </button>
+                            <button type="button" data-shell-utility-action="tour" role="menuitem">
+                                <i class="ti ti-route"></i><span>新手引导</span>
+                            </button>
+                            <button type="button" data-shell-utility-action="accounts" role="menuitem">
+                                <i class="ti ti-user-cog"></i><span>账号权限</span>
+                            </button>
+                            <button type="button" data-shell-utility-action="rollback" role="menuitem">
+                                <i class="ti ti-cloud-download"></i><span>云端回滚</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </header>
 

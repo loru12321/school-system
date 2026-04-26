@@ -3354,6 +3354,13 @@ body.workspace-drawer-open {
 /* Final sidebar density pass: parent modules first, compact tools float beside the canvas. */
 .sidebar-nav-container {
     flex: 1 1 auto;
+    max-height: none;
+    min-height: 0;
+    height: 100%;
+}
+
+body.shell-sidebar-collapsed .sidebar-nav-container {
+    max-height: none;
 }
 
 body.shell-sidebar-collapsed .sidebar-footer {
@@ -3388,4 +3395,186 @@ body.shell-sidebar-collapsed .shell-utility-dock .sidebar-footer-item,
     width: 44px !important;
     min-height: 44px !important;
     padding: 0 !important;
+}
+
+/* Final toolbar pass: no title block in the bar, stable 3-zone layout on desktop/tablet/mobile. */
+#main-header.shell-toolbar {
+    grid-template-columns: auto minmax(260px, 640px) minmax(0, auto) !important;
+    align-items: center !important;
+    gap: 14px !important;
+    min-height: 72px;
+}
+
+.shell-toolbar-panel--identity {
+    align-items: center !important;
+    justify-content: flex-start !important;
+    min-width: 48px;
+}
+
+.shell-toolbar-state-store {
+    display: none !important;
+}
+
+.shell-toolbar-panel--search {
+    grid-column: auto !important;
+    min-width: 0;
+}
+
+.shell-toolbar-panel--actions {
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+    min-width: 0;
+}
+
+.shell-utility-menu {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+}
+
+.shell-utility-menu__button {
+    width: 42px;
+    height: 42px;
+    padding: 0 !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(226, 232, 240, 0.9) !important;
+    background: rgba(255, 255, 255, 0.86) !important;
+    color: #0f172a !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+.shell-utility-menu__button i {
+    font-size: 20px;
+}
+
+.shell-utility-menu__panel {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    z-index: 560;
+    width: min(240px, calc(100vw - 32px));
+    padding: 8px;
+    border: 1px solid rgba(226, 232, 240, 0.92);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 24px 56px rgba(15, 23, 42, 0.16);
+    backdrop-filter: blur(18px) saturate(1.04);
+    -webkit-backdrop-filter: blur(18px) saturate(1.04);
+}
+
+.shell-utility-menu__panel button {
+    width: 100%;
+    min-height: 42px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    text-align: left;
+}
+
+.shell-utility-menu__panel button:hover {
+    background: #f8fafc;
+    color: var(--nav-accent, var(--primary));
+}
+
+.shell-utility-menu__panel button i {
+    width: 18px;
+    font-size: 17px;
+}
+
+.dark-mode .shell-utility-menu__button,
+.dark-mode .shell-utility-menu__panel {
+    border-color: rgba(51, 65, 85, 0.92) !important;
+    background: rgba(15, 23, 42, 0.94) !important;
+    color: #f8fafc !important;
+}
+
+.dark-mode .shell-utility-menu__panel button {
+    color: #cbd5e1;
+}
+
+.dark-mode .shell-utility-menu__panel button:hover {
+    background: rgba(30, 41, 59, 0.9);
+    color: #fff;
+}
+
+@media screen and (max-width: 1280px) {
+    #main-header.shell-toolbar {
+        grid-template-columns: auto minmax(240px, 1fr) auto !important;
+    }
+}
+
+@media screen and (max-width: 1024px) {
+    #main-header.shell-toolbar {
+        grid-template-columns: auto minmax(0, 1fr) auto !important;
+        margin: 10px 12px 0 !important;
+        padding: 10px 12px !important;
+        border-radius: 22px !important;
+    }
+
+    .shell-launcher-button span,
+    .toolbar-right .notification-btn,
+    #admin-panel-btn {
+        display: none !important;
+    }
+
+    #cohort-selector {
+        max-width: 132px;
+    }
+}
+
+@media screen and (max-width: 960px) {
+    body[data-mobile-query="true"]:not([data-role="parent"]) #main-header.shell-toolbar {
+        display: grid !important;
+        grid-template-columns: 44px minmax(0, 1fr) auto !important;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    #main-header.shell-toolbar {
+        grid-template-columns: 44px minmax(0, 1fr) auto !important;
+        min-height: 64px;
+        gap: 8px !important;
+    }
+
+    body[data-mobile-query="true"]:not([data-role="parent"]) #main-header.shell-toolbar {
+        display: grid !important;
+        grid-template-columns: 44px minmax(0, 1fr) auto !important;
+    }
+
+    .shell-toolbar-panel--actions {
+        gap: 6px !important;
+        justify-content: flex-end !important;
+    }
+
+    #global-search-container {
+        min-height: 44px;
+        border-radius: 16px !important;
+    }
+
+    #global-search-container .search-input-wrapper input {
+        font-size: 13px;
+        padding: 0 10px !important;
+    }
+
+    .shell-launcher-button,
+    #cohort-selector,
+    #account-actions {
+        display: none !important;
+    }
+
+    .shell-utility-menu__button {
+        width: 40px;
+        height: 40px;
+    }
 }

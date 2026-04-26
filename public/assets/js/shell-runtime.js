@@ -170,6 +170,70 @@
         setWorkspaceDrawerState(!isOpen);
     }
 
+    function setShellUtilityMenuState(shouldOpen) {
+        const panel = document.getElementById('shell-utility-menu-panel');
+        const toggle = document.querySelector('[data-shell-utility-toggle="true"]');
+        if (!panel) return;
+        panel.classList.toggle('hidden', !shouldOpen);
+        if (toggle) {
+            toggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+        }
+    }
+
+    function closeShellUtilityMenu() {
+        setShellUtilityMenuState(false);
+    }
+
+    function toggleShellUtilityMenu(event) {
+        if (event && typeof event.preventDefault === 'function') {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        const panel = document.getElementById('shell-utility-menu-panel');
+        const isOpen = !!panel && !panel.classList.contains('hidden');
+        setShellUtilityMenuState(!isOpen);
+    }
+
+    function runShellUtilityAction(action) {
+        closeShellUtilityMenu();
+        const safeCall = function (fn) {
+            if (typeof fn === 'function') fn();
+        };
+
+        switch (action) {
+            case 'search':
+                safeCall(window.openSpotlight);
+                break;
+            case 'workspace':
+                toggleWorkspaceDrawer(true);
+                break;
+            case 'messages':
+                if (window.IssueManager && typeof window.IssueManager.openAdminPanel === 'function') {
+                    window.IssueManager.openAdminPanel();
+                }
+                break;
+            case 'theme':
+                safeCall(window.openSkinModal);
+                break;
+            case 'dark':
+                safeCall(window.toggleDarkMode);
+                break;
+            case 'tour':
+                if (window.HelpSystem && typeof window.HelpSystem.startTour === 'function') {
+                    window.HelpSystem.startTour();
+                }
+                break;
+            case 'accounts':
+                safeCall(window.openAdminCloudAccountModal);
+                break;
+            case 'rollback':
+                safeCall(window.openCloudRollback);
+                break;
+            default:
+                break;
+        }
+    }
+
     function notifyShellEnhancements() {
         scheduleFloatingModuleRailSync();
         if (typeof window.refreshShellEnhancements === 'function') {
@@ -774,74 +838,23 @@
         closeWorkspaceDrawer();
     }
 
-    function renderSidebarSubmoduleNavigation(category, visibleItems, activeSectionId) {
-        const sideNav = document.getElementById('sidebar-submodule-nav');
-        if (!sideNav) return;
-        sideNav.innerHTML = '';
-
-        if (!category || !Array.isArray(visibleItems) || visibleItems.length === 0) {
-            sideNav.classList.add('is-empty');
-            return;
-        }
-
-        sideNav.classList.remove('is-empty');
-        sideNav.style.setProperty('--nav-accent', category.color);
-        sideNav.style.setProperty('--accent-soft', toSoftColor(category.color, 0.12));
-
-        const title = document.createElement('div');
-        title.className = 'sidebar-submodule-nav__title';
-        title.textContent = '子模块';
-        sideNav.appendChild(title);
-
-        visibleItems.forEach((item, index) => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'sidebar-submodule-nav__item';
-            if (item.id === activeSectionId) button.classList.add('active');
-            button.title = item.text;
-            button.setAttribute('aria-label', item.text);
-            button.setAttribute('data-module-id', item.id);
-            button.setAttribute('data-shell-tooltip', item.hint || item.text);
-            button.innerHTML = `
-                <span class="sidebar-submodule-nav__index">${String(index + 1).padStart(2, '0')}</span>
-                <span class="sidebar-submodule-nav__icon"><i class="ti ${item.icon}"></i></span>
-                <span class="sidebar-submodule-nav__label">${item.text}</span>
-            `;
-            button.onclick = function (event) {
-                event.stopPropagation();
-                activateSubmodule(item, category);
-            };
-            sideNav.appendChild(button);
-        });
-    }
-
     function renderSubNavigation() {
         const subNavContainer = document.getElementById('sub-nav-container');
-        const sideNav = document.getElementById('sidebar-submodule-nav');
-        if (!subNavContainer && !sideNav) return;
+        if (!subNavContainer) return;
 
-        if (subNavContainer) {
-            subNavContainer.innerHTML = '';
-            bindHorizontalWheelScroll(subNavContainer, subNavContainer, subNavContainer);
-        }
+        subNavContainer.innerHTML = '';
+        bindHorizontalWheelScroll(subNavContainer, subNavContainer, subNavContainer);
         resolveCategoryState();
         const category = NAV_STRUCTURE[currentCategory];
         if (!category) return;
 
         const visibleItems = resolveVisibleItems(category);
         if (visibleItems.length === 0) {
-            renderSidebarSubmoduleNavigation(category, visibleItems, getActiveSectionId());
             updateShellChrome();
             return;
         }
 
         const activeSectionId = getActiveSectionId();
-        renderSidebarSubmoduleNavigation(category, visibleItems, activeSectionId);
-        if (!subNavContainer) {
-            updateShellChrome(activeSectionId);
-            notifyShellEnhancements();
-            return;
-        }
 
         visibleItems.forEach((item, index) => {
             const card = document.createElement('div');
@@ -920,6 +933,8 @@
     window.openWorkspaceDrawer = openWorkspaceDrawer;
     window.closeWorkspaceDrawer = closeWorkspaceDrawer;
     window.toggleWorkspaceDrawer = toggleWorkspaceDrawer;
+    window.closeShellUtilityMenu = closeShellUtilityMenu;
+    window.toggleShellUtilityMenu = toggleShellUtilityMenu;
     window.getCurrentNavCategory = function () { return currentCategory; };
     window.setCurrentNavCategorySilently = function (key) {
         if (!NAV_STRUCTURE[key]) return;
@@ -931,13 +946,31 @@
     document.addEventListener('DOMContentLoaded', function () {
         bindFloatingModuleRailBehavior();
         setWorkspaceDrawerState(false);
+        document.querySelectorAll('[data-shell-utility-toggle="true"]').forEach(function (button) {
+            button.addEventListener('click', toggleShellUtilityMenu);
+        });
+        document.querySelectorAll('[data-shell-utility-action]').forEach(function (button) {
+            button.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                runShellUtilityAction(button.getAttribute('data-shell-utility-action'));
+            });
+        });
         updateShellChrome();
         scheduleFloatingModuleRailSync();
+    });
+
+    document.addEventListener('click', function (event) {
+        const menu = document.getElementById('shell-utility-menu');
+        if (menu && !menu.contains(event.target)) {
+            closeShellUtilityMenu();
+        }
     });
 
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
             closeWorkspaceDrawer();
+            closeShellUtilityMenu();
         }
     });
 })();

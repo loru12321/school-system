@@ -106,11 +106,6 @@
             targets.push(item);
         });
 
-        document.querySelectorAll('#sidebar-submodule-nav .sidebar-submodule-nav__item').forEach((item) => {
-            setTooltipText(item, item.getAttribute('aria-label') || getText(item));
-            targets.push(item);
-        });
-
         document.querySelectorAll('#sub-nav-container .shell-story-card').forEach((card) => {
             const title = getText(card, '.shell-story-card__title');
             const desc = getText(card, '.shell-story-card__desc');
