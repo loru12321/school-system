@@ -596,6 +596,33 @@
         return Promise.resolve();
     }
 
+    function initFreshmanExamEntry(id) {
+        const runAfterLoad = () => {
+            if (window.FreshmanExamRuntime && typeof window.FreshmanExamRuntime.syncFbClasses === 'function') {
+                window.FreshmanExamRuntime.syncFbClasses();
+            }
+            if (id === 'exam-arranger' && typeof window.EXAM_initProctorUI === 'function') {
+                window.EXAM_initProctorUI();
+            }
+            return true;
+        };
+
+        if (typeof window.ensureFreshmanExamRuntimeLoaded === 'function'
+            && !window.__FRESHMAN_EXAM_RUNTIME_PATCHED__) {
+            return window.ensureFreshmanExamRuntimeLoaded()
+                .then(() => {
+                    if (document.getElementById(id)?.classList.contains('active')) return runAfterLoad();
+                    return false;
+                })
+                .catch((error) => {
+                    console.warn('init freshman/exam runtime failed:', error);
+                    return false;
+                });
+        }
+
+        return Promise.resolve(runAfterLoad());
+    }
+
     function runModuleSpecificInit(id) {
         if (id === 'student-details') return initStudentDetailsEntry();
         if (id === 'summary'
@@ -654,7 +681,7 @@
             initCountdown();
         }
         if (id === 'teacher-analysis') return initTeacherAnalysisEntry();
-        if (id === 'exam-arranger') EXAM_initProctorUI();
+        if (id === 'freshman-simulator' || id === 'exam-arranger') return initFreshmanExamEntry(id);
         if (id === 'report-generator') {
             updateSchoolSelect();
             updateClassSelect();

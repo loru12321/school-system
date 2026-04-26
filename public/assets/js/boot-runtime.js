@@ -261,6 +261,14 @@ var SYSTEM_RUNTIME_SKILLS = {
             { key: 'zhongkao-countdown', src: './assets/js/zhongkao-countdown-runtime.js' }
         ]
     },
+    'freshman-exam': {
+        mode: 'demand',
+        warmup: 'demand',
+        triggers: ['freshman-simulator', 'exam-arranger'],
+        entries: [
+            { key: 'freshman-exam', src: './assets/js/freshman-exam-runtime.js' }
+        ]
+    },
     'packager': {
         mode: 'demand',
         warmup: 'demand',
@@ -2127,6 +2135,10 @@ window.ensureZhongkaoCountdownRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('zhongkao-countdown');
 };
 
+window.ensureFreshmanExamRuntimeLoaded = function () {
+    return window.SystemRuntimeLoader.load('freshman-exam');
+};
+
 window.ensurePackagerRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('packager');
 };
@@ -2295,6 +2307,33 @@ if (!window.AccountExcel) {
 
 ['renderSingleReportCardHTML', 'renderRadarChart', 'renderVarianceChart', 'analyzeStrengthsAndWeaknesses'].forEach((name) => {
     installOptionalRuntimeMethod(name, window.ensureReportRenderRuntimeLoaded);
+});
+
+[
+    'FB_loadData',
+    'FB_runDivision',
+    'FB_applyScheme',
+    'FB_openSeatMap',
+    'FB_autoSeatAlgo',
+    'FB_renderSeatMap',
+    'FB_toggleLock',
+    'FB_toggleViewRotation',
+    'FB_saveToLocal',
+    'FB_exportResult',
+    'addBindPair',
+    'FB_initScenarioSelect',
+    'FB_saveScenario',
+    'FB_loadScenario',
+    'FB_deleteScenario',
+    'EXAM_loadData',
+    'EXAM_generate',
+    'EXAM_switchView',
+    'EXAM_generateDeskLabels',
+    'EXAM_initProctorUI',
+    'EXAM_assignProctors',
+    'EXAM_exportResult'
+].forEach((name) => {
+    installOptionalRuntimeMethod(name, window.ensureFreshmanExamRuntimeLoaded);
 });
 
 if (window.innerWidth <= 960 || localStorage.getItem('DEV_MODE') === 'true') {
