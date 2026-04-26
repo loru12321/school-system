@@ -875,6 +875,17 @@ function requirePackagerRuntime() {
     return runtime;
 }
 
+async function ensurePackagerRuntime() {
+    const runtime = getPackagerRuntime();
+    if (runtime) return runtime;
+    if (typeof window.ensurePackagerRuntimeLoaded === 'function') {
+        await window.ensurePackagerRuntimeLoaded();
+        const loaded = getPackagerRuntime();
+        if (loaded) return loaded;
+    }
+    throw new Error('PackagerRuntime unavailable');
+}
+
 function getHelpSystemRuntime() {
     return window.HelpSystemRuntime && typeof window.HelpSystemRuntime === 'object' ? window.HelpSystemRuntime : null;
 }
@@ -909,6 +920,17 @@ function requireWorkerApiRuntime() {
         throw new Error('WorkerApiRuntime unavailable');
     }
     return runtime;
+}
+
+async function ensureWorkerApiRuntime() {
+    const runtime = getWorkerApiRuntime();
+    if (runtime) return runtime;
+    if (typeof window.ensureWorkerApiRuntimeLoaded === 'function') {
+        await window.ensureWorkerApiRuntimeLoaded();
+        const loaded = getWorkerApiRuntime();
+        if (loaded) return loaded;
+    }
+    throw new Error('WorkerApiRuntime unavailable');
 }
 
 function getAccountManagerRuntime() {
@@ -6320,8 +6342,9 @@ const IssueManager = {
 
 // 📦 系统打包工具
 const Packager = {
-    exportDistributableHTML: function () {
-        return requirePackagerRuntime().exportDistributableHTML();
+    exportDistributableHTML: async function () {
+        const runtime = await ensurePackagerRuntime();
+        return runtime.exportDistributableHTML();
     }
 };
 
@@ -6636,11 +6659,13 @@ const WORKER_SOURCE = `
 // 2. Worker 管理器
 const WorkerAPI = {
     worker: null,
-    init() {
-        return requireWorkerApiRuntime().init(this, WORKER_SOURCE);
+    async init() {
+        const runtime = await ensureWorkerApiRuntime();
+        return runtime.init(this, WORKER_SOURCE);
     },
-    run(data) {
-        return requireWorkerApiRuntime().run(this, data, WORKER_SOURCE);
+    async run(data) {
+        const runtime = await ensureWorkerApiRuntime();
+        return runtime.run(this, data, WORKER_SOURCE);
     }
 };
 

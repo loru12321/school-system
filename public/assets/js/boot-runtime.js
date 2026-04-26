@@ -252,6 +252,30 @@ var SYSTEM_RUNTIME_SKILLS = {
         entries: [
             { key: 'history-compare', src: './assets/js/history-compare-runtime.js' }
         ]
+    },
+    'zhongkao-countdown': {
+        mode: 'demand',
+        warmup: 'demand',
+        triggers: ['zhongkao-countdown'],
+        entries: [
+            { key: 'zhongkao-countdown', src: './assets/js/zhongkao-countdown-runtime.js' }
+        ]
+    },
+    'packager': {
+        mode: 'demand',
+        warmup: 'demand',
+        triggers: ['exportDistributableHTML'],
+        entries: [
+            { key: 'packager', src: './assets/js/packager-runtime.js' }
+        ]
+    },
+    'worker-api': {
+        mode: 'demand',
+        warmup: 'demand',
+        triggers: ['WorkerAPI.run'],
+        entries: [
+            { key: 'worker-api', src: './assets/js/worker-api-runtime.js' }
+        ]
     }
 };
 
@@ -275,10 +299,8 @@ var APP_MODULES = [
     './assets/js/cloud-workspace-runtime.js',
     './assets/js/data-cloud-runtime.js',
     './assets/js/issue-manager-runtime.js',
-    './assets/js/packager-runtime.js',
     './assets/js/help-system-runtime.js',
     './assets/js/logger-runtime.js',
-    './assets/js/worker-api-runtime.js',
     './assets/js/account-manager-runtime.js',
     './assets/js/data-manager-teacher-runtime.js',
     './assets/js/data-manager-student-runtime.js',
@@ -291,7 +313,6 @@ var APP_MODULES = [
     './assets/js/data-manager-history-runtime.js',
     './assets/js/data-manager-tab-runtime.js',
     './assets/js/config-transfer-runtime.js',
-    './assets/js/zhongkao-countdown-runtime.js',
     './assets/js/shell-runtime.js',
     './assets/js/workspace-rail-runtime.js',
     './assets/js/shell-polish-runtime.js',
@@ -2092,6 +2113,18 @@ window.ensureTeacherCompareRuntimeLoaded = function () {
 
 window.ensureMacroCompareRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('macro-compare');
+};
+
+window.ensureZhongkaoCountdownRuntimeLoaded = function () {
+    return window.SystemRuntimeLoader.load('zhongkao-countdown');
+};
+
+window.ensurePackagerRuntimeLoaded = function () {
+    return window.SystemRuntimeLoader.load('packager');
+};
+
+window.ensureWorkerApiRuntimeLoaded = function () {
+    return window.SystemRuntimeLoader.load('worker-api');
 };
 
 function installOptionalRuntimeMethod(name, loader) {

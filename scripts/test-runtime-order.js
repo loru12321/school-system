@@ -238,7 +238,9 @@ function findScriptTag(html, src) {
     return match ? match[0] : '';
 }
 
-const moduleManifest = bootRuntime;
+const appModulesMatch = bootRuntime.match(/var APP_MODULES = \[[\s\S]*?\];/);
+assert.ok(appModulesMatch, 'boot-runtime.js should declare APP_MODULES');
+const moduleManifest = appModulesMatch[0];
 const authStateIndex = moduleManifest.indexOf(authStateRef);
 const workspaceStateIndex = moduleManifest.indexOf(workspaceStateRef);
 const examStateIndex = moduleManifest.indexOf(examStateRef);
@@ -284,8 +286,8 @@ const moduleEntryRuntimeIndex = moduleManifest.indexOf(moduleEntryRuntimeRef);
 const rankingDataServiceIndex = moduleManifest.indexOf(rankingDataServiceRef);
 const appIndex = moduleManifest.indexOf(appRef);
 const bootRuntimeIndex = indexHtml.indexOf(bootRuntimeRef);
-const popperVendorIndex = moduleManifest.indexOf(popperVendorRef);
-const tippyVendorIndex = moduleManifest.indexOf(tippyVendorRef);
+const popperVendorIndex = bootRuntime.indexOf(popperVendorRef);
+const tippyVendorIndex = bootRuntime.indexOf(tippyVendorRef);
 const accountAdminIndex = indexHtml.indexOf(accountAdminRef);
 const historyCompareIndex = indexHtml.indexOf(historyCompareRef);
 const perfMobileIndex = indexHtml.indexOf(perfMobileRef);
@@ -307,10 +309,10 @@ assert.ok(cloudApiIndex >= 0, 'index.html should load cloud-api-runtime.js');
 assert.ok(systemPerformanceIndex >= 0, 'index.html should load system-performance-runtime.js');
 assert.ok(dataCloudIndex >= 0, 'index.html should load data-cloud-runtime.js');
 assert.ok(issueManagerIndex >= 0, 'index.html should load issue-manager-runtime.js');
-assert.ok(packagerIndex >= 0, 'index.html should load packager-runtime.js');
+assert.strictEqual(packagerIndex, -1, 'packager-runtime.js should be lazy-loaded instead of boot-loaded');
 assert.ok(helpSystemIndex >= 0, 'index.html should load help-system-runtime.js');
 assert.ok(loggerIndex >= 0, 'index.html should load logger-runtime.js');
-assert.ok(workerApiIndex >= 0, 'index.html should load worker-api-runtime.js');
+assert.strictEqual(workerApiIndex, -1, 'worker-api-runtime.js should be lazy-loaded instead of boot-loaded');
 assert.ok(accountManagerIndex >= 0, 'index.html should load account-manager-runtime.js');
 assert.ok(dataManagerTeacherIndex >= 0, 'index.html should load data-manager-teacher-runtime.js');
 assert.ok(dataManagerStudentIndex >= 0, 'index.html should load data-manager-student-runtime.js');
@@ -334,10 +336,8 @@ assert.ok(cloudIndex < systemPerformanceIndex, 'system-performance-runtime.js sh
 assert.ok(systemPerformanceIndex < cloudWorkspaceIndex, 'system-performance-runtime.js should load before cloud-workspace-runtime.js');
 assert.ok(dataCloudIndex < appIndex, 'data-cloud-runtime.js should load before app.js');
 assert.ok(issueManagerIndex < appIndex, 'issue-manager-runtime.js should load before app.js');
-assert.ok(packagerIndex < appIndex, 'packager-runtime.js should load before app.js');
 assert.ok(helpSystemIndex < appIndex, 'help-system-runtime.js should load before app.js');
 assert.ok(loggerIndex < appIndex, 'logger-runtime.js should load before app.js');
-assert.ok(workerApiIndex < appIndex, 'worker-api-runtime.js should load before app.js');
 assert.ok(accountManagerIndex < appIndex, 'account-manager-runtime.js should load before app.js');
 assert.ok(dataManagerTeacherIndex < appIndex, 'data-manager-teacher-runtime.js should load before app.js');
 assert.ok(dataManagerStudentIndex < appIndex, 'data-manager-student-runtime.js should load before app.js');
@@ -371,11 +371,17 @@ assert.ok(bootRuntime.includes(jspdfVendorRef), 'boot-runtime.js should referenc
 assert.ok(bootRuntime.includes(html2canvasVendorRef), 'boot-runtime.js should reference html2canvas.min.js for lazy loading');
 assert.ok(bootRuntime.includes("window.ensureAlasqlVendorLoaded = function ()"), 'boot-runtime.js should expose ensureAlasqlVendorLoaded');
 assert.ok(bootRuntime.includes("window.ensurePdfExportVendorsLoaded = function ()"), 'boot-runtime.js should expose ensurePdfExportVendorsLoaded');
-assert.ok(bootRuntime.includes("window.ensurePresentationVendorsLoaded = function ()"), 'boot-runtime.js should expose ensurePresentationVendorsLoaded');
+assert.ok(!bootRuntime.includes("window.ensurePresentationVendorsLoaded = function ()"), 'boot-runtime.js should not expose removed PPT vendor loader');
 assert.ok(bootRuntime.includes('var SYSTEM_RUNTIME_SKILLS = {'), 'boot-runtime.js should declare a runtime skill manifest');
 assert.ok(bootRuntime.includes('window.SystemRuntimeLoader'), 'boot-runtime.js should expose the runtime skill loader');
 assert.ok(bootRuntime.includes("'teacher-analysis':"), 'runtime skill manifest should include teacher-analysis');
-assert.ok(bootRuntime.includes("'presentation-export':"), 'runtime skill manifest should include presentation-export');
+assert.ok(!bootRuntime.includes("'presentation-export':"), 'runtime skill manifest should not include removed PPT export skill');
+assert.ok(bootRuntime.includes("'zhongkao-countdown':"), 'runtime skill manifest should include zhongkao-countdown');
+assert.ok(bootRuntime.includes("'packager':"), 'runtime skill manifest should include packager');
+assert.ok(bootRuntime.includes("'worker-api':"), 'runtime skill manifest should include worker-api');
+assert.ok(bootRuntime.includes("window.ensureZhongkaoCountdownRuntimeLoaded = function ()"), 'boot-runtime.js should expose ensureZhongkaoCountdownRuntimeLoaded');
+assert.ok(bootRuntime.includes("window.ensurePackagerRuntimeLoaded = function ()"), 'boot-runtime.js should expose ensurePackagerRuntimeLoaded');
+assert.ok(bootRuntime.includes("window.ensureWorkerApiRuntimeLoaded = function ()"), 'boot-runtime.js should expose ensureWorkerApiRuntimeLoaded');
 assert.ok(bootRuntime.includes('loadAll()'), 'runtime skill loader should support full loading');
 assert.strictEqual(initSupabaseMatches.length, 1, 'boot-runtime.js should define initSupabase exactly once');
 assert.strictEqual(supabaseUrlAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_URL exactly once');
@@ -402,10 +408,8 @@ assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign swi
     systemPerformanceRef,
     dataCloudRef,
     issueManagerRef,
-    packagerRef,
     helpSystemRef,
     loggerRef,
-    workerApiRef,
     accountManagerRef,
     dataManagerTeacherRef,
     dataManagerStudentRef,
@@ -430,7 +434,7 @@ assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign swi
     townSubmoduleCompareStateRef,
     townSubmoduleCompareRef
 ].forEach((src) => {
-    assert.ok(moduleManifest.includes(src), `boot-runtime.js should contain APP_MODULES entry for ${src}`);
+    assert.ok(bootRuntime.includes(src), `boot-runtime.js should contain boot/core module entry for ${src}`);
 });
 
 assert.ok(!findScriptTag(indexHtml, supabaseVendorRef), 'index.html should not load the legacy supabase SDK script');
@@ -441,18 +445,16 @@ assert.ok(!findScriptTag(indexHtml, supabaseVendorRef), 'index.html should not l
     chartVendorRef,
     sweetalertVendorRef
 ].forEach((src) => {
-    assert.ok(moduleManifest.includes(src), `boot-runtime.js should contain APP_MODULES entry for ${src}`);
+    assert.ok(bootRuntime.includes(src), `boot-runtime.js should contain deferred module entry for ${src}`);
 });
 
 [
-    jszipVendorRef,
-    pptxgenVendorRef,
     scrollTriggerVendorRef,
     popperVendorRef,
     tippyVendorRef,
     simplebarVendorRef
 ].forEach((src) => {
-    assert.ok(moduleManifest.includes(src), `boot-runtime.js should contain APP_MODULES entry for ${src}`);
+    assert.ok(bootRuntime.includes(src), `boot-runtime.js should contain deferred module entry for ${src}`);
 });
 
 const bootScriptTag = findScriptTag(indexHtml, bootRuntimeRef);

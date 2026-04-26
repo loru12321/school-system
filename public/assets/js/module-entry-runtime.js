@@ -638,10 +638,20 @@
         }
         if (id === 'high-score' && typeof renderHighScoreTable === 'function') renderHighScoreTable();
         if (id === 'student-overview') return initStudentOverviewEntry();
-        if (id === 'zhongkao-countdown'
-            && window.ZhongkaoCountdownModule
-            && typeof window.ZhongkaoCountdownModule.ensureInitialized === 'function') {
-            window.ZhongkaoCountdownModule.ensureInitialized();
+        if (id === 'zhongkao-countdown') {
+            const initCountdown = () => {
+                if (window.ZhongkaoCountdownModule
+                    && typeof window.ZhongkaoCountdownModule.ensureInitialized === 'function') {
+                    window.ZhongkaoCountdownModule.ensureInitialized();
+                }
+            };
+            if (typeof window.ensureZhongkaoCountdownRuntimeLoaded === 'function'
+                && !window.ZhongkaoCountdownModule) {
+                return window.ensureZhongkaoCountdownRuntimeLoaded()
+                    .then(initCountdown)
+                    .catch((error) => console.warn(error));
+            }
+            initCountdown();
         }
         if (id === 'teacher-analysis') return initTeacherAnalysisEntry();
         if (id === 'exam-arranger') EXAM_initProctorUI();

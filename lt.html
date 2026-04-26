@@ -272,6 +272,30 @@ var SYSTEM_RUNTIME_SKILLS = {
         entries: [
             { key: 'history-compare', src: './public/assets/js/history-compare-runtime.js' }
         ]
+    },
+    'zhongkao-countdown': {
+        mode: 'demand',
+        warmup: 'demand',
+        triggers: ['zhongkao-countdown'],
+        entries: [
+            { key: 'zhongkao-countdown', src: './public/assets/js/zhongkao-countdown-runtime.js' }
+        ]
+    },
+    'packager': {
+        mode: 'demand',
+        warmup: 'demand',
+        triggers: ['exportDistributableHTML'],
+        entries: [
+            { key: 'packager', src: './public/assets/js/packager-runtime.js' }
+        ]
+    },
+    'worker-api': {
+        mode: 'demand',
+        warmup: 'demand',
+        triggers: ['WorkerAPI.run'],
+        entries: [
+            { key: 'worker-api', src: './public/assets/js/worker-api-runtime.js' }
+        ]
     }
 };
 
@@ -295,10 +319,8 @@ var APP_MODULES = [
     './public/assets/js/cloud-workspace-runtime.js',
     './public/assets/js/data-cloud-runtime.js',
     './public/assets/js/issue-manager-runtime.js',
-    './public/assets/js/packager-runtime.js',
     './public/assets/js/help-system-runtime.js',
     './public/assets/js/logger-runtime.js',
-    './public/assets/js/worker-api-runtime.js',
     './public/assets/js/account-manager-runtime.js',
     './public/assets/js/data-manager-teacher-runtime.js',
     './public/assets/js/data-manager-student-runtime.js',
@@ -311,7 +333,6 @@ var APP_MODULES = [
     './public/assets/js/data-manager-history-runtime.js',
     './public/assets/js/data-manager-tab-runtime.js',
     './public/assets/js/config-transfer-runtime.js',
-    './public/assets/js/zhongkao-countdown-runtime.js',
     './public/assets/js/shell-runtime.js',
     './public/assets/js/workspace-rail-runtime.js',
     './public/assets/js/shell-polish-runtime.js',
@@ -2112,6 +2133,18 @@ window.ensureTeacherCompareRuntimeLoaded = function () {
 
 window.ensureMacroCompareRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('macro-compare');
+};
+
+window.ensureZhongkaoCountdownRuntimeLoaded = function () {
+    return window.SystemRuntimeLoader.load('zhongkao-countdown');
+};
+
+window.ensurePackagerRuntimeLoaded = function () {
+    return window.SystemRuntimeLoader.load('packager');
+};
+
+window.ensureWorkerApiRuntimeLoaded = function () {
+    return window.SystemRuntimeLoader.load('worker-api');
 };
 
 function installOptionalRuntimeMethod(name, loader) {
