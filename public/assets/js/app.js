@@ -12595,8 +12595,30 @@ let STD_STATE = {
     sortCol: null,     // 当前排序列
     sortDir: 'desc',   // desc 或 asc
     activeFilters: {}, // 存储筛选状态: { 'school': new Set(['实验中学', '二中']), '语文': ... }
-    cacheData: []      // 最终展示的数据
+    cacheData: [],     // 最终展示的数据
+    renderMeta: null   // 当前筛选批次的表格渲染元信息
 };
+
+function buildStudentDetailsRenderMeta(list = []) {
+    const user = getCurrentUser();
+    const role = user?.role || 'guest';
+    const isTeacher = role === 'teacher';
+    const isClassTeacher = role === 'class_teacher';
+    const classTeacherMode = isClassTeacher ? getClassTeacherStudentViewMode() : 'teaching';
+    const needTeacherScope = isTeacher || (isClassTeacher && classTeacherMode === 'teaching');
+    const teacherScope = needTeacherScope ? getTeacherScopeForUser(user) : null;
+    const visibleSubjects = (isTeacher || (isClassTeacher && classTeacherMode === 'teaching'))
+        ? SUBJECTS.filter(s => teacherScope.subjects.has(normalizeSubject(s)))
+        : SUBJECTS;
+    return {
+        role,
+        isTeacher,
+        isClassTeacher,
+        visibleSubjects,
+        countyRankVisible: hasStudentCountyRankData(list, visibleSubjects),
+        townRankVisible: hasStudentTownshipRankData(list, visibleSubjects)
+    };
+}
 
 // 1. 主渲染函数
 function getClassTeacherStudentViewMode() {
@@ -13049,6 +13071,7 @@ function renderStudentDetails(reset = true) {
         }
 
         STD_STATE.cacheData = data;
+        STD_STATE.renderMeta = buildStudentDetailsRenderMeta(data);
     }
 
     // --- E. 分页与渲染 ---
@@ -13073,18 +13096,13 @@ function renderStudentDetails(reset = true) {
         }
     }
 
-    const user = getCurrentUser();
-    const role = user?.role || 'guest';
-    const isTeacher = role === 'teacher';
-    const isClassTeacher = role === 'class_teacher';
-    const classTeacherMode = isClassTeacher ? getClassTeacherStudentViewMode() : 'teaching';
-    const needTeacherScope = isTeacher || (isClassTeacher && classTeacherMode === 'teaching');
-    const teacherScope = needTeacherScope ? getTeacherScopeForUser(user) : null;
-    const visibleSubjects = (isTeacher || (isClassTeacher && classTeacherMode === 'teaching'))
-        ? SUBJECTS.filter(s => teacherScope.subjects.has(normalizeSubject(s)))
-        : SUBJECTS;
-    const countyRankVisible = hasStudentCountyRankData(STD_STATE.cacheData, visibleSubjects);
-    const townRankVisible = hasStudentTownshipRankData(STD_STATE.cacheData, visibleSubjects);
+    const renderMeta = STD_STATE.renderMeta || buildStudentDetailsRenderMeta(STD_STATE.cacheData);
+    STD_STATE.renderMeta = renderMeta;
+    const isTeacher = renderMeta.isTeacher;
+    const isClassTeacher = renderMeta.isClassTeacher;
+    const visibleSubjects = renderMeta.visibleSubjects;
+    const countyRankVisible = renderMeta.countyRankVisible;
+    const townRankVisible = renderMeta.townRankVisible;
 
     // 生成表头 (带漏斗图标)
     let headerHTML = '';
@@ -13146,7 +13164,10 @@ function renderStudentDetails(reset = true) {
         headerHTML += `<th>班排</th><th>级排</th><th style="${townHeaderStyle}">镇排</th><th style="${countyHeaderStyle}">县排</th>`;
     }
 
-    thead.innerHTML = headerHTML;
+    if (thead.dataset.studentDetailsHeaderSig !== headerHTML) {
+        thead.innerHTML = headerHTML;
+        thead.dataset.studentDetailsHeaderSig = headerHTML;
+    }
 
     // 生成数据行
     let rowsHTML = '';
