@@ -60,6 +60,47 @@
         }[char]));
     }
 
+    function setTextIfChanged(node, value) {
+        if (!node) return false;
+        const nextValue = String(value ?? '');
+        if (node.textContent === nextValue) return false;
+        node.textContent = nextValue;
+        return true;
+    }
+
+    function setHtmlIfChanged(node, html) {
+        if (!node) return false;
+        const nextHtml = String(html ?? '');
+        if (node.__apkLastHtml === nextHtml) return false;
+        node.innerHTML = nextHtml;
+        node.__apkLastHtml = nextHtml;
+        return true;
+    }
+
+    function setDatasetIfChanged(node, key, value) {
+        if (!node?.dataset) return false;
+        const nextValue = String(value ?? '');
+        if (node.dataset[key] === nextValue) return false;
+        node.dataset[key] = nextValue;
+        return true;
+    }
+
+    function setStylePropertyIfChanged(node, key, value) {
+        if (!node?.style) return false;
+        const nextValue = String(value ?? '');
+        if (node.style.getPropertyValue(key) === nextValue) return false;
+        node.style.setProperty(key, nextValue);
+        return true;
+    }
+
+    function toggleClassIfChanged(node, className, force) {
+        if (!node?.classList) return false;
+        const nextValue = !!force;
+        if (node.classList.contains(className) === nextValue) return false;
+        node.classList.toggle(className, nextValue);
+        return true;
+    }
+
     function getViewportWidth() {
         const candidates = [
             Number(window.innerWidth || 0),
@@ -1227,7 +1268,7 @@
     function renderLibrary(root) {
         const panel = root.querySelector('[data-apk-library-panel]');
         if (!panel) return;
-        panel.innerHTML = libraryOpen ? buildLibraryHtml() : '';
+        setHtmlIfChanged(panel, libraryOpen ? buildLibraryHtml() : '');
     }
 
     function renderSheet() {
@@ -1236,23 +1277,23 @@
         if (!panel) return;
 
         if (!sheetMode) {
-            panel.innerHTML = '';
+            setHtmlIfChanged(panel, '');
             return;
         }
         if (sheetMode === 'modules') {
-            panel.innerHTML = buildModulesSheetHtml();
+            setHtmlIfChanged(panel, buildModulesSheetHtml());
             return;
         }
         if (sheetMode === 'quick') {
-            panel.innerHTML = buildRecentQuickSheetHtml();
+            setHtmlIfChanged(panel, buildRecentQuickSheetHtml());
             return;
         }
         if (sheetMode === 'account') {
-            panel.innerHTML = buildAccountSheetHtml();
+            setHtmlIfChanged(panel, buildAccountSheetHtml());
             return;
         }
         if (sheetMode === 'cohorts') {
-            panel.innerHTML = buildCohortsSheetHtml();
+            setHtmlIfChanged(panel, buildCohortsSheetHtml());
         }
     }
 
@@ -1265,17 +1306,19 @@
         const activeId = getActiveModuleId();
 
         if (!currentCategory?.items?.length) {
-            rail.innerHTML = `<div class="apk-rail-empty">${escapeHtml(copy.currentCategoryEmpty)}</div>`;
+            setHtmlIfChanged(rail, `<div class="apk-rail-empty">${escapeHtml(copy.currentCategoryEmpty)}</div>`);
             return;
         }
 
-        rail.innerHTML = currentCategory.items.map((item) => `
+        const railHtml = currentCategory.items.map((item) => `
             <button type="button" class="apk-rail-chip${item.id === activeId ? ' is-active' : ''}" data-apk-module="${escapeHtml(item.id)}">
                 ${escapeHtml(item.text || item.id)}
             </button>
         `).join('');
 
-        window.requestAnimationFrame(() => scrollActiveRailChipIntoView(root));
+        if (setHtmlIfChanged(rail, railHtml)) {
+            window.requestAnimationFrame(() => scrollActiveRailChipIntoView(root));
+        }
     }
 
     function renderTabs(root) {
@@ -1292,7 +1335,7 @@
                     || (tab === 'account' && sheetMode === 'account')
                 )
             );
-            button.classList.toggle('is-active', active);
+            toggleClassIfChanged(button, 'is-active', active);
         });
     }
 
@@ -1307,11 +1350,11 @@
             getCurrentCohortLabel()
         ].filter(Boolean).join(' · ');
 
-        root.style.setProperty('--apk-accent', activeItem?.categoryColor || currentCategory?.color || '#2563eb');
+        setStylePropertyIfChanged(root, '--apk-accent', activeItem?.categoryColor || currentCategory?.color || '#2563eb');
         root.setAttribute('aria-hidden', 'false');
-        root.dataset.sheetOpen = sheetMode ? 'true' : 'false';
-        root.dataset.sheetMode = sheetMode || '';
-        root.dataset.libraryOpen = libraryOpen ? 'true' : 'false';
+        setDatasetIfChanged(root, 'sheetOpen', sheetMode ? 'true' : 'false');
+        setDatasetIfChanged(root, 'sheetMode', sheetMode || '');
+        setDatasetIfChanged(root, 'libraryOpen', libraryOpen ? 'true' : 'false');
 
         const fields = {
             role: `${humanizeRole()}工作台`,
@@ -1323,7 +1366,7 @@
 
         Object.entries(fields).forEach(([key, value]) => {
             const node = root.querySelector(`[data-apk-field="${key}"]`);
-            if (node) node.textContent = value;
+            setTextIfChanged(node, value);
         });
 
         syncShellModalState(root);
