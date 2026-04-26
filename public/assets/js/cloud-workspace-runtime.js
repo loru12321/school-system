@@ -109,6 +109,17 @@
     const WORKSPACE_SYNC_QUEUE_KEY = 'CLOUD_WORKSPACE_SYNC_QUEUE_V2';
     const CACHE_MACHINE_ID_KEY = 'SCHOOL_SYSTEM_CACHE_MACHINE_ID_V1';
     const CACHE_READY_KEY = 'SCHOOL_SYSTEM_LOCAL_CACHE_READY_V1';
+    const storedJsonCache = new Map();
+
+    if (!window.__CLOUD_WORKSPACE_STORAGE_CACHE_BOUND__) {
+        window.__CLOUD_WORKSPACE_STORAGE_CACHE_BOUND__ = true;
+        window.addEventListener('storage', (event) => {
+            const key = String(event?.key || '');
+            if (key === WORKSPACE_SYNC_QUEUE_KEY || key.startsWith(WORKSPACE_SYNC_META_PREFIX)) {
+                storedJsonCache.delete(key);
+            }
+        });
+    }
 
     function hashText(text) {
         const raw = String(text || '');
@@ -126,9 +137,15 @@
 
     function readStoredJson(key, fallbackValue) {
         try {
+            if (storedJsonCache.has(key)) {
+                return cloneStoredJsonValue(storedJsonCache.get(key), fallbackValue);
+            }
             const raw = localStorage.getItem(key);
-            return raw ? (JSON.parse(raw) || fallbackValue) : fallbackValue;
+            const parsed = raw ? (JSON.parse(raw) || fallbackValue) : fallbackValue;
+            storedJsonCache.set(key, parsed);
+            return cloneStoredJsonValue(parsed, fallbackValue);
         } catch (_) {
+            storedJsonCache.delete(key);
             return fallbackValue;
         }
     }
@@ -136,8 +153,15 @@
     function writeStoredJson(key, value) {
         try {
             localStorage.setItem(key, JSON.stringify(value));
+            storedJsonCache.set(key, value);
         } catch (_) { }
         return value;
+    }
+
+    function cloneStoredJsonValue(value, fallbackValue) {
+        if (!value || typeof value !== 'object') return value || fallbackValue;
+        if (Array.isArray(value)) return value.slice();
+        return { ...value };
     }
 
     function readWorkspaceSyncMeta(key) {
