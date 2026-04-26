@@ -14,6 +14,20 @@
             return nextCache;
         });
 
+    async function selectCloudMacroCompareRows(options = {}) {
+        if (window.CloudApi && typeof window.CloudApi.selectSystemData === 'function') {
+            return window.CloudApi.selectSystemData(options);
+        }
+        if (!window.sbClient) return { data: [], error: new Error('CLOUD_CLIENT_MISSING') };
+        let query = window.sbClient.from('system_data').select(options.select || '*');
+        if (options.keyEq) query = query.eq('key', options.keyEq);
+        if (options.keyLike) query = query.like('key', options.keyLike);
+        if (options.order) query = query.order(options.order, { ascending: options.ascending !== false });
+        if (options.limit) query = query.limit(options.limit);
+        if (options.maybeSingle && typeof query.maybeSingle === 'function') query = query.maybeSingle();
+        return query;
+    }
+
     async function saveMacroMultiPeriodCompareToCloud() {
         const MACRO_MULTI_PERIOD_COMPARE_CACHE = readMacroCompareCacheState();
         window.MACRO_MULTI_PERIOD_COMPARE_CACHE = MACRO_MULTI_PERIOD_COMPARE_CACHE;
@@ -68,14 +82,13 @@
             const isAdmin = RoleManager.hasAnyRole(user, ['admin', 'director']);
             const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '';
 
-            let query = sbClient.from('system_data').select('key, updated_at');
-            if (!isAdmin && cohortId) {
-                query = query.like('key', `MACRO_COMPARE_${cohortId}级_%`);
-            } else {
-                query = query.like('key', 'MACRO_COMPARE_%');
-            }
-
-            const { data, error } = await query.order('updated_at', { ascending: false }).limit(50);
+            const { data, error } = await selectCloudMacroCompareRows({
+                select: 'key, updated_at',
+                keyLike: (!isAdmin && cohortId) ? `MACRO_COMPARE_${cohortId}级_%` : 'MACRO_COMPARE_%',
+                order: 'updated_at',
+                ascending: false,
+                limit: 50
+            });
             if (error) throw error;
             if (window.UI) UI.loading(false);
 
@@ -123,7 +136,11 @@
         try {
             if (typeof Swal !== 'undefined') Swal.close();
             if (window.UI) UI.loading(true, '☁️ 正在加载校际对比详情...');
-            const { data, error } = await sbClient.from('system_data').select('content').eq('key', key).single();
+            const { data, error } = await selectCloudMacroCompareRows({
+                select: 'content',
+                keyEq: key,
+                maybeSingle: true
+            });
             if (error) throw error;
 
             let content = data.content;

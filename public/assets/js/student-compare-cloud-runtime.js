@@ -16,6 +16,20 @@
             window.STUDENT_MULTI_PERIOD_COMPARE_CACHE = nextCache;
             return nextCache;
         });
+
+    async function selectCloudStudentCompareRows(options = {}) {
+        if (window.CloudApi && typeof window.CloudApi.selectSystemData === 'function') {
+            return window.CloudApi.selectSystemData(options);
+        }
+        if (!window.sbClient) return { data: [], error: new Error('CLOUD_CLIENT_MISSING') };
+        let query = window.sbClient.from('system_data').select(options.select || '*');
+        if (options.keyEq) query = query.eq('key', options.keyEq);
+        if (options.keyLike) query = query.like('key', options.keyLike);
+        if (options.order) query = query.order(options.order, { ascending: options.ascending !== false });
+        if (options.limit) query = query.limit(options.limit);
+        if (options.maybeSingle && typeof query.maybeSingle === 'function') query = query.maybeSingle();
+        return query;
+    }
     const readCloudCompareTargetSessionState = typeof window.readCloudCompareTargetState === 'function'
         ? window.readCloudCompareTargetState
         : (() => {
@@ -618,20 +632,23 @@
             const user = getCurrentUser();
             const isAdminOrDirector = RoleManager.hasAnyRole(user, ['admin', 'director']);
             const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '';
-            let query = sbClient.from('system_data').select('key, updated_at');
+            let keyLike = 'STUDENT_COMPARE_%';
 
             if (selfOnly) {
                 const target = resolveCloudCompareTarget(user);
-                if (target.name && target.class && target.school) query = query.like('key', `STUDENT_COMPARE_${cohortId}级_${target.school}_%`);
-                else if (cohortId) query = query.like('key', `STUDENT_COMPARE_${cohortId}级_%`);
-                else query = query.like('key', 'STUDENT_COMPARE_%');
+                if (target.name && target.class && target.school) keyLike = `STUDENT_COMPARE_${cohortId}级_${target.school}_%`;
+                else if (cohortId) keyLike = `STUDENT_COMPARE_${cohortId}级_%`;
             } else if (!isAdminOrDirector && cohortId) {
-                query = query.like('key', `STUDENT_COMPARE_${cohortId}级_%`);
-            } else {
-                query = query.like('key', 'STUDENT_COMPARE_%');
+                keyLike = `STUDENT_COMPARE_${cohortId}级_%`;
             }
 
-            const { data, error } = await query.order('updated_at', { ascending: false }).limit(50);
+            const { data, error } = await selectCloudStudentCompareRows({
+                select: 'key, updated_at',
+                keyLike,
+                order: 'updated_at',
+                ascending: false,
+                limit: 50
+            });
             if (error) throw error;
             if (window.UI) UI.loading(false);
 
@@ -708,7 +725,11 @@
         if (!window.sbClient) return alert('☁️ 云端服务未连接');
         try {
             if (window.UI) UI.loading(true, '☁️ 正在加载云端对比详情...');
-            const { data, error } = await sbClient.from('system_data').select('content').eq('key', key).single();
+            const { data, error } = await selectCloudStudentCompareRows({
+                select: 'content',
+                keyEq: key,
+                maybeSingle: true
+            });
             if (error) throw error;
 
             let content = data.content;

@@ -27,6 +27,20 @@
             return Object.prototype.hasOwnProperty.call(cache, submoduleId) ? cache[submoduleId] : null;
         });
 
+async function selectCloudTownSubmoduleCompareRows(options = {}) {
+    if (window.CloudApi && typeof window.CloudApi.selectSystemData === 'function') {
+        return window.CloudApi.selectSystemData(options);
+    }
+    if (!window.sbClient) return { data: [], error: new Error('CLOUD_CLIENT_MISSING') };
+    let query = window.sbClient.from('system_data').select(options.select || '*');
+    if (options.keyEq) query = query.eq('key', options.keyEq);
+    if (options.keyLike) query = query.like('key', options.keyLike);
+    if (options.order) query = query.order(options.order, { ascending: options.ascending !== false });
+    if (options.limit) query = query.limit(options.limit);
+    if (options.maybeSingle && typeof query.maybeSingle === 'function') query = query.maybeSingle();
+    return query;
+}
+
 const TOWN_SUBMODULE_META = {
     summary: '综合评价总榜',
     analysis: '两率一分(横向)',
@@ -344,14 +358,15 @@ async function viewCloudTownSubmoduleCompares(submoduleId) {
         const isAdmin = RoleManager.hasAnyRole(user, ['admin', 'director']);
         const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '';
 
-        let query = sbClient.from('system_data').select('key, updated_at');
-        if (!isAdmin && cohortId) {
-            query = query.like('key', `TOWN_SUB_COMPARE_${submoduleId}_${cohortId}级_%`);
-        } else {
-            query = query.like('key', `TOWN_SUB_COMPARE_${submoduleId}_%`);
-        }
-
-        const { data, error } = await query.order('updated_at', { ascending: false }).limit(50);
+        const { data, error } = await selectCloudTownSubmoduleCompareRows({
+            select: 'key, updated_at',
+            keyLike: (!isAdmin && cohortId)
+                ? `TOWN_SUB_COMPARE_${submoduleId}_${cohortId}级_%`
+                : `TOWN_SUB_COMPARE_${submoduleId}_%`,
+            order: 'updated_at',
+            ascending: false,
+            limit: 50
+        });
         if (error) throw error;
         if (window.UI) UI.loading(false);
         if (!data || data.length === 0) return alert('☁️ 云端暂无记录');
@@ -402,7 +417,11 @@ async function loadCloudTownSubmoduleCompare(submoduleId, key) {
     try {
         if (typeof Swal !== 'undefined') Swal.close();
         if (window.UI) UI.loading(true, '☁️ 正在加载详情...');
-        const { data, error } = await sbClient.from('system_data').select('content').eq('key', key).single();
+        const { data, error } = await selectCloudTownSubmoduleCompareRows({
+            select: 'content',
+            keyEq: key,
+            maybeSingle: true
+        });
         if (error) throw error;
         let content = data.content;
         if (typeof content === 'string' && content.startsWith('LZ|')) {

@@ -26,6 +26,27 @@
             return nextCache;
         });
 
+    async function selectCloudTeacherCompareRows(options = {}) {
+        if (window.CloudApi && typeof window.CloudApi.selectSystemData === 'function') {
+            return window.CloudApi.selectSystemData(options);
+        }
+        if (!window.sbClient) return { data: [], error: new Error('CLOUD_CLIENT_MISSING') };
+        let query = window.sbClient.from('system_data').select(options.select || '*');
+        if (options.keyEq) query = query.eq('key', options.keyEq);
+        if (options.keyLike) query = query.like('key', options.keyLike);
+        if (options.order) query = query.order(options.order, { ascending: options.ascending !== false });
+        if (options.limit) query = query.limit(options.limit);
+        if (options.maybeSingle && typeof query.maybeSingle === 'function') query = query.maybeSingle();
+        return query;
+    }
+
+    function sortCloudTeacherCompareRows(rows) {
+        return (Array.isArray(rows) ? rows : [])
+            .filter(Boolean)
+            .sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')))
+            .slice(0, 50);
+    }
+
     async function saveTeacherMultiPeriodCompareToCloud() {
         const TEACHER_MULTI_PERIOD_COMPARE_CACHE = readTeacherCompareCacheState();
         window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = TEACHER_MULTI_PERIOD_COMPARE_CACHE;
@@ -106,14 +127,38 @@
             const isAdmin = RoleManager.hasAnyRole(user, ['admin', 'director']);
             const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '';
 
-            let query = sbClient.from('system_data').select('key, updated_at');
+            let data = [];
+            let error = null;
             if (!isAdmin && cohortId) {
-                query = query.or(`key.like.TEACHER_COMPARE_${cohortId}级_%,key.like.TEACHER_COMPARE_BATCH_${cohortId}级_%`);
+                const [singleResult, batchResult] = await Promise.all([
+                    selectCloudTeacherCompareRows({
+                        select: 'key, updated_at',
+                        keyLike: `TEACHER_COMPARE_${cohortId}级_%`,
+                        order: 'updated_at',
+                        ascending: false,
+                        limit: 50
+                    }),
+                    selectCloudTeacherCompareRows({
+                        select: 'key, updated_at',
+                        keyLike: `TEACHER_COMPARE_BATCH_${cohortId}级_%`,
+                        order: 'updated_at',
+                        ascending: false,
+                        limit: 50
+                    })
+                ]);
+                error = singleResult.error || batchResult.error;
+                data = sortCloudTeacherCompareRows([...(singleResult.data || []), ...(batchResult.data || [])]);
             } else {
-                query = query.like('key', 'TEACHER_COMPARE_%');
+                const result = await selectCloudTeacherCompareRows({
+                    select: 'key, updated_at',
+                    keyLike: 'TEACHER_COMPARE_%',
+                    order: 'updated_at',
+                    ascending: false,
+                    limit: 50
+                });
+                data = result.data;
+                error = result.error;
             }
-
-            const { data, error } = await query.order('updated_at', { ascending: false }).limit(50);
             if (error) throw error;
             if (window.UI) UI.loading(false);
 
@@ -167,11 +212,11 @@
         if (window.UI) UI.loading(true, '☁️ 正在下载详情...');
 
         try {
-            const { data, error } = await sbClient
-                .from('system_data')
-                .select('content')
-                .eq('key', key)
-                .single();
+            const { data, error } = await selectCloudTeacherCompareRows({
+                select: 'content',
+                keyEq: key,
+                maybeSingle: true
+            });
 
             if (error) throw error;
 
