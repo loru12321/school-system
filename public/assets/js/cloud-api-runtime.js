@@ -67,8 +67,16 @@
         });
     }
 
+    function cloneCloudRow(row) {
+        if (!row || typeof row !== 'object') return row;
+        if (Array.isArray(row)) return row.map(cloneCloudRow);
+        return { ...row };
+    }
+
     function cloneCachedValue(value) {
         if (value == null) return value;
+        if (Array.isArray(value)) return value.map(cloneCloudRow);
+        if (typeof value === 'object') return cloneCloudRow(value);
         try {
             return JSON.parse(JSON.stringify(value));
         } catch (_) {
