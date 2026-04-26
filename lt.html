@@ -289,6 +289,14 @@ var SYSTEM_RUNTIME_SKILLS = {
             { key: 'freshman-exam', src: './public/assets/js/freshman-exam-runtime.js' }
         ]
     },
+    'grade-scheduler': {
+        mode: 'demand',
+        warmup: 'demand',
+        triggers: ['exam-arranger', 'grade-scheduler'],
+        entries: [
+            { key: 'grade-scheduler', src: './public/assets/js/grade-scheduler-runtime.js' }
+        ]
+    },
     'packager': {
         mode: 'demand',
         warmup: 'demand',
@@ -2159,6 +2167,10 @@ window.ensureFreshmanExamRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('freshman-exam');
 };
 
+window.ensureGradeSchedulerRuntimeLoaded = function () {
+    return window.SystemRuntimeLoader.load('grade-scheduler');
+};
+
 window.ensurePackagerRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('packager');
 };
@@ -2355,6 +2367,34 @@ if (!window.AccountExcel) {
 ].forEach((name) => {
     installOptionalRuntimeMethod(name, window.ensureFreshmanExamRuntimeLoaded);
 });
+
+if (!window.SCHEDULER) {
+    const schedulerStub = {};
+    [
+        'addConstraint',
+        'removeConstraint',
+        'downloadTemplate',
+        'loadData',
+        'run',
+        'auditFatigue',
+        'renderTable',
+        'exportResult',
+        'importExisting'
+    ].forEach((name) => {
+        schedulerStub[name] = function (...args) {
+            const current = window.SCHEDULER && window.SCHEDULER !== schedulerStub ? window.SCHEDULER : null;
+            if (current && typeof current[name] === 'function') return current[name](...args);
+            return window.ensureGradeSchedulerRuntimeLoaded().then(() => {
+                const next = window.SCHEDULER;
+                if (next && next !== schedulerStub && typeof next[name] === 'function') {
+                    return next[name](...args);
+                }
+                throw new Error(`SCHEDULER.${name} runtime not loaded`);
+            });
+        };
+    });
+    window.SCHEDULER = schedulerStub;
+}
 
 if (window.innerWidth <= 960 || localStorage.getItem('DEV_MODE') === 'true') {
     window.ensureMobileManagerRuntimeLoaded().catch((error) => {
