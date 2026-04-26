@@ -49,6 +49,9 @@
     let shellGesture = null;
     let themeMedia = null;
     let responsiveObserverRoot = null;
+    let allowedCategoriesCacheKey = '';
+    let allowedCategoriesCache = null;
+    let allowedItemCache = new Map();
 
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -187,6 +190,19 @@
         }
     }
 
+    function resetMobileNavCache() {
+        allowedCategoriesCacheKey = '';
+        allowedCategoriesCache = null;
+        allowedItemCache = new Map();
+    }
+
+    function getAllowedCategoriesCacheKey(nav, role) {
+        const roles = getCurrentRoles().join('|');
+        const navKeys = nav ? Object.keys(nav).join('|') : '';
+        const reportVisible = window.CONFIG && window.CONFIG.showQuery ? 'report:1' : 'report:0';
+        return [role, roles, navKeys, reportVisible].join('::');
+    }
+
     function canUseModule(id) {
         const role = getCurrentRole();
         if ((role === 'teacher' || role === 'class_teacher')
@@ -208,9 +224,14 @@
         if (!nav) return [];
 
         const role = getCurrentRole();
+        const cacheKey = getAllowedCategoriesCacheKey(nav, role);
+        if (allowedCategoriesCache && allowedCategoriesCacheKey === cacheKey) {
+            return allowedCategoriesCache;
+        }
+
         const restrictedRole = role === 'teacher' || role === 'class_teacher';
 
-        return Object.keys(nav)
+        const categories = Object.keys(nav)
             .filter((key) => {
                 if (restrictedRole && (key === 'data' || key === 'tools')) return false;
                 if (restrictedRole && role === 'teacher' && key === 'town') return false;
@@ -227,22 +248,31 @@
                 };
             })
             .filter((category) => category.items.length > 0);
+
+        allowedCategoriesCacheKey = cacheKey;
+        allowedCategoriesCache = categories;
+        allowedItemCache = new Map();
+        return categories;
     }
 
     function findAllowedItem(moduleId) {
         if (!moduleId) return null;
+        if (allowedItemCache.has(moduleId)) return allowedItemCache.get(moduleId);
         const categories = getAllowedCategories();
         for (const category of categories) {
             const match = category.items.find((item) => item.id === moduleId);
             if (match) {
-                return {
+                const item = {
                     ...match,
                     categoryKey: category.key,
                     categoryTitle: category.title,
                     categoryColor: category.color
                 };
+                allowedItemCache.set(moduleId, item);
+                return item;
             }
         }
+        allowedItemCache.set(moduleId, null);
         return null;
     }
 
@@ -1643,6 +1673,7 @@
     }
 
     function refreshMobileArchitecture() {
+        resetMobileNavCache();
         ensureHooks();
         syncSystemTheme();
 
