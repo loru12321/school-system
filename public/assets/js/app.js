@@ -9575,24 +9575,6 @@ enhanceStudentReportMetrics = function (root) {
 };
 
 // ================= 侧边栏与通用工具 =================
-window.toggleSidebarMoreMenu = function () {
-    const menu = document.getElementById('sidebar-more-menu');
-    if (menu) {
-        menu.classList.toggle('hidden');
-    }
-};
-
-// 点击屏幕其他地方收起菜单
-document.addEventListener('click', function (e) {
-    const menu = document.getElementById('sidebar-more-menu');
-    const moreBtn = document.querySelector('.sidebar-more');
-    if (menu && !menu.classList.contains('hidden')) {
-        if (!menu.contains(e.target) && (!moreBtn || !moreBtn.contains(e.target))) {
-            menu.classList.add('hidden');
-        }
-    }
-});
-
 function scrollToAnchor(id, element) {
     const target = document.getElementById(id);
     if (target) {
