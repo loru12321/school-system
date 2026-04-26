@@ -1102,7 +1102,11 @@
     }
 
     function renderAppDownloadCenter(selected = state.pagePlatform) {
-        const root = document.getElementById('app-download-center');
+        let root = document.getElementById('app-download-center');
+        if (root && root.dataset.lazySectionPlaceholder === '1'
+            && typeof window.ensureLazySectionLoaded === 'function') {
+            root = window.ensureLazySectionLoaded('app-download-center') || root;
+        }
         if (!root) return false;
 
         state.pagePlatform = selected === 'desktop' ? 'desktop' : 'android';
