@@ -48,6 +48,7 @@
     let libraryQuery = '';
     let shellGesture = null;
     let themeMedia = null;
+    let responsiveObserverRoot = null;
 
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -412,33 +413,33 @@
         }, 60);
     }
 
-    function installResponsiveTableObserver() {
-        if (window.__RESPONSIVE_TABLE_OBSERVER__ || typeof MutationObserver !== 'function') return;
-        const root = document.body || document.documentElement;
+    function installResponsiveTableObserver(scope = document.querySelector('.section.active') || document.getElementById('app') || document.body) {
+        if (typeof MutationObserver !== 'function') return;
+        const root = scope instanceof HTMLElement
+            ? scope
+            : (document.querySelector('.section.active') || document.getElementById('app') || document.body || document.documentElement);
         if (!root) return;
+        if (window.__RESPONSIVE_TABLE_OBSERVER__ && responsiveObserverRoot === root) return;
+        if (window.__RESPONSIVE_TABLE_OBSERVER__ && typeof window.__RESPONSIVE_TABLE_OBSERVER__.disconnect === 'function') {
+            window.__RESPONSIVE_TABLE_OBSERVER__.disconnect();
+        }
         const observer = new MutationObserver((mutations) => {
             if (!isMobileViewport()) return;
             const shouldRefresh = mutations.some((mutation) => {
-                if (mutation.type === 'attributes') {
-                    return mutation.target instanceof HTMLElement
-                        && (mutation.target.matches('table, tbody, tr, td, .section, #parent-view-container')
-                            || !!mutation.target.closest?.('table, .section, #parent-view-container'));
-                }
                 return Array.from(mutation.addedNodes || []).some((node) => {
                     if (!(node instanceof HTMLElement)) return false;
                     return node.matches('table, tbody, tr, td, .table-wrap, .comparison-table, .fluent-table, .section, #parent-view-container')
                         || !!node.querySelector?.('table, tbody, tr, td, .table-wrap, .comparison-table, .fluent-table');
                 });
             });
-            if (shouldRefresh) scheduleResponsiveTableRefresh(document);
+            if (shouldRefresh) scheduleResponsiveTableRefresh(root);
         });
         observer.observe(root, {
             childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['class', 'style']
+            subtree: true
         });
         window.__RESPONSIVE_TABLE_OBSERVER__ = observer;
+        responsiveObserverRoot = root;
     }
     window.refreshResponsiveMobileTables = refreshResponsiveTablesNow;
 
@@ -455,11 +456,150 @@
         });
     }
 
+    function ensureMobileExperienceStyles() {
+        if (document.getElementById('mobile-experience-styles')) return;
+        const style = document.createElement('style');
+        style.id = 'mobile-experience-styles';
+        style.textContent = `
+            @media screen and (max-width: 960px) {
+                body[data-mobile-architecture="apk-v2"] {
+                    overflow-x: hidden;
+                    overscroll-behavior-y: contain;
+                    touch-action: manipulation;
+                }
+                body[data-mobile-architecture="apk-v2"] #app {
+                    max-width: 100vw;
+                    overflow-x: hidden;
+                }
+                body[data-mobile-architecture="apk-v2"] main.app-main {
+                    width: 100%;
+                    max-width: 100vw;
+                    padding: calc(var(--app-safe-top, 0px) + 148px) 10px calc(var(--app-safe-bottom, 0px) + 110px) !important;
+                    -webkit-overflow-scrolling: touch;
+                    scroll-padding-top: calc(var(--app-safe-top, 0px) + 148px);
+                    scroll-padding-bottom: calc(var(--app-safe-bottom, 0px) + 120px);
+                }
+                body[data-mobile-architecture="apk-v2"] .section.active {
+                    max-width: 100%;
+                    overflow: visible;
+                }
+                body[data-mobile-architecture="apk-v2"] .module-desc-bar,
+                body[data-mobile-architecture="apk-v2"] .analysis-shell-head,
+                body[data-mobile-architecture="apk-v2"] .analysis-inline-panel,
+                body[data-mobile-architecture="apk-v2"] .analysis-anchor-panel,
+                body[data-mobile-architecture="apk-v2"] .card-box {
+                    margin-left: 0 !important;
+                    margin-right: 0 !important;
+                    border-radius: 18px !important;
+                }
+                body[data-mobile-architecture="apk-v2"] input,
+                body[data-mobile-architecture="apk-v2"] select,
+                body[data-mobile-architecture="apk-v2"] textarea {
+                    min-height: 44px;
+                    font-size: 16px !important;
+                }
+                body[data-mobile-architecture="apk-v2"] button,
+                body[data-mobile-architecture="apk-v2"] .btn {
+                    min-height: 44px;
+                }
+                body[data-mobile-architecture="apk-v2"] .table-wrap {
+                    width: 100%;
+                    max-width: 100%;
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                    overscroll-behavior-x: contain;
+                }
+                body[data-mobile-architecture="apk-v2"] table.mobile-card-table:not(.student-detail-mobile-table) {
+                    display: block;
+                    width: 100%;
+                    min-width: 0 !important;
+                    border-collapse: separate;
+                    border-spacing: 0 10px;
+                }
+                body[data-mobile-architecture="apk-v2"] table.mobile-card-table:not(.student-detail-mobile-table) thead {
+                    display: none !important;
+                }
+                body[data-mobile-architecture="apk-v2"] table.mobile-card-table:not(.student-detail-mobile-table) tbody,
+                body[data-mobile-architecture="apk-v2"] table.mobile-card-table:not(.student-detail-mobile-table) tr,
+                body[data-mobile-architecture="apk-v2"] table.mobile-card-table:not(.student-detail-mobile-table) td {
+                    display: block;
+                    width: 100%;
+                }
+                body[data-mobile-architecture="apk-v2"] table.mobile-card-table:not(.student-detail-mobile-table) tr {
+                    padding: 12px;
+                    border: 1px solid rgba(148, 163, 184, .22);
+                    border-radius: 16px;
+                    background: rgba(255, 255, 255, .92);
+                    box-shadow: 0 14px 28px -24px rgba(15, 23, 42, .45);
+                }
+                body.dark-mode[data-mobile-architecture="apk-v2"] table.mobile-card-table:not(.student-detail-mobile-table) tr {
+                    background: rgba(15, 23, 42, .92);
+                    border-color: rgba(148, 163, 184, .2);
+                }
+                body[data-mobile-architecture="apk-v2"] table.mobile-card-table:not(.student-detail-mobile-table) td {
+                    padding: 8px 2px !important;
+                    border: 0 !important;
+                    display: grid;
+                    grid-template-columns: minmax(86px, 34%) minmax(0, 1fr);
+                    gap: 10px;
+                    align-items: start;
+                    text-align: right;
+                    white-space: normal;
+                    word-break: break-word;
+                }
+                body[data-mobile-architecture="apk-v2"] table.mobile-card-table:not(.student-detail-mobile-table) td::before {
+                    content: attr(data-label);
+                    color: #64748b;
+                    font-weight: 700;
+                    font-size: 12px;
+                    text-align: left;
+                    line-height: 1.45;
+                }
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-title,
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-subtitle,
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-rail-chip {
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-rail-chip {
+                    max-width: 56vw;
+                    scroll-snap-align: center;
+                }
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-rail {
+                    scroll-snap-type: x proximity;
+                    padding-bottom: 8px;
+                }
+                body[data-mobile-architecture="apk-v2"] .swal2-popup {
+                    width: min(92vw, 420px) !important;
+                    max-height: calc(100dvh - var(--app-safe-top, 0px) - var(--app-safe-bottom, 0px) - 24px);
+                    overflow: auto;
+                }
+            }
+            @media screen and (max-width: 420px) {
+                body[data-mobile-architecture="apk-v2"] main.app-main {
+                    padding-left: 8px !important;
+                    padding-right: 8px !important;
+                }
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-topbar {
+                    grid-template-columns: 40px minmax(0, 1fr) 40px;
+                    gap: 8px;
+                    padding: 10px;
+                }
+                body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-icon {
+                    width: 40px;
+                    height: 40px;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
     function refreshContentEnhancements() {
         const scope = document.querySelector('.section.active') || document;
+        ensureMobileExperienceStyles();
         refreshResponsiveTablesNow(scope);
         scheduleResponsiveTableRefresh(scope);
-        installResponsiveTableObserver();
+        installResponsiveTableObserver(scope);
         markFlexibleRows(scope);
     }
 
