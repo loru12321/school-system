@@ -10354,7 +10354,13 @@ function scheduleCountyAnalysisRenderAfterSwitch(id) {
     const renderCounty = () => {
         if (!isCountyTargetActive()) return false;
         if (typeof window.renderCountyAnalysis !== 'function') return false;
-        window.renderCountyAnalysis(id);
+        const result = window.renderCountyAnalysis(id);
+        if (result && typeof result.then === 'function') {
+            result
+                .then(() => window.setTimeout(renderCounty, 0))
+                .catch(error => console.warn('county analysis runtime render failed:', error));
+            return false;
+        }
         return true;
     };
     if (renderCounty()) return;
