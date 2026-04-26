@@ -875,79 +875,14 @@ const EdgeGateway = {
     canUseAuthorizedRequests: function () {
         return this.hasGatewayConfig() && !!this.getToken();
     },
-    request: async function (action, payload = {}, options = {}) {
-        const urls = this.getGatewayCandidates();
-        const apikey = this.getPublishableKey();
-        if (!urls.length || !apikey) {
-            throw new Error('EDGE_GATEWAY_NOT_CONFIGURED');
-        }
-
-        const protocol = window.location.protocol;
-        const origin = window.location.origin;
-        appDebug(`[EdgeGateway] Requesting ${action}, Protocol: ${protocol}, Origin: ${origin}`);
-        if (protocol === 'file:') {
-            console.warn('[EdgeGateway] Running from file:// may trigger CORS blocks (Origin: null). Recommended: Use local web server.');
-        }
-
-        const headers = {
-            'Content-Type': 'application/json',
-            'apikey': apikey
-        };
-        const token = options.allowAnonymous ? '' : (options.token || this.getToken());
-        if (!options.allowAnonymous) {
-            if (!token) throw new Error('EDGE_GATEWAY_SESSION_MISSING');
-            headers.Authorization = `Bearer ${token}`;
-        }
-        let lastError = null;
-        for (let i = 0; i < urls.length; i += 1) {
-            const url = urls[i];
-            appDebug(`[EdgeGateway] Attempt ${i + 1}/${urls.length}: ${url}`);
-
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 18000); // 18s timeout per candidate
-
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify({ action, payload }),
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-
-                let data = null;
-                try {
-                    data = await response.json();
-                } catch (e) { }
-                if (response.ok && data?.ok) {
-                    appDebug(`[EdgeGateway] Success with ${url}`);
-                    this.resolvedGatewayUrl = url;
-                    return data;
-                }
-                const message = data?.error || `EDGE_GATEWAY_HTTP_${response.status}`;
-                console.warn(`[EdgeGateway] Failure with ${url}: ${message}`);
-                lastError = new Error(message);
-                if (i < urls.length - 1 && this.shouldRetryRequest(response.status, message)) {
-                    continue;
-                }
-                throw lastError;
-            } catch (error) {
-                lastError = error instanceof Error ? error : new Error(String(error));
-                console.error(`[EdgeGateway] Error with ${url}:`, lastError.message);
-                if (i < urls.length - 1 && this.shouldRetryRequest(0, lastError.message)) {
-                    continue;
-                }
-                throw lastError;
-            }
-        }
-        throw lastError || new Error('EDGE_GATEWAY_REQUEST_FAILED');
-    },
     shouldRetryRequest: function (status, message) {
         if (status === 404 || status >= 500) return true;
         const text = String(message || '').trim().toLowerCase();
         return text.includes('function not found')
             || text.includes('edge_gateway_http_404')
             || text.includes('failed to fetch')
+            || text.includes('abort')
+            || text.includes('timeout')
             || text.includes('networkerror');
     },
     buildLoginClassCandidates: function (className = '') {
@@ -997,6 +932,12 @@ const EdgeGateway = {
         if (!urls.length || !apikey) {
             throw new Error('EDGE_GATEWAY_NOT_CONFIGURED');
         }
+        const protocol = window.location.protocol;
+        const origin = window.location.origin;
+        appDebug(`[EdgeGateway] Requesting ${action}, Protocol: ${protocol}, Origin: ${origin}`);
+        if (protocol === 'file:') {
+            console.warn('[EdgeGateway] Running from file:// may trigger CORS blocks (Origin: null). Recommended: Use local web server.');
+        }
         const headers = {
             'Content-Type': 'application/json',
             'apikey': apikey
@@ -1009,12 +950,17 @@ const EdgeGateway = {
         let lastError = null;
         for (let i = 0; i < urls.length; i += 1) {
             const url = urls[i];
+            appDebug(`[EdgeGateway] Attempt ${i + 1}/${urls.length}: ${url}`);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 18000);
             try {
                 const response = await fetch(url, {
                     method: 'POST',
                     headers,
-                    body: JSON.stringify({ action, payload })
+                    body: JSON.stringify({ action, payload }),
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
                 let data = null;
                 try {
                     data = await response.json();
@@ -1031,6 +977,7 @@ const EdgeGateway = {
                 }
                 throw lastError;
             } catch (error) {
+                clearTimeout(timeoutId);
                 lastError = error instanceof Error ? error : new Error(String(error));
                 if (i < urls.length - 1 && this.shouldRetryRequest(0, lastError.message)) {
                     console.warn(`[EdgeGateway] ${url} request failed, retrying fallback endpoint`, lastError.message);
