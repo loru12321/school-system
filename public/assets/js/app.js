@@ -12387,6 +12387,25 @@ let STD_STATE = {
     renderMeta: null   // 当前筛选批次的表格渲染元信息
 };
 
+function getStudentDetailsSubjectList(list = []) {
+    const configuredSubjects = Array.isArray(SUBJECTS) ? SUBJECTS.filter(Boolean) : [];
+    if (configuredSubjects.length) return configuredSubjects;
+
+    const seen = new Set();
+    (Array.isArray(list) ? list : []).forEach(row => {
+        Object.keys(row?.scores || {}).forEach(subject => {
+            const normalized = normalizeSubject(subject);
+            if (normalized) seen.add(normalized);
+        });
+    });
+    const preferredOrder = ['语文', '数学', '英语', '物理', '化学', '历史', '地理', '生物', '政治'];
+    const ordered = preferredOrder.filter(subject => seen.has(subject));
+    Array.from(seen).forEach(subject => {
+        if (!ordered.includes(subject)) ordered.push(subject);
+    });
+    return ordered;
+}
+
 function buildStudentDetailsRenderMeta(list = []) {
     const user = getCurrentUser();
     const role = user?.role || 'guest';
@@ -12395,9 +12414,10 @@ function buildStudentDetailsRenderMeta(list = []) {
     const classTeacherMode = isClassTeacher ? getClassTeacherStudentViewMode() : 'teaching';
     const needTeacherScope = isTeacher || (isClassTeacher && classTeacherMode === 'teaching');
     const teacherScope = needTeacherScope ? getTeacherScopeForUser(user) : null;
+    const subjectList = getStudentDetailsSubjectList(list);
     const visibleSubjects = (isTeacher || (isClassTeacher && classTeacherMode === 'teaching'))
-        ? SUBJECTS.filter(s => teacherScope.subjects.has(normalizeSubject(s)))
-        : SUBJECTS;
+        ? subjectList.filter(s => teacherScope.subjects.has(normalizeSubject(s)))
+        : subjectList;
     const rankVisibility = window.RankingDataService && typeof window.RankingDataService.getStudentRankVisibility === 'function'
         ? window.RankingDataService.getStudentRankVisibility(list, visibleSubjects, { isSingleSchoolMode })
         : {
@@ -12846,6 +12866,12 @@ function renderStudentDetails(reset = true) {
         }
 
         data = getComparisonStudentList(data, RAW_DATA);
+        const hasExcelFilters = Object.values(STD_STATE.activeFilters || {}).some(values => values && values.size > 0);
+        const canUseAllRowsFallback = ['admin', 'director', 'grade_director'].includes(role);
+        if (!data.length && canUseAllRowsFallback && !hasExcelFilters && !hasSelectedSchool && Array.isArray(RAW_DATA) && RAW_DATA.length) {
+            data = getComparisonStudentList([...RAW_DATA], RAW_DATA);
+            appDebug('[考试明细] 检测到空首屏，已回落到当前成绩库数据');
+        }
 
         // --- C. Excel 列筛选 (核心逻辑) ---
         // 遍历所有已激活的筛选器
