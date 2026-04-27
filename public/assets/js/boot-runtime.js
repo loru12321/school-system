@@ -359,6 +359,7 @@ var APP_MODULES = [
     './assets/js/student-jump-runtime.js',
     './assets/js/student-details-guard-runtime.js',
     './assets/js/teaching-management-modules-runtime.js',
+    './assets/js/app-foundation-runtime.js',
     './assets/js/app.js',
     './assets/js/macro-analysis-compat-runtime.js',
     './assets/js/school-normalization-runtime.js',
