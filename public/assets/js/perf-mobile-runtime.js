@@ -87,10 +87,29 @@ if (localStorage.getItem('DEV_MODE') === 'true') {
 
 // Mobile dashboard helper
 const MobDashboardMgr = {
+    timer: 0,
+    lastStatsKey: '',
     init: function () {
-        if (window.innerWidth > 768) return;
+        if (this._initialized) return;
+        this._initialized = true;
+        window.addEventListener('resize', () => this.syncPolling());
+        document.addEventListener('visibilitychange', () => this.syncPolling());
+        window.addEventListener('cloud-load-state', () => {
+            this.lastStatsKey = '';
+            this.checkLoginAndRender();
+        });
+        this.syncPolling();
+    },
 
-        console.log('📱 Mobile Dashboard Initialized');
+    syncPolling: function () {
+        const shouldRun = window.innerWidth <= 768 && document.visibilityState !== 'hidden';
+        if (!shouldRun) {
+            if (this.timer) {
+                clearInterval(this.timer);
+                this.timer = 0;
+            }
+            return;
+        }
 
         const date = new Date();
         const dateStr = `${date.getMonth() + 1}月${date.getDate()}日`;
@@ -98,7 +117,9 @@ const MobDashboardMgr = {
         if (dateEl) dateEl.innerText = dateStr;
 
         this.checkLoginAndRender();
-        setInterval(() => this.checkLoginAndRender(), 2000);
+        if (!this.timer) {
+            this.timer = setInterval(() => this.checkLoginAndRender(), 8000);
+        }
     },
 
     checkLoginAndRender: function () {
@@ -122,6 +143,13 @@ const MobDashboardMgr = {
     renderStats: function () {
         if (window.Data && window.Data.cleanData && window.Data.cleanData.length > 0) {
             const students = window.Data.cleanData;
+            const statsKey = [
+                students.length,
+                students[0]?.['姓名'] || '',
+                students[students.length - 1]?.['姓名'] || ''
+            ].join('|');
+            if (statsKey === this.lastStatsKey) return;
+            this.lastStatsKey = statsKey;
             const total = students.length;
 
             let totalScore = 0;

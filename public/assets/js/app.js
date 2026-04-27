@@ -17234,10 +17234,13 @@ function updateAdminOnlyButtons() {
 function updateWatermark() {
     const layer = document.getElementById('watermark-layer');
     if (!layer) return;
-    const user = Auth?.currentUser;
+    if (document.visibilityState === 'hidden') return;
+    const user = window.Auth?.currentUser;
     const name = user?.name || '未登录';
     const ts = new Date().toLocaleString();
     const text = `${name} | ${ts} | 内部资料`;
+    if (layer.dataset.watermarkText === text) return;
+    layer.dataset.watermarkText = text;
 
     // SVG 背景水印
     const svg = `
@@ -17255,8 +17258,21 @@ function updateWatermark() {
     layer.style.backgroundImage = `url("data:image/svg+xml,${encoded}")`;
 }
 
-// 每分钟刷新一次时间戳水印
-setInterval(updateWatermark, 60000);
+let watermarkTimer = 0;
+function syncWatermarkTimer() {
+    if (document.visibilityState === 'hidden') {
+        if (watermarkTimer) {
+            clearInterval(watermarkTimer);
+            watermarkTimer = 0;
+        }
+        return;
+    }
+    updateWatermark();
+    if (!watermarkTimer) watermarkTimer = setInterval(updateWatermark, 60000);
+}
+
+document.addEventListener('visibilitychange', syncWatermarkTimer);
+syncWatermarkTimer();
 
 // === 届别管理 (Cohort) ===
 const COHORT_STORAGE_KEY = 'COHORT_LIST';
