@@ -11,6 +11,10 @@
         lastTeacherContextAt: 0,
         subjectRowCacheSignature: '',
         subjectRowCache: new Map(),
+        teacherRowsCacheSignature: '',
+        teacherRowsCache: [],
+        teacherSubjectTablesCacheSignature: '',
+        teacherSubjectTablesCache: [],
         preUploadTownshipSchools: [],
         isRendering: false,
         lastRankSignature: ''
@@ -234,6 +238,35 @@
             getSchoolNames().join('|'),
             targetKeys.join('|')
         ].join('::');
+    }
+
+    function getTeacherStatsSignature() {
+        const teacherStats = window.TEACHER_STATS && typeof window.TEACHER_STATS === 'object' ? window.TEACHER_STATS : {};
+        const teacherMap = window.TEACHER_MAP && typeof window.TEACHER_MAP === 'object' ? window.TEACHER_MAP : {};
+        const teacherSchoolMap = window.TEACHER_SCHOOL_MAP && typeof window.TEACHER_SCHOOL_MAP === 'object' ? window.TEACHER_SCHOOL_MAP : {};
+        const rankingData = window.COUNTY_TEACHER_RANKING_DATA && typeof window.COUNTY_TEACHER_RANKING_DATA === 'object'
+            ? window.COUNTY_TEACHER_RANKING_DATA
+            : {};
+        const teacherStatsShape = Object.entries(teacherStats)
+            .map(([teacherName, subjectMap]) => `${teacherName}:${Object.keys(subjectMap || {}).sort().join(',')}`)
+            .sort()
+            .join('|');
+        return [
+            getDataSignature(),
+            getCurrentSchoolNameForTeacherScope(),
+            Object.keys(teacherMap).length,
+            Object.keys(teacherSchoolMap).length,
+            Object.keys(teacherStats).length,
+            teacherStatsShape,
+            Object.keys(rankingData).sort().join(',')
+        ].join('::');
+    }
+
+    function invalidateTeacherDerivedCaches() {
+        state.teacherRowsCacheSignature = '';
+        state.teacherRowsCache = [];
+        state.teacherSubjectTablesCacheSignature = '';
+        state.teacherSubjectTablesCache = [];
     }
 
     function getScopeMap() {
@@ -619,6 +652,9 @@
 
     function getTeacherRows(limit = 12) {
         applyScopedTeacherAssignmentsForCounty();
+        const signature = getTeacherStatsSignature();
+        let sorted = state.teacherRowsCache;
+        if (state.teacherRowsCacheSignature !== signature) {
         const rankings = window.COUNTY_TEACHER_RANKINGS || {};
         const rows = [];
         Object.entries(window.TEACHER_STATS || {}).forEach(([teacherName, subjects]) => {
@@ -640,18 +676,25 @@
                 });
             });
         });
-        const sorted = rows.sort((a, b) => {
+            sorted = rows.sort((a, b) => {
             const rankA = Number.isFinite(a.countyRankAvg) ? a.countyRankAvg : 9999;
             const rankB = Number.isFinite(b.countyRankAvg) ? b.countyRankAvg : 9999;
             if (rankA !== rankB) return rankA - rankB;
             return b.score - a.score;
         });
-        if (!Number.isFinite(limit) || limit <= 0) return sorted;
+            state.teacherRowsCacheSignature = signature;
+            state.teacherRowsCache = sorted;
+        }
+        if (!Number.isFinite(limit) || limit <= 0) return sorted.slice();
         return sorted.slice(0, limit);
     }
 
     function calculateCountyTeacherRanking(scope) {
         const normalized = normalizeScope(scope || getCurrentScope() || { includesCounty: false, townshipSchools: getSchoolNames() });
+        const rankingSignature = `${getTeacherStatsSignature()}::${(normalized.townshipSchools || []).join('|')}::${normalized.includesCounty ? 'county' : 'township'}`;
+        if (state.lastRankSignature === rankingSignature && window.COUNTY_TEACHER_RANKINGS && window.COUNTY_TEACHER_RANKING_DATA) {
+            return window.COUNTY_TEACHER_RANKINGS;
+        }
         const townshipSet = new Set(normalized.townshipSchools || []);
         const rankings = {};
         const rankingDataMap = {};
@@ -719,6 +762,8 @@
 
         window.COUNTY_TEACHER_RANKINGS = rankings;
         window.COUNTY_TEACHER_RANKING_DATA = rankingDataMap;
+        state.lastRankSignature = rankingSignature;
+        invalidateTeacherDerivedCaches();
         return rankings;
     }
 
@@ -734,12 +779,19 @@
     }
 
     function getTeacherSubjectCountyTables() {
+        const signature = getTeacherStatsSignature();
+        if (state.teacherSubjectTablesCacheSignature === signature) {
+            return state.teacherSubjectTablesCache.map((group) => ({
+                subject: group.subject,
+                rows: (group.rows || []).slice()
+            }));
+        }
         const rankingData = window.COUNTY_TEACHER_RANKING_DATA || {};
         const subjects = sortCountySubjects([
             ...Object.keys(rankingData),
             ...getTeacherRows(Number.POSITIVE_INFINITY).map((row) => row.subject)
         ]);
-        return subjects
+        const tables = subjects
             .map((subject) => {
                 const rows = (rankingData[subject] || []).slice().sort((a, b) => {
                     if ((a.rankAvg || 9999) !== (b.rankAvg || 9999)) return (a.rankAvg || 9999) - (b.rankAvg || 9999);
@@ -749,6 +801,12 @@
                 return { subject, rows };
             })
             .filter((item) => item.rows.length);
+        state.teacherSubjectTablesCacheSignature = signature;
+        state.teacherSubjectTablesCache = tables;
+        return tables.map((group) => ({
+            subject: group.subject,
+            rows: (group.rows || []).slice()
+        }));
     }
 
     function buildStudentSubjectRankSummary(student) {
