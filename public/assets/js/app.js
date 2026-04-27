@@ -13274,8 +13274,115 @@ function importTeacherExcel() {
 // [核心修改] 教师四维评价计算逻辑 (含贡献值、增值、低分率)
 // Teacher analysis main runtime moved to public/assets/js/teacher-analysis-main-runtime.js
 
+let __reportQueryToken = 0;
+
+function getReportStudentIdentity(student) {
+    if (!student || typeof student !== 'object') return '';
+    return [
+        String(student.school || '').trim(),
+        typeof normalizeJumpClass === 'function' ? normalizeJumpClass(student.class) : String(student.class || '').trim(),
+        String(student.name || '').trim(),
+        String(student.examNo || student.id || '').trim()
+    ].join('|');
+}
+
+function applyCloudStudentHistoryToPrevData(stu, historyRes, selectedReportExamIds = [], effectiveCurrentExamId = '') {
+    if (!historyRes || !historyRes.success || !Array.isArray(historyRes.data) || historyRes.data.length === 0) return 0;
+    const selectedForCompare = Array.isArray(selectedReportExamIds) ? selectedReportExamIds : [];
+    const rows = historyRes.data.filter(h => {
+        const hid = String(h.examFullKey || h.examId || '').trim();
+        if (!hid) return false;
+        if (selectedForCompare.length > 0) {
+            const inSelected = selectedForCompare.some(id => isExamKeyEquivalentForCompare(hid, id));
+            if (!inSelected) return false;
+        }
+        return !effectiveCurrentExamId || !isExamKeyEquivalentForCompare(hid, effectiveCurrentExamId);
+    }).map(h => ({
+        examId: h.examId,
+        examFullKey: h.examFullKey,
+        examLabel: String(h.examLabel || h.examId || h.examFullKey || '').replace(/_/g, ' '),
+        fingerprint: h.fingerprint || '',
+        updatedAt: h.updatedAt || new Date().toISOString(),
+        student: {
+            name: stu.name,
+            class: stu.class,
+            school: stu.school || '',
+            total: Number(h.total) || 0,
+            scores: h.scores || {},
+            ranks: Object.assign({
+                total: {
+                    class: h.rankClass || '-',
+                    school: h.rankSchool || '-',
+                    township: h.rankTown || '-'
+                }
+            }, Object.fromEntries(
+                Object.entries(h.subjectRanks || {}).map(([sub, ranks]) => [sub, {
+                    class: ranks?.class ?? '-',
+                    school: ranks?.school ?? '-',
+                    township: ranks?.township ?? '-'
+                }])
+            )),
+            updatedAt: h.updatedAt || new Date().toISOString()
+        },
+        percentiles: h.percentiles || {}
+    }));
+    if (rows.length > 0) setPrevDataState(rows);
+    return historyRes.data.length;
+}
+
+async function refreshRenderedStudentReportAfterHistory(stu, token) {
+    if (token !== __reportQueryToken) return;
+    const currentStudent = typeof readCurrentReportStudentState === 'function' ? readCurrentReportStudentState() : null;
+    if (getReportStudentIdentity(currentStudent || {}) !== getReportStudentIdentity(stu)) return;
+
+    const container = document.getElementById('report-card-capture-area');
+    if (!container || typeof renderSingleReportCardHTML !== 'function') return;
+    try {
+        const reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'A4'));
+        if (token !== __reportQueryToken) return;
+        container.innerHTML = typeof reportHtml === 'string' ? reportHtml : '';
+        enhanceStudentReportMetrics(container);
+        const history = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(stu) : [];
+        window.setTimeout(() => {
+            if (token !== __reportQueryToken) return;
+            try { if (typeof renderRadarChart === 'function') renderRadarChart(stu, history); } catch (e) { console.error(e); }
+            try { if (typeof renderVarianceChart === 'function') renderVarianceChart(stu, history); } catch (e) { console.error(e); }
+        }, 80);
+    } catch (error) {
+        console.warn('[doQuery] 云端历史补齐后刷新报告失败:', error);
+    }
+}
+
+function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, effectiveCurrentExamId, token) {
+    if (!stu || !window.CloudManager || typeof window.CloudManager.fetchStudentExamHistory !== 'function') return;
+    const task = async () => {
+        try {
+            const ready = (
+                (typeof window.CloudManager.ensureClientReady === 'function' && await window.CloudManager.ensureClientReady({ silent: true })) ||
+                (typeof window.CloudManager.check === 'function' && window.CloudManager.check(true))
+            );
+            if (!ready || token !== __reportQueryToken) return;
+            if (window.UI) UI.toast('正在后台同步历史成绩...', 'info');
+            const historyRes = await window.CloudManager.fetchStudentExamHistory(stu);
+            const loadedCount = applyCloudStudentHistoryToPrevData(stu, historyRes, selectedReportExamIds, effectiveCurrentExamId);
+            if (!loadedCount || token !== __reportQueryToken) return;
+            if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
+            if (window.UI) UI.toast(`已后台匹配 ${loadedCount} 次历史成绩`, 'success');
+            await refreshRenderedStudentReportAfterHistory(stu, token);
+        } catch (e) {
+            console.warn('[doQuery] 云端历史后台获取失败:', e);
+        }
+    };
+    if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
+        window.SystemPerformance.scheduleIdle(task, { timeout: 800, delay: 120 });
+    } else {
+        window.setTimeout(task, 120);
+    }
+}
+
 
 async function doQuery(targetStudent = null) {
+    const queryToken = ++__reportQueryToken;
     const name = String(document.getElementById('inp-name')?.value || targetStudent?.name || '').trim();
     const sch = String(document.getElementById('sel-school')?.value || targetStudent?.school || '').trim();
     const cls = String(document.getElementById('sel-class')?.value || targetStudent?.class || '').trim();
@@ -13310,66 +13417,6 @@ async function doQuery(targetStudent = null) {
         CURRENT_EXAM_ID = effectiveCurrentExamId;
         CURRENT_EXAM_ID = effectiveCurrentExamId;
         writeWorkspaceExamId(effectiveCurrentExamId);
-    }
-
-    // 🆕 自动对比流程：先同步云端历史
-    const cloudReady = !!(window.CloudManager && (
-        (typeof window.CloudManager.ensureClientReady === 'function' && await window.CloudManager.ensureClientReady({ silent: true })) ||
-        (typeof window.CloudManager.check === 'function' && window.CloudManager.check(true))
-    ));
-    if (cloudReady) {
-        if (window.UI) UI.toast("🔍 正在同步云端历史数据...", "info");
-        try {
-            const historyRes = await window.CloudManager.fetchStudentExamHistory(stu);
-            if (historyRes.success && historyRes.data.length > 0) {
-                // ✅ 修复：按照 getStudentExamHistory 期望的格式存入 PREV_DATA
-                const selectedForCompare = selectedReportExamIds.length
-                    ? selectedReportExamIds
-                    : [];
-                setPrevDataState(historyRes.data.filter(h => {
-                    const hid = String(h.examFullKey || h.examId || '').trim();
-                    if (!hid) return false;
-                    if (selectedForCompare.length > 0) {
-                        const inSelected = selectedForCompare.some(id => isExamKeyEquivalentForCompare(hid, id));
-                        if (!inSelected) return false;
-                    }
-                    return !effectiveCurrentExamId || !isExamKeyEquivalentForCompare(hid, effectiveCurrentExamId);
-                }).map(h => ({
-                    examId: h.examId,
-                    examFullKey: h.examFullKey,
-                    examLabel: String(h.examLabel || h.examId || h.examFullKey || '').replace(/_/g, ' '),
-                    fingerprint: h.fingerprint || '',
-                    updatedAt: h.updatedAt || new Date().toISOString(),
-                    student: {
-                        name: stu.name,
-                        class: stu.class,
-                        school: stu.school || '',
-                        total: Number(h.total) || 0,
-                        scores: h.scores || {},
-                        ranks: Object.assign({
-                            total: {
-                                class: h.rankClass || '-',
-                                school: h.rankSchool || '-',
-                                township: h.rankTown || '-'
-                            }
-                        }, Object.fromEntries(
-                            Object.entries(h.subjectRanks || {}).map(([sub, ranks]) => [sub, {
-                                class: ranks?.class ?? '-',
-                                school: ranks?.school ?? '-',
-                                township: ranks?.township ?? '-'
-                            }])
-                        )),
-                        updatedAt: h.updatedAt || new Date().toISOString()
-                    },
-                    percentiles: h.percentiles || {}
-                })));
-                if (window.UI) UI.toast(`✅ 已自动匹配 ${historyRes.data.length} 次历史成绩`, "success");
-                // 🆕 取到云端历史后，立即刷新下拉框，让用户能选
-                if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
-            }
-        } catch (e) {
-            console.warn("[doQuery] 云端历史获取失败:", e);
-        }
     }
 
     if (typeof window.ensureStudentCompareRuntimeLoaded === 'function') {
@@ -13415,6 +13462,8 @@ async function doQuery(targetStudent = null) {
         try { if (typeof renderRadarChart === 'function') renderRadarChart(stu, history); } catch (e) { console.error(e); }
         try { if (typeof renderVarianceChart === 'function') renderVarianceChart(stu, history); } catch (e) { console.error(e); }
     }, 150);
+
+    hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, effectiveCurrentExamId, queryToken);
 
     try { if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(stu); } catch (e) { console.error(e); }
 
