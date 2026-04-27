@@ -512,6 +512,20 @@
         return host && host !== '127.0.0.1' && host !== 'localhost';
     }
 
+    async function ensureTeacherAnalysisRuntimeForCounty() {
+        if (typeof window.analyzeTeachers === 'function') return true;
+        try {
+            if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
+                await withTimeout(window.SystemRuntimeLoader.load('teacher-analysis'), 6000, false);
+            } else if (typeof window.ensureTeacherAnalysisRuntimeLoaded === 'function') {
+                await withTimeout(window.ensureTeacherAnalysisRuntimeLoaded(), 6000, false);
+            }
+        } catch (error) {
+            console.warn('[county-analysis] teacher runtime load failed:', error);
+        }
+        return typeof window.analyzeTeachers === 'function';
+    }
+
     async function ensureTeacherContextForCountyAnalysis(force = false) {
         const schoolName = getCurrentSchoolNameForTeacherScope();
         const scopedAssignments = getScopedTeacherAssignmentsForCounty();
@@ -569,10 +583,13 @@
 
             applyScopedTeacherAssignmentsForCounty();
 
-            if (!hasTeacherStats() && hasTeacherAssignments() && typeof window.analyzeTeachers === 'function') {
+            if (!hasTeacherStats() && hasTeacherAssignments()) {
                 try {
-                    window.analyzeTeachers();
-                    changed = true;
+                    const teacherRuntimeReady = await ensureTeacherAnalysisRuntimeForCounty();
+                    if (teacherRuntimeReady && typeof window.analyzeTeachers === 'function') {
+                        window.analyzeTeachers();
+                        changed = true;
+                    }
                 } catch (error) {
                     console.warn('[county-analysis] analyzeTeachers failed:', error);
                 }
