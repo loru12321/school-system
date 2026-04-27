@@ -642,9 +642,25 @@ async function runModuleDeepCheck(page, id) {
             if (typeof window.renderCountyAnalysis === 'function') {
                 window.renderCountyAnalysis();
             }
-            const teacherRoot = document.querySelector('#county-teacher-portrait .county-analysis-root')
+            const getTeacherRoot = () => document.querySelector('#county-teacher-portrait .county-analysis-root')
                 || document.getElementById('county-analysis-root')
                 || document.querySelector('#county-analysis .county-analysis-root');
+            const getTeacherRankRows = () => getTeacherRoot()
+                ? getTeacherRoot().querySelectorAll('.county-teacher-rank-table tbody tr').length
+                : 0;
+            const getOwnTeacherRows = () => getTeacherRoot()
+                ? getTeacherRoot().querySelectorAll('.county-teacher-own-row').length
+                : 0;
+            const shouldExpectTeacherRows = Object.keys(window.TEACHER_MAP || {}).length > 0
+                || Object.keys(window.TEACHER_STATS || {}).length > 0;
+            const deadline = Date.now() + (String(window.location?.hostname || '').includes('schoolsystem.com.cn') ? 10000 : 2500);
+            while (shouldExpectTeacherRows && getTeacherRankRows() === 0 && Date.now() < deadline) {
+                await new Promise((resolve) => setTimeout(resolve, 250));
+                if (typeof window.renderCountyAnalysis === 'function') {
+                    window.renderCountyAnalysis('county-teacher-portrait');
+                }
+            }
+            const teacherRoot = getTeacherRoot();
             const teacherRankRows = teacherRoot
                 ? teacherRoot.querySelectorAll('.county-teacher-rank-table tbody tr').length
                 : 0;
@@ -667,8 +683,8 @@ async function runModuleDeepCheck(page, id) {
                 renderReady: typeof window.renderCountyAnalysis === 'function',
                 scopeReady: !!window.CountyAnalysisRuntime && typeof window.CountyAnalysisRuntime.applyCountyRanks === 'function',
                 exportReady: typeof window.exportCountyAnalysisSection === 'function',
-                teacherRankReady: teacherRankRows > 0 || teacherEmptyState,
-                teacherOwnRowsReady: ownTeacherRows > 0 || teacherEmptyState,
+                teacherRankReady: shouldExpectTeacherRows ? teacherRankRows > 0 : teacherEmptyState,
+                teacherOwnRowsReady: shouldExpectTeacherRows ? ownTeacherRows > 0 : teacherEmptyState,
                 horizontalReady,
                 subjectCountyRankReady: Array.isArray(window.SUBJECTS) && window.SUBJECTS.length > 0
                     ? (window.RAW_DATA || []).some((student) => window.SUBJECTS.some((subject) => student?.ranks?.[subject]?.county))
@@ -681,7 +697,7 @@ async function runModuleDeepCheck(page, id) {
             return {
                 ok: Object.values(checks).every(Boolean)
                     && exportButtons >= 1
-                    && (teacherRankRows > 0 ? teacherRankTable : teacherEmptyState)
+                    && (shouldExpectTeacherRows ? teacherRankTable : teacherEmptyState)
                     && studentArchiveRemoved,
                 checks,
                 exportButtons,
@@ -689,6 +705,7 @@ async function runModuleDeepCheck(page, id) {
                 ownTeacherRows,
                 teacherRankTable,
                 teacherEmptyState,
+                shouldExpectTeacherRows,
                 studentArchiveRemoved
             };
         });
