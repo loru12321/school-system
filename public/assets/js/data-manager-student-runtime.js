@@ -51,18 +51,23 @@
         if (!manager || !Array.isArray(rawData)) return;
 
         const normalizedKeyword = String(keyword || '').trim().toLowerCase();
-        const list = normalizedKeyword
-            ? rawData.filter((student) => {
-                const name = String(student && student.name != null ? student.name : '').toLowerCase();
-                const examId = String(student && student.id != null ? student.id : '');
-                const klass = String(student && student.class != null ? student.class : '').toLowerCase();
-                const school = String(student && student.school != null ? student.school : '').toLowerCase();
-                return name.includes(normalizedKeyword)
-                    || examId.includes(normalizedKeyword)
-                    || klass.includes(normalizedKeyword)
-                    || school.includes(normalizedKeyword);
-            }).map((item) => ({ ...item, _originalIndex: rawData.indexOf(item) }))
-            : rawData.map((item, index) => ({ ...item, _originalIndex: index }));
+        const list = [];
+        for (let index = 0; index < rawData.length; index += 1) {
+            const student = rawData[index] || {};
+            if (normalizedKeyword) {
+                const name = String(student.name != null ? student.name : '').toLowerCase();
+                const examId = String(student.id != null ? student.id : '');
+                const klass = String(student.class != null ? student.class : '').toLowerCase();
+                const school = String(student.school != null ? student.school : '').toLowerCase();
+                if (!name.includes(normalizedKeyword)
+                    && !examId.includes(normalizedKeyword)
+                    && !klass.includes(normalizedKeyword)
+                    && !school.includes(normalizedKeyword)) {
+                    continue;
+                }
+            }
+            list.push({ student, _originalIndex: index });
+        }
 
         manager.pagination = manager.pagination || { page: 1, size: 20, total: 0 };
         if (!Number.isFinite(manager.pagination.size) || manager.pagination.size <= 0) {
@@ -91,13 +96,14 @@
         if (pageData.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#999;">无数据</td></tr>';
         } else {
-            const rows = pageData.map((student) => {
-                const school = student && student.school != null ? student.school : '';
-                const klass = student && student.class != null ? student.class : '';
-                const name = student && student.name != null ? student.name : '';
-                const examId = student && student.id != null ? student.id : '';
-                const total = student && student.total != null ? student.total : '';
-                const originalIndex = student && Number.isInteger(student._originalIndex) ? student._originalIndex : -1;
+            const rows = pageData.map((item) => {
+                const student = item && item.student ? item.student : {};
+                const school = student.school != null ? student.school : '';
+                const klass = student.class != null ? student.class : '';
+                const name = student.name != null ? student.name : '';
+                const examId = student.id != null ? student.id : '';
+                const total = student.total != null ? student.total : '';
+                const originalIndex = item && Number.isInteger(item._originalIndex) ? item._originalIndex : -1;
                 return `
                 <tr>
                     <td style="text-align:center;"><input type="checkbox" class="dm-stu-select" data-idx="${originalIndex}" ${selection.has(originalIndex) ? 'checked' : ''} onchange="DataManager.toggleStudentSelection(this)"></td>
