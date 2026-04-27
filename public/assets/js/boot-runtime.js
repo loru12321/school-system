@@ -323,6 +323,7 @@ var APP_MODULES = [
     './assets/js/support-state-runtime.js',
     './assets/js/progress-state-runtime.js',
     './assets/js/report-session-state-runtime.js',
+    './assets/js/report-performance-runtime.js',
     './assets/js/compare-session-state-runtime.js',
     './assets/js/compare-result-state-runtime.js',
     './assets/js/compare-summary-state-runtime.js',

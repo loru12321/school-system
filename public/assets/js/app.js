@@ -13362,6 +13362,43 @@ function getReportStudentIdentity(student) {
     ].join('|');
 }
 
+function getStudentReportPerformanceRuntime() {
+    return window.StudentReportPerformance && typeof window.StudentReportPerformance === 'object'
+        ? window.StudentReportPerformance
+        : null;
+}
+
+function getStudentReportSelectedExamIds() {
+    const ids = [];
+    ['reportCompareExam1', 'reportCompareExam2', 'reportCompareExam3'].forEach(id => {
+        const value = String(document.getElementById(id)?.value || '').trim();
+        if (value) ids.push(value);
+    });
+    return ids;
+}
+
+function buildStudentReportCacheKey(student, mode = 'FULL', selectedExamIds = null, effectiveCurrentExamId = '') {
+    const selected = Array.isArray(selectedExamIds) ? selectedExamIds : getStudentReportSelectedExamIds();
+    const examId = String(effectiveCurrentExamId || (typeof getEffectiveCurrentExamId === 'function' ? getEffectiveCurrentExamId() : '') || '').trim();
+    const fingerprint = typeof computeExamDataFingerprint === 'function'
+        ? String(computeExamDataFingerprint(RAW_DATA || []) || '').trim()
+        : String((RAW_DATA || []).length || 0);
+    return [
+        getReportStudentIdentity(student),
+        String(mode || 'FULL').trim(),
+        examId,
+        fingerprint,
+        selected.map(String).sort().join(',')
+    ].join('::');
+}
+
+function clearStudentReportCache(student) {
+    const runtime = getStudentReportPerformanceRuntime();
+    if (!runtime || typeof runtime.clear !== 'function') return;
+    const identity = getReportStudentIdentity(student);
+    runtime.clear(identity || '');
+}
+
 function applyCloudStudentHistoryToPrevData(stu, historyRes, selectedReportExamIds = [], effectiveCurrentExamId = '') {
     if (!historyRes || !historyRes.success || !Array.isArray(historyRes.data) || historyRes.data.length === 0) return 0;
     const selectedForCompare = Array.isArray(selectedReportExamIds) ? selectedReportExamIds : [];
@@ -13402,7 +13439,10 @@ function applyCloudStudentHistoryToPrevData(stu, historyRes, selectedReportExamI
         },
         percentiles: h.percentiles || {}
     }));
-    if (rows.length > 0) setPrevDataState(rows);
+    if (rows.length > 0) {
+        setPrevDataState(rows);
+        clearStudentReportCache(stu);
+    }
     return historyRes.data.length;
 }
 
@@ -13415,7 +13455,14 @@ async function refreshRenderedStudentReportAfterHistory(stu, token) {
     if (!container || typeof renderSingleReportCardHTML !== 'function') return;
     try {
         container.classList.add('student-report-canvas-full');
-        const reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'FULL'));
+        const reportCache = getStudentReportPerformanceRuntime();
+        const selectedIds = getStudentReportSelectedExamIds();
+        const reportKey = buildStudentReportCacheKey(stu, 'FULL', selectedIds, selectedIds[selectedIds.length - 1] || getEffectiveCurrentExamId());
+        let reportHtml = reportCache?.getReportHtml?.(reportKey);
+        if (!reportHtml) {
+            reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'FULL'));
+            reportCache?.setReportHtml?.(reportKey, reportHtml);
+        }
         if (token !== __reportQueryToken) return;
         container.innerHTML = typeof reportHtml === 'string' ? reportHtml : '';
         enhanceStudentReportMetrics(container);
@@ -13521,11 +13568,16 @@ async function doQuery(targetStudent = null) {
 
     if (resultEl && container) {
         resultEl.classList.remove('hidden');
-        renderStudentReportSkeleton(container, stu);
-        // 强制使用 'A4' 模式进行渲染
         try {
             container.classList.add('student-report-canvas-full');
-            const reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'FULL'));
+            const reportCache = getStudentReportPerformanceRuntime();
+            const reportCacheKey = buildStudentReportCacheKey(stu, 'FULL', selectedReportExamIds, effectiveCurrentExamId);
+            let reportHtml = reportCache?.getReportHtml?.(reportCacheKey);
+            if (!reportHtml) {
+                renderStudentReportSkeleton(container, stu);
+                reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'FULL'));
+                reportCache?.setReportHtml?.(reportCacheKey, reportHtml);
+            }
             container.innerHTML = typeof reportHtml === 'string' ? reportHtml : '';
             enhanceStudentReportMetrics(container);
         } catch (e) {
@@ -14081,6 +14133,10 @@ function findPreviousRecord(student) {
 function getStudentExamHistory(student) {
     const results = [];
     if (!student) return results;
+    const reportCache = getStudentReportPerformanceRuntime();
+    const historyCacheKey = buildStudentReportCacheKey(student, 'HISTORY');
+    const cachedHistory = reportCache?.getHistory?.(historyCacheKey);
+    if (Array.isArray(cachedHistory)) return cachedHistory;
 
     const cleanStr = (str) => String(str || "").trim().replace(/\s+/g, "");
     const normClass = (cls) => String(cls || "").trim().replace(/[班级\(\)\.\-gradeclass]/gi, "");
@@ -14255,6 +14311,7 @@ function getStudentExamHistory(student) {
         return getHistoryKey(a).localeCompare(getHistoryKey(b));
     });
 
+    reportCache?.setHistory?.(historyCacheKey, dedupedResults);
     return dedupedResults;
 }
 
