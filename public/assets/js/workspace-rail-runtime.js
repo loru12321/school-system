@@ -6,6 +6,7 @@
     const analysisRailStates = new Map();
     let moduleDockFrame = 0;
     let moduleDockBound = false;
+    let moduleDockLastSignature = '';
 
     function isDesktopViewport() {
         return window.matchMedia(DESKTOP_MEDIA_QUERY).matches;
@@ -342,6 +343,38 @@
         return found ? { key: found[0], category: found[1] } : null;
     }
 
+    function getModuleDockSignature(context, items, activeId) {
+        const key = context?.key || '';
+        const ids = items.map((item) => item.id).join('|');
+        return [key, activeId, ids].join('::');
+    }
+
+    function syncModuleDockActiveState(dock, activeId) {
+        if (!dock) return;
+        dock.querySelectorAll('[data-dock-module-id]').forEach((button) => {
+            const isActive = button.getAttribute('data-dock-module-id') === activeId;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-current', isActive ? 'page' : 'false');
+        });
+    }
+
+    function bindModuleDockClick(dock) {
+        if (!dock || dock.dataset.clickBound === 'true') return;
+        dock.dataset.clickBound = 'true';
+        dock.addEventListener('click', (event) => {
+            const button = event.target?.closest?.('[data-dock-module-id]');
+            if (!button || !dock.contains(button)) return;
+            const moduleId = button.getAttribute('data-dock-module-id');
+            if (!moduleId) return;
+            if (typeof window.switchTab === 'function') window.switchTab(moduleId);
+            window.setTimeout(() => {
+                const section = document.getElementById(moduleId);
+                if (section) section.scrollIntoView({ block: 'start', behavior: 'smooth' });
+                scheduleModuleSubnavDockSync();
+            }, 80);
+        });
+    }
+
     function syncModuleSubnavDock() {
         ensureModuleDockStyles();
         const app = document.getElementById('app');
@@ -355,6 +388,7 @@
 
         if (!shouldShow) {
             if (dock) dock.remove();
+            moduleDockLastSignature = '';
             return;
         }
 
@@ -364,9 +398,18 @@
             dock.className = 'module-subnav-dock';
             dock.setAttribute('aria-label', '当前母模块子模块导航');
             document.body.appendChild(dock);
+            moduleDockLastSignature = '';
         }
+        bindModuleDockClick(dock);
 
         const activeId = getActiveModuleId();
+        const nextSignature = getModuleDockSignature(context, items, activeId);
+        if (moduleDockLastSignature === nextSignature) {
+            syncModuleDockActiveState(dock, activeId);
+            return;
+        }
+        moduleDockLastSignature = nextSignature;
+
         const accent = category.color || '#2563eb';
         dock.style.setProperty('--dock-accent', accent);
         dock.style.setProperty('--dock-soft', `color-mix(in srgb, ${accent} 14%, white)`);
@@ -395,19 +438,6 @@
                 `).join('')}
             </div>
         `;
-
-        dock.querySelectorAll('[data-dock-module-id]').forEach((button) => {
-            button.addEventListener('click', () => {
-                const moduleId = button.getAttribute('data-dock-module-id');
-                if (!moduleId) return;
-                if (typeof window.switchTab === 'function') window.switchTab(moduleId);
-                window.setTimeout(() => {
-                    const section = document.getElementById(moduleId);
-                    if (section) section.scrollIntoView({ block: 'start', behavior: 'smooth' });
-                    scheduleModuleSubnavDockSync();
-                }, 80);
-            });
-        });
     }
 
     function scheduleModuleSubnavDockSync() {
