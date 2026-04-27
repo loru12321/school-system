@@ -83,6 +83,7 @@
         if (!text) {
             systemDataCache.clear();
             systemDataInflight.clear();
+            root.CloudDataService?.clear?.();
             return;
         }
         Array.from(systemDataCache.keys()).forEach((key) => {
@@ -91,6 +92,7 @@
         Array.from(systemDataInflight.keys()).forEach((key) => {
             if (String(key).includes(text)) systemDataInflight.delete(key);
         });
+        root.CloudDataService?.clear?.(text);
     }
 
     async function selectSystemDataRecords(options = {}) {

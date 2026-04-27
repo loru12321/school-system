@@ -209,6 +209,7 @@ var SYSTEM_RUNTIME_SKILLS = {
         warmup: 'demand',
         triggers: ['county-analysis', 'county-teacher-portrait', 'county-school-horizontal'],
         entries: [
+            { key: 'county-school-horizontal', src: './assets/js/county-school-horizontal-runtime.js' },
             { key: 'county-analysis', src: './assets/js/county-analysis-runtime.js' }
         ]
     },
@@ -327,6 +328,7 @@ var APP_MODULES = [
     './assets/js/compare-summary-state-runtime.js',
     './assets/js/cloud-api-runtime.js',
     './assets/js/cloud-connection-runtime.js',
+    './assets/js/cloud-data-service-runtime.js',
     './assets/js/cloud.js',
     './assets/js/system-performance-runtime.js',
     './assets/js/cloud-workspace-runtime.js',
@@ -349,9 +351,13 @@ var APP_MODULES = [
     './assets/js/shell-runtime.js',
     './assets/js/workspace-rail-runtime.js',
     './assets/js/shell-polish-runtime.js',
+    './assets/js/virtual-table-runtime.js',
+    './assets/js/mobile-experience-runtime.js',
     './assets/js/module-entry-runtime.js',
     './assets/js/ranking-data-service-runtime.js',
     './assets/js/student-jump-runtime.js',
+    './assets/js/student-details-guard-runtime.js',
+    './assets/js/teaching-management-modules-runtime.js',
     './assets/js/app.js',
     './assets/js/macro-analysis-compat-runtime.js',
     './assets/js/school-normalization-runtime.js',

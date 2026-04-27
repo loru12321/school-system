@@ -9482,6 +9482,53 @@ body.dark-mode .version-center-meta-list > div {
     }
 }
 
+.virtual-table-footer {
+    position: sticky;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-top: 1px solid rgba(203, 213, 225, 0.92);
+    background: rgba(248, 250, 252, 0.96);
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.virtual-table-footer .btn {
+    min-height: 30px;
+    padding: 0 12px;
+    white-space: nowrap;
+}
+
+.is-compact-viewport .analysis-table-shell,
+.is-compact-viewport .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.is-compact-viewport .analysis-table-shell[data-mobile-hint]::before,
+.is-compact-viewport .table-wrap[data-mobile-hint]::before {
+    content: attr(data-mobile-hint);
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    margin: 0 0 8px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(219, 234, 254, 0.92);
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 700;
+}
+
 /* ============================================================
    5. PREMIUM SPACIOUS SIDEBAR LAYOUT (Vercel/Notion Style)
    ============================================================ */

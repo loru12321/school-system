@@ -15,6 +15,9 @@
         });
 
     async function selectCloudMacroCompareRows(options = {}) {
+        if (window.CloudDataService && typeof window.CloudDataService.selectSystemData === 'function') {
+            return window.CloudDataService.selectSystemData(options);
+        }
         if (window.CloudApi && typeof window.CloudApi.selectSystemData === 'function') {
             return window.CloudApi.selectSystemData(options);
         }

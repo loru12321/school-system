@@ -38,6 +38,18 @@
     }
 
     async function selectSystemData(options = {}) {
+        if (window.CloudDataService && typeof window.CloudDataService.selectSystemData === 'function') {
+            return window.CloudDataService.selectSystemData(options, async () => {
+                const api = getCloudApi();
+                if (api && typeof api.selectSystemData === 'function') {
+                    return api.selectSystemData(options);
+                }
+                return {
+                    data: options.maybeSingle ? null : [],
+                    error: new Error('CloudApi.selectSystemData unavailable')
+                };
+            });
+        }
         const api = getCloudApi();
         if (api && typeof api.selectSystemData === 'function') {
             return api.selectSystemData(options);
@@ -1235,6 +1247,9 @@
                 }
 
                 localStorage.setItem('TEACHER_SYNC_AT', new Date().toISOString());
+                if (window.CloudDataService && typeof window.CloudDataService.clear === 'function') {
+                    window.CloudDataService.clear('selectSystemData');
+                }
                 if (typeof logAction === 'function') logAction('任课同步', `任课表已保存：${key}`);
                 if (window.DataManager && typeof DataManager.rememberDataManagerSyncSnapshot === 'function') {
                     DataManager.rememberDataManagerSyncSnapshot('teacher-cloud-save');

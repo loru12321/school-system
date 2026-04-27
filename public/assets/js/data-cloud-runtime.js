@@ -57,6 +57,9 @@
     }
 
     function getSelectSystemDataRecords() {
+        if (root.CloudDataService && typeof root.CloudDataService.selectSystemDataRecords === 'function') {
+            return root.CloudDataService.selectSystemDataRecords.bind(root.CloudDataService);
+        }
         return typeof root.selectSystemDataRecords === 'function'
             ? root.selectSystemDataRecords.bind(root)
             : null;
