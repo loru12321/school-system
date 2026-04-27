@@ -10436,6 +10436,10 @@ function switchTab(id) {
         window.setTimeout(dispatchModuleEnter, 180);
         window.setTimeout(dispatchModuleEnter, 700);
     }
+    if (typeof window.refreshModuleSubnavDock === 'function') {
+        window.refreshModuleSubnavDock();
+        window.setTimeout(window.refreshModuleSubnavDock, 120);
+    }
 }
 
 function ensureDrillModalDom() {

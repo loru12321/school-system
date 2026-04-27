@@ -4,6 +4,8 @@
     let refreshFrame = 0;
     let desktopSidebarCollapsed = DEFAULT_DESKTOP_COLLAPSED;
     const analysisRailStates = new Map();
+    let moduleDockFrame = 0;
+    let moduleDockBound = false;
 
     function isDesktopViewport() {
         return window.matchMedia(DESKTOP_MEDIA_QUERY).matches;
@@ -153,6 +155,274 @@
         return button;
     }
 
+    function getActiveModuleId() {
+        const activeSection = document.querySelector('.section.active[id]');
+        return activeSection ? activeSection.id : '';
+    }
+
+    function ensureModuleDockStyles() {
+        if (document.getElementById('module-subnav-dock-style')) return;
+        const style = document.createElement('style');
+        style.id = 'module-subnav-dock-style';
+        style.textContent = `
+            .module-subnav-dock {
+                position:fixed;
+                right:18px;
+                top:50%;
+                transform:translateY(-50%);
+                z-index:760;
+                width:58px;
+                max-height:min(68vh, 640px);
+                padding:10px 8px;
+                border:1px solid rgba(148, 163, 184, 0.28);
+                border-radius:24px;
+                background:rgba(255, 255, 255, 0.88);
+                box-shadow:0 18px 46px rgba(15, 23, 42, 0.12);
+                backdrop-filter:blur(20px) saturate(160%);
+                overflow:hidden;
+                transition:width 180ms ease, border-radius 180ms ease, box-shadow 180ms ease;
+            }
+            .module-subnav-dock:hover,
+            .module-subnav-dock:focus-within {
+                width:238px;
+                border-radius:22px;
+                box-shadow:0 24px 68px rgba(15, 23, 42, 0.16);
+            }
+            .module-subnav-dock__head {
+                display:flex;
+                align-items:center;
+                gap:10px;
+                min-height:36px;
+                padding:0 5px 8px;
+                border-bottom:1px solid rgba(226, 232, 240, 0.86);
+                margin-bottom:8px;
+                white-space:nowrap;
+            }
+            .module-subnav-dock__head i {
+                width:34px;
+                height:34px;
+                border-radius:14px;
+                display:inline-flex;
+                align-items:center;
+                justify-content:center;
+                color:var(--dock-accent, #2563eb);
+                background:var(--dock-soft, rgba(37, 99, 235, 0.10));
+                flex:0 0 auto;
+            }
+            .module-subnav-dock__title {
+                min-width:0;
+                opacity:0;
+                transform:translateX(-4px);
+                transition:opacity 160ms ease, transform 160ms ease;
+            }
+            .module-subnav-dock:hover .module-subnav-dock__title,
+            .module-subnav-dock:focus-within .module-subnav-dock__title {
+                opacity:1;
+                transform:none;
+            }
+            .module-subnav-dock__title strong {
+                display:block;
+                font-size:13px;
+                line-height:1.25;
+                color:#0f172a;
+            }
+            .module-subnav-dock__title span {
+                display:block;
+                margin-top:2px;
+                font-size:11px;
+                color:#64748b;
+            }
+            .module-subnav-dock__list {
+                display:flex;
+                flex-direction:column;
+                gap:6px;
+                max-height:calc(min(68vh, 640px) - 58px);
+                overflow-y:auto;
+                scrollbar-width:none;
+            }
+            .module-subnav-dock__list::-webkit-scrollbar { width:0; height:0; }
+            .module-subnav-dock__item {
+                appearance:none;
+                width:100%;
+                min-height:42px;
+                border:0;
+                border-radius:16px;
+                background:transparent;
+                color:#475569;
+                display:grid;
+                grid-template-columns:34px minmax(0, 1fr);
+                align-items:center;
+                gap:10px;
+                padding:4px 6px;
+                cursor:pointer;
+                text-align:left;
+                transition:background 140ms ease, color 140ms ease, transform 140ms ease;
+            }
+            .module-subnav-dock__item:hover {
+                background:rgba(241, 245, 249, 0.92);
+                transform:translateX(-1px);
+            }
+            .module-subnav-dock__item.is-active {
+                color:var(--dock-accent, #2563eb);
+                background:var(--dock-soft, rgba(37, 99, 235, 0.12));
+                font-weight:800;
+            }
+            .module-subnav-dock__icon {
+                width:34px;
+                height:34px;
+                border-radius:14px;
+                display:inline-flex;
+                align-items:center;
+                justify-content:center;
+                color:inherit;
+                background:rgba(241, 245, 249, 0.88);
+                flex:0 0 auto;
+            }
+            .module-subnav-dock__item.is-active .module-subnav-dock__icon {
+                background:rgba(255, 255, 255, 0.76);
+            }
+            .module-subnav-dock__label {
+                min-width:0;
+                opacity:0;
+                transform:translateX(-4px);
+                transition:opacity 160ms ease, transform 160ms ease;
+            }
+            .module-subnav-dock:hover .module-subnav-dock__label,
+            .module-subnav-dock:focus-within .module-subnav-dock__label {
+                opacity:1;
+                transform:none;
+            }
+            .module-subnav-dock__label strong {
+                display:block;
+                overflow:hidden;
+                text-overflow:ellipsis;
+                white-space:nowrap;
+                font-size:12px;
+                line-height:1.25;
+            }
+            .module-subnav-dock__label span {
+                display:block;
+                overflow:hidden;
+                text-overflow:ellipsis;
+                white-space:nowrap;
+                margin-top:2px;
+                font-size:10px;
+                color:#94a3b8;
+            }
+            @media (max-width: 1100px) {
+                .module-subnav-dock {
+                    right:12px;
+                    top:auto;
+                    bottom:86px;
+                    transform:none;
+                    width:52px;
+                    max-height:50vh;
+                    padding:8px 7px;
+                }
+                .module-subnav-dock:hover,
+                .module-subnav-dock:focus-within {
+                    width:min(232px, calc(100vw - 28px));
+                }
+            }
+            @media print {
+                .module-subnav-dock { display:none !important; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    function getCurrentDockCategory() {
+        const nav = window.NAV_STRUCTURE || {};
+        const currentKey = typeof window.getCurrentNavCategory === 'function' ? window.getCurrentNavCategory() : '';
+        const activeId = getActiveModuleId();
+        if (currentKey && nav[currentKey]) return { key: currentKey, category: nav[currentKey] };
+        const found = Object.entries(nav).find(([, category]) => {
+            return Array.isArray(category.items) && category.items.some((item) => item.id === activeId);
+        });
+        return found ? { key: found[0], category: found[1] } : null;
+    }
+
+    function syncModuleSubnavDock() {
+        ensureModuleDockStyles();
+        const app = document.getElementById('app');
+        let dock = document.getElementById('module-subnav-dock');
+        const context = getCurrentDockCategory();
+        const category = context && context.category;
+        const items = Array.isArray(category?.items) ? category.items : [];
+        const shouldShow = !!app && getComputedStyle(app).display !== 'none' && items.length > 1;
+
+        if (!shouldShow) {
+            if (dock) dock.remove();
+            return;
+        }
+
+        if (!dock) {
+            dock = document.createElement('nav');
+            dock.id = 'module-subnav-dock';
+            dock.className = 'module-subnav-dock';
+            dock.setAttribute('aria-label', '当前母模块子模块导航');
+            document.body.appendChild(dock);
+        }
+
+        const activeId = getActiveModuleId();
+        const accent = category.color || '#2563eb';
+        dock.style.setProperty('--dock-accent', accent);
+        dock.style.setProperty('--dock-soft', `color-mix(in srgb, ${accent} 14%, white)`);
+        dock.innerHTML = `
+            <div class="module-subnav-dock__head">
+                <i class="ti ${category.icon || 'ti-layout-grid'}"></i>
+                <span class="module-subnav-dock__title">
+                    <strong>${category.title || '模块导航'}</strong>
+                    <span>${items.length} 个子模块</span>
+                </span>
+            </div>
+            <div class="module-subnav-dock__list">
+                ${items.map((item, index) => `
+                    <button type="button"
+                        class="module-subnav-dock__item${item.id === activeId ? ' is-active' : ''}"
+                        data-dock-module-id="${item.id}"
+                        title="${item.text || ''}"
+                        aria-label="${item.text || ''}"
+                        aria-current="${item.id === activeId ? 'page' : 'false'}">
+                        <span class="module-subnav-dock__icon"><i class="ti ${item.icon || 'ti-circle'}"></i></span>
+                        <span class="module-subnav-dock__label">
+                            <strong>${String(item.text || `子模块 ${index + 1}`)}</strong>
+                            <span>${String(item.hint || '点击切换')}</span>
+                        </span>
+                    </button>
+                `).join('')}
+            </div>
+        `;
+
+        dock.querySelectorAll('[data-dock-module-id]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const moduleId = button.getAttribute('data-dock-module-id');
+                if (!moduleId) return;
+                if (typeof window.switchTab === 'function') window.switchTab(moduleId);
+                window.setTimeout(() => {
+                    const section = document.getElementById(moduleId);
+                    if (section) section.scrollIntoView({ block: 'start', behavior: 'smooth' });
+                    scheduleModuleSubnavDockSync();
+                }, 80);
+            });
+        });
+    }
+
+    function scheduleModuleSubnavDockSync() {
+        if (moduleDockFrame) return;
+        moduleDockFrame = window.requestAnimationFrame(() => {
+            moduleDockFrame = 0;
+            syncModuleSubnavDock();
+        });
+    }
+
+    function bindModuleDockSyncEvents() {
+        if (moduleDockBound) return;
+        moduleDockBound = true;
+        document.addEventListener('click', () => window.setTimeout(scheduleModuleSubnavDockSync, 30), true);
+        window.addEventListener('hashchange', scheduleModuleSubnavDockSync);
+    }
+
     function enhanceAnalysisLayout(layout) {
         if (!layout || layout.dataset.analysisRailReady === 'true') return;
 
@@ -197,6 +467,7 @@
             enhanceAnalysisLayout(layout);
             setAnalysisRailCollapsed(layout, getAnalysisRailState(layout), { rememberState: false });
         });
+        scheduleModuleSubnavDockSync();
     }
 
     function scheduleAnalysisRailRefresh() {
@@ -215,10 +486,13 @@
     window.toggleAppSidebar = toggleAppSidebar;
     window.setAppSidebarCollapsed = setAppSidebarCollapsed;
     window.refreshAnalysisSideRails = scheduleAnalysisRailRefresh;
+    window.refreshModuleSubnavDock = scheduleModuleSubnavDockSync;
 
     document.addEventListener('DOMContentLoaded', function () {
+        bindModuleDockSyncEvents();
         restoreAppSidebar();
         refreshAnalysisSideRails();
+        syncModuleSubnavDock();
 
         const observer = new MutationObserver(scheduleAnalysisRailRefresh);
         observer.observe(document.body, {
