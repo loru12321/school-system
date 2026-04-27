@@ -12082,13 +12082,20 @@ function updateStudentSchoolSelect() {
 // 全局状态管理
 let STD_STATE = {
     page: 1,
-    size: 50,
+    size: 40,
     sortCol: null,     // 当前排序列
     sortDir: 'desc',   // desc 或 asc
     activeFilters: {}, // 存储筛选状态: { 'school': new Set(['实验中学', '二中']), '语文': ... }
     cacheData: [],     // 最终展示的数据
     renderMeta: null   // 当前筛选批次的表格渲染元信息
 };
+
+function getStudentDetailsPageSize() {
+    const width = Number(window.innerWidth || 1280);
+    if (width <= 640) return 12;
+    if (width <= 1024) return 24;
+    return 40;
+}
 
 function getStudentDetailsSubjectList(list = []) {
     const configuredSubjects = Array.isArray(SUBJECTS) ? SUBJECTS.filter(Boolean) : [];
@@ -12449,12 +12456,50 @@ function requestStudentDetailsPrimaryFocus(startIndex = 0) {
 }
 window.requestStudentDetailsPrimaryFocus = requestStudentDetailsPrimaryFocus;
 
+function renderStudentReportSkeleton(container, student) {
+    if (!container) return;
+    container.innerHTML = `
+        <div class="student-report-wide-card student-report-loading">
+            <div class="report-wide-header">
+                <div>
+                    <h2>${student?.school || '学生'} 学业发展报告</h2>
+                    <p>${student?.name || '正在生成'} · ${student?.class || ''}</p>
+                </div>
+                <span class="pill">生成中</span>
+            </div>
+            <div class="report-wide-grid">
+                <div class="report-metric-card shimmer"></div>
+                <div class="report-metric-card shimmer"></div>
+                <div class="report-metric-card shimmer"></div>
+                <div class="report-metric-card shimmer"></div>
+            </div>
+            <div class="report-wide-grid report-wide-grid--two">
+                <div class="report-panel shimmer"></div>
+                <div class="report-panel shimmer"></div>
+            </div>
+        </div>
+    `;
+}
+
+function scheduleStudentReportCharts(student, history) {
+    const render = () => {
+        try { if (typeof renderRadarChart === 'function') renderRadarChart(student, history); } catch (e) { console.error(e); }
+        try { if (typeof renderVarianceChart === 'function') renderVarianceChart(student, history); } catch (e) { console.error(e); }
+    };
+    if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(render, { timeout: 1200 });
+    } else {
+        setTimeout(render, 160);
+    }
+}
+
 function renderStudentDetails(reset = true) {
     // 隐藏可能存在的筛选菜单
     closeAllMenus();
 
     if (reset) {
         STD_STATE.page = 1;
+        STD_STATE.size = getStudentDetailsPageSize();
         const selectedSchool = document.getElementById('studentSchoolSelect')?.value;
         const selectedClass = document.getElementById('studentClassSelect')?.value;
         const hasSelectedSchool = selectedSchool && !selectedSchool.includes('请选择');
@@ -12618,6 +12663,7 @@ function renderStudentDetails(reset = true) {
 
     // --- E. 分页与渲染 ---
     const totalItems = STD_STATE.cacheData.length;
+    STD_STATE.size = getStudentDetailsPageSize();
     const totalPages = Math.ceil(totalItems / STD_STATE.size) || 1;
     if (STD_STATE.page > totalPages) STD_STATE.page = totalPages;
     if (STD_STATE.page < 1) STD_STATE.page = 1;
@@ -13475,6 +13521,7 @@ async function doQuery(targetStudent = null) {
 
     if (resultEl && container) {
         resultEl.classList.remove('hidden');
+        renderStudentReportSkeleton(container, stu);
         // 强制使用 'A4' 模式进行渲染
         try {
             container.classList.add('student-report-canvas-full');
@@ -13490,10 +13537,7 @@ async function doQuery(targetStudent = null) {
     // 🆕 统一提取历史数据并传给组件
     const history = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(stu) : [];
 
-    setTimeout(() => {
-        try { if (typeof renderRadarChart === 'function') renderRadarChart(stu, history); } catch (e) { console.error(e); }
-        try { if (typeof renderVarianceChart === 'function') renderVarianceChart(stu, history); } catch (e) { console.error(e); }
-    }, 150);
+    scheduleStudentReportCharts(stu, history);
 
     hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, effectiveCurrentExamId, queryToken);
 

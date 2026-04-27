@@ -16,6 +16,7 @@
     }
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createRankingDataService(root) {
     const EPSILON = 0.0001;
+    const rankValueCache = new WeakMap();
 
     function normalizeText(value) {
         return String(value == null ? '' : value).trim();
@@ -38,6 +39,7 @@
         const bucket = ensureSubjectRank(row, subject);
         const normalizedScope = normalizeText(scope);
         if (!bucket || !normalizedScope) return row;
+        if (row && typeof row === 'object') rankValueCache.delete(row);
         bucket[normalizedScope] = rank;
         if (subject === 'total') {
             if (normalizedScope === 'county') row.countyRank = rank;
@@ -119,14 +121,29 @@
     }
 
     function getStudentRankValue(studentLike, subject = 'total', scope = 'school', options = {}) {
+        if (!studentLike || typeof studentLike !== 'object') return '-';
         const normalizedScope = normalizeText(scope);
+        const key = normalizeText(subject) || 'total';
+        const cacheContext = Array.isArray(options.rows)
+            ? `${options.rows.length}:${normalizeText(options.rows[0]?.school)}:${normalizeText(options.rows[options.rows.length - 1]?.school)}`
+            : '';
+        const cacheKey = `${key}|${normalizedScope}|${cacheContext}`;
+        let cache = rankValueCache.get(studentLike);
+        if (cache && cache.has(cacheKey)) return cache.get(cacheKey);
+
+        let result = '-';
         if (normalizedScope === 'class' && !hasStudentClassRankScope(studentLike)) return '-';
         if ((normalizedScope === 'township' || normalizedScope === 'town') && isCountyDirectStudent(studentLike, options)) return '-';
-        const key = normalizeText(subject) || 'total';
         const fallback = key === 'total' && normalizedScope === 'county'
             ? normalizeRankValue(studentLike && studentLike.countyRank, '-')
             : '-';
-        return normalizeRankValue(getRank(studentLike, key, normalizedScope === 'town' ? 'township' : normalizedScope, fallback), fallback);
+        result = normalizeRankValue(getRank(studentLike, key, normalizedScope === 'town' ? 'township' : normalizedScope, fallback), fallback);
+        if (!cache) {
+            cache = new Map();
+            rankValueCache.set(studentLike, cache);
+        }
+        cache.set(cacheKey, result);
+        return result;
     }
 
     function hasStudentRankData(rows = [], subjects = [], scope = 'school', options = {}) {

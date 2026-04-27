@@ -2,6 +2,11 @@
     if (!root || root.CloudSyncIndicator) return;
 
     const CLOUD_STARTUP_LOAD_TIMEOUT_MS = 25000;
+    const SYSTEM_DATA_READ_TTL_MS = 30000;
+    const SYSTEM_DATA_SELECT_TTL_MS = 20000;
+    const SYSTEM_DATA_MAX_CACHE_SIZE = 120;
+    const systemDataCache = new Map();
+    const systemDataInflight = new Map();
 
     async function withTimeout(promise, timeoutMs = 8000, timeoutMessage = 'Request timeout') {
         let timer = null;
@@ -19,7 +24,92 @@
         return root.CloudApi && typeof root.CloudApi === 'object' ? root.CloudApi : null;
     }
 
+    function stableCacheString(value) {
+        if (value == null) return '';
+        if (typeof value !== 'object') return String(value);
+        if (Array.isArray(value)) return `[${value.map(stableCacheString).join(',')}]`;
+        return `{${Object.keys(value).sort().map((key) => `${key}:${stableCacheString(value[key])}`).join(',')}}`;
+    }
+
+    function cloneCacheValue(value) {
+        if (value == null) return value;
+        try {
+            return JSON.parse(JSON.stringify(value));
+        } catch (_) {
+            return value;
+        }
+    }
+
+    function readSystemDataCache(cacheKey) {
+        const cached = systemDataCache.get(cacheKey);
+        if (!cached) return { hit: false };
+        if (Date.now() - cached.time > cached.ttlMs) {
+            systemDataCache.delete(cacheKey);
+            return { hit: false };
+        }
+        return { hit: true, value: cloneCacheValue(cached.value) };
+    }
+
+    function rememberSystemDataCache(cacheKey, value, ttlMs) {
+        if (!cacheKey || ttlMs <= 0) return;
+        systemDataCache.set(cacheKey, {
+            time: Date.now(),
+            ttlMs,
+            value: cloneCacheValue(value)
+        });
+        if (systemDataCache.size > SYSTEM_DATA_MAX_CACHE_SIZE) {
+            const firstKey = systemDataCache.keys().next().value;
+            if (firstKey) systemDataCache.delete(firstKey);
+        }
+    }
+
+    function runCachedSystemData(cacheKey, ttlMs, task) {
+        const cached = readSystemDataCache(cacheKey);
+        if (cached.hit) return Promise.resolve(cached.value);
+        if (systemDataInflight.has(cacheKey)) return systemDataInflight.get(cacheKey);
+        const promise = Promise.resolve()
+            .then(task)
+            .then((value) => {
+                if (!value?.error) rememberSystemDataCache(cacheKey, value, ttlMs);
+                return value;
+            })
+            .finally(() => systemDataInflight.delete(cacheKey));
+        systemDataInflight.set(cacheKey, promise);
+        return promise;
+    }
+
+    function clearSystemDataRuntimeCache(prefix = '') {
+        const text = String(prefix || '');
+        if (!text) {
+            systemDataCache.clear();
+            systemDataInflight.clear();
+            return;
+        }
+        Array.from(systemDataCache.keys()).forEach((key) => {
+            if (String(key).includes(text)) systemDataCache.delete(key);
+        });
+        Array.from(systemDataInflight.keys()).forEach((key) => {
+            if (String(key).includes(text)) systemDataInflight.delete(key);
+        });
+    }
+
     async function selectSystemDataRecords(options = {}) {
+        const cacheKey = options.cache === false || options.noCache === true || options.force === true
+            ? ''
+            : `system-data:select:${stableCacheString({
+                select: options.select || 'key',
+                keyEq: options.keyEq || '',
+                keyLike: options.keyLike || '',
+                keyIn: Array.isArray(options.keyIn) ? options.keyIn : [],
+                order: options.order || '',
+                ascending: !!options.ascending,
+                limit: options.limit || '',
+                maybeSingle: !!options.maybeSingle
+            })}`;
+        if (cacheKey) {
+            return runCachedSystemData(cacheKey, SYSTEM_DATA_SELECT_TTL_MS, () => selectSystemDataRecords({ ...options, cache: false }));
+        }
+
         const api = getCloudApiRuntime();
         if (api && typeof api.selectSystemData === 'function') {
             return api.selectSystemData(options);
@@ -68,14 +158,18 @@
     }
 
     async function readSystemDataRecord(key, select = 'content') {
-        return selectSystemDataRecords({
+        const normalizedKey = String(key || '').trim();
+        const cacheKey = `system-data:read:${normalizedKey}:${String(select || 'content')}`;
+        return runCachedSystemData(cacheKey, SYSTEM_DATA_READ_TTL_MS, () => selectSystemDataRecords({
             select,
-            keyEq: String(key || '').trim(),
-            maybeSingle: true
-        });
+            keyEq: normalizedKey,
+            maybeSingle: true,
+            cache: false
+        }));
     }
 
     async function upsertSystemDataRecord(rows) {
+        clearSystemDataRuntimeCache();
         const api = getCloudApiRuntime();
         if (api && typeof api.upsertSystemData === 'function') {
             return api.upsertSystemData(rows);
@@ -93,6 +187,7 @@
     }
 
     async function deleteSystemDataRecords(options = {}) {
+        clearSystemDataRuntimeCache();
         const api = getCloudApiRuntime();
         if (api && typeof api.deleteSystemData === 'function') {
             return api.deleteSystemData(options);
@@ -243,5 +338,6 @@
     root.upsertSystemDataRecord = upsertSystemDataRecord;
     root.deleteSystemDataRecords = deleteSystemDataRecords;
     root.probeSystemDataConnection = probeSystemDataConnection;
+    root.clearSystemDataRuntimeCache = clearSystemDataRuntimeCache;
     root.CloudSyncIndicator = CloudSyncIndicator;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
