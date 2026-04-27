@@ -138,12 +138,15 @@
                 }
                 .student-report-shell-full .student-report-main-grid {
                     display:grid;
-                    grid-template-columns:minmax(0, 1.15fr) minmax(360px, 0.85fr);
+                    grid-template-columns:minmax(0, 1fr);
                     gap:18px;
                     align-items:start;
                 }
                 .student-report-shell-full .student-report-main-grid > .fluent-card {
                     height:100%;
+                }
+                .student-report-shell-full .student-report-hero-card {
+                    grid-column:1 / -1;
                 }
                 .student-report-shell-full .student-report-table-card {
                     grid-column:1 / -1;
@@ -219,7 +222,7 @@
             </div>
         </div>
         <div class="student-report-main-grid">
-        <div class="fluent-card" style="padding:18px 20px;">
+        <div class="fluent-card student-report-hero-card" style="padding:18px 20px;">
             <div class="fluent-header"><i class="ti ti-badge-4k" style="color:#2563eb;"></i><span class="fluent-title">成绩快照与真实定位</span></div>
             ${It}
             ${_t}
