@@ -451,8 +451,9 @@
     function bindModuleDockSyncEvents() {
         if (moduleDockBound) return;
         moduleDockBound = true;
-        document.addEventListener('click', () => window.setTimeout(scheduleModuleSubnavDockSync, 30), true);
+        document.addEventListener('cloud-load-state', scheduleModuleSubnavDockSync);
         window.addEventListener('hashchange', scheduleModuleSubnavDockSync);
+        window.addEventListener('popstate', scheduleModuleSubnavDockSync);
     }
 
     function enhanceAnalysisLayout(layout) {
@@ -515,6 +516,17 @@
         refreshAnalysisSideRails();
     }
 
+    function mutationTouchesRailSkeleton(mutation) {
+        const target = mutation.target;
+        if (target?.classList?.contains?.('analysis-results-layout')) return true;
+        if (target?.id === 'app' || target?.id === 'sub-nav-container') return true;
+        return Array.from(mutation.addedNodes || []).some((node) => {
+            if (!node || node.nodeType !== 1) return false;
+            if (node.matches?.('.analysis-results-layout, .analysis-side-nav, .content-area')) return true;
+            return !!node.querySelector?.('.analysis-results-layout, .analysis-side-nav, .content-area');
+        });
+    }
+
     window.toggleAppSidebar = toggleAppSidebar;
     window.setAppSidebarCollapsed = setAppSidebarCollapsed;
     window.refreshAnalysisSideRails = scheduleAnalysisRailRefresh;
@@ -526,7 +538,11 @@
         refreshAnalysisSideRails();
         syncModuleSubnavDock();
 
-        const observer = new MutationObserver(scheduleAnalysisRailRefresh);
+        const observer = new MutationObserver((mutations) => {
+            if (mutations.some(mutationTouchesRailSkeleton)) {
+                scheduleAnalysisRailRefresh();
+            }
+        });
         observer.observe(document.body, {
             childList: true,
             subtree: true
