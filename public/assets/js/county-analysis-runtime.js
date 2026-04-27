@@ -11,6 +11,8 @@
         lastTeacherContextAt: 0,
         subjectRowCacheSignature: '',
         subjectRowCache: new Map(),
+        horizontalTotalCacheSignature: '',
+        horizontalTotalCache: [],
         teacherRowsCacheSignature: '',
         teacherRowsCache: [],
         teacherSubjectTablesCacheSignature: '',
@@ -332,6 +334,10 @@
     }
 
     function buildCountyHorizontalTotalRows() {
+        const cacheSig = getDataSignature();
+        if (state.horizontalTotalCacheSignature === cacheSig) {
+            return state.horizontalTotalCache.map((row) => ({ ...row }));
+        }
         const rows = Object.values(window.SCHOOLS || {})
             .filter((school) => school?.metrics?.total)
             .map((school) => {
@@ -353,7 +359,10 @@
         assignCompetitionRanks(rows, (row) => row.excellentRate, (row, rank) => { row.rankExcellent = rank; });
         assignCompetitionRanks(rows, (row) => row.passRate, (row, rank) => { row.rankPass = rank; });
         assignCompetitionRanks(rows, (row) => row.score, (row, rank) => { row.rankScore = rank; });
-        return rows.sort((a, b) => (a.rankScore || 9999) - (b.rankScore || 9999));
+        const sorted = rows.sort((a, b) => (a.rankScore || 9999) - (b.rankScore || 9999));
+        state.horizontalTotalCacheSignature = cacheSig;
+        state.horizontalTotalCache = sorted.map((row) => ({ ...row }));
+        return sorted.map((row) => ({ ...row }));
     }
 
     function resolveCurrentCountySchoolName() {
@@ -1468,7 +1477,9 @@
             state.subjectRowCacheSignature = cacheSig;
             state.subjectRowCache = new Map();
         }
-        if (state.subjectRowCache.has(subject)) return state.subjectRowCache.get(subject);
+        if (state.subjectRowCache.has(subject)) {
+            return (state.subjectRowCache.get(subject) || []).map((row) => ({ ...row }));
+        }
         const rows = Object.values(window.SCHOOLS || {})
             .filter((school) => school?.metrics?.[subject])
             .map((school) => ({ school, metric: school.metrics[subject] }));
@@ -1501,8 +1512,8 @@
         assignCompetitionRanks(result, (row) => row.passRate, (row, rank) => { row.rankPass = rank; });
         assignCompetitionRanks(result, (row) => row.score, (row, rank) => { row.rank = rank; });
         result.sort((a, b) => (a.rank || 9999) - (b.rank || 9999));
-        state.subjectRowCache.set(subject, result);
-        return result;
+        state.subjectRowCache.set(subject, result.map((row) => ({ ...row })));
+        return result.map((row) => ({ ...row }));
     }
 
     function setCountyAnalysisSchoolNameFromInput(options = {}) {
@@ -1547,6 +1558,9 @@
         const locked = setCountyAnalysisSchoolNameFromInput({ required: false, silent: true });
         if (!locked) return;
         state.subjectRowCache = new Map();
+        state.subjectRowCacheSignature = '';
+        state.horizontalTotalCache = [];
+        state.horizontalTotalCacheSignature = '';
         applyCountyRanks();
         saveCountySnapshot();
         renderCountyAnalysis('county-school-horizontal');
