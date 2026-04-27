@@ -13338,7 +13338,8 @@ async function refreshRenderedStudentReportAfterHistory(stu, token) {
     const container = document.getElementById('report-card-capture-area');
     if (!container || typeof renderSingleReportCardHTML !== 'function') return;
     try {
-        const reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'A4'));
+        container.classList.add('student-report-canvas-full');
+        const reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'FULL'));
         if (token !== __reportQueryToken) return;
         container.innerHTML = typeof reportHtml === 'string' ? reportHtml : '';
         enhanceStudentReportMetrics(container);
@@ -13446,7 +13447,8 @@ async function doQuery(targetStudent = null) {
         resultEl.classList.remove('hidden');
         // 强制使用 'A4' 模式进行渲染
         try {
-            const reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'A4'));
+            container.classList.add('student-report-canvas-full');
+            const reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'FULL'));
             container.innerHTML = typeof reportHtml === 'string' ? reportHtml : '';
             enhanceStudentReportMetrics(container);
         } catch (e) {

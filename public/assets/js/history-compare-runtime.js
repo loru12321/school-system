@@ -373,7 +373,8 @@ function initHistoryComparePatch() {
 
         document.getElementById('single-report-result').classList.remove('hidden');
         const container = document.getElementById('report-card-capture-area');
-        const reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'A4'));
+        container.classList.add('student-report-canvas-full');
+        const reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'FULL'));
         container.innerHTML = typeof reportHtml === 'string' ? reportHtml : '';
         setTimeout(function () { renderRadarChart(stu); renderVarianceChart(stu); }, 100);
         analyzeStrengthsAndWeaknesses(stu);

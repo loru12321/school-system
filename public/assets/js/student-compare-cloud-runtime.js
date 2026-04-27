@@ -615,7 +615,8 @@
         const reportArea = document.getElementById('report-card-capture-area');
         if (currentReportStudent && reportWrap && reportArea && typeof renderSingleReportCardHTML === 'function') {
             reportWrap.classList.remove('hidden');
-            reportArea.innerHTML = renderSingleReportCardHTML(currentReportStudent, 'A4');
+            reportArea.classList.add('student-report-canvas-full');
+            reportArea.innerHTML = renderSingleReportCardHTML(currentReportStudent, 'FULL');
             setTimeout(() => {
                 if (typeof renderRadarChart === 'function') renderRadarChart(currentReportStudent);
                 if (typeof renderVarianceChart === 'function') renderVarianceChart(currentReportStudent);

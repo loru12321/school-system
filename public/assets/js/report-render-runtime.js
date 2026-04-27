@@ -88,7 +88,8 @@ function renderSingleReportCardHTML(stu, mode) {
     // 2. 判断是否为手机端 (或显式请求 IG 模式)
     const isMobile = window.innerWidth <= 768;
 
-    const forceFullLayout = mode === 'A4' || mode === 'PC' || mode === 'FULL';
+    const isFullScreenReport = mode === 'FULL';
+    const forceFullLayout = mode === 'A4' || mode === 'PC' || isFullScreenReport;
     if ((!forceFullLayout && isMobile) || mode === 'IG') {
         // A. 获取 HTML 字符串
         const html = renderInstagramCard(stu);
@@ -349,7 +350,113 @@ function renderSingleReportCardHTML(stu, mode) {
                 .report-reality-list { margin:0; padding-left:18px; font-size:12px; color:#64748b; line-height:1.75; }
                 .report-reality-list li { margin-bottom:4px; }
                 .report-subject-note { margin-top:10px; font-size:11px; color:#64748b; line-height:1.65; }
-                @media (max-width: 768px) { .report-insight-grid, .report-action-grid, .report-subject-board { grid-template-columns:minmax(0, 1fr); } .report-insight-card, .report-action-card, .report-subject-item { padding:14px 16px; } }
+                #single-report-result { width:100%; max-width:none; }
+                #report-card-capture-area.student-report-canvas-full {
+                    width:100%;
+                    max-width:none !important;
+                    margin:0 !important;
+                    padding:0 !important;
+                    display:block;
+                }
+                .student-report-shell {
+                    width:100%;
+                    max-width:1160px;
+                    margin:0 auto;
+                    color:#0f172a;
+                }
+                .student-report-shell-full {
+                    max-width:none;
+                    min-height:calc(100vh - 220px);
+                    padding:26px clamp(18px, 2.4vw, 42px) 32px;
+                    border:1px solid rgba(148, 163, 184, 0.18);
+                    border-radius:26px;
+                    background:
+                        linear-gradient(135deg, rgba(239, 246, 255, 0.92) 0%, rgba(255, 255, 255, 0.96) 38%, rgba(240, 253, 244, 0.82) 100%);
+                    box-shadow:0 22px 60px rgba(15, 23, 42, 0.08);
+                }
+                .student-report-shell-full .report-header {
+                    display:grid;
+                    grid-template-columns:1fr auto;
+                    align-items:end;
+                    gap:14px;
+                    text-align:left !important;
+                    margin-bottom:18px !important;
+                }
+                .student-report-shell-full .report-header h3 {
+                    font-size:clamp(24px, 2.2vw, 36px);
+                    line-height:1.18;
+                }
+                .student-report-shell-full .report-header p {
+                    margin:0 !important;
+                    justify-self:end;
+                    white-space:nowrap;
+                }
+                .student-report-shell-full .report-student-strip {
+                    padding:20px 24px !important;
+                    margin-bottom:18px;
+                }
+                .student-report-shell-full .report-insight-grid {
+                    grid-template-columns:repeat(4, minmax(160px, 1fr));
+                }
+                .student-report-shell-full .report-action-grid {
+                    grid-template-columns:repeat(3, minmax(0, 1fr));
+                }
+                .student-report-shell-full .report-subject-board {
+                    grid-template-columns:repeat(3, minmax(0, 1fr));
+                }
+                .student-report-shell-full .fluent-card {
+                    border-color:rgba(203, 213, 225, 0.72);
+                    background:rgba(255, 255, 255, 0.86);
+                }
+                .student-report-shell-full .student-report-main-grid {
+                    display:grid;
+                    grid-template-columns:minmax(0, 1.15fr) minmax(360px, 0.85fr);
+                    gap:18px;
+                    align-items:start;
+                }
+                .student-report-shell-full .student-report-main-grid > .fluent-card {
+                    height:100%;
+                }
+                .student-report-shell-full .student-report-table-card {
+                    grid-column:1 / -1;
+                }
+                .student-report-shell-full .student-report-chart-grid {
+                    display:grid !important;
+                    grid-template-columns:repeat(2, minmax(0, 1fr));
+                    gap:18px !important;
+                }
+                .student-report-shell-full .student-report-chart-grid .fluent-card {
+                    min-width:0 !important;
+                    margin-bottom:0 !important;
+                }
+                @media (max-width: 1180px) {
+                    .student-report-shell-full .student-report-main-grid,
+                    .student-report-shell-full .student-report-chart-grid {
+                        grid-template-columns:minmax(0, 1fr);
+                    }
+                    .student-report-shell-full .report-subject-board {
+                        grid-template-columns:repeat(2, minmax(0, 1fr));
+                    }
+                }
+                @media (max-width: 768px) {
+                    #report-card-capture-area.student-report-canvas-full { padding:0 !important; }
+                    .student-report-shell-full {
+                        min-height:auto;
+                        padding:16px 12px 22px;
+                        border-radius:18px;
+                    }
+                    .student-report-shell-full .report-header {
+                        grid-template-columns:minmax(0, 1fr);
+                        text-align:left !important;
+                    }
+                    .student-report-shell-full .report-header p { justify-self:start; }
+                    .student-report-shell-full .report-insight-grid,
+                    .student-report-shell-full .report-action-grid,
+                    .student-report-shell-full .report-subject-board {
+                        grid-template-columns:minmax(0, 1fr);
+                    }
+                    .report-insight-card, .report-action-card, .report-subject-item { padding:14px 16px; }
+                }
                 @media print { .fluent-card { box-shadow: none; border: 1px solid #ccc; backdrop-filter: none; } }
             </style>
         `;
@@ -378,15 +485,17 @@ function renderSingleReportCardHTML(stu, mode) {
             </div>
         </div>` : '';
 
+    const shellClass = isFullScreenReport ? 'student-report-shell student-report-shell-full' : 'student-report-shell';
     const baseHtml = `
         ${fluentStyle}
+        <div class="${shellClass}">
         <div class="report-header" style="border-bottom:none; margin-bottom:10px; text-align:center;">
             <h3 style="font-family:'Microsoft YaHei', sans-serif; font-weight:800; color:#1e293b; letter-spacing:1px; margin:0;">${stu.school} 学生学业发展报告</h3>
             <p style="color:#94a3b8; font-size:12px; margin-top:5px;">生成日期: ${genDate}</p>
         </div>
         ${cloudCompareHintHtml}
         ${duplicateCompareHintHtml}
-        <div class="fluent-card" style="padding:15px 25px; background:linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);">
+        <div class="fluent-card report-student-strip" style="padding:15px 25px; background:linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                 <div style="display:flex; align-items:baseline; gap:15px;">
                     <span style="font-size:24px; font-weight:800; color:#1e3a8a;">${stu.name}</span>
@@ -395,6 +504,7 @@ function renderSingleReportCardHTML(stu, mode) {
                 <div style="font-size:13px; color:#64748b; font-family:monospace;">考号: ${stu.id}</div>
             </div>
         </div>
+        <div class="student-report-main-grid">
         <div class="fluent-card" style="padding:18px 20px;">
             <div class="fluent-header"><i class="ti ti-badge-4k" style="color:#2563eb;"></i><span class="fluent-title">成绩快照与真实定位</span></div>
             ${insightOverviewHtml}
@@ -402,11 +512,12 @@ function renderSingleReportCardHTML(stu, mode) {
             ${subjectBoardHtml}
             ${realityNoteHtml}
         </div>
-        <div class="fluent-card" style="padding:0; overflow:hidden;">
+        <div class="fluent-card student-report-table-card" style="padding:0; overflow:hidden;">
             <table class="fluent-table" id="tb-query">
                 <thead><tr><th style="text-align:left; padding-left:20px;">科目</th><th>成绩 (对比)</th><th>总分班排</th><th>校排</th><th style="${townColStyle}">全镇排名</th><th style="${countyColStyle}">全县排名</th></tr></thead>
                 <tbody>${tableRows}</tbody>
             </table>
+        </div>
         </div>`;
 
     // 🟢 [Bug #5 修复] 补充渲染多期考试趋势表格 (如果是多期数据可用)
@@ -453,7 +564,7 @@ function renderSingleReportCardHTML(stu, mode) {
     const finalHtml = `
         ${baseHtml}
         ${historyHtml}
-        <div style="display:flex; gap:15px; margin-bottom:15px; flex-wrap:wrap; margin-top:20px;">
+        <div class="student-report-chart-grid" style="display:flex; gap:15px; margin-bottom:15px; flex-wrap:wrap; margin-top:20px;">
             <div class="fluent-card" style="flex:1; min-width:300px; margin-bottom:0; display:flex; flex-direction:column;">
                 <div class="fluent-header"><i class="ti ti-radar" style="color:#2563eb;"></i><span class="fluent-title">${CONFIG.name === '9年级' ? '五科综合素质评价' : '综合素质评价'} (百分位)</span></div>
                 <div style="flex:1; position:relative; min-height:220px;"><canvas id="radarChart"></canvas></div>
@@ -464,7 +575,8 @@ function renderSingleReportCardHTML(stu, mode) {
             </div> 
         </div>
         ${chartNarrativeHtml}
-        <div style="text-align:center; font-size:11px; color:#cbd5e1; margin-top:20px;">系统自动生成 · 仅供家校沟通参考</div>`;
+        <div style="text-align:center; font-size:11px; color:#cbd5e1; margin-top:20px;">系统自动生成 · 仅供家校沟通参考</div>
+        </div>`;
 
     return finalHtml;
 }
