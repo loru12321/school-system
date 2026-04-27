@@ -1821,6 +1821,11 @@
         return true;
     }
 
+    function isCountyPatchReady(name) {
+        const fn = window[name];
+        return typeof fn === 'function' && !!fn[`__countyPatched_${name}`];
+    }
+
     function installPatches() {
         patchGlobalFunction('processData', () => {
             applyCountyRanks();
@@ -1835,6 +1840,7 @@
                 setTimeout(() => renderCountyAnalysis(id), 0);
             }
         });
+        return ['processData', 'renderTables', 'switchTab'].every(isCountyPatchReady);
     }
 
     function bindUploadPromptArm() {
@@ -1899,13 +1905,13 @@
         installStyles();
         ensureCountySubmoduleSections();
         bindUploadPromptArm();
-        installPatches();
+        const patchesReady = installPatches();
         decorateUploadCountyStatus();
+        if (patchesReady) return;
         let attempts = 0;
         const timer = setInterval(() => {
             attempts += 1;
-            installPatches();
-            if (attempts > 40) clearInterval(timer);
+            if (installPatches() || attempts > 40) clearInterval(timer);
         }, 300);
     }
 

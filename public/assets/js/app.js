@@ -255,6 +255,8 @@ function installMojibakeNormalizer() {
 
     let isNormalizing = false;
     let fullDocumentScheduled = false;
+    let pendingNormalizeTargets = [];
+    let pendingNormalizeScheduled = false;
     const runNormalize = (target) => {
         if (isNormalizing) return 0;
         isNormalizing = true;
@@ -273,16 +275,40 @@ function installMojibakeNormalizer() {
         window.setTimeout(callback, timeout);
     };
 
+    const scheduleNormalizeDrain = () => {
+        if (pendingNormalizeScheduled) return;
+        pendingNormalizeScheduled = true;
+        scheduleTask(() => {
+            pendingNormalizeScheduled = false;
+            const targets = pendingNormalizeTargets.splice(0, pendingNormalizeTargets.length);
+            targets.slice(0, 80).forEach((targetNode) => runNormalize(targetNode));
+            if (targets.length > 80) {
+                pendingNormalizeTargets.unshift(...targets.slice(80));
+                scheduleNormalizeDrain();
+            }
+        }, 350);
+    };
+
+    const enqueueNormalizeTarget = (target) => {
+        if (!target) return;
+        if (pendingNormalizeTargets.length < 160) {
+            pendingNormalizeTargets.push(target);
+        } else if (!pendingNormalizeTargets.includes(document.documentElement)) {
+            pendingNormalizeTargets = [document.documentElement];
+        }
+        scheduleNormalizeDrain();
+    };
+
     const installObserver = () => {
         if (window.__MOJIBAKE_NORMALIZER_OBSERVER__) return;
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 if (mutation.type === 'characterData' || mutation.type === 'attributes') {
-                    runNormalize(mutation.target);
+                    enqueueNormalizeTarget(mutation.target);
                     return;
                 }
                 mutation.addedNodes.forEach((node) => {
-                    if (node.nodeType === 1 || node.nodeType === 3) runNormalize(node);
+                    if (node.nodeType === 1 || node.nodeType === 3) enqueueNormalizeTarget(node);
                 });
             });
         });
