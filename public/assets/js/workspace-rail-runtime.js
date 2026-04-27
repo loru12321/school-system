@@ -345,11 +345,13 @@
     function syncModuleSubnavDock() {
         ensureModuleDockStyles();
         const app = document.getElementById('app');
+        const modeMask = document.getElementById('mode-mask');
         let dock = document.getElementById('module-subnav-dock');
         const context = getCurrentDockCategory();
         const category = context && context.category;
         const items = Array.isArray(category?.items) ? category.items : [];
-        const shouldShow = !!app && getComputedStyle(app).display !== 'none' && items.length > 1;
+        const maskHidden = !modeMask || getComputedStyle(modeMask).display === 'none';
+        const shouldShow = !!app && getComputedStyle(app).display !== 'none' && maskHidden && items.length > 1;
 
         if (!shouldShow) {
             if (dock) dock.remove();
