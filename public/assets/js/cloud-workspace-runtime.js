@@ -243,8 +243,41 @@
         }
     }
 
+    function buildWorkspaceApplySignature(key, payload, updatedAt = '', meta = {}) {
+        const source = payload && typeof payload === 'object' ? payload : {};
+        const fingerprint = String(source.FINGERPRINT || '').trim();
+        const contentHash = String(meta.contentHash || meta.lastUploadedHash || '').trim();
+        const remoteAt = String(updatedAt || meta.remoteUpdatedAt || meta.lastSyncedAt || meta.lastLocalSaveAt || '').trim();
+        const examId = String(source.CURRENT_EXAM_ID || meta.currentExamId || '').trim();
+        const rowCount = Array.isArray(source.RAW_DATA) ? source.RAW_DATA.length : 0;
+        const cohortId = normalizeCohortId(source.CURRENT_COHORT_ID || getCurrentCohortId());
+        return [
+            String(key || '').trim(),
+            cohortId,
+            examId,
+            contentHash,
+            fingerprint,
+            remoteAt,
+            rowCount
+        ].join('|');
+    }
+
+    function markWorkspaceSnapshotApplied(signature) {
+        const text = String(signature || '').trim();
+        if (text) window.__CLOUD_WORKSPACE_APPLIED_SIGNATURE__ = text;
+    }
+
+    function isWorkspaceSnapshotAlreadyApplied(signature) {
+        const text = String(signature || '').trim();
+        if (!text || window.__CLOUD_WORKSPACE_APPLIED_SIGNATURE__ !== text) return false;
+        return Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0;
+    }
+
     async function applyCachedWorkspaceSnapshot(key, payload, updatedAt = '') {
         if (!payload || typeof payload !== 'object') return false;
+        const meta = readWorkspaceSyncMeta(key);
+        const signature = buildWorkspaceApplySignature(key, payload, updatedAt, meta);
+        if (isWorkspaceSnapshotAlreadyApplied(signature)) return true;
         syncWorkspaceState({
             currentProjectKey: key,
             currentExamId: payload?.CURRENT_EXAM_ID || ''
@@ -252,6 +285,7 @@
         seedCurrentExamToCohortDb(payload, key, updatedAt);
         if (typeof applySnapshotPayload === 'function') applySnapshotPayload(payload);
         await refreshCompareSelectors();
+        markWorkspaceSnapshotApplied(signature);
         return true;
     }
 
@@ -351,6 +385,11 @@
             currentExamId: payload?.CURRENT_EXAM_ID || ''
         });
         localStorage.setItem('CLOUD_SYNC_AT', snapshotRow.updated_at || new Date().toISOString());
+        markWorkspaceSnapshotApplied(buildWorkspaceApplySignature(key, payload, snapshotRow.updated_at || '', {
+            contentHash,
+            remoteUpdatedAt: snapshotRow.updated_at || '',
+            currentExamId: payload?.CURRENT_EXAM_ID || ''
+        }));
 
         await refreshCompareSelectors();
         if (cohortId && typeof manager.fetchCohortExamsToLocal === 'function') {
