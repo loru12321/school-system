@@ -11,6 +11,7 @@
         inflight: new Map(),
         cache: new Map(),
         patchAttempts: 0,
+        patchedStableTicks: 0,
         longTasks: []
     };
 
@@ -282,7 +283,8 @@
     const patchTimer = window.setInterval(() => {
         state.patchAttempts += 1;
         const patched = patchCloudManager();
-        if (patched && state.patchAttempts > 12) window.clearInterval(patchTimer);
+        state.patchedStableTicks = patched ? state.patchedStableTicks + 1 : 0;
+        if (state.patchedStableTicks >= 4) window.clearInterval(patchTimer);
         if (state.patchAttempts > 80) window.clearInterval(patchTimer);
     }, 250);
     scheduleIdle(patchCloudManager, { timeout: 800 });
