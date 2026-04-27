@@ -1200,6 +1200,14 @@
     }
 
     function renderTeacherPortraits() {
+        if (!hasTeacherStats() && hasTeacherAssignments() && typeof window.analyzeTeachers === 'function') {
+            try {
+                window.analyzeTeachers({ render: false });
+                if (hasTeacherStats()) calculateCountyTeacherRanking(getCurrentScope());
+            } catch (error) {
+                console.warn('[county-analysis] sync teacher analysis failed:', error);
+            }
+        }
         const rows = getTeacherRows(10);
         if (!rows.length) {
             return '<div class="county-empty">暂无任课表或教师画像数据。导入任课表后，这里会展示县域样本下的教师教学画像。</div>';
