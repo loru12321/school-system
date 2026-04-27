@@ -603,6 +603,40 @@
             || inferredSchool
         );
 
+        const inferSchoolFromTeacherMap = () => {
+            const classToSchools = new Map();
+            rows.forEach((student) => {
+                const cls = normalizeClassFn(student?.class);
+                const school = String(student?.school || '').trim();
+                if (!cls || !school) return;
+                if (!classToSchools.has(cls)) classToSchools.set(cls, new Set());
+                classToSchools.get(cls).add(school);
+            });
+            const hitCounts = new Map();
+            Object.keys(window.TEACHER_MAP || {}).forEach((key) => {
+                const cls = normalizeClassFn(String(key).split('_')[0]);
+                if (!cls || !classToSchools.has(cls)) return;
+                classToSchools.get(cls).forEach((school) => {
+                    hitCounts.set(school, (hitCounts.get(school) || 0) + 1);
+                });
+            });
+            const ranked = Array.from(hitCounts.entries())
+                .filter(([school]) => !accessibleSchools.length || accessibleSchools.includes(school))
+                .sort((a, b) => b[1] - a[1]);
+            return ranked[0]?.[0] || '';
+        };
+
+        const teacherMapSchool = inferSchoolFromTeacherMap();
+        if (teacherMapSchool && teacherMapSchool !== activeSchool) {
+            const activeHasTeacherClasses = rows.some((student) => (
+                String(student?.school || '').trim() === activeSchool
+                && Object.keys(window.TEACHER_MAP || {}).some((key) => normalizeClassFn(String(key).split('_')[0]) === normalizeClassFn(student?.class))
+            ));
+            if (!activeSchool || !activeHasTeacherClasses) {
+                activeSchool = syncTeacherSchoolContext(teacherMapSchool);
+            }
+        }
+
         const user = getCurrentUserFn();
         if (user && user.role === 'teacher') {
             const userNameNorm = String(user.name || '').replace(/\s+/g, '').toLowerCase();

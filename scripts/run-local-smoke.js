@@ -4,7 +4,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 const distDir = path.resolve(__dirname, '../dist');
-const smokeScript = path.resolve(__dirname, './smoke-all-modules.js');
+const smokeScript = path.resolve(__dirname, process.env.SMOKE_SCRIPT || './smoke-all-modules.js');
 const port = Number(process.env.SMOKE_LOCAL_PORT || 4173);
 const proxyOrigin = String(process.env.SMOKE_PROXY_ORIGIN || 'https://schoolsystem.com.cn').trim().replace(/\/+$/, '');
 
