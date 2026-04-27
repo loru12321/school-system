@@ -553,6 +553,15 @@
                         schoolName
                     }), 10000, false);
                     changed = !!loaded || changed;
+                    if (!hasTeacherAssignments() && schoolName) {
+                        const fallbackLoaded = await withTimeout(window.CloudManager.loadTeachers({
+                            background: true,
+                            toast: false,
+                            blocking: false,
+                            schoolName: ''
+                        }), 10000, false);
+                        changed = !!fallbackLoaded || changed;
+                    }
                 } catch (error) {
                     console.warn('[county-analysis] loadTeachers failed:', error);
                 }
