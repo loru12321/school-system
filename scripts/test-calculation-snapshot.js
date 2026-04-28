@@ -62,7 +62,19 @@ async function main() {
     await login(page);
 
     const snapshot = await page.evaluate(async () => {
-        await window.switchTab?.('county-analysis');
+        const boundedSwitchTab = async (moduleId, timeout = 5000) => {
+            if (typeof window.switchTab !== 'function') return false;
+            try {
+                await Promise.race([
+                    Promise.resolve(window.switchTab(moduleId)),
+                    new Promise((resolve) => setTimeout(() => resolve(false), timeout))
+                ]);
+            } catch (_) {
+                return false;
+            }
+            return true;
+        };
+        await boundedSwitchTab('county-analysis');
         await window.CountyAnalysisRuntime?.ensureTeacherContextForCountyAnalysis?.(true);
         window.renderCountyAnalysis?.('county-teacher-portrait');
         const getTeacherRoot = () => document.querySelector('#county-teacher-portrait .county-analysis-root')
@@ -76,7 +88,7 @@ async function main() {
             await new Promise((resolve) => setTimeout(resolve, 250));
             window.renderCountyAnalysis?.('county-teacher-portrait');
         }
-        await window.switchTab?.('student-details');
+        await boundedSwitchTab('student-details');
         window.renderStudentDetails?.();
         const studentDeadline = Date.now() + 10000;
         while (
@@ -86,9 +98,26 @@ async function main() {
             await new Promise((resolve) => setTimeout(resolve, 250));
             window.renderStudentDetails?.();
         }
+        await boundedSwitchTab('teacher-analysis');
+        window.analyzeTeachers?.();
+        window.calculateTeacherTownshipRanking?.();
+        window.renderTeacherTownshipRanking?.();
+        const teacherRankDeadline = Date.now() + 10000;
+        while (
+            Date.now() < teacherRankDeadline
+            && !document.querySelector('#teacher-township-ranking-container tbody tr')
+        ) {
+            await new Promise((resolve) => setTimeout(resolve, 250));
+            window.calculateTeacherTownshipRanking?.();
+            window.renderTeacherTownshipRanking?.();
+        }
 
         const teacherRoot = getTeacherRoot();
         const studentSection = document.getElementById('student-details');
+        const teacherRankSection = document.getElementById('teacher-township-ranking-container');
+        const teacherTownshipComparisonCells = teacherRankSection
+            ? Array.from(teacherRankSection.querySelectorAll('td[data-label="与镇均比"]')).map((cell) => cell.innerText.trim()).filter(Boolean)
+            : [];
         const headers = studentSection
             ? Array.from(studentSection.querySelectorAll('thead th')).map((th) => th.innerText.trim()).filter(Boolean)
             : [];
@@ -103,6 +132,8 @@ async function main() {
                 .filter((row) => Number(row?.avgValue) > 0 || Number(row?.fairScore) > 0).length,
             countyTeacherRankRows: teacherRoot ? teacherRoot.querySelectorAll('.county-teacher-rank-table tbody tr').length : 0,
             countyOwnTeacherRows: teacherRoot ? teacherRoot.querySelectorAll('.county-teacher-own-row').length : 0,
+            teacherTownshipAverageSubjects: Object.values(window.TEACHER_TOWNSHIP_AVERAGES || {}).filter((row) => Number(row?.count) > 0).length,
+            teacherTownshipComparisonCells,
             headers,
             targetStudent: target ? {
                 name: target.name,
@@ -123,6 +154,12 @@ async function main() {
     assert.strictEqual(snapshot.teacherPositive, 13, 'teacher positive row count changed');
     assert.ok(snapshot.countyTeacherRankRows >= 120, `county teacher rank rows too low: ${snapshot.countyTeacherRankRows}`);
     assert.strictEqual(snapshot.countyOwnTeacherRows, 13, 'county own teacher rows changed');
+    assert.ok(snapshot.teacherTownshipAverageSubjects >= 5, `teacher township benchmarks missing: ${snapshot.teacherTownshipAverageSubjects}`);
+    assert.ok(snapshot.teacherTownshipComparisonCells.length > 0, 'teacher township comparison cells missing');
+    assert.ok(
+        snapshot.teacherTownshipComparisonCells.some((text) => text !== '+0.00%' && text !== '0.00%' && text !== '—'),
+        'teacher township comparisons are all zero or empty'
+    );
 
     const totalIndex = snapshot.headers.indexOf('五科总分');
     assert.ok(totalIndex >= 0, '五科总分 header missing');

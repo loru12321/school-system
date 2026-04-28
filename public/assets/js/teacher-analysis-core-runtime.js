@@ -1036,7 +1036,7 @@
         if (typeof window.renderTeacherComparisonTable === 'function') window.renderTeacherComparisonTable();
         if (typeof window.generateTeacherPairing === 'function') window.generateTeacherPairing();
         if (typeof window.renderTeachingOverview === 'function') window.renderTeachingOverview();
-        if (typeof window.tmRenderTeachingModuleStateBars === 'function') window.tmRenderTeachingModuleStateBars();
+        if (typeof window.tmRenderTeachingModuleStateBars === 'function') window.tmRenderTeachingModuleStateBars('teacher-analysis');
     }
 
     function generateTeacherPairing() {
@@ -1109,6 +1109,7 @@
     function calculateTeacherTownshipRanking() {
         window.TEACHER_TOWNSHIP_RANKINGS = {};
         window.TOWNSHIP_RANKING_DATA = {};
+        window.TEACHER_TOWNSHIP_AVERAGES = {};
         const hasTownshipSchoolHelper = typeof window.getTownshipManagedSchoolNames === 'function';
         const townshipSchoolSet = new Set(
             hasTownshipSchoolHelper
@@ -1122,7 +1123,57 @@
             }
             return townshipSchoolSet.has(String(schoolName || '').trim());
         };
+        const buildTownshipAverage = (subject) => {
+            const rawRows = (window.RAW_DATA || []).filter((row) => {
+                const schoolName = String(row?.school || '').trim();
+                const score = teacherToNumber(row?.scores?.[subject], NaN);
+                if (!Number.isFinite(score)) return false;
+                if (!schoolName) return !hasTownshipSchoolHelper;
+                return isTownshipSchoolName(schoolName);
+            });
+            if (rawRows.length) {
+                const thresholds = teacherResolveThresholds(subject, rawRows);
+                const scores = rawRows
+                    .map((row) => teacherToNumber(row?.scores?.[subject], NaN))
+                    .filter(Number.isFinite);
+                if (scores.length) {
+                    const total = scores.reduce((sum, score) => sum + score, 0);
+                    return {
+                        avg: total / scores.length,
+                        excRate: scores.filter((score) => score >= thresholds.exc).length / scores.length,
+                        passRate: scores.filter((score) => score >= thresholds.pass).length / scores.length,
+                        count: scores.length,
+                        source: 'raw'
+                    };
+                }
+            }
+
+            let weightedCount = 0;
+            let avgTotal = 0;
+            let excTotal = 0;
+            let passTotal = 0;
+            Object.keys(window.SCHOOLS || {}).forEach((schoolName) => {
+                if (!isTownshipSchoolName(schoolName)) return;
+                const metrics = window.SCHOOLS?.[schoolName]?.metrics?.[subject];
+                const count = teacherToNumber(metrics?.count, 0);
+                if (!metrics || count <= 0) return;
+                weightedCount += count;
+                avgTotal += teacherToNumber(metrics.avg, 0) * count;
+                excTotal += teacherToNumber(metrics.excRate, 0) * count;
+                passTotal += teacherToNumber(metrics.passRate, 0) * count;
+            });
+            if (weightedCount <= 0) return null;
+            return {
+                avg: avgTotal / weightedCount,
+                excRate: excTotal / weightedCount,
+                passRate: passTotal / weightedCount,
+                count: weightedCount,
+                source: 'school-metrics'
+            };
+        };
         (window.SUBJECTS || []).forEach((subject) => {
+            const townshipAverage = buildTownshipAverage(subject);
+            if (townshipAverage) window.TEACHER_TOWNSHIP_AVERAGES[subject] = townshipAverage;
             const rankingData = [];
             Object.keys(window.TEACHER_STATS || {}).forEach((teacherName) => {
                 const data = window.TEACHER_STATS[teacherName]?.[subject];

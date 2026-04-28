@@ -15,7 +15,8 @@
     const APP_DOWNLOAD_MODULE_IDS = new Set([
         'app-download-center'
     ]);
-    const TEACHER_ANALYSIS_RENDER_DELAY_MS = 8000;
+    const TEACHER_ANALYSIS_RENDER_DELAY_MS = 180000;
+    const TEACHER_ANALYSIS_PRELOAD_DELAY_MS = 180000;
     let teacherAnalysisRenderTimer = 0;
     let teacherAnalysisRenderToken = 0;
 
@@ -207,7 +208,7 @@
                     if (typeof window.renderTeacherTownshipRanking === 'function') window.renderTeacherTownshipRanking();
                 }, 320);
                 scheduleTeacherAnalysisPhase(token, () => {
-                    if (typeof window.tmRenderTeachingModuleStateBars === 'function') window.tmRenderTeachingModuleStateBars();
+                    if (typeof window.tmRenderTeachingModuleStateBars === 'function') window.tmRenderTeachingModuleStateBars('teacher-analysis');
                 }, 380);
                 if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
                 if (typeof updateTeacherCompareTeacherSelect === 'function') updateTeacherCompareTeacherSelect();
@@ -482,14 +483,21 @@
     }
 
     function initTeacherAnalysisEntry() {
-        if (typeof window.ensureLazySectionLoaded === 'function') {
-            window.ensureLazySectionLoaded('teacherModal');
-        }
         clearTeacherAnalysisDeferredRender();
         if (window.DataManager && typeof DataManager.ensureTeacherMap === 'function') {
-            DataManager.ensureTeacherMap(true);
+            window.setTimeout(() => {
+                if (!document.getElementById('teacher-analysis')?.classList.contains('active')) return;
+                try {
+                    DataManager.ensureTeacherMap(true);
+                } catch (error) {
+                    console.warn('[teacher-analysis] teacher map preload failed:', error);
+                }
+            }, TEACHER_ANALYSIS_PRELOAD_DELAY_MS);
         }
-        if (typeof updateTeacherCompareExamSelects === 'function') updateTeacherCompareExamSelects();
+        window.setTimeout(() => {
+            if (!document.getElementById('teacher-analysis')?.classList.contains('active')) return;
+            if (typeof updateTeacherCompareExamSelects === 'function') updateTeacherCompareExamSelects();
+        }, 180);
 
         const cta = document.getElementById('teacher-sync-cta');
         if (cta) cta.style.display = (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) ? 'none' : 'inline-flex';
@@ -502,7 +510,10 @@
         if (pairSection) pairSection.style.display = 'block';
         if (townshipContainer) townshipContainer.style.display = 'block';
 
-        inferTeacherSchoolIfNeeded();
+        window.setTimeout(() => {
+            if (!document.getElementById('teacher-analysis')?.classList.contains('active')) return;
+            inferTeacherSchoolIfNeeded();
+        }, 220);
 
         const runAfterLoad = () => {
             if (!document.getElementById('teacher-analysis')?.classList.contains('active')) return;
@@ -517,9 +528,8 @@
         };
 
         if (typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function') {
-            return window.ensureTeacherAnalysisMainRuntimeLoaded()
-                .then(runAfterLoad)
-                .catch((error) => console.warn(error));
+            showTeacherAnalysisPendingState();
+            return Promise.resolve();
         }
 
         runAfterLoad();
@@ -549,15 +559,6 @@
         const runAfterLoad = () => {
             if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
         };
-
-        if (typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function'
-            && !window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__) {
-            return window.ensureTeacherAnalysisMainRuntimeLoaded()
-                .then(() => {
-                    if (document.getElementById('correlation-analysis')?.classList.contains('active')) runAfterLoad();
-                })
-                .catch((error) => console.warn(error));
-        }
 
         runAfterLoad();
         return Promise.resolve();
@@ -626,9 +627,6 @@
     }
 
     function initSingleSchoolEvalEntry() {
-        if (typeof window.ensureSingleSchoolEvalRuntimeLoaded === 'function') {
-            window.ensureSingleSchoolEvalRuntimeLoaded().catch((error) => console.warn(error));
-        }
         if (typeof updateSSESchoolSelect === 'function') {
             return Promise.resolve(updateSSESchoolSelect()).catch((error) => console.warn(error));
         }
@@ -688,6 +686,10 @@
         if (TEACHING_MANAGEMENT_MODULE_IDS.has(id)) return initTeachingManagementEntry(id);
         if (id === 'indicator' && typeof refreshIndicatorResults === 'function') refreshIndicatorResults(true);
         if (id === 'county-analysis' || id === 'county-teacher-portrait' || id === 'county-school-horizontal') {
+            if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) {
+                if (typeof window.ensureCountySubmoduleSections === 'function') window.ensureCountySubmoduleSections();
+                return Promise.resolve(true);
+            }
             const renderCounty = () => {
                 if (typeof window.renderCountyAnalysis === 'function') {
                     return window.renderCountyAnalysis(id);
@@ -762,9 +764,9 @@
                 const result = id === 'student-details'
                     ? new Promise(resolve => setTimeout(() => resolve(runInit()), 40))
                     : runInit();
-                if (['teacher-analysis', 'class-comparison', 'class-diagnosis', 'single-school-eval'].includes(id)) {
+                if (['class-comparison', 'class-diagnosis', 'single-school-eval'].includes(id)) {
                     setTimeout(() => {
-                        if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars();
+                        if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars(id);
                     }, 0);
                 }
                 return result;

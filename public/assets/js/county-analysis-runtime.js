@@ -19,6 +19,7 @@
         teacherSubjectTablesCache: [],
         preUploadTownshipSchools: [],
         isRendering: false,
+        teacherContextToken: 0,
         lastRankSignature: ''
     };
     const COUNTY_SUBMODULES = {
@@ -554,6 +555,13 @@
         return host && host !== '127.0.0.1' && host !== 'localhost';
     }
 
+    function isCountyTeacherContextStillActive(token) {
+        if (token && token !== state.teacherContextToken) return false;
+        return ['county-teacher-portrait', 'county-analysis'].some((sectionId) => (
+            document.getElementById(sectionId)?.classList?.contains('active')
+        ));
+    }
+
     async function ensureTeacherAnalysisRuntimeForCounty() {
         if (typeof window.analyzeTeachers === 'function') return true;
         try {
@@ -568,7 +576,17 @@
         return typeof window.analyzeTeachers === 'function';
     }
 
-    async function ensureTeacherContextForCountyAnalysis(force = false) {
+    async function ensureTeacherContextForCountyAnalysis(force = false, options = {}) {
+        const activeToken = Number(options.token || state.teacherContextToken || 0);
+        const requireActive = options.requireActive !== false;
+        if (requireActive && !isCountyTeacherContextStillActive(activeToken)) {
+            return {
+                hasTeacherAssignments: hasTeacherAssignments(),
+                hasTeacherStats: hasTeacherStats(),
+                changed: false,
+                cancelled: true
+            };
+        }
         const schoolName = getCurrentSchoolNameForTeacherScope();
         const scopedAssignments = getScopedTeacherAssignmentsForCounty();
         const teacherSig = `${getDataSignature()}::${schoolName}::${Object.keys(scopedAssignments.map || {}).length}::${Object.keys(window.TEACHER_STATS || {}).length}`;
@@ -587,6 +605,15 @@
         if (!force && state.teacherContextPromise) return state.teacherContextPromise;
         state.teacherContextPromise = (async () => {
             let changed = false;
+
+            if (requireActive && !isCountyTeacherContextStillActive(activeToken)) {
+                return {
+                    hasTeacherAssignments: hasTeacherAssignments(),
+                    hasTeacherStats: hasTeacherStats(),
+                    changed: false,
+                    cancelled: true
+                };
+            }
 
             if (!hasTeacherAssignments() && !schoolName && typeof window.tryAutoRestoreTeacherMap === 'function') {
                 try {
@@ -627,9 +654,25 @@
 
             if (!hasTeacherStats() && hasTeacherAssignments()) {
                 try {
+                    if (requireActive && !isCountyTeacherContextStillActive(activeToken)) {
+                        return {
+                            hasTeacherAssignments: hasTeacherAssignments(),
+                            hasTeacherStats: hasTeacherStats(),
+                            changed: false,
+                            cancelled: true
+                        };
+                    }
                     const teacherRuntimeReady = await ensureTeacherAnalysisRuntimeForCounty();
+                    if (requireActive && !isCountyTeacherContextStillActive(activeToken)) {
+                        return {
+                            hasTeacherAssignments: hasTeacherAssignments(),
+                            hasTeacherStats: hasTeacherStats(),
+                            changed: false,
+                            cancelled: true
+                        };
+                    }
                     if (teacherRuntimeReady && typeof window.analyzeTeachers === 'function') {
-                        window.analyzeTeachers();
+                        window.analyzeTeachers({ render: false });
                         changed = true;
                     }
                 } catch (error) {
@@ -1624,6 +1667,8 @@
         if (state.isRendering) return;
         state.isRendering = true;
         try {
+        state.teacherContextToken += 1;
+        const renderToken = state.teacherContextToken;
         ensureCountySubmoduleSections();
         const activeId = id === 'county-analysis' ? 'county-teacher-portrait' : id;
         const root = getCountyRootForSubmodule(activeId);
@@ -1631,10 +1676,9 @@
         const scope = applyCountyRanks();
         if (activeId === 'county-teacher-portrait') {
             window.setTimeout(() => {
-                void ensureTeacherContextForCountyAnalysis().then((result) => {
-                    const isCountyVisible = ['county-teacher-portrait', 'county-analysis']
-                        .some((sectionId) => document.getElementById(sectionId)?.classList?.contains('active'));
-                    if (result?.changed && isCountyVisible && !state.isRendering) {
+                if (!isCountyTeacherContextStillActive(renderToken)) return;
+                void ensureTeacherContextForCountyAnalysis(false, { token: renderToken, requireActive: true }).then((result) => {
+                    if (result?.changed && isCountyTeacherContextStillActive(renderToken) && !state.isRendering) {
                         renderCountyAnalysis(activeId);
                     }
                 });

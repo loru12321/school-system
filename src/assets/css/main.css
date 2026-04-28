@@ -4603,6 +4603,11 @@ table.mobile-card-table tr {
     font-weight: bold;
 }
 
+.rank-muted {
+    color: var(--muted);
+    font-weight: 700;
+}
+
 /* 语音悬浮球 */
 .voice-fab {
     position: fixed;

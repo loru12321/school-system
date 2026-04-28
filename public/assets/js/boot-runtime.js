@@ -363,6 +363,7 @@ var APP_MODULES = [
     './assets/js/permission-policy-runtime.js',
     './assets/js/teacher-card-store-runtime.js',
     './assets/js/ui-actions-runtime.js',
+    './assets/js/runtime-accessors-runtime.js',
     './assets/js/teacher-visibility-runtime.js',
     './assets/js/skin-settings-runtime.js',
     './assets/js/starter-status-runtime.js',

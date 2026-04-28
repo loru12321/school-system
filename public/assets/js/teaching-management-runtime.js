@@ -1222,9 +1222,22 @@ function tmRenderModuleStateBar(moduleId) {
     tmBindModuleStateActions(container);
 }
 
-function tmRenderTeachingModuleStateBars() {
+function tmRenderTeachingModuleStateBars(targetModuleId = '') {
     bindTeachingOverviewWatchers();
-    ['teacher-analysis', 'class-comparison', 'class-diagnosis', 'single-school-eval'].forEach(tmRenderModuleStateBar);
+    const supportedModules = ['teacher-analysis', 'class-comparison', 'class-diagnosis', 'single-school-eval'];
+    const requestedId = String(targetModuleId || '').trim();
+    if (supportedModules.includes(requestedId)) {
+        tmRenderModuleStateBar(requestedId);
+        return;
+    }
+    const activeId = String(document.querySelector('.section.active')?.id || '').trim();
+    if (supportedModules.includes(activeId)) {
+        tmRenderModuleStateBar(activeId);
+        return;
+    }
+    supportedModules
+        .filter((moduleId) => document.getElementById(`tmModuleState-${moduleId}`))
+        .forEach(tmRenderModuleStateBar);
 }
 
 function bindTeachingOverviewWatchers() {

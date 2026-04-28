@@ -251,7 +251,7 @@
         }
         const resultContainer = document.getElementById('sse_result_container');
         if (resultContainer) resultContainer.classList.remove('hidden');
-        if (typeof window.tmRenderTeachingModuleStateBars === 'function') window.tmRenderTeachingModuleStateBars();
+        if (typeof window.tmRenderTeachingModuleStateBars === 'function') window.tmRenderTeachingModuleStateBars('single-school-eval');
     }
 
     function SSE_export() {

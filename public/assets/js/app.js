@@ -41,240 +41,6 @@ const UI = {
     }
 };
 
-function getDataCloudRuntime() {
-    return window.DataCloudRuntime && typeof window.DataCloudRuntime === 'object' ? window.DataCloudRuntime : null;
-}
-
-function requireDataCloudRuntime() {
-    const runtime = getDataCloudRuntime();
-    if (!runtime) {
-        throw new Error('DataCloudRuntime unavailable');
-    }
-    return runtime;
-}
-
-function getIssueManagerRuntime() {
-    return window.IssueManagerRuntime && typeof window.IssueManagerRuntime === 'object' ? window.IssueManagerRuntime : null;
-}
-
-function requireIssueManagerRuntime() {
-    const runtime = getIssueManagerRuntime();
-    if (!runtime) {
-        throw new Error('IssueManagerRuntime unavailable');
-    }
-    return runtime;
-}
-
-function getPackagerRuntime() {
-    return window.PackagerRuntime && typeof window.PackagerRuntime === 'object' ? window.PackagerRuntime : null;
-}
-
-function requirePackagerRuntime() {
-    const runtime = getPackagerRuntime();
-    if (!runtime) {
-        throw new Error('PackagerRuntime unavailable');
-    }
-    return runtime;
-}
-
-async function ensurePackagerRuntime() {
-    const runtime = getPackagerRuntime();
-    if (runtime) return runtime;
-    if (typeof window.ensurePackagerRuntimeLoaded === 'function') {
-        await window.ensurePackagerRuntimeLoaded();
-        const loaded = getPackagerRuntime();
-        if (loaded) return loaded;
-    }
-    throw new Error('PackagerRuntime unavailable');
-}
-
-function getHelpSystemRuntime() {
-    return window.HelpSystemRuntime && typeof window.HelpSystemRuntime === 'object' ? window.HelpSystemRuntime : null;
-}
-
-function requireHelpSystemRuntime() {
-    const runtime = getHelpSystemRuntime();
-    if (!runtime) {
-        throw new Error('HelpSystemRuntime unavailable');
-    }
-    return runtime;
-}
-
-function getLoggerRuntime() {
-    return window.LoggerRuntime && typeof window.LoggerRuntime === 'object' ? window.LoggerRuntime : null;
-}
-
-function requireLoggerRuntime() {
-    const runtime = getLoggerRuntime();
-    if (!runtime) {
-        throw new Error('LoggerRuntime unavailable');
-    }
-    return runtime;
-}
-
-function getWorkerApiRuntime() {
-    return window.WorkerApiRuntime && typeof window.WorkerApiRuntime === 'object' ? window.WorkerApiRuntime : null;
-}
-
-function requireWorkerApiRuntime() {
-    const runtime = getWorkerApiRuntime();
-    if (!runtime) {
-        throw new Error('WorkerApiRuntime unavailable');
-    }
-    return runtime;
-}
-
-async function ensureWorkerApiRuntime() {
-    const runtime = getWorkerApiRuntime();
-    if (runtime) return runtime;
-    if (typeof window.ensureWorkerApiRuntimeLoaded === 'function') {
-        await window.ensureWorkerApiRuntimeLoaded();
-        const loaded = getWorkerApiRuntime();
-        if (loaded) return loaded;
-    }
-    throw new Error('WorkerApiRuntime unavailable');
-}
-
-function getAccountManagerRuntime() {
-    return window.AccountManagerRuntime && typeof window.AccountManagerRuntime === 'object' ? window.AccountManagerRuntime : null;
-}
-
-function requireAccountManagerRuntime() {
-    const runtime = getAccountManagerRuntime();
-    if (!runtime) {
-        throw new Error('AccountManagerRuntime unavailable');
-    }
-    return runtime;
-}
-
-function getDataManagerTeacherRuntime() {
-    return window.DataManagerTeacherRuntime && typeof window.DataManagerTeacherRuntime === 'object' ? window.DataManagerTeacherRuntime : null;
-}
-
-function requireDataManagerTeacherRuntime() {
-    const runtime = getDataManagerTeacherRuntime();
-    if (!runtime) {
-        throw new Error('DataManagerTeacherRuntime unavailable');
-    }
-    return runtime;
-}
-
-function getDataManagerStudentRuntime() {
-    return window.DataManagerStudentRuntime && typeof window.DataManagerStudentRuntime === 'object' ? window.DataManagerStudentRuntime : null;
-}
-
-function requireDataManagerStudentRuntime() {
-    const runtime = getDataManagerStudentRuntime();
-    if (!runtime) {
-        throw new Error('DataManagerStudentRuntime unavailable');
-    }
-    return runtime;
-}
-
-function getDataManagerArchiveRuntime() {
-    return window.DataManagerArchiveRuntime && typeof window.DataManagerArchiveRuntime === 'object' ? window.DataManagerArchiveRuntime : null;
-}
-
-function requireDataManagerArchiveRuntime() {
-    const runtime = getDataManagerArchiveRuntime();
-    if (!runtime) {
-        throw new Error('DataManagerArchiveRuntime unavailable');
-    }
-    return runtime;
-}
-
-function getDataManagerGrade9TemplateRuntime() {
-    return window.DataManagerGrade9TemplateRuntime && typeof window.DataManagerGrade9TemplateRuntime === 'object' ? window.DataManagerGrade9TemplateRuntime : null;
-}
-
-function requireDataManagerGrade9TemplateRuntime() {
-    const runtime = getDataManagerGrade9TemplateRuntime();
-    if (!runtime) {
-        throw new Error('DataManagerGrade9TemplateRuntime unavailable');
-    }
-    return runtime;
-}
-
-function getDataManagerParamsRuntime() {
-    return window.DataManagerParamsRuntime && typeof window.DataManagerParamsRuntime === 'object' ? window.DataManagerParamsRuntime : null;
-}
-
-function requireDataManagerParamsRuntime() {
-    const runtime = getDataManagerParamsRuntime();
-    if (!runtime) {
-        throw new Error('DataManagerParamsRuntime unavailable');
-    }
-    return runtime;
-}
-
-function getDataManagerTargetsRuntime() {
-    return window.DataManagerTargetsRuntime && typeof window.DataManagerTargetsRuntime === 'object' ? window.DataManagerTargetsRuntime : null;
-}
-
-function requireDataManagerTargetsRuntime() {
-    const runtime = getDataManagerTargetsRuntime();
-    if (!runtime) {
-        throw new Error('DataManagerTargetsRuntime unavailable');
-    }
-    return runtime;
-}
-
-function getDataManagerSchoolAliasRuntime() {
-    return window.DataManagerSchoolAliasRuntime && typeof window.DataManagerSchoolAliasRuntime === 'object' ? window.DataManagerSchoolAliasRuntime : null;
-}
-
-function requireDataManagerSchoolAliasRuntime() {
-    const runtime = getDataManagerSchoolAliasRuntime();
-    if (!runtime) {
-        throw new Error('DataManagerSchoolAliasRuntime unavailable');
-    }
-    return runtime;
-}
-
-function getDataManagerSaveSyncRuntime() {
-    return window.DataManagerSaveSyncRuntime && typeof window.DataManagerSaveSyncRuntime === 'object' ? window.DataManagerSaveSyncRuntime : null;
-}
-
-function requireDataManagerSaveSyncRuntime() {
-    const runtime = getDataManagerSaveSyncRuntime();
-    if (!runtime) {
-        throw new Error('DataManagerSaveSyncRuntime unavailable');
-    }
-    return runtime;
-}
-
-function getDataManagerHistoryRuntime() {
-    return window.DataManagerHistoryRuntime && typeof window.DataManagerHistoryRuntime === 'object' ? window.DataManagerHistoryRuntime : null;
-}
-
-function requireDataManagerHistoryRuntime() {
-    const runtime = getDataManagerHistoryRuntime();
-    if (!runtime) {
-        throw new Error('DataManagerHistoryRuntime unavailable');
-    }
-    return runtime;
-}
-
-function getDataManagerTabRuntime() {
-    return window.DataManagerTabRuntime && typeof window.DataManagerTabRuntime === 'object' ? window.DataManagerTabRuntime : null;
-}
-
-function requireDataManagerTabRuntime() {
-    const runtime = getDataManagerTabRuntime();
-    if (!runtime) {
-        throw new Error('DataManagerTabRuntime unavailable');
-    }
-    return runtime;
-}
-
-window.setCloudSyncStatus = (state, detail = '') => {
-    CloudSyncIndicator.set(state, detail);
-};
-
-function isLocalFileRuntimeForApp() {
-    return window.__IS_LOCAL_FILE_RUNTIME__ === true
-        || (window.location && String(window.location.protocol || '').trim().toLowerCase() === 'file:');
-}
 
 const EdgeGateway = {
     tokenStorageKey: 'EDGE_GATEWAY_TOKEN_V1',
@@ -9801,6 +9567,9 @@ function resetMainViewport() {
 }
 
 function scheduleCountyAnalysisRenderAfterSwitch(id) {
+    if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) {
+        return;
+    }
     if (id !== 'county-teacher-portrait' && id !== 'county-school-horizontal' && id !== 'county-analysis') {
         return;
     }
@@ -14676,6 +14445,17 @@ function renderClassComparison() {
     });
     const container = document.getElementById('class-comp-results'); const sideNavClassSubjects = document.getElementById('side-nav-class-subjects'); container.innerHTML = ''; sideNavClassSubjects.innerHTML = '';
     let html = '';
+    const formatComparisonDiff = (diff, valid = true) => {
+        if (!valid || !Number.isFinite(Number(diff))) {
+            return '<td class="rank-muted">—</td>';
+        }
+        const value = Number(diff);
+        return `<td class="${value >= 0 ? 'positive-percent' : 'negative-percent'}">${value >= 0 ? '+' : ''}${(value * 100).toFixed(2)}%</td>`;
+    };
+    const formatMetricValue = (value, valid = true, digits = 2, suffix = '') => {
+        if (!valid || !Number.isFinite(Number(value))) return '—';
+        return `${Number(value).toFixed(digits)}${suffix}`;
+    };
     // 1. 准备矩阵数据
     // classSubjectRanks 结构: { "701班": { "语文": 1, "数学": 5 } }
     // classList 是所有班级名的数组
@@ -14762,7 +14542,10 @@ function renderClassComparison() {
 
     // 将矩阵添加到总 HTML 的最前面
     html += matrixHtml;
-    const rankIt = (arr, key) => { const sorted = [...arr].sort((a, b) => b[key] - a[key]); arr.forEach(item => item[key + 'Rank'] = sorted.indexOf(item) + 1); };
+    const rankIt = (arr, key) => {
+        const sorted = [...arr].filter(item => item.count !== 0 && Number.isFinite(Number(item[key]))).sort((a, b) => b[key] - a[key]);
+        arr.forEach(item => item[key + 'Rank'] = sorted.includes(item) ? sorted.indexOf(item) + 1 : '—');
+    };
     const allStudents = sch.students;
     const gradeTotalScores = allStudents.map(s => s.total); const gradeTotalLen = gradeTotalScores.length || 1; const gradeTotalAvg = gradeTotalScores.reduce((a, b) => a + b, 0) / gradeTotalLen; const gradeTotalExc = gradeTotalScores.filter(v => v >= (THRESHOLDS.total?.exc || 0)).length / gradeTotalLen; const gradeTotalPass = gradeTotalScores.filter(v => v >= (THRESHOLDS.total?.pass || 0)).length / gradeTotalLen;
     const anchorTotal = 'anchor-class-total';
@@ -14802,17 +14585,17 @@ function renderClassComparison() {
         const anchorSub = `anchor-class-${sub}`;
         html += `<div id="${anchorSub}" class="anchor-target analysis-anchor-panel analysis-generated-panel"><div class="sub-header analysis-section-head">📘 ${sub}</div><div class="analysis-generated-note">查看该学科在各班的平均分、优秀率和及格率相对级部的变化。</div><div class="table-wrap analysis-table-shell"><table class="comparison-table analysis-generated-table analysis-table-dense"><thead><tr><th>班级</th><th>人数</th><th>平均分</th><th>与级比</th><th>校排</th><th>优秀率</th><th>与级比</th><th>校排</th><th>及格率</th><th>与级比</th><th>校排</th></tr></thead><tbody>`;
         const subStats = classList.map(c => {
-            const scores = classes[c].map(s => s.scores[sub]).filter(v => typeof v === 'number'); const len = scores.length || 1; const avg = len > 0 ? scores.reduce((a, b) => a + b, 0) / len : 0; const exc = len > 0 ? scores.filter(v => v >= THRESHOLDS[sub].exc).length / len : 0; const pass = len > 0 ? scores.filter(v => v >= THRESHOLDS[sub].pass).length / len : 0;
-            const avgDiff = (gradeSubAvg && avg) ? (avg - gradeSubAvg) / gradeSubAvg : 0; const excDiff = (gradeSubExc && exc) ? (exc - gradeSubExc) / gradeSubExc : 0; const passDiff = (gradeSubPass && pass) ? (pass - gradeSubPass) / gradeSubPass : 0;
-            return { name: c, count: scores.length, avg, exc, pass, avgDiff, excDiff, passDiff };
+            const scores = classes[c].map(s => s.scores[sub]).filter(v => typeof v === 'number'); const rawLen = scores.length; const len = rawLen || 1; const avg = rawLen > 0 ? scores.reduce((a, b) => a + b, 0) / len : NaN; const exc = rawLen > 0 ? scores.filter(v => v >= THRESHOLDS[sub].exc).length / len : NaN; const pass = rawLen > 0 ? scores.filter(v => v >= THRESHOLDS[sub].pass).length / len : NaN;
+            const avgDiff = (rawLen > 0 && gradeSubAvg) ? (avg - gradeSubAvg) / gradeSubAvg : NaN; const excDiff = (rawLen > 0 && gradeSubExc) ? (exc - gradeSubExc) / gradeSubExc : NaN; const passDiff = (rawLen > 0 && gradeSubPass) ? (pass - gradeSubPass) / gradeSubPass : NaN;
+            return { name: c, count: rawLen, avg, exc, pass, avgDiff, excDiff, passDiff };
         });
         rankIt(subStats, 'avg'); rankIt(subStats, 'exc'); rankIt(subStats, 'pass');
-        subStats.forEach(stat => { html += `<tr><td>${stat.name}</td><td>${stat.count}</td><td>${stat.avg.toFixed(2)}</td><td class="${stat.avgDiff >= 0 ? 'positive-percent' : 'negative-percent'}">${stat.avgDiff >= 0 ? '+' : ''}${(stat.avgDiff * 100).toFixed(2)}%</td><td>${stat.avgRank}</td><td>${(stat.exc * 100).toFixed(2)}%</td><td class="${stat.excDiff >= 0 ? 'positive-percent' : 'negative-percent'}">${stat.excDiff >= 0 ? '+' : ''}${(stat.excDiff * 100).toFixed(2)}%</td><td>${stat.excRank}</td><td>${(stat.pass * 100).toFixed(2)}%</td><td class="${stat.passDiff >= 0 ? 'positive-percent' : 'negative-percent'}">${stat.passDiff >= 0 ? '+' : ''}${(stat.passDiff * 100).toFixed(2)}%</td><td>${stat.passRank}</td></tr>`; });
+        subStats.forEach(stat => { const hasScore = stat.count > 0; html += `<tr><td>${stat.name}</td><td>${stat.count}</td><td>${formatMetricValue(stat.avg, hasScore)}</td>${formatComparisonDiff(stat.avgDiff, hasScore && !!gradeSubAvg)}<td>${stat.avgRank}</td><td>${formatMetricValue(stat.exc * 100, hasScore, 2, '%')}</td>${formatComparisonDiff(stat.excDiff, hasScore && !!gradeSubExc)}<td>${stat.excRank}</td><td>${formatMetricValue(stat.pass * 100, hasScore, 2, '%')}</td>${formatComparisonDiff(stat.passDiff, hasScore && !!gradeSubPass)}<td>${stat.passRank}</td></tr>`; });
         html += `</tbody></table></div></div>`;
         const navLink = document.createElement('a'); navLink.className = 'side-nav-sub-link'; navLink.innerText = sub; navLink.onclick = () => scrollToSubAnchor(anchorSub, navLink); sideNavClassSubjects.appendChild(navLink);
     });
     container.innerHTML = html;
-    if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars();
+    if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars('class-comparison');
 }
 
 function exportClassComparisonExcel() {
@@ -15389,7 +15172,7 @@ function renderClassDiagnosis() {
         html += `<tr><td>${st.cls}</td><td>${st.count}</td><td>${st.avg.toFixed(2)}</td><td style="font-family:monospace;font-weight:bold;">${st.sd.toFixed(2)}</td><td>${diagHtml}</td><td style="min-width:150px;">${barsHtml}</td></tr>`;
     });
     document.getElementById('diagnosis-results').innerHTML = html + `</tbody></table></div>`;
-    if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars();
+    if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars('class-diagnosis');
 }
 
 function exportDiagnosisExcel() {

@@ -202,52 +202,56 @@
             return;
         }
 
-        const hasTownshipSchoolHelper = typeof window.getTownshipManagedSchoolNames === 'function';
-        const townshipSchoolSet = new Set(
-            hasTownshipSchoolHelper
-                ? window.getTownshipManagedSchoolNames(Object.keys(window.SCHOOLS || {}))
-                : Object.keys(window.SCHOOLS || {})
-        );
-        const isTownshipSchoolName = (schoolName) => {
-            if (!hasTownshipSchoolHelper) return true;
-            if (typeof window.isTownshipManagedSchool === 'function') {
-                return window.isTownshipManagedSchool(schoolName, Object.keys(window.SCHOOLS || {}));
-            }
-            return townshipSchoolSet.has(String(schoolName || '').trim());
-        };
-        const townshipAverages = {};
-        (window.SUBJECTS || []).forEach((subject) => {
-            if (visibleSubjectSet && visibleSubjectSet.size > 0 && !visibleSubjectSet.has(normalizeSubjectFn(subject))) return;
-            let totalAvg = 0;
-            let totalExc = 0;
-            let totalPass = 0;
+        const townshipAverages = window.TEACHER_TOWNSHIP_AVERAGES || {};
+        const buildFallbackTownshipAverage = (rankingData) => {
+            const sourceRows = (rankingData || []).filter((row) => row.type === 'school' && teacherToNumber(row.studentCount, 0) > 0);
+            const rows = sourceRows.length ? sourceRows : (rankingData || []).filter((row) => teacherToNumber(row.studentCount, 0) > 0);
             let count = 0;
-            Object.keys(window.SCHOOLS || {}).forEach((schoolName) => {
-                const metrics = window.SCHOOLS?.[schoolName]?.metrics?.[subject];
-                if (!metrics || schoolName === window.MY_SCHOOL || !isTownshipSchoolName(schoolName)) return;
-                totalAvg += teacherToNumber(metrics.avg, 0);
-                totalExc += teacherToNumber(metrics.excRate, 0);
-                totalPass += teacherToNumber(metrics.passRate, 0);
-                count += 1;
+            let avgTotal = 0;
+            let excTotal = 0;
+            let passTotal = 0;
+            rows.forEach((row) => {
+                const rowCount = teacherToNumber(row.studentCount, 0);
+                if (rowCount <= 0) return;
+                count += rowCount;
+                avgTotal += teacherToNumber(row.avg, 0) * rowCount;
+                excTotal += teacherToNumber(row.excellentRate, 0) * rowCount;
+                passTotal += teacherToNumber(row.passRate, 0) * rowCount;
             });
-            if (count > 0) townshipAverages[subject] = {
-                avg: totalAvg / count,
-                excRate: totalExc / count,
-                passRate: totalPass / count
+            if (count <= 0) return null;
+            return {
+                avg: avgTotal / count,
+                excRate: excTotal / count,
+                passRate: passTotal / count,
+                count,
+                source: sourceRows.length ? 'ranking-schools' : 'ranking-rows'
             };
-        });
+        };
+        const formatBenchmarkComparison = (value, benchmark) => {
+            const numericValue = teacherToNumber(value, NaN);
+            const numericBenchmark = teacherToNumber(benchmark, NaN);
+            if (!Number.isFinite(numericValue) || !Number.isFinite(numericBenchmark) || Math.abs(numericBenchmark) < 1e-9) {
+                return { text: '—', value: null };
+            }
+            const delta = ((numericValue - numericBenchmark) / numericBenchmark) * 100;
+            return { text: `${delta >= 0 ? '+' : ''}${delta.toFixed(2)}%`, value: delta };
+        };
+        const comparisonClassName = (info) => {
+            if (!info || info.value === null) return 'rank-muted';
+            return info.value >= 0 ? 'positive-percent' : 'negative-percent';
+        };
 
         let htmlAll = '';
         (window.SUBJECTS || []).forEach((subject) => {
             if (visibleSubjectSet && visibleSubjectSet.size > 0 && !visibleSubjectSet.has(normalizeSubjectFn(subject))) return;
             const rankingData = window.TOWNSHIP_RANKING_DATA?.[subject];
             if (!rankingData?.length) return;
-            const townshipAvg = townshipAverages[subject] || { avg: 0, excRate: 0, passRate: 0 };
+            const townshipAvg = townshipAverages[subject] || buildFallbackTownshipAverage(rankingData);
             let tbodyHtml = '';
             rankingData.forEach((item) => {
-                const avgComparison = townshipAvg.avg ? ((item.avg - townshipAvg.avg) / townshipAvg.avg * 100).toFixed(2) : '0.00';
-                const excComparison = townshipAvg.excRate ? ((item.excellentRate - townshipAvg.excRate) / townshipAvg.excRate * 100).toFixed(2) : '0.00';
-                const passComparison = townshipAvg.passRate ? ((item.passRate - townshipAvg.passRate) / townshipAvg.passRate * 100).toFixed(2) : '0.00';
+                const avgComparison = formatBenchmarkComparison(item.avg, townshipAvg?.avg);
+                const excComparison = formatBenchmarkComparison(item.excellentRate, townshipAvg?.excRate);
+                const passComparison = formatBenchmarkComparison(item.passRate, townshipAvg?.passRate);
                 const typeClass = item.type === 'teacher' ? 'text-blue' : '';
                 const rowClass = item.type === 'teacher' ? 'analysis-row-emphasis' : '';
                 const badgeClass = item.type === 'teacher'
@@ -259,13 +263,13 @@
                         <td data-label="教师/学校" class="${typeClass}">${teacherEscapeHtml(item.name)}</td>
                         <td data-label="类型"><span class="${badgeClass}">${typeText}</span></td>
                         <td data-label="平均分">${formatRankDisplayFn(item.avg, item.rankAvg, 'teacher')}</td>
-                        <td data-label="与镇均比" class="${teacherToNumber(avgComparison, 0) >= 0 ? 'positive-percent' : 'negative-percent'}">${teacherToNumber(avgComparison, 0) >= 0 ? '+' : ''}${avgComparison}%</td>
+                        <td data-label="与镇均比" class="${comparisonClassName(avgComparison)}">${teacherEscapeHtml(avgComparison.text)}</td>
                         <td data-label="镇排">${teacherEscapeHtml(item.rankAvg)}</td>
                         <td data-label="优秀率">${formatRankDisplayFn(item.excellentRate, item.rankExc, 'teacher', true)}</td>
-                        <td data-label="与镇均比" class="${teacherToNumber(excComparison, 0) >= 0 ? 'positive-percent' : 'negative-percent'}">${teacherToNumber(excComparison, 0) >= 0 ? '+' : ''}${excComparison}%</td>
+                        <td data-label="与镇均比" class="${comparisonClassName(excComparison)}">${teacherEscapeHtml(excComparison.text)}</td>
                         <td data-label="镇排">${teacherEscapeHtml(item.rankExc)}</td>
                         <td data-label="及格率">${formatRankDisplayFn(item.passRate, item.rankPass, 'teacher', true)}</td>
-                        <td data-label="与镇均比" class="${teacherToNumber(passComparison, 0) >= 0 ? 'positive-percent' : 'negative-percent'}">${teacherToNumber(passComparison, 0) >= 0 ? '+' : ''}${passComparison}%</td>
+                        <td data-label="与镇均比" class="${comparisonClassName(passComparison)}">${teacherEscapeHtml(passComparison.text)}</td>
                         <td data-label="镇排">${teacherEscapeHtml(item.rankPass)}</td>
                     </tr>
                 `;
@@ -577,13 +581,15 @@
         if (excEl) excEl.textContent = teacherFormatPercent(data.excellentRate, 1);
         if (passEl) passEl.textContent = teacherFormatPercent(data.passRate, 1);
 
-        const expectedAvg = teacherToNumber(data.expectedAvg, 0);
-        const avgComparison = expectedAvg > 0 ? ((teacherToNumber(data.avgValue, 0) - expectedAvg) / expectedAvg) * 100 : 0;
-        if (avgCompareEl) avgCompareEl.textContent = `${avgComparison >= 0 ? '+' : ''}${avgComparison.toFixed(1)}%`;
-        const avgProgress = Math.min(Math.max(50 + avgComparison, 0), 100);
+        const expectedAvg = teacherToNumber(data.expectedAvg, NaN);
+        const actualAvg = teacherToNumber(data.avgValue, NaN);
+        const hasExpectedBenchmark = Number.isFinite(expectedAvg) && expectedAvg > 0 && Number.isFinite(actualAvg);
+        const avgComparison = hasExpectedBenchmark ? ((actualAvg - expectedAvg) / expectedAvg) * 100 : null;
+        if (avgCompareEl) avgCompareEl.textContent = hasExpectedBenchmark ? `${avgComparison >= 0 ? '+' : ''}${avgComparison.toFixed(1)}%` : '—';
+        const avgProgress = hasExpectedBenchmark ? Math.min(Math.max(50 + avgComparison, 0), 100) : 50;
         progressEl.style.width = `${avgProgress}%`;
-        progressEl.className = avgComparison >= 0 ? 'progress-good' : 'progress-poor';
-        progressEl.style.backgroundColor = avgComparison >= 0 ? '#22c55e' : '#ef4444';
+        progressEl.className = hasExpectedBenchmark ? (avgComparison >= 0 ? 'progress-good' : 'progress-poor') : 'progress-neutral';
+        progressEl.style.backgroundColor = hasExpectedBenchmark ? (avgComparison >= 0 ? '#22c55e' : '#ef4444') : '#94a3b8';
 
         const thead = table.querySelector('thead');
         const tbody = table.querySelector('tbody');
