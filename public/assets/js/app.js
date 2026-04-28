@@ -3863,9 +3863,12 @@ var Auth = {
             };
             const startBackgroundCloudHydration = (loaderText) => {
                 if (!shouldHydrateCloudInBackground) return;
-                const shouldShowLoader = !RAW_DATA || RAW_DATA.length === 0;
-                if (shouldShowLoader && window.UI) UI.loading(true, loaderText || "正在后台恢复成绩数据...");
-                withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout')
+                const needsManualCohort = typeof requiresManualCohortSelection === 'function' && requiresManualCohortSelection();
+                if (needsManualCohort) return;
+                const runHydration = () => {
+                    if (window.__COHORT_SWITCH_IN_PROGRESS__) return;
+                    if (Array.isArray(RAW_DATA) && RAW_DATA.length > 0) return;
+                    withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout')
                     .then(() => {
                         tryResumeReadyWorkspace();
                         if (typeof scheduleTeacherSyncPrompt === 'function') {
@@ -3884,10 +3887,10 @@ var Auth = {
                                 })
                                 .catch(bgErr => console.warn('[Auth.login] delayed cloud retry failed:', bgErr));
                         }
-                    })
-                    .finally(() => {
-                        if (shouldShowLoader && window.UI) UI.loading(false);
                     });
+                };
+                if (window.__STARTUP_CLOUD_HYDRATION_TIMER__) clearTimeout(window.__STARTUP_CLOUD_HYDRATION_TIMER__);
+                window.__STARTUP_CLOUD_HYDRATION_TIMER__ = setTimeout(runHydration, 0);
             };
 
             // 5. 分流跳转与权限初始化
@@ -3909,10 +3912,9 @@ var Auth = {
                 this.renderParentView();
             } else {
                 // === 教职工模式 (管理员/主任/教师/班主任/级部主任) ===
-                // 初始化导航和表格
+                // 初始化轻量导航；重表格在届别数据就绪后统一调度，避免登录后主线程阻塞。
                 if (typeof renderNavigation === 'function') renderNavigation();
                 if (typeof updateSchoolSelect === 'function') updateSchoolSelect();
-                if (typeof renderTables === 'function') renderTables();
 
                 // 7. 先展示届别选择，不再从登录页直接进入工作台
                 if (typeof CohortManager !== 'undefined') {
@@ -7550,6 +7552,11 @@ async function switchCohort(cohortId, options = {}) {
         return false;
     }
 
+    window.__COHORT_SWITCH_IN_PROGRESS__ = true;
+    if (window.__STARTUP_CLOUD_HYDRATION_TIMER__) {
+        clearTimeout(window.__STARTUP_CLOUD_HYDRATION_TIMER__);
+        window.__STARTUP_CLOUD_HYDRATION_TIMER__ = null;
+    }
     UI.loading(true, "正在从云端拉取 [" + cohortKey + "] 的数据...");
 
     // 1. 记录当前选择的届别
@@ -7585,7 +7592,7 @@ async function switchCohort(cohortId, options = {}) {
         syncRuntimeStateToWindow();
 
         // 优先使用届别考试快照
-        if (COHORT_DB && COHORT_DB.currentExamId && CohortDB.applyExamToWorkspace(COHORT_DB.currentExamId)) {
+        if (COHORT_DB && COHORT_DB.currentExamId && CohortDB.applyExamToWorkspace(COHORT_DB.currentExamId, { renderTables: false })) {
             // 已加载当前考试快照
         } else {
             syncDataRuntimeState({
@@ -7641,7 +7648,6 @@ async function switchCohort(cohortId, options = {}) {
         if (restoredGrade) applyModeByGrade(restoredGrade);
         updateSchoolSelect();
         updateMySchoolSelect();
-        renderTables();
 
         // 如果有配置名，刷新导航
         const badge = document.getElementById('mode-badge');
@@ -7649,6 +7655,7 @@ async function switchCohort(cohortId, options = {}) {
         renderNavigation();
         document.getElementById('mode-mask').style.display = 'none';
         document.getElementById('app').classList.remove('hidden');
+        scheduleWorkspaceUiRefresh('switch-cohort-restored', { delay: 120, idle: true, timeout: 1800, renderTables: false });
 
         CohortDB.renderExamList();
 
@@ -7669,14 +7676,15 @@ async function switchCohort(cohortId, options = {}) {
                     updateSchoolSelect();
                     updateMySchoolSelect();
                     if (CONFIG.name) renderNavigation();
-                    renderTables();
                     document.getElementById('mode-mask').style.display = 'none';
                     document.getElementById('app').classList.remove('hidden');
+                    scheduleWorkspaceUiRefresh('switch-cohort-exam-archive', { delay: 120, idle: true, timeout: 1800, renderTables: false });
                     CohortDB.renderExamList();
                     UI.toast(`已从云端考试快照恢复 [${cohortKey}] 数据`, "success");
                     logAction('届别切换', `已从云端考试快照恢复 ${cohortKey}`);
                     updateStatusPanel();
                     UI.loading(false);
+                    window.__COHORT_SWITCH_IN_PROGRESS__ = false;
                     return true;
                 }
             } catch (e) {
@@ -7706,11 +7714,11 @@ async function switchCohort(cohortId, options = {}) {
         if (i2) i2.value = '';
 
         updateSchoolSelect();
-        renderTables();
         const grade = computeCohortGrade(CURRENT_COHORT_META, getExamMetaFromUI());
         applyModeByGrade(grade);
         document.getElementById('mode-mask').style.display = 'none';
         document.getElementById('app').classList.remove('hidden');
+        scheduleWorkspaceUiRefresh('switch-cohort-empty', { delay: 160, idle: true, timeout: 1800, renderTables: false });
 
         CohortDB.renderExamList();
 
@@ -7720,11 +7728,40 @@ async function switchCohort(cohortId, options = {}) {
     }
 
     UI.loading(false);
+    window.__COHORT_SWITCH_IN_PROGRESS__ = false;
     return true;
 }
 
 // 兼容旧入口
 window.switchProject = switchCohort;
+
+let __workspaceRefreshTimer = null;
+function scheduleWorkspaceUiRefresh(label = 'workspace-refresh', options = {}) {
+    if (__workspaceRefreshTimer) {
+        clearTimeout(__workspaceRefreshTimer);
+        __workspaceRefreshTimer = null;
+    }
+
+    const delay = Math.max(0, Number(options.delay || 120));
+    const run = () => {
+        __workspaceRefreshTimer = null;
+        const shouldRenderTables = options.renderTables !== false;
+        const shouldGenerateTeacherInputs = options.generateTeacherInputs !== false;
+        const refresh = () => {
+            try { if (typeof updateSchoolSelect === 'function') updateSchoolSelect(); } catch (e) { console.warn(e); }
+            try { if (typeof updateMySchoolSelect === 'function') updateMySchoolSelect(); } catch (e) { console.warn(e); }
+            try { if (shouldRenderTables && typeof renderTables === 'function') renderTables(); } catch (e) { console.warn(e); }
+            try { if (shouldGenerateTeacherInputs && MY_SCHOOL && typeof generateTeacherInputs === 'function') generateTeacherInputs(); } catch (e) { console.warn(e); }
+            try { if (typeof updateStatusPanel === 'function') updateStatusPanel(); } catch (e) { console.warn(e); }
+        };
+        scheduleStartupHydration(label, refresh, {
+            idle: options.idle !== false,
+            timeout: Number(options.timeout || 1600)
+        });
+    };
+
+    __workspaceRefreshTimer = window.setTimeout(run, delay);
+}
 
 function scheduleStartupHydration(label, callback, options = {}) {
     const safeRun = () => {
@@ -7986,10 +8023,7 @@ window.addEventListener('load', async () => {
         updateMySchoolSelect();
         document.getElementById('mode-mask').style.display = 'none';
         if (CONFIG.name) renderNavigation();
-        setTimeout(() => {
-            renderTables();
-            if (MY_SCHOOL) generateTeacherInputs();
-        }, 60);
+        scheduleWorkspaceUiRefresh('embedded-db-tables', { delay: 120, idle: true, timeout: 1800, renderTables: false });
 
         UI.toast("✅ 数据已自动加载 (分发版模式)", "success");
     }
@@ -8109,10 +8143,7 @@ window.addEventListener('load', async () => {
                     UI.toast(`✅ 已加载项目：[${currentKey}]`, 'success');
                 });
 
-                scheduleStartupHydration('restore-tables', () => {
-                    renderTables();
-                    if (MY_SCHOOL) generateTeacherInputs();
-                }, { delay: 60 });
+                scheduleWorkspaceUiRefresh('restore-tables', { delay: 160, idle: true, timeout: 1800, renderTables: false });
 
                 CohortExamHydrationScheduler.schedule(CURRENT_COHORT_ID || readWorkspaceCohortId(), {
                     delay: 700,
@@ -17062,12 +17093,7 @@ function tryAutoEnterReadyCohortWorkspace() {
         if (typeof renderNavigation === 'function') renderNavigation();
     }
 
-    scheduleStartupHydration('auto-enter-ready-cohort', () => {
-        try { updateSchoolSelect(); } catch (e) { console.warn(e); }
-        try { updateMySchoolSelect(); } catch (e) { console.warn(e); }
-        try { renderTables(); } catch (e) { console.warn(e); }
-        try { if (MY_SCHOOL) generateTeacherInputs(); } catch (e) { console.warn(e); }
-    }, { delay: 30 });
+    scheduleWorkspaceUiRefresh('auto-enter-ready-cohort', { delay: 180, idle: true, timeout: 1800, renderTables: false });
     return true;
 }
 
@@ -17355,7 +17381,7 @@ function tryAutoRestoreWorkspaceExam(options = {}) {
 
     db.currentExamId = autoExamId;
     window.COHORT_DB = db;
-    if (!CohortDB.applyExamToWorkspace(autoExamId)) return false;
+    if (!CohortDB.applyExamToWorkspace(autoExamId, { renderTables: false })) return false;
 
     ensureWorkspaceDefaultSchool();
     if (typeof CohortDB.renderExamList === 'function') CohortDB.renderExamList();
@@ -17627,10 +17653,13 @@ const CohortDB = {
         syncRuntimeStateToWindow();
     },
 
-    applyExamToWorkspace: function (examId) {
+    applyExamToWorkspace: function (examId, options = {}) {
         const db = this.ensure();
         const exam = db.exams?.[examId];
         if (!exam) return false;
+        const hasProcessedSchools = !!(exam.schools && typeof exam.schools === 'object' && Object.keys(exam.schools).length > 0);
+        const shouldRecalculate = options.recalculate !== false || !hasProcessedSchools;
+        const shouldRenderTables = options.renderTables !== false;
         syncDataRuntimeState({
             rawData: exam.data || [],
             schools: (exam.schools && typeof exam.schools === 'object') ? exam.schools : {},
@@ -17662,15 +17691,17 @@ const CohortDB = {
         if (termId) writeCurrentTermId(termId);
         applyModeByGrade(effectiveGrade || exam.meta?.grade);
 
-        if (RAW_DATA.length > 0 && typeof processData === 'function') {
+        if (shouldRecalculate && RAW_DATA.length > 0 && typeof processData === 'function') {
             setTimeout(() => {
                 processData()
                     .then(() => {
-                        if (typeof renderTables === 'function') renderTables();
+                        if (shouldRenderTables && typeof renderTables === 'function') renderTables();
                         if (typeof updateStatusPanel === 'function') updateStatusPanel();
                     })
                     .catch(err => console.warn('历史考试重算失败:', err));
             }, 0);
+        } else if (typeof updateStatusPanel === 'function') {
+            setTimeout(() => updateStatusPanel(), 0);
         }
 
         return true;
@@ -18267,7 +18298,7 @@ function applySnapshotPayload(db) {
     syncRuntimeStateToWindow();
 
     if (window.COHORT_DB && window.COHORT_DB.currentExamId) {
-        try { CohortDB.applyExamToWorkspace(window.COHORT_DB.currentExamId); } catch (e) { }
+        try { CohortDB.applyExamToWorkspace(window.COHORT_DB.currentExamId, { renderTables: false }); } catch (e) { }
     }
 
     try { if (typeof renderTables === 'function') renderTables(); } catch (e) { }

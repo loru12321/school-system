@@ -670,20 +670,51 @@
         return Promise.resolve(runAfterLoad());
     }
 
+    let macroTablesRenderTimer = 0;
+
+    function scheduleMacroTablesRender(activeModuleId, label = 'macro-entry') {
+        if (macroTablesRenderTimer) {
+            window.clearTimeout(macroTablesRenderTimer);
+            macroTablesRenderTimer = 0;
+        }
+        const run = () => {
+            macroTablesRenderTimer = 0;
+            if (activeModuleId && !document.getElementById(activeModuleId)?.classList.contains('active')) return;
+            if (typeof window.renderTables === 'function') window.renderTables();
+        };
+        const start = () => {
+            if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
+                window.SystemPerformance.scheduleIdle(run, { label, delay: 40, timeout: 900 });
+                return;
+            }
+            if (typeof window.requestIdleCallback === 'function') {
+                window.requestIdleCallback(run, { timeout: 900 });
+                return;
+            }
+            window.setTimeout(run, 40);
+        };
+        macroTablesRenderTimer = window.setTimeout(start, 60);
+    }
+
     function runModuleSpecificInit(id) {
         if (id === 'student-details') return initStudentDetailsEntry();
-        if (id === 'summary'
-            && typeof window.ensureSchoolProfileRuntimeLoaded === 'function'
-            && !window.__SCHOOL_PROFILE_RUNTIME_PATCHED__) {
-            return window.ensureSchoolProfileRuntimeLoaded().catch((error) => console.warn(error));
+        if (id === 'summary') {
+            scheduleMacroTablesRender('summary', 'summary-tables');
+            if (typeof window.ensureSchoolProfileRuntimeLoaded === 'function'
+                && !window.__SCHOOL_PROFILE_RUNTIME_PATCHED__) {
+                return window.ensureSchoolProfileRuntimeLoaded().catch((error) => console.warn(error));
+            }
         }
         if (id === 'app-download-center') return initAppDownloadCenterEntry();
         if (id === 'ai-analysis') return initAIAnalysisEntry();
         if (id === 'analysis') {
             if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
             renderSingleSchoolAnalysisHint();
+            scheduleMacroTablesRender('analysis', 'analysis-tables');
         }
         if (TEACHING_MANAGEMENT_MODULE_IDS.has(id)) return initTeachingManagementEntry(id);
+        if (id === 'macro-watch') scheduleMacroTablesRender('macro-watch', 'macro-watch-tables');
+        if (id === 'bottom3') scheduleMacroTablesRender('bottom3', 'bottom3-tables');
         if (id === 'indicator' && typeof refreshIndicatorResults === 'function') refreshIndicatorResults(true);
         if (id === 'county-analysis' || id === 'county-teacher-portrait' || id === 'county-school-horizontal') {
             if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) {

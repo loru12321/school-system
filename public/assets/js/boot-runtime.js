@@ -483,6 +483,68 @@ function loadBootScript(src, timeoutMs) {
     });
 }
 
+function getAppModuleTimeoutMs(src) {
+    const moduleSrc = String(src || '');
+    return moduleSrc.includes('app.js') || moduleSrc.includes('auth-state') ? 15000 : 8000;
+}
+
+function loadOrderedBootScripts(sources, options = {}) {
+    const list = Array.isArray(sources) ? sources.filter(Boolean) : [];
+    if (!list.length) return Promise.resolve();
+
+    return new Promise((resolve) => {
+        let settledCount = 0;
+        const onProgress = typeof options.onProgress === 'function' ? options.onProgress : function () { };
+
+        const settle = (src, status) => {
+            settledCount += 1;
+            onProgress(settledCount, list.length, src, status);
+            if (settledCount >= list.length) resolve();
+        };
+
+        list.forEach((src) => {
+            if (window.__BOOT_SKIP_INIT__ === true) {
+                settle(src, 'skipped');
+                return;
+            }
+
+            const existingLoaded = Array.from(document.scripts || []).find((script) => {
+                const candidate = String(script.getAttribute('src') || script.src || '');
+                return candidate.includes(src.replace('./', '')) && script.dataset.bootLoaded === 'true';
+            });
+            if (existingLoaded) {
+                settle(src, 'cached');
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = getVersionedAssetPath(src);
+            script.async = false;
+
+            let finished = false;
+            const timeoutMs = getAppModuleTimeoutMs(src);
+            const finish = (status) => {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timeout);
+                if (status === 'loaded') script.dataset.bootLoaded = 'true';
+                settle(src, status);
+            };
+            const timeout = setTimeout(() => {
+                console.warn(`[boot-runtime] Ordered script load timeout (${timeoutMs}ms): ${src}`);
+                finish('timeout');
+            }, timeoutMs);
+
+            script.onload = () => finish('loaded');
+            script.onerror = () => {
+                console.warn(`[boot-runtime] Ordered script load error: ${src}`);
+                finish('error');
+            };
+            document.head.appendChild(script);
+        });
+    });
+}
+
 function loadDeferredAppModules() {
     if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.warmup === 'function') {
         return window.SystemRuntimeLoader.warmup();
@@ -573,19 +635,14 @@ async function loadAppModules() {
         }));
     }
 
-    for (let i = 0; i < APP_MODULES.length; i++) {
-        if (window.__BOOT_SKIP_INIT__ === true) {
-            console.warn('[boot-runtime] Initialization skipped by user');
-            break;
-        }
-        const src = APP_MODULES[i];
-        if (loaderText) loaderText.textContent = `正在初始化核心组件 (${loadedCount + 1}/${total})...`;
-
-        // Critical modules get more patience
-        const isCritical = src.includes('app.js') || src.includes('auth-state');
-        const timeoutMs = isCritical ? 15000 : 8000;
-        await loadBootScript(src, timeoutMs);
-        loadedCount += 1;
+    if (APP_MODULES.length) {
+        if (loaderText) loaderText.textContent = `正在并行准备核心组件 (${loadedCount}/${total})...`;
+        await loadOrderedBootScripts(APP_MODULES, {
+            onProgress: (moduleLoadedCount) => {
+                loadedCount = BOOT_VENDOR_MODULES.length + moduleLoadedCount;
+                if (loaderText) loaderText.textContent = `正在初始化核心组件 (${loadedCount}/${total})...`;
+            }
+        });
     }
     window.__APP_MODULES_LOADED__ = true;
     if (loaderText) loaderText.textContent = '核心组件就绪，正在同步状态...';
