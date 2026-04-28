@@ -5,6 +5,9 @@
     const SYSTEM_DATA_READ_TTL_MS = 5 * 60 * 1000;
     const SYSTEM_DATA_SELECT_TTL_MS = 2 * 60 * 1000;
     const SYSTEM_DATA_MAX_CACHE_SIZE = 120;
+    const CLOUD_PROBE_SUCCESS_CACHE_KEY = 'SCHOOL_SYSTEM_CLOUD_PROBE_SUCCESS_AT_V1';
+    const CLOUD_PROBE_SUCCESS_TTL_MS = 2 * 60 * 1000;
+    const CLOUD_PROBE_INTERVAL_MS = 2 * 60 * 1000;
     const systemDataCache = new Map();
     const systemDataInflight = new Map();
 
@@ -98,6 +101,33 @@
             if (String(key).includes(text)) systemDataInflight.delete(key);
         });
         root.CloudDataService?.clear?.(text);
+    }
+
+    function readRecentProbeSuccess() {
+        try {
+            const at = Number(root.sessionStorage && root.sessionStorage.getItem(CLOUD_PROBE_SUCCESS_CACHE_KEY));
+            return Number.isFinite(at) && Date.now() - at < CLOUD_PROBE_SUCCESS_TTL_MS;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function rememberProbeSuccess() {
+        try {
+            if (root.sessionStorage) root.sessionStorage.setItem(CLOUD_PROBE_SUCCESS_CACHE_KEY, String(Date.now()));
+        } catch (_) { }
+    }
+
+    function scheduleCloudProbeTask(callback, delay = 0) {
+        const runner = () => {
+            if (root.document && root.document.visibilityState === 'hidden') return;
+            if (typeof root.requestIdleCallback === 'function') {
+                root.requestIdleCallback(callback, { timeout: 5000 });
+                return;
+            }
+            callback();
+        };
+        return root.setTimeout(runner, Math.max(0, Number(delay) || 0));
     }
 
     async function selectSystemDataRecords(options = {}) {
@@ -239,7 +269,8 @@
         probeTimer: null,
         probePromise: null,
         lastProbeAt: 0,
-        probeMinInterval: 12000,
+        startupProbeTimer: null,
+        probeMinInterval: 60000,
         ensure: function () {
             if (this.el && root.document && root.document.body.contains(this.el)) return this.el;
             const node = root.document.createElement('div');
@@ -297,6 +328,13 @@
             if (!force && recentlyChecked && (this.state === 'connected' || this.state === 'connecting')) {
                 return;
             }
+            if (!force && readRecentProbeSuccess()) {
+                this.set('connected');
+                return;
+            }
+            if (!force && root.document && root.document.visibilityState === 'hidden') {
+                return;
+            }
             this.lastProbeAt = now;
             this.probePromise = (async () => {
                 const authState = root.AuthState;
@@ -317,6 +355,7 @@
                 }
                 try {
                     await withTimeout(probeSystemDataConnection(), 4000, 'probe-timeout');
+                    rememberProbeSuccess();
                     this.set('connected');
                 } catch (e) {
                     this.set('error', '连接异常');
@@ -330,10 +369,19 @@
             if (this.started) return;
             this.started = true;
             this.ensure();
-            this.probe(true);
+            if (readRecentProbeSuccess()) {
+                this.set('connected');
+                this.startupProbeTimer = scheduleCloudProbeTask(() => this.probe(), 8000);
+            } else {
+                this.set('connecting', '后台检测');
+                this.startupProbeTimer = scheduleCloudProbeTask(() => this.probe(true), 1200);
+            }
             root.addEventListener('online', () => this.probe(true));
             root.addEventListener('offline', () => this.set('error', '离线'));
-            this.probeTimer = setInterval(() => this.probe(), 30000);
+            root.document?.addEventListener?.('visibilitychange', () => {
+                if (root.document.visibilityState === 'visible') this.probe();
+            });
+            this.probeTimer = setInterval(() => this.probe(), CLOUD_PROBE_INTERVAL_MS);
         }
     };
 

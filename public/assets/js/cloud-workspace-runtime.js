@@ -88,6 +88,21 @@
         console.error(label, error);
     }
 
+    function scheduleBackgroundCloudTask(task, delay = 0, timeout = 8000) {
+        const run = () => {
+            if (document.visibilityState === 'hidden') {
+                window.setTimeout(() => scheduleBackgroundCloudTask(task, delay, timeout), 15000);
+                return;
+            }
+            if (typeof window.requestIdleCallback === 'function') {
+                window.requestIdleCallback(() => task(), { timeout });
+                return;
+            }
+            task();
+        };
+        window.setTimeout(run, Math.max(0, Number(delay) || 0));
+    }
+
     async function selectSystemData(options = {}) {
         if (window.CloudDataService && typeof window.CloudDataService.selectSystemData === 'function') {
             return window.CloudDataService.selectSystemData(options, async () => {
@@ -1079,13 +1094,15 @@
         const previousFetch = manager.fetchCohortExamsToLocal;
 
         manager.fetchCohortExamsToLocal = function (cohortId, options = {}) {
-            runCohortExamSync(manager, cohortId, {
-                ...(options || {}),
-                background: true,
-                refreshSelectors: options.refreshSelectors === true
-            }).catch((syncError) => {
-                console.warn('[CloudExams] background sync failed:', syncError);
-            });
+            scheduleBackgroundCloudTask(() => {
+                runCohortExamSync(manager, cohortId, {
+                    ...(options || {}),
+                    background: true,
+                    refreshSelectors: options.refreshSelectors === true
+                }).catch((syncError) => {
+                    console.warn('[CloudExams] background sync failed:', syncError);
+                });
+            }, 1800);
             return Promise.resolve({ success: true, queued: true, background: true });
         };
 
@@ -1097,12 +1114,12 @@
     };
 
     window.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => {
+        scheduleBackgroundCloudTask(() => {
             if (!Object.keys(readWorkspaceSyncQueue()).length) return;
             CloudManager.flushWorkspaceSyncQueue().catch((error) => {
                 console.warn('[CloudSync] startup queue flush failed:', error);
             });
-        }, 1200);
+        }, 3500);
     });
 
     window.__CLOUD_WORKSPACE_RUNTIME_PATCHED__ = true;
