@@ -356,6 +356,7 @@ var APP_MODULES = [
     './assets/js/mobile-experience-runtime.js',
     './assets/js/module-entry-runtime.js',
     './assets/js/ranking-data-service-runtime.js',
+    './assets/js/analytics-kernel-runtime.js',
     './assets/js/student-jump-runtime.js',
     './assets/js/student-details-guard-runtime.js',
     './assets/js/teaching-management-modules-runtime.js',

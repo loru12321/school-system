@@ -22,6 +22,7 @@
         preUploadTownshipSchools: [],
         isRendering: false,
         teacherContextToken: 0,
+        teacherContextScheduledSignature: '',
         lastDataRankSignature: '',
         lastTeacherRankSignature: ''
     };
@@ -260,11 +261,17 @@
         const teacherStats = window.TEACHER_STATS && typeof window.TEACHER_STATS === 'object' ? window.TEACHER_STATS : {};
         const teacherMap = window.TEACHER_MAP && typeof window.TEACHER_MAP === 'object' ? window.TEACHER_MAP : {};
         const teacherSchoolMap = window.TEACHER_SCHOOL_MAP && typeof window.TEACHER_SCHOOL_MAP === 'object' ? window.TEACHER_SCHOOL_MAP : {};
-        const rankingData = window.COUNTY_TEACHER_RANKING_DATA && typeof window.COUNTY_TEACHER_RANKING_DATA === 'object'
-            ? window.COUNTY_TEACHER_RANKING_DATA
-            : {};
         const teacherStatsShape = Object.entries(teacherStats)
-            .map(([teacherName, subjectMap]) => `${teacherName}:${Object.keys(subjectMap || {}).sort().join(',')}`)
+            .map(([teacherName, subjectMap]) => `${teacherName}:${Object.entries(subjectMap || {})
+                .map(([subject, data]) => [
+                    subject,
+                    toNumber(data?.avgValue ?? data?.avg).toFixed(4),
+                    toNumber(data?.excellentRate ?? data?.excRate).toFixed(6),
+                    toNumber(data?.passRate).toFixed(6),
+                    toNumber(data?.studentCount ?? data?.count)
+                ].join(':'))
+                .sort()
+                .join(',')}`)
             .sort()
             .join('|');
         return [
@@ -273,8 +280,7 @@
             Object.keys(teacherMap).length,
             Object.keys(teacherSchoolMap).length,
             Object.keys(teacherStats).length,
-            teacherStatsShape,
-            Object.keys(rankingData).sort().join(',')
+            teacherStatsShape
         ].join('::');
     }
 
@@ -285,6 +291,13 @@
         state.teacherSubjectTablesCache = [];
         state.countyTeacherStatsSignature = '';
         state.countyTeacherStats = {};
+    }
+
+    function invalidateTeacherRankingViewCaches() {
+        state.teacherRowsCacheSignature = '';
+        state.teacherRowsCache = [];
+        state.teacherSubjectTablesCacheSignature = '';
+        state.teacherSubjectTablesCache = [];
     }
 
     function getScopeMap() {
@@ -636,17 +649,30 @@
 
         const rows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
         const schoolRows = teacherSchool ? rows.filter((student) => String(student?.school || '').trim() === teacherSchool) : rows;
+        const subjectByNormalized = new Map(
+            (window.SUBJECTS || []).map((subject) => [normalizeCountySubjectName(subject), subject])
+        );
+        const rowsByClassSubject = new Map();
+        schoolRows.forEach((student) => {
+            const className = normalizeClassNameForCounty(student?.class);
+            if (!className || !student?.scores) return;
+            Object.keys(student.scores || {}).forEach((rawSubject) => {
+                if (!Number.isFinite(Number(student.scores[rawSubject]))) return;
+                const normalizedSubject = normalizeCountySubjectName(rawSubject);
+                if (!normalizedSubject) return;
+                const key = `${className}__${normalizedSubject}`;
+                if (!rowsByClassSubject.has(key)) rowsByClassSubject.set(key, []);
+                rowsByClassSubject.get(key).push(student);
+            });
+        });
         const stats = {};
         Object.entries(teacherMap).forEach(([key, teacherName]) => {
             const [rawClass, rawSubject] = String(key || '').split('_');
             const className = normalizeClassNameForCounty(rawClass);
-            const subject = (window.SUBJECTS || []).find((item) => normalizeCountySubjectName(item) === normalizeCountySubjectName(rawSubject)) || rawSubject;
+            const normalizedSubject = normalizeCountySubjectName(rawSubject);
+            const subject = subjectByNormalized.get(normalizedSubject) || rawSubject;
             if (!teacherName || !className || !subject) return;
-            const students = schoolRows.filter((student) => (
-                normalizeClassNameForCounty(student?.class) === className
-                && student?.scores
-                && student.scores[subject] !== undefined
-            ));
+            const students = rowsByClassSubject.get(`${className}__${normalizedSubject}`) || [];
             if (!students.length) return;
             if (!stats[teacherName]) stats[teacherName] = {};
             if (!stats[teacherName][subject]) {
@@ -967,7 +993,7 @@
         window.COUNTY_TEACHER_RANKINGS = rankings;
         window.COUNTY_TEACHER_RANKING_DATA = rankingDataMap;
         state.lastTeacherRankSignature = rankingSignature;
-        invalidateTeacherDerivedCaches();
+        invalidateTeacherRankingViewCaches();
         return rankings;
     }
 
@@ -1821,27 +1847,37 @@
         if (state.isRendering) return;
         state.isRendering = true;
         try {
-        state.teacherContextToken += 1;
-        const renderToken = state.teacherContextToken;
-        ensureCountySubmoduleSections();
-        const activeId = id === 'county-analysis' ? 'county-teacher-portrait' : id;
-        const root = getCountyRootForSubmodule(activeId);
-        if (!root) return;
-        const scope = applyCountyRanks();
-        if (activeId === 'county-teacher-portrait') {
-            window.setTimeout(() => {
-                void ensureTeacherContextForCountyAnalysis(false, { token: renderToken, requireActive: false }).then((result) => {
-                    if (result?.changed && !state.isRendering) {
-                        renderCountyAnalysis(activeId);
-                    }
-                });
-            }, 0);
-        }
-        const names = getSchoolNames();
-        const countyCount = scope.countySchools?.length || 0;
-        const townshipCount = scope.townshipSchools?.length || 0;
-        const totalStudents = (window.RAW_DATA || []).length;
-        const html = `
+            state.teacherContextToken += 1;
+            const renderToken = state.teacherContextToken;
+            ensureCountySubmoduleSections();
+            const activeId = id === 'county-analysis' ? 'county-teacher-portrait' : id;
+            const root = getCountyRootForSubmodule(activeId);
+            if (!root) return;
+            const scope = applyCountyRanks();
+            if (activeId === 'county-teacher-portrait') {
+                const scheduleSignature = [
+                    getDataSignature(),
+                    getCurrentSchoolNameForTeacherScope(),
+                    Object.keys(window.TEACHER_MAP || {}).length,
+                    Object.keys(window.TEACHER_STATS || {}).length,
+                    window.__TEACHER_ANALYSIS_CORE_RUNTIME_PATCHED__ ? 'core' : 'boot'
+                ].join('::');
+                if (state.teacherContextScheduledSignature !== scheduleSignature && !state.teacherContextPromise) {
+                    state.teacherContextScheduledSignature = scheduleSignature;
+                    window.setTimeout(() => {
+                        void ensureTeacherContextForCountyAnalysis(false, { token: renderToken, requireActive: false }).then((result) => {
+                            if (result?.changed && !state.isRendering) {
+                                renderCountyAnalysis(activeId);
+                            }
+                        });
+                    }, 0);
+                }
+            }
+            const names = getSchoolNames();
+            const countyCount = scope.countySchools?.length || 0;
+            const townshipCount = scope.townshipSchools?.length || 0;
+            const totalStudents = (window.RAW_DATA || []).length;
+            const html = `
             <div class="county-kpi-grid">
                 <div><span>本次范围</span><strong>${scope.includesCounty ? '县域 + 乡镇' : '乡镇'}</strong><em>${escapeHtml(getExamKey())}</em></div>
                 <div><span>学校数</span><strong>${names.length}</strong><em>乡镇 ${townshipCount} · 县域 ${countyCount}</em></div>
@@ -1850,7 +1886,7 @@
             </div>
             ${activeId === 'county-school-horizontal' ? renderCountySchoolHorizontal() : renderCountyTeacherModule()}
         `;
-        root.innerHTML = html;
+            root.innerHTML = html;
         } finally {
             state.isRendering = false;
         }

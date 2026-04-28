@@ -43,6 +43,12 @@
         return schoolsLite;
     }
 
+    function getAnalyticsKernel() {
+        return root && root.AnalyticsKernel && typeof root.AnalyticsKernel === 'object'
+            ? root.AnalyticsKernel
+            : null;
+    }
+
     function init(manager, workerSource, workerScriptUrl) {
         if (!manager) throw new Error('WorkerAPI manager unavailable');
         if (manager.worker) return manager.worker;
@@ -72,10 +78,22 @@
 
     function run(manager, data, workerSource, workerScriptUrl) {
         const worker = init(manager, workerSource, workerScriptUrl);
+        const kernel = getAnalyticsKernel();
+        const signature = kernel && typeof kernel.buildProcessSignature === 'function'
+            ? kernel.buildProcessSignature(data || {})
+            : '';
+        if (signature && typeof kernel.getProcessResult === 'function') {
+            const cached = kernel.getProcessResult(signature);
+            if (cached && cached.status === 'ok') return Promise.resolve(cached);
+        }
         return new Promise((resolve, reject) => {
             worker.onmessage = (event) => {
-                if (event && event.data && event.data.status === 'ok') resolve(event.data);
-                else reject(event && event.data ? event.data.msg : 'worker-error');
+                if (event && event.data && event.data.status === 'ok') {
+                    if (signature && typeof kernel?.setProcessResult === 'function') {
+                        kernel.setProcessResult(signature, event.data);
+                    }
+                    resolve(event.data);
+                } else reject(event && event.data ? event.data.msg : 'worker-error');
             };
             worker.onerror = (event) => reject(event && event.message ? event.message : 'worker-error');
 

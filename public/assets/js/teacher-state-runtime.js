@@ -27,6 +27,12 @@
         }
     }
 
+    function invalidateAnalyticsKernel() {
+        if (root.AnalyticsKernel && typeof root.AnalyticsKernel.invalidate === 'function') {
+            root.AnalyticsKernel.invalidate({ keepProcessCache: true });
+        }
+    }
+
     function getTeacherMap() {
         return normalizeRecordMap(root.TEACHER_MAP);
     }
@@ -34,6 +40,7 @@
     function setTeacherMap(map) {
         const nextMap = normalizeRecordMap(map);
         root.TEACHER_MAP = nextMap;
+        invalidateAnalyticsKernel();
         return nextMap;
     }
 
@@ -44,6 +51,7 @@
     function setTeacherSchoolMap(map) {
         const nextMap = normalizeRecordMap(map);
         root.TEACHER_SCHOOL_MAP = nextMap;
+        invalidateAnalyticsKernel();
         return nextMap;
     }
 
@@ -54,6 +62,7 @@
     function setTeacherStats(stats) {
         const nextStats = cloneJson(stats, {});
         root.TEACHER_STATS = nextStats;
+        invalidateAnalyticsKernel();
         return nextStats;
     }
 

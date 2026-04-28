@@ -8,6 +8,7 @@ const pass = process.env.SMOKE_PASS || 'admin123';
 async function login(page) {
     await page.goto(url, { waitUntil: 'commit', timeout: 90000 });
     await page.waitForFunction(() => document.getElementById('login-overlay') || document.getElementById('app'), null, { timeout: 90000 });
+    await page.waitForFunction(() => window.__APP_MODULES_LOADED__ === true || !!sessionStorage.getItem('CURRENT_USER'), null, { timeout: 90000 }).catch(() => {});
     await page.waitForTimeout(800);
     const ready = await page.evaluate(() => {
         const overlay = document.getElementById('login-overlay');
@@ -22,7 +23,7 @@ async function login(page) {
         await page.waitForSelector('#login-user', { state: 'visible', timeout: 30000 });
         await page.fill('#login-user', user);
         await page.fill('#login-pass', pass);
-        await page.click('button[onclick="window.Auth?.login()"]');
+        await page.click('button[onclick="window.Auth?.login()"]', { force: true });
     }
     await page.waitForFunction(() => {
         const overlay = document.getElementById('login-overlay');
@@ -39,12 +40,19 @@ async function login(page) {
         const mask = document.getElementById('mode-mask');
         return !!mask && getComputedStyle(mask).display !== 'none';
     });
-    if (maskVisible) {
+    const cohortEntryVisible = await page.evaluate(() => {
+        const input = document.getElementById('entry-cohort-year');
+        return !!input && getComputedStyle(input).display !== 'none';
+    });
+    if (maskVisible || cohortEntryVisible) {
         const input = page.locator('#entry-cohort-year');
         if (await input.count()) await input.fill(process.env.SMOKE_COHORT_YEAR || '2022');
         await page.evaluate(async () => {
             if (typeof window.enterCohortFromMask === 'function') {
                 await window.enterCohortFromMask();
+            } else {
+                const button = document.querySelector('button[onclick="enterCohortFromMask()"]');
+                if (button) button.click();
             }
         }).catch(() => {});
     }

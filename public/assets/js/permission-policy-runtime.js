@@ -119,10 +119,10 @@ const PermissionPolicy = {
     },
     canQueryClass(user, schoolName, className, options = {}) {
         if (!user) return true;
+        if (this.hasQueryRole(user, 'admin')) return true;
         if (!this.canQuerySchool(user, schoolName)) return false;
         const normalizedClass = normalizeClass(className || '');
         if (!normalizedClass) return false;
-        if (this.hasQueryRole(user, 'admin')) return true;
         if (this.hasQueryRole(user, 'director')) return true;
 
         const roleChecks = [];
@@ -165,6 +165,7 @@ const PermissionPolicy = {
     },
     filterStudentRows(user, rows, options = {}) {
         if (!user) return Array.isArray(rows) ? rows.slice() : [];
+        if (this.hasQueryRole(user, 'admin')) return Array.isArray(rows) ? rows.slice() : [];
         return (Array.isArray(rows) ? rows : []).filter(row => this.canQueryStudent(user, row, options));
     },
     getAccessibleSchoolNames(user, schoolNames) {

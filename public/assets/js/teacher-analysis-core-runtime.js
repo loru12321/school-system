@@ -30,6 +30,122 @@
         { id: 'middle', max: 0.75 },
         { id: 'tail', max: 1.01 }
     ];
+    const teacherAnalysisCacheState = {
+        signature: '',
+        townshipSignature: '',
+        historyEntryCache: new Map()
+    };
+
+    function teacherStableObjectSignature(value) {
+        if (!value || typeof value !== 'object') return '';
+        return Object.keys(value)
+            .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }))
+            .map((key) => {
+                const item = value[key];
+                if (item && typeof item === 'object' && !Array.isArray(item)) {
+                    return `${key}:{${teacherStableObjectSignature(item)}}`;
+                }
+                return `${key}:${String(item ?? '')}`;
+            })
+            .join('|');
+    }
+
+    function buildTeacherRuntimeSignature(rows, activeSchool = '') {
+        const subjectList = Array.isArray(window.SUBJECTS) ? window.SUBJECTS : [];
+        const teacherMap = window.TEACHER_MAP && typeof window.TEACHER_MAP === 'object' ? window.TEACHER_MAP : {};
+        const teacherSchoolMap = window.TEACHER_SCHOOL_MAP && typeof window.TEACHER_SCHOOL_MAP === 'object' ? window.TEACHER_SCHOOL_MAP : {};
+        const baselineId = String(
+            window.__PROGRESS_BASELINE_ACTIVE_ID
+            || document.getElementById('progressBaselineSelect')?.value
+            || ''
+        ).trim();
+        let baselineEntriesSignature = '';
+        try {
+            baselineEntriesSignature = (teacherGetRollingBaselineExamEntries(3) || [])
+                .map((entry) => [
+                    entry?.id || entry?.key || entry?.examId || entry?.name || '',
+                    entry?.createdAt || entry?.savedAt || '',
+                    Array.isArray(entry?.data) ? entry.data.length : 0
+                ].join(':'))
+                .join('|');
+        } catch {
+            baselineEntriesSignature = '';
+        }
+        return [
+            Number(window.__RAW_DATA_VERSION || 0),
+            Array.isArray(rows) ? rows.length : 0,
+            String(window.CURRENT_EXAM_ID || ''),
+            String(window.CURRENT_TERM_ID || ''),
+            String(window.CONFIG?.name || ''),
+            String(activeSchool || ''),
+            subjectList.join(','),
+            teacherStableObjectSignature(teacherMap),
+            teacherStableObjectSignature(teacherSchoolMap),
+            baselineId,
+            baselineEntriesSignature
+        ].join('::');
+    }
+
+    function buildTeacherTownshipRankingSignature() {
+        const stats = window.TEACHER_STATS && typeof window.TEACHER_STATS === 'object' ? window.TEACHER_STATS : {};
+        const statsShape = Object.entries(stats)
+            .map(([teacherName, subjectMap]) => `${teacherName}:${Object.entries(subjectMap || {})
+                .map(([subject, data]) => `${subject}:${teacherToNumber(data?.avgValue ?? data?.avg, 0).toFixed(4)}:${teacherToNumber(data?.excellentRate, 0).toFixed(6)}:${teacherToNumber(data?.passRate, 0).toFixed(6)}:${teacherToNumber(data?.studentCount, 0)}`)
+                .sort()
+                .join(',')}`)
+            .sort()
+            .join('|');
+        return [
+            Number(window.__RAW_DATA_VERSION || 0),
+            Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
+            Object.keys(window.SCHOOLS || {}).sort().join('|'),
+            Object.keys(window.TARGETS || {}).sort().join('|'),
+            (window.SUBJECTS || []).join(','),
+            statsShape
+        ].join('::');
+    }
+
+    function renderTeacherAnalysisOutputs(renderOptions = {}) {
+        if (typeof window.calculateTeacherTownshipRanking === 'function') window.calculateTeacherTownshipRanking();
+        if (typeof window.refreshTeacherPerformanceCopy === 'function') window.refreshTeacherPerformanceCopy();
+        if (renderOptions.render === false) return;
+        if (typeof window.renderTeacherCards === 'function') window.renderTeacherCards();
+        if (typeof window.renderTeacherComparisonTable === 'function') window.renderTeacherComparisonTable();
+        if (typeof window.generateTeacherPairing === 'function') window.generateTeacherPairing();
+        if (typeof window.renderTeachingOverview === 'function') window.renderTeachingOverview();
+        if (typeof window.tmRenderTeachingModuleStateBars === 'function') window.tmRenderTeachingModuleStateBars('teacher-analysis');
+    }
+
+    function createTeacherPerfProbe(label) {
+        if (!window.__TEACHER_ANALYSIS_PERF_DEBUG__ || typeof performance === 'undefined') {
+            return { mark() {}, flush() {} };
+        }
+        const rows = [];
+        const start = performance.now();
+        let last = start;
+        return {
+            mark(step) {
+                const now = performance.now();
+                rows.push({
+                    label,
+                    step,
+                    delta: Math.round(now - last),
+                    total: Math.round(now - start)
+                });
+                last = now;
+            },
+            flush() {
+                const now = performance.now();
+                rows.push({
+                    label,
+                    step: 'done',
+                    delta: Math.round(now - last),
+                    total: Math.round(now - start)
+                });
+                console.table(rows);
+            }
+        };
+    }
 
     function teacherClamp(value, min, max) {
         return Math.min(Math.max(Number(value) || 0, min), max);
@@ -199,7 +315,7 @@
         };
     }
 
-    function teacherBuildSampleSnapshot(currentStudents, baselineRows, baselineInfoMap, classes) {
+    function teacherBuildSampleSnapshot(currentStudents, baselineRows, baselineInfoMap, classes, keyResolver = teacherBuildStudentKey) {
         const classSet = new Set((classes || []).map((item) => normalizeClassFn(item)).filter(Boolean));
         const previousRosterMap = new Map();
         (baselineRows || []).forEach((row) => {
@@ -210,7 +326,7 @@
 
         let commonCount = 0;
         (currentStudents || []).forEach((student) => {
-            const info = baselineInfoMap.get(teacherBuildStudentKey(student));
+            const info = baselineInfoMap.get(keyResolver(student));
             if (!info?.row) return;
             commonCount += 1;
             previousRosterMap.set(teacherBuildBaselineRowKey(info.row), info.row);
@@ -435,7 +551,11 @@
 
     function teacherResolveHistoryTeacherName(className, subject, termId) {
         if (!termId || typeof window.resolveTeacherHistoryEntry !== 'function') return '';
-        const resolved = window.resolveTeacherHistoryEntry(termId);
+        const cacheKey = String(termId || '').trim();
+        if (!teacherAnalysisCacheState.historyEntryCache.has(cacheKey)) {
+            teacherAnalysisCacheState.historyEntryCache.set(cacheKey, window.resolveTeacherHistoryEntry(termId) || null);
+        }
+        const resolved = teacherAnalysisCacheState.historyEntryCache.get(cacheKey);
         const map = resolved?.map && typeof resolved.map === 'object' ? resolved.map : {};
         const key = `${normalizeClassFn(className)}_${normalizeSubjectFn(subject)}`;
         return String(map[key] || '').trim();
@@ -474,7 +594,7 @@
         };
     }
 
-    function teacherBuildConversionMetrics(students, subject, currentThresholds, primaryContext, baselineInfoMap) {
+    function teacherBuildConversionMetrics(students, subject, currentThresholds, primaryContext, baselineInfoMap, keyResolver = teacherBuildStudentKey) {
         const neutral = {
             score: 50,
             adjustment: 0,
@@ -502,7 +622,7 @@
         let matchedCount = 0;
 
         students.forEach((student) => {
-            const info = baselineInfoMap.get(teacherBuildStudentKey(student));
+            const info = baselineInfoMap.get(keyResolver(student));
             const primaryRow = info?.primaryRow;
             if (!primaryRow) return;
             const rawPrev = primaryContext.rawMap.get(teacherBuildBaselineRowKey(primaryRow));
@@ -569,6 +689,7 @@
     }
 
     function analyzeTeachersV2(options = {}) {
+        const perfProbe = createTeacherPerfProbe('analyzeTeachersV2');
         const renderOptions = (options && typeof options === 'object') ? options : {};
         const resolveRowsForTeacherAnalysis = () => {
             if (Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0) return window.RAW_DATA;
@@ -586,6 +707,7 @@
         };
 
         const rows = resolveRowsForTeacherAnalysis();
+        perfProbe.mark('resolve rows');
         const schools = (typeof window.listAvailableSchoolsForCompare === 'function')
             ? window.listAvailableSchoolsForCompare()
             : Object.keys(window.SCHOOLS || {});
@@ -681,6 +803,7 @@
             return;
         }
         syncTeacherSchoolContext(activeSchool);
+        perfProbe.mark('resolve school');
 
         if (window.DataManager && typeof window.DataManager.ensureTeacherMap === 'function') {
             const ok = window.DataManager.ensureTeacherMap(true);
@@ -690,7 +813,19 @@
             }
         }
 
+        const runtimeSignature = buildTeacherRuntimeSignature(rows, activeSchool);
+        if (renderOptions.force !== true
+            && teacherAnalysisCacheState.signature === runtimeSignature
+            && window.TEACHER_STATS
+            && Object.keys(window.TEACHER_STATS).length) {
+            renderTeacherAnalysisOutputs(renderOptions);
+            perfProbe.mark('cached render');
+            perfProbe.flush();
+            return window.TEACHER_STATS;
+        }
+
         window.TEACHER_STATS = {};
+        teacherAnalysisCacheState.historyEntryCache = new Map();
         const classSchoolMap = (typeof window.getClassSchoolMapForAllData === 'function')
             ? window.getClassSchoolMapForAllData()
             : {};
@@ -733,10 +868,31 @@
             }
         }
         if (!mySchoolStudents.length) return;
+        const studentKeyCache = new WeakMap();
+        const getStudentKey = (student) => {
+            if (!student || typeof student !== 'object') return teacherBuildStudentKey(student);
+            if (!studentKeyCache.has(student)) studentKeyCache.set(student, teacherBuildStudentKey(student));
+            return studentKeyCache.get(student);
+        };
+        perfProbe.mark('scope students');
 
         const subjectList = (window.SUBJECTS && window.SUBJECTS.length)
             ? window.SUBJECTS
             : [...new Set(mySchoolStudents.flatMap((student) => Object.keys(student.scores || {})).map(normalizeSubjectFn))];
+        const subjectByNormalized = new Map(subjectList.map((subject) => [normalizeSubjectFn(subject), subject]));
+        const studentsByClassSubject = new Map();
+        mySchoolStudents.forEach((student) => {
+            const className = normalizeClassFn(student?.class || '');
+            if (!className || !student?.scores) return;
+            Object.keys(student.scores || {}).forEach((rawSubject) => {
+                if (!Number.isFinite(teacherToNumber(student.scores[rawSubject], NaN))) return;
+                const subjectKey = normalizeSubjectFn(rawSubject);
+                if (!subjectKey) return;
+                const indexKey = `${className}__${subjectKey}`;
+                if (!studentsByClassSubject.has(indexKey)) studentsByClassSubject.set(indexKey, []);
+                studentsByClassSubject.get(indexKey).push(student);
+            });
+        });
         const weightConfig = teacherGetWeightConfig();
         const gradeStats = {};
         subjectList.forEach((subject) => {
@@ -747,6 +903,7 @@
             );
             gradeStats[subject].avg = subjectSummary.avg;
         });
+        perfProbe.mark('grade stats');
 
         const schoolRankMap = teacherBuildSchoolRankMap(mySchoolStudents);
         const rollingBaselineEntries = teacherGetRollingBaselineExamEntries(3);
@@ -774,6 +931,7 @@
                 thresholds: thresholdsBySubject
             };
         }).filter((context) => Array.isArray(context.rows) && context.rows.length > 0);
+        perfProbe.mark('baseline contexts');
         const primaryBaselineContext = baselineContexts[0] || null;
         const primaryBaselineRows = primaryBaselineContext?.rows || [];
         const baselineInfoMap = new Map();
@@ -793,7 +951,7 @@
         });
 
         mySchoolStudents.forEach((student) => {
-            const key = teacherBuildStudentKey(student);
+            const key = getStudentKey(student);
             const currentRank = teacherToNumber(
                 typeof window.safeGet === 'function'
                     ? window.safeGet(student, 'ranks.total.school', schoolRankMap.map.get(key))
@@ -832,6 +990,7 @@
                 rollingMatchCount: historyMatches.length
             });
         });
+        perfProbe.mark('baseline matches');
 
         subjectList.forEach((subject) => {
             const buckets = {};
@@ -841,7 +1000,7 @@
             mySchoolStudents.forEach((student) => {
                 const score = teacherToNumber(student?.scores?.[subject], NaN);
                 if (!Number.isFinite(score)) return;
-                const info = baselineInfoMap.get(teacherBuildStudentKey(student));
+                const info = baselineInfoMap.get(getStudentKey(student));
                 if (!info?.historyMatches?.length) return;
                 buckets[info.bandId || 'tail'].push(score);
             });
@@ -852,12 +1011,13 @@
                     : expectationMap[subject].overall;
             });
         });
+        perfProbe.mark('expectations');
 
         Object.entries(window.TEACHER_MAP || {}).forEach(([key, teacherName]) => {
             const [rawClass, rawSubject] = key.split('_');
             const className = normalizeClassFn(rawClass);
             const normalizedSubject = normalizeSubjectFn(rawSubject);
-            const matchedSubject = subjectList.find((subject) => normalizeSubjectFn(subject) === normalizedSubject);
+            const matchedSubject = subjectByNormalized.get(normalizedSubject);
             if (!matchedSubject) return;
             if (!window.TEACHER_STATS[teacherName]) window.TEACHER_STATS[teacherName] = {};
             if (!window.TEACHER_STATS[teacherName][matchedSubject]) {
@@ -867,12 +1027,11 @@
                     subject: matchedSubject
                 };
             }
-            const teacherStudents = mySchoolStudents.filter((student) => (
-                normalizeClassFn(student.class) === className && student.scores?.[matchedSubject] !== undefined
-            ));
+            const teacherStudents = studentsByClassSubject.get(`${className}__${normalizedSubject}`) || [];
             window.TEACHER_STATS[teacherName][matchedSubject].classes.push(className);
             window.TEACHER_STATS[teacherName][matchedSubject].students.push(...teacherStudents);
         });
+        perfProbe.mark('teacher groups');
 
         const subjectGroups = {};
         Object.keys(window.TEACHER_STATS).forEach((teacherName) => {
@@ -880,7 +1039,7 @@
                 const data = window.TEACHER_STATS[teacherName][subject];
                 const studentMap = new Map();
                 (data.students || []).forEach((student) => {
-                    studentMap.set(teacherBuildStudentKey(student), student);
+                    studentMap.set(getStudentKey(student), student);
                 });
                 const students = Array.from(studentMap.values());
                 data.students = students;
@@ -910,7 +1069,7 @@
                 let rollingMatchedCount = 0;
                 let primaryMatchedCount = 0;
                 students.forEach((student) => {
-                    const info = baselineInfoMap.get(teacherBuildStudentKey(student));
+                    const info = baselineInfoMap.get(getStudentKey(student));
                     const fallback = expectationMap[subject]?.overall || teacherBuildMetricSummary([], thresholds);
                     const expected = info?.historyMatches?.length
                         ? (expectationMap[subject]?.bands?.[info.bandId] || fallback)
@@ -939,7 +1098,7 @@
                 data.deltaLowBetter = data.expectedLowRate - data.lowRate;
                 data.focusTargets = teacherBuildFocusTargets(students, subject, thresholds);
                 data.focusSummary = data.focusTargets.summaryText;
-                const sampleSnapshot = teacherBuildSampleSnapshot(students, primaryBaselineRows, baselineInfoMap, data.classes);
+                const sampleSnapshot = teacherBuildSampleSnapshot(students, primaryBaselineRows, baselineInfoMap, data.classes, getStudentKey);
                 data.commonSampleCount = sampleSnapshot.commonCount;
                 data.previousSampleCount = sampleSnapshot.previousCount;
                 data.addedSampleCount = sampleSnapshot.addedCount;
@@ -953,7 +1112,7 @@
                 data.teacherContinuity = teacherEvaluateContinuity(teacherName, subject, data.classes, baselineContexts);
                 data.teacherContinuityText = data.teacherContinuity.detailText || (data.teacherContinuity.status === 'safe' ? '任课连续' : '跨学期任课待核验');
                 data.teacherChangeProtected = data.teacherContinuity.status === 'changed' || data.teacherContinuity.status === 'unknown';
-                data.conversionMetrics = teacherBuildConversionMetrics(students, subject, thresholds, primaryBaselineContext, baselineInfoMap);
+                data.conversionMetrics = teacherBuildConversionMetrics(students, subject, thresholds, primaryBaselineContext, baselineInfoMap, getStudentKey);
                 data.conversionScore = teacherToNumber(data.conversionMetrics.score, 50);
                 data.conversionAdjustment = teacherToNumber(data.conversionMetrics.adjustment, 0);
                 data.conversionSummary = data.conversionMetrics.summary;
@@ -978,6 +1137,7 @@
                 subjectGroups[subject].push({ teacherName, data });
             });
         });
+        perfProbe.mark('teacher metrics');
 
         Object.entries(subjectGroups).forEach(([subject, entries]) => {
             const maxAvg = Math.max(...entries.map((entry) => teacherToNumber(entry.data.avgValue, 0)), 0);
@@ -1045,15 +1205,13 @@
                 entry.data.fairRank = index + 1;
             });
         });
+        perfProbe.mark('fair scoring');
 
-        if (typeof window.calculateTeacherTownshipRanking === 'function') window.calculateTeacherTownshipRanking();
-        if (typeof window.refreshTeacherPerformanceCopy === 'function') window.refreshTeacherPerformanceCopy();
-        if (renderOptions.render === false) return;
-        if (typeof window.renderTeacherCards === 'function') window.renderTeacherCards();
-        if (typeof window.renderTeacherComparisonTable === 'function') window.renderTeacherComparisonTable();
-        if (typeof window.generateTeacherPairing === 'function') window.generateTeacherPairing();
-        if (typeof window.renderTeachingOverview === 'function') window.renderTeachingOverview();
-        if (typeof window.tmRenderTeachingModuleStateBars === 'function') window.tmRenderTeachingModuleStateBars('teacher-analysis');
+        teacherAnalysisCacheState.signature = runtimeSignature;
+        renderTeacherAnalysisOutputs(renderOptions);
+        perfProbe.mark('render outputs');
+        perfProbe.flush();
+        return window.TEACHER_STATS;
     }
 
     function generateTeacherPairing() {
@@ -1123,7 +1281,15 @@
         });
     }
 
-    function calculateTeacherTownshipRanking() {
+    function calculateTeacherTownshipRanking(options = {}) {
+        const signature = buildTeacherTownshipRankingSignature();
+        if (options.force !== true
+            && teacherAnalysisCacheState.townshipSignature === signature
+            && window.TEACHER_TOWNSHIP_RANKINGS
+            && window.TOWNSHIP_RANKING_DATA
+            && Object.keys(window.TOWNSHIP_RANKING_DATA || {}).length) {
+            return window.TEACHER_TOWNSHIP_RANKINGS;
+        }
         window.TEACHER_TOWNSHIP_RANKINGS = {};
         window.TOWNSHIP_RANKING_DATA = {};
         window.TEACHER_TOWNSHIP_AVERAGES = {};
@@ -1240,6 +1406,8 @@
             });
             window.TOWNSHIP_RANKING_DATA[subject] = rankingData;
         });
+        teacherAnalysisCacheState.townshipSignature = signature;
+        return window.TEACHER_TOWNSHIP_RANKINGS;
     }
 
     Object.assign(window, {

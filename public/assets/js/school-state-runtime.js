@@ -19,6 +19,12 @@
         return String(value || '').trim();
     }
 
+    function invalidateAnalyticsKernel() {
+        if (root.AnalyticsKernel && typeof root.AnalyticsKernel.invalidate === 'function') {
+            root.AnalyticsKernel.invalidate({ keepProcessCache: true });
+        }
+    }
+
     function getStorage(name) {
         try {
             const storage = root && root[name];
@@ -43,10 +49,12 @@
         if (!nextSchool) {
             if (storage) storage.removeItem(CURRENT_SCHOOL_STORAGE);
             root.MY_SCHOOL = '';
+            invalidateAnalyticsKernel();
             return '';
         }
         if (storage) storage.setItem(CURRENT_SCHOOL_STORAGE, nextSchool);
         root.MY_SCHOOL = nextSchool;
+        invalidateAnalyticsKernel();
         return nextSchool;
     }
 

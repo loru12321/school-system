@@ -21,6 +21,12 @@
         return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
     }
 
+    function invalidateAnalyticsKernel() {
+        if (root.AnalyticsKernel && typeof root.AnalyticsKernel.invalidate === 'function') {
+            root.AnalyticsKernel.invalidate({ keepProcessCache: true });
+        }
+    }
+
     function getRawData() {
         return normalizeArray(root.RAW_DATA);
     }
@@ -28,6 +34,7 @@
     function setRawData(rows) {
         const nextRows = normalizeArray(rows);
         root.RAW_DATA = nextRows;
+        invalidateAnalyticsKernel();
         return nextRows;
     }
 
@@ -38,6 +45,7 @@
     function setSchools(schools) {
         const nextSchools = normalizeObject(schools);
         root.SCHOOLS = nextSchools;
+        invalidateAnalyticsKernel();
         return nextSchools;
     }
 
@@ -48,6 +56,7 @@
     function setSubjects(subjects) {
         const nextSubjects = normalizeArray(subjects);
         root.SUBJECTS = nextSubjects;
+        invalidateAnalyticsKernel();
         return nextSubjects;
     }
 
@@ -58,6 +67,7 @@
     function setThresholds(thresholds) {
         const nextThresholds = normalizeObject(thresholds);
         root.THRESHOLDS = nextThresholds;
+        invalidateAnalyticsKernel();
         return nextThresholds;
     }
 
@@ -68,6 +78,7 @@
     function setConfig(config) {
         const nextConfig = normalizeObject(config);
         root.CONFIG = nextConfig;
+        invalidateAnalyticsKernel();
         return nextConfig;
     }
 
