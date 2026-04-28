@@ -62,9 +62,16 @@
     }
 
     async function upsertSystemData(rows) {
+        if (window.CloudDataService && typeof window.CloudDataService.clear === 'function') {
+            window.CloudDataService.clear();
+        }
         const api = getCloudApi();
         if (api && typeof api.upsertSystemData === 'function') {
-            return api.upsertSystemData(rows);
+            const result = await api.upsertSystemData(rows);
+            if (!result?.error && window.CloudDataService && typeof window.CloudDataService.clear === 'function') {
+                window.CloudDataService.clear();
+            }
+            return result;
         }
         return {
             data: [],

@@ -1,8 +1,10 @@
 (() => {
     if (typeof window === 'undefined' || window.CloudDataService) return;
 
-    const DEFAULT_TTL_MS = 30000;
-    const LONG_TTL_MS = 120000;
+    const DEFAULT_TTL_MS = 2 * 60 * 1000;
+    const LONG_TTL_MS = 10 * 60 * 1000;
+    const METADATA_TTL_MS = 5 * 60 * 1000;
+    const CACHE_MAX = 240;
     const state = {
         cache: new Map(),
         inflight: new Map()
@@ -20,6 +22,11 @@
 
     function cloneResult(result) {
         if (!result || typeof result !== 'object') return result;
+        if (typeof window.structuredClone === 'function') {
+            try {
+                return window.structuredClone(result);
+            } catch (_) { }
+        }
         try {
             return JSON.parse(JSON.stringify(result));
         } catch (_) {
@@ -43,7 +50,22 @@
             ttl: Number(ttl) > 0 ? Number(ttl) : DEFAULT_TTL_MS,
             value: cloneResult(value)
         });
+        if (state.cache.size > CACHE_MAX) {
+            const firstKey = state.cache.keys().next().value;
+            if (firstKey) state.cache.delete(firstKey);
+        }
         return value;
+    }
+
+    function isMetadataSelect(select) {
+        const text = String(select || '').toLowerCase();
+        return !!text && !text.includes('content');
+    }
+
+    function getReadTtl(options = {}) {
+        if (options?.maybeSingle || options?.keyEq) return LONG_TTL_MS;
+        if (isMetadataSelect(options?.select)) return METADATA_TTL_MS;
+        return DEFAULT_TTL_MS;
     }
 
     async function runCached(type, options, task, config = {}) {
@@ -75,6 +97,9 @@
         Array.from(state.cache.keys()).forEach((key) => {
             if (key.includes(text)) state.cache.delete(key);
         });
+        Array.from(state.inflight.keys()).forEach((key) => {
+            if (key.includes(text)) state.inflight.delete(key);
+        });
     }
 
     async function selectSystemData(options = {}, taskOrConfig, maybeConfig) {
@@ -89,7 +114,7 @@
                 return api.selectSystemData(options);
             });
         const config = hasTask ? (maybeConfig || {}) : (taskOrConfig || {});
-        const ttl = options?.maybeSingle || options?.keyEq ? LONG_TTL_MS : DEFAULT_TTL_MS;
+        const ttl = getReadTtl(options);
         return runCached('selectSystemData', options, task, { ttl, ...config });
     }
 
@@ -104,7 +129,7 @@
                 return window.selectSystemDataRecords(options);
             });
         const config = hasTask ? (maybeConfig || {}) : (taskOrConfig || {});
-        return runCached('selectSystemDataRecords', options, task, { ttl: DEFAULT_TTL_MS, ...config });
+        return runCached('selectSystemDataRecords', options, task, { ttl: getReadTtl(options), ...config });
     }
 
     window.CloudDataService = {
@@ -115,7 +140,13 @@
         getStats() {
             return {
                 cacheSize: state.cache.size,
-                inflightSize: state.inflight.size
+                inflightSize: state.inflight.size,
+                ttlMs: {
+                    default: DEFAULT_TTL_MS,
+                    long: LONG_TTL_MS,
+                    metadata: METADATA_TTL_MS
+                },
+                max: CACHE_MAX
             };
         }
     };

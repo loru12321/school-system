@@ -89,6 +89,24 @@
     }
 
     async function selectSystemData(options = {}) {
+        if (window.CloudDataService && typeof window.CloudDataService.selectSystemData === 'function') {
+            return window.CloudDataService.selectSystemData(options, async () => {
+                if (window.CloudApi && typeof window.CloudApi.selectSystemData === 'function') {
+                    return window.CloudApi.selectSystemData(options);
+                }
+                if (!window.sbClient || typeof window.sbClient.from !== 'function') {
+                    return { data: options.maybeSingle ? null : [], error: new Error('CLOUD_CLIENT_MISSING') };
+                }
+                let query = window.sbClient.from(CLOUD_TABLE).select(options.select || '*');
+                if (options.keyEq) query = query.eq('key', options.keyEq);
+                if (options.keyLike) query = query.like('key', options.keyLike);
+                if (Array.isArray(options.keyIn) && options.keyIn.length) query = query.in('key', options.keyIn);
+                if (options.order) query = query.order(options.order, { ascending: options.ascending !== false });
+                if (Number.isFinite(Number(options.limit)) && Number(options.limit) > 0) query = query.limit(Number(options.limit));
+                if (options.maybeSingle && typeof query.maybeSingle === 'function') query = query.maybeSingle();
+                return query;
+            });
+        }
         if (window.CloudApi && typeof window.CloudApi.selectSystemData === 'function') {
             return window.CloudApi.selectSystemData(options);
         }

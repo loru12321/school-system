@@ -2,8 +2,8 @@
     if (!root || root.CloudSyncIndicator) return;
 
     const CLOUD_STARTUP_LOAD_TIMEOUT_MS = 25000;
-    const SYSTEM_DATA_READ_TTL_MS = 30000;
-    const SYSTEM_DATA_SELECT_TTL_MS = 20000;
+    const SYSTEM_DATA_READ_TTL_MS = 5 * 60 * 1000;
+    const SYSTEM_DATA_SELECT_TTL_MS = 2 * 60 * 1000;
     const SYSTEM_DATA_MAX_CACHE_SIZE = 120;
     const systemDataCache = new Map();
     const systemDataInflight = new Map();
@@ -33,6 +33,11 @@
 
     function cloneCacheValue(value) {
         if (value == null) return value;
+        if (typeof root.structuredClone === 'function') {
+            try {
+                return root.structuredClone(value);
+            } catch (_) { }
+        }
         try {
             return JSON.parse(JSON.stringify(value));
         } catch (_) {

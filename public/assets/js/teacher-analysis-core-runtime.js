@@ -725,6 +725,21 @@
             || inferredSchool
         );
 
+        const teacherAssignments = Object.entries(window.TEACHER_MAP || {})
+            .map(([key, teacherName]) => {
+                const [rawClass, rawSubject] = String(key || '').split('_');
+                const className = normalizeClassFn(rawClass);
+                const normalizedSubject = normalizeSubjectFn(rawSubject);
+                return {
+                    key,
+                    teacherName,
+                    className,
+                    normalizedSubject
+                };
+            })
+            .filter((item) => item.className && item.normalizedSubject && item.teacherName);
+        const teacherClassSetFromMap = new Set(teacherAssignments.map((item) => item.className));
+
         const inferSchoolFromTeacherMap = () => {
             const classToSchools = new Map();
             rows.forEach((student) => {
@@ -735,8 +750,8 @@
                 classToSchools.get(cls).add(school);
             });
             const hitCounts = new Map();
-            Object.keys(window.TEACHER_MAP || {}).forEach((key) => {
-                const cls = normalizeClassFn(String(key).split('_')[0]);
+            teacherAssignments.forEach((assignment) => {
+                const cls = assignment.className;
                 if (!cls || !classToSchools.has(cls)) return;
                 classToSchools.get(cls).forEach((school) => {
                     hitCounts.set(school, (hitCounts.get(school) || 0) + 1);
@@ -752,7 +767,7 @@
         if (teacherMapSchool && teacherMapSchool !== activeSchool) {
             const activeHasTeacherClasses = rows.some((student) => (
                 String(student?.school || '').trim() === activeSchool
-                && Object.keys(window.TEACHER_MAP || {}).some((key) => normalizeClassFn(String(key).split('_')[0]) === normalizeClassFn(student?.class))
+                && teacherClassSetFromMap.has(normalizeClassFn(student?.class))
             ));
             const hasExplicitTeacherSchoolMap = window.TEACHER_SCHOOL_MAP
                 && Object.values(window.TEACHER_SCHOOL_MAP).some((school) => String(school || '').trim());
@@ -767,7 +782,7 @@
             const classSchoolMap = (typeof window.getClassSchoolMapForAllData === 'function')
                 ? window.getClassSchoolMapForAllData()
                 : {};
-            Object.entries(window.TEACHER_MAP || {}).some(([key, teacherName]) => {
+            teacherAssignments.some(({ key, teacherName, className }) => {
                 const teacherNameNorm = String(teacherName || '').replace(/\s+/g, '').toLowerCase();
                 if (teacherNameNorm !== userNameNorm
                     && !teacherNameNorm.startsWith(`${userNameNorm}(`)
@@ -778,10 +793,8 @@
                     activeSchool = window.TEACHER_SCHOOL_MAP[key];
                     return true;
                 }
-                const [rawCls] = key.split('_');
-                const cls = normalizeClassFn(rawCls);
-                if (classSchoolMap[cls]) {
-                    activeSchool = classSchoolMap[cls];
+                if (classSchoolMap[className]) {
+                    activeSchool = classSchoolMap[className];
                     return true;
                 }
                 return false;
@@ -835,25 +848,47 @@
             class: normalizeClassFn(student?.class),
             scores: student?.scores || {}
         }));
-        const teacherClassSet = new Set(
-            Object.keys(window.TEACHER_MAP || {})
-                .map((key) => normalizeClassFn(String(key).split('_')[0]))
-                .filter(Boolean)
-        );
+        const studentsBySchool = new Map();
+        const studentsByClass = new Map();
+        normalizedRows.forEach((student) => {
+            if (student.school) {
+                if (!studentsBySchool.has(student.school)) studentsBySchool.set(student.school, []);
+                studentsBySchool.get(student.school).push(student);
+            }
+            if (student.class) {
+                if (!studentsByClass.has(student.class)) studentsByClass.set(student.class, []);
+                studentsByClass.get(student.class).push(student);
+            }
+        });
+        const teacherClassSet = teacherClassSetFromMap;
         const pickTeacherStudentsForSchool = (schoolName) => {
             const targetSchool = String(schoolName || '').trim();
             if (!targetSchool) return [];
-            const directRows = normalizedRows.filter((student) => student.school === targetSchool);
+            const directRows = studentsBySchool.get(targetSchool) || [];
             if (directRows.length) return directRows;
-            return normalizedRows.filter((student) => {
-                const cls = normalizeClassFn(student.class);
-                if (!cls || !teacherClassSet.has(cls)) return false;
-                return classSchoolMap[cls] === targetSchool;
+            const fallbackRows = [];
+            teacherClassSet.forEach((cls) => {
+                if (classSchoolMap[cls] !== targetSchool) return;
+                const classRows = studentsByClass.get(cls);
+                if (classRows && classRows.length) fallbackRows.push(...classRows);
             });
+            return fallbackRows;
+        };
+        const hasTeacherStudentsForSchool = (schoolName) => {
+            const targetSchool = String(schoolName || '').trim();
+            if (!targetSchool) return false;
+            const directRows = studentsBySchool.get(targetSchool);
+            if (directRows && directRows.length) return true;
+            let found = false;
+            teacherClassSet.forEach((cls) => {
+                if (found || classSchoolMap[cls] !== targetSchool) return;
+                found = !!(studentsByClass.get(cls) || []).length;
+            });
+            return found;
         };
         let mySchoolStudents = pickTeacherStudentsForSchool(activeSchool);
         if (!mySchoolStudents.length) {
-            const fallbackSchool = teacherMapSchool || inferredSchool || schools.find((school) => pickTeacherStudentsForSchool(school).length);
+            const fallbackSchool = teacherMapSchool || inferredSchool || schools.find(hasTeacherStudentsForSchool);
             if (fallbackSchool && fallbackSchool !== activeSchool) {
                 activeSchool = syncTeacherSchoolContext(fallbackSchool);
                 mySchoolStudents = pickTeacherStudentsForSchool(activeSchool);
@@ -1013,10 +1048,7 @@
         });
         perfProbe.mark('expectations');
 
-        Object.entries(window.TEACHER_MAP || {}).forEach(([key, teacherName]) => {
-            const [rawClass, rawSubject] = key.split('_');
-            const className = normalizeClassFn(rawClass);
-            const normalizedSubject = normalizeSubjectFn(rawSubject);
+        teacherAssignments.forEach(({ teacherName, className, normalizedSubject }) => {
             const matchedSubject = subjectByNormalized.get(normalizedSubject);
             if (!matchedSubject) return;
             if (!window.TEACHER_STATS[teacherName]) window.TEACHER_STATS[teacherName] = {};

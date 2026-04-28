@@ -14,7 +14,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createCloudApiRuntime(root) {
     const SYSTEM_DATA_TABLE = 'system_data';
     const SYSTEM_DATA_API_PATH = '/api/system-data';
-    const SELECT_CACHE_TTL_MS = 90000;
+    const SELECT_CACHE_TTL_MS = 5 * 60 * 1000;
     const SELECT_CACHE_MAX = 200;
     const selectCache = new Map();
     const selectInflight = new Map();
@@ -82,6 +82,11 @@
 
     function cloneCachedValue(value) {
         if (value == null) return value;
+        if (typeof root.structuredClone === 'function') {
+            try {
+                return root.structuredClone(value);
+            } catch (_) { }
+        }
         if (Array.isArray(value)) return value.map(cloneCloudRow);
         if (typeof value === 'object') return cloneCloudRow(value);
         try {
