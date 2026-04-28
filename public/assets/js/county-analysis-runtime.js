@@ -20,7 +20,8 @@
         preUploadTownshipSchools: [],
         isRendering: false,
         teacherContextToken: 0,
-        lastRankSignature: ''
+        lastDataRankSignature: '',
+        lastTeacherRankSignature: ''
     };
     const COUNTY_SUBMODULES = {
         'county-teacher-portrait': {
@@ -744,7 +745,7 @@
     function calculateCountyTeacherRanking(scope) {
         const normalized = normalizeScope(scope || getCurrentScope() || { includesCounty: false, townshipSchools: getSchoolNames() });
         const rankingSignature = `${getTeacherStatsSignature()}::${(normalized.townshipSchools || []).join('|')}::${normalized.includesCounty ? 'county' : 'township'}`;
-        if (state.lastRankSignature === rankingSignature && window.COUNTY_TEACHER_RANKINGS && window.COUNTY_TEACHER_RANKING_DATA) {
+        if (state.lastTeacherRankSignature === rankingSignature && window.COUNTY_TEACHER_RANKINGS && window.COUNTY_TEACHER_RANKING_DATA) {
             return window.COUNTY_TEACHER_RANKINGS;
         }
         const townshipSet = new Set(normalized.townshipSchools || []);
@@ -814,7 +815,7 @@
 
         window.COUNTY_TEACHER_RANKINGS = rankings;
         window.COUNTY_TEACHER_RANKING_DATA = rankingDataMap;
-        state.lastRankSignature = rankingSignature;
+        state.lastTeacherRankSignature = rankingSignature;
         invalidateTeacherDerivedCaches();
         return rankings;
     }
@@ -1127,10 +1128,10 @@
 
     function applyCountyRanks() {
         const sig = getDataSignature();
-        if (sig && sig === state.lastRankSignature && window.COUNTY_ANALYSIS_SCOPE) {
+        if (sig && sig === state.lastDataRankSignature && window.COUNTY_ANALYSIS_SCOPE) {
             return window.COUNTY_ANALYSIS_SCOPE;
         }
-        state.lastRankSignature = sig;
+        state.lastDataRankSignature = sig;
 
         const scope = normalizeScope(getCurrentScope() || { includesCounty: false, townshipSchools: getSchoolNames() });
         const townshipSet = new Set(scope.townshipSchools || []);
@@ -1215,7 +1216,7 @@
             });
         });
 
-        calculateCountyTeacherRanking(scope);
+        if (hasTeacherStats()) calculateCountyTeacherRanking(scope);
         window.COUNTY_ANALYSIS_SCOPE = scope;
         return scope;
     }
@@ -1336,17 +1337,12 @@
     }
 
     function renderTeacherPortraits() {
-        if (!hasTeacherStats() && hasTeacherAssignments() && typeof window.analyzeTeachers === 'function') {
-            try {
-                window.analyzeTeachers({ render: false });
-                if (hasTeacherStats()) calculateCountyTeacherRanking(getCurrentScope());
-            } catch (error) {
-                console.warn('[county-analysis] sync teacher analysis failed:', error);
-            }
-        }
+        if (hasTeacherStats()) calculateCountyTeacherRanking(getCurrentScope());
         const rows = getTeacherRows(10);
         if (!rows.length) {
-            return '<div class="county-empty">暂无任课表或教师画像数据。导入任课表后，这里会展示县域样本下的教师教学画像。</div>';
+            return hasTeacherAssignments()
+                ? '<div class="county-empty">教师画像正在后台生成，请稍候。页面可先查看县域学校横向分析，不会再阻塞系统。</div>'
+                : '<div class="county-empty">暂无任课表或教师画像数据。导入任课表后，这里会展示县域样本下的教师教学画像。</div>';
         }
         const rankingRows = getTeacherCountyRankingRows();
         const subjectTables = getTeacherSubjectCountyTables().map((group) => `

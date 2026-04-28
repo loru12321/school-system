@@ -1116,14 +1116,14 @@ ${d.length>0?`错误示例：
                                 <span>${m}</span>
                                 <span style="font-weight:bold;">📉 Avg: ${p.avg.toFixed(1)}</span>
                             </div>
-                        </div>`;t.innerHTML+=E,l++}else if(f>30||b===1){const m=b===1?"全镇排名第一":`优秀率突出 (${f.toFixed(1)}%)`,E=`
+                        </div>`;t.innerHTML+=E,l++}else if(f>30||b===1){const m=b===1?"全镇排名第一":`优秀率突出 (${f.toFixed(1)}%)`,E=Number.isFinite(Number(b))&&Number(b)>0?`排：${Number(b)}`:"排：-",v=`
                         <div class="traffic-item" onclick="jumpToDetail('${h.name}', '${u}')">
                             <div class="t-school">${h.name} <span class="t-badge bg-green-light">${g}</span></div>
                             <div class="t-sub">
                                 <span>${m}</span>
-                                <span style="font-weight:bold;">🏆 No.${b}</span>
+                                <span style="font-weight:bold;">${E}</span>
                             </div>
-                        </div>`;o.innerHTML+=E,d++}else if(f<15){const m=`
+                        </div>`;o.innerHTML+=v,d++}else if(f<15){const m=`
                         <div class="traffic-item" onclick="jumpToDetail('${h.name}', '${u}')">
                             <div class="t-school">${h.name} <span class="t-badge bg-yellow-light">${g}</span></div>
                             <div class="t-sub">

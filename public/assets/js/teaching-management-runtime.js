@@ -10,6 +10,8 @@ let TM_CLOUD_OPS_CACHE = {
     error: ''
 };
 let TM_CLOUD_OPS_REQUEST_ID = 0;
+let TM_CLOUD_OPS_INFLIGHT = null;
+let TM_CLOUD_OPS_INFLIGHT_KEY = '';
 let TM_VERSION_CACHE = {
     key: '',
     fetchedAt: 0,
@@ -261,11 +263,15 @@ async function tmRefreshCloudOps(force = false) {
         return;
     }
 
+    if (!force && TM_CLOUD_OPS_INFLIGHT && TM_CLOUD_OPS_INFLIGHT_KEY === cacheKey) {
+        return TM_CLOUD_OPS_INFLIGHT;
+    }
+
     const requestId = ++TM_CLOUD_OPS_REQUEST_ID;
     tmRenderCloudOpsPanels({ authState: 'loading' });
     if (typeof tmRenderCloudManagementSections === 'function') tmRenderCloudManagementSections();
 
-    try {
+    const task = (async () => {
         const [warningRes, taskRes] = await Promise.all([
             EdgeGateway.listWarnings({ project_key: scope.project_key, cohort_id: scope.cohort_id, limit: 100 }),
             EdgeGateway.listRectifyTasks({ project_key: scope.project_key, cohort_id: scope.cohort_id, limit: 50 })
@@ -286,19 +292,30 @@ async function tmRefreshCloudOps(force = false) {
         };
         tmRenderCloudOpsPanels(TM_CLOUD_OPS_CACHE);
         if (typeof tmRenderCloudManagementSections === 'function') tmRenderCloudManagementSections();
-    } catch (error) {
-        if (requestId !== TM_CLOUD_OPS_REQUEST_ID) return;
-        TM_CLOUD_OPS_CACHE = {
-            key: cacheKey,
-            fetchedAt: Date.now(),
-            warnings: [],
-            tasks: [],
-            authState: 'error',
-            error: error instanceof Error ? error.message : String(error)
-        };
-        tmRenderCloudOpsPanels(TM_CLOUD_OPS_CACHE);
-        if (typeof tmRenderCloudManagementSections === 'function') tmRenderCloudManagementSections();
-    }
+    })()
+        .catch((error) => {
+            if (requestId !== TM_CLOUD_OPS_REQUEST_ID) return;
+            TM_CLOUD_OPS_CACHE = {
+                key: cacheKey,
+                fetchedAt: Date.now(),
+                warnings: [],
+                tasks: [],
+                authState: 'error',
+                error: error instanceof Error ? error.message : String(error)
+            };
+            tmRenderCloudOpsPanels(TM_CLOUD_OPS_CACHE);
+            if (typeof tmRenderCloudManagementSections === 'function') tmRenderCloudManagementSections();
+        })
+        .finally(() => {
+            if (TM_CLOUD_OPS_INFLIGHT === task) {
+                TM_CLOUD_OPS_INFLIGHT = null;
+                TM_CLOUD_OPS_INFLIGHT_KEY = '';
+            }
+        });
+
+    TM_CLOUD_OPS_INFLIGHT = task;
+    TM_CLOUD_OPS_INFLIGHT_KEY = cacheKey;
+    return task;
 }
 
 async function tmCreateRectifyTaskFromWarning(warningId) {

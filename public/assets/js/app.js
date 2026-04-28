@@ -10905,12 +10905,13 @@ function renderTrafficLightDashboard() {
             // 2. 🟢 绿色标杆条件：优秀率 > 30% 或 排名第一
             else if (excP > 30 || rank === 1) {
                 const reason = rank === 1 ? `全镇排名第一` : `优秀率突出 (${excP.toFixed(1)}%)`;
+                const rankText = Number.isFinite(Number(rank)) && Number(rank) > 0 ? `排：${Number(rank)}` : '排：-';
                 const html = `
                         <div class="traffic-item" onclick="jumpToDetail('${s.name}', '${sub}')">
                             <div class="t-school">${s.name} <span class="t-badge bg-green-light">${subName}</span></div>
                             <div class="t-sub">
                                 <span>${reason}</span>
-                                <span style="font-weight:bold;">🏆 No.${rank}</span>
+                                <span style="font-weight:bold;">${rankText}</span>
                             </div>
                         </div>`;
                 listGreen.innerHTML += html;

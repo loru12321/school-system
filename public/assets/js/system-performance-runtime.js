@@ -144,10 +144,16 @@
         if (method === 'load') return [];
         if (method === 'loadTeachers') {
             const options = list.find((item) => item && typeof item === 'object' && !Array.isArray(item)) || {};
+            const currentTermId = typeof window.getPreferredTeacherTermId === 'function'
+                ? window.getPreferredTeacherTermId()
+                : '';
+            const currentSchool = typeof window.readCurrentSchool === 'function'
+                ? window.readCurrentSchool()
+                : '';
             return [{
-                schoolName: options.schoolName || options.scopeSchool || '',
-                termId: options.termId || options.teacherTermId || '',
-                cohortId: options.cohortId || ''
+                schoolName: options.schoolName || options.scopeSchool || currentSchool || '',
+                termId: options.termId || options.teacherTermId || currentTermId || '',
+                cohortId: options.cohortId || window.CURRENT_COHORT_ID || ''
             }];
         }
         if (method === 'fetchCohortExamsToLocal') {
@@ -157,7 +163,10 @@
         }
         if (method === 'fetchAllCohortExams') {
             const options = list[0] && typeof list[0] === 'object' ? list[0] : {};
-            return [{ cohortId: options.cohortId || '' }];
+            const currentCohortId = typeof window.readWorkspaceCohortId === 'function'
+                ? window.readWorkspaceCohortId()
+                : '';
+            return [{ cohortId: options.cohortId || window.CURRENT_COHORT_ID || currentCohortId || '' }];
         }
         if (method === 'fetchStudentExamHistory') {
             const student = list[0] && typeof list[0] === 'object' ? list[0] : {};
