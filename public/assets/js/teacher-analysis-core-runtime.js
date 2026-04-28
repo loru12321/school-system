@@ -632,7 +632,9 @@
                 String(student?.school || '').trim() === activeSchool
                 && Object.keys(window.TEACHER_MAP || {}).some((key) => normalizeClassFn(String(key).split('_')[0]) === normalizeClassFn(student?.class))
             ));
-            if (!activeSchool || !activeHasTeacherClasses) {
+            const hasExplicitTeacherSchoolMap = window.TEACHER_SCHOOL_MAP
+                && Object.values(window.TEACHER_SCHOOL_MAP).some((school) => String(school || '').trim());
+            if (!activeSchool || !activeHasTeacherClasses || !hasExplicitTeacherSchoolMap) {
                 activeSchool = syncTeacherSchoolContext(teacherMapSchool);
             }
         }
@@ -703,17 +705,32 @@
                 .map((key) => normalizeClassFn(String(key).split('_')[0]))
                 .filter(Boolean)
         );
-        let mySchoolStudents = normalizedRows.filter((student) => student.school === activeSchool);
-        if (!mySchoolStudents.length) {
-            mySchoolStudents = normalizedRows.filter((student) => {
+        const pickTeacherStudentsForSchool = (schoolName) => {
+            const targetSchool = String(schoolName || '').trim();
+            if (!targetSchool) return [];
+            const directRows = normalizedRows.filter((student) => student.school === targetSchool);
+            if (directRows.length) return directRows;
+            return normalizedRows.filter((student) => {
                 const cls = normalizeClassFn(student.class);
                 if (!cls || !teacherClassSet.has(cls)) return false;
-                return classSchoolMap[cls] === activeSchool;
+                return classSchoolMap[cls] === targetSchool;
             });
+        };
+        let mySchoolStudents = pickTeacherStudentsForSchool(activeSchool);
+        if (!mySchoolStudents.length) {
+            const fallbackSchool = teacherMapSchool || inferredSchool || schools.find((school) => pickTeacherStudentsForSchool(school).length);
+            if (fallbackSchool && fallbackSchool !== activeSchool) {
+                activeSchool = syncTeacherSchoolContext(fallbackSchool);
+                mySchoolStudents = pickTeacherStudentsForSchool(activeSchool);
+            }
         }
         const queryMode = window.PermissionPolicy && window.PermissionPolicy.isClassTeacher(user) ? 'homeroom' : 'teaching';
         if (window.PermissionPolicy && typeof window.PermissionPolicy.filterStudentRows === 'function') {
             mySchoolStudents = window.PermissionPolicy.filterStudentRows(user, mySchoolStudents, { mode: queryMode });
+            if (!mySchoolStudents.length && teacherMapSchool && teacherMapSchool !== activeSchool) {
+                activeSchool = syncTeacherSchoolContext(teacherMapSchool);
+                mySchoolStudents = window.PermissionPolicy.filterStudentRows(user, pickTeacherStudentsForSchool(activeSchool), { mode: queryMode });
+            }
         }
         if (!mySchoolStudents.length) return;
 

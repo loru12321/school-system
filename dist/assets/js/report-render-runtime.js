@@ -17,7 +17,7 @@
         </tr>`,[...new Set(SUBJECTS)].forEach(t=>{if(j[t]!==void 0){const e=c&&c.scores?lt(c.scores[t]):"-",a=y(j[t],e,"score");let n=dt(c&&c.ranks?c.ranks[t]:null);n.class==="-"&&n.school==="-"&&n.township==="-"&&p&&p.ranks&&p.ranks[t]&&(n=dt(p.ranks[t]));const i=safeGet(l,`ranks.${t}.school`,"-"),b=y(i,n.school||"-","rank"),h=K(safeGet(l,`ranks.${t}.township`,"-"),r),$=r?y(h,n.township||"-","rank"):"",x=getStudentCountyRankValue(l,t),_=f&&Z(c,t,P)?y(x,n.county||"-","rank"):"";A+=`<tr style="transition:0.2s;" onmouseover="this.style.background='rgba(241,245,249,0.5)'" onmouseout="this.style.background='transparent'">
                     ${o("科目",t,"font-weight:600; color:#475569;")}
                     ${o("成绩（对比）",`${j[t]} ${a}`,"font-weight:bold; color:#334155;")}
-                    ${o("总分班排","-","color:#cbd5e1;")}
+                    ${o("班级排名","-","color:#cbd5e1;")}
                     ${o("校级排名",`${i} <span style="font-size:0.9em;">${b}</span>`,"color:#64748b;")}
                     ${o("全镇排名",`${h} <span style="font-size:0.9em;">${$}</span>`,`color:#64748b; ${q}`)}
                     ${o("全县排名",`${f?x:"-"} <span style="font-size:0.9em;">${_}</span>`,`color:#64748b; ${B}`)}

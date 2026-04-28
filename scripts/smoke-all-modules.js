@@ -608,7 +608,7 @@ async function runModuleDeepCheck(page, id) {
         };
     }
     if (id === 'county-analysis') {
-        return page.evaluate(() => {
+        return page.evaluate(async () => {
             if (typeof window.ensureCountySubmoduleSections === 'function') {
                 window.ensureCountySubmoduleSections();
             }
@@ -617,6 +617,26 @@ async function runModuleDeepCheck(page, id) {
                 || document.querySelector('#county-analysis .county-analysis-root');
             const shouldExpectTeacherRows = Object.keys(window.TEACHER_MAP || {}).length > 0
                 || Object.keys(window.TEACHER_STATS || {}).length > 0;
+            if (shouldExpectTeacherRows && window.CountyAnalysisRuntime?.ensureTeacherContextForCountyAnalysis) {
+                await Promise.race([
+                    Promise.resolve(window.CountyAnalysisRuntime.ensureTeacherContextForCountyAnalysis(true, { requireActive: false })),
+                    new Promise((resolve) => setTimeout(resolve, 12000))
+                ]).catch(() => null);
+            }
+            if (typeof window.renderCountyAnalysis === 'function') {
+                window.renderCountyAnalysis('county-teacher-portrait');
+            }
+            const deadline = Date.now() + 12000;
+            while (
+                shouldExpectTeacherRows
+                && Date.now() < deadline
+                && (!getTeacherRoot() || !getTeacherRoot().querySelector('.county-teacher-own-row'))
+            ) {
+                await new Promise((resolve) => setTimeout(resolve, 250));
+                if (typeof window.renderCountyAnalysis === 'function') {
+                    window.renderCountyAnalysis('county-teacher-portrait');
+                }
+            }
             const teacherRoot = getTeacherRoot();
             const teacherRankRows = teacherRoot
                 ? teacherRoot.querySelectorAll('.county-teacher-rank-table tbody tr').length
@@ -644,7 +664,8 @@ async function runModuleDeepCheck(page, id) {
             const studentArchiveRemoved = !studentSubjectSummary;
             return {
                 ok: Object.values(checks).every(Boolean)
-                    && studentArchiveRemoved,
+                    && studentArchiveRemoved
+                    && (!shouldExpectTeacherRows || (teacherRankRows > 0 && ownTeacherRows > 0)),
                 checks,
                 exportButtons,
                 teacherRankRows,
