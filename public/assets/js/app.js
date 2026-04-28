@@ -7514,8 +7514,8 @@ const DB = {
         return requireDataCloudRuntime().dbGetLocal(key);
     },
     // 保存数据：同时保存到云端和本地缓存
-    save: async (key, value) => {
-        return requireDataCloudRuntime().dbSave(key, value);
+    save: async (key, value, options = {}) => {
+        return requireDataCloudRuntime().dbSave(key, value, options);
     },
 
     // 读取数据：优先本地缓存，后台静默更新
@@ -10591,7 +10591,7 @@ async function processData() {
         if (isCohortKey && indicatorRequired && Array.isArray(snapshotPayload?.RAW_DATA) && snapshotPayload.RAW_DATA.length > 0 && targetCount === 0) {
             console.warn(`[AutoSave] skip partial cohort snapshot without targets: ${currentKey}`);
         } else {
-            DB.save(currentKey, snapshotPayload);
+            DB.save(currentKey, snapshotPayload, { deferCloud: true, deferMs: 9000 });
             appDebug(`✅ 数据已自动保存至: ${currentKey}`);
         }
         // 👆 🟢 [修复结束]
@@ -12485,7 +12485,7 @@ function generateTeacherInputs() {
                         CONFIG: CONFIG,
                         MY_SCHOOL: MY_SCHOOL
                     };
-                DB.save(currentKey, snapshotPayload);
+                DB.save(currentKey, snapshotPayload, { deferCloud: true, deferMs: 9000 });
             }, 1000);
         });
     });

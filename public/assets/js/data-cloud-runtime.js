@@ -178,6 +178,7 @@
     }
 
     const cloudSyncInflight = new Map();
+    const deferredDbCloudSaves = new Map();
 
     function getCurrentExamLabel(key) {
         const normalizedKey = normalizeText(key);
@@ -378,6 +379,80 @@
             throw new Error('LZString 未加载，无法压缩云端内容');
         }
         return `LZ|${root.LZString.compressToUTF16(JSON.stringify(value))}`;
+    }
+
+    function scheduleIdleTask(task, options = {}) {
+        const delay = Number.isFinite(Number(options.delay)) ? Number(options.delay) : 0;
+        const timeout = Number.isFinite(Number(options.timeout)) ? Number(options.timeout) : 8000;
+        const run = () => {
+            if (root.SystemPerformance && typeof root.SystemPerformance.scheduleIdle === 'function') {
+                root.SystemPerformance.scheduleIdle(task, { timeout });
+                return;
+            }
+            if (typeof root.requestIdleCallback === 'function') {
+                root.requestIdleCallback(task, { timeout });
+                return;
+            }
+            root.setTimeout(task, 0);
+        };
+        root.setTimeout(run, Math.max(0, delay));
+    }
+
+    async function pushDbSaveToCloud(key, value) {
+        if (!ensureCloudAccess()) return true;
+        const upsertSystemDataRecord = getUpsertSystemDataRecord();
+        if (!upsertSystemDataRecord) return true;
+
+        try {
+            const compressedStr = packCloudPayload(value);
+            const { error } = await upsertSystemDataRecord({ key, content: compressedStr });
+            if (error) {
+                logCloudSyncIssue('云端备份失败:', error);
+                return false;
+            }
+            const doc = getDocument();
+            const statusEl = doc ? doc.getElementById('auto-backup-status') : null;
+            if (statusEl) statusEl.innerHTML = '<span style="color:#16a34a;">☁️ 云端已同步</span>';
+            return true;
+        } catch (e) {
+            logCloudSyncIssue('云端同步出错:', e);
+            return false;
+        }
+    }
+
+    function scheduleDeferredDbCloudSave(key, value, options = {}) {
+        const normalizedKey = normalizeText(key);
+        if (!normalizedKey) return true;
+        const existing = deferredDbCloudSaves.get(normalizedKey) || {};
+        deferredDbCloudSaves.set(normalizedKey, {
+            key: normalizedKey,
+            value,
+            timer: existing.timer || null
+        });
+        if (existing.timer) return true;
+
+        const delayMs = Number.isFinite(Number(options.deferMs)) ? Number(options.deferMs) : 8000;
+        const timer = root.setTimeout(() => {
+            const pending = deferredDbCloudSaves.get(normalizedKey);
+            if (!pending) return;
+            pending.timer = null;
+            deferredDbCloudSaves.set(normalizedKey, pending);
+            scheduleIdleTask(() => {
+                const latest = deferredDbCloudSaves.get(normalizedKey);
+                if (!latest) return;
+                deferredDbCloudSaves.delete(normalizedKey);
+                pushDbSaveToCloud(latest.key, latest.value).catch((error) => {
+                    logCloudSyncIssue('云端延迟同步出错:', error);
+                });
+            }, { timeout: 12000 });
+        }, Math.max(0, delayMs));
+
+        const next = deferredDbCloudSaves.get(normalizedKey);
+        if (next) {
+            next.timer = timer;
+            deferredDbCloudSaves.set(normalizedKey, next);
+        }
+        return true;
     }
 
     function logCloudSyncIssue(label, error) {
@@ -958,7 +1033,8 @@
         return null;
     }
 
-    async function dbSave(key, value) {
+    async function dbSave(key, value, options = {}) {
+        const saveOptions = options && typeof options === 'object' ? options : {};
         try {
             const wrote = await writeLocalCache(key, value);
             if (wrote) console.log(`cache updated: ${key}`);
@@ -966,23 +1042,11 @@
             console.warn('本地缓存失败:', e);
         }
 
-        if (!ensureCloudAccess()) return;
-        const upsertSystemDataRecord = getUpsertSystemDataRecord();
-        if (!upsertSystemDataRecord) return;
-
-        try {
-            const compressedStr = packCloudPayload(value);
-            const { error } = await upsertSystemDataRecord({ key, content: compressedStr });
-            if (error) {
-                logCloudSyncIssue('云端备份失败:', error);
-            } else {
-                const doc = getDocument();
-                const statusEl = doc ? doc.getElementById('auto-backup-status') : null;
-                if (statusEl) statusEl.innerHTML = '<span style="color:#16a34a;">☁️ 云端已同步</span>';
-            }
-        } catch (e) {
-            logCloudSyncIssue('云端同步出错:', e);
+        if (saveOptions.localOnly || saveOptions.cloud === false) return true;
+        if (saveOptions.deferCloud || saveOptions.background) {
+            return scheduleDeferredDbCloudSave(key, value, saveOptions);
         }
+        return pushDbSaveToCloud(key, value);
     }
 
     async function dbGet(key, options = {}) {

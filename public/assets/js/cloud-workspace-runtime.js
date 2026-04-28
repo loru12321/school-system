@@ -355,11 +355,14 @@
     }
 
     function scheduleBackgroundQueueFlush(manager) {
-        setTimeout(() => {
+        if (!manager || manager._workspaceSyncFlushScheduled) return;
+        manager._workspaceSyncFlushScheduled = true;
+        scheduleBackgroundCloudTask(() => {
+            manager._workspaceSyncFlushScheduled = false;
             manager.flushWorkspaceSyncQueue().catch((error) => {
                 console.warn('[CloudSync] background flush failed:', error);
             });
-        }, 0);
+        }, 4500, 12000);
     }
 
     function scheduleWorkspaceRemoteRefresh(manager, key, cachedMeta = {}) {
@@ -732,14 +735,17 @@
             const payload = typeof getCurrentSnapshotPayload === 'function' ? getCurrentSnapshotPayload() : {};
             if (mode === 'workspace') normalizeWorkspacePayload(payload);
 
-            const content = packPayload(payload);
-            const contentHash = hashText(content);
             const nowIso = new Date().toISOString();
             const currentMeta = readWorkspaceSyncMeta(key);
+            let contentHash = '';
+            if (!background) {
+                const content = packPayload(payload);
+                contentHash = hashText(content);
+            }
 
             await writeCachedWorkspaceSnapshot(key, payload);
             writeWorkspaceSyncMeta(key, {
-                contentHash,
+                contentHash: contentHash || currentMeta.contentHash || '',
                 pendingCloudSync: background ? true : Boolean(currentMeta.pendingCloudSync),
                 pendingSyncSource: background ? sourceLabel : (currentMeta.pendingSyncSource || ''),
                 currentProjectKey: key,
@@ -754,7 +760,7 @@
                 });
             }
 
-            if (!opts.forceUpload && currentMeta.lastUploadedHash && currentMeta.lastUploadedHash === contentHash && !currentMeta.pendingCloudSync) {
+            if (!background && !opts.forceUpload && currentMeta.lastUploadedHash && currentMeta.lastUploadedHash === contentHash && !currentMeta.pendingCloudSync) {
                 const syncedAt = currentMeta.lastSyncedAt || nowIso;
                 writeWorkspaceSyncMeta(key, {
                     pendingCloudSync: false,
@@ -777,7 +783,7 @@
                 key,
                 mode,
                 sourceLabel,
-                contentHash,
+                contentHash: contentHash || currentMeta.contentHash || '',
                 queuedAt: nowIso,
                 currentExamId: payload?.CURRENT_EXAM_ID || ''
             });
@@ -839,6 +845,35 @@
                 const packedContent = packPayload(payload);
                 const contentHash = hashText(packedContent);
                 const syncedAt = new Date().toISOString();
+                const currentMeta = readWorkspaceSyncMeta(cacheKey);
+
+                if (!opts.forceUpload && currentMeta.lastUploadedHash && currentMeta.lastUploadedHash === contentHash) {
+                    delete queue[cacheKey];
+                    writeWorkspaceSyncQueue(queue);
+                    writeWorkspaceSyncMeta(cacheKey, {
+                        contentHash,
+                        pendingCloudSync: false,
+                        pendingSyncSource: '',
+                        lastCloudError: '',
+                        lastSyncedAt: currentMeta.lastSyncedAt || syncedAt,
+                        currentProjectKey: cacheKey,
+                        currentExamId: payload?.CURRENT_EXAM_ID || ''
+                    });
+                    if (job.mode === 'workspace') {
+                        syncWorkspaceState({
+                            currentProjectKey: cacheKey,
+                            currentExamId: payload?.CURRENT_EXAM_ID || ''
+                        });
+                    }
+                    dispatchWorkspaceSyncEvent('skipped', {
+                        key: cacheKey,
+                        mode: job.mode || 'workspace',
+                        sourceLabel: String(job.sourceLabel || '').trim(),
+                        syncedAt: currentMeta.lastSyncedAt || syncedAt
+                    });
+                    if (cacheKey === targetKey) targetOk = true;
+                    continue;
+                }
 
                 try {
                     const { error } = await window.sbClient.from(CLOUD_TABLE).upsert({
