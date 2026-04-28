@@ -2096,6 +2096,30 @@ window.copyPublicDesktopDownloadLink = function () {
     return window.copyPublicDownloadLink('desktop');
 };
 
+function scheduleStartupCloudTask(task, options = {}) {
+    const delay = Number.isFinite(Number(options.delay)) ? Number(options.delay) : 1200;
+    const timeout = Number.isFinite(Number(options.timeout)) ? Number(options.timeout) : 2500;
+    const run = () => {
+        const execute = () => {
+            try {
+                task();
+            } catch (error) {
+                console.warn('[startup-cloud] deferred task failed:', error);
+            }
+        };
+        if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
+            window.SystemPerformance.scheduleIdle(execute, { timeout });
+            return;
+        }
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(execute, { timeout });
+            return;
+        }
+        window.setTimeout(execute, 0);
+    };
+    return window.setTimeout(run, Math.max(0, delay));
+}
+
 var Auth = {
     currentUser: null,
     _parentDataRecovering: false,
@@ -3672,18 +3696,20 @@ var Auth = {
                     showCohortPicker();
                 }
                 if (!this.currentUser.local_only && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function') {
-                    withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout')
-                        .then(() => {
-                            tryAutoRestoreWorkspaceExam({
-                                preferredExamId: CURRENT_EXAM_ID || readWorkspaceExamId() || COHORT_DB?.currentExamId || '',
-                                cohortId: CURRENT_COHORT_ID || readWorkspaceCohortId() || ''
-                            });
-                            tryAutoEnterReadyCohortWorkspace();
-                            if (typeof scheduleTeacherSyncPrompt === 'function') {
-                                setTimeout(() => scheduleTeacherSyncPrompt(), 200);
-                            }
-                        })
-                        .catch(e => console.warn('[Auth.init] background cloud load failed:', e));
+                    scheduleStartupCloudTask(() => {
+                        withTimeout(loadCloudData(), CLOUD_STARTUP_LOAD_TIMEOUT_MS, 'cloud-load-timeout')
+                            .then(() => {
+                                tryAutoRestoreWorkspaceExam({
+                                    preferredExamId: CURRENT_EXAM_ID || readWorkspaceExamId() || COHORT_DB?.currentExamId || '',
+                                    cohortId: CURRENT_COHORT_ID || readWorkspaceCohortId() || ''
+                                });
+                                tryAutoEnterReadyCohortWorkspace();
+                                if (typeof scheduleTeacherSyncPrompt === 'function') {
+                                    setTimeout(() => scheduleTeacherSyncPrompt(), 200);
+                                }
+                            })
+                            .catch(e => console.warn('[Auth.init] background cloud load failed:', e));
+                    }, { delay: 1400, timeout: 2600 });
                 } else if (typeof scheduleTeacherSyncPrompt === 'function') {
                     setTimeout(() => scheduleTeacherSyncPrompt(), 200);
                 }
@@ -3890,7 +3916,7 @@ var Auth = {
                     });
                 };
                 if (window.__STARTUP_CLOUD_HYDRATION_TIMER__) clearTimeout(window.__STARTUP_CLOUD_HYDRATION_TIMER__);
-                window.__STARTUP_CLOUD_HYDRATION_TIMER__ = setTimeout(runHydration, 0);
+                window.__STARTUP_CLOUD_HYDRATION_TIMER__ = scheduleStartupCloudTask(runHydration, { delay: 1400, timeout: 2600 });
             };
 
             // 5. 分流跳转与权限初始化
