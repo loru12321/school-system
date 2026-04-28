@@ -1972,10 +1972,27 @@ function injectOptionalRuntimeScript(key, src) {
                 inlineScript.async = true;
                 inlineScript.dataset.runtime = key;
                 inlineScript.dataset.runtimeCandidate = src;
-                inlineScript.dataset.runtimeLoaded = 'true';
-                inlineScript.text = inlineSource;
+                if (typeof Blob === 'function' && window.URL && typeof window.URL.createObjectURL === 'function') {
+                    const blobUrl = window.URL.createObjectURL(new Blob([inlineSource], { type: 'application/javascript' }));
+                    inlineScript.src = blobUrl;
+                    inlineScript.onload = () => {
+                        inlineScript.dataset.runtimeLoaded = 'true';
+                        window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 0);
+                        resolve();
+                    };
+                    inlineScript.onerror = () => {
+                        window.URL.revokeObjectURL(blobUrl);
+                        inlineScript.remove();
+                        reject(new Error(`Failed to load inline runtime: ${src}`));
+                    };
+                } else {
+                    inlineScript.dataset.runtimeLoaded = 'true';
+                    inlineScript.text = inlineSource;
+                }
                 document.head.appendChild(inlineScript);
-                resolve();
+                if (!inlineScript.src) {
+                    resolve();
+                }
             } catch (error) {
                 reject(error);
             }

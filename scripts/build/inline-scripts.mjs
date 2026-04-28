@@ -39,6 +39,7 @@ const OPTIONAL_INLINE_RUNTIME_PATHS = [
     './assets/js/macro-compare-result-runtime.js',
     './assets/js/macro-compare-cloud-runtime.js'
 ];
+const BOOT_RUNTIME_PATH = './assets/js/boot-runtime.js';
 
 // Keep original script semantics intact; only normalize newlines.
 function normalizeScript(content) {
@@ -163,13 +164,33 @@ function rewriteLtAssetPaths(html) {
 }
 
 function buildInlineRuntimeSourceMap(projectRoot) {
-    const entries = OPTIONAL_INLINE_RUNTIME_PATHS
+    const runtimePaths = collectInlineRuntimePaths(projectRoot);
+    const entries = runtimePaths
         .map((src) => {
             const content = readLocalScriptContent(projectRoot, src);
             return content ? [src, content] : null;
         })
         .filter(Boolean);
     return Object.fromEntries(entries);
+}
+
+function getBootRuntimeSkillSources(projectRoot) {
+    const bootContent = readLocalScriptContent(projectRoot, BOOT_RUNTIME_PATH);
+    if (!bootContent) return [];
+    const manifestMatch = bootContent.match(/var\s+SYSTEM_RUNTIME_SKILLS\s*=\s*\{([\s\S]*?)\n\};\s*\n\s*var\s+APP_MODULES/);
+    if (!manifestMatch) return [];
+    const manifestSource = manifestMatch[1];
+    return Array.from(manifestSource.matchAll(/\bsrc\s*:\s*['"]([^'"]+)['"]/g))
+        .map((match) => match[1])
+        .filter((src) => /^\.\/assets\/(?:js|vendor)\//.test(src));
+}
+
+export function collectInlineRuntimePaths(projectRoot = DEFAULT_PROJECT_ROOT) {
+    const merged = new Set([
+        ...OPTIONAL_INLINE_RUNTIME_PATHS,
+        ...getBootRuntimeSkillSources(projectRoot)
+    ]);
+    return Array.from(merged).sort();
 }
 
 function injectInlineRuntimeSourceMap(html, { projectRoot = DEFAULT_PROJECT_ROOT } = {}) {
@@ -180,7 +201,7 @@ function injectInlineRuntimeSourceMap(html, { projectRoot = DEFAULT_PROJECT_ROOT
     const injection = `<script>window.__INLINE_RUNTIME_SOURCES=${payload};</script>`;
     const output = String(html || '');
     if (/<\/head>/i.test(output)) {
-        return output.replace(/<\/head>/i, `${injection}</head>`);
+        return output.replace(/<\/head>/i, (match) => `${injection}${match}`);
     }
     return `${injection}${output}`;
 }
