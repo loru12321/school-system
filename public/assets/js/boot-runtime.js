@@ -178,6 +178,14 @@ var SYSTEM_RUNTIME_SKILLS = {
             { key: 'student-compare-cloud', src: './assets/js/student-compare-cloud-runtime.js' }
         ]
     },
+    'town-submodule-compare': {
+        mode: 'demand',
+        warmup: 'demand',
+        triggers: ['summary', 'town-submodule-compare', 'renderTownSubmoduleMultiPeriodComparison'],
+        entries: [
+            { key: 'town-submodule-compare', src: './assets/js/town-submodule-compare-runtime.js' }
+        ]
+    },
     'teacher-compare': {
         mode: 'demand',
         warmup: 'full',
@@ -481,8 +489,7 @@ var APP_MODULES = [
     './assets/js/compare-exam-sync-runtime.js',
     './assets/js/report-compare-runtime.js',
     './assets/js/compare-selectors-runtime.js',
-    './assets/js/town-submodule-compare-state-runtime.js',
-    './assets/js/town-submodule-compare-runtime.js'
+    './assets/js/town-submodule-compare-state-runtime.js'
 ];
 
 var APP_MODULE_PRELOAD_LIMIT = 10;
@@ -937,10 +944,7 @@ function getSameOriginGatewayUrl() {
         return DIRECT_EDGE_GATEWAY_URL;
     }
     if (window.location && /^(https?:)$/i.test(String(window.location.protocol || '').trim())) {
-        if (!isLocalSupabaseHost(window.location.hostname)) {
-            return normalizeProxyOrigin(window.location.origin) + '/api/edu-gateway';
-        }
-        return DIRECT_EDGE_GATEWAY_URL;
+        return normalizeProxyOrigin(window.location.origin) + '/api/edu-gateway';
     }
     var hostedProxyOrigin = getHostedSupabaseProxyOrigin();
     return hostedProxyOrigin ? hostedProxyOrigin + '/api/edu-gateway' : DIRECT_EDGE_GATEWAY_URL;
@@ -2493,6 +2497,13 @@ window.ensureStudentCompareRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('student-compare');
 };
 
+window.ensureTownSubmoduleCompareRuntimeLoaded = function () {
+    return window.SystemRuntimeLoader.load('town-submodule-compare').then((result) => {
+        if (typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeExports();
+        return result;
+    });
+};
+
 window.ensureTeacherCompareRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('teacher-compare');
 };
@@ -2768,6 +2779,19 @@ if (!window.AccountExcel) {
 
 ['renderStudentMultiPeriodComparison', 'saveStudentCompareToCloud', 'viewCloudStudentCompares', 'exportStudentMultiPeriodComparison', 'loadCloudStudentCompare'].forEach((name) => {
     installOptionalRuntimeMethod(name, window.ensureStudentCompareRuntimeLoaded);
+});
+
+[
+    'ensureTownSubmoduleCompareUIs',
+    'getTownSubmoduleSeries',
+    'openTownSubmoduleCompareDialog',
+    'renderTownSubmoduleMultiPeriodComparison',
+    'exportTownSubmoduleCompare',
+    'saveTownSubmoduleCompareToCloud',
+    'viewCloudTownSubmoduleCompares',
+    'loadCloudTownSubmoduleCompare'
+].forEach((name) => {
+    installOptionalRuntimeMethod(name, window.ensureTownSubmoduleCompareRuntimeLoaded);
 });
 
 ['renderTeacherMultiPeriodComparison', 'renderAllTeachersMultiPeriodComparison', 'exportAllTeachersMultiPeriodDiff', 'exportTeacherMultiPeriodComparison', 'saveTeacherMultiPeriodCompareToCloud', 'viewCloudTeacherCompares', 'loadCloudTeacherCompare'].forEach((name) => {

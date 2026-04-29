@@ -352,7 +352,7 @@ assert.ok(dataManagerTabIndex >= 0, 'index.html should load data-manager-tab-run
 assert.ok(compareCloudContextIndex >= 0, 'index.html should load compare-cloud-context-runtime.js');
 assert.ok(compareExamSyncIndex >= 0, 'index.html should load compare-exam-sync-runtime.js');
 assert.ok(townSubmoduleCompareStateIndex >= 0, 'index.html should load town-submodule-compare-state-runtime.js');
-assert.ok(townSubmoduleCompareIndex >= 0, 'index.html should load town-submodule-compare-runtime.js');
+assert.strictEqual(townSubmoduleCompareIndex, -1, 'town-submodule-compare-runtime.js should be lazy-loaded instead of boot-loaded');
 assert.ok(compareSelectorsIndex >= 0, 'index.html should load compare-selectors-runtime.js');
 assert.ok(cloudIndex >= 0, 'index.html should load cloud.js');
 assert.ok(cloudWorkspaceIndex >= 0, 'index.html should load cloud-workspace-runtime.js');
@@ -394,6 +394,7 @@ assert.ok(bootRuntime.includes(reportChartRef), 'boot-runtime.js should referenc
 assert.ok(bootRuntime.includes(reportExportRef), 'boot-runtime.js should reference report-export-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(reportAiRef), 'boot-runtime.js should reference report-ai-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(cryptoJsVendorRef), 'boot-runtime.js should reference crypto-js.min.js for lazy loading');
+assert.ok(bootRuntime.includes(townSubmoduleCompareRef), 'boot-runtime.js should reference town-submodule-compare-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(alasqlVendorRef), 'boot-runtime.js should reference alasql.min.js for lazy loading');
 assert.ok(bootRuntime.includes(sweetalertVendorRef), 'boot-runtime.js should reference sweetalert2.all.min.js for lazy loading');
 assert.ok(bootRuntime.includes(gsapVendorRef), 'boot-runtime.js should reference gsap.min.js for lazy loading');
@@ -409,6 +410,7 @@ assert.ok(bootRuntime.includes("window.ensureGsapVendorLoaded = function ()"), '
 assert.ok(bootRuntime.includes("window.ensureChartVendorLoaded = function ()"), 'boot-runtime.js should expose ensureChartVendorLoaded');
 assert.ok(bootRuntime.includes("window.ensureXlsxVendorLoaded = function ()"), 'boot-runtime.js should expose ensureXlsxVendorLoaded');
 assert.ok(bootRuntime.includes('window.wrapXlsxRuntimeExports = function ()'), 'boot-runtime.js should wrap Excel entry points with lazy XLSX loading');
+assert.ok(bootRuntime.includes("window.ensureTownSubmoduleCompareRuntimeLoaded = function ()"), 'boot-runtime.js should expose ensureTownSubmoduleCompareRuntimeLoaded');
 assert.ok(bootRuntime.includes("window.ensurePdfExportVendorsLoaded = function ()"), 'boot-runtime.js should expose ensurePdfExportVendorsLoaded');
 assert.ok(!bootRuntime.includes("window.ensurePresentationVendorsLoaded = function ()"), 'boot-runtime.js should not expose removed PPT vendor loader');
 assert.ok(bootRuntime.includes('var SYSTEM_RUNTIME_SKILLS = {'), 'boot-runtime.js should declare a runtime skill manifest');
@@ -426,6 +428,7 @@ assert.ok(bootRuntime.includes("'teacher-analysis':"), 'runtime skill manifest s
 assert.ok(bootRuntime.includes("'crypto-vendor':"), 'runtime skill manifest should include crypto-vendor');
 assert.ok(bootRuntime.includes("'shell-enhancements':"), 'runtime skill manifest should include shell-enhancements');
 assert.ok(bootRuntime.includes("'shell-enhancements': {\n        mode: 'idle',\n        warmup: 'demand'"), 'shell-enhancements should stay demand-loaded instead of warming during post-boot idle');
+assert.ok(bootRuntime.includes("'town-submodule-compare':"), 'runtime skill manifest should include town-submodule-compare');
 assert.ok(bootRuntime.includes("'sweetalert-vendor':"), 'runtime skill manifest should include sweetalert-vendor');
 assert.ok(bootRuntime.includes("'chart-vendor':"), 'runtime skill manifest should include chart-vendor');
 assert.ok(!bootRuntime.includes("'presentation-export':"), 'runtime skill manifest should not include removed PPT export skill');
@@ -446,6 +449,7 @@ assert.strictEqual(initSupabaseMatches.length, 1, 'boot-runtime.js should define
 assert.strictEqual(supabaseUrlAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_URL exactly once');
 assert.strictEqual(supabaseKeyAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_KEY exactly once');
 assert.strictEqual(gatewayUrlAssignments.length, 1, 'boot-runtime.js should resolve EDGE_GATEWAY_URL exactly once');
+assert.ok(bootRuntime.includes("return normalizeProxyOrigin(window.location.origin) + '/api/edu-gateway';"), 'HTTP runtimes should prefer the same-origin gateway proxy before direct Edge fallback');
 assert.strictEqual(switchTabDefinitions.length, 1, 'app.js should define switchTab exactly once');
 assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign switchTab after definition');
 
@@ -552,6 +556,7 @@ assert.ok(indexHtml.includes(tablerIconsRef), 'index.html should load local tabl
     teacherCompareCloudRef,
     macroCompareResultRef,
     macroCompareCloudRef,
+    townSubmoduleCompareRef,
     holographicRef,
     predictiveRef,
     metaverseRef,
@@ -572,7 +577,6 @@ assert.ok(compareSessionStateIndex < compareResultStateIndex, 'compare-session-s
 assert.ok(compareResultStateIndex < compareSummaryStateIndex, 'compare-result-state-runtime.js must load before compare-summary-state-runtime.js');
 assert.ok(compareExamSyncIndex < compareSelectorsIndex, 'compare-exam-sync-runtime.js must load before compare-selectors-runtime.js');
 assert.ok(compareSummaryStateIndex < townSubmoduleCompareStateIndex, 'compare-summary-state-runtime.js must load before town-submodule-compare-state-runtime.js');
-assert.ok(townSubmoduleCompareStateIndex < townSubmoduleCompareIndex, 'town-submodule-compare-state-runtime.js must load before town-submodule-compare-runtime.js');
 assert.ok(progressStateIndex < cloudIndex, 'progress-state-runtime.js must load before cloud.js');
 assert.ok(progressStateIndex < cloudWorkspaceIndex, 'progress-state-runtime.js must load before cloud-workspace-runtime.js');
 assert.ok(progressStateIndex < appIndex, 'progress-state-runtime.js must load before app.js');
