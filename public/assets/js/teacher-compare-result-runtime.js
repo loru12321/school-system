@@ -25,6 +25,7 @@ const setAllTeachersDiffCacheState = typeof window.setAllTeachersDiffCacheState 
         window.ALL_TEACHERS_DIFF_CACHE = nextCache;
         return nextCache;
     });
+let teacherCompareAutoTimer = 0;
 
 function setTeacherCompareHintState(hintEl, message, state = 'idle') {
     if (!hintEl) return;
@@ -35,6 +36,45 @@ function setTeacherCompareHintState(hintEl, message, state = 'idle') {
 function renderTeacherCompareEmptyState(resultEl, title, message) {
     if (!resultEl) return;
     resultEl.innerHTML = `<div class="analysis-empty-state analysis-empty-state-compact"><strong>${title}</strong>${message}</div>`;
+}
+
+function isTeacherAnalysisCompareActive() {
+    return !!document.getElementById('teacher-analysis')?.classList.contains('active');
+}
+
+function scheduleTeacherMultiPeriodAutoRender(delay = 180) {
+    if (teacherCompareAutoTimer) window.clearTimeout(teacherCompareAutoTimer);
+    teacherCompareAutoTimer = window.setTimeout(() => {
+        teacherCompareAutoTimer = 0;
+        if (!isTeacherAnalysisCompareActive()) return;
+        const requiredIds = [
+            'teacherCompareSchool',
+            'teacherCompareSubject',
+            'teacherCompareTeacher',
+            'teacherCompareExam1',
+            'teacherCompareExam2'
+        ];
+        const ready = requiredIds.every((id) => String(document.getElementById(id)?.value || '').trim());
+        if (!ready) return;
+        renderTeacherMultiPeriodComparison();
+    }, Number.isFinite(Number(delay)) ? Number(delay) : 180);
+}
+
+function bindTeacherCompareAutoControls() {
+    [
+        'teacherCompareSchool',
+        'teacherCompareSubject',
+        'teacherCompareTeacher',
+        'teacherComparePeriodCount',
+        'teacherCompareExam1',
+        'teacherCompareExam2',
+        'teacherCompareExam3'
+    ].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el || el.dataset.teacherCompareAutoBound === '1') return;
+        el.dataset.teacherCompareAutoBound = '1';
+        el.addEventListener('change', () => scheduleTeacherMultiPeriodAutoRender(220));
+    });
 }
 
 function buildTeacherStatsForExam(rows, school, subjectFilter) {
@@ -576,10 +616,12 @@ function exportTeacherMultiPeriodComparison() {
         buildTeacherStatsForExam,
         attachTeacherTownshipAvgRank,
         renderTeacherMultiPeriodComparison,
+        scheduleTeacherMultiPeriodAutoRender,
         renderAllTeachersMultiPeriodComparison,
         exportAllTeachersMultiPeriodDiff,
         exportTeacherMultiPeriodComparison
     });
 
+    bindTeacherCompareAutoControls();
     window.__TEACHER_COMPARE_RESULT_RUNTIME_PATCHED__ = true;
 })();

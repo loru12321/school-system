@@ -9,8 +9,8 @@
     const APP_DOWNLOAD_MODULE_IDS = new Set([
         'app-download-center'
     ]);
-    const TEACHER_ANALYSIS_RENDER_DELAY_MS = 180000;
-    const TEACHER_ANALYSIS_PRELOAD_DELAY_MS = 180000;
+    const TEACHER_ANALYSIS_RENDER_DELAY_MS = 180;
+    const TEACHER_ANALYSIS_PRELOAD_DELAY_MS = 700;
     let teacherAnalysisRenderTimer = 0;
     let teacherAnalysisRenderToken = 0;
 
@@ -117,6 +117,46 @@
         window.setTimeout(() => runTeacherAnalysisIfCurrent(token, task), delay);
     }
 
+    function scheduleModuleAutoRender(label, task, options = {}) {
+        const delay = Number.isFinite(Number(options.delay)) ? Number(options.delay) : 120;
+        const timeout = Number.isFinite(Number(options.timeout)) ? Number(options.timeout) : 1200;
+        const run = () => {
+            try {
+                task();
+            } catch (error) {
+                console.warn(`[module-entry] ${label} auto render failed:`, error);
+            }
+        };
+        window.setTimeout(() => {
+            if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
+                window.SystemPerformance.scheduleIdle(run, { label, timeout });
+            } else if (typeof window.requestIdleCallback === 'function') {
+                window.requestIdleCallback(run, { timeout });
+            } else if (typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(run);
+            } else {
+                run();
+            }
+        }, delay);
+    }
+
+    function pickDefaultSelectValue(selectId, preferredValue = '') {
+        const el = document.getElementById(selectId);
+        if (!el) return false;
+        const options = Array.from(el.options || []).filter(option => String(option.value || '').trim());
+        if (!options.length) return false;
+        const oldValue = String(el.value || '').trim();
+        const preferred = String(preferredValue || '').trim();
+        const matched = (preferred && options.find(option => String(option.value || '').trim() === preferred))
+            || (oldValue && options.find(option => String(option.value || '').trim() === oldValue))
+            || options[0];
+        if (!matched) return false;
+        const changed = el.value !== matched.value;
+        el.value = matched.value;
+        if (changed) el.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+    }
+
     function showTeacherAnalysisPendingState() {
         const placeholders = [
             ['teacherCardsContainer', '正在后台计算教师画像，稍后自动刷新。'],
@@ -131,12 +171,40 @@
             node.innerHTML = `
                 <div class="analysis-empty-state">
                     ${message}
-                    <div style="margin-top:10px;">
-                        <button class="btn btn-primary" onclick="window.renderTeacherAnalysisNow && window.renderTeacherAnalysisNow()">立即生成</button>
-                    </div>
+                    <div style="margin-top:8px; color:#64748b; font-size:12px;">系统会自动生成，无需单独点击。</div>
                 </div>
             `;
         });
+    }
+
+    function scheduleTeacherCompareAutoRender(delay = 760) {
+        const token = teacherAnalysisRenderToken;
+        scheduleModuleAutoRender('teacher-compare-auto', () => {
+            if (token !== teacherAnalysisRenderToken || !isTeacherAnalysisActive()) return;
+            const run = () => {
+                if (token !== teacherAnalysisRenderToken || !isTeacherAnalysisActive()) return;
+                if (typeof updateTeacherCompareExamSelects === 'function') updateTeacherCompareExamSelects();
+                if (typeof pickTeacherCompareDefaultSubjectAndTeacher === 'function') pickTeacherCompareDefaultSubjectAndTeacher();
+                const requiredIds = [
+                    'teacherCompareSchool',
+                    'teacherCompareSubject',
+                    'teacherCompareTeacher',
+                    'teacherCompareExam1',
+                    'teacherCompareExam2'
+                ];
+                const ready = requiredIds.every((id) => String(document.getElementById(id)?.value || '').trim());
+                if (!ready || typeof window.renderTeacherMultiPeriodComparison !== 'function') return;
+                window.renderTeacherMultiPeriodComparison();
+            };
+            if (typeof window.ensureTeacherCompareRuntimeLoaded === 'function'
+                && !window.__TEACHER_COMPARE_RESULT_RUNTIME_PATCHED__) {
+                window.ensureTeacherCompareRuntimeLoaded()
+                    .then(run)
+                    .catch((error) => console.warn('[teacher-analysis] teacher compare auto load failed:', error));
+                return;
+            }
+            run();
+        }, { label: 'teacher-compare-auto', delay, timeout: 1800 });
     }
 
     function scheduleTeacherAnalysisRenderWork(delay = TEACHER_ANALYSIS_RENDER_DELAY_MS) {
@@ -177,6 +245,7 @@
                 }, 380);
                 if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
                 if (typeof updateTeacherCompareTeacherSelect === 'function') updateTeacherCompareTeacherSelect();
+                scheduleTeacherCompareAutoRender(260);
             });
 
             if (typeof window.requestIdleCallback === 'function') {
@@ -493,9 +562,14 @@
             }
         };
 
-        if (typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function') {
+        if (typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function'
+            && !window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__) {
             showTeacherAnalysisPendingState();
-            return Promise.resolve();
+            return window.ensureTeacherAnalysisMainRuntimeLoaded()
+                .then(() => {
+                    if (document.getElementById('teacher-analysis')?.classList.contains('active')) runAfterLoad();
+                })
+                .catch((error) => console.warn('[teacher-analysis] runtime load failed:', error));
         }
 
         runAfterLoad();
@@ -592,10 +666,76 @@
         return Promise.resolve();
     }
 
+    function getCurrentSchoolCandidate() {
+        return String(
+            (typeof readCurrentSchool === 'function' ? readCurrentSchool() : '')
+            || window.MY_SCHOOL
+            || localStorage.getItem('MY_SCHOOL')
+            || ''
+        ).trim();
+    }
+
+    function initClassComparisonEntry() {
+        const run = () => {
+            if (!document.getElementById('class-comparison')?.classList.contains('active')) return false;
+            if (typeof updateClassCompSchoolSelect === 'function') updateClassCompSchoolSelect();
+            pickDefaultSelectValue('classCompSchoolSelect', getCurrentSchoolCandidate());
+            scheduleModuleAutoRender('class-comparison-auto', () => {
+                const school = String(document.getElementById('classCompSchoolSelect')?.value || '').trim();
+                if (!document.getElementById('class-comparison')?.classList.contains('active')) return;
+                if (!school || !window.SCHOOLS?.[school] || typeof window.renderClassComparison !== 'function') return;
+                window.renderClassComparison();
+            }, { delay: 100, timeout: 900 });
+            return true;
+        };
+        run();
+        return Promise.resolve();
+    }
+
+    function initClassDiagnosisEntry() {
+        const run = () => {
+            if (!document.getElementById('class-diagnosis')?.classList.contains('active')) return false;
+            if (typeof updateDiagnosisSelects === 'function') updateDiagnosisSelects();
+            pickDefaultSelectValue('diagSchoolSelect', getCurrentSchoolCandidate());
+            pickDefaultSelectValue('diagSubjectSelect', 'total');
+            scheduleModuleAutoRender('class-diagnosis-auto', () => {
+                const school = String(document.getElementById('diagSchoolSelect')?.value || '').trim();
+                if (!document.getElementById('class-diagnosis')?.classList.contains('active')) return;
+                if (!school || !window.SCHOOLS?.[school] || typeof window.renderClassDiagnosis !== 'function') return;
+                window.renderClassDiagnosis();
+            }, { delay: 100, timeout: 900 });
+            return true;
+        };
+        run();
+        return Promise.resolve();
+    }
+
     function initSingleSchoolEvalEntry() {
-        if (typeof updateSSESchoolSelect === 'function') {
-            return Promise.resolve(updateSSESchoolSelect()).catch((error) => console.warn(error));
+        const run = () => {
+            if (!document.getElementById('single-school-eval')?.classList.contains('active')) return false;
+            if (typeof updateSSESchoolSelect === 'function') updateSSESchoolSelect();
+            pickDefaultSelectValue('sse_school_select', getCurrentSchoolCandidate());
+            const calculate = () => {
+                const school = String(document.getElementById('sse_school_select')?.value || '').trim();
+                if (!document.getElementById('single-school-eval')?.classList.contains('active')) return;
+                if (!school || !window.SCHOOLS?.[school]?.metrics?.total || typeof window.SSE_calculate !== 'function') return;
+                window.SSE_calculate();
+            };
+            if (typeof window.scheduleSSEAutoCalculate === 'function') {
+                window.scheduleSSEAutoCalculate(140);
+            } else {
+                scheduleModuleAutoRender('single-school-eval-auto', calculate, { delay: 140, timeout: 900 });
+            }
+            return true;
+        };
+
+        if (typeof window.ensureSingleSchoolEvalRuntimeLoaded === 'function'
+            && !window.__SINGLE_SCHOOL_EVAL_RUNTIME_PATCHED__) {
+            return window.ensureSingleSchoolEvalRuntimeLoaded()
+                .then(run)
+                .catch((error) => console.warn(error));
         }
+        run();
         return Promise.resolve();
     }
 
@@ -734,9 +874,9 @@
             updateClassSelect();
         }
         if (id === 'segment-analysis') updateSegmentSelects();
-        if (id === 'class-comparison') updateClassCompSchoolSelect();
+        if (id === 'class-comparison') return initClassComparisonEntry();
         if (id === 'potential-analysis') updatePotentialSchoolSelect();
-        if (id === 'class-diagnosis') updateDiagnosisSelects();
+        if (id === 'class-diagnosis') return initClassDiagnosisEntry();
         if (id === 'correlation-analysis') return initCorrelationAnalysisEntry();
         if (id === 'seat-adjustment') updateSeatAdjSelects();
         if (id === 'subject-balance') updateSubjectBalanceSelects();

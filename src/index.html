@@ -1441,14 +1441,14 @@
                         <span class="module-help-btn" onclick="showModuleHelp('class-comp')">📘 全景矩阵说明</span>
                     </h2>
                     <div class="analysis-action-stack">
-                        <div class="analysis-action-note">建议先看总分，再切单科和均衡矩阵；热力图更适合会场展示，Excel 更适合留档。</div>
+                        <div class="analysis-action-note">进入模块会自动带入学校并生成横向对比；热力图更适合会场展示，Excel 更适合留档。</div>
                         <div class="analysis-actions">
-                            <button class="btn" onclick="renderClassComparison()">开始对比</button>
+                            <button class="btn" onclick="renderClassComparison()">重新对比</button>
                             <button class="btn btn-green" onclick="exportClassComparisonExcel()">导出Excel</button>
                         </div>
                     </div>
                 </div>
-                <div class="info-bar analysis-info-band">对比同一学校内各班级的各项指标，独立于教师分析。</div>
+                <div class="info-bar analysis-info-band">系统会自动对比同一学校内各班级的各项指标，独立于教师分析。</div>
                 <details class="explain-panel analysis-doc-panel">
                     <summary>横向对比口径与使用建议</summary>
                     <div class="explain-content">
@@ -1505,8 +1505,8 @@
                         </div>
                         <div id="class-comp-results" class="analysis-content-stack">
                             <div class="analysis-empty-state">
-                                <strong>尚未生成班级横向对比</strong>
-                                选择学校后点击“开始对比”，这里会显示总分对比、学科矩阵和单科详情。
+                                <strong>班级横向对比将自动生成</strong>
+                                进入模块后会自动显示总分对比、学科矩阵和单科详情，也可切换学校后重新对比。
                             </div>
                         </div>
                     </div>
@@ -1539,7 +1539,7 @@
                 <div class="sec-head analysis-shell-head">
                     <h2><i class="ti ti-activity"></i> 班情诊断 (标准差/分化度分析)</h2>
                     <div class="analysis-action-stack">
-                        <div class="analysis-action-note">建议先选学校和学科，再生成诊断表；导出更适合做班级诊断留档。</div>
+                        <div class="analysis-action-note">进入模块会自动带入学校和总分并生成诊断表；导出更适合做班级诊断留档。</div>
                         <div class="analysis-actions">
                             <button class="btn btn-green" onclick="exportDiagnosisExcel()">导出诊断表</button>
                         </div>
@@ -1563,7 +1563,7 @@
                     </select>
                     <label style="margin-left:15px;">间距：</label><input type="number" id="diagStep" value="10"
                         style="width:80px;" placeholder="分">
-                    <button class="btn" style="margin-left:15px;" onclick="renderClassDiagnosis()">诊断分析</button>
+                    <button class="btn" style="margin-left:15px;" onclick="renderClassDiagnosis()">重新诊断</button>
                 </div>
                 <div id="tmModuleState-class-diagnosis"></div>
                 <div class="analysis-anchor-panel">
@@ -1575,7 +1575,7 @@
                 <div id="diagnosis-results">
                     <div class="analysis-empty-state"><i class="ti ti-chart-bar"
                             style="font-size:48px; display:block; margin-bottom:10px;"></i>
-                        <p>请选择学校和学科开始诊断</p>
+                        <p>进入模块后会自动生成默认学校和总分诊断</p>
                     </div>
                 </div>
                 </div>
@@ -4941,9 +4941,9 @@
                             <select id="teacherCompareExam3" style="min-width:180px;"></select>
                         </span>
                         <button class="btn btn-sm btn-blue"
-                            onclick="renderTeacherMultiPeriodComparison()">生成教师多期对比</button>
+                            onclick="renderTeacherMultiPeriodComparison()">重新生成教师对比</button>
                         <button class="btn btn-sm" style="background:#ea580c; color:white;"
-                            onclick="renderAllTeachersMultiPeriodComparison()" title="生成该学校所有教师的对比表">📊 生成全校对比</button>
+                            onclick="renderAllTeachersMultiPeriodComparison()" title="重新生成该学校所有教师的对比表">📊 重新生成全校对比</button>
                         <button class="btn btn-sm btn-green"
                             onclick="exportTeacherMultiPeriodComparison()">导出教师多期对比</button>
                         <button class="btn btn-sm" style="background:#8b5cf6; color:white;"
@@ -4952,10 +4952,10 @@
                             onclick="viewCloudTeacherCompares()" title="查看已保存的教师对比记录">📋 查看云端对比</button>
                     </div>
                     <div id="teacherCompareHint" class="analysis-hint analysis-status-text">
-                        请选择学校+学科+教师并选择2期或3期考试后生成。</div>
+                        选择学校、学科、教师和期次后，系统会自动生成多期变化结果。</div>
                     <div id="teacherCompareResult" class="analysis-result-slot">
                         <div class="analysis-empty-state analysis-empty-state-compact">
-                            选择教师或全校对比范围后，这里会生成多期变化结果。
+                            进入模块后会自动生成默认教师的多期变化结果，也可手动切换范围后重新生成。
                         </div>
                     </div>
                 </div>
@@ -5145,15 +5145,15 @@
                         <span class="module-help-btn" onclick="showModuleHelp('sse')">📘 100分制详解</span>
                     </h2>
                     <div class="analysis-action-stack">
-                        <div class="analysis-action-note">建议先确认考核学校和权重项，再生成赋分结果；如果历史数据不足，系统会自动退回单次模式，避免误算。</div>
+                        <div class="analysis-action-note">进入模块会自动带入学校并生成赋分结果；如果历史数据不足，系统会自动退回单次模式，避免误算。</div>
                         <div class="analysis-actions">
-                            <button class="btn btn-green" onclick="SSE_calculate()">🚀 开始考核计算</button>
+                            <button class="btn btn-green" onclick="SSE_calculate()">🚀 重新计算</button>
                             <button class="btn btn-purple" onclick="SSE_export()">📥 导出考核表</button>
                         </div>
                     </div>
                 </div>
                 <div class="info-bar analysis-info-band">
-                    <span>这页更适合做“先统一口径、再做公平比较”的校内绩效判断。先看核心理念和考核设置，再生成结果，比直接算分更不容易误用模型。</span>
+                    <span>这页更适合做“先统一口径、再做公平比较”的校内绩效判断。系统会自动生成结果，后续只需按需要调整学校或权重项。</span>
                 </div>
                 <details class="explain-panel analysis-doc-panel">
                     <summary>绩效分口径说明（点击展开）</summary>

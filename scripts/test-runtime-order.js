@@ -138,6 +138,9 @@ assert.ok(fs.existsSync(macroCompareCloudRuntimePath), 'macro-compare-cloud-runt
 const indexHtml = fs.readFileSync(indexPath, 'utf8');
 const bootRuntime = fs.readFileSync(bootRuntimePath, 'utf8');
 const shellPolishRuntime = fs.readFileSync(shellPolishRuntimePath, 'utf8');
+const moduleEntryRuntime = fs.readFileSync(moduleEntryRuntimePath, 'utf8');
+const singleSchoolEvalRuntime = fs.readFileSync(singleSchoolEvalRuntimePath, 'utf8');
+const teacherCompareResultRuntime = fs.readFileSync(teacherCompareResultRuntimePath, 'utf8');
 const appSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
 const initSupabaseMatches = bootRuntime.match(/window\.initSupabase\s*=\s*function/g) || [];
 const supabaseUrlAssignments = bootRuntime.match(/window\.SUPABASE_URL\s*=/g) || [];
@@ -458,6 +461,17 @@ assert.ok(shellPolishRuntime.includes('function scheduleEnhancementRuntimeLoad()
 assert.ok(shellPolishRuntime.includes("window.SystemRuntimeLoader.load('shell-enhancements')"), 'shell-polish-runtime.js should demand-load shell-enhancements after the app is visible');
 assert.ok(shellPolishRuntime.includes("getRuntimeLoadProfile() === 'lazy'"), 'shell-polish-runtime.js should respect the lazy runtime profile');
 assert.ok(shellPolishRuntime.includes('if (isMobileViewport()) return false;'), 'shell-polish-runtime.js should skip desktop shell enhancements on mobile');
+assert.ok(moduleEntryRuntime.includes('const TEACHER_ANALYSIS_RENDER_DELAY_MS = 180;'), 'teacher portrait should auto-render shortly after entering the module');
+assert.ok(moduleEntryRuntime.includes('ensureTeacherAnalysisMainRuntimeLoaded()'), 'teacher portrait entry should load its runtime automatically');
+assert.ok(moduleEntryRuntime.includes('function scheduleTeacherCompareAutoRender'), 'teacher multi-period compare should auto-render from default selectors');
+assert.ok(moduleEntryRuntime.includes('return initClassComparisonEntry();'), 'class comparison should auto-render when opened from the rail');
+assert.ok(moduleEntryRuntime.includes('return initClassDiagnosisEntry();'), 'class diagnosis should auto-render when opened from the rail');
+assert.ok(moduleEntryRuntime.includes('window.scheduleSSEAutoCalculate(140)'), 'performance fairness module should auto-calculate when opened');
+assert.ok(!moduleEntryRuntime.includes('renderTeacherAnalysisNow()">立即生成'), 'teacher portrait pending state should not require a manual immediate-generate click');
+assert.ok(singleSchoolEvalRuntime.includes('const sizeBonus = Math.max(0, sizeDiff * 0.1);'), 'performance fairness model should not penalize classes below average size');
+assert.ok(singleSchoolEvalRuntime.includes('function scheduleSSEAutoCalculate'), 'performance fairness model should recalculate automatically after setting changes');
+assert.ok(teacherCompareResultRuntime.includes('function scheduleTeacherMultiPeriodAutoRender'), 'teacher multi-period compare should recalculate automatically after selector changes');
+assert.ok(teacherCompareResultRuntime.includes('bindTeacherCompareAutoControls();'), 'teacher compare runtime should bind selector auto-refresh controls');
 assert.strictEqual(initSupabaseMatches.length, 1, 'boot-runtime.js should define initSupabase exactly once');
 assert.strictEqual(supabaseUrlAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_URL exactly once');
 assert.strictEqual(supabaseKeyAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_KEY exactly once');

@@ -2,6 +2,7 @@
     if (typeof window === 'undefined' || window.__SINGLE_SCHOOL_EVAL_RUNTIME_PATCHED__) return;
 
     let sseCache = [];
+    let sseAutoTimer = 0;
 
     function getSchoolMap() {
         return window.SCHOOLS && typeof window.SCHOOLS === 'object' ? window.SCHOOLS : {};
@@ -35,7 +36,53 @@
         schoolList.forEach((schoolName) => {
             sel.innerHTML += `<option value="${schoolName}">${schoolName}</option>`;
         });
-        if (old && schools[old]) sel.value = old;
+        const preferredSchool = String(
+            old
+            || (typeof window.readCurrentSchool === 'function' ? window.readCurrentSchool() : '')
+            || window.MY_SCHOOL
+            || localStorage.getItem('MY_SCHOOL')
+            || ''
+        ).trim();
+        if (preferredSchool && schools[preferredSchool]) {
+            sel.value = preferredSchool;
+        } else if (!sel.value && schoolList.length) {
+            sel.value = schoolList[0];
+        }
+        bindSSEAutoControls();
+    }
+
+    function isSingleSchoolEvalActive() {
+        return !!document.getElementById('single-school-eval')?.classList.contains('active');
+    }
+
+    function canAutoCalculateSSE() {
+        const schoolName = String(document.getElementById('sse_school_select')?.value || '').trim();
+        const schoolData = getSchoolMap()[schoolName];
+        return !!(isSingleSchoolEvalActive() && schoolName && schoolData?.metrics?.total);
+    }
+
+    function scheduleSSEAutoCalculate(delay = 160) {
+        if (sseAutoTimer) window.clearTimeout(sseAutoTimer);
+        sseAutoTimer = window.setTimeout(() => {
+            sseAutoTimer = 0;
+            if (!canAutoCalculateSSE()) return;
+            SSE_calculate();
+        }, Number.isFinite(Number(delay)) ? Number(delay) : 160);
+    }
+
+    function bindSSEAutoControls() {
+        [
+            'sse_school_select',
+            'sse_check_exc',
+            'sse_check_pass',
+            'sse_check_avg',
+            'sse_check_prog'
+        ].forEach((id) => {
+            const el = document.getElementById(id);
+            if (!el || el.dataset.sseAutoBound === '1') return;
+            el.dataset.sseAutoBound = '1';
+            el.addEventListener('change', () => scheduleSSEAutoCalculate(120));
+        });
     }
 
     function updateHeaderLabels(wExc, wPass, wAvg, wProg) {
@@ -142,7 +189,7 @@
             const excRate = scores.filter((value) => value >= excLine).length / realCount;
             const passRate = scores.filter((value) => value >= passLine).length / realCount;
             const sizeDiff = enrollment - avgClassSize;
-            const sizeBonus = sizeDiff * 0.1;
+            const sizeBonus = Math.max(0, sizeDiff * 0.1);
 
             let avgProgress = 0;
             let matchedCount = 0;
@@ -300,5 +347,7 @@
     window.updateSSESchoolSelect = updateSSESchoolSelect;
     window.SSE_calculate = SSE_calculate;
     window.SSE_export = SSE_export;
+    window.scheduleSSEAutoCalculate = scheduleSSEAutoCalculate;
+    bindSSEAutoControls();
     window.__SINGLE_SCHOOL_EVAL_RUNTIME_PATCHED__ = true;
 })();
