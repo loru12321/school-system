@@ -70,6 +70,15 @@ async function main() {
     await login(page);
 
     const snapshot = await page.evaluate(async () => {
+        const loadRuntimeSkill = async (skillId) => {
+            if (!window.SystemRuntimeLoader || typeof window.SystemRuntimeLoader.load !== 'function') return false;
+            try {
+                await window.SystemRuntimeLoader.load(skillId);
+                return true;
+            } catch (_) {
+                return false;
+            }
+        };
         const boundedSwitchTab = async (moduleId, timeout = 5000) => {
             if (typeof window.switchTab !== 'function') return false;
             try {
@@ -82,6 +91,7 @@ async function main() {
             }
             return true;
         };
+        await loadRuntimeSkill('county-analysis');
         await boundedSwitchTab('county-analysis');
         await window.CountyAnalysisRuntime?.ensureTeacherContextForCountyAnalysis?.(true);
         window.renderCountyAnalysis?.('county-teacher-portrait');
@@ -96,6 +106,7 @@ async function main() {
             await new Promise((resolve) => setTimeout(resolve, 250));
             window.renderCountyAnalysis?.('county-teacher-portrait');
         }
+        await loadRuntimeSkill('student-compare');
         await boundedSwitchTab('student-details');
         window.renderStudentDetails?.();
         const studentDeadline = Date.now() + 10000;
@@ -106,6 +117,7 @@ async function main() {
             await new Promise((resolve) => setTimeout(resolve, 250));
             window.renderStudentDetails?.();
         }
+        await loadRuntimeSkill('teacher-analysis');
         await boundedSwitchTab('teacher-analysis');
         window.analyzeTeachers?.();
         window.calculateTeacherTownshipRanking?.();

@@ -2101,6 +2101,20 @@ function loadOptionalRuntimeBundle(key, entries) {
     return window.__optionalRuntimeLoaders[key];
 }
 
+function yieldRuntimeWarmupFrame() {
+    return new Promise((resolve) => {
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(resolve, { timeout: 220 });
+            return;
+        }
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => resolve());
+            return;
+        }
+        window.setTimeout(resolve, 0);
+    });
+}
+
 function getRuntimeLoadProfile() {
     try {
         const stored = String(localStorage.getItem('SYSTEM_LOAD_PROFILE') || '').trim().toLowerCase();
@@ -2141,7 +2155,9 @@ function createSystemRuntimeLoader() {
     };
     const loadMany = function (skillIds) {
         return (Array.isArray(skillIds) ? skillIds : [])
-            .reduce((chain, skillId) => chain.then(() => loadSkill(skillId)), Promise.resolve());
+            .reduce((chain, skillId, index) => chain
+                .then(() => (index > 0 ? yieldRuntimeWarmupFrame() : undefined))
+                .then(() => loadSkill(skillId)), Promise.resolve());
     };
     const preloadSkill = function (skillId) {
         const entries = getRuntimeSkillEntries(skillId);

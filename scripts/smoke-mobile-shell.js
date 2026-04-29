@@ -1,0 +1,117 @@
+try {
+    require.resolve('playwright');
+} catch (error) {
+    console.error('playwright is required for smoke-mobile-shell. Run: npm install --no-save playwright');
+    process.exit(1);
+}
+
+const assert = require('assert');
+const { chromium } = require('playwright');
+
+const url = process.env.SMOKE_URL || 'https://schoolsystem.com.cn/';
+const user = process.env.SMOKE_USER || 'admin';
+const pass = process.env.SMOKE_PASS || 'admin123';
+const cohortYear = process.env.SMOKE_COHORT_YEAR || '2022';
+
+function isIgnorableMessage(text) {
+    return /favicon|GitHub release API|fetch releases|cloudflareinsights|beacon\.min\.js|Failed to load resource/i.test(String(text || ''));
+}
+
+async function loginAndEnterCohort(page) {
+    await page.goto(url, { waitUntil: 'commit', timeout: 90000 });
+    await page.waitForSelector('#login-user', { state: 'visible', timeout: 90000 });
+    await page.fill('#login-user', user);
+    await page.fill('#login-pass', pass);
+    await page.click('#login-submit-button');
+
+    await page.waitForFunction(() => {
+        const overlay = document.getElementById('login-overlay');
+        const mask = document.getElementById('mode-mask');
+        const app = document.getElementById('app');
+        return (!overlay || getComputedStyle(overlay).display === 'none')
+            && (!!mask || !!app || document.body?.dataset?.authState === 'logged_in');
+    }, null, { timeout: 90000 });
+
+    await page.waitForFunction(() => typeof window.enterCohortFromMask === 'function', null, { timeout: 30000 }).catch(() => {});
+    const maskVisible = await page.evaluate(() => {
+        const mask = document.getElementById('mode-mask');
+        return !!mask && getComputedStyle(mask).display !== 'none';
+    });
+    if (maskVisible) {
+        const input = page.locator('#entry-cohort-year');
+        if (await input.count()) await input.fill(cohortYear);
+        await page.evaluate(async () => {
+            if (typeof window.enterCohortFromMask === 'function') {
+                await window.enterCohortFromMask();
+                return;
+            }
+            document.querySelector('button[onclick="enterCohortFromMask()"]')?.click();
+        });
+    }
+
+    await page.waitForFunction(() => {
+        const cohortId = String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
+        const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+        return !!cohortId && rawDataLen > 0;
+    }, null, { timeout: 90000 });
+}
+
+async function main() {
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage({
+        viewport: { width: 390, height: 844 },
+        isMobile: true,
+        hasTouch: true,
+        deviceScaleFactor: 3
+    });
+
+    const messages = [];
+    page.on('console', (msg) => {
+        if (msg.type() === 'error' || msg.type() === 'warning') {
+            messages.push(`${msg.type()}: ${msg.text()}`);
+        }
+    });
+    page.on('pageerror', (error) => {
+        messages.push(`pageerror: ${error.message}`);
+    });
+
+    await loginAndEnterCohort(page);
+    await page.evaluate(() => window.ensureMobileManagerRuntimeLoaded?.()).catch(() => {});
+    await page.evaluate(() => window.MobileQueryUI?.refresh?.()).catch(() => {});
+    await page.waitForTimeout(1200);
+
+    const state = await page.evaluate(() => {
+        const shell = document.getElementById('apk-mobile-shell');
+        const rootDisplay = shell ? getComputedStyle(shell).display : '';
+        const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+        return {
+            mobileQuery: document.body?.dataset?.mobileQuery || '',
+            mobileArchitecture: document.body?.dataset?.mobileArchitecture || '',
+            shellExists: !!shell,
+            shellVisible: !!shell && rootDisplay !== 'none' && shell.getAttribute('aria-hidden') === 'false',
+            railChips: document.querySelectorAll('#apk-mobile-shell .apk-rail-chip').length,
+            activeRailChip: !!document.querySelector('#apk-mobile-shell .apk-rail-chip.is-active'),
+            currentCohortId: String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim(),
+            rawDataLen
+        };
+    });
+
+    await browser.close();
+
+    const actionableMessages = messages.filter((message) => !isIgnorableMessage(message));
+    assert.strictEqual(state.mobileQuery, 'true', 'mobile viewport was not detected');
+    assert.ok(state.shellExists, 'mobile shell root was not created');
+    assert.ok(state.currentCohortId, 'cohort was not selected');
+    assert.ok(state.rawDataLen > 0, 'exam data was not loaded');
+    assert.ok(
+        !actionableMessages.some((message) => /ReferenceError|TypeError|scrollActiveRailChipIntoView|pageerror/i.test(message)),
+        `mobile shell console errors found: ${actionableMessages.join('\n')}`
+    );
+
+    console.log(JSON.stringify({ state, actionableMessages }, null, 2));
+}
+
+main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+});
