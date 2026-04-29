@@ -87,8 +87,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 var BOOT_VENDOR_MODULES = [
     './assets/vendor/crypto-js/crypto-js.min.js',
-    './assets/vendor/alpinejs/cdn.min.js',
-    './assets/vendor/sweetalert2/sweetalert2.all.min.js'
+    './assets/vendor/alpinejs/cdn.min.js'
 ];
 
 var DEFERRED_APP_MODULES = [
@@ -99,6 +98,14 @@ var DEFERRED_APP_MODULES = [
 ];
 
 var SYSTEM_RUNTIME_SKILLS = {
+    'sweetalert-vendor': {
+        mode: 'idle',
+        warmup: 'balanced',
+        triggers: ['Swal', 'uiAlert', 'modal-alert'],
+        entries: [
+            { key: 'sweetalert-vendor', src: './assets/vendor/sweetalert2/sweetalert2.all.min.js' }
+        ]
+    },
     'chart-vendor': {
         mode: 'demand',
         warmup: 'demand',
@@ -329,6 +336,82 @@ var SYSTEM_RUNTIME_SKILLS = {
         ]
     }
 };
+
+function getLoadedSweetAlertVendor() {
+    const swal = window.Swal;
+    return swal && !swal.__schoolLazyProxy && typeof swal.fire === 'function' ? swal : null;
+}
+
+function buildLazySweetAlertFallbackResult() {
+    return {
+        isConfirmed: false,
+        isDenied: false,
+        isDismissed: true,
+        dismiss: 'loader-error'
+    };
+}
+
+function showLazySweetAlertFallback(args, error) {
+    console.warn('[boot-runtime] SweetAlert2 lazy load failed:', error);
+    try {
+        const first = args && args[0];
+        const title = typeof first === 'string' ? first : (first && (first.title || first.text || first.html));
+        if (title && typeof window.alert === 'function') {
+            window.alert(String(title).replace(/<[^>]+>/g, ' '));
+        }
+    } catch (_) {}
+    return buildLazySweetAlertFallbackResult();
+}
+
+function installLazySweetAlertProxy() {
+    const current = getLoadedSweetAlertVendor();
+    if (current) return current;
+    if (window.Swal && window.Swal.__schoolLazyProxy) return window.Swal;
+
+    const state = { closeRequested: false };
+    const proxy = {
+        __schoolLazyProxy: true,
+        fire(...args) {
+            state.closeRequested = false;
+            return window.ensureSweetAlertVendorLoaded()
+                .then((swal) => {
+                    if (state.closeRequested) {
+                        state.closeRequested = false;
+                        if (swal && typeof swal.close === 'function') swal.close();
+                        return buildLazySweetAlertFallbackResult();
+                    }
+                    return swal.fire(...args);
+                })
+                .catch((error) => showLazySweetAlertFallback(args, error));
+        },
+        close(...args) {
+            const swal = getLoadedSweetAlertVendor();
+            if (swal && typeof swal.close === 'function') return swal.close(...args);
+            state.closeRequested = true;
+            return undefined;
+        },
+        isVisible() {
+            const swal = getLoadedSweetAlertVendor();
+            return !!(swal && typeof swal.isVisible === 'function' && swal.isVisible());
+        },
+        getTitle() {
+            const swal = getLoadedSweetAlertVendor();
+            return swal && typeof swal.getTitle === 'function' ? swal.getTitle() : null;
+        },
+        showValidationMessage(message) {
+            const swal = getLoadedSweetAlertVendor();
+            if (swal && typeof swal.showValidationMessage === 'function') {
+                return swal.showValidationMessage(message);
+            }
+            return undefined;
+        }
+    };
+
+    window.Swal = proxy;
+    return proxy;
+}
+
+installLazySweetAlertProxy();
 
 var APP_MODULES = [
     './assets/js/auth-state-runtime.js',
@@ -2305,6 +2388,18 @@ window.ensureDataManagerSqlRuntimeLoaded = function () {
 
 window.ensureAlasqlVendorLoaded = function () {
     return loadOptionalRuntime('alasql-vendor', './assets/vendor/alasql/alasql.min.js');
+};
+
+window.ensureSweetAlertVendorLoaded = function () {
+    const loaded = getLoadedSweetAlertVendor();
+    if (loaded) return Promise.resolve(loaded);
+    return loadOptionalRuntime('sweetalert-vendor', './assets/vendor/sweetalert2/sweetalert2.all.min.js').then(() => {
+        const swal = getLoadedSweetAlertVendor();
+        if (!swal) {
+            throw new Error('SweetAlert2 runtime unavailable');
+        }
+        return swal;
+    });
 };
 
 window.ensureChartVendorLoaded = function () {

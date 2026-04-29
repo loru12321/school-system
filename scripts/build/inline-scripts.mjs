@@ -177,7 +177,7 @@ function buildInlineRuntimeSourceMap(projectRoot) {
 function getBootRuntimeSkillSources(projectRoot) {
     const bootContent = readLocalScriptContent(projectRoot, BOOT_RUNTIME_PATH);
     if (!bootContent) return [];
-    const manifestMatch = bootContent.match(/var\s+SYSTEM_RUNTIME_SKILLS\s*=\s*\{([\s\S]*?)\n\};\s*\n\s*var\s+APP_MODULES/);
+    const manifestMatch = bootContent.match(/var\s+SYSTEM_RUNTIME_SKILLS\s*=\s*\{([\s\S]*?)\n\};/);
     if (!manifestMatch) return [];
     const manifestSource = manifestMatch[1];
     return Array.from(manifestSource.matchAll(/\bsrc\s*:\s*['"]([^'"]+)['"]/g))

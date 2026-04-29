@@ -252,6 +252,7 @@ assert.ok(bootVendorMatch, 'boot-runtime.js should declare BOOT_VENDOR_MODULES')
 const bootVendorManifest = bootVendorMatch[0];
 assert.ok(!bootVendorManifest.includes(xlsxVendorRef), 'xlsx should not be part of the first boot vendor batch');
 assert.ok(!bootVendorManifest.includes(chartVendorRef), 'chart.js should not be part of the first boot vendor batch');
+assert.ok(!bootVendorManifest.includes(sweetalertVendorRef), 'sweetalert2 should not be part of the first boot vendor batch');
 const authStateIndex = moduleManifest.indexOf(authStateRef);
 const workspaceStateIndex = moduleManifest.indexOf(workspaceStateRef);
 const examStateIndex = moduleManifest.indexOf(examStateRef);
@@ -383,11 +384,14 @@ assert.ok(bootRuntime.includes(reportChartRef), 'boot-runtime.js should referenc
 assert.ok(bootRuntime.includes(reportExportRef), 'boot-runtime.js should reference report-export-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(reportAiRef), 'boot-runtime.js should reference report-ai-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(alasqlVendorRef), 'boot-runtime.js should reference alasql.min.js for lazy loading');
+assert.ok(bootRuntime.includes(sweetalertVendorRef), 'boot-runtime.js should reference sweetalert2.all.min.js for lazy loading');
 assert.ok(bootRuntime.includes(chartVendorRef), 'boot-runtime.js should reference chart.umd.min.js for lazy loading');
 assert.ok(bootRuntime.includes(xlsxVendorRef), 'boot-runtime.js should reference xlsx.full.min.js for lazy loading');
 assert.ok(bootRuntime.includes(jspdfVendorRef), 'boot-runtime.js should reference jspdf.umd.min.js for lazy loading');
 assert.ok(bootRuntime.includes(html2canvasVendorRef), 'boot-runtime.js should reference html2canvas.min.js for lazy loading');
 assert.ok(bootRuntime.includes("window.ensureAlasqlVendorLoaded = function ()"), 'boot-runtime.js should expose ensureAlasqlVendorLoaded');
+assert.ok(bootRuntime.includes("window.ensureSweetAlertVendorLoaded = function ()"), 'boot-runtime.js should expose ensureSweetAlertVendorLoaded');
+assert.ok(bootRuntime.includes('function installLazySweetAlertProxy'), 'boot-runtime.js should install a lazy SweetAlert proxy');
 assert.ok(bootRuntime.includes("window.ensureChartVendorLoaded = function ()"), 'boot-runtime.js should expose ensureChartVendorLoaded');
 assert.ok(bootRuntime.includes("window.ensureXlsxVendorLoaded = function ()"), 'boot-runtime.js should expose ensureXlsxVendorLoaded');
 assert.ok(bootRuntime.includes('window.wrapXlsxRuntimeExports = function ()'), 'boot-runtime.js should wrap Excel entry points with lazy XLSX loading');
@@ -405,6 +409,7 @@ assert.ok(bootRuntime.includes('school:app-modules-ready'), 'boot-runtime.js sho
 assert.ok(bootRuntime.includes('function scheduleMobileRuntimeBootstrap'), 'boot-runtime.js should defer mobile runtime bootstrapping');
 assert.ok(bootRuntime.includes('runAfterAppModulesReady'), 'boot-runtime.js should wait for core modules before mobile runtime bootstrap');
 assert.ok(bootRuntime.includes("'teacher-analysis':"), 'runtime skill manifest should include teacher-analysis');
+assert.ok(bootRuntime.includes("'sweetalert-vendor':"), 'runtime skill manifest should include sweetalert-vendor');
 assert.ok(bootRuntime.includes("'chart-vendor':"), 'runtime skill manifest should include chart-vendor');
 assert.ok(!bootRuntime.includes("'presentation-export':"), 'runtime skill manifest should not include removed PPT export skill');
 assert.ok(bootRuntime.includes("'zhongkao-countdown':"), 'runtime skill manifest should include zhongkao-countdown');
