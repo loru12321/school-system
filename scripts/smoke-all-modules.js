@@ -588,6 +588,52 @@ async function runModuleDeepCheck(page, id) {
             };
         });
     }
+    if (id === 'progress-analysis') {
+        return page.evaluate(() => {
+            let renderCallSafe = true;
+            let renderCallResult = null;
+            let renderCallError = '';
+            try {
+                const schoolSel = document.getElementById('progressCompareSchool');
+                const exam1Sel = document.getElementById('progressCompareExam1');
+                const exam2Sel = document.getElementById('progressCompareExam2');
+                const pickOption = (select, exclude = '') => {
+                    const options = Array.from(select?.options || []).map(option => option.value).filter(Boolean);
+                    return options.find(value => value !== exclude) || '';
+                };
+                if (schoolSel && !schoolSel.value) schoolSel.value = pickOption(schoolSel);
+                if (exam1Sel && !exam1Sel.value) exam1Sel.value = pickOption(exam1Sel);
+                if (exam2Sel && (!exam2Sel.value || exam2Sel.value === exam1Sel?.value)) {
+                    exam2Sel.value = pickOption(exam2Sel, exam1Sel?.value || '');
+                }
+                if (schoolSel?.value && exam1Sel?.value && exam2Sel?.value && exam1Sel.value !== exam2Sel.value) {
+                    renderCallResult = window.renderMultiPeriodComparison();
+                }
+            } catch (error) {
+                renderCallSafe = false;
+                renderCallError = error?.message || String(error);
+            }
+            const checks = {
+                sectionReady: !!document.getElementById('progress-analysis'),
+                renderProgressAnalysis: typeof window.renderProgressAnalysis === 'function',
+                onProgressComparePeriodCountChange: typeof window.onProgressComparePeriodCountChange === 'function',
+                renderMultiPeriodComparison: typeof window.renderMultiPeriodComparison === 'function',
+                exportMultiPeriodComparison: typeof window.exportMultiPeriodComparison === 'function',
+                compareControlsReady: !!document.getElementById('progressCompareSchool')
+                    && !!document.getElementById('progressCompareExam1')
+                    && !!document.getElementById('progressCompareExam2')
+                    && !!document.getElementById('progressCompareExam3'),
+                resultSlotReady: !!document.getElementById('multiPeriodCompareResult'),
+                renderCallSafe
+            };
+            return {
+                ok: Object.values(checks).every(Boolean),
+                checks,
+                renderCallResult: !!renderCallResult,
+                renderCallError
+            };
+        });
+    }
     if (id === 'teacher-analysis') {
         // Keep the all-module smoke test lightweight here. The teacher portrait
         // calculations are intentionally covered by test-calculation-snapshot.js

@@ -503,6 +503,362 @@ function updateProgressMultiExamSelects() {
     onProgressComparePeriodCountChange();
 }
 
+function setProgressMultiPeriodHint(message, tone = 'info') {
+    const hintEl = document.getElementById('multiPeriodCompareHint');
+    if (!hintEl) return;
+    const palette = {
+        success: '#16a34a',
+        error: '#dc2626',
+        loading: '#2563eb',
+        info: '#475569'
+    };
+    hintEl.innerHTML = message;
+    hintEl.style.color = palette[tone] || palette.info;
+    hintEl.style.fontWeight = tone === 'success' || tone === 'error' || tone === 'loading' ? '700' : '400';
+}
+
+function getProgressMultiPeriodCache() {
+    if (typeof window.readMultiPeriodCompareCacheState === 'function') {
+        return window.readMultiPeriodCompareCacheState();
+    }
+    return window.MULTI_PERIOD_COMPARE_CACHE && typeof window.MULTI_PERIOD_COMPARE_CACHE === 'object'
+        ? window.MULTI_PERIOD_COMPARE_CACHE
+        : null;
+}
+
+function setProgressMultiPeriodCache(cache) {
+    if (typeof window.setMultiPeriodCompareCacheState === 'function') {
+        return window.setMultiPeriodCompareCacheState(cache);
+    }
+    window.MULTI_PERIOD_COMPARE_CACHE = cache && typeof cache === 'object' ? cache : null;
+    return window.MULTI_PERIOD_COMPARE_CACHE;
+}
+
+function getProgressMultiPeriodConfig() {
+    const countEl = document.getElementById('progressComparePeriodCount');
+    const schoolEl = document.getElementById('progressCompareSchool');
+    const exam1El = document.getElementById('progressCompareExam1');
+    const exam2El = document.getElementById('progressCompareExam2');
+    const exam3El = document.getElementById('progressCompareExam3');
+    const periodCount = parseInt(countEl?.value || '2', 10) === 3 ? 3 : 2;
+    const examIds = periodCount === 3
+        ? [exam1El?.value || '', exam2El?.value || '', exam3El?.value || '']
+        : [exam1El?.value || '', exam2El?.value || ''];
+
+    return {
+        periodCount,
+        school: String(schoolEl?.value || '').trim(),
+        examIds: examIds.map(id => String(id || '').trim())
+    };
+}
+
+function getProgressCompareTotal(row, totalSubjects) {
+    if (!row) return null;
+    if (typeof getComparisonTotalValue === 'function') {
+        const value = Number(getComparisonTotalValue(row, totalSubjects));
+        if (Number.isFinite(value)) return value;
+    }
+    const fallback = Number(row.total);
+    return Number.isFinite(fallback) ? fallback : null;
+}
+
+function getProgressCompareClassKey(value) {
+    const text = String(value || '').trim();
+    if (typeof normalizeClass === 'function') return normalizeClass(text);
+    return text.replace(/\s+/g, '');
+}
+
+function filterProgressCompareRowsForUser(rows) {
+    const list = Array.isArray(rows) ? rows.slice() : [];
+    try {
+        const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+        if (window.PermissionPolicy && typeof PermissionPolicy.filterStudentRows === 'function') {
+            const mode = PermissionPolicy.isClassTeacher && PermissionPolicy.isClassTeacher(user)
+                ? 'homeroom'
+                : 'teaching';
+            return PermissionPolicy.filterStudentRows(user, list, { mode });
+        }
+    } catch (error) {
+        console.warn('[progress-compare] permission filter failed:', error);
+    }
+    return list;
+}
+
+function buildProgressMultiPeriodRows(config) {
+    if (typeof getExamRowsForCompare !== 'function' || typeof filterRowsBySchool !== 'function') {
+        throw new Error('多期对比基础数据模块未就绪，请刷新页面后重试');
+    }
+    if (typeof buildCompetitionRankMap !== 'function') {
+        throw new Error('排名计算模块未就绪，请刷新页面后重试');
+    }
+
+    const totalSubjects = typeof getComparisonTotalSubjects === 'function'
+        ? getComparisonTotalSubjects()
+        : [];
+    const cleanName = typeof getProgressCleanName === 'function'
+        ? getProgressCleanName
+        : (name => String(name || '').replace(/\s+/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '').toLowerCase());
+    const totalOf = row => {
+        const total = getProgressCompareTotal(row, totalSubjects);
+        return Number.isFinite(total) ? total : Number.NEGATIVE_INFINITY;
+    };
+
+    const examDataList = config.examIds.map((examId) => {
+        const allRows = getExamRowsForCompare(examId);
+        const schoolRows = filterProgressCompareRowsForUser(filterRowsBySchool(allRows, config.school));
+        if (!schoolRows.length) {
+            throw new Error(`在「${examId}」中找不到「${config.school}」的可对比学生数据`);
+        }
+        const rankTownMap = buildCompetitionRankMap(allRows, row => cleanName(row?.name), totalOf);
+        const rankSchoolMap = buildCompetitionRankMap(schoolRows, row => cleanName(row?.name), totalOf);
+        return { examId, allRows, schoolRows, rankTownMap, rankSchoolMap };
+    });
+
+    const studentKeys = new Set();
+    examDataList.forEach(({ schoolRows }) => {
+        schoolRows.forEach((row) => {
+            const key = cleanName(row?.name);
+            if (key) studentKeys.add(key);
+        });
+    });
+
+    const rows = Array.from(studentKeys).map((key) => {
+        let displayName = key;
+        let displayClass = '';
+        const periods = examDataList.map(({ examId, schoolRows, rankTownMap, rankSchoolMap }) => {
+            const row = schoolRows.find(item => cleanName(item?.name) === key) || null;
+            if (row) {
+                displayName = row.name || displayName;
+                displayClass = row.class || displayClass;
+            }
+            const total = getProgressCompareTotal(row, totalSubjects);
+            return {
+                examId,
+                total,
+                rankSchool: row ? (rankSchoolMap.get(key) ?? null) : null,
+                rankTown: row ? (rankTownMap.get(key) ?? null) : null,
+                row
+            };
+        });
+        const first = periods[0] || {};
+        const last = periods[periods.length - 1] || {};
+        const scoreDiff = Number.isFinite(first.total) && Number.isFinite(last.total)
+            ? last.total - first.total
+            : null;
+        const rankSchoolDiff = Number.isFinite(first.rankSchool) && Number.isFinite(last.rankSchool)
+            ? first.rankSchool - last.rankSchool
+            : null;
+        const rankTownDiff = Number.isFinite(first.rankTown) && Number.isFinite(last.rankTown)
+            ? first.rankTown - last.rankTown
+            : null;
+        const mainRankDiff = Number.isFinite(rankTownDiff) ? rankTownDiff : rankSchoolDiff;
+        const status = Number.isFinite(mainRankDiff)
+            ? (mainRankDiff > 0 ? '进步' : (mainRankDiff < 0 ? '退步' : '稳定'))
+            : (Number.isFinite(scoreDiff) ? (scoreDiff > 0 ? '进步' : (scoreDiff < 0 ? '退步' : '稳定')) : '缺少数据');
+
+        return {
+            key,
+            name: displayName,
+            class: displayClass,
+            periods,
+            scoreDiff,
+            rankSchoolDiff,
+            rankTownDiff,
+            status
+        };
+    });
+
+    rows.sort((a, b) => {
+        const rankDiff = (Number.isFinite(b.rankTownDiff) ? b.rankTownDiff : -99999)
+            - (Number.isFinite(a.rankTownDiff) ? a.rankTownDiff : -99999);
+        if (rankDiff !== 0) return rankDiff;
+        const schoolDiff = (Number.isFinite(b.rankSchoolDiff) ? b.rankSchoolDiff : -99999)
+            - (Number.isFinite(a.rankSchoolDiff) ? a.rankSchoolDiff : -99999);
+        if (schoolDiff !== 0) return schoolDiff;
+        const classDiff = getProgressCompareClassKey(a.class).localeCompare(getProgressCompareClassKey(b.class), 'zh-CN', { numeric: true });
+        if (classDiff !== 0) return classDiff;
+        return String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN', { numeric: true });
+    });
+
+    return { rows, totalSubjects };
+}
+
+function formatProgressCompareValue(value, digits = 1) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return '-';
+    return number.toFixed(digits);
+}
+
+function formatProgressCompareRank(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number) || number <= 0) return '-';
+    return String(number);
+}
+
+function formatProgressCompareDiff(value, digits = 1) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return '<span style="color:#94a3b8;">-</span>';
+    const color = number > 0 ? '#16a34a' : (number < 0 ? '#dc2626' : '#64748b');
+    const sign = number > 0 ? '+' : '';
+    const text = Number.isInteger(number) ? `${sign}${number}` : `${sign}${number.toFixed(digits)}`;
+    return `<span style="font-weight:700; color:${color};">${text}</span>`;
+}
+
+function renderMultiPeriodComparison() {
+    const resultEl = document.getElementById('multiPeriodCompareResult');
+    const config = getProgressMultiPeriodConfig();
+    if (!resultEl) return false;
+    setProgressMultiPeriodCache(null);
+
+    if (!config.school) {
+        setProgressMultiPeriodHint('❌ 请先选择对比学校。', 'error');
+        resultEl.innerHTML = '<div class="analysis-empty-state analysis-empty-state-compact">请选择学校后再生成。</div>';
+        return false;
+    }
+    if (config.examIds.some(id => !id)) {
+        setProgressMultiPeriodHint('❌ 请完整选择所有考试期次。', 'error');
+        resultEl.innerHTML = '<div class="analysis-empty-state analysis-empty-state-compact">请选择完整期次后再生成。</div>';
+        return false;
+    }
+    if (new Set(config.examIds).size !== config.examIds.length) {
+        setProgressMultiPeriodHint('❌ 期次不能重复，请选择不同考试。', 'error');
+        resultEl.innerHTML = '<div class="analysis-empty-state analysis-empty-state-compact">期次重复，无法生成对比。</div>';
+        return false;
+    }
+
+    setProgressMultiPeriodHint('⏳ 正在生成多期对比，请稍候...', 'loading');
+
+    try {
+        const { rows, totalSubjects } = buildProgressMultiPeriodRows(config);
+        if (!rows.length) {
+            setProgressMultiPeriodHint('⚠️ 当前条件下没有可对比学生。', 'error');
+            resultEl.innerHTML = '<div class="analysis-empty-state analysis-empty-state-compact">没有找到可对比学生。</div>';
+            return false;
+        }
+
+        const improved = rows.filter(row => row.status === '进步').length;
+        const declined = rows.filter(row => row.status === '退步').length;
+        const stable = rows.filter(row => row.status === '稳定').length;
+        const visibleRows = rows.slice(0, 120);
+        const periodHeaders = config.examIds.map(examId => `
+            <th>${progressEscapeHtml(examId)}总分</th>
+            <th>${progressEscapeHtml(examId)}校排</th>
+            <th>${progressEscapeHtml(examId)}镇排</th>
+        `).join('');
+        const bodyHtml = visibleRows.map(row => {
+            const periodCells = row.periods.map(period => `
+                <td>${formatProgressCompareValue(period.total)}</td>
+                <td>${formatProgressCompareRank(period.rankSchool)}</td>
+                <td>${formatProgressCompareRank(period.rankTown)}</td>
+            `).join('');
+            const statusColor = row.status === '进步' ? '#16a34a' : (row.status === '退步' ? '#dc2626' : '#64748b');
+            return `
+                <tr>
+                    <td>${progressEscapeHtml(row.class || '-')}</td>
+                    <td><strong>${progressEscapeHtml(row.name || '-')}</strong></td>
+                    ${periodCells}
+                    <td>${formatProgressCompareDiff(row.scoreDiff)}</td>
+                    <td>${formatProgressCompareDiff(row.rankSchoolDiff, 0)}</td>
+                    <td>${formatProgressCompareDiff(row.rankTownDiff, 0)}</td>
+                    <td style="font-weight:700; color:${statusColor};">${progressEscapeHtml(row.status)}</td>
+                </tr>
+            `;
+        }).join('');
+
+        resultEl.innerHTML = `
+            <div class="analysis-stat-grid" style="margin-bottom:12px;">
+                <div class="stat-card"><span>对比学生</span><strong>${rows.length}</strong></div>
+                <div class="stat-card"><span>进步</span><strong style="color:#16a34a;">${improved}</strong></div>
+                <div class="stat-card"><span>退步</span><strong style="color:#dc2626;">${declined}</strong></div>
+                <div class="stat-card"><span>稳定</span><strong style="color:#64748b;">${stable}</strong></div>
+            </div>
+            <div class="table-wrap" style="max-height:520px; overflow:auto;">
+                <table class="mobile-card-table" style="font-size:12px;">
+                    <thead>
+                        <tr>
+                            <th>班级</th>
+                            <th>姓名</th>
+                            ${periodHeaders}
+                            <th>总分变化</th>
+                            <th>校排变化</th>
+                            <th>镇排变化</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>${bodyHtml}</tbody>
+                </table>
+            </div>
+            ${rows.length > visibleRows.length ? `<div class="analysis-hint analysis-status-text" style="margin-top:8px;">页面展示前 ${visibleRows.length} 人，导出会包含全部 ${rows.length} 人。</div>` : ''}
+        `;
+
+        const cache = setProgressMultiPeriodCache({
+            type: 'progress',
+            school: config.school,
+            examIds: config.examIds,
+            periodCount: config.periodCount,
+            totalSubjects,
+            rows
+        });
+        setProgressMultiPeriodHint(`✅ 已生成 ${config.school} 的 ${rows.length} 名学生 ${config.periodCount} 期进退步对比。`, 'success');
+        return cache;
+    } catch (error) {
+        console.error('[progress-compare] render failed:', error);
+        setProgressMultiPeriodHint(`❌ ${error && error.message ? error.message : '生成失败，请稍后重试。'}`, 'error');
+        resultEl.innerHTML = '<div class="analysis-empty-state analysis-empty-state-compact">生成失败，请检查学校和期次选择。</div>';
+        return false;
+    }
+}
+
+async function exportMultiPeriodComparison() {
+    let cache = getProgressMultiPeriodCache();
+    if (!cache || cache.type !== 'progress' || !Array.isArray(cache.rows) || !cache.rows.length) {
+        cache = renderMultiPeriodComparison();
+    }
+    if (!cache || cache.type !== 'progress' || !Array.isArray(cache.rows) || !cache.rows.length) return false;
+
+    if ((!window.XLSX || !window.XLSX.utils) && typeof window.ensureXlsxVendorLoaded === 'function') {
+        await window.ensureXlsxVendorLoaded();
+    }
+    if (!window.XLSX || !window.XLSX.utils) {
+        if (typeof uiAlert === 'function') uiAlert('Excel 组件未加载，请刷新页面后重试', 'error');
+        else alert('Excel 组件未加载，请刷新页面后重试');
+        return false;
+    }
+
+    const header = ['班级', '姓名'];
+    cache.examIds.forEach((examId) => {
+        header.push(`${examId}总分`, `${examId}校排`, `${examId}镇排`);
+    });
+    header.push('总分变化', '校排变化', '镇排变化', '状态');
+
+    const data = [header];
+    cache.rows.forEach((row) => {
+        const line = [row.class || '-', row.name || '-'];
+        row.periods.forEach((period) => {
+            line.push(
+                Number.isFinite(Number(period.total)) ? Number(period.total).toFixed(1) : '-',
+                Number.isFinite(Number(period.rankSchool)) ? Number(period.rankSchool) : '-',
+                Number.isFinite(Number(period.rankTown)) ? Number(period.rankTown) : '-'
+            );
+        });
+        line.push(
+            Number.isFinite(Number(row.scoreDiff)) ? Number(row.scoreDiff).toFixed(1) : '-',
+            Number.isFinite(Number(row.rankSchoolDiff)) ? Number(row.rankSchoolDiff) : '-',
+            Number.isFinite(Number(row.rankTownDiff)) ? Number(row.rankTownDiff) : '-',
+            row.status || '-'
+        );
+        data.push(line);
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = header.map((title, index) => ({ wch: index < 2 ? 12 : Math.max(10, String(title).length + 2) }));
+    XLSX.utils.book_append_sheet(wb, ws, '多期进退步对比');
+    const safeSchool = String(cache.school || '学校').replace(/[\\/:*?"<>|]/g, '_');
+    XLSX.writeFile(wb, `${safeSchool}_多期进退步对比.xlsx`);
+    return true;
+}
+
 function showMappingModal(cases) {
     const modal = document.getElementById('mappingModal');
     const tbody = document.querySelector('#mappingModal tbody');
@@ -1402,6 +1758,8 @@ function resetProgressFilter() {
         updateProgressBaselineSelect,
         getBaselineDataFromExam,
         onProgressComparePeriodCountChange,
+        renderMultiPeriodComparison,
+        exportMultiPeriodComparison,
         setCompareExamSelectPlaceholders,
         refreshCompareExamSelectors,
         trySyncCompareExamOptions,
