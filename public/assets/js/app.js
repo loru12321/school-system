@@ -19427,6 +19427,9 @@ window.addEventListener('load', () => {
     }, 1000); // 延迟 1 秒执行
 });
 window.DataManager = DataManager;
+window.DrillSystem = DrillSystem;
+window.CohortGrowth = CohortGrowth;
+if (typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeExports();
 
 // 🚀 [AutoFix] Demo Mode Trigger
 (function autoTriggerDemoMode() {

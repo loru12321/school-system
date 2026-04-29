@@ -73,6 +73,7 @@ function markAuthReadyResolved() {
 function markAppModulesReady() {
     if (window.__APP_MODULES_LOADED__ === true) return;
     window.__APP_MODULES_LOADED__ = true;
+    if (typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeExports();
     window.dispatchEvent(new CustomEvent('school:app-modules-ready'));
 }
 
@@ -106,7 +107,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 var BOOT_VENDOR_MODULES = [
     './public/assets/vendor/crypto-js/crypto-js.min.js',
-    './public/assets/vendor/xlsx/xlsx.full.min.js',
     './public/assets/vendor/alpinejs/cdn.min.js',
     './public/assets/vendor/chart.js/chart.umd.min.js',
     './public/assets/vendor/sweetalert2/sweetalert2.all.min.js'
@@ -607,7 +607,10 @@ async function loadOrderedBootScripts(sources, options = {}) {
                     if (finished) return;
                     finished = true;
                     clearTimeout(timeout);
-                    if (status === 'loaded') script.dataset.bootLoaded = 'true';
+                    if (status === 'loaded') {
+                        script.dataset.bootLoaded = 'true';
+                        if (typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeExports();
+                    }
                     settle(src, status);
                 };
                 const timeout = setTimeout(() => {
@@ -2063,6 +2066,7 @@ function injectOptionalRuntimeScript(key, src) {
                     inlineScript.onload = () => {
                         inlineScript.dataset.runtimeLoaded = 'true';
                         window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 0);
+                        if (typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeExports();
                         resolve();
                     };
                     inlineScript.onerror = () => {
@@ -2071,13 +2075,14 @@ function injectOptionalRuntimeScript(key, src) {
                         reject(new Error(`Failed to load inline runtime: ${src}`));
                     };
                 } else {
-                    inlineScript.dataset.runtimeLoaded = 'true';
-                    inlineScript.text = inlineSource;
-                }
-                document.head.appendChild(inlineScript);
-                if (!inlineScript.src) {
-                    resolve();
-                }
+                inlineScript.dataset.runtimeLoaded = 'true';
+                inlineScript.text = inlineSource;
+            }
+            document.head.appendChild(inlineScript);
+            if (!inlineScript.src) {
+                if (typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeExports();
+                resolve();
+            }
             } catch (error) {
                 reject(error);
             }
@@ -2092,6 +2097,7 @@ function injectOptionalRuntimeScript(key, src) {
         script.dataset.runtimeCandidate = src;
         script.onload = () => {
             script.dataset.runtimeLoaded = 'true';
+            if (typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeExports();
             resolve();
         };
         script.onerror = () => {
@@ -2309,6 +2315,16 @@ window.ensureAlasqlVendorLoaded = function () {
     return loadOptionalRuntime('alasql-vendor', './public/assets/vendor/alasql/alasql.min.js');
 };
 
+window.ensureXlsxVendorLoaded = function () {
+    if (window.XLSX && window.XLSX.utils) return Promise.resolve(window.XLSX);
+    return loadOptionalRuntime('xlsx-vendor', './public/assets/vendor/xlsx/xlsx.full.min.js').then(() => {
+        if (!window.XLSX || !window.XLSX.utils) {
+            throw new Error('XLSX runtime unavailable');
+        }
+        return window.XLSX;
+    });
+};
+
 window.ensurePdfExportVendorsLoaded = function () {
     return window.SystemRuntimeLoader.load('pdf-export');
 };
@@ -2413,6 +2429,94 @@ function installOptionalRuntimePlaceholder(name, message) {
         throw new Error(message || `${name} runtime not loaded`);
     };
 }
+
+const XLSX_RUNTIME_FUNCTIONS = [
+    'exportAIBatchFromHub',
+    'exportAICommentsExcel',
+    'exportHighScoreExcel',
+    'exportStudentDetails',
+    'importTeacherExcel',
+    'exportMutualAidGroups',
+    'exportSummaryTable',
+    'exportSegmentExcel',
+    'exportClassComparisonExcel',
+    'exportHorizontalExcel',
+    'exportMacroTables',
+    'SB_exportExcel',
+    'exportPotentialAnalysis',
+    'exportDiagnosisExcel',
+    'exportCorrelationExcel',
+    'exportExcel',
+    'downloadTemplate',
+    'exportMarginalTasks',
+    'exportCountyAnalysisSection',
+    'SSE_export',
+    'exportValueAddedExcel',
+    'exportProgressAnalysis',
+    'exportStudentMultiPeriodComparison',
+    'exportAllTeachersMultiPeriodDiff',
+    'exportTeacherMultiPeriodComparison',
+    'exportMacroMultiPeriodComparison',
+    'exportTownSubmoduleCompare',
+    'exportTeacherComparisonExcel',
+    'exportTeacherComparisonExcelV2',
+    'exportTeacherTownshipRankExcel',
+    'FB_loadData',
+    'FB_exportResult',
+    'EXAM_loadData',
+    'EXAM_exportResult'
+];
+
+const XLSX_RUNTIME_OBJECT_METHODS = [
+    { owner: 'Auth', methods: ['exportAccounts', 'exportAllCloudAccounts'] },
+    { owner: 'DataManager', methods: ['handleHistoryUpload', 'handleTeacherUpload', 'handleTargetUpload', 'exportSQLResult'] },
+    { owner: 'AccountExcel', methods: ['downloadTemplate', 'upload'] },
+    { owner: 'SCHEDULER', methods: ['downloadTemplate', 'loadData', 'exportResult', 'importExisting'] },
+    { owner: 'GradeSchedulerRuntime', methods: ['downloadTemplate', 'loadData', 'exportResult', 'importExisting'] },
+    { owner: 'DrillSystem', methods: ['exportExcel'] },
+    { owner: 'CohortGrowth', methods: ['exportVolatility'] }
+];
+
+function isXlsxRuntimeReady() {
+    return !!(window.XLSX && window.XLSX.utils);
+}
+
+function reportXlsxLoadFailure(error) {
+    console.warn('[boot-runtime] XLSX runtime load failed:', error);
+    const message = `Excel 组件加载失败：${error && error.message ? error.message : error}`;
+    if (window.UI && typeof window.UI.toast === 'function') {
+        window.UI.toast(message, 'error');
+        return;
+    }
+    if (typeof window.alert === 'function') window.alert(message);
+}
+
+function wrapXlsxRuntimeFunction(owner, name) {
+    if (!owner || typeof owner[name] !== 'function') return;
+    const original = owner[name];
+    if (original.__xlsxRuntimeWrapped) return;
+    const wrapped = function (...args) {
+        if (isXlsxRuntimeReady()) return original.apply(this, args);
+        return window.ensureXlsxVendorLoaded()
+            .then(() => original.apply(this, args))
+            .catch((error) => {
+                reportXlsxLoadFailure(error);
+                throw error;
+            });
+    };
+    wrapped.__xlsxRuntimeWrapped = true;
+    wrapped.__xlsxRuntimeOriginal = original;
+    owner[name] = wrapped;
+}
+
+window.wrapXlsxRuntimeExports = function () {
+    XLSX_RUNTIME_FUNCTIONS.forEach((name) => wrapXlsxRuntimeFunction(window, name));
+    XLSX_RUNTIME_OBJECT_METHODS.forEach((group) => {
+        const owner = window[group.owner];
+        if (!owner) return;
+        group.methods.forEach((name) => wrapXlsxRuntimeFunction(owner, name));
+    });
+};
 
 function warmOptionalRuntimeAfterLoad(flagName, loader, delayMs = 1200) {
     if (typeof loader !== 'function') return;
@@ -2629,6 +2733,7 @@ if (!window.VoiceControl) {
 }
 
 installOptionalRuntimeMethod('showModuleHelp', window.ensureModuleHelpRuntimeLoaded);
+window.wrapXlsxRuntimeExports();
 
 if (typeof window.ensureModuleHelpButton !== 'function') {
     window.ensureModuleHelpButton = function (sectionId) {

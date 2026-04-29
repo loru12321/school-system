@@ -247,6 +247,10 @@ function findScriptTag(html, src) {
 const appModulesMatch = bootRuntime.match(/var APP_MODULES = \[[\s\S]*?\];/);
 assert.ok(appModulesMatch, 'boot-runtime.js should declare APP_MODULES');
 const moduleManifest = appModulesMatch[0];
+const bootVendorMatch = bootRuntime.match(/var BOOT_VENDOR_MODULES = \[[\s\S]*?\];/);
+assert.ok(bootVendorMatch, 'boot-runtime.js should declare BOOT_VENDOR_MODULES');
+const bootVendorManifest = bootVendorMatch[0];
+assert.ok(!bootVendorManifest.includes(xlsxVendorRef), 'xlsx should not be part of the first boot vendor batch');
 const authStateIndex = moduleManifest.indexOf(authStateRef);
 const workspaceStateIndex = moduleManifest.indexOf(workspaceStateRef);
 const examStateIndex = moduleManifest.indexOf(examStateRef);
@@ -378,9 +382,12 @@ assert.ok(bootRuntime.includes(reportChartRef), 'boot-runtime.js should referenc
 assert.ok(bootRuntime.includes(reportExportRef), 'boot-runtime.js should reference report-export-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(reportAiRef), 'boot-runtime.js should reference report-ai-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(alasqlVendorRef), 'boot-runtime.js should reference alasql.min.js for lazy loading');
+assert.ok(bootRuntime.includes(xlsxVendorRef), 'boot-runtime.js should reference xlsx.full.min.js for lazy loading');
 assert.ok(bootRuntime.includes(jspdfVendorRef), 'boot-runtime.js should reference jspdf.umd.min.js for lazy loading');
 assert.ok(bootRuntime.includes(html2canvasVendorRef), 'boot-runtime.js should reference html2canvas.min.js for lazy loading');
 assert.ok(bootRuntime.includes("window.ensureAlasqlVendorLoaded = function ()"), 'boot-runtime.js should expose ensureAlasqlVendorLoaded');
+assert.ok(bootRuntime.includes("window.ensureXlsxVendorLoaded = function ()"), 'boot-runtime.js should expose ensureXlsxVendorLoaded');
+assert.ok(bootRuntime.includes('window.wrapXlsxRuntimeExports = function ()'), 'boot-runtime.js should wrap Excel entry points with lazy XLSX loading');
 assert.ok(bootRuntime.includes("window.ensurePdfExportVendorsLoaded = function ()"), 'boot-runtime.js should expose ensurePdfExportVendorsLoaded');
 assert.ok(!bootRuntime.includes("window.ensurePresentationVendorsLoaded = function ()"), 'boot-runtime.js should not expose removed PPT vendor loader');
 assert.ok(bootRuntime.includes('var SYSTEM_RUNTIME_SKILLS = {'), 'boot-runtime.js should declare a runtime skill manifest');
