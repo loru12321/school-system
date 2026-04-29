@@ -88,7 +88,6 @@ document.addEventListener('DOMContentLoaded', function () {
 var BOOT_VENDOR_MODULES = [
     './assets/vendor/crypto-js/crypto-js.min.js',
     './assets/vendor/alpinejs/cdn.min.js',
-    './assets/vendor/chart.js/chart.umd.min.js',
     './assets/vendor/sweetalert2/sweetalert2.all.min.js'
 ];
 
@@ -100,6 +99,14 @@ var DEFERRED_APP_MODULES = [
 ];
 
 var SYSTEM_RUNTIME_SKILLS = {
+    'chart-vendor': {
+        mode: 'demand',
+        warmup: 'demand',
+        triggers: ['Chart', 'chart-render'],
+        entries: [
+            { key: 'chart-vendor', src: './assets/vendor/chart.js/chart.umd.min.js' }
+        ]
+    },
     'shell-enhancements': {
         mode: 'idle',
         warmup: 'balanced',
@@ -125,6 +132,7 @@ var SYSTEM_RUNTIME_SKILLS = {
         warmup: 'full',
         triggers: ['report-generator', 'printSingleReport', 'renderSingleReportCardHTML'],
         entries: [
+            { key: 'chart-vendor', src: './assets/vendor/chart.js/chart.umd.min.js' },
             { key: 'report-render', src: './assets/js/report-render-runtime.js' },
             { key: 'report-chart', src: './assets/js/report-chart-runtime.js' },
             { key: 'report-export', src: './assets/js/report-export-runtime.js' },
@@ -199,6 +207,7 @@ var SYSTEM_RUNTIME_SKILLS = {
         warmup: 'demand',
         triggers: ['summary', 'showSchoolProfile'],
         entries: [
+            { key: 'chart-vendor', src: './assets/vendor/chart.js/chart.umd.min.js' },
             { key: 'school-profile', src: './assets/js/school-profile-runtime.js' }
         ]
     },
@@ -224,6 +233,7 @@ var SYSTEM_RUNTIME_SKILLS = {
         warmup: 'full',
         triggers: ['progress-analysis'],
         entries: [
+            { key: 'chart-vendor', src: './assets/vendor/chart.js/chart.umd.min.js' },
             { key: 'progress-analysis', src: './assets/js/progress-analysis-runtime.js' }
         ]
     },
@@ -257,6 +267,7 @@ var SYSTEM_RUNTIME_SKILLS = {
         warmup: 'full',
         triggers: ['history-compare'],
         entries: [
+            { key: 'chart-vendor', src: './assets/vendor/chart.js/chart.umd.min.js' },
             { key: 'history-compare', src: './assets/js/history-compare-runtime.js' }
         ]
     },
@@ -273,6 +284,7 @@ var SYSTEM_RUNTIME_SKILLS = {
         warmup: 'demand',
         triggers: ['freshman-simulator', 'exam-arranger'],
         entries: [
+            { key: 'chart-vendor', src: './assets/vendor/chart.js/chart.umd.min.js' },
             { key: 'freshman-exam', src: './assets/js/freshman-exam-runtime.js' }
         ]
     },
@@ -2293,6 +2305,16 @@ window.ensureDataManagerSqlRuntimeLoaded = function () {
 
 window.ensureAlasqlVendorLoaded = function () {
     return loadOptionalRuntime('alasql-vendor', './assets/vendor/alasql/alasql.min.js');
+};
+
+window.ensureChartVendorLoaded = function () {
+    if (window.Chart) return Promise.resolve(window.Chart);
+    return loadOptionalRuntime('chart-vendor', './assets/vendor/chart.js/chart.umd.min.js').then(() => {
+        if (!window.Chart) {
+            throw new Error('Chart runtime unavailable');
+        }
+        return window.Chart;
+    });
 };
 
 window.ensureXlsxVendorLoaded = function () {

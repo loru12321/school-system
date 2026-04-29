@@ -14298,6 +14298,17 @@ function updateSegmentSelects() {
 }
 
 function renderSegmentAnalysis() {
+    if (!window.Chart && typeof window.ensureChartVendorLoaded === 'function') {
+        return window.ensureChartVendorLoaded()
+            .then(() => renderSegmentAnalysis())
+            .catch((error) => {
+                console.warn('[segment-analysis] Chart runtime load failed:', error);
+                if (typeof uiAlert === 'function') uiAlert('图表组件加载失败，请刷新页面后重试', 'error');
+                else alert('图表组件加载失败，请刷新页面后重试');
+                return false;
+            });
+    }
+
     const school = document.getElementById('segSchoolSelect').value;
     const subject = document.getElementById('segSubjectSelect').value;
     const step = parseInt(document.getElementById('segStep').value) || 10;
