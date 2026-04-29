@@ -473,14 +473,26 @@ async function getStandaloneInquiryPackageLibraries() {
     };
 }
 
+async function ensureInquiryCryptoRuntime() {
+    if (typeof CryptoJS !== 'undefined') return CryptoJS;
+    if (typeof window.ensureCryptoJsVendorLoaded === 'function') {
+        return window.ensureCryptoJsVendorLoaded();
+    }
+    const cryptoJsSource = await readStandaloneExportLibrarySource('crypto-js', './assets/vendor/crypto-js/crypto-js.min.js');
+    window.eval(cryptoJsSource);
+    if (typeof CryptoJS === 'undefined') {
+        throw new Error('CryptoJS runtime unavailable');
+    }
+    return CryptoJS;
+}
+
 async function generateInquiryPackage() {
     const sch = document.getElementById('studentSchoolSelect').value;
     if (!sch || sch.includes('请选择')) return alert("请先选择一个学校，系统将生成该校的查分包。");
 
     if (typeof CryptoJS === 'undefined') {
         try {
-            const cryptoJsSource = await readStandaloneExportLibrarySource('crypto-js', './assets/vendor/crypto-js/crypto-js.min.js');
-            window.eval(cryptoJsSource);
+            await ensureInquiryCryptoRuntime();
         } catch (error) {
             console.error('[InquiryPackage] crypto-js load failed:', error);
             return alert("❌ 导出失败：加密库未加载完成，请刷新页面后重试。");

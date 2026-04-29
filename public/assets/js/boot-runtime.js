@@ -86,7 +86,6 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 var BOOT_VENDOR_MODULES = [
-    './assets/vendor/crypto-js/crypto-js.min.js',
     './assets/vendor/alpinejs/cdn.min.js'
 ];
 
@@ -99,6 +98,14 @@ var DEFERRED_APP_MODULES = [
 ];
 
 var SYSTEM_RUNTIME_SKILLS = {
+    'crypto-vendor': {
+        mode: 'demand',
+        warmup: 'demand',
+        triggers: ['CryptoJS', 'freshman-simulator', 'inquiry-package'],
+        entries: [
+            { key: 'crypto-vendor', src: './assets/vendor/crypto-js/crypto-js.min.js' }
+        ]
+    },
     'sweetalert-vendor': {
         mode: 'idle',
         warmup: 'balanced',
@@ -2390,6 +2397,16 @@ window.ensureDataManagerSqlRuntimeLoaded = function () {
 
 window.ensureAlasqlVendorLoaded = function () {
     return loadOptionalRuntime('alasql-vendor', './assets/vendor/alasql/alasql.min.js');
+};
+
+window.ensureCryptoJsVendorLoaded = function () {
+    if (window.CryptoJS) return Promise.resolve(window.CryptoJS);
+    return loadOptionalRuntime('crypto-vendor', './assets/vendor/crypto-js/crypto-js.min.js').then(() => {
+        if (!window.CryptoJS) {
+            throw new Error('CryptoJS runtime unavailable');
+        }
+        return window.CryptoJS;
+    });
 };
 
 window.ensureSweetAlertVendorLoaded = function () {
