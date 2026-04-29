@@ -108,7 +108,7 @@ var SYSTEM_RUNTIME_SKILLS = {
     },
     'sweetalert-vendor': {
         mode: 'idle',
-        warmup: 'balanced',
+        warmup: 'demand',
         triggers: ['Swal', 'uiAlert', 'modal-alert'],
         entries: [
             { key: 'sweetalert-vendor', src: './public/assets/vendor/sweetalert2/sweetalert2.all.min.js' }
@@ -639,6 +639,7 @@ function scheduleAppModuleWarmup() {
     if (window.__APP_MODULES_LOADED__ !== true) return;
     if (window.__APP_MODULE_WARMUP_SCHEDULED__) return;
     if (getRuntimeLoadProfile() === 'lazy') return;
+    if (!DEFERRED_APP_MODULES.length && !getRuntimeWarmupSkillIds(getRuntimeLoadProfile()).length) return;
     window.__APP_MODULE_WARMUP_SCHEDULED__ = true;
     const runWarmup = () => {
         warmAppModuleCache();
@@ -2414,6 +2415,11 @@ function shouldWarmRuntimeSkill(skill, profile) {
     return skill.warmup === 'balanced';
 }
 
+function getRuntimeWarmupSkillIds(profile = getRuntimeLoadProfile()) {
+    return Object.keys(SYSTEM_RUNTIME_SKILLS)
+        .filter((skillId) => shouldWarmRuntimeSkill(SYSTEM_RUNTIME_SKILLS[skillId], profile));
+}
+
 function createSystemRuntimeLoader() {
     const loadSkill = function (skillId) {
         const id = String(skillId || '').trim();
@@ -2434,8 +2440,7 @@ function createSystemRuntimeLoader() {
     };
     const warmup = function (profile = getRuntimeLoadProfile()) {
         if (window.__RUNTIME_SKILL_WARMUP_PROMISE__) return window.__RUNTIME_SKILL_WARMUP_PROMISE__;
-        const skillIds = Object.keys(SYSTEM_RUNTIME_SKILLS)
-            .filter((skillId) => shouldWarmRuntimeSkill(SYSTEM_RUNTIME_SKILLS[skillId], profile));
+        const skillIds = getRuntimeWarmupSkillIds(profile);
         skillIds.forEach(preloadSkill);
         window.__RUNTIME_SKILL_WARMUP_PROMISE__ = loadMany(skillIds).then((result) => {
             window.dispatchEvent(new CustomEvent('school:runtime-skills-ready', {

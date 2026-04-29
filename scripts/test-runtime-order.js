@@ -426,6 +426,8 @@ assert.ok(bootRuntime.includes('window.__APP_CORE_LATE_PREFETCH_SCHEDULED__'), '
 assert.ok(bootRuntime.includes('SYSTEM_APP_LATE_PREFETCH_LIMIT'), 'boot-runtime.js should make late app-core prefetch limits configurable');
 assert.ok(bootRuntime.includes('scheduleLateAppCorePrefetch(APP_MODULES.slice(preloadCount));'), 'boot-runtime.js should defer late app-core prefetches on mobile or lazy profiles');
 assert.ok(bootRuntime.includes('if (window.__APP_MODULES_LOADED__ === true) return;'), 'late app-core prefetch should stop once core modules are already loaded');
+assert.ok(bootRuntime.includes('function getRuntimeWarmupSkillIds'), 'boot-runtime.js should compute runtime warmup targets before scheduling idle work');
+assert.ok(bootRuntime.includes('!DEFERRED_APP_MODULES.length && !getRuntimeWarmupSkillIds(getRuntimeLoadProfile()).length'), 'boot-runtime.js should skip idle warmup when there are no runtime targets');
 assert.ok(bootRuntime.includes('function scheduleGatewayPreflight()'), 'boot-runtime.js should run gateway pre-flight through a dedicated scheduler');
 assert.ok(bootRuntime.includes('window.__GATEWAY_PREFLIGHT_PROMISE__'), 'boot-runtime.js should expose gateway pre-flight state for diagnostics');
 assert.ok(bootRuntime.includes('scheduleGatewayPreflight();\n\n    const total = BOOT_VENDOR_MODULES.length + APP_MODULES.length;'), 'gateway pre-flight should not block core module loading');
@@ -438,6 +440,7 @@ assert.ok(bootRuntime.includes("'teacher-analysis':"), 'runtime skill manifest s
 assert.ok(bootRuntime.includes("'crypto-vendor':"), 'runtime skill manifest should include crypto-vendor');
 assert.ok(bootRuntime.includes("'shell-enhancements':"), 'runtime skill manifest should include shell-enhancements');
 assert.ok(bootRuntime.includes("'shell-enhancements': {\n        mode: 'idle',\n        warmup: 'demand'"), 'shell-enhancements should stay demand-loaded instead of warming during post-boot idle');
+assert.ok(bootRuntime.includes("'sweetalert-vendor': {\n        mode: 'idle',\n        warmup: 'demand'"), 'sweetalert-vendor should stay demand-loaded instead of warming during post-boot idle');
 assert.ok(bootRuntime.includes("'town-submodule-compare':"), 'runtime skill manifest should include town-submodule-compare');
 assert.ok(bootRuntime.includes("'sweetalert-vendor':"), 'runtime skill manifest should include sweetalert-vendor');
 assert.ok(bootRuntime.includes("'chart-vendor':"), 'runtime skill manifest should include chart-vendor');
