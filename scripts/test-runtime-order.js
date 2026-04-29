@@ -388,6 +388,8 @@ assert.ok(bootRuntime.includes('window.SystemRuntimeLoader'), 'boot-runtime.js s
 assert.ok(bootRuntime.includes('function getBootScriptBatchSize()'), 'boot-runtime.js should batch boot script insertion on constrained devices');
 assert.ok(bootRuntime.includes('function yieldBootScriptBatchFrame()'), 'boot-runtime.js should yield between boot script batches');
 assert.ok(bootRuntime.includes('if (isRuntimeMobileViewport()) return;'), 'boot-runtime.js should skip desktop deferred vendor prefetch on mobile');
+assert.ok(bootRuntime.includes('function shouldPrefetchLateAppCoreModules()'), 'boot-runtime.js should gate late app-core prefetches');
+assert.ok(bootRuntime.includes('preloadCount < APP_MODULES.length && shouldPrefetchLateAppCoreModules()'), 'boot-runtime.js should avoid late app-core prefetches on mobile or lazy profiles');
 assert.ok(bootRuntime.includes("'teacher-analysis':"), 'runtime skill manifest should include teacher-analysis');
 assert.ok(!bootRuntime.includes("'presentation-export':"), 'runtime skill manifest should not include removed PPT export skill');
 assert.ok(bootRuntime.includes("'zhongkao-countdown':"), 'runtime skill manifest should include zhongkao-countdown');
