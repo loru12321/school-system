@@ -385,6 +385,7 @@ assert.ok(bootRuntime.includes(reportExportRef), 'boot-runtime.js should referen
 assert.ok(bootRuntime.includes(reportAiRef), 'boot-runtime.js should reference report-ai-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(alasqlVendorRef), 'boot-runtime.js should reference alasql.min.js for lazy loading');
 assert.ok(bootRuntime.includes(sweetalertVendorRef), 'boot-runtime.js should reference sweetalert2.all.min.js for lazy loading');
+assert.ok(bootRuntime.includes(gsapVendorRef), 'boot-runtime.js should reference gsap.min.js for lazy loading');
 assert.ok(bootRuntime.includes(chartVendorRef), 'boot-runtime.js should reference chart.umd.min.js for lazy loading');
 assert.ok(bootRuntime.includes(xlsxVendorRef), 'boot-runtime.js should reference xlsx.full.min.js for lazy loading');
 assert.ok(bootRuntime.includes(jspdfVendorRef), 'boot-runtime.js should reference jspdf.umd.min.js for lazy loading');
@@ -392,6 +393,7 @@ assert.ok(bootRuntime.includes(html2canvasVendorRef), 'boot-runtime.js should re
 assert.ok(bootRuntime.includes("window.ensureAlasqlVendorLoaded = function ()"), 'boot-runtime.js should expose ensureAlasqlVendorLoaded');
 assert.ok(bootRuntime.includes("window.ensureSweetAlertVendorLoaded = function ()"), 'boot-runtime.js should expose ensureSweetAlertVendorLoaded');
 assert.ok(bootRuntime.includes('function installLazySweetAlertProxy'), 'boot-runtime.js should install a lazy SweetAlert proxy');
+assert.ok(bootRuntime.includes("window.ensureGsapVendorLoaded = function ()"), 'boot-runtime.js should expose ensureGsapVendorLoaded');
 assert.ok(bootRuntime.includes("window.ensureChartVendorLoaded = function ()"), 'boot-runtime.js should expose ensureChartVendorLoaded');
 assert.ok(bootRuntime.includes("window.ensureXlsxVendorLoaded = function ()"), 'boot-runtime.js should expose ensureXlsxVendorLoaded');
 assert.ok(bootRuntime.includes('window.wrapXlsxRuntimeExports = function ()'), 'boot-runtime.js should wrap Excel entry points with lazy XLSX loading');
@@ -502,8 +504,7 @@ const lzScriptTag = findScriptTag(indexHtml, lzStringVendorRef);
 assert.ok(lzScriptTag, 'index.html should contain a script tag for lz-string.min.js');
 assert.ok(/\sdefer(\s|>|=)/i.test(lzScriptTag), 'lz-string.min.js should load with defer');
 const gsapScriptTag = findScriptTag(indexHtml, gsapVendorRef);
-assert.ok(gsapScriptTag, 'index.html should contain a script tag for gsap.min.js');
-assert.ok(/\sdefer(\s|>|=)/i.test(gsapScriptTag), 'gsap.min.js should load with defer');
+assert.ok(!gsapScriptTag, 'index.html should not block first paint on gsap.min.js');
 
 assert.ok(indexHtml.includes(tablerIconsRef), 'index.html should load local tabler icons CSS');
 

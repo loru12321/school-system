@@ -91,6 +91,7 @@ var BOOT_VENDOR_MODULES = [
 ];
 
 var DEFERRED_APP_MODULES = [
+    './assets/vendor/gsap/gsap.min.js',
     './assets/vendor/gsap/ScrollTrigger.min.js',
     './assets/vendor/popperjs/popper.min.js',
     './assets/vendor/tippyjs/tippy.umd.min.js',
@@ -119,6 +120,7 @@ var SYSTEM_RUNTIME_SKILLS = {
         warmup: 'balanced',
         triggers: ['app-shell', 'hover-tooltips', 'scroll-effects'],
         entries: [
+            { key: 'gsap-vendor', src: './assets/vendor/gsap/gsap.min.js' },
             { key: 'scroll-trigger-vendor', src: './assets/vendor/gsap/ScrollTrigger.min.js' },
             { key: 'popper-vendor', src: './assets/vendor/popperjs/popper.min.js' },
             { key: 'tippy-vendor', src: './assets/vendor/tippyjs/tippy.umd.min.js' },
@@ -2399,6 +2401,16 @@ window.ensureSweetAlertVendorLoaded = function () {
             throw new Error('SweetAlert2 runtime unavailable');
         }
         return swal;
+    });
+};
+
+window.ensureGsapVendorLoaded = function () {
+    if (window.gsap) return Promise.resolve(window.gsap);
+    return loadOptionalRuntime('gsap-vendor', './assets/vendor/gsap/gsap.min.js').then(() => {
+        if (!window.gsap) {
+            throw new Error('GSAP runtime unavailable');
+        }
+        return window.gsap;
     });
 };
 
