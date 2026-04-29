@@ -50,6 +50,12 @@ function markAuthReadyResolved() {
     }
 }
 
+function markAppModulesReady() {
+    if (window.__APP_MODULES_LOADED__ === true) return;
+    window.__APP_MODULES_LOADED__ = true;
+    window.dispatchEvent(new CustomEvent('school:app-modules-ready'));
+}
+
 function armAuthReadySafetyTimeout(timeoutMs = 15000) {
     if (window.__AUTH_READY__ || window.__AUTH_READY_TIMEOUT_ID__) return;
     window.__AUTH_READY_TIMEOUT_ID__ = window.setTimeout(() => {
@@ -645,7 +651,7 @@ async function loadAppModules() {
     // Check if Auth is already defined (e.g. by Vite bundle) to avoid duplicate load
     if (window.Auth && !window.Auth.__bootLoginShell) {
         console.log('[boot-runtime] Auth module already present, skipping dynamic load');
-        window.__APP_MODULES_LOADED__ = true;
+        markAppModulesReady();
         markAuthReadyResolved();
         return Promise.resolve();
     }
@@ -703,7 +709,7 @@ async function loadAppModules() {
             }
         });
     }
-    window.__APP_MODULES_LOADED__ = true;
+    markAppModulesReady();
     if (loaderText) loaderText.textContent = '核心组件就绪，正在同步状态...';
     console.log('[boot-runtime] All modules loaded');
     scheduleAppModuleWarmup();
@@ -2618,19 +2624,59 @@ if (typeof window.ensureModuleHelpButton !== 'function') {
     };
 }
 
-if (window.innerWidth <= 960 || localStorage.getItem('DEV_MODE') === 'true') {
-    window.ensureMobileManagerRuntimeLoaded().catch((error) => {
-        console.warn(error);
+function runAfterAppModulesReady(task) {
+    if (typeof task !== 'function') return;
+    if (window.__APP_MODULES_LOADED__ === true) {
+        task();
+        return;
+    }
+    let done = false;
+    const run = () => {
+        if (done) return;
+        done = true;
+        task();
+    };
+    if (window.__APP_MODULES_LOAD_PROMISE__ && typeof window.__APP_MODULES_LOAD_PROMISE__.then === 'function') {
+        window.__APP_MODULES_LOAD_PROMISE__.then(run).catch(run);
+    }
+    window.addEventListener('school:app-modules-ready', run, { once: true });
+}
+
+function scheduleMobileRuntimeBootstrap(options = {}) {
+    const maxWidth = Number(options.maxWidth || 960);
+    const includePerf = !!options.includePerf;
+    const delayMs = Number(options.delayMs || 0);
+    const devMode = localStorage.getItem('DEV_MODE') === 'true';
+    if (!(window.innerWidth <= maxWidth || devMode)) return;
+    const flagName = includePerf ? '__MOBILE_PERF_BOOTSTRAP_SCHEDULED__' : '__MOBILE_RUNTIME_BOOTSTRAP_SCHEDULED__';
+    if (window[flagName]) return;
+    window[flagName] = true;
+
+    runAfterAppModulesReady(() => {
+        const load = () => {
+            window.ensureMobileManagerRuntimeLoaded()
+                .then(() => (includePerf ? window.ensurePerfMobileRuntimeLoaded() : undefined))
+                .catch((error) => {
+                    console.warn(error);
+                });
+        };
+        const run = () => {
+            if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
+                window.SystemPerformance.scheduleIdle(load, { label: 'mobile-runtime-bootstrap', delay: delayMs, timeout: 1800 });
+                return;
+            }
+            if (typeof window.requestIdleCallback === 'function') {
+                window.requestIdleCallback(load, { timeout: 1800 });
+                return;
+            }
+            window.setTimeout(load, delayMs);
+        };
+        window.setTimeout(run, delayMs);
     });
 }
 
-if (window.innerWidth <= 768 || localStorage.getItem('DEV_MODE') === 'true') {
-    window.ensureMobileManagerRuntimeLoaded().then(() => {
-        return window.ensurePerfMobileRuntimeLoaded();
-    }).catch((error) => {
-        console.warn(error);
-    });
-}
+scheduleMobileRuntimeBootstrap({ maxWidth: 960, delayMs: 120 });
+scheduleMobileRuntimeBootstrap({ maxWidth: 768, includePerf: true, delayMs: 480 });
 
 function installHistoryDoQueryWrapper() {
     if (window.__historyDoQueryWrapped || typeof window.doQuery !== 'function') return false;
