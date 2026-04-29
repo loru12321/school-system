@@ -426,6 +426,7 @@ function hintAppCoreModules() {
 function warmAppModuleCache() {
     if (window.__APP_MODULE_WARMUP_STARTED__) return;
     window.__APP_MODULE_WARMUP_STARTED__ = true;
+    if (isRuntimeMobileViewport()) return;
     prefetchAppModuleList(DEFERRED_APP_MODULES, 'app-deferred');
 }
 
@@ -488,61 +489,95 @@ function getAppModuleTimeoutMs(src) {
     return moduleSrc.includes('app.js') || moduleSrc.includes('auth-state') ? 15000 : 8000;
 }
 
-function loadOrderedBootScripts(sources, options = {}) {
-    const list = Array.isArray(sources) ? sources.filter(Boolean) : [];
-    if (!list.length) return Promise.resolve();
+function getBootScriptBatchSize() {
+    try {
+        const stored = Number(localStorage.getItem('SYSTEM_BOOT_BATCH_SIZE') || 0);
+        if (Number.isFinite(stored) && stored > 0) return Math.max(1, Math.floor(stored));
+    } catch (_) {}
+    try {
+        if (getRuntimeLoadProfile() === 'lazy') return 4;
+        if (isRuntimeMobileViewport()) return 6;
+        const lowCpu = Number(navigator.hardwareConcurrency || 0) > 0
+            && Number(navigator.hardwareConcurrency || 0) <= 4;
+        if (lowCpu) return 8;
+    } catch (_) {}
+    return 0;
+}
 
+function yieldBootScriptBatchFrame() {
     return new Promise((resolve) => {
-        let settledCount = 0;
-        const onProgress = typeof options.onProgress === 'function' ? options.onProgress : function () { };
-
-        const settle = (src, status) => {
-            settledCount += 1;
-            onProgress(settledCount, list.length, src, status);
-            if (settledCount >= list.length) resolve();
-        };
-
-        list.forEach((src) => {
-            if (window.__BOOT_SKIP_INIT__ === true) {
-                settle(src, 'skipped');
-                return;
-            }
-
-            const existingLoaded = Array.from(document.scripts || []).find((script) => {
-                const candidate = String(script.getAttribute('src') || script.src || '');
-                return candidate.includes(src.replace('./', '')) && script.dataset.bootLoaded === 'true';
-            });
-            if (existingLoaded) {
-                settle(src, 'cached');
-                return;
-            }
-
-            const script = document.createElement('script');
-            script.src = getVersionedAssetPath(src);
-            script.async = false;
-
-            let finished = false;
-            const timeoutMs = getAppModuleTimeoutMs(src);
-            const finish = (status) => {
-                if (finished) return;
-                finished = true;
-                clearTimeout(timeout);
-                if (status === 'loaded') script.dataset.bootLoaded = 'true';
-                settle(src, status);
-            };
-            const timeout = setTimeout(() => {
-                console.warn(`[boot-runtime] Ordered script load timeout (${timeoutMs}ms): ${src}`);
-                finish('timeout');
-            }, timeoutMs);
-
-            script.onload = () => finish('loaded');
-            script.onerror = () => {
-                console.warn(`[boot-runtime] Ordered script load error: ${src}`);
-                finish('error');
-            };
-            document.head.appendChild(script);
-        });
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => resolve());
+            return;
+        }
+        window.setTimeout(resolve, 0);
     });
+}
+
+async function loadOrderedBootScripts(sources, options = {}) {
+    const list = Array.isArray(sources) ? sources.filter(Boolean) : [];
+    if (!list.length) return;
+
+    let settledCount = 0;
+    const onProgress = typeof options.onProgress === 'function' ? options.onProgress : function () { };
+    const configuredBatchSize = getBootScriptBatchSize();
+    const batchSize = configuredBatchSize > 0 ? Math.min(configuredBatchSize, list.length) : list.length;
+
+    for (let index = 0; index < list.length; index += batchSize) {
+        const batch = list.slice(index, index + batchSize);
+        await new Promise((resolve) => {
+            const settle = (src, status) => {
+                settledCount += 1;
+                onProgress(settledCount, list.length, src, status);
+                if (settledCount >= index + batch.length) resolve();
+            };
+
+            batch.forEach((src) => {
+                if (window.__BOOT_SKIP_INIT__ === true) {
+                    settle(src, 'skipped');
+                    return;
+                }
+
+                const existingLoaded = Array.from(document.scripts || []).find((script) => {
+                    const candidate = String(script.getAttribute('src') || script.src || '');
+                    return candidate.includes(src.replace('./', '')) && script.dataset.bootLoaded === 'true';
+                });
+                if (existingLoaded) {
+                    settle(src, 'cached');
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = getVersionedAssetPath(src);
+                script.async = false;
+
+                let finished = false;
+                const timeoutMs = getAppModuleTimeoutMs(src);
+                const finish = (status) => {
+                    if (finished) return;
+                    finished = true;
+                    clearTimeout(timeout);
+                    if (status === 'loaded') script.dataset.bootLoaded = 'true';
+                    settle(src, status);
+                };
+                const timeout = setTimeout(() => {
+                    console.warn(`[boot-runtime] Ordered script load timeout (${timeoutMs}ms): ${src}`);
+                    finish('timeout');
+                }, timeoutMs);
+
+                script.onload = () => finish('loaded');
+                script.onerror = () => {
+                    console.warn(`[boot-runtime] Ordered script load error: ${src}`);
+                    finish('error');
+                };
+                document.head.appendChild(script);
+            });
+        });
+
+        if (index + batchSize < list.length) {
+            await yieldBootScriptBatchFrame();
+        }
+    }
 }
 
 function loadDeferredAppModules() {
