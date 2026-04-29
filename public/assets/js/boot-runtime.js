@@ -795,6 +795,51 @@ function loadDeferredAppModules() {
     });
 }
 
+function scheduleGatewayPreflight() {
+    if (window.__GATEWAY_PREFLIGHT_STARTED__) {
+        return window.__GATEWAY_PREFLIGHT_PROMISE__ || Promise.resolve(window.__GATEWAY_PREFLIGHT_STATUS__ || 'started');
+    }
+    window.__GATEWAY_PREFLIGHT_STARTED__ = true;
+
+    if (isLocalFileRuntime() || isLocalSupabaseHost(window.location && window.location.hostname)) {
+        window.__GATEWAY_PREFLIGHT_STATUS__ = 'skipped';
+        console.log('[boot-runtime] Skipping gateway pre-flight in local mode');
+        window.__GATEWAY_PREFLIGHT_PROMISE__ = Promise.resolve('skipped');
+        return window.__GATEWAY_PREFLIGHT_PROMISE__;
+    }
+
+    const run = async () => {
+        let controller = null;
+        let timeoutId = null;
+        try {
+            controller = typeof AbortController === 'function' ? new AbortController() : null;
+            timeoutId = window.setTimeout(() => {
+                if (controller) controller.abort();
+            }, 3200);
+
+            await fetch(DIRECT_PROXY_ORIGIN + '/api/health', {
+                method: 'GET',
+                mode: 'no-cors',
+                signal: controller ? controller.signal : undefined
+            });
+            window.__GATEWAY_PREFLIGHT_STATUS__ = 'ok';
+            console.log('[boot-runtime] Gateway pre-flight successful');
+            return 'ok';
+        } catch (fetchErr) {
+            window.__GATEWAY_PREFLIGHT_STATUS__ = 'fallback';
+            console.warn('[boot-runtime] Gateway pre-flight failed, activating fallback:', fetchErr);
+            window.__API_FALLBACK_ACTIVE__ = true;
+            return 'fallback';
+        } finally {
+            if (timeoutId) window.clearTimeout(timeoutId);
+        }
+    };
+
+    window.__GATEWAY_PREFLIGHT_STATUS__ = 'running';
+    window.__GATEWAY_PREFLIGHT_PROMISE__ = run();
+    return window.__GATEWAY_PREFLIGHT_PROMISE__;
+}
+
 async function loadAppModules() {
     if (window.__APP_MODULES_LOAD_PROMISE__) {
         return window.__APP_MODULES_LOAD_PROMISE__;
@@ -832,31 +877,7 @@ async function loadAppModules() {
     window.__APP_MODULES_LOAD_PROMISE__ = (async () => {
     const loaderText = document.getElementById('loader-text');
 
-    // Pre-flight gateway check
-    try {
-        if (loaderText) loaderText.textContent = '正在检测网关连接...';
-        if (isLocalFileRuntime() || isLocalSupabaseHost(window.location && window.location.hostname)) {
-            console.log('[boot-runtime] Skipping gateway pre-flight in local mode');
-        } else {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-            try {
-                await fetch(DIRECT_PROXY_ORIGIN + '/api/health', {
-                    method: 'GET',
-                    mode: 'no-cors',
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-                console.log('[boot-runtime] Gateway pre-flight successful');
-            } catch (fetchErr) {
-                clearTimeout(timeoutId);
-                console.warn('[boot-runtime] Gateway pre-flight failed, activating fallback:', fetchErr);
-                window.__API_FALLBACK_ACTIVE__ = true;
-            }
-        }
-    } catch (err) {
-        console.warn('[boot-runtime] Gateway pre-flight check error:', err);
-    }
+    scheduleGatewayPreflight();
 
     const total = BOOT_VENDOR_MODULES.length + APP_MODULES.length;
     let loadedCount = 0;

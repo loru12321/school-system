@@ -424,6 +424,10 @@ assert.ok(bootRuntime.includes('window.__APP_CORE_LATE_PREFETCH_SCHEDULED__'), '
 assert.ok(bootRuntime.includes('SYSTEM_APP_LATE_PREFETCH_LIMIT'), 'boot-runtime.js should make late app-core prefetch limits configurable');
 assert.ok(bootRuntime.includes('scheduleLateAppCorePrefetch(APP_MODULES.slice(preloadCount));'), 'boot-runtime.js should defer late app-core prefetches on mobile or lazy profiles');
 assert.ok(bootRuntime.includes('if (window.__APP_MODULES_LOADED__ === true) return;'), 'late app-core prefetch should stop once core modules are already loaded');
+assert.ok(bootRuntime.includes('function scheduleGatewayPreflight()'), 'boot-runtime.js should run gateway pre-flight through a dedicated scheduler');
+assert.ok(bootRuntime.includes('window.__GATEWAY_PREFLIGHT_PROMISE__'), 'boot-runtime.js should expose gateway pre-flight state for diagnostics');
+assert.ok(bootRuntime.includes('scheduleGatewayPreflight();\n\n    const total = BOOT_VENDOR_MODULES.length + APP_MODULES.length;'), 'gateway pre-flight should not block core module loading');
+assert.strictEqual(bootRuntime.includes('正在检测网关连接'), false, 'gateway pre-flight should not hold the boot loader on a network probe');
 assert.ok(bootRuntime.includes('function markAppModulesReady()'), 'boot-runtime.js should mark app modules ready through a shared helper');
 assert.ok(bootRuntime.includes('school:app-modules-ready'), 'boot-runtime.js should dispatch an app modules ready event');
 assert.ok(bootRuntime.includes('function scheduleMobileRuntimeBootstrap'), 'boot-runtime.js should defer mobile runtime bootstrapping');
