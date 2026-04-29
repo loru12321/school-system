@@ -137,6 +137,7 @@ assert.ok(fs.existsSync(macroCompareCloudRuntimePath), 'macro-compare-cloud-runt
 
 const indexHtml = fs.readFileSync(indexPath, 'utf8');
 const bootRuntime = fs.readFileSync(bootRuntimePath, 'utf8');
+const shellPolishRuntime = fs.readFileSync(shellPolishRuntimePath, 'utf8');
 const appSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
 const initSupabaseMatches = bootRuntime.match(/window\.initSupabase\s*=\s*function/g) || [];
 const supabaseUrlAssignments = bootRuntime.match(/window\.SUPABASE_URL\s*=/g) || [];
@@ -250,10 +251,18 @@ const moduleManifest = appModulesMatch[0];
 const bootVendorMatch = bootRuntime.match(/var BOOT_VENDOR_MODULES = \[[\s\S]*?\];/);
 assert.ok(bootVendorMatch, 'boot-runtime.js should declare BOOT_VENDOR_MODULES');
 const bootVendorManifest = bootVendorMatch[0];
+const deferredVendorMatch = bootRuntime.match(/var DEFERRED_APP_MODULES = \[[\s\S]*?\];/);
+assert.ok(deferredVendorMatch, 'boot-runtime.js should declare DEFERRED_APP_MODULES');
+const deferredVendorManifest = deferredVendorMatch[0];
 assert.ok(!bootVendorManifest.includes(cryptoJsVendorRef), 'crypto-js should not be part of the first boot vendor batch');
 assert.ok(!bootVendorManifest.includes(xlsxVendorRef), 'xlsx should not be part of the first boot vendor batch');
 assert.ok(!bootVendorManifest.includes(chartVendorRef), 'chart.js should not be part of the first boot vendor batch');
 assert.ok(!bootVendorManifest.includes(sweetalertVendorRef), 'sweetalert2 should not be part of the first boot vendor batch');
+assert.ok(!deferredVendorManifest.includes(gsapVendorRef), 'gsap should not be part of the generic post-boot vendor batch');
+assert.ok(!deferredVendorManifest.includes(scrollTriggerVendorRef), 'ScrollTrigger should not be part of the generic post-boot vendor batch');
+assert.ok(!deferredVendorManifest.includes(popperVendorRef), 'popper should not be part of the generic post-boot vendor batch');
+assert.ok(!deferredVendorManifest.includes(tippyVendorRef), 'tippy should not be part of the generic post-boot vendor batch');
+assert.ok(!deferredVendorManifest.includes(simplebarVendorRef), 'simplebar should not be part of the generic post-boot vendor batch');
 const authStateIndex = moduleManifest.indexOf(authStateRef);
 const workspaceStateIndex = moduleManifest.indexOf(workspaceStateRef);
 const examStateIndex = moduleManifest.indexOf(examStateRef);
@@ -415,6 +424,8 @@ assert.ok(bootRuntime.includes('function scheduleMobileRuntimeBootstrap'), 'boot
 assert.ok(bootRuntime.includes('runAfterAppModulesReady'), 'boot-runtime.js should wait for core modules before mobile runtime bootstrap');
 assert.ok(bootRuntime.includes("'teacher-analysis':"), 'runtime skill manifest should include teacher-analysis');
 assert.ok(bootRuntime.includes("'crypto-vendor':"), 'runtime skill manifest should include crypto-vendor');
+assert.ok(bootRuntime.includes("'shell-enhancements':"), 'runtime skill manifest should include shell-enhancements');
+assert.ok(bootRuntime.includes("'shell-enhancements': {\n        mode: 'idle',\n        warmup: 'demand'"), 'shell-enhancements should stay demand-loaded instead of warming during post-boot idle');
 assert.ok(bootRuntime.includes("'sweetalert-vendor':"), 'runtime skill manifest should include sweetalert-vendor');
 assert.ok(bootRuntime.includes("'chart-vendor':"), 'runtime skill manifest should include chart-vendor');
 assert.ok(!bootRuntime.includes("'presentation-export':"), 'runtime skill manifest should not include removed PPT export skill');
@@ -427,6 +438,10 @@ assert.ok(bootRuntime.includes("window.ensureWorkerApiRuntimeLoaded = function (
 assert.ok(bootRuntime.includes("'renderMultiPeriodComparison'"), 'boot-runtime.js should keep the progress multi-period compare entry lazy-loadable');
 assert.ok(bootRuntime.includes("'exportMultiPeriodComparison'"), 'boot-runtime.js should keep the progress multi-period export entry lazy-loadable');
 assert.ok(bootRuntime.includes('loadAll()'), 'runtime skill loader should support full loading');
+assert.ok(shellPolishRuntime.includes('function scheduleEnhancementRuntimeLoad()'), 'shell-polish-runtime.js should schedule shell enhancement hydration itself');
+assert.ok(shellPolishRuntime.includes("window.SystemRuntimeLoader.load('shell-enhancements')"), 'shell-polish-runtime.js should demand-load shell-enhancements after the app is visible');
+assert.ok(shellPolishRuntime.includes("getRuntimeLoadProfile() === 'lazy'"), 'shell-polish-runtime.js should respect the lazy runtime profile');
+assert.ok(shellPolishRuntime.includes('if (isMobileViewport()) return false;'), 'shell-polish-runtime.js should skip desktop shell enhancements on mobile');
 assert.strictEqual(initSupabaseMatches.length, 1, 'boot-runtime.js should define initSupabase exactly once');
 assert.strictEqual(supabaseUrlAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_URL exactly once');
 assert.strictEqual(supabaseKeyAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_KEY exactly once');

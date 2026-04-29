@@ -10,6 +10,8 @@
     let spotlightPatched = false;
     let pulseTweenBound = false;
     let scrollFxBound = false;
+    let enhancementRuntimeQueued = false;
+    let enhancementRuntimeLoaded = false;
     let lastSectionId = '';
 
     function scheduleRefresh() {
@@ -26,6 +28,52 @@
     function isAppVisible() {
         const app = document.getElementById('app');
         return !!app && !app.classList.contains('hidden') && isElementVisible(app);
+    }
+
+    function isMobileViewport() {
+        return typeof window.matchMedia === 'function'
+            && window.matchMedia('(max-width: 768px)').matches;
+    }
+
+    function getRuntimeLoadProfile() {
+        try {
+            if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.profile === 'function') {
+                return window.SystemRuntimeLoader.profile();
+            }
+        } catch (_) {}
+        return 'balanced';
+    }
+
+    function shouldLoadEnhancementRuntime() {
+        if (enhancementRuntimeLoaded || enhancementRuntimeQueued) return false;
+        if (!window.SystemRuntimeLoader || typeof window.SystemRuntimeLoader.load !== 'function') return false;
+        if (isMobileViewport()) return false;
+        if (getRuntimeLoadProfile() === 'lazy') return false;
+        return isAppVisible();
+    }
+
+    function requestIdleTask(task, timeoutMs) {
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(task, { timeout: timeoutMs });
+            return;
+        }
+        window.setTimeout(task, Math.min(timeoutMs, 1200));
+    }
+
+    function scheduleEnhancementRuntimeLoad() {
+        if (!shouldLoadEnhancementRuntime()) return;
+        enhancementRuntimeQueued = true;
+        window.setTimeout(() => {
+            requestIdleTask(() => {
+                window.SystemRuntimeLoader.load('shell-enhancements').then(() => {
+                    enhancementRuntimeLoaded = true;
+                    scheduleRefresh();
+                }).catch((error) => {
+                    enhancementRuntimeQueued = false;
+                    console.warn('[shell-polish] Shell enhancement runtime load skipped:', error);
+                });
+            }, 2600);
+        }, 1800);
     }
 
     function getText(element, selector) {
@@ -282,6 +330,7 @@
     }
 
     function refreshEnhancements() {
+        scheduleEnhancementRuntimeLoad();
         ensureSpotlightAnimationPatch();
         ensureSimpleBar();
         ensureTooltips();

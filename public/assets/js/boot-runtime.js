@@ -89,13 +89,7 @@ var BOOT_VENDOR_MODULES = [
     './assets/vendor/alpinejs/cdn.min.js'
 ];
 
-var DEFERRED_APP_MODULES = [
-    './assets/vendor/gsap/gsap.min.js',
-    './assets/vendor/gsap/ScrollTrigger.min.js',
-    './assets/vendor/popperjs/popper.min.js',
-    './assets/vendor/tippyjs/tippy.umd.min.js',
-    './assets/vendor/simplebar/simplebar.min.js'
-];
+var DEFERRED_APP_MODULES = [];
 
 var SYSTEM_RUNTIME_SKILLS = {
     'crypto-vendor': {
@@ -124,7 +118,7 @@ var SYSTEM_RUNTIME_SKILLS = {
     },
     'shell-enhancements': {
         mode: 'idle',
-        warmup: 'balanced',
+        warmup: 'demand',
         triggers: ['app-shell', 'hover-tooltips', 'scroll-effects'],
         entries: [
             { key: 'gsap-vendor', src: './assets/vendor/gsap/gsap.min.js' },
