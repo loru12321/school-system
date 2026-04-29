@@ -11,6 +11,7 @@ const teacherRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-
 const dataRuntimePath = path.resolve(__dirname, '../public/assets/js/data-state-runtime.js');
 const supportRuntimePath = path.resolve(__dirname, '../public/assets/js/support-state-runtime.js');
 const progressRuntimePath = path.resolve(__dirname, '../public/assets/js/progress-state-runtime.js');
+const progressAnalysisRuntimePath = path.resolve(__dirname, '../public/assets/js/progress-analysis-runtime.js');
 const reportSessionRuntimePath = path.resolve(__dirname, '../public/assets/js/report-session-state-runtime.js');
 const compareSessionRuntimePath = path.resolve(__dirname, '../public/assets/js/compare-session-state-runtime.js');
 const compareResultRuntimePath = path.resolve(__dirname, '../public/assets/js/compare-result-state-runtime.js');
@@ -77,6 +78,7 @@ assert.ok(fs.existsSync(teacherRuntimePath), 'teacher-state-runtime.js should ex
 assert.ok(fs.existsSync(dataRuntimePath), 'data-state-runtime.js should exist');
 assert.ok(fs.existsSync(supportRuntimePath), 'support-state-runtime.js should exist');
 assert.ok(fs.existsSync(progressRuntimePath), 'progress-state-runtime.js should exist');
+assert.ok(fs.existsSync(progressAnalysisRuntimePath), 'progress-analysis-runtime.js should exist');
 assert.ok(fs.existsSync(reportSessionRuntimePath), 'report-session-state-runtime.js should exist');
 assert.ok(fs.existsSync(compareSessionRuntimePath), 'compare-session-state-runtime.js should exist');
 assert.ok(fs.existsSync(compareResultRuntimePath), 'compare-result-state-runtime.js should exist');
@@ -141,6 +143,7 @@ const shellPolishRuntime = fs.readFileSync(shellPolishRuntimePath, 'utf8');
 const moduleEntryRuntime = fs.readFileSync(moduleEntryRuntimePath, 'utf8');
 const singleSchoolEvalRuntime = fs.readFileSync(singleSchoolEvalRuntimePath, 'utf8');
 const teacherCompareResultRuntime = fs.readFileSync(teacherCompareResultRuntimePath, 'utf8');
+const progressAnalysisRuntime = fs.readFileSync(progressAnalysisRuntimePath, 'utf8');
 const appSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
 const initSupabaseMatches = bootRuntime.match(/window\.initSupabase\s*=\s*function/g) || [];
 const supabaseUrlAssignments = bootRuntime.match(/window\.SUPABASE_URL\s*=/g) || [];
@@ -472,6 +475,9 @@ assert.ok(singleSchoolEvalRuntime.includes('const sizeBonus = Math.max(0, sizeDi
 assert.ok(singleSchoolEvalRuntime.includes('function scheduleSSEAutoCalculate'), 'performance fairness model should recalculate automatically after setting changes');
 assert.ok(teacherCompareResultRuntime.includes('function scheduleTeacherMultiPeriodAutoRender'), 'teacher multi-period compare should recalculate automatically after selector changes');
 assert.ok(teacherCompareResultRuntime.includes('bindTeacherCompareAutoControls();'), 'teacher compare runtime should bind selector auto-refresh controls');
+assert.ok(progressAnalysisRuntime.includes('function filterProgressCompareRowsToTownshipScope'), 'progress comparison should have a township-scope filter for town ranks');
+assert.ok(progressAnalysisRuntime.includes('const townshipRows = filterProgressCompareRowsToTownshipScope(allRows);'), 'progress comparison should derive town ranks from township-scoped rows');
+assert.ok(progressAnalysisRuntime.includes('const rankTownMap = buildCompetitionRankMap(townshipRows'), 'progress comparison town ranks should not be built from full county rows');
 assert.strictEqual(initSupabaseMatches.length, 1, 'boot-runtime.js should define initSupabase exactly once');
 assert.strictEqual(supabaseUrlAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_URL exactly once');
 assert.strictEqual(supabaseKeyAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_KEY exactly once');

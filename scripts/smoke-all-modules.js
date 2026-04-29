@@ -593,6 +593,9 @@ async function runModuleDeepCheck(page, id) {
             let renderCallSafe = true;
             let renderCallResult = null;
             let renderCallError = '';
+            let townRankScopeOk = true;
+            let townRankScopeChecked = false;
+            let townRankMismatch = null;
             try {
                 const schoolSel = document.getElementById('progressCompareSchool');
                 const exam1Sel = document.getElementById('progressCompareExam1');
@@ -609,6 +612,53 @@ async function runModuleDeepCheck(page, id) {
                 if (schoolSel?.value && exam1Sel?.value && exam2Sel?.value && exam1Sel.value !== exam2Sel.value) {
                     renderCallResult = window.renderMultiPeriodComparison();
                 }
+                const cache = typeof window.readMultiPeriodCompareCacheState === 'function'
+                    ? window.readMultiPeriodCompareCacheState()
+                    : window.MULTI_PERIOD_COMPARE_CACHE;
+                if (cache?.type === 'progress'
+                    && Array.isArray(cache.rows)
+                    && cache.rows.length
+                    && Array.isArray(cache.examIds)
+                    && cache.examIds.length
+                    && typeof window.getExamRowsForCompare === 'function'
+                    && typeof window.buildCompetitionRankMap === 'function'
+                    && typeof window.filterProgressCompareRowsToTownshipScope === 'function') {
+                    const lastExamId = cache.examIds[cache.examIds.length - 1];
+                    const totalSubjects = typeof window.getComparisonTotalSubjects === 'function'
+                        ? window.getComparisonTotalSubjects()
+                        : [];
+                    const totalOf = (row) => {
+                        if (typeof window.getComparisonTotalValue === 'function') {
+                            const value = Number(window.getComparisonTotalValue(row, totalSubjects));
+                            if (Number.isFinite(value)) return value;
+                        }
+                        const fallback = Number(row?.total);
+                        return Number.isFinite(fallback) ? fallback : Number.NEGATIVE_INFINITY;
+                    };
+                    const cleanName = typeof window.getProgressCleanName === 'function'
+                        ? window.getProgressCleanName
+                        : (name => String(name || '').replace(/\s+/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '').toLowerCase());
+                    const townshipRows = window.filterProgressCompareRowsToTownshipScope(window.getExamRowsForCompare(lastExamId));
+                    const expectedRankMap = window.buildCompetitionRankMap(townshipRows, row => cleanName(row?.name), totalOf);
+                    const checkedRows = cache.rows.filter(row => expectedRankMap.has(row.key)).slice(0, 120);
+                    townRankScopeChecked = checkedRows.length > 0;
+                    for (const row of checkedRows) {
+                        const period = row.periods?.[row.periods.length - 1] || {};
+                        const actual = Number(period.rankTown);
+                        const expected = Number(expectedRankMap.get(row.key));
+                        if (Number.isFinite(expected) && actual !== expected) {
+                            townRankScopeOk = false;
+                            townRankMismatch = {
+                                name: row.name,
+                                className: row.class,
+                                examId: lastExamId,
+                                actual,
+                                expected
+                            };
+                            break;
+                        }
+                    }
+                }
             } catch (error) {
                 renderCallSafe = false;
                 renderCallError = error?.message || String(error);
@@ -624,13 +674,16 @@ async function runModuleDeepCheck(page, id) {
                     && !!document.getElementById('progressCompareExam2')
                     && !!document.getElementById('progressCompareExam3'),
                 resultSlotReady: !!document.getElementById('multiPeriodCompareResult'),
-                renderCallSafe
+                renderCallSafe,
+                townRankScopeOk
             };
             return {
                 ok: Object.values(checks).every(Boolean),
                 checks,
                 renderCallResult: !!renderCallResult,
-                renderCallError
+                renderCallError,
+                townRankScopeChecked,
+                townRankMismatch
             };
         });
     }

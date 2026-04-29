@@ -584,6 +584,27 @@ function filterProgressCompareRowsForUser(rows) {
     return list;
 }
 
+function filterProgressCompareRowsToTownshipScope(rows) {
+    const list = Array.isArray(rows) ? rows : [];
+    if (!list.length) return [];
+    if (typeof filterRowsToTownshipSchools === 'function') {
+        const townshipRows = filterRowsToTownshipSchools(list);
+        if (townshipRows.length) return townshipRows;
+    }
+    if (typeof listAvailableSchoolsForCompare === 'function'
+        && typeof getMatchedSchoolNamesFromCollection === 'function') {
+        const townshipSchools = listAvailableSchoolsForCompare();
+        const matchedNames = new Set();
+        townshipSchools.forEach((school) => {
+            getMatchedSchoolNamesFromCollection(list.map(row => row?.school), school)
+                .forEach(name => matchedNames.add(String(name || '').trim()));
+        });
+        const scopedRows = list.filter(row => matchedNames.has(String(row?.school || '').trim()));
+        if (scopedRows.length) return scopedRows;
+    }
+    return list;
+}
+
 function buildProgressMultiPeriodRows(config) {
     if (typeof getExamRowsForCompare !== 'function' || typeof filterRowsBySchool !== 'function') {
         throw new Error('多期对比基础数据模块未就绪，请刷新页面后重试');
@@ -605,13 +626,14 @@ function buildProgressMultiPeriodRows(config) {
 
     const examDataList = config.examIds.map((examId) => {
         const allRows = getExamRowsForCompare(examId);
+        const townshipRows = filterProgressCompareRowsToTownshipScope(allRows);
         const schoolRows = filterProgressCompareRowsForUser(filterRowsBySchool(allRows, config.school));
         if (!schoolRows.length) {
             throw new Error(`在「${examId}」中找不到「${config.school}」的可对比学生数据`);
         }
-        const rankTownMap = buildCompetitionRankMap(allRows, row => cleanName(row?.name), totalOf);
+        const rankTownMap = buildCompetitionRankMap(townshipRows, row => cleanName(row?.name), totalOf);
         const rankSchoolMap = buildCompetitionRankMap(schoolRows, row => cleanName(row?.name), totalOf);
-        return { examId, allRows, schoolRows, rankTownMap, rankSchoolMap };
+        return { examId, allRows, townshipRows, schoolRows, rankTownMap, rankSchoolMap };
     });
 
     const studentKeys = new Set();
@@ -1758,6 +1780,7 @@ function resetProgressFilter() {
         updateProgressBaselineSelect,
         getBaselineDataFromExam,
         onProgressComparePeriodCountChange,
+        filterProgressCompareRowsToTownshipScope,
         renderMultiPeriodComparison,
         exportMultiPeriodComparison,
         setCompareExamSelectPlaceholders,
