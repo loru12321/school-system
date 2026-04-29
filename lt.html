@@ -500,6 +500,21 @@ var APP_MODULES = [
 
 var APP_MODULE_PRELOAD_LIMIT = 10;
 var APP_MODULE_MOBILE_PRELOAD_LIMIT = 6;
+var APP_MODULE_LATE_PREFETCH_LIMIT = 18;
+var APP_MODULE_PREFETCH_CHUNK_SIZE = 6;
+
+function normalizeBootModuleKey(src) {
+    return String(src || '').replace(/^\.?\//, '');
+}
+
+function hasBootScriptElement(src) {
+    const needle = normalizeBootModuleKey(src);
+    if (!needle) return false;
+    return Array.from(document.scripts || []).some((script) => {
+        const candidate = String(script.getAttribute('src') || script.src || '');
+        return candidate.includes(needle);
+    });
+}
 
 function prefetchAppModuleList(modules, key) {
     const head = document.head;
@@ -507,7 +522,7 @@ function prefetchAppModuleList(modules, key) {
     modules.forEach((src) => {
         const href = getVersionedAssetPath(src);
         const attr = `data-${key}-prefetch`;
-        if (!href || head.querySelector(`link[${attr}="${href}"]`)) return;
+        if (!href || hasBootScriptElement(src) || head.querySelector(`link[${attr}="${href}"]`)) return;
         const link = document.createElement('link');
         link.rel = 'prefetch';
         link.as = 'script';
@@ -556,11 +571,59 @@ function shouldPrefetchLateAppCoreModules() {
     return true;
 }
 
+function getLateAppCorePrefetchLimit() {
+    try {
+        const stored = Number(localStorage.getItem('SYSTEM_APP_LATE_PREFETCH_LIMIT') || 0);
+        if (Number.isFinite(stored) && stored >= 0) return Math.max(0, Math.floor(stored));
+    } catch (_) {}
+    return APP_MODULE_LATE_PREFETCH_LIMIT;
+}
+
+function getAppModulePrefetchChunkSize() {
+    try {
+        const stored = Number(localStorage.getItem('SYSTEM_APP_PREFETCH_CHUNK_SIZE') || 0);
+        if (Number.isFinite(stored) && stored > 0) return Math.max(1, Math.floor(stored));
+    } catch (_) {}
+    return APP_MODULE_PREFETCH_CHUNK_SIZE;
+}
+
+function scheduleIdleBootTask(task, timeoutMs = 1600) {
+    if (typeof task !== 'function') return;
+    if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(task, { timeout: timeoutMs });
+        return;
+    }
+    window.setTimeout(task, Math.max(0, timeoutMs));
+}
+
+function scheduleLateAppCorePrefetch(modules) {
+    if (!Array.isArray(modules) || !modules.length) return;
+    if (!shouldPrefetchLateAppCoreModules()) return;
+    if (window.__APP_CORE_LATE_PREFETCH_SCHEDULED__) return;
+
+    const limit = getLateAppCorePrefetchLimit();
+    if (limit <= 0) return;
+    const targets = modules.slice(0, limit);
+    if (!targets.length) return;
+
+    window.__APP_CORE_LATE_PREFETCH_SCHEDULED__ = true;
+    const chunkSize = getAppModulePrefetchChunkSize();
+    let cursor = 0;
+    const runNextChunk = () => {
+        if (window.__APP_MODULES_LOADED__ === true) return;
+        const chunk = targets.slice(cursor, cursor + chunkSize);
+        cursor += chunk.length;
+        prefetchAppModuleList(chunk, 'app-core-late');
+        if (cursor < targets.length) scheduleIdleBootTask(runNextChunk, 900);
+    };
+    scheduleIdleBootTask(runNextChunk, 1600);
+}
+
 function hintAppCoreModules() {
     const preloadCount = Math.min(getAppModulePreloadLimit(), APP_MODULES.length);
     preloadAppModuleList(APP_MODULES.slice(0, preloadCount), 'app-core');
-    if (preloadCount < APP_MODULES.length && shouldPrefetchLateAppCoreModules()) {
-        prefetchAppModuleList(APP_MODULES.slice(preloadCount), 'app-core-late');
+    if (preloadCount < APP_MODULES.length) {
+        scheduleLateAppCorePrefetch(APP_MODULES.slice(preloadCount));
     }
 }
 

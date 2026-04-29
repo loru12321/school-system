@@ -419,7 +419,11 @@ assert.ok(bootRuntime.includes('function getBootScriptBatchSize()'), 'boot-runti
 assert.ok(bootRuntime.includes('function yieldBootScriptBatchFrame()'), 'boot-runtime.js should yield between boot script batches');
 assert.ok(bootRuntime.includes('if (isRuntimeMobileViewport()) return;'), 'boot-runtime.js should skip desktop deferred vendor prefetch on mobile');
 assert.ok(bootRuntime.includes('function shouldPrefetchLateAppCoreModules()'), 'boot-runtime.js should gate late app-core prefetches');
-assert.ok(bootRuntime.includes('preloadCount < APP_MODULES.length && shouldPrefetchLateAppCoreModules()'), 'boot-runtime.js should avoid late app-core prefetches on mobile or lazy profiles');
+assert.ok(bootRuntime.includes('function scheduleLateAppCorePrefetch'), 'boot-runtime.js should schedule late app-core prefetches outside the critical boot path');
+assert.ok(bootRuntime.includes('window.__APP_CORE_LATE_PREFETCH_SCHEDULED__'), 'boot-runtime.js should avoid duplicate late app-core prefetch scheduling');
+assert.ok(bootRuntime.includes('SYSTEM_APP_LATE_PREFETCH_LIMIT'), 'boot-runtime.js should make late app-core prefetch limits configurable');
+assert.ok(bootRuntime.includes('scheduleLateAppCorePrefetch(APP_MODULES.slice(preloadCount));'), 'boot-runtime.js should defer late app-core prefetches on mobile or lazy profiles');
+assert.ok(bootRuntime.includes('if (window.__APP_MODULES_LOADED__ === true) return;'), 'late app-core prefetch should stop once core modules are already loaded');
 assert.ok(bootRuntime.includes('function markAppModulesReady()'), 'boot-runtime.js should mark app modules ready through a shared helper');
 assert.ok(bootRuntime.includes('school:app-modules-ready'), 'boot-runtime.js should dispatch an app modules ready event');
 assert.ok(bootRuntime.includes('function scheduleMobileRuntimeBootstrap'), 'boot-runtime.js should defer mobile runtime bootstrapping');
