@@ -300,7 +300,7 @@ var SYSTEM_RUNTIME_SKILLS = {
     },
     'voice-control': {
         mode: 'idle',
-        warmup: 'balanced',
+        warmup: 'demand',
         triggers: ['voice-control', 'voice-fab', 'VoiceControl.toggle'],
         entries: [
             { key: 'voice-control', src: './public/assets/js/voice-control-runtime.js' }
@@ -2135,6 +2135,11 @@ function yieldRuntimeWarmupFrame() {
     });
 }
 
+function isRuntimeMobileViewport() {
+    return typeof window.matchMedia === 'function'
+        && window.matchMedia('(max-width: 768px)').matches;
+}
+
 function getRuntimeLoadProfile() {
     try {
         const stored = String(localStorage.getItem('SYSTEM_LOAD_PROFILE') || '').trim().toLowerCase();
@@ -2147,9 +2152,7 @@ function getRuntimeLoadProfile() {
         const slowNetwork = effectiveType === 'slow-2g' || effectiveType === '2g';
         const lowMemory = Number(navigator.deviceMemory || 0) > 0 && Number(navigator.deviceMemory || 0) <= 2;
         const lowCpu = Number(navigator.hardwareConcurrency || 0) > 0 && Number(navigator.hardwareConcurrency || 0) <= 4;
-        const mobileViewport = typeof window.matchMedia === 'function'
-            && window.matchMedia('(max-width: 768px)').matches;
-        if (saveData || slowNetwork || lowMemory || (mobileViewport && lowCpu)) return 'lazy';
+        if (saveData || slowNetwork || lowMemory || (isRuntimeMobileViewport() && lowCpu)) return 'lazy';
     } catch (_) {}
     return 'balanced';
 }
@@ -2163,6 +2166,7 @@ function shouldWarmRuntimeSkill(skill, profile) {
     if (!skill) return false;
     if (profile === 'lazy') return false;
     if (profile === 'full') return skill.warmup !== 'mobile';
+    if (isRuntimeMobileViewport()) return skill.warmup === 'mobile';
     return skill.warmup === 'balanced';
 }
 

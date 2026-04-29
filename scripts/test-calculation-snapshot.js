@@ -5,27 +5,93 @@ const url = process.env.SMOKE_URL || 'https://schoolsystem.com.cn/?verify=calc-s
 const user = process.env.SMOKE_USER || 'admin';
 const pass = process.env.SMOKE_PASS || 'admin123';
 
-async function login(page) {
-    await page.goto(url, { waitUntil: 'commit', timeout: 90000 });
-    await page.waitForFunction(() => document.getElementById('login-overlay') || document.getElementById('app'), null, { timeout: 90000 });
-    await page.waitForFunction(() => window.__APP_MODULES_LOADED__ === true || !!sessionStorage.getItem('CURRENT_USER'), null, { timeout: 90000 }).catch(() => {});
-    await page.waitForTimeout(800);
-    const ready = await page.evaluate(() => {
+function isExecutionContextDestroyed(error) {
+    const message = String(error?.message || error || '');
+    return message.includes('Execution context was destroyed')
+        || message.includes('Cannot find context with specified id');
+}
+
+async function waitForPageStability(page, timeout = 15000) {
+    await page.waitForLoadState('domcontentloaded', { timeout }).catch(() => {});
+    await page.waitForTimeout(300);
+}
+
+async function withNavigationRetry(page, task, attempts = 3) {
+    let lastError = null;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+        try {
+            return await task(attempt);
+        } catch (error) {
+            lastError = error;
+            if (!isExecutionContextDestroyed(error) || attempt >= attempts) throw error;
+            await waitForPageStability(page);
+        }
+    }
+    throw lastError;
+}
+
+async function readLoginState(page) {
+    return withNavigationRetry(page, () => page.evaluate(() => {
         const overlay = document.getElementById('login-overlay');
         const app = document.getElementById('app');
+        const mask = document.getElementById('mode-mask');
+        const input = document.getElementById('entry-cohort-year');
+        const selector = document.getElementById('cohort-selector');
         return {
             overlayHidden: !overlay || getComputedStyle(overlay).display === 'none',
-            appVisible: !!app && getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden')
+            appVisible: !!app && getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden'),
+            maskVisible: !!mask && getComputedStyle(mask).display !== 'none',
+            authState: String(document.body?.dataset?.authState || '').trim(),
+            sessionUserPresent: !!String(sessionStorage.getItem('CURRENT_USER') || '').trim(),
+            bootPending: !!window.__BOOT_AUTH_PENDING_HANDOFF__,
+            inputValue: String(input?.value || '').trim(),
+            currentCohortId: String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim(),
+            examId: String(localStorage.getItem('CURRENT_EXAM_ID') || '').trim(),
+            rawDataLen: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
+            schoolCount: window.SCHOOLS ? Object.keys(window.SCHOOLS).length : 0,
+            knownCohorts: selector
+                ? Array.from(selector.options || []).map((option) => String(option.value || '').trim()).filter(Boolean)
+                : []
         };
-    });
-    if (!(ready.overlayHidden && ready.appVisible)) {
-        await page.evaluate(() => window.Auth?.openLoginPortalModal?.('school')).catch(() => {});
-        await page.waitForSelector('#login-user', { state: 'visible', timeout: 30000 });
-        await page.fill('#login-user', user);
-        await page.fill('#login-pass', pass);
-        await page.click('button[onclick="window.Auth?.login()"]', { force: true });
+    }), 4);
+}
+
+function isLoggedInShellReady(state) {
+    return (
+        state.overlayHidden && (state.appVisible || state.maskVisible || state.authState === 'logged_in' || state.sessionUserPresent)
+    ) || (
+        (state.authState === 'logged_in' || state.sessionUserPresent || state.bootPending)
+        && (state.appVisible || state.maskVisible)
+    );
+}
+
+async function ensureLoginWindowVisible(page) {
+    const loginUser = page.locator('#login-user');
+    if (await loginUser.isVisible().catch(() => false)) return;
+
+    const openers = [
+        page.locator('[data-login-open="school"]').first(),
+        page.locator('.login-stage-nav-links a[data-nav="modal"]').first(),
+        page.locator('.login-stage-primary-action').first(),
+        page.locator('button[onclick="window.Auth?.openLoginPortalModal(\'school\')"]').first()
+    ];
+
+    for (const opener of openers) {
+        if (!(await opener.count().catch(() => 0))) continue;
+        await opener.click({ force: true }).catch(() => {});
+        if (await loginUser.isVisible().catch(() => false)) return;
     }
-    await page.waitForFunction(() => {
+
+    await page.evaluate(() => {
+        if (window.Auth && typeof window.Auth.openLoginPortalModal === 'function') {
+            window.Auth.openLoginPortalModal('school');
+        }
+    }).catch(() => {});
+    await page.waitForSelector('#login-user', { state: 'visible', timeout: 30000 });
+}
+
+async function waitForLoggedInShell(page) {
+    await withNavigationRetry(page, () => page.waitForFunction(() => {
         const overlay = document.getElementById('login-overlay');
         const app = document.getElementById('app');
         const mask = document.getElementById('mode-mask');
@@ -34,33 +100,151 @@ async function login(page) {
         const maskVisible = !!mask && getComputedStyle(mask).display !== 'none';
         const authState = String(document.body?.dataset?.authState || '').trim();
         const sessionUser = String(sessionStorage.getItem('CURRENT_USER') || '').trim();
-        return overlayHidden && (appVisible || maskVisible || authState === 'logged_in' || !!sessionUser);
-    }, null, { timeout: 90000 });
-    const maskVisible = await page.evaluate(() => {
-        const mask = document.getElementById('mode-mask');
-        return !!mask && getComputedStyle(mask).display !== 'none';
-    });
-    const cohortEntryVisible = await page.evaluate(() => {
-        const input = document.getElementById('entry-cohort-year');
-        return !!input && getComputedStyle(input).display !== 'none';
-    });
-    if (maskVisible || cohortEntryVisible) {
-        const input = page.locator('#entry-cohort-year');
-        if (await input.count()) await input.fill(process.env.SMOKE_COHORT_YEAR || '2022');
-        await page.evaluate(async () => {
-            if (typeof window.enterCohortFromMask === 'function') {
-                await window.enterCohortFromMask();
-            } else {
-                const button = document.querySelector('button[onclick="enterCohortFromMask()"]');
-                if (button) button.click();
-            }
-        }).catch(() => {});
+        const bootPending = !!window.__BOOT_AUTH_PENDING_HANDOFF__;
+        return (
+            overlayHidden && (appVisible || maskVisible || authState === 'logged_in' || !!sessionUser)
+        ) || (
+            (authState === 'logged_in' || !!sessionUser || bootPending)
+            && (appVisible || maskVisible)
+        );
+    }, null, { timeout: 180000 }), 4);
+}
+
+async function ensureCohortEntered(page) {
+    let state = await readLoginState(page);
+    if (!state.maskVisible) return state;
+
+    if (!state.overlayHidden && (state.authState === 'logged_in' || state.sessionUserPresent || state.bootPending)) {
+        await withNavigationRetry(page, () => page.waitForFunction(() => {
+            const overlay = document.getElementById('login-overlay');
+            return !overlay || getComputedStyle(overlay).display === 'none';
+        }, null, { timeout: 30000 }), 2).catch(() => {});
+        await waitForPageStability(page, 5000);
+        state = await readLoginState(page);
+        if (!state.maskVisible) return state;
     }
+
+    await withNavigationRetry(page, () => page.waitForFunction(() => {
+        const mask = document.getElementById('mode-mask');
+        const app = document.getElementById('app');
+        const examId = String(localStorage.getItem('CURRENT_EXAM_ID') || '').trim();
+        const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+        const appVisible = !!app && getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden');
+        return (!mask || getComputedStyle(mask).display === 'none')
+            || (!!examId && rawDataLen > 0)
+            || (appVisible && !!examId && rawDataLen > 0);
+    }, null, { timeout: 15000 }), 1).catch(() => {});
+
+    state = await readLoginState(page);
+    if (!state.maskVisible) return state;
+
+    const candidate = String(
+        process.env.SMOKE_COHORT_YEAR
+        || state.inputValue
+        || state.currentCohortId
+        || state.knownCohorts[0]
+        || '2022'
+    ).trim();
+
+    if (!candidate) return state;
+
+    await withNavigationRetry(page, async () => {
+        await page.waitForFunction(() => {
+            const mask = document.getElementById('mode-mask');
+            if (!mask || getComputedStyle(mask).display === 'none') return true;
+            let cohortManagerReady = false;
+            try {
+                cohortManagerReady = typeof CohortManager !== 'undefined'
+                    && !!CohortManager
+                    && typeof CohortManager.addCohort === 'function';
+            } catch (_) {
+                cohortManagerReady = false;
+            }
+            return (
+                (typeof window.enterCohortFromMask === 'function' && cohortManagerReady)
+                || !!document.querySelector('button[onclick="enterCohortFromMask()"]')
+            );
+        }, null, { timeout: 30000 });
+
+        const input = page.locator('#entry-cohort-year');
+        if (await input.count()) await input.fill(candidate);
+
+        await page.evaluate(async () => {
+            let cohortManagerReady = false;
+            try {
+                cohortManagerReady = typeof CohortManager !== 'undefined'
+                    && !!CohortManager
+                    && typeof CohortManager.addCohort === 'function';
+            } catch (_) {
+                cohortManagerReady = false;
+            }
+            if (typeof window.enterCohortFromMask === 'function' && cohortManagerReady) {
+                await window.enterCohortFromMask();
+                return;
+            }
+            document.querySelector('button[onclick="enterCohortFromMask()"]')?.click();
+        });
+
+        await waitForPageStability(page, 10000);
+        await page.waitForFunction((expectedCohortId) => {
+            const mask = document.getElementById('mode-mask');
+            const app = document.getElementById('app');
+            const overlay = document.getElementById('login-overlay');
+            const overlayHidden = !overlay || getComputedStyle(overlay).display === 'none';
+            const appVisible = !!app && getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden');
+            const cohortId = String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim();
+            const examId = String(localStorage.getItem('CURRENT_EXAM_ID') || '').trim();
+            const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+            const readyWorkspace = !!cohortId && !!examId && rawDataLen > 0;
+            const maskHidden = !mask || getComputedStyle(mask).display === 'none';
+            const normalizedExpected = String(expectedCohortId || '').trim();
+            return overlayHidden && (
+                (maskHidden && appVisible)
+                || (!!cohortId && normalizedExpected && cohortId === normalizedExpected)
+                || (appVisible && readyWorkspace)
+            );
+        }, candidate, { timeout: 60000 });
+    }, 4);
+
+    return readLoginState(page);
+}
+
+async function login(page) {
+    await page.goto(url, { waitUntil: 'commit', timeout: 90000 });
+    await withNavigationRetry(page, () => page.waitForFunction(() => {
+        return document.getElementById('login-overlay')
+            || document.getElementById('app')
+            || document.getElementById('mode-mask');
+    }, null, { timeout: 90000 }), 4);
+    await page.waitForFunction(() => window.__APP_MODULES_LOADED__ === true || !!sessionStorage.getItem('CURRENT_USER'), null, { timeout: 90000 }).catch(() => {});
+    await waitForPageStability(page, 10000);
+
+    let ready = await readLoginState(page);
+    if (!isLoggedInShellReady(ready)) {
+        await ensureLoginWindowVisible(page);
+        await page.fill('#login-user', user);
+        await page.fill('#login-pass', pass);
+        const submit = page.locator('#login-submit-button').first();
+        if (await submit.count().catch(() => 0)) {
+            await submit.click({ force: true });
+        } else {
+            await page.click('button[onclick="window.Auth?.login()"]', { force: true });
+        }
+    }
+
+    try {
+        await waitForLoggedInShell(page);
+    } catch (error) {
+        ready = await readLoginState(page).catch(() => null);
+        throw new Error(`Login shell did not become ready: ${error.message}; state=${JSON.stringify(ready)}`);
+    }
+
+    await ensureCohortEntered(page);
     await page.waitForFunction(() => {
         const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
         const schools = window.SCHOOLS ? Object.keys(window.SCHOOLS).length : 0;
         return rawDataLen > 0 && schools > 0;
-    }, null, { timeout: 90000 });
+    }, null, { timeout: 180000 });
     await page.waitForTimeout(1000);
 }
 

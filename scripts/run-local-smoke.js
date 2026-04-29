@@ -5,7 +5,8 @@ const { spawn } = require('child_process');
 
 const distDir = path.resolve(__dirname, '../dist');
 const smokeScript = path.resolve(__dirname, process.env.SMOKE_SCRIPT || './smoke-all-modules.js');
-const port = Number(process.env.SMOKE_LOCAL_PORT || 4173);
+const preferredPort = Number(process.env.SMOKE_LOCAL_PORT || 4173);
+const hasExplicitPort = !!process.env.SMOKE_LOCAL_PORT;
 const proxyOrigin = String(process.env.SMOKE_PROXY_ORIGIN || 'https://schoolsystem.com.cn').trim().replace(/\/+$/, '');
 
 const mimeTypes = {
@@ -116,10 +117,26 @@ async function startServer() {
         });
     });
 
-    await new Promise((resolve, reject) => {
-        server.once('error', reject);
-        server.listen(port, '127.0.0.1', () => resolve());
+    const listen = (targetPort) => new Promise((resolve, reject) => {
+        const onError = (error) => {
+            server.off('listening', onListening);
+            reject(error);
+        };
+        const onListening = () => {
+            server.off('error', onError);
+            resolve();
+        };
+        server.once('error', onError);
+        server.once('listening', onListening);
+        server.listen(targetPort, '127.0.0.1');
     });
+
+    try {
+        await listen(preferredPort);
+    } catch (error) {
+        if (hasExplicitPort || error?.code !== 'EADDRINUSE') throw error;
+        await listen(0);
+    }
 
     return server;
 }
@@ -128,7 +145,7 @@ async function main() {
     const server = await startServer();
     const env = {
         ...process.env,
-        SMOKE_URL: process.env.SMOKE_URL || `http://127.0.0.1:${port}/`,
+        SMOKE_URL: process.env.SMOKE_URL || `http://127.0.0.1:${server.address().port}/`,
         SMOKE_USER: process.env.SMOKE_USER || 'admin',
         SMOKE_PASS: process.env.SMOKE_PASS || 'admin123',
         SMOKE_COHORT_YEAR: process.env.SMOKE_COHORT_YEAR || '2022'
