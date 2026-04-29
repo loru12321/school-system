@@ -118,6 +118,14 @@
         return getViewportWidth() <= MOBILE_BREAKPOINT;
     }
 
+    function scrollActiveRailChipIntoView(root) {
+        const rail = root?.querySelector?.('[data-apk-rail]');
+        if (!rail) return;
+        const activeChip = rail.querySelector('.apk-rail-chip.is-active');
+        if (!activeChip || typeof activeChip.scrollIntoView !== 'function') return;
+        activeChip.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'auto' });
+    }
+
     function getCurrentUser() {
         if (window.AuthState && typeof window.AuthState.getCurrentUser === 'function') {
             return window.AuthState.getCurrentUser();

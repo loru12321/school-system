@@ -606,7 +606,7 @@
 
         bindHorizontalWheelScroll(railShell, rail, railShell);
         window.requestAnimationFrame(function () {
-            scrollActiveModuleRailChipIntoView();
+            scrollActiveModuleRailChipIntoView(rail);
             updateHorizontalScrollState(rail, railShell);
         });
     }
