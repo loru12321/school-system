@@ -496,6 +496,7 @@ var APP_MODULE_PRELOAD_LIMIT = 10;
 var APP_MODULE_MOBILE_PRELOAD_LIMIT = 6;
 var APP_MODULE_LATE_PREFETCH_LIMIT = 18;
 var APP_MODULE_PREFETCH_CHUNK_SIZE = 6;
+var APP_MODULE_DESKTOP_BATCH_SIZE = 12;
 
 function normalizeBootModuleKey(src) {
     return String(src || '').replace(/^\.?\//, '');
@@ -699,7 +700,7 @@ function getBootScriptBatchSize() {
             && Number(navigator.hardwareConcurrency || 0) <= 4;
         if (lowCpu) return 8;
     } catch (_) {}
-    return 0;
+    return APP_MODULE_DESKTOP_BATCH_SIZE;
 }
 
 function yieldBootScriptBatchFrame() {

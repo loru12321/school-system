@@ -416,6 +416,8 @@ assert.ok(!bootRuntime.includes("window.ensurePresentationVendorsLoaded = functi
 assert.ok(bootRuntime.includes('var SYSTEM_RUNTIME_SKILLS = {'), 'boot-runtime.js should declare a runtime skill manifest');
 assert.ok(bootRuntime.includes('window.SystemRuntimeLoader'), 'boot-runtime.js should expose the runtime skill loader');
 assert.ok(bootRuntime.includes('function getBootScriptBatchSize()'), 'boot-runtime.js should batch boot script insertion on constrained devices');
+assert.ok(bootRuntime.includes('var APP_MODULE_DESKTOP_BATCH_SIZE = 12;'), 'desktop boot scripts should also load in bounded batches');
+assert.ok(bootRuntime.includes('return APP_MODULE_DESKTOP_BATCH_SIZE;'), 'desktop boot script loading should yield between bounded batches');
 assert.ok(bootRuntime.includes('function yieldBootScriptBatchFrame()'), 'boot-runtime.js should yield between boot script batches');
 assert.ok(bootRuntime.includes('if (isRuntimeMobileViewport()) return;'), 'boot-runtime.js should skip desktop deferred vendor prefetch on mobile');
 assert.ok(bootRuntime.includes('function shouldPrefetchLateAppCoreModules()'), 'boot-runtime.js should gate late app-core prefetches');
