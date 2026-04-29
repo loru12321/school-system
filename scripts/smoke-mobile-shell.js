@@ -56,6 +56,43 @@ async function loginAndEnterCohort(page) {
     }, null, { timeout: 90000 });
 }
 
+async function readMobileShellState(page) {
+    return page.evaluate(() => {
+        const shell = document.getElementById('apk-mobile-shell');
+        const rootDisplay = shell ? getComputedStyle(shell).display : '';
+        const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+        return {
+            mobileQuery: document.body?.dataset?.mobileQuery || '',
+            mobileArchitecture: document.body?.dataset?.mobileArchitecture || '',
+            shellExists: !!shell,
+            shellVisible: !!shell && rootDisplay !== 'none' && shell.getAttribute('aria-hidden') === 'false',
+            railChips: document.querySelectorAll('#apk-mobile-shell .apk-rail-chip').length,
+            activeRailChip: !!document.querySelector('#apk-mobile-shell .apk-rail-chip.is-active'),
+            currentCohortId: String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim(),
+            rawDataLen
+        };
+    });
+}
+
+async function waitForMobileShellReady(page) {
+    let state = await readMobileShellState(page);
+    const deadline = Date.now() + 25000;
+    while (
+        Date.now() < deadline
+        && !(
+            state.mobileArchitecture === 'apk-v2'
+            && state.shellVisible
+            && state.railChips > 0
+            && state.activeRailChip
+        )
+    ) {
+        await page.evaluate(() => window.MobileQueryUI?.refresh?.()).catch(() => {});
+        await page.waitForTimeout(500);
+        state = await readMobileShellState(page);
+    }
+    return state;
+}
+
 async function main() {
     const browser = await chromium.launch({ headless: true });
     const page = await browser.newPage({
@@ -78,29 +115,17 @@ async function main() {
     await loginAndEnterCohort(page);
     await page.evaluate(() => window.ensureMobileManagerRuntimeLoaded?.()).catch(() => {});
     await page.evaluate(() => window.MobileQueryUI?.refresh?.()).catch(() => {});
-    await page.waitForTimeout(1200);
-
-    const state = await page.evaluate(() => {
-        const shell = document.getElementById('apk-mobile-shell');
-        const rootDisplay = shell ? getComputedStyle(shell).display : '';
-        const rawDataLen = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
-        return {
-            mobileQuery: document.body?.dataset?.mobileQuery || '',
-            mobileArchitecture: document.body?.dataset?.mobileArchitecture || '',
-            shellExists: !!shell,
-            shellVisible: !!shell && rootDisplay !== 'none' && shell.getAttribute('aria-hidden') === 'false',
-            railChips: document.querySelectorAll('#apk-mobile-shell .apk-rail-chip').length,
-            activeRailChip: !!document.querySelector('#apk-mobile-shell .apk-rail-chip.is-active'),
-            currentCohortId: String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim(),
-            rawDataLen
-        };
-    });
+    const state = await waitForMobileShellReady(page);
 
     await browser.close();
 
     const actionableMessages = messages.filter((message) => !isIgnorableMessage(message));
     assert.strictEqual(state.mobileQuery, 'true', 'mobile viewport was not detected');
     assert.ok(state.shellExists, 'mobile shell root was not created');
+    assert.strictEqual(state.mobileArchitecture, 'apk-v2', 'mobile shell architecture did not activate');
+    assert.ok(state.shellVisible, 'mobile shell was not visible');
+    assert.ok(state.railChips > 0, 'mobile rail chips were not rendered');
+    assert.ok(state.activeRailChip, 'mobile rail active chip was missing');
     assert.ok(state.currentCohortId, 'cohort was not selected');
     assert.ok(state.rawDataLen > 0, 'exam data was not loaded');
     assert.ok(
