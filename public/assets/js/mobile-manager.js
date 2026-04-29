@@ -10,8 +10,6 @@
         'student-details',
         'progress-analysis',
         'report-generator',
-        'teaching-warning-center',
-        'teaching-rectify-center',
         'analysis',
         'class-comparison'
     ];

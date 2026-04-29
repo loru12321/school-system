@@ -272,11 +272,6 @@
             /* removed closing bracket here because it attaches to next section */
         }
 
-        /* Teaching Overview */
-        #teaching-overview .module-desc-bar {
-            margin-bottom: 14px;
-        }
-
         .tm-overview-actions {
             display: flex;
             gap: 10px;
@@ -1043,9 +1038,6 @@
                 width: 100%;
             }
 
-            #teaching-overview .layout-grid {
-                grid-template-columns: 1fr;
-            }
         }
 
         /* 11. 消息提示 Toast */

@@ -1,11 +1,7 @@
 (() => {
     if (typeof window === 'undefined' || window.TeachingManagementModulesRuntime) return;
 
-    const MODULE_GROUPS = {
-        overview: ['teaching-overview'],
-        issues: ['teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center'],
-        versions: ['teaching-version-center']
-    };
+    const MODULE_GROUPS = {};
 
     function getGroupForModule(id) {
         const moduleId = String(id || '').trim();
@@ -25,7 +21,6 @@
         if (typeof originalSwitchTab === 'function') {
             window.switchTab = function patchedTeachingSwitchTab(id, ...rest) {
                 const moduleId = String(id || '');
-                if (moduleId.startsWith('teaching-')) markActiveGroup(moduleId);
                 return originalSwitchTab.call(this, id, ...rest);
             };
         }

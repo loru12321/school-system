@@ -23,11 +23,6 @@ const MODULES = [
     'report-generator',
     'freshman-simulator',
     'exam-arranger',
-    'teaching-overview',
-    'teaching-issue-board',
-    'teaching-warning-center',
-    'teaching-rectify-center',
-    'teaching-version-center',
     'student-overview',
     'student-details'
 ];

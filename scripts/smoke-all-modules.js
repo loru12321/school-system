@@ -32,11 +32,6 @@ const SWITCH_MODULE_IDS = [
     'app-download-center',
     'freshman-simulator',
     'exam-arranger',
-    'teaching-overview',
-    'teaching-issue-board',
-    'teaching-warning-center',
-    'teaching-rectify-center',
-    'teaching-version-center',
     'student-overview',
     'student-details'
 ];
@@ -678,36 +673,6 @@ async function runModuleDeepCheck(page, id) {
             };
         });
     }
-    if (id === 'teaching-overview') {
-        return page.evaluate(async () => {
-            if (typeof window.ensureTeachingManagementRuntimeLoaded === 'function') {
-                await Promise.resolve(window.ensureTeachingManagementRuntimeLoaded()).catch(() => null);
-            }
-            if (typeof window.renderTeachingOverview === 'function') {
-                await Promise.resolve(window.renderTeachingOverview()).catch(() => null);
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-            const checks = {
-                renderTeachingOverview: typeof window.renderTeachingOverview === 'function',
-                sectionReady: !!document.querySelector('#teaching-overview.analysis-workspace-management'),
-                heroReady: !!document.querySelector('#teaching-overview .analysis-hero'),
-                shellHeadReady: !!document.querySelector('#teaching-overview .analysis-shell-head'),
-                statusStripReady: document.querySelectorAll('#tm-status-strip .tm-stat-card-inner').length >= 4,
-                contextReady: !!document.querySelector('#tm-context-panel .analysis-section-head'),
-                flowReady: document.querySelectorAll('#teaching-overview .analysis-flow-step').length >= 3,
-                nextActionReady: !!document.querySelector('#tmNextAction .tm-next-card'),
-                quickEntryReady: document.querySelectorAll('#tmQuickEntry [data-target]').length >= 4,
-                cloudPanelReady: !!document.getElementById('tmCloudOpsList'),
-                quickActionsReady: !!document.getElementById('tmQuickSyncTeacherBtn')
-                    && !!document.getElementById('tmQuickOpenConsoleBtn')
-                    && !!document.getElementById('tmQuickExportBtn')
-            };
-            return {
-                ok: Object.values(checks).every(Boolean),
-                checks
-            };
-        });
-    }
     if (id === 'single-school-eval') {
         return page.evaluate(() => {
             const checks = {
@@ -743,123 +708,6 @@ async function runModuleDeepCheck(page, id) {
                 ok: Object.values(checks).every(Boolean),
                 checks,
                 heavyRenderDeferred: true
-            };
-        });
-    }
-    if (id === 'teaching-warning-center') {
-        return page.evaluate(async () => {
-            const refreshButton = document.getElementById('tmWarningCenterRefreshBtn');
-            const checks = {
-                sectionReady: !!document.querySelector('#teaching-warning-center.analysis-workspace-management'),
-                heroReady: !!document.querySelector('#teaching-warning-center .analysis-hero'),
-                shellHeadReady: !!document.querySelector('#teaching-warning-center .analysis-shell-head'),
-                tmRenderWarningCenter: typeof window.tmRenderWarningCenter === 'function',
-                tmRefreshCloudOps: typeof window.tmRefreshCloudOps === 'function',
-                tmCreateRectifyTaskFromWarning: typeof window.tmCreateRectifyTaskFromWarning === 'function',
-                tmIgnoreCloudWarning: typeof window.tmIgnoreCloudWarning === 'function',
-                refreshButton: !!refreshButton,
-                refreshBound: !!refreshButton && typeof refreshButton.onclick === 'function',
-                toolbarReady: !!document.getElementById('tmWarningLevelFilter')
-                    && !!document.getElementById('tmWarningStatusFilter')
-                    && !!document.getElementById('tmWarningTypeFilter'),
-                listReady: !!document.getElementById('tmWarningCenterList'),
-                summaryReady: document.querySelectorAll('#teaching-warning-center .tm-center-summary-grid > div').length >= 4,
-                flowReady: document.querySelectorAll('#teaching-warning-center .analysis-flow-step').length >= 3
-            };
-            return {
-                ok: Object.values(checks).every(Boolean),
-                checks
-            };
-        });
-    }
-    if (id === 'teaching-rectify-center') {
-        return page.evaluate(async () => {
-            const refreshButton = document.getElementById('tmRectifyCenterRefreshBtn');
-            const createButton = document.getElementById('tmRectifyCreateBtn');
-            const checks = {
-                sectionReady: !!document.querySelector('#teaching-rectify-center.analysis-workspace-management'),
-                heroReady: !!document.querySelector('#teaching-rectify-center .analysis-hero'),
-                shellHeadReady: !!document.querySelector('#teaching-rectify-center .analysis-shell-head'),
-                tmRenderRectifyCenter: typeof window.tmRenderRectifyCenter === 'function',
-                tmRefreshCloudOps: typeof window.tmRefreshCloudOps === 'function',
-                tmCreateManualRectifyTask: typeof window.tmCreateManualRectifyTask === 'function',
-                tmUpdateRectifyTaskStatus: typeof window.tmUpdateRectifyTaskStatus === 'function',
-                tmPromptRectifyProgress: typeof window.tmPromptRectifyProgress === 'function',
-                refreshButton: !!refreshButton,
-                refreshBound: !!refreshButton && typeof refreshButton.onclick === 'function',
-                createButton: !!createButton,
-                createBound: !!createButton && typeof createButton.onclick === 'function',
-                toolbarReady: !!document.getElementById('tmRectifyStatusFilter')
-                    && !!document.getElementById('tmRectifyPriorityFilter')
-                    && !!document.getElementById('tmRectifyOwnerFilter'),
-                listReady: !!document.getElementById('tmRectifyCenterList'),
-                summaryReady: document.querySelectorAll('#teaching-rectify-center .tm-center-summary-grid > div').length >= 4,
-                flowReady: document.querySelectorAll('#teaching-rectify-center .analysis-flow-step').length >= 3
-            };
-            return {
-                ok: Object.values(checks).every(Boolean),
-                checks
-            };
-        });
-    }
-    if (id === 'teaching-issue-board') {
-        return page.evaluate(async () => {
-            const refreshButton = document.getElementById('tmIssueBoardRefreshBtn');
-            const checks = {
-                sectionReady: !!document.querySelector('#teaching-issue-board.analysis-workspace-management'),
-                heroReady: !!document.querySelector('#teaching-issue-board .analysis-hero'),
-                shellHeadReady: !!document.querySelector('#teaching-issue-board .analysis-shell-head'),
-                tmRenderIssueBoard: typeof window.tmRenderIssueBoard === 'function',
-                refreshButton: !!refreshButton,
-                refreshBound: !!refreshButton && typeof refreshButton.onclick === 'function',
-                listReady: !!document.getElementById('tmIssueBoardList'),
-                summaryReady: document.querySelectorAll('#teaching-issue-board .tm-center-summary-grid > div').length >= 4,
-                flowReady: document.querySelectorAll('#teaching-issue-board .analysis-flow-step').length >= 3
-            };
-            return {
-                ok: Object.values(checks).every(Boolean),
-                checks
-            };
-        });
-    }
-    if (id === 'teaching-version-center') {
-        return page.evaluate(async () => {
-            const refreshButton = document.getElementById('tmVersionRefreshBtn');
-            const createButton = document.getElementById('tmVersionCreateBtn');
-            const stableButton = document.getElementById('tmVersionMarkLatestStableBtn');
-            const compareButton = document.getElementById('tmVersionCompareStableBtn');
-            const checks = {
-                sectionReady: !!document.querySelector('#teaching-version-center.analysis-workspace-version'),
-                heroReady: !!document.querySelector('#teaching-version-center .analysis-hero'),
-                shellHeadReady: !!document.querySelector('#teaching-version-center .analysis-shell-head'),
-                tmRefreshVersionCenter: typeof window.tmRefreshVersionCenter === 'function',
-                tmCreateCurrentVersionSnapshot: typeof window.tmCreateCurrentVersionSnapshot === 'function',
-                tmMarkLatestVersionStable: typeof window.tmMarkLatestVersionStable === 'function',
-                tmShowVersionDiff: typeof window.tmShowVersionDiff === 'function',
-                refreshButton: !!refreshButton,
-                refreshBound: !!refreshButton && typeof refreshButton.onclick === 'function',
-                createButton: !!createButton,
-                createBound: !!createButton && typeof createButton.onclick === 'function',
-                stableButton: !!stableButton,
-                stableBound: !!stableButton && typeof stableButton.onclick === 'function',
-                compareButton: !!compareButton,
-                compareBound: !!compareButton && typeof compareButton.onclick === 'function',
-                toolbarReady: !!document.getElementById('tmVersionSearchInput')
-                    && !!document.getElementById('tmVersionStableFilter')
-                    && !!document.getElementById('tmVersionSortOrder')
-                    && !!document.getElementById('tmVersionDiffOnlyBtn')
-                    && !!document.getElementById('tmVersionNormalDiffBtn'),
-                summaryReady: document.querySelectorAll('#teaching-version-center .tm-center-summary-grid > div').length >= 4,
-                metaReady: !!document.getElementById('tmVersionScopeMeta')
-                    && !!document.getElementById('tmVersionStableMeta'),
-                diffPanelReady: !!document.getElementById('tmVersionDiffPanel')
-                    && !!document.getElementById('tmVersionDiffEmpty'),
-                flowReady: document.querySelectorAll('#teaching-version-center .analysis-flow-step').length >= 3,
-                listReady: !!document.getElementById('tmVersionCenterList')
-            };
-            return {
-                ok: Object.values(checks).every(Boolean),
-                checks
             };
         });
     }

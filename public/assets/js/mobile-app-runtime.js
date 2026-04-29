@@ -17,8 +17,7 @@
         'teacher-analysis',
         'report-generator',
         'progress-analysis',
-        'analysis',
-        'teaching-warning-center'
+        'analysis'
     ];
     const RECENT_MODULE_STORAGE_KEY = 'apk-recent-modules-v1';
     const RECENT_MODULE_LIMIT = 8;

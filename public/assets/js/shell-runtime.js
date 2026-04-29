@@ -16,11 +16,10 @@
             color: '#b45309',
             icon: 'ti-trophy',
             eyebrow: 'Insight Deck',
-            summary: '先看总览、亮点、风险和关键位次，再拆细到指标与群体。',
+            summary: '先看总览、关键位次，再拆细到指标与群体。',
             items: [
                 { id: 'summary', icon: 'ti-report', text: '综合评价总览', hint: '先看全局排名、梯队分布和学校站位。' },
                 { id: 'analysis', icon: 'ti-chart-pie', text: '两率一分(横向)', hint: '从横向口径查看重点率、及格率和均分变化。' },
-                { id: 'macro-watch', icon: 'ti-alert-triangle', text: '预警与亮点看板', hint: '把风险点和高表现项目收进同一张看板。' },
                 { id: 'high-score', icon: 'ti-trophy', text: '高分段/尖子生', hint: '追踪尖子层和高分段的规模与稳定度。' },
                 { id: 'indicator', icon: 'ti-target', text: '指标生达标核算', hint: '快速核对指标生口径、边缘人数和达标压力。' },
                 { id: 'bottom3', icon: 'ti-arrow-bar-to-down', text: '低分群体/后1/3', hint: '定位底部群体波动，提前准备补弱动作。' }
@@ -42,13 +41,8 @@
             color: '#dc2626',
             icon: 'ti-school',
             eyebrow: 'Studio Ops',
-            summary: '把教学问题、预警、整改和版本归档统一收进一条执行看板。',
+            summary: '聚焦教师画像、绩效公平和班级诊断，保留真正高频的教学分析入口。',
             items: [
-                { id: 'teaching-overview', icon: 'ti-layout-dashboard', text: '教学总览', hint: '像工作室总览页一样汇总核心状态和待办动作。' },
-                { id: 'teaching-issue-board', icon: 'ti-clipboard-list', text: '教学问题清单', hint: '集中收口课堂、成绩和流程中的异常问题。' },
-                { id: 'teaching-warning-center', icon: 'ti-alert-triangle', text: '异常预警中心', hint: '按风险等级查看当前最值得优先处理的提醒。' },
-                { id: 'teaching-rectify-center', icon: 'ti-list-check', text: '整改任务列表', hint: '把问题转成可追踪、可验收的整改任务。' },
-                { id: 'teaching-version-center', icon: 'ti-stack-2', text: '版本归档中心', hint: '沉淀口径版本、历史决策与回滚节点。' },
                 { id: 'teacher-analysis', icon: 'ti-school', text: '教师教学质量画像', hint: '从教师视角查看贡献、波动和结构性问题。' },
                 { id: 'single-school-eval', icon: 'ti-scale', text: '绩效公平考核模型', hint: '结合口径和上下文做公平性核算。' },
                 { id: 'class-comparison', icon: 'ti-layout-columns', text: '班级横向对比', hint: '横向比较班级表现，快速识别差异来源。' },

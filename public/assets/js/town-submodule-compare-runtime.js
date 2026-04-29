@@ -44,7 +44,6 @@ async function selectCloudTownSubmoduleCompareRows(options = {}) {
 const TOWN_SUBMODULE_META = {
     summary: '综合评价总榜',
     analysis: '两率一分(横向)',
-    'macro-watch': '预警与亮点看板',
     'high-score': '高分段/尖子生',
     indicator: '指标生达标核算',
     bottom3: '低分率/后1/3核算'
@@ -158,13 +157,6 @@ function getTownSubmoduleSeries(submoduleId, selectedByExam, summaryByExam, scho
             headers: ['期次', '人数', '总分均分', '优秀率', '及格率', '校际均分排位'],
             rows: series.map(s => [s.examId, s.count, s.avg.toFixed(2), `${(s.excRate * 100).toFixed(1)}%`, `${(s.passRate * 100).toFixed(1)}%`, s.rankAvg]),
             note: '口径：综合评价总榜 / 两率一分'
-        };
-    }
-    if (submoduleId === 'macro-watch') {
-        return {
-            headers: ['期次', '预警等级', '总分均分', '优秀率', '及格率', '校际均分排位'],
-            rows: series.map(s => [s.examId, s.riskLevel, s.avg.toFixed(2), `${(s.excRate * 100).toFixed(1)}%`, `${(s.passRate * 100).toFixed(1)}%`, s.rankAvg]),
-            note: '口径：预警看板核心阈值'
         };
     }
     if (submoduleId === 'high-score') {

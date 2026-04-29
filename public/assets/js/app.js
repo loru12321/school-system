@@ -9352,8 +9352,8 @@ if (!window.__BASE_CONFIG_GUARD_CLOUD_EVENTS__) {
 function guardBeforeSwitch(id) {
     if (id === 'starter-hub' || id === 'upload') return true;
     const needGuard = [
-        'summary', 'analysis', 'county-analysis', 'macro-watch', 'high-score', 'indicator', 'bottom3',
-        'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center', 'teacher-analysis', 'single-school-eval', 'class-comparison', 'class-diagnosis',
+        'summary', 'analysis', 'county-analysis', 'high-score', 'indicator', 'bottom3',
+        'teacher-analysis', 'single-school-eval', 'class-comparison', 'class-diagnosis',
         'student-overview', 'student-details', 'subject-balance', 'marginal-push', 'progress-analysis', 'cohort-growth',
         'potential-analysis', 'segment-analysis', 'correlation-analysis', 'report-generator'
     ];
@@ -9665,6 +9665,18 @@ function switchTab(id) {
     if (id === 'school-internal-grades') {
         console.warn('school-internal-grades has been removed; redirecting to exam-arranger');
         id = 'exam-arranger';
+    }
+    const removedModuleRedirects = {
+        'macro-watch': 'summary',
+        'teaching-overview': 'teacher-analysis',
+        'teaching-issue-board': 'teacher-analysis',
+        'teaching-warning-center': 'teacher-analysis',
+        'teaching-rectify-center': 'teacher-analysis',
+        'teaching-version-center': 'teacher-analysis'
+    };
+    if (removedModuleRedirects[id]) {
+        console.warn(`${id} has been removed; redirecting to ${removedModuleRedirects[id]}`);
+        id = removedModuleRedirects[id];
     }
     if (window.DEBUG_MODULE_SWITCH) console.debug(`🔄 切换模块: ${id}`);
     if (!canAccessModule(id)) {
@@ -10745,53 +10757,6 @@ function renderTables() {
         return;
     }
 
-    // --- 📊 新增：数据统计看板逻辑 开始 ---
-    // 如果数据存在，且页面上有 KPI 容器 (我们可以动态插入一个)
-    if (townshipSchools.length > 0) {
-        // 计算全镇数据
-        const totalStudents = townshipRows.length;
-        const totalSchools = townshipSchools.length;
-        const allScores = townshipRows.map(s => s.total).filter(v => typeof v === 'number');
-        const globalAvg = (allScores.reduce((a, b) => a + b, 0) / totalStudents).toFixed(1);
-        const maxScore = Math.max(...allScores);
-
-        // 在看板模块中渲染KPI
-        let dashboard = document.getElementById('macro-dashboard');
-        if (!dashboard) {
-            dashboard = document.createElement('div');
-            dashboard.id = 'macro-dashboard';
-            dashboard.className = 'fb-dashboard';
-            dashboard.style.marginBottom = '25px';
-            const watchSection = document.getElementById('macro-watch');
-            if (watchSection) watchSection.appendChild(dashboard);
-        }
-
-        // 渲染卡片内容
-        dashboard.innerHTML = `
-                <div class="fb-card">
-                    <div class="fb-lbl">参考总人数</div>
-                    <div class="fb-val text-blue">${totalStudents}</div>
-                    <div class="fb-lbl">覆盖 ${totalSchools} 所学校</div>
-                </div>
-                <div class="fb-card">
-                    <div class="fb-lbl">全镇平均分</div>
-                    <div class="fb-val text-green">${globalAvg}</div>
-                    <div class="fb-lbl">总分基准线</div>
-                </div>
-                <div class="fb-card">
-                    <div class="fb-lbl">最高分 (状元)</div>
-                    <div class="fb-val text-orange">${maxScore}</div>
-                    <div class="fb-lbl">分差 ${(maxScore - Math.min(...allScores))} 分</div>
-                </div>
-                <div class="fb-card">
-                    <div class="fb-lbl">数据状态</div>
-                    <div class="fb-val" style="font-size:18px; color:#64748b; margin-top:5px;">${CONFIG.name}</div>
-                    <div class="fb-lbl">已剔除后 ${(CONFIG.excRate * 100)}%</div>
-                </div>
-            `;
-    }
-    // --- 📊 新增：数据统计看板逻辑 结束 ---
-
     const theadTotal = document.querySelector('#tb-total thead tr');
 
     // 1. 获取所有学校列表 (移除任何排序过滤，先拿原始数据)
@@ -10899,7 +10864,6 @@ function renderTables() {
             </tr>`;
     });
     tbBottom.innerHTML = htmlBottom;
-    renderTrafficLightDashboard();
     refreshIndicatorResults(true);
 }
 
@@ -10908,6 +10872,7 @@ function renderTrafficLightDashboard() {
     const listRed = document.getElementById('list-red');
     const listYellow = document.getElementById('list-yellow');
     const listGreen = document.getElementById('list-green');
+    if (!container || !listRed || !listYellow || !listGreen) return;
     const hasTrafficScopeHelper = typeof listAvailableSchoolsForCompare === 'function';
     const townshipSchoolNames = hasTrafficScopeHelper
         ? listAvailableSchoolsForCompare()
@@ -18776,11 +18741,6 @@ function doSpotlightSearch() {
         { name: "新生分班", id: "freshman-simulator" },
         { name: "考场编排", id: "exam-arranger" },
         { name: "座位微调", id: "seat-adjustment" },
-        { name: "教学总览", id: "teaching-overview" },
-        { name: "教学问题清单", id: "teaching-issue-board" },
-        { name: "异常预警中心", id: "teaching-warning-center" },
-        { name: "整改任务列表", id: "teaching-rectify-center" },
-        { name: "版本归档中心", id: "teaching-version-center" },
         { name: "教师分析", id: "teacher-analysis" },
         { name: "进退步追踪", id: "progress-analysis" },
         { name: "两率一分(宏观)", id: "analysis" },

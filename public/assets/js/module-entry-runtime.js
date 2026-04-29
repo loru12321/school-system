@@ -1,13 +1,7 @@
 (() => {
     if (typeof window === 'undefined' || window.__MODULE_ENTRY_RUNTIME_PATCHED__) return;
 
-    const TEACHING_MANAGEMENT_MODULE_IDS = new Set([
-        'teaching-overview',
-        'teaching-issue-board',
-        'teaching-warning-center',
-        'teaching-rectify-center',
-        'teaching-version-center'
-    ]);
+    const TEACHING_MANAGEMENT_MODULE_IDS = new Set([]);
     const TEACHER_INSIGHT_MODULE_IDS = new Set([
         'teacher-analysis',
         'cohort-growth'
@@ -49,36 +43,7 @@
         return Promise.all(loaders).then(() => undefined);
     }
 
-    function activateTeachingManagementModule(id) {
-        if (id === 'teaching-overview') {
-            renderTeachingOverview();
-            tmRefreshVersionCenter(false);
-            return true;
-        }
-        if (id === 'teaching-issue-board') {
-            bindTeachingOverviewActions();
-            tmRenderIssueBoard();
-            tmRefreshCloudOps(false);
-            return true;
-        }
-        if (id === 'teaching-warning-center') {
-            bindTeachingOverviewActions();
-            tmRenderWarningCenter();
-            tmRefreshCloudOps(false);
-            return true;
-        }
-        if (id === 'teaching-rectify-center') {
-            bindTeachingOverviewActions();
-            tmRenderRectifyCenter();
-            tmRefreshCloudOps(false);
-            return true;
-        }
-        if (id === 'teaching-version-center') {
-            bindTeachingOverviewActions();
-            tmRenderVersionCenter();
-            tmRefreshVersionCenter(false);
-            return true;
-        }
+    function activateTeachingManagementModule() {
         return false;
     }
 
@@ -242,6 +207,7 @@
         updateStudentSchoolSelect();
         if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
         if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
+        if (typeof window.renderStudentDetails === 'function') window.renderStudentDetails(true);
 
         const triggerRender = () => {
             const section = document.getElementById('student-details');
@@ -713,7 +679,6 @@
             scheduleMacroTablesRender('analysis', 'analysis-tables');
         }
         if (TEACHING_MANAGEMENT_MODULE_IDS.has(id)) return initTeachingManagementEntry(id);
-        if (id === 'macro-watch') scheduleMacroTablesRender('macro-watch', 'macro-watch-tables');
         if (id === 'bottom3') scheduleMacroTablesRender('bottom3', 'bottom3-tables');
         if (id === 'indicator' && typeof refreshIndicatorResults === 'function') refreshIndicatorResults(true);
         if (id === 'county-analysis' || id === 'county-teacher-portrait' || id === 'county-school-horizontal') {

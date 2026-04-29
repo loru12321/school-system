@@ -139,7 +139,7 @@ var SYSTEM_RUNTIME_SKILLS = {
     'teaching-management': {
         mode: 'demand',
         warmup: 'full',
-        triggers: ['teaching-overview', 'student-overview', 'teaching-management-modules'],
+        triggers: ['student-overview'],
         entries: [
             { key: 'teaching-management', src: './assets/js/teaching-management-runtime.js' }
         ]
