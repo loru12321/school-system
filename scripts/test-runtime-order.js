@@ -151,6 +151,8 @@ const teachingManagementRuntime = fs.readFileSync(teachingManagementRuntimePath,
 const teachingManagementOverviewRuntime = fs.readFileSync(teachingManagementOverviewRuntimePath, 'utf8');
 const studentOverviewRuntime = fs.readFileSync(studentOverviewRuntimePath, 'utf8');
 const teacherAnalysisCoreRuntime = fs.readFileSync(teacherAnalysisCoreRuntimePath, 'utf8');
+const popperVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/popperjs/popper.min.js'), 'utf8');
+const tippyVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/tippyjs/tippy.umd.min.js'), 'utf8');
 const appSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
 const initSupabaseMatches = bootRuntime.match(/window\.initSupabase\s*=\s*function/g) || [];
 const supabaseUrlAssignments = bootRuntime.match(/window\.SUPABASE_URL\s*=/g) || [];
@@ -429,6 +431,10 @@ assert.ok(bootRuntime.includes(chartVendorRef), 'boot-runtime.js should referenc
 assert.ok(bootRuntime.includes(xlsxVendorRef), 'boot-runtime.js should reference xlsx.full.min.js for lazy loading');
 assert.ok(bootRuntime.includes(jspdfVendorRef), 'boot-runtime.js should reference jspdf.umd.min.js for lazy loading');
 assert.ok(bootRuntime.includes(html2canvasVendorRef), 'boot-runtime.js should reference html2canvas.min.js for lazy loading');
+assert.ok(!fs.existsSync(path.resolve(__dirname, '../public/assets/vendor/popperjs/popper.min.js.map')), 'production Popper sourcemap should not be shipped');
+assert.ok(!fs.existsSync(path.resolve(__dirname, '../public/assets/vendor/tippyjs/tippy.umd.min.js.map')), 'production Tippy sourcemap should not be shipped');
+assert.ok(!popperVendorSource.includes('sourceMappingURL=popper.min.js.map'), 'Popper vendor should not request a removed sourcemap');
+assert.ok(!tippyVendorSource.includes('sourceMappingURL=tippy.umd.min.js.map'), 'Tippy vendor should not request a removed sourcemap');
 assert.ok(bootRuntime.includes("window.ensureAlasqlVendorLoaded = function ()"), 'boot-runtime.js should expose ensureAlasqlVendorLoaded');
 assert.ok(bootRuntime.includes("window.ensureCryptoJsVendorLoaded = function ()"), 'boot-runtime.js should expose ensureCryptoJsVendorLoaded');
 assert.ok(bootRuntime.includes("window.ensureSweetAlertVendorLoaded = function ()"), 'boot-runtime.js should expose ensureSweetAlertVendorLoaded');
