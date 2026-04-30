@@ -15499,11 +15499,11 @@ function updateMpSchoolSelect() {
     if (!sel) return;
     const old = sel.value;
     const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
-    sel.innerHTML = '<option value="">--请选择学校--</option>'; schoolList.forEach(s => sel.innerHTML += `<option value="${s}">${s}</option>`);
+    sel.innerHTML = `<option value="">--请选择学校--</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
     if (old && SCHOOLS[old]) sel.value = old;
     updateMpClassSelect();
     const subSel = document.getElementById('mpSubjectSelect'); const oldSub = subSel.value;
-    subSel.innerHTML = '<option value="ALL">全部学科</option>'; SUBJECTS.forEach(s => subSel.innerHTML += `<option value="${s}">${s}</option>`);
+    subSel.innerHTML = `<option value="ALL">全部学科</option>${SUBJECTS.map(s => `<option value="${s}">${s}</option>`).join('')}`;
     if (oldSub) subSel.value = oldSub;
 }
 
@@ -15512,8 +15512,8 @@ function updateMpClassSelect() {
     const clsSel = document.getElementById('mpClassSelect');
     if (!schEl || !clsSel) return;
     const sch = schEl.value;
-    clsSel.innerHTML = '<option value="">全部班级</option>';
-    if (sch && SCHOOLS[sch]) { const classes = [...new Set(SCHOOLS[sch].students.map(s => s.class))].sort(); classes.forEach(c => clsSel.innerHTML += `<option value="${c}">${c}</option>`); }
+    const classes = (sch && SCHOOLS[sch]) ? [...new Set(SCHOOLS[sch].students.map(s => s.class))].sort() : [];
+    clsSel.innerHTML = `<option value="">全部班级</option>${classes.map(c => `<option value="${c}">${c}</option>`).join('')}`;
 }
 
 function generateMarginalTickets() {
@@ -15536,13 +15536,14 @@ function generateMarginalTickets() {
         });
     });
     let hasData = false;
+    const marginalTicketRows = [];
     Object.keys(taskMap).sort().forEach(className => {
         Object.keys(taskMap[className]).forEach(subject => {
             const list = taskMap[className][subject]; if (list.length === 0) return; hasData = true;
             list.sort((a, b) => a.diff - b.diff);
             list.forEach(item => { MP_DATA_CACHE.push({ school: sch, class: className, subject: subject, name: item.name, score: item.score, category: item.category, target: item.target.toFixed(1), diff: item.diff }); });
             const teacherKey = `${className}_${subject}`; const teacherName = TEACHER_MAP[teacherKey] || "科任老师";
-            let rows = ''; list.forEach(item => {
+            const rows = list.map(item => {
                 let gapClass = 'gap-green'; if (item.diff > gap / 2) gapClass = 'gap-orange'; if (item.diff > gap * 0.8) gapClass = 'gap-red';
                 let catStyle = item.category === '拟优' ? 'color:var(--primary);font-weight:bold;' : 'color:#b45309;';
                 let warningTag = '';
@@ -15550,12 +15551,14 @@ function generateMarginalTickets() {
                 if (ROLLER_COASTER_STUDENTS.includes(uid)) {
                     warningTag = '<br><span style="background:#fee2e2; color:#b91c1c; font-size:10px; padding:1px 3px; border-radius:3px;">⚠️ 需心理干预</span>';
                 }
-                rows += `<tr><td style="text-align:left; font-weight:bold;">${item.name}${warningTag}</td><td>${item.score}</td><td style="${catStyle}">${item.category}</td><td><span class="tag-gap ${gapClass}">差 ${item.diff}分</span></td><td style="color:#999;">${item.rank}</td><td><div class="chk-box"></div></td></tr>`;
-            });
-            container.innerHTML += `<div class="task-ticket"><div class="ticket-header"><div><div class="ticket-title">${subject} · ${className}</div><div class="ticket-sub">教师: ${teacherName} | 目标人数: ${list.length}人</div></div><div style="text-align:right;"><i class="ti ti-clipboard-check" style="font-size:24px; color:#cbd5e1;"></i></div></div><div class="ticket-body"><table class="ticket-table"><thead><tr><th style="text-align:left;">学生姓名</th><th>当前分</th><th>目标</th><th>差距</th><th>班排</th><th>辅导</th></tr></thead><tbody>${rows}</tbody></table><div style="padding:8px; font-size:11px; color:#999; border-top:1px dashed #eee; text-align:center;">🎯 目标线参考: 优秀≥${THRESHOLDS[subject].exc.toFixed(1)} / 及格≥${THRESHOLDS[subject].pass.toFixed(1)}</div></div></div>`;
+                return `<tr><td style="text-align:left; font-weight:bold;">${item.name}${warningTag}</td><td>${item.score}</td><td style="${catStyle}">${item.category}</td><td><span class="tag-gap ${gapClass}">差 ${item.diff}分</span></td><td style="color:#999;">${item.rank}</td><td><div class="chk-box"></div></td></tr>`;
+            }).join('');
+            marginalTicketRows.push(`<div class="task-ticket"><div class="ticket-header"><div><div class="ticket-title">${subject} · ${className}</div><div class="ticket-sub">教师: ${teacherName} | 目标人数: ${list.length}人</div></div><div style="text-align:right;"><i class="ti ti-clipboard-check" style="font-size:24px; color:#cbd5e1;"></i></div></div><div class="ticket-body"><table class="ticket-table"><thead><tr><th style="text-align:left;">学生姓名</th><th>当前分</th><th>目标</th><th>差距</th><th>班排</th><th>辅导</th></tr></thead><tbody>${rows}</tbody></table><div style="padding:8px; font-size:11px; color:#999; border-top:1px dashed #eee; text-align:center;">🎯 目标线参考: 优秀≥${THRESHOLDS[subject].exc.toFixed(1)} / 及格≥${THRESHOLDS[subject].pass.toFixed(1)}</div></div></div>`);
         });
     });
-    if (!hasData) container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:50px;"><p>🔍 在当前设定范围内（${gap}分）未找到符合条件的临界生。</p><p style="color:#999;">请尝试增大“临界分值”或切换目标类型。</p></div>`;
+    container.innerHTML = hasData
+        ? marginalTicketRows.join('')
+        : `<div style="grid-column:1/-1; text-align:center; padding:50px;"><p>🔍 在当前设定范围内（${gap}分）未找到符合条件的临界生。</p><p style="color:#999;">请尝试增大“临界分值”或切换目标类型。</p></div>`;
 }
 
 function printMarginalTickets() { if (document.getElementById('mp-tickets-container').children.length === 0) return alert("请先生成任务单"); window.print(); }

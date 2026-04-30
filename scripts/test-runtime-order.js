@@ -500,6 +500,12 @@ assert.ok(appSource.includes("greenTrafficRows.join('')"), 'traffic light analys
 assert.ok(!appSource.includes('listRed.innerHTML +='), 'traffic light analysis should avoid per-row red DOM writes');
 assert.ok(!appSource.includes('listYellow.innerHTML +='), 'traffic light analysis should avoid per-row yellow DOM writes');
 assert.ok(!appSource.includes('listGreen.innerHTML +='), 'traffic light analysis should avoid per-row green DOM writes');
+assert.ok(appSource.includes('const marginalTicketRows = [];'), 'marginal ticket generation should collect cards off-DOM');
+assert.ok(appSource.includes("container.innerHTML = hasData\n        ? marginalTicketRows.join('')"), 'marginal ticket generation should write cards to the DOM once');
+assert.ok(!appSource.includes('container.innerHTML +='), 'marginal ticket generation should avoid per-card DOM writes');
+assert.ok(appSource.includes("schoolList.map(s => `<option value=\"${s}\">${s}</option>`).join('')"), 'marginal push school selector should batch option rendering');
+assert.ok(appSource.includes("SUBJECTS.map(s => `<option value=\"${s}\">${s}</option>`).join('')"), 'marginal push subject selector should batch option rendering');
+assert.ok(appSource.includes("classes.map(c => `<option value=\"${c}\">${c}</option>`).join('')"), 'marginal push class selector should batch option rendering');
 assert.ok(teacherCompareResultRuntime.includes('function scheduleTeacherMultiPeriodAutoRender'), 'teacher multi-period compare should recalculate automatically after selector changes');
 assert.ok(teacherCompareResultRuntime.includes('bindTeacherCompareAutoControls();'), 'teacher compare runtime should bind selector auto-refresh controls');
 assert.ok(progressAnalysisRuntime.includes('function filterProgressCompareRowsToTownshipScope'), 'progress comparison should have a township-scope filter for town ranks');
