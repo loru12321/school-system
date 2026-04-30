@@ -206,33 +206,14 @@
         }
     });
 
-    async function talkToData() {
+    function talkToData() {
         const inputEl = document.getElementById('dm-nlq-input');
         const statusEl = document.getElementById('dm-nlq-status');
         if (!inputEl || !statusEl) return;
         const question = inputEl.value.trim();
         if (!question) return alert('请输入查询需求');
-        statusEl.innerText = 'AI 解析中...';
-
-        try {
-            const schema = buildNLQSchema();
-            const prompt = buildNLQPrompt(question, schema);
-            const aiText = await callUnifiedAI(prompt);
-            const sql = extractSQLFromAI(aiText);
-
-            if (!isSafeSQL(sql)) {
-                statusEl.innerText = '⚠️ 生成 SQL 不安全或不完整，请修改后再执行';
-                return;
-            }
-
-            document.getElementById('dm-sql-input').value = sql;
-            await DM.runSQL();
-            statusEl.innerText = '✅ 已生成 SQL 并执行';
-        } catch (e) {
-            console.error(e);
-            statusEl.innerText = '❌ 解析失败，请重试';
-            if (window.UI) UI.toast('AI 解析失败，请重试', 'error');
-        }
+        statusEl.innerText = '自然语言问数已下线，请在 SQL 编辑框中直接输入 SELECT 查询。';
+        if (window.UI) UI.toast('请直接使用 SQL 查询', 'info');
     }
 
     function buildNLQSchema() {
@@ -248,21 +229,6 @@
         };
     }
 
-    function buildNLQPrompt(question, schema) {
-        return `你是校务数据分析师。请把用户的自然语言查询转换为可执行的 AlaSQL SELECT 语句。要求：1) 只允许 SELECT 查询；不要使用 INSERT/UPDATE/DELETE/CREATE/DROP。2) 表只有 students 和 teachers。3) 优先输出明确字段，不要 SELECT *。4) 输出仅包含 SQL，不要解释，不要 Markdown。\n【表结构】\n${JSON.stringify(schema)}\n【用户问题】\n${question}\n`;
-    }
-
-    function extractSQLFromAI(text) {
-        if (!text) return '';
-        let sql = text.trim();
-        const codeMatch = sql.match(/```(?:sql)?\s*([\s\S]*?)```/i);
-        if (codeMatch) sql = codeMatch[1].trim();
-        const selectIdx = sql.toUpperCase().indexOf('SELECT');
-        if (selectIdx > 0) sql = sql.slice(selectIdx);
-        sql = sql.replace(/;\s*$/g, '').trim();
-        return sql;
-    }
-
     function isSafeSQL(sql) {
         if (!sql) return false;
         const s = sql.trim();
@@ -273,8 +239,6 @@
 
     window.talkToData = talkToData;
     window.buildNLQSchema = buildNLQSchema;
-    window.buildNLQPrompt = buildNLQPrompt;
-    window.extractSQLFromAI = extractSQLFromAI;
     window.isSafeSQL = isSafeSQL;
     window.__DATA_MANAGER_SQL_PATCHED__ = true;
 })();

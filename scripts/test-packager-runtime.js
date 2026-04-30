@@ -50,7 +50,6 @@ function createBaseRoot(overrides = {}) {
         TEACHER_SCHOOL_MAP: { Alice: 'Test School' },
         MY_SCHOOL: 'Test School',
         CONFIG: { version: 1 },
-        LLM_CONFIG: { model: 'x' },
         Auth: { db: { parents: [{ name: 'P1' }], teachers: [] } },
         UI: {
             loading(show, text) {

@@ -49,7 +49,6 @@ const shellPolishRuntimePath = path.resolve(__dirname, '../public/assets/js/shel
 const moduleEntryRuntimePath = path.resolve(__dirname, '../public/assets/js/module-entry-runtime.js');
 const rankingDataServiceRuntimePath = path.resolve(__dirname, '../public/assets/js/ranking-data-service-runtime.js');
 const studentJumpRuntimePath = path.resolve(__dirname, '../public/assets/js/student-jump-runtime.js');
-const aiHubRuntimePath = path.resolve(__dirname, '../public/assets/js/ai-hub-runtime.js');
 const schoolProfileRuntimePath = path.resolve(__dirname, '../public/assets/js/school-profile-runtime.js');
 const teachingManagementRuntimePath = path.resolve(__dirname, '../public/assets/js/teaching-management-runtime.js');
 const teacherAnalysisCoreRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-analysis-core-runtime.js');
@@ -60,7 +59,6 @@ const dataManagerSqlRuntimePath = path.resolve(__dirname, '../public/assets/js/d
 const reportRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/report-render-runtime.js');
 const reportChartRuntimePath = path.resolve(__dirname, '../public/assets/js/report-chart-runtime.js');
 const reportExportRuntimePath = path.resolve(__dirname, '../public/assets/js/report-export-runtime.js');
-const reportAiRuntimePath = path.resolve(__dirname, '../public/assets/js/report-ai-runtime.js');
 const studentCompareGenerateRuntimePath = path.resolve(__dirname, '../public/assets/js/student-compare-generate-runtime.js');
 const studentCompareResultRuntimePath = path.resolve(__dirname, '../public/assets/js/student-compare-result-runtime.js');
 const studentCompareCloudRuntimePath = path.resolve(__dirname, '../public/assets/js/student-compare-cloud-runtime.js');
@@ -115,7 +113,6 @@ assert.ok(fs.existsSync(shellPolishRuntimePath), 'shell-polish-runtime.js should
 assert.ok(fs.existsSync(moduleEntryRuntimePath), 'module-entry-runtime.js should exist');
 assert.ok(fs.existsSync(rankingDataServiceRuntimePath), 'ranking-data-service-runtime.js should exist');
 assert.ok(fs.existsSync(studentJumpRuntimePath), 'student-jump-runtime.js should exist');
-assert.ok(fs.existsSync(aiHubRuntimePath), 'ai-hub-runtime.js should exist');
 assert.ok(fs.existsSync(schoolProfileRuntimePath), 'school-profile-runtime.js should exist');
 assert.ok(fs.existsSync(teachingManagementRuntimePath), 'teaching-management-runtime.js should exist');
 assert.ok(fs.existsSync(teacherAnalysisCoreRuntimePath), 'teacher-analysis-core-runtime.js should exist');
@@ -126,7 +123,6 @@ assert.ok(fs.existsSync(dataManagerSqlRuntimePath), 'data-manager-sql.js should 
 assert.ok(fs.existsSync(reportRenderRuntimePath), 'report-render-runtime.js should exist');
 assert.ok(fs.existsSync(reportChartRuntimePath), 'report-chart-runtime.js should exist');
 assert.ok(fs.existsSync(reportExportRuntimePath), 'report-export-runtime.js should exist');
-assert.ok(fs.existsSync(reportAiRuntimePath), 'report-ai-runtime.js should exist');
 assert.ok(fs.existsSync(studentCompareGenerateRuntimePath), 'student-compare-generate-runtime.js should exist');
 assert.ok(fs.existsSync(studentCompareResultRuntimePath), 'student-compare-result-runtime.js should exist');
 assert.ok(fs.existsSync(studentCompareCloudRuntimePath), 'student-compare-cloud-runtime.js should exist');
@@ -145,7 +141,6 @@ const progressAnalysisRuntime = fs.readFileSync(progressAnalysisRuntimePath, 'ut
 const teacherStateRuntime = fs.readFileSync(teacherRuntimePath, 'utf8');
 const teachingManagementRuntime = fs.readFileSync(teachingManagementRuntimePath, 'utf8');
 const teacherAnalysisCoreRuntime = fs.readFileSync(teacherAnalysisCoreRuntimePath, 'utf8');
-const reportAiRuntime = fs.readFileSync(reportAiRuntimePath, 'utf8');
 const appSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
 const initSupabaseMatches = bootRuntime.match(/window\.initSupabase\s*=\s*function/g) || [];
 const supabaseUrlAssignments = bootRuntime.match(/window\.SUPABASE_URL\s*=/g) || [];
@@ -206,7 +201,6 @@ const appRef = './assets/js/app.js';
 const accountAdminRef = './assets/js/account-admin-runtime.js';
 const historyCompareRef = './assets/js/history-compare-runtime.js';
 const perfMobileRef = './assets/js/perf-mobile-runtime.js';
-const aiHubRef = './assets/js/ai-hub-runtime.js';
 const schoolProfileRef = './assets/js/school-profile-runtime.js';
 const teachingManagementRef = './assets/js/teaching-management-runtime.js';
 const mobileManagerRef = './assets/js/mobile-manager.js';
@@ -214,7 +208,6 @@ const dataManagerSqlRef = './assets/js/data-manager-sql.js';
 const reportRenderRef = './assets/js/report-render-runtime.js';
 const reportChartRef = './assets/js/report-chart-runtime.js';
 const reportExportRef = './assets/js/report-export-runtime.js';
-const reportAiRef = './assets/js/report-ai-runtime.js';
 const studentCompareGenerateRef = './assets/js/student-compare-generate-runtime.js';
 const studentCompareResultRef = './assets/js/student-compare-result-runtime.js';
 const studentCompareCloudRef = './assets/js/student-compare-cloud-runtime.js';
@@ -393,18 +386,15 @@ assert.ok(bootRuntime.includes(teacherAnalysisMainRef), 'boot-runtime.js should 
 assert.ok(bootRuntime.includes(teacherAnalysisCoreRef), 'boot-runtime.js should reference teacher-analysis-core-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(teacherAnalysisUiRef), 'boot-runtime.js should reference teacher-analysis-ui-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(teacherAnalysisBridgeRef), 'boot-runtime.js should reference teacher-analysis-bridge-runtime.js for lazy loading');
-assert.ok(bootRuntime.includes(aiHubRef), 'boot-runtime.js should reference ai-hub-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(schoolProfileRef), 'boot-runtime.js should reference school-profile-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(teachingManagementRef), 'boot-runtime.js should reference teaching-management-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(reportChartRef), 'boot-runtime.js should reference report-chart-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(reportExportRef), 'boot-runtime.js should reference report-export-runtime.js for lazy loading');
-assert.ok(bootRuntime.includes(reportAiRef), 'boot-runtime.js should reference report-ai-runtime.js for lazy loading');
-assert.ok(reportAiRuntime.includes('function buildLocalQualityDiagnosis'), 'AI macro report should have a local diagnosis fallback');
-assert.ok(reportAiRuntime.includes("sourceText.includes('请求失败')"), 'AI macro report should not parse failed empty responses as JSON');
-assert.ok(reportAiRuntime.includes('function renderQualityDiagnosisReport'), 'AI macro report should render parsed and fallback diagnosis through one safe renderer');
-assert.ok(reportAiRuntime.includes('function exportReportAsHtmlWord'), 'Word export should fall back when the docx runtime is unavailable');
-assert.ok(reportAiRuntime.includes('if (!window.docx)'), 'Word export should not require a global docx variable');
-assert.ok(reportAiRuntime.includes('function downloadReportBlob'), 'Word export should not depend only on saveAs');
+assert.ok(!indexHtml.includes('id="ai-analysis"'), 'index.html should not include the removed analysis module');
+assert.ok(!indexHtml.includes('lazy-section-template-ai-analysis'), 'index.html should not include the removed analysis template');
+assert.ok(!bootRuntime.includes('ai-hub-runtime.js'), 'boot-runtime.js should not reference removed hub runtime');
+assert.ok(!bootRuntime.includes('report-ai-runtime.js'), 'boot-runtime.js should not reference removed report runtime');
+assert.ok(!shellRuntime.includes('AI分析'), 'shell navigation should not include removed analysis category');
 assert.ok(bootRuntime.includes(cryptoJsVendorRef), 'boot-runtime.js should reference crypto-js.min.js for lazy loading');
 assert.ok(bootRuntime.includes(townSubmoduleCompareRef), 'boot-runtime.js should reference town-submodule-compare-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(alasqlVendorRef), 'boot-runtime.js should reference alasql.min.js for lazy loading');
@@ -641,7 +631,6 @@ assert.ok(indexHtml.includes(tablerIconsRef), 'index.html should load local tabl
     reportRenderRef,
     reportChartRef,
     reportExportRef,
-    reportAiRef,
     teacherAnalysisCoreRef,
     teacherAnalysisUiRef,
     teacherAnalysisBridgeRef,

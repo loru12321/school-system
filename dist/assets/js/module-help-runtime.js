@@ -30,16 +30,11 @@
                    * 注：9年级模式下，"综合"列不计入政治科目，但表格中仍会列出。`},"student-diag":{title:"🔎 学情深度诊断·原理说明",fit:"用于<strong>个人层面诊断</strong>与精准提分。",when:"期中/期末后需要制定个性化提升方案时使用。",use:"寻找提分点。",calc:`<strong>1. 临界生</strong>：距优生线/及格线差 5 分以内的学生。<br>
                    <strong>2. 偏科挖掘</strong>：总分排名靠前，但单科排名严重滞后的学生。<br>
                    <strong>3. 优劣势透视</strong>：基于 Z-Score (标准分) 判断学科强弱。`},tools:{title:"🛠️ 教务考务工具·算法说明",fit:"用于<strong>教务考务流程化</strong>与日常工作降本。",when:"开学初、考试前后、宣传展示时使用。",use:"包含新生分班、考场编排、座位调整等教务工具。",calc:`<strong>分班算法</strong>：S型蛇形排列 + 均分极差优化 (模拟退火)。<br>
-                   <strong>考场编排</strong>：同班互斥逻辑 (自动检测并调换同班相邻考生)。`},"ai-analysis":{title:"🤖 AI分析·使用说明",fit:"用于<strong>集中管理 AI 评语、宏观 AI 报告、批量 AI 生成与连接配置</strong>。",when:"完成成绩导入后、需要写学生评语或做学校层面的智能诊断时使用。",use:`<ul>
-                <li><strong>AI 配置：</strong>填写或检查模型、网关与密钥配置。</li>
-                <li><strong>单学生评语：</strong>先在“成绩单/家长查分”里查询学生，再回来一键生成 AI 评语。</li>
-                <li><strong>批量 AI 评语：</strong>选择学校与班级，打开批量工作台后连续生成并导出。</li>
-                <li><strong>宏观 AI 报告：</strong>基于当前本校，生成本校 vs 他校的质量诊断建议。</li>
-              </ul>`,calc:"云端模式走同域 AI 网关；批量评语会复用当前工作区成绩、排名和历史对比数据。"},"starter-hub":{title:"🚀 新手入口·说明",fit:"用于<strong>新教师快速上手</strong>，一步完成核心配置。",when:"第一次使用系统或更换学期/届别后。",use:"按“学期 → 成绩 → 任课 → 教师画像”顺序完成配置。",calc:"本页不计算成绩，只提供流程引导、诊断与快捷入口。"}};o.teacher&&(o.teacher.calc=`<strong>当前模型：联考赋分 + 基线校正 + 置信修正</strong><br>
+                   <strong>考场编排</strong>：同班互斥逻辑 (自动检测并调换同班相邻考生)。`},"starter-hub":{title:"🚀 新手入口·说明",fit:"用于<strong>新教师快速上手</strong>，一步完成核心配置。",when:"第一次使用系统或更换学期/届别后。",use:"按“学期 → 成绩 → 任课 → 教师画像”顺序完成配置。",calc:"本页不计算成绩，只提供流程引导、诊断与快捷入口。"}};o.teacher&&(o.teacher.calc=`<strong>当前模型：联考赋分 + 基线校正 + 置信修正</strong><br>
                    <div class="formula-box">公平绩效分 = 联考赋分(折算100) × 置信系数 + 基线校正 + 工作量修正</div>
                    联考赋分按系统现有“两率一分”标准计算；基线校正按最近一次历史考试的匹配学生、分层基础与实际结果的超预期差折算。`),o.sse&&(o.sse.calc=`<strong>说明：</strong><br>
                    班级公平考核仍用于班级层面的工作量与整体结果比较；教师画像中的“公平绩效分”则是教师学科层面的联考赋分与基线校正模型。<br>
-                   建议：班级考核看班级管理与整体结果，教师画像看任课教师的真实教学加工效果。`);function e(n){const t=o[n];if(!t){Swal.fire({title:"📘 模型说明",html:`<div class="help-modal-content">
+                   建议：班级考核看班级管理与整体结果，教师画像看任课教师的真实教学加工效果。`);function s(n){const t=o[n];if(!t){Swal.fire({title:"📘 模型说明",html:`<div class="help-modal-content">
                         <h4>🎯 适合干什么</h4>
                         <div>用于当前模块的功能理解与使用边界说明。</div>
                         <h4>⏱️ 什么时候用</h4>
@@ -55,4 +50,4 @@
                     <h4>🧮 计算方式 / 底层逻辑</h4>
                     <div>${t.calc}</div>
                 </div>
-            `,width:600,confirmButtonText:"我明白了",confirmButtonColor:"#4f46e5"})}function l(n){const t=document.getElementById(n);if(!t)return;const r=t.querySelector(".sec-head h2")||t.querySelector(".module-desc-bar h3");if(!r||r.querySelector(".module-help-btn"))return;const s=document.createElement("span");s.className="module-help-btn",s.textContent="📘 模型说明",s.onclick=()=>e(n),r.appendChild(s)}window.SYSTEM_MANUAL=o,window.showModuleHelp=e,window.ensureModuleHelpButton=l,window.__MODULE_HELP_RUNTIME_PATCHED__=!0})();
+            `,width:600,confirmButtonText:"我明白了",confirmButtonColor:"#4f46e5"})}function l(n){const t=document.getElementById(n);if(!t)return;const r=t.querySelector(".sec-head h2")||t.querySelector(".module-desc-bar h3");if(!r||r.querySelector(".module-help-btn"))return;const e=document.createElement("span");e.className="module-help-btn",e.textContent="📘 模型说明",e.onclick=()=>s(n),r.appendChild(e)}window.SYSTEM_MANUAL=o,window.showModuleHelp=s,window.ensureModuleHelpButton=l,window.__MODULE_HELP_RUNTIME_PATCHED__=!0})();

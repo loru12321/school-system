@@ -375,21 +375,6 @@
             });
     }
 
-    function initAIAnalysisEntry() {
-        if (typeof window.ensureAIHubRuntimeLoaded === 'function' && !window.__AI_HUB_RUNTIME_PATCHED__) {
-            return window.ensureAIHubRuntimeLoaded()
-                .then(() => {
-                    if (document.getElementById('ai-analysis')?.classList.contains('active')
-                        && typeof window.renderAIAnalysisHub === 'function') {
-                        window.renderAIAnalysisHub();
-                    }
-                })
-                .catch((error) => console.warn(error));
-        }
-        if (typeof window.renderAIAnalysisHub === 'function') window.renderAIAnalysisHub();
-        return Promise.resolve();
-    }
-
     function initTeachingManagementEntry(id) {
         const renderNow = () => {
             activateTeachingManagementModule(id);
@@ -791,7 +776,6 @@
             }
         }
         if (id === 'app-download-center') return initAppDownloadCenterEntry();
-        if (id === 'ai-analysis') return initAIAnalysisEntry();
         if (id === 'analysis') {
             if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
             renderSingleSchoolAnalysisHint();

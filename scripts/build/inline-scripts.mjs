@@ -20,8 +20,6 @@ const OPTIONAL_INLINE_RUNTIME_PATHS = [
     './assets/js/report-render-runtime.js',
     './assets/js/report-chart-runtime.js',
     './assets/js/report-export-runtime.js',
-    './assets/js/report-ai-runtime.js',
-    './assets/js/ai-hub-runtime.js',
     './assets/js/school-profile-runtime.js',
     './assets/js/teaching-management-runtime.js',
     './assets/js/app-download-runtime.js',

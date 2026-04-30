@@ -2,8 +2,6 @@ import { handleGatewayRequest, handleManagedRestRequest } from './worker-gateway
 
 const DEFAULT_LEGACY_GATEWAY_ORIGIN = 'https://dpwsxxgojpqevzwyxrot.supabase.co';
 const DEFAULT_LEGACY_GATEWAY_API_KEY = 'sb_publishable_J7f2UEVGfHQ_89MR09KTNA_wKFRGZ86';
-const DEFAULT_AI_BASE_URL = 'https://api.deepseek.com';
-const DEFAULT_AI_MODEL = 'deepseek-chat';
 const SYSTEM_DATA_PATH = '/sb/rest/v1/system_data';
 const SYSTEM_DATA_API_PATH = '/api/system-data';
 const SYSTEM_DATA_TABLE = 'cloud_system_data';
@@ -13,17 +11,8 @@ const SYSTEM_DATA_COMPARE_PREFIXES = [
   'TEACHER_COMPARE_',
   'TOWN_SUB_COMPARE_'
 ];
-const DEFAULT_AI_ALLOWED_HOSTS = [
-  'api.deepseek.com',
-  'api.openai.com',
-  'api.siliconflow.cn',
-  'dashscope.aliyuncs.com',
-  'ark.cn-beijing.volces.com',
-  'openrouter.ai'
-];
 const GATEWAY_PATHS = ['/functions/v1/edu-gateway-v2', '/functions/v1/edu-gateway'];
 const PROXY_TIMEOUT_MS = 15000;
-const AI_PROXY_TIMEOUT_MS = 120000;
 const HOP_BY_HOP_HEADERS = [
   'connection',
   'content-length',
@@ -439,88 +428,6 @@ async function buildSystemDataJsonResponse(request, env, rows, selectSet) {
   return jsonResponse(200, body, request);
 }
 
-function getAllowedAiHosts(env) {
-  const allowed = new Set(DEFAULT_AI_ALLOWED_HOSTS);
-  const envHosts = String(env.AI_ALLOWED_HOSTS || '').trim();
-  if (envHosts) {
-    envHosts
-      .split(',')
-      .map((host) => String(host || '').trim().toLowerCase())
-      .filter(Boolean)
-      .forEach((host) => allowed.add(host));
-  }
-  return allowed;
-}
-
-function isAllowedAiHostname(hostname, allowedHosts) {
-  const normalized = String(hostname || '').trim().toLowerCase();
-  if (!normalized) return false;
-  if (allowedHosts.has(normalized)) return true;
-  return normalized.endsWith('.openai.azure.com');
-}
-
-function resolveAiBaseUrl(rawBaseUrl, env) {
-  const candidate = String(rawBaseUrl || env.AI_BASE_URL || DEFAULT_AI_BASE_URL).trim();
-  if (!candidate) {
-    throw new Error('AI_BASE_URL_MISSING');
-  }
-  let parsed = null;
-  try {
-    parsed = new URL(candidate);
-  } catch (error) {
-    throw new Error('AI_BASE_URL_INVALID');
-  }
-  if (parsed.protocol !== 'https:') {
-    throw new Error('AI_BASE_URL_PROTOCOL_INVALID');
-  }
-  if (!isAllowedAiHostname(parsed.hostname, getAllowedAiHosts(env))) {
-    throw new Error('AI_BASE_URL_HOST_NOT_ALLOWED');
-  }
-  return parsed.toString().replace(/\/+$/, '');
-}
-
-function buildAiMessages(payload, defaultSystemPrompt = '') {
-  if (Array.isArray(payload.messages) && payload.messages.length) {
-    return payload.messages
-      .map((message) => ({
-        role: String(message?.role || '').trim(),
-        content: String(message?.content || '')
-      }))
-      .filter((message) => message.role && message.content);
-  }
-  const messages = [];
-  const systemPrompt = String(payload.systemPrompt || defaultSystemPrompt || '').trim();
-  const userPrompt = String(payload.prompt || '').trim();
-  if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
-  if (userPrompt) messages.push({ role: 'user', content: userPrompt });
-  return messages;
-}
-
-function buildAiRequestPayload(payload, env, defaultSystemPrompt = '') {
-  const baseUrl = resolveAiBaseUrl(payload.baseURL, env);
-  const apiKey = String(env.AI_API_KEY || payload.apiKey || '').trim();
-  if (!apiKey) {
-    throw new Error('AI_API_KEY_MISSING');
-  }
-  const model = String(payload.model || env.AI_MODEL || DEFAULT_AI_MODEL).trim() || DEFAULT_AI_MODEL;
-  const messages = buildAiMessages(payload, defaultSystemPrompt);
-  if (!messages.length) {
-    throw new Error('AI_MESSAGES_MISSING');
-  }
-  const upstreamPayload = {
-    model,
-    messages,
-    stream: payload.stream !== false
-  };
-  if (Number.isFinite(Number(payload.maxTokens))) {
-    upstreamPayload.max_tokens = Number(payload.maxTokens);
-  }
-  if (Number.isFinite(Number(payload.temperature))) {
-    upstreamPayload.temperature = Number(payload.temperature);
-  }
-  return { apiKey, baseUrl, upstreamPayload };
-}
-
 function buildForwardHeaders(upstreamHeaders, request) {
   const headers = new Headers(upstreamHeaders || {});
   HOP_BY_HOP_HEADERS.forEach((name) => headers.delete(name));
@@ -543,101 +450,6 @@ async function readJsonBody(request) {
   } catch (error) {
     throw new Error('INVALID_JSON_BODY');
   }
-}
-
-async function fetchAIUpstream(payload, env, request, defaultSystemPrompt = '') {
-  const { apiKey, baseUrl, upstreamPayload } = buildAiRequestPayload(payload, env, defaultSystemPrompt);
-  const response = await fetchWithTimeout(`${baseUrl}/v1/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify(upstreamPayload)
-  }, AI_PROXY_TIMEOUT_MS);
-  if (!response.ok) {
-    const detailText = await response.text().catch(() => '');
-    return {
-      ok: false,
-      response,
-      detailText
-    };
-  }
-  return {
-    ok: true,
-    response
-  };
-}
-
-async function handleAIChatProxy(request, env) {
-  let payload = null;
-  try {
-    payload = await readJsonBody(request);
-  } catch (error) {
-    return jsonResponse(400, { ok: false, error: String(error.message || error) }, request);
-  }
-
-  let upstream = null;
-  try {
-    upstream = await fetchAIUpstream(payload, env, request);
-  } catch (error) {
-    return jsonResponse(400, { ok: false, error: String(error.message || error) }, request);
-  }
-
-  if (!upstream.ok) {
-    return jsonResponse(upstream.response.status || 502, {
-      ok: false,
-      error: `AI upstream error: ${upstream.response.status}`,
-      detail: String(upstream.detailText || '').slice(0, 1000)
-    }, request);
-  }
-
-  return new Response(upstream.response.body, {
-    status: upstream.response.status,
-    headers: buildForwardHeaders(upstream.response.headers, request)
-  });
-}
-
-async function handleAIDiagnoseProxy(request, env) {
-  let payload = null;
-  try {
-    payload = await readJsonBody(request);
-  } catch (error) {
-    return jsonResponse(400, { ok: false, error: String(error.message || error) }, request);
-  }
-
-  let upstream = null;
-  try {
-    upstream = await fetchAIUpstream(
-      { ...payload, stream: false },
-      env,
-      request,
-      payload.systemPrompt || '你是一位资深的教育诊断专家，请根据学生数据提供具体、温和、可执行的学习建议。'
-    );
-  } catch (error) {
-    return jsonResponse(400, { ok: false, error: String(error.message || error) }, request);
-  }
-
-  if (!upstream.ok) {
-    return jsonResponse(upstream.response.status || 502, {
-      ok: false,
-      error: `AI upstream error: ${upstream.response.status}`,
-      detail: String(upstream.detailText || '').slice(0, 1000)
-    }, request);
-  }
-
-  let data = null;
-  try {
-    data = await upstream.response.json();
-  } catch (error) {
-    return jsonResponse(502, { ok: false, error: 'AI_DIAGNOSE_PARSE_FAILED' }, request);
-  }
-  const resultText = data?.choices?.[0]?.message?.content || data?.result || data?.diagnosis || '';
-  return jsonResponse(200, {
-    ok: true,
-    diagnosis: resultText,
-    result: resultText
-  }, request);
 }
 
 function buildCorsHeaders(request) {
@@ -1045,7 +857,6 @@ export default {
         url.pathname === '/api/edu-gateway'
         || url.pathname === SYSTEM_DATA_API_PATH
         || url.pathname.startsWith('/sb/')
-        || url.pathname.startsWith('/api/ai/')
       )) {
         return new Response(null, {
           status: 204,
@@ -1085,14 +896,6 @@ export default {
         return await handleSystemDataProxy(request, env, url);
       }
 
-      if (url.pathname === '/api/ai/chat') {
-        return await handleAIChatProxy(request, env);
-      }
-
-      if (url.pathname === '/api/ai/diagnose') {
-        return await handleAIDiagnoseProxy(request, env);
-      }
-
       if (url.pathname.startsWith('/sb/')) {
         return await handleCloudRestProxy(request, env, url);
       }
@@ -1116,3 +919,4 @@ export default {
     }
   }
 };
+

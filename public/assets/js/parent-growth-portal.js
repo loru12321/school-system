@@ -5,7 +5,7 @@
  * 功能：
  * 1. 能力雷达：多维度展示学生的学科掌握情况
  * 2. 进步轨迹：可视化展示学生的成长趋势
- * 3. 智能建议：基于 AI 分析的家庭辅导建议
+ * 3. 智能建议：基于规则的家庭辅导建议
  * 4. 一键分享：生成精美的 H5 或长图用于社交分享
  */
 
@@ -15,7 +15,7 @@ const ParentGrowthPortal = {
         enabled: true,
         reportStyle: 'modern',             // 报告风格：'modern' 或 'traditional'
         shareFormat: 'h5',                 // 分享格式：'h5' 或 'image'
-        includeAIAdvice: true,             // 包含 AI 建议
+        includeStudyAdvice: true,          // 包含学情建议
         privacyMode: true                 // 隐私模式（隐藏排名）
     },
 
@@ -53,8 +53,8 @@ const ParentGrowthPortal = {
             // 进步轨迹
             progressTrajectory: this._generateProgressTrajectory(studentData),
             
-            // AI 建议
-            aiAdvice: this.config.includeAIAdvice ? this._generateAIAdvice(studentData) : null,
+            // 学情建议
+            studyAdvice: this.config.includeStudyAdvice ? this._generateStudyAdvice(studentData) : null,
             
             // 家庭辅导建议
             parentGuidance: this._generateParentGuidance(studentData),
@@ -157,18 +157,18 @@ const ParentGrowthPortal = {
                     </div>
                 </div>
 
-                <!-- AI 诊断与建议 -->
-                ${report.aiAdvice ? `
-                <div class="ai-advice-section">
-                    <h2>🤖 AI 学情诊断</h2>
+                <!-- 学情诊断与建议 -->
+                ${report.studyAdvice ? `
+                <div class="study-advice-section">
+                    <h2>学情诊断</h2>
                     <div class="advice-box">
                         <p class="advice-title">诊断结论</p>
-                        <p class="advice-content">${report.aiAdvice.diagnosis}</p>
+                        <p class="advice-content">${report.studyAdvice.diagnosis}</p>
                     </div>
                     <div class="advice-box">
                         <p class="advice-title">改进建议</p>
                         <ul class="advice-list">
-                            ${report.aiAdvice.suggestions.map(s => `<li>✓ ${s}</li>`).join('')}
+                            ${report.studyAdvice.suggestions.map(s => `<li>✓ ${s}</li>`).join('')}
                         </ul>
                     </div>
                 </div>
@@ -289,7 +289,7 @@ const ParentGrowthPortal = {
                         color: #721c24;
                     }
 
-                    .competency-section, .trajectory-section, .ai-advice-section, 
+                    .competency-section, .trajectory-section, .study-advice-section, 
                     .parent-guidance-section, .resources-section {
                         background: white;
                         padding: 30px;
@@ -535,10 +535,10 @@ const ParentGrowthPortal = {
     },
 
     /**
-     * 生成 AI 建议
+     * 生成学情建议
      * @private
      */
-    _generateAIAdvice(studentData) {
+    _generateStudyAdvice(studentData) {
         return {
             diagnosis: `${studentData.name} 同学学科基础扎实，特别是在数学和物理方面表现突出。建议继续保持优势学科的学习强度，同时加强英语和文科的学习投入。`,
             suggestions: [

@@ -249,7 +249,7 @@ function renderHistoryChart(student) {
                             let label = context.dataset.label || '';
                             if (label) label += ': ';
                             if (prediction && context.dataIndex === data.length - 1) {
-                                return label + context.raw + " (AI预测值)";
+                                return label + context.raw + " (预测值)";
                             }
                             return label + context.raw;
                         }

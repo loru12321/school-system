@@ -145,8 +145,7 @@ var SYSTEM_RUNTIME_SKILLS = {
             { key: 'chart-vendor', src: './assets/vendor/chart.js/chart.umd.min.js' },
             { key: 'report-render', src: './assets/js/report-render-runtime.js' },
             { key: 'report-chart', src: './assets/js/report-chart-runtime.js' },
-            { key: 'report-export', src: './assets/js/report-export-runtime.js' },
-            { key: 'report-ai', src: './assets/js/report-ai-runtime.js' }
+            { key: 'report-export', src: './assets/js/report-export-runtime.js' }
         ]
     },
     'teacher-analysis': {
@@ -210,14 +209,6 @@ var SYSTEM_RUNTIME_SKILLS = {
         triggers: ['app-download-center'],
         entries: [
             { key: 'app-download', src: './assets/js/app-download-runtime.js' }
-        ]
-    },
-    'ai-hub': {
-        mode: 'demand',
-        warmup: 'full',
-        triggers: ['ai-analysis'],
-        entries: [
-            { key: 'ai-hub', src: './assets/js/ai-hub-runtime.js' }
         ]
     },
     'school-profile': {
@@ -2543,10 +2534,6 @@ window.ensureOptionalStylesheetLoaded = function (key, href) {
     return loadOptionalStylesheet(key, href);
 };
 
-window.ensureAIHubRuntimeLoaded = function () {
-    return window.SystemRuntimeLoader.load('ai-hub');
-};
-
 window.ensureSchoolProfileRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('school-profile');
 };
@@ -2640,8 +2627,6 @@ function installOptionalRuntimePlaceholder(name, message) {
 }
 
 const XLSX_RUNTIME_FUNCTIONS = [
-    'exportAIBatchFromHub',
-    'exportAICommentsExcel',
     'exportHighScoreExcel',
     'exportStudentDetails',
     'importTeacherExcel',
@@ -2772,29 +2757,8 @@ if (!window.AccountExcel) {
     installOptionalRuntimeMethod(name, window.ensureAccountAdminRuntimeLoaded);
 });
 
-['printSingleReport', 'downloadSingleReportPDF', 'batchGeneratePDF', 'copyReport', 'exportToWord'].forEach((name) => {
+['printSingleReport', 'downloadSingleReportPDF', 'batchGeneratePDF', 'copyReport'].forEach((name) => {
     installOptionalRuntimeMethod(name, window.ensureReportRenderRuntimeLoaded);
-});
-
-[
-    'syncAIAnalysisClassOptions',
-    'updateAIAnalysisHubStatus',
-    'renderAIAnalysisHub',
-    'openReportGeneratorForAI',
-    'saveAIConfigFromHub',
-    'testAIConnectionFromHub',
-    'runSingleStudentAIFromHub',
-    'openAIAnalysisHubForCurrentUser',
-    'runAIMacroReportFromHub',
-    'openAIBatchWorkspaceFromHub',
-    'startAIBatchFromHub',
-    'exportAIBatchFromHub',
-    'openBatchAIModal',
-    'startBatchAIComments',
-    'regenerateOneAI',
-    'exportAICommentsExcel'
-].forEach((name) => {
-    installOptionalRuntimeMethod(name, window.ensureAIHubRuntimeLoaded);
 });
 
 ['showSchoolProfile', 'jumpToModule'].forEach((name) => {

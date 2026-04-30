@@ -726,7 +726,6 @@
         // Keep these as local-only session/runtime state to reduce cloud payload size.
         delete next.CURRENT_REPORT_STUDENT;
         delete next.CURRENT_CONTEXT_STUDENTS;
-        delete next.IS_BATCH_AI_RUNNING;
         delete next.VA_VIEW_MODE;
         delete next.__PROGRESS_QUICK_MODE;
         delete next.TEACHER_STATS;

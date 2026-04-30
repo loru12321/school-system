@@ -1,11 +1,11 @@
 const QUERY_MODULE_ACCESS = {
     admin: ['*'],
-    director: ['starter-hub', 'upload', 'county-analysis', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'freshman-simulator', 'exam-arranger', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'zhongkao-countdown', 'ai-analysis', 'app-download-center'],
-    grade_director: ['starter-hub', 'county-analysis', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'zhongkao-countdown', 'ai-analysis', 'app-download-center'],
-    class_teacher: ['starter-hub', 'student-overview', 'student-details', 'county-analysis', 'teacher-analysis', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator', 'zhongkao-countdown', 'ai-analysis', 'app-download-center'],
-    teacher: ['starter-hub', 'student-overview', 'student-details', 'county-analysis', 'teacher-analysis', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator', 'zhongkao-countdown', 'ai-analysis', 'app-download-center'],
-    parent: ['report-generator', 'ai-analysis', 'app-download-center'],
-    student: ['report-generator', 'ai-analysis', 'app-download-center'],
+    director: ['starter-hub', 'upload', 'county-analysis', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'freshman-simulator', 'exam-arranger', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'zhongkao-countdown', 'app-download-center'],
+    grade_director: ['starter-hub', 'county-analysis', 'teacher-analysis', 'indicator', 'bottom3', 'marginal-push', 'progress-analysis', 'report-generator', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'zhongkao-countdown', 'app-download-center'],
+    class_teacher: ['starter-hub', 'student-overview', 'student-details', 'county-analysis', 'teacher-analysis', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator', 'zhongkao-countdown', 'app-download-center'],
+    teacher: ['starter-hub', 'student-overview', 'student-details', 'county-analysis', 'teacher-analysis', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'class-diagnosis', 'marginal-push', 'report-generator', 'zhongkao-countdown', 'app-download-center'],
+    parent: ['report-generator', 'app-download-center'],
+    student: ['report-generator', 'app-download-center'],
     guest: ['starter-hub', 'app-download-center']
 };
 

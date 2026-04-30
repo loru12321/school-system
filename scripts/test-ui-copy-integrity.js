@@ -32,9 +32,8 @@ const mimeTypes = {
 };
 
 const requiredLoginText = ['学校端', '家长端', '账号 / 姓名', '密码'];
-const requiredSidebarText = ['数据管理', '联考分析', '教学管理', '学情诊断', 'AI分析'];
-const requiredAIWorkbenchText = ['AI工作台', 'AI 配置', '单学生 AI 评语', '批量 AI 评语', '宏观 AI 报告'];
-const requiredParentText = ['AI 学情建议', '生成 AI 评语'];
+const requiredSidebarText = ['数据管理', '联考分析', '教学管理', '学情诊断'];
+const removedAnalysisText = ['AI分析', 'AI工作台', 'AI 配置', '单学生 AI 评语', '批量 AI 评语', '宏观 AI 报告', 'AI 学情建议', '生成 AI 评语'];
 const forbiddenTokens = [
     '馃',
     '锛',
@@ -525,7 +524,7 @@ async function login(page) {
     await waitForAppReady(page);
 }
 
-async function verifyTeacherAiWorkbench(page) {
+async function verifyAnalysisModuleRemoved(page) {
     const sidebarText = await page.evaluate(() => {
         const labels = Array.from(document.querySelectorAll('#sidebar-nav .sidebar-menu-item .sidebar-menu-item__title'));
         const fallback = Array.from(document.querySelectorAll('#sidebar-nav .sidebar-menu-item span'));
@@ -535,36 +534,21 @@ async function verifyTeacherAiWorkbench(page) {
     assertContainsAll('sidebar navigation', sidebarText, requiredSidebarText);
     assertContainsNoForbidden('sidebar navigation', sidebarText);
 
-    await page.evaluate(async () => {
-        if (typeof window.switchTab === 'function') {
-            await window.switchTab('ai-analysis');
-            return;
-        }
-        const items = Array.from(document.querySelectorAll('#sidebar-nav .sidebar-menu-item'));
-        const aiItem = items.find((item) => String(item.textContent || '').includes('AI工作台'))
-            || items.find((item) => item.getAttribute('data-module') === 'ai-analysis')
-            || items[4];
-        if (aiItem) aiItem.click();
-    });
-    await page.waitForFunction(() => {
-        const section = document.getElementById('ai-analysis');
-        const heading = document.querySelector('#ai-analysis .analysis-shell-head h2');
-        return !!section
-            && section.classList.contains('active')
-            && !!heading
-            && String(heading.textContent || '').includes('AI工作台');
-    }, undefined, { timeout: 5000 });
-
-    const aiText = await page.evaluate(() => {
-        const section = document.getElementById('ai-analysis');
-        return section ? section.textContent : '';
-    });
-    assertContainsAll('AI workbench', aiText, requiredAIWorkbenchText);
-    assertContainsNoForbidden('AI workbench', aiText);
+    const removedState = await page.evaluate((tokens) => {
+        const bodyText = document.body ? document.body.innerText : '';
+        return {
+            hasSection: !!document.getElementById('ai-analysis'),
+            hasNavCategory: !!(window.NAV_STRUCTURE && window.NAV_STRUCTURE.ai),
+            leakedTokens: tokens.filter((token) => bodyText.includes(token))
+        };
+    }, removedAnalysisText);
+    assert.strictEqual(removedState.hasSection, false, 'removed analysis section should not exist');
+    assert.strictEqual(removedState.hasNavCategory, false, 'removed analysis navigation category should not exist');
+    assert.deepStrictEqual(removedState.leakedTokens, [], `removed analysis copy leaked: ${removedState.leakedTokens.join(', ')}`);
 }
 
-async function verifyParentAiBlock(page) {
-    const result = await page.evaluate(async (requiredTokens) => {
+async function verifyParentAnalysisCopyRemoved(page) {
+    const result = await page.evaluate(async () => {
         const buildFallbackStudent = () => {
             const subjects = Array.isArray(window.SUBJECTS) && window.SUBJECTS.length
                 ? window.SUBJECTS
@@ -611,22 +595,21 @@ async function verifyParentAiBlock(page) {
 
         const deadline = Date.now() + 20000;
         let container = document.getElementById('parent-view-container');
-        let text = container ? container.innerText : '';
         while (Date.now() < deadline) {
             container = document.getElementById('parent-view-container');
-            text = container ? container.innerText : '';
-            if (container && requiredTokens.every((token) => text.includes(token))) break;
+            if (container && String(container.innerText || '').includes(sample.name)) break;
             await new Promise((resolve) => setTimeout(resolve, 300));
         }
         return {
             ok: !!container,
-            text
+            text: container ? container.innerText : ''
         };
-    }, requiredParentText);
+    });
 
     assert.strictEqual(result.ok, true, `parent view failed to render: ${result.reason || 'unknown error'}`);
-    assertContainsAll('parent AI block', result.text, requiredParentText);
-    assertContainsNoForbidden('parent AI block', result.text);
+    const leakedTokens = removedAnalysisText.filter((token) => result.text.includes(token));
+    assert.deepStrictEqual(leakedTokens, [], `parent view leaked removed analysis copy: ${leakedTokens.join(', ')}`);
+    assertContainsNoForbidden('parent view', result.text);
 }
 
 async function main() {
@@ -641,8 +624,8 @@ async function main() {
 
     try {
         await login(page);
-        await verifyTeacherAiWorkbench(page);
-        await verifyParentAiBlock(page);
+        await verifyAnalysisModuleRemoved(page);
+        await verifyParentAnalysisCopyRemoved(page);
         console.log('ui-copy-integrity passed');
     } finally {
         await browser.close().catch(() => { });

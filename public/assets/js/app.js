@@ -1539,61 +1539,6 @@ function setCurrentReportStudentState(student) {
     return nextStudent;
 }
 
-function readBatchAICacheState() {
-    const lateCache = readLateBoundState(() => BATCH_AI_CACHE, {});
-    const nextCache = ReportSessionStateRuntime && typeof ReportSessionStateRuntime.getBatchAICache === 'function'
-        ? (ReportSessionStateRuntime.getBatchAICache() || {})
-        : (window.BATCH_AI_CACHE && typeof window.BATCH_AI_CACHE === 'object' && !Array.isArray(window.BATCH_AI_CACHE)
-            ? window.BATCH_AI_CACHE
-            : (lateCache && typeof lateCache === 'object' && !Array.isArray(lateCache) ? lateCache : {}));
-    writeLateBoundState((value) => { BATCH_AI_CACHE = value; }, nextCache);
-    window.BATCH_AI_CACHE = nextCache;
-    return nextCache;
-}
-
-function setBatchAICacheState(cache) {
-    const nextCache = ReportSessionStateRuntime && typeof ReportSessionStateRuntime.setBatchAICache === 'function'
-        ? (ReportSessionStateRuntime.setBatchAICache(cache) || {})
-        : (cache && typeof cache === 'object' && !Array.isArray(cache) ? cache : {});
-    writeLateBoundState((value) => { BATCH_AI_CACHE = value; }, nextCache);
-    window.BATCH_AI_CACHE = nextCache;
-    return nextCache;
-}
-
-function upsertBatchAICacheEntryState(key, value) {
-    const normalizedKey = String(key || '').trim();
-    if (!normalizedKey) return readBatchAICacheState();
-    const nextCache = { ...readBatchAICacheState(), [normalizedKey]: value };
-    return setBatchAICacheState(nextCache);
-}
-
-function removeBatchAICacheEntryState(key) {
-    const normalizedKey = String(key || '').trim();
-    const nextCache = { ...readBatchAICacheState() };
-    if (!normalizedKey) return nextCache;
-    delete nextCache[normalizedKey];
-    return setBatchAICacheState(nextCache);
-}
-
-function readIsBatchAIRunningState() {
-    const lateFlag = readLateBoundState(() => IS_BATCH_AI_RUNNING, false);
-    const nextFlag = ReportSessionStateRuntime && typeof ReportSessionStateRuntime.getIsBatchAiRunning === 'function'
-        ? !!ReportSessionStateRuntime.getIsBatchAiRunning()
-        : !!(window.IS_BATCH_AI_RUNNING ?? lateFlag);
-    writeLateBoundState((value) => { IS_BATCH_AI_RUNNING = value; }, nextFlag);
-    window.IS_BATCH_AI_RUNNING = nextFlag;
-    return nextFlag;
-}
-
-function setBatchAIRunningState(flag) {
-    const nextFlag = ReportSessionStateRuntime && typeof ReportSessionStateRuntime.setIsBatchAiRunning === 'function'
-        ? !!ReportSessionStateRuntime.setIsBatchAiRunning(flag)
-        : !!flag;
-    writeLateBoundState((value) => { IS_BATCH_AI_RUNNING = value; }, nextFlag);
-    window.IS_BATCH_AI_RUNNING = nextFlag;
-    return nextFlag;
-}
-
 function readCurrentContextStudentsState() {
     const lateStudents = readLateBoundState(() => CURRENT_CONTEXT_STUDENTS, []);
     const nextStudents = ReportSessionStateRuntime && typeof ReportSessionStateRuntime.getCurrentContextStudents === 'function'
@@ -1617,12 +1562,8 @@ function setCurrentContextStudentsState(students) {
 
 function applyReportSessionLateBoundState(snapshot = {}) {
     writeLateBoundState((value) => { CURRENT_REPORT_STUDENT = value; }, snapshot.currentReportStudent || null);
-    writeLateBoundState((value) => { BATCH_AI_CACHE = value; }, snapshot.batchAiCache || {});
-    writeLateBoundState((value) => { IS_BATCH_AI_RUNNING = value; }, !!snapshot.isBatchAiRunning);
     writeLateBoundState((value) => { CURRENT_CONTEXT_STUDENTS = value; }, snapshot.currentContextStudents || []);
     window.CURRENT_REPORT_STUDENT = snapshot.currentReportStudent || null;
-    window.BATCH_AI_CACHE = snapshot.batchAiCache || {};
-    window.IS_BATCH_AI_RUNNING = !!snapshot.isBatchAiRunning;
     window.CURRENT_CONTEXT_STUDENTS = snapshot.currentContextStudents || [];
     return snapshot;
 }
@@ -1633,20 +1574,12 @@ function syncReportSessionRuntimeState(patch = {}) {
     }
     return applyReportSessionLateBoundState({
         currentReportStudent: setCurrentReportStudentState(patch.currentReportStudent ?? patch.CURRENT_REPORT_STUDENT ?? readCurrentReportStudentState()),
-        batchAiCache: setBatchAICacheState(patch.batchAiCache ?? patch.BATCH_AI_CACHE ?? readBatchAICacheState()),
-        isBatchAiRunning: setBatchAIRunningState(patch.isBatchAiRunning ?? patch.IS_BATCH_AI_RUNNING ?? readIsBatchAIRunningState()),
         currentContextStudents: setCurrentContextStudentsState(patch.currentContextStudents ?? patch.CURRENT_CONTEXT_STUDENTS ?? readCurrentContextStudentsState())
     });
 }
 
 window.readCurrentReportStudentState = readCurrentReportStudentState;
 window.setCurrentReportStudentState = setCurrentReportStudentState;
-window.readBatchAICacheState = readBatchAICacheState;
-window.setBatchAICacheState = setBatchAICacheState;
-window.upsertBatchAICacheEntryState = upsertBatchAICacheEntryState;
-window.removeBatchAICacheEntryState = removeBatchAICacheEntryState;
-window.readIsBatchAIRunningState = readIsBatchAIRunningState;
-window.setBatchAIRunningState = setBatchAIRunningState;
 window.readCurrentContextStudentsState = readCurrentContextStudentsState;
 window.setCurrentContextStudentsState = setCurrentContextStudentsState;
 window.syncReportSessionRuntimeState = syncReportSessionRuntimeState;
@@ -4281,8 +4214,7 @@ var Auth = {
             // 渲染报表 HTML
             let reportHtml = renderSingleReportCardHTML(stu, 'A4');
 
-            // 去除不必要的按钮和输入框
-            reportHtml = reportHtml.replace(/<button.*AI 深度生成.*<\/button>/, '');
+            // 去除不必要的输入框
             const teacherName = TEACHER_MAP[stu.class + '_班主任'] || '班主任';
             reportHtml = reportHtml.replace(/<input.*id="inp-teacher-name".*?>/, `<span style="font-weight:bold">${teacherName}</span>`);
 
@@ -4290,30 +4222,6 @@ var Auth = {
             const safeName = stu.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
             const safeClass = stu.class.replace(/'/g, "\\'").replace(/"/g, '&quot;');
             const safeSchool = stu.school.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-            const isMobileParentViewport = document.body?.dataset?.mobileQuery === 'true'
-                || (typeof window !== 'undefined' && window.innerWidth <= 768);
-
-            if (!isMobileParentViewport) {
-                // 家长/学生端追加 AI 学情建议区
-                reportHtml += `
-                        <div style="margin-top:24px; padding:18px; border:1px solid #ddd6fe; background:#faf5ff; border-radius:18px;">
-                            <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap;">
-                                <div>
-                                    <div style="font-size:18px; font-weight:800; color:#5b21b6;"><i class="ti ti-sparkles"></i> AI 学情建议</div>
-                                    <div style="font-size:13px; color:#6d28d9; margin-top:6px;">根据当前学生的成绩、排名和历史变化，生成可读的学习建议。</div>
-                                </div>
-                                <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                    <button class="btn btn-primary" onclick="runSingleStudentAIFromHub()"><i class="ti ti-brain"></i> 生成 AI 评语</button>
-                                    <button class="btn btn-gray" onclick="openAIAnalysisHubForCurrentUser()"><i class="ti ti-layout-dashboard"></i> 打开 AI 工作台</button>
-                                </div>
-                            </div>
-                            <div id="parent-ai-comment-box" style="min-height:110px; margin-top:14px; border:1px solid #ddd6fe; background:#ffffff; border-radius:16px; padding:16px 18px; font-size:14px; color:#4c1d95; line-height:1.9;">
-                                点击上方按钮后，会在这里显示当前学生的 AI 个性化学情建议。
-                            </div>
-                        </div>
-                    `;
-            }
-
             // 追加底部功能栏 (申诉 & 退出)
             reportHtml += `
                     <div style="text-align:center; margin-top:30px; padding-bottom:80px; border-top:1px dashed #e5e7eb; padding-top:20px;">
@@ -8298,8 +8206,6 @@ const initialProgressSnapshot = syncProgressRuntimeState({
 });
 const initialReportSessionSnapshot = syncReportSessionRuntimeState({
     currentReportStudent: readCurrentReportStudentState(),
-    batchAiCache: readBatchAICacheState(),
-    isBatchAiRunning: readIsBatchAIRunningState(),
     currentContextStudents: readCurrentContextStudentsState()
 });
 // 🟢 [修复]：全局变量显式挂载到 window，确保 CloudManager 可访问
@@ -8309,13 +8215,6 @@ window.TEACHER_SCHOOL_MAP = TEACHER_SCHOOL_MAP;
 MY_SCHOOL = readCurrentSchool();
 window.MY_SCHOOL = MY_SCHOOL;
 window.TEACHER_STATS = TEACHER_STATS;
-
-const AI_DISABLED = false;
-function aiDisabledAlert() {
-    if (window.UI) UI.toast('AI 功能已移除', 'warning');
-    else alert('AI 功能已移除');
-    return true;
-}
 
 function uiAlert(message, type = 'info') {
     if (window.Swal) {
@@ -8368,8 +8267,6 @@ function syncRuntimeStateToWindow() {
     });
     syncReportSessionRuntimeState({
         currentReportStudent: readLateBoundState(() => CURRENT_REPORT_STUDENT, readCurrentReportStudentState()),
-        batchAiCache: readLateBoundState(() => BATCH_AI_CACHE, readBatchAICacheState()),
-        isBatchAiRunning: readLateBoundState(() => IS_BATCH_AI_RUNNING, readIsBatchAIRunningState()),
         currentContextStudents: readLateBoundState(() => CURRENT_CONTEXT_STUDENTS, readCurrentContextStudentsState())
     });
     syncCompareSessionRuntimeState({
@@ -8430,280 +8327,8 @@ let TEACHER_STAMP_BASE64 = "";
 let HISTORY_ARCHIVE = readHistoryArchiveState();
 let ROLLER_COASTER_STUDENTS = []; // 存储波动剧烈的学生名单
 let historyChartInstance = null;
-let LLM_CONFIG = {
-    apiKey: localStorage.getItem('LLM_API_KEY') || '',
-    baseURL: localStorage.getItem('LLM_BASE_URL') || 'https://api.deepseek.com',
-    model: localStorage.getItem('LLM_MODEL') || 'deepseek-chat',
-    systemPrompt: "你是一位经验丰富、语调温和的初中班主任。请根据学生数据写评语，多鼓励，指出具体优缺点。",
-    source: 'cloud' // 新增字段：cloud | local
-};
-
-syncRuntimeStateToWindow();
-
-// 1. 本地引擎状态管理
-let LOCAL_ENGINE = null;
-let IS_LOCAL_LOADING = false;
-
-function getWebLLMModuleCandidates() {
-    const candidates = ['./assets/vendor/web-llm/index.js'];
-    if (window.location && window.location.protocol === 'file:') {
-        candidates.push('./public/assets/vendor/web-llm/index.js');
-        candidates.push('./dist/assets/vendor/web-llm/index.js');
-    }
-    return Array.from(new Set(candidates));
-}
-
-function canUseSameOriginAIGatewayFromApp() {
-    if (!window.location) return false;
-    const protocol = String(window.location.protocol || '').trim().toLowerCase();
-    if (protocol !== 'https:' && protocol !== 'http:') return false;
-    const hostname = String(window.location.hostname || '').trim().toLowerCase();
-    return !!hostname
-        && hostname !== 'localhost'
-        && hostname !== '127.0.0.1'
-        && hostname !== '[::1]'
-        && !hostname.endsWith('.local');
-}
-
-async function loadLocalWebLLMModule() {
-    let lastError = null;
-    for (const candidate of getWebLLMModuleCandidates()) {
-        try {
-            return await import(candidate);
-        } catch (error) {
-            lastError = error instanceof Error ? error : new Error(String(error));
-        }
-    }
-    throw lastError || new Error('WEBLLM_MODULE_LOAD_FAILED');
-}
-
-// 2. 切换 AI 来源 (UI 交互)
-function toggleAISource() {
-    if (AI_DISABLED) return aiDisabledAlert();
-    const source = document.querySelector('input[name="ai_source"]:checked').value;
-    LLM_CONFIG.source = source;
-    if (source === 'cloud') {
-        document.getElementById('ai-config-cloud').classList.remove('hidden');
-        document.getElementById('ai-config-local').classList.add('hidden');
-    } else {
-        document.getElementById('ai-config-cloud').classList.add('hidden');
-        document.getElementById('ai-config-local').classList.remove('hidden');
-        // 检查浏览器是否支持 WebGPU
-        if (!navigator.gpu) {
-            document.getElementById('local-ai-status').innerHTML = '<span style="color:red">❌ 您的浏览器不支持 WebGPU，无法使用本地 AI。请尝试升级 Chrome/Edge 浏览器。</span>';
-        }
-    }
-}
-
-// 3. 初始化本地模型 (WebLLM 核心)
-async function initLocalModel() {
-    if (IS_LOCAL_LOADING) return;
-    if (!window.webllm) return alert("WebLLM 库尚未加载完成，请检查网络或刷新页面");
-
-    // 尝试等待模块加载（如果是异步导入）
-    if (!window.webllm) {
-        try {
-            // 优先从同域本地模块加载，避免依赖外部 ESM CDN。
-            const loadedModule = await loadLocalWebLLMModule();
-            window.webllm = loadedModule;
-        } catch (e) {
-            console.error("WebLLM module load failed:", e);
-            return alert("WebLLM AI 引擎加载失败。请确认本地 AI 依赖资源可访问后重试。");
-        }
-    }
-
-    const modelId = document.getElementById('local_model_select').value;
-    IS_LOCAL_LOADING = true;
-
-    const statusEl = document.getElementById('local-ai-status');
-    const progressEl = document.getElementById('local-ai-progress');
-    const btn = document.querySelector('button[onclick="initLocalModel()"]');
-
-    btn.disabled = true;
-    btn.innerHTML = '⏳ 加载中...';
-
-    try {
-        // 定义加载进度回调
-        const initProgressCallback = (report) => {
-            appDebug(report); // 控制台调试
-            statusEl.innerText = report.text; // 显示具体阶段
-            // 解析进度 (WebLLM返回 0.0 ~ 1.0)
-            const pct = Math.round(report.progress * 100);
-            progressEl.style.width = `${pct}%`;
-        };
-
-        // 如果已有引擎实例，先卸载释放显存
-        if (LOCAL_ENGINE) { await LOCAL_ENGINE.unload(); }
-
-        // 创建引擎实例
-        LOCAL_ENGINE = new window.webllm.MLCEngine();
-
-        // 开始加载模型
-        await LOCAL_ENGINE.reload(modelId, { initProgressCallback });
-
-        statusEl.innerHTML = '✅ 模型加载完毕！现在可以断网使用了。';
-        progressEl.style.background = '#16a34a';
-        UI.toast('本地 AI 引擎就绪', 'success');
-    } catch (err) {
-        console.error(err);
-        statusEl.innerHTML = `<span style="color:red">❌ 加载失败: ${err.message}</span>`;
-        alert("本地模型加载失败。\n可能原因：显存不足、网络中断或浏览器不支持 WebGPU。\n建议切换回云端 API 模式。");
-    } finally {
-        IS_LOCAL_LOADING = false;
-        btn.disabled = false;
-        btn.innerHTML = '⬇️ 重新加载';
-    }
-}
-
-// 4. 统一 AI 调用接口 (自动路由)
-async function callUnifiedAI(prompt, onChunk) {
-    if (AI_DISABLED) throw new Error('AI 功能已移除');
-    // --- 分支 A: 本地模型 ---
-    if (LLM_CONFIG.source === 'local') {
-        if (!LOCAL_ENGINE) return alert("请先在【数据枢纽 -> AI配置】中加载本地模型！");
-
-        try {
-            const completion = await LOCAL_ENGINE.chat.completions.create({
-                messages: [{ role: "user", content: prompt }],
-                stream: true, // 强制流式输出
-            });
-
-            let fullText = "";
-            for await (const chunk of completion) {
-                const delta = chunk.choices[0].delta.content;
-                if (delta) {
-                    fullText += delta;
-                    if (onChunk) onChunk(delta);
-                }
-            }
-            return fullText;
-        } catch (err) {
-            console.error("Local AI Error", err);
-            throw new Error("本地推理出错: " + err.message);
-        }
-    }
-    // --- 分支 B: 云端 API ---
-    else {
-        return new Promise((resolve, reject) => {
-            let fullResponse = "";
-            // 复用之前的 callLLM 逻辑，但包裹在 Promise 中
-            callLLM(prompt,
-                (chunk) => { // onChunk
-                    fullResponse += chunk;
-                    if (onChunk) onChunk(chunk);
-                },
-                (finalText) => { // onFinish
-                    if (finalText.includes("(请求失败)")) reject(new Error("API请求失败"));
-                    else resolve(finalText);
-                }
-            );
-        });
-    }
-}
-
-// 5. [新功能] 班级弱项深度诊断报告
-async function generateClassDiagnosisReport() {
-    if (AI_DISABLED) return aiDisabledAlert();
-    const sch = document.getElementById('classCompSchoolSelect').value;
-    if (!sch || !SCHOOLS[sch]) return alert("请先在左侧选择学校，并点击【开始对比】生成数据基础。");
-
-    // A. 准备数据上下文
-    const schoolData = SCHOOLS[sch];
-    const classNames = [...new Set(schoolData.students.map(s => s.class))].sort();
-
-    // 构建提示词 (Prompt Engineering)
-    let prompt = `你是一位拥有20年经验的资深教务主任。请根据以下 ${sch} 的班级成绩数据，撰写一份深度的“班级弱项诊断与提升方案”。
-
-【全校基准数据】：
-- 全校均分: ${schoolData.metrics.total.avg.toFixed(1)}
-- 全校优秀率: ${(schoolData.metrics.total.excRate * 100).toFixed(1)}%
-
-【各班级详细表现】：
-`;
-    classNames.forEach(cls => {
-        const stus = schoolData.students.filter(s => s.class === cls);
-        const n = stus.length;
-        const avg = stus.reduce((a, b) => a + b.total, 0) / n;
-        const exc = stus.filter(s => s.total >= THRESHOLDS.total.exc).length / n;
-
-        // 寻找该班的最差学科 (与年级均分差距最大)
-        let worstSub = { name: '', diff: 999 };
-        SUBJECTS.forEach(sub => {
-            const subScores = stus.map(s => s.scores[sub]).filter(v => v !== undefined);
-            if (subScores.length === 0) return;
-            const subAvg = subScores.reduce((a, b) => a + b, 0) / subScores.length;
-            const gradeSubAvg = schoolData.metrics[sub].avg;
-            const diff = subAvg - gradeSubAvg; // 负数表示落后
-            if (diff < worstSub.diff) { worstSub = { name: sub, diff: diff }; }
-        });
-
-        prompt += `- ${cls}班(${n}人): 总分均分${avg.toFixed(1)} (与年级差 ${(avg - schoolData.metrics.total.avg).toFixed(1)}), 优秀率${(exc * 100).toFixed(1)}%。最明显的短板学科是【${worstSub.name}】(低于年级均分 ${Math.abs(worstSub.diff).toFixed(1)} 分)。\n`;
-    });
-
-    prompt += `
-\n请输出一份诊断报告，包含以下部分（请使用Markdown格式）：
-1. **年级整体学情综述**：简要评价校内两极分化情况。
-2. **重点关注班级**：指出1-2个均分落后或学科短板最严重的班级，语气要客观严厉。
-3. **学科攻坚建议**：针对出现的共性弱势学科（或某班的特别弱项），给出具体的教学干预措施（如集体备课、分层作业、培优辅差等）。
-4. **给班主任的管理建议**：如何调动班级学风。
-
-要求：条理清晰，语气专业，字数 400-500 字。不要罗列数字，直接给出定性分析和可执行的建议。`;
-
-    // B. 创建/显示弹窗
-    const modalId = 'ai-class-report-modal';
-    let modal = document.getElementById(modalId);
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = modalId;
-        modal.className = 'modal';
-        modal.innerHTML = `
-                <div class="modal-content" style="max-width:800px; display:flex; flex-direction:column; max-height:85vh;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:10px;">
-                        <h3 style="color:var(--primary)"><i class="ti ti-brain"></i> AI 班级诊断报告</h3>
-                        <button type="button" class="modal-close-btn" aria-label="关闭 AI 班级诊断弹窗" onclick="document.getElementById('${modalId}').style.display='none'">&times;</button>
-                    </div>
-                    <div id="ai-class-report-content" style="background:#f8fafc; padding:20px; border-radius:8px; line-height:1.6; flex:1; overflow-y:auto; white-space:pre-wrap; font-family: sans-serif;">🤔 正在通过 ${LLM_CONFIG.source === 'local' ? '本地显卡' : '云端 API'} 进行深度分析，请稍候...</div>
-                    <div style="margin-top:15px; text-align:right; padding-top:10px; border-top:1px solid #eee;">
-                        <button class="btn btn-gray" onclick="document.getElementById('${modalId}').style.display='none'">关闭</button>
-                        <button class="btn btn-blue" onclick="navigator.clipboard.writeText(document.getElementById('ai-class-report-content').innerText); alert('已复制')">📋 复制报告</button>
-                    </div>
-                </div>`;
-        document.body.appendChild(modal);
-        if (typeof bindModalInteractionGuards === 'function') bindModalInteractionGuards();
-    }
-    modal.style.display = 'flex';
-
-    const contentBox = document.getElementById('ai-class-report-content');
-    contentBox.innerHTML = '<div style="text-align:center; padding:30px;"><span class="loader-spinner" style="width:30px;height:30px;display:inline-block;vertical-align:middle;"></span><br><br>正在思考中...<br><span style="font-size:12px;color:#666">引擎: ' + (LLM_CONFIG.source === 'local' ? 'WebLLM (本地)' : 'Cloud API') + '</span></div>';
-
-    // C. 执行调用
-    try {
-        let fullText = "";
-        await callUnifiedAI(prompt, (chunk) => {
-            if (fullText === "") contentBox.innerHTML = ""; // 收到第一个字时清除loading
-            fullText += chunk;
-            contentBox.innerHTML = fullText; // 实时打字机效果
-            contentBox.scrollTop = contentBox.scrollHeight; // 自动滚动到底部
-        });
-    } catch (e) {
-        contentBox.innerHTML = `<div style="color:red; text-align:center; padding:20px;">
-                <h3>🚫 分析失败</h3>
-                <p>${e.message}</p>
-                <p style="font-size:12px; color:#666;">如果是本地模式，请确保模型已加载且显存充足。</p>
-            </div>`;
-    }
-}
-/*
-} let CURRENT_REPORT_STUDENT = null; // 暂存当前正在查询的学生对象
 let CURRENT_REPORT_STUDENT = initialReportSessionSnapshot.currentReportStudent || null; // 暂存当前正在查询的学生对象
-let BATCH_AI_CACHE = initialReportSessionSnapshot.batchAiCache || {}; // 存储批量生成的评语 key: "学校_班级_姓名"
-let IS_BATCH_AI_RUNNING = !!initialReportSessionSnapshot.isBatchAiRunning; // 控制批量任务状态
-// ✋ 性能优化：定义学生明细表的分页状态
-*/
-let CURRENT_REPORT_STUDENT = initialReportSessionSnapshot.currentReportStudent || null; // 暂存当前正在查询的学生对�?
-let BATCH_AI_CACHE = initialReportSessionSnapshot.batchAiCache || {}; // 存储批量生成的评�?key: "学校_班级_濮撳悕"
-let IS_BATCH_AI_RUNNING = !!initialReportSessionSnapshot.isBatchAiRunning; // 控制批量任务状��?
-// 鉁?性能优化：定义学生明细表的分页状�?
+// 性能优化：定义学生明细表的分页状态
 let STD_PAGINATION = {
     page: 1,       // 当前页码
     size: 100,     // 每页显示条数 (调整此数值平衡性能与信息量)
@@ -13025,8 +12650,7 @@ function exportMutualAidGroups() {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), "学科互助分组"); XLSX.writeFile(wb, "互助分组名单.xlsx");
 }
 
-function generateAIComment(student) {
-    if (AI_DISABLED) return aiDisabledAlert();
+function generateStudentComment(student) {
     const style = 'encouraging';
     const teacherName = '老师'; // 默认称呼
     const totalRank = safeGet(student, 'ranks.total.township', 99999); const totalStudents = RAW_DATA.length || 1; const percentile = totalRank / totalStudents;
@@ -16067,111 +15691,6 @@ function updateConstraintWidgetsContext(type) {
     }
 }
 
-// AI hub runtime moved to public/assets/js/ai-hub-runtime.js.
-
-function buildStudentPrompt(stu) {
-    // 1. 获取基础上下文
-    const isDirectStudent = typeof isCountyDirectStudentForRank === 'function' ? isCountyDirectStudentForRank(stu) : false;
-    const totalStudents = isDirectStudent
-        ? ((stu?.school && SCHOOLS?.[stu.school]?.students?.length) || RAW_DATA.length)
-        : RAW_DATA.length;
-    const rankScopeText = isDirectStudent ? '校内' : '全镇';
-    const rawRank = isDirectStudent ? safeGet(stu, 'ranks.total.school', null) : safeGet(stu, 'ranks.total.township', null);
-    const rank = (typeof rawRank === 'number' && rawRank > 0) ? rawRank : null;
-
-    // 防止除以0，排名未知时显示"未知"
-    const rankDisplay = rank !== null ? `${rankScopeText} ${rank}/${totalStudents} (前${(rank / totalStudents * 100).toFixed(1)}%)` : `${rankScopeText} 未知/${totalStudents}`;
-
-    // 2. 进退步数据 (RAG: 检索历史)
-    // 使用之前定义的新辅助函数 findPreviousRecord
-    const prevStu = findPreviousRecord(stu);
-    let trendInfo = "（本次无历史对比数据）";
-
-    if (prevStu) {
-        // prevStu.townRank 可能是数字或字符串'-'，需要做类型守卫
-        const prevTownRank = (typeof prevStu.townRank === 'number' && prevStu.townRank > 0)
-            ? prevStu.townRank
-            : (parseInt(prevStu.townRank) > 0 ? parseInt(prevStu.townRank) : null);
-        // 用当前科目集重算上期总分，防止跨科目集对比错误
-        const prevNormTotal = recalcPrevTotal(prevStu);
-        const canCompareScore = (typeof prevNormTotal === 'number');
-        const scoreDiff = canCompareScore ? stu.total - prevNormTotal : null;
-
-        let rankTrendStr = "";
-        if (prevTownRank !== null && rank !== null) {
-            const rankDiff = prevTownRank - rank; // 正数=进步 (名次变小)
-            let evalStr = "";
-            if (Math.abs(rankDiff) < 10) evalStr = "发挥十分稳定";
-            else if (rankDiff >= 10) evalStr = "进步非常显著！";
-            else evalStr = "名次出现滑坡，需查找原因";
-            rankTrendStr = `
-            - 排名变化：${rankDiff > 0 ? '进步了' : '退步了'} ${Math.abs(rankDiff)} 名。
-            - 稳定性评价：${evalStr}。`;
-        }
-
-        const scoreChangeStr = (scoreDiff !== null)
-            ? `相比上次考试，总分变化：${scoreDiff > 0 ? '+' : ''}${scoreDiff.toFixed(1)}分。`
-            : `（上次考试科目集不同，总分无法直接对比）`;
-
-        trendInfo = `
-            【历史对比情况】：
-            - ${scoreChangeStr}${rankTrendStr}
-            `;
-    }
-
-    // 3. 构建学科强弱项 (基于 Z-Score 或 均分差)
-    let strengths = [];
-    let weaknesses = [];
-
-    SUBJECTS.forEach(sub => {
-        const score = stu.scores[sub];
-        if (score === undefined) return;
-        // 简单计算全镇均分
-        const allScores = RAW_DATA.map(s => s.scores[sub]).filter(v => typeof v === 'number');
-        const avg = allScores.length ? (allScores.reduce((a, b) => a + b, 0) / allScores.length) : 0;
-
-        const diff = score - avg;
-        // 阈值：高于均分15分算强，低于10分算弱
-        if (diff >= 15) strengths.push(sub);
-        else if (diff <= -10) weaknesses.push(sub);
-    });
-
-
-    const strengthStr = strengths.length > 0 ? strengths.join("、") : "各科较均衡";
-    const weakStr = weaknesses.length > 0 ? weaknesses.join("、") : "无明显短板";
-
-    // 4. 组合最终 Prompt
-    return `
-        # Role
-        你是一位经验丰富、数据驱动且充满人文关怀的初中班主任。请根据学生的成绩单和进退步情况，写一段简短的学情诊断。
-
-        # Data Context
-        姓名：${stu.name}
-        当前排名：${rankDisplay}
-        优势学科：${strengthStr}
-        待提升学科：${weakStr}
-        ${trendInfo}
-
-        # Requirements
-        1. **直面进退步**：如果存在历史数据，评语的第一句必须点评进退步情况（如“恭喜你，排名大幅上升”或“本次考试稍有遗憾，名次有所下滑”）。
-        2. **归因分析**：
-           - 如果退步，请温和地建议关注[待提升学科]。
-           - 如果进步，请肯定[优势学科]的贡献。
-        3. **语气风格**：类似 Windows Fluent Design 的理念——清晰、现代、不啰嗦，但充满温度。
-        4. **字数限制**：150字左右，分段显示，不要长篇大论。
-        `;
-}
-
-// 4. 停止生成
-function stopBatchAI() {
-    if (AI_DISABLED) return aiDisabledAlert();
-    setBatchAIRunningState(false);
-    document.getElementById('btn-start-batch-ai').classList.remove('hidden');
-    document.getElementById('btn-stop-batch-ai').classList.add('hidden');
-}
-
-// AI hub batch runtime moved to public/assets/js/ai-hub-runtime.js.
-
 // --- 1. 表格热力图功能 (智能识别横向/纵向 + 强制覆盖本校高亮) ---
 function toggleTableHeatmap(containerId) {
     const container = document.getElementById(containerId);
@@ -18029,8 +17548,6 @@ function getCurrentSnapshotPayload() {
         VA_VIEW_MODE: readProgressViewModeState(),
         __PROGRESS_QUICK_MODE: readProgressQuickModeState(),
         CURRENT_REPORT_STUDENT: readCurrentReportStudentState(),
-        BATCH_AI_CACHE: readBatchAICacheState(),
-        IS_BATCH_AI_RUNNING: readIsBatchAIRunningState(),
         CURRENT_CONTEXT_STUDENTS: readCurrentContextStudentsState(),
         TEACHER_STATS: window.TEACHER_STATS || {},
         HISTORY_ARCHIVE: readHistoryArchiveState(),
@@ -18290,10 +17807,6 @@ function applySnapshotPayload(db) {
         currentReportStudent: Object.prototype.hasOwnProperty.call(db, 'CURRENT_REPORT_STUDENT')
             ? (db.CURRENT_REPORT_STUDENT || null)
             : readCurrentReportStudentState(),
-        batchAiCache: db.BATCH_AI_CACHE || {},
-        isBatchAiRunning: Object.prototype.hasOwnProperty.call(db, 'IS_BATCH_AI_RUNNING')
-            ? (db.IS_BATCH_AI_RUNNING === true || String(db.IS_BATCH_AI_RUNNING || '').trim() === 'true')
-            : readIsBatchAIRunningState(),
         currentContextStudents: Object.prototype.hasOwnProperty.call(db, 'CURRENT_CONTEXT_STUDENTS')
             ? (db.CURRENT_CONTEXT_STUDENTS || [])
             : readCurrentContextStudentsState()
@@ -18374,7 +17887,7 @@ function markProjectFileBackupSaved(fileName) {
 
 function saveProjectSnapshot() {
     const hasData = RAW_DATA.length > 0 || Object.keys(TEACHER_MAP).length > 0;
-    const hasConfig = localStorage.getItem('LLM_API_KEY') || localStorage.getItem('app_skin_config');
+    const hasConfig = localStorage.getItem('app_skin_config');
 
     if (!hasData && !hasConfig) {
         return alert("当前系统为空，无需备份！");
@@ -18404,8 +17917,6 @@ function saveProjectSnapshot() {
             VA_VIEW_MODE: readProgressViewModeState(),
             __PROGRESS_QUICK_MODE: readProgressQuickModeState(),
             CURRENT_REPORT_STUDENT: readCurrentReportStudentState(),
-            BATCH_AI_CACHE: readBatchAICacheState(),
-            IS_BATCH_AI_RUNNING: readIsBatchAIRunningState(),
             CURRENT_CONTEXT_STUDENTS: readCurrentContextStudentsState(),
             MARGINAL_STUDENTS, POTENTIAL_STUDENTS_CACHE,
             MP_DATA_CACHE,
@@ -18424,11 +17935,6 @@ function saveProjectSnapshot() {
             }
         },
         settings: {
-            ai: {
-                key: localStorage.getItem('LLM_API_KEY'),
-                url: localStorage.getItem('LLM_BASE_URL'),
-                model: localStorage.getItem('LLM_MODEL')
-            },
             skin: localStorage.getItem('app_skin_config'),
             themeDark: localStorage.getItem('theme-dark'),
             hasSeenTour: localStorage.getItem('hasSeenV3Tour')
@@ -18471,11 +17977,6 @@ async function loadProjectSnapshot(input) {
         const settings = snapshot.settings || {};
 
         // 2. 恢复 LocalStorage 配置
-        if (settings.ai) {
-            if (settings.ai.key) localStorage.setItem('LLM_API_KEY', settings.ai.key);
-            if (settings.ai.url) localStorage.setItem('LLM_BASE_URL', settings.ai.url);
-            if (settings.ai.model) localStorage.setItem('LLM_MODEL', settings.ai.model);
-        }
         if (settings.skin) localStorage.setItem('app_skin_config', settings.skin);
         if (settings.themeDark) localStorage.setItem('theme-dark', settings.themeDark);
         if (settings.hasSeenTour) localStorage.setItem('hasSeenV3Tour', settings.hasSeenTour);
@@ -18513,8 +18014,6 @@ async function loadProjectSnapshot(input) {
                 VA_VIEW_MODE: db.VA_VIEW_MODE || 'school',
                 __PROGRESS_QUICK_MODE: db.__PROGRESS_QUICK_MODE || 'all',
                 CURRENT_REPORT_STUDENT: db.CURRENT_REPORT_STUDENT || null,
-                BATCH_AI_CACHE: db.BATCH_AI_CACHE || {},
-                IS_BATCH_AI_RUNNING: db.IS_BATCH_AI_RUNNING || false,
                 CURRENT_CONTEXT_STUDENTS: db.CURRENT_CONTEXT_STUDENTS || [],
                 MARGINAL_STUDENTS: db.MARGINAL_STUDENTS || {},
                 POTENTIAL_STUDENTS_CACHE: db.POTENTIAL_STUDENTS_CACHE || [],
@@ -18766,7 +18265,6 @@ function doSpotlightSearch() {
         { name: "两率一分(宏观)", id: "analysis" },
         { name: "临界生任务单", id: "marginal-push" },
         { name: "学生成绩单", id: "report-generator" },
-        { name: "AI工作台", id: "ai-analysis" },
         { name: "应用下载中心", id: "app-download-center" }
     ];
 
@@ -19466,4 +18964,6 @@ if (typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeE
         }, 1500);
     }
 })();
+
+
 

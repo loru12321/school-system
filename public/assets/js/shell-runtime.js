@@ -68,16 +68,6 @@
                 { id: 'report-generator', icon: 'ti-certificate', text: '成绩单/家长查分', hint: '生成面向学生与家长的成绩反馈出口。' }
             ]
         },
-        ai: {
-            title: 'AI分析',
-            color: '#f97316',
-            icon: 'ti-brain',
-            eyebrow: 'Creator Lab',
-            summary: '把分析需求像创作者提示词一样快速转成报告、诊断和批量动作。',
-            items: [
-                { id: 'ai-analysis', icon: 'ti-sparkles', text: 'AI工作台', hint: '集中处理提问、诊断、总结和批量分析任务。' }
-            ]
-        },
         tools: {
             title: '考务工具',
             color: '#7c3aed',

@@ -562,10 +562,10 @@ async function generateInquiryPackage() {
             }
         });
 
-        // C. 获取或生成评语
-        // 优先从批量生成缓存中取，如果没有则现场生成一条简单的
-        const cacheKey = `${stu.school}_${stu.class}_${stu.name}`;
-        const aiComment = readBatchAICacheState()[cacheKey] || generateAIComment(stu);
+        // C. 生成本地规则评语
+        const studentComment = typeof generateStudentComment === 'function'
+            ? generateStudentComment(stu)
+            : '';
 
         secureData[key] = {
             cls: stu.class,  // 存储班级
@@ -580,7 +580,7 @@ async function generateInquiryPackage() {
 
             rd: radarData,   // Radar Data
             vd: varianceData,// Variance Data
-            cm: aiComment    // Comment
+            cm: studentComment    // Comment
 
         };
     });

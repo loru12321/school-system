@@ -125,18 +125,6 @@ const SYSTEM_MANUAL = {
         calc: `<strong>分班算法</strong>：S型蛇形排列 + 均分极差优化 (模拟退火)。<br>
                    <strong>考场编排</strong>：同班互斥逻辑 (自动检测并调换同班相邻考生)。`
     },
-    'ai-analysis': {
-        title: '🤖 AI分析·使用说明',
-        fit: `用于<strong>集中管理 AI 评语、宏观 AI 报告、批量 AI 生成与连接配置</strong>。`,
-        when: `完成成绩导入后、需要写学生评语或做学校层面的智能诊断时使用。`,
-        use: `<ul>
-                <li><strong>AI 配置：</strong>填写或检查模型、网关与密钥配置。</li>
-                <li><strong>单学生评语：</strong>先在“成绩单/家长查分”里查询学生，再回来一键生成 AI 评语。</li>
-                <li><strong>批量 AI 评语：</strong>选择学校与班级，打开批量工作台后连续生成并导出。</li>
-                <li><strong>宏观 AI 报告：</strong>基于当前本校，生成本校 vs 他校的质量诊断建议。</li>
-              </ul>`,
-        calc: `云端模式走同域 AI 网关；批量评语会复用当前工作区成绩、排名和历史对比数据。`
-    },
     'starter-hub': {
         title: '🚀 新手入口·说明',
         fit: `用于<strong>新教师快速上手</strong>，一步完成核心配置。`,

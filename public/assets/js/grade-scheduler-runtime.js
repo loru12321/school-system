@@ -365,8 +365,8 @@ const SCHEDULER = {
         }, 200);
     },
 
-    // --- 🧠 AI 疲劳审计 ---
-    auditFatigue: async function () {
+    // --- 疲劳审计 ---
+    auditFatigue: function () {
         if (!this.schedule || !this.classes || !this.classes.length) return alert("请先完成排课");
         const area = document.getElementById('sch_audit_area');
         const summaryEl = document.getElementById('sch_audit_summary');
@@ -375,22 +375,12 @@ const SCHEDULER = {
 
         area.classList.remove('hidden');
         listEl.innerHTML = '';
-        summaryEl.innerText = 'AI 正在分析排课疲劳风险...';
+        summaryEl.innerText = '正在分析排课疲劳风险...';
 
         const analysis = this.buildFatigueAnalysis();
-
-        try {
-            const prompt = this.buildFatiguePrompt(analysis);
-            const aiText = await callUnifiedAI(prompt);
-            const bullets = this.extractAuditBullets(aiText);
-            this.renderAuditList(bullets.length ? bullets : [aiText.trim()]);
-            summaryEl.innerText = `已完成审计（${analysis.meta.classCount} 个班级 / ${analysis.meta.teacherCount} 位教师）`;
-        } catch (e) {
-            console.error(e);
-            const fallback = this.buildFallbackAuditList(analysis);
-            this.renderAuditList(fallback);
-            summaryEl.innerText = 'AI 审计失败，已展示规则化风险提示';
-        }
+        const items = this.buildFallbackAuditList(analysis);
+        this.renderAuditList(items);
+        summaryEl.innerText = `已完成规则审计（${analysis.meta.classCount} 个班级 / ${analysis.meta.teacherCount} 位教师）`;
     },
 
     buildFatigueAnalysis: function () {
@@ -498,27 +488,6 @@ const SCHEDULER = {
         };
     },
 
-    buildFatiguePrompt: function (analysis) {
-        const dayName = d => `周${['一', '二', '三', '四', '五'][d - 1] || d}`;
-        const topClasses = analysis.flags.classConsecutiveOver4
-            .map(x => `${x.class}班 ${dayName(x.day)} 连续${x.maxConsecutive}节`).join('；') || '无';
-        const topTeachers = analysis.flags.teacherConsecutiveOver3
-            .map(x => `${x.teacher} ${dayName(x.day)} 连续${x.maxConsecutive}节`).join('；') || '无';
-        const eveClasses = analysis.flags.classEveningOver2
-            .map(x => `${x.class}班 ${dayName(x.day)} 晚上${x.eveningLessons}节`).join('；') || '无';
-        const eveTeachers = analysis.flags.teacherEveningOver2
-            .map(x => `${x.teacher} ${dayName(x.day)} 晚上${x.eveningLessons}节`).join('；') || '无';
-
-        return `你是资深教务专家。请根据以下排课疲劳摘要给出审计要点。\n` +
-            `要求：输出 5-8 条要点，每条以“• ”开头，包含具体对象(班级/教师/日期)+风险+改进建议。不要输出代码或Markdown代码块。\n\n` +
-            `【摘要】\n` +
-            `班级数:${analysis.meta.classCount} 教师数:${analysis.meta.teacherCount} 课时结构: 上午${analysis.meta.am} 下午${analysis.meta.pm} 晚自习${analysis.meta.eve}\n` +
-            `连续4节及以上的班级: ${topClasses}\n` +
-            `连续3节及以上的教师: ${topTeachers}\n` +
-            `单日晚自习≥2节的班级: ${eveClasses}\n` +
-            `单日晚自习≥2节的教师: ${eveTeachers}\n`;
-    },
-
     buildFallbackAuditList: function (analysis) {
         const dayName = d => `周${['一', '二', '三', '四', '五'][d - 1] || d}`;
         const list = [];
@@ -536,19 +505,6 @@ const SCHEDULER = {
         });
         if (!list.length) list.push('未发现明显疲劳风险，可维持当前排课结构。');
         return list.slice(0, 10);
-    },
-
-    extractAuditBullets: function (text) {
-        if (!text) return [];
-        let cleaned = text.replace(/```[\s\S]*?```/g, '').trim();
-        const lines = cleaned.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-        const bullets = [];
-        lines.forEach(l => {
-            const item = l.replace(/^[-*•\d\.\)\s]+/g, '').trim();
-            if (item) bullets.push(item);
-        });
-        if (!bullets.length && cleaned) bullets.push(cleaned);
-        return bullets.slice(0, 10);
     },
 
     renderAuditList: function (items) {

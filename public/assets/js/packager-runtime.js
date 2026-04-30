@@ -90,8 +90,7 @@
                     TEACHER_SCHOOL_MAP: root.TEACHER_SCHOOL_MAP,
                     MY_SCHOOL: root.MY_SCHOOL,
                     CONFIG: root.CONFIG,
-                    AUTH_DB: authDb,
-                    LLM_CONFIG: root.LLM_CONFIG
+                    AUTH_DB: authDb
                 };
 
                 let htmlContent = doc.documentElement.outerHTML;
