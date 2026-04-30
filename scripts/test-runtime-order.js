@@ -263,6 +263,9 @@ assert.ok(!deferredVendorManifest.includes(scrollTriggerVendorRef), 'ScrollTrigg
 assert.ok(!deferredVendorManifest.includes(popperVendorRef), 'popper should not be part of the generic post-boot vendor batch');
 assert.ok(!deferredVendorManifest.includes(tippyVendorRef), 'tippy should not be part of the generic post-boot vendor batch');
 assert.ok(!deferredVendorManifest.includes(simplebarVendorRef), 'simplebar should not be part of the generic post-boot vendor batch');
+assert.ok(bootRuntime.includes('window.__BOOT_SCRIPT_REGISTRY__'), 'boot-runtime.js should cache boot script lookup state');
+assert.ok(bootRuntime.includes('function isBootScriptLoaded'), 'boot-runtime.js should reuse cached script load checks');
+assert.ok(bootRuntime.includes("'shell-polish': {\n        mode: 'idle',\n        warmup: 'balanced'"), 'shell polish should load after the core workbench is ready');
 const authStateIndex = moduleManifest.indexOf(authStateRef);
 const workspaceStateIndex = moduleManifest.indexOf(workspaceStateRef);
 const examStateIndex = moduleManifest.indexOf(examStateRef);
@@ -377,7 +380,7 @@ assert.ok(dataManagerSaveSyncIndex < appIndex, 'data-manager-save-sync-runtime.j
 assert.ok(dataManagerHistoryIndex < appIndex, 'data-manager-history-runtime.js should load before app.js');
 assert.ok(dataManagerTabIndex < appIndex, 'data-manager-tab-runtime.js should load before app.js');
 assert.ok(shellRuntimeIndex >= 0, 'index.html should load shell-runtime.js');
-assert.ok(shellPolishRuntimeIndex >= 0, 'index.html should load shell-polish-runtime.js');
+assert.strictEqual(shellPolishRuntimeIndex, -1, 'shell-polish-runtime.js should be idle-loaded instead of blocking core app boot');
 assert.ok(moduleEntryRuntimeIndex >= 0, 'index.html should load module-entry-runtime.js');
 assert.ok(rankingDataServiceIndex >= 0, 'index.html should load ranking-data-service-runtime.js');
 assert.ok(appIndex >= 0, 'index.html should load app.js');
@@ -700,8 +703,7 @@ assert.ok(bootRuntimeIndex >= 0, 'index.html should load boot-runtime.js before 
 assert.ok(authStateIndex < cloudWorkspaceIndex, 'auth-state-runtime.js must load before cloud-workspace-runtime.js');
 assert.ok(authStateIndex < appIndex, 'auth-state-runtime.js must load before app.js');
 assert.ok(shellRuntimeIndex < appIndex, 'shell-runtime.js must load before app.js');
-assert.ok(shellRuntimeIndex < shellPolishRuntimeIndex, 'shell-runtime.js must load before shell-polish-runtime.js');
-assert.ok(shellPolishRuntimeIndex < moduleEntryRuntimeIndex, 'shell-polish-runtime.js must load before module-entry-runtime.js');
+assert.ok(shellRuntimeIndex < moduleEntryRuntimeIndex, 'shell-runtime.js must load before module-entry-runtime.js');
 assert.ok(moduleEntryRuntimeIndex < rankingDataServiceIndex, 'module-entry-runtime.js must load before ranking-data-service-runtime.js');
 assert.ok(rankingDataServiceIndex < appIndex, 'ranking-data-service-runtime.js must load before app.js');
 assert.ok(studentJumpIndex >= 0, 'index.html should load student-jump-runtime.js');

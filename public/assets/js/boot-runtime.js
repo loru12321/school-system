@@ -100,6 +100,14 @@ var SYSTEM_RUNTIME_SKILLS = {
             { key: 'crypto-vendor', src: './assets/vendor/crypto-js/crypto-js.min.js' }
         ]
     },
+    'shell-polish': {
+        mode: 'idle',
+        warmup: 'balanced',
+        triggers: ['shell-polish', 'refreshShellEnhancements'],
+        entries: [
+            { key: 'shell-polish', src: './assets/js/shell-polish-runtime.js' }
+        ]
+    },
     'sweetalert-vendor': {
         mode: 'idle',
         warmup: 'demand',
@@ -446,7 +454,6 @@ var APP_MODULES = [
     './assets/js/config-transfer-runtime.js',
     './assets/js/shell-runtime.js',
     './assets/js/workspace-rail-runtime.js',
-    './assets/js/shell-polish-runtime.js',
     './assets/js/virtual-table-runtime.js',
     './assets/js/mobile-experience-runtime.js',
     './assets/js/module-entry-runtime.js',
@@ -481,17 +488,59 @@ var APP_MODULE_LATE_PREFETCH_LIMIT = 18;
 var APP_MODULE_PREFETCH_CHUNK_SIZE = 6;
 var APP_MODULE_DESKTOP_BATCH_SIZE = 12;
 
+window.__BOOT_SCRIPT_REGISTRY__ = window.__BOOT_SCRIPT_REGISTRY__ || {};
+
 function normalizeBootModuleKey(src) {
-    return String(src || '').replace(/^\.?\//, '');
+    let value = String(src || '').trim();
+    if (!value) return '';
+    try {
+        value = new URL(value, window.location.href).pathname;
+    } catch (_) {}
+    value = value.split('#')[0].split('?')[0].replace(/\\/g, '/');
+    return value.replace(/^\.?\//, '').replace(/^\/+/, '');
+}
+
+function getBootScriptState(src) {
+    const key = normalizeBootModuleKey(src);
+    return key ? window.__BOOT_SCRIPT_REGISTRY__[key] || '' : '';
+}
+
+function markBootScriptState(src, state, script) {
+    const key = normalizeBootModuleKey(src);
+    if (!key) return;
+    window.__BOOT_SCRIPT_REGISTRY__[key] = state;
+    if (script) {
+        script.dataset.bootKey = key;
+        if (state === 'loaded') script.dataset.bootLoaded = 'true';
+    }
+}
+
+function findBootScriptElement(src, loadedOnly = false) {
+    const needle = normalizeBootModuleKey(src);
+    if (!needle) return null;
+    const state = getBootScriptState(src);
+    if (state === 'loaded' && loadedOnly) return { dataset: { bootLoaded: 'true' } };
+
+    const scripts = Array.from(document.scripts || []);
+    const found = scripts.find((script) => {
+        const bootKey = String(script.dataset?.bootKey || '').trim();
+        if (bootKey && bootKey === needle) return !loadedOnly || script.dataset.bootLoaded === 'true';
+        const candidate = normalizeBootModuleKey(script.getAttribute('src') || script.src || '');
+        return candidate === needle && (!loadedOnly || script.dataset.bootLoaded === 'true');
+    }) || null;
+    if (found) {
+        markBootScriptState(src, found.dataset.bootLoaded === 'true' ? 'loaded' : 'loading', found);
+    }
+    return found;
+}
+
+function isBootScriptLoaded(src) {
+    return !!findBootScriptElement(src, true);
 }
 
 function hasBootScriptElement(src) {
-    const needle = normalizeBootModuleKey(src);
-    if (!needle) return false;
-    return Array.from(document.scripts || []).some((script) => {
-        const candidate = String(script.getAttribute('src') || script.src || '');
-        return candidate.includes(needle);
-    });
+    const key = normalizeBootModuleKey(src);
+    return !!key && (!!getBootScriptState(src) || !!findBootScriptElement(src));
 }
 
 function prefetchAppModuleList(modules, key) {
@@ -637,29 +686,34 @@ function scheduleAppModuleWarmup() {
 
 function loadBootScript(src, timeoutMs) {
     return new Promise((resolve) => {
-        const existingLoaded = Array.from(document.scripts || []).find((script) => {
-            const candidate = String(script.getAttribute('src') || script.src || '');
-            return candidate.includes(src.replace('./', '')) && script.dataset.bootLoaded === 'true';
-        });
-        if (existingLoaded) {
+        if (isBootScriptLoaded(src)) {
             resolve();
             return;
         }
         const script = document.createElement('script');
         script.src = getVersionedAssetPath(src);
+        markBootScriptState(src, 'loading', script);
 
+        let finished = false;
         const timeout = setTimeout(() => {
             console.warn(`[boot-runtime] Script load timeout (${timeoutMs}ms): ${src}`);
+            markBootScriptState(src, 'timeout', script);
+            finished = true;
             resolve();
         }, timeoutMs);
 
         script.onload = () => {
-            script.dataset.bootLoaded = 'true';
+            markBootScriptState(src, 'loaded', script);
+            if (finished) return;
+            finished = true;
             clearTimeout(timeout);
             resolve();
         };
         script.onerror = () => {
             console.warn(`[boot-runtime] Script load error: ${src}`);
+            markBootScriptState(src, 'error', script);
+            if (finished) return;
+            finished = true;
             clearTimeout(timeout);
             resolve();
         };
@@ -721,11 +775,7 @@ async function loadOrderedBootScripts(sources, options = {}) {
                     return;
                 }
 
-                const existingLoaded = Array.from(document.scripts || []).find((script) => {
-                    const candidate = String(script.getAttribute('src') || script.src || '');
-                    return candidate.includes(src.replace('./', '')) && script.dataset.bootLoaded === 'true';
-                });
-                if (existingLoaded) {
+                if (isBootScriptLoaded(src)) {
                     settle(src, 'cached');
                     return;
                 }
@@ -733,17 +783,19 @@ async function loadOrderedBootScripts(sources, options = {}) {
                 const script = document.createElement('script');
                 script.src = getVersionedAssetPath(src);
                 script.async = false;
+                markBootScriptState(src, 'loading', script);
 
                 let finished = false;
                 const timeoutMs = getAppModuleTimeoutMs(src);
                 const finish = (status) => {
+                    if (status === 'loaded') {
+                        markBootScriptState(src, 'loaded', script);
+                    }
                     if (finished) return;
                     finished = true;
                     clearTimeout(timeout);
-                    if (status === 'loaded') {
-                        script.dataset.bootLoaded = 'true';
-                        if (typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeExports();
-                    }
+                    if (status !== 'loaded') markBootScriptState(src, status, script);
+                    if (status === 'loaded' && typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeExports();
                     settle(src, status);
                 };
                 const timeout = setTimeout(() => {
@@ -2456,6 +2508,10 @@ window.ensureHistoryCompareRuntimeLoaded = function () {
 
 window.ensurePerfMobileRuntimeLoaded = function () {
     return loadOptionalRuntime('perf-mobile', './assets/js/perf-mobile-runtime.js');
+};
+
+window.ensureShellPolishRuntimeLoaded = function () {
+    return window.SystemRuntimeLoader.load('shell-polish');
 };
 
 window.ensureMobileManagerRuntimeLoaded = function () {
