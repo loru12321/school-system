@@ -68,6 +68,18 @@
         return DEFAULT_TTL_MS;
     }
 
+    function getCloudApi() {
+        return window.CloudApi && typeof window.CloudApi === 'object' ? window.CloudApi : null;
+    }
+
+    function makeUnavailableResult(data, message) {
+        return {
+            data,
+            error: new Error(message || 'Cloud data service unavailable'),
+            source: 'none'
+        };
+    }
+
     async function runCached(type, options, task, config = {}) {
         const key = getCacheKey(type, options);
         const cached = getCached(key);
@@ -107,11 +119,15 @@
         const task = hasTask
             ? taskOrConfig
             : (() => {
-                const api = window.CloudApi;
-                if (!api || typeof api.selectSystemData !== 'function') {
-                    return { data: [], error: new Error('CloudApi.selectSystemData unavailable') };
+                const api = getCloudApi();
+                if (api && typeof api.selectSystemData === 'function') {
+                    return api.selectSystemData(options);
                 }
-                return api.selectSystemData(options);
+                const legacy = window.selectSystemDataRecords;
+                if (typeof legacy === 'function' && legacy !== selectSystemDataRecords) {
+                    return legacy(options);
+                }
+                return makeUnavailableResult(options.maybeSingle ? null : [], 'CloudApi.selectSystemData unavailable');
             });
         const config = hasTask ? (maybeConfig || {}) : (taskOrConfig || {});
         const ttl = getReadTtl(options);
@@ -123,18 +139,79 @@
         const task = hasTask
             ? taskOrConfig
             : (() => {
-                if (typeof window.selectSystemDataRecords !== 'function') {
-                    return { data: [], error: new Error('selectSystemDataRecords unavailable') };
+                const api = getCloudApi();
+                if (api && typeof api.selectSystemData === 'function') {
+                    return api.selectSystemData(options);
                 }
-                return window.selectSystemDataRecords(options);
+                const legacy = window.selectSystemDataRecords;
+                if (typeof legacy === 'function' && legacy !== selectSystemDataRecords) {
+                    return legacy(options);
+                }
+                return makeUnavailableResult(options.maybeSingle ? null : [], 'selectSystemDataRecords unavailable');
             });
         const config = hasTask ? (maybeConfig || {}) : (taskOrConfig || {});
         return runCached('selectSystemDataRecords', options, task, { ttl: getReadTtl(options), ...config });
     }
 
+    async function readSystemDataRecord(key, select = 'content', config = {}) {
+        const normalizedKey = String(key || '').trim();
+        const options = {
+            keyEq: normalizedKey,
+            select: select || 'content',
+            maybeSingle: true
+        };
+        if (!normalizedKey) return makeUnavailableResult(null, 'SYSTEM_DATA_KEY_MISSING');
+        return runCached('readSystemDataRecord', options, () => {
+            const api = getCloudApi();
+            if (api && typeof api.readSystemDataRecord === 'function') {
+                return api.readSystemDataRecord(normalizedKey, options.select);
+            }
+            const legacy = window.readSystemDataRecord;
+            if (typeof legacy === 'function' && legacy !== readSystemDataRecord) {
+                return legacy(normalizedKey, options.select);
+            }
+            return makeUnavailableResult(null, 'readSystemDataRecord unavailable');
+        }, { ttl: getReadTtl(options), ...config });
+    }
+
+    async function upsertSystemDataRecord(rows, config = {}) {
+        clear();
+        const api = getCloudApi();
+        let result;
+        if (api && typeof api.upsertSystemData === 'function') {
+            result = await api.upsertSystemData(rows, config);
+        } else {
+            const legacy = window.upsertSystemDataRecord;
+            result = typeof legacy === 'function' && legacy !== upsertSystemDataRecord
+                ? await legacy(rows)
+                : makeUnavailableResult(null, 'upsertSystemDataRecord unavailable');
+        }
+        if (!result?.error) clear();
+        return result;
+    }
+
+    async function deleteSystemDataRecords(options = {}, config = {}) {
+        clear();
+        const api = getCloudApi();
+        let result;
+        if (api && typeof api.deleteSystemData === 'function') {
+            result = await api.deleteSystemData(options, config);
+        } else {
+            const legacy = window.deleteSystemDataRecords;
+            result = typeof legacy === 'function' && legacy !== deleteSystemDataRecords
+                ? await legacy(options)
+                : makeUnavailableResult(null, 'deleteSystemDataRecords unavailable');
+        }
+        if (!result?.error) clear();
+        return result;
+    }
+
     window.CloudDataService = {
         selectSystemData,
         selectSystemDataRecords,
+        readSystemDataRecord,
+        upsertSystemDataRecord,
+        deleteSystemDataRecords,
         runCached,
         clear,
         getStats() {

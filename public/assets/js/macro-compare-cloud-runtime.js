@@ -31,11 +31,35 @@
         return query;
     }
 
+    function hasCloudCompareAccess() {
+        return !!(
+            window.CloudApi
+            || window.cloudClient
+            || window.sbClient
+        );
+    }
+
+    async function upsertCloudMacroCompareRow(row) {
+        if (window.CloudDataService && typeof window.CloudDataService.upsertSystemDataRecord === 'function') {
+            return window.CloudDataService.upsertSystemDataRecord(row);
+        }
+        if (window.CloudApi && typeof window.CloudApi.upsertSystemData === 'function') {
+            return window.CloudApi.upsertSystemData(row);
+        }
+        if (typeof window.upsertSystemDataRecord === 'function') {
+            return window.upsertSystemDataRecord(row);
+        }
+        if (!window.sbClient || typeof window.sbClient.from !== 'function') {
+            return { data: null, error: new Error('CLOUD_CLIENT_MISSING') };
+        }
+        return window.sbClient.from('system_data').upsert(row, { onConflict: 'key' });
+    }
+
     async function saveMacroMultiPeriodCompareToCloud() {
         const MACRO_MULTI_PERIOD_COMPARE_CACHE = readMacroCompareCacheState();
         window.MACRO_MULTI_PERIOD_COMPARE_CACHE = MACRO_MULTI_PERIOD_COMPARE_CACHE;
         if (!window.MACRO_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成校际多期对比结果');
-        if (!window.sbClient) return alert('☁️ 云端服务未连接，无法保存');
+        if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接，无法保存');
 
         const cache = MACRO_MULTI_PERIOD_COMPARE_CACHE;
         const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || 'unknown';
@@ -61,11 +85,11 @@
         try {
             if (window.UI) UI.loading(true, '☁️ 正在保存校际多期对比...');
             const compressed = 'LZ|' + LZString.compressToUTF16(JSON.stringify(payload));
-            const { error } = await sbClient.from('system_data').upsert({
+            const { error } = await upsertCloudMacroCompareRow({
                 key,
                 content: compressed,
                 updated_at: new Date().toISOString()
-            }, { onConflict: 'key' });
+            });
             if (error) throw error;
             if (window.UI) UI.toast('✅ 校际多期对比已保存到云端', 'success');
         } catch (e) {
@@ -77,7 +101,7 @@
     }
 
     async function viewCloudMacroCompares() {
-        if (!sbClient) return alert('☁️ 云端服务未连接');
+        if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接');
         try {
             if (window.UI) UI.loading(true, '☁️ 正在加载校际对比云端列表...');
 
@@ -135,7 +159,7 @@
     }
 
     async function loadCloudMacroCompare(key) {
-        if (!sbClient) return alert('☁️ 云端服务未连接');
+        if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接');
         try {
             if (typeof Swal !== 'undefined') Swal.close();
             if (window.UI) UI.loading(true, '☁️ 正在加载校际对比详情...');

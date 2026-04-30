@@ -43,6 +43,30 @@
         return query;
     }
 
+    function hasCloudCompareAccess() {
+        return !!(
+            window.CloudApi
+            || window.cloudClient
+            || window.sbClient
+        );
+    }
+
+    async function upsertCloudTeacherCompareRow(row) {
+        if (window.CloudDataService && typeof window.CloudDataService.upsertSystemDataRecord === 'function') {
+            return window.CloudDataService.upsertSystemDataRecord(row);
+        }
+        if (window.CloudApi && typeof window.CloudApi.upsertSystemData === 'function') {
+            return window.CloudApi.upsertSystemData(row);
+        }
+        if (typeof window.upsertSystemDataRecord === 'function') {
+            return window.upsertSystemDataRecord(row);
+        }
+        if (!window.sbClient || typeof window.sbClient.from !== 'function') {
+            return { data: null, error: new Error('CLOUD_CLIENT_MISSING') };
+        }
+        return window.sbClient.from('system_data').upsert(row, { onConflict: 'key' });
+    }
+
     function sortCloudTeacherCompareRows(rows) {
         return (Array.isArray(rows) ? rows : [])
             .filter(Boolean)
@@ -57,7 +81,7 @@
             return alert('请先生成教师多期对比或全校对比结果');
         }
 
-        if (!window.sbClient) {
+        if (!hasCloudCompareAccess()) {
             return alert('☁️ 云端服务未连接，无法保存');
         }
 
@@ -104,11 +128,11 @@
             };
 
             const compressed = 'LZ|' + LZString.compressToUTF16(JSON.stringify(payload));
-            const { error } = await sbClient.from('system_data').upsert({
+            const { error } = await upsertCloudTeacherCompareRow({
                 key,
                 content: compressed,
                 updated_at: new Date().toISOString()
-            }, { onConflict: 'key' });
+            });
 
             if (error) throw error;
             if (window.UI) UI.toast(`✅ 已保存云端对比: ${title}`, 'success');
@@ -121,7 +145,7 @@
     }
 
     async function viewCloudTeacherCompares() {
-        if (!sbClient) return alert('☁️ 云端服务未连接');
+        if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接');
 
         try {
             if (window.UI) UI.loading(true, '☁️ 正在加载云端列表...');

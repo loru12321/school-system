@@ -39,16 +39,7 @@
 
     async function selectSystemData(options = {}) {
         if (window.CloudDataService && typeof window.CloudDataService.selectSystemData === 'function') {
-            return window.CloudDataService.selectSystemData(options, async () => {
-                const api = getCloudApi();
-                if (api && typeof api.selectSystemData === 'function') {
-                    return api.selectSystemData(options);
-                }
-                return {
-                    data: options.maybeSingle ? null : [],
-                    error: new Error('CloudApi.selectSystemData unavailable')
-                };
-            });
+            return window.CloudDataService.selectSystemData(options);
         }
         const api = getCloudApi();
         if (api && typeof api.selectSystemData === 'function') {
@@ -62,16 +53,12 @@
     }
 
     async function upsertSystemData(rows) {
-        if (window.CloudDataService && typeof window.CloudDataService.clear === 'function') {
-            window.CloudDataService.clear();
+        if (window.CloudDataService && typeof window.CloudDataService.upsertSystemDataRecord === 'function') {
+            return window.CloudDataService.upsertSystemDataRecord(rows);
         }
         const api = getCloudApi();
         if (api && typeof api.upsertSystemData === 'function') {
-            const result = await api.upsertSystemData(rows);
-            if (!result?.error && window.CloudDataService && typeof window.CloudDataService.clear === 'function') {
-                window.CloudDataService.clear();
-            }
-            return result;
+            return api.upsertSystemData(rows);
         }
         return {
             data: [],
@@ -1140,7 +1127,7 @@
 
     const CloudManager = {
         check: (silent = false) => {
-            if (!(window.cloudClient || window.sbClient)) {
+            if (!(window.CloudApi || window.cloudClient || window.sbClient)) {
                 if (!silent) safeToast('云端未连接', 'error');
                 return false;
             }

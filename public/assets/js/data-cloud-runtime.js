@@ -66,25 +66,34 @@
     }
 
     function getReadSystemDataRecord() {
+        if (root.CloudDataService && typeof root.CloudDataService.readSystemDataRecord === 'function') {
+            return root.CloudDataService.readSystemDataRecord.bind(root.CloudDataService);
+        }
         return typeof root.readSystemDataRecord === 'function'
             ? root.readSystemDataRecord.bind(root)
             : null;
     }
 
     function getUpsertSystemDataRecord() {
+        if (root.CloudDataService && typeof root.CloudDataService.upsertSystemDataRecord === 'function') {
+            return root.CloudDataService.upsertSystemDataRecord.bind(root.CloudDataService);
+        }
         return typeof root.upsertSystemDataRecord === 'function'
             ? root.upsertSystemDataRecord.bind(root)
             : null;
     }
 
     function getDeleteSystemDataRecords() {
+        if (root.CloudDataService && typeof root.CloudDataService.deleteSystemDataRecords === 'function') {
+            return root.CloudDataService.deleteSystemDataRecords.bind(root.CloudDataService);
+        }
         return typeof root.deleteSystemDataRecords === 'function'
             ? root.deleteSystemDataRecords.bind(root)
             : null;
     }
 
     function ensureCloudAccess() {
-        return !!(root.CloudApi || root.sbClient);
+        return !!(root.CloudApi || root.cloudClient || root.sbClient);
     }
 
     function getWorkspaceProjectKey() {

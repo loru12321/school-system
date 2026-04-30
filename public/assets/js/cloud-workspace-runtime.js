@@ -105,25 +105,13 @@
 
     async function selectSystemData(options = {}) {
         if (window.CloudDataService && typeof window.CloudDataService.selectSystemData === 'function') {
-            return window.CloudDataService.selectSystemData(options, async () => {
-                if (window.CloudApi && typeof window.CloudApi.selectSystemData === 'function') {
-                    return window.CloudApi.selectSystemData(options);
-                }
-                if (!window.sbClient || typeof window.sbClient.from !== 'function') {
-                    return { data: options.maybeSingle ? null : [], error: new Error('CLOUD_CLIENT_MISSING') };
-                }
-                let query = window.sbClient.from(CLOUD_TABLE).select(options.select || '*');
-                if (options.keyEq) query = query.eq('key', options.keyEq);
-                if (options.keyLike) query = query.like('key', options.keyLike);
-                if (Array.isArray(options.keyIn) && options.keyIn.length) query = query.in('key', options.keyIn);
-                if (options.order) query = query.order(options.order, { ascending: options.ascending !== false });
-                if (Number.isFinite(Number(options.limit)) && Number(options.limit) > 0) query = query.limit(Number(options.limit));
-                if (options.maybeSingle && typeof query.maybeSingle === 'function') query = query.maybeSingle();
-                return query;
-            });
+            return window.CloudDataService.selectSystemData(options);
         }
         if (window.CloudApi && typeof window.CloudApi.selectSystemData === 'function') {
             return window.CloudApi.selectSystemData(options);
+        }
+        if (typeof window.selectSystemDataRecords === 'function') {
+            return window.selectSystemDataRecords(options);
         }
         if (!window.sbClient || typeof window.sbClient.from !== 'function') {
             return { data: options.maybeSingle ? null : [], error: new Error('CLOUD_CLIENT_MISSING') };
@@ -136,6 +124,22 @@
         if (Number.isFinite(Number(options.limit)) && Number(options.limit) > 0) query = query.limit(Number(options.limit));
         if (options.maybeSingle && typeof query.maybeSingle === 'function') query = query.maybeSingle();
         return query;
+    }
+
+    async function upsertSystemDataRecord(row) {
+        if (window.CloudDataService && typeof window.CloudDataService.upsertSystemDataRecord === 'function') {
+            return window.CloudDataService.upsertSystemDataRecord(row);
+        }
+        if (window.CloudApi && typeof window.CloudApi.upsertSystemData === 'function') {
+            return window.CloudApi.upsertSystemData(row);
+        }
+        if (typeof window.upsertSystemDataRecord === 'function') {
+            return window.upsertSystemDataRecord(row);
+        }
+        if (!window.sbClient || typeof window.sbClient.from !== 'function') {
+            return { data: null, error: new Error('CLOUD_CLIENT_MISSING') };
+        }
+        return window.sbClient.from(CLOUD_TABLE).upsert(row, { onConflict: 'key' });
     }
 
     const WORKSPACE_SYNC_META_PREFIX = 'CLOUD_WORKSPACE_META_V2::';
@@ -481,11 +485,11 @@
                 if (mode === 'workspace') normalizeWorkspacePayload(payload);
                 const content = packPayload(payload);
 
-                const { error } = await window.sbClient.from(CLOUD_TABLE).upsert({
+                const { error } = await upsertSystemDataRecord({
                     key,
                     content,
                     updated_at: new Date().toISOString()
-                }, { onConflict: 'key' });
+                });
                 if (error) throw error;
 
                 if (mode === 'workspace') {
@@ -876,11 +880,11 @@
                 }
 
                 try {
-                    const { error } = await window.sbClient.from(CLOUD_TABLE).upsert({
+                    const { error } = await upsertSystemDataRecord({
                         key: cacheKey,
                         content: packedContent,
                         updated_at: syncedAt
-                    }, { onConflict: 'key' });
+                    });
                     if (error) throw error;
 
                     delete queue[cacheKey];

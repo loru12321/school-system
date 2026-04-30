@@ -33,6 +33,30 @@
         if (options.maybeSingle && typeof query.maybeSingle === 'function') query = query.maybeSingle();
         return query;
     }
+
+    function hasCloudCompareAccess() {
+        return !!(
+            window.CloudApi
+            || window.cloudClient
+            || window.sbClient
+        );
+    }
+
+    async function upsertCloudStudentCompareRow(row) {
+        if (window.CloudDataService && typeof window.CloudDataService.upsertSystemDataRecord === 'function') {
+            return window.CloudDataService.upsertSystemDataRecord(row);
+        }
+        if (window.CloudApi && typeof window.CloudApi.upsertSystemData === 'function') {
+            return window.CloudApi.upsertSystemData(row);
+        }
+        if (typeof window.upsertSystemDataRecord === 'function') {
+            return window.upsertSystemDataRecord(row);
+        }
+        if (!window.sbClient || typeof window.sbClient.from !== 'function') {
+            return { data: null, error: new Error('CLOUD_CLIENT_MISSING') };
+        }
+        return window.sbClient.from('system_data').upsert(row, { onConflict: 'key' });
+    }
     const readCloudCompareTargetSessionState = typeof window.readCloudCompareTargetState === 'function'
         ? window.readCloudCompareTargetState
         : (() => {
@@ -437,7 +461,7 @@
         const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
         window.STUDENT_MULTI_PERIOD_COMPARE_CACHE = STUDENT_MULTI_PERIOD_COMPARE_CACHE;
         if (!window.STUDENT_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成学生多期对比结果');
-        if (!window.sbClient) return alert('☁️ 云端服务未连接，无法保存');
+        if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接，无法保存');
 
         const user = Auth.currentUser;
         if (!user || !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director'])) {
@@ -474,11 +498,11 @@
             };
 
             const compressed = 'LZ|' + LZString.compressToUTF16(JSON.stringify(payload));
-            const { error } = await sbClient.from('system_data').upsert({
+            const { error } = await upsertCloudStudentCompareRow({
                 key,
                 content: compressed,
                 updated_at: new Date().toISOString()
-            }, { onConflict: 'key' });
+            });
             if (error) throw error;
             if (window.UI) UI.loading(false);
             if (window.UI) UI.toast(`✅ 已保存到云端 (${title})`, 'success');
@@ -629,7 +653,7 @@
     }
 
     async function viewCloudStudentCompares(selfOnly = false) {
-        if (!window.sbClient) return alert('☁️ 云端服务未连接');
+        if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接');
         try {
             if (window.UI) UI.loading(true, '☁️ 正在加载云端对比列表...');
 
@@ -726,7 +750,7 @@
 
     async function loadCloudStudentCompare(key, selfOnly = false) {
         sanitizeCloudCompareFocusAndModal();
-        if (!window.sbClient) return alert('☁️ 云端服务未连接');
+        if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接');
         try {
             if (window.UI) UI.loading(true, '☁️ 正在加载云端对比详情...');
             const { data, error } = await selectCloudStudentCompareRows({

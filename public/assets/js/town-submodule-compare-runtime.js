@@ -28,6 +28,9 @@
         });
 
 async function selectCloudTownSubmoduleCompareRows(options = {}) {
+    if (window.CloudDataService && typeof window.CloudDataService.selectSystemData === 'function') {
+        return window.CloudDataService.selectSystemData(options);
+    }
     if (window.CloudApi && typeof window.CloudApi.selectSystemData === 'function') {
         return window.CloudApi.selectSystemData(options);
     }
@@ -39,6 +42,30 @@ async function selectCloudTownSubmoduleCompareRows(options = {}) {
     if (options.limit) query = query.limit(options.limit);
     if (options.maybeSingle && typeof query.maybeSingle === 'function') query = query.maybeSingle();
     return query;
+}
+
+function hasCloudCompareAccess() {
+    return !!(
+        window.CloudApi
+        || window.cloudClient
+        || window.sbClient
+    );
+}
+
+async function upsertCloudTownSubmoduleCompareRow(row) {
+    if (window.CloudDataService && typeof window.CloudDataService.upsertSystemDataRecord === 'function') {
+        return window.CloudDataService.upsertSystemDataRecord(row);
+    }
+    if (window.CloudApi && typeof window.CloudApi.upsertSystemData === 'function') {
+        return window.CloudApi.upsertSystemData(row);
+    }
+    if (typeof window.upsertSystemDataRecord === 'function') {
+        return window.upsertSystemDataRecord(row);
+    }
+    if (!window.sbClient || typeof window.sbClient.from !== 'function') {
+        return { data: null, error: new Error('CLOUD_CLIENT_MISSING') };
+    }
+    return window.sbClient.from('system_data').upsert(row, { onConflict: 'key' });
 }
 
 const TOWN_SUBMODULE_META = {
@@ -313,7 +340,7 @@ function exportTownSubmoduleCompare(submoduleId) {
 async function saveTownSubmoduleCompareToCloud(submoduleId) {
     const cache = readTownSubmoduleCompareEntryState(submoduleId);
     if (!cache) return alert('请先生成多期对比结果');
-    if (!sbClient) return alert('☁️ 云端服务未连接，无法保存');
+    if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接，无法保存');
 
     const cohortId = window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || 'unknown';
     const stamp = new Date().toISOString().split('T')[0];
@@ -330,7 +357,7 @@ async function saveTownSubmoduleCompareToCloud(submoduleId) {
     try {
         if (window.UI) UI.loading(true, '☁️ 正在保存云端对比...');
         const compressed = 'LZ|' + LZString.compressToUTF16(JSON.stringify(payload));
-        const { error } = await sbClient.from('system_data').upsert({ key, content: compressed, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+        const { error } = await upsertCloudTownSubmoduleCompareRow({ key, content: compressed, updated_at: new Date().toISOString() });
         if (error) throw error;
         if (window.UI) UI.toast('✅ 云端保存成功', 'success');
     } catch (e) {
@@ -342,7 +369,7 @@ async function saveTownSubmoduleCompareToCloud(submoduleId) {
 }
 
 async function viewCloudTownSubmoduleCompares(submoduleId) {
-    if (!sbClient) return alert('☁️ 云端服务未连接');
+    if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接');
     try {
         if (window.UI) UI.loading(true, '☁️ 正在加载云端列表...');
 
@@ -401,7 +428,7 @@ async function viewCloudTownSubmoduleCompares(submoduleId) {
 }
 
 async function loadCloudTownSubmoduleCompare(submoduleId, key) {
-    if (!sbClient) return alert('☁️ 云端服务未连接');
+    if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接');
     const hintEl = document.getElementById(`town-submodule-compare-hint-${submoduleId}`);
     const resultEl = document.getElementById(`town-submodule-compare-result-${submoduleId}`);
     if (!hintEl || !resultEl) return;
