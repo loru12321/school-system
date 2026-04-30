@@ -11,8 +11,77 @@
     ]);
     const TEACHER_ANALYSIS_RENDER_DELAY_MS = 180;
     const TEACHER_ANALYSIS_PRELOAD_DELAY_MS = 700;
-    let teacherAnalysisRenderTimer = 0;
+    const TEACHER_ANALYSIS_ENTRY_LABELS = [
+        'teacher-analysis-preload-map',
+        'teacher-analysis-compare-selects',
+        'teacher-analysis-infer-school'
+    ];
+    const TEACHER_ANALYSIS_RENDER_LABELS = [
+        'teacher-analysis-render-work',
+        'teacher-analysis-render-cards',
+        'teacher-analysis-render-comparison',
+        'teacher-analysis-render-pairing',
+        'teacher-analysis-render-overview',
+        'teacher-analysis-render-township',
+        'teacher-analysis-render-state-bars',
+        'teacher-compare-auto'
+    ];
+    const TEACHER_ANALYSIS_PHASE_LABELS = TEACHER_ANALYSIS_ENTRY_LABELS.concat(TEACHER_ANALYSIS_RENDER_LABELS);
+    const fallbackScheduledTasks = new Map();
     let teacherAnalysisRenderToken = 0;
+
+    function getModuleTaskKey(label) {
+        return `module-entry:${String(label || 'task').trim()}`;
+    }
+
+    function clearModuleTask(label) {
+        const key = getModuleTaskKey(label);
+        if (window.SystemPerformance && typeof window.SystemPerformance.clearScheduledTask === 'function') {
+            window.SystemPerformance.clearScheduledTask(key);
+        }
+        if (fallbackScheduledTasks.has(key)) {
+            window.clearTimeout(fallbackScheduledTasks.get(key));
+            fallbackScheduledTasks.delete(key);
+        }
+    }
+
+    function scheduleModuleTask(label, task, options = {}) {
+        const key = getModuleTaskKey(label);
+        if (window.SystemPerformance && typeof window.SystemPerformance.scheduleTask === 'function') {
+            return window.SystemPerformance.scheduleTask(key, task, options);
+        }
+        clearModuleTask(label);
+        const delay = Math.max(0, Number(options.delay || 0));
+        const run = () => {
+            fallbackScheduledTasks.delete(key);
+            try {
+                task();
+            } catch (error) {
+                console.warn(`[module-entry:${label}]`, error);
+            }
+        };
+        const timerId = window.setTimeout(() => {
+            if (options.frame && typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(run);
+            } else {
+                run();
+            }
+        }, delay);
+        fallbackScheduledTasks.set(key, timerId);
+        return key;
+    }
+
+    function scheduleModuleTaskPromise(label, task, options = {}) {
+        return new Promise((resolve, reject) => {
+            scheduleModuleTask(label, () => {
+                try {
+                    resolve(task());
+                } catch (error) {
+                    reject(error);
+                }
+            }, options);
+        });
+    }
 
     function ensureModuleStylesFor(id) {
         if (typeof window.ensureOptionalStylesheetLoaded !== 'function') return Promise.resolve();
@@ -102,10 +171,12 @@
 
     function clearTeacherAnalysisDeferredRender() {
         teacherAnalysisRenderToken += 1;
-        if (teacherAnalysisRenderTimer) {
-            window.clearTimeout(teacherAnalysisRenderTimer);
-            teacherAnalysisRenderTimer = 0;
-        }
+        TEACHER_ANALYSIS_PHASE_LABELS.forEach(clearModuleTask);
+    }
+
+    function clearTeacherAnalysisRenderWork() {
+        teacherAnalysisRenderToken += 1;
+        TEACHER_ANALYSIS_RENDER_LABELS.forEach(clearModuleTask);
     }
 
     function runTeacherAnalysisIfCurrent(token, task) {
@@ -113,8 +184,8 @@
         task();
     }
 
-    function scheduleTeacherAnalysisPhase(token, task, delay = 0) {
-        window.setTimeout(() => runTeacherAnalysisIfCurrent(token, task), delay);
+    function scheduleTeacherAnalysisPhase(token, label, task, delay = 0) {
+        scheduleModuleTask(label, () => runTeacherAnalysisIfCurrent(token, task), { delay, frame: delay <= 16 });
     }
 
     function scheduleModuleAutoRender(label, task, options = {}) {
@@ -127,17 +198,7 @@
                 console.warn(`[module-entry] ${label} auto render failed:`, error);
             }
         };
-        window.setTimeout(() => {
-            if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
-                window.SystemPerformance.scheduleIdle(run, { label, timeout });
-            } else if (typeof window.requestIdleCallback === 'function') {
-                window.requestIdleCallback(run, { timeout });
-            } else if (typeof window.requestAnimationFrame === 'function') {
-                window.requestAnimationFrame(run);
-            } else {
-                run();
-            }
-        }, delay);
+        scheduleModuleTask(label, run, { delay, idle: true, timeout });
     }
 
     function pickDefaultSelectValue(selectId, preferredValue = '') {
@@ -208,12 +269,12 @@
     }
 
     function scheduleTeacherAnalysisRenderWork(delay = TEACHER_ANALYSIS_RENDER_DELAY_MS) {
-        clearTeacherAnalysisDeferredRender();
+        clearTeacherAnalysisRenderWork();
         const token = teacherAnalysisRenderToken;
         showTeacherAnalysisPendingState();
 
-        teacherAnalysisRenderTimer = window.setTimeout(() => {
-            const startWork = () => runTeacherAnalysisIfCurrent(token, () => {
+        scheduleModuleTask('teacher-analysis-render-work', () => {
+            runTeacherAnalysisIfCurrent(token, () => {
                 const teacherMapReady = window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0;
                 if (!teacherMapReady || typeof window.analyzeTeachers !== 'function') {
                     renderTeacherAnalysisEmptyState();
@@ -225,41 +286,33 @@
                     const node = document.getElementById(id);
                     if (node) delete node.dataset.released;
                 });
-                scheduleTeacherAnalysisPhase(token, () => {
+                scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-cards', () => {
                     if (typeof window.renderTeacherCards === 'function') window.renderTeacherCards();
                 }, 0);
-                scheduleTeacherAnalysisPhase(token, () => {
+                scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-comparison', () => {
                     if (typeof window.renderTeacherComparisonTable === 'function') window.renderTeacherComparisonTable();
                 }, 80);
-                scheduleTeacherAnalysisPhase(token, () => {
+                scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-pairing', () => {
                     if (typeof window.generateTeacherPairing === 'function') window.generateTeacherPairing();
                 }, 140);
-                scheduleTeacherAnalysisPhase(token, () => {
+                scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-overview', () => {
                     if (typeof window.tmScheduleTeachingOverviewRender === 'function') {
                         window.tmScheduleTeachingOverviewRender();
                     } else if (typeof window.renderTeachingOverview === 'function') {
                         window.renderTeachingOverview();
                     }
                 }, 200);
-                scheduleTeacherAnalysisPhase(token, () => {
+                scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-township', () => {
                     if (typeof window.renderTeacherTownshipRanking === 'function') window.renderTeacherTownshipRanking();
                 }, 320);
-                scheduleTeacherAnalysisPhase(token, () => {
+                scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-state-bars', () => {
                     if (typeof window.tmRenderTeachingModuleStateBars === 'function') window.tmRenderTeachingModuleStateBars('teacher-analysis');
                 }, 380);
                 if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
                 if (typeof updateTeacherCompareTeacherSelect === 'function') updateTeacherCompareTeacherSelect();
                 scheduleTeacherCompareAutoRender(260);
             });
-
-            if (typeof window.requestIdleCallback === 'function') {
-                window.requestIdleCallback(startWork, { timeout: 1500 });
-            } else if (typeof window.requestAnimationFrame === 'function') {
-                window.requestAnimationFrame(startWork);
-            } else {
-                startWork();
-            }
-        }, delay);
+        }, { delay, idle: true, timeout: 1500 });
     }
 
     function renderTeacherAnalysisNow() {
@@ -290,15 +343,13 @@
             }
         };
 
-        window.clearTimeout(window.__STUDENT_DETAILS_RENDER_TIMER__);
-        window.__STUDENT_DETAILS_RENDER_TIMER__ = setTimeout(() => {
-            if (typeof window.requestAnimationFrame === 'function') {
-                window.requestAnimationFrame(triggerRender);
-            } else {
-                triggerRender();
-            }
-        }, 80);
-        setTimeout(() => {
+        clearModuleTask('student-details-render-primary');
+        clearModuleTask('student-details-render-fallback');
+        window.__STUDENT_DETAILS_RENDER_TIMER__ = scheduleModuleTask('student-details-render-primary', triggerRender, {
+            delay: 80,
+            frame: true
+        });
+        scheduleModuleTask('student-details-render-fallback', () => {
             const section = document.getElementById('student-details');
             const renderedRows = document.querySelectorAll('#student-details table tbody tr').length;
             if (!section || !section.classList.contains('active')) return;
@@ -306,7 +357,7 @@
             if (typeof window.renderStudentDetails === 'function') {
                 window.renderStudentDetails(true);
             }
-        }, 900);
+        }, { delay: 900, idle: true, timeout: 1200 });
 
         const user = getCurrentUser();
         const role = user?.role || 'guest';
@@ -340,9 +391,9 @@
         const scheduleRender = (attempt = 0) => {
             if (render()) return true;
             if (attempt >= 8) return false;
-            setTimeout(() => {
+            scheduleModuleTask('app-download-render-retry', () => {
                 scheduleRender(attempt + 1);
-            }, attempt < 2 ? 80 : 180);
+            }, { delay: attempt < 2 ? 80 : 180 });
             return false;
         };
 
@@ -386,7 +437,9 @@
                 return true;
             }
             if (attempt >= 6) return false;
-            setTimeout(() => scheduleRender(attempt + 1), attempt < 2 ? 120 : 260);
+            scheduleModuleTask('teaching-management-render-retry', () => {
+                scheduleRender(attempt + 1);
+            }, { delay: attempt < 2 ? 120 : 260 });
             return false;
         };
 
@@ -513,19 +566,19 @@
     function initTeacherAnalysisEntry() {
         clearTeacherAnalysisDeferredRender();
         if (window.DataManager && typeof DataManager.ensureTeacherMap === 'function') {
-            window.setTimeout(() => {
+            scheduleModuleTask('teacher-analysis-preload-map', () => {
                 if (!document.getElementById('teacher-analysis')?.classList.contains('active')) return;
                 try {
                     DataManager.ensureTeacherMap(true);
                 } catch (error) {
                     console.warn('[teacher-analysis] teacher map preload failed:', error);
                 }
-            }, TEACHER_ANALYSIS_PRELOAD_DELAY_MS);
+            }, { delay: TEACHER_ANALYSIS_PRELOAD_DELAY_MS, idle: true, timeout: 1800 });
         }
-        window.setTimeout(() => {
+        scheduleModuleTask('teacher-analysis-compare-selects', () => {
             if (!document.getElementById('teacher-analysis')?.classList.contains('active')) return;
             if (typeof updateTeacherCompareExamSelects === 'function') updateTeacherCompareExamSelects();
-        }, 180);
+        }, { delay: 180, frame: true });
 
         const cta = document.getElementById('teacher-sync-cta');
         if (cta) cta.style.display = (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) ? 'none' : 'inline-flex';
@@ -538,10 +591,10 @@
         if (pairSection) pairSection.style.display = 'block';
         if (townshipContainer) townshipContainer.style.display = 'block';
 
-        window.setTimeout(() => {
+        scheduleModuleTask('teacher-analysis-infer-school', () => {
             if (!document.getElementById('teacher-analysis')?.classList.contains('active')) return;
             inferTeacherSchoolIfNeeded();
-        }, 220);
+        }, { delay: 220, idle: true, timeout: 1200 });
 
         const runAfterLoad = () => {
             if (!document.getElementById('teacher-analysis')?.classList.contains('active')) return;
@@ -740,30 +793,12 @@
         return Promise.resolve(runAfterLoad());
     }
 
-    let macroTablesRenderTimer = 0;
-
     function scheduleMacroTablesRender(activeModuleId, label = 'macro-entry') {
-        if (macroTablesRenderTimer) {
-            window.clearTimeout(macroTablesRenderTimer);
-            macroTablesRenderTimer = 0;
-        }
         const run = () => {
-            macroTablesRenderTimer = 0;
             if (activeModuleId && !document.getElementById(activeModuleId)?.classList.contains('active')) return;
             if (typeof window.renderTables === 'function') window.renderTables();
         };
-        const start = () => {
-            if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
-                window.SystemPerformance.scheduleIdle(run, { label, delay: 40, timeout: 900 });
-                return;
-            }
-            if (typeof window.requestIdleCallback === 'function') {
-                window.requestIdleCallback(run, { timeout: 900 });
-                return;
-            }
-            window.setTimeout(run, 40);
-        };
-        macroTablesRenderTimer = window.setTimeout(start, 60);
+        scheduleModuleTask(`macro-tables:${label}`, run, { delay: 60, idle: true, timeout: 900 });
     }
 
     function runModuleSpecificInit(id) {
@@ -861,12 +896,12 @@
             .then(() => {
                 const runInit = () => runModuleSpecificInit(id);
                 const result = id === 'student-details'
-                    ? new Promise(resolve => setTimeout(() => resolve(runInit()), 40))
+                    ? scheduleModuleTaskPromise('student-details-enter-init', runInit, { delay: 40, frame: true })
                     : runInit();
                 if (['class-comparison', 'class-diagnosis'].includes(id)) {
-                    setTimeout(() => {
+                    scheduleModuleTask(`state-bars:${id}`, () => {
                         if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars(id);
-                    }, 0);
+                    }, { frame: true });
                 }
                 return result;
             })

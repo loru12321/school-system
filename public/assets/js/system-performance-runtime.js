@@ -9,6 +9,7 @@
         active: 0,
         queue: [],
         inflight: new Map(),
+        scheduled: new Map(),
         cache: new Map(),
         patchAttempts: 0,
         patchedStableTicks: 0,
@@ -122,6 +123,72 @@
             return;
         }
         window.setTimeout(task, Number.isFinite(Number(options.delay)) ? Number(options.delay) : 0);
+    }
+
+    function clearScheduledTask(label) {
+        const key = String(label || '');
+        if (!key || !state.scheduled.has(key)) return false;
+        const item = state.scheduled.get(key);
+        item.cancelled = true;
+        if (item.timerId) window.clearTimeout(item.timerId);
+        if (item.frameId && typeof window.cancelAnimationFrame === 'function') {
+            window.cancelAnimationFrame(item.frameId);
+        }
+        if (item.idleId && typeof window.cancelIdleCallback === 'function') {
+            window.cancelIdleCallback(item.idleId);
+        }
+        state.scheduled.delete(key);
+        return true;
+    }
+
+    function scheduleTask(label, task, options = {}) {
+        const key = String(label || options.label || 'task').trim();
+        if (!key || typeof task !== 'function') return '';
+        const replace = options.replace !== false;
+        if (replace) clearScheduledTask(key);
+        if (!replace && state.scheduled.has(key)) return key;
+
+        const item = {
+            label: key,
+            task,
+            timerId: 0,
+            frameId: 0,
+            idleId: 0,
+            cancelled: false
+        };
+
+        const run = () => {
+            if (item.cancelled) return;
+            state.scheduled.delete(key);
+            try {
+                task();
+            } catch (error) {
+                console.warn(`[SystemPerformance:${key}]`, error);
+            }
+        };
+
+        const arm = () => {
+            if (item.cancelled) return;
+            const timeout = Number.isFinite(Number(options.timeout)) ? Number(options.timeout) : 1200;
+            if (options.idle && typeof window.requestIdleCallback === 'function') {
+                item.idleId = window.requestIdleCallback(run, { timeout });
+                return;
+            }
+            if (options.frame && typeof window.requestAnimationFrame === 'function') {
+                item.frameId = window.requestAnimationFrame(run);
+                return;
+            }
+            run();
+        };
+
+        const delay = Math.max(0, Number(options.delay || 0));
+        state.scheduled.set(key, item);
+        if (delay > 0) {
+            item.timerId = window.setTimeout(arm, delay);
+        } else {
+            arm();
+        }
+        return key;
     }
 
     function clearCache(prefix = '') {
@@ -273,6 +340,7 @@
             active: state.active,
             queued: state.queue.length,
             inflight: state.inflight.size,
+            scheduled: state.scheduled.size,
             cached: state.cache.size,
             cloudPatched: patchCloudManager(),
             longTasks: state.longTasks.slice()
@@ -282,6 +350,8 @@
     window.SystemPerformance = {
         enqueue,
         scheduleIdle,
+        scheduleTask,
+        clearScheduledTask,
         clearCache,
         patchCloudManager,
         getSnapshot
