@@ -18565,11 +18565,11 @@ function openTargetEditor() {
     tbody.innerHTML = '';
 
     // 遍历所有学校，生成输入框
-    Object.keys(SCHOOLS).forEach(sch => {
+    const targetRowsHtml = Object.keys(SCHOOLS).map(sch => {
         // 获取现有目标，如果没有则默认为 0
         const t = getTargetConfigBySchool(sch).value || { t1: 0, t2: 0 };
 
-        tbody.innerHTML += `
+        return `
                 <tr data-school="${sch}">
                     <td style="font-weight:bold;">${sch}</td>
                     <td>
@@ -18581,6 +18581,7 @@ function openTargetEditor() {
                 </tr>
             `;
     });
+    tbody.innerHTML = targetRowsHtml.join('');
 
     document.getElementById('target-editor-modal').style.display = 'flex';
 }
@@ -18750,6 +18751,7 @@ function doSpotlightSearch() {
     const resDiv = document.getElementById('spotlight-results');
     resDiv.innerHTML = '';
     if (!val) return;
+    const spotlightRowsHtml = [];
 
     // 1. 搜功能模块 (保持原有逻辑，简单包含匹配即可)
     const modules = [
@@ -18767,11 +18769,11 @@ function doSpotlightSearch() {
 
     modules.forEach(m => {
         if (m.name.includes(val)) {
-            resDiv.innerHTML += `
+            spotlightRowsHtml.push(`
                     <div class="spotlight-item" onclick="switchTab('${m.id}');closeSpotlight()">
                         <span>🛠️ 功能：${m.name}</span>
                         <span style="font-size:10px;color:#999">跳转</span>
-                    </div>`;
+                    </div>`);
         }
     });
 
@@ -18792,17 +18794,18 @@ function doSpotlightSearch() {
     }
 
     if (matches.length === 0) {
-        resDiv.innerHTML += `<div style="padding:10px; text-align:center; color:#999;">无匹配结果</div>`;
+        spotlightRowsHtml.push(`<div style="padding:10px; text-align:center; color:#999;">无匹配结果</div>`);
     } else {
         matches.forEach(s => {
             // 高亮匹配文字逻辑略复杂，这里直接显示结果
-            resDiv.innerHTML += `
+            spotlightRowsHtml.push(`
                     <div class="spotlight-item" onclick="jumpToStudent(${jsStringLiteral(s.name)}, ${jsStringLiteral(s.school)}, ${jsStringLiteral(s.class)})">
                         <span>👤 ${s.name} <small style="color:#666">(${s.school} ${s.class})</small></span>
                         <span style="font-weight:bold;">${s.total}分</span>
-                    </div>`;
+                    </div>`);
         });
     }
+    resDiv.innerHTML = spotlightRowsHtml.join('');
 }
 // Module help runtime moved to public/assets/js/module-help-runtime.js.
 

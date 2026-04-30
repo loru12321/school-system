@@ -487,6 +487,11 @@ assert.ok(teachingManagementRuntime.includes('const rerender = () => smScheduleS
 assert.ok(appSource.includes('const teacherRowsHtml = displayList.map'), 'teacher table rendering should build rows off-DOM before writing to tbody');
 assert.ok(appSource.includes("tbody.innerHTML = teacherRowsHtml.join('');"), 'teacher table rendering should write teacher rows to the DOM once');
 assert.ok(!appSource.includes('displayList.forEach(t => {'), 'teacher table rendering should avoid per-row DOM writes');
+assert.ok(appSource.includes('const targetRowsHtml = Object.keys(SCHOOLS).map'), 'target editor should build school rows off-DOM before writing to tbody');
+assert.ok(appSource.includes("tbody.innerHTML = targetRowsHtml.join('');"), 'target editor should write school target rows to the DOM once');
+assert.ok(appSource.includes('const spotlightRowsHtml = [];'), 'spotlight search should collect result rows before writing to the result container');
+assert.ok(appSource.includes("resDiv.innerHTML = spotlightRowsHtml.join('');"), 'spotlight search should write results to the DOM once per query');
+assert.ok(!appSource.includes('resDiv.innerHTML +='), 'spotlight search should avoid per-result DOM writes');
 assert.ok(teacherCompareResultRuntime.includes('function scheduleTeacherMultiPeriodAutoRender'), 'teacher multi-period compare should recalculate automatically after selector changes');
 assert.ok(teacherCompareResultRuntime.includes('bindTeacherCompareAutoControls();'), 'teacher compare runtime should bind selector auto-refresh controls');
 assert.ok(progressAnalysisRuntime.includes('function filterProgressCompareRowsToTownshipScope'), 'progress comparison should have a township-scope filter for town ranks');
