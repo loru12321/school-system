@@ -6879,9 +6879,9 @@ const DataManager = {
         } else {
             const displayList = list.slice(0, 500);
 
-            displayList.forEach(t => {
+            const teacherRowsHtml = displayList.map(t => {
                 const schoolStyle = t.school.includes("未知") ? "color:#94a3b8; font-style:italic;" : "color:#475569;";
-                tbody.innerHTML += `
+                return `
                     <tr>
                         <td style="${schoolStyle}">${t.school}</td>
                         <td style="font-weight:bold;">${t.class}</td>
@@ -6895,8 +6895,9 @@ const DataManager = {
             });
 
             if (list.length > 500) {
-                tbody.innerHTML += `<tr><td colspan="5" style="text-align:center; color:#999; padding:5px;">... 数据过多，仅显示前 500 条 ...</td></tr>`;
+                teacherRowsHtml.push(`<tr><td colspan="5" style="text-align:center; color:#999; padding:5px;">... 数据过多，仅显示前 500 条 ...</td></tr>`);
             }
+            tbody.innerHTML = teacherRowsHtml.join('');
         }
     },
 

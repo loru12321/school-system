@@ -484,6 +484,9 @@ assert.ok(teachingManagementRuntime.includes('function smScheduleStudentOverview
 assert.ok(teachingManagementRuntime.includes('const progressRows = fullProgressRows.length ? fullProgressRows : readProgressCacheState();'), 'student overview should avoid copying the progress cache for counts');
 assert.ok(teachingManagementRuntime.includes('let progressCount = 0;'), 'student overview should count progress rows in a single pass');
 assert.ok(teachingManagementRuntime.includes('const rerender = () => smScheduleStudentOverviewRender();'), 'student overview watchers should use scheduled rendering');
+assert.ok(appSource.includes('const teacherRowsHtml = displayList.map'), 'teacher table rendering should build rows off-DOM before writing to tbody');
+assert.ok(appSource.includes("tbody.innerHTML = teacherRowsHtml.join('');"), 'teacher table rendering should write teacher rows to the DOM once');
+assert.ok(!appSource.includes('displayList.forEach(t => {'), 'teacher table rendering should avoid per-row DOM writes');
 assert.ok(teacherCompareResultRuntime.includes('function scheduleTeacherMultiPeriodAutoRender'), 'teacher multi-period compare should recalculate automatically after selector changes');
 assert.ok(teacherCompareResultRuntime.includes('bindTeacherCompareAutoControls();'), 'teacher compare runtime should bind selector auto-refresh controls');
 assert.ok(progressAnalysisRuntime.includes('function filterProgressCompareRowsToTownshipScope'), 'progress comparison should have a township-scope filter for town ranks');
