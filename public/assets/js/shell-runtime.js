@@ -41,10 +41,9 @@
             color: '#dc2626',
             icon: 'ti-school',
             eyebrow: 'Studio Ops',
-            summary: '聚焦教师画像、绩效公平和班级诊断，保留真正高频的教学分析入口。',
+            summary: '聚焦教师画像、班级对比和班级诊断，保留真正高频的教学分析入口。',
             items: [
                 { id: 'teacher-analysis', icon: 'ti-school', text: '教师教学质量画像', hint: '从教师视角查看贡献、波动和结构性问题。' },
-                { id: 'single-school-eval', icon: 'ti-scale', text: '绩效公平考核模型', hint: '结合口径和上下文做公平性核算。' },
                 { id: 'class-comparison', icon: 'ti-layout-columns', text: '班级横向对比', hint: '横向比较班级表现，快速识别差异来源。' },
                 { id: 'class-diagnosis', icon: 'ti-activity', text: '班级分化诊断(SD)', hint: '追踪班级内部离散度，判断分化是否加剧。' }
             ]
@@ -227,7 +226,7 @@
                 && !canAccessModule(item.id)) {
                 return false;
             }
-            if (role === 'teacher' && ['single-school-eval', 'exam-arranger', 'freshman-simulator'].includes(item.id)) {
+            if (role === 'teacher' && ['exam-arranger', 'freshman-simulator'].includes(item.id)) {
                 return false;
             }
             if (item.id === 'report-generator' && typeof CONFIG !== 'undefined' && !CONFIG.showQuery) {

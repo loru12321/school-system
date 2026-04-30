@@ -229,14 +229,6 @@ var SYSTEM_RUNTIME_SKILLS = {
             { key: 'school-profile', src: './assets/js/school-profile-runtime.js' }
         ]
     },
-    'single-school-eval': {
-        mode: 'demand',
-        warmup: 'full',
-        triggers: ['single-school-eval'],
-        entries: [
-            { key: 'single-school-eval', src: './assets/js/single-school-eval-runtime.js' }
-        ]
-    },
     'county-analysis': {
         mode: 'demand',
         warmup: 'demand',
@@ -2569,10 +2561,6 @@ window.ensureAppDownloadRuntimeLoaded = function () {
 
 window.ensureTeacherAnalysisMainRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('teacher-analysis');
-};
-
-window.ensureSingleSchoolEvalRuntimeLoaded = function () {
-    return window.SystemRuntimeLoader.load('single-school-eval');
 };
 
 window.ensureCountyAnalysisRuntimeLoaded = function () {

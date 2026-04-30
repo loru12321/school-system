@@ -871,15 +871,6 @@ function tmJumpToTeachingModule(targetId) {
             return;
         }
 
-        if (targetId === 'single-school-eval') {
-            if (typeof updateSSESchoolSelect === 'function') {
-                Promise.resolve(updateSSESchoolSelect()).catch((error) => console.warn(error));
-            }
-            tmApplySelectValue('sse_school_select', context.schoolValue, context.schoolText);
-            if (window.UI && typeof UI.toast === 'function') {
-                UI.toast('已带入当前学校，确认后可直接开始绩效计算', 'info');
-            }
-        }
     }, 60);
 }
 
@@ -931,16 +922,6 @@ function tmRenderQuickEntries(model) {
         model.scoreReady && model.schoolReady ? '可诊断' : '待成绩',
         model.scoreReady && model.schoolReady ? 'ok' : 'warn'
     );
-    tmSetQuickEntryState(
-        'single-school-eval',
-        'ti ti-scale',
-        '绩效考核',
-        model.scoreReady && model.schoolReady
-            ? '会自动带入当前学校，进入后确认即可开始计算。'
-            : '需先识别学校并准备成绩数据后再计算。',
-        model.scoreReady && model.schoolReady ? '可预填' : '待学校',
-        model.scoreReady && model.schoolReady ? 'info' : 'warn'
-    );
 }
 
 function tmRenderNextAction(model) {
@@ -949,8 +930,7 @@ function tmRenderNextAction(model) {
         teacher_sync: 'teacher-analysis',
         score_import: 'teacher-analysis',
         class: 'class-comparison',
-        diagnosis: 'class-diagnosis',
-        eval: 'single-school-eval'
+        diagnosis: 'class-diagnosis'
     };
 
     let title = '教学入口已就绪';
@@ -967,7 +947,7 @@ function tmRenderNextAction(model) {
         targetKey = 'score_import';
     } else if (!model.teacherReady) {
         title = '优先同步任课表';
-        desc = '成绩已经到位，但任课表还没有恢复到当前学期。先同步任课表，教师画像和校内绩效口径会更完整。';
+        desc = '成绩已经到位，但任课表还没有恢复到当前学期。先同步任课表，教师画像和班级诊断口径会更完整。';
         stateText = '先同步任课表';
         tone = 'warn';
         targetKey = 'teacher_sync';
@@ -1204,42 +1184,6 @@ function tmRenderModuleStateBar(moduleId) {
             tmBuildModuleStateItem('成绩库', exams.length ? `${exams.length} 期考试` : '无可用考试', exams.length ? '满足诊断基础数据要求' : '请先导入成绩', 'diagSchoolSelect'),
             tmBuildModuleStateItem('当前提示', hintText, ready ? '点击可回到学校/学科筛选后继续诊断' : '点击可回到最相关筛选项', ['diagSchoolSelect', 'diagSubjectSelect'], ready ? 'ok' : 'warn')
         ];
-    } else if (moduleId === 'single-school-eval') {
-        const school = tmGetSelectDisplayValue(['sse_school_select', 'teacherCompareSchool', 'mySchoolSelect'], fallbackSchool);
-        const enabledMetrics = [
-            document.getElementById('sse_check_exc')?.checked ? '优秀率' : '',
-            document.getElementById('sse_check_pass')?.checked ? '及格率' : '',
-            document.getElementById('sse_check_avg')?.checked ? '均分' : '',
-            document.getElementById('sse_check_prog')?.checked ? '生源增值' : ''
-        ].filter(Boolean);
-        const metricText = enabledMetrics.length ? enabledMetrics.join(' / ') : '未勾选';
-        const ready = !!school && school !== '未选择' && school !== '未识别' && exams.length > 0;
-        let hintText = '可直接开始计算';
-        let hintTone = 'ok';
-        let hintFocus = ['sse_school_select'];
-
-        if (!school || school === '未识别' || school === '未选择') {
-            hintText = '缺学校，请先选择学校';
-            hintTone = 'warn';
-        } else if (!enabledMetrics.length) {
-            hintText = '缺指标，请至少勾选 1 项';
-            hintTone = 'warn';
-            hintFocus = ['sse_check_exc', 'sse_check_pass', 'sse_check_avg', 'sse_check_prog'];
-        } else if (!exams.length) {
-            hintText = '缺成绩库，请先导入成绩';
-            hintTone = 'warn';
-        }
-
-        badgeText = ready ? '绩效考核可预填' : '待选学校';
-        badgeTone = ready ? 'info' : 'warn';
-        summary = ready ? `已预填 ${school}，确认后即可开始考核计算` : '请先识别学校并确认成绩库';
-        items = [
-            tmBuildModuleStateItem('学校', school, school && school !== '未识别' ? '考核只针对当前学校' : '请先选择学校', 'sse_school_select'),
-            tmBuildModuleStateItem('成绩库', exams.length ? `${exams.length} 期考试` : '无可用考试', exams.length ? '绩效计算将使用当前成绩库' : '请先导入成绩', 'sse_school_select'),
-            tmBuildModuleStateItem('已勾选指标', metricText, enabledMetrics.length ? `共 ${enabledMetrics.length} 项` : '建议至少勾选 1 项', ['sse_check_exc', 'sse_check_pass', 'sse_check_avg', 'sse_check_prog']),
-            tmBuildModuleStateItem('当前模式', document.getElementById('sse_check_prog')?.checked ? '含生源增值' : '单次成绩模式', document.getElementById('sse_check_prog')?.checked ? '需要历史数据支撑' : '不依赖历史数据', 'sse_check_prog'),
-            tmBuildModuleStateItem('当前提示', hintText, ready ? '点击可回到学校/指标配置后直接开始计算' : '点击可回到最相关配置项', hintFocus, hintTone)
-        ];
     }
 
     container.innerHTML = `
@@ -1259,7 +1203,7 @@ function tmRenderModuleStateBar(moduleId) {
 
 function tmRenderTeachingModuleStateBars(targetModuleId = '') {
     bindTeachingOverviewWatchers();
-    const supportedModules = ['teacher-analysis', 'class-comparison', 'class-diagnosis', 'single-school-eval'];
+    const supportedModules = ['teacher-analysis', 'class-comparison', 'class-diagnosis'];
     const requestedId = String(targetModuleId || '').trim();
     if (supportedModules.includes(requestedId)) {
         tmRenderModuleStateBar(requestedId);
@@ -1293,12 +1237,7 @@ function bindTeachingOverviewWatchers() {
         'classCompSchoolSelect',
         'diagSchoolSelect',
         'diagSubjectSelect',
-        'diagStep',
-        'sse_school_select',
-        'sse_check_exc',
-        'sse_check_pass',
-        'sse_check_avg',
-        'sse_check_prog'
+        'diagStep'
     ];
 
     watchedIds.forEach((id) => {

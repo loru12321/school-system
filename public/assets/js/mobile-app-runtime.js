@@ -217,7 +217,7 @@
             && !window.canAccessModule(id)) {
             return false;
         }
-        if (role === 'teacher' && ['single-school-eval', 'exam-arranger', 'freshman-simulator'].includes(id)) {
+        if (role === 'teacher' && ['exam-arranger', 'freshman-simulator'].includes(id)) {
             return false;
         }
         if (id === 'report-generator' && typeof window.CONFIG !== 'undefined' && window.CONFIG && !window.CONFIG.showQuery) {

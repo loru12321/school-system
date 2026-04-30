@@ -49,7 +49,6 @@ const shellPolishRuntimePath = path.resolve(__dirname, '../public/assets/js/shel
 const moduleEntryRuntimePath = path.resolve(__dirname, '../public/assets/js/module-entry-runtime.js');
 const rankingDataServiceRuntimePath = path.resolve(__dirname, '../public/assets/js/ranking-data-service-runtime.js');
 const studentJumpRuntimePath = path.resolve(__dirname, '../public/assets/js/student-jump-runtime.js');
-const singleSchoolEvalRuntimePath = path.resolve(__dirname, '../public/assets/js/single-school-eval-runtime.js');
 const aiHubRuntimePath = path.resolve(__dirname, '../public/assets/js/ai-hub-runtime.js');
 const schoolProfileRuntimePath = path.resolve(__dirname, '../public/assets/js/school-profile-runtime.js');
 const teachingManagementRuntimePath = path.resolve(__dirname, '../public/assets/js/teaching-management-runtime.js');
@@ -116,7 +115,6 @@ assert.ok(fs.existsSync(shellPolishRuntimePath), 'shell-polish-runtime.js should
 assert.ok(fs.existsSync(moduleEntryRuntimePath), 'module-entry-runtime.js should exist');
 assert.ok(fs.existsSync(rankingDataServiceRuntimePath), 'ranking-data-service-runtime.js should exist');
 assert.ok(fs.existsSync(studentJumpRuntimePath), 'student-jump-runtime.js should exist');
-assert.ok(fs.existsSync(singleSchoolEvalRuntimePath), 'single-school-eval-runtime.js should exist');
 assert.ok(fs.existsSync(aiHubRuntimePath), 'ai-hub-runtime.js should exist');
 assert.ok(fs.existsSync(schoolProfileRuntimePath), 'school-profile-runtime.js should exist');
 assert.ok(fs.existsSync(teachingManagementRuntimePath), 'teaching-management-runtime.js should exist');
@@ -139,9 +137,9 @@ assert.ok(fs.existsSync(macroCompareCloudRuntimePath), 'macro-compare-cloud-runt
 
 const indexHtml = fs.readFileSync(indexPath, 'utf8');
 const bootRuntime = fs.readFileSync(bootRuntimePath, 'utf8');
+const shellRuntime = fs.readFileSync(shellRuntimePath, 'utf8');
 const shellPolishRuntime = fs.readFileSync(shellPolishRuntimePath, 'utf8');
 const moduleEntryRuntime = fs.readFileSync(moduleEntryRuntimePath, 'utf8');
-const singleSchoolEvalRuntime = fs.readFileSync(singleSchoolEvalRuntimePath, 'utf8');
 const teacherCompareResultRuntime = fs.readFileSync(teacherCompareResultRuntimePath, 'utf8');
 const progressAnalysisRuntime = fs.readFileSync(progressAnalysisRuntimePath, 'utf8');
 const teacherStateRuntime = fs.readFileSync(teacherRuntimePath, 'utf8');
@@ -207,7 +205,6 @@ const appRef = './assets/js/app.js';
 const accountAdminRef = './assets/js/account-admin-runtime.js';
 const historyCompareRef = './assets/js/history-compare-runtime.js';
 const perfMobileRef = './assets/js/perf-mobile-runtime.js';
-const singleSchoolEvalRef = './assets/js/single-school-eval-runtime.js';
 const aiHubRef = './assets/js/ai-hub-runtime.js';
 const schoolProfileRef = './assets/js/school-profile-runtime.js';
 const teachingManagementRef = './assets/js/teaching-management-runtime.js';
@@ -395,7 +392,6 @@ assert.ok(bootRuntime.includes(teacherAnalysisMainRef), 'boot-runtime.js should 
 assert.ok(bootRuntime.includes(teacherAnalysisCoreRef), 'boot-runtime.js should reference teacher-analysis-core-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(teacherAnalysisUiRef), 'boot-runtime.js should reference teacher-analysis-ui-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(teacherAnalysisBridgeRef), 'boot-runtime.js should reference teacher-analysis-bridge-runtime.js for lazy loading');
-assert.ok(bootRuntime.includes(singleSchoolEvalRef), 'boot-runtime.js should reference single-school-eval-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(aiHubRef), 'boot-runtime.js should reference ai-hub-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(schoolProfileRef), 'boot-runtime.js should reference school-profile-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(teachingManagementRef), 'boot-runtime.js should reference teaching-management-runtime.js for lazy loading');
@@ -472,8 +468,14 @@ assert.ok(moduleEntryRuntime.includes('ensureTeacherAnalysisMainRuntimeLoaded()'
 assert.ok(moduleEntryRuntime.includes('function scheduleTeacherCompareAutoRender'), 'teacher multi-period compare should auto-render from default selectors');
 assert.ok(moduleEntryRuntime.includes('return initClassComparisonEntry();'), 'class comparison should auto-render when opened from the rail');
 assert.ok(moduleEntryRuntime.includes('return initClassDiagnosisEntry();'), 'class diagnosis should auto-render when opened from the rail');
-assert.ok(moduleEntryRuntime.includes('window.scheduleSSEAutoCalculate(140)'), 'performance fairness module should auto-calculate when opened');
+assert.ok(appSource.includes("'single-school-eval': 'teacher-analysis'"), 'removed performance fairness module should redirect to teacher analysis');
+assert.ok(!shellRuntime.includes("text: '绩效公平考核模型'"), 'teaching management quick switch should not expose the removed performance fairness module');
+assert.ok(!teachingManagementRuntime.includes("tmSetQuickEntryState(\n        'single-school-eval'"), 'teaching management overview should not render a performance fairness quick entry');
+assert.ok(teachingManagementRuntime.includes("const supportedModules = ['teacher-analysis', 'class-comparison', 'class-diagnosis'];"), 'teaching management state bars should only cover retained modules');
+assert.ok(moduleEntryRuntime.includes("if (id === 'single-school-eval') return false;"), 'module entry runtime should not initialize the removed performance fairness module');
 assert.ok(!moduleEntryRuntime.includes('renderTeacherAnalysisNow()">立即生成'), 'teacher portrait pending state should not require a manual immediate-generate click');
+assert.ok(moduleEntryRuntime.includes('window.tmScheduleTeachingOverviewRender()'), 'module entry should schedule teaching overview refreshes after teacher analysis phases');
+assert.ok(moduleEntryRuntime.includes('window.smScheduleStudentOverviewRender()'), 'module entry should schedule student overview first renders');
 assert.ok(teacherStateRuntime.includes('function peekTeacherStats()'), 'teacher-state-runtime.js should expose a non-cloning stats read path for hot overview renders');
 assert.ok(appSource.includes('TeacherStateRuntime.peekTeacherStats'), 'app.js readTeacherStats should avoid deep cloning teacher stats on hot paths');
 assert.ok(teachingManagementRuntime.includes('window.tmScheduleTeachingOverviewRender = tmScheduleTeachingOverviewRender'), 'teaching overview refresh should be externally schedulable');
@@ -482,8 +484,6 @@ assert.ok(teachingManagementRuntime.includes('function smScheduleStudentOverview
 assert.ok(teachingManagementRuntime.includes('const progressRows = fullProgressRows.length ? fullProgressRows : readProgressCacheState();'), 'student overview should avoid copying the progress cache for counts');
 assert.ok(teachingManagementRuntime.includes('let progressCount = 0;'), 'student overview should count progress rows in a single pass');
 assert.ok(teachingManagementRuntime.includes('const rerender = () => smScheduleStudentOverviewRender();'), 'student overview watchers should use scheduled rendering');
-assert.ok(singleSchoolEvalRuntime.includes('const sizeBonus = Math.max(0, sizeDiff * 0.1);'), 'performance fairness model should not penalize classes below average size');
-assert.ok(singleSchoolEvalRuntime.includes('function scheduleSSEAutoCalculate'), 'performance fairness model should recalculate automatically after setting changes');
 assert.ok(teacherCompareResultRuntime.includes('function scheduleTeacherMultiPeriodAutoRender'), 'teacher multi-period compare should recalculate automatically after selector changes');
 assert.ok(teacherCompareResultRuntime.includes('bindTeacherCompareAutoControls();'), 'teacher compare runtime should bind selector auto-refresh controls');
 assert.ok(progressAnalysisRuntime.includes('function filterProgressCompareRowsToTownshipScope'), 'progress comparison should have a township-scope filter for town ranks');
@@ -582,7 +582,6 @@ assert.ok(indexHtml.includes(tablerIconsRef), 'index.html should load local tabl
     accountAdminRef,
     historyCompareRef,
     perfMobileRef,
-    singleSchoolEvalRef,
     mobileManagerRef,
     dataManagerSqlRef,
     reportRenderRef,

@@ -13,7 +13,6 @@ const MODULES = [
     'analysis',
     'county-analysis',
     'teacher-analysis',
-    'single-school-eval',
     'correlation-analysis',
     'indicator',
     'bottom3',
@@ -126,7 +125,7 @@ async function inspectModule(page, id) {
         const section = document.getElementById(moduleId);
         if (!section) return false;
         const style = getComputedStyle(section);
-        const allowActiveOnly = ['analysis', 'student-details', 'single-school-eval', 'correlation-analysis', 'indicator'].includes(moduleId);
+        const allowActiveOnly = ['analysis', 'student-details', 'correlation-analysis', 'indicator'].includes(moduleId);
         return section.classList.contains('active') && (style.display !== 'none' || allowActiveOnly);
     }, id, { timeout: 20000 }).catch(() => {});
     await page.waitForTimeout(id === 'teacher-analysis' || id === 'county-analysis' ? 2500 : 900);

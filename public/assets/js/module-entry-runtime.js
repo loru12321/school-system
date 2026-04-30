@@ -235,7 +235,11 @@
                     if (typeof window.generateTeacherPairing === 'function') window.generateTeacherPairing();
                 }, 140);
                 scheduleTeacherAnalysisPhase(token, () => {
-                    if (typeof window.renderTeachingOverview === 'function') window.renderTeachingOverview();
+                    if (typeof window.tmScheduleTeachingOverviewRender === 'function') {
+                        window.tmScheduleTeachingOverviewRender();
+                    } else if (typeof window.renderTeachingOverview === 'function') {
+                        window.renderTeachingOverview();
+                    }
                 }, 200);
                 scheduleTeacherAnalysisPhase(token, () => {
                     if (typeof window.renderTeacherTownshipRanking === 'function') window.renderTeacherTownshipRanking();
@@ -440,7 +444,11 @@
             if (typeof updateSegmentSelects === 'function') updateSegmentSelects();
             if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
             if (typeof updateClassSelect === 'function') updateClassSelect();
-            if (typeof window.renderStudentOverview === 'function') window.renderStudentOverview();
+            if (typeof window.smScheduleStudentOverviewRender === 'function') {
+                window.smScheduleStudentOverviewRender();
+            } else if (typeof window.renderStudentOverview === 'function') {
+                window.renderStudentOverview();
+            }
         };
 
         if (typeof window.ensureTeachingManagementRuntimeLoaded === 'function'
@@ -710,35 +718,6 @@
         return Promise.resolve();
     }
 
-    function initSingleSchoolEvalEntry() {
-        const run = () => {
-            if (!document.getElementById('single-school-eval')?.classList.contains('active')) return false;
-            if (typeof updateSSESchoolSelect === 'function') updateSSESchoolSelect();
-            pickDefaultSelectValue('sse_school_select', getCurrentSchoolCandidate());
-            const calculate = () => {
-                const school = String(document.getElementById('sse_school_select')?.value || '').trim();
-                if (!document.getElementById('single-school-eval')?.classList.contains('active')) return;
-                if (!school || !window.SCHOOLS?.[school]?.metrics?.total || typeof window.SSE_calculate !== 'function') return;
-                window.SSE_calculate();
-            };
-            if (typeof window.scheduleSSEAutoCalculate === 'function') {
-                window.scheduleSSEAutoCalculate(140);
-            } else {
-                scheduleModuleAutoRender('single-school-eval-auto', calculate, { delay: 140, timeout: 900 });
-            }
-            return true;
-        };
-
-        if (typeof window.ensureSingleSchoolEvalRuntimeLoaded === 'function'
-            && !window.__SINGLE_SCHOOL_EVAL_RUNTIME_PATCHED__) {
-            return window.ensureSingleSchoolEvalRuntimeLoaded()
-                .then(run)
-                .catch((error) => console.warn(error));
-        }
-        run();
-        return Promise.resolve();
-    }
-
     function initFreshmanExamEntry(id) {
         const runAfterLoad = () => {
             if (window.FreshmanExamRuntime && typeof window.FreshmanExamRuntime.syncFbClasses === 'function') {
@@ -883,7 +862,7 @@
         if (id === 'progress-analysis') return initProgressAnalysisEntry();
         if (id === 'mutual-aid') updateMutualAidSelects();
         if (id === 'marginal-push') updateMpSchoolSelect();
-        if (id === 'single-school-eval') return initSingleSchoolEvalEntry();
+        if (id === 'single-school-eval') return false;
         return Promise.resolve();
     }
 
@@ -900,7 +879,7 @@
                 const result = id === 'student-details'
                     ? new Promise(resolve => setTimeout(() => resolve(runInit()), 40))
                     : runInit();
-                if (['class-comparison', 'class-diagnosis', 'single-school-eval'].includes(id)) {
+                if (['class-comparison', 'class-diagnosis'].includes(id)) {
                     setTimeout(() => {
                         if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars(id);
                     }, 0);

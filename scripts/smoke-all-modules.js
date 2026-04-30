@@ -20,7 +20,6 @@ const SWITCH_MODULE_IDS = [
     'analysis',
     'county-analysis',
     'teacher-analysis',
-    'single-school-eval',
     'correlation-analysis',
     'indicator',
     'bottom3',
@@ -156,11 +155,14 @@ async function login(page, user, pass) {
         return {
             overlayHidden: !overlay || getComputedStyle(overlay).display === 'none',
             appVisible: !!app && getComputedStyle(app).display !== 'none' && !app.classList.contains('hidden'),
-            maskVisible: !!mask && getComputedStyle(mask).display !== 'none'
+            maskVisible: !!mask && getComputedStyle(mask).display !== 'none',
+            authState: String(document.body?.dataset?.authState || '').trim(),
+            sessionUserPresent: !!String(sessionStorage.getItem('CURRENT_USER') || '').trim()
         };
     });
 
-    if (!(bootState.overlayHidden && (bootState.appVisible || bootState.maskVisible))) {
+    const hasLoggedInSession = bootState.authState === 'logged_in' || bootState.sessionUserPresent;
+    if (!(hasLoggedInSession && bootState.overlayHidden && (bootState.appVisible || bootState.maskVisible))) {
         const loginUser = page.locator('#login-user');
         const ensureLoginWindowVisible = async () => {
             if (await loginUser.isVisible().catch(() => false)) return;
@@ -429,7 +431,7 @@ async function smokeSwitchModule(page, id) {
         const visible = style.display !== 'none';
         const active = section.classList.contains('active');
         const title = section.querySelector('h1,h2,h3,.sub-header,.sec-head')?.textContent?.trim() || '';
-        const allowActiveOnly = ['analysis', 'student-details', 'single-school-eval', 'correlation-analysis', 'indicator'].includes(moduleId);
+        const allowActiveOnly = ['analysis', 'student-details', 'correlation-analysis', 'indicator'].includes(moduleId);
         return {
             ok: active && (visible || (allowActiveOnly && !!title)),
             id: moduleId,
@@ -769,37 +771,6 @@ async function runModuleDeepCheck(page, id) {
                 shouldExpectTeacherRows,
                 studentArchiveRemoved,
                 calculationSnapshotCoversCountyRuntime: true
-            };
-        });
-    }
-    if (id === 'single-school-eval') {
-        return page.evaluate(async () => {
-            const deadline = Date.now() + 6000;
-            while (Date.now() < deadline) {
-                const rowCount = document.querySelectorAll('#sse_table tbody tr').length;
-                const resultVisible = !document.getElementById('sse_result_container')?.classList.contains('hidden');
-                if (rowCount > 0 && resultVisible) break;
-                if (typeof window.scheduleSSEAutoCalculate === 'function') window.scheduleSSEAutoCalculate(60);
-                await new Promise((resolve) => setTimeout(resolve, 200));
-            }
-            const rowCount = document.querySelectorAll('#sse_table tbody tr').length;
-            const resultVisible = !document.getElementById('sse_result_container')?.classList.contains('hidden');
-            const checks = {
-                sectionReady: !!document.querySelector('#single-school-eval.analysis-workspace-management'),
-                heroReady: !!document.querySelector('#single-school-eval .analysis-hero'),
-                shellHeadReady: !!document.querySelector('#single-school-eval .analysis-shell-head'),
-                schoolSelect: !!document.getElementById('sse_school_select'),
-                resultContainer: !!document.getElementById('sse_result_container'),
-                resultTable: !!document.getElementById('sse_table'),
-                autoResultVisible: resultVisible,
-                autoRowsReady: rowCount > 0,
-                principleReady: document.querySelectorAll('#single-school-eval .sse-principle-card').length >= 3,
-                flowReady: document.querySelectorAll('#single-school-eval .analysis-flow-step').length >= 3
-            };
-            return {
-                ok: Object.values(checks).every(Boolean),
-                checks,
-                autoRowCount: rowCount
             };
         });
     }
@@ -1193,7 +1164,7 @@ async function smokeDataManagerTab(page, id) {
             () => ({ ok: false, id, error: 'switch-timeout' })
         );
         trace('switch:done', { id, ok: switchResult.ok, error: switchResult.error || null });
-        const allowDeepCheckWithoutVisibleSwitch = ['teacher-analysis', 'student-details', 'single-school-eval', 'correlation-analysis', 'indicator'].includes(id);
+        const allowDeepCheckWithoutVisibleSwitch = ['teacher-analysis', 'student-details', 'correlation-analysis', 'indicator'].includes(id);
         const deepCheck = (switchResult.ok || allowDeepCheckWithoutVisibleSwitch)
             ? await withTimeoutResult(
                 () => runModuleDeepCheck(page, id),

@@ -7680,9 +7680,8 @@ body[data-role="parent"] #app {
 }
 
 /* 2. 教师模式：隐藏敏感操作 */
-/* 隐藏绩效考核(涉及到钱/奖金)、隐藏重置系统按钮、隐藏管理员面板 */
+/* 隐藏重置系统按钮、隐藏管理员面板 */
 /* 🆕 支持多角色：使用类名选择器 */
-body.role-teacher:not(.role-admin):not(.role-director) #single-school-eval,
 body.role-teacher:not(.role-admin):not(.role-director) .module-desc-bar button[onclick*="resetSystem"],
 body[data-role="teacher"] #admin-panel-btn,
 body.role-teacher:not(.role-admin):not(.role-director):not(.role-grade_director) #student-compare-admin-controls,

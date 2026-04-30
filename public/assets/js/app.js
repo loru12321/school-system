@@ -9355,7 +9355,7 @@ function guardBeforeSwitch(id) {
     if (id === 'starter-hub' || id === 'upload') return true;
     const needGuard = [
         'summary', 'analysis', 'county-analysis', 'high-score', 'indicator', 'bottom3',
-        'teacher-analysis', 'single-school-eval', 'class-comparison', 'class-diagnosis',
+        'teacher-analysis', 'class-comparison', 'class-diagnosis',
         'student-overview', 'student-details', 'subject-balance', 'marginal-push', 'progress-analysis', 'cohort-growth',
         'potential-analysis', 'segment-analysis', 'correlation-analysis', 'report-generator'
     ];
@@ -9674,7 +9674,8 @@ function switchTab(id) {
         'teaching-issue-board': 'teacher-analysis',
         'teaching-warning-center': 'teacher-analysis',
         'teaching-rectify-center': 'teacher-analysis',
-        'teaching-version-center': 'teacher-analysis'
+        'teaching-version-center': 'teacher-analysis',
+        'single-school-eval': 'teacher-analysis'
     };
     if (removedModuleRedirects[id]) {
         console.warn(`${id} has been removed; redirecting to ${removedModuleRedirects[id]}`);

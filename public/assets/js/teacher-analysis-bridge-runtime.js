@@ -198,15 +198,6 @@
             `;
         }
 
-        const sseSection = document.getElementById('single-school-eval');
-        const sseExplain = sseSection?.querySelector('.explain-panel .explain-content');
-        if (sseExplain) {
-            sseExplain.innerHTML = `
-                <p>本模块仍用于班级层面的公平考核，重点看班级工作量、整体结果和生源变化。</p>
-                <p>教师教学质量画像中的“公平绩效分”则是教师学科层面的口径，会额外考虑联考赋分、滚动基线、换老师保护和重点学生转化结构。</p>
-                <p>建议班级管理与班主任评价看本模块，任课教师的教学加工效果看“教师教学质量画像”。</p>
-            `;
-        }
     }
 
     Object.assign(window, {
