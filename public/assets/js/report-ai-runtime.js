@@ -58,6 +58,165 @@ function getSameOriginAIChatUrl() {
     return String(window.location.origin).replace(/\/$/, '') + '/api/ai/chat';
 }
 
+function reportToast(message, type) {
+    if (window.UI && typeof UI.toast === 'function') return UI.toast(message, type);
+    return alert(message);
+}
+
+function escapeReportHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    })[char]);
+}
+
+function toReportList(items, fallback) {
+    const source = Array.isArray(items) ? items : [];
+    const cleaned = source.map(item => String(item ?? '').trim()).filter(Boolean);
+    return cleaned.length ? cleaned : [fallback];
+}
+
+function readNumericRank(rank) {
+    const value = Number(String(rank ?? '').replace(/[^\d.-]/g, ''));
+    return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function buildLocalQualityDiagnosis(context) {
+    const subjectRows = Array.isArray(context?.subjectComparison) ? context.subjectComparison : [];
+    const totalSchools = Math.max(1, Number(context?.totalSchools) || 1);
+    const rankValue = readNumericRank(context?.myRank);
+    const rankedRatio = rankValue ? rankValue / totalSchools : 0.5;
+    const byTownDiff = subjectRows
+        .map(row => ({ ...row, diffNum: Number(row.diff), rankNum: readNumericRank(row.rank) }))
+        .filter(row => Number.isFinite(row.diffNum));
+    const leadingSubjects = byTownDiff.filter(row => row.diffNum >= 0).sort((a, b) => b.diffNum - a.diffNum);
+    const trailingSubjects = byTownDiff.filter(row => row.diffNum < 0).sort((a, b) => a.diffNum - b.diffNum);
+    const strongNames = String(context?.strongSubjects || leadingSubjects.slice(0, 2).map(row => row.subject).join('、') || '').trim();
+    const weakNames = String(context?.weakSubjects || trailingSubjects.slice(0, 2).map(row => row.subject).join('、') || '').trim();
+    const score = Math.max(62, Math.min(92, Math.round(94 - rankedRatio * 26 + leadingSubjects.length - trailingSubjects.length * 1.5)));
+    const best = leadingSubjects[0];
+    const weakest = trailingSubjects[0];
+    const rankPhrase = rankValue ? `综合排名第 ${rankValue}/${totalSchools}` : '综合排名暂缺';
+
+    return {
+        notice: 'AI 网关暂未就绪，已根据本地成绩数据生成离线诊断。',
+        summary: `整体表现${rankPhrase}，${strongNames ? `优势学科集中在 ${strongNames}` : '优势学科仍需继续识别'}，${weakNames ? `需关注 ${weakNames}` : '短板暂不明显'}。`,
+        score,
+        highlights: [
+            best ? `${best.subject}均分高于全镇 ${best.diff} 分，当前可作为校内提质样板。` : '当前未发现明显高于全镇均分的学科，建议先稳住基础盘。',
+            strongNames ? `优势学科：${strongNames}，可沉淀备课、作业和讲评经验。` : '各学科差距相对接近，适合用统一质量监测先找关键班级。',
+            rankValue && rankValue <= Math.ceil(totalSchools * 0.35) ? '综合位次处于前列，下一步重点是保持稳定性。' : '综合位次还有提升空间，优先抓可快速拉动均分的薄弱科目。'
+        ],
+        warnings: [
+            weakest ? `${weakest.subject}低于全镇均分 ${Math.abs(weakest.diffNum).toFixed(1)} 分，需要进入学科攻坚清单。` : '未发现明显低于全镇均分的学科，但仍需防止高分段断层。',
+            weakNames ? `薄弱学科：${weakNames}，建议结合班级明细定位具体任课与学生群体。` : '短板暂不明显，建议继续关注优率、及格率和班级波动。',
+            rankedRatio > 0.5 ? '当前综合位次偏后，单靠平均分追赶不够，需要同步提升及格率和优生贡献。' : '排名靠前时更要警惕学科间分化，避免优势科目掩盖局部风险。'
+        ],
+        strategies: [
+            {
+                title: 'Subject focus',
+                action: weakest ? `以${weakest.subject}为首个攻坚学科，拆解到班级、题型和临界生名单，每周复盘一次。` : '按学科均分、优率、及格率三项建立周度看板，先找波动最大的班级。'
+            },
+            {
+                title: 'Teacher support',
+                action: best ? `提炼${best.subject}的有效做法，安排同备课组共享课堂节奏、作业设计和错题讲评方式。` : '组织同备课组交叉听评课，把有效课堂动作沉淀成可复制清单。'
+            },
+            {
+                title: 'Student tiers',
+                action: '把临界生、潜力优生和学困生分层跟踪，使用短周期小测验证干预是否真正拉动分数。'
+            }
+        ],
+        slogan: '稳中提质'
+    };
+}
+
+function renderQualityDiagnosisReport(contentDiv, data) {
+    const safeData = data || {};
+    const highlights = toReportList(safeData.highlights, '暂无结构化亮点，请结合学科明细继续观察。');
+    const warnings = toReportList(safeData.warnings, '暂无结构化预警，请持续关注排名与及格率波动。');
+    const strategies = Array.isArray(safeData.strategies) && safeData.strategies.length
+        ? safeData.strategies
+        : [{ title: 'Follow-up', action: '先从排名变化、薄弱学科和临界学生三个维度建立跟踪台账。' }];
+    const score = Math.max(0, Math.min(100, Math.round(Number(safeData.score) || 75)));
+    const notice = String(safeData.notice || '').trim();
+
+    contentDiv.innerHTML = `
+                    <div style="padding:10px;">
+                        ${notice ? `
+                        <div style="background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; padding:10px 14px; border-radius:10px; margin-bottom:18px; font-size:13px;">
+                            ${escapeReportHtml(notice)}
+                        </div>` : ''}
+                        <!-- 头部评分 -->
+                        <div style="text-align:center; margin-bottom:30px; border-bottom:1px dashed #eee; padding-bottom:20px;">
+                            <h2 style="color:#1e293b; margin:0 0 10px 0; font-size:24px;">${escapeReportHtml(safeData.summary || '已生成质量诊断报告。')}</h2>
+                            <div style="display:inline-flex; align-items:center; background:#fefce8; border:1px solid #facc15; padding:5px 15px; border-radius:20px;">
+                                <span style="color:#854d0e; font-size:12px;">AI 综合健康指数：</span>
+                                <span style="font-size:28px; font-weight:800; color:#d97706; margin-left:8px;">${score}</span>
+                            </div>
+                        </div>
+
+                        <!-- 红绿榜对比 -->
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:25px;">
+                            <div style="background:#f0fdf4; padding:20px; border-radius:12px; border:1px solid #bbf7d0;">
+                                <h4 style="color:#166534; margin:0 0 10px 0; display:flex; align-items:center;">
+                                    <i class="ti ti-thumb-up" style="margin-right:5px;"></i> 亮点与优势
+                                </h4>
+                                <ul style="padding-left:20px; color:#14532d; font-size:14px; margin:0; line-height:1.6;">
+                                    ${highlights.map(h => `<li>${escapeReportHtml(h)}</li>`).join('')}
+                                </ul>
+                            </div>
+                            <div style="background:#fef2f2; padding:20px; border-radius:12px; border:1px solid #fecaca;">
+                                <h4 style="color:#991b1b; margin:0 0 10px 0; display:flex; align-items:center;">
+                                    <i class="ti ti-alert-triangle" style="margin-right:5px;"></i> 风险与预警
+                                </h4>
+                                <ul style="padding-left:20px; color:#7f1d1d; font-size:14px; margin:0; line-height:1.6;">
+                                    ${warnings.map(w => `<li>${escapeReportHtml(w)}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- 策略清单 -->
+                        <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:20px;">
+                            <h4 style="color:#334155; margin:0 0 15px 0; border-left:4px solid var(--primary); padding-left:10px;">
+                                🚀 提质增效行动方案
+                            </h4>
+                            <div style="display:flex; flex-direction:column; gap:15px;">
+                                ${strategies.map((strategy, index) => `
+                                    <div style="display:flex; align-items:flex-start; gap:12px;">
+                                        <div style="background:#eff6ff; color:#1d4ed8; width:28px; height:28px; border-radius:6px; text-align:center; line-height:28px; font-weight:bold; flex-shrink:0;">${index + 1}</div>
+                                        <div>
+                                            <div style="font-weight:bold; color:#1e293b; font-size:15px;">${escapeReportHtml(strategy?.title || `Action ${index + 1}`)}</div>
+                                            <div style="font-size:14px; color:#475569; margin-top:4px; line-height:1.5;">${escapeReportHtml(strategy?.action || '')}</div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <!-- 底部口号 -->
+                        <div style="margin-top:30px; text-align:center;">
+                            <span style="background:#f1f5f9; color:#64748b; padding:8px 20px; border-radius:50px; font-style:italic; font-size:14px;">
+                                “ ${escapeReportHtml(safeData.slogan || '持续改进')} ”
+                            </span>
+                        </div>
+                    </div>
+                `;
+}
+
+function renderPlainQualityReport(contentDiv, text) {
+    contentDiv.innerHTML = `
+                    <div style="padding:20px; color:#333;">
+                        <h3 style="color:#d97706;">⚠️ 解析模式降级</h3>
+                        <p style="font-size:12px; color:#666;">AI 未返回标准 JSON 格式，已切换为纯文本显示。</p>
+                        <hr style="margin:10px 0; border:0; border-top:1px solid #eee;">
+                        <pre style="white-space:pre-wrap; font-family:sans-serif; line-height:1.6;">${escapeReportHtml(text || '暂无可显示内容')}</pre>
+                    </div>
+                `;
+}
+
 // 2. 通用 LLM 请求函数
 async function callLLM(prompt, onChunk, onFinish) {
     if (AI_DISABLED) {
@@ -140,8 +299,14 @@ async function callLLM(prompt, onChunk, onFinish) {
         if (onFinish) onFinish(fullText);
 
     } catch (error) {
-        console.error(error);
-        alert("AI 请求失败: " + error.message);
+        const message = String(error?.message || error || '未知错误');
+        if (/AI_API_KEY_MISSING/i.test(message)) {
+            window.__AI_GATEWAY_UNAVAILABLE__ = true;
+            console.warn('AI gateway unavailable, using local fallback.');
+        } else {
+            console.error(error);
+            alert("AI 请求失败: " + message);
+        }
         if (onFinish) onFinish(" (请求失败)");
     }
 }
@@ -343,88 +508,37 @@ function generateAIMacroReport() {
 
     // 调用 AI 接口 (使用累积模式处理 JSON)
     let jsonBuffer = "";
+    const localFallback = buildLocalQualityDiagnosis({
+        myRank,
+        totalSchools,
+        subjectComparison,
+        strongSubjects,
+        weakSubjects
+    });
+
+    if (window.__AI_GATEWAY_UNAVAILABLE__ && shouldUseSameOriginAIGateway() && !LLM_CONFIG.apiKey) {
+        renderQualityDiagnosisReport(contentDiv, localFallback);
+        return;
+    }
 
     callLLM(prompt, (chunk) => {
         // 流式接收数据，暂不渲染，只存入 buffer
         jsonBuffer += chunk;
     }, (fullText) => {
         // 生成结束，开始解析与渲染
+        const sourceText = (jsonBuffer || fullText || '').replace(/```json/g, '').replace(/```/g, '').trim();
+        if (!sourceText || sourceText.includes('请求失败')) {
+            renderQualityDiagnosisReport(contentDiv, localFallback);
+            return;
+        }
+
         try {
-            // 1. 清洗数据：去除可能存在的 Markdown 代码块标记
-            const cleanJson = jsonBuffer.replace(/```json/g, '').replace(/```/g, '').trim();
-
-            // 2. 解析 JSON
-            const data = JSON.parse(cleanJson);
-
-            // 3. 渲染漂亮的 UI
-            contentDiv.innerHTML = `
-                    <div style="padding:10px;">
-                        <!-- 头部评分 -->
-                        <div style="text-align:center; margin-bottom:30px; border-bottom:1px dashed #eee; padding-bottom:20px;">
-                            <h2 style="color:#1e293b; margin:0 0 10px 0; font-size:24px;">${data.summary}</h2>
-                            <div style="display:inline-flex; align-items:center; background:#fefce8; border:1px solid #facc15; padding:5px 15px; border-radius:20px;">
-                                <span style="color:#854d0e; font-size:12px;">AI 综合健康指数：</span>
-                                <span style="font-size:28px; font-weight:800; color:#d97706; margin-left:8px;">${data.score}</span>
-                            </div>
-                        </div>
-
-                        <!-- 红绿榜对比 -->
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:25px;">
-                            <div style="background:#f0fdf4; padding:20px; border-radius:12px; border:1px solid #bbf7d0;">
-                                <h4 style="color:#166534; margin:0 0 10px 0; display:flex; align-items:center;">
-                                    <i class="ti ti-thumb-up" style="margin-right:5px;"></i> 亮点与优势
-                                </h4>
-                                <ul style="padding-left:20px; color:#14532d; font-size:14px; margin:0; line-height:1.6;">
-                                    ${data.highlights.map(h => `<li>${h}</li>`).join('')}
-                                </ul>
-                            </div>
-                            <div style="background:#fef2f2; padding:20px; border-radius:12px; border:1px solid #fecaca;">
-                                <h4 style="color:#991b1b; margin:0 0 10px 0; display:flex; align-items:center;">
-                                    <i class="ti ti-alert-triangle" style="margin-right:5px;"></i> 风险与预警
-                                </h4>
-                                <ul style="padding-left:20px; color:#7f1d1d; font-size:14px; margin:0; line-height:1.6;">
-                                    ${data.warnings.map(w => `<li>${w}</li>`).join('')}
-                                </ul>
-                            </div>
-                        </div>
-
-                        <!-- 策略清单 -->
-                        <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:20px;">
-                            <h4 style="color:#334155; margin:0 0 15px 0; border-left:4px solid var(--primary); padding-left:10px;">
-                                🚀 提质增效行动方案
-                            </h4>
-                            <div style="display:flex; flex-direction:column; gap:15px;">
-                                ${data.strategies.map((s, i) => `
-                                    <div style="display:flex; align-items:flex-start; gap:12px;">
-                                        <div style="background:#eff6ff; color:#1d4ed8; width:28px; height:28px; border-radius:6px; text-align:center; line-height:28px; font-weight:bold; flex-shrink:0;">${i + 1}</div>
-                                        <div>
-                                            <div style="font-weight:bold; color:#1e293b; font-size:15px;">${s.title}</div>
-                                            <div style="font-size:14px; color:#475569; margin-top:4px; line-height:1.5;">${s.action}</div>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-
-                        <!-- 底部口号 -->
-                        <div style="margin-top:30px; text-align:center;">
-                            <span style="background:#f1f5f9; color:#64748b; padding:8px 20px; border-radius:50px; font-style:italic; font-size:14px;">
-                                “ ${data.slogan} ”
-                            </span>
-                        </div>
-                    </div>
-                `;
+            const data = JSON.parse(sourceText);
+            renderQualityDiagnosisReport(contentDiv, data);
         } catch (e) {
             // 如果 AI 返回的不是合法 JSON，回退显示原始文本
-            console.error("AI JSON 解析失败", e);
-            contentDiv.innerHTML = `
-                    <div style="padding:20px; color:#333;">
-                        <h3 style="color:#d97706;">⚠️ 解析模式降级</h3>
-                        <p style="font-size:12px; color:#666;">AI 未返回标准 JSON 格式，已切换为纯文本显示。</p>
-                        <hr style="margin:10px 0; border:0; border-top:1px solid #eee;">
-                        <pre style="white-space:pre-wrap; font-family:sans-serif; line-height:1.6;">${jsonBuffer}</pre>
-                    </div>
-                `;
+            console.warn("AI JSON 解析失败，已切换为纯文本显示。", e);
+            renderPlainQualityReport(contentDiv, sourceText);
         }
     });
 }
@@ -433,12 +547,72 @@ function copyReport() {
     const text = document.getElementById('ai-report-content').innerText;
     navigator.clipboard.writeText(text).then(() => alert("已复制到剪贴板"));
 }
-function exportToWord() {
-    const content = document.getElementById('ai-report-content').innerText;
-    // 使用我们之前封装的 UI.toast 替代 alert，如果还没加 UI 模块，这里依然可以用 alert
-    if (!content || content.includes("正在汇总")) return (window.UI ? UI.toast : alert)("请等待报告生成完毕后再导出");
 
-    const { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel } = docx;
+function downloadReportBlob(blob, fileName) {
+    if (typeof window.saveAs === 'function') {
+        window.saveAs(blob, fileName);
+        return;
+    }
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+        URL.revokeObjectURL(url);
+        link.remove();
+    }, 0);
+}
+
+function exportReportAsHtmlWord(content, fileName) {
+    const title = `${CONFIG.name} 教学质量分析报告`;
+    const paragraphs = String(content || '')
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean)
+        .map(line => `<p>${escapeReportHtml(line)}</p>`)
+        .join('\n');
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>${escapeReportHtml(title)}</title>
+    <style>
+        body { font-family: "Microsoft YaHei", Arial, sans-serif; line-height: 1.8; color: #1f2937; }
+        h1 { text-align: center; font-size: 24px; }
+        .date { text-align: center; color: #64748b; margin-bottom: 28px; }
+        p { margin: 0 0 10px; text-indent: 2em; }
+    </style>
+</head>
+<body>
+    <h1>${escapeReportHtml(title)}</h1>
+    <div class="date">生成日期：${escapeReportHtml(new Date().toLocaleDateString())}</div>
+    ${paragraphs}
+    <p style="text-align:center;color:#94a3b8;text-indent:0;margin-top:32px;">（本报告由智能教务系统自动生成）</p>
+</body>
+</html>`;
+    const blob = new Blob(['\ufeff', html], { type: 'application/msword;charset=utf-8' });
+    downloadReportBlob(blob, fileName);
+}
+
+function exportToWord() {
+    const content = document.getElementById('ai-report-content')?.innerText || '';
+    // 使用我们之前封装的 UI.toast 替代 alert，如果还没加 UI 模块，这里依然可以用 alert
+    if (!content || /正在(调取|分析|生成|进行|奋笔疾书)|请稍候|AI 正在/.test(content)) {
+        return reportToast("请等待报告生成完毕后再导出");
+    }
+
+    const baseFileName = `${CONFIG.name}_质量分析报告_${new Date().getTime()}`;
+    if (!window.docx) {
+        const fileName = `${baseFileName}.doc`;
+        exportReportAsHtmlWord(content, fileName);
+        reportToast(`✅ 已导出 Word 兼容文档：${fileName}`, "success");
+        return;
+    }
+
+    const { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel } = window.docx;
 
     // 1. 解析文本：简单按换行符分割
     const lines = content.split('\n').filter(line => line.trim() !== '');
@@ -515,9 +689,9 @@ function exportToWord() {
 
     // 3. 生成并下载
     Packer.toBlob(doc).then((blob) => {
-        const fileName = `${CONFIG.name}_质量分析报告_${new Date().getTime()}.docx`;
-        saveAs(blob, fileName);
-        if (window.UI) UI.toast(`✅ 已导出 Word 文档：${fileName}`, "success");
+        const fileName = `${baseFileName}.docx`;
+        downloadReportBlob(blob, fileName);
+        reportToast(`✅ 已导出 Word 文档：${fileName}`, "success");
     }).catch(err => {
         console.error(err);
         alert("导出 Word 失败：" + err.message);

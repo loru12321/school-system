@@ -145,6 +145,7 @@ const progressAnalysisRuntime = fs.readFileSync(progressAnalysisRuntimePath, 'ut
 const teacherStateRuntime = fs.readFileSync(teacherRuntimePath, 'utf8');
 const teachingManagementRuntime = fs.readFileSync(teachingManagementRuntimePath, 'utf8');
 const teacherAnalysisCoreRuntime = fs.readFileSync(teacherAnalysisCoreRuntimePath, 'utf8');
+const reportAiRuntime = fs.readFileSync(reportAiRuntimePath, 'utf8');
 const appSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
 const initSupabaseMatches = bootRuntime.match(/window\.initSupabase\s*=\s*function/g) || [];
 const supabaseUrlAssignments = bootRuntime.match(/window\.SUPABASE_URL\s*=/g) || [];
@@ -398,6 +399,12 @@ assert.ok(bootRuntime.includes(teachingManagementRef), 'boot-runtime.js should r
 assert.ok(bootRuntime.includes(reportChartRef), 'boot-runtime.js should reference report-chart-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(reportExportRef), 'boot-runtime.js should reference report-export-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(reportAiRef), 'boot-runtime.js should reference report-ai-runtime.js for lazy loading');
+assert.ok(reportAiRuntime.includes('function buildLocalQualityDiagnosis'), 'AI macro report should have a local diagnosis fallback');
+assert.ok(reportAiRuntime.includes("sourceText.includes('请求失败')"), 'AI macro report should not parse failed empty responses as JSON');
+assert.ok(reportAiRuntime.includes('function renderQualityDiagnosisReport'), 'AI macro report should render parsed and fallback diagnosis through one safe renderer');
+assert.ok(reportAiRuntime.includes('function exportReportAsHtmlWord'), 'Word export should fall back when the docx runtime is unavailable');
+assert.ok(reportAiRuntime.includes('if (!window.docx)'), 'Word export should not require a global docx variable');
+assert.ok(reportAiRuntime.includes('function downloadReportBlob'), 'Word export should not depend only on saveAs');
 assert.ok(bootRuntime.includes(cryptoJsVendorRef), 'boot-runtime.js should reference crypto-js.min.js for lazy loading');
 assert.ok(bootRuntime.includes(townSubmoduleCompareRef), 'boot-runtime.js should reference town-submodule-compare-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(alasqlVendorRef), 'boot-runtime.js should reference alasql.min.js for lazy loading');
