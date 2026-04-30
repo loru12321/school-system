@@ -1969,7 +1969,7 @@ window.initCloudClient();
         }
     };
 
-    // Protect window.Auth from being overwritten by legacy scripts (like login-instagram-runtime.js)
+    // Protect window.Auth from being overwritten by late-loading legacy entry points.
     if (!window.Auth || window.Auth.__bootLoginShell) {
         Object.defineProperty(window, 'Auth', {
             value: bootAuth,

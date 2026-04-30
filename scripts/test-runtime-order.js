@@ -416,6 +416,10 @@ assert.ok(!indexHtml.includes('lazy-section-template-ai-analysis'), 'index.html 
 assert.ok(!bootRuntime.includes('ai-hub-runtime.js'), 'boot-runtime.js should not reference removed hub runtime');
 assert.ok(!bootRuntime.includes('report-ai-runtime.js'), 'boot-runtime.js should not reference removed report runtime');
 assert.ok(!shellRuntime.includes('AI分析'), 'shell navigation should not include removed analysis category');
+assert.ok(!bootRuntime.includes('login-instagram-runtime.js'), 'boot-runtime.js should not mention removed login prototype runtime');
+assert.ok(!fs.existsSync(path.resolve(__dirname, '../public/history-grade.js')), 'removed history-grade.js patch should not remain in public assets');
+assert.ok(!fs.existsSync(path.resolve(__dirname, '../public/assets/js/login-instagram-runtime.js')), 'removed login-instagram-runtime.js should not remain in public assets');
+assert.ok(!fs.existsSync(path.resolve(__dirname, '../public/assets/vendor/web-llm/index.js')), 'removed WebLLM vendor should not remain after AI cleanup');
 assert.ok(bootRuntime.includes(cryptoJsVendorRef), 'boot-runtime.js should reference crypto-js.min.js for lazy loading');
 assert.ok(bootRuntime.includes(townSubmoduleCompareRef), 'boot-runtime.js should reference town-submodule-compare-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(alasqlVendorRef), 'boot-runtime.js should reference alasql.min.js for lazy loading');
