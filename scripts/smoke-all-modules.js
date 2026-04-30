@@ -370,7 +370,10 @@ async function ensureCohortEntered(page) {
 
 async function waitForAppReady(page) {
     const deadline = Date.now() + 90000;
+    const startedAt = Date.now();
     let lastState = null;
+    let recoveryAttempted = false;
+    let lastRecovery = null;
 
     while (Date.now() < deadline) {
         try {
@@ -416,10 +419,71 @@ async function waitForAppReady(page) {
             return lastState;
         }
 
+        const workspaceLooksReadyButEmpty = lastState
+            && lastState.appVisible
+            && lastState.maskHidden
+            && lastState.termId
+            && lastState.cohortId
+            && lastState.examId
+            && lastState.school
+            && lastState.rawDataLen === 0;
+        if (!recoveryAttempted && workspaceLooksReadyButEmpty && Date.now() - startedAt > 12000) {
+            recoveryAttempted = true;
+            lastRecovery = await attemptSmokeDataRecovery(page);
+            trace('app-ready:data-recovery', lastRecovery);
+            if (lastRecovery && lastRecovery.after > 0) {
+                await page.waitForTimeout(500);
+                continue;
+            }
+        }
+
         await page.waitForTimeout(1000);
     }
 
-    throw new Error(`app not ready for smoke run: ${JSON.stringify(lastState)}`);
+    throw new Error(`app not ready for smoke run: ${JSON.stringify({ lastState, lastRecovery })}`);
+}
+
+async function attemptSmokeDataRecovery(page) {
+    try {
+        return await page.evaluate(async () => {
+            const before = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+            if (before > 0) return { action: 'already-ready', before, after: before };
+            if (typeof window.loadCloudData !== 'function') {
+                return { action: 'loadCloudData-unavailable', before, after: before };
+            }
+
+            const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+            let loadError = '';
+            try {
+                await Promise.race([
+                    Promise.resolve(window.loadCloudData()),
+                    wait(20000)
+                ]);
+            } catch (error) {
+                loadError = error?.message || String(error);
+            }
+
+            let after = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+            for (let index = 0; index < 20 && after === 0; index += 1) {
+                await wait(250);
+                after = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
+            }
+
+            return {
+                action: 'loadCloudData',
+                before,
+                after,
+                error: loadError
+            };
+        });
+    } catch (error) {
+        return {
+            action: 'recovery-evaluate-failed',
+            before: 0,
+            after: 0,
+            error: error?.message || String(error)
+        };
+    }
 }
 
 async function smokeSwitchModule(page, id) {

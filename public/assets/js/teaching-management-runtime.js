@@ -1608,7 +1608,7 @@ function renderTeachingOverview() {
     if (exams.length < 2) alerts.push('可用于教学对比的考试不足 2 期，多期对比会受限。');
     if (teacherInsight.teacherCount > 0) {
         if (teacherInsight.riskTeacherCount > 0) {
-            alerts.push(`当前筛选范围内有 ${teacherInsight.riskTeacherCount} 位教师存在风险信号，其中低分率偏高 ${teacherInsight.lowRiskTeacherCount} 位、公平绩效偏低或基线校正为负 ${teacherInsight.scoreRiskTeacherCount} 位。`);
+            alerts.push(`当前筛选范围内有 ${teacherInsight.riskTeacherCount} 位教师存在风险信号，其中低分率偏高 ${teacherInsight.lowRiskTeacherCount} 位、教学质量分偏低或基线校正为负 ${teacherInsight.scoreRiskTeacherCount} 位。`);
         } else {
             alerts.push(`当前筛选范围内 ${teacherInsight.teacherCount} 位教师已完成画像分析，暂未发现明显风险信号。`);
         }
@@ -2192,7 +2192,7 @@ function tmBuildIssueTeacherCard(row) {
                 ${tmBuildStatusChip('教师风险', 'warn')}
             </div>
             <div class="tm-center-card-scope">${tmEscapeHtml(row.classes || '当前任课班级未识别')}</div>
-            <div class="tm-center-card-desc">低分率 ${(row.lowRate * 100).toFixed(1)}%，及格率 ${(row.passRate * 100).toFixed(1)}%，公平绩效 ${row.fairScore.toFixed(1)}，基线校正 ${row.baselineAdjustment >= 0 ? '+' : ''}${row.baselineAdjustment.toFixed(1)}，转化分 ${row.conversionScore.toFixed(1)}，样本稳定 ${(row.sampleStabilityRate * 100).toFixed(0)}%${row.sampleShiftCount ? `（变动 ${row.sampleShiftCount} 人）` : ''}${row.teacherChangeProtected ? '，已启用换老师保护' : ''}。</div>
+            <div class="tm-center-card-desc">低分率 ${(row.lowRate * 100).toFixed(1)}%，及格率 ${(row.passRate * 100).toFixed(1)}%，教学质量分 ${row.fairScore.toFixed(1)}，基线校正 ${row.baselineAdjustment >= 0 ? '+' : ''}${row.baselineAdjustment.toFixed(1)}，转化分 ${row.conversionScore.toFixed(1)}，样本稳定 ${(row.sampleStabilityRate * 100).toFixed(0)}%${row.sampleShiftCount ? `（变动 ${row.sampleShiftCount} 人）` : ''}${row.teacherChangeProtected ? '，已启用换老师保护' : ''}。</div>
             <div class="tm-center-card-actions">
                 <button type="button" class="btn btn-orange" data-tm-issue-teacher="${tmEscapeHtml(row.teacherName)}" data-tm-issue-subject="${tmEscapeHtml(row.subjectName)}">定位教师画像</button>
             </div>

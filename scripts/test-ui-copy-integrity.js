@@ -33,7 +33,7 @@ const mimeTypes = {
 
 const requiredLoginText = ['学校端', '家长端', '账号 / 姓名', '密码'];
 const requiredSidebarText = ['数据管理', '联考分析', '教学管理', '学情诊断'];
-const removedAnalysisText = ['AI分析', 'AI工作台', 'AI 配置', '单学生 AI 评语', '批量 AI 评语', '宏观 AI 报告', 'AI 学情建议', '生成 AI 评语'];
+const removedAnalysisText = ['AI分析', 'AI工作台', 'AI 配置', '单学生 AI 评语', '批量 AI 评语', '宏观 AI 报告', 'AI 学情建议', '生成 AI 评语', '绩效公平考核模型', '校内绩效公平考核', '公平绩效'];
 const forbiddenTokens = [
     '馃',
     '锛',

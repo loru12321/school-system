@@ -169,7 +169,7 @@
                     </div>
                     <div class="stat-item">
                         <div class="stat-value">${teacherEscapeHtml(item.fairScore)}</div>
-                        <div class="stat-label">公平绩效</div>
+                        <div class="stat-label">质量分</div>
                     </div>
                 </div>
                 <div style="display:flex; justify-content:space-between; font-size:12px; color:#475569; margin-bottom:8px; padding:0 10px;">
@@ -461,7 +461,7 @@
                     <th colspan="3" style="background:#dcfce7; color:#166534;">三率指标</th>
                     <th rowspan="2">转化分</th>
                     <th rowspan="2">重点学生</th>
-                    <th rowspan="2" style="background:#fef3c7; color:#92400e;">公平绩效分</th>
+                    <th rowspan="2" style="background:#fef3c7; color:#92400e;">教学质量分</th>
                 </tr>
                 <tr>
                     <th>优秀率</th>
@@ -641,7 +641,7 @@
                         <div style="font-size:12px; color:#64748b;">覆盖 ${teacherEscapeHtml(data.baselineCoverageText || '0%')}</div>
                     </div>
                     <div class="bg-gray-50" style="padding:12px; border-radius:12px;">
-                        <div style="font-size:12px; color:#64748b;">公平绩效分</div>
+                        <div style="font-size:12px; color:#64748b;">教学质量分</div>
                         <div style="font-size:22px; font-weight:800; color:#b45309;">${teacherToNumber(data.fairScore, 0).toFixed(1)}</div>
                         <div style="font-size:12px; color:#64748b;">同科第 ${teacherEscapeHtml(data.fairRank || '-')} 名</div>
                     </div>
@@ -727,7 +727,7 @@
                 '上次样本', '共同样本', '新增样本', '缺考/退出', '样本稳定度',
                 '任课连续性', '转化分', '转化调整',
                 '预计均分', '优秀率', '预计优秀率', '及格率', '预计及格率', '低分率', '预计低分率',
-                '工作量修正', '置信系数', '公平绩效分', '同科排名',
+                '工作量修正', '置信系数', '教学质量分', '同科排名',
                 '培优边缘生', '及格临界生', '辅差关注生'
             ]];
             rows.forEach(({ teacherName, data }) => {
@@ -766,7 +766,7 @@
                 ]);
             });
             const sheetName = typeof window.buildSafeSheetName === 'function'
-                ? window.buildSafeSheetName(subject, '公平绩效')
+                ? window.buildSafeSheetName(subject, '教学质量')
                 : String(subject || 'Sheet').slice(0, 31);
             window.XLSX.utils.book_append_sheet(workbook, window.XLSX.utils.aoa_to_sheet(wsData), sheetName);
         });
@@ -774,7 +774,7 @@
         const exportTag = typeof window.buildTeacherExportTag === 'function'
             ? window.buildTeacherExportTag(user, subjectSet)
             : new Date().toISOString().slice(0, 10);
-        window.XLSX.writeFile(workbook, `教师公平绩效明细_${exportTag}.xlsx`);
+        window.XLSX.writeFile(workbook, `教师教学质量明细_${exportTag}.xlsx`);
     }
 
     bindTeacherModalEvents();

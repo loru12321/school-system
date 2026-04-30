@@ -84,21 +84,11 @@ const SYSTEM_MANUAL = {
     'teacher': {
         title: '👩‍🏫 教师教学质量画像·评价模型',
         fit: `用于<strong>教师教学成效</strong>与班级贡献度分析。`,
-        when: `完成教师任课配置后，进行校内绩效评估时使用。`,
+        when: `完成教师任课配置后，进行教学质量复盘时使用。`,
         use: `查看每位老师的实绩。需先在数据中心配置【教师任课】。`,
         calc: `<strong>综合绩效分 (默认模型)：</strong><br>
                    <div class="formula-box">30(基准) + 贡献值 + 优率分 + 及格分 - 低分惩罚</div>
                    其中“贡献值” = 班级均分 - 年级均分。`
-    },
-    'sse': {
-        title: '⚖️ 校内绩效公平考核·算法说明',
-        fit: `用于<strong>校内公平考核</strong>与班级工作量补偿。`,
-        when: `需要兼顾在籍人数与实考人数差异的绩效评价时使用。`,
-        use: `校长室专用。用于计算班级津贴，解决生源不均问题。`,
-        calc: `<strong>核心理念：不让老实人吃亏</strong><br>
-                   1. <strong>实考 vs 在籍</strong>：在籍人数算大班补贴，实考人数算平均分。<br>
-                   2. <strong>大班补偿</strong>：每多于年级平均人数1人，加0.1分。<br>
-                   3. <strong>生源增值</strong>：根据学生排名进步情况加分。`
     },
     'class-comp': {
         title: '🏫 班级横向对比·说明',
@@ -136,14 +126,8 @@ const SYSTEM_MANUAL = {
 
 if (SYSTEM_MANUAL.teacher) {
     SYSTEM_MANUAL.teacher.calc = `<strong>当前模型：联考赋分 + 基线校正 + 置信修正</strong><br>
-                   <div class="formula-box">公平绩效分 = 联考赋分(折算100) × 置信系数 + 基线校正 + 工作量修正</div>
+                   <div class="formula-box">教学质量分 = 联考赋分(折算100) × 置信系数 + 基线校正 + 工作量修正</div>
                    联考赋分按系统现有“两率一分”标准计算；基线校正按最近一次历史考试的匹配学生、分层基础与实际结果的超预期差折算。`;
-}
-
-if (SYSTEM_MANUAL.sse) {
-    SYSTEM_MANUAL.sse.calc = `<strong>说明：</strong><br>
-                   班级公平考核仍用于班级层面的工作量与整体结果比较；教师画像中的“公平绩效分”则是教师学科层面的联考赋分与基线校正模型。<br>
-                   建议：班级考核看班级管理与整体结果，教师画像看任课教师的真实教学加工效果。`;
 }
 
 function showModuleHelp(key) {

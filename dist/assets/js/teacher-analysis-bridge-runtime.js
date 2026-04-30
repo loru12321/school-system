@@ -3,5 +3,5 @@
                 <p>滚动基线：系统优先使用最近 3 次历史考试做滚动分层，尽量避免单次考试难度、缺考或样本波动带来的误差。</p>
                 <p>换老师保护：如果滚动基线跨学期任教发生变化，系统会冻结基线增益项，避免把换老师因素误算到当前教师头上。</p>
                 <p>共同样本与样本波动：页面会明确展示共同样本、新增样本、退出样本和样本稳定度，样本不稳时基线校正会自动降权。</p>
-                <p>转化分：系统会单列优秀保持、边缘转优、临界转及格和低分脱低等表现，并以小权重计入公平绩效分。</p>
+                <p>转化分：系统会单列优秀保持、边缘转优、临界转及格和低分脱低等表现，并以小权重计入教学质量分。</p>
             `)}Object.assign(window,{updateCorrelationSchoolSelect:m,renderCorrelationAnalysis:y,buildSafeSheetName:A,exportTeacherTownshipRankExcel:_,refreshTeacherPerformanceCopy:E}),E(),window.__TEACHER_ANALYSIS_BRIDGE_RUNTIME_PATCHED__=!0})();
