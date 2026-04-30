@@ -54,7 +54,7 @@ const teachingManagementRuntimePath = path.resolve(__dirname, '../public/assets/
 const teacherAnalysisCoreRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-analysis-core-runtime.js');
 const teacherAnalysisUiRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-analysis-ui-runtime.js');
 const teacherAnalysisBridgeRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-analysis-bridge-runtime.js');
-const mobileManagerRuntimePath = path.resolve(__dirname, '../public/assets/js/mobile-manager.js');
+const mobileAppRuntimePath = path.resolve(__dirname, '../public/assets/js/mobile-app-runtime.js');
 const dataManagerSqlRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-sql.js');
 const reportRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/report-render-runtime.js');
 const reportChartRuntimePath = path.resolve(__dirname, '../public/assets/js/report-chart-runtime.js');
@@ -118,7 +118,7 @@ assert.ok(fs.existsSync(teachingManagementRuntimePath), 'teaching-management-run
 assert.ok(fs.existsSync(teacherAnalysisCoreRuntimePath), 'teacher-analysis-core-runtime.js should exist');
 assert.ok(fs.existsSync(teacherAnalysisUiRuntimePath), 'teacher-analysis-ui-runtime.js should exist');
 assert.ok(fs.existsSync(teacherAnalysisBridgeRuntimePath), 'teacher-analysis-bridge-runtime.js should exist');
-assert.ok(fs.existsSync(mobileManagerRuntimePath), 'mobile-manager.js should exist');
+assert.ok(fs.existsSync(mobileAppRuntimePath), 'mobile-app-runtime.js should exist');
 assert.ok(fs.existsSync(dataManagerSqlRuntimePath), 'data-manager-sql.js should exist');
 assert.ok(fs.existsSync(reportRenderRuntimePath), 'report-render-runtime.js should exist');
 assert.ok(fs.existsSync(reportChartRuntimePath), 'report-chart-runtime.js should exist');
@@ -203,7 +203,7 @@ const historyCompareRef = './assets/js/history-compare-runtime.js';
 const perfMobileRef = './assets/js/perf-mobile-runtime.js';
 const schoolProfileRef = './assets/js/school-profile-runtime.js';
 const teachingManagementRef = './assets/js/teaching-management-runtime.js';
-const mobileManagerRef = './assets/js/mobile-manager.js';
+const mobileAppRef = './assets/js/mobile-app-runtime.js';
 const dataManagerSqlRef = './assets/js/data-manager-sql.js';
 const reportRenderRef = './assets/js/report-render-runtime.js';
 const reportChartRef = './assets/js/report-chart-runtime.js';
@@ -602,6 +602,14 @@ assert.ok(!findScriptTag(indexHtml, supabaseVendorRef), 'index.html should not l
     assert.ok(bootRuntime.includes(src), `boot-runtime.js should contain deferred module entry for ${src}`);
 });
 
+const mobileManagerSkillSource = bootRuntime.slice(
+    bootRuntime.indexOf("'mobile-manager':"),
+    bootRuntime.indexOf("'account-admin':")
+);
+assert.ok(mobileManagerSkillSource.includes(mobileAppRef), 'mobile manager skill should load mobile-app-runtime.js');
+assert.ok(!mobileManagerSkillSource.includes(perfMobileRef), 'mobile manager skill should not auto-load perf-mobile-runtime.js');
+assert.ok(!bootRuntime.includes('./assets/js/mobile-experience-runtime.js'), 'mobile experience helper should be merged into mobile-app-runtime.js');
+
 [
     scrollTriggerVendorRef,
     popperVendorRef,
@@ -629,7 +637,7 @@ assert.ok(indexHtml.includes(tablerIconsRef), 'index.html should load local tabl
     accountAdminRef,
     historyCompareRef,
     perfMobileRef,
-    mobileManagerRef,
+    mobileAppRef,
     dataManagerSqlRef,
     reportRenderRef,
     reportChartRef,

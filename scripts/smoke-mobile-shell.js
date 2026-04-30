@@ -68,6 +68,9 @@ async function readMobileShellState(page) {
             shellVisible: !!shell && rootDisplay !== 'none' && shell.getAttribute('aria-hidden') === 'false',
             railChips: document.querySelectorAll('#apk-mobile-shell .apk-rail-chip').length,
             activeRailChip: !!document.querySelector('#apk-mobile-shell .apk-rail-chip.is-active'),
+            mobileExperienceRuntime: typeof window.MobileExperienceRuntime?.syncCompactState === 'function',
+            compactViewportClass: document.documentElement.classList.contains('is-compact-viewport'),
+            perfRuntimeLoaded: !!window.PerformanceMonitor,
             currentCohortId: String(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID') || '').trim(),
             rawDataLen
         };
@@ -126,6 +129,9 @@ async function main() {
     assert.ok(state.shellVisible, 'mobile shell was not visible');
     assert.ok(state.railChips > 0, 'mobile rail chips were not rendered');
     assert.ok(state.activeRailChip, 'mobile rail active chip was missing');
+    assert.ok(state.mobileExperienceRuntime, 'merged mobile experience runtime was not exposed');
+    assert.ok(state.compactViewportClass, 'compact viewport class was not synchronized');
+    assert.strictEqual(state.perfRuntimeLoaded, false, 'perf-mobile runtime should not load during normal mobile bootstrap');
     assert.ok(state.currentCohortId, 'cohort was not selected');
     assert.ok(state.rawDataLen > 0, 'exam data was not loaded');
     assert.ok(

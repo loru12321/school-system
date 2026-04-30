@@ -125,7 +125,7 @@ function renderIGCharts(stu) {
     }, 150); // 延时 150ms 确保 HTML 渲染完毕
 }
 
-// 移动端管理逻辑已拆分到 public/assets/js/mobile-manager.js
+// 移动端管理逻辑已拆分到 public/assets/js/mobile-app-runtime.js
 
 function renderHistoryChart(student) {
     const ctx = document.getElementById('historyChart');

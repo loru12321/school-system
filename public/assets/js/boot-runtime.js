@@ -259,8 +259,7 @@ var SYSTEM_RUNTIME_SKILLS = {
         warmup: 'mobile',
         triggers: ['mobile-layout'],
         entries: [
-            { key: 'mobile-manager', src: './assets/js/mobile-app-runtime.js' },
-            { key: 'perf-mobile', src: './assets/js/perf-mobile-runtime.js' }
+            { key: 'mobile-manager', src: './assets/js/mobile-app-runtime.js' }
         ]
     },
     'account-admin': {
@@ -455,7 +454,6 @@ var APP_MODULES = [
     './assets/js/shell-runtime.js',
     './assets/js/workspace-rail-runtime.js',
     './assets/js/virtual-table-runtime.js',
-    './assets/js/mobile-experience-runtime.js',
     './assets/js/module-entry-runtime.js',
     './assets/js/ranking-data-service-runtime.js',
     './assets/js/analytics-kernel-runtime.js',
@@ -3017,15 +3015,16 @@ function scheduleMobileRuntimeBootstrap(options = {}) {
     const includePerf = !!options.includePerf;
     const delayMs = Number(options.delayMs || 0);
     const devMode = localStorage.getItem('DEV_MODE') === 'true';
+    const shouldIncludePerf = includePerf && devMode;
     if (!(window.innerWidth <= maxWidth || devMode)) return;
-    const flagName = includePerf ? '__MOBILE_PERF_BOOTSTRAP_SCHEDULED__' : '__MOBILE_RUNTIME_BOOTSTRAP_SCHEDULED__';
+    const flagName = shouldIncludePerf ? '__MOBILE_PERF_BOOTSTRAP_SCHEDULED__' : '__MOBILE_RUNTIME_BOOTSTRAP_SCHEDULED__';
     if (window[flagName]) return;
     window[flagName] = true;
 
     runAfterAppModulesReady(() => {
         const load = () => {
             window.ensureMobileManagerRuntimeLoaded()
-                .then(() => (includePerf ? window.ensurePerfMobileRuntimeLoaded() : undefined))
+                .then(() => (shouldIncludePerf ? window.ensurePerfMobileRuntimeLoaded() : undefined))
                 .catch((error) => {
                     console.warn(error);
                 });

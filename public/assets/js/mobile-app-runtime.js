@@ -118,6 +118,25 @@
         return getViewportWidth() <= MOBILE_BREAKPOINT;
     }
 
+    function isCompactViewport() {
+        if (window.matchMedia) return window.matchMedia('(max-width: 900px)').matches;
+        return getViewportWidth() <= 900;
+    }
+
+    function syncCompactState(scope = document) {
+        document.documentElement.classList.toggle('is-compact-viewport', isCompactViewport());
+        const targetScope = scope && typeof scope.querySelectorAll === 'function'
+            ? scope
+            : document;
+        targetScope.querySelectorAll('.analysis-table-shell, .table-wrap').forEach((shell) => {
+            if (!shell.dataset.mobileHint) shell.dataset.mobileHint = '可横向滑动查看完整表格';
+        });
+    }
+
+    function installMobileExperienceRuntime() {
+        syncCompactState(document);
+    }
+
     function scrollActiveRailChipIntoView(root) {
         const rail = root?.querySelector?.('[data-apk-rail]');
         if (!rail) return;
@@ -675,6 +694,7 @@
     function refreshContentEnhancements() {
         const scope = document.querySelector('.section.active') || document;
         ensureMobileExperienceStyles();
+        syncCompactState(scope);
         refreshResponsiveTablesNow(scope);
         scheduleResponsiveTableRefresh(scope);
         installResponsiveTableObserver(scope);
@@ -1771,6 +1791,18 @@
         openAccount: () => setSheetMode('account'),
         openCohorts: () => setSheetMode('cohorts')
     };
+    window.MobileExperienceRuntime = window.MobileExperienceRuntime || {
+        install: installMobileExperienceRuntime,
+        syncCompactState,
+        isCompactViewport
+    };
+    window.MobDashboardMgr = window.MobDashboardMgr || {
+        showToast(msg) {
+            if (window.UI && typeof window.UI.toast === 'function') window.UI.toast(msg, 'info');
+            else if (typeof window.showToast === 'function') window.showToast(msg);
+            else window.alert(msg);
+        }
+    };
     window.switchMobileTab = (tabName) => MobMgr.switchTab(tabName);
 
     if (window.matchMedia) {
@@ -1797,6 +1829,7 @@
         if (!document.hidden) scheduleRefresh();
     });
 
+    installMobileExperienceRuntime();
     REFRESH_DELAYS.forEach((delay) => {
         window.setTimeout(scheduleRefresh, delay);
     });
