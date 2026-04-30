@@ -12466,9 +12466,11 @@ function generateTeacherInputs() {
     container.innerHTML = '';
     const mySchoolData = SCHOOLS[MY_SCHOOL]; if (!mySchoolData) return;
     const classes = [...new Set(mySchoolData.students.map(s => s.class))].sort((a, b) => { const [gradeA, classA] = a.split('.').map(Number); const [gradeB, classB] = b.split('.').map(Number); if (gradeA !== gradeB) return gradeA - gradeB; return classA - classB; });
+    const teacherInputFragment = document.createDocumentFragment();
     classes.forEach(cls => {
-        SUBJECTS.forEach(sub => { const key = `${cls}_${sub}`; const currentTeacher = TEACHER_MAP[key] || ''; const inputDiv = document.createElement('div'); inputDiv.innerHTML = `<label style="font-size:12px;color:#666;">${cls}班 ${sub}</label><input type="text" class="teacher-input" data-key="${key}" value="${currentTeacher}" placeholder="姓名" style="width:100%;margin-top:2px;">`; container.appendChild(inputDiv); });
+        SUBJECTS.forEach(sub => { const key = `${cls}_${sub}`; const currentTeacher = TEACHER_MAP[key] || ''; const inputDiv = document.createElement('div'); inputDiv.innerHTML = `<label style="font-size:12px;color:#666;">${cls}班 ${sub}</label><input type="text" class="teacher-input" data-key="${key}" value="${currentTeacher}" placeholder="姓名" style="width:100%;margin-top:2px;">`; teacherInputFragment.appendChild(inputDiv); });
     });
+    container.appendChild(teacherInputFragment);
     container.querySelectorAll('.teacher-input').forEach(input => {
         input.addEventListener('input', function () {
             const key = this.dataset.key; const value = this.value.trim(); if (value) TEACHER_MAP[key] = value; else delete TEACHER_MAP[key];             // 防抖保存：输入停止 1 秒后保存，避免频繁写入
@@ -12996,17 +12998,19 @@ function renderMutualAidGroups() {
 
 function renderAidGroupsHTML(groups, sub) {
     const container = document.getElementById('aid-groups-container'); container.innerHTML = '';
+    const aidGroupFragment = document.createDocumentFragment();
     groups.forEach(g => {
         const allScores = [g.leader, ...g.members].map(s => sub === 'total' ? s.total : (s.scores[sub] || 0)); const avg = allScores.reduce((a, b) => a + b, 0) / allScores.length;
-        let membersHtml = '';
-        g.members.forEach(m => {
+        const membersHtml = g.members.map(m => {
             const score = sub === 'total' ? m.total : (m.scores[sub] || 0); let tag = ''; if (m._subRankPct > 0.8) tag = `<span class="aid-tag tag-weak">需帮扶</span>`;
-            membersHtml += `<div class="aid-role-row aid-member"><div class="aid-avatar">${m.name[0]}</div><div class="aid-info"><div class="aid-name">${m.name} ${tag}</div><div class="aid-score">${sub}: ${score}</div></div></div>`;
-        });
+            return `<div class="aid-role-row aid-member"><div class="aid-avatar">${m.name[0]}</div><div class="aid-info"><div class="aid-name">${m.name} ${tag}</div><div class="aid-score">${sub}: ${score}</div></div></div>`;
+        }).join('');
         const leaderScore = sub === 'total' ? g.leader.total : (g.leader.scores[sub] || 0);
         const card = document.createElement('div'); card.className = 'aid-card';
-        card.innerHTML = `<div class="aid-header"><span>第 ${g.id} 组</span><span style="font-weight:normal; color:#666;">均分: ${avg.toFixed(1)}</span></div><div class="aid-body"><div class="aid-role-row aid-leader"><div class="aid-avatar">组</div><div class="aid-info"><div class="aid-name">${g.leader.name} <span class="aid-tag tag-strong">组长</span></div><div class="aid-score">${sub}: ${leaderScore}</div></div></div>${membersHtml}</div>`; container.appendChild(card);
+        card.innerHTML = `<div class="aid-header"><span>第 ${g.id} 组</span><span style="font-weight:normal; color:#666;">均分: ${avg.toFixed(1)}</span></div><div class="aid-body"><div class="aid-role-row aid-leader"><div class="aid-avatar">组</div><div class="aid-info"><div class="aid-name">${g.leader.name} <span class="aid-tag tag-strong">组长</span></div><div class="aid-score">${sub}: ${leaderScore}</div></div></div>${membersHtml}</div>`;
+        aidGroupFragment.appendChild(card);
     });
+    container.appendChild(aidGroupFragment);
 }
 
 function exportMutualAidGroups() {

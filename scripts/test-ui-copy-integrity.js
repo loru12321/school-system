@@ -564,28 +564,65 @@ async function verifyTeacherAiWorkbench(page) {
 }
 
 async function verifyParentAiBlock(page) {
-    const result = await page.evaluate(async () => {
-        const sample = (window.RAW_DATA || []).find((row) => row && row.name && row.class && row.school)
-            || { name: '测试学生', class: '9.1', school: '银山实验学校' };
+    const result = await page.evaluate(async (requiredTokens) => {
+        const buildFallbackStudent = () => {
+            const subjects = Array.isArray(window.SUBJECTS) && window.SUBJECTS.length
+                ? window.SUBJECTS
+                : ['语文', '数学', '英语'];
+            const scores = {};
+            const ranks = { total: { class: 1, school: 1, township: 1, county: 1 } };
+            subjects.forEach((subject, index) => {
+                scores[subject] = 90 - index;
+                ranks[subject] = { class: 1, school: 1, township: 1, county: 1 };
+            });
+            return {
+                name: '测试学生',
+                class: '9.1',
+                school: '银山实验学校',
+                scores,
+                total: Object.values(scores).reduce((sum, score) => sum + Number(score || 0), 0),
+                ranks
+            };
+        };
+        const existingSample = (window.RAW_DATA || []).find((row) => row && row.name && row.class && row.school);
+        const sample = existingSample || buildFallbackStudent();
+        if (!existingSample) {
+            window.RAW_DATA = [sample];
+            window.SCHOOLS = Object.assign({}, window.SCHOOLS || {}, {
+                [sample.school]: {
+                    students: [sample]
+                }
+            });
+        }
         if (!sample || !window.Auth || typeof window.Auth.renderParentView !== 'function') {
             return { ok: false, reason: 'missing sample or renderParentView' };
         }
 
-        window.Auth.currentUser = { name: sample.name, class: sample.class, school: sample.school, role: 'parent', roles: ['parent'] };
+        const parentUser = { name: sample.name, class: sample.class, school: sample.school, role: 'parent', roles: ['parent'] };
+        window.Auth.currentUser = parentUser;
+        if (window.AuthState && typeof window.AuthState.setCurrentUser === 'function') {
+            window.AuthState.setCurrentUser(parentUser);
+        }
         if (typeof window.setCurrentReportStudentState === 'function') window.setCurrentReportStudentState(sample);
         if (typeof window.ensureReportRenderRuntimeLoaded === 'function') {
             await window.ensureReportRenderRuntimeLoaded();
         }
         window.Auth.renderParentView();
-        await new Promise((resolve) => setTimeout(resolve, 1800));
 
-        const container = document.getElementById('parent-view-container');
-        const text = container ? container.innerText : '';
+        const deadline = Date.now() + 20000;
+        let container = document.getElementById('parent-view-container');
+        let text = container ? container.innerText : '';
+        while (Date.now() < deadline) {
+            container = document.getElementById('parent-view-container');
+            text = container ? container.innerText : '';
+            if (container && requiredTokens.every((token) => text.includes(token))) break;
+            await new Promise((resolve) => setTimeout(resolve, 300));
+        }
         return {
             ok: !!container,
             text
         };
-    });
+    }, requiredParentText);
 
     assert.strictEqual(result.ok, true, `parent view failed to render: ${result.reason || 'unknown error'}`);
     assertContainsAll('parent AI block', result.text, requiredParentText);

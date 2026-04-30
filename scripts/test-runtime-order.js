@@ -487,6 +487,9 @@ assert.ok(teachingManagementRuntime.includes('const rerender = () => smScheduleS
 assert.ok(appSource.includes('const teacherRowsHtml = displayList.map'), 'teacher table rendering should build rows off-DOM before writing to tbody');
 assert.ok(appSource.includes("tbody.innerHTML = teacherRowsHtml.join('');"), 'teacher table rendering should write teacher rows to the DOM once');
 assert.ok(!appSource.includes('displayList.forEach(t => {'), 'teacher table rendering should avoid per-row DOM writes');
+assert.ok(appSource.includes('const teacherInputFragment = document.createDocumentFragment();'), 'teacher input generation should collect controls in a fragment');
+assert.ok(appSource.includes('container.appendChild(teacherInputFragment);'), 'teacher input generation should attach controls with one fragment append');
+assert.ok(!appSource.includes('container.appendChild(inputDiv);'), 'teacher input generation should avoid per-control container appends');
 assert.ok(appSource.includes('const targetRowsHtml = Object.keys(SCHOOLS).map'), 'target editor should build school rows off-DOM before writing to tbody');
 assert.ok(appSource.includes("tbody.innerHTML = targetRowsHtml.join('');"), 'target editor should write school target rows to the DOM once');
 assert.ok(appSource.includes('const spotlightRowsHtml = [];'), 'spotlight search should collect result rows before writing to the result container');
@@ -508,6 +511,9 @@ assert.ok(appSource.includes("SUBJECTS.map(s => `<option value=\"${s}\">${s}</op
 assert.ok(appSource.includes("classes.map(c => `<option value=\"${c}\">${c}</option>`).join('')"), 'marginal push class selector should batch option rendering');
 assert.ok(appSource.includes('const schoolOptionsHtml = [...schools]'), 'teacher school selector should build option HTML once');
 assert.ok(appSource.includes("const snapshotOptions = Object.keys(MP_SNAPSHOTS).map"), 'marginal snapshot selector should batch historical task options');
+assert.ok(appSource.includes('const aidGroupFragment = document.createDocumentFragment();'), 'mutual aid group rendering should collect cards in a fragment');
+assert.ok(appSource.includes('container.appendChild(aidGroupFragment);'), 'mutual aid group rendering should attach cards with one fragment append');
+assert.ok(!appSource.includes('container.appendChild(card);'), 'mutual aid group rendering should avoid per-card container appends');
 assert.ok(!appSource.includes('innerHTML +='), 'app.js should avoid repeated innerHTML appends');
 assert.ok(teacherCompareResultRuntime.includes('function scheduleTeacherMultiPeriodAutoRender'), 'teacher multi-period compare should recalculate automatically after selector changes');
 assert.ok(teacherCompareResultRuntime.includes('bindTeacherCompareAutoControls();'), 'teacher compare runtime should bind selector auto-refresh controls');
