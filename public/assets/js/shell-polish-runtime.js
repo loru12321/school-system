@@ -173,9 +173,7 @@
             ['#shell-module-count', 'Current visible modules'],
             ['#shell-cohort-chip', 'Current cohort'],
             ['#shell-mode-chip', 'Workspace mode'],
-            ['#shell-role-pill', 'Current role'],
-            ['#shell-active-module', 'Current focus'],
-            ['#shell-active-hint', 'Current hint']
+            ['#shell-role-pill', 'Current role']
         ].forEach(([selector, prefix]) => {
             const element = document.querySelector(selector);
             if (!element) return;

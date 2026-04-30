@@ -463,6 +463,18 @@ assert.ok(shellPolishRuntime.includes('function scheduleEnhancementRuntimeLoad()
 assert.ok(shellPolishRuntime.includes("window.SystemRuntimeLoader.load('shell-enhancements')"), 'shell-polish-runtime.js should demand-load shell-enhancements after the app is visible');
 assert.ok(shellPolishRuntime.includes("getRuntimeLoadProfile() === 'lazy'"), 'shell-polish-runtime.js should respect the lazy runtime profile');
 assert.ok(shellPolishRuntime.includes('if (isMobileViewport()) return false;'), 'shell-polish-runtime.js should skip desktop shell enhancements on mobile');
+assert.ok(indexHtml.includes('shell-overview-context-row'), 'shell overview should move workspace context into the top right row');
+assert.ok(indexHtml.includes('shell-overview-pills--dock'), 'shell overview should dock cohort and mode chips in the context row');
+assert.ok(indexHtml.includes('<span>Workspace</span>'), 'shell overview workspace launcher should use compact English copy');
+assert.ok(!indexHtml.includes('id="shell-active-module"'), 'shell overview should remove the current-focus card from the top hero');
+assert.ok(!indexHtml.includes('id="shell-active-hint"'), 'shell overview should remove the next-step card from the top hero');
+assert.ok(!indexHtml.includes('shell-pulse-grid shell-pulse-grid--dock'), 'shell overview should not render the docked pulse grid');
+assert.ok(!shellRuntime.includes('shell-active-module'), 'shell runtime should not query the removed current-focus card');
+assert.ok(!shellRuntime.includes('shell-active-hint'), 'shell runtime should not query the removed next-step card');
+assert.ok(!shellPolishRuntime.includes('#shell-active-module'), 'shell polish runtime should not bind tooltip to removed current-focus card');
+assert.ok(!shellPolishRuntime.includes('#shell-active-hint'), 'shell polish runtime should not bind tooltip to removed next-step card');
+assert.ok(shellRuntime.includes('function formatOverviewCohortText'), 'shell overview should compact cohort chip text for the docked row');
+assert.ok(shellRuntime.includes('function formatOverviewModeText'), 'shell overview should compact mode chip text for the docked row');
 assert.ok(moduleEntryRuntime.includes('const TEACHER_ANALYSIS_RENDER_DELAY_MS = 180;'), 'teacher portrait should auto-render shortly after entering the module');
 assert.ok(moduleEntryRuntime.includes('ensureTeacherAnalysisMainRuntimeLoaded()'), 'teacher portrait entry should load its runtime automatically');
 assert.ok(moduleEntryRuntime.includes('function scheduleTeacherCompareAutoRender'), 'teacher multi-period compare should auto-render from default selectors');

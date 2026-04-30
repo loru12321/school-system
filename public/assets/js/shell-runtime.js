@@ -184,6 +184,20 @@
         setAttrIfChanged(element, 'data-shell-tooltip', tooltip == null ? text : tooltip);
     }
 
+    function formatOverviewCohortText(value) {
+        const text = String(value || '').trim();
+        if (!text) return 'Cohort';
+        const yearMatch = text.match(/(\d{4})/);
+        return yearMatch ? `Cohort ${yearMatch[1]}` : text;
+    }
+
+    function formatOverviewModeText(value) {
+        const text = String(value || '').trim();
+        if (!text) return 'Mode';
+        const gradeMatch = text.match(/(\d+)\s*年级/);
+        return gradeMatch ? `Grade ${gradeMatch[1]}` : text.replace(/\s*模式$/, ' Mode');
+    }
+
     function notifyShellEnhancements() {
         scheduleFloatingModuleRailSync();
         if (typeof window.refreshShellEnhancements === 'function') {
@@ -653,7 +667,7 @@
                 ? String(cohortSelector.options[cohortSelector.selectedIndex].text || '').trim()
                 : '';
             const cohortText = selectedText || '届别未选择';
-            setTextAndTooltip(cohortChip, cohortText, `当前届别：${cohortText}`);
+            setTextAndTooltip(cohortChip, formatOverviewCohortText(cohortText), `当前届别：${cohortText}`);
         }
 
         const modeChip = document.getElementById('shell-mode-chip');
@@ -661,7 +675,7 @@
             const modeBadge = document.getElementById('mode-badge');
             const modeText = modeBadge ? String(modeBadge.textContent || '').trim() : '';
             const shellModeText = modeText ? `${modeText} 模式` : '模式待加载';
-            setTextAndTooltip(modeChip, shellModeText, `当前模式：${shellModeText}`);
+            setTextAndTooltip(modeChip, formatOverviewModeText(shellModeText), `当前模式：${shellModeText}`);
         }
 
         const roleText = resolveRoleLabel();
@@ -683,17 +697,6 @@
         const rolePill = document.getElementById('shell-role-pill');
         if (rolePill) {
             setTextAndTooltip(rolePill, roleText, roleText);
-        }
-
-        const activeModule = document.getElementById('shell-active-module');
-        if (activeModule) {
-            setTextAndTooltip(activeModule, activeTitle, `当前焦点：${activeTitle}`);
-        }
-
-        const activeHintEl = document.getElementById('shell-active-hint');
-        if (activeHintEl) {
-            const activeHintText = activeHint || category.summary;
-            setTextAndTooltip(activeHintEl, activeHintText, activeHintText);
         }
 
         renderModuleRail(category, visibleItems, activeItem);
