@@ -112,7 +112,11 @@
         if (typeof window.renderTeacherCards === 'function') window.renderTeacherCards();
         if (typeof window.renderTeacherComparisonTable === 'function') window.renderTeacherComparisonTable();
         if (typeof window.generateTeacherPairing === 'function') window.generateTeacherPairing();
-        if (typeof window.renderTeachingOverview === 'function') window.renderTeachingOverview();
+        if (typeof window.tmScheduleTeachingOverviewRender === 'function') {
+            window.tmScheduleTeachingOverviewRender();
+        } else if (typeof window.renderTeachingOverview === 'function') {
+            window.renderTeachingOverview();
+        }
         if (typeof window.tmRenderTeachingModuleStateBars === 'function') window.tmRenderTeachingModuleStateBars('teacher-analysis');
     }
 

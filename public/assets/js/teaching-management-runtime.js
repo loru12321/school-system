@@ -802,6 +802,7 @@ window.tmIgnoreCloudWarning = tmIgnoreCloudWarning;
 window.tmRenderWarningCenter = tmRenderWarningCenter;
 window.tmRenderRectifyCenter = tmRenderRectifyCenter;
 window.tmCreateManualRectifyTask = tmCreateManualRectifyTask;
+window.tmScheduleTeachingOverviewRender = tmScheduleTeachingOverviewRender;
 
 function tmGetOverviewContext() {
     return {
@@ -2884,6 +2885,7 @@ async function tmCreateCurrentVersionSnapshot() {
 window.renderTeachingOverview = renderTeachingOverview;
 window.tmRenderTeachingModuleStateBars = tmRenderTeachingModuleStateBars;
 window.tmRenderIssueBoard = tmRenderIssueBoard;
+window.tmScheduleTeachingOverviewRender = tmScheduleTeachingOverviewRender;
 window.tmRefreshVersionCenter = tmRefreshVersionCenter;
 window.tmCreateCurrentVersionSnapshot = tmCreateCurrentVersionSnapshot;
 window.tmShowVersionDiff = tmShowVersionDiff;

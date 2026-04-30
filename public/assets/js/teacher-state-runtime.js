@@ -56,7 +56,13 @@
     }
 
     function getTeacherStats() {
-        return cloneJson(root.TEACHER_STATS, {});
+        return cloneJson(peekTeacherStats(), {});
+    }
+
+    function peekTeacherStats() {
+        return root.TEACHER_STATS && typeof root.TEACHER_STATS === 'object' && !Array.isArray(root.TEACHER_STATS)
+            ? root.TEACHER_STATS
+            : {};
     }
 
     function setTeacherStats(stats) {
@@ -106,6 +112,7 @@
         getTeacherSchoolMap,
         setTeacherSchoolMap,
         getTeacherStats,
+        peekTeacherStats,
         setTeacherStats,
         snapshotTeacherState,
         syncTeacherState,

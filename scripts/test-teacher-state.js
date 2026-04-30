@@ -23,6 +23,10 @@ function run() {
             语文: { avg: 86.5, passRate: 0.92 }
         }
     });
+    assert.strictEqual(teacherState.peekTeacherStats(), root.TEACHER_STATS);
+    const statsClone = teacherState.getTeacherStats();
+    statsClone.张老师.语文.avg = 0;
+    assert.strictEqual(root.TEACHER_STATS.张老师.语文.avg, 86.5);
 
     const snapshot = teacherState.syncTeacherState({
         teacherMap: { '9.2_数学': '李老师' },

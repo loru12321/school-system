@@ -917,8 +917,10 @@ function setTeacherSchoolMap(map) {
 }
 
 function readTeacherStats() {
-    const nextStats = TeacherStateRuntime && typeof TeacherStateRuntime.getTeacherStats === 'function'
-        ? (TeacherStateRuntime.getTeacherStats() || {})
+    const nextStats = TeacherStateRuntime && typeof TeacherStateRuntime.peekTeacherStats === 'function'
+        ? (TeacherStateRuntime.peekTeacherStats() || {})
+        : TeacherStateRuntime && typeof TeacherStateRuntime.getTeacherStats === 'function'
+            ? (TeacherStateRuntime.getTeacherStats() || {})
         : (window.TEACHER_STATS && typeof window.TEACHER_STATS === 'object' ? window.TEACHER_STATS : (
             typeof TEACHER_STATS !== 'undefined' && TEACHER_STATS && typeof TEACHER_STATS === 'object' ? TEACHER_STATS : {}
         ));
