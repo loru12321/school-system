@@ -26,6 +26,7 @@ let TM_VERSION_DIFF_STATE = {
     title: ''
 };
 let TM_OVERVIEW_RENDER_FRAME = 0;
+let SM_OVERVIEW_RENDER_FRAME = 0;
 
 function tmScheduleTeachingOverviewRender() {
     if (TM_OVERVIEW_RENDER_FRAME) return;
@@ -37,6 +38,22 @@ function tmScheduleTeachingOverviewRender() {
         TM_OVERVIEW_RENDER_FRAME = window.requestAnimationFrame(runner);
     } else {
         TM_OVERVIEW_RENDER_FRAME = window.setTimeout(runner, 16);
+    }
+}
+
+function smScheduleStudentOverviewRender() {
+    if (SM_OVERVIEW_RENDER_FRAME) return;
+    const runner = () => {
+        SM_OVERVIEW_RENDER_FRAME = 0;
+        const active = document.getElementById('student-overview');
+        if (active && active.classList.contains('active') && typeof renderStudentOverview === 'function') {
+            renderStudentOverview();
+        }
+    };
+    if (typeof window.requestAnimationFrame === 'function') {
+        SM_OVERVIEW_RENDER_FRAME = window.requestAnimationFrame(runner);
+    } else {
+        SM_OVERVIEW_RENDER_FRAME = window.setTimeout(runner, 16);
     }
 }
 
@@ -1778,29 +1795,34 @@ function smBuildOverviewModel() {
         : Object.keys(window.SCHOOLS || {});
     const selectedClass = normalizeClass(context.classValue || '');
     const fullProgressRows = readProgressCacheFullState();
-    const progressRows = fullProgressRows.length
-        ? fullProgressRows.slice()
-        : readProgressCacheState().slice();
-    const progressScopedRows = progressRows.filter((row) => {
-        if (context.schoolValue && !smSchoolMatches(row.school, context.schoolValue)) return false;
-        if (selectedClass && normalizeClass(row.class || '') !== selectedClass) return false;
-        return true;
+    const progressRows = fullProgressRows.length ? fullProgressRows : readProgressCacheState();
+    let progressCount = 0;
+    let improveCount = 0;
+    let declineCount = 0;
+    let stableCount = 0;
+    progressRows.forEach((row) => {
+        if (context.schoolValue && !smSchoolMatches(row.school, context.schoolValue)) return;
+        if (selectedClass && normalizeClass(row.class || '') !== selectedClass) return;
+        progressCount += 1;
+        const changeValue = Number(row.change || 0);
+        if (changeValue > 0) improveCount += 1;
+        else if (changeValue < 0) declineCount += 1;
+        else stableCount += 1;
     });
-    const improveCount = progressScopedRows.filter((row) => Number(row.change || 0) > 0).length;
-    const declineCount = progressScopedRows.filter((row) => Number(row.change || 0) < 0).length;
-    const stableCount = progressScopedRows.filter((row) => Number(row.change || 0) === 0).length;
     const marginalSummary = smBuildMarginalSummary();
-    const potentialRows = (Array.isArray(window.POTENTIAL_STUDENTS_CACHE) ? window.POTENTIAL_STUDENTS_CACHE : []).filter((row) => {
-        if (context.schoolValue && !smSchoolMatches(row.school, context.schoolValue)) return false;
-        if (selectedClass && normalizeClass(row.class || '') !== selectedClass) return false;
-        return true;
+    const potentialSourceRows = Array.isArray(window.POTENTIAL_STUDENTS_CACHE) ? window.POTENTIAL_STUDENTS_CACHE : [];
+    let potentialCount = 0;
+    potentialSourceRows.forEach((row) => {
+        if (context.schoolValue && !smSchoolMatches(row.school, context.schoolValue)) return;
+        if (selectedClass && normalizeClass(row.class || '') !== selectedClass) return;
+        potentialCount += 1;
     });
     const uniqueStudentCount = smBuildUniqueStudentCount(rawData, context.schoolValue, selectedClass);
     const scoreReady = rawData.length > 0 && exams.length > 0;
     const schoolReady = !!context.schoolText && context.schoolText !== '未识别' && context.schoolText !== '未选择';
     const compareReady = exams.length >= 2 && context.exam1Text !== '未选择' && context.exam2Text !== '未选择' && context.exam1Text !== context.exam2Text;
-    const progressReady = progressScopedRows.length > 0;
-    const supportReady = marginalSummary.total > 0 || potentialRows.length > 0;
+    const progressReady = progressCount > 0;
+    const supportReady = marginalSummary.total > 0 || potentialCount > 0;
 
     return {
         context,
@@ -1813,13 +1835,13 @@ function smBuildOverviewModel() {
         compareReady,
         progressReady,
         supportReady,
-        progressCount: progressScopedRows.length,
+        progressCount,
         improveCount,
         declineCount,
         stableCount,
         marginalClassCount: marginalSummary.classCount,
         marginalRecordCount: marginalSummary.total,
-        potentialCount: potentialRows.length
+        potentialCount
     };
 }
 
@@ -1940,12 +1962,7 @@ function smJumpToStudentModule(targetId) {
 }
 
 function bindStudentOverviewActions() {
-    const rerender = () => {
-        const active = document.getElementById('student-overview');
-        if (active && active.classList.contains('active') && typeof renderStudentOverview === 'function') {
-            renderStudentOverview();
-        }
-    };
+    const rerender = () => smScheduleStudentOverviewRender();
 
     const watchIds = [
         'studentSchoolSelect',
@@ -2886,6 +2903,7 @@ window.renderTeachingOverview = renderTeachingOverview;
 window.tmRenderTeachingModuleStateBars = tmRenderTeachingModuleStateBars;
 window.tmRenderIssueBoard = tmRenderIssueBoard;
 window.tmScheduleTeachingOverviewRender = tmScheduleTeachingOverviewRender;
+window.smScheduleStudentOverviewRender = smScheduleStudentOverviewRender;
 window.tmRefreshVersionCenter = tmRefreshVersionCenter;
 window.tmCreateCurrentVersionSnapshot = tmCreateCurrentVersionSnapshot;
 window.tmShowVersionDiff = tmShowVersionDiff;

@@ -478,6 +478,10 @@ assert.ok(teacherStateRuntime.includes('function peekTeacherStats()'), 'teacher-
 assert.ok(appSource.includes('TeacherStateRuntime.peekTeacherStats'), 'app.js readTeacherStats should avoid deep cloning teacher stats on hot paths');
 assert.ok(teachingManagementRuntime.includes('window.tmScheduleTeachingOverviewRender = tmScheduleTeachingOverviewRender'), 'teaching overview refresh should be externally schedulable');
 assert.ok(teacherAnalysisCoreRuntime.includes('window.tmScheduleTeachingOverviewRender()'), 'teacher analysis should schedule overview refresh instead of blocking the same render frame');
+assert.ok(teachingManagementRuntime.includes('function smScheduleStudentOverviewRender()'), 'student overview should coalesce filter-change refreshes into one frame');
+assert.ok(teachingManagementRuntime.includes('const progressRows = fullProgressRows.length ? fullProgressRows : readProgressCacheState();'), 'student overview should avoid copying the progress cache for counts');
+assert.ok(teachingManagementRuntime.includes('let progressCount = 0;'), 'student overview should count progress rows in a single pass');
+assert.ok(teachingManagementRuntime.includes('const rerender = () => smScheduleStudentOverviewRender();'), 'student overview watchers should use scheduled rendering');
 assert.ok(singleSchoolEvalRuntime.includes('const sizeBonus = Math.max(0, sizeDiff * 0.1);'), 'performance fairness model should not penalize classes below average size');
 assert.ok(singleSchoolEvalRuntime.includes('function scheduleSSEAutoCalculate'), 'performance fairness model should recalculate automatically after setting changes');
 assert.ok(teacherCompareResultRuntime.includes('function scheduleTeacherMultiPeriodAutoRender'), 'teacher multi-period compare should recalculate automatically after selector changes');
