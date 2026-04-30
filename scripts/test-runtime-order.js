@@ -492,6 +492,14 @@ assert.ok(appSource.includes("tbody.innerHTML = targetRowsHtml.join('');"), 'tar
 assert.ok(appSource.includes('const spotlightRowsHtml = [];'), 'spotlight search should collect result rows before writing to the result container');
 assert.ok(appSource.includes("resDiv.innerHTML = spotlightRowsHtml.join('');"), 'spotlight search should write results to the DOM once per query');
 assert.ok(!appSource.includes('resDiv.innerHTML +='), 'spotlight search should avoid per-result DOM writes');
+assert.ok(appSource.includes('const redTrafficRows = [];'), 'traffic light analysis should collect red rows off-DOM');
+assert.ok(appSource.includes("listRed.innerHTML = cntRed === 0"), 'traffic light analysis should write red rows once after classification');
+assert.ok(appSource.includes("redTrafficRows.join('')"), 'traffic light analysis should batch red rows into one DOM write');
+assert.ok(appSource.includes("yellowTrafficRows.join('')"), 'traffic light analysis should batch yellow rows into one DOM write');
+assert.ok(appSource.includes("greenTrafficRows.join('')"), 'traffic light analysis should batch green rows into one DOM write');
+assert.ok(!appSource.includes('listRed.innerHTML +='), 'traffic light analysis should avoid per-row red DOM writes');
+assert.ok(!appSource.includes('listYellow.innerHTML +='), 'traffic light analysis should avoid per-row yellow DOM writes');
+assert.ok(!appSource.includes('listGreen.innerHTML +='), 'traffic light analysis should avoid per-row green DOM writes');
 assert.ok(teacherCompareResultRuntime.includes('function scheduleTeacherMultiPeriodAutoRender'), 'teacher multi-period compare should recalculate automatically after selector changes');
 assert.ok(teacherCompareResultRuntime.includes('bindTeacherCompareAutoControls();'), 'teacher compare runtime should bind selector auto-refresh controls');
 assert.ok(progressAnalysisRuntime.includes('function filterProgressCompareRowsToTownshipScope'), 'progress comparison should have a township-scope filter for town ranks');

@@ -10899,6 +10899,9 @@ function renderTrafficLightDashboard() {
     listRed.innerHTML = ''; listYellow.innerHTML = ''; listGreen.innerHTML = '';
 
     let cntRed = 0, cntYellow = 0, cntGreen = 0;
+    const redTrafficRows = [];
+    const yellowTrafficRows = [];
+    const greenTrafficRows = [];
 
     // 遍历所有学校和所有科目进行“体检”
     townshipSchools.forEach(s => {
@@ -10925,7 +10928,7 @@ function renderTrafficLightDashboard() {
                                 <span style="font-weight:bold;">📉 Avg: ${m.avg.toFixed(1)}</span>
                             </div>
                         </div>`;
-                listRed.innerHTML += html;
+                redTrafficRows.push(html);
                 cntRed++;
             }
             // 2. 🟢 绿色标杆条件：优秀率 > 30% 或 排名第一
@@ -10940,7 +10943,7 @@ function renderTrafficLightDashboard() {
                                 <span style="font-weight:bold;">${rankText}</span>
                             </div>
                         </div>`;
-                listGreen.innerHTML += html;
+                greenTrafficRows.push(html);
                 cntGreen++;
             }
             // 3. 🟡 黄色关注条件：优秀率 < 15% (即缺乏尖子生) 且没被归入红灯
@@ -10953,7 +10956,7 @@ function renderTrafficLightDashboard() {
                                 <span>排: ${rank}</span>
                             </div>
                         </div>`;
-                listYellow.innerHTML += html;
+                yellowTrafficRows.push(html);
                 cntYellow++;
             }
         });
@@ -10965,9 +10968,15 @@ function renderTrafficLightDashboard() {
     document.getElementById('count-green').innerText = cntGreen;
 
     // 空状态处理
-    if (cntRed === 0) listRed.innerHTML = '<div style="text-align:center;color:#999;font-size:12px;padding:10px;">🎉 平安无事，暂无严重警告</div>';
-    if (cntYellow === 0) listYellow.innerHTML = '<div style="text-align:center;color:#999;font-size:12px;padding:10px;">无风险预警</div>';
-    if (cntGreen === 0) listGreen.innerHTML = '<div style="text-align:center;color:#999;font-size:12px;padding:10px;">暂无突出标杆，继续加油</div>';
+    listRed.innerHTML = cntRed === 0
+        ? '<div style="text-align:center;color:#999;font-size:12px;padding:10px;">🎉 平安无事，暂无严重警告</div>'
+        : redTrafficRows.join('');
+    listYellow.innerHTML = cntYellow === 0
+        ? '<div style="text-align:center;color:#999;font-size:12px;padding:10px;">无风险预警</div>'
+        : yellowTrafficRows.join('');
+    listGreen.innerHTML = cntGreen === 0
+        ? '<div style="text-align:center;color:#999;font-size:12px;padding:10px;">暂无突出标杆，继续加油</div>'
+        : greenTrafficRows.join('');
 }
 
 // 辅助跳转函数：点击卡片定位到对应表格
