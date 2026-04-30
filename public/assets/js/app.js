@@ -6325,10 +6325,11 @@ const DataManager = {
         const inferredSchool = (typeof inferDefaultSchoolFromContext === 'function') ? inferDefaultSchoolFromContext() : '';
         if (inferredSchool) schools.add(inferredSchool);
 
-        sel.innerHTML = '<option value="">-- 显示全部 --</option>';
-        [...schools].sort((a, b) => a.localeCompare(b, 'zh-CN')).forEach(s => {
-            sel.innerHTML += `<option value="${s}">${s}</option>`;
-        });
+        const schoolOptionsHtml = [...schools]
+            .sort((a, b) => a.localeCompare(b, 'zh-CN'))
+            .map(s => `<option value="${s}">${s}</option>`)
+            .join('');
+        sel.innerHTML = `<option value="">-- 显示全部 --</option>${schoolOptionsHtml}`;
 
         // 🔥 自动选择当前学校
         if (currentVal && schools.has(currentVal)) {
@@ -12454,9 +12455,8 @@ function exportStudentDetails() {
 function updateMarginalSchoolSelect() {
     const select = document.getElementById('marginalSchoolSelect');
     if (!select) return;
-    select.innerHTML = '<option value="">--请选择本校--</option>';
     const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
-    schoolList.forEach(school => select.innerHTML += `<option value="${school}">${school}</option>`);
+    select.innerHTML = `<option value="">--请选择本校--</option>${schoolList.map(school => `<option value="${school}">${school}</option>`).join('')}`;
 }
 
 function generateTeacherInputs() {
@@ -12948,8 +12948,7 @@ function updateMutualAidSelects() {
     syncAidClasses(prevClass);
 
     subSel.disabled = false;
-    subSel.innerHTML = '<option value="total">总分(综合)</option>';
-    SUBJECTS.forEach(s => subSel.innerHTML += `<option value="${s}">${s}</option>`);
+    subSel.innerHTML = `<option value="total">总分(综合)</option>${SUBJECTS.map(s => `<option value="${s}">${s}</option>`).join('')}`;
     subSel.value = (prevSubject === 'total' || SUBJECTS.includes(prevSubject)) ? prevSubject : 'total';
 }
 
@@ -14306,8 +14305,8 @@ function updateSegmentSelects() {
     if (!schSel || !subSel) return;
     const oldSch = schSel.value;
     const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
-    schSel.innerHTML = '<option value="ALL">全乡镇</option>'; schoolList.forEach(s => schSel.innerHTML += `<option value="${s}">${s}</option>`); if (oldSch && (oldSch === 'ALL' || SCHOOLS[oldSch])) schSel.value = oldSch;
-    const oldSub = subSel.value; subSel.innerHTML = '<option value="total">总分</option>'; SUBJECTS.forEach(s => subSel.innerHTML += `<option value="${s}">${s}</option>`); if (oldSub) subSel.value = oldSub;
+    schSel.innerHTML = `<option value="ALL">全乡镇</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`; if (oldSch && (oldSch === 'ALL' || SCHOOLS[oldSch])) schSel.value = oldSch;
+    const oldSub = subSel.value; subSel.innerHTML = `<option value="total">总分</option>${SUBJECTS.map(s => `<option value="${s}">${s}</option>`).join('')}`; if (oldSub) subSel.value = oldSub;
 }
 
 function renderSegmentAnalysis() {
@@ -14470,7 +14469,7 @@ function updateClassCompSchoolSelect() {
     const sel = document.getElementById('classCompSchoolSelect');
     if (!sel) return;
     const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
-    sel.innerHTML = '<option value="">--请选择学校--</option>'; schoolList.forEach(s => sel.innerHTML += `<option value="${s}">${s}</option>`);
+    sel.innerHTML = `<option value="">--请选择学校--</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
 }
 
 function renderClassComparison() {
@@ -14717,17 +14716,13 @@ function updateSubjectBalanceSelects() {
     const schSel = document.getElementById('sbSchoolSelect');
     const clsSel = document.getElementById('sbClassSelect');
 
-    schSel.innerHTML = '<option value="">--请选择学校--</option>';
     const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
-    schoolList.forEach(s => schSel.innerHTML += `<option value="${s}">${s}</option>`);
+    schSel.innerHTML = `<option value="">--请选择学校--</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
 
     // 联动更新班级
     schSel.onchange = () => {
-        clsSel.innerHTML = '<option value="">全部</option>';
-        if (schSel.value && SCHOOLS[schSel.value]) {
-            const classes = [...new Set(SCHOOLS[schSel.value].students.map(s => s.class))].sort();
-            classes.forEach(c => clsSel.innerHTML += `<option value="${c}">${c}</option>`);
-        }
+        const classes = (schSel.value && SCHOOLS[schSel.value]) ? [...new Set(SCHOOLS[schSel.value].students.map(s => s.class))].sort() : [];
+        clsSel.innerHTML = `<option value="">全部</option>${classes.map(c => `<option value="${c}">${c}</option>`).join('')}`;
     };
 }
 
@@ -15036,13 +15031,9 @@ function updatePotentialSchoolSelect() {
     if (!sel) return;
     const old = sel.value;
 
-    sel.innerHTML = '<option value="ALL">全乡镇</option>';
-
     // 修复：确保 value 属性被引号包裹，防止学校名中有空格导致截断
     const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
-    schoolList.forEach(s => {
-        sel.innerHTML += `<option value="${s}">${s}</option>`;
-    });
+    sel.innerHTML = `<option value="ALL">全乡镇</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
 
     // 恢复之前的选择
     if (old && (old === 'ALL' || SCHOOLS[old])) sel.value = old;
@@ -15160,9 +15151,8 @@ function updateDiagnosisSelects() {
     const subSel = document.getElementById('diagSubjectSelect');
     if (!schSel || !subSel) return;
     const oldSch = schSel.value;
-    schSel.innerHTML = '<option value="">--请选择学校--</option>';
     const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
-    schoolList.forEach(s => schSel.innerHTML += `<option value="${s}">${s}</option>`);
+    schSel.innerHTML = `<option value="">--请选择学校--</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
     if (oldSch && SCHOOLS[oldSch]) schSel.value = oldSch;
 
     const user = getCurrentUser();
@@ -15176,14 +15166,12 @@ function updateDiagnosisSelects() {
     }
 
     const oldSub = subSel.value;
-    subSel.innerHTML = '<option value="total">总分</option>';
+    let diagnosisSubjects = SUBJECTS;
     if (role === 'teacher') {
         const scope = getTeacherScopeForUser(user);
-        const subjects = SUBJECTS.filter(s => scope.subjects.has(normalizeSubject(s)));
-        subjects.forEach(s => subSel.innerHTML += `<option value="${s}">${s}</option>`);
-    } else {
-        SUBJECTS.forEach(s => subSel.innerHTML += `<option value="${s}">${s}</option>`);
+        diagnosisSubjects = SUBJECTS.filter(s => scope.subjects.has(normalizeSubject(s)));
     }
+    subSel.innerHTML = `<option value="total">总分</option>${diagnosisSubjects.map(s => `<option value="${s}">${s}</option>`).join('')}`;
     if (oldSub) subSel.value = oldSub;
 }
 
@@ -15369,8 +15357,7 @@ function updatePosterSelects() {
     );
 
     // 填充科目 (保留总分选项)
-    subSel.innerHTML = '<option value="total">🏆 总分光荣榜</option>';
-    SUBJECTS.forEach(s => subSel.innerHTML += `<option value="${s}">📘 ${s}单科状元</option>`);
+    subSel.innerHTML = `<option value="total">🏆 总分光荣榜</option>${SUBJECTS.map(s => `<option value="${s}">📘 ${s}单科状元</option>`).join('')}`;
     subSel.value = (prevSubject === 'total' || SUBJECTS.includes(prevSubject)) ? prevSubject : 'total';
 
     // 默认触发一次班级更新
@@ -15576,12 +15563,12 @@ function exportMarginalTasks() {
 function MP_initSnapshotSelect() {
     const sel = document.getElementById('mp_snapshot_select');
     if (!sel) return;
-    sel.innerHTML = '<option value="">-- 选择历史任务 --</option>';
-    Object.keys(MP_SNAPSHOTS).forEach(key => {
+    const snapshotOptions = Object.keys(MP_SNAPSHOTS).map(key => {
         const snap = MP_SNAPSHOTS[key];
         const date = new Date(snap.timestamp).toLocaleDateString();
-        sel.innerHTML += `<option value="${key}">${key} (${snap.count}人, ${date})</option>`;
+        return `<option value="${key}">${key} (${snap.count}人, ${date})</option>`;
     });
+    sel.innerHTML = `<option value="">-- 选择历史任务 --</option>${snapshotOptions.join('')}`;
 }
 // Hook: 在 switchTab 切换到 marginal-push 时初始化
 // (由于无法直接修改 switchTab，我们在保存/删除后手动调用一次即可，首次加载需要用户点击一下或被动触发)
