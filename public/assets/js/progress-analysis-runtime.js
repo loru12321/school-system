@@ -55,6 +55,8 @@
     let VA_VIEW_MODE = 'school';
     let trendChartInstance = window.trendChartInstance || null;
     let sankeyChartInstance = window.sankeyChartInstance || null;
+    let PROGRESS_VISUAL_RENDER_FRAME = 0;
+    let PROGRESS_VISUAL_RENDER_TOKEN = 0;
 
     function syncLocalProgressState(patch = {}) {
         const snapshot = syncProgressState
@@ -1135,6 +1137,48 @@ function clearProgressVisuals() {
     sankeyChartInstance = window.sankeyChartInstance = destroyProgressChart('sankeyChart', sankeyChartInstance);
 }
 
+function runProgressSankeyWhenIdle(token) {
+    const runner = () => {
+        if (token !== PROGRESS_VISUAL_RENDER_TOKEN) return;
+        if (!PROGRESS_CACHE.length) {
+            clearProgressVisuals();
+            return;
+        }
+        renderSankeyDiagram();
+    };
+    if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(runner, { timeout: 700 });
+        return;
+    }
+    if (typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(runner);
+        return;
+    }
+    window.setTimeout(runner, 32);
+}
+
+function scheduleProgressVisualRender() {
+    PROGRESS_VISUAL_RENDER_TOKEN += 1;
+    if (PROGRESS_VISUAL_RENDER_FRAME) return;
+
+    const runner = () => {
+        PROGRESS_VISUAL_RENDER_FRAME = 0;
+        const token = PROGRESS_VISUAL_RENDER_TOKEN;
+        if (!PROGRESS_CACHE.length) {
+            clearProgressVisuals();
+            return;
+        }
+        renderTrendChart();
+        runProgressSankeyWhenIdle(token);
+    };
+
+    if (typeof window.requestAnimationFrame === 'function') {
+        PROGRESS_VISUAL_RENDER_FRAME = window.requestAnimationFrame(runner);
+    } else {
+        PROGRESS_VISUAL_RENDER_FRAME = window.setTimeout(runner, 16);
+    }
+}
+
 
 function performProgressCalculation(options = {}) {
     const schoolName = String(options.schoolName || getProgressSelectedSchoolName() || '').trim();
@@ -1750,8 +1794,7 @@ function applyProgressFilter() {
     renderProgressTable(list);
 
     if (list.length > 0) {
-        renderTrendChart();
-        renderSankeyDiagram();
+        scheduleProgressVisualRender();
     } else {
         clearProgressVisuals();
     }

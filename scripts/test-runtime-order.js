@@ -539,6 +539,10 @@ assert.ok(teacherCompareResultRuntime.includes('bindTeacherCompareAutoControls()
 assert.ok(progressAnalysisRuntime.includes('function filterProgressCompareRowsToTownshipScope'), 'progress comparison should have a township-scope filter for town ranks');
 assert.ok(progressAnalysisRuntime.includes('const townshipRows = filterProgressCompareRowsToTownshipScope(allRows);'), 'progress comparison should derive town ranks from township-scoped rows');
 assert.ok(progressAnalysisRuntime.includes('const rankTownMap = buildCompetitionRankMap(townshipRows'), 'progress comparison town ranks should not be built from full county rows');
+assert.ok(progressAnalysisRuntime.includes('function scheduleProgressVisualRender'), 'progress analysis should defer chart rendering off the filter call stack');
+assert.ok(progressAnalysisRuntime.includes('function runProgressSankeyWhenIdle'), 'progress analysis should render the secondary chart during idle time');
+assert.ok(progressAnalysisRuntime.includes('scheduleProgressVisualRender();'), 'progress filters should schedule visual refreshes instead of drawing both charts synchronously');
+assert.ok(progressAnalysisRuntime.includes("typeof window.requestIdleCallback === 'function'"), 'progress secondary chart should use idle rendering when available');
 assert.strictEqual(initSupabaseMatches.length, 1, 'boot-runtime.js should define initSupabase exactly once');
 assert.strictEqual(supabaseUrlAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_URL exactly once');
 assert.strictEqual(supabaseKeyAssignments.length, 1, 'boot-runtime.js should resolve SUPABASE_KEY exactly once');
