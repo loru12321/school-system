@@ -172,7 +172,11 @@ var SYSTEM_RUNTIME_SKILLS = {
         warmup: 'full',
         triggers: ['student-overview'],
         entries: [
-            { key: 'teaching-management', src: './assets/js/teaching-management-runtime.js' }
+            { key: 'teaching-management', src: './assets/js/teaching-management-runtime.js' },
+            { key: 'teaching-management-cloud', src: './assets/js/teaching-management-cloud-runtime.js' },
+            { key: 'teaching-management-overview', src: './assets/js/teaching-management-overview-runtime.js' },
+            { key: 'student-overview', src: './assets/js/student-overview-runtime.js' },
+            { key: 'teaching-management-version', src: './assets/js/teaching-management-version-runtime.js' }
         ]
     },
     'student-compare': {
