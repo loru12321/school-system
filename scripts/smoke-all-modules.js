@@ -1084,7 +1084,7 @@ async function smokeDataManagerTab(page, id) {
                     downloadCloudBackup: typeof window.DataManager.downloadCloudBackup === 'function',
                     uploadButton: !!document.getElementById('btn-cloud-upload-archive'),
                     uploadInput: !!document.getElementById('dm-cloud-upload-input'),
-                    rowDownloadButton: !hasCloudRows || !!document.querySelector('#dm-cloud-table tbody button[onclick*="downloadCloudBackup"]')
+                    rowDownloadButton: !hasCloudRows || !!document.querySelector('#dm-cloud-table tbody button[data-cloud-backup-action="download"]')
                 };
                 return {
                     ok: Object.values(checks).every(Boolean),

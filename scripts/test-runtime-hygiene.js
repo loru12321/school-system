@@ -92,5 +92,15 @@ const appRuntime = fs.readFileSync(path.join(root, 'public/assets/js/app.js'), '
 assert.ok(!appRuntime.includes("onclick=\"showSchoolProfile('${s.name}')\""), 'summary table should not inject dynamic school names into inline handlers');
 assert.ok(appRuntime.includes('const safeSchoolName = escapeAppHtml(s.name)'), 'summary table should escape dynamic school names before rendering');
 assert.ok(appRuntime.includes('data-school-profile-name="${safeSchoolName}"'), 'summary table should bind school profile actions through a safe data attribute');
+const archiveRuntime = fs.readFileSync(path.join(root, 'public/assets/js/data-manager-archive-runtime.js'), 'utf8');
+assert.ok(!archiveRuntime.includes('onclick="DataManager.renameHistoryExam('), 'history archive rows should not inject exam names into inline handlers');
+assert.ok(archiveRuntime.includes('data-history-exam-action="rename"'), 'history archive rows should bind rename actions through data attributes');
+const targetsRuntime = fs.readFileSync(path.join(root, 'public/assets/js/data-manager-targets-runtime.js'), 'utf8');
+assert.ok(!targetsRuntime.includes('onclick="DataManager.editTarget('), 'target rows should not inject school names into inline handlers');
+assert.ok(targetsRuntime.includes('data-target-action="edit"'), 'target rows should bind edit actions through data attributes');
+const dataCloudRuntime = fs.readFileSync(path.join(root, 'public/assets/js/data-cloud-runtime.js'), 'utf8');
+assert.ok(!dataCloudRuntime.includes('onclick="DataManager.loadCloudBackup('), 'cloud backup rows should not inject keys into inline handlers');
+assert.ok(dataCloudRuntime.includes('data-cloud-backup-action="download"'), 'cloud backup rows should bind download actions through data attributes');
+assert.ok(dataCloudRuntime.includes('data-cloud-snapshot-key="${safeKey}"'), 'cloud snapshot rows should bind delete actions through data attributes');
 
 console.log('runtime hygiene tests passed');

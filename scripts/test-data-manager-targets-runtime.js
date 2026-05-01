@@ -22,11 +22,13 @@ async function run() {
     const root = {
         window: {
             TARGETS: {
-                A: { t1: 10, t2: 20 }
+                A: { t1: 10, t2: 20 },
+                "坏<校>'": { t1: 'x', t2: 5 }
             }
         },
         TARGETS: {
-            A: { t1: 10, t2: 20 }
+            A: { t1: 10, t2: 20 },
+            "坏<校>'": { t1: 'x', t2: 5 }
         },
         SCHOOLS: {
             B: { name: 'B' }
@@ -137,6 +139,10 @@ async function run() {
     assert.strictEqual(normalizeCalls > 0, true);
     assert.strictEqual(restoreCalls, 0);
     assert.ok(String(tbody.innerHTML).includes('A'));
+    assert.ok(String(tbody.innerHTML).includes('坏&lt;校&gt;&#39;'));
+    assert.ok(!String(tbody.innerHTML).includes('onclick="DataManager.editTarget('));
+    assert.ok(String(tbody.innerHTML).includes('data-target-action="edit"'));
+    assert.ok(String(tbody.innerHTML).includes('<td>0</td><td>5</td>'));
     assert.strictEqual(renderStatusCalls > 0, true);
 
     await runtime.editTarget(manager, 'A');

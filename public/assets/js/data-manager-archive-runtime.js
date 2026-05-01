@@ -44,6 +44,36 @@
         }
     }
 
+    function escapeHtml(value) {
+        const runtimeEscape = root.SchoolRuntime && typeof root.SchoolRuntime.escapeHtml === 'function'
+            ? root.SchoolRuntime.escapeHtml
+            : null;
+        if (runtimeEscape) return runtimeEscape(value);
+        return String(value ?? '').replace(/[&<>"']/g, function (char) {
+            return {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char];
+        });
+    }
+
+    function bindArchiveRowActions(manager, tbody) {
+        if (!tbody || typeof tbody.querySelectorAll !== 'function') return;
+        tbody.querySelectorAll('[data-history-exam-action]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const examName = button.dataset.historyExamName || '';
+                if (button.dataset.historyExamAction === 'rename') {
+                    renameHistoryExam(manager, examName);
+                } else if (button.dataset.historyExamAction === 'delete') {
+                    deleteHistoryExam(manager, examName);
+                }
+            });
+        });
+    }
+
     function renderArchives(manager) {
         if (!manager) return;
         const archive = readHistoryArchiveRef();
@@ -70,9 +100,11 @@
         } else {
             let html = '';
             Object.keys(examStats).forEach((examName) => {
-                html += `<tr><td style="font-weight:bold;">${examName}</td><td>${examStats[examName]} 条记录</td><td><button class="btn btn-sm btn-primary" onclick="DataManager.renameHistoryExam('${examName}')" style="padding:2px 6px;">重命名</button> <button class="btn btn-sm btn-danger" onclick="DataManager.deleteHistoryExam('${examName}')" style="padding:2px 6px; background:#dc2626;">删除</button></td></tr>`;
+                const safeExamName = escapeHtml(examName);
+                html += `<tr><td style="font-weight:bold;">${safeExamName}</td><td>${examStats[examName]} 条记录</td><td><button class="btn btn-sm btn-primary" type="button" data-history-exam-action="rename" data-history-exam-name="${safeExamName}" style="padding:2px 6px;">重命名</button> <button class="btn btn-sm btn-danger" type="button" data-history-exam-action="delete" data-history-exam-name="${safeExamName}" style="padding:2px 6px; background:#dc2626;">删除</button></td></tr>`;
             });
             tbody.innerHTML = html;
+            bindArchiveRowActions(manager, tbody);
         }
 
         if (manager.currentTab === 'archive' && typeof manager.loadCloudSnapshots === 'function') {

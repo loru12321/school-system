@@ -19,6 +19,7 @@ This pass keeps calculation behavior stable and focuses on guardrails around the
 - XSS/log hygiene: history comparison output escapes dynamic exam and subject labels, and noisy history/student compare logs now require explicit debug flags.
 - XSS surface: school profile modal output escapes dynamic school and subject labels before assigning HTML.
 - XSS surface: summary school profile links no longer interpolate dynamic school names into inline handlers; they use escaped labels plus data-attribute event binding.
+- XSS surface: data-manager history archives, target rows, cloud backup rows, and cloud snapshot rows now escape dynamic labels/keys and bind row actions through data attributes instead of interpolated inline handlers.
 - Budgets: tightened build size budgets and added HTML/vendor/security/release hygiene tests.
 
 ## Calculation Safety

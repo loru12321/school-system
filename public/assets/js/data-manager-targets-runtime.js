@@ -42,6 +42,36 @@
         if (typeof root.alert === 'function') root.alert(String(message || ''));
     }
 
+    function escapeHtml(value) {
+        const runtimeEscape = root.SchoolRuntime && typeof root.SchoolRuntime.escapeHtml === 'function'
+            ? root.SchoolRuntime.escapeHtml
+            : null;
+        if (runtimeEscape) return runtimeEscape(value);
+        return String(value ?? '').replace(/[&<>"']/g, function (char) {
+            return {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char];
+        });
+    }
+
+    function bindTargetRowActions(manager, tbody) {
+        if (!tbody || typeof tbody.querySelectorAll !== 'function') return;
+        tbody.querySelectorAll('[data-target-action]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const schoolName = button.dataset.targetSchool || '';
+                if (button.dataset.targetAction === 'edit') {
+                    editTarget(manager, schoolName);
+                } else if (button.dataset.targetAction === 'delete') {
+                    deleteTarget(manager, schoolName);
+                }
+            });
+        });
+    }
+
     function renderTargets(manager) {
         if (!manager) return;
         const doc = root.document;
@@ -66,9 +96,13 @@
         const targets = readTargetsStateSafe();
         const rows = list.map((school) => {
             const item = targets[school] || { t1: 0, t2: 0 };
-            return `<tr><td style="font-weight:bold;">${school}</td><td>${item.t1}</td><td>${item.t2}</td><td><button class="btn btn-sm btn-primary" onclick="DataManager.editTarget('${school}')" style="padding:2px 6px;">修改</button> <button class="btn btn-sm btn-danger" onclick="DataManager.deleteTarget('${school}')" style="padding:2px 6px;">删除</button></td></tr>`;
+            const safeSchool = escapeHtml(school);
+            const t1 = Number.isFinite(Number(item.t1)) ? Number(item.t1) : 0;
+            const t2 = Number.isFinite(Number(item.t2)) ? Number(item.t2) : 0;
+            return `<tr><td style="font-weight:bold;">${safeSchool}</td><td>${t1}</td><td>${t2}</td><td><button class="btn btn-sm btn-primary" type="button" data-target-action="edit" data-target-school="${safeSchool}" style="padding:2px 6px;">修改</button> <button class="btn btn-sm btn-danger" type="button" data-target-action="delete" data-target-school="${safeSchool}" style="padding:2px 6px;">删除</button></td></tr>`;
         });
         tbody.innerHTML = rows.join('');
+        bindTargetRowActions(manager, tbody);
 
         if (typeof manager.renderDataManagerStatus === 'function') {
             manager.renderDataManagerStatus();
@@ -81,10 +115,12 @@
 
         const targets = readTargetsStateSafe();
         const current = targets[schoolName] || { t1: 0, t2: 0 };
+        const currentT1 = Number.isFinite(Number(current.t1)) ? Number(current.t1) : 0;
+        const currentT2 = Number.isFinite(Number(current.t2)) ? Number(current.t2) : 0;
 
         return swal.fire({
             title: `编辑目标 - ${schoolName}`,
-            html: `<div style="text-align:left;line-height:2.5;"><label>指标一:</label><input id="swal-t1" type="number" class="swal2-input" value="${current.t1}" style="width:100px;height:30px;"><br><label>指标二:</label><input id="swal-t2" type="number" class="swal2-input" value="${current.t2}" style="width:100px;height:30px;"></div>`,
+            html: `<div style="text-align:left;line-height:2.5;"><label>指标一:</label><input id="swal-t1" type="number" class="swal2-input" value="${currentT1}" style="width:100px;height:30px;"><br><label>指标二:</label><input id="swal-t2" type="number" class="swal2-input" value="${currentT2}" style="width:100px;height:30px;"></div>`,
             showCancelButton: true,
             confirmButtonText: '确定',
             preConfirm: () => ({
@@ -209,7 +245,7 @@
                 if (errors.length > 0 && root.Swal && typeof root.Swal.fire === 'function') {
                     root.Swal.fire(
                         '导入结果',
-                        `<div style="text-align:left; font-size:12px;">${message}<br><br>${errors.slice(0, 8).join('<br>')}${errors.length > 8 ? '<br>...' : ''}</div>`,
+                        `<div style="text-align:left; font-size:12px;">${escapeHtml(message)}<br><br>${errors.slice(0, 8).map(escapeHtml).join('<br>')}${errors.length > 8 ? '<br>...' : ''}</div>`,
                         errorCount > 0 ? 'warning' : 'success'
                     );
                 } else {

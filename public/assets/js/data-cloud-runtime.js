@@ -52,6 +52,37 @@
         return true;
     }
 
+    function bindCloudBackupRowActions(manager, tbody) {
+        if (!tbody || typeof tbody.querySelectorAll !== 'function') return;
+        tbody.querySelectorAll('.dm-cloud-select[data-key]').forEach((input) => {
+            input.addEventListener('change', () => api.toggleCloudSelection(manager, input));
+        });
+        tbody.querySelectorAll('[data-cloud-backup-action]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const key = normalizeText(button.dataset && button.dataset.key);
+                if (!key) return;
+                const action = button.dataset.cloudBackupAction;
+                if (action === 'load') {
+                    api.loadCloudBackup(manager, key);
+                } else if (action === 'download') {
+                    api.downloadCloudBackup(manager, key);
+                } else if (action === 'delete') {
+                    api.deleteCloudBackup(manager, key);
+                }
+            });
+        });
+    }
+
+    function bindCloudSnapshotRowActions(manager, tbody) {
+        if (!tbody || typeof tbody.querySelectorAll !== 'function') return;
+        tbody.querySelectorAll('[data-cloud-snapshot-key]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const key = normalizeText(button.dataset && button.dataset.cloudSnapshotKey);
+                if (key) api.deleteCloudSnapshot(manager, key);
+            });
+        });
+    }
+
     function getDocument() {
         return root.document || null;
     }
@@ -611,20 +642,22 @@
             visibleRows.forEach((item) => {
                 const isCurrent = item.key === currentKey;
                 const sizeKB = ((Number(item.size_bytes) || 0) / 1024).toFixed(1);
-                const time = new Date(item.updated_at || item.created_at).toLocaleString();
-                let displayName = item.key;
+                const time = escapeHtml(new Date(item.updated_at || item.created_at).toLocaleString());
+                const safeKey = escapeHtml(item.key);
+                let displayName = safeKey;
                 let tags = '';
                 const parts = String(item.key || '').split('_');
 
                 if (parts.length >= 5) {
-                    displayName = `<b>${parts[0]} ${parts[1]}</b><br><span style="color:#64748b; font-size:11px;">${parts[2]} ${parts[3]} ${parts[5] || ''}</span>`;
-                    tags = `<span class="badge" style="background:${parts[4] === '期末' ? '#ef4444' : '#3b82f6'}; color:white; padding:2px 6px; border-radius:4px; font-size:10px;">${parts[4]}</span>`;
+                    const safeParts = parts.map(escapeHtml);
+                    displayName = `<b>${safeParts[0]} ${safeParts[1]}</b><br><span style="color:#64748b; font-size:11px;">${safeParts[2]} ${safeParts[3]} ${safeParts[5] || ''}</span>`;
+                    tags = `<span class="badge" style="background:${parts[4] === '期末' ? '#ef4444' : '#3b82f6'}; color:white; padding:2px 6px; border-radius:4px; font-size:10px;">${safeParts[4]}</span>`;
                 }
 
                 rows += `
                     <tr style="${isCurrent ? 'background:#f0fdf4;' : ''}">
                         <td style="text-align:center; width:44px;">
-                            <input type="checkbox" class="dm-cloud-select" data-key="${item.key}" ${manager.cloudSelection.has(item.key) ? 'checked' : ''} onchange="DataManager.toggleCloudSelection(this)">
+                            <input type="checkbox" class="dm-cloud-select" data-key="${safeKey}" ${manager.cloudSelection.has(item.key) ? 'checked' : ''}>
                         </td>
                         <td>
                             <div style="display:flex; align-items:center; gap:8px;">
@@ -637,13 +670,13 @@
                         <td style="font-size:12px;">${sizeKB} KB</td>
                         <td>
                             <div style="display:flex; gap:6px;">
-                                <button class="btn btn-sm btn-primary" onclick="DataManager.loadCloudBackup('${item.key}')" title="读取此存档">
+                                <button class="btn btn-sm btn-primary" type="button" data-cloud-backup-action="load" data-key="${safeKey}" title="读取此存档">
                                     <i class="ti ti-download"></i> 读取
                                 </button>
-                                <button class="btn btn-sm btn-green" onclick="DataManager.downloadCloudBackup('${item.key}')" title="下载此存档文档">
+                                <button class="btn btn-sm btn-green" type="button" data-cloud-backup-action="download" data-key="${safeKey}" title="下载此存档文档">
                                     <i class="ti ti-file-download"></i> 下载存档
                                 </button>
-                                <button class="btn btn-sm btn-danger" onclick="DataManager.deleteCloudBackup('${item.key}')" title="永久删除">
+                                <button class="btn btn-sm btn-danger" type="button" data-cloud-backup-action="delete" data-key="${safeKey}" title="永久删除">
                                     <i class="ti ti-trash"></i>
                                 </button>
                             </div>
@@ -652,12 +685,15 @@
                 `;
             });
 
-            if (tbody) tbody.innerHTML = rows;
+            if (tbody) {
+                tbody.innerHTML = rows;
+                bindCloudBackupRowActions(manager, tbody);
+            }
             api.updateCloudSelectionUI(manager);
         } catch (error) {
             console.error(error);
             manager.cloudBackupRows = new Map();
-            if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#ef4444;">❌ 加载失败: ${error.message}</td></tr>`;
+            if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#ef4444;">❌ 加载失败: ${escapeHtml(error.message)}</td></tr>`;
             api.updateCloudSelectionUI(manager);
         }
     }
@@ -1018,7 +1054,12 @@
             return;
         }
 
-        tbody.innerHTML = data.map((item) => `<tr><td>${item.key}</td><td>${new Date(item.created_at).toLocaleString()}</td><td><button class="btn btn-sm btn-danger" onclick="DataManager.deleteCloudSnapshot('${item.key}')">删除</button></td></tr>`).join('');
+        tbody.innerHTML = data.map((item) => {
+            const safeKey = escapeHtml(item.key);
+            const time = escapeHtml(new Date(item.created_at).toLocaleString());
+            return `<tr><td>${safeKey}</td><td>${time}</td><td><button class="btn btn-sm btn-danger" type="button" data-cloud-snapshot-key="${safeKey}">删除</button></td></tr>`;
+        }).join('');
+        bindCloudSnapshotRowActions(null, tbody);
     }
 
     async function deleteCloudSnapshot(manager, key) {

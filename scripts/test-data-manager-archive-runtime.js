@@ -10,7 +10,8 @@ async function run() {
     let archiveState = {
         stu_1: [{ exam: '一模' }, { exam: '二模' }],
         stu_2: [{ exam: '一模' }],
-        stu_3: [{ exam: '三模' }]
+        stu_3: [{ exam: '三模' }],
+        stu_4: [{ exam: '坏<期>\'' }]
     };
     let loadCloudSnapshotsCalls = 0;
     let promptValue = '期末联考';
@@ -58,6 +59,10 @@ async function run() {
     assert.ok(tbody.innerHTML.includes('一模'));
     assert.ok(tbody.innerHTML.includes('2 条记录'));
     assert.ok(tbody.innerHTML.includes('二模'));
+    assert.ok(tbody.innerHTML.includes('坏&lt;期&gt;&#39;'));
+    assert.ok(!tbody.innerHTML.includes("onclick=\"DataManager.renameHistoryExam('${examName}')\""));
+    assert.ok(!tbody.innerHTML.includes('onclick="DataManager.renameHistoryExam('));
+    assert.ok(tbody.innerHTML.includes('data-history-exam-action="rename"'));
     assert.strictEqual(loadCloudSnapshotsCalls, 1);
 
     runtime.deleteHistoryExam(manager, '一模');
