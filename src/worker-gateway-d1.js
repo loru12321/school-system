@@ -27,7 +27,8 @@ function getLegacyGatewayOrigin(env) {
 
 function getLegacyGatewayApiKey(env, request) {
   return normalizeText(
-    env.LEGACY_GATEWAY_API_KEY
+    env.SUPABASE_REST_API_KEY
+    || env.LEGACY_GATEWAY_API_KEY
     || env.LEGACY_SUPABASE_KEY
     || request.headers.get('apikey')
   );
