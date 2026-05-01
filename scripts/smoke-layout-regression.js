@@ -66,6 +66,30 @@ async function openUploadModule(page) {
     await page.waitForTimeout(500);
 }
 
+async function openModule(page, id) {
+    await page.waitForFunction(() => typeof window.switchTab === 'function', null, { timeout: 60000 });
+    await page.evaluate((moduleId) => window.switchTab(moduleId), id);
+    await page.waitForFunction((moduleId) => {
+        const section = document.getElementById(moduleId);
+        return !!section && section.classList.contains('active') && getComputedStyle(section).display !== 'none';
+    }, id, { timeout: 45000 });
+    await page.waitForTimeout(500);
+}
+
+async function openStudentDetailsModule(page) {
+    await openModule(page, 'student-details');
+    await page.evaluate(() => {
+        if (typeof window.renderStudentDetails === 'function') window.renderStudentDetails();
+    }).catch(() => {});
+    await page.waitForFunction(() => {
+        const section = document.getElementById('student-details');
+        const table = document.getElementById('studentDetailTable');
+        const rows = table ? table.querySelectorAll('tbody tr').length : 0;
+        return !!section && !!table && rows > 0;
+    }, null, { timeout: 45000 });
+    await page.waitForTimeout(500);
+}
+
 async function ensureMobileShell(page) {
     await page.evaluate(() => window.ensureMobileManagerRuntimeLoaded?.()).catch(() => {});
     await page.evaluate(() => window.MobileQueryUI?.refresh?.()).catch(() => {});
@@ -78,10 +102,31 @@ async function ensureMobileShell(page) {
     }, null, { timeout: 30000 });
 }
 
-async function inspectUploadLayout(page, mode) {
-    await page.locator('#uploadBox').scrollIntoViewIfNeeded().catch(() => {});
+async function inspectSectionLayout(page, mode, options = {}) {
+    const sectionId = options.sectionId || 'upload';
+    const targetSelector = options.targetSelector || '#uploadBox';
+    await page.locator(targetSelector).scrollIntoViewIfNeeded().catch(() => {});
+    await page.evaluate(({ layoutMode, focusSelector }) => {
+        const target = document.querySelector(focusSelector);
+        if (!target) return;
+        target.scrollIntoView({ block: 'start', inline: 'nearest' });
+        if (layoutMode !== 'mobile') return;
+        const shell = document.querySelector('#apk-mobile-shell .apk-shell-top');
+        if (!shell) return;
+        const shellRect = shell.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+        const desiredTop = Math.round(shellRect.bottom + 12);
+        if (targetRect.top >= desiredTop) return;
+        const appMain = document.querySelector('.app-main');
+        const delta = Math.round(targetRect.top - desiredTop);
+        if (appMain && appMain.scrollHeight > appMain.clientHeight) {
+            appMain.scrollTop += delta;
+            return;
+        }
+        window.scrollBy(0, delta);
+    }, { layoutMode: mode, focusSelector: targetSelector }).catch(() => {});
     await page.waitForTimeout(250);
-    return page.evaluate((layoutMode) => {
+    return page.evaluate(({ layoutMode, targetSectionId, focusSelector, requiredSelectors }) => {
         function selectorFor(el) {
             if (!el) return '';
             if (el.id) return `#${el.id}`;
@@ -95,7 +140,19 @@ async function inspectUploadLayout(page, mode) {
             const style = getComputedStyle(el);
             if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false;
             const rect = el.getBoundingClientRect();
+            if (rect.right < -100 || rect.bottom < -100 || rect.left > window.innerWidth + 100 || rect.top > window.innerHeight + 100) return false;
             return rect.width > 1 && rect.height > 1;
+        }
+
+        function hasManagedHorizontalScroll(el, boundary) {
+            let node = el.parentElement;
+            while (node && node !== boundary && node !== document.body && node !== document.documentElement) {
+                const style = getComputedStyle(node);
+                const managesOverflow = ['auto', 'scroll', 'hidden', 'clip'].includes(style.overflowX);
+                if (managesOverflow && node.scrollWidth > node.clientWidth + 2) return true;
+                node = node.parentElement;
+            }
+            return false;
         }
 
         function rectOf(selector) {
@@ -118,13 +175,23 @@ async function inspectUploadLayout(page, mode) {
             return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
         }
 
+        function containsPoint(rect, point) {
+            if (!rect || !point) return false;
+            return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+        }
+
+        function clamp(value, min, max) {
+            return Math.min(Math.max(value, min), max);
+        }
+
         const viewportWidth = Math.round(document.documentElement.clientWidth || window.innerWidth || 0);
+        const viewportHeight = Math.round(document.documentElement.clientHeight || window.innerHeight || 0);
         const appMain = document.querySelector('.app-main');
         const scrollRoot = layoutMode === 'mobile' && appMain ? appMain : document.scrollingElement;
         const rootOverflow = scrollRoot ? Math.round(scrollRoot.scrollWidth - scrollRoot.clientWidth) : 0;
         const documentOverflow = Math.round(document.documentElement.scrollWidth - document.documentElement.clientWidth);
-        const activeUpload = document.querySelector('#upload.section.active');
-        const scope = activeUpload || document.getElementById('upload') || document.body;
+        const activeSection = document.querySelector(`#${CSS.escape(targetSectionId)}.section.active`);
+        const scope = activeSection || document.getElementById(targetSectionId) || document.body;
 
         const overflowIssues = Array.from(scope.querySelectorAll('*'))
             .filter(isVisible)
@@ -137,80 +204,292 @@ async function inspectUploadLayout(page, mode) {
                     left: Math.round(rect.left),
                     right: Math.round(rect.right),
                     position: style.position,
-                    tag: String(el.tagName || '').toLowerCase()
+                    tag: String(el.tagName || '').toLowerCase(),
+                    scrollManaged: hasManagedHorizontalScroll(el, scope)
                 };
             })
             .filter((item) => {
                 if (item.position === 'fixed') return false;
+                if (item.scrollManaged) return false;
                 if (item.right <= viewportWidth + 2 && item.left >= -2) return false;
                 if (/table|thead|tbody|tr|th|td/.test(item.tag)) return false;
                 return true;
             })
             .slice(0, 12);
 
-        const uploadBox = document.querySelector('#uploadBox');
-        const uploadBoxRect = rectOf('#uploadBox');
-        let uploadBoxHitOk = false;
-        let uploadBoxHitSelector = '';
-        if (uploadBoxRect && uploadBox) {
-            const x = Math.min(Math.max(uploadBoxRect.left + uploadBoxRect.width / 2, 1), window.innerWidth - 2);
-            const y = Math.min(Math.max(uploadBoxRect.top + uploadBoxRect.height / 2, 1), window.innerHeight - 2);
-            const hit = document.elementFromPoint(x, y);
-            uploadBoxHitSelector = selectorFor(hit);
-            uploadBoxHitOk = hit === uploadBox || uploadBox.contains(hit);
-        }
-
         const tabsRect = rectOf('#apk-mobile-shell .apk-shell-tabs');
         const topShellRect = rectOf('#apk-mobile-shell .apk-shell-top');
         const topbarRect = rectOf('#apk-mobile-shell .apk-shell-topbar');
+        const focusTarget = document.querySelector(focusSelector);
+        const focusRect = rectOf(focusSelector);
+        let focusHitOk = false;
+        let focusHitSelector = '';
+        let focusHitPoint = null;
+        if (focusRect && focusTarget) {
+            const safeTop = Math.max(1, topShellRect?.bottom || 1, topbarRect?.bottom || 1) + 6;
+            const safeBottom = Math.min(viewportHeight - 2, tabsRect?.top ? tabsRect.top - 6 : viewportHeight - 2);
+            const focusInset = Math.min(8, Math.max(2, focusRect.height / 3));
+            const minFocusY = focusRect.top + focusInset;
+            const maxFocusY = focusRect.bottom - focusInset;
+            const minY = Math.max(minFocusY, safeTop);
+            const maxY = Math.min(maxFocusY, safeBottom);
+            const preferredY = Math.min(focusRect.top + 72, focusRect.top + focusRect.height / 2);
+            const x = clamp(focusRect.left + focusRect.width / 2, 1, viewportWidth - 2);
+            const y = minY <= maxY
+                ? clamp(preferredY, minY, maxY)
+                : clamp(focusRect.top + focusRect.height / 2, 1, viewportHeight - 2);
+            focusHitPoint = { x: Math.round(x), y: Math.round(y) };
+            const hit = document.elementFromPoint(x, y);
+            focusHitSelector = selectorFor(hit);
+            focusHitOk = hit === focusTarget || focusTarget.contains(hit);
+        }
+
+        const requiredPieces = {};
+        Object.entries(requiredSelectors || {}).forEach(([key, selector]) => {
+            requiredPieces[key] = !!document.querySelector(selector);
+        });
 
         return {
             mode: layoutMode,
+            sectionId: targetSectionId,
             viewportWidth,
             bodyMobileQuery: String(document.body?.dataset?.mobileQuery || ''),
             bodyMobileArchitecture: String(document.body?.dataset?.mobileArchitecture || ''),
-            uploadActive: !!activeUpload,
+            sectionActive: !!activeSection,
+            viewportHeight,
             rootOverflow,
             documentOverflow,
             overflowIssues,
-            requiredPieces: {
-                summary: !!document.querySelector('#upload-summary-strip'),
-                notice: !!document.querySelector('#upload-flow-notice'),
-                workbench: !!document.querySelector('#upload .upload-workbench-grid'),
-                intake: !!document.querySelector('#upload .upload-intake-grid'),
-                ops: !!document.querySelector('#upload .upload-ops-grid'),
-                uploadBox: !!document.querySelector('#uploadBox')
-            },
-            uploadBoxRect,
-            uploadBoxHitOk,
-            uploadBoxHitSelector,
+            requiredPieces,
+            focusRect,
+            focusHitPoint,
+            focusHitOk,
+            focusHitSelector,
             tabsRect,
             topShellRect,
             topbarRect,
-            tabsOverlapUploadBox: intersects(tabsRect, uploadBoxRect),
-            topShellOverlapUploadBox: intersects(topShellRect, uploadBoxRect),
-            topbarOverlapUploadBox: intersects(topbarRect, uploadBoxRect)
+            tabsOverlapFocus: containsPoint(tabsRect, focusHitPoint),
+            topShellOverlapFocus: containsPoint(topShellRect, focusHitPoint),
+            topbarOverlapFocus: containsPoint(topbarRect, focusHitPoint)
+        };
+    }, {
+        layoutMode: mode,
+        targetSectionId: sectionId,
+        focusSelector: targetSelector,
+        requiredSelectors: options.requiredSelectors || {}
+    });
+}
+
+async function inspectUploadLayout(page, mode) {
+    return inspectSectionLayout(page, mode, {
+        sectionId: 'upload',
+        targetSelector: '#uploadBox',
+        requiredSelectors: {
+            summary: '#upload-summary-strip',
+            notice: '#upload-flow-notice',
+            workbench: '#upload .upload-workbench-grid',
+            intake: '#upload .upload-intake-grid',
+            ops: '#upload .upload-ops-grid',
+            uploadBox: '#uploadBox'
+        }
+    });
+}
+
+async function inspectStudentDetailsLayout(page, mode) {
+    return inspectSectionLayout(page, mode, {
+        sectionId: 'student-details',
+        targetSelector: '#student-details .student-details-primary-flow',
+        requiredSelectors: {
+            schoolSelect: '#studentSchoolSelect',
+            classSelect: '#studentClassSelect',
+            detailTable: '#studentDetailTable',
+            detailRows: '#studentDetailTable tbody tr',
+            compareToolbar: '#student-details .student-compare-toolbar'
+        }
+    });
+}
+
+function assertSectionLayout(state, label) {
+    assert.ok(state.sectionActive, `${state.mode} ${label} section is not active`);
+    for (const [key, exists] of Object.entries(state.requiredPieces)) {
+        assert.ok(exists, `${state.mode} ${label} required piece missing: ${key}`);
+    }
+    assert.ok(Math.abs(state.rootOverflow) <= 2, `${state.mode} ${label} root has horizontal overflow: ${state.rootOverflow}px`);
+    assert.ok(state.documentOverflow <= 2, `${state.mode} ${label} document has horizontal overflow: ${state.documentOverflow}px`);
+    assert.deepStrictEqual(state.overflowIssues, [], `${state.mode} ${label} visible overflow issues: ${JSON.stringify(state.overflowIssues)}`);
+    assert.ok(state.focusRect && state.focusRect.width > 120 && state.focusRect.height > 40, `${state.mode} ${label} focus surface is not usable`);
+    assert.ok(state.focusHitOk, `${state.mode} ${label} focus surface is visually covered at center by ${state.focusHitSelector || 'unknown element'}`);
+    if (state.mode === 'mobile') {
+        assert.strictEqual(state.bodyMobileQuery, 'true', 'mobile viewport was not detected');
+        assert.strictEqual(state.bodyMobileArchitecture, 'apk-v2', 'mobile shell architecture did not activate');
+        assert.strictEqual(state.tabsOverlapFocus, false, `mobile bottom tabs overlap ${label}`);
+        assert.strictEqual(state.topShellOverlapFocus, false, `mobile top shell overlaps ${label}`);
+        assert.strictEqual(state.topbarOverlapFocus, false, `mobile topbar overlaps ${label}`);
+    }
+}
+
+function assertUploadLayout(state) {
+    assertSectionLayout(state, 'upload');
+}
+
+function assertStudentDetailsLayout(state) {
+    assertSectionLayout(state, 'student-details');
+}
+
+async function openDataManager(page, tab = 'student') {
+    await page.evaluate(() => {
+        if (window.DataManager && typeof window.DataManager.open === 'function') {
+            window.DataManager.open();
+        }
+    });
+    await page.waitForFunction(() => {
+        const modal = document.getElementById('data-manager-modal');
+        return !!modal && getComputedStyle(modal).display !== 'none';
+    }, null, { timeout: 45000 });
+    await page.evaluate((targetTab) => window.DataManager?.switchTab?.(targetTab), tab).catch(() => {});
+    await page.waitForTimeout(700);
+}
+
+async function inspectDataManagerLayout(page, mode, tab = 'student') {
+    await openDataManager(page, tab);
+    return page.evaluate((layoutMode) => {
+        function isVisible(el) {
+            if (!el) return false;
+            const style = getComputedStyle(el);
+            if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false;
+            const rect = el.getBoundingClientRect();
+            if (rect.right < -100 || rect.bottom < -100 || rect.left > window.innerWidth + 100 || rect.top > window.innerHeight + 100) return false;
+            return rect.width > 1 && rect.height > 1;
+        }
+
+        function isRendered(el) {
+            if (!el) return false;
+            const style = getComputedStyle(el);
+            if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false;
+            const rect = el.getBoundingClientRect();
+            return rect.width > 1 && rect.height > 1;
+        }
+
+        function selectorFor(el) {
+            if (!el) return '';
+            if (el.id) return `#${el.id}`;
+            const classes = Array.from(el.classList || []).slice(0, 3).join('.');
+            const tag = String(el.tagName || '').toLowerCase();
+            return classes ? `${tag}.${classes}` : tag;
+        }
+
+        function hasManagedHorizontalScroll(el, boundary) {
+            let node = el.parentElement;
+            while (node && node !== boundary && node !== document.body && node !== document.documentElement) {
+                const style = getComputedStyle(node);
+                const managesOverflow = ['auto', 'scroll', 'hidden', 'clip'].includes(style.overflowX);
+                if (managesOverflow && node.scrollWidth > node.clientWidth + 2) return true;
+                node = node.parentElement;
+            }
+            return false;
+        }
+
+        function toRect(selector) {
+            const el = document.querySelector(selector);
+            if (!isVisible(el)) return null;
+            const rect = el.getBoundingClientRect();
+            return {
+                selector,
+                left: Math.round(rect.left),
+                right: Math.round(rect.right),
+                top: Math.round(rect.top),
+                bottom: Math.round(rect.bottom),
+                width: Math.round(rect.width),
+                height: Math.round(rect.height)
+            };
+        }
+
+        const viewportWidth = Math.round(document.documentElement.clientWidth || window.innerWidth || 0);
+        const viewportHeight = Math.round(document.documentElement.clientHeight || window.innerHeight || 0);
+        const modal = document.getElementById('data-manager-modal');
+        const content = modal?.querySelector('.modal-content');
+        const contentRect = toRect('#data-manager-modal .modal-content');
+        const tabBar = document.getElementById('tab-data-stu')?.parentElement;
+        const tabBarRect = tabBar && isVisible(tabBar)
+            ? (() => {
+                const rect = tabBar.getBoundingClientRect();
+                return {
+                    left: Math.round(rect.left),
+                    right: Math.round(rect.right),
+                    top: Math.round(rect.top),
+                    bottom: Math.round(rect.bottom),
+                    width: Math.round(rect.width),
+                    height: Math.round(rect.height)
+                };
+            })()
+            : null;
+        const activeTab = document.querySelector('#data-manager-modal .login-tab.active');
+        const visibleArea = ['dm-student-table', 'dm-teacher-area', 'dm-params-area', 'dm-targets-area', 'dm-sql-area', 'dm-cloud-area']
+            .map((id) => document.getElementById(id))
+            .find(isRendered);
+        const scope = content || document.body;
+        const overflowIssues = Array.from(scope.querySelectorAll('*'))
+            .filter(isVisible)
+            .map((el) => {
+                const rect = el.getBoundingClientRect();
+                const style = getComputedStyle(el);
+                return {
+                    selector: selectorFor(el),
+                    left: Math.round(rect.left),
+                    right: Math.round(rect.right),
+                    width: Math.round(rect.width),
+                    position: style.position,
+                    tag: String(el.tagName || '').toLowerCase(),
+                    scrollManaged: hasManagedHorizontalScroll(el, scope)
+                };
+            })
+            .filter((item) => {
+                if (item.position === 'fixed') return false;
+                if (item.scrollManaged) return false;
+                if (item.right <= viewportWidth + 2 && item.left >= -2) return false;
+                if (/table|thead|tbody|tr|th|td/.test(item.tag)) return false;
+                return true;
+            })
+            .slice(0, 12);
+
+        return {
+            mode: layoutMode,
+            modalVisible: !!modal && getComputedStyle(modal).display !== 'none',
+            currentTab: String(window.DataManager?.currentTab || ''),
+            viewportWidth,
+            viewportHeight,
+            contentRect,
+            tabBarRect,
+            activeTabText: String(activeTab?.textContent || '').trim(),
+            visibleAreaSelector: selectorFor(visibleArea),
+            overflowIssues,
+            contentScrollWidth: content ? Math.round(content.scrollWidth) : 0,
+            contentClientWidth: content ? Math.round(content.clientWidth) : 0,
+            requiredPieces: {
+                intro: !!document.getElementById('dm-layout-intro'),
+                workflow: !!document.getElementById('dm-workflow-strip'),
+                tabBar: !!tabBar,
+                activeTab: !!activeTab,
+                visibleArea: !!visibleArea
+            }
         };
     }, mode);
 }
 
-function assertUploadLayout(state) {
-    assert.ok(state.uploadActive, `${state.mode} upload section is not active`);
+function assertDataManagerLayout(state, expectedTab) {
+    assert.ok(state.modalVisible, `${state.mode} data manager modal is not visible`);
+    assert.strictEqual(state.currentTab, expectedTab, `${state.mode} data manager tab mismatch`);
     for (const [key, exists] of Object.entries(state.requiredPieces)) {
-        assert.ok(exists, `${state.mode} upload required piece missing: ${key}`);
+        assert.ok(exists, `${state.mode} data manager required piece missing: ${key}`);
     }
-    assert.ok(Math.abs(state.rootOverflow) <= 2, `${state.mode} root has horizontal overflow: ${state.rootOverflow}px`);
-    assert.ok(state.documentOverflow <= 2, `${state.mode} document has horizontal overflow: ${state.documentOverflow}px`);
-    assert.deepStrictEqual(state.overflowIssues, [], `${state.mode} visible upload overflow issues: ${JSON.stringify(state.overflowIssues)}`);
-    assert.ok(state.uploadBoxRect && state.uploadBoxRect.width > 120 && state.uploadBoxRect.height > 80, `${state.mode} upload box is not a usable target`);
-    assert.ok(state.uploadBoxHitOk, `${state.mode} upload box is visually covered at center by ${state.uploadBoxHitSelector || 'unknown element'}`);
-    if (state.mode === 'mobile') {
-        assert.strictEqual(state.bodyMobileQuery, 'true', 'mobile viewport was not detected');
-        assert.strictEqual(state.bodyMobileArchitecture, 'apk-v2', 'mobile shell architecture did not activate');
-        assert.strictEqual(state.tabsOverlapUploadBox, false, 'mobile bottom tabs overlap upload box');
-        assert.strictEqual(state.topShellOverlapUploadBox, false, 'mobile top shell overlaps upload box');
-        assert.strictEqual(state.topbarOverlapUploadBox, false, 'mobile top shell overlaps upload box');
-    }
+    assert.ok(state.contentRect, `${state.mode} data manager content is not visible`);
+    assert.ok(state.contentRect.left >= -1 && state.contentRect.top >= -1, `${state.mode} data manager content starts outside viewport`);
+    assert.ok(state.contentRect.right <= state.viewportWidth + 1, `${state.mode} data manager content exceeds viewport width`);
+    assert.ok(state.contentRect.bottom <= state.viewportHeight + 1, `${state.mode} data manager content exceeds viewport height`);
+    assert.ok(state.tabBarRect && state.tabBarRect.height >= 32, `${state.mode} data manager tab strip is not usable`);
+    assert.ok(state.tabBarRect.top >= state.contentRect.top - 1 && state.tabBarRect.bottom <= state.contentRect.bottom + 1, `${state.mode} data manager tab strip is outside the modal viewport`);
+    assert.ok(state.contentScrollWidth - state.contentClientWidth <= 2, `${state.mode} data manager content has horizontal overflow`);
+    assert.deepStrictEqual(state.overflowIssues, [], `${state.mode} data manager visible overflow issues: ${JSON.stringify(state.overflowIssues)}`);
 }
 
 async function main() {
@@ -230,6 +509,11 @@ async function main() {
     await openUploadModule(desktopPage);
     const desktopState = await inspectUploadLayout(desktopPage, 'desktop');
     assertUploadLayout(desktopState);
+    await openStudentDetailsModule(desktopPage);
+    const desktopStudentState = await inspectStudentDetailsLayout(desktopPage, 'desktop');
+    assertStudentDetailsLayout(desktopStudentState);
+    const desktopDataManagerState = await inspectDataManagerLayout(desktopPage, 'desktop', 'student');
+    assertDataManagerLayout(desktopDataManagerState, 'student');
     await desktopPage.close();
 
     const mobilePage = await makePage({
@@ -243,6 +527,11 @@ async function main() {
     await openUploadModule(mobilePage);
     const mobileState = await inspectUploadLayout(mobilePage, 'mobile');
     assertUploadLayout(mobileState);
+    await openStudentDetailsModule(mobilePage);
+    const mobileStudentState = await inspectStudentDetailsLayout(mobilePage, 'mobile');
+    assertStudentDetailsLayout(mobileStudentState);
+    const mobileDataManagerState = await inspectDataManagerLayout(mobilePage, 'mobile', 'student');
+    assertDataManagerLayout(mobileDataManagerState, 'student');
     await mobilePage.close();
 
     await browser.close();
@@ -253,7 +542,15 @@ async function main() {
         `layout smoke console errors found: ${actionableMessages.join('\n')}`
     );
 
-    console.log(JSON.stringify({ desktopState, mobileState, actionableMessages }, null, 2));
+    console.log(JSON.stringify({
+        desktopState,
+        desktopStudentState,
+        desktopDataManagerState,
+        mobileState,
+        mobileStudentState,
+        mobileDataManagerState,
+        actionableMessages
+    }, null, 2));
 }
 
 main().catch(async (error) => {

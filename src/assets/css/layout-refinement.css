@@ -194,9 +194,13 @@
 
 #data-manager-modal .modal-content {
     gap: 0;
+    min-width: 0;
+    isolation: isolate;
+    overflow: hidden !important;
 }
 
 #data-manager-modal .modal-content>div:first-child {
+    order: 1;
     flex: 0 0 auto;
     gap: 14px;
     min-height: 48px;
@@ -209,6 +213,31 @@
 #data-manager-modal .modal-content>div:first-child>div {
     flex-wrap: wrap;
     justify-content: flex-end;
+}
+
+#dm-layout-intro,
+#dm-workflow-strip {
+    min-width: 0;
+}
+
+#dm-workflow-strip {
+    order: 3;
+    flex: 0 0 auto;
+}
+
+#dm-tab-strip {
+    order: 2;
+    flex: 0 0 auto;
+    min-width: 0;
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    overflow-x: auto !important;
+}
+
+#data-manager-modal .modal-content>div:nth-child(2) {
+    flex: 0 0 auto;
+    min-width: 0;
 }
 
 #data-manager-modal .login-tab {
@@ -224,7 +253,12 @@
     flex: 0 0 auto;
 }
 
+#dm-status-overview {
+    order: 4;
+}
+
 #dm-search-bar {
+    order: 5;
     align-items: center;
     flex-wrap: wrap;
 }
@@ -234,8 +268,19 @@
 }
 
 #data-manager-modal .table-wrap {
+    order: 6;
+    flex: 1 1 0;
     min-height: 0;
+    min-width: 0;
     overflow: auto !important;
+}
+
+#data-manager-modal .table-wrap table {
+    min-width: max-content;
+}
+
+#dm-student-table {
+    min-width: 720px;
 }
 
 #dm-teacher-area,
@@ -265,6 +310,52 @@
 #dm-cloud-area>.info-bar,
 #dm-cloud-summary {
     flex: 0 0 auto;
+}
+
+#student-details.analysis-workspace-student {
+    min-width: 0;
+}
+
+#student-details .control-panel {
+    min-width: 0;
+}
+
+#student-details .student-compare-toolbar {
+    display: grid;
+    gap: 12px;
+    align-items: stretch;
+}
+
+#student-details .student-compare-toolbar__fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+}
+
+#student-details .student-compare-toolbar__actions,
+#student-details .student-compare-toolbar__actions--secondary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    min-width: 0;
+}
+
+#student-details .student-compare-toolbar__actions .btn {
+    min-height: 40px;
+    white-space: normal;
+    line-height: 1.25;
+}
+
+#student-details .student-details-primary-flow,
+#student-details .student-details-secondary-flow {
+    min-width: 0;
+}
+
+#student-details .student-details-primary-flow .table-wrap {
+    min-height: 240px;
 }
 
 body.dark-mode .app-main {
@@ -583,13 +674,37 @@ body.dark-mode .analysis-workspace {
         gap: 8px !important;
         padding-bottom: 8px !important;
         margin-bottom: 10px !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        flex-wrap: nowrap !important;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+    }
+
+    #dm-layout-intro {
+        display: none !important;
+    }
+
+    #dm-tab-strip {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 8px !important;
+        margin-bottom: 8px !important;
+        padding: 6px !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
     }
 
     #data-manager-modal .login-tab {
+        flex: 0 0 auto !important;
         min-height: 38px;
         padding: 0 12px;
         border-radius: 12px;
         font-size: 12px;
+        min-width: auto !important;
+        white-space: nowrap;
     }
 
     #dm-status-overview {
@@ -597,11 +712,22 @@ body.dark-mode .analysis-workspace {
         margin-bottom: 10px !important;
     }
 
+    #dm-workflow-strip {
+        display: none !important;
+    }
+
     #dm-search-bar {
         display: grid !important;
         grid-template-columns: minmax(0, 1fr) auto;
         gap: 8px !important;
         padding: 10px !important;
+    }
+
+    #dm-status-overview {
+        max-height: 92px;
+        overflow: auto;
+        margin-bottom: 8px !important;
+        -webkit-overflow-scrolling: touch;
     }
 
     #dm-search-bar #dm-stu-selected-count,
@@ -613,9 +739,19 @@ body.dark-mode .analysis-workspace {
         min-width: 0;
     }
 
+    #dm-search-bar .btn {
+        min-height: 38px;
+        white-space: normal;
+    }
+
     #dm-pagination {
+        flex: 0 0 auto;
         justify-content: center !important;
         padding-top: 8px !important;
+    }
+
+    #dm-student-table {
+        min-width: 640px;
     }
 
     #dm-params-area,
@@ -652,6 +788,46 @@ body.dark-mode .analysis-workspace {
     #dm-sql-area textarea {
         height: 104px !important;
         font-size: 12px !important;
+    }
+
+    #student-details .student-compare-toolbar,
+    #student-details .student-compare-toolbar__fields,
+    #student-details .student-compare-toolbar__actions,
+    #student-details .student-compare-toolbar__actions--secondary {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        width: 100%;
+        gap: 8px !important;
+    }
+
+    #student-details .student-compare-toolbar__field,
+    #student-details .student-compare-toolbar__tip {
+        min-width: 0;
+        width: 100%;
+    }
+
+    #student-details .student-compare-toolbar__select,
+    #student-details .student-compare-toolbar__actions .btn,
+    #student-details .student-compare-toolbar__actions--secondary .btn {
+        width: 100%;
+        max-width: 100%;
+        min-height: 42px;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #student-details,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #student-details .student-details-primary-flow,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #student-details .student-details-secondary-flow {
+        scroll-margin-top: calc(var(--app-safe-top, 0px) + 226px);
+    }
+
+    #student-details .student-detail-mobile-head {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    #student-details .student-detail-mobile-score-summary {
+        justify-items: start;
+        min-width: 0 !important;
     }
 }
 
@@ -1087,6 +1263,7 @@ tr:hover {
     border-bottom-color: var(--ui-border) !important;
 }
 
+#dm-tab-strip,
 #data-manager-modal .modal-content>div:nth-child(2) {
     background: var(--ui-surface-soft) !important;
     border: 1px solid var(--ui-border) !important;

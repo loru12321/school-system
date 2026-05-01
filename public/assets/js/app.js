@@ -5532,6 +5532,12 @@ const DataManager = {
             .find(btn => String(btn.getAttribute('onclick') || '').includes('data-manager-modal'));
         const legacyHeader = saveBtn?.parentElement?.parentElement;
 
+        if (tabContainer) {
+            tabContainer.id = 'dm-tab-strip';
+            tabContainer.setAttribute('role', 'tablist');
+            tabContainer.setAttribute('aria-label', '数据管理模块切换');
+        }
+
         if (legacyHeader) {
             legacyHeader.style.display = 'flex';
             legacyHeader.style.justifyContent = 'space-between';
