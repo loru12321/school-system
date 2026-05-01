@@ -6,7 +6,6 @@ import { promisify } from 'node:util';
 
 const DEFAULT_SOURCE_REST_URL = 'https://okwcciujnfvobbwaydiv.supabase.co';
 const DEFAULT_SOURCE_GATEWAY_URL = 'https://okwcciujnfvobbwaydiv.supabase.co/functions/v1/edu-gateway-v2';
-const DEFAULT_SOURCE_KEY = 'sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4';
 const DEFAULT_ADMIN_USER = 'admin';
 const DEFAULT_ADMIN_PASS = 'admin123';
 const DEFAULT_TARGET_PROJECT_REF = 'dpwsxxgojpqevzwyxrot';
@@ -540,7 +539,7 @@ async function readTargetCounts({ managementToken, projectRef, tables }) {
 async function main() {
   const sourceRestUrl = normalizeBaseUrl(process.env.SOURCE_REST_URL || DEFAULT_SOURCE_REST_URL);
   const sourceGatewayUrl = normalizeBaseUrl(process.env.SOURCE_GATEWAY_URL || DEFAULT_SOURCE_GATEWAY_URL);
-  const sourceKey = normalizeText(process.env.SOURCE_SUPABASE_KEY || DEFAULT_SOURCE_KEY);
+  const sourceKey = normalizeText(process.env.SOURCE_SUPABASE_KEY);
   const adminUser = normalizeText(process.env.MIGRATION_ADMIN_USER || DEFAULT_ADMIN_USER);
   const adminPass = normalizeText(process.env.MIGRATION_ADMIN_PASS || DEFAULT_ADMIN_PASS);
   const managementToken = normalizeText(process.env.SUPABASE_MANAGEMENT_TOKEN);

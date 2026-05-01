@@ -7,6 +7,16 @@
             ? window.STUDENT_MULTI_PERIOD_COMPARE_CACHE
             : null));
 
+function escapeStudentCompareHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
+
 function renderStudentComparePage(page) {
     const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
@@ -495,30 +505,22 @@ function updateClassGroupOptions() {
             classSet.add(className);
         });
 
-        console.log('[班级下拉框] 数据中的所有班级:', Array.from(classSet));
-
         const user = getCurrentUser();
         let allowedClasses = classSet;
 
         if (user && RoleManager.hasAnyRole(user, ['teacher', 'class_teacher']) &&
             !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director'])) {
-            console.log('[班级下拉框] 🔒 检测到教师角色，过滤班级选项');
             const scope = getTeacherScopeForUser(user);
             if (scope.classes.size > 0) {
                 allowedClasses = new Set(
                     Array.from(classSet).filter(cls => {
                         const normalized = normalizeClass(cls);
-                        const allowed = scope.classes.has(normalized);
-                        console.log(`[班级下拉框] 班级 ${cls} (规范化: ${normalized}) -> ${allowed ? '✅允许' : '❌禁止'}`);
-                        return allowed;
+                        return scope.classes.has(normalized);
                     })
                 );
-                console.log(`[班级下拉框] 🔐 权限筛选：${user.name} 只能看到 ${allowedClasses.size} 个班级:`, Array.from(allowedClasses));
             } else {
-                console.warn('[班级下拉框] ⚠️ 未找到任课信息，显示空列表');
+                allowedClasses = new Set();
             }
-        } else {
-            console.log('[班级下拉框] ℹ️ 管理员或非教师角色，显示所有班级');
         }
 
         return Array.from(allowedClasses).sort((a, b) => a.localeCompare(b, 'zh-CN'));
@@ -528,7 +530,8 @@ function updateClassGroupOptions() {
     if (optgroup) {
         let html = '<option value="class">所有班级（分组显示）</option>';
         groupClasses.forEach(className => {
-            html += `<option value="class:${className}">${className}</option>`;
+            const safeClassName = escapeStudentCompareHtml(className);
+            html += `<option value="class:${safeClassName}">${safeClassName}</option>`;
         });
         optgroup.innerHTML = html;
     }
@@ -539,14 +542,13 @@ function updateClassGroupOptions() {
         );
         let filterHtml = '<option value="">全部班级</option>';
         filterClasses.forEach(className => {
-            filterHtml += `<option value="${className}">${className}</option>`;
+            const safeClassName = escapeStudentCompareHtml(className);
+            filterHtml += `<option value="${safeClassName}">${safeClassName}</option>`;
         });
         classFilterEl.innerHTML = filterHtml;
         classFilterEl.value = activeClassFilter || '';
         classFilterEl.disabled = filterClasses.length === 0;
     }
-
-    console.log('[班级下拉框] 下拉框已更新，共 ' + groupClasses.length + ' 个分组选项');
 }
 
 function toggleGroupDisplay() {

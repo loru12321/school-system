@@ -46,6 +46,11 @@ const sourceFiles = [
     'package.json'
 ];
 
+const quietRuntimeFiles = [
+    'public/assets/js/student-compare-generate-runtime.js',
+    'public/assets/js/student-compare-result-runtime.js'
+];
+
 removedFiles.forEach((relativePath) => {
     assert.strictEqual(
         fs.existsSync(path.join(root, relativePath)),
@@ -65,5 +70,14 @@ sourceFiles.forEach((relativePath) => {
         );
     });
 });
+
+quietRuntimeFiles.forEach((relativePath) => {
+    const text = fs.readFileSync(path.join(root, relativePath), 'utf8');
+    assert.ok(!/console\.log\([^)]*学生对比/.test(text), `${relativePath} should not emit student compare console.log noise`);
+    assert.ok(!/console\.log\([^)]*班级下拉框/.test(text), `${relativePath} should not emit class filter console.log noise`);
+});
+
+const studentCompareResult = fs.readFileSync(path.join(root, 'public/assets/js/student-compare-result-runtime.js'), 'utf8');
+assert.ok(studentCompareResult.includes('escapeStudentCompareHtml'), 'student compare class filter options should escape dynamic class names');
 
 console.log('runtime hygiene tests passed');

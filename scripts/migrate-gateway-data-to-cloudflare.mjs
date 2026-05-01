@@ -7,7 +7,6 @@ const execFileAsync = promisify(execFile);
 
 const DEFAULT_SOURCE_REST_URL = 'https://okwcciujnfvobbwaydiv.supabase.co';
 const DEFAULT_SOURCE_GATEWAY_URL = 'https://okwcciujnfvobbwaydiv.supabase.co/functions/v1/edu-gateway-v2';
-const DEFAULT_SOURCE_KEY = 'sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4';
 const DEFAULT_ADMIN_USER = 'admin';
 const DEFAULT_ADMIN_PASS = 'admin123';
 const DEFAULT_TARGET_DB = 'school-system-gateway';
@@ -396,7 +395,7 @@ async function readD1Counts(targetDb) {
 async function main() {
   const restUrl = normalizeBaseUrl(process.env.SOURCE_REST_URL || DEFAULT_SOURCE_REST_URL);
   const gatewayUrl = normalizeBaseUrl(process.env.SOURCE_GATEWAY_URL || DEFAULT_SOURCE_GATEWAY_URL);
-  const sourceKey = String(process.env.SOURCE_SUPABASE_KEY || DEFAULT_SOURCE_KEY).trim();
+  const sourceKey = String(process.env.SOURCE_SUPABASE_KEY || '').trim();
   const adminUser = String(process.env.MIGRATION_ADMIN_USER || DEFAULT_ADMIN_USER).trim();
   const adminPass = String(process.env.MIGRATION_ADMIN_PASS || DEFAULT_ADMIN_PASS).trim();
   const targetDb = String(process.env.TARGET_GATEWAY_DB || DEFAULT_TARGET_DB).trim();

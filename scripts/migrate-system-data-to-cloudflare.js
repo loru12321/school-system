@@ -1,5 +1,4 @@
 const DEFAULT_SOURCE_SUPABASE_URL = 'https://okwcciujnfvobbwaydiv.supabase.co';
-const DEFAULT_SOURCE_SUPABASE_KEY = 'sb_publishable_NQqut_NdTW2z1_R27rJ8jA_S3fTh2r4';
 const DEFAULT_TARGET_BASE_URL = 'https://school-system.hkakjiweu.workers.dev';
 const DEFAULT_BATCH_SIZE = 20;
 
@@ -69,7 +68,7 @@ async function verifyTargetHealth(targetBaseUrl) {
 
 async function main() {
     const sourceUrl = normalizeBaseUrl(process.env.SOURCE_SUPABASE_URL || DEFAULT_SOURCE_SUPABASE_URL);
-    const sourceKey = String(process.env.SOURCE_SUPABASE_KEY || DEFAULT_SOURCE_SUPABASE_KEY).trim();
+    const sourceKey = String(process.env.SOURCE_SUPABASE_KEY || '').trim();
     const targetBaseUrl = normalizeBaseUrl(process.env.TARGET_BASE_URL || DEFAULT_TARGET_BASE_URL);
     const batchSize = toNumber(process.env.BATCH_SIZE || DEFAULT_BATCH_SIZE, DEFAULT_BATCH_SIZE);
 

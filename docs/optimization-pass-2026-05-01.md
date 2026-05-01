@@ -7,6 +7,7 @@ This pass keeps calculation behavior stable and focuses on guardrails around the
 - Security: Cloudflare gateway sessions fail closed when `APP_SESSION_SECRET` is missing; the static fallback signing secret was removed.
 - Security: Worker CORS now uses an explicit allowlist plus localhost development origins.
 - Security: boot runtime no longer embeds a Supabase publishable key. Hosted same-origin gateway calls can run without a browser-side key.
+- Security: Supabase publishable keys were removed from Worker source, migration script defaults, and `wrangler.jsonc`; production now expects Cloudflare secrets or runtime environment variables for legacy Supabase proxy credentials.
 - Local verification: localhost now uses the same-origin `/sb` proxy by default, so smoke and calculation snapshots do not need browser-embedded Supabase keys. Set `localStorage.SUPABASE_DIRECT_LOCAL = "true"` only for a deliberate local Supabase instance.
 - Caching: the Service Worker no longer caches sensitive API data; only `/api/health` remains cache-eligible.
 - Runtime governance: added `SchoolRuntime` as a small registry for future runtime exports and runtime skill metadata.

@@ -9,6 +9,12 @@ const setStudentCompareCacheState = typeof window.setStudentCompareCacheState ==
         return nextCache;
     });
 
+function debugStudentCompareGenerate(...args) {
+    if (window.DEBUG_STUDENT_COMPARE && window.console && typeof window.console.debug === 'function') {
+        window.console.debug(...args);
+    }
+}
+
 function renderStudentMultiPeriodComparison() {
     const schoolEl = document.getElementById('studentCompareSchool');
     const hintEl = document.getElementById('studentCompareHint');
@@ -213,49 +219,45 @@ function renderStudentMultiPeriodComparison() {
 
     // 🔐 权限控制：根据角色筛选班级
     const user = getCurrentUser();
-    console.log('[学生对比] 当前用户:', user);
+    debugStudentCompareGenerate('[学生对比] 当前用户:', user);
 
     // 🆕 使用多角色检查
     if (user && RoleManager.hasAnyRole(user, ['teacher', 'class_teacher']) &&
         !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director'])) {
         // 纯教师或班主任角色（不含管理员权限）：只能看自己任教的班级
-        console.log('[学生对比] 🔒 检测到教师角色，启用权限过滤');
+        debugStudentCompareGenerate('[学生对比] 检测到教师角色，启用权限过滤');
         const scope = getTeacherScopeForUser(user);
         const allowedClasses = scope.classes;
 
         if (allowedClasses.size > 0) {
             const originalCount = studentsCompareData.length;
-            console.log(`[学生对比] 过滤前学生数: ${originalCount}`);
-            console.log('[学生对比] 数据中的班级:', [...new Set(studentsCompareData.map(s => s.class))]);
+            debugStudentCompareGenerate(`[学生对比] 过滤前学生数: ${originalCount}`);
+            debugStudentCompareGenerate('[学生对比] 数据中的班级:', [...new Set(studentsCompareData.map(s => s.class))]);
 
             studentsCompareData = studentsCompareData.filter(s => {
                 const cls = normalizeClass(s.class);
                 const hasPermission = allowedClasses.has(cls);
-                if (!hasPermission) {
-                    console.log(`[学生对比] ❌ 过滤掉班级 ${s.class} (规范化: ${cls})`);
-                }
+                if (!hasPermission) debugStudentCompareGenerate(`[学生对比] 过滤掉班级 ${s.class} (规范化: ${cls})`);
                 return hasPermission;
             });
 
             const roles = RoleManager.getUserRoles(user).join(', ');
-            console.log(`🔐 权限筛选：${roles} ${user.name} 只能查看 ${allowedClasses.size} 个班级，筛选前${originalCount}人，筛选后${studentsCompareData.length}人`);
+            debugStudentCompareGenerate(`权限筛选：${roles} ${user.name} 只能查看 ${allowedClasses.size} 个班级，筛选前${originalCount}人，筛选后${studentsCompareData.length}人`);
 
             if (studentsCompareData.length === 0) {
                 hintEl.innerHTML = `⚠️ 您没有权限查看该校学生数据，或您任教的班级不在此学校。`;
                 hintEl.style.color = '#f59e0b';
                 resultEl.innerHTML = '';
-                console.error('[学生对比] ⚠️ 过滤后无数据');
                 return;
             }
         } else {
             hintEl.innerHTML = `⚠️ 未找到您的任课信息，请先在【数据管理 - 教师任课】中配置。`;
             hintEl.style.color = '#dc2626';
             resultEl.innerHTML = '';
-            console.error('[学生对比] ⚠️ 未找到任课信息');
             return;
         }
     } else {
-        console.log('[学生对比] ℹ️ 管理员或非教师角色，不过滤数据');
+        debugStudentCompareGenerate('[学生对比] 管理员或非教师角色，不过滤数据');
     }
 
     // 按班级和姓名排序（默认）

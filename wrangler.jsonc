@@ -9,9 +9,7 @@
   },
   "vars": {
     "CLOUD_SYSTEM_DATA_MODE": "supabase",
-    "LEGACY_GATEWAY_API_KEY": "sb_publishable_J7f2UEVGfHQ_89MR09KTNA_wKFRGZ86",
     "LEGACY_GATEWAY_ORIGIN": "https://dpwsxxgojpqevzwyxrot.supabase.co",
-    "LEGACY_SUPABASE_KEY": "sb_publishable_J7f2UEVGfHQ_89MR09KTNA_wKFRGZ86",
     "SUPABASE_ORIGIN": "https://dpwsxxgojpqevzwyxrot.supabase.co"
   },
   "routes": [
