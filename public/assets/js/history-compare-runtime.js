@@ -1,5 +1,34 @@
 // ====== 历史成绩对比功能代码 ======
-console.log('🔔 历史成绩模块加载中...');
+
+function debugHistoryCompare() {
+    if (window.DEBUG_HISTORY_COMPARE && window.console && typeof window.console.debug === 'function') {
+        window.console.debug.apply(window.console, arguments);
+    }
+}
+
+function escapeHistoryHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, function (char) {
+        return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[char];
+    });
+}
+
+function formatHistoryNumber(value) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric.toFixed(1) : '-';
+}
+
+function formatHistoryRank(value) {
+    const text = String(value ?? '').trim();
+    return text ? escapeHistoryHtml(text) : '-';
+}
+
+debugHistoryCompare('历史成绩模块加载中...');
 
 function normalizeCompareName(name) {
     return String(name || '').trim().replace(/\s+/g, '');
@@ -16,7 +45,7 @@ async function getHistoryComparisonData(studentName, className, schoolName) {
     const history = [];
 
     // 尝试从云端存档获取历史数据
-    console.log('🔍 开始从云端存档获取历史数据...');
+    debugHistoryCompare('开始从云端存档获取历史数据...');
     try {
         if (sbClient) {
             // ✅ 修复：实际存储 key 格式为 `{cohortId}级_{...}`，而非 `cohort::` 前缀
@@ -34,7 +63,7 @@ async function getHistoryComparisonData(studentName, className, schoolName) {
                 .not('key', 'like', 'STUDENT_COMPARE_%')
                 .order('updated_at', { ascending: true });
 
-            console.log(`📡 云端存档查询结果 (${queryPrefix}):`, { count: data?.length, error });
+            debugHistoryCompare(`云端存档查询结果 (${queryPrefix}):`, { count: data?.length, error });
 
             if (data && data.length > 0) {
                 const normalizedTargetName = normalizeCompareName(studentName);
@@ -83,7 +112,7 @@ async function getHistoryComparisonData(studentName, className, schoolName) {
                         const keyParts = item.key.split('_');
                         const examName = keyParts.length >= 5 ? keyParts.slice(4).join('_') : item.key;
 
-                        console.log('✅ 找到匹配学生:', matchedStudent.name, '考试:', examName);
+                        debugHistoryCompare('找到匹配学生:', matchedStudent.name, '考试:', examName);
 
                         history.push({
                             examId: examName,
@@ -99,7 +128,7 @@ async function getHistoryComparisonData(studentName, className, schoolName) {
             }
         }
     } catch (e) {
-        console.log('云端存档获取失败:', e);
+        console.warn('[history-compare] cloud archive lookup failed:', e);
     }
 
     // 尝试从本地历史数据获取
@@ -131,11 +160,11 @@ async function getHistoryComparisonData(studentName, className, schoolName) {
             }
         }
     } catch (e) {
-        console.log('本地历史数据获取失败:', e);
+        console.warn('[history-compare] local history lookup failed:', e);
     }
 
     // 添加当前考试数据
-    console.log('📊 当前考试数据查询: schoolName=', schoolName, 'studentName=', studentName, 'className=', className);
+    debugHistoryCompare('当前考试数据查询:', { schoolName, studentName, className });
     if (SCHOOLS && studentName) {
         // 遍历所有学校查找学生
         for (const [schKey, schData] of Object.entries(SCHOOLS)) {
@@ -143,7 +172,7 @@ async function getHistoryComparisonData(studentName, className, schoolName) {
                 s.name === studentName && (!className || isClassEquivalent(s.class, className))
             );
             if (currentStu) {
-                console.log('✅ 找到当前学生:', currentStu.name, '学校:', schKey);
+                debugHistoryCompare('找到当前学生:', currentStu.name, '学校:', schKey);
                 history.push({
                     examId: '本次考试',
                     total: currentStu.total,
@@ -232,10 +261,10 @@ function renderHistoryCharts(historyData, currentStudent) {
     let html = '<div class="sec-head" style="padding-bottom:15px; border-bottom:1px solid #e2e8f0;"><h2 style="color:#1e293b; margin:0;"><i class="ti ti-timeline" style="color:#2563eb;"></i> 历史成绩记录与对比分析</h2></div>';
 
     html += '<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:15px; margin:20px 0;">';
-    html += '<div style="background:white; padding:20px; border-radius:12px; text-align:center; border:1px solid #e2e8f0;"><div style="font-size:12px; color:#64748b; margin-bottom:5px;">本次总分</div><div style="font-size:28px; font-weight:bold; color:#1e293b;">' + Number(latest.total).toFixed(1) + '</div>' + (totalChange !== null ? '<div style="font-size:14px; margin-top:5px;">' + getChangeBadge(totalChange, 'score') + '</div>' : '') + '</div>';
-    html += '<div style="background:white; padding:20px; border-radius:12px; text-align:center; border:1px solid #e2e8f0;"><div style="font-size:12px; color:#64748b; margin-bottom:5px;">班级排名</div><div style="font-size:28px; font-weight:bold; color:#3b82f6;">' + (latest.rankClass || '-') + '</div></div>';
-    html += '<div style="background:white; padding:20px; border-radius:12px; text-align:center; border:1px solid #e2e8f0;"><div style="font-size:12px; color:#64748b; margin-bottom:5px;">校级排名</div><div style="font-size:28px; font-weight:bold; color:#8b5cf6;">' + (latest.rankSchool || '-') + '</div>' + (rankSchoolChange !== null ? '<div style="font-size:14px; margin-top:5px;">' + getChangeBadge(rankSchoolChange, 'rank') + '</div>' : '') + '</div>';
-    html += '<div style="background:white; padding:20px; border-radius:12px; text-align:center; border:1px solid #e2e8f0;"><div style="font-size:12px; color:#64748b; margin-bottom:5px;">镇级排名</div><div style="font-size:28px; font-weight:bold; color:#f59e0b;">' + (latest.rankTown || '-') + '</div>' + (rankTownChange !== null ? '<div style="font-size:14px; margin-top:5px;">' + getChangeBadge(rankTownChange, 'rank') + '</div>' : '') + '</div>';
+    html += '<div style="background:white; padding:20px; border-radius:12px; text-align:center; border:1px solid #e2e8f0;"><div style="font-size:12px; color:#64748b; margin-bottom:5px;">本次总分</div><div style="font-size:28px; font-weight:bold; color:#1e293b;">' + formatHistoryNumber(latest.total) + '</div>' + (totalChange !== null ? '<div style="font-size:14px; margin-top:5px;">' + getChangeBadge(totalChange, 'score') + '</div>' : '') + '</div>';
+    html += '<div style="background:white; padding:20px; border-radius:12px; text-align:center; border:1px solid #e2e8f0;"><div style="font-size:12px; color:#64748b; margin-bottom:5px;">班级排名</div><div style="font-size:28px; font-weight:bold; color:#3b82f6;">' + formatHistoryRank(latest.rankClass) + '</div></div>';
+    html += '<div style="background:white; padding:20px; border-radius:12px; text-align:center; border:1px solid #e2e8f0;"><div style="font-size:12px; color:#64748b; margin-bottom:5px;">校级排名</div><div style="font-size:28px; font-weight:bold; color:#8b5cf6;">' + formatHistoryRank(latest.rankSchool) + '</div>' + (rankSchoolChange !== null ? '<div style="font-size:14px; margin-top:5px;">' + getChangeBadge(rankSchoolChange, 'rank') + '</div>' : '') + '</div>';
+    html += '<div style="background:white; padding:20px; border-radius:12px; text-align:center; border:1px solid #e2e8f0;"><div style="font-size:12px; color:#64748b; margin-bottom:5px;">镇级排名</div><div style="font-size:28px; font-weight:bold; color:#f59e0b;">' + formatHistoryRank(latest.rankTown) + '</div>' + (rankTownChange !== null ? '<div style="font-size:14px; margin-top:5px;">' + getChangeBadge(rankTownChange, 'rank') + '</div>' : '') + '</div>';
     html += '</div>';
 
     if (historyData.length >= 2) {
@@ -251,7 +280,7 @@ function renderHistoryCharts(historyData, currentStudent) {
         const bgStyle = h.isCurrent ? 'background:#eff6ff;' : '';
         const fontWeight = h.isCurrent ? 'bold' : 'normal';
         const badge = h.isCurrent ? '<span style="font-size:11px; background:#3b82f6; color:white; padding:2px 8px; border-radius:10px; margin-left:8px;">本次</span>' : '';
-        html += '<tr style="' + bgStyle + '"><td style="padding:14px 16px; border-bottom:1px solid #e2e8f0; font-weight:' + fontWeight + ';">' + h.examId + ' ' + badge + '</td><td style="padding:14px 16px; text-align:center; border-bottom:1px solid #e2e8f0; font-weight:bold;">' + Number(h.total).toFixed(1) + '</td><td style="padding:14px 16px; text-align:center; border-bottom:1px solid #e2e8f0;">' + (h.rankClass || '-') + '</td><td style="padding:14px 16px; text-align:center; border-bottom:1px solid #e2e8f0;">' + (h.rankSchool || '-') + '</td><td style="padding:14px 16px; text-align:center; border-bottom:1px solid #e2e8f0;">' + (h.rankTown || '-') + '</td><td style="padding:14px 16px; text-align:center; border-bottom:1px solid #e2e8f0;">' + (tChange !== null ? getChangeBadge(tChange, 'score') : '-') + '</td><td style="padding:14px 16px; text-align:center; border-bottom:1px solid #e2e8f0;">' + (rChange !== null ? getChangeBadge(rChange, 'rank') : '-') + '</td></tr>';
+        html += '<tr style="' + bgStyle + '"><td style="padding:14px 16px; border-bottom:1px solid #e2e8f0; font-weight:' + fontWeight + ';">' + escapeHistoryHtml(h.examId) + ' ' + badge + '</td><td style="padding:14px 16px; text-align:center; border-bottom:1px solid #e2e8f0; font-weight:bold;">' + formatHistoryNumber(h.total) + '</td><td style="padding:14px 16px; text-align:center; border-bottom:1px solid #e2e8f0;">' + formatHistoryRank(h.rankClass) + '</td><td style="padding:14px 16px; text-align:center; border-bottom:1px solid #e2e8f0;">' + formatHistoryRank(h.rankSchool) + '</td><td style="padding:14px 16px; text-align:center; border-bottom:1px solid #e2e8f0;">' + formatHistoryRank(h.rankTown) + '</td><td style="padding:14px 16px; text-align:center; border-bottom:1px solid #e2e8f0;">' + (tChange !== null ? getChangeBadge(tChange, 'score') : '-') + '</td><td style="padding:14px 16px; text-align:center; border-bottom:1px solid #e2e8f0;">' + (rChange !== null ? getChangeBadge(rChange, 'rank') : '-') + '</td></tr>';
     });
 
     html += '</tbody></table></div>';
@@ -259,7 +288,7 @@ function renderHistoryCharts(historyData, currentStudent) {
     if (latest.subjects && Object.keys(latest.subjects).length > 0) {
         html += '<div style="margin:20px 0; background:white; padding:20px; border-radius:12px; border:1px solid #e2e8f0;"><div style="font-size:15px; font-weight:bold; color:#1e293b; margin-bottom:15px;"><i class="ti ti-list-details" style="color:#10b981;"></i> 各科成绩详情（本次）</div><div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px;">';
         Object.entries(latest.subjects).filter(function (k) { return k[0] && k[0] !== 'total'; }).forEach(function (k) {
-            html += '<div style="padding:15px; background:#f8fafc; border-radius:10px; text-align:center;"><div style="font-size:12px; color:#64748b;">' + k[0] + '</div><div style="font-size:20px; font-weight:bold; color:#1e293b; margin-top:5px;">' + Number(k[1]).toFixed(1) + '</div></div>';
+            html += '<div style="padding:15px; background:#f8fafc; border-radius:10px; text-align:center;"><div style="font-size:12px; color:#64748b;">' + escapeHistoryHtml(k[0]) + '</div><div style="font-size:20px; font-weight:bold; color:#1e293b; margin-top:5px;">' + formatHistoryNumber(k[1]) + '</div></div>';
         });
         html += '</div></div>';
     }
@@ -308,14 +337,14 @@ function renderHistoryCharts(historyData, currentStudent) {
         }, 100);
     }
 
-    console.log('✅ 历史成绩模块渲染完成!');
+    debugHistoryCompare('历史成绩模块渲染完成');
 }
 
 function initHistoryComparePatch() {
-    console.log('🔄 初始化历史成绩模块...');
+    debugHistoryCompare('初始化历史成绩模块');
 
     const patchDoQuery = async function () {
-        console.log('🎯 调用增强版 doQuery');
+        debugHistoryCompare('调用增强版 doQuery');
 
         const name = document.getElementById('inp-name').value;
         const sch = document.getElementById('sel-school').value;
@@ -391,14 +420,14 @@ function initHistoryComparePatch() {
             }
         }, 200);
 
-        console.log('📊 获取历史成绩数据...');
+        debugHistoryCompare('获取历史成绩数据');
         const historyResult = await getHistoryComparisonData(stu.name, stu.class, stu.school);
-        console.log('📈 历史成绩结果:', historyResult);
+        debugHistoryCompare('历史成绩结果:', historyResult);
         renderHistoryCharts(historyResult.data, stu);
     };
 
     window.doQuery = patchDoQuery;
-    console.log('✅ 历史成绩模块初始化完成！');
+    debugHistoryCompare('历史成绩模块初始化完成');
 }
 
 if (document.readyState === 'loading') {

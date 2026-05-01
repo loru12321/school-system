@@ -16,6 +16,7 @@ This pass keeps calculation behavior stable and focuses on guardrails around the
 - Download center: latest release assets are now verified from GitHub release metadata. Missing APK/EXE assets disable direct download actions instead of silently using links that may 404.
 - Build hygiene: removed the build-time string patch from `inline-scripts.mjs`; source code is now the only behavior source.
 - XSS surface: account manager table output now escapes dynamic account fields before assigning HTML.
+- XSS/log hygiene: history comparison output escapes dynamic exam and subject labels, and noisy history/student compare logs now require explicit debug flags.
 - Budgets: tightened build size budgets and added HTML/vendor/security/release hygiene tests.
 
 ## Calculation Safety
