@@ -10362,6 +10362,20 @@ function formatVal(val) {
     // toFixed(2) 会四舍五入并转为字符串，如 89.567 -> "89.57", 90 -> "90.00"
     return val.toFixed(2);
 }
+function escapeAppHtml(value) {
+    const root = typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : {});
+    const runtimeEscape = root.SchoolRuntime && typeof root.SchoolRuntime.escapeHtml === 'function'
+        ? root.SchoolRuntime.escapeHtml
+        : null;
+    if (runtimeEscape) return runtimeEscape(value);
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
 function formatRankDisplay(value, rank, type = 'school', isPercent = false) { const displayValue = isPercent ? (value * 100).toFixed(2) + '%' : value.toFixed(2); return `${displayValue} <span style="font-size:0.9em; color:#94a3b8">(${rank})</span>`; }
 
 function renderTables() {
@@ -10415,10 +10429,11 @@ function renderTables() {
         // 计算数据条百分比 (假设满分按全镇最高均分算，或者固定值如100/120)
         const maxAvg = list[0].metrics.total?.avg || 100; // 取第一名均分作为基准
         const barPercent = m.avg ? (m.avg / maxAvg * 100).toFixed(1) : 0;
+        const safeSchoolName = escapeAppHtml(s.name);
 
         html += `<tr class="${isMySchool ? 'bg-highlight' : ''}">
-                <td data-label="学校" class="clickable-school" onclick="showSchoolProfile('${s.name}')" title="点击查看学校学科诊断">
-                    ${s.name} <i class="ti ti-chart-radar" style="font-size:12px; opacity:0.5;"></i>
+                <td data-label="学校" class="clickable-school" data-school-profile-name="${safeSchoolName}" role="button" tabindex="0" title="点击查看学校学科诊断">
+                    ${safeSchoolName} <i class="ti ti-chart-radar" style="font-size:12px; opacity:0.5;"></i>
                 </td>
                 <td data-label="人数">${m.count || 0}</td>
 
@@ -10437,6 +10452,15 @@ function renderTables() {
             </tr>`;
     });
     tbTotal.innerHTML = html;
+    tbTotal.querySelectorAll('[data-school-profile-name]').forEach(cell => {
+        const openProfile = () => showSchoolProfile(cell.dataset.schoolProfileName || '');
+        cell.addEventListener('click', openProfile);
+        cell.addEventListener('keydown', event => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            openProfile();
+        });
+    });
     applySchoolModeToTables();
 
     // ... (下接各科渲染逻辑，保持不变) ...

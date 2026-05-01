@@ -571,9 +571,11 @@ async function runModuleDeepCheck(page, id) {
             };
             const panel = document.querySelector('.town-submodule-compare-panel[data-submodule="summary"]');
             let schoolProfileCloseWorks = false;
+            let schoolProfileCellClickWorks = false;
             const schoolNames = Object.keys(window.SCHOOLS || {});
             const modal = document.getElementById('school-profile-modal');
             const closeBtn = document.querySelector('#school-profile-modal .school-modal-close');
+            const schoolProfileCell = document.querySelector('#tb-total tbody [data-school-profile-name]');
             const openSchoolProfile = typeof window.showSchoolProfile === 'function'
                 ? window.showSchoolProfile
                 : (typeof showSchoolProfile === 'function' ? showSchoolProfile : null);
@@ -586,11 +588,23 @@ async function runModuleDeepCheck(page, id) {
                 const modalClosed = getComputedStyle(modal).display === 'none';
                 schoolProfileCloseWorks = modalVisible && modalClosed;
             }
+            if (modal && closeBtn && schoolProfileCell) {
+                modal.style.display = 'none';
+                schoolProfileCell.click();
+                await new Promise(resolve => setTimeout(resolve, 120));
+                const modalVisible = getComputedStyle(modal).display !== 'none';
+                closeBtn.click();
+                await new Promise(resolve => setTimeout(resolve, 80));
+                const modalClosed = getComputedStyle(modal).display === 'none';
+                schoolProfileCellClickWorks = modalVisible && modalClosed;
+            }
             return {
-                ok: Object.values(checks).every(Boolean) && !!panel && schoolProfileCloseWorks,
+                ok: Object.values(checks).every(Boolean) && !!panel && schoolProfileCloseWorks && schoolProfileCellClickWorks,
                 checks,
                 panelReady: !!panel,
-                schoolProfileCloseWorks
+                schoolProfileCloseWorks,
+                schoolProfileCellReady: !!schoolProfileCell,
+                schoolProfileCellClickWorks
             };
         });
     }

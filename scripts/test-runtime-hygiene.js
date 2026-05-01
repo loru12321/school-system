@@ -88,5 +88,9 @@ const schoolProfileRuntime = fs.readFileSync(path.join(root, 'public/assets/js/s
 assert.ok(schoolProfileRuntime.includes('escapeSchoolProfileHtml(schoolName)'), 'school profile should escape dynamic school names');
 assert.ok(schoolProfileRuntime.includes('escapeSchoolProfileHtml(maxSub)'), 'school profile should escape dynamic advantage subject names');
 assert.ok(schoolProfileRuntime.includes('escapeSchoolProfileHtml(minSub)'), 'school profile should escape dynamic weak subject names');
+const appRuntime = fs.readFileSync(path.join(root, 'public/assets/js/app.js'), 'utf8');
+assert.ok(!appRuntime.includes("onclick=\"showSchoolProfile('${s.name}')\""), 'summary table should not inject dynamic school names into inline handlers');
+assert.ok(appRuntime.includes('const safeSchoolName = escapeAppHtml(s.name)'), 'summary table should escape dynamic school names before rendering');
+assert.ok(appRuntime.includes('data-school-profile-name="${safeSchoolName}"'), 'summary table should bind school profile actions through a safe data attribute');
 
 console.log('runtime hygiene tests passed');
