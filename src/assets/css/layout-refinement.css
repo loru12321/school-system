@@ -1714,3 +1714,242 @@ body.dark-mode #dm-cloud-summary {
         border-radius: 12px !important;
     }
 }
+
+/* Upload product pass: tighter hierarchy, safer wrapping, and clearer mobile operation. */
+#upload.analysis-workspace-upload {
+    --upload-refine-radius: 16px;
+    --upload-refine-shadow: 0 10px 26px rgba(15, 23, 42, 0.055);
+}
+
+#upload.analysis-workspace-upload .upload-summary-strip {
+    grid-template-columns: repeat(auto-fit, minmax(156px, 1fr)) !important;
+}
+
+#upload.analysis-workspace-upload .upload-summary-card,
+#upload.analysis-workspace-upload .upload-feedback-card,
+#upload.analysis-workspace-upload .upload-message-box,
+#upload.analysis-workspace-upload .upload-panel,
+#upload.analysis-workspace-upload .upload-drop-shell,
+#upload.analysis-workspace-upload .upload-ops-card,
+#upload.analysis-workspace-upload .upload-template-group,
+#upload.analysis-workspace-upload .upload-inline-card,
+#upload.analysis-workspace-upload .upload-inline-status {
+    border-radius: var(--upload-refine-radius) !important;
+}
+
+#upload.analysis-workspace-upload .upload-panel,
+#upload.analysis-workspace-upload .upload-drop-shell,
+#upload.analysis-workspace-upload .upload-ops-card {
+    min-width: 0;
+    box-shadow: var(--upload-refine-shadow) !important;
+}
+
+#upload.analysis-workspace-upload .upload-panel .sec-head {
+    align-items: flex-start;
+    gap: 10px;
+}
+
+#upload.analysis-workspace-upload .upload-panel .sec-head h2 {
+    min-width: 0;
+    line-height: 1.35;
+}
+
+#upload.analysis-workspace-upload .upload-field,
+#upload.analysis-workspace-upload .upload-action-row,
+#upload.analysis-workspace-upload .upload-history-controls,
+#upload.analysis-workspace-upload .upload-drop-actions,
+#upload.analysis-workspace-upload .upload-ops-actions {
+    min-width: 0;
+}
+
+#upload.analysis-workspace-upload .upload-field-input,
+#upload.analysis-workspace-upload .upload-checkbox,
+#upload.analysis-workspace-upload .upload-action-row .btn,
+#upload.analysis-workspace-upload .upload-history-controls .btn,
+#upload.analysis-workspace-upload .upload-drop-actions .btn,
+#upload.analysis-workspace-upload .upload-ops-actions .btn {
+    max-width: 100%;
+}
+
+#upload.analysis-workspace-upload .upload-action-row .btn,
+#upload.analysis-workspace-upload .upload-history-controls .btn {
+    white-space: normal;
+    line-height: 1.35;
+}
+
+#upload.analysis-workspace-upload .upload-drop-shell {
+    margin-top: 0;
+}
+
+#upload.analysis-workspace-upload .upload-drop-title {
+    max-width: 760px;
+    letter-spacing: 0;
+}
+
+#upload.analysis-workspace-upload .upload-drop-desc,
+#upload.analysis-workspace-upload .upload-drop-action-note,
+#upload.analysis-workspace-upload .upload-template-note,
+#upload.analysis-workspace-upload .upload-ops-note {
+    max-width: 74ch;
+}
+
+#upload.analysis-workspace-upload #uploadBox {
+    display: grid;
+    place-items: center;
+    gap: 8px;
+    padding: 22px 18px;
+    text-align: center;
+}
+
+#upload.analysis-workspace-upload #uploadBox p {
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+@media screen and (min-width: 1101px) {
+    #upload.analysis-workspace-upload .upload-workbench-grid {
+        grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.7fr) !important;
+        align-items: stretch;
+    }
+
+    #upload.analysis-workspace-upload .upload-panel--cohort,
+    #upload.analysis-workspace-upload .upload-panel--exam {
+        grid-column: auto !important;
+    }
+
+    #upload.analysis-workspace-upload .upload-intake-grid {
+        grid-template-columns: minmax(320px, 0.82fr) minmax(460px, 1.18fr) !important;
+        align-items: stretch;
+    }
+
+    #upload.analysis-workspace-upload .upload-intake-grid > .upload-panel--templates {
+        grid-column: auto !important;
+    }
+
+    #upload.analysis-workspace-upload .upload-ops-grid {
+        align-items: stretch;
+    }
+
+    #upload.analysis-workspace-upload .upload-ops-card {
+        margin-top: 0 !important;
+    }
+}
+
+@media screen and (max-width: 960px) {
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .app-main {
+        padding-top: calc(var(--app-safe-top) + 206px) !important;
+        padding-bottom: calc(var(--app-safe-bottom) + 108px) !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .app-main > #upload.section {
+        padding: 12px 12px 34px !important;
+        scroll-margin-top: calc(var(--app-safe-top) + 206px);
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-workbench-grid,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-intake-grid,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-ops-grid,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-feedback-board {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 10px !important;
+        margin-top: 12px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-panel,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-drop-shell,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-ops-card,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-feedback-card,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-message-box {
+        padding: 14px !important;
+        border-radius: 16px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-panel {
+        margin-top: 0 !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-panel::before {
+        left: 14px;
+        width: 44px;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-panel .sec-head {
+        margin-bottom: 8px !important;
+        padding-bottom: 8px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-panel .sec-head h2 {
+        font-size: 16px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-template-grid,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-flow-grid--cohort,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-flow-grid--exam {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-field--compact,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-field--wide,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-action-row--wide {
+        grid-column: auto !important;
+        max-width: none !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-field-input,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-field-input--compact {
+        min-width: 0 !important;
+        min-height: 44px !important;
+        font-size: 16px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-action-row,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-history-controls,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-drop-actions,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-ops-actions {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 8px !important;
+        width: 100%;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-action-row .btn,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-history-controls .btn,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-drop-actions .btn,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-ops-actions .btn {
+        width: 100%;
+        min-height: 42px;
+        justify-content: center;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-status-row,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-status-strip {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 8px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-drop-title {
+        font-size: 18px !important;
+        line-height: 1.32 !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload #uploadBox {
+        min-height: 178px !important;
+        border-radius: 18px !important;
+        padding: 18px 14px !important;
+        scroll-margin-top: calc(var(--app-safe-top) + 212px);
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload #uploadBox .upload-icon {
+        width: 58px !important;
+        height: 58px !important;
+        border-radius: 18px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload #uploadBox p {
+        font-size: 14px !important;
+        line-height: 1.45 !important;
+        margin-bottom: 0 !important;
+    }
+}
