@@ -17,6 +17,7 @@ This pass keeps calculation behavior stable and focuses on guardrails around the
 - Build hygiene: removed the build-time string patch from `inline-scripts.mjs`; source code is now the only behavior source.
 - XSS surface: account manager table output now escapes dynamic account fields before assigning HTML.
 - XSS/log hygiene: history comparison output escapes dynamic exam and subject labels, and noisy history/student compare logs now require explicit debug flags.
+- XSS surface: school profile modal output escapes dynamic school and subject labels before assigning HTML.
 - Budgets: tightened build size budgets and added HTML/vendor/security/release hygiene tests.
 
 ## Calculation Safety

@@ -84,5 +84,9 @@ assert.ok(studentCompareResult.includes('escapeStudentCompareHtml'), 'student co
 const historyCompareRuntime = fs.readFileSync(path.join(root, 'public/assets/js/history-compare-runtime.js'), 'utf8');
 assert.ok(historyCompareRuntime.includes('escapeHistoryHtml(h.examId)'), 'history compare should escape dynamic exam names');
 assert.ok(historyCompareRuntime.includes('escapeHistoryHtml(k[0])'), 'history compare should escape dynamic subject names');
+const schoolProfileRuntime = fs.readFileSync(path.join(root, 'public/assets/js/school-profile-runtime.js'), 'utf8');
+assert.ok(schoolProfileRuntime.includes('escapeSchoolProfileHtml(schoolName)'), 'school profile should escape dynamic school names');
+assert.ok(schoolProfileRuntime.includes('escapeSchoolProfileHtml(maxSub)'), 'school profile should escape dynamic advantage subject names');
+assert.ok(schoolProfileRuntime.includes('escapeSchoolProfileHtml(minSub)'), 'school profile should escape dynamic weak subject names');
 
 console.log('runtime hygiene tests passed');

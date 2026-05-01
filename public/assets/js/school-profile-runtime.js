@@ -10,13 +10,25 @@
         window.schoolDistInstance = schoolDistInstance;
     }
 
+    function escapeSchoolProfileHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, function (char) {
+            return {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char];
+        });
+    }
+
     function showSchoolProfile(schoolName) {
         if (!SCHOOLS[schoolName]) return;
         currentModalSchool = schoolName;
         const s = SCHOOLS[schoolName];
         const m = s.metrics.total || {};
 
-        document.getElementById('sp-title').innerHTML = `🏫 ${schoolName} <small style="font-size:14px; color:#666;">(参考人数: ${m.count})</small>`;
+        document.getElementById('sp-title').innerHTML = `🏫 ${escapeSchoolProfileHtml(schoolName)} <small style="font-size:14px; color:#666;">(参考人数: ${Number(m.count) || 0})</small>`;
         document.getElementById('sp-rank').innerText = s.rank2Rate || '-';
         document.getElementById('sp-score').innerText = (s.score2Rate || 0).toFixed(2);
 
@@ -103,7 +115,7 @@
             const minIdx = ratios.indexOf(Math.min(...ratios));
             const maxSub = subjectLabels[maxIdx];
             const minSub = subjectLabels[minIdx];
-            document.getElementById('sp-diagnosis').innerHTML = `该校优势学科为 <strong style="color:#16a34a">${maxSub}</strong> (效能${ratios[maxIdx]})，相对薄弱学科为 <strong style="color:#dc2626">${minSub}</strong>。建议点击“班级对比”查看具体差异。`;
+            document.getElementById('sp-diagnosis').innerHTML = `该校优势学科为 <strong style="color:#16a34a">${escapeSchoolProfileHtml(maxSub)}</strong> (效能${ratios[maxIdx]})，相对薄弱学科为 <strong style="color:#dc2626">${escapeSchoolProfileHtml(minSub)}</strong>。建议点击“班级对比”查看具体差异。`;
         } else {
             document.getElementById('sp-diagnosis').innerHTML = '数据不足，无法诊断。';
         }
