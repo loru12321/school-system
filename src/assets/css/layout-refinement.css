@@ -1307,6 +1307,12 @@ body.dark-mode #dm-cloud-summary {
         display: none !important;
     }
 
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #module-subnav-dock,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #shell-module-rail-floating-shell,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) [data-shell-module-rail-shell="floating"] {
+        display: none !important;
+    }
+
     body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .app-main>.section {
         padding: 12px 12px 22px !important;
     }
@@ -1499,5 +1505,361 @@ body.dark-mode #dm-cloud-summary {
 
     body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .analysis-scan-note {
         display: none !important;
+    }
+}
+
+/* Workflow density pass: bring actions higher on the page without changing calculation surfaces. */
+@media screen and (min-width: 961px) {
+    .analysis-workspace .module-desc-bar.analysis-hero {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: 12px;
+    }
+
+    .analysis-workspace .module-desc-bar.analysis-hero h3,
+    .analysis-workspace .module-desc-bar.analysis-hero p,
+    .analysis-workspace .module-desc-bar.analysis-hero .analysis-scan-strip {
+        grid-column: 1;
+        grid-row: auto;
+    }
+
+    .analysis-workspace .module-desc-bar.analysis-hero .analysis-scan-strip {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 10px;
+        margin-top: 2px;
+    }
+
+    .analysis-workspace .analysis-scan-item {
+        min-height: 80px;
+        padding: 11px 13px !important;
+    }
+
+    .analysis-workspace .analysis-scan-note {
+        line-height: 1.42;
+    }
+}
+
+@media screen and (max-width: 960px) {
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .analysis-workspace .module-desc-bar.analysis-hero {
+        gap: 9px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .analysis-workspace .module-desc-bar.analysis-hero p {
+        margin-top: 2px !important;
+        line-height: 1.48 !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .analysis-workspace .analysis-scan-strip {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+        overflow: visible !important;
+        padding: 0 0 2px !important;
+        margin-top: 8px !important;
+        scroll-snap-type: none;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .analysis-workspace .analysis-scan-strip::-webkit-scrollbar {
+        display: none;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .analysis-workspace .analysis-scan-item {
+        flex: initial;
+        min-width: 0;
+        min-height: 64px !important;
+        padding: 9px 10px !important;
+        gap: 3px !important;
+        justify-content: center;
+        scroll-snap-align: none;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .analysis-workspace .analysis-scan-label {
+        font-size: 10px !important;
+        letter-spacing: 0.04em !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .analysis-workspace .analysis-scan-value {
+        font-size: 12px !important;
+        line-height: 1.25 !important;
+        overflow-wrap: anywhere;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .section.active .side-nav,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .analysis-side-toolbar,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .analysis-side-reveal {
+        display: none !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .analysis-results-layout,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .analysis-results-layout.is-side-collapsed {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 12px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #student-details .student-details-primary-flow,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #student-details .student-details-secondary-flow .analysis-inline-panel {
+        padding: 12px !important;
+        border-radius: 14px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #student-details .student-detail-mobile-card {
+        gap: 10px !important;
+        padding: 12px !important;
+        border-radius: 13px !important;
+        box-shadow: none !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #student-details .student-detail-mobile-meta-grid,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #student-details .student-detail-mobile-rank-grid,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #student-details .student-detail-mobile-subject-grid {
+        gap: 8px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #student-details .student-detail-mobile-info,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #student-details .student-detail-mobile-subject {
+        padding: 9px 10px !important;
+        border-radius: 12px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #student-details .student-detail-mobile-score-btn {
+        min-height: 30px !important;
+        padding: 0 9px !important;
+        font-size: 13px !important;
+    }
+}
+
+/* Upload workspace pass: keep the operational controls above explanatory material. */
+#upload.analysis-workspace-upload {
+    display: flex !important;
+    flex-direction: column;
+    gap: 14px;
+}
+
+#upload.analysis-workspace-upload > .module-desc-bar.analysis-hero {
+    order: 1;
+    margin-bottom: 0 !important;
+}
+
+#upload.analysis-workspace-upload > .analysis-shell-head {
+    order: 2;
+    margin-bottom: 0 !important;
+}
+
+#upload.analysis-workspace-upload > .upload-workbench-grid {
+    order: 3;
+    margin-top: 0 !important;
+}
+
+#upload.analysis-workspace-upload > .upload-intake-grid {
+    order: 4;
+    margin-top: 0 !important;
+}
+
+#upload.analysis-workspace-upload > #upload-feedback-board {
+    order: 5;
+    margin-top: 0 !important;
+}
+
+#upload.analysis-workspace-upload > #msg-box {
+    order: 6;
+}
+
+#upload.analysis-workspace-upload > #upload-summary-strip {
+    order: 7;
+    margin-top: 0 !important;
+}
+
+#upload.analysis-workspace-upload > #upload-flow-notice {
+    order: 8;
+    margin-top: 0 !important;
+}
+
+#upload.analysis-workspace-upload > .analysis-info-band {
+    order: 9;
+    margin-top: 0 !important;
+}
+
+#upload.analysis-workspace-upload > .analysis-doc-panel {
+    order: 10;
+    margin-top: 0 !important;
+}
+
+#upload.analysis-workspace-upload > .analysis-flow-banner {
+    order: 11;
+    margin-top: 0 !important;
+}
+
+#upload.analysis-workspace-upload > .upload-ops-grid {
+    order: 12;
+}
+
+@media screen and (min-width: 961px) {
+    #shell-overview {
+        margin-top: 10px !important;
+    }
+
+    #shell-overview .shell-overview-card--dock {
+        min-height: 112px !important;
+        padding: 16px 24px !important;
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 0.56fr) !important;
+        align-items: center;
+    }
+
+    #shell-overview .shell-overview-heading h2 {
+        font-size: clamp(28px, 2.25vw, 34px) !important;
+        line-height: 1.05 !important;
+    }
+
+    #shell-overview #shell-category-desc {
+        margin-top: 8px !important;
+    }
+
+    #shell-overview .shell-overview-context-row {
+        min-height: 52px !important;
+        padding: 8px 10px !important;
+        align-items: center;
+    }
+
+    #shell-overview .shell-overview-pills--dock span,
+    #shell-overview .shell-overview-launcher {
+        min-height: 36px !important;
+        padding: 0 14px !important;
+    }
+
+    #shell-overview #shell-module-rail-shell {
+        display: grid !important;
+        grid-template-columns: minmax(170px, 0.3fr) minmax(0, 1fr);
+        align-items: center;
+        gap: 12px;
+        margin-top: 10px !important;
+        padding: 10px 14px !important;
+    }
+
+    #shell-overview .shell-module-rail-meta {
+        margin-bottom: 0 !important;
+        align-items: center !important;
+    }
+
+    #shell-overview .shell-module-rail {
+        gap: 8px !important;
+    }
+
+    #shell-overview .shell-module-rail-chip {
+        min-height: 36px !important;
+        padding: 0 14px !important;
+    }
+
+    #upload.analysis-workspace-upload {
+        gap: 16px;
+    }
+
+    #upload.analysis-workspace-upload > .analysis-shell-head {
+        display: grid;
+        grid-template-columns: minmax(240px, 0.42fr) minmax(0, 1fr);
+        align-items: center;
+        gap: 16px;
+        padding: 16px 18px !important;
+    }
+
+    #upload.analysis-workspace-upload .analysis-action-stack {
+        align-items: end;
+    }
+
+    #upload.analysis-workspace-upload .analysis-action-note {
+        max-width: 620px;
+        margin-left: auto;
+    }
+}
+
+@media screen and (max-width: 960px) {
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) .app-main {
+        padding-top: calc(var(--app-safe-top) + 164px) !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload {
+        gap: 12px;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload > .analysis-shell-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+        padding: 12px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .analysis-action-stack {
+        gap: 8px;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .analysis-action-note {
+        display: none !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .analysis-actions {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .analysis-actions .btn {
+        min-height: 38px;
+        width: 100%;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload > .upload-workbench-grid,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload > .upload-intake-grid,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload > .upload-ops-grid {
+        gap: 12px !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-panel,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-drop-shell,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-intake-card {
+        border-radius: 14px !important;
+        box-shadow: none !important;
+        margin-top: 0 !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-panel {
+        padding: 12px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-panel::before {
+        left: 12px;
+        width: 42px;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-panel .sec-head {
+        padding: 10px !important;
+        margin-bottom: 10px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-panel .sec-head h2 {
+        font-size: 15px !important;
+        line-height: 1.3 !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-panel-meta,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-status-strip,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-status-row,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-flow-grid {
+        gap: 8px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-inline-card,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-field,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-history-field {
+        border-radius: 12px !important;
+        padding: 10px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-field-input {
+        min-height: 38px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-action-row {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 8px !important;
     }
 }
