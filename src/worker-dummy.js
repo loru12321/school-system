@@ -1,7 +1,6 @@
 import { handleGatewayRequest, handleManagedRestRequest } from './worker-gateway-d1.js';
 
 const DEFAULT_LEGACY_GATEWAY_ORIGIN = 'https://dpwsxxgojpqevzwyxrot.supabase.co';
-const DEFAULT_LEGACY_GATEWAY_API_KEY = 'sb_publishable_J7f2UEVGfHQ_89MR09KTNA_wKFRGZ86';
 const SYSTEM_DATA_PATH = '/sb/rest/v1/system_data';
 const SYSTEM_DATA_API_PATH = '/api/system-data';
 const SYSTEM_DATA_TABLE = 'cloud_system_data';
@@ -72,7 +71,6 @@ function getLegacyGatewayApiKey(env, request) {
     env.LEGACY_GATEWAY_API_KEY
     || env.LEGACY_SUPABASE_KEY
     || request.headers.get('apikey')
-    || DEFAULT_LEGACY_GATEWAY_API_KEY
   );
 }
 
@@ -907,7 +905,7 @@ export default {
         const gatewayDataBackend = shouldProxyManagedRestToSupabase(env)
           ? 'supabase'
           : (hasGatewayDataStorage(env) ? 'd1' : 'unavailable');
-        return new Response(JSON.stringify({
+        return jsonResponse(200, {
           ok: true,
           cloudSystemDataBackend,
           cloudSystemDataReady: cloudSystemDataBackend === 'supabase' ? hasSupabaseRestOrigin(env) : hasSystemDataStorage(env),
@@ -915,13 +913,7 @@ export default {
           gatewayDataBackend,
           gatewayDataReady: gatewayDataBackend === 'supabase' ? hasSupabaseRestOrigin(env) : hasGatewayDataStorage(env),
           gatewayAuthFallback: gatewayDataBackend === 'supabase' ? 'supabase-edge' : 'legacy-login-only'
-        }), {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-            'Cache-Control': 'no-store'
-          }
-        });
+        }, request, env);
       }
 
       if (url.pathname === '/api/edu-gateway' || url.pathname === '/api/edu_gateway') {

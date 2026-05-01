@@ -15,6 +15,7 @@ const serviceWorker = read('public/sw.js');
 
 assert.ok(!gateway.includes('internal_gateway_secret_v1_fallback'), 'gateway must not fall back to a static session secret');
 assert.ok(gateway.includes('throw new Error(\'APP_SESSION_SECRET_MISSING\')'), 'gateway must fail closed when APP_SESSION_SECRET is missing');
+assert.ok(!worker.includes('DEFAULT_LEGACY_GATEWAY_API_KEY'), 'worker must not fall back to a static legacy Supabase key');
 assert.ok(gateway.includes('DEFAULT_ALLOWED_CORS_ORIGINS'), 'gateway should keep an explicit CORS allowlist');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(gateway), 'gateway should not emit wildcard CORS');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(worker), 'worker should not emit wildcard CORS');
