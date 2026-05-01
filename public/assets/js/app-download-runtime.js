@@ -637,8 +637,55 @@
         };
     }
 
+    function isVerifiedReleaseAsset(asset) {
+        return !!(asset && asset.url && asset.name);
+    }
+
     function getLatestReleaseForChannel(channelKey, releases = state.releases) {
-        return ensureArray(releases).find((release) => release?.assets?.[channelKey]) || ensureArray(releases)[0] || null;
+        return ensureArray(releases).find((release) => isVerifiedReleaseAsset(release?.assets?.[channelKey])) || null;
+    }
+
+    function shouldUseFallbackDownloadLink() {
+        return !!state.lastError || !state.lastFetchedAt || !state.releases.length;
+    }
+
+    function getDownloadAssetModel(channelKey, channel = getChannel(channelKey)) {
+        const latestRelease = getLatestReleaseForChannel(channelKey);
+        const latestAsset = latestRelease?.assets?.[channelKey];
+        if (isVerifiedReleaseAsset(latestAsset)) {
+            return {
+                ok: true,
+                verified: true,
+                release: latestRelease,
+                url: latestAsset.url,
+                name: latestAsset.name,
+                size: Number(latestAsset.size || 0),
+                label: 'Release 资产可用',
+                note: `${latestRelease.tag || 'latest'} 已包含 ${latestAsset.name}`
+            };
+        }
+        if (shouldUseFallbackDownloadLink()) {
+            return {
+                ok: true,
+                verified: false,
+                release: null,
+                url: channel.url,
+                name: channel.fileName,
+                size: 0,
+                label: '等待线上校验',
+                note: state.lastError ? 'Release 读取失败，暂用固定下载入口。' : '点击检查更新后会校验真实资产。'
+            };
+        }
+        return {
+            ok: false,
+            verified: false,
+            release: null,
+            url: '',
+            name: channel.fileName,
+            size: 0,
+            label: '下载资产缺失',
+            note: '最新公开 release 未包含当前平台安装包，已暂停直达下载。'
+        };
     }
 
     function getDateToken(value) {
@@ -860,6 +907,7 @@
         const runtimeBuild = getBuildInfo(runtimeChannel);
         const status = getStatusModel(runtimeBuild);
         const latestSelected = getLatestReleaseForChannel(downloadChannelKey);
+        const assetModel = getDownloadAssetModel(downloadChannelKey);
         const latestTag = latestSelected?.tag || '等待读取';
 
         grid.innerHTML = [
@@ -879,6 +927,12 @@
                 copy: latestSelected
                     ? `${formatDate(latestSelected.date)} 发布`
                     : (state.lastError ? '线上 release 读取失败，可稍后重试。' : '点击检查更新读取 GitHub release。')
+            },
+            {
+                label: '下载资产',
+                value: assetModel.label,
+                copy: assetModel.note,
+                tone: assetModel.ok ? (assetModel.verified ? 'success' : 'neutral') : 'warning'
             },
             {
                 label: '更新状态',
@@ -1022,23 +1076,22 @@
         if (!specGrid) return;
 
         const latestRelease = getLatestReleaseForChannel(channel.key);
+        const assetModel = getDownloadAssetModel(channel.key, channel);
         const specs = [
             {
                 label: '当前下载链接',
-                value: latestRelease?.assets?.[channel.key]?.url || channel.url,
+                value: assetModel.url || '当前平台 release 资产缺失',
                 code: true,
-                copyValue: latestRelease?.assets?.[channel.key]?.url || channel.url,
-                copyLabel: '复制链接'
+                copyValue: assetModel.url,
+                copyLabel: assetModel.url ? '复制链接' : ''
             },
             {
                 label: '当前文件名',
-                value: latestRelease?.assets?.[channel.key]?.name || channel.fileName
+                value: assetModel.name || channel.fileName
             },
             {
                 label: '当前文件大小',
-                value: latestRelease?.assets?.[channel.key]?.size
-                    ? formatSize(latestRelease.assets[channel.key].size)
-                    : '通过 latest 链接分发'
+                value: assetModel.size ? formatSize(assetModel.size) : assetModel.label
             },
             {
                 label: '最新发布日期',
@@ -1077,19 +1130,19 @@
 
     function bindActions(root, channel) {
         const latestRelease = getLatestReleaseForChannel(channel.key);
-        const latestAsset = latestRelease?.assets?.[channel.key];
+        const assetModel = getDownloadAssetModel(channel.key, channel);
         const primaryLink = root.querySelector('#app-download-primary-link');
         const secondaryLink = root.querySelector('#app-download-secondary-link');
         const releaseLink = root.querySelector('#app-download-release-link');
         const copyButton = root.querySelector('#app-download-copy-link');
         const linkInput = root.querySelector('#app-download-link-input');
         const digestButton = root.querySelector('#app-download-copy-checksum');
-        const assetUrl = resolveUrl(latestAsset?.url || channel.url);
-        const assetName = latestAsset?.name || channel.fileName;
+        const assetUrl = resolveUrl(assetModel.url);
+        const assetName = assetModel.name || channel.fileName;
 
         applyActionLink(primaryLink, assetUrl, {
             downloadName: assetName,
-            labelHtml: `<i class="ti ti-download"></i> ${escapeHtml(channel.primaryActionLabel)}`
+            labelHtml: `<i class="ti ti-download"></i> ${escapeHtml(assetModel.ok ? channel.primaryActionLabel : '暂无可用安装包')}`
         });
         applyActionLink(secondaryLink, assetUrl, {
             downloadName: assetName,
@@ -1213,7 +1266,7 @@
         const runtimeBuild = getBuildInfo(detectRuntimeChannel());
         const status = getStatusModel(runtimeBuild);
         const latestRelease = getLatestReleaseForChannel(state.modalPlatform) || buildFallbackRelease();
-        const latestAsset = latestRelease?.assets?.[state.modalPlatform];
+        const assetModel = getDownloadAssetModel(state.modalPlatform, channel);
         const platformsWrap = backdrop.querySelector('[data-version-center-platforms]');
         const statusWrap = backdrop.querySelector('[data-version-center-status]');
         const latestWrap = backdrop.querySelector('[data-version-center-latest]');
@@ -1292,12 +1345,12 @@
                             <div><span>最新版本</span><strong>${escapeHtml(latestRelease?.tag || '等待检查更新')}</strong></div>
                             <div><span>Android 版本</span><strong>${escapeHtml(getReleaseVersionLine(latestRelease, 'android') || '未记录')}</strong></div>
                             <div><span>Windows 版本</span><strong>${escapeHtml(getReleaseVersionLine(latestRelease, 'desktop') || '未记录')}</strong></div>
-                            <div><span>下载文件</span><strong>${escapeHtml(latestAsset?.name || channel.fileName)}</strong></div>
-                            <div><span>文件大小</span><strong>${escapeHtml(latestAsset?.size ? formatSize(latestAsset.size) : '通过 latest 链接分发')}</strong></div>
+                            <div><span>下载文件</span><strong>${escapeHtml(assetModel.name || channel.fileName)}</strong></div>
+                            <div><span>文件大小</span><strong>${escapeHtml(assetModel.size ? formatSize(assetModel.size) : assetModel.label)}</strong></div>
                         </div>
                         <div class="version-center-inline-actions">
-                            <a class="btn btn-blue" href="${escapeHtml(latestAsset?.url || channel.url)}" download="${escapeHtml(latestAsset?.name || channel.fileName)}"><i class="ti ti-download"></i> 下载当前平台</a>
-                            <button type="button" class="btn btn-gray" data-version-center-copy="${escapeHtml(latestAsset?.url || channel.url)}"><i class="ti ti-link"></i> 复制链接</button>
+                            <a class="btn btn-blue${assetModel.ok ? '' : ' is-disabled'}" ${assetModel.url ? `href="${escapeHtml(assetModel.url)}" download="${escapeHtml(assetModel.name || channel.fileName)}"` : 'aria-disabled="true" tabindex="-1"'}><i class="ti ti-download"></i> ${assetModel.ok ? '下载当前平台' : '暂无可用安装包'}</a>
+                            <button type="button" class="btn btn-gray" data-version-center-copy="${escapeHtml(assetModel.url)}" ${assetModel.url ? '' : 'disabled'}><i class="ti ti-link"></i> 复制链接</button>
                         </div>
                     </article>
                     <article class="version-center-latest-card">

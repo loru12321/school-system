@@ -6,6 +6,11 @@ const PBKDF2_SCHEME = 'pbkdf2-sha256';
 const GATEWAY_PATHS = ['/functions/v1/edu-gateway-v2', '/functions/v1/edu-gateway'];
 const PROXY_TIMEOUT_MS = 15000;
 const REST_META_KEYS = new Set(['select', 'order', 'limit', 'offset', 'or']);
+const DEFAULT_ALLOWED_CORS_ORIGINS = [
+  'https://schoolsystem.com.cn',
+  'https://www.schoolsystem.com.cn',
+  'https://school-system.hkakjiweu.workers.dev'
+];
 
 const textEncoder = new TextEncoder();
 
@@ -34,13 +39,42 @@ function getGatewayDb(env) {
   return env.GATEWAY_DATA_DB || null;
 }
 
-function buildCorsHeaders(request) {
+function getAllowedCorsOrigins(env = {}) {
+  const configured = normalizeText(env.ALLOWED_CORS_ORIGINS)
+    .split(',')
+    .map((item) => normalizeOrigin(item))
+    .filter(Boolean);
+  return new Set([...DEFAULT_ALLOWED_CORS_ORIGINS, ...configured]);
+}
+
+function isLocalDevelopmentOrigin(origin) {
+  try {
+    const url = new URL(origin);
+    return ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function resolveCorsOrigin(request, env = {}) {
   const origin = request.headers.get('Origin');
+  const normalizedOrigin = normalizeOrigin(origin);
+  if (!normalizedOrigin || normalizedOrigin === 'null') return DEFAULT_ALLOWED_CORS_ORIGINS[0];
+  if (getAllowedCorsOrigins(env).has(normalizedOrigin)) return normalizedOrigin;
+  if (isLocalDevelopmentOrigin(normalizedOrigin)) return normalizedOrigin;
+  try {
+    if (normalizedOrigin === new URL(request.url).origin) return normalizedOrigin;
+  } catch {}
+  return DEFAULT_ALLOWED_CORS_ORIGINS[0];
+}
+
+function buildCorsHeaders(request, env = {}) {
   return {
-    'Access-Control-Allow-Origin': (origin && origin !== 'null') ? origin : '*',
+    'Access-Control-Allow-Origin': resolveCorsOrigin(request, env),
     'Access-Control-Allow-Headers': request.headers.get('Access-Control-Request-Headers') || 'authorization, apikey, content-type, x-client-info',
     'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
-    'Access-Control-Max-Age': '86400'
+    'Access-Control-Max-Age': '86400',
+    'Vary': 'Origin'
   };
 }
 
@@ -48,6 +82,8 @@ function jsonResponse(status, body, request, extraHeaders = {}) {
   const headers = buildCorsHeaders(request);
   headers['Content-Type'] = 'application/json; charset=utf-8';
   headers['Cache-Control'] = 'no-store';
+  headers['X-Content-Type-Options'] = 'nosniff';
+  headers['X-School-System-Gateway'] = 'cloudflare-d1-gateway';
   Object.entries(extraHeaders || {}).forEach(([key, value]) => {
     headers[key] = value;
   });
@@ -112,10 +148,9 @@ async function importHmacKey(secret) {
 }
 
 async function signLocalSession(env, payload) {
-  let secret = normalizeText(env.APP_SESSION_SECRET);
+  const secret = normalizeText(env.APP_SESSION_SECRET);
   if (!secret) {
-    console.warn('APP_SESSION_SECRET_MISSING, using internal fallback');
-    secret = 'internal_gateway_secret_v1_fallback';
+    throw new Error('APP_SESSION_SECRET_MISSING');
   }
   const header = { alg: 'HS256', typ: 'JWT' };
   const encodedHeader = toBase64Url(JSON.stringify(header));
@@ -127,10 +162,9 @@ async function signLocalSession(env, payload) {
 }
 
 async function verifyLocalSession(env, token) {
-  let secret = normalizeText(env.APP_SESSION_SECRET);
+  const secret = normalizeText(env.APP_SESSION_SECRET);
   if (!secret) {
-    console.warn('APP_SESSION_SECRET_MISSING, using internal fallback for verification');
-    secret = 'internal_gateway_secret_v1_fallback';
+    return null;
   }
   const parts = String(token || '').split('.');
   if (parts.length !== 3) return null;

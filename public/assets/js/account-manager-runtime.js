@@ -39,6 +39,24 @@
         return true;
     }
 
+    function escapeHtml(value) {
+        const runtimeEscape = root.SchoolRuntime && typeof root.SchoolRuntime.escapeHtml === 'function'
+            ? root.SchoolRuntime.escapeHtml
+            : null;
+        if (runtimeEscape) return runtimeEscape(value);
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[char]));
+    }
+
+    function escapeJsString(value) {
+        return String(value ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, ' ');
+    }
+
     function getCurrentUser() {
         if (!root.Auth || typeof root.Auth !== 'object') return null;
         return root.Auth.currentUser || null;
@@ -167,16 +185,16 @@
             const btnClass = canEdit ? 'btn-primary' : 'btn-gray';
             const cursorStyle = canEdit ? '' : 'cursor:not-allowed; opacity:0.6;';
             const disableAttr = canEdit ? '' : 'disabled';
-            const safeUser = String(user.username || '').replace(/'/g, "\\'");
-            const safeRole = String(user.role || '');
-            const safeClass = String(user.class_name || '').replace(/'/g, "\\'");
+            const safeUser = escapeJsString(user.username || '');
+            const safeRole = escapeJsString(user.role || '');
+            const safeClass = escapeJsString(user.class_name || '');
 
             html += `
                     <tr>
-                        <td style="font-weight:bold;">${user.username || ''}</td>
-                        <td><span class="badge" style="background:#e0f2fe; color:#0369a1;">${roleName}</span></td>
-                        <td>${user.class_name || '-'}</td>
-                        <td style="font-family:monospace; color:#666;">${user.password_display || '未设置'}</td>
+                        <td style="font-weight:bold;">${escapeHtml(user.username || '')}</td>
+                        <td><span class="badge" style="background:#e0f2fe; color:#0369a1;">${escapeHtml(roleName)}</span></td>
+                        <td>${escapeHtml(user.class_name || '-')}</td>
+                        <td style="font-family:monospace; color:#666;">${escapeHtml(user.password_display || '未设置')}</td>
                         <td>
                             <button class="btn btn-sm btn-purple" ${disableAttr} style="padding:2px 6px; font-size:12px; margin-right:5px; ${cursorStyle}"
                                     onclick="AccountManager.editAttributes('${safeUser}', '${safeRole}', '${safeClass}')">
@@ -210,7 +228,7 @@
         ].map((option) => `<option value="${option.val}" ${option.val === currentRole ? 'selected' : ''}>${option.txt}</option>`).join('');
 
         const result = await swal.fire({
-            title: `修改账号信息：${username}`,
+            title: `修改账号信息：${String(username || '')}`,
             html: `
                     <div style="text-align:left; font-size:14px;">
                         <label style="display:block; margin-bottom:5px; font-weight:bold;">角色权限</label>
@@ -221,7 +239,7 @@
                         <label style="display:block; margin-bottom:5px; font-weight:bold;">
                             班级 / 范围 <small style="color:#666; font-weight:normal;">(教师留空, 家长填班级, 主任填年级)</small>
                         </label>
-                        <input id="swal-edit-class" class="swal2-input" value="${currentClass}" placeholder="例如: 901 或 9" style="margin:0; width:100%; font-size:14px;">
+                        <input id="swal-edit-class" class="swal2-input" value="${escapeHtml(currentClass)}" placeholder="例如: 901 或 9" style="margin:0; width:100%; font-size:14px;">
                     </div>
                 `,
             showCancelButton: true,

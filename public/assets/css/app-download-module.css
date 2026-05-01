@@ -5,6 +5,13 @@
     margin-bottom: 18px;
 }
 
+#app-download-center .is-disabled,
+.version-center-dialog .is-disabled {
+    pointer-events: none;
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
 #app-download-center .app-download-hero-panel {
     position: relative;
     overflow: hidden;

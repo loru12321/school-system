@@ -281,7 +281,8 @@ assert.ok(!deferredVendorManifest.includes(tippyVendorRef), 'tippy should not be
 assert.ok(!deferredVendorManifest.includes(simplebarVendorRef), 'simplebar should not be part of the generic post-boot vendor batch');
 assert.ok(bootRuntime.includes('window.__BOOT_SCRIPT_REGISTRY__'), 'boot-runtime.js should cache boot script lookup state');
 assert.ok(bootRuntime.includes('function isBootScriptLoaded'), 'boot-runtime.js should reuse cached script load checks');
-assert.ok(bootRuntime.includes("'shell-polish': {\n        mode: 'idle',\n        warmup: 'balanced'"), 'shell polish should load after the core workbench is ready');
+assert.ok(bootRuntime.includes("'shell-polish': {\n        mode: 'idle',\n        warmup: 'demand'"), 'shell polish should stay behind the on-demand runtime loader');
+assert.ok(bootRuntime.includes('window.ensureShellPolishRuntimeLoaded'), 'shell polish should still expose an explicit loader');
 const authStateIndex = moduleManifest.indexOf(authStateRef);
 const workspaceStateIndex = moduleManifest.indexOf(workspaceStateRef);
 const examStateIndex = moduleManifest.indexOf(examStateRef);

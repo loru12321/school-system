@@ -1142,8 +1142,9 @@ async function smokeDataManagerTab(page, id) {
     });
 
     page.on('response', response => {
-        if (response.status() !== 404) return;
-        const message = `404 ${response.url()}`;
+        const status = response.status();
+        if (status < 400) return;
+        const message = `${status} ${response.url()}`;
         if (shouldIgnoreConsoleMessage(message, {
             smokeUrl: process.env.SMOKE_URL || 'https://schoolsystem.com.cn/',
             recentFailedRequests

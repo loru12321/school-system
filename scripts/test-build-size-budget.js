@@ -16,11 +16,11 @@ function getSize(filePath) {
 
 const budgets = {
     // 2026-03-24 baseline plus a small amount of regression headroom.
-    distIndexHtml: 410_000,
-    ltHtml: 4_700_000,
-    distAppJs: 800_000,
-    distReportRenderJs: 74_000,
-    distTeacherAnalysisJs: 103_000
+    distIndexHtml: 330_000,
+    ltHtml: 3_900_000,
+    distAppJs: 650_000,
+    distReportRenderJs: 68_000,
+    distTeacherAnalysisJs: 72_000
 };
 
 const actual = {
@@ -36,5 +36,10 @@ const failures = Object.entries(actual)
     .map(([key, size]) => `${key} exceeds budget: ${size} > ${budgets[key]}`);
 
 assert.deepStrictEqual(failures, [], failures.join('\n'));
+assert.strictEqual(
+    fs.existsSync(path.join(projectRoot, 'dist', 'downloads')),
+    false,
+    'dist/downloads should be pruned from production assets; app downloads are verified through release assets'
+);
 
 console.log('build-size-budget tests passed');

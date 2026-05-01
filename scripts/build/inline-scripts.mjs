@@ -51,11 +51,6 @@ function normalizeStyle(content) {
     return String(content || '').replace(/\r\n/g, '\n');
 }
 
-// Fix synchronization issues
-function applySyncFixes(content) {
-    return content.replace(/if\s*\(\s*res\.success\s*&&\s*res\.count\s*>\s*0\s*\)/g, 'if (res.success)');
-}
-
 function resolvePublicScriptPath(projectRoot, src) {
     const relativeSrc = src.replace(/^(\.\/|\/)/, '').split('?')[0].split('#')[0];
     return path.join(projectRoot, 'public', relativeSrc);
@@ -78,9 +73,7 @@ function readLocalScriptContent(projectRoot, src) {
         return '';
     }
 
-    let content = fs.readFileSync(sourcePath, 'utf-8');
-    content = applySyncFixes(content);
-    return normalizeScript(content);
+    return normalizeScript(fs.readFileSync(sourcePath, 'utf-8'));
 }
 
 function readLocalStyleContent(projectRoot, href) {

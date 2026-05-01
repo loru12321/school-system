@@ -49,7 +49,7 @@ self.addEventListener('fetch', event => {
     }
 
     if (isApiRequest(url.pathname)) {
-        event.respondWith(networkFirstApi(request));
+        event.respondWith(networkFirstApi(request, url));
         return;
     }
 
@@ -85,10 +85,10 @@ async function cacheFirstStatic(request) {
     }
 }
 
-async function networkFirstApi(request) {
+async function networkFirstApi(request, url) {
     try {
         const response = await fetch(request);
-        if (isCacheable(response)) {
+        if (isCacheable(response) && isApiCacheEligible(url)) {
             const cache = await caches.open(API_CACHE);
             cache.put(request, response.clone());
         }
@@ -148,10 +148,14 @@ function isApiRequest(pathname) {
     return pathname.includes('/api/') || pathname.includes('/rest/');
 }
 
+function isApiCacheEligible(url) {
+    const pathname = String(url && url.pathname || '');
+    if (pathname === '/api/health') return true;
+    return false;
+}
+
 self.addEventListener('sync', event => {
     if (event.tag === 'sync-data') {
         event.waitUntil(Promise.resolve());
     }
 });
-
-console.log('[SW] loaded');

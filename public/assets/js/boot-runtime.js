@@ -1,5 +1,5 @@
 var DIRECT_SUPABASE_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co';
-var DIRECT_SUPABASE_KEY = 'sb_publishable_J7f2UEVGfHQ_89MR09KTNA_wKFRGZ86';
+var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
@@ -102,7 +102,7 @@ var SYSTEM_RUNTIME_SKILLS = {
     },
     'shell-polish': {
         mode: 'idle',
-        warmup: 'balanced',
+        warmup: 'demand',
         triggers: ['shell-polish', 'refreshShellEnhancements'],
         entries: [
             { key: 'shell-polish', src: './assets/js/shell-polish-runtime.js' }
@@ -341,6 +341,12 @@ var SYSTEM_RUNTIME_SKILLS = {
         ]
     }
 };
+
+if (window.SchoolRuntime && typeof window.SchoolRuntime.registerSkill === 'function') {
+    Object.keys(SYSTEM_RUNTIME_SKILLS).forEach(function (skillId) {
+        window.SchoolRuntime.registerSkill(skillId, SYSTEM_RUNTIME_SKILLS[skillId]);
+    });
+}
 
 function getLoadedSweetAlertVendor() {
     const swal = window.Swal;
@@ -1017,7 +1023,10 @@ function shouldUseSameOriginSupabaseProxy() {
     if (!window.location) return false;
     var protocol = String(window.location.protocol || '').trim().toLowerCase();
     if (protocol !== 'https:' && protocol !== 'http:') return false;
-    return !isLocalSupabaseHost(window.location.hostname);
+    if (isLocalSupabaseHost(window.location.hostname)) {
+        return getBootStorageValue('SUPABASE_DIRECT_LOCAL') !== 'true';
+    }
+    return true;
 }
 
 function shouldUseSameOriginCloudProxy() {
@@ -1137,6 +1146,9 @@ function getCloudflareRestBaseUrl() {
         && /^(https?:)$/i.test(String(window.location.protocol || '').trim())
         && isLocalSupabaseHost(window.location.hostname)
     ) {
+        if (shouldUseSameOriginSupabaseProxy()) {
+            return normalizeProxyOrigin(window.location.origin) + '/sb/rest/v1';
+        }
         return normalizeProxyOrigin(DIRECT_SUPABASE_URL) + '/rest/v1';
     }
     var proxyOrigin = getSupabaseProxyOrigin();
@@ -1603,6 +1615,14 @@ window.initCloudClient();
             pushCandidate(DIRECT_EDGE_GATEWAY_URL);
             return candidates;
         },
+        isHostedGatewayUrl(url) {
+            try {
+                const parsed = new URL(url, window.location.href);
+                return parsed.origin === window.location.origin || parsed.pathname === '/api/edu-gateway';
+            } catch (_) {
+                return false;
+            }
+        },
         getGatewayUrl() {
             return this.getGatewayCandidates()[0] || '';
         },
@@ -1627,7 +1647,8 @@ window.initCloudClient();
             sessionStorage.removeItem(this.userStorageKey);
         },
         hasGatewayConfig() {
-            return !!(this.getGatewayUrl() && this.getPublishableKey());
+            const urls = this.getGatewayCandidates();
+            return !!(urls.length && (this.getPublishableKey() || urls.some((url) => this.isHostedGatewayUrl(url))));
         },
         shouldRetryRequest(status, message) {
             if (status === 404 || status >= 500) return true;
@@ -1640,13 +1661,13 @@ window.initCloudClient();
         async request(action, payload = {}, options = {}) {
             const urls = this.getGatewayCandidates();
             const apikey = this.getPublishableKey();
-            if (!urls.length || !apikey) {
+            if (!urls.length || (!apikey && !urls.some((url) => this.isHostedGatewayUrl(url)))) {
                 throw new Error('EDGE_GATEWAY_NOT_CONFIGURED');
             }
             const headers = {
-                'Content-Type': 'application/json',
-                'apikey': apikey
+                'Content-Type': 'application/json'
             };
+            if (apikey) headers.apikey = apikey;
             const token = options.allowAnonymous ? '' : (options.token || this.getToken());
             if (!options.allowAnonymous) {
                 if (!token) throw new Error('EDGE_GATEWAY_SESSION_MISSING');
