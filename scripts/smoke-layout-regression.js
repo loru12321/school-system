@@ -90,6 +90,21 @@ async function openStudentDetailsModule(page) {
     await page.waitForTimeout(500);
 }
 
+async function openReportGeneratorModule(page) {
+    await openModule(page, 'report-generator');
+    await page.evaluate(() => {
+        if (typeof window.updateSchoolSelect === 'function') window.updateSchoolSelect();
+        if (typeof window.updateReportCompareExamSelects === 'function') window.updateReportCompareExamSelects();
+    }).catch(() => {});
+    await page.waitForFunction(() => {
+        const section = document.getElementById('report-generator');
+        const school = document.getElementById('sel-school');
+        const name = document.getElementById('inp-name');
+        return !!section && !!school && !!name && section.classList.contains('active');
+    }, null, { timeout: 45000 });
+    await page.waitForTimeout(500);
+}
+
 async function ensureMobileShell(page) {
     await page.evaluate(() => window.ensureMobileManagerRuntimeLoaded?.()).catch(() => {});
     await page.evaluate(() => window.MobileQueryUI?.refresh?.()).catch(() => {});
@@ -309,6 +324,25 @@ async function inspectStudentDetailsLayout(page, mode) {
     });
 }
 
+async function inspectReportGeneratorLayout(page, mode) {
+    return inspectSectionLayout(page, mode, {
+        sectionId: 'report-generator',
+        targetSelector: '#report-generator .report-query-panel',
+        requiredSelectors: {
+            queryCopy: '#report-generator .report-query-copy',
+            queryPanel: '#report-generator .report-query-panel',
+            schoolSelect: '#sel-school',
+            classSelect: '#sel-class',
+            nameInput: '#inp-name',
+            comparePanel: '#report-generator .analysis-inline-panel',
+            comparePeriod: '#reportComparePeriodCount',
+            compareExam1: '#reportCompareExam1',
+            resultSlot: '#single-report-result',
+            marginalSelect: '#marginalSchoolSelect'
+        }
+    });
+}
+
 function assertSectionLayout(state, label) {
     assert.ok(state.sectionActive, `${state.mode} ${label} section is not active`);
     for (const [key, exists] of Object.entries(state.requiredPieces)) {
@@ -334,6 +368,10 @@ function assertUploadLayout(state) {
 
 function assertStudentDetailsLayout(state) {
     assertSectionLayout(state, 'student-details');
+}
+
+function assertReportGeneratorLayout(state) {
+    assertSectionLayout(state, 'report-generator');
 }
 
 async function openDataManager(page, tab = 'student') {
@@ -512,6 +550,9 @@ async function main() {
     await openStudentDetailsModule(desktopPage);
     const desktopStudentState = await inspectStudentDetailsLayout(desktopPage, 'desktop');
     assertStudentDetailsLayout(desktopStudentState);
+    await openReportGeneratorModule(desktopPage);
+    const desktopReportState = await inspectReportGeneratorLayout(desktopPage, 'desktop');
+    assertReportGeneratorLayout(desktopReportState);
     const desktopDataManagerState = await inspectDataManagerLayout(desktopPage, 'desktop', 'student');
     assertDataManagerLayout(desktopDataManagerState, 'student');
     await desktopPage.close();
@@ -530,6 +571,9 @@ async function main() {
     await openStudentDetailsModule(mobilePage);
     const mobileStudentState = await inspectStudentDetailsLayout(mobilePage, 'mobile');
     assertStudentDetailsLayout(mobileStudentState);
+    await openReportGeneratorModule(mobilePage);
+    const mobileReportState = await inspectReportGeneratorLayout(mobilePage, 'mobile');
+    assertReportGeneratorLayout(mobileReportState);
     const mobileDataManagerState = await inspectDataManagerLayout(mobilePage, 'mobile', 'student');
     assertDataManagerLayout(mobileDataManagerState, 'student');
     await mobilePage.close();
@@ -545,9 +589,11 @@ async function main() {
     console.log(JSON.stringify({
         desktopState,
         desktopStudentState,
+        desktopReportState,
         desktopDataManagerState,
         mobileState,
         mobileStudentState,
+        mobileReportState,
         mobileDataManagerState,
         actionableMessages
     }, null, 2));

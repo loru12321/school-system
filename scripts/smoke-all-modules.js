@@ -947,11 +947,30 @@ async function runModuleDeepCheck(page, id) {
                 return { ok: false, checks };
             }
 
-            const schools = Object.keys(window.SCHOOLS || {});
-            const school = schools[0] || '';
-            const student = school ? (window.SCHOOLS?.[school]?.students?.[0] || null) : null;
+            if (typeof window.updateSchoolSelect === 'function') window.updateSchoolSelect();
+            if (typeof window.updateReportCompareExamSelects === 'function') window.updateReportCompareExamSelects();
+
+            const schoolOptions = Array.from(schoolSelect.options || [])
+                .map(option => String(option.value || '').trim())
+                .filter(Boolean);
+            let school = '';
+            let student = null;
+            for (const optionSchool of schoolOptions) {
+                const candidate = (window.SCHOOLS?.[optionSchool]?.students || [])
+                    .find(item => item && String(item.name || '').trim());
+                if (candidate) {
+                    school = optionSchool;
+                    student = candidate;
+                    break;
+                }
+            }
             if (!school || !student || !schoolSelect || !classSelect || !nameInput) {
-                return { ok: false, checks, error: 'report form or sample student unavailable' };
+                return {
+                    ok: false,
+                    checks,
+                    error: 'report form or selectable sample student unavailable',
+                    schoolOptions
+                };
             }
 
             schoolSelect.value = school;
@@ -972,7 +991,13 @@ async function runModuleDeepCheck(page, id) {
                 ok: Object.values(checks).every(Boolean) && reportVisible && contentReady,
                 checks,
                 reportVisible,
-                contentReady
+                contentReady,
+                sampleStudent: {
+                    school,
+                    className: student.class || '',
+                    name: student.name || ''
+                },
+                contentLength: capture ? String(capture.innerHTML || '').trim().length : 0
             };
         });
     }
@@ -1223,7 +1248,7 @@ async function smokeDataManagerTab(page, id) {
             )
             : { ok: false, skipped: true };
         const normalizedDeepCheck = (deepCheck && deepCheck.checks && Object.values(deepCheck.checks).every(Boolean))
-            ? { ...deepCheck, ok: true }
+            ? { ...deepCheck, ok: deepCheck.ok !== false }
             : deepCheck;
         trace('deep-check:done', { id, ok: normalizedDeepCheck.ok, error: normalizedDeepCheck.error || null });
         const normalizedSwitchResult = (!switchResult.ok && allowDeepCheckWithoutVisibleSwitch && normalizedDeepCheck.ok)
