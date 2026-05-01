@@ -1501,3 +1501,216 @@ body.dark-mode #dm-cloud-summary {
         display: none !important;
     }
 }
+
+/* Safe density pass: compact only chrome and descriptive blocks; module flow and logic stay unchanged. */
+@media screen and (min-width: 961px) {
+    #shell-overview {
+        margin-top: 10px !important;
+    }
+
+    #shell-overview .shell-overview-card--dock {
+        min-height: 124px !important;
+        padding: 16px 22px !important;
+        align-items: center;
+    }
+
+    #shell-overview .shell-overview-heading h2 {
+        font-size: clamp(28px, 2.1vw, 34px) !important;
+        line-height: 1.05 !important;
+    }
+
+    #shell-overview #shell-category-desc {
+        margin-top: 8px !important;
+        line-height: 1.45 !important;
+    }
+
+    #shell-overview .shell-overview-context-row {
+        min-height: 54px !important;
+        padding: 8px 10px !important;
+    }
+
+    #shell-overview .shell-overview-pills--dock span,
+    #shell-overview .shell-overview-launcher {
+        min-height: 36px !important;
+        padding: 0 13px !important;
+    }
+
+    #shell-overview #shell-module-rail-shell {
+        margin-top: 10px !important;
+        padding: 10px 14px !important;
+    }
+
+    #shell-overview .shell-module-rail-meta {
+        margin-bottom: 8px !important;
+    }
+
+    #shell-overview .shell-module-rail-chip {
+        min-height: 36px !important;
+        padding: 0 14px !important;
+    }
+
+    #upload.analysis-workspace-upload .module-desc-bar.analysis-hero {
+        padding: 18px 22px !important;
+        row-gap: 8px !important;
+    }
+
+    #upload.analysis-workspace-upload .module-desc-bar.analysis-hero p {
+        margin-top: 4px !important;
+        line-height: 1.52 !important;
+    }
+
+    #upload.analysis-workspace-upload .analysis-scan-strip {
+        gap: 8px !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+
+    #upload.analysis-workspace-upload .analysis-scan-item {
+        min-height: 68px !important;
+        padding: 10px 12px !important;
+    }
+
+    #upload.analysis-workspace-upload .analysis-scan-note {
+        display: none !important;
+    }
+
+    #upload.analysis-workspace-upload .analysis-shell-head {
+        padding: 14px 16px !important;
+    }
+
+    #upload.analysis-workspace-upload .analysis-action-note {
+        max-width: 620px;
+        padding: 8px 10px !important;
+        line-height: 1.45 !important;
+    }
+
+    #upload.analysis-workspace-upload .analysis-info-band,
+    #upload.analysis-workspace-upload .upload-flow-notice {
+        min-height: 38px !important;
+        padding: 8px 12px !important;
+        margin-top: 10px !important;
+    }
+
+    #upload.analysis-workspace-upload .analysis-doc-panel {
+        display: none !important;
+    }
+
+    #upload.analysis-workspace-upload .analysis-flow-banner {
+        margin-top: 10px !important;
+        padding: 10px !important;
+        gap: 8px !important;
+    }
+
+    #upload.analysis-workspace-upload .analysis-flow-step {
+        min-height: 0 !important;
+        padding: 9px 10px !important;
+    }
+
+    #upload.analysis-workspace-upload .analysis-flow-note {
+        display: none !important;
+    }
+
+    #upload.analysis-workspace-upload .upload-summary-strip {
+        gap: 8px !important;
+        margin-top: 10px !important;
+    }
+
+    #upload.analysis-workspace-upload .upload-summary-card {
+        min-height: 74px !important;
+        padding: 10px 12px !important;
+        border-radius: 14px !important;
+    }
+
+    #upload.analysis-workspace-upload .upload-summary-card strong {
+        margin-top: 8px !important;
+    }
+}
+
+@media screen and (max-width: 960px) {
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #module-subnav-dock {
+        display: none !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .module-desc-bar.analysis-hero {
+        gap: 8px !important;
+        padding: 12px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .module-desc-bar.analysis-hero p {
+        margin-top: 2px !important;
+        line-height: 1.42 !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .analysis-scan-strip {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+        margin-top: 8px !important;
+        overflow: visible !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .analysis-scan-item {
+        min-width: 0 !important;
+        min-height: 60px !important;
+        padding: 8px 9px !important;
+        justify-content: center;
+        gap: 3px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .analysis-scan-label {
+        font-size: 10px !important;
+        letter-spacing: 0.03em !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .analysis-scan-value {
+        font-size: 12px !important;
+        line-height: 1.25 !important;
+        overflow-wrap: anywhere;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .analysis-shell-head,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .analysis-info-band,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .analysis-flow-banner,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-summary-strip,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-flow-notice {
+        margin-top: 10px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .analysis-action-note,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .analysis-doc-panel,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .analysis-flow-note {
+        display: none !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .analysis-shell-head {
+        padding: 12px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .analysis-flow-banner {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        padding: 9px !important;
+        gap: 8px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .analysis-flow-step {
+        min-height: 0 !important;
+        padding: 8px 9px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .analysis-info-band,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-flow-notice {
+        min-height: 0 !important;
+        padding: 8px 10px !important;
+        line-height: 1.45 !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-summary-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #upload.analysis-workspace-upload .upload-summary-card {
+        min-height: 0 !important;
+        padding: 10px 12px !important;
+        border-radius: 12px !important;
+    }
+}
