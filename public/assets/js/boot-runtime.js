@@ -480,6 +480,7 @@ var APP_MODULES = [
     './assets/js/starter-status-runtime.js',
     './assets/js/teacher-sync-runtime.js',
     './assets/js/app.js',
+    './assets/js/support-metrics-runtime.js',
     './assets/js/marginal-push-runtime.js',
     './assets/js/seat-adjustment-runtime.js',
     './assets/js/cohort-growth-runtime.js',

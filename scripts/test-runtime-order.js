@@ -10,6 +10,7 @@ const schoolRuntimePath = path.resolve(__dirname, '../public/assets/js/school-st
 const teacherRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-state-runtime.js');
 const dataRuntimePath = path.resolve(__dirname, '../public/assets/js/data-state-runtime.js');
 const supportRuntimePath = path.resolve(__dirname, '../public/assets/js/support-state-runtime.js');
+const supportMetricsRuntimePath = path.resolve(__dirname, '../public/assets/js/support-metrics-runtime.js');
 const progressRuntimePath = path.resolve(__dirname, '../public/assets/js/progress-state-runtime.js');
 const progressAnalysisRuntimePath = path.resolve(__dirname, '../public/assets/js/progress-analysis-runtime.js');
 const reportSessionRuntimePath = path.resolve(__dirname, '../public/assets/js/report-session-state-runtime.js');
@@ -78,6 +79,7 @@ assert.ok(fs.existsSync(schoolRuntimePath), 'school-state-runtime.js should exis
 assert.ok(fs.existsSync(teacherRuntimePath), 'teacher-state-runtime.js should exist');
 assert.ok(fs.existsSync(dataRuntimePath), 'data-state-runtime.js should exist');
 assert.ok(fs.existsSync(supportRuntimePath), 'support-state-runtime.js should exist');
+assert.ok(fs.existsSync(supportMetricsRuntimePath), 'support-metrics-runtime.js should exist');
 assert.ok(fs.existsSync(progressRuntimePath), 'progress-state-runtime.js should exist');
 assert.ok(fs.existsSync(progressAnalysisRuntimePath), 'progress-analysis-runtime.js should exist');
 assert.ok(fs.existsSync(reportSessionRuntimePath), 'report-session-state-runtime.js should exist');
@@ -167,6 +169,7 @@ const schoolStateRef = './assets/js/school-state-runtime.js';
 const teacherStateRef = './assets/js/teacher-state-runtime.js';
 const dataStateRef = './assets/js/data-state-runtime.js';
 const supportStateRef = './assets/js/support-state-runtime.js';
+const supportMetricsRef = './assets/js/support-metrics-runtime.js';
 const progressStateRef = './assets/js/progress-state-runtime.js';
 const reportSessionStateRef = './assets/js/report-session-state-runtime.js';
 const compareSessionStateRef = './assets/js/compare-session-state-runtime.js';
@@ -290,6 +293,7 @@ const schoolStateIndex = moduleManifest.indexOf(schoolStateRef);
 const teacherStateIndex = moduleManifest.indexOf(teacherStateRef);
 const dataStateIndex = moduleManifest.indexOf(dataStateRef);
 const supportStateIndex = moduleManifest.indexOf(supportStateRef);
+const supportMetricsIndex = moduleManifest.indexOf(supportMetricsRef);
 const progressStateIndex = moduleManifest.indexOf(progressStateRef);
 const reportSessionStateIndex = moduleManifest.indexOf(reportSessionStateRef);
 const compareSessionStateIndex = moduleManifest.indexOf(compareSessionStateRef);
@@ -344,6 +348,7 @@ assert.ok(schoolStateIndex >= 0, 'index.html should load school-state-runtime.js
 assert.ok(teacherStateIndex >= 0, 'index.html should load teacher-state-runtime.js');
 assert.ok(dataStateIndex >= 0, 'index.html should load data-state-runtime.js');
 assert.ok(supportStateIndex >= 0, 'index.html should load support-state-runtime.js');
+assert.ok(supportMetricsIndex >= 0, 'index.html should load support-metrics-runtime.js');
 assert.ok(progressStateIndex >= 0, 'index.html should load progress-state-runtime.js');
 assert.ok(reportSessionStateIndex >= 0, 'index.html should load report-session-state-runtime.js');
 assert.ok(compareSessionStateIndex >= 0, 'index.html should load compare-session-state-runtime.js');
@@ -582,6 +587,7 @@ assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign swi
     teacherStateRef,
     dataStateRef,
     supportStateRef,
+    supportMetricsRef,
     progressStateRef,
     reportSessionStateRef,
     compareSessionStateRef,
@@ -746,6 +752,7 @@ assert.ok(rankingDataServiceIndex < appIndex, 'ranking-data-service-runtime.js m
 assert.ok(studentJumpIndex >= 0, 'index.html should load student-jump-runtime.js');
 assert.ok(rankingDataServiceIndex < studentJumpIndex, 'ranking-data-service-runtime.js must load before student-jump-runtime.js');
 assert.ok(studentJumpIndex < appIndex, 'student-jump-runtime.js must load before app.js');
+assert.ok(appIndex < supportMetricsIndex, 'support-metrics-runtime.js must load after app.js');
 assert.ok(popperVendorIndex < tippyVendorIndex, 'popper.min.js must load before tippy.umd.min.js');
 
 console.log('runtime order tests passed');

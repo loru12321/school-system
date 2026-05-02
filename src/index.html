@@ -1219,23 +1219,73 @@
 
 
             <!-- 3. 后1/3核算 -->
-            <div id="bottom3" class="section card-box analysis-workspace analysis-workspace-amber">
+            <div id="bottom3" class="section card-box analysis-workspace analysis-workspace-amber support-metric-workspace support-bottom3-workspace">
                 <div class="module-desc-bar analysis-hero" style="border-color:#ea580c;">
                     <h3><i class="ti ti-arrow-bar-to-down"></i> 后1/3学生核算</h3>
                     <p>聚焦薄弱学生区间，剔除约定比例后观察真实托底能力与学校补弱结果。</p>
+                    <div class="analysis-scan-strip support-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Scope</span>
+                            <strong class="analysis-scan-value">后进区间</strong>
+                            <span class="analysis-scan-note">先锁定底部样本，再看有效均分。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Risk</span>
+                            <strong class="analysis-scan-value">剔除口径</strong>
+                            <span class="analysis-scan-note">剔除率随年级模式自动同步。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Output</span>
+                            <strong class="analysis-scan-value">托底排名</strong>
+                            <span class="analysis-scan-note">用于补弱复盘和跟踪排序。</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="sec-head analysis-shell-head">
                     <h2>
                         <i class="ti ti-arrow-bar-to-down"></i> 后1/3学生核算
                         <span class="module-help-btn" onclick="showModuleHelp('bottom3')">📘 剔除规则</span>
-                        <span style="font-size:14px; font-weight:normal; color:#666; margin-left:5px;">(剔除率: <span
-                                id="label-exc"></span>)</span>
                     </h2>
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">适合看学校补弱稳定性和底部学生改善幅度，导出后便于跟进帮扶策略。</div>
-                        <div class="analysis-actions">
-                            <button class="btn" onclick="exportExcel('bottom3')">导出结果</button>
+                        <div class="analysis-actions support-actions bottom3-actions">
+                            <button class="btn" onclick="exportExcel('bottom3')"><i class="ti ti-file-spreadsheet"></i> 导出结果</button>
                         </div>
+                    </div>
+                </div>
+                <div class="info-bar analysis-info-band">当前剔除率：<strong id="label-exc"></strong>。结果来自已导入成绩和当前年级模式，综合排名会沿用这里的托底得分。</div>
+                <div class="support-metric-strip bottom3-metric-strip">
+                    <div class="support-metric-card support-metric-card-orange">
+                        <span class="support-metric-kicker">学校覆盖</span>
+                        <strong id="bottom3-school-count">--</strong>
+                        <span>参与托底核算</span>
+                    </div>
+                    <div class="support-metric-card support-metric-card-blue">
+                        <span class="support-metric-kicker">有效均分</span>
+                        <strong id="bottom3-average-score">--</strong>
+                        <span>后1/3有效均分</span>
+                    </div>
+                    <div class="support-metric-card support-metric-card-green">
+                        <span class="support-metric-kicker">当前领先</span>
+                        <strong id="bottom3-top-school">--</strong>
+                        <span>核算得分最高</span>
+                    </div>
+                </div>
+                <div class="analysis-flow-banner support-flow-banner">
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 1</span>
+                        <strong class="analysis-flow-value">排底部</strong>
+                        <span class="analysis-flow-note">按总分从低到高截取后 1/3，保留原始样本规模。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 2</span>
+                        <strong class="analysis-flow-value">按率剔除</strong>
+                        <span class="analysis-flow-note">剔除约定比例后再算均分，减少极端缺考拖偏。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 3</span>
+                        <strong class="analysis-flow-value">折算排名</strong>
+                        <span class="analysis-flow-note">以最高有效均分折算托底得分，形成横向排序。</span>
                     </div>
                 </div>
                 <details class="explain-panel analysis-doc-panel">
@@ -1271,10 +1321,27 @@
             </div>
 
             <!-- 4. 指标生核算 -->
-            <div id="indicator" class="section card-box analysis-workspace analysis-workspace-violet">
+            <div id="indicator" class="section card-box analysis-workspace analysis-workspace-violet support-metric-workspace support-indicator-workspace">
                 <div class="module-desc-bar analysis-hero" style="border-color:#7c3aed;">
                     <h3><i class="ti ti-target"></i> 指标生达标核算</h3>
                     <p>把目标人数、指标线和达标结果放在同一张工作面里，方便教务快速判断是否达成招生与培养目标。</p>
+                    <div class="analysis-scan-strip support-scan-strip">
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Input</span>
+                            <strong class="analysis-scan-value">目标人数</strong>
+                            <span class="analysis-scan-note">先核对各校指标一、指标二目标。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Line</span>
+                            <strong class="analysis-scan-value">划线名次</strong>
+                            <span class="analysis-scan-note">按当前 9 年级成绩自动换算分数线。</span>
+                        </div>
+                        <div class="analysis-scan-item">
+                            <span class="analysis-scan-label">Score</span>
+                            <strong class="analysis-scan-value">基础+超额</strong>
+                            <span class="analysis-scan-note">达标和超额共同形成指标总分。</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="sec-head analysis-shell-head">
                     <h2>
@@ -1283,13 +1350,48 @@
                     </h2>
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">建议先确认目标口径，再计算达标情况；导出结果更适合做指标生专项追踪。</div>
-                        <div class="analysis-actions">
+                        <div class="analysis-actions support-actions indicator-actions">
                             <button class="btn btn-blue" onclick="openTargetEditor()">
                                 <i class="ti ti-edit"></i> 在线调整目标
                             </button>
-                            <button class="btn btn-green" id="btn-indicator-calc" onclick="calcIndicators()">开始计算</button>
-                            <button class="btn" onclick="exportExcel('indicator')">导出结果</button>
+                            <button class="btn btn-green" id="btn-indicator-calc" onclick="calcIndicators()"><i class="ti ti-calculator"></i> 开始计算</button>
+                            <button class="btn" onclick="exportExcel('indicator')"><i class="ti ti-file-spreadsheet"></i> 导出结果</button>
                         </div>
+                    </div>
+                </div>
+                <div class="info-bar analysis-info-band">指标生核算只在 9 年级当前考试中启用；如果目标人数未匹配，系统会在明细区单独标记。</div>
+                <div class="support-metric-strip indicator-metric-strip">
+                    <div class="support-metric-card support-metric-card-purple">
+                        <span class="support-metric-kicker">学校覆盖</span>
+                        <strong id="indicator-school-count">--</strong>
+                        <span>参与指标核算</span>
+                    </div>
+                    <div class="support-metric-card support-metric-card-green">
+                        <span class="support-metric-kicker">最高指标分</span>
+                        <strong id="indicator-top-score">--</strong>
+                        <span id="indicator-top-school">等待计算</span>
+                    </div>
+                    <div class="support-metric-card support-metric-card-orange">
+                        <span class="support-metric-kicker">目标匹配</span>
+                        <strong id="indicator-missing-target-count">--</strong>
+                        <span>未匹配/异常学校</span>
+                    </div>
+                </div>
+                <div class="analysis-flow-banner support-flow-banner">
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 1</span>
+                        <strong class="analysis-flow-value">取参数</strong>
+                        <span class="analysis-flow-note">读取划线名次和各校目标人数，缺项会提示补齐。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 2</span>
+                        <strong class="analysis-flow-value">换分线</strong>
+                        <span class="analysis-flow-note">按全镇成绩序列换算指标一、指标二参考分。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 3</span>
+                        <strong class="analysis-flow-value">算总分</strong>
+                        <span class="analysis-flow-note">基础分叠加超额奖励，并同步到综合总排名。</span>
                     </div>
                 </div>
                 <details class="explain-panel analysis-doc-panel">
