@@ -5284,6 +5284,10 @@
                     <h2><i class="ti ti-armchair"></i> 考后“座位微调”建议</h2>
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">建议先设定约束和策略，再生成座次；打印适合课堂落地，现场也可二次微调。</div>
+                        <div class="analysis-actions seat-adjustment-actions">
+                            <button class="btn btn-primary" type="button" data-seat-adj-action="generate"><i class="ti ti-sparkles"></i> 生成座次</button>
+                            <button class="btn btn-purple" type="button" data-seat-adj-action="print"><i class="ti ti-printer"></i> 打印</button>
+                        </div>
                     </div>
                 </div>
                 <div class="info-bar analysis-info-band">基于最近发展区理论(ZPD)与小组合作学习模式，生成促进互助的座位表。</div>
@@ -5296,96 +5300,134 @@
                     </div>
                 </details>
 
-                <!-- [修改] 考后座位微调 - 交互优化后的约束框 -->
-                <div class="constraints-box">
-                    <h4><i class="ti ti-alert-triangle"></i> 特殊情况约束配置 (智能标签输入)</h4>
-                    <div class="info-bar" style="margin:0 0 10px 0; padding:5px; font-size:11px;">💡
-                        提示：在输入框中输入姓名，从下拉菜单中选择。数据源为当前选中的班级。</div>
-                    <div class="constraints-grid">
-                        <div><label>😡 难管/调皮:</label><input type="hidden" id="adj_c_diff">
+                <div class="analysis-flow-banner">
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 1</span>
+                        <strong class="analysis-flow-value">定班级</strong>
+                        <span class="analysis-flow-note">先确认学校、班级和座位列数，保证座次容量与班级人数匹配。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 2</span>
+                        <strong class="analysis-flow-value">加约束</strong>
+                        <span class="analysis-flow-note">把视力、心理关注、难管和矛盾关系录入，避免生成结果脱离班级实际。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 3</span>
+                        <strong class="analysis-flow-value">看共同体</strong>
+                        <span class="analysis-flow-note">生成后按层级、策略和教师经验微调，再打印落地到课堂。</span>
+                    </div>
+                </div>
+
+                <div class="seat-adjustment-layout">
+                    <section class="seat-config-panel">
+                        <div class="analysis-section-head">
+                            <h3><i class="ti ti-adjustments-horizontal"></i> 座次参数</h3>
+                            <span>Range & Strategy</span>
+                        </div>
+                        <div class="seat-config-grid">
+                            <div class="seat-field">
+                                <label>学校</label>
+                                <select id="seatAdjSchoolSelect">
+                                    <option value="">--请选择--</option>
+                                </select>
+                            </div>
+                            <div class="seat-field">
+                                <label>班级</label>
+                                <select id="seatAdjClassSelect">
+                                    <option value="">--班级--</option>
+                                </select>
+                            </div>
+                            <div class="seat-field seat-number-field">
+                                <label>左右大组数</label>
+                                <input type="number" id="seatAdjGroups" value="2" min="1" max="4" onchange="renderSeatGrid()">
+                            </div>
+                            <div class="seat-field seat-number-field">
+                                <label>每组列数</label>
+                                <input type="number" id="seatAdjCols" value="4" min="2" max="6" onchange="renderSeatGrid()">
+                            </div>
+                            <div class="seat-field seat-strategy-field">
+                                <label>分组策略</label>
+                                <select id="seatAdjStrategy">
+                                    <option value="conversion">提分转化型 (A带C, B带D)</option>
+                                    <option value="balanced">团队PK型 (4人均分平衡)</option>
+                                    <option value="pair">传统互助型 (强弱结对)</option>
+                                </select>
+                            </div>
+                            <div class="seat-field seat-submit-field">
+                                <button class="btn btn-primary" type="button" data-seat-adj-action="generate"><i class="ti ti-sparkles"></i> 生成共同体座次</button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="constraints-box seat-constraint-panel">
+                        <div class="analysis-section-head">
+                            <h3><i class="ti ti-alert-triangle"></i> 特殊情况约束</h3>
+                            <span>Classroom Constraints</span>
+                        </div>
+                        <div class="seat-constraint-tip">学生建议从下拉提示中选择，切换学校或班级后会自动刷新可选名单。</div>
+                        <div class="constraints-grid seat-constraint-grid">
+                        <div class="seat-constraint-field"><label>难管/调皮</label><input type="hidden" id="adj_c_diff">
                             <div id="widget_adj_diff" class="tag-widget-container"><input type="text"
                                     class="tag-input-field" placeholder="搜姓名...">
                                 <div class="suggestion-dropdown"></div>
                             </div>
                         </div>
-                        <div><label>👓 视力不好 (前排):</label><input type="hidden" id="adj_c_vision">
+                        <div class="seat-constraint-field"><label>视力不好 (前排)</label><input type="hidden" id="adj_c_vision">
                             <div id="widget_adj_vision" class="tag-widget-container"><input type="text"
                                     class="tag-input-field" placeholder="搜姓名...">
                                 <div class="suggestion-dropdown"></div>
                             </div>
                         </div>
-                        <div><label>❤️ 心理关注:</label><input type="hidden" id="adj_c_psy">
+                        <div class="seat-constraint-field"><label>心理关注</label><input type="hidden" id="adj_c_psy">
                             <div id="widget_adj_psy" class="tag-widget-container"><input type="text"
                                     class="tag-input-field" placeholder="搜姓名...">
                                 <div class="suggestion-dropdown"></div>
                             </div>
                         </div>
-                        <div><label>🗣️ 爱说话:</label><input type="hidden" id="adj_c_talk">
+                        <div class="seat-constraint-field"><label>爱说话</label><input type="hidden" id="adj_c_talk">
                             <div id="widget_adj_talk" class="tag-widget-container"><input type="text"
                                     class="tag-input-field" placeholder="搜姓名...">
                                 <div class="suggestion-dropdown"></div>
                             </div>
                         </div>
-                        <div style="grid-column: 1/-1"><label>⚔️ 互有矛盾/避免同桌 (生成器):</label>
-                            <div class="conflict-builder"><select id="conflict_sel_a">
+                        <div class="seat-constraint-field seat-conflict-field"><label>互有矛盾 / 避免同桌</label>
+                            <div class="conflict-builder seat-conflict-builder"><select id="conflict_sel_a">
                                     <option value="">学生 A</option>
                                 </select><span>&</span><select id="conflict_sel_b">
                                     <option value="">学生 B</option>
-                                </select><button class="btn btn-gray" style="padding:2px 8px; height:28px;"
-                                    onclick="addConflictPair('adj')">➕ 添加</button></div><input type="hidden"
+                                </select><button class="btn btn-gray btn-sm" onclick="addConflictPair('adj')"><i class="ti ti-plus"></i> 添加</button></div><input type="hidden"
                                 id="adj_c_conflict">
-                            <div id="widget_adj_conflict" class="tag-widget-container" style="background:#f9fafb;"><span
-                                    style="font-size:11px; color:#999; padding:4px;">请使用上方选择器添加矛盾对</span></div>
+                            <div id="widget_adj_conflict" class="tag-widget-container seat-conflict-tags"><span>请使用上方选择器添加矛盾对</span></div>
                         </div>
                     </div>
+                    </section>
                 </div>
 
-                <div class="control-panel">
-                    <div style="flex:2; display:flex; gap:10px; flex-wrap:wrap;">
-                        <div><label>学校：</label><br><select id="seatAdjSchoolSelect" style="min-width:120px;">
-                                <option value="">--请选择--</option>
-                            </select></div>
-                        <div><label>班级：</label><br><select id="seatAdjClassSelect" style="min-width:100px;">
-                                <option value="">--班级--</option>
-                            </select></div>
-                        <div><label>左右大组数 (中间过道)：</label><br><input type="number" id="seatAdjGroups" value="2" min="1"
-                                max="4" style="width:60px;" onchange="renderSeatGrid()"></div>
-                        <div><label>每组列数：</label><br><input type="number" id="seatAdjCols" value="4" min="2" max="6"
-                                style="width:60px;" onchange="renderSeatGrid()"></div>
-                        <div><label>分组策略：</label><br>
-                            <select id="seatAdjStrategy">
-                                <option value="conversion">🚀 提分转化型 (A带C, B带D)</option>
-                                <option value="balanced">⚖️ 团队PK型 (4人均分平衡)</option>
-                                <option value="pair">🤝 传统互助型 (强弱结对)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button class="btn btn-primary" onclick="generateSeatSuggestions()">🎲 生成共同体座次</button>
-                    <button class="btn btn-purple" onclick="window.print()">🖨 打印</button>
-                </div>
-                <div id="seat-adj-workspace" class="seat-workspace hidden" style="margin-top:20px;">
-                    <div class="seat-tools" style="width:200px;">
-                        <h4 style="margin-bottom:10px;">策略说明</h4>
-                        <div id="seat-strategy-desc"
-                            style="font-size:12px; color:#666; margin-bottom:15px; padding:10px; background:#e0f2fe; border-radius:6px;">
+                <div id="seat-adj-workspace" class="seat-workspace seat-adjustment-workspace hidden">
+                    <aside class="seat-tools seat-adj-tools">
+                        <div class="seat-tool-section">
+                            <h4>策略说明</h4>
+                        <div id="seat-strategy-desc" class="seat-strategy-desc">
                             选择策略后查看详细说明...
                         </div>
-                        <h4 style="margin-bottom:10px;">图例</h4>
-                        <div style="font-size:12px; display:flex; flex-direction:column; gap:5px;">
-                            <span style="background:#dcfce7; padding:2px 5px; border-radius:4px;">🟩 前25% (A层:优)</span>
-                            <span style="background:#e0f2fe; padding:2px 5px; border-radius:4px;">🟦 25-50%
-                                (B层:良)</span>
-                            <span style="background:#fef9c3; padding:2px 5px; border-radius:4px;">🟨 50-75%
-                                (C层:潜)</span>
-                            <span style="background:#fee2e2; padding:2px 5px; border-radius:4px;">🟥 后25% (D层:基)</span>
                         </div>
-                        <div id="seat-stats" style="margin-top:20px; font-size:12px; color:#333; font-weight:bold;">
+                        <div class="seat-tool-section">
+                            <h4>层级图例</h4>
+                            <div class="seat-legend-list">
+                                <span class="seat-legend-chip seat-legend-a">前25% (A层:优)</span>
+                                <span class="seat-legend-chip seat-legend-b">25-50% (B层:良)</span>
+                                <span class="seat-legend-chip seat-legend-c">50-75% (C层:潜)</span>
+                                <span class="seat-legend-chip seat-legend-d">后25% (D层:基)</span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="seat-canvas" style="min-height:500px;">
+                        <div id="seat-stats" class="seat-stats"></div>
+                    </aside>
+                    <div class="seat-canvas seat-adj-canvas">
                         <div class="seat-stage">讲 台</div>
-                        <div id="seat-count-display" style="margin-bottom:10px; font-weight:bold; color:#666;"></div>
-                        <div id="seat-adj-container" class="seat-container" style="position:relative;"></div>
+                        <div id="seat-count-display" class="seat-count-display"></div>
+                        <div class="seat-stage-scroll">
+                            <div id="seat-adj-container" class="seat-container seat-adj-container"></div>
+                        </div>
                     </div>
                 </div>
             </div>

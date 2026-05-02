@@ -343,6 +343,35 @@ async function main() {
             ? MP_DATA_CACHE
             : (Array.isArray(window.MP_DATA_CACHE) ? window.MP_DATA_CACHE : []);
         const marginalValues = marginalRows.flatMap((row) => [row.score, row.target, row.diff]);
+        await boundedSwitchTab('seat-adjustment');
+        if (typeof window.updateSeatAdjSelects === 'function') window.updateSeatAdjSelects();
+        const seatAdjustmentResult = (() => {
+            const schoolSelect = document.getElementById('seatAdjSchoolSelect');
+            const classSelect = document.getElementById('seatAdjClassSelect');
+            const groupsInput = document.getElementById('seatAdjGroups');
+            const colsInput = document.getElementById('seatAdjCols');
+            const strategySelect = document.getElementById('seatAdjStrategy');
+            const schools = Array.from(schoolSelect?.options || []).map((option) => option.value).filter(Boolean);
+            let result = null;
+            for (const school of schools) {
+                schoolSelect.value = school;
+                window.updateSeatAdjSelects?.();
+                const classes = Array.from(classSelect?.options || []).map((option) => option.value).filter(Boolean);
+                for (const className of classes) {
+                    classSelect.value = className;
+                    window.updateConstraintWidgetsContext?.('adj');
+                    if (groupsInput) groupsInput.value = '2';
+                    if (colsInput) colsInput.value = '4';
+                    if (strategySelect) strategySelect.value = 'conversion';
+                    result = typeof window.generateSeatSuggestions === 'function'
+                        ? window.generateSeatSuggestions()
+                        : null;
+                    if (Number(result?.count || 0) > 0) return result;
+                }
+            }
+            return result;
+        })();
+        const seatAdjustmentDeskCount = document.querySelectorAll('#seat-adj-container .desk:not(.desk-empty)').length;
         await boundedSwitchTab('cohort-growth');
         const cohortGrowthResult = typeof window.CohortGrowth?.compute === 'function'
             ? window.CohortGrowth.compute()
@@ -377,6 +406,14 @@ async function main() {
             marginalGeneratedCount: Number(marginalResult?.count || 0),
             marginalTicketCount: document.querySelectorAll('#mp-tickets-container .task-ticket').length,
             marginalFinite: marginalValues.every((value) => Number.isFinite(Number(value))),
+            seatAdjustmentCount: Number(seatAdjustmentResult?.count || 0),
+            seatAdjustmentDeskCount,
+            seatAdjustmentFinite: seatAdjustmentResult?.finite === true,
+            seatAdjustmentSample: seatAdjustmentResult ? {
+                school: seatAdjustmentResult.schoolName || '',
+                className: seatAdjustmentResult.className || '',
+                strategy: seatAdjustmentResult.strategy || ''
+            } : null,
             cohortExamCount: Object.keys(window.COHORT_DB?.exams || {}).length,
             cohortVolatilityRows: Array.isArray(cohortGrowthResult.volatility) ? cohortGrowthResult.volatility.length : 0,
             cohortGrowthRows: Array.isArray(cohortGrowthResult.growth) ? cohortGrowthResult.growth.length : 0,
@@ -410,6 +447,9 @@ async function main() {
     assert.ok(snapshot.marginalGeneratedCount > 0, 'marginal task generation produced no rows');
     assert.ok(snapshot.marginalTicketCount > 0, 'marginal task ticket rendering failed');
     assert.ok(snapshot.marginalFinite, 'marginal task calculation produced non-finite values');
+    assert.ok(snapshot.seatAdjustmentCount > 0, 'seat adjustment generation produced no seats');
+    assert.strictEqual(snapshot.seatAdjustmentDeskCount, snapshot.seatAdjustmentCount, 'seat adjustment rendered seat count mismatch');
+    assert.ok(snapshot.seatAdjustmentFinite, 'seat adjustment calculation produced non-finite values');
     assert.ok(snapshot.cohortExamCount >= 2, `cohort exam count too low: ${snapshot.cohortExamCount}`);
     assert.ok(snapshot.cohortGrowthRows > 0, 'cohort growth rows missing');
     assert.ok(snapshot.cohortGrowthFinite, 'cohort growth calculation produced non-finite values');

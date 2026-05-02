@@ -316,6 +316,51 @@ async function openMarginalPushModule(page) {
     await page.waitForTimeout(500);
 }
 
+async function openSeatAdjustmentModule(page) {
+    await openModule(page, 'seat-adjustment');
+    await page.evaluate(() => {
+        if (typeof window.updateSeatAdjSelects === 'function') window.updateSeatAdjSelects();
+        const schoolSelect = document.getElementById('seatAdjSchoolSelect');
+        const classSelect = document.getElementById('seatAdjClassSelect');
+        const groupsInput = document.getElementById('seatAdjGroups');
+        const colsInput = document.getElementById('seatAdjCols');
+        const strategySelect = document.getElementById('seatAdjStrategy');
+        const schoolOptions = Array.from(schoolSelect?.options || []).map(option => option.value).filter(Boolean);
+        let result = null;
+        for (const school of schoolOptions) {
+            schoolSelect.value = school;
+            if (typeof window.updateSeatAdjSelects === 'function') window.updateSeatAdjSelects();
+            const classOptions = Array.from(classSelect?.options || []).map(option => option.value).filter(Boolean);
+            for (const className of classOptions) {
+                classSelect.value = className;
+                if (typeof window.updateConstraintWidgetsContext === 'function') window.updateConstraintWidgetsContext('adj');
+                if (groupsInput) groupsInput.value = '2';
+                if (colsInput) colsInput.value = '4';
+                if (strategySelect) strategySelect.value = 'conversion';
+                if (typeof window.generateSeatSuggestions === 'function') {
+                    result = window.generateSeatSuggestions();
+                }
+                if (result && Number(result.count || 0) > 0) return result;
+            }
+        }
+        return result;
+    }).catch(() => {});
+    await page.waitForFunction(() => {
+        const section = document.getElementById('seat-adjustment');
+        const desks = document.querySelectorAll('#seat-adj-container .desk:not(.desk-empty)').length;
+        return !!section
+            && section.classList.contains('active')
+            && typeof window.generateSeatSuggestions === 'function'
+            && !!window.SeatAdjustmentRuntime
+            && !!document.getElementById('seatAdjSchoolSelect')
+            && !!document.getElementById('seatAdjClassSelect')
+            && !!document.getElementById('seatAdjGroups')
+            && !!document.getElementById('seatAdjCols')
+            && desks > 0;
+    }, null, { timeout: 90000 });
+    await page.waitForTimeout(500);
+}
+
 async function ensureMobileShell(page) {
     await page.evaluate(() => window.ensureMobileManagerRuntimeLoaded?.()).catch(() => {});
     await page.evaluate(() => window.MobileQueryUI?.refresh?.()).catch(() => {});
@@ -821,6 +866,50 @@ function assertMarginalPushLayout(state) {
     assertSectionLayout(state, 'marginal-push');
 }
 
+async function inspectSeatAdjustmentLayout(page, mode) {
+    const mobileOnlySelectors = mode === 'mobile'
+        ? {
+            scrollStage: '#seat-adjustment .seat-stage-scroll',
+            mobileDesk: '#seat-adjustment .desk:not(.desk-empty)'
+        }
+        : {};
+    return inspectSectionLayout(page, mode, {
+        sectionId: 'seat-adjustment',
+        targetSelector: '#seat-adjustment',
+        requiredSelectors: {
+            hero: '#seat-adjustment .analysis-hero',
+            shellHead: '#seat-adjustment .analysis-shell-head',
+            actions: '#seat-adjustment .seat-adjustment-actions .btn',
+            infoBand: '#seat-adjustment .analysis-info-band',
+            docPanel: '#seat-adjustment .analysis-doc-panel',
+            flow: '#seat-adjustment .analysis-flow-step',
+            configPanel: '#seat-adjustment .seat-config-panel',
+            configGrid: '#seat-adjustment .seat-config-grid',
+            constraintPanel: '#seat-adjustment .seat-constraint-panel',
+            constraintGrid: '#seat-adjustment .seat-constraint-grid',
+            schoolSelect: '#seatAdjSchoolSelect',
+            classSelect: '#seatAdjClassSelect',
+            groupsInput: '#seatAdjGroups',
+            colsInput: '#seatAdjCols',
+            strategySelect: '#seatAdjStrategy',
+            workspace: '#seat-adj-workspace:not(.hidden)',
+            tools: '#seat-adjustment .seat-adj-tools',
+            strategyDesc: '#seat-strategy-desc',
+            legend: '#seat-adjustment .seat-legend-chip',
+            stats: '#seat-stats',
+            canvas: '#seat-adjustment .seat-adj-canvas',
+            countDisplay: '#seat-count-display',
+            seatContainer: '#seat-adj-container',
+            desks: '#seat-adj-container .desk:not(.desk-empty)',
+            ...mobileOnlySelectors
+        }
+    });
+}
+
+function assertSeatAdjustmentLayout(state) {
+    assertSectionLayout(state, 'seat-adjustment');
+}
+
 async function openDataManager(page, tab = 'student') {
     await page.evaluate(() => {
         if (window.DataManager && typeof window.DataManager.open === 'function') {
@@ -1009,6 +1098,9 @@ async function main() {
     await openMarginalPushModule(desktopPage);
     const desktopMarginalPushState = await inspectMarginalPushLayout(desktopPage, 'desktop');
     assertMarginalPushLayout(desktopMarginalPushState);
+    await openSeatAdjustmentModule(desktopPage);
+    const desktopSeatAdjustmentState = await inspectSeatAdjustmentLayout(desktopPage, 'desktop');
+    assertSeatAdjustmentLayout(desktopSeatAdjustmentState);
     await openCohortGrowthModule(desktopPage);
     const desktopCohortGrowthState = await inspectCohortGrowthLayout(desktopPage, 'desktop');
     assertCohortGrowthLayout(desktopCohortGrowthState);
@@ -1048,6 +1140,9 @@ async function main() {
     await openMarginalPushModule(mobilePage);
     const mobileMarginalPushState = await inspectMarginalPushLayout(mobilePage, 'mobile');
     assertMarginalPushLayout(mobileMarginalPushState);
+    await openSeatAdjustmentModule(mobilePage);
+    const mobileSeatAdjustmentState = await inspectSeatAdjustmentLayout(mobilePage, 'mobile');
+    assertSeatAdjustmentLayout(mobileSeatAdjustmentState);
     await openCohortGrowthModule(mobilePage);
     const mobileCohortGrowthState = await inspectCohortGrowthLayout(mobilePage, 'mobile');
     assertCohortGrowthLayout(mobileCohortGrowthState);
@@ -1076,6 +1171,7 @@ async function main() {
         desktopCorrelationState,
         desktopProgressState,
         desktopMarginalPushState,
+        desktopSeatAdjustmentState,
         desktopCohortGrowthState,
         desktopStudentState,
         desktopReportState,
@@ -1086,6 +1182,7 @@ async function main() {
         mobileCorrelationState,
         mobileProgressState,
         mobileMarginalPushState,
+        mobileSeatAdjustmentState,
         mobileCohortGrowthState,
         mobileStudentState,
         mobileReportState,

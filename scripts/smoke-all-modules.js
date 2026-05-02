@@ -24,6 +24,7 @@ const SWITCH_MODULE_IDS = [
     'indicator',
     'bottom3',
     'marginal-push',
+    'seat-adjustment',
     'progress-analysis',
     'cohort-growth',
     'report-generator',
@@ -725,6 +726,80 @@ async function runModuleDeepCheck(page, id) {
                 generatedCount,
                 ticketCount,
                 sampleSchool: schoolSelect.value || ''
+            };
+        });
+    }
+    if (id === 'seat-adjustment') {
+        return page.evaluate(() => {
+            const checks = {
+                sectionReady: !!document.querySelector('#seat-adjustment.analysis-workspace-student'),
+                heroReady: !!document.querySelector('#seat-adjustment .analysis-hero'),
+                shellHeadReady: !!document.querySelector('#seat-adjustment .analysis-shell-head'),
+                actionReady: document.querySelectorAll('#seat-adjustment .seat-adjustment-actions .btn').length >= 2,
+                flowReady: document.querySelectorAll('#seat-adjustment .analysis-flow-step').length >= 3,
+                runtimeReady: !!window.SeatAdjustmentRuntime,
+                updateReady: typeof window.updateSeatAdjSelects === 'function',
+                generateReady: typeof window.generateSeatSuggestions === 'function',
+                configReady: !!document.querySelector('#seat-adjustment .seat-config-panel')
+                    && !!document.querySelector('#seat-adjustment .seat-config-grid'),
+                constraintReady: !!document.querySelector('#seat-adjustment .seat-constraint-panel')
+                    && !!document.querySelector('#seat-adjustment .seat-constraint-grid'),
+                controlsReady: !!document.getElementById('seatAdjSchoolSelect')
+                    && !!document.getElementById('seatAdjClassSelect')
+                    && !!document.getElementById('seatAdjGroups')
+                    && !!document.getElementById('seatAdjCols')
+                    && !!document.getElementById('seatAdjStrategy'),
+                workspaceReady: !!document.getElementById('seat-adj-workspace')
+                    && !!document.getElementById('seat-adj-container')
+                    && !!document.querySelector('#seat-adjustment .seat-adj-canvas')
+            };
+            if (!Object.values(checks).every(Boolean)) {
+                return { ok: false, checks, count: 0, deskCount: 0 };
+            }
+
+            window.updateSeatAdjSelects();
+            const schoolSelect = document.getElementById('seatAdjSchoolSelect');
+            const classSelect = document.getElementById('seatAdjClassSelect');
+            const groupsInput = document.getElementById('seatAdjGroups');
+            const colsInput = document.getElementById('seatAdjCols');
+            const strategySelect = document.getElementById('seatAdjStrategy');
+            const schools = Array.from(schoolSelect.options || []).map(option => option.value).filter(Boolean);
+            let result = null;
+            let sampleSchool = '';
+            let sampleClass = '';
+            for (const school of schools) {
+                schoolSelect.value = school;
+                window.updateSeatAdjSelects();
+                const classes = Array.from(classSelect.options || []).map(option => option.value).filter(Boolean);
+                for (const className of classes) {
+                    classSelect.value = className;
+                    if (typeof window.updateConstraintWidgetsContext === 'function') window.updateConstraintWidgetsContext('adj');
+                    if (groupsInput) groupsInput.value = '2';
+                    if (colsInput) colsInput.value = '4';
+                    if (strategySelect) strategySelect.value = 'conversion';
+                    result = window.generateSeatSuggestions();
+                    if (Number(result?.count || 0) > 0) {
+                        sampleSchool = school;
+                        sampleClass = className;
+                        break;
+                    }
+                }
+                if (Number(result?.count || 0) > 0) break;
+            }
+            const deskCount = document.querySelectorAll('#seat-adj-container .desk:not(.desk-empty)').length;
+            const count = Number(result?.count || 0);
+            return {
+                ok: Object.values(checks).every(Boolean)
+                    && count > 0
+                    && deskCount === count
+                    && result?.finite === true,
+                checks,
+                count,
+                deskCount,
+                finite: result?.finite === true,
+                sampleSchool,
+                sampleClass,
+                strategy: result?.strategy || ''
             };
         });
     }
