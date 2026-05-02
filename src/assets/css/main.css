@@ -1997,6 +1997,175 @@ body.dark-mode #progress-analysis .progress-status-note {
     }
 }
 
+#cohort-growth {
+    min-width: 0;
+}
+
+#cohort-growth .analysis-shell-head {
+    align-items: flex-start;
+}
+
+#cohort-growth .analysis-shell-head h2,
+#cohort-growth .analysis-action-stack,
+#cohort-growth .analysis-info-band,
+#cohort-growth .analysis-doc-panel,
+#cohort-growth .analysis-flow-banner,
+#cohort-growth .cohort-growth-grid,
+#cohort-growth .analysis-anchor-panel,
+#cohort-growth .analysis-table-meta,
+#cohort-growth .analysis-table-shell {
+    min-width: 0;
+}
+
+#cohort-growth .analysis-action-stack {
+    max-width: 760px;
+}
+
+#cohort-growth .analysis-action-note {
+    border-radius: 14px;
+    text-align: left;
+}
+
+#cohort-growth .analysis-actions {
+    justify-content: flex-end;
+}
+
+.cohort-growth-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.cohort-growth-panel {
+    display: grid;
+    gap: 12px;
+    align-content: start;
+}
+
+#cohort-growth .analysis-section-head {
+    margin-bottom: 0;
+}
+
+#cohort-growth .analysis-table-meta {
+    align-items: flex-start;
+    margin: 0;
+}
+
+#cohort-growth .cohort-growth-table-shell {
+    max-width: 100%;
+    max-height: 620px !important;
+    margin-top: 0;
+    overflow: auto !important;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+
+#cohort-volatility-table {
+    min-width: 520px;
+}
+
+#cohort-growth-table {
+    min-width: 660px;
+}
+
+#cohort-growth .analysis-table-dense th,
+#cohort-growth .analysis-table-dense td {
+    text-align: center;
+}
+
+#cohort-growth .analysis-table-dense th:first-child,
+#cohort-growth .analysis-table-dense td:first-child {
+    text-align: left;
+}
+
+.cohort-growth-metric {
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.cohort-growth-metric-volatility {
+    color: #0ea5e9;
+}
+
+.cohort-growth-metric.is-up {
+    color: #16a34a;
+}
+
+.cohort-growth-metric.is-down {
+    color: #dc2626;
+}
+
+body.dark-mode #cohort-growth .analysis-anchor-panel {
+    background: rgba(15, 23, 42, 0.92) !important;
+    border-color: rgba(51, 65, 85, 0.92) !important;
+}
+
+body.dark-mode #cohort-growth .cohort-growth-metric-volatility {
+    color: #38bdf8;
+}
+
+body.dark-mode #cohort-growth .cohort-growth-metric.is-up {
+    color: #4ade80;
+}
+
+body.dark-mode #cohort-growth .cohort-growth-metric.is-down {
+    color: #fb7185;
+}
+
+@media screen and (max-width: 768px) {
+    #cohort-growth {
+        overflow-x: clip;
+    }
+
+    #cohort-growth .analysis-shell-head,
+    #cohort-growth .analysis-action-stack,
+    #cohort-growth .analysis-actions,
+    #cohort-growth .analysis-info-band,
+    #cohort-growth .analysis-flow-banner,
+    #cohort-growth .cohort-growth-grid,
+    #cohort-growth .analysis-table-meta {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        width: 100%;
+        gap: 10px !important;
+    }
+
+    #cohort-growth .analysis-action-stack {
+        max-width: none;
+        justify-items: stretch;
+    }
+
+    #cohort-growth .analysis-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    #cohort-growth .analysis-anchor-panel {
+        border-radius: 14px;
+        padding: 14px;
+    }
+
+    #cohort-growth .cohort-growth-table-shell {
+        max-height: min(560px, 62vh) !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+    }
+
+    #cohort-growth .cohort-growth-table-shell table,
+    #cohort-growth .cohort-growth-table-shell table.mobile-card-table {
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+
+    #cohort-growth .cohort-growth-table-shell td[data-label="姓名"],
+    #cohort-growth .cohort-growth-table-shell td[data-label="变化"],
+    #cohort-growth .cohort-growth-table-shell td[data-label="波动率(σ)"] {
+        align-items: flex-start;
+        gap: 12px;
+    }
+}
+
 #correlation-analysis {
     min-width: 0;
 }

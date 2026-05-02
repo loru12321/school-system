@@ -249,6 +249,31 @@ async function openProgressAnalysisModule(page) {
     await page.waitForTimeout(500);
 }
 
+async function openCohortGrowthModule(page) {
+    await openModule(page, 'cohort-growth');
+    await page.evaluate(() => {
+        if (typeof window.CohortGrowth?.render === 'function') {
+            window.CohortGrowth.render();
+        }
+        if (typeof window.refreshResponsiveMobileTables === 'function') {
+            window.refreshResponsiveMobileTables(document.getElementById('cohort-growth'));
+        }
+    }).catch(() => {});
+    await page.waitForFunction(() => {
+        const section = document.getElementById('cohort-growth');
+        const volatilityRows = document.querySelectorAll('#cohort-volatility-table tbody tr').length;
+        const growthRows = document.querySelectorAll('#cohort-growth-table tbody tr').length;
+        return !!section
+            && section.classList.contains('active')
+            && typeof window.CohortGrowth?.compute === 'function'
+            && !!document.getElementById('cohort-volatility-table')
+            && !!document.getElementById('cohort-growth-table')
+            && volatilityRows > 0
+            && growthRows > 0;
+    }, null, { timeout: 90000 });
+    await page.waitForTimeout(500);
+}
+
 async function ensureMobileShell(page) {
     await page.evaluate(() => window.ensureMobileManagerRuntimeLoaded?.()).catch(() => {});
     await page.evaluate(() => window.MobileQueryUI?.refresh?.()).catch(() => {});
@@ -681,6 +706,41 @@ function assertProgressAnalysisLayout(state) {
     assertSectionLayout(state, 'progress-analysis');
 }
 
+async function inspectCohortGrowthLayout(page, mode) {
+    const mobileOnlySelectors = mode === 'mobile'
+        ? {
+            volatilityMobileLabels: '#cohort-volatility-table tbody td[data-label]',
+            volatilityMobileCardTable: '#cohort-volatility-table.mobile-card-table',
+            growthMobileLabels: '#cohort-growth-table tbody td[data-label]',
+            growthMobileCardTable: '#cohort-growth-table.mobile-card-table'
+        }
+        : {};
+    return inspectSectionLayout(page, mode, {
+        sectionId: 'cohort-growth',
+        targetSelector: '#cohort-growth',
+        requiredSelectors: {
+            hero: '#cohort-growth .analysis-hero',
+            shellHead: '#cohort-growth .analysis-shell-head',
+            actions: '#cohort-growth .cohort-growth-actions .btn',
+            infoBand: '#cohort-growth .analysis-info-band',
+            docPanel: '#cohort-growth .analysis-doc-panel',
+            flow: '#cohort-growth .analysis-flow-step',
+            growthGrid: '#cohort-growth .cohort-growth-grid',
+            volatilityPanel: '#cohort-growth .cohort-volatility-panel',
+            volatilityTable: '#cohort-volatility-table',
+            volatilityRows: '#cohort-volatility-table tbody tr',
+            rankPanel: '#cohort-growth .cohort-rank-panel',
+            growthTable: '#cohort-growth-table',
+            growthRows: '#cohort-growth-table tbody tr',
+            ...mobileOnlySelectors
+        }
+    });
+}
+
+function assertCohortGrowthLayout(state) {
+    assertSectionLayout(state, 'cohort-growth');
+}
+
 async function openDataManager(page, tab = 'student') {
     await page.evaluate(() => {
         if (window.DataManager && typeof window.DataManager.open === 'function') {
@@ -866,6 +926,9 @@ async function main() {
     await openProgressAnalysisModule(desktopPage);
     const desktopProgressState = await inspectProgressAnalysisLayout(desktopPage, 'desktop');
     assertProgressAnalysisLayout(desktopProgressState);
+    await openCohortGrowthModule(desktopPage);
+    const desktopCohortGrowthState = await inspectCohortGrowthLayout(desktopPage, 'desktop');
+    assertCohortGrowthLayout(desktopCohortGrowthState);
     await openStudentDetailsModule(desktopPage);
     const desktopStudentState = await inspectStudentDetailsLayout(desktopPage, 'desktop');
     assertStudentDetailsLayout(desktopStudentState);
@@ -899,6 +962,9 @@ async function main() {
     await openProgressAnalysisModule(mobilePage);
     const mobileProgressState = await inspectProgressAnalysisLayout(mobilePage, 'mobile');
     assertProgressAnalysisLayout(mobileProgressState);
+    await openCohortGrowthModule(mobilePage);
+    const mobileCohortGrowthState = await inspectCohortGrowthLayout(mobilePage, 'mobile');
+    assertCohortGrowthLayout(mobileCohortGrowthState);
     await openStudentDetailsModule(mobilePage);
     const mobileStudentState = await inspectStudentDetailsLayout(mobilePage, 'mobile');
     assertStudentDetailsLayout(mobileStudentState);
@@ -923,6 +989,7 @@ async function main() {
         desktopTeacherState,
         desktopCorrelationState,
         desktopProgressState,
+        desktopCohortGrowthState,
         desktopStudentState,
         desktopReportState,
         desktopDataManagerState,
@@ -931,6 +998,7 @@ async function main() {
         mobileTeacherState,
         mobileCorrelationState,
         mobileProgressState,
+        mobileCohortGrowthState,
         mobileStudentState,
         mobileReportState,
         mobileDataManagerState,

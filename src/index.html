@@ -4608,7 +4608,7 @@
             <h2><i class="ti ti-timeline"></i> 成长轨迹与稳定性分析</h2>
             <div class="analysis-action-stack">
                 <div class="analysis-action-note">建议先确保同一届别下已经累计多次考试，再生成成长档案；如果考试次数太少，这页更适合先当作趋势预览而不是结论依据。</div>
-                <div class="analysis-actions">
+                <div class="analysis-actions cohort-growth-actions">
                     <button class="btn btn-purple" onclick="CohortGrowth.render()">🔎 生成成长档案</button>
                     <button class="btn btn-gray" onclick="CohortGrowth.exportVolatility()">📥 导出波动名单</button>
                 </div>
@@ -4643,13 +4643,13 @@
             </div>
         </div>
         <div class="cohort-growth-grid">
-            <div class="analysis-anchor-panel">
+            <div class="analysis-anchor-panel cohort-growth-panel cohort-volatility-panel">
                 <div class="sub-header analysis-section-head">🌊 Z-Score 波动率（稳定性）</div>
                 <div class="analysis-table-meta">
                     <span><strong>用途：</strong>识别成绩忽高忽低、学习状态波动明显的学生。</span>
                     <span><strong>阅读建议：</strong>波动率越高越需要重点关注，建议结合班级背景判断是阶段起伏还是持续不稳。</span>
                 </div>
-                <div class="table-wrap analysis-table-shell">
+                <div class="table-wrap analysis-table-shell cohort-growth-table-shell" data-mobile-hint="手机端已转为卡片表，可上下滚动查看完整名单">
                     <table id="cohort-volatility-table" class="analysis-table-dense">
                         <thead>
                             <tr>
@@ -4667,13 +4667,13 @@
                     </table>
                 </div>
             </div>
-            <div class="analysis-anchor-panel">
+            <div class="analysis-anchor-panel cohort-growth-panel cohort-rank-panel">
                 <div class="sub-header analysis-section-head">🚀 排名百分位成长（首尾对比）</div>
                 <div class="analysis-table-meta">
                     <span><strong>用途：</strong>查看学生在届别内的长期成长方向，而不是只看单次涨跌。</span>
                     <span><strong>阅读建议：</strong>优先关注变化幅度大的学生，再结合波动率判断是真成长还是高波动。</span>
                 </div>
-                <div class="table-wrap analysis-table-shell">
+                <div class="table-wrap analysis-table-shell cohort-growth-table-shell" data-mobile-hint="手机端已转为卡片表，可上下滚动查看完整名单">
                     <table id="cohort-growth-table" class="analysis-table-dense">
                         <thead>
                             <tr>
@@ -4693,7 +4693,6 @@
                 </div>
             </div>
         </div>
-    </div>
     </div>
 
     <!-- 消息提示容器 -->

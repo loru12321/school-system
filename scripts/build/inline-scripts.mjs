@@ -31,6 +31,7 @@ const OPTIONAL_INLINE_RUNTIME_PATHS = [
     './assets/js/teacher-analysis-ui-runtime.js',
     './assets/js/teacher-analysis-bridge-runtime.js',
     './assets/js/teacher-analysis-main-runtime.js',
+    './assets/js/cohort-growth-runtime.js',
     './assets/js/progress-analysis-runtime.js',
     './assets/js/student-compare-result-runtime.js',
     './assets/js/student-compare-generate-runtime.js',
