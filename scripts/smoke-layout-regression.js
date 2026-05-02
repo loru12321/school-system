@@ -127,6 +127,41 @@ async function openSummaryModule(page) {
     await page.waitForTimeout(500);
 }
 
+async function openTeacherAnalysisModule(page) {
+    await openModule(page, 'teacher-analysis');
+    await page.evaluate(async () => {
+        if (typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function') {
+            await window.ensureTeacherAnalysisMainRuntimeLoaded();
+        }
+        if (typeof window.ensureTeacherCompareRuntimeLoaded === 'function') {
+            await window.ensureTeacherCompareRuntimeLoaded().catch(() => {});
+        }
+        if (typeof window.updateTeacherCompareExamSelects === 'function') window.updateTeacherCompareExamSelects();
+        if (typeof window.pickTeacherCompareDefaultSubjectAndTeacher === 'function') window.pickTeacherCompareDefaultSubjectAndTeacher();
+        if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP || {}).length && typeof window.analyzeTeachers === 'function') {
+            window.analyzeTeachers({ render: false });
+        }
+        if (typeof window.renderTeacherCards === 'function') window.renderTeacherCards();
+        if (typeof window.renderTeacherComparisonTable === 'function') window.renderTeacherComparisonTable();
+        if (typeof window.generateTeacherPairing === 'function') window.generateTeacherPairing();
+        if (typeof window.renderTeacherTownshipRanking === 'function') window.renderTeacherTownshipRanking();
+        if (typeof window.refreshResponsiveMobileTables === 'function') {
+            window.refreshResponsiveMobileTables(document.getElementById('teacher-analysis'));
+        }
+    }).catch(() => {});
+    await page.waitForFunction(() => {
+        const section = document.getElementById('teacher-analysis');
+        const cards = document.querySelectorAll('#teacherCardsContainer .teacher-card').length;
+        const comparisonCells = document.querySelectorAll('#teacherComparisonTable tbody td').length;
+        const compareSchool = document.getElementById('teacherCompareSchool');
+        return !!section
+            && section.classList.contains('active')
+            && !!compareSchool
+            && (cards > 0 || comparisonCells > 0);
+    }, null, { timeout: 90000 });
+    await page.waitForTimeout(500);
+}
+
 async function ensureMobileShell(page) {
     await page.evaluate(() => window.ensureMobileManagerRuntimeLoaded?.()).catch(() => {});
     await page.evaluate(() => window.MobileQueryUI?.refresh?.()).catch(() => {});
@@ -384,6 +419,38 @@ async function inspectSummaryLayout(page, mode) {
     });
 }
 
+async function inspectTeacherAnalysisLayout(page, mode) {
+    const mobileOnlySelectors = mode === 'mobile'
+        ? {
+            mobileLabels: '#teacherComparisonTable tbody td[data-label]',
+            mobileCardTable: '#teacherComparisonTable.mobile-card-table'
+        }
+        : {};
+    return inspectSectionLayout(page, mode, {
+        sectionId: 'teacher-analysis',
+        targetSelector: '#teacher-analysis .analysis-inline-panel',
+        requiredSelectors: {
+            hero: '#teacher-analysis .analysis-hero',
+            shellHead: '#teacher-analysis .analysis-shell-head',
+            syncCta: '#teacher-sync-cta',
+            comparePanel: '#teacher-analysis .analysis-inline-panel',
+            compareSchool: '#teacherCompareSchool',
+            compareSubject: '#teacherCompareSubject',
+            compareTeacher: '#teacherCompareTeacher',
+            compareExam1: '#teacherCompareExam1',
+            compareResult: '#teacherCompareResult',
+            stateBars: '#tmModuleState-teacher-analysis',
+            cards: '#teacherCardsContainer .teacher-card',
+            comparisonTable: '#teacherComparisonTable',
+            comparisonRows: '#teacherComparisonTable tbody td',
+            pairBox: '#teacher-pairing-box',
+            rankingContainer: '#teacher-township-ranking-container',
+            rankingPanel: '#teacher-analysis .analysis-ranking-panel',
+            ...mobileOnlySelectors
+        }
+    });
+}
+
 function assertSectionLayout(state, label) {
     assert.ok(state.sectionActive, `${state.mode} ${label} section is not active`);
     for (const [key, exists] of Object.entries(state.requiredPieces)) {
@@ -417,6 +484,10 @@ function assertReportGeneratorLayout(state) {
 
 function assertSummaryLayout(state) {
     assertSectionLayout(state, 'summary');
+}
+
+function assertTeacherAnalysisLayout(state) {
+    assertSectionLayout(state, 'teacher-analysis');
 }
 
 async function openDataManager(page, tab = 'student') {
@@ -595,6 +666,9 @@ async function main() {
     await openSummaryModule(desktopPage);
     const desktopSummaryState = await inspectSummaryLayout(desktopPage, 'desktop');
     assertSummaryLayout(desktopSummaryState);
+    await openTeacherAnalysisModule(desktopPage);
+    const desktopTeacherState = await inspectTeacherAnalysisLayout(desktopPage, 'desktop');
+    assertTeacherAnalysisLayout(desktopTeacherState);
     await openStudentDetailsModule(desktopPage);
     const desktopStudentState = await inspectStudentDetailsLayout(desktopPage, 'desktop');
     assertStudentDetailsLayout(desktopStudentState);
@@ -619,6 +693,9 @@ async function main() {
     await openSummaryModule(mobilePage);
     const mobileSummaryState = await inspectSummaryLayout(mobilePage, 'mobile');
     assertSummaryLayout(mobileSummaryState);
+    await openTeacherAnalysisModule(mobilePage);
+    const mobileTeacherState = await inspectTeacherAnalysisLayout(mobilePage, 'mobile');
+    assertTeacherAnalysisLayout(mobileTeacherState);
     await openStudentDetailsModule(mobilePage);
     const mobileStudentState = await inspectStudentDetailsLayout(mobilePage, 'mobile');
     assertStudentDetailsLayout(mobileStudentState);
@@ -640,11 +717,13 @@ async function main() {
     console.log(JSON.stringify({
         desktopState,
         desktopSummaryState,
+        desktopTeacherState,
         desktopStudentState,
         desktopReportState,
         desktopDataManagerState,
         mobileState,
         mobileSummaryState,
+        mobileTeacherState,
         mobileStudentState,
         mobileReportState,
         mobileDataManagerState,

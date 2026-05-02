@@ -1,4 +1,61 @@
 /* Teacher and cohort lazy module styles */
+#teacher-analysis.analysis-workspace-teacher {
+    min-width: 0;
+}
+
+#teacher-analysis .analysis-info-band {
+    align-items: center;
+}
+
+#teacher-analysis .analysis-inline-panel,
+#teacher-analysis .analysis-inline-controls,
+#teacher-analysis .analysis-result-slot,
+#teacher-analysis .analysis-results-layout-teacher,
+#teacher-analysis .analysis-content-stack,
+#teacher-analysis .analysis-anchor-panel,
+#teacher-analysis .analysis-ranking-panel {
+    min-width: 0;
+}
+
+#teacher-analysis .analysis-inline-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+    gap: 10px;
+    align-items: end;
+}
+
+#teacher-analysis .analysis-inline-controls>label {
+    align-self: center;
+    margin: 0 !important;
+    line-height: 1.35;
+}
+
+#teacher-analysis .analysis-inline-controls select,
+#teacher-analysis .analysis-inline-controls button {
+    width: 100%;
+    min-width: 0 !important;
+    min-height: 38px;
+}
+
+#teacher-analysis .analysis-inline-controls span {
+    min-width: 0;
+    margin: 0 !important;
+}
+
+#teacher-analysis .analysis-table-shell {
+    max-width: 100%;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+#teacher-analysis #teacherComparisonTable {
+    min-width: 980px;
+}
+
+#teacher-analysis .analysis-ranking-panel table {
+    min-width: 760px;
+}
+
 .analysis-workspace .teacher-cards-container {
     gap: 16px;
     margin-top: 12px;
@@ -29,7 +86,7 @@
 
 .teacher-cards-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 15px;
     margin-top: 15px;
 }
@@ -43,6 +100,9 @@
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
+    display: grid;
+    gap: 12px;
+    min-width: 0;
 }
 
 .teacher-card::before {
@@ -59,13 +119,20 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
+    gap: 10px;
     margin-bottom: 10px;
+}
+
+.teacher-header>div:first-child {
+    min-width: 0;
 }
 
 .teacher-name {
     font-size: 15px;
     font-weight: 700;
     color: #333;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
 }
 
 .teacher-classes {
@@ -79,6 +146,8 @@
     border-radius: 20px;
     font-size: 11px;
     font-weight: 600;
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 
 .performance-excellent {
@@ -102,23 +171,26 @@
 }
 
 .teacher-stats {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
     margin-bottom: 10px;
     background: #f8fafc;
     padding: 8px;
-    border-radius: 6px;
+    border-radius: 12px;
 }
 
 .stat-item {
     text-align: center;
-    flex: 1;
+    min-width: 0;
 }
 
 .stat-value {
     font-size: 16px;
     font-weight: 800;
     color: #333;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
 }
 
 .stat-label {
@@ -129,10 +201,11 @@
 
 .view-details-btn {
     width: 100%;
-    padding: 8px;
+    min-height: 38px;
+    padding: 8px 10px;
     background: white;
     border: 1px solid #cbd5e1;
-    border-radius: 6px;
+    border-radius: 10px;
     cursor: pointer;
     color: #475569;
     font-weight: 500;
@@ -147,7 +220,7 @@
 
 .pairing-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 15px;
     margin-top: 15px;
 }
@@ -155,11 +228,12 @@
 .pairing-card {
     background: linear-gradient(to bottom right, #ffffff, #f8fafc);
     border: 1px solid #cbd5e1;
-    border-radius: 10px;
+    border-radius: 14px;
     padding: 15px;
     display: flex;
     gap: 10px;
     position: relative;
+    min-width: 0;
 }
 
 .pairing-card::after {
@@ -173,6 +247,7 @@
 
 .pairing-side {
     flex: 1;
+    min-width: 0;
 }
 
 .pairing-arrow {
@@ -195,6 +270,7 @@
     font-weight: bold;
     color: #1e293b;
     font-size: 14px;
+    overflow-wrap: anywhere;
 }
 
 .pairing-skill {
@@ -217,4 +293,118 @@
     font-size: 10px;
     display: inline-block;
     margin-top: 5px;
+}
+
+#teacher-analysis .teacher-card>div[style*="display:flex"] {
+    flex-wrap: wrap;
+    min-width: 0;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+#teacher-analysis .teacher-card>div[style*="display:flex"] span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+#teacher-analysis .teacher-focus-chip {
+    min-height: 28px;
+}
+
+body.dark-mode #teacher-analysis .teacher-card,
+body.dark-mode #teacher-analysis .pairing-card,
+body.dark-mode #teacher-analysis .teacher-stats {
+    background: rgba(15, 23, 42, 0.92) !important;
+    border-color: rgba(51, 65, 85, 0.92) !important;
+    color: #e2e8f0 !important;
+}
+
+body.dark-mode #teacher-analysis .teacher-name,
+body.dark-mode #teacher-analysis .pairing-name,
+body.dark-mode #teacher-analysis .stat-value {
+    color: #f8fafc !important;
+}
+
+@media screen and (max-width: 768px) {
+    #teacher-analysis .analysis-info-band,
+    #teacher-analysis .analysis-inline-top,
+    #teacher-analysis .analysis-inline-meta,
+    #teacher-analysis .analysis-inline-controls,
+    #teacher-analysis .analysis-table-meta,
+    #teacher-analysis .analysis-inline-export {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        width: 100%;
+        gap: 8px !important;
+    }
+
+    #teacher-analysis .analysis-inline-controls select,
+    #teacher-analysis .analysis-inline-controls button,
+    #teacher-analysis .analysis-actions .btn,
+    #teacher-analysis .analysis-inline-export .btn,
+    #teacher-analysis #teacher-sync-cta {
+        width: 100%;
+        max-width: 100%;
+        min-height: 42px;
+        justify-content: center;
+    }
+
+    #teacher-analysis .teacher-cards-container,
+    #teacher-analysis .pairing-container {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+    }
+
+    #teacher-analysis .teacher-card,
+    #teacher-analysis .pairing-card {
+        border-radius: 14px;
+        padding: 14px;
+    }
+
+    #teacher-analysis .teacher-header,
+    #teacher-analysis .pairing-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    #teacher-analysis .performance-badge {
+        justify-self: start;
+    }
+
+    #teacher-analysis .teacher-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    #teacher-analysis .stat-value {
+        font-size: 15px;
+    }
+
+    #teacher-analysis #teacherComparisonTable,
+    #teacher-analysis .analysis-ranking-panel table {
+        min-width: 0;
+        width: 100%;
+    }
+
+    #teacher-analysis #teacherComparisonTable td {
+        display: grid !important;
+        grid-template-columns: minmax(92px, 42%) minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
+        text-align: right !important;
+        padding-left: 0 !important;
+    }
+
+    #teacher-analysis #teacherComparisonTable td::before {
+        position: static !important;
+        transform: none !important;
+        width: auto !important;
+        min-width: 0;
+        white-space: normal !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #teacher-analysis,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #teacher-analysis .analysis-inline-panel,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #teacher-analysis #anchor-cards {
+        scroll-margin-top: calc(var(--app-safe-top, 0px) + 226px);
+    }
 }
