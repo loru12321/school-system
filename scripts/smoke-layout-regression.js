@@ -105,6 +105,28 @@ async function openReportGeneratorModule(page) {
     await page.waitForTimeout(500);
 }
 
+async function openSummaryModule(page) {
+    await openModule(page, 'summary');
+    await page.evaluate(async () => {
+        if (typeof window.ensureTownSubmoduleCompareRuntimeLoaded === 'function') {
+            await window.ensureTownSubmoduleCompareRuntimeLoaded();
+        }
+        if (typeof window.ensureTownSubmoduleCompareUIs === 'function') {
+            await window.ensureTownSubmoduleCompareUIs();
+        }
+        if (typeof window.calcSummary === 'function') {
+            window.calcSummary(true);
+        }
+    }).catch(() => {});
+    await page.waitForFunction(() => {
+        const section = document.getElementById('summary');
+        const rows = document.querySelectorAll('#tb-summary tbody tr').length;
+        const panel = document.querySelector('#summary .town-submodule-compare-panel[data-submodule="summary"]');
+        return !!section && section.classList.contains('active') && rows > 0 && !!panel;
+    }, null, { timeout: 45000 });
+    await page.waitForTimeout(500);
+}
+
 async function ensureMobileShell(page) {
     await page.evaluate(() => window.ensureMobileManagerRuntimeLoaded?.()).catch(() => {});
     await page.evaluate(() => window.MobileQueryUI?.refresh?.()).catch(() => {});
@@ -343,6 +365,25 @@ async function inspectReportGeneratorLayout(page, mode) {
     });
 }
 
+async function inspectSummaryLayout(page, mode) {
+    return inspectSectionLayout(page, mode, {
+        sectionId: 'summary',
+        targetSelector: '#summary .analysis-summary-table',
+        requiredSelectors: {
+            hero: '#summary .analysis-hero',
+            shellHead: '#summary .analysis-shell-head',
+            actions: '#summary .analysis-actions .btn',
+            meta: '#summary .analysis-table-meta',
+            comparePanel: '#summary .town-submodule-compare-panel[data-submodule="summary"]',
+            compareResult: '#town-submodule-compare-result-summary',
+            summaryTable: '#tb-summary',
+            summaryRows: '#tb-summary tbody tr',
+            mobileLabels: '#tb-summary tbody td[data-label="学校名称"]',
+            rankLabels: '#tb-summary tbody td[data-label="总排名"]'
+        }
+    });
+}
+
 function assertSectionLayout(state, label) {
     assert.ok(state.sectionActive, `${state.mode} ${label} section is not active`);
     for (const [key, exists] of Object.entries(state.requiredPieces)) {
@@ -372,6 +413,10 @@ function assertStudentDetailsLayout(state) {
 
 function assertReportGeneratorLayout(state) {
     assertSectionLayout(state, 'report-generator');
+}
+
+function assertSummaryLayout(state) {
+    assertSectionLayout(state, 'summary');
 }
 
 async function openDataManager(page, tab = 'student') {
@@ -547,6 +592,9 @@ async function main() {
     await openUploadModule(desktopPage);
     const desktopState = await inspectUploadLayout(desktopPage, 'desktop');
     assertUploadLayout(desktopState);
+    await openSummaryModule(desktopPage);
+    const desktopSummaryState = await inspectSummaryLayout(desktopPage, 'desktop');
+    assertSummaryLayout(desktopSummaryState);
     await openStudentDetailsModule(desktopPage);
     const desktopStudentState = await inspectStudentDetailsLayout(desktopPage, 'desktop');
     assertStudentDetailsLayout(desktopStudentState);
@@ -568,6 +616,9 @@ async function main() {
     await openUploadModule(mobilePage);
     const mobileState = await inspectUploadLayout(mobilePage, 'mobile');
     assertUploadLayout(mobileState);
+    await openSummaryModule(mobilePage);
+    const mobileSummaryState = await inspectSummaryLayout(mobilePage, 'mobile');
+    assertSummaryLayout(mobileSummaryState);
     await openStudentDetailsModule(mobilePage);
     const mobileStudentState = await inspectStudentDetailsLayout(mobilePage, 'mobile');
     assertStudentDetailsLayout(mobileStudentState);
@@ -588,10 +639,12 @@ async function main() {
 
     console.log(JSON.stringify({
         desktopState,
+        desktopSummaryState,
         desktopStudentState,
         desktopReportState,
         desktopDataManagerState,
         mobileState,
+        mobileSummaryState,
         mobileStudentState,
         mobileReportState,
         mobileDataManagerState,

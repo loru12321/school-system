@@ -358,6 +358,100 @@
     min-height: 240px;
 }
 
+#summary.analysis-workspace-summary {
+    min-width: 0;
+}
+
+#summary .analysis-table-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 12px 0 14px;
+}
+
+#summary .analysis-table-meta span {
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--ui-border);
+    border-radius: 12px;
+    background: var(--ui-surface-soft);
+    line-height: 1.6;
+}
+
+#summary .town-submodule-compare-panel {
+    margin: 12px 0 14px !important;
+    padding: 14px !important;
+    border: 1px solid var(--ui-border) !important;
+    border-radius: 14px !important;
+    background: linear-gradient(180deg, rgba(240, 253, 244, 0.96), rgba(255, 255, 255, 0.98)) !important;
+}
+
+#summary .town-submodule-compare-panel>div:first-child {
+    display: grid !important;
+    grid-template-columns: minmax(220px, 1fr) auto;
+    gap: 12px;
+    align-items: center !important;
+}
+
+#summary .town-submodule-compare-panel>div:first-child>div:last-child {
+    display: flex !important;
+    justify-content: flex-end;
+    gap: 8px !important;
+    min-width: 0;
+}
+
+#summary .town-submodule-compare-panel .btn {
+    min-height: 38px;
+    margin: 0;
+    line-height: 1.25;
+    white-space: normal;
+}
+
+#summary .analysis-summary-table {
+    margin-top: 14px;
+    max-width: 100%;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+#summary #tb-summary {
+    min-width: 700px;
+}
+
+#summary #tb-summary th,
+#summary #tb-summary td {
+    text-align: center;
+}
+
+#summary #tb-summary th:first-child,
+#summary #tb-summary td:first-child {
+    min-width: 150px;
+    text-align: left;
+}
+
+#summary #tb-summary td[data-label="综合总分"] {
+    color: #dc2626 !important;
+}
+
+#summary #tb-summary td[data-label="总排名"] {
+    min-width: 74px;
+}
+
+@media screen and (min-width: 769px) {
+    #summary #tb-summary th:first-child,
+    #summary #tb-summary td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        background: inherit;
+    }
+
+    #summary #tb-summary thead th:first-child {
+        z-index: 2;
+        background: #f8fafc !important;
+    }
+}
+
 #report-generator.analysis-workspace-student {
     min-width: 0;
 }
@@ -482,6 +576,16 @@ body.dark-mode .table-wrap,
 body.dark-mode .section.card-box,
 body.dark-mode .analysis-workspace {
     border-color: rgba(51, 65, 85, 0.92);
+}
+
+body.dark-mode #summary .analysis-table-meta span,
+body.dark-mode #summary .town-submodule-compare-panel {
+    background: rgba(15, 23, 42, 0.92) !important;
+    border-color: rgba(51, 65, 85, 0.92) !important;
+}
+
+body.dark-mode #summary #tb-summary thead th:first-child {
+    background: var(--ui-surface-soft) !important;
 }
 
 @media screen and (min-width: 1281px) {
@@ -942,6 +1046,73 @@ body.dark-mode .analysis-workspace {
     #student-details .student-detail-mobile-score-summary {
         justify-items: start;
         min-width: 0 !important;
+    }
+
+    #summary .analysis-action-stack,
+    #summary .analysis-actions {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        justify-items: stretch;
+        width: 100%;
+    }
+
+    #summary .analysis-actions .btn {
+        width: 100%;
+        min-height: 42px;
+    }
+
+    #summary .analysis-table-meta,
+    #summary .town-submodule-compare-panel>div:first-child,
+    #summary .town-submodule-compare-panel>div:first-child>div:last-child {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        width: 100%;
+    }
+
+    #summary .analysis-table-meta {
+        gap: 8px;
+    }
+
+    #summary .town-submodule-compare-panel {
+        padding: 12px !important;
+        border-radius: 12px !important;
+    }
+
+    #summary .town-submodule-compare-panel .btn {
+        width: 100%;
+        min-height: 42px;
+    }
+
+    #summary .analysis-summary-table {
+        overflow: visible !important;
+    }
+
+    #summary #tb-summary {
+        min-width: 0;
+        width: 100%;
+    }
+
+    #summary #tb-summary td {
+        display: grid !important;
+        grid-template-columns: minmax(92px, 42%) minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
+        text-align: right !important;
+        padding-left: 0 !important;
+    }
+
+    #summary #tb-summary td::before {
+        position: static !important;
+        transform: none !important;
+        width: auto !important;
+        min-width: 0;
+        white-space: normal !important;
+    }
+
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #summary,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #summary .town-submodule-compare-panel,
+    body[data-mobile-architecture="apk-v2"]:not([data-role="parent"]) #summary .analysis-summary-table {
+        scroll-margin-top: calc(var(--app-safe-top, 0px) + 226px);
     }
 
     #report-generator .report-query-copy {

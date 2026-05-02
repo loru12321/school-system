@@ -13897,18 +13897,21 @@ function calcSummary(isSilent = false) {
     list.forEach(d => {
         const isMySchool = d.name === MY_SCHOOL;
         let indicatorCell = '';
-        if (isGrade9) indicatorCell = `<td>${d.s3.toFixed(2)}</td>`;
+        if (isGrade9) indicatorCell = `<td data-label="指标生得分">${d.s3.toFixed(2)}</td>`;
         let highScoreCell = '';
-        if (isGrade9) highScoreCell = `<td style="color:#b45309; background:#fff7ed; font-weight:bold;">${d.s4.toFixed(2)}</td>`;
+        if (isGrade9) highScoreCell = `<td data-label="高分段赋分" style="color:#b45309; background:#fff7ed; font-weight:bold;">${d.s4.toFixed(2)}</td>`;
+        const rankClass = ['rank-cell', d.rank === 1 ? 'r-1' : '', d.rank === 2 ? 'r-2' : '', d.rank === 3 ? 'r-3' : '']
+            .filter(Boolean)
+            .join(' ');
 
         html += `<tr class="${isMySchool ? 'bg-highlight' : ''}">
-                <td>${d.name}</td>
-                <td>${d.s1.toFixed(2)}</td>
-                <td>${d.s2.toFixed(2)}</td>
+                <td data-label="学校名称">${d.name}</td>
+                <td data-label="两率一分得分">${d.s1.toFixed(2)}</td>
+                <td data-label="后1/3得分">${d.s2.toFixed(2)}</td>
                 ${indicatorCell}
                 ${highScoreCell}
-                <td class="text-red" style="font-size:16px; font-weight:bold;">${d.total.toFixed(2)}</td>
-                ${getRankHTML(d.rank)}
+                <td data-label="综合总分" class="text-red" style="font-size:16px; font-weight:bold;">${d.total.toFixed(2)}</td>
+                <td data-label="总排名" class="${rankClass}">${d.rank}</td>
             </tr>`;
     });
     document.querySelector('#tb-summary tbody').innerHTML = html;
