@@ -557,6 +557,15 @@ async function smokeSwitchModule(page, id) {
 async function runModuleDeepCheck(page, id) {
     if (id === 'summary') {
         return page.evaluate(async () => {
+            if (typeof window.ensureTownSubmoduleCompareRuntimeLoaded === 'function') {
+                await window.ensureTownSubmoduleCompareRuntimeLoaded();
+            }
+            if (typeof window.ensureTownSubmoduleCompareUIs === 'function') {
+                await window.ensureTownSubmoduleCompareUIs();
+            }
+            if (typeof window.ensureSchoolProfileRuntimeLoaded === 'function') {
+                await window.ensureSchoolProfileRuntimeLoaded();
+            }
             const checks = {
                 ensureTownSubmoduleCompareUIs: typeof window.ensureTownSubmoduleCompareUIs === 'function',
                 openTownSubmoduleCompareDialog: typeof window.openTownSubmoduleCompareDialog === 'function',
