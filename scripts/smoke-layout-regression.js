@@ -197,6 +197,33 @@ async function inspectSectionLayout(page, mode, options = {}) {
         }
         window.scrollBy(0, delta);
     }, { layoutMode: mode, focusSelector: targetSelector }).catch(() => {});
+    await page.waitForFunction(({ layoutMode, focusSelector }) => {
+        const target = document.querySelector(focusSelector);
+        if (!target) return false;
+        const rect = target.getBoundingClientRect();
+        if (rect.width <= 1 || rect.height <= 1) return false;
+        const viewportHeight = Math.round(document.documentElement.clientHeight || window.innerHeight || 0);
+        const topShell = document.querySelector('#apk-mobile-shell .apk-shell-top');
+        const topbar = document.querySelector('#apk-mobile-shell .apk-shell-topbar');
+        const tabs = document.querySelector('#apk-mobile-shell .apk-shell-tabs');
+        const topShellRect = topShell?.getBoundingClientRect?.();
+        const topbarRect = topbar?.getBoundingClientRect?.();
+        const tabsRect = tabs?.getBoundingClientRect?.();
+        const safeTop = Math.max(1, topShellRect?.bottom || 1, topbarRect?.bottom || 1) + 6;
+        const safeBottom = Math.min(viewportHeight - 2, tabsRect?.top ? tabsRect.top - 6 : viewportHeight - 2);
+        const focusInset = Math.min(8, Math.max(2, rect.height / 3));
+        const minY = Math.max(rect.top + focusInset, safeTop);
+        const maxY = Math.min(rect.bottom - focusInset, safeBottom);
+        const preferredY = Math.min(rect.top + 72, rect.top + rect.height / 2);
+        const x = Math.min(Math.max(rect.left + rect.width / 2, 1), Math.round(document.documentElement.clientWidth || window.innerWidth || 0) - 2);
+        const y = minY <= maxY
+            ? Math.min(Math.max(preferredY, minY), maxY)
+            : Math.min(Math.max(rect.top + rect.height / 2, 1), viewportHeight - 2);
+        const hit = document.elementFromPoint(x, y);
+        if (hit === target || target.contains(hit)) return true;
+        if (layoutMode === 'mobile') return false;
+        return !hit?.closest?.('[data-shell-module-rail], [data-shell-module-rail-shell]');
+    }, { layoutMode: mode, focusSelector: targetSelector }, { timeout: 3000 }).catch(() => {});
     await page.waitForTimeout(250);
     return page.evaluate(({ layoutMode, targetSectionId, focusSelector, requiredSelectors }) => {
         function selectorFor(el) {
