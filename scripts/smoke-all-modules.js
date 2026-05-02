@@ -1672,6 +1672,332 @@ async function runModuleDeepCheck(page, id) {
             };
         });
     }
+    if (id === 'freshman-simulator') {
+        return page.evaluate(async () => {
+            const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+            const waitUntil = async (predicate, timeout = 12000) => {
+                const deadline = Date.now() + timeout;
+                let lastError = null;
+                while (Date.now() < deadline) {
+                    try {
+                        if (predicate()) return true;
+                    } catch (error) {
+                        lastError = error;
+                    }
+                    await wait(120);
+                }
+                throw lastError || new Error('freshman simulator wait timeout');
+            };
+            const makeWorkbookFile = (rows, fileName) => {
+                const workbook = XLSX.utils.book_new();
+                const worksheet = XLSX.utils.json_to_sheet(rows);
+                XLSX.utils.book_append_sheet(workbook, worksheet, '学生名单');
+                const bytes = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+                return new File([bytes], fileName, {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                });
+            };
+
+            if (typeof window.ensureFreshmanExamRuntimeLoaded === 'function') {
+                await window.ensureFreshmanExamRuntimeLoaded();
+            }
+            if (typeof window.ensureXlsxVendorLoaded === 'function') {
+                await window.ensureXlsxVendorLoaded();
+            }
+            if (typeof window.ensureChartVendorLoaded === 'function') {
+                await window.ensureChartVendorLoaded();
+            }
+
+            const runtime = window.FreshmanExamRuntime;
+            const checks = {
+                sectionReady: !!document.querySelector('#freshman-simulator.analysis-workspace-violet'),
+                runtimeReady: !!runtime,
+                xlsxReady: !!(window.XLSX && window.XLSX.utils),
+                chartReady: typeof window.Chart === 'function',
+                importReady: typeof window.FB_loadData === 'function',
+                divisionReady: typeof window.FB_runDivision === 'function'
+                    && typeof window.FB_generateSingleScheme === 'function'
+                    && typeof window.FB_applyScheme === 'function',
+                seatReady: typeof window.FB_openSeatMap === 'function'
+                    && typeof window.FB_autoSeatAlgo === 'function'
+                    && typeof window.FB_renderSeatMap === 'function'
+            };
+            if (!Object.values(checks).every(Boolean)) {
+                return { ok: false, checks };
+            }
+
+            const sampleRows = Array.from({ length: 24 }, (_, index) => {
+                const classNo = (index % 4) + 1;
+                const name = `烟测新生${String(index + 1).padStart(2, '0')}`;
+                return {
+                    姓名: name,
+                    性别: index % 2 === 0 ? '男' : '女',
+                    总分: 612 - (index * 5),
+                    身高: 150 + (index % 8) * 3,
+                    视力: 4.6 + ((index % 4) * 0.1),
+                    难管: index % 11 === 0 ? '是' : '',
+                    备注: index === 3 ? '与烟测新生08不同班' : `来自${classNo}班`
+                };
+            });
+
+            const alerts = [];
+            const originalAlert = window.alert;
+            window.alert = (message) => alerts.push(String(message || ''));
+            try {
+                window.FB_loadData({ files: [makeWorkbookFile(sampleRows, 'freshman-smoke.xlsx')], value: '' });
+                await waitUntil(() => runtime.students.length === sampleRows.length);
+
+                const classInput = document.getElementById('fb_cls_num');
+                const algorithmSelect = document.getElementById('fb_algorithm');
+                const diffSelect = document.getElementById('fb_rule_diff');
+                if (classInput) classInput.value = '4';
+                if (algorithmSelect) algorithmSelect.value = 'snake';
+                if (diffSelect) diffSelect.value = 'spread';
+
+                window.FB_runDivision();
+                await waitUntil(() => runtime.classes.length === 4
+                    && document.querySelectorAll('#fb_class_container .fb-class-box').length === 4);
+            } finally {
+                window.alert = originalAlert;
+            }
+
+            const classes = Array.isArray(runtime.classes) ? runtime.classes : [];
+            const allStudents = classes.flatMap(cls => Array.isArray(cls.students) ? cls.students : []);
+            const names = allStudents.map(student => String(student.name || '').trim()).filter(Boolean);
+            const uniqueNames = new Set(names);
+            const classSizes = classes.map(cls => cls.students.length);
+            const averages = classes.map(cls => Number(cls.stats?.avg || 0));
+            const averageRange = averages.length ? Math.max(...averages) - Math.min(...averages) : Infinity;
+            const totalMale = classes.reduce((sum, cls) => sum + Number(cls.stats?.male || 0), 0);
+            const totalCount = classes.reduce((sum, cls) => sum + Number(cls.stats?.count || cls.students?.length || 0), 0);
+            const expectedTotal = sampleRows.length;
+            const expectedMale = sampleRows.filter(row => row.性别 === '男').length;
+            const dashboardText = document.getElementById('balanceTableContainer')?.textContent || '';
+            const simulatedDataCount = Object.values(runtime.simulatedData || {})
+                .reduce((sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0), 0);
+            const persistedCount = Array.isArray(window.FB_CLASSES)
+                ? window.FB_CLASSES.reduce((sum, cls) => sum + (Array.isArray(cls.students) ? cls.students.length : 0), 0)
+                : 0;
+
+            const resultChecks = {
+                ...checks,
+                importedCountMatches: runtime.students.length === expectedTotal,
+                classCountMatches: classes.length === 4,
+                allStudentsAssigned: allStudents.length === expectedTotal,
+                noDuplicateStudents: uniqueNames.size === expectedTotal,
+                classSizesBalanced: classSizes.length === 4
+                    && (Math.max(...classSizes) - Math.min(...classSizes)) <= 1,
+                classStatsFinite: classes.every(cls => Number.isFinite(Number(cls.stats?.avg))
+                    && Number.isFinite(Number(cls.stats?.male))
+                    && Number.isFinite(Number(cls.stats?.count))),
+                genderTotalsMatch: totalMale === expectedMale && totalCount === expectedTotal,
+                averageBalanceReasonable: Number.isFinite(averageRange) && averageRange <= 8,
+                dashboardRendered: document.querySelectorAll('#fb_class_container .fb-class-box').length === 4,
+                balanceTableRendered: document.querySelectorAll('#balanceTableContainer tbody tr').length === 4
+                    && dashboardText.includes('平均分'),
+                resultsAreaVisible: !document.getElementById('fb-results-area')?.classList.contains('hidden'),
+                simulatedDataSynced: simulatedDataCount === expectedTotal,
+                persistedStateSynced: persistedCount === expectedTotal,
+                importSucceeded: alerts.some(message => message.includes(String(expectedTotal)))
+            };
+
+            return {
+                ok: Object.values(resultChecks).every(Boolean),
+                checks: resultChecks,
+                counts: {
+                    imported: runtime.students.length,
+                    assigned: allStudents.length,
+                    classes: classes.length,
+                    minClassSize: Math.min(...classSizes),
+                    maxClassSize: Math.max(...classSizes),
+                    averageRange: Number(averageRange.toFixed(2)),
+                    male: totalMale,
+                    expectedMale
+                },
+                alerts
+            };
+        });
+    }
+    if (id === 'exam-arranger') {
+        return page.evaluate(async () => {
+            const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+            const waitUntil = async (predicate, timeout = 12000) => {
+                const deadline = Date.now() + timeout;
+                let lastError = null;
+                while (Date.now() < deadline) {
+                    try {
+                        if (predicate()) return true;
+                    } catch (error) {
+                        lastError = error;
+                    }
+                    await wait(120);
+                }
+                throw lastError || new Error('exam arranger wait timeout');
+            };
+            const makeWorkbookFile = (rows, fileName) => {
+                const workbook = XLSX.utils.book_new();
+                const worksheet = XLSX.utils.json_to_sheet(rows);
+                XLSX.utils.book_append_sheet(workbook, worksheet, '考生名单');
+                const bytes = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+                return new File([bytes], fileName, {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                });
+            };
+
+            if (typeof window.ensureFreshmanExamRuntimeLoaded === 'function') {
+                await window.ensureFreshmanExamRuntimeLoaded();
+            }
+            if (typeof window.ensureGradeSchedulerRuntimeLoaded === 'function') {
+                await window.ensureGradeSchedulerRuntimeLoaded().catch(() => null);
+            }
+            if (typeof window.ensureXlsxVendorLoaded === 'function') {
+                await window.ensureXlsxVendorLoaded();
+            }
+
+            const runtime = window.FreshmanExamRuntime;
+            const checks = {
+                sectionReady: !!document.querySelector('#exam-arranger.analysis-workspace-tools'),
+                runtimeReady: !!runtime,
+                xlsxReady: !!(window.XLSX && window.XLSX.utils),
+                importReady: typeof window.EXAM_loadData === 'function',
+                generateReady: typeof window.EXAM_generate === 'function'
+                    && typeof window.EXAM_renderOverview === 'function'
+                    && typeof window.EXAM_renderStudentList === 'function'
+                    && typeof window.EXAM_renderProctorTable === 'function',
+                proctorUiReady: typeof window.EXAM_initProctorUI === 'function',
+                proctorAssignReady: typeof window.EXAM_assignProctors === 'function',
+                schedulerRuntimeReady: !window.GradeSchedulerRuntime || typeof window.GradeSchedulerRuntime.loadData === 'function'
+            };
+            if (!Object.values(checks).every(Boolean)) {
+                return { ok: false, checks };
+            }
+
+            const sampleRows = Array.from({ length: 40 }, (_, index) => ({
+                学校: '烟测学校',
+                班级: `${(index % 4) + 1}班`,
+                姓名: `烟测考生${String(index + 1).padStart(2, '0')}`,
+                总分: 698 - (index * 3)
+            }));
+            const prefix = 'T2026';
+            const seatsPerRoom = 12;
+            const expectedRoomCount = Math.ceil(sampleRows.length / seatsPerRoom);
+
+            const alerts = [];
+            const originalAlert = window.alert;
+            window.alert = (message) => alerts.push(String(message || ''));
+            try {
+                window.EXAM_loadData({ files: [makeWorkbookFile(sampleRows, 'exam-smoke.xlsx')], value: '' });
+                await waitUntil(() => runtime.examData.length === sampleRows.length);
+
+                const prefixInput = document.getElementById('exam_prefix');
+                const seatsInput = document.getElementById('exam_seats_per_room');
+                const separateInput = document.getElementById('exam_opt_separate');
+                const snakeInput = document.getElementById('exam_opt_snake');
+                if (prefixInput) prefixInput.value = prefix;
+                if (seatsInput) seatsInput.value = String(seatsPerRoom);
+                if (separateInput) separateInput.checked = true;
+                if (snakeInput) snakeInput.checked = true;
+
+                window.EXAM_generate();
+                await waitUntil(() => runtime.examRooms.length === expectedRoomCount
+                    && document.querySelectorAll('#exam_room_grid .exam-room-card').length === expectedRoomCount);
+
+                if (typeof window.EXAM_initProctorUI === 'function') {
+                    window.EXAM_initProctorUI();
+                }
+            } finally {
+                window.alert = originalAlert;
+            }
+
+            const rooms = Array.isArray(runtime.examRooms) ? runtime.examRooms : [];
+            const examData = Array.isArray(runtime.examData) ? runtime.examData : [];
+            const assigned = rooms.flatMap(room => Array.isArray(room.students) ? room.students : []);
+            const examNos = assigned.map(student => String(student.examNo || '').trim()).filter(Boolean);
+            const teacherNames = [...new Set(Object.values(window.TEACHER_MAP || {})
+                .map(name => String(name || '').trim())
+                .filter(Boolean))];
+            const canAssignProctors = teacherNames.length >= rooms.length * 2;
+            let proctorAssignmentTried = false;
+            let proctorAssignmentReady = false;
+            let proctorAlerts = [];
+            if (canAssignProctors) {
+                const proctorOriginalAlert = window.alert;
+                window.alert = (message) => proctorAlerts.push(String(message || ''));
+                try {
+                    window.EXAM_assignProctors();
+                    proctorAssignmentTried = true;
+                    await wait(200);
+                } finally {
+                    window.alert = proctorOriginalAlert;
+                }
+                const proctorRows = Array.from(document.querySelectorAll('#exam_proctor_table tbody tr'))
+                    .filter(row => row.querySelectorAll('td').length >= 5);
+                proctorAssignmentReady = proctorRows.slice(0, rooms.length).every(row => {
+                    const cells = row.querySelectorAll('td');
+                    return String(cells[3]?.textContent || '').trim()
+                        && String(cells[4]?.textContent || '').trim();
+                });
+            } else {
+                proctorAssignmentReady = true;
+            }
+
+            const roomSizes = rooms.map(room => room.students.length);
+            const seatIntegrity = rooms.every(room => {
+                const seats = room.students.map(student => Number(student.seatNo));
+                return seats.length === new Set(seats).size
+                    && seats.every(seat => Number.isInteger(seat) && seat >= 1 && seat <= seatsPerRoom);
+            });
+            const snakePrintOrder = rooms.every(room => {
+                const seats = room.students.map(student => Number(student.seatNo));
+                return seats.every((seat, index) => index === 0 || seat >= seats[index - 1]);
+            });
+            const examNoSortedStudents = [...assigned].sort((a, b) => String(a.examNo || '').localeCompare(String(b.examNo || '')));
+            const noAdjacentSameClass = examNoSortedStudents.every((student, index, rows) => (
+                index === 0 || String(student.class) !== String(rows[index - 1].class)
+            ));
+            const firstExamNo = String(examNoSortedStudents[0]?.examNo || '');
+            const lastExamNo = String(examNoSortedStudents[examNoSortedStudents.length - 1]?.examNo || '');
+            const expectedLastNo = `${prefix}${String(sampleRows.length).padStart(3, '0')}`;
+            const resultChecks = {
+                ...checks,
+                importedCountMatches: examData.length === sampleRows.length,
+                assignedCountMatches: assigned.length === sampleRows.length,
+                roomCountMatches: rooms.length === expectedRoomCount,
+                roomCapacityRespected: roomSizes.every(size => size > 0 && size <= seatsPerRoom),
+                examNumbersUnique: new Set(examNos).size === sampleRows.length,
+                examNumberPrefixAndRange: firstExamNo === `${prefix}001` && lastExamNo === expectedLastNo,
+                seatIntegrity,
+                snakePrintOrder,
+                classSeparationApplied: noAdjacentSameClass,
+                resultsAreaVisible: !document.getElementById('exam-results-area')?.classList.contains('hidden'),
+                overviewRendered: document.querySelectorAll('#exam_room_grid .exam-room-card').length === expectedRoomCount,
+                studentRowsRendered: document.querySelectorAll('#exam_student_table tbody tr').length === sampleRows.length,
+                proctorRowsRendered: document.querySelectorAll('#exam_proctor_table tbody tr').length >= rooms.length,
+                printViewRendered: document.querySelectorAll('#batch-print-area-wrapper .exam-print-page, #batch-print-container .exam-print-page').length === expectedRoomCount,
+                importSucceeded: alerts.some(message => message.includes(String(sampleRows.length))),
+                proctorAssignmentReady
+            };
+
+            return {
+                ok: Object.values(resultChecks).every(Boolean),
+                checks: resultChecks,
+                counts: {
+                    imported: examData.length,
+                    assigned: assigned.length,
+                    rooms: rooms.length,
+                    minRoomSize: Math.min(...roomSizes),
+                    maxRoomSize: Math.max(...roomSizes),
+                    teacherPool: teacherNames.length,
+                    proctorAssignmentTried
+                },
+                examNumberRange: {
+                    first: firstExamNo,
+                    last: lastExamNo
+                },
+                alerts: alerts.concat(proctorAlerts)
+            };
+        });
+    }
     if (id === 'app-download-center') {
         return page.evaluate(async () => {
             if (typeof window.ensureAppDownloadRuntimeLoaded === 'function') {

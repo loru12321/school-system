@@ -1395,7 +1395,7 @@ function EXAM_renderProctorTable() {
 }
 
 function EXAM_renderPrintView() {
-    const container = document.getElementById('batch-print-area-wrapper'); if (!container) return; container.innerHTML = ''; let html = '';
+    const container = document.getElementById('batch-print-area-wrapper') || document.getElementById('batch-print-container'); if (!container) return; container.innerHTML = ''; let html = '';
     EXAM_ROOMS.forEach(room => {
         let seatsHtml = ''; room.students.forEach(s => { seatsHtml += `<div class="exam-print-seat"><div class="exam-print-seat-num">第${String(s.seatNo).padStart(2, '0')}号</div><div class="exam-print-seat-name">${s.name}</div><div class="exam-print-seat-id">考号: ${s.examNo}</div><div style="font-size:10px;">${s.class}</div></div>`; });
         html += `<div class="exam-print-page"><div class="exam-print-header">第 ${String(room.id).padStart(2, '0')} 考场座位表 (共${room.students.length}人)</div><div class="exam-print-grid">${seatsHtml}</div><div style="margin-top:20px; font-size:12px;">监考员签字：_________________   &nbsp;&nbsp;&nbsp; 巡考员签字：_________________</div></div>`;
