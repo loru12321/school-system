@@ -1113,6 +1113,292 @@ async function runModuleDeepCheck(page, id) {
             };
         });
     }
+    if (id === 'student-overview') {
+        return page.evaluate(async () => {
+            const textOf = (selector) => String(document.querySelector(selector)?.textContent || '')
+                .replace(/\s+/g, ' ')
+                .trim();
+            const toNumber = (value, fallback = 0) => {
+                const number = Number(value);
+                return Number.isFinite(number) ? number : fallback;
+            };
+            const normalizeClassValue = (value) => (
+                typeof window.normalizeClass === 'function'
+                    ? window.normalizeClass(value || '')
+                    : String(value || '').trim()
+            );
+            const schoolMatches = (rowSchool, selectedSchool) => {
+                const useRowSchool = String(rowSchool || '').trim();
+                const useSelectedSchool = String(selectedSchool || '').trim();
+                if (!useSelectedSchool) return true;
+                if (!useRowSchool) return false;
+                if (useRowSchool === useSelectedSchool) return true;
+                if (typeof window.areSchoolNamesEquivalent === 'function') {
+                    try {
+                        return !!window.areSchoolNamesEquivalent(useRowSchool, useSelectedSchool);
+                    } catch (_) {
+                        return false;
+                    }
+                }
+                return false;
+            };
+            const firstOptionValue = (select, exclude = '') => Array.from(select?.options || [])
+                .map(option => String(option.value || '').trim())
+                .find(value => value && value !== exclude) || '';
+            const pickSelectValue = (id, preferred = '', exclude = '') => {
+                const select = document.getElementById(id);
+                if (!select) return '';
+                const preferredValue = String(preferred || '').trim();
+                const hasPreferred = preferredValue && Array.from(select.options || [])
+                    .some(option => String(option.value || '').trim() === preferredValue);
+                select.value = hasPreferred ? preferredValue : firstOptionValue(select, exclude);
+                return String(select.value || '').trim();
+            };
+            const ensureOverviewInputs = () => {
+                const currentSchool = String(
+                    (typeof window.readCurrentSchool === 'function' ? window.readCurrentSchool() : '')
+                    || window.MY_SCHOOL
+                    || ''
+                ).trim();
+                if (typeof window.updateStudentSchoolSelect === 'function') window.updateStudentSchoolSelect();
+                if (typeof window.updateStudentCompareExamSelects === 'function') window.updateStudentCompareExamSelects();
+                if (typeof window.updateReportCompareExamSelects === 'function') window.updateReportCompareExamSelects();
+                if (typeof window.updateMarginalSchoolSelect === 'function') window.updateMarginalSchoolSelect();
+                if (typeof window.updateSubjectBalanceSelects === 'function') window.updateSubjectBalanceSelects();
+                if (typeof window.updatePotentialSchoolSelect === 'function') window.updatePotentialSchoolSelect();
+                if (typeof window.updateSegmentSelects === 'function') window.updateSegmentSelects();
+                if (typeof window.updateCorrelationSchoolSelect === 'function') window.updateCorrelationSchoolSelect();
+                if (typeof window.updateClassSelect === 'function') window.updateClassSelect();
+
+                const selectedSchool = pickSelectValue('studentSchoolSelect', currentSchool);
+                const exam1 = pickSelectValue('studentCompareExam1');
+                pickSelectValue('studentCompareExam2', '', exam1);
+                const period = document.getElementById('studentComparePeriodCount');
+                if (period && !period.value) period.value = '2';
+                if (typeof window.onStudentComparePeriodCountChange === 'function') {
+                    window.onStudentComparePeriodCountChange();
+                }
+
+                if (typeof window.updateProgressMultiExamSelects === 'function') window.updateProgressMultiExamSelects();
+                pickSelectValue('progressCompareSchool', selectedSchool);
+                const progressExam1 = pickSelectValue('progressCompareExam1', exam1);
+                pickSelectValue('progressCompareExam2', '', progressExam1);
+                const progressPeriod = document.getElementById('progressComparePeriodCount');
+                if (progressPeriod && !progressPeriod.value) progressPeriod.value = '2';
+                if (typeof window.onProgressComparePeriodCountChange === 'function') {
+                    window.onProgressComparePeriodCountChange();
+                }
+            };
+            const buildExpected = (model) => {
+                const context = model.context || {};
+                const rawRows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
+                const selectedSchool = String(context.schoolValue || '').trim();
+                const selectedClass = normalizeClassValue(context.classValue || '');
+                const seen = new Set();
+                rawRows.forEach((row) => {
+                    if (!row) return;
+                    if (selectedSchool && !schoolMatches(row.school, selectedSchool)) return;
+                    const rowClass = normalizeClassValue(row.class || '');
+                    if (selectedClass && rowClass !== selectedClass) return;
+                    const key = [
+                        String(row.school || '').trim(),
+                        rowClass,
+                        String(row.name || '').trim()
+                    ].join('|');
+                    if (key !== '||') seen.add(key);
+                });
+
+                const fullProgressRows = typeof window.readProgressCacheFullState === 'function'
+                    ? window.readProgressCacheFullState()
+                    : (Array.isArray(window.PROGRESS_CACHE_FULL) ? window.PROGRESS_CACHE_FULL : []);
+                const fallbackProgressRows = typeof window.readProgressCacheState === 'function'
+                    ? window.readProgressCacheState()
+                    : (Array.isArray(window.PROGRESS_CACHE) ? window.PROGRESS_CACHE : []);
+                const progressRows = fullProgressRows.length ? fullProgressRows : fallbackProgressRows;
+                const progress = { total: 0, improve: 0, decline: 0, stable: 0 };
+                progressRows.forEach((row) => {
+                    if (selectedSchool && !schoolMatches(row.school, selectedSchool)) return;
+                    if (selectedClass && normalizeClassValue(row.class || '') !== selectedClass) return;
+                    progress.total += 1;
+                    const changeValue = toNumber(row.change);
+                    if (changeValue > 0) progress.improve += 1;
+                    else if (changeValue < 0) progress.decline += 1;
+                    else progress.stable += 1;
+                });
+
+                const marginalSource = (window.MARGINAL_STUDENTS && typeof window.MARGINAL_STUDENTS === 'object')
+                    ? window.MARGINAL_STUDENTS
+                    : {};
+                let marginalClassCount = 0;
+                let marginalRecordCount = 0;
+                Object.entries(marginalSource).forEach(([, subjectMap]) => {
+                    marginalClassCount += 1;
+                    Object.values(subjectMap || {}).forEach((subjectData) => {
+                        const excellentList = Array.isArray(subjectData?.excellentMarginal)
+                            ? subjectData.excellentMarginal
+                            : [];
+                        const passList = Array.isArray(subjectData?.passMarginal)
+                            ? subjectData.passMarginal
+                            : [];
+                        marginalRecordCount += excellentList.length + passList.length;
+                    });
+                });
+
+                const potentialRows = Array.isArray(window.POTENTIAL_STUDENTS_CACHE)
+                    ? window.POTENTIAL_STUDENTS_CACHE
+                    : [];
+                let potentialCount = 0;
+                potentialRows.forEach((row) => {
+                    if (selectedSchool && !schoolMatches(row.school, selectedSchool)) return;
+                    if (selectedClass && normalizeClassValue(row.class || '') !== selectedClass) return;
+                    potentialCount += 1;
+                });
+
+                return {
+                    uniqueStudentCount: seen.size,
+                    progress,
+                    marginalClassCount,
+                    marginalRecordCount,
+                    potentialCount
+                };
+            };
+
+            if (typeof window.ensureTeachingManagementRuntimeLoaded === 'function') {
+                await Promise.resolve(window.ensureTeachingManagementRuntimeLoaded()).catch(() => null);
+            } else if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
+                await Promise.resolve(window.SystemRuntimeLoader.load('teaching-management')).catch(() => null);
+            }
+
+            ensureOverviewInputs();
+            if (typeof window.renderMultiPeriodComparison === 'function') {
+                await Promise.resolve(window.renderMultiPeriodComparison()).catch(() => null);
+                await new Promise(resolve => setTimeout(resolve, 180));
+            }
+            if (typeof window.renderStudentOverview === 'function') {
+                window.renderStudentOverview();
+            } else if (typeof window.smScheduleStudentOverviewRender === 'function') {
+                window.smScheduleStudentOverviewRender();
+            }
+            await new Promise(resolve => setTimeout(resolve, 220));
+
+            const model = typeof window.smBuildOverviewModel === 'function'
+                ? window.smBuildOverviewModel()
+                : null;
+            if (!model) {
+                return {
+                    ok: false,
+                    checks: {
+                        runtimeReady: false
+                    }
+                };
+            }
+
+            const expected = buildExpected(model);
+            const statScoresText = textOf('#smStatScores');
+            const statProgressText = textOf('#smStatProgress');
+            const statSupportText = textOf('#smStatSupport');
+            const summarySchoolsText = textOf('#smSummarySchools');
+            const summaryStudentsText = textOf('#smSummaryStudents');
+            const summaryProgressText = textOf('#smSummaryProgress');
+            const summaryPotentialText = textOf('#smSummaryPotential');
+            const quickButtons = Array.from(document.querySelectorAll('#smQuickEntry [data-target]'));
+            const quickStates = Object.fromEntries(quickButtons.map((button) => [
+                button.dataset.target,
+                !button.disabled
+            ]));
+            const expectedQuickStates = {
+                'student-details': !!model.scoreReady,
+                'progress-analysis': !!model.scoreReady && model.exams.length >= 2,
+                'marginal-push': !!model.scoreReady && !!model.schoolReady,
+                'subject-balance': !!model.scoreReady && !!model.schoolReady,
+                'potential-analysis': !!model.scoreReady,
+                'report-generator': !!model.scoreReady
+            };
+            const quickStateMismatches = Object.entries(expectedQuickStates)
+                .filter(([target, enabled]) => quickStates[target] !== enabled)
+                .map(([target, enabled]) => ({ target, expectedEnabled: enabled, actualEnabled: quickStates[target] }));
+            const countFields = [
+                model.uniqueStudentCount,
+                model.progressCount,
+                model.improveCount,
+                model.declineCount,
+                model.stableCount,
+                model.marginalClassCount,
+                model.marginalRecordCount,
+                model.potentialCount,
+                model.rawData?.length,
+                model.exams?.length,
+                model.schoolList?.length
+            ];
+            const checks = {
+                sectionReady: !!document.querySelector('#student-overview.analysis-workspace-emerald'),
+                heroReady: !!document.querySelector('#student-overview .analysis-hero'),
+                shellHeadReady: !!document.querySelector('#student-overview .analysis-shell-head'),
+                runtimeReady: typeof window.smBuildOverviewModel === 'function'
+                    && typeof window.renderStudentOverview === 'function'
+                    && typeof window.smScheduleStudentOverviewRender === 'function',
+                helperReady: typeof window.tmBuildStatCard === 'function'
+                    && typeof window.tmBuildMiniCard === 'function'
+                    && typeof window.tmGetAvailableExamList === 'function',
+                scoreReady: model.scoreReady === true,
+                rawDataReady: Array.isArray(model.rawData) && model.rawData.length > 0,
+                examReady: Array.isArray(model.exams) && model.exams.length >= 1,
+                schoolListReady: Array.isArray(model.schoolList) && model.schoolList.length >= 1,
+                uniqueStudentsReady: model.uniqueStudentCount > 0,
+                finiteCounts: countFields.every(value => Number.isFinite(Number(value))),
+                progressArithmetic: model.progressCount === model.improveCount + model.declineCount + model.stableCount,
+                uniqueCountMatches: model.uniqueStudentCount === expected.uniqueStudentCount,
+                progressCountMatches: model.progressCount === expected.progress.total
+                    && model.improveCount === expected.progress.improve
+                    && model.declineCount === expected.progress.decline
+                    && model.stableCount === expected.progress.stable,
+                supportCountMatches: model.marginalClassCount === expected.marginalClassCount
+                    && model.marginalRecordCount === expected.marginalRecordCount
+                    && model.potentialCount === expected.potentialCount,
+                statCardsReady: ['smStatScores', 'smStatScope', 'smStatProgress', 'smStatSupport']
+                    .every(slotId => String(document.getElementById(slotId)?.textContent || '').trim().length > 0),
+                readinessReady: ['smReadyScore', 'smReadySchool', 'smReadyProgress', 'smReadySupport']
+                    .every(slotId => String(document.getElementById(slotId)?.textContent || '').trim().length > 0),
+                contextReady: ['smCtxSchool', 'smCtxClass', 'smCtxExam1', 'smCtxExam2', 'smCtxPeriod', 'smCtxFocus']
+                    .every(slotId => String(document.getElementById(slotId)?.textContent || '').trim().length > 0),
+                insightsReady: document.querySelectorAll('#smInsightList li').length >= 1
+                    && !textOf('#smInsightList').includes('正在汇总'),
+                summaryMatches: summarySchoolsText.includes(String(model.schoolList.length))
+                    && summaryStudentsText.includes(String(model.uniqueStudentCount))
+                    && summaryProgressText.includes(String(model.progressCount))
+                    && summaryPotentialText.includes(String(model.potentialCount + model.marginalRecordCount)),
+                statTextMatches: statScoresText.includes(String(model.exams.length))
+                    && statScoresText.includes(String(model.rawData.length))
+                    && statProgressText.includes(String(model.progressCount))
+                    && statSupportText.includes(String(model.marginalRecordCount))
+                    && statSupportText.includes(String(model.potentialCount)),
+                quickEntryReady: quickButtons.length === Object.keys(expectedQuickStates).length,
+                quickEntryStatesMatch: quickStateMismatches.length === 0,
+                topQuickStatesMatch: (!!document.getElementById('smQuickStudentBtn')?.disabled) === !expectedQuickStates['student-details']
+                    && (!!document.getElementById('smQuickProgressBtn')?.disabled) === !expectedQuickStates['progress-analysis']
+                    && (!!document.getElementById('smQuickReportBtn')?.disabled) === !expectedQuickStates['report-generator']
+            };
+
+            return {
+                ok: Object.values(checks).every(Boolean),
+                checks,
+                counts: {
+                    rawRows: model.rawData.length,
+                    exams: model.exams.length,
+                    schools: model.schoolList.length,
+                    uniqueStudents: model.uniqueStudentCount,
+                    progress: model.progressCount,
+                    improve: model.improveCount,
+                    decline: model.declineCount,
+                    stable: model.stableCount,
+                    marginalRecords: model.marginalRecordCount,
+                    potential: model.potentialCount
+                },
+                expected,
+                quickStateMismatches
+            };
+        });
+    }
     if (id === 'teacher-analysis') {
         // Keep the all-module smoke test lightweight here. The teacher portrait
         // calculations are intentionally covered by test-calculation-snapshot.js
