@@ -102,6 +102,7 @@ vm.createContext(context);
 vm.runInContext(source, context, { filename: runtimePath });
 
 assert.ok(root.SupportMetricsRuntime, 'support metrics runtime should be installed');
+assert.strictEqual(typeof root.SupportMetricsRuntime.ensureWrappers, 'function');
 assert.strictEqual(typeof root.SupportMetricsRuntime.refreshAll, 'function');
 assert.strictEqual(root.renderTables.__supportMetricsWrapped, true, 'renderTables should be wrapped');
 assert.strictEqual(root.calcIndicators.__supportMetricsWrapped, true, 'calcIndicators should be wrapped');

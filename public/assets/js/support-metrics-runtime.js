@@ -49,6 +49,7 @@
     }
 
     function refreshBottom3Summary() {
+        installWrappers();
         const schools = getTownshipSchools();
         const rows = schools
             .filter((school) => school.bottom3)
@@ -99,6 +100,7 @@
     }
 
     function refreshIndicatorSummary(result) {
+        installWrappers();
         const rows = normalizeIndicatorRows(result)
             .map((row) => ({
                 name: String(row?.name || '').trim(),
@@ -190,6 +192,7 @@
     }
 
     root.SupportMetricsRuntime = {
+        ensureWrappers: installWrappers,
         refreshAll,
         refreshBottom3Summary,
         refreshIndicatorSummary,
@@ -201,11 +204,15 @@
         installWrappers();
         schedule(refreshAll, 0);
         schedule(refreshAll, 600);
+        schedule(refreshAll, 1800);
     }
 
     if (root.document?.readyState === 'loading') {
         root.document.addEventListener('DOMContentLoaded', scheduleInitialRefresh, { once: true });
     } else {
         scheduleInitialRefresh();
+    }
+    if (typeof root.addEventListener === 'function') {
+        root.addEventListener('school:app-modules-ready', scheduleInitialRefresh, { once: true });
     }
 })(typeof window !== 'undefined' ? window : globalThis);

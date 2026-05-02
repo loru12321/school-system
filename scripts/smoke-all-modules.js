@@ -677,6 +677,217 @@ async function runModuleDeepCheck(page, id) {
             };
         });
     }
+    if (id === 'bottom3') {
+        return page.evaluate(() => {
+            const toNumber = (value, fallback = 0) => {
+                const number = Number(value);
+                return Number.isFinite(number) ? number : fallback;
+            };
+            const shortenName = (name) => {
+                const text = String(name || '').trim();
+                return text.length > 8 ? `${text.slice(0, 8)}...` : (text || '--');
+            };
+            const schools = Object.values(window.SCHOOLS || {});
+            const schoolNames = Object.keys(window.SCHOOLS || {});
+            const townshipSchools = schools.filter((school) => {
+                if (!school || typeof school !== 'object') return false;
+                return typeof window.isTownshipManagedSchool === 'function'
+                    ? window.isTownshipManagedSchool(school.name, schoolNames)
+                    : true;
+            });
+            const rows = townshipSchools
+                .filter((school) => school.bottom3)
+                .map((school) => ({
+                    name: String(school.name || '').trim(),
+                    totalN: toNumber(school.bottom3?.totalN),
+                    bottomN: toNumber(school.bottom3?.bottomN),
+                    excN: toNumber(school.bottom3?.excN),
+                    avg: toNumber(school.bottom3?.avg),
+                    score: toNumber(school.scoreBottom),
+                    rank: toNumber(school.rankBottom)
+                }))
+                .filter((row) => row.name && row.totalN > 0);
+            const sorted = rows.slice().sort((a, b) => {
+                if (a.rank && b.rank && a.rank !== b.rank) return a.rank - b.rank;
+                return b.score - a.score;
+            });
+            const expectedAverage = rows.length
+                ? rows.reduce((sum, row) => sum + row.avg, 0) / rows.length
+                : 0;
+            const expectedTopSchool = sorted[0]?.name || '';
+            const snapshotBottom3State = () => JSON.stringify(Object.values(window.SCHOOLS || {}).map((school) => ({
+                name: String(school?.name || '').trim(),
+                bottom3: school?.bottom3 || null,
+                scoreBottom: toNumber(school?.scoreBottom),
+                rankBottom: toNumber(school?.rankBottom)
+            })));
+            if (typeof window.SupportMetricsRuntime?.ensureWrappers === 'function') {
+                window.SupportMetricsRuntime.ensureWrappers();
+            }
+            const beforeRefresh = snapshotBottom3State();
+            const summary = window.SupportMetricsRuntime?.refreshBottom3Summary?.() || null;
+            const afterRefresh = snapshotBottom3State();
+            const schoolCountText = document.getElementById('bottom3-school-count')?.textContent?.trim() || '';
+            const averageScoreText = document.getElementById('bottom3-average-score')?.textContent?.trim() || '';
+            const topSchoolText = document.getElementById('bottom3-top-school')?.textContent?.trim() || '';
+            const excLabelText = document.getElementById('label-exc')?.textContent?.trim() || '';
+            const expectedExcRate = toNumber(window.CONFIG?.excRate) * 100;
+            const tableRowCount = document.querySelectorAll('#tb-bottom3 tbody tr').length;
+            const finite = rows.every((row) => [row.totalN, row.bottomN, row.excN, row.avg, row.score, row.rank]
+                .every((value) => Number.isFinite(Number(value))));
+            const checks = {
+                sectionReady: !!document.querySelector('#bottom3.support-metric-workspace'),
+                heroReady: !!document.querySelector('#bottom3 .analysis-hero'),
+                cardsReady: !!document.getElementById('bottom3-school-count')
+                    && !!document.getElementById('bottom3-average-score')
+                    && !!document.getElementById('bottom3-top-school'),
+                tableReady: tableRowCount > 0,
+                runtimeReady: !!window.SupportMetricsRuntime,
+                renderTablesWrapped: window.renderTables?.__supportMetricsWrapped === true,
+                refreshReady: typeof window.SupportMetricsRuntime?.refreshBottom3Summary === 'function',
+                summaryReady: !!summary && summary.ok === true,
+                countMatches: String(summary?.count || '') === String(rows.length)
+                    && schoolCountText === String(rows.length),
+                averageMatches: Math.abs(toNumber(summary?.averageScore) - Number(expectedAverage.toFixed(2))) < 0.01
+                    && averageScoreText === expectedAverage.toFixed(2),
+                topSchoolMatches: summary?.topSchool === expectedTopSchool
+                    && topSchoolText === shortenName(expectedTopSchool),
+                excRateMatches: expectedExcRate <= 0
+                    || excLabelText === `${expectedExcRate.toFixed(0)}%`,
+                finite,
+                refreshDoesNotMutate: beforeRefresh === afterRefresh
+            };
+            return {
+                ok: Object.values(checks).every(Boolean),
+                checks,
+                count: rows.length,
+                tableRowCount,
+                averageScore: Number(expectedAverage.toFixed(2)),
+                topSchool: expectedTopSchool,
+                summary
+            };
+        });
+    }
+    if (id === 'indicator') {
+        return page.evaluate(async () => {
+            const toNumber = (value, fallback = 0) => {
+                const number = Number(value);
+                return Number.isFinite(number) ? number : fallback;
+            };
+            const shortenName = (name) => {
+                const text = String(name || '').trim();
+                return text.length > 8 ? `${text.slice(0, 8)}...` : (text || '--');
+            };
+            let result = [];
+            let calcError = '';
+            try {
+                if (typeof window.refreshIndicatorResults === 'function') {
+                    result = window.refreshIndicatorResults(true);
+                } else if (typeof window.calcIndicators === 'function') {
+                    result = window.calcIndicators(true);
+                }
+                if (!Array.isArray(result) && Array.isArray(window.INDICATOR_LAST_RESULT)) {
+                    result = window.INDICATOR_LAST_RESULT;
+                }
+            } catch (error) {
+                calcError = error?.message || String(error);
+            }
+            await new Promise(resolve => setTimeout(resolve, 120));
+
+            const rows = (Array.isArray(result) ? result : [])
+                .map((row) => ({
+                    name: String(row?.name || '').trim(),
+                    finalScore: toNumber(row?.finalScore),
+                    score1: toNumber(row?.score1),
+                    score2: toNumber(row?.score2),
+                    base1: toNumber(row?.base1),
+                    base2: toNumber(row?.base2),
+                    bonus1: toNumber(row?.bonus1),
+                    bonus2: toNumber(row?.bonus2),
+                    rank: toNumber(row?.rank),
+                    missingTarget: !!row?.missingTarget,
+                    invalidTarget: !!row?.invalidTarget
+                }))
+                .filter((row) => row.name);
+            const sorted = rows.slice().sort((a, b) => {
+                if (a.rank && b.rank && a.rank !== b.rank) return a.rank - b.rank;
+                return b.finalScore - a.finalScore;
+            });
+            const expectedTop = sorted[0] || null;
+            const expectedIssueCount = rows.filter((row) => row.missingTarget || row.invalidTarget).length;
+            const scoreSnapshot = JSON.stringify(Object.values(window.SCHOOLS || {}).map((school) => ({
+                name: school?.name || '',
+                scoreInd: toNumber(school?.scoreInd),
+                rankInd: toNumber(school?.rankInd)
+            })));
+            if (typeof window.SupportMetricsRuntime?.ensureWrappers === 'function') {
+                window.SupportMetricsRuntime.ensureWrappers();
+            }
+            const summary = window.SupportMetricsRuntime?.refreshIndicatorSummary?.(rows) || null;
+            const scoreSnapshotAfterSummary = JSON.stringify(Object.values(window.SCHOOLS || {}).map((school) => ({
+                name: school?.name || '',
+                scoreInd: toNumber(school?.scoreInd),
+                rankInd: toNumber(school?.rankInd)
+            })));
+            const schoolCountText = document.getElementById('indicator-school-count')?.textContent?.trim() || '';
+            const topScoreText = document.getElementById('indicator-top-score')?.textContent?.trim() || '';
+            const topSchoolText = document.getElementById('indicator-top-school')?.textContent?.trim() || '';
+            const issueCountText = document.getElementById('indicator-missing-target-count')?.textContent?.trim() || '';
+            const tableRowCount = document.querySelectorAll('#tb-indicator tbody tr').length;
+            const finite = rows.every((row) => [
+                row.finalScore,
+                row.score1,
+                row.score2,
+                row.base1,
+                row.base2,
+                row.bonus1,
+                row.bonus2,
+                row.rank
+            ].every((value) => Number.isFinite(Number(value))));
+            const calcAllowed = typeof window.isIndicatorCalcAllowed === 'function'
+                ? window.isIndicatorCalcAllowed()
+                : true;
+            const checks = {
+                sectionReady: !!document.querySelector('#indicator.support-metric-workspace'),
+                heroReady: !!document.querySelector('#indicator .analysis-hero'),
+                cardsReady: !!document.getElementById('indicator-school-count')
+                    && !!document.getElementById('indicator-top-score')
+                    && !!document.getElementById('indicator-top-school')
+                    && !!document.getElementById('indicator-missing-target-count'),
+                tableReady: tableRowCount > 0,
+                buttonReady: !!document.getElementById('btn-indicator-calc'),
+                runtimeReady: !!window.SupportMetricsRuntime,
+                calcIndicatorsWrapped: window.calcIndicators?.__supportMetricsWrapped === true,
+                refreshReady: typeof window.SupportMetricsRuntime?.refreshIndicatorSummary === 'function',
+                calcAllowed,
+                calcSuccess: !calcError && rows.length > 0,
+                summaryReady: !!summary && summary.ok === true,
+                countMatches: String(summary?.count || '') === String(rows.length)
+                    && schoolCountText === String(rows.length),
+                topScoreMatches: !!expectedTop
+                    && Math.abs(toNumber(summary?.topScore) - Number(expectedTop.finalScore.toFixed(2))) < 0.01
+                    && topScoreText === expectedTop.finalScore.toFixed(2),
+                topSchoolMatches: !!expectedTop
+                    && summary?.topSchool === expectedTop.name
+                    && topSchoolText === shortenName(expectedTop.name),
+                issueCountMatches: Number(summary?.issueCount) === expectedIssueCount
+                    && issueCountText === String(expectedIssueCount),
+                finite,
+                summaryRefreshDoesNotMutateScores: scoreSnapshot === scoreSnapshotAfterSummary
+            };
+            return {
+                ok: Object.values(checks).every(Boolean),
+                checks,
+                count: rows.length,
+                tableRowCount,
+                topScore: expectedTop ? Number(expectedTop.finalScore.toFixed(2)) : 0,
+                topSchool: expectedTop?.name || '',
+                issueCount: expectedIssueCount,
+                calcError,
+                summary
+            };
+        });
+    }
     if (id === 'marginal-push') {
         return page.evaluate(() => {
             const checks = {
