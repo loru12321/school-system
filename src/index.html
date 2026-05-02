@@ -1682,8 +1682,8 @@
                     </h2>
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">建议先看集体增值结果，再切到个人变化明细；导出更适合班主任复盘和年级跟踪。</div>
-                        <div style="display:flex; gap:10px;">
-                            <div style="display:flex; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden;">
+                        <div class="progress-view-actions">
+                            <div class="progress-segmented">
                                 <button class="btn btn-sm active" onclick="switchValueAddedView('school', this)"
                                     style="border-radius:0; background:#e0f2fe; color:#0369a1;">按学校看</button>
                                 <button class="btn btn-sm" onclick="switchValueAddedView('class', this)"
@@ -1696,7 +1696,7 @@
 
                 <div class="info-bar analysis-info-band">
                     <span id="va-data-status">⚠️ 请先上传“上次考试”数据以激活此功能</span>
-                    <span style="margin-left:auto; font-size:12px;">核心算法：(入口排名 - 出口排名) = 增值名次</span>
+                    <span class="progress-status-note">核心算法：(入口排名 - 出口排名) = 增值名次</span>
                 </div>
 
                 <details class="explain-panel analysis-doc-panel">
@@ -1741,7 +1741,7 @@
                                 <span><strong>阅读建议：</strong>先看平均增值，再看评价和排名。</span>
                                 <span><strong>导出建议：</strong>适合年级组、班主任和校内阶段复盘。</span>
                             </div>
-                            <div class="table-wrap analysis-table-shell">
+                            <div class="table-wrap analysis-table-shell progress-value-shell" data-mobile-hint="左右滑动查看完整增值评价表">
                                 <table id="tb-value-added" class="analysis-table-dense">
                                     <thead>
                                         <tr>
@@ -1761,20 +1761,17 @@
 
                         <!-- 个人追踪 -->
                         <div id="anchor-va-trend" class="anchor-target analysis-anchor-panel">
-                            <div class="sub-header analysis-section-head"
-                                style="display:flex; justify-content:space-between; align-items:center;">
+                            <div class="sub-header analysis-section-head progress-detail-head">
                                 <span>👤 学生个人进退步详情</span>
-                                <div style="font-size:12px; font-weight:normal;">
+                                <div class="progress-detail-tools">
                                     <label>学校：</label>
                                     <!-- 🔥 关键修复点：这就是报错找不到的 ID -->
                                     <select id="progressSchoolSelect"
-                                        style="padding:4px; border:1px solid #ccc; border-radius:4px;"
                                         onchange="renderProgressAnalysis()">
                                         <option value="">--请选择--</option>
                                     </select>
-                                    <label style="margin-left:8px;">历史基准：</label>
+                                    <label>历史基准：</label>
                                     <select id="progressBaselineSelect"
-                                        style="padding:4px; border:1px solid #ccc; border-radius:4px; min-width:180px;"
                                         onchange="renderProgressAnalysis()">
                                         <option value="">--请选择历史考试--</option>
                                     </select>
@@ -1817,11 +1814,11 @@
                             <div class="analysis-chart-grid">
                                 <div class="analysis-chart-card">
                                     <h4>🛤️ 排名散点分布 (上浮为进，下沉为退)</h4>
-                                    <div style="height:calc(100% - 30px);"><canvas id="trendChart"></canvas></div>
+                                    <div class="progress-chart-shell"><canvas id="trendChart"></canvas></div>
                                 </div>
                                 <div class="analysis-chart-card">
                                     <h4>🌊 生源层级流动桑基图 (A/B/C/D层)</h4>
-                                    <div style="height:calc(100% - 30px);"><canvas id="sankeyChart"></canvas></div>
+                                    <div class="progress-chart-shell"><canvas id="sankeyChart"></canvas></div>
                                 </div>
                             </div>
 
@@ -1835,6 +1832,7 @@
                                         onclick="setProgressQuickFilter('my_class')">只看本班</button>
                                     <button type="button" id="progressQuickFocusBtn" class="btn btn-sm progress-quick-btn"
                                         onclick="setProgressQuickFilter('focus')">重点变化</button>
+                                    <label class="progress-filter-label-direction">变化方向</label>
                                     <select id="progressFilterType"
                                         style="padding:4px 6px; border:1px solid #cbd5e1; border-radius:4px;"
                                         onchange="applyProgressFilter()">
@@ -1864,7 +1862,7 @@
                                 <span><strong>阅读建议：</strong>先看变化方向，再按阈值和排序筛出重点学生。</span>
                                 <span><strong>导出建议：</strong>导出结果会保留当前筛选范围，适合班主任跟踪使用。</span>
                             </div>
-                            <div class="table-wrap analysis-table-shell">
+                            <div class="table-wrap analysis-table-shell progress-table-shell" data-mobile-hint="手机端已转为卡片表，桌面端可横向查看更多字段">
                                 <table id="progressTable" class="analysis-table-dense">
                                     <thead>
                                         <tr>

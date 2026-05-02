@@ -188,6 +188,67 @@ async function openCorrelationAnalysisModule(page) {
     await page.waitForTimeout(500);
 }
 
+async function openProgressAnalysisModule(page) {
+    await openModule(page, 'progress-analysis');
+    await page.evaluate(async () => {
+        if (typeof window.ensureProgressAnalysisRuntimeLoaded === 'function') {
+            await window.ensureProgressAnalysisRuntimeLoaded();
+        }
+        if (typeof window.updateProgressSchoolSelect === 'function') window.updateProgressSchoolSelect();
+        if (typeof window.updateProgressBaselineSelect === 'function') window.updateProgressBaselineSelect();
+        if (typeof window.updateProgressMultiExamSelects === 'function') window.updateProgressMultiExamSelects();
+
+        const selectFirstValue = (select, exclude = '') => {
+            const options = Array.from(select?.options || []).map(option => option.value).filter(Boolean);
+            const value = options.find(optionValue => optionValue !== exclude) || '';
+            if (value) select.value = value;
+            return value;
+        };
+        const progressSchool = document.getElementById('progressSchoolSelect');
+        if (progressSchool && !progressSchool.value) selectFirstValue(progressSchool);
+        if (typeof window.ensureProgressBaselineData === 'function') {
+            await window.ensureProgressBaselineData({
+                allowCloudSync: true,
+                rerenderReport: true,
+                rerenderAnalysis: !!progressSchool?.value
+            });
+        }
+        if (typeof window.renderProgressAnalysis === 'function') window.renderProgressAnalysis();
+        if (typeof window.renderValueAddedReport === 'function') window.renderValueAddedReport(true);
+
+        const compareSchool = document.getElementById('progressCompareSchool');
+        const compareExam1 = document.getElementById('progressCompareExam1');
+        const compareExam2 = document.getElementById('progressCompareExam2');
+        if (compareSchool && !compareSchool.value) selectFirstValue(compareSchool);
+        if (compareExam1 && !compareExam1.value) selectFirstValue(compareExam1);
+        if (compareExam2 && (!compareExam2.value || compareExam2.value === compareExam1?.value)) {
+            selectFirstValue(compareExam2, compareExam1?.value || '');
+        }
+        if (compareSchool?.value && compareExam1?.value && compareExam2?.value && compareExam1.value !== compareExam2.value
+            && typeof window.renderMultiPeriodComparison === 'function') {
+            window.renderMultiPeriodComparison();
+        }
+        if (typeof window.refreshResponsiveMobileTables === 'function') {
+            window.refreshResponsiveMobileTables(document.getElementById('progress-analysis'));
+        }
+    }).catch(() => {});
+    await page.waitForFunction(() => {
+        const section = document.getElementById('progress-analysis');
+        const valueRows = document.querySelectorAll('#tb-value-added tbody tr').length;
+        const progressRows = document.querySelectorAll('#progressTable tbody tr').length;
+        return !!section
+            && section.classList.contains('active')
+            && !!document.getElementById('progressSchoolSelect')
+            && !!document.getElementById('progressBaselineSelect')
+            && !!document.getElementById('progressCompareSchool')
+            && !!document.getElementById('progressCompareExam1')
+            && !!document.getElementById('progressCompareExam2')
+            && valueRows > 0
+            && progressRows > 0;
+    }, null, { timeout: 90000 });
+    await page.waitForTimeout(500);
+}
+
 async function ensureMobileShell(page) {
     await page.evaluate(() => window.ensureMobileManagerRuntimeLoaded?.()).catch(() => {});
     await page.evaluate(() => window.MobileQueryUI?.refresh?.()).catch(() => {});
@@ -531,6 +592,48 @@ async function inspectCorrelationAnalysisLayout(page, mode) {
     });
 }
 
+async function inspectProgressAnalysisLayout(page, mode) {
+    const mobileOnlySelectors = mode === 'mobile'
+        ? {
+            progressMobileLabels: '#progressTable tbody td[data-label]',
+            progressMobileCardTable: '#progressTable.mobile-card-table'
+        }
+        : {};
+    return inspectSectionLayout(page, mode, {
+        sectionId: 'progress-analysis',
+        targetSelector: '#progress-analysis',
+        requiredSelectors: {
+            hero: '#progress-analysis .analysis-hero',
+            shellHead: '#progress-analysis .analysis-shell-head',
+            viewActions: '#progress-analysis .progress-view-actions',
+            statusBand: '#va-data-status',
+            statusNote: '#progress-analysis .progress-status-note',
+            flow: '#progress-analysis .analysis-flow-step',
+            valueAddedPanel: '#anchor-va-report',
+            valueAddedTable: '#tb-value-added',
+            valueAddedRows: '#tb-value-added tbody tr',
+            detailPanel: '#anchor-va-trend',
+            detailHead: '#progress-analysis .progress-detail-head',
+            detailTools: '#progress-analysis .progress-detail-tools',
+            progressSchool: '#progressSchoolSelect',
+            progressBaseline: '#progressBaselineSelect',
+            inlinePanel: '#progress-analysis .analysis-inline-panel',
+            compareSchool: '#progressCompareSchool',
+            compareExam1: '#progressCompareExam1',
+            compareExam2: '#progressCompareExam2',
+            compareResult: '#multiPeriodCompareResult',
+            chartGrid: '#progress-analysis .analysis-chart-grid',
+            trendChart: '#trendChart',
+            sankeyChart: '#sankeyChart',
+            filterStrip: '#progress-analysis .analysis-filter-strip',
+            filterSummary: '#progressFilterSummary',
+            progressTable: '#progressTable',
+            progressRows: '#progressTable tbody tr',
+            ...mobileOnlySelectors
+        }
+    });
+}
+
 function assertSectionLayout(state, label) {
     assert.ok(state.sectionActive, `${state.mode} ${label} section is not active`);
     for (const [key, exists] of Object.entries(state.requiredPieces)) {
@@ -572,6 +675,10 @@ function assertTeacherAnalysisLayout(state) {
 
 function assertCorrelationAnalysisLayout(state) {
     assertSectionLayout(state, 'correlation-analysis');
+}
+
+function assertProgressAnalysisLayout(state) {
+    assertSectionLayout(state, 'progress-analysis');
 }
 
 async function openDataManager(page, tab = 'student') {
@@ -756,6 +863,9 @@ async function main() {
     await openCorrelationAnalysisModule(desktopPage);
     const desktopCorrelationState = await inspectCorrelationAnalysisLayout(desktopPage, 'desktop');
     assertCorrelationAnalysisLayout(desktopCorrelationState);
+    await openProgressAnalysisModule(desktopPage);
+    const desktopProgressState = await inspectProgressAnalysisLayout(desktopPage, 'desktop');
+    assertProgressAnalysisLayout(desktopProgressState);
     await openStudentDetailsModule(desktopPage);
     const desktopStudentState = await inspectStudentDetailsLayout(desktopPage, 'desktop');
     assertStudentDetailsLayout(desktopStudentState);
@@ -786,6 +896,9 @@ async function main() {
     await openCorrelationAnalysisModule(mobilePage);
     const mobileCorrelationState = await inspectCorrelationAnalysisLayout(mobilePage, 'mobile');
     assertCorrelationAnalysisLayout(mobileCorrelationState);
+    await openProgressAnalysisModule(mobilePage);
+    const mobileProgressState = await inspectProgressAnalysisLayout(mobilePage, 'mobile');
+    assertProgressAnalysisLayout(mobileProgressState);
     await openStudentDetailsModule(mobilePage);
     const mobileStudentState = await inspectStudentDetailsLayout(mobilePage, 'mobile');
     assertStudentDetailsLayout(mobileStudentState);
@@ -809,6 +922,7 @@ async function main() {
         desktopSummaryState,
         desktopTeacherState,
         desktopCorrelationState,
+        desktopProgressState,
         desktopStudentState,
         desktopReportState,
         desktopDataManagerState,
@@ -816,6 +930,7 @@ async function main() {
         mobileSummaryState,
         mobileTeacherState,
         mobileCorrelationState,
+        mobileProgressState,
         mobileStudentState,
         mobileReportState,
         mobileDataManagerState,

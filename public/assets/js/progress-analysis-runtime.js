@@ -1596,7 +1596,8 @@ function exportProgressAnalysis() {
 function ensureProgressFilterSummaryElement() {
     let summaryEl = document.getElementById('progressFilterSummary');
     if (summaryEl) return summaryEl;
-    const filterBar = document.querySelector('#progress-analysis div[style*="justify-content:space-between"] > div[style*="font-size:12px"]');
+    const filterBar = document.querySelector('#progress-analysis .analysis-filter-group')
+        || document.querySelector('#progress-analysis div[style*="justify-content:space-between"] > div[style*="font-size:12px"]');
     if (!filterBar) return null;
     const resetBtn = filterBar.querySelector('button[onclick="resetProgressFilter()"]');
     if (!resetBtn) return null;
@@ -1622,13 +1623,16 @@ function updateProgressModuleCopy() {
     const desc = document.querySelector('#progress-analysis .module-desc-bar p:last-of-type');
     if (desc) desc.textContent = '推荐顺序：先自动识别上次考试，再看集体增值，最后用“全部 / 本班 / 重点变化 + 方向 + 排序”查看个人明细。';
 
-    const filterBar = document.querySelector('#progress-analysis div[style*="justify-content:space-between"] > div[style*="font-size:12px"]');
+    const filterBar = document.querySelector('#progress-analysis .analysis-filter-group')
+        || document.querySelector('#progress-analysis div[style*="justify-content:space-between"] > div[style*="font-size:12px"]');
     if (!filterBar) return;
     filterBar.style.flexWrap = 'wrap';
+    const directionLabel = filterBar.querySelector('.progress-filter-label-direction');
     const labels = filterBar.querySelectorAll('label');
-    if (labels[0]) labels[0].textContent = '变化方向';
-    if (labels[1]) labels[1].textContent = '重点阈值(名次)';
-    if (labels[2]) labels[2].textContent = '排序';
+    if (labels[0] && !labels[0].classList.contains('progress-filter-label-direction')) labels[0].textContent = '筛选';
+    if (directionLabel) directionLabel.textContent = '变化方向';
+    if (labels[2]) labels[2].textContent = '重点阈值(名次)';
+    if (labels[3]) labels[3].textContent = '排序';
     const resetBtn = filterBar.querySelector('button[onclick="resetProgressFilter()"]');
     if (resetBtn) resetBtn.textContent = '重置筛选';
     ensureProgressFilterSummaryElement();
