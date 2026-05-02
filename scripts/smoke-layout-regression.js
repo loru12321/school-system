@@ -162,6 +162,32 @@ async function openTeacherAnalysisModule(page) {
     await page.waitForTimeout(500);
 }
 
+async function openCorrelationAnalysisModule(page) {
+    await openModule(page, 'correlation-analysis');
+    await page.evaluate(async () => {
+        if (typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function') {
+            await window.ensureTeacherAnalysisMainRuntimeLoaded();
+        }
+        if (typeof window.updateCorrelationSchoolSelect === 'function') window.updateCorrelationSchoolSelect();
+        if (typeof window.renderCorrelationAnalysis === 'function') window.renderCorrelationAnalysis();
+        if (typeof window.refreshResponsiveMobileTables === 'function') {
+            window.refreshResponsiveMobileTables(document.getElementById('correlation-analysis'));
+        }
+    }).catch(() => {});
+    await page.waitForFunction(() => {
+        const section = document.getElementById('correlation-analysis');
+        const matrixCells = document.querySelectorAll('#corrMatrixTable .heatmap-cell').length;
+        const bars = document.querySelectorAll('#contributionChartContainer .contribution-bar').length;
+        const liftRows = document.querySelectorAll('#liftDragTable tbody tr').length;
+        return !!section
+            && section.classList.contains('active')
+            && matrixCells > 0
+            && bars > 0
+            && liftRows > 0;
+    }, null, { timeout: 90000 });
+    await page.waitForTimeout(500);
+}
+
 async function ensureMobileShell(page) {
     await page.evaluate(() => window.ensureMobileManagerRuntimeLoaded?.()).catch(() => {});
     await page.evaluate(() => window.MobileQueryUI?.refresh?.()).catch(() => {});
@@ -182,13 +208,12 @@ async function inspectSectionLayout(page, mode, options = {}) {
         const target = document.querySelector(focusSelector);
         if (!target) return;
         target.scrollIntoView({ block: 'start', inline: 'nearest' });
-        if (layoutMode !== 'mobile') return;
-        const shell = document.querySelector('#apk-mobile-shell .apk-shell-top');
-        if (!shell) return;
-        const shellRect = shell.getBoundingClientRect();
+        const shell = layoutMode === 'mobile' ? document.querySelector('#apk-mobile-shell .apk-shell-top') : null;
+        const shellRect = shell?.getBoundingClientRect?.();
         const targetRect = target.getBoundingClientRect();
-        const desiredTop = Math.round(shellRect.bottom + 12);
-        if (targetRect.top >= desiredTop) return;
+        const desiredTop = Math.round(layoutMode === 'mobile' && shellRect ? shellRect.bottom + 12 : 36);
+        const desiredBottom = Math.round((window.innerHeight || document.documentElement.clientHeight || 0) - 48);
+        if (targetRect.top >= desiredTop && targetRect.bottom <= desiredBottom) return;
         const appMain = document.querySelector('.app-main');
         const delta = Math.round(targetRect.top - desiredTop);
         if (appMain && appMain.scrollHeight > appMain.clientHeight) {
@@ -478,6 +503,34 @@ async function inspectTeacherAnalysisLayout(page, mode) {
     });
 }
 
+async function inspectCorrelationAnalysisLayout(page, mode) {
+    const mobileOnlySelectors = mode === 'mobile'
+        ? {
+            liftMobileLabels: '#liftDragTable tbody td[data-label]',
+            liftMobileCardTable: '#liftDragTable.mobile-card-table'
+        }
+        : {};
+    return inspectSectionLayout(page, mode, {
+        sectionId: 'correlation-analysis',
+        targetSelector: '#correlation-analysis',
+        requiredSelectors: {
+            hero: '#correlation-analysis .analysis-hero',
+            shellHead: '#correlation-analysis .analysis-shell-head',
+            controlPanel: '#correlation-analysis .control-panel',
+            scopeSelect: '#corrSchoolSelect',
+            flow: '#correlation-analysis .analysis-flow-step',
+            matrixPanel: '#correlation-analysis .corr-board-grid .analysis-anchor-panel',
+            matrixTable: '#corrMatrixTable',
+            matrixCells: '#corrMatrixTable .heatmap-cell',
+            contributionChart: '#contributionChartContainer',
+            contributionBars: '#contributionChartContainer .contribution-bar',
+            liftDragTable: '#liftDragTable',
+            liftDragRows: '#liftDragTable tbody tr',
+            ...mobileOnlySelectors
+        }
+    });
+}
+
 function assertSectionLayout(state, label) {
     assert.ok(state.sectionActive, `${state.mode} ${label} section is not active`);
     for (const [key, exists] of Object.entries(state.requiredPieces)) {
@@ -515,6 +568,10 @@ function assertSummaryLayout(state) {
 
 function assertTeacherAnalysisLayout(state) {
     assertSectionLayout(state, 'teacher-analysis');
+}
+
+function assertCorrelationAnalysisLayout(state) {
+    assertSectionLayout(state, 'correlation-analysis');
 }
 
 async function openDataManager(page, tab = 'student') {
@@ -696,6 +753,9 @@ async function main() {
     await openTeacherAnalysisModule(desktopPage);
     const desktopTeacherState = await inspectTeacherAnalysisLayout(desktopPage, 'desktop');
     assertTeacherAnalysisLayout(desktopTeacherState);
+    await openCorrelationAnalysisModule(desktopPage);
+    const desktopCorrelationState = await inspectCorrelationAnalysisLayout(desktopPage, 'desktop');
+    assertCorrelationAnalysisLayout(desktopCorrelationState);
     await openStudentDetailsModule(desktopPage);
     const desktopStudentState = await inspectStudentDetailsLayout(desktopPage, 'desktop');
     assertStudentDetailsLayout(desktopStudentState);
@@ -723,6 +783,9 @@ async function main() {
     await openTeacherAnalysisModule(mobilePage);
     const mobileTeacherState = await inspectTeacherAnalysisLayout(mobilePage, 'mobile');
     assertTeacherAnalysisLayout(mobileTeacherState);
+    await openCorrelationAnalysisModule(mobilePage);
+    const mobileCorrelationState = await inspectCorrelationAnalysisLayout(mobilePage, 'mobile');
+    assertCorrelationAnalysisLayout(mobileCorrelationState);
     await openStudentDetailsModule(mobilePage);
     const mobileStudentState = await inspectStudentDetailsLayout(mobilePage, 'mobile');
     assertStudentDetailsLayout(mobileStudentState);
@@ -745,12 +808,14 @@ async function main() {
         desktopState,
         desktopSummaryState,
         desktopTeacherState,
+        desktopCorrelationState,
         desktopStudentState,
         desktopReportState,
         desktopDataManagerState,
         mobileState,
         mobileSummaryState,
         mobileTeacherState,
+        mobileCorrelationState,
         mobileStudentState,
         mobileReportState,
         mobileDataManagerState,

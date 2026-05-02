@@ -1589,6 +1589,110 @@ header {
     gap: 18px;
 }
 
+#correlation-analysis {
+    min-width: 0;
+}
+
+#correlation-analysis .analysis-shell-head {
+    align-items: flex-start;
+}
+
+#correlation-analysis .analysis-shell-head h2,
+#correlation-analysis .analysis-action-stack,
+#correlation-analysis .analysis-info-band,
+#correlation-analysis .analysis-doc-panel,
+#correlation-analysis .analysis-flow-banner,
+#correlation-analysis .control-panel,
+#correlation-analysis .corr-board-grid,
+#correlation-analysis .analysis-anchor-panel,
+#correlation-analysis .analysis-chart-card,
+#correlation-analysis .analysis-table-shell {
+    min-width: 0;
+}
+
+#correlation-analysis .analysis-action-stack {
+    max-width: 720px;
+}
+
+#correlation-analysis .analysis-action-note {
+    border-radius: 14px;
+    text-align: left;
+}
+
+#correlation-analysis .analysis-actions {
+    justify-content: flex-end;
+}
+
+#correlation-analysis .control-panel {
+    display: grid;
+    grid-template-columns: auto minmax(220px, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-color: var(--analysis-border);
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--analysis-surface) 0%, #ffffff 100%);
+}
+
+#correlation-analysis .control-panel label {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+}
+
+#correlation-analysis #corrSchoolSelect {
+    width: 100%;
+    min-width: 0 !important;
+    min-height: 40px;
+}
+
+#correlation-analysis .control-panel button {
+    width: auto;
+    min-height: 40px;
+    justify-content: center;
+}
+
+#correlation-analysis .corr-board-grid {
+    grid-template-columns: minmax(0, 1.05fr) minmax(300px, 0.95fr);
+    align-items: stretch;
+}
+
+#correlation-analysis .analysis-anchor-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#correlation-analysis .analysis-section-head {
+    margin-bottom: 0;
+}
+
+#correlation-analysis .analysis-table-meta {
+    align-items: flex-start;
+    margin: 0;
+}
+
+#correlation-analysis .analysis-table-shell {
+    max-width: 100%;
+    margin-top: 0;
+    overflow: auto;
+}
+
+#correlation-analysis #corrMatrixTable {
+    min-width: 640px;
+    table-layout: fixed;
+}
+
+#correlation-analysis #corrMatrixTable th,
+#correlation-analysis #corrMatrixTable td {
+    text-align: center;
+}
+
+#correlation-analysis #liftDragTable {
+    min-width: 760px;
+}
+
 .corr-chart-card {
     min-height: 360px;
 }
@@ -1596,18 +1700,124 @@ header {
 #contributionChartContainer {
     display: grid;
     gap: 10px;
+    align-content: start;
+    min-height: 260px;
+}
+
+#contributionChartContainer > div {
+    display: grid !important;
+    grid-template-columns: minmax(48px, 70px) minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 0 !important;
+}
+
+#contributionChartContainer > div > span {
+    width: auto !important;
+    min-width: 0;
+    font-size: 13px !important;
+    color: #334155;
+    overflow-wrap: anywhere;
+}
+
+#contributionChartContainer > div > div {
+    min-width: 0;
+    height: 24px !important;
+    margin-left: 0 !important;
+    overflow: hidden;
+    border-radius: 999px !important;
 }
 
 #contributionChartContainer .contribution-bar {
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    min-width: 48px;
+    min-height: 24px;
     padding-right: 8px;
-    border-radius: 4px;
+    border-radius: 999px;
     color: #ffffff;
     font-size: 11px;
     font-weight: 700;
     line-height: 1;
+    white-space: nowrap;
+}
+
+body.dark-mode #correlation-analysis .control-panel,
+body.dark-mode #correlation-analysis .analysis-anchor-panel,
+body.dark-mode #correlation-analysis .analysis-chart-card {
+    background: rgba(15, 23, 42, 0.92) !important;
+    border-color: rgba(51, 65, 85, 0.92) !important;
+}
+
+body.dark-mode #correlation-analysis .control-panel label,
+body.dark-mode #contributionChartContainer > div > span {
+    color: #e2e8f0;
+}
+
+body.dark-mode #contributionChartContainer > div > div {
+    background: rgba(30, 41, 59, 0.96) !important;
+}
+
+@media screen and (max-width: 768px) {
+    #correlation-analysis {
+        overflow-x: clip;
+    }
+
+    #correlation-analysis .analysis-shell-head,
+    #correlation-analysis .analysis-action-stack,
+    #correlation-analysis .analysis-actions,
+    #correlation-analysis .analysis-info-band,
+    #correlation-analysis .analysis-table-meta,
+    #correlation-analysis .control-panel,
+    #correlation-analysis .corr-board-grid {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        width: 100%;
+        gap: 10px !important;
+    }
+
+    #correlation-analysis .analysis-action-stack {
+        max-width: none;
+        justify-items: stretch;
+    }
+
+    #correlation-analysis .analysis-actions .btn,
+    #correlation-analysis .control-panel button,
+    #correlation-analysis #corrSchoolSelect {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    #correlation-analysis .analysis-anchor-panel,
+    #correlation-analysis .analysis-chart-card {
+        border-radius: 14px;
+        padding: 14px;
+    }
+
+    #correlation-analysis #corrMatrixTable {
+        min-width: 520px;
+    }
+
+    #correlation-analysis #liftDragTable {
+        min-width: 0;
+        width: 100%;
+    }
+
+    #contributionChartContainer {
+        min-height: 0;
+        gap: 8px;
+    }
+
+    #contributionChartContainer > div {
+        grid-template-columns: minmax(40px, 52px) minmax(0, 1fr);
+        gap: 8px;
+    }
+
+    #contributionChartContainer .contribution-bar {
+        min-width: 44px;
+        font-size: 10px;
+    }
 }
 
 .analysis-workspace .seat-tools {
