@@ -315,6 +315,34 @@ async function main() {
             window.calculateTeacherTownshipRanking?.();
             window.renderTeacherTownshipRanking?.();
         }
+        await boundedSwitchTab('marginal-push');
+        if (typeof window.updateMpSchoolSelect === 'function') window.updateMpSchoolSelect();
+        const marginalResult = (() => {
+            const schoolSelect = document.getElementById('mpSchoolSelect');
+            const subjectSelect = document.getElementById('mpSubjectSelect');
+            const gapInput = document.getElementById('mpGap');
+            const typeSelect = document.getElementById('mpType');
+            const schools = Array.from(schoolSelect?.options || []).map((option) => option.value).filter(Boolean);
+            let result = null;
+            for (const school of schools) {
+                schoolSelect.value = school;
+                window.updateMpClassSelect?.();
+                if (subjectSelect) subjectSelect.value = 'ALL';
+                if (typeSelect) typeSelect.value = 'both';
+                for (const gap of [5, 10, 20, 999]) {
+                    if (gapInput) gapInput.value = String(gap);
+                    result = typeof window.generateMarginalTickets === 'function'
+                        ? window.generateMarginalTickets()
+                        : null;
+                    if (Number(result?.count || 0) > 0) return result;
+                }
+            }
+            return result;
+        })();
+        const marginalRows = typeof MP_DATA_CACHE !== 'undefined' && Array.isArray(MP_DATA_CACHE)
+            ? MP_DATA_CACHE
+            : (Array.isArray(window.MP_DATA_CACHE) ? window.MP_DATA_CACHE : []);
+        const marginalValues = marginalRows.flatMap((row) => [row.score, row.target, row.diff]);
         await boundedSwitchTab('cohort-growth');
         const cohortGrowthResult = typeof window.CohortGrowth?.compute === 'function'
             ? window.CohortGrowth.compute()
@@ -346,6 +374,9 @@ async function main() {
             countyOwnTeacherRows: teacherRoot ? teacherRoot.querySelectorAll('.county-teacher-own-row').length : 0,
             teacherTownshipAverageSubjects: Object.values(window.TEACHER_TOWNSHIP_AVERAGES || {}).filter((row) => Number(row?.count) > 0).length,
             teacherTownshipComparisonCells,
+            marginalGeneratedCount: Number(marginalResult?.count || 0),
+            marginalTicketCount: document.querySelectorAll('#mp-tickets-container .task-ticket').length,
+            marginalFinite: marginalValues.every((value) => Number.isFinite(Number(value))),
             cohortExamCount: Object.keys(window.COHORT_DB?.exams || {}).length,
             cohortVolatilityRows: Array.isArray(cohortGrowthResult.volatility) ? cohortGrowthResult.volatility.length : 0,
             cohortGrowthRows: Array.isArray(cohortGrowthResult.growth) ? cohortGrowthResult.growth.length : 0,
@@ -376,6 +407,9 @@ async function main() {
         snapshot.teacherTownshipComparisonCells.some((text) => text !== '+0.00%' && text !== '0.00%' && text !== '—'),
         'teacher township comparisons are all zero or empty'
     );
+    assert.ok(snapshot.marginalGeneratedCount > 0, 'marginal task generation produced no rows');
+    assert.ok(snapshot.marginalTicketCount > 0, 'marginal task ticket rendering failed');
+    assert.ok(snapshot.marginalFinite, 'marginal task calculation produced non-finite values');
     assert.ok(snapshot.cohortExamCount >= 2, `cohort exam count too low: ${snapshot.cohortExamCount}`);
     assert.ok(snapshot.cohortGrowthRows > 0, 'cohort growth rows missing');
     assert.ok(snapshot.cohortGrowthFinite, 'cohort growth calculation produced non-finite values');

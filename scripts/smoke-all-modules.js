@@ -676,6 +676,58 @@ async function runModuleDeepCheck(page, id) {
             };
         });
     }
+    if (id === 'marginal-push') {
+        return page.evaluate(() => {
+            const checks = {
+                sectionReady: !!document.querySelector('#marginal-push.analysis-workspace-amber'),
+                heroReady: !!document.querySelector('#marginal-push .analysis-hero'),
+                shellHeadReady: !!document.querySelector('#marginal-push .analysis-shell-head'),
+                runtimeReady: !!window.MarginalPushRuntime,
+                updateSchoolReady: typeof window.updateMpSchoolSelect === 'function',
+                generateReady: typeof window.generateMarginalTickets === 'function',
+                exportReady: typeof window.exportMarginalTasks === 'function',
+                filterReady: !!document.getElementById('mpSchoolSelect')
+                    && !!document.getElementById('mpClassSelect')
+                    && !!document.getElementById('mpSubjectSelect')
+                    && !!document.getElementById('mpGap')
+                    && !!document.getElementById('mpType'),
+                cycleReady: !!document.querySelector('#marginal-push .marginal-cycle-panel')
+                    && !!document.getElementById('mp_snapshot_select'),
+                previewReady: !!document.getElementById('mp-tickets-container')
+            };
+            if (!Object.values(checks).every(Boolean)) {
+                return { ok: false, checks, generatedCount: 0, ticketCount: 0 };
+            }
+            window.updateMpSchoolSelect();
+            const schoolSelect = document.getElementById('mpSchoolSelect');
+            const subjectSelect = document.getElementById('mpSubjectSelect');
+            const gapInput = document.getElementById('mpGap');
+            const typeSelect = document.getElementById('mpType');
+            const schools = Array.from(schoolSelect.options || []).map(option => option.value).filter(Boolean);
+            let result = null;
+            for (const school of schools) {
+                schoolSelect.value = school;
+                window.updateMpClassSelect();
+                if (subjectSelect) subjectSelect.value = 'ALL';
+                if (typeSelect) typeSelect.value = 'both';
+                for (const gap of [5, 10, 20, 999]) {
+                    if (gapInput) gapInput.value = String(gap);
+                    result = window.generateMarginalTickets();
+                    if (Number(result?.count || 0) > 0) break;
+                }
+                if (Number(result?.count || 0) > 0) break;
+            }
+            const ticketCount = document.querySelectorAll('#mp-tickets-container .task-ticket').length;
+            const generatedCount = Number(result?.count || 0);
+            return {
+                ok: Object.values(checks).every(Boolean) && generatedCount > 0 && ticketCount > 0,
+                checks,
+                generatedCount,
+                ticketCount,
+                sampleSchool: schoolSelect.value || ''
+            };
+        });
+    }
     if (id === 'progress-analysis') {
         return page.evaluate(() => {
             let renderCallSafe = true;

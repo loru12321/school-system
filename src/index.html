@@ -2054,6 +2054,10 @@
                 </div>
             </div>
 
+            <!-- 13. 临界生精准辅导任务单 -->
+            <div id="marginal-push" class="section card-box analysis-workspace analysis-workspace-amber"
+                data-lazy-section-template="lazy-section-template-marginal-push" data-lazy-section-placeholder="1"></div>
+
             <!-- 13. 新生分班 & 座位编排 -->
             <div id="freshman-simulator" class="section card-box analysis-workspace analysis-workspace-violet">
                 <div class="module-desc-bar analysis-hero" style="border-color: var(--color-tools)">
@@ -4000,8 +4004,7 @@
             </div>
             </main>
         </div>
-
-        
+    </div>
 
 
         <!-- Lazy section templates keep heavy module DOM out of the initial parse path. -->
@@ -5068,6 +5071,7 @@
             </div>
 </script>
 
+<script type="text/html" id="lazy-section-template-marginal-push">
             <!-- 临界生精准辅导任务单 -->
             <div id="marginal-push" class="section card-box analysis-workspace analysis-workspace-amber">
                 <div class="module-desc-bar analysis-hero" style="border-color: var(--color-diag)">
@@ -5098,7 +5102,7 @@
                     </h2>
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">建议先生成任务单，再决定是批量打印给教师，还是导出做跟踪台账。</div>
-                        <div class="analysis-actions">
+                        <div class="analysis-actions marginal-actions">
                             <button class="btn btn-purple" onclick="printMarginalTickets()">🖨 批量打印任务单</button>
                             <button class="btn btn-green" onclick="exportMarginalTasks()">📊 导出Excel</button>
                         </div>
@@ -5107,7 +5111,7 @@
 
                 <div class="info-bar analysis-info-band">
                     <strong>核心策略：</strong> 筛选出距离“优秀线”或“及格线”仅差
-                    <span style="border-bottom:2px solid var(--primary); font-weight:bold;">N分</span>
+                    <span class="marginal-strategy-emphasis">N分</span>
                     的学生，生成科任教师的重点关注名单。
                 </div>
 
@@ -5120,75 +5124,92 @@
                     </div>
                 </details>
 
-                <div class="control-panel" style="background: #fffbeb; border-color: #fcd34d;">
-                    <div style="display:flex; gap:15px; flex-wrap:wrap; align-items:center;">
-                        <div>
-                            <label>选择学校：</label><br>
-                            <select id="mpSchoolSelect" style="min-width:150px;" onchange="updateMpClassSelect()">
+                <div class="analysis-flow-banner">
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 1</span>
+                        <strong class="analysis-flow-value">定范围</strong>
+                        <span class="analysis-flow-note">先锁定学校、班级、学科和临界分值，避免名单过宽或漏掉关键学生。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 2</span>
+                        <strong class="analysis-flow-value">出任务</strong>
+                        <span class="analysis-flow-note">按优秀线、及格线自动拆分目标，把学生分发到对应教师和班级。</span>
+                    </div>
+                    <div class="analysis-flow-step">
+                        <span class="analysis-flow-kicker">Step 3</span>
+                        <strong class="analysis-flow-value">看转化</strong>
+                        <span class="analysis-flow-note">保存历史任务后，用下一次考试结果复盘上线人数和教师辅导效果。</span>
+                    </div>
+                </div>
+
+                <div class="control-panel marginal-filter-panel">
+                    <div class="marginal-filter-grid">
+                        <div class="marginal-field">
+                            <label>选择学校</label>
+                            <select id="mpSchoolSelect" onchange="updateMpClassSelect()">
                                 <option value="">--请选择--</option>
                             </select>
                         </div>
-                        <div>
-                            <label>班级 (可选)：</label><br>
-                            <select id="mpClassSelect" style="min-width:100px;">
+                        <div class="marginal-field">
+                            <label>班级 (可选)</label>
+                            <select id="mpClassSelect">
                                 <option value="">全部班级</option>
                             </select>
                         </div>
-                        <div>
-                            <label>学科：</label><br>
-                            <select id="mpSubjectSelect" style="min-width:100px;">
+                        <div class="marginal-field">
+                            <label>学科</label>
+                            <select id="mpSubjectSelect">
                                 <option value="ALL">全部学科</option>
                             </select>
                         </div>
-                        <div style="border-left:1px solid #ccc; padding-left:15px;">
-                            <label><strong>🎯 临界分值 (Gap)</strong>：</label><br>
-                            <input type="number" id="mpGap" value="5" style="width:70px; font-weight:bold; color:red;">
-                            分以内
+                        <div class="marginal-field marginal-gap-field">
+                            <label>临界分值 (Gap)</label>
+                            <div class="marginal-number-input">
+                                <input type="number" id="mpGap" value="5" min="0.1" step="0.5">
+                                <span>分以内</span>
+                            </div>
                         </div>
-                        <div>
-                            <label>目标类型：</label><br>
+                        <div class="marginal-field">
+                            <label>目标类型</label>
                             <select id="mpType">
                                 <option value="both" selected>全部 (拟优+拟及格)</option>
                                 <option value="pass">仅看 拟及格 (保底)</option>
                                 <option value="exc">仅看 拟优秀 (培优)</option>
                             </select>
                         </div>
-                        <div style="padding-top:16px;">
+                        <div class="marginal-field marginal-submit-field">
                             <button class="btn btn-primary" onclick="generateMarginalTickets()">🚀 生成辅导单</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- 闭环管理：转化率追踪面板 -->
-                <div class="analysis-anchor-panel"
-                    style="margin:15px 0; background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:15px;">
-                    <div
-                        style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed #bbf7d0; padding-bottom:10px; margin-bottom:10px;">
-                        <h3 style="color:#166534; margin:0; font-size:15px;"><i class="ti ti-refresh"></i> 临界生转化闭环管理
+                <div class="analysis-anchor-panel marginal-cycle-panel">
+                    <div class="marginal-cycle-head">
+                        <h3><i class="ti ti-refresh"></i> 临界生转化闭环管理
                             (教师评价)
                         </h3>
-                        <div style="font-size:12px; color:#15803d;">
+                        <div class="marginal-cycle-note">
                             逻辑：保存本次生成的名单为“历史任务” -> 下次考试导入数据 -> 自动计算有多少人成功“上线”
                         </div>
                     </div>
 
-                    <div style="display:flex; gap:20px; flex-wrap:wrap; align-items:center;">
+                    <div class="marginal-cycle-grid">
                         <!-- 动作A: 存档 -->
-                        <div style="flex:1; border-right:1px solid #bbf7d0; padding-right:15px;">
-                            <div style="font-weight:bold; color:#166534; margin-bottom:5px;">第1步：当前任务存档</div>
-                            <div style="display:flex; gap:5px;">
+                        <div class="marginal-cycle-step">
+                            <div class="marginal-cycle-step-title">第1步：当前任务存档</div>
+                            <div class="marginal-cycle-controls">
                                 <input type="text" id="mp_save_name" placeholder="任务名 (如:期中临界生)"
-                                    style="padding:5px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px; flex:1;">
+                                    >
                                 <button class="btn btn-green btn-sm" onclick="MP_saveSnapshot()">💾 存档</button>
                             </div>
                         </div>
 
                         <!-- 动作B: 追踪 -->
-                        <div style="flex:2;">
-                            <div style="font-weight:bold; color:#166534; margin-bottom:5px;">第2步：转化效果追踪 (需先上传新数据)</div>
-                            <div style="display:flex; gap:10px; align-items:center;">
-                                <select id="mp_snapshot_select"
-                                    style="padding:5px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px; min-width:150px;">
+                        <div class="marginal-cycle-step marginal-cycle-step-wide">
+                            <div class="marginal-cycle-step-title">第2步：转化效果追踪 (需先上传新数据)</div>
+                            <div class="marginal-cycle-controls">
+                                <select id="mp_snapshot_select">
                                     <option value="">-- 选择历史任务 --</option>
                                 </select>
                                 <button class="btn btn-orange btn-sm" onclick="MP_analyzeConversion()">📈 计算转化率</button>
@@ -5199,11 +5220,10 @@
                     </div>
 
                     <!-- 分析结果展示区 -->
-                    <div id="mp-conversion-result" class="hidden"
-                        style="margin-top:15px; background:white; padding:10px; border-radius:6px; border:1px solid #e2e8f0;">
-                        <div class="sub-header" style="margin-top:0;">📊 教师辅导效能评估 (基于转化率)</div>
-                        <div class="table-wrap">
-                            <table id="mp_conversion_table" style="font-size:12px;">
+                    <div id="mp-conversion-result" class="hidden marginal-conversion-result">
+                        <div class="sub-header analysis-section-head">📊 教师辅导效能评估 (基于转化率)</div>
+                        <div class="table-wrap analysis-table-shell" data-mobile-hint="手机端已转为卡片表，可上下滚动查看转化结果">
+                            <table id="mp_conversion_table" class="analysis-table-dense">
                                 <thead>
                                     <tr>
                                         <th>教师/班级</th>
@@ -5229,15 +5249,15 @@
                         <span><strong>导出建议：</strong>打印适合线下跟踪，Excel 更适合汇总与复盘。</span>
                     </div>
                 <div id="mp-tickets-container" class="mp-grid">
-                    <div style="grid-column:1/-1; text-align:center; padding:50px; color:#94a3b8;">
-                        <i class="ti ti-clipboard-list" style="font-size:48px; margin-bottom:10px;"></i>
+                    <div class="marginal-empty-state">
+                        <i class="ti ti-clipboard-list" aria-hidden="true"></i>
                         <p>请调整参数后点击“生成辅导单”</p>
                     </div>
                 </div>
                 </div>
             </div>
+</script>
 
-            <!-- 考后座位微调建议 -->
             <div id="seat-adjustment" class="section card-box analysis-workspace analysis-workspace-student">
                 <div class="module-desc-bar analysis-hero" style="border-color: var(--color-student)">
                     <h3><i class="ti ti-armchair"></i> 考后“座位微调”建议</h3>

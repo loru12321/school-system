@@ -274,6 +274,48 @@ async function openCohortGrowthModule(page) {
     await page.waitForTimeout(500);
 }
 
+async function openMarginalPushModule(page) {
+    await openModule(page, 'marginal-push');
+    await page.evaluate(() => {
+        if (typeof window.updateMpSchoolSelect === 'function') window.updateMpSchoolSelect();
+        const schoolSelect = document.getElementById('mpSchoolSelect');
+        const subjectSelect = document.getElementById('mpSubjectSelect');
+        const gapInput = document.getElementById('mpGap');
+        const typeSelect = document.getElementById('mpType');
+        const schoolOptions = Array.from(schoolSelect?.options || []).map(option => option.value).filter(Boolean);
+        const gaps = [5, 10, 20, 999];
+        let result = null;
+        for (const school of schoolOptions) {
+            schoolSelect.value = school;
+            if (typeof window.updateMpClassSelect === 'function') window.updateMpClassSelect();
+            if (subjectSelect) subjectSelect.value = 'ALL';
+            if (typeSelect) typeSelect.value = 'both';
+            for (const gap of gaps) {
+                if (gapInput) gapInput.value = String(gap);
+                if (typeof window.generateMarginalTickets === 'function') {
+                    result = window.generateMarginalTickets();
+                }
+                if (result && Number(result.count || 0) > 0) return result;
+            }
+        }
+        return result;
+    }).catch(() => {});
+    await page.waitForFunction(() => {
+        const section = document.getElementById('marginal-push');
+        const tickets = document.querySelectorAll('#mp-tickets-container .task-ticket').length;
+        const empty = !!document.querySelector('#mp-tickets-container .marginal-empty-state');
+        return !!section
+            && section.classList.contains('active')
+            && typeof window.generateMarginalTickets === 'function'
+            && !!document.getElementById('mpSchoolSelect')
+            && !!document.getElementById('mpClassSelect')
+            && !!document.getElementById('mpSubjectSelect')
+            && !!document.getElementById('mpGap')
+            && (tickets > 0 || empty);
+    }, null, { timeout: 90000 });
+    await page.waitForTimeout(500);
+}
+
 async function ensureMobileShell(page) {
     await page.evaluate(() => window.ensureMobileManagerRuntimeLoaded?.()).catch(() => {});
     await page.evaluate(() => window.MobileQueryUI?.refresh?.()).catch(() => {});
@@ -741,6 +783,44 @@ function assertCohortGrowthLayout(state) {
     assertSectionLayout(state, 'cohort-growth');
 }
 
+async function inspectMarginalPushLayout(page, mode) {
+    const mobileOnlySelectors = mode === 'mobile'
+        ? {
+            ticketMobileLabels: '#marginal-push .ticket-table tbody td[data-label]',
+            mobileTicket: '#marginal-push .task-ticket'
+        }
+        : {};
+    return inspectSectionLayout(page, mode, {
+        sectionId: 'marginal-push',
+        targetSelector: '#marginal-push',
+        requiredSelectors: {
+            hero: '#marginal-push .analysis-hero',
+            shellHead: '#marginal-push .analysis-shell-head',
+            actions: '#marginal-push .marginal-actions .btn',
+            infoBand: '#marginal-push .analysis-info-band',
+            docPanel: '#marginal-push .analysis-doc-panel',
+            flow: '#marginal-push .analysis-flow-step',
+            filterPanel: '#marginal-push .marginal-filter-panel',
+            filterGrid: '#marginal-push .marginal-filter-grid',
+            schoolSelect: '#mpSchoolSelect',
+            classSelect: '#mpClassSelect',
+            subjectSelect: '#mpSubjectSelect',
+            gapInput: '#mpGap',
+            typeSelect: '#mpType',
+            cyclePanel: '#marginal-push .marginal-cycle-panel',
+            saveName: '#mp_save_name',
+            snapshotSelect: '#mp_snapshot_select',
+            previewPanel: '#mp-tickets-container',
+            ticketSurface: '#mp-tickets-container .task-ticket, #mp-tickets-container .marginal-empty-state',
+            ...mobileOnlySelectors
+        }
+    });
+}
+
+function assertMarginalPushLayout(state) {
+    assertSectionLayout(state, 'marginal-push');
+}
+
 async function openDataManager(page, tab = 'student') {
     await page.evaluate(() => {
         if (window.DataManager && typeof window.DataManager.open === 'function') {
@@ -926,6 +1006,9 @@ async function main() {
     await openProgressAnalysisModule(desktopPage);
     const desktopProgressState = await inspectProgressAnalysisLayout(desktopPage, 'desktop');
     assertProgressAnalysisLayout(desktopProgressState);
+    await openMarginalPushModule(desktopPage);
+    const desktopMarginalPushState = await inspectMarginalPushLayout(desktopPage, 'desktop');
+    assertMarginalPushLayout(desktopMarginalPushState);
     await openCohortGrowthModule(desktopPage);
     const desktopCohortGrowthState = await inspectCohortGrowthLayout(desktopPage, 'desktop');
     assertCohortGrowthLayout(desktopCohortGrowthState);
@@ -962,6 +1045,9 @@ async function main() {
     await openProgressAnalysisModule(mobilePage);
     const mobileProgressState = await inspectProgressAnalysisLayout(mobilePage, 'mobile');
     assertProgressAnalysisLayout(mobileProgressState);
+    await openMarginalPushModule(mobilePage);
+    const mobileMarginalPushState = await inspectMarginalPushLayout(mobilePage, 'mobile');
+    assertMarginalPushLayout(mobileMarginalPushState);
     await openCohortGrowthModule(mobilePage);
     const mobileCohortGrowthState = await inspectCohortGrowthLayout(mobilePage, 'mobile');
     assertCohortGrowthLayout(mobileCohortGrowthState);
@@ -989,6 +1075,7 @@ async function main() {
         desktopTeacherState,
         desktopCorrelationState,
         desktopProgressState,
+        desktopMarginalPushState,
         desktopCohortGrowthState,
         desktopStudentState,
         desktopReportState,
@@ -998,6 +1085,7 @@ async function main() {
         mobileTeacherState,
         mobileCorrelationState,
         mobileProgressState,
+        mobileMarginalPushState,
         mobileCohortGrowthState,
         mobileStudentState,
         mobileReportState,
