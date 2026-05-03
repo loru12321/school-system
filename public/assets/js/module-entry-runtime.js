@@ -643,11 +643,30 @@
 
     function initCorrelationAnalysisEntry() {
         const runAfterLoad = () => {
+            if (!document.getElementById('correlation-analysis')?.classList.contains('active')) return false;
             if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
+            scheduleModuleAutoRender('correlation-analysis-auto', () => {
+                if (!document.getElementById('correlation-analysis')?.classList.contains('active')) return;
+                if (!Array.isArray(window.RAW_DATA) || window.RAW_DATA.length < 5) return;
+                if (typeof window.renderCorrelationAnalysis === 'function') window.renderCorrelationAnalysis();
+                if (typeof window.refreshResponsiveMobileTables === 'function') {
+                    window.refreshResponsiveMobileTables(document.getElementById('correlation-analysis'));
+                }
+            }, { delay: 120, timeout: 1200 });
+            return true;
         };
 
-        runAfterLoad();
-        return Promise.resolve();
+        if (typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function'
+            && !window.__TEACHER_ANALYSIS_BRIDGE_RUNTIME_PATCHED__) {
+            return window.ensureTeacherAnalysisMainRuntimeLoaded()
+                .then(runAfterLoad)
+                .catch((error) => {
+                    console.warn('[correlation-analysis] runtime load failed:', error);
+                    return false;
+                });
+        }
+
+        return Promise.resolve(runAfterLoad());
     }
 
     function initProgressAnalysisEntry() {

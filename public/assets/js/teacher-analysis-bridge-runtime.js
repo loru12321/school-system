@@ -12,64 +12,117 @@
         schoolList.forEach((schoolName) => {
             select.innerHTML += `<option value="${schoolName}">${schoolName}</option>`;
         });
-        if (oldValue) select.value = oldValue;
+        if (oldValue && Array.from(select.options || []).some((option) => option.value === oldValue)) {
+            select.value = oldValue;
+        }
+    }
+
+    function toFiniteNumber(value) {
+        const number = typeof value === 'number' ? value : Number(value);
+        return Number.isFinite(number) ? number : null;
     }
 
     function calculatePearson(x, y) {
         const size = Math.min(Array.isArray(x) ? x.length : 0, Array.isArray(y) ? y.length : 0);
         if (!size) return 0;
+        const pairs = [];
+        for (let index = 0; index < size; index += 1) {
+            const left = toFiniteNumber(x[index]);
+            const right = toFiniteNumber(y[index]);
+            if (left === null || right === null) continue;
+            pairs.push([left, right]);
+        }
+        if (pairs.length < 2) return 0;
         let sumX = 0;
         let sumY = 0;
         let sumXY = 0;
         let sumX2 = 0;
         let sumY2 = 0;
-        for (let index = 0; index < size; index += 1) {
-            sumX += x[index];
-            sumY += y[index];
-            sumXY += x[index] * y[index];
-            sumX2 += x[index] * x[index];
-            sumY2 += y[index] * y[index];
-        }
-        const numerator = (size * sumXY) - (sumX * sumY);
-        const denominator = Math.sqrt((size * sumX2 - sumX * sumX) * (size * sumY2 - sumY * sumY));
+        pairs.forEach(([left, right]) => {
+            sumX += left;
+            sumY += right;
+            sumXY += left * right;
+            sumX2 += left * left;
+            sumY2 += right * right;
+        });
+        const pairCount = pairs.length;
+        const numerator = (pairCount * sumXY) - (sumX * sumY);
+        const denominator = Math.sqrt((pairCount * sumX2 - sumX * sumX) * (pairCount * sumY2 - sumY * sumY));
         return denominator === 0 ? 0 : numerator / denominator;
+    }
+
+    function getPairedScores(students, leftSubject, rightSubject) {
+        const leftScores = [];
+        const rightScores = [];
+        students.forEach((student) => {
+            const left = toFiniteNumber(student?.scores?.[leftSubject]);
+            const right = toFiniteNumber(student?.scores?.[rightSubject]);
+            if (left === null || right === null) return;
+            leftScores.push(left);
+            rightScores.push(right);
+        });
+        return { leftScores, rightScores };
+    }
+
+    function getSubjectTotalPairs(students, subject) {
+        const subjectScores = [];
+        const totalScores = [];
+        students.forEach((student) => {
+            const subjectScore = toFiniteNumber(student?.scores?.[subject]);
+            const totalScore = toFiniteNumber(student?.total);
+            if (subjectScore === null || totalScore === null) return;
+            subjectScores.push(subjectScore);
+            totalScores.push(totalScore);
+        });
+        return { subjectScores, totalScores };
+    }
+
+    function getAvailableSubjects() {
+        if (Array.isArray(window.SUBJECTS)) return window.SUBJECTS.filter(Boolean);
+        if (typeof SUBJECTS !== 'undefined' && Array.isArray(SUBJECTS)) return SUBJECTS.filter(Boolean);
+        return [];
+    }
+
+    function getCorrelationStudents(scope) {
+        if (scope === 'ALL') {
+            return (typeof window.filterRowsToTownshipSchools === 'function')
+                ? window.filterRowsToTownshipSchools(RAW_DATA || [])
+                : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
+        }
+        return SCHOOLS?.[scope]?.students || [];
     }
 
     function renderCorrelationAnalysis() {
         const schoolSelect = document.getElementById('corrSchoolSelect');
         const scope = schoolSelect?.value || 'ALL';
-        const students = scope === 'ALL'
-            ? ((typeof window.filterRowsToTownshipSchools === 'function')
-                ? window.filterRowsToTownshipSchools(RAW_DATA || [])
-                : (Array.isArray(RAW_DATA) ? RAW_DATA : []))
-            : (SCHOOLS?.[scope]?.students || []);
+        const students = getCorrelationStudents(scope);
+        const subjects = getAvailableSubjects();
         if (!Array.isArray(students) || students.length < 5) {
             alert('样本数据过少，暂时无法生成有效的相关性分析。');
+            return;
+        }
+        if (!subjects.length) {
+            alert('学科列表尚未就绪，暂时无法生成相关性分析。');
             return;
         }
 
         const matrixBody = document.querySelector('#corrMatrixTable tbody');
         if (matrixBody) {
             let matrixHtml = '<tr><th></th>';
-            SUBJECTS.forEach((subject) => {
+            subjects.forEach((subject) => {
                 matrixHtml += `<th>${subject}</th>`;
             });
             matrixHtml += '</tr>';
 
-            SUBJECTS.forEach((rowSubject) => {
+            subjects.forEach((rowSubject) => {
                 matrixHtml += `<tr><th>${rowSubject}</th>`;
-                SUBJECTS.forEach((colSubject) => {
+                subjects.forEach((colSubject) => {
                     if (rowSubject === colSubject) {
                         matrixHtml += '<td style="background:#eee;">-</td>';
                         return;
                     }
-                    const commonRows = students.filter((student) => (
-                        student?.scores?.[rowSubject] !== undefined && student?.scores?.[colSubject] !== undefined
-                    ));
-                    const pearson = calculatePearson(
-                        commonRows.map((student) => student.scores[rowSubject]),
-                        commonRows.map((student) => student.scores[colSubject])
-                    );
+                    const { leftScores, rightScores } = getPairedScores(students, rowSubject, colSubject);
+                    const pearson = calculatePearson(leftScores, rightScores);
                     const bg = pearson > 0
                         ? `rgba(220, 38, 38, ${Math.abs(pearson) * 0.8})`
                         : `rgba(37, 99, 235, ${Math.abs(pearson) * 0.8})`;
@@ -84,21 +137,19 @@
         const chartContainer = document.getElementById('contributionChartContainer');
         if (chartContainer) {
             chartContainer.innerHTML = '';
-            SUBJECTS
+            subjects
                 .map((subject) => {
-                    const commonRows = students.filter((student) => student?.scores?.[subject] !== undefined);
+                    const { subjectScores, totalScores } = getSubjectTotalPairs(students, subject);
                     return {
                         subject,
-                        value: calculatePearson(
-                            commonRows.map((student) => student.scores[subject]),
-                            commonRows.map((student) => student.total)
-                        )
+                        value: calculatePearson(subjectScores, totalScores)
                     };
                 })
                 .sort((left, right) => right.value - left.value)
                 .forEach((item) => {
-                    const width = Math.max(0, item.value * 100);
-                    const bg = item.value > 0.8 ? '#16a34a' : (item.value > 0.6 ? '#2563eb' : '#ca8a04');
+                    const intensity = Math.abs(item.value);
+                    const width = Math.min(100, Math.max(0, intensity * 100));
+                    const bg = item.value < 0 ? '#2563eb' : (intensity > 0.8 ? '#16a34a' : (intensity > 0.6 ? '#2563eb' : '#ca8a04'));
                     chartContainer.innerHTML += `<div style="display:flex; align-items:center; margin-bottom:5px;"><span style="width:40px; font-size:12px; font-weight:bold;">${item.subject}</span><div style="flex:1; background:#f1f5f9; border-radius:4px; margin-left:10px; height:20px;"><div class="contribution-bar" style="width:${width}%; background:${bg}">${item.value.toFixed(3)}</div></div></div>`;
                 });
         }
@@ -106,14 +157,14 @@
         const liftDragBody = document.querySelector('#liftDragTable tbody');
         if (liftDragBody) {
             let html = '';
-            SUBJECTS.forEach((subject) => {
+            subjects.forEach((subject) => {
                 let lift = 0;
                 let drag = 0;
                 let balance = 0;
                 let validCount = 0;
                 students.forEach((student) => {
-                    const totalRank = typeof safeGet === 'function' ? safeGet(student, 'ranks.total.township', 0) : 0;
-                    const subjectRank = typeof safeGet === 'function' ? safeGet(student, `ranks.${subject}.township`, 0) : 0;
+                    const totalRank = toFiniteNumber(typeof safeGet === 'function' ? safeGet(student, 'ranks.total.township', 0) : 0);
+                    const subjectRank = toFiniteNumber(typeof safeGet === 'function' ? safeGet(student, `ranks.${subject}.township`, 0) : 0);
                     if (!totalRank || !subjectRank) return;
                     validCount += 1;
                     const threshold = students.length * 0.1;
@@ -203,6 +254,7 @@
     Object.assign(window, {
         updateCorrelationSchoolSelect,
         renderCorrelationAnalysis,
+        calculateCorrelationPearson: calculatePearson,
         buildSafeSheetName,
         exportTeacherTownshipRankExcel,
         refreshTeacherPerformanceCopy

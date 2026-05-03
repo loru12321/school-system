@@ -1486,7 +1486,195 @@ async function runModuleDeepCheck(page, id) {
         });
     }
     if (id === 'correlation-analysis') {
-        return page.evaluate(() => {
+        return page.evaluate(async () => {
+            const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+            const waitUntil = async (predicate, timeout = 15000) => {
+                const deadline = Date.now() + timeout;
+                let lastError = null;
+                while (Date.now() < deadline) {
+                    try {
+                        if (predicate()) return true;
+                    } catch (error) {
+                        lastError = error;
+                    }
+                    await wait(120);
+                }
+                throw lastError || new Error('correlation analysis wait timeout');
+            };
+            const toFiniteNumber = (value) => {
+                const number = typeof value === 'number' ? value : Number(String(value || '').replace(/[+%]/g, ''));
+                return Number.isFinite(number) ? number : null;
+            };
+            const getSubjects = () => {
+                if (Array.isArray(window.SUBJECTS)) return window.SUBJECTS.filter(Boolean);
+                if (typeof SUBJECTS !== 'undefined' && Array.isArray(SUBJECTS)) return SUBJECTS.filter(Boolean);
+                return [];
+            };
+            const getSelectedStudents = (scope) => {
+                if (scope === 'ALL') {
+                    return (typeof window.filterRowsToTownshipSchools === 'function')
+                        ? window.filterRowsToTownshipSchools(window.RAW_DATA || [])
+                        : (Array.isArray(window.RAW_DATA) ? window.RAW_DATA : []);
+                }
+                return window.SCHOOLS?.[scope]?.students || [];
+            };
+            const pearson = (leftValues, rightValues) => {
+                const size = Math.min(Array.isArray(leftValues) ? leftValues.length : 0, Array.isArray(rightValues) ? rightValues.length : 0);
+                const pairs = [];
+                for (let index = 0; index < size; index += 1) {
+                    const left = toFiniteNumber(leftValues[index]);
+                    const right = toFiniteNumber(rightValues[index]);
+                    if (left === null || right === null) continue;
+                    pairs.push([left, right]);
+                }
+                if (pairs.length < 2) return 0;
+                let sumX = 0;
+                let sumY = 0;
+                let sumXY = 0;
+                let sumX2 = 0;
+                let sumY2 = 0;
+                pairs.forEach(([left, right]) => {
+                    sumX += left;
+                    sumY += right;
+                    sumXY += left * right;
+                    sumX2 += left * left;
+                    sumY2 += right * right;
+                });
+                const count = pairs.length;
+                const numerator = (count * sumXY) - (sumX * sumY);
+                const denominator = Math.sqrt((count * sumX2 - sumX * sumX) * (count * sumY2 - sumY * sumY));
+                return denominator === 0 ? 0 : numerator / denominator;
+            };
+            const pairedScores = (students, leftSubject, rightSubject) => {
+                const left = [];
+                const right = [];
+                students.forEach((student) => {
+                    const leftScore = toFiniteNumber(student?.scores?.[leftSubject]);
+                    const rightScore = toFiniteNumber(student?.scores?.[rightSubject]);
+                    if (leftScore === null || rightScore === null) return;
+                    left.push(leftScore);
+                    right.push(rightScore);
+                });
+                return { left, right };
+            };
+            const subjectTotalScores = (students, subject) => {
+                const left = [];
+                const right = [];
+                students.forEach((student) => {
+                    const subjectScore = toFiniteNumber(student?.scores?.[subject]);
+                    const totalScore = toFiniteNumber(student?.total);
+                    if (subjectScore === null || totalScore === null) return;
+                    left.push(subjectScore);
+                    right.push(totalScore);
+                });
+                return { left, right };
+            };
+            const getPath = (source, path, fallback = 0) => {
+                const value = String(path).split('.').reduce((current, key) => (current && current[key] !== undefined ? current[key] : undefined), source);
+                return value === undefined ? fallback : value;
+            };
+            const expectedLiftRow = (students, subject) => {
+                let lift = 0;
+                let drag = 0;
+                let balance = 0;
+                let validCount = 0;
+                students.forEach((student) => {
+                    const totalRank = toFiniteNumber(getPath(student, 'ranks.total.township', 0));
+                    const subjectRank = toFiniteNumber(getPath(student, `ranks.${subject}.township`, 0));
+                    if (!totalRank || !subjectRank) return;
+                    validCount += 1;
+                    const threshold = students.length * 0.1;
+                    if (subjectRank < totalRank - threshold) lift += 1;
+                    else if (subjectRank > totalRank + threshold) drag += 1;
+                    else balance += 1;
+                });
+                return { subject, lift, drag, balance, net: lift - drag, validCount };
+            };
+
+            if (typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function') {
+                await window.ensureTeacherAnalysisMainRuntimeLoaded();
+            }
+            if (typeof window.updateCorrelationSchoolSelect === 'function') {
+                window.updateCorrelationSchoolSelect();
+            }
+            const select = document.getElementById('corrSchoolSelect');
+            if (select && !select.value) select.value = 'ALL';
+
+            const alerts = [];
+            const originalAlert = window.alert;
+            window.alert = (message) => alerts.push(String(message || ''));
+            try {
+                if (typeof window.runModuleTabEnter === 'function') {
+                    await Promise.resolve(window.runModuleTabEnter({ id: 'correlation-analysis' }));
+                } else if (typeof window.renderCorrelationAnalysis === 'function') {
+                    await Promise.resolve(window.renderCorrelationAnalysis());
+                }
+                await waitUntil(() => document.querySelectorAll('#corrMatrixTable .heatmap-cell').length > 0
+                    && document.querySelectorAll('#contributionChartContainer .contribution-bar').length > 0
+                    && document.querySelectorAll('#liftDragTable tbody tr').length > 0);
+            } finally {
+                window.alert = originalAlert;
+            }
+
+            const subjects = getSubjects();
+            const scope = document.getElementById('corrSchoolSelect')?.value || 'ALL';
+            const students = getSelectedStudents(scope);
+            const matrixTable = document.getElementById('corrMatrixTable');
+            const matrixRows = Array.from(matrixTable?.querySelectorAll('tbody tr') || []);
+            const matrixValues = Array.from(document.querySelectorAll('#corrMatrixTable .heatmap-cell'))
+                .map(cell => toFiniteNumber(cell.textContent));
+            const getMatrixValue = (rowSubject, colSubject) => {
+                const rowIndex = subjects.indexOf(rowSubject);
+                const colIndex = subjects.indexOf(colSubject);
+                return toFiniteNumber(matrixRows[rowIndex + 1]?.cells?.[colIndex + 1]?.textContent || '');
+            };
+            const sampleSubjects = subjects.slice(0, 2);
+            const samplePair = sampleSubjects.length === 2 ? pairedScores(students, sampleSubjects[0], sampleSubjects[1]) : { left: [], right: [] };
+            const expectedSamplePearson = sampleSubjects.length === 2 ? pearson(samplePair.left, samplePair.right) : 0;
+            const renderedSamplePearson = sampleSubjects.length === 2 ? getMatrixValue(sampleSubjects[0], sampleSubjects[1]) : null;
+            const matrixSymmetric = subjects.every((rowSubject) => subjects.every((colSubject) => {
+                if (rowSubject === colSubject) return true;
+                const left = getMatrixValue(rowSubject, colSubject);
+                const right = getMatrixValue(colSubject, rowSubject);
+                return left !== null && right !== null && Math.abs(left - right) <= 0.011;
+            }));
+
+            const expectedContributions = subjects.map((subject) => {
+                const pair = subjectTotalScores(students, subject);
+                return { subject, value: pearson(pair.left, pair.right) };
+            }).sort((left, right) => right.value - left.value);
+            const contributionRows = Array.from(document.querySelectorAll('#contributionChartContainer > div')).map((row) => ({
+                subject: String(row.querySelector('span')?.textContent || '').trim(),
+                value: toFiniteNumber(row.querySelector('.contribution-bar')?.textContent || '')
+            }));
+            const expectedContributionBySubject = new Map(expectedContributions.map(item => [item.subject, item.value]));
+            const contributionMismatches = contributionRows.map((row) => {
+                const expectedValue = expectedContributionBySubject.get(row.subject);
+                return {
+                    subject: row.subject,
+                    rendered: row.value,
+                    expected: Number.isFinite(expectedValue) ? Number(expectedValue.toFixed(3)) : null,
+                    delta: Number.isFinite(expectedValue) && row.value !== null
+                        ? Number((row.value - Number(expectedValue.toFixed(3))).toFixed(4))
+                        : null
+                };
+            }).filter(item => item.expected === null || item.rendered === null || Math.abs(item.delta) > 0.002);
+            const contributionValuesMatch = contributionRows.length === subjects.length
+                && contributionMismatches.length === 0;
+            const contributionSorted = contributionRows.every((row, index) => (
+                index === 0 || contributionRows[index - 1].value >= row.value - 0.001
+            ));
+
+            const liftRows = Array.from(document.querySelectorAll('#liftDragTable tbody tr'));
+            const firstLiftSubject = String(liftRows[0]?.cells?.[0]?.textContent || '').trim();
+            const expectedFirstLift = expectedLiftRow(students, firstLiftSubject);
+            const renderedFirstLift = {
+                lift: toFiniteNumber(String(liftRows[0]?.cells?.[1]?.textContent || '').match(/\d+/)?.[0]),
+                drag: toFiniteNumber(String(liftRows[0]?.cells?.[2]?.textContent || '').match(/\d+/)?.[0]),
+                balance: toFiniteNumber(String(liftRows[0]?.cells?.[3]?.textContent || '').match(/\d+/)?.[0]),
+                net: toFiniteNumber(liftRows[0]?.cells?.[4]?.textContent || '')
+            };
+            const sectionText = document.getElementById('correlation-analysis')?.innerText || '';
             const checks = {
                 sectionReady: !!document.querySelector('#correlation-analysis.analysis-workspace-violet'),
                 heroReady: !!document.querySelector('#correlation-analysis .analysis-hero'),
@@ -1495,12 +1683,53 @@ async function runModuleDeepCheck(page, id) {
                 matrixTable: !!document.getElementById('corrMatrixTable'),
                 contributionChartContainer: !!document.getElementById('contributionChartContainer'),
                 liftDragTable: !!document.getElementById('liftDragTable'),
-                flowReady: document.querySelectorAll('#correlation-analysis .analysis-flow-step').length >= 3
+                flowReady: document.querySelectorAll('#correlation-analysis .analysis-flow-step').length >= 3,
+                runtimeReady: typeof window.renderCorrelationAnalysis === 'function',
+                pearsonHelperReady: typeof window.calculateCorrelationPearson === 'function',
+                subjectListReady: subjects.length >= 2,
+                sampleReady: students.length >= 5,
+                matrixRendered: matrixValues.length === subjects.length * Math.max(0, subjects.length - 1),
+                matrixValuesFinite: matrixValues.every(value => value !== null && Math.abs(value) <= 1.01),
+                matrixSymmetric,
+                samplePearsonMatches: renderedSamplePearson !== null
+                    && Math.abs(renderedSamplePearson - Number(expectedSamplePearson.toFixed(2))) <= 0.011,
+                contributionRendered: contributionRows.length === subjects.length,
+                contributionValuesFinite: contributionRows.every(row => row.value !== null && Math.abs(row.value) <= 1.01),
+                contributionValuesMatch,
+                contributionSorted,
+                liftDragRendered: liftRows.length === subjects.length,
+                liftDragCountsMatch: renderedFirstLift.lift === expectedFirstLift.lift
+                    && renderedFirstLift.drag === expectedFirstLift.drag
+                    && renderedFirstLift.balance === expectedFirstLift.balance
+                    && renderedFirstLift.net === expectedFirstLift.net,
+                noInvalidText: !/\bNaN\b|Infinity|undefined|null/.test(sectionText)
             };
             return {
                 ok: Object.values(checks).every(Boolean),
                 checks,
-                heavyRenderDeferred: true
+                scope,
+                counts: {
+                    subjects: subjects.length,
+                    students: students.length,
+                    matrixCells: matrixValues.length,
+                    contributionRows: contributionRows.length,
+                    liftRows: liftRows.length
+                },
+                samplePearson: {
+                    subjects: sampleSubjects,
+                    expected: Number(expectedSamplePearson.toFixed(2)),
+                    rendered: renderedSamplePearson
+                },
+                topContribution: contributionRows[0] || null,
+                expectedTopContributions: expectedContributions.slice(0, 3).map(item => ({
+                    subject: item.subject,
+                    value: Number(item.value.toFixed(3))
+                })),
+                contributionRows,
+                contributionMismatches,
+                expectedFirstLift,
+                renderedFirstLift,
+                alerts
             };
         });
     }
