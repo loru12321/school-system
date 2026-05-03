@@ -54,6 +54,12 @@
         return text || '默认班级';
     }
 
+    function isBlankSubjectScoreCell(value) {
+        if (value === undefined || value === null) return true;
+        if (typeof value !== 'string') return false;
+        return value.replace(/\u3000/g, ' ').trim() === '';
+    }
+
     function applyCompetitionRanks(list, scoreGetter, rankSetter) {
         if (typeof root.assignCompetitionRanks === 'function') {
             return root.assignCompetitionRanks(list, scoreGetter, rankSetter);
@@ -166,7 +172,10 @@
                         const scoresObj = {};
                         Object.keys(subjectColMap).forEach((sub) => {
                             const colName = subjectColMap[sub];
-                            if (row[colName] === undefined) return;
+                            if (isBlankSubjectScoreCell(row[colName])) {
+                                scoresObj[sub] = 0;
+                                return;
+                            }
                             const value = parseFloat(row[colName]);
                             if (!Number.isNaN(value)) scoresObj[sub] = value;
                         });

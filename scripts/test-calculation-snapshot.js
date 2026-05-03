@@ -557,6 +557,53 @@ async function main() {
             subject,
             window.AnalyticsKernel?.getSubjectFullScore?.(subject, { config: window.CONFIG }) ?? null
         ]));
+        const blankSubjectScorePolicy = (() => {
+            if (typeof window.parseRows !== 'function'
+                || typeof window.readRawData !== 'function'
+                || typeof window.setRawData !== 'function'
+                || typeof window.readSchools !== 'function'
+                || typeof window.setSchools !== 'function'
+                || typeof window.readSubjects !== 'function'
+                || typeof window.setSubjects !== 'function'
+                || typeof window.readConfigState !== 'function'
+                || typeof window.setConfigState !== 'function') {
+                return { available: false };
+            }
+            const previousRawData = window.readRawData();
+            const previousSchools = window.readSchools();
+            const previousSubjects = window.readSubjects();
+            const previousConfig = window.readConfigState();
+            try {
+                window.setRawData([]);
+                window.setSchools({});
+                window.setSubjects([]);
+                window.setConfigState({ ...(previousConfig || {}), name: '6年级', analysisSubs: 'auto', totalSubs: 'auto' });
+                window.parseRows([
+                    ['学校', '班级', '姓名', '语文', '数学', '英语'],
+                    ['测试学校', '6.10班', '空白数学', 120, '', 118],
+                    ['测试学校', '6.10班', '完整学生', 121, 119, 117],
+                    ['', '', '', '', '', '']
+                ], '测试学校');
+                const rows = window.readRawData();
+                const blankRow = rows.find((student) => String(student?.name || '') === '空白数学');
+                const fullRow = rows.find((student) => String(student?.name || '') === '完整学生');
+                return {
+                    available: true,
+                    rowCount: rows.length,
+                    blankMath: blankRow?.scores?.数学,
+                    blankTotal: blankRow?.total,
+                    blankClass: blankRow?.class,
+                    fullMath: fullRow?.scores?.数学,
+                    fullTotal: fullRow?.total,
+                    generatedNameRows: rows.filter((student) => /^考生/.test(String(student?.name || ''))).length
+                };
+            } finally {
+                window.setRawData(previousRawData);
+                window.setSchools(previousSchools);
+                window.setSubjects(previousSubjects);
+                window.setConfigState(previousConfig);
+            }
+        })();
         const target = (window.RAW_DATA || []).find((student) => String(student?.name || '').trim() === '解洪旭');
         return {
             rawData: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
@@ -565,6 +612,7 @@ async function main() {
             subjectFullScorePolicy,
             currentSubjectFullScores,
             currentSubjectFullScoreTotal: window.AnalyticsKernel?.getTotalFullScore?.(window.SUBJECTS || [], { config: window.CONFIG }) ?? null,
+            blankSubjectScorePolicy,
             score2RatePositive: Object.values(window.SCHOOLS || {}).filter((school) => Number(school?.score2Rate) > 0).length,
             teacherRows: Object.values(window.TEACHER_STATS || {}).reduce((sum, subjects) => sum + Object.keys(subjects || {}).length, 0),
             teacherPositive: Object.values(window.TEACHER_STATS || {}).flatMap((subjects) => Object.values(subjects || {}))
@@ -618,6 +666,16 @@ async function main() {
     }, 'subject full score policy changed');
     assert.deepStrictEqual(snapshot.currentSubjectFullScores, { '语文': 150, '数学': 150, '英语': 150, '物理': 90, '化学': 60 }, 'current 9th-grade subject full scores changed');
     assert.strictEqual(snapshot.currentSubjectFullScoreTotal, 600, 'current 9th-grade full score total changed');
+    assert.deepStrictEqual(snapshot.blankSubjectScorePolicy, {
+        available: true,
+        rowCount: 2,
+        blankMath: 0,
+        blankTotal: 238,
+        blankClass: '6.10',
+        fullMath: 119,
+        fullTotal: 357,
+        generatedNameRows: 0
+    }, 'blank subject score parsing policy changed');
     assert.ok(snapshot.score2RatePositive >= 14, `score2Rate positive schools too low: ${snapshot.score2RatePositive}`);
     assert.strictEqual(snapshot.teacherRows, 13, 'teacher row count changed');
     assert.strictEqual(snapshot.teacherPositive, 13, 'teacher positive row count changed');

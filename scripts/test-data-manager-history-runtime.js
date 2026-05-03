@@ -43,7 +43,7 @@ async function run() {
                 sheet_to_json() {
                     return [
                         { 姓名: '张三', 班级: '六年级10班', 总分: 420, 语文: 110, 数学: 110, 英语: 100, 物理: 100 },
-                        { 姓名: '李四', 班级: '6.10班', 总分: 400, 语文: 106, 数学: 104, 英语: 95, 物理: 95 }
+                        { 姓名: '李四', 班级: '6.10班', 语文: 106, 数学: '', 英语: 95, 物理: 95 }
                     ];
                 }
             }
@@ -99,6 +99,10 @@ async function run() {
 
     assert.strictEqual(savedRows.length, 2);
     assert.deepStrictEqual(savedRows.map((row) => row.class), ['6.10', '6.10']);
+    assert.strictEqual(savedRows[0].scores.数学, 110);
+    assert.strictEqual(savedRows[1].scores.数学, 0);
+    assert.strictEqual(savedRows[1].scores.语文, 106);
+    assert.strictEqual(savedRows[1].total, 296);
     assert.strictEqual(savedRows[0].townRank, 1);
     assert.strictEqual(savedRows[1].townRank, 2);
     assert.ok(savedRows[0].schoolRank >= 1);
