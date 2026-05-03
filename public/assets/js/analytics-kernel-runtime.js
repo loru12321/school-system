@@ -243,6 +243,19 @@
         return normalizeText(root.MY_SCHOOL || (root.localStorage && root.localStorage.getItem('MY_SCHOOL')) || '');
     }
 
+    function sameSchoolName(left, right) {
+        const leftName = normalizeText(left);
+        const rightName = normalizeText(right);
+        if (!leftName || !rightName) return false;
+        if (root.PermissionPolicy && typeof root.PermissionPolicy.sameSchoolName === 'function') {
+            return root.PermissionPolicy.sameSchoolName(leftName, rightName);
+        }
+        if (typeof root.areSchoolNamesEquivalent === 'function') {
+            return root.areSchoolNamesEquivalent(leftName, rightName);
+        }
+        return leftName === rightName;
+    }
+
     function getTeacherMap() {
         if (root.TeacherState && typeof root.TeacherState.getTeacherMap === 'function') {
             return root.TeacherState.getTeacherMap();
@@ -336,8 +349,8 @@
         });
         return Array.from(counts.entries()).sort((left, right) => {
             if (right[1] !== left[1]) return right[1] - left[1];
-            if (left[0] === currentSchool) return -1;
-            if (right[0] === currentSchool) return 1;
+            if (sameSchoolName(left[0], currentSchool)) return -1;
+            if (sameSchoolName(right[0], currentSchool)) return 1;
             return String(left[0]).localeCompare(String(right[0]), 'zh-CN', { numeric: true });
         })[0]?.[0] || currentSchool || '';
     }
@@ -353,7 +366,7 @@
         const scopedMap = {};
         const scopedSchoolMap = {};
         Object.entries(teacherMap).forEach(([key, teacherName]) => {
-            if (normalizeText(teacherSchoolMap[key]) !== currentSchool) return;
+            if (!sameSchoolName(teacherSchoolMap[key], currentSchool)) return;
             scopedMap[key] = teacherName;
             scopedSchoolMap[key] = teacherSchoolMap[key];
         });
@@ -406,7 +419,7 @@
         const teacherSchool = scoped.scoped ? scoped.schoolName : inferTeacherSchool(teacherMap, rows);
         const subjectList = Array.isArray(subjects) ? subjects : [];
         const schoolRows = teacherSchool
-            ? (rows || []).filter((student) => normalizeText(student && student.school) === teacherSchool)
+            ? (rows || []).filter((student) => sameSchoolName(student && student.school, teacherSchool))
             : (rows || []);
         const subjectByNormalized = new Map(
             subjectList.map((subject) => [normalizeSubjectName(subject), subject])

@@ -657,6 +657,77 @@ async function main() {
                 window.setTeacherSchoolMap(previousTeacherSchoolMap);
             }
         })();
+        const analyticsKernelSchoolAliasPolicy = (() => {
+            if (!window.AnalyticsKernel || typeof window.AnalyticsKernel.buildSnapshot !== 'function'
+                || typeof window.readRawData !== 'function'
+                || typeof window.setRawData !== 'function'
+                || typeof window.readSchools !== 'function'
+                || typeof window.setSchools !== 'function'
+                || typeof window.readSubjects !== 'function'
+                || typeof window.setSubjects !== 'function'
+                || typeof window.readTeacherMap !== 'function'
+                || typeof window.setTeacherMap !== 'function'
+                || typeof window.readTeacherSchoolMap !== 'function'
+                || typeof window.setTeacherSchoolMap !== 'function') {
+                return { available: false };
+            }
+            const previousRawData = window.readRawData();
+            const previousSchools = window.readSchools();
+            const previousSubjects = window.readSubjects();
+            const previousTeacherMap = window.readTeacherMap();
+            const previousTeacherSchoolMap = window.readTeacherSchoolMap();
+            const previousSchool = typeof window.readCurrentSchool === 'function'
+                ? window.readCurrentSchool()
+                : String(window.MY_SCHOOL || '');
+            const previousSameSchool = window.areSchoolNamesEquivalent;
+            const rows = [
+                { school: '甲校', class: '9.1', name: '甲一', scores: { 数学: 90 } },
+                { school: '甲校别名', class: '9.1', name: '甲二', scores: { 数学: 80 } },
+                { school: '乙校', class: '9.2', name: '乙一', scores: { 数学: 100 } }
+            ];
+            const normalizeAliasSchool = (value) => String(value || '').trim().replace(/别名/g, '');
+            try {
+                window.areSchoolNamesEquivalent = (left, right) => (
+                    normalizeAliasSchool(left) === normalizeAliasSchool(right)
+                    || (typeof previousSameSchool === 'function' && previousSameSchool(left, right))
+                );
+                if (typeof window.writeCurrentSchool === 'function') window.writeCurrentSchool('甲校别名');
+                else window.MY_SCHOOL = '甲校别名';
+                window.setRawData(rows);
+                window.setSchools({});
+                window.setSubjects(['数学']);
+                window.setTeacherMap({
+                    '9.1_数学': '甲校教师',
+                    '9.2_数学': '乙校教师'
+                });
+                window.setTeacherSchoolMap({
+                    '9.1_数学': '甲校',
+                    '9.2_数学': '乙校'
+                });
+                window.AnalyticsKernel.invalidate?.();
+                const snapshot = window.AnalyticsKernel.buildSnapshot({ force: true });
+                const stats = snapshot.teacherStats || {};
+                const local = stats['甲校教师']?.数学 || null;
+                return {
+                    available: true,
+                    teacherSchoolName: snapshot.teacherSchoolName,
+                    teacherNames: Object.keys(stats).sort(),
+                    localStudentCount: Number(local?.studentCount || 0),
+                    localAvg: Number(local?.avg || 0),
+                    containsForeignTeacher: !!stats['乙校教师']
+                };
+            } finally {
+                window.areSchoolNamesEquivalent = previousSameSchool;
+                if (typeof window.writeCurrentSchool === 'function') window.writeCurrentSchool(previousSchool);
+                else window.MY_SCHOOL = previousSchool;
+                window.setRawData(previousRawData);
+                window.setSchools(previousSchools);
+                window.setSubjects(previousSubjects);
+                window.setTeacherMap(previousTeacherMap);
+                window.setTeacherSchoolMap(previousTeacherSchoolMap);
+                window.AnalyticsKernel.invalidate?.();
+            }
+        })();
         const teacherCompareSchoolIsolationPolicy = (() => {
             if (typeof window.buildTeacherStatsForExam !== 'function') return { available: false };
             const previousTeacherMap = typeof window.readTeacherMap === 'function'
@@ -713,6 +784,7 @@ async function main() {
             currentSubjectFullScoreTotal: window.AnalyticsKernel?.getTotalFullScore?.(window.SUBJECTS || [], { config: window.CONFIG }) ?? null,
             blankSubjectScorePolicy,
             classSchoolIsolationPolicy,
+            analyticsKernelSchoolAliasPolicy,
             teacherCompareSchoolIsolationPolicy,
             score2RatePositive: Object.values(window.SCHOOLS || {}).filter((school) => Number(school?.score2Rate) > 0).length,
             teacherRows: Object.values(window.TEACHER_STATS || {}).reduce((sum, subjects) => sum + Object.keys(subjects || {}).length, 0),
@@ -787,6 +859,14 @@ async function main() {
         ambiguousClassSchool: null,
         explicitClassSchool: '乙校'
     }, 'same class names across schools should stay school-scoped');
+    assert.deepStrictEqual(snapshot.analyticsKernelSchoolAliasPolicy, {
+        available: true,
+        teacherSchoolName: '甲校别名',
+        teacherNames: ['甲校教师'],
+        localStudentCount: 2,
+        localAvg: 85,
+        containsForeignTeacher: false
+    }, 'analytics kernel should keep teacher stats when current school is an alias');
     assert.deepStrictEqual(snapshot.teacherCompareSchoolIsolationPolicy, {
         available: true,
         teacherNames: ['甲校教师'],
