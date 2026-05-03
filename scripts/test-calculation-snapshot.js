@@ -315,6 +315,163 @@ async function main() {
             window.calculateTeacherTownshipRanking?.();
             window.renderTeacherTownshipRanking?.();
         }
+        const toNumber = (value, fallback = 0) => {
+            const number = Number(value);
+            return Number.isFinite(number) ? number : fallback;
+        };
+        const parseFirstNumber = (value) => {
+            const match = String(value ?? '').replace(/,/g, '').match(/-?\d+(?:\.\d+)?/);
+            return match ? Number(match[0]) : null;
+        };
+        const nearlyEqual = (left, right, tolerance = 0.02) => (
+            Number.isFinite(left) && Number.isFinite(right) && Math.abs(left - right) <= tolerance
+        );
+        const buildTownshipSchoolMatcher = () => {
+            const allSchoolNames = Object.keys(window.SCHOOLS || {});
+            const hasHelper = typeof window.getTownshipManagedSchoolNames === 'function';
+            const townshipSet = new Set(
+                hasHelper
+                    ? window.getTownshipManagedSchoolNames(allSchoolNames).map((name) => String(name || '').trim())
+                    : allSchoolNames.map((name) => String(name || '').trim())
+            );
+            return (schoolName) => {
+                const normalizedName = String(schoolName || '').trim();
+                if (!hasHelper) return true;
+                if (typeof window.isTownshipManagedSchool === 'function') {
+                    return window.isTownshipManagedSchool(normalizedName, allSchoolNames);
+                }
+                return townshipSet.has(normalizedName);
+            };
+        };
+        const isTownshipSchoolName = buildTownshipSchoolMatcher();
+        const buildIndependentTeacherTownshipRows = () => {
+            const rows = [];
+            (window.SUBJECTS || []).forEach((subject) => {
+                const rankingData = [];
+                Object.keys(window.TEACHER_STATS || {}).forEach((teacherName) => {
+                    const data = window.TEACHER_STATS?.[teacherName]?.[subject];
+                    if (!data) return;
+                    rankingData.push({
+                        subject,
+                        name: teacherName,
+                        type: 'teacher',
+                        avg: toNumber(data.avg),
+                        excellentRate: toNumber(data.excellentRate),
+                        passRate: toNumber(data.passRate),
+                        studentCount: toNumber(data.studentCount)
+                    });
+                });
+                Object.keys(window.SCHOOLS || {}).forEach((schoolName) => {
+                    const metrics = window.SCHOOLS?.[schoolName]?.metrics?.[subject];
+                    if (!metrics || schoolName === window.MY_SCHOOL || !isTownshipSchoolName(schoolName)) return;
+                    rankingData.push({
+                        subject,
+                        name: schoolName,
+                        type: 'school',
+                        avg: toNumber(metrics.avg),
+                        excellentRate: toNumber(metrics.excRate),
+                        passRate: toNumber(metrics.passRate),
+                        studentCount: toNumber(metrics.count)
+                    });
+                });
+                rankingData.sort((left, right) => right.avg - left.avg);
+                rankingData.forEach((item, index) => { item.rankAvg = index + 1; });
+                rankingData.sort((left, right) => right.excellentRate - left.excellentRate);
+                rankingData.forEach((item, index) => { item.rankExc = index + 1; });
+                rankingData.sort((left, right) => right.passRate - left.passRate);
+                rankingData.forEach((item, index) => { item.rankPass = index + 1; });
+                rankingData.sort((left, right) => right.avg - left.avg);
+                rows.push(...rankingData);
+            });
+            return rows;
+        };
+        const readTeacherTownshipDomRows = () => {
+            const container = document.getElementById('teacher-township-ranking-container');
+            return Array.from(container?.querySelectorAll('.analysis-anchor-panel') || []).flatMap((panel) => {
+                const heading = String(panel.querySelector('.analysis-section-head > span')?.textContent || '').trim();
+                const subject = heading.replace(/\s*教师乡镇排名\s*$/, '');
+                return Array.from(panel.querySelectorAll('tbody tr')).map((row) => {
+                    const cells = Array.from(row.cells || []);
+                    return {
+                        subject,
+                        name: String(cells[0]?.textContent || '').trim(),
+                        type: String(cells[1]?.textContent || '').includes('教师') ? 'teacher' : 'school',
+                        avg: parseFirstNumber(cells[2]?.textContent),
+                        avgComparison: parseFirstNumber(cells[3]?.textContent),
+                        rankAvg: parseFirstNumber(cells[4]?.textContent),
+                        excellentPercent: parseFirstNumber(cells[5]?.textContent),
+                        excellentComparison: parseFirstNumber(cells[6]?.textContent),
+                        rankExc: parseFirstNumber(cells[7]?.textContent),
+                        passPercent: parseFirstNumber(cells[8]?.textContent),
+                        passComparison: parseFirstNumber(cells[9]?.textContent),
+                        rankPass: parseFirstNumber(cells[10]?.textContent)
+                    };
+                });
+            });
+        };
+        const expectedTownshipRows = buildIndependentTeacherTownshipRows();
+        const renderedTownshipRows = readTeacherTownshipDomRows();
+        const renderedTownshipRowMap = new Map(renderedTownshipRows.map((row) => [`${row.subject}::${row.type}::${row.name}`, row]));
+        const townshipAverages = window.TEACHER_TOWNSHIP_AVERAGES || {};
+        const calcBenchmarkDelta = (value, benchmark) => {
+            if (!Number.isFinite(value) || !Number.isFinite(benchmark) || Math.abs(benchmark) < 1e-9) return null;
+            return ((value - benchmark) / benchmark) * 100;
+        };
+        const compareTownshipRow = (expected) => {
+            const rendered = renderedTownshipRowMap.get(`${expected.subject}::${expected.type}::${expected.name}`);
+            if (!rendered) return { key: `${expected.subject}::${expected.type}::${expected.name}`, reason: 'missing-rendered-row' };
+            const avgBenchmark = toNumber(townshipAverages?.[expected.subject]?.avg, NaN);
+            const excBenchmark = toNumber(townshipAverages?.[expected.subject]?.excRate, NaN);
+            const passBenchmark = toNumber(townshipAverages?.[expected.subject]?.passRate, NaN);
+            const expectedAvgComparison = calcBenchmarkDelta(expected.avg, avgBenchmark);
+            const expectedExcComparison = calcBenchmarkDelta(expected.excellentRate, excBenchmark);
+            const expectedPassComparison = calcBenchmarkDelta(expected.passRate, passBenchmark);
+            const mismatches = [];
+            if (!nearlyEqual(rendered.avg, Number(expected.avg.toFixed(2)))) mismatches.push('avg');
+            if (rendered.rankAvg !== expected.rankAvg) mismatches.push('rankAvg');
+            if (!nearlyEqual(rendered.excellentPercent, Number((expected.excellentRate * 100).toFixed(2)))) mismatches.push('excellentPercent');
+            if (rendered.rankExc !== expected.rankExc) mismatches.push('rankExc');
+            if (!nearlyEqual(rendered.passPercent, Number((expected.passRate * 100).toFixed(2)))) mismatches.push('passPercent');
+            if (rendered.rankPass !== expected.rankPass) mismatches.push('rankPass');
+            if (expectedAvgComparison !== null && !nearlyEqual(rendered.avgComparison, Number(expectedAvgComparison.toFixed(2)))) mismatches.push('avgComparison');
+            if (expectedExcComparison !== null && !nearlyEqual(rendered.excellentComparison, Number(expectedExcComparison.toFixed(2)))) mismatches.push('excellentComparison');
+            if (expectedPassComparison !== null && !nearlyEqual(rendered.passComparison, Number(expectedPassComparison.toFixed(2)))) mismatches.push('passComparison');
+            return mismatches.length ? {
+                key: `${expected.subject}::${expected.type}::${expected.name}`,
+                mismatches,
+                rendered,
+                expected: {
+                    ...expected,
+                    avgComparison: expectedAvgComparison === null ? null : Number(expectedAvgComparison.toFixed(2)),
+                    excellentComparison: expectedExcComparison === null ? null : Number(expectedExcComparison.toFixed(2)),
+                    passComparison: expectedPassComparison === null ? null : Number(expectedPassComparison.toFixed(2))
+                }
+            } : null;
+        };
+        const teacherTownshipValueMismatches = expectedTownshipRows
+            .filter((row) => row.type === 'teacher')
+            .map(compareTownshipRow)
+            .filter(Boolean);
+        const townshipAverageChecks = (window.SUBJECTS || []).map((subject) => {
+            const rows = (window.RAW_DATA || []).filter((row) => {
+                const schoolName = String(row?.school || '').trim();
+                const score = toNumber(row?.scores?.[subject], NaN);
+                return Number.isFinite(score) && (!schoolName || isTownshipSchoolName(schoolName));
+            });
+            const scores = rows.map((row) => toNumber(row?.scores?.[subject], NaN)).filter(Number.isFinite);
+            const avg = scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
+            const renderedAverage = townshipAverages?.[subject] || {};
+            return {
+                subject,
+                rawCount: scores.length,
+                renderedCount: toNumber(renderedAverage.count),
+                avg,
+                renderedAvg: toNumber(renderedAverage.avg),
+                countMatches: scores.length === toNumber(renderedAverage.count),
+                avgMatches: nearlyEqual(toNumber(renderedAverage.avg), avg, 0.0001)
+            };
+        });
+        const townshipAverageMismatches = townshipAverageChecks.filter((item) => !item.countMatches || !item.avgMatches);
         await boundedSwitchTab('marginal-push');
         if (typeof window.updateMpSchoolSelect === 'function') window.updateMpSchoolSelect();
         const marginalResult = (() => {
@@ -403,6 +560,13 @@ async function main() {
             countyOwnTeacherRows: teacherRoot ? teacherRoot.querySelectorAll('.county-teacher-own-row').length : 0,
             teacherTownshipAverageSubjects: Object.values(window.TEACHER_TOWNSHIP_AVERAGES || {}).filter((row) => Number(row?.count) > 0).length,
             teacherTownshipComparisonCells,
+            teacherTownshipRenderedRows: renderedTownshipRows.length,
+            teacherTownshipExpectedRows: expectedTownshipRows.length,
+            teacherTownshipRenderedTeacherRows: renderedTownshipRows.filter((row) => row.type === 'teacher').length,
+            teacherTownshipExpectedTeacherRows: expectedTownshipRows.filter((row) => row.type === 'teacher').length,
+            teacherTownshipValueMismatches,
+            teacherTownshipAverageChecks: townshipAverageChecks,
+            teacherTownshipAverageMismatches: townshipAverageMismatches,
             marginalGeneratedCount: Number(marginalResult?.count || 0),
             marginalTicketCount: document.querySelectorAll('#mp-tickets-container .task-ticket').length,
             marginalFinite: marginalValues.every((value) => Number.isFinite(Number(value))),
@@ -443,6 +607,32 @@ async function main() {
     assert.ok(
         snapshot.teacherTownshipComparisonCells.some((text) => text !== '+0.00%' && text !== '0.00%' && text !== '—'),
         'teacher township comparisons are all zero or empty'
+    );
+    assert.ok(snapshot.teacherTownshipExpectedRows > 0, 'teacher township expected rows missing');
+    assert.strictEqual(
+        snapshot.teacherTownshipRenderedRows,
+        snapshot.teacherTownshipExpectedRows,
+        'teacher township rendered row count does not match independent expected rows'
+    );
+    assert.strictEqual(
+        snapshot.teacherTownshipRenderedTeacherRows,
+        snapshot.teacherTownshipExpectedTeacherRows,
+        'teacher township rendered teacher row count does not match independent expected rows'
+    );
+    assert.strictEqual(
+        snapshot.teacherTownshipExpectedTeacherRows,
+        snapshot.teacherRows,
+        'teacher township expected teacher rows do not match teacher stats rows'
+    );
+    assert.deepStrictEqual(
+        snapshot.teacherTownshipValueMismatches,
+        [],
+        'teacher township ranking table diverged from independent calculation'
+    );
+    assert.deepStrictEqual(
+        snapshot.teacherTownshipAverageMismatches,
+        [],
+        'teacher township averages diverged from raw student scores'
     );
     assert.ok(snapshot.marginalGeneratedCount > 0, 'marginal task generation produced no rows');
     assert.ok(snapshot.marginalTicketCount > 0, 'marginal task ticket rendering failed');
