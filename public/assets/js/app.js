@@ -18882,7 +18882,6 @@ function runDataDoctor() {
     });
 
     // 2. 检查异常分值 (高分/负分)
-    // 假设单科满分不超过 150，总分根据科目数估算
     RAW_DATA.forEach((s, idx) => {
         const rowNo = s.__row || (idx + 2);
         if (typeof s.total === 'number' && s.total <= 0) stats.zeroCount++;
@@ -18901,7 +18900,9 @@ function runDataDoctor() {
                 return;
             }
             if (Number(val) < 0) issues.push(`🔴 <strong>负分异常：</strong> 行 ${rowNo} ${s.name || '未知姓名'} (${sub} = ${val})`);
-            if (Number(val) > 150) warnings.push(`🟠 <strong>超高分预警：</strong> 行 ${rowNo} ${s.name || '未知姓名'} (${sub} = ${val}) - 请确认是否录入错误？`);
+            const configuredFullScore = window.AnalyticsKernel?.getSubjectFullScore?.(sub, { config: CONFIG });
+            const maxScore = Number.isFinite(Number(configuredFullScore)) ? Number(configuredFullScore) : 150;
+            if (Number(val) > maxScore) warnings.push(`🟠 <strong>超满分预警：</strong> 行 ${rowNo} ${s.name || '未知姓名'} (${sub} = ${val}，满分 ${maxScore}) - 请确认是否录入错误？`);
         });
     });
 

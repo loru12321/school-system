@@ -547,11 +547,24 @@ async function main() {
         const headers = studentSection
             ? Array.from(studentSection.querySelectorAll('thead th')).map((th) => th.innerText.trim()).filter(Boolean)
             : [];
+        const policySubjects = ['语文', '数学', '英语', '历史', '地理', '生物', '政治', '物理', '化学'];
+        const readFullScorePolicy = (grade) => Object.fromEntries(policySubjects.map((subject) => [
+            subject,
+            window.AnalyticsKernel?.getSubjectFullScore?.(subject, { grade }) ?? null
+        ]));
+        const subjectFullScorePolicy = Object.fromEntries([6, 7, 8, 9].map((grade) => [grade, readFullScorePolicy(grade)]));
+        const currentSubjectFullScores = Object.fromEntries((window.SUBJECTS || []).map((subject) => [
+            subject,
+            window.AnalyticsKernel?.getSubjectFullScore?.(subject, { config: window.CONFIG }) ?? null
+        ]));
         const target = (window.RAW_DATA || []).find((student) => String(student?.name || '').trim() === '解洪旭');
         return {
             rawData: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
             schoolCount: window.SCHOOLS ? Object.keys(window.SCHOOLS).length : 0,
             subjectCount: Array.isArray(window.SUBJECTS) ? window.SUBJECTS.length : 0,
+            subjectFullScorePolicy,
+            currentSubjectFullScores,
+            currentSubjectFullScoreTotal: window.AnalyticsKernel?.getTotalFullScore?.(window.SUBJECTS || [], { config: window.CONFIG }) ?? null,
             score2RatePositive: Object.values(window.SCHOOLS || {}).filter((school) => Number(school?.score2Rate) > 0).length,
             teacherRows: Object.values(window.TEACHER_STATS || {}).reduce((sum, subjects) => sum + Object.keys(subjects || {}).length, 0),
             teacherPositive: Object.values(window.TEACHER_STATS || {}).flatMap((subjects) => Object.values(subjects || {}))
@@ -597,6 +610,14 @@ async function main() {
     assert.strictEqual(snapshot.rawData, 7809, 'RAW_DATA count changed');
     assert.ok(snapshot.schoolCount >= 24, `school count too low: ${snapshot.schoolCount}`);
     assert.strictEqual(snapshot.subjectCount, 5, 'subject count changed for current 9th-grade exam');
+    assert.deepStrictEqual(snapshot.subjectFullScorePolicy, {
+        6: { '语文': 150, '数学': 150, '英语': 150, '历史': 50, '地理': 50, '生物': 50, '政治': 100, '物理': null, '化学': null },
+        7: { '语文': 150, '数学': 150, '英语': 150, '历史': 50, '地理': 50, '生物': 50, '政治': 100, '物理': null, '化学': null },
+        8: { '语文': 150, '数学': 150, '英语': 150, '历史': 50, '地理': 50, '生物': 50, '政治': 100, '物理': 100, '化学': 100 },
+        9: { '语文': 150, '数学': 150, '英语': 150, '历史': null, '地理': null, '生物': null, '政治': 100, '物理': 90, '化学': 60 }
+    }, 'subject full score policy changed');
+    assert.deepStrictEqual(snapshot.currentSubjectFullScores, { '语文': 150, '数学': 150, '英语': 150, '物理': 90, '化学': 60 }, 'current 9th-grade subject full scores changed');
+    assert.strictEqual(snapshot.currentSubjectFullScoreTotal, 600, 'current 9th-grade full score total changed');
     assert.ok(snapshot.score2RatePositive >= 14, `score2Rate positive schools too low: ${snapshot.score2RatePositive}`);
     assert.strictEqual(snapshot.teacherRows, 13, 'teacher row count changed');
     assert.strictEqual(snapshot.teacherPositive, 13, 'teacher positive row count changed');

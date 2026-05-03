@@ -14,6 +14,37 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createAnalyticsKernel(root) {
     const HASH_SEED = 2166136261;
     const PROCESS_CACHE_LIMIT = 2;
+    const SUBJECT_ALIAS_MAP = Object.freeze({
+        '语文': '语文',
+        '数学': '数学',
+        '英语': '英语',
+        '物理': '物理',
+        '化学': '化学',
+        '政治': '政治',
+        '道法': '政治',
+        '道德与法治': '政治',
+        '思政': '政治',
+        '历史': '历史',
+        '地理': '地理',
+        '生物': '生物',
+        '生物学': '生物',
+        '科学': '科学'
+    });
+    const SUBJECT_FULL_SCORE_RULES = Object.freeze({
+        6: Object.freeze({ '语文': 150, '数学': 150, '英语': 150, '历史': 50, '地理': 50, '生物': 50, '政治': 100 }),
+        7: Object.freeze({ '语文': 150, '数学': 150, '英语': 150, '历史': 50, '地理': 50, '生物': 50, '政治': 100 }),
+        8: Object.freeze({ '语文': 150, '数学': 150, '英语': 150, '历史': 50, '地理': 50, '生物': 50, '政治': 100, '物理': 100, '化学': 100 }),
+        9: Object.freeze({ '语文': 150, '数学': 150, '英语': 150, '政治': 100, '物理': 90, '化学': 60 })
+    });
+    const CHINESE_GRADE_MAP = Object.freeze({
+        '六': 6,
+        '七': 7,
+        '八': 8,
+        '九': 9,
+        '初一': 7,
+        '初二': 8,
+        '初三': 9
+    });
     const state = {
         snapshotSignature: '',
         snapshot: null,
@@ -36,7 +67,115 @@
 
     function normalizeSubjectName(value) {
         if (typeof root.normalizeSubject === 'function') return root.normalizeSubject(value);
-        return normalizeText(value);
+        const normalized = normalizeText(value).replace(/\s+/g, '');
+        return SUBJECT_ALIAS_MAP[normalized] || normalized;
+    }
+
+    function readLocalStorageValue(key) {
+        try {
+            return root.localStorage && typeof root.localStorage.getItem === 'function'
+                ? root.localStorage.getItem(key)
+                : '';
+        } catch {
+            return '';
+        }
+    }
+
+    function extractGradeNumber(value) {
+        if (value == null || value === '') return null;
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            return value >= 6 && value <= 9 ? value : null;
+        }
+        const text = normalizeText(value).replace(/\s+/g, '');
+        if (!text) return null;
+        if (/^[6-9]$/.test(text)) return Number(text);
+        const arabicMatch = text.match(/(?:^|[^\d])([6-9])(?:年级|年級|级|級)?(?:$|[^\d])/);
+        if (arabicMatch) return Number(arabicMatch[1]);
+        const juniorMatch = text.match(/初[一二三]/);
+        if (juniorMatch && CHINESE_GRADE_MAP[juniorMatch[0]]) return CHINESE_GRADE_MAP[juniorMatch[0]];
+        const chineseMatch = text.match(/[六七八九](?:年级|年級|级|級)/);
+        if (chineseMatch && CHINESE_GRADE_MAP[chineseMatch[0][0]]) return CHINESE_GRADE_MAP[chineseMatch[0][0]];
+        return null;
+    }
+
+    function inferGradeNumber(options = {}) {
+        const settings = options && typeof options === 'object' ? options : {};
+        const optionConfig = settings && typeof settings.config === 'object' ? settings.config : null;
+        let uiMeta = null;
+        try {
+            uiMeta = typeof root.getExamMetaFromUI === 'function' ? root.getExamMetaFromUI() : null;
+        } catch {
+            uiMeta = null;
+        }
+        const config = optionConfig || (root.CONFIG && typeof root.CONFIG === 'object' ? root.CONFIG : {});
+        const cohortMeta = root.CURRENT_COHORT_META && typeof root.CURRENT_COHORT_META === 'object'
+            ? root.CURRENT_COHORT_META
+            : {};
+        const candidates = [
+            settings.grade,
+            settings.gradeNumber,
+            settings.gradeName,
+            settings.name,
+            settings.examName,
+            settings.examId,
+            uiMeta && uiMeta.grade,
+            uiMeta && uiMeta.gradeName,
+            uiMeta && uiMeta.name,
+            cohortMeta.grade,
+            cohortMeta.gradeName,
+            cohortMeta.name,
+            config.grade,
+            config.gradeNumber,
+            config.gradeName,
+            config.name,
+            root.CURRENT_EXAM_ID,
+            root.CURRENT_TERM_ID,
+            readLocalStorageValue('CURRENT_EXAM_ID'),
+            readLocalStorageValue('CURRENT_TERM_ID'),
+            readLocalStorageValue('CURRENT_TEACHER_TERM_ID')
+        ];
+        for (const candidate of candidates) {
+            const grade = extractGradeNumber(candidate);
+            if (grade) return grade;
+        }
+        return null;
+    }
+
+    function getSubjectFullScore(subject, options = {}) {
+        const grade = inferGradeNumber(options);
+        const subjectName = normalizeSubjectName(subject);
+        if (!grade || !subjectName || !SUBJECT_FULL_SCORE_RULES[grade]) return null;
+        const fullScore = SUBJECT_FULL_SCORE_RULES[grade][subjectName];
+        return Number.isFinite(Number(fullScore)) ? Number(fullScore) : null;
+    }
+
+    function getSubjectFullScoreMap(subjects, options = {}) {
+        const settings = options && typeof options === 'object' ? options : {};
+        const subjectList = Array.isArray(subjects)
+            ? subjects
+            : getDataState(settings).subjects;
+        return (Array.isArray(subjectList) ? subjectList : []).reduce((map, subject) => {
+            const fullScore = getSubjectFullScore(subject, settings);
+            if (Number.isFinite(Number(fullScore))) map[subject] = Number(fullScore);
+            return map;
+        }, {});
+    }
+
+    function getTotalFullScore(subjects, options = {}) {
+        const fullScoreMap = getSubjectFullScoreMap(subjects, options);
+        const scores = Object.values(fullScoreMap).map(Number).filter(Number.isFinite);
+        if (!scores.length) return null;
+        return scores.reduce((sum, score) => sum + score, 0);
+    }
+
+    function isScoreAboveSubjectFullScore(subject, score, options = {}) {
+        const value = Number(score);
+        const fullScore = getSubjectFullScore(subject, options);
+        return Number.isFinite(value) && Number.isFinite(Number(fullScore)) && value > Number(fullScore);
+    }
+
+    function getSubjectFullScoreRules() {
+        return JSON.parse(JSON.stringify(SUBJECT_FULL_SCORE_RULES));
     }
 
     function toNumber(value, fallback = 0) {
@@ -384,6 +523,12 @@
         invalidate,
         normalizeText,
         normalizeClassName,
-        normalizeSubjectName
+        normalizeSubjectName,
+        inferGradeNumber,
+        getSubjectFullScore,
+        getSubjectFullScoreMap,
+        getTotalFullScore,
+        isScoreAboveSubjectFullScore,
+        getSubjectFullScoreRules
     };
 });
