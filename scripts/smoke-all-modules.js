@@ -1416,12 +1416,135 @@ async function runModuleDeepCheck(page, id) {
     }
     if (id === 'county-analysis') {
         return page.evaluate(async () => {
+            const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+            const waitUntil = async (predicate, timeout = 15000) => {
+                const deadline = Date.now() + timeout;
+                let lastError = null;
+                while (Date.now() < deadline) {
+                    try {
+                        if (predicate()) return true;
+                    } catch (error) {
+                        lastError = error;
+                    }
+                    await wait(150);
+                }
+                throw lastError || new Error('county analysis wait timeout');
+            };
+            const toNumber = (value, fallback = 0) => {
+                const number = Number(value);
+                return Number.isFinite(number) ? number : fallback;
+            };
+            const parseFirstNumber = (value) => {
+                const match = String(value ?? '').replace(/,/g, '').match(/-?\d+(?:\.\d+)?/);
+                return match ? Number(match[0]) : null;
+            };
+            const nearlyEqual = (left, right, tolerance = 0.02) => (
+                Number.isFinite(left) && Number.isFinite(right) && Math.abs(left - right) <= tolerance
+            );
+            const assignRanks = (rows, scoreGetter, rankKey) => {
+                const sorted = rows.slice().sort((left, right) => toNumber(scoreGetter(right)) - toNumber(scoreGetter(left)));
+                let lastScore = null;
+                let lastRank = 0;
+                sorted.forEach((row, index) => {
+                    const score = toNumber(scoreGetter(row));
+                    const rank = lastScore !== null && Math.abs(score - lastScore) < 0.0001
+                        ? lastRank
+                        : index + 1;
+                    row[rankKey] = rank;
+                    lastScore = score;
+                    lastRank = rank;
+                });
+            };
+            const getTwoRateWeights = () => String(window.CONFIG?.name || '').includes('9')
+                ? { avg: 50, excellent: 80, pass: 50 }
+                : { avg: 60, excellent: 70, pass: 70 };
+            const buildExpectedHorizontalTotalRows = () => {
+                const rows = Object.values(window.SCHOOLS || {})
+                    .filter((school) => school?.metrics?.total)
+                    .map((school) => {
+                        const metric = school.metrics.total || {};
+                        return {
+                            schoolName: school.name || '',
+                            count: toNumber(metric.count),
+                            avg: toNumber(metric.avg),
+                            excellentRate: toNumber(metric.excRate),
+                            passRate: toNumber(metric.passRate),
+                            ratedAvg: toNumber(metric.countyRatedAvg ?? school.countyRatedAvg),
+                            ratedExc: toNumber(metric.countyRatedExc ?? school.countyRatedExc),
+                            ratedPass: toNumber(metric.countyRatedPass ?? school.countyRatedPass),
+                            score: toNumber(metric.countyScore2Rate ?? school.countyScore2Rate ?? school.score2Rate)
+                        };
+                    });
+                assignRanks(rows, (row) => row.avg, 'rankAvg');
+                assignRanks(rows, (row) => row.excellentRate, 'rankExcellent');
+                assignRanks(rows, (row) => row.passRate, 'rankPass');
+                assignRanks(rows, (row) => row.score, 'rankScore');
+                return rows.sort((left, right) => (left.rankScore || 9999) - (right.rankScore || 9999));
+            };
+            const buildExpectedSubjectRows = (subject) => {
+                const sourceRows = Object.values(window.SCHOOLS || {})
+                    .filter((school) => school?.metrics?.[subject])
+                    .map((school) => ({ school, metric: school.metrics[subject] }));
+                if (!sourceRows.length) return [];
+                const maxes = sourceRows.reduce((acc, row) => {
+                    acc.avg = Math.max(acc.avg, toNumber(row.metric.avg));
+                    acc.excellent = Math.max(acc.excellent, toNumber(row.metric.excRate));
+                    acc.pass = Math.max(acc.pass, toNumber(row.metric.passRate));
+                    return acc;
+                }, { avg: 0, excellent: 0, pass: 0 });
+                const weights = getTwoRateWeights();
+                const rows = sourceRows.map((row) => {
+                    const ratedAvg = maxes.avg ? toNumber(row.metric.avg) / maxes.avg * weights.avg : 0;
+                    const ratedExc = maxes.excellent ? toNumber(row.metric.excRate) / maxes.excellent * weights.excellent : 0;
+                    const ratedPass = maxes.pass ? toNumber(row.metric.passRate) / maxes.pass * weights.pass : 0;
+                    return {
+                        schoolName: row.school.name || '',
+                        count: toNumber(row.metric.count),
+                        avg: toNumber(row.metric.avg),
+                        excellentRate: toNumber(row.metric.excRate),
+                        passRate: toNumber(row.metric.passRate),
+                        ratedAvg,
+                        ratedExc,
+                        ratedPass,
+                        score: ratedAvg + ratedExc + ratedPass
+                    };
+                });
+                assignRanks(rows, (row) => row.avg, 'rankAvg');
+                assignRanks(rows, (row) => row.excellentRate, 'rankExcellent');
+                assignRanks(rows, (row) => row.passRate, 'rankPass');
+                assignRanks(rows, (row) => row.score, 'rank');
+                return rows.sort((left, right) => (left.rank || 9999) - (right.rank || 9999));
+            };
+            const readScoreTableRows = (table) => Array.from(table?.querySelectorAll('tbody tr') || []).map((row) => {
+                const cells = Array.from(row.cells || []);
+                return {
+                    schoolName: String(cells[0]?.textContent || '').trim(),
+                    count: parseFirstNumber(cells[1]?.textContent),
+                    avg: parseFirstNumber(cells[2]?.textContent),
+                    excellentPercent: parseFirstNumber(cells[3]?.textContent),
+                    passPercent: parseFirstNumber(cells[4]?.textContent),
+                    ratedAvg: parseFirstNumber(cells[5]?.textContent),
+                    ratedExc: parseFirstNumber(cells[6]?.textContent),
+                    ratedPass: parseFirstNumber(cells[7]?.textContent),
+                    score: parseFirstNumber(cells[8]?.textContent),
+                    rank: parseFirstNumber(cells[9]?.textContent)
+                };
+            });
             if (typeof window.ensureCountySubmoduleSections === 'function') {
                 window.ensureCountySubmoduleSections();
+            }
+            if (typeof window.ensureCountyAnalysisRuntimeLoaded === 'function') {
+                await Promise.race([
+                    Promise.resolve(window.ensureCountyAnalysisRuntimeLoaded()),
+                    new Promise((resolve) => setTimeout(resolve, 12000))
+                ]).catch(() => null);
             }
             const getTeacherRoot = () => document.querySelector('#county-teacher-portrait .county-analysis-root')
                 || document.getElementById('county-analysis-root')
                 || document.querySelector('#county-analysis .county-analysis-root');
+            const getHorizontalRoot = () => document.querySelector('#county-school-horizontal .county-analysis-root')
+                || document.getElementById('county-school-horizontal-root')
+                || document.querySelector('#county-school-horizontal');
             const shouldExpectTeacherRows = Object.keys(window.TEACHER_MAP || {}).length > 0
                 || Object.keys(window.TEACHER_STATS || {}).length > 0;
             if (shouldExpectTeacherRows && window.CountyAnalysisRuntime?.ensureTeacherContextForCountyAnalysis) {
@@ -1445,25 +1568,109 @@ async function runModuleDeepCheck(page, id) {
                 }
             }
             const teacherRoot = getTeacherRoot();
+            const teacherOwnRows = Array.from(teacherRoot?.querySelectorAll('.county-teacher-own-row') || []);
+            const firstTeacherOwn = teacherOwnRows[0];
+            const firstTeacherOwnCells = Array.from(firstTeacherOwn?.cells || []);
             const teacherRankRows = teacherRoot
                 ? teacherRoot.querySelectorAll('.county-teacher-rank-table tbody tr').length
                 : 0;
-            const ownTeacherRows = teacherRoot
-                ? teacherRoot.querySelectorAll('.county-teacher-own-row').length
-                : 0;
             const teacherEmptyState = !!teacherRoot?.querySelector('.county-empty');
-            const horizontalRoot = document.querySelector('#county-school-horizontal .county-analysis-root')
-                || document.getElementById('county-school-horizontal-root');
-            const horizontalReady = !!horizontalRoot
-                || !!document.getElementById('county-school-horizontal')
-                || !!window.CountySchoolHorizontalRenderer;
+            const firstTeacherOwnSummary = {
+                rankAvg: parseFirstNumber(firstTeacherOwnCells[0]?.textContent),
+                avg: parseFirstNumber(firstTeacherOwnCells[3]?.textContent),
+                rankExc: parseFirstNumber(firstTeacherOwnCells[4]?.textContent),
+                excellentPercent: parseFirstNumber(firstTeacherOwnCells[5]?.textContent),
+                rankPass: parseFirstNumber(firstTeacherOwnCells[6]?.textContent),
+                passPercent: parseFirstNumber(firstTeacherOwnCells[7]?.textContent),
+                studentCount: parseFirstNumber(firstTeacherOwnCells[8]?.textContent)
+            };
+
+            if (typeof window.renderCountyAnalysis === 'function') {
+                window.renderCountyAnalysis('county-school-horizontal');
+            }
+            const expectedTotalRows = buildExpectedHorizontalTotalRows();
+            if (expectedTotalRows.length) {
+                await waitUntil(() => document.querySelector('#county-school-horizontal [data-virtual-table="county-horizontal-total"] tbody tr'));
+            } else {
+                await waitUntil(() => getHorizontalRoot()?.querySelector('.county-empty'));
+            }
+            const horizontalRoot = getHorizontalRoot();
+            const horizontalTotalTable = horizontalRoot?.querySelector('[data-virtual-table="county-horizontal-total"]');
+            const horizontalDomRows = readScoreTableRows(horizontalTotalTable);
+            const expectedTotalTop = expectedTotalRows[0] || null;
+            const renderedTotalTop = horizontalDomRows[0] || null;
+            const totalRanksSorted = horizontalDomRows.every((row, index) => (
+                index === 0 || toNumber(horizontalDomRows[index - 1].rank, 9999) <= toNumber(row.rank, 9999)
+            ));
+
+            const subjectTables = Array.from(horizontalRoot?.querySelectorAll('[data-virtual-table^="county-subject-"]') || []);
+            const renderedSubject = String(subjectTables[0]?.getAttribute('data-virtual-table') || '').replace(/^county-subject-/, '');
+            const expectedSubjectRows = renderedSubject ? buildExpectedSubjectRows(renderedSubject) : [];
+            const subjectDomRows = readScoreTableRows(subjectTables[0]);
+            const expectedSubjectTop = expectedSubjectRows[0] || null;
+            const renderedSubjectTop = subjectDomRows[0] || null;
+            const subjectRanksSorted = subjectDomRows.every((row, index) => (
+                index === 0 || toNumber(subjectDomRows[index - 1].rank, 9999) <= toNumber(row.rank, 9999)
+            ));
+            const countyText = [
+                teacherRoot?.innerText || '',
+                horizontalRoot?.innerText || ''
+            ].join('\n');
             const checks = {
                 rootReady: !!teacherRoot || !!document.getElementById('county-teacher-portrait'),
                 sectionReady: !!document.getElementById('county-analysis'),
-                lightweightSmoke: true,
+                runtimeReady: typeof window.renderCountyAnalysis === 'function'
+                    && !!window.CountyAnalysisRuntime
+                    && !!window.CountySchoolHorizontalRenderer,
+                teacherRankTableReady: !!teacherRoot?.querySelector('.county-teacher-rank-table'),
+                teacherRowsReady: !shouldExpectTeacherRows || (teacherRankRows > 0 && teacherOwnRows.length > 0),
+                teacherOwnMetricsFinite: !shouldExpectTeacherRows || [
+                    firstTeacherOwnSummary.rankAvg,
+                    firstTeacherOwnSummary.avg,
+                    firstTeacherOwnSummary.rankExc,
+                    firstTeacherOwnSummary.excellentPercent,
+                    firstTeacherOwnSummary.rankPass,
+                    firstTeacherOwnSummary.passPercent,
+                    firstTeacherOwnSummary.studentCount
+                ].every(Number.isFinite),
+                schoolHorizontalRendered: !!horizontalTotalTable,
+                horizontalRowCountMatches: expectedTotalRows.length > 0
+                    && horizontalDomRows.length === expectedTotalRows.length,
+                horizontalTopSchoolMatches: !!expectedTotalTop
+                    && renderedTotalTop?.schoolName === expectedTotalTop.schoolName,
+                horizontalTopCountMatches: !!expectedTotalTop
+                    && renderedTotalTop?.count === expectedTotalTop.count,
+                horizontalTopAvgMatches: !!expectedTotalTop
+                    && nearlyEqual(renderedTotalTop?.avg, Number(expectedTotalTop.avg.toFixed(2))),
+                horizontalTopExcellentMatches: !!expectedTotalTop
+                    && nearlyEqual(renderedTotalTop?.excellentPercent, Number((expectedTotalTop.excellentRate * 100).toFixed(2))),
+                horizontalTopPassMatches: !!expectedTotalTop
+                    && nearlyEqual(renderedTotalTop?.passPercent, Number((expectedTotalTop.passRate * 100).toFixed(2))),
+                horizontalTopScoreMatches: !!expectedTotalTop
+                    && nearlyEqual(renderedTotalTop?.score, Number(expectedTotalTop.score.toFixed(2))),
+                horizontalTopRankMatches: !!expectedTotalTop
+                    && renderedTotalTop?.rank === expectedTotalTop.rankScore,
+                horizontalRanksSorted: horizontalDomRows.length > 0 && totalRanksSorted,
+                subjectTableRendered: !!subjectTables[0],
+                subjectRowCountMatches: expectedSubjectRows.length > 0
+                    && subjectDomRows.length === expectedSubjectRows.length,
+                subjectTopSchoolMatches: !!expectedSubjectTop
+                    && renderedSubjectTop?.schoolName === expectedSubjectTop.schoolName,
+                subjectTopAvgMatches: !!expectedSubjectTop
+                    && nearlyEqual(renderedSubjectTop?.avg, Number(expectedSubjectTop.avg.toFixed(2))),
+                subjectTopExcellentMatches: !!expectedSubjectTop
+                    && nearlyEqual(renderedSubjectTop?.excellentPercent, Number((expectedSubjectTop.excellentRate * 100).toFixed(2))),
+                subjectTopPassMatches: !!expectedSubjectTop
+                    && nearlyEqual(renderedSubjectTop?.passPercent, Number((expectedSubjectTop.passRate * 100).toFixed(2))),
+                subjectTopScoreMatches: !!expectedSubjectTop
+                    && nearlyEqual(renderedSubjectTop?.score, Number(expectedSubjectTop.score.toFixed(2))),
+                subjectTopRankMatches: !!expectedSubjectTop
+                    && renderedSubjectTop?.rank === expectedSubjectTop.rank,
+                subjectRanksSorted: subjectDomRows.length > 0 && subjectRanksSorted,
                 subjectCountyRankReady: Array.isArray(window.SUBJECTS) && window.SUBJECTS.length > 0
                     ? (window.RAW_DATA || []).some((student) => window.SUBJECTS.some((subject) => student?.ranks?.[subject]?.county))
-                    : true
+                    : true,
+                noInvalidCountyText: !/\bNaN\b|Infinity|undefined|null/.test(countyText)
             };
             const exportButtons = teacherRoot ? teacherRoot.querySelectorAll('.county-section-actions button').length : 0;
             const teacherRankTable = !!teacherRoot?.querySelector('.county-teacher-rank-table');
@@ -1472,16 +1679,30 @@ async function runModuleDeepCheck(page, id) {
             return {
                 ok: Object.values(checks).every(Boolean)
                     && studentArchiveRemoved
-                    && (!shouldExpectTeacherRows || (teacherRankRows > 0 && ownTeacherRows > 0)),
+                    && (!shouldExpectTeacherRows || (teacherRankRows > 0 && teacherOwnRows.length > 0)),
                 checks,
                 exportButtons,
                 teacherRankRows,
-                ownTeacherRows,
+                ownTeacherRows: teacherOwnRows.length,
                 teacherRankTable,
                 teacherEmptyState,
+                firstTeacherOwnSummary,
                 shouldExpectTeacherRows,
+                horizontal: {
+                    renderedRows: horizontalDomRows.length,
+                    expectedRows: expectedTotalRows.length,
+                    renderedTop: renderedTotalTop,
+                    expectedTop: expectedTotalTop
+                },
+                subject: {
+                    name: renderedSubject,
+                    renderedRows: subjectDomRows.length,
+                    expectedRows: expectedSubjectRows.length,
+                    renderedTop: renderedSubjectTop,
+                    expectedTop: expectedSubjectTop
+                },
                 studentArchiveRemoved,
-                calculationSnapshotCoversCountyRuntime: true
+                dualModuleDeepSmoke: true
             };
         });
     }
