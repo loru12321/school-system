@@ -32,7 +32,45 @@
         const leftName = teacherNormalizeSchoolName(left);
         const rightName = teacherNormalizeSchoolName(right);
         if (!leftName || !rightName) return false;
+        if (window.PermissionPolicy && typeof window.PermissionPolicy.sameSchoolName === 'function') {
+            return window.PermissionPolicy.sameSchoolName(leftName, rightName);
+        }
+        if (typeof window.areSchoolNamesEquivalent === 'function') {
+            return window.areSchoolNamesEquivalent(leftName, rightName);
+        }
         return areSchoolNamesEquivalentFn(leftName, rightName);
+    }
+
+    function teacherSchoolListContains(candidates, schoolName) {
+        const targetSchool = teacherNormalizeSchoolName(schoolName);
+        if (!targetSchool) return false;
+        return (candidates || []).some((candidate) => teacherSameSchoolName(candidate, targetSchool));
+    }
+
+    function teacherResolveSchoolKey(schoolName, candidates = Object.keys(window.SCHOOLS || {})) {
+        const targetSchool = teacherNormalizeSchoolName(schoolName);
+        if (!targetSchool) return '';
+        const list = (candidates || []).map(teacherNormalizeSchoolName).filter(Boolean);
+        if (list.includes(targetSchool)) return targetSchool;
+        return list.find((candidate) => teacherSameSchoolName(candidate, targetSchool)) || targetSchool;
+    }
+
+    function teacherGetSchoolRecord(schoolName) {
+        const schools = window.SCHOOLS && typeof window.SCHOOLS === 'object' ? window.SCHOOLS : {};
+        const schoolKey = teacherResolveSchoolKey(schoolName, Object.keys(schools));
+        return schoolKey && schools[schoolKey] ? schools[schoolKey] : null;
+    }
+
+    function teacherCollectRowsForSchool(rowMap, schoolName) {
+        const targetSchool = teacherNormalizeSchoolName(schoolName);
+        if (!targetSchool || !(rowMap instanceof Map)) return [];
+        const exactRows = rowMap.get(targetSchool) || [];
+        const rows = exactRows.slice();
+        rowMap.forEach((schoolRows, rowSchool) => {
+            if (rowSchool === targetSchool || !teacherSameSchoolName(rowSchool, targetSchool)) return;
+            rows.push(...(schoolRows || []));
+        });
+        return rows;
     }
 
     function isTeacherAssignmentScopedToSchool(assignment, schoolName) {
@@ -118,6 +156,7 @@
             Object.keys(window.SCHOOLS || {}).sort().join('|'),
             Object.keys(window.TARGETS || {}).sort().join('|'),
             (window.SUBJECTS || []).join(','),
+            teacherNormalizeSchoolName(window.MY_SCHOOL || (window.localStorage && window.localStorage.getItem('MY_SCHOOL')) || ''),
             statsShape
         ].join('::');
     }
@@ -391,7 +430,7 @@
 
     function teacherFilterExamStudentsBySchool(rows, schoolName, user, mode = 'teaching') {
         let list = teacherNormalizeExamStudents(rows).filter((student) => (
-            !schoolName || areSchoolNamesEquivalentFn(student.school, schoolName)
+            !schoolName || teacherSameSchoolName(student.school, schoolName)
         ));
         if (window.PermissionPolicy && typeof window.PermissionPolicy.filterStudentRows === 'function') {
             list = window.PermissionPolicy.filterStudentRows(user, list, { mode });
@@ -739,6 +778,7 @@
         const accessibleSchools = (window.PermissionPolicy && typeof window.PermissionPolicy.getAccessibleSchoolNames === 'function')
             ? window.PermissionPolicy.getAccessibleSchoolNames(scopedUser, schools)
             : schools.slice();
+        const canAccessSchool = (schoolName) => !accessibleSchools.length || teacherSchoolListContains(accessibleSchools, schoolName);
         let activeSchool = syncTeacherSchoolContext(
             document.getElementById('mySchoolSelect')?.value
             || window.MY_SCHOOL
@@ -775,10 +815,7 @@
             const hitCounts = new Map();
             teacherAssignments.forEach((assignment) => {
                 if (assignment.schoolName) {
-                    const isAccessible = !accessibleSchools.length || accessibleSchools.some((school) => (
-                        teacherSameSchoolName(school, assignment.schoolName)
-                    ));
-                    if (isAccessible) {
+                    if (canAccessSchool(assignment.schoolName)) {
                         hitCounts.set(assignment.schoolName, (hitCounts.get(assignment.schoolName) || 0) + 1);
                     }
                     return;
@@ -790,15 +827,15 @@
                 });
             });
             const ranked = Array.from(hitCounts.entries())
-                .filter(([school]) => !accessibleSchools.length || accessibleSchools.includes(school))
+                .filter(([school]) => canAccessSchool(school))
                 .sort((a, b) => b[1] - a[1]);
             return ranked[0]?.[0] || '';
         };
 
         const teacherMapSchool = inferSchoolFromTeacherMap();
-        if (teacherMapSchool && teacherMapSchool !== activeSchool) {
+        if (teacherMapSchool && !teacherSameSchoolName(teacherMapSchool, activeSchool)) {
             const activeHasTeacherClasses = rows.some((student) => (
-                String(student?.school || '').trim() === activeSchool
+                teacherSameSchoolName(student?.school, activeSchool)
                 && teacherAssignments.some((assignment) => (
                     isTeacherAssignmentScopedToSchool(assignment, activeSchool)
                     && assignment.className === normalizeClassFn(student?.class)
@@ -840,10 +877,10 @@
             }
         }
 
-        if (activeSchool && accessibleSchools.length && !accessibleSchools.includes(activeSchool)) activeSchool = '';
+        if (activeSchool && accessibleSchools.length && !canAccessSchool(activeSchool)) activeSchool = '';
         if (!activeSchool && accessibleSchools.length === 1) activeSchool = syncTeacherSchoolContext(accessibleSchools[0]);
         if (!activeSchool) {
-            const firstFromRows = rows.find((row) => accessibleSchools.includes(String(row?.school || '').trim()));
+            const firstFromRows = rows.find((row) => canAccessSchool(String(row?.school || '').trim()));
             if (firstFromRows) activeSchool = syncTeacherSchoolContext(String(firstFromRows.school).trim());
         }
         if (!activeSchool) {
@@ -902,11 +939,11 @@
         const pickTeacherStudentsForSchool = (schoolName) => {
             const targetSchool = String(schoolName || '').trim();
             if (!targetSchool) return [];
-            const directRows = studentsBySchool.get(targetSchool) || [];
+            const directRows = teacherCollectRowsForSchool(studentsBySchool, targetSchool);
             if (directRows.length) return directRows;
             const fallbackRows = [];
             teacherClassSet.forEach((cls) => {
-                if (classSchoolMap[cls] !== targetSchool) return;
+                if (!teacherSameSchoolName(classSchoolMap[cls], targetSchool)) return;
                 const classRows = studentsByClass.get(cls);
                 if (classRows && classRows.length) fallbackRows.push(...classRows);
             });
@@ -915,11 +952,10 @@
         const hasTeacherStudentsForSchool = (schoolName) => {
             const targetSchool = String(schoolName || '').trim();
             if (!targetSchool) return false;
-            const directRows = studentsBySchool.get(targetSchool);
-            if (directRows && directRows.length) return true;
+            if (teacherCollectRowsForSchool(studentsBySchool, targetSchool).length) return true;
             let found = false;
             teacherClassSet.forEach((cls) => {
-                if (found || classSchoolMap[cls] !== targetSchool) return;
+                if (found || !teacherSameSchoolName(classSchoolMap[cls], targetSchool)) return;
                 found = !!(studentsByClass.get(cls) || []).length;
             });
             return found;
@@ -927,7 +963,7 @@
         let mySchoolStudents = pickTeacherStudentsForSchool(activeSchool);
         if (!mySchoolStudents.length) {
             const fallbackSchool = teacherMapSchool || inferredSchool || schools.find(hasTeacherStudentsForSchool);
-            if (fallbackSchool && fallbackSchool !== activeSchool) {
+            if (fallbackSchool && !teacherSameSchoolName(fallbackSchool, activeSchool)) {
                 activeSchool = syncTeacherSchoolContext(fallbackSchool);
                 mySchoolStudents = pickTeacherStudentsForSchool(activeSchool);
             }
@@ -935,7 +971,7 @@
         const queryMode = window.PermissionPolicy && window.PermissionPolicy.isClassTeacher(user) ? 'homeroom' : 'teaching';
         if (window.PermissionPolicy && typeof window.PermissionPolicy.filterStudentRows === 'function') {
             mySchoolStudents = window.PermissionPolicy.filterStudentRows(user, mySchoolStudents, { mode: queryMode });
-            if (!mySchoolStudents.length && teacherMapSchool && teacherMapSchool !== activeSchool) {
+            if (!mySchoolStudents.length && teacherMapSchool && !teacherSameSchoolName(teacherMapSchool, activeSchool)) {
                 activeSchool = syncTeacherSchoolContext(teacherMapSchool);
                 mySchoolStudents = window.PermissionPolicy.filterStudentRows(user, pickTeacherStudentsForSchool(activeSchool), { mode: queryMode });
             }
@@ -1288,9 +1324,10 @@
         const container = document.getElementById('teacher-pairing-suggestions');
         if (!container) return;
         container.innerHTML = '';
-        if (!window.MY_SCHOOL || !window.SCHOOLS?.[window.MY_SCHOOL]) return;
+        const schoolRecord = teacherGetSchoolRecord(window.MY_SCHOOL);
+        if (!window.MY_SCHOOL || !schoolRecord) return;
 
-        const schoolMetrics = window.SCHOOLS[window.MY_SCHOOL].metrics || {};
+        const schoolMetrics = schoolRecord.metrics || {};
         const pairs = [];
         (window.SUBJECTS || []).forEach((subject) => {
             const baseline = schoolMetrics[subject];
@@ -1372,9 +1409,10 @@
         const isTownshipSchoolName = (schoolName) => {
             if (!hasTownshipSchoolHelper) return true;
             if (typeof window.isTownshipManagedSchool === 'function') {
-                return window.isTownshipManagedSchool(schoolName, Object.keys(window.SCHOOLS || {}));
+                if (window.isTownshipManagedSchool(schoolName, Object.keys(window.SCHOOLS || {}))) return true;
             }
-            return townshipSchoolSet.has(String(schoolName || '').trim());
+            return townshipSchoolSet.has(String(schoolName || '').trim())
+                || Array.from(townshipSchoolSet).some((item) => teacherSameSchoolName(item, schoolName));
         };
         const buildTownshipAverage = (subject) => {
             const rawRows = (window.RAW_DATA || []).filter((row) => {
@@ -1443,7 +1481,7 @@
             });
             Object.keys(window.SCHOOLS || {}).forEach((schoolName) => {
                 const metrics = window.SCHOOLS?.[schoolName]?.metrics?.[subject];
-                if (!metrics || schoolName === window.MY_SCHOOL || !isTownshipSchoolName(schoolName)) return;
+                if (!metrics || teacherSameSchoolName(schoolName, window.MY_SCHOOL) || !isTownshipSchoolName(schoolName)) return;
                 rankingData.push({
                     name: schoolName,
                     type: 'school',

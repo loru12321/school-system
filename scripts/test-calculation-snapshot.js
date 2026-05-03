@@ -774,6 +774,132 @@ async function main() {
                 applyTeacherMaps(previousTeacherMap, previousTeacherSchoolMap);
             }
         })();
+        const teacherAnalysisCoreSchoolAliasPolicy = (() => {
+            if (typeof window.analyzeTeachers !== 'function'
+                || typeof window.calculateTeacherTownshipRanking !== 'function'
+                || typeof window.generateTeacherPairing !== 'function'
+                || typeof window.setRawData !== 'function'
+                || typeof window.setSchools !== 'function'
+                || typeof window.setSubjects !== 'function'
+                || typeof window.setTeacherMap !== 'function'
+                || typeof window.setTeacherSchoolMap !== 'function') {
+                return { available: false };
+            }
+            const previousRawData = typeof window.readRawData === 'function' ? window.readRawData() : (window.RAW_DATA || []);
+            const previousSchools = typeof window.readSchools === 'function' ? window.readSchools() : (window.SCHOOLS || {});
+            const previousSubjects = typeof window.readSubjects === 'function' ? window.readSubjects() : (window.SUBJECTS || []);
+            const previousTeacherMap = typeof window.readTeacherMap === 'function' ? window.readTeacherMap() : (window.TEACHER_MAP || {});
+            const previousTeacherSchoolMap = typeof window.readTeacherSchoolMap === 'function' ? window.readTeacherSchoolMap() : (window.TEACHER_SCHOOL_MAP || {});
+            const previousStats = window.TEACHER_STATS || {};
+            const previousSchool = typeof window.readCurrentSchool === 'function'
+                ? window.readCurrentSchool()
+                : String(window.MY_SCHOOL || '');
+            const previousSameSchool = window.areSchoolNamesEquivalent;
+            const previousListAvailableSchoolsForCompare = window.listAvailableSchoolsForCompare;
+            const previousGetTownshipManagedSchoolNames = window.getTownshipManagedSchoolNames;
+            const previousIsTownshipManagedSchool = window.isTownshipManagedSchool;
+            let pairingContainer = document.getElementById('teacher-pairing-suggestions');
+            let temporaryPairingContainer = null;
+            if (!pairingContainer && document.body && typeof document.createElement === 'function') {
+                temporaryPairingContainer = document.createElement('div');
+                temporaryPairingContainer.id = 'teacher-pairing-suggestions';
+                document.body.appendChild(temporaryPairingContainer);
+                pairingContainer = temporaryPairingContainer;
+            }
+            const previousPairingHtml = pairingContainer ? pairingContainer.innerHTML : '';
+            const schoolSelect = document.getElementById('mySchoolSelect');
+            const previousSchoolSelectValue = schoolSelect ? schoolSelect.value : '';
+            const normalizeAliasSchool = (value) => String(value || '').trim().replace(/别名/g, '');
+            const rows = [
+                { school: '甲校', class: '9.1', name: '甲一', total: 90, scores: { 数学: 90 } },
+                { school: '甲校', class: '9.1', name: '甲二', total: 80, scores: { 数学: 80 } },
+                { school: '乙校', class: '9.1', name: '乙一', total: 100, scores: { 数学: 100 } }
+            ];
+            try {
+                window.areSchoolNamesEquivalent = (left, right) => (
+                    normalizeAliasSchool(left) === normalizeAliasSchool(right)
+                    || (typeof previousSameSchool === 'function' && previousSameSchool(left, right))
+                );
+                window.listAvailableSchoolsForCompare = () => ['甲校别名', '乙校'];
+                window.getTownshipManagedSchoolNames = (names = []) => names.map((name) => String(name || '').trim()).filter(Boolean);
+                window.isTownshipManagedSchool = (schoolName, names = []) => {
+                    const normalizedSchool = normalizeAliasSchool(schoolName);
+                    return (names || []).some((name) => normalizeAliasSchool(name) === normalizedSchool);
+                };
+                if (typeof window.writeCurrentSchool === 'function') window.writeCurrentSchool('甲校别名');
+                else window.MY_SCHOOL = '甲校别名';
+                if (schoolSelect) schoolSelect.value = '甲校别名';
+                window.setRawData(rows);
+                window.setSchools({
+                    甲校: { metrics: { 数学: { avg: 85, excRate: 0.5, passRate: 0.8, count: 2 } } },
+                    乙校: { metrics: { 数学: { avg: 100, excRate: 1, passRate: 1, count: 1 } } }
+                });
+                window.setSubjects(['数学']);
+                window.setTeacherMap({ '9.1_数学': '甲校教师' });
+                window.setTeacherSchoolMap({ '9.1_数学': '甲校' });
+                window.TEACHER_STATS = {};
+                window.analyzeTeachers({ render: false, force: true });
+                const local = window.TEACHER_STATS?.['甲校教师']?.数学 || null;
+                const foreign = window.TEACHER_STATS?.['乙校教师']?.数学 || null;
+                window.calculateTeacherTownshipRanking({ force: true });
+                const aliasRows = window.TOWNSHIP_RANKING_DATA?.数学 || [];
+                window.TEACHER_STATS = {
+                    基础老师: { 数学: { passRate: 0.9, excellentRate: 0.2 } },
+                    培优老师: { 数学: { passRate: 0.7, excellentRate: 0.6 } }
+                };
+                if (pairingContainer) pairingContainer.innerHTML = '';
+                window.generateTeacherPairing();
+                const pairingCount = pairingContainer ? pairingContainer.querySelectorAll('.pairing-card').length : 0;
+                if (typeof window.writeCurrentSchool === 'function') window.writeCurrentSchool('乙校');
+                else window.MY_SCHOOL = '乙校';
+                if (schoolSelect) schoolSelect.value = '乙校';
+                window.TEACHER_STATS = {
+                    甲校教师: { 数学: { avg: 85, avgValue: 85, excellentRate: 0.5, passRate: 1, studentCount: 2 } }
+                };
+                window.calculateTeacherTownshipRanking();
+                const switchedRows = window.TOWNSHIP_RANKING_DATA?.数学 || [];
+                return {
+                    available: true,
+                    localStudentCount: Number(local?.studentCount || 0),
+                    localAvg: Number(local?.avg || 0),
+                    containsForeignTeacher: !!foreign,
+                    townshipExcludesCanonical: !aliasRows.some((row) => row.type === 'school' && row.name === '甲校'),
+                    townshipIncludesOther: aliasRows.some((row) => row.type === 'school' && row.name === '乙校'),
+                    switchedIncludesCanonical: switchedRows.some((row) => row.type === 'school' && row.name === '甲校'),
+                    switchedExcludesNewSchool: !switchedRows.some((row) => row.type === 'school' && row.name === '乙校'),
+                    pairingCount
+                };
+            } finally {
+                window.areSchoolNamesEquivalent = previousSameSchool;
+                if (previousListAvailableSchoolsForCompare) {
+                    window.listAvailableSchoolsForCompare = previousListAvailableSchoolsForCompare;
+                } else {
+                    delete window.listAvailableSchoolsForCompare;
+                }
+                if (previousGetTownshipManagedSchoolNames) {
+                    window.getTownshipManagedSchoolNames = previousGetTownshipManagedSchoolNames;
+                } else {
+                    delete window.getTownshipManagedSchoolNames;
+                }
+                if (previousIsTownshipManagedSchool) {
+                    window.isTownshipManagedSchool = previousIsTownshipManagedSchool;
+                } else {
+                    delete window.isTownshipManagedSchool;
+                }
+                if (typeof window.writeCurrentSchool === 'function') window.writeCurrentSchool(previousSchool);
+                else window.MY_SCHOOL = previousSchool;
+                window.setRawData(previousRawData);
+                window.setSchools(previousSchools);
+                window.setSubjects(previousSubjects);
+                window.setTeacherMap(previousTeacherMap);
+                window.setTeacherSchoolMap(previousTeacherSchoolMap);
+                window.TEACHER_STATS = previousStats;
+                if (temporaryPairingContainer) temporaryPairingContainer.remove();
+                else if (pairingContainer) pairingContainer.innerHTML = previousPairingHtml;
+                if (schoolSelect) schoolSelect.value = previousSchoolSelectValue;
+                window.calculateTeacherTownshipRanking({ force: true });
+            }
+        })();
         const target = (window.RAW_DATA || []).find((student) => String(student?.name || '').trim() === '解洪旭');
         return {
             rawData: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
@@ -786,6 +912,7 @@ async function main() {
             classSchoolIsolationPolicy,
             analyticsKernelSchoolAliasPolicy,
             teacherCompareSchoolIsolationPolicy,
+            teacherAnalysisCoreSchoolAliasPolicy,
             score2RatePositive: Object.values(window.SCHOOLS || {}).filter((school) => Number(school?.score2Rate) > 0).length,
             teacherRows: Object.values(window.TEACHER_STATS || {}).reduce((sum, subjects) => sum + Object.keys(subjects || {}).length, 0),
             teacherPositive: Object.values(window.TEACHER_STATS || {}).flatMap((subjects) => Object.values(subjects || {}))
@@ -874,6 +1001,17 @@ async function main() {
         localStudentCount: 1,
         foreignStudentCount: 0
     }, 'teacher compare should ignore foreign explicit same-class assignment');
+    assert.deepStrictEqual(snapshot.teacherAnalysisCoreSchoolAliasPolicy, {
+        available: true,
+        localStudentCount: 2,
+        localAvg: 85,
+        containsForeignTeacher: false,
+        townshipExcludesCanonical: true,
+        townshipIncludesOther: true,
+        switchedIncludesCanonical: true,
+        switchedExcludesNewSchool: true,
+        pairingCount: 1
+    }, 'teacher analysis core should treat equivalent school aliases consistently');
     assert.ok(snapshot.score2RatePositive >= 14, `score2Rate positive schools too low: ${snapshot.score2RatePositive}`);
     assert.strictEqual(snapshot.teacherRows, 13, 'teacher row count changed');
     assert.strictEqual(snapshot.teacherPositive, 13, 'teacher positive row count changed');
