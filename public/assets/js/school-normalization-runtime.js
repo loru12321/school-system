@@ -684,6 +684,14 @@ function listAvailableSchoolsForCompare(scope = 'township') {
 
 function getClassSchoolMapForAllData() {
     const map = {};
+    const candidates = {};
+    const collectCandidate = (className, schoolName) => {
+        const cls = normalizeClass(className);
+        const school = String(schoolName || '').trim();
+        if (!cls || !school || map[cls]) return;
+        if (!candidates[cls]) candidates[cls] = new Set();
+        candidates[cls].add(school);
+    };
 
     Object.entries(window.TEACHER_SCHOOL_MAP || {}).forEach(([key, school]) => {
         const cls = normalizeClass(String(key || '').split('_')[0]);
@@ -693,27 +701,28 @@ function getClassSchoolMapForAllData() {
 
     Object.entries(SCHOOLS || {}).forEach(([school, payload]) => {
         (payload?.students || []).forEach((stu) => {
-            const cls = normalizeClass(stu?.class);
-            if (cls && school && !map[cls]) map[cls] = school;
+            collectCandidate(stu?.class, school);
         });
     });
 
     (RAW_DATA || []).forEach((row) => {
-        const school = String(row?.school || '').trim();
-        const cls = normalizeClass(row?.class);
-        if (cls && school && !map[cls]) map[cls] = school;
+        collectCandidate(row?.class, row?.school);
     });
 
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
     if (db?.exams) {
         Object.values(db.exams).forEach((exam) => {
             (exam?.data || []).forEach((row) => {
-                const school = String(row?.school || '').trim();
-                const cls = normalizeClass(row?.class);
-                if (cls && school && !map[cls]) map[cls] = school;
+                collectCandidate(row?.class, row?.school);
             });
         });
     }
+
+    Object.entries(candidates).forEach(([cls, schools]) => {
+        if (!map[cls] && schools.size === 1) {
+            map[cls] = Array.from(schools)[0];
+        }
+    });
 
     return map;
 }

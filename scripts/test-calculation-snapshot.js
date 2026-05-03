@@ -604,6 +604,58 @@ async function main() {
                 window.setConfigState(previousConfig);
             }
         })();
+        const classSchoolIsolationPolicy = (() => {
+            if (typeof window.calculateClassRanksOnly !== 'function'
+                || typeof window.getClassSchoolMapForAllData !== 'function'
+                || typeof window.readRawData !== 'function'
+                || typeof window.setRawData !== 'function'
+                || typeof window.readSchools !== 'function'
+                || typeof window.setSchools !== 'function'
+                || typeof window.readSubjects !== 'function'
+                || typeof window.setSubjects !== 'function'
+                || typeof window.readTeacherSchoolMap !== 'function'
+                || typeof window.setTeacherSchoolMap !== 'function') {
+                return { available: false };
+            }
+            const previousRawData = window.readRawData();
+            const previousSchools = window.readSchools();
+            const previousSubjects = window.readSubjects();
+            const previousTeacherSchoolMap = window.readTeacherSchoolMap();
+            const rows = [
+                { school: '甲校', class: '9.1', name: '甲校高分', total: 120, scores: { 数学: 120 }, ranks: { total: {}, 数学: {} } },
+                { school: '甲校', class: '9.1', name: '甲校低分', total: 90, scores: { 数学: 90 }, ranks: { total: {}, 数学: {} } },
+                { school: '乙校', class: '9.1', name: '乙校高分', total: 150, scores: { 数学: 150 }, ranks: { total: {}, 数学: {} } }
+            ];
+            try {
+                window.setRawData(rows);
+                window.setSchools({
+                    甲校: { name: '甲校', students: rows.filter((row) => row.school === '甲校'), metrics: {}, rankings: {} },
+                    乙校: { name: '乙校', students: rows.filter((row) => row.school === '乙校'), metrics: {}, rankings: {} }
+                });
+                window.setSubjects(['数学']);
+                window.setTeacherSchoolMap({});
+                window.calculateClassRanksOnly();
+                const inferredMap = window.getClassSchoolMapForAllData();
+                const hasAmbiguousClassMap = Object.prototype.hasOwnProperty.call(inferredMap || {}, '9.1');
+                window.setTeacherSchoolMap({ '9.1_数学': '乙校' });
+                const explicitMap = window.getClassSchoolMapForAllData();
+                return {
+                    available: true,
+                    aHighClassRank: rows[0].ranks?.total?.class,
+                    aLowClassRank: rows[1].ranks?.total?.class,
+                    bHighClassRank: rows[2].ranks?.total?.class,
+                    aHighMathRank: rows[0].ranks?.数学?.class,
+                    bHighMathRank: rows[2].ranks?.数学?.class,
+                    ambiguousClassSchool: hasAmbiguousClassMap ? inferredMap['9.1'] : null,
+                    explicitClassSchool: explicitMap?.['9.1'] || null
+                };
+            } finally {
+                window.setRawData(previousRawData);
+                window.setSchools(previousSchools);
+                window.setSubjects(previousSubjects);
+                window.setTeacherSchoolMap(previousTeacherSchoolMap);
+            }
+        })();
         const target = (window.RAW_DATA || []).find((student) => String(student?.name || '').trim() === '解洪旭');
         return {
             rawData: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
@@ -613,6 +665,7 @@ async function main() {
             currentSubjectFullScores,
             currentSubjectFullScoreTotal: window.AnalyticsKernel?.getTotalFullScore?.(window.SUBJECTS || [], { config: window.CONFIG }) ?? null,
             blankSubjectScorePolicy,
+            classSchoolIsolationPolicy,
             score2RatePositive: Object.values(window.SCHOOLS || {}).filter((school) => Number(school?.score2Rate) > 0).length,
             teacherRows: Object.values(window.TEACHER_STATS || {}).reduce((sum, subjects) => sum + Object.keys(subjects || {}).length, 0),
             teacherPositive: Object.values(window.TEACHER_STATS || {}).flatMap((subjects) => Object.values(subjects || {}))
@@ -676,6 +729,16 @@ async function main() {
         fullTotal: 357,
         generatedNameRows: 0
     }, 'blank subject score parsing policy changed');
+    assert.deepStrictEqual(snapshot.classSchoolIsolationPolicy, {
+        available: true,
+        aHighClassRank: 1,
+        aLowClassRank: 2,
+        bHighClassRank: 1,
+        aHighMathRank: 1,
+        bHighMathRank: 1,
+        ambiguousClassSchool: null,
+        explicitClassSchool: '乙校'
+    }, 'same class names across schools should stay school-scoped');
     assert.ok(snapshot.score2RatePositive >= 14, `score2Rate positive schools too low: ${snapshot.score2RatePositive}`);
     assert.strictEqual(snapshot.teacherRows, 13, 'teacher row count changed');
     assert.strictEqual(snapshot.teacherPositive, 13, 'teacher positive row count changed');

@@ -10307,7 +10307,15 @@ async function processData() {
 // 辅助：仅计算班级排名
 function calculateClassRanksOnly() {
     const classes = {};
-    RAW_DATA.forEach(s => { if (!classes[s.class]) classes[s.class] = []; classes[s.class].push(s); });
+    RAW_DATA.forEach(s => {
+        const schoolKey = String(s?.school || '').trim() || '未知学校';
+        const classKey = (typeof normalizeClass === 'function')
+            ? normalizeClass(s?.class || '')
+            : String(s?.class || '').trim();
+        const scopedKey = `${schoolKey}::${classKey || '未分班'}`;
+        if (!classes[scopedKey]) classes[scopedKey] = [];
+        classes[scopedKey].push(s);
+    });
 
     Object.values(classes).forEach(group => {
         // 总分
