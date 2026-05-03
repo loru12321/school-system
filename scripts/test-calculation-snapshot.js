@@ -315,6 +315,7 @@ async function main() {
             window.calculateTeacherTownshipRanking?.();
             window.renderTeacherTownshipRanking?.();
         }
+        await window.ensureTeacherCompareRuntimeLoaded?.().catch(() => {});
         const toNumber = (value, fallback = 0) => {
             const number = Number(value);
             return Number.isFinite(number) ? number : fallback;
@@ -656,6 +657,52 @@ async function main() {
                 window.setTeacherSchoolMap(previousTeacherSchoolMap);
             }
         })();
+        const teacherCompareSchoolIsolationPolicy = (() => {
+            if (typeof window.buildTeacherStatsForExam !== 'function') return { available: false };
+            const previousTeacherMap = typeof window.readTeacherMap === 'function'
+                ? window.readTeacherMap()
+                : (window.TEACHER_MAP || {});
+            const previousTeacherSchoolMap = typeof window.readTeacherSchoolMap === 'function'
+                ? window.readTeacherSchoolMap()
+                : (window.TEACHER_SCHOOL_MAP || {});
+            const applyTeacherMaps = (teacherMap, teacherSchoolMap) => {
+                if (typeof window.setTeacherMap === 'function') window.setTeacherMap(teacherMap);
+                else window.TEACHER_MAP = teacherMap;
+                if (typeof window.setTeacherSchoolMap === 'function') window.setTeacherSchoolMap(teacherSchoolMap);
+                else window.TEACHER_SCHOOL_MAP = teacherSchoolMap;
+            };
+            const rows = [
+                { school: '甲校', class: '9.1', name: '甲一', scores: { 数学: 100 } },
+                { school: '甲校', class: '9.1', name: '甲二', scores: { 数学: 80 } },
+                { school: '甲校', class: '9.2', name: '甲三', scores: { 数学: 70 } },
+                { school: '乙校', class: '9.1', name: '乙一', scores: { 数学: 95 } }
+            ];
+            try {
+                applyTeacherMaps(
+                    {
+                        '9.1_数学': '乙校教师',
+                        '9.2_数学': '甲校教师'
+                    },
+                    {
+                        '9.1_数学': '乙校',
+                        '9.2_数学': '甲校'
+                    }
+                );
+                const stats = window.buildTeacherStatsForExam(rows, '甲校', '数学');
+                const teacherNames = stats.map((item) => item.teacher).sort();
+                const local = stats.find((item) => item.teacher === '甲校教师') || null;
+                const foreign = stats.find((item) => item.teacher === '乙校教师') || null;
+                return {
+                    available: true,
+                    teacherNames,
+                    containsForeignTeacher: !!foreign,
+                    localStudentCount: Number(local?.studentCount || 0),
+                    foreignStudentCount: Number(foreign?.studentCount || 0)
+                };
+            } finally {
+                applyTeacherMaps(previousTeacherMap, previousTeacherSchoolMap);
+            }
+        })();
         const target = (window.RAW_DATA || []).find((student) => String(student?.name || '').trim() === '解洪旭');
         return {
             rawData: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
@@ -666,6 +713,7 @@ async function main() {
             currentSubjectFullScoreTotal: window.AnalyticsKernel?.getTotalFullScore?.(window.SUBJECTS || [], { config: window.CONFIG }) ?? null,
             blankSubjectScorePolicy,
             classSchoolIsolationPolicy,
+            teacherCompareSchoolIsolationPolicy,
             score2RatePositive: Object.values(window.SCHOOLS || {}).filter((school) => Number(school?.score2Rate) > 0).length,
             teacherRows: Object.values(window.TEACHER_STATS || {}).reduce((sum, subjects) => sum + Object.keys(subjects || {}).length, 0),
             teacherPositive: Object.values(window.TEACHER_STATS || {}).flatMap((subjects) => Object.values(subjects || {}))
@@ -739,6 +787,13 @@ async function main() {
         ambiguousClassSchool: null,
         explicitClassSchool: '乙校'
     }, 'same class names across schools should stay school-scoped');
+    assert.deepStrictEqual(snapshot.teacherCompareSchoolIsolationPolicy, {
+        available: true,
+        teacherNames: ['甲校教师'],
+        containsForeignTeacher: false,
+        localStudentCount: 1,
+        foreignStudentCount: 0
+    }, 'teacher compare should ignore foreign explicit same-class assignment');
     assert.ok(snapshot.score2RatePositive >= 14, `score2Rate positive schools too low: ${snapshot.score2RatePositive}`);
     assert.strictEqual(snapshot.teacherRows, 13, 'teacher row count changed');
     assert.strictEqual(snapshot.teacherPositive, 13, 'teacher positive row count changed');

@@ -27,6 +27,35 @@ const setAllTeachersDiffCacheState = typeof window.setAllTeachersDiffCacheState 
     });
 let teacherCompareAutoTimer = 0;
 
+function normalizeTeacherCompareSchoolName(value) {
+    return String(value || '').trim();
+}
+
+function sameTeacherCompareSchoolName(left, right) {
+    const leftName = normalizeTeacherCompareSchoolName(left);
+    const rightName = normalizeTeacherCompareSchoolName(right);
+    if (!leftName || !rightName) return false;
+    if (window.PermissionPolicy && typeof window.PermissionPolicy.sameSchoolName === 'function') {
+        return window.PermissionPolicy.sameSchoolName(leftName, rightName);
+    }
+    if (typeof window.areSchoolNamesEquivalent === 'function') return window.areSchoolNamesEquivalent(leftName, rightName);
+    if (typeof areSchoolNamesEquivalent === 'function') return areSchoolNamesEquivalent(leftName, rightName);
+    return leftName === rightName;
+}
+
+function getTeacherCompareSchoolMap() {
+    if (window.TEACHER_SCHOOL_MAP && typeof window.TEACHER_SCHOOL_MAP === 'object') return window.TEACHER_SCHOOL_MAP;
+    if (typeof TEACHER_SCHOOL_MAP !== 'undefined' && TEACHER_SCHOOL_MAP && typeof TEACHER_SCHOOL_MAP === 'object') return TEACHER_SCHOOL_MAP;
+    return {};
+}
+
+function isTeacherCompareAssignmentVisibleForSchool(key, school) {
+    const targetSchool = normalizeTeacherCompareSchoolName(school);
+    if (!targetSchool) return true;
+    const explicitSchool = normalizeTeacherCompareSchoolName(getTeacherCompareSchoolMap()[key]);
+    return !explicitSchool || sameTeacherCompareSchoolName(explicitSchool, targetSchool);
+}
+
 function setTeacherCompareHintState(hintEl, message, state = 'idle') {
     if (!hintEl) return;
     hintEl.textContent = message;
@@ -78,7 +107,7 @@ function bindTeacherCompareAutoControls() {
 }
 
 function buildTeacherStatsForExam(rows, school, subjectFilter) {
-    const rowsSchool = rows.filter(r => r.school === school);
+    const rowsSchool = rows.filter(r => sameTeacherCompareSchoolName(r.school, school));
     const classSet = new Set(rowsSchool.map(r => normalizeClass(r.class)));
     const excRatio = (CONFIG?.name && String(CONFIG.name).includes('9')) ? 0.15 : 0.2;
 
@@ -94,6 +123,7 @@ function buildTeacherStatsForExam(rows, school, subjectFilter) {
 
     const bucket = {};
     Object.entries(TEACHER_MAP || {}).forEach(([key, teacherName]) => {
+        if (!isTeacherCompareAssignmentVisibleForSchool(key, school)) return;
         const [rawClass, rawSubject] = String(key).split('_');
         const cls = normalizeClass(rawClass);
         const subject = SUBJECTS.find(s => normalizeSubject(s) === normalizeSubject(rawSubject));
@@ -180,7 +210,7 @@ function attachTeacherTownshipAvgRank(rows, school, teacherStatsList) {
 
         const schoolScores = {};
         rows.forEach(r => {
-            if (r.school === school) return;
+            if (sameTeacherCompareSchoolName(r.school, school)) return;
             if (!isTownshipSchoolName(r.school)) return;
             const score = parseFloat(r.scores?.[subject]);
             if (isNaN(score)) return;
