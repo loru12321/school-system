@@ -31,6 +31,7 @@ const SWITCH_MODULE_IDS = [
     'app-download-center',
     'freshman-simulator',
     'exam-arranger',
+    'grade-scheduler',
     'student-overview',
     'student-details'
 ];
@@ -1995,6 +1996,216 @@ async function runModuleDeepCheck(page, id) {
                     last: lastExamNo
                 },
                 alerts: alerts.concat(proctorAlerts)
+            };
+        });
+    }
+    if (id === 'grade-scheduler') {
+        return page.evaluate(async () => {
+            const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+            const waitUntil = async (predicate, timeout = 15000) => {
+                const deadline = Date.now() + timeout;
+                let lastError = null;
+                while (Date.now() < deadline) {
+                    try {
+                        if (predicate()) return true;
+                    } catch (error) {
+                        lastError = error;
+                    }
+                    await wait(120);
+                }
+                throw lastError || new Error('grade scheduler wait timeout');
+            };
+            const makeWorkbookFile = (rows, fileName) => {
+                const workbook = XLSX.utils.book_new();
+                const worksheet = XLSX.utils.json_to_sheet(rows);
+                XLSX.utils.book_append_sheet(workbook, worksheet, '任课表');
+                const bytes = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+                return new File([bytes], fileName, {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                });
+            };
+            const stripCombinedMark = (teacher) => String(teacher || '').replace(/\([^)]*\)/g, '').trim();
+
+            if (typeof window.ensureGradeSchedulerRuntimeLoaded === 'function') {
+                await window.ensureGradeSchedulerRuntimeLoaded();
+            }
+            if (typeof window.ensureXlsxVendorLoaded === 'function') {
+                await window.ensureXlsxVendorLoaded();
+            }
+
+            const scheduler = window.SCHEDULER || window.GradeSchedulerRuntime;
+            const checks = {
+                sectionReady: !!document.querySelector('#grade-scheduler.analysis-workspace-violet'),
+                runtimeReady: !!scheduler,
+                xlsxReady: !!(window.XLSX && window.XLSX.utils),
+                importReady: !!scheduler && typeof scheduler.loadData === 'function',
+                runReady: !!scheduler && typeof scheduler.run === 'function',
+                renderReady: !!scheduler && typeof scheduler.renderTable === 'function',
+                auditReady: !!scheduler && typeof scheduler.auditFatigue === 'function'
+            };
+            if (!Object.values(checks).every(Boolean)) {
+                return { ok: false, checks };
+            }
+
+            scheduler.data = [];
+            scheduler.schedule = {};
+            scheduler.classes = [];
+            scheduler.rules = { meetings: [], busy: [], activities: [], combined: [] };
+
+            const sampleRows = [
+                { 教师姓名: '张老师', 学科: '语文', 任教班级: '701,702', 周课时量: 4 },
+                { 教师姓名: '李老师', 学科: '数学', 任教班级: '701,702', 周课时量: 4 },
+                { 教师姓名: '王老师', 学科: '英语', 任教班级: '701,702', 周课时量: 4 },
+                { 教师姓名: '赵老师', 学科: '物理', 任教班级: '701,702', 周课时量: 2 },
+                { 教师姓名: '周老师', 学科: '历史', 任教班级: '701,702', 周课时量: 2 }
+            ];
+
+            const alerts = [];
+            const originalAlert = window.alert;
+            window.alert = (message) => alerts.push(String(message || ''));
+            try {
+                await scheduler.loadData({ files: [makeWorkbookFile(sampleRows, 'grade-scheduler-smoke.xlsx')], value: '' });
+
+                const setValue = (id, value) => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = value;
+                };
+                const setChecked = (id, checked) => {
+                    const el = document.getElementById(id);
+                    if (el) el.checked = checked;
+                };
+                setValue('sch_am_count', '2');
+                setValue('sch_pm_count', '4');
+                setValue('sch_eve_count', '1');
+                setChecked('sch_rule_fri_eve', true);
+                setChecked('sch_rule_fri_pm', false);
+                setChecked('sch_rule_morning_read', true);
+                setChecked('sch_rule_noon_write', true);
+
+                setValue('sch_comb_subject', '物理');
+                setValue('sch_comb_slot', 'eve_1');
+                scheduler.addConstraint('combined');
+                setValue('sch_meet_day', '5');
+                setValue('sch_meet_slot', 'pm_3');
+                scheduler.addConstraint('meeting');
+                setValue('sch_busy_day', '1');
+                setValue('sch_busy_slots', 'am_1');
+                setValue('sch_busy_name', '李老师');
+                scheduler.addConstraint('busy');
+                setValue('sch_act_day', '3');
+                setValue('sch_act_range', 'pm_all');
+                setValue('sch_act_subject', 'ALL');
+                scheduler.addConstraint('activity');
+
+                scheduler.run();
+                await waitUntil(() => {
+                    const area = document.getElementById('sch_result_area');
+                    const button = document.querySelector('#grade-scheduler .btn-primary');
+                    return area && !area.classList.contains('hidden')
+                        && button && !button.disabled
+                        && document.querySelectorAll('#sch_table tbody tr').length > 0;
+                });
+            } finally {
+                window.alert = originalAlert;
+            }
+
+            scheduler.auditFatigue();
+            await wait(120);
+
+            const classes = Array.isArray(scheduler.classes) ? scheduler.classes : [];
+            const schedule = scheduler.schedule || {};
+            const slotTeacherMap = {};
+            const teacherConflicts = [];
+            classes.forEach(className => {
+                Object.entries(schedule[className] || {}).forEach(([slotId, cell]) => {
+                    if (slotId.startsWith('_') || !cell || !cell.teacher || cell.teacher === '-') return;
+                    if (cell.fixed && cell.subject === '班会') return;
+                    const teacher = stripCombinedMark(cell.teacher);
+                    if (!teacher) return;
+                    if (!slotTeacherMap[slotId]) slotTeacherMap[slotId] = {};
+                    if (!slotTeacherMap[slotId][teacher]) slotTeacherMap[slotId][teacher] = [];
+                    slotTeacherMap[slotId][teacher].push({ className, cell });
+                });
+            });
+            Object.entries(slotTeacherMap).forEach(([slotId, teacherMap]) => {
+                Object.entries(teacherMap).forEach(([teacher, entries]) => {
+                    const allCombined = entries.every(entry => entry.cell.isCombined);
+                    if (entries.length > 1 && !allCombined) {
+                        teacherConflicts.push({ slotId, teacher, classes: entries.map(entry => entry.className) });
+                    }
+                });
+            });
+
+            const lessonCells = classes.flatMap(className => Object.entries(schedule[className] || {})
+                .filter(([slotId, cell]) => !slotId.startsWith('_') && cell && cell.subject)
+                .map(([slotId, cell]) => ({ className, slotId, cell })));
+            const combinedEntries = lessonCells.filter(entry => entry.cell.isCombined && entry.cell.subject === '物理');
+            const combinedDaySet = new Set(combinedEntries.map(entry => entry.slotId.split('_')[0]));
+            const combinedClasses = new Set(combinedEntries.map(entry => entry.className));
+            const malformedSlotIds = lessonCells.filter(entry => (
+                /^d[1-5]_(am|pm|eve)__/.test(entry.slotId) || /^d[1-5]_(am|pm|eve)\d/.test(entry.slotId)
+            ));
+            const combinedOnRequestedSlot = combinedEntries.length === classes.length
+                && combinedEntries.every(entry => /^d[1-4]_eve_1$/.test(entry.slotId));
+            const wednesdayPmBlocked = classes.every(className => ['d3_pm_1', 'd3_pm_2', 'd3_pm_3', 'd3_pm_4'].every(slotId => (
+                schedule[className]?.[slotId]?.subject === '🚫 无课'
+            )));
+            const fridayMeetingReady = classes.every(className => (
+                schedule[className]?.d5_pm_3?.subject === '班会'
+            ));
+            const fridayEveningEmpty = classes.every(className => !Object.entries(schedule[className] || {}).some(([slotId, cell]) => (
+                slotId.startsWith('d5_eve_') && cell && cell.subject
+            )));
+            const busyTeacherRespected = classes.every(className => (
+                stripCombinedMark(schedule[className]?.d1_am_1?.teacher) !== '李老师'
+            ));
+            const tableText = document.getElementById('sch_table')?.textContent || '';
+            const previewText = document.getElementById('sch_resource_preview')?.textContent || '';
+            const auditText = document.getElementById('sch_audit_summary')?.textContent || '';
+            const resultChecks = {
+                ...checks,
+                importedRecordsMatch: scheduler.data.length === sampleRows.length,
+                classListReady: classes.length === 2 && classes.includes('701') && classes.includes('702'),
+                previewRendered: previewText.includes('已导入') && previewText.includes('5'),
+                combinedRuleRendered: document.querySelectorAll('#sch_tags_combined .tag-chip').length === 1,
+                meetingRuleRendered: document.querySelectorAll('#sch_tags_meeting .tag-chip').length === 1,
+                busyRuleRendered: document.querySelectorAll('#sch_tags_busy .tag-chip').length === 1,
+                activityRuleRendered: document.querySelectorAll('#sch_tags_activity .tag-chip').length === 1,
+                scheduleGenerated: classes.every(className => schedule[className] && Object.keys(schedule[className]).length > 0),
+                tableRendered: document.querySelectorAll('#sch_table tbody tr').length >= 10
+                    && tableText.includes('语文')
+                    && tableText.includes('物理')
+                    && tableText.includes('(合)')
+                    && tableText.includes('班会'),
+                resultAreaVisible: !document.getElementById('sch_result_area')?.classList.contains('hidden'),
+                slotIdsNormalized: malformedSlotIds.length === 0,
+                noTeacherDoubleBooked: teacherConflicts.length === 0,
+                fridayEveningRuleRespected: fridayEveningEmpty,
+                busyTeacherRuleRespected: busyTeacherRespected,
+                meetingRuleApplied: fridayMeetingReady,
+                activityRuleApplied: wednesdayPmBlocked,
+                combinedRuleApplied: combinedOnRequestedSlot
+                    && combinedClasses.size === classes.length
+                    && combinedDaySet.size === 1
+                    && !combinedEntries.some(entry => entry.slotId === 'd5_eve_1'),
+                auditRendered: !document.getElementById('sch_audit_area')?.classList.contains('hidden')
+                    && auditText.includes('已完成规则审计')
+                    && document.querySelectorAll('#sch_audit_list .tag-chip').length >= 1
+            };
+
+            return {
+                ok: Object.values(resultChecks).every(Boolean),
+                checks: resultChecks,
+                counts: {
+                    records: scheduler.data.length,
+                    classes: classes.length,
+                    lessonCells: lessonCells.length,
+                    combinedCells: combinedEntries.length,
+                    malformedSlotIds: malformedSlotIds.length,
+                    teacherConflicts: teacherConflicts.length
+                },
+                teacherConflicts,
+                alerts
             };
         });
     }

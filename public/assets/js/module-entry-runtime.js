@@ -793,6 +793,35 @@
         return Promise.resolve(runAfterLoad());
     }
 
+    function initGradeSchedulerEntry() {
+        const runAfterLoad = () => {
+            if (document.getElementById('grade-scheduler')?.classList.contains('active')
+                && window.SCHEDULER
+                && typeof window.SCHEDULER.renderTable === 'function'
+                && window.SCHEDULER.classes
+                && window.SCHEDULER.classes.length
+                && !document.getElementById('sch_result_area')?.classList.contains('hidden')) {
+                window.SCHEDULER.renderTable();
+            }
+            return true;
+        };
+
+        if (typeof window.ensureGradeSchedulerRuntimeLoaded === 'function'
+            && !window.__GRADE_SCHEDULER_RUNTIME_PATCHED__) {
+            return window.ensureGradeSchedulerRuntimeLoaded()
+                .then(() => {
+                    if (document.getElementById('grade-scheduler')?.classList.contains('active')) return runAfterLoad();
+                    return false;
+                })
+                .catch((error) => {
+                    console.warn('init grade scheduler runtime failed:', error);
+                    return false;
+                });
+        }
+
+        return Promise.resolve(runAfterLoad());
+    }
+
     function scheduleMacroTablesRender(activeModuleId, label = 'macro-entry') {
         const run = () => {
             if (activeModuleId && !document.getElementById(activeModuleId)?.classList.contains('active')) return;
@@ -867,6 +896,7 @@
         }
         if (id === 'teacher-analysis') return initTeacherAnalysisEntry();
         if (id === 'freshman-simulator' || id === 'exam-arranger') return initFreshmanExamEntry(id);
+        if (id === 'grade-scheduler') return initGradeSchedulerEntry();
         if (id === 'report-generator') {
             updateSchoolSelect();
             updateClassSelect();

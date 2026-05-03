@@ -20,7 +20,7 @@ const SCHEDULER = {
         // 🟢 新增 combined 类型的处理
         if (type === 'combined') {
             const subject = document.getElementById('sch_comb_subject').value;
-            const slot = document.getElementById('sch_comb_slot').value; // 'eve_3'
+            const slot = this.normalizeSlotCode(document.getElementById('sch_comb_slot').value); // 'eve_3'
 
             // 查重：同一个学科不能重复添加规则
             if (this.rules.combined.some(r => r.subject === subject)) {
@@ -32,7 +32,7 @@ const SCHEDULER = {
         }
         else if (type === 'meeting') {
             const day = document.getElementById('sch_meet_day').value;
-            const slot = document.getElementById('sch_meet_slot').value;
+            const slot = this.normalizeSlotCode(document.getElementById('sch_meet_slot').value);
             const key = `${day}_${slot}`;
             if (this.rules.meetings.some(m => `${m.day}_${m.slot}` === key)) return;
 
@@ -92,9 +92,13 @@ const SCHEDULER = {
         });
     },
 
+    normalizeSlotCode: function (code) {
+        return String(code || '').trim().replace(/^(am|pm|eve)_?(\d+)$/, '$1_$2');
+    },
+
     getSlotName: function (code) {
         const map = { 'am': '上午', 'pm': '下午', 'eve': '晚' };
-        const parts = code.split('_');
+        const parts = this.normalizeSlotCode(code).split('_');
         if (parts.length >= 2) return `${map[parts[0]] || ''}第${parts[parts.length - 1]}节`;
         return code;
     },
@@ -238,7 +242,8 @@ const SCHEDULER = {
 
                 // B. 固定班会
                 this.rules.meetings.forEach(meet => {
-                    const slotId = `d${meet.day}_${meet.slot.replace(/pm|am|eve/, (m) => m + '_')}`; // am_3 -> am_3
+                    const normalizedSlot = this.normalizeSlotCode(meet.slot);
+                    const slotId = `d${meet.day}_${normalizedSlot}`;
                     this.classes.forEach(cls => {
                         if (!this.schedule[cls][slotId]) {
                             this.schedule[cls][slotId] = { subject: '班会', teacher: '班主任', fixed: true };
@@ -250,7 +255,7 @@ const SCHEDULER = {
                 // 逻辑：遍历用户设置的合堂规则 (例如: 物理 -> eve_3)
                 this.rules.combined.forEach(rule => {
                     const targetSubject = rule.subject;
-                    const targetSlotSuffix = rule.slot.replace(/pm|am|eve/, (m) => m + '_'); // e.g. "eve_3" -> "eve_3"
+                    const targetSlotSuffix = this.normalizeSlotCode(rule.slot); // e.g. "eve3" -> "eve_3"
 
                     // 1. 找出所有教该学科且教多个班的老师
                     const eligibleTeachers = queue.filter(t => t.subject === targetSubject && t.classes.length > 1 && t.remainingHours > 0);
@@ -259,11 +264,14 @@ const SCHEDULER = {
                         // 2. 寻找合适的时间 (周1-5)
                         // 必须保证：该老师的所有班级，在某一天的 targetSlot 都是空的
                         let allocatedDay = -1;
+                        const noFridayEvening = document.getElementById('sch_rule_fri_eve')?.checked;
 
                         // 随机尝试周一到周五 (均衡分布)
                         const tryDays = [1, 2, 3, 4, 5].sort(() => Math.random() - 0.5);
 
                         for (let dayNum of tryDays) {
+                            if (dayNum === 5 && targetSlotSuffix.startsWith('eve_') && noFridayEvening) continue;
+
                             const fullSlotId = `d${dayNum}_${targetSlotSuffix}`;
 
                             // 检查所有相关班级是否空闲
