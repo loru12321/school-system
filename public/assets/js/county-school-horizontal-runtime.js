@@ -1,6 +1,14 @@
 (() => {
     if (typeof window === 'undefined' || window.CountySchoolHorizontalRenderer) return;
 
+    function isCurrentSchoolRow(ctx, rowSchoolName, currentSchoolName) {
+        if (!currentSchoolName) return false;
+        if (ctx && typeof ctx.sameSchoolName === 'function') {
+            return ctx.sameSchoolName(rowSchoolName, currentSchoolName);
+        }
+        return String(rowSchoolName || '').trim() === String(currentSchoolName || '').trim();
+    }
+
     function renderTotalTable(ctx, currentSchoolName = '') {
         const rows = ctx.buildCountyHorizontalTotalRows();
         if (!rows.length) return '<div class="county-empty">暂无学校成绩数据，请先导入本次县级成绩。</div>';
@@ -24,7 +32,7 @@
                     </thead>
                     <tbody>
                         ${rows.map((row) => {
-                            const isCurrent = currentSchoolName && row.schoolName === currentSchoolName;
+                            const isCurrent = isCurrentSchoolRow(ctx, row.schoolName, currentSchoolName);
                             const barPercent = row.avg ? Math.min(100, row.avg / maxAvg * 100).toFixed(1) : 0;
                             return `
                                 <tr class="${isCurrent ? 'bg-highlight' : ''}">
@@ -61,7 +69,7 @@
                             <thead><tr><th>学校名称</th><th>实考人数</th><th>平均分</th><th>优秀率</th><th>及格率</th><th>平均分赋分</th><th>优秀率赋分</th><th>及格率赋分</th><th>两率一分</th><th>县域排名</th></tr></thead>
                             <tbody>
                                 ${rows.map((row) => `
-                                    <tr class="${currentSchoolName && row.schoolName === currentSchoolName ? 'bg-highlight' : ''}">
+                                    <tr class="${isCurrentSchoolRow(ctx, row.schoolName, currentSchoolName) ? 'bg-highlight' : ''}">
                                         <td data-label="学校名称">${ctx.escapeHtml(row.schoolName)}</td>
                                         <td data-label="实考人数">${row.count || 0}</td>
                                         <td data-label="平均分">${ctx.formatCountyRankDisplay(row.avg, row.rankAvg)}</td>

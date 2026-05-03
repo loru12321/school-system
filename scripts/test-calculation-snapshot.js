@@ -801,6 +801,45 @@ async function main() {
                 window.areSchoolNamesEquivalent = previousSameSchool;
             }
         })();
+        const countyAnalysisSchoolAliasPolicy = (() => {
+            const runtime = window.CountyAnalysisRuntime || {};
+            if (typeof runtime.resolveSchoolOption !== 'function'
+                || typeof runtime.sameSchoolName !== 'function'
+                || !window.CountySchoolHorizontalRenderer
+                || typeof window.CountySchoolHorizontalRenderer.renderTotalTable !== 'function') {
+                return { available: false };
+            }
+            const previousSameSchool = window.areSchoolNamesEquivalent;
+            const normalizeAliasSchool = (value) => String(value || '').trim().replace(/别名/g, '');
+            try {
+                window.areSchoolNamesEquivalent = (left, right) => (
+                    normalizeAliasSchool(left) === normalizeAliasSchool(right)
+                    || (typeof previousSameSchool === 'function' && previousSameSchool(left, right))
+                );
+                const html = window.CountySchoolHorizontalRenderer.renderTotalTable({
+                    buildCountyHorizontalTotalRows: () => [
+                        { schoolName: '甲校', count: 2, avg: 85, excellentRate: 0.5, passRate: 1, ratedAvg: 50, ratedExc: 80, ratedPass: 50, score: 180, rankScore: 1 },
+                        { schoolName: '乙校', count: 1, avg: 100, excellentRate: 1, passRate: 1, ratedAvg: 60, ratedExc: 80, ratedPass: 50, score: 190, rankScore: 2 }
+                    ],
+                    toNumber: Number,
+                    escapeHtml: (value) => String(value ?? ''),
+                    formatCountyRankDisplay: (value) => String(value),
+                    formatNumber: (value) => String(value),
+                    sameSchoolName: runtime.sameSchoolName
+                }, '甲校别名');
+                const highlightedRows = String(html).match(/<tr class="bg-highlight">[\s\S]*?<\/tr>/g) || [];
+                return {
+                    available: true,
+                    resolvedSchool: runtime.resolveSchoolOption(['甲校', '乙校'], '甲校别名'),
+                    sameSchool: runtime.sameSchoolName('甲校别名', '甲校'),
+                    highlightedRows: highlightedRows.length,
+                    highlightedSchool: highlightedRows[0]?.includes('甲校') ? '甲校' : '',
+                    highlightsForeignSchool: !!highlightedRows[0]?.includes('乙校')
+                };
+            } finally {
+                window.areSchoolNamesEquivalent = previousSameSchool;
+            }
+        })();
         const teacherAnalysisCoreSchoolAliasPolicy = (() => {
             if (typeof window.analyzeTeachers !== 'function'
                 || typeof window.calculateTeacherTownshipRanking !== 'function'
@@ -940,6 +979,7 @@ async function main() {
             analyticsKernelSchoolAliasPolicy,
             teacherCompareSchoolIsolationPolicy,
             compareSchoolAliasDefaultPolicy,
+            countyAnalysisSchoolAliasPolicy,
             teacherAnalysisCoreSchoolAliasPolicy,
             score2RatePositive: Object.values(window.SCHOOLS || {}).filter((school) => Number(school?.score2Rate) > 0).length,
             teacherRows: Object.values(window.TEACHER_STATS || {}).reduce((sum, subjects) => sum + Object.keys(subjects || {}).length, 0),
@@ -1036,6 +1076,14 @@ async function main() {
         townDefault: '甲校',
         townFallback: '甲校'
     }, 'compare selectors should resolve school aliases to canonical options');
+    assert.deepStrictEqual(snapshot.countyAnalysisSchoolAliasPolicy, {
+        available: true,
+        resolvedSchool: '甲校',
+        sameSchool: true,
+        highlightedRows: 1,
+        highlightedSchool: '甲校',
+        highlightsForeignSchool: false
+    }, 'county analysis should resolve and highlight school aliases consistently');
     assert.deepStrictEqual(snapshot.teacherAnalysisCoreSchoolAliasPolicy, {
         available: true,
         localStudentCount: 2,

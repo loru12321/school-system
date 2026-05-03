@@ -211,6 +211,54 @@
         return String(name || '').trim();
     }
 
+    function countySameSchoolName(left, right) {
+        const leftName = String(left || '').trim();
+        const rightName = String(right || '').trim();
+        if (!leftName || !rightName) return false;
+        if (leftName === rightName) return true;
+        if (window.PermissionPolicy && typeof window.PermissionPolicy.sameSchoolName === 'function') {
+            return window.PermissionPolicy.sameSchoolName(leftName, rightName);
+        }
+        if (typeof window.areSchoolNamesEquivalent === 'function') {
+            return window.areSchoolNamesEquivalent(leftName, rightName);
+        }
+        if (typeof areSchoolNamesEquivalent === 'function') {
+            return areSchoolNamesEquivalent(leftName, rightName);
+        }
+        return normalizeSchoolKey(leftName) === normalizeSchoolKey(rightName);
+    }
+
+    function countySchoolListIncludes(list, target) {
+        const targetName = String(target || '').trim();
+        if (!targetName) return false;
+        return (Array.isArray(list) ? list : []).some((name) => countySameSchoolName(name, targetName));
+    }
+
+    function resolveCountySchoolOption(options, preferred) {
+        const list = Array.from(new Set((Array.isArray(options) ? options : [])
+            .map((name) => String(name || '').trim())
+            .filter(Boolean)));
+        const target = String(preferred || '').trim();
+        if (!list.length || !target) return '';
+        if (list.includes(target)) return target;
+        const aliasMatch = list.find((name) => countySameSchoolName(name, target));
+        if (aliasMatch) return aliasMatch;
+        if (typeof window.resolveSchoolNameFromCollection === 'function') {
+            const resolved = window.resolveSchoolNameFromCollection(list, target);
+            if (resolved) return resolved;
+        }
+        if (typeof window.getCanonicalSchoolName === 'function') {
+            const canonical = window.getCanonicalSchoolName(target, list);
+            if (canonical && list.includes(canonical)) return canonical;
+            if (canonical) {
+                const canonicalMatch = list.find((name) => countySameSchoolName(name, canonical));
+                if (canonicalMatch) return canonicalMatch;
+            }
+        }
+        const normalizedTarget = normalizeSchoolKey(target);
+        return list.find((name) => normalizeSchoolKey(name) === normalizedTarget) || '';
+    }
+
     function getTargetManagedTownshipSchools(names) {
         const currentNames = Array.isArray(names) ? names.filter(Boolean) : getSchoolNames();
         if (!currentNames.length) return [];
@@ -229,14 +277,8 @@
 
         const resolved = targetKeys
             .map((rawName) => {
-                if (typeof window.resolveSchoolNameFromCollection === 'function') {
-                    const exact = window.resolveSchoolNameFromCollection(currentNames, rawName);
-                    if (exact) return exact;
-                }
-                if (typeof window.getCanonicalSchoolName === 'function') {
-                    const canonical = window.getCanonicalSchoolName(rawName, currentNames);
-                    if (canonical && currentNames.includes(canonical)) return canonical;
-                }
+                const resolvedName = resolveCountySchoolOption(currentNames, rawName);
+                if (resolvedName) return resolvedName;
                 return byNormalizedName.get(normalizeSchoolKey(rawName)) || '';
             })
             .filter((name) => name && !isAggregateSchoolName(name));
@@ -342,14 +384,15 @@
         const inferredTownshipSchools = getTargetManagedTownshipSchools(names);
         const townshipSet = new Set(inferredTownshipSchools);
         const isTownship = (name) => {
-            if (townshipSet.has(name)) return true;
+            if (countySchoolListIncludes(inferredTownshipSchools, name) || townshipSet.has(name)) return true;
             if (typeof window.isTownshipManagedSchool === 'function') {
                 return window.isTownshipManagedSchool(name, names);
             }
             return inferredTownshipSchools.some((item) => (
-                typeof window.areSchoolNamesMatched === 'function'
+                countySameSchoolName(item, name)
+                || (typeof window.areSchoolNamesMatched === 'function'
                     ? window.areSchoolNamesMatched(item, name, true)
-                    : item === name
+                    : item === name)
             ));
         };
         const townshipSchools = names.filter((name) => isTownship(name));
@@ -416,15 +459,8 @@
         ].map((item) => String(item || '').trim()).filter(Boolean);
 
         for (const rawName of candidates) {
-            if (names.includes(rawName)) return rawName;
-            if (typeof window.resolveSchoolNameFromCollection === 'function') {
-                const resolved = window.resolveSchoolNameFromCollection(names, rawName);
-                if (resolved) return resolved;
-            }
-            if (typeof window.getCanonicalSchoolName === 'function') {
-                const canonical = window.getCanonicalSchoolName(rawName, names);
-                if (canonical && names.includes(canonical)) return canonical;
-            }
+            const resolved = resolveCountySchoolOption(names, rawName);
+            if (resolved) return resolved;
         }
         return '';
     }
@@ -443,7 +479,7 @@
         const townshipSet = new Set(normalizedScope.townshipSchools || []);
         const rows = Object.values(window.SCHOOLS || {})
             .filter((school) => school?.metrics?.[subject])
-            .filter((school) => scopeName !== 'township' || townshipSet.has(school.name));
+            .filter((school) => scopeName !== 'township' || countySchoolListIncludes(normalizedScope.townshipSchools, school.name) || townshipSet.has(school.name));
         if (!rows.length) return null;
 
         const maxes = rows.reduce((acc, school) => {
@@ -464,7 +500,7 @@
             };
         }).sort((a, b) => b.score - a.score);
 
-        let target = scored.find((row) => row.name === schoolName);
+        let target = scored.find((row) => countySameSchoolName(row.name, schoolName));
         if (!target && typeof window.areSchoolNamesMatched === 'function') {
             target = scored.find((row) => window.areSchoolNamesMatched(row.name, schoolName, true));
         }
@@ -548,8 +584,14 @@
     }
 
     function getCurrentSchoolNameForTeacherScope() {
-        if (typeof window.readCurrentSchool === 'function') return String(window.readCurrentSchool() || '').trim();
-        return String(window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || document.getElementById('mySchoolSelect')?.value || '').trim();
+        const rawName = String(
+            (typeof window.readCurrentSchool === 'function' ? window.readCurrentSchool() : '')
+            || window.MY_SCHOOL
+            || localStorage.getItem('MY_SCHOOL')
+            || document.getElementById('mySchoolSelect')?.value
+            || ''
+        ).trim();
+        return resolveCountySchoolOption(getSchoolNames(), rawName) || rawName;
     }
 
     function getScopedTeacherAssignmentsForCounty() {
@@ -563,7 +605,7 @@
         const scopedMap = {};
         const scopedSchoolMap = {};
         Object.entries(teacherMap).forEach(([key, teacherName]) => {
-            if (String(schoolMap[key] || '').trim() !== schoolName) return;
+            if (!countySameSchoolName(schoolMap[key], schoolName)) return;
             scopedMap[key] = teacherName;
             scopedSchoolMap[key] = schoolMap[key];
         });
@@ -609,8 +651,8 @@
         });
         const ranked = Array.from(counts.entries()).sort((a, b) => {
             if (b[1] !== a[1]) return b[1] - a[1];
-            if (a[0] === explicitSchool) return -1;
-            if (b[0] === explicitSchool) return 1;
+            if (countySameSchoolName(a[0], explicitSchool)) return -1;
+            if (countySameSchoolName(b[0], explicitSchool)) return 1;
             return String(a[0]).localeCompare(String(b[0]), 'zh-CN', { numeric: true });
         });
         return ranked[0]?.[0] || explicitSchool || '';
@@ -667,7 +709,7 @@
         if (state.countyTeacherStatsSignature === signature) return state.countyTeacherStats;
 
         const rows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
-        const schoolRows = teacherSchool ? rows.filter((student) => String(student?.school || '').trim() === teacherSchool) : rows;
+        const schoolRows = teacherSchool ? rows.filter((student) => countySameSchoolName(student?.school, teacherSchool)) : rows;
         const subjectByNormalized = new Map(
             (window.SUBJECTS || []).map((subject) => [normalizeCountySubjectName(subject), subject])
         );
@@ -953,6 +995,7 @@
             return window.COUNTY_TEACHER_RANKINGS;
         }
         const townshipSet = new Set(normalized.townshipSchools || []);
+        const isTownshipSchool = (schoolName) => countySchoolListIncludes(normalized.townshipSchools, schoolName) || townshipSet.has(schoolName);
         const teacherStats = getCountyTeacherStats() || {};
         const rankings = {};
         const rankingDataMap = {};
@@ -986,7 +1029,7 @@
                     excellentRate: toNumber(metrics.excRate),
                     passRate: toNumber(metrics.passRate),
                     studentCount: toNumber(metrics.count),
-                    scope: townshipSet.has(school.name) ? 'township' : 'county'
+                    scope: isTownshipSchool(school.name) ? 'township' : 'county'
                 });
             });
 
@@ -1344,6 +1387,7 @@
 
         const scope = normalizeScope(getCurrentScope() || { includesCounty: false, townshipSchools: getSchoolNames() });
         const townshipSet = new Set(scope.townshipSchools || []);
+        const isTownshipSchool = (schoolName) => countySchoolListIncludes(scope.townshipSchools, schoolName) || townshipSet.has(schoolName);
         const schools = Object.values(window.SCHOOLS || {});
         const weights = getTwoRateWeights();
         const countyMax = { avg: 0, excellent: 0, pass: 0 };
@@ -1377,13 +1421,13 @@
             .slice()
             .sort((a, b) => toNumber(b.countyScore2Rate) - toNumber(a.countyScore2Rate))
             .forEach((school, index) => {
-                school.countyScope = townshipSet.has(school.name) ? 'township' : 'county';
+                school.countyScope = isTownshipSchool(school.name) ? 'township' : 'county';
                 school.countyRank2Rate = index + 1;
                 if (school.metrics?.total) school.metrics.total.countyRank2Rate = index + 1;
             });
 
         schools
-            .filter((school) => townshipSet.has(school.name))
+            .filter((school) => isTownshipSchool(school.name))
             .sort((a, b) => toNumber(b.score2Rate) - toNumber(a.score2Rate))
             .forEach((school, index) => {
                 school.townshipRank2Rate = index + 1;
@@ -1396,11 +1440,11 @@
             if (!s.ranks) s.ranks = {};
             if (!s.ranks.total) s.ranks.total = {};
             s.countyRank = rank;
-            s.countyScope = townshipSet.has(s.school) ? 'township' : 'county';
+            s.countyScope = isTownshipSchool(s.school) ? 'township' : 'county';
             s.ranks.total.county = rank;
         });
 
-        const townshipStudents = rankedAll.filter((s) => townshipSet.has(s.school));
+        const townshipStudents = rankedAll.filter((s) => isTownshipSchool(s.school));
         assignCompetitionRanks(townshipStudents, (s) => s.total, (s, rank) => {
             s.townshipRank = rank;
             if (!s.ranks.total) s.ranks.total = {};
@@ -1418,7 +1462,7 @@
                 s.ranks[subject].county = rank;
             });
 
-            const townshipSubjectStudents = rankedSubjectStudents.filter((s) => townshipSet.has(s.school));
+            const townshipSubjectStudents = rankedSubjectStudents.filter((s) => isTownshipSchool(s.school));
             assignCompetitionRanks(townshipSubjectStudents, (s) => s?.scores?.[subject], (s, rank) => {
                 if (!s.ranks[subject]) s.ranks[subject] = {};
                 s.ranks[subject].township = rank;
@@ -1777,16 +1821,8 @@
             return true;
         }
         const names = getSchoolNames();
-        let schoolName = rawName;
-        if (names.length && !names.includes(rawName)) {
-            if (typeof window.resolveSchoolNameFromCollection === 'function') {
-                schoolName = window.resolveSchoolNameFromCollection(names, rawName) || rawName;
-            }
-            if (!names.includes(schoolName) && typeof window.getCanonicalSchoolName === 'function') {
-                schoolName = window.getCanonicalSchoolName(rawName, names) || schoolName;
-            }
-        }
-        if (names.length && !names.includes(schoolName)) {
+        const schoolName = resolveCountySchoolOption(names, rawName) || rawName;
+        if (names.length && !countySchoolListIncludes(names, schoolName)) {
             if (!silent && window.UI?.toast) window.UI.toast('当前县级成绩中没有匹配到该学校，请核对名称', 'warning');
             return false;
         }
@@ -1794,8 +1830,11 @@
         try { localStorage.setItem('MY_SCHOOL', schoolName); } catch (_) {}
         if (typeof window.writeCurrentSchool === 'function') window.writeCurrentSchool(schoolName);
         const selector = document.getElementById('mySchoolSelect');
-        if (selector && Array.from(selector.options || []).some((option) => option.value === schoolName)) {
-            selector.value = schoolName;
+        if (selector) {
+            const optionValue = Array.from(selector.options || [])
+                .map((option) => String(option.value || '').trim())
+                .find((value) => countySameSchoolName(value, schoolName));
+            if (optionValue) selector.value = optionValue;
         }
         if (input) input.value = schoolName;
         if (!silent && window.UI?.toast) window.UI.toast(`已锁定本校：${schoolName}`, 'success');
@@ -1825,7 +1864,8 @@
             escapeHtml,
             toNumber,
             formatNumber,
-            formatCountyRankDisplay
+            formatCountyRankDisplay,
+            sameSchoolName: countySameSchoolName
         };
     }
 
@@ -1971,10 +2011,13 @@
         }
 
         if (selectedSchool && !selectedSchool.includes('请选择')) {
-            studentsToShow = studentsToShow.filter((student) => student.school === selectedSchool);
+            studentsToShow = studentsToShow.filter((student) => countySameSchoolName(student.school, selectedSchool));
         }
         if (selectedClass && selectedClass !== '全部') {
-            studentsToShow = studentsToShow.filter((student) => student.class === selectedClass);
+            const normalizedSelectedClass = normalizeClassNameForCounty(selectedClass);
+            studentsToShow = studentsToShow.filter((student) => (
+                normalizeClassNameForCounty(student.class) === normalizedSelectedClass
+            ));
         }
 
         if (typeof window.getComparisonStudentList === 'function') {
@@ -2200,6 +2243,11 @@
         decorateStudentDetails,
         saveCountySnapshot,
         getCurrentScope,
+        sameSchoolName: countySameSchoolName,
+        resolveSchoolOption: resolveCountySchoolOption,
+        resolveCurrentCountySchoolName,
+        getScopedTeacherAssignmentsForCounty,
+        buildCountyTeacherStats,
         exportCountyAnalysisSection,
         setCountyAnalysisSchoolNameFromInput,
         generateCountySchoolHorizontalTable
