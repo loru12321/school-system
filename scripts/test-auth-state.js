@@ -95,9 +95,16 @@ function run() {
     assert.strictEqual(authState.normalizeClassName('94'), '9.4');
     assert.strictEqual(authState.normalizeClassName('904'), '9.4');
     assert.strictEqual(authState.normalizeClassName('9/04班'), '9.4');
+    assert.strictEqual(authState.normalizeClassName('6.10班'), '6.10');
+    assert.strictEqual(authState.normalizeClassName('6.1班'), '6.1');
+    assert.strictEqual(authState.normalizeClassName('610'), '6.10');
+    assert.strictEqual(authState.normalizeClassName('六年级10班'), '6.10');
+    assert.strictEqual(authState.normalizeClassName('初一10班'), '7.10');
     assert.strictEqual(authState.areEquivalentClasses('9.4', '94'), true);
     assert.strictEqual(authState.areEquivalentClasses('9.4', '904'), true);
     assert.strictEqual(authState.areEquivalentClasses('701', '7.01'), true);
+    assert.strictEqual(authState.areEquivalentClasses('6.10班', '6.1班'), false);
+    assert.strictEqual(authState.areEquivalentClasses('6.10班', '610'), true);
 
     const parentMatch = authState.findManagedAccount(storedDb, 'Parent Local', '701');
     assert.strictEqual(parentMatch.role, 'parent');

@@ -10029,9 +10029,26 @@ function parseRows(rows, defaultSchool) {
 }
 
 
-function normalizeComparableClassValue(classStr) {
-    const raw = String(classStr || '')
+const CHINESE_CLASS_GRADE_MAP = Object.freeze({
+    '六': '6',
+    '七': '7',
+    '八': '8',
+    '九': '9',
+    '初一': '7',
+    '初二': '8',
+    '初三': '9'
+});
+
+function normalizeChineseClassText(classStr) {
+    return String(classStr || '')
         .trim()
+        .replace(/[()（）]/g, '')
+        .replace(/初([一二三])(?:年级|年級|级|級)?(\d{1,3})班?/g, (_, grade, classNo) => `${CHINESE_CLASS_GRADE_MAP[`初${grade}`]}.${classNo}`)
+        .replace(/([六七八九])(?:年级|年級|级|級)?(\d{1,3})班?/g, (_, grade, classNo) => `${CHINESE_CLASS_GRADE_MAP[grade]}.${classNo}`);
+}
+
+function normalizeComparableClassValue(classStr) {
+    const raw = normalizeChineseClassText(classStr)
         .replace(/[()（）]/g, '')
         .replace(/(?:班级|班|年级|grade|class)/gi, '')
         .replace(/[／/、_-]+/g, '.')
