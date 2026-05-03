@@ -76,6 +76,44 @@ const TOWN_SUBMODULE_META = {
     bottom3: '低分率/后1/3核算'
 };
 
+function townNormalizeSchoolName(value) {
+    return String(value || '').trim();
+}
+
+function townGetCurrentSchoolName() {
+    return townNormalizeSchoolName(
+        window.MY_SCHOOL
+        || (typeof MY_SCHOOL !== 'undefined' ? MY_SCHOOL : '')
+        || (window.localStorage && typeof window.localStorage.getItem === 'function' ? window.localStorage.getItem('MY_SCHOOL') : '')
+    );
+}
+
+function townSameSchoolName(left, right) {
+    const leftName = townNormalizeSchoolName(left);
+    const rightName = townNormalizeSchoolName(right);
+    if (!leftName || !rightName) return false;
+    if (window.PermissionPolicy && typeof window.PermissionPolicy.sameSchoolName === 'function') {
+        return window.PermissionPolicy.sameSchoolName(leftName, rightName);
+    }
+    if (typeof window.areSchoolNamesEquivalent === 'function') {
+        return window.areSchoolNamesEquivalent(leftName, rightName);
+    }
+    if (typeof areSchoolNamesEquivalent === 'function') return areSchoolNamesEquivalent(leftName, rightName);
+    return leftName === rightName;
+}
+
+function resolveTownSubmoduleDefaultSchool(schoolList, preferredSchool = townGetCurrentSchoolName()) {
+    const preferred = townNormalizeSchoolName(preferredSchool);
+    const list = (schoolList || []).map(townNormalizeSchoolName).filter(Boolean);
+    if (!list.length) return '';
+    if (preferred) {
+        if (list.includes(preferred)) return preferred;
+        const matched = list.find((school) => townSameSchoolName(school, preferred));
+        if (matched) return matched;
+    }
+    return list[0];
+}
+
 function ensureTownSubmoduleCompareUIs() {
     Object.entries(TOWN_SUBMODULE_META).forEach(([submoduleId, title]) => {
         const section = document.getElementById(submoduleId);
@@ -218,7 +256,7 @@ async function openTownSubmoduleCompareDialog(submoduleId) {
     const examOptions = examList.map(e => `<option value="${e.id}">${e.label}</option>`).join('');
 
     const defaultIds = getDefaultCompareExamIds(examList, examList.length >= 3 ? 3 : 2, CURRENT_EXAM_ID);
-    const schoolDefault = (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) ? MY_SCHOOL : schoolList[0];
+    const schoolDefault = resolveTownSubmoduleDefaultSchool(schoolList);
     const exam1Default = defaultIds[0] || '';
     const exam2Default = defaultIds[1] || defaultIds[0] || '';
     const exam3Default = defaultIds[2] || defaultIds[defaultIds.length - 1] || '';
@@ -463,6 +501,7 @@ async function loadCloudTownSubmoduleCompare(submoduleId, key) {
         TOWN_SUBMODULE_META,
         ensureTownSubmoduleCompareUIs,
         getTownSubmoduleSeries,
+        resolveTownSubmoduleDefaultSchool,
         openTownSubmoduleCompareDialog,
         renderTownSubmoduleMultiPeriodComparison,
         exportTownSubmoduleCompare,

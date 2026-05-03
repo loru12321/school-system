@@ -104,6 +104,40 @@ function setProgressSelectOptionsIfChanged(select, html, signature) {
     select.dataset.progressOptionsSig = nextSignature;
 }
 
+function progressNormalizeSchoolName(value) {
+    return String(value || '').trim();
+}
+
+function progressGetCurrentSchoolName() {
+    return progressNormalizeSchoolName(
+        window.MY_SCHOOL
+        || (typeof MY_SCHOOL !== 'undefined' ? MY_SCHOOL : '')
+        || (window.localStorage && typeof window.localStorage.getItem === 'function' ? window.localStorage.getItem('MY_SCHOOL') : '')
+    );
+}
+
+function progressSameSchoolName(left, right) {
+    const leftName = progressNormalizeSchoolName(left);
+    const rightName = progressNormalizeSchoolName(right);
+    if (!leftName || !rightName) return false;
+    if (window.PermissionPolicy && typeof window.PermissionPolicy.sameSchoolName === 'function') {
+        return window.PermissionPolicy.sameSchoolName(leftName, rightName);
+    }
+    if (typeof window.areSchoolNamesEquivalent === 'function') {
+        return window.areSchoolNamesEquivalent(leftName, rightName);
+    }
+    if (typeof areSchoolNamesEquivalent === 'function') return areSchoolNamesEquivalent(leftName, rightName);
+    return leftName === rightName;
+}
+
+function progressResolveSchoolOption(schoolList, preferredSchool) {
+    const preferred = progressNormalizeSchoolName(preferredSchool);
+    const list = (schoolList || []).map(progressNormalizeSchoolName).filter(Boolean);
+    if (!preferred || !list.length) return '';
+    if (list.includes(preferred)) return preferred;
+    return list.find((school) => progressSameSchoolName(school, preferred)) || '';
+}
+
 function updateProgressSchoolSelect() {
     const sel = document.getElementById('progressSchoolSelect');
     if (!sel) return;
@@ -448,11 +482,10 @@ function updateProgressMultiExamSelects() {
             return `<option value="${safeSchool}">${safeSchool}</option>`;
         }).join('');
     setProgressSelectOptionsIfChanged(schoolSel, schoolOptionsHtml, `progress-compare-schools:${schoolList.join('|')}`);
-    if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) {
-        schoolSel.value = MY_SCHOOL;
-    } else if (previousSchool && schoolList.includes(previousSchool)) {
-        schoolSel.value = previousSchool;
-    }
+    const currentSchool = progressResolveSchoolOption(schoolList, progressGetCurrentSchoolName());
+    const previousSchoolMatch = progressResolveSchoolOption(schoolList, previousSchool);
+    if (currentSchool) schoolSel.value = currentSchool;
+    else if (previousSchoolMatch) schoolSel.value = previousSchoolMatch;
 
     const examList = getProgressBaselineExamList().map((exam) => ({
         id: exam.id,
@@ -1837,6 +1870,7 @@ function resetProgressFilter() {
         syncProgressBaselineExamOptions,
         ensureProgressBaselineData,
         updateProgressMultiExamSelects,
+        progressResolveSchoolOption,
         getProgressCleanName,
         getProgressSelectedSchoolName,
         getProgressCurrentStudentsForSchool,

@@ -121,6 +121,65 @@
         return `<option value="">${placeholder}</option>` + (schoolList || []).map(s => `<option value="${s}">${s}</option>`).join('');
     }
 
+    function normalizeCompareSchoolName(value) {
+        return String(value || '').trim();
+    }
+
+    function getCurrentCompareSchoolName() {
+        return normalizeCompareSchoolName(
+            window.MY_SCHOOL
+            || (typeof MY_SCHOOL !== 'undefined' ? MY_SCHOOL : '')
+            || (window.localStorage && typeof window.localStorage.getItem === 'function' ? window.localStorage.getItem('MY_SCHOOL') : '')
+        );
+    }
+
+    function areCompareSchoolsEquivalent(left, right) {
+        const leftName = normalizeCompareSchoolName(left);
+        const rightName = normalizeCompareSchoolName(right);
+        if (!leftName || !rightName) return false;
+        if (window.PermissionPolicy && typeof window.PermissionPolicy.sameSchoolName === 'function') {
+            return window.PermissionPolicy.sameSchoolName(leftName, rightName);
+        }
+        if (typeof window.areSchoolNamesEquivalent === 'function') {
+            return window.areSchoolNamesEquivalent(leftName, rightName);
+        }
+        if (typeof areSchoolNamesEquivalent === 'function') {
+            return areSchoolNamesEquivalent(leftName, rightName);
+        }
+        return leftName === rightName;
+    }
+
+    function resolveCompareSchoolOption(schoolList, preferredSchool) {
+        const preferred = normalizeCompareSchoolName(preferredSchool);
+        const list = (schoolList || []).map(normalizeCompareSchoolName).filter(Boolean);
+        if (!preferred || !list.length) return '';
+        if (list.includes(preferred)) return preferred;
+        return list.find((school) => areCompareSchoolsEquivalent(school, preferred)) || '';
+    }
+
+    function applyCompareSchoolDefault(select, schoolList, options = {}) {
+        if (!select) return '';
+        const settings = options && typeof options === 'object' ? options : {};
+        const currentSchool = getCurrentCompareSchoolName();
+        const currentMatch = resolveCompareSchoolOption(schoolList, currentSchool);
+        if (currentMatch) {
+            select.value = currentMatch;
+            return currentMatch;
+        }
+        if (settings.preservePrevious) {
+            const previousMatch = resolveCompareSchoolOption(schoolList, settings.previousValue || select.value);
+            if (previousMatch) {
+                select.value = previousMatch;
+                return previousMatch;
+            }
+        }
+        if (settings.fallbackFirst && !select.value && (schoolList || []).length > 0) {
+            select.value = schoolList[0];
+            return select.value;
+        }
+        return select.value || '';
+    }
+
     function buildExamOptionsHtml(examList, options = {}) {
         const defaultOption = options.defaultOption || '';
         return defaultOption + (examList || []).map(e => {
@@ -148,7 +207,7 @@
             buildSchoolOptionsHtml(schoolList),
             signatureFromList('schools', schoolList)
         );
-        if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) schoolSel.value = MY_SCHOOL;
+        applyCompareSchoolDefault(schoolSel, schoolList);
 
         const examList = listAvailableExamsForCompare();
         if (examList.length < 2) {
@@ -198,9 +257,7 @@
             buildSchoolOptionsHtml(schoolList),
             signatureFromList('schools-all', schoolList)
         );
-        if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) {
-            schoolSel.value = MY_SCHOOL;
-        }
+        applyCompareSchoolDefault(schoolSel, schoolList);
 
         const examList = listAvailableExamsForCompare();
         if (examList.length < 2) {
@@ -321,7 +378,7 @@
             buildSchoolOptionsHtml(schoolList),
             signatureFromList('schools', schoolList)
         );
-        if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) schoolSel.value = MY_SCHOOL;
+        applyCompareSchoolDefault(schoolSel, schoolList);
 
         const examList = listAvailableExamsForCompare();
         if (examList.length < 2) {
@@ -372,8 +429,7 @@
             buildSchoolOptionsHtml(schoolList),
             signatureFromList('schools', schoolList)
         );
-        if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) schoolSel.value = MY_SCHOOL;
-        else if (!schoolSel.value && schoolList.length > 0) schoolSel.value = schoolList[0];
+        applyCompareSchoolDefault(schoolSel, schoolList, { fallbackFirst: true });
 
         const sortedSubjects = [...SUBJECTS].sort(sortSubjects);
         setSelectOptionsIfChanged(
@@ -426,11 +482,7 @@
             buildSchoolOptionsHtml(schoolList),
             signatureFromList('schools', schoolList)
         );
-        if (MY_SCHOOL && schoolList.includes(MY_SCHOOL)) {
-            schoolEl.value = MY_SCHOOL;
-        } else if (!schoolEl.value && schoolList.length > 0) {
-            schoolEl.value = schoolList[0];
-        }
+        applyCompareSchoolDefault(schoolEl, schoolList, { fallbackFirst: true });
 
         setSelectOptionsIfChanged(
             subjectEl,
@@ -513,10 +565,13 @@
         teacherEl.innerHTML = '<option value="">--请选择教师--</option>';
         if (!school || !subject) return;
 
-        const schoolClasses = new Set((SCHOOLS[school]?.students || []).map(s => normalizeClass(s.class)));
+        const schoolRows = Object.entries(SCHOOLS || {}).flatMap(([schoolName, schoolData]) => (
+            areCompareSchoolsEquivalent(schoolName, school) ? (schoolData?.students || []) : []
+        ));
+        const schoolClasses = new Set(schoolRows.map(s => normalizeClass(s.class)));
         const classSchoolMap = (typeof getClassSchoolMapForAllData === 'function') ? getClassSchoolMapForAllData() : {};
         Object.entries(classSchoolMap).forEach(([cls, sch]) => {
-            if (sch === school) schoolClasses.add(normalizeClass(cls));
+            if (areCompareSchoolsEquivalent(sch, school)) schoolClasses.add(normalizeClass(cls));
         });
         const names = new Set();
         Object.entries(TEACHER_MAP || {}).forEach(([key, teacherName]) => {
@@ -551,6 +606,8 @@
         refreshCompareExamSelectors,
         trySyncCompareExamOptions,
         updateProgressMultiExamSelects,
+        resolveCompareSchoolOption,
+        applyCompareSchoolDefault,
         onStudentComparePeriodCountChange,
         updateStudentCompareExamSelects,
         updateReportCompareExamSelects,
