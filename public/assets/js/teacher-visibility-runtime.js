@@ -2,6 +2,45 @@ function normalizeTeacherName(name) {
     return String(name || '').trim().replace(/\s+/g, '');
 }
 
+function getTeacherVisibilitySchoolMap() {
+    if (window.TEACHER_SCHOOL_MAP && typeof window.TEACHER_SCHOOL_MAP === 'object') return window.TEACHER_SCHOOL_MAP;
+    if (typeof TEACHER_SCHOOL_MAP !== 'undefined' && TEACHER_SCHOOL_MAP && typeof TEACHER_SCHOOL_MAP === 'object') return TEACHER_SCHOOL_MAP;
+    return {};
+}
+
+function normalizeTeacherVisibilitySchool(value) {
+    return String(value || '').trim();
+}
+
+function sameTeacherVisibilitySchool(left, right) {
+    const leftName = normalizeTeacherVisibilitySchool(left);
+    const rightName = normalizeTeacherVisibilitySchool(right);
+    if (!leftName || !rightName) return false;
+    if (window.PermissionPolicy && typeof window.PermissionPolicy.sameSchoolName === 'function') {
+        return window.PermissionPolicy.sameSchoolName(leftName, rightName);
+    }
+    if (typeof areSchoolNamesEquivalent === 'function') return areSchoolNamesEquivalent(leftName, rightName);
+    return leftName === rightName;
+}
+
+function getTeacherVisibilityBoundSchool(user) {
+    const candidates = [
+        user?.school,
+        typeof readCurrentSchool === 'function' ? readCurrentSchool() : '',
+        window.MY_SCHOOL,
+        typeof MY_SCHOOL !== 'undefined' ? MY_SCHOOL : '',
+        window.localStorage && typeof window.localStorage.getItem === 'function' ? window.localStorage.getItem('MY_SCHOOL') : ''
+    ];
+    return normalizeTeacherVisibilitySchool(candidates.find(value => normalizeTeacherVisibilitySchool(value)) || '');
+}
+
+function isTeacherAssignmentVisibleForSchool(key, schoolName) {
+    const targetSchool = normalizeTeacherVisibilitySchool(schoolName);
+    if (!targetSchool) return true;
+    const explicitSchool = normalizeTeacherVisibilitySchool(getTeacherVisibilitySchoolMap()[key]);
+    return !explicitSchool || sameTeacherVisibilitySchool(explicitSchool, targetSchool);
+}
+
 function getTeacherScopeForUser(user) {
     const scope = { classes: new Set(), subjects: new Set() };
     if (!user || !window.TEACHER_MAP) {
@@ -13,9 +52,11 @@ function getTeacherScopeForUser(user) {
     appDebug(`[权限检查] 检查教师: ${user.name} (规范化: ${uname})`);
     appDebug('[权限检查] TEACHER_MAP内容:', TEACHER_MAP);
 
+    const boundSchool = getTeacherVisibilityBoundSchool(user);
     Object.entries(TEACHER_MAP).forEach(([key, teacher]) => {
         const normalizedTeacher = normalizeTeacherName(teacher);
         if (normalizedTeacher === uname) {
+            if (!isTeacherAssignmentVisibleForSchool(key, boundSchool)) return;
             const parts = key.split('_');
             const cls = normalizeClass(parts[0]);
             const sub = normalizeSubject(parts[1] || '');
@@ -36,6 +77,7 @@ function buildClassTeacherStatsForClass(className) {
     const mySchoolData = SCHOOLS[MY_SCHOOL];
     if (!mySchoolData || !className) return stats;
     Object.entries(TEACHER_MAP || {}).forEach(([key, teacherName]) => {
+        if (!isTeacherAssignmentVisibleForSchool(key, MY_SCHOOL)) return;
         const [rawClass, rawSubject] = key.split('_');
         const cls = normalizeClass(rawClass);
         if (cls !== className) return;
@@ -43,7 +85,7 @@ function buildClassTeacherStatsForClass(className) {
         const useSubject = SUBJECTS.find(s => normalizeSubject(s) === subject) || subject;
         if (!useSubject) return;
         if (!stats[teacherName]) stats[teacherName] = {};
-        const students = mySchoolData.students.filter(s => s.class === cls && s.scores[useSubject] !== undefined);
+        const students = mySchoolData.students.filter(s => normalizeClass(s.class) === cls && s.scores[useSubject] !== undefined);
         const gs = { exc: THRESHOLDS[useSubject]?.exc || 0, pass: THRESHOLDS[useSubject]?.pass || 0, low: (THRESHOLDS[useSubject]?.pass || 60) * 0.6 };
         const totalScore = students.reduce((sum, s) => sum + s.scores[useSubject], 0);
         const avg = students.length ? (totalScore / students.length).toFixed(2) : '0.00';
@@ -80,9 +122,11 @@ function getVisibleSubjectsForTeacherUser(user) {
     // 班主任：可看“本班所有学科” + 自己任教学科
     if (role === 'class_teacher') {
         const myClass = normalizeClass(user?.class || '');
+        const boundSchool = getTeacherVisibilityBoundSchool(user);
 
         // 1) 从任课表提取本班学科
         Object.keys(TEACHER_MAP || {}).forEach(key => {
+            if (!isTeacherAssignmentVisibleForSchool(key, boundSchool)) return;
             const [rawClass, rawSubject] = String(key || '').split('_');
             if (normalizeClass(rawClass) === myClass) {
                 const sub = normalizeSubject(rawSubject || '');
@@ -91,7 +135,10 @@ function getVisibleSubjectsForTeacherUser(user) {
         });
 
         // 2) 兜底：从学生成绩提取本班学科
-        const classRows = (RAW_DATA || []).filter(s => normalizeClass(s?.class) === myClass);
+        const classRows = (RAW_DATA || []).filter(s => (
+            normalizeClass(s?.class) === myClass
+            && (!boundSchool || sameTeacherVisibilitySchool(s?.school, boundSchool))
+        ));
         classRows.forEach(s => {
             Object.keys(s?.scores || {}).forEach(sub => {
                 const nsub = normalizeSubject(sub);
@@ -109,7 +156,16 @@ function getVisibleSubjectsForTeacherUser(user) {
     Object.entries(TEACHER_STATS || {}).forEach(([teacherName, subMap]) => {
         const tNorm = normalizeTeacherName(teacherName).toLowerCase();
         if (tNorm === normalizedName || tNorm.startsWith(normalizedName + '(') || tNorm.startsWith(normalizedName + '（')) {
-            Object.keys(subMap || {}).forEach(sub => set.add(normalizeSubject(sub)));
+            Object.entries(subMap || {}).forEach(([sub, dataItem]) => {
+                const boundSchool = getTeacherVisibilityBoundSchool(user);
+                if (boundSchool
+                    && window.PermissionPolicy
+                    && typeof window.PermissionPolicy.canQueryTeacherMetric === 'function'
+                    && !window.PermissionPolicy.canQueryTeacherMetric(user, teacherName, dataItem, boundSchool)) {
+                    return;
+                }
+                set.add(normalizeSubject(sub));
+            });
         }
     });
 

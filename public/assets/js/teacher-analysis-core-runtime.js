@@ -24,6 +24,23 @@
             return nextSchool;
         });
 
+    function teacherNormalizeSchoolName(value) {
+        return String(value || '').trim();
+    }
+
+    function teacherSameSchoolName(left, right) {
+        const leftName = teacherNormalizeSchoolName(left);
+        const rightName = teacherNormalizeSchoolName(right);
+        if (!leftName || !rightName) return false;
+        return areSchoolNamesEquivalentFn(leftName, rightName);
+    }
+
+    function isTeacherAssignmentScopedToSchool(assignment, schoolName) {
+        const explicitSchool = teacherNormalizeSchoolName(assignment?.schoolName);
+        const targetSchool = teacherNormalizeSchoolName(schoolName);
+        return !explicitSchool || !targetSchool || teacherSameSchoolName(explicitSchool, targetSchool);
+    }
+
     const TEACHER_BASELINE_BANDS = [
         { id: 'top', max: 0.25 },
         { id: 'upper', max: 0.5 },
@@ -734,11 +751,13 @@
                 const [rawClass, rawSubject] = String(key || '').split('_');
                 const className = normalizeClassFn(rawClass);
                 const normalizedSubject = normalizeSubjectFn(rawSubject);
+                const schoolName = teacherNormalizeSchoolName((window.TEACHER_SCHOOL_MAP || {})[key]);
                 return {
                     key,
                     teacherName,
                     className,
-                    normalizedSubject
+                    normalizedSubject,
+                    schoolName
                 };
             })
             .filter((item) => item.className && item.normalizedSubject && item.teacherName);
@@ -755,6 +774,15 @@
             });
             const hitCounts = new Map();
             teacherAssignments.forEach((assignment) => {
+                if (assignment.schoolName) {
+                    const isAccessible = !accessibleSchools.length || accessibleSchools.some((school) => (
+                        teacherSameSchoolName(school, assignment.schoolName)
+                    ));
+                    if (isAccessible) {
+                        hitCounts.set(assignment.schoolName, (hitCounts.get(assignment.schoolName) || 0) + 1);
+                    }
+                    return;
+                }
                 const cls = assignment.className;
                 if (!cls || !classToSchools.has(cls)) return;
                 classToSchools.get(cls).forEach((school) => {
@@ -771,7 +799,10 @@
         if (teacherMapSchool && teacherMapSchool !== activeSchool) {
             const activeHasTeacherClasses = rows.some((student) => (
                 String(student?.school || '').trim() === activeSchool
-                && teacherClassSetFromMap.has(normalizeClassFn(student?.class))
+                && teacherAssignments.some((assignment) => (
+                    isTeacherAssignmentScopedToSchool(assignment, activeSchool)
+                    && assignment.className === normalizeClassFn(student?.class)
+                ))
             ));
             const hasExplicitTeacherSchoolMap = window.TEACHER_SCHOOL_MAP
                 && Object.values(window.TEACHER_SCHOOL_MAP).some((school) => String(school || '').trim());
@@ -846,6 +877,9 @@
         const classSchoolMap = (typeof window.getClassSchoolMapForAllData === 'function')
             ? window.getClassSchoolMapForAllData()
             : {};
+        const teacherAssignmentsForActiveSchool = teacherAssignments.filter((assignment) => (
+            isTeacherAssignmentScopedToSchool(assignment, activeSchool)
+        ));
         const normalizedRows = rows.map((student) => ({
             ...student,
             school: String(student?.school || '').trim(),
@@ -864,7 +898,7 @@
                 studentsByClass.get(student.class).push(student);
             }
         });
-        const teacherClassSet = teacherClassSetFromMap;
+        const teacherClassSet = new Set(teacherAssignmentsForActiveSchool.map((item) => item.className));
         const pickTeacherStudentsForSchool = (schoolName) => {
             const targetSchool = String(schoolName || '').trim();
             if (!targetSchool) return [];
@@ -1052,7 +1086,7 @@
         });
         perfProbe.mark('expectations');
 
-        teacherAssignments.forEach(({ teacherName, className, normalizedSubject }) => {
+        teacherAssignmentsForActiveSchool.forEach(({ teacherName, className, normalizedSubject }) => {
             const matchedSubject = subjectByNormalized.get(normalizedSubject);
             if (!matchedSubject) return;
             if (!window.TEACHER_STATS[teacherName]) window.TEACHER_STATS[teacherName] = {};

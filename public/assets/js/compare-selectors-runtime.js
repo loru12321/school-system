@@ -520,6 +520,13 @@
         });
         const names = new Set();
         Object.entries(TEACHER_MAP || {}).forEach(([key, teacherName]) => {
+            const explicitSchool = String((window.TEACHER_SCHOOL_MAP || {})[key] || '').trim();
+            if (explicitSchool) {
+                const sameSchool = typeof areSchoolNamesEquivalent === 'function'
+                    ? areSchoolNamesEquivalent(explicitSchool, school)
+                    : explicitSchool === school;
+                if (!sameSchool) return;
+            }
             const [rawClass, rawSubject] = String(key).split('_');
             const cls = normalizeClass(rawClass);
             const sub = SUBJECTS.find(s => normalizeSubject(s) === normalizeSubject(rawSubject));
