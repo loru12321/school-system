@@ -62,6 +62,9 @@
 
     function normalizeClassName(value) {
         if (typeof root.normalizeClass === 'function') return root.normalizeClass(value);
+        if (root.AuthState && typeof root.AuthState.normalizeClassName === 'function') {
+            return root.AuthState.normalizeClassName(value);
+        }
         return normalizeText(value).replace(/班$/, '');
     }
 

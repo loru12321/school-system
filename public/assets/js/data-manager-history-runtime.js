@@ -46,6 +46,10 @@
         if (typeof root.normalizeClass === 'function') {
             return root.normalizeClass(value);
         }
+        if (root.AuthState && typeof root.AuthState.normalizeClassName === 'function') {
+            const normalized = root.AuthState.normalizeClassName(value);
+            return normalized || '默认班级';
+        }
         const text = String(value || '').trim();
         return text || '默认班级';
     }

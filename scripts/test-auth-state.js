@@ -2,6 +2,7 @@ const assert = require('assert');
 const path = require('path');
 
 const createAuthStateRuntime = require(path.resolve(__dirname, '../public/assets/js/auth-state-runtime.js'));
+const createAnalyticsKernelRuntime = require(path.resolve(__dirname, '../public/assets/js/analytics-kernel-runtime.js'));
 
 function createMockStorage(initialState = {}) {
     const state = new Map(Object.entries(initialState));
@@ -105,6 +106,9 @@ function run() {
     assert.strictEqual(authState.areEquivalentClasses('701', '7.01'), true);
     assert.strictEqual(authState.areEquivalentClasses('6.10班', '6.1班'), false);
     assert.strictEqual(authState.areEquivalentClasses('6.10班', '610'), true);
+    const analyticsKernel = createAnalyticsKernelRuntime({ AuthState: authState });
+    assert.strictEqual(analyticsKernel.normalizeClassName('六年级10班'), '6.10');
+    assert.strictEqual(analyticsKernel.normalizeClassName('6.1班'), '6.1');
 
     const parentMatch = authState.findManagedAccount(storedDb, 'Parent Local', '701');
     assert.strictEqual(parentMatch.role, 'parent');

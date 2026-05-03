@@ -618,6 +618,9 @@
 
     function normalizeClassNameForCounty(value) {
         if (typeof window.normalizeClass === 'function') return window.normalizeClass(value);
+        if (window.AuthState && typeof window.AuthState.normalizeClassName === 'function') {
+            return window.AuthState.normalizeClassName(value);
+        }
         return String(value || '').trim().replace(/班$/, '');
     }
 
