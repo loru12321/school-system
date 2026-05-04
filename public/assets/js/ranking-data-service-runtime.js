@@ -295,6 +295,61 @@
         return Array.from(keys);
     }
 
+    function sameSchoolForLookup(left, right) {
+        const leftName = normalizeText(left);
+        const rightName = normalizeText(right);
+        if (!leftName || !rightName) return false;
+        if (leftName === rightName) return true;
+        if (root.PermissionPolicy && typeof root.PermissionPolicy.sameSchoolName === 'function') {
+            return root.PermissionPolicy.sameSchoolName(leftName, rightName);
+        }
+        if (typeof root.areSchoolNamesEquivalent === 'function' && root.areSchoolNamesEquivalent(leftName, rightName)) {
+            return true;
+        }
+        return typeof root.areSchoolNamesMatched === 'function' && root.areSchoolNamesMatched(leftName, rightName, true);
+    }
+
+    function getEquivalentSchoolLookupKeys(index, school) {
+        const schoolKey = normalizeText(school);
+        if (!schoolKey) return [];
+        const keys = new Set([schoolKey]);
+        const candidates = Array.from(index?.schoolNames || []);
+
+        if (typeof root.getMatchedSchoolNamesFromCollection === 'function') {
+            try {
+                root.getMatchedSchoolNamesFromCollection(candidates, schoolKey)
+                    .map(normalizeText)
+                    .filter(Boolean)
+                    .forEach((name) => keys.add(name));
+            } catch (error) {}
+        }
+
+        const normalizedSchool = typeof root.normalizeSchoolName === 'function'
+            ? root.normalizeSchoolName(schoolKey)
+            : '';
+        candidates.forEach((candidate) => {
+            if (!candidate) return;
+            if (sameSchoolForLookup(candidate, schoolKey)) {
+                keys.add(candidate);
+                return;
+            }
+            if (normalizedSchool && typeof root.normalizeSchoolName === 'function'
+                && root.normalizeSchoolName(candidate) === normalizedSchool) {
+                keys.add(candidate);
+            }
+        });
+
+        return Array.from(keys);
+    }
+
+    function appendUniqueRows(target, seen, rows) {
+        (Array.isArray(rows) ? rows : []).forEach((row) => {
+            if (!row || seen.has(row)) return;
+            seen.add(row);
+            target.push(row);
+        });
+    }
+
     function pushToMap(map, key, row) {
         const normalizedKey = normalizeText(key);
         if (!normalizedKey) return;
@@ -313,6 +368,7 @@
         const byName = new Map();
         const byExact = new Map();
         const classesBySchool = new Map();
+        const schoolNames = new Set();
 
         list.forEach((row) => {
             if (!row || typeof row !== 'object') return;
@@ -331,6 +387,7 @@
             pushToMap(bySchoolClass, `${school}||${rawClass}`, row);
             getStudentNameKeys(row).forEach((key) => pushToMap(byName, key, row));
             if (exactKey.replace(/\|/g, '')) byExact.set(exactKey, row);
+            if (school) schoolNames.add(school);
             if (school && rawClass) {
                 if (!classesBySchool.has(school)) classesBySchool.set(school, new Set());
                 classesBySchool.get(school).add(rawClass);
@@ -344,7 +401,8 @@
             bySchoolClass,
             byName,
             byExact,
-            classesBySchool
+            classesBySchool,
+            schoolNames
         };
         studentIndexCache.set(list, index);
         return index;
@@ -356,22 +414,39 @@
         const classKey = normalizeClassValue(className);
         const rawClassKey = normalizeText(className);
         if (schoolKey && (classKey || rawClassKey)) {
-            return (index.bySchoolClass.get(`${schoolKey}||${classKey}`) || index.bySchoolClass.get(`${schoolKey}||${rawClassKey}`) || []).slice();
+            const matchedRows = [];
+            const seen = new Set();
+            getEquivalentSchoolLookupKeys(index, schoolKey).forEach((key) => {
+                appendUniqueRows(matchedRows, seen, index.bySchoolClass.get(`${key}||${classKey}`));
+                appendUniqueRows(matchedRows, seen, index.bySchoolClass.get(`${key}||${rawClassKey}`));
+            });
+            return matchedRows;
         }
-        if (schoolKey) return (index.bySchool.get(schoolKey) || []).slice();
+        if (schoolKey) {
+            const matchedRows = [];
+            const seen = new Set();
+            getEquivalentSchoolLookupKeys(index, schoolKey).forEach((key) => {
+                appendUniqueRows(matchedRows, seen, index.bySchool.get(key));
+            });
+            return matchedRows;
+        }
         return index.rows.slice();
     }
 
     function getClassesForSchool(rows, school) {
         const index = getStudentIndex(rows);
-        const classes = index.classesBySchool.get(normalizeText(school));
-        return Array.from(classes || []).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
+        const classes = new Set();
+        getEquivalentSchoolLookupKeys(index, school).forEach((key) => {
+            (index.classesBySchool.get(key) || new Set()).forEach((cls) => classes.add(cls));
+        });
+        return Array.from(classes).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
     }
 
     function findStudent(rows, query = {}) {
         const index = getStudentIndex(rows);
         const nameKey = normalizeName(query.name);
         const schoolKey = normalizeText(query.school);
+        const schoolKeys = new Set(getEquivalentSchoolLookupKeys(index, schoolKey));
         const classKey = normalizeClassValue(query.className || query.class);
         const rawClassKey = normalizeText(query.className || query.class);
         if (!nameKey) return null;
@@ -380,7 +455,7 @@
             const rowSchool = normalizeText(row && row.school);
             const rowClass = normalizeClassValue(row && row.class);
             const rowRawClass = normalizeText(row && row.class);
-            if (schoolKey && rowSchool !== schoolKey) return false;
+            if (schoolKey && !schoolKeys.has(rowSchool)) return false;
             if (classKey || rawClassKey) {
                 return rowClass === classKey || rowRawClass === rawClassKey;
             }
@@ -411,6 +486,7 @@
         canShowRankComparison,
         makeStudentKey,
         getStudentIndex,
+        getEquivalentSchoolLookupKeys,
         getRowsBySchoolClass,
         getClassesForSchool,
         findStudent

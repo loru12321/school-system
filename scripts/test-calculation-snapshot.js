@@ -975,6 +975,44 @@ async function main() {
                 window.setSubjects(previousSubjects);
             }
         })();
+        const rankingDataServiceSchoolAliasPolicy = (() => {
+            const service = window.RankingDataService;
+            if (!service
+                || typeof service.getRowsBySchoolClass !== 'function'
+                || typeof service.getClassesForSchool !== 'function'
+                || typeof service.findStudent !== 'function'
+                || typeof service.getEquivalentSchoolLookupKeys !== 'function') {
+                return { available: false };
+            }
+            const previousSameSchool = window.areSchoolNamesEquivalent;
+            const rows = [
+                { school: '甲校', class: '9.1', name: '甲一', id: 'A001', total: 90, scores: { 数学: 90 } },
+                { school: '甲校', class: '9.2', name: '甲二', id: 'A002', total: 80, scores: { 数学: 80 } },
+                { school: '乙校', class: '9.1', name: '乙一', id: 'B001', total: 100, scores: { 数学: 100 } }
+            ];
+            const normalizeAliasSchool = (value) => String(value || '').trim().replace(/别名/g, '');
+            try {
+                window.areSchoolNamesEquivalent = (left, right) => (
+                    normalizeAliasSchool(left) === normalizeAliasSchool(right)
+                    || (typeof previousSameSchool === 'function' && previousSameSchool(left, right))
+                );
+                const aliasRows = service.getRowsBySchoolClass(rows, '甲校别名', '9.1');
+                const aliasClasses = service.getClassesForSchool(rows, '甲校别名');
+                const found = service.findStudent(rows, { school: '甲校别名', className: '9.1', name: '甲一' });
+                const index = service.getStudentIndex(rows);
+                return {
+                    available: true,
+                    aliasRowCount: aliasRows.length,
+                    aliasFirstName: aliasRows[0]?.name || '',
+                    aliasForeignCount: aliasRows.filter((row) => row.school === '乙校').length,
+                    aliasClasses,
+                    foundSchool: found?.school || '',
+                    lookupKeys: service.getEquivalentSchoolLookupKeys(index, '甲校别名')
+                };
+            } finally {
+                window.areSchoolNamesEquivalent = previousSameSchool;
+            }
+        })();
         const teacherAnalysisCoreSchoolAliasPolicy = (() => {
             if (typeof window.analyzeTeachers !== 'function'
                 || typeof window.calculateTeacherTownshipRanking !== 'function'
@@ -1117,6 +1155,7 @@ async function main() {
             countyAnalysisSchoolAliasPolicy,
             studentAliasIdentityPolicy,
             appSchoolAliasHelperPolicy,
+            rankingDataServiceSchoolAliasPolicy,
             teacherAnalysisCoreSchoolAliasPolicy,
             score2RatePositive: Object.values(window.SCHOOLS || {}).filter((school) => Number(school?.score2Rate) > 0).length,
             teacherRows: Object.values(window.TEACHER_STATS || {}).reduce((sum, subjects) => sum + Object.keys(subjects || {}).length, 0),
@@ -1240,6 +1279,15 @@ async function main() {
         aliasSchoolRank: 1,
         aliasClassRank: 1
     }, 'app school alias helpers should keep filters and comparison ranks school-scoped');
+    assert.deepStrictEqual(snapshot.rankingDataServiceSchoolAliasPolicy, {
+        available: true,
+        aliasRowCount: 1,
+        aliasFirstName: '甲一',
+        aliasForeignCount: 0,
+        aliasClasses: ['9.1', '9.2'],
+        foundSchool: '甲校',
+        lookupKeys: ['甲校别名', '甲校']
+    }, 'ranking data service should resolve school aliases for rows, classes, and student lookup without mixing foreign classes');
     assert.deepStrictEqual(snapshot.teacherAnalysisCoreSchoolAliasPolicy, {
         available: true,
         localStudentCount: 2,
