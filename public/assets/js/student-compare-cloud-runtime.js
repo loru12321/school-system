@@ -183,6 +183,24 @@
         return String(name || '').trim().replace(/\s+/g, '').toLowerCase();
     }
 
+    function sameCloudCompareSchoolName(left, right) {
+        const leftName = String(left || '').trim();
+        const rightName = String(right || '').trim();
+        if (!leftName || !rightName) return false;
+        if (leftName === rightName) return true;
+        if (window.PermissionPolicy && typeof window.PermissionPolicy.sameSchoolName === 'function') {
+            return window.PermissionPolicy.sameSchoolName(leftName, rightName);
+        }
+        if (typeof window.areSchoolNamesEquivalent === 'function') {
+            return window.areSchoolNamesEquivalent(leftName, rightName);
+        }
+        if (typeof areSchoolNamesEquivalent === 'function') return areSchoolNamesEquivalent(leftName, rightName);
+        if (typeof window.normalizeSchoolName === 'function') {
+            return window.normalizeSchoolName(leftName) === window.normalizeSchoolName(rightName);
+        }
+        return leftName === rightName;
+    }
+
     function setCloudCompareTarget(targetOrName, className, schoolName) {
         if (!targetOrName) {
             CLOUD_COMPARE_TARGET = null;
@@ -228,7 +246,7 @@
         return RAW_DATA.find((student) => {
             if (normalizeCompareName(student?.name || '') !== targetName) return false;
             if (targetClass && !isClassEquivalent(student?.class || '', targetClass)) return false;
-            if (targetSchool && String(student?.school || '').trim() && String(student?.school || '').trim() !== targetSchool) return false;
+            if (targetSchool && String(student?.school || '').trim() && !sameCloudCompareSchoolName(student?.school, targetSchool)) return false;
             return true;
         }) || null;
     }
@@ -531,7 +549,7 @@
             if (!targetSchool) return true;
             const school = String(s?.school || '').trim();
             if (!school) return true;
-            return areSchoolNamesEquivalent(school, targetSchool);
+            return sameCloudCompareSchoolName(school, targetSchool);
         });
 
         const exactMatches = withSchool.filter(s => normalizeCompareName(s?.name || '') === targetName && targetClass && isClassEquivalent(s?.class || '', targetClass));
@@ -598,9 +616,11 @@
             !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director', 'teacher', 'class_teacher']);
         if (!isParentOrStudent) return;
 
+        const fallbackSchool = String(selfStudent?.school || user?.school || '').trim();
         const bound = getCurrentBoundStudentFromUser(user) || (Array.isArray(RAW_DATA) ? RAW_DATA.find(s =>
             normalizeCompareName(s?.name || '') === normalizeCompareName(selfStudent?.name || user?.name || '') &&
-            (!selfStudent?.class || isClassEquivalent(s?.class || '', selfStudent.class || ''))
+            (!selfStudent?.class || isClassEquivalent(s?.class || '', selfStudent.class || '')) &&
+            (!fallbackSchool || !String(s?.school || '').trim() || sameCloudCompareSchoolName(s?.school, fallbackSchool))
         ) : null);
 
         if (bound && bound.scores) {
@@ -823,6 +843,7 @@
 
     window.saveStudentCompareToCloud = saveStudentCompareToCloud;
     window.normalizeCompareName = normalizeCompareName;
+    window.sameCloudCompareSchoolName = sameCloudCompareSchoolName;
     window.setCloudCompareTarget = setCloudCompareTarget;
     window.resolveCloudCompareTarget = resolveCloudCompareTarget;
     window.isClassEquivalent = isClassEquivalent;

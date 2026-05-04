@@ -11,7 +11,7 @@ const context = {
     appDebug() {},
     localStorage: {
         getItem(key) {
-            return key === 'MY_SCHOOL' ? '甲校' : '';
+            return key === 'MY_SCHOOL' ? '甲校别名' : '';
         }
     },
     normalizeClass(value) {
@@ -22,27 +22,28 @@ const context = {
         return text === '道法' ? '政治' : text;
     },
     areSchoolNamesEquivalent(left, right) {
-        return String(left || '').trim() === String(right || '').trim();
+        const normalize = (value) => String(value || '').trim().replace(/别名/g, '');
+        return normalize(left) === normalize(right);
     },
     readCurrentSchool() {
-        return '甲校';
+        return '甲校别名';
     },
     getCurrentUser() {
         return context.currentUser;
     },
     PermissionPolicy: {
         sameSchoolName(left, right) {
-            return String(left || '').trim() === String(right || '').trim();
+            return context.areSchoolNamesEquivalent(left, right);
         },
         filterTeacherStats(_user, stats) {
             return stats || {};
         },
         canQueryTeacherMetric(_user, _teacherName, _statItem, schoolName) {
-            return String(schoolName || '').trim() === '甲校';
+            return context.areSchoolNamesEquivalent(schoolName, '甲校');
         }
     },
-    currentUser: { role: 'class_teacher', name: '王老师', school: '甲校', class: '9.1' },
-    MY_SCHOOL: '甲校',
+    currentUser: { role: 'class_teacher', name: '王老师', school: '甲校别名', class: '9.1' },
+    MY_SCHOOL: '甲校别名',
     TEACHER_MAP: {
         '9.1_数学': '王老师',
         '9.1_英语': '李老师',
@@ -55,6 +56,7 @@ const context = {
     },
     SCHOOLS: {
         甲校: {
+            name: '甲校',
             students: [
                 { school: '甲校', class: '9.1', name: '甲一', scores: { 数学: 100 } },
                 { school: '甲校', class: '9.1', name: '甲二', scores: { 数学: 80 } }

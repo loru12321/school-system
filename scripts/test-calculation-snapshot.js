@@ -840,6 +840,90 @@ async function main() {
                 window.areSchoolNamesEquivalent = previousSameSchool;
             }
         })();
+        const studentAliasIdentityPolicy = (() => {
+            if (typeof window.getCurrentBoundStudentFromUser !== 'function'
+                || typeof window.pickSelfStudentFromCloudRows !== 'function'
+                || typeof window.findStudentForJump !== 'function'
+                || typeof window.buildClassTeacherStatsForClass !== 'function'
+                || typeof window.setRawData !== 'function'
+                || typeof window.setSchools !== 'function'
+                || typeof window.setSubjects !== 'function'
+                || typeof window.setTeacherMap !== 'function'
+                || typeof window.setTeacherSchoolMap !== 'function') {
+                return { available: false };
+            }
+            const previousRawData = typeof window.readRawData === 'function' ? window.readRawData() : (window.RAW_DATA || []);
+            const previousSchools = typeof window.readSchools === 'function' ? window.readSchools() : (window.SCHOOLS || {});
+            const previousSubjects = typeof window.readSubjects === 'function' ? window.readSubjects() : (window.SUBJECTS || []);
+            const previousTeacherMap = typeof window.readTeacherMap === 'function' ? window.readTeacherMap() : (window.TEACHER_MAP || {});
+            const previousTeacherSchoolMap = typeof window.readTeacherSchoolMap === 'function' ? window.readTeacherSchoolMap() : (window.TEACHER_SCHOOL_MAP || {});
+            const previousThresholds = window.THRESHOLDS || {};
+            const previousSchool = typeof window.readCurrentSchool === 'function'
+                ? window.readCurrentSchool()
+                : String(window.MY_SCHOOL || '');
+            const previousSameSchool = window.areSchoolNamesEquivalent;
+            const previousGetCurrentUser = window.getCurrentUser;
+            const rows = [
+                { school: '甲校', class: '9.1', name: '张三', total: 90, scores: { 数学: 90 } },
+                { school: '乙校', class: '9.1', name: '张三', total: 60, scores: { 数学: 60 } }
+            ];
+            const normalizeAliasSchool = (value) => String(value || '').trim().replace(/别名/g, '');
+            try {
+                window.areSchoolNamesEquivalent = (left, right) => (
+                    normalizeAliasSchool(left) === normalizeAliasSchool(right)
+                    || (typeof previousSameSchool === 'function' && previousSameSchool(left, right))
+                );
+                window.getCurrentUser = () => ({ role: 'class_teacher', name: '王老师', school: '甲校别名', class: '9.1' });
+                if (typeof window.writeCurrentSchool === 'function') window.writeCurrentSchool('甲校别名');
+                else window.MY_SCHOOL = '甲校别名';
+                window.setRawData(rows);
+                window.setSchools({
+                    甲校: { name: '甲校', students: [rows[0]], metrics: { 数学: { avg: 90, count: 1 } } },
+                    乙校: { name: '乙校', students: [rows[1]], metrics: { 数学: { avg: 60, count: 1 } } }
+                });
+                window.setSubjects(['数学']);
+                window.setTeacherMap({ '9.1_数学': '王老师' });
+                window.setTeacherSchoolMap({ '9.1_数学': '甲校' });
+                window.THRESHOLDS = { 数学: { exc: 85, pass: 60 } };
+                const bound = window.getCurrentBoundStudentFromUser({
+                    role: 'student',
+                    name: '张三',
+                    class: '9.1',
+                    school: '甲校别名'
+                });
+                const picked = window.pickSelfStudentFromCloudRows([
+                    { school: '乙校', class: '9.1', name: '张三', latestTotal: 60 },
+                    { school: '甲校', class: '9.1', name: '张三', latestTotal: 90 }
+                ], {
+                    name: typeof window.normalizeCompareName === 'function' ? window.normalizeCompareName('张三') : '张三',
+                    class: '9.1',
+                    school: '甲校别名'
+                });
+                const jump = window.findStudentForJump('张三', '甲校别名', '9.1');
+                const teacherStats = window.buildClassTeacherStatsForClass('9.1');
+                return {
+                    available: true,
+                    boundSchool: bound?.school || '',
+                    boundScore: Number(bound?.scores?.数学 || 0),
+                    pickedSchool: picked?.student?.school || '',
+                    pickedTotal: Number(picked?.student?.latestTotal || 0),
+                    jumpSchool: jump?.school || '',
+                    teacherStudentCount: Number(teacherStats?.王老师?.数学?.studentCount || 0),
+                    teacherAvg: String(teacherStats?.王老师?.数学?.avg || '')
+                };
+            } finally {
+                window.areSchoolNamesEquivalent = previousSameSchool;
+                if (previousGetCurrentUser) window.getCurrentUser = previousGetCurrentUser;
+                if (typeof window.writeCurrentSchool === 'function') window.writeCurrentSchool(previousSchool);
+                else window.MY_SCHOOL = previousSchool;
+                window.setRawData(previousRawData);
+                window.setSchools(previousSchools);
+                window.setSubjects(previousSubjects);
+                window.setTeacherMap(previousTeacherMap);
+                window.setTeacherSchoolMap(previousTeacherSchoolMap);
+                window.THRESHOLDS = previousThresholds;
+            }
+        })();
         const teacherAnalysisCoreSchoolAliasPolicy = (() => {
             if (typeof window.analyzeTeachers !== 'function'
                 || typeof window.calculateTeacherTownshipRanking !== 'function'
@@ -980,6 +1064,7 @@ async function main() {
             teacherCompareSchoolIsolationPolicy,
             compareSchoolAliasDefaultPolicy,
             countyAnalysisSchoolAliasPolicy,
+            studentAliasIdentityPolicy,
             teacherAnalysisCoreSchoolAliasPolicy,
             score2RatePositive: Object.values(window.SCHOOLS || {}).filter((school) => Number(school?.score2Rate) > 0).length,
             teacherRows: Object.values(window.TEACHER_STATS || {}).reduce((sum, subjects) => sum + Object.keys(subjects || {}).length, 0),
@@ -1084,6 +1169,16 @@ async function main() {
         highlightedSchool: '甲校',
         highlightsForeignSchool: false
     }, 'county analysis should resolve and highlight school aliases consistently');
+    assert.deepStrictEqual(snapshot.studentAliasIdentityPolicy, {
+        available: true,
+        boundSchool: '甲校',
+        boundScore: 90,
+        pickedSchool: '甲校',
+        pickedTotal: 90,
+        jumpSchool: '甲校',
+        teacherStudentCount: 1,
+        teacherAvg: '90.00'
+    }, 'student identity, jump, and class-teacher stats should resolve school aliases without mixing foreign students');
     assert.deepStrictEqual(snapshot.teacherAnalysisCoreSchoolAliasPolicy, {
         available: true,
         localStudentCount: 2,

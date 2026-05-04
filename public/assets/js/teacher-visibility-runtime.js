@@ -41,6 +41,18 @@ function isTeacherAssignmentVisibleForSchool(key, schoolName) {
     return !explicitSchool || sameTeacherVisibilitySchool(explicitSchool, targetSchool);
 }
 
+function resolveTeacherVisibilitySchoolData(schoolName) {
+    const targetSchool = normalizeTeacherVisibilitySchool(schoolName);
+    const schools = window.SCHOOLS || {};
+    if (!targetSchool) return null;
+    if (schools[targetSchool]) return schools[targetSchool];
+    const entry = Object.entries(schools || {}).find(([key, schoolData]) => (
+        sameTeacherVisibilitySchool(key, targetSchool)
+        || sameTeacherVisibilitySchool(schoolData?.name, targetSchool)
+    ));
+    return entry?.[1] || null;
+}
+
 function getTeacherScopeForUser(user) {
     const scope = { classes: new Set(), subjects: new Set() };
     if (!user || !window.TEACHER_MAP) {
@@ -74,10 +86,14 @@ function getTeacherScopeForUser(user) {
 
 function buildClassTeacherStatsForClass(className) {
     const stats = {};
-    const mySchoolData = SCHOOLS[MY_SCHOOL];
-    if (!mySchoolData || !className) return stats;
+    const boundSchool = getTeacherVisibilityBoundSchool(typeof getCurrentUser === 'function' ? getCurrentUser() : null) || normalizeTeacherVisibilitySchool(MY_SCHOOL);
+    const mySchoolData = resolveTeacherVisibilitySchoolData(boundSchool);
+    const sourceStudents = Array.isArray(mySchoolData?.students)
+        ? mySchoolData.students
+        : (RAW_DATA || []).filter(s => !boundSchool || sameTeacherVisibilitySchool(s?.school, boundSchool));
+    if (!sourceStudents.length || !className) return stats;
     Object.entries(TEACHER_MAP || {}).forEach(([key, teacherName]) => {
-        if (!isTeacherAssignmentVisibleForSchool(key, MY_SCHOOL)) return;
+        if (!isTeacherAssignmentVisibleForSchool(key, boundSchool)) return;
         const [rawClass, rawSubject] = key.split('_');
         const cls = normalizeClass(rawClass);
         if (cls !== className) return;
@@ -85,7 +101,7 @@ function buildClassTeacherStatsForClass(className) {
         const useSubject = SUBJECTS.find(s => normalizeSubject(s) === subject) || subject;
         if (!useSubject) return;
         if (!stats[teacherName]) stats[teacherName] = {};
-        const students = mySchoolData.students.filter(s => normalizeClass(s.class) === cls && s.scores[useSubject] !== undefined);
+        const students = sourceStudents.filter(s => normalizeClass(s.class) === cls && s.scores[useSubject] !== undefined);
         const gs = { exc: THRESHOLDS[useSubject]?.exc || 0, pass: THRESHOLDS[useSubject]?.pass || 0, low: (THRESHOLDS[useSubject]?.pass || 60) * 0.6 };
         const totalScore = students.reduce((sum, s) => sum + s.scores[useSubject], 0);
         const avg = students.length ? (totalScore / students.length).toFixed(2) : '0.00';
