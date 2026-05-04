@@ -924,6 +924,57 @@ async function main() {
                 window.THRESHOLDS = previousThresholds;
             }
         })();
+        const appSchoolAliasHelperPolicy = (() => {
+            if (typeof window.sameAppSchoolName !== 'function'
+                || typeof window.getAppSchoolRecord !== 'function'
+                || typeof window.filterRowsByAppSchool !== 'function'
+                || typeof window.buildComparisonStudentRankContext !== 'function'
+                || typeof window.setRawData !== 'function'
+                || typeof window.setSchools !== 'function'
+                || typeof window.setSubjects !== 'function') {
+                return { available: false };
+            }
+            const previousRawData = typeof window.readRawData === 'function' ? window.readRawData() : (window.RAW_DATA || []);
+            const previousSchools = typeof window.readSchools === 'function' ? window.readSchools() : (window.SCHOOLS || {});
+            const previousSubjects = typeof window.readSubjects === 'function' ? window.readSubjects() : (window.SUBJECTS || []);
+            const previousSameSchool = window.areSchoolNamesEquivalent;
+            const rows = [
+                { school: '甲校', class: '9.1', name: '甲一', total: 90, scores: { 数学: 90 } },
+                { school: '甲校', class: '9.1', name: '甲二', total: 80, scores: { 数学: 80 } },
+                { school: '乙校', class: '9.1', name: '乙一', total: 100, scores: { 数学: 100 } }
+            ];
+            const normalizeAliasSchool = (value) => String(value || '').trim().replace(/别名/g, '');
+            try {
+                window.areSchoolNamesEquivalent = (left, right) => (
+                    normalizeAliasSchool(left) === normalizeAliasSchool(right)
+                    || (typeof previousSameSchool === 'function' && previousSameSchool(left, right))
+                );
+                window.setRawData(rows);
+                window.setSchools({
+                    甲校: { name: '甲校', students: rows.filter((row) => row.school === '甲校') },
+                    乙校: { name: '乙校', students: rows.filter((row) => row.school === '乙校') }
+                });
+                window.setSubjects(['数学']);
+                const schoolRecord = window.getAppSchoolRecord('甲校别名');
+                const filteredRows = window.filterRowsByAppSchool(rows, '甲校别名');
+                const rankContext = window.buildComparisonStudentRankContext(rows, ['数学']);
+                const targetKey = rankContext.keyOf(rows[0]);
+                return {
+                    available: true,
+                    sameSchool: window.sameAppSchoolName('甲校别名', '甲校'),
+                    resolvedStudentCount: Number(schoolRecord?.students?.length || 0),
+                    filteredCount: filteredRows.length,
+                    filteredForeignCount: filteredRows.filter((row) => row.school === '乙校').length,
+                    aliasSchoolRank: rankContext.getSchoolRankMap('甲校别名').get(targetKey) || 0,
+                    aliasClassRank: rankContext.getClassRankMap('甲校别名', '9.1').get(targetKey) || 0
+                };
+            } finally {
+                window.areSchoolNamesEquivalent = previousSameSchool;
+                window.setRawData(previousRawData);
+                window.setSchools(previousSchools);
+                window.setSubjects(previousSubjects);
+            }
+        })();
         const teacherAnalysisCoreSchoolAliasPolicy = (() => {
             if (typeof window.analyzeTeachers !== 'function'
                 || typeof window.calculateTeacherTownshipRanking !== 'function'
@@ -1065,6 +1116,7 @@ async function main() {
             compareSchoolAliasDefaultPolicy,
             countyAnalysisSchoolAliasPolicy,
             studentAliasIdentityPolicy,
+            appSchoolAliasHelperPolicy,
             teacherAnalysisCoreSchoolAliasPolicy,
             score2RatePositive: Object.values(window.SCHOOLS || {}).filter((school) => Number(school?.score2Rate) > 0).length,
             teacherRows: Object.values(window.TEACHER_STATS || {}).reduce((sum, subjects) => sum + Object.keys(subjects || {}).length, 0),
@@ -1179,6 +1231,15 @@ async function main() {
         teacherStudentCount: 1,
         teacherAvg: '90.00'
     }, 'student identity, jump, and class-teacher stats should resolve school aliases without mixing foreign students');
+    assert.deepStrictEqual(snapshot.appSchoolAliasHelperPolicy, {
+        available: true,
+        sameSchool: true,
+        resolvedStudentCount: 2,
+        filteredCount: 2,
+        filteredForeignCount: 0,
+        aliasSchoolRank: 1,
+        aliasClassRank: 1
+    }, 'app school alias helpers should keep filters and comparison ranks school-scoped');
     assert.deepStrictEqual(snapshot.teacherAnalysisCoreSchoolAliasPolicy, {
         available: true,
         localStudentCount: 2,

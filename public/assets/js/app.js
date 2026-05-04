@@ -873,6 +873,66 @@ function clearCurrentSchool() {
     return '';
 }
 
+function normalizeAppSchoolName(value) {
+    const text = String(value || '').trim();
+    if (typeof window.normalizeSchoolName === 'function') return window.normalizeSchoolName(text) || text;
+    if (typeof normalizeSchoolName === 'function') return normalizeSchoolName(text) || text;
+    return text;
+}
+
+function sameAppSchoolName(left, right) {
+    const leftName = String(left || '').trim();
+    const rightName = String(right || '').trim();
+    if (!leftName || !rightName) return false;
+    if (leftName === rightName) return true;
+    if (window.PermissionPolicy && typeof window.PermissionPolicy.sameSchoolName === 'function') {
+        return window.PermissionPolicy.sameSchoolName(leftName, rightName);
+    }
+    if (typeof window.areSchoolNamesEquivalent === 'function') return window.areSchoolNamesEquivalent(leftName, rightName);
+    if (typeof areSchoolNamesEquivalent === 'function') return areSchoolNamesEquivalent(leftName, rightName);
+    return normalizeAppSchoolName(leftName) === normalizeAppSchoolName(rightName);
+}
+
+function readAppSchools(schools) {
+    if (schools && typeof schools === 'object' && !Array.isArray(schools)) return schools;
+    if (window.SCHOOLS && typeof window.SCHOOLS === 'object') return window.SCHOOLS;
+    if (typeof SCHOOLS !== 'undefined' && SCHOOLS && typeof SCHOOLS === 'object') return SCHOOLS;
+    return {};
+}
+
+function resolveAppSchoolKey(schoolName, schools) {
+    const targetSchool = String(schoolName || '').trim();
+    const schoolMap = readAppSchools(schools);
+    if (!targetSchool || !schoolMap || typeof schoolMap !== 'object') return '';
+    if (Object.prototype.hasOwnProperty.call(schoolMap, targetSchool)) return targetSchool;
+    const keyMatch = Object.keys(schoolMap).find(key => sameAppSchoolName(key, targetSchool));
+    if (keyMatch) return keyMatch;
+    const namedMatch = Object.entries(schoolMap).find(([, schoolData]) => sameAppSchoolName(schoolData?.name, targetSchool));
+    return namedMatch?.[0] || '';
+}
+
+function getAppSchoolRecord(schoolName, schools) {
+    const schoolMap = readAppSchools(schools);
+    const key = resolveAppSchoolKey(schoolName, schoolMap);
+    return key ? schoolMap[key] : null;
+}
+
+function filterRowsByAppSchool(rows, schoolName) {
+    const targetSchool = String(schoolName || '').trim();
+    const sourceRows = Array.isArray(rows) ? rows : [];
+    if (!targetSchool) return sourceRows;
+    return sourceRows.filter(row => sameAppSchoolName(row?.school, targetSchool));
+}
+
+Object.assign(window, {
+    normalizeAppSchoolName,
+    sameAppSchoolName,
+    readAppSchools,
+    resolveAppSchoolKey,
+    getAppSchoolRecord,
+    filterRowsByAppSchool
+});
+
 // 🔐 权限与账号管理系统核心
 const TeacherStateRuntime = window.TeacherState || null;
 
@@ -6780,7 +6840,7 @@ const DataManager = {
         }
 
         if (selectedSchool) {
-            list = list.filter(t => t.school === selectedSchool);
+            list = list.filter(t => sameAppSchoolName(t.school, selectedSchool));
         }
 
         list.sort((a, b) => {
@@ -11542,7 +11602,7 @@ function renderStudentDetails(reset = true) {
                 }
                 // 非管理员、非教务主任、非级部主任的其他角色：按学校过滤
                 else if (user.school) {
-                    data = data.filter(s => s.school === user.school);
+                    data = data.filter(s => sameAppSchoolName(s.school, user.school));
                     appDebug(`[考试明细] 按学校过滤: ${user.school}`);
                 }
             }
@@ -11552,10 +11612,10 @@ function renderStudentDetails(reset = true) {
         // --- B. 顶部下拉框过滤 (依然保留，作为一级筛选) ---
         // 下拉框筛选逻辑（在权限筛选的基础上二次筛选）
         if (hasSelectedSchool && !(window.RankingDataService && typeof window.RankingDataService.getRowsBySchoolClass === 'function')) {
-            data = data.filter(s => s.school === selectedSchool);
+            data = data.filter(s => sameAppSchoolName(s.school, selectedSchool));
             if (hasSelectedClass) {
                 // 如果是教师，需要确保选中的班级在权限范围内（虽然下拉框可能已经限制了）
-                data = data.filter(s => s.class === selectedClass);
+                data = data.filter(s => normalizeClass(s.class) === normalizeClass(selectedClass));
             }
         }
 
@@ -12025,15 +12085,15 @@ function exportStudentDetails() {
         const myClass = normalizeClass(user.class);
         studentsToShow = studentsToShow.filter(s => normalizeClass(s.class) === myClass);
     } else if (selectedSchool && !selectedSchool.includes('请选择') && !(window.RankingDataService && typeof window.RankingDataService.getRowsBySchoolClass === 'function')) {
-        studentsToShow = studentsToShow.filter(s => s.school === selectedSchool);
-        if (selectedClass && selectedClass !== '全部') studentsToShow = studentsToShow.filter(s => s.class === selectedClass);
+        studentsToShow = studentsToShow.filter(s => sameAppSchoolName(s.school, selectedSchool));
+        if (selectedClass && selectedClass !== '全部') studentsToShow = studentsToShow.filter(s => normalizeClass(s.class) === normalizeClass(selectedClass));
     }
 
     if (selectedSchool && !selectedSchool.includes('请选择') && !(window.RankingDataService && typeof window.RankingDataService.getRowsBySchoolClass === 'function')) {
-        studentsToShow = studentsToShow.filter(s => s.school === selectedSchool);
+        studentsToShow = studentsToShow.filter(s => sameAppSchoolName(s.school, selectedSchool));
     }
     if (selectedClass && selectedClass !== '全部' && !(window.RankingDataService && typeof window.RankingDataService.getRowsBySchoolClass === 'function')) {
-        studentsToShow = studentsToShow.filter(s => s.class === selectedClass);
+        studentsToShow = studentsToShow.filter(s => normalizeClass(s.class) === normalizeClass(selectedClass));
     }
 
     studentsToShow = getComparisonStudentList(studentsToShow, RAW_DATA);
@@ -12158,7 +12218,8 @@ function generateTeacherInputs() {
     const container = document.getElementById('teacherInputsContainer');
     if (!container) return;
     container.innerHTML = '';
-    const mySchoolData = SCHOOLS[MY_SCHOOL]; if (!mySchoolData) return;
+    const mySchoolData = getAppSchoolRecord(readCurrentSchool() || MY_SCHOOL);
+    if (!mySchoolData) return;
     const classes = [...new Set(mySchoolData.students.map(s => s.class))].sort((a, b) => { const [gradeA, classA] = a.split('.').map(Number); const [gradeB, classB] = b.split('.').map(Number); if (gradeA !== gradeB) return gradeA - gradeB; return classA - classB; });
     const teacherInputFragment = document.createDocumentFragment();
     classes.forEach(cls => {
@@ -12780,7 +12841,7 @@ function buildComparisonStudentRankContext(allStudents, totalSubjects = getCompa
             schoolRankMaps.set(
                 schoolKey,
                 buildCompetitionRankMap(
-                    withTotals.filter(item => String(item.row?.school || '').trim() === schoolKey),
+                    withTotals.filter(item => sameAppSchoolName(item.row?.school, schoolKey)),
                     item => keyOf(item.row),
                     item => item.total
                 )
@@ -12798,7 +12859,7 @@ function buildComparisonStudentRankContext(allStudents, totalSubjects = getCompa
                 cacheKey,
                 buildCompetitionRankMap(
                     withTotals.filter(item => (
-                        String(item.row?.school || '').trim() === schoolKey
+                        sameAppSchoolName(item.row?.school, schoolKey)
                         && classKeyOf(item.row?.class || '') === classKey
                     )),
                     item => keyOf(item.row),
@@ -12836,6 +12897,12 @@ function getComparisonStudentList(records, allStudents = RAW_DATA) {
     const comparisonContext = buildComparisonStudentRankContext(allStudents);
     return records.map(record => getComparisonStudentView(record, allStudents, comparisonContext));
 }
+
+Object.assign(window, {
+    buildComparisonStudentRankContext,
+    getComparisonStudentView,
+    getComparisonStudentList
+});
 
 function formatComparisonExamLabel(rawLabel, fallback = '本次') {
     const raw = String(rawLabel || '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
