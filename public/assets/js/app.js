@@ -5389,6 +5389,7 @@ const AccountManager = {
         return requireAccountManagerRuntime().resetPassword(this, username);
     }
 };
+window.AccountManager = AccountManager;
 
 // 📊 [新增] 数据综合管理器 (学生/教师/档案/参数/目标)
 const DataManager = {
@@ -19104,6 +19105,5 @@ if (typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeE
         }, 1500);
     }
 })();
-
 
 

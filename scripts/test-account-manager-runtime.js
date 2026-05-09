@@ -7,7 +7,13 @@ async function run() {
     const hintEl = { innerHTML: '' };
     const inputEl = { value: '', focusCalled: false, focus() { this.focusCalled = true; } };
     const modalEl = { style: { display: 'none' } };
-    const tbody = { innerHTML: '' };
+    const tbody = {
+        innerHTML: '',
+        handlers: {},
+        addEventListener(type, handler) {
+            this.handlers[type] = handler;
+        }
+    };
     const resultTable = { querySelector: () => tbody };
 
     const alerts = [];
@@ -53,10 +59,15 @@ async function run() {
     };
 
     const runtime = createAccountManagerRuntime(root);
+    const editCalls = [];
+    const resetCalls = [];
     const manager = {
         renderTable(list) { return runtime.renderTable.call(this, list); },
-        search() { return runtime.search(this); }
+        search() { return runtime.search(this); },
+        editAttributes(username, role, className) { editCalls.push({ username, role, className }); },
+        resetPassword(username) { resetCalls.push(username); }
     };
+    root.AccountManager = manager;
 
     runtime.open();
     assert.ok(hintEl.innerHTML.includes('管理员权限'));
@@ -67,7 +78,42 @@ async function run() {
     await runtime.search(manager);
     assert.strictEqual(gatewayCalls.length, 1);
     assert.strictEqual(gatewayCalls[0].keyword, 'abc');
-    assert.ok(String(tbody.innerHTML).includes('AccountManager.editAttributes'));
+    assert.ok(String(tbody.innerHTML).includes('data-account-action="edit"'));
+    assert.ok(!String(tbody.innerHTML).includes('onclick="AccountManager.'));
+    assert.strictEqual(typeof tbody.handlers.click, 'function');
+
+    tbody.handlers.click({
+        target: {
+            closest(selector) {
+                assert.strictEqual(selector, '[data-account-action]');
+                return {
+                    disabled: false,
+                    dataset: {
+                        accountAction: 'edit',
+                        accountUsername: 'u1',
+                        accountRole: 'parent',
+                        accountClass: '701'
+                    }
+                };
+            }
+        }
+    });
+    assert.deepStrictEqual(editCalls[0], { username: 'u1', role: 'parent', className: '701' });
+
+    tbody.handlers.click({
+        target: {
+            closest() {
+                return {
+                    disabled: false,
+                    dataset: {
+                        accountAction: 'reset-password',
+                        accountUsername: 'u1'
+                    }
+                };
+            }
+        }
+    });
+    assert.deepStrictEqual(resetCalls, ['u1']);
 
     inputEl.value = '';
     await runtime.search(manager);

@@ -53,10 +53,6 @@
         }[char]));
     }
 
-    function escapeJsString(value) {
-        return String(value ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, ' ');
-    }
-
     function getCurrentUser() {
         if (!root.Auth || typeof root.Auth !== 'object') return null;
         return root.Auth.currentUser || null;
@@ -73,6 +69,39 @@
     function callManagerMethod(manager, name, args) {
         if (!manager || typeof manager[name] !== 'function') return;
         return manager[name].apply(manager, args || []);
+    }
+
+    function getAccountManagerController() {
+        return root.AccountManager && typeof root.AccountManager === 'object'
+            ? root.AccountManager
+            : null;
+    }
+
+    function bindTableActions(tbody) {
+        if (!tbody || tbody.__accountManagerActionsBound || typeof tbody.addEventListener !== 'function') return;
+        tbody.addEventListener('click', (event) => {
+            const target = event.target && typeof event.target.closest === 'function'
+                ? event.target.closest('[data-account-action]')
+                : null;
+            if (!target || target.disabled) return;
+            const manager = getAccountManagerController();
+            if (!manager) return;
+            const action = String(target.dataset.accountAction || '').trim();
+            const username = String(target.dataset.accountUsername || '').trim();
+            if (!username) return;
+            if (action === 'edit' && typeof manager.editAttributes === 'function') {
+                manager.editAttributes(
+                    username,
+                    String(target.dataset.accountRole || '').trim(),
+                    String(target.dataset.accountClass || '').trim()
+                );
+                return;
+            }
+            if (action === 'reset-password' && typeof manager.resetPassword === 'function') {
+                manager.resetPassword(username);
+            }
+        });
+        tbody.__accountManagerActionsBound = true;
     }
 
     function open() {
@@ -185,9 +214,9 @@
             const btnClass = canEdit ? 'btn-primary' : 'btn-gray';
             const cursorStyle = canEdit ? '' : 'cursor:not-allowed; opacity:0.6;';
             const disableAttr = canEdit ? '' : 'disabled';
-            const safeUser = escapeJsString(user.username || '');
-            const safeRole = escapeJsString(user.role || '');
-            const safeClass = escapeJsString(user.class_name || '');
+            const safeUser = escapeHtml(user.username || '');
+            const safeRole = escapeHtml(user.role || '');
+            const safeClass = escapeHtml(user.class_name || '');
 
             html += `
                     <tr>
@@ -197,11 +226,11 @@
                         <td style="font-family:monospace; color:#666;">${escapeHtml(user.password_display || '未设置')}</td>
                         <td>
                             <button class="btn btn-sm btn-purple" ${disableAttr} style="padding:2px 6px; font-size:12px; margin-right:5px; ${cursorStyle}"
-                                    onclick="AccountManager.editAttributes('${safeUser}', '${safeRole}', '${safeClass}')">
+                                    data-account-action="edit" data-account-username="${safeUser}" data-account-role="${safeRole}" data-account-class="${safeClass}">
                                 <i class="ti ti-edit"></i> 修改
                             </button>
                             <button class="btn btn-sm ${btnClass}" ${disableAttr} style="padding:2px 6px; font-size:12px; ${cursorStyle}"
-                                    onclick="AccountManager.resetPassword('${safeUser}')">
+                                    data-account-action="reset-password" data-account-username="${safeUser}">
                                 <i class="ti ti-key"></i> 改密
                             </button>
                         </td>
@@ -209,6 +238,7 @@
                 `;
         });
         tbody.innerHTML = html;
+        bindTableActions(tbody);
     }
 
     async function editAttributes(manager, username, currentRole, currentClass) {
