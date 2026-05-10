@@ -27,6 +27,31 @@
     <script defer src="./assets/js/runtime-registry-runtime.js?v=20260501-runtime-registry-v1"></script>
     <script defer src="./assets/js/boot-runtime.js?v=20260422-boot-racefix-v1"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
+    <script>
+        (function () {
+            function removeIntroPanels(scope) {
+                (scope && scope.querySelectorAll ? scope : document)
+                    .querySelectorAll('.module-desc-bar')
+                    .forEach(function (panel) { panel.remove(); });
+            }
+            function installIntroPanelRemover() {
+                removeIntroPanels(document);
+                if (window.__EARLY_MODULE_INTRO_PANEL_REMOVER__) return;
+                window.__EARLY_MODULE_INTRO_PANEL_REMOVER__ = true;
+                if (typeof MutationObserver !== 'function') return;
+                new MutationObserver(function (mutations) {
+                    mutations.forEach(function (mutation) {
+                        mutation.addedNodes.forEach(function (node) {
+                            if (!node || node.nodeType !== 1) return;
+                            if (node.matches && node.matches('.module-desc-bar')) node.remove();
+                            else removeIntroPanels(node);
+                        });
+                    });
+                }).observe(document.documentElement, { childList: true, subtree: true });
+            }
+            installIntroPanelRemover();
+        }());
+    </script>
 
     <!-- ================== Windows 11 Fluent Design UI 重构包 ================== -->
     

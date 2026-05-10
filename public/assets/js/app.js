@@ -8493,6 +8493,25 @@ function scheduleAfterPaint(callback, delay = 0) {
     }
 }
 
+function removeModuleIntroPanels(scope = document) {
+    (scope?.querySelectorAll ? scope : document).querySelectorAll('.module-desc-bar').forEach(panel => panel.remove());
+}
+
+function installModuleIntroPanelRemover() {
+    removeModuleIntroPanels(document);
+    if (window.__MODULE_INTRO_PANEL_REMOVER__) return;
+    window.__MODULE_INTRO_PANEL_REMOVER__ = true;
+    if (typeof MutationObserver !== 'function') return;
+    new MutationObserver((mutations) => {
+        mutations.forEach(mutation => mutation.addedNodes.forEach(node => {
+            if (!node || node.nodeType !== 1) return;
+            node.matches?.('.module-desc-bar') ? node.remove() : removeModuleIntroPanels(node);
+        }));
+    }).observe(document.documentElement, { childList: true, subtree: true });
+}
+
+installModuleIntroPanelRemover();
+
 function getModuleSectionsCached(force = false) {
     if (!force && Array.isArray(ModuleSwitchPerfCache.sections)) {
         return ModuleSwitchPerfCache.sections;
@@ -9500,9 +9519,11 @@ function switchTab(id) {
     if (typeof window.ensureLazySectionLoaded === 'function') {
         const before = getModuleSectionById(id);
         const loaded = window.ensureLazySectionLoaded(id);
+        if (loaded) removeModuleIntroPanels(document);
         if (loaded && loaded !== before) getModuleSectionsCached(true);
     }
     ensureCountySubmoduleSectionForSwitch(id);
+    removeModuleIntroPanels(document);
 
     // 1. 切换内容区域显示
     forceHideAllSectionsExcept(id);
@@ -9553,6 +9574,7 @@ function switchTab(id) {
         return true;
     };
     scheduleAfterPaint(() => {
+        removeModuleIntroPanels(document);
         if (dispatchModuleEnter()) return;
         window.setTimeout(dispatchModuleEnter, 180);
         window.setTimeout(dispatchModuleEnter, 700);
@@ -16753,34 +16775,15 @@ window.addEventListener('load', () => {
     });
     renderAutoSnapshotsUI();
     updateAdminOnlyButtons();
-    initModuleDescToggles();
     updateWatermark();
     if (Auth?.currentUser && !ensureCurrentCohortIdentity()) {
         showCohortPicker();
     }
     bindModalInteractionGuards();
 });
-document.addEventListener('DOMContentLoaded', bindModalInteractionGuards);
-
-function initModuleDescToggles() {
-    const collapsed = localStorage.getItem('desc_collapsed') !== 'false';
-    document.querySelectorAll('.module-desc-bar').forEach(bar => {
-        if (!bar.querySelector('.desc-toggle')) {
-            const btn = document.createElement('button');
-            btn.className = 'desc-toggle';
-            btn.type = 'button';
-            btn.textContent = collapsed ? '展开说明' : '收起说明';
-            btn.onclick = () => {
-                bar.classList.toggle('desc-collapsed');
-                const isCollapsed = bar.classList.contains('desc-collapsed');
-                btn.textContent = isCollapsed ? '展开说明' : '收起说明';
-                localStorage.setItem('desc_collapsed', String(isCollapsed));
-            };
-            bar.appendChild(btn);
-        }
-        if (collapsed) bar.classList.add('desc-collapsed');
-    });
-}
+document.addEventListener('DOMContentLoaded', () => {
+    bindModalInteractionGuards();
+});
 
 function openCloudRollback() {
     const user = Auth?.currentUser;
