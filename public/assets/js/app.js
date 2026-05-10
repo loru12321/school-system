@@ -8428,6 +8428,61 @@ if (!window.NAV_STRUCTURE) {
     console.warn('shell-runtime.js 未加载，导航结构将保持空对象。');
 }
 
+const ModuleSwitchPerfCache = {
+    sections: null,
+    sectionById: new Map(),
+    categoryByModule: new Map(),
+    navSignature: '',
+    activeId: '',
+    activeSection: null,
+    primaryColor: '',
+    dockRefreshTimer: 0
+};
+
+function getModuleSectionsCached(force = false) {
+    if (!force && Array.isArray(ModuleSwitchPerfCache.sections)) {
+        return ModuleSwitchPerfCache.sections;
+    }
+    const sections = Array.from(document.querySelectorAll('.section'));
+    ModuleSwitchPerfCache.sections = sections;
+    ModuleSwitchPerfCache.sectionById = new Map(sections.map(section => [section.id, section]));
+    return sections;
+}
+
+function getModuleSectionById(id) {
+    const key = String(id || '').trim();
+    if (!key) return null;
+    if (!ModuleSwitchPerfCache.sectionById.size) getModuleSectionsCached(true);
+    return ModuleSwitchPerfCache.sectionById.get(key) || document.getElementById(key);
+}
+
+function getModuleCategoryKeyCached(id) {
+    const navSignature = Object.keys(NAV_STRUCTURE).map(catKey => {
+        const items = Array.isArray(NAV_STRUCTURE[catKey]?.items) ? NAV_STRUCTURE[catKey].items : [];
+        return `${catKey}:${items.map(item => item.id).join('|')}`;
+    }).join(';');
+    if (ModuleSwitchPerfCache.navSignature !== navSignature) {
+        ModuleSwitchPerfCache.categoryByModule.clear();
+        Object.keys(NAV_STRUCTURE).forEach(catKey => {
+            const items = Array.isArray(NAV_STRUCTURE[catKey]?.items) ? NAV_STRUCTURE[catKey].items : [];
+            items.forEach(item => {
+                if (item?.id) ModuleSwitchPerfCache.categoryByModule.set(item.id, catKey);
+            });
+        });
+        ModuleSwitchPerfCache.navSignature = navSignature;
+    }
+    return ModuleSwitchPerfCache.categoryByModule.get(id) || null;
+}
+
+function scheduleModuleDockRefresh() {
+    if (typeof window.refreshModuleSubnavDock !== 'function') return;
+    window.clearTimeout(ModuleSwitchPerfCache.dockRefreshTimer);
+    ModuleSwitchPerfCache.dockRefreshTimer = window.setTimeout(() => {
+        window.refreshModuleSubnavDock();
+        window.setTimeout(window.refreshModuleSubnavDock, 120);
+    }, 0);
+}
+
 function ensureCountySubmoduleSectionForSwitch(id) {
     if (id !== 'county-teacher-portrait' && id !== 'county-school-horizontal') return;
     if (document.getElementById(id)) return;
@@ -9292,11 +9347,17 @@ function tmApplySelectValue(selectId, preferredValue = '', preferredText = '') {
 // Teaching management overview/module runtime moved to public/assets/js/teaching-management-runtime.js.
 
 function forceHideAllSectionsExcept(targetId = '') {
-    document.querySelectorAll('.section').forEach(el => {
+    const sections = getModuleSectionsCached();
+    sections.forEach(el => {
         if (targetId && el.id === targetId) return;
+        if (!el.classList.contains('active') && el.style.display === 'none') return;
         el.classList.remove('active');
         el.style.display = 'none';
     });
+    if (targetId) {
+        ModuleSwitchPerfCache.activeId = targetId;
+        ModuleSwitchPerfCache.activeSection = getModuleSectionById(targetId);
+    }
 }
 
 function enforceSectionIsolation(targetId) {
@@ -9383,16 +9444,18 @@ function switchTab(id) {
     if (!__guardBypass && !guardBeforeSwitch(id)) return;
     if (__guardBypass) __guardBypass = false;
     if (typeof window.ensureLazySectionLoaded === 'function') {
-        window.ensureLazySectionLoaded(id);
+        const before = getModuleSectionById(id);
+        const loaded = window.ensureLazySectionLoaded(id);
+        if (loaded && loaded !== before) getModuleSectionsCached(true);
     }
     ensureCountySubmoduleSectionForSwitch(id);
 
     // 1. 切换内容区域显示
-    forceHideAllSectionsExcept();
+    forceHideAllSectionsExcept(id);
     if (id !== 'teacher-analysis' && typeof window.releaseTeacherAnalysisHeavyDom === 'function') {
         window.setTimeout(() => window.releaseTeacherAnalysisHeavyDom(), 0);
     }
-    const targetSection = document.getElementById(id);
+    const targetSection = getModuleSectionById(id);
     if (!targetSection) {
         console.error(`❌ 找不到模块: ${id}`);
         alert(`模块 "${id}" 不存在，请联系管理员`);
@@ -9406,21 +9469,17 @@ function switchTab(id) {
 
     // 2. 定位所属大类
     let currentCategory = getCurrentCategoryKey();
-    let foundCategory = null;
-
-    Object.keys(NAV_STRUCTURE).forEach(catKey => {
-        const item = NAV_STRUCTURE[catKey].items.find(i => i.id === id);
-        if (item) {
-            foundCategory = catKey;
-        }
-    });
+    let foundCategory = getModuleCategoryKeyCached(id);
 
     // 3. 如果大类变化，刷新导航和全局颜色
     if (foundCategory && foundCategory !== currentCategory) {
         setCurrentCategoryKey(foundCategory);
         currentCategory = foundCategory;
         const newColor = NAV_STRUCTURE[currentCategory]?.color || '#334155';
-        document.documentElement.style.setProperty('--primary', newColor);
+        if (ModuleSwitchPerfCache.primaryColor !== newColor) {
+            document.documentElement.style.setProperty('--primary', newColor);
+            ModuleSwitchPerfCache.primaryColor = newColor;
+        }
 
         // 重新渲染导航以更新高亮
         if (typeof renderNavigation === 'function') renderNavigation();
@@ -9443,10 +9502,7 @@ function switchTab(id) {
         window.setTimeout(dispatchModuleEnter, 180);
         window.setTimeout(dispatchModuleEnter, 700);
     }
-    if (typeof window.refreshModuleSubnavDock === 'function') {
-        window.refreshModuleSubnavDock();
-        window.setTimeout(window.refreshModuleSubnavDock, 120);
-    }
+    scheduleModuleDockRefresh();
 }
 
 function ensureDrillModalDom() {

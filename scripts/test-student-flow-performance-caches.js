@@ -22,6 +22,11 @@ const pkg = JSON.parse(read(packageFile));
 
 [
     'StudentDetailsPerfCache',
+    'ModuleSwitchPerfCache',
+    'getModuleSectionsCached',
+    'getModuleSectionById',
+    'getModuleCategoryKeyCached',
+    'scheduleModuleDockRefresh',
     'buildStudentDetailsDataSignature',
     'buildStudentDetailsFilterSignature',
     'setStudentDetailsHtmlIfChanged',
@@ -70,7 +75,7 @@ if (!String(pkg.scripts['check:syntax'] || '').includes('scripts/test-student-fl
 
 console.log(JSON.stringify({
     ok: true,
-    studentDetailsTokens: 11,
+    studentDetailsTokens: 16,
     overviewTokens: 6,
     freshmanTokens: 6,
     entryTokens: 3
