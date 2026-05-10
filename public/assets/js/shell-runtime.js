@@ -18,8 +18,7 @@
             eyebrow: 'Data Base',
             summary: '管理届别档案、成绩导入、映射与基础配置。',
             items: [
-                { id: 'upload', icon: 'ti-database-import', text: '数据上传与设置', hint: '管理数据导入、映射、科目与基础配置。' },
-                { id: 'cohort-growth', icon: 'ti-timeline', text: '纵向成长档案', hint: '把多次考试串成个人成长轨迹。' }
+                { id: 'upload', icon: 'ti-database-import', text: '数据上传与设置', hint: '管理数据导入、映射、科目与基础配置。' }
             ]
         },
         macro: {

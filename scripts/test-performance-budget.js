@@ -69,6 +69,11 @@ assert.ok(shellRuntime.includes("id: 'student-details'"), 'reordered shell shoul
 assert.ok(shellRuntime.includes("id: 'report-generator'"), 'reordered shell should keep report generator accessible');
 assert.ok(shellRuntime.includes("id: 'county-analysis'"), 'reordered shell should keep county analysis accessible');
 assert.ok(!html.includes('data-shell-module-rail-shell="floating"'), 'shell should not render the old floating module rail that can cover content');
+assert.ok(!shellRuntime.includes("id: 'cohort-growth'"), 'removed cohort growth module should not stay in shell navigation');
+assert.ok(!html.includes('lazy-section-template-cohort-growth'), 'removed cohort growth module should not keep a lazy template');
+assert.ok(!bootRuntime.includes('cohort-growth-runtime.js'), 'removed cohort growth module should not load its runtime');
+assert.ok(!smoke.includes("'cohort-growth'"), 'removed cohort growth module should not be part of production smoke switching');
+assert.ok(read('public/assets/js/workspace-rail-runtime.js').includes('if (dock) dock.remove();'), 'right-side module dock should be removed instead of rendered');
 assert.ok(modernOsShell.includes('prefers-reduced-motion'), 'modern OS shell should respect reduced motion');
 assert.ok(modernOsShell.includes('@supports not'), 'modern OS shell should include a low-cost fallback for unsupported blur');
 

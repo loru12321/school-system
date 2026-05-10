@@ -159,7 +159,7 @@ var SYSTEM_RUNTIME_SKILLS = {
     'teacher-analysis': {
         mode: 'demand',
         warmup: 'full',
-        triggers: ['teacher-analysis', 'cohort-growth', 'correlation-analysis'],
+        triggers: ['teacher-analysis', 'correlation-analysis'],
         entries: [
             { key: 'teacher-analysis-core', src: './assets/js/teacher-analysis-core-runtime.js' },
             { key: 'teacher-analysis-ui', src: './assets/js/teacher-analysis-ui-runtime.js' },
@@ -483,7 +483,6 @@ var APP_MODULES = [
     './assets/js/support-metrics-runtime.js',
     './assets/js/marginal-push-runtime.js',
     './assets/js/seat-adjustment-runtime.js',
-    './assets/js/cohort-growth-runtime.js',
     './assets/js/macro-analysis-compat-runtime.js',
     './assets/js/school-normalization-runtime.js',
     './assets/js/compare-shared-runtime.js',
@@ -2808,8 +2807,7 @@ const XLSX_RUNTIME_OBJECT_METHODS = [
     { owner: 'AccountExcel', methods: ['downloadTemplate', 'upload'] },
     { owner: 'SCHEDULER', methods: ['downloadTemplate', 'loadData', 'exportResult', 'importExisting'] },
     { owner: 'GradeSchedulerRuntime', methods: ['downloadTemplate', 'loadData', 'exportResult', 'importExisting'] },
-    { owner: 'DrillSystem', methods: ['exportExcel'] },
-    { owner: 'CohortGrowth', methods: ['exportVolatility'] }
+    { owner: 'DrillSystem', methods: ['exportExcel'] }
 ];
 
 function isXlsxRuntimeReady() {

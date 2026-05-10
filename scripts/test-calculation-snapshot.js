@@ -532,15 +532,6 @@ async function main() {
             return result;
         })();
         const seatAdjustmentDeskCount = document.querySelectorAll('#seat-adj-container .desk:not(.desk-empty)').length;
-        await boundedSwitchTab('cohort-growth');
-        const cohortGrowthResult = typeof window.CohortGrowth?.compute === 'function'
-            ? window.CohortGrowth.compute()
-            : { volatility: [], growth: [] };
-        const cohortGrowthValues = [
-            ...(cohortGrowthResult.volatility || []).flatMap((row) => [row.count, row.sigma]),
-            ...(cohortGrowthResult.growth || []).flatMap((row) => [row.start, row.end, row.delta])
-        ];
-
         const teacherRoot = getTeacherRoot();
         const studentSection = document.getElementById('student-details');
         const teacherRankSection = document.getElementById('teacher-township-ranking-container');
@@ -1184,9 +1175,6 @@ async function main() {
                 strategy: seatAdjustmentResult.strategy || ''
             } : null,
             cohortExamCount: Object.keys(window.COHORT_DB?.exams || {}).length,
-            cohortVolatilityRows: Array.isArray(cohortGrowthResult.volatility) ? cohortGrowthResult.volatility.length : 0,
-            cohortGrowthRows: Array.isArray(cohortGrowthResult.growth) ? cohortGrowthResult.growth.length : 0,
-            cohortGrowthFinite: cohortGrowthValues.every((value) => Number.isFinite(Number(value))),
             headers,
             targetStudent: target ? {
                 name: target.name,
@@ -1343,8 +1331,6 @@ async function main() {
     assert.strictEqual(snapshot.seatAdjustmentDeskCount, snapshot.seatAdjustmentCount, 'seat adjustment rendered seat count mismatch');
     assert.ok(snapshot.seatAdjustmentFinite, 'seat adjustment calculation produced non-finite values');
     assert.ok(snapshot.cohortExamCount >= 2, `cohort exam count too low: ${snapshot.cohortExamCount}`);
-    assert.ok(snapshot.cohortGrowthRows > 0, 'cohort growth rows missing');
-    assert.ok(snapshot.cohortGrowthFinite, 'cohort growth calculation produced non-finite values');
 
     const totalIndex = snapshot.headers.indexOf('五科总分');
     assert.ok(totalIndex >= 0, '五科总分 header missing');

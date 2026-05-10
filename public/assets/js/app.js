@@ -9105,7 +9105,7 @@ function guardBeforeSwitch(id) {
     const needGuard = [
         'summary', 'analysis', 'county-analysis', 'high-score', 'indicator', 'bottom3',
         'teacher-analysis', 'class-comparison', 'class-diagnosis',
-        'student-overview', 'student-details', 'subject-balance', 'marginal-push', 'progress-analysis', 'cohort-growth',
+        'student-overview', 'student-details', 'subject-balance', 'marginal-push', 'progress-analysis',
         'potential-analysis', 'segment-analysis', 'correlation-analysis', 'report-generator'
     ];
     if (!needGuard.includes(id)) return true;
