@@ -168,6 +168,286 @@
         return `ws_${(hash >>> 0).toString(16)}`;
     }
 
+    function clonePayloadFragment(value) {
+        if (value == null) return value;
+        return JSON.parse(JSON.stringify(value));
+    }
+
+    const WORKSPACE_SPLIT_VERSION = 'workspace-split-v1';
+    const WORKSPACE_META_ONLY_FIELDS = new Set([
+        'RAW_DATA',
+        'SCHOOLS',
+        'PREV_DATA',
+        'PROGRESS_CACHE',
+        'PROGRESS_CACHE_FULL',
+        'LAST_VA_DATA',
+        'CURRENT_REPORT_STUDENT',
+        'CURRENT_CONTEXT_STUDENTS',
+        'TEACHER_STATS'
+    ]);
+
+    function isSplitWorkspacePayload(payload) {
+        return payload && typeof payload === 'object'
+            && payload.__CLOUD_WORKSPACE_SPLIT_VERSION === WORKSPACE_SPLIT_VERSION;
+    }
+
+    function getCurrentExamIdFromPayload(payload) {
+        return String(payload?.CURRENT_EXAM_ID || payload?.COHORT_DB?.currentExamId || '').trim();
+    }
+
+    function compactExamMetadata(examId, examPayload = {}) {
+        const next = {};
+        Object.entries(examPayload && typeof examPayload === 'object' ? examPayload : {}).forEach(([field, value]) => {
+            if (field === 'data' || field === 'schools' || field === 'teacherMap') return;
+            next[field] = clonePayloadFragment(value);
+        });
+        next.examId = String(next.examId || examId || '').trim();
+        const rowCount = Array.isArray(examPayload?.data) ? examPayload.data.length : Number(examPayload?.rowCount || 0);
+        if (rowCount) next.rowCount = rowCount;
+        return next;
+    }
+
+    function buildCurrentExamEntry(payload, examId) {
+        const rows = Array.isArray(payload?.RAW_DATA) ? payload.RAW_DATA : [];
+        if (!examId || !rows.length) return null;
+        const existing = payload?.COHORT_DB?.exams?.[examId] || {};
+        return {
+            ...clonePayloadFragment(existing),
+            examId,
+            examLabel: existing.examLabel || deriveExamLabel(examId),
+            meta: clonePayloadFragment(existing.meta || payload?.ARCHIVE_META || payload?.CONFIG || {}),
+            data: clonePayloadFragment(rows),
+            schools: clonePayloadFragment(existing.schools || payload?.SCHOOLS || {}),
+            teacherMap: clonePayloadFragment(existing.teacherMap || payload?.TEACHER_MAP || {}),
+            subjects: clonePayloadFragment(existing.subjects || payload?.SUBJECTS || []),
+            thresholds: clonePayloadFragment(existing.thresholds || payload?.THRESHOLDS || {}),
+            config: clonePayloadFragment(existing.config || payload?.CONFIG || {}),
+            fingerprint: String(existing.fingerprint || payload?.FINGERPRINT || '').trim(),
+            updatedAt: existing.updatedAt || ''
+        };
+    }
+
+    function buildWorkspaceMetaPayload(payload, workspaceKey) {
+        const source = clonePayloadFragment(payload || {});
+        Object.keys(source).forEach((field) => {
+            if (WORKSPACE_META_ONLY_FIELDS.has(field)) delete source[field];
+        });
+
+        const currentExamId = getCurrentExamIdFromPayload(payload);
+        const cohortDb = source.COHORT_DB && typeof source.COHORT_DB === 'object' ? source.COHORT_DB : {};
+        const sourceExams = payload?.COHORT_DB?.exams && typeof payload.COHORT_DB.exams === 'object'
+            ? payload.COHORT_DB.exams
+            : {};
+        const exams = {};
+        Object.entries(sourceExams).forEach(([examId, examPayload]) => {
+            const exactExamId = String(examId || '').trim();
+            if (!exactExamId || isIgnoredExamKey(exactExamId)) return;
+            exams[exactExamId] = compactExamMetadata(exactExamId, examPayload);
+        });
+
+        const currentEntry = buildCurrentExamEntry(payload, currentExamId);
+        if (currentEntry) exams[currentExamId] = compactExamMetadata(currentExamId, currentEntry);
+
+        source.COHORT_DB = {
+            ...cohortDb,
+            exams,
+            currentExamId: currentExamId || cohortDb.currentExamId || ''
+        };
+        source.CURRENT_PROJECT_KEY = String(source.CURRENT_PROJECT_KEY || workspaceKey || '').trim();
+        source.CURRENT_EXAM_ID = currentExamId || source.COHORT_DB.currentExamId || '';
+        source.__CLOUD_WORKSPACE_SPLIT_VERSION = WORKSPACE_SPLIT_VERSION;
+        source.__CURRENT_EXAM_KEY = source.CURRENT_EXAM_ID;
+        source.__EXAM_KEYS = Object.keys(exams);
+        source.__META_UPDATED_AT = new Date().toISOString();
+        return source;
+    }
+
+    function buildExamShardPayload(payload, examId, examPayload) {
+        const exactExamId = String(examId || '').trim();
+        if (!exactExamId || isIgnoredExamKey(exactExamId)) return null;
+        const exam = examPayload && typeof examPayload === 'object' ? examPayload : {};
+        const rows = Array.isArray(exam.data) && exam.data.length
+            ? exam.data
+            : (exactExamId === getCurrentExamIdFromPayload(payload) && Array.isArray(payload?.RAW_DATA) ? payload.RAW_DATA : []);
+        if (!rows.length) return null;
+
+        const shard = {
+            CURRENT_PROJECT_KEY: payload?.CURRENT_PROJECT_KEY || '',
+            CURRENT_COHORT_ID: payload?.CURRENT_COHORT_ID || '',
+            CURRENT_COHORT_META: clonePayloadFragment(payload?.CURRENT_COHORT_META || null),
+            CURRENT_EXAM_ID: exactExamId,
+            CURRENT_TERM_ID: payload?.CURRENT_TERM_ID || '',
+            CURRENT_TEACHER_TERM_ID: payload?.CURRENT_TEACHER_TERM_ID || '',
+            ARCHIVE_META: clonePayloadFragment(exam.meta || payload?.ARCHIVE_META || payload?.CONFIG || {}),
+            ARCHIVE_LOCKED: payload?.ARCHIVE_LOCKED || '',
+            ARCHIVE_LOCKED_KEY: payload?.ARCHIVE_LOCKED_KEY || '',
+            RAW_DATA: clonePayloadFragment(rows),
+            SCHOOLS: clonePayloadFragment(exam.schools || (exactExamId === getCurrentExamIdFromPayload(payload) ? payload?.SCHOOLS : {}) || {}),
+            SUBJECTS: clonePayloadFragment(exam.subjects || payload?.SUBJECTS || []),
+            THRESHOLDS: clonePayloadFragment(exam.thresholds || payload?.THRESHOLDS || {}),
+            TEACHER_MAP: clonePayloadFragment(exam.teacherMap || payload?.TEACHER_MAP || {}),
+            TEACHER_SCHOOL_MAP: clonePayloadFragment(payload?.TEACHER_SCHOOL_MAP || {}),
+            CONFIG: clonePayloadFragment(exam.config || payload?.CONFIG || {}),
+            MY_SCHOOL: payload?.MY_SCHOOL || '',
+            TARGETS: clonePayloadFragment(payload?.TARGETS || {}),
+            INDICATOR_PARAMS: clonePayloadFragment(payload?.INDICATOR_PARAMS || {}),
+            SCHOOL_ALIAS_SETTINGS: clonePayloadFragment(payload?.SCHOOL_ALIAS_SETTINGS || []),
+            FINGERPRINT: String(exam.fingerprint || payload?.FINGERPRINT || '').trim(),
+            timestamp: Number(exam.createdAt || payload?.timestamp || Date.now()),
+            COHORT_DB: {
+                cohortId: payload?.COHORT_DB?.cohortId || payload?.CURRENT_COHORT_ID || '',
+                cohortMeta: clonePayloadFragment(payload?.COHORT_DB?.cohortMeta || payload?.CURRENT_COHORT_META || null),
+                students: clonePayloadFragment(payload?.COHORT_DB?.students || {}),
+                teachingHistory: clonePayloadFragment(payload?.COHORT_DB?.teachingHistory || {}),
+                exams: {
+                    [exactExamId]: {
+                        ...clonePayloadFragment(exam),
+                        examId: exactExamId,
+                        examLabel: exam.examLabel || deriveExamLabel(exactExamId),
+                        data: clonePayloadFragment(rows),
+                        schools: clonePayloadFragment(exam.schools || {}),
+                        subjects: clonePayloadFragment(exam.subjects || payload?.SUBJECTS || []),
+                        thresholds: clonePayloadFragment(exam.thresholds || payload?.THRESHOLDS || {}),
+                        config: clonePayloadFragment(exam.config || payload?.CONFIG || {}),
+                        teacherMap: clonePayloadFragment(exam.teacherMap || payload?.TEACHER_MAP || {}),
+                        fingerprint: String(exam.fingerprint || payload?.FINGERPRINT || '').trim()
+                    }
+                },
+                currentExamId: exactExamId,
+                resetPoints: clonePayloadFragment(payload?.COHORT_DB?.resetPoints || [])
+            }
+        };
+        return shard;
+    }
+
+    function buildWorkspaceSplitUploadBundle(workspaceKey, payload) {
+        const metaPayload = buildWorkspaceMetaPayload(payload, workspaceKey);
+        const metaContent = packPayload(metaPayload);
+        const sourceExams = payload?.COHORT_DB?.exams && typeof payload.COHORT_DB.exams === 'object'
+            ? payload.COHORT_DB.exams
+            : {};
+        const currentExamId = getCurrentExamIdFromPayload(payload);
+        const examRows = [];
+        const seen = new Set();
+        Object.entries(sourceExams).forEach(([examId, examPayload]) => {
+            const exactExamId = String(examId || '').trim();
+            if (!exactExamId || seen.has(exactExamId)) return;
+            const shard = buildExamShardPayload(payload, exactExamId, examPayload);
+            if (!shard) return;
+            seen.add(exactExamId);
+            examRows.push({ key: exactExamId, content: packPayload(shard) });
+        });
+        if (currentExamId && !seen.has(currentExamId)) {
+            const shard = buildExamShardPayload(payload, currentExamId, buildCurrentExamEntry(payload, currentExamId));
+            if (shard) examRows.push({ key: currentExamId, content: packPayload(shard) });
+        }
+        const contentHash = hashText([
+            metaContent,
+            ...examRows
+                .slice()
+                .sort((a, b) => a.key.localeCompare(b.key, 'zh-CN'))
+                .map(row => `${row.key}:${hashText(row.content)}`)
+        ].join('|'));
+        return {
+            mode: 'workspace-split',
+            workspaceKey,
+            metaPayload,
+            metaContent,
+            examRows,
+            contentHash
+        };
+    }
+
+    async function uploadWorkspaceBundle(bundle, syncedAt) {
+        if (!bundle || bundle.mode !== 'workspace-split') return false;
+        const rows = [
+            { key: bundle.workspaceKey, content: bundle.metaContent, updated_at: syncedAt },
+            ...bundle.examRows.map(row => ({ key: row.key, content: row.content, updated_at: syncedAt }))
+        ];
+        for (const row of rows) {
+            const { error } = await upsertSystemDataRecord(row);
+            if (error) throw error;
+        }
+        return true;
+    }
+
+    function mergeWorkspaceSplitPayload(metaPayload, examPayload, examKey) {
+        const merged = clonePayloadFragment(metaPayload || {});
+        delete merged.__CLOUD_WORKSPACE_SPLIT_VERSION;
+        delete merged.__CURRENT_EXAM_KEY;
+        delete merged.__EXAM_KEYS;
+        delete merged.__META_UPDATED_AT;
+
+        const current = examPayload && typeof examPayload === 'object' ? examPayload : {};
+        [
+            'RAW_DATA',
+            'SCHOOLS',
+            'SUBJECTS',
+            'THRESHOLDS',
+            'TEACHER_MAP',
+            'TEACHER_SCHOOL_MAP',
+            'CONFIG',
+            'MY_SCHOOL',
+            'TARGETS',
+            'INDICATOR_PARAMS',
+            'SCHOOL_ALIAS_SETTINGS',
+            'FINGERPRINT',
+            'ARCHIVE_META',
+            'ARCHIVE_LOCKED',
+            'ARCHIVE_LOCKED_KEY',
+            'CURRENT_TERM_ID',
+            'CURRENT_TEACHER_TERM_ID'
+        ].forEach((field) => {
+            if (Object.prototype.hasOwnProperty.call(current, field)) {
+                merged[field] = clonePayloadFragment(current[field]);
+            }
+        });
+
+        const currentExamId = String(current.CURRENT_EXAM_ID || examKey || metaPayload?.__CURRENT_EXAM_KEY || metaPayload?.CURRENT_EXAM_ID || '').trim();
+        const metaDb = merged.COHORT_DB && typeof merged.COHORT_DB === 'object' ? merged.COHORT_DB : {};
+        const currentDb = current.COHORT_DB && typeof current.COHORT_DB === 'object' ? current.COHORT_DB : {};
+        merged.COHORT_DB = {
+            ...metaDb,
+            ...currentDb,
+            exams: {
+                ...(metaDb.exams || {}),
+                ...(currentDb.exams || {})
+            },
+            currentExamId: currentExamId || currentDb.currentExamId || metaDb.currentExamId || ''
+        };
+        merged.CURRENT_EXAM_ID = currentExamId || merged.COHORT_DB.currentExamId || '';
+        return merged;
+    }
+
+    async function fetchLatestCohortExamRow(cohortId) {
+        const cid = normalizeCohortId(cohortId || getCurrentCohortId());
+        if (!cid) return null;
+        const { data, error } = await selectSystemData({
+            select: 'key,content,updated_at',
+            keyLike: `${cid}%`,
+            order: 'updated_at',
+            ascending: false,
+            limit: 8
+        });
+        if (error) throw error;
+        return (data || []).find(row => {
+            if (!row?.key || !row?.content) return false;
+            if (isIgnoredExamKey(row.key)) return false;
+            return extractCohortIdFromKey(row.key) === cid;
+        }) || null;
+    }
+
+    async function hydrateSplitWorkspacePayload(key, metaPayload) {
+        const currentExamKey = String(metaPayload?.__CURRENT_EXAM_KEY || metaPayload?.CURRENT_EXAM_ID || metaPayload?.COHORT_DB?.currentExamId || '').trim();
+        let examRow = currentExamKey ? await fetchWorkspaceSnapshotRow(currentExamKey) : null;
+        if (!examRow?.content) {
+            examRow = await fetchLatestCohortExamRow(metaPayload?.CURRENT_COHORT_ID || getCurrentCohortId());
+        }
+        if (!examRow?.content) return normalizeWorkspacePayload(metaPayload);
+        const examPayload = parsePayload(examRow.content);
+        return mergeWorkspaceSplitPayload(metaPayload, examPayload, examRow.key || currentExamKey || key);
+    }
+
     function getWorkspaceMetaStorageKey(key) {
         return `${WORKSPACE_SYNC_META_PREFIX}${encodeURIComponent(String(key || '').trim())}`;
     }
@@ -337,13 +617,22 @@
     }
 
     async function fetchWorkspaceSnapshotRow(key) {
+        const exactKey = String(key || '').trim();
         const { data, error } = await selectSystemData({
             select: 'content,updated_at',
-            keyEq: key,
+            keyEq: exactKey,
             maybeSingle: true
         });
         if (error) throw error;
-        return data || null;
+        if (data) return data;
+
+        const { data: fallbackRows, error: fallbackError } = await selectSystemData({
+            select: 'key,content,updated_at',
+            keyIn: [exactKey],
+            limit: 1
+        });
+        if (fallbackError) throw fallbackError;
+        return (fallbackRows || [])[0] || null;
     }
 
     function queueWorkspaceSyncJob(key, job = {}) {
@@ -398,7 +687,9 @@
         if (!snapshotRow || !snapshotRow.content) return false;
 
         let payload = parsePayload(snapshotRow.content);
-        payload = normalizeWorkspacePayload(payload);
+        payload = isSplitWorkspacePayload(payload)
+            ? await hydrateSplitWorkspacePayload(key, payload)
+            : normalizeWorkspacePayload(payload);
         payload = await supplementIndicatorPayload(key, payload);
 
         seedCurrentExamToCohortDb(payload, key, snapshotRow.updated_at || '');
@@ -750,8 +1041,9 @@
             const currentMeta = readWorkspaceSyncMeta(key);
             let contentHash = '';
             if (!background) {
-                const content = packPayload(payload);
-                contentHash = hashText(content);
+                contentHash = mode === 'workspace'
+                    ? buildWorkspaceSplitUploadBundle(key, payload).contentHash
+                    : hashText(packPayload(payload));
             }
 
             await writeCachedWorkspaceSnapshot(key, payload);
@@ -853,8 +1145,11 @@
                     continue;
                 }
 
-                const packedContent = packPayload(payload);
-                const contentHash = hashText(packedContent);
+                const uploadBundle = (job.mode || 'workspace') === 'workspace'
+                    ? buildWorkspaceSplitUploadBundle(cacheKey, payload)
+                    : null;
+                const packedContent = uploadBundle ? '' : packPayload(payload);
+                const contentHash = uploadBundle ? uploadBundle.contentHash : hashText(packedContent);
                 const syncedAt = new Date().toISOString();
                 const currentMeta = readWorkspaceSyncMeta(cacheKey);
 
@@ -887,12 +1182,16 @@
                 }
 
                 try {
-                    const { error } = await upsertSystemDataRecord({
-                        key: cacheKey,
-                        content: packedContent,
-                        updated_at: syncedAt
-                    });
-                    if (error) throw error;
+                    if (uploadBundle) {
+                        await uploadWorkspaceBundle(uploadBundle, syncedAt);
+                    } else {
+                        const { error } = await upsertSystemDataRecord({
+                            key: cacheKey,
+                            content: packedContent,
+                            updated_at: syncedAt
+                        });
+                        if (error) throw error;
+                    }
 
                     delete queue[cacheKey];
                     writeWorkspaceSyncQueue(queue);

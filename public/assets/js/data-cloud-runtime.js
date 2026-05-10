@@ -411,6 +411,122 @@
         return parsed;
     }
 
+    function deepClone(value) {
+        if (value == null) return value;
+        return JSON.parse(JSON.stringify(value));
+    }
+
+    function isSplitWorkspacePayload(payload) {
+        return payload && typeof payload === 'object'
+            && payload.__CLOUD_WORKSPACE_SPLIT_VERSION === 'workspace-split-v1';
+    }
+
+    function getSplitCurrentExamKey(payload) {
+        return normalizeText(
+            payload && (
+                payload.__CURRENT_EXAM_KEY
+                || payload.CURRENT_EXAM_ID
+                || (payload.COHORT_DB && payload.COHORT_DB.currentExamId)
+            )
+        );
+    }
+
+    function extractSplitCohortId(key, payload) {
+        if (root.CloudWorkspaceRuntimeDeps && typeof root.CloudWorkspaceRuntimeDeps.extractCohortIdFromKey === 'function') {
+            return normalizeText(
+                root.CloudWorkspaceRuntimeDeps.extractCohortIdFromKey(key)
+                || root.CloudWorkspaceRuntimeDeps.extractCohortIdFromKey(payload && payload.CURRENT_COHORT_ID)
+            );
+        }
+        const text = normalizeText(key || (payload && payload.CURRENT_COHORT_ID));
+        const match = text.match(/(\d{4})/);
+        return match ? match[1] : '';
+    }
+
+    function mergeSplitWorkspacePayload(metaPayload, examPayload, fallbackExamKey) {
+        const merged = deepClone(metaPayload || {});
+        delete merged.__CLOUD_WORKSPACE_SPLIT_VERSION;
+        delete merged.__CURRENT_EXAM_KEY;
+        delete merged.__EXAM_KEYS;
+        delete merged.__META_UPDATED_AT;
+
+        const current = examPayload && typeof examPayload === 'object' ? examPayload : {};
+        [
+            'RAW_DATA',
+            'SCHOOLS',
+            'SUBJECTS',
+            'THRESHOLDS',
+            'TEACHER_MAP',
+            'TEACHER_SCHOOL_MAP',
+            'CONFIG',
+            'MY_SCHOOL',
+            'TARGETS',
+            'INDICATOR_PARAMS',
+            'SCHOOL_ALIAS_SETTINGS',
+            'FINGERPRINT',
+            'ARCHIVE_META',
+            'ARCHIVE_LOCKED',
+            'ARCHIVE_LOCKED_KEY',
+            'CURRENT_TERM_ID',
+            'CURRENT_TEACHER_TERM_ID'
+        ].forEach((field) => {
+            if (Object.prototype.hasOwnProperty.call(current, field)) {
+                merged[field] = deepClone(current[field]);
+            }
+        });
+
+        const examKey = normalizeText(current.CURRENT_EXAM_ID || fallbackExamKey || getSplitCurrentExamKey(metaPayload));
+        const metaDb = merged.COHORT_DB && typeof merged.COHORT_DB === 'object' ? merged.COHORT_DB : {};
+        const currentDb = current.COHORT_DB && typeof current.COHORT_DB === 'object' ? current.COHORT_DB : {};
+        merged.COHORT_DB = {
+            ...metaDb,
+            ...currentDb,
+            exams: {
+                ...(metaDb.exams || {}),
+                ...(currentDb.exams || {})
+            },
+            currentExamId: examKey || currentDb.currentExamId || metaDb.currentExamId || ''
+        };
+        merged.CURRENT_EXAM_ID = examKey || merged.COHORT_DB.currentExamId || '';
+        return merged;
+    }
+
+    async function readSplitExamPayload(examKey, metaPayload) {
+        const readSystemDataRecord = getReadSystemDataRecord();
+        if (readSystemDataRecord && examKey) {
+            const direct = await readSystemDataRecord(examKey, 'content').catch(() => null);
+            if (direct && !direct.error && direct.data && direct.data.content) {
+                return { key: examKey, payload: parseCloudPayload(direct.data.content) };
+            }
+        }
+
+        const selectSystemDataRecords = getSelectSystemDataRecords();
+        const cohortId = extractSplitCohortId(examKey, metaPayload);
+        if (!selectSystemDataRecords || !cohortId) return null;
+
+        const { data, error } = await selectSystemDataRecords({
+            select: 'key,content,updated_at',
+            keyLike: `${cohortId}%`,
+            order: 'updated_at',
+            ascending: false,
+            limit: 12
+        });
+        if (error) throw error;
+
+        const rows = Array.isArray(data) ? data : [];
+        const selected = rows.find(row => normalizeText(row && row.key) === examKey) || rows[0] || null;
+        if (!selected || !selected.content) return null;
+        return { key: selected.key, payload: parseCloudPayload(selected.content) };
+    }
+
+    async function hydrateSplitWorkspacePayload(key, payload) {
+        if (!isSplitWorkspacePayload(payload)) return payload;
+        const examKey = getSplitCurrentExamKey(payload);
+        const exam = await readSplitExamPayload(examKey, payload);
+        if (!exam || !exam.payload) return payload;
+        return mergeSplitWorkspacePayload(payload, exam.payload, exam.key || examKey);
+    }
+
     function packCloudPayload(value) {
         if (root.CloudWorkspaceRuntimeDeps && typeof root.CloudWorkspaceRuntimeDeps.packPayload === 'function') {
             return root.CloudWorkspaceRuntimeDeps.packPayload(value);
@@ -1134,7 +1250,7 @@
             const { data, error } = await readSystemDataRecord(normalizedKey, 'content');
             if (error) throw error;
             if (data && data.content) {
-                const db = parseCloudPayload(data.content);
+                const db = await hydrateSplitWorkspacePayload(normalizedKey, parseCloudPayload(data.content));
                 await writeLocalCache(normalizedKey, db);
                 return db;
             }
