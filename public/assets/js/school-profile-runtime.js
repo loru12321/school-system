@@ -4,6 +4,16 @@
     let schoolRadarInstance = window.schoolRadarInstance || null;
     let schoolDistInstance = window.schoolDistInstance || null;
     let currentModalSchool = '';
+    const SchoolProfilePerfCache = {
+        signature: '',
+        townshipRows: [],
+        schoolList: [],
+        schoolSet: new Set(),
+        subjectTownAverages: new Map(),
+        totalDistribution: null,
+        schoolDistribution: new Map(),
+        profileModel: new Map()
+    };
 
     function syncSchoolProfileChartState() {
         window.schoolRadarInstance = schoolRadarInstance;
@@ -22,6 +32,127 @@
         });
     }
 
+    function getSchoolProfileSignature() {
+        const signature = [
+            window.CURRENT_EXAM_ID || '',
+            window.__RAW_DATA_VERSION || 0,
+            Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
+            Array.isArray(window.SUBJECTS) ? window.SUBJECTS.join('|') : '',
+            Object.keys(window.SCHOOLS || {}).join('|')
+        ].join('::');
+        if (SchoolProfilePerfCache.signature !== signature) {
+            SchoolProfilePerfCache.signature = signature;
+            SchoolProfilePerfCache.townshipRows = [];
+            SchoolProfilePerfCache.schoolList = [];
+            SchoolProfilePerfCache.schoolSet = new Set();
+            SchoolProfilePerfCache.subjectTownAverages.clear();
+            SchoolProfilePerfCache.totalDistribution = null;
+            SchoolProfilePerfCache.schoolDistribution.clear();
+            SchoolProfilePerfCache.profileModel.clear();
+        }
+        return signature;
+    }
+
+    function getProfileSchoolList() {
+        getSchoolProfileSignature();
+        if (SchoolProfilePerfCache.schoolList.length) return SchoolProfilePerfCache.schoolList;
+        const list = (typeof listAvailableSchoolsForCompare === 'function')
+            ? listAvailableSchoolsForCompare()
+            : Object.keys(SCHOOLS || {});
+        SchoolProfilePerfCache.schoolList = (list || []).map(name => String(name || '').trim()).filter(Boolean);
+        SchoolProfilePerfCache.schoolSet = new Set(SchoolProfilePerfCache.schoolList);
+        return SchoolProfilePerfCache.schoolList;
+    }
+
+    function getProfileTownshipRows() {
+        getSchoolProfileSignature();
+        if (SchoolProfilePerfCache.townshipRows.length) return SchoolProfilePerfCache.townshipRows;
+        SchoolProfilePerfCache.townshipRows = (typeof window.filterRowsToTownshipSchools === 'function')
+            ? window.filterRowsToTownshipSchools(RAW_DATA || [])
+            : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
+        return SchoolProfilePerfCache.townshipRows;
+    }
+
+    function getSubjectTownAverage(subject) {
+        getSchoolProfileSignature();
+        if (SchoolProfilePerfCache.subjectTownAverages.has(subject)) return SchoolProfilePerfCache.subjectTownAverages.get(subject);
+        getProfileSchoolList();
+        const schoolSet = SchoolProfilePerfCache.schoolSet;
+        const allAvgs = Object.values(SCHOOLS || {})
+            .filter(sch => !schoolSet.size || schoolSet.has(String(sch?.name || '').trim()))
+            .map(sch => sch.metrics?.[subject]?.avg || 0)
+            .filter(value => value > 0);
+        const avg = allAvgs.length ? (allAvgs.reduce((sum, value) => sum + value, 0) / allAvgs.length) : 0;
+        SchoolProfilePerfCache.subjectTownAverages.set(subject, avg);
+        return avg;
+    }
+
+    function buildDistribution(scores, step = 50, bounds = null) {
+        const validScores = (scores || []).map(Number).filter(Number.isFinite);
+        if (!validScores.length) return { labels: [], values: [], startBin: 0, endBin: 0, step };
+        const minScore = bounds ? bounds.min : Math.floor(Math.min(...validScores));
+        const maxScore = bounds ? bounds.max : Math.ceil(Math.max(...validScores));
+        const startBin = Math.floor(minScore / step) * step;
+        const endBin = Math.ceil(maxScore / step) * step;
+        const labels = [];
+        const values = [];
+        const counts = new Map();
+        validScores.forEach(score => {
+            const bin = Math.floor(score / step) * step;
+            counts.set(bin, (counts.get(bin) || 0) + 1);
+        });
+        for (let i = startBin; i < endBin; i += step) {
+            labels.push(`${i}-${i + step}`);
+            values.push(((counts.get(i) || 0) / validScores.length * 100).toFixed(1));
+        }
+        return { labels, values, startBin, endBin, step };
+    }
+
+    function getTownDistribution() {
+        getSchoolProfileSignature();
+        if (SchoolProfilePerfCache.totalDistribution) return SchoolProfilePerfCache.totalDistribution;
+        const scores = getProfileTownshipRows().map(student => student?.total);
+        SchoolProfilePerfCache.totalDistribution = buildDistribution(scores);
+        return SchoolProfilePerfCache.totalDistribution;
+    }
+
+    function getSchoolDistribution(schoolName, students) {
+        getSchoolProfileSignature();
+        if (SchoolProfilePerfCache.schoolDistribution.has(schoolName)) return SchoolProfilePerfCache.schoolDistribution.get(schoolName);
+        const town = getTownDistribution();
+        const distribution = buildDistribution((students || []).map(student => student?.total), town.step, { min: town.startBin, max: town.endBin });
+        SchoolProfilePerfCache.schoolDistribution.set(schoolName, distribution);
+        return distribution;
+    }
+
+    function getSchoolProfileModel(schoolName) {
+        const signature = getSchoolProfileSignature();
+        const cacheKey = `${signature}::${schoolName}`;
+        if (SchoolProfilePerfCache.profileModel.has(cacheKey)) return SchoolProfilePerfCache.profileModel.get(cacheKey);
+        const school = SCHOOLS[schoolName];
+        const subjectLabels = [];
+        const ratios = [];
+        SUBJECTS.forEach(sub => {
+            if (school.metrics[sub] && school.metrics[sub].avg) {
+                const townAvg = getSubjectTownAverage(sub);
+                const ratio = townAvg ? (school.metrics[sub].avg / townAvg) : 0;
+                subjectLabels.push(sub);
+                ratios.push(parseFloat(ratio.toFixed(2)));
+            }
+        });
+        const townDistribution = getTownDistribution();
+        const schoolDistribution = getSchoolDistribution(schoolName, school.students || []);
+        const model = {
+            subjectLabels,
+            ratios,
+            distLabels: townDistribution.labels,
+            townData: townDistribution.values,
+            schoolData: schoolDistribution.values
+        };
+        SchoolProfilePerfCache.profileModel.set(cacheKey, model);
+        return model;
+    }
+
     function showSchoolProfile(schoolName) {
         if (!SCHOOLS[schoolName]) return;
         currentModalSchool = schoolName;
@@ -37,26 +168,9 @@
         document.getElementById('sp-s1').innerText = avgScore.toFixed(1);
         document.getElementById('sp-s2').innerText = rateScore.toFixed(1);
 
-        const subjectLabels = [];
-        const ratios = [];
-
-        SUBJECTS.forEach(sub => {
-            if (s.metrics[sub] && s.metrics[sub].avg) {
-                const schoolList = (typeof listAvailableSchoolsForCompare === 'function')
-                    ? listAvailableSchoolsForCompare()
-                    : Object.keys(SCHOOLS || {});
-                const schoolSet = new Set((schoolList || []).map(name => String(name || '').trim()).filter(Boolean));
-                const allAvgs = Object.values(SCHOOLS || {})
-                    .filter(sch => !schoolSet.size || schoolSet.has(String(sch?.name || '').trim()))
-                    .map(sch => sch.metrics[sub]?.avg || 0)
-                    .filter(v => v > 0);
-                const townAvg = allAvgs.length ? (allAvgs.reduce((a, b) => a + b, 0) / allAvgs.length) : 0;
-
-                const ratio = townAvg ? (s.metrics[sub].avg / townAvg) : 0;
-                subjectLabels.push(sub);
-                ratios.push(parseFloat(ratio.toFixed(2)));
-            }
-        });
+        const profileModel = getSchoolProfileModel(schoolName);
+        const subjectLabels = profileModel.subjectLabels;
+        const ratios = profileModel.ratios;
 
         const ctxRadar = document.getElementById('schoolRadarChart');
         if (schoolRadarInstance) schoolRadarInstance.destroy();
@@ -120,34 +234,10 @@
             document.getElementById('sp-diagnosis').innerHTML = '数据不足，无法诊断。';
         }
 
-        const step = 50;
-        const townshipRows = (typeof window.filterRowsToTownshipSchools === 'function')
-            ? window.filterRowsToTownshipSchools(RAW_DATA || [])
-            : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
-        const allScores = townshipRows.map(s => s.total);
-        const myScores = s.students.map(s => s.total);
-
-        if (allScores.length > 0) {
-            const maxScore = Math.ceil(Math.max(...allScores));
-            const minScore = Math.floor(Math.min(...allScores));
-            const startBin = Math.floor(minScore / step) * step;
-            const endBin = Math.ceil(maxScore / step) * step;
-
-            const distLabels = [];
-            const townData = [];
-            const schoolData = [];
-            const totalTown = allScores.length || 1;
-            const totalSchool = myScores.length || 1;
-
-            for (let i = startBin; i < endBin; i += step) {
-                const low = i;
-                const high = i + step;
-                distLabels.push(`${low}-${high}`);
-                const tCount = allScores.filter(v => v >= low && v < high).length;
-                townData.push((tCount / totalTown * 100).toFixed(1));
-                const sCount = myScores.filter(v => v >= low && v < high).length;
-                schoolData.push((sCount / totalSchool * 100).toFixed(1));
-            }
+        if (profileModel.distLabels.length > 0) {
+            const distLabels = profileModel.distLabels;
+            const townData = profileModel.townData;
+            const schoolData = profileModel.schoolData;
 
             const ctxDist = document.getElementById('schoolDistChart');
             if (schoolDistInstance) schoolDistInstance.destroy();

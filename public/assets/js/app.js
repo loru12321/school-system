@@ -10484,24 +10484,91 @@ function escapeAppHtml(value) {
 }
 function formatRankDisplay(value, rank, type = 'school', isPercent = false) { const displayValue = isPercent ? (value * 100).toFixed(2) + '%' : value.toFixed(2); return `${displayValue} <span style="font-size:0.9em; color:#94a3b8">(${rank})</span>`; }
 
-function renderTables() {
-    updateSchoolMode();
-    const tbTotal = document.querySelector('#tb-total tbody');
+const SummaryRenderPerfCache = {
+    signature: '',
+    townshipSchoolNames: [],
+    townshipSchools: [],
+    totalHeadHtml: '',
+    totalBodyHtml: '',
+    subjectTablesHtml: '',
+    subjectNavHtml: '',
+    bottomBodyHtml: '',
+    profileEventsBound: false
+};
+
+function getSummaryRenderSignature() {
+    const targetKeys = Object.keys(TARGETS || {}).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'));
+    const signature = [
+        CURRENT_EXAM_ID || '',
+        window.__RAW_DATA_VERSION || 0,
+        Array.isArray(RAW_DATA) ? RAW_DATA.length : 0,
+        Array.isArray(SUBJECTS) ? SUBJECTS.join('|') : '',
+        Object.keys(SCHOOLS || {}).join('|'),
+        targetKeys.join('|'),
+        MY_SCHOOL || ''
+    ].join('::');
+    if (SummaryRenderPerfCache.signature !== signature) {
+        SummaryRenderPerfCache.signature = signature;
+        SummaryRenderPerfCache.townshipSchoolNames = [];
+        SummaryRenderPerfCache.townshipSchools = [];
+        SummaryRenderPerfCache.totalHeadHtml = '';
+        SummaryRenderPerfCache.totalBodyHtml = '';
+        SummaryRenderPerfCache.subjectTablesHtml = '';
+        SummaryRenderPerfCache.subjectNavHtml = '';
+        SummaryRenderPerfCache.bottomBodyHtml = '';
+    }
+    return signature;
+}
+
+function getSummaryTownshipSchools() {
+    getSummaryRenderSignature();
+    if (SummaryRenderPerfCache.townshipSchools.length) return SummaryRenderPerfCache.townshipSchools;
     const hasTownshipScopeHelper = typeof getTownshipManagedSchoolNames === 'function';
     const townshipSchoolNames = hasTownshipScopeHelper
         ? getTownshipManagedSchoolNames(Object.keys(SCHOOLS || {}))
         : Object.keys(SCHOOLS || {});
     const townshipSchoolSet = new Set((townshipSchoolNames || []).map(name => String(name || '').trim()).filter(Boolean));
-    const townshipSchools = Object.values(SCHOOLS).filter((school) => (
+    SummaryRenderPerfCache.townshipSchoolNames = townshipSchoolNames;
+    SummaryRenderPerfCache.townshipSchools = Object.values(SCHOOLS || {}).filter((school) => (
         hasTownshipScopeHelper
             ? (typeof isTownshipManagedSchool === 'function'
                 ? isTownshipManagedSchool(school?.name, Object.keys(SCHOOLS || {}))
                 : townshipSchoolSet.has(String(school?.name || '').trim()))
             : true
     ));
-    const townshipRows = (typeof filterRowsToTownshipSchools === 'function')
-        ? filterRowsToTownshipSchools(RAW_DATA || [])
-        : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
+    return SummaryRenderPerfCache.townshipSchools;
+}
+
+function setSummaryHtmlIfChanged(element, html, key) {
+    if (!element) return;
+    const next = String(html || '');
+    if (element.dataset.summaryRenderSig === key && element.innerHTML === next) return;
+    element.innerHTML = next;
+    element.dataset.summaryRenderSig = key;
+}
+
+function bindSummaryProfileEvents(tbTotal) {
+    if (!tbTotal || tbTotal.dataset.summaryProfileEventsBound === '1') return;
+    tbTotal.addEventListener('click', event => {
+        const cell = event.target.closest('[data-school-profile-name]');
+        if (!cell || !tbTotal.contains(cell)) return;
+        showSchoolProfile(cell.dataset.schoolProfileName || '');
+    });
+    tbTotal.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        const cell = event.target.closest('[data-school-profile-name]');
+        if (!cell || !tbTotal.contains(cell)) return;
+        event.preventDefault();
+        showSchoolProfile(cell.dataset.schoolProfileName || '');
+    });
+    tbTotal.dataset.summaryProfileEventsBound = '1';
+}
+
+function renderTables() {
+    updateSchoolMode();
+    const tbTotal = document.querySelector('#tb-total tbody');
+    const summarySignature = getSummaryRenderSignature();
+    const townshipSchools = getSummaryTownshipSchools();
     if (!tbTotal) {
         console.warn("⚠️ [renderTables] 找不到 #tb-total tbody，跳过核心报表渲染。");
         return;
@@ -10514,11 +10581,12 @@ function renderTables() {
 
     appDebug(`系统共识别到 ${list.length} 所学校：`, list.map(s => s.name));
 
-    theadTotal.innerHTML = `
+    const totalHeadHtml = `
             <th>学校名称</th><th>实考人数</th><th>平均分</th><th>优秀率</th><th>及格率</th>
             <th>平均分赋分</th><th>优秀率赋分</th><th>及格率赋分</th>
             <th>两率一分总分</th><th>排名</th>
         `;
+    setSummaryHtmlIfChanged(theadTotal, totalHeadHtml, `${summarySignature}::total-head`);
 
     // 2. 排序
     list.sort((a, b) => (a.rank2Rate || 9999) - (b.rank2Rate || 9999));
@@ -10557,22 +10625,16 @@ function renderTables() {
                 ${getRankHTML(s.rank2Rate)}
             </tr>`;
     });
-    tbTotal.innerHTML = html;
-    tbTotal.querySelectorAll('[data-school-profile-name]').forEach(cell => {
-        const openProfile = () => showSchoolProfile(cell.dataset.schoolProfileName || '');
-        cell.addEventListener('click', openProfile);
-        cell.addEventListener('keydown', event => {
-            if (event.key !== 'Enter' && event.key !== ' ') return;
-            event.preventDefault();
-            openProfile();
-        });
-    });
+    setSummaryHtmlIfChanged(tbTotal, html, `${summarySignature}::total-body`);
+    bindSummaryProfileEvents(tbTotal);
     applySchoolModeToTables();
 
     // ... (下接各科渲染逻辑，保持不变) ...
     const subContainer = document.getElementById('subject-tables-container');
     const sideNavSubjects = document.getElementById('side-nav-subjects-container');
+    const subjectRenderKey = `${summarySignature}::subjects`;
 
+    if (subContainer?.dataset.summaryRenderSig !== subjectRenderKey || sideNavSubjects?.dataset.summaryRenderSig !== subjectRenderKey) {
     if (subContainer) subContainer.innerHTML = '';
     if (sideNavSubjects) sideNavSubjects.innerHTML = '';
 
@@ -10603,6 +10665,9 @@ function renderTables() {
         }
         tbody.innerHTML = htmlSub; subContainer.appendChild(box); const navLink = document.createElement('a'); navLink.className = 'side-nav-sub-link'; navLink.innerText = sub; navLink.onclick = () => scrollToSubAnchor(anchorId, navLink); sideNavSubjects.appendChild(navLink);
     });
+    if (subContainer) subContainer.dataset.summaryRenderSig = subjectRenderKey;
+    if (sideNavSubjects) sideNavSubjects.dataset.summaryRenderSig = subjectRenderKey;
+    }
 
     const tbBottom = document.querySelector('#tb-bottom3 tbody'); let htmlBottom = '';
     let bottomList = townshipSchools.slice().sort((a, b) => (a.rankBottom || 9999) - (b.rankBottom || 9999));
@@ -10623,7 +10688,7 @@ function renderTables() {
                 ${getRankHTML(s.rankBottom)}
             </tr>`;
     });
-    tbBottom.innerHTML = htmlBottom;
+    setSummaryHtmlIfChanged(tbBottom, htmlBottom, `${summarySignature}::bottom-body`);
     refreshIndicatorResults(true);
 }
 
@@ -11489,9 +11554,15 @@ function renderStudentReportSkeleton(container, student) {
 }
 
 function scheduleStudentReportCharts(student, history) {
+    const chartKey = buildStudentReportCacheKey(student, 'CHARTS');
+    const container = document.getElementById('report-card-capture-area');
+    if (container?.dataset.reportChartCacheKey === chartKey) return;
     const render = () => {
+        const currentContainer = document.getElementById('report-card-capture-area');
+        if (currentContainer?.dataset.reportChartCacheKey === chartKey) return;
         try { if (typeof renderRadarChart === 'function') renderRadarChart(student, history); } catch (e) { console.error(e); }
         try { if (typeof renderVarianceChart === 'function') renderVarianceChart(student, history); } catch (e) { console.error(e); }
+        if (currentContainer) currentContainer.dataset.reportChartCacheKey = chartKey;
     };
     if (typeof window.requestIdleCallback === 'function') {
         window.requestIdleCallback(render, { timeout: 1200 });
@@ -12473,8 +12544,13 @@ async function refreshRenderedStudentReportAfterHistory(stu, token) {
             reportCache?.setReportHtml?.(reportKey, reportHtml);
         }
         if (token !== __reportQueryToken) return;
-        container.innerHTML = typeof reportHtml === 'string' ? reportHtml : '';
-        enhanceStudentReportMetrics(container);
+        const nextReportHtml = typeof reportHtml === 'string' ? reportHtml : '';
+        if (container.dataset.reportHtmlCacheKey !== reportKey || container.innerHTML !== nextReportHtml) {
+            container.innerHTML = nextReportHtml;
+            container.dataset.reportHtmlCacheKey = reportKey;
+            container.dataset.reportChartCacheKey = '';
+            enhanceStudentReportMetrics(container);
+        }
         const history = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(stu) : [];
         window.setTimeout(() => {
             if (token !== __reportQueryToken) return;
@@ -12587,8 +12663,13 @@ async function doQuery(targetStudent = null) {
                 reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'FULL'));
                 reportCache?.setReportHtml?.(reportCacheKey, reportHtml);
             }
-            container.innerHTML = typeof reportHtml === 'string' ? reportHtml : '';
-            enhanceStudentReportMetrics(container);
+            const nextReportHtml = typeof reportHtml === 'string' ? reportHtml : '';
+            if (container.dataset.reportHtmlCacheKey !== reportCacheKey || container.innerHTML !== nextReportHtml) {
+                container.innerHTML = nextReportHtml;
+                container.dataset.reportHtmlCacheKey = reportCacheKey;
+                container.dataset.reportChartCacheKey = '';
+                enhanceStudentReportMetrics(container);
+            }
         } catch (e) {
             console.error('Render Report Error:', e);
             container.innerHTML = `<div style="color:red; padding:20px; text-align:left;"><h3 style="color:red">Rendering Error</h3><pre>${e.stack || e.message || e}</pre></div>`;
@@ -19105,5 +19186,3 @@ if (typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeE
         }, 1500);
     }
 })();
-
-
