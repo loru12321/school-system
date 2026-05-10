@@ -18,6 +18,7 @@ const smoke = read('scripts/smoke-all-modules.js');
 const schedulerTest = read('scripts/test-system-performance-scheduler.js');
 const bootRuntime = read('public/assets/js/boot-runtime.js');
 const shellRuntime = read('public/assets/js/shell-runtime.js');
+const html = read('src/index.html');
 const modernOsShell = fs.existsSync(path.join(root, 'src/assets/css/modern-os-shell.css'))
   ? read('src/assets/css/modern-os-shell.css')
   : '';
@@ -60,9 +61,14 @@ assert.ok(bootRuntime.includes('__APP_CORE_MODULES_LOADED__'), 'boot runtime sho
 assert.ok(bootRuntime.includes('__APP_SECONDARY_MODULES_LOADED__'), 'boot runtime should track secondary module hydration');
 assert.ok(shellRuntime.includes('DEFAULT_CATEGORY'), 'shell runtime should use a stable default category');
 assert.ok(shellRuntime.includes('CATEGORY_ALIASES'), 'shell runtime should map legacy categories into the reordered shell');
+assert.ok(shellRuntime.includes("macro: {"), 'shell runtime should split macro analysis out of the old all-in-one analysis group');
+assert.ok(shellRuntime.includes("teaching: {"), 'shell runtime should expose a dedicated teaching/class diagnosis group');
+assert.ok(shellRuntime.includes("student: {"), 'shell runtime should expose a dedicated student growth group');
+assert.ok(shellRuntime.includes("intervention: {"), 'shell runtime should expose a dedicated intervention/calculation group');
 assert.ok(shellRuntime.includes("id: 'student-details'"), 'reordered shell should keep student details accessible');
 assert.ok(shellRuntime.includes("id: 'report-generator'"), 'reordered shell should keep report generator accessible');
 assert.ok(shellRuntime.includes("id: 'county-analysis'"), 'reordered shell should keep county analysis accessible');
+assert.ok(!html.includes('data-shell-module-rail-shell="floating"'), 'shell should not render the old floating module rail that can cover content');
 assert.ok(modernOsShell.includes('prefers-reduced-motion'), 'modern OS shell should respect reduced motion');
 assert.ok(modernOsShell.includes('@supports not'), 'modern OS shell should include a low-cost fallback for unsupported blur');
 

@@ -22,31 +22,59 @@
                 { id: 'cohort-growth', icon: 'ti-timeline', text: '纵向成长档案', hint: '把多次考试串成个人成长轨迹。' }
             ]
         },
-        intelligence: {
-            title: '智能分析',
-            color: '#8b5cf6',
-            icon: 'ti-brain',
-            eyebrow: 'Analysis Suite',
-            summary: '从联考、校域到班级、教师的多维度教学诊断。',
+        macro: {
+            title: '宏观分析',
+            color: '#2563eb',
+            icon: 'ti-chart-pie',
+            eyebrow: 'Macro Analysis',
+            summary: '先看联考、县域、学校与分数段的整体走势，避免把所有分析塞进一个大入口。',
             items: [
                 { id: 'summary', icon: 'ti-report', text: '综合评价总览', hint: '先看全局排名、梯队分布和学校站位。' },
                 { id: 'analysis', icon: 'ti-chart-pie', text: '两率一分横向评价', hint: '从横向口径查看重点率、及格率和均分变化。' },
-                { id: 'high-score', icon: 'ti-trophy', text: '高分段/尖子生', hint: '追踪尖子层和高分段的规模与稳定度。' },
+                { id: 'high-score', icon: 'ti-trophy', text: '高分段与尖子生', hint: '追踪尖子层和高分段的规模与稳定度。' },
                 { id: 'county-analysis', icon: 'ti-map-2', text: '县域分析', hint: '查看县域教师画像和学校横向排名。' },
+                { id: 'segment-analysis', icon: 'ti-chart-histogram', text: '分数段统计', hint: '看不同分段的人数密度和迁移趋势。' },
+                { id: 'correlation-analysis', icon: 'ti-topology-star-3', text: '学科关联度分析', hint: '判断学科之间的联动和迁移机会。' }
+            ]
+        },
+        teaching: {
+            title: '教师班级',
+            color: '#7c3aed',
+            icon: 'ti-school',
+            eyebrow: 'Teaching Diagnosis',
+            summary: '把教师画像、班级横比与班内分化集中在教学诊断链路里。',
+            items: [
                 { id: 'teacher-analysis', icon: 'ti-school', text: '教师教学质量画像', hint: '从教师视角查看贡献、波动和结构性问题。' },
                 { id: 'class-comparison', icon: 'ti-layout-columns', text: '班级横向对比', hint: '横向比较班级表现，快速识别差异来源。' },
-                { id: 'class-diagnosis', icon: 'ti-activity', text: '班级分化诊断', hint: '追踪班级内部离散度，判断分化是否加剧。' },
+                { id: 'class-diagnosis', icon: 'ti-activity', text: '班级分化诊断', hint: '追踪班级内部离散度，判断分化是否加剧。' }
+            ]
+        },
+        student: {
+            title: '学生发展',
+            color: '#10b981',
+            icon: 'ti-users',
+            eyebrow: 'Student Growth',
+            summary: '围绕学生画像、明细、进退步、偏科和家校反馈形成一条清楚的观察链。',
+            items: [
                 { id: 'student-overview', icon: 'ti-layout-dashboard', text: '学情总览', hint: '先看整体学情结构、风险分层和关键信号。' },
                 { id: 'student-details', icon: 'ti-list-details', text: '学生档案查询', hint: '按学生查看成绩、班级和画像细节。' },
                 { id: 'subject-balance', icon: 'ti-scale', text: '优势劣势学科透视', hint: '识别学生的拉分学科和短板学科。' },
-                { id: 'marginal-push', icon: 'ti-target-arrow', text: '临界生精准干预', hint: '锁定边缘学生，安排最值得的干预资源。' },
-                { id: 'progress-analysis', icon: 'ti-trending-up', text: '进退步/增值评价', hint: '判断学生是在稳定上行、停滞还是回落。' },
+                { id: 'progress-analysis', icon: 'ti-trending-up', text: '进退步与增值评价', hint: '判断学生是在稳定上行、停滞还是回落。' },
                 { id: 'potential-analysis', icon: 'ti-bulb', text: '偏科潜力挖掘', hint: '抓住潜力学科和被掩盖的提升空间。' },
-                { id: 'segment-analysis', icon: 'ti-chart-histogram', text: '分数段统计', hint: '看不同分段的人数密度和迁移趋势。' },
-                { id: 'correlation-analysis', icon: 'ti-topology-star-3', text: '学科关联度分析', hint: '判断学科之间的联动和迁移机会。' },
+                { id: 'report-generator', icon: 'ti-certificate', text: '成绩单与家校沟通', hint: '生成面向学生与家长的成绩反馈出口。' }
+            ]
+        },
+        intervention: {
+            title: '干预核算',
+            color: '#f97316',
+            icon: 'ti-target-arrow',
+            eyebrow: 'Intervention',
+            summary: '把指标生、后进群体、临界生和座位微调放在干预决策链路里。',
+            items: [
                 { id: 'indicator', icon: 'ti-target', text: '指标生达标核算', hint: '快速核对指标生口径、边缘人数和达标压力。' },
-                { id: 'bottom3', icon: 'ti-arrow-bar-to-down', text: '低分群体/后1/3', hint: '定位底部群体波动，提前准备补弱动作。' },
-                { id: 'report-generator', icon: 'ti-certificate', text: '成绩单/家校沟通', hint: '生成面向学生与家长的成绩反馈出口。' }
+                { id: 'bottom3', icon: 'ti-arrow-bar-to-down', text: '后1/3学生核算', hint: '定位底部群体波动，提前准备补弱动作。' },
+                { id: 'marginal-push', icon: 'ti-target-arrow', text: '临界生精准干预', hint: '锁定边缘学生，安排最值得的干预资源。' },
+                { id: 'seat-adjustment', icon: 'ti-armchair', text: '考后座位微调', hint: '考试后按策略重新排座，减少观察与沟通成本。' }
             ]
         },
         tools: {
@@ -59,7 +87,6 @@
                 { id: 'exam-arranger', icon: 'ti-id-badge-2', text: '智能考场编排', hint: '生成更稳妥的考场、监考与座位安排。' },
                 { id: 'freshman-simulator', icon: 'ti-arrows-split', text: '新生均衡分班', hint: '快速模拟均衡分班方案并比较结果。' },
                 { id: 'grade-scheduler', icon: 'ti-calendar-time', text: '级部智能排课', hint: '协同安排课程资源和排课节奏。' },
-                { id: 'seat-adjustment', icon: 'ti-armchair', text: '考后排座/互助组', hint: '考试后按策略重新排座和组织互助。' },
                 { id: 'mutual-aid', icon: 'ti-friends', text: '学科小老师分组', hint: '按学科优势自动形成互助学习小组。' }
             ]
         },
@@ -86,13 +113,15 @@
     };
 
     const DEFAULT_CATEGORY = 'home';
-    const RESTRICTED_DEFAULT_CATEGORY = 'intelligence';
+    const RESTRICTED_DEFAULT_CATEGORY = 'student';
     const CATEGORY_ALIASES = {
         data: 'foundation',
-        town: 'intelligence',
-        county: 'intelligence',
-        class: 'intelligence',
-        student: 'intelligence',
+        town: 'macro',
+        county: 'macro',
+        class: 'teaching',
+        intelligence: 'macro',
+        student: 'student',
+        intervention: 'intervention',
         tools: 'tools'
     };
 
@@ -181,7 +210,6 @@
     }
 
     function notifyShellEnhancements() {
-        scheduleFloatingModuleRailSync();
         if (typeof window.refreshShellEnhancements === 'function') {
             window.refreshShellEnhancements();
         }
@@ -270,6 +298,9 @@
 
     function getModuleRailInstances() {
         return Array.from(document.querySelectorAll('[data-shell-module-rail-shell]'))
+            .filter(function (shell) {
+                return shell.getAttribute('data-shell-module-rail-shell') !== 'floating';
+            })
             .map(function (shell) {
                 const rail = shell.querySelector('[data-shell-module-rail]');
                 const title = shell.querySelector('[data-shell-module-rail-title]');
@@ -286,7 +317,7 @@
     }
 
     function getFloatingModuleRailShell() {
-        return document.querySelector('[data-shell-module-rail-shell="floating"]');
+        return null;
     }
 
     function getMainScrollContainer() {
@@ -347,12 +378,7 @@
     }
 
     function scheduleFloatingModuleRailSync() {
-        if (moduleRailFloatingSyncFrame) return;
-        moduleRailFloatingSyncFrame = window.requestAnimationFrame(function () {
-            moduleRailFloatingSyncFrame = 0;
-            syncFloatingModuleRailLayout();
-            syncFloatingModuleRailVisibility();
-        });
+        moduleRailFloatingSyncFrame = 0;
     }
 
     function bindFloatingModuleRailBehavior() {
