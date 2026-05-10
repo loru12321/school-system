@@ -24,7 +24,9 @@
         teacherContextToken: 0,
         teacherContextScheduledSignature: '',
         lastDataRankSignature: '',
-        lastTeacherRankSignature: ''
+        lastTeacherRankSignature: '',
+        lastRenderHtmlSignature: '',
+        lastRenderHtml: ''
     };
     const COUNTY_SUBMODULES = {
         'county-teacher-portrait': {
@@ -1951,7 +1953,12 @@
             </div>
             ${activeId === 'county-school-horizontal' ? renderCountySchoolHorizontal() : renderCountyTeacherModule()}
         `;
-            root.innerHTML = html;
+            const htmlSignature = `${activeId}::${getDataSignature()}::${getCurrentSchoolNameForTeacherScope()}::${html.length}`;
+            if (state.lastRenderHtmlSignature !== htmlSignature || state.lastRenderHtml !== html || root.innerHTML !== html) {
+                root.innerHTML = html;
+                state.lastRenderHtmlSignature = htmlSignature;
+                state.lastRenderHtml = html;
+            }
         } finally {
             state.isRendering = false;
         }

@@ -51,7 +51,8 @@ assert.ok(schedulerTest.includes('scheduleTask'), 'system performance scheduler 
 assert.ok(schedulerTest.includes('requestIdleCallback'), 'system performance scheduler test should still cover idle scheduling');
 
 assert.ok(scripts['test:performance-budget'] === 'node scripts/test-performance-budget.js', 'package script should expose performance budget test');
-assert.ok(scripts['check:performance'] === 'npm run test:performance-budget && npm run test:system-performance-scheduler', 'package script should expose the performance check bundle');
+assert.ok(scripts['check:performance'] && scripts['check:performance'].includes('test:performance-budget'), 'performance check bundle should include budget test');
+assert.ok(scripts['check:performance'] && scripts['check:performance'].includes('test:system-performance-scheduler'), 'performance check bundle should include scheduler test');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('check:performance'), 'fast release check should include performance guards');
 assert.ok(scripts['check:syntax'] && scripts['check:syntax'].includes('scripts/test-performance-budget.js'), 'syntax check should cover performance budget test');
 

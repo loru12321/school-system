@@ -30,6 +30,128 @@ const readDuplicateCompareExamsState = typeof window.readDuplicateCompareExamsSt
         return [];
     });
 
+const ReportRenderPerfCache = {
+    signature: '',
+    html: new Map(),
+    comparisonStudent: new WeakMap(),
+    cloudHint: new WeakMap(),
+    previousRecord: new WeakMap(),
+    examHistory: new WeakMap(),
+    scopeMapRaw: '',
+    scopeMap: {},
+    schoolCandidatesSignature: '',
+    schoolCandidates: [],
+    townshipRank: new Map(),
+    countyRank: new Map(),
+    countyDirect: new WeakMap()
+};
+
+function getReportRenderSignature() {
+    const signature = [
+        window.CURRENT_EXAM_ID || '',
+        window.__RAW_DATA_VERSION || 0,
+        Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
+        Array.isArray(window.SUBJECTS) ? window.SUBJECTS.join('|') : '',
+        Object.keys(window.SCHOOLS || {}).join('|')
+    ].join('::');
+    if (ReportRenderPerfCache.signature !== signature) {
+        ReportRenderPerfCache.signature = signature;
+        ReportRenderPerfCache.html.clear();
+        ReportRenderPerfCache.comparisonStudent = new WeakMap();
+        ReportRenderPerfCache.cloudHint = new WeakMap();
+        ReportRenderPerfCache.previousRecord = new WeakMap();
+        ReportRenderPerfCache.examHistory = new WeakMap();
+        ReportRenderPerfCache.townshipRank.clear();
+        ReportRenderPerfCache.countyRank.clear();
+        ReportRenderPerfCache.countyDirect = new WeakMap();
+    }
+    return signature;
+}
+
+function getReportStudentCacheKey(student) {
+    return [
+        String(student?.school || '').trim(),
+        String(student?.class || '').trim(),
+        String(student?.name || '').trim(),
+        String(student?.id || '').trim()
+    ].join('::');
+}
+
+function getCachedComparisonStudentView(student) {
+    if (!student || typeof student !== 'object') return student;
+    getReportRenderSignature();
+    if (ReportRenderPerfCache.comparisonStudent.has(student)) return ReportRenderPerfCache.comparisonStudent.get(student);
+    const view = typeof getComparisonStudentView === 'function'
+        ? getComparisonStudentView(student, RAW_DATA)
+        : student;
+    ReportRenderPerfCache.comparisonStudent.set(student, view);
+    return view;
+}
+
+function getCachedCloudCompareHint(student) {
+    if (!student || typeof student !== 'object') return null;
+    getReportRenderSignature();
+    if (ReportRenderPerfCache.cloudHint.has(student)) return ReportRenderPerfCache.cloudHint.get(student);
+    const hint = resolveCloudCompareHint(student);
+    ReportRenderPerfCache.cloudHint.set(student, hint || null);
+    return hint || null;
+}
+
+function getCachedPreviousRecord(student) {
+    if (!student || typeof student !== 'object') return null;
+    getReportRenderSignature();
+    if (ReportRenderPerfCache.previousRecord.has(student)) return ReportRenderPerfCache.previousRecord.get(student);
+    const previous = typeof findPreviousRecord === 'function' ? findPreviousRecord(student) : null;
+    ReportRenderPerfCache.previousRecord.set(student, previous || null);
+    return previous || null;
+}
+
+function getCachedStudentExamHistory(student) {
+    if (!student || typeof student !== 'object') return [];
+    getReportRenderSignature();
+    if (ReportRenderPerfCache.examHistory.has(student)) return ReportRenderPerfCache.examHistory.get(student);
+    const history = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(student) : [];
+    const list = Array.isArray(history) ? history : [];
+    ReportRenderPerfCache.examHistory.set(student, list);
+    return list;
+}
+
+function getCachedRankScope(kind, subjects) {
+    const key = `${getReportRenderSignature()}::${kind}::${(subjects || []).join('|')}`;
+    const cache = kind === 'township' ? ReportRenderPerfCache.townshipRank : ReportRenderPerfCache.countyRank;
+    if (cache.has(key)) return cache.get(key);
+    const value = kind === 'township'
+        ? (typeof hasStudentTownshipRankData === 'function'
+            ? hasStudentTownshipRankData(RAW_DATA, subjects)
+            : Object.keys(SCHOOLS).length > 1)
+        : (typeof hasStudentCountyRankData === 'function'
+            ? hasStudentCountyRankData(RAW_DATA, subjects)
+            : null);
+    cache.set(key, value);
+    return value;
+}
+
+function getCachedCountyScopeMap() {
+    let raw = '';
+    try { raw = localStorage.getItem('COUNTY_ANALYSIS_SCOPE_V1') || ''; } catch (_) { raw = ''; }
+    if (ReportRenderPerfCache.scopeMapRaw !== raw) {
+        ReportRenderPerfCache.scopeMapRaw = raw;
+        try { ReportRenderPerfCache.scopeMap = raw ? JSON.parse(raw) : {}; } catch (_) { ReportRenderPerfCache.scopeMap = {}; }
+    }
+    return ReportRenderPerfCache.scopeMap;
+}
+
+function getCachedSchoolCandidates() {
+    const signature = getReportRenderSignature();
+    if (ReportRenderPerfCache.schoolCandidatesSignature === signature) return ReportRenderPerfCache.schoolCandidates;
+    ReportRenderPerfCache.schoolCandidatesSignature = signature;
+    ReportRenderPerfCache.schoolCandidates = Array.from(new Set([
+        ...Object.keys(SCHOOLS || {}),
+        ...(RAW_DATA || []).map(row => row?.school)
+    ].map(name => String(name || '').trim()).filter(Boolean)));
+    return ReportRenderPerfCache.schoolCandidates;
+}
+
 function resolveCloudCompareHint(student) {
     if (typeof getCloudCompareHint === 'function') {
         return getCloudCompareHint(student);
@@ -90,6 +212,13 @@ function renderSingleReportCardHTML(stu, mode) {
 
     const isFullScreenReport = mode === 'FULL';
     const forceFullLayout = mode === 'A4' || mode === 'PC' || isFullScreenReport;
+    const cacheableReportHtml = forceFullLayout;
+    const htmlCacheKey = cacheableReportHtml
+        ? `${getReportRenderSignature()}::${getReportStudentCacheKey(stu)}::${mode || ''}::${new Date().toLocaleDateString()}`
+        : '';
+    if (cacheableReportHtml && ReportRenderPerfCache.html.has(htmlCacheKey)) {
+        return ReportRenderPerfCache.html.get(htmlCacheKey);
+    }
     if ((!forceFullLayout && isMobile) || mode === 'IG') {
         // A. 获取 HTML 字符串
         const html = renderInstagramCard(stu);
@@ -109,12 +238,12 @@ function renderSingleReportCardHTML(stu, mode) {
     // --- 否则：渲染原有的 PC 端 Fluent Design 风格 (A4打印版) ---
     const totalStudentsCount = RAW_DATA.length;
     const genDate = new Date().toLocaleDateString();
-    const reportStu = getComparisonStudentView(stu, RAW_DATA);
+    const reportStu = getCachedComparisonStudentView(stu);
 
     // 获取对比数据（云端上下文优先，避免回退导致“看不到对比”）
-    const cloudHint = resolveCloudCompareHint(reportStu);
-    const prevStu = cloudHint?.previousRecord || findPreviousRecord(reportStu);
-    const reportExamHistory = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(reportStu) : [];
+    const cloudHint = getCachedCloudCompareHint(reportStu);
+    const prevStu = cloudHint?.previousRecord || getCachedPreviousRecord(reportStu);
+    const reportExamHistory = getCachedStudentExamHistory(reportStu);
     const currentExamId = getEffectiveCurrentExamId();
     const prevHistoryEntry = reportExamHistory.filter(h => {
         const matchKey = h.examFullKey || h.examId;
@@ -150,13 +279,8 @@ function renderSingleReportCardHTML(stu, mode) {
             || ''
         ).trim();
         if (!historyKey) return null;
-        try {
-            const rawMap = localStorage.getItem('COUNTY_ANALYSIS_SCOPE_V1');
-            const map = rawMap ? JSON.parse(rawMap) : {};
-            return map?.[historyKey] || null;
-        } catch (_) {
-            return null;
-        }
+        const map = getCachedCountyScopeMap();
+        return map?.[historyKey] || null;
     };
     const hasHistoricalCountyRank = (studentLike, subject = 'total', historyEntry = null) => {
         if (!studentLike || typeof studentLike !== 'object') return false;
@@ -177,17 +301,20 @@ function renderSingleReportCardHTML(stu, mode) {
         if (typeof isCountyDirectStudentForRank === 'function') return isCountyDirectStudentForRank(studentLike);
         const schoolName = String(studentLike?.school || '').trim();
         if (!schoolName || typeof getCountyDirectSchoolNames !== 'function' || typeof getTownshipManagedSchoolNames !== 'function') return false;
-        const candidateNames = Array.from(new Set([
-            ...Object.keys(SCHOOLS || {}),
-            ...(RAW_DATA || []).map(row => row?.school)
-        ].map(name => String(name || '').trim()).filter(Boolean)));
+        if (ReportRenderPerfCache.countyDirect.has(studentLike)) return ReportRenderPerfCache.countyDirect.get(studentLike);
+        const candidateNames = getCachedSchoolCandidates();
         const townshipNames = getTownshipManagedSchoolNames(candidateNames);
-        if (!townshipNames.length) return false;
-        return getCountyDirectSchoolNames(candidateNames).some(name => (
+        if (!townshipNames.length) {
+            ReportRenderPerfCache.countyDirect.set(studentLike, false);
+            return false;
+        }
+        const result = getCountyDirectSchoolNames(candidateNames).some(name => (
             name === schoolName
             || (typeof areSchoolNamesEquivalent === 'function' && areSchoolNamesEquivalent(name, schoolName))
             || (typeof areSchoolNamesMatched === 'function' && areSchoolNamesMatched(name, schoolName, true))
         ));
+        ReportRenderPerfCache.countyDirect.set(studentLike, result);
+        return result;
     };
     const displayRankValue = (value, shouldShow = true) => {
         if (!shouldShow) return '-';
@@ -199,12 +326,11 @@ function renderSingleReportCardHTML(stu, mode) {
 
     // 排名数据准备
     const reportSubjectsForRank = [...new Set(SUBJECTS)];
-    const hasTownshipRankData = typeof hasStudentTownshipRankData === 'function'
-        ? hasStudentTownshipRankData(RAW_DATA, reportSubjectsForRank)
-        : Object.keys(SCHOOLS).length > 1;
-    const hasCountyRankData = typeof hasStudentCountyRankData === 'function'
-        ? hasStudentCountyRankData(RAW_DATA, reportSubjectsForRank)
-        : getStudentCountyRankValue(reportStu, 'total') !== '-';
+    const hasTownshipRankData = getCachedRankScope('township', reportSubjectsForRank);
+    const cachedCountyRankData = getCachedRankScope('county', reportSubjectsForRank);
+    const hasCountyRankData = cachedCountyRankData === null
+        ? getStudentCountyRankValue(reportStu, 'total') !== '-'
+        : cachedCountyRankData;
     const showClassRank = hasClassRankScope(reportStu);
     const showTownRank = hasTownshipRankData && !isCountyDirectStudent(reportStu);
     const showCountyRank = hasCountyRankData;
@@ -581,6 +707,9 @@ function renderSingleReportCardHTML(stu, mode) {
         <div style="text-align:center; font-size:11px; color:#cbd5e1; margin-top:20px;">系统自动生成 · 仅供家校沟通参考</div>
         </div>`;
 
+    if (cacheableReportHtml) {
+        ReportRenderPerfCache.html.set(htmlCacheKey, finalHtml);
+    }
     return finalHtml;
 }
 
@@ -588,22 +717,21 @@ function renderSingleReportCardHTML(stu, mode) {
 function renderInstagramCard(stu) {
     const genDate = new Date().toLocaleDateString();
     const totalStudents = RAW_DATA.length;
-    const reportStu = getComparisonStudentView(stu, RAW_DATA);
+    const reportStu = getCachedComparisonStudentView(stu);
     const comparisonTotalSubjects = getComparisonTotalSubjects();
     const currentTotal = getComparisonTotalValue(reportStu, comparisonTotalSubjects);
-    const hasTownshipRankData = typeof hasStudentTownshipRankData === 'function'
-        ? hasStudentTownshipRankData(RAW_DATA, comparisonTotalSubjects)
-        : Object.keys(SCHOOLS).length > 1;
-    const hasCountyRankData = typeof hasStudentCountyRankData === 'function'
-        ? hasStudentCountyRankData(RAW_DATA, comparisonTotalSubjects)
-        : getStudentCountyRankValue(reportStu, 'total') !== '-';
+    const hasTownshipRankData = getCachedRankScope('township', comparisonTotalSubjects);
+    const cachedCountyRankData = getCachedRankScope('county', comparisonTotalSubjects);
+    const hasCountyRankData = cachedCountyRankData === null
+        ? getStudentCountyRankValue(reportStu, 'total') !== '-'
+        : cachedCountyRankData;
     const showTownRank = hasTownshipRankData && !isCountyDirectStudent(reportStu);
     const rank = showTownRank ? safeGet(reportStu, 'ranks.total.township', '-') : safeGet(reportStu, 'ranks.total.school', '-');
     const schoolTotalStudents = (reportStu?.school && SCHOOLS?.[reportStu.school]?.students?.length) || totalStudents || 1;
     const scopeTotalStudents = showTownRank ? (totalStudents || 1) : schoolTotalStudents;
     const pct = (typeof rank === 'number') ? ((1 - rank / scopeTotalStudents) * 100).toFixed(0) : '-';
     const avatarLetter = stu.name.charAt(0); // 头像取首字
-    const cloudHint = resolveCloudCompareHint(reportStu);
+    const cloudHint = getCachedCloudCompareHint(reportStu);
 
     // 判断是否为单校模式
     const isSingleSchool = Object.keys(SCHOOLS).length <= 1;

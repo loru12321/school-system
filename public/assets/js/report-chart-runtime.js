@@ -1,6 +1,60 @@
 (() => {
     if (typeof window === 'undefined' || window.__REPORT_CHART_RUNTIME_PATCHED__) return;
 
+const ReportChartPerfCache = {
+    signature: '',
+    subjectStats: new Map(),
+    comparisonStudent: new WeakMap()
+};
+
+function getReportChartSignature() {
+    const signature = [
+        window.CURRENT_EXAM_ID || '',
+        window.__RAW_DATA_VERSION || 0,
+        Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
+        Array.isArray(window.SUBJECTS) ? window.SUBJECTS.join('|') : ''
+    ].join('::');
+    if (ReportChartPerfCache.signature !== signature) {
+        ReportChartPerfCache.signature = signature;
+        ReportChartPerfCache.subjectStats.clear();
+        ReportChartPerfCache.comparisonStudent = new WeakMap();
+    }
+    return signature;
+}
+
+function getCachedChartComparisonStudent(student) {
+    if (!student || typeof student !== 'object') return student;
+    getReportChartSignature();
+    if (ReportChartPerfCache.comparisonStudent.has(student)) return ReportChartPerfCache.comparisonStudent.get(student);
+    const view = typeof getComparisonStudentView === 'function'
+        ? getComparisonStudentView(student, RAW_DATA)
+        : student;
+    ReportChartPerfCache.comparisonStudent.set(student, view);
+    return view;
+}
+
+function getScoreStatsForRows(subject, rows = RAW_DATA, scopeKey = 'current') {
+    const source = Array.isArray(rows) ? rows : [];
+    const key = `${getReportChartSignature()}::${scopeKey}::${source.length}::${subject}`;
+    if (ReportChartPerfCache.subjectStats.has(key)) return ReportChartPerfCache.subjectStats.get(key);
+    const scores = source
+        .map(row => row?.scores?.[subject])
+        .filter(value => typeof value === 'number')
+        .sort((a, b) => b - a);
+    const count = scores.length;
+    const mean = count ? scores.reduce((sum, value) => sum + value, 0) / count : 0;
+    const variance = count ? scores.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / count : 0;
+    const stats = { scores, count, mean, sd: Math.sqrt(variance) || 1 };
+    ReportChartPerfCache.subjectStats.set(key, stats);
+    return stats;
+}
+
+function getPercentileFromStats(score, stats) {
+    if (!stats || !stats.count) return null;
+    const rank = stats.scores.indexOf(score) + 1;
+    return rank > 0 ? ((1 - (rank / stats.count)) * 100).toFixed(1) : null;
+}
+
 function renderIGCharts(stu) {
     // 使用 setTimeout 确保 DOM 元素已经插入页面
     setTimeout(() => {
@@ -80,8 +134,7 @@ function renderIGCharts(stu) {
 
             linkedSubjects.forEach(sub => {
                 if (stu.scores[sub] !== undefined) {
-                    const allArr = RAW_DATA.map(s => s.scores[sub]).filter(v => typeof v === 'number');
-                    const stats = calcStats(allArr);
+                    const stats = getScoreStatsForRows(sub);
 
                     let z = 0;
                     if (stats.sd > 0) z = (stu.scores[sub] - stats.mean) / stats.sd;
@@ -277,7 +330,7 @@ function renderHistoryChart(student) {
 }
 
 function renderRadarChart(student, passedHistory = null) {
-    const reportStudent = getComparisonStudentView(student, RAW_DATA);
+    const reportStudent = getCachedChartComparisonStudent(student);
     const ctx = document.getElementById('radarChart'); if (!ctx) return;
     if (!window.Chart) {
         const holder = ctx.parentElement;
@@ -293,10 +346,8 @@ function renderRadarChart(student, passedHistory = null) {
     linkedSubjects.forEach(sub => {
         if (reportStudent.scores[sub] !== undefined) {
             labels.push(sub);
-            const allScores = RAW_DATA.map(s => s.scores[sub]).filter(v => typeof v === 'number').sort((a, b) => b - a);
-            const rank = allScores.indexOf(reportStudent.scores[sub]) + 1;
-            const total = allScores.length;
-            currentData.push(total > 0 ? ((1 - (rank / total)) * 100).toFixed(1) : null);
+            const stats = getScoreStatsForRows(sub);
+            currentData.push(getPercentileFromStats(reportStudent.scores[sub], stats));
         }
     });
 
@@ -320,13 +371,10 @@ function renderRadarChart(student, passedHistory = null) {
     if (latestHistoryStudent?.scores) {
         const previousData = labels.map(sub => {
             if (latestHistoryStudent.scores[sub] === undefined) return null;
-            const prevScores = latestHistoryRows
-                .map(row => row?.scores?.[sub])
-                .filter(v => typeof v === 'number')
-                .sort((a, b) => b - a);
-            if (!prevScores.length) return null;
-            const prevRank = prevScores.indexOf(latestHistoryStudent.scores[sub]) + 1;
-            return prevRank > 0 ? ((1 - (prevRank / prevScores.length)) * 100).toFixed(1) : null;
+            return getPercentileFromStats(
+                latestHistoryStudent.scores[sub],
+                getScoreStatsForRows(sub, latestHistoryRows, latestHistoryEntry?.examFullKey || latestHistoryEntry?.examId || 'previous')
+            );
         });
 
         if (previousData.some(value => value !== null)) {
@@ -383,7 +431,7 @@ function renderRadarChart(student, passedHistory = null) {
 let varianceChartInstance = null;
 
 function renderVarianceChart(student, passedHistory = null) {
-    const reportStudent = getComparisonStudentView(student, RAW_DATA);
+    const reportStudent = getCachedChartComparisonStudent(student);
     const ctx = document.getElementById('varianceChart');
     if (!ctx) return;
     if (!window.Chart) {
@@ -412,8 +460,7 @@ function renderVarianceChart(student, passedHistory = null) {
     const linkedSubjects = getComparisonTotalSubjects();
     linkedSubjects.forEach(sub => {
         if (reportStudent.scores[sub] !== undefined) {
-            const allScores = RAW_DATA.map(s => s.scores[sub]).filter(v => typeof v === 'number');
-            const stats = calcStats(allScores);
+            const stats = getScoreStatsForRows(sub);
             let z = 0;
             if (stats.sd > 0) z = (reportStudent.scores[sub] - stats.mean) / stats.sd;
 
@@ -426,10 +473,7 @@ function renderVarianceChart(student, passedHistory = null) {
 
             let prevZ = null;
             if (prevStu && prevStu.scores && prevStu.scores[sub] !== undefined) {
-                const prevAllScores = prevRows
-                    .map(row => row?.scores?.[sub])
-                    .filter(v => typeof v === 'number');
-                const prevStats = calcStats(prevAllScores);
+                const prevStats = getScoreStatsForRows(sub, prevRows, latestHistoryEntry?.examFullKey || latestHistoryEntry?.examId || 'previous');
                 if (prevStats.sd > 0) {
                     prevZ = (prevStu.scores[sub] - prevStats.mean) / prevStats.sd;
                 }
@@ -494,7 +538,7 @@ function renderVarianceChart(student, passedHistory = null) {
 }
 
 function buildStudentInsightModel(student, passedHistory = null) {
-    const reportStudent = getComparisonStudentView(student, RAW_DATA);
+    const reportStudent = getCachedChartComparisonStudent(student);
     const totalSubjects = getComparisonTotalSubjects();
     const totalScore = getComparisonTotalValue(reportStudent, totalSubjects);
     const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
@@ -534,15 +578,11 @@ function buildStudentInsightModel(student, passedHistory = null) {
     totalSubjects.forEach(subject => {
         const score = reportStudent?.scores?.[subject];
         if (typeof score !== 'number') return;
-        const allScores = RAW_DATA
-            .map(row => row?.scores?.[subject])
-            .filter(value => typeof value === 'number')
-            .sort((a, b) => b - a);
-        if (!allScores.length) return;
+        const stats = getScoreStatsForRows(subject);
+        if (!stats.count) return;
 
-        const rank = allScores.indexOf(score) + 1;
-        const percentileValue = rank > 0 ? ((1 - rank / allScores.length) * 100) : null;
-        const stats = calcStats(allScores);
+        const percentileText = getPercentileFromStats(score, stats);
+        const percentileValue = percentileText === null ? null : Number(percentileText);
         const zScore = stats.sd > 0 ? (score - stats.mean) / stats.sd : 0;
         subjectInsights.push({
             subject,
