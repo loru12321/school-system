@@ -499,6 +499,7 @@ var APP_MODULE_MOBILE_PRELOAD_LIMIT = 6;
 var APP_MODULE_LATE_PREFETCH_LIMIT = 18;
 var APP_MODULE_PREFETCH_CHUNK_SIZE = 6;
 var APP_MODULE_DESKTOP_BATCH_SIZE = 12;
+var APP_MODULE_IDLE_HYDRATION_CHUNK_SIZE = 4;
 
 window.__BOOT_SCRIPT_REGISTRY__ = window.__BOOT_SCRIPT_REGISTRY__ || {};
 
@@ -633,6 +634,35 @@ function scheduleIdleBootTask(task, timeoutMs = 1600) {
         return;
     }
     window.setTimeout(task, Math.max(0, timeoutMs));
+}
+
+function getAppCoreModuleCount() {
+    const appIndex = APP_MODULES.findIndex((src) => String(src || '').includes('/app.js'));
+    if (appIndex >= 0) return appIndex + 1;
+    return APP_MODULES.length;
+}
+
+async function loadIdleHydrationModules(modules, options = {}) {
+    const list = Array.isArray(modules) ? modules.filter(Boolean) : [];
+    if (!list.length) return;
+    const chunkSize = Math.max(1, Number(options.chunkSize || APP_MODULE_IDLE_HYDRATION_CHUNK_SIZE) || APP_MODULE_IDLE_HYDRATION_CHUNK_SIZE);
+    let hydratedCount = 0;
+    for (let index = 0; index < list.length; index += chunkSize) {
+        const chunk = list.slice(index, index + chunkSize);
+        await new Promise((resolve) => {
+            scheduleIdleBootTask(async () => {
+                await loadOrderedBootScripts(chunk, {
+                    onProgress: (count, total, src, status) => {
+                        if (status === 'loaded' || status === 'cached') hydratedCount += 1;
+                        if (typeof options.onProgress === 'function') {
+                            options.onProgress(hydratedCount, list.length, src, status);
+                        }
+                    }
+                });
+                resolve();
+            }, index === 0 ? 900 : 1200);
+        });
+    }
 }
 
 function scheduleLateAppCorePrefetch(modules) {
@@ -942,13 +972,40 @@ async function loadAppModules() {
     }
 
     if (APP_MODULES.length) {
-        if (loaderText) loaderText.textContent = `正在并行准备核心组件 (${loadedCount}/${total})...`;
-        await loadOrderedBootScripts(APP_MODULES, {
-            onProgress: (moduleLoadedCount) => {
-                loadedCount = BOOT_VENDOR_MODULES.length + moduleLoadedCount;
-                if (loaderText) loaderText.textContent = `正在初始化核心组件 (${loadedCount}/${total})...`;
+        const coreModuleCount = getAppCoreModuleCount();
+        const coreModules = APP_MODULES.slice(0, coreModuleCount);
+        const lazyModules = APP_MODULES.slice(coreModuleCount);
+
+        if (loaderText) loaderText.textContent = `正在初始化核心服务 (0/${coreModules.length})...`;
+        await loadOrderedBootScripts(coreModules, {
+            onProgress: (count) => {
+                if (loaderText) loaderText.textContent = `正在启动核心引擎 (${count}/${coreModules.length})...`;
             }
         });
+
+        window.__APP_CORE_MODULES_LOADED__ = true;
+        window.dispatchEvent(new CustomEvent('school:app-core-modules-ready', {
+            detail: { coreModuleCount, lazyModuleCount: lazyModules.length }
+        }));
+
+        if (lazyModules.length) {
+            window.__APP_SECONDARY_MODULES_LOADED__ = 'loading';
+            window.__APP_SECONDARY_MODULES_LOAD_PROMISE__ = loadIdleHydrationModules(lazyModules, {
+                onProgress: (count, total, src, status) => {
+                    if (status === 'loaded' || status === 'cached') {
+                        console.log(`[boot-runtime] Hydrated secondary module ${count}/${total}: ${src}`);
+                    }
+                }
+            }).then(() => {
+                window.__APP_SECONDARY_MODULES_LOADED__ = true;
+                window.dispatchEvent(new CustomEvent('school:app-secondary-modules-ready'));
+            }).catch((error) => {
+                window.__APP_SECONDARY_MODULES_LOADED__ = 'error';
+                console.warn('[boot-runtime] Secondary module hydration failed:', error);
+            });
+        } else {
+            window.__APP_SECONDARY_MODULES_LOADED__ = true;
+        }
     }
     markAppModulesReady();
     if (loaderText) loaderText.textContent = '核心组件就绪，正在同步状态...';

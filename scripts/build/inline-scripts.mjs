@@ -41,7 +41,20 @@ const OPTIONAL_INLINE_RUNTIME_PATHS = [
     './assets/js/teacher-compare-result-runtime.js',
     './assets/js/teacher-compare-cloud-runtime.js',
     './assets/js/macro-compare-result-runtime.js',
-    './assets/js/macro-compare-cloud-runtime.js'
+    './assets/js/macro-compare-cloud-runtime.js',
+    './assets/js/data-manager-teacher-runtime.js',
+    './assets/js/data-manager-student-runtime.js',
+    './assets/js/data-manager-archive-runtime.js',
+    './assets/js/data-manager-grade9-template-runtime.js',
+    './assets/js/data-manager-params-runtime.js',
+    './assets/js/data-manager-targets-runtime.js',
+    './assets/js/data-manager-school-alias-runtime.js',
+    './assets/js/data-manager-save-sync-runtime.js',
+    './assets/js/data-manager-history-runtime.js',
+    './assets/js/data-manager-tab-runtime.js',
+    './assets/js/macro-analysis-compat-runtime.js',
+    './assets/js/school-normalization-runtime.js',
+    './assets/js/report-compare-runtime.js'
 ];
 const BOOT_RUNTIME_PATH = './assets/js/boot-runtime.js';
 

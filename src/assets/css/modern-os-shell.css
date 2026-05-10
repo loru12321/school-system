@@ -1,0 +1,222 @@
+/**
+ * Modern OS Shell Theme (Win12 / Mac Integrated Style)
+ * Focus: Acrylic/Mica effects, Unified surfaces, Subtle Micro-interactions
+ */
+
+:root {
+    --os-blur: 18px;
+    --os-radius: 8px;
+    --os-surface-light: rgba(255, 255, 255, 0.72);
+    --os-surface-dark: rgba(15, 23, 42, 0.72);
+    --os-border: rgba(226, 232, 240, 0.5);
+    --os-accent: #3b82f6;
+    --os-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+/* 1. 全局一体化画布 (Unified Canvas) */
+body {
+    background: radial-gradient(circle at top left, #f8fafc, #f1f5f9) !important;
+    transition: background 0.5s ease;
+    font-family: 'Inter', 'Segoe UI', 'PingFang SC', sans-serif;
+}
+
+body.dark-mode {
+    background: radial-gradient(circle at top left, #0f172a, #020617) !important;
+}
+
+.app-layout {
+    background: transparent !important;
+}
+
+/* 2. 沉浸式侧边栏 (Integrated Sidebar) */
+.sidebar-spacious {
+    background: var(--os-surface-light) !important;
+    backdrop-filter: blur(var(--os-blur)) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(var(--os-blur)) saturate(180%) !important;
+    border-right: 1px solid var(--os-border) !important;
+    box-shadow: none !important;
+}
+
+.dark-mode .sidebar-spacious {
+    background: var(--os-surface-dark) !important;
+}
+
+.sidebar-menu-item {
+    border-radius: 8px !important;
+    margin: 4px 12px !important;
+    transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease !important;
+}
+
+.sidebar-menu-item:hover {
+    background: rgba(255, 255, 255, 0.4) !important;
+}
+
+.sidebar-menu-item.active {
+    background: var(--os-accent) !important;
+    color: white !important;
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3) !important;
+}
+
+.sidebar-menu-item.active i {
+    color: white !important;
+}
+
+/* 3. 悬浮一体化标题栏 (Floating Integrated Header) */
+#main-header {
+    top: 12px !important;
+    margin: 0 12px !important;
+    width: calc(100% - 24px) !important;
+    background: var(--os-surface-light) !important;
+    backdrop-filter: blur(var(--os-blur)) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(var(--os-blur)) saturate(180%) !important;
+    border: 1px solid var(--os-border) !important;
+    box-shadow: var(--os-shadow) !important;
+    border-radius: 8px !important;
+    padding: 10px 20px !important;
+}
+
+.dark-mode #main-header {
+    background: var(--os-surface-dark) !important;
+}
+
+/* 4. 全局内容容器 (Main Content Container) */
+.app-main {
+    padding-top: 80px !important; /* Space for floating header */
+}
+
+.section.card-box {
+    background: var(--os-surface-light) !important;
+    backdrop-filter: blur(8px) !important;
+    border: 1px solid var(--os-border) !important;
+    border-radius: var(--os-radius) !important;
+    box-shadow: var(--os-shadow) !important;
+    margin-bottom: 24px !important;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.dark-mode .section.card-box {
+    background: var(--os-surface-dark) !important;
+}
+
+.section.card-box:hover {
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.10);
+}
+
+/* 5. 模块导航微型化 (Mini Module Rail) */
+.shell-module-rail-shell {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 12px !important;
+}
+
+.shell-module-rail-chip {
+    background: rgba(255, 255, 255, 0.5) !important;
+    border: 1px solid var(--os-border) !important;
+    border-radius: 8px !important;
+    padding: 6px 14px !important;
+    backdrop-filter: blur(8px) !important;
+}
+
+.shell-module-rail-chip.is-active {
+    background: var(--os-accent) !important;
+    color: white !important;
+    border-color: var(--os-accent) !important;
+}
+
+/* 6. 搜索框 Mac 风格 (Spotlight Style) */
+#global-search-container {
+    background: rgba(0, 0, 0, 0.05) !important;
+    border-radius: 12px !important;
+    border: none !important;
+}
+
+.dark-mode #global-search-container {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 8. 仪表盘优化 (Dashboard / Starter Hub) */
+.starter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+    padding: 10px 0;
+}
+
+.starter-card {
+    background: rgba(255, 255, 255, 0.6) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    border-radius: 8px !important;
+    padding: 24px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03) !important;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+}
+
+.dark-mode .starter-card {
+    background: rgba(30, 41, 59, 0.4) !important;
+    border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.starter-card:hover {
+    background: rgba(255, 255, 255, 0.9) !important;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08) !important;
+}
+
+.starter-card h4 {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    margin-bottom: 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.starter-card h4 i {
+    color: var(--os-accent);
+}
+
+/* 9. 按钮与交互控件 */
+.btn {
+    border-radius: 10px !important;
+    padding: 8px 16px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+    border: 1px solid transparent !important;
+}
+
+.btn-blue {
+    background: var(--os-accent) !important;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2) !important;
+}
+
+.btn:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sidebar-menu-item,
+    .section.card-box,
+    .starter-card,
+    .btn {
+        transition: none !important;
+    }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .sidebar-spacious,
+    #main-header,
+    .section.card-box,
+    .starter-card,
+    .shell-module-rail-chip {
+        background: rgba(255, 255, 255, 0.94) !important;
+    }
+
+    .dark-mode .sidebar-spacious,
+    .dark-mode #main-header,
+    .dark-mode .section.card-box,
+    .dark-mode .starter-card {
+        background: rgba(15, 23, 42, 0.94) !important;
+    }
+}
