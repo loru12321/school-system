@@ -376,10 +376,16 @@
     }
 
     function syncModuleSubnavDock() {
+        let dock = document.getElementById('module-subnav-dock');
+        const dockStyle = document.getElementById('module-subnav-dock-style');
+        if (dock) dock.remove();
+        if (dockStyle) dockStyle.remove();
+        moduleDockLastSignature = '';
+        return;
+
         ensureModuleDockStyles();
         const app = document.getElementById('app');
         const modeMask = document.getElementById('mode-mask');
-        let dock = document.getElementById('module-subnav-dock');
         const context = getCurrentDockCategory();
         const category = context && context.category;
         const items = Array.isArray(category?.items) ? category.items : [];
