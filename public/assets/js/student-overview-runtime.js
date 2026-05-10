@@ -1,4 +1,33 @@
 // Teaching management runtime: student overview dashboard.
+const StudentOverviewPerfCache = {
+    schoolListSignature: '',
+    schoolList: [],
+    uniqueCountSignature: '',
+    uniqueCount: 0,
+    marginalSignature: '',
+    marginalSummary: { classCount: 0, total: 0 },
+    progressSignature: '',
+    progressSummary: null,
+    potentialSignature: '',
+    potentialCount: 0,
+    renderSignature: ''
+};
+
+function smRowsSignature(rows) {
+    const list = Array.isArray(rows) ? rows : [];
+    const first = list[0] || {};
+    const last = list[list.length - 1] || {};
+    return [
+        list.length,
+        String(first.school || ''),
+        String(first.class || ''),
+        String(first.name || ''),
+        String(last.school || ''),
+        String(last.class || ''),
+        String(last.name || '')
+    ].join('::');
+}
+
 function smSchoolMatches(rowSchool, selectedSchool) {
     const useRowSchool = String(rowSchool || '').trim();
     const useSelectedSchool = String(selectedSchool || '').trim();
@@ -19,6 +48,10 @@ function smBuildUniqueStudentCount(rawList, schoolName = '', className = '') {
     const rows = Array.isArray(rawList) ? rawList : [];
     const selectedSchool = String(schoolName || '').trim();
     const selectedClass = normalizeClass(className || '');
+    const signature = `${smRowsSignature(rows)}::${selectedSchool}::${selectedClass}`;
+    if (StudentOverviewPerfCache.uniqueCountSignature === signature) {
+        return StudentOverviewPerfCache.uniqueCount;
+    }
     const seen = new Set();
 
     rows.forEach((row) => {
@@ -34,11 +67,26 @@ function smBuildUniqueStudentCount(rawList, schoolName = '', className = '') {
         if (key !== '||') seen.add(key);
     });
 
+    StudentOverviewPerfCache.uniqueCountSignature = signature;
+    StudentOverviewPerfCache.uniqueCount = seen.size;
     return seen.size;
 }
 
 function smBuildMarginalSummary() {
     const source = (window.MARGINAL_STUDENTS && typeof window.MARGINAL_STUDENTS === 'object') ? window.MARGINAL_STUDENTS : {};
+    const signature = JSON.stringify(Object.keys(source).sort().map((classKey) => {
+        const subjectMap = source[classKey] || {};
+        return [
+            classKey,
+            ...Object.keys(subjectMap).sort().map((subject) => {
+                const data = subjectMap[subject] || {};
+                return `${subject}:${Array.isArray(data.excellentMarginal) ? data.excellentMarginal.length : 0}:${Array.isArray(data.passMarginal) ? data.passMarginal.length : 0}`;
+            })
+        ].join('|');
+    }));
+    if (StudentOverviewPerfCache.marginalSignature === signature) {
+        return StudentOverviewPerfCache.marginalSummary;
+    }
     let classCount = 0;
     let total = 0;
     Object.entries(source).forEach(([, subjectMap]) => {
@@ -49,7 +97,63 @@ function smBuildMarginalSummary() {
             total += excellentList.length + passList.length;
         });
     });
-    return { classCount, total };
+    StudentOverviewPerfCache.marginalSignature = signature;
+    StudentOverviewPerfCache.marginalSummary = { classCount, total };
+    return StudentOverviewPerfCache.marginalSummary;
+}
+
+function smGetSchoolListCached() {
+    const schools = window.SCHOOLS || {};
+    const signature = Object.keys(schools).sort().join('|');
+    if (StudentOverviewPerfCache.schoolListSignature === signature) {
+        return StudentOverviewPerfCache.schoolList;
+    }
+    StudentOverviewPerfCache.schoolListSignature = signature;
+    StudentOverviewPerfCache.schoolList = (typeof listAvailableSchoolsForCompare === 'function')
+        ? listAvailableSchoolsForCompare()
+        : Object.keys(schools);
+    return StudentOverviewPerfCache.schoolList;
+}
+
+function smBuildProgressSummary(progressRows, context, selectedClass) {
+    const rows = Array.isArray(progressRows) ? progressRows : [];
+    const signature = `${smRowsSignature(rows)}::${context.schoolValue || ''}::${selectedClass || ''}`;
+    if (StudentOverviewPerfCache.progressSignature === signature && StudentOverviewPerfCache.progressSummary) {
+        return StudentOverviewPerfCache.progressSummary;
+    }
+    let progressCount = 0;
+    let improveCount = 0;
+    let declineCount = 0;
+    let stableCount = 0;
+    rows.forEach((row) => {
+        if (context.schoolValue && !smSchoolMatches(row.school, context.schoolValue)) return;
+        if (selectedClass && normalizeClass(row.class || '') !== selectedClass) return;
+        progressCount += 1;
+        const changeValue = Number(row.change || 0);
+        if (changeValue > 0) improveCount += 1;
+        else if (changeValue < 0) declineCount += 1;
+        else stableCount += 1;
+    });
+    StudentOverviewPerfCache.progressSignature = signature;
+    StudentOverviewPerfCache.progressSummary = { progressCount, improveCount, declineCount, stableCount };
+    return StudentOverviewPerfCache.progressSummary;
+}
+
+function smBuildPotentialCount(potentialSourceRows, context, selectedClass) {
+    const rows = Array.isArray(potentialSourceRows) ? potentialSourceRows : [];
+    const signature = `${smRowsSignature(rows)}::${context.schoolValue || ''}::${selectedClass || ''}`;
+    if (StudentOverviewPerfCache.potentialSignature === signature) {
+        return StudentOverviewPerfCache.potentialCount;
+    }
+    let potentialCount = 0;
+    rows.forEach((row) => {
+        if (context.schoolValue && !smSchoolMatches(row.school, context.schoolValue)) return;
+        if (selectedClass && normalizeClass(row.class || '') !== selectedClass) return;
+        potentialCount += 1;
+    });
+    StudentOverviewPerfCache.potentialSignature = signature;
+    StudentOverviewPerfCache.potentialCount = potentialCount;
+    return potentialCount;
 }
 
 function smGetCurrentStudentContext() {
@@ -91,38 +195,19 @@ function smBuildOverviewModel() {
     const context = smGetCurrentStudentContext();
     const rawData = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
     const exams = tmGetAvailableExamList();
-    const schoolList = (typeof listAvailableSchoolsForCompare === 'function')
-        ? listAvailableSchoolsForCompare()
-        : Object.keys(window.SCHOOLS || {});
+    const schoolList = smGetSchoolListCached();
     const selectedClass = normalizeClass(context.classValue || '');
     const fullProgressRows = readProgressCacheFullState();
     const progressRows = fullProgressRows.length ? fullProgressRows : readProgressCacheState();
-    let progressCount = 0;
-    let improveCount = 0;
-    let declineCount = 0;
-    let stableCount = 0;
-    progressRows.forEach((row) => {
-        if (context.schoolValue && !smSchoolMatches(row.school, context.schoolValue)) return;
-        if (selectedClass && normalizeClass(row.class || '') !== selectedClass) return;
-        progressCount += 1;
-        const changeValue = Number(row.change || 0);
-        if (changeValue > 0) improveCount += 1;
-        else if (changeValue < 0) declineCount += 1;
-        else stableCount += 1;
-    });
+    const progressSummary = smBuildProgressSummary(progressRows, context, selectedClass);
     const marginalSummary = smBuildMarginalSummary();
     const potentialSourceRows = Array.isArray(window.POTENTIAL_STUDENTS_CACHE) ? window.POTENTIAL_STUDENTS_CACHE : [];
-    let potentialCount = 0;
-    potentialSourceRows.forEach((row) => {
-        if (context.schoolValue && !smSchoolMatches(row.school, context.schoolValue)) return;
-        if (selectedClass && normalizeClass(row.class || '') !== selectedClass) return;
-        potentialCount += 1;
-    });
+    const potentialCount = smBuildPotentialCount(potentialSourceRows, context, selectedClass);
     const uniqueStudentCount = smBuildUniqueStudentCount(rawData, context.schoolValue, selectedClass);
     const scoreReady = rawData.length > 0 && exams.length > 0;
     const schoolReady = !!context.schoolText && context.schoolText !== '未识别' && context.schoolText !== '未选择';
     const compareReady = exams.length >= 2 && context.exam1Text !== '未选择' && context.exam2Text !== '未选择' && context.exam1Text !== context.exam2Text;
-    const progressReady = progressCount > 0;
+    const progressReady = progressSummary.progressCount > 0;
     const supportReady = marginalSummary.total > 0 || potentialCount > 0;
 
     return {
@@ -136,10 +221,10 @@ function smBuildOverviewModel() {
         compareReady,
         progressReady,
         supportReady,
-        progressCount,
-        improveCount,
-        declineCount,
-        stableCount,
+        progressCount: progressSummary.progressCount,
+        improveCount: progressSummary.improveCount,
+        declineCount: progressSummary.declineCount,
+        stableCount: progressSummary.stableCount,
         marginalClassCount: marginalSummary.classCount,
         marginalRecordCount: marginalSummary.total,
         potentialCount
@@ -317,6 +402,26 @@ function bindStudentOverviewActions() {
 function renderStudentOverview() {
     const model = smBuildOverviewModel();
     const { context } = model;
+    const renderSignature = JSON.stringify({
+        school: context.schoolValue,
+        className: context.classValue,
+        exam1: context.exam1Value,
+        exam2: context.exam2Value,
+        period: context.periodValue,
+        raw: smRowsSignature(model.rawData),
+        exams: model.exams.join('|'),
+        progress: model.progressCount,
+        improve: model.improveCount,
+        decline: model.declineCount,
+        marginal: model.marginalRecordCount,
+        potential: model.potentialCount,
+        schools: model.schoolList.join('|')
+    });
+    if (StudentOverviewPerfCache.renderSignature === renderSignature) {
+        bindStudentOverviewActions();
+        return;
+    }
+    StudentOverviewPerfCache.renderSignature = renderSignature;
 
     tmSetHtml('smStatScores', tmBuildStatCard(
         '当前成绩库',

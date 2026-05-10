@@ -11,6 +11,43 @@
     let EXAM_ROOMS = [];
     let FB_SCHEMES_CACHE = [];
     let balanceChartInstance = null;
+    const FreshmanExamPerfCache = {
+        schemeSelectorSignature: '',
+        schemeSelectorHtml: '',
+        dashboardSignature: '',
+        dashboardHtml: '',
+        balanceSignature: '',
+        balanceTableHtml: ''
+    };
+
+    function fbClassSignature(classes = FB_CLASSES) {
+        return (Array.isArray(classes) ? classes : []).map((c) => [
+            c?.id,
+            c?.name,
+            Array.isArray(c?.students) ? c.students.length : 0,
+            Array.isArray(c?.students) ? c.students.map(s => `${s.name}:${s.score}:${s.gender}:${s.isDiff || s._isDiff ? 1 : 0}`).join(',') : ''
+        ].join(':')).join('|');
+    }
+
+    function fbCalcClassStats(students = []) {
+        const list = Array.isArray(students) ? students : [];
+        const n = list.length;
+        let total = 0;
+        let male = 0;
+        let diff = 0;
+        list.forEach((student) => {
+            total += Number(student?.score) || 0;
+            if (student?.gender === 'M') male += 1;
+            if (student?.isDiff || student?._isDiff) diff += 1;
+        });
+        return {
+            avg: n ? total / n : 0,
+            male,
+            female: n - male,
+            diff,
+            count: n
+        };
+    }
 
     function syncFbClasses() {
         const nextClasses = (typeof window.readFbClassesState === 'function')
@@ -187,11 +224,7 @@ function FB_generateSingleScheme(k, algo) {
 
     // 这里的计算是为了 stats，方便外部筛选
     classes.forEach(c => {
-        const n = c.students.length;
-        const total = c.students.reduce((a, b) => a + b.score, 0);
-        c.stats.avg = n ? total / n : 0;
-        c.stats.male = c.students.filter(s => s.gender === 'M').length;
-        c.stats.count = n;
+        c.stats = fbCalcClassStats(c.students);
     });
 
     return classes;
@@ -201,10 +234,17 @@ function FB_generateSingleScheme(k, algo) {
 function FB_renderSchemeSelector() {
     const container = document.getElementById('fb-scheme-cards');
     if (!container) return;
-    container.innerHTML = '';
     const bestRange = FB_SCHEMES_CACHE.length ? Math.min(...FB_SCHEMES_CACHE.map(s => s.range)) : Infinity;
+    const signature = FB_SCHEMES_CACHE.map(scheme => `${scheme.id}:${scheme.range.toFixed(3)}:${scheme.sd.toFixed(3)}:${fbClassSignature(scheme.data)}`).join('|');
+    if (FreshmanExamPerfCache.schemeSelectorSignature === signature) {
+        if (container.dataset.freshmanSchemeSig !== signature) {
+            container.innerHTML = FreshmanExamPerfCache.schemeSelectorHtml;
+            container.dataset.freshmanSchemeSig = signature;
+        }
+        return;
+    }
 
-    FB_SCHEMES_CACHE.forEach(scheme => {
+    const html = FB_SCHEMES_CACHE.map(scheme => {
         // 简单的评分逻辑
         const isBest = scheme.range <= bestRange;
         const borderStyle = isBest ? 'border:2px solid #16a34a; background:#fff;' : 'border:1px solid #ddd; background:#fff;';
@@ -213,7 +253,7 @@ function FB_renderSchemeSelector() {
         const males = scheme.data.map(c => c.stats.male);
         const maleRange = Math.max(...males) - Math.min(...males);
 
-        container.innerHTML += `
+        return `
                 <div data-scheme-id="${scheme.id}" onclick="FB_applyScheme(${scheme.id})" style="cursor:pointer; padding:10px; border-radius:6px; ${borderStyle} transition:0.2s;" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='#fff'">
                     <div style="font-weight:bold; color:#333; display:flex; justify-content:space-between;">
                         <span>${scheme.name}</span>
@@ -225,7 +265,11 @@ function FB_renderSchemeSelector() {
                     </div>
                 </div>
             `;
-    });
+    }).join('');
+    FreshmanExamPerfCache.schemeSelectorSignature = signature;
+    FreshmanExamPerfCache.schemeSelectorHtml = html;
+    container.innerHTML = html;
+    container.dataset.freshmanSchemeSig = signature;
 }
 
 // 4. 应用选中的方案
@@ -271,14 +315,26 @@ function FB_checkConflict(stu, targetArr) {
 }
 
 function FB_renderDashboard() {
-    document.getElementById('fb-results-area').classList.remove('hidden'); const container = document.getElementById('fb_class_container'); container.innerHTML = '';
+    document.getElementById('fb-results-area').classList.remove('hidden'); const container = document.getElementById('fb_class_container');
+    const dashboardSignature = fbClassSignature(FB_CLASSES);
+    if (container?.dataset.freshmanDashboardSig === dashboardSignature && FreshmanExamPerfCache.dashboardSignature === dashboardSignature) {
+        FB_renderBalanceChart();
+        return;
+    }
     let allAvgs = [], tMale = 0, tFemale = 0, totalDiffCnt = 0;
-    FB_CLASSES.forEach(c => {
-        const n = c.students.length; const total = c.students.reduce((a, b) => a + b.score, 0); const avg = n ? total / n : 0; const male = c.students.filter(s => s.gender === 'M').length;
-        const diffCnt = c.students.filter(s => (s.isDiff || s._isDiff)).length;
-        allAvgs.push(avg); tMale += male; tFemale += (n - male); totalDiffCnt += diffCnt; c.stats = { avg, male, female: n - male, count: n }; const isWarn = diffCnt > 3;
-        container.innerHTML += `<div class="fb-class-box ${isWarn ? 'fb-warn-bg' : ''}" onclick="FB_openSeatMap(${c.id})"><div class="fb-c-head"><span style="font-weight:bold; font-size:16px;">${c.name}</span><span class="fb-tag fb-tag-red" style="${diffCnt > 0 ? '' : 'display:none'}">难管: ${diffCnt}</span></div><div class="fb-c-body"><div>人数: <strong>${n}</strong></div><div>均分: <strong>${avg.toFixed(1)}</strong></div><div>男生: ${male}</div><div>女生: ${n - male}</div><div style="grid-column:span 2; font-size:11px; color:#999; margin-top:5px;">点击进入座位编排 →</div></div></div>`;
-    });
+    const classCardsHtml = FB_CLASSES.map(c => {
+        const stats = fbCalcClassStats(c.students);
+        const n = stats.count; const avg = stats.avg; const male = stats.male;
+        const diffCnt = stats.diff;
+        allAvgs.push(avg); tMale += male; tFemale += stats.female; totalDiffCnt += diffCnt; c.stats = stats; const isWarn = diffCnt > 3;
+        return `<div class="fb-class-box ${isWarn ? 'fb-warn-bg' : ''}" onclick="FB_openSeatMap(${c.id})"><div class="fb-c-head"><span style="font-weight:bold; font-size:16px;">${c.name}</span><span class="fb-tag fb-tag-red" style="${diffCnt > 0 ? '' : 'display:none'}">难管: ${diffCnt}</span></div><div class="fb-c-body"><div>人数: <strong>${n}</strong></div><div>均分: <strong>${avg.toFixed(1)}</strong></div><div>男生: ${male}</div><div>女生: ${stats.female}</div><div style="grid-column:span 2; font-size:11px; color:#999; margin-top:5px;">点击进入座位编排 →</div></div></div>`;
+    }).join('');
+    if (container && container.innerHTML !== classCardsHtml) {
+        container.innerHTML = classCardsHtml;
+        container.dataset.freshmanDashboardSig = dashboardSignature;
+    }
+    FreshmanExamPerfCache.dashboardSignature = dashboardSignature;
+    FreshmanExamPerfCache.dashboardHtml = classCardsHtml;
     const range = allAvgs.length ? (Math.max(...allAvgs) - Math.min(...allAvgs)) : 0;
     const elTotal = document.getElementById('fb_res_total');
     const elMale = document.getElementById('fb_res_male');
@@ -299,6 +355,10 @@ function FB_renderDashboard() {
 
 function FB_renderBalanceChart() {
     const ctx = document.getElementById('balanceChart'); const tableContainer = document.getElementById('balanceTableContainer'); const labels = FB_CLASSES.map(c => c.name);
+    const signature = fbClassSignature(FB_CLASSES);
+    if (FreshmanExamPerfCache.balanceSignature === signature && tableContainer?.dataset.freshmanBalanceSig === signature) {
+        return;
+    }
     const statsData = FB_CLASSES.map(c => { const scores = c.students.map(s => s.score).sort((a, b) => a - b); const qs = calculateQuartiles(scores); return { min: scores[0], max: scores[scores.length - 1], q1: qs.q1, median: qs.q2, q3: qs.q3, avg: c.stats.avg, sd: calculateSD(scores) }; });
     if (balanceChartInstance) balanceChartInstance.destroy();
     balanceChartInstance = new Chart(ctx, {
@@ -306,7 +366,13 @@ function FB_renderBalanceChart() {
     });
     let tableHtml = `<table class="comparison-table" style="font-size:12px;"><thead><tr><th>班级</th><th>人数</th><th>平均分</th><th>标准差 (SD)</th><th>极差 (Max-Min)</th><th>前25%线 (Q3)</th><th>后25%线 (Q1)</th></tr></thead><tbody>`;
     statsData.forEach((s, i) => { tableHtml += `<tr><td>${labels[i]}</td><td>${FB_CLASSES[i].students.length}</td><td>${s.avg.toFixed(2)}</td><td>${s.sd.toFixed(2)}</td><td>${(s.max - s.min).toFixed(1)}</td><td>${s.q3}</td><td>${s.q1}</td></tr>`; });
-    tableContainer.innerHTML = tableHtml + `</tbody></table>`;
+    const nextTableHtml = tableHtml + `</tbody></table>`;
+    if (tableContainer && tableContainer.innerHTML !== nextTableHtml) {
+        tableContainer.innerHTML = nextTableHtml;
+        tableContainer.dataset.freshmanBalanceSig = signature;
+    }
+    FreshmanExamPerfCache.balanceSignature = signature;
+    FreshmanExamPerfCache.balanceTableHtml = nextTableHtml;
 }
 
 const HistoryManager = {

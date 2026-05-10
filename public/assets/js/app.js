@@ -11159,8 +11159,62 @@ let STD_STATE = {
     sortDir: 'desc',   // desc 或 asc
     activeFilters: {}, // 存储筛选状态: { 'school': new Set(['实验中学', '二中']), '语文': ... }
     cacheData: [],     // 最终展示的数据
-    renderMeta: null   // 当前筛选批次的表格渲染元信息
+    renderMeta: null,  // 当前筛选批次的表格渲染元信息
+    dataSignature: '',
+    filterValueCache: Object.create(null),
+    lastBodySignature: '',
+    lastHeaderSignature: '',
+    lastScrollSignature: ''
 };
+
+function buildStudentDetailsFilterSignature() {
+    return Object.entries(STD_STATE.activeFilters || {})
+        .map(([key, values]) => {
+            const list = values && typeof values.forEach === 'function'
+                ? Array.from(values).map(value => String(value)).sort()
+                : [];
+            return `${key}:${list.join('|')}`;
+        })
+        .sort()
+        .join(';');
+}
+
+function buildStudentDetailsDataSignature(list = []) {
+    const rows = Array.isArray(list) ? list : [];
+    let totalSum = 0;
+    let subjectSum = 0;
+    rows.forEach((row) => {
+        totalSum += Number(row?.total) || 0;
+        const scores = row?.scores || {};
+        SUBJECTS.forEach((subject) => {
+            subjectSum += Number(scores[subject]) || 0;
+        });
+    });
+    const first = rows[0] || {};
+    const last = rows[rows.length - 1] || {};
+    return [
+        rows.length,
+        totalSum.toFixed(2),
+        subjectSum.toFixed(2),
+        String(first.school || ''),
+        String(first.class || ''),
+        String(first.name || ''),
+        String(last.school || ''),
+        String(last.class || ''),
+        String(last.name || ''),
+        STD_STATE.sortCol || '',
+        STD_STATE.sortDir || '',
+        buildStudentDetailsFilterSignature()
+    ].join('::');
+}
+
+function setStudentDetailsHtmlIfChanged(element, html, signature) {
+    if (!element) return false;
+    if (element.dataset.studentDetailsRenderSig === signature && element.innerHTML === html) return false;
+    element.innerHTML = html;
+    element.dataset.studentDetailsRenderSig = signature;
+    return true;
+}
 
 function getStudentDetailsPageSize() {
     const width = Number(window.innerWidth || 1280);
@@ -11737,6 +11791,8 @@ function renderStudentDetails(reset = true) {
 
         STD_STATE.cacheData = data;
         STD_STATE.renderMeta = buildStudentDetailsRenderMeta(data);
+        STD_STATE.dataSignature = buildStudentDetailsDataSignature(data);
+        STD_STATE.filterValueCache = Object.create(null);
     }
 
     // --- E. 分页与渲染 ---
@@ -11830,10 +11886,18 @@ function renderStudentDetails(reset = true) {
         headerHTML += `<th>班排</th><th>级排</th><th style="${townHeaderStyle}">镇排</th><th style="${countyHeaderStyle}">县排</th>`;
     }
 
-    if (thead.dataset.studentDetailsHeaderSig !== headerHTML) {
-        thead.innerHTML = headerHTML;
-        thead.dataset.studentDetailsHeaderSig = headerHTML;
-    }
+    const headerSignature = [
+        STD_STATE.dataSignature,
+        isTeacher ? 'teacher' : 'staff',
+        isClassTeacher ? 'class-teacher' : 'regular',
+        visibleSubjects.join('|'),
+        townRankVisible ? 'town' : 'no-town',
+        countyRankVisible ? 'county' : 'no-county',
+        STD_STATE.sortCol || '',
+        STD_STATE.sortDir || '',
+        buildStudentDetailsFilterSignature()
+    ].join('::');
+    setStudentDetailsHtmlIfChanged(thead, headerHTML, headerSignature);
 
     // 生成数据行
     let rowsHTML = '';
@@ -11914,27 +11978,42 @@ function renderStudentDetails(reset = true) {
                 </td>
             </tr>`;
 
-    if (totalItems === 0) tbody.innerHTML = `<tr><td colspan="100" style="text-align:center; padding:30px; color:#999;">无数据</td></tr>`;
-    else tbody.innerHTML = rowsHTML + paginationHTML;
+    const bodyHTML = totalItems === 0
+        ? `<tr><td colspan="100" style="text-align:center; padding:30px; color:#999;">无数据</td></tr>`
+        : rowsHTML + paginationHTML;
+    const bodySignature = [
+        STD_STATE.dataSignature,
+        STD_STATE.page,
+        STD_STATE.size,
+        isMobileStudentDetails ? 'mobile' : 'desktop',
+        visibleSubjects.join('|'),
+        townRankVisible ? 'town' : 'no-town',
+        countyRankVisible ? 'county' : 'no-county'
+    ].join('::');
+    const bodyChanged = setStudentDetailsHtmlIfChanged(tbody, bodyHTML, bodySignature);
 
     // 隐藏可能存在的对比区域
     const compareSection = document.getElementById('student-multi-period-compare-section');
     if (compareSection) compareSection.style.display = 'none';
 
     // 滚动到学生明细区域
-    setTimeout(() => {
-        const tableWrap = document.querySelector('#student-details .table-wrap');
-        const isMobileViewport = document.body?.dataset?.mobileQuery === 'true' || window.innerWidth <= 768;
-        if (isMobileViewport) {
-            if (shouldAutoFocusData) {
-                requestStudentDetailsPrimaryFocus();
+    const scrollSignature = `${bodySignature}::${reset ? 'reset' : 'page'}`;
+    if (bodyChanged || STD_STATE.lastScrollSignature !== scrollSignature) {
+        STD_STATE.lastScrollSignature = scrollSignature;
+        setTimeout(() => {
+            const tableWrap = document.querySelector('#student-details .table-wrap');
+            const isMobileViewport = document.body?.dataset?.mobileQuery === 'true' || window.innerWidth <= 768;
+            if (isMobileViewport) {
+                if (shouldAutoFocusData) {
+                    requestStudentDetailsPrimaryFocus();
+                }
+                return;
             }
-            return;
-        }
-        if (tableWrap) {
-            tableWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    }, 100);
+            if (tableWrap) {
+                tableWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 100);
+    }
 }
 
 // 辅助：获取单元格值
@@ -11971,20 +12050,25 @@ function toggleExcelMenu(colKey, event) {
 
 // 3. 构建菜单内容 (核心：提取唯一值)
 function buildFilterMenuContent(colKey, container) {
-    // 简单策略：从当前显示的 cacheData 中提取唯一值
-    const uniqueValues = new Set();
-    STD_STATE.cacheData.forEach(s => {
-        let val = getCellValue(s, colKey);
-        uniqueValues.add(String(val));
-    });
+    const cacheKey = `${STD_STATE.dataSignature || buildStudentDetailsDataSignature(STD_STATE.cacheData)}::${colKey}`;
+    let sortedValues = STD_STATE.filterValueCache[cacheKey];
+    if (!sortedValues) {
+        // 简单策略：从当前显示的 cacheData 中提取唯一值
+        const uniqueValues = new Set();
+        STD_STATE.cacheData.forEach(s => {
+            let val = getCellValue(s, colKey);
+            uniqueValues.add(String(val));
+        });
 
-    // 转为数组并排序
-    const sortedValues = Array.from(uniqueValues).sort((a, b) => {
-        const numA = parseFloat(a);
-        const numB = parseFloat(b);
-        if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-        return a.localeCompare(b, 'zh-CN', { numeric: true });
-    });
+        // 转为数组并排序
+        sortedValues = Array.from(uniqueValues).sort((a, b) => {
+            const numA = parseFloat(a);
+            const numB = parseFloat(b);
+            if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+            return a.localeCompare(b, 'zh-CN', { numeric: true });
+        });
+        STD_STATE.filterValueCache[cacheKey] = sortedValues;
+    }
 
     // 检查哪些被选中了
     const currentSet = STD_STATE.activeFilters[colKey];
@@ -12431,6 +12515,10 @@ function importTeacherExcel() {
 // Teacher analysis main runtime moved to public/assets/js/teacher-analysis-main-runtime.js
 
 let __reportQueryToken = 0;
+const ReportHistoryPerfCache = {
+    subjectScores: new Map(),
+    lastScrollKey: ''
+};
 
 function getReportStudentIdentity(student) {
     if (!student || typeof student !== 'object') return '';
@@ -12446,6 +12534,23 @@ function getStudentReportPerformanceRuntime() {
     return window.StudentReportPerformance && typeof window.StudentReportPerformance === 'object'
         ? window.StudentReportPerformance
         : null;
+}
+
+function getReportSubjectSortedScores(examKey, examData, subject) {
+    const key = `${String(examKey || '').trim()}::${String(subject || '').trim()}::${Array.isArray(examData) ? examData.length : 0}`;
+    if (ReportHistoryPerfCache.subjectScores.has(key)) {
+        return ReportHistoryPerfCache.subjectScores.get(key);
+    }
+    const scores = (Array.isArray(examData) ? examData : [])
+        .map(s => s.scores?.[subject])
+        .filter(v => typeof v === 'number')
+        .sort((a, b) => b - a);
+    ReportHistoryPerfCache.subjectScores.set(key, scores);
+    if (ReportHistoryPerfCache.subjectScores.size > 120) {
+        const firstKey = ReportHistoryPerfCache.subjectScores.keys().next().value;
+        ReportHistoryPerfCache.subjectScores.delete(firstKey);
+    }
+    return scores;
 }
 
 function getStudentReportSelectedExamIds() {
@@ -12692,12 +12797,16 @@ async function doQuery(targetStudent = null) {
     }
 
     // 自动滚动到成绩单区域
-    setTimeout(() => {
-        const reportElement = document.getElementById('single-report-result');
-        if (reportElement) {
-            reportElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    }, 200);
+    const reportScrollKey = `${getReportStudentIdentity(stu)}::${effectiveCurrentExamId || ''}::${selectedReportExamIds.join('|')}`;
+    if (ReportHistoryPerfCache.lastScrollKey !== reportScrollKey) {
+        ReportHistoryPerfCache.lastScrollKey = reportScrollKey;
+        setTimeout(() => {
+            const reportElement = document.getElementById('single-report-result');
+            if (reportElement) {
+                reportElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 200);
+    }
 }
 
 function setSingleSelectOptions(selectEl, values, placeholderText, preferredValue) {
@@ -13311,7 +13420,7 @@ function getStudentExamHistory(student) {
                 const percentiles = {};
                 (exam.subjects || SUBJECTS).forEach(sub => {
                     if (normalizedStudent.scores && normalizedStudent.scores[sub] !== undefined) {
-                        const allScores = examData.map(s => s.scores?.[sub]).filter(v => typeof v === 'number').sort((a, b) => b - a);
+                        const allScores = getReportSubjectSortedScores(exam.fingerprint || examId, examData, sub);
                         const rank = allScores.indexOf(normalizedStudent.scores[sub]) + 1;
                         const total = allScores.length;
                         percentiles[sub] = total > 0 ? ((1 - (rank / total)) * 100).toFixed(1) : 0;
