@@ -589,6 +589,7 @@
                 const cacheKey = getCohortSyncCacheKey(cid);
                 const forceSync = Boolean(options.force);
                 const minCount = Math.max(1, Number(options.minCount || 2));
+                const latestOnly = options.latestOnly === true || Number(options.maxFetch || 0) === 1;
                 const shouldRefreshSelectors = options.refreshSelectors !== false;
                 const lastSyncAt = Number(localStorage.getItem(cacheKey) || 0);
                 const localExamCount = countCachedCohortExams(db, cid);
@@ -626,6 +627,12 @@
 
                     if (keysToFetch.length === 0 && localExamCount < minCount && candidates.length > 0) {
                         keysToFetch.push(candidates[candidates.length - 1].key);
+                    }
+
+                    if (latestOnly && keysToFetch.length > 1) {
+                        const updatedByKey = new Map(candidates.map(row => [row.key, new Date(row.updated_at).getTime() || 0]));
+                        keysToFetch.sort((left, right) => (updatedByKey.get(right) || 0) - (updatedByKey.get(left) || 0));
+                        keysToFetch.length = 1;
                     }
 
                     if (keysToFetch.length === 0) {

@@ -18,6 +18,9 @@ create table if not exists public.system_data (
 create index if not exists idx_system_data_updated_at
 on public.system_data(updated_at desc);
 
+create index if not exists idx_system_data_key_prefix_updated
+on public.system_data(key text_pattern_ops, updated_at desc);
+
 drop trigger if exists trg_system_data_updated_at on public.system_data;
 
 create trigger trg_system_data_updated_at

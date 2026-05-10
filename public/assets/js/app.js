@@ -7591,9 +7591,7 @@ async function switchCohort(cohortId, options = {}) {
             if (String(readWorkspaceCohortId() || CURRENT_COHORT_ID || '') !== String(cohortId)) return;
             const stillEmpty = !(Array.isArray(RAW_DATA) && RAW_DATA.length > 0);
             if (stillEmpty) {
-                switchCohort(cohortId, { skipConfirm: true, fastEnter: false }).catch((error) => {
-                    console.warn('[switchCohort] background project hydrate failed:', error);
-                });
+                switchCohort(cohortId,{skipConfirm:true,fastEnter:false,preloadedData:cloudData}).catch(error=>console.warn('[switchCohort] background project hydrate failed:',error));
             }
         }).catch((error) => {
             console.warn('[switchCohort] background project fetch failed:', error);
@@ -7601,7 +7599,7 @@ async function switchCohort(cohortId, options = {}) {
     }
 
     // 2. 优先读本地缓存。首次进入时不再用云端请求挡住工作台显示。
-    const data = await DB.get(cohortKey, { localOnly: options.fastEnter === true });
+    const data=options.preloadedData||await DB.get(cohortKey,{localOnly:options.fastEnter===true});
 
     if (data) {
         // 3. 恢复数据
@@ -7716,7 +7714,8 @@ async function switchCohort(cohortId, options = {}) {
                 CohortExamHydrationScheduler.schedule(cohortId, {
                     delay: 250,
                     background: true,
-                    warnPrefix: '[switchCohort] 云端历史考试后台拉取失败:'
+                    minCount: 1,
+                    latestOnly: true
                 });
             } else {
                 const restored = await hydrateFromExamArchive();
@@ -7949,6 +7948,7 @@ const CohortExamHydrationScheduler = (() => {
             refreshSelectors: false
         };
         if (force) fetchOptions.force = true;
+        if(options.latestOnly===true)fetchOptions.latestOnly=true;
 
         const task = Promise.resolve(window.CloudManager.fetchCohortExamsToLocal(cid, fetchOptions))
             .then((res) => {
