@@ -34,9 +34,13 @@ const ReportRenderPerfCache = {
     signature: '',
     html: new Map(),
     comparisonStudent: new WeakMap(),
+    comparisonStudentByKey: new Map(),
     cloudHint: new WeakMap(),
+    cloudHintByKey: new Map(),
     previousRecord: new WeakMap(),
+    previousRecordByKey: new Map(),
     examHistory: new WeakMap(),
+    examHistoryByKey: new Map(),
     scopeMapRaw: '',
     scopeMap: {},
     schoolCandidatesSignature: '',
@@ -58,9 +62,13 @@ function getReportRenderSignature() {
         ReportRenderPerfCache.signature = signature;
         ReportRenderPerfCache.html.clear();
         ReportRenderPerfCache.comparisonStudent = new WeakMap();
+        ReportRenderPerfCache.comparisonStudentByKey.clear();
         ReportRenderPerfCache.cloudHint = new WeakMap();
+        ReportRenderPerfCache.cloudHintByKey.clear();
         ReportRenderPerfCache.previousRecord = new WeakMap();
+        ReportRenderPerfCache.previousRecordByKey.clear();
         ReportRenderPerfCache.examHistory = new WeakMap();
+        ReportRenderPerfCache.examHistoryByKey.clear();
         ReportRenderPerfCache.townshipRank.clear();
         ReportRenderPerfCache.countyRank.clear();
         ReportRenderPerfCache.countyDirect = new WeakMap();
@@ -81,10 +89,17 @@ function getCachedComparisonStudentView(student) {
     if (!student || typeof student !== 'object') return student;
     getReportRenderSignature();
     if (ReportRenderPerfCache.comparisonStudent.has(student)) return ReportRenderPerfCache.comparisonStudent.get(student);
+    const studentKey = getReportStudentCacheKey(student);
+    if (ReportRenderPerfCache.comparisonStudentByKey.has(studentKey)) {
+        const cached = ReportRenderPerfCache.comparisonStudentByKey.get(studentKey);
+        ReportRenderPerfCache.comparisonStudent.set(student, cached);
+        return cached;
+    }
     const view = typeof getComparisonStudentView === 'function'
         ? getComparisonStudentView(student, RAW_DATA)
         : student;
     ReportRenderPerfCache.comparisonStudent.set(student, view);
+    ReportRenderPerfCache.comparisonStudentByKey.set(studentKey, view);
     return view;
 }
 
@@ -92,8 +107,15 @@ function getCachedCloudCompareHint(student) {
     if (!student || typeof student !== 'object') return null;
     getReportRenderSignature();
     if (ReportRenderPerfCache.cloudHint.has(student)) return ReportRenderPerfCache.cloudHint.get(student);
+    const studentKey = getReportStudentCacheKey(student);
+    if (ReportRenderPerfCache.cloudHintByKey.has(studentKey)) {
+        const cached = ReportRenderPerfCache.cloudHintByKey.get(studentKey);
+        ReportRenderPerfCache.cloudHint.set(student, cached);
+        return cached;
+    }
     const hint = resolveCloudCompareHint(student);
     ReportRenderPerfCache.cloudHint.set(student, hint || null);
+    ReportRenderPerfCache.cloudHintByKey.set(studentKey, hint || null);
     return hint || null;
 }
 
@@ -101,8 +123,15 @@ function getCachedPreviousRecord(student) {
     if (!student || typeof student !== 'object') return null;
     getReportRenderSignature();
     if (ReportRenderPerfCache.previousRecord.has(student)) return ReportRenderPerfCache.previousRecord.get(student);
+    const studentKey = getReportStudentCacheKey(student);
+    if (ReportRenderPerfCache.previousRecordByKey.has(studentKey)) {
+        const cached = ReportRenderPerfCache.previousRecordByKey.get(studentKey);
+        ReportRenderPerfCache.previousRecord.set(student, cached);
+        return cached;
+    }
     const previous = typeof findPreviousRecord === 'function' ? findPreviousRecord(student) : null;
     ReportRenderPerfCache.previousRecord.set(student, previous || null);
+    ReportRenderPerfCache.previousRecordByKey.set(studentKey, previous || null);
     return previous || null;
 }
 
@@ -110,9 +139,16 @@ function getCachedStudentExamHistory(student) {
     if (!student || typeof student !== 'object') return [];
     getReportRenderSignature();
     if (ReportRenderPerfCache.examHistory.has(student)) return ReportRenderPerfCache.examHistory.get(student);
+    const studentKey = getReportStudentCacheKey(student);
+    if (ReportRenderPerfCache.examHistoryByKey.has(studentKey)) {
+        const cached = ReportRenderPerfCache.examHistoryByKey.get(studentKey);
+        ReportRenderPerfCache.examHistory.set(student, cached);
+        return cached;
+    }
     const history = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(student) : [];
     const list = Array.isArray(history) ? history : [];
     ReportRenderPerfCache.examHistory.set(student, list);
+    ReportRenderPerfCache.examHistoryByKey.set(studentKey, list);
     return list;
 }
 

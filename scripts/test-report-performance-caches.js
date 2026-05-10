@@ -26,9 +26,13 @@ const pkg = JSON.parse(read(packageFile));
     'getReportRenderSignature',
     'getReportStudentCacheKey',
     'getCachedComparisonStudentView',
+    'comparisonStudentByKey',
     'getCachedCloudCompareHint',
+    'cloudHintByKey',
     'getCachedPreviousRecord',
+    'previousRecordByKey',
     'getCachedStudentExamHistory',
+    'examHistoryByKey',
     'getCachedRankScope',
     'getCachedCountyScopeMap',
     'getCachedSchoolCandidates',
@@ -73,7 +77,7 @@ if (!String(pkg.scripts['check:syntax'] || '').includes('scripts/test-report-per
 
 console.log(JSON.stringify({
     ok: true,
-    reportRenderCacheTokens: 12,
+    reportRenderCacheTokens: 16,
     appReportCacheTokens: 8,
     reportChartCacheTokens: 5,
     countyDomSkipTokens: 3

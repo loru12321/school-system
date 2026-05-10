@@ -11853,7 +11853,10 @@ function renderStudentDetails(reset = true) {
         const activeFilterSignature = buildStudentDetailsFilterSignature();
         const querySignature = [
             Array.isArray(RAW_DATA) ? RAW_DATA.length : 0,
+            String(window.__RAW_DATA_VERSION || 0),
             String(window.CURRENT_EXAM_ID || ''),
+            String(RAW_DATA?.[0]?.name || ''),
+            String(RAW_DATA?.[RAW_DATA.length - 1]?.name || ''),
             String(selectedSchool || ''),
             String(selectedClass || ''),
             hasSelectedSchool ? 'school' : 'all-school',
@@ -13362,6 +13365,30 @@ function getComparisonTotalSubjects() {
     return Array.isArray(subsForTotal) ? subsForTotal.filter(Boolean) : [];
 }
 
+const ComparisonRankContextPerfCache = {
+    maxEntries: 4,
+    contexts: new Map()
+};
+
+function buildComparisonRankContextSignature(allStudents, totalSubjects = getComparisonTotalSubjects()) {
+    const rows = Array.isArray(allStudents) ? allStudents : [];
+    const first = rows[0] || {};
+    const last = rows[rows.length - 1] || {};
+    let totalChecksum = 0;
+    for (let i = 0; i < rows.length; i += 1) {
+        totalChecksum += Number(rows[i]?.total) || 0;
+    }
+    return [
+        window.__RAW_DATA_VERSION || 0,
+        window.CURRENT_EXAM_ID || '',
+        rows.length,
+        totalChecksum.toFixed(2),
+        totalSubjects.join('|'),
+        getReportStudentIdentity(first),
+        getReportStudentIdentity(last)
+    ].join('::');
+}
+
 function buildComparisonStudentRankContext(allStudents, totalSubjects = getComparisonTotalSubjects()) {
     const rows = Array.isArray(allStudents) ? allStudents.filter(Boolean) : [];
     const keyOf = (row) => `${String(row?.school || '').trim()}::${String(row?.class || '').trim()}::${String(row?.name || '').trim()}`;
@@ -13430,10 +13457,32 @@ function buildComparisonStudentRankContext(allStudents, totalSubjects = getCompa
     };
 }
 
+function getCachedComparisonStudentRankContext(allStudents = RAW_DATA, totalSubjects = getComparisonTotalSubjects()) {
+    const signature = buildComparisonRankContextSignature(allStudents, totalSubjects);
+    if (ComparisonRankContextPerfCache.contexts.has(signature)) {
+        const cached = ComparisonRankContextPerfCache.contexts.get(signature);
+        ComparisonRankContextPerfCache.contexts.delete(signature);
+        ComparisonRankContextPerfCache.contexts.set(signature, cached);
+        return cached;
+    }
+    const context = buildComparisonStudentRankContext(allStudents, totalSubjects);
+    ComparisonRankContextPerfCache.contexts.set(signature, context);
+    while (ComparisonRankContextPerfCache.contexts.size > ComparisonRankContextPerfCache.maxEntries) {
+        const firstKey = ComparisonRankContextPerfCache.contexts.keys().next().value;
+        if (!firstKey) break;
+        ComparisonRankContextPerfCache.contexts.delete(firstKey);
+    }
+    return context;
+}
+
 function getComparisonStudentView(record, allStudents = RAW_DATA, comparisonContext = null) {
     if (!record || typeof record !== 'object') return record;
     try {
-        return createComparisonStudentView(record, allStudents, comparisonContext);
+        return createComparisonStudentView(
+            record,
+            allStudents,
+            comparisonContext || getCachedComparisonStudentRankContext(allStudents)
+        );
     } catch (error) {
         console.warn('[report] failed to normalize comparison student view:', error);
         return record;
@@ -13442,12 +13491,13 @@ function getComparisonStudentView(record, allStudents = RAW_DATA, comparisonCont
 
 function getComparisonStudentList(records, allStudents = RAW_DATA) {
     if (!Array.isArray(records)) return [];
-    const comparisonContext = buildComparisonStudentRankContext(allStudents);
+    const comparisonContext = getCachedComparisonStudentRankContext(allStudents);
     return records.map(record => getComparisonStudentView(record, allStudents, comparisonContext));
 }
 
 Object.assign(window, {
     buildComparisonStudentRankContext,
+    getCachedComparisonStudentRankContext,
     getComparisonStudentView,
     getComparisonStudentList
 });
