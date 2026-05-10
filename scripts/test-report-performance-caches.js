@@ -37,6 +37,17 @@ const pkg = JSON.parse(read(packageFile));
 ].forEach((token) => assertContains(reportRender, token, reportRenderFile));
 
 [
+    'getReportDomCache',
+    'getCachedStudentReportHistory',
+    'selectedExamIdsSignature',
+    'historyByStudent',
+    'hydratingKeys',
+    'lastChartScheduleKey',
+    'lastStrengthKey',
+    'lastCompareHiddenKey'
+].forEach((token) => assertContains(read('public/assets/js/app.js'), token, 'public/assets/js/app.js'));
+
+[
     'ReportChartPerfCache',
     'getReportChartSignature',
     'getCachedChartComparisonStudent',
@@ -63,6 +74,7 @@ if (!String(pkg.scripts['check:syntax'] || '').includes('scripts/test-report-per
 console.log(JSON.stringify({
     ok: true,
     reportRenderCacheTokens: 12,
+    appReportCacheTokens: 8,
     reportChartCacheTokens: 5,
     countyDomSkipTokens: 3
 }, null, 2));

@@ -27,6 +27,14 @@ const pkg = JSON.parse(read(packageFile));
     'getModuleSectionById',
     'getModuleCategoryKeyCached',
     'scheduleModuleDockRefresh',
+    'getStudentDetailsDomCache',
+    'getStudentDetailsRankSnapshot',
+    'rankSnapshotByStudent',
+    'bodyHtmlSignature',
+    'paginationSignature',
+    'cellValueByStudent',
+    'openFilterMenu',
+    'filterSearchCache',
     'buildStudentDetailsDataSignature',
     'buildStudentDetailsFilterSignature',
     'setStudentDetailsHtmlIfChanged',
@@ -75,7 +83,7 @@ if (!String(pkg.scripts['check:syntax'] || '').includes('scripts/test-student-fl
 
 console.log(JSON.stringify({
     ok: true,
-    studentDetailsTokens: 16,
+    studentDetailsTokens: 24,
     overviewTokens: 6,
     freshmanTokens: 6,
     entryTokens: 3

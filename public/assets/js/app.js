@@ -11110,7 +11110,25 @@ const StudentDetailsPerfCache = {
     queryData: [],
     queryMeta: null,
     pageSizeWidth: 0,
-    pageSize: 40
+    pageSize: 40,
+    domCache: null,
+    domSignature: '',
+    headerHtmlSignature: '',
+    headerHtml: '',
+    bodyHtmlSignature: '',
+    bodyHtml: '',
+    paginationSignature: '',
+    paginationHtml: '',
+    desktopRowsSignature: '',
+    desktopRowsHtml: '',
+    mobileRowsSignature: '',
+    mobileRowsHtml: '',
+    rankSnapshotSignature: '',
+    rankSnapshotByStudent: new WeakMap(),
+    cellValueSignature: '',
+    cellValueByStudent: new WeakMap(),
+    openFilterMenu: null,
+    filterSearchCache: new WeakMap()
 };
 
 function updateStudentSchoolSelect() {
@@ -11304,6 +11322,32 @@ function setStudentDetailsHtmlIfChanged(element, html, signature) {
     return true;
 }
 
+function getStudentDetailsDomCache() {
+    const section = document.getElementById('student-details');
+    const signature = section
+        ? [
+            section.isConnected ? 'connected' : 'detached',
+            !!document.getElementById('studentDetailTable'),
+            !!document.querySelector('#studentDetailTable thead tr'),
+            !!document.querySelector('#studentDetailTable tbody')
+        ].join('::')
+        : 'missing';
+    if (StudentDetailsPerfCache.domCache && StudentDetailsPerfCache.domSignature === signature) {
+        return StudentDetailsPerfCache.domCache;
+    }
+    const detailTable = document.getElementById('studentDetailTable');
+    StudentDetailsPerfCache.domSignature = signature;
+    StudentDetailsPerfCache.domCache = {
+        section,
+        detailTable,
+        thead: detailTable?.querySelector('thead tr') || document.querySelector('#studentDetailTable thead tr'),
+        tbody: detailTable?.querySelector('tbody') || document.querySelector('#studentDetailTable tbody'),
+        tableWrap: section?.querySelector('.table-wrap') || null,
+        compareSection: document.getElementById('student-multi-period-compare-section')
+    };
+    return StudentDetailsPerfCache.domCache;
+}
+
 function getStudentDetailsPageSize() {
     const width = Number(window.innerWidth || 1280);
     if (StudentDetailsPerfCache.pageSizeWidth === width) return StudentDetailsPerfCache.pageSize;
@@ -11403,6 +11447,44 @@ function isStudentDetailsMobileCardMode() {
     return typeof window !== 'undefined'
         && typeof window.matchMedia === 'function'
         && window.matchMedia('(max-width: 768px)').matches;
+}
+
+function getStudentDetailsRankSnapshot(student, visibleSubjects, townRankVisible, countyRankVisible, dataSignature) {
+    if (!student || typeof student !== 'object') return null;
+    const signature = [
+        dataSignature || '',
+        visibleSubjects.join('|'),
+        townRankVisible ? 'town' : 'no-town',
+        countyRankVisible ? 'county' : 'no-county',
+        getReportStudentIdentity(student)
+    ].join('::');
+    if (StudentDetailsPerfCache.rankSnapshotSignature !== (dataSignature || '')) {
+        StudentDetailsPerfCache.rankSnapshotSignature = dataSignature || '';
+        StudentDetailsPerfCache.rankSnapshotByStudent = new WeakMap();
+    }
+    const cached = StudentDetailsPerfCache.rankSnapshotByStudent.get(student);
+    if (cached?.signature === signature) return cached;
+    const showTownRankForStudent = !isCountyDirectStudentForRank(student);
+    const subjects = {};
+    visibleSubjects.forEach((sub) => {
+        subjects[sub] = {
+            score: student.scores?.[sub] !== undefined ? student.scores[sub] : '-',
+            school: safeGet(student, `ranks.${sub}.school`, '-'),
+            township: townRankVisible && showTownRankForStudent ? getDisplayRankValue(student, `ranks.${sub}.township`, { scope: 'township' }) : '-',
+            county: countyRankVisible ? getStudentCountyRankValue(student, sub) : '-'
+        };
+    });
+    const snapshot = {
+        signature,
+        showTownRankForStudent,
+        subjects,
+        totalClass: getDisplayRankValue(student, 'ranks.total.class', { scope: 'class' }),
+        totalSchool: safeGet(student, 'ranks.total.school', '-'),
+        totalTown: townRankVisible && showTownRankForStudent ? getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }) : '-',
+        totalCounty: countyRankVisible ? getStudentCountyRankValue(student, 'total') : '-'
+    };
+    StudentDetailsPerfCache.rankSnapshotByStudent.set(student, snapshot);
+    return snapshot;
 }
 
 function buildStudentDetailMobileInfoItem(label, value, accentClass = '') {
@@ -11730,7 +11812,10 @@ function renderStudentReportSkeleton(container, student) {
 
 function scheduleStudentReportCharts(student, history) {
     const chartKey = buildStudentReportCacheKey(student, 'CHARTS');
-    const container = document.getElementById('report-card-capture-area');
+    const scheduleKey = `${chartKey}::${Array.isArray(history) ? history.length : 0}`;
+    if (ReportHistoryPerfCache.lastChartScheduleKey === scheduleKey) return;
+    ReportHistoryPerfCache.lastChartScheduleKey = scheduleKey;
+    const { container } = getReportDomCache();
     if (container?.dataset.reportChartCacheKey === chartKey) return;
     const render = () => {
         const currentContainer = document.getElementById('report-card-capture-area');
@@ -11956,9 +12041,10 @@ function renderStudentDetails(reset = true) {
     const endIdx = startIdx + STD_STATE.size;
     const displayList = STD_STATE.cacheData.slice(startIdx, endIdx);
 
-    const thead = document.querySelector('#studentDetailTable thead tr');
-    const tbody = document.querySelector('#studentDetailTable tbody');
-    const detailTable = document.getElementById('studentDetailTable');
+    const dom = getStudentDetailsDomCache();
+    const thead = dom.thead;
+    const tbody = dom.tbody;
+    const detailTable = dom.detailTable;
     const isMobileStudentDetails = isStudentDetailsMobileCardMode();
     const shouldAutoFocusData = shouldAutoFocusStudentDetailsDataOnMobile(reset);
     if (detailTable) {
@@ -12048,17 +12134,40 @@ function renderStudentDetails(reset = true) {
         buildStudentDetailsFilterSignature()
     ].join('::');
     setStudentDetailsHtmlIfChanged(thead, headerHTML, headerSignature);
+    StudentDetailsPerfCache.headerHtmlSignature = headerSignature;
+    StudentDetailsPerfCache.headerHtml = headerHTML;
 
+    const bodySignature = [
+        STD_STATE.dataSignature,
+        STD_STATE.page,
+        STD_STATE.size,
+        isMobileStudentDetails ? 'mobile' : 'desktop',
+        visibleSubjects.join('|'),
+        townRankVisible ? 'town' : 'no-town',
+        countyRankVisible ? 'county' : 'no-county'
+    ].join('::');
+    let bodyHTML = StudentDetailsPerfCache.bodyHtmlSignature === bodySignature
+        ? StudentDetailsPerfCache.bodyHtml
+        : '';
     // 生成数据行
     let rowsHTML = '';
-    if (isMobileStudentDetails) {
+    if (!bodyHTML) {
+    const rowsSignature = `${bodySignature}::${startIdx}::${endIdx}`;
+    const cachedRowsHtml = isMobileStudentDetails
+        ? (StudentDetailsPerfCache.mobileRowsSignature === rowsSignature ? StudentDetailsPerfCache.mobileRowsHtml : '')
+        : (StudentDetailsPerfCache.desktopRowsSignature === rowsSignature ? StudentDetailsPerfCache.desktopRowsHtml : '');
+    if (cachedRowsHtml) {
+        rowsHTML = cachedRowsHtml;
+    } else if (isMobileStudentDetails) {
         rowsHTML = displayList.map(student => (
             buildStudentDetailMobileRow(student, visibleSubjects, isTeacher, isClassTeacher, townRankVisible, countyRankVisible)
         )).join('');
+        StudentDetailsPerfCache.mobileRowsSignature = rowsSignature;
+        StudentDetailsPerfCache.mobileRowsHtml = rowsHTML;
     } else {
         rowsHTML = displayList.map(student => {
             const nameLink = `<a href="javascript:void(0)" onclick="jumpToStudent(${jsStringLiteral(student.name)}, ${jsStringLiteral(student.school)}, ${jsStringLiteral(student.class)})" style="color:var(--primary); font-weight:800;">${student.name}</a>`;
-            const showTownRankForStudent = !isCountyDirectStudentForRank(student);
+            const rank = getStudentDetailsRankSnapshot(student, visibleSubjects, townRankVisible, countyRankVisible, STD_STATE.dataSignature);
 
             let row = `<tr>
                     <td data-label="学校">${student.school}</td>
@@ -12067,45 +12176,53 @@ function renderStudentDetails(reset = true) {
                     ${!isTeacher && !isClassTeacher ? `<td data-label="考号">${student.id}</td><td data-label="考场">${student.examRoom || '-'}</td>` : ''}`;
 
             visibleSubjects.forEach(sub => {
-                const score = student.scores[sub] !== undefined ? student.scores[sub] : '-';
+                const rankItem = rank?.subjects?.[sub] || {};
+                const score = rankItem.score !== undefined ? rankItem.score : '-';
 
                 const clickAttr = `onclick="updateStudentScore('${student.name}', '${student.class}', '${sub}', ${score})"`;
 
                 if (!isTeacher && !isClassTeacher) {
                     row += `<td data-label="${sub}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${score}</td>
-                                <td data-label="${sub}校排" class="text-gray">${safeGet(student, `ranks.${sub}.school`, '-')}</td>
-                                <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${showTownRankForStudent ? getDisplayRankValue(student, `ranks.${sub}.township`, { scope: 'township' }) : '-'}</td>
-                                <td data-label="${sub}县排" class="text-gray" style="${countyHeaderStyle}">${getStudentCountyRankValue(student, sub)}</td>`;
+                                <td data-label="${sub}校排" class="text-gray">${rankItem.school ?? '-'}</td>
+                                <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${rankItem.township ?? '-'}</td>
+                                <td data-label="${sub}县排" class="text-gray" style="${countyHeaderStyle}">${rankItem.county ?? '-'}</td>`;
                 } else {
                     row += `<td data-label="${sub}分数" ${clickAttr} style="cursor:pointer;" title="点击修改">${score}</td>
-                                <td data-label="${sub}级排" class="text-gray">${safeGet(student, `ranks.${sub}.school`, '-')}</td>
-                                <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${showTownRankForStudent ? getDisplayRankValue(student, `ranks.${sub}.township`, { scope: 'township' }) : '-'}</td>
-                                <td data-label="${sub}县排" class="text-gray" style="${countyHeaderStyle}">${getStudentCountyRankValue(student, sub)}</td>`;
+                                <td data-label="${sub}级排" class="text-gray">${rankItem.school ?? '-'}</td>
+                                <td data-label="${sub}镇排" class="text-gray" style="${townHeaderStyle}">${rankItem.township ?? '-'}</td>
+                                <td data-label="${sub}县排" class="text-gray" style="${countyHeaderStyle}">${rankItem.county ?? '-'}</td>`;
                 }
             });
 
             if (!isTeacher && !isClassTeacher) {
                 row += `<td data-label="总分" style="color:#2563eb; font-weight:bold;">${student.total}</td>
-                            <td data-label="总分班排">${getDisplayRankValue(student, 'ranks.total.class', { scope: 'class' })}</td>
-                            <td data-label="总分校排">${safeGet(student, 'ranks.total.school', '-')}</td>
-                            <td data-label="总分镇排" style="${townHeaderStyle}">${showTownRankForStudent ? getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }) : '-'}</td>
-                            <td data-label="总分县排" style="${countyHeaderStyle}">${getStudentCountyRankValue(student, 'total')}</td>
+                            <td data-label="总分班排">${rank?.totalClass ?? '-'}</td>
+                            <td data-label="总分校排">${rank?.totalSchool ?? '-'}</td>
+                            <td data-label="总分镇排" style="${townHeaderStyle}">${rank?.totalTown ?? '-'}</td>
+                            <td data-label="总分县排" style="${countyHeaderStyle}">${rank?.totalCounty ?? '-'}</td>
                         </tr>`;
             } else {
                 row += `<td data-label="总分" style="color:#2563eb; font-weight:bold;">${student.total}</td>
-                        <td data-label="总分班排">${getDisplayRankValue(student, 'ranks.total.class', { scope: 'class' })}</td>
-                        <td data-label="总分级排">${safeGet(student, 'ranks.total.school', '-')}</td>
-                        <td data-label="总分镇排" style="${townHeaderStyle}">${showTownRankForStudent ? getDisplayRankValue(student, 'ranks.total.township', { scope: 'township' }) : '-'}</td>
-                        <td data-label="总分县排" style="${countyHeaderStyle}">${getStudentCountyRankValue(student, 'total')}</td>
+                        <td data-label="总分班排">${rank?.totalClass ?? '-'}</td>
+                        <td data-label="总分级排">${rank?.totalSchool ?? '-'}</td>
+                        <td data-label="总分镇排" style="${townHeaderStyle}">${rank?.totalTown ?? '-'}</td>
+                        <td data-label="总分县排" style="${countyHeaderStyle}">${rank?.totalCounty ?? '-'}</td>
                     </tr>`;
             }
             return row;
         }).join('');
+        StudentDetailsPerfCache.desktopRowsSignature = rowsSignature;
+        StudentDetailsPerfCache.desktopRowsHtml = rowsHTML;
     }
 
     // 分页条
-    const paginationHTML = isMobileStudentDetails
-        ? `
+    const paginationSignature = `${bodySignature}::${totalItems}::${totalPages}::${STD_STATE.page}`;
+    let paginationHTML = StudentDetailsPerfCache.paginationSignature === paginationSignature
+        ? StudentDetailsPerfCache.paginationHtml
+        : '';
+    if (!paginationHTML) {
+        paginationHTML = isMobileStudentDetails
+            ? `
             <tr class="student-detail-mobile-pagination">
                 <td colspan="100" class="student-detail-mobile-pagination-cell">
                     <div class="student-detail-mobile-pagination-bar">
@@ -12127,31 +12244,28 @@ function renderStudentDetails(reset = true) {
                     </div>
                 </td>
             </tr>`;
+        StudentDetailsPerfCache.paginationSignature = paginationSignature;
+        StudentDetailsPerfCache.paginationHtml = paginationHTML;
+    }
 
-    const bodyHTML = totalItems === 0
+    bodyHTML = totalItems === 0
         ? `<tr><td colspan="100" style="text-align:center; padding:30px; color:#999;">无数据</td></tr>`
         : rowsHTML + paginationHTML;
-    const bodySignature = [
-        STD_STATE.dataSignature,
-        STD_STATE.page,
-        STD_STATE.size,
-        isMobileStudentDetails ? 'mobile' : 'desktop',
-        visibleSubjects.join('|'),
-        townRankVisible ? 'town' : 'no-town',
-        countyRankVisible ? 'county' : 'no-county'
-    ].join('::');
+    StudentDetailsPerfCache.bodyHtmlSignature = bodySignature;
+    StudentDetailsPerfCache.bodyHtml = bodyHTML;
+    }
     const bodyChanged = setStudentDetailsHtmlIfChanged(tbody, bodyHTML, bodySignature);
 
     // 隐藏可能存在的对比区域
-    const compareSection = document.getElementById('student-multi-period-compare-section');
-    if (compareSection) compareSection.style.display = 'none';
+    const compareSection = dom.compareSection;
+    if (compareSection && compareSection.style.display !== 'none') compareSection.style.display = 'none';
 
     // 滚动到学生明细区域
     const scrollSignature = `${bodySignature}::${reset ? 'reset' : 'page'}`;
     if (bodyChanged || STD_STATE.lastScrollSignature !== scrollSignature) {
         STD_STATE.lastScrollSignature = scrollSignature;
         setTimeout(() => {
-            const tableWrap = document.querySelector('#student-details .table-wrap');
+            const tableWrap = getStudentDetailsDomCache().tableWrap;
             const isMobileViewport = document.body?.dataset?.mobileQuery === 'true' || window.innerWidth <= 768;
             if (isMobileViewport) {
                 if (shouldAutoFocusData) {
@@ -12168,7 +12282,26 @@ function renderStudentDetails(reset = true) {
 
 // 辅助：获取单元格值
 function getCellValue(student, colKey) {
-    if (colKey === 'total') return getComparisonStudentView(student, RAW_DATA)?.total;
+    if (StudentDetailsPerfCache.cellValueSignature !== STD_STATE.dataSignature) {
+        StudentDetailsPerfCache.cellValueSignature = STD_STATE.dataSignature;
+        StudentDetailsPerfCache.cellValueByStudent = new WeakMap();
+    }
+    if (student && typeof student === 'object') {
+        let cached = StudentDetailsPerfCache.cellValueByStudent.get(student);
+        if (!cached) {
+            cached = Object.create(null);
+            StudentDetailsPerfCache.cellValueByStudent.set(student, cached);
+        } else if (Object.prototype.hasOwnProperty.call(cached, colKey)) {
+            return cached[colKey];
+        }
+        let value;
+        if (colKey === 'total') value = Number.isFinite(Number(student.total)) ? student.total : getComparisonStudentView(student, RAW_DATA)?.total;
+        else if (colKey === 'totalTScore') value = student.totalTScore;
+        else if (['school', 'class', 'name', 'id', 'examRoom'].includes(colKey)) value = student[colKey];
+        else value = student.scores?.[colKey] !== undefined ? student.scores[colKey] : '-';
+        cached[colKey] = value;
+        return value;
+    }
     if (colKey === 'totalTScore') return student.totalTScore;
     if (['school', 'class', 'name', 'id', 'examRoom'].includes(colKey)) return student[colKey];
     return student.scores[colKey] !== undefined ? student.scores[colKey] : '-';
@@ -12185,6 +12318,7 @@ function toggleExcelMenu(colKey, event) {
     // 如果该菜单已打开，则关闭
     if (menu.classList.contains('show')) {
         menu.classList.remove('show');
+        if (StudentDetailsPerfCache.openFilterMenu === menu) StudentDetailsPerfCache.openFilterMenu = null;
         return;
     }
 
@@ -12196,6 +12330,7 @@ function toggleExcelMenu(colKey, event) {
 
     // 显示
     menu.classList.add('show');
+    StudentDetailsPerfCache.openFilterMenu = menu;
 }
 
 // 3. 构建菜单内容 (核心：提取唯一值)
@@ -12264,6 +12399,8 @@ window.applySort = function (colKey, dir) {
 
 window.filterCheckboxList = function (input) {
     const text = input.value.toLowerCase();
+    if (StudentDetailsPerfCache.filterSearchCache.get(input) === text) return;
+    StudentDetailsPerfCache.filterSearchCache.set(input, text);
     const list = input.closest('.menu-actions').nextElementSibling;
     const items = list.querySelectorAll('.menu-item');
     // 跳过第一个(全选)
@@ -12303,7 +12440,14 @@ window.clearFilter = function (colKey) {
 };
 
 function closeAllMenus() {
+    const openMenu = StudentDetailsPerfCache.openFilterMenu;
+    if (openMenu?.classList?.contains('show')) {
+        openMenu.classList.remove('show');
+        StudentDetailsPerfCache.openFilterMenu = null;
+        return;
+    }
     document.querySelectorAll('.excel-filter-menu.show').forEach(el => el.classList.remove('show'));
+    StudentDetailsPerfCache.openFilterMenu = null;
 }
 
 // 点击空白关闭菜单
@@ -12313,7 +12457,7 @@ document.addEventListener('click', closeAllMenus);
 window.changeStdPage = function (delta) {
     STD_STATE.page += delta;
     renderStudentDetails(false);
-    const tableWrap = document.querySelector('#student-details .table-wrap');
+    const tableWrap = getStudentDetailsDomCache().tableWrap;
     if (tableWrap && tableWrap.scrollTop !== 0) tableWrap.scrollTop = 0;
 };
 
@@ -12671,8 +12815,36 @@ function importTeacherExcel() {
 let __reportQueryToken = 0;
 const ReportHistoryPerfCache = {
     subjectScores: new Map(),
-    lastScrollKey: ''
+    lastScrollKey: '',
+    domCache: null,
+    domSignature: '',
+    selectedExamIdsSignature: '',
+    selectedExamIds: [],
+    historyByStudent: new Map(),
+    hydratingKeys: new Set(),
+    lastQueryKey: '',
+    lastChartScheduleKey: '',
+    lastStrengthKey: '',
+    lastCompareHiddenKey: ''
 };
+
+function getReportDomCache() {
+    const resultEl = document.getElementById('single-report-result');
+    const container = document.getElementById('report-card-capture-area');
+    const compareSection = document.getElementById('student-multi-period-compare-section');
+    const signature = [
+        !!resultEl,
+        !!container,
+        !!compareSection,
+        container?.dataset?.reportHtmlCacheKey || ''
+    ].join('::');
+    if (ReportHistoryPerfCache.domCache && ReportHistoryPerfCache.domSignature === signature) {
+        return ReportHistoryPerfCache.domCache;
+    }
+    ReportHistoryPerfCache.domSignature = signature;
+    ReportHistoryPerfCache.domCache = { resultEl, container, compareSection };
+    return ReportHistoryPerfCache.domCache;
+}
 
 function getReportStudentIdentity(student) {
     if (!student || typeof student !== 'object') return '';
@@ -12708,11 +12880,19 @@ function getReportSubjectSortedScores(examKey, examData, subject) {
 }
 
 function getStudentReportSelectedExamIds() {
+    const signature = ['reportCompareExam1', 'reportCompareExam2', 'reportCompareExam3']
+        .map(id => `${id}:${String(document.getElementById(id)?.value || '').trim()}`)
+        .join('|');
+    if (ReportHistoryPerfCache.selectedExamIdsSignature === signature) {
+        return ReportHistoryPerfCache.selectedExamIds.slice();
+    }
     const ids = [];
     ['reportCompareExam1', 'reportCompareExam2', 'reportCompareExam3'].forEach(id => {
         const value = String(document.getElementById(id)?.value || '').trim();
         if (value) ids.push(value);
     });
+    ReportHistoryPerfCache.selectedExamIdsSignature = signature;
+    ReportHistoryPerfCache.selectedExamIds = ids;
     return ids;
 }
 
@@ -12780,9 +12960,25 @@ function applyCloudStudentHistoryToPrevData(stu, historyRes, selectedReportExamI
     }));
     if (rows.length > 0) {
         setPrevDataState(rows);
+        ReportHistoryPerfCache.historyByStudent.clear();
+        ReportHistoryPerfCache.lastChartScheduleKey = '';
         clearStudentReportCache(stu);
     }
     return historyRes.data.length;
+}
+
+function getCachedStudentReportHistory(stu) {
+    const key = `${getReportStudentIdentity(stu)}::${String(window.CURRENT_EXAM_ID || '')}::${ReportHistoryPerfCache.selectedExamIdsSignature || ''}`;
+    if (ReportHistoryPerfCache.historyByStudent.has(key)) {
+        return ReportHistoryPerfCache.historyByStudent.get(key);
+    }
+    const history = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(stu) : [];
+    ReportHistoryPerfCache.historyByStudent.set(key, history);
+    if (ReportHistoryPerfCache.historyByStudent.size > 60) {
+        const firstKey = ReportHistoryPerfCache.historyByStudent.keys().next().value;
+        ReportHistoryPerfCache.historyByStudent.delete(firstKey);
+    }
+    return history;
 }
 
 async function refreshRenderedStudentReportAfterHistory(stu, token) {
@@ -12810,11 +13006,10 @@ async function refreshRenderedStudentReportAfterHistory(stu, token) {
             container.dataset.reportChartCacheKey = '';
             enhanceStudentReportMetrics(container);
         }
-        const history = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(stu) : [];
+        const history = getCachedStudentReportHistory(stu);
         window.setTimeout(() => {
             if (token !== __reportQueryToken) return;
-            try { if (typeof renderRadarChart === 'function') renderRadarChart(stu, history); } catch (e) { console.error(e); }
-            try { if (typeof renderVarianceChart === 'function') renderVarianceChart(stu, history); } catch (e) { console.error(e); }
+            scheduleStudentReportCharts(stu, history);
         }, 80);
     } catch (error) {
         console.warn('[doQuery] 云端历史补齐后刷新报告失败:', error);
@@ -12823,6 +13018,9 @@ async function refreshRenderedStudentReportAfterHistory(stu, token) {
 
 function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, effectiveCurrentExamId, token) {
     if (!stu || !window.CloudManager || typeof window.CloudManager.fetchStudentExamHistory !== 'function') return;
+    const hydrateKey = `${getReportStudentIdentity(stu)}::${(selectedReportExamIds || []).join('|')}::${effectiveCurrentExamId || ''}`;
+    if (ReportHistoryPerfCache.hydratingKeys.has(hydrateKey)) return;
+    ReportHistoryPerfCache.hydratingKeys.add(hydrateKey);
     const task = async () => {
         try {
             const ready = (
@@ -12839,6 +13037,8 @@ function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, eff
             await refreshRenderedStudentReportAfterHistory(stu, token);
         } catch (e) {
             console.warn('[doQuery] 云端历史后台获取失败:', e);
+        } finally {
+            ReportHistoryPerfCache.hydratingKeys.delete(hydrateKey);
         }
     };
     if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
@@ -12899,16 +13099,7 @@ async function doQuery(targetStudent = null) {
     setCloudCompareTarget(stu);
     setCurrentReportStudentState(stu);
 
-    if (typeof window.ensureReportRenderRuntimeLoaded === 'function') {
-        try {
-            await window.ensureReportRenderRuntimeLoaded();
-        } catch (error) {
-            console.warn('Failed to load report render runtime before query:', error);
-        }
-    }
-
-    const resultEl = document.getElementById('single-report-result');
-    const container = document.getElementById('report-card-capture-area');
+    const { resultEl, container } = getReportDomCache();
 
     if (resultEl && container) {
         resultEl.classList.remove('hidden');
@@ -12918,6 +13109,13 @@ async function doQuery(targetStudent = null) {
             const reportCacheKey = buildStudentReportCacheKey(stu, 'FULL', selectedReportExamIds, effectiveCurrentExamId);
             let reportHtml = reportCache?.getReportHtml?.(reportCacheKey);
             if (!reportHtml) {
+                if (typeof window.ensureReportRenderRuntimeLoaded === 'function') {
+                    try {
+                        await window.ensureReportRenderRuntimeLoaded();
+                    } catch (error) {
+                        console.warn('Failed to load report render runtime before query:', error);
+                    }
+                }
                 renderStudentReportSkeleton(container, stu);
                 reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'FULL'));
                 reportCache?.setReportHtml?.(reportCacheKey, reportHtml);
@@ -12936,17 +13134,22 @@ async function doQuery(targetStudent = null) {
     }
 
     // 🆕 统一提取历史数据并传给组件
-    const history = typeof getStudentExamHistory === 'function' ? getStudentExamHistory(stu) : [];
+    const history = getCachedStudentReportHistory(stu);
 
     scheduleStudentReportCharts(stu, history);
 
     hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, effectiveCurrentExamId, queryToken);
 
-    try { if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(stu); } catch (e) { console.error(e); }
+    const strengthKey = `${getReportStudentIdentity(stu)}::${effectiveCurrentExamId || ''}`;
+    if (ReportHistoryPerfCache.lastStrengthKey !== strengthKey) {
+        ReportHistoryPerfCache.lastStrengthKey = strengthKey;
+        try { if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(stu); } catch (e) { console.error(e); }
+    }
 
     // 隐藏对比区域
-    const compareSection = document.getElementById('student-multi-period-compare-section');
-    if (compareSection) {
+    const { compareSection } = getReportDomCache();
+    if (compareSection && ReportHistoryPerfCache.lastCompareHiddenKey !== strengthKey) {
+        ReportHistoryPerfCache.lastCompareHiddenKey = strengthKey;
         compareSection.style.display = 'none';
     }
 
