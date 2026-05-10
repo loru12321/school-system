@@ -48,6 +48,15 @@ const DATA_MANAGER_TABS = ['student', 'teacher', 'targets', 'params', 'sql', 'cl
 const MODULE_SWITCH_TIMEOUT_MS = 12000;
 const MODULE_SWITCH_WRAPPER_TIMEOUT_MS = 30000;
 const MODULE_DEEP_CHECK_TIMEOUT_MS = 90000;
+const PERFORMANCE_BUDGETS = {
+    loginMs: 90000,
+    appReadyMs: 90000,
+    moduleSwitchMs: MODULE_SWITCH_WRAPPER_TIMEOUT_MS,
+    moduleDeepCheckMs: MODULE_DEEP_CHECK_TIMEOUT_MS,
+    dataManagerTabMs: 15000,
+    longTaskMs: 1200
+};
+const STRICT_PERFORMANCE_BUDGETS = process.env.SMOKE_PERF_STRICT === 'true';
 
 function getChromeLaunchArgs() {
     const args = [];
@@ -123,6 +132,60 @@ async function withTimeoutResult(task, timeoutMs, fallbackFactory) {
         }),
         new Promise((resolve) => setTimeout(() => resolve(fallbackFactory()), timeoutMs))
     ]);
+}
+
+async function measureAsync(label, task) {
+    const started = Date.now();
+    try {
+        const result = await task();
+        return {
+            result,
+            durationMs: Date.now() - started,
+            label
+        };
+    } catch (error) {
+        error.durationMs = Date.now() - started;
+        error.measureLabel = label;
+        throw error;
+    }
+}
+
+function buildBudgetStatus(value, budget, label) {
+    const durationMs = Number(value);
+    const budgetMs = Number(budget);
+    return {
+        label,
+        durationMs,
+        budgetMs,
+        ok: Number.isFinite(durationMs) && Number.isFinite(budgetMs) ? durationMs <= budgetMs : false
+    };
+}
+
+async function readPerformanceSnapshot(page) {
+    return page.evaluate(() => {
+        const runtime = window.SystemPerformance;
+        if (!runtime || typeof runtime.getSnapshot !== 'function') {
+            return {
+                available: false,
+                longTasks: []
+            };
+        }
+        const snapshot = runtime.getSnapshot() || {};
+        return {
+            available: true,
+            active: Number(snapshot.active || 0),
+            queued: Number(snapshot.queued || 0),
+            inflight: Number(snapshot.inflight || 0),
+            scheduled: Number(snapshot.scheduled || 0),
+            cached: Number(snapshot.cached || 0),
+            cloudPatched: !!snapshot.cloudPatched,
+            longTasks: Array.isArray(snapshot.longTasks) ? snapshot.longTasks : []
+        };
+    }).catch((error) => ({
+        available: false,
+        error: error?.message || String(error),
+        longTasks: []
+    }));
 }
 
 async function withNavigationRetry(page, task, options = {}) {
@@ -2829,11 +2892,12 @@ async function smokeDataManagerTab(page, id) {
         errors.push({ scope: currentScope, type: 'console', message: text });
     });
 
+    const smokeStartedAt = Date.now();
     trace('login:start');
-    await login(page, user, pass);
-    trace('login:done');
-    await waitForAppReady(page);
-    trace('app-ready:done');
+    const loginMeasurement = await measureAsync('login', () => login(page, user, pass));
+    trace('login:done', { durationMs: loginMeasurement.durationMs });
+    const appReadyMeasurement = await measureAsync('app-ready', () => waitForAppReady(page));
+    trace('app-ready:done', { durationMs: appReadyMeasurement.durationMs });
 
     const summary = {
         login: await page.evaluate(() => ({
@@ -2855,26 +2919,61 @@ async function smokeDataManagerTab(page, id) {
         })),
         switchModules: [],
         dataManagerTabs: [],
+        performance: {
+            budgets: PERFORMANCE_BUDGETS,
+            strict: STRICT_PERFORMANCE_BUDGETS,
+            loginMs: loginMeasurement.durationMs,
+            appReadyMs: appReadyMeasurement.durationMs,
+            moduleTimings: [],
+            dataManagerTimings: [],
+            budgetStatus: [
+                buildBudgetStatus(loginMeasurement.durationMs, PERFORMANCE_BUDGETS.loginMs, 'login'),
+                buildBudgetStatus(appReadyMeasurement.durationMs, PERFORMANCE_BUDGETS.appReadyMs, 'app-ready')
+            ],
+            longTasks: []
+        },
         errors
     };
 
     for (const id of SWITCH_MODULE_IDS) {
         currentScope = `switch:${id}`;
         trace('switch:start', { id });
-        const switchResult = await withTimeoutResult(
-            () => smokeSwitchModule(page, id),
-            MODULE_SWITCH_WRAPPER_TIMEOUT_MS,
-            () => ({ ok: false, id, error: 'switch-timeout' })
+        const switchMeasurement = await measureAsync(
+            `switch:${id}`,
+            () => withTimeoutResult(
+                () => smokeSwitchModule(page, id),
+                MODULE_SWITCH_WRAPPER_TIMEOUT_MS,
+                () => ({ ok: false, id, error: 'switch-timeout' })
+            )
         );
+        const switchResult = switchMeasurement.result;
         trace('switch:done', { id, ok: switchResult.ok, error: switchResult.error || null });
         const allowDeepCheckWithoutVisibleSwitch = ['teacher-analysis', 'student-details', 'correlation-analysis', 'indicator'].includes(id);
-        const deepCheck = (switchResult.ok || allowDeepCheckWithoutVisibleSwitch)
-            ? await withTimeoutResult(
-                () => runModuleDeepCheck(page, id),
-                MODULE_DEEP_CHECK_TIMEOUT_MS,
-                () => ({ ok: false, id, error: 'deep-check-timeout' })
+        const deepMeasurement = (switchResult.ok || allowDeepCheckWithoutVisibleSwitch)
+            ? await measureAsync(
+                `deep:${id}`,
+                () => withTimeoutResult(
+                    () => runModuleDeepCheck(page, id),
+                    MODULE_DEEP_CHECK_TIMEOUT_MS,
+                    () => ({ ok: false, id, error: 'deep-check-timeout' })
+                )
             )
-            : { ok: false, skipped: true };
+            : { result: { ok: false, skipped: true }, durationMs: 0, label: `deep:${id}` };
+        const deepCheck = deepMeasurement.result;
+        const moduleTiming = {
+            id,
+            switchMs: switchMeasurement.durationMs,
+            deepCheckMs: deepMeasurement.durationMs,
+            totalMs: switchMeasurement.durationMs + deepMeasurement.durationMs
+        };
+        summary.performance.moduleTimings.push(moduleTiming);
+        summary.performance.budgetStatus.push(
+            buildBudgetStatus(moduleTiming.switchMs, PERFORMANCE_BUDGETS.moduleSwitchMs, `switch:${id}`),
+            buildBudgetStatus(moduleTiming.deepCheckMs, PERFORMANCE_BUDGETS.moduleDeepCheckMs, `deep:${id}`)
+        );
+        const timingPayload = {
+            performance: moduleTiming
+        };
         const normalizedDeepCheck = (deepCheck && deepCheck.checks && Object.values(deepCheck.checks).every(Boolean))
             ? { ...deepCheck, ok: deepCheck.ok !== false }
             : deepCheck;
@@ -2886,7 +2985,7 @@ async function smokeDataManagerTab(page, id) {
                 recoveredByDeepCheck: true
             }
             : switchResult;
-        summary.switchModules.push({ ...normalizedSwitchResult, deepCheck: normalizedDeepCheck });
+        summary.switchModules.push({ ...normalizedSwitchResult, ...timingPayload, deepCheck: normalizedDeepCheck });
     }
 
     currentScope = 'data-manager';
@@ -2896,23 +2995,54 @@ async function smokeDataManagerTab(page, id) {
     for (const id of DATA_MANAGER_TABS) {
         currentScope = `dm:${id}`;
         trace('data-manager-tab:start', { id });
-        summary.dataManagerTabs.push(await withTimeoutResult(
-            () => smokeDataManagerTab(page, id),
-            15000,
-            () => ({ ok: false, id, error: 'data-manager-timeout' })
-        ));
-        trace('data-manager-tab:done', { id, ok: summary.dataManagerTabs[summary.dataManagerTabs.length - 1].ok });
+        const tabMeasurement = await measureAsync(
+            `dm:${id}`,
+            () => withTimeoutResult(
+                () => smokeDataManagerTab(page, id),
+                PERFORMANCE_BUDGETS.dataManagerTabMs,
+                () => ({ ok: false, id, error: 'data-manager-timeout' })
+            )
+        );
+        const tabResult = tabMeasurement.result;
+        const tabTiming = { id, durationMs: tabMeasurement.durationMs };
+        summary.performance.dataManagerTimings.push(tabTiming);
+        summary.performance.budgetStatus.push(
+            buildBudgetStatus(tabTiming.durationMs, PERFORMANCE_BUDGETS.dataManagerTabMs, `dm:${id}`)
+        );
+        summary.dataManagerTabs.push({ ...tabResult, performance: tabTiming });
+        trace('data-manager-tab:done', { id, ok: tabResult.ok, durationMs: tabTiming.durationMs });
     }
 
     currentScope = 'final';
     summary.errorCount = errors.length;
+    summary.performance.totalMs = Date.now() - smokeStartedAt;
+    summary.performance.slowestModules = summary.performance.moduleTimings
+        .slice()
+        .sort((left, right) => right.totalMs - left.totalMs)
+        .slice(0, 8);
+    summary.performance.slowestDataManagerTabs = summary.performance.dataManagerTimings
+        .slice()
+        .sort((left, right) => right.durationMs - left.durationMs)
+        .slice(0, 4);
+    const performanceSnapshot = await readPerformanceSnapshot(page);
+    summary.performance.systemPerformanceSnapshot = performanceSnapshot;
+    summary.performance.longTasks = (performanceSnapshot.longTasks || [])
+        .filter((item) => Number(item?.duration || 0) >= PERFORMANCE_BUDGETS.longTaskMs);
+    summary.performance.budgetFailures = summary.performance.budgetStatus.filter((item) => !item.ok);
 
     console.log(JSON.stringify(summary, null, 2));
     await browser.close();
 
     const failedSwitch = summary.switchModules.find(item => !item.ok || !item.deepCheck?.ok);
     const failedDm = summary.dataManagerTabs.find(item => !item.ok);
-    if (!summary.login.appVisible || !summary.login.schoolInternalRemoved || failedSwitch || failedDm || errors.length > 0) {
+    if (
+        !summary.login.appVisible
+        || !summary.login.schoolInternalRemoved
+        || failedSwitch
+        || failedDm
+        || errors.length > 0
+        || (STRICT_PERFORMANCE_BUDGETS && summary.performance.budgetFailures.length > 0)
+    ) {
         process.exit(1);
     }
 })().catch(async (error) => {
