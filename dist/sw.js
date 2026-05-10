@@ -1,6 +1,7 @@
 /**
- * Service Worker (PWA 离线支持)
- * 目标：保证 Service Worker 能稳定注册、缓存应用壳资源，并在离线时提供可预测的兜底。
+ * Service Worker (PWA offline support)
+ * Keeps registration stable, caches the app shell, and provides predictable
+ * fallbacks when the network is unavailable.
  */
 
 const CACHE_VERSION = 'school-system-v1.1';
@@ -8,7 +9,7 @@ const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
-// 仅预缓存确定存在的应用壳资源，避免因无效路径导致安装失败。
+// Only precache deterministic app shell assets to avoid install failures.
 const APP_SHELL_ASSETS = [
     './',
     './index.html',
@@ -81,7 +82,7 @@ async function cacheFirstStatic(request) {
         }
         return response;
     } catch (error) {
-        return new Response('资源加载失败', { status: 404 });
+        return new Response('Resource unavailable while offline', { status: 404 });
     }
 }
 
@@ -97,7 +98,7 @@ async function networkFirstApi(request, url) {
         const cached = await caches.match(request);
         if (cached) return cached;
         return new Response(
-            JSON.stringify({ error: '网络不可用，且无缓存数据' }),
+            JSON.stringify({ error: 'Network unavailable and no cached data exists' }),
             {
                 status: 503,
                 headers: { 'Content-Type': 'application/json' }
@@ -122,7 +123,7 @@ async function networkFirstHtml(request) {
         if (shell) return shell;
 
         return new Response(
-            '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>离线模式</title><body><h1>当前处于离线模式</h1><p>请在网络恢复后刷新页面重试。</p></body></html>',
+            '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>Offline</title><body><h1>Offline mode</h1><p>Please refresh after the network is restored.</p></body></html>',
             {
                 status: 503,
                 headers: { 'Content-Type': 'text/html; charset=utf-8' }
