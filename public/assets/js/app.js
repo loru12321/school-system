@@ -7585,8 +7585,23 @@ async function switchCohort(cohortId, options = {}) {
     setTeacherMap({});
     setTeacherSchoolMap({});
 
-    // 2. 从云端拉取新届别的数据
-    const data = await DB.get(cohortKey);
+    if (options.fastEnter === true) {
+        DB.get(cohortKey).then((cloudData) => {
+            if (!cloudData) return;
+            if (String(readWorkspaceCohortId() || CURRENT_COHORT_ID || '') !== String(cohortId)) return;
+            const stillEmpty = !(Array.isArray(RAW_DATA) && RAW_DATA.length > 0);
+            if (stillEmpty) {
+                switchCohort(cohortId, { skipConfirm: true, fastEnter: false }).catch((error) => {
+                    console.warn('[switchCohort] background project hydrate failed:', error);
+                });
+            }
+        }).catch((error) => {
+            console.warn('[switchCohort] background project fetch failed:', error);
+        });
+    }
+
+    // 2. 优先读本地缓存。首次进入时不再用云端请求挡住工作台显示。
+    const data = await DB.get(cohortKey, { localOnly: options.fastEnter === true });
 
     if (data) {
         // 3. 恢复数据
@@ -7674,8 +7689,9 @@ async function switchCohort(cohortId, options = {}) {
         updateStatusPanel();
     } else {
         if (window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
-            try {
-                const syncRes = await window.CloudManager.fetchCohortExamsToLocal(cohortId, { background: false });
+            const hydrateFromExamArchive = () => window.CloudManager.fetchCohortExamsToLocal(cohortId, { background: true })
+                .then((syncRes) => {
+                    if (String(readWorkspaceCohortId() || CURRENT_COHORT_ID || '') !== String(cohortId)) return false;
                 const restoredFromExamArchive = syncRes && syncRes.success && tryAutoRestoreWorkspaceExam({ cohortId });
                 if (restoredFromExamArchive) {
                     updateSchoolSelect();
@@ -7688,12 +7704,27 @@ async function switchCohort(cohortId, options = {}) {
                     UI.toast(`已从云端考试快照恢复 [${cohortKey}] 数据`, "success");
                     logAction('届别切换', `已从云端考试快照恢复 ${cohortKey}`);
                     updateStatusPanel();
+                    return true;
+                }
+                    return false;
+                })
+                .catch((e) => {
+                console.warn('[switchCohort] cloud exam snapshot restore failed:', e);
+                    return false;
+                });
+            if (options.fastEnter === true) {
+                CohortExamHydrationScheduler.schedule(cohortId, {
+                    delay: 250,
+                    background: true,
+                    warnPrefix: '[switchCohort] 云端历史考试后台拉取失败:'
+                });
+            } else {
+                const restored = await hydrateFromExamArchive();
+                if (restored) {
                     UI.loading(false);
                     window.__COHORT_SWITCH_IN_PROGRESS__ = false;
                     return true;
                 }
-            } catch (e) {
-                console.warn('[switchCohort] cloud exam snapshot restore failed:', e);
             }
         }
         // 4. 如果云端没这个届别的数据（新档案）
@@ -8439,6 +8470,29 @@ const ModuleSwitchPerfCache = {
     dockRefreshTimer: 0
 };
 
+function scheduleAfterPaint(callback, delay = 0) {
+    const run = () => {
+        try {
+            callback();
+        } catch (error) {
+            console.warn('[scheduleAfterPaint]', error);
+        }
+    };
+    const wait = Math.max(0, Number(delay || 0));
+    const scheduleFrame = () => {
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => window.requestAnimationFrame(run));
+            return;
+        }
+        window.setTimeout(run, 0);
+    };
+    if (wait > 0) {
+        window.setTimeout(scheduleFrame, wait);
+    } else {
+        scheduleFrame();
+    }
+}
+
 function getModuleSectionsCached(force = false) {
     if (!force && Array.isArray(ModuleSwitchPerfCache.sections)) {
         return ModuleSwitchPerfCache.sections;
@@ -8480,7 +8534,7 @@ function scheduleModuleDockRefresh() {
     ModuleSwitchPerfCache.dockRefreshTimer = window.setTimeout(() => {
         window.refreshModuleSubnavDock();
         window.setTimeout(window.refreshModuleSubnavDock, 120);
-    }, 0);
+    }, 80);
 }
 
 function ensureCountySubmoduleSectionForSwitch(id) {
@@ -9465,7 +9519,7 @@ function switchTab(id) {
     targetSection.classList.add('active');
     targetSection.style.display = 'block';
     resetMainViewport();
-    scheduleCountyAnalysisRenderAfterSwitch(id);
+    scheduleAfterPaint(() => scheduleCountyAnalysisRenderAfterSwitch(id));
 
     // 2. 定位所属大类
     let currentCategory = getCurrentCategoryKey();
@@ -9482,11 +9536,11 @@ function switchTab(id) {
         }
 
         // 重新渲染导航以更新高亮
-        if (typeof renderNavigation === 'function') renderNavigation();
+        if (typeof renderNavigation === 'function') scheduleAfterPaint(() => renderNavigation());
     } else {
         // 如果大类没变，仅更新子模块芯片的高亮状态
         if (typeof renderSubNavigation === 'function') {
-            renderSubNavigation();
+            scheduleAfterPaint(() => renderSubNavigation());
         }
     }
 
@@ -9498,10 +9552,11 @@ function switchTab(id) {
         });
         return true;
     };
-    if (!dispatchModuleEnter()) {
+    scheduleAfterPaint(() => {
+        if (dispatchModuleEnter()) return;
         window.setTimeout(dispatchModuleEnter, 180);
         window.setTimeout(dispatchModuleEnter, 700);
-    }
+    });
     scheduleModuleDockRefresh();
 }
 
@@ -17261,6 +17316,7 @@ const CohortManager = {
 
     switchTo: function (cohortId, options = {}) {
         if (!cohortId) return;
+        const switchOptions = Object.assign({ fastEnter: true }, options || {});
         const meta = this.list.find(c => c.id === cohortId);
         if (!meta) return alert('未找到该届别');
         CURRENT_COHORT_ID = cohortId;
@@ -17281,21 +17337,7 @@ const CohortManager = {
         if (examCohortLabel) examCohortLabel.innerText = label;
         refreshExamYearOptions(meta.year);
         this.renderSelector();
-        return switchCohort(cohortId, options);
-
-        // 🟢 [修复]：切换届别后，立即强制刷新教师学期下拉框，解决同步弹窗年级标签陈旧的问题
-        if (window.DataManager && typeof DataManager.renderTeacherTermSelect === 'function') {
-            DataManager.renderTeacherTermSelect();
-        }
-
-        // 🟢 [新增]：切换届别后，自动加载对应学期的教师任课数据
-        setTimeout(() => {
-            scheduleTeacherSyncPrompt();
-            // 如果已选择学期，自动加载该学期的教师数据
-            if (typeof onExamTermChange === 'function') {
-                onExamTermChange();
-            }
-        }, 1200);
+        return switchCohort(cohortId, switchOptions);
     },
 
     init: function () {
