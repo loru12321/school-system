@@ -11042,6 +11042,21 @@ function autoDetectMySchool() {
     if (window.UI) UI.toast(`✅ 已识别本校：${MY_SCHOOL}`, 'success');
 }
 
+const StudentDetailsPerfCache = {
+    schoolOptionsSignature: '',
+    accessibleSchools: [],
+    classOptions: new Map(),
+    subjectListSignature: '',
+    subjectList: [],
+    renderMetaSignature: '',
+    renderMeta: null,
+    querySignature: '',
+    queryData: [],
+    queryMeta: null,
+    pageSizeWidth: 0,
+    pageSize: 40
+};
+
 function updateStudentSchoolSelect() {
     const select = document.getElementById('studentSchoolSelect');
     const classSelect = document.getElementById('studentClassSelect');
@@ -11067,10 +11082,22 @@ function updateStudentSchoolSelect() {
 
     const user = getCurrentUser();
     const role = user?.role;
-    const availableSchools = (typeof listAvailableSchoolsForCompare === 'function')
-        ? listAvailableSchoolsForCompare()
-        : Object.keys(SCHOOLS || {});
-    const accessibleSchools = PermissionPolicy.getAccessibleSchoolNames(user, availableSchools);
+    const schoolSignature = [
+        Object.keys(SCHOOLS || {}).sort().join('|'),
+        String(user?.role || ''),
+        String(user?.school || ''),
+        String(user?.class || ''),
+        String(user?.name || '')
+    ].join('::');
+    if (StudentDetailsPerfCache.schoolOptionsSignature !== schoolSignature) {
+        const availableSchools = (typeof listAvailableSchoolsForCompare === 'function')
+            ? listAvailableSchoolsForCompare()
+            : Object.keys(SCHOOLS || {});
+        StudentDetailsPerfCache.accessibleSchools = PermissionPolicy.getAccessibleSchoolNames(user, availableSchools);
+        StudentDetailsPerfCache.schoolOptionsSignature = schoolSignature;
+        StudentDetailsPerfCache.classOptions.clear();
+    }
+    const accessibleSchools = StudentDetailsPerfCache.accessibleSchools;
     const schoolOptionsHtml = '<option value="">--请选择本校--</option>'
         + accessibleSchools.map(school => `<option value="${school}">${school}</option>`).join('');
     setOptionsIfChanged(select, schoolOptionsHtml, `schools:${accessibleSchools.join('|')}`);
@@ -11079,15 +11106,20 @@ function updateStudentSchoolSelect() {
     const updateClassOptionsForSchool = (school, options = {}) => {
         const includeAll = options.includeAll !== false;
         const selectedSchool = String(school || '').trim();
-        let classes = [];
-        if (selectedSchool && SCHOOLS[selectedSchool]) {
-            const classQueryMode = role === 'class_teacher' ? getClassTeacherStudentViewMode() : (options.mode || 'teaching');
-            classes = PermissionPolicy.getAccessibleClassNames(
-                user,
-                [...new Set(SCHOOLS[selectedSchool].students.map(s => s.class))].sort(),
-                selectedSchool,
-                { mode: classQueryMode }
-            );
+        const classQueryMode = role === 'class_teacher' ? getClassTeacherStudentViewMode() : (options.mode || 'teaching');
+        const classCacheKey = `${selectedSchool}::${includeAll}::${classQueryMode}::${role || ''}::${user?.school || ''}::${user?.class || ''}`;
+        let classes = StudentDetailsPerfCache.classOptions.get(classCacheKey);
+        if (!classes) {
+            classes = [];
+            if (selectedSchool && SCHOOLS[selectedSchool]) {
+                classes = PermissionPolicy.getAccessibleClassNames(
+                    user,
+                    [...new Set(SCHOOLS[selectedSchool].students.map(s => s.class))].sort(),
+                    selectedSchool,
+                    { mode: classQueryMode }
+                );
+            }
+            StudentDetailsPerfCache.classOptions.set(classCacheKey, classes);
         }
         const html = buildClassOptions(classes, includeAll);
         setOptionsIfChanged(classSelect, html || '<option value="">全部班级</option>', `classes:${selectedSchool}:${includeAll}:${classes.join('|')}`);
@@ -11218,17 +11250,34 @@ function setStudentDetailsHtmlIfChanged(element, html, signature) {
 
 function getStudentDetailsPageSize() {
     const width = Number(window.innerWidth || 1280);
-    if (width <= 640) return 12;
-    if (width <= 1024) return 24;
-    return 40;
+    if (StudentDetailsPerfCache.pageSizeWidth === width) return StudentDetailsPerfCache.pageSize;
+    StudentDetailsPerfCache.pageSizeWidth = width;
+    StudentDetailsPerfCache.pageSize = width <= 640 ? 12 : (width <= 1024 ? 24 : 40);
+    return StudentDetailsPerfCache.pageSize;
 }
 
 function getStudentDetailsSubjectList(list = []) {
     const configuredSubjects = Array.isArray(SUBJECTS) ? SUBJECTS.filter(Boolean) : [];
-    if (configuredSubjects.length) return configuredSubjects;
+    const rows = Array.isArray(list) ? list : [];
+    const signature = [
+        configuredSubjects.join('|'),
+        rows.length,
+        String(rows[0]?.school || ''),
+        String(rows[0]?.class || ''),
+        String(rows[rows.length - 1]?.school || ''),
+        String(rows[rows.length - 1]?.class || '')
+    ].join('::');
+    if (StudentDetailsPerfCache.subjectListSignature === signature) {
+        return StudentDetailsPerfCache.subjectList;
+    }
+    if (configuredSubjects.length) {
+        StudentDetailsPerfCache.subjectListSignature = signature;
+        StudentDetailsPerfCache.subjectList = configuredSubjects;
+        return configuredSubjects;
+    }
 
     const seen = new Set();
-    (Array.isArray(list) ? list : []).forEach(row => {
+    rows.forEach(row => {
         Object.keys(row?.scores || {}).forEach(subject => {
             const normalized = normalizeSubject(subject);
             if (normalized) seen.add(normalized);
@@ -11239,6 +11288,8 @@ function getStudentDetailsSubjectList(list = []) {
     Array.from(seen).forEach(subject => {
         if (!ordered.includes(subject)) ordered.push(subject);
     });
+    StudentDetailsPerfCache.subjectListSignature = signature;
+    StudentDetailsPerfCache.subjectList = ordered;
     return ordered;
 }
 
@@ -11250,6 +11301,17 @@ function buildStudentDetailsRenderMeta(list = []) {
     const classTeacherMode = isClassTeacher ? getClassTeacherStudentViewMode() : 'teaching';
     const needTeacherScope = isTeacher || (isClassTeacher && classTeacherMode === 'teaching');
     const teacherScope = needTeacherScope ? getTeacherScopeForUser(user) : null;
+    const listSignature = buildStudentDetailsDataSignature(list);
+    const metaSignature = [
+        listSignature,
+        role,
+        classTeacherMode,
+        teacherScope ? Array.from(teacherScope.subjects || []).sort().join('|') : '',
+        teacherScope ? Array.from(teacherScope.classes || []).sort().join('|') : ''
+    ].join('::');
+    if (StudentDetailsPerfCache.renderMetaSignature === metaSignature && StudentDetailsPerfCache.renderMeta) {
+        return StudentDetailsPerfCache.renderMeta;
+    }
     const subjectList = getStudentDetailsSubjectList(list);
     const visibleSubjects = (isTeacher || (isClassTeacher && classTeacherMode === 'teaching'))
         ? subjectList.filter(s => teacherScope.subjects.has(normalizeSubject(s)))
@@ -11260,7 +11322,7 @@ function buildStudentDetailsRenderMeta(list = []) {
             countyRankVisible: hasStudentCountyRankData(list, visibleSubjects),
             townRankVisible: hasStudentTownshipRankData(list, visibleSubjects)
         };
-    return {
+    const meta = {
         role,
         isTeacher,
         isClassTeacher,
@@ -11268,6 +11330,9 @@ function buildStudentDetailsRenderMeta(list = []) {
         countyRankVisible: rankVisibility.countyRankVisible,
         townRankVisible: rankVisibility.townRankVisible
     };
+    StudentDetailsPerfCache.renderMetaSignature = metaSignature;
+    StudentDetailsPerfCache.renderMeta = meta;
+    return meta;
 }
 
 // 1. 主渲染函数
@@ -11644,6 +11709,31 @@ function renderStudentDetails(reset = true) {
         const role = user?.role || 'guest';
         const classTeacherMode = role === 'class_teacher' ? getClassTeacherStudentViewMode() : 'teaching';
         const queryMode = role === 'class_teacher' ? (classTeacherMode === 'class_all' ? 'homeroom' : 'teaching') : 'teaching';
+        const activeFilterSignature = buildStudentDetailsFilterSignature();
+        const querySignature = [
+            Array.isArray(RAW_DATA) ? RAW_DATA.length : 0,
+            String(window.CURRENT_EXAM_ID || ''),
+            String(selectedSchool || ''),
+            String(selectedClass || ''),
+            hasSelectedSchool ? 'school' : 'all-school',
+            hasSelectedClass ? 'class' : 'all-class',
+            String(role || ''),
+            String(user?.school || ''),
+            String(user?.class || ''),
+            String(user?.name || ''),
+            classTeacherMode,
+            queryMode,
+            STD_STATE.sortCol || '',
+            STD_STATE.sortDir || '',
+            activeFilterSignature,
+            Object.keys(SCHOOLS || {}).length
+        ].join('::');
+        if (StudentDetailsPerfCache.querySignature === querySignature && Array.isArray(StudentDetailsPerfCache.queryData)) {
+            STD_STATE.cacheData = StudentDetailsPerfCache.queryData;
+            STD_STATE.renderMeta = StudentDetailsPerfCache.queryMeta || buildStudentDetailsRenderMeta(STD_STATE.cacheData);
+            STD_STATE.dataSignature = buildStudentDetailsDataSignature(STD_STATE.cacheData);
+            STD_STATE.filterValueCache = Object.create(null);
+        } else {
         data = PermissionPolicy.filterStudentRows(user, data, { mode: queryMode });
         appDebug('[考试明细] 当前用户:', user);
 
@@ -11793,6 +11883,10 @@ function renderStudentDetails(reset = true) {
         STD_STATE.renderMeta = buildStudentDetailsRenderMeta(data);
         STD_STATE.dataSignature = buildStudentDetailsDataSignature(data);
         STD_STATE.filterValueCache = Object.create(null);
+        StudentDetailsPerfCache.querySignature = querySignature;
+        StudentDetailsPerfCache.queryData = data;
+        StudentDetailsPerfCache.queryMeta = STD_STATE.renderMeta;
+        }
     }
 
     // --- E. 分页与渲染 ---
@@ -12073,6 +12167,8 @@ function buildFilterMenuContent(colKey, container) {
     // 检查哪些被选中了
     const currentSet = STD_STATE.activeFilters[colKey];
     const isAllChecked = !currentSet;
+    const menuSignature = `${cacheKey}::${isAllChecked ? 'all' : Array.from(currentSet || []).sort().join('|')}`;
+    if (container?.dataset.studentDetailsFilterMenuSig === menuSignature) return;
 
     let listHtml = '';
     sortedValues.forEach(v => {
@@ -12100,6 +12196,7 @@ function buildFilterMenuContent(colKey, container) {
                 <button class="btn btn-sm btn-gray" onclick="clearFilter('${colKey}')">重置</button>
             </div>
         `;
+    container.dataset.studentDetailsFilterMenuSig = menuSignature;
 }
 
 // 4. 菜单内部交互函数
@@ -12150,7 +12247,7 @@ window.clearFilter = function (colKey) {
 };
 
 function closeAllMenus() {
-    document.querySelectorAll('.excel-filter-menu').forEach(el => el.classList.remove('show'));
+    document.querySelectorAll('.excel-filter-menu.show').forEach(el => el.classList.remove('show'));
 }
 
 // 点击空白关闭菜单
@@ -12160,7 +12257,8 @@ document.addEventListener('click', closeAllMenus);
 window.changeStdPage = function (delta) {
     STD_STATE.page += delta;
     renderStudentDetails(false);
-    document.querySelector('#student-details .table-wrap').scrollTop = 0;
+    const tableWrap = document.querySelector('#student-details .table-wrap');
+    if (tableWrap && tableWrap.scrollTop !== 0) tableWrap.scrollTop = 0;
 };
 
 

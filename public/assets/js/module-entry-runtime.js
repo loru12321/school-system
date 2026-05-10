@@ -326,14 +326,19 @@
     }
 
     function initStudentDetailsEntry() {
+        updateStudentSchoolSelect();
+        scheduleModuleTask('student-details-compare-selects', () => {
+            if (!document.getElementById('student-details')?.classList.contains('active')) return;
+            if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+            if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
+        }, { delay: 80, idle: true, timeout: 900 });
         if (typeof window.ensureCountyAnalysisRuntimeLoaded === 'function'
             && !window.__COUNTY_ANALYSIS_RUNTIME_PATCHED__) {
-            window.ensureCountyAnalysisRuntimeLoaded().catch((error) => console.warn('student county rank runtime failed:', error));
+            scheduleModuleTask('student-details-county-runtime', () => {
+                if (!document.getElementById('student-details')?.classList.contains('active')) return;
+                window.ensureCountyAnalysisRuntimeLoaded().catch((error) => console.warn('student county rank runtime failed:', error));
+            }, { delay: 260, idle: true, timeout: 1600 });
         }
-        updateStudentSchoolSelect();
-        if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-        if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
-        if (typeof window.renderStudentDetails === 'function') window.renderStudentDetails(true);
 
         const triggerRender = () => {
             const section = document.getElementById('student-details');
