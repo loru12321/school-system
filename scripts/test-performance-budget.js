@@ -16,12 +16,6 @@ const packageJson = JSON.parse(read('package.json'));
 const scripts = packageJson.scripts || {};
 const smoke = read('scripts/smoke-all-modules.js');
 const schedulerTest = read('scripts/test-system-performance-scheduler.js');
-const bootRuntime = read('public/assets/js/boot-runtime.js');
-const shellRuntime = read('public/assets/js/shell-runtime.js');
-const html = read('src/index.html');
-const modernOsShell = fs.existsSync(path.join(root, 'src/assets/css/modern-os-shell.css'))
-  ? read('src/assets/css/modern-os-shell.css')
-  : '';
 
 const requiredSmokeTokens = [
   'PERFORMANCE_BUDGETS',
@@ -55,27 +49,6 @@ assert.ok(smoke.includes('summary.dataManagerTabs.push({ ...tabResult, performan
 assert.ok(smoke.includes('STRICT_PERFORMANCE_BUDGETS && summary.performance.budgetFailures.length > 0'), 'strict performance mode should fail on budget regressions');
 assert.ok(schedulerTest.includes('scheduleTask'), 'system performance scheduler test should still cover task scheduling');
 assert.ok(schedulerTest.includes('requestIdleCallback'), 'system performance scheduler test should still cover idle scheduling');
-assert.ok(bootRuntime.includes('getAppCoreModuleCount'), 'boot runtime should derive the core module boundary from app.js');
-assert.ok(bootRuntime.includes('loadIdleHydrationModules'), 'boot runtime should hydrate secondary modules in idle chunks');
-assert.ok(bootRuntime.includes('__APP_CORE_MODULES_LOADED__'), 'boot runtime should expose app-core readiness separately');
-assert.ok(bootRuntime.includes('__APP_SECONDARY_MODULES_LOADED__'), 'boot runtime should track secondary module hydration');
-assert.ok(shellRuntime.includes('DEFAULT_CATEGORY'), 'shell runtime should use a stable default category');
-assert.ok(shellRuntime.includes('CATEGORY_ALIASES'), 'shell runtime should map legacy categories into the reordered shell');
-assert.ok(shellRuntime.includes("macro: {"), 'shell runtime should split macro analysis out of the old all-in-one analysis group');
-assert.ok(shellRuntime.includes("teaching: {"), 'shell runtime should expose a dedicated teaching/class diagnosis group');
-assert.ok(shellRuntime.includes("student: {"), 'shell runtime should expose a dedicated student growth group');
-assert.ok(shellRuntime.includes("intervention: {"), 'shell runtime should expose a dedicated intervention/calculation group');
-assert.ok(shellRuntime.includes("id: 'student-details'"), 'reordered shell should keep student details accessible');
-assert.ok(shellRuntime.includes("id: 'report-generator'"), 'reordered shell should keep report generator accessible');
-assert.ok(shellRuntime.includes("id: 'county-analysis'"), 'reordered shell should keep county analysis accessible');
-assert.ok(!html.includes('data-shell-module-rail-shell="floating"'), 'shell should not render the old floating module rail that can cover content');
-assert.ok(!shellRuntime.includes("id: 'cohort-growth'"), 'removed cohort growth module should not stay in shell navigation');
-assert.ok(!html.includes('lazy-section-template-cohort-growth'), 'removed cohort growth module should not keep a lazy template');
-assert.ok(!bootRuntime.includes('cohort-growth-runtime.js'), 'removed cohort growth module should not load its runtime');
-assert.ok(!smoke.includes("'cohort-growth'"), 'removed cohort growth module should not be part of production smoke switching');
-assert.ok(read('public/assets/js/workspace-rail-runtime.js').includes('if (dock) dock.remove();'), 'right-side module dock should be removed instead of rendered');
-assert.ok(modernOsShell.includes('prefers-reduced-motion'), 'modern OS shell should respect reduced motion');
-assert.ok(modernOsShell.includes('@supports not'), 'modern OS shell should include a low-cost fallback for unsupported blur');
 
 assert.ok(scripts['test:performance-budget'] === 'node scripts/test-performance-budget.js', 'package script should expose performance budget test');
 assert.ok(scripts['check:performance'] && scripts['check:performance'].includes('test:performance-budget'), 'performance check bundle should include budget test');

@@ -23,7 +23,6 @@
     <link rel="stylesheet" href="./assets/css/apk-mobile-shell.css?v=20260407-apk-v2">
     <link rel="stylesheet" href="./assets/css/layout-refinement.css?v=20260501-layout-v1">
     <link rel="stylesheet" href="./assets/css/ins-login.css?v=20260419-ins-v1">
-    <link rel="stylesheet" href="./assets/css/modern-os-shell.css?v=20260510-os-v1">
     <script defer src="./assets/js/platform-compat-runtime.js?v=20260407-apple-v1"></script>
     <script defer src="./assets/js/runtime-registry-runtime.js?v=20260501-runtime-registry-v1"></script>
     <script defer src="./assets/js/boot-runtime.js?v=20260422-boot-racefix-v1"></script>
@@ -44,29 +43,182 @@
         <div class="loader-text" id="loader-text">系统正在处理数据，请稍候...</div>
     </div>
 
-    <!-- 📱 Mobile App Template (Moved to template to reduce initial DOM overhead) -->
-    <template id="mobile-app-template">
-        <div id="mobile-manager-app"
-            style="min-height:100vh; background:var(--bg-body, #f7f9f9); padding-bottom:80px;">
-            <!-- ... (Content will be injected via JS if mobile is detected) ... -->
-            <div style="background:linear-gradient(135deg, #4f46e5, #3b82f6); padding:20px 20px 25px 20px; color:white; border-radius:0 0 20px 20px; box-shadow:0 4px 15px rgba(59,130,246,0.3);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <div style="font-size:18px; font-weight:bold;">📊 智慧教务</div>
-                    <div style="display:flex; align-items:center; gap:8px; font-size:14px; background:rgba(255,255,255,0.2); padding:5px 12px; border-radius:20px; backdrop-filter:blur(5px);">
-                        <i class="ti ti-user-circle" style="font-size:18px;"></i>
-                        <span id="mob-user-name">用户</span>
-                    </div>
-                </div>
-                <div style="font-size:13px; opacity:0.85;">
-                    <span id="mob-user-role">角色</span> · 今天是 <span id="mob-date-text"></span>
+    <!-- 📱 Mobile Manager App (YouTube-style) -->
+    <div id="mobile-manager-app"
+        style="display:none; min-height:100vh; background:var(--bg-body, #f7f9f9); padding-bottom:80px;">
+
+        <!-- 顶部 Header Bar -->
+        <div
+            style="background:linear-gradient(135deg, #4f46e5, #3b82f6); padding:20px 20px 25px 20px; color:white; border-radius:0 0 20px 20px; box-shadow:0 4px 15px rgba(59,130,246,0.3);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <div style="font-size:18px; font-weight:bold;">📊 智慧教务</div>
+                <div
+                    style="display:flex; align-items:center; gap:8px; font-size:14px; background:rgba(255,255,255,0.2); padding:5px 12px; border-radius:20px; backdrop-filter:blur(5px);">
+                    <i class="ti ti-user-circle" style="font-size:18px;"></i>
+                    <span id="mob-user-name">用户</span>
                 </div>
             </div>
-            <!-- (rest of mobile app structure...) -->
+            <div style="font-size:13px; opacity:0.85;">
+                <span id="mob-user-role">角色</span> · 今天是 <span id="mob-date-text"></span>
+            </div>
         </div>
-    </template>
+
+        <!-- ===== Tab View: 工作台 (Home) ===== -->
+        <div id="mob-view-home" class="mob-view active" style="padding:15px;">
+
+            <!-- 快捷操作 Grid -->
+            <div
+                style="background:white; border-radius:16px; padding:20px 10px; box-shadow:0 2px 12px rgba(0,0,0,0.04); margin-top:-15px; position:relative; z-index:5;">
+                <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:15px 10px; text-align:center;">
+                    <div class="mob-grid-item"
+                        onclick="if(typeof switchTab==='function'){document.getElementById('mobile-manager-app').style.display='none';document.getElementById('app').classList.remove('hidden');switchTab('upload');}">
+                        <div
+                            style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 10px rgba(37,99,235,0.3);margin:0 auto;">
+                            <i class="ti ti-file-upload"></i>
+                        </div>
+                        <div style="font-size:11px;color:#64748b;margin-top:6px;">导入数据</div>
+                    </div>
+                    <div class="mob-grid-item" onclick="if(typeof openStarterGuide==='function')openStarterGuide();">
+                        <div
+                            style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 4px 10px rgba(5,150,105,0.3);margin:0 auto;">
+                            <i class="ti ti-compass"></i>
+                        </div>
+                        <div style="font-size:11px;color:#64748b;margin-top:6px;">新手向导</div>
+                    </div>
+                    <div class="mob-grid-item" onclick="if(typeof loadCloudData==='function')loadCloudData();">
+                        <div
+                            style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(217,119,6,0.3);margin:0 auto;">
+                            <i class="ti ti-cloud-download"></i>
+                        </div>
+                        <div style="font-size:11px;color:#64748b;margin-top:6px;">云端回滚</div>
+                    </div>
+                    <div class="mob-grid-item" onclick="document.body.classList.toggle('dark-mode');">
+                        <div
+                            style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 4px 10px rgba(124,58,237,0.3);margin:0 auto;">
+                            <i class="ti ti-palette"></i>
+                        </div>
+                        <div style="font-size:11px;color:#64748b;margin-top:6px;">外观设置</div>
+                    </div>
+                    <div class="mob-grid-item" onclick="document.body.classList.toggle('dark-mode');">
+                        <div
+                            style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;background:linear-gradient(135deg,#475569,#1e293b);box-shadow:0 4px 10px rgba(30,41,59,0.3);margin:0 auto;">
+                            <i class="ti ti-moon"></i>
+                        </div>
+                        <div style="font-size:11px;color:#64748b;margin-top:6px;">深色模式</div>
+                    </div>
+                    <div class="mob-grid-item" onclick="if(typeof Auth!=='undefined')Auth.logout();">
+                        <div
+                            style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 4px 10px rgba(220,38,38,0.3);margin:0 auto;">
+                            <i class="ti ti-logout"></i>
+                        </div>
+                        <div style="font-size:11px;color:#64748b;margin-top:6px;">退出登录</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 数据概览 -->
+            <div
+                style="background:white; border-radius:16px; padding:18px; margin-top:15px; box-shadow:0 2px 12px rgba(0,0,0,0.04);">
+                <div
+                    style="font-size:15px; font-weight:bold; color:#1e293b; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+                    <i class="ti ti-chart-bar" style="color:#3b82f6;"></i> 数据概览
+                </div>
+                <div id="mob-data-overview" style="display:flex; justify-content:space-between; text-align:center;">
+                    <div style="flex:1;">
+                        <div style="font-size:22px; font-weight:bold; color:#333;" id="mob-stat-total">--</div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:4px;">总人数</div>
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-size:22px; font-weight:bold; color:#2563eb;" id="mob-stat-avg">--</div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:4px;">总平均分</div>
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-size:22px; font-weight:bold; color:#16a34a;" id="mob-stat-pass">--%</div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:4px;">及格率</div>
+                    </div>
+                </div>
+                <div style="text-align:center; font-size:11px; color:#94a3b8; margin-top:12px;">
+                    * 更多详细分析请向下滚动查看完整 PC 视图
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Tab View: 通讯录 (Students) ===== -->
+        <div id="mob-view-students" class="mob-view" style="padding:15px;">
+            <div style="margin-bottom:12px;">
+                <input id="mob-search-input" type="text" placeholder="🔍 搜索学生姓名或考号..."
+                    style="width:100%; padding:12px 16px; border:1px solid #e2e8f0; border-radius:12px; font-size:14px; background:white; outline:none; box-sizing:border-box;"
+                    oninput="MobMgr.renderStudentList()">
+            </div>
+            <div id="mob-student-list" style="display:flex; flex-direction:column; gap:8px;">
+                <div style="text-align:center; padding:40px 0; color:#94a3b8;">请先加载数据</div>
+            </div>
+        </div>
+
+        <!-- ===== Tab View: 分析报表 (Analysis) ===== -->
+        <div id="mob-view-analysis" class="mob-view" style="padding:15px;">
+            <div style="font-size:16px; font-weight:bold; color:#1e293b; margin-bottom:15px;">
+                <i class="ti ti-report-analytics" style="color:#8b5cf6;"></i> 分析报表
+            </div>
+            <div id="mob-analysis-content"
+                style="background:white; border-radius:16px; padding:18px; box-shadow:0 2px 12px rgba(0,0,0,0.04);">
+                <div style="text-align:center; padding:30px 0; color:#94a3b8;">请先加载数据后查看分析</div>
+            </div>
+        </div>
+
+        <!-- ===== Tab View: 我的 (Me) ===== -->
+        <div id="mob-view-me" class="mob-view" style="padding:15px;">
+            <div
+                style="background:white; border-radius:16px; padding:25px; box-shadow:0 2px 12px rgba(0,0,0,0.04); text-align:center;">
+                <div
+                    style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#3b82f6);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:28px;color:white;">
+                    <i class="ti ti-user"></i>
+                </div>
+                <div style="font-size:18px; font-weight:bold; color:#1e293b;" id="mob-me-name">用户</div>
+                <div style="font-size:13px; color:#64748b; margin-top:4px;" id="mob-me-role">角色</div>
+            </div>
+            <div style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
+                <div onclick="document.body.classList.toggle('dark-mode');"
+                    style="background:white; border-radius:12px; padding:15px 18px; box-shadow:0 1px 4px rgba(0,0,0,0.04); display:flex; align-items:center; gap:12px; cursor:pointer;">
+                    <i class="ti ti-moon" style="font-size:20px; color:#475569;"></i>
+                    <span style="font-size:14px; color:#1e293b;">深色模式</span>
+                </div>
+                <div onclick="if(typeof openUserPasswordModal==='function')openUserPasswordModal();"
+                    style="background:white; border-radius:12px; padding:15px 18px; box-shadow:0 1px 4px rgba(0,0,0,0.04); display:flex; align-items:center; gap:12px; cursor:pointer;">
+                    <i class="ti ti-lock" style="font-size:20px; color:#475569;"></i>
+                    <span style="font-size:14px; color:#1e293b;">修改密码</span>
+                </div>
+                <div onclick="if(typeof Auth!=='undefined')Auth.logout();"
+                    style="background:white; border-radius:12px; padding:15px 18px; box-shadow:0 1px 4px rgba(0,0,0,0.04); display:flex; align-items:center; gap:12px; cursor:pointer;">
+                    <i class="ti ti-logout" style="font-size:20px; color:#ef4444;"></i>
+                    <span style="font-size:14px; color:#ef4444;">退出登录</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部导航 (YouTube-style fixed bottom) -->
+        <div
+            style="position:fixed; bottom:0; left:0; width:100%; background:white; border-top:1px solid #f0f0f0; display:flex; justify-content:space-around; align-items:center; padding:8px 0; padding-bottom:max(8px, env(safe-area-inset-bottom)); z-index:99999; box-shadow:0 -2px 10px rgba(0,0,0,0.04);">
+            <div class="mob-nav-btn active" onclick="MobMgr.switchTab('home')"
+                style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;cursor:pointer;color:#94a3b8;font-size:10px;transition:color 0.2s;">
+                <i class="ti ti-home" style="font-size:22px;"></i>工作台
+            </div>
+            <div class="mob-nav-btn" onclick="MobMgr.switchTab('students')"
+                style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;cursor:pointer;color:#94a3b8;font-size:10px;transition:color 0.2s;">
+                <i class="ti ti-address-book" style="font-size:22px;"></i>通讯录
+            </div>
+            <div class="mob-nav-btn" onclick="MobMgr.switchTab('analysis')"
+                style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;cursor:pointer;color:#94a3b8;font-size:10px;transition:color 0.2s;">
+                <i class="ti ti-report-analytics" style="font-size:22px;"></i>分析报表
+            </div>
+            <div class="mob-nav-btn" onclick="MobMgr.switchTab('me')"
+                style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 12px;cursor:pointer;color:#94a3b8;font-size:10px;transition:color 0.2s;">
+                <i class="ti ti-user" style="font-size:22px;"></i>我的
+            </div>
+        </div>
+    </div>
 
     <div id="login-overlay" data-login-portal="school" data-login-skin="clean">
-        <!-- ... (keep login as is for now) ... -->
         <div class="login-clean-shell" aria-label="系统登录">
             <section class="login-clean-stage">
                 <div class="login-clean-brand">
@@ -125,6 +277,7 @@
     </div>
 
         <!-- ?????? (Cohort Growth) -->
+    <div id="cohort-growth" class="section card-box analysis-workspace analysis-workspace-progress" data-lazy-section-template="lazy-section-template-cohort-growth" data-lazy-section-placeholder="1"></div>
     
     <div id="toast-container" class="toast-container"></div>
 
@@ -357,6 +510,18 @@
 
                 </div>
             </header>
+
+            <div id="shell-module-rail-floating-shell" class="shell-module-rail-shell shell-module-rail-shell--floating"
+                data-shell-module-rail-shell="floating" aria-label="滚动快捷切换" aria-hidden="true">
+                <div class="shell-module-rail-meta">
+                    <div class="shell-module-rail-copy">
+                        <span class="shell-module-rail-label">Quick Switch</span>
+                        <strong data-shell-module-rail-title>当前分类模块快切</strong>
+                    </div>
+                    <span class="shell-module-rail-status" data-shell-module-rail-status>点击下方标签快速切换模块</span>
+                </div>
+                <div class="shell-module-rail" data-shell-module-rail></div>
+            </div>
 
             <!-- 工作区总览与模块导航 -->
             <section id="shell-overview" class="shell-overview">
@@ -4520,6 +4685,123 @@
          ============================================================ -->
         
 
+<script type="text/html" id="lazy-section-template-cohort-growth">
+<div id="cohort-growth" class="section card-box analysis-workspace analysis-workspace-progress">
+        <div class="module-desc-bar analysis-hero" style="border-color: var(--color-diag)">
+            <h3><i class="ti ti-timeline"></i> 纵向成长档案 <span class="badge" style="background:#0ea5e9;">📈 班主任必看</span></h3>
+            <p><strong>一句话目的：</strong>基于届别 ID 构建学生成长曲线与稳定性画像。</p>
+            <p><strong>推荐顺序：</strong>完成多次考试导入后使用，至少准备 4 次考试数据再看波动率更稳。</p>
+            <div class="analysis-scan-strip">
+                <div class="analysis-scan-item">
+                    <span class="analysis-scan-label">Focus</span>
+                    <strong class="analysis-scan-value">稳定 / 成长</strong>
+                    <span class="analysis-scan-note">先看 Z-Score 波动率识别稳定性，再看排名百分位的首尾变化判断长期成长趋势。</span>
+                </div>
+                <div class="analysis-scan-item">
+                    <span class="analysis-scan-label">Use</span>
+                    <strong class="analysis-scan-value">纵向跟踪</strong>
+                    <span class="analysis-scan-note">适合班主任、年级组用来区分“短期起伏”与“长期向上/向下”的学生画像。</span>
+                </div>
+                <div class="analysis-scan-item">
+                    <span class="analysis-scan-label">Output</span>
+                    <strong class="analysis-scan-value">名单 / 画像</strong>
+                    <span class="analysis-scan-note">支持生成波动名单与成长名单，适合后续谈话、家校沟通和稳定性跟踪。</span>
+                </div>
+            </div>
+        </div>
+        <div class="sec-head analysis-shell-head">
+            <h2><i class="ti ti-timeline"></i> 成长轨迹与稳定性分析</h2>
+            <div class="analysis-action-stack">
+                <div class="analysis-action-note">建议先确保同一届别下已经累计多次考试，再生成成长档案；如果考试次数太少，这页更适合先当作趋势预览而不是结论依据。</div>
+                <div class="analysis-actions cohort-growth-actions">
+                    <button class="btn btn-purple" onclick="CohortGrowth.render()">🔎 生成成长档案</button>
+                    <button class="btn btn-gray" onclick="CohortGrowth.exportVolatility()">📥 导出波动名单</button>
+                </div>
+            </div>
+        </div>
+        <div class="info-bar analysis-info-band">
+            <span>基于届别历史考试，计算 $Z$ 分数波动率与排名百分位变化。建议至少累计 4 次考试数据后再正式使用稳定性结果，否则更适合做阶段参考。</span>
+        </div>
+        <details class="explain-panel analysis-doc-panel">
+            <summary>成长档案阅读建议</summary>
+            <div class="explain-content">
+                <p>Z-Score 波动率反映学生成绩的稳定程度，波动越大，越需要关注“忽高忽低”的学习状态。</p>
+                <p>排名百分位首尾对比更适合看长期趋势，能帮助区分“偶然高分”与“持续成长”。</p>
+                <p>建议先看波动率名单，再看成长名单，避免只看上升幅度而忽略不稳定风险。</p>
+            </div>
+        </details>
+        <div class="analysis-flow-banner">
+            <div class="analysis-flow-step">
+                <span class="analysis-flow-kicker">Step 1</span>
+                <strong class="analysis-flow-value">看波动</strong>
+                <span class="analysis-flow-note">先看 Z-Score 波动率，识别成绩最不稳定、最需要持续关注的学生。</span>
+            </div>
+            <div class="analysis-flow-step">
+                <span class="analysis-flow-kicker">Step 2</span>
+                <strong class="analysis-flow-value">看成长</strong>
+                <span class="analysis-flow-note">再看排名百分位的首尾变化，判断长期成长是上升、停滞还是回落。</span>
+            </div>
+            <div class="analysis-flow-step">
+                <span class="analysis-flow-kicker">Step 3</span>
+                <strong class="analysis-flow-value">做跟进</strong>
+                <span class="analysis-flow-note">最后导出波动名单或成长名单，用于谈话、家校沟通与阶段跟踪。</span>
+            </div>
+        </div>
+        <div class="cohort-growth-grid">
+            <div class="analysis-anchor-panel cohort-growth-panel cohort-volatility-panel">
+                <div class="sub-header analysis-section-head">🌊 Z-Score 波动率（稳定性）</div>
+                <div class="analysis-table-meta">
+                    <span><strong>用途：</strong>识别成绩忽高忽低、学习状态波动明显的学生。</span>
+                    <span><strong>阅读建议：</strong>波动率越高越需要重点关注，建议结合班级背景判断是阶段起伏还是持续不稳。</span>
+                </div>
+                <div class="table-wrap analysis-table-shell cohort-growth-table-shell" data-mobile-hint="手机端已转为卡片表，可上下滚动查看完整名单">
+                    <table id="cohort-volatility-table" class="analysis-table-dense">
+                        <thead>
+                            <tr>
+                                <th>姓名</th>
+                                <th>班级</th>
+                                <th>考试次数</th>
+                                <th>波动率(σ)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="4" class="analysis-empty-cell">点击“生成成长档案”后，这里会展示波动率最高的学生名单。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="analysis-anchor-panel cohort-growth-panel cohort-rank-panel">
+                <div class="sub-header analysis-section-head">🚀 排名百分位成长（首尾对比）</div>
+                <div class="analysis-table-meta">
+                    <span><strong>用途：</strong>查看学生在届别内的长期成长方向，而不是只看单次涨跌。</span>
+                    <span><strong>阅读建议：</strong>优先关注变化幅度大的学生，再结合波动率判断是真成长还是高波动。</span>
+                </div>
+                <div class="table-wrap analysis-table-shell cohort-growth-table-shell" data-mobile-hint="手机端已转为卡片表，可上下滚动查看完整名单">
+                    <table id="cohort-growth-table" class="analysis-table-dense">
+                        <thead>
+                            <tr>
+                                <th>姓名</th>
+                                <th>班级</th>
+                                <th>起始百分位</th>
+                                <th>最新百分位</th>
+                                <th>变化</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="5" class="analysis-empty-cell">点击“生成成长档案”后，这里会展示排名百分位成长最明显的学生。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 消息提示容器 -->
+</script>
 <script type="text/html" id="lazy-section-template-teacher-analysis">
 <div id="teacher-analysis" class="section card-box analysis-workspace analysis-workspace-teacher">
                 <div class="module-desc-bar analysis-hero" style="border-color:#2563eb;">
