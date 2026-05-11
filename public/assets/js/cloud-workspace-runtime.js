@@ -364,10 +364,8 @@
             { key: bundle.workspaceKey, content: bundle.metaContent, updated_at: syncedAt },
             ...bundle.examRows.map(row => ({ key: row.key, content: row.content, updated_at: syncedAt }))
         ];
-        for (const row of rows) {
-            const { error } = await upsertSystemDataRecord(row);
-            if (error) throw error;
-        }
+        const { error } = await upsertSystemDataRecord(rows);
+        if (error) throw error;
         return true;
     }
 

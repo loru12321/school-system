@@ -289,26 +289,28 @@
 
     async function upsertCompatRows(client, rows) {
         const list = Array.isArray(rows) ? rows : [rows];
+        const payload = Array.isArray(rows) ? list : list[0];
+        let bulkResult = await client.from(SYSTEM_DATA_TABLE).upsert(payload, { onConflict: 'key' });
+        if (bulkResult && !bulkResult.error) {
+            return {
+                data: Array.isArray(rows) ? (bulkResult.data ?? []) : bulkResult.data ?? null,
+                error: null,
+                source: 'compat'
+            };
+        }
+
+        if (!isDuplicateKeyError(bulkResult && bulkResult.error) || !client || typeof client.from !== 'function') {
+            return {
+                data: Array.isArray(rows) ? [] : null,
+                error: bulkResult && Object.prototype.hasOwnProperty.call(bulkResult, 'error') ? bulkResult.error : new Error('SYSTEM_DATA_UPSERT_FAILED'),
+                source: 'compat'
+            };
+        }
+
         const results = [];
-
         for (const row of list) {
-            let result = await client.from(SYSTEM_DATA_TABLE).upsert(row, { onConflict: 'key' });
-            if (result && !result.error) {
-                results.push(result.data ?? null);
-                continue;
-            }
-
-            if (!isDuplicateKeyError(result && result.error) || !client || typeof client.from !== 'function') {
-                return {
-                    data: results,
-                    error: result && Object.prototype.hasOwnProperty.call(result, 'error') ? result.error : new Error('SYSTEM_DATA_UPSERT_FAILED'),
-                    source: 'compat'
-                };
-            }
-
             const updatePayload = buildUpdatePayloadFromRow(row);
-            const updateQuery = client.from(SYSTEM_DATA_TABLE).update(updatePayload).eq('key', row.key);
-            result = await updateQuery;
+            const result = await client.from(SYSTEM_DATA_TABLE).update(updatePayload).eq('key', row.key);
             if (result && result.error) {
                 return {
                     data: results,

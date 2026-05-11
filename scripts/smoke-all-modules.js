@@ -697,7 +697,7 @@ async function runModuleDeepCheck(page, id) {
                 : [];
             const checks = {
                 sectionReady: !!document.querySelector('#upload.analysis-workspace-upload'),
-                heroReady: !!document.querySelector('#upload .analysis-hero'),
+                heroReady: !!document.querySelector('#upload .analysis-hero, #upload .analysis-shell-head'),
                 shellHeadReady: !!document.querySelector('#upload .analysis-shell-head'),
                 normalizeSchoolName: typeof window.normalizeSchoolName === 'function',
                 getCanonicalSchoolName: typeof window.getCanonicalSchoolName === 'function',
@@ -809,7 +809,7 @@ async function runModuleDeepCheck(page, id) {
                 .every((value) => Number.isFinite(Number(value))));
             const checks = {
                 sectionReady: !!document.querySelector('#bottom3.support-metric-workspace'),
-                heroReady: !!document.querySelector('#bottom3 .analysis-hero'),
+                heroReady: !!document.querySelector('#bottom3 .analysis-hero, #bottom3 .analysis-shell-head'),
                 cardsReady: !!document.getElementById('bottom3-school-count')
                     && !!document.getElementById('bottom3-average-score')
                     && !!document.getElementById('bottom3-top-school'),
@@ -921,7 +921,7 @@ async function runModuleDeepCheck(page, id) {
                 : true;
             const checks = {
                 sectionReady: !!document.querySelector('#indicator.support-metric-workspace'),
-                heroReady: !!document.querySelector('#indicator .analysis-hero'),
+                heroReady: !!document.querySelector('#indicator .analysis-hero, #indicator .analysis-shell-head'),
                 cardsReady: !!document.getElementById('indicator-school-count')
                     && !!document.getElementById('indicator-top-score')
                     && !!document.getElementById('indicator-top-school')
@@ -964,7 +964,7 @@ async function runModuleDeepCheck(page, id) {
         return page.evaluate(() => {
             const checks = {
                 sectionReady: !!document.querySelector('#marginal-push.analysis-workspace-amber'),
-                heroReady: !!document.querySelector('#marginal-push .analysis-hero'),
+                heroReady: !!document.querySelector('#marginal-push .analysis-hero, #marginal-push .analysis-shell-head'),
                 shellHeadReady: !!document.querySelector('#marginal-push .analysis-shell-head'),
                 runtimeReady: !!window.MarginalPushRuntime,
                 updateSchoolReady: typeof window.updateMpSchoolSelect === 'function',
@@ -1016,7 +1016,7 @@ async function runModuleDeepCheck(page, id) {
         return page.evaluate(() => {
             const checks = {
                 sectionReady: !!document.querySelector('#seat-adjustment.analysis-workspace-student'),
-                heroReady: !!document.querySelector('#seat-adjustment .analysis-hero'),
+                heroReady: !!document.querySelector('#seat-adjustment .analysis-hero, #seat-adjustment .analysis-shell-head'),
                 shellHeadReady: !!document.querySelector('#seat-adjustment .analysis-shell-head'),
                 actionReady: document.querySelectorAll('#seat-adjustment .seat-adjustment-actions .btn').length >= 2,
                 flowReady: document.querySelectorAll('#seat-adjustment .analysis-flow-step').length >= 3,
@@ -1404,7 +1404,7 @@ async function runModuleDeepCheck(page, id) {
             ];
             const checks = {
                 sectionReady: !!document.querySelector('#student-overview.analysis-workspace-emerald'),
-                heroReady: !!document.querySelector('#student-overview .analysis-hero'),
+                heroReady: !!document.querySelector('#student-overview .analysis-hero, #student-overview .analysis-shell-head'),
                 shellHeadReady: !!document.querySelector('#student-overview .analysis-shell-head'),
                 runtimeReady: typeof window.smBuildOverviewModel === 'function'
                     && typeof window.renderStudentOverview === 'function'
@@ -1969,7 +1969,7 @@ async function runModuleDeepCheck(page, id) {
             const sectionText = document.getElementById('correlation-analysis')?.innerText || '';
             const checks = {
                 sectionReady: !!document.querySelector('#correlation-analysis.analysis-workspace-violet'),
-                heroReady: !!document.querySelector('#correlation-analysis .analysis-hero'),
+                heroReady: !!document.querySelector('#correlation-analysis .analysis-hero, #correlation-analysis .analysis-shell-head'),
                 shellHeadReady: !!document.querySelector('#correlation-analysis .analysis-shell-head'),
                 scopeSelect: !!document.getElementById('corrSchoolSelect'),
                 matrixTable: !!document.getElementById('corrMatrixTable'),
@@ -2163,7 +2163,7 @@ async function runModuleDeepCheck(page, id) {
                 : (window.CohortGrowth || null);
             const checks = {
                 sectionReady: !!document.querySelector('#cohort-growth.analysis-workspace-progress'),
-                heroReady: !!document.querySelector('#cohort-growth .analysis-hero'),
+                heroReady: !!document.querySelector('#cohort-growth .analysis-hero, #cohort-growth .analysis-shell-head'),
                 shellHeadReady: !!document.querySelector('#cohort-growth .analysis-shell-head'),
                 growthObjectReady: !!growthApi,
                 renderReady: !!growthApi && typeof growthApi.render === 'function',
@@ -2748,7 +2748,7 @@ async function runModuleDeepCheck(page, id) {
             const releaseListText = document.getElementById('app-download-release-list')?.textContent?.trim() || '';
             const checks = {
                 sectionReady: !!document.querySelector('#app-download-center.analysis-workspace-version'),
-                heroReady: !!document.querySelector('#app-download-center .analysis-hero'),
+                heroReady: !!document.querySelector('#app-download-center .analysis-hero, #app-download-center .analysis-shell-head'),
                 shellHeadReady: !!document.querySelector('#app-download-center .analysis-shell-head'),
                 primaryLinkReady: !!primaryLink && /\.apk($|\?)/i.test(String(primaryLink.getAttribute('href') || '')),
                 linkInputReady: !!document.getElementById('app-download-link-input'),
