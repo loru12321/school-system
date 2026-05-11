@@ -1435,8 +1435,6 @@
         },
 
         fetchStudentExamHistory: async function (student) {
-            if (!(await this.ensureClientReady())) return { success: false, message: '云端未连接' };
-            setCloudStatus('syncing', '拉取历史');
             if (!student || !student.name) return { success: false, message: '学生信息无效' };
 
             const cohortId = normalizeCohortId(student.cohort || getCurrentCohortId());
@@ -1457,7 +1455,91 @@
             }
             if (this._studentHistoryTasks[historyKey]) return this._studentHistoryTasks[historyKey];
 
+            const targetName = String(student.name || '').trim();
+            const targetClassNum = String(student.class || '').replace(/[^0-9]/g, '');
+            const findHistoryMatch = (payload) => {
+                let match = null;
+                const schools = payload?.SCHOOLS || payload?.schools || {};
+                for (const [schoolName, schoolData] of Object.entries(schools)) {
+                    if (student.school && schoolName !== student.school) continue;
+                    const list = Array.isArray(schoolData?.students) ? schoolData.students : [];
+                    match = list.find(s => {
+                        if (String(s?.name || '').trim() !== targetName) return false;
+                        if (!targetClassNum) return true;
+                        return String(s?.class || '').replace(/[^0-9]/g, '') === targetClassNum;
+                    });
+                    if (match) break;
+                }
+
+                if (!match) {
+                    const list = payload?.students || payload?.RAW_DATA || payload?.data || [];
+                    match = window.RankingDataService && typeof window.RankingDataService.findStudent === 'function'
+                        ? window.RankingDataService.findStudent(list, {
+                            name: student.name,
+                            school: student.school,
+                            className: student.class
+                        })
+                        : list.find(s => {
+                            if (String(s?.name || '').trim() !== targetName) return false;
+                            if (!targetClassNum) return true;
+                            return String(s?.class || '').replace(/[^0-9]/g, '') === targetClassNum;
+                        });
+                }
+                return match;
+            };
+            const buildHistoryEntry = (examId, payload, updatedAt) => {
+                const match = findHistoryMatch(payload);
+                if (!match) return null;
+                const keyParts = String(examId || '').split('_');
+                const examLabel = payload?.examLabel || (keyParts.length >= 5 ? keyParts.slice(4).join('_') : examId);
+                const rows = payload?.RAW_DATA || payload?.data || [];
+                return {
+                    // Use full key as canonical ID to avoid "same exam" false positives.
+                    examId,
+                    examFullKey: examId,
+                    examLabel: examLabel || examId,
+                    fingerprint: payload?.FINGERPRINT || payload?.fingerprint || computeExamDataFingerprint(rows),
+                    total: match.total,
+                    rankClass: match.ranks?.total?.class,
+                    rankSchool: match.ranks?.total?.school,
+                    rankTown: match.ranks?.total?.township,
+                    subjectRanks: match.ranks || {},
+                    scores: match.scores,
+                    updatedAt
+                };
+            };
+            const collectLocalHistory = () => {
+                const db = WorkspaceState && typeof WorkspaceState.getCohortDb === 'function'
+                    ? WorkspaceState.getCohortDb()
+                    : (window.COHORT_DB || null);
+                const exams = db?.exams && typeof db.exams === 'object' ? db.exams : null;
+                if (!exams) return [];
+                return Object.entries(exams)
+                    .filter(([examId, exam]) => (
+                        !isIgnoredExamKey(examId) &&
+                        !isVirtualCohortSnapshotKey(examId) &&
+                        normalizeCohortId(exam?.cohort || exam?.meta?.cohort || examId) === cohortId
+                    ))
+                    .sort((left, right) => {
+                        const leftTime = Number(left[1]?.createdAt || new Date(left[1]?.updatedAt || 0).getTime() || 0);
+                        const rightTime = Number(right[1]?.createdAt || new Date(right[1]?.updatedAt || 0).getTime() || 0);
+                        return leftTime - rightTime;
+                    })
+                    .map(([examId, exam]) => buildHistoryEntry(examId, exam, exam?.updatedAt || exam?.createdAt || ''))
+                    .filter(Boolean);
+            };
+
+            const localHistory = collectLocalHistory();
+            if (localHistory.length >= 2) {
+                const localResult = { success: true, data: localHistory, source: 'local-cohort-db' };
+                this._studentHistoryCache[historyKey] = { at: Date.now(), result: localResult };
+                setCloudStatus('success', `历史${localHistory.length}条`);
+                return localResult;
+            }
+
             this._studentHistoryTasks[historyKey] = (async () => {
+                if (!(await this.ensureClientReady())) return { success: false, message: '云端未连接' };
+                setCloudStatus('syncing', '拉取历史');
                 const { data, error } = await selectSystemData({
                     select: 'key,content,updated_at',
                     keyLike: `${cohortId}%`,
@@ -1467,61 +1549,13 @@
                 if (error) throw error;
 
                 const rows = (data || []).filter(row => !isIgnoredExamKey(row.key));
-                const targetName = String(student.name || '').trim();
-                const targetClassNum = String(student.class || '').replace(/[^0-9]/g, '');
                 const history = [];
 
                 for (const row of rows) {
                     try {
                         const payload = parsePayload(row.content) || {};
-                        let match = null;
-
-                        const schools = payload.SCHOOLS || {};
-                        for (const [schoolName, schoolData] of Object.entries(schools)) {
-                            if (student.school && schoolName !== student.school) continue;
-                            const list = Array.isArray(schoolData?.students) ? schoolData.students : [];
-                            match = list.find(s => {
-                                if (String(s?.name || '').trim() !== targetName) return false;
-                                if (!targetClassNum) return true;
-                                return String(s?.class || '').replace(/[^0-9]/g, '') === targetClassNum;
-                            });
-                            if (match) break;
-                        }
-
-                        if (!match) {
-                            const list = payload.students || payload.RAW_DATA || [];
-                            match = window.RankingDataService && typeof window.RankingDataService.findStudent === 'function'
-                                ? window.RankingDataService.findStudent(list, {
-                                    name: student.name,
-                                    school: student.school,
-                                    className: student.class
-                                })
-                                : list.find(s => {
-                                    if (String(s?.name || '').trim() !== targetName) return false;
-                                    if (!targetClassNum) return true;
-                                    return String(s?.class || '').replace(/[^0-9]/g, '') === targetClassNum;
-                                });
-                        }
-
-                        if (!match) continue;
-
-                        const keyParts = String(row.key || '').split('_');
-                        const examLabel = keyParts.length >= 5 ? keyParts.slice(4).join('_') : row.key;
-
-                        history.push({
-                            // Use full key as canonical ID to avoid "same exam" false positives.
-                            examId: row.key,
-                            examFullKey: row.key,
-                            examLabel: examLabel || row.key,
-                            fingerprint: payload?.FINGERPRINT || computeExamDataFingerprint(payload?.RAW_DATA || []),
-                            total: match.total,
-                            rankClass: match.ranks?.total?.class,
-                            rankSchool: match.ranks?.total?.school,
-                            rankTown: match.ranks?.total?.township,
-                            subjectRanks: match.ranks || {},
-                            scores: match.scores,
-                            updatedAt: row.updated_at
-                        });
+                        const entry = buildHistoryEntry(row.key, payload, row.updated_at);
+                        if (entry) history.push(entry);
                     } catch (rowErr) {
                         console.warn('[CloudHistory] parse row failed:', rowErr);
                     }
@@ -1532,7 +1566,9 @@
             })();
             try {
                 const result = await this._studentHistoryTasks[historyKey];
-                this._studentHistoryCache[historyKey] = { at: Date.now(), result };
+                if (result?.success) {
+                    this._studentHistoryCache[historyKey] = { at: Date.now(), result };
+                }
                 return result;
             } catch (e) {
                 console.error('[CloudHistory] failed:', e);

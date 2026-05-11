@@ -1,6 +1,13 @@
 (() => {
     if (typeof window === 'undefined' || window.__TEACHER_ANALYSIS_BRIDGE_RUNTIME_PATCHED__) return;
 
+    const CorrelationAnalysisPerfCache = {
+        signature: '',
+        matrixHtml: '',
+        chartHtml: '',
+        liftDragHtml: ''
+    };
+
     function updateCorrelationSchoolSelect() {
         const select = document.getElementById('corrSchoolSelect');
         if (!select) return;
@@ -92,6 +99,98 @@
         return SCHOOLS?.[scope]?.students || [];
     }
 
+    function getCorrelationStudentSignaturePart(student) {
+        if (!student || typeof student !== 'object') return '';
+        return [
+            String(student.school || '').trim(),
+            String(student.class || '').trim(),
+            String(student.name || '').trim(),
+            String(student.examNo || student.id || '').trim(),
+            String(student.total ?? '').trim()
+        ].join('/');
+    }
+
+    function buildCorrelationSignature(scope, students, subjects) {
+        const totalChecksum = (Array.isArray(students) ? students : []).reduce((sum, student) => {
+            const total = toFiniteNumber(student?.total);
+            return sum + (total === null ? 0 : total);
+        }, 0);
+        return [
+            scope,
+            subjects.join('|'),
+            students.length,
+            getCorrelationStudentSignaturePart(students[0]),
+            getCorrelationStudentSignaturePart(students[students.length - 1]),
+            totalChecksum.toFixed(3)
+        ].join('::');
+    }
+
+    function buildCorrelationAnalysisHtml(students, subjects) {
+        let matrixHtml = '<tr><th></th>';
+        subjects.forEach((subject) => {
+            matrixHtml += `<th>${subject}</th>`;
+        });
+        matrixHtml += '</tr>';
+
+        subjects.forEach((rowSubject) => {
+            matrixHtml += `<tr><th>${rowSubject}</th>`;
+            subjects.forEach((colSubject) => {
+                if (rowSubject === colSubject) {
+                    matrixHtml += '<td style="background:#eee;">-</td>';
+                    return;
+                }
+                const { leftScores, rightScores } = getPairedScores(students, rowSubject, colSubject);
+                const pearson = calculatePearson(leftScores, rightScores);
+                const bg = pearson > 0
+                    ? `rgba(220, 38, 38, ${Math.abs(pearson) * 0.8})`
+                    : `rgba(37, 99, 235, ${Math.abs(pearson) * 0.8})`;
+                const color = Math.abs(pearson) > 0.5 ? '#fff' : '#333';
+                matrixHtml += `<td class="heatmap-cell" style="background:${bg}; color:${color}" title="${rowSubject} vs ${colSubject} 相关系数: ${pearson.toFixed(3)}">${pearson.toFixed(2)}</td>`;
+            });
+            matrixHtml += '</tr>';
+        });
+
+        const chartHtml = subjects
+            .map((subject) => {
+                const { subjectScores, totalScores } = getSubjectTotalPairs(students, subject);
+                return {
+                    subject,
+                    value: calculatePearson(subjectScores, totalScores)
+                };
+            })
+            .sort((left, right) => right.value - left.value)
+            .map((item) => {
+                const intensity = Math.abs(item.value);
+                const width = Math.min(100, Math.max(0, intensity * 100));
+                const bg = item.value < 0 ? '#2563eb' : (intensity > 0.8 ? '#16a34a' : (intensity > 0.6 ? '#2563eb' : '#ca8a04'));
+                return `<div style="display:flex; align-items:center; margin-bottom:5px;"><span style="width:40px; font-size:12px; font-weight:bold;">${item.subject}</span><div style="flex:1; background:#f1f5f9; border-radius:4px; margin-left:10px; height:20px;"><div class="contribution-bar" style="width:${width}%; background:${bg}">${item.value.toFixed(3)}</div></div></div>`;
+            })
+            .join('');
+
+        let liftDragHtml = '';
+        subjects.forEach((subject) => {
+            let lift = 0;
+            let drag = 0;
+            let balance = 0;
+            let validCount = 0;
+            students.forEach((student) => {
+                const totalRank = toFiniteNumber(typeof safeGet === 'function' ? safeGet(student, 'ranks.total.township', 0) : 0);
+                const subjectRank = toFiniteNumber(typeof safeGet === 'function' ? safeGet(student, `ranks.${subject}.township`, 0) : 0);
+                if (!totalRank || !subjectRank) return;
+                validCount += 1;
+                const threshold = students.length * 0.1;
+                if (subjectRank < totalRank - threshold) lift += 1;
+                else if (subjectRank > totalRank + threshold) drag += 1;
+                else balance += 1;
+            });
+            if (!validCount) return;
+            const net = lift - drag;
+            liftDragHtml += `<tr><td>${subject}</td><td class="text-green">${lift} 人 (${(lift / validCount * 100).toFixed(0)}%)</td><td class="text-red">${drag} 人 (${(drag / validCount * 100).toFixed(0)}%)</td><td>${balance} 人</td><td style="font-weight:bold; color:${net > 0 ? 'green' : 'red'}">${net > 0 ? '+' : ''}${net}</td></tr>`;
+        });
+
+        return { matrixHtml, chartHtml, liftDragHtml };
+    }
+
     function renderCorrelationAnalysis() {
         const schoolSelect = document.getElementById('corrSchoolSelect');
         const scope = schoolSelect?.value || 'ALL';
@@ -106,77 +205,27 @@
             return;
         }
 
+        const signature = buildCorrelationSignature(scope, students, subjects);
+        if (CorrelationAnalysisPerfCache.signature !== signature) {
+            Object.assign(CorrelationAnalysisPerfCache, {
+                signature,
+                ...buildCorrelationAnalysisHtml(students, subjects)
+            });
+        }
+
         const matrixBody = document.querySelector('#corrMatrixTable tbody');
         if (matrixBody) {
-            let matrixHtml = '<tr><th></th>';
-            subjects.forEach((subject) => {
-                matrixHtml += `<th>${subject}</th>`;
-            });
-            matrixHtml += '</tr>';
-
-            subjects.forEach((rowSubject) => {
-                matrixHtml += `<tr><th>${rowSubject}</th>`;
-                subjects.forEach((colSubject) => {
-                    if (rowSubject === colSubject) {
-                        matrixHtml += '<td style="background:#eee;">-</td>';
-                        return;
-                    }
-                    const { leftScores, rightScores } = getPairedScores(students, rowSubject, colSubject);
-                    const pearson = calculatePearson(leftScores, rightScores);
-                    const bg = pearson > 0
-                        ? `rgba(220, 38, 38, ${Math.abs(pearson) * 0.8})`
-                        : `rgba(37, 99, 235, ${Math.abs(pearson) * 0.8})`;
-                    const color = Math.abs(pearson) > 0.5 ? '#fff' : '#333';
-                    matrixHtml += `<td class="heatmap-cell" style="background:${bg}; color:${color}" title="${rowSubject} vs ${colSubject} 相关系数: ${pearson.toFixed(3)}">${pearson.toFixed(2)}</td>`;
-                });
-                matrixHtml += '</tr>';
-            });
-            matrixBody.innerHTML = matrixHtml;
+            matrixBody.innerHTML = CorrelationAnalysisPerfCache.matrixHtml;
         }
 
         const chartContainer = document.getElementById('contributionChartContainer');
         if (chartContainer) {
-            chartContainer.innerHTML = '';
-            subjects
-                .map((subject) => {
-                    const { subjectScores, totalScores } = getSubjectTotalPairs(students, subject);
-                    return {
-                        subject,
-                        value: calculatePearson(subjectScores, totalScores)
-                    };
-                })
-                .sort((left, right) => right.value - left.value)
-                .forEach((item) => {
-                    const intensity = Math.abs(item.value);
-                    const width = Math.min(100, Math.max(0, intensity * 100));
-                    const bg = item.value < 0 ? '#2563eb' : (intensity > 0.8 ? '#16a34a' : (intensity > 0.6 ? '#2563eb' : '#ca8a04'));
-                    chartContainer.innerHTML += `<div style="display:flex; align-items:center; margin-bottom:5px;"><span style="width:40px; font-size:12px; font-weight:bold;">${item.subject}</span><div style="flex:1; background:#f1f5f9; border-radius:4px; margin-left:10px; height:20px;"><div class="contribution-bar" style="width:${width}%; background:${bg}">${item.value.toFixed(3)}</div></div></div>`;
-                });
+            chartContainer.innerHTML = CorrelationAnalysisPerfCache.chartHtml;
         }
 
         const liftDragBody = document.querySelector('#liftDragTable tbody');
         if (liftDragBody) {
-            let html = '';
-            subjects.forEach((subject) => {
-                let lift = 0;
-                let drag = 0;
-                let balance = 0;
-                let validCount = 0;
-                students.forEach((student) => {
-                    const totalRank = toFiniteNumber(typeof safeGet === 'function' ? safeGet(student, 'ranks.total.township', 0) : 0);
-                    const subjectRank = toFiniteNumber(typeof safeGet === 'function' ? safeGet(student, `ranks.${subject}.township`, 0) : 0);
-                    if (!totalRank || !subjectRank) return;
-                    validCount += 1;
-                    const threshold = students.length * 0.1;
-                    if (subjectRank < totalRank - threshold) lift += 1;
-                    else if (subjectRank > totalRank + threshold) drag += 1;
-                    else balance += 1;
-                });
-                if (!validCount) return;
-                const net = lift - drag;
-                html += `<tr><td>${subject}</td><td class="text-green">${lift} 人 (${(lift / validCount * 100).toFixed(0)}%)</td><td class="text-red">${drag} 人 (${(drag / validCount * 100).toFixed(0)}%)</td><td>${balance} 人</td><td style="font-weight:bold; color:${net > 0 ? 'green' : 'red'}">${net > 0 ? '+' : ''}${net}</td></tr>`;
-            });
-            liftDragBody.innerHTML = html;
+            liftDragBody.innerHTML = CorrelationAnalysisPerfCache.liftDragHtml;
         }
     }
 
@@ -254,6 +303,7 @@
     Object.assign(window, {
         updateCorrelationSchoolSelect,
         renderCorrelationAnalysis,
+        CorrelationAnalysisPerfCache,
         calculateCorrelationPearson: calculatePearson,
         buildSafeSheetName,
         exportTeacherTownshipRankExcel,

@@ -13061,6 +13061,21 @@ function getCachedStudentReportHistory(stu) {
     return history;
 }
 
+function hasCachedReportHistoryForSelectedExams(stu, selectedReportExamIds = [], effectiveCurrentExamId = '') {
+    const selectedIds = (Array.isArray(selectedReportExamIds) ? selectedReportExamIds : [])
+        .map(id => String(id || '').trim())
+        .filter(Boolean)
+        .filter(id => !effectiveCurrentExamId || !isExamKeyEquivalentForCompare(id, effectiveCurrentExamId));
+    if (!selectedIds.length) return false;
+
+    const history = getCachedStudentReportHistory(stu);
+    if (!Array.isArray(history) || !history.length) return false;
+    return selectedIds.every(selectedId => history.some(item => {
+        const examKey = String(item?.examFullKey || item?.examId || '').trim();
+        return examKey && isExamKeyEquivalentForCompare(examKey, selectedId);
+    }));
+}
+
 async function refreshRenderedStudentReportAfterHistory(stu, token) {
     if (token !== __reportQueryToken) return;
     const currentStudent = typeof readCurrentReportStudentState === 'function' ? readCurrentReportStudentState() : null;
@@ -13098,6 +13113,7 @@ async function refreshRenderedStudentReportAfterHistory(stu, token) {
 
 function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, effectiveCurrentExamId, token) {
     if (!stu || !window.CloudManager || typeof window.CloudManager.fetchStudentExamHistory !== 'function') return;
+    if (hasCachedReportHistoryForSelectedExams(stu, selectedReportExamIds, effectiveCurrentExamId)) return;
     const hydrateKey = `${getReportStudentIdentity(stu)}::${(selectedReportExamIds || []).join('|')}::${effectiveCurrentExamId || ''}`;
     if (ReportHistoryPerfCache.hydratingKeys.has(hydrateKey)) return;
     ReportHistoryPerfCache.hydratingKeys.add(hydrateKey);
