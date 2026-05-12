@@ -82,6 +82,7 @@ function applyTeacherTermWithoutPrompt(termId) {
         syncTeacherTermStorage(resolved.key);
         setTeacherMap(JSON.parse(JSON.stringify(resolved.map || {})));
         setTeacherSchoolMap(JSON.parse(JSON.stringify(resolved.schoolMap || {})));
+        localStorage.setItem('TEACHER_SYNC_AT', new Date(resolved.savedAt || Date.now()).toISOString());
         if (window.DataManager && typeof DataManager.renderTeachers === 'function') DataManager.renderTeachers();
         if (window.DataManager && typeof DataManager.refreshTeacherAnalysis === 'function') DataManager.refreshTeacherAnalysis();
         return true;
@@ -213,7 +214,13 @@ async function tryAutoRestoreTeacherMap() {
 }
 
 function scheduleTeacherSyncPrompt() {
-    if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) return;
+    if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) {
+        if (!localStorage.getItem('TEACHER_SYNC_AT')) {
+            localStorage.setItem('TEACHER_SYNC_AT', new Date().toISOString());
+            if (typeof updateStatusPanel === 'function') updateStatusPanel();
+        }
+        return;
+    }
     if (!shouldAutoLoadTeacherData()) return;
     let tries = 0;
     const timer = setInterval(() => {

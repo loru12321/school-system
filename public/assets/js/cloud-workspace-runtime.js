@@ -656,6 +656,14 @@
         }, 4500, 12000);
     }
 
+    function markFullCloudSyncComplete(syncedAt = '', message = '') {
+        const stamp = String(syncedAt || '').trim() || new Date().toISOString();
+        localStorage.setItem('CLOUD_SYNC_AT', stamp);
+        if (message && typeof logAction === 'function') logAction('云端同步', message);
+        if (typeof updateStatusPanel === 'function') updateStatusPanel();
+        return stamp;
+    }
+
     function scheduleWorkspaceRemoteRefresh(manager, key, cachedMeta = {}) {
         const normalizedKey = String(key || '').trim();
         if (!normalizedKey) return;
@@ -885,6 +893,7 @@
 
                 if (!forceSync && localExamCount >= minCount && lastSyncAt && (Date.now() - lastSyncAt) < AUTO_COHORT_SYNC_COOLDOWN_MS) {
                     if (shouldRefreshSelectors) await refreshCompareSelectors();
+                    markFullCloudSyncComplete(new Date(lastSyncAt).toISOString());
                     setCloudStatus('success', '使用缓存');
                     return { success: true, count: localExamCount, updated: 0, cached: true };
                 }
@@ -925,8 +934,10 @@
                     }
 
                     if (keysToFetch.length === 0) {
+                        const syncedAt = new Date().toISOString();
                         localStorage.setItem(cacheKey, String(Date.now()));
                         if (shouldRefreshSelectors) await refreshCompareSelectors();
+                        markFullCloudSyncComplete(syncedAt, `全量考试已检查：${cid}`);
                         setCloudStatus('success', '已最新');
                         return { success: true, count: candidates.length, updated: 0 };
                     }
@@ -957,8 +968,10 @@
                     }
 
                     window.COHORT_DB = db;
+                    const syncedAt = new Date().toISOString();
                     localStorage.setItem(cacheKey, String(Date.now()));
                     if (shouldRefreshSelectors) await refreshCompareSelectors();
+                    markFullCloudSyncComplete(syncedAt, `全量考试已同步：${cid}，更新 ${loadedCount} 期`);
 
                     if (loadedCount > 0) safeToast(`已从云端加载 ${loadedCount} 期历史考试`, 'success');
                     setCloudStatus('success', loadedCount > 0 ? `更新${loadedCount}期` : '已最新');
@@ -1266,6 +1279,9 @@
                     cachedPayload,
                     cachedMeta.remoteUpdatedAt || cachedMeta.lastSyncedAt || ''
                 );
+                if (cachedMeta.remoteUpdatedAt || cachedMeta.lastSyncedAt) {
+                    markFullCloudSyncComplete(cachedMeta.remoteUpdatedAt || cachedMeta.lastSyncedAt);
+                }
                 setCloudStatus('syncing', '本地已就绪');
             } catch (error) {
                 console.warn('[CloudLoad] apply cached snapshot failed:', error);
@@ -1315,6 +1331,9 @@
                         cachedPayload,
                         cachedMeta.remoteUpdatedAt || cachedMeta.lastSyncedAt || ''
                     );
+                    if (cachedMeta.remoteUpdatedAt || cachedMeta.lastSyncedAt) {
+                        markFullCloudSyncComplete(cachedMeta.remoteUpdatedAt || cachedMeta.lastSyncedAt);
+                    }
                     setCloudStatus('syncing', '本地已就绪');
                 } catch (error) {
                     console.warn('[CloudLoad] apply resolved cached snapshot failed:', error);
