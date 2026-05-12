@@ -21,7 +21,6 @@ const SWITCH_MODULE_IDS = [
     'high-score',
     'county-analysis',
     'teacher-analysis',
-    'class-comparison',
     'segment-analysis',
     'correlation-analysis',
     'indicator',
@@ -1009,6 +1008,58 @@ async function runModuleDeepCheck(page, id) {
                 ticketCount,
                 sampleSchool: schoolSelect.value || ''
             };
+        });
+    }
+    if (id === 'subject-balance') {
+        return page.evaluate(() => {
+            const checks = {
+                sectionReady: !!document.getElementById('subject-balance'),
+                schoolSelectReady: !!document.getElementById('sbSchoolSelect'),
+                classSelectReady: !!document.getElementById('sbClassSelect'),
+                tableReady: !!document.getElementById('sb-table'),
+                updateReady: typeof window.updateSubjectBalanceSelects === 'function',
+                renderReady: typeof window.SB_renderTable === 'function',
+                aliasResolverReady: typeof window.getAppSchoolRecord === 'function'
+            };
+            if (!Object.values(checks).every(Boolean)) return { ok: false, checks };
+
+            const alerts = [];
+            const originalAlert = window.alert;
+            window.alert = (message) => {
+                alerts.push(String(message || ''));
+            };
+
+            try {
+                window.updateSubjectBalanceSelects();
+                const schoolSelect = document.getElementById('sbSchoolSelect');
+                const preferred = String(window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '银山实验').trim();
+                const options = Array.from(schoolSelect.options || []).map(option => option.value).filter(Boolean);
+                const selected = schoolSelect.value || options.find(value => (
+                    typeof window.sameAppSchoolName === 'function'
+                        ? window.sameAppSchoolName(value, preferred)
+                        : value === preferred
+                )) || options[0] || '';
+                schoolSelect.value = selected;
+                if (typeof schoolSelect.onchange === 'function') schoolSelect.onchange();
+                window.SB_renderTable();
+                const rows = document.querySelectorAll('#sb-table tbody tr');
+                checks.selectedSchoolResolves = !!window.getAppSchoolRecord(selected);
+                checks.homeSchoolSelected = typeof window.sameAppSchoolName === 'function'
+                    ? window.sameAppSchoolName(selected, preferred)
+                    : selected === preferred;
+                checks.rowsRendered = rows.length > 0;
+                checks.noAlerts = alerts.length === 0;
+                checks.noInvalidText = !/undefined|NaN|Cannot read/i.test(document.getElementById('sb-table')?.textContent || '');
+                return {
+                    ok: Object.values(checks).every(Boolean),
+                    checks,
+                    selectedSchool: selected,
+                    rowCount: rows.length,
+                    alerts
+                };
+            } finally {
+                window.alert = originalAlert;
+            }
         });
     }
     if (id === 'seat-adjustment') {

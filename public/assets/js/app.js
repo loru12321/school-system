@@ -4683,7 +4683,8 @@ var Auth = {
                 // 简易反查：遍历学校找班级
                 if (typeof SCHOOLS !== 'undefined') {
                     for (let sName in SCHOOLS) {
-                        if (SCHOOLS[sName].students.some(s => s.class == cls)) {
+                        const schoolRecord = getAppSchoolRecord(sName);
+                        if ((schoolRecord?.students || []).some(s => s.class == cls)) {
                             teaSchMap[v] = sName; break;
                         }
                     }
@@ -9176,7 +9177,7 @@ function guardBeforeSwitch(id) {
     if (id === 'starter-hub' || id === 'upload') return true;
     const needGuard = [
         'summary', 'analysis', 'county-analysis', 'high-score', 'indicator', 'bottom3',
-        'teacher-analysis', 'class-comparison',
+        'teacher-analysis',
         'student-overview', 'student-details', 'subject-balance', 'marginal-push', 'progress-analysis', 'cohort-growth',
         'potential-analysis', 'segment-analysis', 'correlation-analysis', 'report-generator'
     ];
@@ -9756,16 +9757,17 @@ function handleIndicatorClick(schoolName, type) {
 }
 
 function handleHighClick(schoolName) {
-    if (!SCHOOLS[schoolName]) return;
+    const schoolRecord = getAppSchoolRecord(schoolName);
+    if (!schoolRecord) return;
     // 9年级默认490，或者这里可以做成动态的
     const line = 490;
-    const students = SCHOOLS[schoolName].students.filter(s => s.total >= line);
+    const students = (schoolRecord.students || []).filter(s => s.total >= line);
     DrillSystem.open(`${schoolName} - 高分段(≥${line})名单`, students);
 }
 
 function handleExcludedClick(schoolName) {
-    if (!SCHOOLS[schoolName]) return;
-    const s = SCHOOLS[schoolName];
+    const s = getAppSchoolRecord(schoolName);
+    if (!s) return;
     // 重新计算剔除逻辑
     const sorted = [...s.students].sort((a, b) => a.total - b.total); // 升序
     const excN = s.bottom3 ? s.bottom3.excN : 0;
@@ -10015,7 +10017,7 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
         applySchoolModeToTables();
         // 更新所有下拉框
         updateSchoolSelect(); updateMySchoolSelect(); updateStudentSchoolSelect(); updateMarginalSchoolSelect();
-        updateClassSelect(); updateSegmentSelects(); updateClassCompSchoolSelect(); updatePotentialSchoolSelect();
+        updateClassSelect(); updateSegmentSelects(); updatePotentialSchoolSelect();
         if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
         updateSeatAdjSelects();
         updateProgressSchoolSelect();
@@ -11061,10 +11063,11 @@ function updateClassSelect() {
     if (!schoolSelect || !classSelect) return;
     let optionsHtml = '<option>--请先选择学校--</option>';
     let signature = `classes:${schoolSelect.value || ''}:empty`;
-    if (schoolSelect.value && SCHOOLS[schoolSelect.value]) {
+    const schoolRecord = getAppSchoolRecord(schoolSelect.value);
+    if (schoolSelect.value && schoolRecord) {
         const user = getCurrentUser();
         const classMode = PermissionPolicy.isClassTeacher(user) ? 'homeroom' : 'teaching';
-        const classes = PermissionPolicy.getAccessibleClassNames(user, [...new Set(SCHOOLS[schoolSelect.value].students.map(s => s.class))].sort(), schoolSelect.value, { mode: classMode });
+        const classes = PermissionPolicy.getAccessibleClassNames(user, [...new Set((schoolRecord.students || []).map(s => s.class))].sort(), schoolSelect.value, { mode: classMode });
         optionsHtml = '<option>--请先选择学校--</option>' + classes.map(cls => `<option>${tmEscapeHtml(cls)}</option>`).join('');
         signature = `classes:${schoolSelect.value}:${classMode}:${classes.join('|')}`;
     }
@@ -12743,6 +12746,9 @@ function updateMarginalSchoolSelect() {
     if (!select) return;
     const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
     select.innerHTML = `<option value="">--请选择本校--</option>${schoolList.map(school => `<option value="${school}">${school}</option>`).join('')}`;
+    const currentSchool = readCurrentSchool();
+    const matched = Array.from(select.options || []).find(option => sameAppSchoolName(option.value, currentSchool));
+    if (matched) select.value = matched.value;
 }
 
 function generateTeacherInputs() {
@@ -13159,7 +13165,8 @@ async function doQuery(targetStudent = null) {
                 className: (cls === '--请先选择学校--') ? '' : cls
             });
         } else {
-            stu = SCHOOLS[sch]?.students.find(s => (
+            const schoolRecord = getAppSchoolRecord(sch);
+            stu = (schoolRecord?.students || []).find(s => (
                 String(s.name || '').trim() === name
                 && (cls === '--请先选择学校--' || !cls || normalizeJumpClass(s.class) === normalizeJumpClass(cls))
             ));
@@ -13299,8 +13306,9 @@ function getSchoolClassOptions(schoolName) {
     if (window.RankingDataService && typeof window.RankingDataService.getClassesForSchool === 'function') {
         return window.RankingDataService.getClassesForSchool(RAW_DATA, schoolName);
     }
-    if (!schoolName || !SCHOOLS[schoolName] || !Array.isArray(SCHOOLS[schoolName].students)) return [];
-    return [...new Set(SCHOOLS[schoolName].students.map(s => s.class).filter(Boolean))]
+    const schoolRecord = getAppSchoolRecord(schoolName);
+    if (!schoolName || !schoolRecord || !Array.isArray(schoolRecord.students)) return [];
+    return [...new Set(schoolRecord.students.map(s => s.class).filter(Boolean))]
         .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true }));
 }
 
@@ -13367,7 +13375,8 @@ function renderMutualAidGroups() {
         students = FB_SIMULATED_DATA[cls].map(s => ({ ...s, class: cls, total: s.score, scores: { total: s.score }, ranks: { total: { class: 0 } } }));
     } else {
         if (!sch || !cls) return alert("请选择学校和班级");
-        students = JSON.parse(JSON.stringify(SCHOOLS[sch].students.filter(s => s.class === cls)));
+        const schoolRecord = getAppSchoolRecord(sch);
+        students = JSON.parse(JSON.stringify((schoolRecord?.students || []).filter(s => s.class === cls)));
     }
     if (students.length < groupSize) return alert("班级人数不足以分组");
     const getScore = (s) => (sub === 'total' ? s.total : (s.scores[sub] || 0));
@@ -14921,252 +14930,6 @@ function exportSegmentExcel() {
     XLSX.writeFile(wb, "分数段统计.xlsx");
 }
 
-function updateClassCompSchoolSelect() {
-    const sel = document.getElementById('classCompSchoolSelect');
-    if (!sel) return;
-    const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
-    sel.innerHTML = `<option value="">--请选择学校--</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
-}
-
-function renderClassComparison() {
-    const schoolName = document.getElementById('classCompSchoolSelect').value; if (!schoolName || !SCHOOLS[schoolName]) { alert('请选择有效学校'); return; }
-    const sch = SCHOOLS[schoolName]; const classes = {}; sch.students.forEach(s => { if (!classes[s.class]) classes[s.class] = []; classes[s.class].push(s); });
-    const classList = Object.keys(classes).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-    const classSubjectRanks = {}; // 存储结构: { "701班": { "语文": 1, "数学": 5 } }
-    SUBJECTS.forEach(sub => {
-        const subStats = classList.map(c => {
-            const scores = classes[c].map(s => s.scores[sub]).filter(v => typeof v === 'number');
-            const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-            return { name: c, avg };
-        });
-        subStats.sort((a, b) => b.avg - a.avg);
-        subStats.forEach((stat, index) => {
-            if (!classSubjectRanks[stat.name]) classSubjectRanks[stat.name] = {};
-            classSubjectRanks[stat.name][sub] = index + 1;
-        });
-    });
-    const container = document.getElementById('class-comp-results'); const sideNavClassSubjects = document.getElementById('side-nav-class-subjects'); container.innerHTML = ''; sideNavClassSubjects.innerHTML = '';
-    let html = '';
-    const formatComparisonDiff = (diff, valid = true) => {
-        if (!valid || !Number.isFinite(Number(diff))) {
-            return '<td class="rank-muted">—</td>';
-        }
-        const value = Number(diff);
-        return `<td class="${value >= 0 ? 'positive-percent' : 'negative-percent'}">${value >= 0 ? '+' : ''}${(value * 100).toFixed(2)}%</td>`;
-    };
-    const formatMetricValue = (value, valid = true, digits = 2, suffix = '') => {
-        if (!valid || !Number.isFinite(Number(value))) return '—';
-        return `${Number(value).toFixed(digits)}${suffix}`;
-    };
-    // 1. 准备矩阵数据
-    // classSubjectRanks 结构: { "701班": { "语文": 1, "数学": 5 } }
-    // classList 是所有班级名的数组
-
-    let matrixHtml = `
-            <div class="anchor-target analysis-anchor-panel analysis-generated-panel" id="anchor-matrix">
-                <div class="sub-header analysis-section-head analysis-generated-header">
-                    <span>🧩 班级学科均衡性全景矩阵</span>
-                    <span class="analysis-generated-meta"><span class="analysis-table-tag">数字为校内排名</span></span>
-                </div>
-                <div class="analysis-generated-note">横向看班级结构，纵向看学科整体水平，适合快速识别“总分不错但单科偏弱”的班级。</div>
-                <div class="table-wrap analysis-table-shell">
-                    <table class="comparison-table analysis-generated-table analysis-table-dense" style="text-align:center;">
-                        <thead>
-                            <tr>
-                                <th style="width:80px; background:#faf5ff;">班级</th>
-                                <!-- 动态生成学科表头 -->
-                                ${SUBJECTS.map(s => `<th>${s}</th>`).join('')}
-                                <th style="border-left:2px solid #eee;">综合</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-        `;
-
-    // 1. 判断当前是否为 9 年级模式
-    const isGrade9Mode = CONFIG.name && CONFIG.name.includes('9');
-
-    classList.forEach(cls => {
-        const ranks = classSubjectRanks[cls] || {};
-        // 计算该班所有学科排名的平均值 (衡量整体实力)
-        let rankSum = 0;
-        let validCount = 0;
-
-        let rowCells = SUBJECTS.map(sub => {
-            const r = ranks[sub] || '-';
-            if (typeof r === 'number') {
-
-                // 🟢 核心修改：如果是 9 年级模式且科目是政治，则不计入综合分
-                let shouldCount = true;
-                if (isGrade9Mode && (sub === '政治' || sub === '道法' || sub === '道德与法治')) {
-                    shouldCount = false;
-                }
-
-                if (shouldCount) {
-                    rankSum += r;
-                    validCount++;
-                }
-
-                // 样式逻辑：前3名绿，后3名红 (假设班级数>5)
-                let style = "";
-                if (classList.length >= 5) {
-                    if (r <= 3) style = "color:#16a34a; font-weight:bold; background:#dcfce7;";
-                    else if (r > classList.length - 3) style = "color:#dc2626; font-weight:bold; background:#fee2e2;";
-                } else {
-                    // 班级少时，第1名绿，最后1名红
-                    if (r === 1) style = "color:#16a34a; font-weight:bold; background:#dcfce7;";
-                    else if (r === classList.length) style = "color:#dc2626; font-weight:bold; background:#fee2e2;";
-                }
-                return `<td style="${style}">${r}</td>`;
-            }
-            return `<td style="color:#ccc;">-</td>`;
-        }).join('');
-
-        // 计算平均排名 (排除政治后的)
-        const avgRank = validCount > 0 ? (rankSum / validCount).toFixed(1) : '-';
-
-        matrixHtml += `
-                <tr>
-                    <td style="font-weight:bold; background:#faf5ff;">${cls}</td>
-                    ${rowCells}
-                    <td style="border-left:2px solid #eee; font-weight:bold;">${avgRank}</td>
-                </tr>
-            `;
-    });
-
-        matrixHtml += `</tbody></table></div>
-            <div class="analysis-generated-note">
-                💡 <strong>读图指南：</strong>
-                <span style="background:#dcfce7; color:#16a34a; padding:0 4px;">绿色</span> 代表该科进入前3名 (优势)，
-                <span style="background:#fee2e2; color:#dc2626; padding:0 4px;">红色</span> 代表该科处于后3名 (短板)。
-                横向看班级偏科情况，纵向看学科整体水平。
-            </div>
-        </div>`;
-
-    // 将矩阵添加到总 HTML 的最前面
-    html += matrixHtml;
-    const rankIt = (arr, key) => {
-        const sorted = [...arr].filter(item => item.count !== 0 && Number.isFinite(Number(item[key]))).sort((a, b) => b[key] - a[key]);
-        arr.forEach(item => item[key + 'Rank'] = sorted.includes(item) ? sorted.indexOf(item) + 1 : '—');
-    };
-    const allStudents = sch.students;
-    const gradeTotalScores = allStudents.map(s => s.total); const gradeTotalLen = gradeTotalScores.length || 1; const gradeTotalAvg = gradeTotalScores.reduce((a, b) => a + b, 0) / gradeTotalLen; const gradeTotalExc = gradeTotalScores.filter(v => v >= (THRESHOLDS.total?.exc || 0)).length / gradeTotalLen; const gradeTotalPass = gradeTotalScores.filter(v => v >= (THRESHOLDS.total?.pass || 0)).length / gradeTotalLen;
-    const anchorTotal = 'anchor-class-total';
-    html += `<div id="${anchorTotal}" class="anchor-target analysis-anchor-panel analysis-generated-panel"><div class="sub-header analysis-section-head">📊 ${CONFIG.label}</div><div class="analysis-generated-note">先看总分与两率，再看木桶效应诊断，判断是整体偏弱还是结构性短板。</div><div class="table-wrap analysis-table-shell"><table class="comparison-table analysis-generated-table analysis-table-dense"><thead><tr><th>班级</th><th>人数</th><th>平均分</th><th>校排</th><th>优秀率</th><th>及格率</th><th style="background:#fff7ed; color:#c2410c; min-width:150px;">🏗️ 木桶效应诊断 (学科均衡性)</th></tr></thead><tbody>`;
-    const totalStats = classList.map(c => {
-        const scores = classes[c].map(s => s.total); const len = scores.length || 1; const avg = scores.reduce((a, b) => a + b, 0) / len; const exc = scores.filter(v => v >= (THRESHOLDS.total?.exc || 0)).length / len; const pass = scores.filter(v => v >= (THRESHOLDS.total?.pass || 0)).length / len;
-        const avgDiff = gradeTotalAvg ? (avg - gradeTotalAvg) / gradeTotalAvg : 0; const excDiff = gradeTotalExc ? (exc - gradeTotalExc) / gradeTotalExc : 0; const passDiff = gradeTotalPass ? (pass - gradeTotalPass) / gradeTotalPass : 0;
-        return { name: c, count: scores.length, avg, exc, pass, avgDiff, excDiff, passDiff };
-    });
-    rankIt(totalStats, 'avg'); rankIt(totalStats, 'exc'); rankIt(totalStats, 'pass');
-    totalStats.forEach(stat => {
-        let diagnosisHtml = '';
-        const totalRank = stat.avgRank; // 班级总分排名
-
-        SUBJECTS.forEach(sub => {
-            const subRank = classSubjectRanks[stat.name][sub];
-            // 逻辑：如果单科排名比总排名落后 2 名以上，视为“短板”；领先 2 名以上视为“优势”
-            if (subRank >= totalRank + 2) {
-                diagnosisHtml += `<span class="plank-badge plank-drag" title="${sub}排名(${subRank})显著低于总分排名(${totalRank})">🔻${sub}</span>`;
-            } else if (subRank <= totalRank - 2) {
-                diagnosisHtml += `<span class="plank-badge plank-lift" title="${sub}排名(${subRank})显著高于总分排名(${totalRank})">▲${sub}</span>`;
-            }
-        });
-        if (!diagnosisHtml) diagnosisHtml = '<span style="color:#94a3b8; font-size:11px;">各科均衡</span>'; html += `<tr>
-                <td><strong>${stat.name}</strong></td>
-                <td>${stat.count}</td>
-                <td>${stat.avg.toFixed(2)}</td>
-                <td>${getRankHTML(stat.avgRank)}</td>
-                <td>${(stat.exc * 100).toFixed(1)}%</td>
-                <td>${(stat.pass * 100).toFixed(1)}%</td>
-                <td style="text-align:left; background:#fffaf5;">${diagnosisHtml}</td>
-            </tr>`;
-    });
-    html += `</tbody></table></div></div>`;
-    SUBJECTS.forEach(sub => {
-        const gradeSubScores = allStudents.map(s => s.scores[sub]).filter(v => typeof v === 'number'); const gradeSubLen = gradeSubScores.length || 1; const gradeSubAvg = gradeSubScores.reduce((a, b) => a + b, 0) / gradeSubLen; const gradeSubExc = gradeSubScores.filter(v => v >= THRESHOLDS[sub].exc).length / gradeSubLen; const gradeSubPass = gradeSubScores.filter(v => v >= THRESHOLDS[sub].pass).length / gradeSubLen;
-        const anchorSub = `anchor-class-${sub}`;
-        html += `<div id="${anchorSub}" class="anchor-target analysis-anchor-panel analysis-generated-panel"><div class="sub-header analysis-section-head">📘 ${sub}</div><div class="analysis-generated-note">查看该学科在各班的平均分、优秀率和及格率相对级部的变化。</div><div class="table-wrap analysis-table-shell"><table class="comparison-table analysis-generated-table analysis-table-dense"><thead><tr><th>班级</th><th>人数</th><th>平均分</th><th>与级比</th><th>校排</th><th>优秀率</th><th>与级比</th><th>校排</th><th>及格率</th><th>与级比</th><th>校排</th></tr></thead><tbody>`;
-        const subStats = classList.map(c => {
-            const scores = classes[c].map(s => s.scores[sub]).filter(v => typeof v === 'number'); const rawLen = scores.length; const len = rawLen || 1; const avg = rawLen > 0 ? scores.reduce((a, b) => a + b, 0) / len : NaN; const exc = rawLen > 0 ? scores.filter(v => v >= THRESHOLDS[sub].exc).length / len : NaN; const pass = rawLen > 0 ? scores.filter(v => v >= THRESHOLDS[sub].pass).length / len : NaN;
-            const avgDiff = (rawLen > 0 && gradeSubAvg) ? (avg - gradeSubAvg) / gradeSubAvg : NaN; const excDiff = (rawLen > 0 && gradeSubExc) ? (exc - gradeSubExc) / gradeSubExc : NaN; const passDiff = (rawLen > 0 && gradeSubPass) ? (pass - gradeSubPass) / gradeSubPass : NaN;
-            return { name: c, count: rawLen, avg, exc, pass, avgDiff, excDiff, passDiff };
-        });
-        rankIt(subStats, 'avg'); rankIt(subStats, 'exc'); rankIt(subStats, 'pass');
-        subStats.forEach(stat => { const hasScore = stat.count > 0; html += `<tr><td>${stat.name}</td><td>${stat.count}</td><td>${formatMetricValue(stat.avg, hasScore)}</td>${formatComparisonDiff(stat.avgDiff, hasScore && !!gradeSubAvg)}<td>${stat.avgRank}</td><td>${formatMetricValue(stat.exc * 100, hasScore, 2, '%')}</td>${formatComparisonDiff(stat.excDiff, hasScore && !!gradeSubExc)}<td>${stat.excRank}</td><td>${formatMetricValue(stat.pass * 100, hasScore, 2, '%')}</td>${formatComparisonDiff(stat.passDiff, hasScore && !!gradeSubPass)}<td>${stat.passRank}</td></tr>`; });
-        html += `</tbody></table></div></div>`;
-        const navLink = document.createElement('a'); navLink.className = 'side-nav-sub-link'; navLink.innerText = sub; navLink.onclick = () => scrollToSubAnchor(anchorSub, navLink); sideNavClassSubjects.appendChild(navLink);
-    });
-    container.innerHTML = html;
-    if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars('class-comparison');
-}
-
-function exportClassComparisonExcel() {
-    const schoolName = document.getElementById('classCompSchoolSelect').value;
-    if (!schoolName || !SCHOOLS[schoolName]) return alert("请先进行对比分析");
-    const sch = SCHOOLS[schoolName];
-    const classes = {}; sch.students.forEach(s => { if (!classes[s.class]) classes[s.class] = []; classes[s.class].push(s); });
-    const classList = Object.keys(classes).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-
-    const wb = XLSX.utils.book_new();
-    const rankIt = (arr, key) => { const sorted = [...arr].sort((a, b) => b[key] - a[key]); arr.forEach(item => item[key + 'Rank'] = sorted.indexOf(item) + 1); };
-
-    const allStudents = sch.students;
-    const gAvg = allStudents.reduce((a, b) => a + b.total, 0) / allStudents.length;
-    const gExc = allStudents.filter(v => v.total >= (THRESHOLDS.total?.exc || 0)).length / allStudents.length;
-    const gPass = allStudents.filter(v => v.total >= (THRESHOLDS.total?.pass || 0)).length / allStudents.length;
-
-    const totalStats = classList.map(c => {
-        const scores = classes[c].map(s => s.total); const len = scores.length;
-        const avg = scores.reduce((a, b) => a + b, 0) / len;
-        const exc = scores.filter(v => v >= (THRESHOLDS.total?.exc || 0)).length / len;
-        const pass = scores.filter(v => v >= (THRESHOLDS.total?.pass || 0)).length / len;
-        return {
-            name: c, count: len, avg, exc, pass,
-            avgDiff: gAvg ? (avg - gAvg) / gAvg : 0,
-            excDiff: gExc ? (exc - gExc) / gExc : 0,
-            passDiff: gPass ? (pass - gPass) / gPass : 0
-        };
-    });
-    rankIt(totalStats, 'avg'); rankIt(totalStats, 'exc'); rankIt(totalStats, 'pass');
-
-    const wsTotalData = [["班级", "人数", "平均分", "与级比", "校排", "优秀率", "与级比", "校排", "及格率", "与级比", "校排"]];
-    totalStats.forEach(s => {
-        wsData = [s.name, s.count, getExcelNum(s.avg), getExcelPercent(s.avgDiff), s.avgRank, getExcelPercent(s.exc), getExcelPercent(s.excDiff), s.excRank, getExcelPercent(s.pass), getExcelPercent(s.passDiff), s.passRank];
-        wsTotalData.push(wsData);
-    });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(wsTotalData), CONFIG.label);
-
-    SUBJECTS.forEach(sub => {
-        const gScores = allStudents.map(s => s.scores[sub]).filter(v => typeof v === 'number');
-        const subAvg = gScores.length ? gScores.reduce((a, b) => a + b, 0) / gScores.length : 0;
-        const subExc = gScores.length ? gScores.filter(v => v >= THRESHOLDS[sub].exc).length / gScores.length : 0;
-        const subPass = gScores.length ? gScores.filter(v => v >= THRESHOLDS[sub].pass).length / gScores.length : 0;
-
-        const subStats = classList.map(c => {
-            const scores = classes[c].map(s => s.scores[sub]).filter(v => typeof v === 'number');
-            const len = scores.length || 1;
-            const avg = scores.length ? scores.reduce((a, b) => a + b, 0) / len : 0;
-            const exc = scores.length ? scores.filter(v => v >= THRESHOLDS[sub].exc).length / len : 0;
-            const pass = scores.length ? scores.filter(v => v >= THRESHOLDS[sub].pass).length / len : 0;
-            return {
-                name: c, count: scores.length, avg, exc, pass,
-                avgDiff: subAvg ? (avg - subAvg) / subAvg : 0,
-                excDiff: subExc ? (exc - subExc) / subExc : 0,
-                passDiff: subPass ? (pass - subPass) / subPass : 0
-            };
-        });
-        rankIt(subStats, 'avg'); rankIt(subStats, 'exc'); rankIt(subStats, 'pass');
-
-        const wsSubData = [["班级", "人数", "平均分", "与级比", "校排", "优秀率", "与级比", "校排", "及格率", "与级比", "校排"]];
-        subStats.forEach(s => {
-            wsData = [s.name, s.count, getExcelNum(s.avg), getExcelPercent(s.avgDiff), s.avgRank, getExcelPercent(s.exc), getExcelPercent(s.excDiff), s.excRank, getExcelPercent(s.pass), getExcelPercent(s.passDiff), s.passRank];
-            wsSubData.push(wsData);
-        });
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(wsSubData), sub);
-    });
-    XLSX.writeFile(wb, "班级横向对比分析.xlsx");
-}
-
 // 1. 初始化下拉框
 function updateSubjectBalanceSelects() {
     const schSel = document.getElementById('sbSchoolSelect');
@@ -15174,12 +14937,17 @@ function updateSubjectBalanceSelects() {
 
     const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
     schSel.innerHTML = `<option value="">--请选择学校--</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
+    const currentSchool = readCurrentSchool();
+    const matched = Array.from(schSel.options || []).find(option => sameAppSchoolName(option.value, currentSchool));
+    if (matched) schSel.value = matched.value;
 
     // 联动更新班级
     schSel.onchange = () => {
-        const classes = (schSel.value && SCHOOLS[schSel.value]) ? [...new Set(SCHOOLS[schSel.value].students.map(s => s.class))].sort() : [];
+        const schoolRecord = getAppSchoolRecord(schSel.value);
+        const classes = schoolRecord ? [...new Set((schoolRecord.students || []).map(s => s.class))].sort() : [];
         clsSel.innerHTML = `<option value="">全部</option>${classes.map(c => `<option value="${c}">${c}</option>`).join('')}`;
     };
+    schSel.onchange();
 }
 
 let SB_CACHE_DATA = []; // 缓存用于导出
@@ -15193,7 +14961,9 @@ function SB_renderTable() {
     if (!sch) return alert("请先选择学校");
 
     // A. 筛选学生
-    let students = SCHOOLS[sch].students;
+    const schoolRecord = getAppSchoolRecord(sch);
+    if (!schoolRecord || !Array.isArray(schoolRecord.students)) return alert("该学校暂无学生数据");
+    let students = schoolRecord.students;
     if (cls && cls !== '全部') students = students.filter(s => s.class === cls);
 
     // B. 计算全镇各科均分 (作为基准线)
@@ -15326,7 +15096,9 @@ function SB_runCluster() {
     const cls = document.getElementById('sbClassSelect').value;
     if (!sch) return alert("请先选择学校");
 
-    let students = SCHOOLS[sch].students;
+    const schoolRecord = getAppSchoolRecord(sch);
+    if (!schoolRecord || !Array.isArray(schoolRecord.students)) return alert("该学校暂无学生数据");
+    let students = schoolRecord.students;
     if (cls && cls !== '全部') students = students.filter(s => s.class === cls);
     if (!students.length) return alert("无可用学生数据");
 
@@ -15783,10 +15555,11 @@ function renderPoster() {
     const container = document.getElementById('poster-list-container');
 
     if (!canvas || !container) return;
-    if (!sch || !SCHOOLS[sch]) return alert("请先选择学校");
+    const schoolRecord = getAppSchoolRecord(sch);
+    if (!sch || !schoolRecord || !Array.isArray(schoolRecord.students)) return alert("请先选择学校");
 
     // 1. 筛选数据
-    let students = SCHOOLS[sch].students;
+    let students = schoolRecord.students;
     if (cls) students = students.filter(s => s.class === cls);
 
     // 2. 排序数据
@@ -15872,7 +15645,9 @@ function updateMpSchoolSelect() {
     const old = sel.value;
     const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
     sel.innerHTML = `<option value="">--请选择学校--</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
-    if (old && SCHOOLS[old]) sel.value = old;
+    const currentSchool = old || readCurrentSchool();
+    const matched = Array.from(sel.options || []).find(option => sameAppSchoolName(option.value, currentSchool));
+    if (matched) sel.value = matched.value;
     updateMpClassSelect();
     const subSel = document.getElementById('mpSubjectSelect'); const oldSub = subSel.value;
     subSel.innerHTML = `<option value="ALL">全部学科</option>${SUBJECTS.map(s => `<option value="${s}">${s}</option>`).join('')}`;
@@ -15884,15 +15659,17 @@ function updateMpClassSelect() {
     const clsSel = document.getElementById('mpClassSelect');
     if (!schEl || !clsSel) return;
     const sch = schEl.value;
-    const classes = (sch && SCHOOLS[sch]) ? [...new Set(SCHOOLS[sch].students.map(s => s.class))].sort() : [];
+    const schoolRecord = getAppSchoolRecord(sch);
+    const classes = (sch && schoolRecord) ? [...new Set((schoolRecord.students || []).map(s => s.class))].sort() : [];
     clsSel.innerHTML = `<option value="">全部班级</option>${classes.map(c => `<option value="${c}">${c}</option>`).join('')}`;
 }
 
 function generateMarginalTickets() {
     const sch = document.getElementById('mpSchoolSelect').value; const clsLimit = document.getElementById('mpClassSelect').value; const subLimit = document.getElementById('mpSubjectSelect').value; const gap = parseFloat(document.getElementById('mpGap').value) || 5; const type = document.getElementById('mpType').value;
-    if (!sch || !SCHOOLS[sch]) return alert("请先选择学校");
+    const schoolRecord = getAppSchoolRecord(sch);
+    if (!sch || !schoolRecord || !Array.isArray(schoolRecord.students)) return alert("请先选择学校");
     MP_DATA_CACHE = []; const container = document.getElementById('mp-tickets-container'); container.innerHTML = '';
-    let students = SCHOOLS[sch].students; if (clsLimit) students = students.filter(s => s.class === clsLimit);
+    let students = schoolRecord.students; if (clsLimit) students = students.filter(s => s.class === clsLimit);
     let subjectsToAnalyze = (subLimit === 'ALL') ? SUBJECTS : [subLimit]; let taskMap = {};
     students.forEach(stu => {
         subjectsToAnalyze.forEach(sub => {
@@ -16125,8 +15902,9 @@ function generateSeatSuggestions() {
     if (!sch || !cls) return alert("请先选择学校和班级");
 
     let students = [];
-    if (SCHOOLS[sch] && SCHOOLS[sch].students) {
-        students = JSON.parse(JSON.stringify(SCHOOLS[sch].students.filter(s => s.class === cls)));
+    const schoolRecord = getAppSchoolRecord(sch);
+    if (schoolRecord && schoolRecord.students) {
+        students = JSON.parse(JSON.stringify(schoolRecord.students.filter(s => s.class === cls)));
     }
     if (!students.length) return alert("该班级无学生数据");
 
@@ -16385,9 +16163,10 @@ function updateConstraintWidgetsContext(type) {
         const sch = document.getElementById('seatAdjSchoolSelect').value;
         const cls = document.getElementById('seatAdjClassSelect').value;
 
-        if (sch && cls && SCHOOLS[sch]) {
+        const schoolRecord = getAppSchoolRecord(sch);
+        if (sch && cls && schoolRecord) {
             // 过滤出该班学生
-            students = SCHOOLS[sch].students.filter(s => s.class === cls);
+            students = (schoolRecord.students || []).filter(s => s.class === cls);
         }
 
         // 更新全局上下文
@@ -17854,7 +17633,6 @@ const CohortDB = {
             updateMarginalSchoolSelect();
             updateClassSelect();
             updateSegmentSelects();
-            updateClassCompSchoolSelect();
             updatePotentialSchoolSelect();
             if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
             updateSeatAdjSelects();

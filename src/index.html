@@ -1531,107 +1531,6 @@
                         <!-- 6. ?????? -->
             <div id="teacher-analysis" class="section card-box analysis-workspace analysis-workspace-teacher" data-lazy-section-template="lazy-section-template-teacher-analysis" data-lazy-section-placeholder="1"></div>
 
-<!-- 7. 班级横向对比 -->
-            <div id="class-comparison" class="section card-box analysis-workspace analysis-workspace-violet">
-                <div class="module-desc-bar analysis-hero" style="border-color:#7c3aed;">
-                    <h3><i class="ti ti-layout-columns"></i> 班级横向对比分析</h3>
-                    <p>对比同一学校内各班级在总分、单科和学科均衡性上的差异，帮助快速识别优势班、短板班与结构性问题。</p>
-                    <div class="analysis-scan-strip">
-                        <div class="analysis-scan-item">
-                            <span class="analysis-scan-label">Focus</span>
-                            <strong class="analysis-scan-value">总分 / 单科 / 均衡</strong>
-                            <span class="analysis-scan-note">先看总分对比，再看单科详情和班级学科均衡矩阵。</span>
-                        </div>
-                        <div class="analysis-scan-item">
-                            <span class="analysis-scan-label">Use</span>
-                            <strong class="analysis-scan-value">班级横评</strong>
-                            <span class="analysis-scan-note">适合年级组、班主任做班级横向复盘和教学安排。</span>
-                        </div>
-                        <div class="analysis-scan-item">
-                            <span class="analysis-scan-label">Output</span>
-                            <strong class="analysis-scan-value">矩阵 / 热力图</strong>
-                            <span class="analysis-scan-note">支持总分、单科和热力图查看，也可导出结果做会前准备。</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="sec-head analysis-shell-head">
-                    <h2>
-                        <i class="ti ti-layout-columns"></i> 班级横向对比分析
-                        <span class="module-help-btn" onclick="showModuleHelp('class-comp')">📘 全景矩阵说明</span>
-                    </h2>
-                    <div class="analysis-action-stack">
-                        <div class="analysis-action-note">进入模块会自动带入学校并生成横向对比；热力图更适合会场展示，Excel 更适合留档。</div>
-                        <div class="analysis-actions">
-                            <button class="btn" onclick="renderClassComparison()">重新对比</button>
-                            <button class="btn btn-green" onclick="exportClassComparisonExcel()">导出Excel</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="info-bar analysis-info-band">系统会自动对比同一学校内各班级的各项指标，独立于教师分析。</div>
-                <details class="explain-panel analysis-doc-panel">
-                    <summary>横向对比口径与使用建议</summary>
-                    <div class="explain-content">
-                        <p>先看总分与两率，再看单科与学科均衡矩阵，避免只看一个指标下结论。</p>
-                        <p>热力图更适合会场展示，筛选学科后更适合做专项教研讨论。</p>
-                        <p>均衡矩阵用于发现“某班整体不错但单科掉队”或“某科整体领先”的结构问题。</p>
-                    </div>
-                </details>
-                <div class="control-panel">
-                    <label>选择学校：</label><select id="classCompSchoolSelect" style="min-width:200px;">
-                        <option value="">--请选择--</option>
-                    </select>
-                    <div
-                        style="border-left:1px solid #ccc; padding-left:10px; margin-left:10px; display:flex; gap:5px;">
-                        <button class="btn btn-purple" onclick="toggleTableHeatmap('class-comp-results')">🎨
-                            热力图</button>
-                        <div style="position:relative;">
-                            <button class="btn btn-gray" onclick="toggleColFilterMenu()" id="btn-col-filter">👁️
-                                筛选学科</button>
-                            <div id="col-filter-popover" class="filter-popover">
-                                <!-- JS 动态填充复选框 -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div id="tmModuleState-class-comparison"></div>
-                <div class="layout-grid analysis-results-layout is-side-collapsed">
-                    <div class="side-nav analysis-side-nav">
-                        <div class="side-nav-title">快速定位</div>
-                        <div class="analysis-side-note">先看总分，再进入单科详情和均衡矩阵，便于快速比较班级结构。</div>
-                        <div class="side-nav-link active" onclick="scrollToAnchor('anchor-class-total', this)">📊 总分对比
-                        </div>
-                        <div class="side-nav-link" onclick="toggleSubNav(this)"><span>📘 单科详情</span><i
-                                class="ti ti-chevron-right nav-caret"></i></div>
-                        <div id="side-nav-class-subjects" class="side-nav-sub-container"></div>
-                    </div>
-                    <div class="content-area analysis-content-stack">
-                        <div class="analysis-flow-banner">
-                            <div class="analysis-flow-step">
-                                <span class="analysis-flow-kicker">Step 1</span>
-                                <strong class="analysis-flow-value">总分对比</strong>
-                                <span class="analysis-flow-note">先看班级整体站位与两率情况，判断强弱梯队。</span>
-                            </div>
-                            <div class="analysis-flow-step">
-                                <span class="analysis-flow-kicker">Step 2</span>
-                                <strong class="analysis-flow-value">单科详情</strong>
-                                <span class="analysis-flow-note">再看具体学科，识别是整体弱还是单科拖后腿。</span>
-                            </div>
-                            <div class="analysis-flow-step">
-                                <span class="analysis-flow-kicker">Step 3</span>
-                                <strong class="analysis-flow-value">均衡矩阵</strong>
-                                <span class="analysis-flow-note">最后看学科均衡性，判断是否存在结构性短板。</span>
-                            </div>
-                        </div>
-                        <div id="class-comp-results" class="analysis-content-stack">
-                            <div class="analysis-empty-state">
-                                <strong>班级横向对比将自动生成</strong>
-                                进入模块后会自动显示总分对比、学科矩阵和单科详情，也可切换学校后重新对比。
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- 9. 分数段统计 -->
             <div id="segment-analysis" class="section card-box analysis-workspace analysis-workspace-violet">
                 <div class="module-desc-bar analysis-hero" style="border-color:#7c3aed;">
@@ -3076,8 +2975,6 @@
 
             <div class="school-modal-actions">
                 <span style="font-size:12px; color:#999; margin-right:auto; align-self:center;">跳转后将自动筛选该校数据</span>
-                <button class="btn btn-purple" onclick="jumpToModule('class-comparison')"><i
-                        class="ti ti-layout-columns"></i> 班级对比</button>
                 <button class="btn btn-blue" onclick="jumpToModule('teacher-analysis')"><i class="ti ti-school"></i>
                     教师评价</button>
                 <button class="btn btn-green" onclick="jumpToModule('student-details')"><i class="ti ti-users"></i>

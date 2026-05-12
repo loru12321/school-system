@@ -138,6 +138,13 @@ function progressResolveSchoolOption(schoolList, preferredSchool) {
     return list.find((school) => progressSameSchoolName(school, preferred)) || '';
 }
 
+function progressGetSchoolRecord(schoolName) {
+    if (typeof window.getAppSchoolRecord === 'function') return window.getAppSchoolRecord(schoolName);
+    const schoolMap = SCHOOLS || {};
+    const key = progressResolveSchoolOption(Object.keys(schoolMap), schoolName);
+    return key ? schoolMap[key] : null;
+}
+
 function updateProgressSchoolSelect() {
     const sel = document.getElementById('progressSchoolSelect');
     if (!sel) return;
@@ -1040,7 +1047,7 @@ function getProgressSelectedSchoolName() {
 }
 
 function getProgressCurrentStudentsForSchool(schoolName) {
-    const school = SCHOOLS?.[schoolName];
+    const school = progressGetSchoolRecord(schoolName);
     if (!school || !Array.isArray(school.students)) return [];
 
     const user = getCurrentUser();
@@ -1219,7 +1226,7 @@ function performProgressCalculation(options = {}) {
     const shouldRenderReport = options.rerenderReport !== false;
     const statusEl = document.getElementById('va-data-status');
 
-    if (!schoolName || !SCHOOLS[schoolName]) {
+    if (!schoolName || !progressGetSchoolRecord(schoolName)) {
         if (!silent) uiAlert("请选择要分析的学校", 'warning');
         return { schoolName, matched: 0, ambiguous: 0, ignored: 0, total: 0 };
     }
@@ -1589,7 +1596,7 @@ function renderValueAddedReport(isSwitching = false) {
 function performSilentMatching() {
     if (!PREV_DATA.length || !RAW_DATA.length) return [];
     const schoolName = getProgressSelectedSchoolName();
-    if (!schoolName || !SCHOOLS[schoolName]) return [];
+    if (!schoolName || !progressGetSchoolRecord(schoolName)) return [];
     performProgressCalculation({ schoolName, silent: true, rerenderReport: false });
     return readProgressCacheFullState() || [];
 }
@@ -1783,7 +1790,7 @@ function renderProgressAnalysis() {
     }
 
     const schoolName = getProgressSelectedSchoolName();
-    if (!schoolName || !SCHOOLS[schoolName]) return uiAlert("请选择要分析的学校", 'warning');
+    if (!schoolName || !progressGetSchoolRecord(schoolName)) return uiAlert("请选择要分析的学校", 'warning');
     performProgressCalculation({ schoolName });
 }
 

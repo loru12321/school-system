@@ -574,7 +574,10 @@
             Object.keys(TEACHER_MAP).forEach((key) => {
                 const cls = key.split('_')[0];
                 for (const schoolName of schoolNames) {
-                    const hasClass = SCHOOLS[schoolName].students.some((student) => student.class == cls);
+                    const schoolRecord = typeof window.getAppSchoolRecord === 'function'
+                        ? window.getAppSchoolRecord(schoolName)
+                        : SCHOOLS[schoolName];
+                    const hasClass = (schoolRecord?.students || []).some((student) => student.class == cls);
                     if (hasClass) {
                         schoolCounts[schoolName] = (schoolCounts[schoolName] || 0) + 1;
                         break;
@@ -720,7 +723,10 @@
                 Object.keys(TEACHER_MAP).forEach((key) => {
                     const cls = key.split('_')[0];
                     for (const schoolName of schoolNames) {
-                        if (SCHOOLS[schoolName].students.some((student) => student.class == cls)) {
+                        const schoolRecord = typeof window.getAppSchoolRecord === 'function'
+                            ? window.getAppSchoolRecord(schoolName)
+                            : SCHOOLS[schoolName];
+                        if ((schoolRecord?.students || []).some((student) => student.class == cls)) {
                             schoolCounts[schoolName] = (schoolCounts[schoolName] || 0) + 1;
                             break;
                         }
@@ -779,23 +785,6 @@
             || localStorage.getItem('MY_SCHOOL')
             || ''
         ).trim();
-    }
-
-    function initClassComparisonEntry() {
-        const run = () => {
-            if (!document.getElementById('class-comparison')?.classList.contains('active')) return false;
-            if (typeof updateClassCompSchoolSelect === 'function') updateClassCompSchoolSelect();
-            pickDefaultSelectValue('classCompSchoolSelect', getCurrentSchoolCandidate());
-            scheduleModuleAutoRender('class-comparison-auto', () => {
-                const school = String(document.getElementById('classCompSchoolSelect')?.value || '').trim();
-                if (!document.getElementById('class-comparison')?.classList.contains('active')) return;
-                if (!school || !window.SCHOOLS?.[school] || typeof window.renderClassComparison !== 'function') return;
-                window.renderClassComparison();
-            }, { delay: 100, timeout: 900 });
-            return true;
-        };
-        run();
-        return Promise.resolve();
     }
 
     function initFreshmanExamEntry(id) {
@@ -944,7 +933,6 @@
             updateClassSelect();
         }
         if (id === 'segment-analysis') updateSegmentSelects();
-        if (id === 'class-comparison') return initClassComparisonEntry();
         if (id === 'potential-analysis') updatePotentialSchoolSelect();
         if (id === 'correlation-analysis') return initCorrelationAnalysisEntry();
         if (id === 'seat-adjustment') updateSeatAdjSelects();
@@ -969,11 +957,6 @@
                 const result = id === 'student-details'
                     ? scheduleModuleTaskPromise('student-details-enter-init', runInit, { delay: 40, frame: true })
                     : runInit();
-                if (id === 'class-comparison') {
-                    scheduleModuleTask(`state-bars:${id}`, () => {
-                        if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars(id);
-                    }, { frame: true });
-                }
                 return result;
             })
             .catch((error) => {

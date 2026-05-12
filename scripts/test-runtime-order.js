@@ -512,12 +512,13 @@ assert.ok(shellRuntime.includes('function formatOverviewModeText'), 'shell overv
 assert.ok(moduleEntryRuntime.includes('const TEACHER_ANALYSIS_RENDER_DELAY_MS = 180;'), 'teacher portrait should auto-render shortly after entering the module');
 assert.ok(moduleEntryRuntime.includes('ensureTeacherAnalysisMainRuntimeLoaded()'), 'teacher portrait entry should load its runtime automatically');
 assert.ok(moduleEntryRuntime.includes('function scheduleTeacherCompareAutoRender'), 'teacher multi-period compare should auto-render from default selectors');
-assert.ok(moduleEntryRuntime.includes('return initClassComparisonEntry();'), 'class comparison should auto-render when opened from the rail');
+assert.ok(!moduleEntryRuntime.includes('initClassComparisonEntry'), 'removed class comparison should not have an entry initializer');
+assert.ok(!indexHtml.includes('id="class-comparison"'), 'removed class comparison section should not be present in the app shell');
 assert.ok(!moduleEntryRuntime.includes('initClassDiagnosisEntry'), 'removed class diagnosis should not have an entry initializer');
 assert.ok(appSource.includes("'single-school-eval': 'teacher-analysis'"), 'removed performance fairness module should redirect to teacher analysis');
 assert.ok(!shellRuntime.includes("text: '绩效公平考核模型'"), 'teaching management quick switch should not expose the removed performance fairness module');
 assert.ok(!teachingManagementOverviewRuntime.includes("tmSetQuickEntryState(\n        'single-school-eval'"), 'teaching management overview should not render a performance fairness quick entry');
-assert.ok(teachingManagementOverviewRuntime.includes("const supportedModules = ['teacher-analysis', 'class-comparison'];"), 'teaching management state bars should only cover retained modules');
+assert.ok(teachingManagementOverviewRuntime.includes("const supportedModules = ['teacher-analysis'];"), 'teaching management state bars should only cover retained modules');
 assert.ok(moduleEntryRuntime.includes("if (id === 'single-school-eval') return false;"), 'module entry runtime should not initialize the removed performance fairness module');
 assert.ok(!moduleEntryRuntime.includes('renderTeacherAnalysisNow()">立即生成'), 'teacher portrait pending state should not require a manual immediate-generate click');
 assert.ok(moduleEntryRuntime.includes('window.tmScheduleTeachingOverviewRender()'), 'module entry should schedule teaching overview refreshes after teacher analysis phases');

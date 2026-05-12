@@ -566,7 +566,10 @@ async function generateInquiryPackage() {
     }
 
     // 1. 准备数据
-    const schoolStudents = SCHOOLS[sch].students;
+    const schoolRecord = typeof window.getAppSchoolRecord === 'function'
+        ? window.getAppSchoolRecord(sch)
+        : SCHOOLS[sch];
+    const schoolStudents = schoolRecord?.students || [];
     if (!schoolStudents || schoolStudents.length === 0) return alert("该学校无数据");
 
     // 判断是否只有一所学校 (用于控制显示的排名类型)

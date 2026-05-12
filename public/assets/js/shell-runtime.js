@@ -44,7 +44,6 @@
             summary: '聚焦教师画像和班级对比，保留真正高频的教学分析入口。',
             items: [
                 { id: 'teacher-analysis', icon: 'ti-school', text: '教师教学质量画像', hint: '从教师视角查看贡献、波动和结构性问题。' },
-                { id: 'class-comparison', icon: 'ti-layout-columns', text: '班级横向对比', hint: '横向比较班级表现，快速识别差异来源。' }
             ]
         },
         student: {

@@ -62,7 +62,10 @@ async function batchGeneratePDF() {
     }
     const sch = document.getElementById('sel-school').value; const cls = document.getElementById('sel-class').value;
     if (!sch || sch === '--请先选择学校--' || !cls || cls === '--请先选择学校--') { return uiAlert("请先选择学校和班级！", 'warning'); }
-    const students = SCHOOLS[sch].students.filter(s => s.class === cls); if (students.length === 0) { return uiAlert("该班级没有学生数据", 'warning'); }
+    const schoolRecord = typeof window.getAppSchoolRecord === 'function'
+        ? window.getAppSchoolRecord(sch)
+        : SCHOOLS[sch];
+    const students = (schoolRecord?.students || []).filter(s => s.class === cls); if (students.length === 0) { return uiAlert("该班级没有学生数据", 'warning'); }
     students.sort((a, b) => b.total - a.total);
     if (window.Swal) {
         const res = await Swal.fire({

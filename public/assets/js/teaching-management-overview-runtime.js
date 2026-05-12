@@ -33,13 +33,6 @@ function tmJumpToTeachingModule(targetId) {
             return;
         }
 
-        if (targetId === 'class-comparison') {
-            if (typeof updateClassCompSchoolSelect === 'function') updateClassCompSchoolSelect();
-            const ok = tmApplySelectValue('classCompSchoolSelect', context.schoolValue, context.schoolText);
-            if (ok && typeof renderClassComparison === 'function') renderClassComparison();
-            return;
-        }
-
     }, 60);
 }
 
@@ -71,16 +64,6 @@ function tmRenderQuickEntries(model) {
         model.teacherReady ? '已就绪' : '待补数据',
         model.teacherReady ? 'ok' : 'warn'
     );
-    tmSetQuickEntryState(
-        'class-comparison',
-        'ti ti-layout-columns',
-        '班级对比',
-        model.scoreReady && model.schoolReady
-            ? `已锁定 ${model.schoolText}，可直接查看班级横向对比。`
-            : '需先识别学校并接入成绩数据。',
-        model.scoreReady && model.schoolReady ? '可进入' : '待学校',
-        model.scoreReady && model.schoolReady ? 'ok' : 'warn'
-    );
 }
 
 function tmRenderNextAction(model) {
@@ -88,7 +71,6 @@ function tmRenderNextAction(model) {
         teacher: 'teacher-analysis',
         teacher_sync: 'teacher-analysis',
         score_import: 'teacher-analysis',
-        class: 'class-comparison',
     };
 
     let title = '教学入口已就绪';
@@ -115,12 +97,6 @@ function tmRenderNextAction(model) {
         stateText = '先看教师画像';
         tone = 'warn';
         targetKey = 'teacher';
-    } else if (model.schoolReady) {
-        title = '优先查看班级横向对比';
-        desc = '当前学校已经识别完成，虽然多期条件还未满足，但已经可以先做单次考试的班级横向对比。';
-        stateText = '先看班级对比';
-        tone = 'info';
-        targetKey = 'class';
     }
 
     tmSetHtml(
@@ -305,20 +281,6 @@ function tmRenderModuleStateBar(moduleId) {
             tmBuildModuleStateItem('任课表', teacherTerm, `${teacherState.text} · ${statusModel?.teacherSnapshot?.count ?? teacherCoverage.mappingCount} 条记录`, ['teacher-sync-cta', 'teacherCompareSchool']),
             tmBuildModuleStateItem('当前提示', hintText, '点击可回到最相关的筛选项', hintFocus, hintTone)
         ];
-    } else if (moduleId === 'class-comparison') {
-        const school = tmGetSelectDisplayValue(['classCompSchoolSelect', 'teacherCompareSchool', 'mySchoolSelect'], fallbackSchool);
-        const ready = !!school && school !== '未选择' && school !== '未识别' && exams.length > 0;
-        const hintText = ready ? '可直接开始对比' : (!school || school === '未识别' || school === '未选择' ? '缺学校，请先选择学校' : '缺成绩库，请先确认成绩数据');
-
-        badgeText = ready ? '班级对比可用' : '待选学校';
-        badgeTone = ready ? 'ok' : 'warn';
-        summary = ready ? `当前将按 ${school} 的单次成绩做横向对比` : '请先选择学校并确认成绩库';
-        items = [
-            tmBuildModuleStateItem('学校', school, school && school !== '未识别' ? '班级横向对比仅在校内进行' : '请先选择学校', 'classCompSchoolSelect'),
-            tmBuildModuleStateItem('当前成绩库', exams.length ? `${exams.length} 期考试` : '无可用考试', exams.length ? '将优先使用当前考试批次' : '请先导入成绩', 'classCompSchoolSelect'),
-            tmBuildModuleStateItem('对比方式', '单次横向对比', '不依赖第1期 / 第2期选择', 'classCompSchoolSelect'),
-            tmBuildModuleStateItem('当前提示', hintText, ready ? '点击可回到学校筛选后直接开始对比' : '点击可回到学校筛选项', 'classCompSchoolSelect', ready ? 'ok' : 'warn')
-        ];
     }
 
     container.innerHTML = `
@@ -338,7 +300,7 @@ function tmRenderModuleStateBar(moduleId) {
 
 function tmRenderTeachingModuleStateBars(targetModuleId = '') {
     bindTeachingOverviewWatchers();
-    const supportedModules = ['teacher-analysis', 'class-comparison'];
+    const supportedModules = ['teacher-analysis'];
     const requestedId = String(targetModuleId || '').trim();
     if (supportedModules.includes(requestedId)) {
         tmRenderModuleStateBar(requestedId);
@@ -368,8 +330,7 @@ function bindTeachingOverviewWatchers() {
         'teacherCompareExam2',
         'studentCompareExam2',
         'teacherComparePeriodCount',
-        'studentComparePeriodCount',
-        'classCompSchoolSelect'
+        'studentComparePeriodCount'
     ];
 
     watchedIds.forEach((id) => {

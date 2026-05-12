@@ -2716,7 +2716,6 @@ const XLSX_RUNTIME_FUNCTIONS = [
     'exportMutualAidGroups',
     'exportSummaryTable',
     'exportSegmentExcel',
-    'exportClassComparisonExcel',
     'exportHorizontalExcel',
     'exportMacroTables',
     'SB_exportExcel',

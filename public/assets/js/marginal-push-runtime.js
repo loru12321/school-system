@@ -96,10 +96,29 @@
         const schools = getSchools();
         if (typeof root.listAvailableSchoolsForCompare === 'function') {
             try {
-                return root.listAvailableSchoolsForCompare().filter((name) => schools[name]);
+                return root.listAvailableSchoolsForCompare().filter((name) => resolveSchoolKey(name, schools));
             } catch (_) {}
         }
         return sortChinese(Object.keys(schools || {}));
+    }
+
+    function sameSchoolName(left, right) {
+        if (typeof root.sameAppSchoolName === 'function') return root.sameAppSchoolName(left, right);
+        if (typeof root.areSchoolNamesEquivalent === 'function') return root.areSchoolNamesEquivalent(left, right);
+        return String(left || '').trim() === String(right || '').trim();
+    }
+
+    function resolveSchoolKey(schoolName, schools = getSchools()) {
+        const target = String(schoolName || '').trim();
+        if (!target || !schools || typeof schools !== 'object') return '';
+        if (Object.prototype.hasOwnProperty.call(schools, target)) return target;
+        return Object.keys(schools).find((key) => sameSchoolName(key, target) || sameSchoolName(schools[key]?.name, target)) || '';
+    }
+
+    function getSchoolRecord(schoolName) {
+        const schools = getSchools();
+        const key = resolveSchoolKey(schoolName, schools);
+        return { key, school: key ? schools[key] : null };
     }
 
     function setSelectOptions(select, options, placeholder, preferredValue) {
@@ -108,14 +127,17 @@
         select.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>${validOptions
             .map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)
             .join('')}`;
-        if (preferredValue && validOptions.includes(preferredValue)) select.value = preferredValue;
+        if (preferredValue) {
+            const matched = validOptions.find((value) => value === preferredValue || sameSchoolName(value, preferredValue));
+            if (matched) select.value = matched;
+        }
         return select.value || '';
     }
 
     function updateMpSchoolSelect() {
         const select = root.document?.getElementById('mpSchoolSelect');
         if (!select) return;
-        const oldSchool = select.value;
+        const oldSchool = select.value || (typeof root.readCurrentSchool === 'function' ? root.readCurrentSchool() : root.MY_SCHOOL);
         setSelectOptions(select, getSchoolOptions(), '--请选择学校--', oldSchool);
         updateMpClassSelect();
 
@@ -134,11 +156,11 @@
         const schoolSelect = root.document?.getElementById('mpSchoolSelect');
         const classSelect = root.document?.getElementById('mpClassSelect');
         if (!schoolSelect || !classSelect) return;
-        const schools = getSchools();
         const schoolName = String(schoolSelect.value || '').trim();
         const oldClass = classSelect.value;
-        const classes = schoolName && schools[schoolName]
-            ? sortChinese([...new Set((schools[schoolName].students || []).map((student) => String(student.class || '').trim()).filter(Boolean))])
+        const { school } = getSchoolRecord(schoolName);
+        const classes = school
+            ? sortChinese([...new Set((school.students || []).map((student) => String(student.class || '').trim()).filter(Boolean))])
             : [];
         setSelectOptions(classSelect, classes, '全部班级', oldClass);
         if (!oldClass) classSelect.value = '';
@@ -155,10 +177,9 @@
     }
 
     function buildTaskRows(config) {
-        const schools = getSchools();
         const thresholds = getThresholds();
         const subjects = config.subject === 'ALL' ? getSubjects() : [config.subject];
-        const school = schools[config.school];
+        const { key, school } = getSchoolRecord(config.school);
         if (!school) return { rows: [], taskMap: {} };
         const students = (school.students || []).filter((student) => !config.className || student.class === config.className);
         const taskMap = {};
@@ -190,7 +211,7 @@
                 if (!taskMap[className]) taskMap[className] = {};
                 if (!taskMap[className][subject]) taskMap[className][subject] = [];
                 const row = {
-                    school: config.school,
+                    school: key || config.school,
                     class: className,
                     subject,
                     name: String(student.name || ''),
@@ -243,9 +264,8 @@
     function generateMarginalTickets() {
         const container = root.document?.getElementById('mp-tickets-container');
         const config = getMarginalConfig();
-        const schools = getSchools();
         if (!container) return { ok: false, reason: 'missing-container', count: 0 };
-        if (!config.school || !schools[config.school]) {
+        if (!config.school || !getSchoolRecord(config.school).school) {
             if (root.alert) root.alert('请先选择学校');
             return { ok: false, reason: 'missing-school', count: 0 };
         }

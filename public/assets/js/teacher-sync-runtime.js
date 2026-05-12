@@ -269,7 +269,10 @@ function renderTeacherAnalysisState() {
             Object.keys(TEACHER_MAP).forEach(key => {
                 const cls = key.split('_')[0];
                 for (const sName of schoolNames) {
-                    const hasClass = SCHOOLS[sName].students.some(s => s.class == cls);
+                    const schoolRecord = typeof window.getAppSchoolRecord === 'function'
+                        ? window.getAppSchoolRecord(sName)
+                        : SCHOOLS[sName];
+                    const hasClass = (schoolRecord?.students || []).some(s => s.class == cls);
                     if (hasClass) {
                         schoolCounts[sName] = (schoolCounts[sName] || 0) + 1;
                         break;

@@ -129,7 +129,10 @@
         const signature = getSchoolProfileSignature();
         const cacheKey = `${signature}::${schoolName}`;
         if (SchoolProfilePerfCache.profileModel.has(cacheKey)) return SchoolProfilePerfCache.profileModel.get(cacheKey);
-        const school = SCHOOLS[schoolName];
+        const school = typeof window.getAppSchoolRecord === 'function'
+            ? window.getAppSchoolRecord(schoolName)
+            : SCHOOLS[schoolName];
+        if (!school) return { subjectLabels: [], ratios: [], distLabels: [], townData: [], schoolData: [] };
         const subjectLabels = [];
         const ratios = [];
         SUBJECTS.forEach(sub => {
@@ -154,9 +157,12 @@
     }
 
     function showSchoolProfile(schoolName) {
-        if (!SCHOOLS[schoolName]) return;
-        currentModalSchool = schoolName;
-        const s = SCHOOLS[schoolName];
+        const resolvedKey = typeof window.resolveAppSchoolKey === 'function' ? window.resolveAppSchoolKey(schoolName) : schoolName;
+        const s = typeof window.getAppSchoolRecord === 'function'
+            ? window.getAppSchoolRecord(schoolName)
+            : SCHOOLS[schoolName];
+        if (!s) return;
+        currentModalSchool = resolvedKey || schoolName;
         const m = s.metrics.total || {};
 
         document.getElementById('sp-title').innerHTML = `🏫 ${escapeSchoolProfileHtml(schoolName)} <small style="font-size:14px; color:#666;">(参考人数: ${Number(m.count) || 0})</small>`;
@@ -197,14 +203,15 @@
                     const subject = subjectLabels[idx];
 
                     document.getElementById('school-profile-modal').style.display = 'none';
-                    jumpToModule('class-comparison');
+                    jumpToModule('teacher-analysis');
 
                     setTimeout(() => {
-                        const anchor = document.getElementById(`anchor-class-${subject}`);
-                        if (anchor) {
-                            anchor.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            UI.toast(`已定位到 ${subject} 对比分析`, 'success');
+                        const subjectSelect = document.getElementById('teacherCompareSubject');
+                        if (subjectSelect) {
+                            subjectSelect.value = subject;
+                            subjectSelect.dispatchEvent(new Event('change', { bubbles: true }));
                         }
+                        UI.toast(`已切换到 ${subject} 教师画像`, 'success');
                     }, 600);
                 },
                 onHover: (event, chartElement) => {
@@ -276,8 +283,7 @@
         switchTab(moduleId);
         setTimeout(() => {
             let selectId = '';
-            if (moduleId === 'class-comparison') selectId = 'classCompSchoolSelect';
-            else if (moduleId === 'teacher-analysis') selectId = 'mySchoolSelect';
+            if (moduleId === 'teacher-analysis') selectId = 'mySchoolSelect';
             else if (moduleId === 'student-details') selectId = 'studentSchoolSelect';
             const select = document.getElementById(selectId);
             if (select) {
