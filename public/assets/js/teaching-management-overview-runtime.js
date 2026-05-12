@@ -812,5 +812,7 @@ function renderTeachingOverview() {
     tmRenderQuickEntries(overviewModel);
     tmRenderTeachingModuleStateBars();
     bindTeachingOverviewActions();
-    tmRefreshCloudOps(false);
+    if (typeof tmScheduleCloudOpsRefresh === 'function') {
+        tmScheduleCloudOpsRefresh(false, 900);
+    }
 }

@@ -1,7 +1,13 @@
 (() => {
     if (typeof window === 'undefined' || window.__MODULE_ENTRY_RUNTIME_PATCHED__) return;
 
-    const TEACHING_MANAGEMENT_MODULE_IDS = new Set([]);
+    const TEACHING_MANAGEMENT_MODULE_IDS = new Set([
+        'teaching-overview',
+        'teaching-issue-board',
+        'teaching-warning-center',
+        'teaching-rectify-center',
+        'teaching-version-center'
+    ]);
     const TEACHER_INSIGHT_MODULE_IDS = new Set([
         'teacher-analysis',
         'cohort-growth'
@@ -112,7 +118,37 @@
         return Promise.all(loaders).then(() => undefined);
     }
 
-    function activateTeachingManagementModule() {
+    function activateTeachingManagementModule(id = 'teaching-overview') {
+        const moduleId = String(id || 'teaching-overview').trim() || 'teaching-overview';
+        if (!TEACHING_MANAGEMENT_MODULE_IDS.has(moduleId)) return false;
+
+        if (moduleId === 'teaching-overview') {
+            if (typeof window.tmScheduleTeachingOverviewRender === 'function') {
+                window.tmScheduleTeachingOverviewRender();
+            } else if (typeof window.renderTeachingOverview === 'function') {
+                window.renderTeachingOverview();
+            }
+            return true;
+        }
+
+        if (moduleId === 'teaching-issue-board' && typeof window.tmRenderIssueBoard === 'function') {
+            window.tmRenderIssueBoard();
+            return true;
+        }
+        if (moduleId === 'teaching-warning-center' && typeof window.tmRenderWarningCenter === 'function') {
+            window.tmRenderWarningCenter();
+            if (typeof window.tmRefreshCloudOps === 'function') window.tmRefreshCloudOps(false);
+            return true;
+        }
+        if (moduleId === 'teaching-rectify-center' && typeof window.tmRenderRectifyCenter === 'function') {
+            window.tmRenderRectifyCenter();
+            if (typeof window.tmRefreshCloudOps === 'function') window.tmRefreshCloudOps(false);
+            return true;
+        }
+        if (moduleId === 'teaching-version-center' && typeof window.tmRenderVersionCenter === 'function') {
+            window.tmRenderVersionCenter();
+            return true;
+        }
         return false;
     }
 

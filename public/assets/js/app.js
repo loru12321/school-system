@@ -829,6 +829,8 @@ function clearExamRuntimeState(options = {}) {
     return syncExamRuntimeState({});
 }
 
+const DEFAULT_MY_SCHOOL_NAME = String(window.DEFAULT_MY_SCHOOL_NAME || '银山实验学校').trim();
+window.DEFAULT_MY_SCHOOL_NAME = DEFAULT_MY_SCHOOL_NAME;
 const SchoolStateRuntime = window.SchoolState || null;
 
 function readCurrentSchool() {
@@ -838,23 +840,23 @@ function readCurrentSchool() {
             (typeof MY_SCHOOL !== 'undefined' ? MY_SCHOOL : '')
             || window.MY_SCHOOL
             || localStorage.getItem('MY_SCHOOL')
-            || ''
+            || DEFAULT_MY_SCHOOL_NAME
         ).trim();
     if (typeof MY_SCHOOL !== 'undefined') MY_SCHOOL = nextSchool;
     window.MY_SCHOOL = nextSchool;
+    if (nextSchool) {
+        try { localStorage.setItem('MY_SCHOOL', nextSchool); } catch (_) {}
+    }
     return nextSchool;
 }
 
 function writeCurrentSchool(school) {
-    const nextSchool = String(school || '').trim();
+    const nextSchool = String(school || '').trim() || DEFAULT_MY_SCHOOL_NAME;
     if (SchoolStateRuntime && typeof SchoolStateRuntime.setCurrentSchool === 'function') {
         SchoolStateRuntime.setCurrentSchool(nextSchool);
-    } else if (nextSchool) {
+    } else {
         localStorage.setItem('MY_SCHOOL', nextSchool);
         window.MY_SCHOOL = nextSchool;
-    } else {
-        localStorage.removeItem('MY_SCHOOL');
-        window.MY_SCHOOL = '';
     }
     if (typeof MY_SCHOOL !== 'undefined') MY_SCHOOL = nextSchool;
     window.MY_SCHOOL = nextSchool;
@@ -865,12 +867,12 @@ function clearCurrentSchool() {
     if (SchoolStateRuntime && typeof SchoolStateRuntime.clearCurrentSchool === 'function') {
         SchoolStateRuntime.clearCurrentSchool();
     } else {
-        localStorage.removeItem('MY_SCHOOL');
-        window.MY_SCHOOL = '';
+        localStorage.setItem('MY_SCHOOL', DEFAULT_MY_SCHOOL_NAME);
+        window.MY_SCHOOL = DEFAULT_MY_SCHOOL_NAME;
     }
-    if (typeof MY_SCHOOL !== 'undefined') MY_SCHOOL = '';
-    window.MY_SCHOOL = '';
-    return '';
+    if (typeof MY_SCHOOL !== 'undefined') MY_SCHOOL = DEFAULT_MY_SCHOOL_NAME;
+    window.MY_SCHOOL = DEFAULT_MY_SCHOOL_NAME;
+    return DEFAULT_MY_SCHOOL_NAME;
 }
 
 function normalizeAppSchoolName(value) {
@@ -6798,7 +6800,7 @@ const DataManager = {
             return { key, class: clsName, subject, name, school: schoolName };
         });
 
-        // 逻辑：统计列表中出现频率最高的学校，自动将其设为 MY_SCHOOL
+        // 逻辑：仅在没有固定本校时才从任课表推断，避免覆盖学校默认口径
         if (list.length > 0) {
             const schoolCounts = {};
             list.forEach(t => {
@@ -6817,8 +6819,8 @@ const DataManager = {
                 }
             }
 
-            // 如果找到了有效学校，且当前未设置或不一致，则强制自动同步
-            if (autoDetectedSchool && readCurrentSchool() !== autoDetectedSchool) {
+            // 如果找到了有效学校，且当前未设置，则自动同步
+            if (autoDetectedSchool && !readCurrentSchool()) {
                 writeCurrentSchool(autoDetectedSchool);
                 appDebug(`🤖 系统已自动将本校锁定为：${autoDetectedSchool}`);
 

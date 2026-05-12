@@ -728,10 +728,11 @@ function getClassSchoolMapForAllData() {
 }
 
 function inferDefaultSchoolFromContext() {
-    const saved = String(MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || '').trim();
+    const fallbackSchool = String(window.DEFAULT_MY_SCHOOL_NAME || '银山实验学校').trim();
+    const saved = String(MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || fallbackSchool).trim();
     if (saved) return saved;
     const list = listAvailableSchoolsForCompare();
-    return list.length === 1 ? list[0] : '';
+    return list.length === 1 ? list[0] : fallbackSchool;
 }
 
 // Compare school summary runtime moved to public/assets/js/compare-shared-runtime.js

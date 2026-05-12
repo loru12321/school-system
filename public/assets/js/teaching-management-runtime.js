@@ -25,6 +25,7 @@ var TM_VERSION_DIFF_STATE = {
 };
 var TM_OVERVIEW_RENDER_FRAME = 0;
 var SM_OVERVIEW_RENDER_FRAME = 0;
+var TM_CLOUD_OPS_REFRESH_TIMER = 0;
 
 function tmScheduleTeachingOverviewRender() {
     if (TM_OVERVIEW_RENDER_FRAME) return;
@@ -55,5 +56,19 @@ function smScheduleStudentOverviewRender() {
     }
 }
 
+function tmScheduleCloudOpsRefresh(force = false, delay = 900) {
+    if (TM_CLOUD_OPS_REFRESH_TIMER) window.clearTimeout(TM_CLOUD_OPS_REFRESH_TIMER);
+    TM_CLOUD_OPS_REFRESH_TIMER = window.setTimeout(() => {
+        TM_CLOUD_OPS_REFRESH_TIMER = 0;
+        const teachingActive = document.getElementById('teaching-overview')?.classList.contains('active')
+            || document.getElementById('teaching-issue-board')?.classList.contains('active')
+            || document.getElementById('teaching-warning-center')?.classList.contains('active')
+            || document.getElementById('teaching-rectify-center')?.classList.contains('active');
+        if (!teachingActive) return;
+        if (typeof tmRefreshCloudOps === 'function') tmRefreshCloudOps(force);
+    }, Math.max(0, Number(delay) || 0));
+}
+
 window.tmScheduleTeachingOverviewRender = tmScheduleTeachingOverviewRender;
 window.smScheduleStudentOverviewRender = smScheduleStudentOverviewRender;
+window.tmScheduleCloudOpsRefresh = tmScheduleCloudOpsRefresh;

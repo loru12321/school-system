@@ -31,7 +31,9 @@ function smRowsSignature(rows) {
 function smSchoolMatches(rowSchool, selectedSchool) {
     const useRowSchool = String(rowSchool || '').trim();
     const useSelectedSchool = String(selectedSchool || '').trim();
+    const selectedLower = useSelectedSchool.toLowerCase();
     if (!useSelectedSchool) return true;
+    if (selectedLower === 'all' || selectedLower === '__all__' || useSelectedSchool === '全部学校' || useSelectedSchool.includes('请选择') || useSelectedSchool.includes('请先选择')) return true;
     if (!useRowSchool) return false;
     if (useRowSchool === useSelectedSchool) return true;
     if (typeof areSchoolNamesEquivalent === 'function') {
@@ -46,7 +48,11 @@ function smSchoolMatches(rowSchool, selectedSchool) {
 
 function smBuildUniqueStudentCount(rawList, schoolName = '', className = '') {
     const rows = Array.isArray(rawList) ? rawList : [];
-    const selectedSchool = String(schoolName || '').trim();
+    const rawSelectedSchool = String(schoolName || '').trim();
+    const selectedLower = rawSelectedSchool.toLowerCase();
+    const selectedSchool = (selectedLower === 'all' || selectedLower === '__all__' || rawSelectedSchool === '全部学校' || rawSelectedSchool.includes('请选择') || rawSelectedSchool.includes('请先选择'))
+        ? ''
+        : rawSelectedSchool;
     const selectedClass = normalizeClass(className || '');
     const signature = `${smRowsSignature(rows)}::${selectedSchool}::${selectedClass}`;
     if (StudentOverviewPerfCache.uniqueCountSignature === signature) {
@@ -158,14 +164,9 @@ function smBuildPotentialCount(potentialSourceRows, context, selectedClass) {
 
 function smGetCurrentStudentContext() {
     const fallbackSchool = readCurrentSchool();
-    const schoolValue = tmGetSelectRawValue(
-        ['studentSchoolSelect', 'progressSchoolSelect', 'progressCompareSchool', 'marginalSchoolSelect', 'sbSchoolSelect', 'potSchoolSelect', 'segSchoolSelect', 'corrSchoolSelect', 'sel-school'],
-        fallbackSchool
-    );
-    const schoolText = tmGetSelectDisplayValue(
-        ['studentSchoolSelect', 'progressSchoolSelect', 'progressCompareSchool', 'marginalSchoolSelect', 'sbSchoolSelect', 'potSchoolSelect', 'segSchoolSelect', 'corrSchoolSelect', 'sel-school'],
-        fallbackSchool || '未识别'
-    );
+    const studentSchoolSelect = document.getElementById('studentSchoolSelect');
+    const schoolValue = String(studentSchoolSelect?.value || '').trim();
+    const schoolText = String(studentSchoolSelect?.selectedOptions?.[0]?.textContent || schoolValue || fallbackSchool || '未识别').trim();
     const classValue = tmGetSelectRawValue(['studentClassSelect', 'sbClassSelect', 'sel-class'], '');
     const classText = tmGetSelectDisplayValue(['studentClassSelect', 'sbClassSelect', 'sel-class'], '全部班级');
     const exam1Value = tmGetSelectRawValue(['studentCompareExam1', 'progressCompareExam1'], '');
@@ -443,7 +444,7 @@ function renderStudentOverview() {
         '进退步状态',
         model.progressReady ? '已生成' : '待分析',
         model.progressReady ? 'ok' : 'warn',
-        model.progressReady ? `${model.progressCount} 条记录` : '尚未生成进退步结果',
+        model.progressReady ? `${model.progressCount} 条记录` : `${model.progressCount} 条记录`,
         model.progressReady
             ? `进步 ${model.improveCount} 人 / 退步 ${model.declineCount} 人 / 持平 ${model.stableCount} 人`
             : '进入进退步/增值评价后可自动生成结果'
@@ -455,7 +456,7 @@ function renderStudentOverview() {
         model.supportReady ? 'ok' : 'warn',
         model.supportReady
             ? `边缘生 ${model.marginalRecordCount} 人 / 潜力生 ${model.potentialCount} 人`
-            : '边缘生与潜力生名单还未生成',
+            : `边缘生 ${model.marginalRecordCount} 人 / 潜力生 ${model.potentialCount} 人`,
         `涉及 ${model.marginalClassCount} 个班级的边缘生缓存`
     ));
 
