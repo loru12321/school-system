@@ -30,6 +30,7 @@ elementMap.set('teacher-pairing-suggestions', pairingContainer);
 const storage = { MY_SCHOOL: '甲校别名' };
 const context = {
     console,
+    DEFAULT_MY_SCHOOL_NAME: '甲校别名',
     alert(message) {
         context.lastAlert = message;
     },

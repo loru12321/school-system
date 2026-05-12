@@ -12,7 +12,7 @@ const SCHOOL_ALIAS_GROUPS = [
     { canonical: '新湖中学', aliases: ['新湖镇中学'] },
     { canonical: '大羊中学', aliases: ['大羊'] },
     { canonical: '沙河站中学', aliases: ['沙河站镇中学'] },
-    { canonical: '银山实验学校', aliases: ['银山镇实验学校', '银山实验中学', '银山镇实验中学'] },
+    { canonical: '银山实验', aliases: ['银山实验学校', '银山镇实验学校', '银山实验中学', '银山镇实验中学'] },
     { canonical: '旧县中学', aliases: ['旧县乡中心学校', '旧县中心学校'] },
     { canonical: '斑鸠店镇中', aliases: ['斑鸠店中学', '斑鸠店镇中学', '斑鸠店中'] },
     { canonical: '戴庙中学', aliases: ['戴庙'] }
@@ -728,7 +728,7 @@ function getClassSchoolMapForAllData() {
 }
 
 function inferDefaultSchoolFromContext() {
-    const fallbackSchool = String(window.DEFAULT_MY_SCHOOL_NAME || '银山实验学校').trim();
+    const fallbackSchool = String(window.DEFAULT_MY_SCHOOL_NAME || '银山实验').trim();
     const saved = String(MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || fallbackSchool).trim();
     if (saved) return saved;
     const list = listAvailableSchoolsForCompare();

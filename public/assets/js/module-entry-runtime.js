@@ -317,7 +317,7 @@
                     return;
                 }
 
-                window.analyzeTeachers({ render: false });
+                window.analyzeTeachers({ render: false, township: false, historyLimit: 1 });
                 ['teacherCardsContainer', 'teacherComparisonTable', 'teacher-township-ranking-container'].forEach((id) => {
                     const node = document.getElementById(id);
                     if (node) delete node.dataset.released;
@@ -325,25 +325,25 @@
                 scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-cards', () => {
                     if (typeof window.renderTeacherCards === 'function') window.renderTeacherCards();
                 }, 0);
-                scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-comparison', () => {
-                    if (typeof window.renderTeacherComparisonTable === 'function') window.renderTeacherComparisonTable();
-                }, 80);
                 scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-pairing', () => {
                     if (typeof window.generateTeacherPairing === 'function') window.generateTeacherPairing();
-                }, 140);
+                }, 100);
                 scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-overview', () => {
                     if (typeof window.tmScheduleTeachingOverviewRender === 'function') {
                         window.tmScheduleTeachingOverviewRender();
                     } else if (typeof window.renderTeachingOverview === 'function') {
                         window.renderTeachingOverview();
                     }
-                }, 200);
-                scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-township', () => {
-                    if (typeof window.renderTeacherTownshipRanking === 'function') window.renderTeacherTownshipRanking();
-                }, 320);
+                }, 160);
                 scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-state-bars', () => {
                     if (typeof window.tmRenderTeachingModuleStateBars === 'function') window.tmRenderTeachingModuleStateBars('teacher-analysis');
-                }, 380);
+                }, 260);
+                scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-comparison', () => {
+                    if (typeof window.renderTeacherComparisonTable === 'function') window.renderTeacherComparisonTable();
+                }, 420);
+                scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-township', () => {
+                    if (typeof window.renderTeacherTownshipRanking === 'function') window.renderTeacherTownshipRanking();
+                }, 760);
                 if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
                 if (typeof updateTeacherCompareTeacherSelect === 'function') updateTeacherCompareTeacherSelect();
                 scheduleTeacherCompareAutoRender(260);
@@ -798,24 +798,6 @@
         return Promise.resolve();
     }
 
-    function initClassDiagnosisEntry() {
-        const run = () => {
-            if (!document.getElementById('class-diagnosis')?.classList.contains('active')) return false;
-            if (typeof updateDiagnosisSelects === 'function') updateDiagnosisSelects();
-            pickDefaultSelectValue('diagSchoolSelect', getCurrentSchoolCandidate());
-            pickDefaultSelectValue('diagSubjectSelect', 'total');
-            scheduleModuleAutoRender('class-diagnosis-auto', () => {
-                const school = String(document.getElementById('diagSchoolSelect')?.value || '').trim();
-                if (!document.getElementById('class-diagnosis')?.classList.contains('active')) return;
-                if (!school || !window.SCHOOLS?.[school] || typeof window.renderClassDiagnosis !== 'function') return;
-                window.renderClassDiagnosis();
-            }, { delay: 100, timeout: 900 });
-            return true;
-        };
-        run();
-        return Promise.resolve();
-    }
-
     function initFreshmanExamEntry(id) {
         const runAfterLoad = () => {
             if (window.FreshmanExamRuntime && typeof window.FreshmanExamRuntime.syncFbClasses === 'function') {
@@ -964,7 +946,6 @@
         if (id === 'segment-analysis') updateSegmentSelects();
         if (id === 'class-comparison') return initClassComparisonEntry();
         if (id === 'potential-analysis') updatePotentialSchoolSelect();
-        if (id === 'class-diagnosis') return initClassDiagnosisEntry();
         if (id === 'correlation-analysis') return initCorrelationAnalysisEntry();
         if (id === 'seat-adjustment') updateSeatAdjSelects();
         if (id === 'subject-balance') updateSubjectBalanceSelects();
@@ -988,7 +969,7 @@
                 const result = id === 'student-details'
                     ? scheduleModuleTaskPromise('student-details-enter-init', runInit, { delay: 40, frame: true })
                     : runInit();
-                if (['class-comparison', 'class-diagnosis'].includes(id)) {
+                if (id === 'class-comparison') {
                     scheduleModuleTask(`state-bars:${id}`, () => {
                         if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars(id);
                     }, { frame: true });

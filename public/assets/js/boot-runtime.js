@@ -2721,7 +2721,6 @@ const XLSX_RUNTIME_FUNCTIONS = [
     'exportMacroTables',
     'SB_exportExcel',
     'exportPotentialAnalysis',
-    'exportDiagnosisExcel',
     'exportCorrelationExcel',
     'exportExcel',
     'downloadTemplate',

@@ -104,16 +104,9 @@ function shouldAutoLoadTeacherData() {
 
 function syncTeacherAnalysisSchoolContext(preferredSchool = '') {
     const schoolSel = document.getElementById('mySchoolSelect');
-    const inferredSchool = (typeof inferDefaultSchoolFromContext === 'function') ? inferDefaultSchoolFromContext() : '';
-    const candidates = [
-        preferredSchool,
-        schoolSel?.value,
-        readCurrentSchool(),
-        inferredSchool
-    ].map(v => String(v || '').trim()).filter(Boolean);
-    const schoolNames = Object.keys(SCHOOLS || {});
-    const resolvedSchool = candidates.find(name => schoolNames.includes(name))
-        || (schoolNames.length === 1 ? schoolNames[0] : candidates[0] || '');
+    const resolvedSchool = (typeof readCurrentSchool === 'function')
+        ? String(readCurrentSchool() || '').trim()
+        : String(window.DEFAULT_MY_SCHOOL_NAME || '银山实验').trim();
 
     if (resolvedSchool) {
         writeCurrentSchool(resolvedSchool);

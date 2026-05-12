@@ -1828,14 +1828,15 @@
             if (!silent && window.UI?.toast) window.UI.toast('当前县级成绩中没有匹配到该学校，请核对名称', 'warning');
             return false;
         }
-        window.MY_SCHOOL = schoolName;
-        try { localStorage.setItem('MY_SCHOOL', schoolName); } catch (_) {}
         if (typeof window.writeCurrentSchool === 'function') window.writeCurrentSchool(schoolName);
+        const currentSchool = typeof window.readCurrentSchool === 'function'
+            ? window.readCurrentSchool()
+            : String(window.MY_SCHOOL || '').trim();
         const selector = document.getElementById('mySchoolSelect');
         if (selector) {
             const optionValue = Array.from(selector.options || [])
                 .map((option) => String(option.value || '').trim())
-                .find((value) => countySameSchoolName(value, schoolName));
+                .find((value) => countySameSchoolName(value, currentSchool));
             if (optionValue) selector.value = optionValue;
         }
         if (input) input.value = schoolName;

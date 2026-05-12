@@ -22,7 +22,6 @@ const SWITCH_MODULE_IDS = [
     'county-analysis',
     'teacher-analysis',
     'class-comparison',
-    'class-diagnosis',
     'segment-analysis',
     'correlation-analysis',
     'indicator',

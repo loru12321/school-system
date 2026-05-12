@@ -20,6 +20,7 @@ function createMockStorage(initialState = {}) {
 
 function run() {
     const root = {
+        DEFAULT_MY_SCHOOL_NAME: '银山实验',
         localStorage: createMockStorage({
             MY_SCHOOL: 'School A'
         })
@@ -27,20 +28,20 @@ function run() {
 
     const schoolState = createSchoolStateRuntime(root);
 
-    assert.strictEqual(schoolState.getCurrentSchool(), 'School A');
-    assert.deepStrictEqual(schoolState.snapshotSchoolState(), { currentSchool: 'School A' });
+    assert.strictEqual(schoolState.getCurrentSchool(), '银山实验');
+    assert.deepStrictEqual(schoolState.snapshotSchoolState(), { currentSchool: '银山实验' });
 
     schoolState.setCurrentSchool('School B');
-    assert.strictEqual(root.MY_SCHOOL, 'School B');
-    assert.strictEqual(root.localStorage.getItem('MY_SCHOOL'), 'School B');
+    assert.strictEqual(root.MY_SCHOOL, '银山实验');
+    assert.strictEqual(root.localStorage.getItem('MY_SCHOOL'), '银山实验');
 
     const synced = schoolState.syncSchoolState({ currentSchool: 'School C' });
-    assert.deepStrictEqual(synced, { currentSchool: 'School C' });
-    assert.strictEqual(schoolState.getCurrentSchool(), 'School C');
+    assert.deepStrictEqual(synced, { currentSchool: '银山实验' });
+    assert.strictEqual(schoolState.getCurrentSchool(), '银山实验');
 
     schoolState.clearCurrentSchool();
-    assert.strictEqual(schoolState.getCurrentSchool(), '');
-    assert.strictEqual(root.localStorage.getItem('MY_SCHOOL'), null);
+    assert.strictEqual(schoolState.getCurrentSchool(), '银山实验');
+    assert.strictEqual(root.localStorage.getItem('MY_SCHOOL'), '银山实验');
 
     console.log('school-state-runtime tests passed');
 }

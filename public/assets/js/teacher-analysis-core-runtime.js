@@ -16,7 +16,7 @@
     const syncTeacherSchoolContext = typeof window.syncTeacherAnalysisSchoolContext === 'function'
         ? window.syncTeacherAnalysisSchoolContext
         : ((preferredSchool = '') => {
-            const nextSchool = String(preferredSchool || '').trim();
+            const nextSchool = String(window.DEFAULT_MY_SCHOOL_NAME || '银山实验').trim();
             if (nextSchool) {
                 window.MY_SCHOOL = nextSchool;
                 localStorage.setItem('MY_SCHOOL', nextSchool);
@@ -162,7 +162,9 @@
     }
 
     function renderTeacherAnalysisOutputs(renderOptions = {}) {
-        if (typeof window.calculateTeacherTownshipRanking === 'function') window.calculateTeacherTownshipRanking();
+        if (renderOptions.township !== false && typeof window.calculateTeacherTownshipRanking === 'function') {
+            window.calculateTeacherTownshipRanking();
+        }
         if (typeof window.refreshTeacherPerformanceCopy === 'function') window.refreshTeacherPerformanceCopy();
         if (renderOptions.render === false) return;
         if (typeof window.renderTeacherCards === 'function') window.renderTeacherCards();
@@ -872,8 +874,7 @@
                 return false;
             });
             if (activeSchool) {
-                window.MY_SCHOOL = activeSchool;
-                localStorage.setItem('MY_SCHOOL', activeSchool);
+                activeSchool = syncTeacherSchoolContext(activeSchool);
             }
         }
 
@@ -1015,7 +1016,11 @@
         perfProbe.mark('grade stats');
 
         const schoolRankMap = teacherBuildSchoolRankMap(mySchoolStudents);
-        const rollingBaselineEntries = teacherGetRollingBaselineExamEntries(3);
+        const requestedHistoryLimit = Number(renderOptions.historyLimit);
+        const rollingBaselineLimit = Number.isFinite(requestedHistoryLimit)
+            ? Math.max(0, Math.min(3, Math.floor(requestedHistoryLimit)))
+            : 1;
+        const rollingBaselineEntries = teacherGetRollingBaselineExamEntries(rollingBaselineLimit);
         const baselineContexts = rollingBaselineEntries.map((entry) => {
             const examStudents = teacherFilterExamStudentsBySchool(entry?.data || [], activeSchool, user, queryMode);
             const rowsForCompare = teacherBuildComparableBaselineRows(examStudents);

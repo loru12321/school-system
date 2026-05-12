@@ -829,19 +829,15 @@ function clearExamRuntimeState(options = {}) {
     return syncExamRuntimeState({});
 }
 
-const DEFAULT_MY_SCHOOL_NAME = String(window.DEFAULT_MY_SCHOOL_NAME || '银山实验学校').trim();
+const DEFAULT_MY_SCHOOL_NAME = String(window.DEFAULT_MY_SCHOOL_NAME || '银山实验').trim();
 window.DEFAULT_MY_SCHOOL_NAME = DEFAULT_MY_SCHOOL_NAME;
 const SchoolStateRuntime = window.SchoolState || null;
 
 function readCurrentSchool() {
-    const nextSchool = SchoolStateRuntime && typeof SchoolStateRuntime.getCurrentSchool === 'function'
-        ? String(SchoolStateRuntime.getCurrentSchool() || '').trim()
-        : String(
-            (typeof MY_SCHOOL !== 'undefined' ? MY_SCHOOL : '')
-            || window.MY_SCHOOL
-            || localStorage.getItem('MY_SCHOOL')
-            || DEFAULT_MY_SCHOOL_NAME
-        ).trim();
+    const nextSchool = DEFAULT_MY_SCHOOL_NAME;
+    if (SchoolStateRuntime && typeof SchoolStateRuntime.setCurrentSchool === 'function') {
+        SchoolStateRuntime.setCurrentSchool(nextSchool);
+    }
     if (typeof MY_SCHOOL !== 'undefined') MY_SCHOOL = nextSchool;
     window.MY_SCHOOL = nextSchool;
     if (nextSchool) {
@@ -851,7 +847,7 @@ function readCurrentSchool() {
 }
 
 function writeCurrentSchool(school) {
-    const nextSchool = String(school || '').trim() || DEFAULT_MY_SCHOOL_NAME;
+    const nextSchool = DEFAULT_MY_SCHOOL_NAME;
     if (SchoolStateRuntime && typeof SchoolStateRuntime.setCurrentSchool === 'function') {
         SchoolStateRuntime.setCurrentSchool(nextSchool);
     } else {
@@ -8587,6 +8583,7 @@ function ensureCountySubmoduleSectionForSwitch(id) {
         </div>
     `;
     base.insertAdjacentElement('afterend', section);
+    getModuleSectionsCached(true);
 }
 
 function getCurrentCategoryKey() {
@@ -9179,7 +9176,7 @@ function guardBeforeSwitch(id) {
     if (id === 'starter-hub' || id === 'upload') return true;
     const needGuard = [
         'summary', 'analysis', 'county-analysis', 'high-score', 'indicator', 'bottom3',
-        'teacher-analysis', 'class-comparison', 'class-diagnosis',
+        'teacher-analysis', 'class-comparison',
         'student-overview', 'student-details', 'subject-balance', 'marginal-push', 'progress-analysis', 'cohort-growth',
         'potential-analysis', 'segment-analysis', 'correlation-analysis', 'report-generator'
     ];
@@ -9422,7 +9419,7 @@ function tmApplySelectValue(selectId, preferredValue = '', preferredText = '') {
 // Teaching management overview/module runtime moved to public/assets/js/teaching-management-runtime.js.
 
 function forceHideAllSectionsExcept(targetId = '') {
-    const sections = getModuleSectionsCached();
+    const sections = getModuleSectionsCached(true);
     sections.forEach(el => {
         if (targetId && el.id === targetId) return;
         if (!el.classList.contains('active') && el.style.display === 'none') return;
@@ -9821,7 +9818,7 @@ function renderHighScoreTable() {
     // 3. 渲染所有行 (没有 slice)
     let html = '';
     list.forEach((d, i) => {
-        const isMySchool = d.name === MY_SCHOOL;
+        const isMySchool = sameAppSchoolName(d.name, MY_SCHOOL);
         html += `<tr class="${isMySchool ? 'bg-highlight' : ''}">
                 <td>${d.name}</td>
                 <td>${d.count}</td>
@@ -10019,7 +10016,6 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
         // 更新所有下拉框
         updateSchoolSelect(); updateMySchoolSelect(); updateStudentSchoolSelect(); updateMarginalSchoolSelect();
         updateClassSelect(); updateSegmentSelects(); updateClassCompSchoolSelect(); updatePotentialSchoolSelect();
-        updateDiagnosisSelects();
         if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
         updateSeatAdjSelects();
         updateProgressSchoolSelect();
@@ -10733,7 +10729,7 @@ function renderTables() {
         const rA = m.ratedAvg || 0;
         const rE = m.ratedExc || 0;
         const rP = m.ratedPass || 0;
-        const isMySchool = s.name === MY_SCHOOL;
+        const isMySchool = sameAppSchoolName(s.name, MY_SCHOOL);
 
         // 计算数据条百分比 (假设满分按全镇最高均分算，或者固定值如100/120)
         const maxAvg = list[0].metrics.total?.avg || 100; // 取第一名均分作为基准
@@ -10794,7 +10790,7 @@ function renderTables() {
             subList.forEach(s => {
                 const m = s.metrics[sub];
                 const r = s.rankings[sub];
-                const isMySchool = s.name === MY_SCHOOL;
+                const isMySchool = sameAppSchoolName(s.name, MY_SCHOOL);
                 htmlSub += `<tr class="${isMySchool ? 'bg-highlight' : ''}"><td data-label="学校名称">${s.name}</td><td data-label="实考人数">${m.count}</td><td data-label="平均分">${formatRankDisplay(m.avg, r.avg)}</td><td data-label="优秀率">${formatRankDisplay(m.excRate, r.excRate, 'school', true)}</td><td data-label="及格率">${formatRankDisplay(m.passRate, r.passRate, 'school', true)}</td></tr>`;
             });
         }
@@ -10807,7 +10803,7 @@ function renderTables() {
     const tbBottom = document.querySelector('#tb-bottom3 tbody'); let htmlBottom = '';
     let bottomList = townshipSchools.slice().sort((a, b) => (a.rankBottom || 9999) - (b.rankBottom || 9999));
     bottomList.forEach(s => {
-        const isMySchool = s.name === MY_SCHOOL;
+        const isMySchool = sameAppSchoolName(s.name, MY_SCHOOL);
         htmlBottom += `
             <tr class="${isMySchool ? 'bg-highlight' : ''}">
                 <td>${s.name}</td>
@@ -14344,7 +14340,7 @@ function calcIndicators(isSilent = false) {
 
     let html = '';
     calcData.forEach(d => {
-        const isMySchool = d.name === MY_SCHOOL;
+        const isMySchool = sameAppSchoolName(d.name, MY_SCHOOL);
         html += `
             <tr class="${isMySchool ? 'bg-highlight' : ''}">
                 <td style="font-weight:bold;" title="${d.targetKey ? `目标人数匹配：${d.targetKey}` : '未匹配目标人数'}">${d.name}${d.invalidTarget ? '<span style="display:block; font-size:11px; color:#d97706; font-weight:600;">目标异常</span>' : (d.missingTarget ? '<span style="display:block; font-size:11px; color:#dc2626; font-weight:600;">未匹配目标人数</span>' : '')}</td>
@@ -14694,7 +14690,7 @@ function calcSummary(isSilent = false) {
     // 4. 生成表格内容 (遍历所有，无截断)
     let html = '';
     list.forEach(d => {
-        const isMySchool = d.name === MY_SCHOOL;
+        const isMySchool = sameAppSchoolName(d.name, MY_SCHOOL);
         let indicatorCell = '';
         if (isGrade9) indicatorCell = `<td data-label="指标生得分">${d.s3.toFixed(2)}</td>`;
         let highScoreCell = '';
@@ -15604,77 +15600,6 @@ function exportPotentialAnalysis() {
     const wb = XLSX.utils.book_new(); const data = [['学校', '班级', '姓名', '总分', '总分全镇排名', '跛脚学科', '学科分数', '学科全镇排名', '名次落差']];
     POTENTIAL_STUDENTS_CACHE.forEach(c => data.push([c.school, c.class, c.name, c.totalScore, c.totalRank, c.subject, c.subScore, c.subRank, c.gap]));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), "偏科生名单"); XLSX.writeFile(wb, "偏科潜力生挖掘名单.xlsx");
-}
-
-function updateDiagnosisSelects() {
-    const schSel = document.getElementById('diagSchoolSelect');
-    const subSel = document.getElementById('diagSubjectSelect');
-    if (!schSel || !subSel) return;
-    const oldSch = schSel.value;
-    const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
-    schSel.innerHTML = `<option value="">--请选择学校--</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
-    if (oldSch && SCHOOLS[oldSch]) schSel.value = oldSch;
-
-    const user = getCurrentUser();
-    const role = user?.role || 'guest';
-    if (role === 'teacher' || role === 'class_teacher') {
-        const school = user.school || MY_SCHOOL || '';
-        if (school) {
-            schSel.value = school;
-            schSel.disabled = true;
-        }
-    }
-
-    const oldSub = subSel.value;
-    let diagnosisSubjects = SUBJECTS;
-    if (role === 'teacher') {
-        const scope = getTeacherScopeForUser(user);
-        diagnosisSubjects = SUBJECTS.filter(s => scope.subjects.has(normalizeSubject(s)));
-    }
-    subSel.innerHTML = `<option value="total">总分</option>${diagnosisSubjects.map(s => `<option value="${s}">${s}</option>`).join('')}`;
-    if (oldSub) subSel.value = oldSub;
-}
-
-function renderClassDiagnosis() {
-    const schoolName = document.getElementById('diagSchoolSelect').value; const subject = document.getElementById('diagSubjectSelect').value; const step = parseInt(document.getElementById('diagStep').value) || 10;
-    if (!schoolName || !SCHOOLS[schoolName]) return uiAlert('请选择学校', 'warning');
-    const user = getCurrentUser();
-    const role = user?.role || 'guest';
-    const scope = (role === 'teacher') ? getTeacherScopeForUser(user) : null;
-    const sch = SCHOOLS[schoolName];
-    const classData = {};
-    sch.students.forEach(s => {
-        if (role === 'class_teacher' && user?.class && s.class !== user.class) return;
-        if (role === 'teacher' && scope && scope.classes.size > 0 && !scope.classes.has(s.class)) return;
-        if (!classData[s.class]) classData[s.class] = [];
-        const val = (subject === 'total') ? s.total : s.scores[subject];
-        if (typeof val === 'number') classData[s.class].push(val);
-    });
-    const classes = Object.keys(classData).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-    let maxScoreAll = 0;
-    const stats = classes.map(cls => {
-        const scores = classData[cls]; const count = scores.length; const avg = count ? scores.reduce((a, b) => a + b, 0) / count : 0; const variance = count > 1 ? scores.reduce((sum, score) => sum + Math.pow(score - avg, 2), 0) / count : 0; if (count) maxScoreAll = Math.max(maxScoreAll, ...scores);
-        return { cls, count, avg, sd: Math.sqrt(variance), scores };
-    });
-    const allScores = stats.flatMap(s => s.scores); const gradeAvg = allScores.length ? allScores.reduce((a, b) => a + b, 0) / allScores.length : 0; const gradeVariance = allScores.length ? allScores.reduce((sum, score) => sum + Math.pow(score - gradeAvg, 2), 0) / allScores.length : 0; const gradeSD = Math.sqrt(gradeVariance);
-    const maxBinCount = Math.max(...stats.map(s => { const bins = {}; s.scores.forEach(v => { const bin = Math.floor(v / step); bins[bin] = (bins[bin] || 0) + 1; }); return Math.max(...Object.values(bins)) || 1; }));
-    let html = `<div class="info-bar" style="margin-bottom:10px;"><span style="font-weight:bold;">参考基准：</span> 全校平均分 ${gradeAvg.toFixed(1)}，全校标准差 (SD) <span style="font-weight:bold;">${gradeSD.toFixed(2)}</span></div><div class="table-wrap" id="diagnosisTable"><table><thead><tr><th>班级</th><th>人数</th><th>平均分</th><th>标准差(SD)</th><th>诊断结论</th><th>成绩分布 (区间: ${step}分)</th></tr></thead><tbody>`;
-    stats.forEach(st => {
-        let diagHtml = ''; const ratio = gradeSD ? st.sd / gradeSD : 1; if (ratio > 1.1) diagHtml = `<span class="diagnosis-tag diagnosis-bad">两极分化 (需抓两头)</span>`; else if (ratio < 0.9) diagHtml = `<span class="diagnosis-tag diagnosis-flat">高度集中 (需整体拔高)</span>`; else diagHtml = `<span class="diagnosis-tag diagnosis-good">分布正常</span>`;
-        const minVal = st.scores.length ? Math.min(...st.scores) : 0; const maxVal = st.scores.length ? Math.max(...st.scores) : 0; const minBin = Math.floor(minVal / step); const maxBin = Math.floor(maxVal / step); const bins = new Array(maxBin - minBin + 1).fill(0);
-        st.scores.forEach(v => { const b = Math.floor(v / step) - minBin; if (b >= 0 && b < bins.length) bins[b]++; });
-        let barsHtml = `<div class="dist-bar-container">`; bins.forEach(count => { const h = Math.max((count / maxBinCount) * 100, 5); barsHtml += `<div class="dist-bar" style="height:${h}%;" title="人数: ${count}" data-count="${count}"></div>`; }); barsHtml += `</div><div style="font-size:10px; color:#999; text-align:center;">${minBin * step} - ${(maxBin + 1) * step}分</div>`;
-        html += `<tr><td>${st.cls}</td><td>${st.count}</td><td>${st.avg.toFixed(2)}</td><td style="font-family:monospace;font-weight:bold;">${st.sd.toFixed(2)}</td><td>${diagHtml}</td><td style="min-width:150px;">${barsHtml}</td></tr>`;
-    });
-    document.getElementById('diagnosis-results').innerHTML = html + `</tbody></table></div>`;
-    if (typeof tmRenderTeachingModuleStateBars === 'function') tmRenderTeachingModuleStateBars('class-diagnosis');
-}
-
-function exportDiagnosisExcel() {
-    const table = document.querySelector('#diagnosisTable table'); if (!table) return alert("请先生成诊断表");
-    const wb = XLSX.utils.book_new(); const wsData = [["班级", "人数", "平均分", "标准差(SD)", "诊断结论"]];
-    const rows = table.querySelectorAll('tbody tr'); rows.forEach(r => { const cols = r.querySelectorAll('td'); wsData.push([cols[0].innerText, parseInt(cols[1].innerText), parseFloat(cols[3].innerText), cols[4].innerText]); });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(wsData), "班情诊断"); XLSX.writeFile(wb, "班情诊断分析.xlsx");
 }
 
 function exportCorrelationExcel() {
@@ -17931,7 +17856,6 @@ const CohortDB = {
             updateSegmentSelects();
             updateClassCompSchoolSelect();
             updatePotentialSchoolSelect();
-            updateDiagnosisSelects();
             if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
             updateSeatAdjSelects();
             updateProgressSchoolSelect();

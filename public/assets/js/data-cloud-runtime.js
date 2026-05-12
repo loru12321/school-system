@@ -265,7 +265,6 @@
         if (typeof root.updateSegmentSelects === 'function') root.updateSegmentSelects();
         if (typeof root.updateClassCompSchoolSelect === 'function') root.updateClassCompSchoolSelect();
         if (typeof root.updatePotentialSchoolSelect === 'function') root.updatePotentialSchoolSelect();
-        if (typeof root.updateDiagnosisSelects === 'function') root.updateDiagnosisSelects();
         if (typeof root.updateCorrelationSchoolSelect === 'function') root.updateCorrelationSchoolSelect();
         if (typeof root.updateSeatAdjSelects === 'function') root.updateSeatAdjSelects();
         if (typeof root.updateProgressSchoolSelect === 'function') root.updateProgressSchoolSelect();

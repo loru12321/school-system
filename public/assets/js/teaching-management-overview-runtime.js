@@ -40,15 +40,6 @@ function tmJumpToTeachingModule(targetId) {
             return;
         }
 
-        if (targetId === 'class-diagnosis') {
-            if (typeof updateDiagnosisSelects === 'function') updateDiagnosisSelects();
-            tmApplySelectValue('diagSchoolSelect', context.schoolValue, context.schoolText);
-            const appliedSubject = tmApplySelectValue('diagSubjectSelect', context.subjectValue, context.subjectText);
-            if (!appliedSubject) tmApplySelectValue('diagSubjectSelect', 'total', '总分');
-            if (typeof renderClassDiagnosis === 'function' && context.schoolValue) renderClassDiagnosis();
-            return;
-        }
-
     }, 60);
 }
 
@@ -90,16 +81,6 @@ function tmRenderQuickEntries(model) {
         model.scoreReady && model.schoolReady ? '可进入' : '待学校',
         model.scoreReady && model.schoolReady ? 'ok' : 'warn'
     );
-    tmSetQuickEntryState(
-        'class-diagnosis',
-        'ti ti-activity',
-        '分化诊断',
-        model.scoreReady && model.schoolReady
-            ? `将沿用当前学校${model.subjectText && model.subjectText !== '全部学科' ? `和学科 ${model.subjectText}` : ''}进入诊断。`
-            : '需先有成绩数据，系统才能生成标准差诊断。',
-        model.scoreReady && model.schoolReady ? '可诊断' : '待成绩',
-        model.scoreReady && model.schoolReady ? 'ok' : 'warn'
-    );
 }
 
 function tmRenderNextAction(model) {
@@ -108,7 +89,6 @@ function tmRenderNextAction(model) {
         teacher_sync: 'teacher-analysis',
         score_import: 'teacher-analysis',
         class: 'class-comparison',
-        diagnosis: 'class-diagnosis'
     };
 
     let title = '教学入口已就绪';
@@ -135,12 +115,6 @@ function tmRenderNextAction(model) {
         stateText = '先看教师画像';
         tone = 'warn';
         targetKey = 'teacher';
-    } else if (model.compareReady) {
-        title = '优先查看班级分化诊断';
-        desc = '当前学校、多期数据和任课表都已就绪，适合直接进入班情诊断，查看是否存在明显分化或木桶短板。';
-        stateText = '推荐进入诊断';
-        tone = 'info';
-        targetKey = 'diagnosis';
     } else if (model.schoolReady) {
         title = '优先查看班级横向对比';
         desc = '当前学校已经识别完成，虽然多期条件还未满足，但已经可以先做单次考试的班级横向对比。';
@@ -345,23 +319,6 @@ function tmRenderModuleStateBar(moduleId) {
             tmBuildModuleStateItem('对比方式', '单次横向对比', '不依赖第1期 / 第2期选择', 'classCompSchoolSelect'),
             tmBuildModuleStateItem('当前提示', hintText, ready ? '点击可回到学校筛选后直接开始对比' : '点击可回到学校筛选项', 'classCompSchoolSelect', ready ? 'ok' : 'warn')
         ];
-    } else if (moduleId === 'class-diagnosis') {
-        const school = tmGetSelectDisplayValue(['diagSchoolSelect', 'teacherCompareSchool', 'mySchoolSelect'], fallbackSchool);
-        const subject = tmGetSelectDisplayValue(['diagSubjectSelect'], '总分');
-        const stepValue = tmGetSelectRawValue(['diagStep'], '10');
-        const ready = !!school && school !== '未选择' && school !== '未识别' && exams.length > 0;
-        const hintText = ready ? '可直接开始诊断' : (!school || school === '未识别' || school === '未选择' ? '缺学校，请先选择学校' : '缺成绩库，请先确认成绩数据');
-
-        badgeText = ready ? '分化诊断可用' : '待补条件';
-        badgeTone = ready ? 'ok' : 'warn';
-        summary = ready ? `将按 ${school} / ${subject} / ${stepValue} 分档进行诊断` : '请先补齐学校和成绩库';
-        items = [
-            tmBuildModuleStateItem('学校', school, school && school !== '未识别' ? '当前诊断按校内班级展开' : '请先选择学校', 'diagSchoolSelect'),
-            tmBuildModuleStateItem('学科', subject, subject === '总分' ? '当前使用总分口径' : '当前使用单学科口径', 'diagSubjectSelect'),
-            tmBuildModuleStateItem('分档步长', `${stepValue || '10'} 分`, '用于标准差与分布可视化', 'diagStep'),
-            tmBuildModuleStateItem('成绩库', exams.length ? `${exams.length} 期考试` : '无可用考试', exams.length ? '满足诊断基础数据要求' : '请先导入成绩', 'diagSchoolSelect'),
-            tmBuildModuleStateItem('当前提示', hintText, ready ? '点击可回到学校/学科筛选后继续诊断' : '点击可回到最相关筛选项', ['diagSchoolSelect', 'diagSubjectSelect'], ready ? 'ok' : 'warn')
-        ];
     }
 
     container.innerHTML = `
@@ -381,7 +338,7 @@ function tmRenderModuleStateBar(moduleId) {
 
 function tmRenderTeachingModuleStateBars(targetModuleId = '') {
     bindTeachingOverviewWatchers();
-    const supportedModules = ['teacher-analysis', 'class-comparison', 'class-diagnosis'];
+    const supportedModules = ['teacher-analysis', 'class-comparison'];
     const requestedId = String(targetModuleId || '').trim();
     if (supportedModules.includes(requestedId)) {
         tmRenderModuleStateBar(requestedId);
@@ -412,10 +369,7 @@ function bindTeachingOverviewWatchers() {
         'studentCompareExam2',
         'teacherComparePeriodCount',
         'studentComparePeriodCount',
-        'classCompSchoolSelect',
-        'diagSchoolSelect',
-        'diagSubjectSelect',
-        'diagStep'
+        'classCompSchoolSelect'
     ];
 
     watchedIds.forEach((id) => {

@@ -14,7 +14,7 @@
     runtime.syncSchoolState(runtime.snapshotSchoolState());
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createSchoolStateRuntime(root) {
     const CURRENT_SCHOOL_STORAGE = 'MY_SCHOOL';
-    const DEFAULT_MY_SCHOOL_NAME = normalizeText(root.DEFAULT_MY_SCHOOL_NAME || '银山实验学校');
+    const DEFAULT_MY_SCHOOL_NAME = normalizeText(root.DEFAULT_MY_SCHOOL_NAME || '银山实验');
     root.DEFAULT_MY_SCHOOL_NAME = DEFAULT_MY_SCHOOL_NAME;
 
     function normalizeText(value) {
@@ -42,14 +42,17 @@
 
     function getCurrentSchool() {
         const storage = getStorage('localStorage');
-        const nextSchool = normalizeText(root.MY_SCHOOL || (storage && storage.getItem(CURRENT_SCHOOL_STORAGE)) || DEFAULT_MY_SCHOOL_NAME);
-        if (!normalizeText(root.MY_SCHOOL)) root.MY_SCHOOL = nextSchool;
+        const nextSchool = DEFAULT_MY_SCHOOL_NAME;
+        if (storage && normalizeText(storage.getItem(CURRENT_SCHOOL_STORAGE)) !== nextSchool) {
+            storage.setItem(CURRENT_SCHOOL_STORAGE, nextSchool);
+        }
+        root.MY_SCHOOL = nextSchool;
         return nextSchool;
     }
 
     function setCurrentSchool(school) {
         const storage = getStorage('localStorage');
-        const nextSchool = normalizeText(school) || DEFAULT_MY_SCHOOL_NAME;
+        const nextSchool = DEFAULT_MY_SCHOOL_NAME;
         if (storage) storage.setItem(CURRENT_SCHOOL_STORAGE, nextSchool);
         root.MY_SCHOOL = nextSchool;
         invalidateAnalyticsKernel();
