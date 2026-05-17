@@ -9,7 +9,7 @@
 - 正式站点：[https://schoolsystem.com.cn/](https://schoolsystem.com.cn/)
 - GitHub 仓库：[https://github.com/hka123321/school-system](https://github.com/hka123321/school-system)
 - 默认分支：`main`
-- 当前工作区：`C:\Users\loru\Desktop\system\school-system`
+- 当前工作区：`C:\Users\loru\Documents\New project\school-system`
 
 ## 系统覆盖范围
 
@@ -172,7 +172,7 @@ npm run push
 
 ## GitHub Releases 状态
 
-截至 `2026-04-21`，GitHub Releases 尚未完成客户端同步，当前公共地址检查结果如下：
+截至 `2026-05-17`，GitHub Releases 尚未完成客户端同步，当前公共地址检查结果如下：
 
 - [releases/latest](https://github.com/hka123321/school-system/releases/latest)：`404`
 - Android 安装包：`school-system-android-latest.apk` 下载地址返回 `404`
@@ -182,7 +182,9 @@ npm run push
 
 - 安卓客户端当前没有在 GitHub Releases 中对外发布
 - Windows 客户端当前也没有在 GitHub Releases 中对外发布
-- 如果应用下载中心仍指向 GitHub Releases，需要补齐发布资产或改为稳定的对象存储下载地址
+- 应用下载中心已经增加真实发布状态检测；未验证到真实 release 资产前，APK / EXE 直达下载按钮默认禁用，避免页面显示可下载但实际链接 `404`
+
+可用 `npm run release:verify-assets` 做严格校验；如只想输出巡检报告而不让命令失败，可使用 `RELEASE_ASSETS_ALLOW_MISSING=true npm run release:verify-assets`。
 
 ## 当前数据与业务规则要点
 
@@ -200,8 +202,8 @@ npm run push
 如果继续优化，我建议优先做这三件事：
 
 1. 补齐 GitHub Releases 发布链路，把 Android APK 和 Windows EXE 自动挂到同一个版本标签下。
-2. 给“应用下载中心”增加真实发布状态检测，避免页面显示可下载但实际链接 `404`。
-3. 继续压缩运行时体积，逐步把高耦合逻辑从 `app.js` 向独立 runtime 拆分，降低后续回归成本。
+2. 继续压缩运行时体积，逐步把高耦合逻辑从 `app.js` 向独立 runtime 拆分，降低后续回归成本。
+3. 将 release 资产校验接入 GitHub Actions 或定时巡检，持续跟踪 APK / EXE 是否已补齐。
 
 ## 说明
 
