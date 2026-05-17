@@ -646,7 +646,7 @@
     }
 
     function shouldUseFallbackDownloadLink() {
-        return !!state.lastError || !state.lastFetchedAt || !state.releases.length;
+        return window.PUBLIC_DOWNLOAD_ALLOW_UNVERIFIED_LINKS === true;
     }
 
     function getDownloadAssetModel(channelKey, channel = getChannel(channelKey)) {

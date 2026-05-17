@@ -2796,11 +2796,13 @@ async function runModuleDeepCheck(page, id) {
             const statusCardCount = document.querySelectorAll('#app-download-status-grid .app-download-status-card').length;
             const metaCardCount = document.querySelectorAll('#app-download-meta-grid .app-download-meta-card').length;
             const releaseListText = document.getElementById('app-download-release-list')?.textContent?.trim() || '';
+            const primaryHref = String(primaryLink?.getAttribute('href') || '');
+            const primaryDisabled = primaryLink?.getAttribute('aria-disabled') === 'true';
             const checks = {
                 sectionReady: !!document.querySelector('#app-download-center.analysis-workspace-version'),
                 heroReady: !!document.querySelector('#app-download-center .analysis-hero, #app-download-center .analysis-shell-head'),
                 shellHeadReady: !!document.querySelector('#app-download-center .analysis-shell-head'),
-                primaryLinkReady: !!primaryLink && /\.apk($|\?)/i.test(String(primaryLink.getAttribute('href') || '')),
+                primaryLinkReady: !!primaryLink && (primaryDisabled || /\.apk($|\?)/i.test(primaryHref)),
                 linkInputReady: !!document.getElementById('app-download-link-input'),
                 featureGridReady: featureCount >= 1 || statusCardCount >= 3,
                 releaseListReady: releaseCount >= 1 || releaseListText.length > 20,
