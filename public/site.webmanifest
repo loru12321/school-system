@@ -16,6 +16,47 @@
     "productivity",
     "utilities"
   ],
+  "shortcuts": [
+    {
+      "name": "数据导入",
+      "short_name": "导入",
+      "description": "打开成绩与基础数据导入入口。",
+      "url": "/#upload",
+      "icons": [
+        {
+          "src": "/icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "学情总览",
+      "short_name": "总览",
+      "description": "进入学生画像、进退步与家校报告入口。",
+      "url": "/#student-overview",
+      "icons": [
+        {
+          "src": "/icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "应用下载",
+      "short_name": "下载",
+      "description": "查看 Android 与 Windows 客户端发布状态。",
+      "url": "/#app-download-center",
+      "icons": [
+        {
+          "src": "/icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ],
   "icons": [
     {
       "src": "/icon.svg",

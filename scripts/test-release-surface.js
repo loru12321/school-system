@@ -109,6 +109,10 @@ assert.strictEqual(publicManifest.dir, 'ltr', 'web manifest should declare text 
 assert.strictEqual(publicManifest.display, 'standalone', 'web manifest should enable standalone app display');
 assert.ok(Array.isArray(publicManifest.categories) && publicManifest.categories.includes('education'), 'web manifest should classify the app for education');
 assert.ok(Array.isArray(publicManifest.icons) && publicManifest.icons.some((icon) => icon.src === '/icon.svg'), 'web manifest should include the SVG app icon');
+assert.ok(Array.isArray(publicManifest.shortcuts) && publicManifest.shortcuts.length >= 3, 'web manifest should expose common app shortcuts');
+assert.ok(publicManifest.shortcuts.some((shortcut) => shortcut.url === '/#upload'), 'web manifest should shortcut to data import');
+assert.ok(publicManifest.shortcuts.some((shortcut) => shortcut.url === '/#student-overview'), 'web manifest should shortcut to student overview');
+assert.ok(publicManifest.shortcuts.some((shortcut) => shortcut.url === '/#app-download-center'), 'web manifest should shortcut to app downloads');
 assert.ok(!distIndex.includes('http://localhost'), 'dist HTML must not reference localhost');
 assert.ok(!distIndex.includes('127.0.0.1'), 'dist HTML must not reference loopback hosts');
 forbiddenSecretPatterns.forEach((pattern) => {
