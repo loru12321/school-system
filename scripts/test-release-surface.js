@@ -34,6 +34,8 @@ const distIndex = read('dist/index.html');
 const prodSmoke = read('scripts/run-prod-smoke.js');
 const runLocalSmoke = read('scripts/run-local-smoke.js');
 const smokeModules = read('scripts/smoke-all-modules.js');
+const publicHeaders = read('public/_headers');
+const distHeaders = exists('dist/_headers') ? read('dist/_headers') : '';
 const scripts = packageJson.scripts || {};
 const wranglerRoutes = Array.isArray(wrangler.routes) ? wrangler.routes : [];
 const distJsFiles = listFiles('dist/assets/js');
@@ -45,6 +47,7 @@ const forbiddenSecretPatterns = [
 ];
 
 assert.ok(exists('dist/index.html'), 'dist/index.html must exist before release');
+assert.ok(exists('dist/_headers'), 'dist/_headers must be emitted for Cloudflare static asset headers');
 assert.ok(exists('dist/sw.js'), 'dist/sw.js must exist before release');
 assert.ok(exists('dist/favicon.ico'), 'dist/favicon.ico must exist before release');
 assert.ok(exists('dist/assets/js/boot-runtime.js'), 'dist boot runtime must exist before release');
@@ -74,6 +77,13 @@ assert.ok(distIndex.includes('id="login-overlay"'), 'dist HTML must contain the 
 assert.ok(distIndex.includes('./assets/js/boot-runtime.js'), 'dist HTML must load boot-runtime.js');
 assert.ok(distIndex.includes('./assets/js/runtime-registry-runtime.js'), 'dist HTML must load runtime registry');
 assert.ok(distIndex.includes('./assets/vendor/tabler-icons/tabler-icons.min.css'), 'dist HTML must load local Tabler icons CSS');
+assert.strictEqual(distHeaders, publicHeaders, 'dist static asset headers should match public/_headers');
+assert.ok(publicHeaders.includes('/style-*.css'), 'static asset headers should cover hashed Vite CSS');
+assert.ok(publicHeaders.includes('/assets/vendor/*'), 'static asset headers should cover vendored assets');
+assert.ok(publicHeaders.includes('/assets/js/*'), 'static asset headers should cover runtime JS assets');
+assert.ok(publicHeaders.includes('/sw.js'), 'static asset headers should keep service worker updates revalidation-friendly');
+assert.ok(publicHeaders.includes('max-age=31536000, immutable'), 'fingerprinted/vendor assets should get long browser caching');
+assert.ok(publicHeaders.includes('max-age=0, must-revalidate'), 'service worker should remain quickly updateable');
 assert.ok(!distIndex.includes('http://localhost'), 'dist HTML must not reference localhost');
 assert.ok(!distIndex.includes('127.0.0.1'), 'dist HTML must not reference loopback hosts');
 forbiddenSecretPatterns.forEach((pattern) => {

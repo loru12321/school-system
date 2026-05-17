@@ -10,7 +10,7 @@ const DEFAULT_PROJECT_ROOT = path.resolve(__dirname, '../../');
 const sourceDir = path.join(DEFAULT_PROJECT_ROOT, 'public', 'assets', 'js');
 const targetDir = path.join(DEFAULT_PROJECT_ROOT, 'dist', 'assets', 'js');
 const sourceIndexPath = path.join(DEFAULT_PROJECT_ROOT, 'src', 'index.html');
-const rootPublicFiles = ['favicon.ico'];
+const rootPublicFiles = ['favicon.ico', '_headers'];
 
 export function collectReferencedJsAssets(html) {
   const refs = new Set();
