@@ -1,5 +1,6 @@
 const repo = process.env.RELEASE_REPO || 'hka123321/school-system';
 const apiUrl = `https://api.github.com/repos/${repo}/releases/latest`;
+const allowMissing = process.env.RELEASE_ASSETS_ALLOW_MISSING === 'true';
 const required = [
     { key: 'android', pattern: /\.apk$/i },
     { key: 'desktop', pattern: /\.exe$/i }
@@ -20,11 +21,23 @@ async function main() {
     const response = await request(apiUrl, { cache: 'no-store' });
     if (!response.ok) {
         await response.arrayBuffer().catch(() => null);
-        throw new Error(`latest release lookup failed: ${response.status}`);
+        const result = {
+            ok: false,
+            repo,
+            latestRelease: null,
+            status: response.status,
+            reason: `latest release lookup failed: ${response.status}`,
+            assets: Object.fromEntries(required.map((item) => [item.key, { ok: false, reason: 'release-unavailable' }]))
+        };
+        console.log(JSON.stringify(result, null, 2));
+        if (allowMissing) return;
+        throw new Error(result.reason);
     }
     const release = await response.json();
     const assets = Array.isArray(release.assets) ? release.assets : [];
     const result = {
+        ok: false,
+        repo,
         tag: release.tag_name || '',
         html_url: release.html_url || '',
         assets: {}
@@ -50,8 +63,10 @@ async function main() {
     const failures = Object.entries(result.assets)
         .filter(([, value]) => !value.ok)
         .map(([key, value]) => `${key}: ${value.reason || `HTTP ${value.status}`}`);
+    result.ok = failures.length === 0;
     console.log(JSON.stringify(result, null, 2));
     if (failures.length) {
+        if (allowMissing) return;
         throw new Error(`release asset verification failed: ${failures.join(', ')}`);
     }
 }
