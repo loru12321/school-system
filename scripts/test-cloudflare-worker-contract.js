@@ -31,7 +31,8 @@ const requiredWorkerTokens = [
   'PROXY_TIMEOUT_MS = 15000',
   'HOP_BY_HOP_HEADERS.forEach((name) => nextHeaders.delete(name))',
   'request.method === \'OPTIONS\'',
-  'Access-Control-Max-Age'
+  'Access-Control-Max-Age',
+  'protectAssetResponse(request, response)'
 ];
 
 requiredWorkerTokens.forEach((token) => {
@@ -58,6 +59,9 @@ assert.ok(worker.includes("return jsonResponse(404"), 'unsupported managed REST 
 assert.ok(worker.includes("return new Response('Not Found', { status: 404 });"), 'asset fallback should return 404 instead of crashing');
 assert.ok(worker.includes("headers.set('Cache-Control', mergeCacheControl"), 'HTML responses should preserve and extend cache control');
 assert.ok(worker.includes("'public', 'no-transform'"), 'HTML response protection should include no-transform');
+assert.ok(worker.includes("return 'public, max-age=31536000, immutable';"), 'versioned static assets should get immutable caching');
+assert.ok(worker.includes("return 'public, max-age=3600, stale-while-revalidate=86400';"), 'unversioned static assets should get short browser caching');
+assert.ok(worker.includes("pathname === '/sw.js'"), 'service worker script should stay revalidation-friendly');
 assert.ok(worker.includes("headers.set('Cache-Control', 'no-store');"), 'forwarded API responses should be no-store');
 assert.ok(worker.includes("headers.set('X-Content-Type-Options', 'nosniff');"), 'forwarded API responses should set nosniff');
 assert.ok(worker.includes("if (method === 'GET' || method === 'HEAD') return null;"), 'GET/HEAD proxy requests should not attach a body');

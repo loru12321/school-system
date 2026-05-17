@@ -530,6 +530,49 @@ function protectHtmlResponse(request, response) {
   });
 }
 
+function isStaticAssetPath(pathname) {
+  return /\.(?:js|css|png|jpg|jpeg|gif|svg|webp|avif|woff2?|ttf|eot|ico)$/i.test(pathname);
+}
+
+function isVersionedStaticAsset(url) {
+  const pathname = String(url.pathname || '');
+  if (url.searchParams.has('v')) return true;
+  if (/\/assets\/vendor\//.test(pathname)) return true;
+  if (/\.(?:woff2?|ttf|eot)$/i.test(pathname)) return true;
+  return /-[A-Za-z0-9_-]{6,}\.(?:js|css|png|jpg|jpeg|gif|svg|webp|avif)$/i.test(pathname);
+}
+
+function getStaticAssetCacheControl(url) {
+  const pathname = String(url.pathname || '');
+  if (pathname === '/sw.js' || pathname.endsWith('/sw.js')) {
+    return 'public, max-age=0, must-revalidate';
+  }
+  if (!isStaticAssetPath(pathname)) return '';
+  if (isVersionedStaticAsset(url)) {
+    return 'public, max-age=31536000, immutable';
+  }
+  return 'public, max-age=3600, stale-while-revalidate=86400';
+}
+
+function protectAssetResponse(request, response) {
+  const protectedHtml = protectHtmlResponse(request, response);
+  if (!protectedHtml || !protectedHtml.ok || shouldProtectHtmlResponse(request, protectedHtml)) {
+    return protectedHtml;
+  }
+  const method = String(request.method || 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'HEAD') return protectedHtml;
+  const cacheControl = getStaticAssetCacheControl(new URL(request.url));
+  if (!cacheControl) return protectedHtml;
+  const headers = new Headers(protectedHtml.headers);
+  headers.set('Cache-Control', cacheControl);
+  headers.set('X-Content-Type-Options', 'nosniff');
+  return new Response(protectedHtml.body, {
+    status: protectedHtml.status,
+    statusText: protectedHtml.statusText,
+    headers
+  });
+}
+
 function filterProxyHeaders(headers) {
   const nextHeaders = new Headers(headers);
   HOP_BY_HOP_HEADERS.forEach((name) => nextHeaders.delete(name));
@@ -931,7 +974,7 @@ export default {
 
       try {
         const response = await env.ASSETS.fetch(request);
-        return protectHtmlResponse(request, response);
+        return protectAssetResponse(request, response);
       } catch (error) {
         return new Response('Not Found', { status: 404 });
       }
@@ -948,4 +991,3 @@ export default {
     }
   }
 };
-
