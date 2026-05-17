@@ -102,8 +102,12 @@ assert.ok(publicHeaders.includes('/icon.svg'), 'static asset headers should cove
 assert.strictEqual((publicHeaders.match(/X-Content-Type-Options: nosniff/g) || []).length, 1, 'nosniff should be defined once globally');
 assert.ok(publicRobots.includes('Sitemap: https://schoolsystem.com.cn/sitemap.xml'), 'robots.txt should point to the canonical sitemap');
 assert.ok(publicSitemap.includes('<loc>https://schoolsystem.com.cn/</loc>'), 'sitemap should include the canonical app URL');
+assert.strictEqual(publicManifest.id, '/', 'web manifest should keep a stable app identity');
 assert.strictEqual(publicManifest.start_url, '/', 'web manifest should start at the app root');
+assert.strictEqual(publicManifest.orientation, 'any', 'web manifest should allow responsive orientation');
+assert.strictEqual(publicManifest.dir, 'ltr', 'web manifest should declare text direction');
 assert.strictEqual(publicManifest.display, 'standalone', 'web manifest should enable standalone app display');
+assert.ok(Array.isArray(publicManifest.categories) && publicManifest.categories.includes('education'), 'web manifest should classify the app for education');
 assert.ok(Array.isArray(publicManifest.icons) && publicManifest.icons.some((icon) => icon.src === '/icon.svg'), 'web manifest should include the SVG app icon');
 assert.ok(!distIndex.includes('http://localhost'), 'dist HTML must not reference localhost');
 assert.ok(!distIndex.includes('127.0.0.1'), 'dist HTML must not reference loopback hosts');
