@@ -1,0 +1,24 @@
+{
+  "name": "智慧教务管理系统",
+  "short_name": "智慧教务",
+  "description": "面向学校教务、班主任和教师的成绩管理、横向评价、成长分析与教学决策工作台。",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f9fc",
+  "theme_color": "#eef2f8",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}

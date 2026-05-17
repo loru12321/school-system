@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title>智慧教务</title>
+  <rect width="512" height="512" rx="112" fill="#eef2f8"/>
+  <path d="M136 154c0-18 15-33 33-33h174c18 0 33 15 33 33v204c0 18-15 33-33 33H169c-18 0-33-15-33-33V154Z" fill="#2563eb"/>
+  <path d="M176 171c0-9 7-16 16-16h128c9 0 16 7 16 16v170c0 9-7 16-16 16H192c-9 0-16-7-16-16V171Z" fill="#fff"/>
+  <path d="M211 211h90M211 256h90M211 301h58" stroke="#2563eb" stroke-width="24" stroke-linecap="round"/>
+  <path d="M154 121h204" stroke="#0f172a" stroke-width="24" stroke-linecap="round"/>
+</svg>

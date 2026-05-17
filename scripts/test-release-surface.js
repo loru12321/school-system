@@ -36,6 +36,9 @@ const runLocalSmoke = read('scripts/run-local-smoke.js');
 const smokeModules = read('scripts/smoke-all-modules.js');
 const publicHeaders = read('public/_headers');
 const distHeaders = exists('dist/_headers') ? read('dist/_headers') : '';
+const publicRobots = read('public/robots.txt');
+const publicSitemap = read('public/sitemap.xml');
+const publicManifest = JSON.parse(read('public/site.webmanifest'));
 const scripts = packageJson.scripts || {};
 const wranglerRoutes = Array.isArray(wrangler.routes) ? wrangler.routes : [];
 const distJsFiles = listFiles('dist/assets/js');
@@ -48,6 +51,10 @@ const forbiddenSecretPatterns = [
 
 assert.ok(exists('dist/index.html'), 'dist/index.html must exist before release');
 assert.ok(exists('dist/_headers'), 'dist/_headers must be emitted for Cloudflare static asset headers');
+assert.ok(exists('dist/robots.txt'), 'dist/robots.txt must be emitted for crawlers');
+assert.ok(exists('dist/sitemap.xml'), 'dist/sitemap.xml must be emitted for crawlers');
+assert.ok(exists('dist/site.webmanifest'), 'dist/site.webmanifest must be emitted for PWA metadata');
+assert.ok(exists('dist/icon.svg'), 'dist/icon.svg must be emitted for app icons and sharing');
 assert.ok(exists('dist/sw.js'), 'dist/sw.js must exist before release');
 assert.ok(exists('dist/favicon.ico'), 'dist/favicon.ico must exist before release');
 assert.ok(exists('dist/assets/js/boot-runtime.js'), 'dist boot runtime must exist before release');
@@ -84,6 +91,18 @@ assert.ok(publicHeaders.includes('/assets/js/*'), 'static asset headers should c
 assert.ok(publicHeaders.includes('/sw.js'), 'static asset headers should keep service worker updates revalidation-friendly');
 assert.ok(publicHeaders.includes('max-age=31536000, immutable'), 'fingerprinted/vendor assets should get long browser caching');
 assert.ok(publicHeaders.includes('max-age=0, must-revalidate'), 'service worker should remain quickly updateable');
+assert.ok(publicHeaders.includes('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload'), 'static responses should send HSTS');
+assert.ok(publicHeaders.includes('Referrer-Policy: strict-origin-when-cross-origin'), 'static responses should send a referrer policy');
+assert.ok(publicHeaders.includes('X-Frame-Options: SAMEORIGIN'), 'static responses should limit framing');
+assert.ok(publicHeaders.includes('Permissions-Policy: camera=(), microphone=(), geolocation=()'), 'static responses should disable unused sensitive browser features');
+assert.ok(publicHeaders.includes('/robots.txt'), 'static asset headers should cover robots.txt');
+assert.ok(publicHeaders.includes('/sitemap.xml'), 'static asset headers should cover sitemap.xml');
+assert.ok(publicHeaders.includes('/site.webmanifest'), 'static asset headers should cover site.webmanifest');
+assert.ok(publicRobots.includes('Sitemap: https://schoolsystem.com.cn/sitemap.xml'), 'robots.txt should point to the canonical sitemap');
+assert.ok(publicSitemap.includes('<loc>https://schoolsystem.com.cn/</loc>'), 'sitemap should include the canonical app URL');
+assert.strictEqual(publicManifest.start_url, '/', 'web manifest should start at the app root');
+assert.strictEqual(publicManifest.display, 'standalone', 'web manifest should enable standalone app display');
+assert.ok(Array.isArray(publicManifest.icons) && publicManifest.icons.some((icon) => icon.src === '/icon.svg'), 'web manifest should include the SVG app icon');
 assert.ok(!distIndex.includes('http://localhost'), 'dist HTML must not reference localhost');
 assert.ok(!distIndex.includes('127.0.0.1'), 'dist HTML must not reference loopback hosts');
 forbiddenSecretPatterns.forEach((pattern) => {
