@@ -98,6 +98,8 @@ assert.ok(publicHeaders.includes('Permissions-Policy: camera=(), microphone=(), 
 assert.ok(publicHeaders.includes('/robots.txt'), 'static asset headers should cover robots.txt');
 assert.ok(publicHeaders.includes('/sitemap.xml'), 'static asset headers should cover sitemap.xml');
 assert.ok(publicHeaders.includes('/site.webmanifest'), 'static asset headers should cover site.webmanifest');
+assert.ok(publicHeaders.includes('/icon.svg'), 'static asset headers should cover icon.svg');
+assert.strictEqual((publicHeaders.match(/X-Content-Type-Options: nosniff/g) || []).length, 1, 'nosniff should be defined once globally');
 assert.ok(publicRobots.includes('Sitemap: https://schoolsystem.com.cn/sitemap.xml'), 'robots.txt should point to the canonical sitemap');
 assert.ok(publicSitemap.includes('<loc>https://schoolsystem.com.cn/</loc>'), 'sitemap should include the canonical app URL');
 assert.strictEqual(publicManifest.start_url, '/', 'web manifest should start at the app root');
