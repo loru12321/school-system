@@ -20,6 +20,7 @@ function assertIncludes(source, token, message) {
 
 const packageJson = JSON.parse(read('package.json'));
 const publicSw = read('public/sw.js');
+const serviceWorkerRuntime = read('public/assets/js/service-worker-runtime.js');
 const distSw = read('dist/sw.js');
 const releaseSurface = read('scripts/test-release-surface.js');
 const scripts = packageJson.scripts || {};
@@ -52,6 +53,11 @@ assertIncludes(publicSw, "headers: { 'Content-Type': 'text/html; charset=utf-8' 
 assertIncludes(publicSw, "if (event.tag === 'sync-data')", 'background sync tag should remain explicit');
 assert.ok(!publicSw.includes("console.log('[SW] loaded')"), 'service worker should not log on every load');
 assert.ok(!/\/\/[^\n]*const\s+APP_SHELL_ASSETS/.test(publicSw), 'APP_SHELL_ASSETS declaration should not be hidden inside a comment');
+assertIncludes(serviceWorkerRuntime, "const SERVICE_WORKER_PATH = './sw.js';", 'service worker runtime should register the local sw.js');
+assertIncludes(serviceWorkerRuntime, "'schoolsystem.com.cn'", 'service worker runtime should allow the canonical production host');
+assertIncludes(serviceWorkerRuntime, "root.addEventListener('load', registerServiceWorker", 'service worker registration should wait until page load');
+assertIncludes(serviceWorkerRuntime, 'requestIdleCallback', 'service worker registration should avoid competing with initial rendering');
+assert.ok(!serviceWorkerRuntime.includes("console.log('[SW] loaded')"), 'service worker runtime should not log on every load');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:service-worker-contract'), 'fast release check must include service worker contract guard');
 assert.ok(scripts['check:syntax'] && scripts['check:syntax'].includes('node --check public/sw.js'), 'syntax check must cover public service worker');
 assert.ok(releaseSurface.includes("exists('dist/sw.js')"), 'release surface check should require dist service worker');
