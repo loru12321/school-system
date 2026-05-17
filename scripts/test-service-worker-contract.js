@@ -28,9 +28,9 @@ const publicAppShellAssets = parseAppShellAssets(publicSw);
 const distAppShellAssets = parseAppShellAssets(distSw);
 
 assert.deepStrictEqual(distSw, publicSw, 'dist service worker should match public service worker after build');
-assert.deepStrictEqual(publicAppShellAssets, ['./', './index.html', './favicon.ico'], 'service worker should precache only stable app shell assets');
+assert.deepStrictEqual(publicAppShellAssets, ['./', './index.html', './favicon.ico', './icon.svg', './site.webmanifest', './robots.txt', './sitemap.xml'], 'service worker should precache only stable app shell assets and public metadata');
 assert.deepStrictEqual(distAppShellAssets, publicAppShellAssets, 'dist service worker app shell assets should match source');
-assertIncludes(publicSw, "const CACHE_VERSION = 'school-system-v", 'cache version should be explicit');
+assertIncludes(publicSw, "const CACHE_VERSION = 'school-system-v1.2';", 'cache version should be explicit and bumped when the app shell changes');
 assertIncludes(publicSw, 'const STATIC_CACHE = `${CACHE_VERSION}-static`;', 'static cache name should be versioned');
 assertIncludes(publicSw, 'const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;', 'dynamic cache name should be versioned');
 assertIncludes(publicSw, 'const API_CACHE = `${CACHE_VERSION}-api`;', 'API cache name should be versioned');
