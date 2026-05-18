@@ -52,6 +52,11 @@ const pkg = JSON.parse(read(packageFile));
 ].forEach((token) => assertContains(read('public/assets/js/app.js'), token, 'public/assets/js/app.js'));
 
 [
+    'return read(state.history, key, { clone: false });',
+    'return write(state.history, key, value, HISTORY_TTL_MS, { clone: false });'
+].forEach((token) => assertContains(read('public/assets/js/report-performance-runtime.js'), token, 'public/assets/js/report-performance-runtime.js'));
+
+[
     'ReportChartPerfCache',
     'getReportChartSignature',
     'getCachedChartComparisonStudent',

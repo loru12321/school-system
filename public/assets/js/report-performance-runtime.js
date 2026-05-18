@@ -18,7 +18,7 @@
         }
     }
 
-    function read(map, key) {
+    function read(map, key, options = {}) {
         const text = String(key || '');
         if (!text) return null;
         const item = map.get(text);
@@ -27,13 +27,13 @@
             map.delete(text);
             return null;
         }
-        return clone(item.value);
+        return options.clone === false ? item.value : clone(item.value);
     }
 
-    function write(map, key, value, ttl) {
+    function write(map, key, value, ttl, options = {}) {
         const text = String(key || '');
         if (!text) return value;
-        map.set(text, { at: Date.now(), ttl, value: clone(value) });
+        map.set(text, { at: Date.now(), ttl, value: options.clone === false ? value : clone(value) });
         while (map.size > MAX_ENTRIES) {
             const first = map.keys().next().value;
             if (!first) break;
@@ -59,10 +59,10 @@
 
     window.StudentReportPerformance = {
         getHistory(key) {
-            return read(state.history, key);
+            return read(state.history, key, { clone: false });
         },
         setHistory(key, value) {
-            return write(state.history, key, value, HISTORY_TTL_MS);
+            return write(state.history, key, value, HISTORY_TTL_MS, { clone: false });
         },
         getReportHtml(key) {
             return read(state.html, key);

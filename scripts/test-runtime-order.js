@@ -573,6 +573,8 @@ assert.ok(schoolNormalizationRuntime.includes('townshipEligibilityCache.get(scho
 assert.ok(appSource.includes('const totalsBySchool = new Map();'), 'student comparison rank context should pre-group totals by school');
 assert.ok(appSource.includes('const totalsByClass = new Map();'), 'student comparison rank context should pre-group totals by class');
 assert.ok(teachingManagementRuntime.includes('function smScheduleStudentOverviewRender()'), 'student overview should coalesce filter-change refreshes into one frame');
+assert.ok(moduleEntryRuntime.includes('student-overview-deferred-select'), 'student overview should defer cross-module selector refreshes off the switch frame');
+assert.ok(moduleEntryRuntime.includes('const deferredSelectorUpdates = ['), 'student overview should batch non-critical selector refreshes');
 assert.ok(studentOverviewRuntime.includes('const progressRows = fullProgressRows.length ? fullProgressRows : readProgressCacheState();'), 'student overview should avoid copying the progress cache for counts');
 assert.ok(studentOverviewRuntime.includes('let progressCount = 0;'), 'student overview should count progress rows in a single pass');
 assert.ok(studentOverviewRuntime.includes('const rerender = () => smScheduleStudentOverviewRender();'), 'student overview watchers should use scheduled rendering');

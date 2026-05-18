@@ -532,18 +532,27 @@
         const renderNow = () => {
             if (typeof updateStudentSchoolSelect === 'function') updateStudentSchoolSelect();
             if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-            if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
-            if (typeof updateMarginalSchoolSelect === 'function') updateMarginalSchoolSelect();
-            if (typeof updateSubjectBalanceSelects === 'function') updateSubjectBalanceSelects();
-            if (typeof updatePotentialSchoolSelect === 'function') updatePotentialSchoolSelect();
-            if (typeof updateSegmentSelects === 'function') updateSegmentSelects();
-            if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
             if (typeof updateClassSelect === 'function') updateClassSelect();
             if (typeof window.smScheduleStudentOverviewRender === 'function') {
                 window.smScheduleStudentOverviewRender();
             } else if (typeof window.renderStudentOverview === 'function') {
                 window.renderStudentOverview();
             }
+            const deferredSelectorUpdates = [
+                () => { if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects(); },
+                () => { if (typeof updateMarginalSchoolSelect === 'function') updateMarginalSchoolSelect(); },
+                () => { if (typeof updateSubjectBalanceSelects === 'function') updateSubjectBalanceSelects(); },
+                () => { if (typeof updatePotentialSchoolSelect === 'function') updatePotentialSchoolSelect(); },
+                () => { if (typeof updateSegmentSelects === 'function') updateSegmentSelects(); },
+                () => { if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect(); }
+            ];
+            deferredSelectorUpdates.forEach((task, index) => {
+                scheduleActiveModuleTask('student-overview', `student-overview-deferred-select:${index}`, task, {
+                    delay: 120 + index * 80,
+                    idle: true,
+                    timeout: 1200
+                });
+            });
         };
 
         if (typeof window.ensureTeachingManagementRuntimeLoaded === 'function'
