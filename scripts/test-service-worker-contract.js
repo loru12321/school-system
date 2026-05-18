@@ -30,7 +30,7 @@ const distAppShellAssets = parseAppShellAssets(distSw);
 assert.deepStrictEqual(distSw, publicSw, 'dist service worker should match public service worker after build');
 assert.deepStrictEqual(publicAppShellAssets, ['./', './index.html', './favicon.ico', './icon.svg', './site.webmanifest', './robots.txt', './sitemap.xml'], 'service worker should precache only stable app shell assets and public metadata');
 assert.deepStrictEqual(distAppShellAssets, publicAppShellAssets, 'dist service worker app shell assets should match source');
-assertIncludes(publicSw, "const CACHE_VERSION = 'school-system-v1.3';", 'cache version should be explicit and bumped when the app shell changes');
+assertIncludes(publicSw, "const CACHE_VERSION = 'school-system-v1.4';", 'cache version should be explicit and bumped when the app shell changes');
 assertIncludes(publicSw, 'const STATIC_CACHE = `${CACHE_VERSION}-static`;', 'static cache name should be versioned');
 assertIncludes(publicSw, 'const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;', 'dynamic cache name should be versioned');
 assertIncludes(publicSw, 'const API_CACHE = `${CACHE_VERSION}-api`;', 'API cache name should be versioned');
@@ -39,6 +39,8 @@ assertIncludes(publicSw, 'await Promise.all(APP_SHELL_ASSETS.map(asset => precac
 assertIncludes(publicSw, 'await self.skipWaiting();', 'install should activate updates promptly');
 assertIncludes(publicSw, "self.addEventListener('activate'", 'activate handler should be registered');
 assertIncludes(publicSw, 'await self.clients.claim();', 'activate should claim clients');
+assertIncludes(publicSw, 'await reloadControlledClients();', 'activate should navigate controlled clients onto the fresh runtime');
+assertIncludes(publicSw, "url.searchParams.set('swRefresh', CACHE_VERSION);", 'service worker refresh should mark client navigations to avoid loops');
 assertIncludes(publicSw, "self.addEventListener('fetch'", 'fetch handler should be registered');
 assertIncludes(publicSw, "if (request.method !== 'GET') return;", 'service worker must not cache mutating requests');
 assertIncludes(publicSw, "if (url.protocol === 'chrome-extension:') return;", 'service worker should ignore browser extension requests');
@@ -56,7 +58,7 @@ assertIncludes(publicSw, "headers: { 'Content-Type': 'text/html; charset=utf-8' 
 assertIncludes(publicSw, "if (event.tag === 'sync-data')", 'background sync tag should remain explicit');
 assert.ok(!publicSw.includes("console.log('[SW] loaded')"), 'service worker should not log on every load');
 assert.ok(!/\/\/[^\n]*const\s+APP_SHELL_ASSETS/.test(publicSw), 'APP_SHELL_ASSETS declaration should not be hidden inside a comment');
-assertIncludes(serviceWorkerRuntime, "const SERVICE_WORKER_VERSION = '20260518-runtime-cache-v2';", 'service worker runtime should version registration updates');
+assertIncludes(serviceWorkerRuntime, "const SERVICE_WORKER_VERSION = '20260518-runtime-cache-v3';", 'service worker runtime should version registration updates');
 assertIncludes(serviceWorkerRuntime, 'const SERVICE_WORKER_PATH = `./sw.js?v=${SERVICE_WORKER_VERSION}`;', 'service worker runtime should register the versioned local sw.js');
 assertIncludes(serviceWorkerRuntime, "root.location.reload();", 'service worker runtime should refresh controlled pages after an update claims them');
 assertIncludes(serviceWorkerRuntime, "'schoolsystem.com.cn'", 'service worker runtime should allow the canonical production host');
