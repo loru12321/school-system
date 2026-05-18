@@ -4,7 +4,7 @@
  * fallbacks when the network is unavailable.
  */
 
-const CACHE_VERSION = 'school-system-v1.2';
+const CACHE_VERSION = 'school-system-v1.3';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
@@ -58,6 +58,11 @@ self.addEventListener('fetch', event => {
         return;
     }
 
+    if (isRuntimeAsset(url.pathname)) {
+        event.respondWith(networkFirstRuntimeAsset(request));
+        return;
+    }
+
     if (isStaticAsset(url.pathname)) {
         event.respondWith(cacheFirstStatic(request));
         return;
@@ -87,6 +92,21 @@ async function cacheFirstStatic(request) {
         return response;
     } catch (error) {
         return new Response('Resource unavailable while offline', { status: 404 });
+    }
+}
+
+async function networkFirstRuntimeAsset(request) {
+    try {
+        const response = await fetch(new Request(request, { cache: 'reload' }));
+        if (isCacheable(response)) {
+            const cache = await caches.open(STATIC_CACHE);
+            cache.put(request, response.clone());
+        }
+        return response;
+    } catch (error) {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        return new Response('Runtime resource unavailable while offline', { status: 404 });
     }
 }
 
@@ -147,6 +167,10 @@ function acceptsHtml(request) {
 
 function isStaticAsset(pathname) {
     return /\.(js|css|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|ico)$/i.test(pathname);
+}
+
+function isRuntimeAsset(pathname) {
+    return /\.(js|css)$/i.test(pathname) && !pathname.includes('/assets/vendor/');
 }
 
 function isApiRequest(pathname) {
