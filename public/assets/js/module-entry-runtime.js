@@ -292,16 +292,16 @@
                 if (token !== teacherAnalysisRenderToken || !isTeacherAnalysisActive()) return;
                 if (typeof updateTeacherCompareExamSelects === 'function') updateTeacherCompareExamSelects();
                 if (typeof pickTeacherCompareDefaultSubjectAndTeacher === 'function') pickTeacherCompareDefaultSubjectAndTeacher();
-                const requiredIds = [
-                    'teacherCompareSchool',
-                    'teacherCompareSubject',
-                    'teacherCompareTeacher',
-                    'teacherCompareExam1',
-                    'teacherCompareExam2'
-                ];
-                const ready = requiredIds.every((id) => String(document.getElementById(id)?.value || '').trim());
-                if (!ready || typeof window.renderTeacherMultiPeriodComparison !== 'function') return;
-                window.renderTeacherMultiPeriodComparison();
+                const resultEl = document.getElementById('teacherCompareResult');
+                const hintEl = document.getElementById('teacherCompareHint');
+                if (resultEl && !resultEl.dataset.teacherCompareManualReady) {
+                    resultEl.dataset.teacherCompareManualReady = '1';
+                    resultEl.innerHTML = '<div class="analysis-empty-state analysis-empty-state-compact"><strong>教师多期对比待生成</strong>选择学校、学科、教师和期次后点击“重新生成教师对比”。</div>';
+                }
+                if (hintEl && !hintEl.dataset.teacherCompareManualReady) {
+                    hintEl.dataset.teacherCompareManualReady = '1';
+                    hintEl.textContent = '已准备好对比条件，点击按钮后生成多期结果。';
+                }
             };
             if (typeof window.ensureTeacherCompareRuntimeLoaded === 'function'
                 && !window.__TEACHER_COMPARE_RESULT_RUNTIME_PATCHED__) {

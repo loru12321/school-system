@@ -26,6 +26,7 @@ const setAllTeachersDiffCacheState = typeof window.setAllTeachersDiffCacheState 
         return nextCache;
     });
 let teacherCompareAutoTimer = 0;
+const teacherCompareExamStatsCache = new Map();
 
 function normalizeTeacherCompareSchoolName(value) {
     return String(value || '').trim();
@@ -76,16 +77,12 @@ function scheduleTeacherMultiPeriodAutoRender(delay = 180) {
     teacherCompareAutoTimer = window.setTimeout(() => {
         teacherCompareAutoTimer = 0;
         if (!isTeacherAnalysisCompareActive()) return;
-        const requiredIds = [
-            'teacherCompareSchool',
-            'teacherCompareSubject',
-            'teacherCompareTeacher',
-            'teacherCompareExam1',
-            'teacherCompareExam2'
-        ];
-        const ready = requiredIds.every((id) => String(document.getElementById(id)?.value || '').trim());
-        if (!ready) return;
-        renderTeacherMultiPeriodComparison();
+        const resultEl = document.getElementById('teacherCompareResult');
+        const hintEl = document.getElementById('teacherCompareHint');
+        if (resultEl && !readTeacherCompareCacheState()) {
+            renderTeacherCompareEmptyState(resultEl, '教师多期对比待生成', '选择学校、学科、教师和期次后点击“重新生成教师对比”。');
+        }
+        if (hintEl) setTeacherCompareHintState(hintEl, '对比条件已更新，点击按钮后生成多期结果。');
     }, Number.isFinite(Number(delay)) ? Number(delay) : 180);
 }
 
@@ -109,6 +106,20 @@ function bindTeacherCompareAutoControls() {
 function buildTeacherStatsForExam(rows, school, subjectFilter) {
     const rowsSchool = rows.filter(r => sameTeacherCompareSchoolName(r.school, school));
     const classSet = new Set(rowsSchool.map(r => normalizeClass(r.class)));
+    const rowsByClassSubject = new Map();
+    rowsSchool.forEach((row) => {
+        const cls = normalizeClass(row.class);
+        if (!cls || !row?.scores) return;
+        Object.keys(row.scores).forEach((rawSubject) => {
+            const subject = SUBJECTS.find(s => normalizeSubject(s) === normalizeSubject(rawSubject));
+            if (!subject) return;
+            const score = parseFloat(row.scores?.[rawSubject]);
+            if (Number.isNaN(score)) return;
+            const key = `${cls}__${normalizeSubject(subject)}`;
+            if (!rowsByClassSubject.has(key)) rowsByClassSubject.set(key, []);
+            rowsByClassSubject.get(key).push(row);
+        });
+    });
     const excRatio = (CONFIG?.name && String(CONFIG.name).includes('9')) ? 0.15 : 0.2;
 
     const gradeStats = {};
@@ -132,7 +143,7 @@ function buildTeacherStatsForExam(rows, school, subjectFilter) {
         const teacher = String(teacherName || '').trim();
         if (!teacher) return;
 
-        const students = rowsSchool.filter(r => normalizeClass(r.class) === cls && !isNaN(parseFloat(r.scores?.[subject])));
+        const students = rowsByClassSubject.get(`${cls}__${normalizeSubject(subject)}`) || [];
         if (!students.length) return;
 
         const keyName = `${teacher}__${subject}`;
@@ -184,6 +195,28 @@ function buildTeacherStatsForExam(rows, school, subjectFilter) {
     });
 
     return list;
+}
+
+function getTeacherCompareExamStats(examId, rows, school, subject) {
+    const signature = [
+        String(examId || ''),
+        String(school || ''),
+        String(subject || ''),
+        Array.isArray(rows) ? rows.length : 0,
+        Number(window.__RAW_DATA_VERSION || 0),
+        Object.keys(TEACHER_MAP || {}).length
+    ].join('::');
+    const cached = teacherCompareExamStatsCache.get(signature);
+    if (cached) return cached;
+    const list = buildTeacherStatsForExam(rows, school, subject);
+    attachTeacherTownshipAvgRank(rows, school, list);
+    const entry = { list };
+    teacherCompareExamStatsCache.set(signature, entry);
+    if (teacherCompareExamStatsCache.size > 24) {
+        const firstKey = teacherCompareExamStatsCache.keys().next().value;
+        teacherCompareExamStatsCache.delete(firstKey);
+    }
+    return entry;
 }
 
 function attachTeacherTownshipAvgRank(rows, school, teacherStatsList) {
@@ -284,8 +317,7 @@ function renderTeacherMultiPeriodComparison() {
 
     const examStats = examIds.map(examId => {
         const rows = getExamRowsForCompare(examId);
-        const list = buildTeacherStatsForExam(rows, school, subject);
-        attachTeacherTownshipAvgRank(rows, school, list);
+        const { list } = getTeacherCompareExamStats(examId, rows, school, subject);
         const current = list.find(x => x.teacher === teacher && x.subject === subject);
         return { examId, list, current };
     });

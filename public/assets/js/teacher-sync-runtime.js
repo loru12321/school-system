@@ -104,12 +104,50 @@ function shouldAutoLoadTeacherData() {
 
 function syncTeacherAnalysisSchoolContext(preferredSchool = '') {
     const schoolSel = document.getElementById('mySchoolSelect');
-    const resolvedSchool = (typeof readCurrentSchool === 'function')
-        ? String(readCurrentSchool() || '').trim()
-        : String(window.DEFAULT_MY_SCHOOL_NAME || '银山实验').trim();
+    const rawPreferred = String(preferredSchool || '').trim();
+    const fallbackSchool = String(window.DEFAULT_MY_SCHOOL_NAME || '银山实验').trim();
+    let resolvedSchool = rawPreferred || (
+        typeof readCurrentSchool === 'function'
+            ? String(readCurrentSchool() || '').trim()
+            : String(window.MY_SCHOOL || localStorage.getItem('MY_SCHOOL') || fallbackSchool).trim()
+    );
+
+    const schoolNames = (typeof listAvailableSchoolsForCompare === 'function')
+        ? listAvailableSchoolsForCompare()
+        : Object.keys(window.SCHOOLS || {});
+    if (resolvedSchool && schoolNames.length && typeof resolveSchoolNameFromCollection === 'function') {
+        resolvedSchool = resolveSchoolNameFromCollection(schoolNames, resolvedSchool) || resolvedSchool;
+    }
+
+    if (!rawPreferred && window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length && Array.isArray(window.RAW_DATA)) {
+        const normalizeCls = typeof normalizeClass === 'function' ? normalizeClass : ((value) => String(value || '').trim());
+        const teacherClasses = new Set(Object.keys(window.TEACHER_MAP || {})
+            .map((key) => normalizeCls(String(key || '').split('_')[0]))
+            .filter(Boolean));
+        const currentRows = window.RAW_DATA.filter((row) => (
+            teacherClasses.has(normalizeCls(row?.class || ''))
+            && (!resolvedSchool || !row?.school || (
+                typeof areSchoolNamesEquivalent === 'function'
+                    ? areSchoolNamesEquivalent(row.school, resolvedSchool)
+                    : String(row.school || '').trim() === resolvedSchool
+            ))
+        ));
+        if (!currentRows.length) {
+            const hitCounts = new Map();
+            window.RAW_DATA.forEach((row) => {
+                const cls = normalizeCls(row?.class || '');
+                const school = String(row?.school || '').trim();
+                if (!teacherClasses.has(cls) || !school) return;
+                hitCounts.set(school, (hitCounts.get(school) || 0) + 1);
+            });
+            const inferred = Array.from(hitCounts.entries()).sort((left, right) => right[1] - left[1])[0]?.[0] || '';
+            if (inferred) resolvedSchool = inferred;
+        }
+    }
 
     if (resolvedSchool) {
-        writeCurrentSchool(resolvedSchool);
+        window.MY_SCHOOL = resolvedSchool;
+        try { localStorage.setItem('MY_SCHOOL', resolvedSchool); } catch (_) {}
         if (schoolSel && schoolSel.value !== resolvedSchool) schoolSel.value = resolvedSchool;
     }
 
