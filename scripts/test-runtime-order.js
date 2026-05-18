@@ -536,6 +536,7 @@ const teacherEntryStart = moduleEntryRuntime.indexOf('function initTeacherAnalys
 const teacherEntryEnd = moduleEntryRuntime.indexOf('function releaseTeacherAnalysisHeavyDom()', teacherEntryStart);
 const teacherEntrySource = moduleEntryRuntime.slice(teacherEntryStart, teacherEntryEnd);
 assert.ok(!teacherEntrySource.includes('ensureTeacherAnalysisMainRuntimeLoaded'), 'teacher-analysis entry should not auto-load the heavy analysis runtime on switch');
+assert.ok(!teacherEntrySource.includes('ensureTeacherMap(true)'), 'teacher-analysis entry should not auto-load teacher maps on switch');
 assert.ok(moduleEntryRuntime.includes('window.tmScheduleTeachingOverviewRender()'), 'module entry should schedule teaching overview refreshes after teacher analysis phases');
 assert.ok(moduleEntryRuntime.includes('historyLimit: 0'), 'teacher-analysis entry should use a fast no-history first render');
 assert.ok(moduleEntryRuntime.includes('window.smScheduleStudentOverviewRender()'), 'module entry should schedule student overview first renders');

@@ -363,7 +363,16 @@
 
     function renderTeacherAnalysisNow() {
         if (!isTeacherAnalysisActive()) return;
-        const run = () => scheduleTeacherAnalysisRenderWork(0);
+        const run = () => {
+            if (window.DataManager && typeof DataManager.ensureTeacherMap === 'function') {
+                try {
+                    DataManager.ensureTeacherMap(true);
+                } catch (error) {
+                    console.warn('[teacher-analysis] teacher map load failed:', error);
+                }
+            }
+            scheduleTeacherAnalysisRenderWork(0);
+        };
         if (typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function') {
             window.ensureTeacherAnalysisMainRuntimeLoaded().then(run).catch((error) => console.warn(error));
             return;
@@ -624,16 +633,6 @@
 
     function initTeacherAnalysisEntry() {
         clearTeacherAnalysisDeferredRender();
-        if (window.DataManager && typeof DataManager.ensureTeacherMap === 'function') {
-            scheduleModuleTask('teacher-analysis-preload-map', () => {
-                if (!document.getElementById('teacher-analysis')?.classList.contains('active')) return;
-                try {
-                    DataManager.ensureTeacherMap(true);
-                } catch (error) {
-                    console.warn('[teacher-analysis] teacher map preload failed:', error);
-                }
-            }, { delay: TEACHER_ANALYSIS_PRELOAD_DELAY_MS, idle: true, timeout: 1800 });
-        }
         scheduleModuleTask('teacher-analysis-compare-selects', () => {
             if (!document.getElementById('teacher-analysis')?.classList.contains('active')) return;
             if (typeof updateTeacherCompareExamSelects === 'function') updateTeacherCompareExamSelects();
