@@ -13962,20 +13962,10 @@ function getStudentExamHistory(student) {
                     const numC1 = histClass.replace(/0/g, '');
                     const numC2 = targetClass.replace(/0/g, '');
                     return numC1 === numC2 && numC1.length > 0;
-                });
+            });
 
             if (found) {
                 const normalizedStudent = createComparisonStudentView(found, examData);
-                // 计算该次考试中该学生各科的百分位
-                const percentiles = {};
-                (exam.subjects || SUBJECTS).forEach(sub => {
-                    if (normalizedStudent.scores && normalizedStudent.scores[sub] !== undefined) {
-                        const allScores = getReportSubjectSortedScores(exam.fingerprint || examId, examData, sub);
-                        const rank = allScores.indexOf(normalizedStudent.scores[sub]) + 1;
-                        const total = allScores.length;
-                        percentiles[sub] = total > 0 ? ((1 - (rank / total)) * 100).toFixed(1) : 0;
-                    }
-                });
 
                 results.push({
                     examId,
@@ -13984,7 +13974,7 @@ function getStudentExamHistory(student) {
                     createdAt: exam.createdAt || 0,
                     fingerprint: exam.fingerprint || computeExamDataFingerprint(examData),
                     student: normalizedStudent,
-                    percentiles,
+                    percentiles: {},
                     allStudents: examData
                 });
             }

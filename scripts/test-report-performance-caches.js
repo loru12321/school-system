@@ -19,6 +19,7 @@ const packageFile = 'package.json';
 const reportRender = read(reportRenderFile);
 const reportChart = read(reportChartFile);
 const county = read(countyFile);
+const app = read('public/assets/js/app.js');
 const pkg = JSON.parse(read(packageFile));
 
 [
@@ -49,12 +50,19 @@ const pkg = JSON.parse(read(packageFile));
     'lastChartScheduleKey',
     'lastStrengthKey',
     'lastCompareHiddenKey'
-].forEach((token) => assertContains(read('public/assets/js/app.js'), token, 'public/assets/js/app.js'));
+].forEach((token) => assertContains(app, token, 'public/assets/js/app.js'));
 
 [
     'return read(state.history, key, { clone: false });',
     'return write(state.history, key, value, HISTORY_TTL_MS, { clone: false });'
 ].forEach((token) => assertContains(read('public/assets/js/report-performance-runtime.js'), token, 'public/assets/js/report-performance-runtime.js'));
+
+const historyStart = app.indexOf('function getStudentExamHistory(student)');
+const historyEnd = app.indexOf('// 🟢 [新增]：生成进退步胶囊标签', historyStart);
+const historySource = historyStart >= 0 && historyEnd > historyStart ? app.slice(historyStart, historyEnd) : '';
+if (!historySource || historySource.includes('getReportSubjectSortedScores(')) {
+    fail('student exam history should not precompute subject percentile score arrays');
+}
 
 [
     'ReportChartPerfCache',
