@@ -38,6 +38,39 @@ const setDuplicateCompareWarnedKeyState = typeof window.setDuplicateCompareWarne
         window.__DUPLICATE_COMPARE_WARNED_KEY = nextKey;
         return nextKey;
     });
+const CompareExamListPerfCache = {
+    signature: '',
+    result: []
+};
+
+function cloneCompareExamList(list) {
+    return (Array.isArray(list) ? list : []).map(entry => ({ ...entry }));
+}
+
+function getCompareExamListSignature(db, cohortId) {
+    const exams = db?.exams && typeof db.exams === 'object' ? db.exams : {};
+    const examSig = Object.values(exams).map(ex => [
+        String(ex?.examId || ex?.id || ''),
+        String(ex?.createdAt || 0),
+        String(ex?.fingerprint || ''),
+        Array.isArray(ex?.data) ? ex.data.length : 0
+    ].join(':')).sort().join('|');
+    const prevSig = Array.isArray(window.PREV_DATA)
+        ? window.PREV_DATA.map(h => [
+            String(h?.examFullKey || h?.examId || ''),
+            String(h?.fingerprint || ''),
+            String(h?.updatedAt || '')
+        ].join(':')).sort().join('|')
+        : '';
+    return [
+        cohortId,
+        String(CURRENT_EXAM_ID || ''),
+        String(window.__RAW_DATA_VERSION || 0),
+        Array.isArray(RAW_DATA) ? RAW_DATA.length : 0,
+        examSig,
+        prevSig
+    ].join('::');
+}
 
 function isExamKeyEquivalentForCompare(a, b) {
     const normalize = (key) => String(key || '').trim().replace(/\s+/g, '_').toLowerCase();
@@ -379,6 +412,10 @@ function listAvailableExamsForCompare() {
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
     const examMap = new Map();
     const cohortId = normalizeCompareCohortId(CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
+    const cacheSignature = getCompareExamListSignature(db, cohortId);
+    if (CompareExamListPerfCache.signature === cacheSignature && Array.isArray(CompareExamListPerfCache.result)) {
+        return cloneCompareExamList(CompareExamListPerfCache.result);
+    }
     const upsertExam = (entry) => {
         if (!entry?.id || !isRealExamIdForCompare(entry.id, cohortId)) return;
         const identity = getCompareExamIdentity(entry);
@@ -451,6 +488,8 @@ function listAvailableExamsForCompare() {
         if (ta !== tb) return ta - tb;
         return String(a.id || '').localeCompare(String(b.id || ''), 'zh-CN');
     });
+    CompareExamListPerfCache.signature = cacheSignature;
+    CompareExamListPerfCache.result = cloneCompareExamList(finalExamList);
     return finalExamList;
 }
 

@@ -9284,6 +9284,7 @@ function tmBuildMiniCard(title, value) {
 
 // Teaching management cloud/version runtime moved to public/assets/js/teaching-management-runtime.js.
 var TM_TEACHER_COVERAGE_CACHE = { teacherMap: null, result: null };
+var TM_AVAILABLE_EXAM_LIST_CACHE = { signature: '', result: [] };
 var TM_TEACHER_INSIGHT_CACHE = {
     stats: null,
     subjectFilter: '',
@@ -9318,20 +9319,45 @@ function tmGetTeacherCoverageFromMap() {
 }
 
 function tmGetAvailableExamList() {
-    if (typeof listAvailableExamsForCompare === 'function') {
-        const compareList = listAvailableExamsForCompare();
-        if (Array.isArray(compareList) && compareList.length) return compareList;
-    }
     const db = (typeof CohortDB !== 'undefined' && CohortDB && typeof CohortDB.ensure === 'function')
         ? CohortDB.ensure()
         : (window.COHORT_DB || null);
+    const examSignature = db?.exams && typeof db.exams === 'object'
+        ? Object.values(db.exams).map(ex => [
+            String(ex?.examId || ex?.id || ''),
+            String(ex?.createdAt || 0),
+            String(ex?.fingerprint || ''),
+            Array.isArray(ex?.data) ? ex.data.length : 0
+        ].join(':')).sort().join('|')
+        : '';
+    const signature = [
+        typeof listAvailableExamsForCompare === 'function' ? 'compare' : 'local',
+        String(CURRENT_COHORT_ID || window.CURRENT_COHORT_ID || ''),
+        String(CURRENT_EXAM_ID || window.CURRENT_EXAM_ID || ''),
+        String(window.__RAW_DATA_VERSION || 0),
+        Array.isArray(RAW_DATA) ? RAW_DATA.length : 0,
+        examSignature
+    ].join('::');
+    if (TM_AVAILABLE_EXAM_LIST_CACHE.signature === signature && Array.isArray(TM_AVAILABLE_EXAM_LIST_CACHE.result)) {
+        return TM_AVAILABLE_EXAM_LIST_CACHE.result.map(ex => ({ ...ex }));
+    }
+    if (typeof listAvailableExamsForCompare === 'function') {
+        const compareList = listAvailableExamsForCompare();
+        if (Array.isArray(compareList) && compareList.length) {
+            TM_AVAILABLE_EXAM_LIST_CACHE = { signature, result: compareList.map(ex => ({ ...ex })) };
+            return compareList;
+        }
+    }
     if (db?.exams && typeof db.exams === 'object') {
-        return Object.values(db.exams).map(ex => ({
+        const result = Object.values(db.exams).map(ex => ({
             id: ex?.examId || ex?.id || '',
             label: ex?.examLabel || ex?.label || ex?.examId || ex?.id || '',
             createdAt: ex?.createdAt || 0
         })).filter(ex => ex.id);
+        TM_AVAILABLE_EXAM_LIST_CACHE = { signature, result: result.map(ex => ({ ...ex })) };
+        return result;
     }
+    TM_AVAILABLE_EXAM_LIST_CACHE = { signature, result: [] };
     return [];
 }
 
@@ -12937,6 +12963,10 @@ const ReportHistoryPerfCache = {
     lastScrollKey: '',
     domCache: null,
     domSignature: '',
+    currentFingerprintRows: null,
+    currentFingerprintVersion: -1,
+    currentFingerprintLength: -1,
+    currentFingerprint: '',
     selectedExamIdsSignature: '',
     selectedExamIds: [],
     historyByStudent: new Map(),
@@ -12946,6 +12976,26 @@ const ReportHistoryPerfCache = {
     lastStrengthKey: '',
     lastCompareHiddenKey: ''
 };
+
+function getCurrentReportDataFingerprint() {
+    const rows = RAW_DATA || [];
+    const version = Number(window.__RAW_DATA_VERSION || 0);
+    const length = Array.isArray(rows) ? rows.length : 0;
+    if (ReportHistoryPerfCache.currentFingerprintRows === rows
+        && ReportHistoryPerfCache.currentFingerprintVersion === version
+        && ReportHistoryPerfCache.currentFingerprintLength === length
+        && ReportHistoryPerfCache.currentFingerprint) {
+        return ReportHistoryPerfCache.currentFingerprint;
+    }
+    const fingerprint = typeof computeExamDataFingerprint === 'function'
+        ? String(computeExamDataFingerprint(rows) || '').trim()
+        : String(length || 0);
+    ReportHistoryPerfCache.currentFingerprintRows = rows;
+    ReportHistoryPerfCache.currentFingerprintVersion = version;
+    ReportHistoryPerfCache.currentFingerprintLength = length;
+    ReportHistoryPerfCache.currentFingerprint = fingerprint;
+    return fingerprint;
+}
 
 function getReportDomCache() {
     const resultEl = document.getElementById('single-report-result');
@@ -13018,9 +13068,7 @@ function getStudentReportSelectedExamIds() {
 function buildStudentReportCacheKey(student, mode = 'FULL', selectedExamIds = null, effectiveCurrentExamId = '') {
     const selected = Array.isArray(selectedExamIds) ? selectedExamIds : getStudentReportSelectedExamIds();
     const examId = String(effectiveCurrentExamId || (typeof getEffectiveCurrentExamId === 'function' ? getEffectiveCurrentExamId() : '') || '').trim();
-    const fingerprint = typeof computeExamDataFingerprint === 'function'
-        ? String(computeExamDataFingerprint(RAW_DATA || []) || '').trim()
-        : String((RAW_DATA || []).length || 0);
+    const fingerprint = getCurrentReportDataFingerprint();
     return [
         getReportStudentIdentity(student),
         String(mode || 'FULL').trim(),
@@ -13907,7 +13955,7 @@ function getStudentExamHistory(student) {
     const targetClass = normClass(student.class);
     const targetSchool = student.school;
     const currentExamId = getEffectiveCurrentExamId();
-    const currentFingerprint = computeExamDataFingerprint(RAW_DATA || []);
+    const currentFingerprint = getCurrentReportDataFingerprint();
     const isTargetStudent = (row) => {
         const sObj = row?.student || row || {};
         if (sObj.school && targetSchool && !areSchoolNamesEquivalent(sObj.school, targetSchool)) return false;
@@ -13934,6 +13982,16 @@ function getStudentExamHistory(student) {
 
         const examEntries = Object.entries(db.exams)
             .sort((a, b) => (a[1].createdAt || 0) - (b[1].createdAt || 0)); // 按时间升序
+        const comparisonContextByExam = new Map();
+        const getExamComparisonContext = (examId, examFingerprint, examData) => {
+            const contextKey = `${String(examFingerprint || examId || '').trim()}::${Array.isArray(examData) ? examData.length : 0}`;
+            if (comparisonContextByExam.has(contextKey)) return comparisonContextByExam.get(contextKey);
+            const context = typeof getCachedComparisonStudentRankContext === 'function'
+                ? getCachedComparisonStudentRankContext(examData)
+                : null;
+            comparisonContextByExam.set(contextKey, context);
+            return context;
+        };
 
         for (const [examId, exam] of examEntries) {
             const examData = exam.data || [];
@@ -13965,14 +14023,15 @@ function getStudentExamHistory(student) {
             });
 
             if (found) {
-                const normalizedStudent = createComparisonStudentView(found, examData);
+                const comparisonContext = getExamComparisonContext(examId, examFingerprint, examData);
+                const normalizedStudent = createComparisonStudentView(found, examData, comparisonContext);
 
                 results.push({
                     examId,
                     examFullKey: exam.examFullKey || examId, // 记录全名
                     examLabel: examId.replace(/_/g, ' '),
                     createdAt: exam.createdAt || 0,
-                    fingerprint: exam.fingerprint || computeExamDataFingerprint(examData),
+                    fingerprint: examFingerprint,
                     student: normalizedStudent,
                     percentiles: {},
                     allStudents: examData

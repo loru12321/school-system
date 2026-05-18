@@ -20,6 +20,7 @@ const reportRender = read(reportRenderFile);
 const reportChart = read(reportChartFile);
 const county = read(countyFile);
 const app = read('public/assets/js/app.js');
+const compareShared = read('public/assets/js/compare-shared-runtime.js');
 const pkg = JSON.parse(read(packageFile));
 
 [
@@ -44,6 +45,8 @@ const pkg = JSON.parse(read(packageFile));
 [
     'getReportDomCache',
     'getCachedStudentReportHistory',
+    'getCurrentReportDataFingerprint',
+    'currentFingerprintRows',
     'selectedExamIdsSignature',
     'historyByStudent',
     'hydratingKeys',
@@ -51,6 +54,16 @@ const pkg = JSON.parse(read(packageFile));
     'lastStrengthKey',
     'lastCompareHiddenKey'
 ].forEach((token) => assertContains(app, token, 'public/assets/js/app.js'));
+
+[
+    'CompareExamListPerfCache',
+    'getCompareExamListSignature',
+    'return cloneCompareExamList(CompareExamListPerfCache.result);',
+    'TM_AVAILABLE_EXAM_LIST_CACHE'
+].forEach((token) => {
+    const file = token === 'TM_AVAILABLE_EXAM_LIST_CACHE' ? 'public/assets/js/app.js' : 'public/assets/js/compare-shared-runtime.js';
+    assertContains(token === 'TM_AVAILABLE_EXAM_LIST_CACHE' ? app : compareShared, token, file);
+});
 
 [
     'return read(state.history, key, { clone: false });',
@@ -91,7 +104,8 @@ if (!String(pkg.scripts['check:syntax'] || '').includes('scripts/test-report-per
 console.log(JSON.stringify({
     ok: true,
     reportRenderCacheTokens: 16,
-    appReportCacheTokens: 8,
+    appReportCacheTokens: 10,
+    compareExamListCacheTokens: 4,
     reportChartCacheTokens: 5,
     countyDomSkipTokens: 3
 }, null, 2));
