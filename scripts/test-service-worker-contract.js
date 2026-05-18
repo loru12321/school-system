@@ -39,8 +39,7 @@ assertIncludes(publicSw, 'await Promise.all(APP_SHELL_ASSETS.map(asset => precac
 assertIncludes(publicSw, 'await self.skipWaiting();', 'install should activate updates promptly');
 assertIncludes(publicSw, "self.addEventListener('activate'", 'activate handler should be registered');
 assertIncludes(publicSw, 'await self.clients.claim();', 'activate should claim clients');
-assertIncludes(publicSw, 'await reloadControlledClients();', 'activate should navigate controlled clients onto the fresh runtime');
-assertIncludes(publicSw, "url.searchParams.set('swRefresh', CACHE_VERSION);", 'service worker refresh should mark client navigations to avoid loops');
+assert.ok(!publicSw.includes('client.navigate'), 'service worker should not force-navigate clients during activation');
 assertIncludes(publicSw, "self.addEventListener('fetch'", 'fetch handler should be registered');
 assertIncludes(publicSw, "if (request.method !== 'GET') return;", 'service worker must not cache mutating requests');
 assertIncludes(publicSw, "if (url.protocol === 'chrome-extension:') return;", 'service worker should ignore browser extension requests');

@@ -37,7 +37,6 @@ self.addEventListener('activate', event => {
                 .map(name => caches.delete(name))
         );
         await self.clients.claim();
-        await reloadControlledClients();
     })());
 });
 
@@ -155,21 +154,6 @@ async function networkFirstHtml(request) {
             }
         );
     }
-}
-
-async function reloadControlledClients() {
-    if (!self.clients || typeof self.clients.matchAll !== 'function') return;
-    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    await Promise.all(clients.map(async client => {
-        if (!client || typeof client.navigate !== 'function' || !client.url) return;
-        try {
-            const url = new URL(client.url);
-            if (!['schoolsystem.com.cn', 'www.schoolsystem.com.cn', 'localhost', '127.0.0.1'].includes(url.hostname)) return;
-            if (url.searchParams.get('swRefresh') === CACHE_VERSION) return;
-            url.searchParams.set('swRefresh', CACHE_VERSION);
-            await client.navigate(url.href);
-        } catch (_) {}
-    }));
 }
 
 function isCacheable(response) {
