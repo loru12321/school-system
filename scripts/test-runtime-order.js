@@ -531,11 +531,12 @@ assert.ok(!shellRuntime.includes("text: '绩效公平考核模型'"), 'teaching 
 assert.ok(!teachingManagementOverviewRuntime.includes("tmSetQuickEntryState(\n        'single-school-eval'"), 'teaching management overview should not render a performance fairness quick entry');
 assert.ok(teachingManagementOverviewRuntime.includes("const supportedModules = ['teacher-analysis'];"), 'teaching management state bars should only cover retained modules');
 assert.ok(moduleEntryRuntime.includes("if (id === 'single-school-eval') return false;"), 'module entry runtime should not initialize the removed performance fairness module');
-assert.ok(indexHtml.includes('onclick="renderTeacherAnalysisNow()">生成教师画像'), 'teacher portrait should expose an explicit generate action');
+assert.ok(indexHtml.includes('onclick="renderTeacherAnalysisNow()">刷新教师画像'), 'teacher portrait should expose an explicit refresh action');
 const teacherEntryStart = moduleEntryRuntime.indexOf('function initTeacherAnalysisEntry()');
 const teacherEntryEnd = moduleEntryRuntime.indexOf('function releaseTeacherAnalysisHeavyDom()', teacherEntryStart);
 const teacherEntrySource = moduleEntryRuntime.slice(teacherEntryStart, teacherEntryEnd);
-assert.ok(!teacherEntrySource.includes('ensureTeacherAnalysisMainRuntimeLoaded'), 'teacher-analysis entry should not auto-load the heavy analysis runtime on switch');
+assert.ok(teacherEntrySource.includes("'teacher-analysis-auto-render'"), 'teacher-analysis entry should auto-generate the portrait after the switch frame');
+assert.ok(teacherEntrySource.includes('ensureTeacherAnalysisMainRuntimeLoaded'), 'teacher-analysis entry should load the analysis runtime only from the deferred auto-render task');
 assert.ok(!teacherEntrySource.includes('ensureTeacherMap(true)'), 'teacher-analysis entry should not auto-load teacher maps on switch');
 assert.ok(!teacherEntrySource.includes('updateTeacherCompareExamSelects'), 'teacher-analysis entry should not scan compare exam selectors on switch');
 assert.ok(!teacherEntrySource.includes('inferTeacherSchoolIfNeeded'), 'teacher-analysis entry should not infer teacher school on switch');

@@ -266,9 +266,9 @@
 
     function showTeacherAnalysisPendingState() {
         const placeholders = [
-            ['teacherCardsContainer', '教师画像尚未生成。'],
-            ['teacherComparisonTable', '教师对比表尚未生成。'],
-            ['teacher-township-ranking-container', '教师乡镇排名尚未生成。']
+            ['teacherCardsContainer', '正在后台生成教师画像。'],
+            ['teacherComparisonTable', '正在整理教师对比表。'],
+            ['teacher-township-ranking-container', '正在生成教师乡镇排名。']
         ];
         placeholders.forEach(([id, message]) => {
             const node = document.getElementById(id);
@@ -278,7 +278,7 @@
             node.innerHTML = `
                 <div class="analysis-empty-state">
                     ${message}
-                    <div style="margin-top:8px; color:#64748b; font-size:12px;">点击上方“生成教师画像”后开始计算。</div>
+                    <div style="margin-top:8px; color:#64748b; font-size:12px;">页面会自动刷新结果，也可点击上方按钮手动刷新。</div>
                 </div>
             `;
         });
@@ -354,9 +354,6 @@
                 scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-township', () => {
                     if (typeof window.renderTeacherTownshipRanking === 'function') window.renderTeacherTownshipRanking();
                 }, 760);
-                if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
-                if (typeof updateTeacherCompareTeacherSelect === 'function') updateTeacherCompareTeacherSelect();
-                scheduleTeacherCompareAutoRender(260);
             });
         }, { delay, idle: true, timeout: 1500 });
     }
@@ -645,6 +642,25 @@
         if (townshipContainer) townshipContainer.style.display = 'block';
 
         showTeacherAnalysisPendingState();
+        scheduleModuleTask('teacher-analysis-auto-render', () => {
+            if (!document.getElementById('teacher-analysis')?.classList.contains('active')) return;
+            const teacherMapReady = window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0;
+            if (!teacherMapReady) {
+                renderTeacherAnalysisEmptyState();
+                return;
+            }
+            const run = () => scheduleTeacherAnalysisRenderWork(0);
+            if (typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function'
+                && !window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__) {
+                window.ensureTeacherAnalysisMainRuntimeLoaded()
+                    .then(() => {
+                        if (document.getElementById('teacher-analysis')?.classList.contains('active')) run();
+                    })
+                    .catch((error) => console.warn('[teacher-analysis] runtime load failed:', error));
+                return;
+            }
+            run();
+        }, { delay: 420, idle: true, timeout: 1800 });
         return Promise.resolve();
     }
 
