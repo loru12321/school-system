@@ -630,13 +630,19 @@ function filterRowsToTownshipSchools(rows, schoolNameResolver = null) {
     const townshipSchools = getTownshipManagedSchoolNames(candidateNames);
     if (!townshipSchools.length) return [];
     const townshipSet = new Set(townshipSchools);
-    return list.filter((row) => {
-        const school = normalizeSchoolDisplayName(resolver(row));
+    const townshipEligibilityCache = new Map();
+    const isTownshipSchool = (schoolName) => {
+        const school = normalizeSchoolDisplayName(schoolName);
         if (!school) return false;
-        if (townshipSet.has(school)) return true;
-        return townshipSchools.some((item) => (
+        if (townshipEligibilityCache.has(school)) return townshipEligibilityCache.get(school);
+        const matched = townshipSet.has(school) || townshipSchools.some((item) => (
             areSchoolNamesEquivalent(item, school) || areSchoolNamesMatched(item, school, true)
         ));
+        townshipEligibilityCache.set(school, matched);
+        return matched;
+    };
+    return list.filter((row) => {
+        return isTownshipSchool(resolver(row));
     });
 }
 

@@ -13542,6 +13542,17 @@ function buildComparisonStudentRankContext(allStudents, totalSubjects = getCompa
     const townshipWithTotals = withTotals.filter(item => townshipKeys.has(keyOf(item.row)));
     const townRankMap = buildCompetitionRankMap(townshipWithTotals, item => keyOf(item.row), item => item.total);
     const countyRankMap = buildCompetitionRankMap(withTotals, item => keyOf(item.row), item => item.total);
+    const totalsBySchool = new Map();
+    const totalsByClass = new Map();
+    withTotals.forEach((item) => {
+        const schoolKey = String(item.row?.school || '').trim();
+        const classKey = classKeyOf(item.row?.class || '');
+        if (!totalsBySchool.has(schoolKey)) totalsBySchool.set(schoolKey, []);
+        totalsBySchool.get(schoolKey).push(item);
+        const classCacheKey = `${schoolKey}::${classKey}`;
+        if (!totalsByClass.has(classCacheKey)) totalsByClass.set(classCacheKey, []);
+        totalsByClass.get(classCacheKey).push(item);
+    });
     const schoolRankMaps = new Map();
     const classRankMaps = new Map();
 
@@ -13551,7 +13562,7 @@ function buildComparisonStudentRankContext(allStudents, totalSubjects = getCompa
             schoolRankMaps.set(
                 schoolKey,
                 buildCompetitionRankMap(
-                    withTotals.filter(item => sameAppSchoolName(item.row?.school, schoolKey)),
+                    totalsBySchool.get(schoolKey) || [],
                     item => keyOf(item.row),
                     item => item.total
                 )
@@ -13568,10 +13579,7 @@ function buildComparisonStudentRankContext(allStudents, totalSubjects = getCompa
             classRankMaps.set(
                 cacheKey,
                 buildCompetitionRankMap(
-                    withTotals.filter(item => (
-                        sameAppSchoolName(item.row?.school, schoolKey)
-                        && classKeyOf(item.row?.class || '') === classKey
-                    )),
+                    totalsByClass.get(cacheKey) || [],
                     item => keyOf(item.row),
                     item => item.total
                 )
