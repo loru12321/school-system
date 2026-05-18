@@ -266,9 +266,9 @@
 
     function showTeacherAnalysisPendingState() {
         const placeholders = [
-            ['teacherCardsContainer', '正在后台计算教师画像，稍后自动刷新。'],
-            ['teacherComparisonTable', '正在整理教师对比表，稍后自动刷新。'],
-            ['teacher-township-ranking-container', '正在生成教师乡镇排名，稍后自动刷新。']
+            ['teacherCardsContainer', '教师画像尚未生成。'],
+            ['teacherComparisonTable', '教师对比表尚未生成。'],
+            ['teacher-township-ranking-container', '教师乡镇排名尚未生成。']
         ];
         placeholders.forEach(([id, message]) => {
             const node = document.getElementById(id);
@@ -278,7 +278,7 @@
             node.innerHTML = `
                 <div class="analysis-empty-state">
                     ${message}
-                    <div style="margin-top:8px; color:#64748b; font-size:12px;">系统会自动生成，无需单独点击。</div>
+                    <div style="margin-top:8px; color:#64748b; font-size:12px;">点击上方“生成教师画像”后开始计算。</div>
                 </div>
             `;
         });
@@ -605,7 +605,12 @@
             });
 
             if (winner) {
-                writeCurrentSchool(winner);
+                if (typeof window.syncTeacherAnalysisSchoolContext === 'function') {
+                    window.syncTeacherAnalysisSchoolContext(winner);
+                } else {
+                    window.MY_SCHOOL = winner;
+                    try { localStorage.setItem('MY_SCHOOL', winner); } catch (_) {}
+                }
                 console.log('🤖 [teacher-analysis] 已根据任课表自动锁定本校:', winner);
             }
         }
@@ -650,29 +655,9 @@
             inferTeacherSchoolIfNeeded();
         }, { delay: 220, idle: true, timeout: 1200 });
 
-        const runAfterLoad = () => {
-            if (!document.getElementById('teacher-analysis')?.classList.contains('active')) return;
-            const teacherMapReady = window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0;
-            if (teacherMapReady && typeof window.analyzeTeachers === 'function') {
-                scheduleTeacherAnalysisRenderWork();
-            } else {
-                renderTeacherAnalysisEmptyState();
-                if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
-                if (typeof updateTeacherCompareTeacherSelect === 'function') updateTeacherCompareTeacherSelect();
-            }
-        };
-
-        if (typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function'
-            && !window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__) {
-            showTeacherAnalysisPendingState();
-            return window.ensureTeacherAnalysisMainRuntimeLoaded()
-                .then(() => {
-                    if (document.getElementById('teacher-analysis')?.classList.contains('active')) runAfterLoad();
-                })
-                .catch((error) => console.warn('[teacher-analysis] runtime load failed:', error));
-        }
-
-        runAfterLoad();
+        showTeacherAnalysisPendingState();
+        if (typeof updateTeacherMultiExamSelects === 'function') updateTeacherMultiExamSelects();
+        if (typeof updateTeacherCompareTeacherSelect === 'function') updateTeacherCompareTeacherSelect();
         return Promise.resolve();
     }
 

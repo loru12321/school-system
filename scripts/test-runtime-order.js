@@ -531,7 +531,11 @@ assert.ok(!shellRuntime.includes("text: '绩效公平考核模型'"), 'teaching 
 assert.ok(!teachingManagementOverviewRuntime.includes("tmSetQuickEntryState(\n        'single-school-eval'"), 'teaching management overview should not render a performance fairness quick entry');
 assert.ok(teachingManagementOverviewRuntime.includes("const supportedModules = ['teacher-analysis'];"), 'teaching management state bars should only cover retained modules');
 assert.ok(moduleEntryRuntime.includes("if (id === 'single-school-eval') return false;"), 'module entry runtime should not initialize the removed performance fairness module');
-assert.ok(!moduleEntryRuntime.includes('renderTeacherAnalysisNow()">立即生成'), 'teacher portrait pending state should not require a manual immediate-generate click');
+assert.ok(indexHtml.includes('onclick="renderTeacherAnalysisNow()">生成教师画像'), 'teacher portrait should expose an explicit generate action');
+const teacherEntryStart = moduleEntryRuntime.indexOf('function initTeacherAnalysisEntry()');
+const teacherEntryEnd = moduleEntryRuntime.indexOf('function releaseTeacherAnalysisHeavyDom()', teacherEntryStart);
+const teacherEntrySource = moduleEntryRuntime.slice(teacherEntryStart, teacherEntryEnd);
+assert.ok(!teacherEntrySource.includes('ensureTeacherAnalysisMainRuntimeLoaded'), 'teacher-analysis entry should not auto-load the heavy analysis runtime on switch');
 assert.ok(moduleEntryRuntime.includes('window.tmScheduleTeachingOverviewRender()'), 'module entry should schedule teaching overview refreshes after teacher analysis phases');
 assert.ok(moduleEntryRuntime.includes('historyLimit: 0'), 'teacher-analysis entry should use a fast no-history first render');
 assert.ok(moduleEntryRuntime.includes('window.smScheduleStudentOverviewRender()'), 'module entry should schedule student overview first renders');

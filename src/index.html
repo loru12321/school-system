@@ -4710,6 +4710,7 @@
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">先查看画像和多期趋势，再导出教师分析与乡镇排名，适合教研组复盘。</div>
                         <div class="analysis-actions">
+                            <button class="btn btn-blue" onclick="renderTeacherAnalysisNow()">生成教师画像</button>
                             <button class="btn" onclick="exportTeacherAnalysis()">导出教师分析</button>
                         </div>
                     </div>
@@ -4760,7 +4761,7 @@
                             onclick="viewCloudTeacherCompares()" title="查看已保存的教师对比记录">📋 查看云端对比</button>
                     </div>
                     <div id="teacherCompareHint" class="analysis-hint analysis-status-text">
-                        选择学校、学科、教师和期次后，系统会自动生成多期变化结果。</div>
+                        选择学校、学科、教师和期次后，点击按钮生成多期变化结果。</div>
                     <div id="teacherCompareResult" class="analysis-result-slot">
                         <div class="analysis-empty-state analysis-empty-state-compact">
                             选择学校、学科、教师和期次后点击按钮生成多期变化结果。
