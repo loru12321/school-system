@@ -554,6 +554,8 @@ assert.ok(appSource.includes('var TM_TEACHER_INSIGHT_CACHE'), 'teaching overview
 assert.ok(teachingManagementVersionRuntime.includes('var TM_CURRENT_VERSION_PAYLOAD_CACHE'), 'teaching version center should cache the current version payload');
 assert.ok(teachingManagementVersionRuntime.includes('TM_CURRENT_VERSION_PAYLOAD_CACHE = { key: cacheKey, payload };'), 'teaching version center should reuse current payload across one render cycle');
 assert.ok(teacherAnalysisCoreRuntime.includes('window.tmScheduleTeachingOverviewRender()'), 'teacher analysis should schedule overview refresh instead of blocking the same render frame');
+assert.ok(teacherAnalysisCoreRuntime.includes('const townshipSchoolEligibilityCache = new Map();'), 'teacher township ranking should cache school eligibility checks');
+assert.ok(teacherAnalysisCoreRuntime.includes('townshipSchoolEligibilityCache.get(normalizedSchool)'), 'teacher township ranking should reuse cached township school matches');
 assert.ok(teachingManagementRuntime.includes('function smScheduleStudentOverviewRender()'), 'student overview should coalesce filter-change refreshes into one frame');
 assert.ok(studentOverviewRuntime.includes('const progressRows = fullProgressRows.length ? fullProgressRows : readProgressCacheState();'), 'student overview should avoid copying the progress cache for counts');
 assert.ok(studentOverviewRuntime.includes('let progressCount = 0;'), 'student overview should count progress rows in a single pass');

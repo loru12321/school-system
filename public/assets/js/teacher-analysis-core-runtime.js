@@ -1411,37 +1411,54 @@
                 ? window.getTownshipManagedSchoolNames(Object.keys(window.SCHOOLS || {}))
                 : Object.keys(window.SCHOOLS || {})
         );
+        const townshipSchoolList = Array.from(townshipSchoolSet);
+        const townshipSchoolEligibilityCache = new Map();
         const isTownshipSchoolName = (schoolName) => {
-            if (!hasTownshipSchoolHelper) return true;
-            if (typeof window.isTownshipManagedSchool === 'function') {
-                if (window.isTownshipManagedSchool(schoolName, Object.keys(window.SCHOOLS || {}))) return true;
+            const normalizedSchool = String(schoolName || '').trim();
+            if (townshipSchoolEligibilityCache.has(normalizedSchool)) {
+                return townshipSchoolEligibilityCache.get(normalizedSchool);
             }
-            return townshipSchoolSet.has(String(schoolName || '').trim())
-                || Array.from(townshipSchoolSet).some((item) => teacherSameSchoolName(item, schoolName));
+            let matched = false;
+            if (!hasTownshipSchoolHelper) {
+                townshipSchoolEligibilityCache.set(normalizedSchool, true);
+                return true;
+            }
+            if (typeof window.isTownshipManagedSchool === 'function') {
+                if (window.isTownshipManagedSchool(normalizedSchool, Object.keys(window.SCHOOLS || {}))) matched = true;
+            }
+            if (!matched) {
+                matched = townshipSchoolSet.has(normalizedSchool)
+                    || townshipSchoolList.some((item) => teacherSameSchoolName(item, normalizedSchool));
+            }
+            townshipSchoolEligibilityCache.set(normalizedSchool, matched);
+            return matched;
         };
         const buildTownshipAverage = (subject) => {
-            const rawRows = (window.RAW_DATA || []).filter((row) => {
+            let rawCount = 0;
+            let rawTotal = 0;
+            const rawRows = [];
+            const rawScores = [];
+            (window.RAW_DATA || []).forEach((row) => {
                 const schoolName = String(row?.school || '').trim();
                 const score = teacherToNumber(row?.scores?.[subject], NaN);
-                if (!Number.isFinite(score)) return false;
-                if (!schoolName) return !hasTownshipSchoolHelper;
-                return isTownshipSchoolName(schoolName);
+                if (!Number.isFinite(score)) return;
+                if (schoolName ? !isTownshipSchoolName(schoolName) : hasTownshipSchoolHelper) return;
+                rawRows.push(row);
+                rawScores.push(score);
+                rawCount += 1;
+                rawTotal += score;
             });
-            if (rawRows.length) {
+            if (rawCount) {
                 const thresholds = teacherResolveThresholds(subject, rawRows);
-                const scores = rawRows
-                    .map((row) => teacherToNumber(row?.scores?.[subject], NaN))
-                    .filter(Number.isFinite);
-                if (scores.length) {
-                    const total = scores.reduce((sum, score) => sum + score, 0);
-                    return {
-                        avg: total / scores.length,
-                        excRate: scores.filter((score) => score >= thresholds.exc).length / scores.length,
-                        passRate: scores.filter((score) => score >= thresholds.pass).length / scores.length,
-                        count: scores.length,
-                        source: 'raw'
-                    };
-                }
+                const rawExcCount = rawScores.filter((score) => score >= thresholds.exc).length;
+                const rawPassCount = rawScores.filter((score) => score >= thresholds.pass).length;
+                return {
+                    avg: rawTotal / rawCount,
+                    excRate: rawExcCount / rawCount,
+                    passRate: rawPassCount / rawCount,
+                    count: rawCount,
+                    source: 'raw'
+                };
             }
 
             let weightedCount = 0;
