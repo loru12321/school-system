@@ -327,7 +327,7 @@
                     return;
                 }
 
-                window.analyzeTeachers({ render: false, township: false, historyLimit: 1 });
+                window.analyzeTeachers({ render: false, township: false, historyLimit: 0 });
                 ['teacherCardsContainer', 'teacherComparisonTable', 'teacher-township-ranking-container'].forEach((id) => {
                     const node = document.getElementById(id);
                     if (node) delete node.dataset.released;

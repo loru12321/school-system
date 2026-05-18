@@ -533,6 +533,7 @@ assert.ok(teachingManagementOverviewRuntime.includes("const supportedModules = [
 assert.ok(moduleEntryRuntime.includes("if (id === 'single-school-eval') return false;"), 'module entry runtime should not initialize the removed performance fairness module');
 assert.ok(!moduleEntryRuntime.includes('renderTeacherAnalysisNow()">立即生成'), 'teacher portrait pending state should not require a manual immediate-generate click');
 assert.ok(moduleEntryRuntime.includes('window.tmScheduleTeachingOverviewRender()'), 'module entry should schedule teaching overview refreshes after teacher analysis phases');
+assert.ok(moduleEntryRuntime.includes('historyLimit: 0'), 'teacher-analysis entry should use a fast no-history first render');
 assert.ok(moduleEntryRuntime.includes('window.smScheduleStudentOverviewRender()'), 'module entry should schedule student overview first renders');
 assert.ok(teacherStateRuntime.includes('function peekTeacherStats()'), 'teacher-state-runtime.js should expose a non-cloning stats read path for hot overview renders');
 assert.ok(appSource.includes('TeacherStateRuntime.peekTeacherStats'), 'app.js readTeacherStats should avoid deep cloning teacher stats on hot paths');
