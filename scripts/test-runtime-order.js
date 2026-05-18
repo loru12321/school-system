@@ -509,9 +509,18 @@ assert.ok(!shellPolishRuntime.includes('#shell-active-module'), 'shell polish ru
 assert.ok(!shellPolishRuntime.includes('#shell-active-hint'), 'shell polish runtime should not bind tooltip to removed next-step card');
 assert.ok(shellRuntime.includes('function formatOverviewCohortText'), 'shell overview should compact cohort chip text for the docked row');
 assert.ok(shellRuntime.includes('function formatOverviewModeText'), 'shell overview should compact mode chip text for the docked row');
+assert.ok(shellRuntime.includes('function buildModuleRailSignature'), 'module rail should cache its rendered structure between module switches');
+assert.ok(shellRuntime.includes('function syncModuleRailActiveState'), 'module rail should update active chips without rebuilding the rail');
+assert.ok(shellRuntime.includes('dataset.moduleRailSignature'), 'module rail should store a render signature on the rail element');
+assert.ok(shellRuntime.includes('dataset.moduleRailDelegated'), 'module rail should use delegated clicks instead of rebinding each chip');
+assert.ok(!shellRuntime.includes("rail.querySelectorAll('.shell-module-rail-chip').forEach((button) => {\n            button.addEventListener('click'"), 'module rail should avoid per-render chip click listeners');
 assert.ok(moduleEntryRuntime.includes('const TEACHER_ANALYSIS_RENDER_DELAY_MS = 180;'), 'teacher portrait should auto-render shortly after entering the module');
 assert.ok(moduleEntryRuntime.includes('ensureTeacherAnalysisMainRuntimeLoaded()'), 'teacher portrait entry should load its runtime automatically');
 assert.ok(moduleEntryRuntime.includes('function scheduleTeacherCompareAutoRender'), 'teacher multi-period compare should auto-render from default selectors');
+assert.ok(moduleEntryRuntime.includes('function scheduleActiveModuleTask'), 'module entry should defer non-critical active-module work');
+assert.ok(moduleEntryRuntime.includes("'analysis-entry-selects'"), 'analysis module should defer selector and hint refresh off the switch frame');
+assert.ok(moduleEntryRuntime.includes("`county-analysis-render:${id}`"), 'county analysis should schedule heavy rendering after the switch frame');
+assert.ok(moduleEntryRuntime.includes("'report-generator-selects'"), 'report generator should defer selector refresh off the switch frame');
 assert.ok(!moduleEntryRuntime.includes('initClassComparisonEntry'), 'removed class comparison should not have an entry initializer');
 assert.ok(!indexHtml.includes('id="class-comparison"'), 'removed class comparison section should not be present in the app shell');
 assert.ok(!moduleEntryRuntime.includes('initClassDiagnosisEntry'), 'removed class diagnosis should not have an entry initializer');

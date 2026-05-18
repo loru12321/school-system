@@ -861,6 +861,13 @@
         scheduleModuleTask(`macro-tables:${label}`, run, { delay: 60, idle: true, timeout: 900 });
     }
 
+    function scheduleActiveModuleTask(activeModuleId, label, task, options = {}) {
+        scheduleModuleTask(label, () => {
+            if (activeModuleId && !document.getElementById(activeModuleId)?.classList.contains('active')) return;
+            task();
+        }, options);
+    }
+
     function runModuleSpecificInit(id) {
         if (id === 'student-details') return initStudentDetailsEntry();
         if (id === 'summary') {
@@ -872,8 +879,10 @@
         }
         if (id === 'app-download-center') return initAppDownloadCenterEntry();
         if (id === 'analysis') {
-            if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
-            renderSingleSchoolAnalysisHint();
+            scheduleActiveModuleTask('analysis', 'analysis-entry-selects', () => {
+                if (typeof updateMacroMultiExamSelects === 'function') updateMacroMultiExamSelects();
+                renderSingleSchoolAnalysisHint();
+            }, { delay: 40, frame: true });
             scheduleMacroTablesRender('analysis', 'analysis-tables');
         }
         if (TEACHING_MANAGEMENT_MODULE_IDS.has(id)) return initTeachingManagementEntry(id);
@@ -890,23 +899,24 @@
                 }
                 return false;
             };
+            const scheduleCountyRender = () => scheduleModuleTaskPromise(`county-analysis-render:${id}`, () => {
+                const active = document.getElementById(id)?.classList.contains('active')
+                    || (id === 'county-analysis'
+                        && (document.getElementById('county-teacher-portrait')?.classList.contains('active')
+                            || document.getElementById('county-school-horizontal')?.classList.contains('active')));
+                if (active) return renderCounty();
+                return false;
+            }, { delay: 80, frame: true });
             if (typeof window.ensureCountyAnalysisRuntimeLoaded === 'function'
                 && !window.__COUNTY_ANALYSIS_RUNTIME_PATCHED__) {
                 return window.ensureCountyAnalysisRuntimeLoaded()
-                    .then(() => {
-                        const active = document.getElementById(id)?.classList.contains('active')
-                            || (id === 'county-analysis'
-                                && (document.getElementById('county-teacher-portrait')?.classList.contains('active')
-                                    || document.getElementById('county-school-horizontal')?.classList.contains('active')));
-                        if (active) return renderCounty();
-                        return false;
-                    })
+                    .then(scheduleCountyRender)
                     .catch((error) => {
                         console.warn('init county analysis failed:', error);
                         return false;
                     });
             }
-            return renderCounty();
+            return scheduleCountyRender();
         }
         if (id === 'high-score' && typeof renderHighScoreTable === 'function') renderHighScoreTable();
         if (id === 'student-overview') return initStudentOverviewEntry();
@@ -929,8 +939,10 @@
         if (id === 'freshman-simulator' || id === 'exam-arranger') return initFreshmanExamEntry(id);
         if (id === 'grade-scheduler') return initGradeSchedulerEntry();
         if (id === 'report-generator') {
-            updateSchoolSelect();
-            updateClassSelect();
+            scheduleActiveModuleTask('report-generator', 'report-generator-selects', () => {
+                if (typeof updateSchoolSelect === 'function') updateSchoolSelect();
+                if (typeof updateClassSelect === 'function') updateClassSelect();
+            }, { delay: 60, frame: true });
         }
         if (id === 'segment-analysis') updateSegmentSelects();
         if (id === 'potential-analysis') updatePotentialSchoolSelect();

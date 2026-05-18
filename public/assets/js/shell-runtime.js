@@ -483,11 +483,53 @@
         window.requestAnimationFrame(syncState);
     }
 
+    function buildModuleRailSignature(category, visibleItems, activeItem) {
+        const categoryKey = [
+            category && category.title,
+            category && category.color,
+            category && category.eyebrow
+        ].join('|');
+        const itemKey = (Array.isArray(visibleItems) ? visibleItems : [])
+            .map((item) => [item.id, item.text, item.hint || ''].join(':'))
+            .join('|');
+        return [categoryKey, itemKey].join('::');
+    }
+
+    function syncModuleRailActiveState(rail, activeId) {
+        if (!rail) return;
+        rail.querySelectorAll('.shell-module-rail-chip').forEach((button) => {
+            const isActive = button.getAttribute('data-module-id') === activeId;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+    }
+
+    function bindModuleRailDelegatedClick(rail) {
+        if (!rail || rail.dataset.moduleRailDelegated === 'true') return;
+        rail.dataset.moduleRailDelegated = 'true';
+        rail.addEventListener('click', function (event) {
+            const target = event.target && event.target.closest
+                ? event.target.closest('.shell-module-rail-chip')
+                : null;
+            if (!target || !rail.contains(target)) return;
+
+            event.preventDefault();
+            const moduleId = target.getAttribute('data-module-id');
+            if (!moduleId) return;
+            if (typeof switchTab === 'function') {
+                switchTab(moduleId);
+            } else {
+                updateShellChrome(moduleId);
+            }
+        });
+    }
+
     function renderModuleRailShell(instance, category, visibleItems, activeItem) {
         if (!instance || !instance.shell || !instance.rail || !instance.title || !instance.status) return;
 
         const activeId = activeItem ? activeItem.id : '';
         const activeLabel = activeItem ? activeItem.text : '未选择模块';
+        const signature = buildModuleRailSignature(category, visibleItems, activeItem);
 
         instance.shell.style.display = '';
         instance.shell.style.setProperty('--rail-accent', category.color);
@@ -496,6 +538,13 @@
         instance.title.textContent = `${category.title} · 桌面快切`;
         instance.status.textContent = `当前模块：${activeLabel}`;
         instance.status.setAttribute('data-shell-tooltip', `${category.title} 当前模块：${activeLabel}`);
+        bindModuleRailDelegatedClick(instance.rail);
+
+        if (instance.rail.dataset.moduleRailSignature === signature) {
+            syncModuleRailActiveState(instance.rail, activeId);
+            return;
+        }
+        instance.rail.dataset.moduleRailSignature = signature;
 
         instance.rail.innerHTML = visibleItems.map((item) => `
             <button
@@ -510,19 +559,6 @@
             </button>
         `).join('');
 
-        instance.rail.querySelectorAll('.shell-module-rail-chip').forEach((button) => {
-            button.addEventListener('click', function (event) {
-                event.preventDefault();
-                const moduleId = button.getAttribute('data-module-id');
-                if (!moduleId) return;
-                if (typeof switchTab === 'function') {
-                    switchTab(moduleId);
-                } else {
-                    updateShellChrome(moduleId);
-                }
-            });
-        });
-
         bindHorizontalWheelScroll(instance.shell, instance.rail, instance.shell);
     }
 
@@ -533,6 +569,7 @@
                 instances.forEach(function (instance) {
                     instance.shell.style.display = 'none';
                     instance.rail.innerHTML = '';
+                    delete instance.rail.dataset.moduleRailSignature;
                     instance.shell.classList.remove('is-visible');
                     if (instance.shell === getFloatingModuleRailShell()) {
                         instance.shell.setAttribute('aria-hidden', 'true');
@@ -566,6 +603,7 @@
         if (!category || !Array.isArray(visibleItems) || visibleItems.length === 0) {
             railShell.style.display = 'none';
             rail.innerHTML = '';
+            delete rail.dataset.moduleRailSignature;
             return;
         }
 
@@ -578,6 +616,18 @@
         railTitle.textContent = `${category.title} · 桌面快切`;
         railStatus.textContent = `当前模块：${activeLabel}`;
         railStatus.setAttribute('data-shell-tooltip', `${category.title} 当前模块：${activeLabel}`);
+        bindModuleRailDelegatedClick(rail);
+
+        const signature = buildModuleRailSignature(category, visibleItems, activeItem);
+        if (rail.dataset.moduleRailSignature === signature) {
+            syncModuleRailActiveState(rail, activeId);
+            window.requestAnimationFrame(function () {
+                scrollActiveModuleRailChipIntoView(rail);
+                updateHorizontalScrollState(rail, railShell);
+            });
+            return;
+        }
+        rail.dataset.moduleRailSignature = signature;
 
         rail.innerHTML = visibleItems.map((item) => `
             <button
@@ -591,19 +641,6 @@
                 <span>${item.text}</span>
             </button>
         `).join('');
-
-        rail.querySelectorAll('.shell-module-rail-chip').forEach((button) => {
-            button.addEventListener('click', function (event) {
-                event.preventDefault();
-                const moduleId = button.getAttribute('data-module-id');
-                if (!moduleId) return;
-                if (typeof switchTab === 'function') {
-                    switchTab(moduleId);
-                } else {
-                    updateShellChrome(moduleId);
-                }
-            });
-        });
 
         bindHorizontalWheelScroll(railShell, rail, railShell);
         window.requestAnimationFrame(function () {
