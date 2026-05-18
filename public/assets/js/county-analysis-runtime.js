@@ -236,6 +236,28 @@
         return (Array.isArray(list) ? list : []).some((name) => countySameSchoolName(name, targetName));
     }
 
+    function createCountyTownshipMatcher(townshipSchools = []) {
+        const townshipList = Array.from(new Set((Array.isArray(townshipSchools) ? townshipSchools : [])
+            .map((name) => String(name || '').trim())
+            .filter(Boolean)));
+        const exactSet = new Set(townshipList);
+        const normalizedSet = new Set(townshipList.map((name) => normalizeSchoolKey(name)));
+        const townshipSchoolEligibilityCache = new Map();
+        return (schoolName) => {
+            const normalizedSchool = String(schoolName || '').trim();
+            if (!normalizedSchool) return false;
+            if (townshipSchoolEligibilityCache.has(normalizedSchool)) {
+                return townshipSchoolEligibilityCache.get(normalizedSchool);
+            }
+            let matched = exactSet.has(normalizedSchool) || normalizedSet.has(normalizeSchoolKey(normalizedSchool));
+            if (!matched) {
+                matched = townshipList.some((name) => countySameSchoolName(name, normalizedSchool));
+            }
+            townshipSchoolEligibilityCache.set(normalizedSchool, matched);
+            return matched;
+        };
+    }
+
     function resolveCountySchoolOption(options, preferred) {
         const list = Array.from(new Set((Array.isArray(options) ? options : [])
             .map((name) => String(name || '').trim())
@@ -996,8 +1018,7 @@
         if (state.lastTeacherRankSignature === rankingSignature && window.COUNTY_TEACHER_RANKINGS && window.COUNTY_TEACHER_RANKING_DATA) {
             return window.COUNTY_TEACHER_RANKINGS;
         }
-        const townshipSet = new Set(normalized.townshipSchools || []);
-        const isTownshipSchool = (schoolName) => countySchoolListIncludes(normalized.townshipSchools, schoolName) || townshipSet.has(schoolName);
+        const isTownshipSchool = createCountyTownshipMatcher(normalized.townshipSchools);
         const teacherStats = getCountyTeacherStats() || {};
         const rankings = {};
         const rankingDataMap = {};
@@ -1388,8 +1409,7 @@
         state.lastDataRankSignature = sig;
 
         const scope = normalizeScope(getCurrentScope() || { includesCounty: false, townshipSchools: getSchoolNames() });
-        const townshipSet = new Set(scope.townshipSchools || []);
-        const isTownshipSchool = (schoolName) => countySchoolListIncludes(scope.townshipSchools, schoolName) || townshipSet.has(schoolName);
+        const isTownshipSchool = createCountyTownshipMatcher(scope.townshipSchools);
         const schools = Object.values(window.SCHOOLS || {});
         const weights = getTwoRateWeights();
         const countyMax = { avg: 0, excellent: 0, pass: 0 };

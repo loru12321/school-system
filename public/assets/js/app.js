@@ -12091,11 +12091,10 @@ function renderStudentDetails(reset = true) {
             }
         }
 
-        data = getComparisonStudentList(data, RAW_DATA);
         const hasExcelFilters = Object.values(STD_STATE.activeFilters || {}).some(values => values && values.size > 0);
         const canUseAllRowsFallback = ['admin', 'director', 'grade_director'].includes(role);
         if (!data.length && canUseAllRowsFallback && !hasExcelFilters && !hasSelectedSchool && Array.isArray(RAW_DATA) && RAW_DATA.length) {
-            data = getComparisonStudentList([...RAW_DATA], RAW_DATA);
+            data = [...RAW_DATA];
             appDebug('[考试明细] 检测到空首屏，已回落到当前成绩库数据');
         }
 
@@ -12154,7 +12153,9 @@ function renderStudentDetails(reset = true) {
 
     const startIdx = (STD_STATE.page - 1) * STD_STATE.size;
     const endIdx = startIdx + STD_STATE.size;
-    const displayList = STD_STATE.cacheData.slice(startIdx, endIdx);
+    const displaySourceList = STD_STATE.cacheData.slice(startIdx, endIdx);
+    const comparisonContext = getCachedComparisonStudentRankContext(RAW_DATA);
+    const displayList = displaySourceList.map((student) => getComparisonStudentView(student, RAW_DATA, comparisonContext));
 
     const dom = getStudentDetailsDomCache();
     const thead = dom.thead;

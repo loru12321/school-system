@@ -59,6 +59,7 @@ const teachingManagementVersionRuntimePath = path.resolve(__dirname, '../public/
 const teacherAnalysisCoreRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-analysis-core-runtime.js');
 const teacherAnalysisUiRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-analysis-ui-runtime.js');
 const teacherAnalysisBridgeRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-analysis-bridge-runtime.js');
+const countyAnalysisRuntimePath = path.resolve(__dirname, '../public/assets/js/county-analysis-runtime.js');
 const mobileAppRuntimePath = path.resolve(__dirname, '../public/assets/js/mobile-app-runtime.js');
 const dataManagerSqlRuntimePath = path.resolve(__dirname, '../public/assets/js/data-manager-sql.js');
 const reportRenderRuntimePath = path.resolve(__dirname, '../public/assets/js/report-render-runtime.js');
@@ -128,6 +129,7 @@ assert.ok(fs.existsSync(teachingManagementVersionRuntimePath), 'teaching-managem
 assert.ok(fs.existsSync(teacherAnalysisCoreRuntimePath), 'teacher-analysis-core-runtime.js should exist');
 assert.ok(fs.existsSync(teacherAnalysisUiRuntimePath), 'teacher-analysis-ui-runtime.js should exist');
 assert.ok(fs.existsSync(teacherAnalysisBridgeRuntimePath), 'teacher-analysis-bridge-runtime.js should exist');
+assert.ok(fs.existsSync(countyAnalysisRuntimePath), 'county-analysis-runtime.js should exist');
 assert.ok(fs.existsSync(mobileAppRuntimePath), 'mobile-app-runtime.js should exist');
 assert.ok(fs.existsSync(dataManagerSqlRuntimePath), 'data-manager-sql.js should exist');
 assert.ok(fs.existsSync(reportRenderRuntimePath), 'report-render-runtime.js should exist');
@@ -155,6 +157,7 @@ const teachingManagementOverviewRuntime = fs.readFileSync(teachingManagementOver
 const teachingManagementVersionRuntime = fs.readFileSync(teachingManagementVersionRuntimePath, 'utf8');
 const studentOverviewRuntime = fs.readFileSync(studentOverviewRuntimePath, 'utf8');
 const teacherAnalysisCoreRuntime = fs.readFileSync(teacherAnalysisCoreRuntimePath, 'utf8');
+const countyAnalysisRuntime = fs.readFileSync(countyAnalysisRuntimePath, 'utf8');
 const popperVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/popperjs/popper.min.js'), 'utf8');
 const tippyVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/tippyjs/tippy.umd.min.js'), 'utf8');
 const appSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
@@ -556,6 +559,12 @@ assert.ok(teachingManagementVersionRuntime.includes('TM_CURRENT_VERSION_PAYLOAD_
 assert.ok(teacherAnalysisCoreRuntime.includes('window.tmScheduleTeachingOverviewRender()'), 'teacher analysis should schedule overview refresh instead of blocking the same render frame');
 assert.ok(teacherAnalysisCoreRuntime.includes('const townshipSchoolEligibilityCache = new Map();'), 'teacher township ranking should cache school eligibility checks');
 assert.ok(teacherAnalysisCoreRuntime.includes('townshipSchoolEligibilityCache.get(normalizedSchool)'), 'teacher township ranking should reuse cached township school matches');
+assert.ok(countyAnalysisRuntime.includes('function createCountyTownshipMatcher'), 'county analysis should reuse a cached township school matcher');
+assert.ok(countyAnalysisRuntime.includes('const isTownshipSchool = createCountyTownshipMatcher(scope.townshipSchools);'), 'county rank application should not fuzzy-match township schools per row');
+assert.ok(countyAnalysisRuntime.includes('const isTownshipSchool = createCountyTownshipMatcher(normalized.townshipSchools);'), 'county teacher ranking should not fuzzy-match township schools repeatedly');
+assert.ok(appSource.includes('const displaySourceList = STD_STATE.cacheData.slice(startIdx, endIdx);'), 'student details should paginate before comparison rank normalization');
+assert.ok(appSource.includes('const displayList = displaySourceList.map((student) => getComparisonStudentView(student, RAW_DATA, comparisonContext));'), 'student details should normalize comparison rank data only for the visible page');
+assert.ok(!appSource.includes('data = getComparisonStudentList(data, RAW_DATA);'), 'student details should avoid full-list comparison normalization before pagination');
 assert.ok(teachingManagementRuntime.includes('function smScheduleStudentOverviewRender()'), 'student overview should coalesce filter-change refreshes into one frame');
 assert.ok(studentOverviewRuntime.includes('const progressRows = fullProgressRows.length ? fullProgressRows : readProgressCacheState();'), 'student overview should avoid copying the progress cache for counts');
 assert.ok(studentOverviewRuntime.includes('let progressCount = 0;'), 'student overview should count progress rows in a single pass');
