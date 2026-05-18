@@ -11,6 +11,7 @@ function read(relativePath) {
 const gateway = read('src/worker-gateway-d1.js');
 const worker = read('src/worker-dummy.js');
 const boot = read('public/assets/js/boot-runtime.js');
+const app = read('public/assets/js/app.js');
 const serviceWorker = read('public/sw.js');
 const keySensitiveFiles = [
     'wrangler.jsonc',
@@ -37,6 +38,12 @@ assert.ok(
     boot.includes("return normalizeProxyOrigin(window.location.origin) + '/sb/rest/v1';"),
     'localhost REST compatibility client should use the same-origin Supabase proxy'
 );
+assert.ok(app.includes('isHostedGatewayUrl'), 'app EdgeGateway should recognize same-origin hosted gateway URLs');
+assert.ok(
+    app.includes("urls.length && (this.getPublishableKey() || urls.some(url => this.isHostedGatewayUrl(url)))"),
+    'app EdgeGateway should allow same-origin hosted gateway calls without a browser-side publishable key'
+);
+assert.ok(app.includes('if (apikey) headers.apikey = apikey;'), 'app EdgeGateway should omit empty apikey headers for hosted gateway calls');
 assert.ok(serviceWorker.includes('isApiCacheEligible'), 'service worker should gate API caching');
 assert.ok(!serviceWorker.includes("console.log('[SW] loaded')"), 'service worker should not log on every load');
 

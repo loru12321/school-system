@@ -87,6 +87,14 @@ const EdgeGateway = {
     getGatewayUrl: function () {
         return this.getGatewayCandidates()[0] || '';
     },
+    isHostedGatewayUrl: function (url) {
+        try {
+            const parsed = new URL(url, window.location.href);
+            return parsed.origin === window.location.origin || parsed.pathname === '/api/edu-gateway';
+        } catch (e) {
+            return false;
+        }
+    },
     getPublishableKey: function () {
         return String(
             localStorage.getItem('CLOUD_API_KEY')
@@ -108,7 +116,8 @@ const EdgeGateway = {
         sessionStorage.removeItem(this.userStorageKey);
     },
     hasGatewayConfig: function () {
-        return !!(this.getGatewayUrl() && this.getPublishableKey());
+        const urls = this.getGatewayCandidates();
+        return !!(urls.length && (this.getPublishableKey() || urls.some(url => this.isHostedGatewayUrl(url))));
     },
     canUseAuthorizedRequests: function () {
         return this.hasGatewayConfig() && !!this.getToken();
@@ -167,7 +176,7 @@ const EdgeGateway = {
     request: async function (action, payload = {}, options = {}) {
         const urls = this.getGatewayCandidates();
         const apikey = this.getPublishableKey();
-        if (!urls.length || !apikey) {
+        if (!urls.length || (!apikey && !urls.some(url => this.isHostedGatewayUrl(url)))) {
             throw new Error('EDGE_GATEWAY_NOT_CONFIGURED');
         }
         const protocol = window.location.protocol;
@@ -177,9 +186,9 @@ const EdgeGateway = {
             console.warn('[EdgeGateway] Running from file:// may trigger CORS blocks (Origin: null). Recommended: Use local web server.');
         }
         const headers = {
-            'Content-Type': 'application/json',
-            'apikey': apikey
+            'Content-Type': 'application/json'
         };
+        if (apikey) headers.apikey = apikey;
         const token = options.allowAnonymous ? '' : (options.token || this.getToken());
         if (!options.allowAnonymous) {
             if (!token) throw new Error('EDGE_GATEWAY_SESSION_MISSING');
