@@ -9283,9 +9283,19 @@ function tmBuildMiniCard(title, value) {
 }
 
 // Teaching management cloud/version runtime moved to public/assets/js/teaching-management-runtime.js.
+var TM_TEACHER_COVERAGE_CACHE = { teacherMap: null, result: null };
+var TM_TEACHER_INSIGHT_CACHE = {
+    stats: null,
+    subjectFilter: '',
+    teacherFilter: '',
+    result: null
+};
 
 function tmGetTeacherCoverageFromMap() {
     const teacherMap = window.TEACHER_MAP && typeof window.TEACHER_MAP === 'object' ? window.TEACHER_MAP : {};
+    if (TM_TEACHER_COVERAGE_CACHE.teacherMap === teacherMap && TM_TEACHER_COVERAGE_CACHE.result) {
+        return TM_TEACHER_COVERAGE_CACHE.result;
+    }
     const keys = Object.keys(teacherMap);
     const teachers = new Set();
     const classes = new Set();
@@ -9297,12 +9307,14 @@ function tmGetTeacherCoverageFromMap() {
         if (className) classes.add(String(className).trim());
         if (subjectName) subjects.add(String(subjectName).trim());
     });
-    return {
+    const result = {
         mappingCount: keys.length,
         teacherCount: teachers.size,
         classCount: classes.size,
         subjectCount: subjects.size
     };
+    TM_TEACHER_COVERAGE_CACHE = { teacherMap, result };
+    return result;
 }
 
 function tmGetAvailableExamList() {
@@ -9327,6 +9339,12 @@ function tmBuildTeacherInsight(subjectFilter = '', teacherFilter = '') {
     const stats = readTeacherStats();
     const useSubjectFilter = String(subjectFilter || '').trim();
     const useTeacherFilter = String(teacherFilter || '').trim();
+    if (TM_TEACHER_INSIGHT_CACHE.stats === stats
+        && TM_TEACHER_INSIGHT_CACHE.subjectFilter === useSubjectFilter
+        && TM_TEACHER_INSIGHT_CACHE.teacherFilter === useTeacherFilter
+        && TM_TEACHER_INSIGHT_CACHE.result) {
+        return TM_TEACHER_INSIGHT_CACHE.result;
+    }
     const teacherSet = new Set();
     const classSet = new Set();
     const subjectSet = new Set();
@@ -9392,7 +9410,7 @@ function tmBuildTeacherInsight(subjectFilter = '', teacherFilter = '') {
             return a.avgScore - b.avgScore;
         })[0] || null;
 
-    return {
+    const result = {
         teacherCount: teacherSet.size,
         classCount: classSet.size,
         subjectCount: subjectSet.size,
@@ -9402,6 +9420,13 @@ function tmBuildTeacherInsight(subjectFilter = '', teacherFilter = '') {
         riskTeacherCount: new Set([...lowRiskTeachers, ...scoreRiskTeachers, ...passRiskTeachers]).size,
         focusSubject
     };
+    TM_TEACHER_INSIGHT_CACHE = {
+        stats,
+        subjectFilter: useSubjectFilter,
+        teacherFilter: useTeacherFilter,
+        result
+    };
+    return result;
 }
 
 function tmApplySelectValue(selectId, preferredValue = '', preferredText = '') {

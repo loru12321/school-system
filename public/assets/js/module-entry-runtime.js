@@ -121,32 +121,42 @@
     function activateTeachingManagementModule(id = 'teaching-overview') {
         const moduleId = String(id || 'teaching-overview').trim() || 'teaching-overview';
         if (!TEACHING_MANAGEMENT_MODULE_IDS.has(moduleId)) return false;
+        const scheduleTeachingRender = (label, task, options = {}) => {
+            scheduleModuleTask(`teaching-management:${label}`, () => {
+                if (!document.getElementById(moduleId)?.classList.contains('active')) return;
+                task();
+            }, { delay: 40, frame: true, ...options });
+        };
 
         if (moduleId === 'teaching-overview') {
             if (typeof window.tmScheduleTeachingOverviewRender === 'function') {
                 window.tmScheduleTeachingOverviewRender();
             } else if (typeof window.renderTeachingOverview === 'function') {
-                window.renderTeachingOverview();
+                scheduleTeachingRender('overview', window.renderTeachingOverview, { delay: 16 });
             }
             return true;
         }
 
         if (moduleId === 'teaching-issue-board' && typeof window.tmRenderIssueBoard === 'function') {
-            window.tmRenderIssueBoard();
+            scheduleTeachingRender('issue-board', window.tmRenderIssueBoard);
             return true;
         }
         if (moduleId === 'teaching-warning-center' && typeof window.tmRenderWarningCenter === 'function') {
-            window.tmRenderWarningCenter();
-            if (typeof window.tmRefreshCloudOps === 'function') window.tmRefreshCloudOps(false);
+            scheduleTeachingRender('warning-center', () => {
+                window.tmRenderWarningCenter();
+                if (typeof window.tmRefreshCloudOps === 'function') window.tmRefreshCloudOps(false);
+            });
             return true;
         }
         if (moduleId === 'teaching-rectify-center' && typeof window.tmRenderRectifyCenter === 'function') {
-            window.tmRenderRectifyCenter();
-            if (typeof window.tmRefreshCloudOps === 'function') window.tmRefreshCloudOps(false);
+            scheduleTeachingRender('rectify-center', () => {
+                window.tmRenderRectifyCenter();
+                if (typeof window.tmRefreshCloudOps === 'function') window.tmRefreshCloudOps(false);
+            });
             return true;
         }
         if (moduleId === 'teaching-version-center' && typeof window.tmRenderVersionCenter === 'function') {
-            window.tmRenderVersionCenter();
+            scheduleTeachingRender('version-center', window.tmRenderVersionCenter);
             return true;
         }
         return false;

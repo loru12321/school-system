@@ -151,6 +151,7 @@ const progressAnalysisRuntime = fs.readFileSync(progressAnalysisRuntimePath, 'ut
 const teacherStateRuntime = fs.readFileSync(teacherRuntimePath, 'utf8');
 const teachingManagementRuntime = fs.readFileSync(teachingManagementRuntimePath, 'utf8');
 const teachingManagementOverviewRuntime = fs.readFileSync(teachingManagementOverviewRuntimePath, 'utf8');
+const teachingManagementVersionRuntime = fs.readFileSync(teachingManagementVersionRuntimePath, 'utf8');
 const studentOverviewRuntime = fs.readFileSync(studentOverviewRuntimePath, 'utf8');
 const teacherAnalysisCoreRuntime = fs.readFileSync(teacherAnalysisCoreRuntimePath, 'utf8');
 const popperVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/popperjs/popper.min.js'), 'utf8');
@@ -535,6 +536,13 @@ assert.ok(moduleEntryRuntime.includes('window.smScheduleStudentOverviewRender()'
 assert.ok(teacherStateRuntime.includes('function peekTeacherStats()'), 'teacher-state-runtime.js should expose a non-cloning stats read path for hot overview renders');
 assert.ok(appSource.includes('TeacherStateRuntime.peekTeacherStats'), 'app.js readTeacherStats should avoid deep cloning teacher stats on hot paths');
 assert.ok(teachingManagementRuntime.includes('window.tmScheduleTeachingOverviewRender = tmScheduleTeachingOverviewRender'), 'teaching overview refresh should be externally schedulable');
+assert.ok(moduleEntryRuntime.includes('const scheduleTeachingRender = (label, task, options = {}) =>'), 'teaching management modules should share a deferred render helper');
+assert.ok(moduleEntryRuntime.includes("scheduleTeachingRender('warning-center'"), 'teaching warning center should render after the module switch frame');
+assert.ok(moduleEntryRuntime.includes("scheduleTeachingRender('version-center'"), 'teaching version center should render after the module switch frame');
+assert.ok(appSource.includes('var TM_TEACHER_COVERAGE_CACHE'), 'teaching overview should cache teacher coverage for repeated renders');
+assert.ok(appSource.includes('var TM_TEACHER_INSIGHT_CACHE'), 'teaching overview should cache teacher insight scans for repeated renders');
+assert.ok(teachingManagementVersionRuntime.includes('var TM_CURRENT_VERSION_PAYLOAD_CACHE'), 'teaching version center should cache the current version payload');
+assert.ok(teachingManagementVersionRuntime.includes('TM_CURRENT_VERSION_PAYLOAD_CACHE = { key: cacheKey, payload };'), 'teaching version center should reuse current payload across one render cycle');
 assert.ok(teacherAnalysisCoreRuntime.includes('window.tmScheduleTeachingOverviewRender()'), 'teacher analysis should schedule overview refresh instead of blocking the same render frame');
 assert.ok(teachingManagementRuntime.includes('function smScheduleStudentOverviewRender()'), 'student overview should coalesce filter-change refreshes into one frame');
 assert.ok(studentOverviewRuntime.includes('const progressRows = fullProgressRows.length ? fullProgressRows : readProgressCacheState();'), 'student overview should avoid copying the progress cache for counts');

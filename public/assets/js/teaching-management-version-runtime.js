@@ -276,6 +276,8 @@ function tmBuildScoreSignature(exams) {
     return `rows:${Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0}|exams:${examSig}`;
 }
 
+var TM_CURRENT_VERSION_PAYLOAD_CACHE = { key: '', payload: null };
+
 function tmBuildCurrentVersionPayload(versionName) {
     const scope = tmGetCurrentGatewayScope();
     const exams = tmGetAvailableExamList();
@@ -287,18 +289,40 @@ function tmBuildCurrentVersionPayload(versionName) {
     const teacherSignature = window.DataManager?.buildTeacherSignature
         ? DataManager.buildTeacherSignature(window.TEACHER_MAP || {}, window.TEACHER_SCHOOL_MAP || {})
         : `teacher:${teacherCoverage.mappingCount}`;
+    const scoreHash = tmBuildScoreSignature(exams);
+    const aliasHash = tmBuildAliasSignature();
+    const configHash = `${String(window.CONFIG?.name || '').trim()}|${paramsSignature}`;
+    const isCurrentPayload = String(versionName || '') === '__current__';
+    const cacheKey = isCurrentPayload
+        ? [
+            scope.project_key,
+            scope.cohort_id,
+            scope.school_name,
+            scoreHash,
+            teacherSignature,
+            targetsSignature,
+            aliasHash,
+            configHash,
+            Object.keys(targets || {}).length,
+            Array.isArray(aliasRows) ? aliasRows.length : 0
+        ].join('::')
+        : '';
 
-    return {
+    if (isCurrentPayload && TM_CURRENT_VERSION_PAYLOAD_CACHE.key === cacheKey && TM_CURRENT_VERSION_PAYLOAD_CACHE.payload) {
+        return TM_CURRENT_VERSION_PAYLOAD_CACHE.payload;
+    }
+
+    const payload = {
         version_name: versionName,
         project_key: scope.project_key,
         cohort_id: scope.cohort_id,
         snapshot_key: readWorkspaceProjectKey() || null,
         exam_scope: exams.map((item) => item.label || item.id).join(' | ') || null,
-        score_hash: tmBuildScoreSignature(exams),
+        score_hash: scoreHash,
         teacher_hash: teacherSignature,
         target_hash: targetsSignature,
-        alias_hash: tmBuildAliasSignature(),
-        config_hash: `${String(window.CONFIG?.name || '').trim()}|${paramsSignature}`,
+        alias_hash: aliasHash,
+        config_hash: configHash,
         summary_json: {
             school_name: scope.school_name || null,
             exams_count: exams.length,
@@ -308,6 +332,10 @@ function tmBuildCurrentVersionPayload(versionName) {
             alias_rules: Array.isArray(aliasRows) ? aliasRows.length : 0
         }
     };
+    if (isCurrentPayload) {
+        TM_CURRENT_VERSION_PAYLOAD_CACHE = { key: cacheKey, payload };
+    }
+    return payload;
 }
 
 function tmFormatVersionValue(value, fallback = '未记录') {
