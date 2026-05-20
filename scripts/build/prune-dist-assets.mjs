@@ -8,9 +8,7 @@ const projectRoot = path.resolve(__dirname, '../../');
 const distRoot = path.join(projectRoot, 'dist');
 const distIndexPath = path.join(distRoot, 'index.html');
 
-const prunablePaths = [
-    'downloads'
-];
+const prunablePaths = [];
 
 function isReferenced(relativePath, html) {
     const normalized = String(relativePath || '').replace(/\\/g, '/');

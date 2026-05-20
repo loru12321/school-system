@@ -10,6 +10,13 @@ const scripts = packageJson.scripts || {};
 
 assert.ok(source.includes('getDownloadAssetModel'), 'download center should resolve an explicit asset model');
 assert.ok(source.includes('isVerifiedReleaseAsset'), 'download center should distinguish verified release assets from fallback links');
+assert.ok(source.includes('getPeerDownloadChannelKey'), 'download center should expose both Android and Windows download actions');
+assert.ok(source.includes('peerAssetModel'), 'download center secondary action should target the opposite platform asset');
+assert.ok(source.includes('shouldAutoFetchReleaseCatalog'), 'download center should gate automatic GitHub release refreshes');
+assert.ok(source.includes('window.PUBLIC_DOWNLOAD_AUTO_FETCH_RELEASES === true'), 'download center should only auto-fetch GitHub releases when explicitly enabled');
+assert.ok(source.includes("name.endsWith('.zip') && /(?:win|windows|desktop|smartedu)/i.test(name)"), 'download center should recognize Windows release archives');
+assert.ok(source.includes('./downloads/school-system-android-v1.0.apk'), 'download center should expose the locally hosted APK');
+assert.ok(source.includes('./downloads/smartedu-windows-latest.zip'), 'download center should expose the locally hosted Windows app package');
 assert.ok(source.includes('aria-disabled'), 'download center should disable missing release assets');
 assert.ok(source.includes('window.PUBLIC_DOWNLOAD_ALLOW_UNVERIFIED_LINKS === true'), 'download center should require an explicit opt-in before exposing unverified fallback links');
 assert.ok(!source.includes('return !!state.lastError || !state.lastFetchedAt || !state.releases.length;'), 'download center should not enable fallback download links before release verification');

@@ -3,7 +3,7 @@ const apiUrl = `https://api.github.com/repos/${repo}/releases/latest`;
 const allowMissing = process.env.RELEASE_ASSETS_ALLOW_MISSING === 'true';
 const required = [
     { key: 'android', pattern: /\.apk$/i },
-    { key: 'desktop', pattern: /\.exe$/i }
+    { key: 'desktop', pattern: /\.(exe|msi|zip)$/i }
 ];
 
 async function request(url, options = {}) {

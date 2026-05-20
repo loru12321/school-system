@@ -42,8 +42,8 @@
             badge: '手机 / 平板',
             icon: 'ti-brand-android',
             accent: '#22c55e',
-            url: 'https://github.com/hka123321/school-system/releases/latest/download/school-system-android-latest.apk',
-            fileName: 'school-system-android-latest.apk',
+            url: './downloads/school-system-android-v1.0.apk',
+            fileName: 'school-system-android-v1.0.apk',
             heroTitle: '安卓包、桌面端与历史版本统一查看',
             heroCopy: '登录后可继续查看关于与更新；登录前也可以在这里直接下载安卓 APK 或查看最新 release。',
             summary: '当前会根据所选平台切换下载链接，并联动展示历史版本与更新点。',
@@ -103,14 +103,14 @@
             badge: 'Windows 10 / 11',
             icon: 'ti-brand-windows',
             accent: '#60a5fa',
-            url: 'https://github.com/hka123321/school-system/releases/latest/download/smartedu-desktop-windows-latest.exe',
-            fileName: 'smartedu-desktop-windows-latest.exe',
+            url: './downloads/smartedu-windows-latest.zip',
+            fileName: 'smartedu-windows-latest.zip',
             heroTitle: '桌面端关于、更新检查与历史下载统一入口',
             heroCopy: 'Windows 客户端、安卓客户端与网页端现在共用同一套版本中心，可查看当前版本、历史版本和每次 release 更新点。',
             summary: '当前选中 Windows EXE，会优先展示桌面端下载、更新状态和历史版本入口。',
             releaseStamp: 'Latest · Desktop',
-            primaryActionLabel: '下载 Windows EXE',
-            secondaryActionLabel: '打开桌面端下载',
+            primaryActionLabel: '下载 Windows 应用',
+            secondaryActionLabel: '打开 Windows 下载',
             details: [
                 { label: '推荐设备', value: '办公室电脑 / 机房 / 固定工位' },
                 { label: '运行方式', value: '下载安装包后本地启动，单实例运行' },
@@ -150,12 +150,12 @@
                 }
             ],
             installSteps: [
-                '点击当前 Desktop 下载按钮，获取 Windows EXE 安装包。',
-                '下载完成后双击 EXE；如果 SmartScreen 提示，请选择“更多信息 / 仍要运行”。',
+                '点击当前 Windows 下载按钮，获取 Windows 应用启动包。',
+                '下载完成后解压 ZIP，双击“启动智慧教务管理系统.cmd”。',
                 '首次打开后可通过右上角“关于”或托盘菜单查看当前版本和更新记录。',
-                '若后续发布新版，重新下载最新 EXE 覆盖使用即可。'
+                '若后续发布新版，重新下载最新 Windows 应用包覆盖使用即可。'
             ],
-            specNote: '如果 Windows 弹出 SmartScreen，请选择“更多信息”后继续运行当前 EXE。'
+            specNote: 'Windows 应用包会优先用 Edge/Chrome 的应用窗口打开正式站点。'
         }
     };
     const state = {
@@ -526,7 +526,8 @@
             const name = String(asset?.name || '').trim().toLowerCase();
             if (!name) return false;
             if (channel === 'android') return name.endsWith('.apk');
-            return name.endsWith('.exe') && (name.includes('desktop') || name.includes('smartedu'));
+            return (/\.(exe|msi)$/i.test(name) || (name.endsWith('.zip') && /(?:win|windows|desktop|smartedu)/i.test(name)))
+                && /(?:win|windows|desktop|smartedu|setup|installer)/i.test(name);
         }) || null;
     }
 
@@ -649,6 +650,10 @@
         return window.PUBLIC_DOWNLOAD_ALLOW_UNVERIFIED_LINKS === true;
     }
 
+    function shouldAutoFetchReleaseCatalog() {
+        return window.PUBLIC_DOWNLOAD_AUTO_FETCH_RELEASES === true;
+    }
+
     function getDownloadAssetModel(channelKey, channel = getChannel(channelKey)) {
         const latestRelease = getLatestReleaseForChannel(channelKey);
         const latestAsset = latestRelease?.assets?.[channelKey];
@@ -686,6 +691,10 @@
             label: '下载资产缺失',
             note: '最新公开 release 未包含当前平台安装包，已暂停直达下载。'
         };
+    }
+
+    function getPeerDownloadChannelKey(channelKey) {
+        return channelKey === 'desktop' ? 'android' : 'desktop';
     }
 
     function getDateToken(value) {
@@ -1131,6 +1140,8 @@
     function bindActions(root, channel) {
         const latestRelease = getLatestReleaseForChannel(channel.key);
         const assetModel = getDownloadAssetModel(channel.key, channel);
+        const peerChannel = getChannel(getPeerDownloadChannelKey(channel.key));
+        const peerAssetModel = getDownloadAssetModel(peerChannel.key, peerChannel);
         const primaryLink = root.querySelector('#app-download-primary-link');
         const secondaryLink = root.querySelector('#app-download-secondary-link');
         const releaseLink = root.querySelector('#app-download-release-link');
@@ -1144,9 +1155,9 @@
             downloadName: assetName,
             labelHtml: `<i class="ti ti-download"></i> ${escapeHtml(assetModel.ok ? channel.primaryActionLabel : '暂无可用安装包')}`
         });
-        applyActionLink(secondaryLink, assetUrl, {
-            downloadName: assetName,
-            labelHtml: `<i class="ti ti-download"></i> ${escapeHtml(channel.secondaryActionLabel)}`
+        if (secondaryLink) applyActionLink(secondaryLink, resolveUrl(peerAssetModel.url), {
+            downloadName: peerAssetModel.name || peerChannel.fileName,
+            labelHtml: `<i class="ti ${escapeHtml(peerChannel.icon || 'ti-download')}"></i> ${escapeHtml(peerAssetModel.ok ? peerChannel.primaryActionLabel : `${peerChannel.shortLabel} 暂无安装包`)}`
         });
         applyActionLink(releaseLink, resolveUrl(latestRelease?.url || RELEASE_PAGE_URL));
         if (linkInput) linkInput.value = assetUrl || '';
@@ -1450,15 +1461,21 @@
             return state.releases;
         }
         const now = Date.now();
-        if (!force) {
+        if (!force && !shouldAutoFetchReleaseCatalog()) {
             if (!state.releases.length) state.releases = [buildFallbackRelease()];
             state.lastError = '';
             if (!state.lastFetchedAt) state.lastFetchedAt = now;
             refreshSurfaces();
             return state.releases;
         }
-        if (!force && state.releases.length && now - state.lastFetchedAt < RELEASE_CACHE_TTL_MS) {
+        const hasFreshRemoteCatalog = !!state.lastFetchedAt && !state.lastError && now - state.lastFetchedAt < RELEASE_CACHE_TTL_MS;
+        if (!force && hasFreshRemoteCatalog && state.releases.length) {
             return state.releases;
+        }
+        if (!force && !state.releases.length) {
+            if (!state.releases.length) state.releases = [buildFallbackRelease()];
+            state.lastError = '';
+            refreshSurfaces();
         }
         if (state.fetchPromise) return state.fetchPromise;
 
