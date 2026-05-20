@@ -1,216 +1,171 @@
-# School System
+# SmartEdu Analytics
 
-面向学校成绩分析、联考对比、教师教学诊断、县乡质量排名与教务管理的一体化系统。
+一套正在生产环境运行的学校教务与质量分析系统。它不是一个静态演示页，而是围绕“成绩数据进入系统之后，学校、年级、教师、班主任分别能做什么判断”搭起来的完整工作台。
 
-当前仓库维护的是正式站点 [schoolsystem.com.cn](https://schoolsystem.com.cn/) 的实际运行代码，而不是演示模板。
+正式站点：[https://schoolsystem.com.cn/](https://schoolsystem.com.cn/)  
+当前生产分支：`main`  
+部署平台：Cloudflare Workers + Assets  
+数据与网关：Supabase / Cloudflare D1 / `/api/edu-gateway`
 
-## 访问入口
+## 为什么值得看
 
-- 正式站点：[https://schoolsystem.com.cn/](https://schoolsystem.com.cn/)
-- GitHub 仓库：[https://github.com/hka123321/school-system](https://github.com/hka123321/school-system)
-- 默认分支：`main`
-- 当前工作区：`C:\Users\loru\Documents\New project\school-system`
+很多成绩分析系统只停留在“把 Excel 变成表格”。这个项目更关心后面的链路：
 
-## 系统覆盖范围
+- 教务主任需要快速知道：哪所学校、哪个年级、哪个学科出现了质量波动。
+- 年级组需要知道：指标生、后 1/3、临界生、进退步学生分别在哪里。
+- 班主任需要知道：学生个人报告、成长轨迹、薄弱学科和同层对比。
+- 教师需要知道：自己的教学画像、班级表现和县域/校内位置。
+- 管理者需要知道：问题清单、预警、整改任务是否闭环。
 
-当前主系统已经覆盖以下核心场景：
+系统把这些场景放在同一个工作台里，并配套了本地烟测、线上烟测、下载验证和 Cloudflare 部署流程，避免“页面能打开但业务不可用”。
 
-- 数据枢纽中心：成绩上传、考试归档、届别管理、目标人数管理、学校别名、云端备份与恢复
-- 联考分析：综合总览、两率一分、县域质量排名、教师教学分析、指标生达标、后 1/3 学生核算
-- 学情诊断：学生总览、学生明细、成长档案、学生报告、进退步分析
-- 教学管理：总览、问题清单、异常预警、整改任务、版本归档
-- 教务工具：考务编排、新生均衡分班、应用下载中心
+## 一眼看懂
 
-## 当前模块状态
-
-截至 `2026-04-21`，已重新完成本地与线上全模块烟测：
-
-- 本地烟测：`npm run smoke:modules:local` 通过
-- 正式站点烟测：`SMOKE_URL=https://schoolsystem.com.cn/ node scripts/smoke-all-modules.js` 通过
-- 结果：`errorCount: 0`
-
-已覆盖确认的关键模块包括：
-
-- 综合分析报告
-- 镇域宏观横向评价
-- 县域质量排名
-- 教师教学分析
-- 校内绩效管理与评价
-- 学科贡献度与关联性分析
-- 进退步分析
-- 纵向成长档案
-- 学生报告生成
-- AI 分析统一入口
-- 应用下载中心
-- 教学管理五个子模块
-- 学生总览与学生明细
-- 数据枢纽中心全部页签
-
-## 技术架构
-
-前端与构建：
-
-- Vite 7
-- 原生 HTML / CSS / JavaScript
-- `vite-plugin-singlefile`
-- 构建后同步脚本：
-  - `scripts/build/sync-public-assets.mjs`
-  - `scripts/build/optimize-dist-html.mjs`
-  - `scripts/build/inline-scripts.mjs`
-
-前端运行时拆分：
-
-- 主入口：`public/assets/js/app.js`
-- 状态层：`*-state-runtime.js`
-- 模块层：`*-runtime.js`
-- 云端与账户：`cloud-api-runtime.js`、`data-cloud-runtime.js`、`account-manager-runtime.js`
-- 登录与壳层：`boot-runtime.js`、`login-entry-runtime.js`、`shell-runtime.js`
-
-云端与网关：
-
-- Supabase 数据库
-- Supabase Edge Functions
-- 同源代理网关 `/api/edu-gateway`
-- Cloudflare Workers
-
-## 仓库结构
-
-```text
-src/                               页面入口
-public/assets/js/                  前端运行时代码
-scripts/                           构建、校验、烟测、部署辅助脚本
-dist/                              构建产物
-supabase/functions/                Edge Functions
-supabase/sql/                      表结构、RLS、迁移脚本
-cloudflare/                        Worker 相关文件
-docs/                              补充文档
-lt.html                            单文件本地版本
-deploy.ps1                         部署脚本
-wrangler.jsonc                     Workers 部署配置
+```mermaid
+flowchart LR
+    A["成绩 Excel / 历次考试数据"] --> B["数据枢纽中心"]
+    B --> C["标准化: 学校别名 / 届别 / 考试 / 目标人数"]
+    C --> D["分析引擎"]
+    D --> E["县域质量排名"]
+    D --> F["教师教学分析"]
+    D --> G["学生成长与报告"]
+    D --> H["教学管理闭环"]
+    H --> I["问题清单 / 异常预警 / 整改任务 / 版本归档"]
+    E --> J["校长与教务决策"]
+    F --> K["教研组复盘"]
+    G --> L["班主任与家长沟通"]
 ```
 
-建议优先阅读：
+## 功能地图
 
-- [README.md](README.md)
-- [package.json](package.json)
-- [scripts/smoke-all-modules.js](scripts/smoke-all-modules.js)
-- [public/assets/js/app.js](public/assets/js/app.js)
-- [public/assets/js/data-cloud-runtime.js](public/assets/js/data-cloud-runtime.js)
-- [public/assets/js/county-analysis-runtime.js](public/assets/js/county-analysis-runtime.js)
+| 场景 | 代表模块 | 解决的问题 |
+| --- | --- | --- |
+| 数据进入系统 | 数据上传、考试归档、届别管理、云端备份 | 把不同来源的成绩数据整理成可分析的统一口径 |
+| 学校质量分析 | 综合分析、两率一分、县域质量排名、学科贡献度 | 看清学校、乡镇、县域之间的质量位置 |
+| 教师教学诊断 | 教师教学分析、教师画像、校内/县域排名 | 让教师评价从印象判断变成可追溯指标 |
+| 学生发展跟踪 | 学生总览、学生明细、进退步、成长档案、成绩报告 | 形成学生个人层面的连续观察 |
+| 教学管理闭环 | 教学管理总览、问题清单、异常预警、整改任务 | 把发现问题到跟进整改串起来 |
+| 教务工具 | 考务编排、新生均衡分班、座位微调、应用服务 | 处理日常教务中的高频事务 |
 
-## 本地开发
+## 系统如何流动
 
-安装依赖：
+```mermaid
+sequenceDiagram
+    participant User as 教务/教师/班主任
+    participant UI as Web 工作台
+    participant Runtime as 前端运行时模块
+    participant Gateway as /api/edu-gateway
+    participant Data as Supabase / D1
+    participant Smoke as 本地与线上烟测
+
+    User->>UI: 登录并选择模块
+    UI->>Runtime: 懒加载对应 runtime
+    Runtime->>Gateway: 读取账号、归档、整改、版本等数据
+    Gateway->>Data: 查询或写入业务数据
+    Data-->>Gateway: 返回标准化结果
+    Gateway-->>Runtime: 返回统一响应
+    Runtime-->>UI: 渲染分析表、报告、任务单
+    Smoke->>UI: 自动切换模块并做深度检查
+```
+
+## 技术结构
+
+```text
+src/                       页面入口和模板
+public/assets/js/          前端运行时模块
+scripts/                   构建、验证、烟测、部署辅助脚本
+supabase/                  Edge Functions、SQL、迁移脚本
+cloudflare/                Worker 相关代码
+dist/                      Vite 构建产物
+lt.html                    单文件离线版本
+wrangler.jsonc             Cloudflare Workers 部署配置
+```
+
+核心思路是把巨大的前端业务拆成多个 runtime：
+
+- `app.js`：公共配置、入口调度和少量兼容逻辑
+- `*-state-runtime.js`：状态与持久化边界
+- `*-runtime.js`：独立业务模块
+- `cloud-*-runtime.js`：云端连接、数据读写和同步
+- `teaching-management-*-runtime.js`：教学管理模块
+- `app-download-runtime.js`：应用服务、APK/Windows 下载和版本中心
+
+## 本地运行
 
 ```bash
 npm install
-```
-
-启动开发环境：
-
-```bash
 npm run dev
 ```
 
-构建：
+构建生产产物：
 
 ```bash
 npm run build
 ```
 
-全量校验：
+常用验证：
+
+```bash
+npm run check:release-fast
+npm run smoke:modules:local
+npm run smoke:modules:prod
+```
+
+更完整的回归：
 
 ```bash
 npm run validate
 ```
 
-## 验证命令
+## 发布链路
 
-本地全模块烟测：
+```mermaid
+flowchart TD
+    A["修改代码"] --> B["npm run build"]
+    B --> C["本地专项测试 / 本地全模块烟测"]
+    C --> D["git commit + push main"]
+    D --> E["wrangler deploy"]
+    E --> F["正式站点烟测"]
+    F --> G["真实下载 / 关键接口验证"]
+    G --> H["发布完成"]
+```
+
+Cloudflare 手动部署命令：
 
 ```powershell
-npm run smoke:modules:local
+cmd /c "set npm_config_cache=C:\Users\loru\Desktop\system\.npm-cache&& npx --yes --package wrangler@4.92.0 --package @cloudflare/workerd-windows-64 wrangler deploy"
 ```
 
-正式站点全模块烟测：
+## 质量保护
 
-```powershell
-$env:SMOKE_URL='https://schoolsystem.com.cn/'
-node scripts/smoke-all-modules.js
-```
+这个仓库对“能不能真的用”看得比“能不能构建”更重。常见保护包括：
 
-对比报告专项烟测：
+- 全模块自动切换烟测：确认主模块和数据中心页签能打开。
+- 深度业务检查：报告生成、学生明细、县域排名、教学管理等关键路径会检查真实 DOM 和函数。
+- 下载验证：应用服务中的 Windows 包和 Android APK 会做真实请求与点击下载检查。
+- 性能预算：记录模块切换耗时、深度检查耗时和长任务。
+- Cloudflare 合约检查：部署配置、静态资源和 Worker 路由保持可验证。
 
-```powershell
-npm run smoke:report-compare
-```
+## 应用下载
 
-AI 网关专项检查：
+“应用服务”保留当前可用下载入口：
 
-```powershell
-npm run smoke:ai-gateway
-```
+- Windows：`/downloads/smartedu-windows-latest.zip`
+- Android：`/downloads/school-system-android-v1.0.apk`
 
-## 部署流程
+旧的历史版本更新文件已清空。以后发布新的 APK 或 Windows 应用包时，版本记录从当前入口重新累积。
 
-标准发布流程：
+## 适合继续改进的方向
 
-1. 修改代码
-2. 运行 `npm run build`
-3. 运行本地烟测
-4. 提交并推送到 `main`
-5. 部署 Worker / 站点
-6. 对正式站点再次跑烟测
+- 继续把高耦合业务从 `app.js` 拆到独立 runtime，降低首屏和模块切换压力。
+- 把 GitHub Release、APK、Windows 包的发布链路做成自动化流水线。
+- 给教学管理、学生报告、县域排名等高价值模块增加更细的端到端用例。
+- 把性能采样结果沉淀成可对比的趋势报告，方便定位哪次提交引入卡顿。
 
-仓库内常用命令：
+## 给维护者的一句话
 
-```bash
-npm run push
-```
+修改这个系统时，请把它当作一个真实学校正在使用的生产工作台：先保证登录、数据、报告、教学管理和下载入口可用，再谈重构和美化。每一次发布都应该能回答三个问题：
 
-如需手动部署 Worker，可参考项目中的 `wrangler.jsonc` 与 `deploy.ps1`。
-
-## GitHub Releases 状态
-
-截至 `2026-05-17`，GitHub Releases 尚未完成客户端同步，当前公共地址检查结果如下：
-
-- [releases/latest](https://github.com/hka123321/school-system/releases/latest)：`404`
-- Android 安装包：`school-system-android-latest.apk` 下载地址返回 `404`
-- Windows 客户端：`smartedu-desktop-windows-latest.exe` 下载地址返回 `404`
-
-这意味着：
-
-- 安卓客户端当前没有在 GitHub Releases 中对外发布
-- Windows 客户端当前也没有在 GitHub Releases 中对外发布
-- 应用下载中心已经增加真实发布状态检测；未验证到真实 release 资产前，APK / EXE 直达下载按钮默认禁用，避免页面显示可下载但实际链接 `404`
-
-可用 `npm run release:verify-assets` 做严格校验；如只想输出巡检报告而不让命令失败，可使用 `RELEASE_ASSETS_ALLOW_MISSING=true npm run release:verify-assets`。
-
-## 当前数据与业务规则要点
-
-系统近阶段已经落地的关键规则包括：
-
-- 同一考试日期时间再次上传时，覆盖本次考试数据
-- 没有“目标人数管理”配置的学校，按县直学校处理
-- 县域质量排名支持县乡双口径
-- 县域质量排名内已纳入下载入口
-- 9 年级县域排名支持总分与分学科排名呈现
-- 教师在县直 + 乡镇的本学科县域总排名已纳入县域质量排名
-
-## 维护建议
-
-如果继续优化，我建议优先做这三件事：
-
-1. 补齐 GitHub Releases 发布链路，把 Android APK 和 Windows EXE 自动挂到同一个版本标签下。
-2. 继续压缩运行时体积，逐步把高耦合逻辑从 `app.js` 向独立 runtime 拆分，降低后续回归成本。
-3. 将 release 资产校验接入 GitHub Actions 或定时巡检，持续跟踪 APK / EXE 是否已补齐。
-
-## 说明
-
-这是生产仓库，提交前建议至少完成：
-
-- `npm run build`
-- `npm run smoke:modules:local`
-- 正式站点回归一遍关键模块
-
-如果这次修改涉及云端、登录、县域排名、报告导出或数据覆盖逻辑，建议追加正式站点烟测，不要只看本地结果。
+1. 用户最常用的路径还能不能走通？
+2. 关键数据有没有被错误覆盖或错口径展示？
+3. 线上站点是否已经用真实浏览器和真实下载验证过？
