@@ -42,10 +42,22 @@ const failures = Object.entries(actual)
     .map(([key, size]) => `${key} exceeds budget: ${size} > ${budgets[key]}`);
 
 assert.deepStrictEqual(failures, [], failures.join('\n'));
-assert.strictEqual(
-    fs.existsSync(path.join(projectRoot, 'dist', 'downloads')),
-    false,
-    'dist/downloads should be pruned from production assets; app downloads are verified through release assets'
+
+const distDownloadsPath = path.join(projectRoot, 'dist', 'downloads');
+assert.ok(fs.existsSync(distDownloadsPath), 'dist/downloads should expose the current app packages');
+const downloadFiles = fs.readdirSync(distDownloadsPath).sort();
+assert.deepStrictEqual(
+    downloadFiles,
+    ['school-system-android-v1.0.apk', 'smartedu-windows-latest.zip'],
+    'dist/downloads should only contain the current hosted APK and Windows package'
+);
+assert.ok(
+    getSize(path.join(distDownloadsPath, 'school-system-android-v1.0.apk')) > 10_000_000,
+    'hosted APK should look like a real application package'
+);
+assert.ok(
+    getSize(path.join(distDownloadsPath, 'smartedu-windows-latest.zip')) > 0,
+    'hosted Windows package should not be empty'
 );
 
 console.log('build-size-budget tests passed');

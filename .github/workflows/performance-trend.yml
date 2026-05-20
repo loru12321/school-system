@@ -1,0 +1,74 @@
+name: Performance Trend
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "docs/performance/**"
+      - "README.md"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: write
+
+jobs:
+  record-performance:
+    name: Record browser smoke performance
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser dependencies
+        run: npx playwright install --with-deps chromium
+
+      - name: Build web package
+        run: npm run build
+
+      - name: Run local smoke and save raw performance sample
+        env:
+          SMOKE_OUTPUT_PATH: docs/performance/latest-smoke.json
+        run: npm run smoke:modules:local
+
+      - name: Update trend report
+        env:
+          PERFORMANCE_SMOKE_JSON: docs/performance/latest-smoke.json
+          PERFORMANCE_REPORT_DIR: docs/performance
+        run: npm run performance:record
+
+      - name: Upload performance report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-trend
+          path: docs/performance/
+
+      - name: Commit performance trend
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/performance/latest-smoke.json docs/performance/performance-history.json docs/performance/performance-report.md
+          if git diff --cached --quiet; then
+            echo "No performance trend changes to commit."
+          else
+            git commit -m "Record performance trend for ${GITHUB_SHA::7}"
+            git push
+          fi

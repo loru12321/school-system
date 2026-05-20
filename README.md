@@ -146,6 +146,13 @@ cmd /c "set npm_config_cache=C:\Users\loru\Desktop\system\.npm-cache&& npx --yes
 - 性能预算：记录模块切换耗时、深度检查耗时和长任务。
 - Cloudflare 合约检查：部署配置、静态资源和 Worker 路由保持可验证。
 
+## 自动化流水线
+
+- `.github/workflows/release-apps.yml`：手动输入 tag 或推送 `school-system-v*` tag 后，自动构建、检查下载入口、整理 APK 与 Windows 包，并创建或更新 GitHub Release。
+- `.github/workflows/performance-trend.yml`：`main` 更新后自动跑本地浏览器烟测，把原始性能样本、跨提交历史和 Markdown 趋势报告写入 `docs/performance/`。
+- `npm run release:prepare-assets`：本地生成 GitHub Release 资产目录，包含 latest 文件名、带 tag 的不可变文件名、SHA256 和 release notes。
+- `npm run performance:record`：把一次烟测 JSON 转成可对比的趋势记录，用于定位哪次提交让模块切换、深度检查或长任务变慢。
+
 ## 应用下载
 
 “应用服务”保留当前可用下载入口：
@@ -158,9 +165,8 @@ cmd /c "set npm_config_cache=C:\Users\loru\Desktop\system\.npm-cache&& npx --yes
 ## 适合继续改进的方向
 
 - 继续把高耦合业务从 `app.js` 拆到独立 runtime，降低首屏和模块切换压力。
-- 把 GitHub Release、APK、Windows 包的发布链路做成自动化流水线。
 - 给教学管理、学生报告、县域排名等高价值模块增加更细的端到端用例。
-- 把性能采样结果沉淀成可对比的趋势报告，方便定位哪次提交引入卡顿。
+- 在性能趋势报告基础上增加自动阈值告警，让明显变慢的提交在 CI 中直接标红。
 
 ## 给维护者的一句话
 

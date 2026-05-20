@@ -1,0 +1,1901 @@
+{
+  "login": {
+    "legacySchoolInternalSectionPresent": false,
+    "legacyRemovedSigPanelPresent": false,
+    "legacyInlineTriggerPresent": false,
+    "overlayHidden": true,
+    "appVisible": true,
+    "roleText": false,
+    "termId": "9年级_下学期",
+    "cohortId": "2022",
+    "mySchool": "银山实验",
+    "schoolInternalRemoved": true,
+    "scoreCount": 7809
+  },
+  "switchModules": [
+    {
+      "ok": true,
+      "id": "starter-hub",
+      "visible": true,
+      "active": true,
+      "title": "",
+      "performance": {
+        "id": "starter-hub",
+        "switchMs": 4465,
+        "deepCheckMs": 2,
+        "totalMs": 4467
+      },
+      "deepCheck": {
+        "ok": true
+      }
+    },
+    {
+      "ok": true,
+      "id": "upload",
+      "visible": true,
+      "active": true,
+      "title": "数据文件上传\n                        📘 使用说明建议按“届别 -> 考试 -> 上传 -> 快照”顺序完成本页操作；每次批量导入前先看顶部摘要和当前模式，更不容易把数据导错届别。 数据体检",
+      "performance": {
+        "id": "upload",
+        "switchMs": 1816,
+        "deepCheckMs": 232,
+        "totalMs": 2048
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "sectionReady": true,
+          "heroReady": true,
+          "shellHeadReady": true,
+          "normalizeSchoolName": true,
+          "getCanonicalSchoolName": true,
+          "ensureNormalizedTargets": true,
+          "buildIndicatorSchoolBuckets": true,
+          "listAvailableSchoolsForCompare": true,
+          "summaryStripReady": true,
+          "flowNoticeReady": true,
+          "workbenchReady": true,
+          "intakeReady": true,
+          "flowReady": true
+        },
+        "schoolCount": 14
+      }
+    },
+    {
+      "ok": true,
+      "id": "summary",
+      "visible": true,
+      "active": true,
+      "title": "综合分析报告 ⭐\n                            教务常用📘 权重说明适合考试后的教务汇总与校长汇报，建议完成前置分析后再统一导出。生成总排名导出报告",
+      "performance": {
+        "id": "summary",
+        "switchMs": 582,
+        "deepCheckMs": 746,
+        "totalMs": 1328
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "ensureTownSubmoduleCompareUIs": true,
+          "openTownSubmoduleCompareDialog": true,
+          "renderTownSubmoduleMultiPeriodComparison": true,
+          "exportTownSubmoduleCompare": true,
+          "saveTownSubmoduleCompareToCloud": true,
+          "viewCloudTownSubmoduleCompares": true,
+          "loadCloudTownSubmoduleCompare": true,
+          "showSchoolProfile": true,
+          "schoolProfileModal": true,
+          "schoolProfileClose": true
+        },
+        "panelReady": true,
+        "schoolProfileCloseWorks": true,
+        "schoolProfileCellReady": true,
+        "schoolProfileCellClickWorks": true
+      }
+    },
+    {
+      "ok": true,
+      "id": "analysis",
+      "visible": true,
+      "active": true,
+      "title": "乡镇学校分析 - 两率一分\n                        📘 算法说明支持横向对比、热力图和全科导出，适合联考复盘前先快速定站位。生成横向对比表🎨\n                                开启热力图导出全科分析表",
+      "performance": {
+        "id": "analysis",
+        "switchMs": 583,
+        "deepCheckMs": 1034,
+        "totalMs": 1617
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "renderHorizontalTable": true,
+          "exportHorizontalExcel": true,
+          "exportMacroTables": true,
+          "renderTables": true,
+          "toggleTableHeatmap": true
+        },
+        "horizontalReady": true
+      }
+    },
+    {
+      "ok": true,
+      "id": "high-score",
+      "visible": true,
+      "active": true,
+      "title": "高分段赋分详情\n                        📘 核算规则适合快速识别尖子生密度和高分学校梯队，导出后可直接做年级汇报附件。📊 导出Excel",
+      "performance": {
+        "id": "high-score",
+        "switchMs": 1068,
+        "deepCheckMs": 0,
+        "totalMs": 1068
+      },
+      "deepCheck": {
+        "ok": true
+      }
+    },
+    {
+      "ok": true,
+      "id": "county-analysis",
+      "visible": true,
+      "active": true,
+      "title": "",
+      "performance": {
+        "id": "county-analysis",
+        "switchMs": 541,
+        "deepCheckMs": 369,
+        "totalMs": 910
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "rootReady": true,
+          "sectionReady": true,
+          "runtimeReady": true,
+          "teacherRankTableReady": true,
+          "teacherRowsReady": true,
+          "teacherOwnMetricsFinite": true,
+          "schoolHorizontalRendered": true,
+          "horizontalRowCountMatches": true,
+          "horizontalTopSchoolMatches": true,
+          "horizontalTopCountMatches": true,
+          "horizontalTopAvgMatches": true,
+          "horizontalTopExcellentMatches": true,
+          "horizontalTopPassMatches": true,
+          "horizontalTopScoreMatches": true,
+          "horizontalTopRankMatches": true,
+          "horizontalRanksSorted": true,
+          "subjectTableRendered": true,
+          "subjectRowCountMatches": true,
+          "subjectTopSchoolMatches": true,
+          "subjectTopAvgMatches": true,
+          "subjectTopExcellentMatches": true,
+          "subjectTopPassMatches": true,
+          "subjectTopScoreMatches": true,
+          "subjectTopRankMatches": true,
+          "subjectRanksSorted": true,
+          "subjectCountyRankReady": true,
+          "noInvalidCountyText": true
+        },
+        "exportButtons": 1,
+        "teacherRankRows": 133,
+        "ownTeacherRows": 13,
+        "teacherRankTable": true,
+        "teacherEmptyState": false,
+        "firstTeacherOwnSummary": {
+          "rankAvg": 2,
+          "avg": 107.6,
+          "rankExc": 3,
+          "excellentPercent": 25.6,
+          "rankPass": 2,
+          "passPercent": 74.4,
+          "studentCount": 90
+        },
+        "shouldExpectTeacherRows": true,
+        "horizontal": {
+          "renderedRows": 24,
+          "expectedRows": 24,
+          "renderedTop": {
+            "schoolName": "泰安市东平实验中学",
+            "count": 1537,
+            "avg": 402.72,
+            "excellentPercent": 54.07,
+            "passPercent": 84.19,
+            "ratedAvg": 50,
+            "ratedExc": 80,
+            "ratedPass": 49.26,
+            "score": 179.26,
+            "rank": 1
+          },
+          "expectedTop": {
+            "schoolName": "泰安市东平实验中学",
+            "count": 1537,
+            "avg": 402.7186076772938,
+            "excellentRate": 0.5406636304489265,
+            "passRate": 0.8418998048145738,
+            "ratedAvg": 50,
+            "ratedExc": 80,
+            "ratedPass": 49.26009496255486,
+            "score": 179.26009496255486,
+            "rankAvg": 1,
+            "rankExcellent": 1,
+            "rankPass": 2,
+            "rankScore": 1
+          }
+        },
+        "subject": {
+          "name": "语文",
+          "renderedRows": 24,
+          "expectedRows": 24,
+          "renderedTop": {
+            "schoolName": "彭集中学",
+            "count": 163,
+            "avg": 108.74,
+            "excellentPercent": 47.24,
+            "passPercent": 76.07,
+            "ratedAvg": 50,
+            "ratedExc": 80,
+            "ratedPass": 50,
+            "score": 180,
+            "rank": 1
+          },
+          "expectedTop": {
+            "schoolName": "彭集中学",
+            "count": 163,
+            "avg": 108.74233128834356,
+            "excellentRate": 0.4723926380368098,
+            "passRate": 0.7607361963190185,
+            "ratedAvg": 50,
+            "ratedExc": 80,
+            "ratedPass": 50,
+            "score": 180,
+            "rankAvg": 1,
+            "rankExcellent": 1,
+            "rankPass": 1,
+            "rank": 1
+          }
+        },
+        "studentArchiveRemoved": true,
+        "dualModuleDeepSmoke": true
+      }
+    },
+    {
+      "ok": true,
+      "id": "teacher-analysis",
+      "visible": true,
+      "active": true,
+      "title": "本校教师教学分析 📊\n                            班主任必看📘 评价模型先查看画像和多期趋势，再导出教师分析与乡镇排名，适合教研组复盘。刷新教师画像导出教师分析",
+      "performance": {
+        "id": "teacher-analysis",
+        "switchMs": 543,
+        "deepCheckMs": 0,
+        "totalMs": 543
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "sectionReady": true,
+          "comparisonTableReady": true,
+          "calculationSnapshotCoversTeacherRuntime": true
+        }
+      }
+    },
+    {
+      "ok": true,
+      "id": "segment-analysis",
+      "visible": true,
+      "active": true,
+      "title": "分数段统计分析建议先选范围和学科，再生成统计表；图表支持点击柱子下钻查看名单。生成统计表导出Excel",
+      "performance": {
+        "id": "segment-analysis",
+        "switchMs": 1119,
+        "deepCheckMs": 0,
+        "totalMs": 1119
+      },
+      "deepCheck": {
+        "ok": true
+      }
+    },
+    {
+      "ok": true,
+      "id": "correlation-analysis",
+      "visible": true,
+      "active": true,
+      "title": "学科贡献度与关联性深度分析📘 模型说明建议先选分析范围，再生成结果；阅读顺序最好是“相关矩阵 -> 贡献度 -> 提分/拖分频率”，这样更容易形成完整判断。🚀 开始深度分析导出分析Excel",
+      "performance": {
+        "id": "correlation-analysis",
+        "switchMs": 788,
+        "deepCheckMs": 452,
+        "totalMs": 1240
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "sectionReady": true,
+          "heroReady": true,
+          "shellHeadReady": true,
+          "scopeSelect": true,
+          "matrixTable": true,
+          "contributionChartContainer": true,
+          "liftDragTable": true,
+          "flowReady": true,
+          "runtimeReady": true,
+          "pearsonHelperReady": true,
+          "subjectListReady": true,
+          "sampleReady": true,
+          "matrixRendered": true,
+          "matrixValuesFinite": true,
+          "matrixSymmetric": true,
+          "samplePearsonMatches": true,
+          "contributionRendered": true,
+          "contributionValuesFinite": true,
+          "contributionValuesMatch": true,
+          "contributionSorted": true,
+          "liftDragRendered": true,
+          "liftDragCountsMatch": true,
+          "noInvalidText": true
+        },
+        "scope": "ALL",
+        "counts": {
+          "subjects": 5,
+          "students": 1996,
+          "matrixCells": 20,
+          "contributionRows": 5,
+          "liftRows": 5
+        },
+        "samplePearson": {
+          "subjects": [
+            "语文",
+            "数学"
+          ],
+          "expected": 0.7,
+          "rendered": 0.7
+        },
+        "topContribution": {
+          "subject": "数学",
+          "value": 0.943
+        },
+        "expectedTopContributions": [
+          {
+            "subject": "数学",
+            "value": 0.944
+          },
+          {
+            "subject": "英语",
+            "value": 0.904
+          },
+          {
+            "subject": "化学",
+            "value": 0.902
+          }
+        ],
+        "contributionRows": [
+          {
+            "subject": "数学",
+            "value": 0.943
+          },
+          {
+            "subject": "英语",
+            "value": 0.903
+          },
+          {
+            "subject": "化学",
+            "value": 0.902
+          },
+          {
+            "subject": "物理",
+            "value": 0.898
+          },
+          {
+            "subject": "语文",
+            "value": 0.815
+          }
+        ],
+        "contributionMismatches": [],
+        "expectedFirstLift": {
+          "subject": "语文",
+          "lift": 464,
+          "drag": 444,
+          "balance": 1081,
+          "net": 20,
+          "validCount": 1989
+        },
+        "renderedFirstLift": {
+          "lift": 464,
+          "drag": 444,
+          "balance": 1081,
+          "net": 20
+        },
+        "alerts": []
+      }
+    },
+    {
+      "ok": true,
+      "id": "indicator",
+      "visible": true,
+      "active": true,
+      "title": "指标生达标核算\n                        📘 计分公式建议先确认目标口径，再计算达标情况；导出结果更适合做指标生专项追踪。 在线调整目标\n                             开始计算 导出结果",
+      "performance": {
+        "id": "indicator",
+        "switchMs": 591,
+        "deepCheckMs": 925,
+        "totalMs": 1516
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "sectionReady": true,
+          "heroReady": true,
+          "cardsReady": true,
+          "tableReady": true,
+          "buttonReady": true,
+          "runtimeReady": true,
+          "calcIndicatorsWrapped": true,
+          "refreshReady": true,
+          "calcAllowed": true,
+          "calcSuccess": true,
+          "summaryReady": true,
+          "countMatches": true,
+          "topScoreMatches": true,
+          "topSchoolMatches": true,
+          "issueCountMatches": true,
+          "finite": true,
+          "summaryRefreshDoesNotMutateScores": true
+        },
+        "count": 14,
+        "tableRowCount": 14,
+        "topScore": 68.75,
+        "topSchool": "银山中学",
+        "issueCount": 0,
+        "calcError": "",
+        "summary": {
+          "ok": true,
+          "count": 14,
+          "finite": true,
+          "topScore": 68.75,
+          "topSchool": "银山中学",
+          "issueCount": 0
+        }
+      }
+    },
+    {
+      "ok": true,
+      "id": "bottom3",
+      "visible": true,
+      "active": true,
+      "title": "后1/3学生核算\n                        📘 剔除规则适合看学校补弱稳定性和底部学生改善幅度，导出后便于跟进帮扶策略。 导出结果",
+      "performance": {
+        "id": "bottom3",
+        "switchMs": 545,
+        "deepCheckMs": 174,
+        "totalMs": 719
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "sectionReady": true,
+          "heroReady": true,
+          "cardsReady": true,
+          "tableReady": true,
+          "runtimeReady": true,
+          "renderTablesWrapped": true,
+          "refreshReady": true,
+          "summaryReady": true,
+          "countMatches": true,
+          "averageMatches": true,
+          "topSchoolMatches": true,
+          "excRateMatches": true,
+          "finite": true,
+          "refreshDoesNotMutate": true
+        },
+        "count": 14,
+        "tableRowCount": 14,
+        "averageScore": 137.65,
+        "topSchool": "银山实验学校",
+        "summary": {
+          "ok": true,
+          "count": 14,
+          "finite": true,
+          "averageScore": 137.65,
+          "topSchool": "银山实验学校",
+          "excRate": 6
+        }
+      }
+    },
+    {
+      "ok": true,
+      "id": "marginal-push",
+      "visible": true,
+      "active": true,
+      "title": "临界生精准辅导任务单\n                        📘 筛选逻辑建议先生成任务单，再决定是批量打印给教师，还是导出做跟踪台账。🖨 批量打印任务单📊 导出Excel",
+      "performance": {
+        "id": "marginal-push",
+        "switchMs": 572,
+        "deepCheckMs": 224,
+        "totalMs": 796
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "sectionReady": true,
+          "heroReady": true,
+          "shellHeadReady": true,
+          "runtimeReady": true,
+          "updateSchoolReady": true,
+          "generateReady": true,
+          "exportReady": true,
+          "filterReady": true,
+          "cycleReady": true,
+          "previewReady": true
+        },
+        "generatedCount": 68,
+        "ticketCount": 5,
+        "sampleSchool": "斑鸠店镇中"
+      }
+    },
+    {
+      "ok": true,
+      "id": "seat-adjustment",
+      "visible": true,
+      "active": true,
+      "title": "考后“座位微调”建议📘 模型说明建议先设定约束和策略，再生成座次；打印适合课堂落地，现场也可二次微调。 生成座次 打印",
+      "performance": {
+        "id": "seat-adjustment",
+        "switchMs": 763,
+        "deepCheckMs": 519,
+        "totalMs": 1282
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "sectionReady": true,
+          "heroReady": true,
+          "shellHeadReady": true,
+          "actionReady": true,
+          "flowReady": true,
+          "runtimeReady": true,
+          "updateReady": true,
+          "generateReady": true,
+          "configReady": true,
+          "constraintReady": true,
+          "controlsReady": true,
+          "workspaceReady": true
+        },
+        "count": 131,
+        "deskCount": 131,
+        "finite": true,
+        "sampleSchool": "斑鸠店镇中",
+        "sampleClass": "未分班",
+        "strategy": "conversion"
+      }
+    },
+    {
+      "ok": true,
+      "id": "progress-analysis",
+      "visible": true,
+      "active": true,
+      "title": "学生进退步追踪分析\n                        📘 增值评价建议先看集体增值结果，再切到个人变化明细；导出更适合班主任复盘和年级跟踪。按学校看按班级看📊 导出增值评价表",
+      "performance": {
+        "id": "progress-analysis",
+        "switchMs": 1578,
+        "deepCheckMs": 57,
+        "totalMs": 1635
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "sectionReady": true,
+          "renderProgressAnalysis": true,
+          "onProgressComparePeriodCountChange": true,
+          "renderMultiPeriodComparison": true,
+          "exportMultiPeriodComparison": true,
+          "compareControlsReady": true,
+          "resultSlotReady": true,
+          "renderCallSafe": true,
+          "townRankScopeOk": true
+        },
+        "renderCallResult": true,
+        "renderCallError": "",
+        "townRankScopeChecked": true,
+        "townRankMismatch": null
+      }
+    },
+    {
+      "ok": true,
+      "id": "cohort-growth",
+      "visible": true,
+      "active": true,
+      "title": "成长轨迹与稳定性分析📘 模型说明建议先确保同一届别下已经累计多次考试，再生成成长档案；如果考试次数太少，这页更适合先当作趋势预览而不是结论依据。🔎 生成成长档案📥 导出波动名单",
+      "performance": {
+        "id": "cohort-growth",
+        "switchMs": 561,
+        "deepCheckMs": 236,
+        "totalMs": 797
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "sectionReady": true,
+          "heroReady": true,
+          "shellHeadReady": true,
+          "growthObjectReady": true,
+          "renderReady": true,
+          "exportReady": true,
+          "volatilityTable": true,
+          "growthTable": true,
+          "flowReady": true
+        },
+        "examCount": 3,
+        "volatilityRows": 3,
+        "growthRows": 50
+      }
+    },
+    {
+      "ok": true,
+      "id": "report-generator",
+      "visible": true,
+      "active": true,
+      "title": "个性化成绩单生成器📘 模型说明建议先完成成绩查询，再按需导出单份 PDF 或批量生成全班材料。 批量生成全班 PDF",
+      "performance": {
+        "id": "report-generator",
+        "switchMs": 547,
+        "deepCheckMs": 5282,
+        "totalMs": 5829
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "doQuery": true,
+          "getComparisonStudentView": true,
+          "getComparisonStudentList": true,
+          "formatComparisonExamLabel": true,
+          "getStudentExamHistory": true,
+          "renderSingleReportCardHTML": true,
+          "renderRadarChart": true,
+          "renderVarianceChart": true
+        },
+        "reportVisible": true,
+        "contentReady": true,
+        "sampleStudent": {
+          "school": "斑鸠店镇中",
+          "className": "未分班",
+          "name": "卢兴轩"
+        },
+        "contentLength": 32701
+      }
+    },
+    {
+      "ok": true,
+      "id": "app-download-center",
+      "visible": true,
+      "active": true,
+      "title": "双端下载分发中心📘 模型说明保留安卓 APK 与桌面端 EXE 的统一入口，同时继续兼容现有模块冒烟与巡检校验。",
+      "performance": {
+        "id": "app-download-center",
+        "switchMs": 552,
+        "deepCheckMs": 519,
+        "totalMs": 1071
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "sectionReady": true,
+          "heroReady": true,
+          "shellHeadReady": true,
+          "primaryLinkReady": true,
+          "linkInputReady": true,
+          "featureGridReady": true,
+          "releaseListReady": true,
+          "specGridReady": true
+        },
+        "featureCount": 4,
+        "releaseCount": 1,
+        "releaseEmptyStateReady": false,
+        "specCount": 6,
+        "statusCardCount": 5,
+        "metaCardCount": 8
+      }
+    },
+    {
+      "ok": true,
+      "id": "zhongkao-countdown",
+      "visible": true,
+      "active": true,
+      "title": "",
+      "performance": {
+        "id": "zhongkao-countdown",
+        "switchMs": 516,
+        "deepCheckMs": 0,
+        "totalMs": 516
+      },
+      "deepCheck": {
+        "ok": true
+      }
+    },
+    {
+      "ok": true,
+      "id": "freshman-simulator",
+      "visible": true,
+      "active": true,
+      "title": "新生均衡分班\n                        📘 算法逻辑建议先生成分班方案，再保存、导出并继续进入座位编排；多方案时优先看均分极差最小的结果。💾 保存方案📊 导出结果",
+      "performance": {
+        "id": "freshman-simulator",
+        "switchMs": 616,
+        "deepCheckMs": 371,
+        "totalMs": 987
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "sectionReady": true,
+          "runtimeReady": true,
+          "xlsxReady": true,
+          "chartReady": true,
+          "importReady": true,
+          "divisionReady": true,
+          "seatReady": true,
+          "importedCountMatches": true,
+          "classCountMatches": true,
+          "allStudentsAssigned": true,
+          "noDuplicateStudents": true,
+          "classSizesBalanced": true,
+          "classStatsFinite": true,
+          "genderTotalsMatch": true,
+          "averageBalanceReasonable": true,
+          "dashboardRendered": true,
+          "balanceTableRendered": true,
+          "resultsAreaVisible": true,
+          "simulatedDataSynced": true,
+          "persistedStateSynced": true,
+          "importSucceeded": true
+        },
+        "counts": {
+          "imported": 24,
+          "assigned": 24,
+          "classes": 4,
+          "minClassSize": 6,
+          "maxClassSize": 6,
+          "averageRange": 0,
+          "male": 12,
+          "expectedMale": 12
+        },
+        "alerts": [
+          "✅ 导入成功！共 24 人。"
+        ]
+      }
+    },
+    {
+      "ok": true,
+      "id": "exam-arranger",
+      "visible": true,
+      "active": true,
+      "title": "智能考场编排器建议先生成考场安排，再进入人员配置和桌贴打印；Excel 导出更适合考务留档。📊 导出考务Excel🏷️ 批量打印桌贴🖨 批量打印桌贴",
+      "performance": {
+        "id": "exam-arranger",
+        "switchMs": 519,
+        "deepCheckMs": 369,
+        "totalMs": 888
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "sectionReady": true,
+          "runtimeReady": true,
+          "xlsxReady": true,
+          "importReady": true,
+          "generateReady": true,
+          "proctorUiReady": true,
+          "proctorAssignReady": true,
+          "schedulerRuntimeReady": true,
+          "importedCountMatches": true,
+          "assignedCountMatches": true,
+          "roomCountMatches": true,
+          "roomCapacityRespected": true,
+          "examNumbersUnique": true,
+          "examNumberPrefixAndRange": true,
+          "seatIntegrity": true,
+          "snakePrintOrder": true,
+          "classSeparationApplied": true,
+          "resultsAreaVisible": true,
+          "overviewRendered": true,
+          "studentRowsRendered": true,
+          "proctorRowsRendered": true,
+          "printViewRendered": true,
+          "importSucceeded": true,
+          "proctorAssignmentReady": true
+        },
+        "counts": {
+          "imported": 40,
+          "assigned": 40,
+          "rooms": 4,
+          "minRoomSize": 4,
+          "maxRoomSize": 12,
+          "teacherPool": 15,
+          "proctorAssignmentTried": true
+        },
+        "examNumberRange": {
+          "first": "T2026001",
+          "last": "T2026040"
+        },
+        "alerts": [
+          "✅ 已导入 40 名学生，准备进行考场编排。"
+        ]
+      }
+    },
+    {
+      "ok": true,
+      "id": "grade-scheduler",
+      "visible": true,
+      "active": true,
+      "title": "级部智能排课📘 模型说明建议先完成课时结构和约束设置，再导入现有课表做优化；导出 Excel 适合留档，疲劳审计适合二次微调。📥 导出课表(Excel)📤\n                                导入已有课表优化 疲劳审计",
+      "performance": {
+        "id": "grade-scheduler",
+        "switchMs": 576,
+        "deepCheckMs": 412,
+        "totalMs": 988
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "sectionReady": true,
+          "runtimeReady": true,
+          "xlsxReady": true,
+          "importReady": true,
+          "runReady": true,
+          "renderReady": true,
+          "auditReady": true,
+          "importedRecordsMatch": true,
+          "classListReady": true,
+          "previewRendered": true,
+          "combinedRuleRendered": true,
+          "meetingRuleRendered": true,
+          "busyRuleRendered": true,
+          "activityRuleRendered": true,
+          "scheduleGenerated": true,
+          "tableRendered": true,
+          "resultAreaVisible": true,
+          "slotIdsNormalized": true,
+          "noTeacherDoubleBooked": true,
+          "fridayEveningRuleRespected": true,
+          "busyTeacherRuleRespected": true,
+          "meetingRuleApplied": true,
+          "activityRuleApplied": true,
+          "combinedRuleApplied": true,
+          "auditRendered": true
+        },
+        "counts": {
+          "records": 5,
+          "classes": 2,
+          "lessonCells": 27,
+          "combinedCells": 2,
+          "malformedSlotIds": 0,
+          "teacherConflicts": 0
+        },
+        "teacherConflicts": [],
+        "alerts": []
+      }
+    },
+    {
+      "ok": true,
+      "id": "subject-balance",
+      "visible": true,
+      "active": true,
+      "title": "优劣势学科透视表建议先按学校/班级分析，再导出透视表和聚类结果，适合班主任做结构诊断。📊 导出Excel",
+      "performance": {
+        "id": "subject-balance",
+        "switchMs": 523,
+        "deepCheckMs": 294,
+        "totalMs": 817
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "sectionReady": true,
+          "schoolSelectReady": true,
+          "classSelectReady": true,
+          "tableReady": true,
+          "updateReady": true,
+          "renderReady": true,
+          "aliasResolverReady": true,
+          "selectedSchoolResolves": true,
+          "homeSchoolSelected": true,
+          "rowsRendered": true,
+          "noAlerts": true,
+          "noInvalidText": true
+        },
+        "selectedSchool": "银山实验",
+        "rowCount": 274,
+        "alerts": []
+      }
+    },
+    {
+      "ok": true,
+      "id": "potential-analysis",
+      "visible": true,
+      "active": true,
+      "title": "偏科潜力生挖掘\n                        📘 挖掘原理适合识别“总分不错但单科掉队”的学生，导出后便于做培优补短跟进。导出名单",
+      "performance": {
+        "id": "potential-analysis",
+        "switchMs": 605,
+        "deepCheckMs": 0,
+        "totalMs": 605
+      },
+      "deepCheck": {
+        "ok": true
+      }
+    },
+    {
+      "ok": true,
+      "id": "mutual-aid",
+      "visible": true,
+      "active": true,
+      "title": "学科互助分组建议先确认数据源和班级，再生成分组；导出结果适合课堂实施和班级留档。导出Excel",
+      "performance": {
+        "id": "mutual-aid",
+        "switchMs": 528,
+        "deepCheckMs": 0,
+        "totalMs": 528
+      },
+      "deepCheck": {
+        "ok": true
+      }
+    },
+    {
+      "ok": true,
+      "id": "student-overview",
+      "visible": true,
+      "active": true,
+      "title": "学情总览先看总览和数据就绪状态，再进入学生明细、进退步、偏科和成绩单模块。 学生明细 进退步分析 成绩单/家长查分",
+      "performance": {
+        "id": "student-overview",
+        "switchMs": 518,
+        "deepCheckMs": 2076,
+        "totalMs": 2594
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "sectionReady": true,
+          "heroReady": true,
+          "shellHeadReady": true,
+          "runtimeReady": true,
+          "helperReady": true,
+          "scoreReady": true,
+          "rawDataReady": true,
+          "examReady": true,
+          "schoolListReady": true,
+          "uniqueStudentsReady": true,
+          "finiteCounts": true,
+          "progressArithmetic": true,
+          "uniqueCountMatches": true,
+          "progressCountMatches": true,
+          "supportCountMatches": true,
+          "statCardsReady": true,
+          "readinessReady": true,
+          "contextReady": true,
+          "insightsReady": true,
+          "summaryMatches": true,
+          "statTextMatches": true,
+          "quickEntryReady": true,
+          "quickEntryStatesMatch": true,
+          "topQuickStatesMatch": true
+        },
+        "counts": {
+          "rawRows": 7809,
+          "exams": 3,
+          "schools": 14,
+          "uniqueStudents": 7478,
+          "progress": 0,
+          "improve": 0,
+          "decline": 0,
+          "stable": 0,
+          "marginalRecords": 0,
+          "potential": 0
+        },
+        "expected": {
+          "uniqueStudentCount": 7478,
+          "progress": {
+            "total": 0,
+            "improve": 0,
+            "decline": 0,
+            "stable": 0
+          },
+          "marginalClassCount": 0,
+          "marginalRecordCount": 0,
+          "potentialCount": 0
+        },
+        "quickStateMismatches": []
+      }
+    },
+    {
+      "ok": true,
+      "id": "student-details",
+      "visible": true,
+      "active": true,
+      "title": "学生考试明细📘 模型说明建议先筛选学校/班级，再决定是导出 Excel、长图还是查分包。导出Excel",
+      "performance": {
+        "id": "student-details",
+        "switchMs": 2012,
+        "deepCheckMs": 3,
+        "totalMs": 2015
+      },
+      "deepCheck": {
+        "ok": true,
+        "checks": {
+          "sectionReady": true,
+          "renderStudentDetails": true,
+          "renderStudentMultiPeriodComparison": true,
+          "schoolSelectReady": true,
+          "tableReady": true,
+          "countyRankAfterTownRank": true,
+          "targetStudentTownRankReady": true,
+          "targetStudentCountyRankReady": true,
+          "compareSectionReady": true,
+          "comparisonHelpersReady": true
+        },
+        "rows": 41,
+        "headers": [
+          "学校",
+          "班级",
+          "姓名",
+          "考号",
+          "考场",
+          "语文",
+          "校排",
+          "镇排",
+          "县排",
+          "数学",
+          "校排",
+          "镇排",
+          "县排",
+          "英语",
+          "校排",
+          "镇排",
+          "县排",
+          "物理",
+          "校排",
+          "镇排",
+          "县排",
+          "化学",
+          "校排",
+          "镇排",
+          "县排",
+          "五科总分",
+          "班排",
+          "校排",
+          "镇排",
+          "县排"
+        ],
+        "targetStudentRank": {
+          "name": "解洪旭",
+          "school": "银山实验学校",
+          "town": 4,
+          "county": 222
+        },
+        "compareEntryReady": true,
+        "comparisonHelpersReady": true
+      }
+    }
+  ],
+  "dataManagerTabs": [
+    {
+      "ok": true,
+      "id": "student",
+      "activeText": "",
+      "performance": {
+        "id": "student",
+        "durationMs": 1168
+      }
+    },
+    {
+      "ok": true,
+      "id": "teacher",
+      "activeText": "",
+      "performance": {
+        "id": "teacher",
+        "durationMs": 1400
+      }
+    },
+    {
+      "ok": true,
+      "id": "targets",
+      "activeText": "",
+      "performance": {
+        "id": "targets",
+        "durationMs": 1265
+      }
+    },
+    {
+      "ok": true,
+      "id": "params",
+      "activeText": "",
+      "performance": {
+        "id": "params",
+        "durationMs": 1140
+      }
+    },
+    {
+      "ok": true,
+      "id": "sql",
+      "checks": {
+        "setQuickSQL": true,
+        "runSQL": true,
+        "exportSQLResult": true,
+        "talkToData": true
+      },
+      "performance": {
+        "id": "sql",
+        "durationMs": 1139
+      }
+    },
+    {
+      "ok": true,
+      "id": "cloud",
+      "checks": {
+        "triggerCloudArchiveUpload": true,
+        "handleCloudArchiveUpload": true,
+        "downloadCloudBackup": true,
+        "uploadButton": true,
+        "uploadInput": true,
+        "rowDownloadButton": true
+      },
+      "performance": {
+        "id": "cloud",
+        "durationMs": 1157
+      }
+    }
+  ],
+  "performance": {
+    "budgets": {
+      "loginMs": 90000,
+      "appReadyMs": 90000,
+      "moduleSwitchMs": 30000,
+      "moduleDeepCheckMs": 90000,
+      "dataManagerTabMs": 15000,
+      "longTaskMs": 1200
+    },
+    "strict": false,
+    "loginMs": 19624,
+    "appReadyMs": 4906,
+    "moduleTimings": [
+      {
+        "id": "starter-hub",
+        "switchMs": 4465,
+        "deepCheckMs": 2,
+        "totalMs": 4467
+      },
+      {
+        "id": "upload",
+        "switchMs": 1816,
+        "deepCheckMs": 232,
+        "totalMs": 2048
+      },
+      {
+        "id": "summary",
+        "switchMs": 582,
+        "deepCheckMs": 746,
+        "totalMs": 1328
+      },
+      {
+        "id": "analysis",
+        "switchMs": 583,
+        "deepCheckMs": 1034,
+        "totalMs": 1617
+      },
+      {
+        "id": "high-score",
+        "switchMs": 1068,
+        "deepCheckMs": 0,
+        "totalMs": 1068
+      },
+      {
+        "id": "county-analysis",
+        "switchMs": 541,
+        "deepCheckMs": 369,
+        "totalMs": 910
+      },
+      {
+        "id": "teacher-analysis",
+        "switchMs": 543,
+        "deepCheckMs": 0,
+        "totalMs": 543
+      },
+      {
+        "id": "segment-analysis",
+        "switchMs": 1119,
+        "deepCheckMs": 0,
+        "totalMs": 1119
+      },
+      {
+        "id": "correlation-analysis",
+        "switchMs": 788,
+        "deepCheckMs": 452,
+        "totalMs": 1240
+      },
+      {
+        "id": "indicator",
+        "switchMs": 591,
+        "deepCheckMs": 925,
+        "totalMs": 1516
+      },
+      {
+        "id": "bottom3",
+        "switchMs": 545,
+        "deepCheckMs": 174,
+        "totalMs": 719
+      },
+      {
+        "id": "marginal-push",
+        "switchMs": 572,
+        "deepCheckMs": 224,
+        "totalMs": 796
+      },
+      {
+        "id": "seat-adjustment",
+        "switchMs": 763,
+        "deepCheckMs": 519,
+        "totalMs": 1282
+      },
+      {
+        "id": "progress-analysis",
+        "switchMs": 1578,
+        "deepCheckMs": 57,
+        "totalMs": 1635
+      },
+      {
+        "id": "cohort-growth",
+        "switchMs": 561,
+        "deepCheckMs": 236,
+        "totalMs": 797
+      },
+      {
+        "id": "report-generator",
+        "switchMs": 547,
+        "deepCheckMs": 5282,
+        "totalMs": 5829
+      },
+      {
+        "id": "app-download-center",
+        "switchMs": 552,
+        "deepCheckMs": 519,
+        "totalMs": 1071
+      },
+      {
+        "id": "zhongkao-countdown",
+        "switchMs": 516,
+        "deepCheckMs": 0,
+        "totalMs": 516
+      },
+      {
+        "id": "freshman-simulator",
+        "switchMs": 616,
+        "deepCheckMs": 371,
+        "totalMs": 987
+      },
+      {
+        "id": "exam-arranger",
+        "switchMs": 519,
+        "deepCheckMs": 369,
+        "totalMs": 888
+      },
+      {
+        "id": "grade-scheduler",
+        "switchMs": 576,
+        "deepCheckMs": 412,
+        "totalMs": 988
+      },
+      {
+        "id": "subject-balance",
+        "switchMs": 523,
+        "deepCheckMs": 294,
+        "totalMs": 817
+      },
+      {
+        "id": "potential-analysis",
+        "switchMs": 605,
+        "deepCheckMs": 0,
+        "totalMs": 605
+      },
+      {
+        "id": "mutual-aid",
+        "switchMs": 528,
+        "deepCheckMs": 0,
+        "totalMs": 528
+      },
+      {
+        "id": "student-overview",
+        "switchMs": 518,
+        "deepCheckMs": 2076,
+        "totalMs": 2594
+      },
+      {
+        "id": "student-details",
+        "switchMs": 2012,
+        "deepCheckMs": 3,
+        "totalMs": 2015
+      }
+    ],
+    "dataManagerTimings": [
+      {
+        "id": "student",
+        "durationMs": 1168
+      },
+      {
+        "id": "teacher",
+        "durationMs": 1400
+      },
+      {
+        "id": "targets",
+        "durationMs": 1265
+      },
+      {
+        "id": "params",
+        "durationMs": 1140
+      },
+      {
+        "id": "sql",
+        "durationMs": 1139
+      },
+      {
+        "id": "cloud",
+        "durationMs": 1157
+      }
+    ],
+    "budgetStatus": [
+      {
+        "label": "login",
+        "durationMs": 19624,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "app-ready",
+        "durationMs": 4906,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:starter-hub",
+        "durationMs": 4465,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:starter-hub",
+        "durationMs": 2,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:upload",
+        "durationMs": 1816,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:upload",
+        "durationMs": 232,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:summary",
+        "durationMs": 582,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:summary",
+        "durationMs": 746,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:analysis",
+        "durationMs": 583,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:analysis",
+        "durationMs": 1034,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:high-score",
+        "durationMs": 1068,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:high-score",
+        "durationMs": 0,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:county-analysis",
+        "durationMs": 541,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:county-analysis",
+        "durationMs": 369,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:teacher-analysis",
+        "durationMs": 543,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:teacher-analysis",
+        "durationMs": 0,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:segment-analysis",
+        "durationMs": 1119,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:segment-analysis",
+        "durationMs": 0,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:correlation-analysis",
+        "durationMs": 788,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:correlation-analysis",
+        "durationMs": 452,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:indicator",
+        "durationMs": 591,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:indicator",
+        "durationMs": 925,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:bottom3",
+        "durationMs": 545,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:bottom3",
+        "durationMs": 174,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:marginal-push",
+        "durationMs": 572,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:marginal-push",
+        "durationMs": 224,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:seat-adjustment",
+        "durationMs": 763,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:seat-adjustment",
+        "durationMs": 519,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:progress-analysis",
+        "durationMs": 1578,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:progress-analysis",
+        "durationMs": 57,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:cohort-growth",
+        "durationMs": 561,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:cohort-growth",
+        "durationMs": 236,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:report-generator",
+        "durationMs": 547,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:report-generator",
+        "durationMs": 5282,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:app-download-center",
+        "durationMs": 552,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:app-download-center",
+        "durationMs": 519,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:zhongkao-countdown",
+        "durationMs": 516,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:zhongkao-countdown",
+        "durationMs": 0,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:freshman-simulator",
+        "durationMs": 616,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:freshman-simulator",
+        "durationMs": 371,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:exam-arranger",
+        "durationMs": 519,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:exam-arranger",
+        "durationMs": 369,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:grade-scheduler",
+        "durationMs": 576,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:grade-scheduler",
+        "durationMs": 412,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:subject-balance",
+        "durationMs": 523,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:subject-balance",
+        "durationMs": 294,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:potential-analysis",
+        "durationMs": 605,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:potential-analysis",
+        "durationMs": 0,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:mutual-aid",
+        "durationMs": 528,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:mutual-aid",
+        "durationMs": 0,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:student-overview",
+        "durationMs": 518,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:student-overview",
+        "durationMs": 2076,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "switch:student-details",
+        "durationMs": 2012,
+        "budgetMs": 30000,
+        "ok": true
+      },
+      {
+        "label": "deep:student-details",
+        "durationMs": 3,
+        "budgetMs": 90000,
+        "ok": true
+      },
+      {
+        "label": "dm:student",
+        "durationMs": 1168,
+        "budgetMs": 15000,
+        "ok": true
+      },
+      {
+        "label": "dm:teacher",
+        "durationMs": 1400,
+        "budgetMs": 15000,
+        "ok": true
+      },
+      {
+        "label": "dm:targets",
+        "durationMs": 1265,
+        "budgetMs": 15000,
+        "ok": true
+      },
+      {
+        "label": "dm:params",
+        "durationMs": 1140,
+        "budgetMs": 15000,
+        "ok": true
+      },
+      {
+        "label": "dm:sql",
+        "durationMs": 1139,
+        "budgetMs": 15000,
+        "ok": true
+      },
+      {
+        "label": "dm:cloud",
+        "durationMs": 1157,
+        "budgetMs": 15000,
+        "ok": true
+      }
+    ],
+    "longTasks": [
+      {
+        "key": "self",
+        "duration": 1215,
+        "time": "2026-05-20T05:44:48.167Z"
+      },
+      {
+        "key": "self",
+        "duration": 1274,
+        "time": "2026-05-20T05:44:59.760Z"
+      }
+    ],
+    "totalMs": 70273,
+    "slowestModules": [
+      {
+        "id": "report-generator",
+        "switchMs": 547,
+        "deepCheckMs": 5282,
+        "totalMs": 5829
+      },
+      {
+        "id": "starter-hub",
+        "switchMs": 4465,
+        "deepCheckMs": 2,
+        "totalMs": 4467
+      },
+      {
+        "id": "student-overview",
+        "switchMs": 518,
+        "deepCheckMs": 2076,
+        "totalMs": 2594
+      },
+      {
+        "id": "upload",
+        "switchMs": 1816,
+        "deepCheckMs": 232,
+        "totalMs": 2048
+      },
+      {
+        "id": "student-details",
+        "switchMs": 2012,
+        "deepCheckMs": 3,
+        "totalMs": 2015
+      },
+      {
+        "id": "progress-analysis",
+        "switchMs": 1578,
+        "deepCheckMs": 57,
+        "totalMs": 1635
+      },
+      {
+        "id": "analysis",
+        "switchMs": 583,
+        "deepCheckMs": 1034,
+        "totalMs": 1617
+      },
+      {
+        "id": "indicator",
+        "switchMs": 591,
+        "deepCheckMs": 925,
+        "totalMs": 1516
+      }
+    ],
+    "slowestDataManagerTabs": [
+      {
+        "id": "teacher",
+        "durationMs": 1400
+      },
+      {
+        "id": "targets",
+        "durationMs": 1265
+      },
+      {
+        "id": "student",
+        "durationMs": 1168
+      },
+      {
+        "id": "cloud",
+        "durationMs": 1157
+      }
+    ],
+    "systemPerformanceSnapshot": {
+      "available": true,
+      "active": 0,
+      "queued": 0,
+      "inflight": 0,
+      "scheduled": 0,
+      "cached": 4,
+      "cloudPatched": true,
+      "longTasks": [
+        {
+          "key": "self",
+          "duration": 54,
+          "time": "2026-05-20T05:44:44.819Z"
+        },
+        {
+          "key": "self",
+          "duration": 224,
+          "time": "2026-05-20T05:44:45.935Z"
+        },
+        {
+          "key": "self",
+          "duration": 550,
+          "time": "2026-05-20T05:44:46.699Z"
+        },
+        {
+          "key": "self",
+          "duration": 1215,
+          "time": "2026-05-20T05:44:48.167Z"
+        },
+        {
+          "key": "self",
+          "duration": 52,
+          "time": "2026-05-20T05:44:54.942Z"
+        },
+        {
+          "key": "self",
+          "duration": 243,
+          "time": "2026-05-20T05:44:56.137Z"
+        },
+        {
+          "key": "self",
+          "duration": 290,
+          "time": "2026-05-20T05:44:56.759Z"
+        },
+        {
+          "key": "unknown",
+          "duration": 68,
+          "time": "2026-05-20T05:44:56.759Z"
+        },
+        {
+          "key": "self",
+          "duration": 272,
+          "time": "2026-05-20T05:44:57.070Z"
+        },
+        {
+          "key": "self",
+          "duration": 610,
+          "time": "2026-05-20T05:44:59.760Z"
+        },
+        {
+          "key": "self",
+          "duration": 1274,
+          "time": "2026-05-20T05:44:59.760Z"
+        },
+        {
+          "key": "self",
+          "duration": 206,
+          "time": "2026-05-20T05:44:59.978Z"
+        },
+        {
+          "key": "self",
+          "duration": 209,
+          "time": "2026-05-20T05:45:00.192Z"
+        },
+        {
+          "key": "self",
+          "duration": 203,
+          "time": "2026-05-20T05:45:00.399Z"
+        },
+        {
+          "key": "self",
+          "duration": 200,
+          "time": "2026-05-20T05:45:00.613Z"
+        },
+        {
+          "key": "self",
+          "duration": 218,
+          "time": "2026-05-20T05:45:00.931Z"
+        },
+        {
+          "key": "self",
+          "duration": 259,
+          "time": "2026-05-20T05:45:01.728Z"
+        },
+        {
+          "key": "self",
+          "duration": 450,
+          "time": "2026-05-20T05:45:01.728Z"
+        },
+        {
+          "key": "self",
+          "duration": 268,
+          "time": "2026-05-20T05:45:04.400Z"
+        },
+        {
+          "key": "self",
+          "duration": 856,
+          "time": "2026-05-20T05:45:06.479Z"
+        }
+      ]
+    },
+    "budgetFailures": []
+  },
+  "errors": [],
+  "errorCount": 0
+}

@@ -6,11 +6,21 @@ try {
 }
 
 const { chromium } = require('playwright');
+const fs = require('fs');
+const path = require('path');
+const SMOKE_OUTPUT_PATH = String(process.env.SMOKE_OUTPUT_PATH || '').trim();
 
 function trace(message, extra = undefined) {
     if (!process.env.SMOKE_TRACE) return;
     const suffix = extra === undefined ? '' : ` ${JSON.stringify(extra)}`;
     console.error(`[smoke] ${new Date().toISOString()} ${message}${suffix}`);
+}
+
+function writeSmokeOutput(summary) {
+    if (!SMOKE_OUTPUT_PATH) return;
+    const outputPath = path.resolve(process.cwd(), SMOKE_OUTPUT_PATH);
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
 }
 
 const SWITCH_MODULE_IDS = [
@@ -3084,6 +3094,7 @@ async function smokeDataManagerTab(page, id) {
         .filter((item) => Number(item?.duration || 0) >= PERFORMANCE_BUDGETS.longTaskMs);
     summary.performance.budgetFailures = summary.performance.budgetStatus.filter((item) => !item.ok);
 
+    writeSmokeOutput(summary);
     console.log(JSON.stringify(summary, null, 2));
     await browser.close();
 

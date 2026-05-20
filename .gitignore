@@ -4,6 +4,7 @@ dist/
 .idea/
 .playwright-cli/
 output/
+release-assets/
 .wrangler/
 scratch/
 
