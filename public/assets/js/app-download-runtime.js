@@ -166,6 +166,7 @@
         lastFetchedAt: 0,
         loading: false,
         fetchPromise: null,
+        remoteCatalogFetched: false,
         nativeInfo: null,
         nativeInfoPromise: null
     };
@@ -654,7 +655,30 @@
         return window.PUBLIC_DOWNLOAD_AUTO_FETCH_RELEASES === true;
     }
 
+    function preferHostedChannelDownload(channel) {
+        const url = String(channel?.url || '').trim();
+        if (state.remoteCatalogFetched || !url) return false;
+        if (/^\.?\/downloads\//i.test(url)) return true;
+        try {
+            return new URL(url, window.location.href).pathname.startsWith('/downloads/');
+        } catch (_) {
+            return false;
+        }
+    }
+
     function getDownloadAssetModel(channelKey, channel = getChannel(channelKey)) {
+        if (preferHostedChannelDownload(channel)) {
+            return {
+                ok: true,
+                verified: true,
+                release: buildFallbackRelease(),
+                url: channel.url,
+                name: channel.fileName,
+                size: 0,
+                label: '本站安装包可用',
+                note: `${channel.fileName} 已由本站托管，可直接下载。`
+            };
+        }
         const latestRelease = getLatestReleaseForChannel(channelKey);
         const latestAsset = latestRelease?.assets?.[channelKey];
         if (isVerifiedReleaseAsset(latestAsset)) {
@@ -1496,12 +1520,14 @@
                 state.releases = sortReleasesByDate(ensureArray(payload).map(mapRelease).filter((item) => item.tag));
                 state.lastFetchedAt = Date.now();
                 state.lastError = '';
+                state.remoteCatalogFetched = true;
                 refreshSurfaces();
                 return state.releases;
             })
             .catch((error) => {
                 console.warn('[version-center] fetch releases failed:', error);
                 state.lastError = error instanceof Error ? error.message : String(error);
+                state.remoteCatalogFetched = false;
                 if (!state.releases.length) state.releases = [buildFallbackRelease()];
                 refreshSurfaces();
                 return state.releases;

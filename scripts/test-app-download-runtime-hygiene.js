@@ -4,6 +4,7 @@ const path = require('path');
 
 const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8'));
 const source = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app-download-runtime.js'), 'utf8');
+const appSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
 const html = fs.readFileSync(path.resolve(__dirname, '../src/index.html'), 'utf8');
 const verifier = fs.readFileSync(path.resolve(__dirname, '../scripts/verify-release-assets.mjs'), 'utf8');
 const scripts = packageJson.scripts || {};
@@ -14,9 +15,16 @@ assert.ok(source.includes('getPeerDownloadChannelKey'), 'download center should 
 assert.ok(source.includes('peerAssetModel'), 'download center secondary action should target the opposite platform asset');
 assert.ok(source.includes('shouldAutoFetchReleaseCatalog'), 'download center should gate automatic GitHub release refreshes');
 assert.ok(source.includes('window.PUBLIC_DOWNLOAD_AUTO_FETCH_RELEASES === true'), 'download center should only auto-fetch GitHub releases when explicitly enabled');
+assert.ok(source.includes('preferHostedChannelDownload'), 'download center should prefer hosted app packages over stale embedded release assets');
+assert.ok(source.includes('remoteCatalogFetched'), 'download center should distinguish embedded releases from a freshly fetched release catalog');
+assert.ok(source.includes("pathname.startsWith('/downloads/')"), 'download center should recognize resolved same-origin download URLs');
 assert.ok(source.includes("name.endsWith('.zip') && /(?:win|windows|desktop|smartedu)/i.test(name)"), 'download center should recognize Windows release archives');
 assert.ok(source.includes('./downloads/school-system-android-v1.0.apk'), 'download center should expose the locally hosted APK');
 assert.ok(source.includes('./downloads/smartedu-windows-latest.zip'), 'download center should expose the locally hosted Windows app package');
+assert.ok(appSource.includes("url: './downloads/school-system-android-v1.0.apk'"), 'public channel config should not override APK with a stale remote link');
+assert.ok(appSource.includes("url: './downloads/smartedu-windows-latest.zip'"), 'public channel config should not override Windows download with a stale remote link');
+assert.ok(!appSource.includes('releases/latest/download/school-system-android-latest.apk'), 'public app config should not keep the stale APK release URL');
+assert.ok(!appSource.includes('releases/latest/download/smartedu-desktop-windows-latest.exe'), 'public app config should not keep the stale Windows release URL');
 assert.ok(source.includes('aria-disabled'), 'download center should disable missing release assets');
 assert.ok(source.includes('window.PUBLIC_DOWNLOAD_ALLOW_UNVERIFIED_LINKS === true'), 'download center should require an explicit opt-in before exposing unverified fallback links');
 assert.ok(!source.includes('return !!state.lastError || !state.lastFetchedAt || !state.releases.length;'), 'download center should not enable fallback download links before release verification');

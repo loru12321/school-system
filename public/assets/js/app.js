@@ -1995,8 +1995,8 @@ var PUBLIC_DOWNLOAD_CHANNELS = {
         badge: '手机 / 平板',
         icon: 'ti-brand-android',
         accent: '#22c55e',
-        url: 'https://github.com/hka123321/school-system/releases/latest/download/school-system-android-latest.apk',
-        fileName: 'school-system-android-latest.apk',
+        url: './downloads/school-system-android-v1.0.apk',
+        fileName: 'school-system-android-v1.0.apk',
         helper: '适合安卓手机和平板直接安装，安装后沿用现有账号登录。',
         notes: [
             '适合教师、班主任、家长与学生在移动端直接打开系统。',
@@ -2007,16 +2007,16 @@ var PUBLIC_DOWNLOAD_CHANNELS = {
     desktop: {
         key: 'desktop',
         label: '桌面端下载',
-        shortLabel: 'Windows EXE',
+        shortLabel: 'Windows 应用',
         badge: 'Windows 桌面',
         icon: 'ti-brand-windows',
         accent: '#60a5fa',
-        url: 'https://github.com/hka123321/school-system/releases/latest/download/smartedu-desktop-windows-latest.exe',
-        fileName: 'smartedu-desktop-windows-latest.exe',
-        helper: '适合 Windows 办公电脑本地打开，内置单实例桌面壳。',
+        url: './downloads/smartedu-windows-latest.zip',
+        fileName: 'smartedu-windows-latest.zip',
+        helper: '适合 Windows 办公电脑本地打开，会优先用 Edge/Chrome 应用窗口启动正式系统。',
         notes: [
             '适合教务处、办公室、机房与固定工位使用。',
-            '双击 EXE 即可打开桌面端，避免反复找浏览器入口。',
+            '解压 ZIP 后双击启动脚本即可打开，避免反复找浏览器入口。',
             '桌面端和网页端使用同一套数据口径与登录逻辑。'
         ]
     }

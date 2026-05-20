@@ -42,6 +42,7 @@
     "test:runtime-registry": "node scripts/test-runtime-registry.js",
     "test:npm-audit": "node scripts/test-npm-audit.js",
     "test:app-download-runtime-hygiene": "node scripts/test-app-download-runtime-hygiene.js",
+    "test:app-download-clicks": "node scripts/test-app-download-clicks.js",
     "test:docs-hygiene": "node scripts/test-docs-hygiene.js",
     "test:html-hygiene": "node scripts/test-html-hygiene.js",
     "test:module-inventory": "node scripts/test-module-inventory.js",
