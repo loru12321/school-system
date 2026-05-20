@@ -59,10 +59,12 @@ const pkg = JSON.parse(read(packageFile));
     'CompareExamListPerfCache',
     'getCompareExamListSignature',
     'return cloneCompareExamList(CompareExamListPerfCache.result);',
-    'TM_AVAILABLE_EXAM_LIST_CACHE'
+    'TM_AVAILABLE_EXAM_LIST_CACHE',
+    'cloudHistorySignature'
 ].forEach((token) => {
-    const file = token === 'TM_AVAILABLE_EXAM_LIST_CACHE' ? 'public/assets/js/app.js' : 'public/assets/js/compare-shared-runtime.js';
-    assertContains(token === 'TM_AVAILABLE_EXAM_LIST_CACHE' ? app : compareShared, token, file);
+    const inApp = token === 'TM_AVAILABLE_EXAM_LIST_CACHE' || token === 'cloudHistorySignature';
+    const file = inApp ? 'public/assets/js/app.js' : 'public/assets/js/compare-shared-runtime.js';
+    assertContains(inApp ? app : compareShared, token, file);
 });
 
 [
@@ -105,7 +107,7 @@ console.log(JSON.stringify({
     ok: true,
     reportRenderCacheTokens: 16,
     appReportCacheTokens: 10,
-    compareExamListCacheTokens: 4,
+    compareExamListCacheTokens: 5,
     reportChartCacheTokens: 5,
     countyDomSkipTokens: 3
 }, null, 2));

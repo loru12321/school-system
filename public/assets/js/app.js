@@ -9330,13 +9330,21 @@ function tmGetAvailableExamList() {
             Array.isArray(ex?.data) ? ex.data.length : 0
         ].join(':')).sort().join('|')
         : '';
+    const cloudHistorySignature = Array.isArray(window.PREV_DATA)
+        ? window.PREV_DATA.map(row => [
+            String(row?.examFullKey || row?.examId || ''),
+            String(row?.fingerprint || ''),
+            String(row?.updatedAt || '')
+        ].join(':')).sort().join('|')
+        : '';
     const signature = [
         typeof listAvailableExamsForCompare === 'function' ? 'compare' : 'local',
         String(CURRENT_COHORT_ID || window.CURRENT_COHORT_ID || ''),
         String(CURRENT_EXAM_ID || window.CURRENT_EXAM_ID || ''),
         String(window.__RAW_DATA_VERSION || 0),
         Array.isArray(RAW_DATA) ? RAW_DATA.length : 0,
-        examSignature
+        examSignature,
+        cloudHistorySignature
     ].join('::');
     if (TM_AVAILABLE_EXAM_LIST_CACHE.signature === signature && Array.isArray(TM_AVAILABLE_EXAM_LIST_CACHE.result)) {
         return TM_AVAILABLE_EXAM_LIST_CACHE.result.map(ex => ({ ...ex }));
