@@ -2796,6 +2796,7 @@ async function runModuleDeepCheck(page, id) {
             const statusCardCount = document.querySelectorAll('#app-download-status-grid .app-download-status-card').length;
             const metaCardCount = document.querySelectorAll('#app-download-meta-grid .app-download-meta-card').length;
             const releaseListText = document.getElementById('app-download-release-list')?.textContent?.trim() || '';
+            const releaseEmptyStateReady = releaseListText.includes('历史版本已清空');
             const primaryHref = String(primaryLink?.getAttribute('href') || '');
             const primaryDisabled = primaryLink?.getAttribute('aria-disabled') === 'true';
             const checks = {
@@ -2805,7 +2806,7 @@ async function runModuleDeepCheck(page, id) {
                 primaryLinkReady: !!primaryLink && (primaryDisabled || /\.apk($|\?)/i.test(primaryHref)),
                 linkInputReady: !!document.getElementById('app-download-link-input'),
                 featureGridReady: featureCount >= 1 || statusCardCount >= 3,
-                releaseListReady: releaseCount >= 1 || releaseListText.length > 20,
+                releaseListReady: releaseCount >= 1 || releaseEmptyStateReady || releaseListText.length > 20,
                 specGridReady: specCount >= 1 || metaCardCount >= 4
             };
             return {
@@ -2813,6 +2814,7 @@ async function runModuleDeepCheck(page, id) {
                 checks,
                 featureCount,
                 releaseCount,
+                releaseEmptyStateReady,
                 specCount,
                 statusCardCount,
                 metaCardCount

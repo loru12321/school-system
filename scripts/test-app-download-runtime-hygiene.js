@@ -23,8 +23,13 @@ assert.ok(source.includes('./downloads/school-system-android-v1.0.apk'), 'downlo
 assert.ok(source.includes('./downloads/smartedu-windows-latest.zip'), 'download center should expose the locally hosted Windows app package');
 assert.ok(appSource.includes("url: './downloads/school-system-android-v1.0.apk'"), 'public channel config should not override APK with a stale remote link');
 assert.ok(appSource.includes("url: './downloads/smartedu-windows-latest.zip'"), 'public channel config should not override Windows download with a stale remote link');
+assert.ok(appSource.includes('var PUBLIC_VERSION_CENTER_RELEASES = [];'), 'embedded historical release assets should stay cleared');
 assert.ok(!appSource.includes('releases/latest/download/school-system-android-latest.apk'), 'public app config should not keep the stale APK release URL');
 assert.ok(!appSource.includes('releases/latest/download/smartedu-desktop-windows-latest.exe'), 'public app config should not keep the stale Windows release URL');
+assert.ok(!appSource.includes('school-system-android-latest.apk'), 'public app config should not keep stale APK asset names');
+assert.ok(!appSource.includes('smartedu-desktop-windows-latest.exe'), 'public app config should not keep stale Windows asset names');
+assert.ok(!appSource.includes('browser_download_url'), 'public app config should not embed historical release asset URLs');
+assert.ok(source.includes('历史版本已清空'), 'download center should show a clear empty state after clearing history');
 assert.ok(source.includes('aria-disabled'), 'download center should disable missing release assets');
 assert.ok(source.includes('window.PUBLIC_DOWNLOAD_ALLOW_UNVERIFIED_LINKS === true'), 'download center should require an explicit opt-in before exposing unverified fallback links');
 assert.ok(!source.includes('return !!state.lastError || !state.lastFetchedAt || !state.releases.length;'), 'download center should not enable fallback download links before release verification');

@@ -44,9 +44,9 @@
             accent: '#22c55e',
             url: './downloads/school-system-android-v1.0.apk',
             fileName: 'school-system-android-v1.0.apk',
-            heroTitle: '安卓包、桌面端与历史版本统一查看',
-            heroCopy: '登录后可继续查看关于与更新；登录前也可以在这里直接下载安卓 APK 或查看最新 release。',
-            summary: '当前会根据所选平台切换下载链接，并联动展示历史版本与更新点。',
+            heroTitle: '安卓包与桌面端统一下载',
+            heroCopy: '登录后可继续查看关于与更新；登录前也可以在这里直接下载安卓 APK 或 Windows 应用包。',
+            summary: '当前会根据所选平台切换下载链接，历史更新记录已清空，后续新文件从这里开始记录。',
             releaseStamp: 'Latest · Android',
             primaryActionLabel: '下载 Android APK',
             secondaryActionLabel: '打开安卓下载',
@@ -105,9 +105,9 @@
             accent: '#60a5fa',
             url: './downloads/smartedu-windows-latest.zip',
             fileName: 'smartedu-windows-latest.zip',
-            heroTitle: '桌面端关于、更新检查与历史下载统一入口',
-            heroCopy: 'Windows 客户端、安卓客户端与网页端现在共用同一套版本中心，可查看当前版本、历史版本和每次 release 更新点。',
-            summary: '当前选中 Windows EXE，会优先展示桌面端下载、更新状态和历史版本入口。',
+            heroTitle: '桌面端关于、更新检查与下载统一入口',
+            heroCopy: 'Windows 客户端、安卓客户端与网页端现在共用同一套版本中心；旧历史记录已清空，后续新版本从当前入口重新累积。',
+            summary: '当前选中 Windows 应用，会优先展示桌面端下载和更新状态。',
             releaseStamp: 'Latest · Desktop',
             primaryActionLabel: '下载 Windows 应用',
             secondaryActionLabel: '打开 Windows 下载',
@@ -130,8 +130,8 @@
                 },
                 {
                     icon: 'ti-history',
-                    title: '历史版本可追溯',
-                    body: '可以直接查看每次 dated release 的小更新点，并下载对应历史版本资产。'
+                    title: '从当前版本重新累积',
+                    body: '旧历史记录已清空，以后新发布的 APK 或 Windows 包会从这里开始记录。'
                 },
                 {
                     icon: 'ti-refresh-alert',
@@ -1097,7 +1097,19 @@
         const releaseList = root.querySelector('#app-download-release-list');
         if (!releaseList) return;
 
-        const releases = state.releases.length ? state.releases : [buildFallbackRelease()];
+        const releases = state.releases.length ? state.releases : [];
+        if (!releases.length) {
+            releaseList.innerHTML = `
+                <article class="app-download-release-card is-empty">
+                    <div class="app-download-release-top">
+                        <strong>历史版本已清空</strong>
+                        <span>从现在开始</span>
+                    </div>
+                    <p>旧版本更新文件已不再展示。后续新增 APK 或 Windows 应用包时，会从当前入口重新记录。</p>
+                </article>
+            `;
+            return;
+        }
         releaseList.innerHTML = releases
             .slice(0, 6)
             .map((release) => buildReleaseCardHtml(release, activeKey))
@@ -1233,7 +1245,7 @@
                     <div>
                         <span class="version-center-chip">关于与更新</span>
                         <h2 id="version-center-title" tabindex="-1">版本中心</h2>
-                        <p id="version-center-copy">查看当前版本、检查最新 release、阅读每个版本的小更新点，并下载安卓或桌面端历史版本。</p>
+                        <p id="version-center-copy">查看当前版本、检查最新 release；旧历史记录已清空，后续新版本从这里开始记录。</p>
                     </div>
                     <button type="button" class="version-center-close" data-version-center-close aria-label="关闭关于与更新">
                         <i class="ti ti-x"></i>
@@ -1248,7 +1260,7 @@
                 <section class="version-center-panel" data-version-center-latest></section>
                 <section class="version-center-panel">
                     <div class="version-center-panel-head">
-                        <h3>历史版本与更新点</h3>
+                        <h3>后续版本与更新点</h3>
                         <span>Release History</span>
                     </div>
                     <div class="version-center-history" data-version-center-history></div>
@@ -1409,7 +1421,19 @@
         }
 
         if (historyWrap) {
-            const releases = state.releases.length ? state.releases : [buildFallbackRelease()];
+            const releases = state.releases.length ? state.releases : [];
+            if (!releases.length) {
+                historyWrap.innerHTML = `
+                    <article class="app-download-release-card is-empty">
+                        <div class="app-download-release-top">
+                            <strong>历史版本已清空</strong>
+                            <span>从现在开始</span>
+                        </div>
+                        <p>旧版本更新文件已不再展示。后续新增 APK 或 Windows 应用包时，会从这里开始记录。</p>
+                    </article>
+                `;
+                return;
+            }
             historyWrap.innerHTML = releases
                 .slice(0, 8)
                 .map((release) => buildReleaseCardHtml(release, state.modalPlatform, { compact: true }))
