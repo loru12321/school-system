@@ -1933,6 +1933,9 @@ window.initCloudClient();
 
             this.__bootLoginBusy = true;
             setBootSubmitState({ busy: true, text: '正在验证身份...' });
+            if (portal === 'school' && !window.__APP_MODULES_LOAD_PROMISE__ && !window.__APP_MODULES_LOADED__) {
+                loadAppModules().catch(err => console.warn('[boot-auth] module warmup during login failed:', err));
+            }
 
             try {
                 // Connection attempt with offline fallback
@@ -2046,17 +2049,6 @@ window.initCloudClient();
         if (window.__BOOT_AUTH_INIT_DONE__) return;
         window.__BOOT_AUTH_INIT_DONE__ = true;
         bootAuth.init();
-        if (!readBootSessionUser() && bootAuth.getLoginPortal() === 'school') {
-            const preload = () => {
-                if (window.__APP_MODULES_LOADED__ || window.__APP_MODULES_LOAD_PROMISE__) return;
-                loadAppModules().catch(err => console.warn('[boot-runtime] school module preload failed:', err));
-            };
-            if (typeof window.requestIdleCallback === 'function') {
-                window.requestIdleCallback(preload, { timeout: 1800 });
-            } else {
-                setTimeout(preload, 1200);
-            }
-        }
     }
 
     if (document.readyState === 'loading') {
