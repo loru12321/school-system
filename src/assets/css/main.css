@@ -5366,12 +5366,21 @@ select:focus {
     gap: 20px;
 }
 
+.mode-shell--minimal {
+    padding: 28px 30px 30px;
+    gap: 26px;
+}
+
 .mode-topline {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
     flex-wrap: wrap;
+}
+
+.mode-topline--status-only {
+    justify-content: flex-end;
 }
 
 .mode-kicker,
@@ -5535,9 +5544,18 @@ select:focus {
         gap: 18px;
     }
 
+    .mode-shell--minimal {
+        padding: 22px 18px 20px;
+        gap: 20px;
+    }
+
     .mode-topline,
 .mode-entry-row {
         align-items: stretch;
+    }
+
+    .mode-topline--status-only {
+        justify-content: flex-start;
     }
 
     .mode-title {
