@@ -1789,6 +1789,7 @@ window.initCloudClient();
         const overlay = document.getElementById('login-overlay');
         const loader = document.getElementById('global-loader');
         const app = document.getElementById('app');
+        const modeMask = document.getElementById('mode-mask');
 
         document.body.classList.toggle('login-overlay-active', !!visible);
         document.body.dataset.authState = visible ? 'logged_out' : 'logged_in';
@@ -1808,6 +1809,38 @@ window.initCloudClient();
         if (app) {
             app.classList.toggle('hidden', !!visible);
             app.setAttribute('aria-hidden', visible ? 'true' : 'false');
+        }
+        if (visible && modeMask) {
+            modeMask.style.display = 'none';
+            modeMask.setAttribute('aria-hidden', 'true');
+        }
+    }
+
+    function showBootCohortPicker() {
+        const overlay = document.getElementById('login-overlay');
+        const loader = document.getElementById('global-loader');
+        const modeMask = document.getElementById('mode-mask');
+        const app = document.getElementById('app');
+        document.body.classList.remove('login-overlay-active');
+        document.body.dataset.authState = 'logged_in';
+        if (overlay) {
+            overlay.style.display = 'none';
+            overlay.style.visibility = 'hidden';
+            overlay.style.opacity = '0';
+            overlay.style.pointerEvents = 'none';
+            overlay.setAttribute('aria-hidden', 'true');
+        }
+        if (loader) {
+            loader.classList.add('hidden');
+            loader.style.display = 'none';
+        }
+        if (app) {
+            app.classList.add('hidden');
+            app.setAttribute('aria-hidden', 'true');
+        }
+        if (modeMask) {
+            modeMask.style.display = 'flex';
+            modeMask.setAttribute('aria-hidden', 'false');
         }
     }
 
@@ -1953,7 +1986,19 @@ window.initCloudClient();
                         }
                     }
 
-                    // Fallback or Parent Portal: Load and enter
+                    if (portal === 'school') {
+                        showBootCohortPicker();
+                        loadAppModules()
+                            .then(() => window.waitForAuthReady())
+                            .catch(err => {
+                                console.warn('[boot-auth] background module load failed after login:', err);
+                                setBootHelperMessage('核心组件加载失败，请刷新后重试。', 'error');
+                                syncBootLoginOverlayState(true);
+                            });
+                        return;
+                    }
+
+                    // Parent Portal: Load and enter
                     const loader = document.getElementById('global-loader');
                     if (loader) loader.classList.remove('hidden');
                     await loadAppModules();

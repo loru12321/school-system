@@ -3196,6 +3196,7 @@ var Auth = {
     syncLoginOverlayState: function (visible) {
         const overlay = document.getElementById('login-overlay');
         const app = document.getElementById('app');
+        const modeMask = document.getElementById('mode-mask');
         this.closeSystemIntroModal();
         this.closeDownloadHubModal();
         this.closeLoginPortalModal();
@@ -3226,6 +3227,10 @@ var Auth = {
         if (app) {
             app.classList.toggle('hidden', !!visible);
             app.setAttribute('aria-hidden', visible ? 'true' : 'false');
+        }
+        if (visible && modeMask) {
+            modeMask.style.display = 'none';
+            modeMask.setAttribute('aria-hidden', 'true');
         }
     },
 
@@ -7408,7 +7413,9 @@ async function switchCohort(cohortId, options = {}) {
         clearTimeout(window.__STARTUP_CLOUD_HYDRATION_TIMER__);
         window.__STARTUP_CLOUD_HYDRATION_TIMER__ = null;
     }
-    UI.loading(true, "正在从云端拉取 [" + cohortKey + "] 的数据...");
+    if (options.silent !== true) {
+        UI.loading(true, "正在从云端拉取 [" + cohortKey + "] 的数据...");
+    }
 
     // 1. 记录当前选择的届别
     CURRENT_EXAM_ID = '';
@@ -7437,7 +7444,7 @@ async function switchCohort(cohortId, options = {}) {
             if (String(readWorkspaceCohortId() || CURRENT_COHORT_ID || '') !== String(cohortId)) return;
             const stillEmpty = !(Array.isArray(RAW_DATA) && RAW_DATA.length > 0);
             if (stillEmpty) {
-                switchCohort(cohortId,{skipConfirm:true,fastEnter:false,preloadedData:cloudData}).catch(error=>console.warn('[switchCohort] background project hydrate failed:',error));
+                switchCohort(cohortId,{skipConfirm:true,fastEnter:false,preloadedData:cloudData,silent:true}).catch(error=>console.warn('[switchCohort] background project hydrate failed:',error));
             }
         }).catch((error) => {
             console.warn('[switchCohort] background project fetch failed:', error);
@@ -7528,7 +7535,9 @@ async function switchCohort(cohortId, options = {}) {
             warnPrefix: '[switchCohort] 云端历史考试拉取失败:'
         });
 
-        UI.toast(`✅ 已切换到 [${cohortKey}]，数据加载完毕`, "success");
+        if (options.silent !== true) {
+            UI.toast(`✅ 已切换到 [${cohortKey}]，数据加载完毕`, "success");
+        }
         logAction('届别切换', `已切换到 ${cohortKey}`);
         updateStatusPanel();
     } else {
@@ -7603,12 +7612,16 @@ async function switchCohort(cohortId, options = {}) {
 
         CohortDB.renderExamList();
 
-        UI.toast(`✨ 已切换到 [${cohortKey}] (新存档)，请开始上传数据`, "info");
+        if (options.fastEnter === true) {
+            UI.toast(`已进入 [${cohortKey}]，云端数据正在后台恢复`, "info");
+        } else {
+            UI.toast(`✨ 已切换到 [${cohortKey}] (新存档)，请开始上传数据`, "info");
+        }
         logAction('届别切换', `新建并切换到 ${cohortKey}`);
         updateStatusPanel();
     }
 
-    UI.loading(false);
+    if (options.silent !== true) UI.loading(false);
     window.__COHORT_SWITCH_IN_PROGRESS__ = false;
     return true;
 }
