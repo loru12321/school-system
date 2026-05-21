@@ -1933,9 +1933,6 @@ window.initCloudClient();
 
             this.__bootLoginBusy = true;
             setBootSubmitState({ busy: true, text: '正在验证身份...' });
-            if (portal === 'school' && !window.__APP_MODULES_LOAD_PROMISE__ && !window.__APP_MODULES_LOADED__) {
-                loadAppModules().catch(err => console.warn('[boot-auth] module warmup during login failed:', err));
-            }
 
             try {
                 // Connection attempt with offline fallback
