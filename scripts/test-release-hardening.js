@@ -51,6 +51,9 @@ assert.strictEqual(manifest.short_name, '智慧教务', 'manifest short name sho
 assert.ok(manifest.description.includes('教务'), 'manifest description should stay readable');
 assert.ok(!/[�锟]/.test(manifestText), 'manifest should not contain replacement or mojibake characters');
 assert.ok(Array.isArray(manifest.shortcuts) && manifest.shortcuts.length >= 3, 'manifest should keep app shortcuts');
+assert.ok(manifest.shortcuts.some((shortcut) => shortcut.name === '数据导入'), 'manifest should keep readable import shortcut');
+assert.ok(manifest.shortcuts.some((shortcut) => shortcut.name === '学情总览'), 'manifest should keep readable overview shortcut');
+assert.ok(manifest.shortcuts.some((shortcut) => shortcut.name === '应用下载'), 'manifest should keep readable download shortcut');
 assert.ok(manifest.shortcuts.every((shortcut) => shortcut.icons?.some((icon) => icon.src === '/icon.svg')), 'manifest shortcuts should include app icons');
 assert.ok(publicHeaders.includes('/downloads/*'), 'Cloudflare static headers should cover hosted downloads');
 assert.ok(publicHeaders.includes('stale-while-revalidate=86400'), 'download headers should allow short browser caching with revalidation');

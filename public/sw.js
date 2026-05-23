@@ -4,7 +4,7 @@
  * fallbacks when the network is unavailable.
  */
 
-const CACHE_VERSION = 'school-system-v1.4';
+const CACHE_VERSION = 'school-system-v1.5';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const API_CACHE = `${CACHE_VERSION}-api`;
@@ -125,7 +125,7 @@ async function networkFirstApi(request, url) {
             JSON.stringify({ error: 'Network unavailable and no cached data exists' }),
             {
                 status: 503,
-                headers: { 'Content-Type': 'application/json' }
+                headers: buildOfflineHeaders('application/json; charset=utf-8')
             }
         );
     }
@@ -147,13 +147,21 @@ async function networkFirstHtml(request) {
         if (shell) return shell;
 
         return new Response(
-            '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>Offline</title><body><h1>Offline mode</h1><p>Please refresh after the network is restored.</p></body></html>',
+            '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>离线模式</title><body><h1>离线模式</h1><p>网络恢复后请刷新页面。</p></body></html>',
             {
                 status: 503,
-                headers: { 'Content-Type': 'text/html; charset=utf-8' }
+                headers: buildOfflineHeaders('text/html; charset=utf-8')
             }
         );
     }
+}
+
+function buildOfflineHeaders(contentType) {
+    return {
+        'Content-Type': contentType,
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff'
+    };
 }
 
 function isCacheable(response) {

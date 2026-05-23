@@ -118,6 +118,7 @@ assert.strictEqual(publicManifest.dir, 'ltr', 'web manifest should declare text 
 assert.strictEqual(publicManifest.display, 'standalone', 'web manifest should enable standalone app display');
 assert.strictEqual(publicManifest.name, '智慧教务管理系统', 'web manifest name should stay readable');
 assert.strictEqual(publicManifest.short_name, '智慧教务', 'web manifest short name should stay readable');
+assert.ok(publicManifest.description.includes('教务'), 'web manifest description should stay readable');
 assert.ok(!/[�锟]/.test(read('public/site.webmanifest')), 'web manifest should not contain mojibake');
 assert.ok(Array.isArray(publicManifest.categories) && publicManifest.categories.includes('education'), 'web manifest should classify the app for education');
 assert.ok(Array.isArray(publicManifest.icons) && publicManifest.icons.some((icon) => icon.src === '/icon.svg'), 'web manifest should include the SVG app icon');
@@ -125,6 +126,9 @@ assert.ok(Array.isArray(publicManifest.shortcuts) && publicManifest.shortcuts.le
 assert.ok(publicManifest.shortcuts.some((shortcut) => shortcut.url === '/#upload'), 'web manifest should shortcut to data import');
 assert.ok(publicManifest.shortcuts.some((shortcut) => shortcut.url === '/#student-overview'), 'web manifest should shortcut to student overview');
 assert.ok(publicManifest.shortcuts.some((shortcut) => shortcut.url === '/#app-download-center'), 'web manifest should shortcut to app downloads');
+assert.ok(publicManifest.shortcuts.some((shortcut) => shortcut.name === '数据导入'), 'web manifest should keep readable import shortcut');
+assert.ok(publicManifest.shortcuts.some((shortcut) => shortcut.name === '学情总览'), 'web manifest should keep readable overview shortcut');
+assert.ok(publicManifest.shortcuts.some((shortcut) => shortcut.name === '应用下载'), 'web manifest should keep readable download shortcut');
 assert.ok(!distIndex.includes('http://localhost'), 'dist HTML must not reference localhost');
 assert.ok(!distIndex.includes('127.0.0.1'), 'dist HTML must not reference loopback hosts');
 forbiddenSecretPatterns.forEach((pattern) => {
