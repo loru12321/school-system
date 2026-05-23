@@ -12,13 +12,15 @@
         const select = document.getElementById('corrSchoolSelect');
         if (!select) return;
         const oldValue = select.value;
-        select.innerHTML = '<option value="ALL">全乡镇（All）</option>';
         const schoolList = (typeof window.listAvailableSchoolsForCompare === 'function')
             ? window.listAvailableSchoolsForCompare()
             : Object.keys(SCHOOLS || {});
-        schoolList.forEach((schoolName) => {
-            select.innerHTML += `<option value="${schoolName}">${schoolName}</option>`;
-        });
+        const signature = `corr-schools:${schoolList.join('|')}`;
+        if (select.dataset.corrSchoolOptionsSig !== signature) {
+            select.innerHTML = '<option value="ALL">全乡镇（All）</option>'
+                + schoolList.map((schoolName) => `<option value="${schoolName}">${schoolName}</option>`).join('');
+            select.dataset.corrSchoolOptionsSig = signature;
+        }
         if (oldValue && Array.from(select.options || []).some((option) => option.value === oldValue)) {
             select.value = oldValue;
         }

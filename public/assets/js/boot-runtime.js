@@ -3099,6 +3099,69 @@ function scheduleMobileRuntimeBootstrap(options = {}) {
 scheduleMobileRuntimeBootstrap({ maxWidth: 960, delayMs: 120 });
 scheduleMobileRuntimeBootstrap({ maxWidth: 768, includePerf: true, delayMs: 480 });
 
+function scheduleHotspotRuntimeWarmup() {
+    if (window.__HOTSPOT_RUNTIME_WARMUP_SCHEDULED__) return;
+    if (getRuntimeLoadProfile() === 'lazy' || isRuntimeMobileViewport()) return;
+    window.__HOTSPOT_RUNTIME_WARMUP_SCHEDULED__ = true;
+
+    const steps = [
+        { label: 'xlsx-vendor', loader: () => window.ensureXlsxVendorLoaded?.() },
+        { label: 'town-submodule-compare', loader: () => window.ensureTownSubmoduleCompareRuntimeLoaded?.() },
+        { label: 'school-profile', loader: () => window.ensureSchoolProfileRuntimeLoaded?.() },
+        { label: 'teacher-analysis', loader: () => window.ensureTeacherAnalysisMainRuntimeLoaded?.() },
+        { label: 'teaching-management', loader: () => window.ensureTeachingManagementRuntimeLoaded?.() },
+        { label: 'student-compare', loader: () => window.ensureStudentCompareRuntimeLoaded?.() },
+        { label: 'report-render', loader: () => window.ensureReportRenderRuntimeLoaded?.() },
+        { label: 'freshman-exam', loader: () => window.ensureFreshmanExamRuntimeLoaded?.() },
+        { label: 'app-download', loader: () => window.ensureAppDownloadRuntimeLoaded?.() }
+    ];
+
+    const preload = () => {
+        try {
+            prefetchAppModuleList(['./assets/vendor/xlsx/xlsx.full.min.js'], 'hotspot-runtime-xlsx');
+            steps.forEach((step) => {
+                const skill = SYSTEM_RUNTIME_SKILLS[step.label];
+                if (skill && Array.isArray(skill.entries)) {
+                    prefetchAppModuleList(skill.entries.map((entry) => entry.src), `hotspot-runtime-${step.label}`);
+                }
+            });
+        } catch (error) {
+            console.warn('[boot-runtime] hotspot runtime prefetch failed:', error);
+        }
+    };
+
+    const runStep = (index = 0) => {
+        if (index >= steps.length) return;
+        const step = steps[index];
+        const run = () => {
+            Promise.resolve()
+                .then(() => (typeof step.loader === 'function' ? step.loader() : undefined))
+                .catch((error) => console.warn(`[boot-runtime] hotspot runtime warmup failed: ${step.label}`, error))
+                .finally(() => {
+                    window.setTimeout(() => runStep(index + 1), 650);
+                });
+        };
+        if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
+            window.SystemPerformance.scheduleIdle(run, { label: `hotspot-runtime:${step.label}`, delay: 120, timeout: 2200 });
+            return;
+        }
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(run, { timeout: 2200 });
+            return;
+        }
+        window.setTimeout(run, 120);
+    };
+
+    runAfterAppModulesReady(() => {
+        window.setTimeout(() => {
+            preload();
+            runStep(0);
+        }, 1800);
+    });
+}
+
+scheduleHotspotRuntimeWarmup();
+
 function installHistoryDoQueryWrapper() {
     if (window.__historyDoQueryWrapped || typeof window.doQuery !== 'function') return false;
     const base = window.doQuery;
