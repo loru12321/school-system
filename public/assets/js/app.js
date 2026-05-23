@@ -13160,6 +13160,48 @@ function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, eff
     }
 }
 
+function syncReportCompareTargetForQuery(stu) {
+    if (typeof clearCloudStudentCompareContext === 'function') {
+        clearCloudStudentCompareContext();
+    } else if (typeof clearCloudStudentCompareContextState === 'function') {
+        clearCloudStudentCompareContextState();
+    } else if (typeof setCloudStudentCompareContextState === 'function') {
+        setCloudStudentCompareContextState(null);
+    } else {
+        window.CLOUD_STUDENT_COMPARE_CONTEXT = null;
+    }
+
+    if (typeof setCloudCompareTarget === 'function') {
+        setCloudCompareTarget(stu);
+    } else if (typeof setCloudCompareTargetState === 'function') {
+        setCloudCompareTargetState(stu);
+    } else {
+        window.CLOUD_COMPARE_TARGET = {
+            name: String(stu?.name || '').trim(),
+            class: String(stu?.class || '').trim(),
+            school: String(stu?.school || '').trim()
+        };
+    }
+}
+
+function warmStudentCompareRuntimeForReport(stu) {
+    if (typeof window.ensureStudentCompareRuntimeLoaded !== 'function') return;
+    const loadRuntime = () => {
+        window.ensureStudentCompareRuntimeLoaded()
+            .then(() => {
+                if (typeof setCloudCompareTarget === 'function') setCloudCompareTarget(stu);
+            })
+            .catch((error) => {
+                console.warn('Failed to warm student compare runtime after report query:', error);
+            });
+    };
+    if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
+        window.SystemPerformance.scheduleIdle(loadRuntime, { label: 'report-student-compare-warmup', delay: 120, timeout: 1500 });
+        return;
+    }
+    window.setTimeout(loadRuntime, 120);
+}
+
 
 async function doQuery(targetStudent = null) {
     const queryToken = ++__reportQueryToken;
@@ -13200,17 +13242,9 @@ async function doQuery(targetStudent = null) {
         writeWorkspaceExamId(effectiveCurrentExamId);
     }
 
-    if (typeof window.ensureStudentCompareRuntimeLoaded === 'function') {
-        try {
-            await window.ensureStudentCompareRuntimeLoaded();
-        } catch (error) {
-            console.warn('Failed to load student compare runtime before query:', error);
-        }
-    }
-
-    clearCloudStudentCompareContext();
-    setCloudCompareTarget(stu);
+    syncReportCompareTargetForQuery(stu);
     setCurrentReportStudentState(stu);
+    warmStudentCompareRuntimeForReport(stu);
 
     const { resultEl, container } = getReportDomCache();
 

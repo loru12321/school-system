@@ -3103,15 +3103,23 @@ function installHistoryDoQueryWrapper() {
     if (window.__historyDoQueryWrapped || typeof window.doQuery !== 'function') return false;
     const base = window.doQuery;
     const wrapped = async function (...args) {
-        try {
-            await window.ensureStudentCompareRuntimeLoaded();
-        } catch (error) {
-            console.warn(error);
-        }
-        try {
-            await window.ensureHistoryCompareRuntimeLoaded();
-        } catch (error) {
-            console.warn(error);
+        const warmHistoryRuntime = () => {
+            Promise.allSettled([
+                window.ensureStudentCompareRuntimeLoaded?.(),
+                window.ensureHistoryCompareRuntimeLoaded?.()
+            ]).then(() => {
+                const currentStudent = typeof window.readCurrentReportStudentState === 'function'
+                    ? window.readCurrentReportStudentState()
+                    : null;
+                if (currentStudent && typeof window.setCloudCompareTarget === 'function') {
+                    window.setCloudCompareTarget(currentStudent);
+                }
+            }).catch((error) => console.warn(error));
+        };
+        if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
+            window.SystemPerformance.scheduleIdle(warmHistoryRuntime, { label: 'report-history-runtime-warmup', delay: 80, timeout: 1500 });
+        } else {
+            window.setTimeout(warmHistoryRuntime, 80);
         }
         const next = window.doQuery !== wrapped ? window.doQuery : base;
         if (window.doQuery !== wrapped) {
