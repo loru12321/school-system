@@ -71,6 +71,8 @@ userFacingReleaseFiles.forEach((relativePath) => {
   assert.ok(!read(relativePath).includes('\uFFFD'), `${relativePath} should not contain replacement characters`);
 });
 assert.ok(publicHeaders.includes('/downloads/*'), 'Cloudflare static headers should cover hosted downloads');
+assert.ok(publicHeaders.includes('/index.html'), 'Cloudflare static headers should cover index.html');
+assert.ok(publicHeaders.includes('Content-Type: text/html; charset=utf-8'), 'HTML responses should declare UTF-8 charset');
 assert.ok(publicHeaders.includes('stale-while-revalidate=86400'), 'download headers should allow short browser caching with revalidation');
 assert.ok(worker.includes("pathname.startsWith('/downloads/')"), 'Worker cache policy should recognize hosted downloads');
 assert.ok(worker.includes('buildWorkerErrorHeaders()'), 'Worker crash responses should use hardened headers');

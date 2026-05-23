@@ -97,6 +97,8 @@ assert.ok(publicHeaders.includes('/style-*.css'), 'static asset headers should c
 assert.ok(publicHeaders.includes('/assets/vendor/*'), 'static asset headers should cover vendored assets');
 assert.ok(publicHeaders.includes('/assets/js/*'), 'static asset headers should cover runtime JS assets');
 assert.ok(publicHeaders.includes('/downloads/*'), 'static asset headers should cover hosted downloads');
+assert.ok(publicHeaders.includes('/index.html'), 'static asset headers should cover index.html');
+assert.ok(publicHeaders.includes('Content-Type: text/html; charset=utf-8'), 'HTML responses should declare UTF-8 charset');
 assert.ok(publicHeaders.includes('/sw.js'), 'static asset headers should keep service worker updates revalidation-friendly');
 assert.ok(publicHeaders.includes('max-age=31536000, immutable'), 'fingerprinted/vendor assets should get long browser caching');
 assert.ok(publicHeaders.includes('max-age=0, must-revalidate'), 'service worker should remain quickly updateable');
