@@ -268,7 +268,7 @@ async function login(page, user, pass) {
         await ensureLoginWindowVisible();
         await page.fill('#login-user', user);
         await page.fill('#login-pass', pass);
-        await page.click('button[onclick="window.Auth?.login()"]');
+        await page.click('#login-submit-button');
     }
 
     await withNavigationRetry(page, async () => {

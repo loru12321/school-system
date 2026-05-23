@@ -7,7 +7,11 @@ $root = Split-Path -Parent $PSScriptRoot
 $distDir = Join-Path $root 'dist'
 $srcDir = Join-Path $root 'src'
 $wranglerConfigPath = Join-Path $root 'wrangler.jsonc'
-$wranglerAuthPath = 'C:\Users\loru\AppData\Roaming\xdg.config\.wrangler\config\default.toml'
+$wranglerAuthPath = if ($env:WRANGLER_CONFIG_PATH) {
+  $env:WRANGLER_CONFIG_PATH
+} else {
+  Join-Path $env:APPDATA 'xdg.config\.wrangler\config\default.toml'
+}
 $tmpDir = Join-Path $root '.tmp-cf-direct'
 $proxy = 'http://127.0.0.1:7897'
 $accountId = 'af1077850d5b820c28d2425c5208b761'

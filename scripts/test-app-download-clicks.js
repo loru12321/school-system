@@ -105,7 +105,7 @@ async function login(page, baseUrl) {
     await page.waitForSelector('#login-user', { state: 'visible', timeout: 30000 });
     await page.fill('#login-user', process.env.SMOKE_USER || 'admin');
     await page.fill('#login-pass', process.env.SMOKE_PASS || 'admin123');
-    await page.click('button[onclick="window.Auth?.login()"]');
+    await page.click('#login-submit-button');
     await page.waitForFunction(() => {
         const app = document.getElementById('app');
         const overlay = document.getElementById('login-overlay');

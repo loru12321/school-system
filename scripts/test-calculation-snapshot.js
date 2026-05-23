@@ -228,7 +228,7 @@ async function login(page) {
         if (await submit.count().catch(() => 0)) {
             await submit.click({ force: true });
         } else {
-            await page.click('button[onclick="window.Auth?.login()"]', { force: true });
+            await page.click('#login-submit-button', { force: true });
         }
     }
 

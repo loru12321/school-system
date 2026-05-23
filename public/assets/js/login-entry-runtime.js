@@ -127,8 +127,40 @@
         patchAuthMethod('ensureLoginWorkbench');
     }
 
+    function submitLogin() {
+        if (window.Auth && typeof window.Auth.login === 'function') {
+            window.Auth.login();
+        }
+    }
+
+    function bindLoginActions() {
+        document.querySelectorAll('[data-login-portal-action]').forEach((button) => {
+            if (button.dataset.loginEntryBound === '1') return;
+            button.dataset.loginEntryBound = '1';
+            button.addEventListener('click', () => {
+                const portal = button.dataset.loginPortalAction === 'parent' ? 'parent' : 'school';
+                if (window.Auth && typeof window.Auth.setLoginPortal === 'function') {
+                    window.Auth.setLoginPortal(portal);
+                }
+            });
+        });
+        document.querySelectorAll('[data-login-submit]').forEach((button) => {
+            if (button.dataset.loginEntryBound === '1') return;
+            button.dataset.loginEntryBound = '1';
+            button.addEventListener('click', submitLogin);
+        });
+        document.querySelectorAll('[data-login-submit-on-enter]').forEach((input) => {
+            if (input.dataset.loginEntryBound === '1') return;
+            input.dataset.loginEntryBound = '1';
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') submitLogin();
+            });
+        });
+    }
+
     function boot() {
         polishLoginShell();
+        bindLoginActions();
         patchAuth();
         const observer = new MutationObserver(() => polishLoginShell());
         const overlay = document.getElementById('login-overlay');
@@ -138,6 +170,7 @@
             attempts += 1;
             patchAuth();
             polishLoginShell();
+            bindLoginActions();
             if (attempts > 80) clearInterval(timer);
         }, 250);
     }

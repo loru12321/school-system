@@ -2269,21 +2269,21 @@ var Auth = {
                         <div id="login-form">
                             <div class="form-group">
                                 <label id="login-user-label" for="login-user">账号 / 姓名</label>
-                                <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" onkeydown="if(event.key==='Enter') Auth.login()">
+                                <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" data-login-submit-on-enter="1">
                                 <div id="login-user-helper" class="login-inline-tip">支持管理员、教务、年级、班主任与教师账号登录。</div>
                             </div>
 
                             <div id="login-class-group" class="form-group">
                                 <label for="login-class">班级 <span id="login-class-label-note">(学校端无需填写)</span></label>
-                                <input type="text" id="login-class" placeholder="请输入学生班级，如 701" onkeydown="if(event.key==='Enter') Auth.login()">
+                                <input type="text" id="login-class" placeholder="请输入学生班级，如 701" data-login-submit-on-enter="1">
                             </div>
 
                             <div class="form-group">
                                 <label for="login-pass">密码</label>
-                                <input type="password" id="login-pass" placeholder="输入密码" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                                <input type="password" id="login-pass" placeholder="输入密码" data-login-submit-on-enter="1">
                             </div>
 
-                            <button id="login-submit-button" onclick="window.Auth?.login()">进入学校工作台</button>
+                            <button id="login-submit-button" data-login-submit="1">进入学校工作台</button>
 
                             <div id="login-portal-helper" class="login-portal-helper">当前为学校端，验证通过后直达教学分析与数据维护。</div>
 
@@ -2486,21 +2486,21 @@ var Auth = {
                         <div id="login-form">
                             <div class="form-group">
                                 <label id="login-user-label" for="login-user">账号 / 姓名</label>
-                                <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" onkeydown="if(event.key==='Enter') Auth.login()">
+                                <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" data-login-submit-on-enter="1">
                                 <div id="login-user-helper" class="login-inline-tip">支持管理员、教务、年级、班主任与教师账号登录。</div>
                             </div>
 
                             <div id="login-class-group" class="form-group">
                                 <label for="login-class">班级 <span id="login-class-label-note">(学校端无需填写)</span></label>
-                                <input type="text" id="login-class" placeholder="请输入学生班级，如 701" onkeydown="if(event.key==='Enter') Auth.login()">
+                                <input type="text" id="login-class" placeholder="请输入学生班级，如 701" data-login-submit-on-enter="1">
                             </div>
 
                             <div class="form-group">
                                 <label for="login-pass">密码</label>
-                                <input type="password" id="login-pass" placeholder="输入密码" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                                <input type="password" id="login-pass" placeholder="输入密码" data-login-submit-on-enter="1">
                             </div>
 
-                            <button id="login-submit-button" onclick="window.Auth?.login()">进入学校工作台</button>
+                            <button id="login-submit-button" data-login-submit="1">进入学校工作台</button>
 
                             <div id="login-portal-helper" class="login-portal-helper">当前为学校端，验证通过后直达教学分析与数据维护。</div>
 
@@ -2616,21 +2616,21 @@ var Auth = {
                             <div id="login-form">
                                 <div class="form-group">
                                     <label id="login-user-label" for="login-user">账号 / 姓名</label>
-                                    <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" onkeydown="if(event.key==='Enter') Auth.login()">
+                                    <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" data-login-submit-on-enter="1">
                                     <div id="login-user-helper" class="login-inline-tip">支持管理员、教务、年级主任、班主任和教师账号登录。</div>
                                 </div>
 
                                 <div id="login-class-group" class="form-group">
                                     <label for="login-class">班级 <span id="login-class-label-note">(学校端无需填写)</span></label>
-                                    <input type="text" id="login-class" placeholder="请输入学生班级，如 701" onkeydown="if(event.key==='Enter') Auth.login()">
+                                    <input type="text" id="login-class" placeholder="请输入学生班级，如 701" data-login-submit-on-enter="1">
                                 </div>
 
                                 <div class="form-group">
                                     <label for="login-pass">密码</label>
-                                    <input type="password" id="login-pass" placeholder="输入密码" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                                    <input type="password" id="login-pass" placeholder="输入密码" data-login-submit-on-enter="1">
                                 </div>
 
-                                <button id="login-submit-button" onclick="window.Auth?.login()">验证并进入届别选择</button>
+                                <button id="login-submit-button" data-login-submit="1">验证并进入届别选择</button>
 
                                 <div id="login-portal-helper" class="login-portal-helper">当前为学校端，验证成功后会先进入届别选择界面。</div>
 

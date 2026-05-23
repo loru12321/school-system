@@ -41,6 +41,8 @@ assert.ok(releaseWorkflow.includes('concurrency:'), 'release workflow should ser
 assert.ok(performanceWorkflow.includes('npm run performance:record'), 'performance workflow should record trend output');
 assert.ok(performanceWorkflow.includes('npm run check:release-fast'), 'performance workflow should run fast guards before smoke');
 assert.ok(performanceWorkflow.includes('cancel-in-progress: true'), 'performance workflow should cancel stale trend runs');
+assert.ok(performanceWorkflow.includes("github.actor != 'github-actions[bot]'"), 'performance workflow should not react to bot-authored trend commits');
+assert.ok(performanceWorkflow.includes('[skip performance]'), 'performance workflow should support an explicit skip marker');
 
 console.log(JSON.stringify({
   ok: true,

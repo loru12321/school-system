@@ -22,6 +22,7 @@ concurrency:
 jobs:
   record-performance:
     name: Record browser smoke performance
+    if: github.actor != 'github-actions[bot]' && !contains(github.event.head_commit.message || '', '[skip performance]')
     runs-on: ubuntu-latest
     timeout-minutes: 35
 

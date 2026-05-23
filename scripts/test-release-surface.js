@@ -96,12 +96,13 @@ assert.strictEqual(
 assert.ok(publicHeaders.includes('/style-*.css'), 'static asset headers should cover hashed Vite CSS');
 assert.ok(publicHeaders.includes('/assets/vendor/*'), 'static asset headers should cover vendored assets');
 assert.ok(publicHeaders.includes('/assets/js/*'), 'static asset headers should cover runtime JS assets');
+assert.ok(publicHeaders.includes('max-age=3600, stale-while-revalidate=86400'), 'runtime JS should use short browser caching with background revalidation');
 assert.ok(publicHeaders.includes('/downloads/*'), 'static asset headers should cover hosted downloads');
 assert.ok(publicHeaders.includes('/index.html'), 'static asset headers should cover index.html');
 assert.ok(publicHeaders.includes('Content-Type: text/html; charset=utf-8'), 'HTML responses should declare UTF-8 charset');
 assert.ok(publicHeaders.includes('/sw.js'), 'static asset headers should keep service worker updates revalidation-friendly');
 assert.ok(publicHeaders.includes('max-age=31536000, immutable'), 'fingerprinted/vendor assets should get long browser caching');
-assert.ok(publicHeaders.includes('max-age=0, must-revalidate'), 'service worker should remain quickly updateable');
+assert.ok(publicHeaders.includes('/sw.js\n  Cache-Control: public, max-age=0, must-revalidate'), 'service worker should remain quickly updateable');
 assert.ok(publicHeaders.includes('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload'), 'static responses should send HSTS');
 assert.ok(publicHeaders.includes('Referrer-Policy: strict-origin-when-cross-origin'), 'static responses should send a referrer policy');
 assert.ok(publicHeaders.includes('X-Frame-Options: SAMEORIGIN'), 'static responses should limit framing');

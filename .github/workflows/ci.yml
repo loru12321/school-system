@@ -13,10 +13,65 @@ permissions:
   contents: read
 
 jobs:
+  release-guards:
+    name: Release Guards
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Build release surface
+        run: npm run build
+
+      - name: Run fast release guards
+        run: npm run check:release-fast
+
+  browser-smoke:
+    name: Browser Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: release-guards
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install Playwright browser dependencies
+        run: npx playwright install --with-deps chromium
+
+      - name: Build web package
+        run: npm run build
+
+      - name: Run browser smoke checks
+        run: npm run test:calculation-snapshot:local && npm run smoke:layout:local
+
   root-validate:
     name: Root Validate
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    needs: browser-smoke
 
     steps:
       - name: Check out repository

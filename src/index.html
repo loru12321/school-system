@@ -318,15 +318,15 @@
                 </div>
 
                 <div class="login-clean-switch" aria-label="登录入口">
-                    <button id="btn-role-school" type="button" class="role-btn active" onclick="window.Auth?.setLoginPortal?.('school')">学校端</button>
-                    <button id="btn-role-parent" type="button" class="role-btn" onclick="window.Auth?.setLoginPortal?.('parent')">家长端登录</button>
+                    <button id="btn-role-school" type="button" class="role-btn active" data-login-portal-action="school">学校端</button>
+                    <button id="btn-role-parent" type="button" class="role-btn" data-login-portal-action="parent">家长端登录</button>
                 </div>
 
                 <div id="login-form" class="login-clean-form">
                     <label id="login-user-label" for="login-user" class="login-clean-label">账号 / 姓名</label>
                     <div class="login-entry-field" data-login-field="user">
                         <span class="login-entry-prefix">User</span>
-                        <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" autocomplete="username" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                        <input type="text" id="login-user" placeholder="管理员账号 / 教师姓名" autocomplete="username" data-login-submit-on-enter="1">
                     </div>
                     <div id="login-user-helper" class="login-clean-helper">支持管理员、教务、年级、班主任与教师账号登录。</div>
 
@@ -334,17 +334,17 @@
                         <label for="login-class" class="login-clean-label">班级 <span id="login-class-label-note">(家长端必填)</span></label>
                         <div class="login-entry-field" data-login-field="class">
                             <span class="login-entry-prefix">Class</span>
-                            <input type="text" id="login-class" placeholder="请输入学生班级，如 701" autocomplete="organization-title" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                            <input type="text" id="login-class" placeholder="请输入学生班级，如 701" autocomplete="organization-title" data-login-submit-on-enter="1">
                         </div>
                     </div>
 
                     <label for="login-pass" class="login-clean-label">密码</label>
                     <div class="login-entry-field" data-login-field="password">
                         <span class="login-entry-prefix">Password</span>
-                        <input type="password" id="login-pass" placeholder="输入密码" autocomplete="current-password" onkeydown="if(event.key==='Enter') window.Auth?.login()">
+                        <input type="password" id="login-pass" placeholder="输入密码" autocomplete="current-password" data-login-submit-on-enter="1">
                     </div>
 
-                    <button id="login-submit-button" class="advanced-submit login-clean-submit" onclick="window.Auth?.login()">进入学校工作台</button>
+                    <button id="login-submit-button" class="advanced-submit login-clean-submit" data-login-submit="1">进入学校工作台</button>
                     <div id="login-portal-helper" class="login-portal-helper">当前为学校端，验证通过后进入届别选择和工作台。</div>
                 </div>
             </section>

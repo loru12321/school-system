@@ -30,10 +30,10 @@ const budgets = {
     // 2026-03-24 baseline plus a small amount of regression headroom.
     distIndexHtml: 330_000,
     ltHtml: 3_900_000,
-    publicAppJs: 930_000,
-    publicBootJs: 135_000,
+    publicAppJs: 910_000,
+    publicBootJs: 130_000,
     publicAppDownloadJs: 76_000,
-    distAppJs: 650_000,
+    distAppJs: 560_000,
     distAppDownloadJs: 45_000,
     distReportRenderJs: 68_000,
     distTeacherAnalysisJs: 72_000
