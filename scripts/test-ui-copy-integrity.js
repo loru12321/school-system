@@ -109,6 +109,28 @@ function scanConflictMarkers() {
     assert.deepStrictEqual(offenders, [], `Found unresolved merge markers in: ${offenders.join(', ')}`);
 }
 
+function scanReplacementCharacters() {
+    const files = [
+        path.join(projectRoot, 'src', 'index.html'),
+        path.join(projectRoot, 'public', 'site.webmanifest'),
+        path.join(projectRoot, 'public', 'assets', 'js', 'app.js'),
+        path.join(projectRoot, 'public', 'assets', 'js', 'app-foundation-runtime.js'),
+        path.join(projectRoot, 'public', 'assets', 'js', 'service-worker-runtime.js'),
+        path.join(projectRoot, 'dist', 'index.html'),
+        path.join(projectRoot, 'dist', 'site.webmanifest'),
+        path.join(projectRoot, 'dist', 'assets', 'js', 'app.js')
+    ];
+
+    const offenders = [];
+    files.forEach((file) => {
+        if (!fs.existsSync(file)) return;
+        const text = fs.readFileSync(file, 'utf8');
+        if (text.includes('\uFFFD')) offenders.push(path.relative(projectRoot, file));
+    });
+
+    assert.deepStrictEqual(offenders, [], `Found replacement characters in user-facing release files: ${offenders.join(', ')}`);
+}
+
 function resolveFilePath(urlPath) {
     const decodedPath = decodeURIComponent(String(urlPath || '/').split('?')[0]);
     const relativePath = decodedPath === '/' ? '/index.html' : decodedPath;
@@ -614,6 +636,7 @@ async function verifyParentAnalysisCopyRemoved(page) {
 
 async function main() {
     scanConflictMarkers();
+    scanReplacementCharacters();
 
     const server = await startServer();
     const browser = await chromium.launch({ headless: true });

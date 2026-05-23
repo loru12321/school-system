@@ -44,6 +44,14 @@ const hostedDownloads = [
   'dist/downloads/smartedu-windows-latest.zip'
 ];
 
+const userFacingReleaseFiles = [
+  'public/site.webmanifest',
+  'public/assets/js/app.js',
+  'public/assets/js/app-foundation-runtime.js',
+  'dist/site.webmanifest',
+  'dist/assets/js/app.js'
+];
+
 assert.strictEqual(scripts['test:release-hardening'], 'node scripts/test-release-hardening.js', 'release hardening script should be exposed');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:release-hardening'), 'fast release check should include release hardening');
 assert.strictEqual(manifest.name, '智慧教务管理系统', 'manifest app name should be readable Chinese');
@@ -55,6 +63,9 @@ assert.ok(manifest.shortcuts.some((shortcut) => shortcut.name === '数据导入'
 assert.ok(manifest.shortcuts.some((shortcut) => shortcut.name === '学情总览'), 'manifest should keep readable overview shortcut');
 assert.ok(manifest.shortcuts.some((shortcut) => shortcut.name === '应用下载'), 'manifest should keep readable download shortcut');
 assert.ok(manifest.shortcuts.every((shortcut) => shortcut.icons?.some((icon) => icon.src === '/icon.svg')), 'manifest shortcuts should include app icons');
+userFacingReleaseFiles.forEach((relativePath) => {
+  assert.ok(!read(relativePath).includes('\uFFFD'), `${relativePath} should not contain replacement characters`);
+});
 assert.ok(publicHeaders.includes('/downloads/*'), 'Cloudflare static headers should cover hosted downloads');
 assert.ok(publicHeaders.includes('stale-while-revalidate=86400'), 'download headers should allow short browser caching with revalidation');
 assert.ok(worker.includes("pathname.startsWith('/downloads/')"), 'Worker cache policy should recognize hosted downloads');

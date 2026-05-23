@@ -8471,7 +8471,7 @@ function enhanceStudentReportMetrics(root) {
         board.parentNode.insertBefore(explain, board);
         const tipline = document.createElement('div');
         tipline.className = 'report-metric-tipline';
-        tipline.textContent = '丢�句话记忆：百分位看位置，Z 值看和平均水平差多远�?';
+        tipline.textContent = '一句话记忆：百分位看位置，Z 值看和平均水平差多远。';
         explain.appendChild(tipline);
     }
 
@@ -8492,7 +8492,7 @@ function enhanceStudentReportMetrics(root) {
         if (item.querySelector('.report-subject-note')) return;
         const note = document.createElement('div');
         note.className = 'report-subject-note';
-        note.textContent = '百分位看位置，Z 值看和平均水平差�?';
+        note.textContent = '百分位看位置，Z 值看和平均水平差异。';
         item.appendChild(note);
     });
 }
