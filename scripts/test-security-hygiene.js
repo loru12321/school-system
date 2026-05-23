@@ -29,6 +29,8 @@ assert.ok(!worker.includes('DEFAULT_LEGACY_GATEWAY_API_KEY'), 'worker must not f
 assert.ok(gateway.includes('DEFAULT_ALLOWED_CORS_ORIGINS'), 'gateway should keep an explicit CORS allowlist');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(gateway), 'gateway should not emit wildcard CORS');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(worker), 'worker should not emit wildcard CORS');
+assert.ok(worker.includes('WORKER_DEBUG_ERRORS'), 'worker stack traces should require an explicit debug flag');
+assert.ok(!worker.includes("stack: error instanceof Error ? error.stack : ''"), 'worker should not expose stack traces by default');
 assert.ok(!boot.includes('sb_publishable_'), 'boot runtime should not embed Supabase publishable keys');
 for (const file of keySensitiveFiles) {
     assert.ok(!read(file).includes('sb_publishable_'), `${file} should not embed Supabase publishable keys`);

@@ -46,6 +46,9 @@ jobs:
       - name: Guard app download links
         run: npm run test:app-download-runtime-hygiene
 
+      - name: Smoke hosted download clicks
+        run: npm run test:app-download-clicks
+
       - name: Prepare release assets
         env:
           RELEASE_TAG: ${{ inputs.tag || github.ref_name }}

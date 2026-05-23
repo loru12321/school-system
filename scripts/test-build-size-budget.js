@@ -18,6 +18,14 @@ function getSize(filePath) {
     return fs.statSync(filePath).size;
 }
 
+function assertZipLike(filePath, label) {
+    const signature = fs.readFileSync(filePath).subarray(0, 4).toString('binary');
+    assert.ok(
+        signature === 'PK\u0003\u0004' || signature === 'PK\u0005\u0006' || signature === 'PK\u0007\u0008',
+        `${label} should have a ZIP/APK file signature`
+    );
+}
+
 const budgets = {
     // 2026-03-24 baseline plus a small amount of regression headroom.
     distIndexHtml: 330_000,
@@ -61,9 +69,11 @@ assert.ok(
     getSize(path.join(distDownloadsPath, 'school-system-android-v1.0.apk')) > 10_000_000,
     'hosted APK should look like a real application package'
 );
+assertZipLike(path.join(distDownloadsPath, 'school-system-android-v1.0.apk'), 'hosted APK');
 assert.ok(
-    getSize(path.join(distDownloadsPath, 'smartedu-windows-latest.zip')) > 0,
-    'hosted Windows package should not be empty'
+    getSize(path.join(distDownloadsPath, 'smartedu-windows-latest.zip')) >= 500,
+    'hosted Windows package should look like a real zip package'
 );
+assertZipLike(path.join(distDownloadsPath, 'smartedu-windows-latest.zip'), 'hosted Windows package');
 
 console.log('build-size-budget tests passed');

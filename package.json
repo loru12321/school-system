@@ -56,7 +56,7 @@
     "test:vendor-budget": "node scripts/test-vendor-budget.js",
     "test:css-hygiene": "node scripts/test-css-hygiene.js",
     "test:system-performance-scheduler": "node scripts/test-system-performance-scheduler.js",
-    "test:release-automation": "node --check scripts/prepare-github-release-assets.mjs && node --check scripts/record-performance-trend.mjs",
+    "test:release-automation": "node scripts/test-release-automation.js",
     "check:performance": "npm run test:performance-budget && npm run test:report-performance-caches && npm run test:summary-report-performance-caches && npm run test:student-flow-performance-caches && npm run test:system-performance-scheduler",
     "test:cloud-api-runtime": "node scripts/test-cloud-api-runtime.js",
     "test:cloud-data-service-runtime": "node scripts/test-cloud-data-service-runtime.js",

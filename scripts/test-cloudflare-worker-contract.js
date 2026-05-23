@@ -57,6 +57,9 @@ assert.ok(worker.includes("Prefer: 'resolution=merge-duplicates,return=represent
 assert.ok(worker.includes("return jsonResponse(405, { ok: false, error: 'SYSTEM_DATA_METHOD_NOT_ALLOWED' }, request);"), 'system data route must fail closed for unsupported methods');
 assert.ok(worker.includes("return jsonResponse(404"), 'unsupported managed REST paths should return JSON 404');
 assert.ok(worker.includes("return new Response('Not Found', { status: 404 });"), 'asset fallback should return 404 instead of crashing');
+assert.ok(worker.includes('buildWorkerErrorBody(error, env)'), 'worker crash responses should use sanitized error bodies');
+assert.ok(worker.includes('WORKER_DEBUG_ERRORS'), 'worker crash stack traces should require an explicit debug flag');
+assert.ok(!worker.includes("stack: error instanceof Error ? error.stack : ''"), 'worker must not expose stack traces by default');
 assert.ok(worker.includes("headers.set('Cache-Control', mergeCacheControl"), 'HTML responses should preserve and extend cache control');
 assert.ok(worker.includes("'public', 'no-transform'"), 'HTML response protection should include no-transform');
 assert.ok(worker.includes("return 'public, max-age=31536000, immutable';"), 'versioned static assets should get immutable caching');

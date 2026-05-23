@@ -573,6 +573,22 @@ function protectAssetResponse(request, response) {
   });
 }
 
+function shouldExposeErrorDetails(env = {}) {
+  return normalizeText(env.WORKER_DEBUG_ERRORS).toLowerCase() === 'true';
+}
+
+function buildWorkerErrorBody(error, env = {}) {
+  const body = {
+    ok: false,
+    error: 'WORKER_CRASHED',
+    message: error instanceof Error ? error.message : String(error)
+  };
+  if (shouldExposeErrorDetails(env) && error instanceof Error && error.stack) {
+    body.stack = error.stack;
+  }
+  return body;
+}
+
 function filterProxyHeaders(headers) {
   const nextHeaders = new Headers(headers);
   HOP_BY_HOP_HEADERS.forEach((name) => nextHeaders.delete(name));
@@ -979,12 +995,7 @@ export default {
         return new Response('Not Found', { status: 404 });
       }
     } catch (error) {
-      return new Response(JSON.stringify({
-        ok: false,
-        error: 'WORKER_CRASHED',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : ''
-      }), {
+      return new Response(JSON.stringify(buildWorkerErrorBody(error, env)), {
         status: 500,
         headers: { 'Content-Type': 'application/json; charset=utf-8' }
       });
