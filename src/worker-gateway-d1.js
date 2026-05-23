@@ -1,3 +1,5 @@
+// Managed D1 account/data gateway implementation imported by src/worker-dummy.js.
+// It is not the Wrangler main entrypoint; keep production routing in worker-dummy.js.
 const DEFAULT_LEGACY_GATEWAY_ORIGIN = 'https://dpwsxxgojpqevzwyxrot.supabase.co';
 const LOCAL_SESSION_TTL_SECONDS = 60 * 60 * 12;
 const PBKDF2_ITERATIONS = 100000;
@@ -272,9 +274,6 @@ function buildSessionPayload(row) {
 }
 
 function shouldForceManagedPasswordChange(row) {
-  const roles = normalizeRoles(row);
-  const role = getPrimaryRoleFromRoles(roles);
-  if (role !== 'parent' && role !== 'student') return false;
   const source = normalizeText(row?.password_source);
   return source !== 'cloudflare_change';
 }

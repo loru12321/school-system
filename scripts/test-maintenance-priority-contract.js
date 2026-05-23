@@ -46,6 +46,10 @@ const bootRuntime = read('public/assets/js/boot-runtime.js');
 const appRuntime = read('public/assets/js/app.js');
 const appDownloadRuntime = read('public/assets/js/app-download-runtime.js');
 const sw = read('public/sw.js');
+const authState = read('public/assets/js/auth-state-runtime.js');
+const accountAdmin = read('public/assets/js/account-admin-runtime.js');
+const srcIndex = read('src/index.html');
+const gateway = read('src/worker-gateway-d1.js');
 
 const guardedItems = [
   () => assertScriptIncludes(scripts, 'check:p0', 'check:release-data-safe'),
@@ -88,6 +92,20 @@ const guardedItems = [
   () => assertIncludes(appRuntime, 'isHostedGatewayUrl', 'app runtime should support hosted gateway URLs'),
   () => assertIncludes(appDownloadRuntime, 'smartedu-windows-latest.zip', 'download runtime should keep Windows package URL'),
   () => assertIncludes(sw, 'CACHE_VERSION', 'service worker cache version should remain explicit')
+  ,() => ['123456', 'admin123', 'yssy2016'].forEach((token) => {
+    [
+      ['src/index.html', srcIndex],
+      ['public/assets/js/app.js', appRuntime],
+      ['public/assets/js/auth-state-runtime.js', authState],
+      ['public/assets/js/account-admin-runtime.js', accountAdmin],
+      ['public/assets/js/boot-runtime.js', bootRuntime]
+    ].forEach(([file, text]) => assert.ok(!text.includes(token), `${file} should not expose ${token}`));
+  }),
+  () => assertIncludes(appRuntime, 'createManagedTemporaryPassword', 'account generation should use temporary passwords'),
+  () => assertIncludes(appRuntime, '首次登录后必须改密', 'account generation should tell admins about mandatory password changes'),
+  () => assertIncludes(gateway, "return source !== 'cloudflare_change';", 'gateway should force password change until user changes password'),
+  () => assert.ok(!bootRuntime.includes('console.log('), 'boot runtime should not emit production console.log noise'),
+  () => assert.ok(!read('public/assets/js/data-cloud-runtime.js').includes('console.log('), 'data cloud runtime should not emit production console.log noise')
 ];
 
 guardedItems.forEach((check) => check());

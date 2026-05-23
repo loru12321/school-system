@@ -12,6 +12,9 @@ const gateway = read('src/worker-gateway-d1.js');
 const worker = read('src/worker-dummy.js');
 const boot = read('public/assets/js/boot-runtime.js');
 const app = read('public/assets/js/app.js');
+const authState = read('public/assets/js/auth-state-runtime.js');
+const accountAdmin = read('public/assets/js/account-admin-runtime.js');
+const srcIndex = read('src/index.html');
 const serviceWorker = read('public/sw.js');
 const keySensitiveFiles = [
     'wrangler.jsonc',
@@ -32,6 +35,17 @@ assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(worker), 'worker sho
 assert.ok(worker.includes('WORKER_DEBUG_ERRORS'), 'worker stack traces should require an explicit debug flag');
 assert.ok(!worker.includes("stack: error instanceof Error ? error.stack : ''"), 'worker should not expose stack traces by default');
 assert.ok(!boot.includes('sb_publishable_'), 'boot runtime should not embed Supabase publishable keys');
+[
+    ['src/index.html', srcIndex],
+    ['public/assets/js/app.js', app],
+    ['public/assets/js/auth-state-runtime.js', authState],
+    ['public/assets/js/account-admin-runtime.js', accountAdmin],
+    ['public/assets/js/boot-runtime.js', boot]
+].forEach(([file, text]) => {
+    ['123456', 'admin123', 'yssy2016'].forEach((token) => {
+        assert.ok(!text.includes(token), `${file} should not expose weak default password ${token}`);
+    });
+});
 for (const file of keySensitiveFiles) {
     assert.ok(!read(file).includes('sb_publishable_'), `${file} should not embed Supabase publishable keys`);
 }
@@ -48,5 +62,6 @@ assert.ok(
 assert.ok(app.includes('if (apikey) headers.apikey = apikey;'), 'app EdgeGateway should omit empty apikey headers for hosted gateway calls');
 assert.ok(serviceWorker.includes('isApiCacheEligible'), 'service worker should gate API caching');
 assert.ok(!serviceWorker.includes("console.log('[SW] loaded')"), 'service worker should not log on every load');
+assert.ok(!boot.includes('DEMO_TOKEN'), 'boot runtime should not provide an offline admin demo token');
 
 console.log('security hygiene tests passed');

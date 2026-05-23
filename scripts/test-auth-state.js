@@ -45,31 +45,32 @@ function run() {
     const authState = createAuthStateRuntime(root);
 
     const sanitizedDb = authState.sanitizeLocalAuthDb({
-        admin: { pass: 'admin123' },
+        admin: { pass: 'director-secret' },
         director: { pass: 'director123' },
         teachers: [
-            { name: 'Teacher Default', pass: 'yssy2016' },
+            { name: 'Teacher Reset Required', password_mode: 'default' },
             { name: 'Teacher Custom', pass: 'custom123' }
         ],
         parents: [
-            { name: 'Parent Local', class: '701', pass: '123456' },
-            { name: 'Parent Variant', class: '9.04', pass: '123456' }
+            { name: 'Parent Local', class: '701', pass: 'parent-temp-901' },
+            { name: 'Parent Variant', class: '9.04', pass: 'parent-temp-902' }
         ]
     });
 
     assert.strictEqual(sanitizedDb.admin.pass, authState.MASKED_PASSWORD_DISPLAY);
     assert.strictEqual(sanitizedDb.director.pass, authState.MASKED_PASSWORD_DISPLAY);
-    assert.strictEqual(sanitizedDb.teachers[0].password_mode, 'default');
+    assert.strictEqual(sanitizedDb.teachers[0].password_mode, 'reset_required');
     assert.strictEqual(Object.prototype.hasOwnProperty.call(sanitizedDb.teachers[0], 'pass'), false);
     assert.strictEqual(sanitizedDb.teachers[1].password_mode, 'custom');
     assert.strictEqual(sanitizedDb.teachers[1].pass, 'custom123');
-    assert.strictEqual(authState.getManagedAccountPassword(sanitizedDb.teachers[0], 'teacher'), 'yssy2016');
-    assert.strictEqual(authState.getManagedAccountPassword(sanitizedDb.parents[0], 'parent'), '123456');
-    assert.strictEqual(authState.matchesManagedPassword(sanitizedDb.parents[0], 'parent', '123456'), true);
+    assert.strictEqual(authState.getDefaultManagedPassword('teacher'), '');
+    assert.strictEqual(authState.getManagedAccountPassword(sanitizedDb.teachers[0], 'teacher'), '');
+    assert.strictEqual(authState.getManagedAccountPassword(sanitizedDb.parents[0], 'parent'), 'parent-temp-901');
+    assert.strictEqual(authState.matchesManagedPassword(sanitizedDb.parents[0], 'parent', 'parent-temp-901'), true);
 
     authState.persistLocalAuthDb(sanitizedDb);
     const storedDb = JSON.parse(root.localStorage.getItem(authState.LOCAL_AUTH_DB_KEY));
-    assert.strictEqual(storedDb.teachers[0].password_mode, 'default');
+    assert.strictEqual(storedDb.teachers[0].password_mode, 'reset_required');
     assert.strictEqual(Object.prototype.hasOwnProperty.call(storedDb.teachers[0], 'pass'), false);
 
     const currentUser = authState.setCurrentUser({
@@ -115,7 +116,7 @@ function run() {
     assert.strictEqual(authState.findManagedAccount(storedDb, 'Parent Variant', '9.4').record.class, '9.04');
     assert.strictEqual(authState.findManagedAccount(storedDb, 'Parent Variant', '94').record.class, '9.04');
 
-    const teacherMatch = authState.findManagedAccount(storedDb, 'Teacher Default', '');
+    const teacherMatch = authState.findManagedAccount(storedDb, 'Teacher Reset Required', '');
     assert.strictEqual(teacherMatch.role, 'teacher');
 
     authState.clearCurrentUser();

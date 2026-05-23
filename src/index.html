@@ -3113,7 +3113,7 @@
 
             <div class="info-bar" style="margin-bottom:20px;">
                 此处功能将基于您在【数据中心】上传的 Excel 数据批量生成账号。<br>
-                教师生成账号的初始密码为 <strong>yssy2016</strong>，其余生成账号的初始密码为 <strong>123456</strong>。
+                系统会为生成账号创建一次性临时密码，账号首次登录后必须改密。
             </div>
 
             <div style="display:grid; gap:15px;">
@@ -3172,8 +3172,8 @@
                         生成一个内置了成绩和账号的新HTML文件。请把这个新文件发到家长群。
                     </p>
                     <p style="font-size:12px; color:#666; margin-top:5px;">
-                        教师账号 = 教师姓名 (默认密码 yssy2016)<br> <!-- 🟢 修改点：更新显示文本 -->
-                        家长账号 = 学生姓名 (默认密码 123456)
+                        教师账号 = 教师姓名（一次性临时密码）<br>
+                        家长账号 = 学生姓名（一次性临时密码）
                     </p>
                 </div>
 
@@ -3248,12 +3248,12 @@
                     </div>
 
                     <div style="display:flex; gap:10px;">
-                        <input type="text" id="manual-pass" value="123456" placeholder="密码"
+                        <input type="password" id="manual-pass" autocomplete="new-password" placeholder="输入临时密码"
                             style="padding:8px; border-radius:4px; border:1px solid #ccc; width:60%;">
                         <!-- 这里的 onclick 必须指向 Auth.addCloudAccount -->
                         <button class="btn btn-primary" onclick="Auth.addCloudAccount()" style="flex:1;">添加/更新</button>
                     </div>
-                    <p style="font-size:12px; color:#999; margin-top:5px;">提示：直接写入云端数据库。账号必须唯一。</p>
+                    <p style="font-size:12px; color:#999; margin-top:5px;">提示：直接写入云端数据库。账号必须唯一，首次登录后必须改密。</p>
                 </div>
 
 

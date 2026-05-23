@@ -4,11 +4,11 @@ const AccountExcel = {
         const headers = ['角色', '学校', '班级', '级部(年级)', '姓名/账号', '密码', '备注'];
         const data = [
             headers,
-            ['科任教师', '实验中学', '', '7', '张老师', '123456', '只看自己教的课'],
-            ['班主任', '实验中学', '701', '7', '王班头', '123456', '看本班所有'],
-            ['级部主任', '实验中学', '', '7', '李级部', '123456', '管理整个七年级'],
-            ['家长', '实验中学', '701', '', '张小明', '123456', '只能看自己'],
-            ['教务主任', '实验中学', '', '', '赵主任', '123456', '查看全校']
+            ['科任教师', '实验中学', '', '7', '张老师', '请填写临时密码', '只看自己教的课，首次登录后必须改密'],
+            ['班主任', '实验中学', '701', '7', '王班头', '请填写临时密码', '看本班所有，首次登录后必须改密'],
+            ['级部主任', '实验中学', '', '7', '李级部', '请填写临时密码', '管理整个七年级，首次登录后必须改密'],
+            ['家长', '实验中学', '701', '', '张小明', '请填写临时密码', '只能看自己，首次登录后必须改密'],
+            ['教务主任', '实验中学', '', '', '赵主任', '请填写临时密码', '查看全校，首次登录后必须改密']
         ];
         const ws = XLSX.utils.aoa_to_sheet(data);
         ws['!cols'] = [{ wch: 12 }, { wch: 15 }, { wch: 8 }, { wch: 10 }, { wch: 15 }, { wch: 10 }, { wch: 20 }];
@@ -46,15 +46,18 @@ const AccountExcel = {
                     const roleCN = row['角色'] || '';
                     const role = roleMap[roleCN.trim()] || 'teacher';
                     const user = row['姓名/账号'] || row['姓名'];
-                    const pass = row['密码'] || '123456';
+                    const pass = String(row['密码'] || '').trim();
                     const school = row['学校'] || window.MY_SCHOOL || '默认学校';
                     const cls = row['班级'] ? String(row['班级']).trim() : '';
                     const grade = row['级部(年级)'] ? String(row['级部(年级)']).trim() : '';
 
                     if (user) {
+                        if (!pass || pass === '请填写临时密码' || pass.length < 8) {
+                            throw new Error(`账号 ${user} 缺少至少 8 位临时密码`);
+                        }
                         batchData.push({
                             username: user,
-                            password: pass.toString(),
+                            password: pass,
                             role,
                             school,
                             class_name: role === 'class_teacher' || role === 'parent'

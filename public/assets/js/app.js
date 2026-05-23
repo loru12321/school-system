@@ -433,13 +433,14 @@ const AuthState = window.AuthState || {
         return primaryRole;
     },
     getDefaultManagedPassword: function (role) {
-        return role === 'teacher' ? 'yssy2016' : '123456';
+        return '';
     },
     isDefaultManagedPassword: function (role, password) {
-        return String(password || '').trim() === this.getDefaultManagedPassword(role);
+        const defaultPassword = this.getDefaultManagedPassword(role);
+        return !!defaultPassword && String(password || '').trim() === defaultPassword;
     },
     getManagedAccountPassword: function (record, role) {
-        return String(record?.pass || '').trim() || this.getDefaultManagedPassword(role);
+        return String(record?.pass || '').trim();
     },
     matchesManagedPassword: function (record, role, password) {
         return this.getManagedAccountPassword(record, role) === String(password || '').trim();
@@ -499,6 +500,34 @@ const MASKED_PASSWORD_DISPLAY = AuthState.MASKED_PASSWORD_DISPLAY;
 const sanitizeLocalAuthDb = AuthState.sanitizeLocalAuthDb.bind(AuthState);
 const persistLocalAuthDb = AuthState.persistLocalAuthDb.bind(AuthState);
 const WorkspaceStateRuntime = window.WorkspaceState || null;
+
+function createManagedTemporaryPassword(role = 'user') {
+    const prefix = role === 'teacher' ? 'T' : 'U';
+    const bytes = new Uint8Array(9);
+    const cryptoApi = window.crypto || window.msCrypto;
+    if (cryptoApi && typeof cryptoApi.getRandomValues === 'function') {
+        cryptoApi.getRandomValues(bytes);
+    } else {
+        for (let index = 0; index < bytes.length; index++) {
+            bytes[index] = Math.floor(Math.random() * 256);
+        }
+    }
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+    const body = Array.from(bytes, value => alphabet[value % alphabet.length]).join('');
+    return `${prefix}-${body}`;
+}
+
+function getRecoverableManagedPassword(record, role) {
+    const password = String(AuthState.getManagedAccountPassword(record, role) || '').trim();
+    if (password) return password;
+    if (record && typeof record === 'object') {
+        record.pass = createManagedTemporaryPassword(role);
+        record.password_mode = 'temporary';
+        record.must_change_password = true;
+        return record.pass;
+    }
+    return createManagedTemporaryPassword(role);
+}
 
 function readWorkspaceProjectKey() {
     if (WorkspaceStateRuntime && typeof WorkspaceStateRuntime.getCurrentProjectKey === 'function') {
@@ -3470,7 +3499,8 @@ var Auth = {
             roles: [role],
             school: localSchool,
             class_name: isParentLikeRole(role) ? normalizedClass : '教师',
-            local_only: true
+            local_only: true,
+            must_change_password: match.record?.must_change_password !== false
         };
     },
 
@@ -3678,16 +3708,14 @@ var Auth = {
                 : this.currentUser.role;
             logAction('登录', `用户 ${this.currentUser.name} (${rolesInfo}) 登录`);
 
-            // === 🛡️ 安全检查：家长端首次登录强制修改默认密码 ===
-            // 默认密码定义：教师是 yssy2016，其他人是 123456
-            // 仅家长端首次登录时强制弹出修改密码，其他角色不主动弹出
+            // === 安全检查：临时密码或后端标记账号首次登录后必须改密 ===
             const isDefaultPass = AuthState.isDefaultManagedPassword(this.currentUser.role, pass);
 
-            if ((isDefaultPass || this.currentUser.must_change_password) && isParentLikeUser(this.currentUser)) {
+            if (isDefaultPass || this.currentUser.must_change_password) {
                 this.syncLoginOverlayState(false); // 先关掉登录框
 
                 // 弹出提示
-                alert("⚠️ 安全警告：\n检测到您正在使用默认密码！\n为了保障账号安全，首次登录必须修改密码。");
+                alert("⚠️ 安全警告：\n检测到当前账号需要完成首次改密。\n为了保障账号安全，请立即修改密码。");
 
                 // 打开修改密码弹窗 (传入 true 表示强制模式)
                 setTimeout(() => openUserPasswordModal(true), 500);
@@ -4206,7 +4234,9 @@ var Auth = {
             const newAccount = {
                 name: s.name,
                 class: s.class,
-                password_mode: 'default'
+                pass: createManagedTemporaryPassword('parent'),
+                password_mode: 'temporary',
+                must_change_password: true
             };
             if (existIdx >= 0) {
                 this.db.parents[existIdx] = newAccount;
@@ -4236,12 +4266,15 @@ var Auth = {
             const existIdx = this.db.teachers.findIndex(t => t.name === tName);
             const newAccount = {
                 name: tName,
-                password_mode: 'default',
+                pass: createManagedTemporaryPassword('teacher'),
+                password_mode: 'temporary',
+                must_change_password: true,
                 grade: 'all'
             };
             if (existIdx >= 0) {
-                this.db.teachers[existIdx].password_mode = 'default';
-                delete this.db.teachers[existIdx].pass;
+                this.db.teachers[existIdx].pass = createManagedTemporaryPassword('teacher');
+                this.db.teachers[existIdx].password_mode = 'temporary';
+                this.db.teachers[existIdx].must_change_password = true;
             } else {
                 this.db.teachers.push(newAccount);
                 countTeacherNew++;
@@ -4275,7 +4308,7 @@ var Auth = {
             return alert("请至少勾选一所学校！\n(如果列表为空，请先上传数据)");
         }
 
-        if (!confirm(`⚠️ 确定要为选中的 [${selectedSchools.length}] 所学校生成账号吗？\n\n1. 仅生成/更新选中学校的学生和老师账号。\n2. 未选中学校的现有账号将【保留】。\n3. 教师初始密码为 yssy2016，其余账号初始密码为 123456。`)) return;
+        if (!confirm(`⚠️ 确定要为选中的 [${selectedSchools.length}] 所学校生成账号吗？\n\n1. 仅生成/更新选中学校的学生和老师账号。\n2. 未选中学校的现有账号将【保留】。\n3. 系统会生成一次性临时密码，账号首次登录后必须改密。`)) return;
         const generation = this.generateRecoverableAccountsForSchools(selectedSchools, { persist: true });
         if (!generation.ok) {
             return alert(`❌ ${generation.error}`);
@@ -4351,7 +4384,7 @@ var Auth = {
             }
 
             if (shouldExport) {
-                data.push(['教师', t.name, '-', AuthState.getManagedAccountPassword(t, 'teacher'), isFiltering ? '关联选中学校' : '']);
+                data.push(['教师', t.name, '-', getRecoverableManagedPassword(t, 'teacher'), `${isFiltering ? '关联选中学校；' : ''}首次登录后必须改密`]);
                 teacherCount++;
             }
         });
@@ -4376,10 +4409,12 @@ var Auth = {
             }
 
             if (shouldExport) {
-                data.push(['家长', p.name, p.class, AuthState.getManagedAccountPassword(p, 'parent'), schoolName || '未知/已删除']);
+                data.push(['家长', p.name, p.class, getRecoverableManagedPassword(p, 'parent'), `${schoolName || '未知/已删除'}；首次登录后必须改密`]);
                 parentCount++;
             }
         });
+
+        this.db = persistLocalAuthDb(this.db);
 
         const ws = XLSX.utils.aoa_to_sheet(data);
         ws['!cols'] = [{ wch: 10 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 25 }];
@@ -4434,6 +4469,7 @@ var Auth = {
         // --- 校验逻辑 ---
         // 1. 账号密码必填
         if (!username || !password) return alert("❌ 请填写账号和密码");
+        if (password.length < 8) return alert("❌ 临时密码至少需要 8 位，并将在首次登录后强制修改。");
 
         // 2. 学校必填 (除了管理员)
         if (role !== 'admin' && !school) return alert("❌ 请填写所属学校");
@@ -4514,7 +4550,7 @@ var Auth = {
 
             uniqueMap.set(user, {
                 username: user,
-                password: cleanStr(AuthState.getManagedAccountPassword(p, 'parent')) || AuthState.getDefaultManagedPassword('parent'),
+                password: cleanStr(getRecoverableManagedPassword(p, 'parent')),
                 role: 'parent',
                 school: getSchool(p.name, p.class),
                 class_name: cleanStr(p.class) // 班级
@@ -4545,12 +4581,14 @@ var Auth = {
 
             uniqueMap.set(user, { // 写入 Map，自动覆盖同名 Key
                 username: user,
-                password: cleanStr(AuthState.getManagedAccountPassword(t, 'teacher')) || AuthState.getDefaultManagedPassword('teacher'),
+                password: cleanStr(getRecoverableManagedPassword(t, 'teacher')),
                 role: 'teacher',
                 school: teaSchMap[t.name] || globalDefaultSchool,
                 class_name: '教师'
             });
         });
+
+        this.db = persistLocalAuthDb(this.db);
 
         return {
             parents,

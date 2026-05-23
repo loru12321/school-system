@@ -340,7 +340,7 @@
                     </button></div><button type="button" class="modal-close-btn" aria-label="关闭管理员面板"
                     onclick="document.getElementById('admin-modal').style.display='none'">&times;</button></div><div class="info-bar" style="margin-bottom:20px;">
                 此处功能将基于您在【数据中心】上传的 Excel 数据批量生成账号。<br>
-                教师生成账号的初始密码为 <strong>yssy2016</strong>，其余生成账号的初始密码为 <strong>123456</strong>。
+                系统会为生成账号创建一次性临时密码，账号首次登录后必须改密。
             </div><div style="display:grid; gap:15px;"><div style="background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #e2e8f0;"><h4 style="margin-bottom:10px; color:#334155;">1. 批量生成/重置账号</h4><div style="margin-bottom:10px;"><label
                             style="font-size:12px; font-weight:bold; color:#64748b; display:block; margin-bottom:5px;">
                             请选择要生成的学校 (多选):
@@ -365,8 +365,8 @@
                         style="font-size:11px; color:#7c3aed; margin-top:5px; background:#f3e8ff; padding:5px; border-radius:4px;">
                         生成一个内置了成绩和账号的新HTML文件。请把这个新文件发到家长群。
                     </p><p style="font-size:12px; color:#666; margin-top:5px;">
-                        教师账号 = 教师姓名 (默认密码 yssy2016)<br> 
-                        家长账号 = 学生姓名 (默认密码 123456)
+                        教师账号 = 教师姓名（一次性临时密码）<br>
+                        家长账号 = 学生姓名（一次性临时密码）
                     </p></div><div
                     style="background:#fff; padding:15px; border:1px solid #cbd5e1; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;"><h4 style="margin:0; color:#0369a1;"><i class="ti ti-cloud-upload"></i> 2. 添加/管理云端账号</h4><div style="display:flex; gap:5px;"><button class="btn btn-sm btn-green" onclick="AccountExcel.downloadTemplate()"
                                 title="下载导入模板"><i class="ti ti-download"></i> 模板
@@ -385,8 +385,8 @@
                             style="padding:8px; border:1px solid #ccc; width:20%; display:none;"><input type="text" id="manual-school" placeholder="所属学校 (必填)"
                             style="padding:8px; border:1px solid #ccc; width:25%;"><input type="text" id="manual-name" placeholder="账号/姓名"
                             style="padding:8px; border:1px solid #ccc; flex:1;"></div><div id="manual-class-wrap" style="margin-bottom:10px; display:none;"><input type="text" id="manual-class" placeholder="输入班级 (如: 701，家长必填)"
-                            style="width:100%; padding:8px; border:1px solid #ccc;"></div><div style="display:flex; gap:10px;"><input type="text" id="manual-pass" value="123456" placeholder="密码"
-                            style="padding:8px; border-radius:4px; border:1px solid #ccc; width:60%;"><button class="btn btn-primary" onclick="Auth.addCloudAccount()" style="flex:1;">添加/更新</button></div><p style="font-size:12px; color:#999; margin-top:5px;">提示：直接写入云端数据库。账号必须唯一。</p></div><div style="background:#fff; padding:15px; border:1px solid #eee; border-radius:8px;"><h4 style="margin-bottom:10px; color:#333;">3. 修改管理员密码</h4><div style="display:flex; gap:10px;"><input type="text" id="new-admin-pass" placeholder="输入新密码"
+                            style="width:100%; padding:8px; border:1px solid #ccc;"></div><div style="display:flex; gap:10px;"><input type="password" id="manual-pass" autocomplete="new-password" placeholder="输入临时密码"
+                            style="padding:8px; border-radius:4px; border:1px solid #ccc; width:60%;"><button class="btn btn-primary" onclick="Auth.addCloudAccount()" style="flex:1;">添加/更新</button></div><p style="font-size:12px; color:#999; margin-top:5px;">提示：直接写入云端数据库。账号必须唯一，首次登录后必须改密。</p></div><div style="background:#fff; padding:15px; border:1px solid #eee; border-radius:8px;"><h4 style="margin-bottom:10px; color:#333;">3. 修改管理员密码</h4><div style="display:flex; gap:10px;"><input type="text" id="new-admin-pass" placeholder="输入新密码"
                             style="padding:8px; flex:1; border:1px solid #cbd5e1; border-radius:4px;"><button class="btn btn-gray" onclick="changeAdminPass()">确认修改</button></div></div><div
                     style="background:#f0fdf4; padding:15px; border:1px solid #86efac; border-radius:8px; margin-top:5px;"><h4 style="margin-bottom:10px; color:#166534;"><i class="ti ti-cloud-download"></i> 4. 导出云端所有账号
                         (完整备份)</h4><div style="display:flex; justify-content:space-between; align-items:center;"><p style="font-size:12px; color:#15803d; margin:0; flex:1;">

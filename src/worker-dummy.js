@@ -1,5 +1,8 @@
 import { handleGatewayRequest, handleManagedRestRequest } from './worker-gateway-d1.js';
 
+// Production Cloudflare Worker entrypoint.
+// This file owns routing, static asset protection, Supabase compatibility proxying,
+// and delegates managed account actions to worker-gateway-d1.js.
 const DEFAULT_LEGACY_GATEWAY_ORIGIN = 'https://dpwsxxgojpqevzwyxrot.supabase.co';
 const SYSTEM_DATA_PATH = '/sb/rest/v1/system_data';
 const SYSTEM_DATA_API_PATH = '/api/system-data';

@@ -39,6 +39,8 @@ requiredWorkerTokens.forEach((token) => {
   assert.ok(worker.includes(token), `worker contract missing token: ${token}`);
 });
 
+assert.ok(worker.includes('Production Cloudflare Worker entrypoint'), 'worker entrypoint responsibility should be documented');
+assert.ok(gateway.includes('not the Wrangler main entrypoint'), 'D1 gateway module responsibility should be documented');
 assert.strictEqual(count(worker, /DEFAULT_ALLOWED_CORS_ORIGINS/g) >= 2, true, 'worker must keep explicit CORS allowlist usage');
 assert.ok(worker.includes("'https://schoolsystem.com.cn'"), 'root production origin must be allowed');
 assert.ok(worker.includes("'https://www.schoolsystem.com.cn'"), 'www production origin must be allowed');

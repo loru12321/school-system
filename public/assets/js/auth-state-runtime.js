@@ -113,14 +113,12 @@
     }
 
     function getDefaultManagedPassword(role) {
-        const r = normalizeText(role);
-        if (r === 'admin') return 'admin123';
-        if (r === 'teacher') return 'yssy2016';
-        return '123456';
+        return '';
     }
 
     function isDefaultManagedPassword(role, password) {
-        return normalizeText(password) === getDefaultManagedPassword(role);
+        const defaultPassword = getDefaultManagedPassword(role);
+        return !!defaultPassword && normalizeText(password) === defaultPassword;
     }
 
     function normalizeManagedLocalAccount(record, role) {
@@ -140,7 +138,7 @@
             return nextRecord;
         }
 
-        nextRecord.password_mode = storedMode || 'default';
+        nextRecord.password_mode = storedMode === 'default' ? 'reset_required' : (storedMode || 'reset_required');
         return nextRecord;
     }
 
@@ -148,7 +146,7 @@
         const explicitPassword = normalizeText(record && record.pass);
         if (explicitPassword && explicitPassword !== MASKED_PASSWORD_DISPLAY) return explicitPassword;
         const passwordMode = normalizeText(record && record.password_mode);
-        if (!passwordMode || passwordMode === 'default' || passwordMode === 'masked') {
+        if (!passwordMode || passwordMode === 'default' || passwordMode === 'masked' || passwordMode === 'reset_required') {
             return getDefaultManagedPassword(role);
         }
         return '';

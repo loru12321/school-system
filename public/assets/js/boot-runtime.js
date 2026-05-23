@@ -5,6 +5,14 @@ var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
 var BOOT_ASSET_VERSION_FALLBACK = '20260511-workspace-split-v1';
 
+function bootDebugLog(...args) {
+    try {
+        if (window.SCHOOL_SYSTEM_DEBUG === true || window.localStorage?.getItem('SCHOOL_SYSTEM_DEBUG') === 'true') {
+            console.debug(...args);
+        }
+    } catch (_) {}
+}
+
 function getBootRuntimeAssetVersion() {
     const currentScript = document.currentScript;
     const scripts = Array.from(document.scripts || []);
@@ -852,7 +860,7 @@ function scheduleGatewayPreflight() {
 
     if (isLocalFileRuntime() || isLocalSupabaseHost(window.location && window.location.hostname)) {
         window.__GATEWAY_PREFLIGHT_STATUS__ = 'skipped';
-        console.log('[boot-runtime] Skipping gateway pre-flight in local mode');
+        bootDebugLog('[boot-runtime] Skipping gateway pre-flight in local mode');
         window.__GATEWAY_PREFLIGHT_PROMISE__ = Promise.resolve('skipped');
         return window.__GATEWAY_PREFLIGHT_PROMISE__;
     }
@@ -872,7 +880,7 @@ function scheduleGatewayPreflight() {
                 signal: controller ? controller.signal : undefined
             });
             window.__GATEWAY_PREFLIGHT_STATUS__ = 'ok';
-            console.log('[boot-runtime] Gateway pre-flight successful');
+            bootDebugLog('[boot-runtime] Gateway pre-flight successful');
             return 'ok';
         } catch (fetchErr) {
             window.__GATEWAY_PREFLIGHT_STATUS__ = 'fallback';
@@ -902,20 +910,20 @@ async function loadAppModules() {
                 setTimeout(() => {
                     loader.style.display = 'none';
                     loader.classList.add('hidden');
-                    console.log('[boot-runtime] Global loader hidden');
+                    bootDebugLog('[boot-runtime] Global loader hidden');
                 }, 300);
             }
         }, delay);
     };
 
     if (window.__APP_MODULES_LOADED__ === true || window.__APP_MODULES_LOADED__ === 'loading') {
-        console.log('[boot-runtime] Module load already in progress or completed');
+        bootDebugLog('[boot-runtime] Module load already in progress or completed');
         return window.__APP_MODULES_LOAD_PROMISE__;
     }
 
     // Check if Auth is already defined (e.g. by Vite bundle) to avoid duplicate load
     if (window.Auth && !window.Auth.__bootLoginShell) {
-        console.log('[boot-runtime] Auth module already present, skipping dynamic load');
+        bootDebugLog('[boot-runtime] Auth module already present, skipping dynamic load');
         markAppModulesReady();
         markAuthReadyResolved();
         return Promise.resolve();
@@ -952,7 +960,7 @@ async function loadAppModules() {
     }
     markAppModulesReady();
     if (loaderText) loaderText.textContent = '核心组件就绪，正在同步状态...';
-    console.log('[boot-runtime] All modules loaded');
+    bootDebugLog('[boot-runtime] All modules loaded');
     scheduleAppModuleWarmup();
 
     hideGlobalLoader(500);
@@ -1553,7 +1561,7 @@ window.initSupabase = function () {
         sbClient = createCloudflareCompatClient();
         window.sbClient = sbClient;
         window.cloudClient = sbClient;
-        console.log('Cloud data compatibility client initialized');
+        bootDebugLog('Cloud data compatibility client initialized');
     } else if (!window.cloudClient) {
         window.cloudClient = sbClient;
     }
@@ -1720,7 +1728,7 @@ window.initCloudClient();
                     }
 
                     if (i < urls.length - 1 && this.shouldRetryRequest(0, lastError.message)) {
-                        console.log(`[boot-runtime] Retrying with next candidate due to error: ${lastError.message}`);
+                        bootDebugLog(`[boot-runtime] Retrying with next candidate due to error: ${lastError.message}`);
                         continue;
                     }
                     throw lastError;
@@ -1869,14 +1877,14 @@ window.initCloudClient();
             if (!readBootSessionUser()) {
                 this.syncLoginOverlayState(true);
             } else {
-                console.log('[boot-auth] User already logged in, bypassing overlay and loading modules');
+                bootDebugLog('[boot-auth] User already logged in, bypassing overlay and loading modules');
                 this.syncLoginOverlayState(false);
                 loadAppModules();
             }
         },
         // Stub to prevent race condition crashes if app.js calls it before replacing window.Auth
         ensureLoginWorkbench() {
-            console.log('[boot-auth] ensureLoginWorkbench called on shell, waiting for modules...');
+            bootDebugLog('[boot-auth] ensureLoginWorkbench called on shell, waiting for modules...');
             return null;
         },
         async login() {
@@ -1902,22 +1910,7 @@ window.initCloudClient();
             setBootSubmitState({ busy: true, text: '正在验证身份...' });
 
             try {
-                // Connection attempt with offline fallback
-                const result = await bootGateway.login(user, pass, className).catch(err => {
-                    const msg = String(err?.message || '').toLowerCase();
-                    // Also fallback for 500 errors if it's the admin account (likely missing local gateway)
-                    if (msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('500') || msg.includes('connection refused')) {
-                        if (user === 'admin' && pass === 'admin123') {
-                            console.warn('[boot-auth] Cloud unreachable or 500 error, triggering offline demo mode');
-                            return {
-                                ok: true,
-                                token: 'DEMO_TOKEN',
-                                user: { id: 'demo-admin', name: '演示管理员', role: 'admin', roles: ['admin'] }
-                            };
-                        }
-                    }
-                    throw err;
-                });
+                const result = await bootGateway.login(user, pass, className);
 
                 if (result && result.user) {
                     const matchedUser = result.user;

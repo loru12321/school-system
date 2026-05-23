@@ -16,6 +16,14 @@
         return String(value || '').trim();
     }
 
+    function debugLog(...args) {
+        try {
+            if (root.SCHOOL_SYSTEM_DEBUG === true || root.localStorage?.getItem('SCHOOL_SYSTEM_DEBUG') === 'true') {
+                root.console?.debug?.(...args);
+            }
+        } catch (_) {}
+    }
+
     function escapeHtml(value) {
         return String(value || '')
             .replace(/&/g, '&amp;')
@@ -1189,7 +1197,7 @@
         try {
             const localData = await readLocalCache(key);
             if (localData) {
-                console.log(`cache hit: ${key}`);
+                debugLog(`cache hit: ${key}`);
                 return localData;
             }
         } catch (e) {
@@ -1202,7 +1210,7 @@
         const saveOptions = options && typeof options === 'object' ? options : {};
         try {
             const wrote = await writeLocalCache(key, value);
-            if (wrote) console.log(`cache updated: ${key}`);
+            if (wrote) debugLog(`cache updated: ${key}`);
         } catch (e) {
             console.warn('本地缓存失败:', e);
         }
@@ -1219,7 +1227,7 @@
         try {
             const localData = await readLocalCache(key);
             if (localData) {
-                console.log(`cache ready: ${key}`);
+                debugLog(`cache ready: ${key}`);
                 if (!localOnly) {
                     api.dbSyncFromCloud(key, { background: true }).catch((error) => {
                         console.warn('后台云端同步失败:', error);

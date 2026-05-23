@@ -47,6 +47,8 @@ const sourceFiles = [
 ];
 
 const quietRuntimeFiles = [
+    'public/assets/js/boot-runtime.js',
+    'public/assets/js/data-cloud-runtime.js',
     'public/assets/js/history-compare-runtime.js',
     'public/assets/js/student-compare-generate-runtime.js',
     'public/assets/js/student-compare-result-runtime.js'
