@@ -655,10 +655,33 @@ async function generateInquiryPackage() {
     });
 
     // 3. 提示设置访问密码
-    const password = prompt(`🔐 安全设置\n\n请设置一个“访问密码” (例如: 123456)。\n\n家长查询时要求：\n1. 输入此密码\n2. 输入准确的班级\n3. 输入准确的姓名`, "123456");
+    const password = window.UI && typeof window.UI.prompt === 'function'
+        ? await window.UI.prompt(
+            '请设置一个访问密码。家长查询时需要同时输入此密码、准确班级和准确姓名。',
+            '',
+            {
+                title: '安全查分包访问密码',
+                input: 'password',
+                confirmText: '生成查分包',
+                inputAttributes: {
+                    autocomplete: 'new-password',
+                    minlength: 8
+                },
+                inputValidator: (value) => {
+                    const text = String(value || '').trim();
+                    if (text.length < 8) return '访问密码至少 8 位';
+                    if (!/[A-Za-z]/.test(text) || !/\d/.test(text)) return '访问密码需同时包含字母和数字';
+                    return null;
+                }
+            }
+        )
+        : prompt('请设置一个访问密码。至少 8 位，并同时包含字母和数字。', '');
 
     if (password === null) return;
     if (!password) return alert("❌ 必须设置密码才能生成安全查分包！");
+    if (String(password).trim().length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+        return alert("❌ 访问密码至少 8 位，并需同时包含字母和数字。");
+    }
 
     // 使用 CryptoJS 进行 AES 加密
     const jsonStr = JSON.stringify(secureData);

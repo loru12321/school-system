@@ -15,6 +15,7 @@ function count(source, pattern) {
 const packageJson = JSON.parse(read('package.json'));
 const worker = read('src/worker-dummy.js');
 const gateway = read('src/worker-gateway-d1.js');
+const helpers = read('src/worker-http-helpers.js');
 const wrangler = JSON.parse(read('wrangler.jsonc'));
 const scripts = packageJson.scripts || {};
 
@@ -31,7 +32,6 @@ const requiredWorkerTokens = [
   'PROXY_TIMEOUT_MS = 15000',
   'HOP_BY_HOP_HEADERS.forEach((name) => nextHeaders.delete(name))',
   'request.method === \'OPTIONS\'',
-  'Access-Control-Max-Age',
   'protectAssetResponse(request, response)'
 ];
 
@@ -41,12 +41,17 @@ requiredWorkerTokens.forEach((token) => {
 
 assert.ok(worker.includes('Production Cloudflare Worker entrypoint'), 'worker entrypoint responsibility should be documented');
 assert.ok(gateway.includes('not the Wrangler main entrypoint'), 'D1 gateway module responsibility should be documented');
-assert.strictEqual(count(worker, /DEFAULT_ALLOWED_CORS_ORIGINS/g) >= 2, true, 'worker must keep explicit CORS allowlist usage');
-assert.ok(worker.includes("'https://schoolsystem.com.cn'"), 'root production origin must be allowed');
-assert.ok(worker.includes("'https://www.schoolsystem.com.cn'"), 'www production origin must be allowed');
-assert.ok(worker.includes("'https://school-system.hkakjiweu.workers.dev'"), 'workers.dev origin must remain allowed for diagnostics');
+assert.ok(worker.includes("from './worker-http-helpers.js'"), 'worker should import shared HTTP helpers');
+assert.ok(gateway.includes("from './worker-http-helpers.js'"), 'gateway should import shared HTTP helpers');
+assert.ok(helpers.includes('DEFAULT_ALLOWED_CORS_ORIGINS'), 'shared helpers must keep explicit CORS allowlist usage');
+assert.ok(helpers.includes('HOP_BY_HOP_HEADERS'), 'shared helpers must keep hop-by-hop header list');
+assert.ok(helpers.includes('Access-Control-Max-Age'), 'shared helpers must keep CORS preflight max age');
+assert.ok(helpers.includes("'https://schoolsystem.com.cn'"), 'root production origin must be allowed');
+assert.ok(helpers.includes("'https://www.schoolsystem.com.cn'"), 'www production origin must be allowed');
+assert.ok(helpers.includes("'https://school-system.hkakjiweu.workers.dev'"), 'workers.dev origin must remain allowed for diagnostics');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(worker), 'worker must not emit wildcard CORS');
 assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(gateway), 'gateway must not emit wildcard CORS');
+assert.ok(!/Access-Control-Allow-Origin['"]:\s*['"]\*/.test(helpers), 'shared helpers must not emit wildcard CORS');
 assert.ok(worker.includes("return normalizeOrigin(env.LEGACY_GATEWAY_ORIGIN || env.SUPABASE_ORIGIN || DEFAULT_LEGACY_GATEWAY_ORIGIN);"), 'legacy origin resolution must prefer env values');
 assert.ok(worker.includes("headers['Cache-Control'] = 'no-store';"), 'JSON API responses should be no-store');
 assert.ok(worker.includes("headers['X-Content-Type-Options'] = 'nosniff';"), 'JSON API responses should set nosniff');

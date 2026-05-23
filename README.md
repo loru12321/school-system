@@ -137,6 +137,16 @@ $env:npm_config_cache = "$PWD\.npm-cache"
 npx wrangler deploy
 ```
 
+Current recommended release path:
+
+```bash
+npm run build
+npx wrangler deploy
+npm run verify:prod-minimal
+```
+
+Legacy OSS, DNS, certificate, and direct-deploy helpers are archived in `scripts/legacy/`. Keep new releases on the Wrangler path unless a recovery note explicitly says otherwise.
+
 ## 质量保护
 
 这个仓库对“能不能真的用”看得比“能不能构建”更重。常见保护包括：

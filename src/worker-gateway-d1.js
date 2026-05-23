@@ -1,5 +1,7 @@
 // Managed D1 account/data gateway implementation imported by src/worker-dummy.js.
 // It is not the Wrangler main entrypoint; keep production routing in worker-dummy.js.
+import { buildCorsHeaders, normalizeOrigin } from './worker-http-helpers.js';
+
 const DEFAULT_LEGACY_GATEWAY_ORIGIN = 'https://dpwsxxgojpqevzwyxrot.supabase.co';
 const LOCAL_SESSION_TTL_SECONDS = 60 * 60 * 12;
 const PBKDF2_ITERATIONS = 100000;
@@ -7,20 +9,11 @@ const PBKDF2_SCHEME = 'pbkdf2-sha256';
 const GATEWAY_PATHS = ['/functions/v1/edu-gateway-v2', '/functions/v1/edu-gateway'];
 const PROXY_TIMEOUT_MS = 15000;
 const REST_META_KEYS = new Set(['select', 'order', 'limit', 'offset', 'or']);
-const DEFAULT_ALLOWED_CORS_ORIGINS = [
-  'https://schoolsystem.com.cn',
-  'https://www.schoolsystem.com.cn',
-  'https://school-system.hkakjiweu.workers.dev'
-];
 
 const textEncoder = new TextEncoder();
 
 function normalizeText(value) {
   return String(value || '').trim();
-}
-
-function normalizeOrigin(origin) {
-  return normalizeText(origin).replace(/\/+$/, '');
 }
 
 function getLegacyGatewayOrigin(env) {
@@ -38,45 +31,6 @@ function getLegacyGatewayApiKey(env, request) {
 
 function getGatewayDb(env) {
   return env.GATEWAY_DATA_DB || null;
-}
-
-function getAllowedCorsOrigins(env = {}) {
-  const configured = normalizeText(env.ALLOWED_CORS_ORIGINS)
-    .split(',')
-    .map((item) => normalizeOrigin(item))
-    .filter(Boolean);
-  return new Set([...DEFAULT_ALLOWED_CORS_ORIGINS, ...configured]);
-}
-
-function isLocalDevelopmentOrigin(origin) {
-  try {
-    const url = new URL(origin);
-    return ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
-  } catch {
-    return false;
-  }
-}
-
-function resolveCorsOrigin(request, env = {}) {
-  const origin = request.headers.get('Origin');
-  const normalizedOrigin = normalizeOrigin(origin);
-  if (!normalizedOrigin || normalizedOrigin === 'null') return DEFAULT_ALLOWED_CORS_ORIGINS[0];
-  if (getAllowedCorsOrigins(env).has(normalizedOrigin)) return normalizedOrigin;
-  if (isLocalDevelopmentOrigin(normalizedOrigin)) return normalizedOrigin;
-  try {
-    if (normalizedOrigin === new URL(request.url).origin) return normalizedOrigin;
-  } catch {}
-  return DEFAULT_ALLOWED_CORS_ORIGINS[0];
-}
-
-function buildCorsHeaders(request, env = {}) {
-  return {
-    'Access-Control-Allow-Origin': resolveCorsOrigin(request, env),
-    'Access-Control-Allow-Headers': request.headers.get('Access-Control-Request-Headers') || 'authorization, apikey, content-type, x-client-info',
-    'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
-    'Access-Control-Max-Age': '86400',
-    'Vary': 'Origin'
-  };
 }
 
 function jsonResponse(status, body, request, extraHeaders = {}) {

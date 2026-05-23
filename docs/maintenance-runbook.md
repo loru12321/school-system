@@ -55,10 +55,13 @@ npm run test:docs-hygiene
 npm run test:release-automation
 npm run test:release-hardening
 npm run test:maintenance-priority-contract
+npm run smoke:prod-minimal
 npm run check:release-fast
 ```
 
 Good P2 work should make the next P0 or P1 patch easier to validate.
+
+Legacy operations scripts live in `scripts/legacy/`. The recommended release path is Cloudflare-only: `npm run build`, `npx wrangler deploy`, then `npm run verify:prod-minimal`.
 
 ## Release Checklist
 

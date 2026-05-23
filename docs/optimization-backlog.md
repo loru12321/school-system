@@ -30,7 +30,7 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 
 ## P2: sustainable maintenance
 
-- Archive legacy OSS, DNS, certificate, and direct-deploy scripts under a documented legacy folder.
+- Archive legacy OSS, DNS, certificate, and direct-deploy scripts under a documented legacy folder. Status: `scripts/legacy/README.md` now identifies Wrangler as the recommended path.
 - Split CI into smaller priority jobs so P0 checks return faster than full browser smoke.
 - Keep `check:p0`, `check:p1`, and `check:p2` aligned with the maintenance runbook.
 - Record each optimization pass with the changed files, commands run, commit hash, and Cloudflare version when deployed.
@@ -39,4 +39,13 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 - Keep `docs/optimization-backlog.md` linked from README and checked by docs hygiene.
 - Keep release and performance workflows protected by concurrency settings.
 - Keep production verification available through `npm run verify:prod-minimal`.
+- Keep production minimal smoke available through `npm run smoke:prod-minimal` after Cloudflare deployments.
 - Keep `check:release-fast` as the shared gate for release, performance, and P2 checks.
+
+## Optimization pass log
+
+| Date | Priority | Scope | Verification |
+| --- | --- | --- | --- |
+| 2026-05-23 | P0 | Managed account password hardening, weak default removal, Worker ownership clarification | `npm run check:release-fast`, Cloudflare version `5fa1dc97-3cfa-4d3d-87a1-9e6337ccee65` |
+| 2026-05-23 | P1 | Login runtime binding, CI split, JS cache policy, build warning contract | `npm run check:p1`, `npm run check:release-fast`, Cloudflare version `d2afbb6a-52cd-4caa-bb48-33d7c4b51963` |
+| 2026-05-23 | P2 | Legacy script archive, shared Worker HTTP helpers, dialog API guardrails, production minimal smoke alias | pending |

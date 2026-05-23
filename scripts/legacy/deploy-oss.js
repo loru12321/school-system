@@ -41,7 +41,7 @@ async function deploy() {
       console.log('WARNING: Could not configure static hosting automatically.', e.message);
     }
 
-    const distPath = path.join(__dirname, '..', 'dist');
+    const distPath = path.join(__dirname, '..', '..', 'dist');
     const files = [];
 
     function walkDir(dir) {
