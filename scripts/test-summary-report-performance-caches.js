@@ -48,8 +48,8 @@ if (pkg.scripts['test:summary-report-performance-caches'] !== 'node scripts/test
 if (!String(pkg.scripts['check:performance'] || '').includes('test:summary-report-performance-caches')) {
     fail('check:performance must include summary/report cache guard');
 }
-if (!String(pkg.scripts['check:syntax'] || '').includes('scripts/test-summary-report-performance-caches.js')) {
-    fail('check:syntax must syntax-check summary/report cache guard');
+if (String(pkg.scripts['check:syntax'] || '') !== 'node scripts/test-syntax.js') {
+    fail('check:syntax must use recursive syntax coverage');
 }
 
 console.log(JSON.stringify({

@@ -8,6 +8,10 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8');
 }
 
+function normalizeLineEndings(value) {
+  return String(value || '').replace(/\r\n/g, '\n');
+}
+
 function exists(relativePath) {
   return fs.existsSync(path.join(root, relativePath));
 }
@@ -84,7 +88,11 @@ assert.ok(distIndex.includes('id="login-overlay"'), 'dist HTML must contain the 
 assert.ok(distIndex.includes('./assets/js/boot-runtime.js'), 'dist HTML must load boot-runtime.js');
 assert.ok(distIndex.includes('./assets/js/runtime-registry-runtime.js'), 'dist HTML must load runtime registry');
 assert.ok(distIndex.includes('./assets/vendor/tabler-icons/tabler-icons.min.css'), 'dist HTML must load local Tabler icons CSS');
-assert.strictEqual(distHeaders, publicHeaders, 'dist static asset headers should match public/_headers');
+assert.strictEqual(
+  normalizeLineEndings(distHeaders),
+  normalizeLineEndings(publicHeaders),
+  'dist static asset headers should match public/_headers'
+);
 assert.ok(publicHeaders.includes('/style-*.css'), 'static asset headers should cover hashed Vite CSS');
 assert.ok(publicHeaders.includes('/assets/vendor/*'), 'static asset headers should cover vendored assets');
 assert.ok(publicHeaders.includes('/assets/js/*'), 'static asset headers should cover runtime JS assets');

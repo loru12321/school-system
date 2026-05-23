@@ -80,8 +80,8 @@ if (pkg.scripts['test:student-flow-performance-caches'] !== 'node scripts/test-s
 if (!String(pkg.scripts['check:performance'] || '').includes('test:student-flow-performance-caches')) {
     fail('check:performance must include student-flow cache guard');
 }
-if (!String(pkg.scripts['check:syntax'] || '').includes('scripts/test-student-flow-performance-caches.js')) {
-    fail('check:syntax must syntax-check student-flow cache guard');
+if (String(pkg.scripts['check:syntax'] || '') !== 'node scripts/test-syntax.js') {
+    fail('check:syntax must use recursive syntax coverage');
 }
 
 console.log(JSON.stringify({

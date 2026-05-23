@@ -54,7 +54,7 @@ assert.ok(scripts['test:performance-budget'] === 'node scripts/test-performance-
 assert.ok(scripts['check:performance'] && scripts['check:performance'].includes('test:performance-budget'), 'performance check bundle should include budget test');
 assert.ok(scripts['check:performance'] && scripts['check:performance'].includes('test:system-performance-scheduler'), 'performance check bundle should include scheduler test');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('check:performance'), 'fast release check should include performance guards');
-assert.ok(scripts['check:syntax'] && scripts['check:syntax'].includes('scripts/test-performance-budget.js'), 'syntax check should cover performance budget test');
+assert.strictEqual(scripts['check:syntax'], 'node scripts/test-syntax.js', 'syntax check should use recursive syntax coverage');
 
 const budgets = {
   publicAppJs: 930_000,

@@ -65,7 +65,7 @@ assertIncludes(serviceWorkerRuntime, "root.addEventListener('load', registerServ
 assertIncludes(serviceWorkerRuntime, 'requestIdleCallback', 'service worker registration should avoid competing with initial rendering');
 assert.ok(!serviceWorkerRuntime.includes("console.log('[SW] loaded')"), 'service worker runtime should not log on every load');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:service-worker-contract'), 'fast release check must include service worker contract guard');
-assert.ok(scripts['check:syntax'] && scripts['check:syntax'].includes('node --check public/sw.js'), 'syntax check must cover public service worker');
+assert.strictEqual(scripts['check:syntax'], 'node scripts/test-syntax.js', 'syntax check must use recursive service worker coverage');
 assert.ok(releaseSurface.includes("exists('dist/sw.js')"), 'release surface check should require dist service worker');
 
 console.log(JSON.stringify({
