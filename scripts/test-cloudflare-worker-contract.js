@@ -64,7 +64,9 @@ assert.ok(worker.includes("headers.set('Cache-Control', mergeCacheControl"), 'HT
 assert.ok(worker.includes("'public', 'no-transform'"), 'HTML response protection should include no-transform');
 assert.ok(worker.includes("return 'public, max-age=31536000, immutable';"), 'versioned static assets should get immutable caching');
 assert.ok(worker.includes("return 'public, max-age=3600, stale-while-revalidate=86400';"), 'unversioned static assets should get short browser caching');
+assert.ok(worker.includes("pathname.startsWith('/downloads/')"), 'hosted downloads should have an explicit cache policy');
 assert.ok(worker.includes("pathname === '/sw.js'"), 'service worker script should stay revalidation-friendly');
+assert.ok(worker.includes('buildWorkerErrorHeaders()'), 'worker crash responses should use hardened headers');
 assert.ok(worker.includes("headers.set('Cache-Control', 'no-store');"), 'forwarded API responses should be no-store');
 assert.ok(worker.includes("headers.set('X-Content-Type-Options', 'nosniff');"), 'forwarded API responses should set nosniff');
 assert.ok(worker.includes("if (method === 'GET' || method === 'HEAD') return null;"), 'GET/HEAD proxy requests should not attach a body');

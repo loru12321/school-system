@@ -547,6 +547,9 @@ function getStaticAssetCacheControl(url) {
   if (pathname === '/sw.js' || pathname.endsWith('/sw.js')) {
     return 'public, max-age=0, must-revalidate';
   }
+  if (pathname.startsWith('/downloads/')) {
+    return 'public, max-age=3600, stale-while-revalidate=86400';
+  }
   if (!isStaticAssetPath(pathname)) return '';
   if (isVersionedStaticAsset(url)) {
     return 'public, max-age=31536000, immutable';
@@ -587,6 +590,15 @@ function buildWorkerErrorBody(error, env = {}) {
     body.stack = error.stack;
   }
   return body;
+}
+
+function buildWorkerErrorHeaders() {
+  return {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff',
+    'X-School-System-Gateway': 'cloudflare-worker'
+  };
 }
 
 function filterProxyHeaders(headers) {
@@ -997,7 +1009,7 @@ export default {
     } catch (error) {
       return new Response(JSON.stringify(buildWorkerErrorBody(error, env)), {
         status: 500,
-        headers: { 'Content-Type': 'application/json; charset=utf-8' }
+        headers: buildWorkerErrorHeaders()
       });
     }
   }

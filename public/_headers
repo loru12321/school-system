@@ -20,6 +20,9 @@
 /assets/js/*
   Cache-Control: public, max-age=0, must-revalidate
 
+/downloads/*
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+
 /sw.js
   Cache-Control: public, max-age=0, must-revalidate
 

@@ -15,6 +15,10 @@ env:
 permissions:
   contents: write
 
+concurrency:
+  group: performance-trend-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   record-performance:
     name: Record browser smoke performance
@@ -36,6 +40,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Run fast release guards
+        run: npm run check:release-fast
 
       - name: Install Playwright browser dependencies
         run: npx playwright install --with-deps chromium

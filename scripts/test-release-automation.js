@@ -31,11 +31,16 @@ assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].include
 
 assert.ok(releaseWorkflow.includes('npm run build'), 'release workflow should build dist before packaging app assets');
 assert.ok(releaseWorkflow.includes('npm run test:app-download-runtime-hygiene'), 'release workflow should guard download runtime hygiene');
+assert.ok(releaseWorkflow.includes('npm run test:release-surface'), 'release workflow should guard release surface');
+assert.ok(releaseWorkflow.includes('npm run test:build-size-budget'), 'release workflow should guard hosted package budgets');
 assert.ok(releaseWorkflow.includes('npm run test:app-download-clicks'), 'release workflow should smoke-test hosted download clicks');
 assert.ok(releaseWorkflow.includes('npm run release:prepare-assets'), 'release workflow should prepare immutable release assets');
 assert.ok(releaseWorkflow.includes('gh release upload'), 'release workflow should update existing releases');
 assert.ok(releaseWorkflow.includes('gh release create'), 'release workflow should create missing releases');
+assert.ok(releaseWorkflow.includes('concurrency:'), 'release workflow should serialize release jobs');
 assert.ok(performanceWorkflow.includes('npm run performance:record'), 'performance workflow should record trend output');
+assert.ok(performanceWorkflow.includes('npm run check:release-fast'), 'performance workflow should run fast guards before smoke');
+assert.ok(performanceWorkflow.includes('cancel-in-progress: true'), 'performance workflow should cancel stale trend runs');
 
 console.log(JSON.stringify({
   ok: true,

@@ -58,7 +58,9 @@ const failures = Object.entries(actual)
 assert.deepStrictEqual(failures, [], failures.join('\n'));
 
 const distDownloadsPath = path.join(projectRoot, 'dist', 'downloads');
+const publicDownloadsPath = path.join(projectRoot, 'public', 'downloads');
 assert.ok(fs.existsSync(distDownloadsPath), 'dist/downloads should expose the current app packages');
+assert.ok(fs.existsSync(publicDownloadsPath), 'public/downloads should contain hosted app packages');
 const downloadFiles = fs.readdirSync(distDownloadsPath).sort();
 assert.deepStrictEqual(
     downloadFiles,
@@ -70,10 +72,17 @@ assert.ok(
     'hosted APK should look like a real application package'
 );
 assertZipLike(path.join(distDownloadsPath, 'school-system-android-v1.0.apk'), 'hosted APK');
+assertZipLike(path.join(publicDownloadsPath, 'school-system-android-v1.0.apk'), 'public hosted APK');
 assert.ok(
     getSize(path.join(distDownloadsPath, 'smartedu-windows-latest.zip')) >= 500,
     'hosted Windows package should look like a real zip package'
 );
 assertZipLike(path.join(distDownloadsPath, 'smartedu-windows-latest.zip'), 'hosted Windows package');
+assertZipLike(path.join(publicDownloadsPath, 'smartedu-windows-latest.zip'), 'public hosted Windows package');
+assert.ok(
+    getSize(path.join(distDownloadsPath, 'school-system-android-v1.0.apk')) +
+    getSize(path.join(distDownloadsPath, 'smartedu-windows-latest.zip')) < 30_000_000,
+    'hosted download payload should stay under 30MB'
+);
 
 console.log('build-size-budget tests passed');

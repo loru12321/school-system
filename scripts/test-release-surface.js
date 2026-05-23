@@ -96,6 +96,7 @@ assert.strictEqual(
 assert.ok(publicHeaders.includes('/style-*.css'), 'static asset headers should cover hashed Vite CSS');
 assert.ok(publicHeaders.includes('/assets/vendor/*'), 'static asset headers should cover vendored assets');
 assert.ok(publicHeaders.includes('/assets/js/*'), 'static asset headers should cover runtime JS assets');
+assert.ok(publicHeaders.includes('/downloads/*'), 'static asset headers should cover hosted downloads');
 assert.ok(publicHeaders.includes('/sw.js'), 'static asset headers should keep service worker updates revalidation-friendly');
 assert.ok(publicHeaders.includes('max-age=31536000, immutable'), 'fingerprinted/vendor assets should get long browser caching');
 assert.ok(publicHeaders.includes('max-age=0, must-revalidate'), 'service worker should remain quickly updateable');
@@ -115,6 +116,9 @@ assert.strictEqual(publicManifest.start_url, '/', 'web manifest should start at 
 assert.strictEqual(publicManifest.orientation, 'any', 'web manifest should allow responsive orientation');
 assert.strictEqual(publicManifest.dir, 'ltr', 'web manifest should declare text direction');
 assert.strictEqual(publicManifest.display, 'standalone', 'web manifest should enable standalone app display');
+assert.strictEqual(publicManifest.name, '智慧教务管理系统', 'web manifest name should stay readable');
+assert.strictEqual(publicManifest.short_name, '智慧教务', 'web manifest short name should stay readable');
+assert.ok(!/[�锟]/.test(read('public/site.webmanifest')), 'web manifest should not contain mojibake');
 assert.ok(Array.isArray(publicManifest.categories) && publicManifest.categories.includes('education'), 'web manifest should classify the app for education');
 assert.ok(Array.isArray(publicManifest.icons) && publicManifest.icons.some((icon) => icon.src === '/icon.svg'), 'web manifest should include the SVG app icon');
 assert.ok(Array.isArray(publicManifest.shortcuts) && publicManifest.shortcuts.length >= 3, 'web manifest should expose common app shortcuts');

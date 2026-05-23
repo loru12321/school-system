@@ -20,6 +20,10 @@ env:
 permissions:
   contents: write
 
+concurrency:
+  group: release-apps-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   publish-app-assets:
     name: Publish APK and Windows assets
@@ -45,6 +49,12 @@ jobs:
 
       - name: Guard app download links
         run: npm run test:app-download-runtime-hygiene
+
+      - name: Guard release surface
+        run: npm run test:release-surface
+
+      - name: Guard hosted package budgets
+        run: npm run test:build-size-budget
 
       - name: Smoke hosted download clicks
         run: npm run test:app-download-clicks
