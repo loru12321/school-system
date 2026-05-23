@@ -755,19 +755,7 @@ function loadBootScript(src, timeoutMs) {
 
 function getAppModuleTimeoutMs(src) {
     const moduleSrc = String(src || '');
-    if (moduleSrc.includes('app.js') || moduleSrc.includes('auth-state')) return 20000;
-    if (
-        moduleSrc.includes('county-analysis')
-        || moduleSrc.includes('progress-analysis')
-        || moduleSrc.includes('teacher-analysis-core')
-        || moduleSrc.includes('report-render')
-        || moduleSrc.includes('freshman-exam')
-        || moduleSrc.includes('data-cloud')
-        || moduleSrc.includes('mobile-app')
-    ) {
-        return 18000;
-    }
-    return 12000;
+    return moduleSrc.includes('app.js') || moduleSrc.includes('auth-state') ? 15000 : 8000;
 }
 
 function getBootScriptBatchSize() {
