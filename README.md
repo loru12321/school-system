@@ -153,6 +153,14 @@ cmd /c "set npm_config_cache=C:\Users\loru\Desktop\system\.npm-cache&& npx --yes
 - `npm run release:prepare-assets`：本地生成 GitHub Release 资产目录，包含 latest 文件名、带 tag 的不可变文件名、SHA256 和 release notes。
 - `npm run performance:record`：把一次烟测 JSON 转成可对比的趋势记录，用于定位哪次提交让模块切换、深度检查或长任务变慢。
 
+## 维护分级
+
+长期维护按 P0/P1/P2 分级处理，完整发布清单和缓存规则见 [`docs/maintenance-runbook.md`](docs/maintenance-runbook.md)。
+
+- P0：生产正确性，优先保护登录、关键数据、报告、下载和线上可访问性。
+- P1：发布质量与用户体验，优先保护文案编码、元数据、离线缓存和回归检查。
+- P2：可持续维护，优先保护文档、自动化守护、交接清单和可追溯发布记录。
+
 ## 应用下载
 
 “应用服务”保留当前可用下载入口：
