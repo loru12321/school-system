@@ -244,7 +244,7 @@
                 console.warn(`[module-entry] ${label} auto render failed:`, error);
             }
         };
-        scheduleModuleTask(label, run, { delay, idle: true, timeout });
+        scheduleModuleTask(label, run, { delay, idle: options.idle !== false, timeout });
     }
 
     function pickDefaultSelectValue(selectId, preferredValue = '') {
@@ -471,7 +471,7 @@
             return Promise.resolve(scheduleRender());
         }
 
-        return loadRuntime()
+        loadRuntime()
             .then(() => {
                 scheduleRender();
                 return true;
@@ -481,6 +481,7 @@
                 scheduleRender();
                 return false;
             });
+        return Promise.resolve(false);
     }
 
     function initTeachingManagementEntry(id) {
@@ -703,18 +704,19 @@
                 if (typeof window.refreshResponsiveMobileTables === 'function') {
                     window.refreshResponsiveMobileTables(document.getElementById('correlation-analysis'));
                 }
-            }, { delay: 120, timeout: 1200 });
+            }, { delay: 32, idle: false, timeout: 1200 });
             return true;
         };
 
         if (typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function'
             && !window.__TEACHER_ANALYSIS_BRIDGE_RUNTIME_PATCHED__) {
-            return window.ensureTeacherAnalysisMainRuntimeLoaded()
+            window.ensureTeacherAnalysisMainRuntimeLoaded()
                 .then(runAfterLoad)
                 .catch((error) => {
                     console.warn('[correlation-analysis] runtime load failed:', error);
                     return false;
                 });
+            return Promise.resolve(false);
         }
 
         return Promise.resolve(runAfterLoad());
@@ -817,7 +819,7 @@
         }
 
         if (loaders.length) {
-            return Promise.all(loaders)
+            Promise.all(loaders)
                 .then(() => {
                     if (document.getElementById(id)?.classList.contains('active')) return runAfterLoad();
                     return false;
@@ -826,6 +828,7 @@
                     console.warn('init freshman/exam runtime failed:', error);
                     return false;
                 });
+            return Promise.resolve(false);
         }
 
         return Promise.resolve(runAfterLoad());
@@ -881,7 +884,7 @@
             scheduleMacroTablesRender('summary', 'summary-tables');
             if (typeof window.ensureSchoolProfileRuntimeLoaded === 'function'
                 && !window.__SCHOOL_PROFILE_RUNTIME_PATCHED__) {
-                return window.ensureSchoolProfileRuntimeLoaded().catch((error) => console.warn(error));
+                window.ensureSchoolProfileRuntimeLoaded().catch((error) => console.warn(error));
             }
         }
         if (id === 'app-download-center') return initAppDownloadCenterEntry();
