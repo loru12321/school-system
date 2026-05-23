@@ -43,14 +43,18 @@ assert.ok(maintenanceRunbook.includes('SERVICE_WORKER_VERSION'), 'maintenance ru
 assert.ok(maintenanceRunbook.includes('CACHE_VERSION'), 'maintenance runbook should document cache versioning');
 assert.ok(maintenanceRunbook.includes('npx wrangler deploy'), 'maintenance runbook should document Cloudflare deployment');
 assert.ok(maintenanceRunbook.includes('npm run check:release-fast'), 'maintenance runbook should document release-fast checks');
+assert.ok(maintenanceRunbook.includes('npm run verify:prod-minimal'), 'maintenance runbook should document minimal production verification');
 assert.ok(optimizationBacklog.includes('## P0: production correctness'), 'optimization backlog should list P0 items');
 assert.ok(optimizationBacklog.includes('## P1: release quality and user experience'), 'optimization backlog should list P1 items');
 assert.ok(optimizationBacklog.includes('## P2: sustainable maintenance'), 'optimization backlog should list P2 items');
 assert.ok(optimizationBacklog.includes('check:p0'), 'optimization backlog should mention priority check scripts');
+assert.ok((optimizationBacklog.match(/^- /gm) || []).length >= 20, 'optimization backlog should keep at least 20 tracked optimization items');
 assert.ok(cloudflareCutover.includes('pending_accounts = 0'), 'Cloudflare cutover doc should retain readiness condition');
 assert.ok(scripts['check:p0'] && scripts['check:p0'].includes('check:release-data-safe'), 'P0 check should include data-safe release checks');
 assert.ok(scripts['check:p1'] && scripts['check:p1'].includes('test:html-hygiene'), 'P1 check should include HTML hygiene');
 assert.ok(scripts['check:p2'] && scripts['check:p2'].includes('test:docs-hygiene'), 'P2 check should include docs hygiene');
+assert.ok(scripts['check:p2'] && scripts['check:p2'].includes('test:maintenance-priority-contract'), 'P2 check should include maintenance priority contract');
+assert.ok(scripts['verify:prod-minimal'] === 'node scripts/verify-production-minimal.mjs', 'package scripts should expose minimal production verification');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:docs-hygiene'), 'fast release check should include docs hygiene');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:release-automation'), 'fast release check should include release automation checks');
 

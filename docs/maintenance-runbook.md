@@ -54,6 +54,7 @@ Required checks:
 npm run test:docs-hygiene
 npm run test:release-automation
 npm run test:release-hardening
+npm run test:maintenance-priority-contract
 npm run check:release-fast
 ```
 
@@ -69,6 +70,7 @@ Good P2 work should make the next P0 or P1 patch easier to validate.
 6. Verify production:
 
 ```bash
+npm run verify:prod-minimal
 node -e "fetch('https://schoolsystem.com.cn/').then(r => console.log(r.status, r.headers.get('content-type')))"
 node -e "fetch('https://schoolsystem.com.cn/api/health').then(r => r.text()).then(console.log)"
 ```

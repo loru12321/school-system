@@ -58,6 +58,7 @@
     "test:system-performance-scheduler": "node scripts/test-system-performance-scheduler.js",
     "test:release-automation": "node scripts/test-release-automation.js",
     "test:release-hardening": "node scripts/test-release-hardening.js",
+    "test:maintenance-priority-contract": "node scripts/test-maintenance-priority-contract.js",
     "check:performance": "npm run test:performance-budget && npm run test:report-performance-caches && npm run test:summary-report-performance-caches && npm run test:student-flow-performance-caches && npm run test:system-performance-scheduler",
     "test:cloud-api-runtime": "node scripts/test-cloud-api-runtime.js",
     "test:cloud-data-service-runtime": "node scripts/test-cloud-data-service-runtime.js",
@@ -83,8 +84,8 @@
     "check:cloudflare": "npx wrangler deploy --dry-run",
     "check:p0": "npm run build && npm run check:release-data-safe && npm run test:ui-copy-integrity",
     "check:p1": "npm run test:html-hygiene && npm run test:service-worker-contract && npm run test:release-surface && npm run test:runtime-hygiene && npm run test:css-hygiene && npm run check:release-fast",
-    "check:p2": "npm run test:docs-hygiene && npm run test:release-automation && npm run test:release-hardening && npm run test:vendor-budget && npm run check:release-fast",
-    "check:release-fast": "npm run test:npm-audit && npm run test:module-inventory && npm run test:release-surface && npm run test:cloudflare-worker-contract && npm run test:service-worker-contract && npm run test:app-download-runtime-hygiene && npm run test:release-automation && npm run test:release-hardening && npm run test:docs-hygiene && npm run check:performance && npm run test:build-size-budget && npm run test:security-hygiene && npm run check:cloudflare",
+    "check:p2": "npm run test:docs-hygiene && npm run test:release-automation && npm run test:release-hardening && npm run test:vendor-budget && npm run test:maintenance-priority-contract && npm run check:release-fast",
+    "check:release-fast": "npm run test:npm-audit && npm run test:module-inventory && npm run test:release-surface && npm run test:cloudflare-worker-contract && npm run test:service-worker-contract && npm run test:app-download-runtime-hygiene && npm run test:release-automation && npm run test:release-hardening && npm run test:docs-hygiene && npm run test:maintenance-priority-contract && npm run check:performance && npm run test:build-size-budget && npm run test:security-hygiene && npm run check:cloudflare",
     "check:calculation": "npm run test:calculation-snapshot",
     "check:release-data-safe": "npm run check:release-fast && npm run check:calculation",
     "release:prepare-assets": "node scripts/prepare-github-release-assets.mjs",
@@ -107,7 +108,8 @@
     "preview": "vite preview",
     "test:calculation-snapshot": "node scripts/test-calculation-snapshot.js",
     "test:calculation-snapshot:local": "node -e \"process.env.SMOKE_SCRIPT='./test-calculation-snapshot.js'; require('./scripts/run-local-smoke.js')\"",
-    "release:verify-assets": "node scripts/verify-release-assets.mjs"
+    "release:verify-assets": "node scripts/verify-release-assets.mjs",
+    "verify:prod-minimal": "node scripts/verify-production-minimal.mjs"
   },
   "keywords": [],
   "author": "",

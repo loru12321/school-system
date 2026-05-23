@@ -8,6 +8,10 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 - Finish Cloudflare account migration: remove the legacy gateway fallback only after `pending_accounts = 0`.
 - Clarify Worker entrypoint ownership: keep `wrangler.jsonc` aligned with the intended production Worker and guard it in release checks.
 - Add a post-deploy production smoke: verify `/`, `/api/health`, login shell availability, core modules, and hosted downloads.
+- Keep `check:p0` tied to data-safe release checks and UI copy integrity.
+- Keep Worker crash responses no-store, nosniff, and gateway-identified.
+- Keep `/api/health` returning JSON before any deploy is considered complete.
+- Keep hosted APK and Windows package signatures checked before release.
 
 ## P1: release quality and user experience
 
@@ -17,6 +21,12 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 - Subset or prune Tabler icon fonts so unused font formats do not dominate the release surface.
 - Replace alert, confirm, and prompt flows with a shared modal/toast API.
 - Tighten immutable cache rules for hashed assets while keeping `sw.js` and HTML revalidation strict.
+- Keep `Content-Type: text/html; charset=utf-8` on `/` and `/index.html`.
+- Keep `SERVICE_WORKER_VERSION` and the early refresh version aligned.
+- Keep `CACHE_VERSION` explicit when service worker app-shell behavior changes.
+- Keep `check:p1` tied to HTML, service worker, release surface, runtime, and CSS hygiene.
+- Keep heavy vendor libraries behind demand loaders instead of boot loading.
+- Keep bundle and hosted download budgets from drifting upward silently.
 
 ## P2: sustainable maintenance
 
@@ -24,3 +34,9 @@ This backlog tracks useful work discovered during maintenance scans. Keep items 
 - Split CI into smaller priority jobs so P0 checks return faster than full browser smoke.
 - Keep `check:p0`, `check:p1`, and `check:p2` aligned with the maintenance runbook.
 - Record each optimization pass with the changed files, commands run, commit hash, and Cloudflare version when deployed.
+- Keep `test:maintenance-priority-contract` guarding at least 20 maintenance constraints.
+- Keep README deployment commands portable and free of local machine paths.
+- Keep `docs/optimization-backlog.md` linked from README and checked by docs hygiene.
+- Keep release and performance workflows protected by concurrency settings.
+- Keep production verification available through `npm run verify:prod-minimal`.
+- Keep `check:release-fast` as the shared gate for release, performance, and P2 checks.
