@@ -1981,6 +1981,37 @@ window.initCloudClient();
         }
     };
 
+    function submitBootLogin() {
+        if (window.Auth && typeof window.Auth.login === 'function') {
+            window.Auth.login();
+        }
+    }
+
+    function bindBootLoginActions() {
+        document.querySelectorAll('[data-login-portal-action]').forEach((button) => {
+            if (button.dataset.bootLoginBound === '1') return;
+            button.dataset.bootLoginBound = '1';
+            button.addEventListener('click', () => {
+                const portal = button.dataset.loginPortalAction === 'parent' ? 'parent' : 'school';
+                if (window.Auth && typeof window.Auth.setLoginPortal === 'function') {
+                    window.Auth.setLoginPortal(portal);
+                }
+            });
+        });
+        document.querySelectorAll('[data-login-submit]').forEach((button) => {
+            if (button.dataset.bootLoginBound === '1') return;
+            button.dataset.bootLoginBound = '1';
+            button.addEventListener('click', submitBootLogin);
+        });
+        document.querySelectorAll('[data-login-submit-on-enter]').forEach((input) => {
+            if (input.dataset.bootLoginBound === '1') return;
+            input.dataset.bootLoginBound = '1';
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') submitBootLogin();
+            });
+        });
+    }
+
     // Protect window.Auth from being overwritten by late-loading legacy entry points.
     if (!window.Auth || window.Auth.__bootLoginShell) {
         Object.defineProperty(window, 'Auth', {
@@ -1993,6 +2024,7 @@ window.initCloudClient();
     function initBootAuthOnce() {
         if (window.__BOOT_AUTH_INIT_DONE__) return;
         window.__BOOT_AUTH_INIT_DONE__ = true;
+        bindBootLoginActions();
         bootAuth.init();
     }
 

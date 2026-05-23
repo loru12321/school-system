@@ -106,6 +106,8 @@ const guardedItems = [
   () => assert.ok(!readme.includes('C:\\Users\\'), 'README should remain free of local paths'),
   () => assertIncludes(headers, 'max-age=3600, stale-while-revalidate=86400', 'runtime JS should use short cache with background revalidation'),
   () => assertIncludes(bootRuntime, 'ensureXlsxVendorLoaded', 'boot runtime should lazy-load XLSX'),
+  () => assertIncludes(bootRuntime, 'bindBootLoginActions', 'boot runtime should bind first-screen login actions before app modules load'),
+  () => assertIncludes(bootRuntime, '[data-login-submit]', 'boot runtime should bind data-login-submit buttons'),
   () => assert.ok(fileSize('public/assets/js/app.js') <= 910_000, 'public app.js should stay within tightened budget'),
   () => assert.ok(fileSize('public/assets/js/boot-runtime.js') <= 130_000, 'boot runtime should stay within tightened budget'),
   () => assert.ok(fileSize('public/assets/js/app-download-runtime.js') <= 76_000, 'download runtime should stay within budget'),
