@@ -18,6 +18,12 @@ const SCHOOL_ALIAS_GROUPS = [
     { canonical: '戴庙中学', aliases: ['戴庙'] }
 ];
 
+const SchoolCompareListPerfCache = {
+    signature: '',
+    allSchools: [],
+    townshipSchools: []
+};
+
 function normalizeSchoolDisplayName(name) {
     return String(name || '')
         .normalize('NFKC')
@@ -647,6 +653,45 @@ function filterRowsToTownshipSchools(rows, schoolNameResolver = null) {
 }
 
 function listAvailableSchoolsForCompare(scope = 'township') {
+    const requestedScope = String(scope || '').toLowerCase();
+    const rawRows = Array.isArray(RAW_DATA) ? RAW_DATA : [];
+    const buildSignature = () => {
+        const schoolKeys = Object.keys(SCHOOLS || {}).sort().join('|');
+        const teacherKeys = Object.entries(window.TEACHER_SCHOOL_MAP || {})
+            .map(([key, value]) => `${key}:${value}`)
+            .sort()
+            .join('|');
+        const rawFirst = rawRows[0]?.school || '';
+        const rawLast = rawRows[rawRows.length - 1]?.school || '';
+        let examSig = '';
+        try {
+            const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
+            examSig = Object.entries(db?.exams || {})
+                .map(([key, exam]) => `${key}:${Array.isArray(exam?.data) ? exam.data.length : 0}`)
+                .sort()
+                .join('|');
+        } catch (error) {
+            examSig = 'cohort-db-unavailable';
+        }
+        return [
+            schoolKeys,
+            teacherKeys,
+            rawRows.length,
+            rawFirst,
+            rawLast,
+            String(localStorage.getItem('MY_SCHOOL') || '').trim(),
+            String(MY_SCHOOL || '').trim(),
+            examSig
+        ].join('::');
+    };
+
+    const signature = buildSignature();
+    if (SchoolCompareListPerfCache.signature === signature) {
+        return requestedScope === 'all'
+            ? SchoolCompareListPerfCache.allSchools.slice()
+            : SchoolCompareListPerfCache.townshipSchools.slice();
+    }
+
     const allSchools = (() => {
         const names = new Map();
         const collectName = (rawName) => {
@@ -683,9 +728,15 @@ function listAvailableSchoolsForCompare(scope = 'township') {
             .sort((a, b) => a.localeCompare(b, 'zh-CN'));
     })();
 
-    if (String(scope || '').toLowerCase() === 'all') return allSchools;
     const townshipSchools = getTownshipManagedSchoolNames(allSchools);
-    return townshipSchools;
+    const canCacheTownshipResult = townshipSchools.length > 0 || !rawRows.length;
+    if (canCacheTownshipResult) {
+        SchoolCompareListPerfCache.signature = signature;
+        SchoolCompareListPerfCache.allSchools = allSchools.slice();
+        SchoolCompareListPerfCache.townshipSchools = townshipSchools.slice();
+    }
+
+    return requestedScope === 'all' ? allSchools.slice() : townshipSchools.slice();
 }
 
 function getClassSchoolMapForAllData() {

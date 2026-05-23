@@ -3118,13 +3118,13 @@ function scheduleHotspotRuntimeWarmup() {
 
     const steps = [
         { label: 'xlsx-vendor', loader: () => window.ensureXlsxVendorLoaded?.() },
+        { label: 'report-render', loader: () => window.ensureReportRenderRuntimeLoaded?.() },
+        { label: 'student-compare', loader: () => window.ensureStudentCompareRuntimeLoaded?.() },
         { label: 'town-submodule-compare', loader: () => window.ensureTownSubmoduleCompareRuntimeLoaded?.() },
         { label: 'school-profile', loader: () => window.ensureSchoolProfileRuntimeLoaded?.() },
         { label: 'teacher-analysis', loader: () => window.ensureTeacherAnalysisMainRuntimeLoaded?.() },
-        { label: 'teaching-management', loader: () => window.ensureTeachingManagementRuntimeLoaded?.() },
-        { label: 'student-compare', loader: () => window.ensureStudentCompareRuntimeLoaded?.() },
-        { label: 'report-render', loader: () => window.ensureReportRenderRuntimeLoaded?.() },
         { label: 'freshman-exam', loader: () => window.ensureFreshmanExamRuntimeLoaded?.() },
+        { label: 'teaching-management', loader: () => window.ensureTeachingManagementRuntimeLoaded?.() },
         { label: 'app-download', loader: () => window.ensureAppDownloadRuntimeLoaded?.() }
     ];
 
