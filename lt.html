@@ -518,7 +518,7 @@ var APP_MODULE_PRELOAD_LIMIT = 10;
 var APP_MODULE_MOBILE_PRELOAD_LIMIT = 6;
 var APP_MODULE_LATE_PREFETCH_LIMIT = 18;
 var APP_MODULE_PREFETCH_CHUNK_SIZE = 6;
-var APP_MODULE_DESKTOP_BATCH_SIZE = 12;
+var APP_MODULE_DESKTOP_BATCH_SIZE = 8;
 
 window.__BOOT_SCRIPT_REGISTRY__ = window.__BOOT_SCRIPT_REGISTRY__ || {};
 
@@ -755,7 +755,19 @@ function loadBootScript(src, timeoutMs) {
 
 function getAppModuleTimeoutMs(src) {
     const moduleSrc = String(src || '');
-    return moduleSrc.includes('app.js') || moduleSrc.includes('auth-state') ? 15000 : 8000;
+    if (moduleSrc.includes('app.js') || moduleSrc.includes('auth-state')) return 20000;
+    if (
+        moduleSrc.includes('county-analysis')
+        || moduleSrc.includes('progress-analysis')
+        || moduleSrc.includes('teacher-analysis-core')
+        || moduleSrc.includes('report-render')
+        || moduleSrc.includes('freshman-exam')
+        || moduleSrc.includes('data-cloud')
+        || moduleSrc.includes('mobile-app')
+    ) {
+        return 18000;
+    }
+    return 12000;
 }
 
 function getBootScriptBatchSize() {
