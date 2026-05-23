@@ -133,7 +133,8 @@ flowchart TD
 Cloudflare 手动部署命令：
 
 ```powershell
-cmd /c "set npm_config_cache=C:\Users\loru\Desktop\system\.npm-cache&& npx --yes --package wrangler@4.92.0 --package @cloudflare/workerd-windows-64 wrangler deploy"
+$env:npm_config_cache = "$PWD\.npm-cache"
+npx wrangler deploy
 ```
 
 ## 质量保护
@@ -156,6 +157,7 @@ cmd /c "set npm_config_cache=C:\Users\loru\Desktop\system\.npm-cache&& npx --yes
 ## 维护分级
 
 长期维护按 P0/P1/P2 分级处理，完整发布清单和缓存规则见 [`docs/maintenance-runbook.md`](docs/maintenance-runbook.md)。
+持续优化清单见 [`docs/optimization-backlog.md`](docs/optimization-backlog.md)。
 
 - P0：生产正确性，优先保护登录、关键数据、报告、下载和线上可访问性。
 - P1：发布质量与用户体验，优先保护文案编码、元数据、离线缓存和回归检查。
