@@ -65,6 +65,7 @@ assert.ok(!/\/\/[^\n]*const\s+APP_SHELL_ASSETS/.test(publicSw), 'APP_SHELL_ASSET
 assertIncludes(serviceWorkerRuntime, "const SERVICE_WORKER_VERSION = '20260523-runtime-cache-v4';", 'service worker runtime should version registration updates');
 assertIncludes(serviceWorkerRuntime, 'const SERVICE_WORKER_PATH = `./sw.js?v=${SERVICE_WORKER_VERSION}`;', 'service worker runtime should register the versioned local sw.js');
 assertIncludes(srcIndex, 'service-worker-runtime.js?v=20260523-runtime-cache-v4', 'HTML should cache-bust the service worker runtime loader');
+assertIncludes(srcIndex, "var refreshVersion = '20260523-runtime-cache-v4';", 'early runtime refresh should use the same service worker runtime version');
 assertIncludes(serviceWorkerRuntime, "root.location.reload();", 'service worker runtime should refresh controlled pages after an update claims them');
 assertIncludes(serviceWorkerRuntime, "'schoolsystem.com.cn'", 'service worker runtime should allow the canonical production host');
 assertIncludes(serviceWorkerRuntime, "root.addEventListener('load', registerServiceWorker", 'service worker registration should wait until page load');

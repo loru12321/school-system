@@ -33,6 +33,7 @@ const scripts = packageJson.scripts || {};
 const manifestText = read('public/site.webmanifest');
 const manifest = JSON.parse(manifestText);
 const publicHeaders = read('public/_headers');
+const srcIndex = read('src/index.html');
 const worker = read('src/worker-dummy.js');
 const releaseWorkflow = read('.github/workflows/release-apps.yml');
 const performanceWorkflow = read('.github/workflows/performance-trend.yml');
@@ -63,6 +64,9 @@ assert.ok(manifest.shortcuts.some((shortcut) => shortcut.name === '数据导入'
 assert.ok(manifest.shortcuts.some((shortcut) => shortcut.name === '学情总览'), 'manifest should keep readable overview shortcut');
 assert.ok(manifest.shortcuts.some((shortcut) => shortcut.name === '应用下载'), 'manifest should keep readable download shortcut');
 assert.ok(manifest.shortcuts.every((shortcut) => shortcut.icons?.some((icon) => icon.src === '/icon.svg')), 'manifest shortcuts should include app icons');
+assert.ok(srcIndex.includes("var refreshVersion = '20260523-runtime-cache-v4';"), 'early runtime refresh should match the current service worker runtime');
+assert.ok(srcIndex.includes('智慧教务管理系统'), 'HTML metadata should keep readable Chinese application name');
+assert.ok(!/[�锟鏅烘収]/.test(srcIndex.slice(0, srcIndex.indexOf('</head>'))), 'HTML head metadata should not contain mojibake');
 userFacingReleaseFiles.forEach((relativePath) => {
   assert.ok(!read(relativePath).includes('\uFFFD'), `${relativePath} should not contain replacement characters`);
 });
