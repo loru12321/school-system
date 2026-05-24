@@ -447,22 +447,22 @@
         const exam3Sel = document.getElementById('teacherCompareExam3');
         if (!schoolSel || !subjectSel || !exam1Sel || !exam2Sel || !exam3Sel) return;
 
-        const schoolList = listAvailableSchoolsForCompare();
+        const schoolList = getTeacherCompareSchoolList(listAvailableSchoolsForCompare('all'));
         setSelectOptionsIfChanged(
             schoolSel,
             buildSchoolOptionsHtml(schoolList),
-            signatureFromList('schools', schoolList)
+            signatureFromList('teacher-schools', schoolList)
         );
         applyCompareSchoolDefault(schoolSel, schoolList, { fallbackFirst: true });
 
-        const sortedSubjects = [...SUBJECTS].sort(sortSubjects);
+        const sortedSubjects = getTeacherCompareSubjectList();
         setSelectOptionsIfChanged(
             subjectSel,
             '<option value="">--请选择学科--</option>' + sortedSubjects.map(sub => `<option value="${sub}">${sub}</option>`).join(''),
-            signatureFromList('subjects-sorted', sortedSubjects)
+            signatureFromList('teacher-subjects', sortedSubjects)
         );
 
-        const examList = listAvailableExamsForCompare();
+        const examList = getTeacherCompareExamList();
         if (examList.length < 2) {
             const syncing = trySyncCompareExamOptions();
             if (syncing) {
@@ -491,6 +491,67 @@
         pickTeacherCompareDefaultSubjectAndTeacher();
     }
 
+    function getTeacherMapForCompare() {
+        if (typeof window.readTeacherMap === 'function') return window.readTeacherMap() || {};
+        if (window.TEACHER_MAP && typeof window.TEACHER_MAP === 'object') return window.TEACHER_MAP;
+        if (typeof TEACHER_MAP !== 'undefined' && TEACHER_MAP && typeof TEACHER_MAP === 'object') return TEACHER_MAP;
+        return {};
+    }
+
+    function getTeacherSchoolMapForCompare() {
+        if (typeof window.readTeacherSchoolMap === 'function') return window.readTeacherSchoolMap() || {};
+        if (window.TEACHER_SCHOOL_MAP && typeof window.TEACHER_SCHOOL_MAP === 'object') return window.TEACHER_SCHOOL_MAP;
+        if (typeof TEACHER_SCHOOL_MAP !== 'undefined' && TEACHER_SCHOOL_MAP && typeof TEACHER_SCHOOL_MAP === 'object') return TEACHER_SCHOOL_MAP;
+        return {};
+    }
+
+    function getTeacherCompareSchoolList(baseList = []) {
+        const names = [];
+        const addName = (rawName) => {
+            const name = String(rawName || '').trim();
+            if (!name) return;
+            if (names.some(existing => areCompareSchoolsEquivalent(existing, name))) return;
+            names.push(name);
+        };
+        (baseList || []).forEach(addName);
+        Object.values(getTeacherSchoolMapForCompare()).forEach((school) => {
+            addName(school);
+        });
+        const currentSchool = getCurrentCompareSchoolName();
+        if (currentSchool) addName(currentSchool);
+        const classSchoolMap = (typeof getClassSchoolMapForAllData === 'function') ? getClassSchoolMapForAllData() : {};
+        Object.keys(getTeacherMapForCompare()).forEach((key) => {
+            const [rawClass] = String(key).split('_');
+            const cls = normalizeClass(rawClass);
+            const mappedSchool = String(classSchoolMap[cls] || classSchoolMap[rawClass] || '').trim();
+            if (mappedSchool) addName(mappedSchool);
+        });
+        return names.sort((a, b) => a.localeCompare(b, 'zh-CN'));
+    }
+
+    function getTeacherCompareSubjectList() {
+        const subjects = new Map();
+        (SUBJECTS || []).forEach((subject) => {
+            const label = String(subject || '').trim();
+            if (label) subjects.set(normalizeSubject(label) || label, label);
+        });
+        Object.keys(getTeacherMapForCompare()).forEach((key) => {
+            const rawSubject = String(key).split('_')[1] || '';
+            const normalized = normalizeSubject(rawSubject);
+            if (!normalized) return;
+            const matched = (SUBJECTS || []).find(s => normalizeSubject(s) === normalized);
+            subjects.set(normalized, matched || rawSubject);
+        });
+        return [...subjects.values()].sort(sortSubjects);
+    }
+
+    function getTeacherCompareExamList() {
+        const primary = typeof listAvailableExamsForCompare === 'function' ? listAvailableExamsForCompare() : [];
+        if (Array.isArray(primary) && primary.length >= 2) return primary;
+        const fallback = typeof window.tmGetAvailableExamList === 'function' ? window.tmGetAvailableExamList() : [];
+        return Array.isArray(fallback) && fallback.length ? fallback : primary;
+    }
+
     function updateTeacherCompareExamSelects() {
         const schoolEl = document.getElementById('teacherCompareSchool');
         const subjectEl = document.getElementById('teacherCompareSubject');
@@ -500,21 +561,22 @@
 
         if (!schoolEl || !subjectEl || !exam1El || !exam2El || !exam3El) return;
 
-        const schoolList = listAvailableSchoolsForCompare();
+        const schoolList = getTeacherCompareSchoolList(listAvailableSchoolsForCompare('all'));
         setSelectOptionsIfChanged(
             schoolEl,
             buildSchoolOptionsHtml(schoolList),
-            signatureFromList('schools', schoolList)
+            signatureFromList('teacher-schools', schoolList)
         );
         applyCompareSchoolDefault(schoolEl, schoolList, { fallbackFirst: true });
 
+        const teacherSubjects = getTeacherCompareSubjectList();
         setSelectOptionsIfChanged(
             subjectEl,
-            '<option value="">--请选择学科--</option>' + (SUBJECTS || []).map(sub => `<option value="${sub}">${sub}</option>`).join(''),
-            signatureFromList('subjects', SUBJECTS || [])
+            '<option value="">--请选择学科--</option>' + teacherSubjects.map(sub => `<option value="${sub}">${sub}</option>`).join(''),
+            signatureFromList('teacher-subjects', teacherSubjects)
         );
 
-        const examList = listAvailableExamsForCompare();
+        const examList = getTeacherCompareExamList();
         if (examList.length < 2) {
             const syncing = trySyncCompareExamOptions();
             if (syncing) {
@@ -598,20 +660,24 @@
             if (areCompareSchoolsEquivalent(sch, school)) schoolClasses.add(normalizeClass(cls));
         });
         const names = new Set();
-        Object.entries(TEACHER_MAP || {}).forEach(([key, teacherName]) => {
-            const explicitSchool = String((window.TEACHER_SCHOOL_MAP || {})[key] || '').trim();
+        const teacherMap = getTeacherMapForCompare();
+        const teacherSchoolMap = getTeacherSchoolMapForCompare();
+        Object.entries(teacherMap).forEach(([key, teacherName]) => {
+            const explicitSchool = String(teacherSchoolMap[key] || '').trim();
+            let hasExplicitSchoolMatch = false;
             if (explicitSchool) {
                 const sameSchool = typeof areSchoolNamesEquivalent === 'function'
                     ? areSchoolNamesEquivalent(explicitSchool, school)
                     : explicitSchool === school;
                 if (!sameSchool) return;
+                hasExplicitSchoolMatch = true;
             }
             const [rawClass, rawSubject] = String(key).split('_');
             const cls = normalizeClass(rawClass);
-            const sub = SUBJECTS.find(s => normalizeSubject(s) === normalizeSubject(rawSubject));
+            const sub = (SUBJECTS || []).find(s => normalizeSubject(s) === normalizeSubject(rawSubject)) || String(rawSubject || '').trim();
             if (!cls || !sub) return;
             if (sub !== subject) return;
-            if (!schoolClasses.has(cls)) return;
+            if (!hasExplicitSchoolMatch && schoolClasses.size > 0 && !schoolClasses.has(cls)) return;
             const name = String(teacherName || '').trim();
             if (name) names.add(name);
         });
