@@ -1130,7 +1130,11 @@ header {
 #analysis-local-hint,
 .analysis-scan-strip,
 .analysis-action-note,
-.analysis-side-note {
+.analysis-side-note,
+.analysis-table-meta,
+.analysis-generated-note,
+.student-compare-toolbar__tip,
+.analysis-empty-state-compact {
     display: none !important;
 }
 
