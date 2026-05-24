@@ -11504,6 +11504,10 @@ body.dark-mode .version-center-meta-list > div {
     flex-wrap: wrap;
 }
 
+#data-quality [data-data-quality-status] {
+    margin: 10px 0 0;
+}
+
 .data-quality-kpis {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));

@@ -5,6 +5,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createDataQualityRuntime(root) {
     const SCORE_MIN = 0;
     const SCORE_MAX_FALLBACK = 150;
+    const DEFAULT_LIMIT = 300;
 
     function normalizeText(value) {
         return String(value == null ? '' : value).trim();
@@ -158,7 +159,7 @@
             highCount: issues.filter((issue) => issue.severity === 'high').length,
             mediumCount: issues.filter((issue) => issue.severity === 'medium').length,
             lowCount: issues.filter((issue) => issue.severity === 'low').length,
-            issues: issues.slice(0, Number(options.limit || 200))
+            issues: issues.slice(0, Number(options.limit || DEFAULT_LIMIT))
         };
     }
 
@@ -182,6 +183,7 @@
                     <button type="button" class="btn btn-green" data-data-quality-export><i class="ti ti-download"></i> 导出问题</button>
                 </div>
             </div>
+            <div class="analysis-status-text" data-data-quality-status></div>
             <div class="data-quality-kpis" data-data-quality-kpis></div>
             <div class="table-wrap analysis-table-shell data-quality-table-wrap">
                 <table class="analysis-table-dense data-quality-table">
@@ -203,6 +205,15 @@
         `;
         upload.insertAdjacentElement('afterend', section);
         return section;
+    }
+
+    function setExportState(section, message, type = '') {
+        if (!section) return;
+        const status = section.querySelector('[data-data-quality-status]');
+        if (status) {
+            status.textContent = message || '';
+            status.className = `analysis-status-text ${type}`.trim();
+        }
     }
 
     function renderSummary(section, result) {
@@ -250,6 +261,7 @@
         section.__dataQualityLastResult = result;
         renderSummary(section, result);
         renderIssues(section, result);
+        setExportState(section, result.issueCount ? `发现 ${result.issueCount} 个问题，建议导出后修正源数据。` : '未发现明显数据问题。', result.issueCount ? 'is-error' : 'is-success');
         if (typeof root.refreshResponsiveMobileTables === 'function') root.refreshResponsiveMobileTables(section);
         return result;
     }
@@ -259,7 +271,7 @@
         const result = section && section.__dataQualityLastResult || render();
         const issues = result && result.issues || [];
         if (!issues.length) {
-            if (typeof root.alert === 'function') root.alert('当前没有可导出的问题清单');
+            setExportState(section, '当前没有可导出的问题清单。', 'is-success');
             return false;
         }
         const header = ['级别', '问题', '学校', '班级', '姓名', '详情'];
@@ -274,6 +286,7 @@
         link.download = 'data-quality-issues.csv';
         link.click();
         URL.revokeObjectURL(url);
+        setExportState(section, `已导出 ${issues.length} 条问题。`, 'is-success');
         return true;
     }
 
