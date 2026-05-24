@@ -150,6 +150,9 @@
         const severityRank = { high: 0, medium: 1, low: 2 };
         issues.sort((a, b) => (severityRank[a.severity] ?? 9) - (severityRank[b.severity] ?? 9));
 
+        const limit = Number(options.limit || DEFAULT_LIMIT);
+        const visibleIssues = Number.isFinite(limit) ? issues.slice(0, limit) : issues;
+
         return {
             rowCount: rows.length,
             schoolCount: schoolSet.size,
@@ -159,7 +162,8 @@
             highCount: issues.filter((issue) => issue.severity === 'high').length,
             mediumCount: issues.filter((issue) => issue.severity === 'medium').length,
             lowCount: issues.filter((issue) => issue.severity === 'low').length,
-            issues: issues.slice(0, Number(options.limit || DEFAULT_LIMIT))
+            visibleIssueCount: visibleIssues.length,
+            issues: visibleIssues
         };
     }
 
@@ -261,14 +265,15 @@
         section.__dataQualityLastResult = result;
         renderSummary(section, result);
         renderIssues(section, result);
-        setExportState(section, result.issueCount ? `发现 ${result.issueCount} 个问题，建议导出后修正源数据。` : '未发现明显数据问题。', result.issueCount ? 'is-error' : 'is-success');
+        const clipped = result.issueCount > result.visibleIssueCount ? `，表格先展示 ${result.visibleIssueCount} 条` : '';
+        setExportState(section, result.issueCount ? `发现 ${result.issueCount} 个问题${clipped}，导出会包含全部问题。` : '未发现明显数据问题。', result.issueCount ? 'is-error' : 'is-success');
         if (typeof root.refreshResponsiveMobileTables === 'function') root.refreshResponsiveMobileTables(section);
         return result;
     }
 
     function exportIssues() {
         const section = ensureSection();
-        const result = section && section.__dataQualityLastResult || render();
+        const result = analyze({ limit: Infinity });
         const issues = result && result.issues || [];
         if (!issues.length) {
             setExportState(section, '当前没有可导出的问题清单。', 'is-success');
