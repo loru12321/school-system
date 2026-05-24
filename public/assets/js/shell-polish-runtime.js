@@ -334,6 +334,7 @@
         ensureTooltips();
         ensurePulseTween();
         ensureScrollEffects();
+        if (typeof window.applyComparisonPanelCollapses === 'function') window.applyComparisonPanelCollapses();
         animateShellChrome();
         if (window.ScrollTrigger && typeof window.ScrollTrigger.refresh === 'function') {
             window.ScrollTrigger.refresh();

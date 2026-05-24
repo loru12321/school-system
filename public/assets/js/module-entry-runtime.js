@@ -163,28 +163,8 @@
     }
 
     function renderSingleSchoolAnalysisHint() {
-        const section = document.getElementById('analysis');
-        if (!section) return;
-        let hint = document.getElementById('analysis-local-hint');
-        if (!hint) {
-            hint = document.createElement('div');
-            hint.id = 'analysis-local-hint';
-            hint.className = 'info-bar';
-            hint.style.marginBottom = '12px';
-            const head = section.querySelector('.sec-head');
-            if (head) head.insertAdjacentElement('afterend', hint);
-        }
-        const user = getCurrentUser();
-        const schools = (typeof listAvailableSchoolsForCompare === 'function')
-            ? listAvailableSchoolsForCompare()
-            : Object.keys(SCHOOLS || {});
-        const visibleSchools = (window.PermissionPolicy && typeof PermissionPolicy.getAccessibleSchoolNames === 'function')
-            ? PermissionPolicy.getAccessibleSchoolNames(user, schools)
-            : schools;
-        const schoolCount = Array.isArray(visibleSchools) ? visibleSchools.length : 0;
-        hint.textContent = schoolCount <= 1
-            ? '当前只有本校数据，校际横向排名口径不适用，请优先看本页趋势和本校执行类模块。'
-            : '如果当前处理的是本校月考或校考，请谨慎使用联考横向口径，优先结合本校执行与学情模块判断。';
+        const hint = document.getElementById('analysis-local-hint');
+        if (hint) hint.remove();
     }
 
     function syncModuleDescBar(sectionId, currentCategoryMeta) {

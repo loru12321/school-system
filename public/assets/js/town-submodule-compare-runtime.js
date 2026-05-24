@@ -141,6 +141,8 @@ function ensureTownSubmoduleCompareUIs() {
         const secHead = section.querySelector('.sec-head');
         if (secHead && secHead.parentNode) secHead.parentNode.insertBefore(panel, secHead.nextSibling);
         else section.insertBefore(panel, section.firstChild);
+        if (typeof window.applyComparisonPanelCollapses === 'function') window.applyComparisonPanelCollapses();
+        if (typeof window.refreshShellEnhancements === 'function') window.refreshShellEnhancements();
     });
 }
 
