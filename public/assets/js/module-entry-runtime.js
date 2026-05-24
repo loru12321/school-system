@@ -558,11 +558,13 @@
 
         if (typeof window.ensureTeachingManagementRuntimeLoaded === 'function'
             && !window.__TEACHING_MANAGEMENT_RUNTIME_PATCHED__) {
-            return window.ensureTeachingManagementRuntimeLoaded()
+            window.ensureTeachingManagementRuntimeLoaded()
                 .then(() => {
                     if (document.getElementById('student-overview')?.classList.contains('active')) renderNow();
                 })
                 .catch((error) => console.warn(error));
+            renderNow();
+            return Promise.resolve(false);
         }
 
         renderNow();
