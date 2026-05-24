@@ -1179,45 +1179,6 @@
                         </div>
                     </div>
                 </div>
-                <div class="analysis-inline-panel">
-                    <div class="analysis-inline-top">
-                        <div class="analysis-inline-title">🧭 校际联考多期对比（2期/3期）</div>
-                        <div class="analysis-inline-meta">
-                            <label>期数：</label>
-                            <select id="macroComparePeriodCount" onchange="onMacroComparePeriodCountChange()">
-                                <option value="2">2期</option>
-                                <option value="3">3期</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="analysis-inline-controls">
-                        <label style="font-size:12px; color:#475569;">学校：</label>
-                        <select id="macroCompareSchool" style="min-width:130px;"></select>
-                        <label style="font-size:12px; color:#475569;">第1期：</label>
-                        <select id="macroCompareExam1" style="min-width:180px;"></select>
-                        <label style="font-size:12px; color:#475569;">第2期：</label>
-                        <select id="macroCompareExam2" style="min-width:180px;"></select>
-                        <span id="macroCompareExam3Wrap" style="display:none;">
-                            <label style="font-size:12px; color:#475569; margin-left:2px;">第3期：</label>
-                            <select id="macroCompareExam3" style="min-width:180px;"></select>
-                        </span>
-                        <button class="btn btn-sm btn-blue"
-                            onclick="renderMacroMultiPeriodComparison()">生成校际多期对比</button>
-                        <button class="btn btn-sm btn-green"
-                            onclick="exportMacroMultiPeriodComparison()">导出校际多期对比</button>
-                        <button class="btn btn-sm" style="background:#8b5cf6; color:white;"
-                            onclick="saveMacroMultiPeriodCompareToCloud()">☁️ 保存云端对比</button>
-                        <button class="btn btn-sm" style="background:#06b6d4; color:white;"
-                            onclick="viewCloudMacroCompares()">📋 查看云端对比</button>
-                    </div>
-                    <div id="macroCompareHint" class="analysis-hint analysis-status-text">请选择2期或3期考试后生成。
-                    </div>
-                    <div id="macroCompareResult" class="analysis-result-slot">
-                        <div class="analysis-empty-state analysis-empty-state-compact">
-                            选择学校与考试期次后，这里会生成校际多期对比结果。
-                        </div>
-                    </div>
-                </div>
                 <div class="layout-grid analysis-results-layout is-side-collapsed">
                     <div class="side-nav analysis-side-nav">
                         <div class="side-nav-title">快速定位</div>
