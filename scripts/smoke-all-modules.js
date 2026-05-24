@@ -26,6 +26,7 @@ function writeSmokeOutput(summary) {
 const SWITCH_MODULE_IDS = [
     'starter-hub',
     'upload',
+    'data-quality',
     'summary',
     'analysis',
     'high-score',

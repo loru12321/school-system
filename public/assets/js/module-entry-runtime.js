@@ -936,6 +936,12 @@
                 if (typeof updateClassSelect === 'function') updateClassSelect();
             }, { delay: 60, frame: true });
         }
+        if (id === 'data-quality') {
+            if (window.DataQualityRuntime && typeof window.DataQualityRuntime.init === 'function') {
+                return Promise.resolve(window.DataQualityRuntime.init());
+            }
+            return Promise.resolve(false);
+        }
         if (id === 'segment-analysis') updateSegmentSelects();
         if (id === 'potential-analysis') updatePotentialSchoolSelect();
         if (id === 'correlation-analysis') return initCorrelationAnalysisEntry();

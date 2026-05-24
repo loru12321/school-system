@@ -1091,6 +1091,37 @@
 
             </div>
 
+            <div id="data-quality" class="section card-box analysis-workspace analysis-workspace-upload">
+                <div class="analysis-shell-head data-quality-head">
+                    <div>
+                        <h2>数据质量体检</h2>
+                        <p>上传后先检查缺字段、重复身份、异常分数和科目缺失，再进入分析模块。</p>
+                    </div>
+                    <div class="analysis-actions">
+                        <button type="button" class="btn btn-blue" data-data-quality-run><i class="ti ti-stethoscope"></i> 开始体检</button>
+                        <button type="button" class="btn btn-green" data-data-quality-export><i class="ti ti-download"></i> 导出问题</button>
+                    </div>
+                </div>
+                <div class="data-quality-kpis" data-data-quality-kpis></div>
+                <div class="table-wrap analysis-table-shell data-quality-table-wrap">
+                    <table class="analysis-table-dense data-quality-table">
+                        <thead>
+                            <tr>
+                                <th>级别</th>
+                                <th>问题</th>
+                                <th>学校</th>
+                                <th>班级</th>
+                                <th>姓名</th>
+                                <th>详情</th>
+                            </tr>
+                        </thead>
+                        <tbody data-data-quality-tbody>
+                            <tr><td colspan="6" class="analysis-empty-cell">点击“开始体检”后生成数据问题清单。</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- 2. 乡镇学校分析 -->
             <div id="analysis" class="section card-box analysis-workspace analysis-workspace-macro">
                 <div class="module-desc-bar analysis-hero" style="border-color: var(--color-macro)">
