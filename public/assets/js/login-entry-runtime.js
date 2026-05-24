@@ -45,6 +45,47 @@
         return shell;
     }
 
+    function getRecentCohortYears() {
+        const currentYear = new Date().getFullYear();
+        const years = [];
+        for (let year = currentYear - 4; year <= currentYear; year += 1) years.push(String(year));
+        return years;
+    }
+
+    function ensureCohortSelect(portal) {
+        const passShell = document.getElementById('login-pass')?.closest('.login-entry-field');
+        const form = document.getElementById('login-form');
+        if (!passShell || !form) return;
+
+        let group = document.getElementById('login-cohort-group');
+        if (!group) {
+            group = document.createElement('div');
+            group.id = 'login-cohort-group';
+            group.className = 'login-clean-cohort';
+            group.innerHTML = [
+                '<label for="login-cohort-select" class="login-clean-label">选择届别</label>',
+                '<div class="login-entry-field login-entry-field--select" data-login-field="cohort">',
+                '<span class="login-entry-prefix">Cohort</span>',
+                '<select id="login-cohort-select" data-login-cohort-select="1"></select>',
+                '</div>'
+            ].join('');
+            passShell.insertAdjacentElement('afterend', group);
+        }
+
+        const select = document.getElementById('login-cohort-select');
+        if (!select) return;
+        const years = getRecentCohortYears();
+        const currentValue = years.includes(select.value) ? select.value : years[years.length - 1];
+        const nextHtml = years.map((year) => `<option value="${year}">${year}届</option>`).join('');
+        if (select.dataset.cohortYears !== years.join('|')) {
+            select.innerHTML = nextHtml;
+            select.dataset.cohortYears = years.join('|');
+        }
+        select.value = currentValue;
+        group.style.display = portal === 'parent' ? 'none' : '';
+        group.setAttribute('aria-hidden', portal === 'parent' ? 'true' : 'false');
+    }
+
     function removeLegacyStudentEntry() {
         document.querySelectorAll([
             '#role-student',
@@ -88,6 +129,7 @@
         ensureFieldShell(userInput, 'user', copy.userPrefix);
         ensureFieldShell(classInput, 'class', 'Class');
         ensureFieldShell(passInput, 'password', copy.passPrefix);
+        ensureCohortSelect(portal);
 
         if (userInput) userInput.placeholder = copy.userPlaceholder;
         if (classInput) classInput.placeholder = '请输入学生班级，如 701';

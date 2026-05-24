@@ -1577,6 +1577,41 @@ window.initCloudClient();
 (function installBootLoginShell() {
     const BOOT_LOGIN_PORTAL_STORAGE_KEY = 'LOGIN_PORTAL_V1';
     const BOOT_GATEWAY_REQUEST = createSupabaseFetchWithTimeout(12000);
+    function getBootLoginCohortYears() {
+        const currentYear = new Date().getFullYear();
+        const years = [];
+        for (let year = currentYear - 4; year <= currentYear; year += 1) years.push(String(year));
+        return years;
+    }
+    function syncBootLoginCohortSelect(portal) {
+        const select = document.getElementById('login-cohort-select');
+        const group = document.getElementById('login-cohort-group');
+        if (!select) return '';
+        const years = getBootLoginCohortYears();
+        const selected = years.includes(select.value) ? select.value : years[years.length - 1];
+        const html = years.map((year) => `<option value="${year}">${year}届</option>`).join('');
+        if (select.dataset.cohortYears !== years.join('|')) {
+            select.innerHTML = html;
+            select.dataset.cohortYears = years.join('|');
+        }
+        select.value = selected;
+        if (group) {
+            group.style.display = portal === 'parent' ? 'none' : '';
+            group.setAttribute('aria-hidden', portal === 'parent' ? 'true' : 'false');
+        }
+        return selected;
+    }
+    async function enterSelectedBootCohort(year) {
+        const selectedYear = String(year || document.getElementById('login-cohort-select')?.value || '').trim();
+        if (!selectedYear) return false;
+        const yearInput = document.getElementById('entry-cohort-year');
+        if (yearInput) yearInput.value = selectedYear;
+        if (typeof window.enterCohortFromMask === 'function') {
+            await window.enterCohortFromMask();
+            return true;
+        }
+        return false;
+    }
     const bootPortalConfigs = {
         school: {
             badge: '学校工作台',
@@ -1869,6 +1904,7 @@ window.initCloudClient();
                 classGroup.style.display = nextPortal === 'parent' ? 'block' : 'none';
                 classGroup.setAttribute('aria-hidden', nextPortal === 'parent' ? 'false' : 'true');
             }
+            syncBootLoginCohortSelect(nextPortal);
             if (!this.__bootLoginBusy) {
                 setBootHelperMessage(config.helper, 'info');
                 setBootSubmitState({ busy: false, text: config.submit });
@@ -1898,6 +1934,7 @@ window.initCloudClient();
             const user = String(document.getElementById('login-user')?.value || '').trim();
             const pass = String(document.getElementById('login-pass')?.value || '').trim();
             const className = String(document.getElementById('login-class')?.value || '').trim();
+            const cohortYear = portal === 'school' ? syncBootLoginCohortSelect(portal) : '';
 
             if (!user || !pass) {
                 setBootHelperMessage('请输入账号和密码。', 'error');
@@ -1953,6 +1990,7 @@ window.initCloudClient();
                     if (loader) loader.classList.remove('hidden');
                     await loadAppModules();
                     await window.waitForAuthReady();
+                    if (portal === 'school' && cohortYear) await enterSelectedBootCohort(cohortYear);
                     this.syncLoginOverlayState(false);
                     if (loader) {
                         loader.style.opacity = '0';

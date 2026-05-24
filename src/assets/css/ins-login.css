@@ -211,7 +211,8 @@ body.login-overlay-active #parent-view-container {
     text-transform: uppercase;
 }
 
-.login-entry-field input {
+.login-entry-field input,
+.login-entry-field select {
     width: 100%;
     border: 0 !important;
     outline: none !important;
@@ -220,6 +221,36 @@ body.login-overlay-active #parent-view-container {
     color: #0f172a;
     font-size: 15px;
     box-shadow: none !important;
+}
+
+.login-entry-field select {
+    appearance: none;
+    cursor: pointer;
+}
+
+.login-entry-field--select {
+    position: relative;
+}
+
+.login-entry-field--select::after {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid #64748b;
+    border-bottom: 2px solid #64748b;
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    transform: translateY(-65%) rotate(45deg);
+    pointer-events: none;
+}
+
+.login-entry-field--select select {
+    padding-right: 42px !important;
+}
+
+#login-overlay[data-login-portal="parent"] .login-clean-cohort {
+    display: none;
 }
 
 .login-clean-helper,

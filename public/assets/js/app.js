@@ -3733,6 +3733,18 @@ var Auth = {
             const isLocalOnlySession = !!data.local_only;
             this.currentUser = AuthState.setCurrentUser(matchedUser) || matchedUser;
             this.setLoginPortal(isParentLikeUser(this.currentUser) ? 'parent' : 'school');
+            const selectedLoginCohort = String(document.getElementById('login-cohort-select')?.value || '').trim();
+            if (!isParentLikeUser(this.currentUser) && selectedLoginCohort) {
+                const yearInput = document.getElementById('entry-cohort-year');
+                if (yearInput) yearInput.value = selectedLoginCohort;
+                if (typeof enterCohortFromMask === 'function') {
+                    try {
+                        await enterCohortFromMask();
+                    } catch (cohortError) {
+                        console.warn('[Auth] failed to enter selected login cohort:', cohortError?.message || cohortError);
+                    }
+                }
+            }
             if (!isLocalOnlySession && (!window.EdgeGateway || !EdgeGateway.getToken()) && window.EdgeGateway && typeof EdgeGateway.login === 'function') {
                 const gatewayClassName = (isParentLikeUser(this.currentUser) || this.currentUser.role === 'class_teacher') ? inputClass : '';
                 EdgeGateway.login(user, pass, gatewayClassName).catch(err => {
