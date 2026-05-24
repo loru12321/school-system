@@ -3,6 +3,9 @@
 
     const CompareSessionStateRuntime = window.CompareSessionState || null;
     const CompareExamSyncRuntime = window.CompareExamSyncRuntime || null;
+    const ReportCompareSelectPerfCache = {
+        signature: ''
+    };
     const ensureCompareExamSyncStateEntry = typeof window.ensureCompareExamSyncStateEntry === 'function'
         ? window.ensureCompareExamSyncStateEntry
         : ((cohortId) => {
@@ -194,6 +197,18 @@
         return `${prefix}:${(list || []).map(pick).join('|')}`;
     }
 
+    function getReportCompareSelectStateSignature(optionsSig, autoCount, exam1Sel, exam2Sel, exam3Sel, countEl) {
+        return [
+            optionsSig,
+            autoCount,
+            getEffectiveCurrentExamId(),
+            exam1Sel.value,
+            exam2Sel.value,
+            exam3Sel.value,
+            countEl.value
+        ].join('::');
+    }
+
     function updateProgressMultiExamSelects() {
         const schoolSel = document.getElementById('progressCompareSchool');
         const exam1Sel = document.getElementById('progressCompareExam1');
@@ -313,12 +328,19 @@
             return;
         }
         const autoCount = examList.length >= 3 ? 3 : 2;
+        const optionsSig = signatureFromList('report-exams', examList, e => `${e.id}:${e.label}:${e.source || ''}`);
+        const stateSig = getReportCompareSelectStateSignature(optionsSig, autoCount, exam1Sel, exam2Sel, exam3Sel, countEl);
+        if (ReportCompareSelectPerfCache.signature === stateSig
+            && exam1Sel.dataset.compareOptionsSig === optionsSig
+            && exam2Sel.dataset.compareOptionsSig === optionsSig
+            && exam3Sel.dataset.compareOptionsSig === optionsSig) {
+            return;
+        }
         countEl.value = String(autoCount);
         const count3Option = countEl.querySelector('option[value="3"]');
         if (count3Option) count3Option.disabled = examList.length < 3;
         onReportComparePeriodCountChange();
         const optionsHtml = buildExamOptionsHtml(examList, { defaultOption, decorateSource: true });
-        const optionsSig = signatureFromList('report-exams', examList, e => `${e.id}:${e.label}:${e.source || ''}`);
         setSelectOptionsIfChanged(exam1Sel, optionsHtml, optionsSig);
         setSelectOptionsIfChanged(exam2Sel, optionsHtml, optionsSig);
         setSelectOptionsIfChanged(exam3Sel, optionsHtml, optionsSig);
@@ -336,12 +358,14 @@
             exam1Sel.value = ordered[0] || '';
             exam2Sel.value = ordered[1] || '';
             exam3Sel.value = autoCount === 3 ? (ordered[2] || '') : '';
+            ReportCompareSelectPerfCache.signature = getReportCompareSelectStateSignature(optionsSig, autoCount, exam1Sel, exam2Sel, exam3Sel, countEl);
             return;
         }
         const defaultIds = getDefaultCompareExamIds(examList, autoCount, getEffectiveCurrentExamId());
         exam1Sel.value = defaultIds[0] || '';
         exam2Sel.value = defaultIds[1] || defaultIds[0] || '';
         exam3Sel.value = autoCount === 3 ? (defaultIds[2] || '') : '';
+        ReportCompareSelectPerfCache.signature = getReportCompareSelectStateSignature(optionsSig, autoCount, exam1Sel, exam2Sel, exam3Sel, countEl);
     }
 
     function onReportComparePeriodCountChange() {

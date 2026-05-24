@@ -40,7 +40,12 @@ const setDuplicateCompareWarnedKeyState = typeof window.setDuplicateCompareWarne
     });
 const CompareExamListPerfCache = {
     signature: '',
-    result: []
+    result: [],
+    fingerprintRows: null,
+    fingerprintVersion: -1,
+    fingerprintLength: -1,
+    fingerprintValue: '',
+    fingerprintByRows: new WeakMap()
 };
 
 function cloneCompareExamList(list) {
@@ -329,6 +334,18 @@ function buildCompetitionRankMap(list, keyGetter, scoreGetter) {
 
 function computeExamDataFingerprint(rows) {
     const list = Array.isArray(rows) ? rows : [];
+    const version = Number(window.__RAW_DATA_VERSION || 0);
+    if (list === RAW_DATA
+        && CompareExamListPerfCache.fingerprintRows === list
+        && CompareExamListPerfCache.fingerprintVersion === version
+        && CompareExamListPerfCache.fingerprintLength === list.length
+        && CompareExamListPerfCache.fingerprintValue) {
+        return CompareExamListPerfCache.fingerprintValue;
+    }
+    const cached = CompareExamListPerfCache.fingerprintByRows.get(list);
+    if (cached && cached.length === list.length && cached.version === version) {
+        return cached.value;
+    }
     const normalized = list.map(row => ({
         school: String(row?.school || '').trim(),
         class: String(row?.class || '').trim(),
@@ -353,7 +370,15 @@ function computeExamDataFingerprint(rows) {
         hash ^= json.charCodeAt(i);
         hash = Math.imul(hash, 16777619);
     }
-    return `fp_${(hash >>> 0).toString(16)}`;
+    const value = `fp_${(hash >>> 0).toString(16)}`;
+    CompareExamListPerfCache.fingerprintByRows.set(list, { length: list.length, version, value });
+    if (list === RAW_DATA) {
+        CompareExamListPerfCache.fingerprintRows = list;
+        CompareExamListPerfCache.fingerprintVersion = version;
+        CompareExamListPerfCache.fingerprintLength = list.length;
+        CompareExamListPerfCache.fingerprintValue = value;
+    }
+    return value;
 }
 
 function pickPreferredExamEntry(existing, candidate) {
