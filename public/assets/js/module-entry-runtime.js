@@ -634,6 +634,7 @@
         if (townshipContainer) townshipContainer.style.display = 'block';
 
         showTeacherAnalysisPendingState();
+        scheduleTeacherCompareAutoRender(16);
         scheduleModuleTask('teacher-analysis-auto-render', () => {
             if (!document.getElementById('teacher-analysis')?.classList.contains('active')) return;
             const teacherMapReady = window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0;

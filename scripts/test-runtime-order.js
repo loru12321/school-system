@@ -542,6 +542,7 @@ const teacherEntryStart = moduleEntryRuntime.indexOf('function initTeacherAnalys
 const teacherEntryEnd = moduleEntryRuntime.indexOf('function releaseTeacherAnalysisHeavyDom()', teacherEntryStart);
 const teacherEntrySource = moduleEntryRuntime.slice(teacherEntryStart, teacherEntryEnd);
 assert.ok(teacherEntrySource.includes("'teacher-analysis-auto-render'"), 'teacher-analysis entry should auto-generate the portrait after the switch frame');
+assert.ok(teacherEntrySource.includes('scheduleTeacherCompareAutoRender(16);'), 'teacher-analysis entry should initialize teacher compare selectors immediately after the switch frame');
 assert.ok(teacherEntrySource.includes('ensureTeacherAnalysisMainRuntimeLoaded'), 'teacher-analysis entry should load the analysis runtime only from the deferred auto-render task');
 assert.ok(!teacherEntrySource.includes('ensureTeacherMap(true)'), 'teacher-analysis entry should not auto-load teacher maps on switch');
 assert.ok(!teacherEntrySource.includes('updateTeacherCompareExamSelects'), 'teacher-analysis entry should not scan compare exam selectors on switch');
