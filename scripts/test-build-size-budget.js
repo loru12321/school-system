@@ -31,7 +31,8 @@ const budgets = {
     distIndexHtml: 330_000,
     ltHtml: 3_900_000,
     publicAppJs: 910_000,
-    publicBootJs: 130_000,
+    // Boot auth now includes login cohort handoff before core modules load.
+    publicBootJs: 133_000,
     publicAppDownloadJs: 76_000,
     distAppJs: 560_000,
     distAppDownloadJs: 45_000,

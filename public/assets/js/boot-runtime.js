@@ -1577,10 +1577,14 @@ window.initCloudClient();
 (function installBootLoginShell() {
     const BOOT_LOGIN_PORTAL_STORAGE_KEY = 'LOGIN_PORTAL_V1';
     const BOOT_GATEWAY_REQUEST = createSupabaseFetchWithTimeout(12000);
+    function getBootCurrentGrade9CohortYear(now = new Date()) {
+        const academicYear = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+        return String(academicYear - 3);
+    }
     function getBootLoginCohortYears() {
-        const currentYear = new Date().getFullYear();
+        const grade9CohortYear = Number(getBootCurrentGrade9CohortYear());
         const years = [];
-        for (let year = currentYear - 4; year <= currentYear; year += 1) years.push(String(year));
+        for (let offset = 0; offset < 5; offset += 1) years.push(String(grade9CohortYear + offset));
         return years;
     }
     function syncBootLoginCohortSelect(portal) {
@@ -1588,13 +1592,16 @@ window.initCloudClient();
         const group = document.getElementById('login-cohort-group');
         if (!select) return '';
         const years = getBootLoginCohortYears();
-        const selected = years.includes(select.value) ? select.value : years[years.length - 1];
+        const defaultYear = getBootCurrentGrade9CohortYear();
+        const preserveSelection = select.dataset.cohortInitialized === '1' && years.includes(select.value);
+        const selected = preserveSelection ? select.value : defaultYear;
         const html = years.map((year) => `<option value="${year}">${year}届</option>`).join('');
         if (select.dataset.cohortYears !== years.join('|')) {
             select.innerHTML = html;
             select.dataset.cohortYears = years.join('|');
         }
         select.value = selected;
+        select.dataset.cohortInitialized = '1';
         if (group) {
             group.style.display = portal === 'parent' ? 'none' : '';
             group.setAttribute('aria-hidden', portal === 'parent' ? 'true' : 'false');

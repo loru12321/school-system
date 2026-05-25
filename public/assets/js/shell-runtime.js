@@ -222,14 +222,8 @@
 
     function resolveVisibleItems(category) {
         if (!category || !Array.isArray(category.items)) return [];
-        const role = resolveUserRoleKey();
         return category.items.filter((item) => {
-            if ((role === 'teacher' || role === 'class_teacher')
-                && typeof canAccessModule === 'function'
-                && !canAccessModule(item.id)) {
-                return false;
-            }
-            if (role === 'teacher' && ['exam-arranger', 'freshman-simulator'].includes(item.id)) {
+            if (typeof canAccessModule === 'function' && !canAccessModule(item.id)) {
                 return false;
             }
             if (item.id === 'report-generator' && typeof CONFIG !== 'undefined' && !CONFIG.showQuery) {

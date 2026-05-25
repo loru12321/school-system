@@ -45,10 +45,15 @@
         return shell;
     }
 
+    function getCurrentGrade9CohortYear(now = new Date()) {
+        const academicYear = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+        return String(academicYear - 3);
+    }
+
     function getRecentCohortYears() {
-        const currentYear = new Date().getFullYear();
+        const grade9CohortYear = Number(getCurrentGrade9CohortYear());
         const years = [];
-        for (let year = currentYear - 4; year <= currentYear; year += 1) years.push(String(year));
+        for (let offset = 0; offset < 5; offset += 1) years.push(String(grade9CohortYear + offset));
         return years;
     }
 
@@ -75,13 +80,16 @@
         const select = document.getElementById('login-cohort-select');
         if (!select) return;
         const years = getRecentCohortYears();
-        const currentValue = years.includes(select.value) ? select.value : years[years.length - 1];
+        const defaultYear = getCurrentGrade9CohortYear();
+        const preserveSelection = select.dataset.cohortInitialized === '1' && years.includes(select.value);
+        const currentValue = preserveSelection ? select.value : defaultYear;
         const nextHtml = years.map((year) => `<option value="${year}">${year}届</option>`).join('');
         if (select.dataset.cohortYears !== years.join('|')) {
             select.innerHTML = nextHtml;
             select.dataset.cohortYears = years.join('|');
         }
         select.value = currentValue;
+        select.dataset.cohortInitialized = '1';
         group.style.display = portal === 'parent' ? 'none' : '';
         group.setAttribute('aria-hidden', portal === 'parent' ? 'true' : 'false');
     }
