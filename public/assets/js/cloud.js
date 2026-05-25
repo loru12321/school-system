@@ -386,9 +386,6 @@
 
     function normalizeWorkspacePayload(payload) {
         const next = ensureCurrentExamBundled((payload && typeof payload === 'object') ? payload : {});
-        const db = next.COHORT_DB && typeof next.COHORT_DB === 'object' ? next.COHORT_DB : null;
-        const examMap = db?.exams && typeof db.exams === 'object' ? db.exams : null;
-        if (!examMap) return next;
         const workspaceCohortId = normalizeCohortId(next.CURRENT_COHORT_ID || getCurrentCohortId());
         if (workspaceCohortId && normalizeCohortId(next.CURRENT_COHORT_META?.id) !== workspaceCohortId) {
             next.CURRENT_COHORT_META = {
@@ -398,6 +395,9 @@
                 startGrade: Number(next.CURRENT_COHORT_META?.startGrade) || 6
             };
         }
+        const db = next.COHORT_DB && typeof next.COHORT_DB === 'object' ? next.COHORT_DB : null;
+        const examMap = db?.exams && typeof db.exams === 'object' ? db.exams : null;
+        if (!examMap) return next;
 
         const realExamEntries = Object.entries(examMap)
             .map(([examId, examPayload]) => ({

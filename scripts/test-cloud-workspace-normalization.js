@@ -80,6 +80,11 @@ assert.strictEqual(
 assert.strictEqual(normalized.RAW_DATA.length, 7809, 'stale workspace rows should be replaced by current exam rows');
 assert.ok(!normalized.COHORT_DB.exams['2026_校内首模'], 'cross-cohort stale exam should not survive normalization');
 assert.strictEqual(normalized.CURRENT_COHORT_META.id, '2022', 'workspace cohort metadata should follow the selected cohort');
+assert.strictEqual(
+    normalize({ CURRENT_COHORT_ID: '2022', CURRENT_COHORT_META: { id: '2026', year: '2026' } }).CURRENT_COHORT_META.id,
+    '2022',
+    'split metadata payload should repair cohort metadata before exam data is hydrated'
+);
 assert.ok(
     workspaceSource.includes('normalizeWorkspacePayload: normalizeCloudWorkspacePayload'),
     'workspace runtime should consume the shared normalizer'
