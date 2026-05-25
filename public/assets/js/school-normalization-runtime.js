@@ -12,7 +12,7 @@ const SCHOOL_ALIAS_GROUPS = [
     { canonical: '新湖中学', aliases: ['新湖镇中学'] },
     { canonical: '大羊中学', aliases: ['大羊'] },
     { canonical: '沙河站中学', aliases: ['沙河站镇中学'] },
-    { canonical: '银山实验', aliases: ['银山实验学校', '银山镇实验学校', '银山实验中学', '银山镇实验中学'] },
+    { canonical: '银山实验', aliases: ['银山实验学校', '银山镇实验学校', '银山实验中学', '银山镇实验中学', '实验完全中学'] },
     { canonical: '旧县中学', aliases: ['旧县乡中心学校', '旧县中心学校'] },
     { canonical: '斑鸠店镇中', aliases: ['斑鸠店中学', '斑鸠店镇中学', '斑鸠店中'] },
     { canonical: '戴庙中学', aliases: ['戴庙'] }
@@ -585,10 +585,20 @@ function getTownshipManagedSchoolNames(candidateNames = []) {
     if (!currentNames.length) return [];
 
     const targetKeys = Object.keys(window.TARGETS && typeof window.TARGETS === 'object' ? window.TARGETS : {});
+    const knownTownshipKeys = targetKeys.length
+        ? []
+        : SCHOOL_ALIAS_GROUPS.flatMap((group) => [group?.canonical, ...(group?.aliases || [])]).filter(Boolean);
+    const currentSchoolKeys = [
+        String(MY_SCHOOL || '').trim(),
+        String(localStorage.getItem('MY_SCHOOL') || '').trim(),
+        String(window.DEFAULT_MY_SCHOOL_NAME || '').trim()
+    ].filter(Boolean);
+    const managedSchoolKeys = Array.from(new Set([...targetKeys, ...knownTownshipKeys, ...currentSchoolKeys]));
 
-    // Only schools that can be resolved from targetKeys are considered township schools.
-    // Keep the actual uploaded school display name, even when the target table uses an alias.
-    const matched = targetKeys.flatMap((rawName) => {
+    // Without indicator targets, fall back to known township schools rather than showing a blank analysis.
+    // Always keep the logged-in school visible while configuration is incomplete.
+    // Retain the uploaded display name when a target or current-school key uses an alias.
+    const matched = managedSchoolKeys.flatMap((rawName) => {
         const directMatches = getMatchedSchoolNamesFromCollection(currentNames, rawName);
         if (directMatches.length) return directMatches;
         const canonical = getCanonicalSchoolName(rawName, currentNames);

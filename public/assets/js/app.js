@@ -19025,7 +19025,7 @@ async function runAutoDiagnosis() {
 
 async function loadDemoData() {
     // 🎭 全方位演示数据引擎 - 营造“系统已就绪”的沉浸式体验
-    const demoSchool = '实验完全中学';
+    const demoSchool = DEFAULT_MY_SCHOOL_NAME;
     const subjects = ['语文', '数学', '英语', '物理', '化学', '生物', '政治', '历史', '地理'];
     const cohorts = ['2022', '2023', '2024'];
     const teachers = ['张伟', '王芳', '李娜', '刘强', '陈静', '杨敏', '黄磊', '赵磊', '周涛', '吴洋', '孙丽', '胡勇'];
