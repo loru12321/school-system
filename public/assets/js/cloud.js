@@ -389,18 +389,34 @@
         const db = next.COHORT_DB && typeof next.COHORT_DB === 'object' ? next.COHORT_DB : null;
         const examMap = db?.exams && typeof db.exams === 'object' ? db.exams : null;
         if (!examMap) return next;
+        const workspaceCohortId = normalizeCohortId(next.CURRENT_COHORT_ID || getCurrentCohortId());
+        if (workspaceCohortId && normalizeCohortId(next.CURRENT_COHORT_META?.id) !== workspaceCohortId) {
+            next.CURRENT_COHORT_META = {
+                ...(next.CURRENT_COHORT_META || {}),
+                id: workspaceCohortId,
+                year: workspaceCohortId,
+                startGrade: Number(next.CURRENT_COHORT_META?.startGrade) || 6
+            };
+        }
 
         const realExamEntries = Object.entries(examMap)
             .map(([examId, examPayload]) => ({
                 examId: String(examId || '').trim(),
                 examPayload: examPayload || {}
             }))
-            .filter(item => item.examId && !isIgnoredExamKey(item.examId) && !isVirtualCohortSnapshotKey(item.examId) && !isLegacyWorkspaceShadowExamKey(item.examId));
+            .filter(item => item.examId
+                && !isIgnoredExamKey(item.examId)
+                && !isVirtualCohortSnapshotKey(item.examId)
+                && !isLegacyWorkspaceShadowExamKey(item.examId)
+                && (!workspaceCohortId || extractCohortIdFromKey(item.examId) === workspaceCohortId));
 
         if (realExamEntries.length === 0) return next;
 
         Object.keys(examMap).forEach(examId => {
-            if (isLegacyWorkspaceShadowExamKey(examId) || isVirtualCohortSnapshotKey(examId)) {
+            const examCohortId = extractCohortIdFromKey(examId);
+            if (isLegacyWorkspaceShadowExamKey(examId)
+                || isVirtualCohortSnapshotKey(examId)
+                || (workspaceCohortId && examCohortId && examCohortId !== workspaceCohortId)) {
                 delete examMap[examId];
             }
         });
@@ -1106,6 +1122,7 @@
         isIgnoredExamKey,
         parsePayload,
         packPayload,
+        normalizeWorkspacePayload,
         clonePayloadFragment,
         getPayloadTargetCount,
         hasPayloadIndicatorParams,

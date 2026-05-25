@@ -18,6 +18,7 @@
         countCachedCohortExams,
         parsePayload,
         packPayload,
+        normalizeWorkspacePayload: normalizeCloudWorkspacePayload,
         supplementIndicatorPayload,
         seedCurrentExamToCohortDb,
         deriveExamLabel,
@@ -30,8 +31,8 @@
     } = deps;
 
     function normalizeWorkspacePayload(payload) {
-        if (typeof window.normalizeWorkspacePayload === 'function') {
-            return window.normalizeWorkspacePayload(payload);
+        if (typeof normalizeCloudWorkspacePayload === 'function') {
+            return normalizeCloudWorkspacePayload(payload);
         }
         return payload;
     }
@@ -443,7 +444,7 @@
         }
         if (!examRow?.content) return normalizeWorkspacePayload(metaPayload);
         const examPayload = parsePayload(examRow.content);
-        return mergeWorkspaceSplitPayload(metaPayload, examPayload, examRow.key || currentExamKey || key);
+        return normalizeWorkspacePayload(mergeWorkspaceSplitPayload(metaPayload, examPayload, examRow.key || currentExamKey || key));
     }
 
     function getWorkspaceMetaStorageKey(key) {
@@ -590,15 +591,20 @@
 
     async function applyCachedWorkspaceSnapshot(key, payload, updatedAt = '') {
         if (!payload || typeof payload !== 'object') return false;
+        let normalizedPayload = isSplitWorkspacePayload(payload)
+            ? await hydrateSplitWorkspacePayload(key, payload)
+            : normalizeWorkspacePayload(payload);
+        normalizedPayload = await supplementIndicatorPayload(key, normalizedPayload);
         const meta = readWorkspaceSyncMeta(key);
-        const signature = buildWorkspaceApplySignature(key, payload, updatedAt, meta);
+        const signature = buildWorkspaceApplySignature(key, normalizedPayload, updatedAt, meta);
         if (isWorkspaceSnapshotAlreadyApplied(signature)) return true;
         syncWorkspaceState({
             currentProjectKey: key,
-            currentExamId: payload?.CURRENT_EXAM_ID || ''
+            currentExamId: normalizedPayload?.CURRENT_EXAM_ID || ''
         });
-        seedCurrentExamToCohortDb(payload, key, updatedAt);
-        if (typeof applySnapshotPayload === 'function') applySnapshotPayload(payload);
+        seedCurrentExamToCohortDb(normalizedPayload, key, updatedAt);
+        if (typeof applySnapshotPayload === 'function') applySnapshotPayload(normalizedPayload);
+        await writeCachedWorkspaceSnapshot(key, normalizedPayload);
         await refreshCompareSelectors();
         markWorkspaceSnapshotApplied(signature);
         return true;

@@ -17457,6 +17457,7 @@ function tryAutoRestoreWorkspaceExam(options = {}) {
     const db = COHORT_DB || ((typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null);
     if (!db) return false;
 
+    const normalizedCohortId = normalizeCompareCohortId(options.cohortId || CURRENT_COHORT_ID || readWorkspaceCohortId() || '');
     const preferredExamId = String(
         options.preferredExamId
         || db.currentExamId
@@ -17464,14 +17465,23 @@ function tryAutoRestoreWorkspaceExam(options = {}) {
         || readWorkspaceExamId()
         || ''
     ).trim();
+    const preferredExamCohortId = normalizeCompareCohortId(typeof inferCohortIdFromValue === 'function' ? inferCohortIdFromValue(preferredExamId) : '');
+    const preferredMatchesCohort = !normalizedCohortId || !preferredExamCohortId || preferredExamCohortId === normalizedCohortId;
+    const activeCid = normalizeCompareCohortId(CURRENT_COHORT_META?.id || '');
+    if (normalizedCohortId && activeCid !== normalizedCohortId) ensureCohortRegistered(normalizedCohortId);
     const currentRows = Array.isArray(RAW_DATA) ? RAW_DATA : [];
 
-    if (preferredExamId && db.exams?.[preferredExamId] && currentRows.length > 0) {
+    if (preferredExamId && db.exams?.[preferredExamId] && currentRows.length > 0 && preferredMatchesCohort) {
+        const preferredMeta = db.exams[preferredExamId].meta || {};
+        const effectiveGrade = String(getEffectiveGrade(preferredMeta) || '').trim();
+        if (effectiveGrade && String(preferredMeta.grade || '').trim() !== effectiveGrade && typeof CohortDB?.applyExamToWorkspace === 'function') {
+            CohortDB.applyExamToWorkspace(preferredExamId, { renderTables: false, recalculate: false });
+        }
         ensureWorkspaceDefaultSchool();
         return true;
     }
 
-    const autoExamId = preferredExamId && db.exams?.[preferredExamId]
+    const autoExamId = preferredExamId && db.exams?.[preferredExamId] && preferredMatchesCohort
         ? preferredExamId
         : getAutoRestoreExamId(db, options.cohortId);
     if (!autoExamId || typeof CohortDB === 'undefined' || typeof CohortDB.applyExamToWorkspace !== 'function') {
