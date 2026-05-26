@@ -501,6 +501,9 @@ assert.ok(bootRuntime.includes("window.ensureWorkerApiRuntimeLoaded = function (
 assert.ok(bootRuntime.indexOf("{ label: 'report-render'") < bootRuntime.indexOf("{ label: 'xlsx-vendor'"), 'interactive report runtime warmup should precede spreadsheet import warmup');
 assert.ok(bootRuntime.indexOf("{ label: 'teacher-analysis'") < bootRuntime.indexOf("{ label: 'xlsx-vendor'"), 'interactive teacher runtime warmup should precede spreadsheet import warmup');
 assert.ok(bootRuntime.includes('window.setTimeout(preload, 240);'), 'desktop hotspot prefetch should begin before runtime hydration work');
+assert.ok(bootRuntime.includes('const prioritySteps = ['), 'desktop hotspot warmup should declare an interactive priority batch');
+assert.ok(bootRuntime.includes('Promise.allSettled(prioritySteps.map(warmStep))'), 'interactive runtime warmup should execute independent hot bundles concurrently');
+assert.ok(bootRuntime.includes("scheduleWarmup('hotspot-runtime:priority', runPrioritySteps)"), 'interactive runtime warmup should retain idle scheduling for boot responsiveness');
 assert.ok(bootRuntime.includes("'renderMultiPeriodComparison'"), 'boot-runtime.js should keep the progress multi-period compare entry lazy-loadable');
 assert.ok(bootRuntime.includes("'exportMultiPeriodComparison'"), 'boot-runtime.js should keep the progress multi-period export entry lazy-loadable');
 assert.ok(bootRuntime.includes('loadAll()'), 'runtime skill loader should support full loading');

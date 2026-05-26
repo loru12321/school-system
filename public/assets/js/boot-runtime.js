@@ -3151,17 +3151,20 @@ function scheduleHotspotRuntimeWarmup() {
     if (getRuntimeLoadProfile() === 'lazy' || isRuntimeMobileViewport()) return;
     window.__HOTSPOT_RUNTIME_WARMUP_SCHEDULED__ = true;
 
-    const steps = [
+    const prioritySteps = [
         { label: 'report-render', loader: () => window.ensureReportRenderRuntimeLoaded?.() },
         { label: 'teacher-analysis', loader: () => window.ensureTeacherAnalysisMainRuntimeLoaded?.() },
         { label: 'teaching-management', loader: () => window.ensureTeachingManagementRuntimeLoaded?.() },
+        { label: 'student-compare', loader: () => window.ensureStudentCompareRuntimeLoaded?.() }
+    ];
+    const deferredSteps = [
         { label: 'school-profile', loader: () => window.ensureSchoolProfileRuntimeLoaded?.() },
-        { label: 'student-compare', loader: () => window.ensureStudentCompareRuntimeLoaded?.() },
         { label: 'town-submodule-compare', loader: () => window.ensureTownSubmoduleCompareRuntimeLoaded?.() },
         { label: 'freshman-exam', loader: () => window.ensureFreshmanExamRuntimeLoaded?.() },
         { label: 'xlsx-vendor', loader: () => window.ensureXlsxVendorLoaded?.() },
         { label: 'app-download', loader: () => window.ensureAppDownloadRuntimeLoaded?.() }
     ];
+    const steps = prioritySteps.concat(deferredSteps);
 
     const preload = () => {
         try {
@@ -3177,32 +3180,41 @@ function scheduleHotspotRuntimeWarmup() {
         }
     };
 
+    const warmStep = (step) => Promise.resolve()
+        .then(() => (typeof step.loader === 'function' ? step.loader() : undefined))
+        .catch((error) => console.warn(`[boot-runtime] hotspot runtime warmup failed: ${step.label}`, error));
+
+    const scheduleWarmup = (label, run) => {
+        if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
+            window.SystemPerformance.scheduleIdle(run, { label, delay: 120, timeout: 2200 });
+        } else if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(run, { timeout: 2200 });
+        } else {
+            window.setTimeout(run, 120);
+        }
+    };
+
     const runStep = (index = 0) => {
-        if (index >= steps.length) return;
-        const step = steps[index];
+        if (index >= deferredSteps.length) return;
+        const step = deferredSteps[index];
         const run = () => {
-            Promise.resolve()
-                .then(() => (typeof step.loader === 'function' ? step.loader() : undefined))
-                .catch((error) => console.warn(`[boot-runtime] hotspot runtime warmup failed: ${step.label}`, error))
+            warmStep(step)
                 .finally(() => {
                     window.setTimeout(() => runStep(index + 1), 650);
                 });
         };
-        if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
-            window.SystemPerformance.scheduleIdle(run, { label: `hotspot-runtime:${step.label}`, delay: 120, timeout: 2200 });
-            return;
-        }
-        if (typeof window.requestIdleCallback === 'function') {
-            window.requestIdleCallback(run, { timeout: 2200 });
-            return;
-        }
-        window.setTimeout(run, 120);
+        scheduleWarmup(`hotspot-runtime:${step.label}`, run);
+    };
+
+    const runPrioritySteps = () => {
+        Promise.allSettled(prioritySteps.map(warmStep))
+            .finally(() => window.setTimeout(() => runStep(0), 650));
     };
 
     runAfterAppModulesReady(() => {
         window.setTimeout(preload, 240);
         window.setTimeout(() => {
-            runStep(0);
+            scheduleWarmup('hotspot-runtime:priority', runPrioritySteps);
         }, 1400);
     });
 }
