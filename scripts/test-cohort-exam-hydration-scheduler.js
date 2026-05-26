@@ -1,0 +1,64 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+
+async function run() {
+    const source = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
+    const start = source.indexOf('const CohortExamHydrationScheduler = (() => {');
+    const endMarker = 'window.CohortExamHydrationScheduler = CohortExamHydrationScheduler;';
+    const end = source.indexOf(endMarker, start) + endMarker.length;
+    assert.ok(start >= 0 && end > start, 'hydration scheduler source should be present');
+
+    const requests = [];
+    const window = {
+        CloudManager: {
+            fetchCohortExamsToLocal(cohortId, options) {
+                requests.push({ cohortId, options: { ...options } });
+                return Promise.resolve({ success: true });
+            }
+        }
+    };
+    const context = {
+        window,
+        CURRENT_COHORT_ID: '2022',
+        readWorkspaceCohortId: () => '2022',
+        tryAutoRestoreWorkspaceExam: () => true,
+        scheduleExamSelectorRefresh: () => {},
+        setTimeout,
+        clearTimeout,
+        Promise,
+        Map,
+        Math,
+        Number,
+        String,
+        Object,
+        console
+    };
+    window.window = window;
+    vm.runInNewContext(source.slice(start, end), context, { filename: 'cohort-hydration-scheduler.js' });
+
+    const quick = window.CohortExamHydrationScheduler.schedule('2022', {
+        delay: 30,
+        minCount: 1,
+        latestOnly: true
+    });
+    const comparison = window.CohortExamHydrationScheduler.schedule('2022', {
+        delay: 0,
+        minCount: 2
+    });
+
+    assert.strictEqual(quick, comparison, 'replacement scheduling must preserve the original promise');
+    await Promise.all([quick, comparison]);
+    assert.strictEqual(requests.length, 1, 'merged hydration demand should issue only one cloud read');
+    assert.strictEqual(requests[0].cohortId, '2022');
+    assert.strictEqual(requests[0].options.minCount, 2, 'comparison demand should upgrade quick hydration');
+    assert.strictEqual(requests[0].options.latestOnly, undefined, 'upgraded hydration must not load only one exam');
+
+    console.log('cohort exam hydration scheduler tests passed');
+}
+
+run().catch((error) => {
+    console.error(error);
+    process.exit(1);
+});

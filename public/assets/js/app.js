@@ -7508,7 +7508,6 @@ async function switchCohort(cohortId, options = {}) {
     }
     UI.loading(true, "正在从云端拉取 [" + cohortKey + "] 的数据...");
 
-    // 1. 记录当前选择的届别
     CURRENT_EXAM_ID = '';
     COHORT_DB = null;
     syncWorkspaceRuntimeState({
@@ -7524,7 +7523,6 @@ async function switchCohort(cohortId, options = {}) {
     const examCohortLabel = document.getElementById('exam-cohort-label');
     if (examCohortLabel) examCohortLabel.innerText = label;
 
-    // 🟢 [Bug #4 修复] 切换前先清空全局数据，防止残留上一届别的数据
     clearDataRuntimeState();
     setTeacherMap({});
     setTeacherSchoolMap({});
@@ -7542,20 +7540,16 @@ async function switchCohort(cohortId, options = {}) {
         });
     }
 
-    // 2. 优先读本地缓存。首次进入时不再用云端请求挡住工作台显示。
     const data=options.preloadedData||await DB.get(cohortKey,{localOnly:options.fastEnter===true});
 
     if (data) {
-        // 3. 恢复数据
         COHORT_DB = data.COHORT_DB || null;
         CURRENT_COHORT_ID = data.CURRENT_COHORT_ID || cohortId;
         CURRENT_COHORT_META = data.CURRENT_COHORT_META || CURRENT_COHORT_META;
         CURRENT_EXAM_ID = data.CURRENT_EXAM_ID || '';
         syncRuntimeStateToWindow();
 
-        // 优先使用届别考试快照
         if (COHORT_DB && COHORT_DB.currentExamId && CohortDB.applyExamToWorkspace(COHORT_DB.currentExamId, { renderTables: false })) {
-            // 已加载当前考试快照
         } else {
             syncDataRuntimeState({
                 rawData: data.RAW_DATA || [],
@@ -7573,26 +7567,21 @@ async function switchCohort(cohortId, options = {}) {
         });
         scheduleTeacherSyncPrompt();
 
-        // ★★★ 关键：恢复账号数据 ★★★
         if (data.AUTH_DB) {
             Auth.db = persistLocalAuthDb(data.AUTH_DB);
             appDebug("✅ 账号已切换为 [" + cohortKey + "] 的版本");
         }
 
-        // ★★★ 关键：恢复指标参数输入框 (安全检查版) ★★★
         if (data.INDICATOR_PARAMS) {
             const indicator = setIndicatorState(data.INDICATOR_PARAMS);
             const i1 = document.getElementById('ind1');
             const i2 = document.getElementById('ind2');
-            // 🟢 修复：先检查元素是否存在，再赋值
             if (i1) i1.value = indicator.ind1 || '';
             if (i2) i2.value = indicator.ind2 || '';
 
-            // 同时更新内存
             setIndicatorState(indicator);
         }
 
-        // 恢复其他变量
         if (data.TARGETS) {
             setTargetsState(data.TARGETS);
         }
@@ -7605,13 +7594,11 @@ async function switchCohort(cohortId, options = {}) {
         if (data.FB_CLASSES) setFbClassesState(data.FB_CLASSES);
         if (data.MP_SNAPSHOTS) setMpSnapshotsState(data.MP_SNAPSHOTS);
 
-        // 4. 刷新界面
         const restoredGrade = getEffectiveGrade(getExamMetaFromUI());
         if (restoredGrade) applyModeByGrade(restoredGrade);
         updateSchoolSelect();
         updateMySchoolSelect();
 
-        // 如果有配置名，刷新导航
         const badge = document.getElementById('mode-badge');
         if (badge && CONFIG.name) badge.innerText = CONFIG.name;
         renderNavigation();
@@ -7670,7 +7657,6 @@ async function switchCohort(cohortId, options = {}) {
                 }
             }
         }
-        // 4. 如果云端没这个届别的数据（新档案）
         clearDataRuntimeState();
         COHORT_DB = {
             cohortId,
@@ -7685,10 +7671,8 @@ async function switchCohort(cohortId, options = {}) {
 
         Auth.db = persistLocalAuthDb({ admin: { pass: MASKED_PASSWORD_DISPLAY }, teachers: [], parents: [] });
 
-        // 清空指标输入框 (安全检查版)
         const i1 = document.getElementById('ind1');
         const i2 = document.getElementById('ind2');
-        // 🟢 修复：先检查元素是否存在，再清空
         if (i1) i1.value = '';
         if (i2) i2.value = '';
 
@@ -7711,7 +7695,6 @@ async function switchCohort(cohortId, options = {}) {
     return true;
 }
 
-// 兼容旧入口
 window.switchProject = switchCohort;
 
 let __workspaceRefreshTimer = null;
@@ -7859,7 +7842,7 @@ window.runExamSelectorRefresh = runExamSelectorRefresh;
 
 const CohortExamHydrationScheduler = (() => {
     const tasks = new Map();
-    const timers = new Map();
+    const pending = new Map();
     const lastRun = new Map();
     const MIN_INTERVAL_MS = 2500;
 
@@ -7911,22 +7894,45 @@ const CohortExamHydrationScheduler = (() => {
         return task;
     }
 
+    function mergeOptions(base = {}, next = {}) {
+        const minCount = Math.max(1, Number(base.minCount || 2), Number(next.minCount || 2));
+        return Object.assign({}, base, next, {
+            minCount,
+            background: base.background !== false && next.background !== false,
+            latestOnly: minCount === 1 && base.latestOnly === true && next.latestOnly === true
+        });
+    }
+
     function schedule(cohortId, options = {}) {
         const cid = getCurrentCohortForHydration(cohortId);
         if (!cid) return Promise.resolve({ success: false, skipped: true, message: '未选择届别' });
         if (tasks.has(cid)) return tasks.get(cid);
-        if (timers.has(cid)) {
-            clearTimeout(timers.get(cid));
-            timers.delete(cid);
-        }
-        const delay = Math.max(0, Number(options.delay || 0));
-        return new Promise((resolve) => {
-            const timer = setTimeout(() => {
-                timers.delete(cid);
-                run(cid, options).then(resolve);
-            }, delay);
-            timers.set(cid, timer);
+        const incoming = Object.assign({}, options, {
+            delay: Math.max(0, Number(options.delay || 0)),
+            minCount: Math.max(1, Number(options.minCount || 2))
         });
+        const current = pending.get(cid);
+        if (current) {
+            current.o = mergeOptions(current.o, incoming);
+            if (incoming.delay < current.d) {
+                clearTimeout(current.t);
+                current.a(incoming.delay);
+            }
+            return current.p;
+        }
+        const queued = { o: incoming, d: incoming.delay };
+        queued.p = new Promise((resolve, reject) => {
+            queued.a = (delay) => {
+                queued.d = delay;
+                queued.t = setTimeout(() => {
+                    pending.delete(cid);
+                    run(cid, queued.o).then(resolve, reject);
+                }, delay);
+            };
+        });
+        pending.set(cid, queued);
+        queued.a(incoming.delay);
+        return queued.p;
     }
 
     return { run, schedule, refreshViews: refreshHydratedExamViews };
@@ -7935,32 +7941,23 @@ const CohortExamHydrationScheduler = (() => {
 window.CohortExamHydrationScheduler = CohortExamHydrationScheduler;
 
 
-// 4. 启动时自动检查恢复 (程序入口)
 window.addEventListener('load', async () => {
     try { CloudSyncIndicator.start(); } catch (e) { console.warn('CloudSyncIndicator start failed:', e); }
 
-    // ✋ 🔴 [已移除]：删除了 MobApp.init() 的拦截逻辑，确保手机端也继续执行后续的完整初始化流程 🔴
-
-    // 0. 初始化届别选择器状态
     if (typeof CohortManager !== 'undefined') {
         CohortManager.init();
     }
     const selector = document.getElementById('cohort-selector');
     if (selector) selector.value = readWorkspaceCohortId() || '';
 
-    // 1. 初始化鉴权 (最先执行)
     if (typeof Auth !== 'undefined') {
         Auth.init();
     }
 
-    // 2. 教程检查
     if (typeof HelpSystem !== 'undefined') {
         HelpSystem.checkFirstRun();
     }
 
-    // (setInterval 代码在第一步已经修改过，这里不再重复展示，保持第一步的代码即可)
-
-    // 🟢 分支一：这是分发版 (有内置数据) -> 加载内置数据
     if (window.EMBEDDED_DB) {
         appDebug("检测到内置数据包，正在装载...");
         const loader = document.getElementById('global-loader');
@@ -7970,7 +7967,6 @@ window.addEventListener('load', async () => {
         document.getElementById('app').classList.add('hidden');
         const db = window.EMBEDDED_DB;
 
-        // 恢复内存
         syncDataRuntimeState({
             rawData: db.RAW_DATA || [],
             schools: db.SCHOOLS || {},
@@ -7982,12 +7978,10 @@ window.addEventListener('load', async () => {
         setTeacherSchoolMap(db.TEACHER_SCHOOL_MAP || {});
         writeCurrentSchool(db.MY_SCHOOL || '');
 
-        // 恢复账号 (分发版核心)
         if (db.AUTH_DB) {
             if (typeof Auth !== 'undefined') Auth.db = persistLocalAuthDb(db.AUTH_DB);
         }
 
-        // 恢复指标参数
         if (db.INDICATOR_PARAMS) {
             setTimeout(() => {
                 const i1 = document.getElementById('ind1');
@@ -7998,7 +7992,6 @@ window.addEventListener('load', async () => {
         }
         if (db.TARGETS) setTargetsState(db.TARGETS);
 
-        // 刷新
         updateSchoolSelect();
         updateMySchoolSelect();
         document.getElementById('mode-mask').style.display = 'none';
@@ -8008,9 +8001,7 @@ window.addEventListener('load', async () => {
         UI.toast("✅ 数据已自动加载 (分发版模式)", "success");
     }
 
-    // 🟠 分支二：这是管理员原版 -> 从云端/本地加载
     else {
-        // 🟢 [Bug #4 修复] 启动时校验 cohort key 一致性
         const savedCohortId = readWorkspaceCohortId();
         const savedProjectKey = readWorkspaceProjectKey();
         if (savedCohortId && savedProjectKey) {
@@ -8021,22 +8012,18 @@ window.addEventListener('load', async () => {
             }
         }
 
-        // 🔥 关键：读取当前选中的项目 Key
         const currentKey = readWorkspaceProjectKey() || 'autosave_backup';
         const hasSessionUser = AuthState.hasActiveSession(window.Auth && Auth.currentUser);
         const backup = await DB.get(currentKey, { localOnly: !hasSessionUser });
         const isForceRestore = localStorage.getItem('SYS_FORCE_RESTORE');
 
-        // 定义统一的恢复函数
         const performRestore = async () => {
             await Perf.runAsync(async () => {
-                // 恢复届别与考试主状态（历史考试下拉依赖）
                 COHORT_DB = backup.COHORT_DB || COHORT_DB || null;
                 CURRENT_COHORT_ID = backup.CURRENT_COHORT_ID || CURRENT_COHORT_ID || readWorkspaceCohortId() || '';
                 CURRENT_COHORT_META = backup.CURRENT_COHORT_META || CURRENT_COHORT_META || null;
                 CURRENT_EXAM_ID = backup.CURRENT_EXAM_ID || CURRENT_EXAM_ID || readWorkspaceExamId() || '';
 
-                // 恢复基础数据
                 syncDataRuntimeState({
                     rawData: backup.RAW_DATA || [],
                     schools: backup.SCHOOLS || {},
@@ -8048,20 +8035,14 @@ window.addEventListener('load', async () => {
                 setTeacherSchoolMap(backup.TEACHER_SCHOOL_MAP || {});
                 writeCurrentSchool(backup.MY_SCHOOL || '');
 
-                // ★★★ 恢复账号 ★★★
                 if (backup.AUTH_DB) {
                     Auth.db = persistLocalAuthDb(backup.AUTH_DB);
                     appDebug("✅ 账号信息已同步");
                 }
 
-                // ★★★ 恢复指标参数 (修复版) ★★★
                 if (backup.INDICATOR_PARAMS) {
-                    // 1. 核心修复：必须更新全局内存变量！
-                    // 这样当你打开管理面板时，switchTab 才能读取到正确的值
                     const indicator = setIndicatorState(backup.INDICATOR_PARAMS);
 
-                    // 2. 尝试回填到 DOM (使用正确的新 ID: dm_ind..._input)
-                    // 使用 setTimeout 确保模态框DOM已就绪
                     setTimeout(() => {
                         const dm1 = document.getElementById('dm_ind1_input');
                         const dm2 = document.getElementById('dm_ind2_input');
@@ -8079,7 +8060,6 @@ window.addEventListener('load', async () => {
                     persistSchoolAliasSettingsLocal();
                 }
 
-                // 恢复其他
                 if (backup.PREV_DATA) setPrevDataState(backup.PREV_DATA);
                 if (backup.HISTORY_ARCHIVE) setHistoryArchiveState(backup.HISTORY_ARCHIVE);
                 if (backup.FB_CLASSES) setFbClassesState(backup.FB_CLASSES);
@@ -8097,7 +8077,6 @@ window.addEventListener('load', async () => {
                 const restoredGrade = getEffectiveGrade(restoredExamMeta);
                 if (restoredGrade) applyModeByGrade(restoredGrade);
 
-                // 先展示主工作区，重表格和下拉框刷新改到后续帧补齐。
                 const modeMask = document.getElementById('mode-mask');
                 const appRoot = document.getElementById('app');
                 if (modeMask) modeMask.style.display = 'none';
@@ -8144,11 +8123,9 @@ window.addEventListener('load', async () => {
             ) &&
             RAW_DATA.length === 0
         ) {
-            // 发现缓存（成绩或历史考试库）时都恢复
             await performRestore();
         }
         else {
-            // 无数据，显示初始模式选择
             document.getElementById('mode-mask').style.display = 'flex';
         }
     }
@@ -8160,12 +8137,9 @@ window.addEventListener('load', async () => {
 });
 
 
-// 性能优化工具
 const Perf = {
-    // 异步任务包装器：解决点击按钮后界面“假死”的问题
     runAsync: (fn, loadingText) => {
         UI.loading(true, loadingText);
-        // 利用 setTimeout 将任务推到下一帧，让 UI 先渲染出 Loading
         setTimeout(async () => {
             try {
                 await fn();
