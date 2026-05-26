@@ -31,6 +31,63 @@
         return manager[name].apply(manager, args || []);
     }
 
+    function sameSchoolName(left, right) {
+        const leftName = String(left || '').trim();
+        const rightName = String(right || '').trim();
+        if (!leftName || !rightName) return leftName === rightName;
+        if (typeof root.areSchoolNamesEquivalent === 'function') {
+            return root.areSchoolNamesEquivalent(leftName, rightName);
+        }
+        return leftName === rightName;
+    }
+
+    function buildTeacherImportMaps(assignments) {
+        const teacherMap = {};
+        const schoolMap = {};
+        const conflicts = [];
+        const imported = {};
+
+        (Array.isArray(assignments) ? assignments : []).forEach((assignment) => {
+            const key = String(assignment && assignment.key || '').trim();
+            const teacher = String(assignment && assignment.teacher || '').trim();
+            const school = String(assignment && assignment.school || '').trim();
+            if (!key || !teacher) return;
+
+            const current = imported[key];
+            if (current) {
+                const isSameSchool = sameSchoolName(current.school, school);
+                if (!isSameSchool || current.teacher !== teacher) {
+                    conflicts.push({
+                        key,
+                        first: current,
+                        next: { key, teacher, school }
+                    });
+                }
+                return;
+            }
+
+            imported[key] = { key, teacher, school };
+            teacherMap[key] = teacher;
+            if (school) schoolMap[key] = school;
+        });
+
+        return {
+            teacherMap,
+            schoolMap,
+            conflicts,
+            count: Object.keys(teacherMap).length
+        };
+    }
+
+    function formatTeacherImportConflictMessage(conflicts) {
+        const conflictLines = (Array.isArray(conflicts) ? conflicts : []).slice(0, 5).map((conflict) => {
+            const firstSchool = conflict.first.school || '未填写学校';
+            const nextSchool = conflict.next.school || '未填写学校';
+            return `- ${conflict.key}: ${firstSchool} / ${nextSchool}`;
+        });
+        return `❌ 任课表存在不能安全合并的重复课程\n\n当前任课数据按“班级 + 学科”保存，检测到以下记录会互相覆盖：\n${conflictLines.join('\n')}\n\n对于存在重复班级/学科的学校，请分别上传任课表，并将 Sheet 名改为学校名称。原有任课数据未被修改。`;
+    }
+
     function switchTeacherTerm(manager, termId) {
         if (!termId) return;
         const exactTermId = String(termId || '').trim();
@@ -170,6 +227,8 @@
         switchTeacherTerm,
         syncTeacherHistory,
         ensureTeacherMap,
-        refreshTeacherAnalysis
+        refreshTeacherAnalysis,
+        buildTeacherImportMaps,
+        formatTeacherImportConflictMessage
     };
 });

@@ -126,6 +126,32 @@ async function run() {
     assert.strictEqual(analysisRenderCount, 1);
     assert.strictEqual(statusPanelCount, 1);
 
+    const oneSchoolImport = runtime.buildTeacherImportMaps([
+        { key: '9.1_数学', teacher: '张老师', school: '银山实验学校' },
+        { key: '9.1_数学', teacher: '张老师', school: '银山实验学校' },
+        { key: '9.2_数学', teacher: '李老师', school: '银山实验学校' }
+    ]);
+    assert.strictEqual(oneSchoolImport.count, 2);
+    assert.deepStrictEqual(oneSchoolImport.conflicts, []);
+    assert.deepStrictEqual(oneSchoolImport.schoolMap, {
+        '9.1_数学': '银山实验学校',
+        '9.2_数学': '银山实验学校'
+    });
+
+    const multiSchoolCollision = runtime.buildTeacherImportMaps([
+        { key: '9.1_数学', teacher: '张老师', school: '银山实验学校' },
+        { key: '9.1_数学', teacher: '王老师', school: '第二实验学校' }
+    ]);
+    assert.strictEqual(multiSchoolCollision.conflicts.length, 1);
+    assert.strictEqual(multiSchoolCollision.conflicts[0].key, '9.1_数学');
+    assert.ok(runtime.formatTeacherImportConflictMessage(multiSchoolCollision.conflicts).includes('原有任课数据未被修改'));
+
+    const conflictingTeacher = runtime.buildTeacherImportMaps([
+        { key: '9.1_数学', teacher: '张老师', school: '银山实验学校' },
+        { key: '9.1_数学', teacher: '王老师', school: '银山实验学校' }
+    ]);
+    assert.strictEqual(conflictingTeacher.conflicts.length, 1);
+
     console.log('data-manager-teacher-runtime tests passed');
 }
 

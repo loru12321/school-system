@@ -6569,7 +6569,6 @@ const DataManager = {
                 // 解析Excel
                 const data = new Uint8Array(e.target.result);
                 const wb = XLSX.read(data, { type: 'array' });
-                const teacherSchoolMap = { ...(window.TEACHER_SCHOOL_MAP || {}) };
 
                 if (!wb.SheetNames || wb.SheetNames.length === 0) {
                     if (window.UI) UI.loading(false);
@@ -6582,9 +6581,7 @@ const DataManager = {
                 // 导入数据
                 let count = 0;
                 const errors = [];
-                // 🟢 [修复]：开始导入前准备全新的 Map，完全替换旧数据，避免遗留错误届别或已删除教师的数据
-                const newTeacherMap = {};
-                const newTeacherSchoolMap = {};
+                const teacherAssignments = [];
 
                 wb.SheetNames.forEach(sheetName => {
                     const json = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
@@ -6615,10 +6612,11 @@ const DataManager = {
                         const schoolName = String(extractedSchool || '').trim();
 
                         if (className && subject && teacher) {
-                            const key = `${className}_${subject}`;
-                            newTeacherMap[key] = String(teacher).trim();
-                            if (schoolName) newTeacherSchoolMap[key] = schoolName;
-                            count++;
+                            teacherAssignments.push({
+                                key: `${className}_${subject}`,
+                                teacher: String(teacher).trim(),
+                                school: schoolName
+                            });
                         } else {
                             if (errors.length < 5) {
                                 errors.push(`[${sheetName}]第${idx + 2}行: 班级=${className || '空'}, 学科=${subject || '空'}, 教师=${teacher || '空'}`);
@@ -6626,6 +6624,19 @@ const DataManager = {
                         }
                     });
                 });
+
+                const importResult = requireDataManagerTeacherRuntime().buildTeacherImportMaps(teacherAssignments);
+                if (importResult.conflicts.length > 0) {
+                    if (window.UI) UI.loading(false);
+                    alert(requireDataManagerTeacherRuntime().formatTeacherImportConflictMessage(importResult.conflicts));
+                    input.value = '';
+                    return;
+                }
+
+                // Apply a complete replacement only after the workbook passes conflict validation.
+                const newTeacherMap = importResult.teacherMap;
+                const newTeacherSchoolMap = importResult.schoolMap;
+                count = importResult.count;
 
                 // 应用新数据
                 if (count > 0) {
@@ -15536,7 +15547,7 @@ function downloadTemplate(type) {
                 ["702", "数学", "王老师"]
             ];
             filename = "教师任课信息_导入模板.xlsx";
-            sheetName = "任课表";
+            sheetName = "请改为学校名称";
             break;
     }
 
