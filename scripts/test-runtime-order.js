@@ -505,6 +505,7 @@ assert.ok(bootRuntime.includes('const prioritySteps = ['), 'desktop hotspot warm
 assert.ok(bootRuntime.includes('Promise.allSettled(prioritySteps.map(warmStep))'), 'interactive runtime warmup should execute independent hot bundles concurrently');
 assert.ok(bootRuntime.includes("scheduleWarmup('hotspot-runtime:priority', runPrioritySteps)"), 'interactive runtime warmup should retain idle scheduling for boot responsiveness');
 assert.ok(bootRuntime.indexOf("{ label: 'town-submodule-compare'") < bootRuntime.indexOf('const deferredSteps = ['), 'summary interaction runtimes should remain in the priority batch');
+assert.ok(bootRuntime.includes('runAfterAppModulesReady(function () {\n    retryInstallLateHook(installHistoryDoQueryWrapper'), 'late workspace hooks should not retry on the unauthenticated login screen');
 assert.ok(bootRuntime.includes("'renderMultiPeriodComparison'"), 'boot-runtime.js should keep the progress multi-period compare entry lazy-loadable');
 assert.ok(bootRuntime.includes("'exportMultiPeriodComparison'"), 'boot-runtime.js should keep the progress multi-period export entry lazy-loadable');
 assert.ok(bootRuntime.includes('loadAll()'), 'runtime skill loader should support full loading');

@@ -3365,16 +3365,18 @@ function retryInstallLateHook(installer, options) {
     }
 }
 
-retryInstallLateHook(installHistoryDoQueryWrapper, {
-    onExhausted: function () {
-        console.warn('[boot-runtime] history compare hook install timed out');
-    }
-});
+runAfterAppModulesReady(function () {
+    retryInstallLateHook(installHistoryDoQueryWrapper, {
+        onExhausted: function () {
+            console.warn('[boot-runtime] history compare hook install timed out');
+        }
+    });
 
-retryInstallLateHook(installDataManagerSqlHooks, {
-    onExhausted: function () {
-        console.warn('[boot-runtime] SQL hook timeout');
-    }
+    retryInstallLateHook(installDataManagerSqlHooks, {
+        onExhausted: function () {
+            console.warn('[boot-runtime] SQL hook timeout');
+        }
+    });
 });
 
 </script>
