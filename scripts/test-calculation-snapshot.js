@@ -366,7 +366,7 @@ async function main() {
                 });
                 Object.keys(window.SCHOOLS || {}).forEach((schoolName) => {
                     const metrics = window.SCHOOLS?.[schoolName]?.metrics?.[subject];
-                    if (!metrics || schoolName === window.MY_SCHOOL || !isTownshipSchoolName(schoolName)) return;
+                    if (!metrics || window.sameAppSchoolName(schoolName, window.MY_SCHOOL) || !isTownshipSchoolName(schoolName)) return;
                     rankingData.push({
                         subject,
                         name: schoolName,

@@ -24,6 +24,8 @@ const pkg = JSON.parse(read(packageFile));
     'getSummaryTownshipSchools',
     'setSummaryHtmlIfChanged',
     'bindSummaryProfileEvents',
+    'const maxAvg = list.reduce((max, school) => (',
+    'Math.min(100, m.avg / maxAvg * 100).toFixed(1)',
     'subjectRenderKey',
     'dataset.summaryRenderSig',
     'reportHtmlCacheKey',

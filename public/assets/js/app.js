@@ -917,10 +917,14 @@ window.DEFAULT_MY_SCHOOL_NAME = DEFAULT_MY_SCHOOL_NAME;
 const SchoolStateRuntime = window.SchoolState || null;
 
 function readCurrentSchool() {
-    const nextSchool = DEFAULT_MY_SCHOOL_NAME;
-    if (SchoolStateRuntime && typeof SchoolStateRuntime.setCurrentSchool === 'function') {
-        SchoolStateRuntime.setCurrentSchool(nextSchool);
-    }
+    const nextSchool = SchoolStateRuntime && typeof SchoolStateRuntime.getCurrentSchool === 'function'
+        ? String(SchoolStateRuntime.getCurrentSchool() || '').trim()
+        : String(
+            (typeof MY_SCHOOL !== 'undefined' ? MY_SCHOOL : '')
+            || window.MY_SCHOOL
+            || localStorage.getItem('MY_SCHOOL')
+            || DEFAULT_MY_SCHOOL_NAME
+        ).trim();
     if (typeof MY_SCHOOL !== 'undefined') MY_SCHOOL = nextSchool;
     window.MY_SCHOOL = nextSchool;
     if (nextSchool) {
@@ -930,7 +934,7 @@ function readCurrentSchool() {
 }
 
 function writeCurrentSchool(school) {
-    const nextSchool = DEFAULT_MY_SCHOOL_NAME;
+    const nextSchool = String(school || '').trim() || DEFAULT_MY_SCHOOL_NAME;
     if (SchoolStateRuntime && typeof SchoolStateRuntime.setCurrentSchool === 'function') {
         SchoolStateRuntime.setCurrentSchool(nextSchool);
     } else {
@@ -10710,7 +10714,6 @@ function renderTables() {
 
     const theadTotal = document.querySelector('#tb-total thead tr');
 
-    // 1. 获取所有学校列表 (移除任何排序过滤，先拿原始数据)
     let list = townshipSchools.slice();
 
     appDebug(`系统共识别到 ${list.length} 所学校：`, list.map(s => s.name));
@@ -10722,10 +10725,11 @@ function renderTables() {
         `;
     setSummaryHtmlIfChanged(theadTotal, totalHeadHtml, `${summarySignature}::total-head`);
 
-    // 2. 排序
     list.sort((a, b) => (a.rank2Rate || 9999) - (b.rank2Rate || 9999));
+    const maxAvg = list.reduce((max, school) => (
+        Math.max(max, Number(school.metrics?.total?.avg || 0))
+    ), 0) || 100;
 
-    // 3. 渲染
     let html = '';
     list.forEach(s => {
         const m = s.metrics.total || {};
@@ -10734,9 +10738,7 @@ function renderTables() {
         const rP = m.ratedPass || 0;
         const isMySchool = sameAppSchoolName(s.name, MY_SCHOOL);
 
-        // 计算数据条百分比 (假设满分按全镇最高均分算，或者固定值如100/120)
-        const maxAvg = list[0].metrics.total?.avg || 100; // 取第一名均分作为基准
-        const barPercent = m.avg ? (m.avg / maxAvg * 100).toFixed(1) : 0;
+        const barPercent = m.avg ? Math.min(100, m.avg / maxAvg * 100).toFixed(1) : 0;
         const safeSchoolName = escapeAppHtml(s.name);
 
         html += `<tr class="${isMySchool ? 'bg-highlight' : ''}">
@@ -10745,7 +10747,6 @@ function renderTables() {
                 </td>
                 <td data-label="人数">${m.count || 0}</td>
 
-                <!-- 注入样式变量 --percent -->
                 <td data-label="平均分" class="data-bar-bg" style="--percent: ${barPercent}%">
                     ${formatRankDisplay(m.avg || 0, s.rankings.total?.avg || 0)}
                 </td>
@@ -10763,7 +10764,6 @@ function renderTables() {
     bindSummaryProfileEvents(tbTotal);
     applySchoolModeToTables();
 
-    // ... (下接各科渲染逻辑，保持不变) ...
     const subContainer = document.getElementById('subject-tables-container');
     const sideNavSubjects = document.getElementById('side-nav-subjects-container');
     const subjectRenderKey = `${summarySignature}::subjects`;
@@ -13292,7 +13292,6 @@ async function doQuery(targetStudent = null) {
         }
     }
 
-    // 🆕 统一提取历史数据并传给组件
     const history = getCachedStudentReportHistory(stu);
 
     scheduleStudentReportCharts(stu, history);
@@ -13305,14 +13304,12 @@ async function doQuery(targetStudent = null) {
         try { if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(stu); } catch (e) { console.error(e); }
     }
 
-    // 隐藏对比区域
     const { compareSection } = getReportDomCache();
     if (compareSection && ReportHistoryPerfCache.lastCompareHiddenKey !== strengthKey) {
         ReportHistoryPerfCache.lastCompareHiddenKey = strengthKey;
         compareSection.style.display = 'none';
     }
 
-    // 自动滚动到成绩单区域
     const reportScrollKey = `${getReportStudentIdentity(stu)}::${effectiveCurrentExamId || ''}::${selectedReportExamIds.join('|')}`;
     if (ReportHistoryPerfCache.lastScrollKey !== reportScrollKey) {
         ReportHistoryPerfCache.lastScrollKey = reportScrollKey;
@@ -13512,12 +13509,6 @@ function generateStudentComment(student) {
     return parts.join("");
 }
 
-/**
- * 用当前考试的科目集重新计算上期总分
- * 解决跨期次科目集不同（如期中6科含政治 vs 期末5科不含）导致对比差值完全错误的问题
- * @param {Object} prevRecord - 上期学生记录（需含 scores 对象）
- * @returns {number|string} - 归一化后的总分，或 '-' 表示科目不匹配
- */
 function getComparisonTotalSubjects() {
     const subsForTotal = (CONFIG.totalSubs === 'auto') ? SUBJECTS : CONFIG.totalSubs;
     return Array.isArray(subsForTotal) ? subsForTotal.filter(Boolean) : [];
@@ -13578,9 +13569,14 @@ function buildComparisonStudentRankContext(allStudents, totalSubjects = getCompa
     });
     const schoolRankMaps = new Map();
     const classRankMaps = new Map();
+    const resolveRankSchoolKey = (school) => {
+        const requested = String(school || '').trim();
+        if (totalsBySchool.has(requested)) return requested;
+        return Array.from(totalsBySchool.keys()).find(key => sameAppSchoolName(key, requested)) || requested;
+    };
 
     const getSchoolRankMap = (school) => {
-        const schoolKey = String(school || '').trim();
+        const schoolKey = resolveRankSchoolKey(school);
         if (!schoolRankMaps.has(schoolKey)) {
             schoolRankMaps.set(
                 schoolKey,
@@ -13595,7 +13591,7 @@ function buildComparisonStudentRankContext(allStudents, totalSubjects = getCompa
     };
 
     const getClassRankMap = (school, className) => {
-        const schoolKey = String(school || '').trim();
+        const schoolKey = resolveRankSchoolKey(school);
         const classKey = classKeyOf(className);
         const cacheKey = `${schoolKey}::${classKey}`;
         if (!classRankMaps.has(cacheKey)) {
@@ -13802,7 +13798,6 @@ function recalcPrevTotal(prevRecord) {
             matchCount++;
         }
     });
-    // 所有科目都必须匹配才对比，否则返回 '-'（科目集差异太大无法有效对比）
     if (matchCount === 0 || matchCount < subsForTotal.length) return '-';
     return sum;
 }
@@ -13813,14 +13808,12 @@ function findPreviousRecord(student) {
         return cloudPrev;
     }
 
-    // 🟢 [Bug #2/#5 修复] 标准化工具函数
     const cleanStr = (str) => String(str || "").trim().replace(/\s+/g, "");
     const normClass = (cls) => {
         let s = String(cls || "").trim();
         return s.replace(/[班级\(\)\.\-gradeclass]/gi, "");
     };
     const matchStudent = (p, targetName, targetClass, targetSchool) => {
-        // PREV_DATA 中的记录结构是 { examId, examFullKey, student: { name, class, school ... } }
         const sObj = p.student || p;
         if (sObj.school && targetSchool && !areSchoolNamesEquivalent(sObj.school, targetSchool)) return false;
         if (cleanStr(sObj.name) !== targetName) return false;
@@ -13847,7 +13840,6 @@ function findPreviousRecord(student) {
     const currentFingerprint = computeExamDataFingerprint(RAW_DATA || []);
 
 
-    // 1. 尝试从 PREV_DATA 查找 (排除当前考试)
     if (window.PREV_DATA && window.PREV_DATA.length > 0) {
         const otherExams = window.PREV_DATA.filter(p => {
             const hid = p.examFullKey || p.examId;
@@ -13859,7 +13851,6 @@ function findPreviousRecord(student) {
         if (match) return match;
     }
 
-    // 🟢 [Bug #2 修复] 2. PREV_DATA为空时，从 COHORT_DB.exams 历史快照中查找上一次考试
     if (typeof CohortDB !== 'undefined') {
         try {
             const db = CohortDB.ensure();

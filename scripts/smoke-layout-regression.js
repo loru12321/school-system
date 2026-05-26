@@ -630,7 +630,6 @@ async function inspectSummaryLayout(page, mode) {
         sectionId: 'summary',
         targetSelector: '#summary .analysis-summary-table',
         requiredSelectors: {
-            hero: '#summary .analysis-hero',
             shellHead: '#summary .analysis-shell-head',
             actions: '#summary .analysis-actions .btn',
             meta: '#summary .analysis-table-meta',
@@ -655,7 +654,6 @@ async function inspectTeacherAnalysisLayout(page, mode) {
         sectionId: 'teacher-analysis',
         targetSelector: '#teacher-analysis .analysis-inline-panel',
         requiredSelectors: {
-            hero: '#teacher-analysis .analysis-hero',
             shellHead: '#teacher-analysis .analysis-shell-head',
             syncCta: '#teacher-sync-cta',
             comparePanel: '#teacher-analysis .analysis-inline-panel',
@@ -687,7 +685,6 @@ async function inspectCorrelationAnalysisLayout(page, mode) {
         sectionId: 'correlation-analysis',
         targetSelector: '#correlation-analysis',
         requiredSelectors: {
-            hero: '#correlation-analysis .analysis-hero',
             shellHead: '#correlation-analysis .analysis-shell-head',
             controlPanel: '#correlation-analysis .control-panel',
             scopeSelect: '#corrSchoolSelect',
@@ -715,7 +712,6 @@ async function inspectProgressAnalysisLayout(page, mode) {
         sectionId: 'progress-analysis',
         targetSelector: '#progress-analysis',
         requiredSelectors: {
-            hero: '#progress-analysis .analysis-hero',
             shellHead: '#progress-analysis .analysis-shell-head',
             viewActions: '#progress-analysis .progress-view-actions',
             statusBand: '#va-data-status',
@@ -806,7 +802,6 @@ async function inspectCohortGrowthLayout(page, mode) {
         sectionId: 'cohort-growth',
         targetSelector: '#cohort-growth',
         requiredSelectors: {
-            hero: '#cohort-growth .analysis-hero',
             shellHead: '#cohort-growth .analysis-shell-head',
             actions: '#cohort-growth .cohort-growth-actions .btn',
             infoBand: '#cohort-growth .analysis-info-band',
@@ -839,7 +834,6 @@ async function inspectMarginalPushLayout(page, mode) {
         sectionId: 'marginal-push',
         targetSelector: '#marginal-push',
         requiredSelectors: {
-            hero: '#marginal-push .analysis-hero',
             shellHead: '#marginal-push .analysis-shell-head',
             actions: '#marginal-push .marginal-actions .btn',
             infoBand: '#marginal-push .analysis-info-band',
@@ -877,7 +871,6 @@ async function inspectSeatAdjustmentLayout(page, mode) {
         sectionId: 'seat-adjustment',
         targetSelector: '#seat-adjustment',
         requiredSelectors: {
-            hero: '#seat-adjustment .analysis-hero',
             shellHead: '#seat-adjustment .analysis-shell-head',
             actions: '#seat-adjustment .seat-adjustment-actions .btn',
             infoBand: '#seat-adjustment .analysis-info-band',

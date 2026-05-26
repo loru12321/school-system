@@ -42,17 +42,18 @@
 
     function getCurrentSchool() {
         const storage = getStorage('localStorage');
-        const nextSchool = DEFAULT_MY_SCHOOL_NAME;
-        if (storage && normalizeText(storage.getItem(CURRENT_SCHOOL_STORAGE)) !== nextSchool) {
-            storage.setItem(CURRENT_SCHOOL_STORAGE, nextSchool);
-        }
-        root.MY_SCHOOL = nextSchool;
+        const nextSchool = normalizeText(
+            root.MY_SCHOOL
+            || (storage && storage.getItem(CURRENT_SCHOOL_STORAGE))
+            || DEFAULT_MY_SCHOOL_NAME
+        );
+        if (!normalizeText(root.MY_SCHOOL)) root.MY_SCHOOL = nextSchool;
         return nextSchool;
     }
 
     function setCurrentSchool(school) {
         const storage = getStorage('localStorage');
-        const nextSchool = DEFAULT_MY_SCHOOL_NAME;
+        const nextSchool = normalizeText(school) || DEFAULT_MY_SCHOOL_NAME;
         if (storage) storage.setItem(CURRENT_SCHOOL_STORAGE, nextSchool);
         root.MY_SCHOOL = nextSchool;
         invalidateAnalyticsKernel();
