@@ -3155,11 +3155,11 @@ function scheduleHotspotRuntimeWarmup() {
         { label: 'report-render', loader: () => window.ensureReportRenderRuntimeLoaded?.() },
         { label: 'teacher-analysis', loader: () => window.ensureTeacherAnalysisMainRuntimeLoaded?.() },
         { label: 'teaching-management', loader: () => window.ensureTeachingManagementRuntimeLoaded?.() },
-        { label: 'student-compare', loader: () => window.ensureStudentCompareRuntimeLoaded?.() }
+        { label: 'student-compare', loader: () => window.ensureStudentCompareRuntimeLoaded?.() },
+        { label: 'school-profile', loader: () => window.ensureSchoolProfileRuntimeLoaded?.() },
+        { label: 'town-submodule-compare', loader: () => window.ensureTownSubmoduleCompareRuntimeLoaded?.() }
     ];
     const deferredSteps = [
-        { label: 'school-profile', loader: () => window.ensureSchoolProfileRuntimeLoaded?.() },
-        { label: 'town-submodule-compare', loader: () => window.ensureTownSubmoduleCompareRuntimeLoaded?.() },
         { label: 'freshman-exam', loader: () => window.ensureFreshmanExamRuntimeLoaded?.() },
         { label: 'xlsx-vendor', loader: () => window.ensureXlsxVendorLoaded?.() },
         { label: 'app-download', loader: () => window.ensureAppDownloadRuntimeLoaded?.() }
