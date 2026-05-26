@@ -7644,9 +7644,7 @@ async function switchCohort(cohortId, options = {}) {
             if (options.fastEnter === true) {
                 CohortExamHydrationScheduler.schedule(cohortId, {
                     delay: 250,
-                    background: true,
-                    minCount: 1,
-                    latestOnly: true
+                    background: true
                 });
             } else {
                 const restored = await hydrateFromExamArchive();

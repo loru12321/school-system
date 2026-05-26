@@ -5,6 +5,15 @@ const vm = require('vm');
 
 async function run() {
     const source = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
+    const cloudSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/cloud.js'), 'utf8');
+    const fastEntryStart = source.indexOf('if (options.fastEnter === true) {');
+    const fastEntryEnd = source.indexOf('} else {', fastEntryStart);
+    const fastEntrySource = source.slice(fastEntryStart, fastEntryEnd);
+    assert.ok(fastEntryStart >= 0 && fastEntryEnd > fastEntryStart, 'fast entry hydration source should be present');
+    assert.ok(!fastEntrySource.includes('minCount: 1'), 'fast entry must not schedule an insufficient one-exam sync');
+    assert.ok(!fastEntrySource.includes('latestOnly: true'), 'fast entry must keep multi-period comparisons warm');
+    assert.ok(!cloudSource.includes('minCount: 1'), 'idle cloud hydration must keep multi-period comparisons warm');
+
     const start = source.indexOf('const CohortExamHydrationScheduler = (() => {');
     const endMarker = 'window.CohortExamHydrationScheduler = CohortExamHydrationScheduler;';
     const end = source.indexOf(endMarker, start) + endMarker.length;

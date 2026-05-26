@@ -1666,7 +1666,7 @@
                     CloudManager.fetchAllCohortExams({
                         background: true,
                         refreshSelectors: false,
-                        minCount: 1
+                        minCount: 2
                     });
                 }, 3500);
             }
