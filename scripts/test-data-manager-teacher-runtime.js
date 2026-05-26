@@ -21,6 +21,9 @@ async function run() {
             syncedTerm = String(termId || '');
             return { baseTermId: String(termId || '').split('_').slice(0, 2).join('_') };
         },
+        readCurrentTeacherTermId() {
+            return syncedTerm;
+        },
         writeWorkspaceCohortId(value) {
             cohortIdSet = String(value || '');
         },
@@ -96,6 +99,21 @@ async function run() {
     assert.strictEqual(renderTeachersCount, 1);
     assert.strictEqual(refreshCount, 1);
 
+    root.TEACHER_MAP['901_语文'] = '手工修改后未被覆盖';
+    const reusedCurrentTerm = runtime.switchTeacherTerm(manager, '2025-2026_上学期_9年级');
+    assert.strictEqual(reusedCurrentTerm, true);
+    assert.strictEqual(renderTeachersCount, 1);
+    assert.strictEqual(refreshCount, 1);
+    assert.strictEqual(root.TEACHER_MAP['901_语文'], '手工修改后未被覆盖');
+
+    syncedTerm = '2025-2026_下学期_9年级';
+    root.TEACHER_MAP = { '901_语文': '外部切换学期后的数据' };
+    runtime.switchTeacherTerm(manager, '2025-2026_上学期_9年级');
+    assert.deepStrictEqual(setMapValue, { '901_语文': '老师A' });
+    assert.strictEqual(renderTeachersCount, 2);
+    assert.strictEqual(refreshCount, 2);
+    root.TEACHER_MAP = { '901_语文': '老师A' };
+
     root.resolveTeacherHistoryEntry = () => null;
     runtime.switchTeacherTerm(manager, '2024-2025_下学期_8年级');
     assert.strictEqual(loadedTeachers, 1);
@@ -145,6 +163,7 @@ async function run() {
     assert.strictEqual(multiSchoolCollision.conflicts.length, 1);
     assert.strictEqual(multiSchoolCollision.conflicts[0].key, '9.1_数学');
     assert.ok(runtime.formatTeacherImportConflictMessage(multiSchoolCollision.conflicts).includes('原有任课数据未被修改'));
+    assert.ok(runtime.formatTeacherSchoolOwnershipConflictMessage('9.1_数学', '甲校', '乙校').includes('不能直接覆盖'));
 
     const conflictingTeacher = runtime.buildTeacherImportMaps([
         { key: '9.1_数学', teacher: '张老师', school: '银山实验学校' },

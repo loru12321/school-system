@@ -12,6 +12,8 @@
     if (!root || root.DataManagerTeacherRuntime) return;
     root.DataManagerTeacherRuntime = runtime;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createDataManagerTeacherRuntime(root) {
+    let activeTermId = '';
+
     function safeClone(value) {
         try {
             return JSON.parse(JSON.stringify(value || {}));
@@ -88,9 +90,20 @@
         return `❌ 任课表存在不能安全合并的重复课程\n\n当前任课数据按“班级 + 学科”保存，检测到以下记录会互相覆盖：\n${conflictLines.join('\n')}\n\n对于存在重复班级/学科的学校，请分别上传任课表，并将 Sheet 名改为学校名称。原有任课数据未被修改。`;
     }
 
+    function formatTeacherSchoolOwnershipConflictMessage(key, existingSchool, selectedSchool) {
+        return `❌ ${String(key || '').replace('_', ' ')} 已属于 ${existingSchool}，不能直接覆盖为 ${selectedSchool} 的教师。\n\n请分别维护存在同名班级/学科的学校任课表。`;
+    }
+
     function switchTeacherTerm(manager, termId) {
         if (!termId) return;
         const exactTermId = String(termId || '').trim();
+        const storedTermId = typeof root.readCurrentTeacherTermId === 'function'
+            ? String(root.readCurrentTeacherTermId() || '').trim()
+            : activeTermId;
+        if (activeTermId === exactTermId && storedTermId === exactTermId
+            && root.TEACHER_MAP && Object.keys(root.TEACHER_MAP).length > 0) {
+            return true;
+        }
 
         const storageResult = typeof root.syncTeacherTermStorage === 'function'
             ? (root.syncTeacherTermStorage(exactTermId) || {})
@@ -115,6 +128,7 @@
             : null;
 
         if (resolved) {
+            activeTermId = exactTermId;
             if (typeof root.syncTeacherTermStorage === 'function') {
                 root.syncTeacherTermStorage(resolved.key);
             }
@@ -126,9 +140,10 @@
             }
             callManagerMethod(manager, 'renderTeachers');
             callManagerMethod(manager, 'refreshTeacherAnalysis');
-            return;
+            return true;
         }
 
+        activeTermId = exactTermId;
         if (typeof root.setTeacherMap === 'function') root.setTeacherMap({});
         if (typeof root.setTeacherSchoolMap === 'function') root.setTeacherSchoolMap({});
         callManagerMethod(manager, 'renderTeachers');
@@ -143,6 +158,7 @@
                 safeToast('☁️ 云端暂无该学期任课数据', 'warning');
             });
         }
+        return false;
     }
 
     function syncTeacherHistory(manager, opts = {}) {
@@ -153,6 +169,7 @@
                 : '');
         if (!termId) return;
 
+        activeTermId = String(termId || '').trim();
         if (typeof root.syncTeacherTermStorage === 'function') root.syncTeacherTermStorage(termId);
         if (!root.CohortDB || typeof root.CohortDB.ensure !== 'function') return;
 
@@ -189,6 +206,7 @@
             ? root.resolveTeacherHistoryEntry(termId)
             : null;
         if (resolved) {
+            activeTermId = String(termId || '').trim();
             if (typeof root.syncTeacherTermStorage === 'function') root.syncTeacherTermStorage(resolved.key);
             if (typeof root.setTeacherMap === 'function') root.setTeacherMap(safeClone(resolved.map || {}));
             if (typeof root.setTeacherSchoolMap === 'function') root.setTeacherSchoolMap(safeClone(resolved.schoolMap || {}));
@@ -229,6 +247,7 @@
         ensureTeacherMap,
         refreshTeacherAnalysis,
         buildTeacherImportMaps,
-        formatTeacherImportConflictMessage
+        formatTeacherImportConflictMessage,
+        formatTeacherSchoolOwnershipConflictMessage
     };
 });

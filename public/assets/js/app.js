@@ -6278,28 +6278,6 @@ const DataManager = {
         this.renderTeachers();
     },
 
-    addTeacher: function () {
-        const school = prompt('请输入学校名称：');
-        if (!school) return;
-
-        const className = prompt('请输入班级（如：701）：');
-        if (!className) return;
-
-        const subject = prompt('请输入学科（如：语文）：');
-        if (!subject) return;
-
-        const teacher = prompt('请输入教师姓名：');
-        if (!teacher) return;
-
-        const key = `${normalizeClass(className)}_${subject}`;
-        TEACHER_MAP[key] = teacher;
-
-        this.syncTeacherHistory();
-        this.renderTeachers();
-
-        if (window.UI) UI.toast('✅ 已添加任课记录', 'success');
-    },
-
     renderTeacherTermSelect: function () {
         const sel = document.getElementById('dm-teacher-term-select');
         if (!sel) return;
@@ -6893,7 +6871,7 @@ const DataManager = {
     editTeacher: function (key, oldName) {
         const newName = prompt(`修改 [${key.replace('_', ' ')}] 的任课教师：`, oldName);
         if (newName && newName.trim()) {
-            TEACHER_MAP[key] = newName.trim();
+            setTeacherMap({ ...TEACHER_MAP, [key]: newName.trim() });
             this.syncTeacherHistory();
             this.renderTeachers();
             UI.toast("已修改 (需点击保存)", "info");
@@ -6903,6 +6881,9 @@ const DataManager = {
     deleteTeacher: function (key) {
         if (!confirm(`确定移除【${key.replace('_', ' ')}】的任课信息吗？`)) return;
         delete TEACHER_MAP[key];
+        delete TEACHER_SCHOOL_MAP[key];
+        setTeacherMap(TEACHER_MAP);
+        setTeacherSchoolMap(TEACHER_SCHOOL_MAP);
         this.syncTeacherHistory();
         this.renderTeachers();
         UI.toast("已移除 (需点击保存)", "info");
@@ -6926,7 +6907,14 @@ const DataManager = {
             if (result.isConfirmed) {
                 const d = result.value;
                 if (!d.cls || !d.sub || !d.name) return alert("请填写完整");
-                TEACHER_MAP[`${d.cls}_${d.sub}`] = d.name;
+                const key = `${normalizeClass(d.cls)}_${normalizeSubject(d.sub)}`;
+                const school = String(document.getElementById('dm-teacher-school-select')?.value || readCurrentSchool() || '').trim();
+                const previousSchool = String((TEACHER_SCHOOL_MAP || {})[key] || '').trim();
+                if (previousSchool && school && !sameAppSchoolName(previousSchool, school)) {
+                    return alert(requireDataManagerTeacherRuntime().formatTeacherSchoolOwnershipConflictMessage(key, previousSchool, school));
+                }
+                setTeacherMap({ ...TEACHER_MAP, [key]: d.name });
+                if (school) setTeacherSchoolMap({ ...TEACHER_SCHOOL_MAP, [key]: school });
                 this.syncTeacherHistory();
                 this.renderTeachers();
                 UI.toast("添加成功 (需点击保存)", "success");
