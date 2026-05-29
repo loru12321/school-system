@@ -861,6 +861,22 @@
         }, options);
     }
 
+    function prewarmReportGeneratorRuntimes() {
+        scheduleActiveModuleTask('report-generator', 'report-generator-runtime-prewarm', () => {
+            const loaders = [
+                ['report-render', window.ensureReportRenderRuntimeLoaded],
+                ['student-compare', window.ensureStudentCompareRuntimeLoaded],
+                ['history-compare', window.ensureHistoryCompareRuntimeLoaded]
+            ];
+            loaders.forEach(([label, loader]) => {
+                if (typeof loader !== 'function') return;
+                Promise.resolve()
+                    .then(() => loader.call(window))
+                    .catch((error) => console.warn(`[report-generator] ${label} runtime prewarm failed:`, error));
+            });
+        }, { delay: 16, frame: true });
+    }
+
     function runModuleSpecificInit(id) {
         if (id === 'student-details') return initStudentDetailsEntry();
         if (id === 'summary') {
@@ -936,6 +952,7 @@
                 if (typeof updateSchoolSelect === 'function') updateSchoolSelect();
                 if (typeof updateClassSelect === 'function') updateClassSelect();
             }, { delay: 60, frame: true });
+            prewarmReportGeneratorRuntimes();
         }
         if (id === 'data-quality') {
             if (window.DataQualityRuntime && typeof window.DataQualityRuntime.init === 'function') {

@@ -537,6 +537,11 @@ assert.ok(moduleEntryRuntime.includes('function scheduleActiveModuleTask'), 'mod
 assert.ok(moduleEntryRuntime.includes("'analysis-entry-selects'"), 'analysis module should defer selector and hint refresh off the switch frame');
 assert.ok(moduleEntryRuntime.includes("`county-analysis-render:${id}`"), 'county analysis should schedule heavy rendering after the switch frame');
 assert.ok(moduleEntryRuntime.includes("'report-generator-selects'"), 'report generator should defer selector refresh off the switch frame');
+assert.ok(moduleEntryRuntime.includes('function prewarmReportGeneratorRuntimes'), 'report generator should prewarm query runtimes after entry');
+assert.ok(moduleEntryRuntime.includes("'report-generator-runtime-prewarm'"), 'report generator runtime prewarm should be scheduled off the switch frame');
+assert.ok(moduleEntryRuntime.includes('ensureReportRenderRuntimeLoaded'), 'report generator prewarm should include report rendering runtime');
+assert.ok(moduleEntryRuntime.includes('ensureStudentCompareRuntimeLoaded'), 'report generator prewarm should include student compare runtime');
+assert.ok(moduleEntryRuntime.includes('ensureHistoryCompareRuntimeLoaded'), 'report generator prewarm should include history compare runtime');
 assert.ok(!moduleEntryRuntime.includes('initClassComparisonEntry'), 'removed class comparison should not have an entry initializer');
 assert.ok(!indexHtml.includes('id="class-comparison"'), 'removed class comparison section should not be present in the app shell');
 assert.ok(!moduleEntryRuntime.includes('initClassDiagnosisEntry'), 'removed class diagnosis should not have an entry initializer');
