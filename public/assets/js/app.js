@@ -13186,10 +13186,18 @@ function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, eff
             ReportHistoryPerfCache.hydratingKeys.delete(hydrateKey);
         }
     };
-    if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
-        window.SystemPerformance.scheduleIdle(task, { timeout: 800, delay: 120 });
+    if (window.SystemPerformance && typeof window.SystemPerformance.scheduleTask === 'function') {
+        window.SystemPerformance.scheduleTask(`report-history-hydrate:${hydrateKey}`, task, {
+            delay: 1600,
+            idle: true,
+            timeout: 3200
+        });
+    } else if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
+        window.setTimeout(() => {
+            window.SystemPerformance.scheduleIdle(task, { timeout: 2200 });
+        }, 1600);
     } else {
-        window.setTimeout(task, 120);
+        window.setTimeout(task, 1600);
     }
 }
 
@@ -13270,7 +13278,6 @@ async function doQuery(targetStudent = null) {
     const selectedReportExamIds = getSelectedReportCompareExamIds();
     const effectiveCurrentExamId = selectedReportExamIds[selectedReportExamIds.length - 1] || getEffectiveCurrentExamId();
     if (effectiveCurrentExamId) {
-        CURRENT_EXAM_ID = effectiveCurrentExamId;
         CURRENT_EXAM_ID = effectiveCurrentExamId;
         writeWorkspaceExamId(effectiveCurrentExamId);
     }

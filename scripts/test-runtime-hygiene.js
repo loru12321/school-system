@@ -94,6 +94,8 @@ const appRuntime = fs.readFileSync(path.join(root, 'public/assets/js/app.js'), '
 assert.ok(!appRuntime.includes("onclick=\"showSchoolProfile('${s.name}')\""), 'summary table should not inject dynamic school names into inline handlers');
 assert.ok(appRuntime.includes('const safeSchoolName = escapeAppHtml(s.name)'), 'summary table should escape dynamic school names before rendering');
 assert.ok(appRuntime.includes('data-school-profile-name="${safeSchoolName}"'), 'summary table should bind school profile actions through a safe data attribute');
+assert.ok(appRuntime.includes('window.SystemPerformance.scheduleTask(`report-history-hydrate:${hydrateKey}`, task'), 'report history hydration should be delayed as a scheduled background task');
+assert.ok(appRuntime.includes('delay: 1600'), 'report history hydration should not run during the first report paint');
 const archiveRuntime = fs.readFileSync(path.join(root, 'public/assets/js/data-manager-archive-runtime.js'), 'utf8');
 assert.ok(!archiveRuntime.includes('onclick="DataManager.renameHistoryExam('), 'history archive rows should not inject exam names into inline handlers');
 assert.ok(archiveRuntime.includes('data-history-exam-action="rename"'), 'history archive rows should bind rename actions through data attributes');
@@ -111,6 +113,9 @@ const renderCloudBackupsSource = renderCloudBackupsStart >= 0 && renderCloudBack
     : '';
 assert.ok(renderCloudBackupsSource.includes("select: 'key, created_at, updated_at, size_bytes'"), 'cloud backup list should use metadata query first');
 assert.ok(renderCloudBackupsSource.includes("select: 'key, created_at, updated_at'"), 'cloud backup list should fall back to metadata without content');
+assert.ok(dataCloudRuntime.includes('function getCloudBackupListQueryOptions(filterCurrent)'), 'cloud backup list should build bounded query options');
+assert.ok(dataCloudRuntime.includes('if (cohortId) options.keyLike = `%${cohortId}%`;'), 'cloud backup list should push current cohort filtering into the query');
+assert.ok(dataCloudRuntime.includes('limit: filterCurrent ? 800 : 500'), 'cloud backup list should cap metadata list reads');
 assert.ok(!renderCloudBackupsSource.includes("select: 'key, created_at, updated_at, content'"), 'cloud backup list should not fetch full content while rendering rows');
 
 console.log('runtime hygiene tests passed');

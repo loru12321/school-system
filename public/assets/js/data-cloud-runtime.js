@@ -149,6 +149,30 @@
         return normalizeText(root.CURRENT_EXAM_ID || (root.localStorage && root.localStorage.getItem('CURRENT_EXAM_ID')) || '');
     }
 
+    function getCurrentCloudCohortId() {
+        const raw = normalizeText(
+            root.CURRENT_COHORT_ID
+            || (root.readWorkspaceCohortId && root.readWorkspaceCohortId())
+            || getWorkspaceProjectKey()
+        );
+        if (!raw) return '';
+        if (typeof root.normalizeCompareCohortId === 'function') {
+            return normalizeText(root.normalizeCompareCohortId(raw));
+        }
+        const match = raw.match(/20\d{2}/);
+        return match ? match[0] : raw;
+    }
+
+    function getCloudBackupListQueryOptions(filterCurrent) {
+        const options = {
+            order: 'updated_at',
+            limit: filterCurrent ? 800 : 500
+        };
+        const cohortId = filterCurrent ? getCurrentCloudCohortId() : '';
+        if (cohortId) options.keyLike = `%${cohortId}%`;
+        return options;
+    }
+
     function getCurrentCohortDb() {
         if (root.WorkspaceState && typeof root.WorkspaceState.getCohortDb === 'function') {
             return root.WorkspaceState.getCohortDb();
@@ -672,9 +696,10 @@
             const selectSystemDataRecords = getSelectSystemDataRecords();
             if (!selectSystemDataRecords) throw new Error('selectSystemDataRecords unavailable');
 
+            const listQueryOptions = getCloudBackupListQueryOptions(filterCurrent);
             const metaResult = await selectSystemDataRecords({
                 select: 'key, created_at, updated_at, size_bytes',
-                order: 'updated_at'
+                ...listQueryOptions
             });
             data = metaResult?.data || null;
             error = metaResult?.error || null;
@@ -682,10 +707,28 @@
             if (error && /size_bytes/i.test(String(error.message || error.code || ''))) {
                 const legacyMetaResult = await selectSystemDataRecords({
                     select: 'key, created_at, updated_at',
-                    order: 'updated_at'
+                    ...listQueryOptions
                 });
                 data = legacyMetaResult?.data || null;
                 error = legacyMetaResult?.error || null;
+            }
+
+            if (!error && filterCurrent && listQueryOptions.keyLike && Array.isArray(data) && !data.length) {
+                const fallbackQueryOptions = { order: 'updated_at', limit: 500 };
+                const fallbackResult = await selectSystemDataRecords({
+                    select: 'key, created_at, updated_at, size_bytes',
+                    ...fallbackQueryOptions
+                });
+                data = fallbackResult?.data || null;
+                error = fallbackResult?.error || null;
+                if (error && /size_bytes/i.test(String(error.message || error.code || ''))) {
+                    const fallbackLegacyResult = await selectSystemDataRecords({
+                        select: 'key, created_at, updated_at',
+                        ...fallbackQueryOptions
+                    });
+                    data = fallbackLegacyResult?.data || null;
+                    error = fallbackLegacyResult?.error || null;
+                }
             }
 
             if (error) throw error;
