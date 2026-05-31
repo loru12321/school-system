@@ -13144,7 +13144,7 @@ async function refreshRenderedStudentReportAfterHistory(stu, token) {
         }
         if (token !== __reportQueryToken) return;
         const nextReportHtml = typeof reportHtml === 'string' ? reportHtml : '';
-        if (container.dataset.reportHtmlCacheKey !== reportKey || container.innerHTML !== nextReportHtml) {
+        if (container.dataset.reportHtmlCacheKey !== reportKey) {
             container.innerHTML = nextReportHtml;
             container.dataset.reportHtmlCacheKey = reportKey;
             container.dataset.reportChartCacheKey = '';
@@ -13308,7 +13308,7 @@ async function doQuery(targetStudent = null) {
                 reportCache?.setReportHtml?.(reportCacheKey, reportHtml);
             }
             const nextReportHtml = typeof reportHtml === 'string' ? reportHtml : '';
-            if (container.dataset.reportHtmlCacheKey !== reportCacheKey || container.innerHTML !== nextReportHtml) {
+            if (container.dataset.reportHtmlCacheKey !== reportCacheKey) {
                 container.innerHTML = nextReportHtml;
                 container.dataset.reportHtmlCacheKey = reportCacheKey;
                 container.dataset.reportChartCacheKey = '';

@@ -60,6 +60,23 @@ const pkg = JSON.parse(read(packageFile));
     'lastCompareHiddenKey'
 ].forEach((token) => assertContains(app, token, 'public/assets/js/app.js'));
 
+const refreshReportStart = app.indexOf('async function refreshRenderedStudentReportAfterHistory');
+const refreshReportEnd = app.indexOf('function hydrateStudentReportHistoryInBackground', refreshReportStart);
+const refreshReportSource = refreshReportStart >= 0 && refreshReportEnd > refreshReportStart
+    ? app.slice(refreshReportStart, refreshReportEnd)
+    : '';
+const doQueryStart = app.indexOf('async function doQuery');
+const doQueryEnd = app.indexOf('function setSingleSelectOptions', doQueryStart);
+const doQuerySource = doQueryStart >= 0 && doQueryEnd > doQueryStart
+    ? app.slice(doQueryStart, doQueryEnd)
+    : '';
+if (!refreshReportSource || refreshReportSource.includes('container.innerHTML !== nextReportHtml')) {
+    fail('refreshRenderedStudentReportAfterHistory should trust reportHtmlCacheKey instead of serializing report innerHTML');
+}
+if (!doQuerySource || doQuerySource.includes('container.innerHTML !== nextReportHtml')) {
+    fail('doQuery should trust reportHtmlCacheKey instead of serializing report innerHTML');
+}
+
 [
     'CompareExamListPerfCache',
     'getCompareExamListSignature',
