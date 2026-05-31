@@ -672,26 +672,20 @@
             const selectSystemDataRecords = getSelectSystemDataRecords();
             if (!selectSystemDataRecords) throw new Error('selectSystemDataRecords unavailable');
 
-            const preferMetadataQuery = shouldPreferMetadataQuery();
-            let usingLegacyContentQuery = !preferMetadataQuery;
+            const metaResult = await selectSystemDataRecords({
+                select: 'key, created_at, updated_at, size_bytes',
+                order: 'updated_at'
+            });
+            data = metaResult?.data || null;
+            error = metaResult?.error || null;
 
-            if (preferMetadataQuery) {
-                const metaResult = await selectSystemDataRecords({
-                    select: 'key, created_at, updated_at, size_bytes',
+            if (error && /size_bytes/i.test(String(error.message || error.code || ''))) {
+                const legacyMetaResult = await selectSystemDataRecords({
+                    select: 'key, created_at, updated_at',
                     order: 'updated_at'
                 });
-                data = metaResult?.data || null;
-                error = metaResult?.error || null;
-            }
-
-            if (usingLegacyContentQuery || (error && /size_bytes/i.test(String(error.message || error.code || '')))) {
-                usingLegacyContentQuery = true;
-                const legacyResult = await selectSystemDataRecords({
-                    select: 'key, created_at, updated_at, content',
-                    order: 'updated_at'
-                });
-                data = legacyResult?.data || null;
-                error = legacyResult?.error || null;
+                data = legacyMetaResult?.data || null;
+                error = legacyMetaResult?.error || null;
             }
 
             if (error) throw error;
