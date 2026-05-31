@@ -779,6 +779,15 @@ assert.ok(grade9TotalSubjectContract.test(appSource), 'grade 9 total score must 
 assert.ok(grade9PoliticsDisplayContract.test(appSource), 'grade 9 politics should be configured as display-only subject');
 assert.ok(appSource.includes('function getConfiguredDisplaySubjects'), 'app.js should merge display-only subjects without changing total score subjects');
 assert.ok(
+    appSource.includes('getConfiguredDisplaySubjects(CONFIG, { includeExtra: false })'),
+    'grade 9 display-only politics must not enter the heavy analysis subject list'
+);
+assert.ok(appSource.includes('function getConfiguredExtraDisplaySubjects'), 'app.js should expose display-only subjects for lightweight detail views');
+assert.ok(
+    appSource.includes('detectedSubjects.forEach(sub =>'),
+    'parseRows should store display-only subject scores without adding them to global heavy subjects'
+);
+assert.ok(
     appSource.includes('CohortManager.addCohort({ year, startGrade }, { skipConfirm: true, fastEnter: false })'),
     'login cohort entry should wait for cloud data instead of opening an empty fast-enter workspace'
 );

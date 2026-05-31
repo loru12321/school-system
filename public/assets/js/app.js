@@ -8208,15 +8208,21 @@ CONFIG = initialDataSnapshot.config && Object.keys(initialDataSnapshot.config).l
     ? { ...CONFIG, ...initialDataSnapshot.config }
     : CONFIG;
 
-function getConfiguredDisplaySubjects(config = CONFIG) {
+function getConfiguredDisplaySubjects(config = CONFIG, options = {}) {
     const analysisSubjects = config.analysisSubs;
     if (!analysisSubjects || analysisSubjects === 'auto') return 'auto';
     const displaySubjects = Array.isArray(analysisSubjects) ? [...analysisSubjects] : [];
-    const extraDisplaySubjects = Array.isArray(config.extraDisplaySubs) ? config.extraDisplaySubs : [];
-    extraDisplaySubjects.forEach((subject) => {
-        if (subject && !displaySubjects.includes(subject)) displaySubjects.push(subject);
-    });
+    if (options.includeExtra !== false) {
+        const extraDisplaySubjects = Array.isArray(config.extraDisplaySubs) ? config.extraDisplaySubs : [];
+        extraDisplaySubjects.forEach((subject) => {
+            if (subject && !displaySubjects.includes(subject)) displaySubjects.push(subject);
+        });
+    }
     return displaySubjects;
+}
+
+function getConfiguredExtraDisplaySubjects(config = CONFIG) {
+    return Array.isArray(config.extraDisplaySubs) ? config.extraDisplaySubs.filter(Boolean) : [];
 }
 RAW_DATA = initialDataSnapshot.rawData || [];
 SCHOOLS = initialDataSnapshot.schools || {};
@@ -10104,9 +10110,10 @@ function parseRows(rows, defaultSchool) {
     });
     idxMap.school = findBestHeaderIndex(aliasMap.school, schoolHeaderExcludeKeywords);
 
-    const displaySubjects = getConfiguredDisplaySubjects(CONFIG);
-    if (displaySubjects && displaySubjects !== 'auto') {
-        setSubjects(SUBJECTS.filter(s => displaySubjects.includes(s)));
+    const detectedSubjects = Array.isArray(SUBJECTS) ? [...SUBJECTS] : [];
+    const analysisSubjects = getConfiguredDisplaySubjects(CONFIG, { includeExtra: false });
+    if (analysisSubjects && analysisSubjects !== 'auto') {
+        setSubjects(SUBJECTS.filter(s => analysisSubjects.includes(s)));
     }
     const subsForTotal = CONFIG.totalSubs === 'auto' ? SUBJECTS : CONFIG.totalSubs;
 
@@ -10186,7 +10193,7 @@ function parseRows(rows, defaultSchool) {
         // 数据读取逻辑
         let hasAnyScore = false;
         let hasExplicitScoreEvidence = false;
-        SUBJECTS.forEach(sub => {
+        detectedSubjects.forEach(sub => {
             const colIndices = idxMap.scores[sub];
             if (colIndices && colIndices.length > 0) {
                 let subSum = 0;
@@ -11364,14 +11371,27 @@ function buildStudentDetailsFilterSignature() {
         .join(';');
 }
 
+function getStudentDetailsConfiguredSubjectList(list = []) {
+    const configuredSubjects = Array.isArray(SUBJECTS) ? SUBJECTS.filter(Boolean) : [];
+    const rows = Array.isArray(list) ? list : [];
+    const detailSubjects = [...configuredSubjects];
+    getConfiguredExtraDisplaySubjects(CONFIG).forEach((subject) => {
+        if (!subject || detailSubjects.includes(subject)) return;
+        const hasSubjectScore = rows.some((row) => Object.prototype.hasOwnProperty.call(row?.scores || {}, subject));
+        if (hasSubjectScore) detailSubjects.push(subject);
+    });
+    return detailSubjects;
+}
+
 function buildStudentDetailsDataSignature(list = []) {
     const rows = Array.isArray(list) ? list : [];
+    const detailSubjects = getStudentDetailsConfiguredSubjectList(rows);
     let totalSum = 0;
     let subjectSum = 0;
     rows.forEach((row) => {
         totalSum += Number(row?.total) || 0;
         const scores = row?.scores || {};
-        SUBJECTS.forEach((subject) => {
+        detailSubjects.forEach((subject) => {
             subjectSum += Number(scores[subject]) || 0;
         });
     });
@@ -11436,8 +11456,8 @@ function getStudentDetailsPageSize() {
 }
 
 function getStudentDetailsSubjectList(list = []) {
-    const configuredSubjects = Array.isArray(SUBJECTS) ? SUBJECTS.filter(Boolean) : [];
     const rows = Array.isArray(list) ? list : [];
+    const configuredSubjects = getStudentDetailsConfiguredSubjectList(rows);
     const signature = [
         configuredSubjects.join('|'),
         rows.length,
@@ -12555,9 +12575,6 @@ function exportStudentDetails() {
     const classTeacherMode = isClassTeacher ? getClassTeacherStudentViewMode() : 'teaching';
     const needTeacherScope = isTeacher || (isClassTeacher && classTeacherMode === 'teaching');
     const teacherScope = needTeacherScope ? getTeacherScopeForUser(user) : null;
-    const visibleSubjects = (isTeacher || (isClassTeacher && classTeacherMode === 'teaching'))
-        ? SUBJECTS.filter(s => teacherScope.subjects.has(normalizeSubject(s)))
-        : SUBJECTS;
 
     const selectedSchool = document.getElementById('studentSchoolSelect').value;
     const selectedClass = document.getElementById('studentClassSelect').value;
@@ -12634,6 +12651,10 @@ function exportStudentDetails() {
     }
 
     studentsToShow = getComparisonStudentList(studentsToShow, RAW_DATA);
+    const subjectListForExport = getStudentDetailsSubjectList(studentsToShow);
+    const visibleSubjects = (isTeacher || (isClassTeacher && classTeacherMode === 'teaching'))
+        ? subjectListForExport.filter(s => teacherScope.subjects.has(normalizeSubject(s)))
+        : subjectListForExport;
     studentsToShow.sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0));
     const exportTownRankVisible = hasStudentTownshipRankData(studentsToShow, visibleSubjects);
     const exportCountyRankVisible = hasStudentCountyRankData(studentsToShow, visibleSubjects);
