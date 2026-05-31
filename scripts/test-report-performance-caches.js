@@ -83,6 +83,15 @@ if (!historySource || historySource.includes('getReportSubjectSortedScores(')) {
     fail('student exam history should not precompute subject percentile score arrays');
 }
 
+const previousRecordStart = app.indexOf('function findPreviousRecord(student)');
+const previousRecordEnd = app.indexOf('// 🟢 [Bug #5 新增] 获取学生在所有历史考试中的记录', previousRecordStart);
+const previousRecordSource = previousRecordStart >= 0 && previousRecordEnd > previousRecordStart
+    ? app.slice(previousRecordStart, previousRecordEnd)
+    : '';
+if (!previousRecordSource || !previousRecordSource.includes('getCurrentReportDataFingerprint()')) {
+    fail('findPreviousRecord should reuse cached current report fingerprint');
+}
+
 [
     'getHistoryPayloadFingerprint',
     "return [String(examId || '').trim(), String(updatedAt || '').trim(), rowCount].join(':');"

@@ -13858,7 +13858,9 @@ function findPreviousRecord(student) {
     };
 
     const currentExamId = getEffectiveCurrentExamId();
-    const currentFingerprint = computeExamDataFingerprint(RAW_DATA || []);
+    const currentFingerprint = typeof getCurrentReportDataFingerprint === 'function'
+        ? getCurrentReportDataFingerprint()
+        : computeExamDataFingerprint(RAW_DATA || []);
 
 
     if (window.PREV_DATA && window.PREV_DATA.length > 0) {
