@@ -15,11 +15,13 @@ const appFile = 'public/assets/js/app.js';
 const overviewFile = 'public/assets/js/student-overview-runtime.js';
 const freshmanFile = 'public/assets/js/freshman-exam-runtime.js';
 const progressFile = 'public/assets/js/progress-analysis-runtime.js';
+const bootFile = 'public/assets/js/boot-runtime.js';
 const packageFile = 'package.json';
 const app = read(appFile);
 const overview = read(overviewFile);
 const freshman = read(freshmanFile);
 const progress = read(progressFile);
+const boot = read(bootFile);
 const pkg = JSON.parse(read(packageFile));
 
 [
@@ -69,6 +71,10 @@ const pkg = JSON.parse(read(packageFile));
     'ProgressCompareSelectPerfCache.examOptionsHtml',
     'ProgressCompareSelectPerfCache.schoolOptionsHtml'
 ].forEach((token) => assertContains(progress, token, progressFile));
+
+if (boot.includes("'updateProgressMultiExamSelects',")) {
+    fail('progress compare selector refresh should stay on the lightweight compare-selectors runtime, not trigger the full progress runtime');
+}
 
 const marginalStart = overview.indexOf('function smBuildMarginalSummary()');
 const marginalEnd = overview.indexOf('function smGetSchoolListCached()', marginalStart);

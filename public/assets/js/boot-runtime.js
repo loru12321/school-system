@@ -2960,7 +2960,6 @@ if (!window.AccountExcel) {
     'exportMultiPeriodComparison',
     'setProgressBaselineStatus',
     'ensureProgressBaselineData',
-    'updateProgressMultiExamSelects',
     'renderValueAddedReport',
     'performSilentMatching',
     'exportProgressAnalysis',
