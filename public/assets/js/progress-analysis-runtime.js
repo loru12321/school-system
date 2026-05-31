@@ -57,6 +57,16 @@
     let sankeyChartInstance = window.sankeyChartInstance || null;
     let PROGRESS_VISUAL_RENDER_FRAME = 0;
     let PROGRESS_VISUAL_RENDER_TOKEN = 0;
+    const ProgressBaselineExamPerfCache = {
+        signature: '',
+        list: []
+    };
+    const ProgressCompareSelectPerfCache = {
+        schoolSignature: '',
+        schoolOptionsHtml: '',
+        examSignature: '',
+        examOptionsHtml: ''
+    };
 
     function syncLocalProgressState(patch = {}) {
         const snapshot = syncProgressState
@@ -181,7 +191,22 @@ function updateProgressSchoolSelect() {
 
 function getProgressBaselineExamList() {
     const db = (typeof CohortDB !== 'undefined' && typeof CohortDB.ensure === 'function') ? CohortDB.ensure() : null;
-    return Object.values(db?.exams || {})
+    const exams = db?.exams || {};
+    const signature = Object.entries(exams)
+        .map(([key, exam]) => [
+            key,
+            String(exam?.examId || ''),
+            String(exam?.examFullKey || ''),
+            Number(exam?.createdAt || 0),
+            Number(exam?.updatedAt || 0),
+            Array.isArray(exam?.data) ? exam.data.length : 0
+        ].join(':'))
+        .sort()
+        .join('|');
+    if (ProgressBaselineExamPerfCache.signature === signature) {
+        return ProgressBaselineExamPerfCache.list;
+    }
+    const list = Object.values(exams)
         .map((exam) => ({
             id: String(exam?.examId || '').trim(),
             examId: String(exam?.examId || '').trim(),
@@ -191,6 +216,9 @@ function getProgressBaselineExamList() {
         }))
         .filter((exam) => exam.id && exam.data.length > 0)
         .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    ProgressBaselineExamPerfCache.signature = signature;
+    ProgressBaselineExamPerfCache.list = list;
+    return list;
 }
 
 function pickDefaultProgressBaselineExamId(examList) {
@@ -483,12 +511,16 @@ function updateProgressMultiExamSelects() {
         ? listAvailableSchoolsForCompare()
         : Object.keys(SCHOOLS || {});
     const previousSchool = schoolSel.value || '';
-    const schoolOptionsHtml = '<option value="">--请选择学校--</option>'
-        + schoolList.map((school) => {
-            const safeSchool = progressEscapeHtml(school);
-            return `<option value="${safeSchool}">${safeSchool}</option>`;
-        }).join('');
-    setProgressSelectOptionsIfChanged(schoolSel, schoolOptionsHtml, `progress-compare-schools:${schoolList.join('|')}`);
+    const schoolSignature = `progress-compare-schools:${schoolList.join('|')}`;
+    if (ProgressCompareSelectPerfCache.schoolSignature !== schoolSignature) {
+        ProgressCompareSelectPerfCache.schoolSignature = schoolSignature;
+        ProgressCompareSelectPerfCache.schoolOptionsHtml = '<option value="">--请选择学校--</option>'
+            + schoolList.map((school) => {
+                const safeSchool = progressEscapeHtml(school);
+                return `<option value="${safeSchool}">${safeSchool}</option>`;
+            }).join('');
+    }
+    setProgressSelectOptionsIfChanged(schoolSel, ProgressCompareSelectPerfCache.schoolOptionsHtml, schoolSignature);
     const currentSchool = progressResolveSchoolOption(schoolList, progressGetCurrentSchoolName());
     const previousSchoolMatch = progressResolveSchoolOption(schoolList, previousSchool);
     if (currentSchool) schoolSel.value = currentSchool;
@@ -517,15 +549,18 @@ function updateProgressMultiExamSelects() {
         return;
     }
 
-    const optionsHtml = examList.map((exam) => {
-        const safeId = progressEscapeHtml(exam.id);
-        const safeLabel = progressEscapeHtml(exam.label);
-        return `<option value="${safeId}">${safeLabel}</option>`;
-    }).join('');
     const examSignature = `progress-compare-exams:${examList.map((exam) => `${exam.id}:${exam.label}`).join('|')}`;
-    setProgressSelectOptionsIfChanged(exam1Sel, optionsHtml, examSignature);
-    setProgressSelectOptionsIfChanged(exam2Sel, optionsHtml, examSignature);
-    setProgressSelectOptionsIfChanged(exam3Sel, optionsHtml, examSignature);
+    if (ProgressCompareSelectPerfCache.examSignature !== examSignature) {
+        ProgressCompareSelectPerfCache.examSignature = examSignature;
+        ProgressCompareSelectPerfCache.examOptionsHtml = examList.map((exam) => {
+            const safeId = progressEscapeHtml(exam.id);
+            const safeLabel = progressEscapeHtml(exam.label);
+            return `<option value="${safeId}">${safeLabel}</option>`;
+        }).join('');
+    }
+    setProgressSelectOptionsIfChanged(exam1Sel, ProgressCompareSelectPerfCache.examOptionsHtml, examSignature);
+    setProgressSelectOptionsIfChanged(exam2Sel, ProgressCompareSelectPerfCache.examOptionsHtml, examSignature);
+    setProgressSelectOptionsIfChanged(exam3Sel, ProgressCompareSelectPerfCache.examOptionsHtml, examSignature);
 
     const currentIndex = (CURRENT_EXAM_ID && examList.some((exam) => exam.id === CURRENT_EXAM_ID))
         ? examList.findIndex((exam) => exam.id === CURRENT_EXAM_ID)

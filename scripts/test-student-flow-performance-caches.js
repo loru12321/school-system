@@ -14,10 +14,12 @@ const assertContains = (content, token, file) => {
 const appFile = 'public/assets/js/app.js';
 const overviewFile = 'public/assets/js/student-overview-runtime.js';
 const freshmanFile = 'public/assets/js/freshman-exam-runtime.js';
+const progressFile = 'public/assets/js/progress-analysis-runtime.js';
 const packageFile = 'package.json';
 const app = read(appFile);
 const overview = read(overviewFile);
 const freshman = read(freshmanFile);
+const progress = read(progressFile);
 const pkg = JSON.parse(read(packageFile));
 
 [
@@ -60,6 +62,14 @@ const pkg = JSON.parse(read(packageFile));
     'renderSignature'
 ].forEach((token) => assertContains(overview, token, overviewFile));
 
+[
+    'ProgressBaselineExamPerfCache',
+    'ProgressCompareSelectPerfCache',
+    'ProgressBaselineExamPerfCache.signature === signature',
+    'ProgressCompareSelectPerfCache.examOptionsHtml',
+    'ProgressCompareSelectPerfCache.schoolOptionsHtml'
+].forEach((token) => assertContains(progress, token, progressFile));
+
 const marginalStart = overview.indexOf('function smBuildMarginalSummary()');
 const marginalEnd = overview.indexOf('function smGetSchoolListCached()', marginalStart);
 const marginalSource = marginalStart >= 0 && marginalEnd > marginalStart ? overview.slice(marginalStart, marginalEnd) : '';
@@ -99,6 +109,7 @@ console.log(JSON.stringify({
     ok: true,
     studentDetailsTokens: 27,
     overviewTokens: 6,
+    progressTokens: 5,
     freshmanTokens: 6,
     entryTokens: 3
 }, null, 2));
