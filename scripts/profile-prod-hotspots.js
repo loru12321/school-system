@@ -108,6 +108,10 @@ async function installProfiler(page) {
       'updateStudentCompareExamSelects',
       'updateReportCompareExamSelects',
       'updateMarginalSchoolSelect',
+      'updateMpSchoolSelect',
+      'updateMpClassSelect',
+      'generateMarginalTickets',
+      'MP_analyzeConversion',
       'updateSubjectBalanceSelects',
       'updatePotentialSchoolSelect',
       'updateSegmentSelects',
@@ -282,6 +286,26 @@ async function profileStudentOverview(page) {
   });
 }
 
+async function profileMarginalPush(page) {
+  await page.evaluate(async () => {
+    if (typeof window.updateMpSchoolSelect === 'function') window.updateMpSchoolSelect();
+    const schoolSelect = document.getElementById('mpSchoolSelect');
+    const classSelect = document.getElementById('mpClassSelect');
+    const subjectSelect = document.getElementById('mpSubjectSelect');
+    const gapInput = document.getElementById('mpGap');
+    const school = Array.from(schoolSelect?.options || [])
+      .map((option) => option.value)
+      .find(Boolean);
+    if (schoolSelect && school) schoolSelect.value = school;
+    if (typeof window.updateMpClassSelect === 'function') window.updateMpClassSelect();
+    if (classSelect) classSelect.value = '';
+    if (subjectSelect) subjectSelect.value = 'ALL';
+    if (gapInput) gapInput.value = '5';
+    await Promise.resolve(window.generateMarginalTickets?.());
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  });
+}
+
 async function run() {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
@@ -293,7 +317,8 @@ async function run() {
     'correlation-analysis': profileCorrelation,
     'report-generator': profileReport,
     'freshman-simulator': profileFreshman,
-    'student-overview': profileStudentOverview
+    'student-overview': profileStudentOverview,
+    'marginal-push': profileMarginalPush
   };
   for (const id of TARGETS) {
     const started = Date.now();

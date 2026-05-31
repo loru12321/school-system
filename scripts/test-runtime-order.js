@@ -504,8 +504,8 @@ assert.ok(bootRuntime.includes("'worker-api':"), 'runtime skill manifest should 
 assert.ok(bootRuntime.includes("window.ensureZhongkaoCountdownRuntimeLoaded = function ()"), 'boot-runtime.js should expose ensureZhongkaoCountdownRuntimeLoaded');
 assert.ok(bootRuntime.includes("window.ensurePackagerRuntimeLoaded = function ()"), 'boot-runtime.js should expose ensurePackagerRuntimeLoaded');
 assert.ok(bootRuntime.includes("window.ensureWorkerApiRuntimeLoaded = function ()"), 'boot-runtime.js should expose ensureWorkerApiRuntimeLoaded');
-assert.ok(bootRuntime.indexOf("{ label: 'report-render'") < bootRuntime.indexOf("{ label: 'xlsx-vendor'"), 'interactive report runtime warmup should precede spreadsheet import warmup');
-assert.ok(bootRuntime.indexOf("{ label: 'teacher-analysis'") < bootRuntime.indexOf("{ label: 'xlsx-vendor'"), 'interactive teacher runtime warmup should precede spreadsheet import warmup');
+assert.ok(!bootRuntime.includes("{ label: 'xlsx-vendor', loader: () => window.ensureXlsxVendorLoaded?.() }"), 'spreadsheet vendor should not actively warm during normal navigation');
+assert.ok(!bootRuntime.includes("{ label: 'freshman-exam', loader: () => window.ensureFreshmanExamRuntimeLoaded?.() }"), 'freshman runtime should stay demand-loaded outside freshman/exam modules');
 assert.ok(bootRuntime.includes('window.setTimeout(preload, 240);'), 'desktop hotspot prefetch should begin before runtime hydration work');
 assert.ok(bootRuntime.includes('const prioritySteps = ['), 'desktop hotspot warmup should declare an interactive priority batch');
 assert.ok(bootRuntime.includes('Promise.allSettled(prioritySteps.map(warmStep))'), 'interactive runtime warmup should execute independent hot bundles concurrently');

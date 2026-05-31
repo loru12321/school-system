@@ -3159,8 +3159,6 @@ function scheduleHotspotRuntimeWarmup() {
         { label: 'town-submodule-compare', loader: () => window.ensureTownSubmoduleCompareRuntimeLoaded?.() }
     ];
     const deferredSteps = [
-        { label: 'freshman-exam', loader: () => window.ensureFreshmanExamRuntimeLoaded?.() },
-        { label: 'xlsx-vendor', loader: () => window.ensureXlsxVendorLoaded?.() },
         { label: 'app-download', loader: () => window.ensureAppDownloadRuntimeLoaded?.() }
     ];
     const steps = prioritySteps.concat(deferredSteps);
