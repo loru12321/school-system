@@ -22,6 +22,10 @@
         }
     }
 
+    function asPlainMap(value) {
+        return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    }
+
     function safeToast(text, type) {
         if (root.UI && typeof root.UI === 'object' && typeof root.UI.toast === 'function') {
             root.UI.toast(text, type);
@@ -133,10 +137,10 @@
                 root.syncTeacherTermStorage(resolved.key);
             }
             if (typeof root.setTeacherMap === 'function') {
-                root.setTeacherMap(safeClone(resolved.map || {}));
+                root.setTeacherMap(asPlainMap(resolved.map));
             }
             if (typeof root.setTeacherSchoolMap === 'function') {
-                root.setTeacherSchoolMap(safeClone(resolved.schoolMap || {}));
+                root.setTeacherSchoolMap(asPlainMap(resolved.schoolMap));
             }
             callManagerMethod(manager, 'renderTeachers');
             callManagerMethod(manager, 'refreshTeacherAnalysis');
@@ -208,8 +212,8 @@
         if (resolved) {
             activeTermId = String(termId || '').trim();
             if (typeof root.syncTeacherTermStorage === 'function') root.syncTeacherTermStorage(resolved.key);
-            if (typeof root.setTeacherMap === 'function') root.setTeacherMap(safeClone(resolved.map || {}));
-            if (typeof root.setTeacherSchoolMap === 'function') root.setTeacherSchoolMap(safeClone(resolved.schoolMap || {}));
+            if (typeof root.setTeacherMap === 'function') root.setTeacherMap(asPlainMap(resolved.map));
+            if (typeof root.setTeacherSchoolMap === 'function') root.setTeacherSchoolMap(asPlainMap(resolved.schoolMap));
             return true;
         }
 
