@@ -542,6 +542,8 @@ assert.ok(moduleEntryRuntime.includes("'report-generator-runtime-prewarm'"), 're
 assert.ok(moduleEntryRuntime.includes('ensureReportRenderRuntimeLoaded'), 'report generator prewarm should include report rendering runtime');
 assert.ok(moduleEntryRuntime.includes('ensureStudentCompareRuntimeLoaded'), 'report generator prewarm should include student compare runtime');
 assert.ok(moduleEntryRuntime.includes('ensureHistoryCompareRuntimeLoaded'), 'report generator prewarm should include history compare runtime');
+assert.ok(!moduleEntryRuntime.includes("id === 'exam-arranger'\n            && typeof window.ensureGradeSchedulerRuntimeLoaded"), 'exam arranger should not eagerly load the grade scheduler runtime');
+assert.ok(bootRuntime.includes("triggers: ['grade-scheduler']"), 'grade scheduler runtime should load only for the grade scheduler module');
 assert.ok(!moduleEntryRuntime.includes('initClassComparisonEntry'), 'removed class comparison should not have an entry initializer');
 assert.ok(!indexHtml.includes('id="class-comparison"'), 'removed class comparison section should not be present in the app shell');
 assert.ok(!moduleEntryRuntime.includes('initClassDiagnosisEntry'), 'removed class diagnosis should not have an entry initializer');

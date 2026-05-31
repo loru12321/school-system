@@ -2464,9 +2464,6 @@ async function runModuleDeepCheck(page, id) {
             if (typeof window.ensureFreshmanExamRuntimeLoaded === 'function') {
                 await window.ensureFreshmanExamRuntimeLoaded();
             }
-            if (typeof window.ensureGradeSchedulerRuntimeLoaded === 'function') {
-                await window.ensureGradeSchedulerRuntimeLoaded().catch(() => null);
-            }
             if (typeof window.ensureXlsxVendorLoaded === 'function') {
                 await window.ensureXlsxVendorLoaded();
             }
@@ -2482,8 +2479,7 @@ async function runModuleDeepCheck(page, id) {
                     && typeof window.EXAM_renderStudentList === 'function'
                     && typeof window.EXAM_renderProctorTable === 'function',
                 proctorUiReady: typeof window.EXAM_initProctorUI === 'function',
-                proctorAssignReady: typeof window.EXAM_assignProctors === 'function',
-                schedulerRuntimeReady: !window.GradeSchedulerRuntime || typeof window.GradeSchedulerRuntime.loadData === 'function'
+                proctorAssignReady: typeof window.EXAM_assignProctors === 'function'
             };
             if (!Object.values(checks).every(Boolean)) {
                 return { ok: false, checks };

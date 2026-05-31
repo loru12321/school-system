@@ -311,7 +311,7 @@ var SYSTEM_RUNTIME_SKILLS = {
     'grade-scheduler': {
         mode: 'demand',
         warmup: 'demand',
-        triggers: ['exam-arranger', 'grade-scheduler'],
+        triggers: ['grade-scheduler'],
         entries: [
             { key: 'grade-scheduler', src: './assets/js/grade-scheduler-runtime.js' }
         ]

@@ -73,7 +73,10 @@ if (!marginalSource || marginalSource.includes('JSON.stringify')) {
     'fbCalcClassStats',
     'freshmanSchemeSig',
     'freshmanDashboardSig',
-    'freshmanBalanceSig'
+    'freshmanBalanceSig',
+    'examRoomSignature',
+    'examOverviewSignature',
+    'examPrintSignature'
 ].forEach((token) => assertContains(freshman, token, freshmanFile));
 
 [

@@ -795,12 +795,6 @@
             && !window.__FRESHMAN_EXAM_RUNTIME_PATCHED__) {
             loaders.push(window.ensureFreshmanExamRuntimeLoaded());
         }
-        if (id === 'exam-arranger'
-            && typeof window.ensureGradeSchedulerRuntimeLoaded === 'function'
-            && !window.__GRADE_SCHEDULER_RUNTIME_PATCHED__) {
-            loaders.push(window.ensureGradeSchedulerRuntimeLoaded());
-        }
-
         if (loaders.length) {
             Promise.all(loaders)
                 .then(() => {

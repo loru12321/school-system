@@ -17,7 +17,15 @@
         dashboardSignature: '',
         dashboardHtml: '',
         balanceSignature: '',
-        balanceTableHtml: ''
+        balanceTableHtml: '',
+        examOverviewSignature: '',
+        examOverviewHtml: '',
+        examStudentListSignature: '',
+        examStudentListHtml: '',
+        examProctorSignature: '',
+        examProctorHtml: '',
+        examPrintSignature: '',
+        examPrintHtml: ''
     };
 
     function fbClassSignature(classes = FB_CLASSES) {
@@ -47,6 +55,24 @@
             diff,
             count: n
         };
+    }
+
+    function examRoomSignature() {
+        return (Array.isArray(EXAM_ROOMS) ? EXAM_ROOMS : []).map(room => {
+            const students = Array.isArray(room?.students) ? room.students : [];
+            return [
+                room?.id,
+                students.length,
+                students.map(student => [
+                    student?.examNo,
+                    student?.name,
+                    student?.class,
+                    student?.roomNo,
+                    student?.seatNo,
+                    student?.score
+                ].join(':')).join(',')
+            ].join('|');
+        }).join('||');
     }
 
     function syncFbClasses() {
@@ -1469,30 +1495,67 @@ function EXAM_switchView(view, btn) {
 }
 
 function EXAM_renderOverview() {
-    const container = document.getElementById('exam_room_grid'); container.innerHTML = '';
-    EXAM_ROOMS.forEach(room => { const first = room.students[0].examNo; const last = room.students[room.students.length - 1].examNo; container.innerHTML += `<div class="exam-room-card analysis-exam-room-card" onclick="alert('提示：请使用“打印桌贴”功能查看该考场的详细座次表')"><div class="exam-room-title analysis-exam-room-title">第 ${String(room.id).padStart(2, '0')} 考场</div><div class="exam-room-info analysis-exam-room-info"><span>人数: ${room.students.length}</span></div><div class="exam-room-range analysis-exam-room-range">${first} - ${last}</div></div>`; });
+    const container = document.getElementById('exam_room_grid'); if (!container) return;
+    const signature = examRoomSignature();
+    if (FreshmanExamPerfCache.examOverviewSignature === signature) {
+        if (container.innerHTML !== FreshmanExamPerfCache.examOverviewHtml) container.innerHTML = FreshmanExamPerfCache.examOverviewHtml;
+        return;
+    }
+    const html = EXAM_ROOMS.map(room => {
+        const first = room.students[0].examNo;
+        const last = room.students[room.students.length - 1].examNo;
+        return `<div class="exam-room-card analysis-exam-room-card" onclick="alert('提示：请使用“打印桌贴”功能查看该考场的详细座次表')"><div class="exam-room-title analysis-exam-room-title">第 ${String(room.id).padStart(2, '0')} 考场</div><div class="exam-room-info analysis-exam-room-info"><span>人数: ${room.students.length}</span></div><div class="exam-room-range analysis-exam-room-range">${first} - ${last}</div></div>`;
+    }).join('');
+    FreshmanExamPerfCache.examOverviewSignature = signature;
+    FreshmanExamPerfCache.examOverviewHtml = html;
+    if (container.innerHTML !== html) container.innerHTML = html;
 }
 
 function EXAM_renderStudentList() {
-    const tbody = document.querySelector('#exam_student_table tbody'); let html = '';
+    const tbody = document.querySelector('#exam_student_table tbody'); if (!tbody) return;
+    const signature = examRoomSignature();
+    if (FreshmanExamPerfCache.examStudentListSignature === signature) {
+        if (tbody.innerHTML !== FreshmanExamPerfCache.examStudentListHtml) tbody.innerHTML = FreshmanExamPerfCache.examStudentListHtml;
+        return;
+    }
+    let html = '';
     const sorted = [...EXAM_DATA].sort((a, b) => { if (a.class !== b.class) return String(a.class).localeCompare(String(b.class), undefined, { numeric: true }); return a.examNo.localeCompare(b.examNo); });
     sorted.slice(0, 500).forEach(s => { html += `<tr><td>${s.examNo}</td><td>${s.name}</td><td>${s.class}</td><td>${String(s.roomNo).padStart(2, '0')}</td><td>${String(s.seatNo).padStart(2, '0')}</td><td>${s.score}</td></tr>`; });
-    if (sorted.length > 500) html += `<tr><td colspan="6" style="text-align:center">...更多数据请导出Excel查看...</td></tr>`; tbody.innerHTML = html;
+    if (sorted.length > 500) html += `<tr><td colspan="6" style="text-align:center">...更多数据请导出Excel查看...</td></tr>`;
+    FreshmanExamPerfCache.examStudentListSignature = signature;
+    FreshmanExamPerfCache.examStudentListHtml = html;
+    if (tbody.innerHTML !== html) tbody.innerHTML = html;
 }
 
 function EXAM_renderProctorTable() {
-    const tbody = document.querySelector('#exam_proctor_table tbody'); let html = '';
+    const tbody = document.querySelector('#exam_proctor_table tbody'); if (!tbody) return;
+    const signature = examRoomSignature();
+    if (FreshmanExamPerfCache.examProctorSignature === signature) {
+        if (tbody.innerHTML !== FreshmanExamPerfCache.examProctorHtml) tbody.innerHTML = FreshmanExamPerfCache.examProctorHtml;
+        return;
+    }
+    let html = '';
     EXAM_ROOMS.forEach(room => { const first = room.students[0].examNo; const last = room.students[room.students.length - 1].examNo; html += `<tr><td>第 ${String(room.id).padStart(2, '0')} 考场</td><td>${room.students.length}</td><td>${first} - ${last}</td><td></td><td></td></tr>`; });
-    tbody.innerHTML = html;
+    FreshmanExamPerfCache.examProctorSignature = signature;
+    FreshmanExamPerfCache.examProctorHtml = html;
+    if (tbody.innerHTML !== html) tbody.innerHTML = html;
 }
 
 function EXAM_renderPrintView() {
-    const container = document.getElementById('batch-print-area-wrapper') || document.getElementById('batch-print-container'); if (!container) return; container.innerHTML = ''; let html = '';
+    const container = document.getElementById('batch-print-area-wrapper') || document.getElementById('batch-print-container'); if (!container) return;
+    const signature = examRoomSignature();
+    if (FreshmanExamPerfCache.examPrintSignature === signature) {
+        if (container.innerHTML !== FreshmanExamPerfCache.examPrintHtml) container.innerHTML = FreshmanExamPerfCache.examPrintHtml;
+        return;
+    }
+    let html = '';
     EXAM_ROOMS.forEach(room => {
         let seatsHtml = ''; room.students.forEach(s => { seatsHtml += `<div class="exam-print-seat"><div class="exam-print-seat-num">第${String(s.seatNo).padStart(2, '0')}号</div><div class="exam-print-seat-name">${s.name}</div><div class="exam-print-seat-id">考号: ${s.examNo}</div><div style="font-size:10px;">${s.class}</div></div>`; });
         html += `<div class="exam-print-page"><div class="exam-print-header">第 ${String(room.id).padStart(2, '0')} 考场座位表 (共${room.students.length}人)</div><div class="exam-print-grid">${seatsHtml}</div><div style="margin-top:20px; font-size:12px;">监考员签字：_________________   &nbsp;&nbsp;&nbsp; 巡考员签字：_________________</div></div>`;
     });
-    container.innerHTML = html;
+    FreshmanExamPerfCache.examPrintSignature = signature;
+    FreshmanExamPerfCache.examPrintHtml = html;
+    if (container.innerHTML !== html) container.innerHTML = html;
 }
 
 function EXAM_generateDeskLabels() {
