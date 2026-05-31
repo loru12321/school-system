@@ -13,11 +13,13 @@ const assertContains = (content, token, file) => {
 
 const reportRenderFile = 'public/assets/js/report-render-runtime.js';
 const reportChartFile = 'public/assets/js/report-chart-runtime.js';
+const cloudFile = 'public/assets/js/cloud.js';
 const countyFile = 'public/assets/js/county-analysis-runtime.js';
 const packageFile = 'package.json';
 
 const reportRender = read(reportRenderFile);
 const reportChart = read(reportChartFile);
+const cloud = read(cloudFile);
 const county = read(countyFile);
 const app = read('public/assets/js/app.js');
 const compareShared = read('public/assets/js/compare-shared-runtime.js');
@@ -77,6 +79,20 @@ const historyEnd = app.indexOf('// 🟢 [新增]：生成进退步胶囊标签',
 const historySource = historyStart >= 0 && historyEnd > historyStart ? app.slice(historyStart, historyEnd) : '';
 if (!historySource || historySource.includes('getReportSubjectSortedScores(')) {
     fail('student exam history should not precompute subject percentile score arrays');
+}
+
+[
+    'getHistoryPayloadFingerprint',
+    "return [String(examId || '').trim(), String(updatedAt || '').trim(), rowCount].join(':');"
+].forEach((token) => assertContains(cloud, token, cloudFile));
+
+const cloudHistoryStart = cloud.indexOf('fetchStudentExamHistory: async function');
+const cloudHistoryEnd = cloud.indexOf('// 届别考试补拉运行时', cloudHistoryStart);
+const cloudHistorySource = cloudHistoryStart >= 0 && cloudHistoryEnd > cloudHistoryStart
+    ? cloud.slice(cloudHistoryStart, cloudHistoryEnd)
+    : '';
+if (!cloudHistorySource || cloudHistorySource.includes('computeExamDataFingerprint(')) {
+    fail('student report cloud history fetch should not compute full exam fingerprints during query hydration');
 }
 
 [

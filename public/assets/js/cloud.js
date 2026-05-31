@@ -1504,18 +1504,24 @@
                 }
                 return match;
             };
+            const getHistoryPayloadFingerprint = (examId, payload, updatedAt) => {
+                const existing = String(payload?.FINGERPRINT || payload?.fingerprint || '').trim();
+                if (existing) return existing;
+                const rows = payload?.RAW_DATA || payload?.data || [];
+                const rowCount = Array.isArray(rows) ? rows.length : 0;
+                return [String(examId || '').trim(), String(updatedAt || '').trim(), rowCount].join(':');
+            };
             const buildHistoryEntry = (examId, payload, updatedAt) => {
                 const match = findHistoryMatch(payload);
                 if (!match) return null;
                 const keyParts = String(examId || '').split('_');
                 const examLabel = payload?.examLabel || (keyParts.length >= 5 ? keyParts.slice(4).join('_') : examId);
-                const rows = payload?.RAW_DATA || payload?.data || [];
                 return {
                     // Use full key as canonical ID to avoid "same exam" false positives.
                     examId,
                     examFullKey: examId,
                     examLabel: examLabel || examId,
-                    fingerprint: payload?.FINGERPRINT || payload?.fingerprint || computeExamDataFingerprint(rows),
+                    fingerprint: getHistoryPayloadFingerprint(examId, payload, updatedAt),
                     total: match.total,
                     rankClass: match.ranks?.total?.class,
                     rankSchool: match.ranks?.total?.school,
