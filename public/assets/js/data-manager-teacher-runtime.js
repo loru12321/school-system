@@ -228,20 +228,24 @@
         const section = doc && typeof doc.getElementById === 'function'
             ? doc.getElementById('teacher-analysis')
             : null;
+        const isTeacherAnalysisActive = !!(
+            section
+            && section.classList
+            && typeof section.classList.contains === 'function'
+            && section.classList.contains('active')
+        );
+        if (!isTeacherAnalysisActive) return;
 
         if (typeof root.syncTeacherAnalysisSchoolContext === 'function') {
             root.syncTeacherAnalysisSchoolContext();
         }
-
-        if (section && section.classList && typeof section.classList.contains === 'function' && section.classList.contains('active')) {
-            if (typeof root.renderTeacherAnalysisState === 'function') {
-                root.renderTeacherAnalysisState();
-            } else if (typeof root.analyzeTeachers === 'function') {
-                root.analyzeTeachers();
-            }
-            if (typeof root.updateStatusPanel === 'function') {
-                root.updateStatusPanel();
-            }
+        if (typeof root.renderTeacherAnalysisState === 'function') {
+            root.renderTeacherAnalysisState();
+        } else if (typeof root.analyzeTeachers === 'function') {
+            root.analyzeTeachers();
+        }
+        if (typeof root.updateStatusPanel === 'function') {
+            root.updateStatusPanel();
         }
     }
 
