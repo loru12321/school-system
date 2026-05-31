@@ -116,6 +116,7 @@ assert.ok(renderCloudBackupsSource.includes("select: 'key, created_at, updated_a
 assert.ok(dataCloudRuntime.includes('function getCloudBackupListQueryOptions(filterCurrent)'), 'cloud backup list should build bounded query options');
 assert.ok(dataCloudRuntime.includes('if (cohortId) options.keyLike = `%${cohortId}%`;'), 'cloud backup list should push current cohort filtering into the query');
 assert.ok(dataCloudRuntime.includes('limit: filterCurrent ? 800 : 500'), 'cloud backup list should cap metadata list reads');
+assert.ok(!dataCloudRuntime.includes('fallbackQueryOptions'), 'current cloud backup list should not fall back to a full metadata scan');
 assert.ok(!renderCloudBackupsSource.includes("select: 'key, created_at, updated_at, content'"), 'cloud backup list should not fetch full content while rendering rows');
 
 console.log('runtime hygiene tests passed');

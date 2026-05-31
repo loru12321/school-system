@@ -52,6 +52,8 @@ const pkg = JSON.parse(read(packageFile));
     'getCachedStudentReportHistory',
     'getCurrentReportDataFingerprint',
     'currentFingerprintRows',
+    'examFingerprintByExam',
+    'getReportExamFingerprint',
     'selectedExamIdsSignature',
     'historyByStudent',
     'hydratingKeys',
@@ -112,6 +114,12 @@ const previousRecordSource = previousRecordStart >= 0 && previousRecordEnd > pre
     : '';
 if (!previousRecordSource || !previousRecordSource.includes('getCurrentReportDataFingerprint()')) {
     fail('findPreviousRecord should reuse cached current report fingerprint');
+}
+if (!previousRecordSource || previousRecordSource.includes('computeExamDataFingerprint(examData)')) {
+    fail('findPreviousRecord should use cached historical exam fingerprints');
+}
+if (!historySource || historySource.includes('computeExamDataFingerprint(examData)')) {
+    fail('student exam history should use cached historical exam fingerprints');
 }
 
 [

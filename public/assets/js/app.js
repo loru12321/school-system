@@ -12929,6 +12929,7 @@ const ReportHistoryPerfCache = {
     currentFingerprintVersion: -1,
     currentFingerprintLength: -1,
     currentFingerprint: '',
+    examFingerprintByExam: new WeakMap(),
     selectedExamIdsSignature: '',
     selectedExamIds: [],
     historyByStudent: new Map(),
@@ -12956,6 +12957,30 @@ function getCurrentReportDataFingerprint() {
     ReportHistoryPerfCache.currentFingerprintVersion = version;
     ReportHistoryPerfCache.currentFingerprintLength = length;
     ReportHistoryPerfCache.currentFingerprint = fingerprint;
+    return fingerprint;
+}
+
+function getReportExamFingerprint(exam, examData = null) {
+    const rows = Array.isArray(examData) ? examData : (Array.isArray(exam?.data) ? exam.data : []);
+    const stored = String(exam?.fingerprint || '').trim();
+    if (stored) return stored;
+    if (!exam || typeof exam !== 'object') {
+        return typeof computeExamDataFingerprint === 'function'
+            ? String(computeExamDataFingerprint(rows) || '').trim()
+            : String(rows.length || 0);
+    }
+    const cached = ReportHistoryPerfCache.examFingerprintByExam.get(exam);
+    if (cached && cached.rows === rows && cached.length === rows.length && cached.fingerprint) {
+        return cached.fingerprint;
+    }
+    const fingerprint = typeof computeExamDataFingerprint === 'function'
+        ? String(computeExamDataFingerprint(rows) || '').trim()
+        : String(rows.length || 0);
+    ReportHistoryPerfCache.examFingerprintByExam.set(exam, {
+        rows,
+        length: rows.length,
+        fingerprint
+    });
     return fingerprint;
 }
 
@@ -13892,7 +13917,7 @@ function findPreviousRecord(student) {
                 for (const [examId, exam] of examEntries) {
                     const examData = exam.data || [];
                     if (examData.length === 0) continue;
-                    const examFingerprint = String(exam.fingerprint || computeExamDataFingerprint(examData)).trim();
+                    const examFingerprint = getReportExamFingerprint(exam, examData);
                     if (currentFingerprint && examFingerprint && examFingerprint === currentFingerprint) continue;
 
                     const found = window.RankingDataService && typeof window.RankingDataService.findStudent === 'function'
@@ -14014,7 +14039,7 @@ function getStudentExamHistory(student) {
         for (const [examId, exam] of examEntries) {
             const examData = exam.data || [];
             if (examData.length === 0) continue;
-            const examFingerprint = String(exam.fingerprint || computeExamDataFingerprint(examData)).trim();
+            const examFingerprint = getReportExamFingerprint(exam, examData);
             if (currentFingerprint && examFingerprint && examFingerprint === currentFingerprint && !isExamKeyEquivalentForCompare(examId, currentExamId)) {
                 continue;
             }

@@ -713,24 +713,6 @@
                 error = legacyMetaResult?.error || null;
             }
 
-            if (!error && filterCurrent && listQueryOptions.keyLike && Array.isArray(data) && !data.length) {
-                const fallbackQueryOptions = { order: 'updated_at', limit: 500 };
-                const fallbackResult = await selectSystemDataRecords({
-                    select: 'key, created_at, updated_at, size_bytes',
-                    ...fallbackQueryOptions
-                });
-                data = fallbackResult?.data || null;
-                error = fallbackResult?.error || null;
-                if (error && /size_bytes/i.test(String(error.message || error.code || ''))) {
-                    const fallbackLegacyResult = await selectSystemDataRecords({
-                        select: 'key, created_at, updated_at',
-                        ...fallbackQueryOptions
-                    });
-                    data = fallbackLegacyResult?.data || null;
-                    error = fallbackLegacyResult?.error || null;
-                }
-            }
-
             if (error) throw error;
 
             const allRows = (Array.isArray(data) ? data : []).map((item) => ({
