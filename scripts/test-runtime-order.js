@@ -489,6 +489,7 @@ assert.ok(bootRuntime.includes('function markAppModulesReady()'), 'boot-runtime.
 assert.ok(bootRuntime.includes('school:app-modules-ready'), 'boot-runtime.js should dispatch an app modules ready event');
 assert.ok(bootRuntime.includes('function scheduleMobileRuntimeBootstrap'), 'boot-runtime.js should defer mobile runtime bootstrapping');
 assert.ok(bootRuntime.includes('runAfterAppModulesReady'), 'boot-runtime.js should wait for core modules before mobile runtime bootstrap');
+assert.ok(bootRuntime.includes("{ label: 'data-manager-sql', loader: () => window.ensureDataManagerSqlRuntimeLoaded?.() }"), 'boot-runtime.js should idle-warm data manager SQL runtime');
 assert.ok(bootRuntime.includes("'teacher-analysis':"), 'runtime skill manifest should include teacher-analysis');
 assert.ok(bootRuntime.includes("'crypto-vendor':"), 'runtime skill manifest should include crypto-vendor');
 assert.ok(bootRuntime.includes("'shell-enhancements':"), 'runtime skill manifest should include shell-enhancements');

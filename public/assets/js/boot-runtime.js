@@ -3159,6 +3159,7 @@ function scheduleHotspotRuntimeWarmup() {
         { label: 'town-submodule-compare', loader: () => window.ensureTownSubmoduleCompareRuntimeLoaded?.() }
     ];
     const deferredSteps = [
+        { label: 'data-manager-sql', loader: () => window.ensureDataManagerSqlRuntimeLoaded?.() },
         { label: 'app-download', loader: () => window.ensureAppDownloadRuntimeLoaded?.() }
     ];
     const steps = prioritySteps.concat(deferredSteps);
