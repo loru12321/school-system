@@ -13981,6 +13981,28 @@ function getStudentExamHistory(student) {
             comparisonContextByExam.set(contextKey, context);
             return context;
         };
+        const hasUsableStoredHistoryRanks = (row) => {
+            const totalRanks = row?.ranks?.total;
+            if (!totalRanks || typeof totalRanks !== 'object') return false;
+            return ['class', 'school', 'township', 'county'].some(key => {
+                const value = totalRanks[key];
+                return value !== undefined && value !== null && value !== '';
+            });
+        };
+        const createHistoryStudentView = (found, examId, examFingerprint, examData) => {
+            if (hasUsableStoredHistoryRanks(found)) {
+                return {
+                    ...found,
+                    scores: { ...(found.scores || {}) },
+                    ranks: {
+                        ...(found.ranks || {}),
+                        total: { ...((found.ranks && found.ranks.total) || {}) }
+                    }
+                };
+            }
+            const comparisonContext = getExamComparisonContext(examId, examFingerprint, examData);
+            return createComparisonStudentView(found, examData, comparisonContext);
+        };
 
         for (const [examId, exam] of examEntries) {
             const examData = exam.data || [];
@@ -14012,8 +14034,7 @@ function getStudentExamHistory(student) {
             });
 
             if (found) {
-                const comparisonContext = getExamComparisonContext(examId, examFingerprint, examData);
-                const normalizedStudent = createComparisonStudentView(found, examData, comparisonContext);
+                const normalizedStudent = createHistoryStudentView(found, examId, examFingerprint, examData);
 
                 results.push({
                     examId,

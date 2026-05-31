@@ -83,6 +83,10 @@ const historySource = historyStart >= 0 && historyEnd > historyStart ? app.slice
 if (!historySource || historySource.includes('getReportSubjectSortedScores(')) {
     fail('student exam history should not precompute subject percentile score arrays');
 }
+[
+    'hasUsableStoredHistoryRanks',
+    'createHistoryStudentView'
+].forEach((token) => assertContains(historySource, token, 'public/assets/js/app.js'));
 
 const previousRecordStart = app.indexOf('function findPreviousRecord(student)');
 const previousRecordEnd = app.indexOf('// 🟢 [Bug #5 新增] 获取学生在所有历史考试中的记录', previousRecordStart);
