@@ -290,11 +290,12 @@ function renderSingleReportCardHTML(stu, mode) {
 
     // 获取对比数据（云端上下文优先，避免回退导致“看不到对比”）
     const cloudHint = getCachedCloudCompareHint(reportStu);
-    const prevStu = cloudHint?.previousRecord || getCachedPreviousRecord(reportStu);
     const reportExamHistory = getCachedStudentExamHistory(reportStu);
     const currentExamId = getEffectiveCurrentExamId();
     const prevHistoryEntry = getPreviousHistoryEntryForReport(reportExamHistory, currentExamId);
     const prevHistoryStu = prevHistoryEntry ? (prevHistoryEntry.student || prevHistoryEntry) : null;
+    const hasUsablePrevHistoryStudent = !!(prevHistoryStu && prevHistoryStu.scores && prevHistoryStu.ranks);
+    const prevStu = cloudHint?.previousRecord || (hasUsablePrevHistoryStudent ? null : getCachedPreviousRecord(reportStu));
     const compareStu = (prevHistoryStu && prevHistoryStu.scores) ? prevHistoryStu : prevStu;
     const compareTotalRanks = compareStu?.ranks?.total || {};
     const readScoreValue = (scoreLike) => {

@@ -42,6 +42,7 @@ const pkg = JSON.parse(read(packageFile));
     'getCachedSchoolCandidates',
     'student?.id || student?.examNo',
     'getPreviousHistoryEntryForReport',
+    'hasUsablePrevHistoryStudent ? null : getCachedPreviousRecord',
     'cacheableReportHtml',
     'ReportRenderPerfCache.html.set'
 ].forEach((token) => assertContains(reportRender, token, reportRenderFile));
