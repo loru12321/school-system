@@ -15,12 +15,14 @@ const appFile = 'public/assets/js/app.js';
 const overviewFile = 'public/assets/js/student-overview-runtime.js';
 const freshmanFile = 'public/assets/js/freshman-exam-runtime.js';
 const progressFile = 'public/assets/js/progress-analysis-runtime.js';
+const compareSharedFile = 'public/assets/js/compare-shared-runtime.js';
 const bootFile = 'public/assets/js/boot-runtime.js';
 const packageFile = 'package.json';
 const app = read(appFile);
 const overview = read(overviewFile);
 const freshman = read(freshmanFile);
 const progress = read(progressFile);
+const compareShared = read(compareSharedFile);
 const boot = read(bootFile);
 const pkg = JSON.parse(read(packageFile));
 
@@ -71,6 +73,21 @@ const pkg = JSON.parse(read(packageFile));
     'ProgressCompareSelectPerfCache.examOptionsHtml',
     'ProgressCompareSelectPerfCache.schoolOptionsHtml'
 ].forEach((token) => assertContains(progress, token, progressFile));
+
+[
+    'getSelectorSafeExamFingerprint',
+    'fingerprint: getSelectorSafeExamFingerprint(ex)',
+    'fingerprint: getSelectorSafeExamFingerprint({'
+].forEach((token) => assertContains(compareShared, token, compareSharedFile));
+
+const listAvailableExamsStart = compareShared.indexOf('function listAvailableExamsForCompare()');
+const getSelectedReportStart = compareShared.indexOf('function getSelectedReportCompareExamIds()', listAvailableExamsStart);
+const listAvailableExamsSource = listAvailableExamsStart >= 0 && getSelectedReportStart > listAvailableExamsStart
+    ? compareShared.slice(listAvailableExamsStart, getSelectedReportStart)
+    : '';
+if (!listAvailableExamsSource || listAvailableExamsSource.includes('computeExamDataFingerprint(')) {
+    fail('compare exam selector list must not compute full row fingerprints during dropdown refresh');
+}
 
 if (boot.includes("'updateProgressMultiExamSelects',")) {
     fail('progress compare selector refresh should stay on the lightweight compare-selectors runtime, not trigger the full progress runtime');

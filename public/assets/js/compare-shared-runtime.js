@@ -397,6 +397,15 @@ function pickPreferredExamEntry(existing, candidate) {
     return score(candidate) >= score(existing) ? candidate : existing;
 }
 
+function getSelectorSafeExamFingerprint(entry) {
+    const fingerprint = String(entry?.fingerprint || '').trim();
+    if (fingerprint) return fingerprint;
+    const id = String(entry?.id || entry?.examId || '').trim();
+    const createdAt = Number(entry?.createdAt || entry?.updatedAt || 0);
+    const rowCount = Array.isArray(entry?.data) ? entry.data.length : Number(entry?.rowCount || 0);
+    return [id, createdAt, rowCount].join(':');
+}
+
 function warnIfDuplicateCompareSnapshots() {
     const groups = readDuplicateCompareExamsState();
     if (!groups.length) return;
@@ -478,7 +487,7 @@ function listAvailableExamsForCompare() {
                 createdAt: ex.createdAt || 0,
                 label: ex.examLabel || ex.examId,
                 source: 'local',
-                fingerprint: ex.fingerprint || computeExamDataFingerprint(ex.data || [])
+                fingerprint: getSelectorSafeExamFingerprint(ex)
             });
         });
     }
@@ -488,7 +497,11 @@ function listAvailableExamsForCompare() {
             createdAt: Date.now(),
             label: `${CURRENT_EXAM_ID.split('_').pop()} (当前)`,
             source: 'current',
-            fingerprint: computeExamDataFingerprint(RAW_DATA || [])
+            fingerprint: getSelectorSafeExamFingerprint({
+                id: CURRENT_EXAM_ID,
+                rowCount: Array.isArray(RAW_DATA) ? RAW_DATA.length : 0,
+                createdAt: window.__RAW_DATA_VERSION || Date.now()
+            })
         });
     }
     if (window.PREV_DATA && Array.isArray(window.PREV_DATA)) {
