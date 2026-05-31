@@ -859,8 +859,7 @@
         scheduleActiveModuleTask('report-generator', 'report-generator-runtime-prewarm', () => {
             const loaders = [
                 ['report-render', window.ensureReportRenderRuntimeLoaded],
-                ['student-compare', window.ensureStudentCompareRuntimeLoaded],
-                ['history-compare', window.ensureHistoryCompareRuntimeLoaded]
+                ['student-compare', window.ensureStudentCompareRuntimeLoaded]
             ];
             loaders.forEach(([label, loader]) => {
                 if (typeof loader !== 'function') return;

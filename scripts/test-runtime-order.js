@@ -547,7 +547,13 @@ assert.ok(moduleEntryRuntime.includes('function prewarmReportGeneratorRuntimes')
 assert.ok(moduleEntryRuntime.includes("'report-generator-runtime-prewarm'"), 'report generator runtime prewarm should be scheduled off the switch frame');
 assert.ok(moduleEntryRuntime.includes('ensureReportRenderRuntimeLoaded'), 'report generator prewarm should include report rendering runtime');
 assert.ok(moduleEntryRuntime.includes('ensureStudentCompareRuntimeLoaded'), 'report generator prewarm should include student compare runtime');
-assert.ok(moduleEntryRuntime.includes('ensureHistoryCompareRuntimeLoaded'), 'report generator prewarm should include history compare runtime');
+const reportPrewarmStart = moduleEntryRuntime.indexOf('function prewarmReportGeneratorRuntimes');
+const reportPrewarmEnd = moduleEntryRuntime.indexOf('function runModuleSpecificInit', reportPrewarmStart);
+const reportPrewarmSource = reportPrewarmStart >= 0 && reportPrewarmEnd > reportPrewarmStart
+    ? moduleEntryRuntime.slice(reportPrewarmStart, reportPrewarmEnd)
+    : '';
+assert.ok(reportPrewarmSource, 'report generator prewarm source should be present');
+assert.ok(!reportPrewarmSource.includes('ensureHistoryCompareRuntimeLoaded'), 'report generator should not prewarm legacy history compare runtime during normal report entry');
 assert.ok(!moduleEntryRuntime.includes("id === 'exam-arranger'\n            && typeof window.ensureGradeSchedulerRuntimeLoaded"), 'exam arranger should not eagerly load the grade scheduler runtime');
 assert.ok(bootRuntime.includes("triggers: ['grade-scheduler']"), 'grade scheduler runtime should load only for the grade scheduler module');
 assert.ok(!moduleEntryRuntime.includes('initClassComparisonEntry'), 'removed class comparison should not have an entry initializer');

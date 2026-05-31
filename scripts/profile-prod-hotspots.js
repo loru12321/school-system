@@ -225,8 +225,26 @@ async function profileReport(page) {
     const schoolSelect = document.getElementById('sel-school');
     const classSelect = document.getElementById('sel-class');
     const nameInput = document.getElementById('inp-name');
-    const school = Array.from(schoolSelect?.options || []).map((o) => o.value).find(Boolean);
-    const student = school ? (window.SCHOOLS?.[school]?.students || []).find((item) => item?.name) : null;
+    const schoolOptions = Array.from(schoolSelect?.options || []).map((o) => o.value).filter(Boolean);
+    const rows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
+    const sameSchool = (left, right) => {
+      const leftName = String(left || '').trim();
+      const rightName = String(right || '').trim();
+      if (!leftName || !rightName) return false;
+      if (window.PermissionPolicy && typeof window.PermissionPolicy.sameSchoolName === 'function') {
+        return window.PermissionPolicy.sameSchoolName(leftName, rightName);
+      }
+      if (typeof window.areSchoolNamesEquivalent === 'function') {
+        return window.areSchoolNamesEquivalent(leftName, rightName);
+      }
+      return leftName === rightName;
+    };
+    const school = schoolOptions.find((name) => rows.some((item) => sameSchool(item?.school, name)))
+      || schoolOptions[0]
+      || '';
+    const student = school
+      ? rows.find((item) => item?.name && sameSchool(item?.school, school))
+      : rows.find((item) => item?.name);
     if (!student) throw new Error('sample student not found');
     schoolSelect.value = school;
     window.updateClassSelect?.();

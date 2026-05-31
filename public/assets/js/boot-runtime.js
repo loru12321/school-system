@@ -3224,8 +3224,7 @@ function installHistoryDoQueryWrapper() {
     const wrapped = async function (...args) {
         const warmHistoryRuntime = () => {
             Promise.allSettled([
-                window.ensureStudentCompareRuntimeLoaded?.(),
-                window.ensureHistoryCompareRuntimeLoaded?.()
+                window.ensureStudentCompareRuntimeLoaded?.()
             ]).then(() => {
                 const currentStudent = typeof window.readCurrentReportStudentState === 'function'
                     ? window.readCurrentReportStudentState()
