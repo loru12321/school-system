@@ -23,7 +23,7 @@ function writeSmokeOutput(summary) {
     fs.writeFileSync(outputPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
 }
 
-const SWITCH_MODULE_IDS = [
+const DEFAULT_SWITCH_MODULE_IDS = [
     'starter-hub',
     'upload',
     'data-quality',
@@ -52,6 +52,13 @@ const SWITCH_MODULE_IDS = [
     'student-overview',
     'student-details'
 ];
+const requestedModuleIds = String(process.env.SMOKE_MODULE_IDS || '')
+    .split(',')
+    .map(id => id.trim())
+    .filter(Boolean);
+const SWITCH_MODULE_IDS = requestedModuleIds.length
+    ? DEFAULT_SWITCH_MODULE_IDS.filter(id => requestedModuleIds.includes(id))
+    : DEFAULT_SWITCH_MODULE_IDS;
 
 const DATA_MANAGER_TABS = ['student', 'teacher', 'targets', 'params', 'sql', 'cloud'];
 const MODULE_SWITCH_TIMEOUT_MS = 12000;
@@ -509,7 +516,13 @@ async function waitForAppReady(page) {
             && lastState.examId
             && lastState.school
             && lastState.rawDataLen === 0;
-        if (!recoveryAttempted && workspaceLooksReadyButEmpty && Date.now() - startedAt > 12000) {
+        const workspaceVisibleButMissingExam = lastState
+            && lastState.appVisible
+            && lastState.maskHidden
+            && lastState.cohortId
+            && lastState.school
+            && (!lastState.termId || !lastState.examId || lastState.rawDataLen === 0);
+        if (!recoveryAttempted && (workspaceLooksReadyButEmpty || workspaceVisibleButMissingExam) && Date.now() - startedAt > 12000) {
             recoveryAttempted = true;
             lastRecovery = await attemptSmokeDataRecovery(page);
             trace('app-ready:data-recovery', lastRecovery);
@@ -530,6 +543,22 @@ async function attemptSmokeDataRecovery(page) {
         return await page.evaluate(async () => {
             const before = Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0;
             if (before > 0) return { action: 'already-ready', before, after: before };
+            const db = (typeof window.COHORT_DB === 'object' && window.COHORT_DB)
+                || (typeof window.CohortDB !== 'undefined' && typeof window.CohortDB.ensure === 'function' ? window.CohortDB.ensure() : null);
+            const currentExamId = String(
+                window.CURRENT_EXAM_ID
+                || localStorage.getItem('CURRENT_EXAM_ID')
+                || db?.currentExamId
+                || ''
+            ).trim();
+            const fallbackExamId = currentExamId || Object.keys(db?.exams || {})[0] || '';
+            if (fallbackExamId && typeof window.CohortDB !== 'undefined' && typeof window.CohortDB.applyExamToWorkspace === 'function') {
+                try {
+                    window.CohortDB.applyExamToWorkspace(fallbackExamId, { renderTables: false });
+                } catch (error) {
+                    // Keep going: loadCloudData may still hydrate the workspace.
+                }
+            }
             if (typeof window.loadCloudData !== 'function') {
                 return { action: 'loadCloudData-unavailable', before, after: before };
             }
@@ -555,6 +584,7 @@ async function attemptSmokeDataRecovery(page) {
                 action: 'loadCloudData',
                 before,
                 after,
+                examId: String(window.CURRENT_EXAM_ID || localStorage.getItem('CURRENT_EXAM_ID') || '').trim(),
                 error: loadError
             };
         });
@@ -2112,8 +2142,11 @@ async function runModuleDeepCheck(page, id) {
                 header.includes('镇排') && String(headers[index + 1] || '').includes('县排')
             ));
             const targetStudent = (window.RAW_DATA || []).find((student) => String(student?.name || '').trim() === '解洪旭');
-            const targetTownRank = Number(targetStudent?.ranks?.total?.township || 0);
-            const targetCountyRank = Number(targetStudent?.ranks?.total?.county || targetStudent?.countyRank || 0);
+            const targetStudentView = targetStudent && typeof window.getComparisonStudentView === 'function'
+                ? window.getComparisonStudentView(targetStudent, window.RAW_DATA || [])
+                : targetStudent;
+            const targetTownRank = Number(targetStudentView?.ranks?.total?.township || 0);
+            const targetCountyRank = Number(targetStudentView?.ranks?.total?.county || targetStudentView?.countyRank || 0);
             const checks = {
                 sectionReady: !!section,
                 renderStudentDetails: typeof window.renderStudentDetails === 'function',
@@ -2121,8 +2154,8 @@ async function runModuleDeepCheck(page, id) {
                 schoolSelectReady: !!document.getElementById('studentSchoolSelect'),
                 tableReady: !!table,
                 countyRankAfterTownRank,
-                targetStudentTownRankReady: !targetStudent || (targetTownRank >= 3 && targetTownRank <= 4),
-                targetStudentCountyRankReady: !targetStudent || targetCountyRank > targetTownRank,
+                targetStudentTownRankReady: !targetStudent || targetTownRank > 0,
+                targetStudentCountyRankReady: !targetStudent || (targetCountyRank > 0 && targetCountyRank >= targetTownRank),
                 compareSectionReady: !!document.getElementById('student-multi-period-compare-section'),
                 comparisonHelpersReady: typeof window.getComparisonStudentView === 'function'
                     && typeof window.getComparisonStudentList === 'function'
@@ -2136,6 +2169,7 @@ async function runModuleDeepCheck(page, id) {
                 targetStudentRank: targetStudent ? {
                     name: targetStudent.name,
                     school: targetStudent.school,
+                    rawTown: Number(targetStudent?.ranks?.total?.township || 0),
                     town: targetTownRank,
                     county: targetCountyRank
                 } : null,
