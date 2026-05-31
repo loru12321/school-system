@@ -81,8 +81,20 @@ function getReportStudentCacheKey(student) {
         String(student?.school || '').trim(),
         String(student?.class || '').trim(),
         String(student?.name || '').trim(),
-        String(student?.id || '').trim()
+        String(student?.id || student?.examNo || '').trim()
     ].join('::');
+}
+
+function getPreviousHistoryEntryForReport(reportExamHistory, currentExamId) {
+    if (!Array.isArray(reportExamHistory) || !reportExamHistory.length) return null;
+    for (let i = reportExamHistory.length - 1; i >= 0; i--) {
+        const historyEntry = reportExamHistory[i];
+        const matchKey = historyEntry?.examFullKey || historyEntry?.examId;
+        if (!currentExamId || (!isExamKeyEquivalentForCompare(matchKey, currentExamId) && !isExamKeyEquivalentForCompare(historyEntry?.examId, currentExamId))) {
+            return historyEntry || null;
+        }
+    }
+    return null;
 }
 
 function getCachedComparisonStudentView(student) {
@@ -281,10 +293,7 @@ function renderSingleReportCardHTML(stu, mode) {
     const prevStu = cloudHint?.previousRecord || getCachedPreviousRecord(reportStu);
     const reportExamHistory = getCachedStudentExamHistory(reportStu);
     const currentExamId = getEffectiveCurrentExamId();
-    const prevHistoryEntry = reportExamHistory.filter(h => {
-        const matchKey = h.examFullKey || h.examId;
-        return !currentExamId || (!isExamKeyEquivalentForCompare(matchKey, currentExamId) && !isExamKeyEquivalentForCompare(h.examId, currentExamId));
-    }).slice(-1)[0] || null;
+    const prevHistoryEntry = getPreviousHistoryEntryForReport(reportExamHistory, currentExamId);
     const prevHistoryStu = prevHistoryEntry ? (prevHistoryEntry.student || prevHistoryEntry) : null;
     const compareStu = (prevHistoryStu && prevHistoryStu.scores) ? prevHistoryStu : prevStu;
     const compareTotalRanks = compareStu?.ranks?.total || {};

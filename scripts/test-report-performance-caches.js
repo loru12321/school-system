@@ -40,6 +40,8 @@ const pkg = JSON.parse(read(packageFile));
     'getCachedRankScope',
     'getCachedCountyScopeMap',
     'getCachedSchoolCandidates',
+    'student?.id || student?.examNo',
+    'getPreviousHistoryEntryForReport',
     'cacheableReportHtml',
     'ReportRenderPerfCache.html.set'
 ].forEach((token) => assertContains(reportRender, token, reportRenderFile));
