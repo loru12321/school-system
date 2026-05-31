@@ -55,9 +55,17 @@ const pkg = JSON.parse(read(packageFile));
     'smRowsSignature',
     'smGetSchoolListCached',
     'smBuildProgressSummary',
+    'signatureParts',
     'smBuildPotentialCount',
     'renderSignature'
 ].forEach((token) => assertContains(overview, token, overviewFile));
+
+const marginalStart = overview.indexOf('function smBuildMarginalSummary()');
+const marginalEnd = overview.indexOf('function smGetSchoolListCached()', marginalStart);
+const marginalSource = marginalStart >= 0 && marginalEnd > marginalStart ? overview.slice(marginalStart, marginalEnd) : '';
+if (!marginalSource || marginalSource.includes('JSON.stringify')) {
+    fail('student overview marginal summary should build its signature and counts in one pass');
+}
 
 [
     'FreshmanExamPerfCache',

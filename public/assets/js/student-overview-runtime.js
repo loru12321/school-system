@@ -80,29 +80,26 @@ function smBuildUniqueStudentCount(rawList, schoolName = '', className = '') {
 
 function smBuildMarginalSummary() {
     const source = (window.MARGINAL_STUDENTS && typeof window.MARGINAL_STUDENTS === 'object') ? window.MARGINAL_STUDENTS : {};
-    const signature = JSON.stringify(Object.keys(source).sort().map((classKey) => {
+    let classCount = 0;
+    let total = 0;
+    const signatureParts = Object.keys(source).sort().map((classKey) => {
         const subjectMap = source[classKey] || {};
-        return [
-            classKey,
-            ...Object.keys(subjectMap).sort().map((subject) => {
-                const data = subjectMap[subject] || {};
-                return `${subject}:${Array.isArray(data.excellentMarginal) ? data.excellentMarginal.length : 0}:${Array.isArray(data.passMarginal) ? data.passMarginal.length : 0}`;
-            })
-        ].join('|');
-    }));
+        classCount += 1;
+        const subjectParts = Object.keys(subjectMap).sort().map((subject) => {
+            const subjectData = subjectMap[subject] || {};
+            const excellentList = Array.isArray(subjectData?.excellentMarginal) ? subjectData.excellentMarginal : [];
+            const passList = Array.isArray(subjectData?.passMarginal) ? subjectData.passMarginal : [];
+            const excellentCount = excellentList.length;
+            const passCount = passList.length;
+            total += excellentCount + passCount;
+            return `${subject}:${excellentCount}:${passCount}`;
+        });
+        return [classKey, ...subjectParts].join('|');
+    });
+    const signature = signatureParts.join('||');
     if (StudentOverviewPerfCache.marginalSignature === signature) {
         return StudentOverviewPerfCache.marginalSummary;
     }
-    let classCount = 0;
-    let total = 0;
-    Object.entries(source).forEach(([, subjectMap]) => {
-        classCount += 1;
-        Object.values(subjectMap || {}).forEach((subjectData) => {
-            const excellentList = Array.isArray(subjectData?.excellentMarginal) ? subjectData.excellentMarginal : [];
-            const passList = Array.isArray(subjectData?.passMarginal) ? subjectData.passMarginal : [];
-            total += excellentList.length + passList.length;
-        });
-    });
     StudentOverviewPerfCache.marginalSignature = signature;
     StudentOverviewPerfCache.marginalSummary = { classCount, total };
     return StudentOverviewPerfCache.marginalSummary;
