@@ -20,6 +20,7 @@ const compareResultRuntimePath = path.resolve(__dirname, '../public/assets/js/co
 const compareSummaryRuntimePath = path.resolve(__dirname, '../public/assets/js/compare-summary-state-runtime.js');
 const cloudApiRuntimePath = path.resolve(__dirname, '../public/assets/js/cloud-api-runtime.js');
 const cloudConnectionRuntimePath = path.resolve(__dirname, '../public/assets/js/cloud-connection-runtime.js');
+const cloudWorkspaceRuntimePath = path.resolve(__dirname, '../public/assets/js/cloud-workspace-runtime.js');
 const systemPerformanceRuntimePath = path.resolve(__dirname, '../public/assets/js/system-performance-runtime.js');
 const dataCloudRuntimePath = path.resolve(__dirname, '../public/assets/js/data-cloud-runtime.js');
 const issueManagerRuntimePath = path.resolve(__dirname, '../public/assets/js/issue-manager-runtime.js');
@@ -161,6 +162,7 @@ const teachingManagementVersionRuntime = fs.readFileSync(teachingManagementVersi
 const studentOverviewRuntime = fs.readFileSync(studentOverviewRuntimePath, 'utf8');
 const teacherAnalysisCoreRuntime = fs.readFileSync(teacherAnalysisCoreRuntimePath, 'utf8');
 const countyAnalysisRuntime = fs.readFileSync(countyAnalysisRuntimePath, 'utf8');
+const cloudWorkspaceRuntime = fs.readFileSync(cloudWorkspaceRuntimePath, 'utf8');
 const popperVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/popperjs/popper.min.js'), 'utf8');
 const tippyVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/tippyjs/tippy.umd.min.js'), 'utf8');
 const appSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
@@ -170,6 +172,10 @@ const supabaseKeyAssignments = bootRuntime.match(/window\.SUPABASE_KEY\s*=/g) ||
 const gatewayUrlAssignments = bootRuntime.match(/window\.EDGE_GATEWAY_URL\s*=/g) || [];
 const switchTabDefinitions = appSource.match(/function\s+switchTab\s*\(/g) || [];
 const switchTabOverrides = appSource.match(/switchTab\s*=\s*function\s*\(/g) || [];
+const bootDirectGatewayCandidateIndex = bootRuntime.indexOf('pushCandidate(DIRECT_EDGE_GATEWAY_URL);', bootRuntime.indexOf('installBootLoginShell'));
+const bootSameOriginGatewayCandidateIndex = bootRuntime.indexOf('pushCandidate(window.EDGE_GATEWAY_URL);', bootRuntime.indexOf('installBootLoginShell'));
+const grade9TotalSubjectContract = /totalSubs:\s*\['语文',\s*'数学',\s*'英语',\s*'物理',\s*'化学'\]/;
+const grade9PoliticsDisplayContract = /extraDisplaySubs:\s*\['政治'\]/;
 const authStateRef = './assets/js/auth-state-runtime.js';
 const workspaceStateRef = './assets/js/workspace-state-runtime.js';
 const examStateRef = './assets/js/exam-state-runtime.js';
@@ -765,6 +771,25 @@ assert.ok(indexHtml.includes(tablerIconsRef), 'index.html should load local tabl
 ].forEach((src) => {
     assert.strictEqual(indexHtml.includes(src), false, `${src} should not be eagerly loaded on boot`);
 });
+assert.ok(
+    bootDirectGatewayCandidateIndex >= 0 && bootSameOriginGatewayCandidateIndex >= 0 && bootDirectGatewayCandidateIndex < bootSameOriginGatewayCandidateIndex,
+    'boot login should try the direct Cloudflare gateway before the same-origin proxy fallback'
+);
+assert.ok(grade9TotalSubjectContract.test(appSource), 'grade 9 total score must remain limited to Chinese, Math, English, Physics, Chemistry');
+assert.ok(grade9PoliticsDisplayContract.test(appSource), 'grade 9 politics should be configured as display-only subject');
+assert.ok(appSource.includes('function getConfiguredDisplaySubjects'), 'app.js should merge display-only subjects without changing total score subjects');
+assert.ok(
+    appSource.includes('CohortManager.addCohort({ year, startGrade }, { skipConfirm: true, fastEnter: false })'),
+    'login cohort entry should wait for cloud data instead of opening an empty fast-enter workspace'
+);
+assert.ok(
+    appSource.includes('latestOnly: true') && appSource.includes('后台历史考试补全失败'),
+    'login cohort entry should restore the latest exam first and hydrate historical exams in the background'
+);
+assert.ok(
+    cloudWorkspaceRuntime.includes('function getExamKeyRecencyScore') && cloudWorkspaceRuntime.includes('keysToFetch.length = 1'),
+    'latest-only cohort hydration should pick one recency-ranked exam snapshot'
+);
 assert.ok(authStateIndex < workspaceStateIndex, 'auth-state-runtime.js must load before workspace-state-runtime.js');
 assert.ok(workspaceStateIndex < examStateIndex, 'workspace-state-runtime.js must load before exam-state-runtime.js');
 assert.ok(examStateIndex < schoolStateIndex, 'exam-state-runtime.js must load before school-state-runtime.js');

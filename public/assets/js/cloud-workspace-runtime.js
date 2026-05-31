@@ -51,6 +51,21 @@
         return normalizeCohortId(window.CURRENT_COHORT_ID || localStorage.getItem('CURRENT_COHORT_ID'));
     }
 
+    function getExamKeyRecencyScore(key, updatedAt = '') {
+        const text = String(key || '');
+        const updatedScore = new Date(updatedAt || '').getTime() || 0;
+        const dateMatch = text.match(/(20\d{2})[-_/年.](\d{1,2})[-_/月.](\d{1,2})/);
+        const dateScore = dateMatch
+            ? new Date(Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3])).getTime()
+            : 0;
+        const termScore = text.includes('下学期') ? 200000 : text.includes('上学期') ? 100000 : 0;
+        const typeOrder = ['期中', '期末', '一模', '二模', '三模', '四模', '中考'];
+        const typeScore = typeOrder.reduce((score, label, index) => (
+            text.includes(label) ? Math.max(score, (index + 1) * 1000) : score
+        ), 0);
+        return Math.max(updatedScore, dateScore) + termScore + typeScore;
+    }
+
     function syncWorkspaceState(patch = {}) {
         if (WorkspaceState && typeof WorkspaceState.syncWorkspaceState === 'function') {
             return WorkspaceState.syncWorkspaceState(patch);
@@ -934,8 +949,12 @@
                     }
 
                     if (latestOnly && keysToFetch.length > 1) {
-                        const updatedByKey = new Map(candidates.map(row => [row.key, new Date(row.updated_at).getTime() || 0]));
-                        keysToFetch.sort((left, right) => (updatedByKey.get(right) || 0) - (updatedByKey.get(left) || 0));
+                        const candidateByKey = new Map(candidates.map(row => [row.key, row]));
+                        keysToFetch.sort((left, right) => {
+                            const leftRow = candidateByKey.get(left) || {};
+                            const rightRow = candidateByKey.get(right) || {};
+                            return getExamKeyRecencyScore(right, rightRow.updated_at) - getExamKeyRecencyScore(left, leftRow.updated_at);
+                        });
                         keysToFetch.length = 1;
                     }
 

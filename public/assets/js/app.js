@@ -7618,7 +7618,12 @@ async function switchCohort(cohortId, options = {}) {
         updateStatusPanel();
     } else {
         if (window.CloudManager && typeof window.CloudManager.fetchCohortExamsToLocal === 'function') {
-            const hydrateFromExamArchive = () => window.CloudManager.fetchCohortExamsToLocal(cohortId, { background: true })
+            const hydrateFromExamArchive = () => window.CloudManager.fetchCohortExamsToLocal(cohortId, {
+                background: true,
+                latestOnly: true,
+                minCount: 1,
+                refreshSelectors: false
+            })
                 .then((syncRes) => {
                     if (String(readWorkspaceCohortId() || CURRENT_COHORT_ID || '') !== String(cohortId)) return false;
                 const restoredFromExamArchive = syncRes && syncRes.success && tryAutoRestoreWorkspaceExam({ cohortId });
@@ -7630,6 +7635,12 @@ async function switchCohort(cohortId, options = {}) {
                     document.getElementById('app').classList.remove('hidden');
                     scheduleWorkspaceUiRefresh('switch-cohort-exam-archive', { delay: 120, idle: true, timeout: 1800, renderTables: false });
                     CohortDB.renderExamList();
+                    CohortExamHydrationScheduler.schedule(cohortId, {
+                        delay: 1200,
+                        background: true,
+                        minCount: 2,
+                        warnPrefix: '[switchCohort] 后台历史考试补全失败:'
+                    });
                     UI.toast(`已从云端考试快照恢复 [${cohortKey}] 数据`, "success");
                     logAction('届别切换', `已从云端考试快照恢复 ${cohortKey}`);
                     updateStatusPanel();
@@ -8179,6 +8190,7 @@ let CONFIG = {
     excRate: 0.05,
     totalSubs: 'auto',
     analysisSubs: 'auto',
+    extraDisplaySubs: [],
     showQuery: true,
     mode: 'multi'
 };
@@ -8195,6 +8207,17 @@ const initialDataSnapshot = syncDataRuntimeState({
 CONFIG = initialDataSnapshot.config && Object.keys(initialDataSnapshot.config).length
     ? { ...CONFIG, ...initialDataSnapshot.config }
     : CONFIG;
+
+function getConfiguredDisplaySubjects(config = CONFIG) {
+    const analysisSubjects = config.analysisSubs;
+    if (!analysisSubjects || analysisSubjects === 'auto') return 'auto';
+    const displaySubjects = Array.isArray(analysisSubjects) ? [...analysisSubjects] : [];
+    const extraDisplaySubjects = Array.isArray(config.extraDisplaySubs) ? config.extraDisplaySubs : [];
+    extraDisplaySubjects.forEach((subject) => {
+        if (subject && !displaySubjects.includes(subject)) displaySubjects.push(subject);
+    });
+    return displaySubjects;
+}
 RAW_DATA = initialDataSnapshot.rawData || [];
 SCHOOLS = initialDataSnapshot.schools || {};
 SUBJECTS = initialDataSnapshot.subjects || [];
@@ -8973,12 +8996,17 @@ saveProjectSnapshot = function () {
 function initSystem(type) {
     document.getElementById('mode-mask').style.display = 'none';
     document.getElementById('app').classList.remove('hidden');
-    if (type === '6-8') setConfigState({ name: '6-8年级', label: '全科总', excRate: 0.05, totalSubs: 'auto', analysisSubs: 'auto', showQuery: true });
-    else setConfigState({ name: '9年级', label: '五科总', excRate: 0.06, totalSubs: ['语文', '数学', '英语', '物理', '化学'], analysisSubs: ['语文', '数学', '英语', '物理', '化学'], showQuery: true });
+    if (type === '6-8') setConfigState({ name: '6-8年级', label: '全科总', excRate: 0.05, totalSubs: 'auto', analysisSubs: 'auto', extraDisplaySubs: [], showQuery: true });
+    else setConfigState({ name: '9年级', label: '五科总', excRate: 0.06, totalSubs: ['语文', '数学', '英语', '物理', '化学'], analysisSubs: ['语文', '数学', '英语', '物理', '化学'], extraDisplaySubs: ['政治'], showQuery: true });
     const modeBadge = document.getElementById('mode-badge');
     const modeInfo = document.getElementById('mode-info');
     if (modeBadge) modeBadge.innerText = CONFIG.name;
-    if (modeInfo) modeInfo.innerText = `${CONFIG.name}模式 (总分: ${CONFIG.label}, 后1/3剔除: ${CONFIG.excRate * 100}%)`;
+    if (modeInfo) {
+        const displayOnlyText = Array.isArray(CONFIG.extraDisplaySubs) && CONFIG.extraDisplaySubs.length
+            ? `，单科展示: ${CONFIG.extraDisplaySubs.join('、')}`
+            : '';
+        modeInfo.innerText = `${CONFIG.name}模式 (总分: ${CONFIG.label}${displayOnlyText}, 后1/3剔除: ${CONFIG.excRate * 100}%)`;
+    }
     document.querySelectorAll('.label-total').forEach(e => e.innerText = CONFIG.label);
     const labelExc = document.getElementById('label-exc');
     if (labelExc) labelExc.innerText = (CONFIG.excRate * 100) + '%';
@@ -10076,8 +10104,9 @@ function parseRows(rows, defaultSchool) {
     });
     idxMap.school = findBestHeaderIndex(aliasMap.school, schoolHeaderExcludeKeywords);
 
-    if (CONFIG.analysisSubs && CONFIG.analysisSubs !== 'auto') {
-        setSubjects(SUBJECTS.filter(s => CONFIG.analysisSubs.includes(s)));
+    const displaySubjects = getConfiguredDisplaySubjects(CONFIG);
+    if (displaySubjects && displaySubjects !== 'auto') {
+        setSubjects(SUBJECTS.filter(s => displaySubjects.includes(s)));
     }
     const subsForTotal = CONFIG.totalSubs === 'auto' ? SUBJECTS : CONFIG.totalSubs;
 
@@ -17001,14 +17030,19 @@ function getActiveGrade() {
 function applyModeByGrade(grade) {
     const isGrade9 = String(grade) === '9';
     if (isGrade9) {
-        setConfigState({ name: '9年级', label: '五科总', excRate: 0.06, totalSubs: ['语文', '数学', '英语', '物理', '化学'], analysisSubs: ['语文', '数学', '英语', '物理', '化学'], showQuery: true, mode: CONFIG.mode || 'multi' });
+        setConfigState({ name: '9年级', label: '五科总', excRate: 0.06, totalSubs: ['语文', '数学', '英语', '物理', '化学'], analysisSubs: ['语文', '数学', '英语', '物理', '化学'], extraDisplaySubs: ['政治'], showQuery: true, mode: CONFIG.mode || 'multi' });
     } else {
-        setConfigState({ name: '6-8年级', label: '全科总', excRate: 0.05, totalSubs: 'auto', analysisSubs: 'auto', showQuery: true, mode: CONFIG.mode || 'multi' });
+        setConfigState({ name: '6-8年级', label: '全科总', excRate: 0.05, totalSubs: 'auto', analysisSubs: 'auto', extraDisplaySubs: [], showQuery: true, mode: CONFIG.mode || 'multi' });
     }
     const badge = document.getElementById('mode-badge');
     if (badge) badge.innerText = CONFIG.name;
     const info = document.getElementById('mode-info');
-    if (info) info.innerText = `${CONFIG.name}模式 (总分: ${CONFIG.label}, 后1/3剔除: ${CONFIG.excRate * 100}%)`;
+    if (info) {
+        const displayOnlyText = Array.isArray(CONFIG.extraDisplaySubs) && CONFIG.extraDisplaySubs.length
+            ? `，单科展示: ${CONFIG.extraDisplaySubs.join('、')}`
+            : '';
+        info.innerText = `${CONFIG.name}模式 (总分: ${CONFIG.label}${displayOnlyText}, 后1/3剔除: ${CONFIG.excRate * 100}%)`;
+    }
     document.querySelectorAll('.label-total').forEach(e => e.innerText = CONFIG.label);
     const excEl = document.getElementById('label-exc');
     if (excEl) excEl.innerText = (CONFIG.excRate * 100) + '%';
@@ -17128,7 +17162,7 @@ async function enterCohortFromMask() {
     const startGrade = 6;
     if (!year || year < 2000) return alert('请输入有效的入学年份');
     setManualCohortSelectionGate(false);
-    await CohortManager.addCohort({ year, startGrade }, { skipConfirm: true });
+    await CohortManager.addCohort({ year, startGrade }, { skipConfirm: true, fastEnter: false });
     refreshAuthRoleViewFromSession();
 }
 
