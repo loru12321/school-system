@@ -3245,8 +3245,9 @@
                         <input type="text" id="manual-grade" placeholder="级部(如:7)"
                             style="padding:8px; border:1px solid #ccc; width:20%; display:none;">
 
-                        <input type="text" id="manual-school" placeholder="所属学校 (必填)"
-                            style="padding:8px; border:1px solid #ccc; width:25%;">
+                        <select id="manual-school" style="padding:8px; border:1px solid #ccc; width:25%;">
+                            <option value="">选择所属学校</option>
+                        </select>
                         <input type="text" id="manual-name" placeholder="账号/姓名"
                             style="padding:8px; border:1px solid #ccc; flex:1;">
                     </div>
@@ -3534,6 +3535,33 @@
                     onclick="document.getElementById('account-manager-modal').style.display='none'">&times;</button>
             </div>
 
+            <!-- 编辑区：放在搜索区上方，避免修改账号信息被表格区遮住 -->
+            <div id="account-edit-panel"
+                style="display:none; background:#fff7ed; padding:14px; border-radius:8px; border:1px solid #fed7aa; margin-bottom:15px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <strong id="acc-edit-title" style="color:#9a3412;">修改账号信息</strong>
+                    <button type="button" class="btn btn-sm btn-gray" onclick="AccountManager.cancelEdit && AccountManager.cancelEdit()">取消</button>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <label style="font-size:12px; color:#475569;">
+                        角色权限
+                        <select id="acc-edit-role" style="margin-top:4px; width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;"></select>
+                    </label>
+                    <label style="font-size:12px; color:#475569;">
+                        所属学校
+                        <select id="acc-edit-school" style="margin-top:4px; width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;"></select>
+                    </label>
+                    <label id="acc-edit-class-wrap" style="font-size:12px; color:#475569; grid-column:1 / -1;">
+                        <span id="acc-edit-class-label">班级 / 范围</span>
+                        <input type="text" id="acc-edit-class" placeholder="例如: 9.1 或 9"
+                            style="margin-top:4px; width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px;">
+                    </label>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:12px;">
+                    <button type="button" class="btn btn-primary" onclick="AccountManager.saveInlineEdit && AccountManager.saveInlineEdit()">保存修改</button>
+                </div>
+            </div>
+
             <!-- 搜索区 -->
             <div
                 style="background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:15px;">
@@ -3557,6 +3585,7 @@
                         <tr>
                             <th>账号/姓名</th>
                             <th>角色</th>
+                            <th>学校</th>
                             <th>班级/范围</th>
                             <th>密码状态</th>
                             <th>操作</th>
@@ -3564,7 +3593,7 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td colspan="5" style="text-align:center; padding:30px; color:#999;">请输入关键字搜索</td>
+                            <td colspan="6" style="text-align:center; padding:30px; color:#999;">请输入关键字搜索</td>
                         </tr>
                     </tbody>
                 </table>

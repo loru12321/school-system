@@ -3530,14 +3530,17 @@ var Auth = {
         if (!match || !AuthState.matchesManagedPassword(match.record, match.role, password)) return null;
 
         const normalizedClass = String(match.record?.class || inputClass || '').trim();
-        const localSchool = this.resolveLocalManagedSchool(match.record?.name, normalizedClass);
+        const localSchool = String(match.record?.school || '').trim() || this.resolveLocalManagedSchool(match.record?.name, normalizedClass);
         const role = match.role;
+        let className = normalizedClass;
+        if (role === 'teacher') className = '教师';
+        else if (role === 'director' || role === 'admin') className = '';
         return {
             username: String(match.record?.name || username).trim(),
             role,
             roles: [role],
             school: localSchool,
-            class_name: isParentLikeRole(role) ? normalizedClass : '教师',
+            class_name: className,
             local_only: true,
             must_change_password: match.record?.must_change_password !== false
         };
@@ -3714,6 +3717,8 @@ var Auth = {
                 roles: data.roles || [data.role], // 🆕 支持多角色数组
                 school: data.school,
                 class: data.class_name, // 数据库字段名
+                class_name: data.class_name,
+                teacher_name: data.teacher_name || data.display_name || data.username || data.name,
                 local_only: !!data.local_only,
                 must_change_password: !!data.must_change_password
             };
@@ -4168,6 +4173,7 @@ var Auth = {
 
     renderSchoolCheckboxes: function () {
         const container = document.getElementById('admin-gen-school-list');
+        this.populateManualSchoolSelect();
         if (!container) return; // 如果找不到容器（比如非管理员），直接返回，不报错
 
         if (typeof SCHOOLS === 'undefined' || Object.keys(SCHOOLS).length === 0) {
@@ -4185,6 +4191,50 @@ var Auth = {
                 `;
         });
         container.innerHTML = html;
+    },
+
+    getAccountSchoolOptions: function () {
+        const names = new Set();
+        if (typeof SCHOOLS !== 'undefined' && SCHOOLS && typeof SCHOOLS === 'object') {
+            Object.keys(SCHOOLS).forEach(name => {
+                const clean = String(name || '').trim();
+                if (clean) names.add(clean);
+            });
+        }
+        if (Array.isArray(RAW_DATA)) {
+            RAW_DATA.forEach(row => {
+                const clean = String(row?.school || '').trim();
+                if (clean) names.add(clean);
+            });
+        }
+        const currentSchool = String(
+            this.currentUser?.school
+            || MY_SCHOOL
+            || (typeof readCurrentSchool === 'function' ? readCurrentSchool() : '')
+            || ''
+        ).trim();
+        if (currentSchool && currentSchool !== '系统') names.add(currentSchool);
+        return Array.from(names).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
+    },
+
+    populateManualSchoolSelect: function () {
+        const select = document.getElementById('manual-school');
+        if (!select || String(select.tagName || '').toLowerCase() !== 'select') return;
+        const previous = String(select.value || '').trim();
+        const options = this.getAccountSchoolOptions();
+        const htmlEscape = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[char]));
+        select.innerHTML = '<option value="">选择所属学校</option>' + options
+            .map(name => `<option value="${htmlEscape(name)}">${htmlEscape(name)}</option>`)
+            .join('');
+        if (previous && options.some(name => sameAppSchoolName(name, previous) || name === previous)) {
+            const matched = options.find(name => sameAppSchoolName(name, previous) || name === previous);
+            select.value = matched || previous;
+        } else if (this.currentUser?.school && this.currentUser.school !== '系统') {
+            const matched = options.find(name => sameAppSchoolName(name, this.currentUser.school) || name === this.currentUser.school);
+            if (matched) select.value = matched;
+        }
     },
 
     toggleAllSchools: function (check) {
@@ -4211,13 +4261,20 @@ var Auth = {
         let countParentUpd = 0;
         let countTeacherNew = 0;
 
-        const targetStudents = RAW_DATA.filter(s => schools.includes(s.school));
+        const selectedSchoolSet = new Set(schools);
+        const targetStudents = RAW_DATA.filter(s => schools.some(school => sameAppSchoolName(school, s.school) || school === s.school));
         if (shouldGenerateParents) {
             targetStudents.forEach(s => {
-                const existIdx = this.db.parents.findIndex(p => p.name === s.name && p.class === s.class);
+                const studentSchool = String(s.school || '').trim();
+                const existIdx = this.db.parents.findIndex(p =>
+                    p.name === s.name
+                    && p.class === s.class
+                    && (!p.school || sameAppSchoolName(p.school, studentSchool) || p.school === studentSchool)
+                );
                 const newAccount = {
                     name: s.name,
                     class: s.class,
+                    school: studentSchool,
                     pass: createManagedTemporaryPassword('parent'),
                     password_mode: 'temporary',
                     must_change_password: true
@@ -4232,35 +4289,58 @@ var Auth = {
             });
         }
 
-        const targetClasses = new Set();
-        targetStudents.forEach(s => targetClasses.add(s.class));
+        const targetClasses = new Map();
+        targetStudents.forEach(s => {
+            const cls = String(s.class || '').trim();
+            const sch = String(s.school || '').trim();
+            if (!cls || !sch) return;
+            if (!targetClasses.has(cls)) targetClasses.set(cls, new Set());
+            targetClasses.get(cls).add(sch);
+        });
 
-        const targetTeachers = new Set();
+        const targetTeachers = new Map();
         if (shouldGenerateTeachers && Object.keys(TEACHER_MAP).length > 0) {
-            Object.keys(TEACHER_MAP).forEach(key => {
+            Object.entries(TEACHER_MAP).forEach(([key, teacherName]) => {
                 const [cls] = key.split('_');
-                if (targetClasses.has(cls)) {
-                    targetTeachers.add(TEACHER_MAP[key]);
-                }
+                if (!targetClasses.has(cls) || !teacherName) return;
+                const explicitSchool = String((TEACHER_SCHOOL_MAP || {})[key] || '').trim();
+                const candidateSchools = explicitSchool
+                    ? [explicitSchool]
+                    : Array.from(targetClasses.get(cls) || []);
+                candidateSchools.forEach(schoolName => {
+                    const inSelected = Array.from(selectedSchoolSet).some(selected => sameAppSchoolName(selected, schoolName) || selected === schoolName);
+                    if (!inSelected) return;
+                    const teacherKey = String(teacherName || '').trim();
+                    if (teacherKey && !targetTeachers.has(teacherKey)) targetTeachers.set(teacherKey, schoolName);
+                });
             });
         } else if (shouldGenerateTeachers) {
             console.warn("未配置教师任课表，仅能生成家长账号");
         }
 
         if (shouldGenerateTeachers) {
-            targetTeachers.forEach(tName => {
-                const existIdx = this.db.teachers.findIndex(t => t.name === tName);
+            targetTeachers.forEach((schoolName, tName) => {
+                const existIdx = this.db.teachers.findIndex(t =>
+                    t.name === tName
+                    && (!t.school || sameAppSchoolName(t.school, schoolName) || t.school === schoolName)
+                );
                 const newAccount = {
                     name: tName,
+                    school: schoolName,
                     pass: createManagedTemporaryPassword('teacher'),
                     password_mode: 'temporary',
                     must_change_password: true,
                     grade: 'all'
                 };
                 if (existIdx >= 0) {
-                    this.db.teachers[existIdx].pass = createManagedTemporaryPassword('teacher');
-                    this.db.teachers[existIdx].password_mode = 'temporary';
-                    this.db.teachers[existIdx].must_change_password = true;
+                    this.db.teachers[existIdx] = {
+                        ...this.db.teachers[existIdx],
+                        school: schoolName,
+                        pass: createManagedTemporaryPassword('teacher'),
+                        password_mode: 'temporary',
+                        must_change_password: true,
+                        grade: this.db.teachers[existIdx].grade || 'all'
+                    };
                 } else {
                     this.db.teachers.push(newAccount);
                     countTeacherNew++;
@@ -4348,7 +4428,7 @@ var Auth = {
 
         if (isFiltering) {
             RAW_DATA.forEach(s => {
-                if (selectedSchools.includes(s.school)) {
+                if (selectedSchools.some(school => sameAppSchoolName(school, s.school) || school === s.school)) {
                     validClasses.add(s.class);
                 }
             });
@@ -4358,11 +4438,17 @@ var Auth = {
         this.db.teachers.forEach(t => {
             let shouldExport = true;
             if (isFiltering) {
-                let isRelevant = false;
+                let isRelevant = t.school
+                    ? selectedSchools.some(school => sameAppSchoolName(school, t.school) || school === t.school)
+                    : false;
                 for (const [key, tName] of Object.entries(TEACHER_MAP)) {
+                    if (isRelevant) break;
                     if (tName === t.name) {
                         const [cls, sub] = key.split('_');
-                        if (validClasses.has(cls)) {
+                        const teacherSchool = String((TEACHER_SCHOOL_MAP || {})[key] || '').trim();
+                        const schoolMatches = !teacherSchool
+                            || selectedSchools.some(school => sameAppSchoolName(school, teacherSchool) || school === teacherSchool);
+                        if (validClasses.has(cls) && schoolMatches) {
                             isRelevant = true;
                             break;
                         }
@@ -4380,13 +4466,17 @@ var Auth = {
         let parentCount = 0;
         this.db.parents.forEach(p => {
             let shouldExport = true;
-            let schoolName = '';
+            let schoolName = String(p.school || '').trim();
 
-            const stuRecord = RAW_DATA.find(r => r.name === p.name && r.class === p.class);
+            const stuRecord = RAW_DATA.find(r =>
+                r.name === p.name
+                && r.class === p.class
+                && (!schoolName || sameAppSchoolName(r.school, schoolName) || r.school === schoolName)
+            );
             if (stuRecord) schoolName = stuRecord.school;
 
             if (isFiltering) {
-                if (stuRecord && selectedSchools.includes(stuRecord.school)) {
+                if (schoolName && selectedSchools.some(school => sameAppSchoolName(school, schoolName) || school === schoolName)) {
                     shouldExport = true;
                 } else {
                     shouldExport = false;
@@ -4498,7 +4588,9 @@ var Auth = {
         const uniqueMap = new Map(); // key: username, value: dataObj
         const globalDefaultSchool = window.MY_SCHOOL || "默认学校";
 
-        const getSchool = (name, cls) => {
+        const getSchool = (name, cls, storedSchool = '') => {
+            const cleanStoredSchool = String(storedSchool || '').trim();
+            if (cleanStoredSchool) return cleanStoredSchool;
             if (typeof RAW_DATA !== 'undefined') {
                 const s = RAW_DATA.find(r => r.name === name && r.class == cls);
                 if (s) return s.school;
@@ -4516,7 +4608,7 @@ var Auth = {
                 username: user,
                 password: cleanStr(getRecoverableManagedPassword(p, 'parent')),
                 role: 'parent',
-                school: getSchool(p.name, p.class),
+                school: getSchool(p.name, p.class, p.school),
                 class_name: cleanStr(p.class) // 班级
             });
         });
@@ -4544,8 +4636,9 @@ var Auth = {
                 username: user,
                 password: cleanStr(getRecoverableManagedPassword(t, 'teacher')),
                 role: 'teacher',
-                school: teaSchMap[t.name] || globalDefaultSchool,
-                class_name: '教师'
+                school: cleanStr(t.school) || teaSchMap[t.name] || globalDefaultSchool,
+                class_name: '教师',
+                teacher_name: user
             });
         });
 
@@ -5185,8 +5278,14 @@ const AccountManager = {
     renderTable: function (list) {
         return requireAccountManagerRuntime().renderTable(list);
     },
-    editAttributes: async function (username, currentRole, currentClass) {
-        return requireAccountManagerRuntime().editAttributes(this, username, currentRole, currentClass);
+    editAttributes: async function (username, currentRole, currentClass, currentSchool) {
+        return requireAccountManagerRuntime().editAttributes(this, username, currentRole, currentClass, currentSchool);
+    },
+    saveInlineEdit: async function () {
+        return requireAccountManagerRuntime().saveInlineEdit(this);
+    },
+    cancelEdit: function () {
+        return requireAccountManagerRuntime().cancelEdit();
     },
     resetPassword: async function (username) {
         return requireAccountManagerRuntime().resetPassword(this, username);

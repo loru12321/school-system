@@ -60,8 +60,9 @@ function getTeacherScopeForUser(user) {
         return scope;
     }
 
-    const uname = normalizeTeacherName(user.name);
-    appDebug(`[权限检查] 检查教师: ${user.name} (规范化: ${uname})`);
+    const displayName = user.teacher_name || user.name || user.username || '';
+    const uname = normalizeTeacherName(displayName);
+    appDebug(`[权限检查] 检查教师: ${displayName} (规范化: ${uname})`);
     appDebug('[权限检查] TEACHER_MAP内容:', TEACHER_MAP);
 
     const boundSchool = getTeacherVisibilityBoundSchool(user);
@@ -166,7 +167,7 @@ function getVisibleSubjectsForTeacherUser(user) {
     const scope = getTeacherScopeForUser(user);
     (scope.subjects || new Set()).forEach(s => set.add(normalizeSubject(s)));
 
-    const normalizedName = normalizeTeacherName(user?.name || '').toLowerCase();
+    const normalizedName = normalizeTeacherName(user?.teacher_name || user?.name || user?.username || '').toLowerCase();
     if (!normalizedName) return set;
 
     Object.entries(TEACHER_STATS || {}).forEach(([teacherName, subMap]) => {
@@ -203,7 +204,7 @@ function getVisibleTeacherStats() {
             if (role === 'class_teacher') {
                 return buildClassTeacherStatsForClass(user?.class);
             }
-            const normalizedName = String(user?.name || '').replace(/\s+/g, '').toLowerCase();
+            const normalizedName = String(user?.teacher_name || user?.name || user?.username || '').replace(/\s+/g, '').toLowerCase();
             Object.keys(allStats).forEach(k => {
                 const keyNorm = String(k || '').replace(/\s+/g, '').toLowerCase();
                 if (keyNorm === normalizedName || keyNorm.startsWith(normalizedName + '(') || keyNorm.startsWith(normalizedName + '（')) {
@@ -229,4 +230,3 @@ function getVisibleTeacherStats() {
     }
     return scopedStats;
 }
-

@@ -43,6 +43,42 @@ assert.strictEqual(
     false,
     'teacher should not receive town-wide summary access'
 );
+assert.strictEqual(
+    context.PermissionPolicy.canQueryClass(
+        { role: 'director', roles: ['director'], school: '实验中学', class: '' },
+        '实验中学',
+        '9.1'
+    ),
+    true,
+    'director should query every grade/class in own school without a bound grade'
+);
+assert.strictEqual(
+    context.PermissionPolicy.canQueryClass(
+        { role: 'director', roles: ['director'], school: '实验中学', class: '' },
+        '外校',
+        '9.1'
+    ),
+    false,
+    'director should not query another school'
+);
+assert.strictEqual(
+    context.PermissionPolicy.canQueryClass(
+        { role: 'grade_director', roles: ['grade_director'], school: '实验中学', class: '9' },
+        '实验中学',
+        '9.1'
+    ),
+    true,
+    'grade director should query own grade'
+);
+assert.strictEqual(
+    context.PermissionPolicy.canQueryClass(
+        { role: 'grade_director', roles: ['grade_director'], school: '实验中学', class: '9' },
+        '实验中学',
+        '8.1'
+    ),
+    false,
+    'grade director should not query other grades'
+);
 assert.ok(
     shellSource.includes("if (typeof canAccessModule === 'function' && !canAccessModule(item.id))"),
     'navigation should suppress any item rejected by permission policy'

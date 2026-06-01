@@ -375,6 +375,7 @@ function normalizeAccountUpsertRow(input, session) {
   let school = normalizeText(input?.school);
   let className = normalizeText(input?.class_name);
   if (role === 'teacher' && !className) className = '教师';
+  if (role === 'director' || role === 'admin') className = '';
   if (role !== 'admin' && !school && !isAdmin(session)) {
     school = normalizeText(session?.school);
   }
@@ -1304,11 +1305,19 @@ async function handleAccountUpdate(request, db, session, payload) {
   if (!existing || !existing.is_active) return badRequest(request, 'account not found');
   if (!accountEditable(session, existing)) return forbidden(request, 'Out of scope');
   const nextRole = normalizeText(payload.role) || normalizeText(existing.role) || 'teacher';
-  const nextClassName = normalizeText(payload.class_name ?? existing.class_name);
+  let nextSchool = normalizeText(payload.school ?? existing.school);
+  let nextClassName = normalizeText(payload.class_name ?? existing.class_name);
+  if (nextRole === 'teacher' && !nextClassName) nextClassName = '教师';
+  if (nextRole === 'director' || nextRole === 'admin') nextClassName = '';
+  if (nextRole !== 'admin' && !nextSchool) return badRequest(request, 'school is required');
+  if (nextRole === 'admin') nextSchool = '系统';
   if ((nextRole === 'parent' || nextRole === 'class_teacher') && !nextClassName) return badRequest(request, 'class_name is required');
   if (nextRole === 'grade_director' && !nextClassName) return badRequest(request, 'class_name is required');
   if (!isAdmin(session) && (nextRole === 'admin' || nextRole === 'director')) {
     return forbidden(request, 'Only admin can elevate account to admin/director');
+  }
+  if (hasRole(session, 'director') && normalizeText(nextSchool) !== normalizeText(session?.school)) {
+    return forbidden(request, 'Director can only manage accounts in own school');
   }
   if (normalizeText(existing.role) === 'admin' && normalizeText(existing.username) === normalizeText(session.username) && nextRole !== 'admin') {
     return forbidden(request, 'Cannot downgrade current admin account from browser');
@@ -1317,7 +1326,9 @@ async function handleAccountUpdate(request, db, session, payload) {
     ...existing,
     role: nextRole,
     roles: [nextRole],
-    class_name: nextRole === 'teacher' && !nextClassName ? '教师' : nextClassName,
+    school: nextSchool,
+    class_name: nextClassName,
+    teacher_name: normalizeText(payload.teacher_name || existing.teacher_name || existing.display_name || existing.username),
     updated_at: new Date().toISOString(),
     has_password: existing.has_password || Boolean(existing.password_hash)
   });

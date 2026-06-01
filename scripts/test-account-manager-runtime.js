@@ -35,6 +35,7 @@ async function run() {
                     records: [{
                         username: 'u1',
                         role: 'parent',
+                        school: '实验中学',
                         class_name: '701',
                         password_display: '***'
                     }]
@@ -65,7 +66,7 @@ async function run() {
     const manager = {
         renderTable(list) { return runtime.renderTable.call(this, list); },
         search() { return runtime.search(this); },
-        editAttributes(username, role, className) { editCalls.push({ username, role, className }); },
+        editAttributes(username, role, className, school) { editCalls.push({ username, role, className, school }); },
         resetPassword(username) { resetCalls.push(username); }
     };
     root.AccountManager = manager;
@@ -80,6 +81,7 @@ async function run() {
     assert.strictEqual(gatewayCalls.length, 1);
     assert.strictEqual(gatewayCalls[0].keyword, 'abc');
     assert.ok(String(tbody.innerHTML).includes('data-account-action="edit"'));
+    assert.ok(String(tbody.innerHTML).includes('data-account-school="实验中学"'));
     assert.ok(!String(tbody.innerHTML).includes('onclick="AccountManager.'));
     assert.strictEqual(typeof tbody.handlers.click, 'function');
 
@@ -93,13 +95,14 @@ async function run() {
                         accountAction: 'edit',
                         accountUsername: 'u1',
                         accountRole: 'parent',
-                        accountClass: '701'
+                        accountClass: '701',
+                        accountSchool: '实验中学'
                     }
                 };
             }
         }
     });
-    assert.deepStrictEqual(editCalls[0], { username: 'u1', role: 'parent', className: '701' });
+    assert.deepStrictEqual(editCalls[0], { username: 'u1', role: 'parent', className: '701', school: '实验中学' });
 
     tbody.handlers.click({
         target: {
@@ -141,6 +144,12 @@ async function run() {
     assert.ok(app.includes("generateParentAccounts: function ()"), 'Auth should expose a parent-only account generator');
     assert.ok(app.includes("options.accountType === 'teacher'"), 'account generation should support teacher-only scope');
     assert.ok(app.includes("options.accountType === 'parent'"), 'account generation should support parent-only scope');
+    assert.ok(html.includes('id="account-edit-panel"'), 'account edit panel should render above search area');
+    assert.ok(html.includes('id="acc-edit-school"'), 'account edit panel should include a school dropdown');
+    assert.ok(html.includes('<select id="manual-school"'), 'manual account school input should be a dropdown');
+    assert.ok(app.includes('school: studentSchool'), 'generated parent accounts should preserve selected school');
+    assert.ok(app.includes('teacher_name: user'), 'generated teacher cloud rows should keep teacher_name');
+    assert.ok(app.includes('sameAppSchoolName(p.school, studentSchool)'), 'parent account generation should match duplicate class names by school');
 
     console.log('account-manager-runtime tests passed');
 }
