@@ -230,13 +230,7 @@
     }
 
     function canUseModule(id) {
-        const role = getCurrentRole();
-        if ((role === 'teacher' || role === 'class_teacher')
-            && typeof window.canAccessModule === 'function'
-            && !window.canAccessModule(id)) {
-            return false;
-        }
-        if (role === 'teacher' && ['exam-arranger', 'freshman-simulator'].includes(id)) {
+        if (typeof window.canAccessModule === 'function' && !window.canAccessModule(id)) {
             return false;
         }
         if (id === 'report-generator' && typeof window.CONFIG !== 'undefined' && window.CONFIG && !window.CONFIG.showQuery) {
@@ -255,14 +249,7 @@
             return allowedCategoriesCache;
         }
 
-        const restrictedRole = role === 'teacher' || role === 'class_teacher';
-
         const categories = Object.keys(nav)
-            .filter((key) => {
-                if (restrictedRole && (key === 'data' || key === 'tools')) return false;
-                if (restrictedRole && role === 'teacher' && key === 'town') return false;
-                return true;
-            })
             .map((key) => {
                 const category = nav[key];
                 return {

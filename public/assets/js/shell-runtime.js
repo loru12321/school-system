@@ -234,17 +234,27 @@
     }
 
     function resolveCategoryState() {
-        const role = resolveUserRoleKey();
-        const restrictedRoles = ['teacher', 'class_teacher'];
-        const isRestricted = restrictedRoles.includes(role);
-        const isTeacherRole = role === 'teacher' || role === 'class_teacher';
+        const current = NAV_STRUCTURE[currentCategory];
+        if (current && resolveVisibleItems(current).length > 0) return;
 
-        if (isRestricted && (currentCategory === 'data' || currentCategory === 'tools')) {
-            currentCategory = 'town';
-        }
-        if (isTeacherRole && currentCategory === 'town') {
-            currentCategory = 'class';
-        }
+        const orderedKeys = Object.keys(NAV_STRUCTURE);
+        const role = resolveUserRoleKey();
+        const preferredByRole = {
+            admin: ['data', 'town', 'county', 'class', 'student', 'tools', 'apps'],
+            director: ['data', 'town', 'class', 'student', 'county', 'tools', 'apps'],
+            grade_director: ['town', 'class', 'student', 'apps'],
+            class_teacher: ['class', 'student', 'apps'],
+            teacher: ['class', 'student', 'apps'],
+            parent: ['student', 'apps'],
+            student: ['student', 'apps'],
+            guest: ['data', 'apps']
+        };
+        const candidates = [...(preferredByRole[role] || []), ...orderedKeys];
+        const nextKey = candidates.find((key) => {
+            const category = NAV_STRUCTURE[key];
+            return category && resolveVisibleItems(category).length > 0;
+        });
+        currentCategory = nextKey || orderedKeys[0] || currentCategory;
     }
 
     function getActiveSectionId() {
@@ -730,17 +740,10 @@
         resolveCategoryState();
         sidebarNav.innerHTML = '';
 
-        const role = resolveUserRoleKey();
-        const restrictedRoles = ['teacher', 'class_teacher'];
-        const isRestricted = restrictedRoles.includes(role);
-        const isTeacherRole = role === 'teacher' || role === 'class_teacher';
-
         Object.keys(NAV_STRUCTURE).forEach((key) => {
             const category = NAV_STRUCTURE[key];
-            if (isRestricted && (key === 'data' || key === 'tools')) return;
-            if (isTeacherRole && key === 'town') return;
-
             const visibleItems = resolveVisibleItems(category);
+            if (visibleItems.length === 0) return;
             const item = document.createElement('div');
             item.className = 'sidebar-menu-item';
             if (key === currentCategory) item.classList.add('active');

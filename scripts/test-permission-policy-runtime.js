@@ -44,6 +44,36 @@ assert.strictEqual(
     'teacher should not receive town-wide summary access'
 );
 assert.strictEqual(
+    context.PermissionPolicy.canAccessModule({ role: 'teacher', roles: ['teacher'] }, 'county-teacher-portrait'),
+    false,
+    'teacher should not receive county teacher portrait access'
+);
+assert.strictEqual(
+    context.PermissionPolicy.canAccessModule({ role: 'teacher', roles: ['teacher'] }, 'teacher-analysis'),
+    true,
+    'teacher should keep own teaching quality module access'
+);
+assert.strictEqual(
+    context.PermissionPolicy.canAccessModule({ role: 'class_teacher', roles: ['class_teacher'] }, 'marginal-push'),
+    true,
+    'class teacher should keep class intervention module access'
+);
+assert.strictEqual(
+    context.PermissionPolicy.canAccessModule({ role: 'class_teacher', roles: ['class_teacher'] }, 'county-school-horizontal'),
+    false,
+    'class teacher should not receive county horizontal analysis access'
+);
+assert.strictEqual(
+    context.PermissionPolicy.canAccessModule({ role: 'grade_director', roles: ['grade_director'] }, 'county-analysis'),
+    false,
+    'grade director should not receive county-wide module access'
+);
+assert.strictEqual(
+    context.PermissionPolicy.canAccessModule({ role: 'director', roles: ['director'] }, 'county-teacher-portrait'),
+    true,
+    'director should receive school management county context access'
+);
+assert.strictEqual(
     context.PermissionPolicy.canQueryClass(
         { role: 'director', roles: ['director'], school: '实验中学', class: '' },
         '实验中学',
@@ -79,9 +109,50 @@ assert.strictEqual(
     false,
     'grade director should not query other grades'
 );
+
+context.getTeacherScopeForUser = () => ({ classes: new Set(['9.1']), subjects: new Set(['数学']) });
+const mixedRows = [
+    { school: '实验中学', class: '9.1', name: '张三', total: 500 },
+    { school: '实验中学', class: '9.2', name: '李四', total: 490 },
+    { school: '外校', class: '9.1', name: '王五', total: 480 }
+];
+assert.deepStrictEqual(
+    context.PermissionPolicy.filterStudentRows({ role: 'teacher', roles: ['teacher'], school: '实验中学', name: '数学老师' }, mixedRows).map(row => row.name),
+    ['张三'],
+    'teacher should only search/query own teaching classes in own school'
+);
+assert.deepStrictEqual(
+    context.PermissionPolicy.filterStudentRows({ role: 'class_teacher', roles: ['class_teacher'], school: '实验中学', class_name: '9.2', name: '班主任' }, mixedRows).map(row => row.name),
+    ['张三', '李四'],
+    'class teacher should query homeroom class plus teaching scope inside own school'
+);
+assert.deepStrictEqual(
+    context.PermissionPolicy.filterStudentRows({ role: 'grade_director', roles: ['grade_director'], school: '实验中学', grade_name: '9年级' }, mixedRows).map(row => row.name),
+    ['张三', '李四'],
+    'grade director should query own grade inside own school only'
+);
+assert.deepStrictEqual(
+    context.PermissionPolicy.filterStudentRows({ role: 'parent', roles: ['parent'], school: '实验中学', class_name: '9.1', name: '张三' }, mixedRows).map(row => row.name),
+    ['张三'],
+    'parent/student role should only query the bound student'
+);
 assert.ok(
     shellSource.includes("if (typeof canAccessModule === 'function' && !canAccessModule(item.id))"),
     'navigation should suppress any item rejected by permission policy'
+);
+assert.ok(
+    shellSource.includes('resolveVisibleItems(category).length > 0'),
+    'navigation should select the first accessible category instead of hard-coded role branches'
+);
+
+const appSource = fs.readFileSync(path.join(root, 'public/assets/js/app.js'), 'utf8');
+assert.ok(
+    appSource.includes(".filter(m => typeof canAccessModule !== 'function' || canAccessModule(m.id))"),
+    'spotlight module search should suppress inaccessible module hits'
+);
+assert.ok(
+    appSource.includes('PermissionPolicy.filterStudentRows(currentUser, matches)'),
+    'spotlight student search should suppress inaccessible student hits'
 );
 
 console.log('permission policy runtime tests passed');

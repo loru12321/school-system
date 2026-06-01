@@ -1,12 +1,17 @@
 const QUERY_MODULE_ACCESS = {
     admin: ['*'],
-    director: ['starter-hub', 'upload', 'summary', 'analysis', 'high-score', 'indicator', 'bottom3', 'county-analysis', 'teacher-analysis', 'marginal-push', 'progress-analysis', 'report-generator', 'freshman-simulator', 'exam-arranger', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'zhongkao-countdown', 'app-download-center'],
-    grade_director: ['starter-hub', 'summary', 'analysis', 'high-score', 'indicator', 'bottom3', 'county-analysis', 'teacher-analysis', 'marginal-push', 'progress-analysis', 'report-generator', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'zhongkao-countdown', 'app-download-center'],
-    class_teacher: ['starter-hub', 'student-overview', 'student-details', 'county-analysis', 'teacher-analysis', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'marginal-push', 'report-generator', 'zhongkao-countdown', 'app-download-center'],
-    teacher: ['starter-hub', 'student-overview', 'student-details', 'county-analysis', 'teacher-analysis', 'progress-analysis', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'marginal-push', 'report-generator', 'zhongkao-countdown', 'app-download-center'],
+    director: ['starter-hub', 'upload', 'data-quality', 'summary', 'analysis', 'high-score', 'indicator', 'bottom3', 'county-analysis', 'teacher-analysis', 'marginal-push', 'progress-analysis', 'report-generator', 'freshman-simulator', 'exam-arranger', 'grade-scheduler', 'seat-adjustment', 'mutual-aid', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'cohort-growth', 'zhongkao-countdown', 'app-download-center'],
+    grade_director: ['starter-hub', 'summary', 'analysis', 'high-score', 'indicator', 'bottom3', 'teacher-analysis', 'marginal-push', 'progress-analysis', 'report-generator', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'cohort-growth', 'zhongkao-countdown', 'app-download-center'],
+    class_teacher: ['starter-hub', 'teacher-analysis', 'student-overview', 'student-details', 'subject-balance', 'marginal-push', 'progress-analysis', 'cohort-growth', 'potential-analysis', 'segment-analysis', 'report-generator', 'zhongkao-countdown', 'app-download-center'],
+    teacher: ['starter-hub', 'teacher-analysis', 'student-overview', 'student-details', 'subject-balance', 'progress-analysis', 'cohort-growth', 'report-generator', 'zhongkao-countdown', 'app-download-center'],
     parent: ['report-generator', 'app-download-center'],
     student: ['report-generator', 'app-download-center'],
     guest: ['starter-hub', 'app-download-center']
+};
+
+const MODULE_ACCESS_ALIASES = {
+    'county-teacher-portrait': 'county-analysis',
+    'county-school-horizontal': 'county-analysis'
 };
 
 const PermissionPolicy = {
@@ -69,13 +74,16 @@ const PermissionPolicy = {
         return role === 'parent' || role === 'student';
     },
     getBoundSchool(user = getCurrentUser()) {
-        return this.normalizeSchool(user?.school || readCurrentSchool() || '');
+        const bound = this.normalizeSchool(user?.school || '');
+        if (bound) return bound;
+        if (this.hasQueryRole(user, 'admin')) return '';
+        return this.normalizeSchool(readCurrentSchool() || '');
     },
     getBoundGrade(user = getCurrentUser()) {
-        return this.extractGrade(user?.grade_name || user?.class || '');
+        return this.extractGrade(user?.grade_name || user?.class_name || user?.class || '');
     },
     getHomeroomClass(user = getCurrentUser()) {
-        return normalizeClass(user?.class || '');
+        return normalizeClass(user?.class_name || user?.class || '');
     },
     getTeachingScope(user = getCurrentUser()) {
         if (!(this.hasQueryRole(user, 'teacher') || this.hasQueryRole(user, 'class_teacher'))) {
@@ -84,28 +92,17 @@ const PermissionPolicy = {
         return getTeacherScopeForUser(user);
     },
     getAllowedModules(user = getCurrentUser()) {
-        const roles = this.getQueryRoles(user);
-        if (!roles.length) return QUERY_MODULE_ACCESS.guest;
-        const merged = new Set();
-        for (const role of roles) {
-            const allow = QUERY_MODULE_ACCESS[role] || [];
-            if (allow.includes('*')) return ['*'];
-            allow.forEach(moduleId => merged.add(moduleId));
-        }
-        if (!merged.size) {
-            (QUERY_MODULE_ACCESS.guest || []).forEach(moduleId => merged.add(moduleId));
-        }
-        return Array.from(merged);
+        const role = this.getPrimaryRole(user);
+        const allow = QUERY_MODULE_ACCESS[role] || QUERY_MODULE_ACCESS.guest || [];
+        return allow.slice();
     },
     canAccessModule(user, moduleId) {
-        if (moduleId === 'county-teacher-portrait' || moduleId === 'county-school-horizontal') {
-            moduleId = 'county-analysis';
-        }
+        moduleId = MODULE_ACCESS_ALIASES[moduleId] || moduleId;
         const allow = this.getAllowedModules(user);
         return allow.includes('*') || allow.includes(moduleId);
     },
     canQuerySchool(user, schoolName) {
-        if (!user) return true;
+        if (!user) return false;
         if (this.hasQueryRole(user, 'admin')) return true;
         if (this.hasQueryRole(user, 'director')
             || this.hasQueryRole(user, 'grade_director')
@@ -118,7 +115,7 @@ const PermissionPolicy = {
         return false;
     },
     canQueryClass(user, schoolName, className, options = {}) {
-        if (!user) return true;
+        if (!user) return false;
         if (this.hasQueryRole(user, 'admin')) return true;
         if (!this.canQuerySchool(user, schoolName)) return false;
         const normalizedClass = normalizeClass(className || '');
@@ -148,38 +145,39 @@ const PermissionPolicy = {
         }
 
         if (this.hasQueryRole(user, 'parent') || this.hasQueryRole(user, 'student')) {
-            roleChecks.push(normalizeClass(user?.class || '') === normalizedClass);
+            roleChecks.push(normalizeClass(user?.class_name || user?.class || '') === normalizedClass);
         }
 
         return roleChecks.some(Boolean);
     },
     canQueryStudent(user, row, options = {}) {
-        if (!user) return true;
+        if (!user) return false;
         if (!row) return false;
         const canByClassScope = this.canQueryClass(user, row?.school, row?.class, options);
         const canBySelf = (this.hasQueryRole(user, 'parent') || this.hasQueryRole(user, 'student'))
             && this.sameSchoolName(user?.school, row?.school)
-            && normalizeClass(user?.class || '') === normalizeClass(row?.class || '')
-            && this.normalizeName(user?.name) === this.normalizeName(row?.name);
+            && normalizeClass(user?.class_name || user?.class || '') === normalizeClass(row?.class || '')
+            && this.normalizeName(user?.name || user?.username) === this.normalizeName(row?.name);
         return canByClassScope || canBySelf;
     },
     filterStudentRows(user, rows, options = {}) {
-        if (!user) return Array.isArray(rows) ? rows.slice() : [];
+        if (!user) return [];
         if (this.hasQueryRole(user, 'admin')) return Array.isArray(rows) ? rows.slice() : [];
         return (Array.isArray(rows) ? rows : []).filter(row => this.canQueryStudent(user, row, options));
     },
     getAccessibleSchoolNames(user, schoolNames) {
         const names = Array.from(new Set((Array.isArray(schoolNames) ? schoolNames : []).map(name => String(name || '').trim()).filter(Boolean)));
-        if (!user || this.isAdmin(user)) return names;
+        if (this.isAdmin(user)) return names;
+        if (!user) return [];
         return names.filter(name => this.canQuerySchool(user, name));
     },
     getAccessibleClassNames(user, classNames, schoolName, options = {}) {
         const names = Array.from(new Set((Array.isArray(classNames) ? classNames : []).map(name => String(name || '').trim()).filter(Boolean)));
-        if (!user) return names;
+        if (!user) return [];
         return names.filter(name => this.canQueryClass(user, schoolName, name, options));
     },
     canQueryTeacherMetric(user, teacherName, statItem, schoolName) {
-        if (!user) return true;
+        if (!user) return false;
         if (!this.canQuerySchool(user, schoolName)) return false;
         if (this.hasQueryRole(user, 'admin')) return true;
         if (this.hasQueryRole(user, 'director')) return true;
@@ -187,7 +185,7 @@ const PermissionPolicy = {
         const roleChecks = [];
 
         if (this.hasQueryRole(user, 'teacher')) {
-            roleChecks.push(this.normalizeName(teacherName) === this.normalizeName(user?.name));
+            roleChecks.push(this.normalizeName(teacherName) === this.normalizeName(user?.teacher_name || user?.name || user?.username));
         }
 
         if (this.hasQueryRole(user, 'grade_director')) {
@@ -197,14 +195,14 @@ const PermissionPolicy = {
 
         if (this.hasQueryRole(user, 'class_teacher')) {
             const homeroomClass = this.getHomeroomClass(user);
-            const ownTeacherMetric = this.normalizeName(teacherName) === this.normalizeName(user?.name);
+            const ownTeacherMetric = this.normalizeName(teacherName) === this.normalizeName(user?.teacher_name || user?.name || user?.username);
             roleChecks.push(ownTeacherMetric || (!!homeroomClass && classes.some(cls => normalizeClass(cls) === homeroomClass)));
         }
 
         return roleChecks.some(Boolean);
     },
     filterTeacherStats(user, stats, schoolName) {
-        if (!user) return stats;
+        if (!user) return {};
         const filtered = {};
         Object.entries(stats || {}).forEach(([teacherName, subjectMap]) => {
             const scopedSubjects = {};
@@ -218,18 +216,18 @@ const PermissionPolicy = {
         return filtered;
     },
     'permissions': {
-        title: '权限说明·方案 C',
+        title: '权限说明',
         fit: `用于<strong>查看当前角色的模块访问与数据查询边界</strong>，便于系统培训、审核和账号配置。`,
         when: `新增/调整角色，或需要解释多角色可查范围时使用。`,
         use: `<ul>
-                <li><strong>模块访问：</strong>按最高优先级角色决定。</li>
-                <li><strong>数据查询：</strong>按所有角色查询范围的并集决定。</li>
+                <li><strong>模块访问：</strong>只按主角色展示，不能看的模块不出现在侧栏、快捷入口和搜索结果。</li>
+                <li><strong>数据查询：</strong>按所有角色查询范围的并集决定，但必须同时满足学校/级部/班级边界。</li>
                 <li><strong>优先级：</strong>admin > director > grade_director > class_teacher > teacher > parent > student > guest。</li>
               </ul>`,
         calc: `<div class="formula-box">
-                <strong>方案 C 核心：</strong><br>
-                模块访问 = 最高优先级角色<br>
-                数据查询 = 所有角色范围并集
+                <strong>当前权限核心：</strong><br>
+                模块展示 = 主角色白名单<br>
+                数据查询 = 角色范围并集 + 学校/级部/班级边界
               </div>
               <div style="text-align:left; line-height:1.7;">
                 <p><strong>典型示例：</strong></p>
@@ -247,6 +245,5 @@ window.PermissionPolicy = PermissionPolicy;
 
 function canAccessModule(id) {
     const user = getCurrentUser();
-    if (!user) return true;
     return PermissionPolicy.canAccessModule(user, id);
 }

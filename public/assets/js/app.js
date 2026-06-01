@@ -18260,7 +18260,9 @@ function doSpotlightSearch() {
         { name: "应用下载中心", id: "app-download-center" }
     ];
 
-    modules.forEach(m => {
+    modules
+        .filter(m => typeof canAccessModule !== 'function' || canAccessModule(m.id))
+        .forEach(m => {
         if (m.name.includes(val)) {
             spotlightRowsHtml.push(`
                     <div class="spotlight-item" onclick="switchTab('${m.id}');closeSpotlight()">
@@ -18279,6 +18281,14 @@ function doSpotlightSearch() {
         matches = results.map(r => r.item).slice(0, 8); // 取前8个
     } else {
         matches = RAW_DATA.filter(s => s.name.includes(val) || String(s.id).includes(val)).slice(0, 5);
+    }
+    if (window.PermissionPolicy && typeof window.PermissionPolicy.filterStudentRows === 'function') {
+        const currentUser = typeof getCurrentUser === 'function'
+            ? getCurrentUser()
+            : (window.AuthState && typeof window.AuthState.getCurrentUser === 'function'
+                ? window.AuthState.getCurrentUser()
+                : (typeof Auth !== 'undefined' ? Auth.currentUser : null));
+        matches = window.PermissionPolicy.filterStudentRows(currentUser, matches);
     }
 
     if (matches.length === 0) {
