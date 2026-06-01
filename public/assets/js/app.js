@@ -1,6 +1,5 @@
 
 const UI = {
-    // 1. 加载动画控制
     loading: (show, text = '系统正在处理数据...') => {
         const loader = document.getElementById('global-loader');
         const txt = document.getElementById('loader-text');
@@ -23,7 +22,6 @@ const UI = {
             }, 200); // 稍微延迟防止闪烁
         }
     },
-    // 2. 消息提示控制
     toast: (msg, type = 'info') => {
         const container = document.getElementById('toast-container');
         const div = document.createElement('div');
@@ -110,19 +108,16 @@ const EdgeGateway = {
             return candidates;
         }
 
-        // Priority 1: Direct Cloudflare Gateway (resilient to DNS/Proxy issues)
         if (typeof window.DIRECT_CLOUDFLARE_GATEWAY_URL !== 'undefined') {
             pushCandidate(window.DIRECT_CLOUDFLARE_GATEWAY_URL);
         } else if (typeof DIRECT_CLOUDFLARE_GATEWAY_URL !== 'undefined') {
             pushCandidate(DIRECT_CLOUDFLARE_GATEWAY_URL);
         }
 
-        // Priority 2: Standard candidates
         pushCandidate(this.resolvedGatewayUrl);
         pushCandidate(localStorage.getItem('EDGE_GATEWAY_URL'));
         pushCandidate(window.EDGE_GATEWAY_URL);
 
-        // Fallback constant if defined
         if (typeof DIRECT_EDGE_GATEWAY_URL !== 'undefined') {
             pushCandidate(DIRECT_EDGE_GATEWAY_URL);
         }
@@ -1018,7 +1013,6 @@ Object.assign(window, {
     filterRowsByAppSchool
 });
 
-// 🔐 权限与账号管理系统核心
 const TeacherStateRuntime = window.TeacherState || null;
 
 function readTeacherMap() {
@@ -2061,7 +2055,6 @@ var Auth = {
         document.body.classList.toggle('parent-mobile-scroll-root', shouldEnable);
     },
 
-    // 模拟数据库 (实际存储在 localStorage 'SYS_USERS')
     db: (typeof AuthState.readLocalAuthDb === 'function'
         ? AuthState.readLocalAuthDb()
         : sanitizeLocalAuthDb(JSON.parse(localStorage.getItem('SYS_USERS')) || {
@@ -2070,7 +2063,6 @@ var Auth = {
             parents: []
         })),
 
-    // 初始化：检查会话状态
     loginPortalStorageKey: 'LOGIN_PORTAL_V1',
 
     getLoginPortal: function () {
@@ -2153,8 +2145,6 @@ var Auth = {
 
         const portal = overlay.dataset.loginPortal === 'parent' ? 'parent' : 'school';
         overlay.dataset.loginPortal = portal;
-        // overlay.dataset.loginLayout = 'qq-fullscreen';
-        // overlay.dataset.loginSkin = 'instagram';
         const dummyHTML = `
             <div class="login-shell login-shell--instagram">
                 <section class="login-stage login-stage--instagram" aria-label="系统首页">
@@ -3583,7 +3573,6 @@ var Auth = {
             this.syncLoginOverlayState(false);
             this.applyRoleView();
 
-            // 如果是家长，恢复视图
             if (isParentLikeUser(this.currentUser)) {
                 if (!this.currentUser.local_only && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function' && !this._parentDataRecovering) {
                     this._parentDataRecovering = true;
@@ -3599,7 +3588,6 @@ var Auth = {
                 }
                 this.renderParentView();
             }
-            // 🟢 补充：如果是其他角色，恢复主视图 (防止刷新后空白)
             else if (!isParentLikeUser(this.currentUser)) {
                 if (typeof renderNavigation === 'function') renderNavigation();
                 const restoredCohortId = String(CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
@@ -3638,11 +3626,9 @@ var Auth = {
 
     /* 👇👇👇 ✋ 🟢 [此处开始替换] 重写 login 函数 (登录后立即刷新主界面) 🟢 ✋ 👇👇👇 */
 
-    // 🟢 核心登录逻辑：改为查 Supabase 数据库 (已修复 406 报错 + 增加班级强校验)
     login: async function () {
         const user = document.getElementById('login-user').value.trim();
         const pass = document.getElementById('login-pass').value.trim();
-        // 获取输入的班级 (去除空格)
         const loginPortal = this.getLoginPortal();
         const classInputEl = document.getElementById('login-class');
         const inputClass = classInputEl ? classInputEl.value.trim() : '';
@@ -3710,7 +3696,6 @@ var Auth = {
                     }
                 }
 
-                // 对比输入的班级和数据库存的班级，兼容 9.4 / 94 / 904 这类常见写法差异
                 const dbClass = String(data.class_name || '').trim();
                 const userClass = String(inputClass || '').trim();
                 const classMatches = userClass
@@ -3723,7 +3708,6 @@ var Auth = {
             }
             /* 👆👆👆 🟢 结束 🟢 👆👆👆 */
 
-            // 4. 登录成功，构建用户对象
             const matchedUser = {
                 name: data.username || data.name,
                 role: data.role, // 主角色（兼容）
@@ -3755,34 +3739,27 @@ var Auth = {
                     console.warn('[EdgeGateway] login skipped:', err?.message || err);
                 });
             }
-            // 先彻底隐藏登录层，再进入业务界面，避免旧登录页残留一帧。
             this.syncLoginOverlayState(false);
-            // 界面切换
             this.applyRoleView();
             updateAdminOnlyButtons();
             updateWatermark();
             updateRoleHint();
 
-            // 🆕 记录所有角色信息
             const rolesInfo = this.currentUser.roles && this.currentUser.roles.length > 1
                 ? `${this.currentUser.role} (${this.currentUser.roles.join(', ')})`
                 : this.currentUser.role;
             logAction('登录', `用户 ${this.currentUser.name} (${rolesInfo}) 登录`);
 
-            // === 安全检查：临时密码或后端标记账号首次登录后必须改密 ===
             const isDefaultPass = AuthState.isDefaultManagedPassword(this.currentUser.role, pass);
 
             if (isDefaultPass || this.currentUser.must_change_password) {
                 this.syncLoginOverlayState(false); // 先关掉登录框
 
-                // 弹出提示
                 alert("⚠️ 安全警告：\n检测到当前账号需要完成首次改密。\n为了保障账号安全，请立即修改密码。");
 
-                // 打开修改密码弹窗 (传入 true 表示强制模式)
                 setTimeout(() => openUserPasswordModal(true), 500);
                 return; // ⛔ 终止后续加载，直到密码修改完成
             }
-            // === 🛡️ 安全检查结束 ===
             const loginUserEl = document.getElementById('login-user');
             const loginPassEl = document.getElementById('login-pass');
             const loginClassEl = document.getElementById('login-class');
@@ -3848,7 +3825,6 @@ var Auth = {
                 window.__STARTUP_CLOUD_HYDRATION_TIMER__ = scheduleStartupCloudTask(runHydration, { delay: 1400, timeout: 2600 });
             };
 
-            // 5. 分流跳转与权限初始化
             if (isParentLikeUser(this.currentUser)) {
                 if (!isLocalOnlySession && (!RAW_DATA || RAW_DATA.length === 0) && typeof loadCloudData === 'function') {
                     UI.loading(true, "正在恢复学生数据...");
@@ -3863,15 +3839,11 @@ var Auth = {
                         UI.loading(false);
                     }
                 }
-                // === 家长模式 ===
                 this.renderParentView();
             } else {
-                // === 教职工模式 (管理员/主任/教师/班主任/级部主任) ===
-                // 初始化轻量导航；重表格在届别数据就绪后统一调度，避免登录后主线程阻塞。
                 if (typeof renderNavigation === 'function') renderNavigation();
                 if (typeof updateSchoolSelect === 'function') updateSchoolSelect();
 
-                // 7. 先展示届别选择，不再从登录页直接进入工作台
                 if (typeof CohortManager !== 'undefined') {
                     CohortManager.init();
                 }
@@ -3887,32 +3859,23 @@ var Auth = {
                     tryResumeReadyWorkspace();
                 }
 
-                // 👇👇👇 🟢 新增：角色专属初始化逻辑 🟢 👇👇👇
 
-                // A. 如果有学校绑定 (除管理员外通常都有)
                 if (this.currentUser.school) {
-                    // 自动设置本校全局变量
                     writeCurrentSchool(this.currentUser.school);
 
-                    // 尝试更新界面上的“选择本校”下拉框
                     const sel = document.getElementById('mySchoolSelect');
                     if (sel) {
                         sel.value = readCurrentSchool();
-                        // 触发一次 change 事件以更新相关下拉框 (如班级列表)
                         sel.dispatchEvent(new Event('change'));
                     }
                 }
 
-                // B. 角色权限细分处理
                 if (this.currentUser.role === 'teacher') {
-                    // 普通教师：后续将在 renderStudentDetails 中过滤只能看自己教的课
                     UI.toast(`欢迎您，${this.currentUser.name}老师`, "success");
                 }
                 else if (this.currentUser.role === 'class_teacher') {
-                    // 班主任：后续将在 renderStudentDetails 中过滤只能看本班
                     UI.toast(`欢迎您，${this.currentUser.class}班班主任`, "success");
 
-                    // 尝试自动定位到“学生档案查询”模块的班级筛选
                     setTimeout(() => {
                         const clsSel = document.getElementById('studentClassSelect');
                         if (clsSel) {
@@ -3922,18 +3885,12 @@ var Auth = {
                     }, 500);
                 }
                 else if (this.currentUser.role === 'grade_director') {
-                    // 级部主任：
-                    // 1. 拥有修改成绩权限 (在 updateStudentScore 中控制)
-                    // 2. 能接收消息 (需显示铃铛按钮)
-                    // 3. 只能看本级部 (在 renderStudentDetails 中控制)
 
                     UI.toast(`欢迎您，${this.currentUser.class}年级主任`, "success");
 
-                    // 开启消息轮询 (复用管理员的逻辑)
                     const msgBtn = document.getElementById('admin-msg-btn');
                     if (msgBtn) msgBtn.style.display = 'block'; // 显示铃铛
 
-                    // 轮询交由 applyRoleView 统一管理，避免重复定时器导致卡顿
                 }
                 /* 👆👆👆 🟢 结束 🟢 👆👆👆 */
 
@@ -3947,7 +3904,6 @@ var Auth = {
         }
     },
 
-    // 登出
     logout: function () {
         logAction('登出', '退出登录');
         AuthState.clearCurrentUser();
@@ -3957,17 +3913,14 @@ var Auth = {
         location.reload(); // 刷新页面最彻底，清除所有临时状态
     },
 
-    // 应用视图权限 (配合 CSS data-role 属性)
     applyRoleView: function () {
         if (!this.currentUser) return;
 
-        // 🆕 使用 RoleManager 应用多角色
         RoleManager.applyRolesToBody(this.currentUser);
         this.syncParentMobileScrollRoot(isParentLikeUser(this.currentUser));
 
         const role = this.currentUser.role; // 主角色（兼容旧代码）
 
-        // 🟢 [Bug #1 修复] 设置全局年级过滤器，供其他模块使用
         if (role === 'grade_director' && this.currentUser.class) {
             window.USER_GRADE_FILTER = String(this.currentUser.class).trim();
             appDebug(`[权限] 级部主任年级过滤已启用: ${window.USER_GRADE_FILTER}`);
@@ -3977,16 +3930,13 @@ var Auth = {
 
         const msgBtn = document.getElementById('admin-msg-btn');
         if (msgBtn) {
-            // 🟢 修改：使用多角色检查
             const canSeeMessages = RoleManager.hasAnyRole(this.currentUser, ['admin', 'director', 'grade_director', 'class_teacher']);
 
             if (canSeeMessages) {
                 msgBtn.style.display = 'block';
 
-                // 启动消息轮询 (每30秒查一次，检查 IssueManager 是否已加载)
                 if (typeof IssueManager !== 'undefined') {
                     IssueManager.checkIssues();
-                    // 清除旧定时器防止重复
                     if (window.msgInterval) clearInterval(window.msgInterval);
                     window.msgInterval = setInterval(() => IssueManager.checkIssues(), 30000);
                 }
@@ -3995,13 +3945,11 @@ var Auth = {
             }
         }
 
-        // 🟢 添加或更新悬浮个人中心条 (包含修改密码) -> 改为注入到 Header 的 #account-actions
         let accountActionsContainer = document.getElementById('account-actions');
 
         if (accountActionsContainer) {
             accountActionsContainer.innerHTML = ''; // 清空重新渲染
 
-            // 渲染两个按钮：修改密码 | 退出 (YouTube 风格纯图标)
             accountActionsContainer.innerHTML = `
                 <button class="btn" onclick="openUserPasswordModal()" style="background:transparent; border:none; color:var(--text-color); font-size: 22px; padding: 8px; border-radius: 50%; display:flex; align-items:center; justify-content:center; width:40px; height:40px;" title="修改密码">
                     <i class="ti ti-key"></i>
@@ -4012,33 +3960,24 @@ var Auth = {
             `;
         }
 
-        // 注意：这里移除了 btn.onclick，因为点击事件直接写在 span 里的 HTML 中了
-        // 🟢 [新增] 动态添加“账号管理”入口按钮 (针对有权用户)
-        // 1. 获取当前用户角色
         const currentRole = this.currentUser.role;
         const allowedRoles = ['admin', 'director', 'grade_director', 'class_teacher'];
 
-        // 2. 查找 header 里的工具栏容器 (第三个子元素，即右侧容器)
         const toolbar = document.querySelector('#main-header > div:last-child');
 
-        // 3. 先移除旧按钮(防止重复添加)
         const oldBtn = document.getElementById('header-acc-mgr-btn');
         if (oldBtn) oldBtn.remove();
 
-        // 4. 如果有权限且容器存在，插入按钮
         if (toolbar && allowedRoles.includes(currentRole)) {
             const mgrBtn = document.createElement('button');
             mgrBtn.id = 'header-acc-mgr-btn';
             mgrBtn.className = 'btn';
-            // 样式微调：纯图标按钮
             mgrBtn.style.cssText = 'background:transparent; border:none; color:var(--text-color); font-size: 22px; padding: 8px; border-radius: 50%; display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px;';
             mgrBtn.innerHTML = '<i class="ti ti-user-cog"></i>';
             mgrBtn.title = "账号权限管理";
 
-            // 绑定点击事件：打开账号管理弹窗
             mgrBtn.onclick = () => AccountManager.open();
 
-            // 5. 插入到通知铃铛按钮前面 (寻找 admin-msg-btn)
             const msgBtnNode = document.getElementById('admin-msg-btn');
             if (msgBtnNode && msgBtnNode.parentNode === toolbar) {
                 toolbar.insertBefore(mgrBtn, msgBtnNode);
@@ -4046,16 +3985,12 @@ var Auth = {
                 toolbar.insertBefore(mgrBtn, toolbar.firstChild);
             }
         }
-        // 🟢 [修正]：将以下代码移入 applyRoleView 函数内部，接在上面的代码后面
 
-        // 🟢 [新增] 动态添加“数据管理”入口 (仅限 管理员/教务主任)
         const dataRoles = ['admin', 'director'];
 
-        // 先移除旧按钮(防止重复)
         const oldDataBtn = document.getElementById('header-data-mgr-btn');
         if (oldDataBtn) oldDataBtn.remove();
 
-        // 确保使用当前角色的引用进行判断
         if (toolbar && dataRoles.includes(currentRole)) {
             const dataBtn = document.createElement('button');
             dataBtn.id = 'header-data-mgr-btn';
@@ -4064,7 +3999,6 @@ var Auth = {
             dataBtn.innerHTML = '<i class="ti ti-cloud-data-connection" style="font-size:18px;"></i><span>云端数据</span>';
             dataBtn.title = "打开云端教务数据管理";
 
-            // 绑定点击事件
             dataBtn.onclick = () => {
                 DataManager.open();
                 setTimeout(() => {
@@ -4074,15 +4008,12 @@ var Auth = {
                 }, 0);
             };
 
-            // 插入到工具栏最前面 (作为最高频功能)
             toolbar.insertBefore(dataBtn, toolbar.firstChild);
         }
 
     },
 
-    // 👨‍👩‍👧 渲染家长专属视图 (完全隔离)
     renderParentView: function () {
-        // 1. 彻底隐藏主界面及所有干扰元素 (防止透视)
         const app = document.getElementById('app');
         const header = document.querySelector('header');
         const nav = document.querySelector('.nav-wrapper');
@@ -4100,7 +4031,6 @@ var Auth = {
         if (overlay) this.syncLoginOverlayState(false);
         if (loader) loader.classList.add('hidden');
 
-        // 2. 创建或重置家长容器
         let container = document.getElementById('parent-view-container');
         if (!container) {
             container = document.createElement('div');
@@ -4108,18 +4038,15 @@ var Auth = {
             document.body.appendChild(container);
         }
 
-        // 确保容器可见
         container.style.display = 'block';
         container.scrollTop = 0;
         this.syncParentMobileScrollRoot(true);
 
-        // 3. 移动端视口适配 (防止表格太宽看不全)
         let viewport = document.querySelector('meta[name="viewport"]');
         if (viewport) {
             viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes');
         }
 
-        // A. 立即渲染骨架屏 (Skeleton Screen)
         container.innerHTML = `
                 <div class="sk-card skeleton"><div class="sk-header"></div></div>
                 <div class="sk-card skeleton"><div class="sk-block" style="width:80%"></div></div>
@@ -4129,7 +4056,6 @@ var Auth = {
                 </div>
             `;
 
-        // 延时加载数据，给骨架屏一点展示时间
         this._parentRenderTimer = setTimeout(async () => {
             this._parentRenderTimer = null;
             if (!isParentLikeUser(this.currentUser)) return;
@@ -4157,7 +4083,6 @@ var Auth = {
                 return;
             }
 
-            // 容错查找：优先使用当前报告学生（云端对比命中后会写入）
             const currentReportStudent = readCurrentReportStudentState();
             const normalizeParentName = typeof normalizeCompareName === 'function'
                 ? (value) => normalizeCompareName(value)
@@ -4169,7 +4094,6 @@ var Auth = {
                 normalizeParentName(currentReportStudent.name || '') === normalizeParentName(this.currentUser?.name || '')
             ) ? currentReportStudent : null;
 
-            // 回退：优先使用云端对比运行时的绑定学生；若运行时未加载，则直接在当前成绩库中兜底查找
             const boundStudent = typeof getCurrentBoundStudentFromUser === 'function'
                 ? getCurrentBoundStudentFromUser(this.currentUser)
                 : null;
@@ -4205,18 +4129,14 @@ var Auth = {
 
             setCurrentReportStudentState(stu);
 
-            // 渲染报表 HTML
             let reportHtml = renderSingleReportCardHTML(stu, 'A4');
 
-            // 去除不必要的输入框
             const teacherName = TEACHER_MAP[stu.class + '_班主任'] || '班主任';
             reportHtml = reportHtml.replace(/<input.*id="inp-teacher-name".*?>/, `<span style="font-weight:bold">${teacherName}</span>`);
 
-            // 安全处理：防止姓名或班级中有引号导致 JS 报错
             const safeName = stu.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
             const safeClass = stu.class.replace(/'/g, "\\'").replace(/"/g, '&quot;');
             const safeSchool = stu.school.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-            // 追加底部功能栏 (申诉 & 退出)
             reportHtml += `
                     <div style="text-align:center; margin-top:30px; padding-bottom:80px; border-top:1px dashed #e5e7eb; padding-top:20px;">
                         <p style="font-size:14px; color:#64748b; margin-bottom:15px;">数据有疑问？</p>
@@ -4236,7 +4156,6 @@ var Auth = {
             container.innerHTML = reportHtml;
             enhanceStudentReportMetrics(container);
 
-            // 渲染图表 (Canvas)
             setTimeout(() => {
                 try {
                     if (typeof renderRadarChart === 'function') renderRadarChart(stu);
@@ -4247,7 +4166,6 @@ var Auth = {
         }, 500);
     },
 
-    // 辅助：渲染生成账号时的学校列表
     renderSchoolCheckboxes: function () {
         const container = document.getElementById('admin-gen-school-list');
         if (!container) return; // 如果找不到容器（比如非管理员），直接返回，不报错
@@ -4269,7 +4187,6 @@ var Auth = {
         container.innerHTML = html;
     },
 
-    // 辅助：全选/反选
     toggleAllSchools: function (check) {
         document.querySelectorAll('.gen-school-check').forEach(el => el.checked = check);
     },
@@ -4357,11 +4274,9 @@ var Auth = {
         };
     },
 
-    // 🛠️ 管理员工具：批量生成账号 (支持指定学校增量更新)
     generateAccounts: function () {
         if (!RAW_DATA.length) return alert("请先在【数据中心】上传成绩数据");
 
-        // 1. 获取界面上勾选的学校
         const checkboxes = document.querySelectorAll('.gen-school-check:checked');
         const selectedSchools = Array.from(checkboxes).map(cb => cb.value);
 
@@ -4381,42 +4296,31 @@ var Auth = {
         msg += `教师账号：新增 ${generation.teacherNew} / 涉及 ${generation.teacherTouched}\n`;
         msg += `\n(提示：未选中学校的旧账号已自动保留)`;
 
-        // 🚫 已注释掉成功后的弹窗，避免干扰
-        // alert(msg);
 
-        // 仅在右下角显示轻提示
         if (window.UI) UI.toast("✅ 账号生成操作完成", "success");
     },
 
 
-    // 🛠️ 管理员工具：导出账号明细 (新功能)
     exportAccounts: function () {
         if (!this.db.teachers.length && !this.db.parents.length) {
             return alert("当前没有生成任何普通账号，请先点击“一键生成”。");
         }
 
-        // 1. 获取界面上勾选的学校
         const checkboxes = document.querySelectorAll('.gen-school-check:checked');
         const selectedSchools = Array.from(checkboxes).map(cb => cb.value);
 
-        // 判断是否启用了筛选 (如果有勾选，且勾选数量小于总学校数，则视为筛选)
-        // 逻辑优化：只要有勾选，就只导出勾选的；如果一个都没勾(或全没勾)，则导出全部
         const isFiltering = selectedSchools.length > 0;
 
         const wb = XLSX.utils.book_new();
-        // 表头增加一列 "所属学校 (仅导出时计算)"
         const data = [['角色', '用户名/姓名', '登录班级 (家长必填)', '密码', '所属学校/备注']];
 
-        // --- A. 写入管理员/主任 (始终导出，不受筛选影响) ---
         data.push(['管理员', 'admin', '-', MASKED_PASSWORD_DISPLAY, '最高权限（明文口令不导出）']);
         const dirPass = MASKED_PASSWORD_DISPLAY;
         data.push(['教务主任', 'director', '-', dirPass, '查看除账号外所有信息']);
 
-        // --- 准备筛选辅助数据 ---
         let validClasses = new Set();   // 选中学校包含的所有班级
 
         if (isFiltering) {
-            // 遍历 RAW_DATA 构建白名单，比每次 find 快
             RAW_DATA.forEach(s => {
                 if (selectedSchools.includes(s.school)) {
                     validClasses.add(s.class);
@@ -4424,14 +4328,11 @@ var Auth = {
             });
         }
 
-        // --- B. 写入教师信息 ---
         let teacherCount = 0;
         this.db.teachers.forEach(t => {
             let shouldExport = true;
             if (isFiltering) {
-                // 检查该老师是否任教于选中的学校 (通过班级反查)
                 let isRelevant = false;
-                // 遍历 TEACHER_MAP 查找该老师教的班级
                 for (const [key, tName] of Object.entries(TEACHER_MAP)) {
                     if (tName === t.name) {
                         const [cls, sub] = key.split('_');
@@ -4450,18 +4351,15 @@ var Auth = {
             }
         });
 
-        // --- C. 写入家长信息 ---
         let parentCount = 0;
         this.db.parents.forEach(p => {
             let shouldExport = true;
             let schoolName = '';
 
-            // 尝试找回学校名以便填写在备注里 (账号库里没存学校，需要回查 RAW_DATA)
             const stuRecord = RAW_DATA.find(r => r.name === p.name && r.class === p.class);
             if (stuRecord) schoolName = stuRecord.school;
 
             if (isFiltering) {
-                // 只有当学生属于选中学校时才导出
                 if (stuRecord && selectedSchools.includes(stuRecord.school)) {
                     shouldExport = true;
                 } else {
@@ -4482,7 +4380,6 @@ var Auth = {
 
         let fileName = `账号清单_${new Date().toLocaleDateString()}.xlsx`;
         if (isFiltering) {
-            // 如果只选了一个学校，文件名带上学校名
             if (selectedSchools.length === 1) fileName = `${selectedSchools[0]}_账号清单.xlsx`;
             else fileName = `特定学校账号清单(共${selectedSchools.length}校).xlsx`;
         }
@@ -4490,7 +4387,6 @@ var Auth = {
         XLSX.utils.book_append_sheet(wb, ws, "账号列表");
         XLSX.writeFile(wb, fileName);
 
-        // 🚫 已注释掉导出成功后的弹窗
         /*
         if (isFiltering) {
             alert(`✅ 已导出选定范围的账号：\n教师: ${teacherCount} 人\n家长: ${parentCount} 人`);
@@ -4498,44 +4394,33 @@ var Auth = {
         */
     },
 
-    // 🟢 [新增] 向云端数据库添加账号
 
-    // 🟢 [修改] 适配级部主任和班主任的手动添加
     addCloudAccount: async function () {
         const role = document.getElementById('manual-role').value;
         const username = document.getElementById('manual-name').value.trim();
         const password = document.getElementById('manual-pass').value.trim();
         const school = document.getElementById('manual-school').value.trim();
 
-        // 获取各个输入框的元素
         const classInput = document.getElementById('manual-class');
         const gradeInput = document.getElementById('manual-grade');
 
-        // 根据角色获取 "class_name" 字段应该存什么
         let className = "";
 
         if (role === 'parent' || role === 'class_teacher') {
-            // 必须检查元素是否存在
             if (classInput) className = classInput.value.trim();
         }
         else if (role === 'grade_director') {
-            // 必须检查元素是否存在
             if (gradeInput) className = gradeInput.value.trim();
         }
-        // 普通教师给一个默认值，防止数据库非空报错
         else if (role === 'teacher') {
             className = "教师";
         }
 
-        // --- 校验逻辑 ---
-        // 1. 账号密码必填
         if (!username || !password) return alert("❌ 请填写账号和密码");
         if (password.length < 8) return alert("❌ 临时密码至少需要 8 位，并将在首次登录后强制修改。");
 
-        // 2. 学校必填 (除了管理员)
         if (role !== 'admin' && !school) return alert("❌ 请填写所属学校");
 
-        // 3. 班级/年级必填校验
         if ((role === 'parent' || role === 'class_teacher') && !className) {
             return alert("❌ 请填写【班级】(例如: 701)");
         }
@@ -4574,26 +4459,20 @@ var Auth = {
             if (typeof this.refreshCloudAccountMigrationStatus === 'function') {
                 this.refreshCloudAccountMigrationStatus();
             }
-            // 清空姓名输入框，方便继续添加
             document.getElementById('manual-name').value = '';
-            // 如果是家长，不清空班级，方便连续添加同班学生
             if (role !== 'parent') {
                 if (classInput) classInput.value = '';
                 if (gradeInput) gradeInput.value = '';
             }
         }
     },
-    // 🛠️ 管理员工具：批量同步本地生成的账号到云端 (V4 智能容错版)
-    // 特性：自动去重 + 失败自动降级为单条上传 + 精确报错
     buildRecoverableCloudAccountRows: function () {
         const parents = this.db.parents || [];
         const teachers = this.db.teachers || [];
         const uniqueMap = new Map(); // key: username, value: dataObj
         const globalDefaultSchool = window.MY_SCHOOL || "默认学校";
 
-        // 辅助：查找学校
         const getSchool = (name, cls) => {
-            // 尝试从 RAW_DATA 查找准确学校
             if (typeof RAW_DATA !== 'undefined') {
                 const s = RAW_DATA.find(r => r.name === name && r.class == cls);
                 if (s) return s.school;
@@ -4601,10 +4480,8 @@ var Auth = {
             return globalDefaultSchool;
         };
 
-        // 辅助：强力清洗字符串 (去空格、去特殊符)
         const cleanStr = (str) => String(str || "").trim().replace(/\s+/g, "");
 
-        // --- A. 处理家长数据 ---
         parents.forEach(p => {
             const user = cleanStr(p.name);
             if (!user) return;
@@ -4618,13 +4495,10 @@ var Auth = {
             });
         });
 
-        // --- B. 处理教师数据 (优先级高，覆盖同名家长) ---
-        // 预处理教师学校映射
         const teaSchMap = {};
         if (typeof TEACHER_MAP !== 'undefined') {
             Object.entries(TEACHER_MAP).forEach(([k, v]) => {
                 const cls = k.split('_')[0];
-                // 简易反查：遍历学校找班级
                 if (typeof SCHOOLS !== 'undefined') {
                     for (let sName in SCHOOLS) {
                         const schoolRecord = getAppSchoolRecord(sName);
@@ -4669,13 +4543,11 @@ var Auth = {
 
         appDebug(`[同步准备] 去重后:${safeRows.length}`);
 
-        // --- C. 智能分批上传 ---
         const BATCH_SIZE = 10; // 保守批次大小
         let successCount = 0;
         let failCount = 0;
         let errorDetails = [];
 
-        // 定义单条重试函数
         const uploadOneByOne = async (items) => {
             let ok = 0;
             for (let item of items) {
@@ -4695,19 +4567,16 @@ var Auth = {
         for (let i = 0; i < safeRows.length; i += BATCH_SIZE) {
             const chunk = safeRows.slice(i, i + BATCH_SIZE);
 
-            // 1. 尝试批量写入
             const pct = Math.round(((i + chunk.length) / safeRows.length) * 100);
             try {
                 await EdgeGateway.upsertAccounts(chunk);
                 successCount += chunk.length;
             } catch (error) {
                 console.warn(`⚠️ 批次 ${Math.ceil(i / BATCH_SIZE) + 1} 报错 (HTTP 500/409)，自动降级为单条上传模式...`);
-                // 2. 批量失败，自动降级为单条循环
                 await uploadOneByOne(chunk);
             }
 
             UI.loading(true, `☁️ 同步中... ${pct}% (成功:${successCount} / 失败:${failCount})`);
-            // 稍微延时防止数据库压力过大
             if (failCount > 50) throw new Error("错误过多，中止上传"); // 熔断机制
             await new Promise(r => setTimeout(r, 50));
         }
@@ -4793,18 +4662,15 @@ var Auth = {
         }
     },
 
-    // 🛠️ 管理员工具：批量删除云端账号 (保留管理员)
     deleteCloudAccounts: async function () {
         if (!window.EdgeGateway || typeof EdgeGateway.deleteManagedAccounts !== 'function') {
             return alert("❌ 账号网关未就绪，请稍后重试。");
         }
 
-        // 1. 第一重确认
         if (!confirm("⚠️【高风险操作】⚠️\n\n您确定要清空云端数据库中的所有【家长】和【教师】账号吗？\n\n注意：\n1. 此操作不可撤销！\n2. 管理员账号会被保留，不会被删除。\n3. 删除后用户将无法登录，直到您再次同步。")) {
             return;
         }
 
-        // 2. 第二重确认 (防止误触)
         const input = prompt("🔴 请输入 '确认删除' 四个字以执行清空操作：");
         if (input !== "确认删除") {
             return alert("操作已取消。");
@@ -4813,15 +4679,12 @@ var Auth = {
         UI.loading(true, "正在清理云端账号库...");
 
         try {
-            // 执行删除操作
-            // 逻辑：删除所有 role 不等于 'admin' 和 'director' 的用户
             const { count } = await EdgeGateway.deleteManagedAccounts();
 
             UI.loading(false);
 
             alert(`✅ 清理完成！\n共删除了 ${count !== null ? count : '若干'} 个云端账号。\n\n现在您可以重新生成并同步新名单了。`);
 
-            // 🛡️ [日志埋点] 记录清空账号操作
             Logger.log('清空账号', `管理员执行了清空云端普通账号操作 (影响:${count}人)`);
             if (typeof this.refreshCloudAccountMigrationStatus === 'function') {
                 this.refreshCloudAccountMigrationStatus();
@@ -4850,11 +4713,9 @@ var Auth = {
                 throw new Error("云端数据库为空，没有账号可导出。");
             }
 
-            // 2. 准备 Excel 数据
             const headers = ['角色', '学校', '班级/范围', '账号/姓名', '密码状态'];
             const excelData = [headers];
 
-            // 角色名称映射字典
             const roleMap = {
                 'admin': '👑 管理员',
                 'director': '🎓 教务主任',
@@ -4875,11 +4736,9 @@ var Auth = {
                 ]);
             });
 
-            // 3. 生成并下载 Excel
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.aoa_to_sheet(excelData);
 
-            // 设置列宽 (美观)
             ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }];
 
             XLSX.utils.book_append_sheet(wb, ws, "云端全量账号");
@@ -5032,7 +4891,6 @@ var Auth = {
         }
     },
 
-    // 🛠️ 管理员工具：清除账号
     clearAccounts: function () {
         if (!confirm("⚠️ 确定清空所有教师和家长账号吗？\n(管理员密码不会被清除)")) return;
         this.db.teachers = [];
@@ -5042,12 +4900,10 @@ var Auth = {
     }
 };
 
-// 🟢 [修复] 确保 Auth 挂载到 window 以便 HTML onclick 访问
 window.Auth = Auth;
 Auth.ensureLoginWorkbench();
 Auth.syncLoginPortalUI();
 
-// Signal to the portal loader that Auth is ready
 if (typeof window.markAuthReadyResolved === 'function') {
     window.markAuthReadyResolved();
     appDebug('[app] AuthReady signaled to portal');
@@ -5067,7 +4923,6 @@ window.openAdminCloudAccountModal = function () {
     }
 };
 
-// 🆕 多角色权限系统
 window.RoleManager = {
     getUserRoles: function (user) {
         return AuthState.getUserRoles(user);
@@ -5092,7 +4947,6 @@ window.RoleManager = {
         }
     },
 
-    // 🆕 测试工具：为当前用户添加角色（仅用于开发测试）
     addRoleToCurrentUser: function (roleName) {
         if (!Auth.currentUser) {
             console.error('❌ 没有登录用户');
@@ -5110,10 +4964,8 @@ window.RoleManager = {
 
         AuthState.setCurrentUser(Auth.currentUser);
 
-        // 重新应用角色
         this.applyRolesToBody(Auth.currentUser);
 
-        // 更新角色提示
         if (typeof updateRoleHint === 'function') {
             updateRoleHint();
         }
@@ -5122,7 +4974,6 @@ window.RoleManager = {
         appDebug('💡 提示：这只是临时测试，刷新页面后会恢复。要永久设置，请在数据库中修改用户数据。');
     },
 
-    // 🆕 测试工具：查看当前用户的所有权限
     showCurrentPermissions: function () {
         const user = Auth.currentUser;
         if (!user) {
@@ -5198,7 +5049,6 @@ const IssueManager = {
     }
 };
 
-// 📦 系统打包工具
 const Packager = {
     exportDistributableHTML: async function () {
         const runtime = await ensurePackagerRuntime();
@@ -5228,7 +5078,6 @@ function getDataProcessingWorkerScriptUrl() {
 }
 
 
-// 2. Worker 管理器
 const WorkerAPI = {
     worker: null,
     async init() {
@@ -5241,8 +5090,6 @@ const WorkerAPI = {
     }
 };
 
-// 【魔法】劫持原生 alert，你旧代码里的 alert 都会自动变漂亮
-// 升级版：使用 SweetAlert2 替代原生弹窗
 window.alert = function (msg, icon = 'info') {
     if (typeof Swal !== 'undefined') {
         Swal.fire({
@@ -5253,35 +5100,21 @@ window.alert = function (msg, icon = 'info') {
             timerProgressBar: true
         });
     } else {
-        // 降级处理
         UI.toast(msg);
     }
 };
 
-// 👇👇👇 ✋ 🔴 [修复重点开始]：调整代码顺序，防止递归死循环 🔴 ✋ 👇👇👇
 
-// 🟢 [修正步骤 1]：必须在重写之前，先备份浏览器原生的 confirm 函数！
-// 之前代码把这行放在了后面，导致备份的是“新函数自己”，从而引发死循环。
 if (!window.originalConfirm) window.originalConfirm = window.confirm;
 
-// 🟢 [修正步骤 2]：然后再重写 window.confirm
-// (这是为了让 window.confirm = async function 变成异步，虽然这里暂时还是同步调用)
 window.confirm = function (msg) {
-    // 注意：原生的 confirm 是同步阻塞的，SweetAlert2 是异步 Promise。
-    // 这里只是为了覆盖默认行为，实际代码中需要把 if(confirm(...)) 改为 await 模式
-    // 为了兼容旧代码，这里暂时保留原生 confirm 作为同步阻塞，
-    // 但建议在关键操作（如删除）中显式调用 Swal.fire
 
-    // 这里的 window.originalConfirm 现在指向的是真正的原生函数，不会死循环了
     return window.originalConfirm ? window.originalConfirm(msg) : true;
 };
 
-// 备份原生 confirm 以防万一 (这段旧有的冗余代码可以保留，也可以删掉，上面的步骤1已经处理了)
 if (!window.originalConfirm) window.originalConfirm = window.confirm;
 
-// 👆👆👆 ✋ 🟢 [修复重点结束] 🟢 ✋ 👆👆👆
 
-// 🛡️ [升级版] 系统操作日志记录器 (支持回收站)
 const Logger = {
     isHistoryMode: false,
     log: async function (action, details) {
@@ -5316,7 +5149,6 @@ const Logger = {
     }
 };
 
-// 🔐 [新增] 多角色账号管理控制器 (管理员/主任/班主任)
 const AccountManager = {
     open: function () {
         return requireAccountManagerRuntime().open(this);
@@ -5336,7 +5168,6 @@ const AccountManager = {
 };
 window.AccountManager = AccountManager;
 
-// 📊 [新增] 数据综合管理器 (学生/教师/档案/参数/目标)
 const DataManager = {
     init: function () {
         window.DataManager = this;
@@ -5411,7 +5242,6 @@ const DataManager = {
         localStorage.setItem(key, JSON.stringify(targets));
     },
 
-    // 1. 打开面板
     open: function () {
         const user = Auth.currentUser;
         if (!user) return alert("请先登录");
@@ -5518,7 +5348,6 @@ const DataManager = {
         if (listBtn) Object.assign(listBtn.style, showOverview ? idleStyle : activeStyle);
     },
 
-    // 2. 切换标签页 (修复版：支持所有管理模块)
     decorateLayout: function () {
         const modal = document.getElementById('data-manager-modal');
         const content = modal?.querySelector('.modal-content');
@@ -5682,7 +5511,6 @@ const DataManager = {
         const searchInput = document.getElementById('dm-search-input');
         if (searchInput) searchInput.value = '';
 
-        // 样式切换
         document.querySelectorAll('.login-tab').forEach(el => el.classList.remove('active'));
 
         let tabId = 'tab-data-stu';
@@ -5695,21 +5523,16 @@ const DataManager = {
         const el = document.getElementById(tabId);
         if (el) el.classList.add('active');
 
-        // --- 区域显隐控制 ---
 
-        // 学生表
         const stuTable = document.getElementById('dm-student-table');
         if (stuTable) stuTable.style.display = tab === 'student' ? 'table' : 'none';
 
-        // 教师区域 (新版容器)
         const teaArea = document.getElementById('dm-teacher-area');
         if (teaArea) teaArea.style.display = tab === 'teacher' ? 'block' : 'none';
 
-        // 隐藏旧版直接引用的教师表 (防止冲突)
         const oldTeaTable = document.getElementById('dm-teacher-table');
         if (oldTeaTable && !teaArea) oldTeaTable.style.display = tab === 'teacher' ? 'table' : 'none';
 
-        // 其他区域
         const archArea = document.getElementById('dm-archive-area');
         if (archArea) archArea.style.display = tab === 'archive' ? 'block' : 'none';
 
@@ -5726,7 +5549,6 @@ const DataManager = {
         if (cloudArea) cloudArea.style.display = tab === 'cloud' ? 'flex' : 'none';
 
 
-        // 如果切到云端管理，立即加载列表
         if (tab === 'cloud') this.renderCloudBackups();
         if (tab === 'sql') {
             if (typeof this.renderSQLHistory === 'function') {
@@ -5740,16 +5562,13 @@ const DataManager = {
             }
         }
 
-        // 搜索栏和分页栏逻辑 (教师页现在有独立筛选，不再使用顶部通用搜索)
         const showSearch = (tab === 'student');
         const searchBar = document.getElementById('dm-search-bar');
         const pageBar = document.getElementById('dm-pagination');
         if (searchBar) searchBar.style.display = showSearch ? 'flex' : 'none';
         if (pageBar) pageBar.style.display = showSearch ? 'flex' : 'none';
 
-        // 初始化教师页面的学校下拉框
         if (tab === 'teacher') {
-            // 强制重新初始化届别元数据，防止因数据延迟导致的渲染失败
             if (!window.CURRENT_COHORT_META && window.CURRENT_COHORT_ID) {
                 try {
                     const storedMeta = localStorage.getItem('CURRENT_COHORT_META');
@@ -5764,19 +5583,16 @@ const DataManager = {
             this.updateTeacherSchoolSelect();
             this.renderTeacherTermSelect();
 
-            // 🟢 [修复]：选中学期并自动同步云端数据
             setTimeout(() => {
                 const termId = getPreferredTeacherTermId() || buildTeacherTermId(getExamMetaFromUI());
                 if (termId) {
                     const sel = document.getElementById('dm-teacher-term-select');
                     if (sel) sel.value = termId;
-                    // switchTeacherTerm 内部已经包含云端同步逻辑
                     DataManager.switchTeacherTerm(termId);
                 }
             }, 50);
         }
 
-        // 👇👇👇 🟢 [同步修复]：切换到参数页时，强制刷新数据显示 🟢 👇👇👇
         if (tab === 'params') {
             this.renderParams();
         }
@@ -5786,7 +5602,6 @@ const DataManager = {
         this.updateCloudPanelView();
     },
 
-    // --- 模块 A: 云端数据管理 (重构版) ---
     getCloudRecordKind: function (key) {
         const text = String(key || '').trim();
         if (!text) return 'other';
@@ -5839,7 +5654,6 @@ const DataManager = {
         return requireDataCloudRuntime().deleteSelectedCloudBackups(this);
     },
 
-    // 加载指定的云端存档
     getCloudBackupRow: async function (key) {
         return requireDataCloudRuntime().getCloudBackupRow(this, key);
     },
@@ -5878,7 +5692,6 @@ const DataManager = {
 
 
 
-    // --- 模块 B: 历史数据上传 (Sheet名=学校名, 班级+姓名=Key) ---
     handleHistoryUpload: function (input) {
         const file = input.files[0];
         if (!file) return;
@@ -5892,7 +5705,6 @@ const DataManager = {
                 let parsedHistory = [];
                 let calcModeMsg = "";
 
-                // 1. 遍历所有 Sheet
                 wb.SheetNames.forEach(sheetName => {
                     const json = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
                     if (json.length === 0) return;
@@ -5916,7 +5728,6 @@ const DataManager = {
                     });
                     SUBJECTS.sort(sortSubjects);
 
-                    // 确定计算策略
                     const isGrade9 = CONFIG.name && CONFIG.name.includes('9');
                     let targetSubjects = isGrade9 ? ['语文', '数学', '英语', '物理', '化学'] : Object.keys(subjectColMap);
                     if (isGrade9) calcModeMsg = "9年级模式"; else calcModeMsg = "全科模式";
@@ -5931,7 +5742,6 @@ const DataManager = {
                         let totalScore = 0;
                         let scoresObj = {};
 
-                        // 解析单科
                         Object.keys(subjectColMap).forEach(sub => {
                             const colName = subjectColMap[sub];
                             if (row[colName] !== undefined) {
@@ -5940,7 +5750,6 @@ const DataManager = {
                             }
                         });
 
-                        // 计算总分
                         if (keyScore && row[keyScore] !== undefined) {
                             totalScore = parseFloat(row[keyScore]);
                         } else {
@@ -5965,23 +5774,16 @@ const DataManager = {
 
                 if (parsedHistory.length === 0) throw new Error("未解析到有效数据");
 
-                // ==========================================
-                // 🔥 核心升级：计算历史数据的【总分】及【所有单科】排名 🔥
-                // ==========================================
 
-                // 辅助函数：通用排名计算
                 const calcRank = (list, scoreGetter, rankSetter) => assignCompetitionRanks(list, scoreGetter, rankSetter);
 
-                // 1. 全镇范围 (总分 + 单科)
                 calcRank(parsedHistory, s => s.total, (s, r) => { if (!s.ranks.total) s.ranks.total = {}; s.townRank = r; s.ranks.total.township = r; });
 
                 SUBJECTS.forEach(sub => {
-                    // 过滤出有该科成绩的学生
                     const validList = parsedHistory.filter(s => s.scores[sub] !== undefined);
                     calcRank(validList, s => s.scores[sub], (s, r) => { if (!s.ranks[sub]) s.ranks[sub] = {}; s.ranks[sub].township = r; });
                 });
 
-                // 2. 学校范围 (总分 + 单科)
                 const schools = {};
                 parsedHistory.forEach(s => { if (!schools[s.school]) schools[s.school] = []; schools[s.school].push(s); });
 
@@ -5997,7 +5799,6 @@ const DataManager = {
                     });
                 });
 
-                // 3. 班级范围 (总分 + 单科)
                 const classes = {};
                 parsedHistory.forEach(s => { const k = s.school + "_" + s.class; if (!classes[k]) classes[k] = []; classes[k].push(s); });
 
@@ -6012,11 +5813,9 @@ const DataManager = {
                         calcRank(validList, s => s.scores[sub], (s, r) => { if (!s.ranks[sub]) s.ranks[sub] = {}; s.ranks[sub].class = r; });
                     });
                 });
-                // ==========================================
 
                 setPrevDataState(parsedHistory);
 
-                // 更新 UI
                 const statusEl = document.getElementById('dm-history-status');
                 statusEl.innerHTML = `✅ 已加载 ${parsedHistory.length} 条 | ${calcModeMsg}`;
                 statusEl.style.color = "#16a34a";
@@ -6047,12 +5846,10 @@ const DataManager = {
         if (!tbody) return;
         if (!window.PREV_DATA || window.PREV_DATA.length === 0) return;
 
-        // 判断是否单校
         const schools = new Set(window.PREV_DATA.map(s => s.school));
         const isSingleSchool = schools.size === 1;
 
         let html = '';
-        // 只展示前 50 条预览
         window.PREV_DATA.slice(0, 50).forEach(s => {
             const townRankDisplay = isSingleSchool ? '<span style="color:#ccc">-</span>' : s.townRank;
             html += `
@@ -6073,7 +5870,6 @@ const DataManager = {
 
         tbody.innerHTML = html;
 
-        // 动态隐藏/显示表头
         const townTh = document.querySelector('#dm-history-preview-table th:last-child');
         if (townTh) {
             if (isSingleSchool) {
@@ -6084,7 +5880,6 @@ const DataManager = {
         }
     },
 
-    // 3. 渲染调度器
     renderCurrentTab: function () {
         const input = document.getElementById('dm-search-input');
         const keyword = input ? input.value.trim().toLowerCase() : '';
@@ -6102,11 +5897,9 @@ const DataManager = {
         }
     },
 
-    // 4. 学生列表渲染 (优化版：使用 DocumentFragment 和字符串拼接优化性能)
     renderStudents: function (keyword) {
         if (!window.RAW_DATA) return;
 
-        // 性能优化：仅在有搜索词时进行过滤
         let list = keyword
             ? RAW_DATA.filter(s =>
                 (s.name && s.name.toLowerCase().includes(keyword)) ||
@@ -6135,7 +5928,6 @@ const DataManager = {
         if (pageData.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#999;">无数据</td></tr>';
         } else {
-            // 使用数组 join 拼接字符串，比 += 性能更好
             const rows = pageData.map(s => `
                 <tr>
                     <td style="text-align:center;"><input type="checkbox" class="dm-stu-select" data-idx="${s._originalIndex}" ${this.studentSelection.has(s._originalIndex) ? 'checked' : ''} onchange="DataManager.toggleStudentSelection(this)"></td>
@@ -6215,7 +6007,6 @@ const DataManager = {
         UI.toast(`已暂存删除 ${indexes.length} 项 (请点击保存)`, 'info');
     },
 
-    // 5. 分页 UI 更新
     updatePaginationUI: function (totalPages) {
         const el = document.getElementById('dm-page-info');
         if (el) el.innerText = `${this.pagination.page} / ${totalPages}`;
@@ -6226,11 +6017,9 @@ const DataManager = {
         this.renderCurrentTab();
     },
 
-    // --- 教师管理核心逻辑 ---
 
 
 
-    // 🟢 [修复]：修正 updateTeacherSchoolSelect 缺失问题
     updateTeacherSchoolSelect: function () {
         const sel = document.getElementById('dm-teacher-school-select');
         if (!sel) return;
@@ -6251,7 +6040,6 @@ const DataManager = {
             .join('');
         sel.innerHTML = `<option value="">-- 显示全部 --</option>${schoolOptionsHtml}`;
 
-        // 🔥 自动选择当前学校
         if (currentVal && schools.has(currentVal)) {
             sel.value = currentVal;
         } else if (MY_SCHOOL && schools.has(MY_SCHOOL)) {
@@ -6274,7 +6062,6 @@ const DataManager = {
                 mainSelect.dispatchEvent(new Event('change'));
             }
         }
-        // 切换学校筛选时重新渲染表格
         this.renderTeachers();
     },
 
@@ -6283,12 +6070,10 @@ const DataManager = {
         if (!sel) return;
 
         const getEntryYear = () => {
-            // 1. 绝对优先：内存中的届别元数据
             if (window.CURRENT_COHORT_META && window.CURRENT_COHORT_META.year) {
                 return parseInt(window.CURRENT_COHORT_META.year, 10);
             }
 
-            // 2. 本地存储的元数据
             try {
                 const metaStr = localStorage.getItem('CURRENT_COHORT_META');
                 if (metaStr) {
@@ -6297,11 +6082,9 @@ const DataManager = {
                 }
             } catch (e) { }
 
-            // 3. 届别 ID (通常就是年份字符串，如 "2024")
             const id = window.CURRENT_COHORT_ID || readWorkspaceCohortId();
             if (id && /^\d{4}$/.test(String(id))) return parseInt(id, 10);
 
-            // 4. 界面标签 (如 "2024级 (六年级入学)")
             const label = document.getElementById('cohort-current-label')?.innerText || '';
             const match = label.match(/(\d{4})级/); // 精确匹配 "xxxx级"
             if (match) return parseInt(match[1], 10);
@@ -6313,7 +6096,6 @@ const DataManager = {
         const startYear = getEntryYear();
 
         if (startYear) {
-            // 正常学制：初中四年 (6, 7, 8, 9)
             for (let i = 0; i < 4; i++) years.push(startYear + i);
         } else {
             const currentYear = new Date().getFullYear();
@@ -6337,7 +6119,6 @@ const DataManager = {
 
         sel.innerHTML = options || '<option value="">暂无学期</option>';
 
-        // 智能选中逻辑
         let prefer = null;
         const preferredCandidates = getTeacherTermCandidates();
         for (const candidate of preferredCandidates) {
@@ -6359,15 +6140,12 @@ const DataManager = {
     switchTeacherTerm: function (termId) {
         if (!termId) return;
 
-        // 🟢 改进：从termId中提取年级和届数信息
-        // termId格式可能是："2025-2026_上学期_9年级" 或 "2025-2026_上学期"
         const parts = termId.split('_');
         const baseTerm = parts.slice(0, 2).join('_'); // "2025-2026_上学期"
         const gradeInfo = parts[2]; // "9年级" 或 undefined
 
         syncTeacherTermStorage(termId);
 
-        // 如果有年级信息，计算并设置cohortId
         if (gradeInfo) {
             const gradeMatch = gradeInfo.match(/(\d+)/);
             if (gradeMatch) {
@@ -6375,28 +6153,23 @@ const DataManager = {
                 const yearMatch = parts[0].match(/(\d{4})/);
                 if (yearMatch) {
                     const currentYear = parseInt(yearMatch[1], 10);
-                    // 计算入学年份：当前学年 - (当前年级 - 6)
                     const entryYear = currentYear - (grade - 6);
                     const cohortId = entryYear;
 
-                    // 更新全局cohortId
                     writeWorkspaceCohortId(String(cohortId));
                     appDebug(`📅 已设置届数：${cohortId}级 (${grade}年级)`);
                 }
             }
         }
 
-        // 🟢 [修复]：切换学期时，先尝试从本地历史读取
         const db = CohortDB.ensure();
         const history = db.teachingHistory || {};
-        // 尝试用完整termId或baseTerm查找
         const entry = history[termId] || history[baseTerm];
         const localMap = entry?.map && typeof entry.map === 'object' ? entry.map : (entry || {});
         const localSchoolMap = entry?.schoolMap && typeof entry.schoolMap === 'object' ? entry.schoolMap : {};
         const hasLocal = localMap && Object.keys(localMap).length > 0;
 
         if (hasLocal) {
-            // 🟢 [修复]：清洗已被上一版 Bug 污染的本地缓存 (如8年级学期里混入了9年级的历史数据)
             if (gradeInfo) {
                 const gradeMatch = gradeInfo.match(/(\d+)/);
                 if (gradeMatch) {
@@ -6407,7 +6180,6 @@ const DataManager = {
 
                     Object.entries(localMap).forEach(([k, v]) => {
                         const clsName = String(k.split('_')[0]).replace(/班/g, '');
-                        // 如果班级是以该年级开头（例如 "801", "8.1"），则保留；否则（如 "9.1"）丢弃
                         if (clsName.startsWith(gradePrefix)) {
                             cleanedMap[k] = v;
                             cleanedCount++;
@@ -6422,7 +6194,6 @@ const DataManager = {
                     localMap = cleanedMap;
                 }
 
-                // 🟢 [修复]：同时清洗 "Sheet1" 这类因为当初 Excel 导入错误而遗留下来的假学校名
                 if (localSchoolMap && typeof localSchoolMap === 'object') {
                     let scrubbedSchools = 0;
                     Object.keys(localSchoolMap).forEach(k => {
@@ -6435,20 +6206,17 @@ const DataManager = {
                 }
             }
 
-            // 有本地数据(或清洗后的干净数据)，直接使用
             setTeacherMap(JSON.parse(JSON.stringify(localMap)));
             setTeacherSchoolMap(JSON.parse(JSON.stringify(localSchoolMap)));
             this.renderTeachers();
             appDebug(`✅ 已从本地历史加载学期 ${baseTerm} 的任课表，共展示 ${Object.keys(localMap).length} 条`);
             if (typeof this.refreshTeacherAnalysis === 'function') this.refreshTeacherAnalysis();
         } else {
-            // 🟢 [修复]：本地无数据，自动尝试从云端拉取
             appDebug(`⚠️ 本地无学期 ${baseTerm} 的任课数据，尝试从云端同步...`);
             setTeacherMap({});
             setTeacherSchoolMap({});
             this.renderTeachers(); // 先渲染空表
 
-            // 异步从云端加载
             if (window.CloudManager && CloudManager.loadTeachers) {
                 if (window.UI) UI.toast('🔄 正在从云端加载教师任课数据...', 'info');
                 CloudManager.loadTeachers({ background: true }).then(() => {
@@ -6523,13 +6291,11 @@ const DataManager = {
             return;
         }
 
-        // 检查 XLSX 库
         if (typeof XLSX === 'undefined') {
             alert('❌ Excel解析库未加载，请刷新页面后重试');
             return;
         }
 
-        // 检查学期
         const termId = readCurrentTermId() || getTermId(getExamMetaFromUI());
         if (!termId) {
             alert('⚠️ 请先选择学期！\n\n点击【学期】下拉框选择一个学期后再导入Excel。');
@@ -6544,7 +6310,6 @@ const DataManager = {
         const reader = new FileReader();
         reader.onload = async function (e) {
             try {
-                // 解析Excel
                 const data = new Uint8Array(e.target.result);
                 const wb = XLSX.read(data, { type: 'array' });
 
@@ -6556,7 +6321,6 @@ const DataManager = {
 
                 let totalRows = 0;
 
-                // 导入数据
                 let count = 0;
                 const errors = [];
                 const teacherAssignments = [];
@@ -6567,7 +6331,6 @@ const DataManager = {
                     totalRows += json.length;
 
                     json.forEach((row, idx) => {
-                        // 🟢 [修复]：大幅增加 Excel 表头别名的容错率，匹配更多中国学校常用教务表格头
                         const classAlias = ['班级', 'class', 'Class', '班级名称', '行政班', '所属班级', '年级班级', '教学班'];
                         const subjectAlias = ['学科', 'subject', '科目', 'Subject', '任教科目', '考试科目'];
                         const teacherAlias = ['教师', 'teacher', '教师姓名', '姓名', 'Teacher', '任课教师', '任课老师', '授课教师', '老师'];
@@ -6611,12 +6374,10 @@ const DataManager = {
                     return;
                 }
 
-                // Apply a complete replacement only after the workbook passes conflict validation.
                 const newTeacherMap = importResult.teacherMap;
                 const newTeacherSchoolMap = importResult.schoolMap;
                 count = importResult.count;
 
-                // 应用新数据
                 if (count > 0) {
                     setTeacherMap(newTeacherMap);
                     setTeacherSchoolMap(newTeacherSchoolMap);
@@ -6635,15 +6396,12 @@ const DataManager = {
                     return;
                 }
 
-                // 同步到本地历史
                 DataManager.syncTeacherHistory();
                 updateStatusPanel();
 
-                // 渲染界面
                 DataManager.renderTeachers();
                 logAction('导入', `任课表导入 ${count} 条（${termId}）`);
 
-                // 自动同步到云端
                 if (window.CloudManager && CloudManager.saveTeachers) {
                     try {
                         appDebug('[TeacherSync] 尝试上传任课表到云端...');
@@ -6668,7 +6426,6 @@ const DataManager = {
                     alert(`✅ 成功导入 ${count} 条任课信息！`);
                 }
 
-                // 清空输入
                 input.value = '';
 
             } catch (err) {
@@ -6694,7 +6451,6 @@ const DataManager = {
         const sel = document.getElementById('dm-teacher-school-select');
         const selectedSchool = sel ? sel.value : "";
 
-        // 若学期下拉仍未渲染，进行兜底刷新
         const termSel = document.getElementById('dm-teacher-term-select');
         if (termSel && termSel.options && termSel.options.length <= 1) {
             const txt = termSel.options[0]?.textContent || '';
@@ -6732,7 +6488,6 @@ const DataManager = {
             return { key, class: clsName, subject, name, school: schoolName };
         });
 
-        // 逻辑：仅在没有固定本校时才从任课表推断，避免覆盖学校默认口径
         if (list.length > 0) {
             const schoolCounts = {};
             list.forEach(t => {
@@ -6741,7 +6496,6 @@ const DataManager = {
                 }
             });
 
-            // 找出数量最多的学校
             let maxCount = 0;
             let autoDetectedSchool = "";
             for (const [sch, count] of Object.entries(schoolCounts)) {
@@ -6751,25 +6505,19 @@ const DataManager = {
                 }
             }
 
-            // 如果找到了有效学校，且当前未设置，则自动同步
             if (autoDetectedSchool && !readCurrentSchool()) {
                 writeCurrentSchool(autoDetectedSchool);
                 appDebug(`🤖 系统已自动将本校锁定为：${autoDetectedSchool}`);
 
-                // 同步更新主界面的下拉框 UI
                 const mainSelect = document.getElementById('mySchoolSelect');
                 if (mainSelect) {
                     mainSelect.value = autoDetectedSchool;
-                    // 稍微延时触发变更事件，确保数据加载完成
                     setTimeout(() => {
-                        // 仅更新内存，不频繁触发 renderTables 以免卡顿，但在关闭模态框时会生效
                     }, 100);
                 }
                 updateStatusPanel();
 
-                // 提示用户
                 if (window.UI && list.length > 5) { // 只有数据量足够时才提示
-                    // UI.toast(`已自动识别本校为：${autoDetectedSchool}`, "success");
                 }
             }
         }
@@ -6811,7 +6559,6 @@ const DataManager = {
         }
     },
 
-    // --- 数据操作辅助函数 ---
 
     deleteStudent: function (index) {
         const s = RAW_DATA[index];
@@ -6922,7 +6669,6 @@ const DataManager = {
         });
     },
 
-    // --- 档案管理 ---
 
     renderArchives: function () {
         const examStats = {};
@@ -6974,7 +6720,6 @@ const DataManager = {
         return requireDataCloudRuntime().deleteCloudSnapshot(this, key);
     },
 
-    // 👇👇👇 🟢 [同步修复]：参数管理渲染逻辑优化 🟢 👇👇👇
     getDataManagerSyncStorageKey: function () {
         return requireDataCloudRuntime().getDataManagerSyncStorageKey();
     },
@@ -7030,10 +6775,8 @@ const DataManager = {
             this.renderDataManagerStatus();
             return;
         }
-        // 1. 确保全局变量结构存在
         ensureSupportSysVars();
 
-        // 2. 优先从全局变量读取
         let i1 = readIndicatorState().ind1;
         let i2 = readIndicatorState().ind2;
 
@@ -7043,20 +6786,17 @@ const DataManager = {
             i2 = readIndicatorState().ind2;
         }
 
-        // 3. 兜底：如果全局变量为空，尝试从主界面 DOM 获取（防止主界面有值但这里没显示）
         const mainInput1 = document.getElementById('ind1');
         const mainInput2 = document.getElementById('ind2');
 
         if (!i1 && mainInput1) i1 = mainInput1.value;
         if (!i2 && mainInput2) i2 = mainInput2.value;
 
-        // 4. 将值填入弹窗的输入框
         const el1 = document.getElementById('dm_ind1_input');
         const el2 = document.getElementById('dm_ind2_input');
 
         if (el1) {
             el1.value = i1 || '';
-            // 绑定实时更新
             el1.oninput = function () {
                 setIndicatorState({ ...readIndicatorState(), ind1: this.value });
                 if (window.DataManager && typeof DataManager.renderDataManagerStatus === 'function') {
@@ -7078,26 +6818,20 @@ const DataManager = {
 
     saveParamsLocally: async function (skipCloudSync = false) {
         if (!isIndicatorAllowed()) return;
-        // 1. 防御性初始化
         ensureSupportSysVars();
 
-        // 2. 获取管理面板弹窗内的值
         const v1 = document.getElementById('dm_ind1_input').value;
         const v2 = document.getElementById('dm_ind2_input').value;
 
-        // 3. 更新内存全局变量
         setIndicatorState({ ind1: v1, ind2: v2 });
 
-        // 4. 同步更新主界面的输入框 (确保 processData 运行时能读到)
         const main1 = document.getElementById('ind1');
         const main2 = document.getElementById('ind2');
         if (main1) main1.value = v1;
         if (main2) main2.value = v2;
         this.persistGrade9IndicatorTemplate();
 
-        // 5. 🔥 核心新增：立即触发云端同步 🔥
         if (!skipCloudSync && typeof saveCloudData === 'function') {
-            // 使用 toast 提示正在保存，体验更好
             UI.toast('💾 参数已暂存，正在后台同步...', 'info');
             const ok = await saveCloudData({ background: true, sourceLabel: 'params-auto-save' });
             if (ok) {
@@ -7110,12 +6844,10 @@ const DataManager = {
         }
     },
 
-    // --- 目标人数管理 (增强版) ---
     renderTargets: function () {
         const tbody = document.getElementById('dm-targets-tbody');
         if (!tbody) return;
 
-        // 确保全局变量存在
         readTargetsState();
         ensureNormalizedTargets();
         if (Object.keys(readTargetsState()).length === 0) {
@@ -7404,7 +7136,6 @@ const DataManager = {
         this.renderDataManagerStatus();
     },
 
-    // 7. 保存并同步 (核心修复)
     saveAndSync: async function () {
         if (isArchiveLocked()) return alert("⛔ 当前考试已封存，仅支持只读查看");
         if (!confirm("⚠️ 确定要应用所有修改并同步到云端吗？\n\n1. 系统将重算排名\n2. 目标/参数将被保存")) return;
@@ -7412,13 +7143,11 @@ const DataManager = {
         UI.loading(true, "正在保存...");
 
         try {
-            // 1. 确保参数已同步到全局
             await this.saveParamsLocally(true);
             this.syncTeacherHistory();
             setTargetsState(ensureNormalizedTargets());
             setSchoolAliasState(ensureSchoolAliasStore());
 
-            // 2. 重新计算数据 (会读取 ind1, ind2)
             if (window.RAW_DATA && window.RAW_DATA.length) {
                 try {
                     await processData();
@@ -7428,7 +7157,6 @@ const DataManager = {
                 }
             }
 
-            // 3. 上传到云端
             const ok = await saveCloudData({ background: true, sourceLabel: 'save-and-sync' });
             if (!ok) throw new Error('云端同步任务未能创建');
 
@@ -7457,33 +7185,27 @@ function logCloudSyncIssue(label, error) {
     console.error(label, error);
 }
 
-// 🟢 [优化版] 数据持久化工具：支持云端同步 + IndexedDB 本地缓存
 const DB = {
     getLocal: async (key) => {
         return requireDataCloudRuntime().dbGetLocal(key);
     },
-    // 保存数据：同时保存到云端和本地缓存
     save: async (key, value, options = {}) => {
         return requireDataCloudRuntime().dbSave(key, value, options);
     },
 
-    // 读取数据：优先本地缓存，后台静默更新
     get: async (key, options = {}) => {
         return requireDataCloudRuntime().dbGet(key, options);
     },
 
-    // 从云端强制同步并更新本地
     syncFromCloud: async (key) => {
         return requireDataCloudRuntime().dbSyncFromCloud(key);
     },
 
-    // 清除数据
     clear: async (key) => {
         return requireDataCloudRuntime().dbClear(key);
     }
 };
 
-// 🔄 切换届别 (安全修复版)
 async function switchCohort(cohortId, options = {}) {
     if (!cohortId) return;
     const cohortKey = getCohortKey(cohortId);
@@ -8160,13 +7882,11 @@ const Perf = {
             }
         }, 50);
     },
-    // 高性能列表渲染：解决 += HTML 导致的卡顿
     renderList: (data, templateFn) => {
         if (!data || !data.length) return '';
         return data.map(templateFn).join('');
     }
 };
-// ================= 全局变量 =================
 Perf.runAsync = (fn, loadingText) => {
     UI.loading(true, loadingText);
     return new Promise((resolve) => {
@@ -8251,7 +7971,6 @@ const initialReportSessionSnapshot = syncReportSessionRuntimeState({
     currentReportStudent: readCurrentReportStudentState(),
     currentContextStudents: readCurrentContextStudentsState()
 });
-// 🟢 [修复]：全局变量显式挂载到 window，确保 CloudManager 可访问
 var TEACHER_MAP = readTeacherMap(), TEACHER_SCHOOL_MAP = readTeacherSchoolMap(), MY_SCHOOL = "", TEACHER_STATS = readTeacherStats();
 window.TEACHER_MAP = TEACHER_MAP;
 window.TEACHER_SCHOOL_MAP = TEACHER_SCHOOL_MAP;
@@ -8366,12 +8085,10 @@ let radarChartInstance = null;
 let segmentChartInstance = null; // 新增：分数段直方图实例
 let trendChartInstance = null; // 进退步趋势图实例
 let TEACHER_STAMP_BASE64 = "";
-// 存储结构: { "学校_姓名": [ {exam:"初一上", rank:100}, {exam:"初一下", rank:50} ... ] }
 let HISTORY_ARCHIVE = readHistoryArchiveState();
 let ROLLER_COASTER_STUDENTS = []; // 存储波动剧烈的学生名单
 let historyChartInstance = null;
 let CURRENT_REPORT_STUDENT = initialReportSessionSnapshot.currentReportStudent || null; // 暂存当前正在查询的学生对象
-// 性能优化：定义学生明细表的分页状态
 let STD_PAGINATION = {
     page: 1,       // 当前页码
     size: 100,     // 每页显示条数 (调整此数值平衡性能与信息量)
@@ -8389,7 +8106,6 @@ let MP_DATA_CACHE = []; // 临界生数据缓存
 let MP_SNAPSHOTS = readMpSnapshotsState(); // 持久化存储临界生快照
 let CURRENT_CONTEXT_STUDENTS = initialReportSessionSnapshot.currentContextStudents || []; // 标签组件用
 
-// 考务与分班相关变量
 let FB_STUDENTS = []; let FB_CLASSES = readFbClassesState(); let FB_CUR_CLASS_IDX = -1; let FB_SIMULATED_DATA = {};
 let EXAM_DATA = []; let EXAM_ROOMS = [];
 
@@ -8397,8 +8113,6 @@ let FB_SCHEMES_CACHE = []; // 存储生成的多种方案
 
 const SUBJECT_ORDER = ['语文', '数学', '英语', '物理', '化学', '政治', '历史', '地理', '生物'];
 
-// [修改] 导航配置与逻辑 (方案二：功能场景导向版)
-// 说明：按“管数据 -> 比学校 -> 评班级 -> 抓学生 -> 用工具”的逻辑排列
 const NAV_STRUCTURE = window.NAV_STRUCTURE || {};
 if (!window.NAV_STRUCTURE) {
     console.warn('shell-runtime.js 未加载，导航结构将保持空对象。');
@@ -8641,7 +8355,6 @@ enhanceStudentReportMetrics = function (root) {
     });
 };
 
-// ================= 侧边栏与通用工具 =================
 function scrollToAnchor(id, element) {
     const target = document.getElementById(id);
     if (target) {
@@ -8684,7 +8397,6 @@ function safeGet(obj, path, defaultValue = '-') { return path.split('.').reduce(
 function getSubjectOrderIndex(sub) { const idx = SUBJECT_ORDER.indexOf(sub); return idx === -1 ? 999 : idx; }
 function sortSubjects(a, b) { const idxA = getSubjectOrderIndex(a); const idxB = getSubjectOrderIndex(b); if (idxA !== idxB) return idxA - idxB; return a.localeCompare(b); }
 
-// ================= 辅助函数：Excel 格式化 =================
 function getExcelPercent(val) {
     if (typeof val !== 'number' || isNaN(val)) return '-';
     return { t: 'n', v: val, z: '0.00%' };
@@ -8694,30 +8406,24 @@ function getExcelNum(val, decimals = 2) {
     return { t: 'n', v: parseFloat(val.toFixed(decimals)) };
 }
 
-// 定义一套专业的样式配置
 const XLS_STYLES = {
-    // 表头样式
     HEADER: {
         font: { bold: true, sz: 12, color: { rgb: "333333" }, name: "Microsoft YaHei" },
         fill: { fgColor: { rgb: "E5E7EB" } }, // 浅灰背景
         border: { top: { style: 'thin' }, bottom: { style: 'medium' }, left: { style: 'thin' }, right: { style: 'thin' } },
         alignment: { horizontal: "center", vertical: "center", wrapText: true }
     },
-    // 普通单元格
     CELL: {
         font: { sz: 11, name: "Arial" },
         border: { top: { style: 'thin', color: { rgb: "E5E7EB" } }, bottom: { style: 'thin', color: { rgb: "E5E7EB" } }, left: { style: 'thin', color: { rgb: "E5E7EB" } }, right: { style: 'thin', color: { rgb: "E5E7EB" } } },
         alignment: { horizontal: "center", vertical: "center" }
     },
-    // 排名高亮 (前三名)
     RANK_TOP: {
         font: { bold: true, color: { rgb: "DC2626" } } // 红色
     },
-    // 优秀 (绿色)
     SCORE_GOOD: {
         font: { color: { rgb: "16A34A" }, bold: true }
     },
-    // 不及格 (红色)
     SCORE_BAD: {
         font: { color: { rgb: "DC2626" } }
     }
@@ -8742,22 +8448,16 @@ function decorateExcelSheet(ws, headers = []) {
             const cell = ws[cellRef];
             const headerName = headers[C] || ""; // 获取当前列的表头名
 
-            // 1. 基础样式应用
             let style = JSON.parse(JSON.stringify(R === 0 ? XLS_STYLES.HEADER : XLS_STYLES.CELL));
 
-            // 2. 表头特殊处理
             if (R === 0) {
-                // 如果是“总分”或“排名”，加深背景
                 if (String(cell.v).includes("总分") || String(cell.v).includes("排名")) {
                     style.fill.fgColor = { rgb: "D1FAE5" }; // 浅绿
                 }
             }
-            // 3. 数据行智能处理
             else {
-                // 🦓 斑马纹 (偶数行微灰)
                 if (R % 2 === 0) style.fill = { fgColor: { rgb: "F9FAFB" } };
 
-                // 🏆 排序列处理
                 if (headerName.includes("排名") || headerName.includes("名次")) {
                     if (cell.v === 1 || cell.v === 2 || cell.v === 3) {
                         Object.assign(style.font, XLS_STYLES.RANK_TOP.font);
@@ -8765,68 +8465,52 @@ function decorateExcelSheet(ws, headers = []) {
                     }
                 }
 
-                // 📉 分数/率 处理
                 if (typeof cell.v === 'number') {
-                    // 及格率/优秀率 < 60% 标红 (如果是百分比数值 0.6)
                     if (headerName.includes("率") && cell.v < 0.6) {
                         Object.assign(style.font, XLS_STYLES.SCORE_BAD.font);
                     }
-                    // 分数 < 60 标红 (假设满分100以上)
                     if ((headerName.includes("分") || headerName.includes("绩")) && cell.v < 60 && cell.v > 0) {
                         Object.assign(style.font, XLS_STYLES.SCORE_BAD.font);
                     }
                 }
 
-                // 文本对齐优化：姓名、学校左对齐
                 if (headerName.includes("姓名") || headerName.includes("学校") || headerName.includes("班级")) {
                     style.alignment.horizontal = "left";
-                    // 增加一点缩进
                     style.alignment.indent = 1;
                 }
             }
 
-            // 应用样式
             cell.s = style;
 
-            // 4. 计算列宽 (简单估算)
             const valLen = (cell.v ? String(cell.v).length : 0) * 1.5;
             colWidths[C] = Math.max(colWidths[C] || 5, valLen > 50 ? 50 : valLen); // 限制最大宽度
         }
     }
 
-    // 应用列宽
     ws['!cols'] = colWidths.map(w => ({ wch: w + 2 })); // 加一点padding
 
-    // 冻结首行
     ws['!freeze'] = { xSplit: 0, ySplit: 1 };
 }
 
-// --- 隐私/演示模式逻辑 ---
 
 function togglePrivacyMode() {
     const btn = document.getElementById('btn-privacy-toggle');
     const indicator = document.getElementById('privacy-indicator');
 
     if (!IS_PRIVACY_ON) {
-        // === 开启隐私模式 ===
         if (RAW_DATA.length === 0) return alert("请先上传数据后再开启演示模式。");
 
         if (!confirm("🛡️ 即将进入【隐私演示模式】：\n\n1. 所有学生姓名将变为代码 (如 S-001)\n2. 所有教师姓名将变为代码 (如 T-01)\n3. 适合投屏汇报或截图分享\n\n点击确定继续。")) return;
 
-        // 1. 备份原始数据 (Deep Copy)
         DATA_BACKUP_PRIVACY = {
             RAW_DATA: JSON.parse(JSON.stringify(RAW_DATA)),
             TEACHER_MAP: JSON.parse(JSON.stringify(TEACHER_MAP)),
-            // 也要备份历史数据，否则进退步分析会乱
             PREV_DATA: JSON.parse(JSON.stringify(PREV_DATA))
         };
 
-        // 2. 执行脱敏 (Masking)
-        // 建立映射表保证同名同ID
         const stuMap = new Map();
         let stuCounter = 1;
 
-        // 脱敏 RAW_DATA
         RAW_DATA.forEach(s => {
             const key = s.name; // 简单按姓名映射，如果有重名会映射成同一个代码，符合演示逻辑
             if (!stuMap.has(key)) {
@@ -8835,11 +8519,9 @@ function togglePrivacyMode() {
             s.name = stuMap.get(key);
         });
 
-        // 脱敏 PREV_DATA (如果有)
         if (PREV_DATA.length > 0) {
             PREV_DATA.forEach(p => {
                 const key = p.name;
-                // 如果是上次有但本次没有的学生，给新号；如果有，用旧号
                 if (!stuMap.has(key)) {
                     stuMap.set(key, `S-${String(stuCounter++).padStart(3, '0')}`);
                 }
@@ -8847,7 +8529,6 @@ function togglePrivacyMode() {
             });
         }
 
-        // 脱敏 TEACHER_MAP
         const teacherMap = new Map();
         let teaCounter = 1;
         Object.keys(TEACHER_MAP).forEach(k => {
@@ -8858,7 +8539,6 @@ function togglePrivacyMode() {
             TEACHER_MAP[k] = teacherMap.get(realName);
         });
 
-        // 3. 标记状态并刷新
         IS_PRIVACY_ON = true;
         btn.innerHTML = '<i class="ti ti-eye"></i> 退出隐私模式';
         btn.style.background = "#dc2626"; // 红色按钮提示退出
@@ -8866,7 +8546,6 @@ function togglePrivacyMode() {
         document.body.classList.add('privacy-mode-active'); // 可用于CSS扩展
 
     } else {
-        // === 关闭隐私模式 (还原) ===
         if (DATA_BACKUP_PRIVACY) {
             setRawData(DATA_BACKUP_PRIVACY.RAW_DATA);
             setTeacherMap(DATA_BACKUP_PRIVACY.TEACHER_MAP);
@@ -8881,32 +8560,24 @@ function togglePrivacyMode() {
         document.body.classList.remove('privacy-mode-active');
     }
 
-    // 4. 全局重算与重绘
-    // 因为 SCHOOLS, TEACHER_STATS 等都是基于 RAW_DATA 计算的，必须重置
     setSchools({});
     setTeacherStats({});
     TEACHER_TOWNSHIP_RANKINGS = {};
 
-    // 重新运行数据处理流程
     processData();
     calculateRankings();
 
-    // 如果当前在教师分析页，重算教师数据
     if (Object.keys(TEACHER_MAP).length > 0 && MY_SCHOOL) {
         analyzeTeachers();
     }
 
-    // 刷新所有表格视图
     renderTables();
 
-    // 刷新特定的视图（如果当前正停留在这些Tab）
-    // 比如教师卡片
     if (document.getElementById('teacherCardsContainer')) {
         renderTeacherCards();
         renderTeacherComparisonTable();
         renderTeacherTownshipRanking();
     }
-    // 比如进退步
     if (document.getElementById('progress-analysis').classList.contains('active')) {
         if (PREV_DATA.length > 0) renderProgressAnalysis();
     }
@@ -8920,7 +8591,6 @@ function toggleGuestMode() {
     const btn = document.getElementById('btn-guest-mode');
 
     if (!window.IS_GUEST_MODE) {
-        // === 准备开启 ===
         Swal.fire({
             title: '🔥 开启“阅后即焚”模式？',
             html: `
@@ -8942,22 +8612,17 @@ function toggleGuestMode() {
             cancelButtonText: '取消'
         }).then(async (result) => {
             if (result.isConfirmed) {
-                // 1. 立即清除缓存
                 await DB.clear('autosave_backup');
 
-                // 2. 清除 LocalStorage 中的非配置类数据
                 localStorage.removeItem('FB_DATA_BACKUP');
                 localStorage.removeItem('MP_SNAPSHOTS');
 
-                // 3. 改变状态
                 window.IS_GUEST_MODE = true;
 
-                // 4. UI 变化
                 btn.innerHTML = '<i class="ti ti-flame-off"></i> 退出并清空';
                 btn.style.background = "#dc2626";
                 btn.style.borderColor = "#b91c1c";
 
-                // 5. 页面增加水印或标识
                 document.body.style.borderTop = "5px solid #dc2626";
                 const statusEl = document.getElementById('auto-backup-status');
                 if (statusEl) statusEl.innerHTML = `<span style="color:#dc2626; font-weight:bold;">🔥 阅后即焚模式：数据不落地</span>`;
@@ -8967,7 +8632,6 @@ function toggleGuestMode() {
         });
 
     } else {
-        // === 准备关闭 (其实就是重置) ===
         Swal.fire({
             title: '退出阅后即焚',
             text: "退出将刷新页面并重置系统。当前屏幕上的数据将会丢失。",
@@ -8983,7 +8647,6 @@ function toggleGuestMode() {
     }
 }
 
-// 拦截手动保存操作 (双重保险)
 const originalSaveSnapshot = saveProjectSnapshot; // 备份原函数
 saveProjectSnapshot = function () {
     if (window.IS_GUEST_MODE) {
@@ -8998,7 +8661,6 @@ saveProjectSnapshot = function () {
     originalSaveSnapshot();
 };
 
-// ================= 初始化 =================
 function initSystem(type) {
     document.getElementById('mode-mask').style.display = 'none';
     document.getElementById('app').classList.remove('hidden');
@@ -9153,7 +8815,6 @@ function guardBeforeSwitch(id) {
     return true;
 }
 
-// [优化] switchTab: 增加动态副标题更新，提升上下文感知
 function tmEscapeHtml(value) {
     return String(value ?? '')
         .replace(/&/g, '&amp;')
@@ -9224,7 +8885,6 @@ function tmBuildMiniCard(title, value) {
     `;
 }
 
-// Teaching management cloud/version runtime moved to public/assets/js/teaching-management-runtime.js.
 var TM_TEACHER_COVERAGE_CACHE = { teacherMap: null, result: null };
 var TM_AVAILABLE_EXAM_LIST_CACHE = { signature: '', result: [] };
 var TM_TEACHER_INSIGHT_CACHE = {
@@ -9427,7 +9087,6 @@ function tmApplySelectValue(selectId, preferredValue = '', preferredText = '') {
     return true;
 }
 
-// Teaching management overview/module runtime moved to public/assets/js/teaching-management-runtime.js.
 
 function forceHideAllSectionsExcept(targetId = '') {
     const sections = getModuleSectionsCached(true);
@@ -9535,7 +9194,6 @@ function switchTab(id) {
     ensureCountySubmoduleSectionForSwitch(id);
     removeModuleIntroPanels(document);
 
-    // 1. 切换内容区域显示
     forceHideAllSectionsExcept(id);
     if (id !== 'teacher-analysis' && typeof window.releaseTeacherAnalysisHeavyDom === 'function') {
         window.setTimeout(() => window.releaseTeacherAnalysisHeavyDom(), 0);
@@ -9552,11 +9210,9 @@ function switchTab(id) {
     resetMainViewport();
     scheduleAfterPaint(() => scheduleCountyAnalysisRenderAfterSwitch(id));
 
-    // 2. 定位所属大类
     let currentCategory = getCurrentCategoryKey();
     let foundCategory = getModuleCategoryKeyCached(id);
 
-    // 3. 如果大类变化，刷新导航和全局颜色
     if (foundCategory && foundCategory !== currentCategory) {
         setCurrentCategoryKey(foundCategory);
         currentCategory = foundCategory;
@@ -9566,10 +9222,8 @@ function switchTab(id) {
             ModuleSwitchPerfCache.primaryColor = newColor;
         }
 
-        // 重新渲染导航以更新高亮
         if (typeof renderNavigation === 'function') scheduleAfterPaint(() => renderNavigation());
     } else {
-        // 如果大类没变，仅更新子模块芯片的高亮状态
         if (typeof renderSubNavigation === 'function') {
             scheduleAfterPaint(() => renderSubNavigation());
         }
@@ -9604,16 +9258,13 @@ const DrillSystem = {
     currentData: null, // 当前暂存数据
     exportData: null, // 🟢 新增：专门用于导出的数据缓存
 
-    // 1. 打开入口
     open: function (title, studentList, scoreLabel = "总分") {
         ensureDrillModalDom();
         this.history = []; // 清空历史
         this.currentData = { title, list: studentList, scoreLabel };
 
-        // 🟢 缓存导出数据：如果是普通名单，直接缓存学生列表
         this.exportData = { type: 'list', data: studentList, fileName: title };
 
-        // 🟢 显示导出按钮 (防止之前被隐藏)
         const btn = document.getElementById('drill-export-btn');
         if (btn) btn.classList.remove('hidden');
 
@@ -9621,7 +9272,6 @@ const DrillSystem = {
         this.renderClassView();
     },
 
-    // 🟢 新增：通用导出功能
     exportExcel: function () {
         if (!this.exportData || !this.exportData.data) return alert("当前无数据可导出");
 
@@ -9630,11 +9280,9 @@ const DrillSystem = {
         const filename = (this.exportData.fileName || "导出数据") + ".xlsx";
 
         if (this.exportData.type === 'gap') {
-            // 🅰️ 导出临界生/潜力生分析数据 (特殊表头)
             const headers = ['班级', '姓名', '当前总分', '距目标分差', '建议补救/潜力学科', '该科与年级均分差'];
             const data = [headers];
             this.exportData.data.forEach(item => {
-                // 去除HTML标签 (提取纯文本)
                 const cleanSub = item.worstSub.replace(/<[^>]+>/g, "");
                 data.push([
                     item.class,
@@ -9649,7 +9297,6 @@ const DrillSystem = {
             ws['!cols'] = [{ wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 30 }, { wch: 15 }];
 
         } else {
-            // 🅱️ 导出普通学生名单 (如点击"达标人数"时)
             const headers = ['班级', '姓名', '考号', '总分', '全镇排名'];
             const data = [headers];
             this.exportData.data.forEach(s => {
@@ -9668,20 +9315,17 @@ const DrillSystem = {
         XLSX.writeFile(wb, filename);
     },
 
-    // 2. 渲染班级视图
     renderClassView: function () {
         const { title, list, scoreLabel } = this.currentData;
         document.getElementById('drill-title').innerText = title;
         document.getElementById('drill-back-btn').classList.add('hidden');
 
-        // 按班级分组
         const classMap = {};
         list.forEach(s => {
             if (!classMap[s.class]) classMap[s.class] = [];
             classMap[s.class].push(s);
         });
 
-        // 排序班级
         const classes = Object.keys(classMap).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
         let html = `<div class="drill-class-grid">`;
@@ -9702,7 +9346,6 @@ const DrillSystem = {
         document.getElementById('drill-footer').innerText = `合计: ${list.length} 人`;
     },
 
-    // 3. 渲染学生名单视图
     renderStudentView: function (className) {
         const { list, scoreLabel } = this.currentData;
         this.history.push('class_view');
@@ -9725,7 +9368,6 @@ const DrillSystem = {
         document.getElementById('drill-content').innerHTML = html;
     },
 
-    // 4. 返回上一级
     goBack: function () {
         if (this.history.length > 0) {
             this.history.pop();
@@ -9734,7 +9376,6 @@ const DrillSystem = {
     }
 };
 
-// 辅助：各模块的点击处理器
 function getIndicatorRankParams() {
     const indicator = window.SYS_VARS?.indicator || {};
     const raw1 = indicator.ind1 || document.getElementById('dm_ind1_input')?.value || document.getElementById('ind1')?.value || '';
@@ -9749,7 +9390,6 @@ function handleIndicatorClick(schoolName, type) {
     const studentsBySchool = getEquivalentSchoolStudents(schoolName);
     if (!studentsBySchool.length) return;
 
-    // 获取当前设定的划线
     const { r1, r2 } = getIndicatorRankParams();
     if (!r1 || !r2) return alert("请先设置指标参数");
 
@@ -9760,7 +9400,6 @@ function handleIndicatorClick(schoolName, type) {
     const line = type === 'ind1' ? (allScores[r1 - 1] || 0) : (allScores[r2 - 1] || 0);
     const title = `${schoolName} - ${type === 'ind1' ? '指标一' : '指标二'}达标名单 (线≥${line})`;
 
-    // 筛选学生
     const students = studentsBySchool.filter(s => s.total >= line);
 
     DrillSystem.open(title, students);
@@ -9769,7 +9408,6 @@ function handleIndicatorClick(schoolName, type) {
 function handleHighClick(schoolName) {
     const schoolRecord = getAppSchoolRecord(schoolName);
     if (!schoolRecord) return;
-    // 9年级默认490，或者这里可以做成动态的
     const line = 490;
     const students = (schoolRecord.students || []).filter(s => s.total >= line);
     DrillSystem.open(`${schoolName} - 高分段(≥${line})名单`, students);
@@ -9778,17 +9416,14 @@ function handleHighClick(schoolName) {
 function handleExcludedClick(schoolName) {
     const s = getAppSchoolRecord(schoolName);
     if (!s) return;
-    // 重新计算剔除逻辑
     const sorted = [...s.students].sort((a, b) => a.total - b.total); // 升序
     const excN = s.bottom3 ? s.bottom3.excN : 0;
 
-    // 取最低分的 N 个
     const students = sorted.slice(0, excN).sort((a, b) => b.total - a.total); // 展示时按分降序好看点
 
     DrillSystem.open(`${schoolName} - 后1/3核算剔除名单 (共${excN}人)`, students);
 }
 
-// === 渲染高分段表格 ===
 function renderHighScoreTable() {
     const tbody = document.querySelector('#tb-high-score tbody');
     tbody.innerHTML = '';
@@ -9812,7 +9447,6 @@ function renderHighScoreTable() {
         return;
     }
 
-    // 1. 提取所有学校数据
     const list = townshipSchools.map(s => {
         const hs = s.highScoreStats || { count: 0, ratio: 0, score: 0 };
         return {
@@ -9824,10 +9458,8 @@ function renderHighScoreTable() {
         };
     });
 
-    // 2. 排序：按高分赋分降序
     list.sort((a, b) => b.score - a.score);
 
-    // 3. 渲染所有行 (没有 slice)
     let html = '';
     list.forEach((d, i) => {
         const isMySchool = sameAppSchoolName(d.name, MY_SCHOOL);
@@ -9847,11 +9479,9 @@ function renderHighScoreTable() {
     });
     tbody.innerHTML = html;
 
-    // 更新 UI 提示
     appDebug(`已渲染 ${list.length} 所学校的高分数据`);
 }
 
-// === 导出高分段 Excel ===
 function exportHighScoreExcel() {
     const hasHighScoreScopeHelper = typeof getTownshipManagedSchoolNames === 'function';
     const townshipSchoolNames = hasHighScoreScopeHelper ? getTownshipManagedSchoolNames(Object.keys(SCHOOLS || {})) : Object.keys(SCHOOLS || {});
@@ -9896,7 +9526,6 @@ function exportHighScoreExcel() {
     XLSX.writeFile(wb, `高分段核算_${CONFIG.name}.xlsx`);
 }
 
-// ================= 数据处理 =================
 async function prepareSameExamOverwrite(currentExamId, existingExam = null) {
     const examId = String(currentExamId || '').trim();
     if (!examId) return { localRemoved: false, cloudRemoved: false };
@@ -9977,13 +9606,11 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
     const files = e.target.files;
     if (!files.length) return;
 
-    // 使用 Perf.runAsync 包裹，实现加载动画 + 防卡死
     Perf.runAsync(async () => {
         if (shouldOverwriteExistingExam) {
             await prepareSameExamOverwrite(currentExamId, existingExam);
         }
 
-        // 重置数据
         clearDataRuntimeState({ keepConfig: true }); setTeacherMap({}); setTeacherStats({});
         TEACHER_TOWNSHIP_RANKINGS = {}; MARGINAL_STUDENTS = {}; POTENTIAL_STUDENTS_CACHE = []; TOWNSHIP_RANKING_DATA = {}; clearCurrentSchool();
         const teacherCards = document.getElementById('teacherCardsContainer');
@@ -10004,7 +9631,6 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
         }
         if (marginalResult) marginalResult.innerHTML = '';
 
-        // 耗时操作
         for (let f of files) await readExcel(f);
         SUBJECTS.sort(sortSubjects);
         await processData(); // 这是一个耗时操作
@@ -10012,20 +9638,15 @@ document.getElementById('fileInput').addEventListener('change', function (e) {
 
         updateSchoolMode();
 
-        // 🟣 Cohort：写入考试快照并执行智能匹配
         await CohortDB.syncCurrentExam();
 
-        // 🟣 上传后立即刷新多期对比选择器（analysis / teacher / progress）
         scheduleExamSelectorRefresh({ teacherCompareTeacher: true });
 
-        // 🟢 [新增] 处理完数据后，立即同步到云端 (仅管理员有效)
-        // 注意：因为是异步，我们在后台默默保存，不阻塞界面显示
         saveCloudData({ background: true, sourceLabel: 'auto-backup' }).then(() => {
             appDebug("自动备份完成");
         }).catch(e => logCloudSyncIssue("自动备份失败", e));
         renderTables();
         applySchoolModeToTables();
-        // 更新所有下拉框
         updateSchoolSelect(); updateMySchoolSelect(); updateStudentSchoolSelect(); updateMarginalSchoolSelect();
         updateClassSelect(); updateSegmentSelects(); updatePotentialSchoolSelect();
         if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
@@ -10051,17 +9672,11 @@ async function readExcel(file) {
     });
 }
 
-// =========== 🔥 修改重点：parseRows 全自动版 (含缺考录入) ===========
-// 逻辑说明：
-// 1. 只要Excel里有姓名，就录入系统，作为【在籍人数】的基数。
-// 2. 只有当学生有有效分数时，标记 hasValidScore=true，作为【实考人数】的基数。
 function parseRows(rows, defaultSchool) {
     const headers = rows[0].map(h => String(h).trim());
 
-    // 1. 初始化索引映射
     const idxMap = { name: -1, id: -1, school: -1, class: -1, examRoom: -1, scores: {} };
 
-    // 2. 别名匹配
     const aliasMap = {
         name: ['姓名', '学生姓名', '学生', 'Name', '考生姓名'],
         id: ['考号', '学号', '准考证号', 'ID', '考生号'],
@@ -10070,11 +9685,9 @@ function parseRows(rows, defaultSchool) {
         examRoom: ['考场', '考室', 'Room', '考试地点']
     };
 
-    // 增加容错：常见的学科名称
     const subjectMap = { '语文': '语文', '数学': '数学', '英语': '英语', '物理': '物理', '化学': '化学', '政治': '政治', '道法': '政治', '道德与法治': '政治', '历史': '历史', '地理': '地理', '生物': '生物', '科学': '科学' };
     const excludeKeywords = ['排', '次', '级', 'Rank', '赋分', '相对分', '折算', '等级', '优劣'];
 
-    // 3. 扫描表头
     const schoolHeaderExcludeKeywords = ['排名', '名次', '序号', '代码', '编号', '赋分', '得分', '分数', '成绩', '班级', '年级'];
     const findBestHeaderIndex = (aliases, excludes = []) => {
         let best = { index: -1, score: -1 };
@@ -10117,7 +9730,6 @@ function parseRows(rows, defaultSchool) {
     }
     const subsForTotal = CONFIG.totalSubs === 'auto' ? SUBJECTS : CONFIG.totalSubs;
 
-    // 1. 全角转半角工具 (针对分数录入错误)
     const toHalfWidth = (str) => {
         if (typeof str !== 'string') return str;
         return str.replace(/[\uff01-\uff5e]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
@@ -10130,21 +9742,16 @@ function parseRows(rows, defaultSchool) {
         return typeof normalized === 'string' && normalized.trim() === '';
     };
 
-    // 2. 姓名清洗工具 (去除空格、不可见字符)
     const cleanNameStr = (str) => {
         if (!str) return "";
         return String(str).replace(/\s+/g, '').replace(/[\u200b-\u200f\uFEFF]/g, '');
     };
 
-    // 4. 遍历数据 (核心修改区)
-    // 学校列支持逐行填写，也支持 Excel 合并单元格导出的“首行有值、后续空白”格式。
     let lastDetectedSchool = '';
     for (let i = 1; i < rows.length; i++) {
         const r = rows[i];
         if (!r || !r.length) continue;
 
-        // --- 修改点 A: 姓名处理 ---
-        // 如果找不到姓名列，或者单元格为空，自动生成 "匿名考生_行号"
         let rawName = idxMap.name !== -1 ? (r[idxMap.name] || "") : "";
         let nameStr = cleanNameStr(rawName);
         let isAutoGeneratedName = false;
@@ -10154,8 +9761,6 @@ function parseRows(rows, defaultSchool) {
             isAutoGeneratedName = true;
         }
 
-        // --- 修改点 B: 班级处理 ---
-        // 如果找不到班级列，默认为 "未分班"
         let classStr = "未分班";
         if (idxMap.class !== -1 && r[idxMap.class]) {
             classStr = normalizeClass(r[idxMap.class]);
@@ -10190,7 +9795,6 @@ function parseRows(rows, defaultSchool) {
             hasValidScore: false
         };
 
-        // 数据读取逻辑
         let hasAnyScore = false;
         let hasExplicitScoreEvidence = false;
         detectedSubjects.forEach(sub => {
@@ -10204,25 +9808,19 @@ function parseRows(rows, defaultSchool) {
                         validSub = true;
                         return;
                     }
-                    // 如果是字符串，先尝试转半角
                     if (typeof rawVal === 'string') {
                         rawVal = toHalfWidth(rawVal).trim();
                     }
                     let val = parseFloat(rawVal);
 
-                    // 如果解析结果不是数字，进行智能清洗
                     if (isNaN(val)) {
                         const strVal = String(rawVal || "").trim().toUpperCase(); // 转大写去空格
 
-                        // 定义由于特殊原因导致的“0分”关键词
-                        // 缺考(ABS/Q/缺), 作弊(CHE/违纪), 病假(BJ), 缓考 等
                         const zeroKeywords = ["缺", "ABS", "作弊", "违纪", "病假", "缓考", "取消", "零分", "Q", "CHE"];
 
-                        // 如果包含上述关键词，强制视为 0 分 (参与排名)
                         if (zeroKeywords.some(key => strVal.includes(key))) {
                             val = 0;
                         }
-                        // 否则，该数据依然为 NaN，后续逻辑会自动“排除” (不参与均分计算)
                     }
                     if (!isNaN(val)) { subSum += val; validSub = true; hasExplicitScoreEvidence = true; }
                 });
@@ -10235,7 +9833,6 @@ function parseRows(rows, defaultSchool) {
             }
         });
 
-        // 如果这一行完全没有成绩，并且名字也是自动生成的，大概率是空行，跳过
         if (!hasExplicitScoreEvidence && isAutoGeneratedName) continue;
         if (!hasAnyScore && nameStr.startsWith("考生")) continue;
 
@@ -10339,15 +9936,10 @@ function normalizeSubject(subj) {
 }
 
 async function processData() {
-    // 1. 预处理
-    // 🟢 [修改开始]：引入单校模式判断与阈值计算优化
 
-    // 重新构建临时的 SCHOOLS 键列表以检测数量
     const schoolSet = new Set(RAW_DATA.map(s => s.school));
     const isSingleSchool = schoolSet.size === 1;
 
-    // 获取用户输入的指标参数 (用于单校模式下的精确划线)
-    // 确保 window.SYS_VARS 已初始化
     const input1 = parseFloat(window.SYS_VARS?.indicator?.ind1) || 0;
     const input2 = parseFloat(window.SYS_VARS?.indicator?.ind2) || 0;
 
@@ -10361,10 +9953,7 @@ async function processData() {
         const vals = thresholdSourceRows.map(s => k === 'total' ? s.total : s.scores[k]).filter(v => v !== undefined).sort((a, b) => b - a);
 
         if (vals.length) {
-            // 如果是单校模式，且是总分，且用户输入了有效的名次指标
             if (isSingleSchool && k === 'total' && input1 > 0 && input2 > 0) {
-                // 🏫 单校模式特殊逻辑：
-                // 使用用户输入的“年级名次”来反推分数线，这在单校月考中比百分比更稳定
                 const idx1 = Math.min(Math.floor(input1), vals.length) - 1;
                 const idx2 = Math.min(Math.floor(input2), vals.length) - 1;
 
@@ -10374,12 +9963,8 @@ async function processData() {
                 };
                 appDebug(`[单校模式] 总分划线锁定: 优=${THRESHOLDS[k].exc} (Top${input1}), 良=${THRESHOLDS[k].pass} (Top${input2})`);
             } else {
-                // 🌍 多校联考模式 / 单科默认逻辑：按固定比例
-                // 9年级 15%，其他 20%
                 const excRatio = (CONFIG.name && CONFIG.name.includes('9')) ? 0.15 : 0.2;
-                // 单校模式下，如果没有手动指定，单科依然沿用百分比，但可以考虑后续增加单科手动设置
                 const pickPercentileLine = (ratio) => {
-                    // Match Excel LARGE(range, count * ratio): Excel's rank is 1-based.
                     const index = Math.max(0, Math.ceil(vals.length * ratio) - 1);
                     return vals[index] || 0;
                 };
@@ -10391,7 +9976,6 @@ async function processData() {
         }
     });
 
-    // 2. 呼叫 Worker
     const schoolKeysForWorker = Object.keys(SCHOOLS || {});
     const townshipSchoolNamesForWorker = (typeof getTownshipManagedSchoolNames === 'function')
         ? Array.from(new Set([
@@ -10405,38 +9989,28 @@ async function processData() {
         : schoolKeysForWorker;
     const result = await WorkerAPI.run({ RAW_DATA, SUBJECTS, CONFIG, THRESHOLDS, SCHOOLS, TOWNSHIP_SCHOOL_NAMES: townshipSchoolNamesForWorker });
 
-    // 3. 接收结果 (RAW_DATA 是全新的，带有排名的数组)
     setRawData(result.RAW_DATA || []);
 
-    // 4. 【关键修复】重建 SCHOOLS 与新 RAW_DATA 的关联
-    // Worker 返回了全新的 RAW_DATA，必须把这些新对象重新塞回 SCHOOLS 的 students 数组里
-    // 否则 SCHOOLS 里存的还是旧对象(无排名)，导致"本校"查询失效
 
-    // A. 先清空所有学校的学生列表
     Object.keys(SCHOOLS).forEach(k => {
         if (SCHOOLS[k]) SCHOOLS[k].students = [];
     });
 
-    // B. 重新分配新学生对象
     RAW_DATA.forEach(stu => {
         if (!SCHOOLS[stu.school]) {
-            // 防止有漏网之鱼
             SCHOOLS[stu.school] = { name: stu.school, students: [], metrics: {}, rankings: {} };
         }
         SCHOOLS[stu.school].students.push(stu);
     });
 
-    // 5. 更新统计指标 (metrics)
     const newSchools = result.SCHOOLS;
     Object.keys(newSchools).forEach(k => {
         if (SCHOOLS[k]) {
             const { students, ...metricsData } = newSchools[k];
-            // 只合并统计数据，不动刚才重新生成的 students 数组
             Object.assign(SCHOOLS[k], metricsData);
         }
     });
 
-    // 6. 补全班级排名
     calculateClassRanksOnly();
 
     if (typeof fuseInstance !== 'undefined') fuseInstance = null; // 强制重建索引
@@ -10447,12 +10021,9 @@ async function processData() {
     if (isSingleSchool) {
         appDebug("🏫 检测到单校数据，自动切换 UI 为年级模式...");
 
-        // 1. 隐藏横向对比入口 (自己跟自己没法比)
         const analysisMod = document.getElementById('analysis');
         if (analysisMod) analysisMod.classList.add('single-school-mode');
 
-        // 2. 修改表头文字 (延迟执行确保 DOM 已渲染)
-        // 将 "全镇"、"镇排" 替换为 "年级"、"级排"，消除歧义
         setTimeout(() => {
             document.querySelectorAll('th').forEach(th => {
                 if (th.innerText.includes('镇排')) th.innerHTML = th.innerHTML.replace('镇排', '级排');
@@ -10467,13 +10038,10 @@ async function processData() {
     try {
         appDebug("🔄 正在自动执行衍生计算...");
 
-        // 1. 自动计算指标生 (依赖 RAW_DATA 和 TARGETS)
-        // 即使没有设置划线，运行一下也不会报错，只是得分为0
         if (typeof calcIndicators === 'function' && isIndicatorCalcAllowed()) {
             calcIndicators(true); // 传入 true 表示静默模式(可选，视函数实现而定)
         }
 
-        // 2. 自动计算综合总榜 (依赖前一步计算出的 scoreInd)
         if (typeof calcSummary === 'function') {
             calcSummary(true);    // 传入 true 表示静默模式
         }
@@ -10482,10 +10050,7 @@ async function processData() {
         console.warn("⚠️ 自动计算衍生指标时遇到非致命错误:", e);
     }
 
-    // 7. 自动保存
     if (typeof DB !== 'undefined') {
-        // ✋ 🔴 [修复开始]：不要写死 'autosave_backup'，而是获取当前选中的项目 KEY
-        // 如果获取不到，才兜底使用 'autosave_backup'
         const currentKey = readWorkspaceProjectKey() || 'autosave_backup';
         const snapshotPayload = typeof getCurrentSnapshotPayload === 'function'
             ? getCurrentSnapshotPayload()
@@ -10505,12 +10070,10 @@ async function processData() {
             DB.save(currentKey, snapshotPayload, { deferCloud: true, deferMs: 9000 });
             appDebug(`✅ 数据已自动保存至: ${currentKey}`);
         }
-        // 👆 🟢 [修复结束]
     }
     updateStatusPanel();
 }
 
-// 辅助：仅计算班级排名
 function calculateClassRanksOnly() {
     const classes = {};
     RAW_DATA.forEach(s => {
@@ -10524,14 +10087,12 @@ function calculateClassRanksOnly() {
     });
 
     Object.values(classes).forEach(group => {
-        // 总分
         if (window.RankingDataService && typeof window.RankingDataService.assignRankScope === 'function') {
             window.RankingDataService.assignRankScope(group, 'total', 'class', s => s.total);
         } else {
             group.sort((a, b) => b.total - a.total);
             group.forEach((s, i) => { if (!s.ranks) s.ranks = {}; if (!s.ranks.total) s.ranks.total = {}; s.ranks.total.class = i + 1; });
         }
-        // 单科
         SUBJECTS.forEach(sub => {
             const subGroup = group.filter(s => s.scores[sub] !== undefined);
             if (window.RankingDataService && typeof window.RankingDataService.assignRankScope === 'function') {
@@ -10606,11 +10167,8 @@ function calculateRankings() {
 }
 
 function getRankHTML(rank, type = 'school') { let cls = 'rank-cell'; if (rank === 1) cls += ' r-1'; if (rank === 2) cls += ' r-2'; if (rank === 3) cls += ' r-3'; return `<td class="${cls}">${rank}</td>`; }
-// 核心逻辑：如果是数字，保留2位小数展示；如果是无效值，显示 '-'
-// 注意：这只改变显示，不改变 underlying calculation (底层计算)
 function formatVal(val) {
     if (typeof val !== 'number' || isNaN(val)) return '-';
-    // toFixed(2) 会四舍五入并转为字符串，如 89.567 -> "89.57", 90 -> "90.00"
     return val.toFixed(2);
 }
 function escapeAppHtml(value) {
@@ -10865,7 +10423,6 @@ function renderTrafficLightDashboard() {
     const yellowTrafficRows = [];
     const greenTrafficRows = [];
 
-    // 遍历所有学校和所有科目进行“体检”
     townshipSchools.forEach(s => {
         if (hasTrafficScopeHelper && typeof isTownshipManagedSchool === 'function' && !isTownshipManagedSchool(s?.name, Object.keys(SCHOOLS || {}))) return;
         if (townshipSchoolSet.size && typeof isTownshipManagedSchool !== 'function' && !townshipSchoolSet.has(String(s?.name || '').trim())) return;
@@ -10879,7 +10436,6 @@ function renderTrafficLightDashboard() {
             const rank = s.rankings[sub]?.avg || 999;
             const totalSchools = townshipSchools.length;
 
-            // 1. 🔴 红色预警条件：及格率 < 60% 或 排名垫底
             if (passP < 60 || rank === totalSchools) {
                 const reason = passP < 60 ? `及格率过低 (${passP.toFixed(1)}%)` : `全镇排名倒数第一`;
                 const html = `
@@ -10893,7 +10449,6 @@ function renderTrafficLightDashboard() {
                 redTrafficRows.push(html);
                 cntRed++;
             }
-            // 2. 🟢 绿色标杆条件：优秀率 > 30% 或 排名第一
             else if (excP > 30 || rank === 1) {
                 const reason = rank === 1 ? `全镇排名第一` : `优秀率突出 (${excP.toFixed(1)}%)`;
                 const rankText = Number.isFinite(Number(rank)) && Number(rank) > 0 ? `排：${Number(rank)}` : '排：-';
@@ -10908,7 +10463,6 @@ function renderTrafficLightDashboard() {
                 greenTrafficRows.push(html);
                 cntGreen++;
             }
-            // 3. 🟡 黄色关注条件：优秀率 < 15% (即缺乏尖子生) 且没被归入红灯
             else if (excP < 15) {
                 const html = `
                         <div class="traffic-item" onclick="jumpToDetail('${s.name}', '${sub}')">
@@ -10924,12 +10478,10 @@ function renderTrafficLightDashboard() {
         });
     });
 
-    // 更新计数徽章
     document.getElementById('count-red').innerText = cntRed;
     document.getElementById('count-yellow').innerText = cntYellow;
     document.getElementById('count-green').innerText = cntGreen;
 
-    // 空状态处理
     listRed.innerHTML = cntRed === 0
         ? '<div style="text-align:center;color:#999;font-size:12px;padding:10px;">🎉 平安无事，暂无严重警告</div>'
         : redTrafficRows.join('');
@@ -10941,19 +10493,14 @@ function renderTrafficLightDashboard() {
         : greenTrafficRows.join('');
 }
 
-// 辅助跳转函数：点击卡片定位到对应表格
 function jumpToDetail(school, subject) {
-    // 如果是总分，跳到总表
     if (subject === 'total') {
         document.getElementById('anchor-total').scrollIntoView({ behavior: "smooth", block: "center" });
     } else {
-        // 如果是单科，跳到单科表
         const anchor = document.getElementById(`anchor-subject-${subject}`);
         if (anchor) {
-            // 展开侧边栏（如果有的话）
             const navLink = document.querySelector(`.side-nav-sub-link[onclick*="${subject}"]`);
             if (navLink) {
-                // 模拟点击展开父级菜单
                 const parent = navLink.closest('.side-nav-sub-container');
                 if (parent) parent.classList.add('show');
             }
@@ -10961,16 +10508,11 @@ function jumpToDetail(school, subject) {
         }
     }
 
-    // 高亮行闪烁效果
     setTimeout(() => {
-        // 简单查找包含学校名的行（不仅限于精确匹配，为了简化）
-        // 实际应用中可能需要更精确的ID定位，但这里通过文字匹配即可
-        // 提示用户
         UI.toast(`已定位到：${school} - ${subject}`, 'info');
     }, 500);
 }
 
-// ================= 教师配置与分析 =================
 function setTeacherConfigSelectOptionsIfChanged(select, html, signature) {
     if (!select) return;
     const sig = String(signature || html || '');
@@ -11010,19 +10552,14 @@ function updateSchoolSelect() {
 }
 
 function updateMySchoolSelect() {
-    // 🟢 1. 【核心修复】无条件优先刷新管理员面板的学校列表
-    // 无论界面上有没有 "mySchoolSelect" 下拉框，只要数据处理完了，就必须通知账号管理器
     if (typeof Auth !== 'undefined') {
         Auth.renderSchoolCheckboxes();
     }
 
-    // 🟢 2. 然后再处理下拉框逻辑 (如果 ID 存在的话)
     const select = document.getElementById('mySchoolSelect');
 
-    // 如果找不到下拉框，仅仅停止处理下拉框，不要影响上面的账号列表刷新
     if (!select) return;
 
-    // 下面是原有的下拉框填充逻辑
     const schools = (typeof listAvailableSchoolsForCompare === 'function')
         ? listAvailableSchoolsForCompare()
         : Object.keys(SCHOOLS || {});
@@ -11050,7 +10587,6 @@ function updateMySchoolSelect() {
         select.value = readCurrentSchool();
     }
 
-    // 当学校数据更新时，顺便刷新管理员面板里的“学校复选框列表” (此处旧代码已在上面第一步执行了，这里不需要重复)
 
     if (select.dataset.boundMySchoolSelect !== '1') {
         select.dataset.boundMySchoolSelect = '1';
@@ -11090,11 +10626,9 @@ function autoDetectMySchool() {
 
     let detectedSchool = '';
 
-    // 单校直接锁定
     if (schoolNames.length === 1) {
         detectedSchool = schoolNames[0];
     } else {
-        // 策略1：从当前用户信息获取
         try {
             const user = getCurrentUser();
             if (user && user.school && schoolNames.includes(user.school)) {
@@ -11104,7 +10638,6 @@ function autoDetectMySchool() {
             console.warn('获取用户信息失败:', e);
         }
 
-        // 策略2：从 TEACHER_MAP 统计
         if (!detectedSchool) {
             try {
                 if (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) {
@@ -11128,7 +10661,6 @@ function autoDetectMySchool() {
             }
         }
 
-        // 策略3：从 RAW_DATA 统计哪个学校的数据最多
         if (!detectedSchool) {
             try {
                 if (window.RAW_DATA && Array.isArray(RAW_DATA) && RAW_DATA.length > 0) {
@@ -11151,7 +10683,6 @@ function autoDetectMySchool() {
             }
         }
 
-        // 策略4：从 SCHOOLS 对象统计哪个学校的学生最多
         if (!detectedSchool) {
             try {
                 if (window.SCHOOLS && typeof SCHOOLS === 'object') {
@@ -11326,11 +10857,9 @@ function updateStudentSchoolSelect() {
         const selectedSchool = this.value;
         classSelect.value = '';
         updateClassOptionsForSchool(selectedSchool, { preservePrevious: false });
-        // ✋ 性能优化关键：切换学校时，重置分页并立即渲染
         renderStudentDetails(true);
     };
 
-    // 🟢 新增：班级切换也触发重置
     classSelect.onchange = function () {
         renderStudentDetails(true);
     };
@@ -11343,7 +10872,6 @@ function updateStudentSchoolSelect() {
 }
 
 
-// 全局状态管理
 let STD_STATE = {
     page: 1,
     size: 40,
@@ -11534,7 +11062,6 @@ function buildStudentDetailsRenderMeta(list = []) {
     return meta;
 }
 
-// 1. 主渲染函数
 function getClassTeacherStudentViewMode() {
     const sel = document.getElementById('classTeacherViewMode');
     const val = sel?.value;
@@ -11931,7 +11458,6 @@ function scheduleStudentReportCharts(student, history) {
 }
 
 function renderStudentDetails(reset = true) {
-    // 隐藏可能存在的筛选菜单
     closeAllMenus();
 
     if (reset) {
@@ -11980,15 +11506,11 @@ function renderStudentDetails(reset = true) {
         data = PermissionPolicy.filterStudentRows(user, data, { mode: queryMode });
         appDebug('[考试明细] 当前用户:', user);
 
-        // --- A. 权限过滤 ---
-        // 🆕 使用多角色系统进行权限控制
         if (false && user && RoleManager.hasAnyRole(user, ['teacher', 'class_teacher']) &&
             !RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director'])) {
-            // 纯教师或班主任角色：只能看自己任教的班级
             appDebug('[考试明细] 🔒 检测到教师角色，启用权限过滤');
             const scope = getTeacherScopeForUser(user);
 
-            // 班主任“本班全科”模式：按本班过滤，不受任教学科限制
             if (role === 'class_teacher' && classTeacherMode === 'class_all') {
                 const myClass = normalizeClass(user?.class || '');
                 if (!myClass) {
@@ -12011,13 +11533,10 @@ function renderStudentDetails(reset = true) {
                     const rawClass = String(s.class || '').trim();
                     const normalizedClass = normalizeClass(s.class);
 
-                    // 宽容匹配策略
                     let hasPermission = scope.classes.has(normalizedClass);
                     if (!hasPermission) hasPermission = scope.classes.has(rawClass);
                     if (!hasPermission) {
-                        // 尝试模糊匹配，如 "701" 和 "7.01"
                         for (const allowedCls of scope.classes) {
-                            // 移除所有点和空格再比较
                             if (String(allowedCls).replace(/[\s\.]/g, '') === String(rawClass).replace(/[\s\.]/g, '')) {
                                 hasPermission = true;
                                 break;
@@ -12043,15 +11562,12 @@ function renderStudentDetails(reset = true) {
                 UI.toast('⚠️ 未找到您的任课信息，无法显示数据。请在“数据管理-教师任课”中检查配置。', 'warning');
             }
         } else if (false && user) {
-            // 其他角色的权限控制
             if (!RoleManager.hasAnyRole(user, ['admin', 'director'])) {
-                // 🟢 [Bug #1 修复] 级部主任：按年级过滤，只能看到自己级部的数据
                 if (RoleManager.hasAnyRole(user, ['grade_director']) && user.class) {
                     const gradePrefix = String(user.class).trim();
                     const beforeCount = data.length;
                     data = data.filter(s => {
                         const cls = String(s.class || '').trim();
-                        // 班级号以年级号开头（例如年级"7" → 班级"701","702"等）
                         return cls.startsWith(gradePrefix);
                     });
                     appDebug(`[考试明细] 🔒 级部主任过滤: 年级=${gradePrefix}, 过滤前${beforeCount}人, 过滤后${data.length}人`);
@@ -12059,7 +11575,6 @@ function renderStudentDetails(reset = true) {
                         UI.toast(`⚠️ 未找到${gradePrefix}年级的考试数据`, 'warning');
                     }
                 }
-                // 非管理员、非教务主任、非级部主任的其他角色：按学校过滤
                 else if (user.school) {
                     data = data.filter(s => sameAppSchoolName(s.school, user.school));
                     appDebug(`[考试明细] 按学校过滤: ${user.school}`);
@@ -12068,12 +11583,9 @@ function renderStudentDetails(reset = true) {
             appDebug('[考试明细] 其他角色或管理员，显示所有/学校范围数据');
         }
 
-        // --- B. 顶部下拉框过滤 (依然保留，作为一级筛选) ---
-        // 下拉框筛选逻辑（在权限筛选的基础上二次筛选）
         if (hasSelectedSchool && !(window.RankingDataService && typeof window.RankingDataService.getRowsBySchoolClass === 'function')) {
             data = data.filter(s => sameAppSchoolName(s.school, selectedSchool));
             if (hasSelectedClass) {
-                // 如果是教师，需要确保选中的班级在权限范围内（虽然下拉框可能已经限制了）
                 data = data.filter(s => normalizeClass(s.class) === normalizeClass(selectedClass));
             }
         }
@@ -12085,20 +11597,16 @@ function renderStudentDetails(reset = true) {
             appDebug('[考试明细] 检测到空首屏，已回落到当前成绩库数据');
         }
 
-        // --- C. Excel 列筛选 (核心逻辑) ---
-        // 遍历所有已激活的筛选器
         Object.keys(STD_STATE.activeFilters).forEach(colKey => {
             const allowedValues = STD_STATE.activeFilters[colKey]; // Set 对象
             if (!allowedValues || allowedValues.size === 0) return;
 
             data = data.filter(s => {
                 let val = getCellValue(s, colKey);
-                // 将值统一转为字符串进行比对
                 return allowedValues.has(String(val));
             });
         });
 
-        // --- D. 排序 ---
         if (STD_STATE.sortCol) {
             const key = STD_STATE.sortCol;
             const dir = STD_STATE.sortDir === 'asc' ? 1 : -1;
@@ -12107,7 +11615,6 @@ function renderStudentDetails(reset = true) {
                 let valA = getCellValue(a, key);
                 let valB = getCellValue(b, key);
 
-                // 处理空值
                 if (valA === '-' || valA === undefined) valA = -9999;
                 if (valB === '-' || valB === undefined) valB = -9999;
 
@@ -12117,7 +11624,6 @@ function renderStudentDetails(reset = true) {
                 return String(valA).localeCompare(String(valB), 'zh-CN', { numeric: true }) * dir;
             });
         } else {
-            // 默认按总分降序
             data.sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0));
         }
 
@@ -12131,7 +11637,6 @@ function renderStudentDetails(reset = true) {
         }
     }
 
-    // --- E. 分页与渲染 ---
     const totalItems = STD_STATE.cacheData.length;
     STD_STATE.size = getStudentDetailsPageSize();
     const totalPages = Math.ceil(totalItems / STD_STATE.size) || 1;
@@ -12165,14 +11670,10 @@ function renderStudentDetails(reset = true) {
     const countyRankVisible = renderMeta.countyRankVisible;
     const townRankVisible = renderMeta.townRankVisible;
 
-    // 生成表头 (带漏斗图标)
     let headerHTML = '';
 
-    // 辅助：生成表头单元格
     const buildTh = (label, colKey, width = 'auto') => {
-        // 判断该列是否有激活的筛选
         const isFiltered = STD_STATE.activeFilters[colKey] && STD_STATE.activeFilters[colKey].size > 0;
-        // 判断该列是否正在排序
         const isSorted = STD_STATE.sortCol === colKey;
         const sortIcon = isSorted ? (STD_STATE.sortDir === 'asc' ? '↑' : '↓') : '';
 
@@ -12200,7 +11701,6 @@ function renderStudentDetails(reset = true) {
         headerHTML += buildTh('考场', 'examRoom', '80px');
     }
 
-    // 动态判断当前数据是否只有一所学校
     const isSingleSchool = isSingleSchoolMode();
     const townHeaderStyle = townRankVisible ? '' : 'display:none;'; // 没有全镇成绩时隐藏列
     const countyHeaderStyle = countyRankVisible ? '' : 'display:none;'; // 没有全县成绩时隐藏列
@@ -12210,7 +11710,6 @@ function renderStudentDetails(reset = true) {
         if (!isTeacher && !isClassTeacher) {
             headerHTML += `<th>校排</th><th style="${townHeaderStyle}">镇排</th><th style="${countyHeaderStyle}">县排</th>`;
         } else {
-            // 科任教师/班主任：展示分数 + 级部排 + 镇排 + 县排
             headerHTML += `<th>级排</th><th style="${townHeaderStyle}">镇排</th><th style="${countyHeaderStyle}">县排</th>`;
         }
     });
@@ -12220,7 +11719,6 @@ function renderStudentDetails(reset = true) {
         headerHTML += buildTh(totalLabel, 'total', '80px');
         headerHTML += `<th>班排</th><th>校排</th><th style="${townHeaderStyle}">镇排</th><th style="${countyHeaderStyle}">县排</th>`;
     } else {
-        // 科任教师/班主任：显示总分及排名（便于诊断学生整体位置）
         headerHTML += buildTh(totalLabel, 'total', '80px');
         headerHTML += `<th>班排</th><th>级排</th><th style="${townHeaderStyle}">镇排</th><th style="${countyHeaderStyle}">县排</th>`;
     }
@@ -12252,7 +11750,6 @@ function renderStudentDetails(reset = true) {
     let bodyHTML = StudentDetailsPerfCache.bodyHtmlSignature === bodySignature
         ? StudentDetailsPerfCache.bodyHtml
         : '';
-    // 生成数据行
     let rowsHTML = '';
     if (!bodyHTML) {
     const rowsSignature = `${bodySignature}::${startIdx}::${endIdx}`;
@@ -12318,7 +11815,6 @@ function renderStudentDetails(reset = true) {
         StudentDetailsPerfCache.desktopRowsHtml = rowsHTML;
     }
 
-    // 分页条
     const paginationSignature = `${bodySignature}::${totalItems}::${totalPages}::${STD_STATE.page}`;
     let paginationHTML = StudentDetailsPerfCache.paginationSignature === paginationSignature
         ? StudentDetailsPerfCache.paginationHtml
@@ -12359,11 +11855,9 @@ function renderStudentDetails(reset = true) {
     }
     const bodyChanged = setStudentDetailsHtmlIfChanged(tbody, bodyHTML, bodySignature);
 
-    // 隐藏可能存在的对比区域
     const compareSection = dom.compareSection;
     if (compareSection && compareSection.style.display !== 'none') compareSection.style.display = 'none';
 
-    // 滚动到学生明细区域
     const scrollSignature = `${bodySignature}::${reset ? 'reset' : 'page'}`;
     if (bodyChanged || STD_STATE.lastScrollSignature !== scrollSignature) {
         STD_STATE.lastScrollSignature = scrollSignature;
@@ -12383,7 +11877,6 @@ function renderStudentDetails(reset = true) {
     }
 }
 
-// 辅助：获取单元格值
 function getCellValue(student, colKey) {
     if (StudentDetailsPerfCache.cellValueSignature !== STD_STATE.dataSignature) {
         StudentDetailsPerfCache.cellValueSignature = STD_STATE.dataSignature;
@@ -12410,45 +11903,36 @@ function getCellValue(student, colKey) {
     return student.scores[colKey] !== undefined ? student.scores[colKey] : '-';
 }
 
-// 2. 切换显示 Excel 菜单
 function toggleExcelMenu(colKey, event) {
-    // 阻止冒泡
     event.stopPropagation();
 
     const menuId = `menu-${colKey}`;
     const menu = document.getElementById(menuId);
 
-    // 如果该菜单已打开，则关闭
     if (menu.classList.contains('show')) {
         menu.classList.remove('show');
         if (StudentDetailsPerfCache.openFilterMenu === menu) StudentDetailsPerfCache.openFilterMenu = null;
         return;
     }
 
-    // 关闭其他所有菜单
     closeAllMenus();
 
-    // 填充菜单内容
     buildFilterMenuContent(colKey, menu);
 
-    // 显示
     menu.classList.add('show');
     StudentDetailsPerfCache.openFilterMenu = menu;
 }
 
-// 3. 构建菜单内容 (核心：提取唯一值)
 function buildFilterMenuContent(colKey, container) {
     const cacheKey = `${STD_STATE.dataSignature || buildStudentDetailsDataSignature(STD_STATE.cacheData)}::${colKey}`;
     let sortedValues = STD_STATE.filterValueCache[cacheKey];
     if (!sortedValues) {
-        // 简单策略：从当前显示的 cacheData 中提取唯一值
         const uniqueValues = new Set();
         STD_STATE.cacheData.forEach(s => {
             let val = getCellValue(s, colKey);
             uniqueValues.add(String(val));
         });
 
-        // 转为数组并排序
         sortedValues = Array.from(uniqueValues).sort((a, b) => {
             const numA = parseFloat(a);
             const numB = parseFloat(b);
@@ -12458,7 +11942,6 @@ function buildFilterMenuContent(colKey, container) {
         STD_STATE.filterValueCache[cacheKey] = sortedValues;
     }
 
-    // 检查哪些被选中了
     const currentSet = STD_STATE.activeFilters[colKey];
     const isAllChecked = !currentSet;
     const menuSignature = `${cacheKey}::${isAllChecked ? 'all' : Array.from(currentSet || []).sort().join('|')}`;
@@ -12493,7 +11976,6 @@ function buildFilterMenuContent(colKey, container) {
     container.dataset.studentDetailsFilterMenuSig = menuSignature;
 }
 
-// 4. 菜单内部交互函数
 window.applySort = function (colKey, dir) {
     STD_STATE.sortCol = colKey;
     STD_STATE.sortDir = dir;
@@ -12506,7 +11988,6 @@ window.filterCheckboxList = function (input) {
     StudentDetailsPerfCache.filterSearchCache.set(input, text);
     const list = input.closest('.menu-actions').nextElementSibling;
     const items = list.querySelectorAll('.menu-item');
-    // 跳过第一个(全选)
     for (let i = 1; i < items.length; i++) {
         const itemText = items[i].innerText.toLowerCase();
         items[i].style.display = itemText.includes(text) ? 'flex' : 'none';
@@ -12553,10 +12034,8 @@ function closeAllMenus() {
     StudentDetailsPerfCache.openFilterMenu = null;
 }
 
-// 点击空白关闭菜单
 document.addEventListener('click', closeAllMenus);
 
-// 辅助：翻页
 window.changeStdPage = function (delta) {
     STD_STATE.page += delta;
     renderStudentDetails(false);
@@ -12579,12 +12058,10 @@ function exportStudentDetails() {
     const selectedSchool = document.getElementById('studentSchoolSelect').value;
     const selectedClass = document.getElementById('studentClassSelect').value;
 
-    // 1. 判断是否为单校模式 (只有1所学校)
     const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
 
     const wb = XLSX.utils.book_new();
 
-    // 2. 动态构建表头
     const headers = isClassTeacher
         ? ['学校', '班级', '姓名']
         : (isTeacher
@@ -12688,7 +12165,6 @@ function exportStudentDetails() {
         if (exportCountyRankVisible) headers.push('总分县排');
     }
 
-    // 3. 填充数据行 (需与表头逻辑严格对应)
     studentsToShow.forEach(student => {
         const row = (isTeacher || isClassTeacher)
             ? [student.school, student.class, student.name]
@@ -12752,7 +12228,6 @@ function exportStudentDetails() {
 
     const ws = XLSX.utils.aoa_to_sheet(data);
 
-    // 调用装饰函数美化 Excel
     decorateExcelSheet(ws, headers);
 
     XLSX.utils.book_append_sheet(wb, ws, '学生考试明细');
@@ -12814,7 +12289,6 @@ function generateTeacherInputs() {
 }
 
 function importTeacherExcel() {
-    // 🟢 [重写] 使用新的统一导入逻辑
     const fileInput = document.getElementById('teacherFileInput');
     if (!fileInput) {
         alert('❌ 系统错误：找不到文件输入框');
@@ -12826,13 +12300,11 @@ function importTeacherExcel() {
         return;
     }
 
-    // 检查是否封存
     if (typeof isArchiveLocked === 'function' && isArchiveLocked()) {
         alert("⛔ 当前考试已封存，禁止导入任课表");
         return;
     }
 
-    // 检查 XLSX 库
     if (typeof XLSX === 'undefined') {
         alert('❌ Excel解析库未加载，请刷新页面后重试');
         return;
@@ -12857,7 +12329,6 @@ function importTeacherExcel() {
                 return;
             }
 
-            // 导入数据
             let count = 0;
             jsonData.forEach(row => {
                 const className = normalizeClass(row['班级'] || row['class'] || row['Class']);
@@ -12876,12 +12347,10 @@ function importTeacherExcel() {
                 return;
             }
 
-            // 刷新显示
             if (typeof generateTeacherInputs === 'function') {
                 generateTeacherInputs();
             }
 
-            // 同步到云端
             if (typeof saveCloudData === 'function') {
                 try {
                     await saveCloudData({ background: true, sourceLabel: 'teacher-import' });
@@ -12916,8 +12385,6 @@ function importTeacherExcel() {
     reader.readAsArrayBuffer(file);
 }
 
-// [核心修改] 教师四维评价计算逻辑 (含贡献值、增值、低分率)
-// Teacher analysis main runtime moved to public/assets/js/teacher-analysis-main-runtime.js
 
 let __reportQueryToken = 0;
 const ReportHistoryPerfCache = {
@@ -13958,7 +13425,6 @@ function findPreviousRecord(student) {
     return null;
 }
 
-// 🟢 [Bug #5 新增] 获取学生在所有历史考试中的记录（用于多期雷达图对比）
 function getStudentExamHistory(student) {
     const results = [];
     if (!student) return results;
@@ -13995,7 +13461,6 @@ function getStudentExamHistory(student) {
 
     if (typeof CohortDB === 'undefined') return results;
 
-    // 🟢 [新增] 检查是否启用了“个性化历史期数”的手动覆盖
     const manualExams = [];
     ['reportCompareExam1', 'reportCompareExam2', 'reportCompareExam3'].forEach(id => {
         const el = document.getElementById(id);
@@ -14049,7 +13514,6 @@ function getStudentExamHistory(student) {
                 continue;
             }
 
-            // 如果启用了手动覆盖，必须在指定的 examId 列表中
             if (manualExams.length > 0 && !manualExams.some(id => isExamKeyEquivalentForCompare(examId, id)) && !isExamKeyEquivalentForCompare(examId, currentExamId)) {
                 continue;
             }
@@ -14089,11 +13553,9 @@ function getStudentExamHistory(student) {
         console.warn('[多期对比] 获取学生本地考试历史异常:', e);
     }
 
-    // 🆕 整合云端异步拉取的数据 (PREV_DATA)
     if (window.PREV_DATA && Array.isArray(window.PREV_DATA)) {
         window.PREV_DATA.forEach(h => {
             if (!isTargetStudent(h)) return;
-            // 如果启用了手动覆盖，过滤掉不在覆盖列表里的云端数据 (当前考试除外)
             const matchKey = getHistoryKey(h);
             if (currentFingerprint && h?.fingerprint && String(h.fingerprint) === currentFingerprint && !isExamKeyEquivalentForCompare(matchKey, currentExamId)) {
                 return;
@@ -14103,7 +13565,6 @@ function getStudentExamHistory(student) {
             }
             if (!matchKey) return;
 
-            // 统一结构后再做去重，避免 examId/examFullKey 混用导致误判
             const normalized = {
                 ...h,
                 examFullKey: h.examFullKey || h.examId,
@@ -14120,7 +13581,6 @@ function getStudentExamHistory(student) {
         });
     }
 
-    // 重新按考试身份去重：允许“不同考试但成绩恰好相同”并存
     const dedupedResults = [];
     const getHistoryIdentity = (entry) => getCompareExamIdentity({
         id: entry?.examFullKey || entry?.examId || '',
@@ -14167,7 +13627,6 @@ function getStudentExamHistory(student) {
 }
 
 // 🟢 [新增]：生成进退步胶囊标签 (Windows 风格)
-// Report render runtime moved to public/assets/js/report-render-runtime.js
 
 
 function getIndicatorContext() {
@@ -14328,8 +13787,6 @@ function calcIndicators(isSilent = false) {
         if (!isSilent && window.UI) UI.toast('仅 9 年级可使用指标生功能', 'warning');
         return [];
     }
-    // 1. 优先读取全局变量 SYS_VARS (这是最可靠的数据源)
-    // 如果全局变量是空的，尝试读取管理面板里的输入框 (dm_ind...)
     let val1 = window.SYS_VARS?.indicator?.ind1;
     let val2 = window.SYS_VARS?.indicator?.ind2;
 
@@ -14339,7 +13796,6 @@ function calcIndicators(isSilent = false) {
     const r1 = parseInt(val1);
     const r2 = parseInt(val2);
 
-    // 2. 检查：如果参数未设置，自动打开管理面板并跳转到【年级指标参数】页
     if (!r1 || !r2) {
         if (!isSilent && confirm("❌ 检测到【划线名次】尚未设置！\n\n是否立即打开「教务数据综合控制台」进行设置？")) {
             DataManager.open(); // 打开弹窗
@@ -14357,8 +13813,6 @@ function calcIndicators(isSilent = false) {
         return;
     }
 
-    // 3. 检查：如果目标人数未导入，自动打开管理面板并跳转到【目标人数管理】页
-    // window.TARGETS 是在 loadCloudData 或 DataManager 中加载的
     if (!window.TARGETS || Object.keys(window.TARGETS).length === 0) {
         if (!isSilent && confirm("❌ 检测到【目标人数】尚未导入！\n\n是否立即打开「教务数据综合控制台」进行导入？")) {
             DataManager.open(); // 打开弹窗
@@ -14371,7 +13825,6 @@ function calcIndicators(isSilent = false) {
         if (school && typeof school === 'object') school.scoreInd = 0;
     });
 
-    // 1. 确定全镇划线分数。县直学校不参与指标生划线与达标统计。
     const townshipRows = (typeof filterRowsToTownshipSchools === 'function')
         ? filterRowsToTownshipSchools(RAW_DATA || [])
         : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
@@ -14379,7 +13832,6 @@ function calcIndicators(isSilent = false) {
     const line1 = allScores[r1 - 1] || 0;
     const line2 = allScores[r2 - 1] || 0;
 
-    // 2. 第一轮遍历：计算达标人数、基础分、超额数
     let calcData = [];
     let maxExcess1 = 0; // 指标一最大超额数
     let maxExcess2 = 0; // 指标二最大超额数
@@ -14408,8 +13860,6 @@ function calcIndicators(isSilent = false) {
         const invalidTarget = invalidTarget1 || invalidTarget2;
         const missingTarget = !targetInfo.key || (!t.t1 && !t.t2);
 
-        // --- 指标一计算 ---
-        // 基础分 (满分30)
         let base1 = 0;
         if (t.t1 > 0) {
             if (reach1 < t.t1 * 0.6) base1 = 0;
@@ -14417,12 +13867,9 @@ function calcIndicators(isSilent = false) {
             else base1 = (reach1 / t.t1) * 30;
         }
 
-        // 超额数
         const excess1 = t.t1 > 0 ? Math.max(0, reach1 - t.t1) : 0;
         if (excess1 > maxExcess1) maxExcess1 = excess1;
 
-        // --- 指标二计算 ---
-        // 基础分 (满分30)
         let base2 = 0;
         if (t.t2 > 0) {
             if (reach2 < t.t2 * 0.6) base2 = 0;
@@ -14430,7 +13877,6 @@ function calcIndicators(isSilent = false) {
             else base2 = (reach2 / t.t2) * 30;
         }
 
-        // 超额数
         const excess2 = t.t2 > 0 ? Math.max(0, reach2 - t.t2) : 0;
         if (excess2 > maxExcess2) maxExcess2 = excess2;
 
@@ -14447,9 +13893,7 @@ function calcIndicators(isSilent = false) {
         });
     });
 
-    // 3. 第二轮遍历：计算附加分、总分并排序
     calcData.forEach(d => {
-        // 附加分公式：(某校超额 / 最大超额) * 5
         d.bonus1 = (maxExcess1 > 0) ? (d.excess1 / maxExcess1 * 5) : 0;
         d.score1 = d.base1 + d.bonus1;
 
@@ -14458,11 +13902,9 @@ function calcIndicators(isSilent = false) {
 
         d.finalScore = d.score1 + d.score2;
 
-        // 同步到全局对象供综合排名使用
         syncIndicatorScoreToSchools(d.name, d.finalScore);
     });
 
-    // 排序
     calcData.sort((a, b) => b.finalScore - a.finalScore).forEach((d, i) => d.rank = i + 1);
 
     const missingTargetSchools = calcData.filter(d => d.missingTarget).map(d => d.name);
@@ -14470,7 +13912,6 @@ function calcIndicators(isSilent = false) {
         .filter(d => d.invalidTarget)
         .map(d => `${d.name}(人数${d.studentCount}, 目标${d.rawT1}/${d.rawT2})`);
 
-    // 4. 渲染表格 (表头增加基础分/附加分列)
     const thead = document.querySelector('#tb-indicator thead');
     thead.innerHTML = `
             <tr>
@@ -14545,47 +13986,37 @@ function analyzeTargetGap(schoolName, type, lineScore) {
     const schoolStudents = getEquivalentSchoolStudents(schoolName);
     if (!schoolStudents.length) return;
 
-    // 1. 获取该校的目标人数设定
-    // 注意：TARGETS 是全局变量，存储了导入的目标配置
     const targetConfig = getTargetConfigBySchool(schoolName).value || { t1: 0, t2: 0 };
     const targetCount = type === 'ind1' ? parseInt(targetConfig.t1) : parseInt(targetConfig.t2);
 
     if (!targetCount) return alert(`未找到 ${schoolName} 的目标设定，请先导入目标人数Excel。`);
 
-    // 2. 将学生分为“已达标”和“未达标”两组
-    // 按总分降序排列，保证未达标组的第一个就是离线最近的
     const allStudents = [...schoolStudents].sort((a, b) => b.total - a.total);
     const reached = allStudents.filter(s => s.total >= lineScore);
     const below = allStudents.filter(s => s.total < lineScore);
 
-    // 3. 计算需要抓取的人数 (策略：补齐缺口 + 适当富余以便培优)
     const currentCount = reached.length;
     const gap = targetCount - currentCount; // 缺口人数
 
-    // 设置“缓冲量”：比如为了保险起见，多抓取目标数的 10% 或至少 5 人
     const buffer = Math.ceil(targetCount * 0.1) || 5;
 
     let countToFetch = 0;
     let strategyText = "";
 
     if (gap > 0) {
-        // 情况A: 尚未达标 -> 抓取 (缺口 + 缓冲) 人
         countToFetch = gap + buffer;
         strategyText = `当前差 <strong style="color:red">${gap}</strong> 人达标。已为您筛选最接近目标的 <strong>${countToFetch}</strong> 名潜力生（含 ${buffer} 名保险备份）。`;
     } else {
-        // 情况B: 已经达标 -> 依然推荐 (缓冲) 人，用于巩固防守
         countToFetch = buffer;
         strategyText = `当前已达标 (超 ${Math.abs(gap)} 人)。建议继续关注线下前 <strong>${countToFetch}</strong> 名学生，防止上线生波动下滑。`;
     }
 
-    // 4. 截取名单
     let candidates = below.slice(0, countToFetch);
 
     if (candidates.length === 0) {
         return alert("线下没有更多学生可供挖掘了。");
     }
 
-    // 5. 计算全镇各科均分 (作为诊断弱科的基准)
     const gradeStatsRows = (typeof filterRowsToTownshipSchools === 'function')
         ? filterRowsToTownshipSchools(RAW_DATA || [])
         : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
@@ -14595,74 +14026,58 @@ function analyzeTargetGap(schoolName, type, lineScore) {
         gradeStats[sub] = allScores.reduce((a, b) => a + b, 0) / (allScores.length || 1);
     });
 
-    // 6. 深度分析每一位候选人 (计算差距 + 找弱科)
     candidates = candidates.map(s => {
-        // A. 计算差距
         const scoreGap = lineScore - s.total;
 
-        // 1. 确定计分科目范围 (避免政治等不计入总分的科目被错误推荐)
-        // 逻辑：如果是9年级模式，CONFIG.totalSubs 只有[语,数,英,物,化]
         let validSubjects = SUBJECTS;
         if (CONFIG && Array.isArray(CONFIG.totalSubs)) {
             validSubjects = CONFIG.totalSubs;
         }
 
-        // 2. 辅助函数：获取带老师姓名的学科名 (例如: "物理(张师)")
         const getSubWithTeacher = (sub) => {
-            // 键名格式参考 generateTeacherInputs 函数: "班级_学科"
             const teacherKey = `${s.class}_${sub}`;
             let teacher = TEACHER_MAP[teacherKey];
             if (teacher) {
-                // 只取姓氏以节省空间，如 "张老师" -> "张"
                 const surname = teacher.charAt(0);
                 return `${sub}<small style="color:#666; font-size:0.9em;">(${surname}师)</small>`;
             }
             return sub;
         };
 
-        // 3. 遍历计算所有有效科目的分差
         let allDiffs = [];  // 存储所有科目差值 (用于挖掘潜力)
         let hardWeakness = []; // 存储明显弱项 (低于均分5分)
 
         validSubjects.forEach(sub => {
             if (s.scores[sub] !== undefined) {
-                // 核心算法：学生分数 - 年级均分 (正数=优势，负数=劣势)
                 const diff = s.scores[sub] - gradeStats[sub];
                 const item = { name: sub, diff: diff };
 
                 allDiffs.push(item);
 
-                // 阈值判定：低于均分 5 分算“硬伤”，需要优先补救
                 if (diff < -5) {
                     hardWeakness.push(item);
                 }
             }
         });
 
-        // 按差值升序排序 (数值越小/越负，排在越前面，代表越需要补)
         allDiffs.sort((a, b) => a.diff - b.diff);
         hardWeakness.sort((a, b) => a.diff - b.diff);
 
         let worstSubName = "";
         let worstSubDiff = "";
 
-        // 4. 决策逻辑：是补短板，还是挖潜力？
         if (hardWeakness.length > 0) {
-            // 🛑 情况A：有明显弱科 (有科目低于均分5分) -> 显示最差的 2 科
             const targets = hardWeakness.slice(0, 2);
 
             worstSubName = targets.map(t => getSubWithTeacher(t.name)).join("、");
             worstSubDiff = targets.map(t => t.diff.toFixed(1)).join(" / ");
         } else {
-            // 💡 情况B：无明显弱科 (各科都还行，但总分未达标) -> 强制挖掘相对最弱的 2 科作为潜力点
             const targets = allDiffs.slice(0, 2);
 
             if (targets.length > 0) {
-                // 加个 "潜力:" 前缀提示班主任这是相对弱项，不是绝对差
                 worstSubName = "<span style='font-size:10px; color:#666; border:1px solid #ccc; padding:0 2px; border-radius:2px; margin-right:2px;'>潜力</span>" +
                     targets.map(t => getSubWithTeacher(t.name)).join("、");
 
-                // 显示分差 (正数加+号，提示老师其实这科可能已经高于均分了，只是在个人维度里算短板)
                 worstSubDiff = targets.map(t => (t.diff > 0 ? '+' : '') + t.diff.toFixed(1)).join(" / ");
             } else {
                 worstSubName = "数据不足";
@@ -14680,7 +14095,6 @@ function analyzeTargetGap(schoolName, type, lineScore) {
         };
     });
 
-    // 7. 构建弹窗内容
     const typeName = type === 'ind1' ? '指标一' : '指标二';
     const title = `${schoolName} - ${typeName} 冲刺名单 (目标:${targetCount}人)`;
 
@@ -14706,17 +14120,12 @@ function analyzeTargetGap(schoolName, type, lineScore) {
         `;
 
     candidates.forEach(c => {
-        // 样式逻辑
         const isBalanced = c.worstSub.includes("潜力"); // 匹配"潜力"关键字
         const subStyle = isBalanced ? "color:#64748b; font-size:12px;" : "color:#b91c1c; font-weight:bold;";
         const diffStyle = isBalanced ? "color:#64748b;" : "color:#b91c1c; font-weight:bold;";
 
-        // 🟢 计算进度百分比 (用于画进度条)
-        // 比如 目标490，考了485 -> 进度 98.9%
         const percent = Math.min(100, (c.total / lineScore) * 100).toFixed(1);
 
-        // 🟢 进度条颜色：越接近目标越红(警示/冲刺)，或者用绿色表示健康度？
-        // 这里用黄色到绿色的渐变概念：>98% 用橙色(只差一口气)，<95% 用蓝色
         const barColor = percent >= 98 ? '#f59e0b' : '#3b82f6';
 
         html += `
@@ -14756,14 +14165,11 @@ function analyzeTargetGap(schoolName, type, lineScore) {
 
     html += `</tbody></table></div>`;
 
-    // 8. 调用通用弹窗显示
     ensureDrillModalDom();
     document.getElementById('drill-title').innerText = title;
     document.getElementById('drill-back-btn').classList.add('hidden');
     document.getElementById('drill-content').innerHTML = html;
 
-    // 底部统计：按班级汇总潜力生人数，方便主任平衡各班指标
-    // 简单的 reduce 统计
     const classCount = {};
     candidates.forEach(c => { classCount[c.class] = (classCount[c.class] || 0) + 1; });
     const classSummary = Object.entries(classCount)
@@ -14772,14 +14178,12 @@ function analyzeTargetGap(schoolName, type, lineScore) {
 
     document.getElementById('drill-footer').innerText = `各班潜力生分布：${classSummary} (请平衡各班指标压力)`;
 
-    // 🟢 关键：将计算好的 candidates 数组传给 DrillSystem，并标记类型为 'gap'
     DrillSystem.exportData = {
         type: 'gap',
         fileName: title, // 使用弹窗标题作为文件名
         data: candidates
     };
 
-    // 🟢 确保导出按钮显示
     const exportBtn = document.getElementById('drill-export-btn');
     if (exportBtn) exportBtn.classList.remove('hidden');
 
@@ -14803,7 +14207,6 @@ function calcSummary(isSilent = false) {
         : Object.keys(SCHOOLS || {});
     const summarySchoolSet = new Set((summarySchoolNames || []).map(name => String(name || '').trim()).filter(Boolean));
 
-    // 1. 汇总各项得分 (仅乡镇学校)
     const list = Object.values(SCHOOLS || {}).filter(s => (
         hasSummaryScopeHelper
             ? (typeof isTownshipManagedSchool === 'function'
@@ -14824,10 +14227,8 @@ function calcSummary(isSilent = false) {
         return { name: s.name, s1, s2, s3, s4, total };
     });
 
-    // 2. 排序 (按综合总分降序)
     list.sort((a, b) => b.total - a.total).forEach((d, i) => d.rank = i + 1);
 
-    // 3. 动态生成表头
     const thead = document.querySelector('#tb-summary thead');
     let theadHtml = `<tr><th>学校名称</th><th>两率一分得分</th><th>后1/3得分</th>`;
     if (isGrade9) theadHtml += `<th>指标生得分</th>`;
@@ -14835,7 +14236,6 @@ function calcSummary(isSilent = false) {
     theadHtml += `<th>综合总分</th><th>总排名</th></tr>`;
     thead.innerHTML = theadHtml;
 
-    // 4. 生成表格内容 (遍历所有，无截断)
     let html = '';
     list.forEach(d => {
         const isMySchool = sameAppSchoolName(d.name, MY_SCHOOL);
@@ -14949,10 +14349,8 @@ function renderSegmentAnalysis() {
     let html = `<thead><tr><th>分数段</th><th>人数</th><th>累计人数</th><th>比例</th><th>累计比例</th></tr></thead><tbody>`;
     let cumulative = 0, total = scores.length;
 
-    // 🟢 准备图表数据容器
     const rowsData = []; // 临时存储数据以便后续给图表使用
 
-    // 从高到低遍历生成表格
     for (let high = topCeil; high > 0; high -= step) {
         const low = high - step;
         const isTopBucket = high === topCeil;
@@ -14962,7 +14360,6 @@ function renderSegmentAnalysis() {
         });
         const count = bucketList.length;
 
-        // 优化：去掉两头均为0的空行，但保留中间的0以体现断层
         if (count === 0 && cumulative === 0) continue;
 
         cumulative += count;
@@ -14971,7 +14368,6 @@ function renderSegmentAnalysis() {
 
         html += `<tr><td>${label} 分</td><td>${count}</td><td>${cumulative}</td><td>${(count / total * 100).toFixed(2)}%</td><td>${(cumulative / total * 100).toFixed(2)}%</td></tr>`;
 
-        // 收集图表数据 (使用 unshift 存入头部，保证图表是从低分到高分排列，符合直方图习惯)
         rowsData.unshift({
             label: label,
             count: count,
@@ -14981,10 +14377,8 @@ function renderSegmentAnalysis() {
 
     document.getElementById('tb-segment').innerHTML = html + `</tbody>`;
 
-    // 🟢 绘制图表核心逻辑
     const ctx = document.getElementById('segmentChart');
     if (ctx) {
-        // 如果已有图表实例，先销毁，防止重影
         if (segmentChartInstance) segmentChartInstance.destroy();
 
         segmentChartInstance = new Chart(ctx, {
@@ -15002,7 +14396,6 @@ function renderSegmentAnalysis() {
                     categoryPercentage: 0.9,
                     order: 2
                 }, {
-                    // 增加一条平滑曲线 (趋势线)
                     type: 'line',
                     label: '分布趋势',
                     data: rowsData.map(d => d.count),
@@ -15019,13 +14412,10 @@ function renderSegmentAnalysis() {
                 onClick: (event, elements) => {
                     if (!elements || elements.length === 0) return;
 
-                    // 获取被点击的数据点索引
                     const index = elements[0].index;
                     const dataItem = rowsData[index];
 
                     if (dataItem && dataItem.count > 0) {
-                        // 调用 DrillSystem (钻取系统) 显示该分数段的学生名单
-                        // 标题如：全镇 语文 分数段详情 (110-120)
                         const title = `${school === 'ALL' ? '全镇' : school} ${subject} 分数段详情 (${dataItem.label})`;
                         DrillSystem.open(title, dataItem.studentList);
                     } else {
@@ -15033,7 +14423,6 @@ function renderSegmentAnalysis() {
                     }
                 },
                 onHover: (event, chartElement) => {
-                    // 鼠标悬停时变成小手图标，提示可点击
                     event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
                 },
                 plugins: {
@@ -15069,7 +14458,6 @@ function exportSegmentExcel() {
     XLSX.writeFile(wb, "分数段统计.xlsx");
 }
 
-// 1. 初始化下拉框
 function updateSubjectBalanceSelects() {
     const schSel = document.getElementById('sbSchoolSelect');
     const clsSel = document.getElementById('sbClassSelect');
@@ -15080,7 +14468,6 @@ function updateSubjectBalanceSelects() {
     const matched = Array.from(schSel.options || []).find(option => sameAppSchoolName(option.value, currentSchool));
     if (matched) schSel.value = matched.value;
 
-    // 联动更新班级
     schSel.onchange = () => {
         const schoolRecord = getAppSchoolRecord(schSel.value);
         const classes = schoolRecord ? [...new Set((schoolRecord.students || []).map(s => s.class))].sort() : [];
@@ -15091,7 +14478,6 @@ function updateSubjectBalanceSelects() {
 
 let SB_CACHE_DATA = []; // 缓存用于导出
 
-// 2. 渲染主表格
 function SB_renderTable() {
     const sch = document.getElementById('sbSchoolSelect').value;
     const cls = document.getElementById('sbClassSelect').value;
@@ -15099,16 +14485,13 @@ function SB_renderTable() {
 
     if (!sch) return alert("请先选择学校");
 
-    // A. 筛选学生
     const schoolRecord = getAppSchoolRecord(sch);
     if (!schoolRecord || !Array.isArray(schoolRecord.students)) return alert("该学校暂无学生数据");
     let students = schoolRecord.students;
     if (cls && cls !== '全部') students = students.filter(s => s.class === cls);
 
-    // B. 计算全镇各科均分 (作为基准线)
     const gradeStats = SB_getGradeStats();
 
-    // C. 处理每个学生的数据
     const renderList = students.map(s => {
         const items = [];
         let maxDiff = -999;
@@ -15123,10 +14506,8 @@ function SB_renderTable() {
             if (diff < minDiff) minDiff = diff;
         });
 
-        // 按差值排序：优势在前，劣势在后
         items.sort((a, b) => b.diff - a.diff);
 
-        // 计算偏科指数 (极差)
         const balanceScore = maxDiff - minDiff;
 
         return {
@@ -15139,7 +14520,6 @@ function SB_renderTable() {
         };
     });
 
-    // D. 排序
     if (sortType === 'total') {
         renderList.sort((a, b) => b.total - a.total);
     } else {
@@ -15148,14 +14528,10 @@ function SB_renderTable() {
 
     SB_CACHE_DATA = renderList; // 存入缓存
 
-    // E. 生成 HTML
     const tbody = document.querySelector('#sb-table tbody');
     let html = '';
 
     renderList.forEach(row => {
-        // 构建可视化条
-        // 我们只展示最强的2科和最弱的2科，避免太长，或者展示全部但缩小
-        // 为了“一看就懂”，我们展示全部，但用 Flex 布局一行显示
 
         let barsHtml = `<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">`;
 
@@ -15165,11 +14541,9 @@ function SB_renderTable() {
             const bg = isStrong ? '#dcfce7' : '#fee2e2';
             const icon = isStrong ? '📈' : '📉';
 
-            // 仅当差值绝对值大于 5 分时才显著展示，否则作为“平”
             const absDiff = Math.abs(item.diff);
             const barWidth = Math.min(absDiff * 2, 50); // 限制最大宽度
 
-            // 小孩易读的胶囊样式
             barsHtml += `
                     <div style="display:flex; flex-direction:column; align-items:center; width:50px;">
                         <div style="font-size:10px; font-weight:bold; color:#333;">${item.sub}</div>
@@ -15190,7 +14564,6 @@ function SB_renderTable() {
         });
         barsHtml += `</div>`;
 
-        // 生成简评
         const strongSub = row.items[0];
         const weakSub = row.items[row.items.length - 1];
         let comment = "";
@@ -15274,7 +14647,6 @@ function SB_runCluster() {
         clusterMap[c].push(meta[i]);
     });
 
-    // 给每个簇命名
     const clusterLabels = {};
     centroids.forEach((centroid, idx) => {
         const [hAvg, sAvg, maxAbs, balance] = centroid;
@@ -15313,7 +14685,6 @@ function SB_renderClusterResults(clusterMap, clusterLabels) {
     container.innerHTML = html || '暂无聚类结果';
 }
 
-// 简单 K-Means 实现
 function kmeans(data, k = 4, maxIter = 10) {
     if (!data.length) return { labels: [], centroids: [] };
     const dim = data[0].length;
@@ -15326,7 +14697,6 @@ function kmeans(data, k = 4, maxIter = 10) {
     const labels = new Array(data.length).fill(0);
 
     for (let iter = 0; iter < maxIter; iter++) {
-        // assignment
         for (let i = 0; i < data.length; i++) {
             let best = 0, bestDist = Infinity;
             for (let c = 0; c < centroids.length; c++) {
@@ -15335,7 +14705,6 @@ function kmeans(data, k = 4, maxIter = 10) {
             }
             labels[i] = best;
         }
-        // update
         const sums = Array.from({ length: centroids.length }, () => new Array(dim).fill(0));
         const counts = new Array(centroids.length).fill(0);
         for (let i = 0; i < data.length; i++) {
@@ -15357,14 +14726,12 @@ function euclid(a, b) {
     return Math.sqrt(s);
 }
 
-// 3. 导出 Excel
 function SB_exportExcel() {
     if (!SB_CACHE_DATA.length) return alert("请先生成分析数据");
 
     const wb = XLSX.utils.book_new();
     const headers = ["班级", "姓名", "总分", "全镇排名", "最强学科", "最强分差", "最弱学科", "最弱分差"];
 
-    // 动态添加所有学科列
     SUBJECTS.forEach(s => headers.push(`${s}分差`));
 
     const data = [headers];
@@ -15379,7 +14746,6 @@ function SB_exportExcel() {
             weak.sub, weak.diff.toFixed(1)
         ];
 
-        // 填充各科分差
         SUBJECTS.forEach(s => {
             const item = r.items.find(i => i.sub === s);
             row.push(item ? item.diff.toFixed(1) : '-');
@@ -15398,11 +14764,9 @@ function updatePotentialSchoolSelect() {
     if (!sel) return;
     const old = sel.value;
 
-    // 修复：确保 value 属性被引号包裹，防止学校名中有空格导致截断
     const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
     sel.innerHTML = `<option value="ALL">全乡镇</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
 
-    // 恢复之前的选择
     if (old && (old === 'ALL' || SCHOOLS[old])) sel.value = old;
 }
 
@@ -15417,19 +14781,14 @@ function renderPotentialAnalysis() {
         : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
     let scopeStudents = (scope === 'ALL') ? townshipRows : (SCHOOLS[scope]?.students || []);
 
-    // 1. 筛选总分优生
     const totalCount = townshipRows.length || RAW_DATA.length;
     const topRankThreshold = Math.floor(totalCount * topRatio);
 
-    // 2. 遍历优生，计算偏科指数
     scopeStudents.forEach(stu => {
         const tRank = safeGet(stu, 'ranks.total.township', 99999);
         if (tRank === '-' || tRank > topRankThreshold) return;
 
-        // 获取该生的总分相对位置值
 
-        // 如果只有排名数据，回退到 Rank Gap 模式
-        // 如果有相对位置数据，使用科目偏离差
         const useAdvancedMetrics = (stu.tScores && stu.totalTScore);
 
         SUBJECTS.forEach(sub => {
@@ -15441,21 +14800,16 @@ function renderPotentialAnalysis() {
             let gapLabel = '';
 
             if (useAdvancedMetrics) {
-                // 业务逻辑深化：使用科目相对偏离差
                 const subT = stu.tScores[sub];
-                // 估算学生自身的平均水平
                 const validSubCount = Object.values(stu.tScores).filter(v => v > 0).length || 1;
                 const selfAvgT = stu.totalTScore / validSubCount;
 
-                // 判定：该科比自己平均水平低 8 分以上，且该科绝对值 < 45 (稍微偏弱)
                 if ((selfAvgT - subT) > 8) {
                     isPotential = true;
                     gapVal = (selfAvgT - subT).toFixed(1);
                     gapLabel = `相对偏离 -${gapVal}`;
                 }
             } else {
-                // 回退逻辑：排名落差法
-                // 如果单科排名比总排名 落后 30% 的总人数
                 const gap = subRank - tRank;
                 if (gap > (totalCount * 0.3)) {
                     isPotential = true;
@@ -15476,7 +14830,6 @@ function renderPotentialAnalysis() {
         });
     });
 
-    // 按偏科严重程度排序
     candidates.sort((a, b) => b.sortVal - a.sortVal);
     POTENTIAL_STUDENTS_CACHE = candidates;
 
@@ -15523,7 +14876,6 @@ function exportCorrelationExcel() {
 function exportExcel(type) {
     if (!RAW_DATA.length) { alert('请先上传数据'); return; }
 
-    // 1. 导出后1/3 (逻辑不变)
     if (type === 'bottom3') {
         const table = document.getElementById('tb-bottom3');
         const wb = XLSX.utils.book_new();
@@ -15533,27 +14885,21 @@ function exportExcel(type) {
         return;
     }
 
-    // 2. 导出指标生 (逻辑更新：从界面表格获取太麻烦，直接重算一遍或者从DOM解析)
-    // 为了准确性，我们这里解析刚才生成的表格 DOM，这样所见即所得
     if (type === 'indicator') {
         const table = document.getElementById('tb-indicator');
         if (table.rows.length < 3) return alert("请先点击【开始计算】");
 
         const wb = XLSX.utils.book_new();
 
-        // 自定义表头数据，因为DOM表头是双层的，直接转换可能格式不好看
         const wsData = [];
-        //这一行是合并后的逻辑表头
         wsData.push(["学校",
             "指标一目标", "指标一达标", "指标一基础分", "指标一附加分", "指标一小计",
             "指标二目标", "指标二达标", "指标二基础分", "指标二附加分", "指标二小计",
             "指标总分", "排名"]);
 
-        // 遍历 tbody 获取数据
         const rows = table.querySelectorAll('tbody tr');
         rows.forEach(tr => {
             const tds = tr.querySelectorAll('td');
-            // 解析 "目标/达标" 这种格式
             const parseTargetReach = (str) => {
                 const parts = str.split('/');
                 return { t: parts[0].trim(), r: parts[1].trim() };
@@ -15624,7 +14970,6 @@ function downloadTemplate(type) {
     const wsData = [headers, ...sampleData];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    // 设置列宽，让模板稍微好看点
     ws['!cols'] = headers.map(() => ({ wch: 15 }));
 
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
@@ -15633,9 +14978,6 @@ function downloadTemplate(type) {
     if (window.UI) UI.toast(`✅ 已下载：${filename}`, "success");
     logAction('下载模板', filename);
 }
-// Freshman class division and exam arrangement moved to public/assets/js/freshman-exam-runtime.js.
-// Grade scheduler moved to public/assets/js/grade-scheduler-runtime.js.
-// 初始化下拉框 (当切换到此 Tab 时调用)
 function updatePosterSelects() {
     const schSel = document.getElementById('posterSchoolSelect');
     const clsSel = document.getElementById('posterClassSelect');
@@ -15652,11 +14994,9 @@ function updatePosterSelects() {
         prevSchool
     );
 
-    // 填充科目 (保留总分选项)
     subSel.innerHTML = `<option value="total">🏆 总分光荣榜</option>${SUBJECTS.map(s => `<option value="${s}">📘 ${s}单科状元</option>`).join('')}`;
     subSel.value = (prevSubject === 'total' || SUBJECTS.includes(prevSubject)) ? prevSubject : 'total';
 
-    // 默认触发一次班级更新
     schSel.onchange = () => updatePosterClassSelect();
     updatePosterClassSelect(prevClass);
 }
@@ -15672,12 +15012,9 @@ function updatePosterClassSelect(preferredClass) {
 function setPosterTheme(themeName, btn) {
     const canvas = document.getElementById('poster-canvas');
     if (!canvas || !btn || !btn.parentNode) return;
-    // 移除旧主题
     canvas.classList.remove('theme-red', 'theme-blue', 'theme-tech');
-    // 添加新主题
     canvas.classList.add(`theme-${themeName}`);
 
-    // 更新按钮状态
     const btns = btn.parentNode.querySelectorAll('.thumb-btn');
     btns.forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -15697,27 +15034,21 @@ function renderPoster() {
     const schoolRecord = getAppSchoolRecord(sch);
     if (!sch || !schoolRecord || !Array.isArray(schoolRecord.students)) return alert("请先选择学校");
 
-    // 1. 筛选数据
     let students = schoolRecord.students;
     if (cls) students = students.filter(s => s.class === cls);
 
-    // 2. 排序数据
     const getScore = (s) => (sub === 'total') ? s.total : (s.scores[sub] || -1);
 
-    // 过滤掉没成绩的
     let list = students.filter(s => getScore(s) >= 0);
     list.sort((a, b) => getScore(b) - getScore(a));
 
-    // 截取前N名
     list = list.slice(0, limit);
 
-    // 3. 更新标题
     const titleEl = canvas.querySelector('.p-title');
     const subTitleEl = canvas.querySelector('.p-sub');
     if (titleEl) titleEl.innerText = customTitle;
     if (subTitleEl) subTitleEl.innerText = customSub || `${sch} ${cls || '全年级'} ${sub === 'total' ? '总分' : sub}前${limit}名`;
 
-    // 4. 渲染列表
     let html = '';
 
     if (list.length === 0) {
@@ -15725,9 +15056,7 @@ function renderPoster() {
     } else {
         list.forEach((s, i) => {
             const scoreVal = getScore(s);
-            // 仅在前3名显示特殊图标，其他显示数字
             let rankDisplay = i + 1;
-            // 为了通用性，这里用纯数字+CSS样式控制
 
             html += `
                 <div class="p-item">
@@ -15747,7 +15076,6 @@ function downloadPoster() {
     if (!canvasDiv) return;
     if (typeof html2canvas !== 'function') return alert("截图组件尚未加载完成，请刷新页面后重试。");
 
-    // 防止截图时文字被截断或错位，先临时锁定宽高
     const originalTransform = canvasDiv.style.transform;
     canvasDiv.style.transform = "none"; // 确保无缩放
 
@@ -15760,10 +15088,8 @@ function downloadPoster() {
             backgroundColor: null, // 透明背景
             logging: false
         }).then(canvas => {
-            // 恢复样式
             canvasDiv.style.transform = originalTransform;
 
-            // 下载
             const link = document.createElement('a');
             link.download = `光荣榜_${new Date().getTime()}.png`;
             link.href = canvas.toDataURL("image/png");
@@ -15777,7 +15103,6 @@ function downloadPoster() {
     }, 200);
 }
 
-// ================== 临界生精准推送逻辑 ==================
 function updateMpSchoolSelect() {
     const sel = document.getElementById('mpSchoolSelect');
     if (!sel) return;
@@ -15858,9 +15183,7 @@ function exportMarginalTasks() {
     XLSX.utils.book_append_sheet(wb, ws, "临界生辅导名单"); XLSX.writeFile(wb, "临界生精准辅导任务单.xlsx");
 }
 
-// --- 临界生闭环管理逻辑 ---
 
-// 1. 初始化下拉框 (页面加载或数据变动时调用)
 function MP_initSnapshotSelect() {
     const sel = document.getElementById('mp_snapshot_select');
     if (!sel) return;
@@ -15871,11 +15194,7 @@ function MP_initSnapshotSelect() {
     });
     sel.innerHTML = `<option value="">-- 选择历史任务 --</option>${snapshotOptions.join('')}`;
 }
-// Hook: 在 switchTab 切换到 marginal-push 时初始化
-// (由于无法直接修改 switchTab，我们在保存/删除后手动调用一次即可，首次加载需要用户点击一下或被动触发)
-// 为了方便，我们在保存后直接刷新UI
 
-// 2. 存档当前生成的临界生名单
 function MP_saveSnapshot() {
     if (!MP_DATA_CACHE || MP_DATA_CACHE.length === 0) return alert("当前没有生成的临界生名单，请先设置参数并点击'生成辅导单'");
 
@@ -15896,7 +15215,6 @@ function MP_saveSnapshot() {
     document.getElementById('mp_save_name').value = '';
 }
 
-// 3. 删除存档
 function MP_deleteSnapshot() {
     const key = document.getElementById('mp_snapshot_select').value;
     if (!key) return;
@@ -15907,7 +15225,6 @@ function MP_deleteSnapshot() {
     MP_initSnapshotSelect();
 }
 
-// 4. 计算转化率 (核心)
 function MP_analyzeConversion() {
     const key = document.getElementById('mp_snapshot_select').value;
     if (!key) return alert("请选择一个历史任务进行对比");
@@ -15916,12 +15233,9 @@ function MP_analyzeConversion() {
     const snapshot = MP_SNAPSHOTS[key];
     const oldList = snapshot.data;
 
-    // 统计容器: key = "School_Class_Subject_Category"
     const stats = {};
 
     oldList.forEach(task => {
-        // 唯一标识：班级+学科+类型 (如: 701_数学_拟及格)
-        // 尝试获取教师名
         const teacherKey = `${task.class}_${task.subject}`;
         const teacherName = TEACHER_MAP[teacherKey] || "未配置";
 
@@ -15937,8 +15251,6 @@ function MP_analyzeConversion() {
 
         stats[groupKey].total++;
 
-        // 在本次数据中寻找该学生
-        // 匹配逻辑：姓名 + 学校 (防止同名)
         const currStudent = SCHOOLS[task.school]?.students.find(s => s.name === task.name);
 
         if (currStudent && currStudent.scores[task.subject] !== undefined) {
@@ -15946,9 +15258,6 @@ function MP_analyzeConversion() {
             const thresholds = THRESHOLDS[task.subject]; // 本次考试的划线
 
             let isSuccess = false;
-            // 判断逻辑：
-            // 如果当初是“拟优”，现在是否达到“优秀线”？
-            // 如果当初是“拟合格”，现在是否达到“及格线”？
             if (task.category === '拟优' && currScore >= thresholds.exc) isSuccess = true;
             if (task.category === '拟合格' && currScore >= thresholds.pass) isSuccess = true;
 
@@ -15956,7 +15265,6 @@ function MP_analyzeConversion() {
         }
     });
 
-    // 渲染结果
     const tbody = document.querySelector('#mp_conversion_table tbody');
     let html = '';
     const sortedKeys = Object.keys(stats).sort();
@@ -15966,7 +15274,6 @@ function MP_analyzeConversion() {
         const rate = d.total > 0 ? (d.success / d.total) : 0;
         const ratePct = (rate * 100).toFixed(1) + '%';
 
-        // 评价徽章
         let badge = '';
         if (rate >= 0.8) badge = '<span class="badge" style="background:#16a34a">⭐⭐⭐ 卓越</span>';
         else if (rate >= 0.5) badge = '<span class="badge" style="background:#2563eb">⭐⭐ 良好</span>';
@@ -15990,10 +15297,8 @@ function MP_analyzeConversion() {
     document.getElementById('mp-conversion-result').classList.remove('hidden');
 }
 
-// 初始化一次
 window.addEventListener('load', MP_initSnapshotSelect);
 
-// ================== 考后座位微调 (联动版) ==================
 function updateSeatAdjSelects() {
     const schSel = document.getElementById('seatAdjSchoolSelect');
     const clsSel = document.getElementById('seatAdjClassSelect');
@@ -16001,7 +15306,6 @@ function updateSeatAdjSelects() {
     const prevSchool = schSel.value;
     const prevClass = clsSel.value;
 
-    // 初始化学校下拉框
     setSingleSelectOptions(
         schSel,
         Object.keys(SCHOOLS || {}).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true })),
@@ -16012,15 +15316,12 @@ function updateSeatAdjSelects() {
         setSingleSelectOptions(clsSel, getSchoolClassOptions(schSel.value), '--请选择班级--', preferredClass);
     };
 
-    // 学校变更 -> 更新班级
     schSel.onchange = () => {
         syncSeatAdjClasses('');
-        // 清空学生列表
         setCurrentContextStudentsState([]);
         updateConstraintWidgetsContext('adj'); // 立即更新一次，清空下拉框
     };
 
-    // 班级变更 -> 更新学生名单 (核心修复点)
     clsSel.onchange = () => {
         updateConstraintWidgetsContext('adj');
     };
@@ -16028,7 +15329,6 @@ function updateSeatAdjSelects() {
     updateConstraintWidgetsContext('adj');
 }
 function renderSeatGrid() {
-    // 仅在座位工作区已生成后才重新渲染（响应行列数输入变化）
     const workspace = document.getElementById('seat-adj-workspace');
     if (workspace && !workspace.classList.contains('hidden')) {
         generateSeatSuggestions();
@@ -16232,7 +15532,6 @@ function applyPrintSettings() {
     alert("✅ 打印配置已应用！\n\n请点击“调用打印机”按钮查看预览效果。\n提示：浏览器打印设置中请勾选“背景图形”以显示颜色。");
 }
 
-// ================== [新增] 智能标签输入组件逻辑 ==================
 function initTagWidget(wrapperId, hiddenInputId) {
     const wrapper = document.getElementById(wrapperId); if (!wrapper) return;
     const input = wrapper.querySelector('.tag-input-field'); const dropdown = wrapper.querySelector('.suggestion-dropdown');
@@ -16271,7 +15570,6 @@ function renderTagsUI(wrapperId, hiddenInputId) {
     });
 }
 function addConflictPair(type) {
-    // 根据类型获取对应的下拉框 ID
     const idA = type === 'adj' ? 'conflict_sel_a' : 'fb_conflict_sel_a';
     const idB = type === 'adj' ? 'conflict_sel_b' : 'fb_conflict_sel_b';
     const wrapperId = type === 'adj' ? 'widget_adj_conflict' : 'widget_fb_conflict';
@@ -16280,15 +15578,12 @@ function addConflictPair(type) {
     const selA = document.getElementById(idA);
     const selB = document.getElementById(idB);
 
-    // 校验选择
     if (!selA || !selB) return console.error("找不到下拉框元素");
     if (!selA.value || !selB.value) return alert("请先选择两个学生");
     if (selA.value === selB.value) return alert("不能选择同一个学生");
 
-    // 添加到标签栏
     addTagToWidget(wrapperId, hiddenId, `${selA.value}&${selB.value}`);
 
-    // 重置选项
     selA.value = "";
     selB.value = "";
 }
@@ -16296,22 +15591,17 @@ function addConflictPair(type) {
 function updateConstraintWidgetsContext(type) {
     let students = [];
 
-    // 1. 获取当前上下文的学生列表
     if (type === 'adj') {
-        // 考后排座模式：从学校和班级下拉框获取数据
         const sch = document.getElementById('seatAdjSchoolSelect').value;
         const cls = document.getElementById('seatAdjClassSelect').value;
 
         const schoolRecord = getAppSchoolRecord(sch);
         if (sch && cls && schoolRecord) {
-            // 过滤出该班学生
             students = (schoolRecord.students || []).filter(s => s.class === cls);
         }
 
-        // 更新全局上下文
         setCurrentContextStudentsState(students);
 
-        // 初始化其他标签组件
         ['diff', 'vision', 'psy', 'talk'].forEach(f => {
             initTagWidget(`widget_adj_${f}`, `adj_c_${f}`);
             renderTagsUI(`widget_adj_${f}`, `adj_c_${f}`);
@@ -16319,7 +15609,6 @@ function updateConstraintWidgetsContext(type) {
         renderTagsUI('widget_adj_conflict', 'adj_c_conflict');
 
     } else if (type === 'fb') {
-        // 新生分班模式：从当前选中的班级对象获取数据
         if (FB_CUR_CLASS_IDX !== -1 && FB_CLASSES[FB_CUR_CLASS_IDX]) {
             students = FB_CLASSES[FB_CUR_CLASS_IDX].students;
         }
@@ -16332,55 +15621,44 @@ function updateConstraintWidgetsContext(type) {
         });
         renderTagsUI('widget_fb_conflict', 'fb_c_conflict');
 
-        // ★★★ 新增：初始化“强行绑定”组件 ★★★
         renderTagsUI('widget_fb_bind', 'fb_c_bind');
     }
 
-    // 2. 生成下拉框选项 HTML (统一处理)
     let opts = '<option value="">--点击选择--</option>';
     if (students.length > 0) {
-        // 按姓名排序，方便查找
         students.sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'));
         opts += students.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
     } else {
         opts = '<option value="">(暂无学生数据)</option>';
     }
 
-    // 3. 将选项填充到对应的下拉框中
     if (type === 'fb') {
-        // 更新新生分班的“矛盾”下拉框
         const cA = document.getElementById('fb_conflict_sel_a');
         const cB = document.getElementById('fb_conflict_sel_b');
         if (cA && cB) { cA.innerHTML = opts; cB.innerHTML = opts; }
 
-        // ★★★ 新增：更新新生分班的“绑定”下拉框 ★★★
         const bA = document.getElementById('fb_bind_sel_a');
         const bB = document.getElementById('fb_bind_sel_b');
         if (bA && bB) { bA.innerHTML = opts; bB.innerHTML = opts; }
 
     } else if (type === 'adj') {
-        // 更新考后排座的“矛盾”下拉框
         const elA = document.getElementById('conflict_sel_a');
         const elB = document.getElementById('conflict_sel_b');
         if (elA && elB) { elA.innerHTML = opts; elB.innerHTML = opts; }
     }
 }
 
-// --- 1. 表格热力图功能 (智能识别横向/纵向 + 强制覆盖本校高亮) ---
 function toggleTableHeatmap(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
     const tables = container.querySelectorAll('table');
     if (!tables.length) return alert("请先生成表格");
 
-    // 切换状态标记
     const isHeatmapOn = container.classList.toggle('heatmap-mode');
-    // 判断是否为“乡镇横向对比表” (该表结构特殊：行是指标，列是学校，需行内对比)
     const isHorizontalMode = (containerId === 'horizontal-table');
 
     tables.forEach(table => {
         if (!isHeatmapOn) {
-            // 关闭：清除背景色 (使用 removeProperty 以确保清除 important 样式)
             table.querySelectorAll('td').forEach(td => td.style.removeProperty('background-color'));
             return;
         }
@@ -16388,14 +15666,11 @@ function toggleTableHeatmap(containerId) {
         const rows = Array.from(table.querySelectorAll('tbody tr'));
         if (rows.length === 0) return;
 
-        // 提取数值的辅助函数
         const getVal = (cell) => {
-            // 移除 %, +, (排名) 等符号，只取主数值
             const txt = cell.innerText.split('(')[0].replace(/[%+]/g, '').trim();
             return parseFloat(txt);
         };
 
-        // 颜色计算辅助函数
         const applyColorToGroup = (cells, isRankType) => {
             const values = cells.map(c => c.val);
             const max = Math.max(...values);
@@ -16405,10 +15680,8 @@ function toggleTableHeatmap(containerId) {
 
             cells.forEach(item => {
                 let ratio = (item.val - min) / range;
-                // 排名(Rank)类数据，数值越小越好(绿) -> ratio应大
                 if (isRankType) ratio = 1 - ratio;
 
-                // 仿Excel色阶：低=红, 中=黄, 高=绿
                 let r, g, b;
                 if (ratio < 0.5) { // 红 -> 黄
                     r = 255;
@@ -16420,14 +15693,11 @@ function toggleTableHeatmap(containerId) {
                     b = 200;
                 }
 
-                // [修改点] 使用 setProperty(..., 'important') 强制覆盖 .bg-highlight 的 !important 样式
-                // 这样热力图颜色会优先显示，但本校的文字颜色和边框依然保留
                 item.el.style.setProperty('background-color', `rgb(${r}, ${g}, ${b})`, 'important');
             });
         };
 
         if (isHorizontalMode) {
-            // === 模式 A：行内对比 (适用于乡镇横向对比表) ===
             rows.forEach(tr => {
                 let cells = [];
                 const label = tr.children[0].innerText;
@@ -16442,7 +15712,6 @@ function toggleTableHeatmap(containerId) {
             });
 
         } else {
-            // === 模式 B：列内对比 (适用于班级对比等) ===
             const colCount = rows[0].children.length;
             for (let c = 1; c < colCount; c++) {
                 let cells = [];
@@ -16460,7 +15729,6 @@ function toggleTableHeatmap(containerId) {
     });
 }
 
-// --- 2. 学科列筛选功能 ---
 let COL_FILTER_STATE = {}; // 存储选中状态
 
 function toggleColFilterMenu() {
@@ -16478,7 +15746,6 @@ function initColFilterUI() {
     if (popover.children.length > 0 && SUBJECTS.length === popover.children.length) return; // 已初始化
 
     popover.innerHTML = '';
-    // 默认全选
     SUBJECTS.forEach(sub => {
         if (COL_FILTER_STATE[sub] === undefined) COL_FILTER_STATE[sub] = true;
 
@@ -16488,7 +15755,6 @@ function initColFilterUI() {
         popover.appendChild(label);
     });
 
-    // 点击外部关闭
     document.addEventListener('click', function closeMenu(e) {
         if (!e.target.closest('#col-filter-popover') && !e.target.closest('#btn-col-filter')) {
             document.getElementById('col-filter-popover').style.display = 'none';
@@ -16502,16 +15768,10 @@ function applyColFilter(checkbox) {
     const isChecked = checkbox.checked;
     COL_FILTER_STATE[sub] = isChecked;
 
-    // 查找班级对比区域的所有表格
     const container = document.getElementById('class-comp-results');
     const tables = container.querySelectorAll('table');
 
-    // 逻辑：
-    // 1. 总分表格 ("两率一分"等) 不受影响，通常保留
-    // 2. 单科表格：如果该表格的标题（或上方的小标题）包含未选中的学科名，则隐藏整个表格块
 
-    // 针对当前系统的 DOM 结构：
-    // 每个学科是一个 <div id="anchor-class-数学">...<table>...</table></div>
 
     SUBJECTS.forEach(s => {
         const anchorDiv = document.getElementById(`anchor-class-${s}`);
@@ -16524,9 +15784,6 @@ function applyColFilter(checkbox) {
         }
     });
 
-    // 另外，如果是针对长表格（如学生明细表）的列筛选，逻辑如下（通用化）：
-    // 遍历所有 th，如果 th 文本包含未选中的学科，则隐藏该列
-    // 这里主要针对班级对比的单科卡片显隐，已满足“只看语数英”的需求。
 }
 
 function resetSystem() {
@@ -16544,22 +15801,17 @@ function resetSystem() {
         cancelButtonText: '取消'
     }).then(async (result) => {
         if (result.isConfirmed) {
-            // 1. 清空 IndexedDB 存储
             await DB.clear('autosave_backup');
 
-            // 2. 清空 LocalStorage (如果有相关的)
             localStorage.removeItem('FB_DATA_BACKUP');
             localStorage.removeItem('MP_SNAPSHOTS');
 
-            // 3. 刷新页面 -> 触发 onload -> 发现无数据 -> 显示模式选择
             location.reload();
         }
     });
 }
 
-// 拦截页面刷新或关闭，防止未保存的数据丢失
 window.addEventListener('beforeunload', (e) => {
-    // 如果 RAW_DATA 里有数据，说明老师已经导入过文件
     if (RAW_DATA.length > 0) {
         const msg = "系统检测到您有正在处理的成绩数据，刷新或关闭页面将导致配置（如教师名单）丢失。确定离开吗？";
         e.preventDefault();
@@ -16567,8 +15819,6 @@ window.addEventListener('beforeunload', (e) => {
         return msg;
     }
 });
-// Voice control moved to public/assets/js/voice-control-runtime.js.
-// School profile runtime moved to public/assets/js/school-profile-runtime.js.
 
 function bindModalInteractionGuards() {
     const modalIds = [
@@ -16611,7 +15861,6 @@ function bindModalInteractionGuards() {
 }
 
 window.bindModalInteractionGuards = bindModalInteractionGuards;
-// 页面加载完成后，强制移除所有 max-height 限制
 window.addEventListener('load', () => {
     const style = document.createElement('style');
     style.innerHTML = `
@@ -16682,7 +15931,6 @@ function updateWatermark() {
     if (layer.dataset.watermarkText === text) return;
     layer.dataset.watermarkText = text;
 
-    // SVG 背景水印
     const svg = `
             <svg xmlns="http://www.w3.org/2000/svg" width="320" height="220">
                 <style>
@@ -16714,7 +15962,6 @@ function syncWatermarkTimer() {
 document.addEventListener('visibilitychange', syncWatermarkTimer);
 syncWatermarkTimer();
 
-// === 届别管理 (Cohort) ===
 const COHORT_STORAGE_KEY = 'COHORT_LIST';
 
 function getCohortKey(cohortId) {
@@ -17278,7 +16525,6 @@ function parseYearFromInput(id) {
     return parseInt(val, 10);
 }
 
-// === 考试档案化与封存逻辑 ===
 function getPreferredExamName(meta, fallback = '') {
     const customName = String(meta?.name || '').trim();
     if (customName) return customName;
@@ -17381,7 +16627,6 @@ function refreshExamGradePreview() {
     if (gradeEl) gradeEl.textContent = meta.grade || '-';
 }
 
-// 🟢 [新增]：学期变化时自动加载教师任课数据
 function onExamTermChange() {
     const meta = getExamMetaFromUI();
     if (!meta.cohortId || !meta.year || !meta.term) {
@@ -17389,19 +16634,15 @@ function onExamTermChange() {
         return;
     }
 
-    // 构建学期ID：年份_学期_年级
     const termId = buildTeacherTermId(meta);
     const baseTerm = getTeacherTermBase(termId);
 
     appDebug(`📅 学期已选择：${termId}，准备加载教师任课数据...`);
 
-    // 更新学期ID到localStorage，供DataManager使用
     syncTeacherTermStorage(termId);
 
-    // 同步到教师管理界面的学期选择器
     const teacherTermSel = document.getElementById('dm-teacher-term-select');
     if (teacherTermSel) {
-        // 查找匹配的选项
         for (let i = 0; i < teacherTermSel.options.length; i++) {
             if (teacherTermSel.options[i].value === termId ||
                 teacherTermSel.options[i].value === baseTerm) {
@@ -17411,12 +16652,10 @@ function onExamTermChange() {
         }
     }
 
-    // 尝试从本地历史加载
     const db = CohortDB.ensure();
     const resolved = resolveTeacherHistoryEntry(termId);
 
     if (resolved) {
-        // 有本地数据
         syncTeacherTermStorage(resolved.key);
         setTeacherMap(JSON.parse(JSON.stringify(resolved.map || {})));
         setTeacherSchoolMap(JSON.parse(JSON.stringify(resolved.schoolMap || {})));
@@ -17426,7 +16665,6 @@ function onExamTermChange() {
         appDebug(`✅ 已从本地历史加载 ${resolved.key} 的任课表（${Object.keys(resolved.map || {}).length}条）`);
         if (window.UI) UI.toast(`✅ 已加载该学期任课表（${Object.keys(resolved.map || {}).length}条）`, 'success');
     } else {
-        // 本地无数据，尝试从云端加载
         appDebug(`⚠️ 本地无 ${baseTerm} 的任课数据，尝试从云端加载...`);
         setTeacherMap({});
         setTeacherSchoolMap({});
@@ -17434,7 +16672,6 @@ function onExamTermChange() {
             DataManager.renderTeachers();
         }
 
-        // Avoid forcing a cloud teacher sync during generic startup flows.
         if (!shouldAutoLoadTeacherData()) {
             appDebug('⏸️ 当前不在教师/数据模块，暂不自动拉取云端任课表');
         } else if (window.CloudManager && typeof CloudManager.loadTeachers === 'function') {
@@ -17454,7 +16691,6 @@ function onExamTermChange() {
         }
     }
 
-    // 刷新教师分析
     if (window.DataManager && typeof DataManager.refreshTeacherAnalysis === 'function') {
         DataManager.refreshTeacherAnalysis();
     }
@@ -17659,7 +16895,6 @@ async function archiveCurrentExam() {
     syncExamRuntimeState({ archiveMeta: meta });
     syncRuntimeStateToWindow();
 
-    // 保存真实考试快照，并同步整届工作区
     await saveCloudData({ mode: 'exam' });
     await saveCloudData({ mode: 'workspace' });
     createAutoSnapshot(getCurrentSnapshotPayload());
@@ -17701,7 +16936,6 @@ function applyArchiveLockUI() {
     if (typeof updateUploadWorkbenchStatus === 'function') updateUploadWorkbenchStatus();
 }
 
-// === Cohort DB & Smart Link ===
 const CohortDB = {
     ensure: function () {
         if (!COHORT_DB) {
@@ -18161,7 +17395,6 @@ const CohortGrowth = {
     }
 };
 
-// === 自动快照/回滚 ===
 function getCurrentSnapshotPayload() {
     window.getCurrentSnapshotPayload = getCurrentSnapshotPayload;
     const workspaceSnapshot = readWorkspaceSnapshot();
@@ -18353,7 +17586,6 @@ function restoreLatestAutoSnapshotDirect() {
 }
 
 function promptHistoryRecoveryIfEmpty() {
-    // Disabled by product requirement: no "历史考试为空" popup.
     return;
     const cohortId = CURRENT_COHORT_ID || readWorkspaceCohortId() || '';
     if (!cohortId) return;
@@ -18495,7 +17727,6 @@ function applySnapshotPayload(db) {
     closeBaseConfigGuardModalIfRecovered();
     flushDeferredGuardResume('snapshot');
 }
-// === 项目快照逻辑 ===
 function getConfigTransferRuntime() {
     if (window.ConfigTransferRuntime) return window.ConfigTransferRuntime;
     return {
@@ -18549,7 +17780,6 @@ function saveProjectSnapshot() {
         return alert("当前系统为空，无需备份！");
     }
 
-    // 获取当前界面上的输入框数值
     const elInd1 = document.getElementById('ind1');
     const elInd2 = document.getElementById('ind2');
     const freshmanExamState = window.FreshmanExamRuntime || null;
@@ -18561,7 +17791,6 @@ function saveProjectSnapshot() {
             desc: "全量备份(含指标参数)"
         },
         db: {
-            // 核心变量
             CONFIG, MY_SCHOOL, RAW_DATA, SCHOOLS, SUBJECTS, THRESHOLDS,
             TARGETS, // 👈 确保这里包含目标人数对象
             TEACHER_MAP, TEACHER_STATS, TEACHER_TOWNSHIP_RANKINGS, TEACHER_STAMP_BASE64,
@@ -18584,7 +17813,6 @@ function saveProjectSnapshot() {
             AID_GROUPS_CACHE, HISTORY_ARCHIVE, ROLLER_COASTER_STUDENTS,
             MP_SNAPSHOTS,
 
-            // 🟢 关键修改：保存输入框的具体数值
             INDICATOR_PARAMS: {
                 ind1: elInd1 ? elInd1.value : '',
                 ind2: elInd2 ? elInd2.value : ''
@@ -18623,21 +17851,17 @@ async function loadProjectSnapshot(input) {
         const transfer = getConfigTransferRuntime();
         const snapshot = await transfer.readJson(file);
 
-        // 1. 校验版本结构
         if (!snapshot.meta || (!snapshot.data && !snapshot.db)) {
             throw new Error("文件格式不兼容或已损坏");
         }
 
-        // 兼容旧版备份 (旧版数据在 .data，新版在 .db)
         const db = snapshot.db || snapshot.data || {};
         const settings = snapshot.settings || {};
 
-        // 2. 恢复 LocalStorage 配置
         if (settings.skin) localStorage.setItem('app_skin_config', settings.skin);
         if (settings.themeDark) localStorage.setItem('theme-dark', settings.themeDark);
         if (settings.hasSeenTour) localStorage.setItem('hasSeenV3Tour', settings.hasSeenTour);
 
-        // 3. 恢复 IndexedDB 数据 (关键步骤：写入后刷新页面)
         if (Object.keys(db).length > 0) {
             /* 👇👇👇 🟢 关键：恢复全局变量 TARGETS (防止刷新前点击无效) 🟢 👇👇👇 */
             setTargetsState(db.TARGETS || {});
@@ -18660,7 +17884,6 @@ async function loadProjectSnapshot(input) {
                 FB_CLASSES: db.FB_CLASSES || [],
                 CONFIG: db.CONFIG || {},
                 MY_SCHOOL: db.MY_SCHOOL || "",
-                // 其他字段...
                 TEACHER_TOWNSHIP_RANKINGS: db.TEACHER_TOWNSHIP_RANKINGS || {},
                 PREV_DATA: db.PREV_DATA || [],
                 PROGRESS_CACHE: db.PROGRESS_CACHE || [],
@@ -18682,7 +17905,6 @@ async function loadProjectSnapshot(input) {
                 ROLLER_COASTER_STUDENTS: db.ROLLER_COASTER_STUDENTS || []
             });
 
-            // 恢复临界生快照到 LocalStorage
             if (db.MP_SNAPSHOTS) {
                 localStorage.setItem('MP_SNAPSHOTS', JSON.stringify(db.MP_SNAPSHOTS));
             }
@@ -18690,12 +17912,10 @@ async function loadProjectSnapshot(input) {
 
         if (typeof logAction === 'function') logAction('文件恢复', `已从 ${file.name || '备份文件'} 恢复项目`);
 
-        // 标记强制恢复
         localStorage.setItem('SYS_FORCE_RESTORE', 'true');
 
         UI.loading(false);
 
-        // 4. 成功提示并刷新
         Swal.fire({
             title: '恢复成功',
             text: '项目已从文件恢复，系统即将重启以应用更改...',
@@ -18722,9 +17942,7 @@ function openTargetEditor() {
     const tbody = document.querySelector('#target-editor-table tbody');
     tbody.innerHTML = '';
 
-    // 遍历所有学校，生成输入框
     const targetRowsHtml = Object.keys(SCHOOLS).map(sch => {
-        // 获取现有目标，如果没有则默认为 0
         const t = getTargetConfigBySchool(sch).value || { t1: 0, t2: 0 };
 
         return `
@@ -18765,7 +17983,6 @@ function saveTargetEditor() {
 
     UI.toast(`✅ 已更新 ${updateCount} 所学校的目标设定`, "success");
 
-    // 自动触发一次计算，让用户看到变化
     const { r1, r2 } = getIndicatorRankParams();
     if (r1 && r2) {
         calcIndicators();
@@ -18774,8 +17991,6 @@ function saveTargetEditor() {
     }
 }
 
-// === 全局搜索 (Spotlight) 逻辑 ===
-// 快捷键绑定
 document.addEventListener('keydown', function (e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
@@ -18877,13 +18092,11 @@ document.addEventListener('keydown', function (e) {
     btn.click();
 });
 
-// 辅助：更新 Spotlight 选中样式
 function updateSpotlightSelection(items, index) {
     items.forEach(el => el.classList.remove('active'));
     if (items[index]) {
         items[index].classList.add('active');
         items[index].scrollIntoView({ block: 'nearest' }); // 确保可见
-        // 样式补丁：确保 .active 有高亮 (配合 CSS)
         items[index].style.backgroundColor = 'var(--primary-light)';
     }
 }
@@ -18893,7 +18106,6 @@ let fuseInstance = null;
 function initFuse() {
     if (!window.Fuse || RAW_DATA.length === 0) return;
 
-    // 配置 Fuse 选项
     const options = {
         keys: ['name', 'id', 'class', 'school'], // 搜索字段
         threshold: 0.3, // 模糊阈值：0.0完全匹配，1.0匹配任何。0.3适合人名容错
@@ -18911,7 +18123,6 @@ function doSpotlightSearch() {
     if (!val) return;
     const spotlightRowsHtml = [];
 
-    // 1. 搜功能模块 (保持原有逻辑，简单包含匹配即可)
     const modules = [
         { name: "新生分班", id: "freshman-simulator" },
         { name: "考场编排", id: "exam-arranger" },
@@ -18934,19 +18145,14 @@ function doSpotlightSearch() {
         }
     });
 
-    // 2. 搜学生 (使用 Fuse.js 模糊搜索)
     let matches = [];
 
-    // 如果 Fuse 还没初始化或者数据更新了，重新初始化
     if (!fuseInstance && RAW_DATA.length > 0) initFuse();
 
     if (fuseInstance) {
-        // 使用 Fuse 搜索
         const results = fuseInstance.search(val);
-        // Fuse 返回格式是 [{item: ...}, ...]
         matches = results.map(r => r.item).slice(0, 8); // 取前8个
     } else {
-        // 降级方案：原有简单搜索
         matches = RAW_DATA.filter(s => s.name.includes(val) || String(s.id).includes(val)).slice(0, 5);
     }
 
@@ -18954,7 +18160,6 @@ function doSpotlightSearch() {
         spotlightRowsHtml.push(`<div style="padding:10px; text-align:center; color:#999;">无匹配结果</div>`);
     } else {
         matches.forEach(s => {
-            // 高亮匹配文字逻辑略复杂，这里直接显示结果
             spotlightRowsHtml.push(`
                     <div class="spotlight-item" onclick="jumpToStudent(${jsStringLiteral(s.name)}, ${jsStringLiteral(s.school)}, ${jsStringLiteral(s.class)})">
                         <span>👤 ${s.name} <small style="color:#666">(${s.school} ${s.class})</small></span>
@@ -18964,7 +18169,6 @@ function doSpotlightSearch() {
     }
     resDiv.innerHTML = spotlightRowsHtml.join('');
 }
-// Module help runtime moved to public/assets/js/module-help-runtime.js.
 
 function ensureAuthCurrentUserFromSession() {
     let sessionUser = null;
@@ -19016,7 +18220,6 @@ function updateRoleHint() {
         guest: '访客'
     };
 
-    // 🆕 显示所有角色
     if (user && typeof RoleManager !== 'undefined') {
         const roles = RoleManager.getUserRoles(user);
         if (roles.length > 1) {
@@ -19111,7 +18314,6 @@ async function runAutoDiagnosis() {
 }
 
 async function loadDemoData() {
-    // 🎭 全方位演示数据引擎 - 营造“系统已就绪”的沉浸式体验
     const demoSchool = DEFAULT_MY_SCHOOL_NAME;
     const subjects = ['语文', '数学', '英语', '物理', '化学', '生物', '政治', '历史', '地理'];
     const cohorts = ['2022', '2023', '2024'];
@@ -19139,7 +18341,6 @@ async function loadDemoData() {
         return f + g1 + g2;
     }
 
-    // 为每个届别生成班级和学生
     ['9', '8', '7'].forEach((gradeLevel, gIdx) => {
         const cohort = cohorts[gIdx];
         const classCount = 4;
@@ -19147,13 +18348,11 @@ async function loadDemoData() {
         for (let cNum = 1; cNum <= classCount; cNum++) {
             const cls = `${gradeLevel}.${cNum}`;
 
-            // 为每个学科随机分配教师
             subjects.forEach(sub => {
                 const tName = teachers[Math.floor(Math.random() * teachers.length)];
                 teacherAssignments[`${cls}_${sub}`] = tName;
             });
 
-            // 生成学生
             for (let i = 0; i < 40; i++) {
                 const stu = {
                     id: `S${String(studentId).padStart(5, '0')}`,
@@ -19479,12 +18678,10 @@ function runDataDoctor() {
     let warnings = [];
     let stats = { total: RAW_DATA.length, zeroCount: 0, highCount: 0, emptyFieldCount: 0 };
 
-    // 1. 基础字段校验 + 收集重复信息
     const nameMap = {};
     RAW_DATA.forEach((s, idx) => {
         const rowNo = s.__row || (idx + 2); // 默认第2行开始是数据
 
-        // 必填字段检查
         if (!s.school || !s.class || !s.name) {
             stats.emptyFieldCount++;
             issues.push(`🔴 <strong>关键字段缺失：</strong> 行 ${rowNo} 学校/班级/姓名为空`);
@@ -19496,7 +18693,6 @@ function runDataDoctor() {
         nameMap[key].push(rowNo);
     });
 
-    // 1.1 同班同名检测 (致命错误)
     Object.entries(nameMap).forEach(([key, rows]) => {
         if (rows.length > 1) {
             const [school, cls, name] = key.split('_');
@@ -19504,7 +18700,6 @@ function runDataDoctor() {
         }
     });
 
-    // 2. 检查异常分值 (高分/负分)
     RAW_DATA.forEach((s, idx) => {
         const rowNo = s.__row || (idx + 2);
         if (typeof s.total === 'number' && s.total <= 0) stats.zeroCount++;
@@ -19529,9 +18724,7 @@ function runDataDoctor() {
         });
     });
 
-    // 3. 检查班级人数极值 (过大或过小)
     Object.values(SCHOOLS).forEach(sch => {
-        // 简单统计该校班级人数
         const clsCounts = {};
         sch.students.forEach(s => clsCounts[s.class] = (clsCounts[s.class] || 0) + 1);
         Object.entries(clsCounts).forEach(([cls, count]) => {
@@ -19540,7 +18733,6 @@ function runDataDoctor() {
         });
     });
 
-    // 4. 生成报告 HTML
     let reportHtml = `<div style="text-align:left; max-height:400px; overflow-y:auto;">`;
 
     if (issues.length === 0 && warnings.length === 0) {
@@ -19583,7 +18775,6 @@ function runDataDoctor() {
 }
 
 window.addEventListener('load', () => {
-    // 延迟执行，确保 DOM 已经完全渲染
     setTimeout(() => {
         const modalIds = [
             'issue-submit-modal',   // 成绩核查申诉弹窗
@@ -19594,7 +18785,6 @@ window.addEventListener('load', () => {
 
         modalIds.forEach(id => {
             const el = document.getElementById(id);
-            // 如果元素存在，且它不是 body 的直接子元素，就移动它
             if (el && el.parentNode !== document.body) {
                 appDebug(`🔧 [AutoFix] 正在修复弹窗 DOM 位置: ${id}`);
                 document.body.appendChild(el); // 移动到 body 末尾
@@ -19607,7 +18797,6 @@ window.DrillSystem = DrillSystem;
 window.CohortGrowth = CohortGrowth;
 if (typeof window.wrapXlsxRuntimeExports === 'function') window.wrapXlsxRuntimeExports();
 
-// 🚀 [AutoFix] Demo Mode Trigger
 (function autoTriggerDemoMode() {
     const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
     const hasData = Array.isArray(window.RAW_DATA) && window.RAW_DATA.length > 0;

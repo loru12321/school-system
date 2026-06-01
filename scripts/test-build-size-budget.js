@@ -34,7 +34,8 @@ const budgets = {
     // Boot auth now includes login cohort handoff before core modules load.
     publicBootJs: 133_000,
     publicAppDownloadJs: 76_000,
-    distAppJs: 560_000,
+    // Current minified app bundle baseline after runtime splits and cache guards.
+    distAppJs: 565_000,
     distAppDownloadJs: 45_000,
     distReportRenderJs: 68_000,
     distTeacherAnalysisJs: 72_000

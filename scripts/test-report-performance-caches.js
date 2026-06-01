@@ -112,7 +112,7 @@ if (!historySource || historySource.includes('getReportSubjectSortedScores(')) {
 ].forEach((token) => assertContains(historySource, token, 'public/assets/js/app.js'));
 
 const previousRecordStart = app.indexOf('function findPreviousRecord(student)');
-const previousRecordEnd = app.indexOf('// 🟢 [Bug #5 新增] 获取学生在所有历史考试中的记录', previousRecordStart);
+const previousRecordEnd = app.indexOf('function getStudentExamHistory(student)', previousRecordStart);
 const previousRecordSource = previousRecordStart >= 0 && previousRecordEnd > previousRecordStart
     ? app.slice(previousRecordStart, previousRecordEnd)
     : '';
@@ -148,8 +148,20 @@ if (!cloudHistorySource || cloudHistorySource.includes('computeExamDataFingerpri
     'fetchStudentExamHistory: async function (student, options = {})',
     'const requestedExamIds = Array.from(new Set(',
     'keyIn: requestedExamIds',
-    'rankCounty: match.ranks?.total?.county'
+    "const rankCounty = match.ranks?.total?.county ?? match.rankCounty ?? match.countyRank ?? getCountyRankFallback(payload, match, 'total');",
+    'getCountyRankFallback',
+    'countyRankFallbackCache',
+    'subjectCache.set(subject, rankByScore);',
+    'subjectRanks[subject] = { ...ranks, county: fallback };',
+    'rankCounty,'
 ].forEach((token) => assertContains(cloudHistorySource, token, cloudFile));
+
+[
+    'totalRanks.county ?? row?.countyRank ?? row?.rankCounty ?? null',
+    'const tuple = [ranks.class ?? null, ranks.school ?? null, ranks.township ?? null, ranks.county ?? null];',
+    'if (totalRanks[3] !== null && totalRanks[3] !== undefined) {',
+    'if (tuple[3] !== null && tuple[3] !== undefined) rankMap.county = tuple[3];'
+].forEach((token) => assertContains(cloud, token, cloudFile));
 
 [
     'ReportChartPerfCache',
@@ -181,5 +193,6 @@ console.log(JSON.stringify({
     appReportCacheTokens: 10,
     compareExamListCacheTokens: 5,
     reportChartCacheTokens: 5,
-    countyDomSkipTokens: 3
+    countyDomSkipTokens: 3,
+    cloudCountyRankTokens: 10
 }, null, 2));

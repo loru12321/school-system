@@ -493,7 +493,7 @@
         const subjects = collectPackedSubjects(list, subjectHint);
         const reservedKeys = new Set([
             'school', 'class', 'name', 'id', 'total', 'scores', 'ranks',
-            'uuid', 'status', 'townRank', 'schoolRank', 'classRank'
+            'uuid', 'status', 'townRank', 'schoolRank', 'classRank', 'countyRank', 'rankCounty'
         ]);
 
         return {
@@ -509,7 +509,8 @@
                 const totalRankTuple = [
                     totalRanks.class ?? row?.classRank ?? null,
                     totalRanks.school ?? row?.schoolRank ?? null,
-                    totalRanks.township ?? row?.townRank ?? null
+                    totalRanks.township ?? row?.townRank ?? null,
+                    totalRanks.county ?? row?.countyRank ?? row?.rankCounty ?? null
                 ];
 
                 return [
@@ -528,7 +529,7 @@
                     subjects.map((subject) => {
                         const ranks = row?.ranks?.[subject];
                         if (!ranks || typeof ranks !== 'object') return null;
-                        const tuple = [ranks.class ?? null, ranks.school ?? null, ranks.township ?? null];
+                        const tuple = [ranks.class ?? null, ranks.school ?? null, ranks.township ?? null, ranks.county ?? null];
                         return tuple.some(value => value != null) ? tuple : null;
                     }),
                     row?.uuid ?? null,
@@ -584,6 +585,10 @@
                     totalRankMap.township = totalRanks[2];
                     row.townRank = totalRanks[2];
                 }
+                if (totalRanks[3] !== null && totalRanks[3] !== undefined) {
+                    totalRankMap.county = totalRanks[3];
+                    row.countyRank = totalRanks[3];
+                }
                 if (Object.keys(totalRankMap).length) row.ranks.total = totalRankMap;
             }
 
@@ -595,6 +600,7 @@
                 if (tuple[0] !== null && tuple[0] !== undefined) rankMap.class = tuple[0];
                 if (tuple[1] !== null && tuple[1] !== undefined) rankMap.school = tuple[1];
                 if (tuple[2] !== null && tuple[2] !== undefined) rankMap.township = tuple[2];
+                if (tuple[3] !== null && tuple[3] !== undefined) rankMap.county = tuple[3];
                 if (Object.keys(rankMap).length) row.ranks[subject] = rankMap;
             });
 
@@ -1520,11 +1526,54 @@
                 const rowCount = Array.isArray(rows) ? rows.length : 0;
                 return [String(examId || '').trim(), String(updatedAt || '').trim(), rowCount].join(':');
             };
+            const countyRankFallbackCache = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
+            const getCountyRankFallback = (payload, match, subject = 'total') => {
+                const rows = payload?.RAW_DATA || payload?.data || [];
+                if (!Array.isArray(rows) || !rows.length || !match) return undefined;
+                const readValue = (row) => {
+                    if (subject === 'total') return Number(row?.total);
+                    const value = row?.scores && Object.prototype.hasOwnProperty.call(row.scores, subject)
+                        ? Number(row.scores[subject])
+                        : NaN;
+                    return value;
+                };
+                const targetValue = readValue(match);
+                if (!Number.isFinite(targetValue)) return undefined;
+                let subjectCache = null;
+                if (countyRankFallbackCache && payload && typeof payload === 'object') {
+                    subjectCache = countyRankFallbackCache.get(payload);
+                    if (!subjectCache) {
+                        subjectCache = new Map();
+                        countyRankFallbackCache.set(payload, subjectCache);
+                    }
+                    const cachedRank = subjectCache.get(subject);
+                    if (cachedRank) return cachedRank.get(targetValue);
+                }
+                const rankByScore = new Map();
+                rows
+                    .map(readValue)
+                    .filter(value => Number.isFinite(value))
+                    .sort((left, right) => right - left)
+                    .forEach((value, index) => {
+                        if (!rankByScore.has(value)) rankByScore.set(value, index + 1);
+                    });
+                if (subjectCache) subjectCache.set(subject, rankByScore);
+                return rankByScore.get(targetValue);
+            };
             const buildHistoryEntry = (examId, payload, updatedAt) => {
                 const match = findHistoryMatch(payload);
                 if (!match) return null;
                 const keyParts = String(examId || '').split('_');
                 const examLabel = payload?.examLabel || (keyParts.length >= 5 ? keyParts.slice(4).join('_') : examId);
+                const subjectRanks = match.ranks || {};
+                Object.keys(match.scores || {}).forEach((subject) => {
+                    const ranks = subjectRanks[subject] || {};
+                    if (ranks.county === undefined || ranks.county === null || ranks.county === '') {
+                        const fallback = getCountyRankFallback(payload, match, subject);
+                        if (fallback !== undefined) subjectRanks[subject] = { ...ranks, county: fallback };
+                    }
+                });
+                const rankCounty = match.ranks?.total?.county ?? match.rankCounty ?? match.countyRank ?? getCountyRankFallback(payload, match, 'total');
                 return {
                     // Use full key as canonical ID to avoid "same exam" false positives.
                     examId,
@@ -1535,8 +1584,8 @@
                     rankClass: match.ranks?.total?.class,
                     rankSchool: match.ranks?.total?.school,
                     rankTown: match.ranks?.total?.township,
-                    rankCounty: match.ranks?.total?.county ?? match.rankCounty ?? match.countyRank,
-                    subjectRanks: match.ranks || {},
+                    rankCounty,
+                    subjectRanks,
                     scores: match.scores,
                     updatedAt
                 };
