@@ -1451,17 +1451,26 @@
             return this._teacherLoadTasks[requestKey];
         },
 
-        fetchStudentExamHistory: async function (student) {
+        fetchStudentExamHistory: async function (student, options = {}) {
             if (!student || !student.name) return { success: false, message: '学生信息无效' };
 
             const cohortId = normalizeCohortId(student.cohort || getCurrentCohortId());
             if (!cohortId) return { success: false, message: '无法确定学生届别' };
+            const requestedExamIds = Array.from(new Set(
+                (Array.isArray(options?.examIds) ? options.examIds : [])
+                    .map(item => String(item || '').trim())
+                    .filter(Boolean)
+                    .filter(key => !isIgnoredExamKey(key))
+                    .filter(key => !isVirtualCohortSnapshotKey(key))
+            ));
+            const requestedSignature = requestedExamIds.slice().sort().join(',');
             const historyKey = [
                 cohortId,
                 String(student.school || '').trim(),
                 String(student.class || '').trim(),
                 String(student.id || student.examNo || '').trim(),
-                String(student.name || '').trim()
+                String(student.name || '').trim(),
+                requestedSignature
             ].join('|');
             this._studentHistoryTasks = this._studentHistoryTasks || {};
             this._studentHistoryCache = this._studentHistoryCache || {};
@@ -1526,10 +1535,20 @@
                     rankClass: match.ranks?.total?.class,
                     rankSchool: match.ranks?.total?.school,
                     rankTown: match.ranks?.total?.township,
+                    rankCounty: match.ranks?.total?.county ?? match.rankCounty ?? match.countyRank,
                     subjectRanks: match.ranks || {},
                     scores: match.scores,
                     updatedAt
                 };
+            };
+            const shouldUseHistoryEntry = (examId) => {
+                if (!requestedExamIds.length) return true;
+                return requestedExamIds.some(requestedId => {
+                    if (typeof window.isExamKeyEquivalentForCompare === 'function') {
+                        return window.isExamKeyEquivalentForCompare(examId, requestedId);
+                    }
+                    return String(examId || '').trim() === requestedId;
+                });
             };
             const collectLocalHistory = () => {
                 const db = WorkspaceState && typeof WorkspaceState.getCohortDb === 'function'
@@ -1541,6 +1560,7 @@
                     .filter(([examId, exam]) => (
                         !isIgnoredExamKey(examId) &&
                         !isVirtualCohortSnapshotKey(examId) &&
+                        shouldUseHistoryEntry(examId) &&
                         normalizeCohortId(exam?.cohort || exam?.meta?.cohort || examId) === cohortId
                     ))
                     .sort((left, right) => {
@@ -1563,15 +1583,26 @@
             this._studentHistoryTasks[historyKey] = (async () => {
                 if (!(await this.ensureClientReady())) return { success: false, message: '云端未连接' };
                 setCloudStatus('syncing', '拉取历史');
+                const queryOptions = requestedExamIds.length
+                    ? {
+                        select: 'key,content,updated_at',
+                        keyIn: requestedExamIds,
+                        order: 'updated_at',
+                        ascending: true,
+                        limit: requestedExamIds.length
+                    }
+                    : {
+                        select: 'key,content,updated_at',
+                        keyLike: `${cohortId}%`,
+                        order: 'updated_at',
+                        ascending: true
+                    };
                 const { data, error } = await selectSystemData({
-                    select: 'key,content,updated_at',
-                    keyLike: `${cohortId}%`,
-                    order: 'updated_at',
-                    ascending: true
+                    ...queryOptions
                 });
                 if (error) throw error;
 
-                const rows = (data || []).filter(row => !isIgnoredExamKey(row.key));
+                const rows = (data || []).filter(row => !isIgnoredExamKey(row.key) && shouldUseHistoryEntry(row.key));
                 const history = [];
 
                 for (const row of rows) {

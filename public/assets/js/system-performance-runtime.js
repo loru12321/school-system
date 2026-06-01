@@ -237,12 +237,16 @@
         }
         if (method === 'fetchStudentExamHistory') {
             const student = list[0] && typeof list[0] === 'object' ? list[0] : {};
+            const options = list[1] && typeof list[1] === 'object' ? list[1] : {};
             return [{
                 name: student.name || '',
                 school: student.school || '',
                 class: student.class || '',
                 examNo: student.examNo || student.id || '',
                 cohort: student.cohort || ''
+            }, {
+                examIds: Array.isArray(options.examIds) ? options.examIds.map(String).sort() : [],
+                currentExamId: options.currentExamId || ''
             }];
         }
         return list;

@@ -45,7 +45,10 @@ const pkg = JSON.parse(read(packageFile));
     'hasUsablePrevHistoryStudent ? null : getCachedPreviousRecord',
     'cacheableReportHtml',
     'ReportRenderPerfCache.html.set',
-    "rankValue !== undefined && rankValue !== null && rankValue !== '' && rankValue !== '-'"
+    "rankValue !== undefined && rankValue !== null && rankValue !== '' && rankValue !== '-'",
+    'readHistoricalRankValue',
+    'if (showCountyRank) thHtml += `<th>县排</th>`;',
+    "showCountyRank ? renderResponsiveTableCell('全县排名', cRank"
 ].forEach((token) => assertContains(reportRender, token, reportRenderFile));
 
 [
@@ -128,6 +131,11 @@ if (!historySource || historySource.includes('computeExamDataFingerprint(examDat
     "return [String(examId || '').trim(), String(updatedAt || '').trim(), rowCount].join(':');"
 ].forEach((token) => assertContains(cloud, token, cloudFile));
 
+[
+    'county: h.rankCounty || h.subjectRanks?.total?.county ||',
+    'examIds: selectedReportExamIds'
+].forEach((token) => assertContains(app, token, 'public/assets/js/app.js'));
+
 const cloudHistoryStart = cloud.indexOf('fetchStudentExamHistory: async function');
 const cloudHistoryEnd = cloud.indexOf('// 届别考试补拉运行时', cloudHistoryStart);
 const cloudHistorySource = cloudHistoryStart >= 0 && cloudHistoryEnd > cloudHistoryStart
@@ -136,6 +144,12 @@ const cloudHistorySource = cloudHistoryStart >= 0 && cloudHistoryEnd > cloudHist
 if (!cloudHistorySource || cloudHistorySource.includes('computeExamDataFingerprint(')) {
     fail('student report cloud history fetch should not compute full exam fingerprints during query hydration');
 }
+[
+    'fetchStudentExamHistory: async function (student, options = {})',
+    'const requestedExamIds = Array.from(new Set(',
+    'keyIn: requestedExamIds',
+    'rankCounty: match.ranks?.total?.county'
+].forEach((token) => assertContains(cloudHistorySource, token, cloudFile));
 
 [
     'ReportChartPerfCache',

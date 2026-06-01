@@ -13096,18 +13096,20 @@ function applyCloudStudentHistoryToPrevData(stu, historyRes, selectedReportExamI
             total: Number(h.total) || 0,
             scores: h.scores || {},
             ranks: Object.assign({
-                total: {
-                    class: h.rankClass || '-',
-                    school: h.rankSchool || '-',
-                    township: h.rankTown || '-'
-                }
-            }, Object.fromEntries(
-                Object.entries(h.subjectRanks || {}).map(([sub, ranks]) => [sub, {
-                    class: ranks?.class ?? '-',
-                    school: ranks?.school ?? '-',
-                    township: ranks?.township ?? '-'
-                }])
-            )),
+                    total: {
+                        class: h.rankClass || '-',
+                        school: h.rankSchool || '-',
+                        township: h.rankTown || '-',
+                        county: h.rankCounty || h.subjectRanks?.total?.county || '-'
+                    }
+                }, Object.fromEntries(
+                    Object.entries(h.subjectRanks || {}).map(([sub, ranks]) => [sub, {
+                        class: ranks?.class ?? '-',
+                        school: ranks?.school ?? '-',
+                        township: ranks?.township ?? '-',
+                        county: ranks?.county ?? '-'
+                    }])
+                )),
             updatedAt: h.updatedAt || new Date().toISOString()
         },
         percentiles: h.percentiles || {}
@@ -13199,7 +13201,10 @@ function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, eff
             );
             if (!ready || token !== __reportQueryToken) return;
             if (window.UI) UI.toast('正在后台同步历史成绩...', 'info');
-            const historyRes = await window.CloudManager.fetchStudentExamHistory(stu);
+            const historyRes = await window.CloudManager.fetchStudentExamHistory(stu, {
+                examIds: selectedReportExamIds,
+                currentExamId: effectiveCurrentExamId
+            });
             const loadedCount = applyCloudStudentHistoryToPrevData(stu, historyRes, selectedReportExamIds, effectiveCurrentExamId);
             if (!loadedCount || token !== __reportQueryToken) return;
             if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
