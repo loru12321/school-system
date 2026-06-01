@@ -3722,7 +3722,8 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
                             style="max-height:100px; overflow-y:auto; background:white; border:1px solid #cbd5e1; border-radius:4px; padding:5px; font-size:12px;"><div style="color:#999; text-align:center; padding:10px;">暂无数据，请先上传成绩</div></div><div style="text-align:right; margin-top:2px;"><a href="javascript:void(0)" onclick="Auth.toggleAllSchools(true)"
                                 style="font-size:11px; color:var(--primary);">全选</a> /
                             <a href="javascript:void(0)" onclick="Auth.toggleAllSchools(false)"
-                                style="font-size:11px; color:var(--primary);">清空</a></div></div><button class="btn btn-primary" onclick="Auth.generateAccounts()" style="width:100%;"><i class="ti ti-user-plus"></i> 一键生成所有账号 (教师+家长)
+                                style="font-size:11px; color:var(--primary);">清空</a></div></div><button class="btn btn-primary" onclick="Auth.generateTeacherAccounts()" style="width:100%;"><i class="ti ti-user-plus"></i> 一键生成所有账号 (教师)
+                    </button><button class="btn btn-primary" onclick="Auth.generateParentAccounts()" style="width:100%; margin-top:5px;"><i class="ti ti-users"></i> 一键生成所有账号 (家长)
                     </button><button class="btn btn-green" onclick="Auth.exportAccounts()"
                         style="width:100%; background:#059669; color:white;"><i class="ti ti-file-export"></i> 导出账号密码表 (Excel)
                     </button><button class="btn btn-blue" onclick="Auth.syncBatchToCloud()"

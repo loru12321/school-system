@@ -4192,6 +4192,11 @@ var Auth = {
     },
 
     generateRecoverableAccountsForSchools: function (selectedSchools, options = {}) {
+        const accountType = options.accountType === 'teacher'
+            ? 'teacher'
+            : (options.accountType === 'parent' ? 'parent' : 'all');
+        const shouldGenerateParents = accountType === 'all' || accountType === 'parent';
+        const shouldGenerateTeachers = accountType === 'all' || accountType === 'teacher';
         const schools = Array.isArray(selectedSchools)
             ? Array.from(new Set(selectedSchools.map(item => String(item || '').trim()).filter(Boolean)))
             : [];
@@ -4207,57 +4212,61 @@ var Auth = {
         let countTeacherNew = 0;
 
         const targetStudents = RAW_DATA.filter(s => schools.includes(s.school));
-        targetStudents.forEach(s => {
-            const existIdx = this.db.parents.findIndex(p => p.name === s.name && p.class === s.class);
-            const newAccount = {
-                name: s.name,
-                class: s.class,
-                pass: createManagedTemporaryPassword('parent'),
-                password_mode: 'temporary',
-                must_change_password: true
-            };
-            if (existIdx >= 0) {
-                this.db.parents[existIdx] = newAccount;
-                countParentUpd++;
-            } else {
-                this.db.parents.push(newAccount);
-                countParentNew++;
-            }
-        });
+        if (shouldGenerateParents) {
+            targetStudents.forEach(s => {
+                const existIdx = this.db.parents.findIndex(p => p.name === s.name && p.class === s.class);
+                const newAccount = {
+                    name: s.name,
+                    class: s.class,
+                    pass: createManagedTemporaryPassword('parent'),
+                    password_mode: 'temporary',
+                    must_change_password: true
+                };
+                if (existIdx >= 0) {
+                    this.db.parents[existIdx] = newAccount;
+                    countParentUpd++;
+                } else {
+                    this.db.parents.push(newAccount);
+                    countParentNew++;
+                }
+            });
+        }
 
         const targetClasses = new Set();
         targetStudents.forEach(s => targetClasses.add(s.class));
 
         const targetTeachers = new Set();
-        if (Object.keys(TEACHER_MAP).length > 0) {
+        if (shouldGenerateTeachers && Object.keys(TEACHER_MAP).length > 0) {
             Object.keys(TEACHER_MAP).forEach(key => {
                 const [cls] = key.split('_');
                 if (targetClasses.has(cls)) {
                     targetTeachers.add(TEACHER_MAP[key]);
                 }
             });
-        } else {
+        } else if (shouldGenerateTeachers) {
             console.warn("未配置教师任课表，仅能生成家长账号");
         }
 
-        targetTeachers.forEach(tName => {
-            const existIdx = this.db.teachers.findIndex(t => t.name === tName);
-            const newAccount = {
-                name: tName,
-                pass: createManagedTemporaryPassword('teacher'),
-                password_mode: 'temporary',
-                must_change_password: true,
-                grade: 'all'
-            };
-            if (existIdx >= 0) {
-                this.db.teachers[existIdx].pass = createManagedTemporaryPassword('teacher');
-                this.db.teachers[existIdx].password_mode = 'temporary';
-                this.db.teachers[existIdx].must_change_password = true;
-            } else {
-                this.db.teachers.push(newAccount);
-                countTeacherNew++;
-            }
-        });
+        if (shouldGenerateTeachers) {
+            targetTeachers.forEach(tName => {
+                const existIdx = this.db.teachers.findIndex(t => t.name === tName);
+                const newAccount = {
+                    name: tName,
+                    pass: createManagedTemporaryPassword('teacher'),
+                    password_mode: 'temporary',
+                    must_change_password: true,
+                    grade: 'all'
+                };
+                if (existIdx >= 0) {
+                    this.db.teachers[existIdx].pass = createManagedTemporaryPassword('teacher');
+                    this.db.teachers[existIdx].password_mode = 'temporary';
+                    this.db.teachers[existIdx].must_change_password = true;
+                } else {
+                    this.db.teachers.push(newAccount);
+                    countTeacherNew++;
+                }
+            });
+        }
 
         if (options.persist !== false) {
             this.db = persistLocalAuthDb(this.db);
@@ -4270,11 +4279,12 @@ var Auth = {
             parentReset: countParentUpd,
             teacherNew: countTeacherNew,
             teacherTouched: targetTeachers.size,
-            targetStudentCount: targetStudents.length
+            targetStudentCount: targetStudents.length,
+            accountType
         };
     },
 
-    generateAccounts: function () {
+    generateAccounts: function (accountType = 'all') {
         if (!RAW_DATA.length) return alert("请先在【数据中心】上传成绩数据");
 
         const checkboxes = document.querySelectorAll('.gen-school-check:checked');
@@ -4284,20 +4294,36 @@ var Auth = {
             return alert("请至少勾选一所学校！\n(如果列表为空，请先上传数据)");
         }
 
-        if (!confirm(`⚠️ 确定要为选中的 [${selectedSchools.length}] 所学校生成账号吗？\n\n1. 仅生成/更新选中学校的学生和老师账号。\n2. 未选中学校的现有账号将【保留】。\n3. 系统会生成一次性临时密码，账号首次登录后必须改密。`)) return;
-        const generation = this.generateRecoverableAccountsForSchools(selectedSchools, { persist: true });
+        const normalizedType = accountType === 'teacher' ? 'teacher' : (accountType === 'parent' ? 'parent' : 'all');
+        const typeLabel = normalizedType === 'teacher' ? '教师' : (normalizedType === 'parent' ? '家长' : '教师+家长');
+        const scopeText = normalizedType === 'teacher'
+            ? '仅生成/更新选中学校相关班级的老师账号。'
+            : (normalizedType === 'parent'
+                ? '仅生成/更新选中学校学生对应的家长账号。'
+                : '仅生成/更新选中学校的学生和老师账号。');
+        if (!confirm(`⚠️ 确定要为选中的 [${selectedSchools.length}] 所学校生成【${typeLabel}】账号吗？\n\n1. ${scopeText}\n2. 未选中学校的现有账号将【保留】。\n3. 系统会生成一次性临时密码，账号首次登录后必须改密。`)) return;
+        const generation = this.generateRecoverableAccountsForSchools(selectedSchools, { persist: true, accountType: normalizedType });
         if (!generation.ok) {
             return alert(`❌ ${generation.error}`);
         }
 
         let msg = `✅ 操作完成！\n\n`;
         msg += `覆盖学校：${generation.selectedSchools.join(', ')}\n`;
-        msg += `家长账号：新增 ${generation.parentNew} / 重置 ${generation.parentReset}\n`;
-        msg += `教师账号：新增 ${generation.teacherNew} / 涉及 ${generation.teacherTouched}\n`;
+        if (normalizedType !== 'teacher') msg += `家长账号：新增 ${generation.parentNew} / 重置 ${generation.parentReset}\n`;
+        if (normalizedType !== 'parent') msg += `教师账号：新增 ${generation.teacherNew} / 涉及 ${generation.teacherTouched}\n`;
         msg += `\n(提示：未选中学校的旧账号已自动保留)`;
 
+        alert(msg);
 
-        if (window.UI) UI.toast("✅ 账号生成操作完成", "success");
+        if (window.UI) UI.toast(`✅ ${typeLabel}账号生成操作完成`, "success");
+    },
+
+    generateTeacherAccounts: function () {
+        return this.generateAccounts('teacher');
+    },
+
+    generateParentAccounts: function () {
+        return this.generateAccounts('parent');
     },
 
 

@@ -3143,8 +3143,11 @@
                                 style="font-size:11px; color:var(--primary);">清空</a>
                         </div>
                     </div>
-                    <button class="btn btn-primary" onclick="Auth.generateAccounts()" style="width:100%;">
-                        <i class="ti ti-user-plus"></i> 一键生成所有账号 (教师+家长)
+                    <button class="btn btn-primary" onclick="Auth.generateTeacherAccounts()" style="width:100%;">
+                        <i class="ti ti-user-plus"></i> 一键生成所有账号 (教师)
+                    </button>
+                    <button class="btn btn-primary" onclick="Auth.generateParentAccounts()" style="width:100%; margin-top:5px;">
+                        <i class="ti ti-users"></i> 一键生成所有账号 (家长)
                     </button>
                     <button class="btn btn-green" onclick="Auth.exportAccounts()"
                         style="width:100%; background:#059669; color:white;">

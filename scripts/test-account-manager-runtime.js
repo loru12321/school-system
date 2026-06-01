@@ -1,4 +1,5 @@
 const assert = require('assert');
+const fs = require('fs');
 const path = require('path');
 
 const createAccountManagerRuntime = require(path.resolve(__dirname, '../public/assets/js/account-manager-runtime.js'));
@@ -127,6 +128,19 @@ async function run() {
     const deniedRuntime = createAccountManagerRuntime(deniedRoot);
     deniedRuntime.open();
     assert.ok(alerts.some((msg) => msg.includes('权限不足')));
+
+    const rootDir = path.resolve(__dirname, '..');
+    const html = fs.readFileSync(path.join(rootDir, 'src/index.html'), 'utf8');
+    const app = fs.readFileSync(path.join(rootDir, 'public/assets/js/app.js'), 'utf8');
+    assert.ok(html.includes('一键生成所有账号 (教师)'), 'account manager should expose a teacher-only bulk generation button');
+    assert.ok(html.includes('一键生成所有账号 (家长)'), 'account manager should expose a parent-only bulk generation button');
+    assert.ok(!html.includes('一键生成所有账号 (教师+家长)'), 'combined teacher+parent bulk generation button should be removed');
+    assert.ok(html.includes('Auth.generateTeacherAccounts()'), 'teacher bulk button should call the teacher-only entry');
+    assert.ok(html.includes('Auth.generateParentAccounts()'), 'parent bulk button should call the parent-only entry');
+    assert.ok(app.includes("generateTeacherAccounts: function ()"), 'Auth should expose a teacher-only account generator');
+    assert.ok(app.includes("generateParentAccounts: function ()"), 'Auth should expose a parent-only account generator');
+    assert.ok(app.includes("options.accountType === 'teacher'"), 'account generation should support teacher-only scope');
+    assert.ok(app.includes("options.accountType === 'parent'"), 'account generation should support parent-only scope');
 
     console.log('account-manager-runtime tests passed');
 }
