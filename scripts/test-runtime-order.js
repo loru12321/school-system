@@ -471,7 +471,7 @@ assert.ok(!bootRuntime.includes("window.ensurePresentationVendorsLoaded = functi
 assert.ok(bootRuntime.includes('var SYSTEM_RUNTIME_SKILLS = {'), 'boot-runtime.js should declare a runtime skill manifest');
 assert.ok(bootRuntime.includes('window.SystemRuntimeLoader'), 'boot-runtime.js should expose the runtime skill loader');
 assert.ok(bootRuntime.includes('function getBootScriptBatchSize()'), 'boot-runtime.js should batch boot script insertion on constrained devices');
-assert.ok(bootRuntime.includes('var APP_MODULE_DESKTOP_BATCH_SIZE = 8;'), 'desktop boot scripts should also load in bounded batches');
+assert.ok(bootRuntime.includes('var APP_MODULE_DESKTOP_BATCH_SIZE = 6;'), 'desktop boot scripts should also load in bounded batches');
 assert.ok(bootRuntime.includes('return APP_MODULE_DESKTOP_BATCH_SIZE;'), 'desktop boot script loading should yield between bounded batches');
 assert.ok(bootRuntime.includes('function yieldBootScriptBatchFrame()'), 'boot-runtime.js should yield between boot script batches');
 assert.ok(bootRuntime.includes('if (isRuntimeMobileViewport()) return;'), 'boot-runtime.js should skip desktop deferred vendor prefetch on mobile');
@@ -511,7 +511,7 @@ assert.ok(!bootRuntime.includes("{ label: 'xlsx-vendor', loader: () => window.en
 assert.ok(!bootRuntime.includes("{ label: 'freshman-exam', loader: () => window.ensureFreshmanExamRuntimeLoaded?.() }"), 'freshman runtime should stay demand-loaded outside freshman/exam modules');
 assert.ok(bootRuntime.includes('window.setTimeout(preload, 240);'), 'desktop hotspot prefetch should begin before runtime hydration work');
 assert.ok(bootRuntime.includes('const prioritySteps = ['), 'desktop hotspot warmup should declare an interactive priority batch');
-assert.ok(bootRuntime.includes('Promise.allSettled(prioritySteps.map(warmStep))'), 'interactive runtime warmup should execute independent hot bundles concurrently');
+assert.ok(bootRuntime.includes('runStepsSequentially(prioritySteps'), 'interactive runtime warmup should avoid concurrent hot bundle parsing during user interaction');
 assert.ok(bootRuntime.includes("scheduleWarmup('hotspot-runtime:priority', runPrioritySteps)"), 'interactive runtime warmup should retain idle scheduling for boot responsiveness');
 assert.ok(bootRuntime.indexOf("{ label: 'town-submodule-compare'") < bootRuntime.indexOf('const deferredSteps = ['), 'summary interaction runtimes should remain in the priority batch');
 assert.ok(bootRuntime.includes('runAfterAppModulesReady(function () {\n    retryInstallLateHook(installHistoryDoQueryWrapper'), 'late workspace hooks should not retry on the unauthenticated login screen');

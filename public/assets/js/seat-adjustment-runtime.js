@@ -18,6 +18,8 @@
     const originalAddConflictPair = root.addConflictPair;
     const originalUpdateConstraintWidgetsContext = root.updateConstraintWidgetsContext;
     let lastArrangement = null;
+    let lastContextSignature = '';
+    let lastContextStudents = [];
 
     function isSeatWidget(wrapperId, hiddenInputId) {
         return String(wrapperId || '').startsWith('widget_adj_')
@@ -73,11 +75,16 @@
         const cleanValues = (Array.isArray(values) ? values : [])
             .map((value) => String(value || '').trim())
             .filter(Boolean);
-        select.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>${cleanValues
-            .map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)
-            .join('')}`;
+        const optionSignature = `${String(placeholder || '')}\u0000${cleanValues.join('\u0001')}`;
+        if (select.dataset.seatOptionsSignature !== optionSignature) {
+            select.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>${cleanValues
+                .map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)
+                .join('')}`;
+            select.dataset.seatOptionsSignature = optionSignature;
+        }
         const preferred = String(preferredValue || '').trim();
         if (preferred && cleanValues.includes(preferred)) select.value = preferred;
+        else select.value = '';
         return select.value || '';
     }
 
@@ -98,14 +105,21 @@
 
     function writeContextStudents(students) {
         const list = Array.isArray(students) ? students : [];
+        const signature = list
+            .map((student) => `${student?.name || ''}\u0001${student?.class || ''}\u0001${student?.total ?? student?.score ?? ''}`)
+            .join('\u0002');
+        if (signature === lastContextSignature) return lastContextStudents;
         if (typeof root.setCurrentContextStudentsState === 'function') {
             try {
-                root.setCurrentContextStudentsState(list);
-                return list;
+                lastContextStudents = root.setCurrentContextStudentsState(list) || [];
+                lastContextSignature = signature;
+                return lastContextStudents;
             } catch (_) {}
         }
         root.CURRENT_CONTEXT_STUDENTS = list;
-        return list;
+        lastContextStudents = list;
+        lastContextSignature = signature;
+        return lastContextStudents;
     }
 
     function readContextStudents() {
@@ -236,8 +250,7 @@
     }
 
     function refreshConstraintContext() {
-        const students = getSelectedStudents();
-        writeContextStudents(students);
+        const students = writeContextStudents(getSelectedStudents());
         ['diff', 'vision', 'psy', 'talk'].forEach((field) => {
             bindTagWidget(`widget_adj_${field}`, `adj_c_${field}`);
             renderTagsUI(`widget_adj_${field}`, `adj_c_${field}`);
@@ -251,8 +264,15 @@
             : '<option value="">(暂无学生数据)</option>';
         const selectA = root.document?.getElementById('conflict_sel_a');
         const selectB = root.document?.getElementById('conflict_sel_b');
-        if (selectA) selectA.innerHTML = html;
-        if (selectB) selectB.innerHTML = html;
+        const optionSignature = options.map((student) => student.name).join('\u0001');
+        if (selectA && selectA.dataset.seatStudentOptionsSignature !== optionSignature) {
+            selectA.innerHTML = html;
+            selectA.dataset.seatStudentOptionsSignature = optionSignature;
+        }
+        if (selectB && selectB.dataset.seatStudentOptionsSignature !== optionSignature) {
+            selectB.innerHTML = html;
+            selectB.dataset.seatStudentOptionsSignature = optionSignature;
+        }
         return students;
     }
 
@@ -358,14 +378,23 @@
         return nextOrder;
     }
 
-    function getLayerClass(student, sortedStudents) {
-        const index = sortedStudents.findIndex((item) => item.name === student.name);
-        const denominator = Math.max(sortedStudents.length, 1);
-        const percentile = (index + 1) / denominator;
+    function getLayerClass(index, total) {
+        const safeIndex = Math.max(Number(index) || 0, 0);
+        const denominator = Math.max(Number(total) || 0, 1);
+        const percentile = (safeIndex + 1) / denominator;
         if (percentile <= 0.25) return 'desk-rank-A';
         if (percentile <= 0.5) return 'desk-rank-B';
         if (percentile <= 0.75) return 'desk-rank-C';
         return 'desk-rank-D';
+    }
+
+    function buildLayerClassByName(sortedStudents) {
+        const byName = new Map();
+        const denominator = Math.max(sortedStudents.length, 1);
+        sortedStudents.forEach((student, index) => {
+            if (!byName.has(student.name)) byName.set(student.name, getLayerClass(index, denominator));
+        });
+        return byName;
     }
 
     function bindDeskDrag(desk) {
@@ -396,9 +425,9 @@
         };
     }
 
-    function createDesk(student, sortedStudents) {
+    function createDesk(student, layerClassByName) {
         const desk = root.document.createElement('div');
-        desk.className = `desk ${getLayerClass(student, sortedStudents)}`;
+        desk.className = `desk ${layerClassByName.get(student.name) || 'desk-rank-D'}`;
         desk.dataset.studentName = student.name;
         if (student._isDiff) desk.classList.add('is-diff');
         if (student._isVision) desk.classList.add('is-vision');
@@ -417,6 +446,7 @@
         container.style.gridTemplateColumns = `repeat(${groupsCount}, minmax(${Math.max(colsPerGroup * 84, 180)}px, 1fr))`;
         const rowCapacity = Math.max(groupsCount * colsPerGroup, 1);
         const totalRows = Math.ceil(order.length / rowCapacity);
+        const layerClassByName = buildLayerClassByName(sortedStudents);
         const groupElements = [];
         const fragment = root.document.createDocumentFragment();
         for (let groupIndex = 0; groupIndex < groupsCount; groupIndex += 1) {
@@ -434,7 +464,7 @@
                         seatIndex = rowIndex * rowCapacity + groupIndex * colsPerGroup + (colsPerGroup - 1 - colIndex);
                     }
                     const group = groupElements[groupIndex];
-                    if (order[seatIndex]) group.appendChild(createDesk(order[seatIndex], sortedStudents));
+                    if (order[seatIndex]) group.appendChild(createDesk(order[seatIndex], layerClassByName));
                     else {
                         const spacer = root.document.createElement('div');
                         spacer.className = 'desk desk-empty';

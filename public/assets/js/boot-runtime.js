@@ -506,9 +506,9 @@ var APP_MODULES = [
 
 var APP_MODULE_PRELOAD_LIMIT = 10;
 var APP_MODULE_MOBILE_PRELOAD_LIMIT = 6;
-var APP_MODULE_LATE_PREFETCH_LIMIT = 18;
-var APP_MODULE_PREFETCH_CHUNK_SIZE = 6;
-var APP_MODULE_DESKTOP_BATCH_SIZE = 8;
+var APP_MODULE_LATE_PREFETCH_LIMIT = 8;
+var APP_MODULE_PREFETCH_CHUNK_SIZE = 3;
+var APP_MODULE_DESKTOP_BATCH_SIZE = 6;
 
 window.__BOOT_SCRIPT_REGISTRY__ = window.__BOOT_SCRIPT_REGISTRY__ || {};
 
@@ -3192,21 +3192,25 @@ function scheduleHotspotRuntimeWarmup() {
         }
     };
 
-    const runStep = (index = 0) => {
-        if (index >= deferredSteps.length) return;
-        const step = deferredSteps[index];
+    const runStepsSequentially = (queue, index = 0, done) => {
+        if (index >= queue.length) {
+            if (typeof done === 'function') done();
+            return;
+        }
+        const step = queue[index];
         const run = () => {
             warmStep(step)
                 .finally(() => {
-                    window.setTimeout(() => runStep(index + 1), 650);
+                    window.setTimeout(() => runStepsSequentially(queue, index + 1, done), 650);
                 });
         };
         scheduleWarmup(`hotspot-runtime:${step.label}`, run);
     };
 
     const runPrioritySteps = () => {
-        Promise.allSettled(prioritySteps.map(warmStep))
-            .finally(() => window.setTimeout(() => runStep(0), 650));
+        runStepsSequentially(prioritySteps, 0, () => {
+            window.setTimeout(() => runStepsSequentially(deferredSteps), 650);
+        });
     };
 
     runAfterAppModulesReady(() => {

@@ -112,6 +112,10 @@ async function installProfiler(page) {
       'updateMpClassSelect',
       'generateMarginalTickets',
       'MP_analyzeConversion',
+      'updateSeatAdjSelects',
+      'updateConstraintWidgetsContext',
+      'generateSeatSuggestions',
+      'renderSeatGrid',
       'updateSubjectBalanceSelects',
       'updatePotentialSchoolSelect',
       'updateSegmentSelects',
@@ -324,6 +328,36 @@ async function profileMarginalPush(page) {
   });
 }
 
+async function profileSeatAdjustment(page) {
+  await page.evaluate(async () => {
+    const schoolSelect = document.getElementById('seatAdjSchoolSelect');
+    const classSelect = document.getElementById('seatAdjClassSelect');
+    const groupsInput = document.getElementById('seatAdjGroups');
+    const colsInput = document.getElementById('seatAdjCols');
+    const strategySelect = document.getElementById('seatAdjStrategy');
+    window.updateSeatAdjSelects?.();
+    const schools = Array.from(schoolSelect?.options || []).map((option) => option.value).filter(Boolean);
+    for (const school of schools) {
+      if (schoolSelect) schoolSelect.value = school;
+      window.updateSeatAdjSelects?.();
+      const classes = Array.from(classSelect?.options || []).map((option) => option.value).filter(Boolean);
+      for (const className of classes) {
+        if (classSelect) classSelect.value = className;
+        window.updateConstraintWidgetsContext?.('adj');
+        if (groupsInput) groupsInput.value = '2';
+        if (colsInput) colsInput.value = '4';
+        if (strategySelect) strategySelect.value = 'conversion';
+        const result = window.generateSeatSuggestions?.();
+        if (Number(result?.count || 0) > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          return;
+        }
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  });
+}
+
 async function run() {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
@@ -336,7 +370,8 @@ async function run() {
     'report-generator': profileReport,
     'freshman-simulator': profileFreshman,
     'student-overview': profileStudentOverview,
-    'marginal-push': profileMarginalPush
+    'marginal-push': profileMarginalPush,
+    'seat-adjustment': profileSeatAdjustment
   };
   for (const id of TARGETS) {
     const started = Date.now();
