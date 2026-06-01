@@ -228,6 +228,8 @@ function buildSessionPayload(row) {
 }
 
 function shouldForceManagedPasswordChange(row) {
+  const role = normalizeText(row?.role);
+  if (role === 'admin') return false;
   const source = normalizeText(row?.password_source);
   return source !== 'cloudflare_change';
 }
