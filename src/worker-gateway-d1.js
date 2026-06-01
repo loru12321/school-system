@@ -629,6 +629,10 @@ async function performGatewayLogin(request, env, body) {
         }
       }, request);
     }
+    return jsonResponse(401, {
+      ok: false,
+      error: 'Invalid username or password'
+    }, request);
   }
 
   const remote = await proxyGatewayActionToLegacyGateway(request, env, 'login', body?.payload || {}, { allowAnonymous: true });
