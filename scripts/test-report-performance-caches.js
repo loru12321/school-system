@@ -97,7 +97,8 @@ if (!doQuerySource || doQuerySource.includes('container.innerHTML !== nextReport
 
 [
     'return read(state.history, key, { clone: false });',
-    'return write(state.history, key, value, HISTORY_TTL_MS, { clone: false });'
+    'return write(state.history, key, value, HISTORY_TTL_MS, { clone: false });',
+    "if (typeof value !== 'object') return value;"
 ].forEach((token) => assertContains(read('public/assets/js/report-performance-runtime.js'), token, 'public/assets/js/report-performance-runtime.js'));
 
 const historyStart = app.indexOf('function getStudentExamHistory(student)');

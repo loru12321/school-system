@@ -11,6 +11,7 @@
 
     function clone(value) {
         if (value == null) return value;
+        if (typeof value !== 'object') return value;
         try {
             return JSON.parse(JSON.stringify(value));
         } catch (_) {
