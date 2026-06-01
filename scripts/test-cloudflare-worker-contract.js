@@ -45,6 +45,7 @@ assert.ok(gateway.includes('let nextSchool = normalizeText(payload.school ?? exi
 assert.ok(gateway.includes("if (nextRole === 'director' || nextRole === 'admin') nextClassName = '';"), 'director/admin account updates should not require a grade/class range');
 assert.ok(gateway.includes("Director can only manage accounts in own school"), 'director account edits must remain school-scoped');
 assert.ok(gateway.includes("error: 'Invalid username or password'"), 'managed D1 account passwords should not fall back to stale legacy credentials');
+assert.ok(gateway.includes("if (remoteUser.role !== 'admin')"), 'legacy fallback must not recreate deleted non-admin accounts');
 assert.ok(worker.includes("from './worker-http-helpers.js'"), 'worker should import shared HTTP helpers');
 assert.ok(gateway.includes("from './worker-http-helpers.js'"), 'gateway should import shared HTTP helpers');
 assert.ok(helpers.includes('DEFAULT_ALLOWED_CORS_ORIGINS'), 'shared helpers must keep explicit CORS allowlist usage');

@@ -645,6 +645,12 @@ async function performGatewayLogin(request, env, body) {
 
   const remoteUser = normalizeGatewaySession(remote.user);
   if (!remoteUser.username) remoteUser.username = username;
+  if (remoteUser.role !== 'admin') {
+    return jsonResponse(401, {
+      ok: false,
+      error: 'Invalid username or password'
+    }, request);
+  }
   const passwordHash = await hashAccountPassword(password);
   await upsertSystemUser(db, {
     username: remoteUser.username,
