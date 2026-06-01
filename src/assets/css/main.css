@@ -1429,6 +1429,79 @@ header {
     padding: 0 2px;
 }
 
+.teacher-township-jumpbar {
+    position: sticky;
+    top: 12px;
+    z-index: 4;
+    grid-template-columns: minmax(180px, 0.65fr) 1fr;
+    align-items: center;
+    padding: 12px;
+    border-radius: 16px;
+    border: 1px solid rgba(37, 99, 235, 0.18);
+    background: rgba(248, 250, 255, 0.94);
+    box-shadow: 0 18px 38px -30px rgba(37, 99, 235, 0.45);
+}
+
+.teacher-township-jumpbar strong {
+    display: block;
+    color: #1e3a8a;
+    font-size: 14px;
+}
+
+.teacher-township-jumpbar span {
+    display: block;
+    margin-top: 3px;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.teacher-township-jumpbar-links {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.teacher-township-jumpbar-links button {
+    border: 1px solid rgba(37, 99, 235, 0.22);
+    background: #fff;
+    color: #1d4ed8;
+    border-radius: 999px;
+    min-height: 32px;
+    padding: 0 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.teacher-township-jumpbar-links em {
+    margin-left: 6px;
+    color: #94a3b8;
+    font-style: normal;
+    font-weight: 600;
+}
+
+.teacher-township-quick-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 8px;
+}
+
+.teacher-township-quick-card {
+    display: grid;
+    gap: 4px;
+    padding: 10px 12px;
+    border: 1px solid #dbeafe;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);
+    color: #334155;
+    font-size: 12px;
+}
+
+.teacher-township-quick-card strong {
+    color: #1e3a8a;
+    font-size: 13px;
+}
+
 .analysis-result-slot {
     margin-top: 10px;
     display: grid;

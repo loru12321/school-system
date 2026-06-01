@@ -330,11 +330,12 @@ function renderSingleReportCardHTML(stu, mode) {
     };
     const hasHistoricalCountyRank = (studentLike, subject = 'total', historyEntry = null) => {
         if (!studentLike || typeof studentLike !== 'object') return false;
-        const scope = getCountyScopeForHistoryEntry(historyEntry, studentLike);
-        if (!scope || scope.includesCounty !== true) return false;
         const rankValue = subject === 'total'
             ? (studentLike?.ranks?.total?.county ?? studentLike?.rankCounty ?? studentLike?.countyRank)
             : (studentLike?.ranks?.[subject]?.county ?? studentLike?.subjectRanks?.[subject]?.county);
+        if (rankValue !== undefined && rankValue !== null && rankValue !== '' && rankValue !== '-') return true;
+        const scope = getCountyScopeForHistoryEntry(historyEntry, studentLike);
+        if (!scope || scope.includesCounty !== true) return false;
         return rankValue !== undefined && rankValue !== null && rankValue !== '';
     };
     const hasClassRankScope = (studentLike) => {

@@ -44,7 +44,8 @@ const pkg = JSON.parse(read(packageFile));
     'getPreviousHistoryEntryForReport',
     'hasUsablePrevHistoryStudent ? null : getCachedPreviousRecord',
     'cacheableReportHtml',
-    'ReportRenderPerfCache.html.set'
+    'ReportRenderPerfCache.html.set',
+    "rankValue !== undefined && rankValue !== null && rankValue !== '' && rankValue !== '-'"
 ].forEach((token) => assertContains(reportRender, token, reportRenderFile));
 
 [

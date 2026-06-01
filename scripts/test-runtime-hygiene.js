@@ -111,11 +111,15 @@ const renderCloudBackupsEnd = dataCloudRuntime.indexOf('function toggleCloudSele
 const renderCloudBackupsSource = renderCloudBackupsStart >= 0 && renderCloudBackupsEnd > renderCloudBackupsStart
     ? dataCloudRuntime.slice(renderCloudBackupsStart, renderCloudBackupsEnd)
     : '';
-assert.ok(renderCloudBackupsSource.includes("select: 'key, created_at, updated_at, size_bytes'"), 'cloud backup list should use metadata query first');
-assert.ok(renderCloudBackupsSource.includes("select: 'key, created_at, updated_at'"), 'cloud backup list should fall back to metadata without content');
+assert.ok(renderCloudBackupsSource.includes("select: 'key, created_at, updated_at'"), 'cloud backup list should use key/time metadata only');
+assert.ok(!renderCloudBackupsSource.includes("select: 'key, created_at, updated_at, size_bytes'"), 'cloud backup list should not request size_bytes because proxy paths may hydrate content to compute it');
 assert.ok(dataCloudRuntime.includes('function getCloudBackupListQueryOptions(filterCurrent)'), 'cloud backup list should build bounded query options');
-assert.ok(dataCloudRuntime.includes('if (cohortId) options.keyLike = `%${cohortId}%`;'), 'cloud backup list should push current cohort filtering into the query');
+assert.ok(dataCloudRuntime.includes('options.keyIn = Array.from(keys);'), 'cloud backup list should query exact current workspace keys');
+assert.ok(!dataCloudRuntime.includes('options.keyLike = `%${cohortId}%`;'), 'current cloud backup list should not use wildcard cohort scans');
 assert.ok(dataCloudRuntime.includes('limit: filterCurrent ? 800 : 500'), 'cloud backup list should cap metadata list reads');
+assert.ok(dataCloudRuntime.includes('const MAX_CLOUD_BACKUP_RENDER_ROWS = 80'), 'cloud backup list should cap rows rendered into the DOM');
+assert.ok(renderCloudBackupsSource.includes('const displayRows = visibleRows.slice(0, MAX_CLOUD_BACKUP_RENDER_ROWS);'), 'cloud backup list should render a bounded page of rows');
+assert.ok(renderCloudBackupsSource.includes('displayRows.forEach((item) => {'), 'cloud backup table should iterate the bounded display rows');
 assert.ok(!dataCloudRuntime.includes('fallbackQueryOptions'), 'current cloud backup list should not fall back to a full metadata scan');
 assert.ok(!renderCloudBackupsSource.includes("select: 'key, created_at, updated_at, content'"), 'cloud backup list should not fetch full content while rendering rows');
 

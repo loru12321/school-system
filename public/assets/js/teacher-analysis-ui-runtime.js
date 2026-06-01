@@ -243,6 +243,27 @@
             if (!info || info.value === null) return 'rank-muted';
             return info.value >= 0 ? 'positive-percent' : 'negative-percent';
         };
+        const subjectAnchors = [];
+        const renderTeacherRankQuickView = (subject, rankingData) => {
+            const teacherRows = (rankingData || [])
+                .filter((item) => item.type === 'teacher')
+                .slice()
+                .sort((a, b) => teacherToNumber(a.rankAvg, 99999) - teacherToNumber(b.rankAvg, 99999))
+                .slice(0, 8);
+            if (!teacherRows.length) return '';
+            return `
+                <div class="teacher-township-quick-view" aria-label="${teacherEscapeHtml(subject)}教师排名速览">
+                    ${teacherRows.map((item) => `
+                        <div class="teacher-township-quick-card">
+                            <strong>${teacherEscapeHtml(item.name)}</strong>
+                            <span>均分镇排 ${teacherEscapeHtml(item.rankAvg)}</span>
+                            <span>优秀率 ${teacherEscapeHtml(item.rankExc)}</span>
+                            <span>及格率 ${teacherEscapeHtml(item.rankPass)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        };
 
         let htmlAll = '';
         (window.SUBJECTS || []).forEach((subject) => {
@@ -278,6 +299,7 @@
                 `;
             });
             const anchorId = `rank-anchor-${subject}`;
+            subjectAnchors.push({ subject, anchorId, count: rankingData.length });
             htmlAll += `
                 <div id="${anchorId}" class="anchor-target analysis-anchor-panel analysis-generated-panel">
                     <div class="sub-header analysis-section-head analysis-generated-header">
@@ -288,6 +310,7 @@
                         </span>
                     </div>
                     <div class="analysis-generated-note">教师与学校数据同表展示，便于对照镇均水平、乡镇排名和学科整体波动。</div>
+                    ${renderTeacherRankQuickView(subject, rankingData)}
                     <div class="table-wrap analysis-table-shell">
                         <table class="comparison-table analysis-generated-table">
                             <thead>
@@ -325,7 +348,28 @@
             container.innerHTML = '<div class="analysis-empty-state">当前角色下暂无可见学科的教师乡镇排名数据</div>';
             return;
         }
-        container.innerHTML = htmlAll;
+        const quickNavHtml = subjectAnchors.length
+            ? `<div class="teacher-township-jumpbar analysis-generated-panel">
+                    <div>
+                        <strong>教师乡镇排名快速查看</strong>
+                        <span>点击学科直接定位，无需逐屏查找。</span>
+                    </div>
+                    <div class="teacher-township-jumpbar-links">
+                        ${subjectAnchors.map(item => `<button type="button" data-rank-anchor="${teacherEscapeHtml(item.anchorId)}">${teacherEscapeHtml(item.subject)}<em>${teacherEscapeHtml(item.count)}</em></button>`).join('')}
+                    </div>
+                </div>`
+            : '';
+        container.innerHTML = quickNavHtml + htmlAll;
+        container.querySelectorAll('[data-rank-anchor]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const anchorId = button.getAttribute('data-rank-anchor');
+                if (typeof window.scrollToSubAnchor === 'function') {
+                    window.scrollToSubAnchor(anchorId, button);
+                    return;
+                }
+                document.getElementById(anchorId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
     }
 
     function teacherFormatFocusList(list, emptyText = '暂无') {

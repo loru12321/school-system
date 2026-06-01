@@ -163,13 +163,22 @@
         return match ? match[0] : raw;
     }
 
+    const MAX_CLOUD_BACKUP_RENDER_ROWS = 80;
+
     function getCloudBackupListQueryOptions(filterCurrent) {
         const options = {
             order: 'updated_at',
             limit: filterCurrent ? 800 : 500
         };
-        const cohortId = filterCurrent ? getCurrentCloudCohortId() : '';
-        if (cohortId) options.keyLike = `%${cohortId}%`;
+        if (!filterCurrent) return options;
+        const keys = new Set();
+        const workspaceKey = getWorkspaceProjectKey();
+        const currentExamKey = getCurrentExamKey();
+        const cohortId = getCurrentCloudCohortId();
+        if (workspaceKey) keys.add(workspaceKey);
+        if (currentExamKey) keys.add(currentExamKey);
+        if (cohortId) keys.add(`cohort::${cohortId}`);
+        if (keys.size) options.keyIn = Array.from(keys);
         return options;
     }
 
@@ -698,20 +707,11 @@
 
             const listQueryOptions = getCloudBackupListQueryOptions(filterCurrent);
             const metaResult = await selectSystemDataRecords({
-                select: 'key, created_at, updated_at, size_bytes',
+                select: 'key, created_at, updated_at',
                 ...listQueryOptions
             });
             data = metaResult?.data || null;
             error = metaResult?.error || null;
-
-            if (error && /size_bytes/i.test(String(error.message || error.code || ''))) {
-                const legacyMetaResult = await selectSystemDataRecords({
-                    select: 'key, created_at, updated_at',
-                    ...listQueryOptions
-                });
-                data = legacyMetaResult?.data || null;
-                error = legacyMetaResult?.error || null;
-            }
 
             if (error) throw error;
 
@@ -759,7 +759,8 @@
                 return;
             }
 
-            const keySet = new Set(visibleRows.map((item) => item.key));
+            const displayRows = visibleRows.slice(0, MAX_CLOUD_BACKUP_RENDER_ROWS);
+            const keySet = new Set(displayRows.map((item) => item.key));
             manager.cloudSelection.forEach((key) => {
                 if (!keySet.has(key)) manager.cloudSelection.delete(key);
             });
@@ -767,8 +768,8 @@
             const totalSize = visibleRows.reduce((acc, item) => acc + (Number(item.size_bytes) || 0), 0);
             const totalSizeMB = (totalSize / 1024 / 1024).toFixed(2);
             if (summaryEl) {
-                const suffix = visibleRows.length !== allRows.length
-                    ? `<span style="font-size:11px; color:#94a3b8;">当前显示 ${visibleRows.length} / ${allRows.length} 条</span>`
+                const suffix = displayRows.length !== visibleRows.length || visibleRows.length !== allRows.length
+                    ? `<span style="font-size:11px; color:#94a3b8;">当前渲染 ${displayRows.length} / 匹配 ${visibleRows.length} / 云端 ${allRows.length} 条</span>`
                     : '<span style="font-size:11px; color:#94a3b8;">当前显示全部匹配记录</span>';
                 summaryEl.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -781,7 +782,7 @@
 
             const currentKey = getWorkspaceProjectKey();
             let rows = '';
-            visibleRows.forEach((item) => {
+            displayRows.forEach((item) => {
                 const isCurrent = item.key === currentKey;
                 const sizeKB = ((Number(item.size_bytes) || 0) / 1024).toFixed(1);
                 const time = escapeHtml(new Date(item.updated_at || item.created_at).toLocaleString());

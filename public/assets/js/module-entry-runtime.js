@@ -227,6 +227,35 @@
         scheduleModuleTask(label, run, { delay, idle: options.idle !== false, timeout });
     }
 
+    function loadCompareSelectorsRuntime() {
+        if (window.CompareSelectorsRuntime || typeof window.updateTeacherCompareExamSelects === 'function') {
+            return Promise.resolve(true);
+        }
+        if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.loadScriptOnce === 'function') {
+            return window.SystemRuntimeLoader.loadScriptOnce('compare-selectors', './assets/js/compare-selectors-runtime.js');
+        }
+        if (window.__COMPARE_SELECTORS_RUNTIME_PROMISE__) return window.__COMPARE_SELECTORS_RUNTIME_PROMISE__;
+        window.__COMPARE_SELECTORS_RUNTIME_PROMISE__ = new Promise((resolve, reject) => {
+            const existing = document.querySelector('script[data-runtime-key="compare-selectors"]');
+            if (existing) {
+                existing.addEventListener('load', () => resolve(true), { once: true });
+                existing.addEventListener('error', reject, { once: true });
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = './assets/js/compare-selectors-runtime.js';
+            script.async = false;
+            script.dataset.runtimeKey = 'compare-selectors';
+            script.onload = () => resolve(true);
+            script.onerror = reject;
+            document.head.appendChild(script);
+        }).catch((error) => {
+            delete window.__COMPARE_SELECTORS_RUNTIME_PROMISE__;
+            throw error;
+        });
+        return window.__COMPARE_SELECTORS_RUNTIME_PROMISE__;
+    }
+
     function pickDefaultSelectValue(selectId, preferredValue = '') {
         const el = document.getElementById(selectId);
         if (!el) return false;
@@ -283,9 +312,14 @@
                     hintEl.textContent = '已准备好对比条件，点击按钮后生成多期结果。';
                 }
             };
+            const loaders = [];
+            loaders.push(loadCompareSelectorsRuntime());
             if (typeof window.ensureTeacherCompareRuntimeLoaded === 'function'
                 && !window.__TEACHER_COMPARE_RESULT_RUNTIME_PATCHED__) {
-                window.ensureTeacherCompareRuntimeLoaded()
+                loaders.push(window.ensureTeacherCompareRuntimeLoaded());
+            }
+            if (loaders.length) {
+                Promise.all(loaders)
                     .then(run)
                     .catch((error) => console.warn('[teacher-analysis] teacher compare auto load failed:', error));
                 return;
@@ -331,6 +365,9 @@
                 scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-comparison', () => {
                     if (typeof window.renderTeacherComparisonTable === 'function') window.renderTeacherComparisonTable();
                 }, 420);
+                scheduleTeacherAnalysisPhase(token, 'teacher-analysis-refresh-compare-selects', () => {
+                    scheduleTeacherCompareAutoRender(0);
+                }, 520);
                 scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-township', () => {
                     if (typeof window.renderTeacherTownshipRanking === 'function') window.renderTeacherTownshipRanking();
                 }, 760);

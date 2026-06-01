@@ -161,7 +161,9 @@ const teachingManagementOverviewRuntime = fs.readFileSync(teachingManagementOver
 const teachingManagementVersionRuntime = fs.readFileSync(teachingManagementVersionRuntimePath, 'utf8');
 const studentOverviewRuntime = fs.readFileSync(studentOverviewRuntimePath, 'utf8');
 const teacherAnalysisCoreRuntime = fs.readFileSync(teacherAnalysisCoreRuntimePath, 'utf8');
+const teacherAnalysisUiRuntime = fs.readFileSync(teacherAnalysisUiRuntimePath, 'utf8');
 const countyAnalysisRuntime = fs.readFileSync(countyAnalysisRuntimePath, 'utf8');
+const mainCss = fs.readFileSync(path.resolve(__dirname, '../src/assets/css/main.css'), 'utf8');
 const cloudWorkspaceRuntime = fs.readFileSync(cloudWorkspaceRuntimePath, 'utf8');
 const popperVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/popperjs/popper.min.js'), 'utf8');
 const tippyVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/tippyjs/tippy.umd.min.js'), 'utf8');
@@ -584,6 +586,8 @@ assert.ok(teachingManagementRuntime.includes('window.tmScheduleTeachingOverviewR
 assert.ok(moduleEntryRuntime.includes('const scheduleTeachingRender = (label, task, options = {}) =>'), 'teaching management modules should share a deferred render helper');
 assert.ok(moduleEntryRuntime.includes("scheduleTeachingRender('warning-center'"), 'teaching warning center should render after the module switch frame');
 assert.ok(moduleEntryRuntime.includes("scheduleTeachingRender('version-center'"), 'teaching version center should render after the module switch frame');
+assert.ok(moduleEntryRuntime.includes("loadScriptOnce('compare-selectors'"), 'teacher analysis should load compare selector runtime before refreshing multi-period controls');
+assert.ok(moduleEntryRuntime.includes("scheduleTeacherAnalysisPhase(token, 'teacher-analysis-refresh-compare-selects'"), 'teacher analysis should refresh multi-period selectors after first render');
 assert.ok(appSource.includes('var TM_TEACHER_COVERAGE_CACHE'), 'teaching overview should cache teacher coverage for repeated renders');
 assert.ok(appSource.includes('var TM_TEACHER_INSIGHT_CACHE'), 'teaching overview should cache teacher insight scans for repeated renders');
 assert.ok(teachingManagementVersionRuntime.includes('var TM_CURRENT_VERSION_PAYLOAD_CACHE'), 'teaching version center should cache the current version payload');
@@ -591,6 +595,9 @@ assert.ok(teachingManagementVersionRuntime.includes('TM_CURRENT_VERSION_PAYLOAD_
 assert.ok(teacherAnalysisCoreRuntime.includes('window.tmScheduleTeachingOverviewRender()'), 'teacher analysis should schedule overview refresh instead of blocking the same render frame');
 assert.ok(teacherAnalysisCoreRuntime.includes('const townshipSchoolEligibilityCache = new Map();'), 'teacher township ranking should cache school eligibility checks');
 assert.ok(teacherAnalysisCoreRuntime.includes('townshipSchoolEligibilityCache.get(normalizedSchool)'), 'teacher township ranking should reuse cached township school matches');
+assert.ok(teacherAnalysisUiRuntime.includes('teacher-township-jumpbar'), 'teacher township ranking should expose subject jump links');
+assert.ok(teacherAnalysisUiRuntime.includes('teacher-township-quick-view'), 'teacher township ranking should expose compact teacher rank summaries');
+assert.ok(mainCss.includes('.teacher-township-jumpbar'), 'teacher township jump links should have desktop styles');
 assert.ok(countyAnalysisRuntime.includes('function createCountyTownshipMatcher'), 'county analysis should reuse a cached township school matcher');
 assert.ok(countyAnalysisRuntime.includes('const isTownshipSchool = createCountyTownshipMatcher(scope.townshipSchools);'), 'county rank application should not fuzzy-match township schools per row');
 assert.ok(countyAnalysisRuntime.includes('const isTownshipSchool = createCountyTownshipMatcher(normalized.townshipSchools);'), 'county teacher ranking should not fuzzy-match township schools repeatedly');
