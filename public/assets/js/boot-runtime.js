@@ -3149,6 +3149,25 @@ function scheduleHotspotRuntimeWarmup() {
     if (window.__HOTSPOT_RUNTIME_WARMUP_SCHEDULED__) return;
     if (getRuntimeLoadProfile() === 'lazy' || isRuntimeMobileViewport()) return;
     window.__HOTSPOT_RUNTIME_WARMUP_SCHEDULED__ = true;
+    window.__HOTSPOT_RUNTIME_LAST_INTERACTION_AT__ = window.__HOTSPOT_RUNTIME_LAST_INTERACTION_AT__ || Date.now();
+
+    const markInteractiveRuntimeUse = () => {
+        window.__HOTSPOT_RUNTIME_LAST_INTERACTION_AT__ = Date.now();
+    };
+    ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach((eventName) => {
+        window.addEventListener(eventName, markInteractiveRuntimeUse, { passive: true });
+    });
+    const installSwitchTabInteractionMarker = () => {
+        const currentSwitchTab = window.switchTab;
+        if (typeof currentSwitchTab !== 'function' || currentSwitchTab.__hotspotInteractionWrapped) return;
+        const wrappedSwitchTab = function (...args) {
+            markInteractiveRuntimeUse();
+            return currentSwitchTab.apply(this, args);
+        };
+        Object.defineProperty(wrappedSwitchTab, '__hotspotInteractionWrapped', { value: true });
+        Object.defineProperty(wrappedSwitchTab, '__hotspotInteractionOriginal', { value: currentSwitchTab });
+        window.switchTab = wrappedSwitchTab;
+    };
 
     const prioritySteps = [
         { label: 'report-render', loader: () => window.ensureReportRenderRuntimeLoaded?.() },
@@ -3183,12 +3202,21 @@ function scheduleHotspotRuntimeWarmup() {
         .catch((error) => console.warn(`[boot-runtime] hotspot runtime warmup failed: ${step.label}`, error));
 
     const scheduleWarmup = (label, run) => {
+        installSwitchTabInteractionMarker();
+        const guardedRun = () => {
+            const elapsed = Date.now() - Number(window.__HOTSPOT_RUNTIME_LAST_INTERACTION_AT__ || 0);
+            if (elapsed >= 3000) {
+                run();
+                return;
+            }
+            window.setTimeout(() => scheduleWarmup(label, run), 3000 - elapsed + 250);
+        };
         if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
-            window.SystemPerformance.scheduleIdle(run, { label, delay: 120, timeout: 2200 });
+            window.SystemPerformance.scheduleIdle(guardedRun, { label, delay: 120, timeout: 2200 });
         } else if (typeof window.requestIdleCallback === 'function') {
-            window.requestIdleCallback(run, { timeout: 2200 });
+            window.requestIdleCallback(guardedRun, { timeout: 2200 });
         } else {
-            window.setTimeout(run, 120);
+            window.setTimeout(guardedRun, 120);
         }
     };
 
