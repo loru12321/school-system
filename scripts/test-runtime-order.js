@@ -917,6 +917,8 @@ assert.ok(teacherAnalysisCoreRuntime.includes('function buildTeacherRowsFingerpr
 assert.ok(teacherAnalysisCoreRuntime.includes('computeExamDataFingerprint'), 'teacher analysis cache should reuse the shared exam data fingerprint when available');
 assert.ok(layoutRefinementCss.includes('#teacher-township-ranking .analysis-table-shell') && layoutRefinementCss.includes('#teacherComparisonTable thead th'), 'teacher analysis tables should keep sticky grid affordances');
 assert.ok(layoutRefinementCss.includes('#data-manager-modal #dm-teacher-table thead th'), 'teacher assignment management table should keep sticky headers');
+assert.ok(appSource.includes('function renderBottom3TableOnly'), 'bottom3 should expose a lightweight table-only render path');
+assert.ok(moduleEntryRuntime.includes("activeModuleId === 'bottom3'") && moduleEntryRuntime.includes('window.renderBottom3TableOnly()'), 'bottom3 module entry should avoid full macro table rerenders');
 const bottom3SmokeStart = smokeAllModules.indexOf("if (id === 'bottom3')");
 const bottom3SmokeEnd = smokeAllModules.indexOf("if (id === 'indicator')", bottom3SmokeStart);
 const bottom3SmokeSource = bottom3SmokeStart >= 0 && bottom3SmokeEnd > bottom3SmokeStart

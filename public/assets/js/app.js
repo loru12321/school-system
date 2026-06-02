@@ -10451,6 +10451,41 @@ function setSummaryHtmlIfChanged(element, html, key) {
     element.dataset.summaryRenderSig = key;
 }
 
+function renderBottom3TableBody(summarySignature = getSummaryRenderSignature(), townshipSchools = getSummaryTownshipSchools()) {
+    const tbBottom = document.querySelector('#tb-bottom3 tbody');
+    if (!tbBottom) return false;
+    let htmlBottom = '';
+    const bottomList = townshipSchools.slice().sort((a, b) => (a.rankBottom || 9999) - (b.rankBottom || 9999));
+    bottomList.forEach(s => {
+        const isMySchool = sameAppSchoolName(s.name, MY_SCHOOL);
+        htmlBottom += `
+            <tr class="${isMySchool ? 'bg-highlight' : ''}">
+                <td>${s.name}</td>
+                <td>${s.bottom3 ? s.bottom3.totalN : ''}</td>
+                <td>${s.bottom3 ? s.bottom3.bottomN : ''}</td>
+                <td>
+                    <span class="clickable-num" onclick="handleExcludedClick('${s.name}')" title="点击查看被剔除的低分学生">
+                        ${s.bottom3 ? s.bottom3.excN : ''}
+                    </span>
+                </td>
+                <td>${s.bottom3 ? s.bottom3.avg.toFixed(2) : ''}</td>
+                <td class="text-red">${s.scoreBottom ? s.scoreBottom.toFixed(2) : ''}</td>
+                ${getRankHTML(s.rankBottom)}
+            </tr>`;
+    });
+    setSummaryHtmlIfChanged(tbBottom, htmlBottom, `${summarySignature}::bottom-body`);
+    return true;
+}
+
+function renderBottom3TableOnly() {
+    updateSchoolMode();
+    const rendered = renderBottom3TableBody();
+    if (window.SupportMetricsRuntime && typeof window.SupportMetricsRuntime.refreshBottom3Summary === 'function') {
+        window.SupportMetricsRuntime.refreshBottom3Summary();
+    }
+    return rendered;
+}
+
 function bindSummaryProfileEvents(tbTotal) {
     if (!tbTotal || tbTotal.dataset.summaryProfileEventsBound === '1') return;
     tbTotal.addEventListener('click', event => {
@@ -10600,26 +10635,7 @@ function renderTables() {
     if (sideNavSubjects) sideNavSubjects.dataset.summaryRenderSig = subjectRenderKey;
     }
 
-    const tbBottom = document.querySelector('#tb-bottom3 tbody'); let htmlBottom = '';
-    let bottomList = townshipSchools.slice().sort((a, b) => (a.rankBottom || 9999) - (b.rankBottom || 9999));
-    bottomList.forEach(s => {
-        const isMySchool = sameAppSchoolName(s.name, MY_SCHOOL);
-        htmlBottom += `
-            <tr class="${isMySchool ? 'bg-highlight' : ''}">
-                <td>${s.name}</td>
-                <td>${s.bottom3 ? s.bottom3.totalN : ''}</td>
-                <td>${s.bottom3 ? s.bottom3.bottomN : ''}</td>
-                <td>
-                    <span class="clickable-num" onclick="handleExcludedClick('${s.name}')" title="点击查看被剔除的低分学生">
-                        ${s.bottom3 ? s.bottom3.excN : ''}
-                    </span>
-                </td>
-                <td>${s.bottom3 ? s.bottom3.avg.toFixed(2) : ''}</td>
-                <td class="text-red">${s.scoreBottom ? s.scoreBottom.toFixed(2) : ''}</td>
-                ${getRankHTML(s.rankBottom)}
-            </tr>`;
-    });
-    setSummaryHtmlIfChanged(tbBottom, htmlBottom, `${summarySignature}::bottom-body`);
+    renderBottom3TableBody(summarySignature, townshipSchools);
     refreshIndicatorResults(true);
     markSummaryDataChanged('两率一分或后1/3结果已更新，请重新生成总排名。');
 }

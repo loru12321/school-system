@@ -919,6 +919,10 @@
     function scheduleMacroTablesRender(activeModuleId, label = 'macro-entry') {
         const run = () => {
             if (activeModuleId && !document.getElementById(activeModuleId)?.classList.contains('active')) return;
+            if (activeModuleId === 'bottom3' && typeof window.renderBottom3TableOnly === 'function') {
+                window.renderBottom3TableOnly();
+                return;
+            }
             if (typeof window.renderTables === 'function') window.renderTables();
         };
         scheduleModuleTask(`macro-tables:${label}`, run, { delay: 60, idle: true, timeout: 900 });
