@@ -189,8 +189,8 @@ var SYSTEM_RUNTIME_SKILLS = {
     },
     'student-compare': {
         mode: 'demand',
-        warmup: 'full',
-        triggers: ['student-details', 'renderStudentMultiPeriodComparison'],
+        warmup: 'demand',
+        triggers: ['renderStudentMultiPeriodComparison', 'saveStudentCompareToCloud', 'viewCloudStudentCompares'],
         entries: [
             { key: 'student-compare-result', src: './assets/js/student-compare-result-runtime.js' },
             { key: 'student-compare-generate', src: './assets/js/student-compare-generate-runtime.js' },
@@ -3173,7 +3173,6 @@ function scheduleHotspotRuntimeWarmup() {
         { label: 'report-render', loader: () => window.ensureReportRenderRuntimeLoaded?.() },
         { label: 'teacher-analysis', loader: () => window.ensureTeacherAnalysisMainRuntimeLoaded?.() },
         { label: 'teaching-management', loader: () => window.ensureTeachingManagementRuntimeLoaded?.() },
-        { label: 'student-compare', loader: () => window.ensureStudentCompareRuntimeLoaded?.() },
         { label: 'school-profile', loader: () => window.ensureSchoolProfileRuntimeLoaded?.() },
         { label: 'town-submodule-compare', loader: () => window.ensureTownSubmoduleCompareRuntimeLoaded?.() }
     ];

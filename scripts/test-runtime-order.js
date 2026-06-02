@@ -625,6 +625,11 @@ assert.ok(countyAnalysisRuntime.includes('const isTownshipSchool = createCountyT
 assert.ok(appSource.includes('const displaySourceList = STD_STATE.cacheData.slice(startIdx, endIdx);'), 'student details should paginate before comparison rank normalization');
 assert.ok(appSource.includes('const displayList = displaySourceList.map((student) => getComparisonStudentView(student, RAW_DATA, comparisonContext));'), 'student details should normalize comparison rank data only for the visible page');
 assert.ok(!appSource.includes('data = getComparisonStudentList(data, RAW_DATA);'), 'student details should avoid full-list comparison normalization before pagination');
+assert.ok(!bootRuntime.includes("triggers: ['student-details', 'renderStudentMultiPeriodComparison']"), 'student compare runtime should not be triggered by entering student details');
+assert.ok(bootRuntime.includes("triggers: ['renderStudentMultiPeriodComparison', 'saveStudentCompareToCloud', 'viewCloudStudentCompares']"), 'student compare runtime should load only for explicit multi-period actions');
+assert.ok(!bootRuntime.includes("{ label: 'student-compare', loader: () => window.ensureStudentCompareRuntimeLoaded?.() }"), 'student compare runtime should not be part of hotspot warmup');
+assert.ok(moduleEntryRuntime.includes('const canUseStudentMultiPeriod = role ==='), 'student details should gate multi-period prewarm by role');
+assert.ok(moduleEntryRuntime.includes("delay: 1400, idle: true, timeout: 3200"), 'student details should defer multi-period prewarm after first render');
 assert.ok(schoolNormalizationRuntime.includes('const townshipEligibilityCache = new Map();'), 'shared township row filtering should cache per-school eligibility');
 assert.ok(schoolNormalizationRuntime.includes('townshipEligibilityCache.get(school)'), 'shared township row filtering should reuse per-school eligibility checks');
 assert.ok(appSource.includes('const totalsBySchool = new Map();'), 'student comparison rank context should pre-group totals by school');

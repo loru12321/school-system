@@ -408,11 +408,19 @@
 
     function initStudentDetailsEntry() {
         updateStudentSchoolSelect();
+        const user = getCurrentUser();
+        const role = user?.role || 'guest';
+        const canUseStudentMultiPeriod = role === 'admin' || role === 'director' || role === 'grade_director';
         scheduleModuleTask('student-details-compare-selects', () => {
             if (!document.getElementById('student-details')?.classList.contains('active')) return;
-            if (typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
-            if (typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
-        }, { delay: 80, idle: true, timeout: 900 });
+            if (canUseStudentMultiPeriod && typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
+            if (canUseStudentMultiPeriod && typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
+            if (canUseStudentMultiPeriod
+                && typeof window.ensureStudentCompareRuntimeLoaded === 'function'
+                && !window.__STUDENT_COMPARE_RESULT_RUNTIME_PATCHED__) {
+                window.ensureStudentCompareRuntimeLoaded().catch((error) => console.warn('student compare runtime failed:', error));
+            }
+        }, { delay: 1400, idle: true, timeout: 3200 });
         if (typeof window.ensureCountyAnalysisRuntimeLoaded === 'function'
             && !window.__COUNTY_ANALYSIS_RUNTIME_PATCHED__) {
             scheduleModuleTask('student-details-county-runtime', () => {
@@ -445,12 +453,10 @@
             }
         }, { delay: 900, idle: true, timeout: 1200 });
 
-        const user = getCurrentUser();
-        const role = user?.role || 'guest';
         const multiPeriodSection = document.getElementById('student-multi-period-compare-section');
         if (!multiPeriodSection) return;
 
-        if (role === 'admin' || role === 'director' || role === 'grade_director') {
+        if (canUseStudentMultiPeriod) {
             multiPeriodSection.style.display = 'block';
             const saveCloudBtn = multiPeriodSection.querySelector('[onclick="saveStudentCompareToCloud()"]');
             if (saveCloudBtn) saveCloudBtn.style.display = '';
