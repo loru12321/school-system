@@ -829,12 +829,18 @@ async function runModuleDeepCheck(page, id) {
                 ? rows.reduce((sum, row) => sum + row.avg, 0) / rows.length
                 : 0;
             const expectedTopSchool = sorted[0]?.name || '';
-            const snapshotBottom3State = () => JSON.stringify(Object.values(window.SCHOOLS || {}).map((school) => ({
-                name: String(school?.name || '').trim(),
-                bottom3: school?.bottom3 || null,
-                scoreBottom: toNumber(school?.scoreBottom),
-                rankBottom: toNumber(school?.rankBottom)
-            })));
+            const snapshotBottom3State = () => Object.values(window.SCHOOLS || {}).map((school) => {
+                const bottom3 = school?.bottom3 || {};
+                return [
+                    String(school?.name || '').trim(),
+                    toNumber(bottom3.totalN),
+                    toNumber(bottom3.bottomN),
+                    toNumber(bottom3.excN),
+                    toNumber(bottom3.avg).toFixed(4),
+                    toNumber(school?.scoreBottom).toFixed(4),
+                    toNumber(school?.rankBottom)
+                ].join(':');
+            }).join('|');
             if (typeof window.SupportMetricsRuntime?.ensureWrappers === 'function') {
                 window.SupportMetricsRuntime.ensureWrappers();
             }

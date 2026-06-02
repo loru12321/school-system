@@ -75,6 +75,7 @@ const teacherCompareResultRuntimePath = path.resolve(__dirname, '../public/asset
 const teacherCompareCloudRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-compare-cloud-runtime.js');
 const macroCompareResultRuntimePath = path.resolve(__dirname, '../public/assets/js/macro-compare-result-runtime.js');
 const macroCompareCloudRuntimePath = path.resolve(__dirname, '../public/assets/js/macro-compare-cloud-runtime.js');
+const smokeAllModulesPath = path.resolve(__dirname, './smoke-all-modules.js');
 
 assert.ok(fs.existsSync(runtimePath), 'auth-state-runtime.js should exist');
 assert.ok(fs.existsSync(workspaceRuntimePath), 'workspace-state-runtime.js should exist');
@@ -174,6 +175,7 @@ const cloudWorkspaceRuntime = fs.readFileSync(cloudWorkspaceRuntimePath, 'utf8')
 const popperVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/popperjs/popper.min.js'), 'utf8');
 const tippyVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/tippyjs/tippy.umd.min.js'), 'utf8');
 const appSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
+const smokeAllModules = fs.readFileSync(smokeAllModulesPath, 'utf8');
 const initSupabaseMatches = bootRuntime.match(/window\.initSupabase\s*=\s*function/g) || [];
 const supabaseUrlAssignments = bootRuntime.match(/window\.SUPABASE_URL\s*=/g) || [];
 const supabaseKeyAssignments = bootRuntime.match(/window\.SUPABASE_KEY\s*=/g) || [];
@@ -915,5 +917,12 @@ assert.ok(teacherAnalysisCoreRuntime.includes('function buildTeacherRowsFingerpr
 assert.ok(teacherAnalysisCoreRuntime.includes('computeExamDataFingerprint'), 'teacher analysis cache should reuse the shared exam data fingerprint when available');
 assert.ok(layoutRefinementCss.includes('#teacher-township-ranking .analysis-table-shell') && layoutRefinementCss.includes('#teacherComparisonTable thead th'), 'teacher analysis tables should keep sticky grid affordances');
 assert.ok(layoutRefinementCss.includes('#data-manager-modal #dm-teacher-table thead th'), 'teacher assignment management table should keep sticky headers');
+const bottom3SmokeStart = smokeAllModules.indexOf("if (id === 'bottom3')");
+const bottom3SmokeEnd = smokeAllModules.indexOf("if (id === 'indicator')", bottom3SmokeStart);
+const bottom3SmokeSource = bottom3SmokeStart >= 0 && bottom3SmokeEnd > bottom3SmokeStart
+    ? smokeAllModules.slice(bottom3SmokeStart, bottom3SmokeEnd)
+    : '';
+assert.ok(bottom3SmokeSource.includes('snapshotBottom3State'), 'bottom3 smoke should keep mutation guard');
+assert.ok(!bottom3SmokeSource.includes('JSON.stringify'), 'bottom3 smoke mutation guard should use compact signatures instead of serializing full objects');
 
 console.log('runtime order tests passed');
