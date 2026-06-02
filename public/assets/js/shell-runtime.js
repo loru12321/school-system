@@ -42,14 +42,12 @@
             color: '#dc2626',
             icon: 'ti-school',
             eyebrow: 'Studio Ops',
-            summary: '把工作台、教师画像、问题清单、预警整改和版本归档拆成独立入口，减少一个页面里来回滑动。',
+            summary: '把教师画像、明细对比、结对子建议和乡镇排名拆成独立入口，减少一个页面里来回滑动。',
             items: [
-                { id: 'teaching-overview', icon: 'ti-layout-dashboard', text: '教学管理工作台', hint: '先看数据准备度、筛选口径、风险提示和下一步建议。' },
-                { id: 'teacher-analysis', icon: 'ti-school', text: '教师教学质量画像', hint: '从教师视角查看贡献、波动和结构性问题。' },
-                { id: 'teaching-issue-board', icon: 'ti-clipboard-list', text: '教学问题清单', hint: '汇总风险教师、待跟进预警和整改任务。' },
-                { id: 'teaching-warning-center', icon: 'ti-alert-triangle', text: '质量预警中心', hint: '按等级、状态和类型筛选云端质量预警。' },
-                { id: 'teaching-rectify-center', icon: 'ti-checkup-list', text: '整改跟踪中心', hint: '跟进整改任务、负责人、进度和完成状态。' },
-                { id: 'teaching-version-center', icon: 'ti-versions', text: '版本归档中心', hint: '保存并对比成绩、任课表、目标人数和规则基线。' },
+                { id: 'teacher-analysis', icon: 'ti-school', text: '本校教师教学分析', hint: '从教师概况卡片查看贡献、波动和结构性问题。' },
+                { id: 'teacher-detail-comparison', icon: 'ti-table', text: '教师教学详细数据对比表', hint: '独立查看教师明细指标、校内排序和导出结果。' },
+                { id: 'teacher-pairing', icon: 'ti-users-group', text: '校内教师结对子建议', hint: '基于数据分析生成同校教师互助建议。' },
+                { id: 'teacher-township-ranking', icon: 'ti-trophy', text: '教师乡镇排名', hint: '查看本校教师在镇域同学科中的相对站位。' },
             ]
         },
         student: {

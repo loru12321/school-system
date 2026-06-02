@@ -52,6 +52,12 @@ function hasCloudCompareAccess() {
     );
 }
 
+function canShowTownSubmoduleMultiPeriodCompare() {
+    const user = typeof window.getCurrentUser === 'function' ? window.getCurrentUser() : (window.Auth?.currentUser || null);
+    const role = String(user?.role || '').trim();
+    return role === 'admin' || role === 'director' || role === 'grade_director';
+}
+
 async function upsertCloudTownSubmoduleCompareRow(row) {
     if (window.CloudDataService && typeof window.CloudDataService.upsertSystemDataRecord === 'function') {
         return window.CloudDataService.upsertSystemDataRecord(row);
@@ -115,6 +121,10 @@ function resolveTownSubmoduleDefaultSchool(schoolList, preferredSchool = townGet
 }
 
 function ensureTownSubmoduleCompareUIs() {
+    if (!canShowTownSubmoduleMultiPeriodCompare()) {
+        document.querySelectorAll('.town-submodule-compare-panel').forEach((panel) => panel.remove());
+        return;
+    }
     Object.entries(TOWN_SUBMODULE_META).forEach(([submoduleId, title]) => {
         const section = document.getElementById(submoduleId);
         if (!section) return;
@@ -248,6 +258,7 @@ function getTownSubmoduleSeries(submoduleId, selectedByExam, summaryByExam, scho
 }
 
 async function openTownSubmoduleCompareDialog(submoduleId) {
+    if (!canShowTownSubmoduleMultiPeriodCompare()) return;
     const schoolList = listAvailableSchoolsForCompare();
     const examList = listAvailableExamsForCompare();
     if (schoolList.length === 0) return alert('暂无可选学校');
@@ -319,6 +330,7 @@ async function openTownSubmoduleCompareDialog(submoduleId) {
 }
 
 function renderTownSubmoduleMultiPeriodComparison(submoduleId, school, examIds, periodCount) {
+    if (!canShowTownSubmoduleMultiPeriodCompare()) return;
     const hintEl = document.getElementById(`town-submodule-compare-hint-${submoduleId}`);
     const resultEl = document.getElementById(`town-submodule-compare-result-${submoduleId}`);
     if (!hintEl || !resultEl) return;
@@ -369,6 +381,7 @@ function renderTownSubmoduleMultiPeriodComparison(submoduleId, school, examIds, 
 }
 
 function exportTownSubmoduleCompare(submoduleId) {
+    if (!canShowTownSubmoduleMultiPeriodCompare()) return alert('权限不足：该多期对比仅管理员、教务主任、级部主任可用');
     const cache = readTownSubmoduleCompareEntryState(submoduleId);
     if (!cache) return alert('请先生成多期对比结果');
     const wb = XLSX.utils.book_new();
@@ -378,6 +391,7 @@ function exportTownSubmoduleCompare(submoduleId) {
 }
 
 async function saveTownSubmoduleCompareToCloud(submoduleId) {
+    if (!canShowTownSubmoduleMultiPeriodCompare()) return alert('权限不足：该多期对比仅管理员、教务主任、级部主任可用');
     const cache = readTownSubmoduleCompareEntryState(submoduleId);
     if (!cache) return alert('请先生成多期对比结果');
     if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接，无法保存');
@@ -409,6 +423,7 @@ async function saveTownSubmoduleCompareToCloud(submoduleId) {
 }
 
 async function viewCloudTownSubmoduleCompares(submoduleId) {
+    if (!canShowTownSubmoduleMultiPeriodCompare()) return alert('权限不足：该多期对比仅管理员、教务主任、级部主任可用');
     if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接');
     try {
         if (window.UI) UI.loading(true, '☁️ 正在加载云端列表...');

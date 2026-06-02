@@ -17,7 +17,14 @@ function escapeStudentCompareHtml(value) {
     }[char]));
 }
 
+function canUseStudentMultiPeriodCompare() {
+    const user = typeof window.getCurrentUser === 'function' ? window.getCurrentUser() : (window.Auth?.currentUser || null);
+    const role = String(user?.role || '').trim();
+    return role === 'admin' || role === 'director' || role === 'grade_director';
+}
+
 function renderStudentComparePage(page) {
+    if (!canUseStudentMultiPeriodCompare()) return;
     const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return;
 
@@ -692,6 +699,7 @@ function toggleClassGroup(headerEl) {
 }
 
 function exportStudentMultiPeriodComparison() {
+    if (!canUseStudentMultiPeriodCompare()) return alert('权限不足：学生多期对比仅管理员、教务主任、级部主任可用');
     const STUDENT_MULTI_PERIOD_COMPARE_CACHE = readStudentCompareCacheState();
     if (!STUDENT_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成学生多期对比结果');
 

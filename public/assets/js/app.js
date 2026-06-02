@@ -8943,7 +8943,7 @@ function guardBeforeSwitch(id) {
     if (id === 'starter-hub' || id === 'upload') return true;
     const needGuard = [
         'summary', 'analysis', 'county-analysis', 'high-score', 'indicator', 'bottom3',
-        'teacher-analysis',
+        'teacher-analysis', 'teacher-detail-comparison', 'teacher-pairing', 'teacher-township-ranking',
         'student-overview', 'student-details', 'subject-balance', 'marginal-push', 'progress-analysis', 'cohort-growth',
         'potential-analysis', 'segment-analysis', 'correlation-analysis', 'report-generator'
     ];
@@ -9320,6 +9320,11 @@ function switchTab(id) {
     }
     const removedModuleRedirects = {
         'macro-watch': 'summary',
+        'teaching-overview': 'teacher-analysis',
+        'teaching-issue-board': 'teacher-analysis',
+        'teaching-warning-center': 'teacher-analysis',
+        'teaching-rectify-center': 'teacher-analysis',
+        'teaching-version-center': 'teacher-analysis',
         'single-school-eval': 'teacher-analysis'
     };
     if (removedModuleRedirects[id]) {
@@ -9343,7 +9348,8 @@ function switchTab(id) {
     removeModuleIntroPanels(document);
 
     forceHideAllSectionsExcept(id);
-    if (id !== 'teacher-analysis' && typeof window.releaseTeacherAnalysisHeavyDom === 'function') {
+    const teacherInsightModuleIds = ['teacher-analysis', 'teacher-detail-comparison', 'teacher-pairing', 'teacher-township-ranking'];
+    if (!teacherInsightModuleIds.includes(id) && typeof window.releaseTeacherAnalysisHeavyDom === 'function') {
         window.setTimeout(() => window.releaseTeacherAnalysisHeavyDom(), 0);
     }
     const targetSection = getModuleSectionById(id);

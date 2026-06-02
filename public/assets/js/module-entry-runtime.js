@@ -10,6 +10,9 @@
     ]);
     const TEACHER_INSIGHT_MODULE_IDS = new Set([
         'teacher-analysis',
+        'teacher-detail-comparison',
+        'teacher-pairing',
+        'teacher-township-ranking',
         'cohort-growth'
     ]);
     const APP_DOWNLOAD_MODULE_IDS = new Set([
@@ -192,7 +195,12 @@
     }
 
     function isTeacherAnalysisActive() {
-        return !!document.getElementById('teacher-analysis')?.classList.contains('active');
+        return !!(
+            document.getElementById('teacher-analysis')?.classList.contains('active')
+            || document.getElementById('teacher-detail-comparison')?.classList.contains('active')
+            || document.getElementById('teacher-pairing')?.classList.contains('active')
+            || document.getElementById('teacher-township-ranking')?.classList.contains('active')
+        );
     }
 
     function clearTeacherAnalysisDeferredRender() {
@@ -347,9 +355,11 @@
                     if (node) delete node.dataset.released;
                 });
                 scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-cards', () => {
+                    if (typeof window.TeachingManagementModulesRuntime?.relocateTeacherBlocks === 'function') window.TeachingManagementModulesRuntime.relocateTeacherBlocks();
                     if (typeof window.renderTeacherCards === 'function') window.renderTeacherCards();
                 }, 0);
                 scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-pairing', () => {
+                    if (typeof window.TeachingManagementModulesRuntime?.relocateTeacherBlocks === 'function') window.TeachingManagementModulesRuntime.relocateTeacherBlocks();
                     if (typeof window.generateTeacherPairing === 'function') window.generateTeacherPairing();
                 }, 100);
                 scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-overview', () => {
@@ -363,12 +373,14 @@
                     if (typeof window.tmRenderTeachingModuleStateBars === 'function') window.tmRenderTeachingModuleStateBars('teacher-analysis');
                 }, 260);
                 scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-comparison', () => {
+                    if (typeof window.TeachingManagementModulesRuntime?.relocateTeacherBlocks === 'function') window.TeachingManagementModulesRuntime.relocateTeacherBlocks();
                     if (typeof window.renderTeacherComparisonTable === 'function') window.renderTeacherComparisonTable();
                 }, 420);
                 scheduleTeacherAnalysisPhase(token, 'teacher-analysis-refresh-compare-selects', () => {
                     scheduleTeacherCompareAutoRender(0);
                 }, 520);
                 scheduleTeacherAnalysisPhase(token, 'teacher-analysis-render-township', () => {
+                    if (typeof window.TeachingManagementModulesRuntime?.relocateTeacherBlocks === 'function') window.TeachingManagementModulesRuntime.relocateTeacherBlocks();
                     if (typeof window.renderTeacherTownshipRanking === 'function') window.renderTeacherTownshipRanking();
                 }, 760);
             });
@@ -438,12 +450,10 @@
         const multiPeriodSection = document.getElementById('student-multi-period-compare-section');
         if (!multiPeriodSection) return;
 
-        if (role === 'admin' || role === 'director' || role === 'grade_director' || role === 'class_teacher' || role === 'teacher') {
+        if (role === 'admin' || role === 'director' || role === 'grade_director') {
             multiPeriodSection.style.display = 'block';
             const saveCloudBtn = multiPeriodSection.querySelector('[onclick="saveStudentCompareToCloud()"]');
-            if (role === 'teacher' || role === 'class_teacher') {
-                if (saveCloudBtn) saveCloudBtn.style.display = 'none';
-            }
+            if (saveCloudBtn) saveCloudBtn.style.display = '';
         } else {
             multiPeriodSection.style.display = 'none';
         }
@@ -673,7 +683,7 @@
         showTeacherAnalysisPendingState();
         scheduleTeacherCompareAutoRender(16);
         scheduleModuleTask('teacher-analysis-auto-render', () => {
-            if (!document.getElementById('teacher-analysis')?.classList.contains('active')) return;
+            if (!isTeacherAnalysisActive()) return;
             const teacherMapReady = window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0;
             if (!teacherMapReady) {
                 renderTeacherAnalysisEmptyState();
@@ -684,7 +694,7 @@
                 && !window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__) {
                 window.ensureTeacherAnalysisMainRuntimeLoaded()
                     .then(() => {
-                        if (document.getElementById('teacher-analysis')?.classList.contains('active')) run();
+                        if (isTeacherAnalysisActive()) run();
                     })
                     .catch((error) => console.warn('[teacher-analysis] runtime load failed:', error));
                 return;
@@ -974,7 +984,10 @@
             }
             initCountdown();
         }
-        if (id === 'teacher-analysis') return initTeacherAnalysisEntry();
+        if (id === 'teacher-analysis'
+            || id === 'teacher-detail-comparison'
+            || id === 'teacher-pairing'
+            || id === 'teacher-township-ranking') return initTeacherAnalysisEntry();
         if (id === 'freshman-simulator' || id === 'exam-arranger') return initFreshmanExamEntry(id);
         if (id === 'grade-scheduler') return initGradeSchedulerEntry();
         if (id === 'report-generator') {

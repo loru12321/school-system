@@ -803,7 +803,14 @@ function formatProgressCompareDiff(value, digits = 1) {
     return `<span style="font-weight:700; color:${color};">${text}</span>`;
 }
 
+function canUseProgressMultiPeriodCompare() {
+    const user = typeof window.getCurrentUser === 'function' ? window.getCurrentUser() : (window.Auth?.currentUser || null);
+    const role = String(user?.role || '').trim();
+    return role === 'admin' || role === 'director' || role === 'grade_director';
+}
+
 function renderMultiPeriodComparison() {
+    if (!canUseProgressMultiPeriodCompare()) return false;
     const resultEl = document.getElementById('multiPeriodCompareResult');
     const config = getProgressMultiPeriodConfig();
     if (!resultEl) return false;
@@ -909,6 +916,11 @@ function renderMultiPeriodComparison() {
 }
 
 async function exportMultiPeriodComparison() {
+    if (!canUseProgressMultiPeriodCompare()) {
+        if (typeof uiAlert === 'function') uiAlert('权限不足：多期对比仅管理员、教务主任、级部主任可用', 'error');
+        else alert('权限不足：多期对比仅管理员、教务主任、级部主任可用');
+        return false;
+    }
     let cache = getProgressMultiPeriodCache();
     if (!cache || cache.type !== 'progress' || !Array.isArray(cache.rows) || !cache.rows.length) {
         cache = renderMultiPeriodComparison();

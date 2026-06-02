@@ -15,7 +15,14 @@ function debugStudentCompareGenerate(...args) {
     }
 }
 
+function canUseStudentMultiPeriodCompare() {
+    const user = typeof window.getCurrentUser === 'function' ? window.getCurrentUser() : (window.Auth?.currentUser || null);
+    const role = String(user?.role || '').trim();
+    return role === 'admin' || role === 'director' || role === 'grade_director';
+}
+
 function renderStudentMultiPeriodComparison() {
+    if (!canUseStudentMultiPeriodCompare()) return;
     const schoolEl = document.getElementById('studentCompareSchool');
     const hintEl = document.getElementById('studentCompareHint');
     const summaryEl = document.getElementById('studentCompareSummary');
