@@ -675,6 +675,11 @@
 
     function initTeacherAnalysisEntry() {
         clearTeacherAnalysisDeferredRender();
+        const applyTeacherRoleVisibility = () => {
+            if (typeof window.applyRoleAllowVisibility === 'function') {
+                window.applyRoleAllowVisibility(document.getElementById('teacher-analysis') || document);
+            }
+        };
         const cta = document.getElementById('teacher-sync-cta');
         if (cta) cta.style.display = (window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0) ? 'none' : 'inline-flex';
         const exportBtn = document.querySelector('#teacher-analysis .sec-head button');
@@ -686,13 +691,16 @@
         if (pairSection) pairSection.style.display = 'block';
         if (townshipContainer) townshipContainer.style.display = 'block';
 
+        applyTeacherRoleVisibility();
         showTeacherAnalysisPendingState();
         scheduleTeacherCompareAutoRender(16);
         scheduleModuleTask('teacher-analysis-auto-render', () => {
             if (!isTeacherAnalysisActive()) return;
+            applyTeacherRoleVisibility();
             const teacherMapReady = window.TEACHER_MAP && Object.keys(window.TEACHER_MAP).length > 0;
             if (!teacherMapReady) {
                 renderTeacherAnalysisEmptyState();
+                applyTeacherRoleVisibility();
                 return;
             }
             const run = () => scheduleTeacherAnalysisRenderWork(0);
@@ -700,12 +708,17 @@
                 && !window.__TEACHER_ANALYSIS_MAIN_RUNTIME_PATCHED__) {
                 window.ensureTeacherAnalysisMainRuntimeLoaded()
                     .then(() => {
-                        if (isTeacherAnalysisActive()) run();
+                        if (isTeacherAnalysisActive()) {
+                            applyTeacherRoleVisibility();
+                            run();
+                            scheduleModuleTask('teacher-analysis-role-visibility', applyTeacherRoleVisibility, { delay: 160, idle: true, timeout: 700 });
+                        }
                     })
                     .catch((error) => console.warn('[teacher-analysis] runtime load failed:', error));
                 return;
             }
             run();
+            scheduleModuleTask('teacher-analysis-role-visibility', applyTeacherRoleVisibility, { delay: 160, idle: true, timeout: 700 });
         }, { delay: 420, idle: true, timeout: 1800 });
         return Promise.resolve();
     }
