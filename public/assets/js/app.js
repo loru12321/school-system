@@ -8837,13 +8837,16 @@ function showBaseConfigGuardModal(missing) {
                     建议先进入<strong>新手入口</strong>完成引导步骤。
                 </div>`,
         showCancelButton: true,
-        confirmButtonText: '去新手入口',
+        confirmButtonText: '去可用入口',
         cancelButtonText: '我知道了',
         confirmButtonColor: '#0ea5e9'
     }).then((r) => {
         if (r.isConfirmed) {
             __guardBypass = true;
-            switchTab('starter-hub');
+            const fallbackIds = ['starter-hub', 'teacher-analysis', 'student-overview', 'report-generator', 'app-download-center'];
+            const targetId = fallbackIds.find((moduleId) => typeof canAccessModule !== 'function' || canAccessModule(moduleId))
+                || 'app-download-center';
+            switchTab(targetId);
         }
     });
 }

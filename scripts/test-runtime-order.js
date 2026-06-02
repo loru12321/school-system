@@ -163,6 +163,7 @@ const studentOverviewRuntime = fs.readFileSync(studentOverviewRuntimePath, 'utf8
 const teacherAnalysisCoreRuntime = fs.readFileSync(teacherAnalysisCoreRuntimePath, 'utf8');
 const teacherAnalysisUiRuntime = fs.readFileSync(teacherAnalysisUiRuntimePath, 'utf8');
 const countyAnalysisRuntime = fs.readFileSync(countyAnalysisRuntimePath, 'utf8');
+const mobileAppRuntime = fs.readFileSync(mobileAppRuntimePath, 'utf8');
 const mainCss = fs.readFileSync(path.resolve(__dirname, '../src/assets/css/main.css'), 'utf8');
 const cloudWorkspaceRuntime = fs.readFileSync(cloudWorkspaceRuntimePath, 'utf8');
 const popperVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/popperjs/popper.min.js'), 'utf8');
@@ -563,6 +564,11 @@ assert.ok(!moduleEntryRuntime.includes('initClassComparisonEntry'), 'removed cla
 assert.ok(!indexHtml.includes('id="class-comparison"'), 'removed class comparison section should not be present in the app shell');
 assert.ok(!moduleEntryRuntime.includes('initClassDiagnosisEntry'), 'removed class diagnosis should not have an entry initializer');
 assert.ok(appSource.includes("'single-school-eval': 'teacher-analysis'"), 'removed performance fairness module should redirect to teacher analysis');
+assert.ok(!mobileAppRuntime.includes("grade_director: 'starter-hub'"), 'grade director mobile home should not default to the hidden data management starter hub');
+assert.ok(mobileAppRuntime.includes("grade_director: 'teacher-analysis'"), 'grade director mobile home should default to teacher analysis');
+assert.ok(shellRuntime.includes('function isVisibleModuleActive(activeSectionId, visibleItems)'), 'shell should verify that the active module is visible for the current role');
+assert.ok(shellRuntime.includes('if (!firstCard || activeIsVisible) return;'), 'shell should auto-enter the first visible module when the default active section is forbidden');
+assert.ok(appSource.includes("const fallbackIds = ['starter-hub', 'teacher-analysis', 'student-overview', 'report-generator', 'app-download-center'];"), 'base config guard should redirect to the first role-visible module instead of forcing starter hub');
 assert.ok(!shellRuntime.includes("text: '绩效公平考核模型'"), 'teaching management quick switch should not expose the removed performance fairness module');
 assert.ok(!teachingManagementOverviewRuntime.includes("tmSetQuickEntryState(\n        'single-school-eval'"), 'teaching management overview should not render a performance fairness quick entry');
 assert.ok(teachingManagementOverviewRuntime.includes("const supportedModules = ['teacher-analysis'];"), 'teaching management state bars should only cover retained modules');

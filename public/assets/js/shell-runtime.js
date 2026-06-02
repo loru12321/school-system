@@ -233,6 +233,12 @@
         });
     }
 
+    function isVisibleModuleActive(activeSectionId, visibleItems) {
+        if (!activeSectionId) return false;
+        if (typeof canAccessModule === 'function' && !canAccessModule(activeSectionId)) return false;
+        return visibleItems.some((item) => item.id === activeSectionId);
+    }
+
     function resolveCategoryState() {
         const current = NAV_STRUCTURE[currentCategory];
         if (current && resolveVisibleItems(current).length > 0) return;
@@ -856,11 +862,13 @@
         setTimeout(function () {
             const lastAuto = window.__SHELL_LAST_DEFAULT_MODULE_AUTO__ || {};
             const now = Date.now();
-            const hasActiveSection = document.querySelector('.section.active');
+            const activeSectionId = getActiveSectionId();
+            const activeIsVisible = isVisibleModuleActive(activeSectionId, visibleItems);
             const firstCard = subNavContainer.querySelector('.shell-story-card');
             const firstModuleId = firstCard ? firstCard.getAttribute('data-module-id') : '';
+            if (!firstCard || activeIsVisible) return;
             if (firstModuleId && lastAuto.id === firstModuleId && now - Number(lastAuto.time || 0) < 10000) return;
-            if (!hasActiveSection && firstCard) {
+            if (firstModuleId) {
                 window.__SHELL_LAST_DEFAULT_MODULE_AUTO__ = { id: firstModuleId, time: now };
                 firstCard.click();
             }

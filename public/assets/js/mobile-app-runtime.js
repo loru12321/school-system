@@ -7,7 +7,7 @@
     const HOME_BY_ROLE = {
         admin: 'starter-hub',
         director: 'starter-hub',
-        grade_director: 'starter-hub',
+        grade_director: 'teacher-analysis',
         class_teacher: 'student-details',
         teacher: 'teacher-analysis'
     };
