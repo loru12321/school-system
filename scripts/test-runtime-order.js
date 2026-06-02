@@ -554,7 +554,6 @@ assert.ok(moduleEntryRuntime.includes("'report-generator-selects'"), 'report gen
 assert.ok(moduleEntryRuntime.includes('function prewarmReportGeneratorRuntimes'), 'report generator should prewarm query runtimes after entry');
 assert.ok(moduleEntryRuntime.includes("'report-generator-runtime-prewarm'"), 'report generator runtime prewarm should be scheduled off the switch frame');
 assert.ok(moduleEntryRuntime.includes('ensureReportRenderRuntimeLoaded'), 'report generator prewarm should include report rendering runtime');
-assert.ok(moduleEntryRuntime.includes('ensureStudentCompareRuntimeLoaded'), 'report generator prewarm should include student compare runtime');
 const reportPrewarmStart = moduleEntryRuntime.indexOf('function prewarmReportGeneratorRuntimes');
 const reportPrewarmEnd = moduleEntryRuntime.indexOf('function runModuleSpecificInit', reportPrewarmStart);
 const reportPrewarmSource = reportPrewarmStart >= 0 && reportPrewarmEnd > reportPrewarmStart
@@ -562,6 +561,8 @@ const reportPrewarmSource = reportPrewarmStart >= 0 && reportPrewarmEnd > report
     : '';
 assert.ok(reportPrewarmSource, 'report generator prewarm source should be present');
 assert.ok(!reportPrewarmSource.includes('ensureHistoryCompareRuntimeLoaded'), 'report generator should not prewarm legacy history compare runtime during normal report entry');
+assert.ok(!reportPrewarmSource.includes('ensureStudentCompareRuntimeLoaded'), 'report generator should not prewarm student compare runtime during normal report entry');
+assert.ok(!appSource.includes('report-student-compare-warmup'), 'report queries should not warm student compare runtime unless the user opens compare features');
 assert.ok(!moduleEntryRuntime.includes("id === 'exam-arranger'\n            && typeof window.ensureGradeSchedulerRuntimeLoaded"), 'exam arranger should not eagerly load the grade scheduler runtime');
 assert.ok(bootRuntime.includes("triggers: ['grade-scheduler']"), 'grade scheduler runtime should load only for the grade scheduler module');
 assert.ok(!moduleEntryRuntime.includes('initClassComparisonEntry'), 'removed class comparison should not have an entry initializer');
@@ -578,6 +579,10 @@ assert.ok(appSource.includes("if (role !== 'teacher') return allSubjects;"), 'on
 assert.ok(appSource.includes('visibleSubjects.forEach(sub => {'), 'town analysis subject detail tables should render only visible subjects');
 assert.ok(indexHtml.includes('data-role-allow="admin,director,grade_director"'), 'teacher multi-period compare panel should only be visible to admin, director, and grade director');
 assert.ok(appSource.includes('function applyRoleAllowVisibility(root = document)'), 'role-limited local panels should be hidden by a shared runtime helper');
+assert.ok(indexHtml.includes('class="analysis-action-stack" data-role-allow="admin,director,grade_director"'), 'student detail export actions should be admin/director/grade-director only');
+assert.ok(indexHtml.includes('class="explain-panel analysis-doc-panel" data-role-allow="admin,director,grade_director"'), 'student detail usage advice should be admin/director/grade-director only');
+assert.ok(indexHtml.includes('class="student-details-secondary-flow" data-role-allow="admin,director,grade_director"'), 'student multi-period compare flow should be admin/director/grade-director only');
+assert.ok(moduleEntryRuntime.includes('applyStudentDetailsRoleVisibility'), 'student details lazy entry should reapply role visibility after template insertion');
 assert.ok(teacherCompareResultRuntime.includes('function canUseTeacherMultiPeriodCompare()'), 'teacher multi-period compare runtime should have a role guard');
 assert.ok(teacherCompareResultRuntime.includes('guardTeacherMultiPeriodCompare(hintEl, resultEl)'), 'teacher multi-period compare generation should enforce the role guard');
 assert.ok(teacherCompareCloudRuntime.includes('function guardTeacherMultiPeriodCloudAction()'), 'teacher multi-period cloud actions should enforce the role guard');

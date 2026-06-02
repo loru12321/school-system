@@ -126,6 +126,10 @@ async function inspectRole(page, role) {
     for (const moduleId of modulesToInspect) {
         await page.evaluate((id) => {
             if (typeof window.switchModule === 'function') window.switchModule(id);
+            if (!document.getElementById(id)?.classList.contains('active')
+                && typeof window.switchTab === 'function') {
+                window.switchTab(id);
+            }
         }, moduleId);
         await page.waitForFunction((id) => {
             const active = document.getElementById(id);
@@ -164,12 +168,15 @@ async function inspectRole(page, role) {
                 })
                 .filter(node => /多期对比|2期|3期/.test(String(node.textContent || '')));
             const oldTeachingText = /教学管理概览|任务清单|问题预警|整改中心|版本中心|数据状态面板|统一入口|数据导入|教师任课/.test(visibleText);
+            const visibleStudentDetailsRestrictedContent = id === 'student-details'
+                && /学生明细使用建议|生成班级成绩长图|生成家长查分包|学生多期对比|查看云端对比|保存到云端/.test(visibleText);
             return {
                 id,
                 active: !!active && active.classList.contains('active'),
                 visibleForbiddenPanelCount: forbiddenPanels.length,
                 visibleTextHasMultiPeriodCompare: /多期对比/.test(visibleText),
-                visibleOldTeachingContent: oldTeachingText
+                visibleOldTeachingContent: oldTeachingText,
+                visibleStudentDetailsRestrictedContent
             };
         }, moduleId));
     }
@@ -222,6 +229,9 @@ async function inspectRole(page, role) {
         }
         if (/^teacher-/.test(result.id) && result.visibleOldTeachingContent) {
             failures.push(`${role}/${result.id}: old teaching-management content remains`);
+        }
+        if (result.visibleStudentDetailsRestrictedContent) {
+            failures.push(`${role}/${result.id}: student detail admin-only tools remain visible`);
         }
     });
 

@@ -411,8 +411,15 @@
         const user = getCurrentUser();
         const role = user?.role || 'guest';
         const canUseStudentMultiPeriod = role === 'admin' || role === 'director' || role === 'grade_director';
+        const applyStudentDetailsRoleVisibility = () => {
+            if (typeof window.applyRoleAllowVisibility === 'function') {
+                window.applyRoleAllowVisibility(document.getElementById('student-details') || document);
+            }
+        };
+        applyStudentDetailsRoleVisibility();
         scheduleModuleTask('student-details-compare-selects', () => {
             if (!document.getElementById('student-details')?.classList.contains('active')) return;
+            applyStudentDetailsRoleVisibility();
             if (canUseStudentMultiPeriod && typeof updateStudentCompareExamSelects === 'function') updateStudentCompareExamSelects();
             if (canUseStudentMultiPeriod && typeof updateReportCompareExamSelects === 'function') updateReportCompareExamSelects();
             if (canUseStudentMultiPeriod
@@ -432,8 +439,10 @@
         const triggerRender = () => {
             const section = document.getElementById('student-details');
             if (!section || !section.classList.contains('active')) return;
+            applyStudentDetailsRoleVisibility();
             if (typeof window.renderStudentDetails === 'function') {
                 window.renderStudentDetails(true);
+                applyStudentDetailsRoleVisibility();
             }
         };
 
@@ -463,6 +472,7 @@
         } else {
             multiPeriodSection.style.display = 'none';
         }
+        applyStudentDetailsRoleVisibility();
     }
 
     function initAppDownloadCenterEntry() {
@@ -924,8 +934,7 @@
     function prewarmReportGeneratorRuntimes() {
         scheduleActiveModuleTask('report-generator', 'report-generator-runtime-prewarm', () => {
             const loaders = [
-                ['report-render', window.ensureReportRenderRuntimeLoaded],
-                ['student-compare', window.ensureStudentCompareRuntimeLoaded]
+                ['report-render', window.ensureReportRenderRuntimeLoaded]
             ];
             loaders.forEach(([label, loader]) => {
                 if (typeof loader !== 'function') return;

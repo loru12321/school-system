@@ -4328,14 +4328,14 @@
                 </div>
                 <div class="sec-head analysis-shell-head">
                     <h2><i class="ti ti-users"></i> 学生考试明细</h2>
-                    <div class="analysis-action-stack">
+                    <div class="analysis-action-stack" data-role-allow="admin,director,grade_director">
                         <div class="analysis-action-note">建议先筛选学校/班级，再决定是导出 Excel、长图还是查分包。</div>
                         <div class="analysis-actions">
                             <button class="btn" onclick="exportStudentDetails()">导出Excel</button>
                         </div>
                     </div>
                 </div>
-                <details class="explain-panel analysis-doc-panel">
+                <details class="explain-panel analysis-doc-panel" data-role-allow="admin,director,grade_director">
                     <summary>学生明细使用建议</summary>
                     <div class="explain-content">
                         <p>先筛选学校与班级，再导出结果，能减少无关学生信息干扰。</p>
@@ -4359,15 +4359,15 @@
                         </select>
                     </span>
                     <button class="btn" onclick="renderStudentDetails()">筛选查询</button>
-                    <button class="btn btn-green" style="margin-left:auto;" onclick="generateMobileLongImage()">
+                    <button class="btn btn-green" style="margin-left:auto;" data-role-allow="admin,director,grade_director" onclick="generateMobileLongImage()">
                         <i class="ti ti-photo-scan"></i> 生成班级成绩长图 (手机端)
                     </button>
-                    <button class="btn btn-orange" onclick="generateInquiryPackage()">
+                    <button class="btn btn-orange" data-role-allow="admin,director,grade_director" onclick="generateInquiryPackage()">
                         <i class="ti ti-package"></i> 生成家长查分包 (HTML)
                     </button>
                 </div>
 
-                <div class="student-details-secondary-flow">
+                <div class="student-details-secondary-flow" data-role-allow="admin,director,grade_director">
                 <div class="analysis-inline-panel" data-role-allow="admin,director,grade_director">
                     <div class="analysis-inline-top">
                         <div class="analysis-inline-title">🧭 学生多期对比 (2期 / 3期)</div>

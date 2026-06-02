@@ -12908,21 +12908,7 @@ function syncReportCompareTargetForQuery(stu) {
 }
 
 function warmStudentCompareRuntimeForReport(stu) {
-    if (typeof window.ensureStudentCompareRuntimeLoaded !== 'function') return;
-    const loadRuntime = () => {
-        window.ensureStudentCompareRuntimeLoaded()
-            .then(() => {
-                if (typeof setCloudCompareTarget === 'function') setCloudCompareTarget(stu);
-            })
-            .catch((error) => {
-                console.warn('Failed to warm student compare runtime after report query:', error);
-            });
-    };
-    if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
-        window.SystemPerformance.scheduleIdle(loadRuntime, { label: 'report-student-compare-warmup', delay: 120, timeout: 1500 });
-        return;
-    }
-    window.setTimeout(loadRuntime, 120);
+    if (typeof setCloudCompareTarget === 'function') setCloudCompareTarget(stu);
 }
 
 
