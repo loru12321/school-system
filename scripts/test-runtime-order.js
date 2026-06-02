@@ -50,6 +50,7 @@ const perfMobileRuntimePath = path.resolve(__dirname, '../public/assets/js/perf-
 const shellRuntimePath = path.resolve(__dirname, '../public/assets/js/shell-runtime.js');
 const shellPolishRuntimePath = path.resolve(__dirname, '../public/assets/js/shell-polish-runtime.js');
 const moduleEntryRuntimePath = path.resolve(__dirname, '../public/assets/js/module-entry-runtime.js');
+const permissionPolicyRuntimePath = path.resolve(__dirname, '../public/assets/js/permission-policy-runtime.js');
 const rankingDataServiceRuntimePath = path.resolve(__dirname, '../public/assets/js/ranking-data-service-runtime.js');
 const studentJumpRuntimePath = path.resolve(__dirname, '../public/assets/js/student-jump-runtime.js');
 const schoolProfileRuntimePath = path.resolve(__dirname, '../public/assets/js/school-profile-runtime.js');
@@ -121,6 +122,7 @@ assert.ok(fs.existsSync(perfMobileRuntimePath), 'perf-mobile-runtime.js should e
 assert.ok(fs.existsSync(shellRuntimePath), 'shell-runtime.js should exist');
 assert.ok(fs.existsSync(shellPolishRuntimePath), 'shell-polish-runtime.js should exist');
 assert.ok(fs.existsSync(moduleEntryRuntimePath), 'module-entry-runtime.js should exist');
+assert.ok(fs.existsSync(permissionPolicyRuntimePath), 'permission-policy-runtime.js should exist');
 assert.ok(fs.existsSync(rankingDataServiceRuntimePath), 'ranking-data-service-runtime.js should exist');
 assert.ok(fs.existsSync(studentJumpRuntimePath), 'student-jump-runtime.js should exist');
 assert.ok(fs.existsSync(schoolProfileRuntimePath), 'school-profile-runtime.js should exist');
@@ -152,6 +154,7 @@ const shellRuntime = fs.readFileSync(shellRuntimePath, 'utf8');
 const shellPolishRuntime = fs.readFileSync(shellPolishRuntimePath, 'utf8');
 const schoolNormalizationRuntime = fs.readFileSync(schoolNormalizationRuntimePath, 'utf8');
 const moduleEntryRuntime = fs.readFileSync(moduleEntryRuntimePath, 'utf8');
+const permissionPolicyRuntime = fs.readFileSync(permissionPolicyRuntimePath, 'utf8');
 const teacherCompareResultRuntime = fs.readFileSync(teacherCompareResultRuntimePath, 'utf8');
 const teacherSyncRuntime = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/teacher-sync-runtime.js'), 'utf8');
 const progressAnalysisRuntime = fs.readFileSync(progressAnalysisRuntimePath, 'utf8');
@@ -572,6 +575,9 @@ assert.ok(appSource.includes("const fallbackIds = ['starter-hub', 'teacher-analy
 assert.ok(appSource.includes('function getTownAnalysisVisibleSubjectsForCurrentUser()'), 'town analysis should centralize role-aware subject detail visibility');
 assert.ok(appSource.includes("if (role !== 'teacher') return allSubjects;"), 'only teacher role should hide non-teaching subject detail tables');
 assert.ok(appSource.includes('visibleSubjects.forEach(sub => {'), 'town analysis subject detail tables should render only visible subjects');
+assert.ok(permissionPolicyRuntime.includes("roleChecks.push(ownTeacherMetric || (!!normalizedSubject && teachingScope.subjects.has(normalizedSubject)));"), 'teacher-analysis should allow teachers to see same-school same-subject teacher metrics');
+assert.ok(teacherAnalysisCoreRuntime.includes("const useSchoolWideTeacherPeerScope = user?.role === 'teacher';"), 'teacher-analysis should compute school-wide peer stats for teacher accounts before subject-level visibility filtering');
+assert.ok(teacherAnalysisCoreRuntime.includes('useSchoolWideTeacherPeerScope ? null : user'), 'teacher-analysis baselines should use school-wide peer scope for teacher comparison rows');
 assert.ok(!shellRuntime.includes("text: '绩效公平考核模型'"), 'teaching management quick switch should not expose the removed performance fairness module');
 assert.ok(!teachingManagementOverviewRuntime.includes("tmSetQuickEntryState(\n        'single-school-eval'"), 'teaching management overview should not render a performance fairness quick entry');
 assert.ok(teachingManagementOverviewRuntime.includes("const supportedModules = ['teacher-analysis'];"), 'teaching management state bars should only cover retained modules');

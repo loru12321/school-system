@@ -434,7 +434,7 @@
         let list = teacherNormalizeExamStudents(rows).filter((student) => (
             !schoolName || teacherSameSchoolName(student.school, schoolName)
         ));
-        if (window.PermissionPolicy && typeof window.PermissionPolicy.filterStudentRows === 'function') {
+        if (user && window.PermissionPolicy && typeof window.PermissionPolicy.filterStudentRows === 'function') {
             list = window.PermissionPolicy.filterStudentRows(user, list, { mode });
         }
         return list;
@@ -970,7 +970,8 @@
             }
         }
         const queryMode = window.PermissionPolicy && window.PermissionPolicy.isClassTeacher(user) ? 'homeroom' : 'teaching';
-        if (window.PermissionPolicy && typeof window.PermissionPolicy.filterStudentRows === 'function') {
+        const useSchoolWideTeacherPeerScope = user?.role === 'teacher';
+        if (!useSchoolWideTeacherPeerScope && window.PermissionPolicy && typeof window.PermissionPolicy.filterStudentRows === 'function') {
             mySchoolStudents = window.PermissionPolicy.filterStudentRows(user, mySchoolStudents, { mode: queryMode });
             if (!mySchoolStudents.length && teacherMapSchool && !teacherSameSchoolName(teacherMapSchool, activeSchool)) {
                 activeSchool = syncTeacherSchoolContext(teacherMapSchool);
@@ -1022,7 +1023,12 @@
             : 1;
         const rollingBaselineEntries = teacherGetRollingBaselineExamEntries(rollingBaselineLimit);
         const baselineContexts = rollingBaselineEntries.map((entry) => {
-            const examStudents = teacherFilterExamStudentsBySchool(entry?.data || [], activeSchool, user, queryMode);
+            const examStudents = teacherFilterExamStudentsBySchool(
+                entry?.data || [],
+                activeSchool,
+                useSchoolWideTeacherPeerScope ? null : user,
+                queryMode
+            );
             const rowsForCompare = teacherBuildComparableBaselineRows(examStudents);
             const indexes = rowsForCompare.length && typeof window.buildProgressPreviousMatchIndex === 'function'
                 ? window.buildProgressPreviousMatchIndex(rowsForCompare)

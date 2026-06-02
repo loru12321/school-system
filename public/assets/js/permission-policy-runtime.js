@@ -176,7 +176,7 @@ const PermissionPolicy = {
         if (!user) return [];
         return names.filter(name => this.canQueryClass(user, schoolName, name, options));
     },
-    canQueryTeacherMetric(user, teacherName, statItem, schoolName) {
+    canQueryTeacherMetric(user, teacherName, statItem, schoolName, subjectName = '') {
         if (!user) return false;
         if (!this.canQuerySchool(user, schoolName)) return false;
         if (this.hasQueryRole(user, 'admin')) return true;
@@ -185,7 +185,10 @@ const PermissionPolicy = {
         const roleChecks = [];
 
         if (this.hasQueryRole(user, 'teacher')) {
-            roleChecks.push(this.normalizeName(teacherName) === this.normalizeName(user?.teacher_name || user?.name || user?.username));
+            const ownTeacherMetric = this.normalizeName(teacherName) === this.normalizeName(user?.teacher_name || user?.name || user?.username);
+            const teachingScope = this.getTeachingScope(user);
+            const normalizedSubject = normalizeSubject(subjectName || statItem?.subject || '');
+            roleChecks.push(ownTeacherMetric || (!!normalizedSubject && teachingScope.subjects.has(normalizedSubject)));
         }
 
         if (this.hasQueryRole(user, 'grade_director')) {
@@ -207,7 +210,7 @@ const PermissionPolicy = {
         Object.entries(stats || {}).forEach(([teacherName, subjectMap]) => {
             const scopedSubjects = {};
             Object.entries(subjectMap || {}).forEach(([subject, statItem]) => {
-                if (this.canQueryTeacherMetric(user, teacherName, statItem, schoolName)) {
+                if (this.canQueryTeacherMetric(user, teacherName, statItem, schoolName, subject)) {
                     scopedSubjects[subject] = statItem;
                 }
             });
