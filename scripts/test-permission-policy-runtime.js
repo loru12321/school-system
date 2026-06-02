@@ -26,6 +26,18 @@ context.window = context;
 
 vm.runInNewContext(permissionSource, context, { filename: 'permission-policy-runtime.js' });
 
+const dataManagementModuleIds = ['starter-hub', 'upload', 'data-quality'];
+for (const role of ['grade_director', 'class_teacher', 'teacher']) {
+    const user = { role, roles: [role] };
+    dataManagementModuleIds.forEach((moduleId) => {
+        assert.strictEqual(
+            context.PermissionPolicy.canAccessModule(user, moduleId),
+            false,
+            `${role} should not access data management module ${moduleId}`
+        );
+    });
+}
+
 const townModuleIds = ['summary', 'analysis', 'high-score', 'indicator', 'bottom3'];
 for (const role of ['director', 'grade_director']) {
     const user = { role, roles: [role] };

@@ -1,9 +1,9 @@
 const QUERY_MODULE_ACCESS = {
     admin: ['*'],
     director: ['starter-hub', 'upload', 'data-quality', 'summary', 'analysis', 'high-score', 'indicator', 'bottom3', 'county-analysis', 'teacher-analysis', 'marginal-push', 'progress-analysis', 'report-generator', 'freshman-simulator', 'exam-arranger', 'grade-scheduler', 'seat-adjustment', 'mutual-aid', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'cohort-growth', 'zhongkao-countdown', 'app-download-center'],
-    grade_director: ['starter-hub', 'summary', 'analysis', 'high-score', 'indicator', 'bottom3', 'teacher-analysis', 'marginal-push', 'progress-analysis', 'report-generator', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'cohort-growth', 'zhongkao-countdown', 'app-download-center'],
-    class_teacher: ['starter-hub', 'teacher-analysis', 'student-overview', 'student-details', 'subject-balance', 'marginal-push', 'progress-analysis', 'cohort-growth', 'potential-analysis', 'segment-analysis', 'report-generator', 'zhongkao-countdown', 'app-download-center'],
-    teacher: ['starter-hub', 'teacher-analysis', 'student-overview', 'student-details', 'subject-balance', 'progress-analysis', 'cohort-growth', 'report-generator', 'zhongkao-countdown', 'app-download-center'],
+    grade_director: ['summary', 'analysis', 'high-score', 'indicator', 'bottom3', 'teacher-analysis', 'marginal-push', 'progress-analysis', 'report-generator', 'student-overview', 'student-details', 'subject-balance', 'potential-analysis', 'segment-analysis', 'correlation-analysis', 'cohort-growth', 'zhongkao-countdown', 'app-download-center'],
+    class_teacher: ['teacher-analysis', 'student-overview', 'student-details', 'subject-balance', 'marginal-push', 'progress-analysis', 'cohort-growth', 'potential-analysis', 'segment-analysis', 'report-generator', 'zhongkao-countdown', 'app-download-center'],
+    teacher: ['teacher-analysis', 'student-overview', 'student-details', 'subject-balance', 'progress-analysis', 'cohort-growth', 'report-generator', 'zhongkao-countdown', 'app-download-center'],
     parent: ['report-generator', 'app-download-center'],
     student: ['report-generator', 'app-download-center'],
     guest: ['starter-hub', 'app-download-center']
