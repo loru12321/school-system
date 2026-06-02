@@ -9578,6 +9578,52 @@ function handleExcludedClick(schoolName) {
     DrillSystem.open(`${schoolName} - 后1/3核算剔除名单 (共${excN}人)`, students);
 }
 
+const SummaryRefreshState = {
+    dirty: false,
+    reason: '',
+    version: 0,
+    lastGeneratedVersion: 0,
+    suppress: false
+};
+
+function updateSummaryRefreshState() {
+    const btn = document.getElementById('btn-summary-generate');
+    const notice = document.getElementById('summary-refresh-notice');
+    const isDirty = !!SummaryRefreshState.dirty;
+
+    if (btn) {
+        btn.classList.toggle('is-stale', isDirty);
+        btn.dataset.stale = isDirty ? '1' : '0';
+        btn.textContent = isDirty ? '数据已变更，请重新生成' : '生成总排名';
+        btn.title = isDirty
+            ? (SummaryRefreshState.reason || '前置数据已变化，请重新生成总排名')
+            : '生成综合总排名';
+    }
+
+    if (notice) {
+        notice.textContent = isDirty
+            ? (SummaryRefreshState.reason || '前置数据已变化，请重新生成总排名。')
+            : '';
+        notice.style.display = isDirty ? 'block' : 'none';
+    }
+}
+
+function markSummaryDataChanged(reason = '前置数据已变化，请重新生成总排名。') {
+    if (SummaryRefreshState.suppress) return;
+    SummaryRefreshState.version += 1;
+    const hasGeneratedSummary = !!document.querySelector('#tb-summary tbody tr');
+    SummaryRefreshState.dirty = hasGeneratedSummary;
+    SummaryRefreshState.reason = reason;
+    updateSummaryRefreshState();
+}
+
+function markSummaryFresh() {
+    SummaryRefreshState.dirty = false;
+    SummaryRefreshState.lastGeneratedVersion = SummaryRefreshState.version;
+    SummaryRefreshState.reason = '';
+    updateSummaryRefreshState();
+}
+
 function renderHighScoreTable() {
     const tbody = document.querySelector('#tb-high-score tbody');
     tbody.innerHTML = '';
@@ -9632,6 +9678,7 @@ function renderHighScoreTable() {
             </tr>`;
     });
     tbody.innerHTML = html;
+    markSummaryDataChanged('高分段赋分已更新，请重新生成总排名。');
 
     appDebug(`已渲染 ${list.length} 所学校的高分数据`);
 }
@@ -10574,6 +10621,7 @@ function renderTables() {
     });
     setSummaryHtmlIfChanged(tbBottom, htmlBottom, `${summarySignature}::bottom-body`);
     refreshIndicatorResults(true);
+    markSummaryDataChanged('两率一分或后1/3结果已更新，请重新生成总排名。');
 }
 
 function renderTrafficLightDashboard() {
@@ -14153,6 +14201,7 @@ function calcIndicators(isSilent = false) {
     });
     document.querySelector('#tb-indicator tbody').innerHTML = html;
     renderIndicatorTargetMatchPanel(calcData, line1, line2);
+    markSummaryDataChanged('指标生核算结果已更新，请重新生成总排名。');
 
     if (!isSilent && window.UI) {
         UI.toast("✅ 指标生核算完成 (含附加分)", "success");
@@ -14378,10 +14427,14 @@ function calcSummary(isSilent = false) {
     const isGrade9 = CONFIG.name && CONFIG.name.includes('9');
 
     if (isGrade9 && typeof calcIndicators === 'function') {
+        const previousSuppress = SummaryRefreshState.suppress;
+        SummaryRefreshState.suppress = true;
         try {
             calcIndicators(true);
         } catch (e) {
             console.warn('[calcSummary] 指标生静默重算失败:', e);
+        } finally {
+            SummaryRefreshState.suppress = previousSuppress;
         }
     }
 
@@ -14423,18 +14476,20 @@ function calcSummary(isSilent = false) {
     let html = '';
     list.forEach(d => {
         const isMySchool = sameAppSchoolName(d.name, MY_SCHOOL);
+        const safeName = escapeAppHtml(d.name);
+        const safeSchoolArg = jsStringLiteral(d.name);
         let indicatorCell = '';
         if (isGrade9) indicatorCell = `<td data-label="指标生得分">${d.s3.toFixed(2)}</td>`;
         let highScoreCell = '';
-        if (isGrade9) highScoreCell = `<td data-label="高分段赋分" style="color:#b45309; background:#fff7ed; font-weight:bold;">${d.s4.toFixed(2)}</td>`;
+        if (isGrade9) highScoreCell = `<td data-label="高分段赋分" style="color:#b45309; background:#fff7ed; font-weight:bold;"><button type="button" class="summary-drill-link summary-drill-link-warm" onclick="handleHighClick(${safeSchoolArg})" title="点击查看高分段学生名单">${d.s4.toFixed(2)}</button></td>`;
         const rankClass = ['rank-cell', d.rank === 1 ? 'r-1' : '', d.rank === 2 ? 'r-2' : '', d.rank === 3 ? 'r-3' : '']
             .filter(Boolean)
             .join(' ');
 
         html += `<tr class="${isMySchool ? 'bg-highlight' : ''}">
-                <td data-label="学校名称">${d.name}</td>
+                <td data-label="学校名称">${safeName}</td>
                 <td data-label="两率一分得分">${d.s1.toFixed(2)}</td>
-                <td data-label="后1/3得分">${d.s2.toFixed(2)}</td>
+                <td data-label="后1/3得分"><button type="button" class="summary-drill-link" onclick="handleExcludedClick(${safeSchoolArg})" title="点击查看后1/3核算剔除名单">${d.s2.toFixed(2)}</button></td>
                 ${indicatorCell}
                 ${highScoreCell}
                 <td data-label="综合总分" class="text-red" style="font-size:16px; font-weight:bold;">${d.total.toFixed(2)}</td>
@@ -14442,6 +14497,7 @@ function calcSummary(isSilent = false) {
             </tr>`;
     });
     document.querySelector('#tb-summary tbody').innerHTML = html;
+    markSummaryFresh();
 
     appDebug(`综合排名已生成，共 ${list.length} 所学校`);
 }

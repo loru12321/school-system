@@ -169,6 +169,7 @@ const teacherAnalysisUiRuntime = fs.readFileSync(teacherAnalysisUiRuntimePath, '
 const countyAnalysisRuntime = fs.readFileSync(countyAnalysisRuntimePath, 'utf8');
 const mobileAppRuntime = fs.readFileSync(mobileAppRuntimePath, 'utf8');
 const mainCss = fs.readFileSync(path.resolve(__dirname, '../src/assets/css/main.css'), 'utf8');
+const layoutRefinementCss = fs.readFileSync(path.resolve(__dirname, '../src/assets/css/layout-refinement.css'), 'utf8');
 const cloudWorkspaceRuntime = fs.readFileSync(cloudWorkspaceRuntimePath, 'utf8');
 const popperVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/popperjs/popper.min.js'), 'utf8');
 const tippyVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/tippyjs/tippy.umd.min.js'), 'utf8');
@@ -902,5 +903,13 @@ assert.ok(rankingDataServiceIndex < studentJumpIndex, 'ranking-data-service-runt
 assert.ok(studentJumpIndex < appIndex, 'student-jump-runtime.js must load before app.js');
 assert.ok(appIndex < supportMetricsIndex, 'support-metrics-runtime.js must load after app.js');
 assert.ok(popperVendorIndex < tippyVendorIndex, 'popper.min.js must load before tippy.umd.min.js');
+assert.ok(indexHtml.includes('id="btn-summary-generate"'), 'summary should expose a stable generate button id for stale-data reminders');
+assert.ok(indexHtml.includes('id="summary-refresh-notice"'), 'summary should include a stale-data reminder region');
+assert.ok(appSource.includes('function markSummaryDataChanged'), 'summary stale-data state helper should exist');
+assert.ok(appSource.includes('function markSummaryFresh'), 'summary fresh-state helper should exist');
+assert.ok(appSource.includes('handleExcludedClick(${safeSchoolArg})'), 'summary bottom-third score should drill into excluded students');
+assert.ok(appSource.includes('handleHighClick(${safeSchoolArg})'), 'summary high-score score should drill into high-score students');
+assert.ok(layoutRefinementCss.includes('#summary #tb-summary thead th') && layoutRefinementCss.includes('position: sticky'), 'summary table header should remain sticky');
+assert.ok(layoutRefinementCss.includes('.summary-generate-btn.is-stale'), 'summary stale generate button styling should exist');
 
 console.log('runtime order tests passed');

@@ -1551,9 +1551,10 @@
                     <div class="analysis-action-stack">
                         <div class="analysis-action-note">适合考试后的教务汇总与校长汇报，建议完成前置分析后再统一导出。</div>
                         <div class="analysis-actions">
-                            <button class="btn btn-green" onclick="calcSummary()">生成总排名</button>
+                            <button id="btn-summary-generate" class="btn btn-green summary-generate-btn" onclick="calcSummary()">生成总排名</button>
                             <button class="btn btn-green" onclick="exportSummaryTable()">导出报告</button>
                         </div>
+                        <div id="summary-refresh-notice" class="summary-refresh-notice" aria-live="polite"></div>
                     </div>
                 </div>
                 <details class="explain-panel analysis-doc-panel">
