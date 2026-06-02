@@ -42,9 +42,14 @@
             color: '#dc2626',
             icon: 'ti-school',
             eyebrow: 'Studio Ops',
-            summary: '聚焦教师画像和班级对比，保留真正高频的教学分析入口。',
+            summary: '把工作台、教师画像、问题清单、预警整改和版本归档拆成独立入口，减少一个页面里来回滑动。',
             items: [
+                { id: 'teaching-overview', icon: 'ti-layout-dashboard', text: '教学管理工作台', hint: '先看数据准备度、筛选口径、风险提示和下一步建议。' },
                 { id: 'teacher-analysis', icon: 'ti-school', text: '教师教学质量画像', hint: '从教师视角查看贡献、波动和结构性问题。' },
+                { id: 'teaching-issue-board', icon: 'ti-clipboard-list', text: '教学问题清单', hint: '汇总风险教师、待跟进预警和整改任务。' },
+                { id: 'teaching-warning-center', icon: 'ti-alert-triangle', text: '质量预警中心', hint: '按等级、状态和类型筛选云端质量预警。' },
+                { id: 'teaching-rectify-center', icon: 'ti-checkup-list', text: '整改跟踪中心', hint: '跟进整改任务、负责人、进度和完成状态。' },
+                { id: 'teaching-version-center', icon: 'ti-versions', text: '版本归档中心', hint: '保存并对比成绩、任课表、目标人数和规则基线。' },
             ]
         },
         student: {

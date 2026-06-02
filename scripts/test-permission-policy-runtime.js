@@ -50,6 +50,44 @@ for (const role of ['director', 'grade_director', 'class_teacher', 'teacher']) {
     });
 }
 
+const directorTeachingModuleIds = [
+    'teaching-overview',
+    'teacher-analysis',
+    'teaching-issue-board',
+    'teaching-warning-center',
+    'teaching-rectify-center',
+    'teaching-version-center'
+];
+directorTeachingModuleIds.forEach((moduleId) => {
+    assert.strictEqual(
+        context.PermissionPolicy.canAccessModule({ role: 'director', roles: ['director'] }, moduleId),
+        true,
+        `director should access teaching management submodule ${moduleId}`
+    );
+});
+
+['teaching-overview', 'teacher-analysis', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center'].forEach((moduleId) => {
+    assert.strictEqual(
+        context.PermissionPolicy.canAccessModule({ role: 'grade_director', roles: ['grade_director'] }, moduleId),
+        true,
+        `grade director should access teaching management submodule ${moduleId}`
+    );
+});
+assert.strictEqual(
+    context.PermissionPolicy.canAccessModule({ role: 'grade_director', roles: ['grade_director'] }, 'teaching-version-center'),
+    false,
+    'grade director should not access the version archive center'
+);
+for (const role of ['teacher', 'class_teacher']) {
+    ['teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center'].forEach((moduleId) => {
+        assert.strictEqual(
+            context.PermissionPolicy.canAccessModule({ role, roles: [role] }, moduleId),
+            false,
+            `${role} should not access management-only teaching submodule ${moduleId}`
+        );
+    });
+}
+
 townModuleIds.forEach((moduleId) => {
     assert.strictEqual(
         context.PermissionPolicy.canAccessModule({ role: 'parent', roles: ['parent'] }, moduleId),

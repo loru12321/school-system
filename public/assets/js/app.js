@@ -9320,11 +9320,6 @@ function switchTab(id) {
     }
     const removedModuleRedirects = {
         'macro-watch': 'summary',
-        'teaching-overview': 'teacher-analysis',
-        'teaching-issue-board': 'teacher-analysis',
-        'teaching-warning-center': 'teacher-analysis',
-        'teaching-rectify-center': 'teacher-analysis',
-        'teaching-version-center': 'teacher-analysis',
         'single-school-eval': 'teacher-analysis'
     };
     if (removedModuleRedirects[id]) {
