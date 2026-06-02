@@ -156,6 +156,7 @@ const schoolNormalizationRuntime = fs.readFileSync(schoolNormalizationRuntimePat
 const moduleEntryRuntime = fs.readFileSync(moduleEntryRuntimePath, 'utf8');
 const permissionPolicyRuntime = fs.readFileSync(permissionPolicyRuntimePath, 'utf8');
 const teacherCompareResultRuntime = fs.readFileSync(teacherCompareResultRuntimePath, 'utf8');
+const teacherCompareCloudRuntime = fs.readFileSync(teacherCompareCloudRuntimePath, 'utf8');
 const teacherSyncRuntime = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/teacher-sync-runtime.js'), 'utf8');
 const progressAnalysisRuntime = fs.readFileSync(progressAnalysisRuntimePath, 'utf8');
 const teacherStateRuntime = fs.readFileSync(teacherRuntimePath, 'utf8');
@@ -575,6 +576,11 @@ assert.ok(appSource.includes("const fallbackIds = ['starter-hub', 'teacher-analy
 assert.ok(appSource.includes('function getTownAnalysisVisibleSubjectsForCurrentUser()'), 'town analysis should centralize role-aware subject detail visibility');
 assert.ok(appSource.includes("if (role !== 'teacher') return allSubjects;"), 'only teacher role should hide non-teaching subject detail tables');
 assert.ok(appSource.includes('visibleSubjects.forEach(sub => {'), 'town analysis subject detail tables should render only visible subjects');
+assert.ok(indexHtml.includes('data-role-allow="admin,director,grade_director"'), 'teacher multi-period compare panel should only be visible to admin, director, and grade director');
+assert.ok(appSource.includes('function applyRoleAllowVisibility(root = document)'), 'role-limited local panels should be hidden by a shared runtime helper');
+assert.ok(teacherCompareResultRuntime.includes('function canUseTeacherMultiPeriodCompare()'), 'teacher multi-period compare runtime should have a role guard');
+assert.ok(teacherCompareResultRuntime.includes('guardTeacherMultiPeriodCompare(hintEl, resultEl)'), 'teacher multi-period compare generation should enforce the role guard');
+assert.ok(teacherCompareCloudRuntime.includes('function guardTeacherMultiPeriodCloudAction()'), 'teacher multi-period cloud actions should enforce the role guard');
 assert.ok(permissionPolicyRuntime.includes("roleChecks.push(ownTeacherMetric || (!!normalizedSubject && teachingScope.subjects.has(normalizedSubject)));"), 'teacher-analysis should allow teachers to see same-school same-subject teacher metrics');
 assert.ok(teacherAnalysisCoreRuntime.includes("const useSchoolWideTeacherPeerScope = user?.role === 'teacher';"), 'teacher-analysis should compute school-wide peer stats for teacher accounts before subject-level visibility filtering');
 assert.ok(teacherAnalysisCoreRuntime.includes('useSchoolWideTeacherPeerScope ? null : user'), 'teacher-analysis baselines should use school-wide peer scope for teacher comparison rows');

@@ -536,6 +536,30 @@ function isParentLikeUser(user) {
     return roles.some(isParentLikeRole);
 }
 
+function applyRoleAllowVisibility(root = document) {
+    const user = typeof getCurrentUser === 'function'
+        ? getCurrentUser()
+        : (window.Auth?.currentUser || null);
+    const roles = window.RoleManager && typeof window.RoleManager.getUserRoles === 'function'
+        ? window.RoleManager.getUserRoles(user)
+        : (Array.isArray(user?.roles) && user.roles.length ? user.roles : [user?.role]);
+    const roleSet = new Set(
+        (roles || [])
+            .map(role => String(role || '').trim())
+            .filter(Boolean)
+    );
+    (root || document).querySelectorAll('[data-role-allow]').forEach(node => {
+        const allowed = String(node.dataset.roleAllow || '')
+            .split(',')
+            .map(role => role.trim())
+            .filter(Boolean);
+        const visible = allowed.length === 0 || allowed.some(role => roleSet.has(role));
+        node.hidden = !visible;
+        node.style.display = visible ? '' : 'none';
+        node.setAttribute('aria-hidden', visible ? 'false' : 'true');
+    });
+}
+
 const MASKED_PASSWORD_DISPLAY = AuthState.MASKED_PASSWORD_DISPLAY;
 const sanitizeLocalAuthDb = AuthState.sanitizeLocalAuthDb.bind(AuthState);
 const persistLocalAuthDb = AuthState.persistLocalAuthDb.bind(AuthState);
@@ -3922,6 +3946,7 @@ var Auth = {
         if (!this.currentUser) return;
 
         RoleManager.applyRolesToBody(this.currentUser);
+        applyRoleAllowVisibility(document);
         this.syncParentMobileScrollRoot(isParentLikeUser(this.currentUser));
 
         const role = this.currentUser.role; // 主角色（兼容旧代码）

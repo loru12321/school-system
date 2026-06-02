@@ -51,6 +51,24 @@
         );
     }
 
+    function canUseTeacherMultiPeriodCompareCloud() {
+        const user = typeof window.getCurrentUser === 'function'
+            ? window.getCurrentUser()
+            : (window.Auth?.currentUser || null);
+        if (!user) return false;
+        if (window.RoleManager && typeof window.RoleManager.hasAnyRole === 'function') {
+            return window.RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director']);
+        }
+        const roles = Array.isArray(user.roles) && user.roles.length ? user.roles : [user.role];
+        return roles.some((role) => ['admin', 'director', 'grade_director'].includes(String(role || '').trim()));
+    }
+
+    function guardTeacherMultiPeriodCloudAction() {
+        if (canUseTeacherMultiPeriodCompareCloud()) return true;
+        alert('⛔ 权限不足：教师同学科多期对比仅管理员、教务主任、级部主任可用');
+        return false;
+    }
+
     async function upsertCloudTeacherCompareRow(row) {
         if (window.CloudDataService && typeof window.CloudDataService.upsertSystemDataRecord === 'function') {
             return window.CloudDataService.upsertSystemDataRecord(row);
@@ -75,6 +93,7 @@
     }
 
     async function saveTeacherMultiPeriodCompareToCloud() {
+        if (!guardTeacherMultiPeriodCloudAction()) return;
         const TEACHER_MULTI_PERIOD_COMPARE_CACHE = readTeacherCompareCacheState();
         window.TEACHER_MULTI_PERIOD_COMPARE_CACHE = TEACHER_MULTI_PERIOD_COMPARE_CACHE;
         if (!window.TEACHER_MULTI_PERIOD_COMPARE_CACHE) {
@@ -145,6 +164,7 @@
     }
 
     async function viewCloudTeacherCompares() {
+        if (!guardTeacherMultiPeriodCloudAction()) return;
         if (!hasCloudCompareAccess()) return alert('☁️ 云端服务未连接');
 
         try {

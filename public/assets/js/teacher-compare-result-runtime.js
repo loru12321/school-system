@@ -72,6 +72,25 @@ function isTeacherAnalysisCompareActive() {
     return !!document.getElementById('teacher-analysis')?.classList.contains('active');
 }
 
+function canUseTeacherMultiPeriodCompare() {
+    const user = typeof window.getCurrentUser === 'function'
+        ? window.getCurrentUser()
+        : (window.Auth?.currentUser || null);
+    if (!user) return false;
+    if (window.RoleManager && typeof window.RoleManager.hasAnyRole === 'function') {
+        return window.RoleManager.hasAnyRole(user, ['admin', 'director', 'grade_director']);
+    }
+    const roles = Array.isArray(user.roles) && user.roles.length ? user.roles : [user.role];
+    return roles.some((role) => ['admin', 'director', 'grade_director'].includes(String(role || '').trim()));
+}
+
+function guardTeacherMultiPeriodCompare(hintEl, resultEl) {
+    if (canUseTeacherMultiPeriodCompare()) return true;
+    setTeacherCompareHintState(hintEl, '当前角色无权查看教师同学科多期对比。', 'error');
+    renderTeacherCompareEmptyState(resultEl, '无权查看', '教师同学科多期对比仅管理员、教务主任、级部主任可见。');
+    return false;
+}
+
 function scheduleTeacherMultiPeriodAutoRender(delay = 180) {
     if (teacherCompareAutoTimer) window.clearTimeout(teacherCompareAutoTimer);
     teacherCompareAutoTimer = window.setTimeout(() => {
@@ -292,6 +311,7 @@ function renderTeacherMultiPeriodComparison() {
     const e2El = document.getElementById('teacherCompareExam2');
     const e3El = document.getElementById('teacherCompareExam3');
     if (!hintEl || !resultEl || !countEl || !schoolEl || !subjectEl || !teacherEl || !e1El || !e2El || !e3El) return;
+    if (!guardTeacherMultiPeriodCompare(hintEl, resultEl)) return;
 
     const periodCount = parseInt(countEl.value || '2');
     const school = schoolEl.value;
@@ -380,6 +400,7 @@ function renderAllTeachersMultiPeriodComparison() {
     const e3El = document.getElementById('teacherCompareExam3');
 
     if (!hintEl || !resultEl || !countEl || !schoolEl || !e1El || !e2El || !e3El) return;
+    if (!guardTeacherMultiPeriodCompare(hintEl, resultEl)) return;
 
     const periodCount = parseInt(countEl.value || '2');
     const school = schoolEl.value;
@@ -589,6 +610,9 @@ function renderAllTeachersMultiPeriodComparison() {
 
 // 🆕 导出全校教师对比
 function exportAllTeachersMultiPeriodDiff(school, examIdsStr) {
+    if (!canUseTeacherMultiPeriodCompare()) {
+        return alert('⛔ 权限不足：教师同学科多期对比仅管理员、教务主任、级部主任可用');
+    }
     const ALL_TEACHERS_DIFF_CACHE = readAllTeachersDiffCacheState();
     if (!ALL_TEACHERS_DIFF_CACHE) return alert('请先生成表格');
     const { results, examIds } = ALL_TEACHERS_DIFF_CACHE;
@@ -642,6 +666,9 @@ function exportAllTeachersMultiPeriodDiff(school, examIdsStr) {
 // 教师云对比运行时已拆分到 public/assets/js/teacher-compare-cloud-runtime.js
 
 function exportTeacherMultiPeriodComparison() {
+    if (!canUseTeacherMultiPeriodCompare()) {
+        return alert('⛔ 权限不足：教师同学科多期对比仅管理员、教务主任、级部主任可用');
+    }
     const TEACHER_MULTI_PERIOD_COMPARE_CACHE = readTeacherCompareCacheState();
     if (!TEACHER_MULTI_PERIOD_COMPARE_CACHE) return alert('请先生成教师多期对比结果');
     const { school, subject, teacher, examIds, examStats, delta } = TEACHER_MULTI_PERIOD_COMPARE_CACHE;
