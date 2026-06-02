@@ -569,6 +569,9 @@ assert.ok(mobileAppRuntime.includes("grade_director: 'teacher-analysis'"), 'grad
 assert.ok(shellRuntime.includes('function isVisibleModuleActive(activeSectionId, visibleItems)'), 'shell should verify that the active module is visible for the current role');
 assert.ok(shellRuntime.includes('if (!firstCard || activeIsVisible) return;'), 'shell should auto-enter the first visible module when the default active section is forbidden');
 assert.ok(appSource.includes("const fallbackIds = ['starter-hub', 'teacher-analysis', 'student-overview', 'report-generator', 'app-download-center'];"), 'base config guard should redirect to the first role-visible module instead of forcing starter hub');
+assert.ok(appSource.includes('function getTownAnalysisVisibleSubjectsForCurrentUser()'), 'town analysis should centralize role-aware subject detail visibility');
+assert.ok(appSource.includes("if (role !== 'teacher') return allSubjects;"), 'only teacher role should hide non-teaching subject detail tables');
+assert.ok(appSource.includes('visibleSubjects.forEach(sub => {'), 'town analysis subject detail tables should render only visible subjects');
 assert.ok(!shellRuntime.includes("text: '绩效公平考核模型'"), 'teaching management quick switch should not expose the removed performance fairness module');
 assert.ok(!teachingManagementOverviewRuntime.includes("tmSetQuickEntryState(\n        'single-school-eval'"), 'teaching management overview should not render a performance fairness quick entry');
 assert.ok(teachingManagementOverviewRuntime.includes("const supportedModules = ['teacher-analysis'];"), 'teaching management state bars should only cover retained modules');

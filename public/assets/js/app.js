@@ -10395,6 +10395,32 @@ function bindSummaryProfileEvents(tbTotal) {
     tbTotal.dataset.summaryProfileEventsBound = '1';
 }
 
+function getTownAnalysisVisibleSubjectsForCurrentUser() {
+    const allSubjects = Array.isArray(SUBJECTS) ? SUBJECTS.filter(Boolean) : [];
+    const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    const role = user?.role || 'guest';
+    if (role !== 'teacher') return allSubjects;
+
+    let visibleSet = null;
+    if (typeof getVisibleSubjectsForTeacherUser === 'function') {
+        visibleSet = getVisibleSubjectsForTeacherUser(user);
+    }
+    if (!(visibleSet instanceof Set) || visibleSet.size === 0) {
+        const scope = typeof getTeacherScopeForUser === 'function'
+            ? getTeacherScopeForUser(user)
+            : { subjects: new Set() };
+        visibleSet = scope?.subjects instanceof Set ? scope.subjects : new Set();
+    }
+
+    const normalizedVisible = new Set(
+        Array.from(visibleSet || [])
+            .map(subject => normalizeSubject(subject))
+            .filter(Boolean)
+    );
+    if (normalizedVisible.size === 0) return [];
+    return allSubjects.filter(subject => normalizedVisible.has(normalizeSubject(subject)));
+}
+
 function renderTables() {
     updateSchoolMode();
     const tbTotal = document.querySelector('#tb-total tbody');
@@ -10459,7 +10485,8 @@ function renderTables() {
 
     const subContainer = document.getElementById('subject-tables-container');
     const sideNavSubjects = document.getElementById('side-nav-subjects-container');
-    const subjectRenderKey = `${summarySignature}::subjects`;
+    const visibleSubjects = getTownAnalysisVisibleSubjectsForCurrentUser();
+    const subjectRenderKey = `${summarySignature}::subjects::${visibleSubjects.map(s => normalizeSubject(s)).join('|')}`;
 
     if (subContainer?.dataset.summaryRenderSig !== subjectRenderKey || sideNavSubjects?.dataset.summaryRenderSig !== subjectRenderKey) {
     if (subContainer) subContainer.innerHTML = '';
@@ -10470,7 +10497,7 @@ function renderTables() {
         return;
     }
 
-    SUBJECTS.forEach(sub => {
+    visibleSubjects.forEach(sub => {
         const thresh = THRESHOLDS[sub];
         const subList = townshipSchools.filter(s => s.metrics[sub]).sort((a, b) => (a.rankings[sub].avg - b.rankings[sub].avg));
         const box = document.createElement('div');
@@ -10492,6 +10519,10 @@ function renderTables() {
         }
         tbody.innerHTML = htmlSub; subContainer.appendChild(box); const navLink = document.createElement('a'); navLink.className = 'side-nav-sub-link'; navLink.innerText = sub; navLink.onclick = () => scrollToSubAnchor(anchorId, navLink); sideNavSubjects.appendChild(navLink);
     });
+    if (visibleSubjects.length === 0) {
+        subContainer.innerHTML = '<div class="analysis-empty-state">当前教师账号未匹配到任教学科，暂不展示学科明细。</div>';
+        sideNavSubjects.innerHTML = '<span class="analysis-empty-cell">暂无可见学科</span>';
+    }
     if (subContainer) subContainer.dataset.summaryRenderSig = subjectRenderKey;
     if (sideNavSubjects) sideNavSubjects.dataset.summaryRenderSig = subjectRenderKey;
     }

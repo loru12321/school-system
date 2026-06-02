@@ -39,7 +39,7 @@ for (const role of ['grade_director', 'class_teacher', 'teacher']) {
 }
 
 const townModuleIds = ['summary', 'analysis', 'high-score', 'indicator', 'bottom3'];
-for (const role of ['director', 'grade_director']) {
+for (const role of ['director', 'grade_director', 'class_teacher', 'teacher']) {
     const user = { role, roles: [role] };
     townModuleIds.forEach((moduleId) => {
         assert.strictEqual(
@@ -50,11 +50,13 @@ for (const role of ['director', 'grade_director']) {
     });
 }
 
-assert.strictEqual(
-    context.PermissionPolicy.canAccessModule({ role: 'teacher', roles: ['teacher'] }, 'summary'),
-    false,
-    'teacher should not receive town-wide summary access'
-);
+townModuleIds.forEach((moduleId) => {
+    assert.strictEqual(
+        context.PermissionPolicy.canAccessModule({ role: 'parent', roles: ['parent'] }, moduleId),
+        false,
+        `parent should not access town analysis module ${moduleId}`
+    );
+});
 assert.strictEqual(
     context.PermissionPolicy.canAccessModule({ role: 'teacher', roles: ['teacher'] }, 'county-teacher-portrait'),
     false,
