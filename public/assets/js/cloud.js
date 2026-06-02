@@ -1550,13 +1550,12 @@
                     if (cachedRank) return cachedRank.get(targetValue);
                 }
                 const rankByScore = new Map();
-                rows
-                    .map(readValue)
-                    .filter(value => Number.isFinite(value))
-                    .sort((left, right) => right - left)
-                    .forEach((value, index) => {
-                        if (!rankByScore.has(value)) rankByScore.set(value, index + 1);
-                    });
+                let higherCount = 0;
+                rows.forEach(row => {
+                    const value = readValue(row);
+                    if (Number.isFinite(value) && value > targetValue) higherCount += 1;
+                });
+                rankByScore.set(targetValue, higherCount + 1);
                 if (subjectCache) subjectCache.set(subject, rankByScore);
                 return rankByScore.get(targetValue);
             };

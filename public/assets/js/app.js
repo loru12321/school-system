@@ -12932,7 +12932,8 @@ function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, eff
             if (window.UI) UI.toast('正在后台同步历史成绩...', 'info');
             const historyRes = await window.CloudManager.fetchStudentExamHistory(stu, {
                 examIds: selectedReportExamIds,
-                currentExamId: effectiveCurrentExamId
+                currentExamId: effectiveCurrentExamId,
+                background: true
             });
             const loadedCount = applyCloudStudentHistoryToPrevData(stu, historyRes, selectedReportExamIds, effectiveCurrentExamId);
             if (!loadedCount || token !== __reportQueryToken) return;
@@ -12947,16 +12948,16 @@ function hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, eff
     };
     if (window.SystemPerformance && typeof window.SystemPerformance.scheduleTask === 'function') {
         window.SystemPerformance.scheduleTask(`report-history-hydrate:${hydrateKey}`, task, {
-            delay: 1600,
+            delay: 4800,
             idle: true,
-            timeout: 3200
+            timeout: 9000
         });
     } else if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
         window.setTimeout(() => {
-            window.SystemPerformance.scheduleIdle(task, { timeout: 2200 });
-        }, 1600);
+            window.SystemPerformance.scheduleIdle(task, { timeout: 9000 });
+        }, 4800);
     } else {
-        window.setTimeout(task, 1600);
+        window.setTimeout(task, 4800);
     }
 }
 

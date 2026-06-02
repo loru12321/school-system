@@ -75,6 +75,7 @@ const teacherCompareResultRuntimePath = path.resolve(__dirname, '../public/asset
 const teacherCompareCloudRuntimePath = path.resolve(__dirname, '../public/assets/js/teacher-compare-cloud-runtime.js');
 const macroCompareResultRuntimePath = path.resolve(__dirname, '../public/assets/js/macro-compare-result-runtime.js');
 const macroCompareCloudRuntimePath = path.resolve(__dirname, '../public/assets/js/macro-compare-cloud-runtime.js');
+const cloudRuntimePath = path.resolve(__dirname, '../public/assets/js/cloud.js');
 const smokeAllModulesPath = path.resolve(__dirname, './smoke-all-modules.js');
 
 assert.ok(fs.existsSync(runtimePath), 'auth-state-runtime.js should exist');
@@ -175,6 +176,7 @@ const cloudWorkspaceRuntime = fs.readFileSync(cloudWorkspaceRuntimePath, 'utf8')
 const popperVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/popperjs/popper.min.js'), 'utf8');
 const tippyVendorSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/vendor/tippyjs/tippy.umd.min.js'), 'utf8');
 const appSource = fs.readFileSync(path.resolve(__dirname, '../public/assets/js/app.js'), 'utf8');
+const cloudRuntime = fs.readFileSync(cloudRuntimePath, 'utf8');
 const smokeAllModules = fs.readFileSync(smokeAllModulesPath, 'utf8');
 const initSupabaseMatches = bootRuntime.match(/window\.initSupabase\s*=\s*function/g) || [];
 const supabaseUrlAssignments = bootRuntime.match(/window\.SUPABASE_URL\s*=/g) || [];
@@ -919,6 +921,14 @@ assert.ok(layoutRefinementCss.includes('#teacher-township-ranking .analysis-tabl
 assert.ok(layoutRefinementCss.includes('#data-manager-modal #dm-teacher-table thead th'), 'teacher assignment management table should keep sticky headers');
 assert.ok(appSource.includes('function renderBottom3TableOnly'), 'bottom3 should expose a lightweight table-only render path');
 assert.ok(moduleEntryRuntime.includes("activeModuleId === 'bottom3'") && moduleEntryRuntime.includes('window.renderBottom3TableOnly()'), 'bottom3 module entry should avoid full macro table rerenders');
+assert.ok(appSource.includes('background: true') && appSource.includes('delay: 4800'), 'student report cloud-history hydration should stay delayed and low priority');
+const countyRankFallbackStart = cloudRuntime.indexOf('const getCountyRankFallback = (payload, match, subject =');
+const countyRankFallbackEnd = cloudRuntime.indexOf('const buildHistoryEntry =', countyRankFallbackStart);
+const countyRankFallbackSource = countyRankFallbackStart >= 0 && countyRankFallbackEnd > countyRankFallbackStart
+    ? cloudRuntime.slice(countyRankFallbackStart, countyRankFallbackEnd)
+    : '';
+assert.ok(countyRankFallbackSource.includes('higherCount + 1'), 'student history county-rank fallback should use counting rank');
+assert.ok(!countyRankFallbackSource.includes('.sort('), 'student history county-rank fallback should avoid full-score sorting');
 const bottom3SmokeStart = smokeAllModules.indexOf("if (id === 'bottom3')");
 const bottom3SmokeEnd = smokeAllModules.indexOf("if (id === 'indicator')", bottom3SmokeStart);
 const bottom3SmokeSource = bottom3SmokeStart >= 0 && bottom3SmokeEnd > bottom3SmokeStart
