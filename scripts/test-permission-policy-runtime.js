@@ -57,6 +57,30 @@ townModuleIds.forEach((moduleId) => {
         `parent should not access town analysis module ${moduleId}`
     );
 });
+
+const studentDiagnosisModuleIds = [
+    'zhongkao-countdown',
+    'student-overview',
+    'student-details',
+    'subject-balance',
+    'marginal-push',
+    'progress-analysis',
+    'cohort-growth',
+    'potential-analysis',
+    'segment-analysis',
+    'correlation-analysis',
+    'report-generator'
+];
+for (const role of ['teacher', 'class_teacher']) {
+    studentDiagnosisModuleIds.forEach((moduleId) => {
+        assert.strictEqual(
+            context.PermissionPolicy.canAccessModule({ role, roles: [role] }, moduleId),
+            moduleId === 'student-details',
+            `${role} should only access student-details inside student diagnosis, not ${moduleId}`
+        );
+    });
+}
+
 assert.strictEqual(
     context.PermissionPolicy.canAccessModule({ role: 'teacher', roles: ['teacher'] }, 'county-teacher-portrait'),
     false,
@@ -69,8 +93,8 @@ assert.strictEqual(
 );
 assert.strictEqual(
     context.PermissionPolicy.canAccessModule({ role: 'class_teacher', roles: ['class_teacher'] }, 'marginal-push'),
-    true,
-    'class teacher should keep class intervention module access'
+    false,
+    'class teacher should only see student archive query inside student diagnosis'
 );
 assert.strictEqual(
     context.PermissionPolicy.canAccessModule({ role: 'class_teacher', roles: ['class_teacher'] }, 'county-school-horizontal'),
