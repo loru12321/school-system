@@ -170,13 +170,40 @@ async function inspectRole(page, role) {
             const oldTeachingText = /教学管理概览|任务清单|问题预警|整改中心|版本中心|数据状态面板|统一入口|数据导入|教师任课/.test(visibleText);
             const visibleStudentDetailsRestrictedContent = id === 'student-details'
                 && /学生明细使用建议|生成班级成绩长图|生成家长查分包|学生多期对比|查看云端对比|保存到云端/.test(visibleText);
+            let studentDetailsClassFilterWorks = true;
+            let studentDetailsClassFilterDebug = null;
+            if (id === 'student-details') {
+                const user = typeof window.getCurrentUser === 'function' ? window.getCurrentUser() : (window.CURRENT_USER || null);
+                const role = String(user?.role || '');
+                if (role === 'teacher' || role === 'class_teacher') {
+                    const classSelect = document.getElementById('studentClassSelect');
+                    const classOptions = Array.from(classSelect?.options || []).map(option => option.value).filter(Boolean);
+                    const targetClass = classOptions[classOptions.length - 1] || '';
+                    if (classSelect && targetClass) {
+                        classSelect.value = targetClass;
+                        if (typeof window.renderStudentDetails === 'function') window.renderStudentDetails(true);
+                        const visibleClasses = Array.from(document.querySelectorAll('#studentDetailTable tbody tr'))
+                            .slice(0, 20)
+                            .map(row => String(row.children?.[1]?.textContent || '').trim())
+                            .filter(Boolean);
+                        const normalize = typeof window.normalizeClass === 'function'
+                            ? window.normalizeClass
+                            : (value) => String(value || '').trim();
+                        studentDetailsClassFilterWorks = visibleClasses.length === 0
+                            || visibleClasses.every(value => normalize(value) === normalize(targetClass));
+                        studentDetailsClassFilterDebug = { targetClass, visibleClasses: Array.from(new Set(visibleClasses)).sort() };
+                    }
+                }
+            }
             return {
                 id,
                 active: !!active && active.classList.contains('active'),
                 visibleForbiddenPanelCount: forbiddenPanels.length,
                 visibleTextHasMultiPeriodCompare: /多期对比/.test(visibleText),
                 visibleOldTeachingContent: oldTeachingText,
-                visibleStudentDetailsRestrictedContent
+                visibleStudentDetailsRestrictedContent,
+                studentDetailsClassFilterWorks,
+                studentDetailsClassFilterDebug
             };
         }, moduleId));
     }
@@ -232,6 +259,9 @@ async function inspectRole(page, role) {
         }
         if (result.visibleStudentDetailsRestrictedContent) {
             failures.push(`${role}/${result.id}: student detail admin-only tools remain visible`);
+        }
+        if (result.studentDetailsClassFilterWorks === false) {
+            failures.push(`${role}/${result.id}: class selector does not filter rows ${JSON.stringify(result.studentDetailsClassFilterDebug)}`);
         }
     });
 

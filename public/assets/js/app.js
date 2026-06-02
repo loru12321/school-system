@@ -10950,6 +10950,11 @@ function updateStudentSchoolSelect() {
         return (includeAll ? '<option value="">全部班级</option>' : '')
             + classList.map(c => `<option value="${c}">${c}</option>`).join('');
     };
+    const findMatchingSchoolOption = (schoolName) => {
+        const target = String(schoolName || '').trim();
+        if (!target) return '';
+        return accessibleSchools.find(school => sameAppSchoolName(school, target) || school === target) || '';
+    };
     const previousSchool = select.value;
     const previousClass = classSelect.value;
     select.disabled = false;
@@ -10977,7 +10982,8 @@ function updateStudentSchoolSelect() {
     const schoolOptionsHtml = '<option value="">--请选择本校--</option>'
         + accessibleSchools.map(school => `<option value="${school}">${school}</option>`).join('');
     setOptionsIfChanged(select, schoolOptionsHtml, `schools:${accessibleSchools.join('|')}`);
-    if (previousSchool && accessibleSchools.includes(previousSchool)) select.value = previousSchool;
+    const previousSchoolMatch = findMatchingSchoolOption(previousSchool);
+    if (previousSchoolMatch) select.value = previousSchoolMatch;
 
     const updateClassOptionsForSchool = (school, options = {}) => {
         const includeAll = options.includeAll !== false;
@@ -11004,7 +11010,7 @@ function updateStudentSchoolSelect() {
     };
 
     if (role === 'class_teacher') {
-        const school = user.school || MY_SCHOOL || '';
+        const school = findMatchingSchoolOption(user.school) || findMatchingSchoolOption(MY_SCHOOL) || user.school || MY_SCHOOL || '';
         if (school) {
             select.value = school;
             select.disabled = true;
@@ -11016,7 +11022,7 @@ function updateStudentSchoolSelect() {
         if (modeWrap) modeWrap.style.display = 'inline-flex';
         if (modeSelect && !modeSelect.value) modeSelect.value = 'class_all';
     } else if (role === 'teacher') {
-        const school = user.school || MY_SCHOOL || '';
+        const school = findMatchingSchoolOption(user.school) || findMatchingSchoolOption(MY_SCHOOL) || user.school || MY_SCHOOL || '';
         if (school) {
             select.value = school;
             select.disabled = true;
@@ -11648,16 +11654,21 @@ function renderStudentDetails(reset = true) {
     if (reset) {
         STD_STATE.page = 1;
         STD_STATE.size = getStudentDetailsPageSize();
-        const selectedSchool = document.getElementById('studentSchoolSelect')?.value;
-        const selectedClass = document.getElementById('studentClassSelect')?.value;
-        const hasSelectedSchool = selectedSchool && !selectedSchool.includes('请选择');
-        const hasSelectedClass = selectedClass && selectedClass !== '全部';
-        let data = window.RankingDataService && typeof window.RankingDataService.getRowsBySchoolClass === 'function'
-            ? window.RankingDataService.getRowsBySchoolClass(RAW_DATA, hasSelectedSchool ? selectedSchool : '', hasSelectedClass ? selectedClass : '')
-            : [...RAW_DATA];
-
         const user = getCurrentUser();
         const role = user?.role || 'guest';
+        const selectedSchool = document.getElementById('studentSchoolSelect')?.value;
+        const selectedClass = document.getElementById('studentClassSelect')?.value;
+        const boundSchool = role === 'teacher' || role === 'class_teacher'
+            ? (selectedSchool || user?.school || MY_SCHOOL || '')
+            : selectedSchool;
+        const effectiveSelectedSchool = String(boundSchool || '').trim();
+        const effectiveSelectedClass = String(selectedClass || '').trim();
+        const hasSelectedSchool = effectiveSelectedSchool && !effectiveSelectedSchool.includes('请选择');
+        const hasSelectedClass = effectiveSelectedClass && effectiveSelectedClass !== '全部';
+        let data = window.RankingDataService && typeof window.RankingDataService.getRowsBySchoolClass === 'function'
+            ? window.RankingDataService.getRowsBySchoolClass(RAW_DATA, hasSelectedSchool ? effectiveSelectedSchool : '', hasSelectedClass ? effectiveSelectedClass : '')
+            : [...RAW_DATA];
+
         const classTeacherMode = role === 'class_teacher' ? getClassTeacherStudentViewMode() : 'teaching';
         const queryMode = role === 'class_teacher' ? (classTeacherMode === 'class_all' ? 'homeroom' : 'teaching') : 'teaching';
         const activeFilterSignature = buildStudentDetailsFilterSignature();
@@ -11667,8 +11678,8 @@ function renderStudentDetails(reset = true) {
             String(window.CURRENT_EXAM_ID || ''),
             String(RAW_DATA?.[0]?.name || ''),
             String(RAW_DATA?.[RAW_DATA.length - 1]?.name || ''),
-            String(selectedSchool || ''),
-            String(selectedClass || ''),
+            String(effectiveSelectedSchool || ''),
+            String(effectiveSelectedClass || ''),
             hasSelectedSchool ? 'school' : 'all-school',
             hasSelectedClass ? 'class' : 'all-class',
             String(role || ''),
@@ -11768,11 +11779,13 @@ function renderStudentDetails(reset = true) {
             appDebug('[考试明细] 其他角色或管理员，显示所有/学校范围数据');
         }
 
-        if (hasSelectedSchool && !(window.RankingDataService && typeof window.RankingDataService.getRowsBySchoolClass === 'function')) {
-            data = data.filter(s => sameAppSchoolName(s.school, selectedSchool));
+        if (hasSelectedSchool) {
+            data = data.filter(s => sameAppSchoolName(s.school, effectiveSelectedSchool));
             if (hasSelectedClass) {
-                data = data.filter(s => normalizeClass(s.class) === normalizeClass(selectedClass));
+                data = data.filter(s => normalizeClass(s.class) === normalizeClass(effectiveSelectedClass));
             }
+        } else if (hasSelectedClass) {
+            data = data.filter(s => normalizeClass(s.class) === normalizeClass(effectiveSelectedClass));
         }
 
         const hasExcelFilters = Object.values(STD_STATE.activeFilters || {}).some(values => values && values.size > 0);
