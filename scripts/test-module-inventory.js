@@ -68,7 +68,7 @@ const lazyTemplateRootIds = Array.from(
   (match) => ({ templateId: match[1], rootId: match[2] })
 );
 
-const rawSmokeIds = extractQuotedArray(smokeRuntime, 'SWITCH_MODULE_IDS');
+const rawSmokeIds = extractQuotedArray(smokeRuntime, 'DEFAULT_SWITCH_MODULE_IDS');
 const rawGuardedIds = extractQuotedArray(appRuntime, 'needGuard');
 
 const removedRedirectIds = unique(Array.from(
@@ -78,7 +78,10 @@ const removedRedirectIds = unique(Array.from(
 
 const dynamicSectionIds = new Set([
   'county-teacher-portrait',
-  'county-school-horizontal'
+  'county-school-horizontal',
+  'teacher-detail-comparison',
+  'teacher-pairing',
+  'teacher-township-ranking'
 ]);
 
 const validModuleIds = new Set([...sectionIds, ...dynamicSectionIds]);
@@ -150,7 +153,9 @@ const missingGuards = navIds.filter((id) => {
   return !guardedIds.has(guardId);
 });
 const smokeGaps = navIds.filter((id) => {
-  if (dynamicSectionIds.has(id)) return smokeIds.has('county-analysis') ? false : true;
+  if (id === 'county-teacher-portrait' || id === 'county-school-horizontal') {
+    return smokeIds.has('county-analysis') ? false : true;
+  }
   return !smokeIds.has(id);
 });
 const staleScoreFreeIds = Array.from(scoreFreeIds).filter((id) => !validModuleIds.has(id));

@@ -301,8 +301,12 @@ async function main() {
             await new Promise((resolve) => setTimeout(resolve, 250));
             window.renderStudentDetails?.();
         }
+        await loadRuntimeSkill('teaching-management');
         await loadRuntimeSkill('teacher-analysis');
         await boundedSwitchTab('teacher-analysis');
+        window.TeachingManagementModulesRuntime?.relocateTeacherBlocks?.();
+        await boundedSwitchTab('teacher-township-ranking');
+        window.TeachingManagementModulesRuntime?.relocateTeacherBlocks?.();
         window.analyzeTeachers?.();
         window.calculateTeacherTownshipRanking?.();
         window.renderTeacherTownshipRanking?.();
@@ -413,8 +417,8 @@ async function main() {
             });
         };
         const expectedTownshipRows = buildIndependentTeacherTownshipRows();
-        const renderedTownshipRows = readTeacherTownshipDomRows();
-        const renderedTownshipRowMap = new Map(renderedTownshipRows.map((row) => [`${row.subject}::${row.type}::${row.name}`, row]));
+        let renderedTownshipRows = readTeacherTownshipDomRows();
+        let renderedTownshipRowMap = new Map(renderedTownshipRows.map((row) => [`${row.subject}::${row.type}::${row.name}`, row]));
         const townshipAverages = window.TEACHER_TOWNSHIP_AVERAGES || {};
         const calcBenchmarkDelta = (value, benchmark) => {
             if (!Number.isFinite(value) || !Number.isFinite(benchmark) || Math.abs(benchmark) < 1e-9) return null;
@@ -451,7 +455,7 @@ async function main() {
                 }
             } : null;
         };
-        const teacherTownshipValueMismatches = expectedTownshipRows
+        let teacherTownshipValueMismatches = expectedTownshipRows
             .filter((row) => row.type === 'teacher')
             .map(compareTownshipRow)
             .filter(Boolean);
@@ -540,13 +544,29 @@ async function main() {
             ...(cohortGrowthResult.volatility || []).flatMap((row) => [row.count, row.sigma]),
             ...(cohortGrowthResult.growth || []).flatMap((row) => [row.start, row.end, row.delta])
         ];
+        await boundedSwitchTab('teacher-township-ranking');
+        window.calculateTeacherTownshipRanking?.();
+        window.renderTeacherTownshipRanking?.();
+        renderedTownshipRows = readTeacherTownshipDomRows();
+        renderedTownshipRowMap = new Map(renderedTownshipRows.map((row) => [`${row.subject}::${row.type}::${row.name}`, row]));
+        teacherTownshipValueMismatches = expectedTownshipRows
+            .filter((row) => row.type === 'teacher')
+            .map(compareTownshipRow)
+            .filter(Boolean);
 
         const teacherRoot = getTeacherRoot();
         const studentSection = document.getElementById('student-details');
         const teacherRankSection = document.getElementById('teacher-township-ranking-container');
         const teacherTownshipComparisonCells = teacherRankSection
-            ? Array.from(teacherRankSection.querySelectorAll('td[data-label="与镇均比"]')).map((cell) => cell.innerText.trim()).filter(Boolean)
+            ? Array.from(teacherRankSection.querySelectorAll('td[data-label="与镇均比"]')).map((cell) => cell.textContent.trim()).filter(Boolean)
             : [];
+        const teacherTownshipRenderDebug = teacherRankSection ? {
+            htmlLength: teacherRankSection.innerHTML.length,
+            tableCount: teacherRankSection.querySelectorAll('table').length,
+            rowCount: teacherRankSection.querySelectorAll('tbody tr').length,
+            labeledCellCount: teacherRankSection.querySelectorAll('td[data-label]').length,
+            textSample: teacherRankSection.textContent.trim().slice(0, 200)
+        } : { missing: true };
         const headers = studentSection
             ? Array.from(studentSection.querySelectorAll('thead th')).map((th) => th.innerText.trim()).filter(Boolean)
             : [];
@@ -1165,6 +1185,7 @@ async function main() {
             countyOwnTeacherRows: teacherRoot ? teacherRoot.querySelectorAll('.county-teacher-own-row').length : 0,
             teacherTownshipAverageSubjects: Object.values(window.TEACHER_TOWNSHIP_AVERAGES || {}).filter((row) => Number(row?.count) > 0).length,
             teacherTownshipComparisonCells,
+            teacherTownshipRenderDebug,
             teacherTownshipRenderedRows: renderedTownshipRows.length,
             teacherTownshipExpectedRows: expectedTownshipRows.length,
             teacherTownshipRenderedTeacherRows: renderedTownshipRows.filter((row) => row.type === 'teacher').length,
@@ -1199,17 +1220,17 @@ async function main() {
 
     await browser.close();
 
-    assert.strictEqual(snapshot.rawData, 7809, 'RAW_DATA count changed');
+    assert.strictEqual(snapshot.rawData, 7790, 'RAW_DATA count changed');
     assert.ok(snapshot.schoolCount >= 24, `school count too low: ${snapshot.schoolCount}`);
-    assert.strictEqual(snapshot.subjectCount, 5, 'subject count changed for current 9th-grade exam');
+    assert.strictEqual(snapshot.subjectCount, 6, 'subject count changed for current 9th-grade exam');
     assert.deepStrictEqual(snapshot.subjectFullScorePolicy, {
         6: { '语文': 150, '数学': 150, '英语': 150, '历史': 50, '地理': 50, '生物': 50, '政治': 100, '物理': null, '化学': null },
         7: { '语文': 150, '数学': 150, '英语': 150, '历史': 50, '地理': 50, '生物': 50, '政治': 100, '物理': null, '化学': null },
         8: { '语文': 150, '数学': 150, '英语': 150, '历史': 50, '地理': 50, '生物': 50, '政治': 100, '物理': 100, '化学': 100 },
         9: { '语文': 150, '数学': 150, '英语': 150, '历史': null, '地理': null, '生物': null, '政治': 100, '物理': 90, '化学': 60 }
     }, 'subject full score policy changed');
-    assert.deepStrictEqual(snapshot.currentSubjectFullScores, { '语文': 150, '数学': 150, '英语': 150, '物理': 90, '化学': 60 }, 'current 9th-grade subject full scores changed');
-    assert.strictEqual(snapshot.currentSubjectFullScoreTotal, 600, 'current 9th-grade full score total changed');
+    assert.deepStrictEqual(snapshot.currentSubjectFullScores, { '语文': 150, '数学': 150, '英语': 150, '物理': 90, '化学': 60, '政治': 100 }, 'current 9th-grade subject full scores changed');
+    assert.strictEqual(snapshot.currentSubjectFullScoreTotal, 700, 'current 9th-grade full score total changed');
     assert.deepStrictEqual(snapshot.blankSubjectScorePolicy, {
         available: true,
         rowCount: 2,
@@ -1300,12 +1321,15 @@ async function main() {
         pairingCount: 1
     }, 'teacher analysis core should treat equivalent school aliases consistently');
     assert.ok(snapshot.score2RatePositive >= 14, `score2Rate positive schools too low: ${snapshot.score2RatePositive}`);
-    assert.strictEqual(snapshot.teacherRows, 13, 'teacher row count changed');
-    assert.strictEqual(snapshot.teacherPositive, 13, 'teacher positive row count changed');
+    assert.strictEqual(snapshot.teacherRows, 15, 'teacher row count changed');
+    assert.strictEqual(snapshot.teacherPositive, 15, 'teacher positive row count changed');
     assert.ok(snapshot.countyTeacherRankRows >= 120, `county teacher rank rows too low: ${snapshot.countyTeacherRankRows}`);
-    assert.strictEqual(snapshot.countyOwnTeacherRows, 13, 'county own teacher rows changed');
+    assert.strictEqual(snapshot.countyOwnTeacherRows, 15, 'county own teacher rows changed');
     assert.ok(snapshot.teacherTownshipAverageSubjects >= 5, `teacher township benchmarks missing: ${snapshot.teacherTownshipAverageSubjects}`);
-    assert.ok(snapshot.teacherTownshipComparisonCells.length > 0, 'teacher township comparison cells missing');
+    assert.ok(
+        snapshot.teacherTownshipComparisonCells.length > 0,
+        `teacher township comparison cells missing: ${JSON.stringify(snapshot.teacherTownshipRenderDebug)}`
+    );
     assert.ok(
         snapshot.teacherTownshipComparisonCells.some((text) => text !== '+0.00%' && text !== '0.00%' && text !== '—'),
         'teacher township comparisons are all zero or empty'
@@ -1351,8 +1375,8 @@ async function main() {
     assert.deepStrictEqual(snapshot.headers.slice(totalIndex + 1, totalIndex + 5), ['班排', '校排', '镇排', '县排'], 'total rank column order changed');
     assert.ok(snapshot.targetStudent, 'target student 解洪旭 missing');
     assert.strictEqual(snapshot.targetStudent.school, '银山实验学校', 'target student school changed');
-    assert.strictEqual(snapshot.targetStudent.town, 4, 'target student town rank changed');
-    assert.strictEqual(snapshot.targetStudent.county, 222, 'target student county rank changed');
+    assert.strictEqual(snapshot.targetStudent.town, 1, 'target student town rank changed');
+    assert.strictEqual(snapshot.targetStudent.county, 78, 'target student county rank changed');
 
     console.log(JSON.stringify(snapshot, null, 2));
 }

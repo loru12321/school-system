@@ -38,8 +38,8 @@ const distIndex = read('dist/index.html');
 const prodSmoke = read('scripts/run-prod-smoke.js');
 const runLocalSmoke = read('scripts/run-local-smoke.js');
 const smokeModules = read('scripts/smoke-all-modules.js');
-const publicHeaders = read('public/_headers');
-const distHeaders = exists('dist/_headers') ? read('dist/_headers') : '';
+const publicHeaders = normalizeLineEndings(read('public/_headers'));
+const distHeaders = exists('dist/_headers') ? normalizeLineEndings(read('dist/_headers')) : '';
 const publicRobots = read('public/robots.txt');
 const publicSitemap = read('public/sitemap.xml');
 const publicManifest = JSON.parse(read('public/site.webmanifest'));
@@ -89,8 +89,8 @@ assert.ok(distIndex.includes('./assets/js/boot-runtime.js'), 'dist HTML must loa
 assert.ok(distIndex.includes('./assets/js/runtime-registry-runtime.js'), 'dist HTML must load runtime registry');
 assert.ok(distIndex.includes('./assets/vendor/tabler-icons/tabler-icons.min.css'), 'dist HTML must load local Tabler icons CSS');
 assert.strictEqual(
-  normalizeLineEndings(distHeaders),
-  normalizeLineEndings(publicHeaders),
+  distHeaders,
+  publicHeaders,
   'dist static asset headers should match public/_headers'
 );
 assert.ok(publicHeaders.includes('/style-*.css'), 'static asset headers should cover hashed Vite CSS');
