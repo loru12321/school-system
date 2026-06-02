@@ -105,6 +105,22 @@
             .join('|');
     }
 
+    function buildTeacherRowsFingerprint(rows) {
+        const list = Array.isArray(rows) ? rows : [];
+        if (typeof window.computeExamDataFingerprint === 'function') {
+            return String(window.computeExamDataFingerprint(list) || '').trim();
+        }
+        return [
+            list.length,
+            list[0]?.school || '',
+            list[0]?.class || '',
+            list[0]?.name || '',
+            list[list.length - 1]?.school || '',
+            list[list.length - 1]?.class || '',
+            list[list.length - 1]?.name || ''
+        ].join(':');
+    }
+
     function buildTeacherRuntimeSignature(rows, activeSchool = '') {
         const subjectList = Array.isArray(window.SUBJECTS) ? window.SUBJECTS : [];
         const teacherMap = window.TEACHER_MAP && typeof window.TEACHER_MAP === 'object' ? window.TEACHER_MAP : {};
@@ -129,6 +145,7 @@
         return [
             Number(window.__RAW_DATA_VERSION || 0),
             Array.isArray(rows) ? rows.length : 0,
+            buildTeacherRowsFingerprint(rows),
             String(window.CURRENT_EXAM_ID || ''),
             String(window.CURRENT_TERM_ID || ''),
             String(window.CONFIG?.name || ''),

@@ -877,6 +877,14 @@
                 </div>
                 <div id="upload-summary-strip" class="upload-summary-strip"></div>
                 <div id="upload-flow-notice" class="upload-flow-notice">正在汇总当前上传进度...</div>
+                <div class="upload-box upload-box--quick" id="uploadBox" data-upload-box onclick="document.getElementById('fileInput').click()"
+                    tabindex="0" role="button" aria-label="上传成绩文件，按回车键可打开文件选择器">
+                    <div class="upload-icon"><i class="ti ti-cloud-upload"></i></div>
+                    <div>
+                        <strong>上传成绩 Excel 文件</strong>
+                        <span>支持多文件上传，导入后自动刷新分析底座</span>
+                    </div>
+                </div>
                 <div class="upload-workbench-grid">
                 <div class="card-box upload-panel upload-panel--cohort" style="border-left:4px solid #7c3aed; background:#f5f3ff; margin-top:10px;">
                     <div class="sec-head" style="border-bottom-color:#ddd6fe; margin-bottom:10px;">
@@ -1037,7 +1045,7 @@
                             <span>导入后自动刷新分析</span>
                         </div>
                     </div>
-                    <div class="upload-box" id="uploadBox" onclick="document.getElementById('fileInput').click()"
+                    <div class="upload-box" id="uploadBoxMain" data-upload-box onclick="document.getElementById('fileInput').click()"
                         tabindex="0" role="button" aria-label="上传成绩文件，按回车键可打开文件选择器">
                         <div class="upload-icon"><i class="ti ti-cloud-upload"></i></div>
                         <p style="font-size:18px; margin-bottom:10px; font-weight:600;">点击上传成绩 Excel 文件</p>

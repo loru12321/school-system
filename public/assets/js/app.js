@@ -17162,12 +17162,11 @@ function applyArchiveLockUI() {
     const statusEl = document.getElementById('exam-archive-status');
     if (statusEl) statusEl.textContent = locked ? '已封存(只读)' : '未封存';
 
-    const uploadBox = document.getElementById('uploadBox');
-    if (uploadBox) {
+    document.querySelectorAll('[data-upload-box], #uploadBox').forEach((uploadBox) => {
         uploadBox.style.pointerEvents = locked ? 'none' : 'auto';
         uploadBox.style.opacity = locked ? '0.6' : '1';
         uploadBox.title = lockNotice;
-    }
+    });
     const ids = ['fileInput', 'teacherFileInput', 'projectFileInput', 'btn-reset-system', 'btn-save-project', 'btn-load-project'];
     ids.forEach(id => {
         const el = document.getElementById(id);
@@ -18296,7 +18295,7 @@ document.addEventListener('keydown', function (e) {
         return;
     }
 
-    if (target.id === 'uploadBox') {
+    if (target.id === 'uploadBox' || target.hasAttribute?.('data-upload-box')) {
         e.preventDefault();
         const fileInput = document.getElementById('fileInput');
         if (fileInput && !fileInput.disabled) fileInput.click();

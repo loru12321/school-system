@@ -130,12 +130,30 @@
         moveNodeToSlot(document.getElementById('anchor-detail'), 'teacher-detail-comparison-slot');
         moveNodeToSlot(document.getElementById('anchor-pair'), 'teacher-pairing-slot');
         moveNodeToSlot(document.querySelector('.analysis-ranking-panel'), 'teacher-township-ranking-slot');
+        ensureTeacherAnalysisSplitPlaceholder(teacherSection);
 
         if (typeof window.refreshResponsiveMobileTables === 'function') {
             SUBMODULE_IDS.forEach((id) => window.refreshResponsiveMobileTables(document.getElementById(id)));
         }
         if (typeof window.applyRoleAllowVisibility === 'function') window.applyRoleAllowVisibility(document);
         return true;
+    }
+
+    function ensureTeacherAnalysisSplitPlaceholder(teacherSection) {
+        if (!teacherSection || teacherSection.querySelector('.analysis-ranking-panel')) return;
+        const contentArea = teacherSection.querySelector('.analysis-content-stack') || teacherSection;
+        const placeholder = document.createElement('div');
+        placeholder.className = 'analysis-anchor-panel analysis-ranking-panel teacher-split-placeholder';
+        const needsRankingContainer = !document.getElementById('teacher-township-ranking-container');
+        placeholder.innerHTML = `
+            <div class="analysis-section-head">
+                <span>教师乡镇排名已拆分为独立子模块</span>
+                <button type="button" class="btn btn-secondary" onclick="switchTab('teacher-township-ranking')">打开乡镇排名</button>
+            </div>
+            ${needsRankingContainer ? '<div id="teacher-township-ranking-container" hidden></div>' : ''}
+            <div class="analysis-generated-note">教师画像页只保留概况入口，完整乡镇排名、导出和快速学科定位请进入“教师乡镇排名”子模块。</div>
+        `;
+        contentArea.appendChild(placeholder);
     }
 
     function ensureTeacherAnalysisLoaded() {

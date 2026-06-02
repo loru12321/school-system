@@ -911,5 +911,9 @@ assert.ok(appSource.includes('handleExcludedClick(${safeSchoolArg})'), 'summary 
 assert.ok(appSource.includes('handleHighClick(${safeSchoolArg})'), 'summary high-score score should drill into high-score students');
 assert.ok(layoutRefinementCss.includes('#summary #tb-summary thead th') && layoutRefinementCss.includes('position: sticky'), 'summary table header should remain sticky');
 assert.ok(layoutRefinementCss.includes('.summary-generate-btn.is-stale'), 'summary stale generate button styling should exist');
+assert.ok(teacherAnalysisCoreRuntime.includes('function buildTeacherRowsFingerprint'), 'teacher analysis cache signature should include a row fingerprint helper');
+assert.ok(teacherAnalysisCoreRuntime.includes('computeExamDataFingerprint'), 'teacher analysis cache should reuse the shared exam data fingerprint when available');
+assert.ok(layoutRefinementCss.includes('#teacher-township-ranking .analysis-table-shell') && layoutRefinementCss.includes('#teacherComparisonTable thead th'), 'teacher analysis tables should keep sticky grid affordances');
+assert.ok(layoutRefinementCss.includes('#data-manager-modal #dm-teacher-table thead th'), 'teacher assignment management table should keep sticky headers');
 
 console.log('runtime order tests passed');
