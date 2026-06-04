@@ -150,4 +150,61 @@ assert.strictEqual(aliasStats.studentCount, 2);
 assert.strictEqual(Number(aliasStats.avg), 85);
 assert.strictEqual(context.lastAlert, undefined);
 
+const classTeacherUser = {
+    role: 'class_teacher',
+    roles: ['class_teacher', 'teacher'],
+    teacher_name: '甲校教师',
+    homeroom_class: '9.1'
+};
+context.Auth = { currentUser: classTeacherUser };
+context.PermissionPolicy = {
+    sameSchoolName(left, right) {
+        return normalizeAliasSchool(left) === normalizeAliasSchool(right);
+    },
+    hasQueryRole(user, roleName) {
+        return Array.isArray(user?.roles) ? user.roles.includes(roleName) : user?.role === roleName;
+    },
+    isClassTeacher(user) {
+        return this.hasQueryRole(user, 'class_teacher');
+    },
+    getAccessibleSchoolNames() {
+        return ['甲校别名', '乙校'];
+    },
+    filterStudentRows(user, rows, options = {}) {
+        if (options.mode !== 'homeroom') return rows;
+        return (rows || []).filter((row) => String(row?.class || '').trim() === user?.homeroom_class);
+    }
+};
+context.RAW_DATA = [
+    { school: '甲校', class: '9.1', name: '甲一', total: 100, scores: { 数学: 100 } },
+    { school: '甲校', class: '9.1', name: '甲二', total: 90, scores: { 数学: 90 } },
+    { school: '甲校', class: '9.2', name: '甲三', total: 60, scores: { 数学: 60 } },
+    { school: '甲校', class: '9.2', name: '甲四', total: 50, scores: { 数学: 50 } },
+    { school: '乙校', class: '9.3', name: '乙一', total: 80, scores: { 数学: 80 } }
+];
+context.TEACHER_MAP = {
+    '9.1_数学': '甲校教师',
+    '9.2_数学': '甲校教师'
+};
+context.TEACHER_SCHOOL_MAP = {
+    '9.1_数学': '甲校',
+    '9.2_数学': '甲校'
+};
+context.SCHOOLS = {
+    甲校: { metrics: { 数学: { avg: 75, excRate: 0.5, passRate: 0.75, count: 4 } } },
+    乙校: { metrics: { 数学: { avg: 80, excRate: 0, passRate: 1, count: 1 } } }
+};
+context.TEACHER_STATS = {};
+context.analyzeTeachers({ render: false, force: true, township: false });
+const homeroomStats = context.TEACHER_STATS['甲校教师']?.数学;
+assert.ok(homeroomStats, 'class teacher scoped teacher stats should still render for the homeroom analysis context');
+assert.strictEqual(homeroomStats.studentCount, 2);
+assert.strictEqual(Number(homeroomStats.avg), 95);
+context.calculateTeacherTownshipRanking({ force: true, teacherMetricScope: 'admin' });
+const townshipStats = context.TEACHER_TOWNSHIP_RANKINGS?.['甲校教师']?.数学;
+assert.ok(townshipStats, 'teacher township ranking should include class teacher subject rows');
+assert.strictEqual(Number(townshipStats.avg), 75, 'teacher township ranking should use the admin/full-school teacher metric average');
+assert.strictEqual(context.TEACHER_STATS['甲校教师'].数学.studentCount, 2, 'admin-scope township calculation should not overwrite role-scoped teacher stats');
+assert.strictEqual(Number(context.TEACHER_STATS['甲校教师'].数学.avg), 95, 'admin-scope township calculation should restore class teacher analysis values');
+
 console.log('teacher-analysis-core-runtime tests passed');

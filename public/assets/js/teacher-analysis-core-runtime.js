@@ -786,6 +786,8 @@
         };
 
         const rows = resolveRowsForTeacherAnalysis();
+        const useAdminTeacherMetricScope = renderOptions.teacherMetricScope === 'admin'
+            || renderOptions.forceAdminTeacherMetricScope === true;
         perfProbe.mark('resolve rows');
         const schools = (typeof window.listAvailableSchoolsForCompare === 'function')
             ? window.listAvailableSchoolsForCompare()
@@ -927,7 +929,7 @@
             }
         }
 
-        const runtimeSignature = buildTeacherRuntimeSignature(rows, activeSchool);
+        const runtimeSignature = `${buildTeacherRuntimeSignature(rows, activeSchool)}::teacherMetricScope:${useAdminTeacherMetricScope ? 'admin' : 'role'}`;
         if (renderOptions.force !== true
             && teacherAnalysisCacheState.signature === runtimeSignature
             && window.TEACHER_STATS
@@ -998,7 +1000,7 @@
             }
         }
         const queryMode = isClassTeacherUser ? 'homeroom' : 'teaching';
-        const useSchoolWideTeacherPeerScope = isTeacherUser && !isClassTeacherUser;
+        const useSchoolWideTeacherPeerScope = useAdminTeacherMetricScope || (isTeacherUser && !isClassTeacherUser);
         if (!useSchoolWideTeacherPeerScope && window.PermissionPolicy && typeof window.PermissionPolicy.filterStudentRows === 'function') {
             mySchoolStudents = window.PermissionPolicy.filterStudentRows(user, mySchoolStudents, { mode: queryMode });
             if (!mySchoolStudents.length && teacherMapSchool && !teacherSameSchoolName(teacherMapSchool, activeSchool)) {
@@ -1428,7 +1430,24 @@
     }
 
     function calculateTeacherTownshipRanking(options = {}) {
-        const signature = buildTeacherTownshipRankingSignature();
+        let sourceTeacherStats = options.teacherStats || null;
+        if (!sourceTeacherStats && options.teacherMetricScope === 'admin' && typeof analyzeTeachersV2 === 'function') {
+            const previousStats = window.TEACHER_STATS;
+            const previousSignature = teacherAnalysisCacheState.signature;
+            try {
+                sourceTeacherStats = analyzeTeachersV2({
+                    force: true,
+                    render: false,
+                    township: false,
+                    teacherMetricScope: 'admin'
+                }) || window.TEACHER_STATS || {};
+            } finally {
+                window.TEACHER_STATS = previousStats;
+                teacherAnalysisCacheState.signature = previousSignature;
+            }
+        }
+        const teacherStatsSource = sourceTeacherStats || window.TEACHER_STATS || {};
+        const signature = `${buildTeacherTownshipRankingSignature()}::teacherMetricScope:${options.teacherMetricScope === 'admin' ? 'admin' : 'current'}::${teacherStableObjectSignature(teacherStatsSource)}`;
         if (options.force !== true
             && teacherAnalysisCacheState.townshipSignature === signature
             && window.TEACHER_TOWNSHIP_RANKINGS
@@ -1522,8 +1541,8 @@
             const townshipAverage = buildTownshipAverage(subject);
             if (townshipAverage) window.TEACHER_TOWNSHIP_AVERAGES[subject] = townshipAverage;
             const rankingData = [];
-            Object.keys(window.TEACHER_STATS || {}).forEach((teacherName) => {
-                const data = window.TEACHER_STATS[teacherName]?.[subject];
+            Object.keys(teacherStatsSource || {}).forEach((teacherName) => {
+                const data = teacherStatsSource[teacherName]?.[subject];
                 if (!data) return;
                 rankingData.push({
                     name: teacherName,

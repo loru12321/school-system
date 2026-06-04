@@ -198,7 +198,7 @@
         if (sideNav) sideNav.innerHTML = '';
         if (!container) return;
         if (typeof window.calculateTeacherTownshipRanking === 'function') {
-            window.calculateTeacherTownshipRanking();
+            window.calculateTeacherTownshipRanking({ teacherMetricScope: 'admin' });
         }
         if (!window.TOWNSHIP_RANKING_DATA || !Object.keys(window.TOWNSHIP_RANKING_DATA).length) {
             container.innerHTML = '<div class="analysis-empty-state">暂无教师乡镇排名数据</div>';

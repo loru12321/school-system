@@ -607,8 +607,10 @@ assert.ok(teacherCompareResultRuntime.includes('function canUseTeacherMultiPerio
 assert.ok(teacherCompareResultRuntime.includes('guardTeacherMultiPeriodCompare(hintEl, resultEl)'), 'teacher multi-period compare generation should enforce the role guard');
 assert.ok(teacherCompareCloudRuntime.includes('function guardTeacherMultiPeriodCloudAction()'), 'teacher multi-period cloud actions should enforce the role guard');
 assert.ok(permissionPolicyRuntime.includes("roleChecks.push(ownTeacherMetric || (!!normalizedSubject && teachingScope.subjects.has(normalizedSubject)));"), 'teacher-analysis should allow teachers to see same-school same-subject teacher metrics');
-assert.ok(teacherAnalysisCoreRuntime.includes("const useSchoolWideTeacherPeerScope = isTeacherUser && !isClassTeacherUser;"), 'teacher-analysis should compute school-wide peer stats for teacher-only query scope without leaking class-teacher homeroom scope');
+assert.ok(teacherAnalysisCoreRuntime.includes("const useSchoolWideTeacherPeerScope = useAdminTeacherMetricScope || (isTeacherUser && !isClassTeacherUser);"), 'teacher-analysis should allow township ranking to use admin teacher metric scope');
 assert.ok(teacherAnalysisCoreRuntime.includes('useSchoolWideTeacherPeerScope ? null : user'), 'teacher-analysis baselines should use school-wide peer scope for teacher comparison rows');
+assert.ok(teacherAnalysisCoreRuntime.includes("teacherMetricScope: 'admin'"), 'teacher township ranking should be able to calculate from admin-scope teacher stats');
+assert.ok(teacherAnalysisUiRuntime.includes("window.calculateTeacherTownshipRanking({ teacherMetricScope: 'admin' });"), 'teacher township ranking UI should use admin-scope metric values for all roles');
 assert.ok(!shellRuntime.includes("text: '绩效公平考核模型'"), 'teaching management quick switch should not expose the removed performance fairness module');
 assert.ok(!teachingManagementOverviewRuntime.includes("tmSetQuickEntryState(\n        'single-school-eval'"), 'teaching management overview should not render a performance fairness quick entry');
 assert.ok(teachingManagementOverviewRuntime.includes("const supportedModules = ['teacher-analysis'];"), 'teaching management state bars should only cover retained modules');
