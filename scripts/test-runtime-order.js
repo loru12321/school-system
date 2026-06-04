@@ -575,6 +575,13 @@ const studentOverviewEntrySource = studentOverviewEntryStart >= 0 && studentOver
 assert.ok(reportPrewarmSource, 'report generator prewarm source should be present');
 assert.ok(!reportPrewarmSource.includes('ensureHistoryCompareRuntimeLoaded'), 'report generator should not prewarm legacy history compare runtime during normal report entry');
 assert.ok(!reportPrewarmSource.includes('ensureStudentCompareRuntimeLoaded'), 'report generator should not prewarm student compare runtime during normal report entry');
+const historyDoQueryWrapperStart = bootRuntime.indexOf('function installHistoryDoQueryWrapper()');
+const historyDoQueryWrapperEnd = bootRuntime.indexOf('function installDataManagerSqlHooks', historyDoQueryWrapperStart);
+const historyDoQueryWrapperSource = historyDoQueryWrapperStart >= 0 && historyDoQueryWrapperEnd > historyDoQueryWrapperStart
+    ? bootRuntime.slice(historyDoQueryWrapperStart, historyDoQueryWrapperEnd)
+    : '';
+assert.ok(historyDoQueryWrapperSource.includes('report-history-compare-target-sync'), 'report history hook should only sync compare targets when the compare runtime is already loaded');
+assert.ok(!historyDoQueryWrapperSource.includes('ensureStudentCompareRuntimeLoaded'), 'report history hook should not load the student compare runtime during normal report generation');
 assert.ok(!appSource.includes('report-student-compare-warmup'), 'report queries should not warm student compare runtime unless the user opens compare features');
 assert.ok(!moduleEntryRuntime.includes("id === 'exam-arranger'\n            && typeof window.ensureGradeSchedulerRuntimeLoaded"), 'exam arranger should not eagerly load the grade scheduler runtime');
 assert.ok(bootRuntime.includes("triggers: ['grade-scheduler']"), 'grade scheduler runtime should load only for the grade scheduler module');

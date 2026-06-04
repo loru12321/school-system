@@ -3277,22 +3277,17 @@ function installHistoryDoQueryWrapper() {
     if (window.__historyDoQueryWrapped || typeof window.doQuery !== 'function') return false;
     const base = window.doQuery;
     const wrapped = async function (...args) {
-        const warmHistoryRuntime = () => {
-            Promise.allSettled([
-                window.ensureStudentCompareRuntimeLoaded?.()
-            ]).then(() => {
-                const currentStudent = typeof window.readCurrentReportStudentState === 'function'
-                    ? window.readCurrentReportStudentState()
-                    : null;
-                if (currentStudent && typeof window.setCloudCompareTarget === 'function') {
-                    window.setCloudCompareTarget(currentStudent);
-                }
-            }).catch((error) => console.warn(error));
+        const syncCompareTargetIfReady = () => {
+            if (typeof window.setCloudCompareTarget !== 'function') return;
+            const currentStudent = typeof window.readCurrentReportStudentState === 'function'
+                ? window.readCurrentReportStudentState()
+                : null;
+            if (currentStudent) window.setCloudCompareTarget(currentStudent);
         };
         if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
-            window.SystemPerformance.scheduleIdle(warmHistoryRuntime, { label: 'report-history-runtime-warmup', delay: 80, timeout: 1500 });
+            window.SystemPerformance.scheduleIdle(syncCompareTargetIfReady, { label: 'report-history-compare-target-sync', delay: 80, timeout: 1500 });
         } else {
-            window.setTimeout(warmHistoryRuntime, 80);
+            window.setTimeout(syncCompareTargetIfReady, 80);
         }
         const next = window.doQuery !== wrapped ? window.doQuery : base;
         if (window.doQuery !== wrapped) {
