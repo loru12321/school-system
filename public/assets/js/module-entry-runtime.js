@@ -685,6 +685,14 @@
 
     function initTeacherAnalysisEntry() {
         clearTeacherAnalysisDeferredRender();
+        if (typeof window.ensureLazySectionLoaded === 'function') {
+            window.ensureLazySectionLoaded('teacher-analysis');
+        }
+        if (typeof window.TeachingManagementModulesRuntime?.ensureTeacherTownshipRankingSlotReady === 'function') {
+            window.TeachingManagementModulesRuntime.ensureTeacherTownshipRankingSlotReady();
+        } else if (typeof window.TeachingManagementModulesRuntime?.relocateTeacherBlocks === 'function') {
+            window.TeachingManagementModulesRuntime.relocateTeacherBlocks();
+        }
         const applyTeacherRoleVisibility = () => {
             if (typeof window.applyRoleAllowVisibility === 'function') {
                 window.applyRoleAllowVisibility(document.getElementById('teacher-analysis') || document);

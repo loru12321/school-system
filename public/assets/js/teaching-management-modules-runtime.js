@@ -114,6 +114,18 @@
         });
     }
 
+    function findTeacherTownshipRankingPanel() {
+        const slot = document.getElementById('teacher-township-ranking-slot');
+        const panels = Array.from(document.querySelectorAll('.analysis-ranking-panel'));
+        return panels.find((panel) => (
+            !panel.classList.contains('teacher-split-placeholder')
+            && panel.querySelector('#teacher-township-ranking-container')
+        )) || panels.find((panel) => (
+            panel.parentElement === slot
+            && panel.querySelector('#teacher-township-ranking-container')
+        )) || null;
+    }
+
     function relocateTeacherBlocks() {
         ensureTeachingManagementSections();
         const teacherSection = document.getElementById('teacher-analysis');
@@ -129,7 +141,7 @@
 
         moveNodeToSlot(document.getElementById('anchor-detail'), 'teacher-detail-comparison-slot');
         moveNodeToSlot(document.getElementById('anchor-pair'), 'teacher-pairing-slot');
-        moveNodeToSlot(document.querySelector('.analysis-ranking-panel'), 'teacher-township-ranking-slot');
+        moveNodeToSlot(findTeacherTownshipRankingPanel(), 'teacher-township-ranking-slot');
         ensureTeacherAnalysisSplitPlaceholder(teacherSection);
 
         if (typeof window.refreshResponsiveMobileTables === 'function') {
@@ -137,6 +149,21 @@
         }
         if (typeof window.applyRoleAllowVisibility === 'function') window.applyRoleAllowVisibility(document);
         return true;
+    }
+
+    function ensureTeacherTownshipRankingSlotReady(attempt = 0) {
+        const relocated = relocateTeacherBlocks();
+        const slot = document.getElementById('teacher-township-ranking-slot');
+        const panel = slot?.querySelector('.analysis-ranking-panel');
+        const container = panel?.querySelector('#teacher-township-ranking-container');
+        if (relocated && panel && container && !panel.classList.contains('teacher-split-placeholder')) {
+            container.hidden = false;
+            container.style.display = 'block';
+            return true;
+        }
+        if (attempt >= 8) return false;
+        window.setTimeout(() => ensureTeacherTownshipRankingSlotReady(attempt + 1), 120);
+        return false;
     }
 
     function ensureTeacherAnalysisSplitPlaceholder(teacherSection) {
@@ -157,10 +184,12 @@
     }
 
     function ensureTeacherAnalysisLoaded() {
+        let loaded = null;
         if (typeof window.ensureLazySectionLoaded === 'function') {
-            window.ensureLazySectionLoaded('teacher-analysis');
+            loaded = window.ensureLazySectionLoaded('teacher-analysis');
         }
         relocateTeacherBlocks();
+        return loaded || document.getElementById('teacher-analysis') || null;
     }
 
     function refreshTeachingManagementAfterSwitch(moduleId) {
@@ -177,7 +206,11 @@
         const renderer = renderers[moduleId];
         if (typeof renderer === 'function') {
             window.setTimeout(() => {
-                relocateTeacherBlocks();
+                if (moduleId === 'teacher-township-ranking') {
+                    ensureTeacherTownshipRankingSlotReady();
+                } else {
+                    relocateTeacherBlocks();
+                }
                 renderer();
             }, 80);
         }
@@ -192,6 +225,9 @@
             window.switchTab = function patchedTeachingSwitchTab(id, ...rest) {
                 const moduleId = String(id || '').trim();
                 ensureTeachingManagementSections();
+                if (MODULE_META[moduleId]) {
+                    ensureTeacherAnalysisLoaded();
+                }
                 const result = originalSwitchTab.call(this, id, ...rest);
                 if (moduleId === 'teacher-analysis' || MODULE_META[moduleId]) {
                     refreshTeachingManagementAfterSwitch(moduleId);
@@ -209,6 +245,7 @@
         markActiveGroup,
         ensureTeachingManagementSections,
         relocateTeacherBlocks,
+        ensureTeacherTownshipRankingSlotReady,
         install
     };
 

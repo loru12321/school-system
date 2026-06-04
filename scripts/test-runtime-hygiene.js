@@ -95,7 +95,7 @@ assert.ok(!appRuntime.includes("onclick=\"showSchoolProfile('${s.name}')\""), 's
 assert.ok(appRuntime.includes('const safeSchoolName = escapeAppHtml(s.name)'), 'summary table should escape dynamic school names before rendering');
 assert.ok(appRuntime.includes('data-school-profile-name="${safeSchoolName}"'), 'summary table should bind school profile actions through a safe data attribute');
 assert.ok(appRuntime.includes('window.SystemPerformance.scheduleTask(`report-history-hydrate:${hydrateKey}`, task'), 'report history hydration should be delayed as a scheduled background task');
-assert.ok(appRuntime.includes('delay: 1600'), 'report history hydration should not run during the first report paint');
+assert.ok(appRuntime.includes('delay: 4800'), 'report history hydration should stay well after the first report paint');
 const archiveRuntime = fs.readFileSync(path.join(root, 'public/assets/js/data-manager-archive-runtime.js'), 'utf8');
 assert.ok(!archiveRuntime.includes('onclick="DataManager.renameHistoryExam('), 'history archive rows should not inject exam names into inline handlers');
 assert.ok(archiveRuntime.includes('data-history-exam-action="rename"'), 'history archive rows should bind rename actions through data attributes');
@@ -118,6 +118,33 @@ assert.ok(dataCloudRuntime.includes('options.keyIn = Array.from(keys);'), 'cloud
 assert.ok(!dataCloudRuntime.includes('options.keyLike = `%${cohortId}%`;'), 'current cloud backup list should not use wildcard cohort scans');
 assert.ok(dataCloudRuntime.includes('limit: filterCurrent ? 800 : 500'), 'cloud backup list should cap metadata list reads');
 assert.ok(dataCloudRuntime.includes('const MAX_CLOUD_BACKUP_RENDER_ROWS = 80'), 'cloud backup list should cap rows rendered into the DOM');
+
+const teachingModulesRuntime = fs.readFileSync(path.join(root, 'public/assets/js/teaching-management-modules-runtime.js'), 'utf8');
+const moduleEntryRuntime = fs.readFileSync(path.join(root, 'public/assets/js/module-entry-runtime.js'), 'utf8');
+assert.ok(
+    teachingModulesRuntime.includes('function findTeacherTownshipRankingPanel()'),
+    'teaching management split should resolve the real teacher township ranking panel'
+);
+assert.ok(
+    teachingModulesRuntime.includes("!panel.classList.contains('teacher-split-placeholder')"),
+    'teacher township relocation should not move the split placeholder into the ranking slot'
+);
+assert.ok(
+    teachingModulesRuntime.includes('ensureTeacherTownshipRankingSlotReady'),
+    'teacher township submodule should retry relocation after the lazy teacher template loads'
+);
+assert.ok(
+    !teachingModulesRuntime.includes("moveNodeToSlot(document.querySelector('.analysis-ranking-panel'), 'teacher-township-ranking-slot')"),
+    'teacher township relocation should not select the first ranking panel blindly'
+);
+assert.ok(
+    moduleEntryRuntime.includes("window.ensureLazySectionLoaded('teacher-analysis')"),
+    'teacher insight submodule entry should load the teacher analysis lazy template before rendering split panels'
+);
+assert.ok(
+    moduleEntryRuntime.includes('ensureTeacherTownshipRankingSlotReady'),
+    'teacher insight submodule entry should ready the township ranking slot for direct navigation'
+);
 assert.ok(renderCloudBackupsSource.includes('const displayRows = visibleRows.slice(0, MAX_CLOUD_BACKUP_RENDER_ROWS);'), 'cloud backup list should render a bounded page of rows');
 assert.ok(renderCloudBackupsSource.includes('displayRows.forEach((item) => {'), 'cloud backup table should iterate the bounded display rows');
 assert.ok(!dataCloudRuntime.includes('fallbackQueryOptions'), 'current cloud backup list should not fall back to a full metadata scan');
