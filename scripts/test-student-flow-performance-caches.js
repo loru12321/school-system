@@ -53,7 +53,11 @@ const pkg = JSON.parse(read(packageFile));
     'dataset.studentDetailsRenderSig',
     'ReportHistoryPerfCache',
     'getReportSubjectSortedScores',
-    'lastScrollKey'
+    'lastScrollKey',
+    'getStudentDetailsClassTeacherQueryMode',
+    'classTeacherClasses = Array.from(new Set([',
+    '...Array.from(scope.classes || [])',
+    'scope?.classes?.has(normalizedSelectedClass) ? \'teaching\' : \'homeroom\''
 ].forEach((token) => assertContains(app, token, appFile));
 
 [

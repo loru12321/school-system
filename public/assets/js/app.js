@@ -11121,7 +11121,7 @@ function updateStudentSchoolSelect() {
     const buildClassOptions = (classes, includeAll = true) => {
         const classList = Array.from(classes || []).map(c => String(c || '').trim()).filter(Boolean);
         return (includeAll ? '<option value="">全部班级</option>' : '')
-            + classList.map(c => `<option value="${c}">${c}</option>`).join('');
+            + classList.map(c => `<option value="${tmEscapeHtml(c)}">${tmEscapeHtml(c)}</option>`).join('');
     };
     const findMatchingSchoolOption = (schoolName) => {
         const target = String(schoolName || '').trim();
@@ -11193,11 +11193,22 @@ function updateStudentSchoolSelect() {
             select.value = school;
             select.disabled = true;
         }
-        const homeroomLabel = String(user?.class_name || user?.class || homeroomClass || '未配置班级');
-        const homeroomValue = homeroomClass || '';
-        setOptionsIfChanged(classSelect, `<option value="${tmEscapeHtml(homeroomValue)}">${tmEscapeHtml(homeroomLabel)}</option>`, `class-teacher:${homeroomValue}:${homeroomLabel}`);
-        classSelect.value = homeroomValue;
-        classSelect.disabled = true;
+        const scope = getTeacherScopeForUser(user);
+        const classTeacherClasses = Array.from(new Set([
+            homeroomClass,
+            ...Array.from(scope.classes || [])
+        ].map(c => normalizeClass(c)).filter(Boolean))).sort();
+        const fallbackLabel = String(user?.class_name || user?.class || homeroomClass || '未配置班级');
+        const classOptionsHtml = classTeacherClasses.length
+            ? buildClassOptions(classTeacherClasses, false)
+            : `<option value="${tmEscapeHtml(homeroomClass || '')}">${tmEscapeHtml(fallbackLabel)}</option>`;
+        setOptionsIfChanged(classSelect, classOptionsHtml, `class-teacher:${school}:${classTeacherClasses.join('|')}:${fallbackLabel}`);
+        if (previousClass && classTeacherClasses.includes(normalizeClass(previousClass))) {
+            classSelect.value = normalizeClass(previousClass);
+        } else {
+            classSelect.value = homeroomClass || classTeacherClasses[0] || '';
+        }
+        classSelect.disabled = classTeacherClasses.length === 0;
 
         if (modeWrap) modeWrap.style.display = 'inline-flex';
         if (modeSelect && !modeSelect.value) modeSelect.value = 'class_all';
@@ -11397,7 +11408,9 @@ function buildStudentDetailsRenderMeta(list = []) {
     const isClassTeacher = isStudentDetailsClassTeacher(user);
     const isTeacher = isStudentDetailsTeacher(user);
     const classTeacherMode = isClassTeacher ? getClassTeacherStudentViewMode() : 'teaching';
-    const useTeachingSubjectScope = (!isClassTeacher && isTeacher) || (isClassTeacher && classTeacherMode === 'teaching');
+    const selectedClass = document.getElementById('studentClassSelect')?.value || '';
+    const queryMode = isClassTeacher ? getStudentDetailsClassTeacherQueryMode(user, selectedClass) : 'teaching';
+    const useTeachingSubjectScope = (!isClassTeacher && isTeacher) || (isClassTeacher && queryMode === 'teaching');
     const needTeacherScope = useTeachingSubjectScope;
     const teacherScope = needTeacherScope ? getTeacherScopeForUser(user) : null;
     const listSignature = buildStudentDetailsDataSignature(list);
@@ -11405,6 +11418,8 @@ function buildStudentDetailsRenderMeta(list = []) {
         listSignature,
         role,
         classTeacherMode,
+        queryMode,
+        normalizeClass(selectedClass || ''),
         teacherScope ? Array.from(teacherScope.subjects || []).sort().join('|') : '',
         teacherScope ? Array.from(teacherScope.classes || []).sort().join('|') : ''
     ].join('::');
@@ -11438,6 +11453,17 @@ function getClassTeacherStudentViewMode() {
     const sel = document.getElementById('classTeacherViewMode');
     const val = sel?.value;
     return (val === 'teaching') ? 'teaching' : 'class_all';
+}
+
+function getStudentDetailsClassTeacherQueryMode(user, selectedClass = '') {
+    if (!isStudentDetailsClassTeacher(user)) return 'teaching';
+    if (getClassTeacherStudentViewMode() === 'teaching') return 'teaching';
+    const normalizedSelectedClass = normalizeClass(selectedClass || '');
+    if (!normalizedSelectedClass) return 'homeroom';
+    const homeroomClass = getStudentDetailsHomeroomClass(user);
+    if (normalizedSelectedClass === homeroomClass) return 'homeroom';
+    const scope = getTeacherScopeForUser(user);
+    return scope?.classes?.has(normalizedSelectedClass) ? 'teaching' : 'homeroom';
 }
 
 function isStudentDetailsMobileCardMode() {
@@ -11853,7 +11879,7 @@ function renderStudentDetails(reset = true) {
             : [...RAW_DATA];
 
         const classTeacherMode = isClassTeacher ? getClassTeacherStudentViewMode() : 'teaching';
-        const queryMode = isClassTeacher ? (classTeacherMode === 'class_all' ? 'homeroom' : 'teaching') : 'teaching';
+        const queryMode = isClassTeacher ? getStudentDetailsClassTeacherQueryMode(user, effectiveSelectedClass) : 'teaching';
         const activeFilterSignature = buildStudentDetailsFilterSignature();
         const querySignature = [
             Array.isArray(RAW_DATA) ? RAW_DATA.length : 0,
@@ -12434,12 +12460,12 @@ function exportStudentDetails() {
     const isClassTeacher = isStudentDetailsClassTeacher(user);
     const isTeacher = isStudentDetailsTeacher(user);
     const classTeacherMode = isClassTeacher ? getClassTeacherStudentViewMode() : 'teaching';
-    const useTeachingSubjectScope = (!isClassTeacher && isTeacher) || (isClassTeacher && classTeacherMode === 'teaching');
-    const needTeacherScope = useTeachingSubjectScope;
-    const teacherScope = needTeacherScope ? getTeacherScopeForUser(user) : null;
-
     const selectedSchool = document.getElementById('studentSchoolSelect').value;
     const selectedClass = document.getElementById('studentClassSelect').value;
+    const queryMode = isClassTeacher ? getStudentDetailsClassTeacherQueryMode(user, selectedClass) : 'teaching';
+    const useTeachingSubjectScope = (!isClassTeacher && isTeacher) || (isClassTeacher && queryMode === 'teaching');
+    const needTeacherScope = useTeachingSubjectScope;
+    const teacherScope = needTeacherScope ? getTeacherScopeForUser(user) : null;
 
     const isSingleSchool = Object.keys(SCHOOLS).length <= 1;
 
@@ -12460,7 +12486,9 @@ function exportStudentDetails() {
             selectedClass && selectedClass !== '全部' ? selectedClass : ''
         )
         : [...RAW_DATA];
-    if (useTeachingSubjectScope && teacherScope && teacherScope.classes.size > 0) {
+    if (window.PermissionPolicy && typeof window.PermissionPolicy.filterStudentRows === 'function') {
+        studentsToShow = PermissionPolicy.filterStudentRows(user, studentsToShow, { mode: queryMode });
+    } else if (useTeachingSubjectScope && teacherScope && teacherScope.classes.size > 0) {
         studentsToShow = studentsToShow.filter(s => {
             const rawClass = String(s.class || '').trim();
             const normalizedClass = normalizeClass(s.class);
