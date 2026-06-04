@@ -769,12 +769,12 @@
         ];
         heavyTargets.forEach(([id, message]) => {
             const node = document.getElementById(id);
-            if (!node || !node.innerHTML) return;
+            if (!node || !node.innerHTML || node.dataset.released === 'true') return;
             node.dataset.released = 'true';
             node.innerHTML = `<div class="analysis-empty-state">${message}</div>`;
         });
         const sideNav = document.getElementById('side-nav-teacher-ranks-container');
-        if (sideNav) sideNav.innerHTML = '';
+        if (sideNav && sideNav.innerHTML) sideNav.innerHTML = '';
     }
 
     function initCorrelationAnalysisEntry() {

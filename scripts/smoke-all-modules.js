@@ -620,6 +620,36 @@ async function smokeSwitchModule(page, id) {
     }, id);
 
     try {
+        if (id === 'bottom3') {
+            await page.evaluate(() => {
+                window.__SMOKE_BOTTOM3_ENTRY_TIMINGS__ = [];
+                const record = (label, durationMs) => {
+                    window.__SMOKE_BOTTOM3_ENTRY_TIMINGS__.push({
+                        label,
+                        durationMs: Math.round(durationMs)
+                    });
+                };
+                const wrap = (name) => {
+                    const original = window[name];
+                    if (typeof original !== 'function' || original.__smokeBottom3Wrapped) return;
+                    const wrapped = function (...args) {
+                        const start = performance.now();
+                        try {
+                            return original.apply(this, args);
+                        } finally {
+                            record(name, performance.now() - start);
+                        }
+                    };
+                    wrapped.__smokeBottom3Wrapped = true;
+                    window[name] = wrapped;
+                };
+                wrap('switchTab');
+                wrap('runModuleTabEnter');
+                wrap('renderBottom3TableOnly');
+                wrap('renderTables');
+                wrap('releaseTeacherAnalysisHeavyDom');
+            });
+        }
         await page.evaluate((moduleId) => {
             if (typeof window.switchTab !== 'function') {
                 throw new Error('switchTab is not available');
@@ -808,6 +838,13 @@ async function runModuleDeepCheck(page, id) {
                 const text = String(name || '').trim();
                 return text.length > 8 ? `${text.slice(0, 8)}...` : (text || '--');
             };
+            const timings = [];
+            let lastMark = performance.now();
+            const mark = (label) => {
+                const now = performance.now();
+                timings.push({ label, durationMs: Math.round(now - lastMark) });
+                lastMark = now;
+            };
             const schools = Object.values(window.SCHOOLS || {});
             const schoolNames = Object.keys(window.SCHOOLS || {});
             const townshipSchools = schools.filter((school) => {
@@ -816,6 +853,7 @@ async function runModuleDeepCheck(page, id) {
                     ? window.isTownshipManagedSchool(school.name, schoolNames)
                     : true;
             });
+            mark('filterTownshipSchools');
             const rows = townshipSchools
                 .filter((school) => school.bottom3)
                 .map((school) => ({
@@ -828,10 +866,12 @@ async function runModuleDeepCheck(page, id) {
                     rank: toNumber(school.rankBottom)
                 }))
                 .filter((row) => row.name && row.totalN > 0);
+            mark('mapRows');
             const sorted = rows.slice().sort((a, b) => {
                 if (a.rank && b.rank && a.rank !== b.rank) return a.rank - b.rank;
                 return b.score - a.score;
             });
+            mark('sortRows');
             const expectedAverage = rows.length
                 ? rows.reduce((sum, row) => sum + row.avg, 0) / rows.length
                 : 0;
@@ -851,15 +891,20 @@ async function runModuleDeepCheck(page, id) {
             if (typeof window.SupportMetricsRuntime?.ensureWrappers === 'function') {
                 window.SupportMetricsRuntime.ensureWrappers();
             }
+            mark('ensureWrappers');
             const beforeRefresh = snapshotBottom3State();
+            mark('snapshotBeforeSummary');
             const summary = window.SupportMetricsRuntime?.refreshBottom3Summary?.() || null;
+            mark('refreshSummary');
             const afterRefresh = snapshotBottom3State();
+            mark('snapshotAfterSummary');
             const schoolCountText = document.getElementById('bottom3-school-count')?.textContent?.trim() || '';
             const averageScoreText = document.getElementById('bottom3-average-score')?.textContent?.trim() || '';
             const topSchoolText = document.getElementById('bottom3-top-school')?.textContent?.trim() || '';
             const excLabelText = document.getElementById('label-exc')?.textContent?.trim() || '';
             const expectedExcRate = toNumber(window.CONFIG?.excRate) * 100;
             const tableRowCount = document.querySelectorAll('#tb-bottom3 tbody tr').length;
+            mark('readDom');
             const finite = rows.every((row) => [row.totalN, row.bottomN, row.excN, row.avg, row.score, row.rank]
                 .every((value) => Number.isFinite(Number(value))));
             const checks = {
@@ -891,6 +936,10 @@ async function runModuleDeepCheck(page, id) {
                 tableRowCount,
                 averageScore: Number(expectedAverage.toFixed(2)),
                 topSchool: expectedTopSchool,
+                timings,
+                entryTimings: Array.isArray(window.__SMOKE_BOTTOM3_ENTRY_TIMINGS__)
+                    ? window.__SMOKE_BOTTOM3_ENTRY_TIMINGS__
+                    : [],
                 summary
             };
         });
