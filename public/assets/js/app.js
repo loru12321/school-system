@@ -9583,8 +9583,60 @@ const SummaryRefreshState = {
     reason: '',
     version: 0,
     lastGeneratedVersion: 0,
-    suppress: false
+    suppress: false,
+    dependencySignatures: {}
 };
+
+function buildSummaryDependencySignature(type, rows = []) {
+    const parts = [
+        String(type || ''),
+        String(CURRENT_EXAM_ID || ''),
+        String(window.__RAW_DATA_VERSION || 0),
+        String(MY_SCHOOL || '')
+    ];
+    (rows || []).forEach((row) => {
+        if (!row) return;
+        if (type === 'indicator') {
+            parts.push([
+                row.name,
+                row.rank,
+                row.finalScore,
+                row.score1,
+                row.score2,
+                row.r1,
+                row.r2,
+                row.t1,
+                row.t2,
+                row.targetKey,
+                row.missingTarget ? 1 : 0,
+                row.invalidTarget ? 1 : 0
+            ].join(':'));
+            return;
+        }
+        if (type === 'highScore') {
+            parts.push([
+                row.name,
+                row.count,
+                row.hsCount,
+                row.hsRatio,
+                row.score
+            ].join(':'));
+            return;
+        }
+        parts.push([
+            row.name,
+            row.rank2Rate,
+            row.score2Rate,
+            row.rankBottom,
+            row.scoreBottom,
+            row.bottom3?.totalN,
+            row.bottom3?.bottomN,
+            row.bottom3?.excN,
+            row.bottom3?.avg
+        ].join(':'));
+    });
+    return parts.join('|');
+}
 
 function updateSummaryRefreshState() {
     const btn = document.getElementById('btn-summary-generate');
@@ -9617,7 +9669,31 @@ function markSummaryDataChanged(reason = '前置数据已变化，请重新生�
     updateSummaryRefreshState();
 }
 
+function markSummaryDataChangedIfDependencyChanged(type, signature, reason = '前置数据已变化，请重新生成总排名。') {
+    const key = String(type || '').trim();
+    const nextSignature = String(signature || '');
+    if (!key || !nextSignature) return;
+    const previousSignature = SummaryRefreshState.dependencySignatures[key] || '';
+    SummaryRefreshState.dependencySignatures[key] = nextSignature;
+    if (!previousSignature || previousSignature === nextSignature) return;
+    markSummaryDataChanged(reason);
+}
+
+function captureSummaryDependencyBaselines() {
+    const townshipSchools = getSummaryTownshipSchools();
+    SummaryRefreshState.dependencySignatures.twoRateBottom = buildSummaryDependencySignature('twoRateBottom', townshipSchools);
+    const highScoreRows = Array.isArray(window.__LAST_HIGH_SCORE_SUMMARY_ROWS__) ? window.__LAST_HIGH_SCORE_SUMMARY_ROWS__ : [];
+    if (highScoreRows.length) {
+        SummaryRefreshState.dependencySignatures.highScore = buildSummaryDependencySignature('highScore', highScoreRows);
+    }
+    const indicatorRows = Array.isArray(window.__LAST_INDICATOR_CALC_DATA__) ? window.__LAST_INDICATOR_CALC_DATA__ : [];
+    if (indicatorRows.length) {
+        SummaryRefreshState.dependencySignatures.indicator = buildSummaryDependencySignature('indicator', indicatorRows);
+    }
+}
+
 function markSummaryFresh() {
+    captureSummaryDependencyBaselines();
     SummaryRefreshState.dirty = false;
     SummaryRefreshState.lastGeneratedVersion = SummaryRefreshState.version;
     SummaryRefreshState.reason = '';
@@ -9678,7 +9754,12 @@ function renderHighScoreTable() {
             </tr>`;
     });
     tbody.innerHTML = html;
-    markSummaryDataChanged('高分段赋分已更新，请重新生成总排名。');
+    window.__LAST_HIGH_SCORE_SUMMARY_ROWS__ = list;
+    markSummaryDataChangedIfDependencyChanged(
+        'highScore',
+        buildSummaryDependencySignature('highScore', list),
+        '高分段赋分已更新，请重新生成总排名。'
+    );
 
     appDebug(`已渲染 ${list.length} 所学校的高分数据`);
 }
@@ -10637,7 +10718,11 @@ function renderTables() {
 
     renderBottom3TableBody(summarySignature, townshipSchools);
     refreshIndicatorResults(true);
-    markSummaryDataChanged('两率一分或后1/3结果已更新，请重新生成总排名。');
+    markSummaryDataChangedIfDependencyChanged(
+        'twoRateBottom',
+        buildSummaryDependencySignature('twoRateBottom', townshipSchools),
+        '两率一分或后1/3结果已更新，请重新生成总排名。'
+    );
 }
 
 function renderTrafficLightDashboard() {
@@ -14218,7 +14303,12 @@ function calcIndicators(isSilent = false) {
     });
     document.querySelector('#tb-indicator tbody').innerHTML = html;
     renderIndicatorTargetMatchPanel(calcData, line1, line2);
-    markSummaryDataChanged('指标生核算结果已更新，请重新生成总排名。');
+    window.__LAST_INDICATOR_CALC_DATA__ = calcData;
+    markSummaryDataChangedIfDependencyChanged(
+        'indicator',
+        buildSummaryDependencySignature('indicator', calcData),
+        '指标生核算结果已更新，请重新生成总排名。'
+    );
 
     if (!isSilent && window.UI) {
         UI.toast("✅ 指标生核算完成 (含附加分)", "success");

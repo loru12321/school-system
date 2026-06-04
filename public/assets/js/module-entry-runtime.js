@@ -587,8 +587,7 @@
                 () => { if (typeof updateMarginalSchoolSelect === 'function') updateMarginalSchoolSelect(); },
                 () => { if (typeof updateSubjectBalanceSelects === 'function') updateSubjectBalanceSelects(); },
                 () => { if (typeof updatePotentialSchoolSelect === 'function') updatePotentialSchoolSelect(); },
-                () => { if (typeof updateSegmentSelects === 'function') updateSegmentSelects(); },
-                () => { if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect(); }
+                () => { if (typeof updateSegmentSelects === 'function') updateSegmentSelects(); }
             ];
             deferredSelectorUpdates.forEach((task, index) => {
                 scheduleActiveModuleTask('student-overview', `student-overview-deferred-select:${index}`, task, {
@@ -599,14 +598,32 @@
             });
         };
 
-        if (typeof window.ensureTeachingManagementRuntimeLoaded === 'function'
-            && !window.__TEACHING_MANAGEMENT_RUNTIME_PATCHED__) {
-            window.ensureTeachingManagementRuntimeLoaded()
+        const loadRuntime = () => {
+            if (window.__TEACHING_MANAGEMENT_RUNTIME_PATCHED__
+                || (typeof window.smScheduleStudentOverviewRender === 'function'
+                    && typeof window.renderStudentOverview === 'function')) {
+                return Promise.resolve();
+            }
+            if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
+                return window.SystemRuntimeLoader.load('teaching-management');
+            }
+            if (typeof window.ensureTeachingManagementRuntimeLoaded === 'function') {
+                return window.ensureTeachingManagementRuntimeLoaded();
+            }
+            return Promise.reject(new Error('student overview runtime loader unavailable'));
+        };
+
+        if (!window.__TEACHING_MANAGEMENT_RUNTIME_PATCHED__
+            && (typeof window.smScheduleStudentOverviewRender !== 'function'
+                || typeof window.renderStudentOverview !== 'function')) {
+            loadRuntime()
                 .then(() => {
                     if (document.getElementById('student-overview')?.classList.contains('active')) renderNow();
                 })
-                .catch((error) => console.warn(error));
-            renderNow();
+                .catch((error) => {
+                    console.warn(error);
+                    renderNow();
+                });
             return Promise.resolve(false);
         }
 

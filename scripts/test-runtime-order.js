@@ -564,6 +564,11 @@ const reportPrewarmEnd = moduleEntryRuntime.indexOf('function runModuleSpecificI
 const reportPrewarmSource = reportPrewarmStart >= 0 && reportPrewarmEnd > reportPrewarmStart
     ? moduleEntryRuntime.slice(reportPrewarmStart, reportPrewarmEnd)
     : '';
+const studentOverviewEntryStart = moduleEntryRuntime.indexOf('function initStudentOverviewEntry()');
+const studentOverviewEntryEnd = moduleEntryRuntime.indexOf('function renderTeacherAnalysisEmptyState()', studentOverviewEntryStart);
+const studentOverviewEntrySource = studentOverviewEntryStart >= 0 && studentOverviewEntryEnd > studentOverviewEntryStart
+    ? moduleEntryRuntime.slice(studentOverviewEntryStart, studentOverviewEntryEnd)
+    : '';
 assert.ok(reportPrewarmSource, 'report generator prewarm source should be present');
 assert.ok(!reportPrewarmSource.includes('ensureHistoryCompareRuntimeLoaded'), 'report generator should not prewarm legacy history compare runtime during normal report entry');
 assert.ok(!reportPrewarmSource.includes('ensureStudentCompareRuntimeLoaded'), 'report generator should not prewarm student compare runtime during normal report entry');
@@ -647,6 +652,9 @@ assert.ok(appSource.includes('const totalsByClass = new Map();'), 'student compa
 assert.ok(teachingManagementRuntime.includes('function smScheduleStudentOverviewRender()'), 'student overview should coalesce filter-change refreshes into one frame');
 assert.ok(moduleEntryRuntime.includes('student-overview-deferred-select'), 'student overview should defer cross-module selector refreshes off the switch frame');
 assert.ok(moduleEntryRuntime.includes('const deferredSelectorUpdates = ['), 'student overview should batch non-critical selector refreshes');
+assert.ok(!studentOverviewEntrySource.includes('updateCorrelationSchoolSelect'), 'student overview should not refresh hidden correlation-analysis selectors on entry');
+assert.ok(moduleEntryRuntime.includes("return Promise.reject(new Error('student overview runtime loader unavailable'))"), 'student overview entry should explicitly wait for its runtime loader before first render');
+assert.ok(!moduleEntryRuntime.includes('window.ensureTeachingManagementRuntimeLoaded()\n                .then(() => {\n                    if (document.getElementById(\'student-overview\')?.classList.contains(\'active\')) renderNow();\n                })\n                .catch((error) => console.warn(error));\n            renderNow();'), 'student overview entry should not render once before the lazy runtime resolves');
 assert.ok(studentOverviewRuntime.includes('const progressRows = fullProgressRows.length ? fullProgressRows : readProgressCacheState();'), 'student overview should avoid copying the progress cache for counts');
 assert.ok(studentOverviewRuntime.includes('let progressCount = 0;'), 'student overview should count progress rows in a single pass');
 assert.ok(studentOverviewRuntime.includes('const rerender = () => smScheduleStudentOverviewRender();'), 'student overview watchers should use scheduled rendering');
