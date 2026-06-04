@@ -1621,7 +1621,24 @@
             };
 
             const localHistory = collectLocalHistory();
-            if (localHistory.length >= 2) {
+            const selectedHistoricalExamIds = requestedExamIds.filter(examId => {
+                const currentExamId = String(options?.currentExamId || '').trim();
+                if (!currentExamId) return true;
+                if (typeof window.isExamKeyEquivalentForCompare === 'function') {
+                    return !window.isExamKeyEquivalentForCompare(examId, currentExamId);
+                }
+                return String(examId || '').trim() !== currentExamId;
+            });
+            const localHistoryCoversSelection = selectedHistoricalExamIds.length > 0
+                && selectedHistoricalExamIds.every(selectedId => localHistory.some(item => {
+                    const historyId = String(item?.examFullKey || item?.examId || '').trim();
+                    if (!historyId) return false;
+                    if (typeof window.isExamKeyEquivalentForCompare === 'function') {
+                        return window.isExamKeyEquivalentForCompare(historyId, selectedId);
+                    }
+                    return historyId === selectedId;
+                }));
+            if (localHistory.length >= 2 || localHistoryCoversSelection) {
                 const localResult = { success: true, data: localHistory, source: 'local-cohort-db' };
                 this._studentHistoryCache[historyKey] = { at: Date.now(), result: localResult };
                 setCloudStatus('success', `历史${localHistory.length}条`);
