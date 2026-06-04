@@ -16,6 +16,10 @@
     }
 
     function getTownshipSchools() {
+        if (typeof root.getSummaryTownshipSchools === 'function') {
+            const cachedSchools = root.getSummaryTownshipSchools();
+            if (Array.isArray(cachedSchools)) return cachedSchools;
+        }
         const schools = getSchools();
         const names = Object.keys(schools);
         return Object.values(schools).filter((school) => {

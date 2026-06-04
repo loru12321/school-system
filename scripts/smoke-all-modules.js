@@ -722,13 +722,20 @@ async function runModuleDeepCheck(page, id) {
                 const modalClosed = getComputedStyle(modal).display === 'none';
                 schoolProfileCellClickWorks = modalVisible && modalClosed;
             }
+            const staleTexts = Array.from(document.querySelectorAll('button, #summary-refresh-notice, .summary-refresh-notice'))
+                .map((element) => String(element?.innerText || element?.textContent || '').trim())
+                .filter((text) => /数据已变更|请重新生成/.test(text));
+            const summaryDirty = !!window.SummaryRefreshState?.dirty;
+            checks.summaryStalePromptAbsent = staleTexts.length === 0 && !summaryDirty;
             return {
                 ok: Object.values(checks).every(Boolean) && !!panel && schoolProfileCloseWorks && schoolProfileCellClickWorks,
                 checks,
                 panelReady: !!panel,
                 schoolProfileCloseWorks,
                 schoolProfileCellReady: !!schoolProfileCell,
-                schoolProfileCellClickWorks
+                schoolProfileCellClickWorks,
+                summaryDirty,
+                staleTexts
             };
         });
     }

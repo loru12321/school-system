@@ -91,6 +91,7 @@ assert.ok(schoolProfileRuntime.includes('escapeSchoolProfileHtml(schoolName)'), 
 assert.ok(schoolProfileRuntime.includes('escapeSchoolProfileHtml(maxSub)'), 'school profile should escape dynamic advantage subject names');
 assert.ok(schoolProfileRuntime.includes('escapeSchoolProfileHtml(minSub)'), 'school profile should escape dynamic weak subject names');
 const appRuntime = fs.readFileSync(path.join(root, 'public/assets/js/app.js'), 'utf8');
+const smokeAllModulesRuntime = fs.readFileSync(path.join(root, 'scripts/smoke-all-modules.js'), 'utf8');
 assert.ok(!appRuntime.includes("onclick=\"showSchoolProfile('${s.name}')\""), 'summary table should not inject dynamic school names into inline handlers');
 assert.ok(appRuntime.includes('const safeSchoolName = escapeAppHtml(s.name)'), 'summary table should escape dynamic school names before rendering');
 assert.ok(appRuntime.includes('data-school-profile-name="${safeSchoolName}"'), 'summary table should bind school profile actions through a safe data attribute');
@@ -104,6 +105,8 @@ assert.ok(appRuntime.includes("buildSummaryDependencySignature('highScore', list
 assert.ok(!appRuntime.includes("markSummaryDataChanged('两率一分或后1/3结果已更新，请重新生成总排名。');"), 'two-rate/bottom3 refresh should not always mark summary stale');
 assert.ok(!appRuntime.includes("markSummaryDataChanged('指标生核算结果已更新，请重新生成总排名。');"), 'indicator refresh should not always mark summary stale');
 assert.ok(!appRuntime.includes("markSummaryDataChanged('高分段赋分已更新，请重新生成总排名。');"), 'high-score refresh should not always mark summary stale');
+assert.ok(smokeAllModulesRuntime.includes('summaryStalePromptAbsent'), 'summary smoke should fail if unchanged data shows a stale regeneration prompt');
+assert.ok(smokeAllModulesRuntime.includes('/数据已变更|请重新生成/'), 'summary smoke should inspect stale prompt text directly');
 const archiveRuntime = fs.readFileSync(path.join(root, 'public/assets/js/data-manager-archive-runtime.js'), 'utf8');
 assert.ok(!archiveRuntime.includes('onclick="DataManager.renameHistoryExam('), 'history archive rows should not inject exam names into inline handlers');
 assert.ok(archiveRuntime.includes('data-history-exam-action="rename"'), 'history archive rows should bind rename actions through data attributes');

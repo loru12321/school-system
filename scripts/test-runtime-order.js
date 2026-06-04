@@ -170,6 +170,7 @@ const teacherAnalysisCoreRuntime = fs.readFileSync(teacherAnalysisCoreRuntimePat
 const teacherAnalysisUiRuntime = fs.readFileSync(teacherAnalysisUiRuntimePath, 'utf8');
 const countyAnalysisRuntime = fs.readFileSync(countyAnalysisRuntimePath, 'utf8');
 const mobileAppRuntime = fs.readFileSync(mobileAppRuntimePath, 'utf8');
+const supportMetricsRuntime = fs.readFileSync(supportMetricsRuntimePath, 'utf8');
 const mainCss = fs.readFileSync(path.resolve(__dirname, '../src/assets/css/main.css'), 'utf8');
 const layoutRefinementCss = fs.readFileSync(path.resolve(__dirname, '../src/assets/css/layout-refinement.css'), 'utf8');
 const cloudWorkspaceRuntime = fs.readFileSync(cloudWorkspaceRuntimePath, 'utf8');
@@ -929,6 +930,7 @@ assert.ok(layoutRefinementCss.includes('#teacher-township-ranking .analysis-tabl
 assert.ok(layoutRefinementCss.includes('#data-manager-modal #dm-teacher-table thead th'), 'teacher assignment management table should keep sticky headers');
 assert.ok(appSource.includes('function renderBottom3TableOnly'), 'bottom3 should expose a lightweight table-only render path');
 assert.ok(moduleEntryRuntime.includes("activeModuleId === 'bottom3'") && moduleEntryRuntime.includes('window.renderBottom3TableOnly()'), 'bottom3 module entry should avoid full macro table rerenders');
+assert.ok(supportMetricsRuntime.includes('root.getSummaryTownshipSchools'), 'support metrics should reuse summary township school cache instead of rematching schools');
 assert.ok(appSource.includes('background: true') && appSource.includes('delay: 4800'), 'student report cloud-history hydration should stay delayed and low priority');
 const countyRankFallbackStart = cloudRuntime.indexOf('const getCountyRankFallback = (payload, match, subject =');
 const countyRankFallbackEnd = cloudRuntime.indexOf('const buildHistoryEntry =', countyRankFallbackStart);
