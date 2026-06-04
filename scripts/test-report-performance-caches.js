@@ -61,6 +61,7 @@ const pkg = JSON.parse(read(packageFile));
     'selectedExamIdsSignature',
     'historyByStudent',
     'hydratingKeys',
+    'getHistoricalReportExamIds',
     'lastChartScheduleKey',
     'lastStrengthKey',
     'lastCompareHiddenKey'
@@ -134,7 +135,8 @@ if (!historySource || historySource.includes('computeExamDataFingerprint(examDat
 
 [
     'county: h.rankCounty || h.subjectRanks?.total?.county ||',
-    'examIds: selectedReportExamIds'
+    'examIds: historicalExamIds',
+    'if (!historicalExamIds.length || hasCachedReportHistoryForSelectedExams'
 ].forEach((token) => assertContains(app, token, 'public/assets/js/app.js'));
 
 const cloudHistoryStart = cloud.indexOf('fetchStudentExamHistory: async function');
