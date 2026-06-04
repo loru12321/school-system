@@ -202,6 +202,25 @@ assert.deepStrictEqual(
     ['张三', '李四'],
     'class teacher should query homeroom class plus teaching scope inside own school'
 );
+assert.strictEqual(
+    context.PermissionPolicy.isClassTeacher({ role: 'teacher', roles: ['teacher', 'class_teacher'], school: '实验中学', class_name: '9.2' }),
+    true,
+    'query role union should recognize a teacher-primary account as class teacher when roles include class_teacher'
+);
+assert.strictEqual(
+    context.PermissionPolicy.getHomeroomClass({ role: 'teacher', roles: ['teacher', 'class_teacher'], school: '实验中学', class_name: '9.2' }),
+    '9.2',
+    'homeroom class should use class_name when class is not populated'
+);
+assert.deepStrictEqual(
+    context.PermissionPolicy.filterStudentRows(
+        { role: 'teacher', roles: ['teacher', 'class_teacher'], school: '实验中学', class_name: '9.2', name: '班主任' },
+        mixedRows,
+        { mode: 'homeroom' }
+    ).map(row => row.name),
+    ['李四'],
+    'class teacher homeroom mode should not leak teaching-only classes into class-all student diagnosis'
+);
 assert.deepStrictEqual(
     context.PermissionPolicy.filterStudentRows({ role: 'grade_director', roles: ['grade_director'], school: '实验中学', grade_name: '9年级' }, mixedRows).map(row => row.name),
     ['张三', '李四'],

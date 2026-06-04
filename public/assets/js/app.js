@@ -11082,6 +11082,30 @@ const StudentDetailsPerfCache = {
     filterSearchCache: new WeakMap()
 };
 
+function hasStudentDetailsQueryRole(user, roleName) {
+    if (window.PermissionPolicy && typeof PermissionPolicy.hasQueryRole === 'function') {
+        return PermissionPolicy.hasQueryRole(user, roleName);
+    }
+    if (Array.isArray(user?.roles)) return user.roles.includes(roleName);
+    return user?.role === roleName;
+}
+
+function isStudentDetailsClassTeacher(user) {
+    return window.PermissionPolicy && typeof PermissionPolicy.isClassTeacher === 'function'
+        ? PermissionPolicy.isClassTeacher(user)
+        : hasStudentDetailsQueryRole(user, 'class_teacher');
+}
+
+function isStudentDetailsTeacher(user) {
+    return hasStudentDetailsQueryRole(user, 'teacher');
+}
+
+function getStudentDetailsHomeroomClass(user) {
+    return window.PermissionPolicy && typeof PermissionPolicy.getHomeroomClass === 'function'
+        ? PermissionPolicy.getHomeroomClass(user)
+        : normalizeClass(user?.class_name || user?.class || '');
+}
+
 function updateStudentSchoolSelect() {
     const select = document.getElementById('studentSchoolSelect');
     const classSelect = document.getElementById('studentClassSelect');
@@ -11112,10 +11136,15 @@ function updateStudentSchoolSelect() {
 
     const user = getCurrentUser();
     const role = user?.role;
+    const isClassTeacherUser = isStudentDetailsClassTeacher(user);
+    const isTeacherUser = isStudentDetailsTeacher(user);
+    const homeroomClass = getStudentDetailsHomeroomClass(user);
     const schoolSignature = [
         Object.keys(SCHOOLS || {}).sort().join('|'),
         String(user?.role || ''),
+        Array.isArray(user?.roles) ? user.roles.join('|') : '',
         String(user?.school || ''),
+        String(user?.class_name || ''),
         String(user?.class || ''),
         String(user?.name || '')
     ].join('::');
@@ -11137,8 +11166,8 @@ function updateStudentSchoolSelect() {
     const updateClassOptionsForSchool = (school, options = {}) => {
         const includeAll = options.includeAll !== false;
         const selectedSchool = String(school || '').trim();
-        const classQueryMode = role === 'class_teacher' ? getClassTeacherStudentViewMode() : (options.mode || 'teaching');
-        const classCacheKey = `${selectedSchool}::${includeAll}::${classQueryMode}::${role || ''}::${user?.school || ''}::${user?.class || ''}`;
+        const classQueryMode = isClassTeacherUser ? getClassTeacherStudentViewMode() : (options.mode || 'teaching');
+        const classCacheKey = `${selectedSchool}::${includeAll}::${classQueryMode}::${role || ''}::${Array.isArray(user?.roles) ? user.roles.join('|') : ''}::${user?.school || ''}::${user?.class_name || ''}::${user?.class || ''}`;
         let classes = StudentDetailsPerfCache.classOptions.get(classCacheKey);
         if (!classes) {
             classes = [];
@@ -11158,19 +11187,21 @@ function updateStudentSchoolSelect() {
         else if (includeAll) classSelect.value = '';
     };
 
-    if (role === 'class_teacher') {
+    if (isClassTeacherUser) {
         const school = findMatchingSchoolOption(user.school) || findMatchingSchoolOption(MY_SCHOOL) || user.school || MY_SCHOOL || '';
         if (school) {
             select.value = school;
             select.disabled = true;
         }
-        setOptionsIfChanged(classSelect, `<option value="${user.class}">${user.class}</option>`, `class-teacher:${user.class}`);
-        classSelect.value = user.class;
+        const homeroomLabel = String(user?.class_name || user?.class || homeroomClass || '未配置班级');
+        const homeroomValue = homeroomClass || '';
+        setOptionsIfChanged(classSelect, `<option value="${tmEscapeHtml(homeroomValue)}">${tmEscapeHtml(homeroomLabel)}</option>`, `class-teacher:${homeroomValue}:${homeroomLabel}`);
+        classSelect.value = homeroomValue;
         classSelect.disabled = true;
 
         if (modeWrap) modeWrap.style.display = 'inline-flex';
         if (modeSelect && !modeSelect.value) modeSelect.value = 'class_all';
-    } else if (role === 'teacher') {
+    } else if (isTeacherUser) {
         const school = findMatchingSchoolOption(user.school) || findMatchingSchoolOption(MY_SCHOOL) || user.school || MY_SCHOOL || '';
         if (school) {
             select.value = school;
@@ -11363,10 +11394,11 @@ function getStudentDetailsSubjectList(list = []) {
 function buildStudentDetailsRenderMeta(list = []) {
     const user = getCurrentUser();
     const role = user?.role || 'guest';
-    const isTeacher = role === 'teacher';
-    const isClassTeacher = role === 'class_teacher';
+    const isClassTeacher = isStudentDetailsClassTeacher(user);
+    const isTeacher = isStudentDetailsTeacher(user);
     const classTeacherMode = isClassTeacher ? getClassTeacherStudentViewMode() : 'teaching';
-    const needTeacherScope = isTeacher || (isClassTeacher && classTeacherMode === 'teaching');
+    const useTeachingSubjectScope = (!isClassTeacher && isTeacher) || (isClassTeacher && classTeacherMode === 'teaching');
+    const needTeacherScope = useTeachingSubjectScope;
     const teacherScope = needTeacherScope ? getTeacherScopeForUser(user) : null;
     const listSignature = buildStudentDetailsDataSignature(list);
     const metaSignature = [
@@ -11380,7 +11412,7 @@ function buildStudentDetailsRenderMeta(list = []) {
         return StudentDetailsPerfCache.renderMeta;
     }
     const subjectList = getStudentDetailsSubjectList(list);
-    const visibleSubjects = (isTeacher || (isClassTeacher && classTeacherMode === 'teaching'))
+    const visibleSubjects = useTeachingSubjectScope
         ? subjectList.filter(s => teacherScope.subjects.has(normalizeSubject(s)))
         : subjectList;
     const rankVisibility = window.RankingDataService && typeof window.RankingDataService.getStudentRankVisibility === 'function'
@@ -11805,9 +11837,11 @@ function renderStudentDetails(reset = true) {
         STD_STATE.size = getStudentDetailsPageSize();
         const user = getCurrentUser();
         const role = user?.role || 'guest';
+        const isClassTeacher = isStudentDetailsClassTeacher(user);
+        const isTeacher = isStudentDetailsTeacher(user);
         const selectedSchool = document.getElementById('studentSchoolSelect')?.value;
         const selectedClass = document.getElementById('studentClassSelect')?.value;
-        const boundSchool = role === 'teacher' || role === 'class_teacher'
+        const boundSchool = isTeacher || isClassTeacher
             ? (selectedSchool || user?.school || MY_SCHOOL || '')
             : selectedSchool;
         const effectiveSelectedSchool = String(boundSchool || '').trim();
@@ -11818,8 +11852,8 @@ function renderStudentDetails(reset = true) {
             ? window.RankingDataService.getRowsBySchoolClass(RAW_DATA, hasSelectedSchool ? effectiveSelectedSchool : '', hasSelectedClass ? effectiveSelectedClass : '')
             : [...RAW_DATA];
 
-        const classTeacherMode = role === 'class_teacher' ? getClassTeacherStudentViewMode() : 'teaching';
-        const queryMode = role === 'class_teacher' ? (classTeacherMode === 'class_all' ? 'homeroom' : 'teaching') : 'teaching';
+        const classTeacherMode = isClassTeacher ? getClassTeacherStudentViewMode() : 'teaching';
+        const queryMode = isClassTeacher ? (classTeacherMode === 'class_all' ? 'homeroom' : 'teaching') : 'teaching';
         const activeFilterSignature = buildStudentDetailsFilterSignature();
         const querySignature = [
             Array.isArray(RAW_DATA) ? RAW_DATA.length : 0,
@@ -11833,6 +11867,7 @@ function renderStudentDetails(reset = true) {
             hasSelectedClass ? 'class' : 'all-class',
             String(role || ''),
             String(user?.school || ''),
+            String(user?.class_name || ''),
             String(user?.class || ''),
             String(user?.name || ''),
             classTeacherMode,
@@ -11856,8 +11891,8 @@ function renderStudentDetails(reset = true) {
             appDebug('[考试明细] 🔒 检测到教师角色，启用权限过滤');
             const scope = getTeacherScopeForUser(user);
 
-            if (role === 'class_teacher' && classTeacherMode === 'class_all') {
-                const myClass = normalizeClass(user?.class || '');
+            if (isClassTeacher && classTeacherMode === 'class_all') {
+                const myClass = getStudentDetailsHomeroomClass(user);
                 if (!myClass) {
                     data = [];
                     UI.toast('⚠️ 班主任账号未配置班级，无法显示本班数据。', 'warning');
@@ -12396,10 +12431,11 @@ function exportStudentDetails() {
 
     const user = getCurrentUser();
     const role = user?.role || 'guest';
-    const isTeacher = role === 'teacher';
-    const isClassTeacher = role === 'class_teacher';
+    const isClassTeacher = isStudentDetailsClassTeacher(user);
+    const isTeacher = isStudentDetailsTeacher(user);
     const classTeacherMode = isClassTeacher ? getClassTeacherStudentViewMode() : 'teaching';
-    const needTeacherScope = isTeacher || (isClassTeacher && classTeacherMode === 'teaching');
+    const useTeachingSubjectScope = (!isClassTeacher && isTeacher) || (isClassTeacher && classTeacherMode === 'teaching');
+    const needTeacherScope = useTeachingSubjectScope;
     const teacherScope = needTeacherScope ? getTeacherScopeForUser(user) : null;
 
     const selectedSchool = document.getElementById('studentSchoolSelect').value;
@@ -12415,29 +12451,6 @@ function exportStudentDetails() {
             ? ['学校', '班级', '姓名']
             : ['学校', '班级', '姓名', '考号', '考场']);
 
-    visibleSubjects.forEach(subject => {
-        if (isTeacher || isClassTeacher) {
-            headers.push(`${subject} 分数`, `${subject} 级排`);
-            if (!isSingleSchool) headers.push(`${subject} 镇排`, `${subject} 县排`);
-        } else {
-            headers.push(`${subject} 分数`, `${subject} 校排`);
-            if (!isSingleSchool) headers.push(`${subject} 镇排`, `${subject} 县排`);
-        }
-    });
-
-    if (!isClassTeacher && !isTeacher) {
-        if (CONFIG.name === '9年级') {
-            headers.push('五科总分', '五科班排', '五科校排');
-            if (!isSingleSchool) headers.push('五科镇排', '五科县排');
-        } else {
-            headers.push('总分', '总分班排', '总分校排');
-            if (!isSingleSchool) headers.push('总分镇排', '总分县排');
-        }
-    } else {
-        headers.push(CONFIG.name === '9年级' ? '五科总分' : '总分', '总分班排', '总分级排');
-        if (!isSingleSchool) headers.push('总分镇排', '总分县排');
-    }
-
     const data = [headers];
 
     let studentsToShow = window.RankingDataService && typeof window.RankingDataService.getRowsBySchoolClass === 'function'
@@ -12447,7 +12460,7 @@ function exportStudentDetails() {
             selectedClass && selectedClass !== '全部' ? selectedClass : ''
         )
         : [...RAW_DATA];
-    if ((isTeacher || (isClassTeacher && classTeacherMode === 'teaching')) && teacherScope && teacherScope.classes.size > 0) {
+    if (useTeachingSubjectScope && teacherScope && teacherScope.classes.size > 0) {
         studentsToShow = studentsToShow.filter(s => {
             const rawClass = String(s.class || '').trim();
             const normalizedClass = normalizeClass(s.class);
@@ -12459,8 +12472,8 @@ function exportStudentDetails() {
             }
             return false;
         });
-    } else if (isClassTeacher && user?.class) {
-        const myClass = normalizeClass(user.class);
+    } else if (isClassTeacher && getStudentDetailsHomeroomClass(user)) {
+        const myClass = getStudentDetailsHomeroomClass(user);
         studentsToShow = studentsToShow.filter(s => normalizeClass(s.class) === myClass);
     } else if (selectedSchool && !selectedSchool.includes('请选择') && !(window.RankingDataService && typeof window.RankingDataService.getRowsBySchoolClass === 'function')) {
         studentsToShow = studentsToShow.filter(s => sameAppSchoolName(s.school, selectedSchool));
@@ -12476,7 +12489,7 @@ function exportStudentDetails() {
 
     studentsToShow = getComparisonStudentList(studentsToShow, RAW_DATA);
     const subjectListForExport = getStudentDetailsSubjectList(studentsToShow);
-    const visibleSubjects = (isTeacher || (isClassTeacher && classTeacherMode === 'teaching'))
+    const visibleSubjects = useTeachingSubjectScope
         ? subjectListForExport.filter(s => teacherScope.subjects.has(normalizeSubject(s)))
         : subjectListForExport;
     studentsToShow.sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0));

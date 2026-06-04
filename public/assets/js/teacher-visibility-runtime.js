@@ -34,6 +34,21 @@ function getTeacherVisibilityBoundSchool(user) {
     return normalizeTeacherVisibilitySchool(candidates.find(value => normalizeTeacherVisibilitySchool(value)) || '');
 }
 
+function getTeacherVisibilityHomeroomClass(user) {
+    if (window.PermissionPolicy && typeof window.PermissionPolicy.getHomeroomClass === 'function') {
+        return window.PermissionPolicy.getHomeroomClass(user);
+    }
+    return normalizeClass(user?.class_name || user?.class || '');
+}
+
+function hasTeacherVisibilityRole(user, roleName) {
+    if (window.PermissionPolicy && typeof window.PermissionPolicy.hasQueryRole === 'function') {
+        return window.PermissionPolicy.hasQueryRole(user, roleName);
+    }
+    if (Array.isArray(user?.roles)) return user.roles.includes(roleName);
+    return user?.role === roleName;
+}
+
 function isTeacherAssignmentVisibleForSchool(key, schoolName) {
     const targetSchool = normalizeTeacherVisibilitySchool(schoolName);
     if (!targetSchool) return true;
@@ -130,15 +145,17 @@ function buildClassTeacherStatsForClass(className) {
 
 function getVisibleSubjectsForTeacherUser(user) {
     const role = user?.role || 'guest';
+    const isTeacherUser = hasTeacherVisibilityRole(user, 'teacher');
+    const isClassTeacherUser = hasTeacherVisibilityRole(user, 'class_teacher');
     const set = new Set();
-    if (!(role === 'teacher' || role === 'class_teacher')) {
+    if (!(isTeacherUser || isClassTeacherUser)) {
         (SUBJECTS || []).forEach(s => set.add(normalizeSubject(s)));
         return set;
     }
 
     // 班主任：可看“本班所有学科” + 自己任教学科
-    if (role === 'class_teacher') {
-        const myClass = normalizeClass(user?.class || '');
+    if (isClassTeacherUser) {
+        const myClass = getTeacherVisibilityHomeroomClass(user);
         const boundSchool = getTeacherVisibilityBoundSchool(user);
 
         // 1) 从任课表提取本班学科
@@ -192,8 +209,10 @@ function getVisibleSubjectsForTeacherUser(user) {
 function getVisibleTeacherStats() {
     const user = getCurrentUser();
     const role = user?.role || 'guest';
+    const isTeacherUser = hasTeacherVisibilityRole(user, 'teacher');
+    const isClassTeacherUser = hasTeacherVisibilityRole(user, 'class_teacher');
     const scopedStats = PermissionPolicy.filterTeacherStats(user, TEACHER_STATS || {}, MY_SCHOOL);
-    if (role === 'teacher' || role === 'class_teacher') {
+    if (isTeacherUser || isClassTeacherUser) {
         const allStats = scopedStats;
         const filtered = {};
         if (Object.keys(allStats).length === 0) return filtered;
@@ -201,8 +220,8 @@ function getVisibleTeacherStats() {
         const visibleSubjects = getVisibleSubjectsForTeacherUser(user);
 
         if (visibleSubjects.size === 0) {
-            if (role === 'class_teacher') {
-                return buildClassTeacherStatsForClass(user?.class);
+            if (isClassTeacherUser) {
+                return buildClassTeacherStatsForClass(getTeacherVisibilityHomeroomClass(user));
             }
             const normalizedName = String(user?.teacher_name || user?.name || user?.username || '').replace(/\s+/g, '').toLowerCase();
             Object.keys(allStats).forEach(k => {

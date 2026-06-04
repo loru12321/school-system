@@ -64,10 +64,10 @@ const PermissionPolicy = {
         return this.getPrimaryRole(user) === 'grade_director';
     },
     isClassTeacher(user = getCurrentUser()) {
-        return this.getPrimaryRole(user) === 'class_teacher';
+        return this.hasQueryRole(user, 'class_teacher');
     },
     isTeacher(user = getCurrentUser()) {
-        return this.getPrimaryRole(user) === 'teacher';
+        return this.hasQueryRole(user, 'teacher');
     },
     isParentLike(user = getCurrentUser()) {
         const role = this.getPrimaryRole(user);
@@ -140,7 +140,8 @@ const PermissionPolicy = {
             else roleChecks.push(homeroomMatch || teachingMatch);
         }
 
-        if (this.hasQueryRole(user, 'teacher')) {
+        if (this.hasQueryRole(user, 'teacher')
+            && !(this.hasQueryRole(user, 'class_teacher') && options.mode === 'homeroom')) {
             roleChecks.push(this.getTeachingScope(user).classes.has(normalizedClass));
         }
 

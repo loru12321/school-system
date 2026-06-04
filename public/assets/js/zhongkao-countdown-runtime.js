@@ -447,40 +447,34 @@
         return ranges.some((range) => time >= range.start && time <= range.end);
     }
 
-    function calculate() {
-        const form = collectFormState();
+    function computeCountdownMetrics(form, todayInput = new Date()) {
         const examDate = parseLocalDate(form.examDate);
-        const today = new Date();
+        const today = new Date(todayInput);
         today.setHours(0, 0, 0, 0);
-
-        if (!examDate) {
-            updateStats(null);
-            renderSummary('请选择中考日期后开始计算。系统会从明天开始统计，一直算到考试当天。', [
-                '支持本地保存',
-                '支持保存到文件和从文件恢复',
-                '支持联网同步法定节假日'
-            ]);
-            return;
-        }
-
+        if (!examDate) return null;
         if (examDate <= today) {
-            updateStats({ totalDays: 0, studyDays: 0, weekendDays: 0, holidayDays: 0 });
-            renderSummary(`考试日期 ${formatDateCn(form.examDate)} 已到达或已过去，当前倒计时已归零。`, [
-                '如需继续使用，请修改为新的考试日期'
-            ]);
-            return;
+            return {
+                expired: true,
+                totalDays: 0,
+                studyDays: 0,
+                weekendDays: 0,
+                holidayDays: 0,
+                adjustedWorkdays: 0,
+                classificationStart: '',
+                classificationEnd: ''
+            };
         }
 
-        const ranges = getValidHolidayRanges(form.holidays);
+        const ranges = getValidHolidayRanges(form.holidays || []);
         const totalDays = Math.round((examDate.getTime() - today.getTime()) / DAY_MS);
         let studyDays = 0;
         let weekendDays = 0;
         let holidayDays = 0;
         let adjustedWorkdays = 0;
-        const cursor = new Date(today);
-        cursor.setDate(cursor.getDate() + 1);
+        const cursor = addDays(today, 1);
+        const classificationEndDate = addDays(examDate, -1);
 
-        while (cursor <= examDate) {
+        while (cursor <= classificationEndDate) {
             const now = cursor.getTime();
             const dateKey = formatDate(cursor);
             const day = cursor.getDay();
@@ -491,8 +485,9 @@
                 handled = true;
             }
 
-            if (!handled && state.config.officialHolidays[dateKey]) {
-                if (state.config.officialHolidays[dateKey].isHoliday) holidayDays += 1;
+            const officialHolidays = state.config?.officialHolidays || {};
+            if (!handled && officialHolidays[dateKey]) {
+                if (officialHolidays[dateKey].isHoliday) holidayDays += 1;
                 else {
                     adjustedWorkdays += 1;
                     studyDays += 1;
@@ -509,14 +504,48 @@
             cursor.setDate(cursor.getDate() + 1);
         }
 
-        updateStats({ totalDays, studyDays, weekendDays, holidayDays });
+        return {
+            expired: false,
+            totalDays,
+            studyDays,
+            weekendDays,
+            holidayDays,
+            adjustedWorkdays,
+            classificationStart: formatDate(addDays(today, 1)),
+            classificationEnd: formatDate(classificationEndDate)
+        };
+    }
+
+    function calculate() {
+        const form = collectFormState();
+        const metrics = computeCountdownMetrics(form);
+
+        if (!metrics) {
+            updateStats(null);
+            renderSummary('请选择中考日期后开始计算。系统会从明天开始统计，一直算到考试当天。', [
+                '支持本地保存',
+                '支持保存到文件和从文件恢复',
+                '支持联网同步法定节假日'
+            ]);
+            return;
+        }
+
+        if (metrics.expired) {
+            updateStats(metrics);
+            renderSummary(`考试日期 ${formatDateCn(form.examDate)} 已到达或已过去，当前倒计时已归零。`, [
+                '如需继续使用，请修改为新的考试日期'
+            ]);
+            return;
+        }
+
+        updateStats(metrics);
         renderSummary(
-            `距离 ${formatDateCn(form.examDate)} 还有 ${totalDays} 天，其中预计可用于高强度复习的时间约为 ${studyDays} 天。`,
+            `距离 ${formatDateCn(form.examDate)} 还有 ${metrics.totalDays} 天，其中预计可用于高强度复习的时间约为 ${metrics.studyDays} 天。`,
             [
-                `统计区间：${formatDate(addDays(today, 1))} 至 ${form.examDate}`,
-                `普通周末休息：${weekendDays} 天`,
-                `假期休息：${holidayDays} 天`,
-                `调休上课：${adjustedWorkdays} 天`
+                `复习/休息统计区间：${metrics.classificationStart} 至 ${metrics.classificationEnd}`,
+                `普通周末休息：${metrics.weekendDays} 天`,
+                `假期休息：${metrics.holidayDays} 天`,
+                `调休上课：${metrics.adjustedWorkdays} 天`
             ]
         );
     }
@@ -688,6 +717,9 @@
             }
             renderLiveClock();
             calculate();
+        },
+        _test: {
+            computeCountdownMetrics
         }
     };
 })(window);

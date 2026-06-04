@@ -868,8 +868,19 @@
         }
 
         const user = getCurrentUserFn();
-        if (user && user.role === 'teacher') {
-            const userNameNorm = String(user.name || '').replace(/\s+/g, '').toLowerCase();
+        const hasQueryRole = (roleName) => {
+            if (window.PermissionPolicy && typeof window.PermissionPolicy.hasQueryRole === 'function') {
+                return window.PermissionPolicy.hasQueryRole(user, roleName);
+            }
+            if (Array.isArray(user?.roles)) return user.roles.includes(roleName);
+            return user?.role === roleName;
+        };
+        const isClassTeacherUser = window.PermissionPolicy && typeof window.PermissionPolicy.isClassTeacher === 'function'
+            ? window.PermissionPolicy.isClassTeacher(user)
+            : hasQueryRole('class_teacher');
+        const isTeacherUser = hasQueryRole('teacher');
+        if (user && (isTeacherUser || isClassTeacherUser)) {
+            const userNameNorm = String(user.teacher_name || user.name || user.username || '').replace(/\s+/g, '').toLowerCase();
             const classSchoolMap = (typeof window.getClassSchoolMapForAllData === 'function')
                 ? window.getClassSchoolMapForAllData()
                 : {};
@@ -986,8 +997,8 @@
                 mySchoolStudents = pickTeacherStudentsForSchool(activeSchool);
             }
         }
-        const queryMode = window.PermissionPolicy && window.PermissionPolicy.isClassTeacher(user) ? 'homeroom' : 'teaching';
-        const useSchoolWideTeacherPeerScope = user?.role === 'teacher';
+        const queryMode = isClassTeacherUser ? 'homeroom' : 'teaching';
+        const useSchoolWideTeacherPeerScope = isTeacherUser && !isClassTeacherUser;
         if (!useSchoolWideTeacherPeerScope && window.PermissionPolicy && typeof window.PermissionPolicy.filterStudentRows === 'function') {
             mySchoolStudents = window.PermissionPolicy.filterStudentRows(user, mySchoolStudents, { mode: queryMode });
             if (!mySchoolStudents.length && teacherMapSchool && !teacherSameSchoolName(teacherMapSchool, activeSchool)) {
