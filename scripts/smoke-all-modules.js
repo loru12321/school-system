@@ -905,6 +905,13 @@ async function runModuleDeepCheck(page, id) {
                 const text = String(name || '').trim();
                 return text.length > 8 ? `${text.slice(0, 8)}...` : (text || '--');
             };
+            const timings = [];
+            let lastMark = performance.now();
+            const mark = (label) => {
+                const now = performance.now();
+                timings.push({ label, durationMs: Math.round(now - lastMark) });
+                lastMark = now;
+            };
             let result = [];
             let calcError = '';
             try {
@@ -919,7 +926,9 @@ async function runModuleDeepCheck(page, id) {
             } catch (error) {
                 calcError = error?.message || String(error);
             }
+            mark('calc');
             await new Promise(resolve => setTimeout(resolve, 120));
+            mark('settle');
 
             const rows = (Array.isArray(result) ? result : [])
                 .map((row) => ({
@@ -936,31 +945,36 @@ async function runModuleDeepCheck(page, id) {
                     invalidTarget: !!row?.invalidTarget
                 }))
                 .filter((row) => row.name);
+            mark('mapRows');
             const sorted = rows.slice().sort((a, b) => {
                 if (a.rank && b.rank && a.rank !== b.rank) return a.rank - b.rank;
                 return b.finalScore - a.finalScore;
             });
+            mark('sortRows');
             const expectedTop = sorted[0] || null;
             const expectedIssueCount = rows.filter((row) => row.missingTarget || row.invalidTarget).length;
-            const scoreSnapshot = JSON.stringify(Object.values(window.SCHOOLS || {}).map((school) => ({
-                name: school?.name || '',
-                scoreInd: toNumber(school?.scoreInd),
-                rankInd: toNumber(school?.rankInd)
-            })));
+            const snapshotIndicatorState = () => Object.values(window.SCHOOLS || {})
+                .map((school) => [
+                    String(school?.name || '').trim(),
+                    toNumber(school?.scoreInd).toFixed(4),
+                    toNumber(school?.rankInd)
+                ].join(':'))
+                .join('|');
+            const scoreSnapshot = snapshotIndicatorState();
+            mark('snapshotBeforeSummary');
             if (typeof window.SupportMetricsRuntime?.ensureWrappers === 'function') {
                 window.SupportMetricsRuntime.ensureWrappers();
             }
             const summary = window.SupportMetricsRuntime?.refreshIndicatorSummary?.(rows) || null;
-            const scoreSnapshotAfterSummary = JSON.stringify(Object.values(window.SCHOOLS || {}).map((school) => ({
-                name: school?.name || '',
-                scoreInd: toNumber(school?.scoreInd),
-                rankInd: toNumber(school?.rankInd)
-            })));
+            mark('refreshSummary');
+            const scoreSnapshotAfterSummary = snapshotIndicatorState();
+            mark('snapshotAfterSummary');
             const schoolCountText = document.getElementById('indicator-school-count')?.textContent?.trim() || '';
             const topScoreText = document.getElementById('indicator-top-score')?.textContent?.trim() || '';
             const topSchoolText = document.getElementById('indicator-top-school')?.textContent?.trim() || '';
             const issueCountText = document.getElementById('indicator-missing-target-count')?.textContent?.trim() || '';
             const tableRowCount = document.querySelectorAll('#tb-indicator tbody tr').length;
+            mark('readDom');
             const finite = rows.every((row) => [
                 row.finalScore,
                 row.score1,
@@ -1011,6 +1025,7 @@ async function runModuleDeepCheck(page, id) {
                 topSchool: expectedTop?.name || '',
                 issueCount: expectedIssueCount,
                 calcError,
+                timings,
                 summary
             };
         });

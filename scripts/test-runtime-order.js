@@ -931,6 +931,9 @@ assert.ok(layoutRefinementCss.includes('#data-manager-modal #dm-teacher-table th
 assert.ok(appSource.includes('function renderBottom3TableOnly'), 'bottom3 should expose a lightweight table-only render path');
 assert.ok(moduleEntryRuntime.includes("activeModuleId === 'bottom3'") && moduleEntryRuntime.includes('window.renderBottom3TableOnly()'), 'bottom3 module entry should avoid full macro table rerenders');
 assert.ok(supportMetricsRuntime.includes('root.getSummaryTownshipSchools'), 'support metrics should reuse summary township school cache instead of rematching schools');
+assert.ok(appSource.includes('const IndicatorCalcPerfCache'), 'indicator should cache repeated silent calculations');
+assert.ok(appSource.includes('function buildIndicatorCalcSignature'), 'indicator cache should use an explicit dependency signature');
+assert.ok(appSource.includes('isSilent') && appSource.includes('IndicatorCalcPerfCache.signature === calcSignature'), 'indicator cache should only short-circuit repeated silent calculations');
 assert.ok(appSource.includes('background: true') && appSource.includes('delay: 4800'), 'student report cloud-history hydration should stay delayed and low priority');
 const countyRankFallbackStart = cloudRuntime.indexOf('const getCountyRankFallback = (payload, match, subject =');
 const countyRankFallbackEnd = cloudRuntime.indexOf('const buildHistoryEntry =', countyRankFallbackStart);
@@ -946,5 +949,12 @@ const bottom3SmokeSource = bottom3SmokeStart >= 0 && bottom3SmokeEnd > bottom3Sm
     : '';
 assert.ok(bottom3SmokeSource.includes('snapshotBottom3State'), 'bottom3 smoke should keep mutation guard');
 assert.ok(!bottom3SmokeSource.includes('JSON.stringify'), 'bottom3 smoke mutation guard should use compact signatures instead of serializing full objects');
+const indicatorSmokeStart = smokeAllModules.indexOf("if (id === 'indicator')");
+const indicatorSmokeEnd = smokeAllModules.indexOf("if (id === 'marginal-push')", indicatorSmokeStart);
+const indicatorSmokeSource = indicatorSmokeStart >= 0 && indicatorSmokeEnd > indicatorSmokeStart
+    ? smokeAllModules.slice(indicatorSmokeStart, indicatorSmokeEnd)
+    : '';
+assert.ok(indicatorSmokeSource.includes('snapshotIndicatorState'), 'indicator smoke should keep a compact mutation guard');
+assert.ok(!indicatorSmokeSource.includes('JSON.stringify'), 'indicator smoke mutation guard should avoid serializing full school objects');
 
 console.log('runtime order tests passed');

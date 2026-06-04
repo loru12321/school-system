@@ -14115,9 +14115,37 @@ function renderIndicatorTargetMatchPanel(calcData, line1, line2) {
         </div>`;
 }
 
+const IndicatorCalcPerfCache = { signature: '', rows: [] };
+
+function cloneIndicatorCalcRows(rows) {
+    return Array.isArray(rows) ? rows.map((row) => ({ ...row })) : [];
+}
+
+function buildIndicatorCalcSignature(rankLine1, rankLine2) {
+    const targets = (typeof ensureNormalizedTargets === 'function')
+        ? ensureNormalizedTargets()
+        : (window.TARGETS || {});
+    const targetSignature = Object.keys(targets || {})
+        .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'))
+        .map((name) => {
+            const target = targets[name] || {};
+            return `${String(name).trim()}:${parseInt(target.t1, 10) || 0}:${parseInt(target.t2, 10) || 0}`;
+        })
+        .join('|');
+    return [
+        CURRENT_EXAM_ID || '',
+        window.__RAW_DATA_VERSION || 0,
+        Array.isArray(RAW_DATA) ? RAW_DATA.length : 0,
+        Object.keys(SCHOOLS || {}).sort((a, b) => String(a).localeCompare(String(b), 'zh-CN')).join('|'),
+        parseInt(rankLine1, 10) || 0,
+        parseInt(rankLine2, 10) || 0,
+        targetSignature
+    ].join('::');
+}
+
 function calcIndicators(isSilent = false) {
-    clearIndicatorTargetMatchPanel();
     if (!isIndicatorPromptAllowed()) {
+        clearIndicatorTargetMatchPanel();
         if (!isSilent && window.UI) UI.toast('仅 9 年级可使用指标生功能', 'warning');
         return [];
     }
@@ -14131,6 +14159,7 @@ function calcIndicators(isSilent = false) {
     const r2 = parseInt(val2);
 
     if (!r1 || !r2) {
+        clearIndicatorTargetMatchPanel();
         if (!isSilent && confirm("❌ 检测到【划线名次】尚未设置！\n\n是否立即打开「教务数据综合控制台」进行设置？")) {
             DataManager.open(); // 打开弹窗
             DataManager.switchTab('params'); // 自动切换到参数设置Tab
@@ -14139,15 +14168,18 @@ function calcIndicators(isSilent = false) {
     }
 
     if (!isIndicatorCalcAllowed()) {
+        clearIndicatorTargetMatchPanel();
         if (window.UI) UI.toast('请先加载当前 9 年级考试成绩后再开始计算', 'warning');
         return [];
     }
     if (!isIndicatorCalcAllowed()) {
+        clearIndicatorTargetMatchPanel();
         if (window.UI) UI.toast('仅 9 年级期中/期末考试可开始计算', 'warning');
         return;
     }
 
     if (!window.TARGETS || Object.keys(window.TARGETS).length === 0) {
+        clearIndicatorTargetMatchPanel();
         if (!isSilent && confirm("❌ 检测到【目标人数】尚未导入！\n\n是否立即打开「教务数据综合控制台」进行导入？")) {
             DataManager.open(); // 打开弹窗
             DataManager.switchTab('targets'); // 自动切换到目标管理Tab
@@ -14155,6 +14187,20 @@ function calcIndicators(isSilent = false) {
         return [];
     }
 
+    const calcSignature = buildIndicatorCalcSignature(r1, r2);
+    if (
+        isSilent
+        && IndicatorCalcPerfCache.signature === calcSignature
+        && Array.isArray(IndicatorCalcPerfCache.rows)
+        && IndicatorCalcPerfCache.rows.length
+    ) {
+        const cachedRows = cloneIndicatorCalcRows(IndicatorCalcPerfCache.rows);
+        window.INDICATOR_LAST_RESULT = cachedRows;
+        window.__LAST_INDICATOR_CALC_DATA__ = cachedRows;
+        return cachedRows;
+    }
+
+    clearIndicatorTargetMatchPanel();
     Object.values(SCHOOLS || {}).forEach(school => {
         if (school && typeof school === 'object') school.scoreInd = 0;
     });
@@ -14303,7 +14349,11 @@ function calcIndicators(isSilent = false) {
     });
     document.querySelector('#tb-indicator tbody').innerHTML = html;
     renderIndicatorTargetMatchPanel(calcData, line1, line2);
-    window.__LAST_INDICATOR_CALC_DATA__ = calcData;
+    const cachedCalcData = cloneIndicatorCalcRows(calcData);
+    IndicatorCalcPerfCache.signature = calcSignature;
+    IndicatorCalcPerfCache.rows = cachedCalcData;
+    window.INDICATOR_LAST_RESULT = cachedCalcData;
+    window.__LAST_INDICATOR_CALC_DATA__ = cachedCalcData;
     markSummaryDataChangedIfDependencyChanged(
         'indicator',
         buildSummaryDependencySignature('indicator', calcData),
