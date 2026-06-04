@@ -13023,9 +13023,10 @@ async function refreshRenderedStudentReportAfterHistory(stu, token) {
         const reportCache = getStudentReportPerformanceRuntime();
         const selectedIds = getStudentReportSelectedExamIds();
         const reportKey = buildStudentReportCacheKey(stu, 'FULL', selectedIds, selectedIds[selectedIds.length - 1] || getEffectiveCurrentExamId());
+        const history = getCachedStudentReportHistory(stu);
         let reportHtml = reportCache?.getReportHtml?.(reportKey);
         if (!reportHtml) {
-            reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'FULL'));
+            reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'FULL', { reportExamHistory: history }));
             reportCache?.setReportHtml?.(reportKey, reportHtml);
         }
         if (token !== __reportQueryToken) return;
@@ -13036,7 +13037,6 @@ async function refreshRenderedStudentReportAfterHistory(stu, token) {
             container.dataset.reportChartCacheKey = '';
             enhanceStudentReportMetrics(container);
         }
-        const history = getCachedStudentReportHistory(stu);
         window.setTimeout(() => {
             if (token !== __reportQueryToken) return;
             scheduleStudentReportCharts(stu, history);
@@ -13164,6 +13164,11 @@ async function doQuery(targetStudent = null) {
     warmStudentCompareRuntimeForReport(stu);
 
     const { resultEl, container } = getReportDomCache();
+    let reportHistoryForQuery = null;
+    const getReportHistoryForQuery = () => {
+        if (!reportHistoryForQuery) reportHistoryForQuery = getCachedStudentReportHistory(stu);
+        return reportHistoryForQuery;
+    };
 
     if (resultEl && container) {
         resultEl.classList.remove('hidden');
@@ -13181,7 +13186,9 @@ async function doQuery(targetStudent = null) {
                     }
                 }
                 renderStudentReportSkeleton(container, stu);
-                reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'FULL'));
+                reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'FULL', {
+                    reportExamHistory: getReportHistoryForQuery()
+                }));
                 reportCache?.setReportHtml?.(reportCacheKey, reportHtml);
             }
             const nextReportHtml = typeof reportHtml === 'string' ? reportHtml : '';
@@ -13197,7 +13204,7 @@ async function doQuery(targetStudent = null) {
         }
     }
 
-    const history = getCachedStudentReportHistory(stu);
+    const history = getReportHistoryForQuery();
 
     scheduleStudentReportCharts(stu, history);
 

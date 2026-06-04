@@ -1,27 +1,27 @@
-(()=>{if(typeof window=="undefined"||window.__REPORT_RENDER_RUNTIME_PATCHED__)return;const q=window.CompareSessionState||null,ft=window.ReportSessionState||null,Ft=typeof window.readCloudStudentCompareContextState=="function"?window.readCloudStudentCompareContextState:(()=>q&&typeof q.getCloudStudentCompareContext=="function"&&q.getCloudStudentCompareContext()||null),se=typeof window.readCurrentReportStudentState=="function"?window.readCurrentReportStudentState:(()=>ft&&typeof ft.getCurrentReportStudent=="function"?ft.getCurrentReportStudent()||null:window.CURRENT_REPORT_STUDENT&&typeof window.CURRENT_REPORT_STUDENT=="object"?window.CURRENT_REPORT_STUDENT:null),Kt=typeof window.readDuplicateCompareExamsState=="function"?window.readDuplicateCompareExamsState:(()=>q&&typeof q.getDuplicateCompareExams=="function"?q.getDuplicateCompareExams()||[]:[]),o={signature:"",html:new Map,comparisonStudent:new WeakMap,comparisonStudentByKey:new Map,cloudHint:new WeakMap,cloudHintByKey:new Map,previousRecord:new WeakMap,previousRecordByKey:new Map,examHistory:new WeakMap,examHistoryByKey:new Map,scopeMapRaw:"",scopeMap:{},schoolCandidatesSignature:"",schoolCandidates:[],townshipRank:new Map,countyRank:new Map,countyDirect:new WeakMap};function I(){const e=[window.CURRENT_EXAM_ID||"",window.__RAW_DATA_VERSION||0,Array.isArray(window.RAW_DATA)?window.RAW_DATA.length:0,Array.isArray(window.SUBJECTS)?window.SUBJECTS.join("|"):"",Object.keys(window.SCHOOLS||{}).join("|")].join("::");return o.signature!==e&&(o.signature=e,o.html.clear(),o.comparisonStudent=new WeakMap,o.comparisonStudentByKey.clear(),o.cloudHint=new WeakMap,o.cloudHintByKey.clear(),o.previousRecord=new WeakMap,o.previousRecordByKey.clear(),o.examHistory=new WeakMap,o.examHistoryByKey.clear(),o.townshipRank.clear(),o.countyRank.clear(),o.countyDirect=new WeakMap),e}function Q(e){return[String((e==null?void 0:e.school)||"").trim(),String((e==null?void 0:e.class)||"").trim(),String((e==null?void 0:e.name)||"").trim(),String((e==null?void 0:e.id)||(e==null?void 0:e.examNo)||"").trim()].join("::")}function Ot(e,a){if(!Array.isArray(e)||!e.length)return null;for(let l=e.length-1;l>=0;l--){const r=e[l],m=(r==null?void 0:r.examFullKey)||(r==null?void 0:r.examId);if(!a||!isExamKeyEquivalentForCompare(m,a)&&!isExamKeyEquivalentForCompare(r==null?void 0:r.examId,a))return r||null}return null}function Ct(e){if(!e||typeof e!="object")return e;if(I(),o.comparisonStudent.has(e))return o.comparisonStudent.get(e);const a=Q(e);if(o.comparisonStudentByKey.has(a)){const r=o.comparisonStudentByKey.get(a);return o.comparisonStudent.set(e,r),r}const l=typeof getComparisonStudentView=="function"?getComparisonStudentView(e,RAW_DATA):e;return o.comparisonStudent.set(e,l),o.comparisonStudentByKey.set(a,l),l}function $t(e){if(!e||typeof e!="object")return null;if(I(),o.cloudHint.has(e))return o.cloudHint.get(e);const a=Q(e);if(o.cloudHintByKey.has(a)){const r=o.cloudHintByKey.get(a);return o.cloudHint.set(e,r),r}const l=Wt(e);return o.cloudHint.set(e,l||null),o.cloudHintByKey.set(a,l||null),l||null}function It(e){if(!e||typeof e!="object")return null;if(I(),o.previousRecord.has(e))return o.previousRecord.get(e);const a=Q(e);if(o.previousRecordByKey.has(a)){const r=o.previousRecordByKey.get(a);return o.previousRecord.set(e,r),r}const l=typeof findPreviousRecord=="function"?findPreviousRecord(e):null;return o.previousRecord.set(e,l||null),o.previousRecordByKey.set(a,l||null),l||null}function Bt(e){if(!e||typeof e!="object")return[];if(I(),o.examHistory.has(e))return o.examHistory.get(e);const a=Q(e);if(o.examHistoryByKey.has(a)){const m=o.examHistoryByKey.get(a);return o.examHistory.set(e,m),m}const l=typeof getStudentExamHistory=="function"?getStudentExamHistory(e):[],r=Array.isArray(l)?l:[];return o.examHistory.set(e,r),o.examHistoryByKey.set(a,r),r}function nt(e,a){const l=`${I()}::${e}::${(a||[]).join("|")}`,r=e==="township"?o.townshipRank:o.countyRank;if(r.has(l))return r.get(l);const m=e==="township"?typeof hasStudentTownshipRankData=="function"?hasStudentTownshipRankData(RAW_DATA,a):Object.keys(SCHOOLS).length>1:typeof hasStudentCountyRankData=="function"?hasStudentCountyRankData(RAW_DATA,a):null;return r.set(l,m),m}function Gt(){let e="";try{e=localStorage.getItem("COUNTY_ANALYSIS_SCOPE_V1")||""}catch(a){e=""}if(o.scopeMapRaw!==e){o.scopeMapRaw=e;try{o.scopeMap=e?JSON.parse(e):{}}catch(a){o.scopeMap={}}}return o.scopeMap}function Pt(){const e=I();return o.schoolCandidatesSignature===e||(o.schoolCandidatesSignature=e,o.schoolCandidates=Array.from(new Set([...Object.keys(SCHOOLS||{}),...(RAW_DATA||[]).map(a=>a==null?void 0:a.school)].map(a=>String(a||"").trim()).filter(Boolean)))),o.schoolCandidates}function Wt(e){return typeof getCloudCompareHint=="function"?getCloudCompareHint(e):isCloudContextMatchStudent(e)||isCloudContextLikelyCurrentTarget(e)?Ft():null}function z(e,a,l="score"){if(a==null||a==="-"||a==="")return"";const r=parseFloat(e),m=parseFloat(a);if(isNaN(r)||isNaN(m))return"";const j=r-m;if(Math.abs(j)<.01)return'<span style="color:#94a3b8; font-size:11px; margin-left:4px; font-weight:normal;">(持平)</span>';let A="",R="",T="";l==="score"?j>0?(A="#15803d",T="#dcfce7",R="▲"):(A="#b91c1c",T="#fee2e2",R="▼"):j<0?(A="#15803d",T="#dcfce7",R="▲"):(A="#b91c1c",T="#fee2e2",R="▼");const S=Math.abs(j);return`<span style="display:inline-flex; align-items:center; background:${T}; color:${A}; padding:1px 6px; border-radius:10px; font-size:11px; font-weight:bold; margin-left:5px; vertical-align:middle;">
-            ${R} ${l==="score"?S.toFixed(1):S}
-        </span>`}function Rt(e,a){var At,Dt,jt,Nt,Et,Mt,_t;if(navigator.userAgent.toLowerCase().includes("android")&&window.innerWidth<=768&&!window.Chart)return console.warn("⚠️ Android Canvas 异常，强制切换 PC 模式"),Rt(e,"PC");const j=window.innerWidth<=768,A=a==="FULL",R=a==="A4"||a==="PC"||A,T=R,S=T?`${I()}::${Q(e)}::${a||""}::${new Date().toLocaleDateString()}`:"";if(T&&o.html.has(S))return o.html.get(S);if(!R&&j||a==="IG"){const t=Tt(e);return setTimeout(()=>{typeof renderIGCharts=="function"&&renderIGCharts(e)},50),t}const gt=RAW_DATA.length,ut=new Date().toLocaleDateString(),p=Ct(e),H=$t(p),L=Bt(p),J=getEffectiveCurrentExamId(),N=Ot(L,J),E=N?N.student||N:null,Y=!!(E&&E.scores&&E.ranks),g=(H==null?void 0:H.previousRecord)||(Y?null:It(p)),u=E&&E.scores?E:g,rt=((At=u==null?void 0:u.ranks)==null?void 0:At.total)||{},y=t=>typeof t=="number"&&Number.isFinite(t)?t:t&&typeof t=="object"&&typeof t.score=="number"&&Number.isFinite(t.score)?t.score:"-",Ht=t=>String(t!=null?t:"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"),c=(t,n,s="")=>`<td data-label="${Ht(t)}"${s?` style="${s}"`:""}>${n}</td>`,Z=t=>{var n,s,i,b,f,v,$,x;return{class:(s=(n=t==null?void 0:t.class)!=null?n:t==null?void 0:t.rankClass)!=null?s:"-",school:(b=(i=t==null?void 0:t.school)!=null?i:t==null?void 0:t.rankSchool)!=null?b:"-",township:(v=(f=t==null?void 0:t.township)!=null?f:t==null?void 0:t.rankTown)!=null?v:"-",county:(x=($=t==null?void 0:t.county)!=null?$:t==null?void 0:t.rankCounty)!=null?x:"-"}},X=(t,n,s="total",i="county")=>{var v,$,x,D,O,W,V,U;const b=s==="total"?((v=n==null?void 0:n.ranks)==null?void 0:v.total)||n||t||{}:(($=n==null?void 0:n.ranks)==null?void 0:$[s])||((x=n==null?void 0:n.subjectRanks)==null?void 0:x[s])||((D=t==null?void 0:t.subjectRanks)==null?void 0:D[s])||{},f=Z(b)[i];return f!=null&&f!==""?f:i==="county"&&s==="total"&&(U=(V=(W=(O=n==null?void 0:n.rankCounty)!=null?O:n==null?void 0:n.countyRank)!=null?W:t==null?void 0:t.rankCounty)!=null?V:t==null?void 0:t.countyRank)!=null?U:"-"},at=(t,n=null)=>{const s=String((t==null?void 0:t.examFullKey)||(t==null?void 0:t.examId)||(n==null?void 0:n._sourceExam)||(n==null?void 0:n.examFullKey)||(n==null?void 0:n.examId)||"").trim();if(!s)return null;const i=Gt();return(i==null?void 0:i[s])||null},mt=(t,n="total",s=null)=>{var f,v,$,x,D,O,W,V,U;if(!t||typeof t!="object")return!1;const i=n==="total"?(x=($=(v=(f=t==null?void 0:t.ranks)==null?void 0:f.total)==null?void 0:v.county)!=null?$:t==null?void 0:t.rankCounty)!=null?x:t==null?void 0:t.countyRank:(U=(O=(D=t==null?void 0:t.ranks)==null?void 0:D[n])==null?void 0:O.county)!=null?U:(V=(W=t==null?void 0:t.subjectRanks)==null?void 0:W[n])==null?void 0:V.county;if(i!=null&&i!==""&&i!=="-")return!0;const b=at(s,t);return!b||b.includesCounty!==!0?!1:i!=null&&i!==""},it=t=>{var i;const n=String((i=t==null?void 0:t.class)!=null?i:"").trim(),s=typeof normalizeClass=="function"?normalizeClass(n):n;return!s||s==="-"?!1:!/^(?:无|未分班|无班级|暂无|undefined|null|nan)$/i.test(s)},xt=t=>{if(typeof isCountyDirectStudentForRank=="function")return isCountyDirectStudentForRank(t);const n=String((t==null?void 0:t.school)||"").trim();if(!n||typeof getCountyDirectSchoolNames!="function"||typeof getTownshipManagedSchoolNames!="function")return!1;if(o.countyDirect.has(t))return o.countyDirect.get(t);const s=Pt();if(!getTownshipManagedSchoolNames(s).length)return o.countyDirect.set(t,!1),!1;const b=getCountyDirectSchoolNames(s).some(f=>f===n||typeof areSchoolNamesEquivalent=="function"&&areSchoolNamesEquivalent(f,n)||typeof areSchoolNamesMatched=="function"&&areSchoolNamesMatched(f,n,!0));return o.countyDirect.set(t,b),b},B=(t,n=!0)=>n?t==null||t===""?"-":t:"-",M=p&&typeof p=="object"&&p.scores&&typeof p.scores=="object"?p.scores:{},tt=[...new Set(SUBJECTS)],d=nt("township",tt),h=nt("county",tt),_=h===null?getStudentCountyRankValue(p,"total")!=="-":h,k=it(p),F=d&&!xt(p),w=_,st=B(safeGet(p,"ranks.total.township","-"),F),ht=B((jt=(Dt=rt.township)!=null?Dt:g==null?void 0:g.townRank)!=null?jt:"-",F),G=B(safeGet(p,"ranks.total.class","-"),k),P=B((Et=(Nt=rt.class)!=null?Nt:g==null?void 0:g.classRank)!=null?Et:"-",k),et=safeGet(p,"ranks.total.school","-"),bt=(_t=(Mt=rt.school)!=null?Mt:g==null?void 0:g.schoolRank)!=null?_t:"-",lt=getStudentCountyRankValue(p,"total"),ot=mt(u,"total",N)?X(N,u,"total","county"):"-",ct=Object.keys(SCHOOLS).length<=1,C=d?"":"display:none !important;",K=w?"":"display:none !important;";let dt="";if(CONFIG.name==="9年级"){let t=0,n=0;["语文","数学","英语","物理","化学"].forEach(s=>{M[s]!==void 0&&(t+=M[s],n++)}),n>0&&(dt+=`<tr style="background:rgba(248,250,252,0.5);">
+(()=>{if(typeof window=="undefined"||window.__REPORT_RENDER_RUNTIME_PATCHED__)return;const q=window.CompareSessionState||null,ft=window.ReportSessionState||null,Kt=typeof window.readCloudStudentCompareContextState=="function"?window.readCloudStudentCompareContextState:(()=>q&&typeof q.getCloudStudentCompareContext=="function"&&q.getCloudStudentCompareContext()||null),le=typeof window.readCurrentReportStudentState=="function"?window.readCurrentReportStudentState:(()=>ft&&typeof ft.getCurrentReportStudent=="function"?ft.getCurrentReportStudent()||null:window.CURRENT_REPORT_STUDENT&&typeof window.CURRENT_REPORT_STUDENT=="object"?window.CURRENT_REPORT_STUDENT:null),Ot=typeof window.readDuplicateCompareExamsState=="function"?window.readDuplicateCompareExamsState:(()=>q&&typeof q.getDuplicateCompareExams=="function"?q.getDuplicateCompareExams()||[]:[]),o={signature:"",html:new Map,comparisonStudent:new WeakMap,comparisonStudentByKey:new Map,cloudHint:new WeakMap,cloudHintByKey:new Map,previousRecord:new WeakMap,previousRecordByKey:new Map,examHistory:new WeakMap,examHistoryByKey:new Map,scopeMapRaw:"",scopeMap:{},schoolCandidatesSignature:"",schoolCandidates:[],townshipRank:new Map,countyRank:new Map,countyDirect:new WeakMap};function P(){const e=[window.CURRENT_EXAM_ID||"",window.__RAW_DATA_VERSION||0,Array.isArray(window.RAW_DATA)?window.RAW_DATA.length:0,Array.isArray(window.SUBJECTS)?window.SUBJECTS.join("|"):"",Object.keys(window.SCHOOLS||{}).join("|")].join("::");return o.signature!==e&&(o.signature=e,o.html.clear(),o.comparisonStudent=new WeakMap,o.comparisonStudentByKey.clear(),o.cloudHint=new WeakMap,o.cloudHintByKey.clear(),o.previousRecord=new WeakMap,o.previousRecordByKey.clear(),o.examHistory=new WeakMap,o.examHistoryByKey.clear(),o.townshipRank.clear(),o.countyRank.clear(),o.countyDirect=new WeakMap),e}function et(e){return[String((e==null?void 0:e.school)||"").trim(),String((e==null?void 0:e.class)||"").trim(),String((e==null?void 0:e.name)||"").trim(),String((e==null?void 0:e.id)||(e==null?void 0:e.examNo)||"").trim()].join("::")}function It(e,a){if(!Array.isArray(e)||!e.length)return null;for(let s=e.length-1;s>=0;s--){const r=e[s],u=(r==null?void 0:r.examFullKey)||(r==null?void 0:r.examId);if(!a||!isExamKeyEquivalentForCompare(u,a)&&!isExamKeyEquivalentForCompare(r==null?void 0:r.examId,a))return r||null}return null}function vt(e){if(!e||typeof e!="object")return e;if(P(),o.comparisonStudent.has(e))return o.comparisonStudent.get(e);const a=et(e);if(o.comparisonStudentByKey.has(a)){const r=o.comparisonStudentByKey.get(a);return o.comparisonStudent.set(e,r),r}const s=typeof getComparisonStudentView=="function"?getComparisonStudentView(e,RAW_DATA):e;return o.comparisonStudent.set(e,s),o.comparisonStudentByKey.set(a,s),s}function wt(e){if(!e||typeof e!="object")return null;if(P(),o.cloudHint.has(e))return o.cloudHint.get(e);const a=et(e);if(o.cloudHintByKey.has(a)){const r=o.cloudHintByKey.get(a);return o.cloudHint.set(e,r),r}const s=Vt(e);return o.cloudHint.set(e,s||null),o.cloudHintByKey.set(a,s||null),s||null}function Bt(e){if(!e||typeof e!="object")return null;if(P(),o.previousRecord.has(e))return o.previousRecord.get(e);const a=et(e);if(o.previousRecordByKey.has(a)){const r=o.previousRecordByKey.get(a);return o.previousRecord.set(e,r),r}const s=typeof findPreviousRecord=="function"?findPreviousRecord(e):null;return o.previousRecord.set(e,s||null),o.previousRecordByKey.set(a,s||null),s||null}function Gt(e){if(!e||typeof e!="object")return[];if(P(),o.examHistory.has(e))return o.examHistory.get(e);const a=et(e);if(o.examHistoryByKey.has(a)){const u=o.examHistoryByKey.get(a);return o.examHistory.set(e,u),u}const s=typeof getStudentExamHistory=="function"?getStudentExamHistory(e):[],r=Array.isArray(s)?s:[];return o.examHistory.set(e,r),o.examHistoryByKey.set(a,r),r}function rt(e,a){const s=`${P()}::${e}::${(a||[]).join("|")}`,r=e==="township"?o.townshipRank:o.countyRank;if(r.has(s))return r.get(s);const u=e==="township"?typeof hasStudentTownshipRankData=="function"?hasStudentTownshipRankData(RAW_DATA,a):Object.keys(SCHOOLS).length>1:typeof hasStudentCountyRankData=="function"?hasStudentCountyRankData(RAW_DATA,a):null;return r.set(s,u),u}function Pt(){let e="";try{e=localStorage.getItem("COUNTY_ANALYSIS_SCOPE_V1")||""}catch(a){e=""}if(o.scopeMapRaw!==e){o.scopeMapRaw=e;try{o.scopeMap=e?JSON.parse(e):{}}catch(a){o.scopeMap={}}}return o.scopeMap}function Wt(){const e=P();return o.schoolCandidatesSignature===e||(o.schoolCandidatesSignature=e,o.schoolCandidates=Array.from(new Set([...Object.keys(SCHOOLS||{}),...(RAW_DATA||[]).map(a=>a==null?void 0:a.school)].map(a=>String(a||"").trim()).filter(Boolean)))),o.schoolCandidates}function Vt(e){return typeof getCloudCompareHint=="function"?getCloudCompareHint(e):isCloudContextMatchStudent(e)||isCloudContextLikelyCurrentTarget(e)?Kt():null}function T(e,a,s="score"){if(a==null||a==="-"||a==="")return"";const r=parseFloat(e),u=parseFloat(a);if(isNaN(r)||isNaN(u))return"";const M=r-u;if(Math.abs(M)<.01)return'<span style="color:#94a3b8; font-size:11px; margin-left:4px; font-weight:normal;">(持平)</span>';let z="",C="",H="";s==="score"?M>0?(z="#15803d",H="#dcfce7",C="▲"):(z="#b91c1c",H="#fee2e2",C="▼"):M<0?(z="#15803d",H="#dcfce7",C="▲"):(z="#b91c1c",H="#fee2e2",C="▼");const w=Math.abs(M);return`<span style="display:inline-flex; align-items:center; background:${H}; color:${z}; padding:1px 6px; border-radius:10px; font-size:11px; font-weight:bold; margin-left:5px; vertical-align:middle;">
+            ${C} ${s==="score"?w.toFixed(1):w}
+        </span>`}function St(e,a,s={}){var Dt,jt,Nt,Et,Mt,_t,Ft;if(navigator.userAgent.toLowerCase().includes("android")&&window.innerWidth<=768&&!window.Chart)return console.warn("⚠️ Android Canvas 异常，强制切换 PC 模式"),St(e,"PC",s);const z=window.innerWidth<=768,C=a==="FULL",H=a==="A4"||a==="PC"||C,w=H,J=w?`${P()}::${et(e)}::${a||""}::${new Date().toLocaleDateString()}`:"";if(w&&o.html.has(J))return o.html.get(J);if(!H&&z||a==="IG"){const t=Ct(e);return setTimeout(()=>{typeof renderIGCharts=="function"&&renderIGCharts(e)},50),t}const $t=RAW_DATA.length,Rt=new Date().toLocaleDateString(),d=vt(e),A=wt(d),_=Array.isArray(s.reportExamHistory)?s.reportExamHistory:Gt(d),Tt=getEffectiveCurrentExamId(),D=It(_,Tt),$=D?D.student||D:null,at=!!($&&$.scores&&$.ranks),m=(A==null?void 0:A.previousRecord)||(at?null:Bt(d)),x=$&&$.scores?$:m,h=((Dt=x==null?void 0:x.ranks)==null?void 0:Dt.total)||{},Ht=t=>typeof t=="number"&&Number.isFinite(t)?t:t&&typeof t=="object"&&typeof t.score=="number"&&Number.isFinite(t.score)?t.score:"-",Y=t=>String(t!=null?t:"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"),c=(t,n,l="")=>`<td data-label="${Y(t)}"${l?` style="${l}"`:""}>${n}</td>`,Z=t=>{var n,l,i,y,f,v,S,b;return{class:(l=(n=t==null?void 0:t.class)!=null?n:t==null?void 0:t.rankClass)!=null?l:"-",school:(y=(i=t==null?void 0:t.school)!=null?i:t==null?void 0:t.rankSchool)!=null?y:"-",township:(v=(f=t==null?void 0:t.township)!=null?f:t==null?void 0:t.rankTown)!=null?v:"-",county:(b=(S=t==null?void 0:t.county)!=null?S:t==null?void 0:t.rankCounty)!=null?b:"-"}},X=(t,n,l="total",i="county")=>{var v,S,b,k,G,W,V,U;const y=l==="total"?((v=n==null?void 0:n.ranks)==null?void 0:v.total)||n||t||{}:((S=n==null?void 0:n.ranks)==null?void 0:S[l])||((b=n==null?void 0:n.subjectRanks)==null?void 0:b[l])||((k=t==null?void 0:t.subjectRanks)==null?void 0:k[l])||{},f=Z(y)[i];return f!=null&&f!==""?f:i==="county"&&l==="total"&&(U=(V=(W=(G=n==null?void 0:n.rankCounty)!=null?G:n==null?void 0:n.countyRank)!=null?W:t==null?void 0:t.rankCounty)!=null?V:t==null?void 0:t.countyRank)!=null?U:"-"},kt=(t,n=null)=>{const l=String((t==null?void 0:t.examFullKey)||(t==null?void 0:t.examId)||(n==null?void 0:n._sourceExam)||(n==null?void 0:n.examFullKey)||(n==null?void 0:n.examId)||"").trim();if(!l)return null;const i=Pt();return(i==null?void 0:i[l])||null},ot=(t,n="total",l=null)=>{var f,v,S,b,k,G,W,V,U;if(!t||typeof t!="object")return!1;const i=n==="total"?(b=(S=(v=(f=t==null?void 0:t.ranks)==null?void 0:f.total)==null?void 0:v.county)!=null?S:t==null?void 0:t.rankCounty)!=null?b:t==null?void 0:t.countyRank:(U=(G=(k=t==null?void 0:t.ranks)==null?void 0:k[n])==null?void 0:G.county)!=null?U:(V=(W=t==null?void 0:t.subjectRanks)==null?void 0:W[n])==null?void 0:V.county;if(i!=null&&i!==""&&i!=="-")return!0;const y=kt(l,t);return!y||y.includesCounty!==!0?!1:i!=null&&i!==""},gt=t=>{var i;const n=String((i=t==null?void 0:t.class)!=null?i:"").trim(),l=typeof normalizeClass=="function"?normalizeClass(n):n;return!l||l==="-"?!1:!/^(?:无|未分班|无班级|暂无|undefined|null|nan)$/i.test(l)},ut=t=>{if(typeof isCountyDirectStudentForRank=="function")return isCountyDirectStudentForRank(t);const n=String((t==null?void 0:t.school)||"").trim();if(!n||typeof getCountyDirectSchoolNames!="function"||typeof getTownshipManagedSchoolNames!="function")return!1;if(o.countyDirect.has(t))return o.countyDirect.get(t);const l=Wt();if(!getTownshipManagedSchoolNames(l).length)return o.countyDirect.set(t,!1),!1;const y=getCountyDirectSchoolNames(l).some(f=>f===n||typeof areSchoolNamesEquivalent=="function"&&areSchoolNamesEquivalent(f,n)||typeof areSchoolNamesMatched=="function"&&areSchoolNamesMatched(f,n,!0));return o.countyDirect.set(t,y),y},F=(t,n=!0)=>n?t==null||t===""?"-":t:"-",K=d&&typeof d=="object"&&d.scores&&typeof d.scores=="object"?d.scores:{},p=[...new Set(SUBJECTS)],g=rt("township",p),j=rt("county",p),N=j===null?getStudentCountyRankValue(d,"total")!=="-":j,Q=gt(d),R=g&&!ut(d),E=N,it=F(safeGet(d,"ranks.total.township","-"),R),L=F((Nt=(jt=h.township)!=null?jt:m==null?void 0:m.townRank)!=null?Nt:"-",R),O=F(safeGet(d,"ranks.total.class","-"),Q),st=F((Mt=(Et=h.class)!=null?Et:m==null?void 0:m.classRank)!=null?Mt:"-",Q),lt=safeGet(d,"ranks.total.school","-"),mt=(Ft=(_t=h.school)!=null?_t:m==null?void 0:m.schoolRank)!=null?Ft:"-",tt=getStudentCountyRankValue(d,"total"),nt=ot(x,"total",D)?X(D,x,"total","county"):"-",I=Object.keys(SCHOOLS).length<=1,B=g?"":"display:none !important;",ct=E?"":"display:none !important;";let dt="";if(CONFIG.name==="9年级"){let t=0,n=0;["语文","数学","英语","物理","化学"].forEach(l=>{K[l]!==void 0&&(t+=K[l],n++)}),n>0&&(dt+=`<tr style="background:rgba(248,250,252,0.5);">
                     ${c("科目","🏁 核心五科","font-weight:bold; color:#475569;")}
                     ${c("成绩（对比）",t.toFixed(1),"font-weight:bold; color:#2563eb;")}
                     ${c("班级排名","-")}
                     ${c("校级排名","-")}
-                    ${c("全镇排名","-",C)}
-                    ${c("全县排名","-",K)}
-                </tr>`)}const yt=getComparisonTotalSubjects(),vt=getComparisonTotalValue(p,yt),wt=CONFIG.name==="9年级"&&yt.length?"五科总分":CONFIG.label,Vt=u?recalcPrevTotal(u):"-",Ut=z(vt,Vt,"score"),qt=k?z(G,P,"rank"):"",Jt=z(et,bt,"rank"),Yt=F?z(st,ht,"rank"):"",Zt=w?z(lt,ot,"rank"):"";dt+=`<tr style="background:rgba(239,246,255,0.7); backdrop-filter:blur(4px); border-bottom:2px solid #fff;">
-            ${c("科目",`🏆 ${wt}`,"font-weight:bold; color:#1e3a8a;")}
-            ${c("成绩（对比）",`${Number.isFinite(vt)?vt.toFixed(2):"-"} ${Ut}`,"font-weight:800; font-size:16px; color:#1e40af;")}
-            ${c("班级排名",`${G} ${qt}`,"font-weight:bold; color:#334155;")}
-            ${c("校级排名",`${et} ${Jt}`,"font-weight:bold; color:#334155;")}
-            ${c("全镇排名",`${st} ${Yt}`,`${C} font-weight:bold; color:#334155;`)}
-            ${c("全县排名",`${w?lt:"-"} ${Zt}`,`${K} font-weight:bold; color:#334155;`)}
-        </tr>`,[...new Set(SUBJECTS)].forEach(t=>{if(M[t]!==void 0){const n=u&&u.scores?y(u.scores[t]):"-",s=z(M[t],n,"score");let i=Z(u&&u.ranks?u.ranks[t]:null);i.class==="-"&&i.school==="-"&&i.township==="-"&&g&&g.ranks&&g.ranks[t]&&(i=Z(g.ranks[t]));const b=safeGet(p,`ranks.${t}.school`,"-"),f=z(b,i.school||"-","rank"),v=B(safeGet(p,`ranks.${t}.township`,"-"),F),$=F?z(v,i.township||"-","rank"):"",x=getStudentCountyRankValue(p,t),D=X(N,u,t,"county"),O=w&&mt(u,t,N)?z(x,D||"-","rank"):"";dt+=`<tr style="transition:0.2s;" onmouseover="this.style.background='rgba(241,245,249,0.5)'" onmouseout="this.style.background='transparent'">
+                    ${c("全镇排名","-",B)}
+                    ${c("全县排名","-",ct)}
+                </tr>`)}const xt=getComparisonTotalSubjects(),ht=getComparisonTotalValue(d,xt),bt=CONFIG.name==="9年级"&&xt.length?"五科总分":CONFIG.label,Ut=x?recalcPrevTotal(x):"-",qt=T(ht,Ut,"score"),Jt=Q?T(O,st,"rank"):"",Yt=T(lt,mt,"rank"),Zt=R?T(it,L,"rank"):"",Xt=E?T(tt,nt,"rank"):"";dt+=`<tr style="background:rgba(239,246,255,0.7); backdrop-filter:blur(4px); border-bottom:2px solid #fff;">
+            ${c("科目",`🏆 ${bt}`,"font-weight:bold; color:#1e3a8a;")}
+            ${c("成绩（对比）",`${Number.isFinite(ht)?ht.toFixed(2):"-"} ${qt}`,"font-weight:800; font-size:16px; color:#1e40af;")}
+            ${c("班级排名",`${O} ${Jt}`,"font-weight:bold; color:#334155;")}
+            ${c("校级排名",`${lt} ${Yt}`,"font-weight:bold; color:#334155;")}
+            ${c("全镇排名",`${it} ${Zt}`,`${B} font-weight:bold; color:#334155;`)}
+            ${c("全县排名",`${E?tt:"-"} ${Xt}`,`${ct} font-weight:bold; color:#334155;`)}
+        </tr>`,[...new Set(SUBJECTS)].forEach(t=>{if(K[t]!==void 0){const n=x&&x.scores?Ht(x.scores[t]):"-",l=T(K[t],n,"score");let i=Z(x&&x.ranks?x.ranks[t]:null);i.class==="-"&&i.school==="-"&&i.township==="-"&&m&&m.ranks&&m.ranks[t]&&(i=Z(m.ranks[t]));const y=safeGet(d,`ranks.${t}.school`,"-"),f=T(y,i.school||"-","rank"),v=F(safeGet(d,`ranks.${t}.township`,"-"),R),S=R?T(v,i.township||"-","rank"):"",b=getStudentCountyRankValue(d,t),k=X(D,x,t,"county"),G=E&&ot(x,t,D)?T(b,k||"-","rank"):"";dt+=`<tr style="transition:0.2s;" onmouseover="this.style.background='rgba(241,245,249,0.5)'" onmouseout="this.style.background='transparent'">
                     ${c("科目",t,"font-weight:600; color:#475569;")}
-                    ${c("成绩（对比）",`${M[t]} ${s}`,"font-weight:bold; color:#334155;")}
+                    ${c("成绩（对比）",`${K[t]} ${l}`,"font-weight:bold; color:#334155;")}
                     ${c("班级排名","-","color:#cbd5e1;")}
-                    ${c("校级排名",`${b} <span style="font-size:0.9em;">${f}</span>`,"color:#64748b;")}
-                    ${c("全镇排名",`${v} <span style="font-size:0.9em;">${$}</span>`,`color:#64748b; ${C}`)}
-                    ${c("全县排名",`${w?x:"-"} <span style="font-size:0.9em;">${O}</span>`,`color:#64748b; ${K}`)}
-                </tr>`}});const Xt=`
+                    ${c("校级排名",`${y} <span style="font-size:0.9em;">${f}</span>`,"color:#64748b;")}
+                    ${c("全镇排名",`${v} <span style="font-size:0.9em;">${S}</span>`,`color:#64748b; ${B}`)}
+                    ${c("全县排名",`${E?b:"-"} <span style="font-size:0.9em;">${G}</span>`,`color:#64748b; ${ct}`)}
+                </tr>`}});const Qt=`
             <style>
                 .fluent-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.6); box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.05); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
                 .fluent-header { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); }
@@ -190,28 +190,28 @@
                 }
                 @media print { .fluent-card { box-shadow: none; border: 1px solid #ccc; backdrop-filter: none; } }
             </style>
-        `,Qt=buildChartNarrative(p),pt=buildStudentInsightModel(p,L),Lt=renderStudentInsightOverview(pt),te=renderStudentActionPlan(pt),ee=renderStudentSubjectBoard(pt),oe=renderStudentRealityNote(pt),ne=H?`
+        `,Lt=buildChartNarrative(d),pt=buildStudentInsightModel(d,_),te=renderStudentInsightOverview(pt),ee=renderStudentActionPlan(pt),oe=renderStudentSubjectBoard(pt),ne=renderStudentRealityNote(pt),re=A?`
         <div class="fluent-card" style="padding:10px 14px; margin-bottom:12px; background:#eef2ff; border:1px solid #c7d2fe; color:#3730a3;">
             <div style="display:flex; align-items:center; gap:8px; font-size:12px; flex-wrap:wrap;">
                 <span style="font-weight:700;">状态：☁️ 云端对比已启用</span>
-                <span>当前对比：${H.prevExamId||"上次"} → ${H.latestExamId||"本次"}</span>
-                <span style="color:#6366f1;">来源：${H.title||"云端记录"}</span>
+                <span>当前对比：${A.prevExamId||"上次"} → ${A.latestExamId||"本次"}</span>
+                <span style="color:#6366f1;">来源：${A.title||"云端记录"}</span>
             </div>
-        </div>`:"",re=Kt().length>0?`
+        </div>`:"",ae=Ot().length>0?`
         <div class="fluent-card" style="padding:10px 14px; margin-bottom:12px; background:#fff7ed; border:1px solid #fdba74; color:#9a3412;">
             <div style="font-size:12px; line-height:1.7;">
                 检测到重复考试快照，系统已自动去重，避免把同一份数据误判为持平。
                 如需恢复真实趋势，请重新封存对应考试期数。
             </div>
-        </div>`:"",ae=`
-        ${Xt}
-        <div class="${A?"student-report-shell student-report-shell-full":"student-report-shell"}">
+        </div>`:"",ie=`
+        ${Qt}
+        <div class="${C?"student-report-shell student-report-shell-full":"student-report-shell"}">
         <div class="report-header" style="border-bottom:none; margin-bottom:10px; text-align:center;">
             <h3 style="font-family:'Microsoft YaHei', sans-serif; font-weight:800; color:#1e293b; letter-spacing:1px; margin:0;">${e.school} 学生学业发展报告</h3>
-            <p style="color:#94a3b8; font-size:12px; margin-top:5px;">生成日期: ${ut}</p>
+            <p style="color:#94a3b8; font-size:12px; margin-top:5px;">生成日期: ${Rt}</p>
         </div>
-        ${ne}
         ${re}
+        ${ae}
         <div class="fluent-card report-student-strip" style="padding:15px 25px; background:linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                 <div style="display:flex; align-items:baseline; gap:15px;">
@@ -224,33 +224,33 @@
         <div class="student-report-main-grid">
         <div class="fluent-card student-report-hero-card" style="padding:18px 20px;">
             <div class="fluent-header"><i class="ti ti-badge-4k" style="color:#2563eb;"></i><span class="fluent-title">成绩快照与真实定位</span></div>
-            ${Lt}
             ${te}
             ${ee}
             ${oe}
+            ${ne}
         </div>
         <div class="fluent-card student-report-table-card" style="padding:0; overflow:hidden;">
             <table class="fluent-table" id="tb-query">
-                <thead><tr><th style="text-align:left; padding-left:20px;">科目</th><th>成绩 (对比)</th><th>总分班排</th><th>校排</th><th style="${C}">全镇排名</th><th style="${K}">全县排名</th></tr></thead>
+                <thead><tr><th style="text-align:left; padding-left:20px;">科目</th><th>成绩 (对比)</th><th>总分班排</th><th>校排</th><th style="${B}">全镇排名</th><th style="${ct}">全县排名</th></tr></thead>
                 <tbody>${dt}</tbody>
             </table>
         </div>
-        </div>`,St=L;let kt="";if(St.length>1){let t="",n=`<th style="text-align:left; padding-left:20px;">考试名称</th><th>${wt}</th><th>校排</th>`;d&&(n+="<th>镇排</th>"),w&&(n+="<th>县排</th>");for(let s=St.length-1;s>=0;s--){const i=St[s],b=i.examFullKey||i.examId,f=getEffectiveCurrentExamId(),v=!!f&&(isExamKeyEquivalentForCompare(b,f)||isExamKeyEquivalentForCompare(i.examId,f)),$=v?"background:rgba(239,246,255,0.7); font-weight:bold;":"",x=i.student||i,D=getComparisonTotalValue(x,yt),W=Number.isFinite(D)?D.toFixed(1):"-",V=safeGet(x,"ranks.total.school",i.rankSchool||"-"),U=safeGet(x,"ranks.total.township",i.rankTown||"-"),ie=X(i,x,"total","county");t+=`<tr style="${$}">
+        </div>`,yt=_;let zt="";if(yt.length>1){let t="",n=`<th style="text-align:left; padding-left:20px;">考试名称</th><th>${bt}</th><th>校排</th>`;g&&(n+="<th>镇排</th>"),E&&(n+="<th>县排</th>");for(let l=yt.length-1;l>=0;l--){const i=yt[l],y=i.examFullKey||i.examId,f=getEffectiveCurrentExamId(),v=!!f&&(isExamKeyEquivalentForCompare(y,f)||isExamKeyEquivalentForCompare(i.examId,f)),S=v?"background:rgba(239,246,255,0.7); font-weight:bold;":"",b=i.student||i,k=getComparisonTotalValue(b,xt),W=Number.isFinite(k)?k.toFixed(1):"-",V=safeGet(b,"ranks.total.school",i.rankSchool||"-"),U=safeGet(b,"ranks.total.township",i.rankTown||"-"),se=X(i,b,"total","county");t+=`<tr style="${S}">
                 ${c("考试名称",`${v?"⭐ ":""}${i.examLabel||i.examId||i.examFullKey||"-"}`,"text-align:left; padding-left:20px; color:#475569;")}
-                ${c(wt,W,"color:#2563eb;")}
+                ${c(bt,W,"color:#2563eb;")}
                 ${c("校级排名",V,"color:#64748b;")}
-                ${d?c("全镇排名",U,"color:#64748b;"):""}
-                ${w?c("全县排名",ie,"color:#64748b;"):""}
-            </tr>`}kt=`
+                ${g?c("全镇排名",U,"color:#64748b;"):""}
+                ${E?c("全县排名",se,"color:#64748b;"):""}
+            </tr>`}zt=`
         <div class="fluent-card" style="padding:0; overflow:hidden; margin-top:20px;">
             <div class="fluent-header" style="padding: 15px 20px 5px; border-bottom: none;"><i class="ti ti-chart-line" style="color:#f97316;"></i><span class="fluent-title">历次考试趋势记录</span></div>
             <table class="fluent-table">
                 <thead><tr>${n}</tr></thead>
                 <tbody>${t}</tbody>
             </table>
-        </div>`}const zt=`
-        ${ae}
-        ${kt}
+        </div>`}const At=`
+        ${ie}
+        ${zt}
         <div class="student-report-chart-grid" style="display:flex; gap:15px; margin-bottom:15px; flex-wrap:wrap; margin-top:20px;">
             <div class="fluent-card" style="flex:1; min-width:300px; margin-bottom:0; display:flex; flex-direction:column;">
                 <div class="fluent-header"><i class="ti ti-radar" style="color:#2563eb;"></i><span class="fluent-title">${CONFIG.name==="9年级"?"五科综合素质评价":"综合素质评价"} (百分位)</span></div>
@@ -261,20 +261,20 @@
                 <div style="flex:1; position:relative; min-height:220px;"><canvas id="varianceChart"></canvas></div>
             </div> 
         </div>
-        ${Qt}
+        ${Lt}
         <div style="text-align:center; font-size:11px; color:#cbd5e1; margin-top:20px;">系统自动生成 · 仅供家校沟通参考</div>
-        </div>`;return T&&o.html.set(S,zt),zt}function Tt(e){var M,tt;const a=new Date().toLocaleDateString(),l=RAW_DATA.length,r=Ct(e),m=getComparisonTotalSubjects(),j=getComparisonTotalValue(r,m),A=nt("township",m),R=nt("county",m),T=R===null?getStudentCountyRankValue(r,"total")!=="-":R,S=A&&!isCountyDirectStudent(r),gt=S?safeGet(r,"ranks.total.township","-"):safeGet(r,"ranks.total.school","-"),ut=(r==null?void 0:r.school)&&((tt=(M=SCHOOLS==null?void 0:SCHOOLS[r.school])==null?void 0:M.students)==null?void 0:tt.length)||l||1,H=typeof gt=="number"?((1-gt/(S?l||1:ut))*100).toFixed(0):"-",L=e.name.charAt(0),J=$t(r),E=Object.keys(SCHOOLS).length<=1?"全校":S?"全镇":"本校";let Y="";H>=90?Y="🌟 卓越之星":H>=75?Y="🔥 进步飞速":Y="📚 持续努力";let g="";m.forEach(d=>{if(r.scores[d]!==void 0){const h=r.scores[d],_=safeGet(r,`ranks.${d}.school`,"-"),k=S?safeGet(r,`ranks.${d}.township`,"-"):"-",F=getStudentCountyRankValue(r,d),w=[`级#${_}`];S&&w.push(`镇#${k}`),T&&w.push(`县#${F}`),g+=`
+        </div>`;return w&&o.html.set(J,At),At}function Ct(e){var F,K;const a=new Date().toLocaleDateString(),s=RAW_DATA.length,r=vt(e),u=getComparisonTotalSubjects(),M=getComparisonTotalValue(r,u),z=rt("township",u),C=rt("county",u),H=C===null?getStudentCountyRankValue(r,"total")!=="-":C,w=z&&!isCountyDirectStudent(r),J=w?safeGet(r,"ranks.total.township","-"):safeGet(r,"ranks.total.school","-"),$t=(r==null?void 0:r.school)&&((K=(F=SCHOOLS==null?void 0:SCHOOLS[r.school])==null?void 0:F.students)==null?void 0:K.length)||s||1,d=typeof J=="number"?((1-J/(w?s||1:$t))*100).toFixed(0):"-",A=e.name.charAt(0),_=wt(r),D=Object.keys(SCHOOLS).length<=1?"全校":w?"全镇":"本校";let $="";d>=90?$="🌟 卓越之星":d>=75?$="🔥 进步飞速":$="📚 持续努力";let at="";u.forEach(p=>{if(r.scores[p]!==void 0){const g=r.scores[p],j=safeGet(r,`ranks.${p}.school`,"-"),N=w?safeGet(r,`ranks.${p}.township`,"-"):"-",Q=getStudentCountyRankValue(r,p),R=[`级#${j}`];w&&R.push(`镇#${N}`),H&&R.push(`县#${Q}`),at+=`
                     <div class="insta-comment-row">
                         <div>
-                            <span class="insta-comm-user">${d}</span>
+                            <span class="insta-comm-user">${p}</span>
                             <span class="insta-comm-text">成绩单</span>
                         </div>
                         <div>
-                            <span class="insta-comm-score">${h}</span>
-                            <span class="insta-comm-rank">${w.join(" | ")}</span>
+                            <span class="insta-comm-score">${g}</span>
+                            <span class="insta-comm-rank">${R.join(" | ")}</span>
                         </div>
                     </div>
-                `}});const u=`
+                `}});const m=`
             <div style="margin-top: 20px; padding: 0 14px;">
                 <!-- 雷达图容器 -->
                 <div style="background: #f8fafc; border-radius: 8px; padding: 15px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
@@ -299,76 +299,76 @@
                     </div>
                 </div>
             </div>
-        `,y=(()=>{let d=[],h=[],_=[],k=[];getComparisonTotalSubjects().forEach(G=>{if(e.scores[G]!==void 0){const P=RAW_DATA.map(C=>C.scores[G]).filter(C=>typeof C=="number");if(P.length<2)return;const et=P.reduce((C,K)=>C+K,0)/P.length,bt=P.reduce((C,K)=>C+Math.pow(K-et,2),0)/P.length,lt=Math.sqrt(bt)||1,ot=(e.scores[G]-et)/lt;k.push(ot);const ct=`${G}`;ot>=.8?d.push(ct):ot<=-.8?h.push(ct):_.push(ct)}});const w=k.length?Math.max(...k):0,st=k.length?Math.min(...k):0,ht=w-st;return{strong:d,weak:h,mid:_,range:ht}})(),c=(d=>d>=2.5?{tag:"⚠️ 严重偏科",color:"#b91c1c",bg:"#fee2e2",text:"不同学科成绩差异极大，存在明显优势科目与薄弱科目，需要针对性调整学习重心，补齐短板。"}:d>=1.2?{tag:"⚖️ 相对均衡",color:"#0369a1",bg:"#e0f2fe",text:"各学科成绩整体较为均衡，个别学科略有波动，保持稳定发挥是关键。"}:{tag:"🌟 结构优秀",color:"#15803d",bg:"#dcfce7",text:"各学科发展极其均衡，无明显短板，心理素质稳定，是冲刺更高目标的理想状态。"})(y.range),Z=`
+        `,h=(()=>{let p=[],g=[],j=[],N=[];getComparisonTotalSubjects().forEach(L=>{if(e.scores[L]!==void 0){const O=RAW_DATA.map(I=>I.scores[L]).filter(I=>typeof I=="number");if(O.length<2)return;const st=O.reduce((I,B)=>I+B,0)/O.length,lt=O.reduce((I,B)=>I+Math.pow(B-st,2),0)/O.length,mt=Math.sqrt(lt)||1,tt=(e.scores[L]-st)/mt;N.push(tt);const nt=`${L}`;tt>=.8?p.push(nt):tt<=-.8?g.push(nt):j.push(nt)}});const R=N.length?Math.max(...N):0,E=N.length?Math.min(...N):0,it=R-E;return{strong:p,weak:g,mid:j,range:it}})(),Y=(p=>p>=2.5?{tag:"⚠️ 严重偏科",color:"#b91c1c",bg:"#fee2e2",text:"不同学科成绩差异极大，存在明显优势科目与薄弱科目，需要针对性调整学习重心，补齐短板。"}:p>=1.2?{tag:"⚖️ 相对均衡",color:"#0369a1",bg:"#e0f2fe",text:"各学科成绩整体较为均衡，个别学科略有波动，保持稳定发挥是关键。"}:{tag:"🌟 结构优秀",color:"#15803d",bg:"#dcfce7",text:"各学科发展极其均衡，无明显短板，心理素质稳定，是冲刺更高目标的理想状态。"})(h.range),c=`
             <div style="margin: 15px 14px 0 14px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <span style="font-weight:bold; color:#334155; font-size:14px;">🧠 学情结构诊断</span>
-                    <span style="font-size:12px; background:${c.bg}; color:${c.color}; padding:2px 8px; border-radius:12px; font-weight:bold;">
-                        ${c.tag}
+                    <span style="font-size:12px; background:${Y.bg}; color:${Y.color}; padding:2px 8px; border-radius:12px; font-weight:bold;">
+                        ${Y.tag}
                     </span>
                 </div>
                 <div style="font-size:13px; color:#64748b; line-height:1.5;">
-                    ${c.text}
+                    ${Y.text}
                 </div>
             </div>
-        `,X=(d,h)=>!d||d.length===0?`<div style="font-size:12px; color:#ccc; padding:5px;">${h}</div>`:d.map(_=>`<span style="display:inline-block; background:#f1f5f9; color:#334155; font-size:12px; padding:4px 10px; border-radius:4px; margin:0 5px 5px 0;">${_}</span>`).join(""),at=`
+        `,Z=(p,g)=>!p||p.length===0?`<div style="font-size:12px; color:#ccc; padding:5px;">${g}</div>`:p.map(j=>`<span style="display:inline-block; background:#f1f5f9; color:#334155; font-size:12px; padding:4px 10px; border-radius:4px; margin:0 5px 5px 0;">${j}</span>`).join(""),X=`
             <div style="margin: 15px 14px 0 14px;">
                 <!-- 优势科目 -->
                 <details open style="margin-bottom:10px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
                     <summary style="padding:10px 15px; font-size:13px; font-weight:bold; color:#333; cursor:pointer; background:#f8fafc; list-style:none; display:flex; align-items:center;">
                         <span style="margin-right:8px;">☀️</span> 优势学科
-                        <span style="margin-left:auto; font-size:10px; color:#999;">${y.strong.length}科</span>
+                        <span style="margin-left:auto; font-size:10px; color:#999;">${h.strong.length}科</span>
                     </summary>
                     <div style="padding:15px;">
-                        ${X(y.strong,"暂无明显优势学科，继续加油")}
+                        ${Z(h.strong,"暂无明显优势学科，继续加油")}
                     </div>
                 </details>
 
                 <!-- 薄弱科目 -->
-                <details ${y.weak.length>0?"open":""} style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+                <details ${h.weak.length>0?"open":""} style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
                     <summary style="padding:10px 15px; font-size:13px; font-weight:bold; color:#333; cursor:pointer; background:#fff1f2; list-style:none; display:flex; align-items:center;">
                         <span style="margin-right:8px;">🌧️</span> 需关注学科
-                        <span style="margin-left:auto; font-size:10px; color:#dc2626;">${y.weak.length}科</span>
+                        <span style="margin-left:auto; font-size:10px; color:#dc2626;">${h.weak.length}科</span>
                     </summary>
                     <div style="padding:15px;">
-                        ${X(y.weak,"暂无明显短板，保持均衡")}
+                        ${Z(h.weak,"暂无明显短板，保持均衡")}
                     </div>
                 </details>
             </div>
-        `,it=`
+        `,ot=`
             <div style="margin: 15px 14px 20px 14px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 15px;">
                 <div style="font-size:13px; font-weight:bold; color:#b45309; margin-bottom:10px; display:flex; align-items:center;">
                     <i class="ti ti-bulb" style="margin-right:5px; font-size:16px;"></i> 家长行动指南
                 </div>
                 <ul style="padding-left:15px; margin:0; font-size:12px; color:#78350f;">
-                    ${(()=>{const d=[];if(y.weak.length>0){const h=y.weak.join("、");d.push(`🎯 <strong>精准攻坚：</strong>针对 ${h}，建议每天安排 15 分钟回归课本基础概念，不盲目刷题。`)}if(y.strong.length>0){const h=y.strong.join("、");d.push(`🛡️ <strong>保持自信：</strong>${h} 是孩子的信心来源，请多给予具体表扬，稳住优势。`)}return y.strong.length===0&&y.weak.length===0&&d.push("🚀 <strong>寻找突破：</strong>目前成绩非常稳定。建议选定一门孩子最感兴趣的学科，尝试增加 5% 的投入，培养成优势学科。"),d.push("📅 <strong>习惯养成：</strong>检查孩子是否养成了“先复习，后作业”的习惯。"),d.map(h=>`<li style="margin-bottom:8px; line-height:1.5;">${h}</li>`).join("")})()}
+                    ${(()=>{const p=[];if(h.weak.length>0){const g=h.weak.join("、");p.push(`🎯 <strong>精准攻坚：</strong>针对 ${g}，建议每天安排 15 分钟回归课本基础概念，不盲目刷题。`)}if(h.strong.length>0){const g=h.strong.join("、");p.push(`🛡️ <strong>保持自信：</strong>${g} 是孩子的信心来源，请多给予具体表扬，稳住优势。`)}return h.strong.length===0&&h.weak.length===0&&p.push("🚀 <strong>寻找突破：</strong>目前成绩非常稳定。建议选定一门孩子最感兴趣的学科，尝试增加 5% 的投入，培养成优势学科。"),p.push("📅 <strong>习惯养成：</strong>检查孩子是否养成了“先复习，后作业”的习惯。"),p.map(g=>`<li style="margin-bottom:8px; line-height:1.5;">${g}</li>`).join("")})()}
                 </ul>
             </div>
-        `,xt=`
+        `,gt=`
             <div class="insta-visual-area">
                 <div style="width:100%; height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; background:linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045); border-radius:8px; color:white; padding:40px 0;">
                     <div style="font-size:16px; opacity:0.9; text-transform:uppercase; letter-spacing:2px;">Total Score</div>
-                    <div style="font-size:64px; font-weight:800; text-shadow:0 4px 10px rgba(0,0,0,0.2);">${Number.isFinite(j)?j.toFixed(1):"-"}</div>
+                    <div style="font-size:64px; font-weight:800; text-shadow:0 4px 10px rgba(0,0,0,0.2);">${Number.isFinite(M)?M.toFixed(1):"-"}</div>
                     <div style="margin-top:10px; font-size:18px; font-weight:bold; background:rgba(255,255,255,0.2); padding:5px 15px; border-radius:20px;">
                         全校排名: ${safeGet(r,"ranks.total.school","-")}
                     </div>
-                    <div style="margin-top:20px; font-size:12px; opacity:0.8;">击败了${E} ${H}% 的考生</div>
+                    <div style="margin-top:20px; font-size:12px; opacity:0.8;">击败了${D} ${d}% 的考生</div>
                 </div>
             </div>
-        `,B=J?`
+        `,ut=_?`
             <div style="margin:12px 14px 0 14px; background:#eef2ff; border:1px solid #c7d2fe; border-radius:8px; padding:10px 12px;">
                 <div style="font-size:12px; color:#3730a3; line-height:1.5;">
                     <strong>状态：☁️ 云端对比已启用</strong><br>
-                    当前对比：${J.prevExamId||"上次"} → ${J.latestExamId||"本次"}
+                    当前对比：${_.prevExamId||"上次"} → ${_.latestExamId||"本次"}
                 </div>
-                <div style="font-size:11px; color:#6366f1; margin-top:4px;">来源：${J.title||"云端记录"}</div>
+                <div style="font-size:11px; color:#6366f1; margin-top:4px;">来源：${_.title||"云端记录"}</div>
             </div>
         `:"";return`
             <div class="insta-view-container" style="background:#fafafa; padding-top:20px;">
                 <div class="insta-card">
                     <!-- Header -->
                     <div class="insta-header">
-                        <div class="insta-avatar-ring"><div class="insta-avatar">${L}</div></div>
+                        <div class="insta-avatar-ring"><div class="insta-avatar">${A}</div></div>
                         <div class="insta-user-info">
                             <div class="insta-username">${e.name} <i class="ti ti-discount-check-filled insta-verified"></i></div>
                             <div class="insta-location">${e.school} · ${e.class}</div>
@@ -377,7 +377,7 @@
                     </div>
                     
                     <!-- 1. 核心总分大卡片 (Visual Area - 旧模块) -->
-                    ${xt}
+                    ${gt}
                     ${igInsightHtml}
                     
                     <!-- Actions (点赞栏 - 旧模块) -->
@@ -396,28 +396,28 @@
                     <!-- Caption (文案 - 旧模块) -->
                     <div class="insta-caption">
                         <span class="insta-caption-name">${CONFIG.name}教务处</span>
-                        本次考试成绩已出炉！${Y}，请查收您的学习报告。
+                        本次考试成绩已出炉！${$}，请查收您的学习报告。
                         <span class="insta-tags">#期末考试 #${e.school} #学习报告</span>
                     </div>
 
                     <!-- 2. 🟢 新增：模块④ 学情结构一句话诊断 -->
-                    ${typeof Z!="undefined"?Z:""}
+                    ${typeof c!="undefined"?c:""}
 
                     <!-- 3. 🟢 新增：模块⑤ 优势/短板学科折叠清单 -->
-                    ${typeof at!="undefined"?at:""}
+                    ${typeof X!="undefined"?X:""}
 
                     <!-- 4. 🟢 新增：图表容器 (雷达图/均衡度 - 之前定义的 chartsHtml) -->
-                    ${B}
-                    ${u}
+                    ${ut}
+                    ${m}
 
                     <!-- 5. 单科成绩列表 (旧模块) -->
                     <div class="insta-comments" style="margin-top:15px;">
                         <div style="color:#8e8e8e; margin-bottom:5px; font-size:12px; font-weight:bold;">📄 单科成绩详情</div>
-                        ${g}
+                        ${at}
                     </div>
 
                     <!-- 6. 🟢 新增：模块⑥ 家长执行建议 -->
-                    ${typeof it!="undefined"?it:""}
+                    ${typeof ot!="undefined"?ot:""}
 
                     <!-- Timestamp -->
                     <div class="insta-timestamp">${a}</div>
@@ -428,4 +428,4 @@
                     <button class="btn btn-sm btn-gray" onclick="Auth.logout()">退出登录</button>
                 </div>
             </div>
-        `}Object.assign(window,{getTrendBadge:z,renderSingleReportCardHTML:Rt,renderInstagramCard:Tt}),window.__REPORT_RENDER_RUNTIME_PATCHED__=!0})();
+        `}Object.assign(window,{getTrendBadge:T,renderSingleReportCardHTML:St,renderInstagramCard:Ct}),window.__REPORT_RENDER_RUNTIME_PATCHED__=!0})();

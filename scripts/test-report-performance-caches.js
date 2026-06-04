@@ -44,6 +44,8 @@ const pkg = JSON.parse(read(packageFile));
     'getPreviousHistoryEntryForReport',
     'hasUsablePrevHistoryStudent ? null : getCachedPreviousRecord',
     'cacheableReportHtml',
+    'function renderSingleReportCardHTML(stu, mode, options = {})',
+    'Array.isArray(options.reportExamHistory)',
     'ReportRenderPerfCache.html.set',
     "rankValue !== undefined && rankValue !== null && rankValue !== '' && rankValue !== '-'",
     'readHistoricalRankValue',
@@ -64,7 +66,10 @@ const pkg = JSON.parse(read(packageFile));
     'getHistoricalReportExamIds',
     'lastChartScheduleKey',
     'lastStrengthKey',
-    'lastCompareHiddenKey'
+    'lastCompareHiddenKey',
+    'getReportHistoryForQuery',
+    "renderSingleReportCardHTML(stu, 'FULL', {",
+    'reportExamHistory: getReportHistoryForQuery()'
 ].forEach((token) => assertContains(app, token, 'public/assets/js/app.js'));
 
 const refreshReportStart = app.indexOf('async function refreshRenderedStudentReportAfterHistory');

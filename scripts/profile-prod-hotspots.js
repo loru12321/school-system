@@ -90,6 +90,10 @@ async function installProfiler(page) {
       'renderRadarChart',
       'renderVarianceChart',
       'analyzeStrengthsAndWeaknesses',
+      'renderBottom3TableOnly',
+      'renderBottom3TableBody',
+      'renderTables',
+      'refreshBottom3Summary',
       'ensureFreshmanExamRuntimeLoaded',
       'ensureXlsxVendorLoaded',
       'ensureChartVendorLoaded',
@@ -125,39 +129,44 @@ async function installProfiler(page) {
       'onProgressComparePeriodCountChange'
     ];
     window.__PROD_PROFILE = window.__PROD_PROFILE || { calls: {}, longTasks: [], events: [] };
-    const record = (name, duration, status) => {
+    const stackSampleNames = new Set(['doQuery', 'renderSingleReportCardHTML', 'renderBottom3TableOnly']);
+    const record = (name, duration, status, stack) => {
       const calls = window.__PROD_PROFILE.calls;
-      const item = calls[name] || (calls[name] = { count: 0, total: 0, max: 0, errors: 0, samples: [] });
+      const item = calls[name] || (calls[name] = { count: 0, total: 0, max: 0, errors: 0, samples: [], stacks: [] });
       item.count += 1;
       item.total += duration;
       item.max = Math.max(item.max, duration);
       if (status === 'error') item.errors += 1;
       item.samples.push(Number(duration.toFixed(2)));
       if (item.samples.length > 10) item.samples.shift();
+      if (stackSampleNames.has(name) && item.stacks.length < 5) {
+        item.stacks.push(String(stack || '').split('\n').slice(1, 6).map(line => line.trim()));
+      }
     };
     const wrapOne = (name) => {
       const fn = window[name];
       if (typeof fn !== 'function' || fn.__profileWrapped) return;
       const wrapped = function (...args) {
         const started = performance.now();
+        const stack = stackSampleNames.has(name) ? new Error().stack : '';
         try {
           const result = fn.apply(this, args);
           if (result && typeof result.then === 'function') {
             return result.then(
               (value) => {
-                record(name, performance.now() - started, 'ok');
+                record(name, performance.now() - started, 'ok', stack);
                 return value;
               },
               (error) => {
-                record(name, performance.now() - started, 'error');
+                record(name, performance.now() - started, 'error', stack);
                 throw error;
               }
             );
           }
-          record(name, performance.now() - started, 'ok');
+          record(name, performance.now() - started, 'ok', stack);
           return result;
         } catch (error) {
-          record(name, performance.now() - started, 'error');
+          record(name, performance.now() - started, 'error', stack);
           throw error;
         }
       };
@@ -393,7 +402,8 @@ async function run() {
         avgMs: Number((item.total / Math.max(1, item.count)).toFixed(2)),
         maxMs: Number(item.max.toFixed(2)),
         errors: item.errors,
-        samples: item.samples
+        samples: item.samples,
+        stacks: item.stacks || []
       }))
       .sort((a, b) => b.totalMs - a.totalMs);
     return {

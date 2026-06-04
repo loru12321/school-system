@@ -10,7 +10,45 @@ const { chromium } = require('playwright');
 const SMOKE_URL = process.env.SMOKE_URL || 'https://schoolsystem.com.cn/';
 const SMOKE_USER = process.env.SMOKE_USER || 'admin';
 const SMOKE_PASS = process.env.SMOKE_PASS || 'admin123';
-const TARGET_ROLES = ['teacher', 'class_teacher'];
+const TARGET_ROLES = ['teacher', 'class_teacher', 'grade_director', 'director'];
+const ROLE_EXPECTATIONS = {
+    teacher: {
+        dataManagement: false,
+        studentOverview: false,
+        studentDetails: true,
+        splitTeacherModules: true,
+        studentDetailsAdminTools: false,
+        oldTeachingModules: false,
+        multiPeriodCompare: false
+    },
+    class_teacher: {
+        dataManagement: false,
+        studentOverview: false,
+        studentDetails: true,
+        splitTeacherModules: true,
+        studentDetailsAdminTools: false,
+        oldTeachingModules: false,
+        multiPeriodCompare: false
+    },
+    grade_director: {
+        dataManagement: false,
+        studentOverview: true,
+        studentDetails: true,
+        splitTeacherModules: true,
+        studentDetailsAdminTools: true,
+        oldTeachingModules: false,
+        multiPeriodCompare: true
+    },
+    director: {
+        dataManagement: true,
+        studentOverview: true,
+        studentDetails: true,
+        splitTeacherModules: true,
+        studentDetailsAdminTools: true,
+        oldTeachingModules: false,
+        multiPeriodCompare: true
+    }
+};
 
 async function login(page) {
     await page.goto(SMOKE_URL, { waitUntil: 'commit', timeout: 90000 });
@@ -77,14 +115,54 @@ async function login(page) {
 
 async function impersonateRole(page, role) {
     await page.evaluate((targetRole) => {
+        const roleConfig = {
+            teacher: {
+                username: 'smoke-teacher',
+                name: '白明新',
+                teacher_name: '白明新',
+                school: '银山实验学校',
+                class: '',
+                subject: '政治'
+            },
+            class_teacher: {
+                username: 'smoke-class_teacher',
+                name: '孙少章',
+                teacher_name: '孙少章',
+                school: '银山实验学校',
+                class: '9.4',
+                class_name: '9.4',
+                subject: '物理'
+            },
+            grade_director: {
+                username: 'smoke-grade_director',
+                name: '级部主任烟测',
+                teacher_name: '级部主任烟测',
+                school: '银山实验学校',
+                class: '9',
+                class_name: '9',
+                grade_name: '9年级'
+            },
+            director: {
+                username: 'smoke-director',
+                name: '教务主任烟测',
+                teacher_name: '教务主任烟测',
+                school: '银山实验学校',
+                class: '',
+                class_name: ''
+            }
+        };
+        const config = roleConfig[targetRole] || roleConfig.teacher;
         const user = {
-            username: `smoke-${targetRole}`,
-            name: targetRole === 'teacher' ? '白明新' : '班主任烟测',
+            username: config.username,
+            name: config.name,
+            teacher_name: config.teacher_name || config.name,
             role: targetRole,
             roles: [targetRole],
-            school: '银山实验学校',
-            class: '9.1',
-            subject: targetRole === 'teacher' ? '政治' : '',
+            school: config.school,
+            class: config.class || '',
+            class_name: config.class_name || config.class || '',
+            grade_name: config.grade_name || '',
+            subject: config.subject || '',
             local_only: true
         };
         if (window.AuthState && typeof window.AuthState.setCurrentUser === 'function') {
@@ -175,7 +253,7 @@ async function inspectRole(page, role) {
             if (id === 'student-details') {
                 const user = typeof window.getCurrentUser === 'function' ? window.getCurrentUser() : (window.CURRENT_USER || null);
                 const role = String(user?.role || '');
-                if (role === 'teacher' || role === 'class_teacher') {
+                if (role === 'teacher' || role === 'class_teacher' || role === 'grade_director' || role === 'director') {
                     const classSelect = document.getElementById('studentClassSelect');
                     const classOptions = Array.from(classSelect?.options || []).map(option => option.value).filter(Boolean);
                     const targetClass = classOptions[classOptions.length - 1] || '';
@@ -189,9 +267,17 @@ async function inspectRole(page, role) {
                         const normalize = typeof window.normalizeClass === 'function'
                             ? window.normalizeClass
                             : (value) => String(value || '').trim();
+                        const normalizedTarget = normalize(targetClass);
                         studentDetailsClassFilterWorks = visibleClasses.length === 0
-                            || visibleClasses.every(value => normalize(value) === normalize(targetClass));
-                        studentDetailsClassFilterDebug = { targetClass, visibleClasses: Array.from(new Set(visibleClasses)).sort() };
+                            || visibleClasses.every(value => {
+                                const normalizedValue = normalize(value);
+                                return normalizedValue === normalizedTarget;
+                            });
+                        studentDetailsClassFilterDebug = {
+                            targetClass,
+                            classOptions,
+                            visibleClasses: Array.from(new Set(visibleClasses)).sort()
+                        };
                     }
                 }
             }
@@ -235,30 +321,32 @@ async function inspectRole(page, role) {
     }, role);
 
     const failures = [];
-    if (summary.visibleDataManagement || summary.canAccessDataManagement) {
-        failures.push(`${role}: still exposes data management`);
+    const expected = ROLE_EXPECTATIONS[role] || ROLE_EXPECTATIONS.teacher;
+    const hasDataManagement = !!(summary.visibleDataManagement || summary.canAccessDataManagement);
+    if (hasDataManagement !== expected.dataManagement) {
+        failures.push(`${role}: data management visibility expected ${expected.dataManagement}, got ${hasDataManagement}`);
     }
-    if (summary.visibleOldTeachingModules.length) {
+    if (!expected.oldTeachingModules && summary.visibleOldTeachingModules.length) {
         failures.push(`${role}: still exposes old teaching modules ${summary.visibleOldTeachingModules.join(', ')}`);
     }
-    if (summary.canAccessStudentOverview) {
-        failures.push(`${role}: can access student overview; should only keep student details in learning diagnosis`);
+    if (!!summary.canAccessStudentOverview !== expected.studentOverview) {
+        failures.push(`${role}: student overview access expected ${expected.studentOverview}, got ${summary.canAccessStudentOverview}`);
     }
-    if (!summary.canAccessStudentDetails) {
-        failures.push(`${role}: cannot access student details`);
+    if (!!summary.canAccessStudentDetails !== expected.studentDetails) {
+        failures.push(`${role}: student details access expected ${expected.studentDetails}, got ${summary.canAccessStudentDetails}`);
     }
-    if (!summary.canAccessSplitTeacherModules) {
-        failures.push(`${role}: cannot access all split teacher insight modules`);
+    if (!!summary.canAccessSplitTeacherModules !== expected.splitTeacherModules) {
+        failures.push(`${role}: split teacher module access expected ${expected.splitTeacherModules}, got ${summary.canAccessSplitTeacherModules}`);
     }
     moduleResults.forEach(result => {
-        if (result.visibleForbiddenPanelCount > 0 || result.visibleTextHasMultiPeriodCompare) {
+        if (!expected.multiPeriodCompare && (result.visibleForbiddenPanelCount > 0 || result.visibleTextHasMultiPeriodCompare)) {
             failures.push(`${role}/${result.id}: visible multi-period comparison remains`);
         }
         if (/^teacher-/.test(result.id) && result.visibleOldTeachingContent) {
             failures.push(`${role}/${result.id}: old teaching-management content remains`);
         }
-        if (result.visibleStudentDetailsRestrictedContent) {
-            failures.push(`${role}/${result.id}: student detail admin-only tools remain visible`);
+        if (result.id === 'student-details' && !!result.visibleStudentDetailsRestrictedContent !== expected.studentDetailsAdminTools) {
+            failures.push(`${role}/${result.id}: student detail admin tools expected ${expected.studentDetailsAdminTools}, got ${result.visibleStudentDetailsRestrictedContent}`);
         }
         if (result.studentDetailsClassFilterWorks === false) {
             failures.push(`${role}/${result.id}: class selector does not filter rows ${JSON.stringify(result.studentDetailsClassFilterDebug)}`);

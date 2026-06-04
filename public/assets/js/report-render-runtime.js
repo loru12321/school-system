@@ -242,7 +242,7 @@ function getTrendBadge(current, previous, type = 'score') {
 }
 
 // 1. 综合渲染入口：根据设备类型自动选择模板
-function renderSingleReportCardHTML(stu, mode) {
+function renderSingleReportCardHTML(stu, mode, options = {}) {
     // 1. 安卓 Canvas 兼容性兜底 (部分低版本安卓 WebView 无法渲染 Chart.js)
     // 如果是安卓且屏幕小，且没有 window.Chart 对象(极少数情况)，强制回退到 PC 版 HTML 表格
     const ua = navigator.userAgent.toLowerCase();
@@ -252,7 +252,7 @@ function renderSingleReportCardHTML(stu, mode) {
     if (isProblemAndroid) {
         console.warn('⚠️ Android Canvas 异常，强制切换 PC 模式');
         // 递归调用自己，传入 'PC' 模式以跳过下方的 Mobile 判断
-        return renderSingleReportCardHTML(stu, 'PC');
+        return renderSingleReportCardHTML(stu, 'PC', options);
     }
 
     // 2. 判断是否为手机端 (或显式请求 IG 模式)
@@ -290,7 +290,9 @@ function renderSingleReportCardHTML(stu, mode) {
 
     // 获取对比数据（云端上下文优先，避免回退导致“看不到对比”）
     const cloudHint = getCachedCloudCompareHint(reportStu);
-    const reportExamHistory = getCachedStudentExamHistory(reportStu);
+    const reportExamHistory = Array.isArray(options.reportExamHistory)
+        ? options.reportExamHistory
+        : getCachedStudentExamHistory(reportStu);
     const currentExamId = getEffectiveCurrentExamId();
     const prevHistoryEntry = getPreviousHistoryEntryForReport(reportExamHistory, currentExamId);
     const prevHistoryStu = prevHistoryEntry ? (prevHistoryEntry.student || prevHistoryEntry) : null;
