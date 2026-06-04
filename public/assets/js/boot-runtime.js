@@ -175,15 +175,22 @@ var SYSTEM_RUNTIME_SKILLS = {
             { key: 'teacher-analysis-main', src: './assets/js/teacher-analysis-main-runtime.js' }
         ]
     },
+    'student-overview': {
+        mode: 'demand',
+        warmup: 'demand',
+        triggers: ['student-overview'],
+        entries: [
+            { key: 'student-overview', src: './assets/js/student-overview-runtime.js' }
+        ]
+    },
     'teaching-management': {
         mode: 'demand',
         warmup: 'full',
-        triggers: ['student-overview'],
+        triggers: ['teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center'],
         entries: [
             { key: 'teaching-management', src: './assets/js/teaching-management-runtime.js' },
             { key: 'teaching-management-cloud', src: './assets/js/teaching-management-cloud-runtime.js' },
             { key: 'teaching-management-overview', src: './assets/js/teaching-management-overview-runtime.js' },
-            { key: 'student-overview', src: './assets/js/student-overview-runtime.js' },
             { key: 'teaching-management-version', src: './assets/js/teaching-management-version-runtime.js' }
         ]
     },
@@ -2695,6 +2702,10 @@ window.ensureSchoolProfileRuntimeLoaded = function () {
 
 window.ensureTeachingManagementRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('teaching-management');
+};
+
+window.ensureStudentOverviewRuntimeLoaded = function () {
+    return window.SystemRuntimeLoader.load('student-overview');
 };
 
 window.ensureAppDownloadRuntimeLoaded = function () {

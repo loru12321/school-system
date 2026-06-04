@@ -1506,10 +1506,10 @@ async function runModuleDeepCheck(page, id) {
                 };
             };
 
-            if (typeof window.ensureTeachingManagementRuntimeLoaded === 'function') {
-                await Promise.resolve(window.ensureTeachingManagementRuntimeLoaded()).catch(() => null);
+            if (typeof window.ensureStudentOverviewRuntimeLoaded === 'function') {
+                await Promise.resolve(window.ensureStudentOverviewRuntimeLoaded()).catch(() => null);
             } else if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
-                await Promise.resolve(window.SystemRuntimeLoader.load('teaching-management')).catch(() => null);
+                await Promise.resolve(window.SystemRuntimeLoader.load('student-overview')).catch(() => null);
             }
 
             ensureOverviewInputs();

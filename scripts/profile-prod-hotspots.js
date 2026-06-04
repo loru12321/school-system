@@ -289,7 +289,7 @@ async function profileFreshman(page) {
 
 async function profileStudentOverview(page) {
   await page.evaluate(async () => {
-    await Promise.resolve(window.ensureTeachingManagementRuntimeLoaded?.()).catch(() => null);
+    await Promise.resolve(window.ensureStudentOverviewRuntimeLoaded?.()).catch(() => null);
     window.updateStudentSchoolSelect?.();
     window.updateStudentCompareExamSelects?.();
     window.updateReportCompareExamSelects?.();

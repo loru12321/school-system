@@ -12,6 +12,23 @@ const StudentOverviewPerfCache = {
     potentialCount: 0,
     renderSignature: ''
 };
+var SM_OVERVIEW_RENDER_FRAME = 0;
+
+function smScheduleStudentOverviewRender() {
+    if (SM_OVERVIEW_RENDER_FRAME) return;
+    const runner = () => {
+        SM_OVERVIEW_RENDER_FRAME = 0;
+        const active = document.getElementById('student-overview');
+        if (active && active.classList.contains('active') && typeof renderStudentOverview === 'function') {
+            renderStudentOverview();
+        }
+    };
+    if (typeof window.requestAnimationFrame === 'function') {
+        SM_OVERVIEW_RENDER_FRAME = window.requestAnimationFrame(runner);
+    } else {
+        SM_OVERVIEW_RENDER_FRAME = window.setTimeout(runner, 16);
+    }
+}
 
 function smRowsSignature(rows) {
     const list = Array.isArray(rows) ? rows : [];
@@ -501,3 +518,5 @@ function renderStudentOverview() {
     smRenderQuickEntries(model);
     bindStudentOverviewActions();
 }
+
+window.smScheduleStudentOverviewRender = smScheduleStudentOverviewRender;

@@ -605,10 +605,10 @@
                 return Promise.resolve();
             }
             if (window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
-                return window.SystemRuntimeLoader.load('teaching-management');
+                return window.SystemRuntimeLoader.load('student-overview');
             }
-            if (typeof window.ensureTeachingManagementRuntimeLoaded === 'function') {
-                return window.ensureTeachingManagementRuntimeLoaded();
+            if (typeof window.ensureStudentOverviewRuntimeLoaded === 'function') {
+                return window.ensureStudentOverviewRuntimeLoaded();
             }
             return Promise.reject(new Error('student overview runtime loader unavailable'));
         };

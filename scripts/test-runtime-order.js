@@ -444,6 +444,8 @@ assert.ok(bootRuntime.includes(teachingManagementCloudRef), 'boot-runtime.js sho
 assert.ok(bootRuntime.includes(teachingManagementOverviewRef), 'boot-runtime.js should reference teaching-management-overview-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(studentOverviewRef), 'boot-runtime.js should reference student-overview-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(teachingManagementVersionRef), 'boot-runtime.js should reference teaching-management-version-runtime.js for lazy loading');
+assert.ok(bootRuntime.includes("'student-overview': {\n        mode: 'demand',\n        warmup: 'demand',\n        triggers: ['student-overview']"), 'student overview should have its own demand runtime skill');
+assert.ok(bootRuntime.includes("window.ensureStudentOverviewRuntimeLoaded = function ()"), 'boot-runtime.js should expose ensureStudentOverviewRuntimeLoaded');
 assert.ok(bootRuntime.includes(reportChartRef), 'boot-runtime.js should reference report-chart-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes(reportExportRef), 'boot-runtime.js should reference report-export-runtime.js for lazy loading');
 assert.ok(!indexHtml.includes('id="ai-analysis"'), 'index.html should not include the removed analysis module');
@@ -598,7 +600,7 @@ assert.ok(teacherCompareResultRuntime.includes('function canUseTeacherMultiPerio
 assert.ok(teacherCompareResultRuntime.includes('guardTeacherMultiPeriodCompare(hintEl, resultEl)'), 'teacher multi-period compare generation should enforce the role guard');
 assert.ok(teacherCompareCloudRuntime.includes('function guardTeacherMultiPeriodCloudAction()'), 'teacher multi-period cloud actions should enforce the role guard');
 assert.ok(permissionPolicyRuntime.includes("roleChecks.push(ownTeacherMetric || (!!normalizedSubject && teachingScope.subjects.has(normalizedSubject)));"), 'teacher-analysis should allow teachers to see same-school same-subject teacher metrics');
-assert.ok(teacherAnalysisCoreRuntime.includes("const useSchoolWideTeacherPeerScope = user?.role === 'teacher';"), 'teacher-analysis should compute school-wide peer stats for teacher accounts before subject-level visibility filtering');
+assert.ok(teacherAnalysisCoreRuntime.includes("const useSchoolWideTeacherPeerScope = isTeacherUser && !isClassTeacherUser;"), 'teacher-analysis should compute school-wide peer stats for teacher-only query scope without leaking class-teacher homeroom scope');
 assert.ok(teacherAnalysisCoreRuntime.includes('useSchoolWideTeacherPeerScope ? null : user'), 'teacher-analysis baselines should use school-wide peer scope for teacher comparison rows');
 assert.ok(!shellRuntime.includes("text: '绩效公平考核模型'"), 'teaching management quick switch should not expose the removed performance fairness module');
 assert.ok(!teachingManagementOverviewRuntime.includes("tmSetQuickEntryState(\n        'single-school-eval'"), 'teaching management overview should not render a performance fairness quick entry');
@@ -651,6 +653,9 @@ assert.ok(schoolNormalizationRuntime.includes('townshipEligibilityCache.get(scho
 assert.ok(appSource.includes('const totalsBySchool = new Map();'), 'student comparison rank context should pre-group totals by school');
 assert.ok(appSource.includes('const totalsByClass = new Map();'), 'student comparison rank context should pre-group totals by class');
 assert.ok(teachingManagementRuntime.includes('function smScheduleStudentOverviewRender()'), 'student overview should coalesce filter-change refreshes into one frame');
+assert.ok(studentOverviewRuntime.includes('function smScheduleStudentOverviewRender()'), 'student overview scheduler should live with the student overview runtime');
+assert.ok(studentOverviewEntrySource.includes("window.SystemRuntimeLoader.load('student-overview')"), 'student overview entry should load only the student overview runtime');
+assert.ok(!studentOverviewEntrySource.includes("window.SystemRuntimeLoader.load('teaching-management')"), 'student overview entry should not load the teaching-management bundle');
 assert.ok(moduleEntryRuntime.includes('student-overview-deferred-select'), 'student overview should defer cross-module selector refreshes off the switch frame');
 assert.ok(moduleEntryRuntime.includes('const deferredSelectorUpdates = ['), 'student overview should batch non-critical selector refreshes');
 assert.ok(!studentOverviewEntrySource.includes('updateCorrelationSchoolSelect'), 'student overview should not refresh hidden correlation-analysis selectors on entry');
