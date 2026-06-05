@@ -1489,33 +1489,42 @@
 
             const targetName = String(student.name || '').trim();
             const targetClassNum = String(student.class || '').replace(/[^0-9]/g, '');
+            const findStudentInRows = (list, scopedToTargetSchool = false) => {
+                const rows = Array.isArray(list) ? list : [];
+                if (!rows.length) return null;
+                if (window.RankingDataService && typeof window.RankingDataService.findStudent === 'function') {
+                    return window.RankingDataService.findStudent(rows, {
+                        name: student.name,
+                        school: scopedToTargetSchool ? '' : student.school,
+                        className: student.class
+                    });
+                }
+                return rows.find(s => {
+                    if (String(s?.name || '').trim() !== targetName) return false;
+                    if (!targetClassNum) return true;
+                    return String(s?.class || '').replace(/[^0-9]/g, '') === targetClassNum;
+                }) || null;
+            };
             const findHistoryMatch = (payload) => {
                 let match = null;
                 const schools = payload?.SCHOOLS || payload?.schools || {};
-                for (const [schoolName, schoolData] of Object.entries(schools)) {
-                    if (student.school && schoolName !== student.school) continue;
-                    const list = Array.isArray(schoolData?.students) ? schoolData.students : [];
-                    match = list.find(s => {
-                        if (String(s?.name || '').trim() !== targetName) return false;
-                        if (!targetClassNum) return true;
-                        return String(s?.class || '').replace(/[^0-9]/g, '') === targetClassNum;
-                    });
-                    if (match) break;
+                if (student.school && schools && typeof schools === 'object') {
+                    const directSchool = schools[student.school];
+                    if (directSchool) {
+                        match = findStudentInRows(directSchool?.students, true);
+                    }
+                }
+                if (!match && schools && typeof schools === 'object') {
+                    for (const [schoolName, schoolData] of Object.entries(schools)) {
+                        if (student.school && schoolName !== student.school) continue;
+                        match = findStudentInRows(schoolData?.students, true);
+                        if (match) break;
+                    }
                 }
 
                 if (!match) {
                     const list = payload?.students || payload?.RAW_DATA || payload?.data || [];
-                    match = window.RankingDataService && typeof window.RankingDataService.findStudent === 'function'
-                        ? window.RankingDataService.findStudent(list, {
-                            name: student.name,
-                            school: student.school,
-                            className: student.class
-                        })
-                        : list.find(s => {
-                            if (String(s?.name || '').trim() !== targetName) return false;
-                            if (!targetClassNum) return true;
-                            return String(s?.class || '').replace(/[^0-9]/g, '') === targetClassNum;
-                        });
+                    match = findStudentInRows(list);
                 }
                 return match;
             };

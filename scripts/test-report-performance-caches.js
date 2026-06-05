@@ -69,7 +69,8 @@ const pkg = JSON.parse(read(packageFile));
     'lastCompareHiddenKey',
     'getReportHistoryForQuery',
     "renderSingleReportCardHTML(stu, 'FULL', {",
-    'reportExamHistory: getReportHistoryForQuery()'
+    'reportExamHistory: getReportHistoryForQuery()',
+    'getMissingReportHistoryExamIds'
 ].forEach((token) => assertContains(app, token, 'public/assets/js/app.js'));
 
 const refreshReportStart = app.indexOf('async function refreshRenderedStudentReportAfterHistory');
@@ -140,8 +141,8 @@ if (!historySource || historySource.includes('computeExamDataFingerprint(examDat
 
 [
     'county: h.rankCounty || h.subjectRanks?.total?.county ||',
-    'examIds: historicalExamIds',
-    'if (!historicalExamIds.length || hasCachedReportHistoryForSelectedExams'
+    'examIds: missingHistoricalExamIds',
+    'if (!missingHistoricalExamIds.length) return;'
 ].forEach((token) => assertContains(app, token, 'public/assets/js/app.js'));
 
 const cloudHistoryStart = cloud.indexOf('fetchStudentExamHistory: async function');
@@ -156,6 +157,8 @@ if (!cloudHistorySource || cloudHistorySource.includes('computeExamDataFingerpri
     'fetchStudentExamHistory: async function (student, options = {})',
     'const requestedExamIds = Array.from(new Set(',
     'keyIn: requestedExamIds',
+    'const findStudentInRows = (list, scopedToTargetSchool = false) => {',
+    'const directSchool = schools[student.school];',
     "const rankCounty = match.ranks?.total?.county ?? match.rankCounty ?? match.countyRank ?? getCountyRankFallback(payload, match, 'total');",
     'getCountyRankFallback',
     'countyRankFallbackCache',
