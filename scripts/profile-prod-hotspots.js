@@ -198,11 +198,11 @@ async function installProfiler(page) {
 
 async function switchModule(page, id) {
   await page.evaluate((moduleId) => window.switchTab?.(moduleId), id);
-  await page.waitForTimeout(800);
   await page.waitForFunction((moduleId) => {
     const section = document.getElementById(moduleId);
     return !!section && section.classList.contains('active');
   }, id, { timeout: 30000 }).catch(() => {});
+  await page.waitForTimeout(120);
   await installProfiler(page);
 }
 

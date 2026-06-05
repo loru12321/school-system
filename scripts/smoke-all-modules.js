@@ -658,11 +658,18 @@ async function smokeSwitchModule(page, id) {
         }, id);
 
         if (id === 'student-details') {
-            await page.waitForTimeout(1800);
+            await page.waitForFunction(() => {
+                const section = document.getElementById('student-details');
+                const table = document.getElementById('studentDetailTable');
+                const headers = Array.from(table?.querySelectorAll('thead th') || [])
+                    .map((cell) => String(cell.textContent || '').replace(/\s+/g, '').trim());
+                const countyRankAfterTownRank = headers.some((header, index) => (
+                    header.includes('镇排') && String(headers[index + 1] || '').includes('县排')
+                ));
+                return !!section && section.classList.contains('active') && countyRankAfterTownRank;
+            }, { timeout: 1500 }).catch(() => {});
             const earlyState = await collectState();
-            if (earlyState.active || earlyState.visible || earlyState.ok) {
-                return earlyState;
-            }
+            if (earlyState.active || earlyState.visible || earlyState.ok) return earlyState;
         }
 
         await page.waitForFunction((moduleId) => {
