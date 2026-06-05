@@ -190,7 +190,9 @@
         if (typeof syncShellChromeBridge === 'function') syncShellChromeBridge(id);
         if (typeof ensureModuleHelpButton === 'function') ensureModuleHelpButton(id);
         if (currentCategory === 'town' && typeof ensureTownSubmoduleCompareUIs === 'function') {
-            ensureTownSubmoduleCompareUIs();
+            scheduleModuleTask('town-submodule-compare-ui', () => {
+                if (typeof ensureTownSubmoduleCompareUIs === 'function') ensureTownSubmoduleCompareUIs();
+            }, { delay: 80, frame: true });
         }
     }
 

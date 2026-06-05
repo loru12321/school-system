@@ -81,6 +81,30 @@ const TOWN_SUBMODULE_META = {
     indicator: '指标生达标核算',
     bottom3: '低分率/后1/3核算'
 };
+let townSubmoduleCollapseBindTimer = null;
+
+function scheduleTownSubmoduleCompareCollapseBinding() {
+    if (townSubmoduleCollapseBindTimer !== null) return;
+    const schedule = typeof window.requestAnimationFrame === 'function'
+        ? window.requestAnimationFrame
+        : (callback) => window.setTimeout(callback, 0);
+    townSubmoduleCollapseBindTimer = schedule(() => {
+        townSubmoduleCollapseBindTimer = null;
+        if (typeof window.applyComparisonPanelCollapses === 'function') window.applyComparisonPanelCollapses();
+    });
+}
+
+function getTownSubmoduleSecHead(section) {
+    if (!section) return null;
+    let child = section.firstElementChild;
+    let inspected = 0;
+    while (child && inspected < 8) {
+        if (child.classList && child.classList.contains('sec-head')) return child;
+        child = child.nextElementSibling;
+        inspected += 1;
+    }
+    return null;
+}
 
 function townNormalizeSchoolName(value) {
     return String(value || '').trim();
@@ -122,13 +146,18 @@ function resolveTownSubmoduleDefaultSchool(schoolList, preferredSchool = townGet
 
 function ensureTownSubmoduleCompareUIs() {
     if (!canShowTownSubmoduleMultiPeriodCompare()) {
-        document.querySelectorAll('.town-submodule-compare-panel').forEach((panel) => panel.remove());
+        const panels = document.querySelectorAll('.town-submodule-compare-panel');
+        panels.forEach((panel) => panel.remove());
+        if (panels.length) {
+            scheduleTownSubmoduleCompareCollapseBinding();
+        }
         return;
     }
+    let didChange = false;
     Object.entries(TOWN_SUBMODULE_META).forEach(([submoduleId, title]) => {
         const section = document.getElementById(submoduleId);
         if (!section) return;
-        if (section.querySelector(`.town-submodule-compare-panel[data-submodule="${submoduleId}"]`)) return;
+        if (document.getElementById(`town-submodule-compare-result-${submoduleId}`)) return;
 
         const panel = document.createElement('div');
         panel.className = 'town-submodule-compare-panel';
@@ -148,12 +177,14 @@ function ensureTownSubmoduleCompareUIs() {
                 <div id="town-submodule-compare-result-${submoduleId}" style="margin-top:10px;"></div>
             `;
 
-        const secHead = section.querySelector('.sec-head');
+        const secHead = getTownSubmoduleSecHead(section);
         if (secHead && secHead.parentNode) secHead.parentNode.insertBefore(panel, secHead.nextSibling);
         else section.insertBefore(panel, section.firstChild);
-        if (typeof window.applyComparisonPanelCollapses === 'function') window.applyComparisonPanelCollapses();
-        if (typeof window.refreshShellEnhancements === 'function') window.refreshShellEnhancements();
+        didChange = true;
     });
+    if (didChange) {
+        scheduleTownSubmoduleCompareCollapseBinding();
+    }
 }
 
 function getTownSubmoduleSeries(submoduleId, selectedByExam, summaryByExam, school) {
