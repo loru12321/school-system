@@ -162,6 +162,9 @@ if (!cloudHistorySource || cloudHistorySource.includes('computeExamDataFingerpri
     "const rankCounty = match.ranks?.total?.county ?? match.rankCounty ?? match.countyRank ?? getCountyRankFallback(payload, match, 'total');",
     'getCountyRankFallback',
     'countyRankFallbackCache',
+    '_studentHistoryPayloadCache',
+    'parseHistoryPayloadRow',
+    'cache.size > 12',
     'subjectCache.set(subject, rankByScore);',
     'subjectRanks[subject] = { ...ranks, county: fallback };',
     'rankCounty,'

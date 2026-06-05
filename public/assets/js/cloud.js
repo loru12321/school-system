@@ -1480,6 +1480,7 @@
             ].join('|');
             this._studentHistoryTasks = this._studentHistoryTasks || {};
             this._studentHistoryCache = this._studentHistoryCache || {};
+            this._studentHistoryPayloadCache = this._studentHistoryPayloadCache || new Map();
             const cachedHistory = this._studentHistoryCache[historyKey];
             if (cachedHistory && Date.now() - cachedHistory.at < STUDENT_HISTORY_CACHE_TTL_MS) {
                 setCloudStatus('success', `历史${cachedHistory.result?.data?.length || 0}条`);
@@ -1534,6 +1535,24 @@
                 const rows = payload?.RAW_DATA || payload?.data || [];
                 const rowCount = Array.isArray(rows) ? rows.length : 0;
                 return [String(examId || '').trim(), String(updatedAt || '').trim(), rowCount].join(':');
+            };
+            const parseHistoryPayloadRow = (row) => {
+                const cache = this._studentHistoryPayloadCache;
+                const key = [
+                    String(row?.key || '').trim(),
+                    String(row?.updated_at || '').trim(),
+                    String(row?.content || '').length
+                ].join('|');
+                if (cache && cache.has(key)) return cache.get(key);
+                const payload = parsePayload(row?.content) || {};
+                if (cache) {
+                    cache.set(key, payload);
+                    if (cache.size > 12) {
+                        const firstKey = cache.keys().next().value;
+                        if (firstKey) cache.delete(firstKey);
+                    }
+                }
+                return payload;
             };
             const countyRankFallbackCache = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
             const getCountyRankFallback = (payload, match, subject = 'total') => {
@@ -1681,7 +1700,7 @@
 
                 for (const row of rows) {
                     try {
-                        const payload = parsePayload(row.content) || {};
+                        const payload = parseHistoryPayloadRow(row);
                         const entry = buildHistoryEntry(row.key, payload, row.updated_at);
                         if (entry) history.push(entry);
                     } catch (rowErr) {
