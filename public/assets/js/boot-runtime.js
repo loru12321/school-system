@@ -74,7 +74,6 @@ function armAuthReadySafetyTimeout(timeoutMs = 15000) {
     }, timeoutMs);
 }
 
-// Initialize AuthReady promise early to guard the UI transition
 window.__BOOT_ASSET_VERSION__ = window.__BOOT_ASSET_VERSION__ || getBootRuntimeAssetVersion();
 window.AuthReady = new Promise((resolve) => {
     window.resolveAuthReady = resolve;
@@ -93,268 +92,127 @@ document.addEventListener('DOMContentLoaded', function () {
     scheduleAppModuleWarmup();
 });
 
-var BOOT_VENDOR_MODULES = [
-    './assets/vendor/alpinejs/cdn.min.js'
-];
-
+var BOOT_JS_BASE = './assets/js/';
+var BOOT_VENDOR_BASE = './assets/vendor/';
+var BOOT_VENDOR_MODULES = [BOOT_VENDOR_BASE + 'alpinejs/cdn.min.js'];
 var DEFERRED_APP_MODULES = [];
 
+function bootJs(name) { return BOOT_JS_BASE + name; }
+function bootVend(name) { return BOOT_VENDOR_BASE + name; }
+function bootEntry(key, src) { return { key, src }; }
+function bootSkill(mode, warmup, triggers, entries) { return { mode, warmup, triggers, entries }; }
+
 var SYSTEM_RUNTIME_SKILLS = {
-    'crypto-vendor': {
-        mode: 'demand',
-        warmup: 'demand',
-        triggers: ['CryptoJS', 'freshman-simulator', 'inquiry-package'],
-        entries: [
-            { key: 'crypto-vendor', src: './assets/vendor/crypto-js/crypto-js.min.js' }
-        ]
-    },
-    'shell-polish': {
-        mode: 'idle',
-        warmup: 'demand',
-        triggers: ['shell-polish', 'refreshShellEnhancements'],
-        entries: [
-            { key: 'shell-polish', src: './assets/js/shell-polish-runtime.js' }
-        ]
-    },
-    'sweetalert-vendor': {
-        mode: 'idle',
-        warmup: 'demand',
-        triggers: ['Swal', 'uiAlert', 'modal-alert'],
-        entries: [
-            { key: 'sweetalert-vendor', src: './assets/vendor/sweetalert2/sweetalert2.all.min.js' }
-        ]
-    },
-    'chart-vendor': {
-        mode: 'demand',
-        warmup: 'demand',
-        triggers: ['Chart', 'chart-render'],
-        entries: [
-            { key: 'chart-vendor', src: './assets/vendor/chart.js/chart.umd.min.js' }
-        ]
-    },
-    'shell-enhancements': {
-        mode: 'idle',
-        warmup: 'demand',
-        triggers: ['app-shell', 'hover-tooltips', 'scroll-effects'],
-        entries: [
-            { key: 'gsap-vendor', src: './assets/vendor/gsap/gsap.min.js' },
-            { key: 'scroll-trigger-vendor', src: './assets/vendor/gsap/ScrollTrigger.min.js' },
-            { key: 'popper-vendor', src: './assets/vendor/popperjs/popper.min.js' },
-            { key: 'tippy-vendor', src: './assets/vendor/tippyjs/tippy.umd.min.js' },
-            { key: 'simplebar-vendor', src: './assets/vendor/simplebar/simplebar.min.js' }
-        ]
-    },
-    'pdf-export': {
-        mode: 'demand',
-        warmup: 'full',
-        triggers: ['downloadSingleReportPDF', 'batchGeneratePDF'],
-        entries: [
-            { key: 'jspdf-vendor', src: './assets/vendor/jspdf/jspdf.umd.min.js' },
-            { key: 'html2canvas-vendor', src: './assets/vendor/html2canvas/html2canvas.min.js' }
-        ]
-    },
-    'report-render': {
-        mode: 'demand',
-        warmup: 'full',
-        triggers: ['report-generator', 'printSingleReport', 'renderSingleReportCardHTML'],
-        entries: [
-            { key: 'chart-vendor', src: './assets/vendor/chart.js/chart.umd.min.js' },
-            { key: 'report-render', src: './assets/js/report-render-runtime.js' },
-            { key: 'report-chart', src: './assets/js/report-chart-runtime.js' },
-            { key: 'report-export', src: './assets/js/report-export-runtime.js' }
-        ]
-    },
-    'teacher-analysis': {
-        mode: 'demand',
-        warmup: 'full',
-        triggers: ['teacher-analysis', 'cohort-growth', 'correlation-analysis'],
-        entries: [
-            { key: 'teacher-analysis-core', src: './assets/js/teacher-analysis-core-runtime.js' },
-            { key: 'teacher-analysis-ui', src: './assets/js/teacher-analysis-ui-runtime.js' },
-            { key: 'teacher-analysis-bridge', src: './assets/js/teacher-analysis-bridge-runtime.js' },
-            { key: 'teacher-analysis-main', src: './assets/js/teacher-analysis-main-runtime.js' }
-        ]
-    },
-    'student-overview': {
-        mode: 'demand',
-        warmup: 'demand',
-        triggers: ['student-overview'],
-        entries: [
-            { key: 'student-overview', src: './assets/js/student-overview-runtime.js' }
-        ]
-    },
-    'teaching-management': {
-        mode: 'demand',
-        warmup: 'full',
-        triggers: ['teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center'],
-        entries: [
-            { key: 'teaching-management', src: './assets/js/teaching-management-runtime.js' },
-            { key: 'teaching-management-cloud', src: './assets/js/teaching-management-cloud-runtime.js' },
-            { key: 'teaching-management-overview', src: './assets/js/teaching-management-overview-runtime.js' },
-            { key: 'teaching-management-version', src: './assets/js/teaching-management-version-runtime.js' }
-        ]
-    },
-    'student-compare': {
-        mode: 'demand',
-        warmup: 'demand',
-        triggers: ['renderStudentMultiPeriodComparison', 'saveStudentCompareToCloud', 'viewCloudStudentCompares'],
-        entries: [
-            { key: 'student-compare-result', src: './assets/js/student-compare-result-runtime.js' },
-            { key: 'student-compare-generate', src: './assets/js/student-compare-generate-runtime.js' },
-            { key: 'student-compare-cloud', src: './assets/js/student-compare-cloud-runtime.js' }
-        ]
-    },
-    'town-submodule-compare': {
-        mode: 'demand',
-        warmup: 'demand',
-        triggers: ['summary', 'town-submodule-compare', 'renderTownSubmoduleMultiPeriodComparison'],
-        entries: [
-            { key: 'town-submodule-compare', src: './assets/js/town-submodule-compare-runtime.js' }
-        ]
-    },
-    'teacher-compare': {
-        mode: 'demand',
-        warmup: 'full',
-        triggers: ['renderTeacherMultiPeriodComparison'],
-        entries: [
-            { key: 'teacher-compare-result', src: './assets/js/teacher-compare-result-runtime.js' },
-            { key: 'teacher-compare-cloud', src: './assets/js/teacher-compare-cloud-runtime.js' }
-        ]
-    },
-    'macro-compare': {
-        mode: 'demand',
-        warmup: 'full',
-        triggers: ['renderMacroMultiPeriodComparison'],
-        entries: [
-            { key: 'macro-compare-result', src: './assets/js/macro-compare-result-runtime.js' },
-            { key: 'macro-compare-cloud', src: './assets/js/macro-compare-cloud-runtime.js' }
-        ]
-    },
-    'app-download': {
-        mode: 'demand',
-        warmup: 'demand',
-        triggers: ['app-download-center'],
-        entries: [
-            { key: 'app-download', src: './assets/js/app-download-runtime.js' }
-        ]
-    },
-    'school-profile': {
-        mode: 'demand',
-        warmup: 'demand',
-        triggers: ['summary', 'showSchoolProfile'],
-        entries: [
-            { key: 'chart-vendor', src: './assets/vendor/chart.js/chart.umd.min.js' },
-            { key: 'school-profile', src: './assets/js/school-profile-runtime.js' }
-        ]
-    },
-    'county-analysis': {
-        mode: 'demand',
-        warmup: 'demand',
-        triggers: ['county-analysis', 'county-teacher-portrait', 'county-school-horizontal'],
-        entries: [
-            { key: 'county-school-horizontal', src: './assets/js/county-school-horizontal-runtime.js' },
-            { key: 'county-analysis', src: './assets/js/county-analysis-runtime.js' }
-        ]
-    },
-    'progress-analysis': {
-        mode: 'demand',
-        warmup: 'full',
-        triggers: ['progress-analysis'],
-        entries: [
-            { key: 'chart-vendor', src: './assets/vendor/chart.js/chart.umd.min.js' },
-            { key: 'progress-analysis', src: './assets/js/progress-analysis-runtime.js' }
-        ]
-    },
-    'data-manager-sql': {
-        mode: 'demand',
-        warmup: 'full',
-        triggers: ['data-manager-sql', 'talkToData'],
-        entries: [
-            { key: 'data-manager-sql', src: './assets/js/data-manager-sql.js' }
-        ]
-    },
-    'mobile-manager': {
-        mode: 'conditional',
-        warmup: 'mobile',
-        triggers: ['mobile-layout'],
-        entries: [
-            { key: 'mobile-manager', src: './assets/js/mobile-app-runtime.js' }
-        ]
-    },
-    'account-admin': {
-        mode: 'demand',
-        warmup: 'full',
-        triggers: ['account-admin', 'AccountExcel'],
-        entries: [
-            { key: 'account-admin', src: './assets/js/account-admin-runtime.js' }
-        ]
-    },
-    'history-compare': {
-        mode: 'demand',
-        warmup: 'full',
-        triggers: ['history-compare'],
-        entries: [
-            { key: 'chart-vendor', src: './assets/vendor/chart.js/chart.umd.min.js' },
-            { key: 'history-compare', src: './assets/js/history-compare-runtime.js' }
-        ]
-    },
-    'zhongkao-countdown': {
-        mode: 'demand',
-        warmup: 'demand',
-        triggers: ['zhongkao-countdown'],
-        entries: [
-            { key: 'zhongkao-countdown', src: './assets/js/zhongkao-countdown-runtime.js' }
-        ]
-    },
-    'freshman-exam': {
-        mode: 'demand',
-        warmup: 'demand',
-        triggers: ['freshman-simulator', 'exam-arranger'],
-        entries: [
-            { key: 'chart-vendor', src: './assets/vendor/chart.js/chart.umd.min.js' },
-            { key: 'freshman-exam', src: './assets/js/freshman-exam-runtime.js' }
-        ]
-    },
-    'grade-scheduler': {
-        mode: 'demand',
-        warmup: 'demand',
-        triggers: ['grade-scheduler'],
-        entries: [
-            { key: 'grade-scheduler', src: './assets/js/grade-scheduler-runtime.js' }
-        ]
-    },
-    'voice-control': {
-        mode: 'idle',
-        warmup: 'demand',
-        triggers: ['voice-control', 'voice-fab', 'VoiceControl.toggle'],
-        entries: [
-            { key: 'voice-control', src: './assets/js/voice-control-runtime.js' }
-        ]
-    },
-    'module-help': {
-        mode: 'demand',
-        warmup: 'demand',
-        triggers: ['showModuleHelp', 'ensureModuleHelpButton', 'module-help'],
-        entries: [
-            { key: 'module-help', src: './assets/js/module-help-runtime.js' }
-        ]
-    },
-    'packager': {
-        mode: 'demand',
-        warmup: 'demand',
-        triggers: ['exportDistributableHTML'],
-        entries: [
-            { key: 'packager', src: './assets/js/packager-runtime.js' }
-        ]
-    },
-    'worker-api': {
-        mode: 'demand',
-        warmup: 'demand',
-        triggers: ['WorkerAPI.run'],
-        entries: [
-            { key: 'worker-api', src: './assets/js/worker-api-runtime.js' }
-        ]
-    }
+    'crypto-vendor': bootSkill('demand', 'demand', ['CryptoJS', 'freshman-simulator', 'inquiry-package'], [
+        bootEntry('crypto-vendor', bootVend('crypto-js/crypto-js.min.js'))
+    ]),
+    'shell-polish': bootSkill('idle', 'demand', ['shell-polish', 'refreshShellEnhancements'], [
+        bootEntry('shell-polish', bootJs('shell-polish-runtime.js'))
+    ]),
+    'sweetalert-vendor': bootSkill('idle', 'demand', ['Swal', 'uiAlert', 'modal-alert'], [
+        bootEntry('sweetalert-vendor', bootVend('sweetalert2/sweetalert2.all.min.js'))
+    ]),
+    'chart-vendor': bootSkill('demand', 'demand', ['Chart', 'chart-render'], [
+        bootEntry('chart-vendor', bootVend('chart.js/chart.umd.min.js'))
+    ]),
+    'shell-enhancements': bootSkill('idle', 'demand', ['app-shell', 'hover-tooltips', 'scroll-effects'], [
+        bootEntry('gsap-vendor', bootVend('gsap/gsap.min.js')),
+        bootEntry('scroll-trigger-vendor', bootVend('gsap/ScrollTrigger.min.js')),
+        bootEntry('popper-vendor', bootVend('popperjs/popper.min.js')),
+        bootEntry('tippy-vendor', bootVend('tippyjs/tippy.umd.min.js')),
+        bootEntry('simplebar-vendor', bootVend('simplebar/simplebar.min.js'))
+    ]),
+    'pdf-export': bootSkill('demand', 'full', ['downloadSingleReportPDF', 'batchGeneratePDF'], [
+        bootEntry('jspdf-vendor', bootVend('jspdf/jspdf.umd.min.js')),
+        bootEntry('html2canvas-vendor', bootVend('html2canvas/html2canvas.min.js'))
+    ]),
+    'report-render': bootSkill('demand', 'full', ['report-generator', 'printSingleReport', 'renderSingleReportCardHTML'], [
+        bootEntry('chart-vendor', bootVend('chart.js/chart.umd.min.js')),
+        bootEntry('report-render', bootJs('report-render-runtime.js')),
+        bootEntry('report-chart', bootJs('report-chart-runtime.js')),
+        bootEntry('report-export', bootJs('report-export-runtime.js'))
+    ]),
+    'teacher-analysis': bootSkill('demand', 'full', ['teacher-analysis', 'cohort-growth', 'correlation-analysis'], [
+        bootEntry('teacher-analysis-core', bootJs('teacher-analysis-core-runtime.js')),
+        bootEntry('teacher-analysis-ui', bootJs('teacher-analysis-ui-runtime.js')),
+        bootEntry('teacher-analysis-bridge', bootJs('teacher-analysis-bridge-runtime.js')),
+        bootEntry('teacher-analysis-main', bootJs('teacher-analysis-main-runtime.js'))
+    ]),
+    'student-overview': bootSkill('demand', 'demand', ['student-overview'], [
+        bootEntry('student-overview', bootJs('student-overview-runtime.js'))
+    ]),
+    'teaching-management': bootSkill('demand', 'full', ['teaching-overview', 'teaching-issue-board', 'teaching-warning-center', 'teaching-rectify-center', 'teaching-version-center'], [
+        bootEntry('teaching-management', bootJs('teaching-management-runtime.js')),
+        bootEntry('teaching-management-cloud', bootJs('teaching-management-cloud-runtime.js')),
+        bootEntry('teaching-management-overview', bootJs('teaching-management-overview-runtime.js')),
+        bootEntry('teaching-management-version', bootJs('teaching-management-version-runtime.js'))
+    ]),
+    'student-compare': bootSkill('demand', 'demand', ['renderStudentMultiPeriodComparison', 'saveStudentCompareToCloud', 'viewCloudStudentCompares'], [
+        bootEntry('student-compare-result', bootJs('student-compare-result-runtime.js')),
+        bootEntry('student-compare-generate', bootJs('student-compare-generate-runtime.js')),
+        bootEntry('student-compare-cloud', bootJs('student-compare-cloud-runtime.js'))
+    ]),
+    'town-submodule-compare': bootSkill('demand', 'demand', ['summary', 'town-submodule-compare', 'renderTownSubmoduleMultiPeriodComparison'], [
+        bootEntry('town-submodule-compare', bootJs('town-submodule-compare-runtime.js'))
+    ]),
+    'teacher-compare': bootSkill('demand', 'full', ['renderTeacherMultiPeriodComparison'], [
+        bootEntry('teacher-compare-result', bootJs('teacher-compare-result-runtime.js')),
+        bootEntry('teacher-compare-cloud', bootJs('teacher-compare-cloud-runtime.js'))
+    ]),
+    'macro-compare': bootSkill('demand', 'full', ['renderMacroMultiPeriodComparison'], [
+        bootEntry('macro-compare-result', bootJs('macro-compare-result-runtime.js')),
+        bootEntry('macro-compare-cloud', bootJs('macro-compare-cloud-runtime.js'))
+    ]),
+    'app-download': bootSkill('demand', 'demand', ['app-download-center'], [
+        bootEntry('app-download', bootJs('app-download-runtime.js'))
+    ]),
+    'school-profile': bootSkill('demand', 'demand', ['summary', 'showSchoolProfile'], [
+        bootEntry('chart-vendor', bootVend('chart.js/chart.umd.min.js')),
+        bootEntry('school-profile', bootJs('school-profile-runtime.js'))
+    ]),
+    'county-analysis': bootSkill('demand', 'demand', ['county-analysis', 'county-teacher-portrait', 'county-school-horizontal'], [
+        bootEntry('county-school-horizontal', bootJs('county-school-horizontal-runtime.js')),
+        bootEntry('county-analysis', bootJs('county-analysis-runtime.js'))
+    ]),
+    'progress-analysis': bootSkill('demand', 'full', ['progress-analysis'], [
+        bootEntry('chart-vendor', bootVend('chart.js/chart.umd.min.js')),
+        bootEntry('progress-analysis', bootJs('progress-analysis-runtime.js'))
+    ]),
+    'data-manager-sql': bootSkill('demand', 'full', ['data-manager-sql', 'talkToData'], [
+        bootEntry('data-manager-sql', bootJs('data-manager-sql.js'))
+    ]),
+    'mobile-manager': bootSkill('conditional', 'mobile', ['mobile-layout'], [
+        bootEntry('mobile-manager', bootJs('mobile-app-runtime.js'))
+    ]),
+    'account-admin': bootSkill('demand', 'full', ['account-admin', 'AccountExcel'], [
+        bootEntry('account-admin', bootJs('account-admin-runtime.js'))
+    ]),
+    'history-compare': bootSkill('demand', 'full', ['history-compare'], [
+        bootEntry('chart-vendor', bootVend('chart.js/chart.umd.min.js')),
+        bootEntry('history-compare', bootJs('history-compare-runtime.js'))
+    ]),
+    'zhongkao-countdown': bootSkill('demand', 'demand', ['zhongkao-countdown'], [
+        bootEntry('zhongkao-countdown', bootJs('zhongkao-countdown-runtime.js'))
+    ]),
+    'freshman-exam': bootSkill('demand', 'demand', ['freshman-simulator', 'exam-arranger'], [
+        bootEntry('chart-vendor', bootVend('chart.js/chart.umd.min.js')),
+        bootEntry('freshman-exam', bootJs('freshman-exam-runtime.js'))
+    ]),
+    'grade-scheduler': bootSkill('demand', 'demand', ['grade-scheduler'], [
+        bootEntry('grade-scheduler', bootJs('grade-scheduler-runtime.js'))
+    ]),
+    'voice-control': bootSkill('idle', 'demand', ['voice-control', 'voice-fab', 'VoiceControl.toggle'], [
+        bootEntry('voice-control', bootJs('voice-control-runtime.js'))
+    ]),
+    'module-help': bootSkill('demand', 'demand', ['showModuleHelp', 'ensureModuleHelpButton', 'module-help'], [
+        bootEntry('module-help', bootJs('module-help-runtime.js'))
+    ]),
+    'packager': bootSkill('demand', 'demand', ['exportDistributableHTML'], [
+        bootEntry('packager', bootJs('packager-runtime.js'))
+    ]),
+    'worker-api': bootSkill('demand', 'demand', ['WorkerAPI.run'], [
+        bootEntry('worker-api', bootJs('worker-api-runtime.js'))
+    ])
 };
 
 if (window.SchoolRuntime && typeof window.SchoolRuntime.registerSkill === 'function') {
@@ -440,76 +298,76 @@ function installLazySweetAlertProxy() {
 installLazySweetAlertProxy();
 
 var APP_MODULES = [
-    './assets/js/auth-state-runtime.js',
-    './assets/js/login-entry-runtime.js',
-    './assets/js/workspace-state-runtime.js',
-    './assets/js/exam-state-runtime.js',
-    './assets/js/school-state-runtime.js',
-    './assets/js/teacher-state-runtime.js',
-    './assets/js/data-state-runtime.js',
-    './assets/js/support-state-runtime.js',
-    './assets/js/progress-state-runtime.js',
-    './assets/js/report-session-state-runtime.js',
-    './assets/js/report-performance-runtime.js',
-    './assets/js/compare-session-state-runtime.js',
-    './assets/js/compare-result-state-runtime.js',
-    './assets/js/compare-summary-state-runtime.js',
-    './assets/js/cloud-api-runtime.js',
-    './assets/js/cloud-connection-runtime.js',
-    './assets/js/cloud-data-service-runtime.js',
-    './assets/js/cloud.js',
-    './assets/js/system-performance-runtime.js',
-    './assets/js/cloud-workspace-runtime.js',
-    './assets/js/data-cloud-runtime.js',
-    './assets/js/issue-manager-runtime.js',
-    './assets/js/help-system-runtime.js',
-    './assets/js/logger-runtime.js',
-    './assets/js/account-manager-runtime.js',
-    './assets/js/data-manager-teacher-runtime.js',
-    './assets/js/data-manager-student-runtime.js',
-    './assets/js/data-manager-archive-runtime.js',
-    './assets/js/data-manager-grade9-template-runtime.js',
-    './assets/js/data-manager-params-runtime.js',
-    './assets/js/data-manager-targets-runtime.js',
-    './assets/js/data-manager-school-alias-runtime.js',
-    './assets/js/data-manager-save-sync-runtime.js',
-    './assets/js/data-manager-history-runtime.js',
-    './assets/js/data-manager-tab-runtime.js',
-    './assets/js/config-transfer-runtime.js',
-    './assets/js/data-quality-runtime.js',
-    './assets/js/shell-runtime.js',
-    './assets/js/workspace-rail-runtime.js',
-    './assets/js/virtual-table-runtime.js',
-    './assets/js/module-entry-runtime.js',
-    './assets/js/comparison-panel-collapse-runtime.js',
-    './assets/js/ranking-data-service-runtime.js',
-    './assets/js/analytics-kernel-runtime.js',
-    './assets/js/student-jump-runtime.js',
-    './assets/js/student-details-guard-runtime.js',
-    './assets/js/teaching-management-modules-runtime.js',
-    './assets/js/app-foundation-runtime.js',
-    './assets/js/permission-policy-runtime.js',
-    './assets/js/teacher-card-store-runtime.js',
-    './assets/js/ui-actions-runtime.js',
-    './assets/js/runtime-accessors-runtime.js',
-    './assets/js/teacher-visibility-runtime.js',
-    './assets/js/skin-settings-runtime.js',
-    './assets/js/starter-status-runtime.js',
-    './assets/js/teacher-sync-runtime.js',
-    './assets/js/app.js',
-    './assets/js/support-metrics-runtime.js',
-    './assets/js/marginal-push-runtime.js',
-    './assets/js/seat-adjustment-runtime.js',
-    './assets/js/cohort-growth-runtime.js',
-    './assets/js/macro-analysis-compat-runtime.js',
-    './assets/js/school-normalization-runtime.js',
-    './assets/js/compare-shared-runtime.js',
-    './assets/js/compare-cloud-context-runtime.js',
-    './assets/js/compare-exam-sync-runtime.js',
-    './assets/js/report-compare-runtime.js',
-    './assets/js/compare-selectors-runtime.js',
-    './assets/js/town-submodule-compare-state-runtime.js'
-];
+    'auth-state-runtime.js',
+    'login-entry-runtime.js',
+    'workspace-state-runtime.js',
+    'exam-state-runtime.js',
+    'school-state-runtime.js',
+    'teacher-state-runtime.js',
+    'data-state-runtime.js',
+    'support-state-runtime.js',
+    'progress-state-runtime.js',
+    'report-session-state-runtime.js',
+    'report-performance-runtime.js',
+    'compare-session-state-runtime.js',
+    'compare-result-state-runtime.js',
+    'compare-summary-state-runtime.js',
+    'cloud-api-runtime.js',
+    'cloud-connection-runtime.js',
+    'cloud-data-service-runtime.js',
+    'cloud.js',
+    'system-performance-runtime.js',
+    'cloud-workspace-runtime.js',
+    'data-cloud-runtime.js',
+    'issue-manager-runtime.js',
+    'help-system-runtime.js',
+    'logger-runtime.js',
+    'account-manager-runtime.js',
+    'data-manager-teacher-runtime.js',
+    'data-manager-student-runtime.js',
+    'data-manager-archive-runtime.js',
+    'data-manager-grade9-template-runtime.js',
+    'data-manager-params-runtime.js',
+    'data-manager-targets-runtime.js',
+    'data-manager-school-alias-runtime.js',
+    'data-manager-save-sync-runtime.js',
+    'data-manager-history-runtime.js',
+    'data-manager-tab-runtime.js',
+    'config-transfer-runtime.js',
+    'data-quality-runtime.js',
+    'shell-runtime.js',
+    'workspace-rail-runtime.js',
+    'virtual-table-runtime.js',
+    'module-entry-runtime.js',
+    'comparison-panel-collapse-runtime.js',
+    'ranking-data-service-runtime.js',
+    'analytics-kernel-runtime.js',
+    'student-jump-runtime.js',
+    'student-details-guard-runtime.js',
+    'teaching-management-modules-runtime.js',
+    'app-foundation-runtime.js',
+    'permission-policy-runtime.js',
+    'teacher-card-store-runtime.js',
+    'ui-actions-runtime.js',
+    'runtime-accessors-runtime.js',
+    'teacher-visibility-runtime.js',
+    'skin-settings-runtime.js',
+    'starter-status-runtime.js',
+    'teacher-sync-runtime.js',
+    'app.js',
+    'support-metrics-runtime.js',
+    'marginal-push-runtime.js',
+    'seat-adjustment-runtime.js',
+    'cohort-growth-runtime.js',
+    'macro-analysis-compat-runtime.js',
+    'school-normalization-runtime.js',
+    'compare-shared-runtime.js',
+    'compare-cloud-context-runtime.js',
+    'compare-exam-sync-runtime.js',
+    'report-compare-runtime.js',
+    'compare-selectors-runtime.js',
+    'town-submodule-compare-state-runtime.js'
+].map(bootJs);
 
 var APP_MODULE_PRELOAD_LIMIT = 10;
 var APP_MODULE_MOBILE_PRELOAD_LIMIT = 6;
@@ -930,7 +788,6 @@ async function loadAppModules() {
         return window.__APP_MODULES_LOAD_PROMISE__;
     }
 
-    // Check if Auth is already defined (e.g. by Vite bundle) to avoid duplicate load
     if (window.Auth && !window.Auth.__bootLoginShell) {
         bootDebugLog('[boot-runtime] Auth module already present, skipping dynamic load');
         markAppModulesReady();
@@ -985,7 +842,6 @@ function enterCohort(year) {
     if (typeof window.enterCohortFromMask === 'function') {
         window.enterCohortFromMask();
     } else {
-        // Fallback: hide login overlay manually if state manager isn't loaded yet
         if (window.Auth) window.Auth.syncLoginOverlayState(false);
     }
 }
@@ -1181,7 +1037,6 @@ function getCloudflareRestBaseUrl() {
     if (hostedProxyOrigin) {
         return hostedProxyOrigin + '/sb/rest/v1';
     }
-    // Fall back to direct REST only when no hosted proxy origin is available.
     if (typeof DIRECT_SUPABASE_URL !== 'undefined' && DIRECT_SUPABASE_URL) {
         return normalizeProxyOrigin(DIRECT_SUPABASE_URL) + '/rest/v1';
     }
@@ -1224,8 +1079,6 @@ function createCloudflareCompatClient() {
         var token = getBootSessionValue('EDGE_GATEWAY_TOKEN_V1');
         if (apikey && !headers.apikey) headers.apikey = apikey;
 
-        // Only send the gateway token if we are NOT talking directly to Supabase REST.
-        // Standard Supabase REST doesn't know our custom gateway secret.
         var isDirectSupabase = false;
         if (targetUrl) {
             try {
@@ -1393,13 +1246,11 @@ function createCloudflareCompatClient() {
                         var rawMsg = (errorBody && (errorBody.error || errorBody.message)) || ('CLOUDFLARE_REST_HTTP_' + response.status);
                         var finalMsg = rawMsg;
 
-                        // Trigger fallback if proxy returns 500 or 502
                         if ((response.status >= 500 || response.status === 404) && !window.__API_FALLBACK_ACTIVE__) {
-                            console.warn('[boot-runtime] Proxy error detected, activating direct Supabase fallback', response.status);
+                            console.warn('[boot-runtime] Proxy fallback', response.status);
                             window.__API_FALLBACK_ACTIVE__ = true;
                         }
 
-                        // 友好化处理特定的底层错误
                         if (rawMsg.includes('No suitable key') || rawMsg.includes('wrong key type')) {
                             finalMsg = '云端身份验证失败 (请检查登录状态或网络连接)';
                         }
@@ -1433,7 +1284,7 @@ function createCloudflareCompatClient() {
                     };
                 } catch (error) {
                     if (!window.__API_FALLBACK_ACTIVE__) {
-                        console.warn('[boot-runtime] Network error detected, activating direct Supabase fallback', error);
+                        console.warn('[boot-runtime] Network fallback', error);
                         window.__API_FALLBACK_ACTIVE__ = true;
                     }
                     return {
@@ -1762,7 +1613,6 @@ window.initCloudClient();
                 } catch (error) {
                     lastError = error instanceof Error ? error : new Error(String(error));
 
-                    // Diagnostic logging for CORS and Origin issues
                     const isNetworkError = lastError.message.toLowerCase().includes('failed to fetch') || lastError.message.toLowerCase().includes('networkerror');
                     if (isNetworkError) {
                         const origin = window.location ? window.location.origin : 'unknown';
@@ -1774,7 +1624,7 @@ window.initCloudClient();
                         });
 
                         if (origin === 'null' || (window.location && window.location.protocol === 'file:')) {
-                            console.error('[boot-runtime] CRITICAL: Running via file:// protocol. Direct API calls may be blocked by CORS (Origin: null). Please use a web server (npm run dev).');
+                            console.error('[boot-runtime] file:// blocks direct API; use npm run dev.');
                         }
                     }
 
@@ -1861,7 +1711,6 @@ window.initCloudClient();
         }
         if (loader && !visible) {
             loader.classList.add('hidden');
-            // Ensure display is also set to none to be safe
             setTimeout(() => { if (loader.classList.contains('hidden')) loader.style.display = 'none'; }, 300);
         }
         if (app) {
@@ -1934,7 +1783,6 @@ window.initCloudClient();
                 loadAppModules();
             }
         },
-        // Stub to prevent race condition crashes if app.js calls it before replacing window.Auth
         ensureLoginWorkbench() {
             bootDebugLog('[boot-auth] ensureLoginWorkbench called on shell, waiting for modules...');
             return null;
@@ -1969,7 +1817,6 @@ window.initCloudClient();
                     const matchedUser = result.user;
                     writeBootSessionUser(matchedUser);
                     setBootHelperMessage('身份验证成功', 'success');
-                    // Phase transition to Cohort Selection (School only)
                     if (portal === 'school' && window.gsap) {
                         const form = document.getElementById('login-form');
                         const cohortPhase = document.getElementById('login-cohort-phase');
@@ -1981,7 +1828,6 @@ window.initCloudClient();
                                 cohortPhase.style.display = 'block';
                                 if (submitBtn) submitBtn.style.display = 'none';
                                 window.gsap.fromTo(cohortPhase, { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.4 });
-                                // Start loading modules and wait for auth readiness
                                 (async () => {
                                     await loadAppModules();
                                     await window.waitForAuthReady();
@@ -1999,7 +1845,6 @@ window.initCloudClient();
                         }
                     }
 
-                    // Fallback or Parent Portal: Load and enter
                     const loader = document.getElementById('global-loader');
                     if (loader) loader.classList.remove('hidden');
                     await loadAppModules();
@@ -2066,7 +1911,6 @@ window.initCloudClient();
         });
     }
 
-    // Protect window.Auth from being overwritten by late-loading legacy entry points.
     if (!window.Auth || window.Auth.__bootLoginShell) {
         Object.defineProperty(window, 'Auth', {
             value: bootAuth,
@@ -3351,7 +3195,6 @@ function retryInstallLateHook(installer, options) {
     const intervalMs = Number(opts.intervalMs || 250);
     const onExhausted = typeof opts.onExhausted === 'function' ? opts.onExhausted : null;
 
-    // Attempt immediate installation
     try {
         if (installer()) return;
     } catch (e) {

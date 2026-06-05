@@ -29,6 +29,17 @@ export function collectLazyLoadedJsAssets(sourceCode) {
   for (const match of String(sourceCode || '').matchAll(lazyLoadRegex)) {
     refs.add(String(match[1] || '').trim());
   }
+  const bootJsCallRegex = /\bbootJs\(\s*['"]([^'"]+\.js)['"]\s*\)/g;
+  for (const match of String(sourceCode || '').matchAll(bootJsCallRegex)) {
+    refs.add(String(match[1] || '').trim());
+  }
+  const appModulesMatch = String(sourceCode || '').match(/var\s+APP_MODULES\s*=\s*\[([\s\S]*?)\]\.map\(bootJs\);/);
+  if (appModulesMatch) {
+    const appModuleRegex = /['"]([^'"]+\.js)['"]/g;
+    for (const match of appModulesMatch[1].matchAll(appModuleRegex)) {
+      refs.add(String(match[1] || '').trim());
+    }
+  }
   return refs;
 }
 

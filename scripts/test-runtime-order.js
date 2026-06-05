@@ -292,15 +292,25 @@ function findScriptTag(html, src) {
     return match ? match[0] : '';
 }
 
-const appModulesMatch = bootRuntime.match(/var APP_MODULES = \[[\s\S]*?\];/);
+const appModulesMatch = bootRuntime.match(/var APP_MODULES = \[[\s\S]*?\]\.map\(bootJs\);/)
+    || bootRuntime.match(/var APP_MODULES = \[[\s\S]*?\];/);
 assert.ok(appModulesMatch, 'boot-runtime.js should declare APP_MODULES');
 const moduleManifest = appModulesMatch[0];
+const normalizedModuleManifest = moduleManifest.includes('.map(bootJs)')
+    ? moduleManifest.replace(/'([^']+\.js)'/g, "'./assets/js/$1'")
+    : moduleManifest;
 const bootVendorMatch = bootRuntime.match(/var BOOT_VENDOR_MODULES = \[[\s\S]*?\];/);
 assert.ok(bootVendorMatch, 'boot-runtime.js should declare BOOT_VENDOR_MODULES');
 const bootVendorManifest = bootVendorMatch[0];
 const deferredVendorMatch = bootRuntime.match(/var DEFERRED_APP_MODULES = \[[\s\S]*?\];/);
 assert.ok(deferredVendorMatch, 'boot-runtime.js should declare DEFERRED_APP_MODULES');
 const deferredVendorManifest = deferredVendorMatch[0];
+const bootRuntimeReferences = (ref) => bootRuntime.includes(ref) || bootRuntime.includes(ref.split('/').pop());
+const bootRuntimeReferenceIndex = (ref) => {
+    const fullIndex = bootRuntime.indexOf(ref);
+    if (fullIndex >= 0) return fullIndex;
+    return bootRuntime.indexOf(ref.split('/').pop());
+};
 assert.ok(!bootVendorManifest.includes(cryptoJsVendorRef), 'crypto-js should not be part of the first boot vendor batch');
 assert.ok(!bootVendorManifest.includes(xlsxVendorRef), 'xlsx should not be part of the first boot vendor batch');
 assert.ok(!bootVendorManifest.includes(chartVendorRef), 'chart.js should not be part of the first boot vendor batch');
@@ -312,58 +322,58 @@ assert.ok(!deferredVendorManifest.includes(tippyVendorRef), 'tippy should not be
 assert.ok(!deferredVendorManifest.includes(simplebarVendorRef), 'simplebar should not be part of the generic post-boot vendor batch');
 assert.ok(bootRuntime.includes('window.__BOOT_SCRIPT_REGISTRY__'), 'boot-runtime.js should cache boot script lookup state');
 assert.ok(bootRuntime.includes('function isBootScriptLoaded'), 'boot-runtime.js should reuse cached script load checks');
-assert.ok(bootRuntime.includes("'shell-polish': {\n        mode: 'idle',\n        warmup: 'demand'"), 'shell polish should stay behind the on-demand runtime loader');
+assert.ok(bootRuntime.includes("'shell-polish': bootSkill('idle', 'demand'"), 'shell polish should stay behind the on-demand runtime loader');
 assert.ok(bootRuntime.includes('window.ensureShellPolishRuntimeLoaded'), 'shell polish should still expose an explicit loader');
-const authStateIndex = moduleManifest.indexOf(authStateRef);
-const workspaceStateIndex = moduleManifest.indexOf(workspaceStateRef);
-const examStateIndex = moduleManifest.indexOf(examStateRef);
-const schoolStateIndex = moduleManifest.indexOf(schoolStateRef);
-const teacherStateIndex = moduleManifest.indexOf(teacherStateRef);
-const dataStateIndex = moduleManifest.indexOf(dataStateRef);
-const supportStateIndex = moduleManifest.indexOf(supportStateRef);
-const supportMetricsIndex = moduleManifest.indexOf(supportMetricsRef);
-const progressStateIndex = moduleManifest.indexOf(progressStateRef);
-const reportSessionStateIndex = moduleManifest.indexOf(reportSessionStateRef);
-const compareSessionStateIndex = moduleManifest.indexOf(compareSessionStateRef);
-const compareResultStateIndex = moduleManifest.indexOf(compareResultStateRef);
-const compareSummaryStateIndex = moduleManifest.indexOf(compareSummaryStateRef);
-const cloudApiIndex = moduleManifest.indexOf(cloudApiRef);
-const cloudConnectionIndex = moduleManifest.indexOf(cloudConnectionRef);
-const systemPerformanceIndex = moduleManifest.indexOf(systemPerformanceRef);
-const dataCloudIndex = moduleManifest.indexOf(dataCloudRef);
-const issueManagerIndex = moduleManifest.indexOf(issueManagerRef);
-const packagerIndex = moduleManifest.indexOf(packagerRef);
-const helpSystemIndex = moduleManifest.indexOf(helpSystemRef);
-const loggerIndex = moduleManifest.indexOf(loggerRef);
-const workerApiIndex = moduleManifest.indexOf(workerApiRef);
-const accountManagerIndex = moduleManifest.indexOf(accountManagerRef);
-const dataManagerTeacherIndex = moduleManifest.indexOf(dataManagerTeacherRef);
-const dataManagerStudentIndex = moduleManifest.indexOf(dataManagerStudentRef);
-const dataManagerArchiveIndex = moduleManifest.indexOf(dataManagerArchiveRef);
-const dataManagerGrade9TemplateIndex = moduleManifest.indexOf(dataManagerGrade9TemplateRef);
-const dataManagerParamsIndex = moduleManifest.indexOf(dataManagerParamsRef);
-const dataManagerTargetsIndex = moduleManifest.indexOf(dataManagerTargetsRef);
-const dataManagerSchoolAliasIndex = moduleManifest.indexOf(dataManagerSchoolAliasRef);
-const dataManagerSaveSyncIndex = moduleManifest.indexOf(dataManagerSaveSyncRef);
-const dataManagerHistoryIndex = moduleManifest.indexOf(dataManagerHistoryRef);
-const dataManagerTabIndex = moduleManifest.indexOf(dataManagerTabRef);
-const compareCloudContextIndex = moduleManifest.indexOf(compareCloudContextRef);
-const compareExamSyncIndex = moduleManifest.indexOf(compareExamSyncRef);
-const townSubmoduleCompareStateIndex = moduleManifest.indexOf(townSubmoduleCompareStateRef);
-const townSubmoduleCompareIndex = moduleManifest.indexOf(townSubmoduleCompareRef);
-const compareSelectorsIndex = moduleManifest.indexOf(compareSelectorsRef);
-const progressAnalysisIndex = moduleManifest.indexOf(progressAnalysisRef);
-const cloudIndex = moduleManifest.indexOf(cloudRef);
-const cloudWorkspaceIndex = moduleManifest.indexOf(cloudWorkspaceRef);
-const shellRuntimeIndex = moduleManifest.indexOf(shellRuntimeRef);
-const shellPolishRuntimeIndex = moduleManifest.indexOf(shellPolishRuntimeRef);
-const moduleEntryRuntimeIndex = moduleManifest.indexOf(moduleEntryRuntimeRef);
-const rankingDataServiceIndex = moduleManifest.indexOf(rankingDataServiceRef);
-const studentJumpIndex = moduleManifest.indexOf(studentJumpRef);
-const appIndex = moduleManifest.indexOf(appRef);
+const authStateIndex = normalizedModuleManifest.indexOf(authStateRef);
+const workspaceStateIndex = normalizedModuleManifest.indexOf(workspaceStateRef);
+const examStateIndex = normalizedModuleManifest.indexOf(examStateRef);
+const schoolStateIndex = normalizedModuleManifest.indexOf(schoolStateRef);
+const teacherStateIndex = normalizedModuleManifest.indexOf(teacherStateRef);
+const dataStateIndex = normalizedModuleManifest.indexOf(dataStateRef);
+const supportStateIndex = normalizedModuleManifest.indexOf(supportStateRef);
+const supportMetricsIndex = normalizedModuleManifest.indexOf(supportMetricsRef);
+const progressStateIndex = normalizedModuleManifest.indexOf(progressStateRef);
+const reportSessionStateIndex = normalizedModuleManifest.indexOf(reportSessionStateRef);
+const compareSessionStateIndex = normalizedModuleManifest.indexOf(compareSessionStateRef);
+const compareResultStateIndex = normalizedModuleManifest.indexOf(compareResultStateRef);
+const compareSummaryStateIndex = normalizedModuleManifest.indexOf(compareSummaryStateRef);
+const cloudApiIndex = normalizedModuleManifest.indexOf(cloudApiRef);
+const cloudConnectionIndex = normalizedModuleManifest.indexOf(cloudConnectionRef);
+const systemPerformanceIndex = normalizedModuleManifest.indexOf(systemPerformanceRef);
+const dataCloudIndex = normalizedModuleManifest.indexOf(dataCloudRef);
+const issueManagerIndex = normalizedModuleManifest.indexOf(issueManagerRef);
+const packagerIndex = normalizedModuleManifest.indexOf(packagerRef);
+const helpSystemIndex = normalizedModuleManifest.indexOf(helpSystemRef);
+const loggerIndex = normalizedModuleManifest.indexOf(loggerRef);
+const workerApiIndex = normalizedModuleManifest.indexOf(workerApiRef);
+const accountManagerIndex = normalizedModuleManifest.indexOf(accountManagerRef);
+const dataManagerTeacherIndex = normalizedModuleManifest.indexOf(dataManagerTeacherRef);
+const dataManagerStudentIndex = normalizedModuleManifest.indexOf(dataManagerStudentRef);
+const dataManagerArchiveIndex = normalizedModuleManifest.indexOf(dataManagerArchiveRef);
+const dataManagerGrade9TemplateIndex = normalizedModuleManifest.indexOf(dataManagerGrade9TemplateRef);
+const dataManagerParamsIndex = normalizedModuleManifest.indexOf(dataManagerParamsRef);
+const dataManagerTargetsIndex = normalizedModuleManifest.indexOf(dataManagerTargetsRef);
+const dataManagerSchoolAliasIndex = normalizedModuleManifest.indexOf(dataManagerSchoolAliasRef);
+const dataManagerSaveSyncIndex = normalizedModuleManifest.indexOf(dataManagerSaveSyncRef);
+const dataManagerHistoryIndex = normalizedModuleManifest.indexOf(dataManagerHistoryRef);
+const dataManagerTabIndex = normalizedModuleManifest.indexOf(dataManagerTabRef);
+const compareCloudContextIndex = normalizedModuleManifest.indexOf(compareCloudContextRef);
+const compareExamSyncIndex = normalizedModuleManifest.indexOf(compareExamSyncRef);
+const townSubmoduleCompareStateIndex = normalizedModuleManifest.indexOf(townSubmoduleCompareStateRef);
+const townSubmoduleCompareIndex = normalizedModuleManifest.indexOf(townSubmoduleCompareRef);
+const compareSelectorsIndex = normalizedModuleManifest.indexOf(compareSelectorsRef);
+const progressAnalysisIndex = normalizedModuleManifest.indexOf(progressAnalysisRef);
+const cloudIndex = normalizedModuleManifest.indexOf(cloudRef);
+const cloudWorkspaceIndex = normalizedModuleManifest.indexOf(cloudWorkspaceRef);
+const shellRuntimeIndex = normalizedModuleManifest.indexOf(shellRuntimeRef);
+const shellPolishRuntimeIndex = normalizedModuleManifest.indexOf(shellPolishRuntimeRef);
+const moduleEntryRuntimeIndex = normalizedModuleManifest.indexOf(moduleEntryRuntimeRef);
+const rankingDataServiceIndex = normalizedModuleManifest.indexOf(rankingDataServiceRef);
+const studentJumpIndex = normalizedModuleManifest.indexOf(studentJumpRef);
+const appIndex = normalizedModuleManifest.indexOf(appRef);
 const bootRuntimeIndex = indexHtml.indexOf(bootRuntimeRef);
-const popperVendorIndex = bootRuntime.indexOf(popperVendorRef);
-const tippyVendorIndex = bootRuntime.indexOf(tippyVendorRef);
+const popperVendorIndex = bootRuntimeReferenceIndex(popperVendorRef);
+const tippyVendorIndex = bootRuntimeReferenceIndex(tippyVendorRef);
 const accountAdminIndex = indexHtml.indexOf(accountAdminRef);
 const historyCompareIndex = indexHtml.indexOf(historyCompareRef);
 const perfMobileIndex = indexHtml.indexOf(perfMobileRef);
@@ -434,21 +444,21 @@ assert.strictEqual(shellPolishRuntimeIndex, -1, 'shell-polish-runtime.js should 
 assert.ok(moduleEntryRuntimeIndex >= 0, 'index.html should load module-entry-runtime.js');
 assert.ok(rankingDataServiceIndex >= 0, 'index.html should load ranking-data-service-runtime.js');
 assert.ok(appIndex >= 0, 'index.html should load app.js');
-assert.ok(bootRuntime.includes(progressAnalysisRef), 'boot-runtime.js should reference progress-analysis-runtime.js for lazy loading');
-assert.ok(bootRuntime.includes(teacherAnalysisMainRef), 'boot-runtime.js should reference teacher-analysis-main-runtime.js for lazy loading');
-assert.ok(bootRuntime.includes(teacherAnalysisCoreRef), 'boot-runtime.js should reference teacher-analysis-core-runtime.js for lazy loading');
-assert.ok(bootRuntime.includes(teacherAnalysisUiRef), 'boot-runtime.js should reference teacher-analysis-ui-runtime.js for lazy loading');
-assert.ok(bootRuntime.includes(teacherAnalysisBridgeRef), 'boot-runtime.js should reference teacher-analysis-bridge-runtime.js for lazy loading');
-assert.ok(bootRuntime.includes(schoolProfileRef), 'boot-runtime.js should reference school-profile-runtime.js for lazy loading');
-assert.ok(bootRuntime.includes(teachingManagementRef), 'boot-runtime.js should reference teaching-management-runtime.js for lazy loading');
-assert.ok(bootRuntime.includes(teachingManagementCloudRef), 'boot-runtime.js should reference teaching-management-cloud-runtime.js for lazy loading');
-assert.ok(bootRuntime.includes(teachingManagementOverviewRef), 'boot-runtime.js should reference teaching-management-overview-runtime.js for lazy loading');
-assert.ok(bootRuntime.includes(studentOverviewRef), 'boot-runtime.js should reference student-overview-runtime.js for lazy loading');
-assert.ok(bootRuntime.includes(teachingManagementVersionRef), 'boot-runtime.js should reference teaching-management-version-runtime.js for lazy loading');
-assert.ok(bootRuntime.includes("'student-overview': {\n        mode: 'demand',\n        warmup: 'demand',\n        triggers: ['student-overview']"), 'student overview should have its own demand runtime skill');
+assert.ok(bootRuntimeReferences(progressAnalysisRef), 'boot-runtime.js should reference progress-analysis-runtime.js for lazy loading');
+assert.ok(bootRuntimeReferences(teacherAnalysisMainRef), 'boot-runtime.js should reference teacher-analysis-main-runtime.js for lazy loading');
+assert.ok(bootRuntimeReferences(teacherAnalysisCoreRef), 'boot-runtime.js should reference teacher-analysis-core-runtime.js for lazy loading');
+assert.ok(bootRuntimeReferences(teacherAnalysisUiRef), 'boot-runtime.js should reference teacher-analysis-ui-runtime.js for lazy loading');
+assert.ok(bootRuntimeReferences(teacherAnalysisBridgeRef), 'boot-runtime.js should reference teacher-analysis-bridge-runtime.js for lazy loading');
+assert.ok(bootRuntimeReferences(schoolProfileRef), 'boot-runtime.js should reference school-profile-runtime.js for lazy loading');
+assert.ok(bootRuntimeReferences(teachingManagementRef), 'boot-runtime.js should reference teaching-management-runtime.js for lazy loading');
+assert.ok(bootRuntimeReferences(teachingManagementCloudRef), 'boot-runtime.js should reference teaching-management-cloud-runtime.js for lazy loading');
+assert.ok(bootRuntimeReferences(teachingManagementOverviewRef), 'boot-runtime.js should reference teaching-management-overview-runtime.js for lazy loading');
+assert.ok(bootRuntimeReferences(studentOverviewRef), 'boot-runtime.js should reference student-overview-runtime.js for lazy loading');
+assert.ok(bootRuntimeReferences(teachingManagementVersionRef), 'boot-runtime.js should reference teaching-management-version-runtime.js for lazy loading');
+assert.ok(bootRuntime.includes("'student-overview': bootSkill('demand', 'demand', ['student-overview']"), 'student overview should have its own demand runtime skill');
 assert.ok(bootRuntime.includes("window.ensureStudentOverviewRuntimeLoaded = function ()"), 'boot-runtime.js should expose ensureStudentOverviewRuntimeLoaded');
-assert.ok(bootRuntime.includes(reportChartRef), 'boot-runtime.js should reference report-chart-runtime.js for lazy loading');
-assert.ok(bootRuntime.includes(reportExportRef), 'boot-runtime.js should reference report-export-runtime.js for lazy loading');
+assert.ok(bootRuntimeReferences(reportChartRef), 'boot-runtime.js should reference report-chart-runtime.js for lazy loading');
+assert.ok(bootRuntimeReferences(reportExportRef), 'boot-runtime.js should reference report-export-runtime.js for lazy loading');
 assert.ok(!indexHtml.includes('id="ai-analysis"'), 'index.html should not include the removed analysis module');
 assert.ok(!indexHtml.includes('lazy-section-template-ai-analysis'), 'index.html should not include the removed analysis template');
 assert.ok(!bootRuntime.includes('ai-hub-runtime.js'), 'boot-runtime.js should not reference removed hub runtime');
@@ -458,15 +468,15 @@ assert.ok(!bootRuntime.includes('login-instagram-runtime.js'), 'boot-runtime.js 
 assert.ok(!fs.existsSync(path.resolve(__dirname, '../public/history-grade.js')), 'removed history-grade.js patch should not remain in public assets');
 assert.ok(!fs.existsSync(path.resolve(__dirname, '../public/assets/js/login-instagram-runtime.js')), 'removed login-instagram-runtime.js should not remain in public assets');
 assert.ok(!fs.existsSync(path.resolve(__dirname, '../public/assets/vendor/web-llm/index.js')), 'removed WebLLM vendor should not remain after AI cleanup');
-assert.ok(bootRuntime.includes(cryptoJsVendorRef), 'boot-runtime.js should reference crypto-js.min.js for lazy loading');
-assert.ok(bootRuntime.includes(townSubmoduleCompareRef), 'boot-runtime.js should reference town-submodule-compare-runtime.js for lazy loading');
-assert.ok(bootRuntime.includes(alasqlVendorRef), 'boot-runtime.js should reference alasql.min.js for lazy loading');
-assert.ok(bootRuntime.includes(sweetalertVendorRef), 'boot-runtime.js should reference sweetalert2.all.min.js for lazy loading');
-assert.ok(bootRuntime.includes(gsapVendorRef), 'boot-runtime.js should reference gsap.min.js for lazy loading');
-assert.ok(bootRuntime.includes(chartVendorRef), 'boot-runtime.js should reference chart.umd.min.js for lazy loading');
-assert.ok(bootRuntime.includes(xlsxVendorRef), 'boot-runtime.js should reference xlsx.full.min.js for lazy loading');
-assert.ok(bootRuntime.includes(jspdfVendorRef), 'boot-runtime.js should reference jspdf.umd.min.js for lazy loading');
-assert.ok(bootRuntime.includes(html2canvasVendorRef), 'boot-runtime.js should reference html2canvas.min.js for lazy loading');
+assert.ok(bootRuntimeReferences(cryptoJsVendorRef), 'boot-runtime.js should reference crypto-js.min.js for lazy loading');
+assert.ok(bootRuntimeReferences(townSubmoduleCompareRef), 'boot-runtime.js should reference town-submodule-compare-runtime.js for lazy loading');
+assert.ok(bootRuntimeReferences(alasqlVendorRef), 'boot-runtime.js should reference alasql.min.js for lazy loading');
+assert.ok(bootRuntimeReferences(sweetalertVendorRef), 'boot-runtime.js should reference sweetalert2.all.min.js for lazy loading');
+assert.ok(bootRuntimeReferences(gsapVendorRef), 'boot-runtime.js should reference gsap.min.js for lazy loading');
+assert.ok(bootRuntimeReferences(chartVendorRef), 'boot-runtime.js should reference chart.umd.min.js for lazy loading');
+assert.ok(bootRuntimeReferences(xlsxVendorRef), 'boot-runtime.js should reference xlsx.full.min.js for lazy loading');
+assert.ok(bootRuntimeReferences(jspdfVendorRef), 'boot-runtime.js should reference jspdf.umd.min.js for lazy loading');
+assert.ok(bootRuntimeReferences(html2canvasVendorRef), 'boot-runtime.js should reference html2canvas.min.js for lazy loading');
 assert.ok(!fs.existsSync(path.resolve(__dirname, '../public/assets/vendor/popperjs/popper.min.js.map')), 'production Popper sourcemap should not be shipped');
 assert.ok(!fs.existsSync(path.resolve(__dirname, '../public/assets/vendor/tippyjs/tippy.umd.min.js.map')), 'production Tippy sourcemap should not be shipped');
 assert.ok(!popperVendorSource.includes('sourceMappingURL=popper.min.js.map'), 'Popper vendor should not request a removed sourcemap');
@@ -525,8 +535,8 @@ assert.ok(bootRuntime.includes("{ label: 'data-manager-sql', loader: () => windo
 assert.ok(bootRuntime.includes("'teacher-analysis':"), 'runtime skill manifest should include teacher-analysis');
 assert.ok(bootRuntime.includes("'crypto-vendor':"), 'runtime skill manifest should include crypto-vendor');
 assert.ok(bootRuntime.includes("'shell-enhancements':"), 'runtime skill manifest should include shell-enhancements');
-assert.ok(bootRuntime.includes("'shell-enhancements': {\n        mode: 'idle',\n        warmup: 'demand'"), 'shell-enhancements should stay demand-loaded instead of warming during post-boot idle');
-assert.ok(bootRuntime.includes("'sweetalert-vendor': {\n        mode: 'idle',\n        warmup: 'demand'"), 'sweetalert-vendor should stay demand-loaded instead of warming during post-boot idle');
+assert.ok(bootRuntime.includes("'shell-enhancements': bootSkill('idle', 'demand'"), 'shell-enhancements should stay demand-loaded instead of warming during post-boot idle');
+assert.ok(bootRuntime.includes("'sweetalert-vendor': bootSkill('idle', 'demand'"), 'sweetalert-vendor should stay demand-loaded instead of warming during post-boot idle');
 assert.ok(bootRuntime.includes("'town-submodule-compare':"), 'runtime skill manifest should include town-submodule-compare');
 assert.ok(bootRuntime.includes("'sweetalert-vendor':"), 'runtime skill manifest should include sweetalert-vendor');
 assert.ok(bootRuntime.includes("'chart-vendor':"), 'runtime skill manifest should include chart-vendor');
@@ -601,7 +611,7 @@ assert.ok(historyDoQueryWrapperSource.includes('report-history-compare-target-sy
 assert.ok(!historyDoQueryWrapperSource.includes('ensureStudentCompareRuntimeLoaded'), 'report history hook should not load the student compare runtime during normal report generation');
 assert.ok(!appSource.includes('report-student-compare-warmup'), 'report queries should not warm student compare runtime unless the user opens compare features');
 assert.ok(!moduleEntryRuntime.includes("id === 'exam-arranger'\n            && typeof window.ensureGradeSchedulerRuntimeLoaded"), 'exam arranger should not eagerly load the grade scheduler runtime');
-assert.ok(bootRuntime.includes("triggers: ['grade-scheduler']"), 'grade scheduler runtime should load only for the grade scheduler module');
+assert.ok(bootRuntime.includes("'grade-scheduler': bootSkill('demand', 'demand', ['grade-scheduler']"), 'grade scheduler runtime should load only for the grade scheduler module');
 assert.ok(!moduleEntryRuntime.includes('initClassComparisonEntry'), 'removed class comparison should not have an entry initializer');
 assert.ok(!indexHtml.includes('id="class-comparison"'), 'removed class comparison section should not be present in the app shell');
 assert.ok(!moduleEntryRuntime.includes('initClassDiagnosisEntry'), 'removed class diagnosis should not have an entry initializer');
@@ -669,8 +679,8 @@ assert.ok(countyAnalysisRuntime.includes('const isTownshipSchool = createCountyT
 assert.ok(appSource.includes('const displaySourceList = STD_STATE.cacheData.slice(startIdx, endIdx);'), 'student details should paginate before comparison rank normalization');
 assert.ok(appSource.includes('const displayList = displaySourceList.map((student) => getComparisonStudentView(student, RAW_DATA, comparisonContext));'), 'student details should normalize comparison rank data only for the visible page');
 assert.ok(!appSource.includes('data = getComparisonStudentList(data, RAW_DATA);'), 'student details should avoid full-list comparison normalization before pagination');
-assert.ok(!bootRuntime.includes("triggers: ['student-details', 'renderStudentMultiPeriodComparison']"), 'student compare runtime should not be triggered by entering student details');
-assert.ok(bootRuntime.includes("triggers: ['renderStudentMultiPeriodComparison', 'saveStudentCompareToCloud', 'viewCloudStudentCompares']"), 'student compare runtime should load only for explicit multi-period actions');
+assert.ok(!bootRuntime.includes("'student-compare': bootSkill('demand', 'demand', ['student-details'"), 'student compare runtime should not be triggered by entering student details');
+assert.ok(bootRuntime.includes("'student-compare': bootSkill('demand', 'demand', ['renderStudentMultiPeriodComparison', 'saveStudentCompareToCloud', 'viewCloudStudentCompares']"), 'student compare runtime should load only for explicit multi-period actions');
 assert.ok(!bootRuntime.includes("{ label: 'student-compare', loader: () => window.ensureStudentCompareRuntimeLoaded?.() }"), 'student compare runtime should not be part of hotspot warmup');
 assert.ok(moduleEntryRuntime.includes('const canUseStudentMultiPeriod = role ==='), 'student details should gate multi-period prewarm by role');
 assert.ok(moduleEntryRuntime.includes("delay: 1400, idle: true, timeout: 3200"), 'student details should defer multi-period prewarm after first render');
@@ -788,7 +798,7 @@ assert.strictEqual(switchTabOverrides.length, 0, 'app.js should not reassign swi
     townSubmoduleCompareStateRef,
     townSubmoduleCompareRef
 ].forEach((src) => {
-    assert.ok(bootRuntime.includes(src), `boot-runtime.js should contain boot/core module entry for ${src}`);
+    assert.ok(bootRuntimeReferences(src), `boot-runtime.js should contain boot/core module entry for ${src}`);
 });
 
 assert.ok(!findScriptTag(indexHtml, supabaseVendorRef), 'index.html should not load the legacy supabase SDK script');
@@ -799,14 +809,14 @@ assert.ok(!findScriptTag(indexHtml, supabaseVendorRef), 'index.html should not l
     chartVendorRef,
     sweetalertVendorRef
 ].forEach((src) => {
-    assert.ok(bootRuntime.includes(src), `boot-runtime.js should contain deferred module entry for ${src}`);
+    assert.ok(bootRuntimeReferences(src), `boot-runtime.js should contain deferred module entry for ${src}`);
 });
 
 const mobileManagerSkillSource = bootRuntime.slice(
     bootRuntime.indexOf("'mobile-manager':"),
     bootRuntime.indexOf("'account-admin':")
 );
-assert.ok(mobileManagerSkillSource.includes(mobileAppRef), 'mobile manager skill should load mobile-app-runtime.js');
+assert.ok(mobileManagerSkillSource.includes(mobileAppRef) || mobileManagerSkillSource.includes('mobile-app-runtime.js'), 'mobile manager skill should load mobile-app-runtime.js');
 assert.ok(!mobileManagerSkillSource.includes(perfMobileRef), 'mobile manager skill should not auto-load perf-mobile-runtime.js');
 assert.ok(!bootRuntime.includes('./assets/js/mobile-experience-runtime.js'), 'mobile experience helper should be merged into mobile-app-runtime.js');
 
@@ -816,7 +826,7 @@ assert.ok(!bootRuntime.includes('./assets/js/mobile-experience-runtime.js'), 'mo
     tippyVendorRef,
     simplebarVendorRef
 ].forEach((src) => {
-    assert.ok(bootRuntime.includes(src), `boot-runtime.js should contain deferred module entry for ${src}`);
+    assert.ok(bootRuntimeReferences(src), `boot-runtime.js should contain deferred module entry for ${src}`);
 });
 
 const bootScriptTag = findScriptTag(indexHtml, bootRuntimeRef);
