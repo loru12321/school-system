@@ -1469,13 +1469,20 @@
                     .filter(key => !isIgnoredExamKey(key))
                     .filter(key => !isVirtualCohortSnapshotKey(key))
             ));
+            const requestedExamIdSet = new Set(requestedExamIds);
             const requestedSignature = requestedExamIds.slice().sort().join(',');
+            const targetSchool = String(student.school || '').trim();
+            const targetClassRaw = String(student.class || '').trim();
+            const targetStudentId = String(student.id || student.examNo || '').trim();
+            const targetName = String(student.name || '').trim();
+            const targetClassNum = targetClassRaw.replace(/[^0-9]/g, '');
+            const currentExamId = String(options?.currentExamId || '').trim();
             const historyKey = [
                 cohortId,
-                String(student.school || '').trim(),
-                String(student.class || '').trim(),
-                String(student.id || student.examNo || '').trim(),
-                String(student.name || '').trim(),
+                targetSchool,
+                targetClassRaw,
+                targetStudentId,
+                targetName,
                 requestedSignature
             ].join('|');
             this._studentHistoryTasks = this._studentHistoryTasks || {};
@@ -1488,16 +1495,35 @@
             }
             if (this._studentHistoryTasks[historyKey]) return this._studentHistoryTasks[historyKey];
 
-            const targetName = String(student.name || '').trim();
-            const targetClassNum = String(student.class || '').replace(/[^0-9]/g, '');
+            const examEquivalentCache = new Map();
+            const isExamEquivalent = (left, right) => {
+                const leftKey = String(left || '').trim();
+                const rightKey = String(right || '').trim();
+                if (!leftKey || !rightKey) return false;
+                if (leftKey === rightKey) return true;
+                const cacheKey = `${leftKey}::${rightKey}`;
+                if (examEquivalentCache.has(cacheKey)) return examEquivalentCache.get(cacheKey);
+                const result = typeof window.isExamKeyEquivalentForCompare === 'function'
+                    ? !!window.isExamKeyEquivalentForCompare(leftKey, rightKey)
+                    : false;
+                examEquivalentCache.set(cacheKey, result);
+                return result;
+            };
+            const isRequestedExam = (examId) => {
+                const key = String(examId || '').trim();
+                if (!requestedExamIds.length) return true;
+                if (requestedExamIdSet.has(key)) return true;
+                return requestedExamIds.some(requestedId => isExamEquivalent(key, requestedId));
+            };
+            const isCurrentExam = (examId) => currentExamId && isExamEquivalent(examId, currentExamId);
             const findStudentInRows = (list, scopedToTargetSchool = false) => {
                 const rows = Array.isArray(list) ? list : [];
                 if (!rows.length) return null;
                 if (window.RankingDataService && typeof window.RankingDataService.findStudent === 'function') {
                     return window.RankingDataService.findStudent(rows, {
-                        name: student.name,
-                        school: scopedToTargetSchool ? '' : student.school,
-                        className: student.class
+                        name: targetName,
+                        school: scopedToTargetSchool ? '' : targetSchool,
+                        className: targetClassRaw
                     });
                 }
                 return rows.find(s => {
@@ -1509,15 +1535,15 @@
             const findHistoryMatch = (payload) => {
                 let match = null;
                 const schools = payload?.SCHOOLS || payload?.schools || {};
-                if (student.school && schools && typeof schools === 'object') {
-                    const directSchool = schools[student.school];
+                if (targetSchool && schools && typeof schools === 'object') {
+                    const directSchool = schools[targetSchool];
                     if (directSchool) {
                         match = findStudentInRows(directSchool?.students, true);
                     }
                 }
                 if (!match && schools && typeof schools === 'object') {
                     for (const [schoolName, schoolData] of Object.entries(schools)) {
-                        if (student.school && schoolName !== student.school) continue;
+                        if (targetSchool && schoolName !== targetSchool) continue;
                         match = findStudentInRows(schoolData?.students, true);
                         if (match) break;
                     }
@@ -1558,10 +1584,11 @@
             const getCountyRankFallback = (payload, match, subject = 'total') => {
                 const rows = payload?.RAW_DATA || payload?.data || [];
                 if (!Array.isArray(rows) || !rows.length || !match) return undefined;
+                const subjectKey = String(subject || 'total');
                 const readValue = (row) => {
-                    if (subject === 'total') return Number(row?.total);
-                    const value = row?.scores && Object.prototype.hasOwnProperty.call(row.scores, subject)
-                        ? Number(row.scores[subject])
+                    if (subjectKey === 'total') return Number(row?.total);
+                    const value = row?.scores && Object.prototype.hasOwnProperty.call(row.scores, subjectKey)
+                        ? Number(row.scores[subjectKey])
                         : NaN;
                     return value;
                 };
@@ -1574,17 +1601,22 @@
                         subjectCache = new Map();
                         countyRankFallbackCache.set(payload, subjectCache);
                     }
-                    const cachedRank = subjectCache.get(subject);
+                    const cachedRank = subjectCache.get(subjectKey);
                     if (cachedRank) return cachedRank.get(targetValue);
                 }
-                const rankByScore = new Map();
-                let higherCount = 0;
+                const scoreCounts = new Map();
                 rows.forEach(row => {
                     const value = readValue(row);
-                    if (Number.isFinite(value) && value > targetValue) higherCount += 1;
+                    if (!Number.isFinite(value)) return;
+                    scoreCounts.set(value, (scoreCounts.get(value) || 0) + 1);
                 });
-                rankByScore.set(targetValue, higherCount + 1);
-                if (subjectCache) subjectCache.set(subject, rankByScore);
+                const rankByScore = new Map();
+                let seen = 0;
+                Array.from(scoreCounts.keys()).sort((a, b) => b - a).forEach(value => {
+                    rankByScore.set(value, seen + 1);
+                    seen += scoreCounts.get(value) || 0;
+                });
+                if (subjectCache) subjectCache.set(subjectKey, rankByScore);
                 return rankByScore.get(targetValue);
             };
             const buildHistoryEntry = (examId, payload, updatedAt) => {
@@ -1592,13 +1624,14 @@
                 if (!match) return null;
                 const keyParts = String(examId || '').split('_');
                 const examLabel = payload?.examLabel || (keyParts.length >= 5 ? keyParts.slice(4).join('_') : examId);
-                const subjectRanks = match.ranks || {};
+                const subjectRanks = { ...(match.ranks || {}) };
                 Object.keys(match.scores || {}).forEach((subject) => {
-                    const ranks = subjectRanks[subject] || {};
+                    const ranks = { ...(subjectRanks[subject] || {}) };
                     if (ranks.county === undefined || ranks.county === null || ranks.county === '') {
                         const fallback = getCountyRankFallback(payload, match, subject);
-                        if (fallback !== undefined) subjectRanks[subject] = { ...ranks, county: fallback };
+                        if (fallback !== undefined) ranks.county = fallback;
                     }
+                    subjectRanks[subject] = ranks;
                 });
                 const rankCounty = match.ranks?.total?.county ?? match.rankCounty ?? match.countyRank ?? getCountyRankFallback(payload, match, 'total');
                 return {
@@ -1618,13 +1651,13 @@
                 };
             };
             const shouldUseHistoryEntry = (examId) => {
-                if (!requestedExamIds.length) return true;
-                return requestedExamIds.some(requestedId => {
-                    if (typeof window.isExamKeyEquivalentForCompare === 'function') {
-                        return window.isExamKeyEquivalentForCompare(examId, requestedId);
-                    }
-                    return String(examId || '').trim() === requestedId;
-                });
+                return isRequestedExam(examId);
+            };
+            const readExamSortTime = (exam) => {
+                const direct = Number(exam?.createdAt || 0);
+                if (Number.isFinite(direct) && direct > 0) return direct;
+                const parsed = new Date(exam?.updatedAt || 0).getTime();
+                return Number.isFinite(parsed) ? parsed : 0;
             };
             const collectLocalHistory = () => {
                 const db = WorkspaceState && typeof WorkspaceState.getCohortDb === 'function'
@@ -1633,39 +1666,32 @@
                 const exams = db?.exams && typeof db.exams === 'object' ? db.exams : null;
                 if (!exams) return [];
                 return Object.entries(exams)
-                    .filter(([examId, exam]) => (
-                        !isIgnoredExamKey(examId) &&
-                        !isVirtualCohortSnapshotKey(examId) &&
-                        shouldUseHistoryEntry(examId) &&
-                        normalizeCohortId(exam?.cohort || exam?.meta?.cohort || examId) === cohortId
+                    .map(([examId, exam]) => ({
+                        examId,
+                        exam,
+                        sortTime: readExamSortTime(exam),
+                        normalizedCohort: normalizeCohortId(exam?.cohort || exam?.meta?.cohort || examId)
+                    }))
+                    .filter(item => (
+                        !isIgnoredExamKey(item.examId) &&
+                        !isVirtualCohortSnapshotKey(item.examId) &&
+                        shouldUseHistoryEntry(item.examId) &&
+                        item.normalizedCohort === cohortId
                     ))
-                    .sort((left, right) => {
-                        const leftTime = Number(left[1]?.createdAt || new Date(left[1]?.updatedAt || 0).getTime() || 0);
-                        const rightTime = Number(right[1]?.createdAt || new Date(right[1]?.updatedAt || 0).getTime() || 0);
-                        return leftTime - rightTime;
+                    .sort((left, right) => left.sortTime - right.sortTime)
+                    .map(({ examId, exam }) => {
+                        return buildHistoryEntry(examId, exam, exam?.updatedAt || exam?.createdAt || '');
                     })
-                    .map(([examId, exam]) => buildHistoryEntry(examId, exam, exam?.updatedAt || exam?.createdAt || ''))
                     .filter(Boolean);
             };
 
             const localHistory = collectLocalHistory();
-            const selectedHistoricalExamIds = requestedExamIds.filter(examId => {
-                const currentExamId = String(options?.currentExamId || '').trim();
-                if (!currentExamId) return true;
-                if (typeof window.isExamKeyEquivalentForCompare === 'function') {
-                    return !window.isExamKeyEquivalentForCompare(examId, currentExamId);
-                }
-                return String(examId || '').trim() !== currentExamId;
-            });
+            const selectedHistoricalExamIds = requestedExamIds.filter(examId => !isCurrentExam(examId));
+            const localHistoryExamKeys = localHistory
+                .map(item => String(item?.examFullKey || item?.examId || '').trim())
+                .filter(Boolean);
             const localHistoryCoversSelection = selectedHistoricalExamIds.length > 0
-                && selectedHistoricalExamIds.every(selectedId => localHistory.some(item => {
-                    const historyId = String(item?.examFullKey || item?.examId || '').trim();
-                    if (!historyId) return false;
-                    if (typeof window.isExamKeyEquivalentForCompare === 'function') {
-                        return window.isExamKeyEquivalentForCompare(historyId, selectedId);
-                    }
-                    return historyId === selectedId;
-                }));
+                && selectedHistoricalExamIds.every(selectedId => localHistoryExamKeys.some(historyId => isExamEquivalent(historyId, selectedId)));
             if (localHistory.length >= 2 || localHistoryCoversSelection) {
                 const localResult = { success: true, data: localHistory, source: 'local-cohort-db' };
                 this._studentHistoryCache[historyKey] = { at: Date.now(), result: localResult };
@@ -1695,7 +1721,10 @@
                 });
                 if (error) throw error;
 
-                const rows = (data || []).filter(row => !isIgnoredExamKey(row.key) && shouldUseHistoryEntry(row.key));
+                const rows = (data || []).filter(row => {
+                    const rowKey = String(row?.key || '').trim();
+                    return rowKey && !isIgnoredExamKey(rowKey) && shouldUseHistoryEntry(rowKey);
+                });
                 const history = [];
 
                 for (const row of rows) {

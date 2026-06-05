@@ -982,8 +982,9 @@ const countyRankFallbackEnd = cloudRuntime.indexOf('const buildHistoryEntry =', 
 const countyRankFallbackSource = countyRankFallbackStart >= 0 && countyRankFallbackEnd > countyRankFallbackStart
     ? cloudRuntime.slice(countyRankFallbackStart, countyRankFallbackEnd)
     : '';
-assert.ok(countyRankFallbackSource.includes('higherCount + 1'), 'student history county-rank fallback should use counting rank');
-assert.ok(!countyRankFallbackSource.includes('.sort('), 'student history county-rank fallback should avoid full-score sorting');
+assert.ok(countyRankFallbackSource.includes('rankByScore.set(value, seen + 1)'), 'student history county-rank fallback should use counting rank');
+assert.ok(countyRankFallbackSource.includes('const scoreCounts = new Map();'), 'student history county-rank fallback should aggregate each score once');
+assert.ok(countyRankFallbackSource.includes('Array.from(scoreCounts.keys()).sort((a, b) => b - a)'), 'student history county-rank fallback should build reusable descending ranks');
 const bottom3SmokeStart = smokeAllModules.indexOf("if (id === 'bottom3')");
 const bottom3SmokeEnd = smokeAllModules.indexOf("if (id === 'indicator')", bottom3SmokeStart);
 const bottom3SmokeSource = bottom3SmokeStart >= 0 && bottom3SmokeEnd > bottom3SmokeStart
