@@ -7,6 +7,7 @@
         'TEACHER_COMPARE_',
         'TOWN_SUB_COMPARE_'
     ];
+    const STUDENT_HISTORY_INDEX_PREFIX = 'STUDENT_HISTORY_V1';
     const AUTO_COHORT_SYNC_COOLDOWN_MS = 10 * 60 * 1000;
     const TEACHER_LOAD_CACHE_TTL_MS = 90 * 1000;
     const STUDENT_HISTORY_CACHE_TTL_MS = 2 * 60 * 1000;
@@ -86,6 +87,45 @@
         if (match) return match[1];
         const digits = text.replace(/\D/g, '');
         return digits.length > 4 ? digits.slice(0, 4) : digits;
+    }
+
+    function hashCloudText(text) {
+        const raw = String(text || '');
+        let hash = 2166136261;
+        for (let i = 0; i < raw.length; i++) {
+            hash ^= raw.charCodeAt(i);
+            hash = Math.imul(hash, 16777619);
+        }
+        return `ws_${(hash >>> 0).toString(16)}`;
+    }
+
+    function normalizeStudentHistoryText(value) {
+        return String(value || '').trim().replace(/\s+/g, '');
+    }
+
+    function normalizeStudentHistoryClass(value) {
+        return String(value || '').trim().replace(/[班级\(\)\.\-gradeclass]/gi, '').replace(/\s+/g, '');
+    }
+
+    function getStudentHistoryIdentity(row = {}) {
+        const school = normalizeStudentHistoryText(row.school);
+        const className = normalizeStudentHistoryClass(row.class);
+        const id = normalizeStudentHistoryText(row.id || row.examNo || row.uuid);
+        const name = normalizeStudentHistoryText(row.name);
+        return [school, className, id, name].join('|');
+    }
+
+    function getStudentHistoryIndexKey(cohortId, examId, row) {
+        const cohort = normalizeCohortId(cohortId || examId);
+        const exactExamId = String(examId || '').trim();
+        const identity = getStudentHistoryIdentity(row);
+        if (!cohort || !exactExamId || !identity.replace(/\|/g, '')) return '';
+        return [
+            STUDENT_HISTORY_INDEX_PREFIX,
+            cohort,
+            hashCloudText(identity),
+            hashCloudText(exactExamId)
+        ].join('_');
     }
 
     function extractCohortIdFromKey(key) {
@@ -1650,6 +1690,84 @@
                     updatedAt
                 };
             };
+            const buildIndexedHistoryEntry = (row) => {
+                const payload = parsePayload(row?.content) || {};
+                const entry = payload?.entry && typeof payload.entry === 'object' ? payload.entry : null;
+                const examId = String(payload?.examId || entry?.examFullKey || entry?.examId || '').trim();
+                if (!entry || !examId || !shouldUseHistoryEntry(examId)) return null;
+                const indexedIdentity = String(payload?.identity || '').trim();
+                const targetIdentity = getStudentHistoryIdentity({
+                    school: targetSchool,
+                    class: targetClassRaw,
+                    id: targetStudentId,
+                    name: targetName
+                });
+                if (indexedIdentity && targetIdentity && indexedIdentity !== targetIdentity) return null;
+                return {
+                    ...entry,
+                    examId: entry.examId || examId,
+                    examFullKey: entry.examFullKey || examId,
+                    updatedAt: entry.updatedAt || row?.updated_at || ''
+                };
+            };
+            const readIndexedHistory = async () => {
+                const targetLikeRow = {
+                    school: targetSchool,
+                    class: targetClassRaw,
+                    id: targetStudentId,
+                    name: targetName
+                };
+                const targetIdentity = getStudentHistoryIdentity(targetLikeRow);
+                if (!targetIdentity.replace(/\|/g, '')) return { history: [], coveredKeys: new Set(), attempted: false };
+                const indexPrefix = [
+                    STUDENT_HISTORY_INDEX_PREFIX,
+                    cohortId,
+                    hashCloudText(targetIdentity)
+                ].join('_');
+                const examKeys = requestedExamIds
+                    .filter(examId => !isCurrentExam(examId))
+                    .map(examId => getStudentHistoryIndexKey(cohortId, examId, targetLikeRow))
+                    .filter(Boolean);
+                if (!examKeys.length && requestedExamIds.length) return { history: [], coveredKeys: new Set(), attempted: false };
+                const indexedOptions = examKeys.length
+                    ? {
+                        select: 'key,content,updated_at',
+                        keyIn: examKeys,
+                        order: 'updated_at',
+                        ascending: true,
+                        limit: examKeys.length,
+                        cache: true
+                    }
+                    : {
+                        select: 'key,content,updated_at',
+                        keyLike: `${indexPrefix}_%`,
+                        order: 'updated_at',
+                        ascending: true,
+                        cache: true
+                    };
+                const { data, error } = await selectSystemData(indexedOptions);
+                if (error) return { history: [], coveredKeys: new Set(), attempted: true, error };
+
+                const history = [];
+                const coveredKeys = new Set();
+                (data || []).forEach((row) => {
+                    try {
+                        const entry = buildIndexedHistoryEntry(row);
+                        if (!entry) return;
+                        history.push(entry);
+                        coveredKeys.add(String(entry.examFullKey || entry.examId || '').trim());
+                    } catch (indexError) {
+                        console.warn('[CloudHistory] parse index row failed:', indexError);
+                    }
+                });
+                history.sort((left, right) => {
+                    const timeA = new Date(left?.updatedAt || 0).getTime() || 0;
+                    const timeB = new Date(right?.updatedAt || 0).getTime() || 0;
+                    if (timeA !== timeB) return timeA - timeB;
+                    return String(left?.examFullKey || left?.examId || '').localeCompare(String(right?.examFullKey || right?.examId || ''), 'zh-CN');
+                });
+                return { history, coveredKeys, attempted: true };
+            };
             const shouldUseHistoryEntry = (examId) => {
                 return isRequestedExam(examId);
             };
@@ -1702,13 +1820,25 @@
             this._studentHistoryTasks[historyKey] = (async () => {
                 if (!(await this.ensureClientReady())) return { success: false, message: '云端未连接' };
                 setCloudStatus('syncing', '拉取历史');
-                const queryOptions = requestedExamIds.length
+                const indexedResult = await readIndexedHistory();
+                const indexedHistory = indexedResult.history || [];
+                const indexedCoveredKeys = indexedResult.coveredKeys || new Set();
+                const missingRequestedExamIds = requestedExamIds
+                    .filter(examId => !isCurrentExam(examId))
+                    .filter(examId => !Array.from(indexedCoveredKeys).some(historyId => isExamEquivalent(historyId, examId)));
+                if (requestedExamIds.length && missingRequestedExamIds.length === 0) {
+                    setCloudStatus('success', `历史${indexedHistory.length}条`);
+                    return { success: true, data: indexedHistory, source: 'student-history-index' };
+                }
+
+                const fallbackExamIds = requestedExamIds.length ? missingRequestedExamIds : requestedExamIds;
+                const queryOptions = fallbackExamIds.length
                     ? {
                         select: 'key,content,updated_at',
-                        keyIn: requestedExamIds,
+                        keyIn: fallbackExamIds,
                         order: 'updated_at',
                         ascending: true,
-                        limit: requestedExamIds.length
+                        limit: fallbackExamIds.length
                     }
                     : {
                         select: 'key,content,updated_at',
@@ -1725,7 +1855,7 @@
                     const rowKey = String(row?.key || '').trim();
                     return rowKey && !isIgnoredExamKey(rowKey) && shouldUseHistoryEntry(rowKey);
                 });
-                const history = [];
+                const history = indexedHistory.slice();
 
                 for (const row of rows) {
                     try {

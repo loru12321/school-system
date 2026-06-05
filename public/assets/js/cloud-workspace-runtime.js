@@ -162,6 +162,7 @@
     const WORKSPACE_SYNC_QUEUE_KEY = 'CLOUD_WORKSPACE_SYNC_QUEUE_V2';
     const CACHE_MACHINE_ID_KEY = 'SCHOOL_SYSTEM_CACHE_MACHINE_ID_V1';
     const CACHE_READY_KEY = 'SCHOOL_SYSTEM_LOCAL_CACHE_READY_V1';
+    const STUDENT_HISTORY_INDEX_PREFIX = 'STUDENT_HISTORY_V1';
     const storedJsonCache = new Map();
 
     if (!window.__CLOUD_WORKSPACE_STORAGE_CACHE_BOUND__) {
@@ -182,6 +183,35 @@
             hash = Math.imul(hash, 16777619);
         }
         return `ws_${(hash >>> 0).toString(16)}`;
+    }
+
+    function normalizeStudentHistoryText(value) {
+        return String(value || '').trim().replace(/\s+/g, '');
+    }
+
+    function normalizeStudentHistoryClass(value) {
+        return String(value || '').trim().replace(/[班级\(\)\.\-gradeclass]/gi, '').replace(/\s+/g, '');
+    }
+
+    function getStudentHistoryIdentity(row = {}) {
+        const school = normalizeStudentHistoryText(row.school);
+        const className = normalizeStudentHistoryClass(row.class);
+        const id = normalizeStudentHistoryText(row.id || row.examNo || row.uuid);
+        const name = normalizeStudentHistoryText(row.name);
+        return [school, className, id, name].join('|');
+    }
+
+    function getStudentHistoryIndexKey(cohortId, examId, row) {
+        const cohort = normalizeCohortId(cohortId || examId);
+        const exactExamId = String(examId || '').trim();
+        const identity = getStudentHistoryIdentity(row);
+        if (!cohort || !exactExamId || !identity.replace(/\|/g, '')) return '';
+        return [
+            STUDENT_HISTORY_INDEX_PREFIX,
+            cohort,
+            hashText(identity),
+            hashText(exactExamId)
+        ].join('_');
     }
 
     function clonePayloadFragment(value) {
@@ -336,6 +366,123 @@
         return shard;
     }
 
+    function buildRankFallbackBySubject(rows, subject) {
+        const subjectKey = String(subject || 'total');
+        const readValue = (row) => {
+            if (subjectKey === 'total') return Number(row?.total);
+            const value = row?.scores && Object.prototype.hasOwnProperty.call(row.scores, subjectKey)
+                ? Number(row.scores[subjectKey])
+                : NaN;
+            return value;
+        };
+        const scoreCounts = new Map();
+        (Array.isArray(rows) ? rows : []).forEach((row) => {
+            const value = readValue(row);
+            if (!Number.isFinite(value)) return;
+            scoreCounts.set(value, (scoreCounts.get(value) || 0) + 1);
+        });
+        const rankByScore = new Map();
+        let seen = 0;
+        Array.from(scoreCounts.keys()).sort((a, b) => b - a).forEach((value) => {
+            rankByScore.set(value, seen + 1);
+            seen += scoreCounts.get(value) || 0;
+        });
+        return { readValue, rankByScore };
+    }
+
+    function buildStudentHistoryIndexRowsForExam(payload, examId, shard, syncedAt) {
+        const examPayload = shard && typeof shard === 'object' ? shard : {};
+        const rows = Array.isArray(examPayload.RAW_DATA) ? examPayload.RAW_DATA : [];
+        const exactExamId = String(examId || examPayload.CURRENT_EXAM_ID || '').trim();
+        if (!exactExamId || !rows.length) return [];
+
+        const cohortId = normalizeCohortId(examPayload.CURRENT_COHORT_ID || payload?.CURRENT_COHORT_ID || exactExamId);
+        const subjects = Array.isArray(examPayload.SUBJECTS) && examPayload.SUBJECTS.length
+            ? examPayload.SUBJECTS.map(subject => String(subject || '').trim()).filter(Boolean)
+            : Array.from(new Set(rows.flatMap(row => Object.keys(row?.scores || {}))));
+        const fallbackCache = new Map();
+        const getCountyFallback = (row, subject = 'total') => {
+            const subjectKey = String(subject || 'total');
+            if (!fallbackCache.has(subjectKey)) {
+                fallbackCache.set(subjectKey, buildRankFallbackBySubject(rows, subjectKey));
+            }
+            const context = fallbackCache.get(subjectKey);
+            const value = context.readValue(row);
+            return Number.isFinite(value) ? context.rankByScore.get(value) : undefined;
+        };
+        const examLabel = examPayload.ARCHIVE_META?.examName
+            || examPayload.ARCHIVE_META?.name
+            || examPayload.COHORT_DB?.exams?.[exactExamId]?.examLabel
+            || deriveExamLabel(exactExamId)
+            || exactExamId;
+        const fingerprint = String(examPayload.FINGERPRINT || examPayload.COHORT_DB?.exams?.[exactExamId]?.fingerprint || '').trim();
+        const updatedAt = syncedAt || new Date().toISOString();
+
+        return rows.map((row) => {
+            if (!row || typeof row !== 'object' || !String(row.name || '').trim()) return null;
+            const key = getStudentHistoryIndexKey(cohortId, exactExamId, row);
+            if (!key) return null;
+
+            const subjectRanks = { ...(row.ranks || {}) };
+            subjects.forEach((subject) => {
+                const ranks = { ...(subjectRanks[subject] || {}) };
+                if (ranks.county === undefined || ranks.county === null || ranks.county === '') {
+                    const fallback = getCountyFallback(row, subject);
+                    if (fallback !== undefined) ranks.county = fallback;
+                }
+                if (Object.keys(ranks).length) subjectRanks[subject] = ranks;
+            });
+            const totalRanks = { ...((subjectRanks && subjectRanks.total) || {}) };
+            if (totalRanks.county === undefined || totalRanks.county === null || totalRanks.county === '') {
+                const fallback = getCountyFallback(row, 'total');
+                if (fallback !== undefined) totalRanks.county = fallback;
+            }
+            if (Object.keys(totalRanks).length) subjectRanks.total = totalRanks;
+
+            return {
+                key,
+                content: packPayload({
+                    __STUDENT_HISTORY_INDEX_VERSION: 1,
+                    cohortId,
+                    examId: exactExamId,
+                    identity: getStudentHistoryIdentity(row),
+                    student: {
+                        school: row.school || '',
+                        class: row.class || '',
+                        id: row.id || row.examNo || row.uuid || '',
+                        name: row.name || ''
+                    },
+                    entry: {
+                        examId: exactExamId,
+                        examFullKey: exactExamId,
+                        examLabel,
+                        fingerprint: fingerprint || [exactExamId, updatedAt, rows.length].join(':'),
+                        total: row.total,
+                        rankClass: subjectRanks.total?.class ?? row.classRank,
+                        rankSchool: subjectRanks.total?.school ?? row.schoolRank,
+                        rankTown: subjectRanks.total?.township ?? row.townRank,
+                        rankCounty: subjectRanks.total?.county ?? row.rankCounty ?? row.countyRank,
+                        subjectRanks,
+                        scores: clonePayloadFragment(row.scores || {}),
+                        updatedAt
+                    }
+                }),
+                updated_at: updatedAt
+            };
+        }).filter(Boolean);
+    }
+
+    function buildStudentHistoryIndexRowsForBundle(payload, examRows, syncedAt) {
+        const rows = [];
+        const currentExamId = getCurrentExamIdFromPayload(payload);
+        (Array.isArray(examRows) ? examRows : []).forEach((examRow) => {
+            if (currentExamId && String(examRow?.key || '').trim() !== currentExamId) return;
+            if (!examRow?.shard) return;
+            rows.push(...buildStudentHistoryIndexRowsForExam(payload, examRow.key, examRow.shard, syncedAt));
+        });
+        return rows;
+    }
+
     function buildWorkspaceSplitUploadBundle(workspaceKey, payload) {
         const metaPayload = buildWorkspaceMetaPayload(payload, workspaceKey);
         const metaContent = packPayload(metaPayload);
@@ -351,11 +498,11 @@
             const shard = buildExamShardPayload(payload, exactExamId, examPayload);
             if (!shard) return;
             seen.add(exactExamId);
-            examRows.push({ key: exactExamId, content: packPayload(shard) });
+            examRows.push({ key: exactExamId, content: packPayload(shard), shard });
         });
         if (currentExamId && !seen.has(currentExamId)) {
             const shard = buildExamShardPayload(payload, currentExamId, buildCurrentExamEntry(payload, currentExamId));
-            if (shard) examRows.push({ key: currentExamId, content: packPayload(shard) });
+            if (shard) examRows.push({ key: currentExamId, content: packPayload(shard), shard });
         }
         const contentHash = hashText([
             metaContent,
@@ -376,12 +523,18 @@
 
     async function uploadWorkspaceBundle(bundle, syncedAt) {
         if (!bundle || bundle.mode !== 'workspace-split') return false;
+        const historyIndexRows = buildStudentHistoryIndexRowsForBundle(bundle.metaPayload, bundle.examRows, syncedAt);
         const rows = [
             { key: bundle.workspaceKey, content: bundle.metaContent, updated_at: syncedAt },
             ...bundle.examRows.map(row => ({ key: row.key, content: row.content, updated_at: syncedAt }))
         ];
         const { error } = await upsertSystemDataRecord(rows);
         if (error) throw error;
+        for (let i = 0; i < historyIndexRows.length; i += 400) {
+            const chunk = historyIndexRows.slice(i, i + 400);
+            const { error: indexError } = await upsertSystemDataRecord(chunk);
+            if (indexError) throw indexError;
+        }
         return true;
     }
 
@@ -802,13 +955,28 @@
                 const payload = typeof getCurrentSnapshotPayload === 'function' ? getCurrentSnapshotPayload() : {};
                 if (mode === 'workspace') normalizeWorkspacePayload(payload);
                 const content = packPayload(payload);
+                const nowIso = new Date().toISOString();
+                const currentExamId = getCurrentExamIdFromPayload(payload);
+                const legacyShard = mode === 'exam' && currentExamId
+                    ? buildExamShardPayload(payload, currentExamId, buildCurrentExamEntry(payload, currentExamId))
+                    : null;
+                const legacyHistoryIndexRows = legacyShard
+                    ? buildStudentHistoryIndexRowsForExam(payload, currentExamId, legacyShard, nowIso)
+                    : [];
 
                 const { error } = await upsertSystemDataRecord({
                     key,
                     content,
-                    updated_at: new Date().toISOString()
+                    updated_at: nowIso
                 });
                 if (error) throw error;
+                if (legacyHistoryIndexRows.length) {
+                    for (let i = 0; i < legacyHistoryIndexRows.length; i += 400) {
+                        const chunk = legacyHistoryIndexRows.slice(i, i + 400);
+                        const { error: indexError } = await upsertSystemDataRecord(chunk);
+                        if (indexError) throw indexError;
+                    }
+                }
 
                 if (mode === 'workspace') {
                     syncWorkspaceState({

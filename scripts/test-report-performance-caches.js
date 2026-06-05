@@ -161,7 +161,11 @@ if (!cloudHistorySource || cloudHistorySource.includes('computeExamDataFingerpri
     'const targetClassRaw = String(student.class ||',
     'const targetStudentId = String(student.id || student.examNo ||',
     'const currentExamId = String(options?.currentExamId ||',
-    'keyIn: requestedExamIds',
+    'STUDENT_HISTORY_INDEX_PREFIX',
+    'readIndexedHistory',
+    'keyIn: examKeys',
+    'const missingRequestedExamIds = requestedExamIds',
+    'keyIn: fallbackExamIds',
     'const examEquivalentCache = new Map();',
     'const isExamEquivalent = (left, right) => {',
     'examEquivalentCache.set(cacheKey, result);',
@@ -184,8 +188,17 @@ if (!cloudHistorySource || cloudHistorySource.includes('computeExamDataFingerpri
     'normalizedCohort: normalizeCohortId(exam?.cohort || exam?.meta?.cohort || examId)',
     'const localHistoryExamKeys = localHistory',
     'rowKey && !isIgnoredExamKey(rowKey) && shouldUseHistoryEntry(rowKey)',
+    "return { success: true, data: indexedHistory, source: 'student-history-index' };",
     'rankCounty,'
 ].forEach((token) => assertContains(cloudHistorySource, token, cloudFile));
+
+[
+    'STUDENT_HISTORY_INDEX_PREFIX',
+    'buildStudentHistoryIndexRowsForExam',
+    'buildStudentHistoryIndexRowsForBundle',
+    'i += 400',
+    'legacyHistoryIndexRows'
+].forEach((token) => assertContains(read('public/assets/js/cloud-workspace-runtime.js'), token, 'public/assets/js/cloud-workspace-runtime.js'));
 
 [
     'totalRanks.county ?? row?.countyRank ?? row?.rankCounty ?? null',
