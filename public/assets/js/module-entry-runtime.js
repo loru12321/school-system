@@ -18,7 +18,7 @@
     const APP_DOWNLOAD_MODULE_IDS = new Set([
         'app-download-center'
     ]);
-    const TEACHER_ANALYSIS_RENDER_DELAY_MS = 180;
+    const TEACHER_ANALYSIS_RENDER_DELAY_MS = 16;
     const TEACHER_ANALYSIS_PRELOAD_DELAY_MS = 700;
     const TEACHER_ANALYSIS_ENTRY_LABELS = [
         'teacher-analysis-preload-map',
@@ -386,7 +386,7 @@
                     if (typeof window.renderTeacherTownshipRanking === 'function') window.renderTeacherTownshipRanking();
                 }, 760);
             });
-        }, { delay, idle: true, timeout: 1500 });
+        }, { delay, idle: false, timeout: 700 });
     }
 
     function renderTeacherAnalysisNow() {
@@ -756,7 +756,7 @@
             }
             run();
             scheduleModuleTask('teacher-analysis-role-visibility', applyTeacherRoleVisibility, { delay: 160, idle: true, timeout: 700 });
-        }, { delay: 420, idle: true, timeout: 1800 });
+        }, { delay: 32, idle: false, timeout: 700 });
         return Promise.resolve();
     }
 

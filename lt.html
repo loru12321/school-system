@@ -3150,6 +3150,43 @@ function scheduleHotspotRuntimeWarmup() {
 
 scheduleHotspotRuntimeWarmup();
 
+function scheduleTeachingManagementFastWarmup() {
+    if (window.__TEACHING_FAST_WARMUP_SCHEDULED__) return;
+    window.__TEACHING_FAST_WARMUP_SCHEDULED__ = true;
+
+    const warm = () => {
+        if (!Array.isArray(window.RAW_DATA) || window.RAW_DATA.length === 0) {
+            window.setTimeout(warm, 900);
+            return;
+        }
+        const loaders = [
+            () => window.ensureTeacherAnalysisMainRuntimeLoaded?.(),
+            () => window.ensureTeachingManagementRuntimeLoaded?.()
+        ];
+        loaders.reduce((chain, load) => (
+            chain.then(() => Promise.resolve(load()).catch((error) => {
+                console.warn('[boot-runtime] teaching fast warmup failed:', error);
+            }))
+        ), Promise.resolve());
+    };
+
+    const schedule = () => {
+        if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
+            window.SystemPerformance.scheduleIdle(warm, { label: 'teaching-fast-warmup', delay: 280, timeout: 1200 });
+            return;
+        }
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(warm, { timeout: 1200 });
+            return;
+        }
+        window.setTimeout(warm, 360);
+    };
+
+    runAfterAppModulesReady(() => window.setTimeout(schedule, 220));
+}
+
+scheduleTeachingManagementFastWarmup();
+
 function installHistoryDoQueryWrapper() {
     if (window.__historyDoQueryWrapped || typeof window.doQuery !== 'function') return false;
     const base = window.doQuery;
