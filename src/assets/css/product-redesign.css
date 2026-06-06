@@ -1012,3 +1012,299 @@ body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-top {
     transform: none !important;
     animation: none !important;
 }
+
+/* Polished light editorial correction: higher contrast, tighter density, no dark shell. */
+:root {
+    --pd-bg: #f8f3ee;
+    --pd-surface: #fffdfa;
+    --pd-surface-soft: #fff6f1;
+    --pd-surface-strong: #ffffff;
+    --pd-border: #ded0ca;
+    --pd-border-soft: #eadfda;
+    --pd-text: #18151b;
+    --pd-muted: #645d66;
+    --pd-primary: #ef4e74;
+    --pd-primary-strong: #c62d54;
+    --pd-primary-soft: #ffe7ee;
+    --pd-accent: #2fb8a7;
+    --pd-accent-soft: #e2f7f3;
+    --pd-warm: #ff9a62;
+    --pd-shadow: 0 18px 42px rgba(67, 45, 55, 0.14);
+    --pd-shadow-soft: 0 10px 26px rgba(67, 45, 55, 0.1);
+}
+
+html,
+body,
+body.dark-mode {
+    background:
+        radial-gradient(circle at 15% 8%, rgba(239, 78, 116, 0.13), transparent 26%),
+        radial-gradient(circle at 86% 12%, rgba(47, 184, 167, 0.12), transparent 25%),
+        linear-gradient(180deg, #fbf7f2 0%, #f8f3ee 48%, #f5f8f7 100%) !important;
+    color: var(--pd-text) !important;
+}
+
+.app-main,
+.main-content,
+body.dark-mode .app-main,
+body.dark-mode .main-content {
+    background: transparent !important;
+}
+
+.sidebar-spacious,
+body.dark-mode .sidebar-spacious {
+    background: rgba(255, 253, 250, 0.94) !important;
+    border-right-color: rgba(222, 208, 202, 0.96) !important;
+    box-shadow: 12px 0 30px rgba(67, 45, 55, 0.08) !important;
+}
+
+#main-header.shell-toolbar {
+    background: rgba(255, 253, 250, 0.96) !important;
+    border-color: rgba(222, 208, 202, 0.98) !important;
+    box-shadow: 0 12px 30px rgba(67, 45, 55, 0.12) !important;
+}
+
+.shell-toolbar-panel,
+.shell-toolbar-state-store,
+.shell-top-search,
+#globalSearchInput,
+#main-header select,
+#main-header .btn,
+#main-header button {
+    background-color: #fffdfa !important;
+    border-color: rgba(222, 208, 202, 0.98) !important;
+    color: var(--pd-text) !important;
+}
+
+.shell-overview-card--dock {
+    min-height: 118px !important;
+    background:
+        radial-gradient(circle at 72% 30%, rgba(47, 184, 167, 0.13), transparent 28%),
+        linear-gradient(135deg, #fffdfa 0%, #fff2f5 56%, #eef8f6 100%) !important;
+    border-color: rgba(222, 208, 202, 0.96) !important;
+    box-shadow: 0 14px 34px rgba(67, 45, 55, 0.1) !important;
+}
+
+.section.card-box,
+.analysis-workspace,
+.card-box,
+.control-panel,
+.analysis-inline-panel,
+.analysis-anchor-panel,
+.analysis-chart-card,
+.analysis-table-shell,
+.table-wrap,
+.compare-collapsible-panel,
+.task-ticket,
+.modal-content,
+.workspace-drawer-panel,
+.shell-story-card {
+    background: #fffdfa !important;
+    border-color: rgba(222, 208, 202, 0.96) !important;
+    box-shadow: var(--pd-shadow-soft) !important;
+}
+
+#starter-hub {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    padding-top: 0 !important;
+}
+
+#starter-hub .starter-grid {
+    gap: 12px !important;
+    margin-top: 12px !important;
+    align-items: stretch !important;
+}
+
+#starter-hub .starter-card,
+.starter-card {
+    min-height: 150px !important;
+    padding: 16px !important;
+    border-radius: 14px !important;
+    background: #fffdfa !important;
+    border: 1px solid rgba(222, 208, 202, 0.98) !important;
+    box-shadow: 0 10px 24px rgba(67, 45, 55, 0.1) !important;
+}
+
+#starter-hub .starter-card--status,
+#starter-hub .starter-card--tasks,
+#starter-hub .starter-card--entry {
+    min-height: 188px !important;
+}
+
+#starter-hub .starter-card--diagnose,
+#starter-hub .starter-card--issues,
+#starter-hub .starter-card--logs,
+#starter-hub .starter-card--backup,
+#starter-hub .starter-card--templates {
+    min-height: 136px !important;
+}
+
+#starter-hub .starter-card::before,
+.starter-card::before {
+    inset: 0 auto auto 16px !important;
+    width: 44px !important;
+    height: 3px !important;
+    background: linear-gradient(90deg, var(--pd-primary), var(--pd-warm), var(--pd-accent)) !important;
+    opacity: 1 !important;
+}
+
+#starter-hub .starter-card h4 {
+    margin-bottom: 12px !important;
+    color: var(--pd-text) !important;
+    font-size: 15px !important;
+    letter-spacing: 0 !important;
+}
+
+#starter-status-panel:empty,
+#starter-hub .log-list:empty {
+    display: none !important;
+}
+
+#starter-hub .status-grid {
+    gap: 10px !important;
+}
+
+#starter-hub .status-item {
+    min-height: 58px !important;
+    padding: 10px 12px !important;
+    border-radius: 12px !important;
+    background: #fff6f1 !important;
+    border-color: rgba(234, 219, 214, 0.98) !important;
+}
+
+#starter-hub .task-list,
+#starter-hub .issue-list,
+#starter-hub .log-list {
+    gap: 8px !important;
+}
+
+#starter-hub .task-item,
+#starter-hub .log-item,
+#starter-hub .issue-item {
+    border-radius: 12px !important;
+    padding: 9px 11px !important;
+    background: #f8fbfa !important;
+    border: 1px solid #dce9e6 !important;
+    color: #4d5864 !important;
+}
+
+#starter-hub .task-item.done {
+    background: linear-gradient(90deg, #e2f7f3, #fffdfa) !important;
+    border-color: rgba(47, 184, 167, 0.26) !important;
+}
+
+#starter-hub .starter-card--entry .btn,
+#starter-hub .starter-card--templates .btn {
+    flex: 1 1 136px !important;
+    min-height: 34px !important;
+    border-radius: 9px !important;
+}
+
+.metric-card,
+.summary-metric-card,
+.status-item,
+.analysis-scan-item,
+.teacher-card,
+.mobile-grid .mobile-grid-item,
+.mob-grid-card,
+.upload-drop-zone,
+.progress-status-note,
+.marginal-cycle-panel,
+.marginal-filter-panel {
+    background: #fffdfa !important;
+    border-color: rgba(222, 208, 202, 0.9) !important;
+    box-shadow: 0 8px 20px rgba(67, 45, 55, 0.08) !important;
+}
+
+.shell-overview-kicker,
+.sidebar-category-header,
+.analysis-scan-label,
+.metric-label,
+.stat-label {
+    color: #765f68 !important;
+    letter-spacing: 0.05em !important;
+}
+
+.btn-primary,
+.btn.success,
+.btn.btn-primary,
+#login-submit-button,
+#btn-summary-generate,
+.analysis-actions .btn:first-child,
+.upload-drop-actions .btn:first-child,
+#main-header.shell-toolbar .btn.active,
+#main-header.shell-toolbar button.active,
+#main-header.shell-toolbar .btn[aria-pressed="true"],
+.shell-module-rail-chip.is-active,
+.side-nav-link.active {
+    background: linear-gradient(135deg, #ef4e74, #ff8f62) !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 22px rgba(239, 78, 116, 0.22) !important;
+}
+
+.btn-green,
+.btn.btn-green {
+    background: linear-gradient(135deg, #2fb8a7, #55cdbf) !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 22px rgba(47, 184, 167, 0.18) !important;
+}
+
+input,
+select,
+textarea,
+.search-input,
+.form-control,
+.login-entry-field {
+    background: #fffdfa !important;
+    border-color: rgba(222, 208, 202, 0.98) !important;
+    color: var(--pd-text) !important;
+}
+
+table thead th,
+.analysis-generated-table thead th,
+.analysis-table-dense thead th {
+    background: #fff0f4 !important;
+    color: #6d5963 !important;
+}
+
+.toast-container {
+    top: 16px !important;
+    right: 22px !important;
+    left: auto !important;
+    transform: none !important;
+    width: min(360px, calc(100vw - 32px)) !important;
+    align-items: flex-end !important;
+}
+
+.toast-msg,
+.toast,
+.toast-message,
+.toast-item {
+    min-width: 0 !important;
+    max-width: 360px !important;
+    padding: 9px 14px !important;
+    border-radius: 999px !important;
+    background: linear-gradient(135deg, rgba(239, 78, 116, 0.92), rgba(47, 184, 167, 0.88)) !important;
+    border: 0 !important;
+    color: #ffffff !important;
+    box-shadow: 0 12px 28px rgba(67, 45, 55, 0.18) !important;
+    backdrop-filter: blur(10px);
+}
+
+.toast-msg.toast-success,
+.toast-success {
+    border-left: 0 !important;
+}
+
+.toast-msg.toast-error,
+.toast-error {
+    background: linear-gradient(135deg, #ef4e74, #c62d54) !important;
+    border-left: 0 !important;
+}
+
+.toast-msg.toast-info,
+.toast-info {
+    background: linear-gradient(135deg, #2f6feb, #2fb8a7) !important;
+    border-left: 0 !important;
+}
