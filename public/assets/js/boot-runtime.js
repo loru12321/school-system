@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = '20260606-correlation-split-v1';
+var BOOT_ASSET_VERSION_FALLBACK = '20260606-report-split-v1';
 
 function bootDebugLog(...args) {
     try {
@@ -126,10 +126,14 @@ var SYSTEM_RUNTIME_SKILLS = {
         bootEntry('jspdf-vendor', bootVend('jspdf/jspdf.umd.min.js')),
         bootEntry('html2canvas-vendor', bootVend('html2canvas/html2canvas.min.js'))
     ]),
-    'report-render': bootSkill('demand', 'full', ['report-generator', 'printSingleReport', 'renderSingleReportCardHTML'], [
+    'report-render': bootSkill('demand', 'demand', ['report-generator', 'renderSingleReportCardHTML'], [
+        bootEntry('report-render', bootJs('report-render-runtime.js'))
+    ]),
+    'report-chart': bootSkill('demand', 'demand', ['renderRadarChart', 'renderVarianceChart', 'analyzeStrengthsAndWeaknesses'], [
         bootEntry('chart-vendor', bootVend('chart.js/chart.umd.min.js')),
-        bootEntry('report-render', bootJs('report-render-runtime.js')),
-        bootEntry('report-chart', bootJs('report-chart-runtime.js')),
+        bootEntry('report-chart', bootJs('report-chart-runtime.js'))
+    ]),
+    'report-export': bootSkill('demand', 'demand', ['printSingleReport', 'copyReport'], [
         bootEntry('report-export', bootJs('report-export-runtime.js'))
     ]),
     'teacher-analysis': bootSkill('demand', 'full', ['teacher-analysis', 'cohort-growth'], [
@@ -2540,6 +2544,14 @@ window.ensureReportRenderRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('report-render');
 };
 
+window.ensureReportChartRuntimeLoaded = function () {
+    return window.SystemRuntimeLoader.load('report-chart');
+};
+
+window.ensureReportExportRuntimeLoaded = function () {
+    return window.SystemRuntimeLoader.load('report-export');
+};
+
 window.ensureOptionalStylesheetLoaded = function (key, href) {
     return loadOptionalStylesheet(key, href);
 };
@@ -2774,7 +2786,7 @@ if (!window.AccountExcel) {
 });
 
 ['printSingleReport', 'downloadSingleReportPDF', 'batchGeneratePDF', 'copyReport'].forEach((name) => {
-    installOptionalRuntimeMethod(name, window.ensureReportRenderRuntimeLoaded);
+    installOptionalRuntimeMethod(name, window.ensureReportExportRuntimeLoaded);
 });
 
 ['showSchoolProfile', 'jumpToModule'].forEach((name) => {
@@ -2859,8 +2871,12 @@ if (!window.AccountExcel) {
     installOptionalRuntimeMethod(name, window.ensureMacroCompareRuntimeLoaded);
 });
 
-['renderSingleReportCardHTML', 'renderRadarChart', 'renderVarianceChart', 'analyzeStrengthsAndWeaknesses'].forEach((name) => {
+['renderSingleReportCardHTML'].forEach((name) => {
     installOptionalRuntimeMethod(name, window.ensureReportRenderRuntimeLoaded);
+});
+
+['renderRadarChart', 'renderVarianceChart', 'analyzeStrengthsAndWeaknesses'].forEach((name) => {
+    installOptionalRuntimeMethod(name, window.ensureReportChartRuntimeLoaded);
 });
 
 [

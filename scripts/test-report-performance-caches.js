@@ -73,6 +73,18 @@ const pkg = JSON.parse(read(packageFile));
     'getMissingReportHistoryExamIds'
 ].forEach((token) => assertContains(app, token, 'public/assets/js/app.js'));
 
+[
+    'function scheduleStudentReportCharts(student, history)',
+    'await window.ensureReportChartRuntimeLoaded();',
+    'function scheduleStudentReportStrengthAnalysis(student, strengthKey)',
+    "window.SystemPerformance.scheduleIdle(run, { label: 'report-strength-analysis'",
+    'scheduleStudentReportStrengthAnalysis(stu, strengthKey)'
+].forEach((token) => assertContains(app, token, 'public/assets/js/app.js'));
+
+[
+    "const chartNarrativeHtml = typeof buildChartNarrative === 'function' ? buildChartNarrative(reportStu) : '';"
+].forEach((token) => assertContains(reportRender, token, reportRenderFile));
+
 const refreshReportStart = app.indexOf('async function refreshRenderedStudentReportAfterHistory');
 const refreshReportEnd = app.indexOf('function hydrateStudentReportHistoryInBackground', refreshReportStart);
 const refreshReportSource = refreshReportStart >= 0 && refreshReportEnd > refreshReportStart

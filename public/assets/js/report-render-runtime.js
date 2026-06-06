@@ -648,7 +648,7 @@ function renderSingleReportCardHTML(stu, mode, options = {}) {
             </style>
         `;
 
-    const chartNarrativeHtml = buildChartNarrative(reportStu);
+    const chartNarrativeHtml = typeof buildChartNarrative === 'function' ? buildChartNarrative(reportStu) : '';
     const insightModel = buildStudentInsightModel(reportStu, reportExamHistory);
     const insightOverviewHtml = renderStudentInsightOverview(insightModel);
     const actionPlanHtml = renderStudentActionPlan(insightModel);

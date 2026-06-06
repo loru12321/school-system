@@ -457,6 +457,11 @@ assert.ok(bootRuntimeReferences(studentOverviewRef), 'boot-runtime.js should ref
 assert.ok(bootRuntimeReferences(teachingManagementVersionRef), 'boot-runtime.js should reference teaching-management-version-runtime.js for lazy loading');
 assert.ok(bootRuntime.includes("'student-overview': bootSkill('demand', 'demand', ['student-overview']"), 'student overview should have its own demand runtime skill');
 assert.ok(bootRuntime.includes("window.ensureStudentOverviewRuntimeLoaded = function ()"), 'boot-runtime.js should expose ensureStudentOverviewRuntimeLoaded');
+assert.ok(bootRuntime.includes("'report-render': bootSkill('demand', 'demand', ['report-generator', 'renderSingleReportCardHTML']"), 'report HTML rendering should have its own lightweight demand runtime skill');
+assert.ok(bootRuntime.includes("'report-chart': bootSkill('demand', 'demand', ['renderRadarChart', 'renderVarianceChart', 'analyzeStrengthsAndWeaknesses']"), 'report charts should have their own demand runtime skill');
+assert.ok(bootRuntime.includes("'report-export': bootSkill('demand', 'demand', ['printSingleReport', 'copyReport']"), 'report export should have its own demand runtime skill');
+assert.ok(bootRuntime.includes("window.ensureReportChartRuntimeLoaded = function ()"), 'boot-runtime.js should expose ensureReportChartRuntimeLoaded');
+assert.ok(bootRuntime.includes("window.ensureReportExportRuntimeLoaded = function ()"), 'boot-runtime.js should expose ensureReportExportRuntimeLoaded');
 assert.ok(bootRuntimeReferences(reportChartRef), 'boot-runtime.js should reference report-chart-runtime.js for lazy loading');
 assert.ok(bootRuntimeReferences(reportExportRef), 'boot-runtime.js should reference report-export-runtime.js for lazy loading');
 assert.ok(!indexHtml.includes('id="ai-analysis"'), 'index.html should not include the removed analysis module');
@@ -606,6 +611,17 @@ const studentOverviewEntrySource = studentOverviewEntryStart >= 0 && studentOver
 assert.ok(reportPrewarmSource, 'report generator prewarm source should be present');
 assert.ok(!reportPrewarmSource.includes('ensureHistoryCompareRuntimeLoaded'), 'report generator should not prewarm legacy history compare runtime during normal report entry');
 assert.ok(!reportPrewarmSource.includes('ensureStudentCompareRuntimeLoaded'), 'report generator should not prewarm student compare runtime during normal report entry');
+assert.ok(!reportPrewarmSource.includes('ensureReportChartRuntimeLoaded'), 'report generator should not prewarm chart runtime during normal report entry');
+assert.ok(!reportPrewarmSource.includes('ensureReportExportRuntimeLoaded'), 'report generator should not prewarm export runtime during normal report entry');
+const reportRenderSkillStart = bootRuntime.indexOf("'report-render':");
+const reportChartSkillStart = bootRuntime.indexOf("'report-chart':");
+const reportRenderSkillSource = reportRenderSkillStart >= 0 && reportChartSkillStart > reportRenderSkillStart
+    ? bootRuntime.slice(reportRenderSkillStart, reportChartSkillStart)
+    : '';
+assert.ok(reportRenderSkillSource, 'report-render skill source should be present');
+assert.ok(!reportRenderSkillSource.includes('chart-vendor'), 'report-render should not load Chart.js on the query critical path');
+assert.ok(!reportRenderSkillSource.includes('report-chart-runtime.js'), 'report-render should not load report chart runtime on the query critical path');
+assert.ok(!reportRenderSkillSource.includes('report-export-runtime.js'), 'report-render should not load report export runtime on the query critical path');
 const historyDoQueryWrapperStart = bootRuntime.indexOf('function installHistoryDoQueryWrapper()');
 const historyDoQueryWrapperEnd = bootRuntime.indexOf('function installDataManagerSqlHooks', historyDoQueryWrapperStart);
 const historyDoQueryWrapperSource = historyDoQueryWrapperStart >= 0 && historyDoQueryWrapperEnd > historyDoQueryWrapperStart

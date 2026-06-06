@@ -11841,9 +11841,17 @@ function scheduleStudentReportCharts(student, history) {
     ReportHistoryPerfCache.lastChartScheduleKey = scheduleKey;
     const { container } = getReportDomCache();
     if (container?.dataset.reportChartCacheKey === chartKey) return;
-    const render = () => {
+    const render = async () => {
         const currentContainer = document.getElementById('report-card-capture-area');
         if (currentContainer?.dataset.reportChartCacheKey === chartKey) return;
+        if (typeof window.ensureReportChartRuntimeLoaded === 'function' && !window.__REPORT_CHART_RUNTIME_PATCHED__) {
+            try {
+                await window.ensureReportChartRuntimeLoaded();
+            } catch (error) {
+                console.warn('[report] chart runtime load failed:', error);
+                return;
+            }
+        }
         try { if (typeof renderRadarChart === 'function') renderRadarChart(student, history); } catch (e) { console.error(e); }
         try { if (typeof renderVarianceChart === 'function') renderVarianceChart(student, history); } catch (e) { console.error(e); }
         if (currentContainer) currentContainer.dataset.reportChartCacheKey = chartKey;
@@ -11852,6 +11860,28 @@ function scheduleStudentReportCharts(student, history) {
         window.requestIdleCallback(render, { timeout: 1200 });
     } else {
         setTimeout(render, 160);
+    }
+}
+
+function scheduleStudentReportStrengthAnalysis(student, strengthKey) {
+    if (!student || ReportHistoryPerfCache.lastStrengthKey === strengthKey) return;
+    ReportHistoryPerfCache.lastStrengthKey = strengthKey;
+    const run = async () => {
+        try {
+            if (typeof window.ensureReportChartRuntimeLoaded === 'function' && !window.__REPORT_CHART_RUNTIME_PATCHED__) {
+                await window.ensureReportChartRuntimeLoaded();
+            }
+            if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(student);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+    if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
+        window.SystemPerformance.scheduleIdle(run, { label: 'report-strength-analysis', delay: 260, timeout: 2500 });
+    } else if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(run, { timeout: 2500 });
+    } else {
+        setTimeout(run, 260);
     }
 }
 
@@ -13217,10 +13247,7 @@ async function doQuery(targetStudent = null) {
     hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, effectiveCurrentExamId, queryToken);
 
     const strengthKey = `${getReportStudentIdentity(stu)}::${effectiveCurrentExamId || ''}`;
-    if (ReportHistoryPerfCache.lastStrengthKey !== strengthKey) {
-        ReportHistoryPerfCache.lastStrengthKey = strengthKey;
-        try { if (typeof analyzeStrengthsAndWeaknesses === 'function') analyzeStrengthsAndWeaknesses(stu); } catch (e) { console.error(e); }
-    }
+    scheduleStudentReportStrengthAnalysis(stu, strengthKey);
 
     const { compareSection } = getReportDomCache();
     if (compareSection && ReportHistoryPerfCache.lastCompareHiddenKey !== strengthKey) {

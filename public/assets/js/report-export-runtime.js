@@ -60,6 +60,20 @@ async function batchGeneratePDF() {
             return uiAlert('PDF 导出依赖加载失败，请刷新页面后重试', 'error');
         }
     }
+    if (typeof window.ensureReportRenderRuntimeLoaded === 'function' && !window.__REPORT_RENDER_RUNTIME_PATCHED__) {
+        try {
+            await window.ensureReportRenderRuntimeLoaded();
+        } catch (error) {
+            return uiAlert('成绩单渲染加载失败，请刷新页面后重试', 'error');
+        }
+    }
+    if (typeof window.ensureReportChartRuntimeLoaded === 'function' && !window.__REPORT_CHART_RUNTIME_PATCHED__) {
+        try {
+            await window.ensureReportChartRuntimeLoaded();
+        } catch (error) {
+            return uiAlert('成绩单图表加载失败，请刷新页面后重试', 'error');
+        }
+    }
     const sch = document.getElementById('sel-school').value; const cls = document.getElementById('sel-class').value;
     if (!sch || sch === '--请先选择学校--' || !cls || cls === '--请先选择学校--') { return uiAlert("请先选择学校和班级！", 'warning'); }
     const schoolRecord = typeof window.getAppSchoolRecord === 'function'
