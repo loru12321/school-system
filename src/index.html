@@ -371,51 +371,6 @@
     
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- 届别入口弹窗 -->
-    <div id="mode-mask">
-        <div class="mode-box">
-            <div class="mode-shell">
-                <div class="mode-topline">
-                    <span class="mode-kicker">Cohort Workspace</span>
-                    <span class="mode-status"><i class="ti ti-sparkles"></i> 自动匹配年级与核算模式</span>
-                </div>
-                <div class="mode-copy">
-                    <h2 class="mode-title">进入届别档案</h2>
-                    <p class="mode-desc">以“入学年份”为主线建立完整成长周期，把成绩、增值、教学管理和成长报告统一收进同一条届别链路。</p>
-                </div>
-                <div class="mode-pill-row">
-                    <span class="mode-pill"><i class="ti ti-timeline"></i> 成长轨迹</span>
-                    <span class="mode-pill"><i class="ti ti-chart-histogram"></i> 进退步分析</span>
-                    <span class="mode-pill"><i class="ti ti-building-bank"></i> 教学评价</span>
-                    <span class="mode-pill"><i class="ti ti-file-analytics"></i> 家校报告</span>
-                </div>
-                <div class="mode-entry-row">
-                    <label class="mode-field" for="entry-cohort-year">
-                        <span class="mode-field-label">入学年份</span>
-                        <input id="entry-cohort-year" class="mode-field-input" type="number" min="2000" max="2100"
-                            placeholder="入学年份 (如 2022)">
-                    </label>
-                    <button class="btn btn-primary" onclick="enterCohortFromMask()">进入届别</button>
-                </div>
-                <div class="mode-foot-grid">
-                    <div class="mode-foot-card">
-                        <span>主线组织</span>
-                        <strong>按届别收拢多次考试与历史快照</strong>
-                    </div>
-                    <div class="mode-foot-card">
-                        <span>自动判断</span>
-                        <strong>根据年份匹配年级、学期与分析模式</strong>
-                    </div>
-                    <div class="mode-foot-card">
-                        <span>快速切换</span>
-                        <strong>已有届别可在顶部下拉直接切换</strong>
-                    </div>
-                </div>
-                <div class="mode-note">首次进入只需填写一次入学年份，后续系统会记住并在当前浏览器中继续使用。</div>
-            </div>
-        </div>
-    </div>
-
     <!-- 手机端管理主界面 (默认隐藏，通过 JS 激活) -->
     <!-- 📱 移动端仪表盘视图 -->
     <div id="mob-dashboard-view" style="display: none;">

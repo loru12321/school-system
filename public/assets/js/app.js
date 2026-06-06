@@ -7474,7 +7474,7 @@ async function switchCohort(cohortId, options = {}) {
         const badge = document.getElementById('mode-badge');
         if (badge && CONFIG.name) badge.innerText = CONFIG.name;
         renderNavigation();
-        document.getElementById('mode-mask').style.display = 'none';
+        hideCohortPicker();
         document.getElementById('app').classList.remove('hidden');
         scheduleWorkspaceUiRefresh('switch-cohort-restored', { delay: 120, idle: true, timeout: 1800, renderTables: false });
 
@@ -7503,7 +7503,7 @@ async function switchCohort(cohortId, options = {}) {
                     updateSchoolSelect();
                     updateMySchoolSelect();
                     if (CONFIG.name) renderNavigation();
-                    document.getElementById('mode-mask').style.display = 'none';
+                    hideCohortPicker();
                     document.getElementById('app').classList.remove('hidden');
                     scheduleWorkspaceUiRefresh('switch-cohort-exam-archive', { delay: 120, idle: true, timeout: 1800, renderTables: false });
                     CohortDB.renderExamList();
@@ -7560,7 +7560,7 @@ async function switchCohort(cohortId, options = {}) {
         updateSchoolSelect();
         const grade = computeCohortGrade(CURRENT_COHORT_META, getExamMetaFromUI());
         applyModeByGrade(grade);
-        document.getElementById('mode-mask').style.display = 'none';
+        hideCohortPicker();
         document.getElementById('app').classList.remove('hidden');
         scheduleWorkspaceUiRefresh('switch-cohort-empty', { delay: 160, idle: true, timeout: 1800, renderTables: false });
 
@@ -7875,7 +7875,7 @@ window.addEventListener('load', async () => {
 
         updateSchoolSelect();
         updateMySchoolSelect();
-        document.getElementById('mode-mask').style.display = 'none';
+        hideCohortPicker();
         if (CONFIG.name) renderNavigation();
         scheduleWorkspaceUiRefresh('embedded-db-tables', { delay: 120, idle: true, timeout: 1800, renderTables: false });
 
@@ -8007,7 +8007,7 @@ window.addEventListener('load', async () => {
             await performRestore();
         }
         else {
-            document.getElementById('mode-mask').style.display = 'flex';
+            showCohortPicker();
         }
     }
 
@@ -8812,7 +8812,7 @@ saveProjectSnapshot = function () {
 };
 
 function initSystem(type) {
-    document.getElementById('mode-mask').style.display = 'none';
+    hideCohortPicker();
     document.getElementById('app').classList.remove('hidden');
     if (type === '6-8') setConfigState({ name: '6-8年级', label: '全科总', excRate: 0.05, totalSubs: 'auto', analysisSubs: 'auto', extraDisplaySubs: [], showQuery: true });
     else setConfigState({ name: '9年级', label: '五科总', excRate: 0.06, totalSubs: ['语文', '数学', '英语', '物理', '化学'], analysisSubs: ['语文', '数学', '英语', '物理', '化学'], extraDisplaySubs: ['政治'], showQuery: true });
@@ -16774,6 +16774,12 @@ function resolveMaskCohortYear() {
     const inputYear = parseYearFromInput('entry-cohort-year');
     if (inputYear && inputYear >= 2000) return String(inputYear);
 
+    const loginSelected = String(document.getElementById('login-cohort-select')?.value || '').trim();
+    if (/^\d{4}$/.test(loginSelected)) return loginSelected;
+
+    const shellSelected = String(document.getElementById('cohort-selector')?.value || '').trim();
+    if (/^\d{4}$/.test(shellSelected)) return shellSelected;
+
     const current = String(CURRENT_COHORT_ID || readWorkspaceCohortId() || '').trim();
     if (/^\d{4}$/.test(current)) return current;
 
@@ -16796,12 +16802,30 @@ function prefillMaskCohortYear() {
     return String(input.value || '').trim();
 }
 
+function hideCohortPicker() {
+    const mask = document.getElementById('mode-mask');
+    const app = document.getElementById('app');
+    if (mask) mask.style.display = 'none';
+    if (app) app.classList.remove('hidden');
+}
+
 function showCohortPicker() {
     const mask = document.getElementById('mode-mask');
     const app = document.getElementById('app');
-    prefillMaskCohortYear();
-    if (mask) mask.style.display = 'flex';
-    if (app) app.classList.add('hidden');
+    if (mask) mask.remove();
+    if (app) app.classList.remove('hidden');
+    setManualCohortSelectionGate(false);
+
+    const year = parseInt(resolveMaskCohortYear(), 10);
+    if (year && year >= 2000 && typeof CohortManager !== 'undefined') {
+        window.setTimeout(() => {
+            try {
+                CohortManager.addCohort({ year, startGrade: 6 }, { skipConfirm: true, fastEnter: true });
+            } catch (error) {
+                console.warn('[CohortPicker] auto-enter failed:', error);
+            }
+        }, 0);
+    }
 }
 
 function setManualCohortSelectionGate(required = false) {
@@ -16980,8 +17004,10 @@ async function enterCohortFromMask() {
 function tryAutoEnterReadyCohortWorkspace() {
     const mask = document.getElementById('mode-mask');
     const app = document.getElementById('app');
-    if (!mask || !app) return false;
-    if (getComputedStyle(mask).display === 'none') return false;
+    if (!app) return false;
+    const maskVisible = !!mask && getComputedStyle(mask).display !== 'none';
+    const appHidden = app.classList.contains('hidden');
+    if (!maskVisible && !appHidden) return false;
     if (requiresManualCohortSelection()) return false;
 
     const cohortId = CURRENT_COHORT_ID || readWorkspaceCohortId();
@@ -16989,7 +17015,7 @@ function tryAutoEnterReadyCohortWorkspace() {
     const hasReadyData = Array.isArray(RAW_DATA) && RAW_DATA.length > 0;
     if (!cohortId || !examId || !hasReadyData) return false;
 
-    mask.style.display = 'none';
+    if (mask) mask.style.display = 'none';
     app.classList.remove('hidden');
     refreshAuthRoleViewFromSession();
 
