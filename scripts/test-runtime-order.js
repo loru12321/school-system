@@ -533,6 +533,9 @@ assert.ok(bootRuntime.includes('function scheduleMobileRuntimeBootstrap'), 'boot
 assert.ok(bootRuntime.includes('runAfterAppModulesReady'), 'boot-runtime.js should wait for core modules before mobile runtime bootstrap');
 assert.ok(bootRuntime.includes("{ label: 'data-manager-sql', loader: () => window.ensureDataManagerSqlRuntimeLoaded?.() }"), 'boot-runtime.js should idle-warm data manager SQL runtime');
 assert.ok(bootRuntime.includes("'teacher-analysis':"), 'runtime skill manifest should include teacher-analysis');
+assert.ok(bootRuntime.includes("'teacher-correlation':"), 'runtime skill manifest should include teacher-correlation');
+assert.ok(bootRuntime.includes("window.ensureTeacherCorrelationRuntimeLoaded = function ()"), 'boot-runtime.js should expose ensureTeacherCorrelationRuntimeLoaded');
+assert.ok(!bootRuntime.includes("'teacher-analysis', 'cohort-growth', 'correlation-analysis'"), 'correlation analysis should not pull the full teacher-analysis skill');
 assert.ok(bootRuntime.includes("'crypto-vendor':"), 'runtime skill manifest should include crypto-vendor');
 assert.ok(bootRuntime.includes("'shell-enhancements':"), 'runtime skill manifest should include shell-enhancements');
 assert.ok(bootRuntime.includes("'shell-enhancements': bootSkill('idle', 'demand'"), 'shell-enhancements should stay demand-loaded instead of warming during post-boot idle');
@@ -696,6 +699,7 @@ assert.ok(!studentOverviewEntrySource.includes("window.SystemRuntimeLoader.load(
 assert.ok(moduleEntryRuntime.includes('student-overview-deferred-select'), 'student overview should defer cross-module selector refreshes off the switch frame');
 assert.ok(moduleEntryRuntime.includes('const deferredSelectorUpdates = ['), 'student overview should batch non-critical selector refreshes');
 assert.ok(!studentOverviewEntrySource.includes('updateCorrelationSchoolSelect'), 'student overview should not refresh hidden correlation-analysis selectors on entry');
+assert.ok(moduleEntryRuntime.includes('ensureTeacherCorrelationRuntimeLoaded'), 'correlation-analysis entry should load only the correlation runtime');
 assert.ok(moduleEntryRuntime.includes("return Promise.reject(new Error('student overview runtime loader unavailable'))"), 'student overview entry should explicitly wait for its runtime loader before first render');
 assert.ok(!moduleEntryRuntime.includes('window.ensureTeachingManagementRuntimeLoaded()\n                .then(() => {\n                    if (document.getElementById(\'student-overview\')?.classList.contains(\'active\')) renderNow();\n                })\n                .catch((error) => console.warn(error));\n            renderNow();'), 'student overview entry should not render once before the lazy runtime resolves');
 assert.ok(studentOverviewRuntime.includes('const progressRows = fullProgressRows.length ? fullProgressRows : readProgressCacheState();'), 'student overview should avoid copying the progress cache for counts');

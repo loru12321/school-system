@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = '20260606-hotspot-prefetch-v1';
+var BOOT_ASSET_VERSION_FALLBACK = '20260606-correlation-split-v1';
 
 function bootDebugLog(...args) {
     try {
@@ -132,11 +132,15 @@ var SYSTEM_RUNTIME_SKILLS = {
         bootEntry('report-chart', bootJs('report-chart-runtime.js')),
         bootEntry('report-export', bootJs('report-export-runtime.js'))
     ]),
-    'teacher-analysis': bootSkill('demand', 'full', ['teacher-analysis', 'cohort-growth', 'correlation-analysis'], [
+    'teacher-analysis': bootSkill('demand', 'full', ['teacher-analysis', 'cohort-growth'], [
         bootEntry('teacher-analysis-core', bootJs('teacher-analysis-core-runtime.js')),
         bootEntry('teacher-analysis-ui', bootJs('teacher-analysis-ui-runtime.js')),
         bootEntry('teacher-analysis-bridge', bootJs('teacher-analysis-bridge-runtime.js')),
         bootEntry('teacher-analysis-main', bootJs('teacher-analysis-main-runtime.js'))
+    ]),
+    'teacher-correlation': bootSkill('demand', 'demand', ['correlation-analysis', 'renderCorrelationAnalysis', 'updateCorrelationSchoolSelect'], [
+        bootEntry('teacher-analysis-core', bootJs('teacher-analysis-core-runtime.js')),
+        bootEntry('teacher-analysis-bridge', bootJs('teacher-analysis-bridge-runtime.js'))
     ]),
     'student-overview': bootSkill('demand', 'demand', ['student-overview'], [
         bootEntry('student-overview', bootJs('student-overview-runtime.js'))
@@ -2558,6 +2562,10 @@ window.ensureAppDownloadRuntimeLoaded = function () {
 
 window.ensureTeacherAnalysisMainRuntimeLoaded = function () {
     return window.SystemRuntimeLoader.load('teacher-analysis');
+};
+
+window.ensureTeacherCorrelationRuntimeLoaded = function () {
+    return window.SystemRuntimeLoader.load('teacher-correlation');
 };
 
 window.ensureCountyAnalysisRuntimeLoaded = function () {

@@ -794,9 +794,9 @@
             return true;
         };
 
-        if (typeof window.ensureTeacherAnalysisMainRuntimeLoaded === 'function'
+        if (typeof window.ensureTeacherCorrelationRuntimeLoaded === 'function'
             && !window.__TEACHER_ANALYSIS_BRIDGE_RUNTIME_PATCHED__) {
-            window.ensureTeacherAnalysisMainRuntimeLoaded()
+            window.ensureTeacherCorrelationRuntimeLoaded()
                 .then(runAfterLoad)
                 .catch((error) => {
                     console.warn('[correlation-analysis] runtime load failed:', error);

@@ -75,6 +75,7 @@ async function installProfiler(page) {
       'ensureSchoolProfileRuntimeLoaded',
       'showSchoolProfile',
       'ensureTeacherAnalysisMainRuntimeLoaded',
+      'ensureTeacherCorrelationRuntimeLoaded',
       'renderCorrelationAnalysis',
       'calculateCorrelationPearson',
       'updateCorrelationSchoolSelect',
@@ -222,7 +223,7 @@ async function profileSummary(page) {
 
 async function profileCorrelation(page) {
   await page.evaluate(async () => {
-    await window.ensureTeacherAnalysisMainRuntimeLoaded?.();
+    await (window.ensureTeacherCorrelationRuntimeLoaded?.() || window.ensureTeacherAnalysisMainRuntimeLoaded?.());
     window.updateCorrelationSchoolSelect?.();
     const select = document.getElementById('corrSchoolSelect');
     if (select && !select.value) select.value = 'ALL';
