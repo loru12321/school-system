@@ -192,7 +192,7 @@
         if (currentCategory === 'town' && typeof ensureTownSubmoduleCompareUIs === 'function') {
             scheduleModuleTask('town-submodule-compare-ui', () => {
                 if (typeof ensureTownSubmoduleCompareUIs === 'function') ensureTownSubmoduleCompareUIs(id);
-            }, { delay: 80, frame: true });
+            }, { delay: 420, idle: true, timeout: 1800 });
         }
     }
 

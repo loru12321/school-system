@@ -511,6 +511,7 @@ assert.ok(townSubmoduleCompareRuntime.includes('function getTownSubmoduleSecHead
 assert.ok(townSubmoduleCompareRuntime.includes('function scheduleTownSubmoduleCompareCollapseBinding()'), 'town submodule compare collapse binding should be scheduled');
 assert.ok(townSubmoduleCompareRuntime.includes('window.requestAnimationFrame'), 'town submodule compare collapse binding should defer DOM binding off the module-enter path');
 assert.ok(moduleEntryRuntime.includes("scheduleModuleTask('town-submodule-compare-ui'"), 'town submodule compare UI should be scheduled outside the synchronous module-enter path');
+assert.ok(moduleEntryRuntime.includes("{ delay: 420, idle: true, timeout: 1800 }"), 'town submodule compare UI should wait for idle time instead of competing with first-entry renders');
 assert.ok(townSubmoduleCompareRuntime.includes('function getTownSubmoduleCompareEntries(submoduleId = \'\')'), 'town submodule compare UI should support targeted per-module creation');
 assert.ok(townSubmoduleCompareRuntime.includes('getTownSubmoduleCompareEntries(submoduleId).forEach'), 'town submodule compare UI should avoid inserting every panel during single-module entry');
 assert.ok(moduleEntryRuntime.includes('ensureTownSubmoduleCompareUIs(id)'), 'module entry should create only the active town submodule compare UI');
