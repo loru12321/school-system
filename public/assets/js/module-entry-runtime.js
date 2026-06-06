@@ -191,7 +191,7 @@
         if (typeof ensureModuleHelpButton === 'function') ensureModuleHelpButton(id);
         if (currentCategory === 'town' && typeof ensureTownSubmoduleCompareUIs === 'function') {
             scheduleModuleTask('town-submodule-compare-ui', () => {
-                if (typeof ensureTownSubmoduleCompareUIs === 'function') ensureTownSubmoduleCompareUIs();
+                if (typeof ensureTownSubmoduleCompareUIs === 'function') ensureTownSubmoduleCompareUIs(id);
             }, { delay: 80, frame: true });
         }
     }
@@ -980,10 +980,6 @@
         if (id === 'student-details') return initStudentDetailsEntry();
         if (id === 'summary') {
             scheduleMacroTablesRender('summary', 'summary-tables');
-            if (typeof window.ensureSchoolProfileRuntimeLoaded === 'function'
-                && !window.__SCHOOL_PROFILE_RUNTIME_PATCHED__) {
-                window.ensureSchoolProfileRuntimeLoaded().catch((error) => console.warn(error));
-            }
         }
         if (id === 'app-download-center') return initAppDownloadCenterEntry();
         if (id === 'analysis') {

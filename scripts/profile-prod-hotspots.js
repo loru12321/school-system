@@ -210,8 +210,7 @@ async function switchModule(page, id) {
 async function profileSummary(page) {
   await page.evaluate(async () => {
     await window.ensureTownSubmoduleCompareRuntimeLoaded?.();
-    await window.ensureTownSubmoduleCompareUIs?.();
-    await window.ensureSchoolProfileRuntimeLoaded?.();
+    await window.ensureTownSubmoduleCompareUIs?.('summary');
     const school = Object.keys(window.SCHOOLS || {})[0] || '';
     const examIds = Object.keys(window.COHORT_DB?.exams || {}).slice(0, 2);
     if (school && examIds.length >= 2) {

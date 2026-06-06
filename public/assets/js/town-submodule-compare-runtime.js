@@ -144,7 +144,15 @@ function resolveTownSubmoduleDefaultSchool(schoolList, preferredSchool = townGet
     return list[0];
 }
 
-function ensureTownSubmoduleCompareUIs() {
+function getTownSubmoduleCompareEntries(submoduleId = '') {
+    const target = String(submoduleId || '').trim();
+    if (target && Object.prototype.hasOwnProperty.call(TOWN_SUBMODULE_META, target)) {
+        return [[target, TOWN_SUBMODULE_META[target]]];
+    }
+    return Object.entries(TOWN_SUBMODULE_META);
+}
+
+function ensureTownSubmoduleCompareUIs(submoduleId = '') {
     if (!canShowTownSubmoduleMultiPeriodCompare()) {
         const panels = document.querySelectorAll('.town-submodule-compare-panel');
         panels.forEach((panel) => panel.remove());
@@ -154,27 +162,27 @@ function ensureTownSubmoduleCompareUIs() {
         return;
     }
     let didChange = false;
-    Object.entries(TOWN_SUBMODULE_META).forEach(([submoduleId, title]) => {
-        const section = document.getElementById(submoduleId);
+    getTownSubmoduleCompareEntries(submoduleId).forEach(([entryId, title]) => {
+        const section = document.getElementById(entryId);
         if (!section) return;
-        if (document.getElementById(`town-submodule-compare-result-${submoduleId}`)) return;
+        if (document.getElementById(`town-submodule-compare-result-${entryId}`)) return;
 
         const panel = document.createElement('div');
         panel.className = 'town-submodule-compare-panel';
-        panel.setAttribute('data-submodule', submoduleId);
+        panel.setAttribute('data-submodule', entryId);
         panel.style.cssText = 'margin:10px 0 14px 0; padding:10px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc;';
         panel.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
                     <div style="font-weight:600; color:#334155;">🧭 ${title} 多期对比（2期/3期）</div>
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <button class="btn btn-sm btn-blue" onclick="openTownSubmoduleCompareDialog('${submoduleId}')">生成多期对比</button>
-                        <button class="btn btn-sm btn-green" onclick="exportTownSubmoduleCompare('${submoduleId}')">导出多期对比</button>
-                        <button class="btn btn-sm" style="background:#8b5cf6; color:white;" onclick="saveTownSubmoduleCompareToCloud('${submoduleId}')">☁️ 保存云端对比</button>
-                        <button class="btn btn-sm" style="background:#06b6d4; color:white;" onclick="viewCloudTownSubmoduleCompares('${submoduleId}')">📋 查看云端对比</button>
+                        <button class="btn btn-sm btn-blue" onclick="openTownSubmoduleCompareDialog('${entryId}')">生成多期对比</button>
+                        <button class="btn btn-sm btn-green" onclick="exportTownSubmoduleCompare('${entryId}')">导出多期对比</button>
+                        <button class="btn btn-sm" style="background:#8b5cf6; color:white;" onclick="saveTownSubmoduleCompareToCloud('${entryId}')">☁️ 保存云端对比</button>
+                        <button class="btn btn-sm" style="background:#06b6d4; color:white;" onclick="viewCloudTownSubmoduleCompares('${entryId}')">📋 查看云端对比</button>
                     </div>
                 </div>
-                <div id="town-submodule-compare-hint-${submoduleId}" style="margin-top:6px; font-size:12px; color:#64748b;">请选择学校与考试期次后生成。</div>
-                <div id="town-submodule-compare-result-${submoduleId}" style="margin-top:10px;"></div>
+                <div id="town-submodule-compare-hint-${entryId}" style="margin-top:6px; font-size:12px; color:#64748b;">请选择学校与考试期次后生成。</div>
+                <div id="town-submodule-compare-result-${entryId}" style="margin-top:10px;"></div>
             `;
 
         const secHead = getTownSubmoduleSecHead(section);

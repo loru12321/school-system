@@ -495,11 +495,11 @@ assert.ok(bootRuntime.includes("window.ensureChartVendorLoaded = function ()"), 
 assert.ok(bootRuntime.includes("window.ensureXlsxVendorLoaded = function ()"), 'boot-runtime.js should expose ensureXlsxVendorLoaded');
 assert.ok(bootRuntime.includes('window.wrapXlsxRuntimeExports = function ()'), 'boot-runtime.js should wrap Excel entry points with lazy XLSX loading');
 assert.ok(bootRuntime.includes("window.ensureTownSubmoduleCompareRuntimeLoaded = function ()"), 'boot-runtime.js should expose ensureTownSubmoduleCompareRuntimeLoaded');
-const townCompareUiStart = townSubmoduleCompareRuntime.indexOf('function ensureTownSubmoduleCompareUIs()');
+const townCompareUiStart = townSubmoduleCompareRuntime.indexOf("function ensureTownSubmoduleCompareUIs(submoduleId = '')");
 const townCompareUiEnd = townSubmoduleCompareRuntime.indexOf('function getTownSubmoduleSeries', townCompareUiStart);
 assert.ok(townCompareUiStart >= 0 && townCompareUiEnd > townCompareUiStart, 'town submodule compare UI function should be discoverable');
 const townCompareUiSource = townSubmoduleCompareRuntime.slice(townCompareUiStart, townCompareUiEnd);
-const townCompareLoopStart = townCompareUiSource.indexOf('Object.entries(TOWN_SUBMODULE_META).forEach');
+const townCompareLoopStart = townCompareUiSource.indexOf('getTownSubmoduleCompareEntries(submoduleId).forEach');
 const townCompareLoopEnd = townCompareUiSource.indexOf('    if (didChange)', townCompareLoopStart);
 assert.ok(townCompareLoopStart >= 0 && townCompareLoopEnd > townCompareLoopStart, 'town submodule compare UI should batch refreshes after the insert loop');
 const townCompareInsertLoop = townCompareUiSource.slice(townCompareLoopStart, townCompareLoopEnd);
@@ -511,6 +511,9 @@ assert.ok(townSubmoduleCompareRuntime.includes('function getTownSubmoduleSecHead
 assert.ok(townSubmoduleCompareRuntime.includes('function scheduleTownSubmoduleCompareCollapseBinding()'), 'town submodule compare collapse binding should be scheduled');
 assert.ok(townSubmoduleCompareRuntime.includes('window.requestAnimationFrame'), 'town submodule compare collapse binding should defer DOM binding off the module-enter path');
 assert.ok(moduleEntryRuntime.includes("scheduleModuleTask('town-submodule-compare-ui'"), 'town submodule compare UI should be scheduled outside the synchronous module-enter path');
+assert.ok(townSubmoduleCompareRuntime.includes('function getTownSubmoduleCompareEntries(submoduleId = \'\')'), 'town submodule compare UI should support targeted per-module creation');
+assert.ok(townSubmoduleCompareRuntime.includes('getTownSubmoduleCompareEntries(submoduleId).forEach'), 'town submodule compare UI should avoid inserting every panel during single-module entry');
+assert.ok(moduleEntryRuntime.includes('ensureTownSubmoduleCompareUIs(id)'), 'module entry should create only the active town submodule compare UI');
 assert.ok(bootRuntime.includes("window.ensurePdfExportVendorsLoaded = function ()"), 'boot-runtime.js should expose ensurePdfExportVendorsLoaded');
 assert.ok(!bootRuntime.includes("window.ensurePresentationVendorsLoaded = function ()"), 'boot-runtime.js should not expose removed PPT vendor loader');
 assert.ok(bootRuntime.includes('var SYSTEM_RUNTIME_SKILLS = {'), 'boot-runtime.js should declare a runtime skill manifest');
@@ -557,6 +560,13 @@ assert.ok(bootRuntime.includes("window.ensurePackagerRuntimeLoaded = function ()
 assert.ok(bootRuntime.includes("window.ensureWorkerApiRuntimeLoaded = function ()"), 'boot-runtime.js should expose ensureWorkerApiRuntimeLoaded');
 assert.ok(!bootRuntime.includes("{ label: 'xlsx-vendor', loader: () => window.ensureXlsxVendorLoaded?.() }"), 'spreadsheet vendor should not actively warm during normal navigation');
 assert.ok(!bootRuntime.includes("{ label: 'freshman-exam', loader: () => window.ensureFreshmanExamRuntimeLoaded?.() }"), 'freshman runtime should stay demand-loaded outside freshman/exam modules');
+const summaryEntryStart = moduleEntryRuntime.indexOf("if (id === 'summary')");
+const summaryEntryEnd = moduleEntryRuntime.indexOf("if (id === 'app-download-center')", summaryEntryStart);
+const summaryEntrySource = summaryEntryStart >= 0 && summaryEntryEnd > summaryEntryStart
+    ? moduleEntryRuntime.slice(summaryEntryStart, summaryEntryEnd)
+    : '';
+assert.ok(summaryEntrySource, 'summary entry source should be present');
+assert.ok(!summaryEntrySource.includes('ensureSchoolProfileRuntimeLoaded'), 'summary entry should not parse school profile runtime before a profile click');
 assert.ok(bootRuntime.includes('window.setTimeout(preload, 240);'), 'desktop hotspot prefetch should begin before runtime hydration work');
 assert.ok(bootRuntime.includes('const prioritySteps = ['), 'desktop hotspot warmup should declare an interactive priority batch');
 assert.ok(bootRuntime.includes('SCHOOL_RUNTIME_HOTSPOT_HYDRATE'), 'desktop hotspot runtime hydration should require an explicit local switch');
