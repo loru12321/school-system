@@ -59,24 +59,26 @@ body {
 }
 
 body.dark-mode {
-    --pd-bg: #0b1120;
-    --pd-surface: #101827;
-    --pd-surface-soft: #111c2e;
-    --pd-surface-strong: #17233a;
-    --pd-border: #263449;
-    --pd-border-soft: #203047;
-    --pd-text: #e5edf7;
-    --pd-muted: #9aa9bc;
-    --pd-faint: #718096;
-    --pd-primary: #60a5fa;
-    --pd-primary-strong: #93c5fd;
-    --pd-primary-soft: rgba(96, 165, 250, 0.16);
-    --pd-accent: #2dd4bf;
-    --pd-accent-soft: rgba(45, 212, 191, 0.14);
+    --pd-bg: #fff8f5;
+    --pd-surface: #ffffff;
+    --pd-surface-soft: #fff1f4;
+    --pd-surface-strong: #fff6e8;
+    --pd-border: #efdbe0;
+    --pd-border-soft: #f6e8ec;
+    --pd-text: #172033;
+    --pd-muted: #6f6470;
+    --pd-faint: #a3919a;
+    --pd-primary: #f0527d;
+    --pd-primary-strong: #c7355f;
+    --pd-primary-soft: #fff0f5;
+    --pd-accent: #20a99a;
+    --pd-accent-soft: #e7fbf7;
     --bg-body: var(--pd-bg);
     --bg-card: var(--pd-surface);
     --border: var(--pd-border);
-    background: #0b1120 !important;
+    background:
+        linear-gradient(180deg, rgba(255, 248, 245, 0.96), rgba(255, 252, 249, 0.98)),
+        var(--pd-bg) !important;
     color: var(--pd-text);
 }
 
@@ -242,7 +244,7 @@ input[type="button"]:hover,
 input[type="submit"]:hover,
 .summary-generate-btn:hover {
     background: var(--pd-surface-strong) !important;
-    border-color: rgba(37, 99, 235, 0.34) !important;
+    border-color: rgba(240, 82, 125, 0.34) !important;
     color: var(--pd-primary-strong) !important;
     transform: none !important;
 }
@@ -278,15 +280,15 @@ input[type="submit"]:hover,
 
 .btn-orange,
 .btn.btn-orange {
-    background: #f59e0b !important;
-    border-color: #f59e0b !important;
-    color: #111827 !important;
+    background: #ff9f67 !important;
+    border-color: #ff9f67 !important;
+    color: #ffffff !important;
 }
 
 .btn-purple,
 .btn.btn-purple {
-    background: #7c3aed !important;
-    border-color: #7c3aed !important;
+    background: linear-gradient(135deg, var(--pd-primary), #ff8f5f) !important;
+    border-color: transparent !important;
     color: #ffffff !important;
 }
 
@@ -335,7 +337,7 @@ textarea:focus,
 .search-input:focus,
 .form-control:focus {
     border-color: var(--pd-primary) !important;
-    outline: 3px solid rgba(37, 99, 235, 0.14) !important;
+    outline: 3px solid rgba(240, 82, 125, 0.14) !important;
 }
 
 label,
@@ -379,6 +381,173 @@ label,
 .status-badge.info,
 .badge.info {
     background: var(--pd-primary-soft) !important;
+    color: var(--pd-primary-strong) !important;
+}
+
+.shell-toolbar-panel,
+.shell-module-rail-shell {
+    background: rgba(255, 255, 255, 0.86) !important;
+    border-color: var(--pd-border-soft) !important;
+}
+
+#main-header.shell-toolbar .btn,
+#main-header.shell-toolbar button,
+.shell-module-rail-chip,
+.side-nav-link {
+    border-color: var(--pd-border) !important;
+    background: rgba(255, 255, 255, 0.82) !important;
+    color: var(--pd-muted) !important;
+    box-shadow: none !important;
+}
+
+#main-header.shell-toolbar .btn:hover,
+#main-header.shell-toolbar button:hover,
+.shell-module-rail-chip:hover,
+.side-nav-link:hover {
+    background: var(--pd-primary-soft) !important;
+    border-color: rgba(240, 82, 125, 0.28) !important;
+    color: var(--pd-primary-strong) !important;
+}
+
+#main-header.shell-toolbar .btn.active,
+#main-header.shell-toolbar button.active,
+#main-header.shell-toolbar .btn[aria-pressed="true"],
+.shell-module-rail-chip.is-active,
+.side-nav-link.active {
+    background: linear-gradient(135deg, var(--pd-primary), #ff8f5f) !important;
+    border-color: transparent !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 24px rgba(240, 82, 125, 0.18) !important;
+}
+
+.workspace-rail-toggle,
+.sidebar-menu-item.active i,
+.nav-link.active i,
+.shell-current-icon {
+    color: var(--pd-primary) !important;
+}
+
+#summary #tb-summary tr[style*="fff3cd"] td,
+#summary #tb-summary tr[style*="ffeb3b"] td,
+#summary #tb-summary tr[style*="yellow"] td {
+    background: linear-gradient(90deg, rgba(255, 240, 245, 0.88), rgba(255, 246, 232, 0.82)) !important;
+    border-top-color: rgba(255, 143, 95, 0.44) !important;
+    border-bottom-color: rgba(255, 143, 95, 0.44) !important;
+}
+
+#summary #tb-summary tr[style*="fff3cd"] td:first-child,
+#summary #tb-summary tr[style*="ffeb3b"] td:first-child,
+#summary #tb-summary tr[style*="yellow"] td:first-child {
+    border-left: 5px solid var(--pd-primary) !important;
+}
+
+#summary #tb-summary tr.bg-highlight > td:first-child,
+#summary #tb-summary tr[style*="fff3cd"] > td:first-child,
+#summary #tb-summary tr[style*="ffeb3b"] > td:first-child,
+#summary #tb-summary tr[style*="yellow"] > td:first-child {
+    box-shadow: inset 5px 0 0 var(--pd-primary) !important;
+}
+
+table .summary-drill-link,
+table button[title*="点击查看"],
+.analysis-generated-table button[title*="查看"],
+.analysis-table-dense button[title*="查看"] {
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 54px !important;
+    min-height: 30px !important;
+    padding: 2px 8px 4px !important;
+    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.52) !important;
+    color: #8f3f2c !important;
+    text-decoration-line: underline !important;
+    text-decoration-style: wavy !important;
+    text-decoration-color: var(--pd-primary) !important;
+    text-decoration-thickness: 1.5px !important;
+    text-underline-offset: 6px !important;
+    box-shadow: inset 0 0 0 1px rgba(240, 82, 125, 0.16) !important;
+}
+
+table .summary-drill-link::after,
+table button[title*="点击查看"]::after,
+.analysis-generated-table button[title*="查看"]::after,
+.analysis-table-dense button[title*="查看"]::after {
+    content: "";
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 3px;
+    height: 3px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(240, 82, 125, 0.18), rgba(255, 159, 103, 0.28));
+    pointer-events: none;
+}
+
+table .summary-drill-link:hover,
+table .summary-drill-link:focus-visible,
+table button[title*="点击查看"]:hover,
+table button[title*="点击查看"]:focus-visible,
+.analysis-generated-table button[title*="查看"]:hover,
+.analysis-generated-table button[title*="查看"]:focus-visible,
+.analysis-table-dense button[title*="查看"]:hover,
+.analysis-table-dense button[title*="查看"]:focus-visible {
+    background: #ffffff !important;
+    color: var(--pd-primary-strong) !important;
+    text-decoration-color: var(--pd-primary-strong) !important;
+    box-shadow: inset 0 0 0 1px rgba(240, 82, 125, 0.26), 0 8px 18px rgba(240, 82, 125, 0.10) !important;
+}
+
+#summary #tb-summary span,
+#summary #tb-summary .badge,
+#summary #tb-summary .tag,
+#summary #tb-summary .pill {
+    box-shadow: none !important;
+}
+
+.analysis-summary-table td[style*="fff"],
+.analysis-summary-table td[style*="white"] {
+    box-shadow: none !important;
+}
+
+.mob-grid-icon-box {
+    background: linear-gradient(135deg, var(--pd-primary), #ff9f67) !important;
+    box-shadow: 0 10px 22px rgba(240, 82, 125, 0.18) !important;
+}
+
+.mobile-grid .mobile-grid-item:nth-child(2n) .mob-grid-icon-box,
+.mob-grid-card:nth-child(2n) .mob-grid-icon-box {
+    background: linear-gradient(135deg, var(--pd-accent), #66d7c8) !important;
+    box-shadow: 0 10px 22px rgba(32, 169, 154, 0.15) !important;
+}
+
+.mobile-grid .mobile-grid-item:nth-child(3n) .mob-grid-icon-box,
+.mob-grid-card:nth-child(3n) .mob-grid-icon-box {
+    background: linear-gradient(135deg, #ff9f67, #ffc76f) !important;
+    box-shadow: 0 10px 22px rgba(255, 159, 103, 0.16) !important;
+}
+
+body[data-mobile-architecture="apk-v2"] {
+    --apk-shell-bg: #fff8f5;
+    --apk-shell-card: rgba(255, 255, 255, 0.92);
+    --apk-shell-card-strong: #ffffff;
+    --apk-shell-border: rgba(239, 219, 224, 0.96);
+    --apk-shell-text: var(--pd-text);
+    --apk-shell-muted: var(--pd-muted);
+    --apk-shell-shadow: 0 14px 34px rgba(161, 91, 112, 0.10);
+}
+
+body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-top {
+    background:
+        linear-gradient(180deg, rgba(255, 240, 245, 0.92), rgba(255, 248, 245, 0.96)),
+        var(--pd-bg) !important;
+}
+
+body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-tab.is-active,
+body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-rail-chip.is-active {
+    background: var(--pd-primary-soft) !important;
+    border-color: rgba(240, 82, 125, 0.28) !important;
     color: var(--pd-primary-strong) !important;
 }
 
@@ -427,33 +596,37 @@ tbody tr:hover td,
 }
 
 #summary #tb-summary .summary-drill-link {
-    display: inline !important;
-    min-width: 0 !important;
-    min-height: 0 !important;
-    padding: 0 !important;
+    display: inline-flex !important;
+    min-width: 54px !important;
+    min-height: 30px !important;
+    padding: 2px 8px 4px !important;
     border: 0 !important;
-    border-radius: 0 !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    color: inherit !important;
+    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.52) !important;
+    box-shadow: inset 0 0 0 1px rgba(240, 82, 125, 0.16) !important;
+    color: #8f3f2c !important;
     font: inherit !important;
     font-weight: 800 !important;
     line-height: inherit !important;
-    text-decoration: none !important;
-    vertical-align: baseline !important;
+    text-decoration-line: underline !important;
+    text-decoration-style: wavy !important;
+    text-decoration-color: var(--pd-primary) !important;
+    text-decoration-thickness: 1.5px !important;
+    text-underline-offset: 6px !important;
+    vertical-align: middle !important;
 }
 
 #summary #tb-summary .summary-drill-link:hover,
 #summary #tb-summary .summary-drill-link:focus-visible {
-    background: transparent !important;
-    box-shadow: inset 0 -2px 0 rgba(240, 82, 125, 0.34) !important;
-    color: var(--pd-primary) !important;
+    background: #ffffff !important;
+    box-shadow: inset 0 0 0 1px rgba(240, 82, 125, 0.26), 0 8px 18px rgba(240, 82, 125, 0.10) !important;
+    color: var(--pd-primary-strong) !important;
     outline: 0 !important;
 }
 
 #summary #tb-summary .summary-drill-link-warm:hover,
 #summary #tb-summary .summary-drill-link-warm:focus-visible {
-    box-shadow: inset 0 -2px 0 rgba(255, 178, 74, 0.48) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 178, 74, 0.34), 0 8px 18px rgba(255, 159, 103, 0.10) !important;
     color: #a45600 !important;
 }
 
