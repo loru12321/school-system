@@ -721,3 +721,294 @@ body.dark-mode .analysis-workspace .module-desc-bar.analysis-hero {
         padding: 10px 12px !important;
     }
 }
+
+/*
+ * Favorite-content inspired polish.
+ * Reference mood: light outfit editorials, soft studio light, warm skin-tone
+ * neutrals, pink accents, and dense vertical-cover rhythm. This intentionally
+ * does not copy Douyin's product shell.
+ */
+:root {
+    --pd-bg: #fff7f3;
+    --pd-surface: rgba(255, 255, 255, 0.94);
+    --pd-surface-soft: #fff0f4;
+    --pd-surface-strong: #fffaf5;
+    --pd-border: #eadde0;
+    --pd-border-soft: #f4e8ea;
+    --pd-text: #201824;
+    --pd-muted: #746a73;
+    --pd-faint: #a8939d;
+    --pd-primary: #ff4778;
+    --pd-primary-strong: #d92e62;
+    --pd-primary-soft: #fff0f5;
+    --pd-accent: #48c5b5;
+    --pd-accent-soft: #e9fbf8;
+    --pd-warning: #b46b18;
+    --pd-warning-soft: #fff3d9;
+    --pd-shadow: 0 18px 46px rgba(145, 83, 103, 0.11);
+    --pd-shadow-soft: 0 8px 24px rgba(145, 83, 103, 0.07);
+    --primary: var(--pd-primary);
+    --primary-dark: var(--pd-primary-strong);
+    --primary-light: var(--pd-primary-soft);
+    --bg-body: var(--pd-bg);
+    --bg-card: var(--pd-surface);
+    --border: var(--pd-border);
+    color-scheme: light;
+}
+
+html,
+body,
+body.dark-mode {
+    color-scheme: light !important;
+    background:
+        radial-gradient(circle at 14% 12%, rgba(255, 190, 208, 0.34), transparent 28%),
+        radial-gradient(circle at 84% 8%, rgba(72, 197, 181, 0.16), transparent 25%),
+        linear-gradient(180deg, #fff7f3 0%, #fffdfb 42%, #f8fbff 100%) !important;
+    color: var(--pd-text) !important;
+}
+
+.sidebar-spacious,
+body.dark-mode .sidebar-spacious {
+    background: rgba(255, 255, 255, 0.86) !important;
+    border-right: 1px solid rgba(234, 221, 224, 0.86) !important;
+    box-shadow: 10px 0 34px rgba(145, 83, 103, 0.06) !important;
+    backdrop-filter: blur(18px);
+}
+
+.sidebar-menu-item.active,
+.nav-link.active,
+.nav-cat-item.active,
+body.dark-mode .sidebar-menu-item.active,
+body.dark-mode .nav-link.active,
+body.dark-mode .nav-cat-item.active {
+    background: linear-gradient(90deg, rgba(255, 71, 120, 0.16), rgba(72, 197, 181, 0.08)) !important;
+    color: var(--pd-primary-strong) !important;
+    box-shadow: inset 4px 0 0 var(--pd-primary) !important;
+}
+
+#main-header.shell-toolbar {
+    background: rgba(255, 255, 255, 0.78) !important;
+    border: 1px solid rgba(234, 221, 224, 0.92) !important;
+    box-shadow: 0 18px 42px rgba(145, 83, 103, 0.09) !important;
+    backdrop-filter: blur(18px);
+}
+
+.shell-overview-card--dock {
+    background:
+        radial-gradient(circle at 76% 24%, rgba(72, 197, 181, 0.14), transparent 28%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 241, 246, 0.92)) !important;
+    border-color: rgba(234, 221, 224, 0.92) !important;
+}
+
+.section.card-box,
+.analysis-workspace,
+.card-box,
+.control-panel,
+.analysis-inline-panel,
+.analysis-anchor-panel,
+.analysis-chart-card,
+.analysis-table-shell,
+.table-wrap,
+.compare-collapsible-panel,
+.starter-card,
+.task-ticket,
+.modal-content,
+.workspace-drawer-panel,
+.shell-story-card {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 250, 247, 0.92)) !important;
+    border: 1px solid rgba(234, 221, 224, 0.9) !important;
+    box-shadow: var(--pd-shadow-soft) !important;
+}
+
+.metric-card,
+.summary-metric-card,
+.status-item,
+.analysis-scan-item,
+.teacher-card,
+.mobile-grid .mobile-grid-item,
+.mob-grid-card,
+.upload-drop-zone,
+.progress-status-note,
+.marginal-cycle-panel,
+.marginal-filter-panel {
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 82% 0%, rgba(255, 71, 120, 0.11), transparent 36%),
+        linear-gradient(180deg, #ffffff 0%, #fff8f6 100%) !important;
+    border: 1px solid rgba(244, 232, 234, 0.98) !important;
+    box-shadow: 0 10px 28px rgba(145, 83, 103, 0.07) !important;
+}
+
+.metric-card::before,
+.summary-metric-card::before,
+.teacher-card::before,
+.task-ticket::before,
+.starter-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto auto 18px;
+    width: 56px;
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--pd-primary), #ff9f67, var(--pd-accent));
+}
+
+.shell-overview-kicker,
+.sidebar-category-header,
+.analysis-scan-label,
+.metric-label,
+.stat-label {
+    color: #9c7b87 !important;
+    letter-spacing: 0.08em !important;
+}
+
+.shell-current-title,
+.sec-head h2,
+.sec-head h3,
+.analysis-shell-head h2,
+.analysis-shell-head h3,
+.card-box h2,
+.card-box h3,
+.metric-value,
+.summary-metric-value,
+.stat-value,
+.analysis-scan-value {
+    color: var(--pd-text) !important;
+    text-shadow: none !important;
+}
+
+.btn-primary,
+.btn.success,
+.btn.btn-primary,
+#login-submit-button,
+#btn-summary-generate,
+.analysis-actions .btn:first-child,
+.upload-drop-actions .btn:first-child,
+#main-header.shell-toolbar .btn.active,
+#main-header.shell-toolbar button.active,
+#main-header.shell-toolbar .btn[aria-pressed="true"],
+.shell-module-rail-chip.is-active,
+.side-nav-link.active {
+    background: linear-gradient(135deg, #ff4778, #ff8f5f) !important;
+    border-color: transparent !important;
+    color: #ffffff !important;
+    box-shadow: 0 12px 24px rgba(255, 71, 120, 0.18) !important;
+}
+
+.btn-green,
+.btn.btn-green {
+    background: linear-gradient(135deg, #48c5b5, #75d8cb) !important;
+    border-color: transparent !important;
+    color: #ffffff !important;
+}
+
+input,
+select,
+textarea,
+.search-input,
+.form-control,
+.login-entry-field {
+    background: rgba(255, 255, 255, 0.92) !important;
+    border-color: rgba(226, 213, 217, 0.94) !important;
+}
+
+table thead th,
+.analysis-generated-table thead th,
+.analysis-table-dense thead th {
+    background: #fff2f6 !important;
+    color: #8f7180 !important;
+}
+
+tbody tr:hover td,
+.analysis-generated-table tbody tr:hover td,
+.analysis-table-dense tbody tr:hover td {
+    background: rgba(255, 71, 120, 0.055) !important;
+}
+
+#summary #tb-summary tr[style*="fff3cd"] td,
+#summary #tb-summary tr[style*="ffeb3b"] td,
+#summary #tb-summary tr[style*="yellow"] td,
+tr.bg-highlight > td {
+    background: linear-gradient(90deg, rgba(255, 240, 245, 0.94), rgba(255, 248, 236, 0.9)) !important;
+    border-top-color: rgba(255, 143, 95, 0.42) !important;
+    border-bottom-color: rgba(255, 143, 95, 0.42) !important;
+}
+
+body[data-mobile-architecture="apk-v2"] {
+    --apk-shell-bg: #fff7f3;
+    --apk-shell-card: rgba(255, 255, 255, 0.94);
+    --apk-shell-card-strong: #ffffff;
+    --apk-shell-border: rgba(234, 221, 224, 0.94);
+    --apk-shell-text: var(--pd-text);
+    --apk-shell-muted: var(--pd-muted);
+    --apk-shell-shadow: 0 14px 34px rgba(145, 83, 103, 0.1);
+}
+
+body[data-mobile-architecture="apk-v2"] #apk-mobile-shell .apk-shell-top {
+    background:
+        radial-gradient(circle at 78% 4%, rgba(72, 197, 181, 0.16), transparent 30%),
+        linear-gradient(180deg, rgba(255, 240, 245, 0.94), rgba(255, 250, 247, 0.96)) !important;
+}
+
+#login-overlay[data-login-skin="clean"] {
+    background:
+        radial-gradient(circle at 16% 16%, rgba(255, 190, 208, 0.42), transparent 30%),
+        radial-gradient(circle at 84% 8%, rgba(72, 197, 181, 0.18), transparent 26%),
+        linear-gradient(135deg, #fff8f4 0%, #fffdfb 52%, #f8fbff 100%) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage {
+    color: var(--pd-text) !important;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 246, 242, 0.88)),
+        radial-gradient(circle at 74% 24%, rgba(72, 197, 181, 0.16), transparent 28%) !important;
+    border-color: rgba(234, 221, 224, 0.9) !important;
+    box-shadow: 0 28px 68px rgba(145, 83, 103, 0.12) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::before {
+    border-color: rgba(234, 221, 224, 0.9) !important;
+    background:
+        linear-gradient(90deg, transparent 0 28%, rgba(255, 71, 120, 0.08) 28% 29%, transparent 29%),
+        linear-gradient(180deg, #fff0f5 0 18%, transparent 18%),
+        linear-gradient(135deg, rgba(255, 71, 120, 0.12), rgba(255, 183, 118, 0.13), rgba(72, 197, 181, 0.1)) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+    color: #76515f !important;
+    background: rgba(255, 255, 255, 0.78) !important;
+    border-color: rgba(234, 221, 224, 0.92) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1,
+#login-overlay[data-login-skin="clean"] .login-form-header h2,
+#login-overlay[data-login-skin="clean"] .login-clean-label {
+    color: var(--pd-text) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy span,
+#login-overlay[data-login-skin="clean"] .login-clean-copy p,
+#login-overlay[data-login-skin="clean"] .login-form-header p,
+#login-overlay[data-login-skin="clean"] .login-clean-helper,
+#login-overlay[data-login-skin="clean"] .login-portal-helper {
+    color: var(--pd-muted) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-card {
+    background: rgba(255, 255, 255, 0.86) !important;
+    border-color: rgba(234, 221, 224, 0.92) !important;
+    box-shadow: 0 26px 62px rgba(145, 83, 103, 0.11) !important;
+    backdrop-filter: blur(18px);
+}
+
+#login-overlay[data-login-skin="clean"] .login-form-header,
+#login-overlay[data-login-skin="clean"] .login-clean-form,
+#login-overlay[data-login-skin="clean"] #login-form,
+#login-overlay[data-login-skin="clean"] .login-clean-copy,
+#login-overlay[data-login-skin="clean"] .login-clean-brand {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+}
