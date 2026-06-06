@@ -551,6 +551,7 @@ assert.ok(!bootRuntime.includes("{ label: 'xlsx-vendor', loader: () => window.en
 assert.ok(!bootRuntime.includes("{ label: 'freshman-exam', loader: () => window.ensureFreshmanExamRuntimeLoaded?.() }"), 'freshman runtime should stay demand-loaded outside freshman/exam modules');
 assert.ok(bootRuntime.includes('window.setTimeout(preload, 240);'), 'desktop hotspot prefetch should begin before runtime hydration work');
 assert.ok(bootRuntime.includes('const prioritySteps = ['), 'desktop hotspot warmup should declare an interactive priority batch');
+assert.ok(bootRuntime.includes('SCHOOL_RUNTIME_HOTSPOT_HYDRATE'), 'desktop hotspot runtime hydration should require an explicit local switch');
 assert.ok(bootRuntime.includes('runStepsSequentially(prioritySteps'), 'interactive runtime warmup should avoid concurrent hot bundle parsing during user interaction');
 assert.ok(bootRuntime.includes("scheduleWarmup('hotspot-runtime:priority', runPrioritySteps)"), 'interactive runtime warmup should retain idle scheduling for boot responsiveness');
 assert.ok(bootRuntime.indexOf("{ label: 'town-submodule-compare'") < bootRuntime.indexOf('const deferredSteps = ['), 'summary interaction runtimes should remain in the priority batch');

@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = '20260606-history-index-v1';
+var BOOT_ASSET_VERSION_FALLBACK = '20260606-hotspot-prefetch-v1';
 
 function bootDebugLog(...args) {
     try {
@@ -3055,6 +3055,14 @@ function scheduleHotspotRuntimeWarmup() {
         .then(() => (typeof step.loader === 'function' ? step.loader() : undefined))
         .catch((error) => console.warn(`[boot-runtime] hotspot runtime warmup failed: ${step.label}`, error));
 
+    const shouldHydrateHotspotRuntimes = () => {
+        try {
+            return window.localStorage && window.localStorage.getItem('SCHOOL_RUNTIME_HOTSPOT_HYDRATE') === 'true';
+        } catch (_) {
+            return false;
+        }
+    };
+
     const scheduleWarmup = (label, run) => {
         installSwitchTabInteractionMarker();
         const guardedRun = () => {
@@ -3098,6 +3106,7 @@ function scheduleHotspotRuntimeWarmup() {
     runAfterAppModulesReady(() => {
         window.setTimeout(preload, 240);
         window.setTimeout(() => {
+            if (!shouldHydrateHotspotRuntimes()) return;
             scheduleWarmup('hotspot-runtime:priority', runPrioritySteps);
         }, 1400);
     });
