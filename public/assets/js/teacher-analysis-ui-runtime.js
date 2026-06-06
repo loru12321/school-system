@@ -45,6 +45,44 @@
                 : teacherToNumber(value, 0).toFixed(2);
             return `${displayValue} <span style="font-size:0.9em; color:#94a3b8">(${rank})</span>`;
         });
+    const teacherUiRenderCache = {
+        cardsSignature: '',
+        cardsHtml: '',
+        comparisonSignature: '',
+        comparisonHtml: ''
+    };
+
+    function teacherBuildUiStatsSignature(stats, extra = '') {
+        const parts = [String(extra || '')];
+        Object.keys(stats || {}).sort().forEach((teacherName) => {
+            parts.push(`T:${teacherName}`);
+            Object.keys(stats[teacherName] || {}).sort(sortSubjectsFn).forEach((subject) => {
+                const data = stats[teacherName][subject] || {};
+                parts.push([
+                    subject,
+                    data.classesText || data.classes || '',
+                    data.studentCount,
+                    data.avg,
+                    data.avgValue,
+                    data.fairScore,
+                    data.fairRank,
+                    data.leagueScoreRaw,
+                    data.leagueScore,
+                    data.baselineAdjustment,
+                    data.baselineCoverageText,
+                    data.excellentRate,
+                    data.passRate,
+                    data.lowRate,
+                    data.conversionScore,
+                    data.conversionAdjustment,
+                    data.focusSummary,
+                    data.sampleStabilityText,
+                    data.teacherContinuityText
+                ].join('|'));
+            });
+        });
+        return parts.join('::');
+    }
 
     function getTeacherStats() {
         if (typeof window.getVisibleTeacherStats === 'function') return window.getVisibleTeacherStats();
@@ -149,7 +187,20 @@
             return;
         }
 
-        container.innerHTML = list.map((item) => `
+        const signature = teacherBuildUiStatsSignature(stats, [
+            role,
+            user?.name || '',
+            Object.keys(rankings || {}).sort().join('|')
+        ].join('|'));
+        if (teacherUiRenderCache.cardsSignature === signature && teacherUiRenderCache.cardsHtml) {
+            if (container.dataset.teacherCardsSignature !== signature) {
+                container.innerHTML = teacherUiRenderCache.cardsHtml;
+                container.dataset.teacherCardsSignature = signature;
+            }
+            return;
+        }
+
+        const html = list.map((item) => `
             <div class="teacher-card">
                 <div class="teacher-header">
                     <div>
@@ -187,6 +238,10 @@
                 <button class="view-details-btn" onclick='showTeacherDetails(${JSON.stringify(item.name)}, ${JSON.stringify(item.subject)})'>查看详情</button>
             </div>
         `).join('');
+        teacherUiRenderCache.cardsSignature = signature;
+        teacherUiRenderCache.cardsHtml = html;
+        container.dataset.teacherCardsSignature = signature;
+        container.innerHTML = html;
     }
 
     function renderTeacherTownshipRanking() {
@@ -485,6 +540,22 @@
             return;
         }
 
+        const signature = teacherBuildUiStatsSignature(stats, [
+            'comparison',
+            window.innerWidth <= 860 ? 'mobile' : 'desktop'
+        ].join('|'));
+        if (teacherUiRenderCache.comparisonSignature === signature && teacherUiRenderCache.comparisonHtml) {
+            if (container.dataset.teacherComparisonSignature !== signature) {
+                container.classList.add('comparison-table');
+                container.innerHTML = teacherUiRenderCache.comparisonHtml;
+                container.dataset.teacherComparisonSignature = signature;
+                if (typeof window.refreshResponsiveMobileTables === 'function') {
+                    window.refreshResponsiveMobileTables(container.closest('.section') || container);
+                }
+            }
+            return;
+        }
+
         const subjectTeachers = {};
         Object.keys(stats).forEach((teacherName) => {
             Object.keys(stats[teacherName] || {}).forEach((subject) => {
@@ -573,6 +644,9 @@
         });
 
         tableHtml += '</tbody>';
+        teacherUiRenderCache.comparisonSignature = signature;
+        teacherUiRenderCache.comparisonHtml = tableHtml;
+        container.dataset.teacherComparisonSignature = signature;
         container.classList.add('comparison-table');
         container.innerHTML = tableHtml;
         if (typeof window.refreshResponsiveMobileTables === 'function') {
