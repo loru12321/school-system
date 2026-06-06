@@ -5,22 +5,22 @@
  */
 :root {
     --pd-font-sans: Inter, "Segoe UI", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    --pd-bg: #f7f8fa;
+    --pd-bg: #fff8f5;
     --pd-surface: #ffffff;
-    --pd-surface-soft: #f3f4f6;
-    --pd-surface-strong: #eef2f7;
-    --pd-border: #d9dee7;
-    --pd-border-soft: #e9edf3;
-    --pd-text: #111827;
-    --pd-muted: #5f6b7a;
-    --pd-faint: #8a95a5;
-    --pd-primary: #0b57d0;
-    --pd-primary-strong: #0842a0;
-    --pd-primary-soft: #e8f0fe;
-    --pd-accent: #e1306c;
-    --pd-accent-soft: #fff0f5;
-    --pd-warning: #b45309;
-    --pd-warning-soft: #fef3c7;
+    --pd-surface-soft: #fff1f4;
+    --pd-surface-strong: #fff6e8;
+    --pd-border: #efdbe0;
+    --pd-border-soft: #f6e8ec;
+    --pd-text: #172033;
+    --pd-muted: #6f6470;
+    --pd-faint: #a3919a;
+    --pd-primary: #f0527d;
+    --pd-primary-strong: #c7355f;
+    --pd-primary-soft: #fff0f5;
+    --pd-accent: #20a99a;
+    --pd-accent-soft: #e7fbf7;
+    --pd-warning: #b86a00;
+    --pd-warning-soft: #fff4d8;
     --pd-danger: #dc2626;
     --pd-danger-soft: #fee2e2;
     --pd-success: #15803d;
@@ -28,8 +28,8 @@
     --pd-radius-sm: 6px;
     --pd-radius: 8px;
     --pd-radius-lg: 10px;
-    --pd-shadow: 0 1px 2px rgba(17, 24, 39, 0.08), 0 8px 24px rgba(17, 24, 39, 0.06);
-    --pd-shadow-soft: 0 1px 2px rgba(17, 24, 39, 0.05);
+    --pd-shadow: 0 1px 2px rgba(88, 47, 62, 0.08), 0 12px 32px rgba(240, 82, 125, 0.08);
+    --pd-shadow-soft: 0 1px 2px rgba(88, 47, 62, 0.05);
     --primary: var(--pd-primary);
     --primary-dark: var(--pd-primary-strong);
     --primary-light: var(--pd-primary-soft);
@@ -49,7 +49,9 @@ html {
 }
 
 body {
-    background: var(--pd-bg) !important;
+    background:
+        linear-gradient(180deg, rgba(255, 248, 245, 0.96), rgba(255, 252, 249, 0.98)),
+        var(--pd-bg) !important;
     color: var(--pd-text);
     font-family: var(--pd-font-sans);
     font-size: 14px;
@@ -421,7 +423,7 @@ table th,
 tbody tr:hover td,
 .analysis-generated-table tbody tr:hover td,
 .analysis-table-dense tbody tr:hover td {
-    background: rgba(11, 87, 208, 0.045) !important;
+    background: rgba(240, 82, 125, 0.055) !important;
 }
 
 #summary #tb-summary .summary-drill-link {
@@ -444,15 +446,15 @@ tbody tr:hover td,
 #summary #tb-summary .summary-drill-link:hover,
 #summary #tb-summary .summary-drill-link:focus-visible {
     background: transparent !important;
-    box-shadow: inset 0 -2px 0 rgba(11, 87, 208, 0.32) !important;
+    box-shadow: inset 0 -2px 0 rgba(240, 82, 125, 0.34) !important;
     color: var(--pd-primary) !important;
     outline: 0 !important;
 }
 
 #summary #tb-summary .summary-drill-link-warm:hover,
 #summary #tb-summary .summary-drill-link-warm:focus-visible {
-    box-shadow: inset 0 -2px 0 rgba(225, 48, 108, 0.32) !important;
-    color: var(--pd-accent) !important;
+    box-shadow: inset 0 -2px 0 rgba(255, 178, 74, 0.48) !important;
+    color: #a45600 !important;
 }
 
 .sec-head,

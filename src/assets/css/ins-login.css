@@ -1,12 +1,12 @@
 :root {
-    --login-bg: #f6f7f9;
+    --login-bg: #fff8f5;
     --login-panel: #ffffff;
     --login-text-main: #0f172a;
-    --login-text-sub: #5f6b7a;
-    --login-accent: #0b57d0;
-    --login-accent-hover: #0842a0;
-    --login-border: #dbe2ea;
-    --login-shadow: rgba(17, 24, 39, 0.08);
+    --login-text-sub: #6f6470;
+    --login-accent: #f0527d;
+    --login-accent-hover: #c7355f;
+    --login-border: #efdbe0;
+    --login-shadow: rgba(88, 47, 62, 0.08);
 }
 
 body.login-overlay-active {
@@ -887,7 +887,7 @@ body.login-overlay-active #parent-view-container {
 
 /* ================= Mature Login Refresh ================= */
 #login-overlay[data-login-skin="clean"] {
-    background: #f6f7f9;
+    background: #fff8f5;
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-shell {
@@ -897,7 +897,9 @@ body.login-overlay-active #parent-view-container {
     grid-template-columns: minmax(560px, 1.08fr) minmax(420px, 0.92fr);
     gap: 0;
     padding: 28px;
-    background: #f6f7f9;
+    background:
+        linear-gradient(135deg, rgba(255, 240, 245, 0.78), rgba(255, 250, 242, 0.82) 42%, rgba(231, 251, 247, 0.58)),
+        #fff8f5;
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-stage {
@@ -1101,30 +1103,32 @@ body.login-overlay-active #parent-view-container {
 #login-overlay[data-login-skin="clean"] .login-clean-stage {
     color: #111827;
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(248, 250, 252, 0.92)),
-        #f8fafc;
-    border: 1px solid #dbe2ea;
-    box-shadow: 0 24px 60px rgba(17, 24, 39, 0.08);
+        radial-gradient(circle at 18% 18%, rgba(255, 188, 213, 0.30), transparent 34%),
+        radial-gradient(circle at 78% 78%, rgba(32, 169, 154, 0.16), transparent 30%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 250, 248, 0.94)),
+        #fffaf8;
+    border: 1px solid #f0dfe3;
+    box-shadow: 0 24px 60px rgba(161, 91, 112, 0.10);
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-stage::before {
-    border-color: #dbe2ea;
+    border-color: #efdbe0;
     background:
-        linear-gradient(90deg, transparent 0 28%, rgba(11, 87, 208, 0.07) 28% 29%, transparent 29%),
-        linear-gradient(180deg, #eef2f7 0 18%, transparent 18%),
-        linear-gradient(135deg, rgba(11, 87, 208, 0.12), rgba(225, 48, 108, 0.08));
+        linear-gradient(90deg, transparent 0 28%, rgba(240, 82, 125, 0.09) 28% 29%, transparent 29%),
+        linear-gradient(180deg, #fff0f5 0 18%, transparent 18%),
+        linear-gradient(135deg, rgba(240, 82, 125, 0.13), rgba(255, 178, 74, 0.12), rgba(32, 169, 154, 0.10));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86), 0 18px 48px rgba(17, 24, 39, 0.08);
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
-    color: #334155;
+    color: #5f4f59;
     background: rgba(255, 255, 255, 0.78);
-    border-color: #dbe2ea;
-    box-shadow: 0 12px 30px rgba(17, 24, 39, 0.08);
+    border-color: #efdbe0;
+    box-shadow: 0 12px 30px rgba(161, 91, 112, 0.10);
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-mark {
-    background: #0b57d0;
+    background: linear-gradient(135deg, #f0527d, #ff9f67);
     color: #fff;
 }
 
@@ -1134,7 +1138,7 @@ body.login-overlay-active #parent-view-container {
 
 #login-overlay[data-login-skin="clean"] .login-clean-brand small,
 #login-overlay[data-login-skin="clean"] .login-clean-copy span {
-    color: #64748b !important;
+    color: #9b7180 !important;
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
@@ -1142,5 +1146,19 @@ body.login-overlay-active #parent-view-container {
 }
 
 #login-overlay[data-login-skin="clean"] .login-clean-copy p {
-    color: #475569 !important;
+    color: #6f6470 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-card {
+    background: rgba(255, 255, 255, 0.86);
+    border-radius: 24px;
+    box-shadow: 0 24px 60px rgba(161, 91, 112, 0.08);
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-submit {
+    background: linear-gradient(135deg, #f0527d, #ff8f5f) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-submit:hover {
+    background: linear-gradient(135deg, #d83d67, #ef7647) !important;
 }
