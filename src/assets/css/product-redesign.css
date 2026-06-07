@@ -1607,3 +1607,258 @@ table thead th,
         padding: 8px;
     }
 }
+
+/* Pure campus entrance: soft, light, high-end, no heavy dark shell. */
+:root {
+    --pd-yj-ink: #222735;
+    --pd-yj-ink-soft: #748092;
+    --pd-yj-ivory: #fffefa;
+    --pd-yj-silk: #fbf7f1;
+    --pd-yj-champagne: #ead8bd;
+    --pd-yj-wine: #f08aa9;
+    --pd-yj-rose: #ffd5e1;
+    --pd-yj-sage: #bce9df;
+}
+
+#login-overlay[data-login-skin="clean"] {
+    background:
+        radial-gradient(circle at 15% 12%, rgba(255, 213, 225, 0.30), transparent 30%),
+        radial-gradient(circle at 82% 78%, rgba(188, 233, 223, 0.24), transparent 32%),
+        radial-gradient(circle at 55% 18%, rgba(255, 255, 255, 0.86), transparent 34%),
+        linear-gradient(135deg, #fffefa 0%, #fff7f7 46%, #f7fffd 100%) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-shell {
+    grid-template-columns: minmax(620px, 1.08fr) minmax(420px, 0.76fr) !important;
+    gap: clamp(28px, 4vw, 64px) !important;
+    padding: clamp(24px, 3vw, 48px) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage {
+    min-height: calc(100vh - 72px) !important;
+    overflow: hidden;
+    color: var(--pd-yj-ink) !important;
+    border-radius: 26px !important;
+    border: 1px solid rgba(200, 168, 106, 0.36) !important;
+    background:
+        linear-gradient(90deg, rgba(34, 39, 53, 0.026) 0 1px, transparent 1px 100%),
+        linear-gradient(180deg, rgba(34, 39, 53, 0.022) 0 1px, transparent 1px 100%),
+        radial-gradient(circle at 20% 16%, rgba(255, 213, 225, 0.28), transparent 34%),
+        radial-gradient(circle at 84% 80%, rgba(188, 233, 223, 0.22), transparent 30%),
+        linear-gradient(135deg, rgba(255, 254, 250, 0.98), rgba(251, 247, 241, 0.88)) !important;
+    background-size:
+        92px 92px,
+        92px 92px,
+        auto,
+        auto,
+        auto !important;
+    box-shadow: 0 24px 60px rgba(147, 129, 111, 0.10) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::before {
+    inset: auto 7% 9% auto !important;
+    width: min(40%, 420px) !important;
+    height: min(58%, 480px) !important;
+    border-radius: 34px 34px 26px 26px !important;
+    border: 1px solid rgba(200, 168, 106, 0.42) !important;
+    background:
+        linear-gradient(90deg, transparent 0 30%, rgba(255, 213, 225, 0.22) 30% 31%, transparent 31% 67%, rgba(188, 233, 223, 0.20) 67% 68%, transparent 68%),
+        linear-gradient(180deg, rgba(255, 254, 250, 0.92), rgba(251, 247, 241, 0.42)),
+        linear-gradient(140deg, rgba(255, 213, 225, 0.10), rgba(234, 216, 189, 0.08), rgba(188, 233, 223, 0.10)) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.70), 0 28px 56px rgba(120, 104, 86, 0.11) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-mark {
+    background: linear-gradient(135deg, #ffffff, #f6b8ca 58%, #92d5c6) !important;
+    color: #1d2330 !important;
+    border: 1px solid rgba(228, 207, 168, 0.55) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 14px 28px rgba(236, 111, 148, 0.14) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand strong,
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1,
+#login-overlay[data-login-skin="clean"] .login-form-header h2 {
+    color: var(--pd-yj-ink) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand small,
+#login-overlay[data-login-skin="clean"] .login-clean-copy span {
+    color: var(--pd-yj-wine) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy {
+    max-width: 560px !important;
+    margin-bottom: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+    max-width: 560px !important;
+    font-size: clamp(52px, 5.2vw, 82px) !important;
+    line-height: 1.02 !important;
+    font-weight: 860 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy p {
+    max-width: 560px !important;
+    color: var(--pd-yj-ink-soft) !important;
+    font-size: 16px !important;
+}
+
+.login-styleboard {
+    width: min(560px, 56%) !important;
+    align-items: end;
+    margin-top: 18px !important;
+}
+
+.login-look-card {
+    min-height: 176px !important;
+    border-radius: 26px !important;
+    border-color: rgba(228, 207, 168, 0.44) !important;
+    box-shadow: 0 24px 52px rgba(120, 104, 86, 0.12) !important;
+}
+
+.login-look-card span {
+    color: rgba(29, 35, 48, 0.58) !important;
+}
+
+.login-look-card strong {
+    color: #1d2330 !important;
+    text-shadow: none !important;
+}
+
+.login-look-card small {
+    color: rgba(102, 112, 133, 0.86) !important;
+}
+
+.login-look-card--primary {
+    background:
+        radial-gradient(circle at 50% 12%, rgba(255, 255, 255, 0.92), transparent 30%),
+        linear-gradient(150deg, #fffefa 0%, #ffeaf1 66%, #ffd5e1 120%) !important;
+}
+
+.login-look-card--warm {
+    background:
+        radial-gradient(circle at 50% 12%, rgba(255, 255, 255, 0.88), transparent 30%),
+        linear-gradient(150deg, #fffefa 0%, #fff0dc 58%, #ffe1ec 128%) !important;
+}
+
+.login-look-card--mint {
+    background:
+        radial-gradient(circle at 50% 12%, rgba(255, 255, 255, 0.90), transparent 30%),
+        linear-gradient(150deg, #fefffd 0%, #e9fbf7 58%, #dff4ff 132%) !important;
+}
+
+.login-rhythm-strip {
+    border-color: rgba(200, 168, 106, 0.34) !important;
+    background: rgba(255, 250, 242, 0.82) !important;
+}
+
+.login-rhythm-strip span {
+    color: #5d6472 !important;
+    background: linear-gradient(135deg, rgba(246, 184, 202, 0.18), rgba(146, 213, 198, 0.16)) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-card {
+    max-width: 500px !important;
+    border-radius: 28px !important;
+    border-color: rgba(200, 168, 106, 0.32) !important;
+    background: rgba(255, 252, 246, 0.92) !important;
+    box-shadow: 0 30px 72px rgba(52, 38, 44, 0.13) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-switch {
+    background: rgba(23, 19, 22, 0.06) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-switch .role-btn.active {
+    color: var(--pd-yj-ink) !important;
+    box-shadow: 0 12px 26px rgba(52, 38, 44, 0.12) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-entry-field {
+    border-color: rgba(200, 168, 106, 0.34) !important;
+    background: rgba(255, 250, 242, 0.86) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-entry-field:focus-within {
+    border-color: rgba(143, 29, 55, 0.62) !important;
+    box-shadow: 0 0 0 4px rgba(143, 29, 55, 0.10) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-entry-prefix {
+    color: var(--pd-yj-wine) !important;
+}
+
+#login-submit-button,
+#login-overlay[data-login-skin="clean"] .login-clean-submit {
+    color: #1d2330 !important;
+    background: linear-gradient(135deg, #ffffff, #ffd5e1 52%, #bce9df) !important;
+    box-shadow: 0 18px 34px rgba(188, 233, 223, 0.22) !important;
+}
+
+.entrance-sound-panel {
+    margin-top: 14px;
+    padding: 12px;
+    border-radius: 18px;
+    border: 1px solid rgba(200, 168, 106, 0.28);
+    background: rgba(255, 253, 248, 0.72);
+}
+
+.entrance-sound-panel__head,
+.entrance-sound-options {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.entrance-sound-panel__head {
+    justify-content: space-between;
+    margin-bottom: 10px;
+    color: var(--pd-yj-ink);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.entrance-sound-panel button,
+.entrance-sound-import span {
+    min-height: 30px;
+    border: 1px solid rgba(200, 168, 106, 0.34);
+    border-radius: 999px;
+    padding: 6px 10px;
+    color: #5d6472;
+    background: rgba(255, 255, 255, 0.88);
+    font-size: 12px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.entrance-sound-options {
+    flex-wrap: wrap;
+}
+
+.entrance-sound-options button.is-active {
+    color: #1d2330;
+    border-color: rgba(246, 184, 202, 0.70);
+    background: linear-gradient(135deg, #fff7fb, #eafff9);
+}
+
+.entrance-sound-import {
+    display: inline-flex;
+    margin-top: 8px;
+}
+
+@media (max-width: 980px) {
+    #login-overlay[data-login-skin="clean"] .login-clean-shell {
+        grid-template-columns: 1fr !important;
+        gap: 0 !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage {
+        min-height: 240px !important;
+    }
+
+    .entrance-sound-panel {
+        padding: 10px;
+    }
+}

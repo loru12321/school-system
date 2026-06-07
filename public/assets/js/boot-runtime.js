@@ -3,7 +3,7 @@ var DIRECT_SUPABASE_KEY = String(window.PUBLIC_SUPABASE_KEY || '').trim();
 var DIRECT_EDGE_GATEWAY_URL = 'https://dpwsxxgojpqevzwyxrot.supabase.co/functions/v1/edu-gateway-v2';
 var DIRECT_PROXY_ORIGIN = 'https://schoolsystem.com.cn';
 var DIRECT_CLOUDFLARE_GATEWAY_URL = 'https://schoolsystem.com.cn/api/edu-gateway';
-var BOOT_ASSET_VERSION_FALLBACK = '20260606-product-redesign-v6';
+var BOOT_ASSET_VERSION_FALLBACK = '20260607-yujie-sound-v1';
 
 function bootDebugLog(...args) {
     try {
@@ -89,6 +89,7 @@ var sbClient = window.sbClient || null;
 
 document.addEventListener('DOMContentLoaded', function () {
     if (typeof initMacroAnomalyConfigUI === 'function') initMacroAnomalyConfigUI();
+    scheduleLoginPrefetch();
     scheduleAppModuleWarmup();
 });
 
@@ -377,9 +378,9 @@ var APP_MODULES = [
     'town-submodule-compare-state-runtime.js'
 ].map(bootJs);
 
-var APP_MODULE_PRELOAD_LIMIT = 10;
-var APP_MODULE_MOBILE_PRELOAD_LIMIT = 6;
-var APP_MODULE_LATE_PREFETCH_LIMIT = 8;
+var APP_MODULE_PRELOAD_LIMIT = 16;
+var APP_MODULE_MOBILE_PRELOAD_LIMIT = 8;
+var APP_MODULE_LATE_PREFETCH_LIMIT = 12;
 var APP_MODULE_PREFETCH_CHUNK_SIZE = 3;
 var APP_MODULE_DESKTOP_BATCH_SIZE = 6;
 
@@ -547,6 +548,14 @@ function hintAppCoreModules() {
     if (preloadCount < APP_MODULES.length) {
         scheduleLateAppCorePrefetch(APP_MODULES.slice(preloadCount));
     }
+}
+
+function scheduleLoginPrefetch() {
+    if (window.__LOGIN_PREFETCH__) return;
+    window.__LOGIN_PREFETCH__ = true;
+    window.setTimeout(() => {
+        if (window.__APP_MODULES_LOADED__ !== true && window.__APP_MODULES_LOADED__ !== 'loading') hintAppCoreModules();
+    }, 320);
 }
 
 function warmAppModuleCache() {
