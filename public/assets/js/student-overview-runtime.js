@@ -276,6 +276,18 @@ function smRenderQuickEntries(model) {
             enabled: model.scoreReady,
             hint: '需要先有成绩数据'
         },
+        'segment-analysis': {
+            enabled: model.scoreReady,
+            hint: '需要先有成绩数据'
+        },
+        'correlation-analysis': {
+            enabled: model.scoreReady,
+            hint: '需要先有成绩数据'
+        },
+        'cohort-growth': {
+            enabled: model.scoreReady && model.exams.length >= 2,
+            hint: '需要至少 2 期考试数据'
+        },
         'report-generator': {
             enabled: model.scoreReady,
             hint: '需要先有成绩数据'
@@ -348,7 +360,45 @@ function smJumpToStudentModule(targetId) {
         if (targetId === 'potential-analysis') {
             if (typeof updatePotentialSchoolSelect === 'function') updatePotentialSchoolSelect();
             tmApplySelectValue('potSchoolSelect', context.schoolValue || 'ALL', context.schoolText || '全乡镇');
-            if (typeof renderPotentialAnalysis === 'function') renderPotentialAnalysis();
+            setTimeout(() => {
+                tmApplySelectValue('potClassSelect', context.classValue || 'ALL', context.classText || '全部班级');
+                if (typeof renderPotentialAnalysis === 'function') renderPotentialAnalysis();
+            }, 80);
+            return;
+        }
+
+        if (targetId === 'segment-analysis') {
+            if (typeof updateSegmentSelects === 'function') updateSegmentSelects();
+            tmApplySelectValue('segSchoolSelect', context.schoolValue || 'ALL', context.schoolText || '全乡镇');
+            if (typeof updateSegmentClassSelect === 'function') updateSegmentClassSelect();
+            setTimeout(() => {
+                tmApplySelectValue('segClassSelect', context.classValue || 'ALL', context.classText || '全部班级');
+                if (typeof renderSegmentAnalysis === 'function') renderSegmentAnalysis();
+            }, 80);
+            return;
+        }
+
+        if (targetId === 'correlation-analysis') {
+            if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
+            tmApplySelectValue('corrSchoolSelect', context.schoolValue || 'ALL', context.schoolText || '全乡镇');
+            if (typeof updateCorrelationClassSelect === 'function') updateCorrelationClassSelect();
+            setTimeout(() => {
+                tmApplySelectValue('corrClassSelect', context.classValue || 'ALL', context.classText || '全部班级');
+                if (typeof renderCorrelationAnalysis === 'function') renderCorrelationAnalysis();
+            }, 80);
+            return;
+        }
+
+        if (targetId === 'cohort-growth') {
+            if (window.CohortGrowth && typeof window.CohortGrowth.updateScopeControls === 'function') window.CohortGrowth.updateScopeControls();
+            tmApplySelectValue('cgSchoolSelect', context.schoolValue || 'ALL', context.schoolText || '全乡镇');
+            if (window.CohortGrowth && typeof window.CohortGrowth.updateClassSelectForSchool === 'function') {
+                window.CohortGrowth.updateClassSelectForSchool(context.schoolValue || 'ALL');
+            }
+            setTimeout(() => {
+                tmApplySelectValue('cgClassSelect', context.classValue || 'ALL', context.classText || '全部班级');
+                if (window.CohortGrowth && typeof window.CohortGrowth.render === 'function') window.CohortGrowth.render();
+            }, 80);
             return;
         }
 
@@ -380,8 +430,13 @@ function bindStudentOverviewActions() {
         'sbSchoolSelect',
         'sbClassSelect',
         'potSchoolSelect',
+        'potClassSelect',
         'segSchoolSelect',
+        'segClassSelect',
         'corrSchoolSelect',
+        'corrClassSelect',
+        'cgSchoolSelect',
+        'cgClassSelect',
         'sel-school',
         'sel-class'
     ];

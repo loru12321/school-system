@@ -190,6 +190,142 @@
         return gradeMatch ? `Grade ${gradeMatch[1]}` : text.replace(/\s*模式$/, ' Mode');
     }
 
+    function normalizeScopeClass(value) {
+        if (window.AuthState && typeof window.AuthState.normalizeClassName === 'function') {
+            return window.AuthState.normalizeClassName(value || '');
+        }
+        if (typeof window.normalizeClass === 'function') return window.normalizeClass(value || '');
+        return String(value || '').trim().replace(/\s+/g, '');
+    }
+
+    function isGlobalAll(value) {
+        const text = String(value || '').trim();
+        const lower = text.toLowerCase();
+        return !text || lower === 'all' || lower === '__all__' || text.includes('全部') || text.includes('全乡') || text.includes('全镇');
+    }
+
+    function sameScopeSchool(left, right) {
+        const a = String(left || '').trim();
+        const b = String(right || '').trim();
+        if (!a || !b) return false;
+        if (a === b) return true;
+        if (typeof window.areSchoolNamesEquivalent === 'function') {
+            try {
+                return !!window.areSchoolNamesEquivalent(a, b);
+            } catch (_) {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    function getGlobalScopeSchools() {
+        if (typeof window.listAvailableSchoolsForCompare === 'function') return window.listAvailableSchoolsForCompare();
+        return Object.keys(window.SCHOOLS || {});
+    }
+
+    function getGlobalScopeRows(school) {
+        const rawRows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
+        const townshipRows = typeof window.filterRowsToTownshipSchools === 'function'
+            ? window.filterRowsToTownshipSchools(rawRows)
+            : rawRows;
+        if (isGlobalAll(school)) return townshipRows;
+        const schoolRecord = typeof window.getAppSchoolRecord === 'function' ? window.getAppSchoolRecord(school) : null;
+        if (Array.isArray(schoolRecord?.students)) return schoolRecord.students;
+        return townshipRows.filter((row) => sameScopeSchool(row?.school, school));
+    }
+
+    function setSelectOptions(select, options, allLabel, oldValue) {
+        if (!select) return;
+        const values = Array.from(new Set((options || []).map((value) => String(value || '').trim()).filter(Boolean)));
+        select.innerHTML = `<option value="ALL">${allLabel}</option>${values.map((value) => `<option value="${value}">${value}</option>`).join('')}`;
+        if (oldValue && Array.from(select.options || []).some((option) => option.value === oldValue)) {
+            select.value = oldValue;
+        }
+    }
+
+    function setSelectByValueOrText(id, value, text) {
+        const select = document.getElementById(id);
+        if (!select || !select.options || !select.options.length) return false;
+        const rawValue = String(value || '').trim();
+        const rawText = String(text || rawValue).trim();
+        const match = Array.from(select.options).find((option) => {
+            return option.value === rawValue
+                || option.textContent.trim() === rawText
+                || sameScopeSchool(option.value, rawValue)
+                || sameScopeSchool(option.textContent, rawText);
+        });
+        if (!match) return false;
+        select.value = match.value;
+        return true;
+    }
+
+    function updateGlobalScopeControls() {
+        const schoolSelect = document.getElementById('global-school-scope');
+        const classSelect = document.getElementById('global-class-scope');
+        if (!schoolSelect || !classSelect) return;
+
+        const oldSchool = schoolSelect.value;
+        const oldClass = classSelect.value;
+        setSelectOptions(schoolSelect, getGlobalScopeSchools(), '全乡镇', oldSchool);
+
+        const classes = getGlobalScopeRows(schoolSelect.value)
+            .map((row) => row?.class)
+            .filter(Boolean)
+            .sort((a, b) => normalizeScopeClass(a).localeCompare(normalizeScopeClass(b), 'zh-Hans-CN', { numeric: true }));
+        setSelectOptions(classSelect, classes, '全部班级', oldClass);
+    }
+
+    function applyGlobalScopeToModule() {
+        const schoolSelect = document.getElementById('global-school-scope');
+        const classSelect = document.getElementById('global-class-scope');
+        if (!schoolSelect || !classSelect) return;
+
+        const schoolValue = schoolSelect.value || 'ALL';
+        const schoolText = schoolSelect.selectedOptions?.[0]?.textContent || schoolValue;
+        const classValue = classSelect.value || 'ALL';
+        const classText = classSelect.selectedOptions?.[0]?.textContent || classValue;
+
+        [
+            'studentSchoolSelect',
+            'studentCompareSchool',
+            'progressSchoolSelect',
+            'progressCompareSchool',
+            'marginalSchoolSelect',
+            'sbSchoolSelect',
+            'potSchoolSelect',
+            'segSchoolSelect',
+            'corrSchoolSelect',
+            'sel-school',
+            'cgSchoolSelect'
+        ].forEach((id) => setSelectByValueOrText(id, schoolValue, schoolText));
+
+        if (typeof window.updateSegmentClassSelect === 'function') window.updateSegmentClassSelect();
+        if (typeof window.updatePotentialClassSelect === 'function') window.updatePotentialClassSelect();
+        if (typeof window.updateCorrelationClassSelect === 'function') window.updateCorrelationClassSelect();
+        if (window.CohortGrowth && typeof window.CohortGrowth.updateClassSelectForSchool === 'function') {
+            window.CohortGrowth.updateClassSelectForSchool(schoolValue);
+        }
+
+        [
+            'studentClassSelect',
+            'studentCompareClass',
+            'progressClassSelect',
+            'marginalClassSelect',
+            'sbClassSelect',
+            'potClassSelect',
+            'segClassSelect',
+            'corrClassSelect',
+            'sel-class',
+            'cgClassSelect'
+        ].forEach((id) => setSelectByValueOrText(id, classValue, classText));
+    }
+
+    function onGlobalSchoolScopeChange() {
+        updateGlobalScopeControls();
+        applyGlobalScopeToModule();
+    }
+
     function notifyShellEnhancements() {
         scheduleFloatingModuleRailSync();
         if (typeof window.refreshShellEnhancements === 'function') {
@@ -569,7 +705,11 @@
                 data-shell-tooltip="${item.hint || item.text}"
                 aria-pressed="${item.id === activeId ? 'true' : 'false'}"
             >
-                <span>${item.text}</span>
+                <span class="shell-module-rail-chip-index">${String(visibleItems.indexOf(item) + 1).padStart(2, '0')}</span>
+                <span class="shell-module-rail-chip-copy">
+                    <span class="shell-module-rail-chip-title">${item.text}</span>
+                    <span class="shell-module-rail-chip-hint">${item.hint || item.text}</span>
+                </span>
             </button>
         `).join('');
 
@@ -652,7 +792,11 @@
                 data-shell-tooltip="${item.hint || item.text}"
                 aria-pressed="${item.id === activeId ? 'true' : 'false'}"
             >
-                <span>${item.text}</span>
+                <span class="shell-module-rail-chip-index">${String(visibleItems.indexOf(item) + 1).padStart(2, '0')}</span>
+                <span class="shell-module-rail-chip-copy">
+                    <span class="shell-module-rail-chip-title">${item.text}</span>
+                    <span class="shell-module-rail-chip-hint">${item.hint || item.text}</span>
+                </span>
             </button>
         `).join('');
 
@@ -668,6 +812,8 @@
         const category = NAV_STRUCTURE[currentCategory] || NAV_STRUCTURE.data;
         if (!category) return;
 
+        updateGlobalScopeControls();
+        applyGlobalScopeToModule();
         applyCategoryAccent(category);
 
         const visibleItems = resolveVisibleItems(category);
@@ -909,6 +1055,9 @@
     window.openWorkspaceDrawer = openWorkspaceDrawer;
     window.closeWorkspaceDrawer = closeWorkspaceDrawer;
     window.toggleWorkspaceDrawer = toggleWorkspaceDrawer;
+    window.updateGlobalScopeControls = updateGlobalScopeControls;
+    window.applyGlobalScopeToModule = applyGlobalScopeToModule;
+    window.onGlobalSchoolScopeChange = onGlobalSchoolScopeChange;
     window.getCurrentNavCategory = function () { return currentCategory; };
     window.setCurrentNavCategorySilently = function (key) {
         if (!NAV_STRUCTURE[key]) return;

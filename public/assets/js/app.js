@@ -14794,6 +14794,22 @@ function updateSegmentSelects() {
     const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
     schSel.innerHTML = `<option value="ALL">全乡镇</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`; if (oldSch && (oldSch === 'ALL' || SCHOOLS[oldSch])) schSel.value = oldSch;
     const oldSub = subSel.value; subSel.innerHTML = `<option value="total">总分</option>${SUBJECTS.map(s => `<option value="${s}">${s}</option>`).join('')}`; if (oldSub) subSel.value = oldSub;
+    schSel.onchange = updateSegmentClassSelect;
+    updateSegmentClassSelect();
+}
+
+function updateSegmentClassSelect() {
+    const schSel = document.getElementById('segSchoolSelect');
+    const clsSel = document.getElementById('segClassSelect');
+    if (!schSel || !clsSel) return;
+    const oldClass = clsSel.value;
+    const townshipRows = (typeof filterRowsToTownshipSchools === 'function') ? filterRowsToTownshipSchools(RAW_DATA || []) : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
+    const schoolRecord = typeof getAppSchoolRecord === 'function' ? getAppSchoolRecord(schSel.value) : null;
+    const students = schSel.value === 'ALL' ? townshipRows : (schoolRecord?.students || []);
+    const classes = Array.from(new Set(students.map(s => s.class).filter(Boolean)))
+        .sort((a, b) => normalizeClass(a).localeCompare(normalizeClass(b), 'zh-Hans-CN', { numeric: true }));
+    clsSel.innerHTML = `<option value="ALL">全部班级</option>${classes.map(c => `<option value="${c}">${c}</option>`).join('')}`;
+    if (oldClass && Array.from(clsSel.options || []).some(option => option.value === oldClass)) clsSel.value = oldClass;
 }
 
 function renderSegmentAnalysis() {
@@ -14809,11 +14825,16 @@ function renderSegmentAnalysis() {
     }
 
     const school = document.getElementById('segSchoolSelect').value;
+    const selectedClass = document.getElementById('segClassSelect')?.value || 'ALL';
     const subject = document.getElementById('segSubjectSelect').value;
     const step = parseInt(document.getElementById('segStep').value) || 10;
 
     const townshipRows = (typeof filterRowsToTownshipSchools === 'function') ? filterRowsToTownshipSchools(RAW_DATA || []) : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
     let students = school === 'ALL' ? townshipRows : (SCHOOLS[school] ? SCHOOLS[school].students : []);
+    const normalizedSelectedClass = normalizeClass(selectedClass);
+    if (normalizedSelectedClass && normalizedSelectedClass.toLowerCase() !== 'all') {
+        students = students.filter(s => normalizeClass(s.class || '') === normalizedSelectedClass);
+    }
     const validStudents = students.filter(s => {
         const v = subject === 'total' ? s.total : s.scores[subject];
         return typeof v === 'number';
@@ -15251,11 +15272,28 @@ function updatePotentialSchoolSelect() {
     sel.innerHTML = `<option value="ALL">全乡镇</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
 
     if (old && (old === 'ALL' || SCHOOLS[old])) sel.value = old;
+    sel.onchange = updatePotentialClassSelect;
+    updatePotentialClassSelect();
+}
+
+function updatePotentialClassSelect() {
+    const schoolSelect = document.getElementById('potSchoolSelect');
+    const classSelect = document.getElementById('potClassSelect');
+    if (!schoolSelect || !classSelect) return;
+    const oldClass = classSelect.value;
+    const townshipRows = (typeof filterRowsToTownshipSchools === 'function') ? filterRowsToTownshipSchools(RAW_DATA || []) : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
+    const schoolRecord = typeof getAppSchoolRecord === 'function' ? getAppSchoolRecord(schoolSelect.value) : null;
+    const students = schoolSelect.value === 'ALL' ? townshipRows : (schoolRecord?.students || []);
+    const classes = Array.from(new Set(students.map(s => s.class).filter(Boolean)))
+        .sort((a, b) => normalizeClass(a).localeCompare(normalizeClass(b), 'zh-Hans-CN', { numeric: true }));
+    classSelect.innerHTML = `<option value="ALL">全部班级</option>${classes.map(c => `<option value="${c}">${c}</option>`).join('')}`;
+    if (oldClass && Array.from(classSelect.options || []).some(option => option.value === oldClass)) classSelect.value = oldClass;
 }
 
 function renderPotentialAnalysis() {
     if (!RAW_DATA.length) return alert('请先上传数据');
     const scope = document.getElementById('potSchoolSelect').value;
+    const selectedClass = document.getElementById('potClassSelect')?.value || 'ALL';
     const topRatio = parseFloat(document.getElementById('potTopSelect').value);
 
     let candidates = [];
@@ -15263,6 +15301,10 @@ function renderPotentialAnalysis() {
         ? filterRowsToTownshipSchools(RAW_DATA || [])
         : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
     let scopeStudents = (scope === 'ALL') ? townshipRows : (SCHOOLS[scope]?.students || []);
+    const normalizedSelectedClass = normalizeClass(selectedClass);
+    if (normalizedSelectedClass && normalizedSelectedClass.toLowerCase() !== 'all') {
+        scopeStudents = scopeStudents.filter(s => normalizeClass(s.class || '') === normalizedSelectedClass);
+    }
 
     const totalCount = townshipRows.length || RAW_DATA.length;
     const topRankThreshold = Math.floor(totalCount * topRatio);

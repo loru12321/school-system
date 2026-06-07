@@ -24,6 +24,30 @@
         if (oldValue && Array.from(select.options || []).some((option) => option.value === oldValue)) {
             select.value = oldValue;
         }
+        select.onchange = updateCorrelationClassSelect;
+        updateCorrelationClassSelect();
+    }
+
+    function normalizeCorrelationClass(value) {
+        if (window.AuthState && typeof window.AuthState.normalizeClassName === 'function') {
+            return window.AuthState.normalizeClassName(value || '');
+        }
+        if (typeof window.normalizeClass === 'function') return window.normalizeClass(value || '');
+        return String(value || '').trim().replace(/\s+/g, '');
+    }
+
+    function updateCorrelationClassSelect() {
+        const schoolSelect = document.getElementById('corrSchoolSelect');
+        const classSelect = document.getElementById('corrClassSelect');
+        if (!schoolSelect || !classSelect) return;
+        const oldClass = classSelect.value;
+        const students = getCorrelationStudents(schoolSelect.value || 'ALL', 'ALL');
+        const classes = Array.from(new Set((students || []).map(student => student?.class).filter(Boolean)))
+            .sort((a, b) => normalizeCorrelationClass(a).localeCompare(normalizeCorrelationClass(b), 'zh-Hans-CN', { numeric: true }));
+        classSelect.innerHTML = `<option value="ALL">全部班级</option>${classes.map(className => `<option value="${className}">${className}</option>`).join('')}`;
+        if (oldClass && Array.from(classSelect.options || []).some(option => option.value === oldClass)) {
+            classSelect.value = oldClass;
+        }
     }
 
     function toFiniteNumber(value) {
@@ -92,13 +116,15 @@
         return [];
     }
 
-    function getCorrelationStudents(scope) {
-        if (scope === 'ALL') {
-            return (typeof window.filterRowsToTownshipSchools === 'function')
+    function getCorrelationStudents(scope, className = 'ALL') {
+        const baseStudents = scope === 'ALL'
+            ? ((typeof window.filterRowsToTownshipSchools === 'function')
                 ? window.filterRowsToTownshipSchools(RAW_DATA || [])
-                : (Array.isArray(RAW_DATA) ? RAW_DATA : []);
-        }
-        return SCHOOLS?.[scope]?.students || [];
+                : (Array.isArray(RAW_DATA) ? RAW_DATA : []))
+            : (SCHOOLS?.[scope]?.students || []);
+        const normalizedClass = normalizeCorrelationClass(className);
+        if (!normalizedClass || normalizedClass.toLowerCase() === 'all') return baseStudents;
+        return baseStudents.filter(student => normalizeCorrelationClass(student?.class || '') === normalizedClass);
     }
 
     function getCorrelationStudentSignaturePart(student) {
@@ -112,13 +138,14 @@
         ].join('/');
     }
 
-    function buildCorrelationSignature(scope, students, subjects) {
+    function buildCorrelationSignature(scope, className, students, subjects) {
         const totalChecksum = (Array.isArray(students) ? students : []).reduce((sum, student) => {
             const total = toFiniteNumber(student?.total);
             return sum + (total === null ? 0 : total);
         }, 0);
         return [
             scope,
+            className || 'ALL',
             subjects.join('|'),
             students.length,
             getCorrelationStudentSignaturePart(students[0]),
@@ -195,8 +222,10 @@
 
     function renderCorrelationAnalysis() {
         const schoolSelect = document.getElementById('corrSchoolSelect');
+        const classSelect = document.getElementById('corrClassSelect');
         const scope = schoolSelect?.value || 'ALL';
-        const students = getCorrelationStudents(scope);
+        const className = classSelect?.value || 'ALL';
+        const students = getCorrelationStudents(scope, className);
         const subjects = getAvailableSubjects();
         if (!Array.isArray(students) || students.length < 5) {
             alert('样本数据过少，暂时无法生成有效的相关性分析。');
@@ -207,7 +236,7 @@
             return;
         }
 
-        const signature = buildCorrelationSignature(scope, students, subjects);
+        const signature = buildCorrelationSignature(scope, className, students, subjects);
         if (CorrelationAnalysisPerfCache.signature !== signature) {
             Object.assign(CorrelationAnalysisPerfCache, {
                 signature,
@@ -304,6 +333,7 @@
 
     Object.assign(window, {
         updateCorrelationSchoolSelect,
+        updateCorrelationClassSelect,
         renderCorrelationAnalysis,
         CorrelationAnalysisPerfCache,
         calculateCorrelationPearson: calculatePearson,

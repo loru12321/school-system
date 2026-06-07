@@ -307,6 +307,7 @@
         if (typeof root.updateClassCompSchoolSelect === 'function') root.updateClassCompSchoolSelect();
         if (typeof root.updatePotentialSchoolSelect === 'function') root.updatePotentialSchoolSelect();
         if (typeof root.updateCorrelationSchoolSelect === 'function') root.updateCorrelationSchoolSelect();
+        if (typeof root.updateGlobalScopeControls === 'function') root.updateGlobalScopeControls();
         if (typeof root.updateSeatAdjSelects === 'function') root.updateSeatAdjSelects();
         if (typeof root.updateProgressSchoolSelect === 'function') root.updateProgressSchoolSelect();
         if (typeof root.updateMutualAidSelects === 'function') root.updateMutualAidSelects();

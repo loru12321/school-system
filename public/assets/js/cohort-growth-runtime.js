@@ -21,6 +21,109 @@
         return Object.values(db?.exams || {}).sort((a, b) => Number(a?.createdAt || 0) - Number(b?.createdAt || 0));
     }
 
+    function normalizeText(value) {
+        return String(value || '').trim();
+    }
+
+    function normalizeClassName(value) {
+        if (root.AuthState && typeof root.AuthState.normalizeClassName === 'function') {
+            return root.AuthState.normalizeClassName(value || '');
+        }
+        if (typeof root.normalizeClass === 'function') return root.normalizeClass(value || '');
+        return normalizeText(value).replace(/\s+/g, '');
+    }
+
+    function isAllSchool(value) {
+        const text = normalizeText(value);
+        const lower = text.toLowerCase();
+        return !text || lower === 'all' || lower === '__all__' || text.includes('全部') || text.includes('全乡') || text.includes('全镇');
+    }
+
+    function sameSchool(left, right) {
+        const a = normalizeText(left);
+        const b = normalizeText(right);
+        if (!a || !b) return false;
+        if (a === b) return true;
+        if (typeof root.areSchoolNamesEquivalent === 'function') {
+            try {
+                return !!root.areSchoolNamesEquivalent(a, b);
+            } catch (_) {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    function getSchoolList() {
+        if (typeof root.listAvailableSchoolsForCompare === 'function') return root.listAvailableSchoolsForCompare();
+        return Object.keys(root.SCHOOLS || {});
+    }
+
+    function getAllCohortRows() {
+        const rows = [];
+        getCohortExams().forEach((exam) => {
+            if (Array.isArray(exam?.data)) rows.push(...exam.data);
+        });
+        return rows;
+    }
+
+    function getRowsForSchool(school) {
+        const rows = getAllCohortRows();
+        if (isAllSchool(school)) return rows;
+        return rows.filter((row) => sameSchool(row?.school, school));
+    }
+
+    function fillSelect(select, options, allLabel, oldValue) {
+        if (!select) return;
+        const values = Array.from(new Set((options || []).map(normalizeText).filter(Boolean)));
+        select.innerHTML = `<option value="ALL">${escapeHtml(allLabel)}</option>` + values
+            .map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)
+            .join('');
+        if (oldValue && Array.from(select.options || []).some((option) => option.value === oldValue)) {
+            select.value = oldValue;
+        }
+    }
+
+    function updateClassSelectForSchool(schoolValue) {
+        const classSelect = root.document?.getElementById('cgClassSelect');
+        if (!classSelect) return;
+        const oldClass = classSelect.value;
+        const classes = getRowsForSchool(schoolValue)
+            .map((row) => row?.class)
+            .filter(Boolean)
+            .sort((left, right) => normalizeClassName(left).localeCompare(normalizeClassName(right), 'zh-Hans-CN', { numeric: true }));
+        fillSelect(classSelect, classes, '全部班级', oldClass);
+    }
+
+    function updateScopeControls() {
+        const schoolSelect = root.document?.getElementById('cgSchoolSelect');
+        if (!schoolSelect) return;
+        const oldSchool = schoolSelect.value;
+        fillSelect(schoolSelect, getSchoolList(), '全乡镇', oldSchool);
+        if (!oldSchool) {
+            const currentSchool = typeof root.readCurrentSchool === 'function' ? root.readCurrentSchool() : '';
+            const match = Array.from(schoolSelect.options || []).find((option) => sameSchool(option.value, currentSchool));
+            if (match) schoolSelect.value = match.value;
+        }
+        updateClassSelectForSchool(schoolSelect.value);
+    }
+
+    function getSelectedScope() {
+        return {
+            school: root.document?.getElementById('cgSchoolSelect')?.value || 'ALL',
+            className: root.document?.getElementById('cgClassSelect')?.value || 'ALL'
+        };
+    }
+
+    function filterRowsByScope(rows, scope) {
+        const selectedClass = normalizeClassName(scope?.className || '');
+        return (Array.isArray(rows) ? rows : []).filter((row) => {
+            if (!isAllSchool(scope?.school) && !sameSchool(row?.school, scope.school)) return false;
+            if (selectedClass && selectedClass.toLowerCase() !== 'all' && normalizeClassName(row?.class || '') !== selectedClass) return false;
+            return true;
+        });
+    }
+
     function renderEmptyRow(tbody, colspan, message) {
         if (!tbody) return;
         tbody.innerHTML = `<tr><td colspan="${colspan}" class="analysis-empty-cell">${escapeHtml(message)}</td></tr>`;
@@ -33,8 +136,11 @@
 
     const CohortGrowthRuntime = {
         cache: { volatility: [], growth: [] },
+        updateScopeControls,
+        updateClassSelectForSchool,
 
         render() {
+            updateScopeControls();
             if (!getCohortExams().length) {
                 return root.alert ? root.alert('当前届别暂无历史考试数据') : undefined;
             }
@@ -50,10 +156,11 @@
 
         compute() {
             const studentSeries = {};
+            const scope = getSelectedScope();
 
             getCohortExams().forEach((exam) => {
                 const validRows = Array.isArray(exam?.data)
-                    ? exam.data
+                    ? filterRowsByScope(exam.data, scope)
                         .map((student, index) => ({ student, index, total: toFiniteNumber(student?.total) }))
                         .filter((row) => row.student && row.total !== null)
                     : [];
