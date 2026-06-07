@@ -11,6 +11,10 @@
     let playedForSession = false;
     let customAudio = null;
     let customAudioUrl = '';
+    let customAudioSource = '';
+    let customAudioHydratePromise = null;
+    let customAudioUnlocked = false;
+    let unlockGestureBound = false;
 
     function toast(message, type = 'info') {
         if (window.UI && typeof window.UI.toast === 'function') window.UI.toast(message, type);
@@ -142,22 +146,104 @@
         } catch (_) {}
         if (!src) return Promise.resolve(null);
         if (src === 'indexeddb') {
-            return readStoredAudioFile().then((blob) => {
+            if (customAudio && customAudioSource === 'indexeddb') return Promise.resolve(customAudio);
+            if (customAudioHydratePromise) return customAudioHydratePromise;
+            customAudioHydratePromise = readStoredAudioFile().then((blob) => {
+                customAudioHydratePromise = null;
                 if (!blob) return null;
                 if (customAudioUrl) URL.revokeObjectURL(customAudioUrl);
                 customAudioUrl = URL.createObjectURL(blob);
                 customAudio = new Audio(customAudioUrl);
+                customAudioSource = 'indexeddb';
                 customAudio.preload = 'auto';
                 customAudio.volume = 0.42;
+                customAudio.load();
                 return customAudio;
+            }).catch((error) => {
+                customAudioHydratePromise = null;
+                throw error;
             });
+            return customAudioHydratePromise;
         }
-        if (!customAudio || customAudio.src !== src) {
+        if (!customAudio || customAudio.src !== src || customAudioSource !== src) {
             customAudio = new Audio(src);
+            customAudioSource = src;
             customAudio.preload = 'auto';
             customAudio.volume = 0.42;
         }
         return Promise.resolve(customAudio);
+    }
+
+    function resetCustomAudioCache() {
+        customAudio = null;
+        customAudioSource = '';
+        customAudioUnlocked = false;
+        customAudioHydratePromise = null;
+        if (customAudioUrl) {
+            URL.revokeObjectURL(customAudioUrl);
+            customAudioUrl = '';
+        }
+    }
+
+    function getImmediateCustomAudioFromFile(file) {
+        resetCustomAudioCache();
+        customAudioUrl = URL.createObjectURL(file);
+        customAudio = new Audio(customAudioUrl);
+        customAudioSource = 'indexeddb';
+        customAudio.preload = 'auto';
+        customAudio.volume = 0.42;
+        customAudio.load();
+        return customAudio;
+    }
+
+    function prewarmCustomAudio() {
+        if (readMode() !== 'custom') return;
+        getCustomAudio().catch(() => {});
+    }
+
+    function unlockCustomAudio() {
+        if (customAudioUnlocked || readMode() !== 'custom') return;
+        getCustomAudio().then((audio) => {
+            if (!audio || customAudioUnlocked) return;
+            const oldMuted = audio.muted;
+            const oldVolume = audio.volume;
+            audio.muted = true;
+            audio.volume = 0;
+            const playPromise = audio.play();
+            if (!playPromise || typeof playPromise.then !== 'function') {
+                audio.pause();
+                audio.currentTime = 0;
+                audio.muted = oldMuted;
+                audio.volume = oldVolume || 0.42;
+                customAudioUnlocked = true;
+                return;
+            }
+            playPromise.then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+                audio.muted = oldMuted;
+                audio.volume = oldVolume || 0.42;
+                customAudioUnlocked = true;
+            }).catch(() => {
+                audio.muted = oldMuted;
+                audio.volume = oldVolume || 0.42;
+            });
+        }).catch(() => {});
+    }
+
+    function bindUnlockGestures() {
+        if (!unlockGestureBound) {
+            unlockGestureBound = true;
+            ['pointerdown', 'keydown', 'touchstart'].forEach((eventName) => {
+                document.addEventListener(eventName, unlockCustomAudio, { passive: true });
+            });
+        }
+        document.querySelectorAll('[data-login-submit]').forEach((button) => {
+            if (button.dataset.soundUnlockBound === '1') return;
+            button.dataset.soundUnlockBound = '1';
+            button.addEventListener('pointerdown', unlockCustomAudio, { passive: true });
+            button.addEventListener('click', unlockCustomAudio, { passive: true });
+        });
     }
 
     function playEntranceSound(forceMode) {
@@ -220,16 +306,12 @@
                     input.value = '';
                     return;
                 }
+                getImmediateCustomAudioFromFile(file);
                 storeCustomAudioFile(file).then(() => {
                     try {
                         localStorage.setItem(CUSTOM_AUDIO_KEY, 'indexeddb');
                         localStorage.setItem(STORAGE_KEY, 'custom');
                     } catch (_) {}
-                    customAudio = null;
-                    if (customAudioUrl) {
-                        URL.revokeObjectURL(customAudioUrl);
-                        customAudioUrl = '';
-                    }
                     updateSoundButtons();
                     playEntranceSound('custom');
                     toast('本机入场音乐已启用', 'success');
@@ -269,10 +351,13 @@
 
     function boot() {
         bindControls();
+        bindUnlockGestures();
         polishLoginCopy();
+        prewarmCustomAudio();
         observeEntrance();
         window.setInterval(() => {
             bindControls();
+            bindUnlockGestures();
             polishLoginCopy();
             observeEntrance();
         }, 600);
