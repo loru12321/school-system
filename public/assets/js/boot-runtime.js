@@ -378,10 +378,10 @@ var APP_MODULES = [
     'town-submodule-compare-state-runtime.js'
 ].map(bootJs);
 
-var APP_MODULE_PRELOAD_LIMIT = 16;
-var APP_MODULE_MOBILE_PRELOAD_LIMIT = 8;
-var APP_MODULE_LATE_PREFETCH_LIMIT = 12;
-var APP_MODULE_PREFETCH_CHUNK_SIZE = 3;
+var APP_MODULE_PRELOAD_LIMIT = 6;
+var APP_MODULE_MOBILE_PRELOAD_LIMIT = 3;
+var APP_MODULE_LATE_PREFETCH_LIMIT = 4;
+var APP_MODULE_PREFETCH_CHUNK_SIZE = 2;
 var APP_MODULE_DESKTOP_BATCH_SIZE = 6;
 
 window.__BOOT_SCRIPT_REGISTRY__ = window.__BOOT_SCRIPT_REGISTRY__ || {};
@@ -553,9 +553,9 @@ function hintAppCoreModules() {
 function scheduleLoginPrefetch() {
     if (window.__LOGIN_PREFETCH__) return;
     window.__LOGIN_PREFETCH__ = true;
-    window.setTimeout(() => {
-        if (window.__APP_MODULES_LOADED__ !== true && window.__APP_MODULES_LOADED__ !== 'loading') hintAppCoreModules();
-    }, 320);
+    window.setTimeout(() => window.__APP_MODULES_LOADED__ !== true
+        && window.__APP_MODULES_LOADED__ !== 'loading'
+        && prefetchAppModuleList(APP_MODULES.slice(0, 3), 'lh'), 320);
 }
 
 function warmAppModuleCache() {

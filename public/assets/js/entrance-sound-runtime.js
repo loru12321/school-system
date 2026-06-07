@@ -3,10 +3,18 @@
 
     const STORAGE_KEY = 'SCHOOL_ENTRANCE_SOUND_V1';
     const CUSTOM_AUDIO_KEY = 'SCHOOL_ENTRANCE_SOUND_CUSTOM_AUDIO_V1';
+    const CUSTOM_AUDIO_DB = 'SCHOOL_ENTRANCE_AUDIO_DB_V1';
+    const CUSTOM_AUDIO_STORE = 'audio';
+    const CUSTOM_AUDIO_ID = 'entrance';
     const DEFAULT_MODE = 'signature';
     let lastOverlayVisible = true;
     let playedForSession = false;
     let customAudio = null;
+    let customAudioUrl = '';
+
+    function toast(message, type = 'info') {
+        if (window.UI && typeof window.UI.toast === 'function') window.UI.toast(message, type);
+    }
 
     function readMode() {
         try {
@@ -79,31 +87,92 @@
         });
     }
 
+    function openCustomAudioDb() {
+        return new Promise((resolve, reject) => {
+            if (!window.indexedDB) {
+                reject(new Error('IndexedDB unavailable'));
+                return;
+            }
+            const request = indexedDB.open(CUSTOM_AUDIO_DB, 1);
+            request.onupgradeneeded = () => {
+                const db = request.result;
+                if (!db.objectStoreNames.contains(CUSTOM_AUDIO_STORE)) db.createObjectStore(CUSTOM_AUDIO_STORE, { keyPath: 'id' });
+            };
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error || new Error('IndexedDB open failed'));
+        });
+    }
+
+    function storeCustomAudioFile(file) {
+        return openCustomAudioDb().then((db) => new Promise((resolve, reject) => {
+            const tx = db.transaction(CUSTOM_AUDIO_STORE, 'readwrite');
+            tx.objectStore(CUSTOM_AUDIO_STORE).put({
+                id: CUSTOM_AUDIO_ID,
+                blob: file,
+                name: file.name || '',
+                type: file.type || '',
+                updatedAt: Date.now()
+            });
+            tx.oncomplete = () => {
+                db.close();
+                resolve();
+            };
+            tx.onerror = () => {
+                db.close();
+                reject(tx.error || new Error('IndexedDB write failed'));
+            };
+        }));
+    }
+
+    function readStoredAudioFile() {
+        return openCustomAudioDb().then((db) => new Promise((resolve, reject) => {
+            const tx = db.transaction(CUSTOM_AUDIO_STORE, 'readonly');
+            const request = tx.objectStore(CUSTOM_AUDIO_STORE).get(CUSTOM_AUDIO_ID);
+            request.onsuccess = () => resolve(request.result && request.result.blob ? request.result.blob : null);
+            request.onerror = () => reject(request.error || new Error('IndexedDB read failed'));
+            tx.oncomplete = () => db.close();
+            tx.onerror = () => db.close();
+        }));
+    }
+
     function getCustomAudio() {
+        let src = '';
         try {
-            const src = localStorage.getItem(CUSTOM_AUDIO_KEY);
-            if (!src) return null;
-            if (!customAudio || customAudio.src !== src) {
-                customAudio = new Audio(src);
+            src = localStorage.getItem(CUSTOM_AUDIO_KEY) || '';
+        } catch (_) {}
+        if (!src) return Promise.resolve(null);
+        if (src === 'indexeddb') {
+            return readStoredAudioFile().then((blob) => {
+                if (!blob) return null;
+                if (customAudioUrl) URL.revokeObjectURL(customAudioUrl);
+                customAudioUrl = URL.createObjectURL(blob);
+                customAudio = new Audio(customAudioUrl);
                 customAudio.preload = 'auto';
                 customAudio.volume = 0.42;
-            }
-            return customAudio;
-        } catch (_) {
-            return null;
+                return customAudio;
+            });
         }
+        if (!customAudio || customAudio.src !== src) {
+            customAudio = new Audio(src);
+            customAudio.preload = 'auto';
+            customAudio.volume = 0.42;
+        }
+        return Promise.resolve(customAudio);
     }
 
     function playEntranceSound(forceMode) {
         const mode = forceMode || readMode();
         if (mode === 'off') return;
         if (mode === 'custom') {
-            const audio = getCustomAudio();
-            if (audio) {
+            getCustomAudio().then((audio) => {
+                if (!audio) {
+                    playToneSequence(DEFAULT_MODE);
+                    return;
+                }
                 audio.currentTime = 0;
                 audio.play().catch(() => playToneSequence(DEFAULT_MODE));
-                return;
-            }
+            }).catch(() => playToneSequence(DEFAULT_MODE));
+            return;
         }
         playToneSequence(mode);
     }
@@ -141,22 +210,32 @@
             input.addEventListener('change', () => {
                 const file = input.files && input.files[0];
                 if (!file) return;
-                if (file.size > 900 * 1024) {
-                    if (window.UI && typeof window.UI.toast === 'function') window.UI.toast('音频请控制在 900KB 以内', 'warning');
+                if (!/\.(mp3|wav|ogg|m4a)$/i.test(String(file.name || ''))) {
+                    toast('请导入浏览器可播放的 MP3/WAV/OGG/M4A 音频', 'warning');
                     input.value = '';
                     return;
                 }
-                const reader = new FileReader();
-                reader.onload = () => {
+                if (file.size > 24 * 1024 * 1024) {
+                    toast('音频请控制在 24MB 以内', 'warning');
+                    input.value = '';
+                    return;
+                }
+                storeCustomAudioFile(file).then(() => {
                     try {
-                        localStorage.setItem(CUSTOM_AUDIO_KEY, String(reader.result || ''));
+                        localStorage.setItem(CUSTOM_AUDIO_KEY, 'indexeddb');
                         localStorage.setItem(STORAGE_KEY, 'custom');
                     } catch (_) {}
                     customAudio = null;
+                    if (customAudioUrl) {
+                        URL.revokeObjectURL(customAudioUrl);
+                        customAudioUrl = '';
+                    }
                     updateSoundButtons();
                     playEntranceSound('custom');
-                };
-                reader.readAsDataURL(file);
+                    toast('本机入场音乐已启用', 'success');
+                }).catch(() => {
+                    toast('本地音频保存失败，请换一个 MP3/WAV/OGG/M4A 文件', 'warning');
+                });
             });
         });
         updateSoundButtons();
