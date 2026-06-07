@@ -501,8 +501,8 @@
                                         <td>${gapText}</td>
                                         <td>
                                             <button type="button" class="btn btn-sm btn-blue"
-                                                onclick="window.jumpToStudent && window.jumpToStudent(${teacherJsonAttr(row.name)}, ${teacherJsonAttr(school)}, ${teacherJsonAttr(row.className)})">
-                                                查看成绩单
+                                                onclick="window.openStudentSubjectDialog ? window.openStudentSubjectDialog(${teacherJsonAttr(row.name)}, ${teacherJsonAttr(school)}, ${teacherJsonAttr(row.className)}, ${teacherJsonAttr(subject)}, { focusLabel: ${teacherJsonAttr(meta.title)}, gap: ${Number.isFinite(row.gap) ? Number(row.gap) : 'null'} }) : (window.jumpToStudent && window.jumpToStudent(${teacherJsonAttr(row.name)}, ${teacherJsonAttr(school)}, ${teacherJsonAttr(row.className)}))">
+                                                查看${teacherEscapeHtml(subject)}情况
                                             </button>
                                         </td>
                                     </tr>
