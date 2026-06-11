@@ -6178,7 +6178,7 @@ const DataManager = {
         let schools = new Set();
 
         const schoolList = (typeof listAvailableSchoolsForCompare === 'function')
-            ? listAvailableSchoolsForCompare()
+            ? listAvailableSchoolsForCompare('all')
             : Object.keys(SCHOOLS || {});
         schoolList.forEach(s => schools.add(s));
         const inferredSchool = (typeof inferDefaultSchoolFromContext === 'function') ? inferDefaultSchoolFromContext() : '';
@@ -10861,7 +10861,7 @@ function updateSchoolSelect() {
     const previousValue = String(sel.value || '').trim();
     const user = getCurrentUser();
     const availableSchools = (typeof listAvailableSchoolsForCompare === 'function')
-        ? listAvailableSchoolsForCompare()
+        ? listAvailableSchoolsForCompare('all')
         : Object.keys(SCHOOLS || {});
     const schools = PermissionPolicy.getAccessibleSchoolNames(user, availableSchools);
     const optionsHtml = '<option value="">--请选择学校--</option>'
@@ -10895,7 +10895,7 @@ function updateMySchoolSelect() {
     if (!select) return;
 
     const schools = (typeof listAvailableSchoolsForCompare === 'function')
-        ? listAvailableSchoolsForCompare()
+        ? listAvailableSchoolsForCompare('all')
         : Object.keys(SCHOOLS || {});
     const schoolSet = new Set((schools || []).map(s => String(s || '').trim()).filter(Boolean));
     const currentSchool = readCurrentSchool();
@@ -11150,7 +11150,7 @@ function updateStudentSchoolSelect() {
     ].join('::');
     if (StudentDetailsPerfCache.schoolOptionsSignature !== schoolSignature) {
         const availableSchools = (typeof listAvailableSchoolsForCompare === 'function')
-            ? listAvailableSchoolsForCompare()
+            ? listAvailableSchoolsForCompare('all')
             : Object.keys(SCHOOLS || {});
         StudentDetailsPerfCache.accessibleSchools = PermissionPolicy.getAccessibleSchoolNames(user, availableSchools);
         StudentDetailsPerfCache.schoolOptionsSignature = schoolSignature;
@@ -12660,7 +12660,7 @@ function exportStudentDetails() {
 function updateMarginalSchoolSelect() {
     const select = document.getElementById('marginalSchoolSelect');
     if (!select) return;
-    const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
+    const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare('all') : Object.keys(SCHOOLS || {});
     select.innerHTML = `<option value="">--请选择本校--</option>${schoolList.map(school => `<option value="${school}">${school}</option>`).join('')}`;
     const currentSchool = readCurrentSchool();
     const matched = Array.from(select.options || []).find(option => sameAppSchoolName(option.value, currentSchool));
@@ -14791,8 +14791,8 @@ function updateSegmentSelects() {
     const schSel = document.getElementById('segSchoolSelect'); const subSel = document.getElementById('segSubjectSelect');
     if (!schSel || !subSel) return;
     const oldSch = schSel.value;
-    const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
-    schSel.innerHTML = `<option value="ALL">全乡镇</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`; if (oldSch && (oldSch === 'ALL' || SCHOOLS[oldSch])) schSel.value = oldSch;
+    const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare('all') : Object.keys(SCHOOLS || {});
+    schSel.innerHTML = `<option value="ALL">全部学校</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`; if (oldSch && (oldSch === 'ALL' || SCHOOLS[oldSch])) schSel.value = oldSch;
     const oldSub = subSel.value; subSel.innerHTML = `<option value="total">总分</option>${SUBJECTS.map(s => `<option value="${s}">${s}</option>`).join('')}`; if (oldSub) subSel.value = oldSub;
     schSel.onchange = updateSegmentClassSelect;
     updateSegmentClassSelect();
@@ -14966,7 +14966,7 @@ function updateSubjectBalanceSelects() {
     const schSel = document.getElementById('sbSchoolSelect');
     const clsSel = document.getElementById('sbClassSelect');
 
-    const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
+    const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare('all') : Object.keys(SCHOOLS || {});
     schSel.innerHTML = `<option value="">--请选择学校--</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
     const currentSchool = readCurrentSchool();
     const matched = Array.from(schSel.options || []).find(option => sameAppSchoolName(option.value, currentSchool));
@@ -15268,8 +15268,8 @@ function updatePotentialSchoolSelect() {
     if (!sel) return;
     const old = sel.value;
 
-    const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
-    sel.innerHTML = `<option value="ALL">全乡镇</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
+    const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare('all') : Object.keys(SCHOOLS || {});
+    sel.innerHTML = `<option value="ALL">全部学校</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
 
     if (old && (old === 'ALL' || SCHOOLS[old])) sel.value = old;
     sel.onchange = updatePotentialClassSelect;
@@ -15632,7 +15632,7 @@ function updateMpSchoolSelect() {
     const sel = document.getElementById('mpSchoolSelect');
     if (!sel) return;
     const old = sel.value;
-    const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare() : Object.keys(SCHOOLS || {});
+    const schoolList = (typeof listAvailableSchoolsForCompare === 'function') ? listAvailableSchoolsForCompare('all') : Object.keys(SCHOOLS || {});
     sel.innerHTML = `<option value="">--请选择学校--</option>${schoolList.map(s => `<option value="${s}">${s}</option>`).join('')}`;
     const currentSchool = old || readCurrentSchool();
     const matched = Array.from(sel.options || []).find(option => sameAppSchoolName(option.value, currentSchool));

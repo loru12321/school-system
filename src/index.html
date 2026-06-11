@@ -568,15 +568,6 @@
                         <option value="">选择届别</option>
                     </select>
 
-                    <div class="global-scope-picker" aria-label="全局学校与班级范围">
-                        <select id="global-school-scope" onchange="window.onGlobalSchoolScopeChange && window.onGlobalSchoolScopeChange(this.value)">
-                            <option value="ALL">全乡镇</option>
-                        </select>
-                        <select id="global-class-scope" onchange="window.applyGlobalScopeToModule && window.applyGlobalScopeToModule()">
-                            <option value="ALL">全部班级</option>
-                        </select>
-                    </div>
-
                     <div id="admin-msg-btn" class="notification-btn" style="display:none;"
                         onclick="IssueManager.openAdminPanel()">
                         <button class="btn"
@@ -1641,7 +1632,7 @@
                 </details>
                 <div class="control-panel">
                     <label>统计范围：</label><select id="segSchoolSelect" style="min-width:150px;">
-                        <option value="ALL">全乡镇</option>
+                        <option value="ALL">全部学校</option>
                     </select>
                     <label style="margin-left:10px;">班级：</label><select id="segClassSelect" style="min-width:120px;">
                         <option value="ALL">全部班级</option>
@@ -2055,7 +2046,7 @@
                 </details>
                 <div class="control-panel" style="background:#fffbeb; border-color:#fcd34d;">
                     <label>范围：</label><select id="potSchoolSelect" style="min-width:150px;">
-                        <option value="ALL">全乡镇</option>
+                        <option value="ALL">全部学校</option>
                     </select>
                     <label style="margin-left:15px;">班级：</label><select id="potClassSelect" style="min-width:120px;">
                         <option value="ALL">全部班级</option>
@@ -4677,7 +4668,7 @@
                 <div class="analysis-action-note">建议先确保同一届别下已经累计多次考试，再生成成长档案；如果考试次数太少，这页更适合先当作趋势预览而不是结论依据。</div>
                 <div class="analysis-actions cohort-growth-actions">
                     <select id="cgSchoolSelect" class="analysis-scope-select" style="min-width:180px;" onchange="CohortGrowth.updateClassSelectForSchool(this.value)">
-                        <option value="ALL">全乡镇</option>
+                        <option value="ALL">全部学校</option>
                     </select>
                     <select id="cgClassSelect" class="analysis-scope-select" style="min-width:130px;">
                         <option value="ALL">全部班级</option>
@@ -5080,7 +5071,7 @@
                 </div>
                 <div class="control-panel">
                     <label>分析范围：</label><select id="corrSchoolSelect" style="min-width:200px;">
-                        <option value="ALL">全乡镇</option>
+                        <option value="ALL">全部学校</option>
                     </select>
                     <label style="margin-left:10px;">班级：</label><select id="corrClassSelect" style="min-width:130px;">
                         <option value="ALL">全部班级</option>

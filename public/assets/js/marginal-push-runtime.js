@@ -96,7 +96,9 @@
         const schools = getSchools();
         if (typeof root.listAvailableSchoolsForCompare === 'function') {
             try {
-                return root.listAvailableSchoolsForCompare().filter((name) => resolveSchoolKey(name, schools));
+                return sortChinese(Array.from(new Set(root.listAvailableSchoolsForCompare('all')
+                    .map((name) => String(name || '').trim())
+                    .filter(Boolean))));
             } catch (_) {}
         }
         return sortChinese(Object.keys(schools || {}));
@@ -117,6 +119,13 @@
 
     function getSchoolRecord(schoolName) {
         const schools = getSchools();
+        if (typeof root.getAppSchoolRecord === 'function') {
+            const record = root.getAppSchoolRecord(schoolName);
+            if (record && Array.isArray(record.students)) {
+                const key = resolveSchoolKey(schoolName, schools) || String(schoolName || '').trim();
+                return { key, school: record };
+            }
+        }
         const key = resolveSchoolKey(schoolName, schools);
         return { key, school: key ? schools[key] : null };
     }

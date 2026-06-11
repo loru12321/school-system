@@ -130,7 +130,7 @@ function smGetSchoolListCached() {
     }
     StudentOverviewPerfCache.schoolListSignature = signature;
     StudentOverviewPerfCache.schoolList = (typeof listAvailableSchoolsForCompare === 'function')
-        ? listAvailableSchoolsForCompare()
+        ? listAvailableSchoolsForCompare('all')
         : Object.keys(schools);
     return StudentOverviewPerfCache.schoolList;
 }
@@ -359,7 +359,7 @@ function smJumpToStudentModule(targetId) {
 
         if (targetId === 'potential-analysis') {
             if (typeof updatePotentialSchoolSelect === 'function') updatePotentialSchoolSelect();
-            tmApplySelectValue('potSchoolSelect', context.schoolValue || 'ALL', context.schoolText || '全乡镇');
+            tmApplySelectValue('potSchoolSelect', context.schoolValue || 'ALL', context.schoolText || '全部学校');
             setTimeout(() => {
                 tmApplySelectValue('potClassSelect', context.classValue || 'ALL', context.classText || '全部班级');
                 if (typeof renderPotentialAnalysis === 'function') renderPotentialAnalysis();
@@ -369,7 +369,7 @@ function smJumpToStudentModule(targetId) {
 
         if (targetId === 'segment-analysis') {
             if (typeof updateSegmentSelects === 'function') updateSegmentSelects();
-            tmApplySelectValue('segSchoolSelect', context.schoolValue || 'ALL', context.schoolText || '全乡镇');
+            tmApplySelectValue('segSchoolSelect', context.schoolValue || 'ALL', context.schoolText || '全部学校');
             if (typeof updateSegmentClassSelect === 'function') updateSegmentClassSelect();
             setTimeout(() => {
                 tmApplySelectValue('segClassSelect', context.classValue || 'ALL', context.classText || '全部班级');
@@ -380,7 +380,7 @@ function smJumpToStudentModule(targetId) {
 
         if (targetId === 'correlation-analysis') {
             if (typeof updateCorrelationSchoolSelect === 'function') updateCorrelationSchoolSelect();
-            tmApplySelectValue('corrSchoolSelect', context.schoolValue || 'ALL', context.schoolText || '全乡镇');
+            tmApplySelectValue('corrSchoolSelect', context.schoolValue || 'ALL', context.schoolText || '全部学校');
             if (typeof updateCorrelationClassSelect === 'function') updateCorrelationClassSelect();
             setTimeout(() => {
                 tmApplySelectValue('corrClassSelect', context.classValue || 'ALL', context.classText || '全部班级');
@@ -391,7 +391,7 @@ function smJumpToStudentModule(targetId) {
 
         if (targetId === 'cohort-growth') {
             if (window.CohortGrowth && typeof window.CohortGrowth.updateScopeControls === 'function') window.CohortGrowth.updateScopeControls();
-            tmApplySelectValue('cgSchoolSelect', context.schoolValue || 'ALL', context.schoolText || '全乡镇');
+            tmApplySelectValue('cgSchoolSelect', context.schoolValue || 'ALL', context.schoolText || '全部学校');
             if (window.CohortGrowth && typeof window.CohortGrowth.updateClassSelectForSchool === 'function') {
                 window.CohortGrowth.updateClassSelectForSchool(context.schoolValue || 'ALL');
             }

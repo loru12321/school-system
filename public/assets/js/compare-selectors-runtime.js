@@ -216,11 +216,11 @@
         const exam3Sel = document.getElementById('progressCompareExam3');
         if (!schoolSel || !exam1Sel || !exam2Sel || !exam3Sel) return;
 
-        const schoolList = listAvailableSchoolsForCompare();
+        const schoolList = listAvailableSchoolsForCompare('all');
         setSelectOptionsIfChanged(
             schoolSel,
             buildSchoolOptionsHtml(schoolList),
-            signatureFromList('schools', schoolList)
+            signatureFromList('schools-all', schoolList)
         );
         applyCompareSchoolDefault(schoolSel, schoolList);
 

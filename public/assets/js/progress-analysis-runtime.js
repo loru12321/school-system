@@ -160,7 +160,7 @@ function updateProgressSchoolSelect() {
     if (!sel) return;
     const user = getCurrentUser();
     const availableSchools = (typeof window.listAvailableSchoolsForCompare === 'function')
-        ? window.listAvailableSchoolsForCompare()
+        ? window.listAvailableSchoolsForCompare('all')
         : Object.keys(SCHOOLS || {});
     const schools = PermissionPolicy.getAccessibleSchoolNames(user, availableSchools);
     const optionsHtml = '<option value="">--请选择本校--</option>'
@@ -508,7 +508,7 @@ function updateProgressMultiExamSelects() {
     if (!schoolSel || !exam1Sel || !exam2Sel || !exam3Sel) return;
 
     const schoolList = (typeof listAvailableSchoolsForCompare === 'function')
-        ? listAvailableSchoolsForCompare()
+        ? listAvailableSchoolsForCompare('all')
         : Object.keys(SCHOOLS || {});
     const previousSchool = schoolSel.value || '';
     const schoolSignature = `progress-compare-schools:${schoolList.join('|')}`;
@@ -1086,7 +1086,7 @@ function getProgressCleanName(name) {
 function getProgressSelectedSchoolName() {
     const select = document.getElementById('progressSchoolSelect');
     const fallbackSchools = (typeof window.listAvailableSchoolsForCompare === 'function')
-        ? window.listAvailableSchoolsForCompare()
+        ? window.listAvailableSchoolsForCompare('all')
         : Object.keys(SCHOOLS || {});
     const schoolName = String(select?.value || MY_SCHOOL || fallbackSchools[0] || '').trim();
     if (select && schoolName && !select.value) select.value = schoolName;

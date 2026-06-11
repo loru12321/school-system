@@ -55,7 +55,7 @@
     }
 
     function getSchoolList() {
-        if (typeof root.listAvailableSchoolsForCompare === 'function') return root.listAvailableSchoolsForCompare();
+        if (typeof root.listAvailableSchoolsForCompare === 'function') return root.listAvailableSchoolsForCompare('all');
         return Object.keys(root.SCHOOLS || {});
     }
 
@@ -99,7 +99,7 @@
         const schoolSelect = root.document?.getElementById('cgSchoolSelect');
         if (!schoolSelect) return;
         const oldSchool = schoolSelect.value;
-        fillSelect(schoolSelect, getSchoolList(), '全乡镇', oldSchool);
+        fillSelect(schoolSelect, getSchoolList(), '全部学校', oldSchool);
         if (!oldSchool) {
             const currentSchool = typeof root.readCurrentSchool === 'function' ? root.readCurrentSchool() : '';
             const match = Array.from(schoolSelect.options || []).find((option) => sameSchool(option.value, currentSchool));

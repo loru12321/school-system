@@ -13,11 +13,11 @@
         if (!select) return;
         const oldValue = select.value;
         const schoolList = (typeof window.listAvailableSchoolsForCompare === 'function')
-            ? window.listAvailableSchoolsForCompare()
+            ? window.listAvailableSchoolsForCompare('all')
             : Object.keys(SCHOOLS || {});
         const signature = `corr-schools:${schoolList.join('|')}`;
         if (select.dataset.corrSchoolOptionsSig !== signature) {
-            select.innerHTML = '<option value="ALL">全乡镇（All）</option>'
+            select.innerHTML = '<option value="ALL">全部学校</option>'
                 + schoolList.map((schoolName) => `<option value="${schoolName}">${schoolName}</option>`).join('');
             select.dataset.corrSchoolOptionsSig = signature;
         }

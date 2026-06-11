@@ -220,19 +220,16 @@
     }
 
     function getGlobalScopeSchools() {
-        if (typeof window.listAvailableSchoolsForCompare === 'function') return window.listAvailableSchoolsForCompare();
+        if (typeof window.listAvailableSchoolsForCompare === 'function') return window.listAvailableSchoolsForCompare('all');
         return Object.keys(window.SCHOOLS || {});
     }
 
     function getGlobalScopeRows(school) {
         const rawRows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
-        const townshipRows = typeof window.filterRowsToTownshipSchools === 'function'
-            ? window.filterRowsToTownshipSchools(rawRows)
-            : rawRows;
-        if (isGlobalAll(school)) return townshipRows;
+        if (isGlobalAll(school)) return rawRows;
         const schoolRecord = typeof window.getAppSchoolRecord === 'function' ? window.getAppSchoolRecord(school) : null;
         if (Array.isArray(schoolRecord?.students)) return schoolRecord.students;
-        return townshipRows.filter((row) => sameScopeSchool(row?.school, school));
+        return rawRows.filter((row) => sameScopeSchool(row?.school, school));
     }
 
     function setSelectOptions(select, options, allLabel, oldValue) {
@@ -267,7 +264,7 @@
 
         const oldSchool = schoolSelect.value;
         const oldClass = classSelect.value;
-        setSelectOptions(schoolSelect, getGlobalScopeSchools(), '全乡镇', oldSchool);
+        setSelectOptions(schoolSelect, getGlobalScopeSchools(), '全部学校', oldSchool);
 
         const classes = getGlobalScopeRows(schoolSelect.value)
             .map((row) => row?.class)
