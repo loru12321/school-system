@@ -808,6 +808,28 @@
         return Promise.resolve(runAfterLoad());
     }
 
+    function initCohortGrowthEntry() {
+        const runAfterLoad = () => {
+            if (!document.getElementById('cohort-growth')?.classList.contains('active')) return false;
+            if (window.CohortGrowth && typeof window.CohortGrowth.updateScopeControls === 'function') {
+                window.CohortGrowth.updateScopeControls();
+            }
+            return true;
+        };
+
+        if ((!window.CohortGrowth || typeof window.CohortGrowth.updateScopeControls !== 'function')
+            && window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
+            return window.SystemRuntimeLoader.load('teacher-analysis')
+                .then(runAfterLoad)
+                .catch((error) => {
+                    console.warn('[cohort-growth] runtime load failed:', error);
+                    return false;
+                });
+        }
+
+        return Promise.resolve(runAfterLoad());
+    }
+
     function initProgressAnalysisEntry() {
         const runNow = () => {
             if (!MY_SCHOOL && typeof TEACHER_MAP !== 'undefined' && Object.keys(TEACHER_MAP).length > 0 && typeof SCHOOLS !== 'undefined') {
@@ -1061,6 +1083,7 @@
         if (id === 'segment-analysis') updateSegmentSelects();
         if (id === 'potential-analysis') updatePotentialSchoolSelect();
         if (id === 'correlation-analysis') return initCorrelationAnalysisEntry();
+        if (id === 'cohort-growth') return initCohortGrowthEntry();
         if (id === 'seat-adjustment') updateSeatAdjSelects();
         if (id === 'subject-balance') updateSubjectBalanceSelects();
         if (id === 'progress-analysis') return initProgressAnalysisEntry();

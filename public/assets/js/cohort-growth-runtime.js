@@ -55,8 +55,20 @@
     }
 
     function getSchoolList() {
-        if (typeof root.listAvailableSchoolsForCompare === 'function') return root.listAvailableSchoolsForCompare('all');
-        return Object.keys(root.SCHOOLS || {});
+        const names = new Set();
+        const collect = (value) => {
+            const school = normalizeText(value);
+            if (school) names.add(school);
+        };
+        if (typeof root.listAvailableSchoolsForCompare === 'function') {
+            root.listAvailableSchoolsForCompare('all').forEach(collect);
+        }
+        Object.keys(root.SCHOOLS || {}).forEach(collect);
+        (Array.isArray(root.RAW_DATA) ? root.RAW_DATA : []).forEach((row) => collect(row?.school));
+        getCohortExams().forEach((exam) => {
+            (Array.isArray(exam?.data) ? exam.data : []).forEach((row) => collect(row?.school));
+        });
+        return Array.from(names).sort((left, right) => left.localeCompare(right, 'zh-CN'));
     }
 
     function getAllCohortRows() {

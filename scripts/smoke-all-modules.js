@@ -2364,13 +2364,19 @@ async function runModuleDeepCheck(page, id) {
                 await new Promise(resolve => setTimeout(resolve, 200));
             }
 
+            const schoolOptions = Array.from(document.getElementById('cgSchoolSelect')?.options || [])
+                .map(option => option.textContent.trim())
+                .filter(Boolean);
             const volatilityRows = document.querySelectorAll('#cohort-volatility-table tbody tr').length;
             const growthRows = document.querySelectorAll('#cohort-growth-table tbody tr').length;
 
             return {
-                ok: Object.values(checks).every(Boolean) && (examCount === 0 || (volatilityRows > 0 && growthRows > 0)),
+                ok: Object.values(checks).every(Boolean)
+                    && (examCount === 0 || (volatilityRows > 0 && growthRows > 0 && schoolOptions.length > 1)),
                 checks,
                 examCount,
+                schoolOptionCount: schoolOptions.length,
+                schoolOptions: schoolOptions.slice(0, 12),
                 volatilityRows,
                 growthRows
             };
