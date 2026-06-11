@@ -24,7 +24,13 @@ assert.ok(bootRuntime.includes('ensureXlsxVendorLoaded'), 'XLSX should stay behi
 assert.ok(bootRuntime.includes('ensureAlasqlVendorLoaded'), 'AlaSQL should stay behind the lazy loader');
 const bootVendorBlock = (bootRuntime.match(/BOOT_VENDOR_MODULES\s*=\s*\[([\s\S]*?)\];/) || [])[1] || '';
 assert.ok(!bootVendorBlock.includes('xlsx.full.min.js'), 'XLSX must not be a boot vendor');
-const shellPolishSkill = (bootRuntime.match(/'shell-polish':\s*\{([\s\S]*?)\n    \}/) || [])[1] || '';
-assert.ok(shellPolishSkill.includes("warmup: 'demand'"), 'shell polish should load on demand, not during default desktop warmup');
+const shellPolishFactoryWarmup = (bootRuntime.match(/'shell-polish':\s*bootSkill\(\s*['"][^'"]+['"]\s*,\s*['"]([^'"]+)['"]/) || [])[1] || '';
+const shellPolishSkill = (bootRuntime.match(/'shell-polish':\s*\{([\s\S]*?)\n\s*\}/) || [])[1] || '';
+assert.ok(
+  shellPolishFactoryWarmup === 'demand'
+    || shellPolishSkill.includes("warmup: 'demand'")
+    || shellPolishSkill.includes('warmup: "demand"'),
+  'shell polish should load on demand, not during default desktop warmup'
+);
 
 console.log('vendor budget tests passed');

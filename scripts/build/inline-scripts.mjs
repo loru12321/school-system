@@ -177,9 +177,22 @@ function getBootRuntimeSkillSources(projectRoot) {
     const manifestMatch = bootContent.match(/var\s+SYSTEM_RUNTIME_SKILLS\s*=\s*\{([\s\S]*?)\n\};/);
     if (!manifestMatch) return [];
     const manifestSource = manifestMatch[1];
-    return Array.from(manifestSource.matchAll(/\bsrc\s*:\s*['"]([^'"]+)['"]/g))
+    const sources = new Set();
+
+    Array.from(manifestSource.matchAll(/\bsrc\s*:\s*['"]([^'"]+)['"]/g))
         .map((match) => match[1])
-        .filter((src) => /^\.\/assets\/(?:js|vendor)\//.test(src));
+        .filter((src) => /^\.\/assets\/(?:js|vendor)\//.test(src))
+        .forEach((src) => sources.add(src));
+
+    Array.from(manifestSource.matchAll(/\bbootJs\s*\(\s*['"]([^'"]+)['"]\s*\)/g))
+        .map((match) => `./assets/js/${match[1]}`)
+        .forEach((src) => sources.add(src));
+
+    Array.from(manifestSource.matchAll(/\bbootVend\s*\(\s*['"]([^'"]+)['"]\s*\)/g))
+        .map((match) => `./assets/vendor/${match[1]}`)
+        .forEach((src) => sources.add(src));
+
+    return Array.from(sources);
 }
 
 export function collectInlineRuntimePaths(projectRoot = DEFAULT_PROJECT_ROOT) {
