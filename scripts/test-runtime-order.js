@@ -881,7 +881,6 @@ assert.ok(indexHtml.includes(tablerIconsRef), 'index.html should load local tabl
     perfMobileRef,
     mobileAppRef,
     dataManagerSqlRef,
-    reportRenderRef,
     reportChartRef,
     reportExportRef,
     teacherAnalysisCoreRef,
@@ -903,6 +902,11 @@ assert.ok(indexHtml.includes(tablerIconsRef), 'index.html should load local tabl
 ].forEach((src) => {
     assert.strictEqual(indexHtml.includes(src), false, `${src} should not be eagerly loaded on boot`);
 });
+assert.strictEqual(
+    indexHtml.includes(reportRenderRef),
+    true,
+    'report-render runtime should be preloaded on boot to avoid report query cold-load stalls'
+);
 assert.ok(
     bootDirectGatewayCandidateIndex >= 0 && bootSameOriginGatewayCandidateIndex >= 0 && bootDirectGatewayCandidateIndex < bootSameOriginGatewayCandidateIndex,
     'boot login should try the direct Cloudflare gateway before the same-origin proxy fallback'

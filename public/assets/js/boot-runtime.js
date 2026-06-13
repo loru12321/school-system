@@ -389,6 +389,9 @@ window.__BOOT_SCRIPT_REGISTRY__ = window.__BOOT_SCRIPT_REGISTRY__ || {};
 if (window.ReportInsightRuntime) {
     window.__BOOT_SCRIPT_REGISTRY__['assets/js/report-insight-runtime.js'] = 'loaded';
 }
+if (window.__REPORT_RENDER_RUNTIME_PATCHED__) {
+    window.__BOOT_SCRIPT_REGISTRY__['assets/js/report-render-runtime.js'] = 'loaded';
+}
 
 function normalizeBootModuleKey(src) {
     let value = String(src || '').trim();
@@ -2285,6 +2288,12 @@ function injectOptionalRuntimeScript(key, src) {
 function loadOptionalRuntime(key, src) {
     if (window.__optionalRuntimeLoaders[key]) return window.__optionalRuntimeLoaders[key];
 
+    const readyValue = getOptionalRuntimeReadyValue(key);
+    if (readyValue) {
+        window.__optionalRuntimeLoaders[key] = Promise.resolve(readyValue);
+        return window.__optionalRuntimeLoaders[key];
+    }
+
     const existing = document.querySelector(`script[data-runtime="${key}"][data-runtime-loaded="true"]`);
     if (existing) {
         window.__optionalRuntimeLoaders[key] = Promise.resolve();
@@ -2307,6 +2316,25 @@ function loadOptionalRuntime(key, src) {
         throw error;
     });
     return window.__optionalRuntimeLoaders[key];
+}
+
+function getOptionalRuntimeReadyValue(key) {
+    switch (String(key || '').trim()) {
+        case 'report-insight':
+            return window.ReportInsightRuntime || null;
+        case 'report-render':
+            return window.__REPORT_RENDER_RUNTIME_PATCHED__ ? true : null;
+        case 'chart-vendor':
+            return window.Chart || null;
+        case 'sweetalert-vendor':
+            return getLoadedSweetAlertVendor();
+        case 'crypto-vendor':
+            return window.CryptoJS || null;
+        case 'xlsx-vendor':
+            return window.XLSX && window.XLSX.utils ? window.XLSX : null;
+        default:
+            return null;
+    }
 }
 
 function injectOptionalStylesheet(key, href) {
