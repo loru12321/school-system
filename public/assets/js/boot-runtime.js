@@ -128,6 +128,7 @@ var SYSTEM_RUNTIME_SKILLS = {
         bootEntry('html2canvas-vendor', bootVend('html2canvas/html2canvas.min.js'))
     ]),
     'report-render': bootSkill('demand', 'demand', ['report-generator', 'renderSingleReportCardHTML'], [
+        bootEntry('report-insight', bootJs('report-insight-runtime.js')),
         bootEntry('report-render', bootJs('report-render-runtime.js'))
     ]),
     'report-chart': bootSkill('demand', 'demand', ['renderRadarChart', 'renderVarianceChart', 'analyzeStrengthsAndWeaknesses'], [
@@ -385,6 +386,9 @@ var APP_MODULE_PREFETCH_CHUNK_SIZE = 2;
 var APP_MODULE_DESKTOP_BATCH_SIZE = 6;
 
 window.__BOOT_SCRIPT_REGISTRY__ = window.__BOOT_SCRIPT_REGISTRY__ || {};
+if (window.ReportInsightRuntime) {
+    window.__BOOT_SCRIPT_REGISTRY__['assets/js/report-insight-runtime.js'] = 'loaded';
+}
 
 function normalizeBootModuleKey(src) {
     let value = String(src || '').trim();

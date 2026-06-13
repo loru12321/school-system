@@ -12820,6 +12820,9 @@ const ReportHistoryPerfCache = {
     historyByStudent: new Map(),
     hydratingKeys: new Set(),
     lastQueryKey: '',
+    inflightReportQueryKey: '',
+    inflightReportQueryPromise: null,
+    lastRenderedReportQueryKey: '',
     lastChartScheduleKey: '',
     lastStrengthKey: '',
     lastCompareHiddenKey: ''
@@ -12950,6 +12953,15 @@ function buildStudentReportCacheKey(student, mode = 'FULL', selectedExamIds = nu
     ].join('::');
 }
 
+function buildStudentReportSelectionSignature(selectedExamIds = null, effectiveCurrentExamId = '') {
+    const selected = Array.isArray(selectedExamIds) ? selectedExamIds : getStudentReportSelectedExamIds();
+    const examId = String(effectiveCurrentExamId || (typeof getEffectiveCurrentExamId === 'function' ? getEffectiveCurrentExamId() : '') || '').trim();
+    return [
+        examId,
+        selected.map(id => String(id || '').trim()).filter(Boolean).sort().join(',')
+    ].join('::');
+}
+
 function clearStudentReportCache(student) {
     const runtime = getStudentReportPerformanceRuntime();
     if (!runtime || typeof runtime.clear !== 'function') return;
@@ -13008,8 +13020,12 @@ function applyCloudStudentHistoryToPrevData(stu, historyRes, selectedReportExamI
     return historyRes.data.length;
 }
 
-function getCachedStudentReportHistory(stu) {
-    const key = `${getReportStudentIdentity(stu)}::${String(window.CURRENT_EXAM_ID || '')}::${ReportHistoryPerfCache.selectedExamIdsSignature || ''}`;
+function getCachedStudentReportHistory(stu, selectedExamIds = null, effectiveCurrentExamId = '') {
+    const key = [
+        getReportStudentIdentity(stu),
+        getCurrentReportDataFingerprint(),
+        buildStudentReportSelectionSignature(selectedExamIds, effectiveCurrentExamId)
+    ].join('::');
     if (ReportHistoryPerfCache.historyByStudent.has(key)) {
         return ReportHistoryPerfCache.historyByStudent.get(key);
     }
@@ -13030,7 +13046,7 @@ function getMissingReportHistoryExamIds(stu, selectedReportExamIds = [], effecti
     const selectedIds = getHistoricalReportExamIds(selectedReportExamIds, effectiveCurrentExamId);
     if (!selectedIds.length) return [];
 
-    const history = getCachedStudentReportHistory(stu);
+    const history = getCachedStudentReportHistory(stu, selectedReportExamIds, effectiveCurrentExamId);
     if (!Array.isArray(history) || !history.length) return selectedIds;
     return selectedIds.filter(selectedId => !history.some(item => {
         const examKey = String(item?.examFullKey || item?.examId || '').trim();
@@ -13057,7 +13073,7 @@ async function refreshRenderedStudentReportAfterHistory(stu, token) {
         const reportCache = getStudentReportPerformanceRuntime();
         const selectedIds = getStudentReportSelectedExamIds();
         const reportKey = buildStudentReportCacheKey(stu, 'FULL', selectedIds, selectedIds[selectedIds.length - 1] || getEffectiveCurrentExamId());
-        const history = getCachedStudentReportHistory(stu);
+        const history = getCachedStudentReportHistory(stu, selectedIds, selectedIds[selectedIds.length - 1] || getEffectiveCurrentExamId());
         let reportHtml = reportCache?.getReportHtml?.(reportKey);
         if (!reportHtml) {
             reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'FULL', { reportExamHistory: history }));
@@ -13199,72 +13215,104 @@ async function doQuery(targetStudent = null) {
     setCurrentReportStudentState(stu);
     warmStudentCompareRuntimeForReport(stu);
 
-    const { resultEl, container } = getReportDomCache();
-    let reportHistoryForQuery = null;
-    const getReportHistoryForQuery = () => {
-        if (!reportHistoryForQuery) reportHistoryForQuery = getCachedStudentReportHistory(stu);
-        return reportHistoryForQuery;
+    const reportCacheKey = buildStudentReportCacheKey(stu, 'FULL', selectedReportExamIds, effectiveCurrentExamId);
+    const renderedQueryKey = `${reportCacheKey}::${getReportStudentIdentity(stu)}`;
+    if (!targetStudent
+        && ReportHistoryPerfCache.inflightReportQueryKey === renderedQueryKey
+        && ReportHistoryPerfCache.inflightReportQueryPromise) {
+        return ReportHistoryPerfCache.inflightReportQueryPromise;
+    }
+
+    const executeReportQuery = async () => {
+        const { resultEl, container } = getReportDomCache();
+        let reportHistoryForQuery = null;
+        const getReportHistoryForQuery = () => {
+            if (!reportHistoryForQuery) reportHistoryForQuery = getCachedStudentReportHistory(stu, selectedReportExamIds, effectiveCurrentExamId);
+            return reportHistoryForQuery;
+        };
+
+        if (resultEl && container) {
+            resultEl.classList.remove('hidden');
+            try {
+                container.classList.add('student-report-canvas-full');
+                const reportCache = getStudentReportPerformanceRuntime();
+                if (!targetStudent
+                    && ReportHistoryPerfCache.lastRenderedReportQueryKey === renderedQueryKey
+                    && container.dataset.reportHtmlCacheKey === reportCacheKey
+                    && String(container.innerHTML || '').trim()) {
+                    scheduleStudentReportCharts(stu, getReportHistoryForQuery());
+                    return;
+                }
+                let reportHtml = reportCache?.getReportHtml?.(reportCacheKey);
+                if (!reportHtml) {
+                    if (typeof window.ensureReportRenderRuntimeLoaded === 'function') {
+                        try {
+                            await window.ensureReportRenderRuntimeLoaded();
+                        } catch (error) {
+                            console.warn('Failed to load report render runtime before query:', error);
+                        }
+                    }
+                    renderStudentReportSkeleton(container, stu);
+                    reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'FULL', {
+                        reportExamHistory: getReportHistoryForQuery()
+                    }));
+                    reportCache?.setReportHtml?.(reportCacheKey, reportHtml);
+                }
+                const nextReportHtml = typeof reportHtml === 'string' ? reportHtml : '';
+                if (container.dataset.reportHtmlCacheKey !== reportCacheKey) {
+                    container.innerHTML = nextReportHtml;
+                    container.dataset.reportHtmlCacheKey = reportCacheKey;
+                    container.dataset.reportChartCacheKey = '';
+                    enhanceStudentReportMetrics(container);
+                }
+                ReportHistoryPerfCache.lastRenderedReportQueryKey = renderedQueryKey;
+            } catch (e) {
+                console.error('Render Report Error:', e);
+                container.innerHTML = `<div style="color:red; padding:20px; text-align:left;"><h3 style="color:red">Rendering Error</h3><pre>${e.stack || e.message || e}</pre></div>`;
+            }
+        }
+
+        const history = getReportHistoryForQuery();
+
+        scheduleStudentReportCharts(stu, history);
+
+        hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, effectiveCurrentExamId, queryToken);
+
+        const strengthKey = `${getReportStudentIdentity(stu)}::${effectiveCurrentExamId || ''}`;
+        scheduleStudentReportStrengthAnalysis(stu, strengthKey);
+
+        const { compareSection } = getReportDomCache();
+        if (compareSection && ReportHistoryPerfCache.lastCompareHiddenKey !== strengthKey) {
+            ReportHistoryPerfCache.lastCompareHiddenKey = strengthKey;
+            compareSection.style.display = 'none';
+        }
+
+        const reportScrollKey = `${getReportStudentIdentity(stu)}::${effectiveCurrentExamId || ''}::${selectedReportExamIds.join('|')}`;
+        if (ReportHistoryPerfCache.lastScrollKey !== reportScrollKey) {
+            ReportHistoryPerfCache.lastScrollKey = reportScrollKey;
+            setTimeout(() => {
+                const reportElement = document.getElementById('single-report-result');
+                if (reportElement) {
+                    reportElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 200);
+        }
     };
 
-    if (resultEl && container) {
-        resultEl.classList.remove('hidden');
+    const queryPromise = executeReportQuery();
+    if (!targetStudent) {
+        ReportHistoryPerfCache.inflightReportQueryKey = renderedQueryKey;
+        ReportHistoryPerfCache.inflightReportQueryPromise = queryPromise;
         try {
-            container.classList.add('student-report-canvas-full');
-            const reportCache = getStudentReportPerformanceRuntime();
-            const reportCacheKey = buildStudentReportCacheKey(stu, 'FULL', selectedReportExamIds, effectiveCurrentExamId);
-            let reportHtml = reportCache?.getReportHtml?.(reportCacheKey);
-            if (!reportHtml) {
-                if (typeof window.ensureReportRenderRuntimeLoaded === 'function') {
-                    try {
-                        await window.ensureReportRenderRuntimeLoaded();
-                    } catch (error) {
-                        console.warn('Failed to load report render runtime before query:', error);
-                    }
-                }
-                renderStudentReportSkeleton(container, stu);
-                reportHtml = await Promise.resolve(renderSingleReportCardHTML(stu, 'FULL', {
-                    reportExamHistory: getReportHistoryForQuery()
-                }));
-                reportCache?.setReportHtml?.(reportCacheKey, reportHtml);
+            return await queryPromise;
+        } finally {
+            if (ReportHistoryPerfCache.inflightReportQueryKey === renderedQueryKey) {
+                ReportHistoryPerfCache.inflightReportQueryKey = '';
+                ReportHistoryPerfCache.inflightReportQueryPromise = null;
             }
-            const nextReportHtml = typeof reportHtml === 'string' ? reportHtml : '';
-            if (container.dataset.reportHtmlCacheKey !== reportCacheKey) {
-                container.innerHTML = nextReportHtml;
-                container.dataset.reportHtmlCacheKey = reportCacheKey;
-                container.dataset.reportChartCacheKey = '';
-                enhanceStudentReportMetrics(container);
-            }
-        } catch (e) {
-            console.error('Render Report Error:', e);
-            container.innerHTML = `<div style="color:red; padding:20px; text-align:left;"><h3 style="color:red">Rendering Error</h3><pre>${e.stack || e.message || e}</pre></div>`;
         }
     }
-
-    const history = getReportHistoryForQuery();
-
-    scheduleStudentReportCharts(stu, history);
-
-    hydrateStudentReportHistoryInBackground(stu, selectedReportExamIds, effectiveCurrentExamId, queryToken);
-
-    const strengthKey = `${getReportStudentIdentity(stu)}::${effectiveCurrentExamId || ''}`;
-    scheduleStudentReportStrengthAnalysis(stu, strengthKey);
-
-    const { compareSection } = getReportDomCache();
-    if (compareSection && ReportHistoryPerfCache.lastCompareHiddenKey !== strengthKey) {
-        ReportHistoryPerfCache.lastCompareHiddenKey = strengthKey;
-        compareSection.style.display = 'none';
-    }
-
-    const reportScrollKey = `${getReportStudentIdentity(stu)}::${effectiveCurrentExamId || ''}::${selectedReportExamIds.join('|')}`;
-    if (ReportHistoryPerfCache.lastScrollKey !== reportScrollKey) {
-        ReportHistoryPerfCache.lastScrollKey = reportScrollKey;
-        setTimeout(() => {
-            const reportElement = document.getElementById('single-report-result');
-            if (reportElement) {
-                reportElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }, 200);
-    }
+    return queryPromise;
 }
 
 function setSingleSelectOptions(selectEl, values, placeholderText, preferredValue) {

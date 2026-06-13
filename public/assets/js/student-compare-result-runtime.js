@@ -975,15 +975,34 @@ function updateStudentCompareSummary() {
     }
 
     const totalCount = studentsCompareData.length;
-    const classCount = new Set(studentsCompareData.map(s => s.class || '未分班')).size;
-    const improveCount = studentsCompareData.filter(s => s.progressType === 'improve').length;
-    const declineCount = studentsCompareData.filter(s => s.progressType === 'decline').length;
-    const stableCount = studentsCompareData.filter(s => s.progressType === 'stable').length;
-    const missingCount = studentsCompareData.filter(s => Array.isArray(s.periods) && s.periods.some(p => p.total === null || p.total === undefined)).length;
-    const avgScoreDiff = studentsCompareData.reduce((sum, s) => sum + Number(s.scoreDiff || 0), 0) / totalCount;
-    const avgLatestTotal = studentsCompareData.reduce((sum, s) => sum + Number(s.latestTotal || 0), 0) / totalCount;
-    const bestImprover = studentsCompareData.slice().sort((a, b) => Number(b.scoreDiff || 0) - Number(a.scoreDiff || 0))[0] || null;
-    const topLatest = studentsCompareData.slice().sort((a, b) => Number(b.latestTotal || 0) - Number(a.latestTotal || 0))[0] || null;
+    const classNames = new Set();
+    let improveCount = 0;
+    let declineCount = 0;
+    let stableCount = 0;
+    let missingCount = 0;
+    let totalScoreDiff = 0;
+    let totalLatestTotal = 0;
+    let bestImprover = null;
+    let topLatest = null;
+
+    studentsCompareData.forEach(student => {
+        classNames.add(student.class || '未分班');
+        if (student.progressType === 'improve') improveCount++;
+        if (student.progressType === 'decline') declineCount++;
+        if (student.progressType === 'stable') stableCount++;
+        if (Array.isArray(student.periods) && student.periods.some(p => p.total === null || p.total === undefined)) missingCount++;
+
+        const scoreDiff = Number(student.scoreDiff || 0);
+        const latestTotal = Number(student.latestTotal || 0);
+        totalScoreDiff += scoreDiff;
+        totalLatestTotal += latestTotal;
+        if (!bestImprover || scoreDiff > Number(bestImprover.scoreDiff || 0)) bestImprover = student;
+        if (!topLatest || latestTotal > Number(topLatest.latestTotal || 0)) topLatest = student;
+    });
+
+    const classCount = classNames.size;
+    const avgScoreDiff = totalScoreDiff / totalCount;
+    const avgLatestTotal = totalLatestTotal / totalCount;
 
     let html = '';
 
