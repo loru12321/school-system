@@ -3189,19 +3189,18 @@ function scheduleTeachingManagementFastWarmup() {
             return;
         }
         const loaders = [
-            () => window.ensureTeacherAnalysisMainRuntimeLoaded?.(),
-            () => window.ensureTeachingManagementRuntimeLoaded?.()
+            () => window.ensureTeacherAnalysisMainRuntimeLoaded?.()
         ];
         loaders.reduce((chain, load) => (
             chain.then(() => Promise.resolve(load()).catch((error) => {
-                console.warn('[boot-runtime] teaching fast warmup failed:', error);
+                console.warn('[boot-runtime] teacher analysis fast warmup failed:', error);
             }))
         ), Promise.resolve());
     };
 
     const schedule = () => {
         if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') {
-            window.SystemPerformance.scheduleIdle(warm, { label: 'teaching-fast-warmup', delay: 280, timeout: 1200 });
+            window.SystemPerformance.scheduleIdle(warm, { label: 'teacher-analysis-fast-warmup', delay: 280, timeout: 1200 });
             return;
         }
         if (typeof window.requestIdleCallback === 'function') {
