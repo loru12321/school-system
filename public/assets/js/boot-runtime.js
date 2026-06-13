@@ -392,6 +392,9 @@ if (window.ReportInsightRuntime) {
 if (window.__REPORT_RENDER_RUNTIME_PATCHED__) {
     window.__BOOT_SCRIPT_REGISTRY__['assets/js/report-render-runtime.js'] = 'loaded';
 }
+if (window.__TOWN_SUBMODULE_COMPARE_RUNTIME_PATCHED__) {
+    window.__BOOT_SCRIPT_REGISTRY__['assets/js/town-submodule-compare-runtime.js'] = 'loaded';
+}
 
 function normalizeBootModuleKey(src) {
     let value = String(src || '').trim();
@@ -2324,6 +2327,8 @@ function getOptionalRuntimeReadyValue(key) {
             return window.ReportInsightRuntime || null;
         case 'report-render':
             return window.__REPORT_RENDER_RUNTIME_PATCHED__ ? true : null;
+        case 'town-submodule-compare':
+            return window.__TOWN_SUBMODULE_COMPARE_RUNTIME_PATCHED__ ? true : null;
         case 'chart-vendor':
             return window.Chart || null;
         case 'sweetalert-vendor':

@@ -360,7 +360,6 @@ const dataManagerTabIndex = normalizedModuleManifest.indexOf(dataManagerTabRef);
 const compareCloudContextIndex = normalizedModuleManifest.indexOf(compareCloudContextRef);
 const compareExamSyncIndex = normalizedModuleManifest.indexOf(compareExamSyncRef);
 const townSubmoduleCompareStateIndex = normalizedModuleManifest.indexOf(townSubmoduleCompareStateRef);
-const townSubmoduleCompareIndex = normalizedModuleManifest.indexOf(townSubmoduleCompareRef);
 const compareSelectorsIndex = normalizedModuleManifest.indexOf(compareSelectorsRef);
 const progressAnalysisIndex = normalizedModuleManifest.indexOf(progressAnalysisRef);
 const cloudIndex = normalizedModuleManifest.indexOf(cloudRef);
@@ -415,7 +414,7 @@ assert.ok(dataManagerTabIndex >= 0, 'index.html should load data-manager-tab-run
 assert.ok(compareCloudContextIndex >= 0, 'index.html should load compare-cloud-context-runtime.js');
 assert.ok(compareExamSyncIndex >= 0, 'index.html should load compare-exam-sync-runtime.js');
 assert.ok(townSubmoduleCompareStateIndex >= 0, 'index.html should load town-submodule-compare-state-runtime.js');
-assert.strictEqual(townSubmoduleCompareIndex, -1, 'town-submodule-compare-runtime.js should be lazy-loaded instead of boot-loaded');
+assert.ok(indexHtml.includes(townSubmoduleCompareRef), 'index.html should preload town-submodule-compare-runtime.js to avoid summary deep-check cold-load stalls');
 assert.ok(compareSelectorsIndex >= 0, 'index.html should load compare-selectors-runtime.js');
 assert.ok(cloudIndex >= 0, 'index.html should load cloud.js');
 assert.ok(cloudWorkspaceIndex >= 0, 'index.html should load cloud-workspace-runtime.js');
@@ -902,7 +901,6 @@ assert.ok(indexHtml.includes(tablerIconsRef), 'index.html should load local tabl
     teacherCompareCloudRef,
     macroCompareResultRef,
     macroCompareCloudRef,
-    townSubmoduleCompareRef,
     holographicRef,
     predictiveRef,
     metaverseRef,
