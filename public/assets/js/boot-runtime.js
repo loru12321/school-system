@@ -145,7 +145,6 @@ var SYSTEM_RUNTIME_SKILLS = {
         bootEntry('teacher-analysis-main', bootJs('teacher-analysis-main-runtime.js'))
     ]),
     'teacher-correlation': bootSkill('demand', 'demand', ['correlation-analysis', 'renderCorrelationAnalysis', 'updateCorrelationSchoolSelect'], [
-        bootEntry('teacher-analysis-core', bootJs('teacher-analysis-core-runtime.js')),
         bootEntry('teacher-analysis-bridge', bootJs('teacher-analysis-bridge-runtime.js'))
     ]),
     'student-overview': bootSkill('demand', 'demand', ['student-overview'], [
@@ -2329,6 +2328,10 @@ function getOptionalRuntimeReadyValue(key) {
             return window.__REPORT_RENDER_RUNTIME_PATCHED__ ? true : null;
         case 'town-submodule-compare':
             return window.__TOWN_SUBMODULE_COMPARE_RUNTIME_PATCHED__ ? true : null;
+        case 'teacher-analysis-core':
+            return window.__TEACHER_ANALYSIS_CORE_RUNTIME_PATCHED__ ? true : null;
+        case 'teacher-analysis-bridge':
+            return window.__TEACHER_ANALYSIS_BRIDGE_RUNTIME_PATCHED__ ? true : null;
         case 'chart-vendor':
             return window.Chart || null;
         case 'sweetalert-vendor':

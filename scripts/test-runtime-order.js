@@ -542,6 +542,8 @@ assert.ok(bootRuntime.includes('runAfterAppModulesReady'), 'boot-runtime.js shou
 assert.ok(bootRuntime.includes("{ label: 'data-manager-sql', loader: () => window.ensureDataManagerSqlRuntimeLoaded?.() }"), 'boot-runtime.js should idle-warm data manager SQL runtime');
 assert.ok(bootRuntime.includes("'teacher-analysis':"), 'runtime skill manifest should include teacher-analysis');
 assert.ok(bootRuntime.includes("'teacher-correlation':"), 'runtime skill manifest should include teacher-correlation');
+assert.ok(bootRuntime.includes("'teacher-correlation': bootSkill('demand', 'demand', ['correlation-analysis', 'renderCorrelationAnalysis', 'updateCorrelationSchoolSelect'], [\n        bootEntry('teacher-analysis-bridge', bootJs('teacher-analysis-bridge-runtime.js'))\n    ])"), 'correlation analysis should load only the lightweight bridge runtime');
+assert.ok(bootRuntime.includes("case 'teacher-analysis-bridge':"), 'boot-runtime.js should detect an already-loaded teacher-analysis bridge runtime');
 assert.ok(bootRuntime.includes("window.ensureTeacherCorrelationRuntimeLoaded = function ()"), 'boot-runtime.js should expose ensureTeacherCorrelationRuntimeLoaded');
 assert.ok(!bootRuntime.includes("'teacher-analysis', 'cohort-growth', 'correlation-analysis'"), 'correlation analysis should not pull the full teacher-analysis skill');
 assert.ok(bootRuntime.includes("'crypto-vendor':"), 'runtime skill manifest should include crypto-vendor');
