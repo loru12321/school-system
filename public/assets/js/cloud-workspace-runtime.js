@@ -474,9 +474,7 @@
 
     function buildStudentHistoryIndexRowsForBundle(payload, examRows, syncedAt) {
         const rows = [];
-        const currentExamId = getCurrentExamIdFromPayload(payload);
         (Array.isArray(examRows) ? examRows : []).forEach((examRow) => {
-            if (currentExamId && String(examRow?.key || '').trim() !== currentExamId) return;
             if (!examRow?.shard) return;
             rows.push(...buildStudentHistoryIndexRowsForExam(payload, examRow.key, examRow.shard, syncedAt));
         });

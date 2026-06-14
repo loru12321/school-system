@@ -1710,6 +1710,36 @@
                     updatedAt: entry.updatedAt || row?.updated_at || ''
                 };
             };
+            const buildStudentHistoryIndexRowFromEntry = (entry, updatedAt = '') => {
+                const examId = String(entry?.examFullKey || entry?.examId || '').trim();
+                if (!entry || !examId || isCurrentExam(examId) || !shouldUseHistoryEntry(examId)) return null;
+                const studentLikeRow = {
+                    school: targetSchool,
+                    class: targetClassRaw,
+                    id: targetStudentId,
+                    name: targetName
+                };
+                const identity = getStudentHistoryIdentity(studentLikeRow);
+                const key = getStudentHistoryIndexKey(cohortId, examId, studentLikeRow);
+                if (!identity.replace(/\|/g, '') || !key) return null;
+                return {
+                    key,
+                    content: packPayload({
+                        __STUDENT_HISTORY_INDEX_VERSION: 1,
+                        cohortId,
+                        examId,
+                        identity,
+                        student: studentLikeRow,
+                        entry: {
+                            ...entry,
+                            examId: entry.examId || examId,
+                            examFullKey: entry.examFullKey || examId,
+                            updatedAt: entry.updatedAt || updatedAt || ''
+                        }
+                    }),
+                    updated_at: updatedAt || new Date().toISOString()
+                };
+            };
             const readIndexedHistory = async () => {
                 const targetLikeRow = {
                     school: targetSchool,
@@ -1856,15 +1886,25 @@
                     return rowKey && !isIgnoredExamKey(rowKey) && shouldUseHistoryEntry(rowKey);
                 });
                 const history = indexedHistory.slice();
+                const historyIndexBackfillRows = [];
 
                 for (const row of rows) {
                     try {
                         const payload = parseHistoryPayloadRow(row);
                         const entry = buildHistoryEntry(row.key, payload, row.updated_at);
-                        if (entry) history.push(entry);
+                        if (entry) {
+                            history.push(entry);
+                            const indexRow = buildStudentHistoryIndexRowFromEntry(entry, row.updated_at);
+                            if (indexRow) historyIndexBackfillRows.push(indexRow);
+                        }
                     } catch (rowErr) {
                         console.warn('[CloudHistory] parse row failed:', rowErr);
                     }
+                }
+                if (historyIndexBackfillRows.length) {
+                    upsertSystemData(historyIndexBackfillRows).catch((backfillError) => {
+                        console.warn('[CloudHistory] index backfill failed:', backfillError);
+                    });
                 }
 
                 setCloudStatus('success', `历史${history.length}条`);

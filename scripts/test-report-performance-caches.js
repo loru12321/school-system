@@ -196,6 +196,9 @@ if (!cloudHistorySource || cloudHistorySource.includes('computeExamDataFingerpri
     '_studentHistoryPayloadCache',
     'parseHistoryPayloadRow',
     'cache.size > 12',
+    'buildStudentHistoryIndexRowFromEntry',
+    'historyIndexBackfillRows',
+    "upsertSystemData(historyIndexBackfillRows).catch",
     'const scoreCounts = new Map();',
     'Array.from(scoreCounts.keys()).sort((a, b) => b - a).forEach(value => {',
     'subjectCache.set(subjectKey, rankByScore);',
@@ -216,6 +219,9 @@ if (!cloudHistorySource || cloudHistorySource.includes('computeExamDataFingerpri
     'i += 400',
     'legacyHistoryIndexRows'
 ].forEach((token) => assertContains(read('public/assets/js/cloud-workspace-runtime.js'), token, 'public/assets/js/cloud-workspace-runtime.js'));
+if (read('public/assets/js/cloud-workspace-runtime.js').includes("currentExamId && String(examRow?.key || '').trim() !== currentExamId")) {
+    fail('workspace student history index should cover every split exam, not only the current exam');
+}
 
 [
     'totalRanks.county ?? row?.countyRank ?? row?.rankCounty ?? null',
