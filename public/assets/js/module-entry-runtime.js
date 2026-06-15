@@ -995,7 +995,7 @@
                     .then(() => loader.call(window))
                     .catch((error) => console.warn(`[report-generator] ${label} runtime prewarm failed:`, error));
             });
-        }, { delay: 16, frame: true });
+        }, { delay: 220, idle: true, timeout: 1800 });
     }
 
     function runModuleSpecificInit(id) {
