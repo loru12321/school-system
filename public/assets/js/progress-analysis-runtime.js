@@ -55,6 +55,7 @@
     let VA_VIEW_MODE = 'school';
     let trendChartInstance = window.trendChartInstance || null;
     let sankeyChartInstance = window.sankeyChartInstance || null;
+    let progressChartVendorPromise = null;
     let PROGRESS_VISUAL_RENDER_FRAME = 0;
     let PROGRESS_VISUAL_RENDER_TOKEN = 0;
     const ProgressBaselineExamPerfCache = {
@@ -1224,6 +1225,22 @@ function clearProgressVisuals() {
     sankeyChartInstance = window.sankeyChartInstance = destroyProgressChart('sankeyChart', sankeyChartInstance);
 }
 
+function ensureProgressChartVendor() {
+    if (typeof Chart !== 'undefined') return Promise.resolve(Chart);
+    if (progressChartVendorPromise) return progressChartVendorPromise;
+    const loader = typeof window.ensureChartVendorLoaded === 'function'
+        ? window.ensureChartVendorLoaded
+        : null;
+    if (!loader) return Promise.reject(new Error('Chart runtime loader unavailable'));
+    progressChartVendorPromise = Promise.resolve()
+        .then(() => loader.call(window))
+        .catch((error) => {
+            progressChartVendorPromise = null;
+            throw error;
+        });
+    return progressChartVendorPromise;
+}
+
 function runProgressSankeyWhenIdle(token) {
     const runner = () => {
         if (token !== PROGRESS_VISUAL_RENDER_TOKEN) return;
@@ -1255,8 +1272,13 @@ function scheduleProgressVisualRender() {
             clearProgressVisuals();
             return;
         }
-        renderTrendChart();
-        runProgressSankeyWhenIdle(token);
+        ensureProgressChartVendor()
+            .then(() => {
+                if (token !== PROGRESS_VISUAL_RENDER_TOKEN || !PROGRESS_CACHE.length) return;
+                renderTrendChart();
+                runProgressSankeyWhenIdle(token);
+            })
+            .catch((error) => console.warn('[progress] Chart runtime load failed:', error));
     };
 
     if (typeof window.requestAnimationFrame === 'function') {
@@ -1431,6 +1453,12 @@ function renderTrendChart() {
         trendChartInstance = window.trendChartInstance = destroyProgressChart('trendChart', trendChartInstance);
         return;
     }
+    if (typeof Chart === 'undefined') {
+        ensureProgressChartVendor()
+            .then(() => renderTrendChart())
+            .catch((error) => console.warn('[progress] Chart runtime load failed:', error));
+        return;
+    }
     trendChartInstance = window.trendChartInstance = destroyProgressChart('trendChart', trendChartInstance);
 
     const improved = [];
@@ -1482,6 +1510,12 @@ function renderSankeyDiagram() {
     const ctx = document.getElementById('sankeyChart');
     if (!ctx || !PROGRESS_CACHE.length) {
         sankeyChartInstance = window.sankeyChartInstance = destroyProgressChart('sankeyChart', sankeyChartInstance);
+        return;
+    }
+    if (typeof Chart === 'undefined') {
+        ensureProgressChartVendor()
+            .then(() => renderSankeyDiagram())
+            .catch((error) => console.warn('[progress] Chart runtime load failed:', error));
         return;
     }
 

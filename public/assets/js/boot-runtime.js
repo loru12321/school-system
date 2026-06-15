@@ -187,7 +187,6 @@ var SYSTEM_RUNTIME_SKILLS = {
     bootEntry('county-analysis', bootJs('county-analysis-runtime.js'))
 ]),
 'progress-analysis': bootSkill('demand', 'full', ['progress-analysis'], [
-    bootEntry('chart-vendor', bootVend('chart.js/chart.umd.min.js')),
     bootEntry('progress-analysis', bootJs('progress-analysis-runtime.js'))
 ]),
 'data-manager-sql': bootSkill('demand', 'full', ['data-manager-sql', 'talkToData'], [
