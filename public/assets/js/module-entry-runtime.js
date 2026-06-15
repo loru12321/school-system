@@ -1013,7 +1013,13 @@
         }
         if (TEACHING_MANAGEMENT_MODULE_IDS.has(id)) return initTeachingManagementEntry(id);
         if (id === 'bottom3') scheduleMacroTablesRender('bottom3', 'bottom3-tables');
-        if (id === 'indicator' && typeof refreshIndicatorResults === 'function') refreshIndicatorResults(true);
+        if (id === 'indicator' && typeof refreshIndicatorResults === 'function') {
+            scheduleActiveModuleTask('indicator', 'indicator-results', () => refreshIndicatorResults(true), {
+                delay: 80,
+                idle: true,
+                timeout: 1200
+            });
+        }
         if (id === 'county-analysis' || id === 'county-teacher-portrait' || id === 'county-school-horizontal') {
             if (window.__SMOKE_LIGHTWEIGHT_MODULE_SWITCH__) {
                 if (typeof window.ensureCountySubmoduleSections === 'function') window.ensureCountySubmoduleSections();
