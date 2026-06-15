@@ -4,7 +4,7 @@
     const DEFAULT_TTL_MS = 30000;
     const MAX_CACHE_SIZE = 80;
     const MAX_CONCURRENT_TASKS = 4;
-    const DIRECT_READ_METHODS = new Set(['loadTeachers']);
+    const DIRECT_READ_METHODS = new Set(['loadTeachers', 'fetchStudentExamHistory']);
     const state = {
         active: 0,
         queue: [],

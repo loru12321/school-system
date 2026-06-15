@@ -1740,6 +1740,79 @@
                     updated_at: updatedAt || new Date().toISOString()
                 };
             };
+            const buildStudentHistoryIndexRowForStudent = (examId, payload, match, updatedAt = '') => {
+                if (!match || !examId || isCurrentExam(examId) || !shouldUseHistoryEntry(examId)) return null;
+                const keyParts = String(examId || '').split('_');
+                const examLabel = payload?.examLabel || (keyParts.length >= 5 ? keyParts.slice(4).join('_') : examId);
+                const subjectRanks = { ...(match.ranks || {}) };
+                Object.keys(match.scores || {}).forEach((subject) => {
+                    const ranks = { ...(subjectRanks[subject] || {}) };
+                    if (ranks.county === undefined || ranks.county === null || ranks.county === '') {
+                        const fallback = getCountyRankFallback(payload, match, subject);
+                        if (fallback !== undefined) ranks.county = fallback;
+                    }
+                    subjectRanks[subject] = ranks;
+                });
+                const rankCounty = match.ranks?.total?.county ?? match.rankCounty ?? match.countyRank ?? getCountyRankFallback(payload, match, 'total');
+                const studentLikeRow = {
+                    school: match.school || '',
+                    class: match.class || '',
+                    id: match.id || match.examNo || match.uuid || '',
+                    name: match.name || ''
+                };
+                const identity = getStudentHistoryIdentity(studentLikeRow);
+                const key = getStudentHistoryIndexKey(cohortId, examId, studentLikeRow);
+                if (!identity.replace(/\|/g, '') || !key) return null;
+                return {
+                    key,
+                    content: packPayload({
+                        __STUDENT_HISTORY_INDEX_VERSION: 1,
+                        cohortId,
+                        examId,
+                        identity,
+                        student: studentLikeRow,
+                        entry: {
+                            examId,
+                            examFullKey: examId,
+                            examLabel: examLabel || examId,
+                            fingerprint: getHistoryPayloadFingerprint(examId, payload, updatedAt),
+                            total: match.total,
+                            rankClass: match.ranks?.total?.class,
+                            rankSchool: match.ranks?.total?.school,
+                            rankTown: match.ranks?.total?.township,
+                            rankCounty,
+                            subjectRanks,
+                            scores: match.scores,
+                            updatedAt
+                        }
+                    }),
+                    updated_at: updatedAt || new Date().toISOString()
+                };
+            };
+            const queueExamHistoryIndexBackfill = (examId, payload, updatedAt = '') => {
+                const rows = Array.isArray(payload?.RAW_DATA) ? payload.RAW_DATA : (Array.isArray(payload?.data) ? payload.data : []);
+                if (!rows.length) return;
+                scheduleIdleTask(() => {
+                    const seen = new Set();
+                    const indexRows = [];
+                    rows.forEach((studentRow) => {
+                        const indexRow = buildStudentHistoryIndexRowForStudent(examId, payload, studentRow, updatedAt);
+                        if (!indexRow || seen.has(indexRow.key)) return;
+                        seen.add(indexRow.key);
+                        indexRows.push(indexRow);
+                    });
+                    const pushChunk = (offset = 0) => {
+                        const chunk = indexRows.slice(offset, offset + 400);
+                        if (!chunk.length) return;
+                        upsertSystemData(chunk)
+                            .catch((backfillError) => console.warn('[CloudHistory] exam index backfill failed:', backfillError))
+                            .finally(() => {
+                                if (offset + 400 < indexRows.length) scheduleIdleTask(() => pushChunk(offset + 400), 1200);
+                            });
+                    };
+                    pushChunk();
+                }, 1400);
+            };
             const readIndexedHistory = async () => {
                 const targetLikeRow = {
                     school: targetSchool,
@@ -1860,6 +1933,10 @@
                     setCloudStatus('success', `历史${indexedHistory.length}条`);
                     return { success: true, data: indexedHistory, source: 'student-history-index' };
                 }
+                if (!requestedExamIds.length && indexedHistory.length) {
+                    setCloudStatus('success', `历史${indexedHistory.length}条`);
+                    return { success: true, data: indexedHistory, source: 'student-history-index' };
+                }
 
                 const fallbackExamIds = requestedExamIds.length ? missingRequestedExamIds : requestedExamIds;
                 const queryOptions = fallbackExamIds.length
@@ -1874,7 +1951,8 @@
                         select: 'key,content,updated_at',
                         keyLike: `${cohortId}%`,
                         order: 'updated_at',
-                        ascending: true
+                        ascending: true,
+                        ...(Number(options?.fallbackLimit) > 0 ? { limit: Number(options.fallbackLimit) } : {})
                     };
                 const { data, error } = await selectSystemData({
                     ...queryOptions
@@ -1896,6 +1974,7 @@
                             history.push(entry);
                             const indexRow = buildStudentHistoryIndexRowFromEntry(entry, row.updated_at);
                             if (indexRow) historyIndexBackfillRows.push(indexRow);
+                            queueExamHistoryIndexBackfill(row.key, payload, row.updated_at);
                         }
                     } catch (rowErr) {
                         console.warn('[CloudHistory] parse row failed:', rowErr);

@@ -1,8 +1,31 @@
 (() => {
     if (typeof window === 'undefined' || window.ReportInsightRuntime) return;
 
+let reportInsightStatsCacheSignature = '';
+const reportInsightStatsCache = new Map();
+
+function getReportInsightRowsSignature(rows) {
+    if (!Array.isArray(rows) || !rows.length) return '0';
+    const version = String(window.__RAW_DATA_VERSION__ || window.RAW_DATA_VERSION || '').trim();
+    const first = rows[0] || {};
+    const last = rows[rows.length - 1] || {};
+    return [
+        version,
+        rows.length,
+        first.id || first.examNo || first.name || '',
+        last.id || last.examNo || last.name || ''
+    ].join('|');
+}
+
 function getReportInsightScoreStats(subject) {
     const rows = Array.isArray(window.RAW_DATA) ? window.RAW_DATA : [];
+    const signature = getReportInsightRowsSignature(rows);
+    if (signature !== reportInsightStatsCacheSignature) {
+        reportInsightStatsCacheSignature = signature;
+        reportInsightStatsCache.clear();
+    }
+    const cacheKey = String(subject || '');
+    if (reportInsightStatsCache.has(cacheKey)) return reportInsightStatsCache.get(cacheKey);
     const scores = rows
         .map(row => row?.scores?.[subject])
         .filter(value => typeof value === 'number')
@@ -10,12 +33,20 @@ function getReportInsightScoreStats(subject) {
     const count = scores.length;
     const mean = count ? scores.reduce((sum, value) => sum + value, 0) / count : 0;
     const variance = count ? scores.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / count : 0;
-    return { scores, count, mean, sd: Math.sqrt(variance) || 1 };
+    const rankByScore = new Map();
+    scores.forEach((value, index) => {
+        if (!rankByScore.has(value)) rankByScore.set(value, index + 1);
+    });
+    const stats = { scores, count, mean, sd: Math.sqrt(variance) || 1, rankByScore };
+    reportInsightStatsCache.set(cacheKey, stats);
+    return stats;
 }
 
 function getReportInsightPercentile(score, stats) {
     if (!stats || !stats.count) return null;
-    const rank = stats.scores.indexOf(score) + 1;
+    const rank = stats.rankByScore && stats.rankByScore.has(score)
+        ? stats.rankByScore.get(score)
+        : stats.scores.indexOf(score) + 1;
     return rank > 0 ? ((1 - rank / stats.count) * 100) : null;
 }
 

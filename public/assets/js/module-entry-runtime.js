@@ -819,7 +819,7 @@
 
         if ((!window.CohortGrowth || typeof window.CohortGrowth.updateScopeControls !== 'function')
             && window.SystemRuntimeLoader && typeof window.SystemRuntimeLoader.load === 'function') {
-            return window.SystemRuntimeLoader.load('teacher-analysis')
+            return window.SystemRuntimeLoader.load('cohort-growth')
                 .then(runAfterLoad)
                 .catch((error) => {
                     console.warn('[cohort-growth] runtime load failed:', error);
