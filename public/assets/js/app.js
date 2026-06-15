@@ -12818,6 +12818,7 @@ const ReportHistoryPerfCache = {
     selectedExamIdsSignature: '',
     selectedExamIds: [],
     historyByStudent: new Map(),
+    examStudentLookup: new Map(),
     hydratingKeys: new Set(),
     lastQueryKey: '',
     inflightReportQueryKey: '',
@@ -12921,6 +12922,57 @@ function getReportSubjectSortedScores(examKey, examData, subject) {
         ReportHistoryPerfCache.subjectScores.delete(firstKey);
     }
     return scores;
+}
+
+function normalizeReportHistoryName(value) {
+    return String(value || "").trim().replace(/\s+/g, "");
+}
+
+function normalizeReportHistoryClass(value) {
+    return String(value || "").trim().replace(/[班级\(\)\.\-gradeclass]/gi, "");
+}
+
+function isReportHistoryStudentMatch(row, targetName, targetClass, targetSchool) {
+    const sObj = row?.student || row || {};
+    if (sObj.school && targetSchool && !areSchoolNamesEquivalent(sObj.school, targetSchool)) return false;
+    if (normalizeReportHistoryName(sObj.name) !== targetName) return false;
+    const histClass = normalizeReportHistoryClass(sObj.class);
+    if (histClass === targetClass) return true;
+    const numC1 = histClass.replace(/0/g, '');
+    const numC2 = targetClass.replace(/0/g, '');
+    return numC1 === numC2 && numC1.length > 0;
+}
+
+function getCachedHistoryExamStudent(examData, student, examFingerprint = '') {
+    const rows = Array.isArray(examData) ? examData : [];
+    if (!rows.length || !student) return null;
+    const targetSchool = student.school;
+    const targetName = normalizeReportHistoryName(student.name);
+    const targetClass = normalizeReportHistoryClass(student.class);
+    const lookupKey = [
+        String(examFingerprint || '').trim(),
+        rows.length,
+        String(targetSchool || '').trim(),
+        targetClass,
+        targetName,
+        String(student.id || student.examNo || student.studentId || '').trim()
+    ].join('::');
+    if (ReportHistoryPerfCache.examStudentLookup.has(lookupKey)) {
+        return ReportHistoryPerfCache.examStudentLookup.get(lookupKey) || null;
+    }
+    const found = window.RankingDataService && typeof window.RankingDataService.findStudent === 'function'
+        ? window.RankingDataService.findStudent(rows, {
+            name: student.name,
+            school: targetSchool,
+            className: student.class
+        })
+        : rows.find(p => isReportHistoryStudentMatch(p, targetName, targetClass, targetSchool));
+    ReportHistoryPerfCache.examStudentLookup.set(lookupKey, found || null);
+    if (ReportHistoryPerfCache.examStudentLookup.size > 240) {
+        const firstKey = ReportHistoryPerfCache.examStudentLookup.keys().next().value;
+        ReportHistoryPerfCache.examStudentLookup.delete(firstKey);
+    }
+    return found || null;
 }
 
 function getStudentReportSelectedExamIds() {
@@ -13860,13 +13912,7 @@ function findPreviousRecord(student) {
                     const examFingerprint = getReportExamFingerprint(exam, examData);
                     if (currentFingerprint && examFingerprint && examFingerprint === currentFingerprint) continue;
 
-                    const found = window.RankingDataService && typeof window.RankingDataService.findStudent === 'function'
-                        ? window.RankingDataService.findStudent(examData, {
-                            name: student.name,
-                            school: targetSchool,
-                            className: student.class
-                        })
-                        : examData.find(p => matchStudent(p, targetName, targetClass, targetSchool));
+                    const found = getCachedHistoryExamStudent(examData, student, examFingerprint);
                     if (found) {
                         appDebug(`[对比] 从历史考试 "${examId}" 中找到 ${student.name} 的历史记录`);
                         return {
@@ -13986,21 +14032,7 @@ function getStudentExamHistory(student) {
                 continue;
             }
 
-            const found = window.RankingDataService && typeof window.RankingDataService.findStudent === 'function'
-                ? window.RankingDataService.findStudent(examData, {
-                    name: student.name,
-                    school: targetSchool,
-                    className: student.class
-                })
-                : examData.find(p => {
-                    if (p.school && targetSchool && !areSchoolNamesEquivalent(p.school, targetSchool)) return false;
-                    if (cleanStr(p.name) !== targetName) return false;
-                    const histClass = normClass(p.class);
-                    if (histClass === targetClass) return true;
-                    const numC1 = histClass.replace(/0/g, '');
-                    const numC2 = targetClass.replace(/0/g, '');
-                    return numC1 === numC2 && numC1.length > 0;
-            });
+            const found = getCachedHistoryExamStudent(examData, student, examFingerprint);
 
             if (found) {
                 const normalizedStudent = createHistoryStudentView(found, examId, examFingerprint, examData);

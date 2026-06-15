@@ -133,8 +133,14 @@ if (!historySource || historySource.includes('getReportSubjectSortedScores(')) {
 }
 [
     'hasUsableStoredHistoryRanks',
-    'createHistoryStudentView'
+    'createHistoryStudentView',
+    'getCachedHistoryExamStudent(examData, student, examFingerprint)'
 ].forEach((token) => assertContains(historySource, token, 'public/assets/js/app.js'));
+[
+    'examStudentLookup: new Map()',
+    'function getCachedHistoryExamStudent(examData, student, examFingerprint = \'\')',
+    'ReportHistoryPerfCache.examStudentLookup.set(lookupKey, found || null)'
+].forEach((token) => assertContains(app, token, 'public/assets/js/app.js'));
 
 const previousRecordStart = app.indexOf('function findPreviousRecord(student)');
 const previousRecordEnd = app.indexOf('function getStudentExamHistory(student)', previousRecordStart);
