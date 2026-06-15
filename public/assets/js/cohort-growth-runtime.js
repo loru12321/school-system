@@ -16,9 +16,43 @@
         return Number.isFinite(number) ? number : null;
     }
 
-    function getCohortExams() {
+    const ScopeOptionCache = {
+        examsSignature: '',
+        exams: [],
+        schoolListSignature: '',
+        schoolList: [],
+        allRowsSignature: '',
+        allRows: []
+    };
+
+    function getRawCohortExams() {
         const db = root.COHORT_DB && typeof root.COHORT_DB === 'object' ? root.COHORT_DB : null;
-        return Object.values(db?.exams || {}).sort((a, b) => Number(a?.createdAt || 0) - Number(b?.createdAt || 0));
+        return db?.exams || {};
+    }
+
+    function getCohortExamsSignature() {
+        return Object.entries(getRawCohortExams())
+            .map(([key, exam]) => [
+                key,
+                String(exam?.examId || ''),
+                String(exam?.examFullKey || ''),
+                Number(exam?.createdAt || 0),
+                Number(exam?.updatedAt || 0),
+                Array.isArray(exam?.data) ? exam.data.length : 0
+            ].join(':'))
+            .sort()
+            .join('|');
+    }
+
+    function getCohortExams() {
+        const signature = getCohortExamsSignature();
+        if (ScopeOptionCache.examsSignature === signature) return ScopeOptionCache.exams;
+        ScopeOptionCache.examsSignature = signature;
+        ScopeOptionCache.exams = Object.values(getRawCohortExams())
+            .sort((a, b) => Number(a?.createdAt || 0) - Number(b?.createdAt || 0));
+        ScopeOptionCache.schoolListSignature = '';
+        ScopeOptionCache.allRowsSignature = '';
+        return ScopeOptionCache.exams;
     }
 
     function normalizeText(value) {
@@ -55,6 +89,11 @@
     }
 
     function getSchoolList() {
+        const examsSignature = ScopeOptionCache.examsSignature || getCohortExamsSignature();
+        const rawLength = Array.isArray(root.RAW_DATA) ? root.RAW_DATA.length : 0;
+        const schoolKeys = Object.keys(root.SCHOOLS || {}).sort().join('|');
+        const signature = `${examsSignature}::${rawLength}::${schoolKeys}`;
+        if (ScopeOptionCache.schoolListSignature === signature) return ScopeOptionCache.schoolList;
         const names = new Set();
         const collect = (value) => {
             const school = normalizeText(value);
@@ -68,14 +107,20 @@
         getCohortExams().forEach((exam) => {
             (Array.isArray(exam?.data) ? exam.data : []).forEach((row) => collect(row?.school));
         });
-        return Array.from(names).sort((left, right) => left.localeCompare(right, 'zh-CN'));
+        ScopeOptionCache.schoolListSignature = signature;
+        ScopeOptionCache.schoolList = Array.from(names).sort((left, right) => left.localeCompare(right, 'zh-CN'));
+        return ScopeOptionCache.schoolList;
     }
 
     function getAllCohortRows() {
+        const signature = ScopeOptionCache.examsSignature || getCohortExamsSignature();
+        if (ScopeOptionCache.allRowsSignature === signature) return ScopeOptionCache.allRows;
         const rows = [];
         getCohortExams().forEach((exam) => {
             if (Array.isArray(exam?.data)) rows.push(...exam.data);
         });
+        ScopeOptionCache.allRowsSignature = signature;
+        ScopeOptionCache.allRows = rows;
         return rows;
     }
 
@@ -88,9 +133,17 @@
     function fillSelect(select, options, allLabel, oldValue) {
         if (!select) return;
         const values = Array.from(new Set((options || []).map(normalizeText).filter(Boolean)));
+        const signature = `${allLabel}::${values.join('|')}`;
+        if (select.dataset.cgOptionsSig === signature) {
+            if (oldValue && Array.from(select.options || []).some((option) => option.value === oldValue)) {
+                select.value = oldValue;
+            }
+            return;
+        }
         select.innerHTML = `<option value="ALL">${escapeHtml(allLabel)}</option>` + values
             .map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)
             .join('');
+        select.dataset.cgOptionsSig = signature;
         if (oldValue && Array.from(select.options || []).some((option) => option.value === oldValue)) {
             select.value = oldValue;
         }
