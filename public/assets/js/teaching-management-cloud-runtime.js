@@ -1,4 +1,8 @@
 // Teaching management runtime: cloud warning and rectify task panels.
+const TM_CLOUD_OPS_FRESH_MS = 90 * 1000;
+const TM_CLOUD_OPS_STALE_MS = 10 * 60 * 1000;
+const TM_CLOUD_OPS_STORAGE_KEY = 'schoolSystemTeachingCloudOpsCacheV2';
+
 function tmGetCurrentGatewayScope() {
     const school = tmGetSelectDisplayValue(
         ['teacherCompareSchool', 'mySchoolSelect', 'studentSchoolSelect'],
@@ -41,6 +45,46 @@ function tmFilterCloudRecordsByScope(records, scope, pickSchoolField) {
     const list = Array.isArray(records) ? records : [];
     if (!scope.school_name) return list;
     return list.filter((row) => String(row?.[pickSchoolField] || '').trim() === scope.school_name);
+}
+
+function tmNormalizeCloudOpsSnapshot(value, cacheKey, maxAgeMs = TM_CLOUD_OPS_STALE_MS) {
+    if (!value || typeof value !== 'object') return null;
+    if (String(value.key || '') !== String(cacheKey || '')) return null;
+    const fetchedAt = Number(value.fetchedAt || 0);
+    if (!Number.isFinite(fetchedAt) || fetchedAt <= 0 || Date.now() - fetchedAt > maxAgeMs) return null;
+    return {
+        key: String(value.key || ''),
+        fetchedAt,
+        warnings: Array.isArray(value.warnings) ? value.warnings : [],
+        tasks: Array.isArray(value.tasks) ? value.tasks : [],
+        authState: String(value.authState || 'ready'),
+        error: String(value.error || '')
+    };
+}
+
+function tmReadCloudOpsSnapshot(cacheKey) {
+    try {
+        const raw = window.sessionStorage?.getItem(TM_CLOUD_OPS_STORAGE_KEY);
+        if (!raw) return null;
+        return tmNormalizeCloudOpsSnapshot(JSON.parse(raw), cacheKey);
+    } catch (error) {
+        return null;
+    }
+}
+
+function tmWriteCloudOpsSnapshot(snapshot) {
+    try {
+        const normalized = tmNormalizeCloudOpsSnapshot(snapshot, snapshot?.key, TM_CLOUD_OPS_STALE_MS);
+        if (!normalized || normalized.authState !== 'ready') return;
+        window.sessionStorage?.setItem(TM_CLOUD_OPS_STORAGE_KEY, JSON.stringify(normalized));
+    } catch (error) {
+        // Snapshot cache is only a speed path; cloud data remains the source of truth.
+    }
+}
+
+function tmRenderCloudOpsState(state) {
+    tmRenderCloudOpsPanels(state);
+    if (typeof tmRenderCloudManagementSections === 'function') tmRenderCloudManagementSections();
 }
 
 function tmBuildCloudWarningTitle(row) {
@@ -200,6 +244,7 @@ function tmRenderCloudOpsPanels(state) {
 async function tmRefreshCloudOps(force = false) {
     const scope = tmGetCurrentGatewayScope();
     const cacheKey = JSON.stringify(scope);
+    const now = Date.now();
     const hasAuthorizedGateway = !!(window.EdgeGateway && typeof EdgeGateway.canUseAuthorizedRequests === 'function' && EdgeGateway.canUseAuthorizedRequests());
 
     if (!hasAuthorizedGateway) {
@@ -211,15 +256,25 @@ async function tmRefreshCloudOps(force = false) {
             authState: 'missing_token',
             error: ''
         };
-        tmRenderCloudOpsPanels(TM_CLOUD_OPS_CACHE);
-        if (typeof tmRenderCloudManagementSections === 'function') tmRenderCloudManagementSections();
+        tmRenderCloudOpsState(TM_CLOUD_OPS_CACHE);
         return;
     }
 
-    if (!force && TM_CLOUD_OPS_CACHE.key === cacheKey && Date.now() - TM_CLOUD_OPS_CACHE.fetchedAt < 30000) {
-        tmRenderCloudOpsPanels(TM_CLOUD_OPS_CACHE);
-        if (typeof tmRenderCloudManagementSections === 'function') tmRenderCloudManagementSections();
-        return;
+    let renderedSnapshot = false;
+    const memorySnapshot = tmNormalizeCloudOpsSnapshot(TM_CLOUD_OPS_CACHE, cacheKey);
+    if (!force && memorySnapshot) {
+        TM_CLOUD_OPS_CACHE = memorySnapshot;
+        tmRenderCloudOpsState(TM_CLOUD_OPS_CACHE);
+        if (now - memorySnapshot.fetchedAt < TM_CLOUD_OPS_FRESH_MS) return TM_CLOUD_OPS_CACHE;
+        renderedSnapshot = true;
+    } else if (!force) {
+        const storedSnapshot = tmReadCloudOpsSnapshot(cacheKey);
+        if (storedSnapshot) {
+            TM_CLOUD_OPS_CACHE = storedSnapshot;
+            tmRenderCloudOpsState(TM_CLOUD_OPS_CACHE);
+            if (now - storedSnapshot.fetchedAt < TM_CLOUD_OPS_FRESH_MS) return TM_CLOUD_OPS_CACHE;
+            renderedSnapshot = true;
+        }
     }
 
     if (!force && TM_CLOUD_OPS_INFLIGHT && TM_CLOUD_OPS_INFLIGHT_KEY === cacheKey) {
@@ -227,8 +282,7 @@ async function tmRefreshCloudOps(force = false) {
     }
 
     const requestId = ++TM_CLOUD_OPS_REQUEST_ID;
-    tmRenderCloudOpsPanels({ authState: 'loading' });
-    if (typeof tmRenderCloudManagementSections === 'function') tmRenderCloudManagementSections();
+    if (!renderedSnapshot) tmRenderCloudOpsState({ authState: 'loading' });
 
     const task = (async () => {
         const [warningRes, taskRes] = await Promise.all([
@@ -249,11 +303,19 @@ async function tmRefreshCloudOps(force = false) {
             authState: 'ready',
             error: ''
         };
-        tmRenderCloudOpsPanels(TM_CLOUD_OPS_CACHE);
-        if (typeof tmRenderCloudManagementSections === 'function') tmRenderCloudManagementSections();
+        tmWriteCloudOpsSnapshot(TM_CLOUD_OPS_CACHE);
+        tmRenderCloudOpsState(TM_CLOUD_OPS_CACHE);
     })()
         .catch((error) => {
             if (requestId !== TM_CLOUD_OPS_REQUEST_ID) return;
+            if (renderedSnapshot && TM_CLOUD_OPS_CACHE.key === cacheKey) {
+                TM_CLOUD_OPS_CACHE = Object.assign({}, TM_CLOUD_OPS_CACHE, {
+                    authState: 'ready',
+                    error: error instanceof Error ? error.message : String(error)
+                });
+                tmRenderCloudOpsState(TM_CLOUD_OPS_CACHE);
+                return;
+            }
             TM_CLOUD_OPS_CACHE = {
                 key: cacheKey,
                 fetchedAt: Date.now(),
@@ -262,8 +324,7 @@ async function tmRefreshCloudOps(force = false) {
                 authState: 'error',
                 error: error instanceof Error ? error.message : String(error)
             };
-            tmRenderCloudOpsPanels(TM_CLOUD_OPS_CACHE);
-            if (typeof tmRenderCloudManagementSections === 'function') tmRenderCloudManagementSections();
+            tmRenderCloudOpsState(TM_CLOUD_OPS_CACHE);
         })
         .finally(() => {
             if (TM_CLOUD_OPS_INFLIGHT === task) {
