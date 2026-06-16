@@ -20,11 +20,27 @@ function runLoginRuntime(isoDate) {
     const select = {
         dataset: {},
         innerHTML: '',
-        value: '2026'
+        value: '2026',
+        addEventListener() {}
     };
     const group = {
         style: {},
         setAttribute() {}
+    };
+    const graduatePanel = {
+        hidden: true,
+        style: {},
+        classList: {
+            add() {},
+            remove() {},
+            toggle() {}
+        },
+        setAttribute() {}
+    };
+    const graduateSelect = {
+        dataset: {},
+        innerHTML: '',
+        value: ''
     };
     const passShell = {
         querySelector() {
@@ -36,7 +52,12 @@ function runLoginRuntime(isoDate) {
         'login-form': {},
         'login-pass': { closest: () => passShell, placeholder: '' },
         'login-cohort-group': group,
-        'login-cohort-select': select
+        'login-cohort-select': select,
+        'login-graduate-cohort-panel': graduatePanel,
+        'login-graduate-cohort-select': graduateSelect,
+        'login-graduate-cohort-button': { dataset: {}, addEventListener() {} },
+        'login-graduate-cohort-helper': { textContent: '' },
+        'login-portal-helper': { textContent: '' }
     };
     let onReady = null;
     const document = {
@@ -59,6 +80,13 @@ function runLoginRuntime(isoDate) {
                 return 'school';
             }
         },
+        sessionStorage: {
+            getItem() {
+                return '';
+            },
+            setItem() {},
+            removeItem() {}
+        },
         setTimeout() {},
         setInterval() {}
     };
@@ -69,6 +97,7 @@ function runLoginRuntime(isoDate) {
         },
         document,
         localStorage: window.localStorage,
+        sessionStorage: window.sessionStorage,
         setInterval: window.setInterval,
         setTimeout: window.setTimeout,
         window
@@ -76,7 +105,7 @@ function runLoginRuntime(isoDate) {
     vm.runInNewContext(runtimeSource, context, { filename: 'login-entry-runtime.js' });
     assert.strictEqual(typeof onReady, 'function', 'login runtime should register its boot callback');
     onReady();
-    return { select, window };
+    return { select, graduatePanel, graduateSelect, window };
 }
 
 const spring = runLoginRuntime('2026-05-25T00:00:00Z');
@@ -88,9 +117,21 @@ assert.strictEqual(spring.select.value, '2024', 'refreshing the login shell shou
 
 const autumn = runLoginRuntime('2026-09-01T00:00:00Z');
 assert.strictEqual(autumn.select.value, '2023', 'from September, grade 9 should roll forward by one cohort');
+assert.ok(autumn.select.innerHTML.includes('2027届'), 'from September, the new incoming cohort should appear in active login choices');
+assert.ok(!autumn.select.innerHTML.includes('2022届'), 'from September, the graduated cohort should leave active login choices');
+assert.ok(autumn.graduateSelect.innerHTML.includes('2022届 · 已毕业'), 'from September, the graduated cohort should move to the graduate archive choices');
+assert.strictEqual(
+    autumn.window.BootCohortLifecycle.getLoginCohortYears(new Date('2026-09-01T00:00:00Z')).join('|'),
+    '2023|2024|2025|2026|2027',
+    'login lifecycle API should expose active cohorts after September rollover'
+);
 
 assert.ok(bootSource.includes('getBootCurrentGrade9CohortYear'), 'boot login path should calculate the grade 9 cohort');
+assert.ok(bootSource.includes('getBootGraduatedCohortYears'), 'boot login path should calculate graduated cohorts separately');
+assert.ok(bootSource.includes('LOGIN_GRADUATE_COHORT_TARGET_V1'), 'boot login path should preserve a selected graduate cohort through login');
+assert.ok(bootSource.includes('getBootSelectedLoginCohortYear'), 'app and boot login paths should share the selected cohort resolver');
 assert.ok(bootSource.includes("select.dataset.cohortInitialized = '1'"), 'boot login path should preserve manual selection after initialization');
 assert.ok(htmlSource.includes('<option value="2022" selected>2022届</option>'), 'static login fallback should default to the current grade 9 cohort for this release');
+assert.ok(htmlSource.includes('id="login-graduate-cohort-panel"'), 'login page should expose a dedicated graduate cohort panel');
 
 console.log('login cohort runtime tests passed');

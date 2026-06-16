@@ -1934,6 +1934,70 @@ table thead th,
     background: rgba(255, 253, 248, 0.72);
 }
 
+.login-graduate-cohort-panel {
+    margin-top: 14px;
+    padding: 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(200, 168, 106, 0.30);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(255, 247, 251, 0.72));
+}
+
+.login-graduate-cohort-panel[hidden] {
+    display: none !important;
+}
+
+.login-graduate-cohort-panel.is-selected {
+    border-color: rgba(143, 29, 55, 0.46);
+    box-shadow: 0 16px 34px rgba(143, 29, 55, 0.08);
+}
+
+.login-graduate-cohort-head,
+.login-graduate-cohort-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.login-graduate-cohort-head {
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.login-graduate-cohort-head span {
+    color: var(--pd-yj-ink);
+    font-size: 13px;
+    font-weight: 950;
+}
+
+.login-graduate-cohort-head small,
+.login-graduate-cohort-helper {
+    color: #6f7480;
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.login-graduate-cohort-row .login-entry-field {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.login-graduate-cohort-row button {
+    flex: 0 0 auto;
+    min-height: 44px;
+    border: 1px solid rgba(200, 168, 106, 0.36);
+    border-radius: 999px;
+    padding: 0 18px;
+    color: #1d2330;
+    background: linear-gradient(135deg, #ffffff, #ffdce7 58%, #eafff9);
+    font-size: 13px;
+    font-weight: 950;
+    cursor: pointer;
+}
+
+.login-graduate-cohort-helper {
+    margin-top: 8px;
+}
+
 .entrance-sound-panel__head,
 .entrance-sound-options {
     display: flex;
@@ -1989,5 +2053,14 @@ table thead th,
 
     .entrance-sound-panel {
         padding: 10px;
+    }
+
+    .login-graduate-cohort-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .login-graduate-cohort-row button {
+        width: 100%;
     }
 }

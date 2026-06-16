@@ -46,15 +46,106 @@
     }
 
     function getCurrentGrade9CohortYear(now = new Date()) {
-        const academicYear = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
-        return String(academicYear - 3);
+        return String(getAcademicYear(now) - 3);
     }
 
-    function getRecentCohortYears() {
-        const grade9CohortYear = Number(getCurrentGrade9CohortYear());
+    function getAcademicYear(now = new Date()) {
+        return now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+    }
+
+    function getRecentCohortYears(now = new Date()) {
+        const grade9CohortYear = Number(getCurrentGrade9CohortYear(now));
         const years = [];
         for (let offset = 0; offset < 5; offset += 1) years.push(String(grade9CohortYear + offset));
         return years;
+    }
+
+    const GRADUATE_TARGET_KEY = 'LOGIN_GRADUATE_COHORT_TARGET_V1';
+
+    function getGraduatedCohortYears(now = new Date()) {
+        const grade9CohortYear = Number(getCurrentGrade9CohortYear(now));
+        const years = new Set();
+        for (let offset = 1; offset <= 6; offset += 1) {
+            const year = grade9CohortYear - offset;
+            if (year >= 2000) years.add(String(year));
+        }
+        try {
+            const stored = JSON.parse(localStorage.getItem('COHORT_LIST') || '[]');
+            (Array.isArray(stored) ? stored : []).forEach((item) => {
+                const id = String(item?.id || item?.year || '').match(/\d{4}/)?.[0] || '';
+                if (id && Number(id) < grade9CohortYear) years.add(id);
+            });
+        } catch (error) { }
+        return Array.from(years).sort((a, b) => Number(b) - Number(a));
+    }
+
+    function readGraduateTarget() {
+        try {
+            const value = sessionStorage.getItem(GRADUATE_TARGET_KEY) || '';
+            return /^\d{4}$/.test(value) ? value : '';
+        } catch (error) {
+            return '';
+        }
+    }
+
+    function writeGraduateTarget(year) {
+        const value = String(year || '').trim();
+        try {
+            if (/^\d{4}$/.test(value)) sessionStorage.setItem(GRADUATE_TARGET_KEY, value);
+            else sessionStorage.removeItem(GRADUATE_TARGET_KEY);
+        } catch (error) { }
+        return /^\d{4}$/.test(value) ? value : '';
+    }
+
+    function getSelectedLoginCohortYear() {
+        return readGraduateTarget()
+            || String(document.getElementById('login-cohort-select')?.value || '').trim();
+    }
+
+    function syncGraduateCohortPanel(portal) {
+        const panel = document.getElementById('login-graduate-cohort-panel');
+        const select = document.getElementById('login-graduate-cohort-select');
+        if (!panel || !select) return;
+        const years = getGraduatedCohortYears();
+        const visible = portal !== 'parent' && years.length > 0;
+        panel.hidden = !visible;
+        panel.style.display = visible ? '' : 'none';
+        panel.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        if (!visible) {
+            writeGraduateTarget('');
+            return;
+        }
+        const signature = years.join('|');
+        if (select.dataset.cohortYears !== signature) {
+            select.innerHTML = years.map((year) => `<option value="${year}">${year}届 · 已毕业</option>`).join('');
+            select.dataset.cohortYears = signature;
+        }
+        const target = readGraduateTarget();
+        panel.classList.toggle('is-selected', !!target && years.includes(target));
+        if (target && years.includes(target)) select.value = target;
+    }
+
+    function bindGraduateCohortPanel() {
+        const button = document.getElementById('login-graduate-cohort-button');
+        const select = document.getElementById('login-graduate-cohort-select');
+        const helper = document.getElementById('login-graduate-cohort-helper');
+        const activeSelect = document.getElementById('login-cohort-select');
+        if (activeSelect && activeSelect.dataset.graduateResetBound !== '1') {
+            activeSelect.dataset.graduateResetBound = '1';
+            activeSelect.addEventListener('change', () => {
+                writeGraduateTarget('');
+                document.getElementById('login-graduate-cohort-panel')?.classList.remove('is-selected');
+            });
+        }
+        if (!button || button.dataset.graduateBound === '1') return;
+        button.dataset.graduateBound = '1';
+        button.addEventListener('click', () => {
+            const year = writeGraduateTarget(select?.value || '');
+            document.getElementById('login-graduate-cohort-panel')?.classList.toggle('is-selected', !!year);
+            if (helper) helper.textContent = year ? `已选择 ${year}届毕业生档案，登录后进入该届成绩。` : '请选择毕业届。';
+            const portalHelper = document.getElementById('login-portal-helper');
+            if (portalHelper && year) portalHelper.textContent = `已选择 ${year}届毕业生成绩档案，请完成登录。`;
+        });
     }
 
     function ensureCohortSelect(portal) {
@@ -92,6 +183,8 @@
         select.dataset.cohortInitialized = '1';
         group.style.display = portal === 'parent' ? 'none' : '';
         group.setAttribute('aria-hidden', portal === 'parent' ? 'true' : 'false');
+        bindGraduateCohortPanel();
+        syncGraduateCohortPanel(portal);
     }
 
     function removeLegacyStudentEntry() {
@@ -232,5 +325,13 @@
     }
 
     window.polishLoginEntryShell = polishLoginShell;
+    window.BootCohortLifecycle = window.BootCohortLifecycle || {
+        getAcademicYear,
+        getCurrentGrade9CohortYear,
+        getLoginCohortYears: getRecentCohortYears,
+        getGraduatedCohortYears,
+        getSelectedLoginCohortYear,
+        clearGraduateTarget: () => writeGraduateTarget('')
+    };
     window.__LOGIN_ENTRY_RUNTIME_PATCHED__ = true;
 })();

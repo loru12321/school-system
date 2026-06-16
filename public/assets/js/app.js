@@ -3750,13 +3750,20 @@ var Auth = {
             const isLocalOnlySession = !!data.local_only;
             this.currentUser = AuthState.setCurrentUser(matchedUser) || matchedUser;
             this.setLoginPortal(isParentLikeUser(this.currentUser) ? 'parent' : 'school');
-            const selectedLoginCohort = String(document.getElementById('login-cohort-select')?.value || '').trim();
+            const selectedLoginCohort = String(
+                window.BootCohortLifecycle?.getSelectedLoginCohortYear?.()
+                || document.getElementById('login-cohort-select')?.value
+                || ''
+            ).trim();
             if (!isParentLikeUser(this.currentUser) && selectedLoginCohort) {
                 const yearInput = document.getElementById('entry-cohort-year');
                 if (yearInput) yearInput.value = selectedLoginCohort;
                 if (typeof enterCohortFromMask === 'function') {
                     try {
                         await enterCohortFromMask();
+                        if (window.BootCohortLifecycle?.clearGraduateTarget) {
+                            window.BootCohortLifecycle.clearGraduateTarget();
+                        }
                     } catch (cohortError) {
                         console.warn('[Auth] failed to enter selected login cohort:', cohortError?.message || cohortError);
                     }
@@ -16896,7 +16903,11 @@ function resolveMaskCohortYear() {
     const inputYear = parseYearFromInput('entry-cohort-year');
     if (inputYear && inputYear >= 2000) return String(inputYear);
 
-    const loginSelected = String(document.getElementById('login-cohort-select')?.value || '').trim();
+    const loginSelected = String(
+        window.BootCohortLifecycle?.getSelectedLoginCohortYear?.()
+        || document.getElementById('login-cohort-select')?.value
+        || ''
+    ).trim();
     if (/^\d{4}$/.test(loginSelected)) return loginSelected;
 
     const shellSelected = String(document.getElementById('cohort-selector')?.value || '').trim();

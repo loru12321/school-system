@@ -1461,16 +1461,103 @@ window.initCloudClient();
 
 (function installBootLoginShell() {
 const BOOT_LOGIN_PORTAL_STORAGE_KEY = 'LOGIN_PORTAL_V1';
+const BOOT_LOGIN_GRADUATE_TARGET_KEY = 'LOGIN_GRADUATE_COHORT_TARGET_V1';
 const BOOT_GATEWAY_REQUEST = createSupabaseFetchWithTimeout(12000);
-function getBootCurrentGrade9CohortYear(now = new Date()) {
-    const academicYear = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
-    return String(academicYear - 3);
+function getBootAcademicYear(now = new Date()) {
+    return now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
 }
-function getBootLoginCohortYears() {
-    const grade9CohortYear = Number(getBootCurrentGrade9CohortYear());
+function getBootCurrentGrade9CohortYear(now = new Date()) {
+    return String(getBootAcademicYear(now) - 3);
+}
+function getBootLoginCohortYears(now = new Date()) {
+    const grade9CohortYear = Number(getBootCurrentGrade9CohortYear(now));
     const years = [];
     for (let offset = 0; offset < 5; offset += 1) years.push(String(grade9CohortYear + offset));
     return years;
+}
+function getBootGraduatedCohortYears(now = new Date()) {
+    const grade9CohortYear = Number(getBootCurrentGrade9CohortYear(now));
+    const years = new Set();
+    for (let offset = 1; offset <= 6; offset += 1) {
+        const year = grade9CohortYear - offset;
+        if (year >= 2000) years.add(String(year));
+    }
+    try {
+        const stored = JSON.parse(localStorage.getItem('COHORT_LIST') || '[]');
+        (Array.isArray(stored) ? stored : []).forEach((item) => {
+            const id = String(item?.id || item?.year || '').match(/\d{4}/)?.[0] || '';
+            if (id && Number(id) < grade9CohortYear) years.add(id);
+        });
+    } catch (error) { }
+    return Array.from(years).sort((a, b) => Number(b) - Number(a));
+}
+function readBootGraduateCohortTarget() {
+    try {
+        const value = sessionStorage.getItem(BOOT_LOGIN_GRADUATE_TARGET_KEY) || '';
+        return /^\d{4}$/.test(value) ? value : '';
+    } catch (error) {
+        return '';
+    }
+}
+function writeBootGraduateCohortTarget(year) {
+    const value = String(year || '').trim();
+    try {
+        if (/^\d{4}$/.test(value)) sessionStorage.setItem(BOOT_LOGIN_GRADUATE_TARGET_KEY, value);
+        else sessionStorage.removeItem(BOOT_LOGIN_GRADUATE_TARGET_KEY);
+    } catch (error) { }
+    return /^\d{4}$/.test(value) ? value : '';
+}
+function getBootSelectedLoginCohortYear() {
+    return readBootGraduateCohortTarget()
+        || String(document.getElementById('login-cohort-select')?.value || '').trim();
+}
+function syncBootGraduateCohortPanel(portal) {
+    const panel = document.getElementById('login-graduate-cohort-panel');
+    const select = document.getElementById('login-graduate-cohort-select');
+    if (!panel || !select) return '';
+    const years = getBootGraduatedCohortYears();
+    const shouldShow = portal !== 'parent' && years.length > 0;
+    panel.hidden = !shouldShow;
+    panel.style.display = shouldShow ? '' : 'none';
+    panel.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+    if (!shouldShow) {
+        writeBootGraduateCohortTarget('');
+        return '';
+    }
+    const signature = years.join('|');
+    if (select.dataset.cohortYears !== signature) {
+        select.innerHTML = years.map((year) => `<option value="${year}">${year}届 · 已毕业</option>`).join('');
+        select.dataset.cohortYears = signature;
+    }
+    const target = readBootGraduateCohortTarget();
+    if (target && years.includes(target)) {
+        select.value = target;
+        panel.classList.add('is-selected');
+    } else {
+        panel.classList.remove('is-selected');
+    }
+    return select.value || '';
+}
+function bindBootGraduateCohortPanel() {
+    const button = document.getElementById('login-graduate-cohort-button');
+    const select = document.getElementById('login-graduate-cohort-select');
+    const helper = document.getElementById('login-graduate-cohort-helper');
+    const activeSelect = document.getElementById('login-cohort-select');
+    if (activeSelect && activeSelect.dataset.graduateResetBound !== '1') {
+        activeSelect.dataset.graduateResetBound = '1';
+        activeSelect.addEventListener('change', () => {
+            writeBootGraduateCohortTarget('');
+            document.getElementById('login-graduate-cohort-panel')?.classList.remove('is-selected');
+        });
+    }
+    if (!button || button.dataset.graduateBound === '1') return;
+    button.dataset.graduateBound = '1';
+    button.addEventListener('click', () => {
+        const year = writeBootGraduateCohortTarget(select?.value || '');
+        document.getElementById('login-graduate-cohort-panel')?.classList.toggle('is-selected', !!year);
+        if (helper) helper.textContent = year ? `已选择 ${year}届毕业生档案，登录后进入该届成绩。` : '请选择毕业届。';
+        if (year) setBootHelperMessage(`已选择 ${year}届毕业生成绩档案，请完成登录。`, 'info');
+    });
 }
 function syncBootLoginCohortSelect(portal) {
     const select = document.getElementById('login-cohort-select');
@@ -1491,11 +1578,14 @@ function syncBootLoginCohortSelect(portal) {
         group.style.display = portal === 'parent' ? 'none' : '';
         group.setAttribute('aria-hidden', portal === 'parent' ? 'true' : 'false');
     }
+    bindBootGraduateCohortPanel();
+    syncBootGraduateCohortPanel(portal);
     return selected;
 }
 async function enterSelectedBootCohort(year) {
-    const selectedYear = String(year || document.getElementById('login-cohort-select')?.value || '').trim();
+    const selectedYear = String(year || getBootSelectedLoginCohortYear() || '').trim();
     if (!selectedYear) return false;
+    writeBootGraduateCohortTarget('');
     const yearInput = document.getElementById('entry-cohort-year');
     if (yearInput) yearInput.value = selectedYear;
     if (typeof window.enterCohortFromMask === 'function') {
@@ -1504,6 +1594,14 @@ async function enterSelectedBootCohort(year) {
     }
     return false;
 }
+window.BootCohortLifecycle = {
+    getAcademicYear: getBootAcademicYear,
+    getCurrentGrade9CohortYear: getBootCurrentGrade9CohortYear,
+    getLoginCohortYears: getBootLoginCohortYears,
+    getGraduatedCohortYears: getBootGraduatedCohortYears,
+    getSelectedLoginCohortYear: getBootSelectedLoginCohortYear,
+    clearGraduateTarget: () => writeBootGraduateCohortTarget('')
+};
 const bootPortalConfigs = {
     school: {
         badge: '学校工作台',
@@ -1823,7 +1921,8 @@ const bootAuth = window.Auth || {
         const user = String(document.getElementById('login-user')?.value || '').trim();
         const pass = String(document.getElementById('login-pass')?.value || '').trim();
         const className = String(document.getElementById('login-class')?.value || '').trim();
-        const cohortYear = portal === 'school' ? syncBootLoginCohortSelect(portal) : '';
+        if (portal === 'school') syncBootLoginCohortSelect(portal);
+        const cohortYear = portal === 'school' ? getBootSelectedLoginCohortYear() : '';
 
         if (!user || !pass) {
             setBootHelperMessage('请输入账号和密码。', 'error');
