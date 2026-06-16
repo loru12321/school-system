@@ -3,7 +3,9 @@ const path = require('path');
 
 const root = path.resolve(__dirname, '..');
 const mobileLoginPath = path.join(root, 'src', 'assets', 'css', 'mobile-login.css');
+const productRedesignPath = path.join(root, 'src', 'assets', 'css', 'product-redesign.css');
 const source = fs.readFileSync(mobileLoginPath, 'utf8');
+const productRedesign = fs.readFileSync(productRedesignPath, 'utf8');
 
 const removedBlocks = [
   'Login Poster Final Overrides',
@@ -31,6 +33,19 @@ const maxMobileLoginBytes = 136 * 1024;
 
 if (byteLength > maxMobileLoginBytes) {
   throw new Error(`mobile-login.css is ${byteLength} bytes, above ${maxMobileLoginBytes} byte hygiene budget`);
+}
+
+const favoriteThemeMarkers = [
+  'Douyin favorite full-scan refresh',
+  '--pd-sun',
+  '--pd-sky-soft',
+  'PURE / SOFT / RHYTHM',
+];
+
+for (const marker of favoriteThemeMarkers) {
+  if (!productRedesign.includes(marker) && !fs.readFileSync(path.join(root, 'public', 'assets', 'js', 'entrance-sound-runtime.js'), 'utf8').includes(marker)) {
+    throw new Error(`Favorite-inspired UI marker is missing: ${marker}`);
+  }
 }
 
 console.log(`[css-hygiene] mobile-login.css ${byteLength} bytes`);
