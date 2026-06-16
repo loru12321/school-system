@@ -41,6 +41,7 @@ const ReportRenderPerfCache = {
     previousRecordByKey: new Map(),
     examHistory: new WeakMap(),
     examHistoryByKey: new Map(),
+    im: new Map(),
     scopeMapRaw: '',
     scopeMap: {},
     schoolCandidatesSignature: '',
@@ -84,6 +85,7 @@ function getReportStudentCacheKey(student) {
         String(student?.id || student?.examNo || '').trim()
     ].join('::');
 }
+
 
 function getPreviousHistoryEntryForReport(reportExamHistory, currentExamId) {
     if (!Array.isArray(reportExamHistory) || !reportExamHistory.length) return null;
@@ -165,10 +167,16 @@ function getCachedStudentExamHistory(student) {
 }
 
 function buildStudentInsightModel(student, passedHistory = null) {
-    return window.ReportInsightRuntime.buildStudentInsightModel(student, passedHistory, {
+    const h = Array.isArray(passedHistory) ? passedHistory : [];
+    const last = h[h.length - 1] || {};
+    const cacheKey = `${getReportRenderSignature()}::${getReportStudentCacheKey(student)}::${h.length}:${last.examFullKey || last.examId || ''}`;
+    if (ReportRenderPerfCache.im.has(cacheKey)) return ReportRenderPerfCache.im.get(cacheKey);
+    const model = window.ReportInsightRuntime.buildStudentInsightModel(student, passedHistory, {
         getCachedComparisonStudentView,
         getCachedStudentExamHistory
     });
+    ReportRenderPerfCache.im.set(cacheKey, model);
+    return model;
 }
 
 function renderStudentInsightOverview(model) {
