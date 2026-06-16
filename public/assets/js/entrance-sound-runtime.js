@@ -330,10 +330,10 @@
         const lead = document.querySelector('.login-clean-copy p');
         const eyebrow = document.querySelector('.login-clean-copy span');
         const strongs = document.querySelectorAll('.login-look-card strong');
-        const labels = ['晴光白', '桃粉节拍', '薄荷回声'];
-        if (eyebrow) eyebrow.textContent = 'PURE / SOFT / RHYTHM';
+        const labels = ['电影白', '轻卡点', '蓝绿回声'];
+        if (eyebrow) eyebrow.textContent = 'CLEAN / BEAT / FLOW';
         if (title) title.textContent = '菁莪云枢';
-        if (lead) lead.textContent = '像晴天白衬衫和浅色裙摆，把成绩、师资、成长轨迹与家校报告清清楚楚铺开；进入后少一点压迫感，多一点清透、自然和分寸。';
+        if (lead) lead.textContent = '把成绩、师资、成长轨迹与家校报告按节拍排好：白底清透，粉色点睛，蓝绿色收尾；每一步都轻一点、准一点、看得更顺。';
         strongs.forEach((node, index) => {
             if (labels[index]) node.textContent = labels[index];
         });

@@ -37,9 +37,11 @@ if (byteLength > maxMobileLoginBytes) {
 
 const favoriteThemeMarkers = [
   'Douyin favorite full-scan refresh',
+  'Douyin creator pair variation',
   '--pd-sun',
   '--pd-sky-soft',
-  'PURE / SOFT / RHYTHM',
+  '--pd-beat',
+  'CLEAN / BEAT / FLOW',
 ];
 
 for (const marker of favoriteThemeMarkers) {
