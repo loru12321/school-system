@@ -18,6 +18,8 @@ var TM_VERSION_CACHE = {
     error: ''
 };
 var TM_VERSION_REQUEST_ID = 0;
+var TM_VERSION_INFLIGHT = null;
+var TM_VERSION_INFLIGHT_KEY = '';
 var TM_VERSION_DIFF_STATE = {
     versionId: '',
     html: '',

@@ -1,4 +1,42 @@
 // Teaching management runtime: version center and issue board.
+const TM_VERSION_FRESH_MS = 45 * 1000;
+const TM_VERSION_STALE_MS = 10 * 60 * 1000;
+const TM_VERSION_STORAGE_KEY = 'schoolSystemTeachingVersionCacheV1';
+
+function tmNormalizeVersionSnapshot(value, cacheKey, maxAgeMs = TM_VERSION_STALE_MS) {
+    if (!value || typeof value !== 'object') return null;
+    if (String(value.key || '') !== String(cacheKey || '')) return null;
+    const fetchedAt = Number(value.fetchedAt || 0);
+    if (!Number.isFinite(fetchedAt) || fetchedAt <= 0 || Date.now() - fetchedAt > maxAgeMs) return null;
+    return {
+        key: String(value.key || ''),
+        fetchedAt,
+        records: Array.isArray(value.records) ? value.records : [],
+        authState: String(value.authState || 'ready'),
+        error: String(value.error || '')
+    };
+}
+
+function tmReadVersionSnapshot(cacheKey) {
+    try {
+        const raw = window.sessionStorage?.getItem(TM_VERSION_STORAGE_KEY);
+        if (!raw) return null;
+        return tmNormalizeVersionSnapshot(JSON.parse(raw), cacheKey);
+    } catch (error) {
+        return null;
+    }
+}
+
+function tmWriteVersionSnapshot(snapshot) {
+    try {
+        const normalized = tmNormalizeVersionSnapshot(snapshot, snapshot?.key, TM_VERSION_STALE_MS);
+        if (!normalized || normalized.authState !== 'ready') return;
+        window.sessionStorage?.setItem(TM_VERSION_STORAGE_KEY, JSON.stringify(normalized));
+    } catch (error) {
+        // Snapshot cache only shortens repeat navigation; cloud remains authoritative.
+    }
+}
+
 function tmCanManageVersions() {
     return ['admin', 'director'].includes(tmGetCurrentGatewayRole());
 }
@@ -741,6 +779,7 @@ function tmSyncVersionOverviewState() {
 async function tmRefreshVersionCenter(force = false) {
     const scope = tmGetCurrentGatewayScope();
     const cacheKey = `${scope.project_key}::${scope.cohort_id}`;
+    const now = Date.now();
     const hasAuthorizedGateway = !!(window.EdgeGateway && typeof EdgeGateway.canUseAuthorizedRequests === 'function' && EdgeGateway.canUseAuthorizedRequests());
 
     if (!tmCanManageVersions()) {
@@ -757,18 +796,37 @@ async function tmRefreshVersionCenter(force = false) {
         return;
     }
 
-    if (!force && TM_VERSION_CACHE.key === cacheKey && Date.now() - TM_VERSION_CACHE.fetchedAt < 30000) {
+    let renderedSnapshot = false;
+    const memorySnapshot = tmNormalizeVersionSnapshot(TM_VERSION_CACHE, cacheKey);
+    if (!force && memorySnapshot) {
+        TM_VERSION_CACHE = memorySnapshot;
         tmRenderVersionCenter();
         tmSyncVersionOverviewState();
-        return;
+        if (now - memorySnapshot.fetchedAt < TM_VERSION_FRESH_MS) return TM_VERSION_CACHE;
+        renderedSnapshot = true;
+    } else if (!force) {
+        const storedSnapshot = tmReadVersionSnapshot(cacheKey);
+        if (storedSnapshot) {
+            TM_VERSION_CACHE = storedSnapshot;
+            tmRenderVersionCenter();
+            tmSyncVersionOverviewState();
+            if (now - storedSnapshot.fetchedAt < TM_VERSION_FRESH_MS) return TM_VERSION_CACHE;
+            renderedSnapshot = true;
+        }
+    }
+
+    if (!force && TM_VERSION_INFLIGHT && TM_VERSION_INFLIGHT_KEY === cacheKey) {
+        return TM_VERSION_INFLIGHT;
     }
 
     const requestId = ++TM_VERSION_REQUEST_ID;
-    TM_VERSION_CACHE = { key: cacheKey, fetchedAt: Date.now(), records: [], authState: 'loading', error: '' };
-    tmRenderVersionCenter();
-    tmSyncVersionOverviewState();
+    if (!renderedSnapshot) {
+        TM_VERSION_CACHE = { key: cacheKey, fetchedAt: Date.now(), records: [], authState: 'loading', error: '' };
+        tmRenderVersionCenter();
+        tmSyncVersionOverviewState();
+    }
 
-    try {
+    const task = (async () => {
         const res = await EdgeGateway.listVersions({ project_key: scope.project_key, cohort_id: scope.cohort_id, limit: 20 });
         if (requestId !== TM_VERSION_REQUEST_ID) return;
         TM_VERSION_CACHE = {
@@ -778,23 +836,44 @@ async function tmRefreshVersionCenter(force = false) {
             authState: 'ready',
             error: ''
         };
+        tmWriteVersionSnapshot(TM_VERSION_CACHE);
         if (TM_VERSION_DIFF_STATE.versionId && !TM_VERSION_CACHE.records.some((item) => String(item.id || '') === TM_VERSION_DIFF_STATE.versionId)) {
             TM_VERSION_DIFF_STATE = { versionId: '', html: '', title: '' };
         }
         tmRenderVersionCenter();
         tmSyncVersionOverviewState();
-    } catch (error) {
-        if (requestId !== TM_VERSION_REQUEST_ID) return;
-        TM_VERSION_CACHE = {
-            key: cacheKey,
-            fetchedAt: Date.now(),
-            records: [],
-            authState: 'error',
-            error: error instanceof Error ? error.message : String(error)
-        };
-        tmRenderVersionCenter();
-        tmSyncVersionOverviewState();
-    }
+    })()
+        .catch((error) => {
+            if (requestId !== TM_VERSION_REQUEST_ID) return;
+            if (renderedSnapshot && TM_VERSION_CACHE.key === cacheKey) {
+                TM_VERSION_CACHE = Object.assign({}, TM_VERSION_CACHE, {
+                    authState: 'ready',
+                    error: error instanceof Error ? error.message : String(error)
+                });
+                tmRenderVersionCenter();
+                tmSyncVersionOverviewState();
+                return;
+            }
+            TM_VERSION_CACHE = {
+                key: cacheKey,
+                fetchedAt: Date.now(),
+                records: [],
+                authState: 'error',
+                error: error instanceof Error ? error.message : String(error)
+            };
+            tmRenderVersionCenter();
+            tmSyncVersionOverviewState();
+        })
+        .finally(() => {
+            if (TM_VERSION_INFLIGHT === task) {
+                TM_VERSION_INFLIGHT = null;
+                TM_VERSION_INFLIGHT_KEY = '';
+            }
+        });
+
+    TM_VERSION_INFLIGHT = task;
+    TM_VERSION_INFLIGHT_KEY = cacheKey;
+    return task;
 }
 
 async function tmCreateCurrentVersionSnapshot() {

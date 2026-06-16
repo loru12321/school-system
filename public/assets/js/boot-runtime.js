@@ -3240,9 +3240,14 @@ scheduleHotspotRuntimeWarmup();
 
 function scheduleTeachingManagementFastWarmup() {
 if (window.__TEACHING_FAST_WARMUP_SCHEDULED__) return;
-try { if (localStorage.getItem('SCHOOL_RUNTIME_HOTSPOT_HYDRATE') !== 'true') return; } catch (_) { return; }
 window.__TEACHING_FAST_WARMUP_SCHEDULED__ = true;
 runAfterAppModulesReady(() => {
+const preload = () => {
+const skill = SYSTEM_RUNTIME_SKILLS['teaching-management'];
+if (skill && Array.isArray(skill.entries)) prefetchAppModuleList(skill.entries.map((entry) => entry.src), 'teaching-management-fast-prefetch');
+};
+window.setTimeout(preload, 520);
+try { if (localStorage.getItem('SCHOOL_RUNTIME_HOTSPOT_HYDRATE') !== 'true') return; } catch (_) { return; }
 const run = () => window.ensureTeacherAnalysisMainRuntimeLoaded?.();
 if (window.SystemPerformance && typeof window.SystemPerformance.scheduleIdle === 'function') window.SystemPerformance.scheduleIdle(run, { label: 'teacher-analysis-fast-warmup', delay: 280, timeout: 1200 });
 else if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(run, { timeout: 1200 });

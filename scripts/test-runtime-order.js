@@ -582,7 +582,10 @@ const teachingFastWarmupSource = teachingFastWarmupStart >= 0 && teachingFastWar
     : '';
 assert.ok(teachingFastWarmupSource, 'teaching fast warmup source should be present');
 assert.ok(!teachingFastWarmupSource.includes('ensureTeachingManagementRuntimeLoaded'), 'teaching management legacy bundle should stay demand-loaded outside legacy module entry');
+assert.ok(teachingFastWarmupSource.includes('teaching-management-fast-prefetch'), 'teaching management runtime files should be prefetched after app entry');
 assert.ok(teachingFastWarmupSource.includes('ensureTeacherAnalysisMainRuntimeLoaded'), 'teacher analysis runtime should remain fast-warmed for teacher insight modules');
+assert.ok(teachingManagementVersionRuntime.includes('TM_VERSION_INFLIGHT'), 'teaching version center should coalesce duplicate cloud reads');
+assert.ok(teachingManagementVersionRuntime.includes('schoolSystemTeachingVersionCacheV1'), 'teaching version center should keep a short session snapshot');
 assert.ok(bootRuntime.includes('runAfterAppModulesReady(function () {\n    retryInstallLateHook(installHistoryDoQueryWrapper'), 'late workspace hooks should not retry on the unauthenticated login screen');
 assert.ok(bootRuntime.includes("'renderMultiPeriodComparison'"), 'boot-runtime.js should keep the progress multi-period compare entry lazy-loadable');
 assert.ok(bootRuntime.includes("'exportMultiPeriodComparison'"), 'boot-runtime.js should keep the progress multi-period export entry lazy-loadable');
