@@ -18,7 +18,7 @@
     function getDefaultConfig() {
         return {
             version: CONFIG_VERSION,
-            examDate: '2026-06-13',
+            examDate: getAnnualExamDate(),
             excludeWeekends: true,
             holidays: [],
             officialHolidays: {},
@@ -51,6 +51,31 @@
             return null;
         }
         return next;
+    }
+
+    function getAnnualExamDate(todayInput = new Date()) {
+        const today = new Date(todayInput);
+        today.setHours(0, 0, 0, 0);
+        const currentYear = today.getFullYear();
+        const rolloverDate = new Date(currentYear, 5, 16);
+        rolloverDate.setHours(0, 0, 0, 0);
+        const targetYear = today >= rolloverDate ? currentYear + 1 : currentYear;
+        return `${targetYear}-06-13`;
+    }
+
+    function isAnnualExamDate(dateString) {
+        return /^\d{4}-06-13$/.test(String(dateString || '').trim());
+    }
+
+    function resolveAutoExamDate(rawExamDate, todayInput = new Date()) {
+        const normalized = normalizeDateString(rawExamDate);
+        const annualDate = getAnnualExamDate(todayInput);
+        if (!normalized) return annualDate;
+        const parsed = parseLocalDate(normalized);
+        const today = new Date(todayInput);
+        today.setHours(0, 0, 0, 0);
+        if (isAnnualExamDate(normalized) && parsed && parsed < today) return annualDate;
+        return normalized;
     }
 
     function formatDate(date) {
@@ -98,7 +123,7 @@
     function normalizeConfig(raw) {
         const next = getDefaultConfig();
         if (!raw || typeof raw !== 'object') return next;
-        next.examDate = normalizeDateString(raw.examDate) || next.examDate;
+        next.examDate = resolveAutoExamDate(raw.examDate);
         next.excludeWeekends = raw.excludeWeekends !== false;
         next.holidays = Array.isArray(raw.holidays) ? raw.holidays.map(normalizeHolidayItem).filter(Boolean) : [];
         next.officialHolidays = normalizeOfficialHolidayMap(raw.officialHolidays);
@@ -719,7 +744,10 @@
             calculate();
         },
         _test: {
-            computeCountdownMetrics
+            computeCountdownMetrics,
+            getAnnualExamDate,
+            resolveAutoExamDate,
+            normalizeConfig
         }
     };
 })(window);

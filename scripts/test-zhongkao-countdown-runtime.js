@@ -34,4 +34,31 @@ assert.strictEqual(metrics.studyDays, 6, 'study days should classify 2026-06-05 
 assert.strictEqual(metrics.classificationStart, '2026-06-05');
 assert.strictEqual(metrics.classificationEnd, '2026-06-12');
 
+const lifecycle = context.ZhongkaoCountdownModule._test;
+assert.strictEqual(
+    lifecycle.getAnnualExamDate(new Date(2026, 5, 15)),
+    '2026-06-13',
+    'June 15 should still belong to the current annual exam cycle'
+);
+assert.strictEqual(
+    lifecycle.getAnnualExamDate(new Date(2026, 5, 16)),
+    '2027-06-13',
+    'June 16 should roll the countdown to next year June 13'
+);
+assert.strictEqual(
+    lifecycle.resolveAutoExamDate('2026-06-13', new Date(2026, 5, 16)),
+    '2027-06-13',
+    'saved annual exam dates should auto-roll after June 15'
+);
+assert.strictEqual(
+    lifecycle.resolveAutoExamDate('2026-07-01', new Date(2026, 5, 16)),
+    '2026-07-01',
+    'custom future dates should not be overwritten by the annual rollover'
+);
+assert.strictEqual(
+    lifecycle.normalizeConfig({ examDate: '2026-06-13' }).examDate,
+    lifecycle.getAnnualExamDate(),
+    'normal config loading should apply the current annual countdown target'
+);
+
 console.log('zhongkao countdown runtime tests passed');
