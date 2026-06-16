@@ -138,14 +138,15 @@
         style.textContent = `
             .zkc-shell{display:grid;gap:18px}
             .zkc-toolbar,.zkc-card,.zkc-stat{background:rgba(255,255,255,.9);border:1px solid rgba(148,163,184,.16);border-radius:24px;box-shadow:0 18px 44px rgba(15,23,42,.06)}
-            .zkc-toolbar{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;padding:24px;background:linear-gradient(135deg,rgba(17,24,39,.96),rgba(31,41,55,.92) 45%,rgba(244,114,182,.84))}
-            .zkc-toolbar-copy{display:grid;gap:10px;color:#fff;max-width:620px}
-            .zkc-kicker{display:inline-flex;align-items:center;gap:8px;width:max-content;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.16);font-size:12px;font-weight:700;letter-spacing:.04em}
-            .zkc-toolbar h3{margin:0;font-size:30px;line-height:1.1;color:#fff}
-            .zkc-toolbar p{margin:0;color:rgba(255,255,255,.84);line-height:1.7}
+            .zkc-toolbar{position:relative;overflow:hidden;display:flex;justify-content:space-between;gap:18px;align-items:flex-start;padding:24px;background:linear-gradient(135deg,rgba(255,251,247,.96),rgba(255,244,249,.9) 48%,rgba(235,252,247,.92));border-color:rgba(226,199,190,.56);box-shadow:0 18px 42px rgba(148,93,79,.08)}
+            .zkc-toolbar::after{content:"";position:absolute;right:8%;top:16%;width:360px;height:160px;border-radius:999px;background:radial-gradient(circle,rgba(244,114,182,.16),rgba(244,114,182,0) 68%);pointer-events:none}
+            .zkc-toolbar-copy{position:relative;z-index:1;display:grid;gap:10px;color:#0f172a;max-width:720px}
+            .zkc-kicker{display:inline-flex;align-items:center;gap:8px;width:max-content;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.72);border:1px solid rgba(203,213,225,.76);font-size:12px;font-weight:800;letter-spacing:.02em;color:#64748b}
+            .zkc-toolbar h3{margin:0;font-size:30px;line-height:1.1;color:#0f172a}
+            .zkc-toolbar p{margin:0;color:#64748b;line-height:1.8;max-width:680px}
             .zkc-toolbar-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;align-items:center}
-            .zkc-clock{display:inline-flex;align-items:center;justify-content:center;min-width:124px;padding:11px 14px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.18);font-size:15px;font-weight:700;color:#fff;font-family:"SFMono-Regular","Consolas","Menlo",monospace}
-            .zkc-toolbar-actions .btn{min-height:42px}
+            .zkc-clock{position:relative;z-index:1;display:inline-flex;align-items:center;justify-content:center;min-width:124px;padding:11px 14px;border-radius:999px;background:rgba(255,255,255,.78);border:1px solid rgba(203,213,225,.72);font-size:15px;font-weight:800;color:#334155;font-family:"SFMono-Regular","Consolas","Menlo",monospace;box-shadow:0 8px 20px rgba(15,23,42,.05)}
+            .zkc-toolbar-actions .btn{position:relative;z-index:1;min-height:42px;border-radius:14px;box-shadow:0 8px 20px rgba(15,23,42,.05)}
             .zkc-notice{padding:14px 16px;border-radius:18px;font-size:14px;line-height:1.6}
             .zkc-notice.is-hidden{display:none}
             .zkc-notice.info{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
@@ -181,7 +182,7 @@
             .zkc-chip{display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;color:#475569;font-size:13px;font-weight:700}
             .zkc-footer{margin-top:18px;font-size:13px;line-height:1.8;color:#64748b}
             @media (max-width: 1100px){.zkc-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.zkc-grid{grid-template-columns:1fr}}
-            @media (max-width: 760px){.zkc-toolbar{padding:20px}.zkc-toolbar h3{font-size:24px}.zkc-toolbar-actions{justify-content:flex-start}.zkc-stats{grid-template-columns:1fr}.zkc-form-grid{grid-template-columns:1fr}.zkc-holiday-row{grid-template-columns:1fr}}
+            @media (max-width: 760px){.zkc-toolbar{padding:20px;flex-direction:column}.zkc-toolbar h3{font-size:24px}.zkc-toolbar-actions{justify-content:flex-start}.zkc-stats{grid-template-columns:1fr}.zkc-form-grid{grid-template-columns:1fr}.zkc-holiday-row{grid-template-columns:1fr}}
         `;
         document.head.appendChild(style);
     }
@@ -191,9 +192,9 @@
             <div class="zkc-shell">
                 <div class="zkc-toolbar">
                     <div class="zkc-toolbar-copy">
-                        <span class="zkc-kicker"><i class="ti ti-calendar-event"></i> 中考冲刺工具</span>
+                        <span class="zkc-kicker"><i class="ti ti-calendar-event"></i> 中考时间轴</span>
                         <h3>中考倒计时</h3>
-                        <p>默认按 2026-06-13 计算，支持普通周末扣减、法定节假日同步、自定义长假，以及通过文件保存和恢复设置。</p>
+                        <p>每年 6 月 16 日起自动切到下一年 6 月 13 日；可同步法定节假日、扣减普通周末，也支持自定义长假与文件备份。</p>
                     </div>
                     <div class="zkc-toolbar-actions">
                         <div class="zkc-clock" data-zk="liveClock">--:--:--</div>
@@ -226,7 +227,7 @@
                             <div class="zkc-field">
                                 <label for="zkcExamDate">中考日期</label>
                                 <input id="zkcExamDate" type="date" data-zk="examDate">
-                                <div class="zkc-help">默认：2026-06-13。日期按本地时区解析，避免偏移一天。</div>
+                                <div class="zkc-help">系统按年度自动切换：6 月 15 日前沿用当年目标，6 月 16 日起切到下一年 6 月 13 日。</div>
                             </div>
                             <div class="zkc-check">
                                 <label for="zkcExcludeWeekends">
@@ -261,7 +262,7 @@
                             <p>输入会实时预览，保存后会持久写入当前浏览器本地。适合快速看剩余时间和复习节奏。</p>
                         </div>
                     </div>
-                    <div class="zkc-summary" data-zk="summaryText">默认按 2026-06-13 计算，可自行修改日期。</div>
+                    <div class="zkc-summary" data-zk="summaryText">默认按年度中考日期自动计算，也可自行修改日期。</div>
                     <div class="zkc-meta" data-zk="summaryMeta"></div>
                     <div class="zkc-footer"><strong>说明：</strong>如果存在调休上课日，系统会优先把它视为上课日，不会再被周末规则扣除；从文件恢复时也会自动兼容旧字段。</div>
                 </div>

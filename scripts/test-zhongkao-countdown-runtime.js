@@ -61,4 +61,21 @@ assert.strictEqual(
     'normal config loading should apply the current annual countdown target'
 );
 
+assert.ok(
+    !source.includes('默认按 2026-06-13'),
+    'countdown UI copy should not describe the stale fixed 2026 target date'
+);
+assert.ok(
+    source.includes('每年 6 月 16 日起自动切到下一年 6 月 13 日'),
+    'countdown hero copy should explain the annual rollover rule'
+);
+assert.ok(
+    !source.includes('rgba(17,24,39,.96)'),
+    'countdown hero should avoid the old dark gradient background'
+);
+assert.ok(
+    source.includes('rgba(255,251,247,.96)'),
+    'countdown hero should use the light redesigned background'
+);
+
 console.log('zhongkao countdown runtime tests passed');
