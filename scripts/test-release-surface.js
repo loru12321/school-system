@@ -96,6 +96,7 @@ assert.strictEqual(
 assert.ok(publicHeaders.includes('/style-*.css'), 'static asset headers should cover hashed Vite CSS');
 assert.ok(publicHeaders.includes('/assets/vendor/*'), 'static asset headers should cover vendored assets');
 assert.ok(publicHeaders.includes('/assets/js/*'), 'static asset headers should cover runtime JS assets');
+assert.ok(publicHeaders.includes('/assets/audio/*'), 'static asset headers should cover built-in entrance audio assets');
 assert.ok(publicHeaders.includes('max-age=3600, stale-while-revalidate=86400'), 'runtime JS should use short browser caching with background revalidation');
 assert.ok(publicHeaders.includes('/downloads/*'), 'static asset headers should cover hosted downloads');
 assert.ok(publicHeaders.includes('/index.html'), 'static asset headers should cover index.html');

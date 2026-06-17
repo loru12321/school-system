@@ -6,7 +6,20 @@
     const CUSTOM_AUDIO_DB = 'SCHOOL_ENTRANCE_AUDIO_DB_V1';
     const CUSTOM_AUDIO_STORE = 'audio';
     const CUSTOM_AUDIO_ID = 'entrance';
-    const DEFAULT_MODE = 'signature';
+    const BUILTIN_TRACKS = [
+        { id: 'cinema-white', label: '映雪', src: './assets/audio/entrance/cinema-white.wav', fallback: 'silk' },
+        { id: 'sweet-royal-switch', label: '清晖', src: './assets/audio/entrance/sweet-royal-switch.wav', fallback: 'signature' },
+        { id: 'sister-aura', label: '云岫', src: './assets/audio/entrance/sister-aura.wav', fallback: 'runway' },
+        { id: 'white-lace', label: '栀夏', src: './assets/audio/entrance/white-lace.wav', fallback: 'silk' },
+        { id: 'red-violet', label: '绯云', src: './assets/audio/entrance/red-violet.wav', fallback: 'runway' },
+        { id: 'midnight-silk', label: '月绡', src: './assets/audio/entrance/midnight-silk.wav', fallback: 'signature' },
+        { id: 'bluegreen-flow', label: '青漪', src: './assets/audio/entrance/bluegreen-flow.wav', fallback: 'silk' },
+        { id: 'beat-cut', label: '鹿鸣', src: './assets/audio/entrance/beat-cut.wav', fallback: 'runway' },
+        { id: 'jiangnan-lantern', label: '南枝', src: './assets/audio/entrance/jiangnan-lantern.wav', fallback: 'silk' },
+        { id: 'clean-denim', label: '风荷', src: './assets/audio/entrance/clean-denim.wav', fallback: 'signature' }
+    ];
+    const DEFAULT_MODE = 'random';
+    const LEGACY_MODE_MAP = { signature: 'cinema-white', runway: 'beat-cut', silk: 'white-lace' };
     let lastOverlayVisible = true;
     let playedForSession = false;
     let customAudio = null;
@@ -15,6 +28,20 @@
     let customAudioHydratePromise = null;
     let customAudioUnlocked = false;
     let unlockGestureBound = false;
+    const builtInAudioCache = new Map();
+
+    function getBuiltInTrack(mode) {
+        return BUILTIN_TRACKS.find((track) => track.id === mode) || null;
+    }
+
+    function pickRandomTrack() {
+        return BUILTIN_TRACKS[Math.floor(Math.random() * BUILTIN_TRACKS.length)] || BUILTIN_TRACKS[0];
+    }
+
+    function resolvePlaybackMode(mode) {
+        if (mode === 'random') return pickRandomTrack().id;
+        return mode;
+    }
 
     function toast(message, type = 'info') {
         if (window.UI && typeof window.UI.toast === 'function') window.UI.toast(message, type);
@@ -22,7 +49,10 @@
 
     function readMode() {
         try {
-            return localStorage.getItem(STORAGE_KEY) || DEFAULT_MODE;
+            const stored = localStorage.getItem(STORAGE_KEY) || DEFAULT_MODE;
+            if (LEGACY_MODE_MAP[stored]) return LEGACY_MODE_MAP[stored];
+            if (stored === 'random' || stored === 'off' || stored === 'custom' || getBuiltInTrack(stored)) return stored;
+            return DEFAULT_MODE;
         } catch (_) {
             return DEFAULT_MODE;
         }
@@ -46,12 +76,13 @@
     function playToneSequence(mode) {
         const ctx = getAudioContext();
         if (!ctx || mode === 'off') return;
+        const fallbackMode = getBuiltInTrack(mode)?.fallback || LEGACY_MODE_MAP[mode] || mode;
         if (ctx.state === 'suspended') ctx.resume().catch(() => {});
 
         const now = ctx.currentTime + 0.02;
         const master = ctx.createGain();
         master.gain.setValueAtTime(0.0001, now);
-        master.gain.exponentialRampToValueAtTime(mode === 'runway' ? 0.11 : 0.08, now + 0.025);
+        master.gain.exponentialRampToValueAtTime(fallbackMode === 'runway' ? 0.11 : 0.08, now + 0.025);
         master.gain.exponentialRampToValueAtTime(0.0001, now + 0.74);
         master.connect(ctx.destination);
 
@@ -74,7 +105,7 @@
             ]
         };
 
-        (patterns[mode] || patterns.signature).forEach((note) => {
+        (patterns[fallbackMode] || patterns.signature).forEach((note) => {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             const start = now + note.t;
@@ -89,6 +120,24 @@
             osc.start(start);
             osc.stop(end + 0.02);
         });
+    }
+
+    function getBuiltInAudio(mode) {
+        const track = getBuiltInTrack(mode);
+        if (!track) return null;
+        let audio = builtInAudioCache.get(track.id);
+        if (!audio) {
+            audio = new Audio(track.src);
+            audio.preload = 'auto';
+            audio.volume = 0.44;
+            builtInAudioCache.set(track.id, audio);
+        }
+        return audio;
+    }
+
+    function prewarmBuiltInAudio() {
+        const audio = getBuiltInAudio(readMode());
+        if (audio) audio.load();
     }
 
     function openCustomAudioDb() {
@@ -247,8 +296,15 @@
     }
 
     function playEntranceSound(forceMode) {
-        const mode = forceMode || readMode();
+        const selectedMode = forceMode || readMode();
+        const mode = resolvePlaybackMode(selectedMode);
         if (mode === 'off') return;
+        const builtInAudio = getBuiltInAudio(mode);
+        if (builtInAudio) {
+            builtInAudio.currentTime = 0;
+            builtInAudio.play().catch(() => playToneSequence(mode));
+            return;
+        }
         if (mode === 'custom') {
             getCustomAudio().then((audio) => {
                 if (!audio) {
@@ -263,6 +319,19 @@
         playToneSequence(mode);
     }
 
+    function renderSoundChoices() {
+        document.querySelectorAll('.entrance-sound-options').forEach((group) => {
+            if (group.dataset.builtInRendered === '1') return;
+            group.dataset.builtInRendered = '1';
+            group.innerHTML = [
+                '<button type="button" data-sound-choice="random">随机播放</button>',
+                ...BUILTIN_TRACKS.map((track) => `<button type="button" data-sound-choice="${track.id}">${track.label}</button>`),
+                '<button type="button" data-sound-choice="custom">本地音乐</button>',
+                '<button type="button" data-sound-choice="off">关闭</button>'
+            ].join('');
+        });
+    }
+
     function updateSoundButtons() {
         const mode = readMode();
         document.querySelectorAll('[data-sound-choice]').forEach((button) => {
@@ -273,6 +342,7 @@
     }
 
     function bindControls() {
+        renderSoundChoices();
         document.querySelectorAll('[data-sound-choice]').forEach((button) => {
             if (button.dataset.soundBound === '1') return;
             button.dataset.soundBound = '1';
@@ -280,6 +350,7 @@
                 const mode = button.dataset.soundChoice || DEFAULT_MODE;
                 writeMode(mode);
                 updateSoundButtons();
+                prewarmBuiltInAudio();
                 playEntranceSound(mode);
             });
         });
@@ -330,7 +401,7 @@
         const lead = document.querySelector('.login-clean-copy p');
         const eyebrow = document.querySelector('.login-clean-copy span');
         const strongs = document.querySelectorAll('.login-look-card strong');
-        const labels = ['电影白', '轻卡点', '蓝绿回声'];
+        const labels = ['映雪', '鹿鸣', '青漪'];
         if (eyebrow) eyebrow.textContent = 'CLEAN / BEAT / FLOW';
         if (title) title.textContent = '菁莪云枢';
         if (lead) lead.textContent = '把成绩、师资、成长轨迹与家校报告按节拍排好：白底清透，粉色点睛，蓝绿色收尾；每一步都轻一点、准一点、看得更顺。';
@@ -353,6 +424,7 @@
         bindControls();
         bindUnlockGestures();
         polishLoginCopy();
+        prewarmBuiltInAudio();
         prewarmCustomAudio();
         observeEntrance();
         window.setInterval(() => {

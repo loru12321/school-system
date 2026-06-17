@@ -1,0 +1,76 @@
+{
+  "generatedAt": "2026-06-17T00:31:29.660Z",
+  "note": "Original synthesized entrance music inspired by observed visual rhythm; no source audio was copied.",
+  "tracks": [
+    {
+      "id": "cinema-white",
+      "title": "映雪",
+      "file": "cinema-white.wav",
+      "bpm": 92,
+      "tint": "soft"
+    },
+    {
+      "id": "sweet-royal-switch",
+      "title": "清晖",
+      "file": "sweet-royal-switch.wav",
+      "bpm": 104,
+      "tint": "pluck"
+    },
+    {
+      "id": "sister-aura",
+      "title": "云岫",
+      "file": "sister-aura.wav",
+      "bpm": 100,
+      "tint": "bold"
+    },
+    {
+      "id": "white-lace",
+      "title": "栀夏",
+      "file": "white-lace.wav",
+      "bpm": 84,
+      "tint": "bell"
+    },
+    {
+      "id": "red-violet",
+      "title": "绯云",
+      "file": "red-violet.wav",
+      "bpm": 108,
+      "tint": "dance"
+    },
+    {
+      "id": "midnight-silk",
+      "title": "月绡",
+      "file": "midnight-silk.wav",
+      "bpm": 96,
+      "tint": "silk"
+    },
+    {
+      "id": "bluegreen-flow",
+      "title": "青漪",
+      "file": "bluegreen-flow.wav",
+      "bpm": 88,
+      "tint": "flow"
+    },
+    {
+      "id": "beat-cut",
+      "title": "鹿鸣",
+      "file": "beat-cut.wav",
+      "bpm": 118,
+      "tint": "beat"
+    },
+    {
+      "id": "jiangnan-lantern",
+      "title": "南枝",
+      "file": "jiangnan-lantern.wav",
+      "bpm": 78,
+      "tint": "guqin"
+    },
+    {
+      "id": "clean-denim",
+      "title": "风荷",
+      "file": "clean-denim.wav",
+      "bpm": 102,
+      "tint": "denim"
+    }
+  ]
+}
