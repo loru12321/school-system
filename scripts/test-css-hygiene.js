@@ -59,25 +59,30 @@ for (const marker of favoriteThemeMarkers) {
 
 const audioFiles = fs.readdirSync(entranceAudioPath).filter((name) => name.endsWith('.wav'));
 if (audioFiles.length !== 0) {
-  throw new Error(`Built-in entrance audio should be fully removed, found ${audioFiles.length} wav files`);
+  throw new Error(`Legacy generated wav files should stay removed, found ${audioFiles.length} wav files`);
 }
-if (!Array.isArray(entranceManifest.tracks) || entranceManifest.tracks.length !== 0) {
-  throw new Error(`Entrance manifest should not describe built-in tracks: manifest=${entranceManifest.tracks?.length || 0}`);
+if (!Array.isArray(entranceManifest.tracks)) {
+  throw new Error('Entrance manifest should expose a tracks array');
 }
-if (!entranceManifest.note.includes('Built-in entrance music has been removed')) {
-  throw new Error('Entrance manifest should document that built-in music was removed');
+if (!entranceManifest.note.includes('authorizedForEmbedding')) {
+  throw new Error('Entrance manifest should document that bundled tracks require embedding authorization');
 }
-if (!entranceSound.includes("const DEFAULT_MODE = 'custom'")) {
-  throw new Error('Entrance sound should default to the user-imported authorized playlist');
+for (const track of entranceManifest.tracks) {
+  if (!track.src || track.authorizedForEmbedding !== true || !track.license) {
+    throw new Error(`Bundled entrance track must include src, license, and authorizedForEmbedding=true: ${track.id || track.name || 'unnamed'}`);
+  }
+}
+if (!entranceSound.includes("const DEFAULT_MODE = 'random'")) {
+  throw new Error('Entrance sound should default to random playback');
 }
 if (entranceSound.includes('BUILTIN_TRACKS') || entranceSound.includes('playToneSequence') || entranceSound.includes('getAudioContext')) {
   throw new Error('Entrance sound runtime should not include built-in tracks or generated fallback tones');
 }
-if (entranceSound.includes('./assets/audio/entrance/') || /\.wav['"]/.test(entranceSound)) {
-  throw new Error('Entrance sound runtime should not reference bundled wav files');
+if (!entranceSound.includes('BUNDLED_PLAYLIST_MANIFEST') || !entranceSound.includes('authorizedForEmbedding')) {
+  throw new Error('Entrance sound runtime should load only manifest-authorized bundled audio/video tracks');
 }
 if (!entranceSound.includes('data-sound-choice="random"') || !entranceSound.includes('storeAuthorizedPlaylist')) {
-  throw new Error('Entrance sound runtime should expose random playback for imported authorized playlists');
+  throw new Error('Entrance sound runtime should expose random playback for authorized playlists');
 }
 if (!entranceSound.includes('onended') || !entranceSound.includes('autoAdvanceTimer')) {
   throw new Error('Imported playlist playback should automatically advance to the next track');

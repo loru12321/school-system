@@ -1,5 +1,13 @@
 {
   "generatedAt": "2026-06-17T00:00:00.000Z",
-  "note": "Built-in entrance music has been removed. The system only plays user-imported audio that the user confirms is authorized for use.",
+  "note": "Bundled entrance audio/video is supported only when each track is explicitly marked authorizedForEmbedding. Downloaded Douyin favorite-video music must not be listed here unless the user has rights to redistribute it inside this system.",
+  "trackSchema": {
+    "id": "stable-track-id",
+    "name": "display name",
+    "src": "file name under public/assets/audio/entrance or a same-origin URL",
+    "type": "audio/mpeg, audio/mp4, video/mp4, video/webm, etc.",
+    "authorizedForEmbedding": true,
+    "license": "rights note or source permission"
+  },
   "tracks": []
 }

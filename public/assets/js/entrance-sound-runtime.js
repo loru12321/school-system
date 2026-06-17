@@ -7,7 +7,9 @@
     const CUSTOM_AUDIO_STORE = 'audio';
     const LEGACY_AUDIO_ID = 'entrance';
     const PLAYLIST_AUDIO_ID = 'authorized-playlist';
-    const DEFAULT_MODE = 'custom';
+    const BUNDLED_PLAYLIST_MANIFEST = './assets/audio/entrance/manifest.json';
+    const BUNDLED_AUDIO_BASE = './assets/audio/entrance/';
+    const DEFAULT_MODE = 'random';
 
     let lastOverlayVisible = true;
     let playedForSession = false;
@@ -15,6 +17,7 @@
     let playlistHydratePromise = null;
     let activeAudio = null;
     let activeAudioUrl = '';
+    let activeAudioUrlIsObject = false;
     let activeTrackIndex = -1;
     let lastRandomTrackIndex = -1;
     let autoAdvanceTimer = 0;
@@ -107,8 +110,34 @@
         }));
     }
 
+    function normalizeBundledSrc(src) {
+        const value = String(src || '').trim();
+        if (!value) return '';
+        if (/^(https?:|data:|blob:|\/|\.\/)/i.test(value)) return value;
+        return BUNDLED_AUDIO_BASE + value.split('/').map(encodeURIComponent).join('/');
+    }
+
+    function readBundledPlaylist() {
+        if (typeof fetch !== 'function') return Promise.resolve([]);
+        return fetch(BUNDLED_PLAYLIST_MANIFEST, { cache: 'no-store' }).then((response) => {
+            if (!response.ok) return [];
+            return response.json();
+        }).then((manifest) => {
+            const tracks = Array.isArray(manifest && manifest.tracks) ? manifest.tracks : [];
+            return tracks.map((track, index) => ({
+                id: track.id || `bundled-${index + 1}`,
+                name: track.name || `Bundled track ${index + 1}`,
+                type: track.type || '',
+                src: normalizeBundledSrc(track.src || track.file),
+                source: 'bundled',
+                authorizedForEmbedding: track.authorizedForEmbedding === true,
+                license: track.license || ''
+            })).filter((track) => track.src && track.authorizedForEmbedding);
+        }).catch(() => []);
+    }
+
     function setPlaylist(tracks) {
-        playlist = Array.isArray(tracks) ? tracks.filter((track) => track && track.blob) : [];
+        playlist = Array.isArray(tracks) ? tracks.filter((track) => track && (track.blob || track.src)) : [];
         if (activeTrackIndex >= playlist.length) activeTrackIndex = -1;
         updatePlaylistStatus();
     }
@@ -116,7 +145,10 @@
     function getPlaylist() {
         if (playlist.length) return Promise.resolve(playlist);
         if (playlistHydratePromise) return playlistHydratePromise;
-        playlistHydratePromise = readStoredPlaylist().then((tracks) => {
+        playlistHydratePromise = readBundledPlaylist().then((bundledTracks) => {
+            if (bundledTracks.length) return bundledTracks;
+            return readStoredPlaylist().catch(() => []);
+        }).then((tracks) => {
             playlistHydratePromise = null;
             setPlaylist(tracks);
             return playlist;
@@ -138,10 +170,11 @@
             activeAudio.currentTime = 0;
             activeAudio = null;
         }
-        if (activeAudioUrl) {
+        if (activeAudioUrl && activeAudioUrlIsObject) {
             URL.revokeObjectURL(activeAudioUrl);
-            activeAudioUrl = '';
         }
+        activeAudioUrl = '';
+        activeAudioUrlIsObject = false;
     }
 
     function pickRandomIndex(tracks) {
@@ -160,10 +193,11 @@
 
     function playTrackAt(index, mode) {
         const track = playlist[index];
-        if (!track || !track.blob) return false;
+        if (!track || (!track.blob && !track.src)) return false;
         stopActiveAudio();
         activeTrackIndex = index;
-        activeAudioUrl = URL.createObjectURL(track.blob);
+        activeAudioUrl = track.blob ? URL.createObjectURL(track.blob) : track.src;
+        activeAudioUrlIsObject = !!track.blob;
         activeAudio = new Audio(activeAudioUrl);
         activeAudio.preload = 'auto';
         activeAudio.volume = 0.46;
@@ -208,25 +242,26 @@
         if (audioUnlocked || readMode() === 'off') return;
         getPlaylist().then((tracks) => {
             const track = tracks[0];
-            if (!track || !track.blob || audioUnlocked) return;
-            const url = URL.createObjectURL(track.blob);
+            if (!track || (!track.blob && !track.src) || audioUnlocked) return;
+            const isObjectUrl = !!track.blob;
+            const url = isObjectUrl ? URL.createObjectURL(track.blob) : track.src;
             const probe = new Audio(url);
             probe.muted = true;
             probe.volume = 0;
             const playPromise = probe.play();
             if (!playPromise || typeof playPromise.then !== 'function') {
                 probe.pause();
-                URL.revokeObjectURL(url);
+                if (isObjectUrl) URL.revokeObjectURL(url);
                 audioUnlocked = true;
                 return;
             }
             playPromise.then(() => {
                 probe.pause();
                 probe.currentTime = 0;
-                URL.revokeObjectURL(url);
+                if (isObjectUrl) URL.revokeObjectURL(url);
                 audioUnlocked = true;
             }).catch(() => {
-                URL.revokeObjectURL(url);
+                if (isObjectUrl) URL.revokeObjectURL(url);
             });
         }).catch(() => {});
     }
@@ -283,12 +318,12 @@
         if (!list.length) return [];
         const valid = [];
         for (const file of list) {
-            if (!/\.(mp3|wav|ogg|m4a)$/i.test(String(file.name || ''))) {
-                toast('请导入浏览器可播放的 MP3/WAV/OGG/M4A 音频', 'warning');
+            if (!/\.(mp3|wav|ogg|m4a|mp4|mov|webm)$/i.test(String(file.name || ''))) {
+                toast('请导入浏览器可播放的 MP3/WAV/OGG/M4A 或 MP4/MOV/WEBM 文件', 'warning');
                 return [];
             }
-            if (file.size > 24 * 1024 * 1024) {
-                toast('单个音频请控制在 24MB 以内', 'warning');
+            if (file.size > 96 * 1024 * 1024) {
+                toast('单个音/视频文件请控制在 96MB 以内', 'warning');
                 return [];
             }
             valid.push(file);
@@ -333,9 +368,9 @@
                     audioUnlocked = false;
                     updateSoundButtons();
                     playEntranceSound(tracks.length > 1 ? 'random' : 'custom');
-                    toast(`已启用 ${tracks.length} 首授权入场音乐`, 'success');
+                    toast(`已启用 ${tracks.length} 个授权音/视频入场音轨`, 'success');
                 }).catch(() => {
-                    toast('本地音频保存失败，请换一组 MP3/WAV/OGG/M4A 文件', 'warning');
+                    toast('本地音/视频保存失败，请换一组 MP3/WAV/OGG/M4A/MP4/MOV/WEBM 文件', 'warning');
                 });
             });
         });

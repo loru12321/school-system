@@ -14,10 +14,18 @@ for (const entry of fs.readdirSync(outDir, { withFileTypes: true })) {
 
 const manifest = {
   generatedAt: new Date().toISOString(),
-  note: 'Built-in entrance music has been removed. The system only plays user-imported audio that the user confirms is authorized for use.',
+  note: 'Bundled entrance audio/video is supported only when each track is explicitly marked authorizedForEmbedding. Downloaded Douyin favorite-video music must not be listed here unless the user has rights to redistribute it inside this system.',
+  trackSchema: {
+    id: 'stable-track-id',
+    name: 'display name',
+    src: 'file name under public/assets/audio/entrance or a same-origin URL',
+    type: 'audio/mpeg, audio/mp4, video/mp4, video/webm, etc.',
+    authorizedForEmbedding: true,
+    license: 'rights note or source permission'
+  },
   tracks: []
 };
 
 fs.writeFileSync(path.join(outDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
-console.log(JSON.stringify({ ok: true, outDir, count: 0, mode: 'authorized-import-only' }, null, 2));
+console.log(JSON.stringify({ ok: true, outDir, count: 0, mode: 'authorized-bundled-or-imported' }, null, 2));
