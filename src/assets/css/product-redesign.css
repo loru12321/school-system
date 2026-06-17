@@ -1929,9 +1929,13 @@ table thead th,
 .entrance-sound-panel {
     margin-top: 14px;
     padding: 12px;
-    border-radius: 18px;
-    border: 1px solid rgba(200, 168, 106, 0.28);
-    background: rgba(255, 253, 248, 0.72);
+    overflow: hidden;
+    border-radius: 8px;
+    border: 1px solid rgba(214, 204, 197, 0.78);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 250, 247, 0.78)),
+        radial-gradient(circle at 88% 8%, rgba(201, 240, 235, 0.34), transparent 32%);
+    box-shadow: 0 16px 36px rgba(51, 45, 55, 0.08);
 }
 
 .login-graduate-cohort-panel {
@@ -2001,44 +2005,128 @@ table thead th,
 .entrance-sound-panel__head,
 .entrance-sound-options {
     display: flex;
-    align-items: center;
-    gap: 8px;
 }
 
 .entrance-sound-panel__head {
+    align-items: center;
     justify-content: space-between;
-    margin-bottom: 10px;
+    gap: 10px;
+    margin-bottom: 12px;
     color: var(--pd-yj-ink);
-    font-size: 12px;
-    font-weight: 900;
+}
+
+.entrance-sound-panel__head span {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+}
+
+.entrance-sound-panel__head strong {
+    color: #1b1f2b;
+    font-size: 14px;
+    font-weight: 950;
+}
+
+.entrance-sound-panel__head small,
+.entrance-sound-option small {
+    color: #85818a;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.25;
 }
 
 .entrance-sound-panel button,
 .entrance-sound-import span {
-    min-height: 30px;
-    border: 1px solid rgba(200, 168, 106, 0.34);
+    border: 1px solid rgba(214, 204, 197, 0.82);
+    color: #4b5261;
+    background: rgba(255, 255, 255, 0.86);
+    cursor: pointer;
+    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.entrance-sound-panel__head button,
+.entrance-sound-import span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 34px;
     border-radius: 999px;
-    padding: 6px 10px;
-    color: #5d6472;
-    background: rgba(255, 255, 255, 0.88);
+    padding: 7px 12px;
     font-size: 12px;
     font-weight: 900;
-    cursor: pointer;
+    white-space: nowrap;
+}
+
+.entrance-sound-panel__head button em {
+    font-style: normal;
 }
 
 .entrance-sound-options {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    max-height: 170px;
+    overflow: auto;
+    padding: 2px 2px 4px;
+    scrollbar-width: thin;
+}
+
+.entrance-sound-option {
+    display: grid;
+    align-content: center;
+    gap: 2px;
+    min-width: 0;
+    min-height: 56px;
+    border-radius: 8px !important;
+    padding: 9px 10px !important;
+    text-align: left;
+}
+
+.entrance-sound-option strong {
+    color: #222633;
+    font-size: 13px;
+    font-weight: 950;
+    line-height: 1.15;
+}
+
+.entrance-sound-option--utility {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(238, 246, 255, 0.82)) !important;
+}
+
+.entrance-sound-panel button:hover,
+.entrance-sound-import span:hover {
+    border-color: rgba(255, 102, 132, 0.34);
+    box-shadow: 0 10px 22px rgba(51, 45, 55, 0.08);
+    transform: translateY(-1px);
 }
 
 .entrance-sound-options button.is-active {
     color: #1d2330;
-    border-color: rgba(246, 184, 202, 0.70);
-    background: linear-gradient(135deg, #fff7fb, #eafff9);
+    border-color: rgba(255, 102, 132, 0.48);
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.99), rgba(255, 241, 244, 0.95) 58%, rgba(233, 251, 248, 0.92));
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72), 0 12px 24px rgba(255, 102, 132, 0.11);
+}
+
+.entrance-sound-options button.is-active small {
+    color: #d94a6a;
+}
+
+.entrance-sound-status {
+    margin: 8px 0 0;
+    color: #737985;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
 }
 
 .entrance-sound-import {
     display: inline-flex;
-    margin-top: 8px;
+    margin-top: 10px;
 }
 
 @media (max-width: 980px) {
@@ -2055,6 +2143,16 @@ table thead th,
         padding: 10px;
     }
 
+    #login-overlay[data-login-skin="clean"] .login-clean-card {
+        width: min(500px, calc(100vw - 28px)) !important;
+        max-width: calc(100vw - 28px) !important;
+        justify-self: center !important;
+    }
+
+    .entrance-sound-options {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .login-graduate-cohort-row {
         align-items: stretch;
         flex-direction: column;
@@ -2066,10 +2164,10 @@ table thead th,
 }
 
 /*
- * Douyin favorite full-scan refresh.
- * The saved favorites skew toward clean outfit portraits, soft daylight, cream
- * interiors, light pink/orange rhythm, mint reflections, and short cinematic
- * captions. Keep the enterprise UI light and legible; borrow only the mood.
+ * Douyin favorite evidence refresh.
+ * Logged-in favorite/video-detail evidence shows clean outfit portraits, soft
+ * daylight, night-cover music, light pink rhythm, mint reflections, slow dance,
+ * and short cinematic captions. Keep the enterprise UI legible; borrow the mood.
  */
 :root {
     --pd-bg: #fffaf7;
@@ -2358,9 +2456,9 @@ tbody tr:hover td,
 }
 
 /*
- * Douyin creator pair variation.
- * After opening all 188 videos from the two referenced creators, the stronger
- * signals are quick beat cuts, white/grey denim styling, cinematic clean light,
+ * Douyin creator and favorite variation.
+ * Current evidence from the provided creator pages plus logged-in favorites
+ * points to quick beat cuts, white/grey denim styling, cinematic clean light,
  * low-saturation pink, and blue-green reflections. Keep the system bright.
  */
 :root {
@@ -2535,4 +2633,194 @@ tbody tr:hover td,
 .analysis-generated-table tbody tr:hover td,
 .analysis-table-dense tbody tr:hover td {
     background: rgba(143, 191, 246, 0.06) !important;
+}
+
+/*
+ * Added-profile editorial shell.
+ * The newly supplied creator links continue the same clean, bright video
+ * language: white space first, rose/jade/sky accents second, and a content-feed
+ * rhythm. This layer moves the app shell closer to an Instagram feed plus
+ * Windows Fluent workspace without changing runtime calculations.
+ */
+:root {
+    --pd-editorial-line: rgba(221, 211, 206, 0.74);
+    --pd-editorial-line-soft: rgba(240, 232, 228, 0.82);
+    --pd-editorial-panel: rgba(255, 255, 255, 0.88);
+    --pd-editorial-panel-strong: rgba(255, 255, 255, 0.96);
+    --pd-editorial-rose: #ff6f8d;
+    --pd-editorial-jade: #34bfb1;
+    --pd-editorial-sky: #91c6ff;
+    --pd-editorial-ink: #141827;
+}
+
+#main-header.shell-toolbar {
+    border: 1px solid var(--pd-editorial-line) !important;
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.92), rgba(255, 249, 247, 0.78), rgba(246, 255, 253, 0.82)) !important;
+    box-shadow: 0 18px 44px rgba(95, 82, 90, 0.08) !important;
+}
+
+.app-main,
+#app {
+    background:
+        linear-gradient(90deg, rgba(255, 111, 141, 0.035) 0 1px, transparent 1px 100%),
+        linear-gradient(180deg, rgba(52, 191, 177, 0.028) 0 1px, transparent 1px 100%),
+        transparent !important;
+    background-size: 96px 96px, 96px 96px, auto !important;
+}
+
+.shell-overview-card--dock,
+.module-desc-bar,
+.analysis-workspace .module-desc-bar.analysis-hero {
+    border: 1px solid var(--pd-editorial-line) !important;
+    border-radius: 14px !important;
+    background:
+        linear-gradient(90deg, rgba(255, 111, 141, 0.05) 0 30%, rgba(255, 255, 255, 0.74) 30% 100%),
+        radial-gradient(circle at 68% 16%, rgba(145, 198, 255, 0.16), transparent 28%),
+        radial-gradient(circle at 88% 72%, rgba(52, 191, 177, 0.12), transparent 30%),
+        var(--pd-editorial-panel-strong) !important;
+    box-shadow: 0 18px 48px rgba(70, 55, 65, 0.075) !important;
+}
+
+.module-desc-bar,
+.analysis-workspace .module-desc-bar.analysis-hero {
+    min-height: 126px;
+    padding: 24px 28px !important;
+    display: grid;
+    align-content: center;
+    gap: 8px;
+}
+
+.module-desc-bar h3,
+.analysis-workspace .module-desc-bar.analysis-hero h3,
+.shell-current-title {
+    font-size: clamp(28px, 3.1vw, 46px) !important;
+    line-height: 1.02 !important;
+    font-weight: 900 !important;
+    color: var(--pd-editorial-ink) !important;
+}
+
+.module-desc-bar p,
+.analysis-workspace .module-desc-bar.analysis-hero p {
+    max-width: 68ch;
+    color: #647186 !important;
+    font-size: 15px !important;
+    line-height: 1.72 !important;
+}
+
+#app .sub-nav-chips,
+.shell-module-rail-shell {
+    border: 1px solid var(--pd-editorial-line-soft) !important;
+    border-radius: 16px !important;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 250, 247, 0.84)) !important;
+    box-shadow: 0 12px 36px rgba(77, 64, 72, 0.055) !important;
+}
+
+#app .sub-nav-chips {
+    padding: 14px 16px !important;
+    gap: 10px !important;
+}
+
+#app .sub-nav-chips .chip-item,
+#app .sub-nav-chips button,
+.shell-module-rail-chip,
+.side-nav-link,
+.side-nav-sub-link {
+    border-radius: 10px !important;
+    border: 1px solid rgba(226, 216, 211, 0.84) !important;
+    background: rgba(255, 255, 255, 0.78) !important;
+    color: #515b6e !important;
+}
+
+#app .sub-nav-chips .chip-item:hover,
+#app .sub-nav-chips button:hover,
+.shell-module-rail-chip:hover,
+.side-nav-link:hover,
+.side-nav-sub-link:hover {
+    background: rgba(255, 249, 247, 0.98) !important;
+    border-color: rgba(255, 111, 141, 0.34) !important;
+    color: var(--pd-editorial-ink) !important;
+}
+
+#app .sub-nav-chips .chip-item.active,
+#app .sub-nav-chips button.active,
+.shell-module-rail-chip.is-active,
+.side-nav-link.active,
+.side-nav-sub-link.active {
+    background:
+        linear-gradient(135deg, rgba(255, 111, 141, 0.96), rgba(255, 141, 120, 0.92)) !important;
+    border-color: transparent !important;
+    color: #ffffff !important;
+    box-shadow: 0 12px 26px rgba(255, 111, 141, 0.18) !important;
+}
+
+.shell-module-rail-chip::after {
+    left: 16px;
+    right: 16px;
+    bottom: 7px;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.84), rgba(52, 191, 177, 0.58), rgba(145, 198, 255, 0.58)) !important;
+    opacity: 0.42;
+}
+
+.section.card-box,
+.analysis-workspace,
+.card-box,
+.control-panel,
+.analysis-inline-panel,
+.analysis-anchor-panel,
+.analysis-table-shell,
+.table-wrap {
+    border-color: var(--pd-editorial-line-soft) !important;
+    border-radius: 12px !important;
+    background: var(--pd-editorial-panel) !important;
+    box-shadow: 0 10px 28px rgba(74, 62, 72, 0.045) !important;
+}
+
+.analysis-section-head,
+.analysis-table-meta,
+.analysis-doc-panel,
+.analysis-action-stack {
+    border-radius: 12px !important;
+}
+
+table thead th,
+.analysis-generated-table thead th,
+.analysis-table-dense thead th {
+    background:
+        linear-gradient(180deg, rgba(255, 245, 247, 0.98), rgba(247, 252, 255, 0.96)) !important;
+    color: #6b6270 !important;
+    font-weight: 800 !important;
+}
+
+@media (max-width: 768px) {
+    #main-header.shell-toolbar {
+        border-radius: 18px !important;
+        margin-inline: 10px !important;
+    }
+
+    .module-desc-bar,
+    .analysis-workspace .module-desc-bar.analysis-hero {
+        min-height: 104px;
+        padding: 18px 18px !important;
+    }
+
+    .module-desc-bar h3,
+    .analysis-workspace .module-desc-bar.analysis-hero h3 {
+        font-size: 30px !important;
+    }
+
+    #app .sub-nav-chips {
+        border-radius: 14px !important;
+        overflow-x: auto;
+        flex-wrap: nowrap !important;
+        scroll-snap-type: x proximity;
+    }
+
+    #app .sub-nav-chips .chip-item,
+    #app .sub-nav-chips button {
+        min-width: max-content;
+        scroll-snap-align: start;
+    }
 }

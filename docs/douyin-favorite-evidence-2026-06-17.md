@@ -1,0 +1,2088 @@
+# Douyin Favorite Evidence - 2026-06-17
+
+This note records verified design evidence gathered from the user's logged-in Douyin page. It is not a claim that all favorites have been exhausted.
+
+## Access State
+
+- Account panel was visible in Chrome as `abcabc1411`.
+- The page reported `我的收藏 2.2万`.
+- The favorite collection page rendered visible favorite cards and video links after claiming the logged-in Chrome tab.
+- Public web fetches for the provided profile URLs returned empty dynamic HTML, so Chrome logged-in evidence is the stronger source.
+
+## Favorite List Signals
+
+Visible favorite-card text included:
+
+- `卖个萌就去玩水了拜拜`
+- `那我们今晚见 ... #nightdancer ... #翻唱 #imase`
+- `见面吗 我和你 就现在 #纯欲 #氛围感 #初恋`
+- `叫什么？ #御姐 #芝小知 #微醺`
+- `gogogo #馍馍摇 #短发 #慢摇 #纯欲风`
+- `主打一个简单易学 #工位上跳舞 #发疯日常 #卡点舞 #职场御姐`
+- `总要做一回书里的国风女子 #旗袍 #国风古韵`
+- `喜欢夏天 喜欢阳光`
+
+## Opened Detail Pages
+
+The following specific favorites were opened as detail pages in Chrome:
+
+- `https://www.douyin.com/video/7652021845160575963`
+  - Title: `卖个萌就去玩水了拜拜`
+  - Duration observed: `00:12`
+  - Published: `2026-06-16 23:52`
+  - Mood: summer, water, playful, clean daylight.
+
+- `https://www.douyin.com/video/7651794391488593253`
+  - Title: `那我们今晚见 ... #nightdancer ... #翻唱 #imase`
+  - Duration observed: `00:23`
+  - Published: `2026-06-16 09:10`
+  - Mood: night vocal cover, R&B-adjacent, cinematic text, low light.
+
+- `https://www.douyin.com/video/7628590860523306929`
+  - Title: `见面吗 我和你 就现在 #纯欲 #氛围感 #初恋`
+  - Duration observed: `00:08`
+  - Published: `2026-04-14 20:28`
+  - Mood: first-love atmosphere, soft gaze, minimal caption.
+
+- `https://www.douyin.com/video/7643083905041781711`
+  - Title: `叫什么？ #御姐 #芝小知 #微醺`
+  - Duration observed: `00:07`
+  - Published: `2026-05-23 21:49`
+  - Mood: poised, slightly tipsy, confident, rose-toned.
+
+- `https://www.douyin.com/video/7652139536227026930`
+  - Title: `垫脚小猫在抖音记录美好生活20260617`
+  - Duration observed: `00:07`
+  - Published: `2026-06-17 07:29`
+  - Mood: compact portrait rhythm, body-pose cards, fashion comments.
+
+- `https://www.douyin.com/video/7651977942764027300`
+  - Title: `gogogo #馍馍摇 #短发 #慢摇 #纯欲风`
+  - Duration observed: `00:14`
+  - Published: `2026-06-16 21:02`
+  - Mood: slow dance, short hair, loopable beat, pure style.
+
+## Opened Detail Pages - Batch 2
+
+The following additional favorite details were opened after deeper scrolling on the logged-in favorites page:
+
+- `https://www.douyin.com/video/7650830013970024947`
+  - Author observed: `7鸽_`
+  - Title: `喜欢夏天 喜欢阳光☀️ #夏天就要stepstep #吴宇恒 #抖音潮流舞蹈大赛 #ariseism`
+  - Duration observed: `00:24`
+  - Published: `2026-06-13 18:47`
+  - Mood: summer, sunshine, step-step dance, bright kinetic confidence.
+
+- `https://www.douyin.com/video/7650814490464049023`
+  - Author observed: `崽崽`
+  - Title: `主打一个简单易学#工位上跳舞#发疯日常#卡点舞#职场御姐`
+  - Duration observed: `00:09`
+  - Published: `2026-06-13 17:47`
+  - Mood: office chair dance, sharp beat cuts, polished workplace aura.
+
+- `https://www.douyin.com/video/7649338470925606762`
+  - Author observed: `崽崽`
+  - Title: `替你们试过了椅子质量真不错#椅子舞#抽象舞蹈#发疯日常`
+  - Duration observed: `00:08`
+  - Published: `2026-06-09 18:20`
+  - Mood: playful chair dance, abstract loop, quick comic timing.
+
+- `https://www.douyin.com/video/7649658322143965435`
+  - Author observed: `瑗泉花花`
+  - Title: `#姐感穿搭`
+  - Duration observed: `00:07`
+  - Published: `2026-06-10 15:01`
+  - Mood: composed outfit transition, confident line, editorial polish.
+
+- `https://www.douyin.com/video/7651856633551156721`
+  - Author observed: `闪电小狗`
+  - Title: `修补我的大门牙，哒哒哒哒哒哒 #紧身连衣裙`
+  - Duration observed: `00:12`
+  - Published: `2026-06-16 13:11`
+  - Mood: staccato vocal rhythm, playful styling, short repeated hook.
+
+- `https://www.douyin.com/video/7636697263657519273`
+  - Author observed: `小曲同学`
+  - Title: `很有劲`
+  - Duration observed: `00:18`
+  - Published: `2026-05-06 16:45`
+  - Mood: energetic beat, red velvet cue, punchy confident motion.
+
+- `https://www.douyin.com/video/7643000325972615679`
+  - Author observed: `小曲同学`
+  - Title: `小肚小肚？`
+  - Duration observed: `00:08`
+  - Published: `2026-05-23 16:24`
+  - Mood: compact character cue, casual humor, minimal loop.
+
+- `https://www.douyin.com/video/7650430439345433508`
+  - Author observed: `小曲同学`
+  - Title: `穿的就是s码 调你怎么了 #纯欲还是纯御`
+  - Duration observed: `00:11`
+  - Published: `2026-06-12 16:57`
+  - Mood: confident outfit cue, pure-versus-poised contrast, tight edit.
+
+## Favorite Link Batch 3 - Detail Loading Audit
+
+The logged-in favorites page was reopened and the `收藏` tab was selected again. The page rendered at least 25 non-Baiduspider favorite video links. Ten new favorite links were opened or targeted for detail inspection. Direct `/video/<id>` navigation repeatedly stalled on `加载中` or `视频数据加载中`, so these entries are counted as attempted detail openings, not completed detail extractions.
+
+- `https://www.douyin.com/video/7652163459224153691`
+  - Favorite-card text: `#路人镜头的女明星 #夏日美鞋穿搭分享 #街拍模特穿搭`
+  - Detail attempt: direct video URL loaded only the shell; a collection modal URL with `modal_id=7652163459224153691` opened and exposed video elements.
+  - Duration observed in modal: active video approximately `00:16`; additional preloaded video elements were also present, so this duration is treated as likely but not fully isolated.
+  - License signals observed: none.
+
+- `https://www.douyin.com/video/7652138258898289851`
+  - Favorite-card text: `专门拍给你们男人看的～给我赢啊阿根廷！ #正常展示身材 #球衣 #世界杯 #世界杯决赛 #美加墨世界杯`
+  - Detail attempt: direct video URL stalled on `加载中`.
+  - License signals observed: none.
+
+- `https://www.douyin.com/video/7651804831611392101`
+  - Favorite-card text: `#c罗 #美加墨世界杯 #运动甜妹穿搭 #肤白貌美 #绝了这身材 @可可tsuki`
+  - Detail attempt: direct video URL stalled on `视频数据加载中`.
+  - License signals observed: none.
+
+- `https://www.douyin.com/video/7635162311116803002`
+  - Favorite-card text: `类型不重要感觉才是王道#极品#纯欲 #慢摇`
+  - Detail attempt: direct video URL stalled on `加载中`.
+  - License signals observed: none.
+
+- `https://www.douyin.com/video/7613409478043002873`
+  - Favorite-card text: `焦糖奶茶纯欲包臀连衣裙`
+  - Detail attempt: direct video URL stalled on `视频数据加载中`.
+  - License signals observed: none.
+
+- `https://www.douyin.com/video/7652010160416069305`
+  - Favorite-card text: `#粉玫撞色吊带裙#纯欲风约会连衣裙#显白玫红辣妹穿搭#温柔氛围感穿搭#收腰包臀短裙`
+  - Detail attempt: direct video URL stalled on `视频数据加载中`.
+  - License signals observed: none.
+
+- `https://www.douyin.com/video/7651486607334253002`
+  - Favorite-card text: `#今天穿什么 #ootd`
+  - Detail attempt: direct video URL stalled on `加载中`.
+  - License signals observed: none.
+
+- `https://www.douyin.com/video/7642361113471946486`
+  - Favorite-card text: `主打一个松弛感😦#安检那些事 #173cm#冷脸烧`
+  - Detail attempt: direct video URL stalled on `加载中`.
+  - License signals observed: none.
+
+- `https://www.douyin.com/video/7641548038015827574`
+  - Favorite-card text: `好家伙 差点儿掉美颜 #黑丝穿搭风格 #1米2长腿 #直播间外的我`
+  - Detail attempt: direct video URL stalled on `加载中`; later modal navigation timed out.
+  - License signals observed: none.
+
+- `https://www.douyin.com/video/7639008956833199551`
+  - Favorite-card text: `喜欢萝莉？那我走了…#御姐穿搭 #冷脸烧`
+  - Detail attempt: direct video URL stalled on `加载中`.
+  - License signals observed: none.
+
+## Favorite Link Batch 4 - Visible List Capture
+
+The logged-in favorites page was reopened and scrolled to trigger lazy loading. The page rendered 18 non-Baiduspider favorite links. Two links were newly captured beyond the previous third-batch set. These are list-level captures only; the detail pages were not opened in this batch.
+
+- `https://www.douyin.com/video/7647914719190760049`
+  - Favorite-card text: `永远向上，永远都保持着蓬勃的朝气#查尔斯顿舞#拉丁舞`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+
+- `https://www.douyin.com/video/7650483063499099112`
+  - Favorite-card text: `还是喜欢穿短袖的 你们呢 #有你一块才叫世界杯 #粽星引力 #粽星集结世界杯`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+
+## Favorite Link Batch 5 - Deep Visible List Capture
+
+The logged-in favorites list was scrolled through the route container to about 15,657px, expanding the rendered favorite-card set to 222 unique non-Baiduspider video links. 196 links were newly captured beyond the existing ledger. These are list-level captures only; their detail pages were not opened in this batch.
+
+- `https://www.douyin.com/video/7646743124824774857`
+  - Favorite-card text: `26.3万 我再也不吃饱了饭跳舞了#手势舞 #一学就会系列 #慢摇 #浅扭一下`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7647863274012149242`
+  - Favorite-card text: `5.9万 威海，我来啦！ #威海 #北山路 #夏天的味道你感受到了吗`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650818855023682926`
+  - Favorite-card text: `18.2万 头好痒，难道要变成萌妹了 #高阶萌妹成长指南 #翻唱 #酥z摇`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650826531888482127`
+  - Favorite-card text: `1.0万 啦啦啦`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651455935856166498`
+  - Favorite-card text: `2.1万 #嘉桐摇`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7640122807083035816`
+  - Favorite-card text: `1.4万 好尴尬`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651078454226561167`
+  - Favorite-card text: `4.4万`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651170277645679267`
+  - Favorite-card text: `3.4万 #香菜摇`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7647621550540171621`
+  - Favorite-card text: `7.3万 你最近过的还好吗#纯欲#氛围感#软妹`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650353568566585530`
+  - Favorite-card text: `3852 喂喂喂喂～周五啦 #小学老师 #舞蹈老师 #可爱学生 #seetinh`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7652031984579244017`
+  - Favorite-card text: `1.5万 #馍馍摇`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7572498045091230699`
+  - Favorite-card text: `6.0万 哼😾 #女朋友给你拍系列`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7632425629854619057`
+  - Favorite-card text: `16.6万 总要做一回书里的国风女子#旗袍 #国风古韵`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651201674636239589`
+  - Favorite-card text: `1.7万 #纯御姐风 #大长腿沙发 #高跟脚 #女人感 #御姐ootd穿搭`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7628888640378466737`
+  - Favorite-card text: `5181 🉐好好练了 真小了#瑜伽裤#健身日常 #浅跳一下 #慢摇 @DOU+小助手 @抖音小助手`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7623787981182957491`
+  - Favorite-card text: `5022 喜欢坏女人？那我只能本色出演啦#瑜伽裤 #浅跳一下 #慢摇 #扭一扭 @DOU+小助手 @抖音小助手`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651998491972179310`
+  - Favorite-card text: `1849 嘻嘻不嘻嘻#瑜伽裤 #浅跳一下 #慢摇 @DOU+小助手 @抖音小助手`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7643774690675273210`
+  - Favorite-card text: `8.5万 随手一拍`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7641181066178565371`
+  - Favorite-card text: `6.9万 你是不是有点得意忘形了`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648201209009960434`
+  - Favorite-card text: `6384 #卡点`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7638652882954510565`
+  - Favorite-card text: `1156 可以的可以！`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7643386445961603058`
+  - Favorite-card text: `2120 叫哥哥 #唉 #康复运动 #日常分享`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7644033760112329457`
+  - Favorite-card text: `1843 我萌不萌#喵喵喵`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7652021458453442661`
+  - Favorite-card text: `469 想一个盼 #小粉裙 #黑长直`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7644418445179131371`
+  - Favorite-card text: `3.7万 当别人给了你左脸一巴掌 你就右脸迎上去 #哭鼻子大王`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7645536315815103914`
+  - Favorite-card text: `9211 我的汗掉地上了 帮我捡一下 #哭鼻子大王`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650779117436972265`
+  - Favorite-card text: `1.2万 下午好 不好也下午了 #哭鼻子大王`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649835023817797346`
+  - Favorite-card text: `5.2万 歪歪歪`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650820470774501350`
+  - Favorite-card text: `46.7万 红色高跟鞋～#173的女生`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649371207947834186`
+  - Favorite-card text: `1.2万 已进入不知道拍什么的阶段 #香菜摇 #香菜摇5 #抖音潮流舞蹈大赛 #fyp`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650448782194562664`
+  - Favorite-card text: `1354`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651559971989758185`
+  - Favorite-card text: `7462 今天又是充满希望的一天！ #yu季摇`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7629377034096085369`
+  - Favorite-card text: `8884 @成都水妹`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651929291878716645`
+  - Favorite-card text: `3538`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651983451381590267`
+  - Favorite-card text: `283 #包臀裙穿搭 #随便摇`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650828817892262010`
+  - Favorite-card text: `29.2万 栗（御姐版）`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651880441549194714`
+  - Favorite-card text: `671 甜过初恋的少女感#大长腿 #清纯甜美 #肤白貌美显气质`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651545938398083493`
+  - Favorite-card text: `4.8万 蒟蒻果冻好吃吗`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7618007304873846178`
+  - Favorite-card text: `4.7万 #高尔夫舞 好魔性的舞蹈`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7652001516861818752`
+  - Favorite-card text: `2.1万 我真的生气了😡`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651616121481913768`
+  - Favorite-card text: `5.7万 吼吼 …？`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651854116844004194`
+  - Favorite-card text: `1.0万 人间琴悠扬 姑娘把谁记心上 #旗袍`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651625323038128611`
+  - Favorite-card text: `600 #哇咔哇咔杀回来了 #长寿山 #长寿山风情古镇 #郑州周边一日游推荐 #暑假嗨玩计划`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650689907635223674`
+  - Favorite-card text: `1.8万 #后裔摇`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649348949140306533`
+  - Favorite-card text: `34.7万 我真的很有天赋吗`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651944834064415717`
+  - Favorite-card text: `18.2万 好久不见 想我没`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651893295913162874`
+  - Favorite-card text: `12.6万 🫡 #抖音潮流舞蹈大赛 #后裔摇 #NNUNA #盛夏出游必备穿搭清单 #夏天的味道`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651983466522925946`
+  - Favorite-card text: `586 库存一个 #babe #泫雅 #kpop #翻跳`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651961507085383251`
+  - Favorite-card text: `242 变ip中 #恋爱的条件 #kpop #抖音潮流舞蹈大赛`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651634916291634624`
+  - Favorite-card text: `7239 bgm我喜欢 #肉肉女生穿搭`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651926909139733903`
+  - Favorite-card text: `4.4万 🍧`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651915844188010417`
+  - Favorite-card text: `8097`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651984951987408290`
+  - Favorite-card text: `2167 #你要如何抵抗我 #丰满型身材的活力穿搭 #fyp#越南鼓卡点舞`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651838454120671208`
+  - Favorite-card text: `36.4万 不是说讨厌我吗 靠近你怎么还闭眼了`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7640780343427598720`
+  - Favorite-card text: `7.9万 围着我转就行了你哪来这么多自己的事要干 #呆呆唯`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649403642902268654`
+  - Favorite-card text: `1154 康复运动#浅跳一下 #扭一扭 #慢摇 @DOU+小助手 @抖音小助手`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650878540858905064`
+  - Favorite-card text: `754 有劲可以抽你#牛仔裤 #mottai舞蹈挑战 #浅跳一下 #慢摇 @DOU+小助手 @抖音小助手`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649750063972305034`
+  - Favorite-card text: `1531 痛 太痛了 可惜我只是一个摇子#瑜伽裤 #浅跳一下 #慢摇 #扭一扭 @DOU+小助手 @抖音小助手`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651811299404451483`
+  - Favorite-card text: `1099 什么呀 不太会#瑜伽裤 #浅跳一下 #慢摇 #扭一扭 @DOU+小助手 @抖音小助手`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7639987732459448251`
+  - Favorite-card text: `2.0万`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651806039825893041`
+  - Favorite-card text: `24.5万 #姐感穿搭 #绝了真好看 #路人视角`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7647169961655691173`
+  - Favorite-card text: `5.7万 骗你的 我说我昨天去看瓦现场 其实是去看兔瓦斯现场🐰 #twice #twice演唱会 #nayeon #林娜琏 #kpop`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650281825012975291`
+  - Favorite-card text: `10.2万 当我在ktv遇到会跳的舞 #rolypoly #tara #抖音精选 #抖音潮流舞蹈大赛`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651838217292991770`
+  - Favorite-card text: `3215 第二集：小说：重生开局揭穿绿茶学姐,超长版新人48小时制作 #ai漫剧#ai短剧#美女#青春校园`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7646403391350017267`
+  - Favorite-card text: `5695 我这样的人 我怎么样 我又这样 我又哪样`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651848206909359353`
+  - Favorite-card text: `7299 #ootd女生穿搭御姐`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7642939880879738112`
+  - Favorite-card text: `3377 第59集：做家具 #AI #原创动漫 #漫剧 #创作者中心`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648273046268054838`
+  - Favorite-card text: `845 流落蛮荒沙滩，诡异系统骤然降临 #穿越蛮荒班级求生：全班只有我一个男生 #动漫 #穿越 #蛮荒`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7628881208412747365`
+  - Favorite-card text: `9.6万 @成都水妹`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651536154873334651`
+  - Favorite-card text: `14.2万 过来 躲什么`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7640474553890346899`
+  - Favorite-card text: `2.7万 网恋真的会有结果吗？`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7643951972386701819`
+  - Favorite-card text: `20.7万 笑一个#旗袍美学`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7647868419564570106`
+  - Favorite-card text: `21.5万 本来想好好拍一个的#旗袍新中式 #旗袍 #随拍`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651127255950819557`
+  - Favorite-card text: `10.7万 冒雨拍的T T 鞋带滑掉五次 #嘉桐摇`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650348117602110726`
+  - Favorite-card text: `2655 我在冰封末世开车 第一集来啦！希望喜欢~#AIGC#原创动画`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650099065455388773`
+  - Favorite-card text: `7673 #纯御风 #裸色露趾凉鞋 #御姐ootd穿搭 #ootd女生穿搭御姐`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7647106995133625713`
+  - Favorite-card text: `1.4万 你在我眼里真的很特别#ootd街拍 #女人味`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650809803862731129`
+  - Favorite-card text: `5415 医生说我低血糖得多听甜言蜜语#街拍 #女人味`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649235178368316345`
+  - Favorite-card text: `8544 #我要上热门 #美女 #穿搭 #大长腿 #路人视角 @DOU+上热门`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651455216583221942`
+  - Favorite-card text: `8025 新组合来了@元子 #甜御双修 #口哨舞 #摇子上线`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7638891467231139398`
+  - Favorite-card text: `6187 宝宝 文案甜还是我甜啊^>⸝⸝⸝⸝<^ #大长腿 #177 #模特 #夏天穿搭`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650094921047993445`
+  - Favorite-card text: `10.2万 我一般下午出现 我怕你早晚爱上我 #手势舞 #fyp`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651578129694548090`
+  - Favorite-card text: `13.0万 没有感情的更新机器`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651570670760906633`
+  - Favorite-card text: `3074 my legs#嘉彤摇`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651611259351700598`
+  - Favorite-card text: `3.9万 做你的御姐 #剧情#我的渴望自带bgm#生活 #搞笑`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650440636915637219`
+  - Favorite-card text: `1.0万`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651575839599424505`
+  - Favorite-card text: `1.0万 快变回去啊 #亡命摇 #变装`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651565658636288366`
+  - Favorite-card text: `948 够味 #街拍美女 #女人味`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649602426052820581`
+  - Favorite-card text: `5507 最后我笑是因为一个小朋友错了动作然后她把嘴巴张得老大了！ 太可爱噜#哇咔哇咔杀回来了 #世界杯 #小学老师 #舞蹈老师 #可爱学生`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7646999968951510181`
+  - Favorite-card text: `9.2万 带我可爱崽跳快乐舞啦！ #星游记 #好人游 #小学老师 #舞蹈老师 #星游记舞蹈挑战`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7631471356673327473`
+  - Favorite-card text: `4.6万 我很难忘 对不对`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651776826633987563`
+  - Favorite-card text: `共创 4.6万 短剧界最不协调和最协调的两个人又来了 #都钊 #高子怡 #江城第一纨绔 #新剧来袭 #内马尔`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7628519739736581056`
+  - Favorite-card text: `1.9万 开始考虑值不值得的时候已经不值得了 #穿搭 #ootd穿搭 #今天穿什么 #姐系穿搭 #随性chill`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651487555653752485`
+  - Favorite-card text: `1393 one summer night #穿搭 #穿搭ootd #今天穿什么 #ootd`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651568524520052618`
+  - Favorite-card text: `878 围着我转就行了 你自己哪来那么多事#旗袍美学 #御姐`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651123067062085754`
+  - Favorite-card text: `8.2万 说了我是老师你们还不信 #小学老师 #舞蹈老师 #反差 #上下班两幅面孔`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7646347095633703537`
+  - Favorite-card text: `3858 今天过冬啦#卡点舞 #扭一扭#亮世秋`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650505292710623195`
+  - Favorite-card text: `2975 修补我的大门牙 #后裔舞 #扭一扭 #wayway #卡点舞`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651594083512653641`
+  - Favorite-card text: `941 一二三四 #tll摇3 #卡点舞`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651709946346572386`
+  - Favorite-card text: `1123`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651634180796037096`
+  - Favorite-card text: `2116 FAVYALA原创音乐#臀部训练 #fyp #正常展示身材`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650090903239946161`
+  - Favorite-card text: `4.6万 #浅跳一下 #扭一扭 #卡点舞 #西米摇`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648237464725564913`
+  - Favorite-card text: `2.9万 动人的天籁#阿德摇#简单易学 #我听见你心中动人的天籁`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7651486417788358053`
+  - Favorite-card text: `共创 19.5万`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7642374355754254052`
+  - Favorite-card text: `2.2万`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650723223102308581`
+  - Favorite-card text: `2.5万 再一次！#香菜摇5 #emergency #卡点舞 #抖音潮流舞蹈大赛`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650753739800313508`
+  - Favorite-card text: `4.1万 没错，又是我#后裔摇 #抖音潮流舞蹈大赛 #青年创作者成长计划 #抖音时尚设计师大赛#Z世代的设计狠狠击中我的审美`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649322268313827554`
+  - Favorite-card text: `7.2万 #星奇摇`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650020438730451880`
+  - Favorite-card text: `345 太适合晒美甲的手势舞 #lemonade #aespa #lemonade手势舞`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650127458797307304`
+  - Favorite-card text: `1382 #弯弯弯 下一代天后`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650107073834297576`
+  - Favorite-card text: `13.3万 🤓`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650078099288662671`
+  - Favorite-card text: `772 来啦~ #手势舞 #潮汕女孩 #性感小黄裙`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7646405380789324678`
+  - Favorite-card text: `547 不忍心怪你对我太独特#嘉桐摇 #卡点舞`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7640084132056326757`
+  - Favorite-card text: `4671 今天早一点#嘉桐摇 #浅跳一下`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648975153972370368`
+  - Favorite-card text: `3437 能不能再爱我一遍～#宋雨琦进行曲`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7640856083833620965`
+  - Favorite-card text: `1.8万 防晒衣+1#瓜蛋摇#catsstac`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650154172435732131`
+  - Favorite-card text: `59.1万 栗（邪恶版）`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650141299048687796`
+  - Favorite-card text: `1687 奖励你一巴掌#小黑裙 #抹胸穿搭 #ootd女生穿搭御姐 #运镜`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650071491044995322`
+  - Favorite-card text: `4.5万 脸红什么呀哥哥`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650012877898337979`
+  - Favorite-card text: `2023 是在骂我吗 听不懂 感觉像在撒娇 #甜美 #萌脸`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650114021430432411`
+  - Favorite-card text: `4221 一想到你就…#星奇摇 #沦陷 #卡点舞`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650120051136089253`
+  - Favorite-card text: `1141 猜猜主播今天为什么戴帽子😜#Amazing可爱手势舞`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7650056756806976443`
+  - Favorite-card text: `1314`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7637354488143208571`
+  - Favorite-card text: `1477 所有人…感受#酒店拍照姿势 #女警#制服 #姐姐`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649730884405060287`
+  - Favorite-card text: `2.9万 妙哉妙哉～@赵兰君💦 #亲子互动 #健身 #父女日常 #赵兰君 #邓威`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649771969377787721`
+  - Favorite-card text: `5144 #羊呼呼露露 #路人视角 #白马舞蹈 #舞蹈#羊呼呼跳舞女孩 这个视角好看嘛`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649679878774212712`
+  - Favorite-card text: `627 挑战回复所有评论 #手势舞 #女大学生`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7643314403241562737`
+  - Favorite-card text: `39.3万 爱上自己的那天 人生才刚刚开始 #timelessstudio #金敏智`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649705222340390779`
+  - Favorite-card text: `514 最近很忙，忙着体验新生活~#后裔摇 #后裔摇舞蹈挑战 #卡点舞 #抖音潮流舞蹈地图 #辣妹舞蹈`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649735690239061413`
+  - Favorite-card text: `6132 Let’s GO👊🏻 #青苹果摇2 #0123start #卡点舞 #推给女生 #抖音潮流舞蹈大赛`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648946815471157349`
+  - Favorite-card text: `4.9万 雨中我燃一束挽歌 #下完这场雨 #下完这场雨翻唱 #后弦 #翻唱 #詹舒雯`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649603691213645430`
+  - Favorite-card text: `3456 谁发现有什么不一样了？#wlw #瓜蛋摇 #慢摇 #翻跳 #fyp`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649644372870566641`
+  - Favorite-card text: `3362 这唱的啥听不懂`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649678237538251249`
+  - Favorite-card text: `865 那个感觉回来了 #创作灵感 #MINJU2026了还在星奇摇 #星奇摇 #沦陷dj版舞蹈挑战 #慢摇`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649643889242421177`
+  - Favorite-card text: `6565 好荔枝不挡道！ #长腿欧尼 #177 #模特`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649623041068440953`
+  - Favorite-card text: `8.4万 #广西运镜`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649659252697713317`
+  - Favorite-card text: `1687 摇的摇的`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649714478914107771`
+  - Favorite-card text: `1511 动作已经刻在骨子里了`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649707613785298149`
+  - Favorite-card text: `325 你说我可爱 其实是可爱我了吧 #ootd #fyp #御姐 #随拍`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7642310482951630010`
+  - Favorite-card text: `4.3万 唱歌好听和长得好看哪个更吸引你～#答对了`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649540656919314171`
+  - Favorite-card text: `478 别叫我宝宝，你知道的，我最吃这一套#梅西6到飞起 #慢摇 #我睡不着的时候`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7624968507981236219`
+  - Favorite-card text: `2871 这是好事啊！！！ #峰哥亡命天涯 #峰哥`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649571453088772537`
+  - Favorite-card text: `3608 尝试一下正装 #伯德小姐 #一张照片 #面试穿搭`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649314949415907429`
+  - Favorite-card text: `11.4万 这种冥冥中注定的cp最好吃了嘿嘿嘿 #网剧安全距离 #安全距离国安版史密斯夫妇#网剧安全距离开播`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649063745016174053`
+  - Favorite-card text: `3042 误闯天家#thx #泰国女团`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7565573316267822393`
+  - Favorite-card text: `104.4万 素颜给的松弛感 #海岛穿搭#帕劳`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7640057899923209295`
+  - Favorite-card text: `11.4万 这一刻`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649242577602759750`
+  - Favorite-card text: `17.1万 waywayway #后裔摇 #卡点舞`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649315115020502449`
+  - Favorite-card text: `1.1万 好玩 下次还来 #射击#印尼#shootingday`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649280065163542459`
+  - Favorite-card text: `1.9万 连你也会为我着迷么 #御姐风细跟高跟鞋太绝了`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648327565061476347`
+  - Favorite-card text: `4506 爱你呦#亡命天涯峰哥@峰哥亡命天涯`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649214005991730298`
+  - Favorite-card text: `8673 姐感黑裙`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649382366766461614`
+  - Favorite-card text: `1235 别对不起，真没关系，我换一个就好了 #177 #高个子女生 #健身 #大长腿`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648298379293825914`
+  - Favorite-card text: `9725 想你`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648845974488041716`
+  - Favorite-card text: `1.2万`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7647807362132229352`
+  - Favorite-card text: `11.8万 今天吃放纵餐～`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7647118162455087778`
+  - Favorite-card text: `10.7万 没什么好说的`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7647591425723470201`
+  - Favorite-card text: `2.5万 穿黑旗袍的女生很难不美 #黑色旗袍 #旗袍新中式`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648731307460240339`
+  - Favorite-card text: `20.9万 #闺蜜比基尼 #泳池 #泳装穿搭`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648861632852778579`
+  - Favorite-card text: `1580 #美拍摄影会 #美时美刻美拍`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7644587824155829925`
+  - Favorite-card text: `3.4万 Ok everybody 所有人 感受 #甜御组合 #亲姐妹合拍`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7645997088648224227`
+  - Favorite-card text: `3280 性格很好 脾气很坏 #173 #水瓶座`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648955448548276456`
+  - Favorite-card text: `3.0万 等麦当当出餐的功夫拍了视频 #微胖本命 #173`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648995460523316581`
+  - Favorite-card text: `1714 暂时不准备剪短发#短发aoa #aoa #随机舞蹈 #腿精 #性感可爱`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7649007128871670010`
+  - Favorite-card text: `393 拿不下你 心好痛`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648982701143982822`
+  - Favorite-card text: `1.0万 假装摔倒吓死你#后羿舞 #卡点#牛仔`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648972372682921423`
+  - Favorite-card text: `13.1万 🤓`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648847914898809969`
+  - Favorite-card text: `5374 这又是什么摇 #后裔舞 #后裔摇 #微胖女生`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648030271560909737`
+  - Favorite-card text: `2.5万 巨蟹座出片的小秘密～ #街拍 #广州街拍 #搭讪陌生人拍照 #巨蟹座拍照`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648730540387978531`
+  - Favorite-card text: `8.4万 小刘2/上海街拍 #摄影约拍 #街头摄影 #给陌生人拍照 #时尚街拍 #姬豪`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648873722165880249`
+  - Favorite-card text: `2.9万`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648632892344808884`
+  - Favorite-card text: `1.2万 身材也是一种天赋`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648890710821012347`
+  - Favorite-card text: `575 明明对你念念不忘`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648891954886153722`
+  - Favorite-card text: `539 就这个劲劲的爽🔥 终于跳了吻妹的《who is she》，和悉大哈利波特楼适配度好高！ #kpop翻跳 #路演直拍 #kissoflife #whoisshe`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648958711004514751`
+  - Favorite-card text: `3720 淡淡的 #ootd #fyp`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7647434352581756025`
+  - Favorite-card text: `9.3万 今天依旧做作哈哈哈 #后裔舞 #简单易学 #舞蹈 #抖音潮流舞蹈大赛 #甜辣颖`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7647504038502519458`
+  - Favorite-card text: `8.3万 今夕是何年`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648661891859208867`
+  - Favorite-card text: `15.0万 嘻嘻`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648579114521612522`
+  - Favorite-card text: `7.8万 对面楼上跳舞的小姐姐不知道玻璃透光吗.#大长腿`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7647007908149229029`
+  - Favorite-card text: `517 #无法拒绝温柔感小裙子 #日常分享 #卡点舞 夏天来啦☀️`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7645095916039528182`
+  - Favorite-card text: `3921 下次闺蜜聚会我就这么跳 #后裔摇 #后裔摇舞蹈挑战 #卡点舞`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7646965284066611953`
+  - Favorite-card text: `1148 所有人 感受#御姐ootd`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648661415473030516`
+  - Favorite-card text: `3664 1234#黑色紧身套装 #纯欲紧身短袖 #黑色紧身短裤`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7646745197699301258`
+  - Favorite-card text: `1.9万 你说讨厌我 是怪我了还是想我了`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7640441891364591974`
+  - Favorite-card text: `1.2万 所有人给我感受！`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7639700508303949026`
+  - Favorite-card text: `2.3万 谁能看到第15秒 #泪痕摇`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648667274136877745`
+  - Favorite-card text: `1.1万 所有人 感受！#长腿欧尼`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7643657805606397915`
+  - Favorite-card text: `1173 评论区请打分 A 像触电 B 像作法 C像复健 #抖音潮流舞蹈地图 #舞蹈直拍 #whoisshe #kissoflife`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7647723493564596294`
+  - Favorite-card text: `1.5万 啊`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7637701703420392057`
+  - Favorite-card text: `13.1万 #真实生活分享计划 #黑色紧身套装`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648507659470080692`
+  - Favorite-card text: `9615 拥抱我直至肋骨断裂#御姐#婉婉 #ootd`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7631102206549514868`
+  - Favorite-card text: `19.2万 #3蓝摇 #nextlevel`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7630813188544247142`
+  - Favorite-card text: `4.0万 爱上姐姐 完全是姐姐我的错呀 #卡点舞 #亡命摇 #慢摇`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648583226299161579`
+  - Favorite-card text: `2.9万 歪歪歪 #金牛座`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7648609642029877888`
+  - Favorite-card text: `2.6万 猜猜主包今天拉了多少的长腿#后羿摇 #慢摇`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+- `https://www.douyin.com/video/7643731566824901233`
+  - Favorite-card text: `2.0万 我又拍抖音啦～#健身女孩 #揽胜进行曲`
+  - Detail status: not opened in this batch.
+  - License signals observed: none.
+
+## Favorite Link Batch 6 - Detail Upgrade Audit
+
+Ten previously list-only favorite videos were opened directly on their detail pages. All ten loaded a video element with visible duration metadata. None displayed explicit soundtrack ownership, redistribution permission, or commercial-use authorization, so directly reusable audio remains `0`.
+
+- `https://www.douyin.com/video/7647914719190760049`
+  - Title: `永远向上，永远都保持着蓬勃的朝气#查尔斯顿舞#拉丁舞 - 抖音`
+  - Duration observed: `21.2s`
+  - Music/design signals: `音乐, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650483063499099112`
+  - Title: `还是喜欢穿短袖的 你们呢 #有你一块才叫世界杯 #粽星引力 #粽星集结世界杯 - 抖音`
+  - Duration observed: `15.7s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7646743124824774857`
+  - Title: `我再也不吃饱了饭跳舞了#手势舞 #一学就会系列 #慢摇 #浅扭一下 - 抖音`
+  - Duration observed: `12.7s`
+  - Music/design signals: `DJ, dj, 卡点, 慢摇, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7647863274012149242`
+  - Title: `威海，我来啦！ #威海 #北山路 #夏天的味道你感受到了吗 - 抖音`
+  - Duration observed: `8.5s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650818855023682926`
+  - Title: `头好痒，难道要变成萌妹了 #高阶萌妹成长指南 #翻唱 #酥z摇 - 抖音`
+  - Duration observed: `12.1s`
+  - Music/design signals: `翻唱, 卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650826531888482127`
+  - Title: `啦啦啦 - 抖音`
+  - Duration observed: `9.7s`
+  - Music/design signals: `音乐, 卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651455935856166498`
+  - Title: `#嘉桐摇 - 抖音`
+  - Duration observed: `9.1s`
+  - Music/design signals: `卡点, 慢摇, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7640122807083035816`
+  - Title: `好尴尬 - 抖音`
+  - Duration observed: `8.8s`
+  - Music/design signals: `卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651078454226561167`
+  - Title: `1.68kg在抖音记录美好生活20260614 - 抖音`
+  - Duration observed: `18.1s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651170277645679267`
+  - Title: `#香菜摇 - 抖音`
+  - Duration observed: `7.3s`
+  - Music/design signals: `卡点, 慢摇, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+
+## Favorite Link Batch 7 - Detail Upgrade Audit
+
+Another ten previously list-only favorite videos were opened directly on their detail pages. All ten loaded a video element with visible duration metadata. None displayed explicit soundtrack ownership, redistribution permission, or commercial-use authorization, so directly reusable audio remains `0`.
+
+- `https://www.douyin.com/video/7647621550540171621`
+  - Title: `你最近过的还好吗#纯欲#氛围感#软妹 - 抖音`
+  - Duration observed: `8.9s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650353568566585530`
+  - Title: `喂喂喂喂～周五啦 #小学老师 #舞蹈老师 #可爱学生 #seetinh - 抖音`
+  - Duration observed: `17.2s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7652031984579244017`
+  - Title: `#馍馍摇 - 抖音`
+  - Duration observed: `18.2s`
+  - Music/design signals: `音乐, 卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7572498045091230699`
+  - Title: `哼😾 #女朋友给你拍系列 - 抖音`
+  - Duration observed: `9.5s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7632425629854619057`
+  - Title: `总要做一回书里的国风女子#旗袍 #国风古韵 - 抖音`
+  - Duration observed: `10.2s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651201674636239589`
+  - Title: `#纯御姐风 #大长腿沙发 #高跟脚 #女人感 #御姐ootd穿搭 - 抖音`
+  - Duration observed: `7s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7628888640378466737`
+  - Title: `🉐好好练了 真小了#瑜伽裤#健身日常 #浅跳一下 #慢摇 @DOU+小助手 @抖音小助手 - 抖音`
+  - Duration observed: `9.7s`
+  - Music/design signals: `卡点, 慢摇, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7623787981182957491`
+  - Title: `喜欢坏女人？那我只能本色出演啦#瑜伽裤 #浅跳一下 #慢摇 #扭一扭 @DOU+小助手 @抖音小助手 - 抖音`
+  - Duration observed: `6.5s`
+  - Music/design signals: `卡点, 慢摇, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651998491972179310`
+  - Title: `嘻嘻不嘻嘻#瑜伽裤 #浅跳一下 #慢摇 @DOU+小助手 @抖音小助手 - 抖音`
+  - Duration observed: `10.9s`
+  - Music/design signals: `音乐, 卡点, 慢摇, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7643774690675273210`
+  - Title: `随手一拍 - 抖音`
+  - Duration observed: `8.6s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+
+## Favorite Link Batch 8 - Detail Upgrade Audit
+
+Another ten previously list-only favorite videos were opened directly on their detail pages. All ten loaded a video element with visible duration metadata. None displayed explicit soundtrack ownership, redistribution permission, or commercial-use authorization, so directly reusable audio remains `0`.
+
+- `https://www.douyin.com/video/7641181066178565371`
+  - Title: `你是不是有点得意忘形了 - 抖音`
+  - Duration observed: `9.5s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648201209009960434`
+  - Title: `#卡点 - 抖音`
+  - Duration observed: `11.4s`
+  - Music/design signals: `音乐, 卡点`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7638652882954510565`
+  - Title: `可以的可以！ - 抖音`
+  - Duration observed: `13.9s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7643386445961603058`
+  - Title: `叫哥哥 #唉 #康复运动 #日常分享 - 抖音`
+  - Duration observed: `15s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7644033760112329457`
+  - Title: `我萌不萌#喵喵喵 - 抖音`
+  - Duration observed: `8.8s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7652021458453442661`
+  - Title: `想一个盼 #小粉裙 #黑长直 - 抖音`
+  - Duration observed: `15.1s`
+  - Music/design signals: `音乐, DJ, dj, 卡点, 慢摇, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7644418445179131371`
+  - Title: `当别人给了你左脸一巴掌 你就右脸迎上去 #哭鼻子大王 - 抖音`
+  - Duration observed: `14.2s`
+  - Music/design signals: `卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7645536315815103914`
+  - Title: `我的汗掉地上了 帮我捡一下 #哭鼻子大王 - 抖音`
+  - Duration observed: `13.4s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650779117436972265`
+  - Title: `下午好 不好也下午了 #哭鼻子大王 - 抖音`
+  - Duration observed: `11.1s`
+  - Music/design signals: `音乐, 卡点`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649835023817797346`
+  - Title: `歪歪歪 - 抖音`
+  - Duration observed: `11.7s`
+  - Music/design signals: `卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+
+## Favorite Link Batch 9 - Detail Upgrade Audit
+
+15 previously list-only favorite videos were opened directly on their detail pages. 15 loaded a video element with visible duration metadata. None displayed explicit soundtrack ownership, redistribution permission, or commercial-use authorization, so directly reusable audio remains `0`.
+
+- `https://www.douyin.com/video/7650820470774501350`
+  - Title: `红色高跟鞋～#173的女生 - 抖音`
+  - Duration observed: `6.3s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649371207947834186`
+  - Title: `已进入不知道拍什么的阶段 #香菜摇 #香菜摇5 #抖音潮流舞蹈大赛 #fyp - 抖音`
+  - Duration observed: `16.2s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650448782194562664`
+  - Title: `微微得到在抖音记录美好生活20260612 - 抖音`
+  - Duration observed: `16.1s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651559971989758185`
+  - Title: `今天又是充满希望的一天！ #yu季摇 - 抖音`
+  - Duration observed: `8.2s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7629377034096085369`
+  - Title: `@成都水妹 - 抖音`
+  - Duration observed: `5s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651929291878716645`
+  - Title: `瑾禾.在抖音记录美好生活20260616 - 抖音`
+  - Duration observed: `12.8s`
+  - Music/design signals: `音乐, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651983451381590267`
+  - Title: `#包臀裙穿搭 #随便摇 - 抖音`
+  - Duration observed: `21.2s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650828817892262010`
+  - Title: `栗（御姐版） - 抖音`
+  - Duration observed: `10.4s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651880441549194714`
+  - Title: `甜过初恋的少女感#大长腿 #清纯甜美 #肤白貌美显气质 - 抖音`
+  - Duration observed: `21s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651545938398083493`
+  - Title: `蒟蒻果冻好吃吗 - 抖音`
+  - Duration observed: `5.3s`
+  - Music/design signals: `音乐, DJ, dj`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7618007304873846178`
+  - Title: `#高尔夫舞 好魔性的舞蹈 - 抖音`
+  - Duration observed: `13.4s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7652001516861818752`
+  - Title: `我真的生气了😡 - 抖音`
+  - Duration observed: `8.4s`
+  - Music/design signals: `原声`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651616121481913768`
+  - Title: `吼吼 …？ - 抖音`
+  - Duration observed: `8.9s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651854116844004194`
+  - Title: `人间琴悠扬 姑娘把谁记心上 #旗袍 - 抖音`
+  - Duration observed: `9.5s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651625323038128611`
+  - Title: `#哇咔哇咔杀回来了 #长寿山 #长寿山风情古镇 #郑州周边一日游推荐 #暑假嗨玩计划 - 抖音`
+  - Duration observed: `8.5s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+
+## Favorite Link Batch 10 - Detail Upgrade Audit
+
+15 previously list-only favorite videos were opened directly on their detail pages. 15 loaded a video element with visible duration metadata. None displayed explicit soundtrack ownership, redistribution permission, or commercial-use authorization, so directly reusable audio remains `0`.
+
+- `https://www.douyin.com/video/7650689907635223674`
+  - Title: `#后裔摇 - 抖音`
+  - Duration observed: `11.1s`
+  - Music/design signals: `DJ, dj, 卡点, 慢摇, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649348949140306533`
+  - Title: `我真的很有天赋吗 - 抖音`
+  - Duration observed: `7.3s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651944834064415717`
+  - Title: `好久不见 想我没 - 抖音`
+  - Duration observed: `11.9s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651893295913162874`
+  - Title: `🫡 #抖音潮流舞蹈大赛 #后裔摇 #NNUNA #盛夏出游必备穿搭清单 #夏天的味道 - 抖音`
+  - Duration observed: `10.6s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651983466522925946`
+  - Title: `库存一个 #babe #泫雅 #kpop #翻跳 - 抖音`
+  - Duration observed: `18.7s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651961507085383251`
+  - Title: `变ip中 #恋爱的条件 #kpop #抖音潮流舞蹈大赛 - 抖音`
+  - Duration observed: `17s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651634916291634624`
+  - Title: `bgm我喜欢 #肉肉女生穿搭 - 抖音`
+  - Duration observed: `15s`
+  - Music/design signals: `BGM, bgm`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651926909139733903`
+  - Title: `🍧 - 抖音`
+  - Duration observed: `8.2s`
+  - Music/design signals: `慢摇, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651915844188010417`
+  - Title: `猪猪宝～在抖音记录美好生活20260616 - 抖音`
+  - Duration observed: `11.4s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651984951987408290`
+  - Title: `#你要如何抵抗我 #丰满型身材的活力穿搭 #fyp#越南鼓卡点舞 - 抖音`
+  - Duration observed: `14.2s`
+  - Music/design signals: `卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651838454120671208`
+  - Title: `不是说讨厌我吗 靠近你怎么还闭眼了 - 抖音`
+  - Duration observed: `11.5s`
+  - Music/design signals: `音乐, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7640780343427598720`
+  - Title: `围着我转就行了你哪来这么多自己的事要干 #呆呆唯 - 抖音`
+  - Duration observed: `6.9s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649403642902268654`
+  - Title: `康复运动#浅跳一下 #扭一扭 #慢摇 @DOU+小助手 @抖音小助手 - 抖音`
+  - Duration observed: `11.2s`
+  - Music/design signals: `慢摇`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650878540858905064`
+  - Title: `有劲可以抽你#牛仔裤 #mottai舞蹈挑战 #浅跳一下 #慢摇 @DOU+小助手 @抖音小助手 - 抖音`
+  - Duration observed: `15s`
+  - Music/design signals: `慢摇, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649750063972305034`
+  - Title: `痛 太痛了 可惜我只是一个摇子#瑜伽裤 #浅跳一下 #慢摇 #扭一扭 @DOU+小助手 @抖音小助手 - 抖音`
+  - Duration observed: `15s`
+  - Music/design signals: `音乐, 慢摇, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+
+## Favorite Link Batch 11 - Detail Upgrade Audit
+
+15 previously list-only favorite videos were opened directly on their detail pages. 15 loaded a video element with visible duration metadata. None displayed explicit soundtrack ownership, redistribution permission, or commercial-use authorization, so directly reusable audio remains `0`.
+
+- `https://www.douyin.com/video/7651811299404451483`
+  - Title: `什么呀 不太会#瑜伽裤 #浅跳一下 #慢摇 #扭一扭 @DOU+小助手 @抖音小助手 - 抖音`
+  - Duration observed: `15s`
+  - Music/design signals: `慢摇, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7639987732459448251`
+  - Title: `橘子🍊在抖音记录美好生活20260515 - 抖音`
+  - Duration observed: `14.8s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651806039825893041`
+  - Title: `#姐感穿搭 #绝了真好看 #路人视角 - 抖音`
+  - Duration observed: `7.4s`
+  - Music/design signals: `音乐, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7647169961655691173`
+  - Title: `骗你的 我说我昨天去看瓦现场 其实是去看兔瓦斯现场🐰 #twice #twice演唱会 #nayeon #林娜琏 #kpop - 抖音`
+  - Duration observed: `30.4s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650281825012975291`
+  - Title: `当我在ktv遇到会跳的舞 #rolypoly #tara #抖音精选 #抖音潮流舞蹈大赛 - 抖音`
+  - Duration observed: `28.5s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651838217292991770`
+  - Title: `第二集：小说：重生开局揭穿绿茶学姐,超长版新人48小时制作 #ai漫剧#ai短剧#美女#青春校园 - 抖音`
+  - Duration observed: `148.8s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7646403391350017267`
+  - Title: `我这样的人 我怎么样 我又这样 我又哪样 - 抖音`
+  - Duration observed: `11.5s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651848206909359353`
+  - Title: `#ootd女生穿搭御姐 - 抖音`
+  - Duration observed: `11.5s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7642939880879738112`
+  - Title: `第59集：做家具 #AI #原创动漫 #漫剧 #创作者中心 - 抖音`
+  - Duration observed: `157.4s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648273046268054838`
+  - Title: `流落蛮荒沙滩，诡异系统骤然降临 #穿越蛮荒班级求生：全班只有我一个男生 #动漫 #穿越 #蛮荒 - 抖音`
+  - Duration observed: `128.9s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7628881208412747365`
+  - Title: `@成都水妹 - 抖音`
+  - Duration observed: `5.1s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651536154873334651`
+  - Title: `过来 躲什么 - 抖音`
+  - Duration observed: `10.1s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7640474553890346899`
+  - Title: `网恋真的会有结果吗？ - 抖音`
+  - Duration observed: `11.6s`
+  - Music/design signals: `翻唱`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7643951972386701819`
+  - Title: `笑一个#旗袍美学 - 抖音`
+  - Duration observed: `7.3s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7647868419564570106`
+  - Title: `本来想好好拍一个的#旗袍新中式 #旗袍 #随拍 - 抖音`
+  - Duration observed: `7.8s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+
+## Favorite Link Batch 12 - Detail Upgrade Audit
+
+15 previously list-only favorite videos were opened directly on their detail pages. 15 loaded a video element with visible duration metadata. None displayed explicit soundtrack ownership, redistribution permission, or commercial-use authorization, so directly reusable audio remains `0`.
+
+- `https://www.douyin.com/video/7651127255950819557`
+  - Title: `冒雨拍的T T 鞋带滑掉五次 #嘉桐摇 - 抖音`
+  - Duration observed: `11.4s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650348117602110726`
+  - Title: `我在冰封末世开车 第一集来啦！希望喜欢~#AIGC#原创动画 - 抖音`
+  - Duration observed: `79s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650099065455388773`
+  - Title: `#纯御风 #裸色露趾凉鞋 #御姐ootd穿搭 #ootd女生穿搭御姐 - 抖音`
+  - Duration observed: `5.1s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7647106995133625713`
+  - Title: `你在我眼里真的很特别#ootd街拍 #女人味 - 抖音`
+  - Duration observed: `8.1s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650809803862731129`
+  - Title: `医生说我低血糖得多听甜言蜜语#街拍 #女人味 - 抖音`
+  - Duration observed: `7.5s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649235178368316345`
+  - Title: `#我要上热门 #美女 #穿搭 #大长腿 #路人视角 @DOU+上热门 - 抖音`
+  - Duration observed: `9.1s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651455216583221942`
+  - Title: `新组合来了@元子 #甜御双修 #口哨舞 #摇子上线 - 抖音`
+  - Duration observed: `9.2s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7638891467231139398`
+  - Title: `宝宝 文案甜还是我甜啊^>⸝⸝⸝⸝<^ #大长腿 #177 #模特 #夏天穿搭 - 抖音`
+  - Duration observed: `9.5s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650094921047993445`
+  - Title: `我一般下午出现 我怕你早晚爱上我 #手势舞 #fyp - 抖音`
+  - Duration observed: `17.1s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651578129694548090`
+  - Title: `没有感情的更新机器 - 抖音`
+  - Duration observed: `9.2s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651570670760906633`
+  - Title: `my legs#嘉彤摇 - 抖音`
+  - Duration observed: `14.5s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651611259351700598`
+  - Title: `做你的御姐 #剧情#我的渴望自带bgm#生活 #搞笑 - 抖音`
+  - Duration observed: `62.1s`
+  - Music/design signals: `BGM, bgm`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650440636915637219`
+  - Title: `辣椒虾在抖音记录美好生活20260612 - 抖音`
+  - Duration observed: `7.1s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651575839599424505`
+  - Title: `快变回去啊 #亡命摇 #变装 - 抖音`
+  - Duration observed: `14.6s`
+  - Music/design signals: `翻唱, 卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651565658636288366`
+  - Title: `够味 #街拍美女 #女人味 - 抖音`
+  - Duration observed: `8s`
+  - Music/design signals: `音乐, 翻唱`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+
+## Favorite Link Batch 13 - Detail Upgrade Audit
+
+15 previously list-only favorite videos were opened directly on their detail pages. 15 loaded a video element with visible duration metadata. None displayed explicit soundtrack ownership, redistribution permission, or commercial-use authorization, so directly reusable audio remains `0`.
+
+- `https://www.douyin.com/video/7649602426052820581`
+  - Title: `最后我笑是因为一个小朋友错了动作然后她把嘴巴张得老大了！ 太可爱噜#哇咔哇咔杀回来了 #世界杯 #小学老师 #舞蹈老师 #可爱学生 - 抖音`
+  - Duration observed: `10.9s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7646999968951510181`
+  - Title: `带我可爱崽跳快乐舞啦！ #星游记 #好人游 #小学老师 #舞蹈老师 #星游记舞蹈挑战 - 抖音`
+  - Duration observed: `16s`
+  - Music/design signals: `音乐, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7631471356673327473`
+  - Title: `我很难忘 对不对 - 抖音`
+  - Duration observed: `9.2s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651776826633987563`
+  - Title: `短剧界最不协调和最协调的两个人又来了 #都钊 #高子怡 #江城第一纨绔 #新剧来袭 #内马尔 - 抖音`
+  - Duration observed: `15s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7628519739736581056`
+  - Title: `开始考虑值不值得的时候已经不值得了 #穿搭 #ootd穿搭 #今天穿什么 #姐系穿搭 #随性chill - 抖音`
+  - Duration observed: `6.8s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651487555653752485`
+  - Title: `one summer night #穿搭 #穿搭ootd #今天穿什么 #ootd - 抖音`
+  - Duration observed: `7.5s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651568524520052618`
+  - Title: `围着我转就行了 你自己哪来那么多事#旗袍美学 #御姐 - 抖音`
+  - Duration observed: `9.2s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651123067062085754`
+  - Title: `说了我是老师你们还不信 #小学老师 #舞蹈老师 #反差 #上下班两幅面孔 - 抖音`
+  - Duration observed: `11.8s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7646347095633703537`
+  - Title: `今天过冬啦#卡点舞 #扭一扭#亮世秋 - 抖音`
+  - Duration observed: `11.5s`
+  - Music/design signals: `音乐, 卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650505292710623195`
+  - Title: `修补我的大门牙 #后裔舞 #扭一扭 #wayway #卡点舞 - 抖音`
+  - Duration observed: `10.7s`
+  - Music/design signals: `卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651594083512653641`
+  - Title: `一二三四 #tll摇3 #卡点舞 - 抖音`
+  - Duration observed: `19s`
+  - Music/design signals: `音乐, 卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651709946346572386`
+  - Title: `洁.（6月22日🎂）在抖音记录美好生活20260616 - 抖音`
+  - Duration observed: `12.9s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7651634180796037096`
+  - Title: `FAVYALA原创音乐#臀部训练 #fyp #正常展示身材 - 抖音`
+  - Duration observed: `19s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650090903239946161`
+  - Title: `#浅跳一下 #扭一扭 #卡点舞 #西米摇 - 抖音`
+  - Duration observed: `13.7s`
+  - Music/design signals: `卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648237464725564913`
+  - Title: `动人的天籁#阿德摇#简单易学 #我听见你心中动人的天籁 - 抖音`
+  - Duration observed: `15.2s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+
+## Favorite Link Batch 14 - Detail Upgrade Audit
+
+15 previously list-only favorite videos were opened directly on their detail pages. 15 loaded a video element with visible duration metadata. None displayed explicit soundtrack ownership, redistribution permission, or commercial-use authorization, so directly reusable audio remains `0`.
+
+- `https://www.douyin.com/video/7651486417788358053`
+  - Title: `橘子🍊在抖音记录美好生活20260615 - 抖音`
+  - Duration observed: `11.6s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7642374355754254052`
+  - Title: `不需要姓名在抖音记录美好生活20260521 - 抖音`
+  - Duration observed: `8.2s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650723223102308581`
+  - Title: `再一次！#香菜摇5 #emergency #卡点舞 #抖音潮流舞蹈大赛 - 抖音`
+  - Duration observed: `15.7s`
+  - Music/design signals: `音乐, 卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650753739800313508`
+  - Title: `没错，又是我#后裔摇 #抖音潮流舞蹈大赛 #青年创作者成长计划 #抖音时尚设计师大赛#Z世代的设计狠狠击中我的审美 - 抖音`
+  - Duration observed: `14.2s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649322268313827554`
+  - Title: `#星奇摇 - 抖音`
+  - Duration observed: `20.5s`
+  - Music/design signals: `音乐, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650020438730451880`
+  - Title: `太适合晒美甲的手势舞 #lemonade #aespa #lemonade手势舞 - 抖音`
+  - Duration observed: `13.2s`
+  - Music/design signals: `音乐, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650127458797307304`
+  - Title: `#弯弯弯 下一代天后 - 抖音`
+  - Duration observed: `11.7s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650107073834297576`
+  - Title: `🤓 - 抖音`
+  - Duration observed: `6.9s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650078099288662671`
+  - Title: `来啦~ #手势舞 #潮汕女孩 #性感小黄裙 - 抖音`
+  - Duration observed: `14.5s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7646405380789324678`
+  - Title: `不忍心怪你对我太独特#嘉桐摇 #卡点舞 - 抖音`
+  - Duration observed: `11.2s`
+  - Music/design signals: `卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7640084132056326757`
+  - Title: `今天早一点#嘉桐摇 #浅跳一下 - 抖音`
+  - Duration observed: `10.4s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648975153972370368`
+  - Title: `能不能再爱我一遍～#宋雨琦进行曲 - 抖音`
+  - Duration observed: `12.6s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7640856083833620965`
+  - Title: `防晒衣+1#瓜蛋摇#catsstac - 抖音`
+  - Duration observed: `16.9s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650154172435732131`
+  - Title: `栗（邪恶版） - 抖音`
+  - Duration observed: `9.8s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650141299048687796`
+  - Title: `奖励你一巴掌#小黑裙 #抹胸穿搭 #ootd女生穿搭御姐 #运镜 - 抖音`
+  - Duration observed: `10s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+
+## Favorite Link Batch 15 - Detail Upgrade Audit
+
+15 previously list-only favorite videos were opened directly on their detail pages. 15 loaded a video element with visible duration metadata. None displayed explicit soundtrack ownership, redistribution permission, or commercial-use authorization, so directly reusable audio remains `0`.
+
+- `https://www.douyin.com/video/7650071491044995322`
+  - Title: `脸红什么呀哥哥 - 抖音`
+  - Duration observed: `11.3s`
+  - Music/design signals: `音乐, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650012877898337979`
+  - Title: `是在骂我吗 听不懂 感觉像在撒娇 #甜美 #萌脸 - 抖音`
+  - Duration observed: `9.4s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650114021430432411`
+  - Title: `一想到你就…#星奇摇 #沦陷 #卡点舞 - 抖音`
+  - Duration observed: `23.6s`
+  - Music/design signals: `音乐, DJ, dj, 卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650120051136089253`
+  - Title: `猜猜主播今天为什么戴帽子😜#Amazing可爱手势舞 - 抖音`
+  - Duration observed: `16.7s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7650056756806976443`
+  - Title: `高处不胜寒在抖音记录美好生活20260611 - 抖音`
+  - Duration observed: `10.5s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7637354488143208571`
+  - Title: `所有人…感受#酒店拍照姿势 #女警#制服 #姐姐 - 抖音`
+  - Duration observed: `10.5s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649730884405060287`
+  - Title: `妙哉妙哉～@赵兰君💦 #亲子互动 #健身 #父女日常 #赵兰君 #邓威 - 抖音`
+  - Duration observed: `7.8s`
+  - Music/design signals: `翻唱`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649771969377787721`
+  - Title: `#羊呼呼露露 #路人视角 #白马舞蹈 #舞蹈#羊呼呼跳舞女孩 这个视角好看嘛 - 抖音`
+  - Duration observed: `22.6s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649679878774212712`
+  - Title: `挑战回复所有评论 #手势舞 #女大学生 - 抖音`
+  - Duration observed: `24.9s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7643314403241562737`
+  - Title: `爱上自己的那天 人生才刚刚开始 #timelessstudio #金敏智 - 抖音`
+  - Duration observed: `7.7s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649705222340390779`
+  - Title: `最近很忙，忙着体验新生活~#后裔摇 #后裔摇舞蹈挑战 #卡点舞 #抖音潮流舞蹈地图 #辣妹舞蹈 - 抖音`
+  - Duration observed: `9.5s`
+  - Music/design signals: `卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649735690239061413`
+  - Title: `Let’s GO👊🏻 #青苹果摇2 #0123start #卡点舞 #推给女生 #抖音潮流舞蹈大赛 - 抖音`
+  - Duration observed: `16.6s`
+  - Music/design signals: `音乐, DJ, dj, 卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648946815471157349`
+  - Title: `雨中我燃一束挽歌 #下完这场雨 #下完这场雨翻唱 #后弦 #翻唱 #詹舒雯 - 抖音`
+  - Duration observed: `39.6s`
+  - Music/design signals: `翻唱`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649603691213645430`
+  - Title: `谁发现有什么不一样了？#wlw #瓜蛋摇 #慢摇 #翻跳 #fyp - 抖音`
+  - Duration observed: `18.7s`
+  - Music/design signals: `慢摇, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649644372870566641`
+  - Title: `这唱的啥听不懂 - 抖音`
+  - Duration observed: `10s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+
+## Favorite Link Batch 16 - Detail Upgrade Audit
+
+15 previously list-only favorite videos were opened directly on their detail pages. 15 loaded a video element with visible duration metadata. None displayed explicit soundtrack ownership, redistribution permission, or commercial-use authorization, so directly reusable audio remains `0`.
+
+- `https://www.douyin.com/video/7649678237538251249`
+  - Title: `那个感觉回来了 #创作灵感 #MINJU2026了还在星奇摇 #星奇摇 #沦陷dj版舞蹈挑战 #慢摇 - 抖音`
+  - Duration observed: `25s`
+  - Music/design signals: `音乐, DJ, dj, 慢摇, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649643889242421177`
+  - Title: `好荔枝不挡道！ #长腿欧尼 #177 #模特 - 抖音`
+  - Duration observed: `13.7s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649623041068440953`
+  - Title: `#广西运镜 - 抖音`
+  - Duration observed: `22.2s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649659252697713317`
+  - Title: `摇的摇的 - 抖音`
+  - Duration observed: `7.6s`
+  - Music/design signals: `翻唱`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649714478914107771`
+  - Title: `动作已经刻在骨子里了 - 抖音`
+  - Duration observed: `15.2s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649707613785298149`
+  - Title: `你说我可爱 其实是可爱我了吧 #ootd #fyp #御姐 #随拍 - 抖音`
+  - Duration observed: `8.2s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7642310482951630010`
+  - Title: `唱歌好听和长得好看哪个更吸引你～#答对了 - 抖音`
+  - Duration observed: `19s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649540656919314171`
+  - Title: `别叫我宝宝，你知道的，我最吃这一套#梅西6到飞起 #慢摇 #我睡不着的时候 - 抖音`
+  - Duration observed: `26.4s`
+  - Music/design signals: `慢摇, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7624968507981236219`
+  - Title: `这是好事啊！！！ #峰哥亡命天涯 #峰哥 - 抖音`
+  - Duration observed: `24.2s`
+  - Music/design signals: `音乐, DJ, dj, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649571453088772537`
+  - Title: `尝试一下正装 #伯德小姐 #一张照片 #面试穿搭 - 抖音`
+  - Duration observed: `8.9s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649314949415907429`
+  - Title: `这种冥冥中注定的cp最好吃了嘿嘿嘿 #网剧安全距离 #安全距离国安版史密斯夫妇#网剧安全距离开播 - 抖音`
+  - Duration observed: `57.3s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649063745016174053`
+  - Title: `误闯天家#thx #泰国女团 - 抖音`
+  - Duration observed: `161.9s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7565573316267822393`
+  - Title: `素颜给的松弛感 #海岛穿搭#帕劳 - 抖音`
+  - Duration observed: `10.9s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7640057899923209295`
+  - Title: `这一刻 - 抖音`
+  - Duration observed: `9.1s`
+  - Music/design signals: `音乐, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649242577602759750`
+  - Title: `waywayway #后裔摇 #卡点舞 - 抖音`
+  - Duration observed: `11.9s`
+  - Music/design signals: `卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+
+## Favorite Link Batch 17 - Detail Upgrade Audit
+
+15 previously list-only favorite videos were opened directly on their detail pages. 15 loaded a video element with visible duration metadata. None displayed explicit soundtrack ownership, redistribution permission, or commercial-use authorization, so directly reusable audio remains `0`.
+
+- `https://www.douyin.com/video/7649315115020502449`
+  - Title: `好玩 下次还来 #射击#印尼#shootingday - 抖音`
+  - Duration observed: `10.2s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649280065163542459`
+  - Title: `连你也会为我着迷么 #御姐风细跟高跟鞋太绝了 - 抖音`
+  - Duration observed: `7.1s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648327565061476347`
+  - Title: `爱你呦#亡命天涯峰哥@峰哥亡命天涯 - 抖音`
+  - Duration observed: `48.8s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649214005991730298`
+  - Title: `姐感黑裙 - 抖音`
+  - Duration observed: `14.5s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649382366766461614`
+  - Title: `别对不起，真没关系，我换一个就好了 #177 #高个子女生 #健身 #大长腿 - 抖音`
+  - Duration observed: `9.2s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648298379293825914`
+  - Title: `想你 - 抖音`
+  - Duration observed: `9.3s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648845974488041716`
+  - Title: `咖喱鸡胸肉在抖音记录美好生活20260608 - 抖音`
+  - Duration observed: `10.1s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7647807362132229352`
+  - Title: `今天吃放纵餐～ - 抖音`
+  - Duration observed: `12.5s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7647118162455087778`
+  - Title: `没什么好说的 - 抖音`
+  - Duration observed: `11s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7647591425723470201`
+  - Title: `穿黑旗袍的女生很难不美 #黑色旗袍 #旗袍新中式 - 抖音`
+  - Duration observed: `76.1s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648731307460240339`
+  - Title: `#闺蜜比基尼 #泳池 #泳装穿搭 - 抖音`
+  - Duration observed: `5.9s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648861632852778579`
+  - Title: `#美拍摄影会 #美时美刻美拍 - 抖音`
+  - Duration observed: `11.4s`
+  - Music/design signals: `原声, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7644587824155829925`
+  - Title: `Ok everybody 所有人 感受 #甜御组合 #亲姐妹合拍 - 抖音`
+  - Duration observed: `11.5s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7645997088648224227`
+  - Title: `性格很好 脾气很坏 #173 #水瓶座 - 抖音`
+  - Duration observed: `10.3s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648955448548276456`
+  - Title: `等麦当当出餐的功夫拍了视频 #微胖本命 #173 - 抖音`
+  - Duration observed: `9.8s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+
+## Favorite Link Batch 18 - Detail Upgrade Audit
+
+15 previously list-only favorite videos were opened directly on their detail pages. 15 loaded a video element with visible duration metadata. None displayed explicit soundtrack ownership, redistribution permission, or commercial-use authorization, so directly reusable audio remains `0`.
+
+- `https://www.douyin.com/video/7648995460523316581`
+  - Title: `暂时不准备剪短发#短发aoa #aoa #随机舞蹈 #腿精 #性感可爱 - 抖音`
+  - Duration observed: `37.9s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7649007128871670010`
+  - Title: `拿不下你 心好痛 - 抖音`
+  - Duration observed: `8.5s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648982701143982822`
+  - Title: `假装摔倒吓死你#后羿舞 #卡点#牛仔 - 抖音`
+  - Duration observed: `11.4s`
+  - Music/design signals: `卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648972372682921423`
+  - Title: `🤓 - 抖音`
+  - Duration observed: `10.3s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648847914898809969`
+  - Title: `这又是什么摇 #后裔舞 #后裔摇 #微胖女生 - 抖音`
+  - Duration observed: `11.3s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648030271560909737`
+  - Title: `巨蟹座出片的小秘密～ #街拍 #广州街拍 #搭讪陌生人拍照 #巨蟹座拍照 - 抖音`
+  - Duration observed: `152.4s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648730540387978531`
+  - Title: `小刘2/上海街拍 #摄影约拍 #街头摄影 #给陌生人拍照 #时尚街拍 #姬豪 - 抖音`
+  - Duration observed: `21s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648873722165880249`
+  - Title: `薛薛爱发呆在抖音记录美好生活20260608 - 抖音`
+  - Duration observed: `11.3s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648632892344808884`
+  - Title: `身材也是一种天赋 - 抖音`
+  - Duration observed: `8.2s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648890710821012347`
+  - Title: `明明对你念念不忘 - 抖音`
+  - Duration observed: `7.3s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648891954886153722`
+  - Title: `就这个劲劲的爽🔥 终于跳了吻妹的《who is she》，和悉大哈利波特楼适配度好高！ #kpop翻跳 #路演直拍 #kissoflife #whoisshe - 抖音`
+  - Duration observed: `45.6s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648958711004514751`
+  - Title: `淡淡的 #ootd #fyp - 抖音`
+  - Duration observed: `12.3s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7647434352581756025`
+  - Title: `今天依旧做作哈哈哈 #后裔舞 #简单易学 #舞蹈 #抖音潮流舞蹈大赛 #甜辣颖 - 抖音`
+  - Duration observed: `13.4s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7647504038502519458`
+  - Title: `今夕是何年 - 抖音`
+  - Duration observed: `10.4s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648661891859208867`
+  - Title: `嘻嘻 - 抖音`
+  - Duration observed: `13.4s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+
+## Favorite Link Batch 19 - Detail Upgrade Audit
+
+18 previously list-only favorite videos were opened directly on their detail pages. 18 loaded a video element with visible duration metadata. None displayed explicit soundtrack ownership, redistribution permission, or commercial-use authorization, so directly reusable audio remains `0`.
+
+- `https://www.douyin.com/video/7648579114521612522`
+  - Title: `对面楼上跳舞的小姐姐不知道玻璃透光吗.#大长腿 - 抖音`
+  - Duration observed: `13.7s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7647007908149229029`
+  - Title: `#无法拒绝温柔感小裙子 #日常分享 #卡点舞 夏天来啦☀️ - 抖音`
+  - Duration observed: `13.1s`
+  - Music/design signals: `卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7645095916039528182`
+  - Title: `下次闺蜜聚会我就这么跳 #后裔摇 #后裔摇舞蹈挑战 #卡点舞 - 抖音`
+  - Duration observed: `11.9s`
+  - Music/design signals: `卡点, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7646965284066611953`
+  - Title: `所有人 感受#御姐ootd - 抖音`
+  - Duration observed: `7.2s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648661415473030516`
+  - Title: `1234#黑色紧身套装 #纯欲紧身短袖 #黑色紧身短裤 - 抖音`
+  - Duration observed: `13.4s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7646745197699301258`
+  - Title: `你说讨厌我 是怪我了还是想我了 - 抖音`
+  - Duration observed: `8.9s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7640441891364591974`
+  - Title: `所有人给我感受！ - 抖音`
+  - Duration observed: `7s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7639700508303949026`
+  - Title: `谁能看到第15秒 #泪痕摇 - 抖音`
+  - Duration observed: `22.4s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648667274136877745`
+  - Title: `所有人 感受！#长腿欧尼 - 抖音`
+  - Duration observed: `14.6s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7643657805606397915`
+  - Title: `评论区请打分 A 像触电 B 像作法 C像复健 #抖音潮流舞蹈地图 #舞蹈直拍 #whoisshe #kissoflife - 抖音`
+  - Duration observed: `26.9s`
+  - Music/design signals: `舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7647723493564596294`
+  - Title: `啊 - 抖音`
+  - Duration observed: `11.7s`
+  - Music/design signals: `音乐, 翻唱, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7637701703420392057`
+  - Title: `#真实生活分享计划 #黑色紧身套装 - 抖音`
+  - Duration observed: `10.2s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648507659470080692`
+  - Title: `拥抱我直至肋骨断裂#御姐#婉婉 #ootd - 抖音`
+  - Duration observed: `13s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7631102206549514868`
+  - Title: `#3蓝摇 #nextlevel - 抖音`
+  - Duration observed: `11.3s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7630813188544247142`
+  - Title: `爱上姐姐 完全是姐姐我的错呀 #卡点舞 #亡命摇 #慢摇 - 抖音`
+  - Duration observed: `20.6s`
+  - Music/design signals: `卡点, 慢摇, 舞`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648583226299161579`
+  - Title: `歪歪歪 #金牛座 - 抖音`
+  - Duration observed: `11.7s`
+  - Music/design signals: `none`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7648609642029877888`
+  - Title: `猜猜主包今天拉了多少的长腿#后羿摇 #慢摇 - 抖音`
+  - Duration observed: `11.9s`
+  - Music/design signals: `慢摇`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+- `https://www.douyin.com/video/7643731566824901233`
+  - Title: `我又拍抖音啦～#健身女孩 #揽胜进行曲 - 抖音`
+  - Duration observed: `33s`
+  - Music/design signals: `音乐`
+  - License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+
+## Favorite Link Batch 20 - Deeper Visible And Detail Capture
+
+The logged-in favorites route container was scrolled deeper than the previous evidence window, expanding the observed set beyond the first 222 ledger entries and capturing 61 new unique favorite URLs. All 61 of these new entries were opened directly on their detail pages; each loaded playable video media and duration metadata.
+
+- New URLs captured: `61`.
+- Detail pages opened from this batch: `61`.
+- List-only entries remaining from this batch: `0`.
+- Directly reusable audio found in this batch: `0`.
+- License signals observed: none. Platform footer/license wording such as `许可` or `©` was not counted as soundtrack authorization.
+
+## Favorite Link Batch 21 - Fresh Deep Detail Capture
+
+The logged-in favorites collection was reopened from `我的收藏 2.2万`, then the route container was scrolled to about `22,436px`. This rendered 330 unique visible video links; 49 were not already present in the ledger. All 49 fresh links were opened directly on detail pages, and all 49 loaded playable media duration metadata.
+
+- New URLs captured: `49`.
+- Detail pages opened from this batch: `49`.
+- Directly reusable audio found in this batch: `0`.
+- License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+
+## Favorite Link Batch 22 - Fresh Deep Detail Capture
+
+The logged-in favorites collection was reopened again and the route container was scrolled to about `29,595px`. This rendered 442 unique visible video links; 119 were not already present in the ledger. The first 50 fresh links were opened directly on detail pages: 49 loaded playable media duration metadata, and one direct detail page opened but did not expose playable media duration during repeated checks.
+
+- New detail targets processed: `50`.
+- Completed detail pages in this batch: `49`.
+- Attempted detail pages in this batch: `1`.
+- Directly reusable audio found in this batch: `0`.
+- License signals observed: none. Platform footer/license wording was not counted as soundtrack authorization.
+
+## Design Translation
+
+- Copy should be indirect and playlist-like, not literal labels such as `姐姐氛围` or `甜御切换`.
+- Useful naming direction: `映雪`, `清晖`, `云岫`, `栀夏`, `月绡`, `雾蔷`, `光潮`, `静廊`, `银时`, `绒雨`, `椅边`, `琥珀`.
+- The UI should feel like a refined sound palette: small cards, two-line labels, restrained borders, soft rose/mint/blue accents.
+- Music direction should include clean daylight, night cover, slow dance, office beat, chair-dance staccato, summer water, outfit-edit confidence, and soft portrait cues.
+
+## Music Reuse Audit
+
+- Directly reusable Douyin favorite audio found so far: `0`.
+- Reason: the opened favorite detail pages and the third-batch favorite cards provide mood, title, duration or loading-state evidence, author where available, and visual/music-direction evidence, but they do not provide proof that the soundtrack is owned by the user, licensed for redistribution, or otherwise safe to bundle into this system.
+- System action taken: bundled generated entrance music is being removed from the app. The entrance sound feature is being converted to an authorized-import playlist, so only audio files supplied by the user with usage rights are played by the system.
+- Future evidence needed before bundling any Douyin-derived track: source audio file, rights holder or license, allowed use scope, and whether redistribution inside the school system is permitted.
+
+## Remaining Scope
+
+The user requested all Douyin favorites. The visible account says roughly `2.2万` favorites, so full verification requires a long-running paginated scan with stable browser access and progress persistence. Current evidence covers 382 unique favorite-video URLs captured from the logged-in favorites list: 371 completed opened detail pages, eleven detail-opening attempts whose direct pages or modal navigation did not reliably expose complete detail metadata, and zero visible-list captures remaining in the current evidence window. No captured entry currently contains explicit authorization signals for directly bundling its Douyin audio.

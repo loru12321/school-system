@@ -6,9 +6,11 @@ const mobileLoginPath = path.join(root, 'src', 'assets', 'css', 'mobile-login.cs
 const productRedesignPath = path.join(root, 'src', 'assets', 'css', 'product-redesign.css');
 const entranceSoundPath = path.join(root, 'public', 'assets', 'js', 'entrance-sound-runtime.js');
 const entranceAudioPath = path.join(root, 'public', 'assets', 'audio', 'entrance');
+const entranceManifestPath = path.join(entranceAudioPath, 'manifest.json');
 const source = fs.readFileSync(mobileLoginPath, 'utf8');
 const productRedesign = fs.readFileSync(productRedesignPath, 'utf8');
 const entranceSound = fs.readFileSync(entranceSoundPath, 'utf8');
+const entranceManifest = JSON.parse(fs.readFileSync(entranceManifestPath, 'utf8'));
 
 const removedBlocks = [
   'Login Poster Final Overrides',
@@ -39,11 +41,13 @@ if (byteLength > maxMobileLoginBytes) {
 }
 
 const favoriteThemeMarkers = [
-  'Douyin favorite full-scan refresh',
-  'Douyin creator pair variation',
+  'Douyin favorite evidence refresh',
+  'Douyin creator and favorite variation',
+  'Added-profile editorial shell',
   '--pd-sun',
   '--pd-sky-soft',
   '--pd-beat',
+  '--pd-editorial-jade',
   'CLEAN / BEAT / FLOW',
 ];
 
@@ -54,27 +58,32 @@ for (const marker of favoriteThemeMarkers) {
 }
 
 const audioFiles = fs.readdirSync(entranceAudioPath).filter((name) => name.endsWith('.wav'));
-if (audioFiles.length < 10) {
-  throw new Error(`Expected at least 10 original built-in entrance tracks, found ${audioFiles.length}`);
+if (audioFiles.length !== 0) {
+  throw new Error(`Built-in entrance audio should be fully removed, found ${audioFiles.length} wav files`);
 }
-if (!entranceSound.includes("const DEFAULT_MODE = 'random'")) {
-  throw new Error('Entrance sound should default to random playback across built-in tracks');
+if (!Array.isArray(entranceManifest.tracks) || entranceManifest.tracks.length !== 0) {
+  throw new Error(`Entrance manifest should not describe built-in tracks: manifest=${entranceManifest.tracks?.length || 0}`);
 }
-if (!entranceSound.includes('function pickRandomTrack()') || !entranceSound.includes('data-sound-choice="random"')) {
-  throw new Error('Entrance sound runtime should expose random playback selection');
+if (!entranceManifest.note.includes('Built-in entrance music has been removed')) {
+  throw new Error('Entrance manifest should document that built-in music was removed');
 }
-
-for (const fileName of audioFiles) {
-  const id = fileName.replace(/\.wav$/, '');
-  if (!entranceSound.includes(`./assets/audio/entrance/${fileName}`)) {
-    throw new Error(`Built-in entrance track is not referenced by runtime: ${fileName}`);
-  }
-  if (fs.statSync(path.join(entranceAudioPath, fileName)).size < 100000) {
-    throw new Error(`Built-in entrance track is unexpectedly tiny: ${fileName}`);
-  }
-  if (!entranceSound.includes(id)) {
-    throw new Error(`Built-in entrance track id is missing from runtime: ${id}`);
-  }
+if (!entranceSound.includes("const DEFAULT_MODE = 'custom'")) {
+  throw new Error('Entrance sound should default to the user-imported authorized playlist');
+}
+if (entranceSound.includes('BUILTIN_TRACKS') || entranceSound.includes('playToneSequence') || entranceSound.includes('getAudioContext')) {
+  throw new Error('Entrance sound runtime should not include built-in tracks or generated fallback tones');
+}
+if (entranceSound.includes('./assets/audio/entrance/') || /\.wav['"]/.test(entranceSound)) {
+  throw new Error('Entrance sound runtime should not reference bundled wav files');
+}
+if (!entranceSound.includes('data-sound-choice="random"') || !entranceSound.includes('storeAuthorizedPlaylist')) {
+  throw new Error('Entrance sound runtime should expose random playback for imported authorized playlists');
+}
+if (!entranceSound.includes('onended') || !entranceSound.includes('autoAdvanceTimer')) {
+  throw new Error('Imported playlist playback should automatically advance to the next track');
+}
+if (!entranceSound.includes('multiple') && !entranceSound.includes('Array.from(files')) {
+  throw new Error('Entrance sound runtime should support importing more than one authorized track');
 }
 
 console.log(`[css-hygiene] mobile-login.css ${byteLength} bytes`);

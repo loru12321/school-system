@@ -43,10 +43,10 @@
     <link rel="stylesheet" href="./assets/css/apk-mobile-shell.css?v=20260407-apk-v2">
     <link rel="stylesheet" href="./assets/css/layout-refinement.css?v=20260501-layout-v1">
     <link rel="stylesheet" href="./assets/css/ins-login.css?v=20260606-ins-login-v3">
-    <link rel="stylesheet" href="./assets/css/product-redesign.css?v=20260607-yujie-sound-v1">
+    <link rel="stylesheet" href="./assets/css/product-redesign.css?v=20260617-authorized-audio-v1">
     <script>
         (function () {
-            var refreshVersion = '20260607-yujie-sound-v1';
+            var refreshVersion = '20260617-authorized-audio-v1';
             var refreshKey = 'SCHOOL_RUNTIME_REFRESH_VERSION';
             try {
                 if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
@@ -76,12 +76,12 @@
     </script>
     <script defer src="./assets/js/platform-compat-runtime.js?v=20260407-apple-v1"></script>
     <script defer src="./assets/js/runtime-registry-runtime.js?v=20260501-runtime-registry-v1"></script>
-    <script defer src="./assets/js/entrance-sound-runtime.js?v=20260607-yujie-sound-v1"></script>
+    <script defer src="./assets/js/entrance-sound-runtime.js?v=20260617-authorized-audio-v1"></script>
     <script defer src="./assets/js/report-insight-runtime.js?v=20260613-report-insight-v1"></script>
     <script defer src="./assets/js/report-render-runtime.js?v=20260613-report-render-preload-v1"></script>
     <script defer src="./assets/js/town-submodule-compare-runtime.js?v=20260614-town-submodule-preload-v1"></script>
-    <script defer src="./assets/js/boot-runtime.js?v=20260607-yujie-sound-v1"></script>
-    <script defer src="./assets/js/service-worker-runtime.js?v=20260607-yujie-sound-v1"></script>
+    <script defer src="./assets/js/boot-runtime.js?v=20260617-authorized-audio-v1"></script>
+    <script defer src="./assets/js/service-worker-runtime.js?v=20260617-authorized-audio-v1"></script>
     <script defer src="./assets/vendor/lz-string/lz-string.min.js"></script>
     <script>
         (function () {
@@ -402,29 +402,23 @@
                     </div>
 
                     <button id="login-submit-button" class="advanced-submit login-clean-submit" data-login-submit="1">进入学校工作台</button>
-                    <div class="entrance-sound-panel" data-entrance-sound-panel="1" aria-label="入场音效">
+                    <div class="entrance-sound-panel" data-entrance-sound-panel="1" aria-label="入场音乐">
                         <div class="entrance-sound-panel__head">
-                            <span>入场音效</span>
-                            <button type="button" data-sound-preview="1">试听</button>
+                            <span>
+                                <strong>声场</strong>
+                                <small>Entrance playlist</small>
+                            </span>
+                            <button type="button" data-sound-preview="1" aria-label="试听当前入场音乐"><i class="ti ti-player-play"></i><em>试听</em></button>
                         </div>
-                        <div class="entrance-sound-options" role="group" aria-label="选择入场音效">
-                            <button type="button" data-sound-choice="random">随机播放</button>
-                            <button type="button" data-sound-choice="cinema-white">映雪</button>
-                            <button type="button" data-sound-choice="sweet-royal-switch">清晖</button>
-                            <button type="button" data-sound-choice="sister-aura">云岫</button>
-                            <button type="button" data-sound-choice="white-lace">栀夏</button>
-                            <button type="button" data-sound-choice="red-violet">绯云</button>
-                            <button type="button" data-sound-choice="midnight-silk">月绡</button>
-                            <button type="button" data-sound-choice="bluegreen-flow">青漪</button>
-                            <button type="button" data-sound-choice="beat-cut">鹿鸣</button>
-                            <button type="button" data-sound-choice="jiangnan-lantern">南枝</button>
-                            <button type="button" data-sound-choice="clean-denim">风荷</button>
-                            <button type="button" data-sound-choice="custom">本地音乐</button>
-                            <button type="button" data-sound-choice="off">关闭</button>
+                        <div class="entrance-sound-options" role="group" aria-label="选择入场音乐">
+                            <button type="button" class="entrance-sound-option entrance-sound-option--utility" data-sound-choice="random"><strong>流动</strong><small>授权歌单随机</small></button>
+                            <button type="button" class="entrance-sound-option entrance-sound-option--utility" data-sound-choice="custom"><strong>私藏</strong><small>顺序播放</small></button>
+                            <button type="button" class="entrance-sound-option entrance-sound-option--utility" data-sound-choice="off"><strong>静音</strong><small>off</small></button>
                         </div>
+                        <p class="entrance-sound-status" data-sound-status="1">未导入授权音乐</p>
                         <label class="entrance-sound-import">
-                            <input type="file" accept=".mp3,.wav,.ogg,.m4a,audio/mpeg,audio/wav,audio/ogg,audio/mp4" data-sound-import="1" hidden>
-                            <span>导入本地音频 MP3/WAV/OGG</span>
+                            <input type="file" accept=".mp3,.wav,.ogg,.m4a,audio/mpeg,audio/wav,audio/ogg,audio/mp4" data-sound-import="1" multiple hidden>
+                            <span><i class="ti ti-music-plus"></i>导入授权歌单</span>
                         </label>
                     </div>
                     <div id="login-portal-helper" class="login-portal-helper">当前为学校端，验证通过后进入届别选择和工作台。</div>

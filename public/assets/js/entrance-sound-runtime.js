@@ -5,54 +5,34 @@
     const CUSTOM_AUDIO_KEY = 'SCHOOL_ENTRANCE_SOUND_CUSTOM_AUDIO_V1';
     const CUSTOM_AUDIO_DB = 'SCHOOL_ENTRANCE_AUDIO_DB_V1';
     const CUSTOM_AUDIO_STORE = 'audio';
-    const CUSTOM_AUDIO_ID = 'entrance';
-    const BUILTIN_TRACKS = [
-        { id: 'cinema-white', label: '映雪', src: './assets/audio/entrance/cinema-white.wav', fallback: 'silk' },
-        { id: 'sweet-royal-switch', label: '清晖', src: './assets/audio/entrance/sweet-royal-switch.wav', fallback: 'signature' },
-        { id: 'sister-aura', label: '云岫', src: './assets/audio/entrance/sister-aura.wav', fallback: 'runway' },
-        { id: 'white-lace', label: '栀夏', src: './assets/audio/entrance/white-lace.wav', fallback: 'silk' },
-        { id: 'red-violet', label: '绯云', src: './assets/audio/entrance/red-violet.wav', fallback: 'runway' },
-        { id: 'midnight-silk', label: '月绡', src: './assets/audio/entrance/midnight-silk.wav', fallback: 'signature' },
-        { id: 'bluegreen-flow', label: '青漪', src: './assets/audio/entrance/bluegreen-flow.wav', fallback: 'silk' },
-        { id: 'beat-cut', label: '鹿鸣', src: './assets/audio/entrance/beat-cut.wav', fallback: 'runway' },
-        { id: 'jiangnan-lantern', label: '南枝', src: './assets/audio/entrance/jiangnan-lantern.wav', fallback: 'silk' },
-        { id: 'clean-denim', label: '风荷', src: './assets/audio/entrance/clean-denim.wav', fallback: 'signature' }
-    ];
-    const DEFAULT_MODE = 'random';
-    const LEGACY_MODE_MAP = { signature: 'cinema-white', runway: 'beat-cut', silk: 'white-lace' };
+    const LEGACY_AUDIO_ID = 'entrance';
+    const PLAYLIST_AUDIO_ID = 'authorized-playlist';
+    const DEFAULT_MODE = 'custom';
+
     let lastOverlayVisible = true;
     let playedForSession = false;
-    let customAudio = null;
-    let customAudioUrl = '';
-    let customAudioSource = '';
-    let customAudioHydratePromise = null;
-    let customAudioUnlocked = false;
+    let playlist = [];
+    let playlistHydratePromise = null;
+    let activeAudio = null;
+    let activeAudioUrl = '';
+    let activeTrackIndex = -1;
+    let lastRandomTrackIndex = -1;
+    let autoAdvanceTimer = 0;
+    let audioUnlocked = false;
     let unlockGestureBound = false;
-    const builtInAudioCache = new Map();
-
-    function getBuiltInTrack(mode) {
-        return BUILTIN_TRACKS.find((track) => track.id === mode) || null;
-    }
-
-    function pickRandomTrack() {
-        return BUILTIN_TRACKS[Math.floor(Math.random() * BUILTIN_TRACKS.length)] || BUILTIN_TRACKS[0];
-    }
-
-    function resolvePlaybackMode(mode) {
-        if (mode === 'random') return pickRandomTrack().id;
-        return mode;
-    }
 
     function toast(message, type = 'info') {
         if (window.UI && typeof window.UI.toast === 'function') window.UI.toast(message, type);
     }
 
+    function normalizeMode(mode) {
+        if (mode === 'random' || mode === 'custom' || mode === 'off') return mode;
+        return DEFAULT_MODE;
+    }
+
     function readMode() {
         try {
-            const stored = localStorage.getItem(STORAGE_KEY) || DEFAULT_MODE;
-            if (LEGACY_MODE_MAP[stored]) return LEGACY_MODE_MAP[stored];
-            if (stored === 'random' || stored === 'off' || stored === 'custom' || getBuiltInTrack(stored)) return stored;
-            return DEFAULT_MODE;
+            return normalizeMode(localStorage.getItem(STORAGE_KEY) || DEFAULT_MODE);
         } catch (_) {
             return DEFAULT_MODE;
         }
@@ -60,84 +40,8 @@
 
     function writeMode(mode) {
         try {
-            localStorage.setItem(STORAGE_KEY, mode);
+            localStorage.setItem(STORAGE_KEY, normalizeMode(mode));
         } catch (_) {}
-    }
-
-    function getAudioContext() {
-        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContextCtor) return null;
-        if (!window.__SCHOOL_ENTRANCE_AUDIO_CONTEXT__) {
-            window.__SCHOOL_ENTRANCE_AUDIO_CONTEXT__ = new AudioContextCtor();
-        }
-        return window.__SCHOOL_ENTRANCE_AUDIO_CONTEXT__;
-    }
-
-    function playToneSequence(mode) {
-        const ctx = getAudioContext();
-        if (!ctx || mode === 'off') return;
-        const fallbackMode = getBuiltInTrack(mode)?.fallback || LEGACY_MODE_MAP[mode] || mode;
-        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-
-        const now = ctx.currentTime + 0.02;
-        const master = ctx.createGain();
-        master.gain.setValueAtTime(0.0001, now);
-        master.gain.exponentialRampToValueAtTime(fallbackMode === 'runway' ? 0.11 : 0.08, now + 0.025);
-        master.gain.exponentialRampToValueAtTime(0.0001, now + 0.74);
-        master.connect(ctx.destination);
-
-        const patterns = {
-            signature: [
-                { f: 196, t: 0, d: 0.18, type: 'sine' },
-                { f: 329.63, t: 0.10, d: 0.24, type: 'triangle' },
-                { f: 493.88, t: 0.26, d: 0.34, type: 'sine' }
-            ],
-            runway: [
-                { f: 146.83, t: 0, d: 0.09, type: 'square' },
-                { f: 220, t: 0.14, d: 0.09, type: 'square' },
-                { f: 293.66, t: 0.28, d: 0.12, type: 'triangle' },
-                { f: 440, t: 0.42, d: 0.16, type: 'triangle' }
-            ],
-            silk: [
-                { f: 261.63, t: 0, d: 0.28, type: 'sine' },
-                { f: 392, t: 0.18, d: 0.34, type: 'sine' },
-                { f: 523.25, t: 0.36, d: 0.28, type: 'triangle' }
-            ]
-        };
-
-        (patterns[fallbackMode] || patterns.signature).forEach((note) => {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            const start = now + note.t;
-            const end = start + note.d;
-            osc.type = note.type;
-            osc.frequency.setValueAtTime(note.f, start);
-            gain.gain.setValueAtTime(0.0001, start);
-            gain.gain.exponentialRampToValueAtTime(0.38, start + 0.018);
-            gain.gain.exponentialRampToValueAtTime(0.0001, end);
-            osc.connect(gain);
-            gain.connect(master);
-            osc.start(start);
-            osc.stop(end + 0.02);
-        });
-    }
-
-    function getBuiltInAudio(mode) {
-        const track = getBuiltInTrack(mode);
-        if (!track) return null;
-        let audio = builtInAudioCache.get(track.id);
-        if (!audio) {
-            audio = new Audio(track.src);
-            audio.preload = 'auto';
-            audio.volume = 0.44;
-            builtInAudioCache.set(track.id, audio);
-        }
-        return audio;
-    }
-
-    function prewarmBuiltInAudio() {
-        const audio = getBuiltInAudio(readMode());
-        if (audio) audio.load();
     }
 
     function openCustomAudioDb() {
@@ -156,19 +60,21 @@
         });
     }
 
-    function storeCustomAudioFile(file) {
+    function storeAuthorizedPlaylist(files) {
+        const tracks = Array.from(files).map((file, index) => ({
+            id: `authorized-${Date.now()}-${index}`,
+            name: file.name || `Track ${index + 1}`,
+            type: file.type || '',
+            size: file.size || 0,
+            blob: file,
+            updatedAt: Date.now()
+        }));
         return openCustomAudioDb().then((db) => new Promise((resolve, reject) => {
             const tx = db.transaction(CUSTOM_AUDIO_STORE, 'readwrite');
-            tx.objectStore(CUSTOM_AUDIO_STORE).put({
-                id: CUSTOM_AUDIO_ID,
-                blob: file,
-                name: file.name || '',
-                type: file.type || '',
-                updatedAt: Date.now()
-            });
+            tx.objectStore(CUSTOM_AUDIO_STORE).put({ id: PLAYLIST_AUDIO_ID, tracks });
             tx.oncomplete = () => {
                 db.close();
-                resolve();
+                resolve(tracks);
             };
             tx.onerror = () => {
                 db.close();
@@ -177,105 +83,150 @@
         }));
     }
 
-    function readStoredAudioFile() {
+    function readStoredPlaylist() {
         return openCustomAudioDb().then((db) => new Promise((resolve, reject) => {
             const tx = db.transaction(CUSTOM_AUDIO_STORE, 'readonly');
-            const request = tx.objectStore(CUSTOM_AUDIO_STORE).get(CUSTOM_AUDIO_ID);
-            request.onsuccess = () => resolve(request.result && request.result.blob ? request.result.blob : null);
-            request.onerror = () => reject(request.error || new Error('IndexedDB read failed'));
+            const store = tx.objectStore(CUSTOM_AUDIO_STORE);
+            const playlistRequest = store.get(PLAYLIST_AUDIO_ID);
+            playlistRequest.onsuccess = () => {
+                const result = playlistRequest.result;
+                if (result && Array.isArray(result.tracks) && result.tracks.length) {
+                    resolve(result.tracks);
+                    return;
+                }
+                const legacyRequest = store.get(LEGACY_AUDIO_ID);
+                legacyRequest.onsuccess = () => {
+                    const legacy = legacyRequest.result;
+                    resolve(legacy && legacy.blob ? [{ id: 'legacy-authorized', name: legacy.name || 'Authorized audio', type: legacy.type || '', blob: legacy.blob }] : []);
+                };
+                legacyRequest.onerror = () => reject(legacyRequest.error || new Error('IndexedDB legacy read failed'));
+            };
+            playlistRequest.onerror = () => reject(playlistRequest.error || new Error('IndexedDB playlist read failed'));
             tx.oncomplete = () => db.close();
             tx.onerror = () => db.close();
         }));
     }
 
-    function getCustomAudio() {
-        let src = '';
-        try {
-            src = localStorage.getItem(CUSTOM_AUDIO_KEY) || '';
-        } catch (_) {}
-        if (!src) return Promise.resolve(null);
-        if (src === 'indexeddb') {
-            if (customAudio && customAudioSource === 'indexeddb') return Promise.resolve(customAudio);
-            if (customAudioHydratePromise) return customAudioHydratePromise;
-            customAudioHydratePromise = readStoredAudioFile().then((blob) => {
-                customAudioHydratePromise = null;
-                if (!blob) return null;
-                if (customAudioUrl) URL.revokeObjectURL(customAudioUrl);
-                customAudioUrl = URL.createObjectURL(blob);
-                customAudio = new Audio(customAudioUrl);
-                customAudioSource = 'indexeddb';
-                customAudio.preload = 'auto';
-                customAudio.volume = 0.42;
-                customAudio.load();
-                return customAudio;
-            }).catch((error) => {
-                customAudioHydratePromise = null;
-                throw error;
-            });
-            return customAudioHydratePromise;
-        }
-        if (!customAudio || customAudio.src !== src || customAudioSource !== src) {
-            customAudio = new Audio(src);
-            customAudioSource = src;
-            customAudio.preload = 'auto';
-            customAudio.volume = 0.42;
-        }
-        return Promise.resolve(customAudio);
+    function setPlaylist(tracks) {
+        playlist = Array.isArray(tracks) ? tracks.filter((track) => track && track.blob) : [];
+        if (activeTrackIndex >= playlist.length) activeTrackIndex = -1;
+        updatePlaylistStatus();
     }
 
-    function resetCustomAudioCache() {
-        customAudio = null;
-        customAudioSource = '';
-        customAudioUnlocked = false;
-        customAudioHydratePromise = null;
-        if (customAudioUrl) {
-            URL.revokeObjectURL(customAudioUrl);
-            customAudioUrl = '';
+    function getPlaylist() {
+        if (playlist.length) return Promise.resolve(playlist);
+        if (playlistHydratePromise) return playlistHydratePromise;
+        playlistHydratePromise = readStoredPlaylist().then((tracks) => {
+            playlistHydratePromise = null;
+            setPlaylist(tracks);
+            return playlist;
+        }).catch((error) => {
+            playlistHydratePromise = null;
+            throw error;
+        });
+        return playlistHydratePromise;
+    }
+
+    function stopActiveAudio() {
+        if (autoAdvanceTimer) {
+            window.clearTimeout(autoAdvanceTimer);
+            autoAdvanceTimer = 0;
+        }
+        if (activeAudio) {
+            activeAudio.onended = null;
+            activeAudio.pause();
+            activeAudio.currentTime = 0;
+            activeAudio = null;
+        }
+        if (activeAudioUrl) {
+            URL.revokeObjectURL(activeAudioUrl);
+            activeAudioUrl = '';
         }
     }
 
-    function getImmediateCustomAudioFromFile(file) {
-        resetCustomAudioCache();
-        customAudioUrl = URL.createObjectURL(file);
-        customAudio = new Audio(customAudioUrl);
-        customAudioSource = 'indexeddb';
-        customAudio.preload = 'auto';
-        customAudio.volume = 0.42;
-        customAudio.load();
-        return customAudio;
+    function pickRandomIndex(tracks) {
+        if (tracks.length < 2) return 0;
+        const pool = tracks.map((_, index) => index).filter((index) => index !== lastRandomTrackIndex);
+        const picked = pool[Math.floor(Math.random() * pool.length)] || 0;
+        lastRandomTrackIndex = picked;
+        return picked;
+    }
+
+    function pickSequentialIndex(tracks) {
+        if (!tracks.length) return -1;
+        activeTrackIndex = activeTrackIndex < 0 ? 0 : (activeTrackIndex + 1) % tracks.length;
+        return activeTrackIndex;
+    }
+
+    function playTrackAt(index, mode) {
+        const track = playlist[index];
+        if (!track || !track.blob) return false;
+        stopActiveAudio();
+        activeTrackIndex = index;
+        activeAudioUrl = URL.createObjectURL(track.blob);
+        activeAudio = new Audio(activeAudioUrl);
+        activeAudio.preload = 'auto';
+        activeAudio.volume = 0.46;
+        activeAudio.onended = () => {
+            const currentMode = readMode();
+            if (currentMode === 'off') return;
+            autoAdvanceTimer = window.setTimeout(() => playEntranceSound(currentMode === 'random' ? 'random' : 'custom'), 420);
+        };
+        activeAudio.play().catch(() => {
+            toast('浏览器暂未允许自动播放，请点一次试听或登录按钮', 'warning');
+        });
+        updatePlaylistStatus(track.name, mode);
+        return true;
+    }
+
+    function playEntranceSound(forceMode) {
+        const selectedMode = normalizeMode(forceMode || readMode());
+        if (selectedMode === 'off') {
+            stopActiveAudio();
+            return;
+        }
+        getPlaylist().then((tracks) => {
+            if (!tracks.length) {
+                stopActiveAudio();
+                updatePlaylistStatus();
+                return;
+            }
+            const index = selectedMode === 'random' ? pickRandomIndex(tracks) : pickSequentialIndex(tracks);
+            playTrackAt(index, selectedMode);
+        }).catch(() => {
+            stopActiveAudio();
+            toast('授权歌单读取失败，请重新导入音频文件', 'warning');
+        });
     }
 
     function prewarmCustomAudio() {
-        if (readMode() !== 'custom') return;
-        getCustomAudio().catch(() => {});
+        if (readMode() === 'off') return;
+        getPlaylist().catch(() => {});
     }
 
     function unlockCustomAudio() {
-        if (customAudioUnlocked || readMode() !== 'custom') return;
-        getCustomAudio().then((audio) => {
-            if (!audio || customAudioUnlocked) return;
-            const oldMuted = audio.muted;
-            const oldVolume = audio.volume;
-            audio.muted = true;
-            audio.volume = 0;
-            const playPromise = audio.play();
+        if (audioUnlocked || readMode() === 'off') return;
+        getPlaylist().then((tracks) => {
+            const track = tracks[0];
+            if (!track || !track.blob || audioUnlocked) return;
+            const url = URL.createObjectURL(track.blob);
+            const probe = new Audio(url);
+            probe.muted = true;
+            probe.volume = 0;
+            const playPromise = probe.play();
             if (!playPromise || typeof playPromise.then !== 'function') {
-                audio.pause();
-                audio.currentTime = 0;
-                audio.muted = oldMuted;
-                audio.volume = oldVolume || 0.42;
-                customAudioUnlocked = true;
+                probe.pause();
+                URL.revokeObjectURL(url);
+                audioUnlocked = true;
                 return;
             }
             playPromise.then(() => {
-                audio.pause();
-                audio.currentTime = 0;
-                audio.muted = oldMuted;
-                audio.volume = oldVolume || 0.42;
-                customAudioUnlocked = true;
+                probe.pause();
+                probe.currentTime = 0;
+                URL.revokeObjectURL(url);
+                audioUnlocked = true;
             }).catch(() => {
-                audio.muted = oldMuted;
-                audio.volume = oldVolume || 0.42;
+                URL.revokeObjectURL(url);
             });
         }).catch(() => {});
     }
@@ -295,39 +246,14 @@
         });
     }
 
-    function playEntranceSound(forceMode) {
-        const selectedMode = forceMode || readMode();
-        const mode = resolvePlaybackMode(selectedMode);
-        if (mode === 'off') return;
-        const builtInAudio = getBuiltInAudio(mode);
-        if (builtInAudio) {
-            builtInAudio.currentTime = 0;
-            builtInAudio.play().catch(() => playToneSequence(mode));
-            return;
-        }
-        if (mode === 'custom') {
-            getCustomAudio().then((audio) => {
-                if (!audio) {
-                    playToneSequence(DEFAULT_MODE);
-                    return;
-                }
-                audio.currentTime = 0;
-                audio.play().catch(() => playToneSequence(DEFAULT_MODE));
-            }).catch(() => playToneSequence(DEFAULT_MODE));
-            return;
-        }
-        playToneSequence(mode);
-    }
-
     function renderSoundChoices() {
         document.querySelectorAll('.entrance-sound-options').forEach((group) => {
             if (group.dataset.builtInRendered === '1') return;
             group.dataset.builtInRendered = '1';
             group.innerHTML = [
-                '<button type="button" data-sound-choice="random">随机播放</button>',
-                ...BUILTIN_TRACKS.map((track) => `<button type="button" data-sound-choice="${track.id}">${track.label}</button>`),
-                '<button type="button" data-sound-choice="custom">本地音乐</button>',
-                '<button type="button" data-sound-choice="off">关闭</button>'
+                '<button type="button" class="entrance-sound-option entrance-sound-option--utility" data-sound-choice="random"><strong>流动</strong><small>授权歌单随机</small></button>',
+                '<button type="button" class="entrance-sound-option entrance-sound-option--utility" data-sound-choice="custom"><strong>私藏</strong><small>顺序播放</small></button>',
+                '<button type="button" class="entrance-sound-option entrance-sound-option--utility" data-sound-choice="off"><strong>静音</strong><small>off</small></button>'
             ].join('');
         });
     }
@@ -341,16 +267,44 @@
         });
     }
 
+    function updatePlaylistStatus(activeName, mode) {
+        document.querySelectorAll('[data-sound-status]').forEach((node) => {
+            if (!playlist.length) {
+                node.textContent = '未导入授权音乐';
+                return;
+            }
+            const prefix = mode === 'random' ? '随机' : '顺序';
+            node.textContent = activeName ? `${prefix}播放：${activeName}` : `已导入 ${playlist.length} 首授权音乐`;
+        });
+    }
+
+    function validateAudioFiles(files) {
+        const list = Array.from(files || []);
+        if (!list.length) return [];
+        const valid = [];
+        for (const file of list) {
+            if (!/\.(mp3|wav|ogg|m4a)$/i.test(String(file.name || ''))) {
+                toast('请导入浏览器可播放的 MP3/WAV/OGG/M4A 音频', 'warning');
+                return [];
+            }
+            if (file.size > 24 * 1024 * 1024) {
+                toast('单个音频请控制在 24MB 以内', 'warning');
+                return [];
+            }
+            valid.push(file);
+        }
+        return valid;
+    }
+
     function bindControls() {
         renderSoundChoices();
         document.querySelectorAll('[data-sound-choice]').forEach((button) => {
             if (button.dataset.soundBound === '1') return;
             button.dataset.soundBound = '1';
             button.addEventListener('click', () => {
-                const mode = button.dataset.soundChoice || DEFAULT_MODE;
+                const mode = normalizeMode(button.dataset.soundChoice || DEFAULT_MODE);
                 writeMode(mode);
                 updateSoundButtons();
-                prewarmBuiltInAudio();
                 playEntranceSound(mode);
             });
         });
@@ -365,33 +319,28 @@
             if (input.dataset.soundBound === '1') return;
             input.dataset.soundBound = '1';
             input.addEventListener('change', () => {
-                const file = input.files && input.files[0];
-                if (!file) return;
-                if (!/\.(mp3|wav|ogg|m4a)$/i.test(String(file.name || ''))) {
-                    toast('请导入浏览器可播放的 MP3/WAV/OGG/M4A 音频', 'warning');
+                const files = validateAudioFiles(input.files);
+                if (!files.length) {
                     input.value = '';
                     return;
                 }
-                if (file.size > 24 * 1024 * 1024) {
-                    toast('音频请控制在 24MB 以内', 'warning');
-                    input.value = '';
-                    return;
-                }
-                getImmediateCustomAudioFromFile(file);
-                storeCustomAudioFile(file).then(() => {
+                storeAuthorizedPlaylist(files).then((tracks) => {
+                    setPlaylist(tracks);
                     try {
                         localStorage.setItem(CUSTOM_AUDIO_KEY, 'indexeddb');
-                        localStorage.setItem(STORAGE_KEY, 'custom');
+                        localStorage.setItem(STORAGE_KEY, tracks.length > 1 ? 'random' : 'custom');
                     } catch (_) {}
+                    audioUnlocked = false;
                     updateSoundButtons();
-                    playEntranceSound('custom');
-                    toast('本机入场音乐已启用', 'success');
+                    playEntranceSound(tracks.length > 1 ? 'random' : 'custom');
+                    toast(`已启用 ${tracks.length} 首授权入场音乐`, 'success');
                 }).catch(() => {
-                    toast('本地音频保存失败，请换一个 MP3/WAV/OGG/M4A 文件', 'warning');
+                    toast('本地音频保存失败，请换一组 MP3/WAV/OGG/M4A 文件', 'warning');
                 });
             });
         });
         updateSoundButtons();
+        getPlaylist().then(() => updatePlaylistStatus()).catch(() => updatePlaylistStatus());
     }
 
     function polishLoginCopy() {
@@ -424,7 +373,6 @@
         bindControls();
         bindUnlockGestures();
         polishLoginCopy();
-        prewarmBuiltInAudio();
         prewarmCustomAudio();
         observeEntrance();
         window.setInterval(() => {
