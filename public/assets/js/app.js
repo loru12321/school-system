@@ -11169,6 +11169,32 @@ function getStudentDetailsHomeroomClass(user) {
         : normalizeClass(user?.class_name || user?.class || '');
 }
 
+function getStudentDetailsRowsForSchoolOption(schoolName) {
+    const selectedSchool = String(schoolName || '').trim();
+    if (!selectedSchool) return [];
+    const schoolMap = SCHOOLS || {};
+    const directRows = Array.isArray(schoolMap[selectedSchool]?.students)
+        ? schoolMap[selectedSchool].students
+        : [];
+    if (directRows.length) return directRows;
+
+    const matchedKey = Object.keys(schoolMap).find(key => sameAppSchoolName(key, selectedSchool) || key === selectedSchool);
+    const matchedRows = matchedKey && Array.isArray(schoolMap[matchedKey]?.students)
+        ? schoolMap[matchedKey].students
+        : [];
+    if (matchedRows.length) return matchedRows;
+
+    return (Array.isArray(RAW_DATA) ? RAW_DATA : [])
+        .filter(row => sameAppSchoolName(row?.school, selectedSchool));
+}
+
+function getStudentDetailsClassNamesForSchoolOption(schoolName) {
+    return Array.from(new Set(getStudentDetailsRowsForSchoolOption(schoolName)
+        .map(student => normalizeClass(student?.class) || String(student?.class || '').trim())
+        .filter(Boolean)))
+        .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN', { numeric: true, sensitivity: 'base' }));
+}
+
 function updateStudentSchoolSelect() {
     const select = document.getElementById('studentSchoolSelect');
     const classSelect = document.getElementById('studentClassSelect');
@@ -11230,18 +11256,16 @@ function updateStudentSchoolSelect() {
         const includeAll = options.includeAll !== false;
         const selectedSchool = String(school || '').trim();
         const classQueryMode = isClassTeacherUser ? getClassTeacherStudentViewMode() : (options.mode || 'teaching');
-        const classCacheKey = `${selectedSchool}::${includeAll}::${classQueryMode}::${role || ''}::${Array.isArray(user?.roles) ? user.roles.join('|') : ''}::${user?.school || ''}::${user?.class_name || ''}::${user?.class || ''}`;
+        const classCacheKey = `${selectedSchool}::${includeAll}::${classQueryMode}::${role || ''}::${Array.isArray(user?.roles) ? user.roles.join('|') : ''}::${user?.school || ''}::${user?.class_name || ''}::${user?.class || ''}::${window.__RAW_DATA_VERSION || 0}`;
         let classes = StudentDetailsPerfCache.classOptions.get(classCacheKey);
         if (!classes) {
-            classes = [];
-            if (selectedSchool && SCHOOLS[selectedSchool]) {
-                classes = PermissionPolicy.getAccessibleClassNames(
-                    user,
-                    [...new Set(SCHOOLS[selectedSchool].students.map(s => s.class))].sort(),
-                    selectedSchool,
-                    { mode: classQueryMode }
-                );
-            }
+            const sourceClasses = selectedSchool ? getStudentDetailsClassNamesForSchoolOption(selectedSchool) : [];
+            classes = PermissionPolicy.getAccessibleClassNames(
+                user,
+                sourceClasses,
+                selectedSchool,
+                { mode: classQueryMode }
+            );
             StudentDetailsPerfCache.classOptions.set(classCacheKey, classes);
         }
         const html = buildClassOptions(classes, includeAll);
@@ -11291,7 +11315,7 @@ function updateStudentSchoolSelect() {
             select.value = school;
             select.disabled = true;
         }
-        const classes = PermissionPolicy.getAccessibleClassNames(user, [...new Set((SCHOOLS[school]?.students || []).map(s => s.class))].sort(), school, { mode: 'homeroom' });
+        const classes = PermissionPolicy.getAccessibleClassNames(user, getStudentDetailsClassNamesForSchoolOption(school), school, { mode: 'homeroom' });
         setOptionsIfChanged(classSelect, buildClassOptions(classes, true), `director:${school}:${classes.join('|')}`);
         if (previousClass && classes.includes(previousClass)) classSelect.value = previousClass;
     } else {

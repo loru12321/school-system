@@ -2233,6 +2233,23 @@ async function runModuleDeepCheck(page, id) {
             const section = document.getElementById('student-details');
             const table = document.getElementById('studentDetailTable');
             const rows = table?.querySelectorAll('tbody tr')?.length || 0;
+            const schoolSelect = document.getElementById('studentSchoolSelect');
+            const classSelect = document.getElementById('studentClassSelect');
+            let classOptionCount = Array.from(classSelect?.options || []).filter(option => option.value).length;
+            if (schoolSelect && classSelect) {
+                const sampleSchool = Array.from(schoolSelect.options || [])
+                    .map(option => option.value)
+                    .find(value => value && (window.RAW_DATA || []).some(row => (
+                        typeof window.sameAppSchoolName === 'function'
+                            ? window.sameAppSchoolName(row?.school, value)
+                            : String(row?.school || '').trim() === String(value || '').trim()
+                    )));
+                if (sampleSchool) {
+                    schoolSelect.value = sampleSchool;
+                    schoolSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                    classOptionCount = Array.from(classSelect.options || []).filter(option => option.value).length;
+                }
+            }
             const headers = Array.from(table?.querySelectorAll('thead th') || [])
                 .map((cell) => String(cell.textContent || '').replace(/\s+/g, '').trim());
             const countyRankAfterTownRank = headers.some((header, index) => (
@@ -2248,7 +2265,9 @@ async function runModuleDeepCheck(page, id) {
                 sectionReady: !!section,
                 renderStudentDetails: typeof window.renderStudentDetails === 'function',
                 renderStudentMultiPeriodComparison: typeof window.renderStudentMultiPeriodComparison === 'function',
-                schoolSelectReady: !!document.getElementById('studentSchoolSelect'),
+                schoolSelectReady: !!schoolSelect,
+                classSelectReady: !!classSelect,
+                classOptionsReady: classOptionCount > 0,
                 tableReady: !!table,
                 countyRankAfterTownRank,
                 targetStudentTownRankReady: !targetStudent || targetTownRank > 0,
