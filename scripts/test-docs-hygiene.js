@@ -95,8 +95,10 @@ assert.ok(douyinEvidence.includes('Favorite Link Batch 20 - Deeper Visible And D
 assert.ok(douyinEvidence.includes('Favorite Link Batch 21 - Fresh Deep Detail Capture'), 'Douyin evidence should include batch 21 fresh deep detail audit');
 assert.ok(douyinEvidence.includes('Favorite Link Batch 22 - Fresh Deep Detail Capture'), 'Douyin evidence should include batch 22 fresh deep detail audit');
 assert.ok(douyinEvidence.includes('Directly reusable Douyin favorite audio found so far: `0`'), 'Douyin evidence should keep the music reuse audit');
+assert.ok(douyinEvidence.includes('Clarified target: the embeddable playlist must be selected from soundtracks used inside the user\'s favorited Douyin videos'), 'Douyin evidence should clarify that video soundtracks are the playlist source');
 assert.ok(douyinEvidence.includes('Favorite Music Tab Audit'), 'Douyin evidence should include the clarified favorite-music tab audit');
 assert.ok(douyinEvidence.includes('Visible favorite music entries captured: `49`'), 'Douyin evidence should record favorite-music capture count');
+assert.ok(douyinEvidence.includes('not counted as favorite-video soundtrack candidates'), 'Douyin evidence should not treat the music tab as the embeddable soundtrack source');
 assert.ok(Array.isArray(douyinLedger.batches) && douyinLedger.batches.length >= 3, 'Douyin favorite ledger should preserve batch history');
 const douyinEntries = douyinLedger.batches.flatMap((batch) => batch.entries || []);
 const completedDouyinEntries = douyinEntries.filter((entry) => entry.status === 'completed-detail');
