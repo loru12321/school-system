@@ -10617,6 +10617,61 @@ function getTownAnalysisVisibleSubjectsForCurrentUser() {
     return allSubjects.filter(subject => normalizedVisible.has(normalizeSubject(subject)));
 }
 
+function scrollToTableAnchor(anchorId, trigger = null) {
+    const target = document.getElementById(anchorId);
+    if (!target) {
+        if (typeof UI !== 'undefined' && UI && typeof UI.toast === 'function') {
+            UI.toast('当前表格尚未生成，请先生成结果。', 'info');
+        }
+        return false;
+    }
+    document.querySelectorAll('.table-anchor-jumpbar button, .side-nav-link, .side-nav-sub-link')
+        .forEach(item => item.classList.remove('active', 'is-active'));
+    if (trigger && trigger.classList) trigger.classList.add('active');
+    target.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+    return true;
+}
+
+function renderTwoRateTableJumpbar(visibleSubjects, summarySignature) {
+    const jumpbar = document.getElementById('two-rate-table-jumpbar');
+    if (!jumpbar) return;
+    const subjects = Array.isArray(visibleSubjects) ? visibleSubjects.filter(Boolean) : [];
+    const navKey = `${summarySignature}::jumpbar::${subjects.map(s => normalizeSubject(s)).join('|')}`;
+    if (jumpbar.dataset.summaryRenderSig === navKey && jumpbar.children.length) return;
+    const buttons = [
+        { label: '综合总表', anchorId: 'anchor-total', tone: 'total' },
+        ...subjects.map(subject => ({
+            label: subject,
+            anchorId: `anchor-subject-${subject}`,
+            tone: 'subject'
+        })),
+        { label: '横向对比', anchorId: 'horizontal-box', tone: 'compare' }
+    ];
+    jumpbar.innerHTML = `
+        <div class="table-anchor-jumpbar-head">
+            <strong>表格快速定位</strong>
+            <span>点击按钮直接跳到总表、单科表或横向对比。</span>
+        </div>
+        <div class="table-anchor-jumpbar-links">
+            ${buttons.map((button, index) => `
+                <button type="button" class="${index === 0 ? 'active' : ''}" data-anchor-id="${escapeAppHtml(button.anchorId)}" data-anchor-tone="${escapeAppHtml(button.tone)}">
+                    <span>${escapeAppHtml(button.label)}</span>
+                </button>
+            `).join('')}
+        </div>
+    `;
+    jumpbar.querySelectorAll('[data-anchor-id]').forEach(button => {
+        button.addEventListener('click', () => {
+            const anchorId = button.getAttribute('data-anchor-id');
+            if (anchorId === 'horizontal-box' && document.getElementById('horizontal-box')?.classList.contains('hidden')) {
+                if (typeof renderHorizontalTable === 'function') renderHorizontalTable();
+            }
+            scrollToTableAnchor(anchorId, button);
+        });
+    });
+    jumpbar.dataset.summaryRenderSig = navKey;
+}
+
 function renderTables() {
     updateSchoolMode();
     const tbTotal = document.querySelector('#tb-total tbody');
@@ -10683,6 +10738,7 @@ function renderTables() {
     const sideNavSubjects = document.getElementById('side-nav-subjects-container');
     const visibleSubjects = getTownAnalysisVisibleSubjectsForCurrentUser();
     const subjectRenderKey = `${summarySignature}::subjects::${visibleSubjects.map(s => normalizeSubject(s)).join('|')}`;
+    renderTwoRateTableJumpbar(visibleSubjects, summarySignature);
 
     if (subContainer?.dataset.summaryRenderSig !== subjectRenderKey || sideNavSubjects?.dataset.summaryRenderSig !== subjectRenderKey) {
     if (subContainer) subContainer.innerHTML = '';

@@ -810,10 +810,20 @@ async function runModuleDeepCheck(page, id) {
                 exportHorizontalExcel: typeof window.exportHorizontalExcel === 'function',
                 exportMacroTables: typeof window.exportMacroTables === 'function',
                 renderTables: typeof window.renderTables === 'function',
-                toggleTableHeatmap: typeof window.toggleTableHeatmap === 'function'
+                toggleTableHeatmap: typeof window.toggleTableHeatmap === 'function',
+                tableAnchorJumpbarReady: false,
+                tableAnchorButtonsReady: false
             };
             let horizontalReady = false;
             try {
+                if (checks.renderTables) window.renderTables();
+                const jumpbar = document.getElementById('two-rate-table-jumpbar');
+                const jumpButtons = jumpbar ? jumpbar.querySelectorAll('[data-anchor-id]') : [];
+                const expectedSubjects = typeof window.getTownAnalysisVisibleSubjectsForCurrentUser === 'function'
+                    ? window.getTownAnalysisVisibleSubjectsForCurrentUser().length
+                    : (Array.isArray(window.SUBJECTS) ? window.SUBJECTS.length : 0);
+                checks.tableAnchorJumpbarReady = !!jumpbar;
+                checks.tableAnchorButtonsReady = jumpButtons.length >= expectedSubjects + 2;
                 if (checks.renderHorizontalTable) {
                     window.renderHorizontalTable();
                     const box = document.getElementById('horizontal-box');

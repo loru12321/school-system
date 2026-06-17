@@ -897,6 +897,131 @@ select:hover,
 }
 
 /*
+ * Table anchor navigation.
+ * Dense analysis pages need a local table index so users can jump between
+ * total, subject, and comparison tables without scanning a long report.
+ */
+.table-anchor-jumpbar {
+    display: grid;
+    grid-template-columns: minmax(160px, auto) 1fr;
+    align-items: center;
+    gap: 14px;
+    margin: 12px 0 16px;
+    padding: 12px 14px;
+    border: 1px solid rgba(209, 217, 229, 0.88);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.055);
+    backdrop-filter: blur(16px) saturate(1.08);
+}
+
+.table-anchor-jumpbar-head {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.table-anchor-jumpbar-head strong {
+    color: var(--pd-curated-ink);
+    font-size: 13px;
+    font-weight: 850;
+}
+
+.table-anchor-jumpbar-head span {
+    color: var(--pd-curated-muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.table-anchor-jumpbar-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+}
+
+.table-anchor-jumpbar button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px !important;
+    padding: 0 12px !important;
+    border: 1px solid rgba(209, 217, 229, 0.9) !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    color: #334155 !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    white-space: nowrap;
+    box-shadow: none !important;
+}
+
+.table-anchor-jumpbar button::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    margin-right: 7px;
+    border-radius: 999px;
+    background: var(--pd-curated-sky);
+    box-shadow: 0 0 0 3px rgba(49, 92, 246, 0.1);
+}
+
+.table-anchor-jumpbar button[data-anchor-tone="subject"]::before,
+.county-table-anchor-jumpbar button:not(:first-child)::before {
+    background: var(--pd-curated-mint);
+    box-shadow: 0 0 0 3px rgba(18, 168, 134, 0.1);
+}
+
+.table-anchor-jumpbar button[data-anchor-tone="compare"]::before {
+    background: var(--pd-curated-rose);
+    box-shadow: 0 0 0 3px rgba(254, 44, 85, 0.1);
+}
+
+.table-anchor-jumpbar button:hover {
+    border-color: rgba(49, 92, 246, 0.36) !important;
+    background: rgba(239, 246, 255, 0.96) !important;
+    color: var(--pd-curated-sky) !important;
+    transform: translateY(-1px);
+}
+
+.table-anchor-jumpbar button.active,
+.table-anchor-jumpbar button.is-active {
+    border-color: transparent !important;
+    background: linear-gradient(135deg, var(--pd-curated-sky), #1b7af0) !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 20px rgba(49, 92, 246, 0.18) !important;
+}
+
+.table-anchor-jumpbar button.active::before,
+.table-anchor-jumpbar button.is-active::before {
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22);
+}
+
+.anchor-target {
+    scroll-margin-top: 112px;
+}
+
+@media (max-width: 900px) {
+    .table-anchor-jumpbar {
+        grid-template-columns: 1fr;
+    }
+
+    .table-anchor-jumpbar-links {
+        justify-content: flex-start;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 2px;
+        scroll-snap-type: x proximity;
+    }
+
+    .table-anchor-jumpbar button {
+        scroll-snap-align: start;
+    }
+}
+
+/*
  * Win11 Fluent workspace pass.
  * Mica background, acrylic tool surfaces, 8px cards, reveal-style hover,
  * and visible keyboard focus for dense operational screens.

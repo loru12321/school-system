@@ -59,8 +59,9 @@
         return subjects.map((subject) => {
             const rows = ctx.buildCountySubjectRows(subject);
             if (!rows.length) return '';
+            const anchorId = `county-subject-anchor-${subject}`;
             return `
-                <div class="analysis-anchor-panel county-subject-detail">
+                <div id="${ctx.escapeHtml(anchorId)}" class="analysis-anchor-panel county-subject-detail anchor-target">
                     <div class="county-section-head">
                         <div class="sub-header analysis-section-head">${ctx.escapeHtml(subject)} 学科明细</div>
                     </div>
@@ -90,6 +91,28 @@
         }).filter(Boolean).join('');
     }
 
+    function renderAnchorJumpbar(ctx, subjects) {
+        const items = [
+            { label: '五科总', anchorId: 'county-total-anchor' },
+            ...subjects.map(subject => ({ label: subject, anchorId: `county-subject-anchor-${subject}` }))
+        ];
+        return `
+            <div class="table-anchor-jumpbar table-anchor-jumpbar--inline county-table-anchor-jumpbar" aria-label="县域横向表格快速定位">
+                <div class="table-anchor-jumpbar-head">
+                    <strong>表格快速定位</strong>
+                    <span>按学科跳转到对应排名表。</span>
+                </div>
+                <div class="table-anchor-jumpbar-links">
+                    ${items.map((item, index) => `
+                        <button type="button" class="${index === 0 ? 'active' : ''}" onclick="document.getElementById('${ctx.escapeHtml(item.anchorId)}')?.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' })">
+                            <span>${ctx.escapeHtml(item.label)}</span>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
     function renderSchoolHorizontal(ctx) {
         const totalRows = ctx.buildCountyHorizontalTotalRows();
         if (!totalRows.length) return '<div class="county-empty">暂无学校成绩数据，请先导入本次县级成绩。</div>';
@@ -115,7 +138,8 @@
                 <div><span>学生样本</span><strong>${(window.RAW_DATA || []).length}</strong><em>${ctx.escapeHtml(ctx.getExamKey())}</em></div>
                 <div><span>输出</span><strong>横向表</strong><em>五科总 + 单科明细</em></div>
             </div>
-            <div class="analysis-anchor-panel">
+            ${renderAnchorJumpbar(ctx, subjects)}
+            <div id="county-total-anchor" class="analysis-anchor-panel anchor-target">
                 <div class="county-section-head">
                     <div class="sub-header analysis-section-head">五科总 - 综合分析表</div>
                     <div class="county-section-actions">
