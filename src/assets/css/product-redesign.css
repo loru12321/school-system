@@ -557,6 +557,346 @@ label,
 }
 
 /*
+ * Curated media interaction polish.
+ * This keeps the visual system usable during repeated daily work: clearer
+ * hover/focus states, calmer overlays, stable table scanning, and touch-safe
+ * controls without changing any runtime calculation.
+ */
+:root {
+    --pd-interaction-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --pd-interaction-fast: 140ms;
+    --pd-interaction-medium: 220ms;
+    --pd-scrollbar-track: rgba(226, 232, 240, 0.58);
+    --pd-scrollbar-thumb: rgba(49, 92, 246, 0.42);
+}
+
+html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--pd-scrollbar-thumb) var(--pd-scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+    background: var(--pd-scrollbar-track);
+    border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+    min-height: 48px;
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: var(--pd-scrollbar-thumb);
+    background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: rgba(254, 44, 85, 0.48);
+    background-clip: padding-box;
+}
+
+#app :is(button, .btn, .chip-item, .shell-module-rail-chip, .side-nav-link, .side-nav-sub-link, a, select, input, textarea) {
+    -webkit-tap-highlight-color: transparent;
+}
+
+#app :is(button, .btn, .chip-item, .shell-module-rail-chip, .side-nav-link, .side-nav-sub-link, a) {
+    transition:
+        transform var(--pd-interaction-fast) var(--pd-interaction-ease),
+        background-color var(--pd-interaction-fast) ease,
+        border-color var(--pd-interaction-fast) ease,
+        color var(--pd-interaction-fast) ease,
+        box-shadow var(--pd-interaction-fast) ease !important;
+}
+
+#app :is(button, .btn, .chip-item, .shell-module-rail-chip, .side-nav-link, .side-nav-sub-link):active {
+    transform: translateY(0) scale(0.985) !important;
+}
+
+#app :is(button, .btn, .chip-item, .shell-module-rail-chip, .side-nav-link, .side-nav-sub-link)[disabled],
+#app :is(button, .btn, .chip-item, .shell-module-rail-chip, .side-nav-link, .side-nav-sub-link).disabled {
+    cursor: not-allowed !important;
+    opacity: 0.52 !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+select,
+.toolbar-select,
+.filter-select,
+.upload-field-input,
+.role-select,
+.thumb-select,
+.seat-field select,
+.analysis-filter select {
+    min-height: 40px !important;
+    padding-right: 34px !important;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #64748b 50%),
+        linear-gradient(135deg, #64748b 50%, transparent 50%) !important;
+    background-position:
+        calc(100% - 18px) 52%,
+        calc(100% - 13px) 52% !important;
+    background-size: 5px 5px, 5px 5px !important;
+    background-repeat: no-repeat !important;
+    appearance: none;
+}
+
+select:hover,
+.toolbar-select:hover,
+.filter-select:hover,
+.upload-field-input:hover,
+.analysis-filter select:hover {
+    border-color: rgba(49, 92, 246, 0.42) !important;
+}
+
+.global-search,
+.search-box,
+.command-search,
+#globalSearchInput,
+#global-search-input {
+    border-radius: 12px !important;
+    border: 1px solid var(--pd-curated-line) !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 8px 18px rgba(15, 23, 42, 0.035) !important;
+}
+
+.global-search:focus-within,
+.search-box:focus-within,
+.command-search:focus-within {
+    border-color: rgba(49, 92, 246, 0.54) !important;
+    box-shadow: 0 0 0 3px rgba(49, 92, 246, 0.12), 0 12px 28px rgba(15, 23, 42, 0.08) !important;
+}
+
+.table-wrap,
+.analysis-table-shell,
+.analysis-summary-table,
+.data-quality-table-wrap,
+.progress-table-shell,
+.progress-value-shell {
+    scrollbar-gutter: stable both-edges;
+}
+
+.analysis-table-shell thead th,
+.table-wrap thead th,
+.analysis-generated-table thead th,
+.analysis-table-dense thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+}
+
+.analysis-table-shell tbody tr,
+.table-wrap tbody tr,
+.analysis-generated-table tbody tr,
+.analysis-table-dense tbody tr {
+    transition: background-color var(--pd-interaction-fast) ease, box-shadow var(--pd-interaction-fast) ease;
+}
+
+.analysis-table-shell tbody tr:hover,
+.table-wrap tbody tr:hover,
+.analysis-generated-table tbody tr:hover,
+.analysis-table-dense tbody tr:hover {
+    box-shadow: inset 3px 0 0 rgba(254, 44, 85, 0.52);
+}
+
+.analysis-table-shell td:first-child,
+.table-wrap td:first-child,
+.analysis-generated-table td:first-child,
+.analysis-table-dense td:first-child {
+    color: #172033 !important;
+}
+
+.modal,
+.overlay,
+.drawer-overlay,
+.workspace-drawer-panel {
+    backdrop-filter: blur(14px) saturate(1.08);
+}
+
+.modal-content,
+.school-profile-modal-content,
+.workspace-drawer-panel,
+.drawer-panel,
+.dialog,
+.popover,
+.dropdown-menu,
+.suggestion-dropdown {
+    border: 1px solid rgba(209, 217, 229, 0.92) !important;
+    border-radius: 14px !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    box-shadow: 0 24px 64px rgba(15, 23, 42, 0.16) !important;
+}
+
+.modal-close-btn,
+.school-modal-close,
+.drawer-close,
+.popover-close {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    border-radius: 50% !important;
+    border: 1px solid rgba(226, 232, 240, 0.9) !important;
+    background: rgba(248, 250, 252, 0.94) !important;
+    color: #334155 !important;
+}
+
+.modal-close-btn:hover,
+.school-modal-close:hover,
+.drawer-close:hover,
+.popover-close:hover {
+    background: var(--pd-curated-rose-soft) !important;
+    color: var(--pd-curated-rose) !important;
+    border-color: rgba(254, 44, 85, 0.28) !important;
+}
+
+.toast-container {
+    top: 18px !important;
+    right: 18px !important;
+    gap: 10px !important;
+}
+
+.toast-msg,
+.toast,
+.notification,
+.notice {
+    border: 1px solid rgba(209, 217, 229, 0.9) !important;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    color: var(--pd-curated-ink) !important;
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.14) !important;
+    backdrop-filter: blur(18px) saturate(1.1);
+}
+
+.toast-success,
+.notice-success {
+    border-left: 4px solid var(--pd-curated-mint) !important;
+}
+
+.toast-error,
+.notice-error {
+    border-left: 4px solid var(--pd-curated-rose) !important;
+}
+
+.toast-info,
+.notice-info {
+    border-left: 4px solid var(--pd-curated-sky) !important;
+}
+
+.loading,
+.loading-state,
+.skeleton,
+.table-loading,
+.analysis-loading {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(90deg, rgba(248, 250, 252, 0.92), rgba(239, 246, 255, 0.92), rgba(248, 250, 252, 0.92)) !important;
+}
+
+.loading::after,
+.loading-state::after,
+.skeleton::after,
+.table-loading::after,
+.analysis-loading::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+    animation: pd-curated-shimmer 1.3s infinite;
+}
+
+@keyframes pd-curated-shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.analysis-table-meta,
+.control-panel,
+.filter-panel,
+.report-query-panel,
+.upload-controls,
+.analysis-action-strip {
+    gap: 10px !important;
+}
+
+.analysis-table-meta > *,
+.control-panel > *,
+.filter-panel > *,
+.report-query-panel > *,
+.upload-controls > *,
+.analysis-action-strip > * {
+    min-width: 0;
+}
+
+.analysis-workspace :is(.badge, .tag, .pill, .status-chip, .module-badge) {
+    border: 1px solid rgba(209, 217, 229, 0.82) !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.82) !important;
+    color: #475569 !important;
+}
+
+.analysis-workspace :is(.badge.active, .tag.active, .pill.active, .status-chip.active, .module-badge.active) {
+    background: var(--pd-curated-sky-soft) !important;
+    color: var(--pd-curated-sky) !important;
+    border-color: rgba(49, 92, 246, 0.28) !important;
+}
+
+@media (max-width: 768px) {
+    *::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    #app :is(button, .btn, .chip-item, .shell-module-rail-chip, select, input) {
+        min-height: 44px !important;
+    }
+
+    .toast-container {
+        top: auto !important;
+        right: 12px !important;
+        bottom: calc(16px + env(safe-area-inset-bottom)) !important;
+        left: 12px !important;
+    }
+
+    .toast-msg,
+    .toast,
+    .notification,
+    .notice {
+        width: 100% !important;
+        max-width: none !important;
+    }
+
+    .modal-content,
+    .school-profile-modal-content,
+    .workspace-drawer-panel,
+    .drawer-panel {
+        border-radius: 16px 16px 0 0 !important;
+    }
+
+    .analysis-table-shell thead th,
+    .table-wrap thead th,
+    .analysis-generated-table thead th,
+    .analysis-table-dense thead th {
+        position: static;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .loading::after,
+    .loading-state::after,
+    .skeleton::after,
+    .table-loading::after,
+    .analysis-loading::after {
+        animation: none !important;
+    }
+}
+
+/*
  * Win11 Fluent workspace pass.
  * Mica background, acrylic tool surfaces, 8px cards, reveal-style hover,
  * and visible keyboard focus for dense operational screens.
