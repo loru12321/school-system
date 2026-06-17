@@ -32,7 +32,7 @@ assert.ok(html.includes('<meta name="twitter:card" content="summary">'), 'index.
 assert.ok(html.includes('<meta name="twitter:image" content="https://schoolsystem.com.cn/icon.svg">'), 'index.html should include a Twitter share image');
 assert.ok(html.includes('type="image/x-icon"'), 'favicon link should include an explicit content type');
 assert.ok(html.includes('service-worker-runtime.js'), 'index.html should register the service worker runtime');
-assert.ok(html.includes('./assets/css/product-redesign.css?v=20260617-authorized-audio-v1'), 'index.html should load the product redesign layer after legacy styles');
+assert.ok(html.includes('./assets/css/product-redesign.css?v=20260617-win11-fluent-v1'), 'index.html should load the product redesign layer after legacy styles');
 assert.ok(html.indexOf('layout-refinement.css') < html.indexOf('product-redesign.css'), 'product redesign should override layout refinement styles');
 assert.ok(html.includes("var refreshVersion = '20260617-authorized-audio-v1';"), 'early runtime refresh version should match the service worker runtime');
 assert.ok(!/[�锟鏅烘収]/.test(html.slice(0, html.indexOf('</head>'))), 'index head metadata should not contain mojibake');
