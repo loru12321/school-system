@@ -2083,6 +2083,20 @@ The logged-in favorites collection was reopened again and the route container wa
 - System action taken: bundled generated entrance music is being removed from the app. The entrance sound feature is being converted to an authorized-import playlist, so only audio files supplied by the user with usage rights are played by the system.
 - Future evidence needed before bundling any Douyin-derived track: source audio file, rights holder or license, allowed use scope, and whether redistribution inside the school system is permitted.
 
+## Favorite Music Tab Audit
+
+After the user clarified that the target was favorite music rather than only favorite videos, the logged-in account page was opened at `收藏 > 音乐`. The visible account remained `abcabc1411`; the favorites tab still showed roughly `2.2万`.
+
+- Visible favorite music entries captured: `49`.
+- Music list items opened for detail behavior testing: `1`.
+- Direct audio URLs exposed by the web UI: `0`.
+- Explicit ownership, redistribution, or commercial-use authorization signals: `0`.
+- Directly reusable favorite music tracks found: `0`.
+- Detail behavior observed: the music list item behaved as an in-page list/play surface. It did not expose a stable detail URL, a downloadable audio URL, or a license panel in the browser UI.
+- System decision: these 49 favorite music entries are useful as naming and mood references only. They are not bundled into the product. The system keeps the authorized-import playlist and plays only user-supplied audio that the user confirms is licensed for this school system.
+
+The music entries are persisted in `docs/douyin-favorite-music-audit-ledger.json` so the audit separates favorite-video evidence from favorite-music evidence.
+
 ## Remaining Scope
 
-The user requested all Douyin favorites. The visible account says roughly `2.2万` favorites, so full verification requires a long-running paginated scan with stable browser access and progress persistence. Current evidence covers 382 unique favorite-video URLs captured from the logged-in favorites list: 371 completed opened detail pages, eleven detail-opening attempts whose direct pages or modal navigation did not reliably expose complete detail metadata, and zero visible-list captures remaining in the current evidence window. No captured entry currently contains explicit authorization signals for directly bundling its Douyin audio.
+The user requested all Douyin favorites. The visible account says roughly `2.2万` favorites, so full verification requires a long-running paginated scan with stable browser access and progress persistence. Current evidence covers 382 unique favorite-video URLs captured from the logged-in favorites list: 371 completed opened detail pages, eleven detail-opening attempts whose direct pages or modal navigation did not reliably expose complete detail metadata, and zero visible-list captures remaining in the current evidence window. The clarified favorite-music pass captured 49 visible music entries from `收藏 > 音乐`. No captured entry currently contains explicit authorization signals for directly bundling its Douyin audio.
