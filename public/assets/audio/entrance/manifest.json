@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-18T04:52:06.515Z",
+  "generatedAt": "2026-06-18T05:10:09.744Z",
   "note": "Bundled entrance audio/video is supported only when each track is explicitly marked authorizedForEmbedding. Downloaded Douyin favorite-video music must not be listed here unless the user has rights to redistribute it inside this system.",
   "trackSchema": {
     "id": "stable-track-id",
@@ -13,11 +13,11 @@
     {
       "id": "renran-waipoqiao",
       "name": "任然 - 外婆桥",
-      "src": "renran-waipoqiao.mp3",
+      "src": "renran-waipoqiao-96k.mp3",
       "type": "audio/mpeg",
       "authorizedForEmbedding": true,
       "license": "User-selected project audio; embedding explicitly authorized by the project owner on 2026-06-18.",
-      "sourceRef": "desktop/任然 - 外婆桥.mp3"
+      "sourceRef": "desktop/任然 - 外婆桥.mp3 (web 96 kbps)"
     }
   ]
 }

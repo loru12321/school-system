@@ -78,6 +78,12 @@ for (const track of entranceManifest.tracks) {
   if (!fs.existsSync(trackPath) || fs.statSync(trackPath).size < 100 * 1024) {
     throw new Error(`Bundled entrance track file is missing or unexpectedly small: ${track.src}`);
   }
+  if (fs.statSync(trackPath).size > 4 * 1024 * 1024) {
+    throw new Error(`Bundled entrance track exceeds the 4 MB web budget: ${track.src}`);
+  }
+}
+if (!entranceSound.includes("activeAudio.preload = 'metadata'")) {
+  throw new Error('Entrance audio should preload metadata only so it does not compete with application modules');
 }
 if (!entranceSound.includes("const DEFAULT_MODE = 'random'")) {
   throw new Error('Entrance sound should default to random playback');

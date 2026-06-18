@@ -7,7 +7,7 @@ const outDir = path.join(root, 'public', 'assets', 'audio', 'entrance');
 fs.mkdirSync(outDir, { recursive: true });
 
 const tracks = [
-  ['renran-waipoqiao', '任然 - 外婆桥', 'renran-waipoqiao.mp3', 'desktop/任然 - 外婆桥.mp3']
+  ['renran-waipoqiao', '任然 - 外婆桥', 'renran-waipoqiao-96k.mp3', 'desktop/任然 - 外婆桥.mp3 (web 96 kbps)']
 ].map(([id, name, src, sourceRef]) => ({
   id,
   name,
