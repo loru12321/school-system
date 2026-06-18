@@ -3117,7 +3117,9 @@ async function smokeDataManagerTab(page, id) {
     trace('app-ready:done', { durationMs: appReadyMeasurement.durationMs });
 
     const summary = {
-        login: await page.evaluate(() => ({
+        login: await page.evaluate(() => {
+            const entrancePlaylistStatus = String(document.querySelector('[data-sound-status]')?.textContent || '').trim();
+            return ({
             legacySchoolInternalSectionPresent: !!document.getElementById('school-internal-grades'),
             legacyRemovedSigPanelPresent: !!document.getElementById('removed-sig-panel'),
             legacyInlineTriggerPresent: !!document.querySelector('[onclick*="school-internal-grades"]'),
@@ -3132,8 +3134,11 @@ async function smokeDataManagerTab(page, id) {
             schoolInternalRemoved: !document.getElementById('school-internal-grades')
                 && !document.getElementById('removed-sig-panel')
                 && !document.querySelector('[onclick*="school-internal-grades"]'),
-            scoreCount: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0
-        })),
+            scoreCount: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
+            entrancePlaylistStatus,
+            entrancePlaylistReady: /已导入\s*4\s*首|播放：(晴光流动|夏日微风|时光留白|岁月从容)/.test(entrancePlaylistStatus)
+        });
+        }),
         switchModules: [],
         dataManagerTabs: [],
         performance: {
@@ -3256,6 +3261,7 @@ async function smokeDataManagerTab(page, id) {
     if (
         !summary.login.appVisible
         || !summary.login.schoolInternalRemoved
+        || !summary.login.entrancePlaylistReady
         || failedSwitch
         || failedDm
         || errors.length > 0

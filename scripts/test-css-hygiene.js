@@ -64,12 +64,19 @@ if (audioFiles.length !== 0) {
 if (!Array.isArray(entranceManifest.tracks)) {
   throw new Error('Entrance manifest should expose a tracks array');
 }
+if (entranceManifest.tracks.length !== 4) {
+  throw new Error(`Entrance manifest should expose the four selected project tracks, found ${entranceManifest.tracks.length}`);
+}
 if (!entranceManifest.note.includes('authorizedForEmbedding')) {
   throw new Error('Entrance manifest should document that bundled tracks require embedding authorization');
 }
 for (const track of entranceManifest.tracks) {
   if (!track.src || track.authorizedForEmbedding !== true || !track.license) {
     throw new Error(`Bundled entrance track must include src, license, and authorizedForEmbedding=true: ${track.id || track.name || 'unnamed'}`);
+  }
+  const trackPath = path.join(entranceAudioPath, track.src);
+  if (!fs.existsSync(trackPath) || fs.statSync(trackPath).size < 100 * 1024) {
+    throw new Error(`Bundled entrance track file is missing or unexpectedly small: ${track.src}`);
   }
 }
 if (!entranceSound.includes("const DEFAULT_MODE = 'random'")) {
