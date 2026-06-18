@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-18T03:18:10.375Z",
+  "generatedAt": "2026-06-18T04:52:06.515Z",
   "note": "Bundled entrance audio/video is supported only when each track is explicitly marked authorizedForEmbedding. Downloaded Douyin favorite-video music must not be listed here unless the user has rights to redistribute it inside this system.",
   "trackSchema": {
     "id": "stable-track-id",
@@ -11,40 +11,13 @@
   },
   "tracks": [
     {
-      "id": "daylight-breeze",
-      "name": "晴光流动",
-      "src": "daylight-breeze-7635891699847597818.mp3",
+      "id": "renran-waipoqiao",
+      "name": "任然 - 外婆桥",
+      "src": "renran-waipoqiao.mp3",
       "type": "audio/mpeg",
       "authorizedForEmbedding": true,
       "license": "User-selected project audio; embedding explicitly authorized by the project owner on 2026-06-18.",
-      "sourceRef": "7635891699847597818"
-    },
-    {
-      "id": "summer-flow",
-      "name": "夏日微风",
-      "src": "summer-flow-7651197220167522670.mp3",
-      "type": "audio/mpeg",
-      "authorizedForEmbedding": true,
-      "license": "User-selected project audio; embedding explicitly authorized by the project owner on 2026-06-18.",
-      "sourceRef": "7651197220167522670"
-    },
-    {
-      "id": "quiet-time",
-      "name": "时光留白",
-      "src": "quiet-time-7564305455088078138.mp3",
-      "type": "audio/mpeg",
-      "authorizedForEmbedding": true,
-      "license": "User-selected project audio; embedding explicitly authorized by the project owner on 2026-06-18.",
-      "sourceRef": "7564305455088078138"
-    },
-    {
-      "id": "calm-campus",
-      "name": "岁月从容",
-      "src": "calm-campus-7640353084556289522.mp3",
-      "type": "audio/mpeg",
-      "authorizedForEmbedding": true,
-      "license": "User-selected project audio; embedding explicitly authorized by the project owner on 2026-06-18.",
-      "sourceRef": "7640353084556289522"
+      "sourceRef": "desktop/任然 - 外婆桥.mp3"
     }
   ]
 }

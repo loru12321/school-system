@@ -7,7 +7,7 @@
     const CUSTOM_AUDIO_STORE = 'audio';
     const LEGACY_AUDIO_ID = 'entrance';
     const PLAYLIST_AUDIO_ID = 'authorized-playlist';
-    const BUNDLED_PLAYLIST_MANIFEST = './assets/audio/entrance/manifest.json?v=20260618-bundled-music-v1';
+    const BUNDLED_PLAYLIST_MANIFEST = './assets/audio/entrance/manifest.json?v=20260618-waipoqiao-v1';
     const BUNDLED_AUDIO_BASE = './assets/audio/entrance/';
     const DEFAULT_MODE = 'random';
 

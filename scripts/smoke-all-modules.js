@@ -3136,7 +3136,7 @@ async function smokeDataManagerTab(page, id) {
                 && !document.querySelector('[onclick*="school-internal-grades"]'),
             scoreCount: Array.isArray(window.RAW_DATA) ? window.RAW_DATA.length : 0,
             entrancePlaylistStatus,
-            entrancePlaylistReady: /已导入\s*4\s*首|播放：(晴光流动|夏日微风|时光留白|岁月从容)/.test(entrancePlaylistStatus)
+            entrancePlaylistReady: /已导入\s*1\s*首|播放：任然 - 外婆桥/.test(entrancePlaylistStatus)
         });
         }),
         switchModules: [],

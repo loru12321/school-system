@@ -64,8 +64,8 @@ if (audioFiles.length !== 0) {
 if (!Array.isArray(entranceManifest.tracks)) {
   throw new Error('Entrance manifest should expose a tracks array');
 }
-if (entranceManifest.tracks.length !== 4) {
-  throw new Error(`Entrance manifest should expose the four selected project tracks, found ${entranceManifest.tracks.length}`);
+if (entranceManifest.tracks.length !== 1) {
+  throw new Error(`Entrance manifest should expose only the selected built-in track, found ${entranceManifest.tracks.length}`);
 }
 if (!entranceManifest.note.includes('authorizedForEmbedding')) {
   throw new Error('Entrance manifest should document that bundled tracks require embedding authorization');

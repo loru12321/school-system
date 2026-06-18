@@ -64,7 +64,7 @@ assert.ok(exists('dist/favicon.ico'), 'dist/favicon.ico must exist before releas
 assert.ok(exists('dist/assets/js/boot-runtime.js'), 'dist boot runtime must exist before release');
 assert.ok(exists('dist/assets/js/app.js'), 'dist app runtime must exist before release');
 const entranceManifest = parseJson('dist/assets/audio/entrance/manifest.json');
-assert.strictEqual(entranceManifest.tracks.length, 4, 'release should include the four selected built-in entrance tracks');
+assert.strictEqual(entranceManifest.tracks.length, 1, 'release should include only the selected built-in entrance track');
 entranceManifest.tracks.forEach((track) => {
   assert.ok(exists(`dist/assets/audio/entrance/${track.src}`), `release should include built-in entrance track ${track.src}`);
 });

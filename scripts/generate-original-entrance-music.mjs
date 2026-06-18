@@ -7,10 +7,7 @@ const outDir = path.join(root, 'public', 'assets', 'audio', 'entrance');
 fs.mkdirSync(outDir, { recursive: true });
 
 const tracks = [
-  ['daylight-breeze', '晴光流动', 'daylight-breeze-7635891699847597818.mp3', '7635891699847597818'],
-  ['summer-flow', '夏日微风', 'summer-flow-7651197220167522670.mp3', '7651197220167522670'],
-  ['quiet-time', '时光留白', 'quiet-time-7564305455088078138.mp3', '7564305455088078138'],
-  ['calm-campus', '岁月从容', 'calm-campus-7640353084556289522.mp3', '7640353084556289522']
+  ['renran-waipoqiao', '任然 - 外婆桥', 'renran-waipoqiao.mp3', 'desktop/任然 - 外婆桥.mp3']
 ].map(([id, name, src, sourceRef]) => ({
   id,
   name,
@@ -28,7 +25,9 @@ for (const track of tracks) {
 }
 
 for (const entry of fs.readdirSync(outDir, { withFileTypes: true })) {
-  if (entry.isFile() && entry.name.toLowerCase().endsWith('.wav')) {
+  const isMedia = /\.(mp3|wav|ogg|m4a|mp4|mov|webm)$/i.test(entry.name);
+  const isSelectedTrack = tracks.some((track) => track.src === entry.name);
+  if (entry.isFile() && isMedia && !isSelectedTrack) {
     fs.unlinkSync(path.join(outDir, entry.name));
   }
 }
