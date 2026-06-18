@@ -24,6 +24,13 @@ const SchoolCompareListPerfCache = {
     townshipSchools: []
 };
 
+const IndicatorSchoolBucketPerfCache = {
+    signature: '',
+    buckets: [],
+    scoreMapSignature: '',
+    scoreNameMap: new Map()
+};
+
 function normalizeSchoolDisplayName(name) {
     return String(name || '')
         .normalize('NFKC')
@@ -471,8 +478,52 @@ function getEquivalentSchoolStudents(schoolName) {
         .flatMap(item => Array.isArray(item?.students) ? item.students : []);
 }
 
-function buildIndicatorSchoolBuckets() {
+function getIndicatorSchoolBucketSignature() {
     ensureNormalizedTargets();
+    const schoolSignature = Object.values(SCHOOLS || {})
+        .map((school) => {
+            const name = String(school?.name || '').trim();
+            const count = Array.isArray(school?.students) ? school.students.length : 0;
+            return `${name}:${count}`;
+        })
+        .sort((a, b) => a.localeCompare(b, 'zh-CN'))
+        .join('|');
+    const targetSignature = Object.keys(window.TARGETS || {})
+        .sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'))
+        .map((name) => {
+            const target = window.TARGETS?.[name] || {};
+            return `${String(name).trim()}:${parseInt(target.t1, 10) || 0}:${parseInt(target.t2, 10) || 0}`;
+        })
+        .join('|');
+    return [
+        typeof CURRENT_EXAM_ID !== 'undefined' ? CURRENT_EXAM_ID || '' : '',
+        window.__RAW_DATA_VERSION || 0,
+        (typeof RAW_DATA !== 'undefined' && Array.isArray(RAW_DATA)) ? RAW_DATA.length : 0,
+        schoolSignature,
+        targetSignature
+    ].join('::');
+}
+
+function cloneIndicatorSchoolBuckets(buckets) {
+    return Array.isArray(buckets)
+        ? buckets.map((bucket) => ({
+            name: bucket.name,
+            rawNames: Array.isArray(bucket.rawNames) ? bucket.rawNames.slice() : [],
+            students: Array.isArray(bucket.students) ? bucket.students.slice() : []
+        }))
+        : [];
+}
+
+function buildIndicatorSchoolBuckets() {
+    const signature = getIndicatorSchoolBucketSignature();
+    if (
+        IndicatorSchoolBucketPerfCache.signature === signature
+        && Array.isArray(IndicatorSchoolBucketPerfCache.buckets)
+        && IndicatorSchoolBucketPerfCache.buckets.length
+    ) {
+        return cloneIndicatorSchoolBuckets(IndicatorSchoolBucketPerfCache.buckets);
+    }
+
     const buckets = new Map();
     Object.values(SCHOOLS || {}).forEach((school) => {
         const rawName = String(school?.name || '').trim();
@@ -496,16 +547,37 @@ function buildIndicatorSchoolBuckets() {
             bucket.students.push(...school.students);
         }
     });
-    return Array.from(buckets.values());
+    const nextBuckets = Array.from(buckets.values());
+    IndicatorSchoolBucketPerfCache.signature = signature;
+    IndicatorSchoolBucketPerfCache.buckets = cloneIndicatorSchoolBuckets(nextBuckets);
+    return cloneIndicatorSchoolBuckets(nextBuckets);
+}
+
+function getIndicatorScoreSchoolMapSignature() {
+    return Object.values(SCHOOLS || {})
+        .map((school) => String(school?.name || '').trim())
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, 'zh-CN'))
+        .join('|');
 }
 
 function syncIndicatorScoreToSchools(schoolName, score) {
-    const matchedNames = new Set(
-        getMatchedSchoolNamesFromCollection(
-            Object.values(SCHOOLS || {}).map(item => item?.name),
-            schoolName
-        )
-    );
+    const signature = getIndicatorScoreSchoolMapSignature();
+    if (IndicatorSchoolBucketPerfCache.scoreMapSignature !== signature) {
+        IndicatorSchoolBucketPerfCache.scoreMapSignature = signature;
+        IndicatorSchoolBucketPerfCache.scoreNameMap = new Map();
+    }
+    const cacheKey = normalizeSchoolName(schoolName) || String(schoolName || '').trim();
+    let matchedNames = IndicatorSchoolBucketPerfCache.scoreNameMap.get(cacheKey);
+    if (!matchedNames) {
+        matchedNames = new Set(
+            getMatchedSchoolNamesFromCollection(
+                Object.values(SCHOOLS || {}).map(item => item?.name),
+                schoolName
+            )
+        );
+        IndicatorSchoolBucketPerfCache.scoreNameMap.set(cacheKey, matchedNames);
+    }
     Object.values(SCHOOLS || {}).forEach((school) => {
         if (matchedNames.has(String(school?.name || '').trim())) {
             school.scoreInd = score;

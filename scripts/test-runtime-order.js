@@ -1022,6 +1022,9 @@ assert.ok(supportMetricsRuntime.includes('root.getSummaryTownshipSchools'), 'sup
 assert.ok(appSource.includes('const IndicatorCalcPerfCache'), 'indicator should cache repeated silent calculations');
 assert.ok(appSource.includes('function buildIndicatorCalcSignature'), 'indicator cache should use an explicit dependency signature');
 assert.ok(appSource.includes('isSilent') && appSource.includes('IndicatorCalcPerfCache.signature === calcSignature'), 'indicator cache should only short-circuit repeated silent calculations');
+assert.ok(schoolNormalizationRuntime.includes('const IndicatorSchoolBucketPerfCache'), 'indicator school normalization should cache repeated bucket builds');
+assert.ok(schoolNormalizationRuntime.includes('function getIndicatorSchoolBucketSignature'), 'indicator bucket cache should use an explicit dependency signature');
+assert.ok(schoolNormalizationRuntime.includes('scoreNameMap'), 'indicator score sync should cache repeated school-name matching');
 assert.ok(moduleEntryRuntime.includes("node.dataset.released === 'true'"), 'teacher heavy DOM release should not rewrite already released placeholders on later module switches');
 assert.ok(appSource.includes('background: true') && appSource.includes('delay: 4800'), 'student report cloud-history hydration should stay delayed and low priority');
 const countyRankFallbackStart = cloudRuntime.indexOf('const getCountyRankFallback = (payload, match, subject =');
