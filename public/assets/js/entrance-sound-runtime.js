@@ -385,10 +385,10 @@
         const lead = document.querySelector('.login-clean-copy p');
         const eyebrow = document.querySelector('.login-clean-copy span');
         const strongs = document.querySelectorAll('.login-look-card strong');
-        const labels = ['映雪', '鹿鸣', '青漪'];
-        if (eyebrow) eyebrow.textContent = 'CLEAN / BEAT / FLOW';
+        const labels = ['成绩画像', '教师动线', '家校报告'];
+        if (eyebrow) eyebrow.textContent = 'DATA / CLASS / REPORT';
         if (title) title.textContent = '菁莪云枢';
-        if (lead) lead.textContent = '把成绩、师资、成长轨迹与家校报告按节拍排好：白底清透，粉色点睛，蓝绿色收尾；每一步都轻一点、准一点、看得更顺。';
+        if (lead) lead.textContent = '统一管理成绩、教师画像、成长轨迹与家校报告，登录后按届别进入对应工作台。';
         strongs.forEach((node, index) => {
             if (labels[index]) node.textContent = labels[index];
         });

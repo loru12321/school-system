@@ -23,6 +23,8 @@
     --ds-shadow: 0 24px 60px rgba(15, 23, 42, 0.11);
     --ds-shadow-soft: 0 10px 26px rgba(15, 23, 42, 0.07);
     --ds-focus: 0 0 0 3px rgba(255, 61, 104, 0.18);
+    --ds-stage-text: #f8fafc;
+    --ds-stage-muted: rgba(248, 250, 252, 0.68);
     --rp-canvas: var(--ds-canvas);
     --rp-surface: var(--ds-panel-solid);
     --rp-text: var(--ds-text);
@@ -44,6 +46,202 @@
     --bg-card: var(--ds-panel-solid);
     --border: var(--ds-line);
     --primary: var(--ds-blue);
+}
+
+/* Login poster: black video-stage energy, quiet professional form. */
+#login-overlay[data-login-skin="clean"],
+body.dark-mode #login-overlay[data-login-skin="clean"] {
+    background:
+        linear-gradient(90deg, rgba(15, 17, 23, 0.99) 0 54%, rgba(247, 249, 252, 0.97) 54%),
+        linear-gradient(135deg, rgba(255, 65, 109, 0.22), transparent 34%),
+        linear-gradient(225deg, rgba(18, 200, 188, 0.18), transparent 38%) !important;
+}
+
+#login-overlay[data-login-skin="clean"]::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 84px 84px;
+    mask-image: linear-gradient(90deg, #000 0 51%, transparent 68%);
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-shell {
+    width: min(1660px, calc(100vw - 72px)) !important;
+    min-height: min(820px, calc(100vh - 72px)) !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.16fr) minmax(420px, 0.72fr) !important;
+    gap: 44px !important;
+    align-items: stretch !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.10) !important;
+    border-radius: 30px !important;
+    background:
+        linear-gradient(135deg, rgba(255, 65, 109, 0.18), transparent 34%),
+        linear-gradient(225deg, rgba(18, 200, 188, 0.14), transparent 42%),
+        linear-gradient(180deg, #191c27, #0f1117) !important;
+    box-shadow: 0 38px 86px rgba(0, 0, 0, 0.34) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::before {
+    content: "";
+    position: absolute;
+    inset: 34px !important;
+    left: 34px !important;
+    right: 34px !important;
+    top: 34px !important;
+    bottom: 34px !important;
+    width: auto !important;
+    height: auto !important;
+    border-radius: 24px !important;
+    background:
+        linear-gradient(90deg, transparent 0 26%, rgba(255, 65, 109, 0.11) 26% 26.4%, transparent 26.4% 58%, rgba(18, 200, 188, 0.10) 58% 58.4%, transparent 58.4%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 42%) !important;
+    box-shadow: none !important;
+    opacity: 0.68 !important;
+    pointer-events: none;
+    z-index: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+    content: "";
+    position: absolute;
+    right: 44px;
+    top: 44px;
+    bottom: 44px;
+    width: 1px;
+    border-radius: 999px;
+    border: 0;
+    background:
+        linear-gradient(180deg, transparent, rgba(255, 65, 109, 0.72), rgba(18, 200, 188, 0.52), transparent) !important;
+    box-shadow: 0 0 34px rgba(255, 65, 109, 0.26);
+    z-index: 0;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand {
+    position: relative;
+    z-index: 1;
+}
+
+#login-overlay[data-login-skin="clean"] .login-styleboard {
+    display: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-mark {
+    background: linear-gradient(135deg, var(--ds-pink), var(--ds-coral)) !important;
+    color: #fff !important;
+    border: 0 !important;
+    box-shadow: 0 18px 38px rgba(255, 65, 109, 0.30) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand strong,
+#login-overlay[data-login-skin="clean"] .login-clean-brand small,
+#login-overlay[data-login-skin="clean"] .login-clean-copy span {
+    color: var(--ds-stage-muted) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy {
+    position: relative;
+    z-index: 2;
+    max-width: 640px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy span {
+    color: var(--ds-pink) !important;
+    letter-spacing: 0.08em !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+    max-width: 640px;
+    color: var(--ds-stage-text) !important;
+    font-size: clamp(62px, 6.4vw, 104px) !important;
+    line-height: 0.92 !important;
+    letter-spacing: 0 !important;
+    text-shadow: 0 22px 58px rgba(0, 0, 0, 0.38) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy p {
+    max-width: 620px;
+    color: rgba(248, 250, 252, 0.72) !important;
+    font-size: 18px !important;
+    line-height: 1.9 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-card {
+    align-self: center !important;
+    max-width: 520px !important;
+    min-height: auto !important;
+    padding: 34px !important;
+    border-radius: 30px !important;
+    background: rgba(255, 255, 255, 0.94) !important;
+    border: 1px solid rgba(255, 255, 255, 0.72) !important;
+    box-shadow: 0 30px 78px rgba(15, 23, 42, 0.13) !important;
+    backdrop-filter: blur(26px) saturate(150%) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-form-header {
+    margin-bottom: 24px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-form-header h2 {
+    color: var(--ds-ink) !important;
+    font-size: 28px !important;
+    letter-spacing: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-form-header p {
+    color: var(--ds-muted) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-switch {
+    padding: 5px !important;
+    border-radius: 18px !important;
+    background: #eef1f5 !important;
+    border: 1px solid rgba(148, 163, 184, 0.24) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .role-btn {
+    min-height: 46px !important;
+    border-radius: 14px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .role-btn.active {
+    background: #ffffff !important;
+    color: var(--ds-ink) !important;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.10) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-entry-field {
+    min-height: 50px !important;
+    border-radius: 14px !important;
+    background: #ffffff !important;
+    border: 1px solid rgba(148, 163, 184, 0.26) !important;
+    box-shadow: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-entry-prefix {
+    color: var(--ds-pink-strong) !important;
+    letter-spacing: 0.08em !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-submit {
+    min-height: 58px !important;
+    border-radius: 18px !important;
+    background: linear-gradient(135deg, var(--ds-pink), var(--ds-coral)) !important;
+    box-shadow: 0 22px 42px rgba(255, 65, 109, 0.28) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .entrance-sound-panel {
+    border-radius: 18px !important;
+    background: rgba(255, 255, 255, 0.66) !important;
+    border: 1px solid rgba(148, 163, 184, 0.22) !important;
 }
 
 html,
@@ -267,11 +465,25 @@ body.dark-mode #main-header.shell-toolbar {
 body.dark-mode .shell-overview-card--dock {
     min-height: 156px;
     background:
-        linear-gradient(100deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.93) 59%, rgba(239, 247, 255, 0.86) 100%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.78) !important;
+        linear-gradient(120deg, rgba(20, 23, 33, 0.98) 0%, rgba(15, 17, 23, 0.96) 56%, rgba(34, 38, 52, 0.90) 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.10) !important;
     border-radius: 18px !important;
-    box-shadow: var(--ds-shadow) !important;
+    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.22) !important;
     backdrop-filter: blur(26px) saturate(155%);
+    overflow: hidden;
+}
+
+.shell-overview-card--dock::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(135deg, rgba(255, 65, 109, 0.22), transparent 34%),
+        linear-gradient(235deg, rgba(18, 200, 188, 0.18), transparent 38%),
+        linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.032) 1px, transparent 1px);
+    background-size: auto, auto, 72px 72px, 72px 72px;
 }
 
 .shell-overview-card--dock::before {
@@ -282,29 +494,39 @@ body.dark-mode .shell-overview-card--dock {
 }
 
 .shell-overview-card--dock :is(#shell-category-kicker, .shell-overview-kicker) {
-    color: #7b3ff2 !important;
+    color: var(--ds-pink) !important;
     font-weight: 900 !important;
 }
 
 .shell-overview-card--dock :is(#shell-category-title, .shell-current-title) {
     font-size: clamp(30px, 3.8vw, 46px) !important;
     line-height: 1.04 !important;
-    color: var(--ds-ink) !important;
+    color: #ffffff !important;
+}
+
+.shell-overview-card--dock :is(.shell-overview-copy, p, small, span:not(.shell-overview-kicker)) {
+    color: rgba(248, 250, 252, 0.74) !important;
 }
 
 .shell-overview-context-row {
-    background: rgba(255, 255, 255, 0.66) !important;
-    border: 1px solid rgba(148, 163, 184, 0.24) !important;
+    position: relative;
+    z-index: 1;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-radius: 12px !important;
+}
+
+.shell-overview-context-row :is(button, .btn, .badge, span, strong) {
+    color: #ffffff !important;
 }
 
 .shell-module-rail-shell,
 #app .sub-nav-chips {
     position: relative;
-    background: rgba(255, 255, 255, 0.90) !important;
-    border: 1px solid rgba(255, 255, 255, 0.76) !important;
+    background: rgba(255, 255, 255, 0.94) !important;
+    border: 1px solid rgba(210, 217, 226, 0.76) !important;
     border-radius: 16px !important;
-    box-shadow: 0 14px 35px rgba(15, 23, 42, 0.09) !important;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.07) !important;
     backdrop-filter: blur(22px) saturate(150%);
 }
 
@@ -318,7 +540,7 @@ body.dark-mode .shell-overview-card--dock {
     height: 3px;
     border-radius: 999px;
     background: linear-gradient(90deg, rgba(255, 65, 109, 0.86), rgba(255, 122, 79, 0.82), rgba(18, 200, 188, 0.86));
-    opacity: 0.62;
+    opacity: 0.54;
 }
 
 .shell-module-rail-label,
@@ -328,9 +550,10 @@ body.dark-mode .shell-overview-card--dock {
 
 .shell-module-rail-chip,
 #app .sub-nav-chips :is(.chip-item, button) {
+    position: relative;
     min-height: 48px;
-    background: rgba(255, 255, 255, 0.80) !important;
-    border: 1px solid rgba(148, 163, 184, 0.24) !important;
+    background: rgba(255, 255, 255, 0.70) !important;
+    border: 1px solid rgba(148, 163, 184, 0.18) !important;
     border-radius: 13px !important;
     color: var(--ds-text) !important;
     box-shadow: none !important;
@@ -345,10 +568,22 @@ body.dark-mode .shell-overview-card--dock {
 
 .shell-module-rail-chip.is-active,
 #app .sub-nav-chips :is(.chip-item.active, button.active) {
-    background: linear-gradient(135deg, #1b1f2d, var(--ds-blue)) !important;
-    border-color: rgba(255, 255, 255, 0.24) !important;
+    background: linear-gradient(135deg, #171923, #232737) !important;
+    border-color: rgba(255, 65, 109, 0.30) !important;
     color: #ffffff !important;
-    box-shadow: 0 18px 34px rgba(37, 99, 235, 0.25) !important;
+    box-shadow: 0 18px 34px rgba(15, 23, 42, 0.20) !important;
+}
+
+.shell-module-rail-chip.is-active::after,
+#app .sub-nav-chips :is(.chip-item.active, button.active)::after {
+    content: "";
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 7px;
+    height: 2px;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--ds-pink), var(--ds-coral), var(--ds-cyan));
 }
 
 .shell-module-rail-chip-index {
@@ -374,10 +609,10 @@ body.dark-mode .shell-overview-card--dock {
 .card,
 .modal-content {
     background: var(--ds-panel) !important;
-    border: 1px solid rgba(255, 255, 255, 0.76) !important;
+    border: 1px solid rgba(210, 217, 226, 0.78) !important;
     border-radius: 16px !important;
-    box-shadow: var(--ds-shadow-soft) !important;
-    backdrop-filter: blur(18px) saturate(145%);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.055) !important;
+    backdrop-filter: blur(16px) saturate(132%);
 }
 
 .analysis-action-stack,
@@ -403,8 +638,8 @@ body.dark-mode .shell-overview-card--dock {
 
 .analysis-shell-head,
 .sec-head {
-    background: rgba(255, 255, 255, 0.72) !important;
-    border: 1px solid rgba(148, 163, 184, 0.22) !important;
+    background: rgba(255, 255, 255, 0.82) !important;
+    border: 1px solid rgba(148, 163, 184, 0.18) !important;
     border-radius: 14px !important;
     box-shadow: none !important;
 }
@@ -422,7 +657,7 @@ body.dark-mode .shell-overview-card--dock {
 }
 
 #app thead th {
-    background: linear-gradient(180deg, #f8fbff, #eef4fb) !important;
+    background: #f7f9fc !important;
     border-bottom: 1px solid var(--ds-line-strong) !important;
     color: #31445f !important;
     font-weight: 800 !important;
@@ -433,7 +668,7 @@ body.dark-mode .shell-overview-card--dock {
 }
 
 #app tbody tr:hover td {
-    background: rgba(17, 201, 191, 0.055) !important;
+    background: rgba(18, 200, 188, 0.06) !important;
 }
 
 #app :is(.metric-card, .stat-card, .summary-card, .rank-card, .feature-card) {
@@ -470,6 +705,43 @@ body.dark-mode .shell-overview-card--dock {
 }
 
 @media (max-width: 900px) {
+    #login-overlay[data-login-skin="clean"],
+    body.dark-mode #login-overlay[data-login-skin="clean"] {
+        background:
+            linear-gradient(180deg, rgba(15, 17, 23, 0.99) 0 48%, rgba(247, 249, 252, 0.97) 48%),
+            linear-gradient(145deg, rgba(255, 65, 109, 0.18), transparent 46%),
+            linear-gradient(225deg, rgba(18, 200, 188, 0.16), transparent 48%) !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-shell {
+        width: min(100vw - 28px, 760px) !important;
+        min-height: auto !important;
+        grid-template-columns: 1fr !important;
+        gap: 18px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage {
+        min-height: 360px !important;
+        border-radius: 24px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+        right: 24px;
+        bottom: 22px;
+        width: 28%;
+        min-width: 130px;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+        font-size: clamp(44px, 15vw, 72px) !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-card {
+        max-width: none !important;
+        padding: 24px !important;
+        border-radius: 24px !important;
+    }
+
     html,
     body,
     body.dark-mode {
