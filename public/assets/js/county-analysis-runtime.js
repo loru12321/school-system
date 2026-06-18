@@ -25,6 +25,7 @@
         teacherContextScheduledSignature: '',
         lastDataRankSignature: '',
         lastTeacherRankSignature: '',
+        lastRenderFastSignature: '',
         lastRenderHtmlSignature: '',
         lastRenderHtml: ''
     };
@@ -367,6 +368,7 @@
         state.teacherSubjectTablesCache = [];
         state.countyTeacherStatsSignature = '';
         state.countyTeacherStats = {};
+        state.lastRenderFastSignature = '';
     }
 
     function invalidateTeacherRankingViewCaches() {
@@ -374,6 +376,7 @@
         state.teacherRowsCache = [];
         state.teacherSubjectTablesCacheSignature = '';
         state.teacherSubjectTablesCache = [];
+        state.lastRenderFastSignature = '';
     }
 
     function getScopeMap() {
@@ -616,6 +619,16 @@
             || ''
         ).trim();
         return resolveCountySchoolOption(getSchoolNames(), rawName) || rawName;
+    }
+
+    function getCountyRenderFastSignature(activeId) {
+        return [
+            activeId,
+            getDataSignature(),
+            getCurrentSchoolNameForTeacherScope(),
+            getTeacherStatsSignature(),
+            window.__COUNTY_SCHOOL_HORIZONTAL_RUNTIME_PATCHED__ ? 'horizontal-runtime' : 'horizontal-boot'
+        ].join('::');
     }
 
     function getScopedTeacherAssignmentsForCounty() {
@@ -1941,6 +1954,12 @@
             const activeId = id === 'county-analysis' ? 'county-teacher-portrait' : id;
             const root = getCountyRootForSubmodule(activeId);
             if (!root) return;
+            const fastSignature = getCountyRenderFastSignature(activeId);
+            if (state.lastRenderFastSignature === fastSignature
+                && root.dataset.countyRenderFastSignature === fastSignature
+                && String(root.innerHTML || '').trim()) {
+                return true;
+            }
             const scope = applyCountyRanks();
             if (activeId === 'county-teacher-portrait') {
                 const scheduleSignature = [
@@ -1977,8 +1996,13 @@
             const htmlSignature = `${activeId}::${getDataSignature()}::${getCurrentSchoolNameForTeacherScope()}::${html.length}`;
             if (state.lastRenderHtmlSignature !== htmlSignature || state.lastRenderHtml !== html || root.innerHTML !== html) {
                 root.innerHTML = html;
+                root.dataset.countyRenderFastSignature = fastSignature;
+                state.lastRenderFastSignature = fastSignature;
                 state.lastRenderHtmlSignature = htmlSignature;
                 state.lastRenderHtml = html;
+            } else {
+                root.dataset.countyRenderFastSignature = fastSignature;
+                state.lastRenderFastSignature = fastSignature;
             }
         } finally {
             state.isRendering = false;
