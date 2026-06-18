@@ -2176,8 +2176,8 @@ var Auth = {
                         <a class="login-stage-brand" href="#login-hero">
                             <span class="login-stage-brand-mark">SE</span>
                             <span class="login-stage-brand-copy">
-                                <strong>菁莪云枢</strong>
-                                <small>JING'E CLOUD OS</small>
+                                <strong>知衡云台</strong>
+                                <small>ZHIBALANCE STUDIO</small>
                             </span>
                         </a>
                         <div class="login-stage-nav-links">
@@ -2386,8 +2386,8 @@ var Auth = {
                         <a class="login-stage-brand" href="#login-hero">
                             <span class="login-stage-brand-mark">SE</span>
                             <span class="login-stage-brand-copy">
-                                <strong>菁莪云枢</strong>
-                                <small>JING'E CLOUD OS</small>
+                                <strong>知衡云台</strong>
+                                <small>ZHIBALANCE STUDIO</small>
                             </span>
                         </a>
                         <div class="login-stage-nav-links">
@@ -2603,8 +2603,8 @@ var Auth = {
                         <a class="login-stage-brand" href="#login-hero">
                             <span class="login-stage-brand-mark">SE</span>
                             <span class="login-stage-brand-copy">
-                                <strong>菁莪云枢</strong>
-                                <small>JING'E CLOUD OS</small>
+                                <strong>知衡云台</strong>
+                                <small>ZHIBALANCE STUDIO</small>
                             </span>
                         </a>
                         <div class="login-stage-nav-links">
@@ -3022,7 +3022,7 @@ var Auth = {
 
         return {
             chip: nextPortal === 'parent' ? '家长端说明' : '学校端说明',
-            title: '菁莪云枢如何使用',
+            title: '知衡云台如何使用',
             copy: '系统介绍集中说明使用流程、模块结构、角色权限、成绩计算和绩效比较规则，首页不再直接展开这些说明。',
             spotlight,
             quickStats: [

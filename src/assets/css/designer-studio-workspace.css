@@ -330,7 +330,7 @@ body.dark-mode #app-sidebar.sidebar-spacious {
 
 #app-sidebar.sidebar-spacious .sidebar-nav-container::before,
 .sidebar-spacious .sidebar-nav-container::before {
-    content: "JE";
+    content: "ZH";
     position: absolute;
     top: 35px;
     left: 50%;
@@ -759,6 +759,1824 @@ body.dark-mode .shell-overview-card--dock {
     .sidebar-spacious {
         border-radius: 0 22px 22px 0 !important;
     }
+}
+
+/* Final login art direction: light, content-first, INS-inspired restraint. */
+#login-overlay[data-login-skin="clean"],
+body.dark-mode #login-overlay[data-login-skin="clean"] {
+    padding: clamp(22px, 4vw, 46px) !important;
+    background:
+        radial-gradient(circle at 10% 12%, rgba(254, 44, 85, 0.09), transparent 27%),
+        radial-gradient(circle at 80% 10%, rgba(255, 189, 89, 0.11), transparent 28%),
+        radial-gradient(circle at 34% 88%, rgba(37, 244, 238, 0.10), transparent 29%),
+        #ffffff !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-shell {
+    width: min(1320px, calc(100vw - 64px)) !important;
+    min-height: min(760px, calc(100vh - 56px)) !important;
+    grid-template-columns: minmax(560px, 1fr) minmax(390px, 470px) !important;
+    gap: clamp(28px, 4vw, 58px) !important;
+    align-items: center !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage {
+    min-height: min(720px, calc(100vh - 92px)) !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 0.92fr) minmax(260px, 0.72fr) !important;
+    grid-template-rows: auto 1fr auto !important;
+    gap: 22px !important;
+    padding: clamp(34px, 4.2vw, 58px) !important;
+    overflow: hidden !important;
+    border-radius: 22px !important;
+    color: #161823 !important;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.88)),
+        radial-gradient(circle at 12% 20%, rgba(254, 44, 85, 0.10), transparent 28%),
+        radial-gradient(circle at 86% 28%, rgba(255, 189, 89, 0.13), transparent 30%),
+        radial-gradient(circle at 70% 78%, rgba(37, 244, 238, 0.12), transparent 32%) !important;
+    border: 1px solid rgba(219, 226, 236, 0.92) !important;
+    box-shadow: 0 28px 70px rgba(22, 24, 35, 0.10) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 58px !important;
+    right: clamp(34px, 5vw, 66px) !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: min(300px, 34%) !important;
+    height: min(560px, calc(100% - 116px)) !important;
+    border-radius: 28px !important;
+    background:
+        linear-gradient(#ffffff, #ffffff) padding-box,
+        linear-gradient(145deg, #fe2c55, #ffbd59 48%, #25f4ee) border-box !important;
+    border: 2px solid transparent !important;
+    box-shadow: 0 26px 56px rgba(22, 24, 35, 0.16) !important;
+    opacity: 1 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 92px !important;
+    right: clamp(54px, 6.6vw, 90px) !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: min(244px, 28%) !important;
+    height: min(430px, calc(100% - 184px)) !important;
+    border-radius: 22px !important;
+    background:
+        linear-gradient(180deg, rgba(22, 24, 35, 0.92) 0 14%, transparent 14%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.96)),
+        repeating-linear-gradient(180deg, transparent 0 82px, rgba(226, 232, 240, 0.8) 82px 83px) !important;
+    box-shadow: inset 0 0 0 1px rgba(222, 230, 240, 0.92) !important;
+    opacity: 1 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy {
+    position: relative !important;
+    z-index: 2 !important;
+    align-self: center !important;
+    max-width: 540px !important;
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+    margin: 18px 0 14px !important;
+    color: #161823 !important;
+    font-size: clamp(44px, 5.4vw, 82px) !important;
+    line-height: 0.98 !important;
+    letter-spacing: 0 !important;
+    text-shadow: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy p,
+#login-overlay[data-login-skin="clean"] .login-clean-copy .login-clean-lead {
+    max-width: 500px !important;
+    color: #526173 !important;
+    font-size: clamp(16px, 1.4vw, 19px) !important;
+    line-height: 1.78 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand {
+    position: relative !important;
+    z-index: 2 !important;
+    display: flex !important;
+    gap: 14px !important;
+    align-items: center !important;
+    grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
+    color: #161823 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-mark {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 14px !important;
+    color: #161823 !important;
+    background:
+        linear-gradient(#ffffff, #ffffff) padding-box,
+        linear-gradient(135deg, #fe2c55, #ffbd59 48%, #25f4ee) border-box !important;
+    border: 2px solid transparent !important;
+    box-shadow: 0 12px 24px rgba(22, 24, 35, 0.12) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand small,
+#login-overlay[data-login-skin="clean"] .login-clean-eyebrow {
+    color: #717c8b !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-styleboard,
+#login-overlay[data-login-skin="clean"] .login-look-grid,
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip {
+    position: relative !important;
+    z-index: 2 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-styleboard {
+    display: grid !important;
+    gap: 14px !important;
+    grid-column: 2 !important;
+    grid-row: 2 / 4 !important;
+    align-self: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-grid {
+    display: grid !important;
+    gap: 12px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card,
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip {
+    border: 1px solid rgba(222, 230, 240, 0.92) !important;
+    border-radius: 18px !important;
+    background: rgba(255, 255, 255, 0.88) !important;
+    color: #161823 !important;
+    box-shadow: 0 16px 36px rgba(22, 24, 35, 0.08) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card {
+    min-height: 118px !important;
+    padding: 18px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card::before {
+    background: linear-gradient(180deg, #fe2c55, #25f4ee) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card strong,
+#login-overlay[data-login-skin="clean"] .login-look-card span:first-child,
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip strong {
+    color: #161823 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card span:last-child,
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip span {
+    color: #667488 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip {
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+    padding: 16px 18px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-panel {
+    border-radius: 22px !important;
+    border: 1px solid rgba(222, 230, 240, 0.96) !important;
+    background: rgba(255, 255, 255, 0.94) !important;
+    box-shadow: 0 28px 70px rgba(22, 24, 35, 0.12) !important;
+}
+
+@media (max-width: 980px) {
+    #login-overlay[data-login-skin="clean"] .login-clean-shell,
+    #login-overlay[data-login-skin="clean"] .login-clean-stage {
+        grid-template-columns: 1fr !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-styleboard {
+        grid-column: 1 !important;
+        grid-row: auto !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::before,
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+        display: none !important;
+    }
+}
+
+/* Lock final login composition after all legacy overrides. */
+#login-overlay[data-login-skin="clean"] .login-clean-stage {
+    grid-template-columns: minmax(380px, 1fr) minmax(238px, 300px) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy {
+    max-width: 500px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+    max-width: none !important;
+    white-space: nowrap !important;
+    font-size: clamp(42px, 3.4vw, 58px) !important;
+    letter-spacing: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-styleboard {
+    transform: translateX(-10px) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card {
+    min-height: 104px !important;
+    background: rgba(255, 255, 255, 0.94) !important;
+    background-image: none !important;
+    color: #161823 !important;
+    box-shadow: 0 14px 30px rgba(22, 24, 35, 0.08) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card::after {
+    display: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card::before {
+    display: block !important;
+    inset: 18px auto 18px 14px !important;
+    width: 4px !important;
+    height: auto !important;
+    border-radius: 999px !important;
+    background: linear-gradient(180deg, #fe2c55, #25f4ee) !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card span,
+#login-overlay[data-login-skin="clean"] .login-look-card strong,
+#login-overlay[data-login-skin="clean"] .login-look-card small {
+    color: #161823 !important;
+    text-shadow: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card span:last-child,
+#login-overlay[data-login-skin="clean"] .login-look-card small {
+    color: #667488 !important;
+}
+
+@media (max-width: 980px) {
+    #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+        white-space: normal !important;
+        font-size: clamp(40px, 12vw, 62px) !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-styleboard {
+        transform: none !important;
+    }
+}
+
+/* Instagram-inspired login reset: white canvas, content preview, restrained gradient accent. */
+#login-overlay[data-login-skin="clean"],
+body.dark-mode #login-overlay[data-login-skin="clean"] {
+    padding: clamp(22px, 4vw, 46px) !important;
+    background:
+        radial-gradient(circle at 10% 12%, rgba(254, 44, 85, 0.10), transparent 26%),
+        radial-gradient(circle at 78% 10%, rgba(255, 189, 89, 0.12), transparent 28%),
+        radial-gradient(circle at 34% 88%, rgba(37, 244, 238, 0.10), transparent 28%),
+        #ffffff !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-shell {
+    width: min(1320px, calc(100vw - 64px)) !important;
+    min-height: min(760px, calc(100vh - 56px)) !important;
+    grid-template-columns: minmax(560px, 1fr) minmax(390px, 470px) !important;
+    gap: clamp(28px, 4vw, 58px) !important;
+    align-items: center !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage {
+    min-height: min(720px, calc(100vh - 92px)) !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 0.92fr) minmax(260px, 0.72fr) !important;
+    grid-template-rows: auto 1fr auto !important;
+    gap: 22px !important;
+    padding: clamp(34px, 4.2vw, 58px) !important;
+    overflow: hidden !important;
+    border-radius: 22px !important;
+    color: #161823 !important;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.82)),
+        radial-gradient(circle at 12% 20%, rgba(254, 44, 85, 0.10), transparent 28%),
+        radial-gradient(circle at 86% 28%, rgba(255, 189, 89, 0.13), transparent 30%),
+        radial-gradient(circle at 70% 78%, rgba(37, 244, 238, 0.12), transparent 32%) !important;
+    border: 1px solid rgba(219, 226, 236, 0.92) !important;
+    box-shadow: 0 28px 70px rgba(22, 24, 35, 0.10) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 58px !important;
+    right: clamp(34px, 5vw, 66px) !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: min(300px, 34%) !important;
+    height: min(560px, calc(100% - 116px)) !important;
+    border-radius: 28px !important;
+    background:
+        linear-gradient(#ffffff, #ffffff) padding-box,
+        linear-gradient(145deg, #fe2c55, #ffbd59 48%, #25f4ee) border-box !important;
+    border: 2px solid transparent !important;
+    box-shadow: 0 26px 56px rgba(22, 24, 35, 0.16) !important;
+    opacity: 1 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 92px !important;
+    right: clamp(54px, 6.6vw, 90px) !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: min(244px, 28%) !important;
+    height: min(430px, calc(100% - 184px)) !important;
+    padding: 0 !important;
+    border-radius: 22px !important;
+    background:
+        linear-gradient(180deg, rgba(22, 24, 35, 0.92) 0 14%, transparent 14%),
+        linear-gradient(90deg, rgba(254, 44, 85, 0.86) 0 31%, rgba(255, 245, 232, 0.96) 31% 66%, rgba(37, 244, 238, 0.78) 66% 100%),
+        linear-gradient(180deg, #ffffff, #f8fafc) !important;
+    border: 1px solid rgba(219, 226, 236, 0.9) !important;
+    box-shadow: inset 0 0 0 10px #ffffff !important;
+    opacity: 1 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand {
+    grid-column: 1 / 2 !important;
+    align-self: start !important;
+    position: relative !important;
+    z-index: 4 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-mark {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 13px !important;
+    background: linear-gradient(135deg, #fe2c55, #ffbd59 48%, #25f4ee) !important;
+    color: #ffffff !important;
+    box-shadow: 0 14px 30px rgba(254, 44, 85, 0.18) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand strong {
+    color: #161823 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand small {
+    color: #7a8598 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy {
+    grid-column: 1 / 2 !important;
+    align-self: end !important;
+    position: relative !important;
+    z-index: 4 !important;
+    max-width: 500px !important;
+    margin: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy span {
+    color: #fe2c55 !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.08em !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+    max-width: 500px !important;
+    margin: 12px 0 12px !important;
+    color: #161823 !important;
+    font-size: clamp(54px, 5.2vw, 78px) !important;
+    line-height: 1.02 !important;
+    text-shadow: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy p {
+    max-width: 480px !important;
+    color: #5f6b80 !important;
+    font-size: 16px !important;
+    line-height: 1.8 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-styleboard {
+    grid-column: 1 / 3 !important;
+    align-self: center !important;
+    justify-self: end !important;
+    width: min(360px, 40%) !important;
+    margin-right: clamp(10px, 5vw, 70px) !important;
+    position: relative !important;
+    z-index: 5 !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card {
+    min-height: 78px !important;
+    display: grid !important;
+    grid-template-columns: auto 1fr !important;
+    grid-template-rows: auto auto !important;
+    column-gap: 12px !important;
+    align-items: center !important;
+    padding: 13px 14px !important;
+    border-radius: 14px !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    border: 1px solid rgba(221, 227, 236, 0.96) !important;
+    box-shadow: 0 16px 34px rgba(22, 24, 35, 0.10) !important;
+    backdrop-filter: blur(18px) saturate(150%) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card span {
+    grid-row: 1 / 3 !important;
+    width: 34px !important;
+    height: 34px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    border-radius: 11px !important;
+    background: rgba(37, 244, 238, 0.18) !important;
+    color: #007a73 !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card strong {
+    margin: 0 !important;
+    color: #161823 !important;
+    font-size: 16px !important;
+    letter-spacing: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card small {
+    margin: 3px 0 0 !important;
+    color: #7a8598 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card--warm span {
+    background: rgba(255, 189, 89, 0.20) !important;
+    color: #9a5f00 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card--mint span {
+    background: rgba(254, 44, 85, 0.12) !important;
+    color: #c0183f !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip {
+    display: flex !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip span {
+    height: 30px !important;
+    padding: 0 12px !important;
+    border-radius: 999px !important;
+    color: #38445a !important;
+    background: rgba(255, 255, 255, 0.86) !important;
+    border: 1px solid rgba(221, 227, 236, 0.95) !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+}
+
+@media (max-width: 900px) {
+    #login-overlay[data-login-skin="clean"],
+    body.dark-mode #login-overlay[data-login-skin="clean"] {
+        padding: 14px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-shell {
+        width: 100% !important;
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage {
+        min-height: 420px !important;
+        grid-template-columns: 1fr !important;
+        padding: 22px !important;
+        border-radius: 18px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::before,
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+        display: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-styleboard {
+        grid-column: 1 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        justify-self: stretch !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-look-card {
+        min-height: 66px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+        font-size: clamp(38px, 13vw, 58px) !important;
+    }
+}
+
+/* Final login art direction: replace the empty poster block with an information-led entry panel. */
+#login-overlay[data-login-skin="clean"] {
+    --login-brand-name: "知衡云台";
+    --login-brand-initials: "ZH";
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-mark {
+    font-size: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-mark::before {
+    content: var(--login-brand-initials) !important;
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    letter-spacing: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage {
+    display: grid !important;
+    grid-template-rows: auto 1fr auto !important;
+    align-content: stretch !important;
+    gap: 22px !important;
+    padding: clamp(32px, 3.8vw, 58px) !important;
+    min-height: 620px !important;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.018)),
+        radial-gradient(circle at 82% 18%, rgba(37, 244, 238, 0.16), transparent 28%),
+        radial-gradient(circle at 18% 86%, rgba(254, 44, 85, 0.13), transparent 32%),
+        linear-gradient(150deg, #161823 0%, #192235 48%, #0f3537 100%) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::before {
+    inset: clamp(26px, 3vw, 42px) !important;
+    border-radius: 18px !important;
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(135deg, transparent 0 58%, rgba(37, 244, 238, 0.08) 58% 59%, transparent 59%) !important;
+    background-size: 84px 84px, 84px 84px, 100% 100% !important;
+    opacity: 0.72 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+    content: "2022 Cohort / Grade 9 / Cloud Data" !important;
+    left: clamp(32px, 4vw, 58px) !important;
+    right: auto !important;
+    bottom: clamp(30px, 4vw, 54px) !important;
+    width: auto !important;
+    height: auto !important;
+    aspect-ratio: auto !important;
+    padding: 10px 14px !important;
+    border-radius: 999px !important;
+    color: rgba(255, 255, 255, 0.76) !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.08em !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand {
+    align-self: start !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand strong {
+    color: #ffffff !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand small {
+    color: rgba(248, 250, 252, 0.66) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy {
+    align-self: end !important;
+    max-width: 640px !important;
+    margin: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy span {
+    color: var(--ds-favorite-cyan) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+    max-width: 620px !important;
+    margin: 12px 0 12px !important;
+    font-size: clamp(54px, 5.4vw, 86px) !important;
+    line-height: 1 !important;
+    color: #ffffff !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy p {
+    max-width: 620px !important;
+    color: rgba(248, 250, 252, 0.74) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-styleboard {
+    position: relative !important;
+    z-index: 3 !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+    align-self: start !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card {
+    min-height: 104px !important;
+    padding: 14px !important;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, 0.085) !important;
+    border: 1px solid rgba(255, 255, 255, 0.13) !important;
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.16) !important;
+    backdrop-filter: blur(18px) saturate(150%) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card span {
+    display: inline-flex !important;
+    height: 22px !important;
+    align-items: center !important;
+    padding: 0 8px !important;
+    border-radius: 999px !important;
+    color: #161823 !important;
+    background: rgba(37, 244, 238, 0.88) !important;
+    font-size: 11px !important;
+    font-weight: 900 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card strong {
+    display: block !important;
+    margin-top: 14px !important;
+    color: #ffffff !important;
+    font-size: 18px !important;
+    letter-spacing: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card small {
+    display: block !important;
+    margin-top: 6px !important;
+    color: rgba(248, 250, 252, 0.62) !important;
+    font-size: 12px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card--warm span {
+    background: rgba(255, 245, 232, 0.92) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card--mint span {
+    background: rgba(254, 44, 85, 0.86) !important;
+    color: #ffffff !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip {
+    grid-column: 1 / -1 !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip span {
+    min-height: 36px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 999px !important;
+    color: rgba(248, 250, 252, 0.82) !important;
+    background: rgba(255, 255, 255, 0.075) !important;
+    border: 1px solid rgba(255, 255, 255, 0.11) !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+}
+
+@media (max-width: 900px) {
+    #login-overlay[data-login-skin="clean"] .login-clean-stage {
+        min-height: 360px !important;
+        gap: 14px !important;
+        padding: 22px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-styleboard {
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-look-card {
+        min-height: 76px !important;
+        padding: 12px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-look-card strong {
+        margin-top: 8px !important;
+        font-size: 16px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-rhythm-strip,
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+        display: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+        font-size: clamp(38px, 13vw, 60px) !important;
+    }
+}
+
+/* Douyin favorite gallery pass: lighter rail, clearer icons, softer protected watermark. */
+:root {
+    --ds-favorite-ink: #161823;
+    --ds-favorite-rose: #fe2c55;
+    --ds-favorite-cyan: #25f4ee;
+    --ds-favorite-mint: #d9f8f3;
+    --ds-favorite-sage: #eaf7ee;
+    --ds-favorite-sand: #fff5e8;
+    --shell-sidebar-collapsed: 82px !important;
+    --shell-sidebar-expanded: 82px !important;
+    --shell-sidebar-current: 82px !important;
+}
+
+body.shell-dashboard {
+    background:
+        radial-gradient(circle at 12% 4%, rgba(254, 44, 85, 0.035), transparent 28%),
+        radial-gradient(circle at 72% 2%, rgba(37, 244, 238, 0.045), transparent 30%),
+        linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%) !important;
+}
+
+#watermark-layer {
+    opacity: 0.016 !important;
+    background-size: 420px 290px !important;
+    filter: grayscale(1) contrast(0.72) !important;
+    mix-blend-mode: normal !important;
+}
+
+#app-sidebar.sidebar-spacious,
+.sidebar-spacious {
+    top: 18px !important;
+    left: 24px !important;
+    width: 82px !important;
+    min-width: 82px !important;
+    max-width: 82px !important;
+    height: calc(100vh - 36px) !important;
+    padding: 14px 10px !important;
+    border-radius: 18px !important;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 250, 252, 0.84)) !important;
+    border: 1px solid rgba(204, 216, 230, 0.92) !important;
+    box-shadow: 0 18px 42px rgba(20, 30, 46, 0.12) !important;
+    backdrop-filter: blur(18px) saturate(150%) !important;
+    color: var(--ds-favorite-ink) !important;
+}
+
+#app-sidebar.sidebar-spacious::before,
+.sidebar-spacious::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 12px !important;
+    left: 50% !important;
+    width: 30px !important;
+    height: 3px !important;
+    border-radius: 999px !important;
+    transform: translateX(-50%) !important;
+    background: linear-gradient(90deg, var(--ds-favorite-cyan), var(--ds-favorite-rose)) !important;
+    opacity: 0.9 !important;
+    pointer-events: none !important;
+}
+
+#app-sidebar.sidebar-spacious::after,
+.sidebar-spacious::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: auto 15px 14px !important;
+    height: 1px !important;
+    border-radius: 999px !important;
+    background: linear-gradient(90deg, transparent, rgba(22, 24, 35, 0.18), transparent) !important;
+    pointer-events: none !important;
+}
+
+#app-sidebar.sidebar-spacious .sidebar-nav,
+.sidebar-spacious .sidebar-nav,
+#app-sidebar.sidebar-spacious .sidebar-spacious-nav,
+.sidebar-spacious .sidebar-spacious-nav {
+    width: 100% !important;
+    gap: 11px !important;
+    margin-top: 14px !important;
+    align-items: center !important;
+}
+
+#app-sidebar.sidebar-spacious :is(.nav-item, .sidebar-nav-item, .sidebar-spacious-item, button, a),
+.sidebar-spacious :is(.nav-item, .sidebar-nav-item, .sidebar-spacious-item, button, a) {
+    width: 46px !important;
+    min-width: 46px !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(202, 214, 230, 0.92) !important;
+    background: rgba(255, 255, 255, 0.82) !important;
+    color: #2f3b4f !important;
+    box-shadow: 0 8px 18px rgba(31, 42, 62, 0.07) !important;
+    opacity: 1 !important;
+}
+
+#app-sidebar.sidebar-spacious .sidebar-menu-item,
+.sidebar-spacious .sidebar-menu-item {
+    width: 52px !important;
+    min-width: 52px !important;
+    height: 60px !important;
+    border-radius: 14px !important;
+    color: #38445a !important;
+    opacity: 1 !important;
+}
+
+#app-sidebar.sidebar-spacious .sidebar-menu-item__icon,
+.sidebar-spacious .sidebar-menu-item__icon {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 13px !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    border: 1px solid rgba(202, 214, 230, 0.95) !important;
+    color: #38445a !important;
+    box-shadow: 0 8px 16px rgba(31, 42, 62, 0.075) !important;
+}
+
+#app-sidebar.sidebar-spacious .sidebar-menu-item__icon i,
+.sidebar-spacious .sidebar-menu-item__icon i {
+    color: currentColor !important;
+    opacity: 1 !important;
+}
+
+#app-sidebar.sidebar-spacious .sidebar-menu-item:hover .sidebar-menu-item__icon,
+.sidebar-spacious .sidebar-menu-item:hover .sidebar-menu-item__icon {
+    border-color: rgba(37, 244, 238, 0.58) !important;
+    color: var(--ds-favorite-ink) !important;
+    box-shadow: 0 12px 22px rgba(22, 24, 35, 0.10) !important;
+}
+
+#app-sidebar.sidebar-spacious .sidebar-menu-item.active,
+.sidebar-spacious .sidebar-menu-item.active {
+    color: var(--ds-favorite-ink) !important;
+}
+
+#app-sidebar.sidebar-spacious .sidebar-menu-item.active .sidebar-menu-item__icon,
+.sidebar-spacious .sidebar-menu-item.active .sidebar-menu-item__icon {
+    background:
+        linear-gradient(135deg, rgba(37, 244, 238, 0.22), rgba(254, 44, 85, 0.18)),
+        #ffffff !important;
+    border-color: rgba(37, 244, 238, 0.66) !important;
+    color: var(--ds-favorite-ink) !important;
+    box-shadow: 0 14px 26px rgba(254, 44, 85, 0.12), 0 10px 20px rgba(37, 244, 238, 0.10) !important;
+}
+
+/* Login adaptation: graphite media-stage energy with a calm, legible education form. */
+#login-overlay[data-login-skin="clean"],
+body.dark-mode #login-overlay[data-login-skin="clean"] {
+    align-items: center !important;
+    min-height: 100vh !important;
+    padding: 32px !important;
+    background:
+        linear-gradient(90deg, rgba(22, 24, 35, 0.98) 0 48%, rgba(247, 250, 252, 0.98) 48%),
+        linear-gradient(135deg, rgba(254, 44, 85, 0.18), transparent 42%),
+        linear-gradient(225deg, rgba(37, 244, 238, 0.16), transparent 44%) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-shell {
+    width: min(1500px, calc(100vw - 64px)) !important;
+    min-height: min(780px, calc(100vh - 64px)) !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.05fr) minmax(400px, 0.62fr) !important;
+    gap: 30px !important;
+    align-items: stretch !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage {
+    position: relative !important;
+    overflow: hidden !important;
+    min-height: 620px !important;
+    border-radius: 22px !important;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+        linear-gradient(135deg, #161823 0%, #202637 54%, #143c3b 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 30px 70px rgba(8, 13, 24, 0.28) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 34px !important;
+    border-radius: 18px !important;
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px) !important;
+    background-size: 82px 82px !important;
+    opacity: 0.62 !important;
+    display: block !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+    content: "" !important;
+    position: absolute !important;
+    right: 42px !important;
+    bottom: 38px !important;
+    width: min(360px, 42%) !important;
+    aspect-ratio: 4 / 3 !important;
+    border-radius: 18px !important;
+    display: block !important;
+    background:
+        linear-gradient(90deg, rgba(254, 44, 85, 0.70) 0 22%, transparent 22% 28%, rgba(255, 245, 232, 0.90) 28% 54%, transparent 54% 60%, rgba(37, 244, 238, 0.62) 60% 100%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.02)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    box-shadow: 0 24px 54px rgba(0, 0, 0, 0.22) !important;
+    opacity: 0.86 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand,
+#login-overlay[data-login-skin="clean"] .login-clean-copy {
+    position: relative !important;
+    z-index: 2 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-mark {
+    background: linear-gradient(135deg, var(--ds-favorite-cyan), var(--ds-favorite-rose)) !important;
+    color: #ffffff !important;
+    box-shadow: 0 16px 30px rgba(254, 44, 85, 0.28) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand strong,
+#login-overlay[data-login-skin="clean"] .login-clean-brand small {
+    color: rgba(248, 250, 252, 0.78) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy {
+    max-width: 650px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy span {
+    color: var(--ds-favorite-cyan) !important;
+    letter-spacing: 0.08em !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+    max-width: 620px !important;
+    font-size: clamp(56px, 5.8vw, 92px) !important;
+    line-height: 0.98 !important;
+    letter-spacing: 0 !important;
+    color: #ffffff !important;
+    text-shadow: 0 18px 38px rgba(0, 0, 0, 0.24) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy p {
+    max-width: 620px !important;
+    color: rgba(248, 250, 252, 0.72) !important;
+    font-size: 17px !important;
+    line-height: 1.85 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-card {
+    align-self: center !important;
+    justify-content: flex-start !important;
+    max-width: 500px !important;
+    max-height: calc(100vh - 56px) !important;
+    overflow-y: auto !important;
+    padding: 28px !important;
+    border-radius: 16px !important;
+    background: rgba(255, 255, 255, 0.94) !important;
+    border: 1px solid rgba(205, 218, 232, 0.94) !important;
+    box-shadow: 0 24px 58px rgba(20, 30, 46, 0.16) !important;
+    backdrop-filter: blur(20px) saturate(150%) !important;
+    scrollbar-width: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-card::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-card::-webkit-scrollbar-thumb {
+    background: transparent !important;
+    border-radius: 999px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-form-header,
+#login-overlay[data-login-skin="clean"] .login-clean-form,
+#login-overlay[data-login-skin="clean"] #login-form {
+    opacity: 1 !important;
+    transform: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-form-header h2 {
+    color: var(--ds-favorite-ink) !important;
+    font-size: 26px !important;
+    letter-spacing: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-form-header p {
+    color: #66758a !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-switch,
+#login-overlay[data-login-skin="clean"] .login-entry-field,
+#login-overlay[data-login-skin="clean"] .entrance-sound-panel {
+    border-radius: 10px !important;
+    border: 1px solid rgba(205, 218, 232, 0.94) !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    box-shadow: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-form {
+    gap: 12px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-form-header {
+    margin-bottom: 18px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-switch {
+    margin-top: 18px !important;
+    margin-bottom: 18px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .role-btn {
+    min-height: 44px !important;
+    border-radius: 8px !important;
+    color: #536178 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .role-btn.active {
+    background: var(--ds-favorite-ink) !important;
+    color: #ffffff !important;
+    box-shadow: 0 12px 24px rgba(22, 24, 35, 0.16) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-entry-prefix {
+    color: #00877e !important;
+    letter-spacing: 0.08em !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-entry-field:focus-within {
+    border-color: rgba(37, 244, 238, 0.66) !important;
+    box-shadow: 0 0 0 4px rgba(37, 244, 238, 0.12) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-submit {
+    min-height: 52px !important;
+    border-radius: 10px !important;
+    background: linear-gradient(135deg, #009e96, #0f6dff) !important;
+    box-shadow: 0 16px 30px rgba(0, 158, 150, 0.20) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-submit:hover {
+    background: linear-gradient(135deg, #008a83, #155ee8) !important;
+}
+
+@media (max-width: 900px) {
+    #login-overlay[data-login-skin="clean"],
+    body.dark-mode #login-overlay[data-login-skin="clean"] {
+        align-items: flex-start !important;
+        padding: 14px !important;
+        background:
+            linear-gradient(180deg, rgba(22, 24, 35, 0.98) 0 42%, rgba(247, 250, 252, 0.98) 42%),
+            linear-gradient(135deg, rgba(254, 44, 85, 0.16), transparent 48%),
+            linear-gradient(225deg, rgba(37, 244, 238, 0.14), transparent 50%) !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-shell {
+        width: min(100%, 760px) !important;
+        min-height: auto !important;
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage {
+        min-height: 300px !important;
+        border-radius: 16px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::before {
+        inset: 18px !important;
+        background-size: 58px 58px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+        right: 20px !important;
+        bottom: 18px !important;
+        width: min(210px, 54%) !important;
+        border-radius: 14px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+        font-size: clamp(40px, 14vw, 66px) !important;
+        line-height: 1 !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-copy p {
+        font-size: 15px !important;
+        line-height: 1.7 !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-card {
+        max-width: none !important;
+        padding: 20px !important;
+        border-radius: 14px !important;
+    }
+}
+
+#app-sidebar.sidebar-spacious :is(.nav-item, .sidebar-nav-item, .sidebar-spacious-item, button, a):hover,
+.sidebar-spacious :is(.nav-item, .sidebar-nav-item, .sidebar-spacious-item, button, a):hover {
+    border-color: rgba(37, 244, 238, 0.58) !important;
+    background: #ffffff !important;
+    color: var(--ds-favorite-ink) !important;
+    box-shadow: 0 12px 24px rgba(22, 24, 35, 0.10) !important;
+}
+
+#app-sidebar.sidebar-spacious :is(.nav-item.active, .sidebar-nav-item.active, .sidebar-spacious-item.active, button.active, a.active, [aria-current="page"]),
+.sidebar-spacious :is(.nav-item.active, .sidebar-nav-item.active, .sidebar-spacious-item.active, button.active, a.active, [aria-current="page"]) {
+    border-color: rgba(37, 244, 238, 0.64) !important;
+    background:
+        linear-gradient(135deg, rgba(37, 244, 238, 0.18), rgba(254, 44, 85, 0.16)),
+        #ffffff !important;
+    color: var(--ds-favorite-ink) !important;
+    box-shadow: 0 14px 26px rgba(254, 44, 85, 0.12), 0 10px 20px rgba(37, 244, 238, 0.10) !important;
+}
+
+#app-sidebar.sidebar-spacious :is(.nav-item.active, .sidebar-nav-item.active, .sidebar-spacious-item.active, button.active, a.active, [aria-current="page"])::after,
+.sidebar-spacious :is(.nav-item.active, .sidebar-nav-item.active, .sidebar-spacious-item.active, button.active, a.active, [aria-current="page"])::after {
+    content: "" !important;
+    position: absolute !important;
+    right: -8px !important;
+    top: 12px !important;
+    bottom: 12px !important;
+    width: 3px !important;
+    border-radius: 999px !important;
+    background: var(--ds-favorite-rose) !important;
+    box-shadow: 0 0 0 4px rgba(254, 44, 85, 0.10) !important;
+}
+
+#app-sidebar.sidebar-spacious :is(svg, i, .icon, .lucide),
+.sidebar-spacious :is(svg, i, .icon, .lucide) {
+    width: 20px !important;
+    height: 20px !important;
+    color: currentColor !important;
+    stroke: currentColor !important;
+    fill: none !important;
+    opacity: 1 !important;
+}
+
+#app-sidebar.sidebar-spacious :is(.nav-label, .sidebar-label, .sidebar-text, small, span:not(.icon):not(.badge)),
+.sidebar-spacious :is(.nav-label, .sidebar-label, .sidebar-text, small, span:not(.icon):not(.badge)) {
+    color: currentColor !important;
+    opacity: 1 !important;
+}
+
+#main-header.shell-toolbar {
+    border-color: rgba(205, 218, 232, 0.86) !important;
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(247, 251, 252, 0.91)) !important;
+    box-shadow: 0 12px 32px rgba(24, 36, 56, 0.08) !important;
+}
+
+#shell-overview {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(247, 253, 252, 0.92)) !important;
+    border-color: rgba(196, 224, 224, 0.9) !important;
+}
+
+.shell-eyebrow,
+.overview-kicker,
+.section-eyebrow {
+    color: #00877e !important;
+}
+
+.shell-module-rail-chip.is-active,
+#app .sub-nav-chips :is(.chip-item.active, button.active) {
+    background: var(--ds-favorite-ink) !important;
+    border-color: var(--ds-favorite-ink) !important;
+    box-shadow: 0 12px 24px rgba(22, 24, 35, 0.15) !important;
+}
+
+.shell-module-rail-chip-index {
+    background: var(--ds-favorite-mint) !important;
+    color: #007a73 !important;
+}
+
+.analysis-action-stack::before,
+.analysis-anchor-panel::before {
+    background: linear-gradient(180deg, var(--ds-favorite-rose), var(--ds-favorite-cyan)) !important;
+}
+
+#app :is(.btn-primary, .primary-btn, .report-btn, .analysis-primary-action) {
+    background: #009e96 !important;
+    box-shadow: 0 12px 22px rgba(0, 158, 150, 0.18) !important;
+}
+
+#app :is(.btn-primary, .primary-btn, .report-btn, .analysis-primary-action):hover {
+    background: #008a83 !important;
+}
+
+#app tbody tr:hover td {
+    background: rgba(37, 244, 238, 0.055) !important;
+}
+
+#app tbody tr.highlight td,
+#app tbody tr.is-current td,
+#app tbody tr.current-school td,
+#app tbody tr:has(.badge-school) td,
+#app tbody tr:has(.school-current) td {
+    background: linear-gradient(90deg, rgba(254, 44, 85, 0.07), rgba(255, 245, 232, 0.75), rgba(37, 244, 238, 0.05)) !important;
+}
+
+@media (max-width: 900px) {
+    :root {
+        --shell-sidebar-collapsed: 72px !important;
+        --shell-sidebar-expanded: 72px !important;
+        --shell-sidebar-current: 72px !important;
+    }
+
+    #app-sidebar.sidebar-spacious,
+    .sidebar-spacious {
+        width: 72px !important;
+        min-width: 72px !important;
+        max-width: 72px !important;
+        padding: 12px 8px !important;
+        border-radius: 0 16px 16px 0 !important;
+    }
+
+    #app-sidebar.sidebar-spacious :is(.nav-item, .sidebar-nav-item, .sidebar-spacious-item, button, a),
+    .sidebar-spacious :is(.nav-item, .sidebar-nav-item, .sidebar-spacious-item, button, a) {
+        width: 42px !important;
+        min-width: 42px !important;
+        height: 42px !important;
+        min-height: 42px !important;
+        border-radius: 12px !important;
+    }
+}
+
+/* EOF login lock: keep the entrance light, readable, and product-led. */
+#login-overlay[data-login-skin="clean"] .login-clean-stage {
+    grid-template-columns: minmax(380px, 1fr) minmax(238px, 300px) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy {
+    max-width: 500px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+    max-width: none !important;
+    white-space: nowrap !important;
+    font-size: clamp(42px, 3.4vw, 58px) !important;
+    letter-spacing: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-styleboard {
+    transform: translateX(-10px) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card {
+    min-height: 104px !important;
+    background: rgba(255, 255, 255, 0.94) !important;
+    background-image: none !important;
+    color: #161823 !important;
+    box-shadow: 0 14px 30px rgba(22, 24, 35, 0.08) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card::before {
+    display: block !important;
+    inset: 18px auto 18px 14px !important;
+    width: 4px !important;
+    height: auto !important;
+    border-radius: 999px !important;
+    background: linear-gradient(180deg, #fe2c55, #25f4ee) !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card::after {
+    display: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card span,
+#login-overlay[data-login-skin="clean"] .login-look-card strong,
+#login-overlay[data-login-skin="clean"] .login-look-card small {
+    color: #161823 !important;
+    text-shadow: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card span:last-child,
+#login-overlay[data-login-skin="clean"] .login-look-card small {
+    color: #667488 !important;
+}
+
+/* Absolute last pass: INS-inspired light login surface. */
+#login-overlay[data-login-skin="clean"],
+body.dark-mode #login-overlay[data-login-skin="clean"] {
+    padding: clamp(22px, 4vw, 46px) !important;
+    background:
+        radial-gradient(circle at 10% 12%, rgba(254, 44, 85, 0.10), transparent 26%),
+        radial-gradient(circle at 78% 10%, rgba(255, 189, 89, 0.12), transparent 28%),
+        radial-gradient(circle at 34% 88%, rgba(37, 244, 238, 0.10), transparent 28%),
+        #ffffff !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-shell {
+    width: min(1320px, calc(100vw - 64px)) !important;
+    min-height: min(760px, calc(100vh - 56px)) !important;
+    grid-template-columns: minmax(560px, 1fr) minmax(390px, 470px) !important;
+    gap: clamp(28px, 4vw, 58px) !important;
+    align-items: center !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage {
+    min-height: min(720px, calc(100vh - 92px)) !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 0.92fr) minmax(260px, 0.72fr) !important;
+    grid-template-rows: auto 1fr auto !important;
+    gap: 22px !important;
+    padding: clamp(34px, 4.2vw, 58px) !important;
+    overflow: hidden !important;
+    border-radius: 22px !important;
+    color: #161823 !important;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(255, 255, 255, 0.86)),
+        radial-gradient(circle at 12% 20%, rgba(254, 44, 85, 0.10), transparent 28%),
+        radial-gradient(circle at 86% 28%, rgba(255, 189, 89, 0.13), transparent 30%),
+        radial-gradient(circle at 70% 78%, rgba(37, 244, 238, 0.12), transparent 32%) !important;
+    border: 1px solid rgba(219, 226, 236, 0.92) !important;
+    box-shadow: 0 28px 70px rgba(22, 24, 35, 0.10) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 58px !important;
+    right: clamp(34px, 5vw, 66px) !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: min(300px, 34%) !important;
+    height: min(560px, calc(100% - 116px)) !important;
+    border-radius: 28px !important;
+    background:
+        linear-gradient(#ffffff, #ffffff) padding-box,
+        linear-gradient(145deg, #fe2c55, #ffbd59 48%, #25f4ee) border-box !important;
+    border: 2px solid transparent !important;
+    box-shadow: 0 26px 56px rgba(22, 24, 35, 0.16) !important;
+    opacity: 1 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 92px !important;
+    right: clamp(54px, 6.6vw, 90px) !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: min(244px, 28%) !important;
+    height: min(430px, calc(100% - 184px)) !important;
+    padding: 0 !important;
+    border-radius: 22px !important;
+    background:
+        linear-gradient(180deg, rgba(22, 24, 35, 0.92) 0 14%, transparent 14%),
+        linear-gradient(90deg, rgba(254, 44, 85, 0.86) 0 31%, rgba(255, 245, 232, 0.96) 31% 66%, rgba(37, 244, 238, 0.78) 66% 100%),
+        linear-gradient(180deg, #ffffff, #f8fafc) !important;
+    border: 1px solid rgba(219, 226, 236, 0.9) !important;
+    box-shadow: inset 0 0 0 10px #ffffff !important;
+    opacity: 1 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand,
+#login-overlay[data-login-skin="clean"] .login-clean-copy {
+    grid-column: 1 / 2 !important;
+    position: relative !important;
+    z-index: 4 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand strong,
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+    color: #161823 !important;
+    text-shadow: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand small {
+    color: #7a8598 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy {
+    align-self: end !important;
+    max-width: 500px !important;
+    margin: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy span {
+    color: #fe2c55 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+    max-width: 500px !important;
+    margin: 12px 0 !important;
+    font-size: clamp(54px, 5.2vw, 78px) !important;
+    line-height: 1.02 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy p {
+    max-width: 480px !important;
+    color: #5f6b80 !important;
+    font-size: 16px !important;
+    line-height: 1.8 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-styleboard {
+    grid-column: 1 / 3 !important;
+    align-self: center !important;
+    justify-self: end !important;
+    width: min(360px, 40%) !important;
+    margin-right: clamp(10px, 5vw, 70px) !important;
+    position: relative !important;
+    z-index: 5 !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card {
+    min-height: 78px !important;
+    display: grid !important;
+    grid-template-columns: auto 1fr !important;
+    grid-template-rows: auto auto !important;
+    column-gap: 12px !important;
+    align-items: center !important;
+    padding: 13px 14px !important;
+    border-radius: 14px !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    border: 1px solid rgba(221, 227, 236, 0.96) !important;
+    box-shadow: 0 16px 34px rgba(22, 24, 35, 0.10) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card span {
+    grid-row: 1 / 3 !important;
+    width: 34px !important;
+    height: 34px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    border-radius: 11px !important;
+    background: rgba(37, 244, 238, 0.18) !important;
+    color: #007a73 !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card strong {
+    margin: 0 !important;
+    color: #161823 !important;
+    font-size: 16px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card small {
+    margin: 3px 0 0 !important;
+    color: #7a8598 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card--warm span {
+    background: rgba(255, 189, 89, 0.20) !important;
+    color: #9a5f00 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card--mint span {
+    background: rgba(254, 44, 85, 0.12) !important;
+    color: #c0183f !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip {
+    display: flex !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip span {
+    height: 30px !important;
+    padding: 0 12px !important;
+    border-radius: 999px !important;
+    color: #38445a !important;
+    background: rgba(255, 255, 255, 0.86) !important;
+    border: 1px solid rgba(221, 227, 236, 0.95) !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+}
+
+@media (max-width: 900px) {
+    #login-overlay[data-login-skin="clean"] .login-clean-shell {
+        width: 100% !important;
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage {
+        min-height: 420px !important;
+        grid-template-columns: 1fr !important;
+        padding: 22px !important;
+        border-radius: 18px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::before,
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+        display: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-styleboard {
+        grid-column: 1 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        justify-self: stretch !important;
+    }
+}
+
+/* True final login override: Instagram-like light product preview, not a dark poster. */
+#login-overlay[data-login-skin="clean"],
+body.dark-mode #login-overlay[data-login-skin="clean"] {
+    padding: clamp(22px, 4vw, 46px) !important;
+    background:
+        radial-gradient(circle at 10% 12%, rgba(254, 44, 85, 0.10), transparent 26%),
+        radial-gradient(circle at 78% 10%, rgba(255, 189, 89, 0.12), transparent 28%),
+        radial-gradient(circle at 34% 88%, rgba(37, 244, 238, 0.10), transparent 28%),
+        #ffffff !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-shell {
+    width: min(1320px, calc(100vw - 64px)) !important;
+    min-height: min(760px, calc(100vh - 56px)) !important;
+    grid-template-columns: minmax(560px, 1fr) minmax(390px, 470px) !important;
+    gap: clamp(28px, 4vw, 58px) !important;
+    align-items: center !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage {
+    min-height: min(720px, calc(100vh - 92px)) !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 0.92fr) minmax(260px, 0.72fr) !important;
+    grid-template-rows: auto 1fr auto !important;
+    gap: 22px !important;
+    padding: clamp(34px, 4.2vw, 58px) !important;
+    overflow: hidden !important;
+    border-radius: 22px !important;
+    color: #161823 !important;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(255, 255, 255, 0.86)),
+        radial-gradient(circle at 12% 20%, rgba(254, 44, 85, 0.10), transparent 28%),
+        radial-gradient(circle at 86% 28%, rgba(255, 189, 89, 0.13), transparent 30%),
+        radial-gradient(circle at 70% 78%, rgba(37, 244, 238, 0.12), transparent 32%) !important;
+    border: 1px solid rgba(219, 226, 236, 0.92) !important;
+    box-shadow: 0 28px 70px rgba(22, 24, 35, 0.10) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 58px !important;
+    right: clamp(34px, 5vw, 66px) !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: min(300px, 34%) !important;
+    height: min(560px, calc(100% - 116px)) !important;
+    border-radius: 28px !important;
+    background:
+        linear-gradient(#ffffff, #ffffff) padding-box,
+        linear-gradient(145deg, #fe2c55, #ffbd59 48%, #25f4ee) border-box !important;
+    border: 2px solid transparent !important;
+    box-shadow: 0 26px 56px rgba(22, 24, 35, 0.16) !important;
+    opacity: 1 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 92px !important;
+    right: clamp(54px, 6.6vw, 90px) !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: min(244px, 28%) !important;
+    height: min(430px, calc(100% - 184px)) !important;
+    padding: 0 !important;
+    border-radius: 22px !important;
+    background:
+        linear-gradient(180deg, rgba(22, 24, 35, 0.92) 0 14%, transparent 14%),
+        linear-gradient(90deg, rgba(254, 44, 85, 0.86) 0 31%, rgba(255, 245, 232, 0.96) 31% 66%, rgba(37, 244, 238, 0.78) 66% 100%),
+        linear-gradient(180deg, #ffffff, #f8fafc) !important;
+    border: 1px solid rgba(219, 226, 236, 0.9) !important;
+    box-shadow: inset 0 0 0 10px #ffffff !important;
+    opacity: 1 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand,
+#login-overlay[data-login-skin="clean"] .login-clean-copy {
+    grid-column: 1 / 2 !important;
+    position: relative !important;
+    z-index: 4 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand strong,
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+    color: #161823 !important;
+    text-shadow: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand small {
+    color: #7a8598 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy {
+    align-self: end !important;
+    max-width: 500px !important;
+    margin: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy span {
+    color: #fe2c55 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+    max-width: 500px !important;
+    margin: 12px 0 !important;
+    font-size: clamp(54px, 5.2vw, 78px) !important;
+    line-height: 1.02 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy p {
+    max-width: 480px !important;
+    color: #5f6b80 !important;
+    font-size: 16px !important;
+    line-height: 1.8 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-styleboard {
+    grid-column: 1 / 3 !important;
+    align-self: center !important;
+    justify-self: end !important;
+    width: min(360px, 40%) !important;
+    margin-right: clamp(10px, 5vw, 70px) !important;
+    position: relative !important;
+    z-index: 5 !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card {
+    min-height: 78px !important;
+    display: grid !important;
+    grid-template-columns: auto 1fr !important;
+    grid-template-rows: auto auto !important;
+    column-gap: 12px !important;
+    align-items: center !important;
+    padding: 13px 14px !important;
+    border-radius: 14px !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    border: 1px solid rgba(221, 227, 236, 0.96) !important;
+    box-shadow: 0 16px 34px rgba(22, 24, 35, 0.10) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card span {
+    grid-row: 1 / 3 !important;
+    width: 34px !important;
+    height: 34px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    border-radius: 11px !important;
+    background: rgba(37, 244, 238, 0.18) !important;
+    color: #007a73 !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card strong {
+    margin: 0 !important;
+    color: #161823 !important;
+    font-size: 16px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card small {
+    margin: 3px 0 0 !important;
+    color: #7a8598 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card--warm span {
+    background: rgba(255, 189, 89, 0.20) !important;
+    color: #9a5f00 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card--mint span {
+    background: rgba(254, 44, 85, 0.12) !important;
+    color: #c0183f !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip {
+    display: flex !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip span {
+    height: 30px !important;
+    padding: 0 12px !important;
+    border-radius: 999px !important;
+    color: #38445a !important;
+    background: rgba(255, 255, 255, 0.86) !important;
+    border: 1px solid rgba(221, 227, 236, 0.95) !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+}
+
+@media (max-width: 900px) {
+    #login-overlay[data-login-skin="clean"] .login-clean-shell {
+        width: 100% !important;
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage {
+        min-height: 420px !important;
+        grid-template-columns: 1fr !important;
+        padding: 22px !important;
+        border-radius: 18px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::before,
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+        display: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-styleboard {
+        grid-column: 1 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        justify-self: stretch !important;
+    }
+}
+
+/* Final rail icon contrast fix for the compact menu implementation. */
+#app-sidebar.sidebar-spacious .sidebar-menu-item,
+.sidebar-spacious .sidebar-menu-item {
+    width: 52px !important;
+    min-width: 52px !important;
+    height: 60px !important;
+    border-radius: 14px !important;
+    color: #38445a !important;
+    opacity: 1 !important;
+}
+
+#app-sidebar.sidebar-spacious .sidebar-menu-item__icon,
+.sidebar-spacious .sidebar-menu-item__icon {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 13px !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    border: 1px solid rgba(202, 214, 230, 0.95) !important;
+    color: #38445a !important;
+    box-shadow: 0 8px 16px rgba(31, 42, 62, 0.075) !important;
+}
+
+#app-sidebar.sidebar-spacious .sidebar-menu-item__icon i,
+.sidebar-spacious .sidebar-menu-item__icon i {
+    color: currentColor !important;
+    opacity: 1 !important;
+}
+
+#app-sidebar.sidebar-spacious .sidebar-menu-item:hover .sidebar-menu-item__icon,
+.sidebar-spacious .sidebar-menu-item:hover .sidebar-menu-item__icon {
+    border-color: rgba(37, 244, 238, 0.58) !important;
+    color: var(--ds-favorite-ink) !important;
+    box-shadow: 0 12px 22px rgba(22, 24, 35, 0.10) !important;
+}
+
+#app-sidebar.sidebar-spacious .sidebar-menu-item.active,
+.sidebar-spacious .sidebar-menu-item.active {
+    color: var(--ds-favorite-ink) !important;
+}
+
+#app-sidebar.sidebar-spacious .sidebar-menu-item.active .sidebar-menu-item__icon,
+.sidebar-spacious .sidebar-menu-item.active .sidebar-menu-item__icon {
+    background:
+        linear-gradient(135deg, rgba(37, 244, 238, 0.22), rgba(254, 44, 85, 0.18)),
+        #ffffff !important;
+    border-color: rgba(37, 244, 238, 0.66) !important;
+    color: var(--ds-favorite-ink) !important;
+    box-shadow: 0 14px 26px rgba(254, 44, 85, 0.12), 0 10px 20px rgba(37, 244, 238, 0.10) !important;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1324,4 +3142,505 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
         margin-left: 12px !important;
         margin-right: 12px !important;
     }
+}
+
+/* Absolute EOF login pass: INS-inspired light product preview. */
+#login-overlay[data-login-skin="clean"],
+body.dark-mode #login-overlay[data-login-skin="clean"] {
+    padding: clamp(22px, 4vw, 46px) !important;
+    background:
+        radial-gradient(circle at 10% 12%, rgba(254, 44, 85, 0.10), transparent 26%),
+        radial-gradient(circle at 78% 10%, rgba(255, 189, 89, 0.12), transparent 28%),
+        radial-gradient(circle at 34% 88%, rgba(37, 244, 238, 0.10), transparent 28%),
+        #ffffff !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-shell {
+    width: min(1320px, calc(100vw - 64px)) !important;
+    min-height: min(760px, calc(100vh - 56px)) !important;
+    grid-template-columns: minmax(560px, 1fr) minmax(390px, 470px) !important;
+    gap: clamp(28px, 4vw, 58px) !important;
+    align-items: center !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage {
+    min-height: min(720px, calc(100vh - 92px)) !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 0.92fr) minmax(260px, 0.72fr) !important;
+    grid-template-rows: auto 1fr auto !important;
+    gap: 22px !important;
+    padding: clamp(34px, 4.2vw, 58px) !important;
+    overflow: hidden !important;
+    border-radius: 22px !important;
+    color: #161823 !important;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(255, 255, 255, 0.86)),
+        radial-gradient(circle at 12% 20%, rgba(254, 44, 85, 0.10), transparent 28%),
+        radial-gradient(circle at 86% 28%, rgba(255, 189, 89, 0.13), transparent 30%),
+        radial-gradient(circle at 70% 78%, rgba(37, 244, 238, 0.12), transparent 32%) !important;
+    border: 1px solid rgba(219, 226, 236, 0.92) !important;
+    box-shadow: 0 28px 70px rgba(22, 24, 35, 0.10) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 58px !important;
+    right: clamp(34px, 5vw, 66px) !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: min(300px, 34%) !important;
+    height: min(560px, calc(100% - 116px)) !important;
+    border-radius: 28px !important;
+    background:
+        linear-gradient(#ffffff, #ffffff) padding-box,
+        linear-gradient(145deg, #fe2c55, #ffbd59 48%, #25f4ee) border-box !important;
+    border: 2px solid transparent !important;
+    box-shadow: 0 26px 56px rgba(22, 24, 35, 0.16) !important;
+    opacity: 1 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 92px !important;
+    right: clamp(54px, 6.6vw, 90px) !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: min(244px, 28%) !important;
+    height: min(430px, calc(100% - 184px)) !important;
+    padding: 0 !important;
+    border-radius: 22px !important;
+    background:
+        linear-gradient(180deg, rgba(22, 24, 35, 0.92) 0 14%, transparent 14%),
+        linear-gradient(90deg, rgba(254, 44, 85, 0.86) 0 31%, rgba(255, 245, 232, 0.96) 31% 66%, rgba(37, 244, 238, 0.78) 66% 100%),
+        linear-gradient(180deg, #ffffff, #f8fafc) !important;
+    border: 1px solid rgba(219, 226, 236, 0.9) !important;
+    box-shadow: inset 0 0 0 10px #ffffff !important;
+    opacity: 1 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand,
+#login-overlay[data-login-skin="clean"] .login-clean-copy {
+    grid-column: 1 / 2 !important;
+    position: relative !important;
+    z-index: 4 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand strong,
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+    color: #161823 !important;
+    text-shadow: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand small {
+    color: #7a8598 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy {
+    align-self: end !important;
+    max-width: 500px !important;
+    margin: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy span {
+    color: #fe2c55 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+    max-width: 500px !important;
+    margin: 12px 0 !important;
+    font-size: clamp(54px, 5.2vw, 78px) !important;
+    line-height: 1.02 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy p {
+    max-width: 480px !important;
+    color: #5f6b80 !important;
+    font-size: 16px !important;
+    line-height: 1.8 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-styleboard {
+    grid-column: 1 / 3 !important;
+    align-self: center !important;
+    justify-self: end !important;
+    width: min(360px, 40%) !important;
+    margin-right: clamp(10px, 5vw, 70px) !important;
+    position: relative !important;
+    z-index: 5 !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card {
+    min-height: 78px !important;
+    display: grid !important;
+    grid-template-columns: auto 1fr !important;
+    grid-template-rows: auto auto !important;
+    column-gap: 12px !important;
+    align-items: center !important;
+    padding: 13px 14px !important;
+    border-radius: 14px !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    border: 1px solid rgba(221, 227, 236, 0.96) !important;
+    box-shadow: 0 16px 34px rgba(22, 24, 35, 0.10) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card span {
+    grid-row: 1 / 3 !important;
+    width: 34px !important;
+    height: 34px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    border-radius: 11px !important;
+    background: rgba(37, 244, 238, 0.18) !important;
+    color: #007a73 !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card strong {
+    margin: 0 !important;
+    color: #161823 !important;
+    font-size: 16px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card small {
+    margin: 3px 0 0 !important;
+    color: #7a8598 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card--warm span {
+    background: rgba(255, 189, 89, 0.20) !important;
+    color: #9a5f00 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card--mint span {
+    background: rgba(254, 44, 85, 0.12) !important;
+    color: #c0183f !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip {
+    display: flex !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip span {
+    height: 30px !important;
+    padding: 0 12px !important;
+    border-radius: 999px !important;
+    color: #38445a !important;
+    background: rgba(255, 255, 255, 0.86) !important;
+    border: 1px solid rgba(221, 227, 236, 0.95) !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+}
+
+@media (max-width: 900px) {
+    #login-overlay[data-login-skin="clean"] .login-clean-shell {
+        width: 100% !important;
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage {
+        min-height: 420px !important;
+        grid-template-columns: 1fr !important;
+        padding: 22px !important;
+        border-radius: 18px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::before,
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+        display: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-styleboard {
+        grid-column: 1 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        justify-self: stretch !important;
+    }
+}
+
+/* Final designer override: keep the Douyin-informed rail above the legacy theme stack. */
+:root {
+    --ds-favorite-ink: #161823;
+    --ds-favorite-rose: #fe2c55;
+    --ds-favorite-cyan: #25f4ee;
+    --ds-favorite-mint: #d9f8f3;
+    --shell-sidebar-collapsed: 82px !important;
+    --shell-sidebar-expanded: 82px !important;
+    --shell-sidebar-current: 82px !important;
+}
+
+body.shell-dashboard {
+    background:
+        radial-gradient(circle at 12% 4%, rgba(254, 44, 85, 0.035), transparent 28%),
+        radial-gradient(circle at 72% 2%, rgba(37, 244, 238, 0.045), transparent 30%),
+        linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%) !important;
+}
+
+#watermark-layer {
+    opacity: 0.016 !important;
+    background-size: 420px 290px !important;
+    filter: grayscale(1) contrast(0.72) !important;
+    mix-blend-mode: normal !important;
+}
+
+#app-sidebar.sidebar-spacious,
+.sidebar-spacious {
+    top: 18px !important;
+    left: 24px !important;
+    width: 82px !important;
+    min-width: 82px !important;
+    max-width: 82px !important;
+    height: calc(100vh - 36px) !important;
+    padding: 14px 10px !important;
+    border-radius: 18px !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 250, 252, 0.84)) !important;
+    border: 1px solid rgba(204, 216, 230, 0.92) !important;
+    box-shadow: 0 18px 42px rgba(20, 30, 46, 0.12) !important;
+    backdrop-filter: blur(18px) saturate(150%) !important;
+    color: var(--ds-favorite-ink) !important;
+}
+
+#app-sidebar.sidebar-spacious::before,
+.sidebar-spacious::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 12px !important;
+    left: 50% !important;
+    width: 30px !important;
+    height: 3px !important;
+    border-radius: 999px !important;
+    transform: translateX(-50%) !important;
+    background: linear-gradient(90deg, var(--ds-favorite-cyan), var(--ds-favorite-rose)) !important;
+    opacity: 0.9 !important;
+    pointer-events: none !important;
+}
+
+#app-sidebar.sidebar-spacious::after,
+.sidebar-spacious::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: auto 15px 14px !important;
+    height: 1px !important;
+    border-radius: 999px !important;
+    background: linear-gradient(90deg, transparent, rgba(22, 24, 35, 0.18), transparent) !important;
+    pointer-events: none !important;
+}
+
+#app-sidebar.sidebar-spacious .sidebar-nav,
+.sidebar-spacious .sidebar-nav,
+#app-sidebar.sidebar-spacious .sidebar-spacious-nav,
+.sidebar-spacious .sidebar-spacious-nav {
+    width: 100% !important;
+    gap: 11px !important;
+    margin-top: 14px !important;
+    align-items: center !important;
+}
+
+#app-sidebar.sidebar-spacious :is(.nav-item, .sidebar-nav-item, .sidebar-spacious-item, button, a),
+.sidebar-spacious :is(.nav-item, .sidebar-nav-item, .sidebar-spacious-item, button, a) {
+    width: 46px !important;
+    min-width: 46px !important;
+    height: 46px !important;
+    min-height: 46px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(202, 214, 230, 0.92) !important;
+    background: rgba(255, 255, 255, 0.82) !important;
+    color: #2f3b4f !important;
+    box-shadow: 0 8px 18px rgba(31, 42, 62, 0.07) !important;
+    opacity: 1 !important;
+}
+
+#app-sidebar.sidebar-spacious :is(.nav-item, .sidebar-nav-item, .sidebar-spacious-item, button, a):hover,
+.sidebar-spacious :is(.nav-item, .sidebar-nav-item, .sidebar-spacious-item, button, a):hover {
+    border-color: rgba(37, 244, 238, 0.58) !important;
+    background: #ffffff !important;
+    color: var(--ds-favorite-ink) !important;
+    box-shadow: 0 12px 24px rgba(22, 24, 35, 0.10) !important;
+}
+
+#app-sidebar.sidebar-spacious :is(.nav-item.active, .sidebar-nav-item.active, .sidebar-spacious-item.active, button.active, a.active, [aria-current="page"]),
+.sidebar-spacious :is(.nav-item.active, .sidebar-nav-item.active, .sidebar-spacious-item.active, button.active, a.active, [aria-current="page"]) {
+    border-color: rgba(37, 244, 238, 0.64) !important;
+    background:
+        linear-gradient(135deg, rgba(37, 244, 238, 0.18), rgba(254, 44, 85, 0.16)),
+        #ffffff !important;
+    color: var(--ds-favorite-ink) !important;
+    box-shadow: 0 14px 26px rgba(254, 44, 85, 0.12), 0 10px 20px rgba(37, 244, 238, 0.10) !important;
+}
+
+#app-sidebar.sidebar-spacious :is(.nav-item.active, .sidebar-nav-item.active, .sidebar-spacious-item.active, button.active, a.active, [aria-current="page"])::after,
+.sidebar-spacious :is(.nav-item.active, .sidebar-nav-item.active, .sidebar-spacious-item.active, button.active, a.active, [aria-current="page"])::after {
+    content: "" !important;
+    position: absolute !important;
+    right: -8px !important;
+    top: 12px !important;
+    bottom: 12px !important;
+    width: 3px !important;
+    border-radius: 999px !important;
+    background: var(--ds-favorite-rose) !important;
+    box-shadow: 0 0 0 4px rgba(254, 44, 85, 0.10) !important;
+}
+
+#app-sidebar.sidebar-spacious :is(svg, i, .icon, .lucide),
+.sidebar-spacious :is(svg, i, .icon, .lucide) {
+    width: 20px !important;
+    height: 20px !important;
+    color: currentColor !important;
+    stroke: currentColor !important;
+    fill: none !important;
+    opacity: 1 !important;
+}
+
+#main-header.shell-toolbar {
+    border-color: rgba(205, 218, 232, 0.86) !important;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(247, 251, 252, 0.91)) !important;
+    box-shadow: 0 12px 32px rgba(24, 36, 56, 0.08) !important;
+}
+
+#shell-overview {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(247, 253, 252, 0.92)) !important;
+    border-color: rgba(196, 224, 224, 0.9) !important;
+}
+
+.shell-module-rail-chip.is-active,
+#app .sub-nav-chips :is(.chip-item.active, button.active) {
+    background: var(--ds-favorite-ink) !important;
+    border-color: var(--ds-favorite-ink) !important;
+    box-shadow: 0 12px 24px rgba(22, 24, 35, 0.15) !important;
+}
+
+.shell-module-rail-chip-index {
+    background: var(--ds-favorite-mint) !important;
+    color: #007a73 !important;
+}
+
+.analysis-action-stack::before,
+.analysis-anchor-panel::before {
+    background: linear-gradient(180deg, var(--ds-favorite-rose), var(--ds-favorite-cyan)) !important;
+}
+
+#app :is(.btn-primary, .primary-btn, .report-btn, .analysis-primary-action) {
+    background: #009e96 !important;
+    box-shadow: 0 12px 22px rgba(0, 158, 150, 0.18) !important;
+}
+
+#app tbody tr:hover td {
+    background: rgba(37, 244, 238, 0.055) !important;
+}
+
+#app tbody tr.highlight td,
+#app tbody tr.is-current td,
+#app tbody tr.current-school td,
+#app tbody tr:has(.badge-school) td,
+#app tbody tr:has(.school-current) td {
+    background: linear-gradient(90deg, rgba(254, 44, 85, 0.07), rgba(255, 245, 232, 0.75), rgba(37, 244, 238, 0.05)) !important;
+}
+
+@media (max-width: 900px) {
+    :root {
+        --shell-sidebar-collapsed: 72px !important;
+        --shell-sidebar-expanded: 72px !important;
+        --shell-sidebar-current: 72px !important;
+    }
+
+    #app-sidebar.sidebar-spacious,
+    .sidebar-spacious {
+        width: 72px !important;
+        min-width: 72px !important;
+        max-width: 72px !important;
+        padding: 12px 8px !important;
+        border-radius: 0 16px 16px 0 !important;
+    }
+
+    #app-sidebar.sidebar-spacious :is(.nav-item, .sidebar-nav-item, .sidebar-spacious-item, button, a),
+    .sidebar-spacious :is(.nav-item, .sidebar-nav-item, .sidebar-spacious-item, button, a) {
+        width: 42px !important;
+        min-width: 42px !important;
+        height: 42px !important;
+        min-height: 42px !important;
+        border-radius: 12px !important;
+    }
+}
+
+/* TRUE EOF login lock: final entrance composition. */
+#login-overlay[data-login-skin="clean"] .login-clean-stage {
+    grid-template-columns: minmax(380px, 1fr) minmax(238px, 300px) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy {
+    max-width: 500px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+    max-width: none !important;
+    white-space: nowrap !important;
+    font-size: clamp(42px, 3.4vw, 58px) !important;
+    letter-spacing: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-styleboard {
+    transform: translateX(-10px) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card {
+    min-height: 104px !important;
+    background: rgba(255, 255, 255, 0.94) !important;
+    background-image: none !important;
+    color: #161823 !important;
+    box-shadow: 0 14px 30px rgba(22, 24, 35, 0.08) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card::before {
+    display: block !important;
+    inset: 18px auto 18px 14px !important;
+    width: 4px !important;
+    height: auto !important;
+    border-radius: 999px !important;
+    background: linear-gradient(180deg, #fe2c55, #25f4ee) !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card::after {
+    display: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card span,
+#login-overlay[data-login-skin="clean"] .login-look-card strong,
+#login-overlay[data-login-skin="clean"] .login-look-card small {
+    color: #161823 !important;
+    text-shadow: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card span:last-child,
+#login-overlay[data-login-skin="clean"] .login-look-card small {
+    color: #667488 !important;
+}
+
+/* TRUE EOF login micro-polish: keep preview pills on one line. */
+#login-overlay[data-login-skin="clean"] .login-styleboard {
+    width: min(280px, 100%) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip {
+    gap: 6px !important;
+    padding: 12px 10px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip span,
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip strong {
+    white-space: nowrap !important;
+    font-size: 11px !important;
+    line-height: 1.2 !important;
 }

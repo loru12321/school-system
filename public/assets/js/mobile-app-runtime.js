@@ -1104,7 +1104,7 @@
                     </button>
                     <div class="apk-shell-copy">
                         <span class="apk-shell-kicker" data-apk-field="role">${escapeHtml(copy.workbench)}</span>
-                        <strong class="apk-shell-title" data-apk-field="title">菁莪云枢</strong>
+                        <strong class="apk-shell-title" data-apk-field="title">知衡云台</strong>
                         <span class="apk-shell-subtitle" data-apk-field="subtitle">${escapeHtml(copy.mobilePreparing)}</span>
                     </div>
                     <button type="button" class="apk-shell-icon" data-apk-action="search" aria-label="${escapeHtml(copy.openSearch)}">
@@ -1402,7 +1402,7 @@
 
         const fields = {
             role: `${humanizeRole()}工作台`,
-            title: activeItem?.text || '菁莪云枢',
+            title: activeItem?.text || '知衡云台',
             subtitle,
             cohort: getCurrentCohortLabel(),
             mode: copy.workbench

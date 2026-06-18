@@ -385,10 +385,10 @@
         const lead = document.querySelector('.login-clean-copy p');
         const eyebrow = document.querySelector('.login-clean-copy span');
         const strongs = document.querySelectorAll('.login-look-card strong');
-        const labels = ['成绩画像', '教师动线', '家校报告'];
-        if (eyebrow) eyebrow.textContent = 'DATA / CLASS / REPORT';
-        if (title) title.textContent = '菁莪云枢';
-        if (lead) lead.textContent = '统一管理成绩、教师画像、成长轨迹与家校报告，登录后按届别进入对应工作台。';
+        const labels = ['联考洞察', '教师动线', '家校报告'];
+        if (eyebrow) eyebrow.textContent = 'SCHOOL INSIGHT WORKSPACE';
+        if (title) title.textContent = '知衡云台';
+        if (lead) lead.textContent = '把联考数据、教师画像、成长轨迹和家校报告整理成一个清楚的教学决策入口。';
         strongs.forEach((node, index) => {
             if (labels[index]) node.textContent = labels[index];
         });

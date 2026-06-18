@@ -1063,12 +1063,25 @@
     };
     window.syncShellChrome = updateShellChrome;
 
+    function ensureSidebarNavigationRendered() {
+        const sidebarNav = document.getElementById('sidebar-nav');
+        if (!sidebarNav) return;
+        if (sidebarNav.querySelector('.sidebar-menu-item')) {
+            updateShellChrome();
+            return;
+        }
+        renderNavigation();
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         bindFloatingModuleRailBehavior();
         setWorkspaceDrawerState(false);
-        updateShellChrome();
+        ensureSidebarNavigationRendered();
         scheduleFloatingModuleRailSync();
     });
+
+    window.addEventListener('school:app-modules-ready', ensureSidebarNavigationRendered);
+    window.addEventListener('school:login-workbench-ready', ensureSidebarNavigationRendered);
 
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
