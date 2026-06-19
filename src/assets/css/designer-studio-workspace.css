@@ -1296,7 +1296,7 @@ body.dark-mode #login-overlay[data-login-skin="clean"] {
 
 /* Final login art direction: replace the empty poster block with an information-led entry panel. */
 #login-overlay[data-login-skin="clean"] {
-    --login-brand-name: "知衡云台";
+    --login-brand-name: "校衡台";
     --login-brand-initials: "ZH";
 }
 
@@ -4208,4 +4208,548 @@ tr.selected,
         radial-gradient(circle at 16% 10%, rgba(254, 44, 85, 0.08), transparent 28%),
         radial-gradient(circle at 88% 92%, rgba(33, 214, 207, 0.12), transparent 32%),
         radial-gradient(circle at 54% 100%, rgba(255, 184, 106, 0.10), transparent 24%) !important;
+}
+
+/* TRUE EOF console discipline pass: reduce card noise and make the starter workspace feel designed. */
+:root {
+    --ds-console-shadow: 0 14px 34px rgba(36, 42, 56, 0.07) !important;
+    --ds-console-shadow-soft: 0 8px 22px rgba(36, 42, 56, 0.05) !important;
+    --ds-console-cell: #f8fbfd !important;
+    --ds-console-cell-strong: #f2f8f8 !important;
+}
+
+#starter-hub {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+#starter-hub .starter-grid {
+    gap: 14px !important;
+    margin-top: 14px !important;
+    align-items: stretch !important;
+}
+
+#starter-hub .starter-card,
+.starter-card {
+    min-height: 0 !important;
+    padding: 18px !important;
+    border-radius: 12px !important;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(251, 253, 255, 0.96)),
+        radial-gradient(circle at 100% 0%, rgba(33, 214, 207, 0.045), transparent 30%) !important;
+    border: 1px solid rgba(216, 226, 239, 0.92) !important;
+    box-shadow: var(--ds-console-shadow-soft) !important;
+}
+
+#starter-hub .starter-card--status,
+#starter-hub .starter-card--tasks,
+#starter-hub .starter-card--entry {
+    min-height: 184px !important;
+}
+
+#starter-hub .starter-card--diagnose,
+#starter-hub .starter-card--issues,
+#starter-hub .starter-card--logs,
+#starter-hub .starter-card--backup,
+#starter-hub .starter-card--templates {
+    min-height: 132px !important;
+}
+
+#starter-hub .starter-card::before,
+.starter-card::before,
+.analysis-anchor-panel::before,
+.analysis-inline-panel::before {
+    background: linear-gradient(90deg, var(--ds-favorite-cyan), var(--ds-favorite-rose), var(--ds-favorite-warm)) !important;
+}
+
+#starter-hub .starter-card::before,
+.starter-card::before {
+    inset: 0 auto auto 18px !important;
+    width: 36px !important;
+    height: 3px !important;
+    border-radius: 0 0 999px 999px !important;
+    opacity: 0.9 !important;
+}
+
+#starter-hub .starter-card h4 {
+    margin-bottom: 12px !important;
+    color: var(--ds-favorite-ink) !important;
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0 !important;
+}
+
+#starter-hub .starter-card h4 i {
+    color: var(--ds-favorite-cyan) !important;
+}
+
+#starter-hub .status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+}
+
+#starter-hub .status-item,
+.status-item {
+    min-height: 64px !important;
+    padding: 11px 12px 11px 14px !important;
+    border-radius: 10px !important;
+    background: var(--ds-console-cell) !important;
+    border: 1px solid rgba(216, 226, 239, 0.86) !important;
+    box-shadow: none !important;
+    color: var(--ds-favorite-muted) !important;
+    position: relative !important;
+}
+
+#starter-hub .status-item::before,
+.status-item::before {
+    content: "" !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 12px !important;
+    bottom: 12px !important;
+    width: 3px !important;
+    border-radius: 999px !important;
+    background: linear-gradient(180deg, rgba(33, 214, 207, 0.85), rgba(254, 44, 85, 0.35)) !important;
+}
+
+#starter-hub .status-item strong,
+.status-item strong {
+    margin: 0 0 4px !important;
+    color: var(--ds-favorite-ink) !important;
+    font-size: 13px !important;
+    line-height: 1.28 !important;
+}
+
+.status-badge,
+.badge-ok,
+.badge-warn,
+.badge-err {
+    min-height: 20px !important;
+    padding: 2px 7px !important;
+    border-radius: 999px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+}
+
+.badge-ok {
+    background: rgba(33, 214, 207, 0.12) !important;
+    color: #087f79 !important;
+    border-color: rgba(33, 214, 207, 0.30) !important;
+}
+
+.badge-warn {
+    background: rgba(255, 184, 106, 0.16) !important;
+    color: #9a5a08 !important;
+    border-color: rgba(255, 184, 106, 0.36) !important;
+}
+
+.badge-err {
+    background: rgba(254, 44, 85, 0.10) !important;
+    color: #b5193a !important;
+    border-color: rgba(254, 44, 85, 0.26) !important;
+}
+
+#starter-hub .task-list,
+#starter-hub .issue-list,
+#starter-hub .log-list {
+    gap: 8px !important;
+}
+
+#starter-hub .task-item,
+#starter-hub .log-item,
+#starter-hub .issue-item,
+.task-item,
+.log-item,
+.issue-item {
+    min-height: 38px !important;
+    border-radius: 10px !important;
+    padding: 9px 11px !important;
+    background: var(--ds-console-cell) !important;
+    border: 1px solid rgba(216, 226, 239, 0.82) !important;
+    color: var(--ds-favorite-ink-soft) !important;
+    box-shadow: none !important;
+}
+
+#starter-hub .task-item.done,
+.task-item.done {
+    background:
+        linear-gradient(90deg, rgba(33, 214, 207, 0.13), rgba(255, 255, 255, 0.92)) !important;
+    border-color: rgba(33, 214, 207, 0.30) !important;
+    color: #146b67 !important;
+}
+
+#starter-hub .task-item .dot,
+.task-item .dot {
+    width: 7px !important;
+    height: 7px !important;
+    background: #a7b3c3 !important;
+}
+
+#starter-hub .task-item.done .dot,
+.task-item.done .dot {
+    background: var(--ds-favorite-cyan) !important;
+    box-shadow: 0 0 0 4px rgba(33, 214, 207, 0.14) !important;
+}
+
+#starter-hub .starter-card--entry {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 250, 247, 0.92)),
+        radial-gradient(circle at 100% 100%, rgba(255, 184, 106, 0.14), transparent 32%) !important;
+}
+
+#starter-hub .starter-card--entry .btn,
+#starter-hub .starter-card--templates .btn,
+.tm-quick-grid button,
+.mode-entry-row .btn {
+    min-height: 38px !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(216, 226, 239, 0.88) !important;
+    background: rgba(255, 255, 255, 0.86) !important;
+    color: var(--ds-favorite-ink-soft) !important;
+    box-shadow: none !important;
+    font-weight: 800 !important;
+}
+
+#starter-hub .starter-card--entry .btn:hover,
+#starter-hub .starter-card--templates .btn:hover,
+.tm-quick-grid button:hover,
+.mode-entry-row .btn:hover {
+    transform: translateY(-1px) !important;
+    border-color: rgba(33, 214, 207, 0.50) !important;
+    background:
+        linear-gradient(135deg, rgba(233, 251, 250, 0.94), rgba(255, 240, 244, 0.56)),
+        #ffffff !important;
+    color: var(--ds-favorite-ink) !important;
+}
+
+#starter-hub .starter-card--entry .btn:first-of-type,
+.tm-quick-grid button:first-child,
+.mode-entry-row .btn:first-child {
+    background: linear-gradient(135deg, var(--ds-favorite-blue), #16b9b5) !important;
+    border-color: transparent !important;
+    color: #ffffff !important;
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.16) !important;
+}
+
+.metric-card,
+.summary-metric-card,
+.analysis-scan-item,
+.teacher-card,
+.mobile-grid .mobile-grid-item,
+.mob-grid-card,
+.upload-drop-zone,
+.progress-status-note,
+.marginal-cycle-panel,
+.marginal-filter-panel,
+.task-ticket {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 252, 255, 0.95)) !important;
+    border-color: rgba(216, 226, 239, 0.90) !important;
+    box-shadow: var(--ds-console-shadow-soft) !important;
+}
+
+.analysis-action-note,
+.analysis-info-band,
+.analysis-flow-banner,
+.analysis-doc-panel {
+    background:
+        linear-gradient(135deg, rgba(233, 251, 250, 0.74), rgba(255, 255, 255, 0.94)) !important;
+    border-color: rgba(33, 214, 207, 0.22) !important;
+    color: var(--ds-favorite-ink-soft) !important;
+}
+
+@media (max-width: 980px) {
+    #starter-hub .status-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    #starter-hub .starter-card,
+    .starter-card {
+        border-radius: 10px !important;
+        padding: 15px !important;
+    }
+}
+
+/* TRUE EOF login product-grade pass: Instagram-clean display, Chinese-first copy. */
+#login-overlay[data-login-skin="clean"] {
+    background:
+        radial-gradient(circle at 8% 6%, rgba(37, 220, 214, 0.16), transparent 28%),
+        radial-gradient(circle at 0% 100%, rgba(254, 44, 85, 0.10), transparent 28%),
+        linear-gradient(135deg, #f8fbff 0%, #fffefd 48%, #f4f9ff 100%) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-shell {
+    width: min(1260px, calc(100vw - 80px)) !important;
+    grid-template-columns: minmax(640px, 1fr) minmax(420px, 450px) !important;
+    gap: clamp(34px, 4vw, 56px) !important;
+    align-items: center !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage {
+    min-height: min(720px, calc(100vh - 80px)) !important;
+    grid-template-columns: minmax(330px, 1fr) !important;
+    column-gap: 0 !important;
+    align-items: center !important;
+    padding: clamp(42px, 5.4vw, 72px) !important;
+    border-radius: 28px !important;
+    border: 1px solid rgba(208, 219, 233, 0.82) !important;
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(248, 252, 255, 0.92)),
+        radial-gradient(circle at 16% 18%, rgba(37, 220, 214, 0.12), transparent 30%),
+        radial-gradient(circle at 88% 18%, rgba(254, 44, 85, 0.07), transparent 26%) !important;
+    box-shadow: 0 34px 76px rgba(52, 70, 96, 0.12) !important;
+    overflow: hidden !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::before,
+#login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+    content: "" !important;
+    display: block !important;
+    position: absolute !important;
+    pointer-events: none !important;
+    border-radius: 30px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::before {
+    inset: auto 58px 54px auto !important;
+    width: 260px !important;
+    height: 480px !important;
+    border: 1px solid rgba(210, 220, 234, 0.78) !important;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(247, 251, 255, 0.72)),
+        linear-gradient(90deg, transparent 0 16%, rgba(37, 220, 214, 0.12) 16% 18%, transparent 18% 100%) !important;
+    box-shadow: 0 24px 54px rgba(52, 70, 96, 0.12) !important;
+    transform: rotate(-3deg) !important;
+    opacity: 0.72 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+    inset: 70px auto auto 64px !important;
+    width: 148px !important;
+    height: 148px !important;
+    background:
+        linear-gradient(135deg, rgba(37, 220, 214, 0.14), rgba(254, 44, 85, 0.08)),
+        #ffffff !important;
+    box-shadow: inset 0 0 0 1px rgba(210, 220, 234, 0.76), 0 20px 48px rgba(52, 70, 96, 0.08) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand {
+    position: absolute !important;
+    z-index: 3 !important;
+    top: clamp(34px, 4vw, 48px) !important;
+    left: clamp(34px, 4.8vw, 58px) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-mark {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 14px !important;
+    font-size: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-mark::before {
+    content: "校" !important;
+    display: grid !important;
+    place-items: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    font-size: 19px !important;
+    font-weight: 900 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-mark::after {
+    display: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand strong {
+    font-size: 15px !important;
+    letter-spacing: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand,
+#login-overlay[data-login-skin="clean"] .login-clean-brand *,
+#login-overlay[data-login-skin="clean"] .login-clean-copy,
+#login-overlay[data-login-skin="clean"] .login-clean-copy *,
+#login-overlay[data-login-skin="clean"] .login-styleboard,
+#login-overlay[data-login-skin="clean"] .login-styleboard * {
+    writing-mode: horizontal-tb !important;
+    text-orientation: mixed !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-brand small {
+    color: #7a879a !important;
+    font-size: 10px !important;
+    letter-spacing: 0.06em !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy {
+    grid-column: 1 !important;
+    align-self: end !important;
+    width: min(390px, calc(100% - 300px)) !important;
+    min-width: 340px !important;
+    max-width: 390px !important;
+    padding: 188px 0 10px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy span {
+    color: #fe2c55 !important;
+    font-size: 12px !important;
+    letter-spacing: 0.08em !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+    width: auto !important;
+    max-width: 100% !important;
+    display: block !important;
+    margin-top: 14px !important;
+    white-space: normal !important;
+    color: #242a38 !important;
+    font-size: clamp(52px, 5.2vw, 70px) !important;
+    line-height: 0.96 !important;
+    font-weight: 900 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy p {
+    max-width: 224px !important;
+    display: block !important;
+    margin-top: 18px !important;
+    color: #5f6e84 !important;
+    font-size: 16px !important;
+    line-height: 1.85 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-styleboard {
+    position: absolute !important;
+    z-index: 4 !important;
+    top: 50% !important;
+    right: clamp(34px, 5vw, 62px) !important;
+    grid-column: auto !important;
+    align-self: auto !important;
+    justify-self: auto !important;
+    width: min(292px, 100%) !important;
+    min-height: 494px !important;
+    padding: 18px !important;
+    gap: 11px !important;
+    border-radius: 30px !important;
+    border: 1px solid rgba(209, 219, 232, 0.9) !important;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 252, 255, 0.96)),
+        radial-gradient(circle at 20% 10%, rgba(37, 220, 214, 0.13), transparent 28%),
+        radial-gradient(circle at 88% 92%, rgba(254, 44, 85, 0.08), transparent 30%) !important;
+    box-shadow: 0 26px 58px rgba(52, 70, 96, 0.14) !important;
+    transform: translateY(-50%) rotate(2.2deg) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-styleboard::before {
+    width: 40px !important;
+    height: 4px !important;
+    margin: 2px auto 8px !important;
+    background: rgba(36, 42, 56, 0.14) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card {
+    min-height: 92px !important;
+    grid-template-columns: 38px minmax(0, 1fr) !important;
+    padding: 16px !important;
+    border-radius: 18px !important;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(247, 251, 255, 0.92)) !important;
+    border: 1px solid rgba(218, 227, 238, 0.95) !important;
+    box-shadow: 0 10px 26px rgba(52, 70, 96, 0.07) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card span:first-child {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 13px !important;
+    color: #242a38 !important;
+    background: linear-gradient(135deg, rgba(37, 220, 214, 0.20), rgba(254, 44, 85, 0.07)) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card strong {
+    color: #242a38 !important;
+    font-size: 16px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card small {
+    color: #667488 !important;
+    font-size: 12px !important;
+    letter-spacing: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip {
+    margin-top: 2px !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip span {
+    min-height: 36px !important;
+    justify-content: flex-start !important;
+    padding: 0 14px !important;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, 0.76) !important;
+    color: #38445a !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-card {
+    border-radius: 26px !important;
+    box-shadow: 0 28px 70px rgba(52, 70, 96, 0.13) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-entry-prefix {
+    min-width: 48px !important;
+    color: #2563eb !important;
+    letter-spacing: 0.04em !important;
+}
+
+#login-overlay[data-login-skin="clean"] .entrance-sound-panel small,
+#login-overlay[data-login-skin="clean"] .entrance-sound-option small {
+    letter-spacing: 0 !important;
+}
+
+@media (max-width: 1180px) {
+    #login-overlay[data-login-skin="clean"] .login-clean-shell {
+        width: min(760px, calc(100vw - 40px)) !important;
+        grid-template-columns: 1fr !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage {
+        min-height: auto !important;
+        grid-template-columns: 1fr !important;
+        padding: 34px !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::before,
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+        display: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-brand {
+        position: relative !important;
+        top: auto !important;
+        left: auto !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-copy {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        padding: 28px 0 0 !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+        font-size: clamp(46px, 13vw, 72px) !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-styleboard {
+        position: relative !important;
+        top: auto !important;
+        right: auto !important;
+        grid-column: 1 !important;
+        width: 100% !important;
+        min-height: auto !important;
+        transform: none !important;
+    }
 }

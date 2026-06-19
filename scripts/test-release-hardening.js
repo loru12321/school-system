@@ -56,8 +56,8 @@ const userFacingReleaseFiles = [
 
 assert.strictEqual(scripts['test:release-hardening'], 'node scripts/test-release-hardening.js', 'release hardening script should be exposed');
 assert.ok(scripts['check:release-fast'] && scripts['check:release-fast'].includes('test:release-hardening'), 'fast release check should include release hardening');
-assert.strictEqual(manifest.name, '知衡云台', 'manifest app name should be readable Chinese');
-assert.strictEqual(manifest.short_name, '知衡云台', 'manifest short name should be readable Chinese');
+assert.strictEqual(manifest.name, '校衡台', 'manifest app name should be readable Chinese');
+assert.strictEqual(manifest.short_name, '校衡台', 'manifest short name should be readable Chinese');
 assert.ok(manifest.description.includes('教务'), 'manifest description should stay readable');
 assert.ok(!/[�锟]/.test(manifestText), 'manifest should not contain replacement or mojibake characters');
 assert.ok(Array.isArray(manifest.shortcuts) && manifest.shortcuts.length >= 3, 'manifest should keep app shortcuts');
@@ -69,7 +69,7 @@ const swVersionMatch = swRuntime.match(/const\s+SERVICE_WORKER_VERSION\s*=\s*['"
 const swVersion = swVersionMatch ? swVersionMatch[1] : '';
 assert.ok(swVersion, 'could not extract SERVICE_WORKER_VERSION from service-worker-runtime.js');
 assert.ok(srcIndex.includes(`var refreshVersion = '${swVersion}';`), 'early runtime refresh should match the current service worker runtime');
-assert.ok(srcIndex.includes('知衡云台'), 'HTML metadata should keep readable Chinese application name');
+assert.ok(srcIndex.includes('校衡台'), 'HTML metadata should keep readable Chinese application name');
 assert.ok(!/[�锟鏅烘収]/.test(srcIndex.slice(0, srcIndex.indexOf('</head>'))), 'HTML head metadata should not contain mojibake');
 userFacingReleaseFiles.forEach((relativePath) => {
   assert.ok(!read(relativePath).includes('\uFFFD'), `${relativePath} should not contain replacement characters`);

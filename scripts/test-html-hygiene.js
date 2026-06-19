@@ -14,7 +14,7 @@ const inlineHandlerCount = count(/\son[a-z]+=/g);
 
 assert.ok(html.indexOf('runtime-registry-runtime.js') < html.indexOf('boot-runtime.js'), 'runtime registry must load before boot runtime');
 assert.ok(html.includes('<meta name="description"'), 'index.html should include a search result description');
-assert.ok(html.includes('<meta name="application-name" content="知衡云台">'), 'index.html should expose the application name to browsers');
+assert.ok(html.includes('<meta name="application-name" content="校衡台">'), 'index.html should expose the application name to browsers');
 assert.ok(html.includes('学校成绩导入、届别档案、教学分析、教师画像和家校报告'), 'index.html should keep readable search description copy');
 assert.ok(html.includes('<meta name="color-scheme" content="light dark">'), 'index.html should declare supported color schemes');
 assert.ok(html.includes('<link rel="canonical" href="https://schoolsystem.com.cn/">'), 'index.html should include the canonical production URL');
@@ -22,10 +22,10 @@ assert.ok(html.includes('<link rel="alternate" hreflang="zh-CN" href="https://sc
 assert.ok(html.includes('<link rel="alternate" hreflang="x-default" href="https://schoolsystem.com.cn/">'), 'index.html should include an x-default alternate URL');
 assert.ok(html.includes('<link rel="manifest" href="./site.webmanifest">'), 'index.html should link the web app manifest');
 assert.ok(html.includes('<link rel="apple-touch-icon" href="./icon.svg">'), 'index.html should provide a touch icon');
-assert.ok(html.includes('<meta property="og:title" content="知衡云台">'), 'index.html should include Open Graph metadata');
-assert.ok(html.includes('<meta property="og:site_name" content="知衡云台">'), 'index.html should include readable Open Graph site name');
-assert.ok(html.includes('<meta name="twitter:title" content="知衡云台">'), 'index.html should include readable Twitter metadata');
-assert.ok(html.includes('<meta name="apple-mobile-web-app-title" content="知衡云台">'), 'index.html should expose readable iOS app title');
+assert.ok(html.includes('<meta property="og:title" content="校衡台">'), 'index.html should include Open Graph metadata');
+assert.ok(html.includes('<meta property="og:site_name" content="校衡台">'), 'index.html should include readable Open Graph site name');
+assert.ok(html.includes('<meta name="twitter:title" content="校衡台">'), 'index.html should include readable Twitter metadata');
+assert.ok(html.includes('<meta name="apple-mobile-web-app-title" content="校衡台">'), 'index.html should expose readable iOS app title');
 assert.ok(html.includes('<meta property="og:locale" content="zh_CN">'), 'index.html should include the Open Graph locale');
 assert.ok(html.includes('<meta property="og:image" content="https://schoolsystem.com.cn/icon.svg">'), 'index.html should include a share image');
 assert.ok(html.includes('<meta name="twitter:card" content="summary">'), 'index.html should include Twitter card metadata');
