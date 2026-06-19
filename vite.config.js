@@ -30,6 +30,9 @@ export default defineConfig({
   build: {
     outDir: '../dist',
     emptyOutDir: true,
+    // Lightning CSS preserves the existing cascade while producing a smaller,
+    // standards-aware release stylesheet than the default minifier.
+    cssMinify: 'lightningcss',
   },
   server: {
     open: true,

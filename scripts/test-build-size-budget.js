@@ -26,9 +26,19 @@ function assertZipLike(filePath, label) {
     );
 }
 
+function getBuiltStylesheetSize() {
+    const stylesheets = fs.readdirSync(path.join(projectRoot, 'dist'))
+        .filter((name) => /^style-[\w-]+\.css$/.test(name));
+    assert.strictEqual(stylesheets.length, 1, 'dist should contain one hashed application stylesheet');
+    return getSize(path.join(projectRoot, 'dist', stylesheets[0]));
+}
+
 const budgets = {
     // 2026-03-24 baseline plus a small amount of regression headroom.
     distIndexHtml: 330_000,
+    // Lightning CSS keeps the full existing theme cascade visually identical
+    // while trimming the release payload. Guard that improvement from regressions.
+    distAppCss: 620_000,
     ltHtml: 3_900_000,
     publicAppJs: 910_000,
     // Boot auth now includes login cohort handoff before core modules load.
@@ -44,6 +54,7 @@ const budgets = {
 
 const actual = {
     distIndexHtml: getSize(distIndexPath),
+    distAppCss: getBuiltStylesheetSize(),
     ltHtml: getSize(ltHtmlPath),
     publicAppJs: getSize(publicAppPath),
     publicBootJs: getSize(publicBootPath),

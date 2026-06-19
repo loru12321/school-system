@@ -4,6 +4,12 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const mobileLoginPath = path.join(root, 'src', 'assets', 'css', 'mobile-login.css');
 const productRedesignPath = path.join(root, 'src', 'assets', 'css', 'product-redesign.css');
+const activeThemeLayers = [
+  ['product-redesign.css', 118_000, 900],
+  ['readable-pop-workspace.css', 13_000, 130],
+  ['designer-studio-workspace.css', 164_000, 2_160],
+  ['douyin-editorial-system.css', 33_000, 540],
+];
 const entranceSoundPath = path.join(root, 'public', 'assets', 'js', 'entrance-sound-runtime.js');
 const entranceAudioPath = path.join(root, 'public', 'assets', 'audio', 'entrance');
 const entranceManifestPath = path.join(entranceAudioPath, 'manifest.json');
@@ -38,6 +44,18 @@ const maxMobileLoginBytes = 136 * 1024;
 
 if (byteLength > maxMobileLoginBytes) {
   throw new Error(`mobile-login.css is ${byteLength} bytes, above ${maxMobileLoginBytes} byte hygiene budget`);
+}
+
+for (const [fileName, maxBytes, maxImportant] of activeThemeLayers) {
+  const themeSource = fs.readFileSync(path.join(root, 'src', 'assets', 'css', fileName), 'utf8');
+  const themeBytes = Buffer.byteLength(themeSource, 'utf8');
+  const importantCount = (themeSource.match(/!important\b/g) || []).length;
+  if (themeBytes > maxBytes) {
+    throw new Error(`${fileName} is ${themeBytes} bytes, above its ${maxBytes} byte theme budget`);
+  }
+  if (importantCount > maxImportant) {
+    throw new Error(`${fileName} has ${importantCount} !important declarations, above its ${maxImportant} cascade budget`);
+  }
 }
 
 const favoriteThemeMarkers = [
