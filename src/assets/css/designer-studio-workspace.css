@@ -3644,3 +3644,305 @@ body.shell-dashboard {
     font-size: 11px !important;
     line-height: 1.2 !important;
 }
+
+/* TRUE EOF login layout repair: separate copy from preview so nothing overlaps. */
+#login-overlay[data-login-skin="clean"] .login-clean-stage {
+    grid-template-columns: minmax(250px, 285px) minmax(236px, 268px) !important;
+    column-gap: clamp(28px, 4vw, 42px) !important;
+    row-gap: 20px !important;
+    align-items: stretch !important;
+    padding: clamp(30px, 4vw, 58px) clamp(34px, 4.8vw, 58px) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::before {
+    top: clamp(58px, 10vh, 96px) !important;
+    right: clamp(42px, 5vw, 66px) !important;
+    width: min(238px, 31%) !important;
+    height: min(560px, calc(100% - 132px)) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+    top: clamp(92px, 14vh, 132px) !important;
+    right: clamp(60px, 6.4vw, 88px) !important;
+    width: min(198px, 26%) !important;
+    height: min(430px, calc(100% - 206px)) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy {
+    grid-column: 1 !important;
+    align-self: end !important;
+    max-width: 285px !important;
+    padding-bottom: clamp(36px, 5vh, 58px) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1 {
+    width: max-content !important;
+    max-width: 100% !important;
+    white-space: nowrap !important;
+    font-size: clamp(42px, 3vw, 48px) !important;
+    line-height: 1.04 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy p,
+#login-overlay[data-login-skin="clean"] .login-clean-copy .login-clean-lead {
+    max-width: 285px !important;
+    font-size: 15px !important;
+    line-height: 1.75 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-styleboard {
+    grid-column: 2 !important;
+    align-self: center !important;
+    justify-self: end !important;
+    width: min(268px, 100%) !important;
+    transform: none !important;
+    margin: 0 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card {
+    min-height: 96px !important;
+    padding: 16px 18px 16px 58px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    align-items: center !important;
+}
+
+@media (max-width: 1180px) {
+    #login-overlay[data-login-skin="clean"] .login-clean-stage {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::before,
+    #login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+        display: none !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-copy,
+    #login-overlay[data-login-skin="clean"] .login-styleboard {
+        grid-column: 1 !important;
+        justify-self: stretch !important;
+        max-width: none !important;
+        width: 100% !important;
+    }
+
+    #login-overlay[data-login-skin="clean"] .login-clean-copy {
+        padding-bottom: 0 !important;
+    }
+}
+
+/* TRUE EOF login preview redesign: remove the crude phone outline and use a quiet feed panel. */
+#login-overlay[data-login-skin="clean"] .login-clean-stage::before,
+#login-overlay[data-login-skin="clean"] .login-clean-stage::after {
+    display: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-styleboard {
+    position: relative !important;
+    z-index: 2 !important;
+    grid-column: 2 !important;
+    align-self: center !important;
+    justify-self: end !important;
+    width: min(300px, 100%) !important;
+    min-height: 440px !important;
+    display: grid !important;
+    align-content: center !important;
+    gap: 12px !important;
+    padding: 18px !important;
+    margin: 0 !important;
+    transform: none !important;
+    border-radius: 26px !important;
+    border: 1px solid rgba(218, 226, 236, 0.9) !important;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 252, 255, 0.92)),
+        radial-gradient(circle at 16% 8%, rgba(254, 44, 85, 0.08), transparent 26%),
+        radial-gradient(circle at 86% 96%, rgba(37, 244, 238, 0.10), transparent 30%) !important;
+    box-shadow: 0 24px 54px rgba(22, 24, 35, 0.09) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-styleboard::before {
+    content: "" !important;
+    display: block !important;
+    width: 42px !important;
+    height: 4px !important;
+    margin: 0 auto 4px !important;
+    border-radius: 999px !important;
+    background: rgba(22, 24, 35, 0.18) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-grid {
+    display: grid !important;
+    gap: 10px !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card {
+    min-height: 78px !important;
+    display: grid !important;
+    grid-template-columns: 34px minmax(0, 1fr) !important;
+    grid-template-rows: auto auto !important;
+    column-gap: 12px !important;
+    align-content: center !important;
+    padding: 14px 16px !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(224, 231, 241, 0.92) !important;
+    background: rgba(255, 255, 255, 0.88) !important;
+    background-image: none !important;
+    color: #161823 !important;
+    box-shadow: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card::before,
+#login-overlay[data-login-skin="clean"] .login-look-card::after {
+    display: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card span:first-child {
+    grid-row: 1 / 3 !important;
+    width: 34px !important;
+    height: 34px !important;
+    display: inline-grid !important;
+    place-items: center !important;
+    border-radius: 12px !important;
+    background: rgba(22, 24, 35, 0.06) !important;
+    color: #161823 !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card strong {
+    grid-column: 2 !important;
+    margin: 0 !important;
+    color: #161823 !important;
+    font-size: 15px !important;
+    line-height: 1.2 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card small,
+#login-overlay[data-login-skin="clean"] .login-look-card span:last-child {
+    grid-column: 2 !important;
+    margin: 4px 0 0 !important;
+    color: #667488 !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip span {
+    min-height: 34px !important;
+    display: inline-grid !important;
+    place-items: center !important;
+    padding: 0 8px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(224, 231, 241, 0.96) !important;
+    background: rgba(255, 255, 255, 0.82) !important;
+    color: #283244 !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+}
+
+@media (max-width: 1180px) {
+    #login-overlay[data-login-skin="clean"] .login-styleboard {
+        grid-column: 1 !important;
+        justify-self: stretch !important;
+        width: 100% !important;
+        min-height: auto !important;
+    }
+}
+
+/* TRUE EOF Douyin-favorite palette pass: soften pure black into graphite and keep accents small. */
+:root {
+    --ds-favorite-ink: #242a38 !important;
+    --ds-favorite-ink-soft: #38445a !important;
+    --ds-favorite-rose: #fe2c55 !important;
+    --ds-favorite-cyan: #25dcd6 !important;
+    --ds-favorite-warm: #ffb86a !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy h1,
+#login-overlay[data-login-skin="clean"] .login-clean-panel h2,
+#login-overlay[data-login-skin="clean"] .login-clean-brand strong,
+#login-overlay[data-login-skin="clean"] .login-look-card strong {
+    color: var(--ds-favorite-ink) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-copy p,
+#login-overlay[data-login-skin="clean"] .login-clean-copy .login-clean-lead,
+#login-overlay[data-login-skin="clean"] .login-clean-panel p,
+#login-overlay[data-login-skin="clean"] .login-look-card small,
+#login-overlay[data-login-skin="clean"] .login-look-card span:last-child {
+    color: #637086 !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-eyebrow,
+#login-overlay[data-login-skin="clean"] .login-clean-copy span {
+    color: var(--ds-favorite-rose) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-mark {
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #2563eb 0%, #315df4 52%, #25dcd6 100%) !important;
+    box-shadow: 0 16px 30px rgba(37, 99, 235, 0.18) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-styleboard {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 252, 255, 0.92)),
+        radial-gradient(circle at 18% 10%, rgba(254, 44, 85, 0.07), transparent 28%),
+        radial-gradient(circle at 88% 94%, rgba(37, 220, 214, 0.10), transparent 32%),
+        radial-gradient(circle at 52% 100%, rgba(255, 184, 106, 0.08), transparent 24%) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-look-card span:first-child {
+    color: var(--ds-favorite-ink) !important;
+    background: linear-gradient(135deg, rgba(37, 220, 214, 0.16), rgba(254, 44, 85, 0.08)) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-rhythm-strip span {
+    color: var(--ds-favorite-ink-soft) !important;
+    background: rgba(255, 255, 255, 0.86) !important;
+}
+
+#login-overlay[data-login-skin="clean"] .login-clean-panel button[type="submit"],
+#login-overlay[data-login-skin="clean"] .login-clean-panel .login-submit,
+#login-overlay[data-login-skin="clean"] .login-primary-action {
+    background: linear-gradient(135deg, #2563eb 0%, #1f6df2 54%, #12b7b2 100%) !important;
+    box-shadow: 0 18px 30px rgba(37, 99, 235, 0.20), 0 10px 22px rgba(18, 183, 178, 0.12) !important;
+}
+
+.shell-module-rail-chip.is-active,
+#app .sub-nav-chips :is(.chip-item.active, button.active),
+#app-sidebar.sidebar-spacious :is(.nav-item.active, .sidebar-nav-item.active, .sidebar-spacious-item.active, button.active, a.active, [aria-current="page"]),
+.sidebar-spacious :is(.nav-item.active, .sidebar-nav-item.active, .sidebar-spacious-item.active, button.active, a.active, [aria-current="page"]) {
+    background:
+        linear-gradient(135deg, rgba(37, 220, 214, 0.18), rgba(254, 44, 85, 0.12)),
+        #ffffff !important;
+    color: var(--ds-favorite-ink) !important;
+    border-color: rgba(37, 220, 214, 0.58) !important;
+    box-shadow: 0 14px 28px rgba(36, 42, 56, 0.10), 0 8px 18px rgba(37, 220, 214, 0.10) !important;
+}
+
+#app .quick-switch :is(.active, .is-active),
+#app :is(.quick-switch-card.active, .quick-switch-card.is-active, .shell-module-rail-chip.is-active) {
+    background:
+        linear-gradient(135deg, rgba(37, 220, 214, 0.14), rgba(254, 44, 85, 0.09)),
+        rgba(255, 255, 255, 0.96) !important;
+    color: var(--ds-favorite-ink) !important;
+    border-color: rgba(37, 220, 214, 0.55) !important;
+}
+
+#app .quick-switch :is(.active, .is-active) *,
+#app :is(.quick-switch-card.active, .quick-switch-card.is-active, .shell-module-rail-chip.is-active) * {
+    color: var(--ds-favorite-ink) !important;
+}
