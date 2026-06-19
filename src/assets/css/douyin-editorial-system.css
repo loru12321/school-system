@@ -45,6 +45,221 @@ html body #app button.btn.btn-purple { background: var(--de-coral) !important; b
 :is(input,select,textarea,.form-control,.filter-select):focus { border-color: var(--de-coral) !important; box-shadow: 0 0 0 3px rgba(233,79,86,.12) !important; }
 :is(table,.analysis-generated-table,.analysis-table-dense) thead th { background: var(--de-blue-soft) !important; color: var(--de-ink) !important; }
 
+/* Data-management home: editorial control surface instead of a card mosaic. */
+html body #app #starter-hub {
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+html body #app #starter-hub > .module-desc-bar {
+    margin: 0 0 14px !important;
+    padding: 18px 22px !important;
+    border: 1px solid var(--de-line) !important;
+    border-left: 3px solid var(--de-coral) !important;
+    border-radius: 4px !important;
+    background: #fff !important;
+    box-shadow: none !important;
+}
+
+html body #app #starter-hub > .module-desc-bar h3 {
+    margin: 0 !important;
+    color: var(--de-ink) !important;
+    font-size: 20px !important;
+    line-height: 1.25 !important;
+}
+
+html body #app #starter-hub > .module-desc-bar h3 > .badge {
+    background: var(--de-coral-soft) !important;
+    color: var(--de-coral-deep) !important;
+    border: 1px solid rgba(233,79,86,.22) !important;
+}
+
+html body #app #starter-hub > .module-desc-bar p {
+    display: inline !important;
+    margin: 8px 16px 0 0 !important;
+    color: var(--de-muted) !important;
+    font-size: 12px !important;
+    line-height: 1.6 !important;
+}
+
+html body #app #starter-hub > .module-desc-bar p strong {
+    color: var(--de-text) !important;
+}
+
+html body #app #starter-hub .starter-grid {
+    display: grid !important;
+    grid-template-columns: repeat(12,minmax(0,1fr)) !important;
+    gap: 0 !important;
+    overflow: hidden !important;
+    border: 1px solid var(--de-line) !important;
+    border-radius: 6px !important;
+    background: #fff !important;
+}
+
+html body #app #starter-hub .starter-card {
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 18px 20px !important;
+    border: 0 !important;
+    border-right: 1px solid var(--de-line) !important;
+    border-bottom: 1px solid var(--de-line) !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+}
+
+html body #app #starter-hub .starter-card::before,
+html body #app #starter-hub .starter-card::after {
+    display: none !important;
+}
+
+html body #app #starter-hub .starter-card--status { grid-column: 1/-1 !important; border-right: 0 !important; }
+html body #app #starter-hub .starter-card--tasks { grid-column: span 6 !important; }
+html body #app #starter-hub .starter-card--entry { grid-column: span 6 !important; border-right: 0 !important; }
+html body #app #starter-hub .starter-card--diagnose,
+html body #app #starter-hub .starter-card--issues,
+html body #app #starter-hub .starter-card--logs,
+html body #app #starter-hub .starter-card--backup { grid-column: span 3 !important; }
+html body #app #starter-hub .starter-card--backup { border-right: 0 !important; }
+html body #app #starter-hub .starter-card--templates { grid-column: 1/-1 !important; border-right: 0 !important; border-bottom: 0 !important; }
+
+html body #app #starter-hub .starter-card h4 {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin: 0 0 14px !important;
+    color: var(--de-ink) !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+}
+
+html body #app #starter-hub .starter-card h4 i {
+    color: var(--de-coral-deep) !important;
+    font-size: 16px !important;
+}
+
+html body #app #starter-hub .status-grid {
+    grid-template-columns: repeat(4,minmax(0,1fr)) !important;
+    gap: 0 18px !important;
+}
+
+html body #app #starter-hub .status-item {
+    min-height: 54px !important;
+    padding: 10px 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid #edf0f2 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+html body #app #starter-hub .status-item::before { display: none !important; }
+html body #app #starter-hub .status-item strong { color: var(--de-ink) !important; font-size: 12px !important; }
+
+html body #app #starter-hub :is(.task-list,.issue-list,.log-list) { gap: 0 !important; }
+html body #app #starter-hub :is(.task-item,.issue-item,.log-item) {
+    min-height: 34px !important;
+    padding: 8px 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid #edf0f2 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--de-text) !important;
+}
+
+html body #app #starter-hub .task-item.done {
+    background: transparent !important;
+    color: #287b68 !important;
+}
+
+html body #app #starter-hub .task-item .dot { width: 6px !important; height: 6px !important; box-shadow: none !important; }
+html body #app #starter-hub .task-item.done .dot { background: var(--de-mint) !important; box-shadow: 0 0 0 3px rgba(58,168,137,.12) !important; }
+
+html body #app #starter-hub .starter-card--entry > div,
+html body #app #starter-hub .starter-card--templates > div {
+    display: grid !important;
+    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+    gap: 7px !important;
+}
+
+html body #app #starter-hub .starter-card--entry > div {
+    grid-template-columns: repeat(3,minmax(0,1fr)) !important;
+}
+
+html body #app #starter-hub .starter-card--entry .btn,
+html body #app #starter-hub .starter-card--templates .btn {
+    min-width: 0 !important;
+    min-height: 36px !important;
+    justify-content: flex-start !important;
+    padding: 0 10px !important;
+    border: 1px solid var(--de-line-strong) !important;
+    border-radius: 4px !important;
+    background: #fff !important;
+    color: var(--de-text) !important;
+    box-shadow: none !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+}
+
+html body #app #starter-hub .starter-card--entry .btn:first-child {
+    background: var(--de-coral) !important;
+    border-color: var(--de-coral) !important;
+    color: #fff !important;
+}
+
+html body #app #starter-hub .starter-card--entry .btn:hover,
+html body #app #starter-hub .starter-card--templates .btn:hover {
+    transform: translateY(-1px) !important;
+    border-color: var(--de-coral) !important;
+    background: var(--de-coral-soft) !important;
+    color: var(--de-coral-deep) !important;
+}
+
+html body #app #starter-hub .starter-card--entry .btn:first-child:hover {
+    background: var(--de-coral-deep) !important;
+    color: #fff !important;
+}
+
+html body #app #starter-hub .starter-card--templates > div {
+    grid-template-columns: repeat(3,minmax(0,1fr)) !important;
+}
+
+html body #app #starter-hub .starter-card--templates .btn { justify-content: center !important; }
+
+@keyframes de-workspace-enter {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+html body #app #starter-hub.active .starter-grid { animation: de-workspace-enter 180ms ease-out both; }
+
+@media (max-width: 1100px) {
+    html body #app #starter-hub .starter-card--status { grid-column: span 12 !important; border-right: 0 !important; }
+    html body #app #starter-hub .status-grid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+    html body #app #starter-hub .starter-card--tasks,
+    html body #app #starter-hub .starter-card--entry { grid-column: span 6 !important; }
+    html body #app #starter-hub .starter-card--diagnose,
+    html body #app #starter-hub .starter-card--issues,
+    html body #app #starter-hub .starter-card--logs,
+    html body #app #starter-hub .starter-card--backup { grid-column: span 6 !important; }
+    html body #app #starter-hub .starter-card--tasks,
+    html body #app #starter-hub .starter-card--issues { border-right: 1px solid var(--de-line) !important; }
+    html body #app #starter-hub .starter-card--entry,
+    html body #app #starter-hub .starter-card--logs,
+    html body #app #starter-hub .starter-card--backup { border-right: 0 !important; }
+}
+
+@media (max-width: 720px) {
+    html body #app #starter-hub .starter-card { grid-column: 1/-1 !important; border-right: 0 !important; }
+    html body #app #starter-hub .status-grid { grid-template-columns: 1fr !important; }
+    html body #app #starter-hub .starter-card--entry > div,
+    html body #app #starter-hub .starter-card--templates > div { grid-template-columns: 1fr !important; }
+}
+
 /* Login is an editorial spread, not a phone mockup or floating-card stack. */
 #login-overlay[data-login-skin="clean"] { background: #edf1f2 !important; color: var(--de-ink) !important; }
 #login-overlay[data-login-skin="clean"] .login-clean-shell {
