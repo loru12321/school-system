@@ -334,3 +334,87 @@ html body #app #starter-hub.active .starter-grid { animation: de-workspace-enter
     #login-overlay[data-login-skin="clean"] .login-styleboard { display: none !important; }
     #login-overlay[data-login-skin="clean"] .login-clean-copy p { font-size: 14px !important; line-height: 1.7 !important; }
 }
+
+/* Post-login visual language distilled from the user's saved references. */
+:root {
+    --de-ink: #292735; --de-text: #494657; --de-muted: #817d8d;
+    --de-canvas: #f6f6f9; --de-paper: #fff; --de-line: #e7e4ec; --de-line-strong: #d9d4e2;
+    --de-coral: #d9637d; --de-coral-deep: #ad435d; --de-coral-soft: #fbeef2;
+    --de-mint: #4fa58e; --de-mint-soft: #edf7f4; --de-navy: #373344;
+    --de-violet: #7265c7; --de-violet-deep: #594da9; --de-violet-soft: #f0eefb;
+    --de-blue-soft: #f1f3fa; --de-warm: #b98168; --de-warm-soft: #f8f0ec;
+}
+body:not(.login-overlay-active), body:not(.login-overlay-active) #app, body:not(.login-overlay-active) .main-content { background: var(--de-canvas) !important; }
+html body #app-sidebar.sidebar-spacious, html body .sidebar-spacious { background: rgba(253,253,255,.96) !important; border-color: var(--de-line) !important; box-shadow: 8px 0 30px rgba(55,51,68,.045) !important; }
+html body #app-sidebar.sidebar-spacious :is(.nav-item.active,.sidebar-nav-item.active,.sidebar-spacious-item.active,button.active,a.active,[aria-current="page"]),
+html body .sidebar-spacious :is(.nav-item.active,.sidebar-nav-item.active,.sidebar-spacious-item.active,button.active,a.active,[aria-current="page"]) { background: var(--de-violet-soft) !important; border-color: rgba(114,101,199,.28) !important; color: var(--de-violet-deep) !important; box-shadow: none !important; }
+html body #app .shell-overview-card--dock { border: 0 !important; border-bottom: 1px solid var(--de-line) !important; border-radius: 0 !important; background: transparent !important; }
+html body #app .shell-overview-card--dock::before { content: ""; width: 4px; align-self: stretch; border-radius: 4px; background: linear-gradient(180deg,var(--de-coral),#ae9ce0 58%,#89c7ba); }
+html body #app .shell-overview-pills > span,
+html body #app :is(.badge,.tag,.chip,.status-chip,.analysis-tag) { min-height: 24px !important; padding: 3px 9px !important; border: 1px solid var(--de-line) !important; border-radius: 5px !important; background: #faf9fc !important; color: #6f697b !important; box-shadow: none !important; font-size: 11px !important; font-weight: 700 !important; }
+html body #app .shell-module-rail-shell:not(.shell-module-rail-shell--floating) { padding: 12px 16px 14px !important; border: 0 !important; border-top: 1px solid var(--de-line) !important; border-bottom: 1px solid var(--de-line) !important; border-radius: 0 !important; background: rgba(255,255,255,.62) !important; box-shadow: none !important; }
+html body #app .shell-module-rail-meta { min-height: 26px !important; margin-bottom: 8px !important; }
+html body #app .shell-module-rail-label { color: var(--de-coral-deep) !important; letter-spacing: .08em !important; }
+html body #app .shell-module-rail-status { max-width: min(42vw,540px) !important; color: var(--de-muted) !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+html body #app .shell-module-rail { display: grid !important; grid-auto-flow: column !important; grid-auto-columns: minmax(190px,1fr) !important; gap: 6px !important; padding: 0 !important; overflow-x: auto !important; scrollbar-width: thin !important; scrollbar-color: #c9c2d8 transparent !important; }
+html body #app .shell-module-rail-chip { position: relative !important; display: grid !important; grid-template-columns: 28px minmax(0,1fr) !important; align-items: center !important; gap: 10px !important; min-width: 0 !important; min-height: 54px !important; padding: 8px 12px !important; border: 1px solid transparent !important; border-radius: 6px !important; background: transparent !important; color: var(--de-text) !important; box-shadow: none !important; transition: background-color 160ms ease,border-color 160ms ease,transform 160ms ease !important; }
+html body #app .shell-module-rail-chip:hover { transform: translateY(-1px) !important; border-color: var(--de-line) !important; background: #fff !important; }
+html body #app .shell-module-rail-chip-index { display: grid !important; place-items: center !important; width: 28px !important; height: 28px !important; border: 1px solid var(--de-line) !important; border-radius: 50% !important; background: #fff !important; color: #817a8e !important; font-size: 10px !important; font-weight: 800 !important; }
+html body #app .shell-module-rail-chip-copy { min-width: 0 !important; }
+html body #app .shell-module-rail-chip-title { display: block !important; overflow: hidden !important; color: inherit !important; font-size: 13px !important; font-weight: 760 !important; line-height: 1.35 !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+html body #app .shell-module-rail-chip-hint { display: none !important; }
+html body #app .shell-module-rail-chip.is-active { border-color: rgba(114,101,199,.22) !important; background: var(--de-violet-soft) !important; color: var(--de-violet-deep) !important; box-shadow: none !important; }
+html body #app .shell-module-rail-chip.is-active::after { content: "" !important; position: absolute !important; inset: 9px auto 9px 0 !important; width: 3px !important; border-radius: 0 3px 3px 0 !important; background: var(--de-coral) !important; }
+html body #app .shell-module-rail-chip.is-active .shell-module-rail-chip-index { border-color: var(--de-violet) !important; background: var(--de-violet) !important; color: #fff !important; }
+html body #app :is(.analysis-shell-head,.sec-head,.analysis-section-head,.module-desc-bar.analysis-hero) { border: 0 !important; border-bottom: 1px solid var(--de-line) !important; border-left: 3px solid var(--de-coral) !important; border-radius: 0 !important; background: #fff !important; }
+html body #app :is(.analysis-inline-panel,.analysis-action-stack,.analysis-info-band,.analysis-doc-panel,.analysis-table-shell,.table-wrap) { border-color: var(--de-line) !important; border-radius: 6px !important; box-shadow: none !important; }
+html body #app .analysis-inline-controls { display: flex !important; align-items: end !important; flex-wrap: wrap !important; gap: 8px 10px !important; }
+html body #app .analysis-inline-controls > label { align-self: center !important; color: var(--de-muted) !important; font-size: 11px !important; font-weight: 700 !important; }
+html body #app :is(input,select,textarea,.form-control,.filter-select) { border-color: var(--de-line-strong) !important; border-radius: 5px !important; background-color: #fff !important; color: var(--de-ink) !important; box-shadow: none !important; }
+html body #app :is(input,select,textarea,.form-control,.filter-select):focus { border-color: var(--de-violet) !important; box-shadow: 0 0 0 3px rgba(114,101,199,.10) !important; }
+html body #app :is(.btn,button.btn) { border-radius: 5px !important; box-shadow: none !important; transition: transform 150ms ease,background-color 150ms ease,border-color 150ms ease !important; }
+html body #app :is(.btn-primary,.primary-btn,.analysis-action-btn.primary,button.primary,#app .btn.btn-primary,#app .btn.btn-purple) { border-color: var(--de-violet) !important; background: var(--de-violet) !important; color: #fff !important; }
+html body #app :is(.btn-primary,.primary-btn,.analysis-action-btn.primary,button.primary,#app .btn.btn-primary,#app .btn.btn-purple):hover { border-color: var(--de-violet-deep) !important; background: var(--de-violet-deep) !important; transform: translateY(-1px) !important; }
+html body #app :is(.btn.btn-blue,.btn.btn-green,.btn-success,.analysis-action-btn.success) { border-color: var(--de-line-strong) !important; background: #fff !important; color: var(--de-text) !important; }
+html body #app :is(.btn.btn-blue,.btn.btn-green,.btn-success,.analysis-action-btn.success):hover { border-color: rgba(114,101,199,.36) !important; background: var(--de-violet-soft) !important; color: var(--de-violet-deep) !important; transform: translateY(-1px) !important; }
+html body #app table thead th { background: #f5f4f8 !important; color: #5d5868 !important; }
+html body #app table tbody tr:hover td { background: #faf9fc !important; }
+@media (max-width:720px) {
+    html body #app .shell-module-rail-status { display: none !important; }
+    html body #app .shell-module-rail { grid-auto-columns: minmax(168px,78vw) !important; }
+    html body #app .analysis-inline-controls { display: grid !important; grid-template-columns: 1fr !important; }
+}
+
+html body #app .shell-module-rail-chip.is-active :is(span,strong,small,i),
+html body #app .shell-module-rail-chip.is-active .shell-module-rail-chip-title {
+    color: var(--de-violet-deep) !important;
+}
+html body #app .shell-module-rail-chip.is-active .shell-module-rail-chip-index {
+    color: #fff !important;
+}
+html body #app #teacher-analysis .analysis-inline-controls {
+    display: grid !important;
+    grid-template-columns: auto minmax(130px,1fr) auto minmax(110px,.8fr) auto minmax(120px,.9fr) auto minmax(180px,1.25fr) auto minmax(180px,1.25fr) !important;
+    align-items: center !important;
+    gap: 8px 10px !important;
+}
+html body #app #teacher-analysis .analysis-inline-controls > :is(select,span) { min-width: 0 !important; width: 100% !important; }
+html body #app #teacher-analysis .analysis-inline-controls > .btn { grid-column: span 2 !important; min-height: 36px !important; }
+html body #app #teacher-analysis .analysis-inline-controls > .btn {
+    border-color: var(--de-line-strong) !important;
+    background: #fff !important;
+    color: var(--de-text) !important;
+}
+html body #app #teacher-analysis .analysis-inline-controls > .btn:first-of-type,
+html body #app #teacher-analysis .analysis-shell-head .btn:not(.btn-blue) {
+    border-color: var(--de-violet) !important;
+    background: var(--de-violet) !important;
+    color: #fff !important;
+}
+@media (max-width:1280px) {
+    html body #app #teacher-analysis .analysis-inline-controls { grid-template-columns: auto minmax(150px,1fr) auto minmax(150px,1fr) !important; }
+}
+@media (max-width:720px) {
+    html body #app #teacher-analysis .analysis-inline-controls { grid-template-columns: 72px minmax(0,1fr) !important; }
+    html body #app #teacher-analysis .analysis-inline-controls > .btn { grid-column: 1/-1 !important; }
+}
