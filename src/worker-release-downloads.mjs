@@ -88,23 +88,37 @@ function buildDownloadHeaders(entry) {
 }
 
 function streamChunks(env, chunkUrls) {
+  let chunkIndex = 0;
+  let reader = null;
   return new ReadableStream({
-    async start(controller) {
+    async pull(controller) {
       try {
-        for (const url of chunkUrls) {
-          const response = await env.ASSETS.fetch(new Request(url, { method: 'GET' }));
-          if (!response.ok || !response.body) throw new Error('release chunk unavailable');
-          const reader = response.body.getReader();
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            controller.enqueue(value);
+        while (true) {
+          if (!reader) {
+            if (chunkIndex >= chunkUrls.length) {
+              controller.close();
+              return;
+            }
+            const response = await env.ASSETS.fetch(new Request(chunkUrls[chunkIndex], { method: 'GET' }));
+            if (!response.ok || !response.body) throw new Error('release chunk unavailable');
+            reader = response.body.getReader();
+            chunkIndex += 1;
           }
+          const { done, value } = await reader.read();
+          if (done) {
+            reader.releaseLock();
+            reader = null;
+            continue;
+          }
+          controller.enqueue(value);
+          return;
         }
-        controller.close();
       } catch (error) {
         controller.error(error);
       }
+    },
+    async cancel(reason) {
+      if (reader) await reader.cancel(reason);
     }
   });
 }

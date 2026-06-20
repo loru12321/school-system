@@ -14,6 +14,7 @@ const map = {
 };
 
 function createEnv({ omitSecondChunk = false } = {}) {
+  const stats = { chunkGets: 0 };
   const objects = new Map([
     ['/releases/download-map.json', JSON.stringify(map)],
     ['/releases/packages/beta-20260621-9a362b3/windows/part-0001', 'abc'],
@@ -23,20 +24,26 @@ function createEnv({ omitSecondChunk = false } = {}) {
   return {
     ASSETS: {
       async fetch(request) {
-        const value = objects.get(new URL(request.url).pathname);
+        const pathname = new URL(request.url).pathname;
+        const value = objects.get(pathname);
         if (value === undefined) return new Response('missing', { status: 404 });
+        if (request.method === 'GET' && pathname.includes('/packages/')) stats.chunkGets += 1;
         const headers = request.method === 'HEAD' ? {} : { 'Content-Length': String(Buffer.byteLength(value)) };
         return request.method === 'HEAD'
           ? new Response(null, { status: 200, headers })
           : new Response(value, { status: 200, headers });
       }
-    }
+    },
+    stats
   };
 }
 
 const requestUrl = 'https://schoolsystem.com.cn/downloads/school-system-windows-beta.exe';
-const getResponse = await handleReleaseDownload(new Request(requestUrl), createEnv());
+const getEnv = createEnv();
+const getResponse = await handleReleaseDownload(new Request(requestUrl), getEnv);
 assert.equal(getResponse.status, 200);
+await new Promise((resolve) => setImmediate(resolve));
+assert.ok(getEnv.stats.chunkGets <= 1, 'stream should respect backpressure before the body is consumed');
 assert.equal(await getResponse.text(), 'abcdef');
 assert.equal(getResponse.headers.get('Content-Length'), '6');
 assert.equal(getResponse.headers.get('Content-Type'), 'application/vnd.microsoft.portable-executable');
