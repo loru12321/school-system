@@ -106,6 +106,8 @@
     "check:calculation": "npm run test:calculation-snapshot",
     "check:release-data-safe": "npm run check:release-fast && npm run check:calculation",
     "release:prepare-assets": "node scripts/prepare-github-release-assets.mjs",
+    "release:prepare-worker-assets": "node scripts/prepare-worker-release-chunks.mjs",
+    "test:worker-release-chunks": "node scripts/test-worker-release-chunks.mjs",
     "performance:record": "node scripts/record-performance-trend.mjs",
     "deploy:oss": "node scripts/legacy/deploy-oss.js",
     "sync": "npm run build && npm run push",
