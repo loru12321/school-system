@@ -6,6 +6,8 @@ dist/
 output/
 release-assets/
 native-builds/
+*.keystore
+*.jks
 .capacitor/
 android/.gradle/
 android/local.properties

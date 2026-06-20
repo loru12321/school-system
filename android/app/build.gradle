@@ -1,5 +1,16 @@
 apply plugin: 'com.android.application'
 
+def androidTestSigningEnvironment = [
+    storeFile: System.getenv('ANDROID_TEST_KEYSTORE_FILE'),
+    storePassword: System.getenv('ANDROID_TEST_KEYSTORE_PASSWORD'),
+    keyAlias: System.getenv('ANDROID_TEST_KEY_ALIAS'),
+    keyPassword: System.getenv('ANDROID_TEST_KEY_PASSWORD'),
+]
+def androidTestSigningMissing = androidTestSigningEnvironment.findAll { key, value -> !value }.keySet()
+def releasePackagingRequested = gradle.startParameter.taskNames.any { taskName ->
+    taskName.toLowerCase().contains('release')
+}
+
 android {
     namespace = "cn.com.schoolsystem.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,12 +27,29 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (androidTestSigningMissing.isEmpty()) {
+            testRelease {
+                storeFile file(androidTestSigningEnvironment.storeFile)
+                storePassword androidTestSigningEnvironment.storePassword
+                keyAlias androidTestSigningEnvironment.keyAlias
+                keyPassword androidTestSigningEnvironment.keyPassword
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (androidTestSigningMissing.isEmpty()) {
+                signingConfig signingConfigs.testRelease
+            }
         }
     }
+}
+
+if (releasePackagingRequested && !androidTestSigningMissing.isEmpty()) {
+    throw new GradleException("Release packaging requires Android test signing environment variables; missing: ${androidTestSigningMissing.join(', ')}")
 }
 
 repositories {
