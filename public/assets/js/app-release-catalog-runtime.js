@@ -4,13 +4,14 @@
   var PLATFORMS = Object.freeze(['windows', 'android', 'ios']);
 
   function asString(value) {
-    return value == null ? '' : String(value);
+    return value == null ? '' : String(value).trim();
   }
 
   function normalizeSigned(value) {
-    if (value === true || value === 'signed') return 'signed';
-    if (value === false || value == null || value === '') return 'unsigned';
-    return String(value);
+    var text = typeof value === 'string' ? asString(value) : value;
+    if (value === true || text === 'signed') return 'signed';
+    if (value === false || text == null || text === '') return 'unsigned';
+    return asString(text);
   }
 
   function normalizeAsset(platform, asset) {
@@ -18,18 +19,18 @@
     return {
       platform: platform,
       version: asString(source.version),
-      buildNumber: source.buildNumber == null ? '' : source.buildNumber,
+      buildNumber: asString(source.buildNumber),
       status: asString(source.status) || 'unavailable',
       signed: normalizeSigned(source.signed),
       minimumOs: asString(source.minimumOs),
-      architectures: Array.isArray(source.architectures) ? source.architectures.map(asString) : [],
+      architectures: Array.isArray(source.architectures) ? source.architectures.map(asString).filter(Boolean) : [],
       assetName: asString(source.assetName),
       assetUrl: asString(source.assetUrl),
       bytes: Number.isFinite(Number(source.bytes)) ? Number(source.bytes) : 0,
       sha256: asString(source.sha256).toLowerCase(),
       notes: Array.isArray(source.notes)
-        ? source.notes.map(asString)
-        : (source.notes == null || source.notes === '' ? [] : [String(source.notes)]),
+        ? source.notes.map(asString).filter(Boolean)
+        : (asString(source.notes) ? [asString(source.notes)] : []),
       buildUrl: asString(source.buildUrl)
     };
   }
@@ -37,14 +38,16 @@
   function normalizeRelease(release) {
     if (!release || typeof release !== 'object' || !asString(release.releaseTag)) return null;
     var assets = release.platforms && typeof release.platforms === 'object' ? release.platforms : {};
+    var schemaVersion = Number(release.schemaVersion == null ? 1 : release.schemaVersion);
+    var channel = asString(release.channel);
     var platforms = {};
     PLATFORMS.forEach(function (platform) {
       platforms[platform] = normalizeAsset(platform, assets[platform]);
     });
     return {
-      schemaVersion: release.schemaVersion == null ? 1 : release.schemaVersion,
+      schemaVersion: Number.isFinite(schemaVersion) ? schemaVersion : 1,
       releaseTag: asString(release.releaseTag),
-      channel: release.channel === 'stable' || release.channel === 'beta' ? release.channel : 'beta',
+      channel: channel === 'stable' || channel === 'beta' ? channel : 'beta',
       sourceSha: asString(release.sourceSha),
       generatedAt: asString(release.generatedAt),
       expiresAt: asString(release.expiresAt),

@@ -106,6 +106,11 @@ assert.strictEqual(
   'download URLs should be structurally valid'
 );
 assert.strictEqual(runtime.isExpired(releases[1], new Date('2099-01-01T00:00:00.000Z')), false);
+assert.strictEqual(
+  runtime.isExpired(releases[0], new Date('2026-07-20T08:00:00.000Z')),
+  true,
+  'beta releases should expire at their expiration instant'
+);
 assert.deepStrictEqual(
   Array.from(runtime.filterCatalog(releases, { platform: 'android', channel: 'beta' }), (release) => release.releaseTag),
   ['v2.0.0-beta.1']
@@ -113,5 +118,30 @@ assert.deepStrictEqual(
 assert.strictEqual(runtime.detectPlatform('Mozilla/5.0 (Windows NT 10.0; Win64; x64)'), 'windows');
 assert.strictEqual(runtime.detectPlatform('Mozilla/5.0 (Linux; Android 15; Pixel 9)'), 'android');
 assert.strictEqual(runtime.detectPlatform('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)'), 'ios');
+
+assert.strictEqual(
+  runtime.normalizeCatalog({ releaseTag: '   ' }).length,
+  0,
+  'whitespace-only release tags should be rejected'
+);
+const trimmed = runtime.normalizeCatalog({
+  schemaVersion: '2',
+  releaseTag: '  v2.1.0  ',
+  sourceSha: '  abcdef  ',
+  generatedAt: '  2026-06-21T08:00:00.000Z  ',
+  platforms: {
+    android: {
+      buildNumber: '  42  ',
+      architectures: [' arm64-v8a ', '  ', ' x86_64 '],
+      notes: [' Internal build ', '', '  Test only  ']
+    }
+  }
+})[0];
+assert.strictEqual(trimmed.schemaVersion, 2);
+assert.strictEqual(trimmed.releaseTag, 'v2.1.0');
+assert.strictEqual(trimmed.sourceSha, 'abcdef');
+assert.strictEqual(trimmed.platforms.android.buildNumber, '42');
+assert.deepStrictEqual(Array.from(trimmed.platforms.android.architectures), ['arm64-v8a', 'x86_64']);
+assert.deepStrictEqual(Array.from(trimmed.platforms.android.notes), ['Internal build', 'Test only']);
 
 console.log('app release catalog runtime tests passed');
