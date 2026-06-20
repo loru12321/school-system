@@ -24,6 +24,13 @@ function snapshotTree(directory) {
 }
 
 try {
+  const publicCatalog = JSON.parse(fs.readFileSync(path.join(rootDir, 'public/releases/release-manifest.json'), 'utf8'));
+  const currentPublicRelease = publicCatalog.releases.find((release) => release.releaseTag === 'beta-20260621-9a362b3');
+  assert.ok(currentPublicRelease, 'public catalog must include the current beta');
+  assert.match(currentPublicRelease.platforms.windows.assetUrl, /^https:\/\/schoolsystem\.com\.cn\/downloads\//);
+  assert.match(currentPublicRelease.platforms.android.assetUrl, /^https:\/\/schoolsystem\.com\.cn\/downloads\//);
+  assert.equal(currentPublicRelease.platforms.ios.status, 'awaiting-signing');
+
   const assetDir = path.join(fixtureDir, 'assets');
   const outputPath = path.join(assetDir, 'release-manifest.json');
   fs.mkdirSync(assetDir);

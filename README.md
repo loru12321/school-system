@@ -219,6 +219,12 @@ Legacy OSS, DNS, certificate, and direct-deploy helpers are archived in `scripts
 
 启用 iOS 正式发布前，需要 Apple Developer Program 账号、App Store Connect 中的应用记录、`cn.com.schoolsystem.app` Bundle ID、Team ID，以及 Distribution Certificate 与 Provisioning Profile，或受限权限的 App Store Connect API Key（Issuer ID、Key ID、`.p8` 私钥）。这些凭据必须进入 GitHub Actions Secrets；配置完成后再增加 Archive、签名、IPA 导出与 TestFlight 上传步骤。
 
+### Cloudflare 免费下载回退
+
+当 GitHub Actions 或公开 Releases 暂时不可用时，可使用现有 Cloudflare Workers 免费静态资源提供安装包，不需要开通 R2 或绑定付费存储。`npm run release:prepare-worker-assets` 会把 Windows 与 Android 包切成不超过 20 MiB 的不可变分片，并生成 `dist/releases/download-map.json`；Worker 只允许映射中的文件名，并通过 `/downloads/<filename>` 依次流式合并分片。
+
+二进制包、keystore 和生成分片都不会提交进 Git。执行干净构建后，部署人员必须从受控的本地安装包重新生成分片，再运行 `npx wrangler deploy`。部署前应同时执行 `npm run test:worker-release-chunks`、`npm run test:worker-release-downloads` 和 `npm run check:release-fast`。GitHub 账户恢复后，原有 Actions 与 Releases 仍是首选自动发布路径，Cloudflare 分片可保留为免费镜像。
+
 ### 手动构建与校验
 
 ```powershell

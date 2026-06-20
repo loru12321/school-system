@@ -168,8 +168,10 @@ const cachedReleases = runtime.normalizeCatalog(manifest);
 assert.strictEqual(cachedReleases.length, 1);
 assert.deepStrictEqual(
   Array.from(runtime.PLATFORMS, (platform) => cachedReleases[0].platforms[platform].status),
-  ['unavailable', 'unavailable', 'unavailable']
+  ['ready', 'ready', 'awaiting-signing']
 );
+assert.match(cachedReleases[0].platforms.windows.assetUrl, /^https:\/\/schoolsystem\.com\.cn\/downloads\//);
+assert.match(cachedReleases[0].platforms.android.assetUrl, /^https:\/\/schoolsystem\.com\.cn\/downloads\//);
 
 const catalogScript = html.match(/<script defer src="\.\/assets\/js\/app-release-catalog-runtime\.js\?v=[^"]+"><\/script>/);
 const downloadScript = html.match(/<script defer src="\.\/assets\/js\/app-download-runtime\.js\?v=[^"]+"><\/script>/);
