@@ -8,7 +8,8 @@ const map = {
     contentType: 'application/vnd.microsoft.portable-executable',
     bytes: 6,
     sha256: 'a'.repeat(64),
-    chunks: ['packages/beta-20260621-9a362b3/windows/part-0001', 'packages/beta-20260621-9a362b3/windows/part-0002']
+    chunks: ['packages/beta-20260621-9a362b3/windows/part-0001', 'packages/beta-20260621-9a362b3/windows/part-0002'],
+    chunkBytes: [3, 3]
   }]
 };
 
@@ -24,7 +25,7 @@ function createEnv({ omitSecondChunk = false } = {}) {
       async fetch(request) {
         const value = objects.get(new URL(request.url).pathname);
         if (value === undefined) return new Response('missing', { status: 404 });
-        const headers = { 'Content-Length': String(Buffer.byteLength(value)) };
+        const headers = request.method === 'HEAD' ? {} : { 'Content-Length': String(Buffer.byteLength(value)) };
         return request.method === 'HEAD'
           ? new Response(null, { status: 200, headers })
           : new Response(value, { status: 200, headers });

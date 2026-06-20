@@ -34,6 +34,8 @@ try {
     assert.equal(entry.bytes, original.length);
     assert.equal(entry.sha256, crypto.createHash('sha256').update(original).digest('hex'));
     assert.ok(entry.chunks.every((relative) => fs.statSync(path.join(output, relative)).size <= 16));
+    assert.deepEqual(entry.chunkBytes, entry.chunks.map((relative) => fs.statSync(path.join(output, relative)).size));
+    assert.equal(entry.chunkBytes.reduce((sum, bytes) => sum + bytes, 0), entry.bytes);
   }
 
   const catalog = JSON.parse(fs.readFileSync(path.join(output, 'release-manifest.json'), 'utf8'));

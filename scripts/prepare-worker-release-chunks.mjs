@@ -95,13 +95,14 @@ function discoverInputs(inputDirectory) {
   });
 }
 
-function splitFile(sourcePath, targetDirectory, chunkBytes) {
+function splitFile(sourcePath, targetDirectory, chunkSize) {
   fs.rmSync(targetDirectory, { recursive: true, force: true });
   fs.mkdirSync(targetDirectory, { recursive: true });
   const descriptor = fs.openSync(sourcePath, 'r');
   const chunks = [];
+  const chunkBytes = [];
   const hash = crypto.createHash('sha256');
-  const buffer = Buffer.allocUnsafe(chunkBytes);
+  const buffer = Buffer.allocUnsafe(chunkSize);
   try {
     let index = 1;
     while (true) {
@@ -112,12 +113,13 @@ function splitFile(sourcePath, targetDirectory, chunkBytes) {
       const partName = `part-${String(index).padStart(4, '0')}`;
       fs.writeFileSync(path.join(targetDirectory, partName), payload, { flag: 'wx' });
       chunks.push(partName);
+      chunkBytes.push(bytesRead);
       index += 1;
     }
   } finally {
     fs.closeSync(descriptor);
   }
-  return { chunks, sha256: hash.digest('hex') };
+  return { chunks, chunkBytes, sha256: hash.digest('hex') };
 }
 
 export function prepareWorkerReleaseChunks(options = {}) {
@@ -144,7 +146,8 @@ export function prepareWorkerReleaseChunks(options = {}) {
       contentType: input.contentType,
       bytes: input.bytes,
       sha256: split.sha256,
-      chunks: split.chunks.map((partName) => path.posix.join(relativeRoot, partName))
+      chunks: split.chunks.map((partName) => path.posix.join(relativeRoot, partName)),
+      chunkBytes: split.chunkBytes
     };
   });
 

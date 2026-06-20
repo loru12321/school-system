@@ -42,7 +42,11 @@ function validateDownloadEntry(entry, filename) {
     && SHA256_PATTERN.test(entry.sha256)
     && Array.isArray(entry.chunks)
     && entry.chunks.length > 0
-    && entry.chunks.every((chunk) => typeof chunk === 'string' && CHUNK_PATTERN.test(chunk));
+    && entry.chunks.every((chunk) => typeof chunk === 'string' && CHUNK_PATTERN.test(chunk))
+    && Array.isArray(entry.chunkBytes)
+    && entry.chunkBytes.length === entry.chunks.length
+    && entry.chunkBytes.every((bytes) => Number.isSafeInteger(bytes) && bytes > 0)
+    && entry.chunkBytes.reduce((sum, bytes) => sum + bytes, 0) === entry.bytes;
 }
 
 async function loadDownloadEntry(request, env, filename) {
@@ -68,9 +72,6 @@ async function preflightChunks(request, env, entry) {
   const chunkUrls = entry.chunks.map((chunk) => new URL(`/releases/${chunk}`, request.url));
   const probes = await Promise.all(chunkUrls.map((url) => env.ASSETS.fetch(new Request(url, { method: 'HEAD' }))));
   if (probes.some((response) => !response.ok)) return null;
-  const lengths = probes.map((response) => Number(response.headers.get('Content-Length')));
-  if (lengths.some((length) => !Number.isSafeInteger(length) || length <= 0)) return null;
-  if (lengths.reduce((sum, length) => sum + length, 0) !== entry.bytes) return null;
   return chunkUrls;
 }
 
